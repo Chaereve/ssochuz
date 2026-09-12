@@ -1,124 +1,104 @@
 name: tmp-collect2
 on:
   push:
-    branches: [arena/01a0968c-ssochuz]
-    paths: ['.github/workflows/tmp-collect2.yml']
+    paths:
+      - '.github/workflows/tmp-collect2.yml'
+  workflow_dispatch: {}
 permissions:
   contents: write
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: arena/01a0968c-ssochuz
       - name: Collect
         run: |
-          mkdir -p _inbox/fb
-          cat > /tmp/urls.txt <<'EOF'
-          https://chuseoz.blogspot.com/2026/05/bake-love-feelings.html
-          https://chuseoz.blogspot.com/2026/05/be-my-angel.html
-          https://chuseoz.blogspot.com/2026/05/bo-ao-la-tho-than-linh-nghiem-trong-7.html
-          https://chuseoz.blogspot.com/2026/05/built-in-love.html
-          https://chuseoz.blogspot.com/2026/05/chain-baby.html
-          https://chuseoz.blogspot.com/2026/05/chain.html
-          https://chuseoz.blogspot.com/2026/05/enemies-with-benefits.html
-          https://chuseoz.blogspot.com/2026/05/hidden-heart.html
-          https://chuseoz.blogspot.com/2026/05/hometown-romance-special.html
-          https://chuseoz.blogspot.com/2026/05/hometown-romance.html
-          https://chuseoz.blogspot.com/2026/05/in-love-forever.html
-          https://chuseoz.blogspot.com/2026/05/like-pillow.html
-          https://chuseoz.blogspot.com/2026/05/like-puzzle.html
-          https://chuseoz.blogspot.com/2026/05/love-bound.html
-          https://chuseoz.blogspot.com/2026/05/love-design.html
-          https://chuseoz.blogspot.com/2026/05/love-fribe.html
-          https://chuseoz.blogspot.com/2026/05/love-on-hire.html
-          https://chuseoz.blogspot.com/2026/05/lunar-secret.html
-          https://chuseoz.blogspot.com/2026/05/my-only-sunshine.html
-          https://chuseoz.blogspot.com/2026/05/ngot-ngao-la-may-bay-ang-cay-moi-la-tinh.html
-          https://chuseoz.blogspot.com/2026/05/the-hidden-blood.html
-          https://chuseoz.blogspot.com/2026/05/un-trovert.html
-          https://chuseoz.blogspot.com/2026/05/yours-ever.html
-          https://chuseoz.blogspot.com/2026/06/be-my-sugar-special.html
-          https://chuseoz.blogspot.com/2026/06/be-my-sugar.html
-          https://chuseoz.blogspot.com/2026/06/buy-my-boss.html
-          https://chuseoz.blogspot.com/2026/06/by-your-side.html
-          https://chuseoz.blogspot.com/2026/06/da-xoa-khuat-phuc-nhan-ngu.html
-          https://chuseoz.blogspot.com/2026/06/frozen-valentine.html
-          https://chuseoz.blogspot.com/2026/06/ghost-house.html
-          https://chuseoz.blogspot.com/2026/06/in-arms-of-control.html
-          https://chuseoz.blogspot.com/2026/06/like-palette.html
-          https://chuseoz.blogspot.com/2026/06/nguoi-chong-xau-xa-cua-co-vo-beo.html
-          https://chuseoz.blogspot.com/2026/06/santy-nextdoor.html
-          https://chuseoz.blogspot.com/2026/06/snake-fish.html
-          https://chuseoz.blogspot.com/2026/06/the-fire-4-elements.html
-          https://chuseoz.blogspot.com/2026/06/tho-than-oi-con-khan-nham-roi.html
-          https://chuseoz.blogspot.com/2026/06/tinh-day-hot-luon-tho-than-lam-vo.html
-          https://chuseoz.blogspot.com/2026/06/villain-star.html
-          https://chuseoz.blogspot.com/2026/07/beauty-and-bike.html
-          https://chuseoz.blogspot.com/2026/07/pgrace-khong-nhan-loi-yeu-au.html
-          https://chuseoz.blogspot.com/2026/07/vuot-khoi-uong-chan-troi-endless-blue.html
-          https://chuseoz.blogspot.com/2026/08/co-vo-ho-anh-cua-toi.html
-          https://chuseoz.blogspot.com/2026/08/gia-roi-thi-yeu-luon-i.html
-          https://chuseoz.blogspot.com/2026/09/third-person.html
-          EOF
           cat > /tmp/collect2.py <<'PYEOF'
-          import json, re, urllib.request, gzip, time
+          import traceback
+          try:
+              #!/usr/bin/env python3
+              # Thu thập dữ liệu THẬT (bản gọn): số chương + tựa chương thật của 45 bài post,
+              # và thử đọc số liệu thật từ Firebase cũ (chuseoz-library / Firestore novelData).
+              import json, os, re, sys, time, traceback, urllib.request, urllib.parse, html as H
 
-          UA = {'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36','Accept-Encoding':'gzip'}
-          def get(url, timeout=90):
-              req = urllib.request.Request(url, headers=UA)
-              for attempt in range(3):
-                  try:
-                      with urllib.request.urlopen(req, timeout=timeout) as r:
-                          data = r.read()
-                          if r.headers.get('Content-Encoding') == 'gzip': data = gzip.decompress(data)
-                          return r.status, data
-                  except Exception as e:
-                      code = getattr(e, 'code', None)
-                      if code in (429, 503) and attempt < 2: time.sleep(4 + attempt*5); continue
-                      return code or 0, str(e).encode()
-              return 0, b''
+              OUT='_inbox/real2'
+              os.makedirs(OUT, exist_ok=True)
+              UA={'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36'}
 
-          diag = []
-          # --- Firestore probe ---
-          for url in ['https://firestore.googleapis.com/v1/projects/chuseoz-library/databases/(default)/documents/novelData?pageSize=100',
-                      'https://firestore.googleapis.com/v1/projects/chuseoz-library/databases/(default)/documents/users?pageSize=1']:
-              st, raw = get(url, 30)
-              diag.append('FS %s -> %s %s' % (url.split('documents/')[1][:40], st, raw[:200]))
-          open('_inbox/fb/diag.txt','w').write('\n'.join(diag) + '\n')
+              def get(url, tries=2, timeout=60):
+                  for i in range(tries):
+                      try:
+                          req=urllib.request.Request(url, headers=UA)
+                          with urllib.request.urlopen(req, timeout=timeout) as r:
+                              return r.status, r.read().decode('utf-8','replace')
+                      except urllib.error.HTTPError as e:
+                          return e.code, ''
+                      except Exception as e:
+                          print('   !', url, e, flush=True); time.sleep(2)
+                  return 0, ''
 
-          urls = [u.strip() for u in open('/tmp/wf/post_urls.txt') if u.strip()]
-          out = {}
-          for u in urls:
-              st, raw = get(u)
-              h = raw.decode('utf-8','replace') if st == 200 else ''
-              ct = re.findall(r'<h2 class="chapter-title">(.*?)</h2>', h, re.S)
-              nch = len(re.findall(r'<div class="chapter-page(?![\w-])', h))
-              nch2 = len(re.findall(r'class="chapter-page', h))
-              pid = re.findall(r"post-(\d{15,})", h)[:3] or re.findall(r'\b(\d{19})\b', h)[:3]
-              pub = re.search(r"<meta content='([^']+)' property='article:published_time'|<meta property='article:published_time' content='([^']+)'", h)
-              upd = re.search(r"<meta content='([^']+)' property='article:modified_time'|<meta property='article:modified_time' content='([^']+)'", h)
-              abbr = re.findall(r"<abbr class='published'[^>]*title='([^']+)'", h)[:2]
-              ts = re.findall(r"<meta content='([^']+)' itemprop='datePublished'|<meta itemprop='datePublished' content='([^']+)'", h)
-              out[u] = dict(status=st, bytes=len(raw), chaps=nch, chaps2=nch2,
-                             titles=[re.sub(r'\s+',' ',t).strip() for t in ct],
-                             ids=[p for p in pid], published=(pub.group(1) or pub.group(2)) if pub else None,
-                             updated=(upd.group(1) or upd.group(2)) if upd else None,
-                             abbr=abbr, itempub=[(a or b) for a,b in ts])
-              print(u, st, len(raw), 'chaps=%d/%d' % (nch, nch2), 'ids=%s' % (pid[:2],))
-              time.sleep(0.8)
-          json.dump(out, open('_inbox/fb/postdetails.json','w',encoding='utf-8'), ensure_ascii=False, indent=1)
-          print('DONE')
+              def clean(s):
+                  s=re.sub(r'<[^>]+>',' ', s)
+                  s=H.unescape(s).replace('\u200b','').replace('\xa0',' ')
+                  return re.sub(r'\s+',' ',s).strip()
+
+              # ---- 1. dữ liệu thật của 45 bài post ----
+              urlcheck=[]
+              for line in open('_inbox/urlcheck.txt', encoding='utf-8'):
+                  p=line.split()
+                  if len(p)>=4 and p[1]=='200' and '/p/' not in p[0]:
+                      urlcheck.append(p[0])
+              print('bài post:', len(urlcheck), flush=True)
+
+              posts={}
+              for i,u in enumerate(urlcheck,1):
+                  slug=u.rstrip('/').split('/')[-1].replace('.html','')
+                  st,h=get(u)
+                  if st!=200 or not h:
+                      posts[slug]={'url':u,'status':st,'error':'fetch'}; continue
+                  titles=[clean(x) for x in re.findall(r'<h2[^>]*class="[^"]*chapter-title[^"]*"[^>]*>(.*?)</h2>', h, re.S)]
+                  titles=[t for t in titles if t]
+                  blocks=len(re.findall(r'class="[^"]*chapter-page', h))
+                  em=len(re.findall(r'<img', h))
+                  # tình trạng/tác giả ghi ngay trong bài (nếu có)
+                  stx=None
+                  m=re.search(r'Tình trạng\s*:?\s*([^<\n]{0,60})', clean(h[:400000]))
+                  if m: stx=clean(m.group(1))[:40]
+                  posts[slug]={'url':u,'blocks':blocks,'nTitles':len(titles),'titles':titles,
+                               'first':titles[0] if titles else None,'last':titles[-1] if titles else None,
+                               'imgs':em,'statusRaw':stx,'bytes':len(h)}
+                  print(' %2d/%d %-46s blocks=%-3d titles=%-3d' % (i,len(urlcheck),slug[:46],blocks,len(titles)), flush=True)
+                  json.dump(posts, open(os.path.join(OUT,'posts.json'),'w'), ensure_ascii=False, indent=1)   # ghi dần
+              json.dump(posts, open(os.path.join(OUT,'posts.json'),'w'), ensure_ascii=False, indent=1)
+
+              # ---- 2. Firebase: thử đọc số liệu thật ----
+              fb={}
+              base='https://firestore.googleapis.com/v1/projects/chuseoz-library/databases/(default)/documents/'
+              for name,url in [('novelData_list', base+'novelData?pageSize=5'),
+                               ('voters_count',  base+'voters?pageSize=1'),
+                               ('users_probe',   base+'users?pageSize=1')]:
+                  st,body=get(url)
+                  fb[name]={'http':st,'sample':body[:400] if st!=200 else 'OK'}
+                  if st==200:
+                      try:
+                          d=json.loads(body); fb[name]['count']=len(d.get('documents',[])); fb[name]['sample']=d.get('documents',[])[:1]
+                      except Exception as e: fb[name]['err']=str(e)
+                  print(name, st, flush=True)
+              json.dump(fb, open(os.path.join(OUT,'firebase.json'),'w'), ensure_ascii=False, indent=1)
+              print('DONE', flush=True)
+
+          except Exception:
+              open('_inbox/real2/error.txt','w').write(traceback.format_exc())
+              raise
 
           PYEOF
-          sed -i "s|/tmp/wf/post_urls.txt|/tmp/urls.txt|" /tmp/collect2.py
           python3 /tmp/collect2.py
-      - name: Push back
+      - name: Commit
         if: always()
         run: |
-          git config user.name "arena-bot"; git config user.email "bot@users.noreply.github.com"
-          git add -A _inbox/fb
-          git commit -m "tmp: collect post details (real chapters/dates)" || echo "no change"
-          git push origin HEAD:arena/01a0968c-ssochuz || echo "push failed"
+          set -eux
+          git config user.email "bot@chuseoz.local"; git config user.name "chuseoz bot"
+          mkdir -p _inbox/real2; touch _inbox/real2/.keep
+          git add -A _inbox/real2 || true
+          git commit -m "tmp: real post + firebase data (2)" || echo "nothing"
+          git push
