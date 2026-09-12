@@ -1,0 +1,97 @@
+name: tmp-real-data
+on: {workflow_dispatch: {}}
+permissions:
+  contents: write
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Collect real data
+        run: |
+          cat > /tmp/collect.py <<'PYEOF'
+          #!/usr/bin/env python3
+          # Thu thập dữ liệu THẬT: số chương + tựa chương từ từng bài post blogspot,
+          # và số liệu đọc/bình chọn từ Firebase cũ (chuseoz-library/novelData).
+          import json, re, os, sys, time, urllib.parse, urllib.request, html as H
+
+          OUT='/home/user/ssochuz/_inbox/real'
+          os.makedirs(OUT, exist_ok=True)
+          UA={'User-Agent':'Mozilla/5.0 (compatible; chuseoz-sync/1.0)'}
+
+          def get(url, tries=3):
+              for i in range(tries):
+                  try:
+                      req=urllib.request.Request(url, headers=UA)
+                      with urllib.request.urlopen(req, timeout=60) as r:
+                          return r.read().decode('utf-8', 'replace')
+                  except Exception as e:
+                      print('  ! ', i, url, e); time.sleep(2+i*2)
+              return None
+
+          reg=json.load(open('/home/user/ssochuz/data/registry.json', encoding='utf-8'))
+          posts=[n for n in reg['lib'] if n.get('blog')]
+          print('bộ có link bài:', len(posts))
+
+          # ---------- 1. số chương + tựa chương thật từ bài post ----------
+          info={}
+          for i,n in enumerate(posts,1):
+              u=n['blog']
+              h=get(u)
+              if not h:
+                  info[n['slug']]={'url':u,'error':'fetch fail'}; continue
+              # tách từng khối chương
+              blocks=re.split(r'<div[^>]+class="[^"]*chapter-page[^"]*"', h)[1:]
+              titles=re.findall(r'<h2[^>]*class="[^"]*chapter-title[^"]*"[^>]*>(.*?)</h2>', h, re.S)
+              if not titles:
+                  titles=re.findall(r'<h2[^>]*>(.*?)</h2>', h, re.S)
+              clean=lambda s: H.unescape(re.sub(r'<[^>]+>','',s)).replace('\u200b','').strip()
+              titles=[clean(t) for t in titles if clean(t)]
+              # tình trạng ghi trong bài (nếu có)
+              st=None
+              m=re.search(r'Tình trạng\s*:?\s*</?[^>]*>?\s*([^<\n]{0,40})', h)
+              if m: st=clean(m.group(1))
+              pub=None
+              m=re.search(r'<meta[^>]+property="article:published_time"[^>]+content="([^"]+)"', h) or \
+                re.search(r'<abbr[^>]+class=[\'"]published[\'"][^>]+title=[\'"]([^\'"]+)', h)
+              if m: pub=m.group(1)
+              upd=None
+              m=re.search(r'<meta[^>]+property="article:modified_time"[^>]+content="([^"]+)"', h) or \
+                re.search(r'<abbr[^>]+class=[\'"]updated[\'"][^>]+title=[\'"]([^\'"]+)', h)
+              if m: upd=m.group(1)
+              info[n['slug']]={'url':u,'blocks':len(blocks),'nTitles':len(titles),'titles':titles,
+                               'status':st,'published':pub,'updated':upd,
+                               'img':len(re.findall(r'<img', h))}
+              print(' %2d/%d %-42s blocks=%-3s titles=%-3s' % (i,len(posts),n['slug'][:42],len(blocks),len(titles)))
+
+          json.dump(info, open(os.path.join(OUT,'postinfo.json'),'w'), ensure_ascii=False, indent=1)
+
+          # ---------- 2. Firebase: novelData (views/votes/chapterCount...) ----------
+          FB='https://firestore.googleapis.com/v1/projects/chuseoz-library/databases/(default)/documents/novelData?pageSize=300'
+          fb={'ok':False}
+          all_docs=[]; token=None; pages=0
+          while True:
+              u=FB+(('&pageToken='+urllib.parse.quote(token)) if token else '')
+              t=get(u)
+              if not t: fb['error']='fetch fail'; break
+              try: d=json.loads(t)
+              except Exception as e: fb={'ok':False,'error':'json '+str(e),'raw':t[:300]}; break
+              if 'error' in d: fb={'ok':False,'error':d['error']}; break
+              all_docs+=d.get('documents',[]); pages+=1
+              token=d.get('nextPageToken')
+              if not token or pages>10: break
+          if all_docs:
+              fb={'ok':True,'count':len(all_docs),'docs':all_docs}
+          json.dump(fb, open(os.path.join(OUT,'firebase_novelData.json'),'w'), ensure_ascii=False, indent=1)
+          print('firebase:', fb.get('ok'), fb.get('count') or fb.get('error'))
+          print('DONE')
+
+          PYEOF
+          python3 /tmp/collect.py
+      - name: Commit
+        run: |
+          set -eux
+          git config user.email "bot@chuseoz.local"; git config user.name "chuseoz bot"
+          git add -A _inbox/real || true
+          git commit -m "tmp: real post + firebase data" || echo "nothing"
+          git push
