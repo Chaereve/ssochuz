@@ -17,105 +17,105 @@ jobs:
         run: |
           mkdir -p _inbox/fb
           cat > /tmp/collect.py <<'PYEOF'
-import json, re, urllib.request, gzip, io, hashlib, sys, time
+          import json, re, urllib.request, gzip, io, hashlib, sys, time
 
-UA = {'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36','Accept-Encoding':'gzip'}
-def get(url, timeout=60):
-    req = urllib.request.Request(url, headers=UA)
-    for attempt in range(3):
-        try:
-            with urllib.request.urlopen(req, timeout=timeout) as r:
-                data = r.read()
-                if r.headers.get('Content-Encoding') == 'gzip':
-                    data = gzip.decompress(data)
-                return r.status, data
-        except Exception as e:
-            code = getattr(e, 'code', None)
-            if code in (429, 503) and attempt < 2:
-                time.sleep(3 + attempt*4); continue
-            return code or 0, str(e).encode()
-    return 0, b''
+          UA = {'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36','Accept-Encoding':'gzip'}
+          def get(url, timeout=60):
+              req = urllib.request.Request(url, headers=UA)
+              for attempt in range(3):
+                  try:
+                      with urllib.request.urlopen(req, timeout=timeout) as r:
+                          data = r.read()
+                          if r.headers.get('Content-Encoding') == 'gzip':
+                              data = gzip.decompress(data)
+                          return r.status, data
+                  except Exception as e:
+                      code = getattr(e, 'code', None)
+                      if code in (429, 503) and attempt < 2:
+                          time.sleep(3 + attempt*4); continue
+                      return code or 0, str(e).encode()
+              return 0, b''
 
-# ---------- 1. Firestore novelData ----------
-fb, token, pages = [], None, 0
-base = 'https://firestore.googleapis.com/v1/projects/chuseoz-library/databases/(default)/documents/novelData?pageSize=300'
-while pages < 12:
-    url = base + (('&pageToken=' + token) if token else '')
-    st, raw = get(url)
-    if st != 200:
-        print('FIRESTORE status', st, raw[:300]); break
-    d = json.loads(raw)
-    fb.extend(d.get('documents', []))
-    token = d.get('nextPageToken'); pages += 1
-    if not token: break
-print('firestore docs:', len(fb))
+          # ---------- 1. Firestore novelData ----------
+          fb, token, pages = [], None, 0
+          base = 'https://firestore.googleapis.com/v1/projects/chuseoz-library/databases/(default)/documents/novelData?pageSize=300'
+          while pages < 12:
+              url = base + (('&pageToken=' + token) if token else '')
+              st, raw = get(url)
+              if st != 200:
+                  print('FIRESTORE status', st, raw[:300]); break
+              d = json.loads(raw)
+              fb.extend(d.get('documents', []))
+              token = d.get('nextPageToken'); pages += 1
+              if not token: break
+          print('firestore docs:', len(fb))
 
-def fval(v):
-    for k in ('stringValue','integerValue','doubleValue','booleanValue','timestampValue','nullValue'):
-        if k in v: return v[k]
-    if 'mapValue' in v: return {k: fval(x) for k, x in v['mapValue'].get('fields', {}).items()}
-    if 'arrayValue' in v: return [fval(x) for x in v['arrayValue'].get('values', [])]
-    return None
+          def fval(v):
+              for k in ('stringValue','integerValue','doubleValue','booleanValue','timestampValue','nullValue'):
+                  if k in v: return v[k]
+              if 'mapValue' in v: return {k: fval(x) for k, x in v['mapValue'].get('fields', {}).items()}
+              if 'arrayValue' in v: return [fval(x) for x in v['arrayValue'].get('values', [])]
+              return None
 
-novels = []
-for doc in fb:
-    name = doc['name'].rsplit('/', 1)[-1]
-    f = {k: fval(v) for k, v in doc.get('fields', {}).items()}
-    f['_key'] = name
-    novels.append(f)
-json.dump(novels, open('_inbox/fb/novelData.json','w',encoding='utf-8'), ensure_ascii=False, indent=1)
-print('novel docs written; sample keys:', sorted(novels[0].keys()) if novels else None)
+          novels = []
+          for doc in fb:
+              name = doc['name'].rsplit('/', 1)[-1]
+              f = {k: fval(v) for k, v in doc.get('fields', {}).items()}
+              f['_key'] = name
+              novels.append(f)
+          json.dump(novels, open('_inbox/fb/novelData.json','w',encoding='utf-8'), ensure_ascii=False, indent=1)
+          print('novel docs written; sample keys:', sorted(novels[0].keys()) if novels else None)
 
-# ---------- 2. từng URL: số chương thật ----------
-reg = json.load(open('data/registry.json', encoding='utf-8'))
-targets = []
-for n in reg['lib']:
-    targets.append((n['slug'], n.get('url') or '', n['title']))
-# thêm card thật trên blogspot
-html = open('_inbox/live2/list-novel.html', encoding='utf-8', errors='replace').read()
-cards = []
-for b in re.split(r'<div class="truyen-card"', html)[1:]:
-    href = re.search(r'<a href="([^"]+)"', b)
-    title = re.search(r'class="truyen-card-title">(.*?)<', b, re.S)
-    if href and title:
-        cards.append((title.group(1).strip(), href.group(1)))
-json.dump(cards, open('_inbox/fb/live_cards.json','w',encoding='utf-8'), ensure_ascii=False, indent=1)
+          # ---------- 2. từng URL: số chương thật ----------
+          reg = json.load(open('data/registry.json', encoding='utf-8'))
+          targets = []
+          for n in reg['lib']:
+              targets.append((n['slug'], n.get('url') or '', n['title']))
+          # thêm card thật trên blogspot
+          html = open('_inbox/live2/list-novel.html', encoding='utf-8', errors='replace').read()
+          cards = []
+          for b in re.split(r'<div class="truyen-card"', html)[1:]:
+              href = re.search(r'<a href="([^"]+)"', b)
+              title = re.search(r'class="truyen-card-title">(.*?)<', b, re.S)
+              if href and title:
+                  cards.append((title.group(1).strip(), href.group(1)))
+          json.dump(cards, open('_inbox/fb/live_cards.json','w',encoding='utf-8'), ensure_ascii=False, indent=1)
 
-urls = []
-seen = set()
-for slug, url, title in targets:
-    u = url if url.startswith('http') else ('https://chuseoz.blogspot.com' + url if url.startswith('/') else '')
-    if u and u not in seen:
-        seen.add(u); urls.append((slug, u))
-for title, href in cards:
-    if href not in seen:
-        seen.add(href); urls.append(('card:'+title, href))
-print('urls to fetch:', len(urls))
+          urls = []
+          seen = set()
+          for slug, url, title in targets:
+              u = url if url.startswith('http') else ('https://chuseoz.blogspot.com' + url if url.startswith('/') else '')
+              if u and u not in seen:
+                  seen.add(u); urls.append((slug, u))
+          for title, href in cards:
+              if href not in seen:
+                  seen.add(href); urls.append(('card:'+title, href))
+          print('urls to fetch:', len(urls))
 
-out = {}
-for slug, u in urls:
-    st, raw = get(u, timeout=90)
-    h = raw.decode('utf-8', 'replace') if st == 200 else ''
-    titles = re.findall(r'<h2 class="chapter-title">(.*?)</h2>', h, re.S)
-    nch = len(re.findall(r'class="chapter-page(?:[ "]|\')', h))
-    body = ''
-    m = re.search(r'<div class="chapter-container">(.*?)</div>\s*</div>', h, re.S)
-    if m: body = m.group(1)
-    sup = re.search(r'<meta content="([^"]+)" property="og:title">|<meta property="og:title" content="([^"]+)"', h)
-    pt = re.search(r"<title>(.*?)</title>", h, re.S)
-    pub = re.search(r"(?:published|article:published_time)[^>]{0,80}?content=['\"]([^'\"]+)", h)
-    upd = re.search(r"(?:updated|article:modified_time|last-modified)[^>]{0,80}?content=['\"]([^'\"]+)", h)
-    out[slug] = dict(url=u, status=st, bytes=len(raw), chapterCount=nch,
-                     chapterTitles=[re.sub(r'\s+',' ',t).strip() for t in titles],
-                     ogTitle=(sup.group(1) or sup.group(2)) if sup else None,
-                     pageTitle=re.sub(r'\s+',' ',pt.group(1)).strip() if pt else None,
-                     published=pub.group(1) if pub else None, updated=upd.group(1) if upd else None,
-                     hasContainer=bool(body), containerLen=len(body))
-    print(slug, st, len(raw), 'chaps=%d' % nch)
-json.dump(out, open('_inbox/fb/posts.json','w',encoding='utf-8'), ensure_ascii=False, indent=1)
-print('DONE')
+          out = {}
+          for slug, u in urls:
+              st, raw = get(u, timeout=90)
+              h = raw.decode('utf-8', 'replace') if st == 200 else ''
+              titles = re.findall(r'<h2 class="chapter-title">(.*?)</h2>', h, re.S)
+              nch = len(re.findall(r'class="chapter-page(?:[ "]|\')', h))
+              body = ''
+              m = re.search(r'<div class="chapter-container">(.*?)</div>\s*</div>', h, re.S)
+              if m: body = m.group(1)
+              sup = re.search(r'<meta content="([^"]+)" property="og:title">|<meta property="og:title" content="([^"]+)"', h)
+              pt = re.search(r"<title>(.*?)</title>", h, re.S)
+              pub = re.search(r"(?:published|article:published_time)[^>]{0,80}?content=['\"]([^'\"]+)", h)
+              upd = re.search(r"(?:updated|article:modified_time|last-modified)[^>]{0,80}?content=['\"]([^'\"]+)", h)
+              out[slug] = dict(url=u, status=st, bytes=len(raw), chapterCount=nch,
+                               chapterTitles=[re.sub(r'\s+',' ',t).strip() for t in titles],
+                               ogTitle=(sup.group(1) or sup.group(2)) if sup else None,
+                               pageTitle=re.sub(r'\s+',' ',pt.group(1)).strip() if pt else None,
+                               published=pub.group(1) if pub else None, updated=upd.group(1) if upd else None,
+                               hasContainer=bool(body), containerLen=len(body))
+              print(slug, st, len(raw), 'chaps=%d' % nch)
+          json.dump(out, open('_inbox/fb/posts.json','w',encoding='utf-8'), ensure_ascii=False, indent=1)
+          print('DONE')
 
-PYEOF
+          PYEOF
           python3 /tmp/collect.py
       - name: Push back
         if: always()
