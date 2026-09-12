@@ -2,6 +2,13 @@
 /cz-config.js
   Cache-Control: no-cache
 
+# JS/CSS của admin đổi là thấy ngay, không cần build lại
+/cz-data.js
+  Cache-Control: no-cache
+
+/admin.js
+  Cache-Control: no-cache
+
 /data/*
   Cache-Control: public, max-age=300
 

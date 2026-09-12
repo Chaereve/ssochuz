@@ -41,16 +41,40 @@ def main():
     ap.add_argument('--only', help='chỉ đẩy 1 slug')
     ap.add_argument('--sync', action='store_true', help='gọi /api/sync để cập nhật từ blogspot')
     ap.add_argument('--health', action='store_true')
+    ap.add_argument('--auth', action='store_true', help='kiểm tra ADMIN_KEY có đúng không')
+    ap.add_argument('--verify', action='store_true',
+                    help='so sánh dữ liệu trên KV với file trong repo (không ghi gì)')
     a = ap.parse_args()
 
     if a.health:
         print(call(a.api, '/api/health', 'GET'))
+        return
+    if a.auth:
+        print(call(a.api, '/api/whoami', 'GET', a.key))
         return
     if a.sync:
         st, body = call(a.api, '/api/sync', 'POST', a.key, {})
         print(st, json.dumps(body, ensure_ascii=False)[:600]); return
     if not a.key:
         sys.exit('Thiếu --key (ADMIN_KEY của Worker)')
+
+    if a.verify:                                  # kiểm tra khớp giữa KV và repo
+        st, reg_kv = call(a.api, '/api/registry', 'GET')
+        reg_loc = json.load(open(a.registry, encoding='utf-8'))
+        print('registry: KV %s | repo %s | lib %s vs %s' % (
+            reg_kv.get('rev'), reg_loc.get('rev'),
+            len(reg_kv.get('lib', [])), len(reg_loc.get('lib', []))))
+        diff = 0
+        for n in reg_loc.get('lib', []):
+            slug = n['slug']
+            st, bk = call(a.api, '/api/book/' + slug, 'GET')
+            loc = os.path.join(a.books, slug + '.json')
+            lc = len(json.load(open(loc, encoding='utf-8')).get('chapters', [])) if os.path.exists(loc) else 0
+            kc = len(bk.get('chapters', [])) if st == 200 else -1
+            if kc != lc:
+                print('  LỆCH %-42s KV=%s repo=%s' % (slug, kc, lc)); diff += 1
+        print('xong — %d bộ lệch' % diff)
+        return
 
     if a.only:
         slug = a.only

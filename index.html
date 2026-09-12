@@ -746,6 +746,34 @@ mark.hit{background:linear-gradient(180deg,transparent 55%,var(--acc2) 55%);colo
   .chapbar{position:static;box-shadow:none;background:transparent;padding:0}
 }
 
+/* ======================================================================
+   TĂNG TỐC + SINH ĐỘNG (chuseoz 2026-09)
+   ====================================================================== */
+.controw{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:10px}
+.cont{display:flex;gap:10px;align-items:center;background:var(--surf);border:1px solid var(--bd);
+  border-radius:var(--r);padding:9px;cursor:pointer;
+  transition:transform .25s cubic-bezier(.2,.8,.3,1),border-color .25s,box-shadow .25s}
+.cont:hover{transform:translateY(-2px);border-color:var(--acc);box-shadow:0 10px 24px -18px rgba(0,0,0,.5)}
+.cont img{width:48px;height:64px;border-radius:9px;object-fit:cover;flex:0 0 auto}
+.cont .m{min-width:0;flex:1}
+.cont b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cont .st{font-size:11.5px;color:var(--mut);display:block;margin-top:2px}
+.cont .pb{height:4px;border-radius:3px;background:var(--chipbg,#eceff3);margin-top:7px;overflow:hidden}
+.cont .pb i{display:block;height:100%;background:linear-gradient(90deg,var(--acc),var(--acc2))}
+.cont .go{flex:0 0 auto;font-size:11.5px;font-weight:800;color:var(--acc);border:1px solid var(--bd);
+  border-radius:99px;padding:4px 9px}
+.sec.reveal{opacity:0;transform:translateY(14px)}
+.sec.reveal.in{opacity:1;transform:none;transition:opacity .45s ease,transform .45s cubic-bezier(.2,.8,.3,1)}
+@keyframes pop{0%{transform:scale(.86);opacity:.4}60%{transform:scale(1.06)}100%{transform:none;opacity:1}}
+.stat.pop b{animation:pop .5s cubic-bezier(.2,.8,.3,1)}
+.pg:active,.tab:active,.btn:active{transform:scale(.97)}
+.pg,.tab,.btn{transition:transform .12s ease,background .2s,border-color .2s,color .2s}
+.card img,.cont img{content-visibility:auto}
+img:not([width]){content-visibility:auto}
+@media(prefers-reduced-motion:reduce){
+  .sec.reveal{opacity:1;transform:none}
+}
+
 /* ---- bản Cloudflare: nền ngoài #app ---- */
 body.hpage{background:#fff8f5}
 body.hpage[data-dir="ctoi"]{background:#120e13}
@@ -757,7 +785,12 @@ body.hpage[data-dir="ctoi"]{background:#120e13}
 #app:not([data-view="book"]) .hview{animation:vzIn .25s cubic-bezier(.2,.7,.3,1)}
 </style>
 </head>
+<link rel="preconnect" href="https://blogger.googleusercontent.com" crossorigin>
+<link rel="dns-prefetch" href="https://cdn-local.mebmarket.com">
+<link rel="dns-prefetch" href="https://pbs.twimg.com">
+<link rel="dns-prefetch" href="https://images.justwatch.com">
 <script src="/cz-config.js"></script>
+<script src="/cz-data.js"></script>
 <script>
 /* ===== Kênh dữ liệu ============================================================
    Điền URL Worker (worker/README.md) vào đây thì web đọc dữ liệu từ Cloudflare KV:
@@ -780,6 +813,12 @@ window.CZ_STATS_DIRECT = true;
       <div class="hero">
         <div class="htimer"><i id="hTimer"></i></div>
         <div class="stage" id="stage"></div>
+      </div>
+
+      <div class="sec reveal" id="secContinue" hidden>
+        <div class="sechead"><h2><span class="ic" data-ic="play"></span>Đọc tiếp</h2>
+          <span class="right"><span class="sub" id="contSub"></span></span></div>
+        <div class="controw" id="contRow"></div>
       </div>
 
       <div class="stats" id="stats"></div>
@@ -840,7 +879,7 @@ window.CZ_STATS_DIRECT = true;
             <div class="dmeta" id="dMeta2"></div>
             <p class="hsyn" id="dSyn"></p>
             <div class="btns">
-              <button class="btn primary"><span class="ic" data-ic="play"></span>Đọc chương <span id="dReadFrom">1</span></button>
+              <button class="btn primary"><span class="ic" data-ic="play"></span>Đọc chương <span id="hReadFrom">1</span></button>
               <button class="btn ghost icon" title="Tủ truyện"><span class="ic" data-ic="bookmark"></span></button>
               <button class="btn ghost icon" title="Theo dõi"><span class="ic" data-ic="heart"></span></button>
               <button class="btn ghost icon" title="Chia sẻ"><span class="ic" data-ic="share"></span></button>
@@ -958,7 +997,7 @@ function slideHTML(n,i){
       </div>
     </div>
     <div class="media"><div class="hcover">
-      <img src="${n.slide||n.thumb||''}" alt="Bìa truyện ${esc(n.title)}" ${i===0?'':'loading="lazy"'} decoding="async" width="520" height="300">
+      <img src="${n.slide||n.thumb||''}" alt="Bìa truyện ${esc(n.title)}" ${i===0?'fetchpriority="high"':'loading="lazy" fetchpriority="low"'} decoding="async" width="520" height="300">
       ${n.is18?'<span class="h18">18+</span>':''}
       <span class="hpill"><b>${esc(n.countLabel)}</b><em>${esc(n.author)}</em></span>
     </div></div>
@@ -1044,6 +1083,89 @@ function animateCards(root){
   clearTimeout(window.__revealT);
   window.__revealT=setTimeout(()=>{document.querySelectorAll('.card:not(.in)').forEach(el=>{el.style.transitionDelay='0ms';el.classList.add('in');});},1800);
 }
+
+/* ===== KỆ "ĐỌC TIẾP" — dựng từ tiến độ đọc thật trên máy bạn ==========
+   Chỉ hiện những bộ bạn đã thực sự mở đọc; số chương lấy đúng dữ liệu,
+   không thêm bớt gì. */
+function contInfo(n){
+  try{
+    const ks=[n.postId,n.slug].filter(Boolean);
+    for(let i=0;i<ks.length;i++){
+      const ch=parseInt(localStorage.getItem('chuseoz-prog-'+ks[i])||'0',10);
+      if(ch) return {ch:ch,when:parseInt(localStorage.getItem('chuseoz-when-'+ks[i])||'0',10)};
+    }
+  }catch(e){}
+  return null;
+}
+function renderContinue(){
+  const box=$('#contRow'),sec=$('#secContinue');
+  if(!box||!sec) return;
+  const rows=[];
+  LIB.forEach(n=>{
+    const tot=parseInt(n.chapters,10)||0;
+    if(!tot||!n.url) return;
+    const p=contInfo(n); if(!p) return;
+    rows.push({n:n,ch:Math.min(p.ch,tot),tot:tot,when:p.when});
+  });
+  rows.sort((a,b)=>(b.when-a.when)||(b.ch/b.tot-a.ch/a.tot));
+  const show=rows.slice(0,8);
+  sec.hidden=!show.length;
+  if(!show.length) return;
+  if($('#contSub')) $('#contSub').textContent=show.length+' bộ đang đọc dở';
+  box.innerHTML=show.map(r=>{
+    const next=Math.min(r.tot,r.ch%r.tot+1);
+    const pct=Math.round(r.ch/r.tot*100);
+    return `<article class="cont" data-cont="${esc(r.n.slug)}" role="button" tabindex="0"
+      title="Đọc tiếp ${esc(r.n.title)} — chương ${next}">
+      <img src="${esc(r.n.thumb||r.n.slide||'')}" alt="" loading="lazy" decoding="async" width="48" height="64"
+           onerror="this.style.visibility='hidden'">
+      <div class="m"><b>${esc(r.n.title)}</b><span class="st">đã đọc ${r.ch}/${r.tot} chương</span>
+        <div class="pb"><i style="width:${pct}%"></i></div></div>
+      <span class="go">Chương ${next}</span></article>`;
+  }).join('');
+}
+function openContinue(slug){
+  const n=LIB.find(x=>x.slug===slug); if(!n||!n.url) return;
+  const tot=parseInt(n.chapters,10)||1, p=contInfo(n)||{ch:0};
+  location.href=n.url+'#page-'+Math.min(tot,p.ch%tot+1);
+}
+if($('#contRow')){
+  $('#contRow').addEventListener('click',e=>{const c=e.target.closest('[data-cont]');if(c)openContinue(c.dataset.cont);});
+  $('#contRow').addEventListener('keydown',e=>{
+    if(e.key!=='Enter'&&e.key!==' ') return;
+    const c=e.target.closest('[data-cont]'); if(c){e.preventDefault();openContinue(c.dataset.cont);}
+  });
+}
+window.renderContinue=renderContinue;
+renderContinue();
+window.addEventListener('pageshow',renderContinue);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)renderContinue();});
+
+/* ===== đếm số ở thanh thống kê (chỉ là hiệu ứng của số thật) ===== */
+function countUp(el,to){
+  if(reduce){el.textContent=to;return;}
+  const tile=el.parentNode,t0=(window.performance&&performance.now)?performance.now():Date.now(),dur=700;
+  tile.classList.add('pop');
+  (function step(t){
+    const k=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-k,3);
+    el.textContent=Math.round(to*e);
+    if(k<1) requestAnimationFrame(step); else {el.textContent=to;tile.classList.remove('pop');}
+  })(t0);
+}
+if(window.IntersectionObserver){
+  const ioStat=new IntersectionObserver(es=>{
+    es.forEach(e=>{if(e.isIntersecting){countUp(e.target,parseInt(e.target.dataset.v||'0',10)||0);ioStat.unobserve(e.target);}});
+  },{threshold:.5});
+  $$('#stats .stat b').forEach(b=>{b.dataset.v=b.textContent.trim();ioStat.observe(b);});
+}
+
+/* ===== các mục trong trang hiện dần khi cuộn tới ===== */
+(function(){
+  const secs=$$('.sec.reveal'); if(!secs.length) return;
+  if(reduce||!window.IntersectionObserver){secs.forEach(x=>x.classList.add('in'));return;}
+  const io2=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io2.unobserve(e.target);}});},{rootMargin:'0px 0px -60px 0px'});
+  secs.forEach(x=>io2.observe(x));
+})();
 
 /* ===== BXH + lịch — CHỈ dùng số liệu thật ==============================
    Số liệu (lượt đọc / bình chọn) lấy từ Firebase của site cũ qua /api/stats
@@ -1406,7 +1528,7 @@ function renderDetail(n){
   const readFrom=nowChapter(n);
   /* nút đọc do renderDetailCards() vẽ lại (kể cả khi chưa có chương) — chỉ ghi
      vào ô số chương nếu ô đó đang tồn tại, tránh lỗi khi đổi giữa 2 bộ */
-  const rf=$('#dReadFrom'); if(rf) rf.textContent=readFrom;
+  const rf=$('#hReadFrom'); if(rf) rf.textContent=readFrom;
   currentBookProgress(n,readFrom);
   $('#dSyn').textContent=n.synFull||n.syn||'';
   $('#dMeta2').innerHTML=[`<span>${esc(n.year)}</span>`,`<span>cập nhật ${esc(n.updated||'\u2014')}</span>`,
@@ -1700,7 +1822,14 @@ var _db=$('#dBack'); if(_db)_db.addEventListener('click',function(){location.has
     window.CZREG=reg||{lib:[]};
     try{var d=localStorage.getItem('chuseoz-dir');if(d)app.dataset.dir=d;}catch(e){}
     document.body.setAttribute('data-dir',app.dataset.dir||'c');
-    window.startHome();
+    /* một lỗi nhỏ không được làm trắng cả trang */
+    try{ window.startHome(); }
+    catch(e){
+      if(window.console&&console.error)console.error('[chuseoz] lỗi dựng trang chủ:',e);
+      var box=document.getElementById('grid');
+      if(box&&!box.children.length) box.innerHTML='<div class="empty">Chưa dựng được danh sách truyện. '+
+        'Tải lại trang giúp mình nhé.</div>';
+    }
   }
   var cache=null;
   try{cache=JSON.parse(localStorage.getItem('chuseoz-reg')||'null');}catch(e){}

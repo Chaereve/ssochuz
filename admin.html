@@ -3,147 +3,260 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>chuseoz · admin</title>
+<meta name="robots" content="noindex">
+<title>chuseoz · quản trị</title>
 <style>
-:root{--bg:#fff8f5;--surf:#fff;--surf2:#fff1ec;--txt:#3b2f35;--mut:#7d6e76;--acc:#ff7d9c;--acc2:#ffc48c;--bd:#ffe4e9;--r:14px}
+:root{--bg:#fbf7f8;--surf:#fff;--surf2:#fdf1f4;--tx:#2f2730;--mut:#7b6b74;--bd:#f2dfe4;--ac:#e8567f;--ac2:#ffa06b;
+ --ok:#1f9d63;--warn:#c07a12;--err:#c8382f;--r:14px;--sh:0 6px 22px -14px rgba(80,30,50,.4)}
+[data-dir="ctoi"]{--bg:#151114;--surf:#1e1820;--surf2:#251d26;--tx:#f2e9ee;--mut:#a5969f;--bd:#332a35;--sh:0 8px 26px -16px rgba(0,0,0,.7)}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
-header{position:sticky;top:0;z-index:5;background:rgba(255,248,245,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--bd)}
-header .in{max-width:1080px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px}
-.logo{font-weight:900;font-size:17px;letter-spacing:-.3px}.logo i{color:var(--acc);font-style:normal}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font:14px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;-webkit-text-size-adjust:100%}
+a{color:var(--ac)}
+.bar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+ padding:10px 16px;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--bd)}
+.logo{font-weight:900;font-size:17px;letter-spacing:-.3px}.logo i{color:var(--ac);font-style:normal}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;padding:5px 11px;border-radius:99px;
+ border:1px solid var(--bd);background:var(--surf);white-space:nowrap}
+.chip .d{width:7px;height:7px;border-radius:50%;background:#cbc2c8}
+.chip.ok{color:var(--ok)}.chip.ok .d{background:var(--ok)}
+.chip.warn{color:var(--warn)}.chip.warn .d{background:var(--warn)}
+.chip.err{color:var(--err)}.chip.err .d{background:var(--err)}
 .sp{flex:1}
-main{max-width:1080px;margin:0 auto;padding:18px 16px 80px}
-.card{background:var(--surf);border:1px solid var(--bd);border-radius:var(--r);padding:16px;margin-bottom:14px;box-shadow:0 3px 12px rgba(255,125,156,.08)}
-h2{font-size:16px;margin:0 0 10px}h3{font-size:14px;margin:14px 0 8px}
-label{display:block;font-size:12px;font-weight:700;color:var(--mut);margin:8px 0 4px}
-input,select,textarea{width:100%;padding:9px 11px;border:1px solid var(--bd);border-radius:10px;background:var(--surf2);color:var(--txt);font:inherit;outline:0}
-input:focus,textarea:focus{border-color:var(--acc)}
-textarea{min-height:120px;resize:vertical}
-.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1;min-width:140px}
-button{font:inherit;font-weight:800;border:0;border-radius:10px;padding:9px 14px;cursor:pointer;background:var(--surf2);color:var(--txt)}
-button.pri{background:linear-gradient(90deg,var(--acc),var(--acc2));color:#fff}
-button.dan{background:#ffe3e3;color:#b3261e}
-button:hover{filter:brightness(.97)}
+main{max-width:1180px;margin:0 auto;padding:16px 16px 90px}
+.card{background:var(--surf);border:1px solid var(--bd);border-radius:var(--r);padding:16px;margin-bottom:14px;box-shadow:var(--sh)}
+h1,h2,h3{margin:0 0 10px;line-height:1.3}
+h1{font-size:19px}h2{font-size:16px}h3{font-size:14px;margin-top:16px}
+p.sm,.sm{font-size:12.5px;color:var(--mut)}
+label{display:block;font-size:12px;font-weight:800;color:var(--mut);margin:10px 0 4px}
+input,select,textarea,button{font:inherit}
+input,select,textarea{width:100%;padding:9px 11px;border:1px solid var(--bd);border-radius:10px;background:var(--surf2);color:var(--tx);outline:0}
+input:focus,select:focus,textarea:focus{border-color:var(--ac);box-shadow:0 0 0 3px color-mix(in srgb,var(--ac) 18%,transparent)}
+textarea{min-height:110px;resize:vertical;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.55}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1;min-width:150px}
+button{border:0;border-radius:10px;padding:9px 14px;cursor:pointer;background:var(--surf2);color:var(--tx);font-weight:800;
+ border:1px solid transparent;transition:transform .12s ease,filter .15s,background .2s}
+button:hover{filter:brightness(.97)}button:active{transform:scale(.98)}
+button.pri{background:linear-gradient(95deg,var(--ac),var(--ac2));color:#fff}
+button.gho{background:transparent;border-color:var(--bd);color:var(--mut)}
+button.gho:hover{border-color:var(--ac);color:var(--ac)}
+button.dan{background:#fdeaea;color:var(--err)}
+[data-dir="ctoi"] button.dan{background:#3a2124}
+button[disabled]{opacity:.5;cursor:not-allowed}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
+.tabs button{border:1px solid var(--bd);background:var(--surf)}
+.tabs button.on{background:linear-gradient(95deg,var(--ac),var(--ac2));color:#fff;border-color:transparent}
 table{width:100%;border-collapse:collapse;font-size:13px}
-td,th{padding:8px 6px;border-bottom:1px dashed var(--bd);text-align:left;vertical-align:top}
-th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--mut)}
-.pill{display:inline-block;padding:2px 8px;border-radius:99px;background:var(--surf2);border:1px solid var(--bd);font-size:11px;font-weight:700}
-.msg{padding:10px 12px;border-radius:10px;background:#e8f7ee;color:#1d7752;font-weight:700;margin:10px 0;display:none}
-.msg.err{background:#ffe3e3;color:#b3261e}
-.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
-.tabs button{border:1px solid var(--bd)}
-.tabs button.on{background:linear-gradient(90deg,var(--acc),var(--acc2));color:#fff;border-color:transparent}
-.hide{display:none}
-.sm{font-size:12px;color:var(--mut)}
-.chlist{max-height:320px;overflow:auto;overscroll-behavior:contain;border:1px solid var(--bd);border-radius:10px}
-.chlist div{padding:7px 10px;border-bottom:1px dashed var(--bd);display:flex;gap:8px;align-items:center;cursor:pointer}
-.chlist div.on{background:var(--surf2)}
-.chlist div:last-child{border-bottom:0}
-.chlist .n{flex:0 0 34px;text-align:center;font-weight:800;color:var(--acc)}
-.chlist .mv{cursor:pointer;color:var(--mut);font-weight:900;padding:0 4px;border-radius:6px}
-.chlist .mv:hover{color:var(--acc);background:var(--surf2)}
-/* thêm 2026-09-12: kênh đăng KV, trạng thái, gợi ý */
-.top{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 12px}
-.badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;padding:5px 11px;border-radius:99px;
-  border:1px solid var(--bd);background:var(--surf)}
-.badge .d{width:7px;height:7px;border-radius:50%;background:#c9c2c6}
-.badge.ok .d{background:#25b06b}.badge.ok{color:#1d7752;border-color:#bfe9d3;background:#eefaf3}
-.badge.err .d{background:#e0655f}.badge.err{color:#b3261e;border-color:#f6cfcd;background:#fdeeee}
-.badge.warn .d{background:#e8a33d}.badge.warn{color:#8a5a12;border-color:#f2ddb8;background:#fdf5e7}
-button.sm2{padding:6px 11px;font-size:12.5px;border-radius:9px}
-button.gho{background:transparent;border:1px solid var(--bd);color:var(--mut)}
-button.gho:hover{border-color:var(--acc);color:var(--acc)}
-.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12.5px;color:var(--mut);margin:6px 0}
-.kv b{color:var(--txt);font-weight:700;text-align:right;white-space:nowrap}
+th,td{padding:8px 7px;text-align:left;border-bottom:1px solid var(--bd);vertical-align:middle}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--mut);position:sticky;top:0;background:var(--surf)}
+tbody tr:hover{background:var(--surf2)}
+tbody img.cv{width:34px;height:46px;border-radius:7px;object-fit:cover;background:var(--surf2);display:block}
+.pill{display:inline-block;padding:2px 8px;border-radius:99px;background:var(--surf2);border:1px solid var(--bd);font-size:11px;font-weight:800;white-space:nowrap}
+.pill.done{color:var(--ok)}.pill.soon{color:var(--warn)}.pill.run{color:var(--ac)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:10px}
+.tile{border:1px solid var(--bd);border-radius:12px;padding:12px;background:var(--surf2)}
+.tile b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
+.tile span{font-size:12px;color:var(--mut)}
+.msg{padding:10px 13px;border-radius:11px;font-weight:700;margin:10px 0;display:none;border:1px solid transparent}
+.msg.show{display:block}
+.msg.ok{background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok);border-color:color-mix(in srgb,var(--ok) 30%,transparent)}
+.msg.err{background:color-mix(in srgb,var(--err) 12%,transparent);color:var(--err);border-color:color-mix(in srgb,var(--err) 30%,transparent)}
+.msg.info{background:color-mix(in srgb,var(--ac) 10%,transparent);color:var(--tx);border-color:var(--bd)}
+.hide{display:none !important}
+.steps{counter-reset:s;padding-left:0;list-style:none;margin:8px 0}
+.steps li{counter-increment:s;position:relative;padding:6px 0 6px 30px;font-size:13px;color:var(--mut)}
+.steps li:before{content:counter(s);position:absolute;left:0;top:6px;width:20px;height:20px;border-radius:50%;background:var(--surf2);
+ border:1px solid var(--bd);color:var(--tx);font-weight:800;font-size:11px;display:grid;place-items:center}
+code{background:var(--surf2);border:1px solid var(--bd);border-radius:6px;padding:1px 6px;font-size:12px}
+.chlist{max-height:340px;overflow:auto;border:1px solid var(--bd);border-radius:11px;overscroll-behavior:contain}
+.chlist div.i{display:flex;gap:8px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--bd);cursor:pointer}
+.chlist div.i:last-child{border-bottom:0}
+.chlist div.i.on{background:var(--surf2)}
+.chlist .n{flex:0 0 36px;text-align:center;font-weight:900;color:var(--ac);font-variant-numeric:tabular-nums}
+.chlist .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chlist .mv{cursor:pointer;color:var(--mut);font-weight:900;padding:0 5px;border-radius:6px}
+.chlist .mv:hover{color:var(--ac);background:var(--surf2)}
+.savebar{position:sticky;bottom:0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 0 2px;margin-top:10px;
+ background:linear-gradient(180deg,transparent,var(--bg) 40%)}
+.dirty{font-size:12.5px;font-weight:800;color:var(--warn)}
+.toasts{position:fixed;right:14px;bottom:14px;display:flex;flex-direction:column;gap:8px;z-index:60;max-width:min(92vw,340px)}
+.toast{background:var(--tx);color:var(--bg);padding:10px 14px;border-radius:12px;font-weight:700;font-size:13px;box-shadow:var(--sh);
+ animation:tin .25s cubic-bezier(.2,.8,.3,1)}
+@keyframes tin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:12.5px;color:var(--mut);margin:8px 0}
+.kv b{color:var(--tx);text-align:right;white-space:nowrap}
 .kv span{overflow-wrap:anywhere}
-.hint{font-size:12px;color:var(--mut);margin:6px 0 0;line-height:1.6}
-.hint code{background:var(--surf2);border:1px solid var(--bd);border-radius:6px;padding:1px 5px;font-size:11.5px}
-.save-bar{position:sticky;bottom:0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
-  background:linear-gradient(180deg,transparent,var(--bg) 30%);padding:10px 0 4px;margin-top:8px}
-.dirty{font-size:12px;font-weight:800;color:#8a5a12}
-.steps{counter-reset:s;padding-left:0;list-style:none}
-.steps li{counter-increment:s;position:relative;padding:6px 0 6px 30px;font-size:12.5px;color:var(--mut)}
-.steps li:before{content:counter(s);position:absolute;left:0;top:5px;width:20px;height:20px;border-radius:50%;
-  background:var(--surf2);border:1px solid var(--bd);color:var(--txt);font-weight:800;font-size:11px;display:grid;place-items:center}
-.steps b{color:var(--txt)}
-.diffbox{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:var(--surf2);border:1px solid var(--bd);
-  border-radius:10px;padding:10px;max-height:220px;overflow:auto;white-space:pre-wrap}
-table tr.dirtyrow td:first-child:before{content:'●';color:#e8a33d;margin-right:5px;font-size:10px}
-@media(max-width:640px){.kv{grid-template-columns:1fr}.kv b{text-align:left}}
+.warnbox{border:1px solid color-mix(in srgb,var(--warn) 35%,transparent);background:color-mix(in srgb,var(--warn) 8%,transparent);
+ border-radius:12px;padding:12px;font-size:13px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.bulkbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;
+ animation:sp .7s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media(max-width:720px){
+ table,.chlist{font-size:12.5px}
+ th:nth-child(4),td:nth-child(4),th:nth-child(5),td:nth-child(5){display:none}
+ .bar{padding:8px 12px}
+}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important}}
 </style>
 </head>
 <body>
-<header><div class="in">
-  <div class="logo">chuseoz<i>.</i> <span class="pill">admin</span></div>
+<div class="bar">
+  <div class="logo">chuseoz<i>.</i> <span class="pill">quản trị</span></div>
+  <span class="chip" id="chConn"><span class="d"></span><span id="chConnTxt">chưa nối</span></span>
+  <span class="chip hide" id="chData"><span class="d"></span><span id="chDataTxt">—</span></span>
   <div class="sp"></div>
-  <span class="badge" id="chBadge"><span class="d"></span><span id="chBadgeTxt">chưa kết nối</span></span>
-  <button class="sm2 gho hide" id="btnReloadCh" title="Tải lại trang">↻</button>
-  <button id="btnLogout" class="hide sm2">Đổi kênh đăng</button>
-</div></header>
+  <button class="gho" id="btnView" title="Mở web ở tab mới">Xem web ↗</button>
+  <button class="gho" id="btnDir" title="Sáng / tối">◐</button>
+  <button class="gho hide" id="btnDisconnect">Ngắt kết nối</button>
+</div>
+
 <main>
   <div class="msg" id="msg"></div>
 
-  <section id="secLogin" class="card">
-    <h2>Kênh đăng bài</h2>
-    <p class="sm">Bản này đăng <b>trực tiếp lên Cloudflare KV</b> qua Worker: bấm Lưu là người đọc thấy ngay,
-    <b>không cần chờ GitHub build/deploy</b>. Cần đúng 2 thứ: URL Worker và ADMIN_KEY (khoá bạn tự đặt khi tạo Worker —
-    xem <code>worker/README.md</code>). Khoá chỉ giữ trong máy bạn (localStorage), không gửi đi đâu khác.</p>
-    <label>URL Worker (dạng https://chuseoz-cms.xxx.workers.dev)</label>
-    <input id="inApi" placeholder="https://chuseoz-cms.ten-ban.workers.dev" inputmode="url" autocomplete="off">
-    <label>ADMIN_KEY (khoá quản trị)</label>
-    <input id="inKey" type="password" placeholder="khoá bạn đặt trong Worker" autocomplete="off">
-    <p><button class="pri" id="btnLogin">Kiểm tra &amp; vào quản trị</button>
-       <button class="gho" id="btnTpl">Xem hướng dẫn tạo Worker</button></p>
-    <div class="msg" id="msgLogin"></div>
-    <details id="tplBox" class="hide"><summary class="sm">Hướng dẫn nhanh 5 bước (bấm để mở)</summary>
-      <ol class="steps">
-        <li>Cloudflare → <b>Workers &amp; Pages → KV</b> → tạo namespace tên <code>chuseoz</code>, copy <b>ID</b>.</li>
-        <li>Vào <b>Workers &amp; Pages → Create → Worker</b>, dán nội dung <code>worker/cms.js</code> trong repo, Deploy.</li>
-        <li>Trong Worker → <b>Settings → Variables</b>: thêm KV binding tên <code>CZ_KV</code> (chọn namespace ở bước 1) và secret <code>ADMIN_KEY</code> (tự đặt, ví dụ <code>cz-2026-bimat</code>).</li>
-        <li>Dán URL Worker + ADMIN_KEY vào ô trên rồi bấm <b>Kiểm tra &amp; vào quản trị</b>.</li>
-        <li>Bấm <b>Nạp dữ liệu lên KV</b> (một lần) để đưa 62 truyện hiện có lên KV — hoặc chạy <code>tools/push_to_kv.py</code>. Sau đó web đọc từ KV; điền URL Worker vào <code>window.CZ_API</code> trong index/reader/admin.</li>
-      </ol>
-    </details>
-  </section>rong máy bạn.</p>
+  <!-- ============ 1. KẾT NỐI ============ -->
+  <section id="scConnect">
+    <div class="card">
+      <h1>Đăng bài thẳng lên Cloudflare — không cần GitHub, không đợi build</h1>
+      <p class="sm">Bấm Lưu là dữ liệu ghi vào <b>Cloudflare KV</b> qua Worker, người đọc thấy sau 1–2 giây.
+      Trang web vẫn nằm trên Cloudflare Pages, chỉ có dữ liệu truyện là đi đường riêng (nhanh, gần như miễn phí).</p>
+      <div class="row">
+        <div><label>URL Worker</label><input id="inApi" placeholder="https://chuseoz-cms.ten-ban.workers.dev" inputmode="url" autocomplete="off"></div>
+        <div><label>ADMIN_KEY (khoá bạn đặt trong Worker)</label><input id="inKey" type="password" placeholder="chuỗi dài bạn đã đặt" autocomplete="off"></div>
+      </div>
+      <p><button class="pri" id="btnConnect">Kiểm tra &amp; kết nối</button>
+         <button class="gho" id="btnGuide">Hướng dẫn tạo Worker (2 phút)</button></p>
+      <div class="msg" id="msgConn"></div>
+      <div id="guide" class="hide">
+        <ol class="steps">
+          <li>Vào <b>dash.cloudflare.com</b> → <b>Workers &amp; Pages</b> → <b>Create</b> → <b>Worker</b> → đặt tên <code>chuseoz-cms</code> → Deploy.</li>
+          <li>Bấm <b>Edit code</b> → xoá hết → dán nội dung file <code>worker/cms.js</code> trong repo → <b>Deploy</b>.</li>
+          <li>Tab <b>Settings → Variables and Secrets</b>: thêm secret <code>ADMIN_KEY</code> = một chuỗi dài bạn tự đặt (>= 24 ký tự).</li>
+          <li>Tab <b>Bindings → Add → KV namespace</b>: tạo namespace <code>chuseoz</code>, đặt tên biến là <code>CZ_KV</code> → Deploy lại.</li>
+          <li>Copy URL Worker dán vào ô trên, rồi bấm <b>Kiểm tra &amp; kết nối</b>. Sau đó bấm <b>Nạp dữ liệu lên KV</b> (một lần) để đưa 62 bộ hiện có lên.</li>
+        </ol>
+        <p class="sm">Chi tiết đầy đủ (kèm cách dùng wrangler và cách mở số liệu Firebase): xem <code>worker/README.md</code>.</p>
+      </div>
+    </div>
   </section>
 
-  <section id="secDash" class="hide">
-    <div class="tabs">
-      <button id="tabList" class="on">Thư viện</button>
-      <button id="tabNew">+ Truyện mới</button>
-      <button id="tabSet">Cài đặt site</button>
-      <button id="tabHelp">Hướng dẫn</button>
+  <!-- ============ 2. BẢNG ĐIỀU KHIỂN ============ -->
+  <section id="scApp" class="hide">
+    <div class="tabs" id="tabs">
+      <button data-tab="list" class="on">Thư viện</button>
+      <button data-tab="quick">Đăng chương nhanh</button>
+      <button data-tab="new">Thêm truyện</button>
+      <button data-tab="edit" class="hide">Sửa truyện</button>
+      <button data-tab="stats">Số liệu thật</button>
+      <button data-tab="settings">Cài đặt &amp; đồng bộ</button>
+      <button data-tab="help">Trợ giúp</button>
     </div>
 
-    <div id="paneList">
+    <!-- Thư viện -->
+    <div id="pane-list">
       <div class="card">
         <div class="row">
-          <input id="q" placeholder="Tìm theo tên truyện, tác giả…">
-          <button id="btnRefresh">Tải lại dữ liệu</button>
-          <button class="gho" id="btnBackup">Tải bản sao lưu</button>
-          <button class="gho" id="btnRestore">Phục hồi từ file</button>
+          <div><label>Tìm truyện (tên, slug, tác giả, couple)</label><input id="q" placeholder="gõ để lọc…"></div>
+          <div><label>Tình trạng</label><select id="flStatus"><option value="">Tất cả</option></select></div>
+          <div><label>Sắp xếp</label><select id="fSort">
+            <option value="updated">Mới cập nhật trước</option>
+            <option value="name">Tên A→Z</option>
+            <option value="chapters">Nhiều chương trước</option>
+            <option value="views">Nhiều lượt đọc trước</option>
+          </select></div>
         </div>
-        <div class="top">
-          <span class="badge" id="kvBadge"><span class="d"></span><span id="kvBadgeTxt">đang kiểm tra KV…</span></span>
-          <button class="sm2" id="btnSync" title="Đọc lại trang blogspot và cập nhật số chương/tình trạng/ngày">⟳ Đồng bộ từ Blogger</button>
-          <button class="sm2" id="btnSeed" title="Đưa toàn bộ dữ liệu hiện có trong repo lên KV">↑ Nạp dữ liệu lên KV</button>
-          <span class="sp"></span>
+        <div class="bulkbar">
+          <button class="gho" id="btnSeed">↑ Nạp dữ liệu lên KV</button>
+          <button class="gho" id="btnSync">⟳ Đồng bộ từ Blogger</button>
+          <button class="gho" id="btnBackup">⤓ Sao lưu toàn bộ</button>
+          <button class="gho" id="btnRestore">⤒ Phục hồi từ file</button>
+          <input type="file" id="fileRestore" accept="application/json" class="hide">
+          <span class="sm" id="listInfo"></span>
         </div>
-        <div class="kv" id="kvInfo"></div>
-        <input type="file" id="fileRestore" accept=".json" class="hide">
-      </div>
-      <div class="card">
-        <table><thead><tr><th>#</th><th>Tên truyện</th><th>Chương</th><th>Tình trạng</th><th>Cập nhật</th><th></th></tr></thead>
-        <tbody id="tb"></tbody></table>
+        <div id="bulkArea" class="hide">
+          <div class="bulkbar">
+            <b>Đã chọn <span id="selN">0</span> bộ:</b>
+            <select id="bulkStatus" style="width:auto"><option value="">— đổi tình trạng —</option>
+              <option>Hoàn thành</option><option>Đang cập nhật</option><option>Sắp ra mắt</option></select>
+            <button class="gho" id="bulk18">Bật/tắt 18+</button>
+            <button class="gho" id="bulkApply">Áp dụng</button>
+            <button class="gho" id="bulkClear">Bỏ chọn</button>
+          </div>
+        </div>
+        <div style="max-height:62vh;overflow:auto">
+          <table><thead><tr>
+            <th style="width:34px"><input type="checkbox" id="ckAll" style="width:auto"></th>
+            <th style="width:44px">Bìa</th><th>Truyện</th><th>Chương</th><th>Tình trạng</th><th>Cập nhật</th><th></th>
+          </tr></thead><tbody id="tb"></tbody></table>
+        </div>
       </div>
     </div>
 
-    <div id="paneEdit" class="hide">
+    <!-- Đăng chương nhanh -->
+    <div id="pane-quick" class="hide">
+      <div class="card">
+        <h2>Đăng chương nhanh</h2>
+        <p class="sm">Việc hay làm nhất: chọn truyện → dán nội dung → Đăng. Chương mới sẽ nằm <b>cuối danh sách</b> (số lớn nhất).</p>
+        <label>Truyện</label><select id="qkBook"></select>
+        <div class="row">
+          <div><label>Tiêu đề chương (để trống sẽ tự đánh số)</label><input id="qkTitle" placeholder="Chương 12: …"></div>
+          <div><label>Chế độ dán</label><select id="qkMode">
+            <option value="para">Mỗi đoạn cách nhau 1 dòng trống → &lt;p&gt;</option>
+            <option value="raw">Đã là HTML sẵn — giữ nguyên</option>
+            <option value="br">Mỗi dòng là 1 đoạn</option>
+          </select></div>
+        </div>
+        <div class="tile" style="margin:10px 0">
+          <b>Hoặc lấy thẳng từ Blogger</b>
+          <p class="sm">Không cần copy–paste cả chương: dán link bài viết, hoặc để trống để lấy bài mới nhất khớp tên truyện.
+             Nội dung sẽ được làm sạch (bỏ quảng cáo, bình luận) rồi ghép vào cuối bộ.</p>
+          <input id="qkUrl" placeholder="https://chuseoz.blogspot.com/2026/09/ten-bai.html (để trống = bài mới nhất)">
+          <p><button class="gho" id="qkFetch">⬇ Lấy từ Blogger &amp; đăng</button>
+             <button class="gho" id="qkFetchReplace">⬇ Lấy &amp; thay chương cuối</button></p>
+        </div>
+        <label>Nội dung</label><textarea id="qkBody" placeholder="Dán nội dung chương vào đây…"></textarea>
+        <p class="sm" id="qkInfo"></p>
+        <p><button class="pri" id="qkPost">Đăng chương lên KV</button>
+           <button class="gho" id="qkPreview">Xem trước</button>
+           <button class="gho" id="qkClear">Xoá nội dung</button></p>
+        <div id="qkPrev" class="tile hide" style="max-height:320px;overflow:auto"></div>
+      </div>
+    </div>
+
+    <!-- Thêm truyện -->
+    <div id="pane-new" class="hide">
+      <div class="card">
+        <h2>Thêm truyện mới</h2>
+        <div class="row">
+          <div><label>Tên truyện</label><input id="nTitle"></div>
+          <div><label>Slug (để trống tự tạo)</label><input id="nSlug"></div>
+        </div>
+        <div class="row">
+          <div><label>Tác giả</label><input id="nAuthor"></div>
+          <div><label>Couple</label><input id="nCouple"></div>
+          <div><label>Năm</label><input id="nYear" placeholder="2026"></div>
+        </div>
+        <div class="row">
+          <div><label>Tình trạng</label><select id="nStatus"><option>Đang cập nhật</option><option>Sắp ra mắt</option><option>Hoàn thành</option></select></div>
+          <div><label>18+</label><select id="n18"><option value="0">Không</option><option value="1">Có</option></select></div>
+          <div><label>Chuyển thể</label><select id="nAdapt"><option value="">Chưa</option><option value="phim">Phim</option><option value="series">Series</option></select></div>
+          <div><label>Tên phim/series</label><input id="nAdaptName"></div>
+        </div>
+        <label>Link ảnh bìa</label><input id="nThumb">
+        <label>Tóm tắt</label><textarea id="nSyn" style="min-height:90px"></textarea>
+        <label>Chương đầu (dán nội dung, để trống nếu chưa có)</label><textarea id="nChap" style="min-height:120px"></textarea>
+        <p><button class="pri" id="btnNew">Tạo truyện</button></p>
+      </div>
+    </div>
+
+    <!-- Sửa truyện -->
+    <div id="pane-edit" class="hide">
       <div class="card">
         <h2 id="edHead">Sửa truyện</h2>
         <div class="row">
           <div><label>Tên truyện</label><input id="fTitle"></div>
-          <div><label>Slug (url)</label><input id="fSlug"></div>
+          <div><label>Slug</label><input id="fSlug"></div>
         </div>
         <div class="row">
           <div><label>Tác giả</label><input id="fAuthor"></div>
@@ -151,104 +264,121 @@ table tr.dirtyrow td:first-child:before{content:'●';color:#e8a33d;margin-right
           <div><label>Năm</label><input id="fYear"></div>
         </div>
         <div class="row">
-          <div><label>Tình trạng</label><select id="fStatus">
-            <option>Hoàn thành</option><option>Đang cập nhật</option><option>Sắp ra mắt</option></select></div>
-          <div><label>Nhãn đếm (vd 36/36)</label><input id="fCount"></div>
+          <div><label>Tình trạng</label><select id="fStatus"><option>Hoàn thành</option><option>Đang cập nhật</option><option>Sắp ra mắt</option></select></div>
+          <div><label>Nhãn đếm (vd 12/40)</label><input id="fCount"></div>
+          <div><label>Số chương đã đăng</label><input id="fChapters" type="number" min="0"></div>
           <div><label>18+</label><select id="f18"><option value="0">Không</option><option value="1">Có</option></select></div>
         </div>
         <div class="row">
-          <div><label>Chuyển thể</label><select id="fAdapt">
-            <option value="">Chưa chuyển thể</option><option value="series">Series</option><option value="phim">Phim điện ảnh</option></select></div>
-          <div><label>Tên phim/series (nếu trùng tên truyện để trống)</label><input id="fAdaptName"></div>
+          <div><label>Chuyển thể</label><select id="fAdapt"><option value="">Chưa</option><option value="phim">Phim</option><option value="series">Series</option></select></div>
+          <div><label>Tên phim/series</label><input id="fAdaptName"></div>
+          <div><label>Ngày cập nhật</label><input id="fUpdated" placeholder="2026-09-12"></div>
         </div>
-        <label>Link ảnh bìa (thumb/slide)</label><input id="fThumb">
-        <label>Tóm tắt ngắn</label><textarea id="fSyn"></textarea>
         <div class="row">
-          <div><label>Link bài gốc trên Blogger</label><input id="fBlog" placeholder="https://chuseoz.blogspot.com/2026/09/ten-truyen.html"></div>
-          <div><label>Post ID (nếu có)</label><input id="fPostId" placeholder="để trống cũng được"></div>
-          <div><label>Ngày cập nhật</label><input id="fUpd" placeholder="2026-09-12"></div>
+          <div><label>Link bài gốc Blogger</label><input id="fBlog" placeholder="https://chuseoz.blogspot.com/2026/09/…"></div>
+          <div><label>Post ID</label><input id="fPostId"></div>
         </div>
-        <div class="save-bar">
+        <label>Link ảnh bìa</label><input id="fThumb">
+        <label>Tóm tắt</label><textarea id="fSyn" style="min-height:110px"></textarea>
+        <div class="savebar">
           <button class="pri" id="btnSaveMeta">Lưu thông tin truyện</button>
-          <button class="gho" id="btnBackList">← Danh sách</button>
-          <span class="dirty" id="dirtyMeta"></span>
+          <button class="gho" id="btnSaveBook">Lưu chương</button>
+          <button class="gho" id="btnDelNovel">Xoá truyện</button>
+          <span class="dirty" id="dirty"></span>
         </div>
       </div>
       <div class="card">
-        <h3>Chương (<span id="chCount">0</span>)</h3>
+        <h3>Chương (<span id="chN">0</span>) <span class="sm">— mới nhất ở trên</span></h3>
+        <div class="bulkbar">
+          <button class="gho" id="chAdd">+ Thêm chương cuối</button>
+          <button class="gho" id="chPaste">Dán nhiều chương</button>
+          <button class="gho" id="chReload">Tải lại chương</button>
+        </div>
+        <div class="chlist" id="chList"></div>
+        <h3 id="chHead">Nội dung chương</h3>
+        <label>Tiêu đề</label><input id="chTitle">
+        <label>Nội dung</label><textarea id="chBody" style="min-height:300px"></textarea>
+        <div class="savebar">
+          <button class="pri" id="chSave">Lưu chương này</button>
+          <button class="gho" id="chText2Html">Văn bản thô → &lt;p&gt;</button>
+          <button class="gho" id="chPreview">Xem trước</button>
+          <button class="dan" id="chDel">Xoá chương</button>
+        </div>
+        <div id="chPrev" class="tile hide" style="max-height:340px;overflow:auto"></div>
+      </div>
+    </div>
+
+    <!-- Số liệu -->
+    <div id="pane-stats" class="hide">
+      <div class="card">
+        <h2>Số liệu thật từ Firebase</h2>
+        <p class="sm">Lượt đọc / bình chọn lấy từ project cũ <code>chuseoz-library</code> (Firestore collection <code>novelData</code>).
+        Không đọc được thì web <b>không hiện số nào</b> — tuyệt đối không bịa.</p>
+        <div class="bulkbar">
+          <button class="gho" id="stRefresh">Làm mới số liệu</button>
+          <button class="gho" id="stClear">Xoá cache trên Worker</button>
+        </div>
+        <div id="stState" class="msg info show"></div>
+        <div class="stats" id="stTiles"></div>
+        <h3>Bảng theo lượt đọc</h3>
+        <div style="max-height:50vh;overflow:auto"><table><thead><tr><th>#</th><th>Truyện</th><th>Lượt đọc</th><th>Bình chọn</th><th>Chương (Firebase)</th></tr></thead><tbody id="stTb"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- Cài đặt -->
+    <div id="pane-settings" class="hide">
+      <div class="card">
+        <h2>Cài đặt site</h2>
         <div class="row">
-          <button id="btnChAdd">+ Thêm chương cuối</button>
-          <button class="gho" id="btnChPaste">Dán hàng loạt (văn bản thô)</button>
+          <div><label>Giscus repo (bình luận, để trống nếu không dùng)</label><input id="sGiscusRepo" placeholder="user/repo"></div>
+          <div><label>Giscus repo ID</label><input id="sGiscusId"></div>
         </div>
-        <p class="hint">Danh sách hiển thị <b>chương mới nhất ở trên</b> (giống blogspot). Dùng ↑ ↓ để đổi thứ tự,
-        và chuỗi có dấu <code>---CHAP---</code> khi dán hàng loạt để tách chương.</p>
-        <div class="chlist" id="chList" style="margin-top:10px"></div>
-        <h3 id="chEdHead">Nội dung chương</h3>
-        <label>Tựa chương</label><input id="chTitle">
-        <label>HTML nội dung (mỗi đoạn một thẻ &lt;p&gt;)</label>
-        <textarea id="chHtml" style="min-height:260px"></textarea>
-        <div class="save-bar">
-          <button class="pri" id="btnSaveBook">Lưu truyện + chương</button>
-          <button class="gho" id="btnChText2Html">Văn bản thô → &lt;p&gt;</button>
-          <button class="dan" id="btnChDel">Xoá chương đang mở</button>
+        <label>Slide trang chủ (5 bộ nên chọn — chọn bộ có chương thật)</label>
+        <div class="grid" id="slidePick"></div>
+        <label style="margin-top:12px">Lịch ra chương (mỗi dòng: <code>Thứ 2, 3 | Tên truyện | ghi chú</code>)</label>
+        <textarea id="sSched" style="min-height:100px"></textarea>
+        <label>Ghi chú lịch</label><input id="sSchedNote">
+        <div class="savebar">
+          <button class="pri" id="sSave">Lưu cài đặt</button>
+          <span class="dirty" id="sDirty"></span>
         </div>
       </div>
+      <div class="card">
+        <h3>Đồng bộ &amp; bảo trì</h3>
+        <p class="sm">Đồng bộ đọc lại trang danh sách + lịch ra chương trên Blogger rồi ghép vào dữ liệu KV (không ghi đè chương bạn đã sửa).</p>
+        <div class="bulkbar">
+          <button class="gho" id="setSync">⟳ Đồng bộ Blogger ngay</button>
+          <button class="gho" id="setSeed">↑ Nạp lại /data lên KV</button>
+          <button class="gho" id="setHealth">Kiểm tra Worker</button>
+        </div>
+        <div class="kv" id="health"></div>
+      </div>
     </div>
 
-    <div id="paneNew" class="hide card">
-      <h2>Truyện mới</h2>
-      <div class="row">
-        <div><label>Tên truyện</label><input id="nTitle"></div>
-        <div><label>Slug (không dấu, gạch nối)</label><input id="nSlug"></div>
+    <!-- Trợ giúp -->
+    <div id="pane-help" class="hide">
+      <div class="card">
+        <h2>Quy trình làm việc hằng ngày</h2>
+        <ol class="steps">
+          <li><b>Viết chương mới</b> (Blogger như cũ) → mở admin → <b>Đăng chương nhanh</b> → dán → Đăng. Hoặc bấm <b>Đồng bộ từ Blogger</b> để lấy số chương/tình trạng mới.</li>
+          <li><b>Sửa thông tin bộ</b> (bìa, tóm tắt, tình trạng, 18+, couple) → <b>Thư viện → Sửa</b> → Lưu.</li>
+          <li><b>Đổi hàng loạt</b>: tick nhiều bộ ở Thư viện → chọn thao tác.</li>
+          <li><b>Sao lưu</b> định kỳ bằng nút “Sao lưu toàn bộ” (1 file JSON, phục hồi được bất cứ lúc nào).</li>
+        </ol>
+        <h3>Phím tắt</h3>
+        <p class="sm"><code>Ctrl/⌘ + S</code> lưu · <code>Ctrl/⌘ + K</code> tìm kiếm · <code>Esc</code> đóng thông báo · <code>1…7</code> chuyển mục khi con trỏ không ở ô nhập.</p>
+        <h3>Vì sao không dùng GitHub nữa?</h3>
+        <p class="sm">Mỗi lần lưu qua GitHub là một commit → Cloudflare phải build lại toàn site (tốn vài phút và tốn phút CI). Với Worker + KV, dữ liệu đi thẳng tới nơi phục vụ, không dựng lại gì cả, nên nhanh và rẻ. Code (HTML/CSS/JS) vẫn nằm trên GitHub như cũ — chỉ khi sửa code mới cần deploy.</p>
+        <h3>Số liệu đọc</h3>
+        <p class="sm">Site mới đọc số liệu thật từ Firebase cũ. Để mở: Firebase Console → Firestore → Rules → cho phép <code>read</code> với <code>novelData</code> (mẫu trong <code>worker/README.md §5</code>).</p>
       </div>
-      <div class="row">
-        <div><label>Tác giả</label><input id="nAuthor"></div>
-        <div><label>Couple</label><input id="nCouple"></div>
-        <div><label>Năm</label><input id="nYear" placeholder="2026"></div>
-      </div>
-      <div class="row">
-        <div><label>Tình trạng</label><select id="nStatus">
-          <option>Đang cập nhật</option><option>Sắp ra mắt</option><option>Hoàn thành</option></select></div>
-        <div><label>18+</label><select id="n18"><option value="0">Không</option><option value="1">Có</option></select></div>
-        <div><label>Chuyển thể</label><select id="nAdapt">
-          <option value="">Chưa chuyển thể</option><option value="series">Series</option><option value="phim">Phim điện ảnh</option></select></div>
-      </div>
-      <div class="row">
-        <div><label>Link ảnh bìa</label><input id="nThumb"></div>
-        <div><label>Tên phim/series (nếu khác tên truyện)</label><input id="nAdaptName"></div>
-        <div><label>Link bài gốc Blogger</label><input id="nBlog"></div>
-      </div>
-      <label>Tóm tắt ngắn</label><textarea id="nSyn"></textarea>
-      <label>Dán chương đầu tiên (văn bản thô, đoạn cách dòng trống)</label>
-      <textarea id="nChap" style="min-height:160px"></textarea>
-      <p><button class="pri" id="btnNew">Tạo truyện mới</button></p>
     </div>
-
-    <div id="paneSet" class="hide card">
-      <h2>Cài đặt site</h2>
-      <label>Giscus repo (vd: user/repo) — để trống nếu không dùng bình luận</label><input id="gRepo">
-      <label>Giscus repo ID (lấy từ giscus.app)</label><input id="gRepoId">
-      <p><button class="pri" id="btnSaveSet">Lưu cài đặt</button></p>
-    </div>
-
-    <div id="paneHelp" class="hide card">
-      <h2>Cách vận hành (bản KV — không cần build)</h2>
-      <ol class="steps">
-        <li><b>Đăng bài</b>: sửa xong bấm Lưu → ghi thẳng vào Cloudflare KV → người đọc thấy ngay (1–2 giây), không chờ GitHub build.</li>
-        <li><b>Chương</b>: “+ Thêm chương cuối” hoặc “Dán hàng loạt” (mỗi chương ngăn bởi dòng chỉ chứa <code>---CHAP---</code>, dòng đầu là tựa chương). Danh sách luôn xếp mới nhất lên trên.</li>
-        <li><b>Đồng bộ Blogger</b>: nút “⟳ Đồng bộ từ Blogger” đọc lại trang <code>/p/list-novel.html</code> + các bài viết, cập nhật tình trạng, số chương, ngày cập nhật, lịch ra chương — rồi ghi vào KV. Dùng khi bạn đăng chương lên blogspot mà chưa muốn nhập tay.</li>
-        <li><b>Nạp dữ liệu lên KV</b>: chạy một lần đầu để đưa 62 truyện đang có trong repo lên KV (hoặc <code>tools/push_to_kv.py</code> ở máy).</li>
-        <li><b>Sao lưu / phục hồi</b>: “Tải bản sao lưu” gộp registry + toàn bộ chương thành 1 file JSON; “Phục hồi từ file” nạp lại và ghi lên KV.</li>
-        <li><b>Ảnh bìa</b>: dùng link ảnh ngoài (CDN, imgur, drive…), không cần upload.</li>
-        <li><b>Số liệu đọc/thích</b>: lấy từ Firebase cũ (<code>chuseoz-library</code>). Cần mở quyền đọc Firestore (xem <code>worker/README.md</code> §5) thì web mới hiện số thật — chưa mở thì web <b>không hiện số</b> nào cả.</li>
-      </ol>
-      <p class="hint">Đổi tên url (slug): sửa ô Slug rồi Lưu — url cũ sẽ 404, cân nhắc chia sẻ lại link.
-      Nếu chưa cấu hình Worker, admin vẫn mở được nhưng không lưu được — hãy làm 5 bước ở trang đầu.</p>
-    </div>
-  </div>
   </section>
 </main>
+<div class="toasts" id="toasts"></div>
+
 <script src="/cz-config.js"></script>
+<script src="/cz-data.js"></script>
 <script src="/admin.js"></script>
 </body>
 </html>
