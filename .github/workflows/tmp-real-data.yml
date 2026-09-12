@@ -1,5 +1,9 @@
 name: tmp-real-data
-on: {workflow_dispatch: {}}
+on:
+  push:
+    paths:
+      - '.github/workflows/tmp-real-data.yml'
+  workflow_dispatch: {}
 permissions:
   contents: write
 jobs:
