@@ -1,0 +1,2 @@
+FS novelData?pageSize=100 -> 403 b'HTTP Error 403: Forbidden'
+FS users?pageSize=1 -> 403 b'HTTP Error 403: Forbidden'
