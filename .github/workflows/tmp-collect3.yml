@@ -1,0 +1,102 @@
+name: tmp-collect3
+on:
+  push:
+    branches: [arena/01a0968c-ssochuz]
+    paths: ['.github/workflows/tmp-collect3.yml']
+permissions:
+  contents: write
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: arena/01a0968c-ssochuz
+      - name: Collect
+        run: |
+          mkdir -p _inbox/fb
+          cat > /tmp/collect3.py <<'PYEOF'
+          import json, re, urllib.request, gzip, time, html as H
+
+          UA = {'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36','Accept-Encoding':'gzip'}
+          def get(url, timeout=60):
+              req = urllib.request.Request(url, headers=UA)
+              for a in range(3):
+                  try:
+                      with urllib.request.urlopen(req, timeout=timeout) as r:
+                          d = r.read()
+                          if r.headers.get('Content-Encoding')=='gzip': d = gzip.decompress(d)
+                          return r.status, d
+                  except Exception as e:
+                      c = getattr(e,'code',None)
+                      if c in (429,503) and a<2: time.sleep(4+a*5); continue
+                      return c or 0, str(e).encode()
+              return 0, b''
+
+          # ---------- A. feed paging: ngày + id cho 45 bài ----------
+          entries, idx = [], 1
+          while idx <= 50:
+              st, raw = get('https://chuseoz.blogspot.com/feeds/posts/summary?alt=json&max-results=5&start-index=%d' % idx)
+              if st != 200:
+                  print('feed idx', idx, 'status', st); break
+              d = json.loads(raw)
+              e = d['feed'].get('entry', [])
+              total = int(d['feed'].get('openSearch$totalResults', {'$t':0})['$t'])
+              entries.extend(e)
+              print('idx', idx, 'got', len(e), 'total', total)
+              if not e: break
+              idx += len(e)
+              time.sleep(0.6)
+          compact=[]
+          for e in entries:
+              alt = ''
+              for l in e.get('link',[]):
+                  if l.get('rel')=='alternate': alt = l['href']
+              pid = re.search(r'post-(\d+)', e['id']['$t'])
+              compact.append(dict(title=H.unescape(e['title']['$t']), url=alt, postId=(pid.group(1) if pid else None),
+                                  published=e.get('published',{}).get('$t'), updated=e.get('updated',{}).get('$t'),
+                                  categories=[c['term'] for c in e.get('category',[])]))
+          json.dump(compact, open('_inbox/fb/feed_posts.json','w',encoding='utf-8'), ensure_ascii=False, indent=1)
+          print('feed entries:', len(compact))
+
+          # ---------- B. og:* + synopsis cho 62 trang /p/ ----------
+          cards = json.load(open('_inbox/fb/live_cards.json', encoding='utf-8'))
+          pages = {}
+          for title, url in cards:
+              st, raw = get(url)
+              h = raw.decode('utf-8','replace') if st==200 else ''
+              def og(p):
+                  m = re.search(r"<meta[^>]+property=['\"]og:%s['\"][^>]+content=['\"]([^'\"]*)['\"]" % p, h) or \
+                      re.search(r"<meta[^>]+content=['\"]([^'\"]*)['\"][^>]+property=['\"]og:%s['\"]" % p, h)
+                  return H.unescape(m.group(1)) if m else None
+              # khối mô tả trong thân bài cũ
+              body = ''
+              m = re.search(r"<div class=['\"]post-body[^>]*>(.*?)<div class=['\"]post-footer", h, re.S)
+              if m: body = m.group(1)
+              txt = re.sub(r'<script.*?</script>|<style.*?</style>', ' ', body, flags=re.S)
+              txt = H.unescape(re.sub(r'<[^>]+>', ' ', txt))
+              txt = re.sub(r'\s+', ' ', txt).strip()
+              imgs = re.findall(r'<img[^>]+src=["\']([^"\']+)["\']', body)[:6]
+              pages[url] = dict(status=st, bytes=len(raw), ogTitle=og('title'), ogImage=og('image'),
+                                ogDesc=og('description'), text=txt[:1200], imgs=imgs,
+                                hasSapRaMat='Sắp ra mắt' in txt or 'sắp ra mắt' in txt)
+              print(url.rsplit('/',1)[-1], st, len(raw), (og('title') or '')[:30], '| text', len(txt))
+              time.sleep(0.5)
+          json.dump(pages, open('_inbox/fb/pages_info.json','w',encoding='utf-8'), ensure_ascii=False, indent=1)
+
+          # ---------- C. lưu 1 trang /p/ làm mẫu cấu trúc ----------
+          st, raw = get('https://chuseoz.blogspot.com/p/my-boss.html')
+          open('_inbox/fb/sample_page.html','wb').write(raw)
+          print('sample page bytes', len(raw), st)
+          print('DONE')
+
+          PYEOF
+          python3 /tmp/collect3.py
+      - name: Push back
+        if: always()
+        run: |
+          git config user.name "arena-bot"; git config user.email "bot@users.noreply.github.com"
+          git add -A _inbox/fb
+          git commit -m "tmp: feed dates/ids + page info" || echo "no change"
+          git push origin HEAD:arena/01a0968c-ssochuz || echo "push failed"
