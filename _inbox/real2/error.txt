@@ -1,5 +1,0 @@
-Traceback (most recent call last):
-  File "/tmp/collect2.py", line 31, in <module>
-    for line in open('_inbox/urlcheck.txt', encoding='utf-8'):
-                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-FileNotFoundError: [Errno 2] No such file or directory: '_inbox/urlcheck.txt'
