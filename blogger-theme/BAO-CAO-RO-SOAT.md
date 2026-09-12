@@ -73,14 +73,14 @@ Trong registry nhúng trong theme, 98 chỗ (49 giá trị × 2 block czreg) có
 Bản `index.html` / `reader.html` **chưa có** 2 fix ở mục D. Trong `index.html`:
 
 ```js
-// dòng ~1113 — thay
+// dòng 1111 — thay
 const nowChapter=n=>{try{const v=parseInt(localStorage.getItem('chuseoz-prog-'+(n.postId||n.slug))||'0',10);if(v)return v;}catch(e){}return parseInt(String((n&&n.countLabel)||'').split('/')[0],10)||1;};
 // bằng
 const nowChapter=n=>{try{const ks=[n.postId,n.slug].filter(Boolean);for(let i=0;i<ks.length;i++){const v=parseInt(localStorage.getItem('chuseoz-prog-'+ks[i])||'0',10);if(v)return v;}}catch(e){}return parseInt(String((n&&n.countLabel)||'').split('/')[0],10)||1;};
 ```
 
 ```js
-// trong renderDetail — thay
+// trong renderDetail (dòng ~1125) — thay
 const first=String(n.countLabel||'').split('/')[0];
 $('#dReadFrom').textContent=(first&&first!=='0')?first:'1';
 // bằng
