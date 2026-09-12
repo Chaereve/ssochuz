@@ -1,0 +1,39 @@
+name: tmp-fetch-theme
+on:
+  push:
+    branches: [arena/01a0968c-ssochuz]
+    paths: ['.github/workflows/tmp-fetch-theme.yml']
+permissions:
+  contents: write
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: arena/01a0968c-ssochuz
+      - name: Fetch file
+        run: |
+          URL="https://filebin.net/1xvc5ljiru6iqt8f/chuseoz-theme.xml"
+          UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127 Safari/537.36"
+          echo "--- attempt 1"
+          curl -sSL --retry 2 -A "$UA" -c /tmp/jar -b /tmp/jar -D /tmp/h1 -o /tmp/one "$URL" || true
+          head -20 /tmp/h1
+          echo "--- attempt 2"
+          curl -sSL --retry 2 -A "$UA" -c /tmp/jar -b /tmp/jar -D /tmp/h2 -o /tmp/two "$URL" || true
+          head -20 /tmp/h2
+          echo "--- attempt 3 (referer)"
+          curl -sSL --retry 2 -A "$UA" -c /tmp/jar -b /tmp/jar -e "$URL" -D /tmp/h3 -o /tmp/three "$URL" || true
+          head -20 /tmp/h3
+          echo "--- sizes"; wc -c /tmp/one /tmp/two /tmp/three
+          echo "--- head of two"; head -c 300 /tmp/two
+          mkdir -p _inbox
+          cp /tmp/two _inbox/chuseoz-theme.xml
+          wc -c _inbox/chuseoz-theme.xml
+      - name: Push back
+        run: |
+          git config user.name "arena-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add _inbox/chuseoz-theme.xml
+          git commit -m "tmp: fetched theme xml via runner" || echo "no change"
+          git push origin HEAD:arena/01a0968c-ssochuz
