@@ -40,28 +40,71 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--mut)}
 .chlist div.on{background:var(--surf2)}
 .chlist div:last-child{border-bottom:0}
 .chlist .n{flex:0 0 34px;text-align:center;font-weight:800;color:var(--acc)}
+.chlist .mv{cursor:pointer;color:var(--mut);font-weight:900;padding:0 4px;border-radius:6px}
+.chlist .mv:hover{color:var(--acc);background:var(--surf2)}
+/* thêm 2026-09-12: kênh đăng KV, trạng thái, gợi ý */
+.top{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 12px}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;padding:5px 11px;border-radius:99px;
+  border:1px solid var(--bd);background:var(--surf)}
+.badge .d{width:7px;height:7px;border-radius:50%;background:#c9c2c6}
+.badge.ok .d{background:#25b06b}.badge.ok{color:#1d7752;border-color:#bfe9d3;background:#eefaf3}
+.badge.err .d{background:#e0655f}.badge.err{color:#b3261e;border-color:#f6cfcd;background:#fdeeee}
+.badge.warn .d{background:#e8a33d}.badge.warn{color:#8a5a12;border-color:#f2ddb8;background:#fdf5e7}
+button.sm2{padding:6px 11px;font-size:12.5px;border-radius:9px}
+button.gho{background:transparent;border:1px solid var(--bd);color:var(--mut)}
+button.gho:hover{border-color:var(--acc);color:var(--acc)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12.5px;color:var(--mut);margin:6px 0}
+.kv b{color:var(--txt);font-weight:700;text-align:right;white-space:nowrap}
+.kv span{overflow-wrap:anywhere}
+.hint{font-size:12px;color:var(--mut);margin:6px 0 0;line-height:1.6}
+.hint code{background:var(--surf2);border:1px solid var(--bd);border-radius:6px;padding:1px 5px;font-size:11.5px}
+.save-bar{position:sticky;bottom:0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  background:linear-gradient(180deg,transparent,var(--bg) 30%);padding:10px 0 4px;margin-top:8px}
+.dirty{font-size:12px;font-weight:800;color:#8a5a12}
+.steps{counter-reset:s;padding-left:0;list-style:none}
+.steps li{counter-increment:s;position:relative;padding:6px 0 6px 30px;font-size:12.5px;color:var(--mut)}
+.steps li:before{content:counter(s);position:absolute;left:0;top:5px;width:20px;height:20px;border-radius:50%;
+  background:var(--surf2);border:1px solid var(--bd);color:var(--txt);font-weight:800;font-size:11px;display:grid;place-items:center}
+.steps b{color:var(--txt)}
+.diffbox{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:var(--surf2);border:1px solid var(--bd);
+  border-radius:10px;padding:10px;max-height:220px;overflow:auto;white-space:pre-wrap}
+table tr.dirtyrow td:first-child:before{content:'●';color:#e8a33d;margin-right:5px;font-size:10px}
+@media(max-width:640px){.kv{grid-template-columns:1fr}.kv b{text-align:left}}
 </style>
 </head>
 <body>
 <header><div class="in">
   <div class="logo">chuseoz<i>.</i> <span class="pill">admin</span></div>
   <div class="sp"></div>
-  <span class="sm" id="who"></span>
-  <button id="btnLogout" class="hide">Đăng xuất</button>
+  <span class="badge" id="chBadge"><span class="d"></span><span id="chBadgeTxt">chưa kết nối</span></span>
+  <button class="sm2 gho hide" id="btnReloadCh" title="Tải lại trang">↻</button>
+  <button id="btnLogout" class="hide sm2">Đổi kênh đăng</button>
 </div></header>
 <main>
   <div class="msg" id="msg"></div>
 
   <section id="secLogin" class="card">
-    <h2>Đăng nhập quản trị</h2>
-    <p class="sm">Admin lưu truyện bằng cách commit file JSON vào repo GitHub của bạn → Cloudflare Pages tự deploy (~1 phút). Mã token chỉ giữ trong máy bạn.</p>
-    <label>Repo (dạng owner/repo)</label>
-    <input id="inRepo" placeholder="vidu: username/chuseoz-web">
-    <label>GitHub Personal Access Token (quyền Contents: Read &amp; write)</label>
-    <input id="inPat" type="password" placeholder="github_pat_...">
-    <label>Nhánh (mặc định: main)</label>
-    <input id="inBr" placeholder="main">
-    <p><button class="pri" id="btnLogin">Vào quản trị</button></p>
+    <h2>Kênh đăng bài</h2>
+    <p class="sm">Bản này đăng <b>trực tiếp lên Cloudflare KV</b> qua Worker: bấm Lưu là người đọc thấy ngay,
+    <b>không cần chờ GitHub build/deploy</b>. Cần đúng 2 thứ: URL Worker và ADMIN_KEY (khoá bạn tự đặt khi tạo Worker —
+    xem <code>worker/README.md</code>). Khoá chỉ giữ trong máy bạn (localStorage), không gửi đi đâu khác.</p>
+    <label>URL Worker (dạng https://chuseoz-cms.xxx.workers.dev)</label>
+    <input id="inApi" placeholder="https://chuseoz-cms.ten-ban.workers.dev" inputmode="url" autocomplete="off">
+    <label>ADMIN_KEY (khoá quản trị)</label>
+    <input id="inKey" type="password" placeholder="khoá bạn đặt trong Worker" autocomplete="off">
+    <p><button class="pri" id="btnLogin">Kiểm tra &amp; vào quản trị</button>
+       <button class="gho" id="btnTpl">Xem hướng dẫn tạo Worker</button></p>
+    <div class="msg" id="msgLogin"></div>
+    <details id="tplBox" class="hide"><summary class="sm">Hướng dẫn nhanh 5 bước (bấm để mở)</summary>
+      <ol class="steps">
+        <li>Cloudflare → <b>Workers &amp; Pages → KV</b> → tạo namespace tên <code>chuseoz</code>, copy <b>ID</b>.</li>
+        <li>Vào <b>Workers &amp; Pages → Create → Worker</b>, dán nội dung <code>worker/cms.js</code> trong repo, Deploy.</li>
+        <li>Trong Worker → <b>Settings → Variables</b>: thêm KV binding tên <code>CZ_KV</code> (chọn namespace ở bước 1) và secret <code>ADMIN_KEY</code> (tự đặt, ví dụ <code>cz-2026-bimat</code>).</li>
+        <li>Dán URL Worker + ADMIN_KEY vào ô trên rồi bấm <b>Kiểm tra &amp; vào quản trị</b>.</li>
+        <li>Bấm <b>Nạp dữ liệu lên KV</b> (một lần) để đưa 62 truyện hiện có lên KV — hoặc chạy <code>tools/push_to_kv.py</code>. Sau đó web đọc từ KV; điền URL Worker vào <code>window.CZ_API</code> trong index/reader/admin.</li>
+      </ol>
+    </details>
+  </section>rong máy bạn.</p>
   </section>
 
   <section id="secDash" class="hide">
@@ -77,8 +120,17 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--mut)}
         <div class="row">
           <input id="q" placeholder="Tìm theo tên truyện, tác giả…">
           <button id="btnRefresh">Tải lại dữ liệu</button>
-          <button id="btnBackup">Tải bản sao lưu</button>
+          <button class="gho" id="btnBackup">Tải bản sao lưu</button>
+          <button class="gho" id="btnRestore">Phục hồi từ file</button>
         </div>
+        <div class="top">
+          <span class="badge" id="kvBadge"><span class="d"></span><span id="kvBadgeTxt">đang kiểm tra KV…</span></span>
+          <button class="sm2" id="btnSync" title="Đọc lại trang blogspot và cập nhật số chương/tình trạng/ngày">⟳ Đồng bộ từ Blogger</button>
+          <button class="sm2" id="btnSeed" title="Đưa toàn bộ dữ liệu hiện có trong repo lên KV">↑ Nạp dữ liệu lên KV</button>
+          <span class="sp"></span>
+        </div>
+        <div class="kv" id="kvInfo"></div>
+        <input type="file" id="fileRestore" accept=".json" class="hide">
       </div>
       <div class="card">
         <table><thead><tr><th>#</th><th>Tên truyện</th><th>Chương</th><th>Tình trạng</th><th>Cập nhật</th><th></th></tr></thead>
@@ -111,23 +163,35 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--mut)}
         </div>
         <label>Link ảnh bìa (thumb/slide)</label><input id="fThumb">
         <label>Tóm tắt ngắn</label><textarea id="fSyn"></textarea>
-        <p><button class="pri" id="btnSaveMeta">Lưu thông tin (commit)</button>
-           <button id="btnBackList">← Danh sách</button></p>
+        <div class="row">
+          <div><label>Link bài gốc trên Blogger</label><input id="fBlog" placeholder="https://chuseoz.blogspot.com/2026/09/ten-truyen.html"></div>
+          <div><label>Post ID (nếu có)</label><input id="fPostId" placeholder="để trống cũng được"></div>
+          <div><label>Ngày cập nhật</label><input id="fUpd" placeholder="2026-09-12"></div>
+        </div>
+        <div class="save-bar">
+          <button class="pri" id="btnSaveMeta">Lưu thông tin truyện</button>
+          <button class="gho" id="btnBackList">← Danh sách</button>
+          <span class="dirty" id="dirtyMeta"></span>
+        </div>
       </div>
       <div class="card">
         <h3>Chương (<span id="chCount">0</span>)</h3>
         <div class="row">
           <button id="btnChAdd">+ Thêm chương cuối</button>
-          <button id="btnChPaste">Dán hàng loạt (văn bản thô)</button>
+          <button class="gho" id="btnChPaste">Dán hàng loạt (văn bản thô)</button>
         </div>
+        <p class="hint">Danh sách hiển thị <b>chương mới nhất ở trên</b> (giống blogspot). Dùng ↑ ↓ để đổi thứ tự,
+        và chuỗi có dấu <code>---CHAP---</code> khi dán hàng loạt để tách chương.</p>
         <div class="chlist" id="chList" style="margin-top:10px"></div>
         <h3 id="chEdHead">Nội dung chương</h3>
         <label>Tựa chương</label><input id="chTitle">
         <label>HTML nội dung (mỗi đoạn một thẻ &lt;p&gt;)</label>
         <textarea id="chHtml" style="min-height:260px"></textarea>
-        <p><button class="pri" id="btnSaveBook">Lưu toàn bộ truyện (commit)</button>
-           <button id="btnChText2Html">Văn bản thô → &lt;p&gt;</button>
-           <button class="dan" id="btnChDel">Xoá chương đang mở</button></p>
+        <div class="save-bar">
+          <button class="pri" id="btnSaveBook">Lưu truyện + chương</button>
+          <button class="gho" id="btnChText2Html">Văn bản thô → &lt;p&gt;</button>
+          <button class="dan" id="btnChDel">Xoá chương đang mở</button>
+        </div>
       </div>
     </div>
 
@@ -139,34 +203,52 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--mut)}
       </div>
       <div class="row">
         <div><label>Tác giả</label><input id="nAuthor"></div>
+        <div><label>Couple</label><input id="nCouple"></div>
+        <div><label>Năm</label><input id="nYear" placeholder="2026"></div>
+      </div>
+      <div class="row">
         <div><label>Tình trạng</label><select id="nStatus">
           <option>Đang cập nhật</option><option>Sắp ra mắt</option><option>Hoàn thành</option></select></div>
+        <div><label>18+</label><select id="n18"><option value="0">Không</option><option value="1">Có</option></select></div>
+        <div><label>Chuyển thể</label><select id="nAdapt">
+          <option value="">Chưa chuyển thể</option><option value="series">Series</option><option value="phim">Phim điện ảnh</option></select></div>
+      </div>
+      <div class="row">
         <div><label>Link ảnh bìa</label><input id="nThumb"></div>
+        <div><label>Tên phim/series (nếu khác tên truyện)</label><input id="nAdaptName"></div>
+        <div><label>Link bài gốc Blogger</label><input id="nBlog"></div>
       </div>
       <label>Tóm tắt ngắn</label><textarea id="nSyn"></textarea>
       <label>Dán chương đầu tiên (văn bản thô, đoạn cách dòng trống)</label>
       <textarea id="nChap" style="min-height:160px"></textarea>
-      <p><button class="pri" id="btnNew">Tạo truyện (commit 2 file)</button></p>
+      <p><button class="pri" id="btnNew">Tạo truyện mới</button></p>
     </div>
 
     <div id="paneSet" class="hide card">
       <h2>Cài đặt site</h2>
       <label>Giscus repo (vd: user/repo) — để trống nếu không dùng bình luận</label><input id="gRepo">
       <label>Giscus repo ID (lấy từ giscus.app)</label><input id="gRepoId">
-      <p><button class="pri" id="btnSaveSet">Lưu cài đặt (commit)</button></p>
+      <p><button class="pri" id="btnSaveSet">Lưu cài đặt</button></p>
     </div>
 
     <div id="paneHelp" class="hide card">
-      <h2>Cách vận hành</h2>
-      <p class="sm">
-      · Mọi nút "commit" sẽ ghi file JSON vào nhánh chính của repo → Cloudflare Pages tự build lại trong ~30–60 giây.<br>
-      · Thêm chương: mở truyện → "+ Thêm chương cuối" hoặc "Dán hàng loạt" (mỗi chương ngăn cách bởi dòng chỉ chứa <b>---CHAP---</b>, dòng đầu mỗi khối là tựa chương).<br>
-      · Ảnh bìa dùng link ảnh ngoài (CDN, imgur, drive…); không cần upload file.<br>
-      · Sao lưu: nút "Tải bản sao lưu" gộp registry + toàn bộ chương thành 1 file JSON giữ trong máy.<br>
-      · Muốn đổi tên url (slug): sửa ô Slug rồi Lưu — url cũ sẽ 404, cân nhắc chia sẻ lại link.</p>
+      <h2>Cách vận hành (bản KV — không cần build)</h2>
+      <ol class="steps">
+        <li><b>Đăng bài</b>: sửa xong bấm Lưu → ghi thẳng vào Cloudflare KV → người đọc thấy ngay (1–2 giây), không chờ GitHub build.</li>
+        <li><b>Chương</b>: “+ Thêm chương cuối” hoặc “Dán hàng loạt” (mỗi chương ngăn bởi dòng chỉ chứa <code>---CHAP---</code>, dòng đầu là tựa chương). Danh sách luôn xếp mới nhất lên trên.</li>
+        <li><b>Đồng bộ Blogger</b>: nút “⟳ Đồng bộ từ Blogger” đọc lại trang <code>/p/list-novel.html</code> + các bài viết, cập nhật tình trạng, số chương, ngày cập nhật, lịch ra chương — rồi ghi vào KV. Dùng khi bạn đăng chương lên blogspot mà chưa muốn nhập tay.</li>
+        <li><b>Nạp dữ liệu lên KV</b>: chạy một lần đầu để đưa 62 truyện đang có trong repo lên KV (hoặc <code>tools/push_to_kv.py</code> ở máy).</li>
+        <li><b>Sao lưu / phục hồi</b>: “Tải bản sao lưu” gộp registry + toàn bộ chương thành 1 file JSON; “Phục hồi từ file” nạp lại và ghi lên KV.</li>
+        <li><b>Ảnh bìa</b>: dùng link ảnh ngoài (CDN, imgur, drive…), không cần upload.</li>
+        <li><b>Số liệu đọc/thích</b>: lấy từ Firebase cũ (<code>chuseoz-library</code>). Cần mở quyền đọc Firestore (xem <code>worker/README.md</code> §5) thì web mới hiện số thật — chưa mở thì web <b>không hiện số</b> nào cả.</li>
+      </ol>
+      <p class="hint">Đổi tên url (slug): sửa ô Slug rồi Lưu — url cũ sẽ 404, cân nhắc chia sẻ lại link.
+      Nếu chưa cấu hình Worker, admin vẫn mở được nhưng không lưu được — hãy làm 5 bước ở trang đầu.</p>
     </div>
+  </div>
   </section>
 </main>
+<script src="/cz-config.js"></script>
 <script src="/admin.js"></script>
 </body>
 </html>

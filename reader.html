@@ -4,6 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>chuseoz · đọc truyện</title>
+<meta name="description" content="Đọc truyện chuyển thể tại chuseoz — trình đọc có tuỳ chỉnh cỡ chữ, nền, chế độ cuộn/phân trang và lưu tiến độ."/>
+<meta property="og:type" content="article"/>
+<meta property="og:site_name" content="chuseoz"/>
+<script>
+/* canonical + og:url đúng theo truyện đang mở (SEO) */
+(function(){
+  var slug=location.pathname.split('/').filter(Boolean).pop()||'';
+  var url=location.origin+'/truyen/'+slug+'/';
+  var c=document.createElement('link');c.rel='canonical';c.href=url;document.head.appendChild(c);
+  var o=document.createElement('meta');o.setAttribute('property','og:url');o.content=url;document.head.appendChild(o);
+})();
+</script>
 <style>/* ============================================================
    CSS THEME THẬT — sinh tự động bởi theme/cssmerge.py
    KHÔNG sửa tay file này: sửa ở preview_template.html /
@@ -620,6 +632,42 @@ body.hpage[data-dir="ctoi"]{background:#120e13}
 .crumb a:hover{color:var(--acc,#ff7d9c)}
 /* footer Blogger: ẩn hẳn (locked widget nhưng không hiển thị) */
 #footer{display:none !important}
+/* ======================================================================
+   BỔ SUNG 2026-09-12: chuyển chương mượt, số liệu thật, hiệu năng đọc
+   ====================================================================== */
+@keyframes chapIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+body.rpage .rtext.chap-in{animation:chapIn .32s cubic-bezier(.2,.7,.3,1)}
+body.rpage .rtext.chap-out{opacity:0;transform:translateY(-6px);transition:opacity .13s ease,transform .13s ease}
+body.rpage .rtime{color:var(--rmut)}
+body.rpage .rtime b{color:var(--rtxt)}
+body.rpage .statsrow{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 0}
+body.rpage .statsrow span{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;
+  color:var(--rmut);background:var(--rsurf);border:1px solid var(--rbd);border-radius:99px;padding:5px 11px}
+body.rpage .statsrow b{color:var(--rtxt);font-variant-numeric:tabular-nums}
+body.rpage .statsrow .off{opacity:.75;font-weight:600}
+body.rpage .raction .rbtn.on{background:var(--racc);color:#fff;border-color:transparent}
+body.rpage .raction .rbtn.on svg{stroke:#fff}
+body.rpage .linkblog{color:var(--rmut);font-size:12.5px;text-decoration:none;border-bottom:1px dashed currentColor}
+body.rpage .linkblog:hover{color:var(--racc)}
+/* ảnh trong chương: bấm để xem lớn */
+body.rpage .rtext img{max-width:100%;height:auto;border-radius:12px;cursor:zoom-in;display:block;margin:14px auto}
+body.rpage .lightbox{position:fixed;inset:0;background:rgba(12,10,12,.92);display:none;align-items:center;justify-content:center;
+  z-index:90;padding:20px;cursor:zoom-out;backdrop-filter:blur(3px)}
+body.rpage .lightbox.on{display:flex;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+body.rpage .lightbox img{max-width:min(1100px,96vw);max-height:92vh;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+/* cuối chương: thẻ mời đọc tiếp */
+body.rpage .endcard{margin:26px 0 6px;padding:18px;border:1px solid var(--rbd);border-radius:16px;background:var(--rsurf);
+  display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;
+  animation:chapIn .35s cubic-bezier(.2,.7,.3,1)}
+body.rpage .endcard b{display:block;font-size:15px}
+body.rpage .endcard span{font-size:12.5px;color:var(--rmut)}
+body.rpage .endcard .rbtn.main{background:var(--racc);color:#fff;border-color:transparent}
+@media(prefers-reduced-motion:reduce){
+  body.rpage .rtext.chap-in,body.rpage .endcard{animation:none}
+  body.rpage *{transition-duration:.001ms !important;animation-duration:.001ms !important}
+}
+
 /* chống cuộn dây chuyền: kéo danh sách chương hết cỡ không kéo theo trang */
 .drawer .dlist,.drawer,.settings,.settings .srow,.cmts .box{overscroll-behavior:contain}
 body:has(.drawer.on){overflow:hidden}
@@ -651,6 +699,13 @@ body.hpage[data-dir="ctoi"]{background:#120e13}
 #app:not([data-view="book"]) .hview{animation:vzIn .25s cubic-bezier(.2,.7,.3,1)}
 </style>
 </head>
+<script src="/cz-config.js"></script>
+<script>
+/* Kênh dữ liệu: điền URL Worker (worker/README.md) để đọc từ Cloudflare KV ->
+   sửa chương/truyện là thấy ngay, không cần build. Để trống thì dùng /data/*.json. */
+window.CZ_API = window.CZ_API || '';
+window.CZ_STATS_DIRECT = true;
+</script>
 <body class="rpage">
 <div class="reader" id="reader" data-theme="kem" data-size="m" data-font="serif" data-width="m" data-line="m" data-justify="0" data-mode="scroll">
       <header class="rbar" id="rbar">
@@ -668,6 +723,7 @@ body.hpage[data-dir="ctoi"]{background:#120e13}
         <div class="pmeta">
           <span>Đã đọc <b id="pct">0%</b></span>
           <span id="seriesPct">Chương 1/39</span>
+          <span class="rtime" id="rTime" hidden>· khoảng <b>—</b> phút</span>
         </div>
       </header>
 
@@ -681,6 +737,7 @@ body.hpage[data-dir="ctoi"]{background:#120e13}
         <div class="crumb" id="crumb">Thư viện › Lunar Secret › <b>Chương 1</b></div>
         <h1 class="ctitle" id="cTitle">—</h1>
         <div class="cmeta" id="cMeta"></div>
+        <div class="statsrow" id="rStats"></div>
 
         <article class="rtext" id="rtext"></article>
 
@@ -692,9 +749,9 @@ body.hpage[data-dir="ctoi"]{background:#120e13}
         </div>
 
         <div class="raction">
-          <button class="rbtn" id="btnLike"><span class="ic" data-ic="thumb"></span> Thích <b id="likeN">128</b></button>
+          <button class="rbtn" id="btnLike" title="Thích (lưu trên máy bạn)"><span class="ic" data-ic="thumb"></span> Thích</button>
           <button class="rbtn" id="btnSave"><span class="ic" data-ic="bookmark"></span> Lưu vào tủ</button>
-          <button class="rbtn" id="btnComment"><span class="ic" data-ic="chat"></span> Bình luận <b id="cmtN">12</b></button>
+          <button class="rbtn" id="btnComment"><span class="ic" data-ic="chat"></span> Bình luận</button>
           <button class="rbtn" id="btnReport"><span class="ic" data-ic="alert"></span> Báo lỗi chương</button>
           <button class="rbtn" id="btnShare"><span class="ic" data-ic="share"></span> Chia sẻ</button>
         </div>
@@ -706,6 +763,7 @@ body.hpage[data-dir="ctoi"]{background:#120e13}
         </nav>
 
 
+        <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Xem ảnh"><img alt=""/></div>
         <section class='cmts' id='cmts'><h3>Bình luận</h3><div id='giscus'></div></section>
       </div>
 
@@ -798,8 +856,12 @@ const IC={
  alert:'<svg viewBox="0 0 24 24"><path d="M12 3.5 21 20H3z"/><path d="M12 9v5M12 17h.01"/></svg>',
  share:'<svg viewBox="0 0 24 24"><circle cx="18" cy="5.5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="18.5" r="2.5"/><path d="M8.3 10.8 15.7 6.7M8.3 13.2l7.4 4.1"/></svg>',
  check:'<svg viewBox="0 0 24 24"><path d="m5 13 4.5 4.5L19 7"/></svg>',
+ eye:'<svg viewBox="0 0 24 24"><path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+ clock:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>',
  x:'<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>'
 };
+/* tôn trọng lựa chọn "giảm chuyển động" của hệ điều hành */
+const reduce=!window.matchMedia||window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const CH = window.CZCH||{};   /* {n: {title, paras}} */
 const NOVEL_T=(window.CZPOST&&window.CZPOST.t)||'';
 const NOVEL_A=(window.CZNOV&&window.CZNOV.author)||'';
@@ -883,12 +945,54 @@ function renderChapter(n,pageHint){
   syncHash(n);
   try{window.CZPROG=n;localStorage.setItem('chuseoz-prog-'+((window.CZPOST&&window.CZPOST.id)||'x'),String(n));}catch(e){}
   try{ document.title=c.title+' · '+NOVEL_T+' \u2014 chuseoz'; }catch(e){}
-  $('#likeN').textContent=(120+n*7).toLocaleString('vi-VN');
   $('#btnMark').classList.toggle('on',!!marked[n]);
   renderDrawer($('#dSearch').value.trim().toLowerCase());
+  /* hiệu ứng vào chương: mờ dần chương cũ rồi hiện chương mới (tắt khi giảm chuyển động) */
+  const txt=$('#rtext');
+  txt.classList.remove('chap-in','chap-out');
+  if(!reduce){ void txt.offsetWidth; txt.classList.add('chap-in'); }
   renderBody(pageHint);
+  readingTime(c);
+  renderRealStats();
+  endCard(n);
   barWake(true);
-  window.scrollTo({top:0,behavior:'smooth'});
+  window.scrollTo({top:0,behavior:reduce?'auto':'smooth'});
+}
+/* cuối chương: thẻ mời đọc tiếp (không có ở chương cuối) */
+function endCard(n){
+  const box=$('#rtext'); if(!box) return;
+  const old=box.querySelector('.endcard'); if(old) old.remove();
+  if(n>=TOTAL) return;
+  const nx=LIST[n]||{};
+  const el=document.createElement('div');
+  el.className='endcard';
+  el.innerHTML='<div><b>Hết chương '+n+'</b><span>Tiếp theo: '+esc(nx.title||('Chương '+(n+1)))+'</span></div>'
+    +'<button class="rbtn main" type="button" id="endNext">Chương '+(n+1)+' <span class="ic" data-ic="right"></span></button>';
+  box.appendChild(el);
+  el.querySelector('#endNext').addEventListener('click',()=>go(1));
+}
+/* thời gian đọc: tính từ chính nội dung thật của chương (200 từ/phút) */
+function readingTime(c){
+  const box=$('#rTime'); if(!box) return;
+  const words=(c.paras||[]).join(' ').split(/\s+/).filter(Boolean).length;
+  if(!words){box.hidden=true;return;}
+  const mins=Math.max(1,Math.round(words/200));
+  box.hidden=false; box.innerHTML='· <b>'+mins+'</b> phút đọc';
+}
+/* số liệu THẬT của bộ truyện (lượt đọc / bình chọn) — không có thì không hiện số nào */
+function renderRealStats(){
+  const box=$('#rStats'); if(!box) return;
+  const st=(window.CZ_STATS||{}).items||{};
+  const slug=(window.CZNOV&&CZNOV.slug)||location.pathname.split('/').filter(Boolean).pop()||'';
+  const pid=(window.CZPOST&&window.CZPOST.id)||'';
+  const me=st[slug]||st[pid]||null;
+  const on=!!(window.CZ_STATS&&window.CZ_STATS.on&&me);
+  const parts=[];
+  if(on&&me.views) parts.push('<span>'+IC.eye+' <b>'+me.views.toLocaleString('vi-VN')+'</b> lượt đọc</span>');
+  if(on&&me.votes) parts.push('<span>'+IC.thumb+' <b>'+me.votes.toLocaleString('vi-VN')+'</b> phiếu</span>');
+  if(on&&me.chapterCount) parts.push('<span>'+IC.book+' <b>'+me.chapterCount+'</b> chương (theo Firebase)</span>');
+  if(window.CZNOV&&CZNOV.blog) parts.push('<span><a class="linkblog" href="'+esc(CZNOV.blog)+'" target="_blank" rel="noopener">Xem bài gốc trên Blogger</a></span>');
+  box.innerHTML=parts.length?parts.join(''):'<span class="off">Số liệu đọc thật chưa mở (Firebase đang chặn quyền đọc) — không hiển thị số ước lượng</span>';
 }
 
 /* =========================================================
@@ -1092,9 +1196,11 @@ $('#btnMark').addEventListener('click',()=>{
   toast(marked[cur]?'Đã đánh dấu chương '+cur:'Đã bỏ đánh dấu chương '+cur);
 });
 $('#btnLike').addEventListener('click',function(){
+  /* chỉ lưu trạng thái "bạn đã thích" trên máy — KHÔNG hiện số bịa.
+     Muốn số thật thì bật quyền đọc Firestore (xem worker/README.md). */
   this.classList.toggle('on');
-  const n=+$('#likeN').textContent.replace(/\D/g,'');
-  $('#likeN').textContent=(this.classList.contains('on')? n+1 : n-1).toLocaleString('vi-VN');
+  try{localStorage.setItem('chuseoz-like-'+(window.CZPOST&&CZPOST.id||NOVEL_T),this.classList.contains('on')?'1':'');}catch(e){}
+  toast(this.classList.contains('on')?'Đã thích bộ này.':'Đã bỏ thích.');
 });
 $('#btnSave').addEventListener('click',function(){this.classList.toggle('on');toast(this.classList.contains('on')?'Đã lưu vào tủ truyện':'Đã bỏ khỏi tủ truyện');});
 $('#btnShare').addEventListener('click',()=>toast('Đã copy link chương '+cur+' \u2014 dán để chia sẻ.'));
@@ -1147,6 +1253,68 @@ document.addEventListener('keydown',e=>{
   else if(e.key==='ArrowLeft'){go(-1);}
 });
 
+/* ---------- số liệu thật (Firebase) + lightbox ảnh trong chương + vuốt chuyển chương ---------- */
+(function(){
+  const API=String(window.CZ_API||'').replace(/\/+$/,'');
+  window.CZ_STATS={on:false,items:{}};
+  const direct=()=>{
+    if(!window.CZ_STATS_DIRECT) return Promise.reject(new Error('off'));
+    return fetch('https://firestore.googleapis.com/v1/projects/chuseoz-library/databases/(default)/documents/novelData?pageSize=300')
+      .then(r=>{if(!r.ok)throw new Error('firestore '+r.status);return r.json();})
+      .then(d=>{
+        const items={};
+        (d.documents||[]).forEach(doc=>{
+          const key=decodeURIComponent(doc.name.split('/').pop());
+          const f={};Object.entries(doc.fields||{}).forEach(([k,v])=>{
+            f[k]=v.integerValue!==undefined?Number(v.integerValue):v.doubleValue!==undefined?Number(v.doubleValue):
+                 v.stringValue!==undefined?v.stringValue:v.timestampValue!==undefined?v.timestampValue:null;});
+          items[key.replace(/\/+$/,'').split('/').pop().replace(/\.html$/,'')]={views:f.views||0,votes:f.votes||0,chapterCount:f.chapterCount||0};
+        });
+        if(!Object.keys(items).length) throw new Error('rỗng');
+        return {ok:true,items};
+      });
+  };
+  const p=API? fetch(API+'/api/stats').then(r=>r.json()).then(d=>{
+      if(!d||!d.ok||!d.items||!Object.keys(d.items).length) throw new Error('chưa có');
+      return d;}).catch(direct) : direct();
+  p.then(d=>{window.CZ_STATS={on:true,items:d.items||{}};
+    try{localStorage.setItem('chuseoz-stats',JSON.stringify({saved:d.saved||'',items:d.items||{}}));}catch(e){}
+    renderRealStats();
+  }).catch(()=>{
+    try{const c=JSON.parse(localStorage.getItem('chuseoz-stats')||'null');
+      if(c&&c.items&&Object.keys(c.items).length) window.CZ_STATS={on:true,items:c.items,stale:true};}catch(e){}
+    renderRealStats();
+  });
+})();
+/* ảnh trong chương: bấm để xem lớn */
+(function(){
+  const lb=$('#lightbox'), img=lb&&lb.querySelector('img');
+  if(!lb) return;
+  document.addEventListener('click',e=>{
+    const im=e.target.closest&&e.target.closest('#rtext img');
+    if(im){img.src=im.src;lb.classList.add('on');return;}
+    if(e.target===lb||e.target===img) lb.classList.remove('on');
+  });
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')lb.classList.remove('on');});
+})();
+/* vuốt ngang để chuyển chương (chỉ khi đang cuộn liên tục, không phải chế độ sách) */
+(function(){
+  let x0=null,y0=null;
+  document.addEventListener('touchstart',e=>{const t=e.touches[0];x0=t.clientX;y0=t.clientY;},{passive:true});
+  document.addEventListener('touchend',e=>{
+    if(x0==null) return;
+    const t=e.changedTouches[0],dx=t.clientX-x0,dy=t.clientY-y0;
+    const inRtext=e.target.closest&&(e.target.closest('#rtext')||e.target.closest('.rnav'));
+    if(inRtext&&st.mode!=='paged'&&Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.6) go(dx<0?1:-1);
+    x0=y0=null;
+  },{passive:true});
+})();
+/* phím tắt: ? = trợ giúp */
+document.addEventListener('keydown',e=>{
+  if(e.key==='?'&&!/INPUT|TEXTAREA/.test(e.target.tagName||''
+    )){toast('Phím tắt: ← → chuyển chương · Space xuống trang · B đánh dấu · F tập trung · Esc đóng');}
+});
+
 /* ---------- khởi động ---------- */
 const startCh=hashChapter()||1;
 renderChapter(startCh);
@@ -1182,10 +1350,19 @@ if(dl) dl.addEventListener('click',()=>{
   var parts=location.pathname.split('/').filter(Boolean);
   var slug=parts[parts.length-1]||'';
   function fail(msg){document.body.innerHTML='<div style="padding:60px 20px;text-align:center;font:15px system-ui">'+msg+'<br><a href="/" style="color:#e0557a">Về thư viện</a></div>';}
+  /* Kênh dữ liệu: có CZ_API -> đọc Cloudflare KV (sửa là thấy ngay, không build);
+     không có -> file tĩnh /data/*.json; API lỗi -> tự lùi về file tĩnh. */
+  var API=String(window.CZ_API||'').replace(/\/+$/,'');
+  function jget(u){return fetch(u,{cache:'no-store'}).then(function(r){return r.ok?r.json():null;});}
+  var pReg = API? jget(API+'/api/registry').then(function(d){return d||null;}).catch(function(){return null;})
+                : Promise.resolve(null);
+  var pBook= API? jget(API+'/api/book/'+encodeURIComponent(slug)).catch(function(){return null;})
+                : Promise.resolve(null);
   Promise.all([
-    fetch('/data/registry.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}),
-    fetch('/data/book/'+encodeURIComponent(slug)+'.json').then(function(r){return r.ok?r.json():null;})
+    pReg.then(function(d){return d||jget('/data/registry.json');}),
+    pBook.then(function(d){return d||jget('/data/book/'+encodeURIComponent(slug)+'.json');})
   ]).then(function(rs){
+    window.CZ_SRC = API? 'kv' : 'static';
     var reg=rs[0]||{lib:[]}, book=rs[1];
     if(!book){fail('Không tìm thấy truyện "'+slug+'".');return;}
     window.CZREG=reg;

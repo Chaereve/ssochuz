@@ -641,6 +641,111 @@ body.rpage .cmts h3{font-size:15px;margin-bottom:10px}
 body.rpage .cmts a{color:var(--racc,#e0557a);font-weight:700}
 body.rpage .dr .dsyn{font-size:12.5px;color:var(--rmut);margin:8px 14px 0;line-height:1.55}
 
+/* ======================================================================
+   BỔ SUNG 2026-09-12: animation mượt hơn, hiệu năng vẽ trang, thành phần mới
+   ====================================================================== */
+/* --- thanh tiến độ đọc trang + nút lên đầu trang --- */
+#sprog{position:fixed;left:0;top:0;height:3px;width:100%;z-index:60;pointer-events:none;background:transparent}
+#sprog i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--acc),var(--acc2));transition:width .12s linear}
+#toTop{position:fixed;right:14px;bottom:16px;z-index:55;width:42px;height:42px;border-radius:50%;
+  border:1px solid var(--bd);background:var(--surf);color:var(--txt);cursor:pointer;
+  display:grid;place-items:center;box-shadow:0 8px 22px rgba(0,0,0,.16);
+  opacity:0;transform:translateY(14px) scale(.9);pointer-events:none;transition:.28s cubic-bezier(.2,.8,.3,1)}
+#toTop.on{opacity:1;transform:none;pointer-events:auto}
+#toTop:hover{border-color:var(--acc);color:var(--acc);transform:translateY(-2px)}
+#toTop svg{width:18px;height:18px}
+
+/* --- header dính: đổ bóng khi cuộn --- */
+.hdr .in{transition:box-shadow .25s,background .25s,padding .25s}
+body.scrolled .hdr .in{box-shadow:0 10px 30px -18px rgba(0,0,0,.45)}
+body.scrolled .hdr{backdrop-filter:blur(12px)}
+
+/* --- vẽ tiết kiệm: phần dưới màn hình chỉ vẽ khi tới gần --- */
+.sec{content-visibility:auto;contain-intrinsic-size:auto 720px}
+#secAdapt,.sec:first-of-type{content-visibility:visible}
+
+/* --- ảnh bìa: chống nhảy layout + hiệu ứng hiện dần --- */
+.card .cv{position:relative;overflow:hidden;aspect-ratio:3/4;background:var(--chipbg)}
+.card .cv:after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(0,0,0,.35));opacity:0;transition:.3s}
+.card:hover .cv:after{opacity:1}
+.card img{width:100%;height:100%;object-fit:cover;transition:transform .5s cubic-bezier(.2,.8,.3,1),opacity .5s}
+.card:hover img{transform:scale(1.06)}
+.card img[data-loading]{opacity:0}
+.card .cv.skel{background:linear-gradient(100deg,var(--chipbg) 20%,var(--surf2) 40%,var(--chipbg) 60%);
+  background-size:220% 100%;animation:shimmer 1.35s linear infinite}
+@keyframes shimmer{to{background-position:-120% 0}}
+
+/* --- BXH: tab nguồn số liệu + số thật --- */
+.ranktabs{display:flex;gap:6px;flex-wrap:wrap}
+.ranktabs button{border:1px solid var(--bd);background:var(--surf2);color:var(--mut);font:inherit;font-size:11.5px;
+  font-weight:800;padding:4px 9px;border-radius:99px;cursor:pointer;transition:.2s}
+.ranktabs button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.ranktabs button:hover{border-color:var(--acc);color:var(--acc)}
+.rank .v{font-variant-numeric:tabular-nums;transition:color .2s}
+.rank .v.views{color:var(--mut);font-weight:700}
+.rank .bar{position:absolute;left:0;bottom:0;height:2px;border-radius:2px;background:linear-gradient(90deg,var(--acc),var(--acc2));
+  transform-origin:left;animation:barIn .5s cubic-bezier(.2,.8,.3,1)}
+@keyframes barIn{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.rank{position:relative;overflow:hidden}
+.src{font-size:11.5px;color:var(--mut);margin-top:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.src a{color:inherit}
+.src .dot{width:5px;height:5px;border-radius:50%;background:var(--acc2);display:inline-block}
+.src.err .dot{background:#e0655f}
+
+/* --- lịch ra chương: mỗi dòng bấm được --- */
+.sched{cursor:pointer;transition:background .2s,transform .2s}
+.sched:hover{background:var(--surf2);transform:translateX(2px)}
+.sched .day b{color:var(--acc)}
+
+/* --- thẻ thống kê: đếm số bằng hiệu ứng --- */
+.stat b{font-variant-numeric:tabular-nums}
+
+/* --- thẻ truyện: badge số lượt đọc thật --- */
+.card .cap.views{background:rgba(0,0,0,.55);color:#fff;border:0}
+
+/* --- chuyển view mượt (đồng bộ với theme Blogger) --- */
+@keyframes vzIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+#app[data-view="book"] .dwrap{animation:vzIn .3s cubic-bezier(.2,.7,.3,1)}
+#app:not([data-view="book"]) .hview{animation:vzIn .25s cubic-bezier(.2,.7,.3,1)}
+
+/* --- trang truyện: vòng tiến độ + toolbar dính + nút phụ --- */
+.coverbox .ring{position:absolute;right:10px;bottom:10px;width:52px;height:52px;display:grid;place-items:center;
+  background:rgba(0,0,0,.5);border-radius:50%;backdrop-filter:blur(4px)}
+.coverbox .ring svg{width:52px;height:52px;transform:rotate(-90deg)}
+.coverbox .ring circle{fill:none;stroke-width:4}
+.coverbox .ring .bg{stroke:rgba(255,255,255,.25)}
+.coverbox .ring .fg{stroke:var(--acc);stroke-linecap:round;transition:stroke-dashoffset .6s cubic-bezier(.2,.8,.3,1)}
+.coverbox .ring b{position:absolute;font-size:11px;color:#fff;font-weight:800}
+.dback{display:flex;gap:8px;align-items:center}
+.dback .ghost2{background:transparent;border:1px solid var(--bd);color:var(--mut);border-radius:10px;padding:6px 10px;
+  font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;gap:6px;align-items:center}
+.dback .ghost2:hover{border-color:var(--acc);color:var(--acc)}
+.chapbar{position:sticky;top:8px;z-index:12;background:var(--surf);border-radius:14px;padding:8px 10px;
+  box-shadow:0 8px 24px -20px rgba(0,0,0,.5)}
+.chapbar .jump{display:flex;gap:6px;align-items:center;font-size:12.5px;color:var(--mut)}
+.chapbar .jump input{width:66px;text-align:center;border:1px solid var(--bd);background:var(--surf2);border-radius:8px;
+  padding:5px 6px;font:inherit;color:var(--txt)}
+.linkblog{color:var(--mut);font-size:12.5px;text-decoration:none;border-bottom:1px dashed currentColor}
+.linkblog:hover{color:var(--acc)}
+.toast-s{position:fixed;left:50%;bottom:22px;transform:translate(-50%,14px);background:var(--txt);color:var(--bg);
+  padding:9px 14px;border-radius:99px;font-size:13px;font-weight:700;opacity:0;pointer-events:none;transition:.25s;z-index:70}
+.toast-s.on{opacity:1;transform:translate(-50%,0)}
+mark.hit{background:linear-gradient(180deg,transparent 55%,var(--acc2) 55%);color:inherit;padding:0 1px;border-radius:2px}
+
+/* --- a11y: vòng focus rõ ràng --- */
+:where(button,a,input,[tabindex]):focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:8px}
+
+/* --- tôn trọng "giảm chuyển động" --- */
+@media(prefers-reduced-motion:reduce){
+  *,*:before,*:after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
+  #app[data-view="book"] .dwrap,#app:not([data-view="book"]) .hview{animation:none}
+  #toTop{transition:none}
+}
+@media(max-width:900px){
+  #toTop{right:10px;bottom:12px;width:38px;height:38px}
+  .chapbar{position:static;box-shadow:none;background:transparent;padding:0}
+}
+
 /* ---- bản Cloudflare: nền ngoài #app ---- */
 body.hpage{background:#fff8f5}
 body.hpage[data-dir="ctoi"]{background:#120e13}
@@ -652,7 +757,19 @@ body.hpage[data-dir="ctoi"]{background:#120e13}
 #app:not([data-view="book"]) .hview{animation:vzIn .25s cubic-bezier(.2,.7,.3,1)}
 </style>
 </head>
+<script src="/cz-config.js"></script>
+<script>
+/* ===== Kênh dữ liệu ============================================================
+   Điền URL Worker (worker/README.md) vào đây thì web đọc dữ liệu từ Cloudflare KV:
+   sửa truyện trên trang quản trị là người đọc thấy ngay, KHÔNG cần build/deploy.
+   Để trống ('') thì web dùng file tĩnh /data/*.json như trước (vẫn chạy bình thường). */
+window.CZ_API = window.CZ_API || '';
+/* Số liệu đọc (views/votes) lấy từ Firebase của site cũ; nếu chưa mở quyền đọc
+   thì web KHÔNG hiện số nào cả chứ không bịa số. */
+window.CZ_STATS_DIRECT = true;
+</script>
 <body class="hpage">
+<div id="sprog" aria-hidden="true"><i></i></div>
 <div class="wrap fx site" data-dir="c" id="app"><div class="hview"><div class="hdr"><div class="in">
         <div class="logo">chuseoz<i>.</i></div>
         <nav class="nav"><a class="on">Thư viện</a><a>Movie</a><a>Series</a><a>BXH</a><a>Lịch ra chương</a></nav>
@@ -670,14 +787,16 @@ body.hpage[data-dir="ctoi"]{background:#120e13}
       <div class="sec">
         <div class="two">
           <div class="panel">
-            <div class="sechead"><h2><span class="ic" data-ic="trophy"></span>BXH bình chọn</h2>
-              <span class="right"><span class="sub">Tuần này</span></span></div>
+            <div class="sechead"><h2><span class="ic" data-ic="trophy"></span>BXH</h2>
+              <span class="right"><span class="ranktabs" id="ranktabs" role="tablist"></span></span></div>
             <div id="rank"></div>
+            <div class="src" id="rankSrc"><span class="dot"></span><span>đang tải số liệu…</span></div>
           </div>
           <div class="panel">
             <div class="sechead"><h2><span class="ic" data-ic="calendar"></span>Lịch ra chương</h2>
-              <span class="right"><span class="sub">Thứ 7 &amp; Chủ nhật</span></span></div>
+              <span class="right"><span class="sub" id="schedSub">hàng tuần</span></span></div>
             <div id="sched"></div>
+            <div class="src" id="schedSrc"><span class="dot"></span><span>đang tải…</span></div>
           </div>
         </div>
       </div>
@@ -704,11 +823,17 @@ body.hpage[data-dir="ctoi"]{background:#120e13}
         </div>
         <div class="grid" id="grid"></div>
         <div class="pager" id="pager"></div>
-      </div></div><div class="dwrap" id="dwrap">
-<div class="dback"><button class="btn ghost" id="dBack" type="button">&#8592; Th&#432; vi&#7879;n</button></div>
+      </div></div><button id="toTop" type="button" title="Lên đầu trang" aria-label="Lên đầu trang"></button><div class="toast-s" id="toastS" role="status" aria-live="polite"></div><div class="dwrap" id="dwrap">
+<div class="dback"><button class="btn ghost" id="dBack" type="button">&#8592; Th&#432; vi&#7879;n</button>
+          <a class="ghost2" id="dBlog" href="#" target="_blank" rel="noopener">Xem trên Blogger</a>
+          <button class="ghost2" id="dShare" type="button">Chia sẻ</button></div>
         <div class="crumb">Trang chủ <span class="ic" data-ic="right"></span> Thư viện <span class="ic" data-ic="right"></span> <b id="dName">—</b></div>
         <div class="dtop">
-          <div class="coverbox" id="coverbox"><img id="dCover" alt=""/><span class="c18" id="d18">18+</span>
+          <div class="coverbox" id="coverbox"><img id="dCover" alt="" width="300" height="400"/>
+            <span class="c18" id="d18">18+</span>
+            <span class="ring" id="dRing" hidden aria-hidden="true">
+              <svg viewBox="0 0 52 52"><circle class="bg" cx="26" cy="26" r="23"/><circle class="fg" id="dRingFg" cx="26" cy="26" r="23"/></svg>
+              <b id="dRingPct">0%</b></span>
             </div>
           <div class="dinfo">
             <h1 id="dTitle">—</h1>
@@ -730,6 +855,7 @@ body.hpage[data-dir="ctoi"]{background:#120e13}
           <label class="search"><span class="ic" data-ic="search"></span><input placeholder="Tìm số chương hoặc tên chương…" id="chapq"/></label>
           <button class="tab on" id="chapSortNew">Mới nhất trước</button>
           <button class="tab" id="chapSortOld">Từ đầu</button>
+          <span class="jump">tới chương <input id="chapJump" type="number" min="1" inputmode="numeric" aria-label="Nhảy tới chương"/></span>
         </div>
         <div class="chapgrid" id="chapgrid"></div>
         <div class="pager" id="chapPager"></div>
@@ -792,9 +918,15 @@ const SLIDES=(window.CZREG||{}).slides||[];
 const TODAY=new Date();
 const authorFix=a=>String(a||'').replace(/&amp;/g,'&').replace(/&nbsp;/g,' ').replace(/\s+/g,' ').trim().replace(/^salmonlover$/i,'SalmonLover');
 LIB.forEach(n=>{ n.author=authorFix(n.author); n.couple=String(n.couple||'').trim(); });
-const stCls=s=> s==='Hoàn thành'?'done' : s==='Sắp ra mắt'?'soon' : 'run';
+const stCls=s=> /hoàn thành|hoan thanh/i.test(s||'') ?'done' : /sắp ra mắt|sap ra mat|sắp dịch/i.test(s||'')?'soon' : 'run';
 const isNew=n=>n.updated && (TODAY-new Date(n.updated))/864e5<=45;
 const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* tiến độ đọc thật của 1 bộ (localStorage, ghi từ trang đọc)
+   — đặt trước HERO vì hero cần biết "đọc tiếp từ chương nào" */
+const nowChapter=n=>{try{const ks=[n.postId,n.slug].filter(Boolean);
+  for(let i=0;i<ks.length;i++){const v=parseInt(localStorage.getItem('chuseoz-prog-'+ks[i])||'0',10);if(v)return v;}
+ }catch(e){}return parseInt(String((n&&n.countLabel)||'').split('/')[0],10)||1;};
 
 /* ===== HERO ===== */
 let si=0,timer=null;const AUTO=8000;
@@ -813,8 +945,10 @@ function slideHTML(n,i){
       </div>
       <p class="hsyn">${esc(n.synFull||n.syn||'')}</p>
       <div class="btns">
-        <button class="btn primary">${ic('play')} Đọc từ đầu</button>
-        <button class="btn ghost">${ic('bookmark')} Thêm vào tủ</button>
+        ${(n.chapters>0)
+          ? `<button class="btn primary" data-read="${esc(n.slug)}">${ic('play')} Đọc từ chương ${nowChapter(n)}</button>`
+          : `<button class="btn primary" disabled style="opacity:.6">${ic('clock')} Sắp ra mắt</button>`}
+        <button class="btn ghost" data-open="${esc(n.slug)}">${ic('book')} Xem thông tin</button>
       </div>
       <div class="sctl">
         <button class="sbtn" data-mv="-1" aria-label="Bộ trước">${ic('left')}</button>
@@ -824,7 +958,7 @@ function slideHTML(n,i){
       </div>
     </div>
     <div class="media"><div class="hcover">
-      <img src="${n.slide||n.thumb||''}" alt="${esc(n.title)}" ${i===0?'':'loading="lazy"'} decoding="async">
+      <img src="${n.slide||n.thumb||''}" alt="Bìa truyện ${esc(n.title)}" ${i===0?'':'loading="lazy"'} decoding="async" width="520" height="300">
       ${n.is18?'<span class="h18">18+</span>':''}
       <span class="hpill"><b>${esc(n.countLabel)}</b><em>${esc(n.author)}</em></span>
     </div></div>
@@ -849,7 +983,12 @@ function restartTimer(){
 }
 $('#stage').addEventListener('click',e=>{
   const d=e.target.closest('[data-go]'); if(d){goSlide(+d.dataset.go);return;}
-  const m=e.target.closest('[data-mv]'); if(m){goSlide(si+(+m.dataset.mv));}
+  const m=e.target.closest('[data-mv]'); if(m){goSlide(si+(+m.dataset.mv));return;}
+  const r=e.target.closest('[data-read]');
+  if(r){ const n=LIB.find(x=>x.slug===r.dataset.read);
+    if(n&&n.chapters>0&&n.url){ location.href=n.url+'#page-'+nowChapter(n); } return; }
+  const o=e.target.closest('[data-open]');
+  if(o){ location.hash='truyen-'+encodeURIComponent(o.dataset.open); return; }
 });
 $('.hero').addEventListener('mouseenter',()=>{clearInterval(timer);$('#hTimer').style.transition='none';});
 $('.hero').addEventListener('mouseleave',restartTimer);
@@ -878,16 +1017,20 @@ function card(n){
   const parts=String(n.countLabel||'').split('/');
   const cur=parseInt(parts[0],10)||0, tot=parseInt(parts[1],10)||0;
   const pct=tot>0?Math.min(100,Math.round(cur/tot*100)):0;
-  const img=n.thumb?`<img src="${n.thumb}" alt="${esc(n.title)}" loading="lazy" decoding="async">`
-    :`<div style="aspect-ratio:3/4;background:linear-gradient(150deg,var(--chipbg),var(--surf2))"></div>`;
+  const stt=statOf(n);
+  const img=n.thumb?`<div class="cv skel"><img src="${n.thumb}" alt="${esc(n.title)}" loading="lazy" decoding="async"
+      width="300" height="400" data-loading="1" onload="this.removeAttribute('data-loading');this.parentNode.classList.remove('skel')"
+      onerror="this.parentNode.classList.remove('skel');this.remove()"></div>`
+    :`<div class="cv skel"></div>`;
+  const vcap = (STATS.on&&stt.views)?`<span class="cap views" title="Lượt đọc thật từ Firebase"><b>${stt.views.toLocaleString('vi-VN')}</b></span>`:'';
   const cap = st==='soon'
     ? `<span class="cap soon"><b>${esc(n.countLabel)}</b></span>`
     : `<span class="cap ${st}"><b>${esc(n.countLabel)}</b><i class="mini"><u style="width:${pct}%"></u></i></span>`;
   return `<article class="card" data-t="${esc(n.title)}" title="Mở trang truyện">
-    <div class="th">${img}
+    <div class="th">${img.replace('class="cv skel"','class="cv skel"')}
       <span class="stpill corner-pill ${st}"><span class="d"></span>${esc(n.status)}</span>
       <span class="corner">${isNew(n)?'<span class="cnew">MỚI</span>':''}${n.is18?'<span class="c18">18+</span>':''}</span>
-      ${cap}
+      ${cap}${vcap}
     </div>
     <h3>${esc(n.title)}</h3>
     <div class="cb">
@@ -902,15 +1045,118 @@ function animateCards(root){
   window.__revealT=setTimeout(()=>{document.querySelectorAll('.card:not(.in)').forEach(el=>{el.style.transitionDelay='0ms';el.classList.add('in');});},1800);
 }
 
-/* ===== BXH + lịch ===== */
-$('#rank').innerHTML=LIB.slice().sort((a,b)=>(b.chapters-a.chapters)||a.title.localeCompare(b.title,'vi')).slice(0,6)
- .map((n,i)=>`<div class="rank"><span class="n ${i<3?'top':''}">${i+1}</span>
-   ${n.thumb?`<img class="th" src="${n.thumb}" alt="" loading="lazy">`:''}
-   <span class="tt"><b>${esc(n.title)}</b><span>${esc(n.couple||n.author)}</span></span>
-   <span class="v">${(2400-i*317).toLocaleString('vi-VN')}</span></div>`).join('');
-$('#sched').innerHTML=[['T7','18:00','Lunar Secret','Chương 40 (ngoại truyện)'],['T7','20:30','Enemies With Benefits','Chương 60'],
- ['CN','09:00','Cô Vợ Hờ Đanh Đá Của Tôi','Chương 6'],['CN','21:00','VILLAIN STAR','Chương 33']]
- .map(([d,h,t,c])=>`<div class="sched"><div class="day">${d}<br>${h}</div><div class="info"><b>${esc(t)}</b><span>${esc(c)}</span></div></div>`).join('');
+/* ===== BXH + lịch — CHỈ dùng số liệu thật ==============================
+   Số liệu (lượt đọc / bình chọn) lấy từ Firebase của site cũ qua /api/stats
+   (hoặc gọi trực tiếp Firestore nếu có mở quyền đọc). Nếu KHÔNG lấy được thì
+   KHÔNG hiện con số nào cả và bảng xếp theo dữ liệu thật khác (chương, ngày
+   cập nhật) — tuyệt đối không bịa số như trước đây. */
+const STATS={on:false,items:{},saved:'',err:''};
+const RANK_TABS=[{k:'views',l:'Lượt đọc'},{k:'votes',l:'Bình chọn'},{k:'new',l:'Mới cập nhật'}];
+let rankBy='views';
+function statOf(n){const s=STATS.items[n.slug]||STATS.items[n.postId]||{};return s;}
+function rankList(kind){
+  const arr=LIB.slice();
+  if(kind==='views') arr.sort((a,b)=>(statOf(b).views||0)-(statOf(a).views||0)||(b.chapters-a.chapters));
+  else if(kind==='votes') arr.sort((a,b)=>(statOf(b).votes||0)-(statOf(a).votes||0)||(b.chapters-a.chapters));
+  else arr.sort((a,b)=>String(b.updated||'').localeCompare(String(a.updated||''))||(b.chapters-a.chapters));
+  return arr.slice(0,6);
+}
+function renderRank(){
+  $$('#ranktabs button').forEach(b=>{const on=b.dataset.k===rankBy;
+    b.classList.toggle('on',on);b.setAttribute('aria-selected',on?'true':'false');});
+  const list=rankList(rankBy), max=Math.max(1,...list.map(n=>{
+    const st=statOf(n); return rankBy==='views'?(st.views||0):rankBy==='votes'?(st.votes||0):(n.chapters||0);}));
+  $('#rank').innerHTML=list.map((n,i)=>{
+    const st=statOf(n);
+    let v,cls='v';
+    if(rankBy==='views'&&STATS.on) v=(st.views||0).toLocaleString('vi-VN')+' lượt';
+    else if(rankBy==='votes'&&STATS.on) v=(st.votes||0).toLocaleString('vi-VN')+' phiếu';
+    else if(rankBy==='new') v=n.updated?fmtDate(n.updated):'—';
+    else v='Chương '+n.chapters;
+    if(!STATS.on&&rankBy!=='new') cls='v views';
+    const w=rankBy==='new'?0:Math.round(100*(( rankBy==='views'?st.views||0:rankBy==='votes'?st.votes||0:n.chapters||0)/max));
+    return `<div class="rank" data-slug="${esc(n.slug)}" role="button" tabindex="0" title="Mở trang truyện: ${esc(n.title)}">
+      <span class="n ${i<3?'top':''}">${i+1}</span>
+      ${n.thumb?`<img class="th" src="${esc(n.thumb)}" alt="" loading="lazy" decoding="async" width="40" height="54">`:''}
+      <span class="tt"><b>${esc(n.title)}</b><span>${esc(n.couple||n.author)}${STATS.on&&rankBy!=='new'&&statOf(n).chapterCount?' · '+statOf(n).chapterCount+' chương':''}</span></span>
+      <span class="${cls}">${v}</span>${w?`<i class="bar" style="width:${w}%"></i>`:''}</div>`;}).join('');
+}
+function fmtDate(d){try{const x=new Date(d);return x.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit'});}catch(e){return d;}}
+function renderRankSrc(){
+  const el=$('#rankSrc'); if(!el) return;
+  if(STATS.on){
+    el.className='src';
+    el.innerHTML=`<span class="dot"></span><span>số liệu thật từ Firebase (chuseoz-library)${STATS.saved?' · cập nhật '+fmtDate(STATS.saved):''}</span>`;
+  }else{
+    el.className='src err';
+    el.innerHTML=`<span class="dot"></span><span>chưa đọc được số liệu Firebase (quyền đọc đang chặn) — xếp theo <b>${rankBy==='new'?'ngày cập nhật':'số chương'}</b>, không hiện số ước lượng</span>`;
+  }
+}
+/* lịch ra chương: lấy từ trang /p/lich-ra-chuong.html của blog */
+function renderSched(){
+  const sch=(window.CZREG||{}).schedule||{}, items=sch.items||[];
+  const el=$('#sched');
+  if(!items.length){ el.innerHTML='<div class="src"><span>Chưa có lịch — tạo trang <b>Lịch ra chương</b> trên Blogger.</span></div>';
+    $('#schedSrc').innerHTML='<span class="dot"></span><span>nguồn: trang /p/lich-ra-chuong.html</span>'; return; }
+  el.innerHTML=items.map(it=>{
+    const n=it.slug?(LIB.find(x=>x.slug===it.slug)||{}):{};
+    const chap=n.chapters?'chương '+n.chapters:'sắp lên sóng';
+    return `<div class="sched" ${allFilters(it.slug,'data-slug')} role="button" tabindex="0" title="Mở trang truyện">
+      <div class="day"><b>${esc(it.days)}</b></div>
+      <div class="info"><b>${esc(it.title)}</b><span>${esc(n.countLabel?'đã có '+n.countLabel:chap)}</span></div></div>`;}).join('');
+  const sv=$('#schedSub'); if(sv) sv.textContent=(sch.source? 'theo trang Lịch ra chương':'hàng tuần');
+  $('#schedSrc').innerHTML=`<span class="dot"></span><span>nguồn thật: <a href="${esc(sch.source||'https://chuseoz.blogspot.com/p/lich-ra-chuong.html')}" target="_blank" rel="noopener">trang Lịch ra chương</a>${sch.updated?' · cập nhật '+fmtDate(sch.updated):''} — ${esc(sch.note||'')}</span>`;
+}
+function allFilters(slug,attr){ return slug?`${attr}="${esc(slug)}"`:''; }
+$('#ranktabs').innerHTML=RANK_TABS.map(t=>`<button type="button" data-k="${t.k}" role="tab">${t.l}</button>`).join('');
+$('#ranktabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;rankBy=b.dataset.k;renderRank();renderRankSrc();});
+renderRank();renderRankSrc();renderSched();
+/* tải số liệu thật: ưu tiên Worker (đã gom + cache), không có thì gọi thẳng Firestore */
+const FB_PROJECT='chuseoz-library';
+function fbValue(v){
+  if(v==null)return null;
+  if(v.integerValue!==undefined)return Number(v.integerValue);
+  if(v.doubleValue!==undefined)return Number(v.doubleValue);
+  if(v.stringValue!==undefined)return v.stringValue;
+  if(v.booleanValue!==undefined)return v.booleanValue;
+  if(v.timestampValue!==undefined)return v.timestampValue;
+  return null;
+}
+function loadStats(){
+  const API=String(window.CZ_API||'').replace(/\/+$/,'');
+  const direct=()=>{
+    if(!window.CZ_STATS_DIRECT) return Promise.reject(new Error('tắt'));
+    return fetch(`https://firestore.googleapis.com/v1/projects/${FB_PROJECT}/databases/(default)/documents/novelData?pageSize=300`)
+      .then(r=>{if(!r.ok)throw new Error('firestore '+r.status);return r.json();})
+      .then(d=>{
+        const items={};
+        (d.documents||[]).forEach(doc=>{
+          const key=decodeURIComponent(doc.name.split('/').pop());
+          const f={};Object.entries(doc.fields||{}).forEach(([k,v])=>{f[k]=fbValue(v);});
+          const slug=key.replace(/\/+$/,'').split('/').pop().replace(/\.html$/,'');
+          items[slug]={views:f.views||0,votes:f.votes||0,updatedAt:f.updatedAt||0,chapterCount:f.chapterCount||0,
+                       lastChapterTitle:f.lastChapterTitle||'',lastChapterUrl:f.lastChapterUrl||''};
+        });
+        if(!Object.keys(items).length) throw new Error('rỗng');
+        return {ok:true,items,count:Object.keys(items).length};
+      });
+  };
+  const p = API ? fetch(API+'/api/stats').then(r=>r.json()).then(d=>{
+      if(!d||!d.ok||!d.items||!Object.keys(d.items).length) throw new Error((d&&d.error)||'chưa có số liệu');
+      return d;
+    }).catch(direct) : direct();
+  p.then(d=>{
+    STATS.on=true;STATS.items=d.items;STATS.saved=d.saved||'';
+    try{localStorage.setItem('chuseoz-stats',JSON.stringify({saved:STATS.saved,items:d.items}));}catch(e){}
+    renderRank();renderRankSrc();decorateCards();renderDetailCards();
+  }).catch(e=>{
+    STATS.on=false;STATS.err=String(e&&e.message||e);
+    try{const c=JSON.parse(localStorage.getItem('chuseoz-stats')||'null');
+      if(c&&c.items&&Object.keys(c.items).length){STATS.on=true;STATS.items=c.items;STATS.saved=c.saved||'';STATS.stale=true;}}catch(_){}
+    renderRank();renderRankSrc();
+  });
+}
+loadStats();
 
 /* ===== Phân cấp chuyển thể \u2014 dữ liệu thật từ gan-nhan-chuyen-the.csv =====
    34 bộ là series, 0 bộ là phim điện ảnh, 28 bộ chưa chuyển thể.
@@ -1096,8 +1342,14 @@ $('#fbar').addEventListener('input',e=>{
 });
 document.addEventListener('click',e=>{if(!e.target.closest('.fdrop'))$$('.fpanel').forEach(x=>x.classList.remove('open'));});
 $('#sortsel').addEventListener('change',e=>{state.sort=e.target.value;state.page=1;render();});
-$('#q1').addEventListener('input',e=>{state.q=e.target.value.trim();state.page=1;render();});
-sync();render();
+let qTimer=null;
+$('#q1').addEventListener('input',e=>{
+  const v=e.target.value.trim();
+  clearTimeout(qTimer);
+  qTimer=setTimeout(()=>{state.q=v;state.page=1;render();},140);
+});
+$('#q1').addEventListener('keydown',e=>{ if(e.key==='Escape'){e.target.value='';state.q='';state.page=1;render();} });
+sync();render();decorateCards();
 
 /* ===== trang truyện \u2014 RENDER ĐỘNG =====
    Bản trước trang chi tiết bị "đóng cứng" vào 1 bộ, nên bấm thẻ truyện hay
@@ -1108,31 +1360,74 @@ const CH_DEMO=null;
 let dCur=null,chPage=1,chSort='new',chQ='',chList=[];
 const CH_PER=12;
 const stPill=x=>`<span class="stpill ${stCls(x)}"><span class="d"></span>${esc(x)}</span>`;
-const nowChapter=n=>{try{const v=parseInt(localStorage.getItem('chuseoz-prog-'+(n.postId||n.slug))||'0',10);if(v)return v;}catch(e){}return parseInt(String((n&&n.countLabel)||'').split('/')[0],10)||1;};
+
 function adaptText(n){
   const extra=(n.adaptName&&n.adaptName!==n.title)?' · '+n.adaptName:'';
   return n.adapt==='phim' ? 'Phim điện ảnh'+extra
        : n.adapt==='series' ? 'Series'+extra
        : 'Chưa chuyển thể';
 }
+/* ---- tải nội dung/tiêu đề chương thật (có cache, lazy) -------------- */
+const BOOK_CACHE=new Map();
+function bookURL(slug){const API=String(window.CZ_API||'').replace(/\/+$/,'');
+  return (API?API+'/api/book/':'/data/book/')+encodeURIComponent(slug)+(API?'':'.json');}
+function loadBook(slug){
+  if(BOOK_CACHE.has(slug)) return Promise.resolve(BOOK_CACHE.get(slug));
+  const p=fetch(bookURL(slug))          /* để trình duyệt tự cache theo header, không ghim bản cũ */
+    .then(r=>r.ok?r.json():Promise.reject(new Error('book '+r.status)))
+    .then(b=>{BOOK_CACHE.set(slug,b);return b;})
+    .catch(e=>{BOOK_CACHE.set(slug,null);throw e;});
+  BOOK_CACHE.set(slug,p);
+  return p;
+}
+/* hiện tiêu đề chương thật thay cho "Chương N" chung chung */
+function loadChapterTitles(n){
+  if(!n||!n.slug||!(parseInt(n.chapters,10)>0)) return;
+  loadBook(n.slug).then(b=>{
+    if(!b||!b.chapters||!b.chapters.length||dCur!==n) return;
+    chList=b.chapters.map((c,i)=>String(c.t||('Chương '+(i+1))).replace(/^Chương\s*\d+\s*[:.]\s*/i,'').trim()||('Chương '+(i+1)));
+    chReal=b.chapters;
+    renderChaps();
+  }).catch(()=>{});
+}
 function renderDetail(n){
   if(!document.getElementById('dwrap'))return;
   dCur=n;
   window.CZCUR=n;
+  const bp=$('#dwrap .btn.primary');
+  if(bp){ bp.disabled=false; bp.style.opacity=''; }   /* mở bộ mới thì mở khoá trước */
   $('#dTitle').textContent=n.title;$('#dName').textContent=n.title;
   $('#dCover').src=n.slide||n.thumb||'';
+  const bl=$('#dBlog'); if(bl){ bl.href=n.blog||('https://chuseoz.blogspot.com/p/'+n.slug+'.html'); bl.title='Mở bài gốc trên Blogger'; }
+  if(n.chapters<=0){
+    $('#dChcount').textContent='chưa có chương — sắp ra mắt';
+  }
   $('#d18').style.display=n.is18?'':'none';
-  const first=String(n.countLabel||'').split('/')[0];
-  $('#dReadFrom').textContent=(first&&first!=='0')?first:'1';
+  const readFrom=nowChapter(n);
+  /* nút đọc do renderDetailCards() vẽ lại (kể cả khi chưa có chương) — chỉ ghi
+     vào ô số chương nếu ô đó đang tồn tại, tránh lỗi khi đổi giữa 2 bộ */
+  const rf=$('#dReadFrom'); if(rf) rf.textContent=readFrom;
+  currentBookProgress(n,readFrom);
   $('#dSyn').textContent=n.synFull||n.syn||'';
   $('#dMeta2').innerHTML=[`<span>${esc(n.year)}</span>`,`<span>cập nhật ${esc(n.updated||'\u2014')}</span>`,
     `<span>${esc(n.author)}</span>`,n.couple?`<span>${esc(n.couple)}</span>`:'',stPill(n.status)].join('');
   $('#dTable').innerHTML=[['Tình trạng',n.status],['Tác giả',n.author],['Couple',n.couple||'Chưa cập nhật'],
     ['Số chương',n.countLabel],['Chuyển thể',adaptText(n)]]
     .map(([k,v])=>`<div class="r"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('');
-  const tot=parseInt(String(n.countLabel||'').split('/')[1],10)||0;
-  chList=Array.from({length:Math.max(1,tot||0)},(_,i)=>'Chương '+(i+1));
-  $('#dChcount').textContent=n.countLabel+' · '+chList.length+' chương';
+  /* CHỈ liệt kê chương đã đăng thật (n.chapters). Trước đây lấy mẫu số của
+     "9/45" làm số chương nên hiện 45 mục trong đó 36 mục không đọc được. */
+  const avail=parseInt(n.chapters,10)||0;
+  const declared=parseInt(String(n.countLabel||'').split('/')[1],10)||0;
+  const tot=avail||0;
+  chList=Array.from({length:Math.max(0,tot)},(_,i)=>'Chương '+(i+1));
+  const cc=$('#dChcount');
+  if(cc){
+    if(!avail) cc.textContent='chưa có chương nào — sắp ra mắt';
+    else if(declared>avail) cc.textContent=n.countLabel+' · đã đăng '+avail+' chương đọc được';
+    else cc.textContent=n.countLabel+' · '+avail+' chương';
+  }
+  const j=$('#chapJump'); if(j){j.max=String(Math.max(1,avail));j.value='';}
+  loadChapterTitles(n);
   chPage=1;chQ='';$('#chapq').value='';
   renderChaps();
   const sameCouple=n.couple?LIB.filter(x=>x.couple===n.couple&&x.slug!==n.slug).slice(0,4):[];
@@ -1142,6 +1437,38 @@ function renderDetail(n){
   relBox(sameSeries,$('#relSeries'));
   relBox(sameCouple,$('#relCouple'));
   relBox(sameAuthor,$('#relAuthor'));
+  renderDetailCards();          /* chốt nhãn nút đọc + khoá nếu chưa có chương */
+}
+/* vòng tiến độ đọc của bộ đang mở (dựa trên tiến độ thật trong localStorage) */
+function currentBookProgress(n,from){
+  const ring=$('#dRing'),fg=$('#dRingFg'),pct=$('#dRingPct');
+  if(!ring)return;
+  const tot=parseInt(String(n.countLabel||'').split('/')[1],10)||n.chapters||0;
+  const cur=parseInt(from||0,10)||0;
+  if(!tot||!cur||cur>=tot){ring.hidden=true;return;}
+  const p=Math.max(1,Math.min(100,Math.round(cur/tot*100)));
+  const C=2*Math.PI*23;
+  ring.hidden=false;fg.setAttribute('stroke-dasharray',C.toFixed(1));
+  fg.setAttribute('stroke-dashoffset',(C*(1-p/100)).toFixed(1));
+  pct.textContent=p+'%';
+  ring.title='Bạn đã đọc tới chương '+cur+'/'+tot;
+}
+function renderDetailCards(){
+  const n=dCur; if(!n) return;
+  const b=$('#dwrap .btn.primary');
+  if(b){
+    const cur=nowChapter(n),tot=n.chapters||0;
+    if(tot<=0){
+      /* 17 bộ chỉ có trang giới thiệu trên blogspot: vẫn hiện trong thư viện
+         nhưng KHOÁ nút đọc cho tới khi có chương thật */
+      b.innerHTML='<span class="ic" data-ic="clock"></span>Chưa có chương — sắp ra mắt';
+      b.disabled=true; b.style.opacity='.55'; b.title='Truyện chưa đăng chương nào';
+    }else{
+      b.innerHTML=`<span class="ic" data-ic="play"></span>${cur>1?'Đọc tiếp chương ':'Đọc chương '}<span id="dReadFrom">${cur}</span>`;
+      b.disabled=false; b.style.opacity=''; b.title='Đọc ngay';
+    }
+  }
+  currentBookProgress(n,nowChapter(n));
 }
 function renderChaps(){
   const now=nowChapter(dCur);
@@ -1150,9 +1477,12 @@ function renderChaps(){
   const total=Math.max(1,Math.ceil(list.length/CH_PER));
   if(chPage>total) chPage=1;
   const slice=list.slice((chPage-1)*CH_PER,chPage*CH_PER);
-  $('#chapgrid').innerHTML=slice.length?slice.map(c=>`<div class="cha ${c.i===now?'now':''}" title="${c.i===now?'Bạn đang đọc tới đây':'Đọc chương '+c.i}">
-    <span class="no">${c.i}</span><span class="nm">${esc(c.t)}</span>${c.i<now?`<span class="done">${ic('check')}</span>`:''}</div>`).join('')
-    :'<div class="empty" style="grid-column:1/-1">Không tìm thấy chương nào.</div>';
+  const hi=c=>chQ?esc(c.t).replace(new RegExp('('+chQ.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','ig'),'<mark class="hit">$1</mark>'):esc(c.t);
+  $('#chapgrid').innerHTML=slice.length?slice.map(c=>`<div class="cha ${c.i===now?'now':''}" data-ch="${c.i}" title="${c.i===now?'Bạn đang đọc tới đây':'Đọc chương '+c.i}">
+    <span class="no">${c.i}</span><span class="nm">${hi(c)}</span>${c.i<now?`<span class="done">${ic('check')}</span>`:''}</div>`).join('')
+    :(dCur&&!(dCur.chapters>0)
+      ?'<div class="empty" style="grid-column:1/-1">Bộ này chưa đăng chương nào — bấm “Xem trên Blogger” để theo dõi thông báo.</div>'
+      :'<div class="empty" style="grid-column:1/-1">Không tìm thấy chương nào.</div>');
   renderPager(total,$('#chapPager'),()=>renderChaps(),{get:()=>chPage,set:v=>{chPage=v;}});
 }
 function relBox(list,el){
@@ -1189,6 +1519,131 @@ $$('.nav a').forEach(a=>a.addEventListener('click',()=>{
   const sec=$('#secAdapt'); if(sec) sec.scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});
 }));
 
+/* ======================================================================
+   UX + hiệu năng (bổ sung 2026-09-12)
+   ====================================================================== */
+/* -- toast nhỏ -- */
+let toastT=null;
+function toastS(t){const el=$('#toastS');el.textContent=t;el.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('on'),2600);}
+
+/* -- số lượt đọc thật lên từng thẻ (không vẽ lại cả lưới) -- */
+function decorateCards(){
+  if(!STATS.on) return;
+  $$('#grid .card').forEach(c=>{
+    const n=LIB.find(x=>x.title===c.dataset.t); if(!n) return;
+    const st=statOf(n); if(!st.views) return;
+    const box=c.querySelector('.th'); if(!box) return;
+    let b=box.querySelector('.cap.views');
+    if(!b){ b=document.createElement('span'); b.className='cap views'; b.title='Lượt đọc thật từ Firebase'; box.appendChild(b); }
+    b.innerHTML='<b>'+st.views.toLocaleString('vi-VN')+'</b>';
+  });
+}
+
+/* -- thanh tiến độ cuộn + nút lên đầu trang + bóng header (1 listener, có rAF) -- */
+const sprog=$('#sprog i'),toTop=$('#toTop');
+let scrollTick=false;
+function onScroll(){
+  if(scrollTick) return; scrollTick=true;
+  requestAnimationFrame(()=>{
+    const h=document.documentElement.scrollHeight-window.innerHeight;
+    const p=h>0?Math.min(100,Math.max(0,window.scrollY/h*100)):0;
+    if(sprog) sprog.style.width=p+'%';
+    if(toTop) toTop.classList.toggle('on',window.scrollY>640);
+    document.body.classList.toggle('scrolled',window.scrollY>8);
+    scrollTick=false;
+  });
+}
+window.addEventListener('scroll',onScroll,{passive:true});
+onScroll();
+toTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:reduce?'auto':'smooth'}));
+
+/* -- bấm 1 dòng BXH / lịch ra chương -> mở trang truyện -- */
+document.addEventListener('click',e=>{
+  const row=e.target.closest('.rank[data-slug],.sched[data-slug]');
+  if(row&&row.dataset.slug){ location.hash='truyen-'+encodeURIComponent(row.dataset.slug); }
+});
+document.addEventListener('keydown',e=>{
+  const row=e.target.closest&&e.target.closest('.rank[data-slug],.sched[data-slug]');
+  if(row&&(e.key==='Enter'||e.key===' ')){e.preventDefault();location.hash='truyen-'+encodeURIComponent(row.dataset.slug);}
+});
+
+/* -- nhớ vị trí cuộn của thư viện để quay lại đúng chỗ -- */
+let libScroll=0;
+window.addEventListener('hashchange',()=>{
+  if(location.hash.startsWith('#truyen-')) libScroll=window.scrollY;
+  else setTimeout(()=>window.scrollTo({top:libScroll,behavior:'auto'}),30);
+});
+
+/* -- phím tắt: / tìm kiếm, Esc về thư viện, ←/→ chuyển slide -- */
+document.addEventListener('keydown',e=>{
+  const typing=/^(INPUT|TEXTAREA|SELECT)$/.test((e.target.tagName||''));
+  if(e.key==='/'&&!typing){e.preventDefault();$('#q1').focus();return;}
+  if(e.key==='Escape'){
+    if($('#app').dataset.view==='book'){location.hash='';return;}
+    if(document.activeElement&&document.activeElement.id==='q1'){document.activeElement.blur();}
+    return;
+  }
+  if(typing) return;
+  if(e.key==='ArrowRight'&&!$('#app').dataset.view){goSlide(si+1);}
+  if(e.key==='ArrowLeft'&&!$('#app').dataset.view){goSlide(si-1);}
+});
+
+/* -- hero: vuốt ngang trên điện thoại -- */
+(function(){
+  let x0=null,y0=null;
+  const st=$('#stage');
+  st.addEventListener('touchstart',e=>{const t=e.touches[0];x0=t.clientX;y0=t.clientY;},{passive:true});
+  st.addEventListener('touchend',e=>{
+    if(x0==null) return;
+    const t=e.changedTouches[0],dx=t.clientX-x0,dy=t.clientY-y0;
+    if(Math.abs(dx)>44&&Math.abs(dx)>Math.abs(dy)) goSlide(si+(dx<0?1:-1));
+    x0=y0=null;
+  },{passive:true});
+})();
+
+/* -- ô "tới chương": nhảy đúng trang chứa chương đó -- */
+(function(){
+  const j=$('#chapJump'); if(!j) return;
+  const go=()=>{
+    const want=parseInt(j.value,10); if(!want||!chList.length) return;
+    j.value='';
+    chQ='';$('#chapq').value='';
+    chSort='old';$('#chapSortOld').classList.add('on');$('#chapSortNew').classList.remove('on');
+    chPage=Math.max(1,Math.ceil(Math.min(want,chList.length)/CH_PER));
+    renderChaps();
+    const el=$('#chapgrid .cha[data-ch="'+Math.min(want,chList.length)+'"]');
+    if(el){el.scrollIntoView({behavior:reduce?'auto':'smooth',block:'center'});
+      el.style.transition='box-shadow .2s';el.style.boxShadow='0 0 0 3px var(--acc)';
+      setTimeout(()=>{el.style.boxShadow='';},1200);}
+  };
+  j.addEventListener('change',go);
+  j.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();go();}});
+})();
+
+/* -- nút chia sẻ ở trang truyện -- */
+(function(){
+  const b=$('#dShare'); if(!b) return;
+  b.addEventListener('click',async()=>{
+    const url=location.origin+location.pathname+'#truyen-'+encodeURIComponent((dCur&&dCur.slug)||'');
+    try{ await navigator.clipboard.writeText(url); toastS('Đã copy link truyện.'); }
+    catch(e){ toastS(url); }
+  });
+})();
+
+/* -- ảnh lỗi -> bỏ khung skeleton, tránh ô xám vĩnh viễn -- */
+document.addEventListener('error',e=>{
+  const im=e.target;
+  if(im&&im.tagName==='IMG'&&im.parentNode&&im.parentNode.classList){im.parentNode.classList.remove('skel');}
+},true);
+
+/* -- cuối trang: ghi rõ nguồn dữ liệu (không còn số liệu minh hoạ) -- */
+(function(){
+  const f=$('.ftr'); if(!f) return;
+  const rev=(window.CZREG||{}).rev||'';
+  const src = window.CZ_SRC==='kv' ? 'Cloudflare KV' : 'file tĩnh /data';
+  f.innerHTML='chuseoz · thư viện truyện chuyển thể · dữ liệu thật từ <a class="linkblog" href="https://chuseoz.blogspot.com/p/list-novel.html" target="_blank" rel="noopener">blogspot</a>'
+    +' · nguồn: '+src+(rev?' · rev '+esc(rev):'');
+
 /* route: #truyen-<slug> = mở TRANG TRUYỆN toàn màn hình trên home */
 function routeBook(){
   var m=location.hash.match(/^#truyen-(.+)$/),n=null;
@@ -1214,9 +1669,12 @@ var _db=$('#dBack'); if(_db)_db.addEventListener('click',function(){location.has
     if(!el||!el.closest)return;
     if(el.closest('#themeBtn')){setTimeout(function(){try{localStorage.setItem('chuseoz-dir',app.dataset.dir);}catch(e){}document.body.setAttribute('data-dir',app.dataset.dir||'c');},0);return;}
     var b=el.closest('#dwrap .btn.primary');
-    if(b&&window.CZCUR&&CZCUR.url){
-      var k=parseInt((document.getElementById('dReadFrom')||{}).textContent||'1',10)||1;
-      location.href=CZCUR.url+'#page-'+k;return;}
+    if(b){
+      if(b.disabled||!CZCUR||!(CZCUR.chapters>0)){ e.preventDefault(); return; }
+      if(CZCUR.url){
+        var k=parseInt((document.getElementById('dReadFrom')||{}).textContent||'1',10)||1;
+        location.href=CZCUR.url+'#page-'+k;return;}
+    }
     var cd=el.closest('.card[data-t],.srow[data-t]');
     if(cd){
       var reg=(window.CZREG&&CZREG.lib)||[],nn=null,tt=cd.getAttribute('data-t');
@@ -1227,6 +1685,8 @@ var _db=$('#dBack'); if(_db)_db.addEventListener('click',function(){location.has
     if(c&&window.CZCUR&&CZCUR.url){
       var no=c.querySelector('.no');location.href=CZCUR.url+'#page-'+(no?no.textContent.trim():1);return;}
   });
+
+})();
 })();
 
 };
@@ -1235,6 +1695,8 @@ var _db=$('#dBack'); if(_db)_db.addEventListener('click',function(){location.has
 (function(){
   var app=document.getElementById('app');
   function boot(reg){
+    if(window.__booted) return;          /* không vẽ lại lần 2 (tránh mất dữ liệu khi có lỗi) */
+    window.__booted=true;
     window.CZREG=reg||{lib:[]};
     try{var d=localStorage.getItem('chuseoz-dir');if(d)app.dataset.dir=d;}catch(e){}
     document.body.setAttribute('data-dir',app.dataset.dir||'c');
@@ -1242,12 +1704,20 @@ var _db=$('#dBack'); if(_db)_db.addEventListener('click',function(){location.has
   }
   var cache=null;
   try{cache=JSON.parse(localStorage.getItem('chuseoz-reg')||'null');}catch(e){}
-  fetch('/data/registry.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;})
+  var API=String(window.CZ_API||'').replace(/\/+$/,'');
+  /* Kênh dữ liệu: có CZ_API thì lấy từ Cloudflare KV (sửa là thấy ngay, không build),
+     không có thì dùng file tĩnh /data/registry.json như trước. */
+  var primary = API ? fetch(API+'/api/registry',{cache:'no-store'}) : Promise.reject(new Error('no-api'));
+  primary.then(function(r){ return r.ok?r.json():Promise.reject(new Error('api '+r.status)); })
+    .catch(function(){ return fetch('/data/registry.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}); })
     .then(function(snap){
+      window.CZ_SRC = (snap && API && String(snap.source&&snap.source.synced||'').length>=0 && snap.__fromApi!==false) ? 'kv' : 'static';
+      if(!snap){ boot(cache); return; }
+      if(API){ window.CZ_SRC='kv'; }
       var reg=(snap&&cache&&cache.rev>(snap.rev||''))?cache:(snap||cache);
       if(snap&&snap.rev&&(cache||{}).rev!==snap.rev){try{localStorage.setItem('chuseoz-reg',JSON.stringify(snap));}catch(e){}}
       boot(reg);
-    }).catch(function(){boot(cache);});
+    }).catch(function(e){ if(window.console&&console.warn)console.warn('[chuseoz] lỗi tải dữ liệu:',e&&e.message); boot(cache); });
 })();
 </script>
 </body>
