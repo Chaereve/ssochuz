@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>chuseoz · admin</title>
+<style>
+:root{--bg:#fff8f5;--surf:#fff;--surf2:#fff1ec;--txt:#3b2f35;--mut:#7d6e76;--acc:#ff7d9c;--acc2:#ffc48c;--bd:#ffe4e9;--r:14px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+header{position:sticky;top:0;z-index:5;background:rgba(255,248,245,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--bd)}
+header .in{max-width:1080px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px}
+.logo{font-weight:900;font-size:17px;letter-spacing:-.3px}.logo i{color:var(--acc);font-style:normal}
+.sp{flex:1}
+main{max-width:1080px;margin:0 auto;padding:18px 16px 80px}
+.card{background:var(--surf);border:1px solid var(--bd);border-radius:var(--r);padding:16px;margin-bottom:14px;box-shadow:0 3px 12px rgba(255,125,156,.08)}
+h2{font-size:16px;margin:0 0 10px}h3{font-size:14px;margin:14px 0 8px}
+label{display:block;font-size:12px;font-weight:700;color:var(--mut);margin:8px 0 4px}
+input,select,textarea{width:100%;padding:9px 11px;border:1px solid var(--bd);border-radius:10px;background:var(--surf2);color:var(--txt);font:inherit;outline:0}
+input:focus,textarea:focus{border-color:var(--acc)}
+textarea{min-height:120px;resize:vertical}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1;min-width:140px}
+button{font:inherit;font-weight:800;border:0;border-radius:10px;padding:9px 14px;cursor:pointer;background:var(--surf2);color:var(--txt)}
+button.pri{background:linear-gradient(90deg,var(--acc),var(--acc2));color:#fff}
+button.dan{background:#ffe3e3;color:#b3261e}
+button:hover{filter:brightness(.97)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{padding:8px 6px;border-bottom:1px dashed var(--bd);text-align:left;vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--mut)}
+.pill{display:inline-block;padding:2px 8px;border-radius:99px;background:var(--surf2);border:1px solid var(--bd);font-size:11px;font-weight:700}
+.msg{padding:10px 12px;border-radius:10px;background:#e8f7ee;color:#1d7752;font-weight:700;margin:10px 0;display:none}
+.msg.err{background:#ffe3e3;color:#b3261e}
+.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.tabs button{border:1px solid var(--bd)}
+.tabs button.on{background:linear-gradient(90deg,var(--acc),var(--acc2));color:#fff;border-color:transparent}
+.hide{display:none}
+.sm{font-size:12px;color:var(--mut)}
+.chlist{max-height:320px;overflow:auto;overscroll-behavior:contain;border:1px solid var(--bd);border-radius:10px}
+.chlist div{padding:7px 10px;border-bottom:1px dashed var(--bd);display:flex;gap:8px;align-items:center;cursor:pointer}
+.chlist div.on{background:var(--surf2)}
+.chlist div:last-child{border-bottom:0}
+.chlist .n{flex:0 0 34px;text-align:center;font-weight:800;color:var(--acc)}
+</style>
+</head>
+<body>
+<header><div class="in">
+  <div class="logo">chuseoz<i>.</i> <span class="pill">admin</span></div>
+  <div class="sp"></div>
+  <span class="sm" id="who"></span>
+  <button id="btnLogout" class="hide">Đăng xuất</button>
+</div></header>
+<main>
+  <div class="msg" id="msg"></div>
+
+  <section id="secLogin" class="card">
+    <h2>Đăng nhập quản trị</h2>
+    <p class="sm">Admin lưu truyện bằng cách commit file JSON vào repo GitHub của bạn → Cloudflare Pages tự deploy (~1 phút). Mã token chỉ giữ trong máy bạn.</p>
+    <label>Repo (dạng owner/repo)</label>
+    <input id="inRepo" placeholder="vidu: username/chuseoz-web">
+    <label>GitHub Personal Access Token (quyền Contents: Read &amp; write)</label>
+    <input id="inPat" type="password" placeholder="github_pat_...">
+    <label>Nhánh (mặc định: main)</label>
+    <input id="inBr" placeholder="main">
+    <p><button class="pri" id="btnLogin">Vào quản trị</button></p>
+  </section>
+
+  <section id="secDash" class="hide">
+    <div class="tabs">
+      <button id="tabList" class="on">Thư viện</button>
+      <button id="tabNew">+ Truyện mới</button>
+      <button id="tabSet">Cài đặt site</button>
+      <button id="tabHelp">Hướng dẫn</button>
+    </div>
+
+    <div id="paneList">
+      <div class="card">
+        <div class="row">
+          <input id="q" placeholder="Tìm theo tên truyện, tác giả…">
+          <button id="btnRefresh">Tải lại dữ liệu</button>
+          <button id="btnBackup">Tải bản sao lưu</button>
+        </div>
+      </div>
+      <div class="card">
+        <table><thead><tr><th>#</th><th>Tên truyện</th><th>Chương</th><th>Tình trạng</th><th>Cập nhật</th><th></th></tr></thead>
+        <tbody id="tb"></tbody></table>
+      </div>
+    </div>
+
+    <div id="paneEdit" class="hide">
+      <div class="card">
+        <h2 id="edHead">Sửa truyện</h2>
+        <div class="row">
+          <div><label>Tên truyện</label><input id="fTitle"></div>
+          <div><label>Slug (url)</label><input id="fSlug"></div>
+        </div>
+        <div class="row">
+          <div><label>Tác giả</label><input id="fAuthor"></div>
+          <div><label>Couple</label><input id="fCouple"></div>
+          <div><label>Năm</label><input id="fYear"></div>
+        </div>
+        <div class="row">
+          <div><label>Tình trạng</label><select id="fStatus">
+            <option>Hoàn thành</option><option>Đang cập nhật</option><option>Sắp ra mắt</option></select></div>
+          <div><label>Nhãn đếm (vd 36/36)</label><input id="fCount"></div>
+          <div><label>18+</label><select id="f18"><option value="0">Không</option><option value="1">Có</option></select></div>
+        </div>
+        <div class="row">
+          <div><label>Chuyển thể</label><select id="fAdapt">
+            <option value="">Chưa chuyển thể</option><option value="series">Series</option><option value="phim">Phim điện ảnh</option></select></div>
+          <div><label>Tên phim/series (nếu trùng tên truyện để trống)</label><input id="fAdaptName"></div>
+        </div>
+        <label>Link ảnh bìa (thumb/slide)</label><input id="fThumb">
+        <label>Tóm tắt ngắn</label><textarea id="fSyn"></textarea>
+        <p><button class="pri" id="btnSaveMeta">Lưu thông tin (commit)</button>
+           <button id="btnBackList">← Danh sách</button></p>
+      </div>
+      <div class="card">
+        <h3>Chương (<span id="chCount">0</span>)</h3>
+        <div class="row">
+          <button id="btnChAdd">+ Thêm chương cuối</button>
+          <button id="btnChPaste">Dán hàng loạt (văn bản thô)</button>
+        </div>
+        <div class="chlist" id="chList" style="margin-top:10px"></div>
+        <h3 id="chEdHead">Nội dung chương</h3>
+        <label>Tựa chương</label><input id="chTitle">
+        <label>HTML nội dung (mỗi đoạn một thẻ &lt;p&gt;)</label>
+        <textarea id="chHtml" style="min-height:260px"></textarea>
+        <p><button class="pri" id="btnSaveBook">Lưu toàn bộ truyện (commit)</button>
+           <button id="btnChText2Html">Văn bản thô → &lt;p&gt;</button>
+           <button class="dan" id="btnChDel">Xoá chương đang mở</button></p>
+      </div>
+    </div>
+
+    <div id="paneNew" class="hide card">
+      <h2>Truyện mới</h2>
+      <div class="row">
+        <div><label>Tên truyện</label><input id="nTitle"></div>
+        <div><label>Slug (không dấu, gạch nối)</label><input id="nSlug"></div>
+      </div>
+      <div class="row">
+        <div><label>Tác giả</label><input id="nAuthor"></div>
+        <div><label>Tình trạng</label><select id="nStatus">
+          <option>Đang cập nhật</option><option>Sắp ra mắt</option><option>Hoàn thành</option></select></div>
+        <div><label>Link ảnh bìa</label><input id="nThumb"></div>
+      </div>
+      <label>Tóm tắt ngắn</label><textarea id="nSyn"></textarea>
+      <label>Dán chương đầu tiên (văn bản thô, đoạn cách dòng trống)</label>
+      <textarea id="nChap" style="min-height:160px"></textarea>
+      <p><button class="pri" id="btnNew">Tạo truyện (commit 2 file)</button></p>
+    </div>
+
+    <div id="paneSet" class="hide card">
+      <h2>Cài đặt site</h2>
+      <label>Giscus repo (vd: user/repo) — để trống nếu không dùng bình luận</label><input id="gRepo">
+      <label>Giscus repo ID (lấy từ giscus.app)</label><input id="gRepoId">
+      <p><button class="pri" id="btnSaveSet">Lưu cài đặt (commit)</button></p>
+    </div>
+
+    <div id="paneHelp" class="hide card">
+      <h2>Cách vận hành</h2>
+      <p class="sm">
+      · Mọi nút "commit" sẽ ghi file JSON vào nhánh chính của repo → Cloudflare Pages tự build lại trong ~30–60 giây.<br>
+      · Thêm chương: mở truyện → "+ Thêm chương cuối" hoặc "Dán hàng loạt" (mỗi chương ngăn cách bởi dòng chỉ chứa <b>---CHAP---</b>, dòng đầu mỗi khối là tựa chương).<br>
+      · Ảnh bìa dùng link ảnh ngoài (CDN, imgur, drive…); không cần upload file.<br>
+      · Sao lưu: nút "Tải bản sao lưu" gộp registry + toàn bộ chương thành 1 file JSON giữ trong máy.<br>
+      · Muốn đổi tên url (slug): sửa ô Slug rồi Lưu — url cũ sẽ 404, cân nhắc chia sẻ lại link.</p>
+    </div>
+  </section>
+</main>
+<script src="/admin.js"></script>
+</body>
+</html>
