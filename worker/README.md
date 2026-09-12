@@ -1,0 +1,171 @@
+# Kênh đăng mới — Cloudflare Worker + KV (bỏ GitHub build)
+
+**Mục tiêu:** sửa truyện/chương trên web quản trị ⇒ người đọc thấy **ngay** (vài giây), không commit GitHub, không đợi Cloudflare build, không tốn phút CI.
+
+```
+Admin (admin.html)  ──PUT──▶  Worker (worker/cms.js)  ──▶  Cloudflare KV
+                                      │                        │
+   Web (index.html / reader.html) ──GET──────────────────────────┘
+                                      │
+                                      ├─▶ Blogger feed   (số chương, tình trạng, ngày cập nhật, lịch ra chương)
+                                      └─▶ Firebase       (views/votes thật, cache 10 phút)
+```
+
+GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới cần build); dữ liệu thì không đi qua GitHub nữa.
+
+**Worker v1.1.0 — danh sách API** (đây là những gì bản này hỗ trợ, không hơn):
+
+| Method | Đường dẫn | Ai gọi | Việc |
+|---|---|---|---|
+| GET | `/api/health` | mở | phiên bản, KV có sẵn không, số bộ, rev, lần ghi cuối |
+| GET | `/api/whoami` | cần khoá | kiểm tra `ADMIN_KEY` đúng hay sai |
+| GET | `/api/registry` | mở | toàn bộ thư viện (62 bộ + slides + lịch + series) |
+| GET | `/api/book/<slug>` | mở | tiêu đề + các chương của 1 bộ |
+| GET | `/api/schedule` | mở | lịch ra chương |
+| GET | `/api/stats` | mở | views/votes thật từ Firebase (cache 10 phút) |
+| PUT | `/api/registry` | cần khoá | ghi toàn bộ thư viện |
+| PUT | `/api/book/<slug>` | cần khoá | ghi 1 bộ (thêm/sửa chương) |
+| DELETE | `/api/book/<slug>` | cần khoá | xoá 1 bộ khỏi KV |
+| POST | `/api/seed` | cần khoá | nạp hàng loạt `{registry, books}` |
+| POST | `/api/sync` | cần khoá | đọc lại Blogger, ghép số chương/tình trạng/ngày |
+| POST | `/api/import` | cần khoá | lấy 1 bài viết Blogger thành chương mới (bỏ quảng cáo/bình luận) |
+| POST | `/api/stats/refresh` | cần khoá | xoá cache số liệu để đọc lại ngay |
+
+## 1. Tạo Worker (5 phút, làm 1 lần)
+
+**Cách A — dán trên dashboard (không cần cài gì):**
+
+1. Vào <https://dash.cloudflare.com> → **Workers & Pages** → **Create** → **Worker** → đặt tên `chuseoz-cms` → **Deploy**.
+2. **Edit code** → xoá hết code mẫu → dán toàn bộ nội dung `worker/cms.js` → **Deploy**.
+3. Vào tab **Settings** → **Variables and Secrets**:
+   - `ADMIN_KEY` (chọn **Secret**) — đặt một chuỗi dài, ví dụ 40 ký tự ngẫu nhiên. Đây là mật khẩu để ghi dữ liệu.
+   - `BLOG` = `https://chuseoz.blogspot.com`
+   - `FIREBASE_PROJECT` = `chuseoz-library`
+   - `ALLOW_ORIGIN` = `*` (hoặc domain web của bạn, cách nhau bằng dấu phẩy)
+4. Tab **Bindings** → **Add** → **KV namespace** → **Create new namespace** tên `chuseoz-kv` → **Variable name**: `CZ_KV` → Save → Deploy lại.
+5. Ghi lại URL Worker, dạng `https://chuseoz-cms.<tên-tài-khoản>.workers.dev`.
+
+**Cách B — bằng dòng lệnh (nếu đã có Node + wrangler):**
+
+```bash
+npx wrangler kv namespace create CZ_KV        # dán id vào worker/wrangler.toml
+npx wrangler secret put ADMIN_KEY             # nhập mật khẩu
+npx wrangler deploy
+```
+
+## 2. Nạp dữ liệu hiện có lên KV (1 lần)
+
+```bash
+python3 tools/push_to_kv.py --api https://chuseoz-cms.xxx.workers.dev --key "$ADMIN_KEY"
+```
+
+Lệnh này đẩy `data/registry.json` + toàn bộ `data/book/*.json` (khoảng 27 MB) lên KV theo lô 8 bộ.
+
+```bash
+python3 tools/push_to_kv.py --api https://... --health     # Worker có sống không, KV đã có gì
+python3 tools/push_to_kv.py --api https://... --key "$ADMIN_KEY" --auth   # khoá có đúng không
+python3 tools/push_to_kv.py --api https://... --key "$ADMIN_KEY" --verify # so từng bộ: KV vs repo
+```
+
+`--verify` in ra từng bộ lệch số chương giữa KV và repo — chạy sau khi nạp để chắc chắn không thiếu bộ nào.
+
+Không có Python cũng không sao: trong trang quản trị đã có nút **Nạp toàn bộ lên KV** làm đúng việc này.
+
+## 3. Nối web vào Worker (1 dòng duy nhất)
+
+Mở file **`cz-config.js`** ở gốc repo, dán URL Worker vào:
+
+```js
+window.CZ_API = 'https://chuseoz-cms.xxx.workers.dev';   // để '' nếu chưa dùng Worker
+window.CZ_STATS_DIRECT = true;                            // thử đọc số liệu Firebase trực tiếp
+```
+
+File này được **cả 4 trang** (`index.html`, `reader.html`, `admin.html`) nạp sẵn — sửa một chỗ là toàn web đổi kênh:
+
+- **Có** `CZ_API` → web đọc dữ liệu từ KV (luôn mới, sửa là thấy ngay, không cần deploy lại).
+- **Không có / Worker lỗi** → web tự lùi về file `/data/*.json` như cũ (không bao giờ trắng trang).
+
+Trang quản trị: mở `/admin`, mục **Kênh đăng bài** → dán URL Worker + `ADMIN_KEY` → **Kiểm tra & kết nối**
+(khoá chỉ lưu trong localStorage của máy bạn). Vào được rồi thì:
+
+- **Nạp dữ liệu lên KV** — bấm 1 lần để đưa 62 bộ hiện có trong repo lên KV (hoặc chạy `tools/push_to_kv.py`).
+- **Đồng bộ từ Blogger** — đọc lại blogspot để cập nhật tình trạng/số chương/ngày/lịch ra chương.
+- **Lưu** — ghi thẳng lên KV, người đọc thấy sau 1–2 giây.
+- **Sao lưu / Phục hồi** — tải hoặc nạp lại toàn bộ dữ liệu bằng 1 file JSON.
+
+## 3b. Đăng chương mới trong ~30 giây (việc hay làm nhất)
+
+1. Mở `/admin` → **Đăng nhanh** (phím `2`).
+2. Chọn truyện ở ô **Truyện**, dán nội dung chương vào ô lớn
+   (mỗi đoạn cách nhau 1 dòng trống; dán nhiều chương thì ngăn giữa các chương bằng một dòng `---CHAP---`).
+3. Bấm **Đăng chương lên KV**.
+4. Người đọc mở trang là thấy ngay — không commit, không build, không đợi Pages.
+
+Ô **Tình trạng chương** hiện số từ và số phút đọc ngay khi bạn dán, để kiểm tra nội dung dán đủ chưa.
+
+**Không muốn copy–paste?** Trong cùng tab đó có khối *Hoặc lấy thẳng từ Blogger*:
+
+- **⬇ Lấy từ Blogger & đăng** — dán link bài viết, hoặc **để trống** để Worker tự tìm bài mới nhất khớp tên truyện.
+  Worker tải bài, bỏ quảng cáo/bình luận/nút chia sẻ, giữ chữ + ảnh, rồi ghép vào cuối bộ và cập nhật số chương.
+- **⬇ Lấy & thay chương cuối** — dùng khi bạn vừa sửa lại bài đăng cũ trên Blogger (không tạo chương trùng).
+
+Nhờ vậy quy trình quen thuộc của bạn vẫn giữ nguyên: viết bài trên Blogger → vào `/admin` → bấm 1 nút.
+
+Trong tab **Sửa truyện** còn có: đổi thứ tự chương (↑ ↓), sửa/xoá từng chương (✎), *Văn bản → HTML*,
+xem trước, và `Ctrl+S` để lưu nhanh.
+
+## 4. Những việc làm được sau khi nối
+
+| Việc | Cách làm | Thời gian thấy trên web |
+|---|---|---|
+| Sửa thông tin 1 bộ (tình trạng, số chương, bìa, mô tả, 18+) | admin → **Lưu** | vài giây |
+| Sửa nội dung chương | admin → **Nội dung** → Lưu | vài giây |
+| Thêm bộ mới | admin → **Thêm bộ** | vài giây |
+| Cập nhật số chương/tình trạng/ngày từ blogspot | admin → **Đồng bộ Blogger** (hoặc `--sync`) | vài giây |
+| Số liệu thật (views/votes) | Worker tự lấy từ Firebase, cache 10 phút | 10 phút |
+| Lịch ra chương | Worker đọc trang `/p/lich-ra-chuong.html` | 30 phút |
+| Deploy **code** mới (giao diện) | vẫn qua GitHub → Cloudflare Pages | chỉ khi cần |
+
+## 5. Số liệu thật từ Firebase (không còn số bịa)
+
+Site cũ (`chuseoz-library`) lưu views/votes trong Firestore collection `novelData`. Hiện đọc công khai đang bị **403**, nên vào
+<https://console.firebase.google.com/project/chuseoz-library/firestore/rules> dán rules sau rồi **Publish**:
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /novelData/{doc} {
+      allow read: if true;                 // cho web đọc số liệu
+      allow write: if request.auth != null; // chỉ tài khoản đã đăng nhập mới ghi
+    }
+    match /voters/{doc} { allow read, write: if request.auth != null; }
+    match /users/{doc}  { allow read, write: if request.auth != null; }
+  }
+}
+```
+
+Worker sẽ tự gom lại thành `GET /api/stats` (cache 10 phút). Nếu Firebase vẫn chặn, web **không hiện số nào cả**
+(chứ không bịa số) — bảng xếp hạng khi đó tự xếp theo số chương + ngày cập nhật và ghi rõ nguồn.
+
+Sau khi Publish rules, vào `/admin` → **Số liệu** → **Đọc lại & xoá cache** để thấy số ngay, không phải chờ 10 phút.
+
+## 5b. Khi có trục trặc
+
+| Hiện tượng | Nguyên nhân thường gặp | Cách sửa |
+|---|---|---|
+| admin báo *Không nối được: ADMIN_KEY không đúng* | chưa đặt secret `ADMIN_KEY`, hoặc gõ sai khoá | Settings → Variables and Secrets → đặt lại `ADMIN_KEY` (Secret) rồi Deploy |
+| admin báo *KV chưa gắn* | chưa bind namespace | Settings → Bindings → KV namespace, **Variable name** phải đúng chữ `CZ_KV` |
+| Lưu xong nhưng web vẫn dữ liệu cũ | chưa dán URL Worker vào `cz-config.js` | dán `window.CZ_API = 'https://...'` rồi deploy lại **một lần** (sau đó sửa dữ liệu không cần deploy nữa) |
+| Bấm “Đọc lại & xoá cache” mà vẫn 0 số | Firebase còn chặn quyền đọc | làm lại mục 5, kiểm tra bằng cách mở thẳng link Firestore REST |
+| Trang chủ trắng sau khi sửa dữ liệu | 1 bộ bị sai định dạng JSON | admin → **Sao lưu** để có bản dự phòng, sửa lại bộ đó, hoặc **Phục hồi** từ file sao lưu |
+
+`cz-data.js` và `admin.js` được đặt `Cache-Control: no-cache` trong `_headers`, nên sửa 2 file này rồi deploy lại là
+máy người dùng nhận bản mới ngay, không bị giữ bản cũ trong cache.
+
+## 6. Bảo mật
+
+- `ADMIN_KEY` chỉ nằm trong localStorage của trình duyệt bạn và trong secret của Worker — **không** nằm trong code.
+- Nếu lộ, đổi secret là xong (`Settings → Variables and Secrets`), hoặc tạo lại Worker.
+- Nên đặt `ALLOW_ORIGIN` = domain web của bạn để người khác không gọi API từ site lạ.
+- Muốn khoá đọc công khai? Đặt `READ_KEY` và thêm header khi gọi — hiện tại dữ liệu là nội dung công khai nên để mở.

@@ -1,0 +1,6 @@
+# phụ thuộc khi chạy kiểm thử trên máy (không cần cho Cloudflare Pages)
+node_modules/
+tests/node_modules/
+package-lock.json
+*.log
+.DS_Store

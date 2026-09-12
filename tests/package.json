@@ -1,0 +1,7 @@
+{
+  "name": "chuseoz-tests",
+  "private": true,
+  "description": "Kiểm thử giao diện chuseoz bằng jsdom (không ảnh hưởng bản deploy)",
+  "scripts": { "test": "node run.js" },
+  "devDependencies": { "jsdom": "^24.0.0" }
+}
