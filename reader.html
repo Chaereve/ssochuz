@@ -1282,7 +1282,7 @@ document.addEventListener('keydown',e=>{
 
 /* ---------- số liệu thật (Firebase) + lightbox ảnh trong chương + vuốt chuyển chương ---------- */
 (function(){
-  const API=String(window.CZ_API||'').replace(/\/+$/,'');
+  const API=((window.CZ&&window.CZ.normalizeApi)?window.CZ.normalizeApi(window.CZ_API):String(window.CZ_API||'').replace(/\/+$/,''));
   window.CZ_STATS={on:false,items:{}};
   const direct=()=>{
     if(!window.CZ_STATS_DIRECT) return Promise.reject(new Error('off'));

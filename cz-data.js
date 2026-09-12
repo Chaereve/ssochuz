@@ -10,7 +10,12 @@
    ============================================================================ */
 (function (w) {
   'use strict';
-  var API = String(w.CZ_API || '').replace(/\/+$/, '');
+  function normalizeApi(u) {
+    u = String(u || '').trim().replace(/\/+$/, '');
+    if (u && !/^https?:\/\//i.test(u)) u = 'https://' + u;   /* thiếu https:// thì tự thêm */
+    return u;
+  }
+  var API = normalizeApi(w.CZ_API);
   var LS_REG = 'chuseoz-reg-v1';
   var LS_STATS = 'chuseoz-stats-v1';
   var TTL_REG = 6 * 3600 * 1000;   /* cache registry 6h khi không có Worker */
@@ -148,7 +153,7 @@
   }
 
   w.CZ = {
-    API: API, registry: registry, book: book, stats: stats, schedule: schedule,
+    API: API, normalizeApi: normalizeApi, registry: registry, book: book, stats: stats, schedule: schedule,
     progressOf: progressOf, setProgress: setProgress, progressKey: progressKey,
     hasAPI: !!API
   };

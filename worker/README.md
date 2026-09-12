@@ -129,6 +129,9 @@ window.CZ_STATS_DIRECT = true;                            // thử đọc số l
 File này được **cả 4 trang** (`index.html`, `reader.html`, `admin.html`) nạp sẵn — sửa một chỗ là toàn web đổi kênh:
 
 - **Có** `CZ_API` → web đọc dữ liệu từ KV (luôn mới, sửa là thấy ngay, không cần deploy lại).
+- Dán URL kiểu nào cũng được — `chuseoz-cms.xxx.workers.dev`, `https://chuseoz-cms.xxx.workers.dev`
+  hay thừa dấu `/` ở cuối đều tự chuẩn hoá. **Đừng quên `https://`** nếu bạn tự sửa chỗ khác:
+  thiếu nó, trình duyệt coi URL là đường dẫn trong web và web sẽ lặng lẽ quay về dữ liệu tĩnh.
 - **Không có / Worker lỗi** → web tự lùi về file `/data/*.json` như cũ (không bao giờ trắng trang).
 
 Trang quản trị: mở `/admin`, mục **Kênh đăng bài** → dán URL Worker + `ADMIN_KEY` → **Kiểm tra & kết nối**

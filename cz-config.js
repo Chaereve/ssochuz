@@ -12,3 +12,11 @@
    ========================================================================== */
 window.CZ_API = 'chuseoz-cms.kimtong1906.workers.dev';   // để '' nếu chưa dùng Worker
 window.CZ_STATS_DIRECT = true;                            // thử đọc số liệu Firebase trực tiếp
+
+/* --- chuẩn hoá URL: dán thiếu https:// hay thừa / ở cuối đều vẫn chạy đúng ---
+   (thiếu https:// thì trình duyệt hiểu thành đường dẫn trong web và mọi lệnh gọi
+    Worker sẽ thất bại âm thầm — web lặng lẽ quay về dữ liệu tĩnh) */
+(function () {
+  var u = String(window.CZ_API || '').trim().replace(/\/+$/, '');
+  window.CZ_API = (u && !/^https?:\/\//i.test(u)) ? 'https://' + u : u;
+})();

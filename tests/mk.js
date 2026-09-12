@@ -23,9 +23,13 @@ function page(file, { url = 'https://chuseoz.pages.dev/', fetch, config = {}, fi
   let html = read(file);
   html = inline(html, files);
   html = inlineAll(html);
-  if (config.CZ_API !== undefined || config.CZ_STATS_DIRECT !== undefined) {
-    html = html.replace(/window\.CZ_API\s*=\s*window\.CZ_API\s*\|\|\s*'';/,
-      "window.CZ_API=" + JSON.stringify(config.CZ_API || '') + ";");
+  if (config.CZ_API !== undefined) {
+    html = html.replace(/window\.CZ_API\s*=\s*(window\.CZ_API\s*\|\|\s*)?'[^']*';/,
+      "window.CZ_API=" + JSON.stringify(config.CZ_API) + ";");
+  }
+  if (config.CZ_STATS_DIRECT !== undefined) {
+    html = html.replace(/window\.CZ_STATS_DIRECT\s*=\s*(true|false);/,
+      "window.CZ_STATS_DIRECT=" + (config.CZ_STATS_DIRECT ? 'true' : 'false') + ";");
   }
   const errors = [];
   const dom = new JSDOM(html, {

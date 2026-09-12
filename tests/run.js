@@ -6,7 +6,7 @@ const path = require('path'), { spawnSync } = require('child_process');
 const cands = (process.env.CZ_TEST_MODULES || '').split(path.delimiter).filter(Boolean)
   .concat([path.join(__dirname, 'node_modules'), path.join(__dirname, '..', 'node_modules')]);
 const env = Object.assign({}, process.env, { NODE_PATH: cands.join(path.delimiter) });
-const files = ['t_home.js', 't_reader.js', 't_locked.js', 'cf_admin_test.js'];
+const files = ['t_config.js', 't_home.js', 't_reader.js', 't_locked.js', 'cf_admin_test.js'];
 let bad = 0;
 for (const f of files) {
   const r = spawnSync(process.execPath, [path.join(__dirname, f)], { encoding: 'utf8', timeout: 180000, env });

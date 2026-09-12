@@ -1245,7 +1245,7 @@ function fbValue(v){
   return null;
 }
 function loadStats(){
-  const API=String(window.CZ_API||'').replace(/\/+$/,'');
+  const API=((window.CZ&&window.CZ.normalizeApi)?window.CZ.normalizeApi(window.CZ_API):String(window.CZ_API||'').replace(/\/+$/,''));
   const direct=()=>{
     if(!window.CZ_STATS_DIRECT) return Promise.reject(new Error('tắt'));
     return fetch(`https://firestore.googleapis.com/v1/projects/${FB_PROJECT}/databases/(default)/documents/novelData?pageSize=300`)
@@ -1491,7 +1491,7 @@ function adaptText(n){
 }
 /* ---- tải nội dung/tiêu đề chương thật (có cache, lazy) -------------- */
 const BOOK_CACHE=new Map();
-function bookURL(slug){const API=String(window.CZ_API||'').replace(/\/+$/,'');
+function bookURL(slug){const API=((window.CZ&&window.CZ.normalizeApi)?window.CZ.normalizeApi(window.CZ_API):String(window.CZ_API||'').replace(/\/+$/,''));
   return (API?API+'/api/book/':'/data/book/')+encodeURIComponent(slug)+(API?'':'.json');}
 function loadBook(slug){
   if(BOOK_CACHE.has(slug)) return Promise.resolve(BOOK_CACHE.get(slug));
@@ -1833,7 +1833,7 @@ var _db=$('#dBack'); if(_db)_db.addEventListener('click',function(){location.has
   }
   var cache=null;
   try{cache=JSON.parse(localStorage.getItem('chuseoz-reg')||'null');}catch(e){}
-  var API=String(window.CZ_API||'').replace(/\/+$/,'');
+  var API=((window.CZ&&window.CZ.normalizeApi)?window.CZ.normalizeApi(window.CZ_API):String(window.CZ_API||'').replace(/\/+$/,''));
   /* Kênh dữ liệu: có CZ_API thì lấy từ Cloudflare KV (sửa là thấy ngay, không build),
      không có thì dùng file tĩnh /data/registry.json như trước. */
   var primary = API ? fetch(API+'/api/registry',{cache:'no-store'}) : Promise.reject(new Error('no-api'));
