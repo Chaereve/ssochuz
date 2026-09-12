@@ -10,5 +10,5 @@
    CZ_STATS_DIRECT : true = nếu Worker chưa có số liệu thì thử gọi thẳng
             Firebase cũ (chuseoz-library). Cần mở quyền đọc Firestore.
    ========================================================================== */
-window.CZ_API = window.CZ_API || '';
-window.CZ_STATS_DIRECT = true;
+window.CZ_API = 'chuseoz-cms.kimtong1906.workers.dev';   // để '' nếu chưa dùng Worker
+window.CZ_STATS_DIRECT = true;                            // thử đọc số liệu Firebase trực tiếp
