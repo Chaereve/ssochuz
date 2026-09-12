@@ -1,0 +1,28 @@
+name: tmp-fetch-feed
+on:
+  push:
+    branches: [arena/01a0968c-ssochuz]
+    paths: ['.github/workflows/tmp-fetch-feed.yml']
+permissions:
+  contents: write
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: arena/01a0968c-ssochuz
+      - name: Fetch feed
+        run: |
+          mkdir -p _inbox/feed
+          for u in "posts/default?alt=json&max-results=500" "pages/default?alt=json&max-results=500" "posts/summary?alt=json&max-results=500"; do
+            out=$(echo "$u" | tr "/?&=" "____")
+            curl -sSL --max-time 120 -o "_inbox/feed/$out.json" "https://chuseoz.blogspot.com/feeds/$u"
+            wc -c "_inbox/feed/$out.json"
+          done
+      - name: Push back
+        run: |
+          git config user.name "arena-bot"; git config user.email "bot@users.noreply.github.com"
+          git add -A _inbox/feed
+          git commit -m "tmp: fetch blogger feed (all posts with content)" || echo "no change"
+          git push origin HEAD:arena/01a0968c-ssochuz
