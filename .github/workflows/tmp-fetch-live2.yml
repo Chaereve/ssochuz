@@ -1,0 +1,26 @@
+name: tmp-fetch-live2
+on:
+  push:
+    branches: [arena/01a0968c-ssochuz]
+    paths: ['.github/workflows/tmp-fetch-live2.yml']
+permissions:
+  contents: write
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: arena/01a0968c-ssochuz
+      - name: Fetch
+        run: |
+          mkdir -p _inbox/live2
+          echo "===== list-novel.html https://chuseoz.blogspot.com/p/list-novel.html"; curl -sSL -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36" --max-time 60 -D "/tmp/h_list-novel.html.txt" -o "_inbox/live2/list-novel.html" "https://chuseoz.blogspot.com/p/list-novel.html"; wc -c "_inbox/live2/list-novel.html"; head -20 "/tmp/h_list-novel.html.txt" | tr -d "\r"
+          echo "===== home.html https://chuseoz.blogspot.com/"; curl -sSL -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36" --max-time 60 -D "/tmp/h_home.html.txt" -o "_inbox/live2/home.html" "https://chuseoz.blogspot.com/"; wc -c "_inbox/live2/home.html"; head -20 "/tmp/h_home.html.txt" | tr -d "\r"
+          echo "===== feed-test.json https://chuseoz.blogspot.com/feeds/posts/default?alt=json&max-results=1"; curl -sSL -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36" --max-time 60 -D "/tmp/h_feed-test.json.txt" -o "_inbox/live2/feed-test.json" "https://chuseoz.blogspot.com/feeds/posts/default?alt=json&max-results=1"; wc -c "_inbox/live2/feed-test.json"; head -20 "/tmp/h_feed-test.json.txt" | tr -d "\r"
+      - name: Push back
+        run: |
+          git config user.name "arena-bot"; git config user.email "bot@users.noreply.github.com"
+          git add -A _inbox/live2
+          git commit -m "tmp: fetch blogspot live pages (round 2)" || echo "no change"
+          git push origin HEAD:arena/01a0968c-ssochuz
