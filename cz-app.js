@@ -203,14 +203,14 @@
     var p = progress(n); return p > 0 ? p : 0;
   }
 
-  /* cài đặt đọc — 3 font (serif / sans / georgia) · 3 nền (sang / kem / toi) */
+  /* cài đặt đọc — 2 font (serif / sans) · 3 nền (sang / kem / toi) */
   var RD_DEF = { mode: 'scroll', size: 18, font: 'serif', line: 1.85, para: 1.05, theme: 'kem', width: 720, justify: 0 };
-  var RD_FONTS = { serif: 1, sans: 1, georgia: 1 };
+  var RD_FONTS = { serif: 1, sans: 1 };
   var RD_THEMES = { sang: 1, kem: 1, toi: 1 };
   function rdGet() {
     var cur = jsonGet(LS.read, {}) || {};
     if (cur.font && !RD_FONTS[cur.font]) {
-      cur.font = (cur.font === 'times') ? 'georgia' : (cur.font === 'serif' ? 'serif' : 'sans');
+      cur.font = (cur.font === 'sans' || cur.font === 'bevn' || cur.font === 'roboto' || cur.font === 'inter' || cur.font === 'arial') ? 'sans' : 'serif';
     }
     if (cur.theme && !RD_THEMES[cur.theme]) {
       cur.theme = (cur.theme === 'xam') ? 'toi' : 'kem';
@@ -461,7 +461,7 @@
       '<div class="th' + (img ? ' skel' : '') + '">' +
       (img ? '<img src="' + esc(img) + '" alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" width="300" height="450">' : '') +
       '<span class="scrim"></span>' +
-      '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(n.status || 'Đang cập nhật') + '</span>' +
+      '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(n.statusCls === 'done' ? 'Hoàn thành' : n.statusCls === 'soon' ? 'Sắp ra' : 'Đang ra') + '</span>' +
       (n.is18 ? '<span class="b18">18+</span>' : '') +
       '<span class="foot"><span class="ch">' + esc(countText(n)) + '</span>' +
         (n.fresh ? '<span class="badge-new">Mới</span>' : '') + '</span>' +
@@ -820,7 +820,7 @@
     d.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('#czNav a'); if (a) mark(a); });
     run();
   }
-  /* chân trang gọn: logo · @chuseoz · lời cảm ơn · hướng dẫn/liên hệ */
+  /* chân trang: logo · lời cảm ơn · hướng dẫn / liên hệ */
   function mountFooter(host) {
     if (!host) return;
     host.className = 'ftr';
@@ -830,10 +830,9 @@
       '<div class="fmain">' +
         '<div class="fbrand">' +
           '<a class="logo" href="/"><span class="dot"></span>chuseoz<i>.</i></a>' +
-          '<p class="fhandle"><a href="https://www.facebook.com/profile.php?id=61592803761987" target="_blank" rel="noopener">@chuseoz</a></p>' +
           '<p class="fdesc">Cảm ơn bạn đã ủng hộ và đồng hành cùng chuseoz!</p>' +
+          '<p class="flinks"><a href="/guide">Hướng dẫn</a> · <a href="mailto:' + esc(email) + '">Liên hệ</a></p>' +
         '</div>' +
-        '<div class="fbottom"><span>© ' + (new Date().getFullYear()) + ' chuseoz · phi lợi nhuận</span><span><a href="/guide">Hướng dẫn</a> · <a href="mailto:' + esc(email) + '">Liên hệ</a></span></div>' +
       '</div></div>';
   }
   function mountShell(opt) {

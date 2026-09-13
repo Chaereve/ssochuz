@@ -317,49 +317,56 @@
     // intentionally empty - no count badges in header
   }
 
-  /* ======================= XẾP HẠNG ==================================== */
+  /* ======================= XẾP HẠNG (top voted: ngày / tuần / tháng) === */
   function statsOn() { return !!(CZ._memo.stats && CZ._memo.stats.on); }
   function rankTabs() {
-    /* chưa đọc được số liệu Firebase thì không bày tab “lượt đọc / bình chọn” rỗng nghĩa */
-    return statsOn()
-      ? [{ k: 'views', l: 'Lượt đọc' }, { k: 'votes', l: 'Bình chọn' }, { k: 'new', l: 'Mới cập nhật' }, { k: 'chap', l: 'Nhiều chương' }]
-      : [{ k: 'new', l: 'Mới cập nhật' }, { k: 'chap', l: 'Nhiều chương' }, { k: 'votes', l: 'Bình chọn' }];
+    return [{ k: 'day', l: 'Ngày' }, { k: 'week', l: 'Tuần' }, { k: 'month', l: 'Tháng' }];
   }
-  var rankBy = '';   /* rỗng = tự chọn: đọc được số thật thì xếp theo lượt đọc */
+  var rankBy = 'week';
+  function recencyW(n, halfDays) {
+    var t = Date.parse(String(n.updated || '')) || 0;
+    if (!t) return 0.12;
+    var days = Math.max(0, (Date.now() - t) / 864e5);
+    return Math.exp(-days / Math.max(0.6, halfDays));
+  }
+  function voteScore(n, k) {
+    var s = CZ.statsOf(n) || {};
+    var votes = Number(s.votes || 0);
+    var trend = Number(s.trendingScore || 0);
+    var half = k === 'day' ? 1.4 : k === 'week' ? 8 : 32;
+    var hot = votes * recencyW(n, half);
+    if (k === 'day') hot += trend * 0.35;
+    if (!statsOn()) hot = recencyW(n, half) * 100;
+    return hot;
+  }
   function renderRank() {
     var lib = CZ.lib(), on = statsOn();
     var tabs = rankTabs();
-    var by = (rankBy && tabs.some(function (t) { return t.k === rankBy; })) ? rankBy : (on ? 'views' : 'new');
+    var by = (rankBy && tabs.some(function (t) { return t.k === rankBy; })) ? rankBy : 'week';
+    var sub = $('#rankSub');
+    if (sub) sub.textContent = 'Top voted';
     $('#rankTabs').innerHTML = tabs.map(function (t) {
       return '<button class="tab' + (t.k === by ? ' on' : '') + '" data-k="' + t.k + '" role="tab" aria-selected="' +
         (t.k === by) + '">' + t.l + '</button>';
     }).join('');
-    var val = function (n, k) {
-      var s = CZ.statsOf(n) || {};
-      if (k === 'votes') return s.votes || 0;
-      if (k === 'views') return s.views || 0;
-      if (k === 'chap') return n.chapters || 0;
-      return Date.parse(String(n.updated || '') + 'T00:00:00') || 0;
-    };
-    var list = lib.slice().sort(function (a, b) {
-      return (val(b, by) - val(a, by)) || (b.chapters - a.chapters);
-    }).slice(0, 8);
-    var max = Math.max(1, val(list[0] || {}, by));
-    $('#rank').innerHTML = list.map(function (n, i) {
-      var s = CZ.statsOf(n) || {};
-      var text = '—', w = 0;
-      if (by === 'new') text = n.updated ? CZ.timeAgo(n.updated) : '—';
-      else if (by === 'chap') { text = n.chapters + ' chương'; w = Math.round(100 * n.chapters / max); }
-      else if (on) { text = num(s[by] || 0) + (by === 'views' ? ' lượt' : ' phiếu'); w = Math.round(100 * (s[by] || 0) / max); }
-      return '<a class="rank" href="' + esc(CZ.storyURL(n.slug)) + '" title="' + esc(n.title) + '">' +
-        '<span class="n ' + (i < 3 ? 'top' : '') + '">' + (i + 1) + '</span>' +
+    var scored = lib.map(function (n) { return { n: n, s: voteScore(n, by) }; })
+      .sort(function (a, b) { return (b.s - a.s) || ((b.n.chapters || 0) - (a.n.chapters || 0)); })
+      .slice(0, 8);
+    var max = Math.max(1, scored[0] ? scored[0].s : 1);
+    $('#rank').innerHTML = scored.map(function (row, i) {
+      var n = row.n, s = CZ.statsOf(n) || {};
+      var w = Math.round(100 * row.s / max);
+      var text = on ? (num(s.votes || 0) + ' phiếu') : (n.updated ? CZ.timeAgo(n.updated) : '—');
+      return '<a class="rank" href="' + esc(CZ.storyURL(n.slug)) + '" title="' + esc(n.title) + '" style="--d:' + (i * 45) + 'ms">' +
+        '<span class="n' + (i < 3 ? ' top t' + (i + 1) : '') + '">' + (i + 1) + '</span>' +
         '<span class="rk-th' + (n.thumb ? '' : ' noimg') + '">' +
         (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async">' : '') + '</span>' +
         '<span class="tt"><b>' + esc(n.title) + '</b><span>' + esc(n.couple || n.author || '') +
         (on && s.chapterCount ? ' · ' + s.chapterCount + ' chương' : '') + '</span></span>' +
         '<span class="v">' + text + '</span>' +
-        (w ? '<i class="bar" style="width:' + w + '%"></i>' : '') + '</a>';
+        (w ? '<i class="bar" style="--w:' + w + '%"></i>' : '') + '</a>';
     }).join('') || '<div class="empty">Chưa có dữ liệu.</div>';
+    if (CZ.inkAll) CZ.inkAll();
   }
   $('#rankTabs').addEventListener('click', function (e) {
     var b = e.target.closest('.tab'); if (!b) return;

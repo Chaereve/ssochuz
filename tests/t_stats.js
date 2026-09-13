@@ -34,9 +34,9 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 
   /* --- đổi sang “Bình chọn” thì thứ tự đổi theo phiếu --- */
   const tabs = $$('#rankTabs .tab');
-  const voteTab = tabs.find(b => /Bình chọn/.test(b.textContent));
-  out.hasVoteTab = !!voteTab;
-  if (voteTab) { click(voteTab); await wait(200); }
+  const monthTab = tabs.find(b => /Tháng/.test(b.textContent));
+  out.hasVoteTab = tabs.some(b => /Ngày|Tuần|Tháng/.test(b.textContent));
+  if (monthTab) { click(monthTab); await wait(200); }
   out.rankVotes = $$('#rank .rank').slice(0, 3).map(r => r.querySelector('.v').textContent.trim());
 
   /* --- thư viện: có kiểu sắp xếp “Đọc nhiều nhất” và sắp đúng --- */
