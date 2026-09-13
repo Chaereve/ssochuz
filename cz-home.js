@@ -46,7 +46,7 @@
           '<span class="eyebrow">' + (i === 0 ? 'Nổi bật hôm nay' : 'Đề xuất cho bạn') + '</span>' +
           '<h1><a href="' + esc(CZ.storyURL(n.slug)) + '">' + esc(n.title) + '</a></h1>' +
           '<div class="meta">' +
-            '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(n.status || '—') + '</span>' +
+            '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(CZ.statusLabel(n.statusCls || n.status)) + '</span>' +
             (n.fresh ? '<span class="badge-new">Mới</span>' : '') +
             '<span>' + ic('book', 'i-s') + ' <b>' + esc(CZ.countText(n)) + '</b></span>' +
             (n.author ? '<span>' + ic('pen', 'i-s') + ' ' + esc(n.author) + '</span>' : '') +
@@ -204,7 +204,7 @@
     var facts = [
       { n: lib.length, l: 'Bộ truyện' },
       { n: chap, l: 'Chương đã đăng' },
-      { n: done, l: 'Đã hoàn thành' },
+      { n: done, l: 'Hoàn thành' },
       { n: soon, l: 'Sắp ra mắt' }
     ];
     $('#facts').innerHTML = facts.map(function (f) {
@@ -248,9 +248,6 @@
     $$('#banTabs .tab').forEach(function (b) { b.classList.toggle('on', b.dataset.ban === banTab); });
     $('#contRow').classList.toggle('hide', banTab !== 'doc');
     $('#shelfRow').classList.toggle('hide', banTab !== 'shelf');
-    $('#banSub').textContent = banTab === 'doc'
-      ? 'lưu trong máy bạn — ' + docs.length + ' bộ đang đọc dở'
-      : shelf.length + ' bộ đã lưu';
     var clr = $('#banClear');
     clr.textContent = banTab === 'doc' ? 'Xoá lịch sử đọc' : 'Bỏ hết khỏi tủ';
     if (banTab === 'doc') {
@@ -343,8 +340,6 @@
     var lib = CZ.lib(), on = statsOn();
     var tabs = rankTabs();
     var by = (rankBy && tabs.some(function (t) { return t.k === rankBy; })) ? rankBy : 'week';
-    var sub = $('#rankSub');
-    if (sub) sub.textContent = 'Top voted';
     $('#rankTabs').innerHTML = tabs.map(function (t) {
       return '<button class="tab' + (t.k === by ? ' on' : '') + '" data-k="' + t.k + '" role="tab" aria-selected="' +
         (t.k === by) + '">' + t.l + '</button>';
@@ -374,22 +369,61 @@
   });
 
   /* ======================= LỊCH RA CHƯƠNG ============================== */
-  function normTitle(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9à-ỹ]+/gi, ''); }
+  function parseDays(s) {
+    s = String(s || '').trim();
+    if (!s) return [];
+    var parts = s.split(/[,/–—]+/).map(function (p) { return p.trim(); }).filter(Boolean);
+    var out = [];
+    parts.forEach(function (p) {
+      if (/^\d+$/.test(p)) out.push('T' + p);
+      else {
+        var n = p.match(/(\d+)/);
+        if (/chủ|\bcn\b/i.test(p)) out.push('CN');
+        else if (n) out.push('T' + n[1]);
+        else out.push(p);
+      }
+    });
+    return out;
+  }
+  function schedFind(it) {
+    if (it && it.slug) {
+      var hit = CZ.findLib(it.slug);
+      if (hit) return hit;
+    }
+    var want = String(it && it.title || '').toLowerCase();
+    if (!want) return null;
+    var found = null;
+    CZ.lib().some(function (x) {
+      var t = String(x.title || '').toLowerCase();
+      if (t === want || t.indexOf(want) === 0 || want.indexOf(t) === 0) { found = x; return true; }
+      return false;
+    });
+    return found;
+  }
   function renderSched(sch) {
     var items = (sch && sch.items) || [];
     var el = $('#sched');
+    if (!el) return;
     if (!items.length) {
       el.innerHTML = '<div class="empty">Chưa có lịch ra chương.</div>';
       return;
     }
-    el.innerHTML = items.slice(0, 8).map(function (it) {
-      var n = null;
-      CZ.lib().some(function (x) { if (normTitle(x.title) === normTitle(it.title)) { n = x; return true; } return false; });
-      return '<a class="sched' + (n ? ' clk' : '') + '" ' + (n ? 'href="' + esc(CZ.storyURL(n.slug)) + '"' : '') + '>' +
-        '<div class="day">' + esc(it.days || '') + '</div>' +
-        '<div class="info"><b>' + esc(it.title || '') + '</b><span>' +
-        (n ? (n.canRead ? esc(CZ.countText(n)) : 'sắp ra mắt') : esc(it.detail || '')) + '</span></div></a>';
-    }).join('');
+    el.innerHTML = '<div class="schedlist">' + items.map(function (it) {
+      var n = schedFind(it);
+      var days = parseDays(it.days).map(function (d) { return '<i>' + esc(d) + '</i>'; }).join('');
+      var title = (n && n.title) || it.title || '';
+      var im = n && (n.thumb || n.slide);
+      var href = n ? 'href="' + esc(CZ.storyURL(n.slug)) + '"' : '';
+      var meta = n
+        ? (n.canRead ? esc(CZ.countText(n)) : CZ.statusLabel(n.statusCls))
+        : esc(it.detail || '');
+      return '<a class="sched' + (n ? ' clk' : '') + '" ' + href + '>' +
+        '<span class="sch-th' + (im ? '' : ' noimg') + '">' +
+          (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" decoding="async">' : '') + '</span>' +
+        '<span class="sch-days">' + (days || '<i>—</i>') + '</span>' +
+        '<span class="sch-info"><b>' + esc(title) + '</b><span>' + meta + '</span></span></a>';
+    }).join('') + '</div>' +
+      (sch.note ? '<p class="schnote">' + esc(sch.note) + '</p>' : '');
   }
   function renderEditorChoice() {
     var el = $('#bien-tap'), rail = $('#editRail');
@@ -410,15 +444,7 @@
     }
     if (!list || !list.length) { el.hidden = true; return; }
     el.hidden = false;
-    var sub = $('#editSub');
-    if (sub) sub.textContent = list.length + ' bộ do biên tập chọn';
     CZ.mountRail(rail, list.slice(0, 12));
-  }
-  function renderDonation() {
-    // Donation only in footer as icon per request - hide home section
-    var sec = $('#ung-ho');
-    if (sec) sec.hidden = true;
-    // Footer will handle donation icon via donationCfg
   }
 
   /* ======================= THƯ VIỆN ==================================== */
@@ -644,7 +670,6 @@
       renderNew();
       renderRank();
       renderEditorChoice();
-      renderDonation();
       CZ.schedule().then(renderSched).catch(function () { renderSched(null); });
       buildFilters();
       render();

@@ -333,6 +333,12 @@
   function statusCls(s) {
     return /hoàn thành|full/i.test(s || '') ? 'done' : /sắp|chưa|tạm dừng/i.test(s || '') ? 'soon' : 'run';
   }
+  /* ba tình trạng duy nhất, dùng cùng chữ trên mọi trang */
+  var STATUS_LABEL = { done: 'Hoàn thành', run: 'Đang cập nhật', soon: 'Sắp ra mắt' };
+  function statusLabel(s) {
+    if (s === 'done' || s === 'run' || s === 'soon') return STATUS_LABEL[s];
+    return STATUS_LABEL[statusCls(s)] || 'Đang cập nhật';
+  }
   function words(html) {
     var t = String(html || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
     return t ? t.split(' ').length : 0;
@@ -387,6 +393,7 @@
     o.chapters = parseInt(o.chapters, 10) || 0;
     o.is18 = !!o.is18;
     o.statusCls = statusCls(o.status);
+    o.status = statusLabel(o.status);
     o.countLabel = o.countLabel || o.count || (o.chapters ? o.chapters + ' chương' : '0 chương');
     var parts = String(o.countLabel || '').split('/');
     o.declared = parseInt(parts[1], 10) || o.chapters;         /* tổng dự kiến */
@@ -461,7 +468,7 @@
       '<div class="th' + (img ? ' skel' : '') + '">' +
       (img ? '<img src="' + esc(img) + '" alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" width="300" height="450">' : '') +
       '<span class="scrim"></span>' +
-      '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(n.statusCls === 'done' ? 'Hoàn thành' : n.statusCls === 'soon' ? 'Sắp ra' : 'Đang ra') + '</span>' +
+      '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(statusLabel(n.statusCls || n.status)) + '</span>' +
       (n.is18 ? '<span class="b18">18+</span>' : '') +
       '<span class="foot"><span class="ch">' + esc(countText(n)) + '</span>' +
         (n.fresh ? '<span class="badge-new">Mới</span>' : '') + '</span>' +
@@ -490,7 +497,7 @@
         (pct ? '<span class="cl-prog" title="đã đọc ' + pct + '%"><i style="width:' + pct + '%"></i></span>' : '') +
       '</span>' +
       '<span class="cl-side">' +
-        '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(n.status || 'Đang cập nhật') + '</span>' +
+        '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(statusLabel(n.statusCls || n.status)) + '</span>' +
         '<span class="cl-ch">' + esc(countText(n)) + '</span>' +
         '<span class="cl-year">' + esc(n.year ? 'Năm ' + n.year : '—') + '</span>' +
       '</span>' +
@@ -706,9 +713,9 @@
     if (!host) return;
     /* header: icon + tên chức năng tiếng Anh cho gọn */
     var NAV = [
-      { k: 'library', l: 'Library', vi: 'Thư viện', i: 'library', h: '/#thu-vien' },
-      { k: 'new', l: 'New', vi: 'Mới cập nhật', i: 'sparkle', h: '/#moi-cap-nhat' },
-      { k: 'rank', l: 'Rank', vi: 'Xếp hạng', i: 'trophy', h: '/#bxh' },
+      { k: 'library', l: 'Library', vi: 'Library', i: 'library', h: '/#thu-vien' },
+      { k: 'new', l: 'Latest', vi: 'Latest Update', i: 'sparkle', h: '/#moi-cap-nhat' },
+      { k: 'rank', l: 'Top vote', vi: 'Top vote', i: 'trophy', h: '/#bxh' },
       { k: 'sched', l: 'Schedule', vi: 'Lịch ra chương', i: 'calendar', h: '/#lich' }
     ];
     var links = NAV.map(function (n) {
@@ -731,7 +738,7 @@
       '<button class="hbtn icon burger" id="czBurger" aria-label="Mở menu">' + icon('menu', 'i-s') + '</button>' +
       '</div>' +
       '<div class="mnav" id="czMnav">' + mLinks +
-      '<a href="/#ban-doc">' + icon('bookmark', 'i-s') + ' Bàn đọc</a>' +
+      '<a href="/#ban-doc">' + icon('bookmark', 'i-s') + ' My Space</a>' +
       '<a href="/guide">' + icon('info', 'i-s') + ' Hướng dẫn</a>' +
       '<a href="/admin">' + icon('gear', 'i-s') + ' Quản trị</a></div>';
 
@@ -820,18 +827,25 @@
     d.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('#czNav a'); if (a) mark(a); });
     run();
   }
-  /* chân trang: logo · lời cảm ơn · hướng dẫn / liên hệ */
+  /* chân trang: logo · lời cảm ơn · Hướng dẫn / Facebook / Email / Survey */
   function mountFooter(host) {
     if (!host) return;
     host.className = 'ftr';
     var cfg = reportCfg();
     var email = cfg.email || 'chuseoz.ofc@gmail.com';
+    var fb = 'https://www.facebook.com/profile.php?id=61592803761987';
+    var survey = cfg.form || 'https://forms.gle/YW3PvtrNVQ7xt8nCA';
     host.innerHTML = '<div class="in">' +
       '<div class="fmain">' +
         '<div class="fbrand">' +
           '<a class="logo" href="/"><span class="dot"></span>chuseoz<i>.</i></a>' +
           '<p class="fdesc">Cảm ơn bạn đã ủng hộ và đồng hành cùng chuseoz!</p>' +
-          '<p class="flinks"><a href="/guide">Hướng dẫn</a> · <a href="mailto:' + esc(email) + '">Liên hệ</a></p>' +
+          '<p class="flinks">' +
+            '<a href="/guide">Hướng dẫn</a>' +
+            '<a href="' + esc(fb) + '" target="_blank" rel="noopener">Facebook</a>' +
+            '<a href="mailto:' + esc(email) + '">Email</a>' +
+            '<a href="' + esc(survey) + '" target="_blank" rel="noopener">Survey</a>' +
+          '</p>' +
         '</div>' +
       '</div></div>';
   }
@@ -990,7 +1004,7 @@
     isLiked: isLiked, toggleLike: toggleLike, marks: marks, toggleMark: toggleMark, chaptersRead: chaptersRead,
     rdGet: rdGet, rdSet: rdSet, themeInit: themeInit, themeToggle: themeToggle,
     icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo,
-    statusCls: statusCls, words: words, norm: norm, countText: countText, listHead: listHead,
+    statusCls: statusCls, statusLabel: statusLabel, words: words, norm: norm, countText: countText, listHead: listHead,
     storyURL: storyURL, readURL: readURL, slugify: slugify, qs: qs, copy: copy, download: download,
     card: card, mountRail: mountRail, reveal: reveal, countUp: countUp, scaleFacts: scaleFacts,
     scrollUI: scrollUI, slide: slide, pageFx: pageFx, pop: pop, ink: ink, inkAll: inkAll,

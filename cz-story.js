@@ -214,7 +214,7 @@
         '<div>' +
           '<h1>' + esc(n.title) + '</h1>' +
           '<div class="meta">' +
-            '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(n.status || '—') + '</span>' +
+            '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(CZ.statusLabel(n.statusCls || n.status)) + '</span>' +
             '<span>' + ic('book', 'i-s') + ' <b>' + esc(CZ.countText(n)) + '</b></span>' +
             (n.author ? '<span>' + ic('pen', 'i-s') + ' ' + esc(n.author) + '</span>' : '') +
             (n.couple ? '<span>' + ic('users', 'i-s') + ' ' + esc(n.couple) + '</span>' : '') +
@@ -283,7 +283,7 @@
       ['Tác giả', n.author || '—'],
       ['Couple', n.couple || '—'],
       ['Năm', n.year || '—'],
-      ['Tình trạng', n.status || '—'],
+      ['Tình trạng', CZ.statusLabel(n.statusCls || n.status)],
       ['Số chương', n.canRead ? CZ.countText(n) : 'chưa có chương'],
       ['Bạn đã đọc', ch && n.chapters ? ch + '/' + n.chapters + ' chương (' + progressPct(n, ch) + '%)' : 'chưa đọc chương nào'],
       ['Cập nhật gần nhất', n.updated ? CZ.dateVN(n.updated) : '—']
@@ -453,7 +453,7 @@
         '<b>' + esc(n.title) + '</b>' +
         '<span class="rc-meta">' + esc([n.author, n.couple].filter(Boolean).join(' · ') || '—') + '</span>' +
         '<span class="rc-foot">' +
-          '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(n.status || 'Đang cập nhật') + '</span>' +
+          '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(CZ.statusLabel(n.statusCls || n.status)) + '</span>' +
           '<span class="rc-ch">' + esc(CZ.countText(n)) + '</span>' +
         '</span>' +
       '</span></a>';
