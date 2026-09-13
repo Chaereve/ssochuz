@@ -19,17 +19,45 @@
   paintIcons();
 
   /* ======================= 0. ĐỌC URL ==================================== */
+  function safeDec(s) {
+    try { return decodeURIComponent(s); } catch (e) { try { return decodeURI(s); } catch (e2) { return s; } }
+  }
   function slugFromURL() {
-    var p = location.pathname.split('/').filter(Boolean);
-    /* /truyen/<slug>/  và  /reader/<slug>/ (đời cũ) — tên truyện nằm ngay trong đường dẫn */
-    if ((p[0] === 'truyen' || p[0] === 'reader') && p[1]) return decodeURIComponent(p[1]);
-    /* /truyen, /reader, /truyen.html… : đường dẫn không có tên truyện → đọc query ?slug= */
-    if (!p.length || p[0] === 'truyen' || p[0] === 'reader' || /\.html?$/i.test(p[0] || '')) {
+    var raw = location.pathname || '';
+    var p = raw.split('/').filter(Boolean).map(safeDec);
+    var reserved = { 'truyen': 1, 'reader': 1, 'admin': 1, 'api': 1, 'index': 1 };
+    /* /truyen/<slug>/ và /reader/<slug>/ (đời cũ) — tên truyện nằm ngay sau */
+    if (p.length >= 2 && (p[0] === 'truyen' || p[0] === 'reader')) {
+      var cand = p[1];
+      if (cand && !reserved[cand] && cand.indexOf('.html') < 0) return cand;
+      /* trường hợp /truyen// (slug rỗng do dữ liệu lỗi) → thử query */
+      if (!cand) return CZ.qs('slug') || CZ.qs('truyen') || '';
+    }
+    /* /truyen, /reader, /truyen.html… : không có tên truyện trong path → đọc query */
+    if (!p.length) return CZ.qs('slug') || CZ.qs('truyen') || '';
+    if (p.length === 1 && (p[0] === 'truyen' || p[0] === 'reader')) {
       return CZ.qs('slug') || CZ.qs('truyen') || '';
     }
-    /* đường dẫn lạ (mở thẳng tệp khi xem thử trên máy) → lấy khúc cuối */
-    if (p.length) return decodeURIComponent(p[p.length - 1]);
-    return CZ.qs('slug') || '';
+    if (p.length === 1 && /\.html?$/i.test(raw.split('/').pop() || '')) {
+      /* mở thẳng file truyen.html?slug=… hoặc /<slug>.html khi xem thử trên máy */
+      var q = CZ.qs('slug') || CZ.qs('truyen');
+      if (q) return q;
+      var base = p[0].replace(/\.html?$/i, '');
+      if (base && base !== 'truyen' && base !== 'reader' && !reserved[base]) return base;
+      return '';
+    }
+    /* đường dẫn lạ (mở thẳng tệp khi xem thử trên máy) → lấy khúc cuối, bỏ .html */
+    if (p.length) {
+      var last = p[p.length - 1];
+      if (last === 'truyen' || last === 'reader') return CZ.qs('slug') || CZ.qs('truyen') || '';
+      var m = last.match(/^(.+)\.html?$/i);
+      if (m) {
+        var b = m[1];
+        if (b && b !== 'truyen' && b !== 'reader' && !reserved[b]) return b;
+      }
+      if (!reserved[last]) return last;
+    }
+    return CZ.qs('slug') || CZ.qs('truyen') || '';
   }
   function chapterFromHash() {
     var m = /^#(?:chuong|page|chapter)-(\d+)$/i.exec(location.hash || '');
@@ -416,27 +444,36 @@
   }
 
   /* ======================= 4. TRANG ĐỌC ================================= */
-  var RD_THEMES = [{ k: 'sang', l: 'Sáng' }, { k: 'kem', l: 'Kem' }, { k: 'xam', l: 'Xám' }, { k: 'toi', l: 'Tối' }];
-  var SIZES = [{ k: 16, l: 'Nhỏ' }, { k: 18, l: 'Vừa' }, { k: 20, l: 'Lớn' }, { k: 23, l: 'Rất lớn' }];
+  var RD_THEMES = [
+    { k: 'sang', l: 'Sáng' }, { k: 'kem', l: 'Kem' },
+    { k: 'sepia', l: 'Sepia' }, { k: 'la', l: 'Xanh lá' },
+    { k: 'xam', l: 'Xám' }, { k: 'toi', l: 'Tối' }
+  ];
+  var FONTS = [
+    { k: 'serif', l: 'Serif' }, { k: 'georgia', l: 'Georgia' },
+    { k: 'times', l: 'Times' }, { k: 'sans', l: 'Sans' },
+    { k: 'inter', l: 'Inter' }, { k: 'roboto', l: 'Roboto' },
+    { k: 'arial', l: 'Arial' }
+  ];
   var WIDTHS = [{ k: 640, l: 'Hẹp' }, { k: 720, l: 'Vừa' }, { k: 900, l: 'Rộng' }];
-  var LINES = [{ k: 1.6, l: 'Chặt' }, { k: 1.85, l: 'Vừa' }, { k: 2.1, l: 'Thoáng' }];
   function applyRD() {
     var s = CZ.rdGet();
     document.body.dataset.rd = s.theme;
+    document.body.dataset.rdFont = s.font || 'serif';
     document.body.classList.toggle('rd-paged', s.mode === 'paged');
     document.body.classList.toggle('rd-scroll', s.mode !== 'paged');
     var el = $('#rdText');
     if (el) {
-      el.classList.toggle('nofont', s.font === 'sans');
       el.classList.toggle('just', !!Number(s.justify));
     }
-    document.documentElement.style.setProperty('--rd-size', s.size + 'px');
-    document.documentElement.style.setProperty('--rd-line', s.line);
-    document.documentElement.style.setProperty('--rd-w', s.width + 'px');
+    document.documentElement.style.setProperty('--rd-size', (s.size||18) + 'px');
+    document.documentElement.style.setProperty('--rd-line', s.line || 1.85);
+    document.documentElement.style.setProperty('--rd-para', (s.para||1.05) + 'em');
+    document.documentElement.style.setProperty('--rd-w', (s.width||720) + 'px');
   }
   function paintSettings() {
     var s = CZ.rdGet();
-    function row(label, key, opts, cast) {
+    function row(label, key, opts) {
       return '<div class="srow2"><span>' + label + '</span><div class="opts">' + opts.map(function (o) {
         var on = String(s[key]) === String(o.k);
         return '<button data-set="' + key + '" data-v="' + o.k + '" class="' + (on ? 'on' : '') + '">' + o.l + '</button>';
@@ -445,29 +482,56 @@
     function grp(title, body) {
       return '<div class="sgrp"><h5>' + title + '</h5>' + body + '</div>';
     }
+    function sliderRow(label, key, min, max, step, unit) {
+      var v = s[key] != null ? s[key] : (key==='size'?18:key==='line'?1.85:key==='para'?1.05:720);
+      return '<div class="srow2 sl"><div class="sl-head"><span>' + label + '</span><b id="sl-'+key+'">' + v + (unit||'') + '</b></div>' +
+        '<input type="range" min="' + min + '" max="' + max + '" step="' + step + '" value="' + v + '" data-range="' + key + '" aria-label="' + label + '">' +
+        '</div>';
+    }
     $('#setBody').innerHTML =
       grp('Cách hiển thị',
         row('Kiểu xem', 'mode', [{ k: 'scroll', l: 'Cuộn liên tục' }, { k: 'paged', l: 'Phân trang' }]) +
-        row('Độ rộng cột chữ', 'width', WIDTHS)) +
+        row('Độ rộng cột chữ', 'width', WIDTHS) +
+        '<div class="srow2"><span>Toàn màn hình</span><div class="opts small"><button id="fsBtn">' + ic('expand','i-s') + ' Bật fullscreen</button></div></div>') +
       grp('Chữ',
-        row('Cỡ chữ', 'size', SIZES) +
-        row('Kiểu chữ', 'font', [{ k: 'serif', l: 'Có chân' }, { k: 'sans', l: 'Không chân' }]) +
-        row('Giãn dòng', 'line', LINES) +
+        sliderRow('Cỡ chữ', 'size', 14, 28, 1, 'px') +
+        row('Kiểu chữ', 'font', FONTS) +
+        sliderRow('Giãn dòng', 'line', 1.4, 2.4, 0.05, '') +
+        sliderRow('Giãn đoạn', 'para', 0.6, 1.8, 0.05, 'em') +
         row('Căn đều hai bên', 'justify', [{ k: 0, l: 'Tắt' }, { k: 1, l: 'Bật' }])) +
       grp('Nền đọc', row('Tông nền', 'theme', RD_THEMES)) +
-      '<div class="srow2" style="border:0"><span class="sm muted">Mọi thay đổi áp dụng ngay và được nhớ cho lần sau.</span>' +
+      '<div class="srow2" style="border:0"><span class="sm muted">Kéo trượt để chỉnh ngay, mọi thay đổi được nhớ cho lần sau. Phím tắt: ← → chuyển chương, B đánh dấu, F tập trung, L mục lục, Esc về.</span>' +
       '<button class="btn ghost sm" id="setReset">Mặc định</button></div>';
     $$('#setBody [data-set]').forEach(function (b) {
       b.addEventListener('click', function () {
         var key = b.dataset.set, v = b.dataset.v;
         var patch = {};
-        patch[key] = (key === 'size' || key === 'width' || key === 'line') ? Number(v) : (key === 'justify' ? Number(v) : v);
+        patch[key] = (key === 'size' || key === 'width' || key === 'line' || key === 'para') ? Number(v) : (key === 'justify' ? Number(v) : v);
         CZ.rdSet(patch);
         applyRD(); paintSettings(); relayout();
       });
     });
+    $$('#setBody [data-range]').forEach(function (r) {
+      var key = r.dataset.range;
+      function update(val) {
+        var patch = {}; patch[key] = Number(val);
+        CZ.rdSet(patch);
+        applyRD(); relayout();
+        var lab = document.getElementById('sl-'+key);
+        if (lab) lab.textContent = val + (key==='size'?'px':key==='para'?'em':'');
+      }
+      r.addEventListener('input', function () { update(this.value); });
+      r.addEventListener('change', function () { update(this.value); });
+    });
+    var fsBtn = $('#fsBtn');
+    if (fsBtn) fsBtn.addEventListener('click', function () {
+      try {
+        if (!document.fullscreenElement) { document.documentElement.requestFullscreen(); toast('Đã vào fullscreen — bấm Esc để thoát'); }
+        else { document.exitFullscreen(); }
+      } catch(e) { toast('Trình duyệt không hỗ trợ fullscreen'); }
+    });
     $('#setReset').addEventListener('click', function () {
-      CZ.rdSet({ mode: 'scroll', size: 18, font: 'serif', line: 1.85, theme: 'kem', width: 720, justify: 0 });
+      CZ.rdSet({ mode: 'scroll', size: 18, font: 'serif', line: 1.85, para: 1.05, theme: 'kem', width: 720, justify: 0 });
       applyRD(); paintSettings(); relayout(); CZ.toast('Đã về mặc định');
     });
   }
@@ -681,17 +745,30 @@
     $('#actShare').addEventListener('click', shareChapter);
     var rp = $('#actReport');
     if (rp) rp.addEventListener('click', function () {
+      var cfg = CZ.reportCfg ? CZ.reportCfg() : { email: 'chuseoz.ofc@gmail.com', form: 'https://forms.gle/YW3PvtrNVQ7xt8nCA' };
       var text = 'Báo lỗi · ' + N.title + ' · ' + chapLabel(cur) + '\n' + location.origin + location.pathname +
         '#chuong-' + cur + '\n\nChỗ cần sửa: ';
       var m = CZ.modal('czReport',
         '<div class="mh"><h4>Báo lỗi chữ</h4></div>' +
-        '<div class="mb"><p class="sm muted">Ghi rõ chỗ sai rồi copy nội dung dưới đây gửi cho chủ web (chat, mail…). ' +
-        'Trang đã kèm sẵn tên bộ, số chương và đường dẫn.</p>' +
-        '<textarea class="inp ta" id="rpText" rows="5" spellcheck="false">' + esc(text) + '</textarea></div>' +
+        '<div class="mb"><p class="sm muted">Ghi rõ chỗ sai. Bạn có thể gửi qua email hoặc form khảo sát — trang đã kèm sẵn tên bộ, số chương và link.</p>' +
+        '<textarea class="inp ta" id="rpText" rows="5" spellcheck="false">' + esc(text) + '</textarea>' +
+        '<div class="mt row"><a class="btn ghost sm" id="rpMail" href="#">' + ic('share', 'i-s') + 'Gửi email</a>' +
+        '<a class="btn ghost sm" id="rpForm" href="' + esc(cfg.form) + '" target="_blank" rel="noopener">Mở form</a></div></div>' +
         '<div class="mf"><button class="btn ghost" data-close>Đóng</button>' +
         '<button class="btn pri" id="rpCopy">' + ic('share', 'i-s') + 'Copy nội dung</button></div>');
+      function mailHref(){
+        var body = m.querySelector('#rpText').value;
+        var subj = encodeURIComponent('Báo lỗi · ' + N.title + ' · ' + chapLabel(cur));
+        var b = encodeURIComponent(body);
+        return 'https://mail.google.com/mail/?fs=1&tf=cm&to=' + encodeURIComponent(cfg.email) + '&su=' + subj + '&body=' + b;
+      }
       m.querySelector('#rpCopy').addEventListener('click', function () {
         CZ.copy(m.querySelector('#rpText').value, 'Đã copy nội dung báo lỗi');
+      });
+      var mailBtn = m.querySelector('#rpMail');
+      if (mailBtn) mailBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        window.open(mailHref(), '_blank', 'noopener');
       });
     });
     /* cuối chương: chỉ còn một lời dẫn, việc chuyển chương để thanh điều hướng dưới làm

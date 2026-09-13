@@ -12,6 +12,14 @@
    ========================================================================== */
 window.CZ_API = 'chuseoz-cms.kimtong1906.workers.dev';   // để '' nếu chưa dùng Worker
 window.CZ_STATS_DIRECT = true;                            // thử đọc số liệu Firebase trực tiếp
+// Firebase Auth - chỉ Google (điền apiKey khi bật Auth trong console, để {} nếu chưa dùng)
+window.CZ_FIREBASE_CONFIG = window.CZ_FIREBASE_CONFIG || {
+  apiKey: "", // dán apiKey từ Firebase Console > Project settings > General
+  authDomain: "chuseoz-library.firebaseapp.com",
+  projectId: "chuseoz-library",
+  appId: "" // optional
+};
+window.CZ_FIREBASE_PROJECT = window.CZ_FIREBASE_PROJECT || "chuseoz-library";
 
 /* --- chuẩn hoá URL: dán thiếu https:// hay thừa / ở cuối đều vẫn chạy đúng ---
    (thiếu https:// thì trình duyệt hiểu thành đường dẫn trong web và mọi lệnh gọi

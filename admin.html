@@ -207,7 +207,7 @@
           <button class="btn ghost sm" id="edBack">← Về thư viện</button></div>
         <div class="grid3" style="margin-top:8px">
           <div><label class="fl" for="fTitle">Tên truyện</label><input class="inp" id="fTitle"></div>
-          <div><label class="fl" for="fSlug">Slug</label><input class="inp" id="fSlug" readonly></div>
+          <div><label class="fl" for="fSlug">Slug (đường dẫn /truyen/&lt;slug&gt;/)</label><input class="inp" id="fSlug" placeholder="vd: my-truyen-hay"><span class="hint sm">Đổi slug sẽ đổi đường dẫn truyện. Hệ thống sẽ tự chuyển dữ liệu chương sang slug mới và xoá slug cũ trên KV.</span></div>
           <div><label class="fl" for="fAuthor">Tác giả</label><input class="inp" id="fAuthor"></div>
           <div><label class="fl" for="fCouple">Couple</label><input class="inp" id="fCouple"></div>
           <div><label class="fl" for="fYear">Năm</label><input class="inp" id="fYear"></div>
@@ -274,6 +274,44 @@
             </div>
             <div class="hpfound hide" id="hpFound"></div>
           </div>
+        </div>
+      </div>
+      <div class="card2">
+        <h3>Góc biên tập viên (Editor's Choice)</h3>
+        <p class="hint">Chọn tay những bộ chất lượng cao nhưng ít người biết — hiện ở trang chủ sau mục Xếp hạng. Không giới hạn số lượng nhưng nên 4-8 bộ.</p>
+        <div class="heroPick">
+          <div class="hplist" id="editPick"></div>
+          <div class="hpadd">
+            <div class="row">
+              <label class="search"><span data-ic="search"></span>
+                <input id="epFind" placeholder="Gõ tên truyện để thêm vào Editor's Choice…" autocomplete="off" spellcheck="false">
+              </label>
+              <button class="btn ghost sm" id="epAuto">Xoá hết</button>
+              <span class="sm muted" id="epCount"></span>
+            </div>
+            <div class="hpfound hide" id="epFound"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card2">
+        <h3>Ủng hộ (Donation Widget) — placeholder</h3>
+        <p class="hint">Để trống thì ẩn. Bật lên sẽ hiện ở trang chủ. Điền STK, QR, Momo ở đây.</p>
+        <div class="grid2">
+          <div><label class="fl" for="dEnabled">Bật widget?</label><select class="inp" id="dEnabled"><option value="0">Tắt</option><option value="1">Bật</option></select></div>
+          <div><label class="fl" for="dBank">Ngân hàng</label><input class="inp" id="dBank" placeholder="VD: Vietcombank"></div>
+          <div><label class="fl" for="dAccNo">Số TK</label><input class="inp" id="dAccNo" placeholder="0123456789"></div>
+          <div><label class="fl" for="dAccName">Tên chủ TK</label><input class="inp" id="dAccName"></div>
+          <div><label class="fl" for="dMomo">Momo / số ĐT</label><input class="inp" id="dMomo" placeholder="09xx"></div>
+          <div><label class="fl" for="dQr">QR ảnh URL</label><input class="inp" id="dQr" placeholder="https://.../qr.png"></div>
+        </div>
+        <label class="fl" for="dMsg">Lời ngỏ</label><textarea class="inp" id="dMsg" style="min-height:70px"></textarea>
+      </div>
+      <div class="card2">
+        <h3>Báo lỗi & Liên hệ</h3>
+        <p class="hint">Nút Báo lỗi ở trang đọc sẽ mở email/form này. Đã chọn email_form.</p>
+        <div class="grid2">
+          <div><label class="fl" for="rEmail">Email nhận báo lỗi</label><input class="inp" id="rEmail" placeholder="chuseoz.ofc@gmail.com"></div>
+          <div><label class="fl" for="rForm">Form khảo sát / báo lỗi URL</label><input class="inp" id="rForm" placeholder="https://forms.gle/..."></div>
         </div>
       </div>
       <div class="card2">
@@ -363,7 +401,10 @@
 <div class="toasts" id="toasts"></div>
 
 <script src="/cz-config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="/cz-app.js"></script>
+<script src="/cz-auth.js"></script>
 <script src="/admin.js"></script>
 </body>
 </html>

@@ -1005,6 +1005,19 @@
   "giscus": {
    "repo": "",
    "repoId": ""
+  },
+  "donation": {
+   "bank": "",
+   "accountNo": "",
+   "accountName": "",
+   "momo": "",
+   "qr": "",
+   "message": "Nếu bạn yêu thích chuseoz, hãy cân nhắc ủng hộ chi phí duy trì máy chủ. Mọi đóng góp đều trân quý.",
+   "enabled": false
+  },
+  "report": {
+   "email": "chuseoz.ofc@gmail.com",
+   "form": "https://forms.gle/YW3PvtrNVQ7xt8nCA"
   }
  },
  "schedule": {
@@ -1032,5 +1045,6 @@
  "source": {
   "synced": "2026-09-13",
   "note": "dữ liệu do trang quản trị giữ — không còn phụ thuộc blogspot"
- }
+ },
+ "editorChoice": []
 }

@@ -148,6 +148,7 @@
     return p.then(function (reg) {
       REG = reg || { lib: [] };
       REG.lib = REG.lib || [];
+      REG.editorChoice = REG.editorChoice || (REG.settings && REG.settings.editorChoice) || [];
       if (draft && draft.reg && confirm('Có bản nháp trong máy lưu lúc ' +
         new Date(draft.at).toLocaleString('vi-VN') + '.\nDùng bản nháp đó?')) {
         REG = draft.reg; BOOKS = draft.books || {}; dirty.meta = dirty.set = true;
@@ -202,23 +203,43 @@
     $('#ovClear').classList.toggle('hide', !OV_FILTER);
     if (!l.length) { tb.innerHTML = '<tr><td colspan="7" class="sm muted">Không có bộ nào khớp.</td></tr>'; return; }
     tb.innerHTML = l.map(function (n) {
+      var idx = (REG.lib || []).indexOf(n);
       var ck = selected[n.slug] ? ' checked' : '';
+      var slugDisp = n.slug || '<span style="color:#c33">(thiếu slug)</span>';
       return '<tr>' +
-        '<td><input type="checkbox" data-ck="' + esc(n.slug) + '"' + ck + ' style="width:auto"></td>' +
-        '<td><span class="ttl">' + esc(n.title) + '</span><span class="sub">' + esc(n.slug) + (n.is18 ? ' · 18+' : '') + '</span></td>' +
+        '<td><input type="checkbox" data-ck="' + esc(n.slug) + '" data-idx="' + idx + '"' + ck + ' style="width:auto"></td>' +
+        '<td><span class="ttl">' + esc(n.title) + '</span><span class="sub">' + slugDisp + (n.is18 ? ' · 18+' : '') + '</span></td>' +
         '<td><span class="sm">' + esc(n.author || '—') + '</span><br><span class="sub">' + esc(n.couple || '') + '</span></td>' +
         '<td><b>' + num(n.chapters || 0) + '</b><span class="sub"> ' + esc(n.countLabel || '') + '</span></td>' +
         '<td><span class="pill ' + CZ.statusCls(n.status) + '"><span class="d"></span>' + esc(n.status || '—') + '</span></td>' +
         '<td class="sm">' + esc(CZ.dateVN(n.updated)) + '</td>' +
         '<td class="row" style="gap:4px">' +
-          '<button class="btn ghost sm" data-edit="' + esc(n.slug) + '">' + ic('edit', 'i-s') + 'Sửa</button>' +
-          '<button class="btn ghost sm" data-chap="' + esc(n.slug) + '">' + ic('list', 'i-s') + '</button>' +
-          '<button class="btn ghost sm" data-del="' + esc(n.slug) + '" title="Xoá bộ">' + ic('trash', 'i-s') + '</button>' +
+          '<button class="btn ghost sm" data-edit="' + esc(n.slug) + '" data-idx="' + idx + '">' + ic('edit', 'i-s') + 'Sửa</button>' +
+          '<button class="btn ghost sm" data-chap="' + esc(n.slug) + '" data-idx="' + idx + '">' + ic('list', 'i-s') + '</button>' +
+          '<button class="btn ghost sm" data-del="' + esc(n.slug) + '" data-idx="' + idx + '" title="Xoá bộ">' + ic('trash', 'i-s') + '</button>' +
         '</td></tr>';
     }).join('');
-    $$('#tb [data-edit]').forEach(function (b) { b.addEventListener('click', function () { openEdit(b.dataset.edit, 'meta'); }); });
-    $$('#tb [data-chap]').forEach(function (b) { b.addEventListener('click', function () { openEdit(b.dataset.chap, 'chap'); }); });
-    $$('#tb [data-del]').forEach(function (b) { b.addEventListener('click', function () { delBook(b.dataset.del); }); });
+    $$('#tb [data-edit]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var idx = parseInt(b.dataset.idx,10);
+        if (!b.dataset.edit && !isNaN(idx) && REG.lib[idx]) openEditByIdx(idx, 'meta');
+        else openEdit(b.dataset.edit, 'meta');
+      });
+    });
+    $$('#tb [data-chap]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var idx = parseInt(b.dataset.idx,10);
+        if (!b.dataset.chap && !isNaN(idx) && REG.lib[idx]) openEditByIdx(idx, 'chap');
+        else openEdit(b.dataset.chap, 'chap');
+      });
+    });
+    $$('#tb [data-del]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var idx = parseInt(b.dataset.idx,10);
+        if (!b.dataset.del && !isNaN(idx) && REG.lib[idx]) delBookByIdx(idx);
+        else delBook(b.dataset.del);
+      });
+    });
     $$('#tb [data-ck]').forEach(function (c) {
       c.addEventListener('change', function () {
         if (c.checked) selected[c.dataset.ck] = 1; else delete selected[c.dataset.ck];
@@ -289,7 +310,8 @@
           '<span class="ovtt"><b>' + t.t + '</b><span>' + t.d + '</span></span>' +
           '<span class="grow"></span><button class="btn ghost sm" data-ovlist="' + t.k + '">Xem danh sách</button></div>' +
           '<div class="ovchips">' + t.items.map(function (n) {
-            return '<button class="ovchip" data-ovopen="' + esc(n.slug) + '">' + esc(n.title) +
+            var idx = (REG.lib || []).indexOf(n);
+            return '<button class="ovchip" data-ovopen="' + esc(n.slug) + '" data-idx="' + idx + '">' + esc(n.title) +
               (t.n > t.items.length ? '' : '') + '</button>';
           }).join('') + (t.n > t.items.length ? '<span class="sm muted">… và ' + (t.n - t.items.length) + ' bộ nữa</span>' : '') +
           '</div></div>';
@@ -300,7 +322,8 @@
       return String(b.updated || '').localeCompare(String(a.updated || ''));
     }).slice(0, 6);
     $('#ovRecent').innerHTML = recent.map(function (n) {
-      return '<button class="ovrec" data-ovopen="' + esc(n.slug) + '">' +
+      var idx = (REG.lib || []).indexOf(n);
+      return '<button class="ovrec" data-ovopen="' + esc(n.slug) + '" data-idx="' + idx + '">' +
         '<span class="ovth' + (n.thumb ? ' skel' : '') + '">' +
           (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async">' : '') + '</span>' +
         '<span class="ovtt"><b>' + esc(n.title) + '</b><span>' + esc(n.author || '') + ' · ' + esc(CZ.countText(n)) + '</span></span>' +
@@ -308,7 +331,11 @@
     }).join('') || '<div class="empty sm">Chưa có bộ nào.</div>';
 
     $$('#pane-overview [data-ovopen]').forEach(function (b) {
-      b.addEventListener('click', function () { openEdit(b.dataset.ovopen, 'meta'); });
+      b.addEventListener('click', function () {
+        var idx = parseInt(b.dataset.idx,10);
+        if (!b.dataset.ovopen && !isNaN(idx)) openEditByIdx(idx, 'meta');
+        else openEdit(b.dataset.ovopen, 'meta');
+      });
     });
     $$('#pane-overview [data-ovlist]').forEach(function (b) {
       b.addEventListener('click', function () {
@@ -342,6 +369,7 @@
     var sel = $('#qkBook');
     var cur = sel.value;
     sel.innerHTML = (REG.lib || []).slice().sort(function (a, b) { return String(a.title).localeCompare(String(b.title), 'vi'); })
+      .filter(function (n) { return n.slug; })
       .map(function (n) { return '<option value="' + esc(n.slug) + '">' + esc(n.title) + ' (' + num(n.chapters || 0) + ' chương)</option>'; }).join('');
     if (cur) sel.value = cur;
   }
@@ -359,6 +387,7 @@
   function openEdit(slug, focus) {
     CUR = (REG.lib || []).find(function (n) { return n.slug === slug; });
     if (!CUR) return;
+    CUR._oldSlug = CUR.slug;
     show('edit');
     $('#edHead').textContent = 'Sửa: ' + CUR.title;
     $('#edView').href = CZ.storyURL(CUR.slug);
@@ -372,6 +401,26 @@
     BOOK = null; CHAP = -1;
     $('#chList').innerHTML = '<div class="row2 sm muted" style="padding:10px">đang tải chương…</div>';
     bookOf(slug).then(function (b) { BOOK = b || { title: CUR.title, slug: slug, chapters: [] }; renderChapters(); });
+    if (focus === 'chap') setTimeout(function () { $('#chList').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 200);
+  }
+  function openEditByIdx(idx, focus) {
+    var n = (REG.lib || [])[idx];
+    if (!n) return;
+    if (n.slug) return openEdit(n.slug, focus);
+    CUR = n;
+    CUR._oldSlug = '';
+    show('edit');
+    $('#edHead').textContent = 'Sửa: ' + CUR.title + ' (thiếu slug)';
+    $('#edView').href = '#';
+    $('#fTitle').value = CUR.title || ''; $('#fSlug').value = '';
+    $('#fAuthor').value = CUR.author || ''; $('#fCouple').value = CUR.couple || '';
+    $('#fYear').value = CUR.year || ''; $('#fStatus').value = CUR.status || 'Đang cập nhật';
+    $('#fCount').value = CUR.countLabel || ''; $('#f18').value = CUR.is18 ? '1' : '0';
+    $('#fUpdated').value = CUR.updated || today();
+    $('#fThumb').value = CUR.thumb || CUR.slide || ''; $('#fSyn').value = CUR.synFull || CUR.syn || '';
+    dirty.meta = true; markDirty();
+    BOOK = null; CHAP = -1;
+    $('#chList').innerHTML = '<div class="row2 sm muted" style="padding:10px">bộ này chưa có slug — nhập slug mới rồi bấm Lưu thông tin.</div>';
     if (focus === 'chap') setTimeout(function () { $('#chList').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 200);
   }
   function renderChapters() {
@@ -420,7 +469,22 @@
   /* ------------------------------ lưu ----------------------------------- */
   function saveMeta() {
     if (!CUR) return Promise.resolve();
+    var oldSlug = CUR._oldSlug || CUR.slug;
+    var rawSlug = ($('#fSlug').value || '').trim();
+    var newSlug = rawSlug ? slugify(rawSlug) : oldSlug;
+    if (!newSlug) {
+      msg('Slug không được để trống — dùng chữ thường, số và dấu gạch ngang', 'err');
+      return Promise.resolve();
+    }
+    if (newSlug !== oldSlug) {
+      if ((REG.lib || []).some(function (n) { return n.slug === newSlug && n !== CUR; })) {
+        msg('Slug đã tồn tại: ' + newSlug + ' — chọn slug khác', 'err');
+        $('#fSlug').value = oldSlug;
+        return Promise.resolve();
+      }
+    }
     CUR.title = $('#fTitle').value.trim() || CUR.title;
+    CUR.slug = newSlug;
     CUR.author = $('#fAuthor').value.trim(); CUR.couple = $('#fCouple').value.trim();
     CUR.year = $('#fYear').value.trim(); CUR.status = $('#fStatus').value;
     CUR.countLabel = $('#fCount').value.trim() || CUR.countLabel;
@@ -428,7 +492,54 @@
     CUR.updated = $('#fUpdated').value || today();
     CUR.thumb = $('#fThumb').value.trim(); CUR.slide = CUR.thumb;
     CUR.synFull = $('#fSyn').value.trim(); CUR.syn = CUR.synFull.slice(0, 220);
-    return saveRegistry('Đã lưu thông tin “' + CUR.title + '”').then(function () { $('#edHead').textContent = 'Sửa: ' + CUR.title; });
+
+    var renamePromise = Promise.resolve();
+    if (newSlug !== oldSlug) {
+      if (BOOKS[oldSlug]) {
+        BOOKS[newSlug] = BOOKS[oldSlug];
+        delete BOOKS[oldSlug];
+      }
+      if (BOOK && (BOOK.slug === oldSlug || !BOOK.slug)) BOOK.slug = newSlug;
+      if (REG.slides) {
+        REG.slides.forEach(function (s) { if (s.slug === oldSlug) s.slug = newSlug; });
+      }
+      if (REG.editorChoice) {
+        REG.editorChoice = REG.editorChoice.map(function (x) { var sl = typeof x === 'string' ? x : (x && x.slug); return sl === oldSlug ? newSlug : sl; });
+      }
+      if (REG.settings && REG.settings.editorChoice) {
+        REG.settings.editorChoice = REG.settings.editorChoice.map(function (x) { var sl = typeof x === 'string' ? x : (x && x.slug); return sl === oldSlug ? newSlug : sl; });
+      }
+      if (REG.schedule && REG.schedule.items) {
+        REG.schedule.items.forEach(function (it) { if (it.slug === oldSlug) it.slug = newSlug; });
+      }
+      if (selected[oldSlug]) { selected[newSlug] = 1; delete selected[oldSlug]; }
+      if (ONLINE) {
+        var bookToMove = BOOKS[newSlug] || BOOK;
+        if (bookToMove) {
+          bookToMove.slug = newSlug;
+          renamePromise = api('/api/book/' + encodeURIComponent(newSlug), { method: 'PUT', body: bookToMove })
+            .then(function () {
+              return api('/api/book/' + encodeURIComponent(oldSlug), { method: 'DELETE' }).catch(function () {});
+            })
+            .catch(function (e) { msg('Đổi slug: lỗi khi chuyển chương sang slug mới: ' + e.message, 'err'); });
+        } else {
+          renamePromise = api('/api/book/' + encodeURIComponent(oldSlug), { method: 'DELETE' }).catch(function () {});
+        }
+      }
+      CUR._oldSlug = newSlug;
+    }
+
+    return renamePromise.then(function () {
+      return saveRegistry('Đã lưu thông tin “' + CUR.title + '”' + (newSlug !== oldSlug ? ' · slug mới: ' + newSlug : '')).then(function () {
+        $('#edHead').textContent = 'Sửa: ' + CUR.title;
+        $('#edView').href = CZ.storyURL(CUR.slug);
+        $('#fSlug').value = CUR.slug;
+        if (newSlug !== oldSlug) {
+          renderList(); fillQuickBooks(); renderSlides();
+          toast('Đã đổi slug: ' + oldSlug + ' → ' + newSlug, 'ok');
+        }
+      });
+    });
   }
   function saveRegistry(okMsg) {
     if (!REG) return Promise.resolve();
@@ -477,10 +588,28 @@
       if (!ok) return;
       REG.lib = REG.lib.filter(function (x) { return x.slug !== slug; });
       REG.slides = (REG.slides || []).filter(function (x) { return x.slug !== slug; });
+      REG.editorChoice = (REG.editorChoice || []).filter(function (x) { var sl = typeof x === 'string' ? x : (x && x.slug); return sl !== slug; });
+      if (REG.settings && REG.settings.editorChoice) REG.settings.editorChoice = (REG.settings.editorChoice || []).filter(function (x) { var sl = typeof x === 'string' ? x : (x && x.slug); return sl !== slug; });
       delete BOOKS[slug];
       var done = ONLINE ? api('/api/book/' + encodeURIComponent(slug), { method: 'DELETE' }).catch(function () {}) : Promise.resolve();
       done.then(function () { return saveRegistry('Đã xoá “' + (n ? n.title : slug) + '”'); }).then(function () {
         if (CUR && CUR.slug === slug) { CUR = null; show('list'); }
+        renderList();
+      });
+    });
+  }
+  function delBookByIdx(idx) {
+    var n = (REG.lib || [])[idx];
+    if (!n) return;
+    CZ.confirm('Xoá bộ “' + n.title + '” (thiếu slug) khỏi thư viện?', 'Xoá').then(function (ok) {
+      if (!ok) return;
+      REG.lib.splice(idx,1);
+      if (REG.slides) REG.slides = REG.slides.filter(function (x) { return x !== n && x.slug !== n.slug; });
+      if (REG.editorChoice) REG.editorChoice = REG.editorChoice.filter(function (x) { var sl = typeof x === 'string' ? x : (x && x.slug); return sl !== n.slug && x !== n; });
+      if (REG.settings && REG.settings.editorChoice) REG.settings.editorChoice = REG.settings.editorChoice.filter(function (x) { var sl = typeof x === 'string' ? x : (x && x.slug); return sl !== n.slug && x !== n; });
+      delete BOOKS[n.slug];
+      saveRegistry('Đã xoá “' + n.title + '”').then(function () {
+        if (CUR === n) { CUR = null; show('list'); }
         renderList();
       });
     });
@@ -548,6 +677,10 @@
   function slidePicks() {
     return (REG.slides || []).map(function (s) { return s.slug; }).filter(Boolean);
   }
+  function editPicks() {
+    var raw = REG.editorChoice || (REG.settings && REG.settings.editorChoice) || [];
+    return raw.map(function (x) { return typeof x === 'string' ? x : (x && x.slug); }).filter(Boolean);
+  }
   function renderSlides() {
     var picks = slidePicks();
     var by = {};
@@ -569,6 +702,79 @@
       }).join('')
       : '<div class="empty sm">Chưa chọn bộ nào — trang chủ sẽ tự lấy các bộ mới cập nhật.</div>';
     $('#hpCount').textContent = picks.length ? picks.length + '/6 bộ đang chọn' : 'đang để tự động';
+  }
+  function renderEdit() {
+    var picks = editPicks();
+    var by = {};
+    (REG.lib || []).forEach(function (n) { by[n.slug] = n; });
+    var el = document.getElementById('editPick');
+    if (!el) return;
+    el.innerHTML = picks.length
+      ? picks.map(function (slug, i) {
+        var n = by[slug] || {};
+        return '<div class="hprow" data-eslug="' + esc(slug) + '">' +
+          '<span class="hpno">' + (i + 1) + '</span>' +
+          '<span class="hpth' + (n.thumb ? ' skel' : '') + '">' +
+            (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async">' : '') + '</span>' +
+          '<span class="hpinfo"><b>' + esc(n.title || slug) + '</b><span>' + esc(n.author || '') +
+            (n.chapters ? ' · ' + num(n.chapters) + ' chương' : '') + '</span></span>' +
+          '<span class="hpbtns">' +
+            '<button class="mv" data-eup="' + i + '" title="Lên"' + (i === 0 ? ' disabled' : '') + '>' + ic('up', 'i-s') + '</button>' +
+            '<button class="mv" data-edown="' + i + '" title="Xuống"' + (i === picks.length - 1 ? ' disabled' : '') + '>' + ic('down', 'i-s') + '</button>' +
+            '<button class="mv" data-edrop="' + i + '" title="Bỏ">' + ic('x', 'i-s') + '</button>' +
+          '</span></div>';
+      }).join('')
+      : '<div class="empty sm">Chưa chọn bộ nào cho Góc biên tập viên.</div>';
+    var cnt = document.getElementById('epCount');
+    if (cnt) cnt.textContent = picks.length ? picks.length + ' bộ đang chọn' : 'chưa chọn';
+  }
+  function epMove(from, to) {
+    var picks = editPicks();
+    if (to < 0 || to >= picks.length) return;
+    var list = picks.slice();
+    var item = list.splice(from, 1)[0];
+    list.splice(to, 0, item);
+    REG.editorChoice = list;
+    if (REG.settings) REG.settings.editorChoice = list;
+    dirty.set = true; markDirty(); renderEdit();
+  }
+  function epDrop(i) {
+    var picks = editPicks();
+    var list = picks.slice(); list.splice(i, 1);
+    REG.editorChoice = list;
+    if (REG.settings) REG.settings.editorChoice = list;
+    dirty.set = true; markDirty(); renderEdit(); epSearch();
+  }
+  function epSearch() {
+    var box = document.getElementById('epFound'), inp = document.getElementById('epFind');
+    if (!box || !inp) return;
+    var q = (inp.value || '').trim().toLowerCase();
+    if (!q) { box.classList.add('hide'); box.innerHTML = ''; return; }
+    var picks = editPicks();
+    var hits = (REG.lib || []).filter(function (n) { return picks.indexOf(n.slug) < 0; })
+      .filter(function (n) {
+        return String(n.title || '').toLowerCase().indexOf(q) >= 0 || String(n.author || '').toLowerCase().indexOf(q) >= 0;
+      }).slice(0, 8);
+    box.classList.remove('hide');
+    box.innerHTML = hits.length
+      ? hits.map(function (n) {
+        return '<button class="hphit" data-eadd="' + esc(n.slug) + '"><b>' + esc(n.title) + '</b>' +
+          '<span>' + esc(n.author || '') + ' · ' + num(n.chapters || 0) + ' chương</span></button>';
+      }).join('')
+      : '<div class="sm muted" style="padding:10px 12px">Không tìm thấy.</div>';
+  }
+  function epAdd(slug) {
+    var picks = editPicks();
+    if (picks.indexOf(slug) >= 0) return;
+    var n = (REG.lib || []).find(function (x) { return x.slug === slug; });
+    if (!n) return;
+    picks.push(slug);
+    REG.editorChoice = picks;
+    if (REG.settings) REG.settings.editorChoice = picks;
+    dirty.set = true; markDirty();
+    var inp = document.getElementById('epFind');
+    if (inp) inp.value = '';
+    renderEdit(); epSearch();
   }
   function hpMove(from, to) {
     var picks = slidePicks();
@@ -622,6 +828,18 @@
     $('#sSchedNote').value = s.note || $('#sSchedNote').value || '';
     $('#sGiscusRepo').value = ((REG.settings || {}).giscus || {}).repo || '';
     $('#sGiscusId').value = ((REG.settings || {}).giscus || {}).repoId || '';
+    var don = (REG.settings && REG.settings.donation) || {};
+    var rep = (REG.settings && REG.settings.report) || {};
+    if ($('#dEnabled')) $('#dEnabled').value = don.enabled ? '1' : '0';
+    if ($('#dBank')) $('#dBank').value = don.bank || '';
+    if ($('#dAccNo')) $('#dAccNo').value = don.accountNo || '';
+    if ($('#dAccName')) $('#dAccName').value = don.accountName || '';
+    if ($('#dMomo')) $('#dMomo').value = don.momo || '';
+    if ($('#dQr')) $('#dQr').value = don.qr || '';
+    if ($('#dMsg')) $('#dMsg').value = don.message || '';
+    if ($('#rEmail')) $('#rEmail').value = rep.email || 'chuseoz.ofc@gmail.com';
+    if ($('#rForm')) $('#rForm').value = rep.form || 'https://forms.gle/YW3PvtrNVQ7xt8nCA';
+    renderEdit();
   }
   function renderSettings() {
     var s = REG.schedule || {};
@@ -630,6 +848,8 @@
   function saveSettings() {
     var by = {}; (REG.lib || []).forEach(function (n) { by[n.slug] = n; });
     REG.slides = slidePicks().slice(0, 6).map(function (s) { return by[s]; }).filter(Boolean);
+    var ePicks = editPicks();
+    REG.editorChoice = ePicks;
     var items = $('#sSched').value.split('\n').map(function (l) { return l.trim(); }).filter(Boolean).map(function (l) {
       var p = l.split('|').map(function (x) { return x.trim(); });
       return { days: p[0] || '', title: p[1] || '', detail: p[2] || '' };
@@ -638,8 +858,24 @@
       items: items, note: $('#sSchedNote').value.trim(),
       updated: today()
     };
+    var don = {
+      enabled: $('#dEnabled') && $('#dEnabled').value === '1',
+      bank: $('#dBank') ? $('#dBank').value.trim() : '',
+      accountNo: $('#dAccNo') ? $('#dAccNo').value.trim() : '',
+      accountName: $('#dAccName') ? $('#dAccName').value.trim() : '',
+      momo: $('#dMomo') ? $('#dMomo').value.trim() : '',
+      qr: $('#dQr') ? $('#dQr').value.trim() : '',
+      message: $('#dMsg') ? $('#dMsg').value.trim() : ''
+    };
+    var rep = {
+      email: $('#rEmail') ? $('#rEmail').value.trim() : 'chuseoz.ofc@gmail.com',
+      form: $('#rForm') ? $('#rForm').value.trim() : 'https://forms.gle/YW3PvtrNVQ7xt8nCA'
+    };
     REG.settings = Object.assign({}, REG.settings, {
-      giscus: { repo: $('#sGiscusRepo').value.trim(), repoId: $('#sGiscusId').value.trim() }
+      giscus: { repo: $('#sGiscusRepo').value.trim(), repoId: $('#sGiscusId').value.trim() },
+      donation: don,
+      report: rep,
+      editorChoice: ePicks
     });
     saveRegistry('Đã lưu cài đặt');
   }
@@ -875,8 +1111,18 @@
   });
   $('#nSlug').addEventListener('input', function () { this.dataset.touched = '1'; });
   $('#edBack').addEventListener('click', function () { show('list'); });
-  ['#fTitle', '#fAuthor', '#fCouple', '#fYear', '#fStatus', '#fCount', '#f18', '#fUpdated', '#fThumb', '#fSyn']
+  ['#fTitle', '#fSlug', '#fAuthor', '#fCouple', '#fYear', '#fStatus', '#fCount', '#f18', '#fUpdated', '#fThumb', '#fSyn']
     .forEach(function (s) { $(s).addEventListener('input', function () { dirty.meta = true; markDirty(); }); });
+  $('#fSlug').addEventListener('blur', function () {
+    var v = this.value.trim();
+    if (!v) return;
+    var norm = slugify(v);
+    if (norm && norm !== v) {
+      this.value = norm;
+      dirty.meta = true; markDirty();
+      toast('Slug đã chuẩn hoá thành: ' + norm, 'info');
+    }
+  });
   $('#btnSaveMeta').addEventListener('click', function () { saveMeta(); });
   $('#btnDraft').addEventListener('click', saveDraft);
   $('#chTitle').addEventListener('input', function () { dirty.book = true; markDirty(); });
@@ -931,6 +1177,34 @@
     $('#hpFind').value = ''; renderSlides(); hpSearch();
     toast('Trang chủ sẽ tự chọn bộ mới cập nhật');
   });
+  var epEl = $('#editPick');
+  if (epEl) epEl.addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    var i = parseInt(b.dataset.eup || b.dataset.edown || b.dataset.edrop, 10);
+    if (isNaN(i)) return;
+    if (b.dataset.eup !== undefined) epMove(i, i - 1);
+    else if (b.dataset.edown !== undefined) epMove(i, i + 1);
+    else epDrop(i);
+  });
+  var epFind = $('#epFind');
+  if (epFind) epFind.addEventListener('input', epSearch);
+  var epFound = $('#epFound');
+  if (epFound) epFound.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-eadd]'); if (b) epAdd(b.dataset.eadd);
+  });
+  var epAuto = $('#epAuto');
+  if (epAuto) epAuto.addEventListener('click', function () {
+    REG.editorChoice = []; if (REG.settings) REG.settings.editorChoice = [];
+    dirty.set = true; markDirty();
+    var inp = $('#epFind'); if (inp) inp.value = '';
+    renderEdit(); epSearch();
+    toast('Đã xoá hết Editor\'s Choice');
+  });
+  ['#dEnabled','#dBank','#dAccNo','#dAccName','#dMomo','#dQr','#dMsg','#rEmail','#rForm'].forEach(function (s) {
+    var el = $(s); if (el) el.addEventListener('input', function () { dirty.set = true; markDirty(); });
+  });
+  
   $('#btnSeed').addEventListener('click', seedKV);
   $('#btnHealth').addEventListener('click', function () { health().then(function () { toast('Đã kiểm tra Worker', 'ok'); }); });
   $('#btnStatsClear').addEventListener('click', function () { loadStats(true); show('stats'); });

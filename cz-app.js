@@ -204,8 +204,8 @@
   }
 
   /* cài đặt đọc */
-  var RD_DEF = { mode: 'scroll', size: 18, font: 'serif', line: 1.85, theme: 'kem', width: 720, justify: 0 };
-  function rdGet() { return Object.assign({}, RD_DEF, jsonGet(LS.read, {}) || {}); }
+  var RD_DEF = { mode: 'scroll', size: 18, font: 'serif', line: 1.85, para: 1.05, theme: 'kem', width: 720, justify: 0 };
+  function rdGet() { var cur=jsonGet(LS.read, {})||{}; if(cur && cur.font && ['roboto','inter','arial','times','georgia','serif','sans'].indexOf(cur.font)<0){ cur.font='serif'; } return Object.assign({}, RD_DEF, cur); }
   function rdSet(o) { var v = Object.assign(rdGet(), o || {}); jsonSet(LS.read, v); return v; }
 
   /* sáng / tối (mặc định: nền giấy sáng) */
@@ -321,7 +321,7 @@
     var t = String(html || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
     return t ? t.split(' ').length : 0;
   }
-  function storyURL(slug) { return '/truyen/' + encodeURIComponent(slug) + '/'; }
+  function storyURL(slug) { slug = String(slug||'').trim(); if (!slug) return '/truyen/'; return '/truyen/' + encodeURIComponent(slug) + '/'; }
   function readURL(slug, ch) { return storyURL(slug) + (ch ? '#chuong-' + ch : ''); }
   function slugify(s) {
     return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -435,6 +435,9 @@
   /* ======================= 6. THẺ TRUYỆN & DẢI ========================= */
   function card(n, opts) {
     opts = opts || {};
+    if (!n || !n.slug) return '<div class="card off" title="Thiếu slug — sửa trong trang quản trị">' +
+      '<div class="th noimg"><span class="pill soon"><span class="d"></span>thiếu slug</span></div>' +
+      '<h3>' + esc((n&&n.title)||'—') + '</h3><div class="cb">' + esc((n&&n.author)||'') + '</div></div>';
     var pg = progress(n), pct = n.chapters ? Math.min(100, Math.round(pg / n.chapters * 100)) : 0;
     var img = n.thumb || n.slide || '';
     if (opts.view === 'list') return cardList(n, img, pg, pct);
@@ -454,6 +457,7 @@
   }
   /* xem dạng danh sách: mỗi bộ một hàng, đủ thông tin để quyết định mở hay không */
   function cardList(n, img, pg, pct) {
+    if (!n || !n.slug) return '<div class="card list off"><span class="cl-main"><span class="cl-top"><b class="cl-t">' + esc((n&&n.title)||'—') + '</b></span><span class="cl-meta">thiếu slug — sửa trong trang quản trị</span></span></div>';
     var bits = [n.couple, n.couple && n.author ? n.author : (n.couple ? '' : n.author), n.year].filter(Boolean);
     var read = pg > 0;
     return '<a class="card list st-' + esc(n.statusCls || 'soon') + '" href="' + esc(storyURL(n.slug)) + '" data-t="' + esc(n.title) + '" title="' + esc(n.title) + '">' +
@@ -707,13 +711,15 @@
       '<span class="grow"></span>' +
       '<button class="hbtn" id="czJump" title="Tìm truyện (Ctrl/Cmd + K)">' + icon('search', 'i-s') +
         '<span class="searchbtn-txt">Tìm truyện…</span><span class="k">⌘K</span></button>' +
+      '<button class="hbtn" id="czAuthBtn" title="Đăng nhập Google">' + icon('users', 'i-s') + '<span class="searchbtn-txt" id="czAuthTxt">Đăng nhập</span></button>' +
       '<button class="hbtn icon" id="czTheme" title="Sáng / Tối" aria-label="Đổi nền sáng tối">' + icon('moon', 'i-s') + '</button>' +
       '<a class="hbtn icon" href="/admin" title="Trang quản trị" aria-label="Trang quản trị">' + icon('gear', 'i-s') + '</a>' +
       '<button class="hbtn icon burger" id="czBurger" aria-label="Mở menu">' + icon('menu', 'i-s') + '</button>' +
       '</div>' +
       '<div class="mnav" id="czMnav">' + links +
       '<a href="/#ban-doc">' + icon('bookmark', 'i-s') + ' Bàn đọc của bạn</a>' +
-      '<a href="/admin">' + icon('gear', 'i-s') + ' Trang quản trị</a></div>';
+      '<a href="/admin">' + icon('gear', 'i-s') + ' Trang quản trị</a>' +
+      '<a href="#" id="czAuthM">' + icon('users', 'i-s') + ' <span id="czAuthMTxt">Đăng nhập</span></a></div>';
 
     var tb = host.querySelector('#czTheme');
     function paintTheme() {
@@ -722,6 +728,40 @@
     }
     paintTheme();
     tb.addEventListener('click', function () { themeToggle(); paintTheme(); });
+    // Auth button
+    function paintAuth(){
+      var au = host.querySelector('#czAuthBtn'), txt = host.querySelector('#czAuthTxt');
+      var am = host.querySelector('#czAuthM'), mtxt = host.querySelector('#czAuthMTxt');
+      var u = (w.CZ_AUTH && w.CZ_AUTH.current && w.CZ_AUTH.current()) || null;
+      if(!au) return;
+      if(u){
+        if(txt) txt.textContent = (u.name || u.email || 'Bạn').split(' ')[0];
+        if(mtxt) mtxt.textContent = u.name || u.email;
+        au.title = 'Đã đăng nhập: '+(u.email||u.name)+' — bấm để đăng xuất';
+        am.title = au.title;
+      } else {
+        if(txt) txt.textContent = 'Đăng nhập';
+        if(mtxt) mtxt.textContent = 'Đăng nhập';
+        au.title = 'Đăng nhập Google (một chạm)';
+        if(am) am.title = au.title;
+      }
+    }
+    paintAuth();
+    var authBtn = host.querySelector('#czAuthBtn');
+    if(authBtn) authBtn.addEventListener('click', function(){
+      var u = (w.CZ_AUTH && w.CZ_AUTH.current && w.CZ_AUTH.current()) || null;
+      if(u){ w.CZ_AUTH.logout().then(paintAuth); }
+      else { w.CZ_AUTH.loginGoogle().then(paintAuth); }
+    });
+    var authM = host.querySelector('#czAuthM');
+    if(authM) authM.addEventListener('click', function(e){
+      e.preventDefault();
+      var u = (w.CZ_AUTH && w.CZ_AUTH.current && w.CZ_AUTH.current()) || null;
+      if(u){ w.CZ_AUTH.logout().then(function(){ paintAuth(); host.querySelector('#czMnav').classList.remove('on'); }); }
+      else { w.CZ_AUTH.loginGoogle().then(function(){ paintAuth(); host.querySelector('#czMnav').classList.remove('on'); }); }
+    });
+    if(w.CZ_AUTH && w.CZ_AUTH.onAuth) w.CZ_AUTH.onAuth(paintAuth);
+
     navInk(host);
     var mnav = host.querySelector('#czMnav');
     host.querySelector('#czBurger').addEventListener('click', function () {
@@ -770,20 +810,32 @@
   function mountFooter(host) {
     if (!host) return;
     host.className = 'ftr';
-    var rev = (memo.reg && memo.reg.rev) || '';
     host.innerHTML = '<div class="in">' +
       '<div class="fmain">' +
-        '<a class="logo" href="/"><span class="dot"></span>chuseoz<i>.</i></a>' +
-        '<nav class="fnav" aria-label="Liên kết chân trang">' +
-          '<a href="/#thu-vien">Thư viện</a>' +
-          '<a href="/#moi-cap-nhat">Mới cập nhật</a>' +
-          '<a href="/#bxh">Xếp hạng</a>' +
-          '<a href="/#lich">Lịch ra chương</a>' +
-        '</nav>' +
-      '</div>' +
-      '<div class="fbottom">' +
-        '<span>thư viện truyện đọc trên web · tiến độ lưu trong máy bạn</span>' +
-        '<span>rev ' + esc(rev || '—') + ' · nguồn dữ liệu ' + (w.CZ_SRC === 'kv' ? 'Cloudflare KV' : 'trong kho') + '</span>' +
+        '<div class="fcol fbrand">' +
+          '<a class="logo" href="/"><span class="dot"></span>chuseoz<i>.</i></a>' +
+          '<p class="fdesc">Thư viện truyện chuyển thể — dự án phi lợi nhuận, duy trì vì đam mê.</p>' +
+        '</div>' +
+        '<div class="fcol">' +
+          '<h4>Contact</h4>' +
+          '<a href="https://www.facebook.com/profile.php?id=61592803761987" target="_blank" rel="noopener">' + icon('users','i-s') + ' Facebook</a>' +
+          '<a href="https://mail.google.com/mail/u/0/?fs=1&tf=cm&to=chuseoz.ofc@gmail.com" target="_blank" rel="noopener">' + icon('share','i-s') + ' chuseoz.ofc@gmail.com</a>' +
+          '<a href="https://forms.gle/YW3PvtrNVQ7xt8nCA" target="_blank" rel="noopener">' + icon('edit','i-s') + ' Form khảo sát</a>' +
+        '</div>' +
+        '<div class="fcol">' +
+          '<h4>Follow us</h4>' +
+          '<div class="fsocial">' +
+            '<a href="https://www.facebook.com/profile.php?id=61592803761987" target="_blank" rel="noopener" title="Facebook">' + icon('users','i-s') + '</a>' +
+            '<a href="https://mail.google.com/mail/u/0/?fs=1&tf=cm&to=chuseoz.ofc@gmail.com" target="_blank" rel="noopener" title="Email">' + icon('share','i-s') + '</a>' +
+            '<a href="/guide" title="Hướng dẫn">' + icon('info','i-s') + '</a>' +
+          '</div>' +
+          '<div class="flinks">' +
+            '<a href="/guide">Hướng dẫn sử dụng</a>' +
+            '<a href="/#thu-vien">Thư viện</a>' +
+            '<a href="/#bxh">Xếp hạng</a>' +
+            '<a href="/#lich">Lịch ra chương</a>' +
+          '</div>' +
+        '</div>' +
       '</div></div>';
   }
   function mountShell(opt) {
@@ -895,6 +947,24 @@
       .sort(function (a, b) { return String(b.updated || '').localeCompare(String(a.updated || '')); })
       .slice(0, 5);
   }
+  function editorChoice(reg) {
+    reg = reg || memo.reg || {};
+    var by = {};
+    (reg.lib || []).forEach(function (n) { by[n.slug] = n; });
+    var raw = reg.editorChoice || (reg.settings && reg.settings.editorChoice) || [];
+    var list = raw.map(function (x) { return by[typeof x === 'string' ? x : (x && x.slug)]; }).filter(Boolean).map(norm);
+    return list;
+  }
+  function donationCfg(reg) {
+    reg = reg || memo.reg || {};
+    var d = (reg.settings && reg.settings.donation) || {};
+    return d;
+  }
+  function reportCfg(reg) {
+    reg = reg || memo.reg || {};
+    var r = (reg.settings && reg.settings.report) || {};
+    return { email: r.email || 'chuseoz.ofc@gmail.com', form: r.form || 'https://forms.gle/YW3PvtrNVQ7xt8nCA' };
+  }
   function findLib(id) {
     var lib = libList();
     for (var i = 0; i < lib.length; i++) if (lib[i].slug === id || lib[i].title === id) return lib[i];
@@ -917,7 +987,7 @@
   w.CZ = {
     API: API, normalizeApi: normalizeApi,
     registry: registry, book: book, stats: stats, schedule: schedule,
-    lib: libList, slides: slides, findLib: findLib, statsOf: statsOf, onStats: onStats,
+    lib: libList, slides: slides, editorChoice: editorChoice, donationCfg: donationCfg, reportCfg: reportCfg, findLib: findLib, statsOf: statsOf, onStats: onStats,
     progress: progress, setProgress: setProgress, lastReadAt: lastReadAt,
     shelfIds: shelfIds, inShelf: inShelf, toggleShelf: toggleShelf, clearShelf: clearShelf,
     isLiked: isLiked, toggleLike: toggleLike, marks: marks, toggleMark: toggleMark, chaptersRead: chaptersRead,
