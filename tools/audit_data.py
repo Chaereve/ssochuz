@@ -30,6 +30,39 @@ def load(p, default=None):
         return default
 
 
+def label_matches(label, total):
+    """Nhãn trên thẻ Blogger có 2 kiểu: 'x/y' với y = tổng số chương, hoặc y = tổng dự kiến
+       (khi đó x = số chương đã đăng). Khớp nếu một trong hai con số đúng bằng số chương thật."""
+    parts = str(label or '').split('/')
+    nums = [p.strip() for p in parts if p.strip().isdigit()]
+    return any(int(x) == total for x in nums)
+
+
+def chapter_mix(chapters):
+    """Đếm chương theo cách gọi tên thật trên blogspot:
+       Lời Mở Đầu / Chương 0 / chương đánh số / Ngoại truyện.
+       Nhãn 'x/y' trên thẻ Blogger chỉ đếm phần chương đánh số, nên hay lệch với
+       tổng số chương đọc được — hàm này giúp giải thích chứ không đoán."""
+    pro = c0 = nx = 0
+    nums = []
+    for c in chapters:
+        t = (c.get('t') or '').strip()
+        if re.match(r'^(lời mở đầu|lời nói đầu|giới thiệu|phi lộ|dẫn nhập)', t, re.I):
+            pro += 1
+        elif re.match(r'^chương\s*0\b', t, re.I):
+            c0 += 1
+        elif re.search(r'ngoại truyện|phiên ngoại|side story', t, re.I):
+            nx += 1                       # ngoại truyện đếm riêng, không gộp vào số chương
+        else:
+            m = re.match(r'^chương\s*(\d+)', t, re.I)
+            if m:
+                nums.append(int(m.group(1)))
+            else:
+                pro += 1
+    return {'total': len(chapters), 'prologue': pro, 'chapter0': c0, 'extras': nx,
+            'numbered': len(nums), 'maxNumbered': max(nums) if nums else 0}
+
+
 def norm(t):
     t = str(t or '').lower().replace('²', '2')
     t = re.sub(r'\(.*?\)', ' ', t)
@@ -91,12 +124,18 @@ def main():
         # so với thẻ truyện trên blogspot (nếu có)
         c = (by_card.get(norm_full(n.get('title'))) or by_card.get(norm(n.get('title'))))
         if c:
-            if (c.get('count') or '') != (n.get('countLabel') or ''):
-                notes.append('Thẻ Blogger ghi %s nhưng dữ liệu đang dùng %s — %s (bài gốc nhiều hơn/bằng)'
-                             % (c.get('count'), n.get('countLabel'), n.get('title')))
+            mx = chapter_mix(chs)
+            lab = str(c.get('count') or '')
+            if not label_matches(lab, mx['total']):
+                notes.append('**%s** — thẻ Blogger ghi `%s`, dữ liệu có **%d chương thật** '
+                             '(%d Lời Mở Đầu/Chương 0 + %d chương đánh số + %d Ngoại truyện). '
+                             '%s'
+                             % (n.get('title'), lab or '—', mx['total'],
+                                mx['prologue'] + mx['chapter0'], mx['numbered'], mx['extras'],
+                                'Lệch do cách đếm của thẻ cũ.' if mx['numbered'] else 'Thẻ cũ hơn dữ liệu hiện có.'))
             if (c.get('status') or '') != (n.get('status') or ''):
-                notes.append('Thẻ Blogger ghi "%s", trang truyện ghi "%s" — %s (đã lưu bản gốc ở statusRaw)'
-                             % (c.get('status'), n.get('status'), n.get('title')))
+                notes.append('**%s** — tình trạng: thẻ ghi "%s", trang truyện hiển thị "%s" (bản gốc lưu ở `statusRaw`).'
+                             % (n.get('title'), c.get('status'), n.get('status')))
     n0 = sum(1 for n in lib if not (n.get('chapters') or 0))
     rep = []
     rep.append('# Soát dữ liệu truyện — chuseoz\n')
@@ -115,6 +154,27 @@ def main():
     rep.append('')
     rep.append('## Chênh lệch giữa thẻ Blogger (cũ) và trang truyện (đang dùng)\n')
     rep.append('\n'.join('- %s' % x for x in notes) if notes else 'Không có chênh lệch.')
+    rep.append('')
+    rep.append('## Cách đếm chương (vì sao nhãn trên thẻ Blogger hay lệch với số chương đọc được)\n')
+    rep.append('| Truyện | Thẻ Blogger | Tổng chương | Lời Mở Đầu / Chương 0 | Chương đánh số | Ngoại truyện |')
+    rep.append('|---|---|---|---|---|---|')
+    shown = 0
+    for n in lib:
+        c = by_card.get(norm_full(n.get('title'))) or by_card.get(norm(n.get('title')))
+        if not c:
+            continue
+        p2 = os.path.join(ROOT, 'data/book', (n.get('slug') or '') + '.json')
+        if not os.path.exists(p2):
+            continue
+        mx = chapter_mix((load(p2) or {}).get('chapters') or [])
+        lab = str(c.get('count') or '')
+        if label_matches(lab, mx['total']):
+            continue                       # khớp số chương thì không cần kể ra
+        rep.append('| %s | %s | %d | %d | %d | %d |' % (n.get('title'), lab or '—', mx['total'],
+                                                        mx['prologue'] + mx['chapter0'], mx['numbered'], mx['extras']))
+        shown += 1
+    if not shown:
+        rep.append('| (không có bộ nào lệch) | | | | | |')
     rep.append('')
     rep.append('> Nguyên tắc: số liệu đọc/bình chọn **chỉ** lấy từ Firebase cũ (`chuseoz-library`).\n'
                '> Khi chưa đọc được thì web không hiện số nào và ghi rõ lý do, không ước lượng.\n')

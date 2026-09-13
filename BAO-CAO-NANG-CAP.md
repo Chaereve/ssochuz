@@ -90,9 +90,14 @@ Chạy `python3 tools/audit_data.py --md BAO-CAO-DU-LIEU.md` (báo cáo đầy �
 
 - Số chương khai báo == số chương thật trong `data/book/*.json` == số chương hiện trên trang: **0 lệch / 62 bộ**.
 - Mọi bộ đều có `statusRaw` (nguyên văn tình trạng trên thẻ Blogger) để đối chiếu về sau.
-- **5 chênh lệch** giữa thẻ Blogger (cũ) và trang truyện (đang dùng) đã được ghi lại rõ ràng trong báo cáo —
-  ví dụ thẻ ghi `14/14` nhưng trang đã có 15 chương, hoặc thẻ ghi “Tới Chương 8” trong khi trang ghi “Đang cập nhật”.
-  Bộ nào chưa có chương thì hiện “Sắp ra mắt”, không bịa số.
+- **Chỉ còn 2 bộ lệch số chương** so với thẻ Blogger cũ, và cả hai đã được giải thích tới từng chương:
+  *Chain Baby* thẻ `14/14` nhưng có **15 chương** (thêm “Chương 0” — thẻ cũ không tính phần mở đầu),
+  *Cô Vợ Hờ Đanh Đá Của Tôi* thẻ `5/40` nhưng có **7 chương** (2 phần Lời Mở Đầu + 5 chương đánh số).
+  Các bộ còn lại khớp (thẻ `x/y` với `y` là tổng dự kiến, `x` là số chương đã đăng).
+- 3 ghi chú về **tình trạng**: thẻ ghi “Tới chương 5” / “Tới Chương 8” / “Sắp dịch”, trang truyện hiển thị “Đang cập nhật”
+  và “Sắp ra mắt” — bản gốc vẫn lưu nguyên văn trong `statusRaw` của từng bộ.
+- Bảng “Cách đếm chương” trong `BAO-CAO-DU-LIEU.md` tách rõ: Lời Mở Đầu / Chương 0 / chương đánh số / Ngoại truyện —
+  để bất kỳ ai cũng kiểm lại được con số mà không phải tin lời.
 - **Số liệu đọc/bình chọn**: chỉ lấy từ Firebase cũ (`chuseoz-library`). Hiện Firestore đang chặn quyền đọc (403) nên web
   **không hiện số nào** và ghi rõ lý do; BXH tạm xếp theo số chương + ngày cập nhật.
   Mở quyền đọc theo mục 5 trong `worker/README.md` là số thật hiện ngay (cache 10 phút).
