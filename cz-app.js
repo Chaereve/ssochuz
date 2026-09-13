@@ -838,7 +838,6 @@
         '</div>' +
       '</div></div>';
   }
-  }
   function mountShell(opt) {
     opt = opt || {};
     if (d.getElementById('hdr')) mountHeader(d.getElementById('hdr'), opt.active);
