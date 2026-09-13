@@ -90,6 +90,8 @@ tải lại trang, nút Back của trình duyệt trả về đúng danh sách c
 | **Cuối chương: hai hàng chuyển chương** | vừa dòng “Hết chương · chương kế tiếp” vừa nút chuyển chương lặp lại | giữ **một** hàng nút ở `#rdNav`, thêm cặp nút ←/→ lên thanh trên; hết chương chỉ còn một dòng nhắc |
 | **Thanh trên trang đọc** | muốn sang chương kế phải cuộn xuống cuối | thêm ←/→ cạnh nhãn chương, chương đầu/chương cuối thì nút đó mờ đi |
 | **Xem theo danh sách (lần hai)** | hàng vẫn dễ rối: tình trạng nằm chung dòng tên, nhãn số chương dính sát nút, không có dòng tiêu đề cột | mỗi hàng có vạch màu tình trạng ở lề trái, cột phải xếp dọc *tình trạng → số chương → chuyển thể*, nút đổi thành “Đọc tiếp” / “Xem truyện”, thêm dòng tiêu đề **Bộ truyện · Tình trạng · chương** |
+| **Xem theo danh sách trên điện thoại** | dòng tiêu đề cột chữ dính liền nhau, cột tình trạng · số chương bị giấu nên hàng nào cũng giống hàng nào | máy nhỏ: ẩn dòng tiêu đề cột (hai cột thì nó vô nghĩa), đưa tình trạng + số chương + chuyển thể xuống thành một dòng dưới mô tả |
+| **Thanh trên trang đọc trên điện thoại** | tên truyện co lại còn một chữ “T…”, nhãn chương rớt thành ba dòng số | thanh đọc một hàng gọn: nút về trang truyện · tên truyện + số chương · ←/→ · mục lục · cài đặt · chia sẻ (đánh dấu và chế độ tập trung để ở hàng nút cuối chương) |
 | **Nút trong trang quản trị** | “Ngắt kết nối” hiện cả khi chưa nối gì; thanh trên ở điện thoại chen chúc, ô số liệu dài một cột | nút chỉ hiện khi đã nối; thanh trên xuống dòng, ô số liệu chia hai cột |
 
 **Kiểm thử tự động**: `cd tests && node run.js` → **8/8 bài đạt** (~85 giây), không lỗi JS nào.

@@ -387,12 +387,14 @@ textarea.inp { min-height: 120px; resize: vertical; line-height: 1.6; }
 .card.list .cl-go { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; font-size: 12.5px;
   font-weight: 700; color: var(--acc); white-space: nowrap; transition: gap .15s var(--ease); }
 @media (max-width: 900px) {
-  .card.list { grid-template-columns: 66px minmax(0, 1fr); gap: 13px; align-items: start; }
-  .card.list .cl-th { width: 66px; grid-row: 1 / span 2; align-self: start; }
-  .card.list .cl-main { grid-column: 2; }
-  .card.list .cl-side { display: none; }
-  .card.list .cl-go { grid-column: 2; justify-content: flex-start; }
+  /* xem theo danh sách trên máy nhỏ: bìa một khối bên trái, chữ xếp một cột bên phải */
+  .card.list { grid-template-columns: 66px minmax(0, 1fr); gap: 12px; align-items: start; }
+  .card.list .cl-th { width: 66px; grid-row: 1 / span 3; align-self: start; }
+  .card.list .cl-side { grid-column: 2; flex-direction: row; align-items: baseline; gap: 9px; flex-wrap: wrap;
+    margin-top: 8px; }
+  .card.list .cl-go { grid-column: 2; justify-content: flex-start; margin-top: 6px; }
   .card.list .cl-syn { -webkit-line-clamp: 3; }
+  .grid.list-view .list-head { display: none; }   /* hai cột thì dòng tiêu đề cột không còn nghĩa */
 }
 
 /* ========================= 8. BÀN ĐỌC ==================================== */
@@ -844,6 +846,13 @@ kbd { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; b
   .card2 { padding: 16px; }
   .savebar { margin: 16px -16px -16px; padding: 12px 16px; }
   .tbl { font-size: 12.5px; }
+  /* thanh trên trang đọc: giữ một hàng, bỏ bớt nút phụ (vẫn có ở hàng nút cuối chương) */
+  .rdbar .in { padding: 8px 12px; gap: 8px; }
+  .rdbar .ttl b { font-size: 13.5px; }
+  .rdbar .tools { gap: 0; }
+  .rdbar .tsep { margin: 0 3px; }
+  .ibo { width: 30px; height: 30px; }
+  #rdMark, #rdFocus { display: none; }
   /* thanh trên trang quản trị: xuống dòng thay vì chen chúc */
   .abar .in { height: auto; min-height: 56px; padding: 8px 12px; flex-wrap: wrap; row-gap: 8px; }
   .abar .in .grow { display: none; }
