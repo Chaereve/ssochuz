@@ -178,7 +178,9 @@
     $('#chapTop').setAttribute('href', n.canRead ? '#chuong-' + n.chapters : '#');
     $('#chapTop').style.display = n.canRead ? '' : 'none';
     $('#chapCount').textContent = n.canRead
-      ? n.chapters + ' chương đọc được' + (n.declared > n.chapters ? ' · ' + n.countLabel + ' theo thẻ truyện' : '')
+      ? (n.declared > n.chapters
+        ? 'đang có ' + n.chapters + '/' + n.declared + ' chương'
+        : n.chapters + ' chương')
       : 'chưa có chương nào — đang ở trạng thái “Sắp ra mắt”';
   }
 
@@ -208,7 +210,7 @@
       var on = x.i === prog ? ' now' : '';
       var sp = chapSplit(x.c);
       return '<a class="cha' + on + '" href="#chuong-' + x.i + '" data-ch="' + x.i + '" title="' + esc(x.c.t) + '">' +
-        '<span class="no">' + (sp.no || '・') + '</span><span class="nm">' + hl(sp.name) + '</span>' +
+        '<span class="no">' + (sp.no || '—') + '</span><span class="nm">' + hl(sp.name) + '</span>' +
         (marks.indexOf(x.i) >= 0 ? '<span class="done" title="Chương đã đánh dấu">' + ic('star', 'i-s') + '</span>'
           : (x.i < prog ? '<span class="done" title="Đã đọc">' + ic('check', 'i-s') + '</span>' : '')) + '</a>';
     }).join('') : '<div class="empty" style="grid-column:1/-1">Không tìm thấy chương nào khớp.</div>';
@@ -340,7 +342,7 @@
       if (q && c.t.toLowerCase().indexOf(q) < 0 && String(n) !== q) return '';
       var sp = chapSplit(c);
       return '<a href="#chuong-' + n + '" data-ch="' + n + '" class="' + (n === cur ? 'on' : '') + (n < prog ? ' read' : '') + '">' +
-        '<span class="no">' + (sp.no || '・') + '</span><span class="nm">' + esc(sp.name) + '</span>' +
+        '<span class="no">' + (sp.no || '—') + '</span><span class="nm">' + esc(sp.name) + '</span>' +
         (marks.indexOf(n) >= 0 ? '<span class="ck">' + ic('star', 'i-s') + '</span>'
           : (n < prog ? '<span class="ck">' + ic('check', 'i-s') + '</span>' : '<span></span>')) + '</a>';
     }).join('') || '<div class="empty" style="border:0;background:none">Không có chương nào khớp.</div>';

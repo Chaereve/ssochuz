@@ -51,6 +51,7 @@ tải lại trang, nút Back của trình duyệt trả về đúng danh sách c
 | Dòng nguồn của **Lịch ra chương** ở trên đầu khung | đưa xuống cuối cho giống các khung khác |
 | Đoạn giới thiệu lặp ở tab Kết nối của trang quản trị | giữ một chỗ, chỗ còn lại chỉ nói việc cần làm |
 | Quãng trống giữa giao diện và bộ chữ | hái lại thang chữ theo từng trang (xem §5) |
+| Dòng phụ ở **Danh sách chương** | “9 chương đọc được · 9/45 theo thẻ truyện” nói hai lần một ý — nay chỉ còn “đang có 9/45 chương” |
 
 ---
 
