@@ -291,6 +291,8 @@
   function applyRD() {
     var s = CZ.rdGet();
     document.body.dataset.rd = s.theme;
+    document.body.classList.toggle('rd-paged', s.mode === 'paged');
+    document.body.classList.toggle('rd-scroll', s.mode !== 'paged');
     var el = $('#rdText');
     if (el) {
       el.classList.toggle('nofont', s.font === 'sans');
@@ -496,15 +498,17 @@
     });
     $('#actComment').addEventListener('click', function () { exitReader(true); });
     $('#actShare').addEventListener('click', shareChapter);
-    /* cuối chương */
-    $('#rdEnd').innerHTML = cur < CHS.length
-      ? '<div class="card2"><div class="grow"><b>Hết ' + esc(chapLabel(cur)) + '</b><div class="sm muted">Tiếp theo: ' + esc(CHS[cur].t) + '</div></div>' +
-        '<button class="btn pri" id="endNext">Chương ' + (cur + 1) + ' ' + ic('right', 'i-s') + '</button></div>'
-      : '<div class="card2"><div class="grow"><b>Bạn đã đọc tới chương cuối (' + CHS.length + ')</b>' +
-        '<div class="sm muted">Bộ này đang cập nhật — lưu vào tủ truyện để quay lại sau.</div></div>' +
-        '<a class="btn ghost" href="' + esc(CZ.storyURL(N.slug)) + '" id="endInfo">Về trang truyện</a></div>';
-    var en = $('#endNext');
-    if (en) en.addEventListener('click', function () { go(cur + 1); });
+    /* cuối chương: chỉ còn một lời dẫn, việc chuyển chương để thanh điều hướng dưới làm
+       (bản trước vừa có nút “Chương tiếp theo” ở đây vừa có thanh dưới — trùng nhau) */
+    var last = cur >= CHS.length;
+    $('#rdEnd').innerHTML =
+      '<div class="endrule" aria-hidden="true"></div>' +
+      '<div class="endline">' +
+        '<span class="endmark">' + (last ? 'Hết bộ' : 'Hết ' + esc(chapLabel(cur))) + '</span>' +
+        (last
+          ? '<span class="endsub">Bộ này đang cập nhật — lưu vào tủ truyện để quay lại khi có chương mới.</span>'
+          : '<span class="endsub">Chương kế tiếp: <b>' + esc(CHS[cur].t) + '</b></span>') +
+      '</div>' + (last ? '<a class="btn ghost sm mt" href="' + esc(CZ.storyURL(N.slug)) + '" id="endInfo">' + ic('info', 'i-s') + 'Về trang truyện</a>' : '');
     if (!keepScroll) window.scrollTo({ top: 0, behavior: 'auto' });
     $('#rdProgFill').style.width = (CHS.length ? Math.round(cur / CHS.length * 100) : 0) + '%';
     CZ.setProgress(N, cur);

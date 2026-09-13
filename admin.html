@@ -25,50 +25,53 @@
 
 <main class="amain">
   <nav class="crumb"><a href="/">Trang chủ</a><span>›</span><a href="/#thu-vien">Thư viện</a><span>›</span><b>Trang quản trị</b></nav>
-  <div class="phead">
+  <div class="phead slim">
     <h1>Trang quản trị</h1>
-    <p>Sửa truyện và chương ở đây là người đọc thấy ngay (1–2 giây) — không cần build, không cần deploy lại.
-      Không có Worker vẫn xem và sửa được dữ liệu trong repo, mọi thay đổi giữ trong máy bạn.</p>
+    <p class="sm">Sửa ở đây là người đọc thấy ngay — không cần build, không cần deploy lại.</p>
   </div>
   <div class="msgbar" id="msg"></div>
 
   <!-- ============ 1. KẾT NỐI ============ -->
   <section id="scConnect">
-    <div class="card2">
-      <h3>Nối trang quản trị với Cloudflare Worker</h3>
-      <p class="hint">Cần Worker <code>chuseoz-cms</code> đã gắn KV <code>CZ_KV</code> và secret <code>ADMIN_KEY</code> —
-        hướng dẫn từng bước ở <code>worker/README.md</code> hoặc nút <b>Xem hướng dẫn 5 bước</b> bên dưới.</p>
-      <div class="grid2">
-        <div><label class="fl" for="inApi">URL Worker</label>
-          <input class="inp" id="inApi" placeholder="https://chuseoz-cms.xxx.workers.dev" autocomplete="off"></div>
-        <div><label class="fl" for="inKey">ADMIN_KEY</label>
-          <input class="inp" id="inKey" type="password" placeholder="khoá quản trị" autocomplete="off"></div>
+    <div class="card2 setup">
+      <div class="row">
+        <div class="grow">
+          <h3>Nối Cloudflare Worker</h3>
+          <p class="hint">Sửa trực tiếp lên KV — người đọc thấy sau 1–2 giây. Cần Worker <code>chuseoz-cms</code>
+            đã gắn KV <code>CZ_KV</code> và secret <code>ADMIN_KEY</code>.</p>
+        </div>
+        <button class="btn ghost" id="btnSetup" aria-expanded="false">Mở phần kết nối</button>
       </div>
-      <div class="row mt">
-        <button class="btn pri" id="btnConnect">Kiểm tra &amp; kết nối</button>
-        <button class="btn ghost" id="btnGuide">Xem hướng dẫn 5 bước</button>
-        <button class="btn ghost" id="btnLocal">Xem dữ liệu tĩnh trong repo</button>
+      <div class="hide" id="setupBody">
+        <div class="grid2">
+          <div><label class="fl" for="inApi">URL Worker</label>
+            <input class="inp" id="inApi" placeholder="https://chuseoz-cms.xxx.workers.dev" autocomplete="off"></div>
+          <div><label class="fl" for="inKey">ADMIN_KEY</label>
+            <input class="inp" id="inKey" type="password" placeholder="khoá quản trị" autocomplete="off"></div>
+        </div>
+        <div class="row mt">
+          <button class="btn pri" id="btnConnect">Kiểm tra &amp; kết nối</button>
+          <button class="btn ghost" id="btnGuide">Xem hướng dẫn 5 bước</button>
+          <button class="btn ghost" id="btnLocal">Xem dữ liệu tĩnh trong repo</button>
+        </div>
+        <p class="hint mt">Chưa nối Worker vẫn dùng bình thường: trang quản trị đọc dữ liệu thật trong repo
+          (<code>/data/*.json</code>), mọi thay đổi giữ trong máy bạn và có thể <b>Xuất JSON</b> để nạp thủ công.</p>
+        <div class="hide mt" id="guide">
+          <ol class="steps">
+            <li>Cloudflare → <b>Workers &amp; Pages</b> → tạo Worker <code>chuseoz-cms</code> → dán <code>worker/cms.js</code> → Deploy.</li>
+            <li><b>Settings → Variables and Secrets</b>: <code>ADMIN_KEY</code> (Secret, chuỗi dài), <code>BLOG</code>, <code>FIREBASE_PROJECT</code>, <code>ALLOW_ORIGIN</code>.</li>
+            <li><b>Settings → Bindings</b> → KV namespace, tên biến đúng chữ <code>CZ_KV</code>.</li>
+            <li>Dán URL Worker vào <code>cz-config.js</code> (hoặc vào ô bên trên rồi bấm <b>Nạp dữ liệu lên KV</b> trong tab Cài đặt &amp; đồng bộ).</li>
+            <li>Bấm <b>Kiểm tra &amp; kết nối</b> → vào tab <b>Cài đặt &amp; đồng bộ</b> → <b>Nạp dữ liệu lên KV</b>.</li>
+          </ol>
+        </div>
       </div>
-      <div class="hide mt" id="guide">
-        <ol class="steps">
-          <li>Cloudflare → <b>Workers &amp; Pages</b> → tạo Worker <code>chuseoz-cms</code> → dán <code>worker/cms.js</code> → Deploy.</li>
-          <li><b>Settings → Variables and Secrets</b>: <code>ADMIN_KEY</code> (Secret, chuỗi dài), <code>BLOG</code>, <code>FIREBASE_PROJECT</code>, <code>ALLOW_ORIGIN</code>.</li>
-          <li><b>Settings → Bindings</b> → KV namespace, tên biến đúng chữ <code>CZ_KV</code>.</li>
-          <li>Dán URL Worker vào <code>cz-config.js</code> (hoặc vào ô bên trên rồi bấm <b>Nạp dữ liệu lên KV</b> trong tab Cài đặt &amp; đồng bộ).</li>
-          <li>Bấm <b>Kiểm tra &amp; kết nối</b> → vào tab <b>Cài đặt &amp; đồng bộ</b> → <b>Nạp dữ liệu lên KV</b>.</li>
-        </ol>
-      </div>
-    </div>
-    <div class="card2">
-      <h3>Không có Worker vẫn dùng được</h3>
-      <p class="hint">Trang quản trị luôn mở được dữ liệu thật trong repo (<code>/data/*.json</code>) để xem và sửa nháp.
-        Mọi thay đổi được giữ trong máy và có thể <b>Xuất JSON</b> để nạp thủ công.</p>
     </div>
   </section>
 
   <!-- ============ 2. ỨNG DỤNG ============ -->
   <section id="scApp" class="hide">
-    <div class="tabs mb" id="tabs" role="tablist">
+    <div class="tabs bar sticky" id="tabs" role="tablist">
       <button data-tab="list" class="on">Thư viện</button>
       <button data-tab="quick">Đăng chương nhanh</button>
       <button data-tab="new">Thêm bộ</button>
@@ -212,11 +215,13 @@
       </div>
       <div class="card2">
         <div class="row"><h3>Chương <span class="pill" id="chN">0</span></h3><span class="grow"></span>
-          <button class="btn ghost sm" id="chNew">+ Thêm chương trống</button></div>
+          <button class="btn ghost sm" id="chNew">Thêm chương trống</button></div>
         <div class="grid2" style="margin-top:8px">
           <div>
-            <label class="fl">Danh sách chương (chương 1 ở trên)</label>
+            <label class="fl">Danh sách chương (trên xuống dưới)</label>
             <div class="chlist" id="chList"></div>
+            <p class="hint" style="margin-top:8px">Số <b>#n</b> là thứ tự trong dữ liệu; số người đọc thấy là số trong
+              tiêu đề chương (“Chương 3: …”). Bấm vào một dòng để sửa nội dung.</p>
           </div>
           <div>
             <label class="fl">Tiêu đề chương</label><input class="inp" id="chTitle">
@@ -241,9 +246,21 @@
     <!-- ---------- CÀI ĐẶT ---------- -->
     <div id="pane-settings" class="hide">
       <div class="card2">
-        <h3>Trang chủ: chọn truyện cho khối hero</h3>
-        <p class="hint">Tối đa 6 bộ. Để trống thì trang chủ tự lấy các bộ mới cập nhật.</p>
-        <div class="pick" id="slidePick"></div>
+        <h3>Trang chủ: truyện cho khối hero</h3>
+        <p class="hint">Tối đa 6 bộ, xếp theo thứ tự bên dưới. Không chọn gì thì trang chủ tự lấy các bộ mới cập nhật.</p>
+        <div class="heroPick">
+          <div class="hplist" id="slidePick"></div>
+          <div class="hpadd">
+            <div class="row">
+              <label class="search"><span data-ic="search"></span>
+                <input id="hpFind" placeholder="Gõ tên truyện để thêm…" autocomplete="off" spellcheck="false">
+              </label>
+              <button class="btn ghost sm" id="hpAuto">Để tự động</button>
+              <span class="sm muted" id="hpCount"></span>
+            </div>
+            <div class="hpfound hide" id="hpFound"></div>
+          </div>
+        </div>
       </div>
       <div class="card2">
         <h3>Lịch ra chương</h3>
@@ -301,11 +318,11 @@
       </div>
       <div class="card2">
         <h3>Phím tắt</h3>
-        <div class="grid2">
-          <div><kbd>Ctrl</kbd>+<kbd>S</kbd> lưu thông tin/chương đang sửa</div>
-          <div><kbd>1</kbd>…<kbd>7</kbd> đổi tab</div>
-          <div><kbd>/</kbd> hoặc <kbd>Ctrl</kbd>+<kbd>K</kbd> tìm nhanh trong thư viện</div>
-          <div><kbd>Esc</kbd> đóng hộp thoại</div>
+        <div class="keys">
+          <div><span class="kk"><kbd>Ctrl</kbd><kbd>S</kbd></span> lưu thông tin / chương đang sửa</div>
+          <div><span class="kk"><kbd>1</kbd><kbd>…</kbd><kbd>7</kbd></span> đổi tab</div>
+          <div><span class="kk"><kbd>/</kbd><kbd>Ctrl</kbd><kbd>K</kbd></span> tìm nhanh trong thư viện</div>
+          <div><span class="kk"><kbd>Esc</kbd></span> đóng hộp thoại</div>
         </div>
       </div>
       <div class="card2">

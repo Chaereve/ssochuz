@@ -442,10 +442,10 @@
   /* ======================= 6. THẺ TRUYỆN & DẢI ========================= */
   function card(n, opts) {
     opts = opts || {};
-    var p = progress(n), pct = n.chapters ? Math.min(100, Math.round(p / n.chapters * 100)) : 0;
-    var list = opts.view === 'list';
+    var pg = progress(n), pct = n.chapters ? Math.min(100, Math.round(pg / n.chapters * 100)) : 0;
     var img = n.thumb || n.slide || '';
-    return '<a class="card' + (list ? ' list' : '') + '" href="' + esc(storyURL(n.slug)) + '" data-t="' + esc(n.title) + '" title="' + esc(n.title) + '">' +
+    if (opts.view === 'list') return cardList(n, img, pg, pct);
+    return '<a class="card" href="' + esc(storyURL(n.slug)) + '" data-t="' + esc(n.title) + '" title="' + esc(n.title) + '">' +
       '<div class="th' + (img ? ' skel' : '') + '">' +
       (img ? '<img src="' + esc(img) + '" alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" width="300" height="450">' : '') +
       '<span class="scrim"></span>' +
@@ -455,7 +455,30 @@
       (pct ? '<span class="bar"><i style="width:' + pct + '%"></i></span>' : '') +
       '</div>' +
       '<h3>' + esc(n.title) + '</h3>' +
-      '<div class="cb">' + (n.couple ? esc(n.couple) : esc(n.author || '')) + (list ? ' · ' + esc(adaptText(n)) : '') + '</div>' +
+      '<div class="cb">' + (n.couple ? esc(n.couple) : esc(n.author || '')) + '</div>' +
+      '</a>';
+  }
+  /* xem dạng danh sách: mỗi bộ một hàng, đủ thông tin để quyết định mở hay không */
+  function cardList(n, img, pg, pct) {
+    var bits = [n.couple, n.author && n.couple ? n.author : '', n.year].filter(Boolean);
+    return '<a class="card list" href="' + esc(storyURL(n.slug)) + '" data-t="' + esc(n.title) + '" title="' + esc(n.title) + '">' +
+      '<span class="cl-th' + (img ? ' skel' : '') + '">' +
+        (img ? '<img src="' + esc(img) + '" alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" width="300" height="450">' : '') +
+      '</span>' +
+      '<span class="cl-main">' +
+        '<span class="cl-top"><b class="cl-t">' + esc(n.title) + '</b>' +
+          '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(n.status || 'Đang cập nhật') + '</span>' +
+          (n.is18 ? '<span class="b18">18+</span>' : '') +
+        '</span>' +
+        '<span class="cl-meta">' + esc(bits.join(' · ') || '—') + '</span>' +
+        '<span class="cl-syn">' + esc(n.syn || '') + '</span>' +
+        (pct ? '<span class="cl-prog"><i style="width:' + pct + '%"></i></span>' : '') +
+      '</span>' +
+      '<span class="cl-side">' +
+        '<span class="cl-ch">' + esc(countText(n)) + '</span>' +
+        '<span class="cl-adapt">' + esc(adaptText(n)) + '</span>' +
+      '</span>' +
+      '<span class="cl-go">' + (pg ? 'Đọc tiếp' : 'Xem') + icon('right', 'i-s') + '</span>' +
       '</a>';
   }
   function mountRail(el, list, opts) {
