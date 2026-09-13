@@ -48,6 +48,7 @@ tải lại trang, nút Back của trình duyệt trả về đúng danh sách c
 | Ảnh bìa / ảnh trong bài | ảnh bị chặn hotlink ⇒ hiện icon ảnh vỡ | ảnh bìa để lại khung có nền + chữ mờ; ảnh trong bài đổi thành khung viền giữ chỗ |
 | Trang quản trị → **Ngắt kết nối** | hiện lại trang “Kênh đăng bài” rồi mới tải lại | bỏ bước hiện thừa |
 | Đầu trang khi mở trang | trắng đầu trang tới khi tải xong dữ liệu | dựng đầu trang/chân trang ngay, dữ liệu về sau |
+| Khi Worker KV lỗi/chặn | mỗi lần mở trang lại chờ tối đa 9 giây rồi mới lùi về dữ liệu tĩnh | lỗi một lần là ghi nhớ trong phiên, các trang sau đi thẳng vào `/data` |
 
 Kiểm thử: `cd tests && node run.js` → **4/4 bài đạt** (cấu hình Worker · trang chủ · trang truyện
 + trang đọc · trang quản trị với Worker giả), không lỗi JS nào.

@@ -26,6 +26,8 @@
 
   /* ======================= 1. DỮ LIỆU ================================== */
   var memo = { reg: null, src: '', books: {}, stats: null, sched: null };
+  /* Worker lỗi/chặn một lần trong phiên ⇒ các lần sau đi thẳng vào /data (khỏi chờ 9 giây mỗi trang) */
+  var apiDown = false;
 
   function jget(url, ms) {
     var opt = {}, ctl = null, to = null;
@@ -52,13 +54,16 @@
   function registry() {
     if (memo.reg) return Promise.resolve({ reg: memo.reg, src: memo.src });
     var cached = lsGet('chuseoz-reg', TTL_REG);
-    var p = API ? jget(API + '/api/registry?_=' + Date.now(), 9000) : Promise.resolve(null);
+    var useApi = !!API && !apiDown;
+    var p = useApi ? jget(API + '/api/registry?_=' + Date.now(), 9000) : Promise.resolve(null);
     return p.then(function (api) {
       if (api && api.lib) {
+        apiDown = false;
         memo.reg = api; memo.src = 'kv'; w.CZ_SRC = 'kv';
         lsSet('chuseoz-reg', { t: Date.now(), v: api });
         return { reg: api, src: 'kv' };
       }
+      if (useApi) apiDown = true;
       return jget('/data/registry.json?_=' + Date.now(), 9000).then(function (stat) {
         var reg = newer(stat, cached) || { lib: [] };
         if (stat) lsSet('chuseoz-reg', { t: Date.now(), v: stat });
@@ -72,7 +77,7 @@
     slug = String(slug || '');
     if (!slug) return Promise.resolve(null);
     if (memo.books[slug]) return memo.books[slug];
-    var p = (API ? jget(API + '/api/book/' + encodeURIComponent(slug), 15000) : Promise.resolve(null))
+    var p = (API && !apiDown ? jget(API + '/api/book/' + encodeURIComponent(slug), 15000) : Promise.resolve(null))
       .then(function (b) {
         if (b && b.chapters && b.chapters.length) return b;
         return jget('/data/book/' + encodeURIComponent(slug) + '.json', 20000);
