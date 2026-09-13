@@ -689,7 +689,7 @@ body.rd-focus .rdbar .tools:hover { opacity: 1; }
 /* =========================== TIỆN ÍCH & THIẾT BỊ ========================= */
 @media (max-width: 900px) {
   .hero .col { grid-template-columns: 1fr; gap: 24px; padding: 30px 16px 26px; }
-  .hero .poster { width: min(46vw, 190px); }
+  .hero .poster { order: -1; justify-self: start; width: min(56vw, 224px); margin-bottom: 2px; }
   .hero .strip { display: none; }
   .shero .in { grid-template-columns: 1fr; gap: 24px; }
   .shero .cover { width: min(42vw, 180px); }
