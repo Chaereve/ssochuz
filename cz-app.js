@@ -711,13 +711,15 @@
       '<span class="grow"></span>' +
       '<button class="hbtn" id="czJump" title="Tìm truyện (Ctrl/Cmd + K)">' + icon('search', 'i-s') +
         '<span class="searchbtn-txt">Tìm truyện…</span><span class="k">⌘K</span></button>' +
+      '<button class="hbtn" id="czAuthBtn" title="Đăng nhập Google">' + icon('users', 'i-s') + '<span class="searchbtn-txt" id="czAuthTxt">Đăng nhập</span></button>' +
       '<button class="hbtn icon" id="czTheme" title="Sáng / Tối" aria-label="Đổi nền sáng tối">' + icon('moon', 'i-s') + '</button>' +
       '<a class="hbtn icon" href="/admin" title="Trang quản trị" aria-label="Trang quản trị">' + icon('gear', 'i-s') + '</a>' +
       '<button class="hbtn icon burger" id="czBurger" aria-label="Mở menu">' + icon('menu', 'i-s') + '</button>' +
       '</div>' +
       '<div class="mnav" id="czMnav">' + links +
       '<a href="/#ban-doc">' + icon('bookmark', 'i-s') + ' Bàn đọc của bạn</a>' +
-      '<a href="/admin">' + icon('gear', 'i-s') + ' Trang quản trị</a></div>';
+      '<a href="/admin">' + icon('gear', 'i-s') + ' Trang quản trị</a>' +
+      '<a href="#" id="czAuthM">' + icon('users', 'i-s') + ' <span id="czAuthMTxt">Đăng nhập</span></a></div>';
 
     var tb = host.querySelector('#czTheme');
     function paintTheme() {
@@ -726,6 +728,40 @@
     }
     paintTheme();
     tb.addEventListener('click', function () { themeToggle(); paintTheme(); });
+    // Auth button
+    function paintAuth(){
+      var au = host.querySelector('#czAuthBtn'), txt = host.querySelector('#czAuthTxt');
+      var am = host.querySelector('#czAuthM'), mtxt = host.querySelector('#czAuthMTxt');
+      var u = (w.CZ_AUTH && w.CZ_AUTH.current && w.CZ_AUTH.current()) || null;
+      if(!au) return;
+      if(u){
+        if(txt) txt.textContent = (u.name || u.email || 'Bạn').split(' ')[0];
+        if(mtxt) mtxt.textContent = u.name || u.email;
+        au.title = 'Đã đăng nhập: '+(u.email||u.name)+' — bấm để đăng xuất';
+        am.title = au.title;
+      } else {
+        if(txt) txt.textContent = 'Đăng nhập';
+        if(mtxt) mtxt.textContent = 'Đăng nhập';
+        au.title = 'Đăng nhập Google (một chạm)';
+        if(am) am.title = au.title;
+      }
+    }
+    paintAuth();
+    var authBtn = host.querySelector('#czAuthBtn');
+    if(authBtn) authBtn.addEventListener('click', function(){
+      var u = (w.CZ_AUTH && w.CZ_AUTH.current && w.CZ_AUTH.current()) || null;
+      if(u){ w.CZ_AUTH.logout().then(paintAuth); }
+      else { w.CZ_AUTH.loginGoogle().then(paintAuth); }
+    });
+    var authM = host.querySelector('#czAuthM');
+    if(authM) authM.addEventListener('click', function(e){
+      e.preventDefault();
+      var u = (w.CZ_AUTH && w.CZ_AUTH.current && w.CZ_AUTH.current()) || null;
+      if(u){ w.CZ_AUTH.logout().then(function(){ paintAuth(); host.querySelector('#czMnav').classList.remove('on'); }); }
+      else { w.CZ_AUTH.loginGoogle().then(function(){ paintAuth(); host.querySelector('#czMnav').classList.remove('on'); }); }
+    });
+    if(w.CZ_AUTH && w.CZ_AUTH.onAuth) w.CZ_AUTH.onAuth(paintAuth);
+
     navInk(host);
     var mnav = host.querySelector('#czMnav');
     host.querySelector('#czBurger').addEventListener('click', function () {
@@ -903,6 +939,24 @@
       .sort(function (a, b) { return String(b.updated || '').localeCompare(String(a.updated || '')); })
       .slice(0, 5);
   }
+  function editorChoice(reg) {
+    reg = reg || memo.reg || {};
+    var by = {};
+    (reg.lib || []).forEach(function (n) { by[n.slug] = n; });
+    var raw = reg.editorChoice || (reg.settings && reg.settings.editorChoice) || [];
+    var list = raw.map(function (x) { return by[typeof x === 'string' ? x : (x && x.slug)]; }).filter(Boolean).map(norm);
+    return list;
+  }
+  function donationCfg(reg) {
+    reg = reg || memo.reg || {};
+    var d = (reg.settings && reg.settings.donation) || {};
+    return d;
+  }
+  function reportCfg(reg) {
+    reg = reg || memo.reg || {};
+    var r = (reg.settings && reg.settings.report) || {};
+    return { email: r.email || 'chuseoz.ofc@gmail.com', form: r.form || 'https://forms.gle/YW3PvtrNVQ7xt8nCA' };
+  }
   function findLib(id) {
     var lib = libList();
     for (var i = 0; i < lib.length; i++) if (lib[i].slug === id || lib[i].title === id) return lib[i];
@@ -925,7 +979,7 @@
   w.CZ = {
     API: API, normalizeApi: normalizeApi,
     registry: registry, book: book, stats: stats, schedule: schedule,
-    lib: libList, slides: slides, findLib: findLib, statsOf: statsOf, onStats: onStats,
+    lib: libList, slides: slides, editorChoice: editorChoice, donationCfg: donationCfg, reportCfg: reportCfg, findLib: findLib, statsOf: statsOf, onStats: onStats,
     progress: progress, setProgress: setProgress, lastReadAt: lastReadAt,
     shelfIds: shelfIds, inShelf: inShelf, toggleShelf: toggleShelf, clearShelf: clearShelf,
     isLiked: isLiked, toggleLike: toggleLike, marks: marks, toggleMark: toggleMark, chaptersRead: chaptersRead,

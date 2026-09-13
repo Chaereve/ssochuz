@@ -77,6 +77,22 @@
       <div class="src" id="rankSrc"><span class="dot"></span><span>đang tải số liệu…</span></div>
     </section>
 
+    <!-- ================= GÓC BIÊN TẬP VIÊN (Editor's Choice) ================= -->
+    <section class="sec fade" id="bien-tap" hidden>
+      <div class="sechead">
+        <h2>Góc biên tập viên</h2>
+        <span class="sub" id="editSub">do biên tập chọn tay</span>
+        <span class="right"><a class="btn ghost sm" href="/guide">Vì sao chọn?</a></span>
+      </div>
+      <div class="rail" id="editRail"></div>
+      <div class="src" id="editSrc"><span class="dot"></span><span>Những bộ chất lượng cao nhưng ít người biết — được đề xuất thủ công.</span></div>
+    </section>
+
+    <!-- ================= ỦNG HỘ (Donation) ================= -->
+    <section class="sec fade" id="ung-ho" hidden>
+      <div class="card2" id="donBox"></div>
+    </section>
+
     <!-- ================= LỊCH RA CHƯƠNG (mục riêng) ================= -->
     <section class="sec fade" id="lich">
       <div class="sechead">
@@ -134,7 +150,10 @@
 <button id="toTop" aria-label="Lên đầu trang" title="Lên đầu trang"></button>
 
 <script src="/cz-config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="/cz-app.js"></script>
+<script src="/cz-auth.js"></script>
 <script src="/cz-home.js"></script>
 </body>
 </html>

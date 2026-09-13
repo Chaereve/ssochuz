@@ -148,6 +148,7 @@
     return p.then(function (reg) {
       REG = reg || { lib: [] };
       REG.lib = REG.lib || [];
+      REG.editorChoice = REG.editorChoice || (REG.settings && REG.settings.editorChoice) || [];
       if (draft && draft.reg && confirm('Có bản nháp trong máy lưu lúc ' +
         new Date(draft.at).toLocaleString('vi-VN') + '.\nDùng bản nháp đó?')) {
         REG = draft.reg; BOOKS = draft.books || {}; dirty.meta = dirty.set = true;
@@ -502,6 +503,12 @@
       if (REG.slides) {
         REG.slides.forEach(function (s) { if (s.slug === oldSlug) s.slug = newSlug; });
       }
+      if (REG.editorChoice) {
+        REG.editorChoice = REG.editorChoice.map(function (x) { var sl = typeof x === 'string' ? x : (x && x.slug); return sl === oldSlug ? newSlug : sl; });
+      }
+      if (REG.settings && REG.settings.editorChoice) {
+        REG.settings.editorChoice = REG.settings.editorChoice.map(function (x) { var sl = typeof x === 'string' ? x : (x && x.slug); return sl === oldSlug ? newSlug : sl; });
+      }
       if (REG.schedule && REG.schedule.items) {
         REG.schedule.items.forEach(function (it) { if (it.slug === oldSlug) it.slug = newSlug; });
       }
@@ -581,6 +588,8 @@
       if (!ok) return;
       REG.lib = REG.lib.filter(function (x) { return x.slug !== slug; });
       REG.slides = (REG.slides || []).filter(function (x) { return x.slug !== slug; });
+      REG.editorChoice = (REG.editorChoice || []).filter(function (x) { var sl = typeof x === 'string' ? x : (x && x.slug); return sl !== slug; });
+      if (REG.settings && REG.settings.editorChoice) REG.settings.editorChoice = (REG.settings.editorChoice || []).filter(function (x) { var sl = typeof x === 'string' ? x : (x && x.slug); return sl !== slug; });
       delete BOOKS[slug];
       var done = ONLINE ? api('/api/book/' + encodeURIComponent(slug), { method: 'DELETE' }).catch(function () {}) : Promise.resolve();
       done.then(function () { return saveRegistry('Đã xoá “' + (n ? n.title : slug) + '”'); }).then(function () {
@@ -596,6 +605,8 @@
       if (!ok) return;
       REG.lib.splice(idx,1);
       if (REG.slides) REG.slides = REG.slides.filter(function (x) { return x !== n && x.slug !== n.slug; });
+      if (REG.editorChoice) REG.editorChoice = REG.editorChoice.filter(function (x) { var sl = typeof x === 'string' ? x : (x && x.slug); return sl !== n.slug && x !== n; });
+      if (REG.settings && REG.settings.editorChoice) REG.settings.editorChoice = REG.settings.editorChoice.filter(function (x) { var sl = typeof x === 'string' ? x : (x && x.slug); return sl !== n.slug && x !== n; });
       delete BOOKS[n.slug];
       saveRegistry('Đã xoá “' + n.title + '”').then(function () {
         if (CUR === n) { CUR = null; show('list'); }
@@ -666,6 +677,10 @@
   function slidePicks() {
     return (REG.slides || []).map(function (s) { return s.slug; }).filter(Boolean);
   }
+  function editPicks() {
+    var raw = REG.editorChoice || (REG.settings && REG.settings.editorChoice) || [];
+    return raw.map(function (x) { return typeof x === 'string' ? x : (x && x.slug); }).filter(Boolean);
+  }
   function renderSlides() {
     var picks = slidePicks();
     var by = {};
@@ -687,6 +702,79 @@
       }).join('')
       : '<div class="empty sm">Chưa chọn bộ nào — trang chủ sẽ tự lấy các bộ mới cập nhật.</div>';
     $('#hpCount').textContent = picks.length ? picks.length + '/6 bộ đang chọn' : 'đang để tự động';
+  }
+  function renderEdit() {
+    var picks = editPicks();
+    var by = {};
+    (REG.lib || []).forEach(function (n) { by[n.slug] = n; });
+    var el = document.getElementById('editPick');
+    if (!el) return;
+    el.innerHTML = picks.length
+      ? picks.map(function (slug, i) {
+        var n = by[slug] || {};
+        return '<div class="hprow" data-eslug="' + esc(slug) + '">' +
+          '<span class="hpno">' + (i + 1) + '</span>' +
+          '<span class="hpth' + (n.thumb ? ' skel' : '') + '">' +
+            (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async">' : '') + '</span>' +
+          '<span class="hpinfo"><b>' + esc(n.title || slug) + '</b><span>' + esc(n.author || '') +
+            (n.chapters ? ' · ' + num(n.chapters) + ' chương' : '') + '</span></span>' +
+          '<span class="hpbtns">' +
+            '<button class="mv" data-eup="' + i + '" title="Lên"' + (i === 0 ? ' disabled' : '') + '>' + ic('up', 'i-s') + '</button>' +
+            '<button class="mv" data-edown="' + i + '" title="Xuống"' + (i === picks.length - 1 ? ' disabled' : '') + '>' + ic('down', 'i-s') + '</button>' +
+            '<button class="mv" data-edrop="' + i + '" title="Bỏ">' + ic('x', 'i-s') + '</button>' +
+          '</span></div>';
+      }).join('')
+      : '<div class="empty sm">Chưa chọn bộ nào cho Góc biên tập viên.</div>';
+    var cnt = document.getElementById('epCount');
+    if (cnt) cnt.textContent = picks.length ? picks.length + ' bộ đang chọn' : 'chưa chọn';
+  }
+  function epMove(from, to) {
+    var picks = editPicks();
+    if (to < 0 || to >= picks.length) return;
+    var list = picks.slice();
+    var item = list.splice(from, 1)[0];
+    list.splice(to, 0, item);
+    REG.editorChoice = list;
+    if (REG.settings) REG.settings.editorChoice = list;
+    dirty.set = true; markDirty(); renderEdit();
+  }
+  function epDrop(i) {
+    var picks = editPicks();
+    var list = picks.slice(); list.splice(i, 1);
+    REG.editorChoice = list;
+    if (REG.settings) REG.settings.editorChoice = list;
+    dirty.set = true; markDirty(); renderEdit(); epSearch();
+  }
+  function epSearch() {
+    var box = document.getElementById('epFound'), inp = document.getElementById('epFind');
+    if (!box || !inp) return;
+    var q = (inp.value || '').trim().toLowerCase();
+    if (!q) { box.classList.add('hide'); box.innerHTML = ''; return; }
+    var picks = editPicks();
+    var hits = (REG.lib || []).filter(function (n) { return picks.indexOf(n.slug) < 0; })
+      .filter(function (n) {
+        return String(n.title || '').toLowerCase().indexOf(q) >= 0 || String(n.author || '').toLowerCase().indexOf(q) >= 0;
+      }).slice(0, 8);
+    box.classList.remove('hide');
+    box.innerHTML = hits.length
+      ? hits.map(function (n) {
+        return '<button class="hphit" data-eadd="' + esc(n.slug) + '"><b>' + esc(n.title) + '</b>' +
+          '<span>' + esc(n.author || '') + ' · ' + num(n.chapters || 0) + ' chương</span></button>';
+      }).join('')
+      : '<div class="sm muted" style="padding:10px 12px">Không tìm thấy.</div>';
+  }
+  function epAdd(slug) {
+    var picks = editPicks();
+    if (picks.indexOf(slug) >= 0) return;
+    var n = (REG.lib || []).find(function (x) { return x.slug === slug; });
+    if (!n) return;
+    picks.push(slug);
+    REG.editorChoice = picks;
+    if (REG.settings) REG.settings.editorChoice = picks;
+    dirty.set = true; markDirty();
+    var inp = document.getElementById('epFind');
+    if (inp) inp.value = '';
+    renderEdit(); epSearch();
   }
   function hpMove(from, to) {
     var picks = slidePicks();
@@ -740,6 +828,18 @@
     $('#sSchedNote').value = s.note || $('#sSchedNote').value || '';
     $('#sGiscusRepo').value = ((REG.settings || {}).giscus || {}).repo || '';
     $('#sGiscusId').value = ((REG.settings || {}).giscus || {}).repoId || '';
+    var don = (REG.settings && REG.settings.donation) || {};
+    var rep = (REG.settings && REG.settings.report) || {};
+    if ($('#dEnabled')) $('#dEnabled').value = don.enabled ? '1' : '0';
+    if ($('#dBank')) $('#dBank').value = don.bank || '';
+    if ($('#dAccNo')) $('#dAccNo').value = don.accountNo || '';
+    if ($('#dAccName')) $('#dAccName').value = don.accountName || '';
+    if ($('#dMomo')) $('#dMomo').value = don.momo || '';
+    if ($('#dQr')) $('#dQr').value = don.qr || '';
+    if ($('#dMsg')) $('#dMsg').value = don.message || '';
+    if ($('#rEmail')) $('#rEmail').value = rep.email || 'chuseoz.ofc@gmail.com';
+    if ($('#rForm')) $('#rForm').value = rep.form || 'https://forms.gle/YW3PvtrNVQ7xt8nCA';
+    renderEdit();
   }
   function renderSettings() {
     var s = REG.schedule || {};
@@ -748,6 +848,8 @@
   function saveSettings() {
     var by = {}; (REG.lib || []).forEach(function (n) { by[n.slug] = n; });
     REG.slides = slidePicks().slice(0, 6).map(function (s) { return by[s]; }).filter(Boolean);
+    var ePicks = editPicks();
+    REG.editorChoice = ePicks;
     var items = $('#sSched').value.split('\n').map(function (l) { return l.trim(); }).filter(Boolean).map(function (l) {
       var p = l.split('|').map(function (x) { return x.trim(); });
       return { days: p[0] || '', title: p[1] || '', detail: p[2] || '' };
@@ -756,8 +858,24 @@
       items: items, note: $('#sSchedNote').value.trim(),
       updated: today()
     };
+    var don = {
+      enabled: $('#dEnabled') && $('#dEnabled').value === '1',
+      bank: $('#dBank') ? $('#dBank').value.trim() : '',
+      accountNo: $('#dAccNo') ? $('#dAccNo').value.trim() : '',
+      accountName: $('#dAccName') ? $('#dAccName').value.trim() : '',
+      momo: $('#dMomo') ? $('#dMomo').value.trim() : '',
+      qr: $('#dQr') ? $('#dQr').value.trim() : '',
+      message: $('#dMsg') ? $('#dMsg').value.trim() : ''
+    };
+    var rep = {
+      email: $('#rEmail') ? $('#rEmail').value.trim() : 'chuseoz.ofc@gmail.com',
+      form: $('#rForm') ? $('#rForm').value.trim() : 'https://forms.gle/YW3PvtrNVQ7xt8nCA'
+    };
     REG.settings = Object.assign({}, REG.settings, {
-      giscus: { repo: $('#sGiscusRepo').value.trim(), repoId: $('#sGiscusId').value.trim() }
+      giscus: { repo: $('#sGiscusRepo').value.trim(), repoId: $('#sGiscusId').value.trim() },
+      donation: don,
+      report: rep,
+      editorChoice: ePicks
     });
     saveRegistry('Đã lưu cài đặt');
   }
@@ -1059,6 +1177,34 @@
     $('#hpFind').value = ''; renderSlides(); hpSearch();
     toast('Trang chủ sẽ tự chọn bộ mới cập nhật');
   });
+  var epEl = $('#editPick');
+  if (epEl) epEl.addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    var i = parseInt(b.dataset.eup || b.dataset.edown || b.dataset.edrop, 10);
+    if (isNaN(i)) return;
+    if (b.dataset.eup !== undefined) epMove(i, i - 1);
+    else if (b.dataset.edown !== undefined) epMove(i, i + 1);
+    else epDrop(i);
+  });
+  var epFind = $('#epFind');
+  if (epFind) epFind.addEventListener('input', epSearch);
+  var epFound = $('#epFound');
+  if (epFound) epFound.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-eadd]'); if (b) epAdd(b.dataset.eadd);
+  });
+  var epAuto = $('#epAuto');
+  if (epAuto) epAuto.addEventListener('click', function () {
+    REG.editorChoice = []; if (REG.settings) REG.settings.editorChoice = [];
+    dirty.set = true; markDirty();
+    var inp = $('#epFind'); if (inp) inp.value = '';
+    renderEdit(); epSearch();
+    toast('Đã xoá hết Editor\'s Choice');
+  });
+  ['#dEnabled','#dBank','#dAccNo','#dAccName','#dMomo','#dQr','#dMsg','#rEmail','#rForm'].forEach(function (s) {
+    var el = $(s); if (el) el.addEventListener('input', function () { dirty.set = true; markDirty(); });
+  });
+  
   $('#btnSeed').addEventListener('click', seedKV);
   $('#btnHealth').addEventListener('click', function () { health().then(function () { toast('Đã kiểm tra Worker', 'ok'); }); });
   $('#btnStatsClear').addEventListener('click', function () { loadStats(true); show('stats'); });

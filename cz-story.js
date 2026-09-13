@@ -745,17 +745,30 @@
     $('#actShare').addEventListener('click', shareChapter);
     var rp = $('#actReport');
     if (rp) rp.addEventListener('click', function () {
+      var cfg = CZ.reportCfg ? CZ.reportCfg() : { email: 'chuseoz.ofc@gmail.com', form: 'https://forms.gle/YW3PvtrNVQ7xt8nCA' };
       var text = 'Báo lỗi · ' + N.title + ' · ' + chapLabel(cur) + '\n' + location.origin + location.pathname +
         '#chuong-' + cur + '\n\nChỗ cần sửa: ';
       var m = CZ.modal('czReport',
         '<div class="mh"><h4>Báo lỗi chữ</h4></div>' +
-        '<div class="mb"><p class="sm muted">Ghi rõ chỗ sai rồi copy nội dung dưới đây gửi cho chủ web (chat, mail…). ' +
-        'Trang đã kèm sẵn tên bộ, số chương và đường dẫn.</p>' +
-        '<textarea class="inp ta" id="rpText" rows="5" spellcheck="false">' + esc(text) + '</textarea></div>' +
+        '<div class="mb"><p class="sm muted">Ghi rõ chỗ sai. Bạn có thể gửi qua email hoặc form khảo sát — trang đã kèm sẵn tên bộ, số chương và link.</p>' +
+        '<textarea class="inp ta" id="rpText" rows="5" spellcheck="false">' + esc(text) + '</textarea>' +
+        '<div class="mt row"><a class="btn ghost sm" id="rpMail" href="#">' + ic('share', 'i-s') + 'Gửi email</a>' +
+        '<a class="btn ghost sm" id="rpForm" href="' + esc(cfg.form) + '" target="_blank" rel="noopener">Mở form</a></div></div>' +
         '<div class="mf"><button class="btn ghost" data-close>Đóng</button>' +
         '<button class="btn pri" id="rpCopy">' + ic('share', 'i-s') + 'Copy nội dung</button></div>');
+      function mailHref(){
+        var body = m.querySelector('#rpText').value;
+        var subj = encodeURIComponent('Báo lỗi · ' + N.title + ' · ' + chapLabel(cur));
+        var b = encodeURIComponent(body);
+        return 'https://mail.google.com/mail/?fs=1&tf=cm&to=' + encodeURIComponent(cfg.email) + '&su=' + subj + '&body=' + b;
+      }
       m.querySelector('#rpCopy').addEventListener('click', function () {
         CZ.copy(m.querySelector('#rpText').value, 'Đã copy nội dung báo lỗi');
+      });
+      var mailBtn = m.querySelector('#rpMail');
+      if (mailBtn) mailBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        window.open(mailHref(), '_blank', 'noopener');
       });
     });
     /* cuối chương: chỉ còn một lời dẫn, việc chuyển chương để thanh điều hướng dưới làm

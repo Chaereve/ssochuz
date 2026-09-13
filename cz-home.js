@@ -410,6 +410,33 @@
     $('#schedSrc').innerHTML = '<span class="dot"></span><span>lịch đăng trên web' +
       (sch.updated ? ' · cập nhật ' + CZ.timeAgo(sch.updated) : '') + (sch.note ? ' — ' + esc(sch.note) : '') + '</span>';
   }
+  function renderEditorChoice() {
+    var el = $('#bien-tap'), rail = $('#editRail');
+    if (!el || !rail) return;
+    var list = CZ.editorChoice ? CZ.editorChoice() : [];
+    if (!list || !list.length) { el.hidden = true; return; }
+    el.hidden = false;
+    $('#editSub').textContent = list.length + ' bộ do biên tập chọn';
+    CZ.mountRail(rail, list.slice(0, 12));
+  }
+  function renderDonation() {
+    var sec = $('#ung-ho'), box = $('#donBox');
+    if (!sec || !box) return;
+    var cfg = CZ.donationCfg ? CZ.donationCfg() : {};
+    if (!cfg || !cfg.enabled) { sec.hidden = true; return; }
+    sec.hidden = false;
+    var html = '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start">' +
+      '<div style="flex:1 1 280px"><h3 style="margin:0 0 8px">Ủng hộ duy trì chuseoz</h3>' +
+      '<p class="hint" style="max-width:60ch">' + esc(cfg.message || 'Cảm ơn bạn đã ủng hộ.') + '</p>' +
+      (cfg.bank ? '<div class="mt"><b>Ngân hàng:</b> ' + esc(cfg.bank) + (cfg.accountNo ? ' · <code>' + esc(cfg.accountNo) + '</code>' : '') + (cfg.accountName ? ' · ' + esc(cfg.accountName) : '') + '</div>' : '') +
+      (cfg.momo ? '<div class="mt"><b>Momo:</b> ' + esc(cfg.momo) + '</div>' : '') +
+      '<div class="mt row"><a class="btn ghost sm" href="https://www.facebook.com/profile.php?id=61592803761987" target="_blank" rel="noopener">Facebook</a>' +
+      '<a class="btn ghost sm" href="https://mail.google.com/mail/u/0/?fs=1&tf=cm&to=chuseoz.ofc@gmail.com" target="_blank" rel="noopener">Email</a></div>' +
+      '</div>' +
+      (cfg.qr ? '<div style="flex:0 0 160px"><img src="' + esc(cfg.qr) + '" alt="QR ủng hộ" style="width:160px;height:160px;object-fit:cover;border-radius:8px;border:1px solid var(--bd)"></div>' : '') +
+      '</div>';
+    box.innerHTML = html;
+  }
 
   /* ======================= THƯ VIỆN ==================================== */
   function buildFilters() {
@@ -633,6 +660,8 @@
       renderBan();
       renderNew();
       renderRank();
+      renderEditorChoice();
+      renderDonation();
       CZ.schedule().then(renderSched).catch(function () { renderSched(null); });
       buildFilters();
       render();
