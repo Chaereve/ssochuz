@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hướng dẫn sử dụng · chuseoz</title>
+<meta name="description" content="Hướng dẫn đọc truyện, dùng tủ sách, cài đặt giao diện đọc và báo lỗi trên chuseoz.">
+<meta name="theme-color" content="#faf8f4">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23faf8f4'/%3E%3Cpath d='M10 8h9a3 3 0 0 1 3 3v13H13a3 3 0 0 1-3-3z' fill='none' stroke='%23a63a52' stroke-width='2.4'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/cz.css">
+<script>try{var t=localStorage.getItem('chuseoz-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<style>
+.guide { max-width: 860px; margin: 0 auto; padding: 0 24px; }
+.guide h1 { font-size: clamp(28px,4vw,40px); margin: 24px 0 8px; }
+.guide .lead { color: var(--mut); font-size: 16px; line-height: 1.7; margin-bottom: 24px; }
+.guide h2 { font-size: 22px; margin: 36px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--bd); }
+.guide h3 { font-size: 16px; margin: 20px 0 8px; }
+.guide p, .guide li { font-size: 14.5px; line-height: 1.75; color: var(--txt); }
+.guide ul, .guide ol { margin: 8px 0 16px 20px; }
+.guide .card2 { margin: 16px 0; }
+.guide kbd { font-size: 12px; }
+.guide .toc { position: sticky; top: 70px; border: 1px solid var(--bd); border-radius: var(--r-lg); background: var(--surf); padding: 14px 18px; margin-bottom: 24px; }
+.guide .toc a { display: block; padding: 6px 0; font-size: 13.5px; color: var(--mut); }
+.guide .toc a:hover { color: var(--acc); }
+.guide .grid2 { display: grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap: 12px; }
+@media (max-width: 700px){ .guide { padding: 0 16px; } }
+</style>
+</head>
+<body>
+<div id="sprog" aria-hidden="true"><i></i></div>
+<header id="hdr"></header>
+
+<main class="guide">
+  <nav class="crumb" style="padding:24px 0 0"><a href="/">Trang chủ</a> <span>›</span> <b>Hướng dẫn</b></nav>
+  <h1>Hướng dẫn sử dụng chuseoz</h1>
+  <p class="lead">chuseoz là thư viện truyện đọc trực tiếp trên web, không cần đăng nhập. Mọi tiến độ đọc, tủ truyện và cài đặt được lưu trong máy bạn. Trang hoạt động <b>phi thương mại</b> — cảm ơn bạn đã ủng hộ.</p>
+
+  <div class="toc">
+    <b style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)">Mục lục</b>
+    <a href="#tim-kiem">1. Tìm kiếm & lọc truyện</a>
+    <a href="#doc-truyen">2. Đọc truyện — giao diện tinh giản</a>
+    <a href="#tu-sach">3. Tủ sách & tiến độ</a>
+    <a href="#bao-loi">4. Báo lỗi & liên hệ</a>
+    <a href="#meo">5. Mẹo & phím tắt</a>
+  </div>
+
+  <h2 id="tim-kiem">1. Tìm kiếm & lọc truyện</h2>
+  <div class="card2">
+    <h3>Tìm nhanh</h3>
+    <ul>
+      <li>Bấm <kbd>⌘</kbd><kbd>K</kbd> hoặc <kbd>/</kbd> hoặc nút <b>Tìm truyện…</b> ở đầu trang để mở hộp tìm kiếm nổi. Gõ tên truyện, tác giả hoặc couple — kết quả hiện ngay.</li>
+      <li>Ở thư viện, ô tìm kiếm lớn lọc ngay trên lưới, không cần Enter.</li>
+    </ul>
+    <h3>Bộ lọc</h3>
+    <ul>
+      <li><b>Tình trạng:</b> Tất cả / Hoàn thành / Đang cập nhật / Sắp ra mắt</li>
+      <li><b>Nhãn:</b> 18+</li>
+      <li><b>Năm, Tác giả, Couple, Sắp xếp</b> — chọn nhiều điều kiện cùng lúc, kết quả cập nhật tức thì.</li>
+      <li>Đang lọc sẽ hiện chip ở dưới, bấm <kbd>x</kbd> để bỏ từng cái hoặc <b>Xoá tất cả lọc</b>.</li>
+    </ul>
+  </div>
+
+  <h2 id="doc-truyen">2. Đọc truyện — giao diện tinh giản</h2>
+  <div class="card2">
+    <h3>Thanh công cụ đọc</h3>
+    <p>Khi vào chương, thanh trên tự ẩn sau 3 giây để bạn tập trung. Di chuột lên, chạm vào màn hình hoặc cuộn ngược lên là hiện lại. Thanh gồm:</p>
+    <ul>
+      <li><b>← Về trang truyện (Esc)</b></li>
+      <li><b>% tiến độ chương</b> và vạch chạy ở mép trên</li>
+      <li><b>← →</b> chuyển chương nhanh</li>
+      <li><b>Mục lục (L)</b>, <b>Đánh dấu (B)</b>, <b>Cài đặt</b>, <b>Tập trung (F)</b>, <b>Chia sẻ</b></li>
+    </ul>
+
+    <h3>Bộ màu nền</h3>
+    <ul>
+      <li><b>Sáng</b> — trắng tinh, hợp ban ngày</li>
+      <li><b>Kem</b> — nền giấy ấm, mặc định</li>
+      <li><b>Sepia</b> — vàng dịu, chống mỏi</li>
+      <li><b>Xanh lá nhạt</b> — dịu mắt khi đọc lâu</li>
+      <li><b>Xám & Tối</b> — cho ban đêm</li>
+    </ul>
+
+    <h3>Font chữ</h3>
+    <ul>
+      <li><b>Serif:</b> Georgia, Times New Roman — có chân, hợp đọc dài</li>
+      <li><b>Sans-serif:</b> Inter, Roboto, Arial — không chân, gọn trên màn hình nhỏ</li>
+    </ul>
+
+    <h3>Cỡ chữ & khoảng cách</h3>
+    <p>Dùng thanh trượt trong Cài đặt đọc:</p>
+    <ul>
+      <li><b>Cỡ chữ:</b> 14px → 28px</li>
+      <li><b>Giãn dòng:</b> 1.4 → 2.4</li>
+      <li><b>Giãn đoạn:</b> 0.6em → 1.8em — tăng khoảng trắng giữa các đoạn văn</li>
+      <li><b>Độ rộng cột:</b> Hẹp / Vừa / Rộng</li>
+      <li><b>Căn đều:</b> bật để 2 bên thẳng hàng như sách in</li>
+    </ul>
+
+    <h3>Chế độ hiển thị</h3>
+    <ul>
+      <li><b>Cuộn liên tục:</b> đọc từ trên xuống, tự ẩn thanh công cụ. Cuối chương có gợi ý chương tiếp theo, bấm là đọc ngay (không tải lại trang).</li>
+      <li><b>Phân trang:</b> chia chương thành các trang nhỏ theo chiều cao màn hình, vuốt hoặc bấm để lật trang như sách giấy.</li>
+    </ul>
+
+    <h3>Toàn màn hình</h3>
+    <p>Bật <b>Chế độ tập trung (F)</b> để ẩn hết ngoại trừ nội dung. Bấm nút <b>Toàn màn hình</b> trong cài đặt để trình duyệt vào fullscreen thực sự (ẩn thanh địa chỉ).</p>
+
+    <h3>Thanh tiến trình & điều hướng nhanh</h3>
+    <ul>
+      <li>Vạch mỏng trên cùng cho biết bạn đã cuộn bao nhiêu % chương.</li>
+      <li>Cuối chương có 3 nút: Chương trước / Mục lục / Chương tiếp theo.</li>
+      <li>Trong mục lục có ô tìm chương theo số hoặc tên.</li>
+    </ul>
+  </div>
+
+  <h2 id="tu-sach">3. Tủ sách & tiến độ</h2>
+  <div class="card2">
+    <ul>
+      <li><b>Tủ truyện:</b> bấm bookmark ở trang truyện hoặc trang đọc để lưu. Dữ liệu lưu trong <code>localStorage</code>, không cần tài khoản.</li>
+      <li><b>Đang đọc dở:</b> tự động lưu chương cuối cùng bạn mở. Mở lại trang chủ sẽ thấy ở <b>Bàn đọc của bạn</b>.</li>
+      <li><b>Thích & Đánh dấu:</b> mỗi chương có thể đánh dấu sao để quay lại sau. Nút Thích chỉ lưu trên máy bạn.</li>
+      <li><b>Xoá:</b> trong Bàn đọc có nút xoá lịch sử hoặc bỏ hết tủ.</li>
+      <li><b>Lưu ý:</b> đổi trình duyệt / xoá dữ liệu web sẽ mất tiến độ. Hãy xuất sao lưu nếu cần.</li>
+    </ul>
+  </div>
+
+  <h2 id="bao-loi">4. Báo lỗi & liên hệ</h2>
+  <div class="card2">
+    <p>Mỗi chương có nút <b>Báo lỗi chữ</b> ở cuối. Bấm sẽ tạo sẵn mẫu gồm tên truyện, số chương và link — bạn chỉ cần ghi chỗ sai rồi copy gửi cho quản trị.</p>
+    <ul>
+      <li>FB: <a href="https://www.facebook.com/profile.php?id=61592803761987" target="_blank" rel="noopener">facebook.com/chuseoz</a></li>
+      <li>Email: <a href="https://mail.google.com/mail/u/0/?fs=1&tf=cm&to=chuseoz.ofc@gmail.com" target="_blank" rel="noopener">chuseoz.ofc@gmail.com</a></li>
+      <li>Form khảo sát hàng tháng: <a href="https://forms.gle/YW3PvtrNVQ7xt8nCA" target="_blank" rel="noopener">forms.gle/YW3PvtrNVQ7xt8nCA</a> — giúp tụi mình cải thiện trang.</li>
+    </ul>
+  </div>
+
+  <h2 id="meo">5. Mẹo & phím tắt</h2>
+  <div class="card2">
+    <div class="grid2">
+      <div>
+        <h3>Khi đọc</h3>
+        <ul>
+          <li><kbd>←</kbd> <kbd>→</kbd> — chương trước / sau</li>
+          <li><kbd>Space</kbd> / <kbd>↓</kbd> — cuộn xuống</li>
+          <li><kbd>B</kbd> — đánh dấu chương</li>
+          <li><kbd>L</kbd> — mở mục lục</li>
+          <li><kbd>F</kbd> — tập trung</li>
+          <li><kbd>Esc</kbd> — về trang truyện / đóng popup</li>
+          <li>Vuốt ngang trên điện thoại để đổi chương (chế độ cuộn)</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Trang chủ & quản trị</h3>
+        <ul>
+          <li><kbd>/</kbd> hoặc <kbd>⌘K</kbd> — tìm nhanh</li>
+          <li><kbd>1</kbd>…<kbd>8</kbd> trong trang quản trị — đổi tab</li>
+          <li><kbd>Ctrl</kbd><kbd>S</kbd> — lưu trong trang quản trị</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <p style="margin:36px 0 24px;color:var(--mut);font-size:13px">Cập nhật 2026-09-13 · Nếu bạn thấy chỗ nào khó dùng, hãy gửi qua form khảo sát — tụi mình đọc hết.</p>
+</main>
+
+<footer id="ftr"></footer>
+<button id="toTop" aria-label="Lên đầu trang"></button>
+
+<script src="/cz-config.js"></script>
+<script src="/cz-app.js"></script>
+<script>
+CZ.mountShell({active:'library'});
+document.querySelectorAll('[data-ic]').forEach(function(el){
+  el.outerHTML = CZ.icon(el.dataset.ic);
+});
+</script>
+</body>
+</html>

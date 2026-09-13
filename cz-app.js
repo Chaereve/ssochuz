@@ -204,8 +204,8 @@
   }
 
   /* cài đặt đọc */
-  var RD_DEF = { mode: 'scroll', size: 18, font: 'serif', line: 1.85, theme: 'kem', width: 720, justify: 0 };
-  function rdGet() { return Object.assign({}, RD_DEF, jsonGet(LS.read, {}) || {}); }
+  var RD_DEF = { mode: 'scroll', size: 18, font: 'serif', line: 1.85, para: 1.05, theme: 'kem', width: 720, justify: 0 };
+  function rdGet() { var cur=jsonGet(LS.read, {})||{}; if(cur && cur.font && ['roboto','inter','arial','times','georgia','serif','sans'].indexOf(cur.font)<0){ cur.font='serif'; } return Object.assign({}, RD_DEF, cur); }
   function rdSet(o) { var v = Object.assign(rdGet(), o || {}); jsonSet(LS.read, v); return v; }
 
   /* sáng / tối (mặc định: nền giấy sáng) */
@@ -777,17 +777,21 @@
     var rev = (memo.reg && memo.reg.rev) || '';
     host.innerHTML = '<div class="in">' +
       '<div class="fmain">' +
-        '<a class="logo" href="/"><span class="dot"></span>chuseoz<i>.</i></a>' +
-        '<nav class="fnav" aria-label="Liên kết chân trang">' +
-          '<a href="/#thu-vien">Thư viện</a>' +
-          '<a href="/#moi-cap-nhat">Mới cập nhật</a>' +
-          '<a href="/#bxh">Xếp hạng</a>' +
-          '<a href="/#lich">Lịch ra chương</a>' +
-        '</nav>' +
+        '<div class="fleft">' +
+          '<a class="logo" href="/"><span class="dot"></span>chuseoz<i>.</i></a>' +
+          '<div class="note">Trang hoạt động <b>phi thương mại</b>, phi lợi nhuận — được duy trì bởi tình yêu với truyện chuyển thể. Cảm ơn bạn đã ủng hộ và đồng hành cùng chuseoz.</div>' +
+          '<div class="note sm">Tiến độ đọc, tủ truyện và cài đặt được lưu trong máy bạn. Không yêu cầu đăng nhập.</div>' +
+        '</div>' +
+        '<div class="fright">' +
+          '<div><b>Liên hệ</b></div>' +
+          '<div class="row">FB: <a href="https://www.facebook.com/profile.php?id=61592803761987" target="_blank" rel="noopener">Facebook chuseoz</a> · Email: <a href="https://mail.google.com/mail/u/0/?fs=1&tf=cm&to=chuseoz.ofc@gmail.com" target="_blank" rel="noopener">chuseoz.ofc@gmail.com</a></div>' +
+          '<div>Khảo sát hàng tháng: <a href="https://forms.gle/YW3PvtrNVQ7xt8nCA" target="_blank" rel="noopener">forms.gle/YW3PvtrNVQ7xt8nCA</a></div>' +
+          '<div class="row"><a href="/guide">Hướng dẫn sử dụng</a> · <a href="/#thu-vien">Thư viện</a> · <a href="/admin">Quản trị</a></div>' +
+        '</div>' +
       '</div>' +
       '<div class="fbottom">' +
-        '<span>thư viện truyện đọc trên web · tiến độ lưu trong máy bạn</span>' +
-        '<span>rev ' + esc(rev || '—') + ' · nguồn dữ liệu ' + (w.CZ_SRC === 'kv' ? 'Cloudflare KV' : 'trong kho') + '</span>' +
+        '<span>chuseoz · đọc trên web · rev ' + esc(rev || '—') + '</span>' +
+        '<span>nguồn ' + (w.CZ_SRC === 'kv' ? 'Cloudflare KV' : 'trong kho') + ' · ' + new Date().getFullYear() + '</span>' +
       '</div></div>';
   }
   function mountShell(opt) {
