@@ -579,6 +579,12 @@
   function saveDraft() {
     try {
       localStorage.setItem(LS.draft, JSON.stringify({ at: Date.now(), reg: REG, books: BOOKS }));
+      // cũng cập nhật cache mà trang chủ đọc, để đổi slug thấy ngay cả khi chưa nối Worker
+      try {
+        localStorage.setItem('chuseoz-reg', JSON.stringify({ t: Date.now(), v: REG }));
+        // clear memo để CZ.lib() đọc lại
+        if (window.CZ && CZ._memo) { CZ._memo.reg = null; CZ._setLib(); }
+      } catch (e2) {}
       toast('Đã lưu nháp trong máy', 'ok');
     } catch (e) { toast('Nháp quá lớn để lưu trong máy', 'err'); }
   }

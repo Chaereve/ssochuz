@@ -309,7 +309,6 @@
     var rows = CZ.lib().slice().sort(function (a, b) {
       return String(b.updated || '').localeCompare(String(a.updated || '')) || (b.chapters - a.chapters);
     });
-    var _ns=$('#newSub'); if(_ns) _ns.textContent=''; // removed per user
     CZ.mountRail($('#newRail'), rows.slice(0, 12));
   }
 
@@ -370,8 +369,6 @@
         '<span class="v">' + text + '</span>' +
         (w ? '<i class="bar" style="width:' + w + '%"></i>' : '') + '</a>';
     }).join('') || '<div class="empty">Chưa có dữ liệu.</div>';
-    var _rs=$('#rankSub'); if(_rs) _rs.textContent=''; // removed
-    var src = $('#rankSrc'); if(src){ src.style.display='none'; src.textContent=''; } // removed per user
   }
   $('#rankTabs').addEventListener('click', function (e) {
     var b = e.target.closest('.tab'); if (!b) return;
@@ -383,10 +380,8 @@
   function renderSched(sch) {
     var items = (sch && sch.items) || [];
     var el = $('#sched');
-    var _ss=$('#schedSub'); if(_ss) _ss.textContent=''; // removed
     if (!items.length) {
       el.innerHTML = '<div class="empty">Chưa có lịch ra chương.</div>';
-      var _s0=$('#schedSrc'); if(_s0){ _s0.style.display='none'; }
       return;
     }
     el.innerHTML = items.slice(0, 8).map(function (it) {
@@ -397,7 +392,6 @@
         '<div class="info"><b>' + esc(it.title || '') + '</b><span>' +
         (n ? (n.canRead ? esc(CZ.countText(n)) : 'sắp ra mắt') : esc(it.detail || '')) + '</span></div></a>';
     }).join('');
-    var _s1=$('#schedSrc'); if(_s1){ _s1.style.display='none'; _s1.textContent=''; } // removed
   }
   function renderEditorChoice() {
     var el = $('#bien-tap'), rail = $('#editRail');
@@ -415,12 +409,12 @@
     if (!cfg || !cfg.enabled) { sec.hidden = true; return; }
     sec.hidden = false;
     var html = '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start">' +
-      '<div style="flex:1 1 280px"><h3 style="margin:0 0 8px">Ủng hộ duy trì chuseoz</h3>' +
-      '<p class="hint" style="max-width:60ch">' + esc(cfg.message || 'Cảm ơn bạn đã ủng hộ.') + '</p>' +
+      '<div style="flex:1 1 280px"><h3 style="margin:0 0 8px">' + ic('donate','i-s') + ' Ủng hộ duy trì chuseoz</h3>' +
+      '<p class="hint" style="max-width:60ch">' + esc(cfg.message || 'Trang hoạt động phi thương mại, phi lợi nhuận — được duy trì bởi tình yêu với truyện chuyển thể. Cảm ơn bạn đã ủng hộ và đồng hành cùng chuseoz.') + '</p>' +
       (cfg.bank ? '<div class="mt"><b>Ngân hàng:</b> ' + esc(cfg.bank) + (cfg.accountNo ? ' · <code>' + esc(cfg.accountNo) + '</code>' : '') + (cfg.accountName ? ' · ' + esc(cfg.accountName) : '') + '</div>' : '') +
       (cfg.momo ? '<div class="mt"><b>Momo:</b> ' + esc(cfg.momo) + '</div>' : '') +
-      '<div class="mt row"><a class="btn ghost sm" href="https://www.facebook.com/profile.php?id=61592803761987" target="_blank" rel="noopener">Facebook</a>' +
-      '<a class="btn ghost sm" href="https://mail.google.com/mail/u/0/?fs=1&tf=cm&to=chuseoz.ofc@gmail.com" target="_blank" rel="noopener">Email</a></div>' +
+      '<div class="mt row"><a class="btn ghost sm" href="https://www.facebook.com/profile.php?id=61592803761987" target="_blank" rel="noopener">' + ic('users','i-s') + ' Facebook</a>' +
+      '<a class="btn ghost sm" href="mailto:' + esc((CZ.reportCfg && CZ.reportCfg().email) || 'chuseoz.ofc@gmail.com') + '" target="_blank" rel="noopener">' + ic('mail','i-s') + ' Email</a></div>' +
       '</div>' +
       (cfg.qr ? '<div style="flex:0 0 160px"><img src="' + esc(cfg.qr) + '" alt="QR ủng hộ" style="width:160px;height:160px;object-fit:cover;border-radius:8px;border:1px solid var(--bd)"></div>' : '') +
       '</div>';
