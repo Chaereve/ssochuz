@@ -52,7 +52,7 @@
   var PAGES = [], PI = 0;  /* chế độ phân trang */
 
   /* ======================= 2. DỌN HTML CHƯƠNG ===========================
-     Nội dung lấy từ Blogger/KV nên vẫn giữ in đậm/nghiêng/ảnh/link, nhưng bỏ
+     Nội dung lấy từ kho chương trên web nên vẫn giữ in đậm/nghiêng/ảnh/link, nhưng bỏ
      mọi thứ nguy hiểm (script, iframe, thuộc tính on*, link javascript:).      */
   function cleanHTML(html) {
     var tmp = document.createElement('div');
@@ -78,7 +78,7 @@
   }
 
   /* ---- số chương lấy từ CHÍNH tiêu đề ----------------------------------
-     Dữ liệu Blogger hay mở đầu bằng “Lời Mở Đầu”, nên số thứ tự trong danh
+     Nhiều bộ mở đầu bằng “Lời Mở Đầu”, nên số thứ tự trong danh
      sách lệch với số ghi trên tiêu đề (“Chương 1”, “Chương 2”…). Chỗ nào
      người đọc thấy thì dùng số trong tiêu đề; chương không ghi số thì gọi
      bằng đúng tên của nó. */
@@ -138,7 +138,6 @@
             (n.author ? '<span>' + ic('pen', 'i-s') + ' ' + esc(n.author) + '</span>' : '') +
             (n.couple ? '<span>' + ic('users', 'i-s') + ' ' + esc(n.couple) + '</span>' : '') +
             (n.year ? '<span>' + esc(n.year) + '</span>' : '') +
-            '<span>' + ic('film', 'i-s') + ' ' + esc(CZ.adaptText(n)) + '</span>' +
             '<span>' + ic('refresh', 'i-s') + ' ' + esc(CZ.timeAgo(n.updated)) + '</span>' +
             statChip() +
           '</div>' +
@@ -148,7 +147,6 @@
             '<button class="btn ghost" id="shelfBtn" aria-pressed="' + CZ.inShelf(n) + '">' + ic('bookmark', 'i-s') +
               '<span>' + (CZ.inShelf(n) ? 'Đã lưu' : 'Tủ truyện') + '</span></button>' +
             '<button class="btn ghost" id="shareBtn">' + ic('share', 'i-s') + 'Chia sẻ</button>' +
-            (n.blog ? '<a class="btn ghost" href="' + esc(n.blog) + '" target="_blank" rel="noopener">' + ic('link', 'i-s') + 'Bài gốc</a>' : '') +
           '</div>' +
           (ch && n.chapters ? '<div class="prog"><div class="lbl"><span>Tiến độ đọc của bạn</span>' +
             '<span>còn ' + Math.max(0, n.chapters - ch) + ' chương · ' + progressPct(n, ch) + '%</span></div>' +
@@ -187,8 +185,7 @@
   function renderChapters() {
     if (!N || !N.canRead) {
       $('#chapGrid').innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="big">Bộ này chưa đăng chương nào</div>' +
-        'Đang ở trạng thái <b>Sắp ra mắt</b>. Theo dõi thông báo chương mới trên ' +
-        '<a href="' + esc(N && N.blog || CZ.BLOG + '/p/list-novel.html') + '" target="_blank" rel="noopener" style="color:var(--acc)">Blogger</a>.</div>';
+        'Đang ở trạng thái <b>Sắp ra mắt</b> — chương đầu sẽ hiện ở đây ngay khi được đăng.</div>';
       $('#chapPager').innerHTML = '';
       return;
     }
@@ -250,9 +247,6 @@
   function renderRelated() {
     var n = N;
     var lib = CZ.lib();
-    var grp = (CZ.series() || []).filter(function (g) { return (g.parts || []).indexOf(n.title) >= 0; })[0];
-    var sameSeries = grp ? grp.parts.filter(function (t) { return t !== n.title; })
-      .map(function (t) { return lib.filter(function (x) { return x.title === t; })[0]; }).filter(Boolean) : [];
     var sameCouple = n.couple ? lib.filter(function (x) { return x.couple === n.couple && x.slug !== n.slug; }).slice(0, 6) : [];
     var sameAuthor = n.author ? lib.filter(function (x) { return x.author === n.author && x.slug !== n.slug; }).slice(0, 6) : [];
     var shown = 0;
@@ -262,7 +256,7 @@
       wrap.style.display = rows.length ? '' : 'none';
       if (rows.length) shown++;
     }
-    put('#relSeries', sameSeries); put('#relCouple', sameCouple); put('#relAuthor', sameAuthor);
+    put('#relCouple', sameCouple); put('#relAuthor', sameAuthor);
     $('#relSec').style.display = shown ? '' : 'none';
   }
 
@@ -270,8 +264,9 @@
     var g = ((CZ._memo.reg || {}).settings || {}).giscus || {};
     var box = $('#giscus');
     if (!g.repo || !g.repoId) {
-      $('#cmtNote').innerHTML = 'Chưa gắn bình luận. Bạn có thể đọc & bình luận bài gốc trên ' +
-        '<a href="' + esc(N && N.blog || CZ.BLOG) + '" target="_blank" rel="noopener">Blogger</a>.';
+      /* chưa gắn hệ thống bình luận thì giấu cả khối — không dẫn đi đâu khác */
+      var sec = $('#cmts');
+      if (sec) sec.classList.add('hide');
       return;
     }
     var s = document.createElement('script');
@@ -488,8 +483,7 @@
       '<button id="actMark">' + ic('star', 'i-s') + '<span>Đánh dấu</span></button>',
       '<button id="actComment">' + ic('chat', 'i-s') + '<span>Bình luận</span></button>',
       '<button id="actShare">' + ic('share', 'i-s') + '<span>Chia sẻ</span></button>',
-      (N.blog ? '<span class="acts-note">Thấy lỗi chính tả hay thiếu chữ? <a href="' + esc(N.blog) +
-        '" target="_blank" rel="noopener">' + ic('alert', 'i-s') + 'đọc bài gốc trên Blogger</a></span>' : '')
+      '<button id="actReport" class="ghost">' + ic('alert', 'i-s') + '<span>Báo lỗi chữ</span></button>'
     ];
     if (st && st.views) acts.unshift('<span class="chip">' + ic('eye', 'i-s') + ' ' + num(st.views) + ' lượt đọc (Firebase)</span>');
     $('#rdActs').innerHTML = acts.join('');
@@ -514,6 +508,21 @@
     });
     $('#actComment').addEventListener('click', function () { exitReader(true); });
     $('#actShare').addEventListener('click', shareChapter);
+    var rp = $('#actReport');
+    if (rp) rp.addEventListener('click', function () {
+      var text = 'Báo lỗi · ' + N.title + ' · ' + chapLabel(cur) + '\n' + location.origin + location.pathname +
+        '#chuong-' + cur + '\n\nChỗ cần sửa: ';
+      var m = CZ.modal('czReport',
+        '<div class="mh"><h4>Báo lỗi chữ</h4></div>' +
+        '<div class="mb"><p class="sm muted">Ghi rõ chỗ sai rồi copy nội dung dưới đây gửi cho chủ web (chat, mail…). ' +
+        'Trang đã kèm sẵn tên bộ, số chương và đường dẫn.</p>' +
+        '<textarea class="inp ta" id="rpText" rows="5" spellcheck="false">' + esc(text) + '</textarea></div>' +
+        '<div class="mf"><button class="btn ghost" data-close>Đóng</button>' +
+        '<button class="btn pri" id="rpCopy">' + ic('share', 'i-s') + 'Copy nội dung</button></div>');
+      m.querySelector('#rpCopy').addEventListener('click', function () {
+        CZ.copy(m.querySelector('#rpText').value, 'Đã copy nội dung báo lỗi');
+      });
+    });
     /* cuối chương: chỉ còn một lời dẫn, việc chuyển chương để thanh điều hướng dưới làm
        (bản trước vừa có nút “Chương tiếp theo” ở đây vừa có thanh dưới — trùng nhau) */
     var last = cur >= CHS.length;
@@ -680,9 +689,7 @@
       if (!bk || !bk.chapters) {
         if (meta) {
           N = meta;
-          showError(meta.title, '<p class="muted">Chưa tải được nội dung bộ này. ' +
-            (meta.blog ? 'Đọc bài gốc trên <a href="' + esc(meta.blog) + '" target="_blank" rel="noopener" style="color:var(--acc)">Blogger</a> hoặc ' : '') +
-            'thử lại sau ít phút.</p>');
+          showError(meta.title, '<p class="muted">Chưa tải được nội dung bộ này — thử tải lại trang sau ít phút.</p>');
         } else {
           showError('Không tìm thấy truyện “' + SLUG + '”', '<p class="muted">Bộ này không có trong thư viện. Xem danh sách đầy đủ ở trang chủ.</p>');
         }

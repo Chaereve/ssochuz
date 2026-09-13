@@ -161,13 +161,13 @@
         </div>
       </div>
       <div class="card2">
-        <h3>Lấy thẳng từ Blogger (không cần copy–paste)</h3>
-        <p class="hint">Worker sẽ đọc bài viết trên blogspot, làm sạch nội dung rồi ghép vào cuối bộ.</p>
-        <label class="fl" for="qkUrl">Link bài viết (để trống = tự tìm bài mới nhất khớp tên truyện)</label>
-        <input class="inp" id="qkUrl" placeholder="https://chuseoz.blogspot.com/2026/05/…html">
-        <div class="row mt">
-          <button class="btn pri" id="qkFetch">↓ Lấy &amp; đăng thành chương mới</button>
-          <button class="btn ghost" id="qkFetchReplace">↓ Lấy &amp; thay chương cuối</button>
+        <h3>Mở từ tệp trên máy</h3>
+        <p class="hint">Chọn tệp <code>.txt</code>, <code>.md</code> hoặc <code>.html</code> — nội dung đổ vào ô soạn ở trên,
+          bạn xem lại rồi bấm <b>Đăng chương</b>. Tên tệp được điền sẵn làm tiêu đề chương.</p>
+        <div class="row">
+          <button class="btn" id="qkFileBtn">Chọn tệp…</button>
+          <input type="file" id="qkFile" class="hide" accept=".txt,.md,.markdown,.html,.htm,text/plain,text/html,text/markdown">
+          <span class="sm muted" id="qkFileName">chưa chọn tệp nào</span>
         </div>
       </div>
       <div class="card2 hide" id="qkPrevBox">
@@ -189,9 +189,6 @@
           <div><label class="fl" for="nYear">Năm</label><input class="inp" id="nYear"></div>
           <div><label class="fl" for="nStatus">Tình trạng</label>
             <select class="inp" id="nStatus"><option>Đang cập nhật</option><option>Hoàn thành</option><option>Sắp ra mắt</option></select></div>
-          <div><label class="fl" for="nAdapt">Chuyển thể</label>
-            <select class="inp" id="nAdapt"><option value="">Chưa chuyển thể</option><option value="series">Series</option><option value="phim">Phim điện ảnh</option></select></div>
-          <div><label class="fl" for="nAdaptName">Tên bản chuyển thể</label><input class="inp" id="nAdaptName"></div>
           <div><label class="fl" for="n18">18+</label>
             <select class="inp" id="n18"><option value="0">Không</option><option value="1">Có</option></select></div>
           <div><label class="fl" for="nThumb">Ảnh bìa (URL)</label><input class="inp" id="nThumb" placeholder="https://…"></div>
@@ -219,11 +216,7 @@
           <div><label class="fl" for="fCount">Nhãn số chương (vd 9/45)</label><input class="inp" id="fCount"></div>
           <div><label class="fl" for="f18">18+</label>
             <select class="inp" id="f18"><option value="0">Không</option><option value="1">Có</option></select></div>
-          <div><label class="fl" for="fAdapt">Chuyển thể</label>
-            <select class="inp" id="fAdapt"><option value="">Chưa</option><option value="series">Series</option><option value="phim">Phim</option></select></div>
-          <div><label class="fl" for="fAdaptName">Tên bản chuyển thể</label><input class="inp" id="fAdaptName"></div>
           <div><label class="fl" for="fUpdated">Ngày cập nhật</label><input class="inp" id="fUpdated" type="date"></div>
-          <div><label class="fl" for="fBlog">Link bài gốc Blogger</label><input class="inp" id="fBlog"></div>
         </div>
         <label class="fl" for="fThumb">Ảnh bìa (URL)</label><input class="inp" id="fThumb">
         <label class="fl" for="fSyn">Mô tả</label><textarea class="inp" id="fSyn" style="min-height:80px"></textarea>
@@ -291,7 +284,7 @@
       </div>
       <div class="card2">
         <h3>Bình luận (giscus)</h3>
-        <p class="hint">Lấy repo + repoId tại giscus.app. Để trống thì trang truyện trỏ về Blogger.</p>
+        <p class="hint">Lấy repo + repoId tại giscus.app. Để trống thì trang truyện <b>giấu hẳn khối bình luận</b>.</p>
         <div class="grid2">
           <div><label class="fl" for="sGiscusRepo">repo</label><input class="inp" id="sGiscusRepo" placeholder="user/repo"></div>
           <div><label class="fl" for="sGiscusId">repoId</label><input class="inp" id="sGiscusId"></div>
@@ -301,7 +294,6 @@
         <h3>Đồng bộ · nạp · sao lưu</h3>
         <div class="kv" id="health"></div>
         <div class="row">
-          <button class="btn pri" id="btnSync">Đồng bộ lại từ Blogger</button>
           <button class="btn" id="btnSeed">↑ Nạp dữ liệu repo lên KV</button>
           <button class="btn ghost" id="btnHealth">Kiểm tra Worker</button>
           <button class="btn ghost" id="btnStatsClear">Xoá cache số liệu</button>
@@ -333,8 +325,8 @@
         <h3>Quy trình hằng ngày</h3>
         <ol class="steps">
           <li>Mở tab <b>Tổng quan</b> (phím <b>1</b>) — chỗ liệt kê việc cần dọn: thiếu mô tả, thiếu ảnh bìa, nhãn số chương lệch… Bấm một việc là lọc thẳng ra danh sách để sửa.</li>
-          <li>Viết bài trên Blogger như bình thường.</li>
-          <li>Vào tab <b>Đăng chương nhanh</b> → chọn bộ → dán link bài (hoặc để trống) → <b>Lấy &amp; đăng</b>.</li>
+          <li>Vào tab <b>Đăng chương nhanh</b> → chọn bộ → dán nội dung (hoặc <b>Chọn tệp…</b>) → <b>Đăng chương</b>.</li>
+          <li>Bộ mới thì vào tab <b>Thêm bộ</b> trước, xong quay lại đăng chương.</li>
           <li>Mở <b>Kiểm tra ↻</b> ở thanh trên để xem đúng thứ người đọc thấy.</li>
         </ol>
       </div>

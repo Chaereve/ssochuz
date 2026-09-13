@@ -2,7 +2,7 @@
    Kiểm thử TRANG QUẢN TRỊ với một Worker giả (giống worker/cms.js thật)
    - sai ADMIN_KEY → phải chặn
    - đúng khoá → mở được thư viện
-   - đăng chương nhanh / lấy từ Blogger / sửa thông tin bộ / thêm bộ /
+   - đăng chương nhanh / mở chương từ tệp trên máy / sửa thông tin bộ / thêm bộ /
      đổi tình trạng hàng loạt / lưu slide + lịch + giscus  → đúng dữ liệu gửi lên
    - Firebase bị chặn → KHÔNG hiện số bịa
    - chưa nối Worker vẫn xem được dữ liệu tĩnh (chế độ nháp)
@@ -135,14 +135,18 @@ async function openAdmin(worker, key) {
     msg: ($(doc, '#msg') || {}).textContent.slice(0, 60)
   };
 
-  /* ---------- 4. lấy từ Blogger ---------- */
-  $(doc, '#qkUrl').value = 'https://chuseoz.blogspot.com/2026/09/bai-moi.html';
-  click('#qkFetch');
-  await wait(500);
-  out.layBlogger = {
-    soChuongSau: w.loadBook(slug).chapters.length,
-    coHeaderMode: w.calls.filter(c => c.includes('/api/import')).length > 0,
-    msg: ($(doc, '#msg') || {}).textContent.slice(0, 70)
+  /* ---------- 4. mở chương từ tệp trên máy (thay cho luồng Blogger cũ) ---------- */
+  const fi = $(doc, '#qkFile');
+  const file = new win.File(['Dòng một.\n\nDòng hai.'], 'chuong-10.txt', { type: 'text/plain' });
+  Object.defineProperty(fi, 'files', { value: [file], configurable: true });
+  fi.dispatchEvent(new win.Event('change', { bubbles: true }));
+  await wait(400);
+  out.moTep = {
+    coNoiDung: $(doc, '#qkBody').value.indexOf('Dòng một') >= 0,
+    tieuDe: $(doc, '#qkTitle').value,
+    tenTep: ($(doc, '#qkFileName') || {}).textContent,
+    kieu: $(doc, '#qkMode').value,
+    soChuongSau: w.loadBook(slug).chapters.length
   };
 
   /* ---------- 5. sửa thông tin bộ ---------- */

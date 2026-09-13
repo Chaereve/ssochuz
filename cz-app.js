@@ -19,7 +19,6 @@
     return u;
   }
   var API = normalizeApi(w.CZ_API);
-  var BLOG = 'https://chuseoz.blogspot.com';
   var FB_PROJECT = w.CZ_FIREBASE_PROJECT || 'chuseoz-library';
   var TTL_REG = 6 * 3600 * 1000;    /* registry: 6 giờ khi không nối Worker */
   var TTL_STATS = 10 * 60 * 1000;   /* số liệu: 10 phút */
@@ -385,12 +384,6 @@
     var c = parseInt(n.chapters, 10) || 0, d = parseInt(n.declared, 10) || c;
     return d > c ? (c + '/' + d + ' chương') : (c + ' chương');
   }
-  function adaptText(n) {
-    var extra = (n.adaptName && n.adaptName !== n.title) ? ' · ' + n.adaptName : '';
-    if (n.adapt === 'phim') return 'Phim điện ảnh' + extra;
-    if (n.adapt === 'series') return 'Series' + extra;
-    return 'Chưa chuyển thể';
-  }
 
   /* ======================= 5. THÔNG BÁO & HỘP THOẠI ==================== */
   function toastBox() {
@@ -477,7 +470,7 @@
       '<span class="cl-side">' +
         '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(n.status || 'Đang cập nhật') + '</span>' +
         '<span class="cl-ch">' + esc(countText(n)) + '</span>' +
-        '<span class="cl-adapt">' + esc(adaptText(n)) + '</span>' +
+        '<span class="cl-adapt">' + esc(n.year ? 'Năm ' + n.year : '—') + '</span>' +
       '</span>' +
       '<span class="cl-go">' + (read ? 'Đọc tiếp' : 'Xem truyện') + icon('right', 'i-s') + '</span>' +
       '</a>';
@@ -571,9 +564,9 @@
     if (!host) return;
     var NAV = [
       { k: 'library', l: 'Thư viện', i: 'library', h: '/#thu-vien' },
+      { k: 'new', l: 'Mới cập nhật', i: 'sparkle', h: '/#moi-cap-nhat' },
       { k: 'rank', l: 'Xếp hạng', i: 'trophy', h: '/#bxh' },
-      { k: 'sched', l: 'Lịch ra chương', i: 'calendar', h: '/#lich' },
-      { k: 'adapt', l: 'Chuyển thể', i: 'film', h: '/#chuyen-the' }
+      { k: 'sched', l: 'Lịch ra chương', i: 'calendar', h: '/#lich' }
     ];
     var links = NAV.map(function (n) {
       return '<a href="' + n.h + '"' + (n.k === active ? ' class="on"' : '') + '>' + icon(n.i, 'i-s') + ' ' + n.l + '</a>';
@@ -590,7 +583,7 @@
       '<button class="hbtn icon burger" id="czBurger" aria-label="Mở menu">' + icon('menu', 'i-s') + '</button>' +
       '</div>' +
       '<div class="mnav" id="czMnav">' + links +
-      '<a href="https://chuseoz.blogspot.com/p/list-novel.html" target="_blank" rel="noopener">' + icon('link', 'i-s') + ' Blogger gốc</a>' +
+      '<a href="/#ban-doc">' + icon('bookmark', 'i-s') + ' Bàn đọc của bạn</a>' +
       '<a href="/admin">' + icon('gear', 'i-s') + ' Trang quản trị</a></div>';
 
     var tb = host.querySelector('#czTheme');
@@ -615,17 +608,22 @@
     host.className = 'ftr';
     var rev = (memo.reg && memo.reg.rev) || '';
     host.innerHTML = '<div class="in">' +
-      '<div><div class="logo" style="margin-bottom:8px"><span class="dot"></span>chuseoz<i>.</i></div>' +
-      '<p class="sm muted" style="max-width:38ch">Thư viện truyện chuyển thể: series, phim, couple và lịch ra chương — dữ liệu lấy từ ' +
-      '<a href="' + BLOG + '/p/list-novel.html" target="_blank" rel="noopener" style="color:var(--acc)">blogspot chuseoz</a>.</p></div>' +
-      '<div><h4>Khám phá</h4><a href="/#thu-vien">Thư viện truyện</a><a href="/#bxh">Bảng xếp hạng</a>' +
-      '<a href="/#lich">Lịch ra chương</a><a href="/#chuyen-the">Chuyển thể</a></div>' +
-      '<div><h4>Liên kết</h4><a href="/#ban-doc">Bàn đọc của bạn</a><a href="/admin">Trang quản trị</a>' +
-      '<a href="' + BLOG + '" target="_blank" rel="noopener">Blogger gốc</a>' +
-      '<a href="' + BLOG + '/p/list-novel.html" target="_blank" rel="noopener">Danh sách trên Blogger</a></div>' +
-      '<div class="copy"><span>chuseoz · bản Cloudflare Pages · nguồn dữ liệu: ' +
-      (w.CZ_SRC === 'kv' ? 'Cloudflare KV (sửa là thấy ngay)' : 'file tĩnh /data') + (rev ? ' · rev ' + esc(rev) : '') + '</span>' +
-      '<span id="czFootNote"></span></div></div>';
+      '<div class="fmain">' +
+        '<a class="logo" href="/"><span class="dot"></span>chuseoz<i>.</i></a>' +
+        '<nav class="fnav" aria-label="Liên kết chân trang">' +
+          '<a href="/#thu-vien">Thư viện</a>' +
+          '<a href="/#moi-cap-nhat">Mới cập nhật</a>' +
+          '<a href="/#bxh">Xếp hạng</a>' +
+          '<a href="/#lich">Lịch ra chương</a>' +
+          '<a href="/#ban-doc">Bàn đọc của bạn</a>' +
+          '<a href="/admin">Trang quản trị</a>' +
+        '</nav>' +
+      '</div>' +
+      '<div class="fbottom">' +
+        '<span>chuseoz · thư viện truyện đọc trong máy, không quảng cáo</span>' +
+        '<span>' + (w.CZ_SRC === 'kv' ? 'dữ liệu Cloudflare KV' : 'dữ liệu /data') +
+        (rev ? ' · rev ' + esc(rev) : '') + '</span>' +
+      '</div></div>';
   }
   function mountShell(opt) {
     opt = opt || {};
@@ -717,14 +715,17 @@
   }
   function slides(reg) {
     reg = reg || memo.reg || {};
-    var s = (reg.slides || []).map(norm).filter(function (n) { return n.slug; });
+    var by = {};
+    (reg.lib || []).forEach(function (n) { by[n.slug] = n; });
+    /* registry chỉ giữ danh sách slug của khối hero — khỏi nhân đôi dữ liệu bộ truyện */
+    var s = (reg.slides || []).map(function (x) { return by[typeof x === 'string' ? x : (x && x.slug)]; })
+      .filter(Boolean).map(norm);
     if (s.length) return s;
     return (reg.lib || []).map(norm)
       .filter(function (n) { return n.canRead; })
       .sort(function (a, b) { return String(b.updated || '').localeCompare(String(a.updated || '')); })
       .slice(0, 5);
   }
-  function series(reg) { return (reg || memo.reg || {}).series || []; }
   function findLib(id) {
     var lib = libList();
     for (var i = 0; i < lib.length; i++) if (lib[i].slug === id || lib[i].title === id) return lib[i];
@@ -745,15 +746,15 @@
   }
 
   w.CZ = {
-    API: API, BLOG: BLOG, normalizeApi: normalizeApi,
+    API: API, normalizeApi: normalizeApi,
     registry: registry, book: book, stats: stats, schedule: schedule,
-    lib: libList, slides: slides, series: series, findLib: findLib, statsOf: statsOf, onStats: onStats,
+    lib: libList, slides: slides, findLib: findLib, statsOf: statsOf, onStats: onStats,
     progress: progress, setProgress: setProgress, lastReadAt: lastReadAt,
     shelfIds: shelfIds, inShelf: inShelf, toggleShelf: toggleShelf, clearShelf: clearShelf,
     isLiked: isLiked, toggleLike: toggleLike, marks: marks, toggleMark: toggleMark, chaptersRead: chaptersRead,
     rdGet: rdGet, rdSet: rdSet, themeInit: themeInit, themeToggle: themeToggle,
     icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo,
-    statusCls: statusCls, words: words, norm: norm, adaptText: adaptText, countText: countText, listHead: listHead,
+    statusCls: statusCls, words: words, norm: norm, countText: countText, listHead: listHead,
     storyURL: storyURL, readURL: readURL, slugify: slugify, qs: qs, copy: copy, download: download,
     card: card, mountRail: mountRail, reveal: reveal, countUp: countUp, scaleFacts: scaleFacts,
     scrollUI: scrollUI, mountShell: mountShell, mountHeader: mountHeader, mountFooter: mountFooter,

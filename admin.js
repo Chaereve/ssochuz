@@ -6,8 +6,6 @@
      PUT  /api/registry        ghi toàn bộ dữ liệu thư viện
      PUT  /api/book/<slug>     ghi 1 bộ (tiêu đề + các chương)
      DELETE /api/book/<slug>   xoá 1 bộ
-     POST /api/import          lấy 1 bài Blogger thành chương
-     POST /api/sync            đồng bộ lại thẻ truyện + lịch từ Blogger
      POST /api/seed            nạp dữ liệu trong repo lên KV
      POST /api/stats/refresh   xoá cache số liệu
    Chưa nối Worker vẫn mở được dữ liệu tĩnh trong repo để xem/sửa nháp, và
@@ -242,8 +240,6 @@
     var has = lib.filter(function (n) { return (n.chapters || 0) > 0; }).length;
     var soon = lib.filter(function (n) { return CZ.statusCls(n.status) === 'soon'; }).length;
     var chap = lib.reduce(function (a, n) { return a + (n.chapters || 0); }, 0);
-    var series = lib.filter(function (n) { return n.adapt === 'series'; }).length;
-    var movies = lib.filter(function (n) { return n.adapt === 'phim'; }).length;
     var eighteen = lib.filter(function (n) { return n.is18; }).length;
 
     /* những việc nên xem lại — mỗi việc kèm tối đa 6 bộ để bấm vào sửa luôn */
@@ -270,11 +266,7 @@
           return m && parseInt(m[1], 10) !== (n.chapters || 0);
         })),
       task('stale', '“Sắp ra mắt” đã lâu', 'Đăng hơn 45 ngày vẫn chưa có chương nào',
-        lib.filter(function (n) { return !(n.chapters || 0) && daysSince(n.updated) > 45; })),
-      task('solo', 'Series chỉ một phần', 'Nhóm chuyển thể chỉ có một bộ — có thể thiếu phần khác',
-        (REG.series || []).filter(function (g) { return (g.parts || []).length < 2; })
-          .map(function (g) { return { slug: (lib.filter(function (n) { return n.title === g.parts[0]; })[0] || {}).slug, title: g.name }; })
-          .filter(function (n) { return n.slug; }))
+        lib.filter(function (n) { return !(n.chapters || 0) && daysSince(n.updated) > 45; }))
     ].filter(function (t) { return t.n > 0; });
 
     var tiles = [
@@ -282,9 +274,8 @@
       { n: has, l: 'Đã có chương' },
       { n: soon, l: 'Sắp ra mắt' },
       { n: chap, l: 'Chương đã đăng' },
-      { n: series, l: 'Series' },
-      { n: movies, l: 'Phim' },
       { n: eighteen, l: 'Gắn 18+' },
+      { n: has, l: 'Đã mở đọc' },
       { n: Object.keys(picked).length, l: 'Thiếu thông tin' }
     ];
     $('#ovTiles').innerHTML = tiles.map(function (t) {
@@ -335,7 +326,7 @@
               var m = String(n.countLabel || '').match(/^(\d+)\s*\/\s*(\d+)$/);
               return m && parseInt(m[1], 10) !== (n.chapters || 0);
             })()) ||
-            (k === 'solo' && t.items.some(function (x) { return x.slug === n.slug; }));
+            false;
           if (hit) ids[n.slug] = 1;
         });
         OV_FILTER = ids;
@@ -375,8 +366,7 @@
     $('#fAuthor').value = CUR.author || ''; $('#fCouple').value = CUR.couple || '';
     $('#fYear').value = CUR.year || ''; $('#fStatus').value = CUR.status || 'Đang cập nhật';
     $('#fCount').value = CUR.countLabel || ''; $('#f18').value = CUR.is18 ? '1' : '0';
-    $('#fAdapt').value = CUR.adapt || ''; $('#fAdaptName').value = CUR.adaptName || '';
-    $('#fUpdated').value = CUR.updated || today(); $('#fBlog').value = CUR.blog || '';
+    $('#fUpdated').value = CUR.updated || today();
     $('#fThumb').value = CUR.thumb || CUR.slide || ''; $('#fSyn').value = CUR.synFull || CUR.syn || '';
     dirty.meta = false; markDirty();
     BOOK = null; CHAP = -1;
@@ -434,13 +424,10 @@
     CUR.author = $('#fAuthor').value.trim(); CUR.couple = $('#fCouple').value.trim();
     CUR.year = $('#fYear').value.trim(); CUR.status = $('#fStatus').value;
     CUR.countLabel = $('#fCount').value.trim() || CUR.countLabel;
-    CUR.count = CUR.countLabel;
     CUR.is18 = $('#f18').value === '1';
-    CUR.adapt = $('#fAdapt').value; CUR.adaptName = $('#fAdaptName').value.trim();
-    CUR.updated = $('#fUpdated').value || today(); CUR.blog = $('#fBlog').value.trim();
+    CUR.updated = $('#fUpdated').value || today();
     CUR.thumb = $('#fThumb').value.trim(); CUR.slide = CUR.thumb;
     CUR.synFull = $('#fSyn').value.trim(); CUR.syn = CUR.synFull.slice(0, 220);
-    CUR.url = CZ.storyURL(CUR.slug);
     return saveRegistry('Đã lưu thông tin “' + CUR.title + '”').then(function () { $('#edHead').textContent = 'Sửa: ' + CUR.title; });
   }
   function saveRegistry(okMsg) {
@@ -523,23 +510,6 @@
     }).catch(function (e) { msg('Đăng lỗi: ' + e.message, 'err'); })
       .then(function () { b.disabled = false; b.textContent = 'Đăng chương'; });
   }
-  function fetchBlogger(mode) {
-    var slug = $('#qkBook').value;
-    if (!slug) return toast('Chọn truyện trước', 'err');
-    if (!ONLINE) return toast('Cần nối Worker mới lấy được từ Blogger', 'err');
-    var btn = mode === 'replace-last' ? $('#qkFetchReplace') : $('#qkFetch');
-    var old = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<span class="spin"></span> đang lấy…';
-    api('/api/import', { method: 'POST', mode: mode || 'append', body: { slug: slug, url: $('#qkUrl').value.trim() } })
-      .then(function (d) {
-        msg('Đã lấy “' + d.added + '” · bộ này giờ có ' + d.chapters + ' chương', 'ok');
-        toast('Đã đăng chương từ Blogger', 'ok');
-        delete BOOKS[slug];
-        return loadRegistry();
-      })
-      .catch(function (e) { msg('Lấy từ Blogger lỗi: ' + e.message, 'err'); toast('Lỗi: ' + e.message, 'err'); })
-      .then(function () { btn.disabled = false; btn.innerHTML = old; });
-  }
-
   /* ------------------------------ thêm bộ ------------------------------- */
   function addBook() {
     var title = $('#nTitle').value.trim();
@@ -549,14 +519,13 @@
     var chapRaw = $('#nChap').value.trim();
     var chapters = chapRaw ? [{ t: 'Chương 1', html: textToHtml(chapRaw, 'para') }] : [];
     var entry = {
-      title: title, slug: slug, url: CZ.storyURL(slug), author: $('#nAuthor').value.trim(),
+      title: title, slug: slug, author: $('#nAuthor').value.trim(),
       couple: $('#nCouple').value.trim(), year: $('#nYear').value.trim() || String(new Date().getFullYear()),
-      status: $('#nStatus').value, adapt: $('#nAdapt').value, adaptName: $('#nAdaptName').value.trim(),
+      status: $('#nStatus').value,
       is18: $('#n18').value === '1', thumb: $('#nThumb').value.trim(), slide: $('#nThumb').value.trim(),
       syn: $('#nSyn').value.trim().slice(0, 220), synFull: $('#nSyn').value.trim(),
       chapters: chapters.length, countLabel: chapters.length ? chapters.length + '/' + chapters.length : '0/—',
-      count: chapters.length ? chapters.length + '/' + chapters.length : '0/—',
-      updated: today(), blog: '', postId: ''
+      updated: today()
     };
     var p = Promise.resolve();
     if (chapters.length) {
@@ -569,7 +538,7 @@
       REG.lib.push(entry);
       return saveRegistry('Đã tạo truyện “' + title + '”');
     }).then(function () {
-      ['#nTitle', '#nSlug', '#nAuthor', '#nCouple', '#nYear', '#nThumb', '#nSyn', '#nChap', '#nAdaptName'].forEach(function (s) { $(s).value = ''; });
+      ['#nTitle', '#nSlug', '#nAuthor', '#nCouple', '#nYear', '#nThumb', '#nSyn', '#nChap'].forEach(function (s) { $(s).value = ''; });
       renderList(); fillQuickBooks(); show('list');
     }).catch(function (e) { msg('Tạo truyện lỗi: ' + e.message, 'err'); });
   }
@@ -667,7 +636,7 @@
     });
     REG.schedule = {
       items: items, note: $('#sSchedNote').value.trim(),
-      source: (REG.schedule || {}).source || 'https://chuseoz.blogspot.com/p/lich-ra-chuong.html', updated: today()
+      updated: today()
     };
     REG.settings = Object.assign({}, REG.settings, {
       giscus: { repo: $('#sGiscusRepo').value.trim(), repoId: $('#sGiscusId').value.trim() }
@@ -675,20 +644,7 @@
     saveRegistry('Đã lưu cài đặt');
   }
 
-  /* ------------------------------ đồng bộ / nạp ------------------------- */
-  function syncBlogger() {
-    if (!ONLINE) return msg('Cần nối Worker mới đồng bộ được.', 'err');
-    CZ.confirm('Đọc lại trang danh sách + lịch ra chương trên Blogger rồi ghép vào dữ liệu KV?', 'Đồng bộ').then(function (ok) {
-      if (!ok) return;
-      var b = $('#btnSync'); b.disabled = true;
-      api('/api/sync', { method: 'POST' }).then(function (r) {
-        msg('Đồng bộ xong: ' + r.changed + ' thay đổi · ' + r.cards + ' thẻ truyện · rev ' + r.rev, 'ok');
-        toast('Đồng bộ xong', 'ok');
-        return loadRegistry();
-      }).catch(function (e) { msg('Đồng bộ lỗi: ' + e.message, 'err'); })
-        .then(function () { b.disabled = false; });
-    });
-  }
+  /* ------------------------------ nạp dữ liệu --------------------------- */
   function seedKV() {
     if (!ONLINE) return msg('Cần nối Worker trước.', 'err');
     CZ.confirm('Nạp TOÀN BỘ registry + các bộ trong repo lên KV?\nDữ liệu đang có trên KV sẽ bị ghi đè.', 'Nạp lên KV').then(function (ok) {
@@ -886,8 +842,28 @@
   $('#btnAdd2').addEventListener('click', function () { show('new'); });
   $('#qkBody').addEventListener('input', function () { $('#qkStat').textContent = num(CZ.words(this.value)) + ' từ'; });
   $('#qkPub').addEventListener('click', quickPublish);
-  $('#qkFetch').addEventListener('click', function () { fetchBlogger('append'); });
-  $('#qkFetchReplace').addEventListener('click', function () { fetchBlogger('replace-last'); });
+  /* mở tệp từ máy: .txt / .md / .html → đổ vào ô soạn, tên tệp thành tiêu đề chương */
+  $('#qkFileBtn').addEventListener('click', function () { $('#qkFile').click(); });
+  $('#qkFile').addEventListener('change', function () {
+    var f = this.files && this.files[0];
+    if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function () {
+      var txt = String(rd.result || '');
+      var isHtml = /\.html?$/i.test(f.name) || /^\s*<[a-z][\s\S]*>/i.test(txt.slice(0, 200));
+      $('#qkBody').value = txt;
+      $('#qkMode').value = isHtml ? 'raw' : 'para';
+      if (!$('#qkTitle').value.trim()) {
+        var base = f.name.replace(/\.[a-z]+$/i, '').replace(/[-_]+/g, ' ').trim();
+        $('#qkTitle').value = base;
+      }
+      $('#qkStat').textContent = num(CZ.words(txt)) + ' từ';
+      $('#qkFileName').textContent = f.name + ' · ' + num(CZ.words(txt)) + ' từ';
+      toast('Đã mở ' + f.name, 'ok');
+    };
+    rd.onerror = function () { toast('Không đọc được tệp này', 'err'); };
+    rd.readAsText(f);
+  });
   $('#qkPreview').addEventListener('click', function () {
     $('#qkPrevBox').classList.remove('hide');
     $('#qkPrev').innerHTML = textToHtml($('#qkBody').value, $('#qkMode').value) ||
@@ -899,7 +875,7 @@
   });
   $('#nSlug').addEventListener('input', function () { this.dataset.touched = '1'; });
   $('#edBack').addEventListener('click', function () { show('list'); });
-  ['#fTitle', '#fAuthor', '#fCouple', '#fYear', '#fStatus', '#fCount', '#f18', '#fAdapt', '#fAdaptName', '#fUpdated', '#fBlog', '#fThumb', '#fSyn']
+  ['#fTitle', '#fAuthor', '#fCouple', '#fYear', '#fStatus', '#fCount', '#f18', '#fUpdated', '#fThumb', '#fSyn']
     .forEach(function (s) { $(s).addEventListener('input', function () { dirty.meta = true; markDirty(); }); });
   $('#btnSaveMeta').addEventListener('click', function () { saveMeta(); });
   $('#btnDraft').addEventListener('click', saveDraft);
@@ -955,7 +931,6 @@
     $('#hpFind').value = ''; renderSlides(); hpSearch();
     toast('Trang chủ sẽ tự chọn bộ mới cập nhật');
   });
-  $('#btnSync').addEventListener('click', syncBlogger);
   $('#btnSeed').addEventListener('click', seedKV);
   $('#btnHealth').addEventListener('click', function () { health().then(function () { toast('Đã kiểm tra Worker', 'ok'); }); });
   $('#btnStatsClear').addEventListener('click', function () { loadStats(true); show('stats'); });
