@@ -1,5 +1,5 @@
-/* Nạp 1 trang HTML và nhúng các script ngoài (cz-config.js, cz-data.js, admin.js) vào
-   để jsdom chạy được. Trả về {html, dom, win, doc} */
+/* Nạp 1 trang HTML và nhúng các script ngoài (cz-config.js, cz-app.js, cz-home.js…)
+   vào để jsdom chạy được. Trả về {dom, win, doc, errors} */
 const fs = require('fs'), path = require('path');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const ROOT = require('path').join(__dirname, '..');
@@ -19,7 +19,7 @@ function inline(html, files) {
   });
   return html;
 }
-function page(file, { url = 'https://chuseoz.pages.dev/', fetch, config = {}, files = ['cz-config.js', 'cz-data.js'] } = {}) {
+function page(file, { url = 'https://chuseoz.pages.dev/', fetch, config = {}, files = ['cz-config.js', 'cz-app.js'] } = {}) {
   let html = read(file);
   html = inline(html, files);
   html = inlineAll(html);

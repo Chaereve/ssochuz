@@ -1,73 +1,75 @@
 /* ============================================================================
-   chuseoz · trang quản trị — đăng thẳng lên Cloudflare KV (Worker)
+   chuseoz · TRANG QUẢN TRỊ (bản viết lại)
    ----------------------------------------------------------------------------
-   Không còn GitHub Contents API: không commit, không build, không đợi deploy.
-     Lưu truyện  → PUT  /api/registry      (toàn bộ thư viện)
-     Lưu chương  → PUT  /api/book/<slug>   (tiêu đề + các chương)
-     Đồng bộ     → POST /api/sync          (đọc lại Blogger)
-   Nếu chưa nối Worker, admin vẫn mở được nhưng chỉ xem; mọi thay đổi sẽ được
-   giữ trong máy (nháp) và có thể Xuất JSON để nạp thủ công.
-   ============================================================================ */
+   Cách hoạt động: không đụng tới GitHub. Sửa xong bấm Lưu là ghi thẳng lên
+   Cloudflare KV qua Worker, người đọc thấy sau 1–2 giây.
+     PUT  /api/registry        ghi toàn bộ dữ liệu thư viện
+     PUT  /api/book/<slug>     ghi 1 bộ (tiêu đề + các chương)
+     DELETE /api/book/<slug>   xoá 1 bộ
+     POST /api/seed            nạp dữ liệu trong repo lên KV
+     POST /api/stats/refresh   xoá cache số liệu
+   Chưa nối Worker vẫn mở được dữ liệu tĩnh trong repo để xem/sửa nháp, và
+   xuất JSON để nạp thủ công.
+   ========================================================================== */
 (function () {
   'use strict';
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
-  var LS = { api: 'cz_kv_api', key: 'cz_kv_key', draft: 'cz_admin_draft', slides: 'cz_admin_slides', dir: 'chuseoz-dir' };
-  var API = '', KEY = '', REG = null, BOOK = null, CUR = null, CHAP = -1;
-  var BOOKS = {};           /* slug → book (cache) */
-  var dirtyMeta = false, dirtyBook = false, dirtySet = false;
-  var selected = {};        /* slug → true */
+  var esc = CZ.esc, num = CZ.num, ic = CZ.icon;
+  var LS = { api: 'cz_kv_api', key: 'cz_kv_key', draft: 'cz_admin_draft' };
+
+  var API = '', KEY = '', ONLINE = false;
+  var REG = null, BOOK = null, CUR = null, CHAP = -1;
+  var BOOKS = {};
+  var dirty = { meta: false, book: false, set: false };
+  var selected = {};
 
   /* ------------------------------ tiện ích ------------------------------ */
   function toast(msg, kind) {
-    var box = $('#toasts'); var el = document.createElement('div');
-    el.className = 'toast'; el.textContent = msg;
-    if (kind === 'err') el.style.background = 'var(--err)';
-    else if (kind === 'ok') el.style.background = 'var(--ok)';
+    var box = $('#toasts'); if (!box) return;
+    var el = document.createElement('div');
+    el.className = 'toast' + (kind ? ' ' + kind : '');
+    el.textContent = msg;
     box.appendChild(el);
-    setTimeout(function () { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; }, 2600);
-    setTimeout(function () { el.remove(); }, 3000);
+    setTimeout(function () { el.style.transition = 'opacity .3s'; el.style.opacity = '0'; }, 2600);
+    setTimeout(function () { el.remove(); }, 3100);
   }
   function msg(text, kind) {
     var m = $('#msg');
-    if (!text) { m.className = 'msg'; m.textContent = ''; return; }
-    m.className = 'msg show ' + (kind || 'ok'); m.textContent = text;
-    clearTimeout(msg._t); msg._t = setTimeout(function () { m.className = 'msg'; }, 6000);
+    if (!text) { m.className = 'msgbar'; m.textContent = ''; return; }
+    m.className = 'msgbar show ' + (kind || 'info');
+    m.textContent = text;
+    clearTimeout(msg._t);
+    msg._t = setTimeout(function () { m.className = 'msgbar'; }, 7000);
   }
-  function msgConn(text, kind) { var m = $('#msgConn'); m.className = 'msg show ' + (kind || 'info'); m.innerHTML = text; }
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
-  function num(n) { return (n || 0).toLocaleString('vi-VN'); }
-  function slugify(s) {
-    return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/đ/g, 'd').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-  }
-  function today() { var d = new Date(); return d.toISOString().slice(0, 10); }
-  function stCls(s) { return /hoàn thành/i.test(s || '') ? 'done' : /sắp/i.test(s || '') ? 'soon' : 'run'; }
+  function slugify(s) { return CZ.slugify(s); }
+  function today() { return new Date().toISOString().slice(0, 10); }
   function textToHtml(t, mode) {
     t = String(t || '').replace(/\r\n/g, '\n').trim();
+    if (!t) return '';
     if (mode === 'raw') return t;
     var parts = mode === 'br' ? t.split(/\n+/) : t.split(/\n{2,}/);
     return parts.map(function (p) {
       return '<p>' + p.trim().replace(/\n/g, ' ').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p>';
     }).filter(function (p) { return p !== '<p></p>'; }).join('\n');
   }
-  function words(html) {
-    var t = String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-    return t ? t.split(' ').length : 0;
+  function markDirty() {
+    var on = dirty.meta || dirty.book || dirty.set;
+    $$('.dirty').forEach(function (el) { el.textContent = on ? '● có thay đổi chưa lưu' : ''; });
+    $('#dirtyTxt').textContent = on ? '● chưa lưu' : '';
   }
 
-  /* ------------------------------ gọi Worker ------------------------------ */
+  /* ------------------------------ gọi Worker ---------------------------- */
   function api(path, opt) {
     opt = opt || {};
     if (!API) return Promise.reject(new Error('chưa nối Worker'));
     var headers = {};
     if (opt.body != null) headers['content-type'] = 'application/json';
     if (opt.auth !== false && KEY) headers['x-admin-key'] = KEY;
+    if (opt.mode) headers['x-import-mode'] = opt.mode;
     return fetch(API + path, {
-      method: opt.method || 'GET',
-      headers: headers,
-      body: opt.body != null ? JSON.stringify(opt.body) : undefined,
-      cache: 'no-store'
+      method: opt.method || 'GET', headers: headers, cache: 'no-store',
+      body: opt.body != null ? JSON.stringify(opt.body) : undefined
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (d) {
         if (!r.ok || d.ok === false) throw new Error(d.error || ('HTTP ' + r.status));
@@ -75,560 +77,604 @@
       });
     });
   }
-
-  /* ------------------------------ kết nối ------------------------------ */
-  function normalizeApi(u) {
-    if (window.CZ && window.CZ.normalizeApi) return window.CZ.normalizeApi(u);
-    u = String(u || '').trim().replace(/\/+$/, '');
-    if (u && !/^https?:\/\//i.test(u)) u = 'https://' + u;
-    return u;
-  }
   function setConn(kind, text) {
-    var c = $('#chConn'); c.className = 'chip ' + (kind || '');
-    $('#chConnTxt').textContent = text;
+    var c = $('#chipConn');
+    c.className = 'chip ' + (kind || '');
+    $('#chipConnTxt').textContent = text;
   }
   function connect() {
-    API = normalizeApi($('#inApi').value); KEY = $('#inKey').value.trim();
-    if (!API) { msgConn('Nhập URL Worker đã.', 'err'); return; }
-    if (!KEY) { msgConn('Nhập ADMIN_KEY đã.', 'err'); return; }
-    var btn = $('#btnConnect'); btn.disabled = true; btn.innerHTML = '<span class="spin"></span>đang kiểm tra…';
-    Promise.all([
-      api('/api/health', { auth: false }),
-      api('/api/whoami').catch(function () { throw new Error('ADMIN_KEY không đúng (hoặc Worker chưa đặt secret ADMIN_KEY)'); })
-    ])
+    API = CZ.normalizeApi($('#inApi').value);
+    KEY = $('#inKey').value.trim();
+    if (!API) return msg('Nhập URL Worker đã.', 'err');
+    if (!KEY) return msg('Nhập ADMIN_KEY đã.', 'err');
+    var b = $('#btnConnect');
+    b.disabled = true; b.innerHTML = '<span class="spin"></span> đang kiểm tra…';
+    Promise.all([api('/api/health', { auth: false }), api('/api/whoami')])
       .then(function (rs) {
         var h = rs[0];
-        localStorage.setItem(LS.api, API); localStorage.setItem(LS.key, KEY);
-        msgConn('Kết nối OK · <b>' + esc(h.kv ? 'KV sẵn sàng' : 'KV chưa gắn') + '</b> · ' + num(h.books) + ' bộ đã nạp · rev ' + esc(h.regRev || '—'), 'ok');
+        try { localStorage.setItem(LS.api, API); localStorage.setItem(LS.key, KEY); } catch (e) {}
+        ONLINE = true;
+        msg('Kết nối OK · ' + (h.kv ? 'KV sẵn sàng' : 'KV chưa gắn') + ' · ' + num(h.books) + ' bộ trên KV · rev ' + (h.regRev || '—'), 'ok');
         openApp();
       })
       .catch(function (e) {
-        msgConn('Không nối được: ' + esc(e.message) + '<br><span class="sm">Kiểm tra lại URL Worker, biến <code>CZ_KV</code> và secret <code>ADMIN_KEY</code>.</span>', 'err');
+        ONLINE = false;
+        msg('Không nối được: ' + e.message + ' — kiểm tra URL Worker, binding CZ_KV và secret ADMIN_KEY.', 'err');
       })
-      .then(function () { btn.disabled = false; btn.textContent = 'Kiểm tra & kết nối'; });
+      .then(function () { b.disabled = false; b.textContent = 'Kiểm tra & kết nối'; });
   }
   function openApp() {
-    $('#scConnect').classList.add('hide');
+    /* nối được Worker rồi thì giấu hẳn phần thiết lập; chưa nối thì thu gọn lại một dòng */
+    $('#scConnect').classList.toggle('hide', ONLINE);
+    setSetup(false);
     $('#scApp').classList.remove('hide');
-    $('#btnDisconnect').classList.remove('hide');
-    setConn('ok', 'Cloudflare KV');
-    loadRegistry().then(function () { refreshHealth(); });
+    $('#btnOut').classList.toggle('hide', !ONLINE);   /* chưa nối thì không có gì để ngắt */
+    setConn(ONLINE ? 'ok' : 'warn', ONLINE ? 'Cloudflare KV' : 'xem dữ liệu tĩnh');
+    loadRegistry().then(function () { renderOverview(); if (ONLINE) health(); });
   }
   function disconnect() {
-    localStorage.removeItem(LS.key);
-    API = ''; KEY = ''; REG = null;
-    $('#scConnect').classList.remove('hide'); $('#scApp').classList.add('hide');
-    $('#btnDisconnect').classList.add('hide'); setConn('', 'chưa nối');
+    try { localStorage.removeItem(LS.key); } catch (e) {}
+    API = ''; KEY = ''; ONLINE = false;
+    $('#btnOut').classList.add('hide');
+    setConn('', 'chưa nối Worker');
+    $('#chipData').classList.add('hide');
+    location.reload();
   }
-  function refreshHealth() {
-    api('/api/health', { auth: false }).then(function (h) {
+  function health() {
+    return api('/api/health', { auth: false }).then(function (h) {
       $('#health').innerHTML = [
-        ['Worker', esc(API)], ['Phiên bản', esc(h.version || '—')],
-        ['Số bộ trong KV', num(h.books)], ['Số bộ trong registry', num(h.novels)],
-        ['rev dữ liệu', esc(h.regRev || '—')], ['Ghi gần nhất', esc(h.lastWrite || '—')]
+        ['Worker', esc(API)], ['Phiên bản', esc(h.version || '—')], ['Số bộ trên KV', num(h.books)],
+        ['Số bộ trong registry', num(h.novels)], ['rev dữ liệu', esc(h.regRev || '—')],
+        ['Ghi gần nhất', esc(h.lastWrite ? String(h.lastWrite).replace('T', ' ').slice(0, 16) : '—')]
       ].map(function (r) { return '<b>' + r[0] + '</b><span>' + r[1] + '</span>'; }).join('');
-      $('#chData').classList.remove('hide');
-      $('#chData').className = 'chip ok';
-      $('#chDataTxt').textContent = num(h.books) + ' bộ trên KV';
+      var c = $('#chipData');
+      c.classList.remove('hide'); c.className = 'chip ok';
+      $('#chipDataTxt').textContent = num(h.books) + ' bộ trên KV';
+      return h;
     }).catch(function () {
-      $('#chData').className = 'chip err'; $('#chDataTxt').textContent = 'KV lỗi';
+      var c = $('#chipData');
+      c.classList.remove('hide'); c.className = 'chip bad';
+      $('#chipDataTxt').textContent = 'KV lỗi';
     });
   }
 
-  /* ------------------------------ dữ liệu ------------------------------ */
-  function loadRegistry(keepDraft) {
+  /* ------------------------------ dữ liệu ------------------------------- */
+  function loadRegistry() {
     var draft = null;
-    if (keepDraft !== false) { try { draft = JSON.parse(localStorage.getItem(LS.draft) || 'null'); } catch (e) {} }
-    var fromApi = API ? api('/api/registry').catch(function () { return null; }) : Promise.resolve(null);
-    return fromApi.then(function (d) {
-      if (d && d.lib) return d;
-      return fetch('/data/registry.json').then(function (r) { return r.ok ? r.json() : null; });
-    }).then(function (reg) {
-      REG = (draft && draft.reg && draft.reg.lib && (!reg || draft.reg.lib.length >= reg.lib.length)) ? draft.reg : reg;
-      if (!REG) { msg('Không tải được dữ liệu thư viện.', 'err'); return; }
-      if (!(REG.lib || []).length) msg('KV đang trống — bấm “↑ Nạp dữ liệu lên KV”.', 'info');
-      fillStatusFilter(); fillQuickBooks(); renderSlides(); renderSched(); renderList();
-      $('#chDataTxt').textContent = num((REG.lib || []).length) + ' bộ';
+    try { draft = JSON.parse(localStorage.getItem(LS.draft) || 'null'); } catch (e) {}
+    var p = ONLINE
+      ? api('/api/registry').catch(function () { return fetch('/data/registry.json').then(function (r) { return r.json(); }); })
+      : fetch('/data/registry.json').then(function (r) { return r.json(); });
+    return p.then(function (reg) {
+      REG = reg || { lib: [] };
+      REG.lib = REG.lib || [];
+      if (draft && draft.reg && confirm('Có bản nháp trong máy lưu lúc ' +
+        new Date(draft.at).toLocaleString('vi-VN') + '.\nDùng bản nháp đó?')) {
+        REG = draft.reg; BOOKS = draft.books || {}; dirty.meta = dirty.set = true;
+      }
+      dirty.meta = dirty.set = false; markDirty();
+      renderList(); fillQuickBooks(); renderSlides(); renderSched(); renderSettings(); renderOverview();
+      $('#libCount').textContent = num(REG.lib.length);
+      return REG;
     });
   }
   function bookOf(slug) {
     if (BOOKS[slug]) return Promise.resolve(BOOKS[slug]);
-    var p = API ? api('/api/book/' + encodeURIComponent(slug)).catch(function () { return null; }) : Promise.resolve(null);
+    var p = ONLINE
+      ? api('/api/book/' + encodeURIComponent(slug)).catch(function () { return null; })
+      : Promise.resolve(null);
     return p.then(function (b) {
       if (b && b.chapters) { BOOKS[slug] = b; return b; }
-      return fetch('/data/book/' + encodeURIComponent(slug) + '.json').then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (s) { if (s) BOOKS[slug] = s; return s; });
+      return fetch('/data/book/' + encodeURIComponent(slug) + '.json')
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (s) { BOOKS[slug] = s; return s; });
     });
   }
 
   /* ------------------------------ thư viện ------------------------------ */
   function fillStatusFilter() {
-    var sts = {};
-    (REG.lib || []).forEach(function (n) { if (n.status) sts[n.status] = 1; });
-    $('#flStatus').innerHTML = '<option value="">Tất cả</option>' +
-      Object.keys(sts).map(function (s) { return '<option>' + esc(s) + '</option>'; }).join('');
+    var sel = $('#fStatus');
+    var vals = ['Tất cả', 'Hoàn thành', 'Đang cập nhật', 'Sắp ra mắt', 'Đang cập nhật hoặc sắp ra mắt'];
+    sel.innerHTML = vals.map(function (v) { return '<option>' + v + '</option>'; }).join('');
   }
-  function fillQuickBooks() {
-    var list = (REG.lib || []).slice().sort(function (a, b) { return String(a.title).localeCompare(String(b.title), 'vi'); });
-    $('#qkBook').innerHTML = list.map(function (n) {
-      return '<option value="' + esc(n.slug) + '">' + esc(n.title) + ' — ' + num(n.chapters) + ' chương</option>';
-    }).join('');
-  }
-  function viewsOf(n) { var st = (window.__STATS || {})[n.slug]; return st ? st.views || 0 : 0; }
-  function renderList() {
-    var q = $('#q').value.trim().toLowerCase(), fst = $('#flStatus').value, sort = $('#fSort').value;
-    var arr = (REG.lib || []).slice();
-    if (q) arr = arr.filter(function (n) { return [n.title, n.slug, n.author, n.couple].join(' ').toLowerCase().indexOf(q) >= 0; });
-    if (fst) arr = arr.filter(function (n) { return n.status === fst; });
-    arr.sort(function (a, b) {
-      if (sort === 'name') return String(a.title).localeCompare(String(b.title), 'vi');
-      if (sort === 'chapters') return (b.chapters || 0) - (a.chapters || 0);
-      if (sort === 'views') return viewsOf(b) - viewsOf(a);
-      return String(b.updated || '').localeCompare(String(a.updated || ''));
+  function rows() {
+    var q = $('#q').value.trim().toLowerCase();
+    var st = $('#fStatus').value, sort = $('#fSort').value;
+    var l = (REG.lib || []).slice();
+    if (q) l = l.filter(function (n) {
+      return (n.title || '').toLowerCase().indexOf(q) >= 0 || (n.author || '').toLowerCase().indexOf(q) >= 0 ||
+        (n.slug || '').toLowerCase().indexOf(q) >= 0 || (n.couple || '').toLowerCase().indexOf(q) >= 0;
     });
-    $('#tb').innerHTML = arr.map(function (n) {
-      var st = stCls(n.status);
-      return '<tr data-slug="' + esc(n.slug) + '">' +
-        '<td><input type="checkbox" data-ck="' + esc(n.slug) + '" style="width:auto"' + (selected[n.slug] ? ' checked' : '') + '></td>' +
-        '<td>' + (n.thumb ? '<img class="cv" src="' + esc(n.thumb) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '') + '</td>' +
-        '<td><b>' + esc(n.title) + '</b><div class="sm">' + esc(n.author || '') + (n.couple ? ' · ' + esc(n.couple) : '') + '</div></td>' +
-        '<td>' + esc(n.countLabel || (num(n.chapters) + ' chương')) + '</td>' +
-        '<td><span class="pill ' + st + '">' + esc(n.status || '—') + '</span></td>' +
-        '<td class="sm">' + esc(n.updated || '—') + '</td>' +
-        '<td><button class="gho" data-edit="' + esc(n.slug) + '">Sửa</button></td></tr>';
-    }).join('') || '<tr><td colspan="7" class="sm">Không có bộ nào khớp.</td></tr>';
-    $('#listInfo').textContent = arr.length + '/' + (REG.lib || []).length + ' bộ';
-    $$('#tb [data-edit]').forEach(function (b) { b.addEventListener('click', function () { openEdit(b.dataset.edit); }); });
+    if (st && st !== 'Tất cả') {
+      if (/hoặc/.test(st)) l = l.filter(function (n) { return n.status !== 'Hoàn thành'; });
+      else l = l.filter(function (n) { return (n.status || '') === st; });
+    }
+    if (sort === 'az') l.sort(function (a, b) { return String(a.title).localeCompare(String(b.title), 'vi'); });
+    else if (sort === 'chap') l.sort(function (a, b) { return (b.chapters || 0) - (a.chapters || 0); });
+    else l.sort(function (a, b) { return String(b.updated || '').localeCompare(String(a.updated || '')); });
+    return l;
+  }
+  function renderList() {
+    if (!REG) return;
+    var tb = $('#tb tbody');
+    var l = rows();
+    if (OV_FILTER) l = l.filter(function (n) { return OV_FILTER[n.slug]; });
+    $('#ovClear').classList.toggle('hide', !OV_FILTER);
+    if (!l.length) { tb.innerHTML = '<tr><td colspan="7" class="sm muted">Không có bộ nào khớp.</td></tr>'; return; }
+    tb.innerHTML = l.map(function (n) {
+      var ck = selected[n.slug] ? ' checked' : '';
+      return '<tr>' +
+        '<td><input type="checkbox" data-ck="' + esc(n.slug) + '"' + ck + ' style="width:auto"></td>' +
+        '<td><span class="ttl">' + esc(n.title) + '</span><span class="sub">' + esc(n.slug) + (n.is18 ? ' · 18+' : '') + '</span></td>' +
+        '<td><span class="sm">' + esc(n.author || '—') + '</span><br><span class="sub">' + esc(n.couple || '') + '</span></td>' +
+        '<td><b>' + num(n.chapters || 0) + '</b><span class="sub"> ' + esc(n.countLabel || '') + '</span></td>' +
+        '<td><span class="pill ' + CZ.statusCls(n.status) + '"><span class="d"></span>' + esc(n.status || '—') + '</span></td>' +
+        '<td class="sm">' + esc(CZ.dateVN(n.updated)) + '</td>' +
+        '<td class="row" style="gap:4px">' +
+          '<button class="btn ghost sm" data-edit="' + esc(n.slug) + '">' + ic('edit', 'i-s') + 'Sửa</button>' +
+          '<button class="btn ghost sm" data-chap="' + esc(n.slug) + '">' + ic('list', 'i-s') + '</button>' +
+          '<button class="btn ghost sm" data-del="' + esc(n.slug) + '" title="Xoá bộ">' + ic('trash', 'i-s') + '</button>' +
+        '</td></tr>';
+    }).join('');
+    $$('#tb [data-edit]').forEach(function (b) { b.addEventListener('click', function () { openEdit(b.dataset.edit, 'meta'); }); });
+    $$('#tb [data-chap]').forEach(function (b) { b.addEventListener('click', function () { openEdit(b.dataset.chap, 'chap'); }); });
+    $$('#tb [data-del]').forEach(function (b) { b.addEventListener('click', function () { delBook(b.dataset.del); }); });
     $$('#tb [data-ck]').forEach(function (c) {
       c.addEventListener('change', function () {
         if (c.checked) selected[c.dataset.ck] = 1; else delete selected[c.dataset.ck];
-        updateBulk();
+        $('#selCount').textContent = Object.keys(selected).length ? Object.keys(selected).length + ' bộ được chọn' : '';
       });
     });
-    if ($('#fSort').value === 'views' && !window.__STATS) loadStats();
+    $('#selCount').textContent = Object.keys(selected).length ? Object.keys(selected).length + ' bộ được chọn' : '';
   }
-  function updateBulk() {
-    var n = Object.keys(selected).length;
-    $('#bulkArea').classList.toggle('hide', !n);
-    $('#selN').textContent = n;
+  /* ------------------------------ tổng quan ----------------------------- */
+  function daysSince(d) {
+    if (!d) return 9999;
+    var t = Date.parse(String(d) + 'T00:00:00');
+    if (isNaN(t)) return 9999;
+    return Math.round((Date.now() - t) / 86400000);
+  }
+  function renderOverview() {
+    if (!REG) return;
+    var lib = REG.lib || [];
+    var has = lib.filter(function (n) { return (n.chapters || 0) > 0; }).length;
+    var soon = lib.filter(function (n) { return CZ.statusCls(n.status) === 'soon'; }).length;
+    var chap = lib.reduce(function (a, n) { return a + (n.chapters || 0); }, 0);
+    var eighteen = lib.filter(function (n) { return n.is18; }).length;
+
+    /* những việc nên xem lại — mỗi việc kèm tối đa 6 bộ để bấm vào sửa luôn */
+    var picked = {};
+    function task(k, title, hint, list) {
+      var ids = list.map(function (n) { return n.slug; });
+      ids.forEach(function (s) { picked[s] = 1; });
+      return { k: k, t: title, d: hint, n: list.length, items: list.slice(0, 6) };
+    }
+    var tasks = [
+      task('nosyn', 'Thiếu mô tả', 'Trang truyện và thẻ ở thư viện sẽ trống phần giới thiệu',
+        lib.filter(function (n) { return !String(n.syn || '').trim(); })),
+      task('nothumb', 'Thiếu ảnh bìa', 'Thẻ truyện chỉ còn khung giấy có chữ mờ',
+        lib.filter(function (n) { return !String(n.thumb || '').trim(); })),
+      task('noslug', 'Thiếu slug / tác giả', 'Slug là đường dẫn của bộ, thiếu là không mở được trang truyện',
+        lib.filter(function (n) { return !String(n.slug || '').trim() || !String(n.author || '').trim(); })),
+      task('nocouple', 'Thiếu couple', 'Dùng cho bộ lọc couple ở thư viện và dải “Cùng couple”',
+        lib.filter(function (n) { return !String(n.couple || '').trim(); })),
+      task('noyear', 'Thiếu năm', 'Dùng cho bộ lọc năm và dòng thông tin trên thẻ',
+        lib.filter(function (n) { return !String(n.year || '').trim(); })),
+      task('count', 'Nhãn số chương lệch', 'Nhãn ghi “x/y” nhưng số chương đã đăng không khớp x',
+        lib.filter(function (n) {
+          var m = String(n.countLabel || '').match(/^(\d+)\s*\/\s*(\d+)$/);
+          return m && parseInt(m[1], 10) !== (n.chapters || 0);
+        })),
+      task('stale', '“Sắp ra mắt” đã lâu', 'Đăng hơn 45 ngày vẫn chưa có chương nào',
+        lib.filter(function (n) { return !(n.chapters || 0) && daysSince(n.updated) > 45; }))
+    ].filter(function (t) { return t.n > 0; });
+
+    var tiles = [
+      { n: lib.length, l: 'Bộ truyện' },
+      { n: has, l: 'Đã có chương' },
+      { n: soon, l: 'Sắp ra mắt' },
+      { n: chap, l: 'Chương đã đăng' },
+      { n: eighteen, l: 'Gắn 18+' },
+      { n: has, l: 'Đã mở đọc' },
+      { n: Object.keys(picked).length, l: 'Thiếu thông tin' }
+    ];
+    $('#ovTiles').innerHTML = tiles.map(function (t) {
+      return '<div class="tile"><b>' + num(t.n) + '</b><span>' + t.l + '</span></div>';
+    }).join('');
+
+    $('#ovTasks').innerHTML = tasks.length
+      ? '<div class="ovhead">Việc nên xem lại</div>' + tasks.map(function (t) {
+        return '<div class="ovtask"><div class="ovrow">' +
+          '<span class="ovpill">' + num(t.n) + '</span>' +
+          '<span class="ovtt"><b>' + t.t + '</b><span>' + t.d + '</span></span>' +
+          '<span class="grow"></span><button class="btn ghost sm" data-ovlist="' + t.k + '">Xem danh sách</button></div>' +
+          '<div class="ovchips">' + t.items.map(function (n) {
+            return '<button class="ovchip" data-ovopen="' + esc(n.slug) + '">' + esc(n.title) +
+              (t.n > t.items.length ? '' : '') + '</button>';
+          }).join('') + (t.n > t.items.length ? '<span class="sm muted">… và ' + (t.n - t.items.length) + ' bộ nữa</span>' : '') +
+          '</div></div>';
+      }).join('')
+      : '<div class="ovhead">Việc nên xem lại</div><div class="empty sm">Dữ liệu đang gọn gàng — không có việc nào cần xử lý.</div>';
+
+    var recent = lib.slice().sort(function (a, b) {
+      return String(b.updated || '').localeCompare(String(a.updated || ''));
+    }).slice(0, 6);
+    $('#ovRecent').innerHTML = recent.map(function (n) {
+      return '<button class="ovrec" data-ovopen="' + esc(n.slug) + '">' +
+        '<span class="ovth' + (n.thumb ? ' skel' : '') + '">' +
+          (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async">' : '') + '</span>' +
+        '<span class="ovtt"><b>' + esc(n.title) + '</b><span>' + esc(n.author || '') + ' · ' + esc(CZ.countText(n)) + '</span></span>' +
+        '<span class="ovwhen">' + esc(CZ.dateVN(n.updated)) + '</span></button>';
+    }).join('') || '<div class="empty sm">Chưa có bộ nào.</div>';
+
+    $$('#pane-overview [data-ovopen]').forEach(function (b) {
+      b.addEventListener('click', function () { openEdit(b.dataset.ovopen, 'meta'); });
+    });
+    $$('#pane-overview [data-ovlist]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var k = b.dataset.ovlist, t = tasks.filter(function (x) { return x.k === k; })[0];
+        if (!t) return;
+        var ids = {};
+        lib.forEach(function (n) {
+          var hit = (k === 'nosyn' && !String(n.syn || '').trim()) ||
+            (k === 'nothumb' && !String(n.thumb || '').trim()) ||
+            (k === 'noslug' && (!String(n.slug || '').trim() || !String(n.author || '').trim())) ||
+            (k === 'nocouple' && !String(n.couple || '').trim()) ||
+            (k === 'noyear' && !String(n.year || '').trim()) ||
+            (k === 'stale' && !(n.chapters || 0) && daysSince(n.updated) > 45) ||
+            (k === 'count' && (function () {
+              var m = String(n.countLabel || '').match(/^(\d+)\s*\/\s*(\d+)$/);
+              return m && parseInt(m[1], 10) !== (n.chapters || 0);
+            })()) ||
+            false;
+          if (hit) ids[n.slug] = 1;
+        });
+        OV_FILTER = ids;
+        show('list');
+        renderList();
+        msg('Đang lọc ' + num(t.n) + ' bộ theo mục “' + t.t + '”. Bấm “Bỏ lọc” để xem tất cả.', 'info');
+        $('#tb').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+  }
+  var OV_FILTER = null;
+  function fillQuickBooks() {
+    var sel = $('#qkBook');
+    var cur = sel.value;
+    sel.innerHTML = (REG.lib || []).slice().sort(function (a, b) { return String(a.title).localeCompare(String(b.title), 'vi'); })
+      .map(function (n) { return '<option value="' + esc(n.slug) + '">' + esc(n.title) + ' (' + num(n.chapters || 0) + ' chương)</option>'; }).join('');
+    if (cur) sel.value = cur;
   }
 
-  /* ------------------------------ sửa truyện ------------------------------ */
-  function showPane(name) {
-    if (name === 'stats') loadStats();
-    var panes = ['list', 'quick', 'new', 'edit', 'stats', 'settings', 'help'];
-    panes.forEach(function (p) { var el = $('#pane-' + p); if (el) el.classList.toggle('hide', p !== name); });
-    $$('#tabs button').forEach(function (b) {
-      var t = b.dataset.tab;
-      if (t === 'edit') { b.classList.toggle('hide', name !== 'edit'); b.classList.toggle('on', name === 'edit'); return; }
-      b.classList.toggle('on', t === name);
+  /* ------------------------------ sửa bộ -------------------------------- */
+  function show(pane) {
+    ['overview', 'list', 'quick', 'new', 'edit', 'settings', 'stats', 'help'].forEach(function (k) {
+      var el = $('#pane-' + k);
+      if (el) el.classList.toggle('hide', k !== pane);
     });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    $$('#tabs button').forEach(function (b) { b.classList.toggle('on', b.dataset.tab === pane); });
+    $('#tabs button[data-tab="edit"]').classList.toggle('hide', !CUR);
+    window.scrollTo({ top: 0, behavior: 'auto' });
   }
-  function openEdit(slug) {
+  function openEdit(slug, focus) {
     CUR = (REG.lib || []).find(function (n) { return n.slug === slug; });
     if (!CUR) return;
-    showPane('edit');
+    show('edit');
     $('#edHead').textContent = 'Sửa: ' + CUR.title;
+    $('#edView').href = CZ.storyURL(CUR.slug);
     $('#fTitle').value = CUR.title || ''; $('#fSlug').value = CUR.slug || '';
     $('#fAuthor').value = CUR.author || ''; $('#fCouple').value = CUR.couple || '';
     $('#fYear').value = CUR.year || ''; $('#fStatus').value = CUR.status || 'Đang cập nhật';
-    $('#fCount').value = CUR.countLabel || ''; $('#fChapters').value = CUR.chapters || 0;
-    $('#f18').value = CUR.is18 ? '1' : '0'; $('#fAdapt').value = CUR.adapt || '';
-    $('#fAdaptName').value = CUR.adaptName || ''; $('#fUpdated').value = CUR.updated || today();
-    $('#fBlog').value = CUR.blog || ''; $('#fPostId').value = CUR.postId || '';
+    $('#fCount').value = CUR.countLabel || ''; $('#f18').value = CUR.is18 ? '1' : '0';
+    $('#fUpdated').value = CUR.updated || today();
     $('#fThumb').value = CUR.thumb || CUR.slide || ''; $('#fSyn').value = CUR.synFull || CUR.syn || '';
-    dirtyMeta = false; markDirty();
+    dirty.meta = false; markDirty();
     BOOK = null; CHAP = -1;
-    $('#chList').innerHTML = '<div class="i sm" style="padding:10px">đang tải chương…</div>';
-    bookOf(slug).then(function (b) { BOOK = b || { chapters: [] }; renderChapters(); });
-  }
-  function markDirty() {
-    var d = dirtyMeta || dirtyBook || dirtySet;
-    $$('.dirty').forEach(function (el) { el.textContent = d ? '● có thay đổi chưa lưu' : ''; });
+    $('#chList').innerHTML = '<div class="row2 sm muted" style="padding:10px">đang tải chương…</div>';
+    bookOf(slug).then(function (b) { BOOK = b || { title: CUR.title, slug: slug, chapters: [] }; renderChapters(); });
+    if (focus === 'chap') setTimeout(function () { $('#chList').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 200);
   }
   function renderChapters() {
     var ch = (BOOK && BOOK.chapters) || [];
     $('#chN').textContent = ch.length;
-    if (!ch.length) { $('#chList').innerHTML = '<div class="i sm" style="padding:10px">bộ này chưa có chương nào</div>'; return; }
-    var order = ch.map(function (_, i) { return i; }).reverse();   /* mới nhất lên trên */
+    if (!ch.length) {
+      /* bộ chưa có chương: một dòng trống, vẫn bấm được để bắt đầu viết */
+    $('#chList').innerHTML = '<div class="row2 sm muted" style="padding:12px 14px">bộ này chưa có chương nào — ' +
+      'bấm <b>Thêm chương trống</b> rồi dán nội dung.</div>';
+      return;
+    }
+    var order = ch.map(function (_, i) { return i; });      /* chương 1 ở trên, giống trang đọc */
     $('#chList').innerHTML = order.map(function (i, pos) {
-      var c = ch[i];
-      return '<div class="i' + (i === CHAP ? ' on' : '') + '" data-i="' + i + '">' +
-        '<span class="n">' + (i + 1) + '</span>' +
-        '<span class="t">' + esc(c.t || ('Chương ' + (i + 1))) + '</span>' +
-        (pos === 0 ? '<span class="pill soon">mới nhất</span>' : '') +
-        '<span class="mv" data-up="' + i + '" title="Đưa lên">↑</span>' +
-        '<span class="mv" data-dn="' + i + '" title="Đưa xuống">↓</span>' +
-        '<span class="mv" data-go="' + i + '" title="Sửa chương này">✎</span></div>';
+      return '<div class="row2' + (i === CHAP ? ' on' : '') + '" data-i="' + i + '">' +
+        '<span class="no">#' + (i + 1) + '</span>' +
+        '<span class="nm">' + esc(ch[i].t || ('Chương ' + (i + 1))) + '</span>' +
+        '<span class="row" style="gap:0">' + (pos === order.length - 1 ? '<span class="pill soon">mới nhất</span>' : '') +
+        '<button class="mv" data-up="' + i + '" title="Đưa lên" aria-label="Đưa lên">' + ic('up', 'i-s') + '</button>' +
+        '<button class="mv" data-dn="' + i + '" title="Đưa xuống" aria-label="Đưa xuống">' + ic('down', 'i-s') + '</button>' +
+        '<button class="mv" data-go="' + i + '" title="Sửa chương" aria-label="Sửa chương">' + ic('edit', 'i-s') + '</button></span></div>';
     }).join('');
-    $$('#chList .i').forEach(function (row) {
-      row.addEventListener('click', function (e) {
-        if (e.target.closest('.mv')) return; openChap(+row.dataset.i);
-      });
+    $$('#chList .row2').forEach(function (r) {
+      r.addEventListener('click', function (e) { if (!e.target.closest('.mv')) openChap(+r.dataset.i); });
     });
-    $$('#chList [data-go]').forEach(function (b) { b.addEventListener('click', function () { openChap(+b.dataset.go); }); });
-    $$('#chList [data-up]').forEach(function (b) { b.addEventListener('click', function () { moveChap(+b.dataset.up, -1); }); });
-    $$('#chList [data-dn]').forEach(function (b) { b.addEventListener('click', function () { moveChap(+b.dataset.dn, 1); }); });
+    $$('#chList [data-up]').forEach(function (b) { b.addEventListener('click', function (e) { e.stopPropagation(); moveChap(+b.dataset.up, -1); }); });
+    $$('#chList [data-dn]').forEach(function (b) { b.addEventListener('click', function (e) { e.stopPropagation(); moveChap(+b.dataset.dn, 1); }); });
+    $$('#chList [data-go]').forEach(function (b) { b.addEventListener('click', function (e) { e.stopPropagation(); openChap(+b.dataset.go); }); });
   }
   function moveChap(i, dir) {
     var ch = BOOK.chapters, j = i + dir;
     if (j < 0 || j >= ch.length) return;
     var t = ch[i]; ch[i] = ch[j]; ch[j] = t;
-    dirtyBook = true; markDirty(); renderChapters();
+    if (CHAP === i) CHAP = j; else if (CHAP === j) CHAP = i;
+    dirty.book = true; markDirty(); renderChapters();
   }
   function openChap(i) {
     var ch = (BOOK && BOOK.chapters) || [];
     if (i < 0 || i >= ch.length) return;
     CHAP = i;
-    $('#chHead').textContent = 'Nội dung chương ' + (i + 1) + (i === ch.length - 1 ? ' (cuối — chương mới nhất)' : '');
-    $('#chTitle').value = ch[i].t || ''; $('#chBody').value = ch[i].html || '';
+    $('#chTitle').value = ch[i].t || '';
+    $('#chBody').value = ch[i].html || '';
+    $('#chStat').textContent = num(CZ.words(ch[i].html)) + ' từ';
     renderChapters();
   }
 
-  /* ------------------------------ lưu ------------------------------ */
+  /* ------------------------------ lưu ----------------------------------- */
+  function saveMeta() {
+    if (!CUR) return Promise.resolve();
+    CUR.title = $('#fTitle').value.trim() || CUR.title;
+    CUR.author = $('#fAuthor').value.trim(); CUR.couple = $('#fCouple').value.trim();
+    CUR.year = $('#fYear').value.trim(); CUR.status = $('#fStatus').value;
+    CUR.countLabel = $('#fCount').value.trim() || CUR.countLabel;
+    CUR.is18 = $('#f18').value === '1';
+    CUR.updated = $('#fUpdated').value || today();
+    CUR.thumb = $('#fThumb').value.trim(); CUR.slide = CUR.thumb;
+    CUR.synFull = $('#fSyn').value.trim(); CUR.syn = CUR.synFull.slice(0, 220);
+    return saveRegistry('Đã lưu thông tin “' + CUR.title + '”').then(function () { $('#edHead').textContent = 'Sửa: ' + CUR.title; });
+  }
   function saveRegistry(okMsg) {
     if (!REG) return Promise.resolve();
     REG.rev = new Date().toISOString().slice(0, 16).replace('T', ' ');
     REG.source = { synced: new Date().toISOString(), note: 'sửa từ trang quản trị chuseoz' };
-    if (!API) { saveDraft(); msg('Chưa nối Worker — đã lưu nháp trong máy. Dùng “Sao lưu toàn bộ” để xuất JSON.', 'info'); return Promise.resolve(); }
+    if (!ONLINE) {
+      saveDraft(); dirty.meta = dirty.set = false; markDirty();
+      msg('Chưa nối Worker — đã lưu nháp trong máy. Dùng “Sao lưu toàn bộ” để xuất JSON.', 'info');
+      return Promise.resolve();
+    }
     return api('/api/registry', { method: 'PUT', body: REG }).then(function () {
-      dirtyMeta = false; dirtySet = false; markDirty();
-      msg(okMsg + ' · ' + new Date().toLocaleTimeString('vi-VN'), 'ok'); toast(okMsg, 'ok');
-      refreshHealth(); renderList();
+      dirty.meta = dirty.set = false; markDirty();
+      msg(okMsg + ' · ' + new Date().toLocaleTimeString('vi-VN'), 'ok');
+      toast(okMsg, 'ok'); renderList(); fillQuickBooks(); renderSlides(); renderOverview(); health();
     }).catch(function (e) { msg('Lưu thất bại: ' + e.message, 'err'); toast('Lỗi: ' + e.message, 'err'); });
   }
   function saveBook(okMsg) {
     if (!BOOK || !CUR) return Promise.resolve();
-    BOOK.slug = CUR.slug; BOOK.title = CUR.title;
+    BOOK.slug = CUR.slug; BOOK.title = CUR.title; BOOK.author = CUR.author; BOOK.couple = CUR.couple;
     BOOK.chapters = BOOK.chapters || [];
-    if (!API) { saveDraft(); msg('Chưa nối Worker — đã lưu nháp trong máy.', 'info'); return Promise.resolve(); }
-    return api('/api/book/' + encodeURIComponent(CUR.slug), { method: 'PUT', body: BOOK })
-      .then(function () {
-        dirtyBook = false; markDirty();
-        msg(okMsg, 'ok'); toast(okMsg, 'ok');
-      }).catch(function (e) { msg('Lưu chương thất bại: ' + e.message, 'err'); });
+    CUR.chapters = BOOK.chapters.length;
+    var declared = parseInt(String(CUR.countLabel || '').split('/')[1], 10) || 0;
+    CUR.countLabel = BOOK.chapters.length + '/' + Math.max(declared, BOOK.chapters.length);
+    CUR.count = CUR.countLabel;
+    CUR.updated = today();
+    if (!ONLINE) {
+      saveDraft(); dirty.book = false; markDirty();
+      msg('Chưa nối Worker — đã lưu nháp trong máy.', 'info');
+      return Promise.resolve();
+    }
+    return api('/api/book/' + encodeURIComponent(CUR.slug), { method: 'PUT', body: BOOK }).then(function () {
+      dirty.book = false; markDirty();
+      msg(okMsg, 'ok'); toast(okMsg, 'ok');
+      return saveRegistry('Đã cập nhật thư viện');
+    }).catch(function (e) { msg('Lưu chương thất bại: ' + e.message, 'err'); toast('Lỗi: ' + e.message, 'err'); });
   }
   function saveDraft() {
     try {
-      var books = {};
-      Object.keys(BOOKS).forEach(function (s) { books[s] = BOOKS[s]; });
-      localStorage.setItem(LS.draft, JSON.stringify({ at: Date.now(), reg: REG, books: books }));
+      localStorage.setItem(LS.draft, JSON.stringify({ at: Date.now(), reg: REG, books: BOOKS }));
+      toast('Đã lưu nháp trong máy', 'ok');
     } catch (e) { toast('Nháp quá lớn để lưu trong máy', 'err'); }
   }
-
-  /* ------------------------------ sự kiện UI ------------------------------ */
-  $('#btnConnect').addEventListener('click', connect);
-  $('#btnGuide').addEventListener('click', function () { $('#guide').classList.toggle('hide'); });
-  $('#btnDisconnect').addEventListener('click', disconnect);
-  $('#btnView').addEventListener('click', function () { window.open('/', '_blank'); });
-  $('#btnDir').addEventListener('click', function () {
-    var cur = document.documentElement.getAttribute('data-dir') === 'ctoi' ? '' : 'ctoi';
-    document.documentElement.setAttribute('data-dir', cur);
-    try { localStorage.setItem(LS.dir, cur); } catch (e) {}
-  });
-  $('#inKey').addEventListener('keydown', function (e) { if (e.key === 'Enter') connect(); });
-  $('#inApi').addEventListener('keydown', function (e) { if (e.key === 'Enter') connect(); });
-  $$('#tabs button').forEach(function (b) { b.addEventListener('click', function () { showPane(b.dataset.tab); }); });
-
-  $('#q').addEventListener('input', renderList);
-  $('#flStatus').addEventListener('change', renderList);
-  $('#fSort').addEventListener('change', renderList);
-  $('#ckAll').addEventListener('change', function () {
-    var on = $('#ckAll').checked;
-    $$('#tb [data-ck]').forEach(function (c) { c.checked = on; if (on) selected[c.dataset.ck] = 1; else delete selected[c.dataset.ck]; });
-    updateBulk();
-  });
-  $('#bulkClear').addEventListener('click', function () { selected = {}; $('#ckAll').checked = false; renderList(); updateBulk(); });
-  $('#bulkApply').addEventListener('click', function () {
-    var st = $('#bulkStatus').value; var n = 0;
-    Object.keys(selected).forEach(function (s) {
-      var it = (REG.lib || []).find(function (x) { return x.slug === s; });
-      if (it && st) { it.status = st; n++; }
-      it && (it.updated = today());
-    });
-    if (!n) { toast('Chọn tình trạng mới trước', 'err'); return; }
-    saveRegistry('Đã đổi tình trạng ' + n + ' bộ').then(function () { selected = {}; $('#ckAll').checked = false; renderList(); updateBulk(); });
-  });
-  $('#bulk18').addEventListener('click', function () {
-    Object.keys(selected).forEach(function (s) {
-      var it = (REG.lib || []).find(function (x) { return x.slug === s; });
-      if (it) it.is18 = !it.is18;
-    });
-    saveRegistry('Đã bật/tắt 18+ cho ' + Object.keys(selected).length + ' bộ').then(function () { selected = {}; renderList(); updateBulk(); });
-  });
-
-  /* form sửa */
-  $$('#pane-edit input,#pane-edit select,#pane-edit textarea').forEach(function (el) {
-    el.addEventListener('input', function () { dirtyMeta = true; markDirty(); });
-  });
-  $('#btnSaveMeta').addEventListener('click', function () {
-    if (!CUR) return;
-    var oldSlug = CUR.slug, newSlug = slugify($('#fSlug').value) || oldSlug;
-    var b = $('#fBlog').value.trim();
-    Object.assign(CUR, {
-      title: $('#fTitle').value.trim() || CUR.title, slug: newSlug,
-      author: $('#fAuthor').value.trim(), couple: $('#fCouple').value.trim(), year: $('#fYear').value.trim(),
-      status: $('#fStatus').value, countLabel: $('#fCount').value.trim(),
-      chapters: Math.max(0, parseInt($('#fChapters').value, 10) || 0),
-      is18: $('#f18').value === '1', adapt: $('#fAdapt').value, adaptName: $('#fAdaptName').value.trim(),
-      thumb: $('#fThumb').value.trim(), slide: $('#fThumb').value.trim(),
-      syn: ($('#fSyn').value.trim() || '').slice(0, 220), synFull: $('#fSyn').value.trim(),
-      blog: b, postId: $('#fPostId').value.trim(), updated: $('#fUpdated').value.trim() || today()
-    });
-    if (oldSlug !== newSlug && BOOKS[oldSlug]) { BOOKS[newSlug] = BOOKS[oldSlug]; delete BOOKS[oldSlug]; }
-    saveRegistry('Đã lưu thông tin truyện');
-  });
-  $('#btnSaveBook').addEventListener('click', function () { saveBook('Đã lưu ' + ((BOOK && BOOK.chapters) || []).length + ' chương'); });
-  $('#btnDelNovel').addEventListener('click', function () {
-    if (!CUR) return;
-    if (!confirm('Xoá truyện "' + CUR.title + '" khỏi thư viện (và xoá chương trên KV)?')) return;
-    var slug = CUR.slug;
-    REG.lib = (REG.lib || []).filter(function (n) { return n.slug !== slug; });
-    var p = API ? api('/api/book/' + encodeURIComponent(slug), { method: 'DELETE' }).catch(function () {}) : Promise.resolve();
-    p.then(function () { return saveRegistry('Đã xoá truyện'); }).then(function () { showPane('list'); renderList(); });
-  });
-
-  /* chương */
-  $('#chAdd').addEventListener('click', function () {
-    if (!BOOK) return;
-    BOOK.chapters = BOOK.chapters || [];
-    BOOK.chapters.push({ t: 'Chương ' + (BOOK.chapters.length + 1), html: '' });
-    dirtyBook = true; markDirty(); renderChapters(); openChap(BOOK.chapters.length - 1);
-  });
-  $('#chPaste').addEventListener('click', function () {
-    if (!BOOK) return;
-    var raw = prompt('Dán nhiều chương. Mỗi chương ngăn bởi một dòng chỉ chứa ---CHAP---\nDòng đầu của mỗi chương nếu bắt đầu bằng "Chương …" sẽ thành tiêu đề.');
-    if (!raw || !raw.trim()) return;
-    var parts = raw.split(/^\s*---CHAP---\s*$/m).map(function (s) { return s.trim(); }).filter(Boolean);
-    var mode = $('#qkMode').value;
-    parts.forEach(function (p) {
-      var lines = p.split(/\n/);
-      var t = null;
-      if (/^\s*chương\s*\d+/i.test(lines[0] || '')) { t = lines.shift().trim(); }
-      var idx = BOOK.chapters.length + 1;
-      BOOK.chapters.push({ t: t || ('Chương ' + idx), html: textToHtml(lines.join('\n'), mode === 'raw' ? 'raw' : 'para') });
-    });
-    dirtyBook = true; markDirty(); renderChapters();
-    toast('Đã thêm ' + parts.length + ' chương — nhớ bấm Lưu chương', 'ok');
-  });
-  $('#chReload').addEventListener('click', function () {
-    if (!CUR) return;
-    delete BOOKS[CUR.slug];
-    bookOf(CUR.slug).then(function (b) { BOOK = b || { chapters: [] }; renderChapters(); toast('Đã tải lại chương từ KV'); });
-  });
-  $('#chSave').addEventListener('click', function () { saveBook('Đã lưu chương ' + (CHAP + 1)); });
-  $('#chText2Html').addEventListener('click', function () {
-    $('#chBody').value = textToHtml($('#chBody').value, 'para'); dirtyBook = true; markDirty();
-  });
-  $('#chPreview').addEventListener('click', function () {
-    var box = $('#chPrev'); box.classList.toggle('hide');
-    box.innerHTML = '<b>' + esc($('#chTitle').value) + '</b>' + $('#chBody').value;
-  });
-  $('#chDel').addEventListener('click', function () {
-    if (!BOOK || CHAP < 0) return;
-    if (!confirm('Xoá chương ' + (CHAP + 1) + '?')) return;
-    BOOK.chapters.splice(CHAP, 1); dirtyBook = true;
-    CHAP = Math.min(CHAP, BOOK.chapters.length - 1);
-    renderChapters(); if (CHAP >= 0) openChap(CHAP); else { $('#chTitle').value = ''; $('#chBody').value = ''; }
-  });
-  $('#chTitle').addEventListener('input', function () {
-    if (BOOK && CHAP >= 0) { BOOK.chapters[CHAP].t = $('#chTitle').value; dirtyBook = true; markDirty(); renderChapters(); }
-  });
-  $('#chBody').addEventListener('input', function () {
-    if (BOOK && CHAP >= 0) { BOOK.chapters[CHAP].html = $('#chBody').value; dirtyBook = true; markDirty(); }
-  });
-
-  /* đăng chương nhanh */
-  $('#qkBody').addEventListener('input', function () {
-    var w = words(textToHtml(this.value, $('#qkMode').value));
-    $('#qkInfo').textContent = this.value.trim() ? (num(w) + ' từ · khoảng ' + Math.max(1, Math.round(w / 200)) + ' phút đọc') : '';
-  });
-  $('#qkMode').addEventListener('change', function () { $('#qkBody').dispatchEvent(new Event('input')); });
-  $('#qkPreview').addEventListener('click', function () {
-    var box = $('#qkPrev'); box.classList.toggle('hide');
-    box.innerHTML = $('#qkBody').value ? textToHtml($('#qkBody').value, $('#qkMode').value) : '<span class="sm">chưa có nội dung</span>';
-  });
-  $('#qkClear').addEventListener('click', function () { $('#qkBody').value = ''; $('#qkInfo').textContent = ''; });
-  $('#qkPost').addEventListener('click', function () {
-    var slug = $('#qkBook').value;
-    var body = $('#qkBody').value.trim();
-    if (!slug) { toast('Chọn truyện trước', 'err'); return; }
-    if (!body) { toast('Dán nội dung chương trước', 'err'); return; }
-    if (!API) { toast('Chưa nối Worker — không đăng được', 'err'); return; }
-    var btn = $('#qkPost'); btn.disabled = true; btn.innerHTML = '<span class="spin"></span>đang đăng…';
-    bookOf(slug).then(function (bk) {
-      var b = bk || { chapters: [] };
-      b.chapters = b.chapters || [];
-      var n = b.chapters.length + 1;
-      var title = $('#qkTitle').value.trim() || ('Chương ' + n);
-      b.chapters.push({ t: title, html: textToHtml(body, $('#qkMode').value) });
-      return api('/api/book/' + encodeURIComponent(slug), { method: 'PUT', body: b }).then(function () {
-        BOOKS[slug] = b;
-        var it = (REG.lib || []).find(function (x) { return x.slug === slug; });
-        if (it) {
-          it.chapters = b.chapters.length;
-          it.updated = today();
-          var tot = parseInt(String(it.countLabel || '').split('/')[1], 10) || 0;
-          if (tot < b.chapters.length) tot = b.chapters.length;      /* tổng không thể nhỏ hơn số đã đăng */
-          it.countLabel = b.chapters.length + '/' + tot;
-          if (it.status === 'Sắp ra mắt') it.status = 'Đang cập nhật';
-          return saveRegistry('Đã đăng “' + title + '” (' + b.chapters.length + ' chương)');
-        }
+  function delBook(slug) {
+    var n = (REG.lib || []).find(function (x) { return x.slug === slug; });
+    CZ.confirm('Xoá bộ “' + (n ? n.title : slug) + '” khỏi thư viện' + (ONLINE ? ' và trên KV' : ' (chỉ trong bản nháp)') + '?', 'Xoá').then(function (ok) {
+      if (!ok) return;
+      REG.lib = REG.lib.filter(function (x) { return x.slug !== slug; });
+      REG.slides = (REG.slides || []).filter(function (x) { return x.slug !== slug; });
+      delete BOOKS[slug];
+      var done = ONLINE ? api('/api/book/' + encodeURIComponent(slug), { method: 'DELETE' }).catch(function () {}) : Promise.resolve();
+      done.then(function () { return saveRegistry('Đã xoá “' + (n ? n.title : slug) + '”'); }).then(function () {
+        if (CUR && CUR.slug === slug) { CUR = null; show('list'); }
+        renderList();
       });
-    }).then(function () {
-      $('#qkBody').value = ''; $('#qkTitle').value = ''; $('#qkInfo').textContent = '';
-      toast('Đăng xong — người đọc thấy ngay', 'ok');
-    }).catch(function (e) { toast('Lỗi: ' + e.message, 'err'); })
-      .then(function () { btn.disabled = false; btn.textContent = 'Đăng chương lên KV'; });
-  });
-
-  /* lấy chương thẳng từ bài viết Blogger */
-  function fetchFromBlogger(mode) {
-    var slug = $('#qkBook').value;
-    if (!slug) { toast('Chọn truyện trước', 'err'); return; }
-    if (!API) { toast('Chưa nối Worker — không lấy được', 'err'); return; }
-    var btn = mode === 'replace-last' ? $('#qkFetchReplace') : $('#qkFetch');
-    var old = btn.textContent; btn.disabled = true;
-    btn.innerHTML = '<span class="spin"></span>đang lấy…';
-    fetch(API + '/api/import', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-admin-key': KEY, 'x-import-mode': mode || 'append' },
-      body: JSON.stringify({ slug: slug, url: $('#qkUrl').value.trim() })
-    }).then(function (r) { return r.json().then(function (d) { if (!r.ok || d.ok === false) throw new Error(d.error || ('HTTP ' + r.status)); return d; }); })
-      .then(function (d) {
-        msg('Đã lấy “' + d.added + '” từ Blogger · bộ này giờ có ' + d.chapters + ' chương', 'ok');
-        toast('Đã đăng chương từ Blogger', 'ok');
-        delete BOOKS[slug];
-        return loadRegistry();
-      })
-      .catch(function (e) { msg('Lấy từ Blogger lỗi: ' + e.message, 'err'); toast('Lỗi: ' + e.message, 'err'); })
-      .then(function () { btn.disabled = false; btn.textContent = old; });
+    });
   }
-  $('#qkFetch').addEventListener('click', function () { fetchFromBlogger('append'); });
-  $('#qkFetchReplace').addEventListener('click', function () { fetchFromBlogger('replace-last'); });
 
-  /* thêm truyện */
-  $('#nTitle').addEventListener('input', function () {
-    if (!$('#nSlug').dataset.touched) $('#nSlug').value = slugify(this.value);
-  });
-  $('#nSlug').addEventListener('input', function () { this.dataset.touched = '1'; });
-  $('#btnNew').addEventListener('click', function () {
+  /* ------------------------------ đăng chương --------------------------- */
+  function quickPublish() {
+    var slug = $('#qkBook').value;
+    var n = (REG.lib || []).find(function (x) { return x.slug === slug; });
+    if (!n) return toast('Chọn truyện trước', 'err');
+    var body = $('#qkBody').value;
+    if (!body.trim()) return toast('Chưa có nội dung chương', 'err');
+    var b = $('#qkPub'); b.disabled = true; b.innerHTML = '<span class="spin"></span> đang đăng…';
+    bookOf(slug).then(function (bk) {
+      var book = bk || { title: n.title, slug: slug, author: n.author, couple: n.couple, chapters: [] };
+      book.chapters = book.chapters || [];
+      var num2 = book.chapters.length + 1;
+      var title = $('#qkTitle').value.trim() || ('Chương ' + num2);
+      if (!/^\s*(chương|chương\s*\d+)/i.test(title)) title = 'Chương ' + num2 + ': ' + title;
+      book.chapters.push({ t: title, html: textToHtml(body, $('#qkMode').value) });
+      BOOKS[slug] = book;
+      BOOK = book; CUR = n;
+      return saveBook('Đã đăng “' + title + '” · bộ này giờ có ' + book.chapters.length + ' chương');
+    }).then(function () {
+      $('#qkBody').value = ''; $('#qkTitle').value = ''; $('#qkStat').textContent = '0 từ';
+      fillQuickBooks(); renderList();
+    }).catch(function (e) { msg('Đăng lỗi: ' + e.message, 'err'); })
+      .then(function () { b.disabled = false; b.textContent = 'Đăng chương'; });
+  }
+  /* ------------------------------ thêm bộ ------------------------------- */
+  function addBook() {
     var title = $('#nTitle').value.trim();
-    if (!title) { msg('Nhập tên truyện đã.', 'err'); return; }
+    if (!title) return msg('Nhập tên truyện đã.', 'err');
     var slug = slugify($('#nSlug').value || title);
-    if ((REG.lib || []).some(function (n) { return n.slug === slug; })) { msg('Slug đã tồn tại: ' + slug, 'err'); return; }
+    if ((REG.lib || []).some(function (n) { return n.slug === slug; })) return msg('Slug đã tồn tại: ' + slug, 'err');
     var chapRaw = $('#nChap').value.trim();
     var chapters = chapRaw ? [{ t: 'Chương 1', html: textToHtml(chapRaw, 'para') }] : [];
     var entry = {
-      title: title, slug: slug, url: '/truyen/' + slug + '/', author: $('#nAuthor').value.trim(),
+      title: title, slug: slug, author: $('#nAuthor').value.trim(),
       couple: $('#nCouple').value.trim(), year: $('#nYear').value.trim() || String(new Date().getFullYear()),
-      status: $('#nStatus').value, adapt: $('#nAdapt').value, adaptName: $('#nAdaptName').value.trim(),
+      status: $('#nStatus').value,
       is18: $('#n18').value === '1', thumb: $('#nThumb').value.trim(), slide: $('#nThumb').value.trim(),
       syn: $('#nSyn').value.trim().slice(0, 220), synFull: $('#nSyn').value.trim(),
       chapters: chapters.length, countLabel: chapters.length ? chapters.length + '/' + chapters.length : '0/—',
-      updated: today(), blog: '', postId: ''
+      updated: today()
     };
     var p = Promise.resolve();
-    if (chapters.length && API) p = api('/api/book/' + encodeURIComponent(slug), { method: 'PUT', body: { title: title, slug: slug, author: entry.author, chapters: chapters } });
+    if (chapters.length) {
+      var bk = { title: title, slug: slug, author: entry.author, couple: entry.couple, chapters: chapters };
+      BOOKS[slug] = bk;
+      p = ONLINE ? api('/api/book/' + encodeURIComponent(slug), { method: 'PUT', body: bk })
+        .catch(function (e) { throw new Error('ghi chương: ' + e.message); }) : Promise.resolve();
+    }
     p.then(function () {
-      REG.lib = REG.lib || []; REG.lib.push(entry);
+      REG.lib.push(entry);
       return saveRegistry('Đã tạo truyện “' + title + '”');
     }).then(function () {
-      ['#nTitle', '#nSlug', '#nAuthor', '#nCouple', '#nYear', '#nThumb', '#nSyn', '#nChap', '#nAdaptName'].forEach(function (s) { $(s).value = ''; });
-      $('#nSlug').dataset.touched = ''; fillQuickBooks(); renderList(); showPane('list');
+      ['#nTitle', '#nSlug', '#nAuthor', '#nCouple', '#nYear', '#nThumb', '#nSyn', '#nChap'].forEach(function (s) { $(s).value = ''; });
+      renderList(); fillQuickBooks(); show('list');
     }).catch(function (e) { msg('Tạo truyện lỗi: ' + e.message, 'err'); });
-  });
+  }
 
-  /* cài đặt */
+  /* ------------------------------ cài đặt ------------------------------- */
+  /* danh sách truyện đang chọn cho khối hero: đúng thứ tự, có ảnh bìa, sửa được ngay */
+  function slidePicks() {
+    return (REG.slides || []).map(function (s) { return s.slug; }).filter(Boolean);
+  }
   function renderSlides() {
-    var cur = ((REG.slides || []).map(function (s) { return s.slug; }));
-    var list = (REG.lib || []).filter(function (n) { return (n.chapters || 0) > 0; })
-      .sort(function (a, b) { return String(b.updated || '').localeCompare(String(a.updated || '')); });
-    $('#slidePick').innerHTML = list.map(function (n) {
-      return '<label class="tile" style="display:flex;gap:8px;align-items:center;cursor:pointer;font-weight:600;color:inherit">' +
-        '<input type="checkbox" data-slide="' + esc(n.slug) + '" style="width:auto"' + (cur.indexOf(n.slug) >= 0 ? ' checked' : '') + '>' +
-        '<span>' + esc(n.title) + '<br><span class="sm">' + esc(n.author || '') + ' · ' + num(n.chapters) + ' chương</span></span></label>';
-    }).join('');
+    var picks = slidePicks();
+    var by = {};
+    (REG.lib || []).forEach(function (n) { by[n.slug] = n; });
+    $('#slidePick').innerHTML = picks.length
+      ? picks.map(function (slug, i) {
+        var n = by[slug] || {};
+        return '<div class="hprow" data-slug="' + esc(slug) + '">' +
+          '<span class="hpno">' + (i + 1) + '</span>' +
+          '<span class="hpth' + (n.thumb ? ' skel' : '') + '">' +
+            (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async">' : '') + '</span>' +
+          '<span class="hpinfo"><b>' + esc(n.title || slug) + '</b><span>' + esc(n.author || '') +
+            (n.chapters ? ' · ' + num(n.chapters) + ' chương' : '') + '</span></span>' +
+          '<span class="hpbtns">' +
+            '<button class="mv" data-up="' + i + '" title="Lên một bậc" aria-label="Lên một bậc"' + (i === 0 ? ' disabled' : '') + '>' + ic('up', 'i-s') + '</button>' +
+            '<button class="mv" data-down="' + i + '" title="Xuống một bậc" aria-label="Xuống một bậc"' + (i === picks.length - 1 ? ' disabled' : '') + '>' + ic('down', 'i-s') + '</button>' +
+            '<button class="mv" data-drop="' + i + '" title="Bỏ khỏi khối hero" aria-label="Bỏ khỏi khối hero">' + ic('x', 'i-s') + '</button>' +
+          '</span></div>';
+      }).join('')
+      : '<div class="empty sm">Chưa chọn bộ nào — trang chủ sẽ tự lấy các bộ mới cập nhật.</div>';
+    $('#hpCount').textContent = picks.length ? picks.length + '/6 bộ đang chọn' : 'đang để tự động';
+  }
+  function hpMove(from, to) {
+    var picks = slidePicks();
+    if (to < 0 || to >= picks.length) return;
+    var by = {};
+    (REG.lib || []).forEach(function (n) { by[n.slug] = n; });
+    var list = picks.slice();
+    var item = list.splice(from, 1)[0];
+    list.splice(to, 0, item);
+    REG.slides = list.map(function (s) { return by[s]; }).filter(Boolean);
+    dirty.set = true; markDirty(); renderSlides();
+  }
+  function hpDrop(i) {
+    var picks = slidePicks();
+    var by = {};
+    (REG.lib || []).forEach(function (n) { by[n.slug] = n; });
+    var list = picks.slice(); list.splice(i, 1);
+    REG.slides = list.map(function (s) { return by[s]; }).filter(Boolean);
+    dirty.set = true; markDirty(); renderSlides(); hpSearch();
+  }
+  function hpSearch() {
+    var box = $('#hpFound'), q = ($('#hpFind').value || '').trim().toLowerCase();
+    if (!q) { box.classList.add('hide'); box.innerHTML = ''; return; }
+    var picks = slidePicks();
+    var hits = (REG.lib || []).filter(function (n) { return (n.chapters || 0) > 0 && picks.indexOf(n.slug) < 0; })
+      .filter(function (n) {
+        return String(n.title || '').toLowerCase().indexOf(q) >= 0 || String(n.author || '').toLowerCase().indexOf(q) >= 0;
+      }).slice(0, 8);
+    box.classList.remove('hide');
+    box.innerHTML = hits.length
+      ? hits.map(function (n) {
+        return '<button class="hphit" data-add="' + esc(n.slug) + '"><b>' + esc(n.title) + '</b>' +
+          '<span>' + esc(n.author || '') + ' · ' + num(n.chapters || 0) + ' chương</span></button>';
+      }).join('')
+      : '<div class="sm muted" style="padding:10px 12px">Không tìm thấy bộ nào khớp (chỉ liệt kê bộ đã có chương).</div>';
+  }
+  function hpAdd(slug) {
+    var picks = slidePicks();
+    if (picks.indexOf(slug) >= 0) return;
+    if (picks.length >= 6) return toast('Tối đa 6 bộ cho khối hero', 'err');
+    var n = (REG.lib || []).find(function (x) { return x.slug === slug; });
+    if (!n) return;
+    REG.slides = picks.concat([slug]).map(function (s) { return s === slug ? n : (REG.lib || []).find(function (x) { return x.slug === s; }); }).filter(Boolean);
+    dirty.set = true; markDirty();
+    $('#hpFind').value = '';
+    renderSlides(); hpSearch();
   }
   function renderSched() {
     var s = REG.schedule || {};
-    $('#sSched').value = (s.items || []).map(function (i) {
-      return [i.days, i.title, i.detail || ''].join(' | ');
-    }).join('\n');
-    $('#sSchedNote').value = s.note || '';
+    $('#sSched').value = (s.items || []).map(function (i) { return [i.days, i.title, i.detail || ''].join(' | '); }).join('\n');
+    $('#sSchedNote').value = s.note || $('#sSchedNote').value || '';
     $('#sGiscusRepo').value = ((REG.settings || {}).giscus || {}).repo || '';
     $('#sGiscusId').value = ((REG.settings || {}).giscus || {}).repoId || '';
   }
-  $$('#pane-settings input,#pane-settings textarea').forEach(function (el) {
-    el.addEventListener('input', function () { dirtySet = true; markDirty(); });
-  });
-  $$('#slidePick').forEach(function (el) { el.addEventListener('change', function () { dirtySet = true; markDirty(); }); });
-  $('#sSave').addEventListener('click', function () {
-    var picks = $$('#slidePick [data-slide]:checked').map(function (c) { return c.dataset.slide; }).slice(0, 6);
+  function renderSettings() {
+    var s = REG.schedule || {};
+    if (!$('#sSchedNote').value) $('#sSchedNote').value = s.note || 'Lịch có thể thay đổi nếu có việc đột xuất.';
+  }
+  function saveSettings() {
     var by = {}; (REG.lib || []).forEach(function (n) { by[n.slug] = n; });
-    REG.slides = picks.map(function (s) { return by[s]; }).filter(Boolean).map(function (n) {
-      return {
-        title: n.title, slug: n.slug, url: n.url || ('/truyen/' + n.slug + '/'), author: n.author, couple: n.couple,
-        year: n.year, status: n.status, count: n.countLabel, chapters: n.chapters, is18: n.is18,
-        thumb: n.thumb, countLabel: n.countLabel, updated: n.updated, syn: n.syn, adapt: n.adapt, adaptName: n.adaptName,
-        synFull: n.synFull, blog: n.blog, postId: n.postId
-      };
-    });
+    REG.slides = slidePicks().slice(0, 6).map(function (s) { return by[s]; }).filter(Boolean);
     var items = $('#sSched').value.split('\n').map(function (l) { return l.trim(); }).filter(Boolean).map(function (l) {
       var p = l.split('|').map(function (x) { return x.trim(); });
       return { days: p[0] || '', title: p[1] || '', detail: p[2] || '' };
     });
-    REG.schedule = { items: items, note: $('#sSchedNote').value.trim(), source: (REG.schedule || {}).source || 'https://chuseoz.blogspot.com/p/lich-ra-chuong.html', updated: today() };
-    REG.settings = Object.assign({}, REG.settings, { giscus: { repo: $('#sGiscusRepo').value.trim(), repoId: $('#sGiscusId').value.trim() } });
+    REG.schedule = {
+      items: items, note: $('#sSchedNote').value.trim(),
+      updated: today()
+    };
+    REG.settings = Object.assign({}, REG.settings, {
+      giscus: { repo: $('#sGiscusRepo').value.trim(), repoId: $('#sGiscusId').value.trim() }
+    });
     saveRegistry('Đã lưu cài đặt');
-  });
+  }
 
-  /* đồng bộ / nạp / sao lưu */
-  function syncBlogger() {
-    if (!API) { msg('Cần nối Worker mới đồng bộ được.', 'err'); return; }
-    if (!confirm('Đọc lại trang danh sách + lịch ra chương trên Blogger và ghép vào dữ liệu KV?')) return;
-    var b = $('#btnSync'); b.disabled = true; b.innerHTML = '<span class="spin"></span>đang đồng bộ…';
-    api('/api/sync', { method: 'POST' }).then(function (r) {
-      msg('Đồng bộ xong: ' + r.changed + ' thay đổi · ' + r.cards + ' thẻ truyện · rev ' + r.rev, 'ok');
-      toast('Đồng bộ xong', 'ok');
-      return loadRegistry();
-    }).catch(function (e) { msg('Đồng bộ lỗi: ' + e.message, 'err'); })
-      .then(function () { b.disabled = false; b.textContent = '⟳ Đồng bộ từ Blogger'; });
-  }
-  $('#btnSync').addEventListener('click', syncBlogger);
-  $('#setSync').addEventListener('click', syncBlogger);
+  /* ------------------------------ nạp dữ liệu --------------------------- */
   function seedKV() {
-    if (!API) { msg('Cần nối Worker trước.', 'err'); return; }
-    if (!confirm('Nạp TOÀN BỘ registry + các bộ trong repo lên KV?\nDữ liệu đang có trên KV sẽ bị ghi đè.')) return;
-    var b = $('#btnSeed'); b.disabled = true; var old = b.textContent;
-    fetch('/data/registry.json').then(function (r) { return r.json(); }).then(function (reg) {
-      return api('/api/registry', { method: 'PUT', body: reg }).then(function () { return reg; });
-    }).then(function (reg) {
-      var lib = reg.lib || [], done = 0, fail = [];
-      var step = function (i) {
-        if (i >= lib.length) {
-          msg('Đã nạp ' + done + '/' + lib.length + ' bộ lên KV' + (fail.length ? ' · lỗi: ' + fail.join(', ') : ''), 'ok');
-          return loadRegistry().then(function () { refreshHealth(); });
-        }
-        var n = lib[i];
-        b.innerHTML = '<span class="spin"></span>' + (i + 1) + '/' + lib.length;
-        return fetch('/data/book/' + encodeURIComponent(n.slug) + '.json')
-          .then(function (r) { return r.ok ? r.json() : null; })
-          .then(function (bk) {
-            if (!bk) { return; }
-            return api('/api/book/' + encodeURIComponent(n.slug), { method: 'PUT', body: bk })
-              .then(function () { done++; }).catch(function () { fail.push(n.slug); });
-          })
-          .then(function () { return step(i + 1); });
-      };
-      return step(0);
-    }).catch(function (e) { msg('Nạp lỗi: ' + e.message, 'err'); })
-      .then(function () { b.disabled = false; b.textContent = old; });
+    if (!ONLINE) return msg('Cần nối Worker trước.', 'err');
+    CZ.confirm('Nạp TOÀN BỘ registry + các bộ trong repo lên KV?\nDữ liệu đang có trên KV sẽ bị ghi đè.', 'Nạp lên KV').then(function (ok) {
+      if (!ok) return;
+      var b = $('#btnSeed'); b.disabled = true;
+      fetch('/data/registry.json').then(function (r) { return r.json(); }).then(function (reg) {
+        return api('/api/registry', { method: 'PUT', body: reg }).then(function () { return reg; });
+      }).then(function (reg) {
+        var lib = reg.lib || [], done = 0, fail = [];
+        var step = function (i) {
+          if (i >= lib.length) {
+            msg('Đã nạp ' + done + '/' + lib.length + ' bộ lên KV' + (fail.length ? ' · lỗi: ' + fail.join(', ') : ''), fail.length ? 'err' : 'ok');
+            return loadRegistry().then(function () { health(); });
+          }
+          var n = lib[i];
+          b.innerHTML = '<span class="spin"></span> ' + (i + 1) + '/' + lib.length;
+          return fetch('/data/book/' + encodeURIComponent(n.slug) + '.json')
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (bk) {
+              if (!bk) return;
+              return api('/api/book/' + encodeURIComponent(n.slug), { method: 'PUT', body: bk })
+                .then(function () { done++; }).catch(function () { fail.push(n.slug); });
+            })
+            .then(function () { return step(i + 1); });
+        };
+        return step(0);
+      }).catch(function (e) { msg('Nạp lỗi: ' + e.message, 'err'); })
+        .then(function () { b.disabled = false; b.textContent = '↑ Nạp dữ liệu repo lên KV'; });
+    });
   }
-  $('#btnSeed').addEventListener('click', seedKV);
-  $('#setSeed').addEventListener('click', seedKV);
-  $('#setHealth').addEventListener('click', refreshHealth);
   function backup() {
     var dump = { _: 'chuseoz-backup', at: new Date().toISOString(), registry: REG, books: {} };
     var lib = (REG.lib || []), i = 0;
@@ -647,103 +693,294 @@
     };
     step();
   }
-  $('#btnBackup').addEventListener('click', backup);
-  $('#btnRestore').addEventListener('click', function () { $('#fileRestore').click(); });
-  $('#fileRestore').addEventListener('change', function (e) {
-    var f = e.target.files[0]; if (!f) return;
-    if (!confirm('Phục hồi từ "' + f.name + '"? Dữ liệu trên KV sẽ bị ghi đè.')) return;
-    f.text().then(function (t) {
+  function restore(file) {
+    file.text().then(function (t) {
       var dump = JSON.parse(t);
       if (!dump.registry) throw new Error('file không đúng định dạng');
-      REG = dump.registry; BOOKS = Object.assign({}, dump.books || {});
-      return saveRegistry('Đã phục hồi registry').then(function () {
-        var slugs = Object.keys(BOOKS), i = 0;
-        var step = function () {
-          if (i >= slugs.length) { msg('Phục hồi xong ' + slugs.length + ' bộ.', 'ok'); return renderList(); }
-          var s = slugs[i++]; msg('Đang phục hồi chương ' + i + '/' + slugs.length + '…', 'info');
-          if (!API) return Promise.resolve(step());
-          return api('/api/book/' + encodeURIComponent(s), { method: 'PUT', body: BOOKS[s] }).catch(function () {}).then(step);
-        };
-        return step();
+      return CZ.confirm('Phục hồi từ "' + file.name + '"? Dữ liệu hiện có sẽ bị ghi đè.', 'Phục hồi').then(function (ok) {
+        if (!ok) return;
+        REG = dump.registry; BOOKS = Object.assign({}, dump.books || {});
+        return saveRegistry('Đã phục hồi registry').then(function () {
+          var slugs = Object.keys(BOOKS), i = 0;
+          var step = function () {
+            if (i >= slugs.length) { msg('Phục hồi xong ' + slugs.length + ' bộ.', 'ok'); return renderList(); }
+            var s = slugs[i++];
+            msg('Đang phục hồi chương ' + i + '/' + slugs.length + '…', 'info');
+            if (!ONLINE) return Promise.resolve(step());
+            return api('/api/book/' + encodeURIComponent(s), { method: 'PUT', body: BOOKS[s] }).catch(function () {}).then(step);
+          };
+          return step();
+        });
       });
-    }).catch(function (err) { msg('Phục hồi lỗi: ' + err.message, 'err'); });
-    e.target.value = '';
-  });
+    }).catch(function (e) { msg('Phục hồi lỗi: ' + e.message, 'err'); });
+  }
 
-  /* số liệu */
-  function loadStats() {
-    if (!REG) { $('#stState').textContent = 'Đang tải dữ liệu thư viện…'; return; }
-    $('#stState').innerHTML = '<span class="spin"></span> đang đọc số liệu từ Firebase…';
-    window.CZ.stats().then(function (d) {
+  /* ------------------------------ số liệu ------------------------------- */
+  function loadStats(force) {
+    var st = $('#stState');
+    st.className = 'msgbar show info';
+    st.innerHTML = '<span class="spin"></span> đang đọc số liệu từ Firebase…';
+    var p = force && ONLINE ? api('/api/stats/refresh', { method: 'POST' }).catch(function () {}) : Promise.resolve();
+    p.then(function () { return CZ.stats(); }).then(function (d) {
+      if (force) { CZ._memo.stats = null; }
       var items = (d && d.items) || {};
-      window.__STATS = items;
-      var keys = Object.keys(items);
+      var keys = Object.keys(items).filter(function (k) { return k === k.toLowerCase(); });
       var tv = keys.reduce(function (a, k) { return a + (items[k].views || 0); }, 0);
       var tvv = keys.reduce(function (a, k) { return a + (items[k].votes || 0); }, 0);
-      $('#stTiles').innerHTML = [
-        ['Bộ có số liệu', num(keys.length)], ['Tổng lượt đọc', num(tv)], ['Tổng bình chọn', num(tvv)]
-      ].map(function (r) { return '<div class="tile"><b>' + r[1] + '</b><span>' + r[0] + '</span></div>'; }).join('');
+      $('#stTiles').innerHTML = [['Bộ có số liệu', num(keys.length)], ['Tổng lượt đọc', num(tv)], ['Tổng bình chọn', num(tvv)]]
+        .map(function (r) { return '<div class="tile"><b>' + r[1] + '</b><span>' + r[0] + '</span></div>'; }).join('');
       if (!keys.length) {
-        $('#stState').className = 'msg show err';
-        $('#stState').innerHTML = 'Chưa đọc được số liệu Firebase (quyền đọc đang chặn). ' +
-          'Mở Firebase Console → Firestore → Rules → cho phép <code>read</code> với collection <code>novelData</code> ' +
-          '(mẫu ở <code>worker/README.md §5</code>). Web sẽ <b>không hiện số nào</b> cho tới lúc đó.';
+        st.className = 'msgbar show err';
+        st.innerHTML = 'Chưa đọc được số liệu Firebase (quyền đọc đang chặn). Mở Firebase Console → Firestore → Rules → cho phép ' +
+          '<code>read</code> với collection <code>novelData</code> (mẫu ở <code>worker/README.md §5</code>). Trong lúc đó web ngoài ' +
+          '<b>không hiện số nào</b> — không bịa số.';
         $('#stTb').innerHTML = '';
         return;
       }
-      $('#stState').className = 'msg show ok';
-      $('#stState').textContent = 'Số liệu thật · nguồn: ' + (d.source || 'firebase') + (d.fetchedAt ? ' · cập nhật ' + d.fetchedAt.slice(0, 16).replace('T', ' ') : '');
+      st.className = 'msgbar show ok';
+      st.textContent = 'Số liệu thật · nguồn: ' + (d.source || 'firebase') + (d.stale ? ' (bản lưu trong máy)' : '');
       var by = {}; (REG.lib || []).forEach(function (n) { by[n.slug] = n; });
-      var rows = keys.map(function (k) { return Object.assign({ _k: k }, items[k]); })
+      var list = keys.map(function (k) { return Object.assign({ _k: k }, items[k]); })
         .sort(function (a, b) { return (b.views || 0) - (a.views || 0); }).slice(0, 60);
-      $('#stTb').innerHTML = rows.map(function (r, i) {
-        var n = by[r._k] || {};
-        return '<tr><td>' + (i + 1) + '</td><td><b>' + esc(n.title || r._k) + '</b></td><td>' + num(r.views) +
-          '</td><td>' + num(r.votes) + '</td><td>' + num(r.chapterCount) + '</td></tr>';
-      }).join('');
-      renderList();
+      $('#stTb').innerHTML = '<thead><tr><th>#</th><th>Bộ truyện</th><th>Lượt đọc</th><th>Bình chọn</th><th>Chương</th></tr></thead><tbody>' +
+        list.map(function (r, i) {
+          var n = by[r._k] || {};
+          return '<tr><td>' + (i + 1) + '</td><td>' + (n.title ? esc(n.title) : esc(r._k)) + '</td>' +
+            '<td><b>' + num(r.views) + '</b></td><td>' + num(r.votes) + '</td><td>' + num(r.chapterCount) + '</td></tr>';
+        }).join('') + '</tbody>';
+    }).catch(function (e) {
+      st.className = 'msgbar show err';
+      st.textContent = 'Lỗi đọc số liệu: ' + e.message;
     });
   }
-  $('#stRefresh').addEventListener('click', loadStats);
-  $('#stClear').addEventListener('click', function () {
-    if (!API) { toast('Cần nối Worker', 'err'); return; }
-    api('/api/stats/refresh', { method: 'POST' }).then(function () { toast('Đã xoá cache, đang đọc lại…', 'ok'); loadStats(); })
-      .catch(function (e) { toast('Lỗi: ' + e.message, 'err'); });
-  });
 
-  /* phím tắt + cảnh báo rời trang */
+  /* biểu tượng viết trong HTML: <span data-ic="search"> → hình thật */
+  $$('[data-ic]').forEach(function (el) { el.outerHTML = ic(el.dataset.ic); });
+
+  /* -------------------- lúc mở trang: dùng được ngay --------------------- */
+  (function boot() {
+    show('overview');                                      /* mở sẵn bảng tổng quan */
+    var savedApi = '', savedKey = '';
+    try { savedApi = localStorage.getItem(LS.api) || ''; savedKey = localStorage.getItem(LS.key) || ''; } catch (e) {}
+    if (savedApi) $('#inApi').value = savedApi;
+    else if (CZ.API) $('#inApi').value = CZ.API;
+    if (savedKey) $('#inKey').value = savedKey;
+    if (savedApi && savedKey) { connect(); return; }        /* tự nối lại Worker đã lưu */
+    viewStatic(true);                                      /* còn lại: xem dữ liệu tĩnh ngay */
+    msg('Đang xem dữ liệu tĩnh /data/*.json — nối Worker ở khung trên để sửa là người đọc thấy ngay.', 'info');
+  })();
+
+  /* ------------------------------ gắn sự kiện ---------------------------- */
+  $('#btnConnect').addEventListener('click', connect);
+  $('#inKey').addEventListener('keydown', function (e) { if (e.key === 'Enter') connect(); });
+  $('#inApi').addEventListener('keydown', function (e) { if (e.key === 'Enter') connect(); });
+  $('#btnGuide').addEventListener('click', function () { $('#guide').classList.toggle('hide'); });
+  /* khung “Nối Cloudflare Worker”: mặc định thu gọn để phần việc chính lên đầu trang */
+  function setSetup(open) {
+    var body = $('#setupBody'), b = $('#btnSetup');
+    if (!body || !b) return;
+    body.classList.toggle('hide', !open);
+    b.textContent = open ? 'Thu gọn' : 'Mở phần kết nối';
+    b.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  $('#btnSetup').addEventListener('click', function () { setSetup($('#setupBody').classList.contains('hide')); });
+  $('#btnLocal').addEventListener('click', viewStatic);
+  function viewStatic(quiet) {
+    ONLINE = false; API = ''; KEY = '';
+    setConn('warn', 'dữ liệu tĩnh trong repo');
+    openApp();
+    if (!quiet) msg('Đang xem dữ liệu tĩnh /data/*.json. Mọi thay đổi chỉ lưu nháp trong máy.', 'info');
+  }
+  $('#btnOut').addEventListener('click', disconnect);
+  $('#btnTheme').innerHTML = ic('sun', 'i-s');
+  $('#btnTheme').addEventListener('click', function () {
+    var t = CZ.themeToggle();
+    this.innerHTML = ic(t === 'light' ? 'sun' : 'moon', 'i-s');
+  });
+  $$('#tabs button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var k = b.dataset.tab;
+      if (k === 'stats') loadStats(false);
+      if (k === 'overview') renderOverview();
+      if (k === 'edit' && !CUR) return;
+      show(k);
+    });
+  });
+  $('#ovReload').addEventListener('click', function () {
+    OV_FILTER = null;
+    loadRegistry().then(function () { renderOverview(); toast('Đã đọc lại dữ liệu'); });
+  });
+  $('#q').addEventListener('input', renderList);
+  $('#fStatus').addEventListener('change', renderList);
+  $('#ovClear').addEventListener('click', function () { OV_FILTER = null; renderList(); msg(''); });
+  $('#fSort').addEventListener('change', renderList);
+  $('#ckAll').addEventListener('change', function () {
+    var on = this.checked;
+    $$('#tb [data-ck]').forEach(function (c) { c.checked = on; if (on) selected[c.dataset.ck] = 1; else delete selected[c.dataset.ck]; });
+    $('#selCount').textContent = Object.keys(selected).length ? Object.keys(selected).length + ' bộ được chọn' : '';
+  });
+  $('#btnBulk').addEventListener('click', function () {
+    var v = $('#bulkStatus').value;
+    if (!v) return toast('Chọn việc cần làm trước đã', 'err');
+    var ids = Object.keys(selected);
+    if (!ids.length) return toast('Chưa chọn bộ nào', 'err');
+    var kind = v.split(':')[0], val = v.slice(kind.length + 1);
+    ids.forEach(function (s) {
+      var n = (REG.lib || []).find(function (x) { return x.slug === s; });
+      if (!n) return;
+      if (kind === 'st') n.status = val;
+      else if (kind === '18') n.is18 = val === '1';
+    });
+    selected = {}; $('#ckAll').checked = false;
+    var what = kind === 'st' ? 'Đã đổi tình trạng ' + ids.length + ' bộ thành “' + val + '”'
+      : 'Đã ' + (val === '1' ? 'gắn' : 'bỏ') + ' nhãn 18+ cho ' + ids.length + ' bộ';
+    saveRegistry(what).then(function () { renderList(); });
+  });
+  $('#btnExport').addEventListener('click', function () {
+    CZ.download('chuseoz-registry-' + today() + '.json', JSON.stringify(REG, null, 1));
+  });
+  $('#btnAdd2').addEventListener('click', function () { show('new'); });
+  $('#qkBody').addEventListener('input', function () { $('#qkStat').textContent = num(CZ.words(this.value)) + ' từ'; });
+  $('#qkPub').addEventListener('click', quickPublish);
+  /* mở tệp từ máy: .txt / .md / .html → đổ vào ô soạn, tên tệp thành tiêu đề chương */
+  $('#qkFileBtn').addEventListener('click', function () { $('#qkFile').click(); });
+  $('#qkFile').addEventListener('change', function () {
+    var f = this.files && this.files[0];
+    if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function () {
+      var txt = String(rd.result || '');
+      var isHtml = /\.html?$/i.test(f.name) || /^\s*<[a-z][\s\S]*>/i.test(txt.slice(0, 200));
+      $('#qkBody').value = txt;
+      $('#qkMode').value = isHtml ? 'raw' : 'para';
+      if (!$('#qkTitle').value.trim()) {
+        var base = f.name.replace(/\.[a-z]+$/i, '').replace(/[-_]+/g, ' ').trim();
+        $('#qkTitle').value = base;
+      }
+      $('#qkStat').textContent = num(CZ.words(txt)) + ' từ';
+      $('#qkFileName').textContent = f.name + ' · ' + num(CZ.words(txt)) + ' từ';
+      toast('Đã mở ' + f.name, 'ok');
+    };
+    rd.onerror = function () { toast('Không đọc được tệp này', 'err'); };
+    rd.readAsText(f);
+  });
+  $('#qkPreview').addEventListener('click', function () {
+    $('#qkPrevBox').classList.remove('hide');
+    $('#qkPrev').innerHTML = textToHtml($('#qkBody').value, $('#qkMode').value) ||
+      '<span class="sm muted">Chưa có nội dung.</span>';
+  });
+  $('#btnNew').addEventListener('click', addBook);
+  $('#nTitle').addEventListener('input', function () {
+    if (!$('#nSlug').dataset.touched) $('#nSlug').value = slugify(this.value);
+  });
+  $('#nSlug').addEventListener('input', function () { this.dataset.touched = '1'; });
+  $('#edBack').addEventListener('click', function () { show('list'); });
+  ['#fTitle', '#fAuthor', '#fCouple', '#fYear', '#fStatus', '#fCount', '#f18', '#fUpdated', '#fThumb', '#fSyn']
+    .forEach(function (s) { $(s).addEventListener('input', function () { dirty.meta = true; markDirty(); }); });
+  $('#btnSaveMeta').addEventListener('click', function () { saveMeta(); });
+  $('#btnDraft').addEventListener('click', saveDraft);
+  $('#chTitle').addEventListener('input', function () { dirty.book = true; markDirty(); });
+  $('#chBody').addEventListener('input', function () { dirty.book = true; markDirty(); $('#chStat').textContent = num(CZ.words(this.value)) + ' từ'; });
+  $('#chSave').addEventListener('click', function () {
+    if (!BOOK || CHAP < 0) return toast('Chọn một chương trong danh sách trước', 'err');
+    BOOK.chapters[CHAP] = { t: $('#chTitle').value.trim() || ('Chương ' + (CHAP + 1)), html: $('#chBody').value };
+    dirty.book = true; markDirty(); renderChapters();
+    toast('Đã cập nhật chương ' + (CHAP + 1) + ' (nhớ bấm Lưu toàn bộ chương)', 'ok');
+  });
+  $('#chDel').addEventListener('click', function () {
+    if (!BOOK || CHAP < 0) return;
+    var i = CHAP;
+    CZ.confirm('Xoá chương ' + (i + 1) + ' — ' + (BOOK.chapters[i].t || '') + '?', 'Xoá').then(function (ok) {
+      if (!ok) return;
+      BOOK.chapters.splice(i, 1); CHAP = -1;
+      $('#chTitle').value = ''; $('#chBody').value = '';
+      dirty.book = true; markDirty(); renderChapters();
+    });
+  });
+  $('#chNew').addEventListener('click', function () {
+    if (!BOOK) return;
+    BOOK.chapters.push({ t: 'Chương ' + (BOOK.chapters.length + 1), html: '' });
+    CHAP = BOOK.chapters.length - 1;
+    openChap(CHAP);
+    dirty.book = true; markDirty();
+  });
+  $('#btnSaveCh').addEventListener('click', function () {
+    if (CHAP >= 0 && BOOK) BOOK.chapters[CHAP] = { t: $('#chTitle').value.trim() || ('Chương ' + (CHAP + 1)), html: $('#chBody').value };
+    saveBook('Đã lưu chương');
+  });
+  $('#btnDelBook').addEventListener('click', function () { if (CUR) delBook(CUR.slug); });
+  $('#sSave').addEventListener('click', saveSettings);
+  ['#sSched', '#sSchedNote', '#sGiscusRepo', '#sGiscusId'].forEach(function (s) {
+    $(s).addEventListener('input', function () { dirty.set = true; markDirty(); });
+  });
+  $('#slidePick').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    var i = parseInt(b.dataset.up || b.dataset.down || b.dataset.drop, 10);
+    if (isNaN(i)) return;
+    if (b.dataset.up !== undefined) hpMove(i, i - 1);
+    else if (b.dataset.down !== undefined) hpMove(i, i + 1);
+    else hpDrop(i);
+  });
+  $('#hpFind').addEventListener('input', hpSearch);
+  $('#hpFound').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-add]'); if (b) hpAdd(b.dataset.add);
+  });
+  $('#hpAuto').addEventListener('click', function () {
+    REG.slides = []; dirty.set = true; markDirty();
+    $('#hpFind').value = ''; renderSlides(); hpSearch();
+    toast('Trang chủ sẽ tự chọn bộ mới cập nhật');
+  });
+  $('#btnSeed').addEventListener('click', seedKV);
+  $('#btnHealth').addEventListener('click', function () { health().then(function () { toast('Đã kiểm tra Worker', 'ok'); }); });
+  $('#btnStatsClear').addEventListener('click', function () { loadStats(true); show('stats'); });
+  $('#btnBackup').addEventListener('click', backup);
+  $('#btnRestore').addEventListener('click', function () { $('#fileRestore').click(); });
+  $('#fileRestore').addEventListener('change', function (e) {
+    var f = e.target.files[0]; if (f) restore(f);
+    e.target.value = '';
+  });
+  $('#btnStats').addEventListener('click', function () { loadStats(true); });
+  window.addEventListener('beforeunload', function (e) {
+    if (dirty.meta || dirty.book || dirty.set) { e.preventDefault(); e.returnValue = ''; }
+  });
   document.addEventListener('keydown', function (e) {
-    var typing = /^(INPUT|TEXTAREA|SELECT)$/.test((e.target.tagName || ''));
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+    if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 's') {
       e.preventDefault();
-      if (!$('#pane-edit').classList.contains('hide')) { if (dirtyBook) saveBook('Đã lưu chương'); else $('#btnSaveMeta').click(); }
-      else if (!$('#pane-settings').classList.contains('hide')) $('#sSave').click();
-      else saveRegistry('Đã lưu dữ liệu');
+      if (!$('#pane-edit').classList.contains('hide')) { saveMeta(); saveBook('Đã lưu bộ & chương'); }
+      else if (!$('#pane-settings').classList.contains('hide')) saveSettings();
+      else if (!$('#pane-quick').classList.contains('hide')) quickPublish();
+      else toast('Không có gì để lưu ở tab này');
       return;
     }
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); $('#q').focus(); return; }
-    if (typing) return;
-    var map = { '1': 'list', '2': 'quick', '3': 'new', '4': 'stats', '5': 'settings', '6': 'help' };
-    if (map[e.key]) showPane(map[e.key]);
-  });
-  window.addEventListener('beforeunload', function (e) {
-    if (dirtyMeta || dirtyBook || dirtySet) { e.preventDefault(); e.returnValue = ''; }
+    if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'k') { e.preventDefault(); $('#q').focus(); return; }
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName || '')) return;
+    var map = { 1: 'overview', 2: 'list', 3: 'quick', 4: 'new', 5: 'edit', 6: 'settings', 7: 'stats', 8: 'help' };
+    if (map[e.key]) {
+      var k = map[e.key];
+      if (k === 'edit' && !CUR) return;
+      if (k === 'stats') loadStats(false);
+      if (k === 'overview') renderOverview();
+      show(k);
+    }
   });
 
-  /* ------------------------------ khởi động ------------------------------ */
-  (function boot() {
-    try {
-      var d = localStorage.getItem(LS.dir); if (d) document.documentElement.setAttribute('data-dir', d);
-    } catch (e) {}
-    var a = localStorage.getItem(LS.api), k = localStorage.getItem(LS.key);
-    if (a) $('#inApi').value = a;
-    if (a && k) { API = normalizeApi(a); KEY = k; openApp(); }
-    else { setConn('', 'chưa nối'); }
-    var draft = null;
-    try { draft = JSON.parse(localStorage.getItem(LS.draft) || 'null'); } catch (e) {}
-    if (draft) msg('Có bản nháp lưu trong máy lúc ' + new Date(draft.at).toLocaleString('vi-VN') + '. Mở Thư viện để xem, hoặc Phục hồi.', 'info');
-    window.CZ.registry().then(function (r) {
-      if (!REG && r && r.reg) { REG = r.reg; fillStatusFilter(); fillQuickBooks(); renderList(); }
-    }).catch(function () {});
+  /* ------------------------------ khởi động ---------------------------- */
+  (function init() {
+    CZ.themeInit();
+    $('#btnTheme').innerHTML = ic(document.documentElement.getAttribute('data-theme') === 'light' ? 'sun' : 'moon', 'i-s');
+    fillStatusFilter();
+    var savedApi = '', savedKey = '';
+    try { savedApi = localStorage.getItem(LS.api) || ''; savedKey = localStorage.getItem(LS.key) || ''; } catch (e) {}
+    if (savedApi) $('#inApi').value = savedApi;
+    if (!savedApi && CZ.API) $('#inApi').value = CZ.API;     /* gợi ý từ cz-config.js */
+    if (savedKey) {
+      $('#inKey').value = savedKey;
+      API = CZ.normalizeApi(savedApi || CZ.API); KEY = savedKey;
+      api('/api/whoami').then(function () {
+        ONLINE = true; openApp();
+        msg('Đã tự kết nối lại bằng khoá đã lưu. Nếu đây không phải máy của bạn, bấm “Ngắt kết nối”.', 'info');
+      }).catch(function () { setConn('warn', 'khoá đã lưu không dùng được'); });
+    }
   })();
 })();

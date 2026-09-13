@@ -1,24 +1,41 @@
 # Cloudflare Pages headers — tăng tốc tải trang và làm mới dữ liệu đúng lúc
+
+# File cấu hình + mã nguồn giao diện: sửa là thấy ngay, không bị dính cache
 /cz-config.js
   Cache-Control: no-cache
 
-# JS/CSS của admin đổi là thấy ngay, không cần build lại
-/cz-data.js
+/cz-app.js
+  Cache-Control: no-cache
+
+/cz-home.js
+  Cache-Control: no-cache
+
+/cz-story.js
+  Cache-Control: no-cache
+
+/cz.css
   Cache-Control: no-cache
 
 /admin.js
   Cache-Control: no-cache
 
-/data/*
+# Dữ liệu: ngắn, để bản mới lên nhanh nhưng vẫn đỡ gọi mạng nhiều lần
+/data/*.json
   Cache-Control: public, max-age=300
 
 /data/book/*
   Cache-Control: public, max-age=60
 
-/assets/*
-  Cache-Control: public, max-age=31536000, immutable
-
+# Trang HTML luôn phải kiểm tra lại, tránh người đọc dính bản cũ
 /*.html
   Cache-Control: public, max-age=0, must-revalidate
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
+
+# Sơ đồ web (sitemap) và robots: đổi khi thêm bộ mới
+/sitemap.xml
+  Cache-Control: public, max-age=600
+  Content-Type: application/xml; charset=utf-8
+
+/robots.txt
+  Cache-Control: public, max-age=600

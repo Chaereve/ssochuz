@@ -1,1 +1,7 @@
-/truyen/* /reader 200
+# Cloudflare Pages · chuseoz
+# Trang truyện + trang đọc nằm chung một tệp: /truyen/<slug>/ và /reader (đời cũ) đều trỏ về đó.
+/truyen/*      /truyen.html   200
+/truyen        /truyen.html   200
+/reader        /truyen.html   200
+/reader/*      /truyen.html   200
+/reader.html   /truyen.html   200

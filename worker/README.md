@@ -5,7 +5,7 @@
 ```
 Admin (admin.html)  ──PUT──▶  Worker (worker/cms.js)  ──▶  Cloudflare KV
                                       │                        │
-   Web (index.html / reader.html) ──GET──────────────────────────┘
+   Web (index.html / truyen.html) ──GET──────────────────────────┘
                                       │
                                       ├─▶ Blogger feed   (số chương, tình trạng, ngày cập nhật, lịch ra chương)
                                       └─▶ Firebase       (views/votes thật, cache 10 phút)
@@ -126,7 +126,7 @@ window.CZ_API = 'https://chuseoz-cms.xxx.workers.dev';   // để '' nếu chưa
 window.CZ_STATS_DIRECT = true;                            // thử đọc số liệu Firebase trực tiếp
 ```
 
-File này được **cả 4 trang** (`index.html`, `reader.html`, `admin.html`) nạp sẵn — sửa một chỗ là toàn web đổi kênh:
+File này được **cả 3 trang** (`index.html`, `truyen.html`, `admin.html`) nạp sẵn — sửa một chỗ là toàn web đổi kênh:
 
 - **Có** `CZ_API` → web đọc dữ liệu từ KV (luôn mới, sửa là thấy ngay, không cần deploy lại).
 - Dán URL kiểu nào cũng được — `chuseoz-cms.xxx.workers.dev`, `https://chuseoz-cms.xxx.workers.dev`
@@ -209,8 +209,10 @@ Sau khi Publish rules, vào `/admin` → **Số liệu** → **Đọc lại & xo
 | Bấm “Đọc lại & xoá cache” mà vẫn 0 số | Firebase còn chặn quyền đọc | làm lại mục 5, kiểm tra bằng cách mở thẳng link Firestore REST |
 | Trang chủ trắng sau khi sửa dữ liệu | 1 bộ bị sai định dạng JSON | admin → **Sao lưu** để có bản dự phòng, sửa lại bộ đó, hoặc **Phục hồi** từ file sao lưu |
 
-`cz-data.js` và `admin.js` được đặt `Cache-Control: no-cache` trong `_headers`, nên sửa 2 file này rồi deploy lại là
-máy người dùng nhận bản mới ngay, không bị giữ bản cũ trong cache.
+Các file code (`cz-app.js`, `cz-home.js`, `cz-story.js`, `cz-config.js`, `cz.css`, `admin.js`) được đặt
+`Cache-Control: no-cache` trong `_headers`, nên sửa file nào rồi deploy lại là máy người dùng nhận bản mới ngay,
+không bị giữ bản cũ trong cache. Dữ liệu `/data/*.json` để cache ngắn (5 phút, riêng `data/book/*` 1 phút)
+vì dữ liệu đã đi qua KV.
 
 ## 6. Bảo mật
 
