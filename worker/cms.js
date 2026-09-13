@@ -27,9 +27,12 @@
      BLOG              (tuỳ chọn) = https://chuseoz.blogspot.com
      ALLOW_ORIGIN      (tuỳ chọn) = https://chuseoz.pages.dev  (nhiều domain: phẩy)
      FIREBASE_PROJECT  (tuỳ chọn) = chuseoz-library
+     GOOGLE_CLIENT_ID  (secret/tuỳ chọn)    — Client ID của OAuth Web app (Google Identity Services)
+     SESSION_SECRET    (secret, bắt buộc*)  — chuỗi ngẫu nhiên ≥ 32 ký tự, ký session bình luận/đăng nhập
+                                            (*) bắt buộc nếu bật bình luận/đăng nhập người dùng
    ============================================================================ */
 
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 const JSONH = { 'content-type': 'application/json; charset=utf-8' };
 
 export default {
@@ -49,6 +52,15 @@ export default {
       if (p === '/api/registry' && req.method === 'GET') return getKV(env, 'registry', cors, 30);
       if (p === '/api/schedule' && req.method === 'GET') return getSchedule(env, ctx, cors);
       if (p === '/api/stats' && req.method === 'GET') return getStats(env, ctx, cors);
+
+      /* ---------- người dùng: đăng nhập Google + bình luận ---------- */
+      if (p === '/api/auth/google' && req.method === 'POST') return authGoogle(req, env, cors);
+      if (p === '/api/auth/me' && req.method === 'GET') return authMe(req, env, cors);
+      let mc = p.match(/^\/api\/comments\/([^/]+)\/([^/]+)$/);
+      if (mc && req.method === 'DELETE') return deleteComment(decodeURIComponent(mc[1]), mc[2], req, env, cors);
+      let mc2 = p.match(/^\/api\/comments\/([^/]+)$/);
+      if (mc2 && req.method === 'GET') return getComments(decodeURIComponent(mc2[1]), req, env, cors);
+      if (mc2 && req.method === 'POST') return postComment(decodeURIComponent(mc2[1]), req, env, cors);
 
       let m = p.match(/^\/api\/book\/(.+)$/);
       if (m && req.method === 'GET') return getKV(env, 'book:' + decodeURIComponent(m[1]), cors, 300);
@@ -202,7 +214,7 @@ function corsHeaders(req, env) {
   return {
     'access-control-allow-origin': ao,
     'access-control-allow-methods': 'GET,PUT,POST,DELETE,OPTIONS',
-    'access-control-allow-headers': 'content-type,x-admin-key',
+    'access-control-allow-headers': 'content-type,x-admin-key,authorization',
     'access-control-max-age': '86400',
     vary: 'Origin',
   };
@@ -404,4 +416,160 @@ function slugify(s) {
 function sameTitle(a, b) {
   const f = (x) => unesc(x).toLowerCase().replace(/[^a-z0-9à-ỹ]+/gi, '');
   return f(a) === f(b);
+}
+
+/* ============================================================================
+   ĐĂNG NHẬP GOOGLE + BÌNH LUẬN (người dùng cuối)
+   · Frontend lấy idToken từ Google Identity Services (GIS), gửi lên
+     POST /api/auth/google. Worker xác thực chữ ký JWT bằng khoá công khai của
+     Google (cache 1h), rồi cấp một session token (HS256, ký bằng SESSION_SECRET).
+   · Bình luận POST lên /api/comments/<slug> kèm header Authorization: Bearer
+     <token>, lưu trong KV (khoá cmt:<slug>, mới nhất ở đầu, tối đa 500/bộ).
+   · GET /api/comments/<slug> lấy danh sách công khai.
+   ============================================================================ */
+const _b64 = {
+  toBytes(s, url) {
+    s = String(s);
+    if (url) s = s.replace(/-/g, '+').replace(/_/g, '/');
+    const pad = s.length % 4 ? '='.repeat(4 - (s.length % 4)) : '';
+    const bin = atob(s + pad);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  },
+  fromBytes(b) {
+    let s = '';
+    for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
+    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  },
+};
+const _enc = (s) => new TextEncoder().encode(s);
+const _dec = (b) => new TextDecoder().decode(b);
+
+let _gcerts = null, _gcertsAt = 0;
+async function googlePubKey(kid) {
+  const now = Date.now();
+  if (!_gcerts || now - _gcertsAt > 3600 * 1000) {
+    const r = await fetch('https://www.googleapis.com/oauth2/v3/certs');
+    if (!r.ok) throw new Error('không tải được khoá công khai Google (' + r.status + ')');
+    _gcerts = await r.json();
+    _gcertsAt = now;
+  }
+  const cert = (_gcerts.keys || []).find((k) => k.kid === kid);
+  if (!cert) throw new Error('không tìm thấy khoá kid=' + kid);
+  const der = _b64.toBytes(cert.x5c[0], false);
+  return crypto.subtle.importKey('spki', der, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
+}
+async function verifyGoogleIdToken(idToken, clientId) {
+  const parts = String(idToken).split('.');
+  if (parts.length !== 3) throw new Error('idToken sai định dạng');
+  const header = JSON.parse(_dec(_b64.toBytes(parts[0], true)));
+  const payload = JSON.parse(_dec(_b64.toBytes(parts[1], true)));
+  const sig = _b64.toBytes(parts[2], true);
+  const data = _enc(parts[0] + '.' + parts[1]);
+  const key = await googlePubKey(header.kid);
+  const ok = await crypto.subtle.verify({ name: 'RSASSA-PKCS1-v1_5' }, key, sig, data);
+  if (!ok) throw new Error('chữ ký idToken không hợp lệ');
+  const now = Math.floor(Date.now() / 1000);
+  if (payload.exp && payload.exp < now) throw new Error('idToken đã hết hạn');
+  if (payload.aud !== clientId) throw new Error('idToken sai audience (cần khớp GOOGLE_CLIENT_ID)');
+  if (payload.iss !== 'accounts.google.com' && payload.iss !== 'https://accounts.google.com') throw new Error('idToken sai issuer');
+  if (payload.email_verified === false) throw new Error('email Google chưa xác thực');
+  return payload;
+}
+async function hmacKey(secret) {
+  return crypto.subtle.importKey('raw', _enc(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
+}
+async function signSession(user, secret) {
+  const header = { alg: 'HS256', typ: 'JWT' };
+  const payload = {
+    uid: user.uid, email: user.email || '', name: user.name || '', picture: user.picture || '',
+    iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30,
+  };
+  const data = _b64.fromBytes(_enc(JSON.stringify(header))) + '.' + _b64.fromBytes(_enc(JSON.stringify(payload)));
+  const sig = await crypto.subtle.sign('HMAC', await hmacKey(secret), _enc(data));
+  return data + '.' + _b64.fromBytes(new Uint8Array(sig));
+}
+async function verifySession(token, secret) {
+  const parts = String(token).split('.');
+  if (parts.length !== 3) return null;
+  const data = parts[0] + '.' + parts[1];
+  const ok = await crypto.subtle.verify('HMAC', await hmacKey(secret), _b64.toBytes(parts[2], true), _enc(data));
+  if (!ok) return null;
+  try {
+    const p = JSON.parse(_dec(_b64.toBytes(parts[1], true)));
+    if (p.exp && p.exp < Math.floor(Date.now() / 1000)) return null;
+    return p;
+  } catch (e) { return null; }
+}
+async function userFromReq(req, env) {
+  const secret = env.SESSION_SECRET || '';
+  if (!secret) return null;
+  const h = req.headers.get('authorization') || '';
+  const m = h.match(/^Bearer\s+(.+)$/i);
+  if (!m) return null;
+  return verifySession(m[1], secret);
+}
+function publicUser(u) { return { uid: u.uid, email: u.email || '', name: u.name || 'Bạn đọc', picture: u.picture || '' }; }
+function publicComment(c) { return { id: c.id, uid: c.uid, name: c.name || 'Bạn đọc', picture: c.picture || '', text: c.text, createdAt: c.createdAt }; }
+
+async function authGoogle(req, env, cors) {
+  const secret = env.SESSION_SECRET || '';
+  const cid = env.GOOGLE_CLIENT_ID || '';
+  if (!secret) return json({ ok: false, error: 'Worker chưa đặt secret SESSION_SECRET' }, { status: 500, cors });
+  if (!cid) return json({ ok: false, error: 'Worker chưa đặt biến GOOGLE_CLIENT_ID' }, { status: 500, cors });
+  const body = await req.json().catch(() => ({}));
+  const cred = String(body.credential || '');
+  if (!cred) return json({ ok: false, error: 'thiếu credential (idToken)' }, { status: 400, cors });
+  let payload;
+  try { payload = await verifyGoogleIdToken(cred, cid); }
+  catch (e) { return json({ ok: false, error: 'xác thực Google thất bại: ' + e.message }, { status: 401, cors }); }
+  const user = { uid: payload.sub, email: payload.email || '', name: payload.name || payload.email || 'Bạn đọc', picture: payload.picture || '' };
+  const token = await signSession(user, secret);
+  return json({ ok: true, token, user: publicUser(user) }, { cors });
+}
+async function authMe(req, env, cors) {
+  const u = await userFromReq(req, env);
+  if (!u) return json({ ok: false, error: 'chưa đăng nhập' }, { status: 401, cors });
+  return json({ ok: true, user: publicUser(u) }, { cors });
+}
+async function getComments(slug, req, env, cors) {
+  if (!env.CZ_KV) return json({ ok: false, error: 'chưa gắn CZ_KV' }, { status: 500, cors });
+  const arr = (await env.CZ_KV.get('cmt:' + slug, { type: 'json' })) || [];
+  let limit = 200;
+  try { limit = Math.min(parseInt(new URL(req.url).searchParams.get('limit') || '200', 10) || 200, 300); } catch (e) {}
+  const comments = arr.slice(0, limit).map(publicComment);
+  return json({ ok: true, comments, count: arr.length, slug }, { cors });
+}
+async function postComment(slug, req, env, cors) {
+  const u = await userFromReq(req, env);
+  if (!u) return json({ ok: false, error: 'bạn cần đăng nhập để bình luận' }, { status: 401, cors });
+  const body = await req.json().catch(() => ({}));
+  const text = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 2000);
+  if (text.length < 1) return json({ ok: false, error: 'bình luận không được trống' }, { status: 400, cors });
+  if (!env.CZ_KV) return json({ ok: false, error: 'chưa gắn CZ_KV' }, { status: 500, cors });
+  const key = 'cmt:' + slug;
+  const arr = (await env.CZ_KV.get(key, { type: 'json' })) || [];
+  const c = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    uid: u.uid, name: u.name || 'Bạn đọc', picture: u.picture || '', text,
+    createdAt: new Date().toISOString(),
+  };
+  arr.unshift(c);
+  if (arr.length > 500) arr.length = 500;
+  await env.CZ_KV.put(key, JSON.stringify(arr));
+  return json({ ok: true, comment: publicComment(c) }, { cors });
+}
+async function deleteComment(slug, id, req, env, cors) {
+  const u = await userFromReq(req, env);
+  if (!u) return json({ ok: false, error: 'cần đăng nhập' }, { status: 401, cors });
+  if (!env.CZ_KV) return json({ ok: false, error: 'chưa gắn CZ_KV' }, { status: 500, cors });
+  const key = 'cmt:' + slug;
+  const arr = (await env.CZ_KV.get(key, { type: 'json' })) || [];
+  const idx = arr.findIndex((c) => c.id === id);
+  if (idx < 0) return json({ ok: false, error: 'không thấy bình luận' }, { status: 404, cors });
+  if (arr[idx].uid !== u.uid) return json({ ok: false, error: 'chỉ xoá được bình luận của chính bạn' }, { status: 403, cors });
+  arr.splice(idx, 1);
+  await env.CZ_KV.put(key, JSON.stringify(arr));
+  return json({ ok: true, deleted: id }, { cors });
 }
