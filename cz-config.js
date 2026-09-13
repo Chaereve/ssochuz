@@ -16,7 +16,7 @@ window.CZ_STATS_DIRECT = true;                            // thử đọc số l
 //   · Tạo OAuth Client ID kiểu "Web application" ở Google Cloud Console,
 //     thêm JavaScript origin = domain web của bạn (vd https://chuseoz.pages.dev).
 //   · Dán Client ID vào đây. Chi tiết: worker/README.md §7 và HUONG-DAN-DANG-NHAP-BINH-LUAN.md
-window.CZ_GOOGLE_CLIENT_ID = '';   // để '' sẽ tắt đăng nhập Google (bình luận hiện thông báo cấu hình)
+window.CZ_GOOGLE_CLIENT_ID = '164350528370-3jmoj701gt07kl4v832vpb25qsfd3qh2.apps.googleusercontent.com';   // để '' sẽ tắt đăng nhập Google (bình luận hiện thông báo cấu hình)
 // Firebase Auth - chỉ Google (điền apiKey khi bật Auth trong console, để {} nếu chưa dùng)
 window.CZ_FIREBASE_CONFIG = window.CZ_FIREBASE_CONFIG || {
   apiKey: "", // dán apiKey từ Firebase Console > Project settings > General
