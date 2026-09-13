@@ -357,6 +357,21 @@
   }
   $$('[data-shut]').forEach(function (el) { el.addEventListener('click', function () { sheet('#tocSheet', false); sheet('#setSheet', false); }); });
   $$('#tocSheet .ibo, #setSheet .ibo').forEach(function (b) { b.innerHTML = ic('x', 'i-s'); });
+  /* hai nút chuyển chương nhanh ngay trên thanh đọc (khỏi cuộn xuống cuối) */
+  (function topNav() {
+    var pv = $('#rdPrev'), nx = $('#rdNext');
+    if (!pv || !nx) return;
+    pv.innerHTML = ic('left', 'i-s');
+    nx.innerHTML = ic('right', 'i-s');
+    pv.addEventListener('click', function () { go(cur - 1); });
+    nx.addEventListener('click', function () { go(cur + 1); });
+  })();
+  function paintTopNav() {
+    var pv = $('#rdPrev'), nx = $('#rdNext');
+    if (!pv) return;
+    pv.disabled = cur <= 1;
+    nx.disabled = cur >= CHS.length;
+  }
 
   function toast(msg) {
     var t = $('#rdToast');
@@ -514,7 +529,7 @@
     $('#rdProgFill').style.width = (CHS.length ? Math.round(cur / CHS.length * 100) : 0) + '%';
     CZ.setProgress(N, cur);
     try { document.title = c.t + ' · ' + N.title + ' — chuseoz'; } catch (e) {}
-    paintTOC();
+    paintTOC(); paintTopNav();
     var cr = $('#crumbStory');
     if (cr) cr.addEventListener('click', function (e) { e.preventDefault(); exitReader(); });
   }

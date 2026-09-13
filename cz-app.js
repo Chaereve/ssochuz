@@ -460,26 +460,32 @@
   }
   /* xem dạng danh sách: mỗi bộ một hàng, đủ thông tin để quyết định mở hay không */
   function cardList(n, img, pg, pct) {
-    var bits = [n.couple, n.author && n.couple ? n.author : '', n.year].filter(Boolean);
-    return '<a class="card list" href="' + esc(storyURL(n.slug)) + '" data-t="' + esc(n.title) + '" title="' + esc(n.title) + '">' +
+    var bits = [n.couple, n.couple && n.author ? n.author : (n.couple ? '' : n.author), n.year].filter(Boolean);
+    var read = pg > 0;
+    return '<a class="card list st-' + esc(n.statusCls || 'soon') + '" href="' + esc(storyURL(n.slug)) + '" data-t="' + esc(n.title) + '" title="' + esc(n.title) + '">' +
       '<span class="cl-th' + (img ? ' skel' : '') + '">' +
         (img ? '<img src="' + esc(img) + '" alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" width="300" height="450">' : '') +
       '</span>' +
       '<span class="cl-main">' +
         '<span class="cl-top"><b class="cl-t">' + esc(n.title) + '</b>' +
-          '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(n.status || 'Đang cập nhật') + '</span>' +
           (n.is18 ? '<span class="b18">18+</span>' : '') +
         '</span>' +
         '<span class="cl-meta">' + esc(bits.join(' · ') || '—') + '</span>' +
-        '<span class="cl-syn">' + esc(n.syn || '') + '</span>' +
-        (pct ? '<span class="cl-prog"><i style="width:' + pct + '%"></i></span>' : '') +
+        '<span class="cl-syn">' + esc(n.syn || 'Chưa có mô tả cho bộ này.') + '</span>' +
+        (pct ? '<span class="cl-prog" title="đã đọc ' + pct + '%"><i style="width:' + pct + '%"></i></span>' : '') +
       '</span>' +
       '<span class="cl-side">' +
+        '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(n.status || 'Đang cập nhật') + '</span>' +
         '<span class="cl-ch">' + esc(countText(n)) + '</span>' +
         '<span class="cl-adapt">' + esc(adaptText(n)) + '</span>' +
       '</span>' +
-      '<span class="cl-go">' + (pg ? 'Đọc tiếp' : 'Xem') + icon('right', 'i-s') + '</span>' +
+      '<span class="cl-go">' + (read ? 'Đọc tiếp' : 'Xem truyện') + icon('right', 'i-s') + '</span>' +
       '</a>';
+  }
+  /* hàng tiêu đề cho kiểu xem danh sách (chỉ là nhãn, không bấm được) */
+  function listHead() {
+    return '<div class="list-head" aria-hidden="true">' +
+      '<span>Bộ truyện</span><span>Tình trạng · chương</span><span></span></div>';
   }
   function mountRail(el, list, opts) {
     if (!el) return;
@@ -747,7 +753,7 @@
     isLiked: isLiked, toggleLike: toggleLike, marks: marks, toggleMark: toggleMark, chaptersRead: chaptersRead,
     rdGet: rdGet, rdSet: rdSet, themeInit: themeInit, themeToggle: themeToggle,
     icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo,
-    statusCls: statusCls, words: words, norm: norm, adaptText: adaptText, countText: countText,
+    statusCls: statusCls, words: words, norm: norm, adaptText: adaptText, countText: countText, listHead: listHead,
     storyURL: storyURL, readURL: readURL, slugify: slugify, qs: qs, copy: copy, download: download,
     card: card, mountRail: mountRail, reveal: reveal, countUp: countUp, scaleFacts: scaleFacts,
     scrollUI: scrollUI, mountShell: mountShell, mountHeader: mountHeader, mountFooter: mountFooter,

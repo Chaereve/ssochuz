@@ -348,10 +348,23 @@ textarea.inp { min-height: 120px; resize: vertical; line-height: 1.6; }
 .card:hover h3 { color: var(--acc); }
 .card .cb { font-size: 12px; color: var(--mut); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
 /* --- xem dạng danh sách: một hàng một bộ, có đủ thông tin để chọn ------- */
-.grid.list-view { grid-template-columns: 1fr; gap: 0; border-top: 1px solid var(--bd); }
-.card.list { display: grid; grid-template-columns: 76px minmax(0, 1fr) 138px 74px; gap: 18px; align-items: center;
-  padding: 14px 10px; border-bottom: 1px solid var(--bd); transition: background .15s var(--ease); }
+.grid.list-view { grid-template-columns: 1fr; gap: 0; }
+.grid.list-view .list-head { display: grid; grid-template-columns: minmax(0, 1fr) 132px 112px; gap: 18px;
+  padding: 0 10px 9px; border-bottom: 1px solid var(--bd); }
+.grid.list-view .list-head span { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--dim); white-space: nowrap; }
+.grid.list-view .list-head span:nth-child(2) { text-align: right; }
+.card.list { position: relative; display: grid; grid-template-columns: 76px minmax(0, 1fr) 132px 112px; gap: 18px;
+  align-items: center; padding: 14px 10px 14px 12px; border-bottom: 1px solid var(--bd);
+  transition: background .15s var(--ease); }
+.card.list::before { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 2px;
+  background: var(--dim); opacity: .5; }
+.card.list.st-done::before { background: var(--ok); opacity: 1; }
+.card.list.st-run::before { background: var(--warn); opacity: 1; }
+.card.list.st-soon::before { background: var(--dim); opacity: .45; }
+/* .card.list.st-run / .st-done / .st-soon: màu vạch trạng thái đã đặt ở trên */
 .card.list:hover { background: var(--surf2); }
+.card.list:hover .cl-go { gap: 10px; }
 .card.list .cl-th { display: block; width: 76px; aspect-ratio: 2/3; border-radius: var(--r-sm); overflow: hidden;
   border: 1px solid var(--bd); background: var(--surf2); }
 .card.list .cl-th img { width: 100%; height: 100%; object-fit: cover; }
@@ -367,11 +380,12 @@ textarea.inp { min-height: 120px; resize: vertical; line-height: 1.6; }
   font-size: 13px; color: var(--mut); line-height: 1.55; margin-top: 7px; }
 .card.list .cl-prog { display: block; height: 2px; background: var(--surf3); margin-top: 9px; max-width: 320px; }
 .card.list .cl-prog i { display: block; height: 100%; background: var(--acc); }
-.card.list .cl-side { text-align: right; font-variant-numeric: tabular-nums; }
+.card.list .cl-side { display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
+  font-variant-numeric: tabular-nums; }
 .card.list .cl-ch { display: block; font-size: 13.5px; font-weight: 700; color: var(--txt); }
 .card.list .cl-adapt { display: block; font-size: 12px; color: var(--dim); margin-top: 3px; }
 .card.list .cl-go { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; font-size: 12.5px;
-  font-weight: 700; color: var(--acc); white-space: nowrap; }
+  font-weight: 700; color: var(--acc); white-space: nowrap; transition: gap .15s var(--ease); }
 @media (max-width: 900px) {
   .card.list { grid-template-columns: 66px minmax(0, 1fr); gap: 13px; align-items: start; }
   .card.list .cl-th { width: 66px; grid-row: 1 / span 2; align-self: start; }
@@ -541,7 +555,8 @@ body.rd-hide .rdbar { transform: translateY(-100%); }
 .rdbar .ttl b { display: block; font-family: var(--font-head); font-size: 15px; font-weight: 600; overflow: hidden;
   text-overflow: ellipsis; white-space: nowrap; }
 .rdbar .ttl span { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--rd-mut); }
-.rdbar .tools { display: flex; gap: 3px; }
+.rdbar .tools { display: flex; gap: 3px; align-items: center; }
+.rdbar .tsep { width: 1px; height: 18px; background: var(--rd-bd); margin: 0 5px; }
 .ibo { width: 34px; height: 34px; border-radius: var(--r-sm); border: 1px solid transparent; color: var(--rd-mut);
   display: grid; place-items: center; transition: .16s; }
 .ibo:hover, .ibo.on { background: var(--rd-surf2); color: var(--rd-acc); border-color: var(--rd-bd); }
@@ -717,13 +732,35 @@ body.rd-focus .rdbar .tools:hover { opacity: 1; }
 .tbl .sub { display: block; font-size: 12px; color: var(--dim); margin-top: 2px; }
 .tbl td .row { justify-content: flex-end; flex-wrap: nowrap; }
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
-.tiles > * { border: 1px solid var(--bd); border-radius: var(--r); padding: 14px 16px; background: var(--surf); }
-.tiles b { display: block; font-family: var(--font-head); font-size: 24px; }
-.tiles span { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
 .kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0 20px; margin-bottom: 16px; }
 .kv .r { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--bd);
   font-size: 13.5px; }
 .kv .r span { color: var(--mut); }
+/* tổng quan: việc nên xem lại + danh sách mới cập nhật */
+.ovhead { font-size: 11.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--dim);
+  margin: 22px 0 10px; }
+.ovtasks { display: block; }
+.ovtask { border-top: 1px solid var(--bd); padding: 12px 0 4px; }
+.ovtask:first-child { border-top: 0; }
+.ovrow { display: flex; align-items: center; gap: 12px; }
+.ovpill { min-width: 30px; height: 22px; padding: 0 8px; border-radius: 99px; background: var(--surf2); color: var(--txt);
+  display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800;
+  font-variant-numeric: tabular-nums; }
+.ovtt { min-width: 0; }
+.ovtt b { display: block; font-size: 14px; font-weight: 650; }
+.ovtt span { font-size: 12.5px; color: var(--mut); }
+.ovchips { display: flex; gap: 6px; flex-wrap: wrap; margin: 9px 0 0 42px; align-items: center; }
+.ovchip { padding: 4px 10px; border: 1px solid var(--bd); border-radius: 99px; font-size: 12.5px; color: var(--mut); }
+.ovchip:hover { border-color: var(--acc); color: var(--acc); }
+.ovrecent { display: flex; flex-direction: column; }
+.ovrec { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 12px; align-items: center;
+  padding: 9px 0; border-top: 1px solid var(--bd); text-align: left; }
+.ovrec:first-child { border-top: 0; }
+.ovrec:hover .ovtt b { color: var(--acc); }
+.ovth { width: 34px; aspect-ratio: 2/3; border-radius: 3px; overflow: hidden; background: var(--surf2); }
+.ovth img { width: 100%; height: 100%; object-fit: cover; }
+.ovwhen { font-size: 12px; color: var(--dim); white-space: nowrap; }
+
 /* chọn truyện cho khối hero: danh sách gọn, thêm bằng ô tìm, sắp được thứ tự */
 .heroPick { margin-top: 4px; }
 .hplist { display: flex; flex-direction: column; border: 1px solid var(--bd); border-radius: var(--r);
@@ -776,8 +813,8 @@ kbd { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; b
   border-bottom-width: 2px; border-radius: var(--r-sm); background: var(--surf); color: var(--txt);
   font: 600 11.5px/1 var(--font-mono); }
 .tile { border: 1px solid var(--bd); border-radius: var(--r); padding: 14px 16px; background: var(--surf); }
-.tiles .tile b { display: block; font-family: var(--font-head); font-size: 24px; }
-.tiles .tile span { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+.tile b { display: block; font-family: var(--font-head); font-size: 24px; font-variant-numeric: tabular-nums; }
+.tile span { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
 .spin { display: inline-block; width: 13px; height: 13px; border: 2px solid currentColor; border-right-color: transparent;
   border-radius: 50%; animation: spin .7s linear infinite; vertical-align: -2px; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -807,6 +844,20 @@ kbd { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; b
   .card2 { padding: 16px; }
   .savebar { margin: 16px -16px -16px; padding: 12px 16px; }
   .tbl { font-size: 12.5px; }
+  /* thanh trên trang quản trị: xuống dòng thay vì chen chúc */
+  .abar .in { height: auto; min-height: 56px; padding: 8px 12px; flex-wrap: wrap; row-gap: 8px; }
+  .abar .in .grow { display: none; }
+  .abar .in .pill { display: none; }
+  .abar .in .hbtn { height: 32px; padding: 0 10px; font-size: 12.5px; }
+  .abar .in .hbtn.icon { width: 32px; }
+  .abar .in .chip { max-width: 132px; }
+  .abar .in .chip span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* bảng tổng quan: hai cột cho đỡ dài */
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .tile { padding: 12px 13px; }
+  .tile b { font-size: 21px; }
+  .ovrow { flex-wrap: wrap; }
+  .ovchips { margin-left: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }

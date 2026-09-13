@@ -513,9 +513,10 @@
     var slice = list.slice((state.page - 1) * state.per, state.page * state.per);
     var grid = $('#grid');
     grid.className = 'grid' + (state.view === 'list' ? ' list-view' : '');
-    grid.innerHTML = slice.length ? slice.map(function (n) { return CZ.card(n, { view: state.view }); }).join('')
+    grid.innerHTML = (slice.length && state.view === 'list' ? CZ.listHead() : '') +
+      (slice.length ? slice.map(function (n) { return CZ.card(n, { view: state.view }); }).join('')
       : '<div class="empty" style="grid-column:1/-1"><div class="big">Không có truyện nào khớp</div>Thử bỏ một vài tiêu chí lọc.' +
-        '<div class="mt"><button class="btn ghost" id="clrAll">Xoá tất cả lọc</button></div></div>';
+        '<div class="mt"><button class="btn ghost" id="clrAll">Xoá tất cả lọc</button></div></div>');
     $('#pager').innerHTML = total > 1
       ? '<button class="pg ' + (state.page === 1 ? 'off' : '') + '" data-go="' + (state.page - 1) + '">' + ic('left', 'i-s') + 'Trước</button>' +
         pageList(total, state.page).map(function (p) {

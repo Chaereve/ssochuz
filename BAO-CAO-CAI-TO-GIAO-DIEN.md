@@ -2,8 +2,12 @@
 
 Toàn bộ web dựng lại theo **bố cục hero landing làm chủ đạo**, dùng chung một hệ thống
 giao diện cho cả 4 trang: **trang chủ · trang truyện · trang đọc · trang quản trị**.
-Vòng hai (bản này) đi vào ba việc: **gọt bớt chỗ thừa**, **đồng bộ giữa các trang**,
-và **truy lỗi tận gốc** — kể cả những lỗi cũ mà trình duyệt không báo ra.
+Bốn vòng chỉnh sửa liên tiếp, mỗi vòng đi sâu thêm một lượt: **gọt bớt chỗ thừa**,
+**đồng bộ giữa các trang**, **truy lỗi tận gốc** (kể cả lỗi cũ mà trình duyệt không báo ra),
+rồi **làm dày chỗ đọc và chỗ quản trị**.
+Vòng bốn (bản này thêm) có bốn việc: thanh điều hướng chương ngay trên đầu trang đọc,
+xem theo danh sách ở thư viện dựng lại lần hai, **tab Tổng quan** cho trang quản trị,
+và sửa lỗi hai khung cùng hiện ở trang quản trị.
 
 ---
 
@@ -82,6 +86,12 @@ tải lại trang, nút Back của trình duyệt trả về đúng danh sách c
 | Tìm nhanh (⌘K / phím `/`) | phím Esc không đóng | thêm xử lý Esc toàn trang |
 | Khi Worker KV lỗi | mỗi lần mở trang lại chờ 9 giây | lỗi một lần là ghi nhớ trong phiên, đi thẳng vào `/data` |
 
+| **Trang quản trị: hai khung chồng nhau** | mở trang là khung *Tổng quan* và khung *Thư viện* cùng hiện, cuộn xuống thấy bảng dữ liệu dính ngay dưới phần tổng quan | khung Thư viện thiếu `hide` (bản cũ mặc định mở Thư viện) — nay `#pane-list` có `hide` và `boot()` gọi `show('overview')` |
+| **Cuối chương: hai hàng chuyển chương** | vừa dòng “Hết chương · chương kế tiếp” vừa nút chuyển chương lặp lại | giữ **một** hàng nút ở `#rdNav`, thêm cặp nút ←/→ lên thanh trên; hết chương chỉ còn một dòng nhắc |
+| **Thanh trên trang đọc** | muốn sang chương kế phải cuộn xuống cuối | thêm ←/→ cạnh nhãn chương, chương đầu/chương cuối thì nút đó mờ đi |
+| **Xem theo danh sách (lần hai)** | hàng vẫn dễ rối: tình trạng nằm chung dòng tên, nhãn số chương dính sát nút, không có dòng tiêu đề cột | mỗi hàng có vạch màu tình trạng ở lề trái, cột phải xếp dọc *tình trạng → số chương → chuyển thể*, nút đổi thành “Đọc tiếp” / “Xem truyện”, thêm dòng tiêu đề **Bộ truyện · Tình trạng · chương** |
+| **Nút trong trang quản trị** | “Ngắt kết nối” hiện cả khi chưa nối gì; thanh trên ở điện thoại chen chúc, ô số liệu dài một cột | nút chỉ hiện khi đã nối; thanh trên xuống dòng, ô số liệu chia hai cột |
+
 **Kiểm thử tự động**: `cd tests && node run.js` → **8/8 bài đạt** (~85 giây), không lỗi JS nào.
 
 ```
@@ -128,13 +138,25 @@ chế độ tập trung, tự ẩn thanh công cụ sau 3 giây, phím ←/→/S
 xem lớn. Đổi cỡ chữ / nền / kiểu xem giữa chừng thì **giữ nguyên chỗ đang đọc**.
 Mọi lựa chọn lưu trong máy nên mở lại là y như cũ.
 
+**Danh sách thư viện (xem theo hàng)**
+Dòng tiêu đề cột, vạch màu tình trạng ở lề trái từng hàng (hoàn thành / đang cập nhật / sắp ra mắt),
+bìa, tên truyện + slug, tác giả · couple, mô tả ngắn, rồi tới cột phải: nhãn tình trạng, số chương,
+chuyển thể và nút **Đọc tiếp** (bộ đang đọc dở) hay **Xem truyện**. Quét một lượt là thấy bộ nào
+cần đọc tiếp, bộ nào chưa ra chương nào.
+
 **Trang quản trị (`/admin`)**
-Dãy tab theo kiểu bảng điều khiển (dính dưới thanh trên khi cuộn): Thư viện · Đăng chương nhanh ·
-Thêm bộ · Sửa bộ & chương · Cài đặt & đồng bộ · Số liệu thật · Trợ giúp. Phần nối Worker thu gọn
+Dãy tab theo kiểu bảng điều khiển (dính dưới thanh trên khi cuộn), phím **1…8** đổi tab:
+**Tổng quan** · Thư viện · Đăng chương nhanh · Thêm bộ · Sửa bộ & chương · Cài đặt & đồng bộ ·
+Số liệu thật · Trợ giúp. Tab Tổng quan mở sẵn mỗi lần vào: tám ô số liệu, mục **Việc nên xem lại**
+(thiếu mô tả, thiếu ảnh bìa, thiếu couple, thiếu năm, nhãn số chương lệch, bộ “sắp ra mắt” đã lâu,
+nhóm chuyển thể chỉ một phần) — mỗi việc kèm sẵn vài tên bộ và nút **Xem danh sách** để lọc thẳng
+ra bảng Thư viện rồi bấm **Bỏ lọc** quay về; dưới cùng là **Mới cập nhật**. Phần nối Worker thu gọn
 một khối, chỉ mở khi cần. Ưu tiên đọc/ghi qua Worker + KV (sửa là người đọc thấy sau 1–2 giây);
 chưa nối Worker vẫn xem và sửa được `/data/*.json`, thay đổi giữ nháp trong máy, có sao lưu /
 phục hồi 1 tệp JSON. Danh sách chương xếp trên xuống dưới, số `#n` là thứ tự dữ liệu (số người
 đọc thấy là số trong tiêu đề chương), có nhãn “mới nhất” và nút lên/xuống/sửa bằng biểu tượng.
+Chọn nhiều dòng rồi dùng ô **việc cần làm** ở thanh trên để đổi tình trạng hoặc gắn/bỏ nhãn 18+
+cho cả loạt.
 
 ---
 
@@ -175,5 +197,10 @@ phục hồi 1 tệp JSON. Danh sách chương xếp trên xuống dưới, số
 - Ảnh bìa lấy từ `images.justwatch.com`; nếu host chặn hotlink thì thẻ truyện để lại khung giấy
   có chữ “chuseoz” mờ, không hiện icon ảnh vỡ.
 - Trang quản trị cần `ADMIN_KEY`; khoá chỉ nằm trong localStorage của máy bạn.
+- Số ở tab **Tổng quan** đếm từ chính nguồn đang mở — đã nối Worker thì là số trên KV, chưa nối thì
+  là `/data/*.json` trong repo; nút **Đọc lại dữ liệu** nạp lại nguồn đang dùng.
+- Mục **Việc nên xem lại** chỉ là gợi ý dọn dữ liệu (thiếu mô tả / bìa / couple / năm, nhãn số chương
+  lệch, bộ “sắp ra mắt” quá 45 ngày, nhóm chuyển thể lẻ một bộ) — không phải lỗi, bấm vào là ra danh
+  sách để sửa.
 - Ảnh chụp màn hình trong bài này không kèm theo repo; muốn xem lại giao diện thì mở
   `python3 tools/dev_server.py --port 8080` rồi vào `http://localhost:8080/`.

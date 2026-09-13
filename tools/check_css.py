@@ -44,6 +44,8 @@ def main():
     for f in SRC:
         used |= used_classes(open(os.path.join(ROOT, f), encoding='utf-8').read())
     used = {c for c in used if c and not c.startswith('i-') and not c.startswith('"')}
+    # JS hay ghép lớp kiểu 'st-' + trạng thái → bỏ những mảnh kết thúc bằng '-'
+    used = {c for c in used if not c.endswith('-')}
 
     missing = sorted(c for c in used - css)
     unused = sorted(c for c in css - used)

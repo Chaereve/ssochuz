@@ -110,9 +110,9 @@
     $('#scConnect').classList.toggle('hide', ONLINE);
     setSetup(false);
     $('#scApp').classList.remove('hide');
-    $('#btnOut').classList.remove('hide');
+    $('#btnOut').classList.toggle('hide', !ONLINE);   /* chưa nối thì không có gì để ngắt */
     setConn(ONLINE ? 'ok' : 'warn', ONLINE ? 'Cloudflare KV' : 'xem dữ liệu tĩnh');
-    loadRegistry().then(function () { if (ONLINE) health(); });
+    loadRegistry().then(function () { renderOverview(); if (ONLINE) health(); });
   }
   function disconnect() {
     try { localStorage.removeItem(LS.key); } catch (e) {}
@@ -155,7 +155,7 @@
         REG = draft.reg; BOOKS = draft.books || {}; dirty.meta = dirty.set = true;
       }
       dirty.meta = dirty.set = false; markDirty();
-      renderList(); fillQuickBooks(); renderSlides(); renderSched(); renderSettings();
+      renderList(); fillQuickBooks(); renderSlides(); renderSched(); renderSettings(); renderOverview();
       $('#libCount').textContent = num(REG.lib.length);
       return REG;
     });
@@ -200,6 +200,8 @@
     if (!REG) return;
     var tb = $('#tb tbody');
     var l = rows();
+    if (OV_FILTER) l = l.filter(function (n) { return OV_FILTER[n.slug]; });
+    $('#ovClear').classList.toggle('hide', !OV_FILTER);
     if (!l.length) { tb.innerHTML = '<tr><td colspan="7" class="sm muted">Không có bộ nào khớp.</td></tr>'; return; }
     tb.innerHTML = l.map(function (n) {
       var ck = selected[n.slug] ? ' checked' : '';
@@ -227,6 +229,124 @@
     });
     $('#selCount').textContent = Object.keys(selected).length ? Object.keys(selected).length + ' bộ được chọn' : '';
   }
+  /* ------------------------------ tổng quan ----------------------------- */
+  function daysSince(d) {
+    if (!d) return 9999;
+    var t = Date.parse(String(d) + 'T00:00:00');
+    if (isNaN(t)) return 9999;
+    return Math.round((Date.now() - t) / 86400000);
+  }
+  function renderOverview() {
+    if (!REG) return;
+    var lib = REG.lib || [];
+    var has = lib.filter(function (n) { return (n.chapters || 0) > 0; }).length;
+    var soon = lib.filter(function (n) { return CZ.statusCls(n.status) === 'soon'; }).length;
+    var chap = lib.reduce(function (a, n) { return a + (n.chapters || 0); }, 0);
+    var series = lib.filter(function (n) { return n.adapt === 'series'; }).length;
+    var movies = lib.filter(function (n) { return n.adapt === 'phim'; }).length;
+    var eighteen = lib.filter(function (n) { return n.is18; }).length;
+
+    /* những việc nên xem lại — mỗi việc kèm tối đa 6 bộ để bấm vào sửa luôn */
+    var picked = {};
+    function task(k, title, hint, list) {
+      var ids = list.map(function (n) { return n.slug; });
+      ids.forEach(function (s) { picked[s] = 1; });
+      return { k: k, t: title, d: hint, n: list.length, items: list.slice(0, 6) };
+    }
+    var tasks = [
+      task('nosyn', 'Thiếu mô tả', 'Trang truyện và thẻ ở thư viện sẽ trống phần giới thiệu',
+        lib.filter(function (n) { return !String(n.syn || '').trim(); })),
+      task('nothumb', 'Thiếu ảnh bìa', 'Thẻ truyện chỉ còn khung giấy có chữ mờ',
+        lib.filter(function (n) { return !String(n.thumb || '').trim(); })),
+      task('noslug', 'Thiếu slug / tác giả', 'Slug là đường dẫn của bộ, thiếu là không mở được trang truyện',
+        lib.filter(function (n) { return !String(n.slug || '').trim() || !String(n.author || '').trim(); })),
+      task('nocouple', 'Thiếu couple', 'Dùng cho bộ lọc couple ở thư viện và dải “Cùng couple”',
+        lib.filter(function (n) { return !String(n.couple || '').trim(); })),
+      task('noyear', 'Thiếu năm', 'Dùng cho bộ lọc năm và dòng thông tin trên thẻ',
+        lib.filter(function (n) { return !String(n.year || '').trim(); })),
+      task('count', 'Nhãn số chương lệch', 'Nhãn ghi “x/y” nhưng số chương đã đăng không khớp x',
+        lib.filter(function (n) {
+          var m = String(n.countLabel || '').match(/^(\d+)\s*\/\s*(\d+)$/);
+          return m && parseInt(m[1], 10) !== (n.chapters || 0);
+        })),
+      task('stale', '“Sắp ra mắt” đã lâu', 'Đăng hơn 45 ngày vẫn chưa có chương nào',
+        lib.filter(function (n) { return !(n.chapters || 0) && daysSince(n.updated) > 45; })),
+      task('solo', 'Series chỉ một phần', 'Nhóm chuyển thể chỉ có một bộ — có thể thiếu phần khác',
+        (REG.series || []).filter(function (g) { return (g.parts || []).length < 2; })
+          .map(function (g) { return { slug: (lib.filter(function (n) { return n.title === g.parts[0]; })[0] || {}).slug, title: g.name }; })
+          .filter(function (n) { return n.slug; }))
+    ].filter(function (t) { return t.n > 0; });
+
+    var tiles = [
+      { n: lib.length, l: 'Bộ truyện' },
+      { n: has, l: 'Đã có chương' },
+      { n: soon, l: 'Sắp ra mắt' },
+      { n: chap, l: 'Chương đã đăng' },
+      { n: series, l: 'Series' },
+      { n: movies, l: 'Phim' },
+      { n: eighteen, l: 'Gắn 18+' },
+      { n: Object.keys(picked).length, l: 'Thiếu thông tin' }
+    ];
+    $('#ovTiles').innerHTML = tiles.map(function (t) {
+      return '<div class="tile"><b>' + num(t.n) + '</b><span>' + t.l + '</span></div>';
+    }).join('');
+
+    $('#ovTasks').innerHTML = tasks.length
+      ? '<div class="ovhead">Việc nên xem lại</div>' + tasks.map(function (t) {
+        return '<div class="ovtask"><div class="ovrow">' +
+          '<span class="ovpill">' + num(t.n) + '</span>' +
+          '<span class="ovtt"><b>' + t.t + '</b><span>' + t.d + '</span></span>' +
+          '<span class="grow"></span><button class="btn ghost sm" data-ovlist="' + t.k + '">Xem danh sách</button></div>' +
+          '<div class="ovchips">' + t.items.map(function (n) {
+            return '<button class="ovchip" data-ovopen="' + esc(n.slug) + '">' + esc(n.title) +
+              (t.n > t.items.length ? '' : '') + '</button>';
+          }).join('') + (t.n > t.items.length ? '<span class="sm muted">… và ' + (t.n - t.items.length) + ' bộ nữa</span>' : '') +
+          '</div></div>';
+      }).join('')
+      : '<div class="ovhead">Việc nên xem lại</div><div class="empty sm">Dữ liệu đang gọn gàng — không có việc nào cần xử lý.</div>';
+
+    var recent = lib.slice().sort(function (a, b) {
+      return String(b.updated || '').localeCompare(String(a.updated || ''));
+    }).slice(0, 6);
+    $('#ovRecent').innerHTML = recent.map(function (n) {
+      return '<button class="ovrec" data-ovopen="' + esc(n.slug) + '">' +
+        '<span class="ovth' + (n.thumb ? ' skel' : '') + '">' +
+          (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async">' : '') + '</span>' +
+        '<span class="ovtt"><b>' + esc(n.title) + '</b><span>' + esc(n.author || '') + ' · ' + esc(CZ.countText(n)) + '</span></span>' +
+        '<span class="ovwhen">' + esc(CZ.dateVN(n.updated)) + '</span></button>';
+    }).join('') || '<div class="empty sm">Chưa có bộ nào.</div>';
+
+    $$('#pane-overview [data-ovopen]').forEach(function (b) {
+      b.addEventListener('click', function () { openEdit(b.dataset.ovopen, 'meta'); });
+    });
+    $$('#pane-overview [data-ovlist]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var k = b.dataset.ovlist, t = tasks.filter(function (x) { return x.k === k; })[0];
+        if (!t) return;
+        var ids = {};
+        lib.forEach(function (n) {
+          var hit = (k === 'nosyn' && !String(n.syn || '').trim()) ||
+            (k === 'nothumb' && !String(n.thumb || '').trim()) ||
+            (k === 'noslug' && (!String(n.slug || '').trim() || !String(n.author || '').trim())) ||
+            (k === 'nocouple' && !String(n.couple || '').trim()) ||
+            (k === 'noyear' && !String(n.year || '').trim()) ||
+            (k === 'stale' && !(n.chapters || 0) && daysSince(n.updated) > 45) ||
+            (k === 'count' && (function () {
+              var m = String(n.countLabel || '').match(/^(\d+)\s*\/\s*(\d+)$/);
+              return m && parseInt(m[1], 10) !== (n.chapters || 0);
+            })()) ||
+            (k === 'solo' && t.items.some(function (x) { return x.slug === n.slug; }));
+          if (hit) ids[n.slug] = 1;
+        });
+        OV_FILTER = ids;
+        show('list');
+        renderList();
+        msg('Đang lọc ' + num(t.n) + ' bộ theo mục “' + t.t + '”. Bấm “Bỏ lọc” để xem tất cả.', 'info');
+        $('#tb').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+  }
+  var OV_FILTER = null;
   function fillQuickBooks() {
     var sel = $('#qkBook');
     var cur = sel.value;
@@ -237,7 +357,7 @@
 
   /* ------------------------------ sửa bộ -------------------------------- */
   function show(pane) {
-    ['list', 'quick', 'new', 'edit', 'settings', 'stats', 'help'].forEach(function (k) {
+    ['overview', 'list', 'quick', 'new', 'edit', 'settings', 'stats', 'help'].forEach(function (k) {
       var el = $('#pane-' + k);
       if (el) el.classList.toggle('hide', k !== pane);
     });
@@ -335,7 +455,7 @@
     return api('/api/registry', { method: 'PUT', body: REG }).then(function () {
       dirty.meta = dirty.set = false; markDirty();
       msg(okMsg + ' · ' + new Date().toLocaleTimeString('vi-VN'), 'ok');
-      toast(okMsg, 'ok'); renderList(); fillQuickBooks(); renderSlides(); health();
+      toast(okMsg, 'ok'); renderList(); fillQuickBooks(); renderSlides(); renderOverview(); health();
     }).catch(function (e) { msg('Lưu thất bại: ' + e.message, 'err'); toast('Lỗi: ' + e.message, 'err'); });
   }
   function saveBook(okMsg) {
@@ -683,6 +803,7 @@
 
   /* -------------------- lúc mở trang: dùng được ngay --------------------- */
   (function boot() {
+    show('overview');                                      /* mở sẵn bảng tổng quan */
     var savedApi = '', savedKey = '';
     try { savedApi = localStorage.getItem(LS.api) || ''; savedKey = localStorage.getItem(LS.key) || ''; } catch (e) {}
     if (savedApi) $('#inApi').value = savedApi;
@@ -724,12 +845,18 @@
     b.addEventListener('click', function () {
       var k = b.dataset.tab;
       if (k === 'stats') loadStats(false);
+      if (k === 'overview') renderOverview();
       if (k === 'edit' && !CUR) return;
       show(k);
     });
   });
+  $('#ovReload').addEventListener('click', function () {
+    OV_FILTER = null;
+    loadRegistry().then(function () { renderOverview(); toast('Đã đọc lại dữ liệu'); });
+  });
   $('#q').addEventListener('input', renderList);
   $('#fStatus').addEventListener('change', renderList);
+  $('#ovClear').addEventListener('click', function () { OV_FILTER = null; renderList(); msg(''); });
   $('#fSort').addEventListener('change', renderList);
   $('#ckAll').addEventListener('change', function () {
     var on = this.checked;
@@ -737,15 +864,21 @@
     $('#selCount').textContent = Object.keys(selected).length ? Object.keys(selected).length + ' bộ được chọn' : '';
   });
   $('#btnBulk').addEventListener('click', function () {
-    var st = $('#bulkStatus').value;
-    if (!st) return toast('Chọn tình trạng cần đổi', 'err');
+    var v = $('#bulkStatus').value;
+    if (!v) return toast('Chọn việc cần làm trước đã', 'err');
     var ids = Object.keys(selected);
     if (!ids.length) return toast('Chưa chọn bộ nào', 'err');
+    var kind = v.split(':')[0], val = v.slice(kind.length + 1);
     ids.forEach(function (s) {
       var n = (REG.lib || []).find(function (x) { return x.slug === s; });
-      if (n) n.status = st;
+      if (!n) return;
+      if (kind === 'st') n.status = val;
+      else if (kind === '18') n.is18 = val === '1';
     });
-    saveRegistry('Đã đổi tình trạng ' + ids.length + ' bộ thành “' + st + '”').then(function () { renderList(); });
+    selected = {}; $('#ckAll').checked = false;
+    var what = kind === 'st' ? 'Đã đổi tình trạng ' + ids.length + ' bộ thành “' + val + '”'
+      : 'Đã ' + (val === '1' ? 'gắn' : 'bỏ') + ' nhãn 18+ cho ' + ids.length + ' bộ';
+    saveRegistry(what).then(function () { renderList(); });
   });
   $('#btnExport').addEventListener('click', function () {
     CZ.download('chuseoz-registry-' + today() + '.json', JSON.stringify(REG, null, 1));
@@ -847,8 +980,14 @@
     }
     if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'k') { e.preventDefault(); $('#q').focus(); return; }
     if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName || '')) return;
-    var map = { 1: 'list', 2: 'quick', 3: 'new', 4: 'edit', 5: 'settings', 6: 'stats', 7: 'help' };
-    if (map[e.key]) { var k = map[e.key]; if (k === 'edit' && !CUR) return; if (k === 'stats') loadStats(false); show(k); }
+    var map = { 1: 'overview', 2: 'list', 3: 'quick', 4: 'new', 5: 'edit', 6: 'settings', 7: 'stats', 8: 'help' };
+    if (map[e.key]) {
+      var k = map[e.key];
+      if (k === 'edit' && !CUR) return;
+      if (k === 'stats') loadStats(false);
+      if (k === 'overview') renderOverview();
+      show(k);
+    }
   });
 
   /* ------------------------------ khởi động ---------------------------- */

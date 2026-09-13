@@ -72,7 +72,8 @@
   <!-- ============ 2. ỨNG DỤNG ============ -->
   <section id="scApp" class="hide">
     <div class="tabs bar sticky" id="tabs" role="tablist">
-      <button data-tab="list" class="on">Thư viện</button>
+      <button data-tab="overview" class="on">Tổng quan</button>
+      <button data-tab="list">Thư viện</button>
       <button data-tab="quick">Đăng chương nhanh</button>
       <button data-tab="new">Thêm bộ</button>
       <button data-tab="edit" class="hide">Sửa bộ &amp; chương</button>
@@ -81,8 +82,23 @@
       <button data-tab="help">Trợ giúp</button>
     </div>
 
+    <!-- ---------- TỔNG QUAN ---------- -->
+    <div id="pane-overview">
+      <div class="card2">
+        <div class="row"><h3>Tình trạng dữ liệu</h3><span class="grow"></span>
+          <button class="btn ghost sm" id="ovReload">Đọc lại dữ liệu</button></div>
+        <p class="hint">Tính từ dữ liệu đang mở (KV hoặc tệp trong repo). Bấm vào một việc để sửa ngay.</p>
+        <div class="tiles" id="ovTiles"></div>
+        <div class="ovtasks" id="ovTasks"></div>
+      </div>
+      <div class="card2">
+        <h3>Mới cập nhật</h3>
+        <div class="ovrecent" id="ovRecent"></div>
+      </div>
+    </div>
+
     <!-- ---------- THƯ VIỆN ---------- -->
-    <div id="pane-list">
+    <div id="pane-list" class="hide">
       <div class="card2">
         <div class="row">
           <div><b id="libCount">—</b> <span class="sm muted">bộ trong dữ liệu</span></div>
@@ -94,13 +110,18 @@
             <option value="chap">Nhiều chương</option>
             <option value="az">Tên A→Z</option>
           </select>
-          <button class="btn ghost sm" id="btnAdd2">+ Thêm bộ</button>
+          <button class="btn ghost sm hide" id="ovClear">Bỏ lọc</button>
+          <button class="btn ghost sm" id="btnAdd2">Thêm bộ</button>
         </div>
         <div class="bulkbar row mt">
           <label class="row sm"><input type="checkbox" id="ckAll" style="width:auto"> chọn tất cả</label>
           <select class="sel" id="bulkStatus">
-            <option value="">— đổi tình trạng —</option>
-            <option>Hoàn thành</option><option>Đang cập nhật</option><option>Sắp ra mắt</option>
+            <option value="">— việc cần làm —</option>
+            <option value="st:Hoàn thành">Đổi tình trạng → Hoàn thành</option>
+            <option value="st:Đang cập nhật">Đổi tình trạng → Đang cập nhật</option>
+            <option value="st:Sắp ra mắt">Đổi tình trạng → Sắp ra mắt</option>
+            <option value="18:1">Gắn nhãn 18+</option>
+            <option value="18:0">Bỏ nhãn 18+</option>
           </select>
           <button class="btn ghost sm" id="btnBulk">Áp dụng</button>
           <button class="btn ghost sm" id="btnExport">Xuất JSON thư viện</button>
@@ -311,6 +332,7 @@
       <div class="card2">
         <h3>Quy trình hằng ngày</h3>
         <ol class="steps">
+          <li>Mở tab <b>Tổng quan</b> (phím <b>1</b>) — chỗ liệt kê việc cần dọn: thiếu mô tả, thiếu ảnh bìa, nhãn số chương lệch… Bấm một việc là lọc thẳng ra danh sách để sửa.</li>
           <li>Viết bài trên Blogger như bình thường.</li>
           <li>Vào tab <b>Đăng chương nhanh</b> → chọn bộ → dán link bài (hoặc để trống) → <b>Lấy &amp; đăng</b>.</li>
           <li>Mở <b>Kiểm tra ↻</b> ở thanh trên để xem đúng thứ người đọc thấy.</li>
@@ -320,10 +342,18 @@
         <h3>Phím tắt</h3>
         <div class="keys">
           <div><span class="kk"><kbd>Ctrl</kbd><kbd>S</kbd></span> lưu thông tin / chương đang sửa</div>
-          <div><span class="kk"><kbd>1</kbd><kbd>…</kbd><kbd>7</kbd></span> đổi tab</div>
+          <div><span class="kk"><kbd>1</kbd><kbd>…</kbd><kbd>8</kbd></span> đổi tab</div>
           <div><span class="kk"><kbd>/</kbd><kbd>Ctrl</kbd><kbd>K</kbd></span> tìm nhanh trong thư viện</div>
           <div><span class="kk"><kbd>Esc</kbd></span> đóng hộp thoại</div>
         </div>
+      </div>
+      <div class="card2">
+        <h3>Sửa nhiều bộ một lúc</h3>
+        <ol class="steps">
+          <li>Tick ô vuông ở đầu các dòng trong tab <b>Thư viện</b>.</li>
+          <li>Ở thanh trên chọn <b>việc cần làm</b> — đổi tình trạng, gắn hoặc bỏ nhãn 18+ — rồi bấm <b>Áp dụng</b>.</li>
+        </ol>
+        <p class="hint">Muốn chọn nhanh cả danh sách đang lọc thì tick ô ở tiêu đề bảng trước.</p>
       </div>
       <div class="card2">
         <h3>Khi có sự cố</h3>
