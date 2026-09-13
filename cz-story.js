@@ -450,10 +450,11 @@
     { k: 'xam', l: 'Xám' }, { k: 'toi', l: 'Tối' }
   ];
   var FONTS = [
-    { k: 'serif', l: 'Serif' }, { k: 'georgia', l: 'Georgia' },
-    { k: 'times', l: 'Times' }, { k: 'sans', l: 'Sans' },
-    { k: 'inter', l: 'Inter' }, { k: 'roboto', l: 'Roboto' },
-    { k: 'arial', l: 'Arial' }
+    { k: 'serif', l: 'Serif (mặc định)' },
+    { k: 'georgia', l: 'Georgia' },
+    { k: 'times', l: 'Times New Roman' },
+    { k: 'sans', l: 'Sans gọn' },
+    { k: 'bevn', l: 'Be Vietnam Pro' }
   ];
   var WIDTHS = [{ k: 640, l: 'Hẹp' }, { k: 720, l: 'Vừa' }, { k: 900, l: 'Rộng' }];
   function applyRD() {
@@ -478,6 +479,7 @@
         'georgia': 'Georgia, serif',
         'times': '"Times New Roman", Times, serif',
         'sans': 'var(--font)',
+        'bevn': '"Be Vietnam Pro", var(--font)',
         'inter': 'Inter, var(--font)',
         'roboto': 'Roboto, var(--font)',
         'arial': 'Arial, Helvetica, sans-serif'
@@ -515,8 +517,8 @@
         sliderRow('Giãn đoạn', 'para', 0.6, 1.8, 0.05, 'em') +
         row('Căn đều hai bên', 'justify', [{ k: 0, l: 'Tắt' }, { k: 1, l: 'Bật' }])) +
       grp('Nền đọc', row('Tông nền', 'theme', RD_THEMES)) +
-      '<div class="srow2" style="border:0"><span class="sm muted">Kéo trượt để chỉnh ngay, mọi thay đổi được nhớ cho lần sau. Phím tắt: ← → chuyển chương, B đánh dấu, F tập trung, L mục lục, Esc về.</span>' +
-      '<button class="btn ghost sm" id="setReset">Mặc định</button></div>';
+      '<div class="srow2" style="border:0"><span></span>' +
+      '<button class="btn ghost sm" id="setReset">Về mặc định</button></div>';
     $$('#setBody [data-set]').forEach(function (b) {
       b.addEventListener('click', function () {
         var key = b.dataset.set, v = b.dataset.v;
@@ -562,7 +564,7 @@
       var sp = chapSplit(c);
       return '<a href="#chuong-' + n + '" data-ch="' + n + '" class="' + (n === cur ? 'on' : '') + (n < prog ? ' read' : '') + '">' +
         '<span class="no">' + (sp.no || '—') + '</span><span class="nm">' + esc(sp.name) + '</span>' +
-        (marks.indexOf(n) >= 0 ? '<span class="ck">' + ic('star', 'i-s') + '</span>'
+        (marks.indexOf(n) >= 0 ? '<span class="ck">' + ic('bookmark', 'i-s') + '</span>'
           : (n < prog ? '<span class="ck">' + ic('check', 'i-s') + '</span>' : '<span></span>')) + '</a>';
     }).join('') || '<div class="empty" style="border:0;background:none">Không có chương nào khớp.</div>';
   }
@@ -711,12 +713,10 @@
       ' <a href="' + esc(CZ.storyURL(N.slug)) + '" id="crumbStory">' + esc(N.title) + '</a> ' + ic('right', 'i-s') +
       ' <b>' + esc(chapLabel(cur)) + '</b>';
     $('#rdHead').textContent = c.t;
-    var w = CZ.words(c.html);
+    // reading time & word count removed per request
     $('#rdMeta').innerHTML = [
-      N.author ? '<span>' + ic('pen', 'i-s') + ' ' + esc(N.author) + '</span>' : '',
-      w ? '<span>' + ic('clock', 'i-s') + ' ~' + Math.max(1, Math.round(w / 200)) + ' phút đọc</span>' : '',
-      '<span>' + ic('eye', 'i-s') + ' ' + num(w) + ' từ</span>'
-    ].join('');
+      N.author ? '<span>' + ic('pen', 'i-s') + ' ' + esc(N.author) + '</span>' : ''
+    ].filter(Boolean).join('');
     txt.innerHTML = cleanHTML(c.html);
     PAGES = []; PI = 0;
     if (s.mode === 'paged') { PAGES = measure(txt); paintPage(); } else renderNav(false);
@@ -727,7 +727,7 @@
         (CZ.isLiked(N) ? 'Đã thích' : 'Thích') + (st && st.votes ? ' · ' + num(st.votes) : '') + '</span></button>',
       '<button id="actSave" class="' + (CZ.inShelf(N) ? 'on' : '') + '">' + ic('bookmark', 'i-s') + '<span>' +
         (CZ.inShelf(N) ? 'Đã lưu' : 'Lưu vào tủ') + '</span></button>',
-      '<button id="actMark">' + ic('star', 'i-s') + '<span>Đánh dấu</span></button>',
+      '<button id="actMark">' + ic('bookmark', 'i-s') + '<span>Đánh dấu</span></button>',
       '<button id="actComment">' + ic('chat', 'i-s') + '<span>Bình luận</span></button>',
       '<button id="actShare">' + ic('share', 'i-s') + '<span>Chia sẻ</span></button>',
       '<button id="actReport" class="ghost">' + ic('alert', 'i-s') + '<span>Báo lỗi chữ</span></button>'
@@ -786,17 +786,11 @@
         window.open(mailHref(), '_blank', 'noopener');
       });
     });
-    /* cuối chương: chỉ còn một lời dẫn, việc chuyển chương để thanh điều hướng dưới làm
-       (bản trước vừa có nút “Chương tiếp theo” ở đây vừa có thanh dưới — trùng nhau) */
+    /* cuối chương: đã bỏ dòng Hết chương / Chương kế tiếp theo yêu cầu */
     var last = cur >= CHS.length;
-    $('#rdEnd').innerHTML =
-      '<div class="endrule" aria-hidden="true"></div>' +
-      '<div class="endline">' +
-        '<span class="endmark">' + (last ? 'Hết bộ' : 'Hết ' + esc(chapLabel(cur))) + '</span>' +
-        (last
-          ? '<span class="endsub">Bộ này đang cập nhật — lưu vào tủ truyện để quay lại khi có chương mới.</span>'
-          : '<span class="endsub">Chương kế tiếp: <b>' + esc(CHS[cur].t) + '</b></span>') +
-      '</div>' + (last ? '<a class="btn ghost sm mt" href="' + esc(CZ.storyURL(N.slug)) + '" id="endInfo">' + ic('info', 'i-s') + 'Về trang truyện</a>' : '');
+    $('#rdEnd').innerHTML = last
+      ? '<div class="endrule" aria-hidden="true"></div><div class="endline"><span class="endsub">Bộ này đang cập nhật — lưu vào tủ truyện để quay lại khi có chương mới.</span></div><a class="btn ghost sm mt" href="' + esc(CZ.storyURL(N.slug)) + '" id="endInfo">' + ic('info', 'i-s') + 'Về trang truyện</a>'
+      : '<div class="endrule" aria-hidden="true"></div>';
     if (!keepScroll) window.scrollTo({ top: 0, behavior: 'auto' });
     $('#rdProgFill').style.width = (CHS.length ? Math.round(cur / CHS.length * 100) : 0) + '%';
     var pct = $('#rdPct');

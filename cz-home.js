@@ -312,18 +312,9 @@
     CZ.mountRail($('#newRail'), rows.slice(0, 12));
   }
 
-  /* thanh mục ở đầu trang có thêm số đếm thật: bao nhiêu bộ mới lên chương, tổng bao nhiêu bộ */
+  /* navCounts removed per request - badges caused overlap and clutter */
   function navCounts() {
-    var fresh = CZ.lib().filter(function (n) { return n.fresh; }).length;
-    function put(k, n, title) {
-      var a = document.querySelector('#czNav a[data-k="' + k + '"]');
-      if (!a || a.querySelector('.ct')) return;
-      var sp = document.createElement('span');
-      sp.className = 'ct'; sp.textContent = n; sp.title = title;
-      a.appendChild(sp);
-    }
-    put('new', fresh, fresh + ' bộ vừa lên chương trong 10 ngày gần đây');
-    put('library', CZ.lib().length, CZ.lib().length + ' bộ trong thư viện');
+    // intentionally empty - no count badges in header
   }
 
   /* ======================= XẾP HẠNG ==================================== */
@@ -396,29 +387,31 @@
   function renderEditorChoice() {
     var el = $('#bien-tap'), rail = $('#editRail');
     if (!el || !rail) return;
-    var list = CZ.editorChoice ? CZ.editorChoice() : [];
+    var list = [];
+    try { list = CZ.editorChoice ? CZ.editorChoice() : []; } catch(e) { list = []; }
+    if (!list || !list.length) {
+      // Try fallback from registry raw
+      try {
+        var reg = CZ._memo && CZ._memo.reg;
+        var raw = (reg && (reg.editorChoice || (reg.settings && reg.settings.editorChoice))) || [];
+        if (raw && raw.length) {
+          var by = {};
+          (reg.lib || []).forEach(function(n){ by[n.slug]=n; });
+          list = raw.map(function(x){ var sl = typeof x==='string'?x:(x&&x.slug); return by[sl]; }).filter(Boolean).map(CZ.norm);
+        }
+      } catch(e) {}
+    }
     if (!list || !list.length) { el.hidden = true; return; }
     el.hidden = false;
-    $('#editSub').textContent = list.length + ' bộ do biên tập chọn';
+    var sub = $('#editSub');
+    if (sub) sub.textContent = list.length + ' bộ do biên tập chọn';
     CZ.mountRail(rail, list.slice(0, 12));
   }
   function renderDonation() {
-    var sec = $('#ung-ho'), box = $('#donBox');
-    if (!sec || !box) return;
-    var cfg = CZ.donationCfg ? CZ.donationCfg() : {};
-    if (!cfg || !cfg.enabled) { sec.hidden = true; return; }
-    sec.hidden = false;
-    var html = '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start">' +
-      '<div style="flex:1 1 280px"><h3 style="margin:0 0 8px">' + ic('donate','i-s') + ' Ủng hộ duy trì chuseoz</h3>' +
-      '<p class="hint" style="max-width:60ch">' + esc(cfg.message || 'Trang hoạt động phi thương mại, phi lợi nhuận — được duy trì bởi tình yêu với truyện chuyển thể. Cảm ơn bạn đã ủng hộ và đồng hành cùng chuseoz.') + '</p>' +
-      (cfg.bank ? '<div class="mt"><b>Ngân hàng:</b> ' + esc(cfg.bank) + (cfg.accountNo ? ' · <code>' + esc(cfg.accountNo) + '</code>' : '') + (cfg.accountName ? ' · ' + esc(cfg.accountName) : '') + '</div>' : '') +
-      (cfg.momo ? '<div class="mt"><b>Momo:</b> ' + esc(cfg.momo) + '</div>' : '') +
-      '<div class="mt row"><a class="btn ghost sm" href="https://www.facebook.com/profile.php?id=61592803761987" target="_blank" rel="noopener">' + ic('users','i-s') + ' Facebook</a>' +
-      '<a class="btn ghost sm" href="mailto:' + esc((CZ.reportCfg && CZ.reportCfg().email) || 'chuseoz.ofc@gmail.com') + '" target="_blank" rel="noopener">' + ic('mail','i-s') + ' Email</a></div>' +
-      '</div>' +
-      (cfg.qr ? '<div style="flex:0 0 160px"><img src="' + esc(cfg.qr) + '" alt="QR ủng hộ" style="width:160px;height:160px;object-fit:cover;border-radius:8px;border:1px solid var(--bd)"></div>' : '') +
-      '</div>';
-    box.innerHTML = html;
+    // Donation only in footer as icon per request - hide home section
+    var sec = $('#ung-ho');
+    if (sec) sec.hidden = true;
+    // Footer will handle donation icon via donationCfg
   }
 
   /* ======================= THƯ VIỆN ==================================== */
