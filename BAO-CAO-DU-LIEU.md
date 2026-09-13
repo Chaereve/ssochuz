@@ -17,11 +17,18 @@ Không có lỗi nào.
 
 ## Chênh lệch giữa thẻ Blogger (cũ) và trang truyện (đang dùng)
 
-- Thẻ Blogger ghi 14/14 nhưng dữ liệu đang dùng 15/15 — Chain Baby (bài gốc nhiều hơn/bằng)
-- Thẻ Blogger ghi 5/40 nhưng dữ liệu đang dùng 7/40 — Cô Vợ Hờ Đanh Đá Của Tôi (bài gốc nhiều hơn/bằng)
-- Thẻ Blogger ghi "Tới chương 5", trang truyện ghi "Đang cập nhật" — Cô Vợ Hờ Đanh Đá Của Tôi (đã lưu bản gốc ở statusRaw)
-- Thẻ Blogger ghi "Tới Chương 8", trang truyện ghi "Đang cập nhật" — Third Person (đã lưu bản gốc ở statusRaw)
-- Thẻ Blogger ghi "Sắp dịch", trang truyện ghi "Sắp ra mắt" — Vượt Khỏi Đường Chân Trời - endless blue beyond (Special) (đã lưu bản gốc ở statusRaw)
+- **Chain Baby** — thẻ Blogger ghi `14/14`, dữ liệu có **15 chương thật** (1 Lời Mở Đầu/Chương 0 + 14 chương đánh số + 0 Ngoại truyện). Lệch do cách đếm của thẻ cũ.
+- **Cô Vợ Hờ Đanh Đá Của Tôi** — thẻ Blogger ghi `5/40`, dữ liệu có **7 chương thật** (2 Lời Mở Đầu/Chương 0 + 5 chương đánh số + 0 Ngoại truyện). Lệch do cách đếm của thẻ cũ.
+- **Cô Vợ Hờ Đanh Đá Của Tôi** — tình trạng: thẻ ghi "Tới chương 5", trang truyện hiển thị "Đang cập nhật" (bản gốc lưu ở `statusRaw`).
+- **Third Person** — tình trạng: thẻ ghi "Tới Chương 8", trang truyện hiển thị "Đang cập nhật" (bản gốc lưu ở `statusRaw`).
+- **Vượt Khỏi Đường Chân Trời - endless blue beyond (Special)** — tình trạng: thẻ ghi "Sắp dịch", trang truyện hiển thị "Sắp ra mắt" (bản gốc lưu ở `statusRaw`).
+
+## Cách đếm chương (vì sao nhãn trên thẻ Blogger hay lệch với số chương đọc được)
+
+| Truyện | Thẻ Blogger | Tổng chương | Lời Mở Đầu / Chương 0 | Chương đánh số | Ngoại truyện |
+|---|---|---|---|---|---|
+| Chain Baby | 14/14 | 15 | 1 | 14 | 0 |
+| Cô Vợ Hờ Đanh Đá Của Tôi | 5/40 | 7 | 2 | 5 | 0 |
 
 > Nguyên tắc: số liệu đọc/bình chọn **chỉ** lấy từ Firebase cũ (`chuseoz-library`).
 > Khi chưa đọc được thì web không hiện số nào và ghi rõ lý do, không ước lượng.

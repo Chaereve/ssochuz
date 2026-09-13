@@ -81,8 +81,8 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   // sai khoá
   set('#inApi', 'https://cms.test'); set('#inKey', 'SAI'); click('#btnConnect'); await wait(200);
   out.badKey = txt('#msgConn');
-  // đúng khoá
-  set('#inKey', 'KEY123'); click('#btnConnect'); await wait(600);
+  // đúng khoá + URL dán thiếu https:// (phải tự thêm)
+  set('#inApi', 'cms.test'); set('#inKey', 'KEY123'); click('#btnConnect'); await wait(600);
   out.connected = { scApp: !$('#scApp').classList.contains('hide'), chip: txt('#chConn'), data: txt('#chData') };
   out.rows = $$('#tb tr[data-slug]').length;
   out.health = txt('#health').slice(0, 120);

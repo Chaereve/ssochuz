@@ -1,7 +1,7 @@
 /* Nạp 1 trang HTML và nhúng các script ngoài (cz-config.js, cz-data.js, admin.js) vào
    để jsdom chạy được. Trả về {html, dom, win, doc} */
 const fs = require('fs'), path = require('path');
-const { JSDOM } = require('jsdom');
+const { JSDOM, VirtualConsole } = require('jsdom');
 const ROOT = require('path').join(__dirname, '..');
 
 function read(f) { return fs.readFileSync(path.join(ROOT, f), 'utf8'); }
@@ -23,13 +23,21 @@ function page(file, { url = 'https://chuseoz.pages.dev/', fetch, config = {}, fi
   let html = read(file);
   html = inline(html, files);
   html = inlineAll(html);
-  if (config.CZ_API !== undefined || config.CZ_STATS_DIRECT !== undefined) {
-    html = html.replace(/window\.CZ_API\s*=\s*window\.CZ_API\s*\|\|\s*'';/,
-      "window.CZ_API=" + JSON.stringify(config.CZ_API || '') + ";");
+  if (config.CZ_API !== undefined) {
+    html = html.replace(/window\.CZ_API\s*=\s*(window\.CZ_API\s*\|\|\s*)?'[^']*';/,
+      "window.CZ_API=" + JSON.stringify(config.CZ_API) + ";");
+  }
+  if (config.CZ_STATS_DIRECT !== undefined) {
+    html = html.replace(/window\.CZ_STATS_DIRECT\s*=\s*(true|false);/,
+      "window.CZ_STATS_DIRECT=" + (config.CZ_STATS_DIRECT ? 'true' : 'false') + ";");
   }
   const errors = [];
+  /* jsdom không cài đặt việc chuyển trang thật (location.href = …) — đó là giới hạn của
+     môi trường chạy thử, không phải lỗi của web, nên không tính vào errors */
+  const vc = new VirtualConsole();
+  vc.on('jsdomError', () => {});
   const dom = new JSDOM(html, {
-    runScripts: 'dangerously', pretendToBeVisual: true, url,
+    runScripts: 'dangerously', pretendToBeVisual: true, url, virtualConsole: vc,
     beforeParse(w) {
       w.addEventListener('error', e => errors.push('win: ' + ((e.error && e.error.stack) || e.message)));
       w.console.error = (...a) => errors.push('cerr: ' + a.join(' '));

@@ -55,6 +55,11 @@ npx wrangler deploy
 
 ## 2. Nạp dữ liệu hiện có lên KV (1 lần)
 
+> **Không biết chạy lệnh?** Bỏ qua cả mục này — mở `https://<web-của-bạn>/admin`, dán URL Worker + `ADMIN_KEY`,
+> bấm **Kiểm tra & kết nối**, rồi bấm **↑ Nạp dữ liệu lên KV**. Nút này làm y hệt lệnh bên dưới
+> (đọc `data/registry.json` + 62 bộ trong `data/book/`, đẩy lên KV, có thanh tiến trình `12/62`).
+> Lệnh dòng lệnh chỉ dành cho ai thích chạy trên máy.
+
 ```bash
 python3 tools/push_to_kv.py --api https://chuseoz-cms.xxx.workers.dev --key "$ADMIN_KEY"
 ```
@@ -71,6 +76,47 @@ python3 tools/push_to_kv.py --api https://... --key "$ADMIN_KEY" --verify # so t
 
 Không có Python cũng không sao: trong trang quản trị đã có nút **Nạp toàn bộ lên KV** làm đúng việc này.
 
+### Nếu muốn chạy lệnh trên máy — từng bước
+
+1. **Cài Python 3** (nếu chưa có): tải ở <https://www.python.org/downloads/> → khi cài nhớ tích **Add python.exe to PATH**.
+2. **Lấy code về máy**: trên GitHub mở repo → nút **Code** → **Download ZIP** → giải nén
+   (hoặc `git clone https://github.com/Chaereve/ssochuz.git` nếu đã có Git).
+3. **Mở cửa sổ lệnh ngay trong thư mục vừa giải nén**:
+   - Windows: mở thư mục trong File Explorer → bấm vào thanh địa chỉ → gõ `cmd` → Enter.
+   - macOS: chuột phải thư mục → **Services** → **New Terminal at Folder**.
+4. **Dán lệnh** (thay URL Worker của bạn và mật khẩu `ADMIN_KEY` bạn đã đặt ở bước 1):
+
+   ```bash
+   # Windows (cmd)
+   python tools\push_to_kv.py --api https://chuseoz-cms.xxx.workers.dev --key "mật-khẩu-của-bạn"
+
+   # macOS / Linux
+   python3 tools/push_to_kv.py --api https://chuseoz-cms.xxx.workers.dev --key "mật-khẩu-của-bạn"
+   ```
+
+5. **Dấu hiệu thành công** — in ra 8 dòng `lô 8 bộ -> 200 ...` và kết thúc bằng:
+
+   ```
+   registry + 6 bộ cuối -> 200 {"ok": true, "books": 6, "failed": [], "registry": true}
+   tổng dữ liệu đẩy lên: 26.0 MB
+   {'ok': True, 'kv': True, 'books': 62, 'regRev': '2026-09-12b', ...}
+   ```
+
+   Con số phải là **`books: 62`**. Nếu thấy `401` → sai/thiếu `ADMIN_KEY`; nếu `kv: False` → chưa bind KV với tên `CZ_KV`.
+
+6. **Kiểm tra lại**: `--verify` in `xong — 0 bộ lệch`. Sau khi nạp, mới cần dán URL Worker vào `cz-config.js` (mục 3).
+
+### Thử toàn bộ kênh đăng trước khi lên Cloudflare
+
+Muốn xem tận mắt nút *Nạp dữ liệu lên KV* / *Đăng chương nhanh* hoạt động ra sao mà chưa cần tạo Worker:
+
+```bash
+node tests/mock_worker.mjs 8787          # cần Node.js, không cần cài gì thêm
+# rồi mở http://127.0.0.1:8787/admin.html  → URL Worker: http://127.0.0.1:8787 → khoá: MOCK
+```
+
+Dữ liệu ghi vào RAM của tiến trình đó, tắt là hết — Cloudflare thật không bị ảnh hưởng.
+
 ## 3. Nối web vào Worker (1 dòng duy nhất)
 
 Mở file **`cz-config.js`** ở gốc repo, dán URL Worker vào:
@@ -83,6 +129,9 @@ window.CZ_STATS_DIRECT = true;                            // thử đọc số l
 File này được **cả 4 trang** (`index.html`, `reader.html`, `admin.html`) nạp sẵn — sửa một chỗ là toàn web đổi kênh:
 
 - **Có** `CZ_API` → web đọc dữ liệu từ KV (luôn mới, sửa là thấy ngay, không cần deploy lại).
+- Dán URL kiểu nào cũng được — `chuseoz-cms.xxx.workers.dev`, `https://chuseoz-cms.xxx.workers.dev`
+  hay thừa dấu `/` ở cuối đều tự chuẩn hoá. **Đừng quên `https://`** nếu bạn tự sửa chỗ khác:
+  thiếu nó, trình duyệt coi URL là đường dẫn trong web và web sẽ lặng lẽ quay về dữ liệu tĩnh.
 - **Không có / Worker lỗi** → web tự lùi về file `/data/*.json` như cũ (không bao giờ trắng trang).
 
 Trang quản trị: mở `/admin`, mục **Kênh đăng bài** → dán URL Worker + `ADMIN_KEY` → **Kiểm tra & kết nối**

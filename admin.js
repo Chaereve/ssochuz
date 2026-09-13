@@ -77,7 +77,12 @@
   }
 
   /* ------------------------------ kết nối ------------------------------ */
-  function normalizeApi(u) { u = String(u || '').trim().replace(/\/+$/, ''); if (u && !/^https?:\/\//.test(u)) u = 'https://' + u; return u; }
+  function normalizeApi(u) {
+    if (window.CZ && window.CZ.normalizeApi) return window.CZ.normalizeApi(u);
+    u = String(u || '').trim().replace(/\/+$/, '');
+    if (u && !/^https?:\/\//i.test(u)) u = 'https://' + u;
+    return u;
+  }
   function setConn(kind, text) {
     var c = $('#chConn'); c.className = 'chip ' + (kind || '');
     $('#chConnTxt').textContent = text;
