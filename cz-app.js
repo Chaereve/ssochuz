@@ -224,66 +224,67 @@
 
   /* ======================= 3. BỘ ICON ================================== */
   var P = {
-    search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/>',
-    book: '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M19 18v3H6.5A2.5 2.5 0 0 1 4 18.5"/>',
-    library: '<path d="M4 4h5v16H4zM15 4h5v16h-5zM9 8h6M9 16h6"/>',
-    home: '<path d="m4 10.5 8-6.5 8 6.5V20H4z"/><path d="M9.5 20v-6h5v6"/>',
-    trophy: '<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H5a2 2 0 0 0 2 4M17 6h2a2 2 0 0 1-2 4"/><path d="M12 14v3M9 20h6M10 17h4"/>',
-    calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/>',
-    film: '<rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="M8 4.5v15M16 4.5v15M3 12h18M3 8.2h5M3 15.8h5M16 8.2h5M16 15.8h5"/>',
-    tv: '<rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="m8.5 3 3.5 4 3.5-4"/>',
-    users: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 5.5a3.2 3.2 0 0 1 0 6.4M17 14.6a5.5 5.5 0 0 1 3.5 5.4"/>',
-    pen: '<path d="M4 20h4l10-10a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5 17.5 10.5"/>',
-    play: '<path d="M7 4.5 19 12 7 19.5z"/>',
-    bookmark: '<path d="M7 4h10v16l-5-4-5 4z"/>',
-    heart: '<path d="M12 20s-7.5-4.4-7.5-9.4A4.1 4.1 0 0 1 12 7.9a4.1 4.1 0 0 1 7.5 2.7c0 5-7.5 9.4-7.5 9.4z"/>',
-    share: '<circle cx="18" cy="5.5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="18.5" r="2.5"/><path d="M8.3 10.8 15.7 6.7M8.3 13.2l7.4 4.1"/>',
-    check: '<path d="m5 13 4.5 4.5L19 7"/>',
-    moon: '<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/>',
-    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/>',
-    x: '<path d="M6 6l12 12M18 6 6 18"/>',
-    star: '<path d="m12 4 2.4 5 5.6.8-4 3.9 1 5.5-5-2.7-5 2.7 1-5.5-4-3.9 5.6-.8z"/>',
-    fire: '<path d="M12 21a4 4 0 0 0 4-4c0-2-2-4-4-6-2 2-4 4-4 6a4 4 0 0 0 4 4z"/><path d="M12 3s2 2 2 4"/>',
-    list: '<path d="M4 6h16M4 12h16M4 18h16"/>',
-    left: '<path d="m14 6-6 6 6 6"/>',
-    right: '<path d="m10 6 6 6-6 6"/>',
-    up: '<path d="m6 14 6-6 6 6"/>',
-    down: '<path d="m6 10 6 6 6-6"/>',
-    gear: '<circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2 2 2 0 1 1-4 0 1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.5-2.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 4.6a2 2 0 1 1 4 0 1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 21 11a2 2 0 1 1 0 4z"/>',
-    expand: '<path d="M9 3H4v5M15 3h5v5M9 21H4v-5M15 21h5v-5"/>',
-    thumb: '<path d="M7 21V10l5-7 1.2.6a2 2 0 0 1 1 2.3L13.5 9H19a2 2 0 0 1 2 2.3l-1.2 7A2 2 0 0 1 17.8 20H7z"/><path d="M7 10H4v11h3"/>',
-    chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12z"/>',
-    alert: '<path d="M12 3.5 21 20H3z"/><path d="M12 9v5M12 17h.01"/>',
-    eye: '<path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
-    clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
-    menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
-    plus: '<path d="M12 5v14M5 12h14"/>',
+    search: '<circle cx="11" cy="11" r="6"/><path d="m15.5 15.5 4 4" stroke-linecap="round"/>',
+    book: '<path d="M5 5.5a2 2 0 0 1 2-2h11v14H7a2 2 0 0 0-2 2z"/><path d="M7 8h9" opacity=".5"/>',
+    library: '<path d="M5 4.5h3.5a1.5 1.5 0 0 1 1.5 1.5v13a1.5 1.5 0 0 0-1.5-1.5H5zM12 4.5h3.5a1.5 1.5 0 0 1 1.5 1.5v13a1.5 1.5 0 0 0-1.5-1.5H12zM19 4.5V19M8 8h2M15 8h2"/>',
+    home: '<path d="M4 10.2 12 4l8 6.2V20H4z"/><path d="M10 20v-6h4v6" />',
+    trophy: '<path d="M8 4h8v4a4 4 0 0 1-8 0V4z"/><path d="M6 5H4a2 2 0 0 0 2 3M18 5h2a2 2 0 0 1-2 3"/><path d="M12 12v3M9 19h6"/>',
+    calendar: '<rect x="4" y="5" width="16" height="14" rx="3"/><path d="M8 3v3M16 3v3M4 9h16"/>',
+    film: '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M8 5v14M16 5v14M3 9h18M3 15h18"/>',
+    tv: '<rect x="4" y="7" width="16" height="11" rx="3"/><path d="M8 4 12 7l4-3"/>',
+    users: '<circle cx="9" cy="8" r="3"/><path d="M4 19a6 6 0 0 1 10 0M14 8a3 3 0 0 1 3 3v1M16 14a5 5 0 0 1 4 5"/>',
+    pen: '<path d="M5 19l3-1 9-9a2 2 0 0 0-2.8-2.8L5 15l-1 4z"/><path d="M13 6l4 4"/>',
+    play: '<path d="M8 6.5a1 1 0 0 1 1.5-.8l8 4.5a1 1 0 0 1 0 1.6l-8 4.5A1 1 0 0 1 8 16z"/>',
+    bookmark: '<path d="M6 4h12v14l-6-3-6 3V4z"/>',
+    heart: '<path d="M12 19.5s-6.5-4-6.5-8a3.8 3.8 0 0 1 6.5-2.7A3.8 3.8 0 0 1 18.5 11.5c0 4-6.5 8-6.5 8z"/>',
+    share: '<circle cx="18" cy="6" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.8 15.8 7.2M8.2 13.2l7.6 3.6"/>',
+    check: '<path d="m5.5 12 4 4 8-10" stroke-linecap="round" stroke-linejoin="round"/>',
+    moon: '<path d="M18 13.5A7 7 0 1 1 10.5 6 6 6 0 0 0 18 13.5z"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M4 12h2M18 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17 5.6 18.4"/>',
+    x: '<path d="M6 6l12 12M18 6 6 18" stroke-linecap="round"/>',
+    star: '<path d="m12 3.5 2.2 4.6 5 .7-3.6 3.5.8 5-4.4-2.3-4.4 2.3.8-5L5 8.8l5-.7z"/>',
+    fire: '<path d="M12 20a4 4 0 0 0 4-4c0-2.5-2-4.5-4-7-2 2.5-4 4.5-4 7a4 4 0 0 0 4 4z"/>',
+    list: '<path d="M5 6h14M5 12h14M5 18h14" stroke-linecap="round"/>',
+    left: '<path d="m14 6-6 6 6 6" stroke-linecap="round" stroke-linejoin="round"/>',
+    right: '<path d="m10 6 6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/>',
+    up: '<path d="m6 14 6-6 6 6" stroke-linecap="round" stroke-linejoin="round"/>',
+    down: '<path d="m6 10 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/>',
+    gear: '<circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/>',
+    expand: '<path d="M8 3H5v3M16 3h3v3M8 21H5v-3M16 21h3v-3"/>',
+    thumb: '<path d="M7 21V11l4-5h1a1 1 0 0 1 1 1v1h4a1 1 0 0 1 1 1l-1 6a2 2 0 0 1-2 2H11zM4 11h3v10H4z"/>',
+    chat: '<path d="M20 11a7 7 0 0 1-11 6.3L5 19l1.7-4A7 7 0 0 1 20 11z"/>',
+    alert: '<path d="M12 4 20 19H4L12 4z"/><path d="M12 9v4M12 17h.01"/>',
+    eye: '<path d="M2.5 12S6 6 12 6s9.5 6 9.5 6S18 18 12 18 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.5"/>',
+    clock: '<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>',
+    menu: '<path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round"/>',
+    plus: '<path d="M12 5v14M5 12h14" stroke-linecap="round"/>',
     trash: '<path d="M4 7h16M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13M9 7V4h6v3"/>',
-    edit: '<path d="M4 20h4l10-10a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5 17.5 10.5"/>',
-    refresh: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 5v6h-6"/>',
-    download: '<path d="M12 4v11m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/>',
-    upload: '<path d="M12 20V9m0 0 4 4m-4-4-4 4"/><path d="M5 5h14"/>',
-    cloud: '<path d="M7 18a4 4 0 0 1 .6-8 5.5 5.5 0 0 1 10.6 1.6A3.5 3.5 0 0 1 17.5 18z"/>',
-    key: '<circle cx="8" cy="15" r="3.5"/><path d="m10.5 12.5 7-7 2 2-2 2 1.5 1.5-2 2L15.5 11l-2.5 2.5"/>',
-    lock: '<rect x="4.5" y="10" width="15" height="10.5" rx="2.5"/><path d="M8 10V7.5a4 4 0 0 1 8 0V10"/>',
-    link: '<path d="M10 13a4 4 0 0 0 5.7 0l2.6-2.6a4 4 0 1 0-5.7-5.7L11.5 5.8"/><path d="M14 11a4 4 0 0 0-5.7 0l-2.6 2.6a4 4 0 1 0 5.7 5.7l1.1-1.1"/>',
-    filter: '<path d="M4 6h16M7 12h10M10 18h4"/>',
-    grid: '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
-    rows: '<rect x="4" y="5" width="16" height="4" rx="1.5"/><rect x="4" y="15" width="16" height="4" rx="1.5"/><rect x="4" y="10.2" width="16" height="3.6" rx="1.5"/>',
-    info: '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/>',
-    cloud2: '<path d="M6 18a3.5 3.5 0 0 1 .5-7A5 5 0 0 1 16 9.5 3.7 3.7 0 0 1 16.5 18z"/>',
-    chart: '<path d="M4 20V6M10 20V10M16 20v-7M22 20H2"/>',
-    save: '<path d="M5 4h11l3 3v13H5z"/><path d="M9 4v5h6V4M8 20v-6h8v6"/>',
-    sparkle: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/>',
-    clock2: '<circle cx="12" cy="12" r="8.5"/><path d="M12 8v4.5l3 1.5"/>',
-    mail: '<rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="M3.5 6.5 12 12l8.5-5.5"/>',
-    heart_hand: '<path d="M12 20s-6-3.6-6-7.5A3.5 3.5 0 0 1 12 9a3.5 3.5 0 0 1 6 3.5C18 16.4 12 20 12 20z"/>',
-    donate: '<path d="M12 20s-6-3.6-6-7.5A3.5 3.5 0 0 1 12 9a3.5 3.5 0 0 1 6 3.5C18 16.4 12 20 12 20z"/><path d="M8 14h8M12 10v8"/>',
-    copy: '<rect x="9" y="9" width="10" height="10" rx="2"/><path d="M5 15V7a2 2 0 0 1 2-2h8"/>'
+    edit: '<path d="M5 19l3-1 8-8a2 2 0 0 0-2.8-2.8L5 16l-1 4z"/>',
+    refresh: '<path d="M20 11a8 8 0 1 0-2 5M20 5v5h-5"/>',
+    download: '<path d="M12 4v10M8 10l4 4 4-4"/><path d="M4 19h16"/>',
+    upload: '<path d="M12 15V4M8 8l4-4 4 4"/><path d="M4 19h16"/>',
+    cloud: '<path d="M7 18a3 3 0 0 1 0-6 4 4 0 0 1 7.5-1.5A3 3 0 0 1 17 18z"/>',
+    key: '<circle cx="8" cy="14" r="3"/><path d="m10.5 11.5 7-7a1 1 0 0 1 1.4 0l1 1a1 1 0 0 1 0 1.4l-7 7"/>',
+    lock: '<rect x="5" y="10" width="14" height="9" rx="2"/><path d="M8 10V8a4 4 0 0 1 8 0v2"/>',
+    link: '<path d="M9 13a3 3 0 0 0 4 0l2-2a3 3 0 0 0-4-4l-1 1M15 11a3 3 0 0 0-4 0l-2 2a3 3 0 0 0 4 4l1-1"/>',
+    filter: '<path d="M4 6h16l-4 5v5l-4 2v-7L4 6z"/>',
+    grid: '<rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/>',
+    rows: '<rect x="4" y="5" width="16" height="3" rx="1.5"/><rect x="4" y="10.5" width="16" height="3" rx="1.5"/><rect x="4" y="16" width="16" height="3" rx="1.5"/>',
+    info: '<circle cx="12" cy="12" r="8"/><path d="M12 11v4M12 8h.01"/>',
+    cloud2: '<path d="M6 18a3 3 0 0 1 0-6A4 4 0 0 1 15 9a3 3 0 0 1 1 6z"/>',
+    chart: '<path d="M4 19V5M9 19V10M14 19v-5M19 19V8"/>',
+    save: '<path d="M5 4h11l2 2v14H5z"/><path d="M9 4v5h5V4M8 19v-5h8v5"/>',
+    sparkle: '<path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l1.2 1.2M17.2 17.2l1.2 1.2M18.4 5.6l-1.2 1.2M6.8 17.2l-1.2 1.2"/><circle cx="12" cy="12" r="2.5"/>',
+    clock2: '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 1.5"/>',
+    mail: '<rect x="4" y="5" width="16" height="13" rx="2"/><path d="M4 6.5 12 11l8-4.5"/>',
+    heart_hand: '<path d="M12 19s-5-3-5-6.5A3 3 0 0 1 12 9a3 3 0 0 1 5 3.5C17 16 12 19 12 19z"/>',
+    donate: '<path d="M12 19s-5-3-5-6.5A3 3 0 0 1 12 9a3 3 0 0 1 5 3.5C17 16 12 19 12 19z"/><path d="M8.5 13.5h7M12 10v7"/>',
+    copy: '<rect x="9" y="9" width="10" height="10" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h7"/>',
+    momo: '<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8 12c0-2 1.5-4 4-4s4 2 4 4-1.5 4-4 4-4-2-4-4z"/><circle cx="12" cy="12" r="1.5"/>'
   };
   function icon(name, cls) {
     var p = P[name] || P.info;
-    return '<svg class="i ' + (cls || '') + '" viewBox="0 0 24 24" aria-hidden="true">' + p + '</svg>';
+    return '<svg class="i ' + (cls || '') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + '</svg>';
   }
 
   /* ======================= 4. TIỆN ÍCH ================================= */
@@ -697,14 +698,12 @@
   /* ======================= 8. ĐẦU TRANG / CHÂN TRANG =================== */
   function mountHeader(host, active) {
     if (!host) return;
-    /* thứ tự mục khớp đúng thứ tự trên trang chủ: mới cập nhật → xếp hạng → lịch → thư viện → hướng dẫn
-       ưu tiên icon thay vì chữ theo yêu cầu */
+    /* header gọn: 4 mục chính, icon + label rõ, không rối */
     var NAV = [
-      { k: 'new', l: 'Mới cập nhật', i: 'sparkle', h: '/#moi-cap-nhat' },
-      { k: 'rank', l: 'Xếp hạng', i: 'trophy', h: '/#bxh' },
-      { k: 'sched', l: 'Lịch ra chương', i: 'calendar', h: '/#lich' },
       { k: 'library', l: 'Thư viện', i: 'library', h: '/#thu-vien' },
-      { k: 'guide', l: 'Hướng dẫn', i: 'info', h: '/guide' }
+      { k: 'new', l: 'Mới', i: 'sparkle', h: '/#moi-cap-nhat' },
+      { k: 'rank', l: 'BXH', i: 'trophy', h: '/#bxh' },
+      { k: 'sched', l: 'Lịch', i: 'calendar', h: '/#lich' }
     ];
     var links = NAV.map(function (n) {
       return '<a href="' + n.h + '" data-k="' + n.k + '"' + (n.k === active ? ' class="on"' : '') + ' title="' + esc(n.l) + '" aria-label="' + esc(n.l) + '">' +
@@ -719,17 +718,15 @@
       '<a class="logo" href="/"><span class="dot"></span>chuseoz<i>.</i></a>' +
       '<nav class="nav" id="czNav"><span class="ink" id="czInk" aria-hidden="true"></span>' + links + '</nav>' +
       '<span class="grow"></span>' +
-      '<button class="hbtn" id="czJump" title="Tìm truyện (Ctrl/Cmd + K)">' + icon('search', 'i-s') +
-        '<span class="searchbtn-txt">Tìm truyện…</span><span class="k">⌘K</span></button>' +
-      '<button class="hbtn" id="czAuthBtn" title="Đăng nhập Google">' + icon('users', 'i-s') + '<span class="searchbtn-txt" id="czAuthTxt">Đăng nhập</span></button>' +
-      '<button class="hbtn icon" id="czTheme" title="Sáng / Tối" aria-label="Đổi nền sáng tối">' + icon('moon', 'i-s') + '</button>' +
-      '<a class="hbtn icon" href="/admin" title="Trang quản trị" aria-label="Trang quản trị">' + icon('gear', 'i-s') + '</a>' +
+      '<button class="hbtn" id="czJump" title="Tìm truyện (⌘K)">' + icon('search', 'i-s') +
+        '<span class="searchbtn-txt">Tìm…</span><span class="k">⌘K</span></button>' +
+      '<button class="hbtn icon" id="czTheme" title="Sáng / Tối" aria-label="Đổi nền">' + icon('moon', 'i-s') + '</button>' +
       '<button class="hbtn icon burger" id="czBurger" aria-label="Mở menu">' + icon('menu', 'i-s') + '</button>' +
       '</div>' +
       '<div class="mnav" id="czMnav">' + mLinks +
-      '<a href="/#ban-doc">' + icon('bookmark', 'i-s') + ' Bàn đọc của bạn</a>' +
-      '<a href="/admin">' + icon('gear', 'i-s') + ' Trang quản trị</a>' +
-      '<a href="#" id="czAuthM">' + icon('users', 'i-s') + ' <span id="czAuthMTxt">Đăng nhập</span></a></div>';
+      '<a href="/#ban-doc">' + icon('bookmark', 'i-s') + ' Bàn đọc</a>' +
+      '<a href="/guide">' + icon('info', 'i-s') + ' Hướng dẫn</a>' +
+      '<a href="/admin">' + icon('gear', 'i-s') + ' Quản trị</a></div>';
 
     var tb = host.querySelector('#czTheme');
     function paintTheme() {
@@ -816,31 +813,40 @@
     d.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('#czNav a'); if (a) mark(a); });
     run();
   }
-  /* chân trang v2 clean: gọn, phi thương mại, icon thay chữ, không còn Follow us */
+  /* chân trang v3 clean: tối giản, donation chỉ icon, rõ chức năng */
   function mountFooter(host) {
     if (!host) return;
     host.className = 'ftr';
     var cfg = reportCfg();
     var email = cfg.email || 'chuseoz.ofc@gmail.com';
     var form = cfg.form || 'https://forms.gle/YW3PvtrNVQ7xt8nCA';
+    var dCfg = donationCfg();
+    var momoLink = (dCfg && dCfg.momoLink) || dCfg.momo || '#';
+    var donationIcon = dCfg && dCfg.enabled ? '<a href="' + esc(momoLink) + '" target="_blank" rel="noopener" class="donate" title="Ủng hộ qua Momo" aria-label="Ủng hộ Momo">' + icon('momo','i-s') + '</a>' : '';
     host.innerHTML = '<div class="in">' +
       '<div class="fmain">' +
-        '<div class="fcol fbrand">' +
-          '<a class="logo" href="/"><span class="dot"></span>chuseoz<i>.</i></a>' +
-          '<p class="fdesc">Trang hoạt động phi thương mại, phi lợi nhuận — được duy trì bởi tình yêu với truyện chuyển thể. Cảm ơn bạn đã ủng hộ và đồng hành cùng chuseoz.</p>' +
-        '</div>' +
-        '<div class="fcol fnav">' +
-          '<div class="fsocial" aria-label="Liên kết nhanh">' +
-            '<a href="/#thu-vien" title="Thư viện" aria-label="Thư viện">' + icon('library','i-s') + '</a>' +
-            '<a href="/#bxh" title="Xếp hạng" aria-label="Xếp hạng">' + icon('trophy','i-s') + '</a>' +
-            '<a href="/#lich" title="Lịch ra chương" aria-label="Lịch ra chương">' + icon('calendar','i-s') + '</a>' +
-            '<a href="/#moi-cap-nhat" title="Mới cập nhật" aria-label="Mới cập nhật">' + icon('sparkle','i-s') + '</a>' +
-            '<a href="/guide" title="Hướng dẫn sử dụng" aria-label="Hướng dẫn sử dụng">' + icon('info','i-s') + '</a>' +
-            '<a href="https://www.facebook.com/profile.php?id=61592803761987" target="_blank" rel="noopener" title="Facebook" aria-label="Facebook">' + icon('users','i-s') + '</a>' +
-            '<a href="mailto:' + esc(email) + '" title="Email: ' + esc(email) + '" aria-label="Email">' + icon('mail','i-s') + '</a>' +
-            '<a href="' + esc(form) + '" target="_blank" rel="noopener" title="Form khảo sát / báo lỗi" aria-label="Form khảo sát">' + icon('edit','i-s') + '</a>' +
+        '<div class="ftop">' +
+          '<div class="fbrand">' +
+            '<a class="logo" href="/"><span class="dot"></span>chuseoz<i>.</i></a>' +
+            '<p class="fdesc">Trang hoạt động phi thương mại, phi lợi nhuận — được duy trì bởi tình yêu với truyện chuyển thể. Cảm ơn bạn đã ủng hộ và đồng hành cùng chuseoz.</p>' +
+          '</div>' +
+          '<div class="fnav">' +
+            '<div class="fsocial" aria-label="Liên kết nhanh">' +
+              '<a href="/#thu-vien" title="Thư viện truyện" aria-label="Thư viện">' + icon('library','i-s') + '</a>' +
+              '<a href="/#bxh" title="Bảng xếp hạng" aria-label="Xếp hạng">' + icon('trophy','i-s') + '</a>' +
+              '<a href="/#lich" title="Lịch ra chương" aria-label="Lịch">' + icon('calendar','i-s') + '</a>' +
+              '<a href="/#moi-cap-nhat" title="Truyện mới cập nhật" aria-label="Mới">' + icon('sparkle','i-s') + '</a>' +
+              '<a href="/guide" title="Hướng dẫn sử dụng" aria-label="Hướng dẫn">' + icon('info','i-s') + '</a>' +
+            '</div>' +
+            '<div class="fsocial" aria-label="Liên hệ & ủng hộ">' +
+              '<a href="https://www.facebook.com/profile.php?id=61592803761987" target="_blank" rel="noopener" title="Facebook chuseoz" aria-label="Facebook">' + icon('users','i-s') + '</a>' +
+              '<a href="mailto:' + esc(email) + '" title="Gửi email: ' + esc(email) + '" aria-label="Email">' + icon('mail','i-s') + '</a>' +
+              '<a href="' + esc(form) + '" target="_blank" rel="noopener" title="Báo lỗi / Góp ý qua form" aria-label="Form">' + icon('edit','i-s') + '</a>' +
+              donationIcon +
+            '</div>' +
           '</div>' +
         '</div>' +
+        '<div class="fbottom"><span>© ' + (new Date().getFullYear()) + ' chuseoz · phi lợi nhuận</span><span><a href="/guide">Hướng dẫn</a> · <a href="mailto:' + esc(email) + '">Liên hệ</a></span></div>' +
       '</div></div>';
   }
   function mountShell(opt) {
