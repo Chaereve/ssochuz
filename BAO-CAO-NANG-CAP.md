@@ -52,12 +52,16 @@ Nếu chưa nối Worker, admin vẫn xem được dữ liệu và có thể **X
 - Thêm kệ **“Đọc tiếp”**: chỉ hiện những bộ bạn thực sự đang đọc dở, kèm thanh tiến độ và nút nhảy đúng chương kế tiếp
   (dữ liệu lấy từ tiến độ đọc trong máy — không phải số đoán).
 - Thanh thống kê đếm số khi cuộn tới; các mục trong trang hiện dần; thẻ truyện hiện theo nhịp.
+- Thêm mục **“Tủ truyện của bạn”**: chỉ hiện những bộ bạn đã bấm *Tủ truyện* / *Lưu*, có thanh tiến độ,
+  nút đọc tiếp, bỏ từng bộ (✕) hoặc **Xoá hết**. Không tự thêm bộ nào.
 - Hiệu năng: `preconnect` tới máy chủ ảnh, ảnh bìa hero `fetchpriority=high`, ảnh còn lại `loading=lazy` +
   `content-visibility`, giữ `width/height` để không nhảy bố cục.
 - Một lỗi nhỏ khi dựng dữ liệu **không còn làm trắng cả trang** (có thông báo + link tải lại).
 
 **Trang truyện (trong trang chủ)**
 - Nút đọc ghi đúng chương đang đọc dở; chương đã đọc có dấu ✓; chương hiện tại được đánh dấu.
+- **Nút Tủ truyện** (lưu/bỏ lưu, sáng lên khi đã lưu) và **nút Chia sẻ** (copy link bộ truyện) — trước đây
+  hai nút này bấm không có gì xảy ra; nút *Theo dõi* rỗng đã bỏ.
 - Tìm chương, sắp xếp, phân trang, liên kết bài gốc Blogger.
 
 **Trang đọc**
@@ -106,6 +110,7 @@ Chạy `python3 tools/audit_data.py --md BAO-CAO-DU-LIEU.md` (báo cáo đầy �
 | `id` trùng `fStatus` (bộ lọc và ô sửa) | bộ lọc tình trạng ở admin lấy sai giá trị | đã sửa |
 | `id` trùng `listName` (nút và mục lục) | tên bộ trong mục lục bị ghi đè | đã sửa |
 | `/truyen/<slug>/` phụ thuộc `cz-data.js` | mạng chập là trang đọc chết | đã thêm bản dự phòng |
+| 3 nút trong trang truyện bấm không có gì | người dùng tưởng đã lưu/theo dõi nhưng thực ra không lưu gì | đã sửa |
 | 6 workflow tạm còn sót | chạy tốn CI, commit rác mỗi lần chạy | đã xoá |
 | `data/book/*` không khớp registry | nguy cơ hiện sai số chương | đã soát: 0 lệch |
 
@@ -137,7 +142,7 @@ node run.js
 
 ## 7. Còn có thể làm tiếp (nếu bạn muốn)
 
-- Nút “Tủ truyện” riêng trên trang chủ (hiện chỉ lọc theo tiến độ đọc trong máy).
+- Nút “Theo dõi” (nhận thông báo khi bộ có chương mới) — cần Worker gửi thông báo mới làm thật được.
 - Gửi bình luận/lượt thích qua Worker để lưu chung (hiện chỉ lưu trong máy từng người).
 - Chia nhỏ `data/book/*.json` thành từng chương để tải chương nhanh hơn (~27 MB hiện tại).
 - Xoá code cũ không còn dùng trong theme Blogger (`blogger-theme/`) nếu bạn không cần build theme nữa.

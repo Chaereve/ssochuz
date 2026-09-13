@@ -49,6 +49,23 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   // lọc + phân trang
   const tabs = $$('#tabs .tab'); click(tabs[1]); await wait(120);
   out.tabsLabel = tabs.map(t => t.textContent.trim()).join('|');
+  // tủ truyện: nút trong trang truyện + mục trên trang chủ
+  click($('#dBack')); await wait(120);
+  out.shelfHiddenFirst = $('#secShelf').hidden;
+  q.value = 'love on hire'; q.dispatchEvent(new win.Event('input', { bubbles: true })); await wait(220);
+  click($$('#grid .card')[0]); await wait(260);
+  out.shelfBtnBefore = $('#dShelfBtn').classList.contains('on');
+  click('#dShelfBtn'); await wait(120);
+  out.shelfBtnAfter = { on: $('#dShelfBtn').classList.contains('on'), ls: LS.getItem('chuseoz-shelf'), toast: txt('#toastS') };
+  click('#dBack'); await wait(200);
+  out.shelfSection = { hidden: $('#secShelf').hidden, rows: $$('#shelfRow .cont').length, sub: txt('#shelfSub'), title: txt('#shelfRow .cont b') };
+  click($$('#shelfRow .cont')[0]); await wait(200);
+  out.shelfOpens = $('#app').dataset.view;
+  click('#dBack'); await wait(150);
+  q.value = ''; q.dispatchEvent(new win.Event('input', { bubbles: true })); await wait(200);
+  click($$('#shelfRow [data-rm]')[0]); await wait(200);
+  out.shelfAfterRemove = { rows: $$('#shelfRow .cont').length, hidden: $('#secShelf').hidden, ls: LS.getItem('chuseoz-shelf') };
+
   // truyện 0 chương: phải khoá đọc
   click(tabs[0]); await wait(80);
   q.value = 'my boss'; q.dispatchEvent(new win.Event('input', { bubbles: true })); await wait(200);
