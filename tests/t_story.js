@@ -143,6 +143,33 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     reading: r4.doc.body.classList.contains('reading')
   };
 
+  /* ---------- số chương hiển thị lấy từ TIÊU ĐỀ, không lấy vị trí ----------
+     “Third Person” mở đầu bằng “Lời Mở Đầu” nên vị trí 2 thực ra là “Chương 1”. */
+  const r5 = page('truyen.html', {
+    url: 'https://chuseoz.pages.dev/truyen/third-person/#chuong-2',
+    fetch: dataFetch({ apiBase: 'https://cms.test' })
+  });
+  await wait(900);
+  const rows5 = [...r5.doc.querySelectorAll('#chapGrid .cha')].slice(0, 3)
+    .map(a => a.querySelector('.no').textContent + '|' + a.querySelector('.nm').textContent);
+  click5(r5, '#rdBar button[title]');   /* mở ngăn kéo mục lục */
+  await wait(200);
+  const toc5 = [...r5.doc.querySelectorAll('#tocList a')].slice(0, 3)
+    .map(a => a.querySelector('.no').textContent + '|' + a.querySelector('.nm').textContent);
+  out.danhSoChuong = {
+    tieuDe: r5.doc.querySelector('#rdHead').textContent,
+    nhanChuong: r5.doc.querySelector('#rdSub').textContent,
+    crumb: r5.doc.querySelector('#rdCrumb').textContent.replace(/\s+/g, ' ').trim(),
+    luoi3DongDau: rows5,
+    mucLuc3DongDau: toc5,
+    loi: r5.errors.slice(0, 3)
+  };
+  function click5(pp, sel, txt) {
+    const el = txt ? [...pp.doc.querySelectorAll(sel)].find(e => e.textContent.includes(txt)) : pp.doc.querySelector(sel);
+    if (el) el.dispatchEvent(new pp.win.MouseEvent('click', { bubbles: true }));
+    return !!el;
+  }
+
 out.errors1 = errors.slice(0, 6);
   console.log(JSON.stringify(out, null, 1));
   process.exit(0);

@@ -447,8 +447,7 @@
     var img = n.thumb || n.slide || '';
     return '<a class="card' + (list ? ' list' : '') + '" href="' + esc(storyURL(n.slug)) + '" data-t="' + esc(n.title) + '" title="' + esc(n.title) + '">' +
       '<div class="th' + (img ? ' skel' : '') + '">' +
-      (img ? '<img src="' + esc(img) + '" alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" width="300" height="450"' +
-        ' onload="this.parentNode.classList.remove(\'skel\')" onerror="this.parentNode.classList.remove(\'skel\');this.remove()">' : '') +
+      (img ? '<img src="' + esc(img) + '" alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" width="300" height="450">' : '') +
       '<span class="scrim"></span>' +
       '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(n.status || 'Đang cập nhật') + '</span>' +
       (n.is18 ? '<span class="b18">18+</span>' : '') +
@@ -466,15 +465,22 @@
     el.innerHTML = list.map(function (n) { return card(n, opts); }).join('');
   }
   /* ---- ảnh hỏng (bị chặn hotlink, mạng yếu) → khung vẫn đẹp, không hiện icon vỡ ----
-     Ảnh trong bài đọc thì giữ chỗ và hiện chữ thay thế; ảnh bìa thì bỏ ảnh, để lại khung. */
-  d.addEventListener('error', function (e) {
+     Ảnh trong bài đọc thì giữ chỗ và hiện chữ thay thế; ảnh bìa thì bỏ ảnh,
+     bỏ luôn khung xám chờ để không nhấp nháy mãi. Một chỗ duy nhất cho cả hai
+     sự kiện: ảnh lỗi bị gỡ khỏi trang vẫn có thể bắn tiếp sự kiện lỗi. */
+  function imgSettle(e) {
     var el = e.target;
     if (!el || String(el.tagName || '').toUpperCase() !== 'IMG') return;
-    if (el.closest && el.closest('.rtext')) { el.classList.add('badimg'); return; }
-    var box = el.parentNode;
+    if (el.closest && el.closest('.rtext')) { if (e.type === 'error') el.classList.add('badimg'); return; }
+    var box = el.closest && el.closest('.skel');
+    if (box) box.classList.remove('skel');
+    if (e.type !== 'error') return;
+    box = el.parentNode;
     if (el.remove) el.remove();
-    if (box && box.classList && box !== d.body) box.classList.add('noimg');
-  }, true);
+    if (box && box.classList && box.classList !== d.body.classList) box.classList.add('noimg');
+  }
+  d.addEventListener('error', imgSettle, true);
+  d.addEventListener('load', imgSettle, true);
 
   /* hiệu ứng hiện dần khi cuộn tới (tôn trọng giảm chuyển động) */
   var reduce = !!(w.matchMedia && w.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -531,12 +537,6 @@
     w.addEventListener('scroll', run, { passive: true }); run();
     if (top) top.addEventListener('click', function () { w.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }); });
   }
-  /* ảnh lỗi → bỏ khung xám */
-  d.addEventListener('error', function (e) {
-    var im = e.target;
-    if (im && im.tagName === 'IMG' && im.parentNode && im.parentNode.classList) im.parentNode.classList.remove('skel');
-  }, true);
-
   /* ======================= 7. ĐẦU TRANG / CHÂN TRANG =================== */
   function mountHeader(host, active) {
     if (!host) return;

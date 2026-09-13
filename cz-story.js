@@ -77,6 +77,29 @@
     return tmp.innerHTML;
   }
 
+  /* ---- số chương lấy từ CHÍNH tiêu đề ----------------------------------
+     Dữ liệu Blogger hay mở đầu bằng “Lời Mở Đầu”, nên số thứ tự trong danh
+     sách lệch với số ghi trên tiêu đề (“Chương 1”, “Chương 2”…). Chỗ nào
+     người đọc thấy thì dùng số trong tiêu đề; chương không ghi số thì gọi
+     bằng đúng tên của nó. */
+  function chapSplit(c) {
+    var t = String((c && c.t) || '').trim();
+    var m = /^(?:chương|chap|chapter)\s*(\d+)\s*[:.\-–—]?\s*(.*)$/i.exec(t);
+    if (m) return { no: parseInt(m[1], 10), name: m[2] || t, full: t };
+    return { no: 0, name: t || 'Chương', full: t };
+  }
+  function chapLabel(i) {                     /* i: vị trí 1-based trong sách */
+    var c = CHS[i - 1];
+    if (!c) return 'Chương ' + i;
+    var x = chapSplit(c);
+    return x.no ? 'Chương ' + x.no : (x.name || ('Chương ' + i));
+  }
+  function chapTotal() {
+    var mx = 0;
+    for (var i = 0; i < CHS.length; i++) mx = Math.max(mx, chapSplit(CHS[i]).no);
+    return mx || CHS.length;
+  }
+
   /* ======================= 3. TRANG TRUYỆN ============================== */
   function progressPct(n, ch) {
     var tot = n.chapters || 0;
@@ -85,8 +108,9 @@
   }
   function readBtn(n, ch) {
     if (!n.canRead) return '<button class="btn pri lg off" disabled>' + ic('clock', 'i-s') + 'Chưa có chương — sắp ra mắt</button>';
-    return '<a class="btn pri lg" href="#chuong-' + (ch || 1) + '">' + ic('play', 'i-s') +
-      (ch > 1 ? 'Đọc tiếp chương ' + ch : 'Đọc từ chương 1') + '</a>';
+    return '<a class="btn pri lg" href="#chuong-' + (ch || 1) + '" title="' +
+      (ch > 1 ? 'Mở đúng chỗ bạn đang đọc dở' : 'Bắt đầu từ chương đầu') + '">' + ic('play', 'i-s') +
+      (ch > 1 ? 'Đọc tiếp' : 'Đọc từ đầu') + '</a>';
   }
   function renderStory() {
     var n = N, ch = CZ.progress(n);
@@ -116,7 +140,7 @@
             (n.blog ? '<a class="btn ghost" href="' + esc(n.blog) + '" target="_blank" rel="noopener">' + ic('link', 'i-s') + 'Bài gốc</a>' : '') +
           '</div>' +
           (ch && n.chapters ? '<div class="prog"><div class="lbl"><span>Tiến độ đọc của bạn</span>' +
-            '<span>chương ' + ch + '/' + n.chapters + ' · ' + progressPct(n, ch) + '%</span></div>' +
+            '<span>còn ' + Math.max(0, n.chapters - ch) + ' chương · ' + progressPct(n, ch) + '%</span></div>' +
             '<div class="bar"><i style="width:' + progressPct(n, ch) + '%"></i></div></div>' : '') +
           (n.synFull && n.synFull.length > (n.syn || '').length
             ? '<button class="synbtn mt" id="synMore">Xem mô tả đầy đủ</button>' : '') +
@@ -171,8 +195,9 @@
     }
     $('#chapGrid').innerHTML = slice.length ? slice.map(function (x) {
       var on = x.i === prog ? ' now' : '';
+      var sp = chapSplit(x.c);
       return '<a class="cha' + on + '" href="#chuong-' + x.i + '" data-ch="' + x.i + '" title="' + esc(x.c.t) + '">' +
-        '<span class="no">' + x.i + '</span><span class="nm">' + hl(x.c.t) + '</span>' +
+        '<span class="no">' + (sp.no || '・') + '</span><span class="nm">' + hl(sp.name) + '</span>' +
         (marks.indexOf(x.i) >= 0 ? '<span class="done" title="Chương đã đánh dấu">' + ic('star', 'i-s') + '</span>'
           : (x.i < prog ? '<span class="done" title="Đã đọc">' + ic('check', 'i-s') + '</span>' : '')) + '</a>';
     }).join('') : '<div class="empty" style="grid-column:1/-1">Không tìm thấy chương nào khớp.</div>';
@@ -302,8 +327,9 @@
     $('#tocList').innerHTML = CHS.map(function (c, i) {
       var n = i + 1;
       if (q && c.t.toLowerCase().indexOf(q) < 0 && String(n) !== q) return '';
+      var sp = chapSplit(c);
       return '<a href="#chuong-' + n + '" data-ch="' + n + '" class="' + (n === cur ? 'on' : '') + (n < prog ? ' read' : '') + '">' +
-        '<span class="no">' + n + '</span><span class="nm">' + esc(c.t) + '</span>' +
+        '<span class="no">' + (sp.no || '・') + '</span><span class="nm">' + esc(sp.name) + '</span>' +
         (marks.indexOf(n) >= 0 ? '<span class="ck">' + ic('star', 'i-s') + '</span>'
           : (n < prog ? '<span class="ck">' + ic('check', 'i-s') + '</span>' : '<span></span>')) + '</a>';
     }).join('') || '<div class="empty" style="border:0;background:none">Không có chương nào khớp.</div>';
@@ -367,17 +393,17 @@
     var first = !isPage || PI === 0, last = !isPage || PI >= PAGES.length - 1;
     var paged = s.mode === 'paged' && PAGES.length > 0;
     var left = paged
-      ? (first ? (prev ? 'Chương ' + (cur - 1) : 'Đầu bộ') : 'Trang ' + PI)
-      : (prev ? 'Chương ' + (cur - 1) : 'Đầu bộ');
+      ? (first ? (prev ? chapLabel(cur - 1) : 'Đầu bộ') : 'Trang ' + PI)
+      : (prev ? chapLabel(cur - 1) : 'Đầu bộ');
     var right = paged
-      ? (last ? (next ? 'Chương ' + (cur + 1) : 'Hết bộ') : 'Trang ' + (PI + 2))
-      : (next ? 'Chương ' + (cur + 1) : 'Hết bộ');
+      ? (last ? (next ? chapLabel(cur + 1) : 'Hết bộ') : 'Trang ' + (PI + 2))
+      : (next ? chapLabel(cur + 1) : 'Hết bộ');
     $('#rdNav').innerHTML =
       '<button id="navPrev" class="' + ((paged ? (first && !prev) : !prev) ? 'off' : '') + '"' +
         ((paged ? (first && !prev) : !prev) ? ' disabled' : '') + '>' +
         '<b>' + ic('left', 'i-s') + ' ' + (paged ? (first ? 'Chương trước' : 'Trang trước') : 'Chương trước') + '</b>' +
         '<small>' + esc(left) + '</small></button>' +
-      '<button id="navToc" class="mid"><b>' + ic('list', 'i-s') + ' Mục lục</b><small>chương ' + cur + '/' + CHS.length +
+      '<button id="navToc" class="mid"><b>' + ic('list', 'i-s') + ' Mục lục</b><small>' + esc(chapLabel(cur)) +
         (paged ? ' · trang ' + (PI + 1) + '/' + PAGES.length : '') + '</small></button>' +
       '<button id="navNext" class="main' + ((paged ? (last && !next) : !next) ? ' off' : '') + '"' +
         ((paged ? (last && !next) : !next) ? ' disabled' : '') + '>' +
@@ -408,10 +434,10 @@
     var s = CZ.rdGet();
     var txt = $('#rdText');
     $('#rdTitle').textContent = N.title;
-    $('#rdSub').textContent = 'Chương ' + cur + '/' + CHS.length;
+    $('#rdSub').textContent = chapLabel(cur) + (chapTotal() ? ' / ' + chapTotal() : '');
     $('#rdCrumb').innerHTML = '<a href="/">Thư viện</a> ' + ic('right', 'i-s') +
       ' <a href="' + esc(CZ.storyURL(N.slug)) + '" id="crumbStory">' + esc(N.title) + '</a> ' + ic('right', 'i-s') +
-      ' <b>Chương ' + cur + '</b>';
+      ' <b>' + esc(chapLabel(cur)) + '</b>';
     $('#rdHead').textContent = c.t;
     var w = CZ.words(c.html);
     $('#rdMeta').innerHTML = [
@@ -453,13 +479,13 @@
     $('#actMark').addEventListener('click', function () {
       var on = CZ.toggleMark(N, cur);
       paintMark(); paintTOC();
-      toast(on ? 'Đã đánh dấu chương ' + cur : 'Đã bỏ đánh dấu chương ' + cur);
+      toast(on ? 'Đã đánh dấu ' + chapLabel(cur) : 'Đã bỏ đánh dấu ' + chapLabel(cur));
     });
     $('#actComment').addEventListener('click', function () { exitReader(true); });
     $('#actShare').addEventListener('click', shareChapter);
     /* cuối chương */
     $('#rdEnd').innerHTML = cur < CHS.length
-      ? '<div class="card2"><div class="grow"><b>Hết chương ' + cur + '</b><div class="sm muted">Tiếp theo: ' + esc(CHS[cur].t) + '</div></div>' +
+      ? '<div class="card2"><div class="grow"><b>Hết ' + esc(chapLabel(cur)) + '</b><div class="sm muted">Tiếp theo: ' + esc(CHS[cur].t) + '</div></div>' +
         '<button class="btn pri" id="endNext">Chương ' + (cur + 1) + ' ' + ic('right', 'i-s') + '</button></div>'
       : '<div class="card2"><div class="grow"><b>Bạn đã đọc tới chương cuối (' + CHS.length + ')</b>' +
         '<div class="sm muted">Bộ này đang cập nhật — lưu vào tủ truyện để quay lại sau.</div></div>' +

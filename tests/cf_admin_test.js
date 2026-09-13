@@ -245,7 +245,13 @@ async function openAdmin(worker, key) {
     }
     return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
   } });
-  await wait(300);
+  await wait(700);
+  /* mở trang là dùng được ngay: chưa có khoá thì tự mở dữ liệu tĩnh, không bắt bấm gì */
+  out.tuMoDuLieuTinh = {
+    rowsTruocKhiBam: off.doc.querySelectorAll('#tb tbody tr').length,
+    khungKetNoiConHien: !off.doc.querySelector('#scConnect').classList.contains('hide'),
+    apiDaDienSan: (off.doc.querySelector('#inApi') || {}).value || ''
+  };
   off.doc.querySelector('#btnLocal').dispatchEvent(new off.win.MouseEvent('click', { bubbles: true }));
   await wait(500);
   out.cheDoTinh = {

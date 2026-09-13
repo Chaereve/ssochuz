@@ -44,8 +44,9 @@
           '<p class="syn">' + esc(n.synFull || n.syn || '') + '</p>' +
           '<div class="btn-row">' +
             (n.canRead
-              ? '<a class="btn pri lg" href="' + esc(CZ.readURL(n.slug, resume)) + '">' + ic('play', 'i-s') +
-                (p ? 'Đọc tiếp chương ' + resume : 'Đọc từ chương 1') + '</a>'
+              ? '<a class="btn pri lg" href="' + esc(CZ.readURL(n.slug, resume)) + '" title="' +
+                  (p ? 'Mở đúng chỗ bạn đang đọc dở' : 'Bắt đầu từ chương đầu') + '">' + ic('play', 'i-s') +
+                (p ? 'Đọc tiếp' : 'Đọc từ đầu') + '</a>'
               : '<button class="btn lg off" disabled>' + ic('clock', 'i-s') + 'Sắp ra mắt</button>') +
             '<a class="btn lg" href="' + esc(CZ.storyURL(n.slug)) + '">' + ic('info', 'i-s') + 'Trang truyện</a>' +
             '<button class="btn lg" data-shelf="' + esc(n.slug) + '" aria-pressed="' + (inShelf ? 'true' : 'false') + '">' +
@@ -162,9 +163,10 @@
     return '<article class="cont" data-open="' + esc(n.slug) + '" role="button" tabindex="0" title="Đọc tiếp ' + esc(n.title) + '">' +
       (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async">' : '<img alt="">') +
       '<div><b>' + esc(n.title) + '</b>' +
-      '<span class="st">chương ' + p + '/' + tot + (CZ.lastReadAt(n) ? ' · ' + CZ.timeAgo(new Date(CZ.lastReadAt(n)).toISOString()) : '') + '</span>' +
+      '<span class="st">còn ' + Math.max(0, tot - p) + ' chương' +
+        (CZ.lastReadAt(n) ? ' · ' + CZ.timeAgo(new Date(CZ.lastReadAt(n)).toISOString()) : '') + '</span>' +
       '<div class="pb"><i style="width:' + pct + '%"></i></div></div>' +
-      '<span class="go">Chương ' + Math.min(tot, p || 1) + '</span></article>';
+      '<span class="go">Đọc tiếp</span></article>';
   }
   var banTab = 'doc';
   function docList() {

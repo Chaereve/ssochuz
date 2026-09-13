@@ -106,7 +106,8 @@
       .then(function () { b.disabled = false; b.textContent = 'Kiểm tra & kết nối'; });
   }
   function openApp() {
-    $('#scConnect').classList.add('hide');
+    /* chưa nối Worker thì vẫn để khung kết nối ngay trên, vì đó là việc nên làm tiếp */
+    if (ONLINE) $('#scConnect').classList.add('hide');
     $('#scApp').classList.remove('hide');
     $('#btnOut').classList.remove('hide');
     setConn(ONLINE ? 'ok' : 'warn', ONLINE ? 'Cloudflare KV' : 'xem dữ liệu tĩnh');
@@ -612,17 +613,30 @@
     });
   }
 
+  /* -------------------- lúc mở trang: dùng được ngay --------------------- */
+  (function boot() {
+    var savedApi = '', savedKey = '';
+    try { savedApi = localStorage.getItem(LS.api) || ''; savedKey = localStorage.getItem(LS.key) || ''; } catch (e) {}
+    if (savedApi) $('#inApi').value = savedApi;
+    else if (CZ.API) $('#inApi').value = CZ.API;
+    if (savedKey) $('#inKey').value = savedKey;
+    if (savedApi && savedKey) { connect(); return; }        /* tự nối lại Worker đã lưu */
+    viewStatic(true);                                      /* còn lại: xem dữ liệu tĩnh ngay */
+    msg('Đang xem dữ liệu tĩnh /data/*.json — nối Worker ở khung trên để sửa là người đọc thấy ngay.', 'info');
+  })();
+
   /* ------------------------------ gắn sự kiện ---------------------------- */
   $('#btnConnect').addEventListener('click', connect);
   $('#inKey').addEventListener('keydown', function (e) { if (e.key === 'Enter') connect(); });
   $('#inApi').addEventListener('keydown', function (e) { if (e.key === 'Enter') connect(); });
   $('#btnGuide').addEventListener('click', function () { $('#guide').classList.toggle('hide'); });
-  $('#btnLocal').addEventListener('click', function () {
+  $('#btnLocal').addEventListener('click', viewStatic);
+  function viewStatic(quiet) {
     ONLINE = false; API = ''; KEY = '';
     setConn('warn', 'dữ liệu tĩnh trong repo');
     openApp();
-    msg('Đang xem dữ liệu tĩnh /data/*.json. Mọi thay đổi chỉ lưu nháp trong máy.', 'info');
-  });
+    if (!quiet) msg('Đang xem dữ liệu tĩnh /data/*.json. Mọi thay đổi chỉ lưu nháp trong máy.', 'info');
+  }
   $('#btnOut').addEventListener('click', disconnect);
   $('#btnTheme').innerHTML = ic('sun', 'i-s');
   $('#btnTheme').addEventListener('click', function () {
