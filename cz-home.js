@@ -1,8 +1,11 @@
 /* ============================================================================
    chuseoz · TRANG CHỦ (bố cục hero landing)
    ----------------------------------------------------------------------------
-   Thứ tự dựng: hero → dải số liệu → đọc tiếp → tủ truyện → mới cập nhật →
-   BXH + lịch → chuyển thể → thư viện (lọc / tìm / phân trang)
+   Thứ tự trang: hero → dải số liệu → Bàn đọc (đang đọc dở / tủ truyện) →
+   Khám phá (mới cập nhật · xếp hạng · lịch ra chương · chuyển thể) → Thư viện.
+   “Khám phá” gom 4 mục vào 4 tab để trang không dài lê thê; mọi mục vẫn dựng
+   sẵn nội dung nên mở tab là thấy ngay, và link cũ (#bxh, #lich, #chuyen-the)
+   vẫn nhảy đúng tab.
    Số liệu đọc chỉ lấy từ Firebase thật; không đọc được thì KHÔNG hiện số nào.
    ========================================================================== */
 (function () {
@@ -19,26 +22,24 @@
   }
   paintIcons();
 
-  var state = { tab: 'all', status: '', year: '', author: '', couple: '', q: '', sort: 'new', view: 'grid', page: 1, per: 24 };
+  var state = { tab: 'all', year: '', author: '', couple: '', q: '', sort: 'new', view: 'grid', page: 1, per: 24 };
 
   /* ======================= HERO ======================================== */
-  var hero = { list: [], i: 0, timer: null, auto: 8000, dots: null, strip: null };
+  var hero = { list: [], i: 0, timer: null, auto: 8000 };
   function heroSlide(n, i) {
-    var ic_head = (i === 0 ? 'star' : 'sparkle');
     var p = CZ.progress(n), resume = p || 1;
     var inShelf = CZ.inShelf(n);
-    return '<div class="slide' + (i === 0 ? ' on' : '') + '" data-i="' + i + '" role="group" aria-label="' + esc(n.title) + '">' +
+    return '<article class="slide' + (i === 0 ? ' on' : '') + '" data-i="' + i + '" aria-label="' + esc(n.title) + '">' +
       '<div class="col">' +
         '<div class="info">' +
-          '<span class="eyebrow">' + ic(ic_head, 'i-s') + (i === 0 ? ' Truyện nổi bật' : ' Đề xuất cho bạn') + '</span>' +
+          '<span class="eyebrow">' + (i === 0 ? 'Nổi bật' : 'Đề xuất cho bạn') + '</span>' +
           '<h1>' + esc(n.title) + '</h1>' +
           '<div class="meta">' +
             '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(n.status || '—') + '</span>' +
-            (n.is18 ? '<span class="b18">18+</span>' : '') +
-            '<span><b>' + esc(n.countLabel) + '</b></span>' +
-            '<span>' + esc(n.author || '—') + '</span>' +
+            '<span><b>' + esc(CZ.countText(n)) + '</b></span>' +
+            (n.author ? '<span>Tác giả ' + esc(n.author) + '</span>' : '') +
             (n.couple ? '<span>' + esc(n.couple) + '</span>' : '') +
-            '<span>' + esc(n.year || '') + '</span>' +
+            (n.adaptName ? '<span>Chuyển thể · ' + esc(n.adaptName) + '</span>' : '') +
           '</div>' +
           '<p class="syn">' + esc(n.synFull || n.syn || '') + '</p>' +
           '<div class="btn-row">' +
@@ -46,9 +47,9 @@
               ? '<a class="btn pri lg" href="' + esc(CZ.readURL(n.slug, resume)) + '">' + ic('play', 'i-s') +
                 (p ? 'Đọc tiếp chương ' + resume : 'Đọc từ chương 1') + '</a>'
               : '<button class="btn lg off" disabled>' + ic('clock', 'i-s') + 'Sắp ra mắt</button>') +
-            '<a class="btn ghost lg" href="' + esc(CZ.storyURL(n.slug)) + '">' + ic('info', 'i-s') + 'Chi tiết truyện</a>' +
-            '<button class="btn ghost lg" data-shelf="' + esc(n.slug) + '" aria-pressed="' + (inShelf ? 'true' : 'false') + '">' +
-              ic('bookmark', 'i-s') + '<span>' + (inShelf ? 'Đã lưu' : 'Lưu') + '</span></button>' +
+            '<a class="btn lg" href="' + esc(CZ.storyURL(n.slug)) + '">' + ic('info', 'i-s') + 'Trang truyện</a>' +
+            '<button class="btn lg" data-shelf="' + esc(n.slug) + '" aria-pressed="' + (inShelf ? 'true' : 'false') + '">' +
+              ic('bookmark', 'i-s') + '<span>' + (inShelf ? 'Đã lưu' : 'Lưu vào tủ') + '</span></button>' +
           '</div>' +
         '</div>' +
         '<a class="poster" href="' + esc(CZ.storyURL(n.slug)) + '" aria-label="' + esc(n.title) + '">' +
@@ -56,34 +57,22 @@
             (i === 0 ? ' fetchpriority="high"' : ' loading="lazy"') + ' decoding="async">' : '') +
           (n.is18 ? '<span class="b18">18+</span>' : '') +
         '</a>' +
-      '</div></div>';
+      '</div></article>';
   }
   function heroPaint(animate) {
     var stage = $('#stage');
+    if (!stage) return;
     stage.innerHTML = hero.list.map(heroSlide).join('');
-    hero.dots.innerHTML = hero.list.map(function (n, k) {
+    $('#hDots').innerHTML = hero.list.map(function (n, k) {
       return '<button data-go="' + k + '" class="' + (k === hero.i ? 'on' : '') + '" role="tab" aria-label="' + esc(n.title) + '"></button>';
     }).join('');
-    hero.strip.innerHTML = hero.list.map(function (n, k) {
+    $('#hStrip').innerHTML = hero.list.map(function (n, k) {
       var im = n.thumb || n.slide;
       return '<button data-go="' + k + '" class="' + (k === hero.i ? 'on' : '') + '" title="' + esc(n.title) + '">' +
         (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" decoding="async">' : '') + '</button>';
     }).join('');
     $('#hCount').textContent = (hero.i + 1) + '/' + hero.list.length;
-    setHeroBg(hero.list[hero.i]);
     if (animate) restart();
-  }
-  function setHeroBg(n) {
-    var url = (n && (n.slide || n.thumb)) || '';
-    if (!url) return;
-    var img = new Image();
-    img.onload = function () {
-      $$('#heroBgA,#heroBgB').forEach(function (el) { el.classList.toggle('on', el.dataset.url === url); });
-    };
-    img.src = url;
-    var a = $('#heroBgA'), b = $('#heroBgB');
-    var next = (a.classList.contains('on') || !a.dataset.url) ? b : a;
-    next.dataset.url = url; next.src = url;
   }
   function goSlide(i) {
     if (!hero.list.length) return;
@@ -92,11 +81,11 @@
     hero.i = (i + hero.list.length) % hero.list.length;
     all[hero.i].classList.add('on'); dots[hero.i].classList.add('on'); strip[hero.i].classList.add('on');
     $('#hCount').textContent = (hero.i + 1) + '/' + hero.list.length;
-    setHeroBg(hero.list[hero.i]);
     restart();
   }
   function restart() {
     var bar = $('#heroBar');
+    if (!bar) return;
     bar.style.transition = 'none'; bar.style.width = '0%';
     clearInterval(hero.timer);
     if (CZ.reduce || document.hidden) return;
@@ -109,7 +98,6 @@
   function heroInit() {
     var stage = $('#stage');
     if (!stage || !hero.list.length) return;
-    hero.dots = $('#hDots'); hero.strip = $('#hStrip');
     heroPaint(false);
     $('#hPrev').innerHTML = ic('left', 'i-s'); $('#hNext').innerHTML = ic('right', 'i-s');
     $('#hPrev').addEventListener('click', function () { goSlide(hero.i - 1); });
@@ -123,9 +111,9 @@
         if (!n) return;
         var on = CZ.toggleShelf(n);
         s.setAttribute('aria-pressed', on ? 'true' : 'false');
-        s.querySelector('span').textContent = on ? 'Đã lưu' : 'Lưu';
+        s.querySelector('span').textContent = on ? 'Đã lưu' : 'Lưu vào tủ';
         s.classList.toggle('on', on);
-        renderShelf();
+        renderBan();
         CZ.toast(on ? 'Đã thêm vào tủ truyện' : 'Đã bỏ khỏi tủ truyện');
       }
     });
@@ -160,7 +148,7 @@
       { n: lib.length, l: 'Bộ truyện' },
       { n: chap, l: 'Chương đã đăng' },
       { n: done, l: 'Đã hoàn thành' },
-      { n: ser, l: 'Series chuyển thể' }
+      { n: ser, l: 'Bộ chuyển thể' }
     ];
     $('#facts').innerHTML = facts.map(function (f) {
       return '<div class="f"><b data-count="' + f.n + '">0</b><span>' + f.l + '</span></div>';
@@ -168,61 +156,83 @@
     CZ.scaleFacts($('#facts'));
   }
 
-  /* ======================= ĐỌC TIẾP / TỦ TRUYỆN ======================= */
+  /* ======================= BÀN ĐỌC ===================================== */
   function contRow(n) {
     var p = CZ.progress(n), tot = n.chapters, pct = tot ? Math.min(100, Math.round(p / tot * 100)) : 0;
     return '<article class="cont" data-open="' + esc(n.slug) + '" role="button" tabindex="0" title="Đọc tiếp ' + esc(n.title) + '">' +
-      (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async" onerror="this.style.visibility=\'hidden\'">' : '<img alt="">') +
-      '<div class="m"><b>' + esc(n.title) + '</b>' +
-      '<span class="st">đang ở chương ' + p + '/' + tot + (CZ.lastReadAt(n) ? ' · ' + CZ.timeAgo(new Date(CZ.lastReadAt(n)).toISOString()) : '') + '</span>' +
+      (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async">' : '<img alt="">') +
+      '<div><b>' + esc(n.title) + '</b>' +
+      '<span class="st">chương ' + p + '/' + tot + (CZ.lastReadAt(n) ? ' · ' + CZ.timeAgo(new Date(CZ.lastReadAt(n)).toISOString()) : '') + '</span>' +
       '<div class="pb"><i style="width:' + pct + '%"></i></div></div>' +
       '<span class="go">Chương ' + Math.min(tot, p || 1) + '</span></article>';
   }
-  function renderContinue() {
-    var sec = $('#doc-tiep'), box = $('#contRow');
-    var rows = CZ.lib().filter(function (n) { return n.canRead && CZ.progress(n) > 0; })
+  var banTab = 'doc';
+  function docList() {
+    return CZ.lib().filter(function (n) { return n.canRead && CZ.progress(n) > 0; })
       .sort(function (a, b) { return CZ.lastReadAt(b) - CZ.lastReadAt(a); });
-    sec.hidden = !rows.length;
-    if (!rows.length) { box.innerHTML = ''; return; }
-    $('#contSub').textContent = rows.length + ' bộ đang đọc dở · lưu ngay trong máy bạn';
-    box.innerHTML = rows.slice(0, 8).map(contRow).join('');
   }
-  function renderShelf() {
-    var sec = $('#tu-truyen'), box = $('#shelfRow');
-    var rows = CZ.shelfIds().map(function (s) { return CZ.findLib(s); }).filter(Boolean);
-    sec.hidden = !rows.length;
-    if (!rows.length) { box.innerHTML = ''; return; }
-    $('#shelfSub').textContent = rows.length + ' bộ đã lưu';
-    box.innerHTML = rows.map(function (n) {
-      var p = CZ.progress(n), tot = n.chapters;
-      return '<article class="cont" data-open="' + esc(n.slug) + '" role="button" tabindex="0">' +
-        (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async">' : '<img alt="">') +
-        '<div class="m"><b>' + esc(n.title) + '</b><span class="st">' +
-        (tot ? (p ? 'đang ở chương ' + p + '/' + tot : num(tot) + ' chương') : 'sắp ra mắt') + '</span>' +
-        (tot && p ? '<div class="pb"><i style="width:' + Math.round(p / tot * 100) + '%"></i></div>' : '') + '</div>' +
-        (tot ? '<span class="go">Đọc tiếp</span>' : '') +
-        '<span class="rm" data-rm="' + esc(n.slug) + '" title="Bỏ khỏi tủ">' + ic('x', 'i-s') + '</span></article>';
-    }).join('');
+  function shelfList() {
+    return CZ.shelfIds().map(function (s) { return CZ.findLib(s); }).filter(Boolean);
   }
+  function renderBan() {
+    var sec = $('#ban-doc');
+    if (!sec) return;
+    var docs = docList(), shelf = shelfList();
+    var empty = !docs.length && !shelf.length;
+    sec.hidden = empty;
+    $('#contRow').innerHTML = ''; $('#shelfRow').innerHTML = '';
+    if (empty) return;
+    if (banTab === 'doc' && !docs.length) banTab = 'shelf';
+    if (banTab === 'shelf' && !shelf.length) banTab = 'doc';
+    $('#banDocCount').textContent = docs.length ? String(docs.length) : '';
+    $('#banShelfCount').textContent = shelf.length ? String(shelf.length) : '';
+    $$('#banTabs .tab').forEach(function (b) { b.classList.toggle('on', b.dataset.ban === banTab); });
+    $('#contRow').classList.toggle('hide', banTab !== 'doc');
+    $('#shelfRow').classList.toggle('hide', banTab !== 'shelf');
+    $('#banSub').textContent = banTab === 'doc'
+      ? 'lưu trong máy bạn — ' + docs.length + ' bộ đang đọc dở'
+      : shelf.length + ' bộ đã lưu';
+    var clr = $('#banClear');
+    clr.textContent = banTab === 'doc' ? 'Xoá lịch sử đọc' : 'Bỏ hết khỏi tủ';
+    if (banTab === 'doc') {
+      $('#contRow').innerHTML = docs.slice(0, 8).map(contRow).join('');
+    } else {
+      $('#shelfRow').innerHTML = shelf.map(function (n) {
+        var p = CZ.progress(n), tot = n.chapters;
+        return '<article class="cont" data-open="' + esc(n.slug) + '" role="button" tabindex="0">' +
+          (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async">' : '<img alt="">') +
+          '<div><b>' + esc(n.title) + '</b><span class="st">' +
+          (tot ? (p ? 'đang ở chương ' + p + '/' + tot : num(tot) + ' chương') : 'sắp ra mắt') + '</span>' +
+          (tot && p ? '<div class="pb"><i style="width:' + Math.round(p / tot * 100) + '%"></i></div>' : '') + '</div>' +
+          (tot ? '<span class="go">Đọc tiếp</span>' : '<span class="go"></span>') +
+          '<span class="rm" data-rm="' + esc(n.slug) + '" title="Bỏ khỏi tủ">' + ic('x', 'i-s') + '</span></article>';
+      }).join('');
+    }
+  }
+  $('#banTabs').addEventListener('click', function (e) {
+    var b = e.target.closest('.tab'); if (!b) return;
+    banTab = b.dataset.ban; renderBan();
+  });
   $('#contRow').addEventListener('click', function (e) {
     var c = e.target.closest('[data-open]'); if (!c) return;
     var n = CZ.findLib(c.dataset.open); if (n) location.href = CZ.readURL(n.slug, CZ.progress(n) || 1);
   });
   $('#shelfRow').addEventListener('click', function (e) {
     var rm = e.target.closest('[data-rm]');
-    if (rm) { CZ.toggleShelf({ slug: rm.dataset.rm }); renderShelf(); CZ.toast('Đã bỏ khỏi tủ truyện'); return; }
+    if (rm) { CZ.toggleShelf({ slug: rm.dataset.rm }); renderBan(); CZ.toast('Đã bỏ khỏi tủ truyện'); return; }
     var c = e.target.closest('[data-open]'); if (!c) return;
     var n = CZ.findLib(c.dataset.open);
     if (n) location.href = n.canRead ? CZ.readURL(n.slug, CZ.progress(n) || 1) : CZ.storyURL(n.slug);
   });
-  $('#shelfClear').addEventListener('click', function () {
-    if (!CZ.shelfIds().length) return;
-    CZ.confirm('Xoá hết ' + CZ.shelfIds().length + ' bộ khỏi tủ truyện?', 'Xoá hết').then(function (ok) {
-      if (!ok) return;
-      CZ.clearShelf(); renderShelf(); CZ.toast('Đã xoá tủ truyện');
-    });
-  });
-  $('#contClear').addEventListener('click', function () {
+  $('#banClear').addEventListener('click', function () {
+    if (banTab === 'shelf') {
+      if (!CZ.shelfIds().length) return;
+      CZ.confirm('Bỏ hết ' + CZ.shelfIds().length + ' bộ khỏi tủ truyện?', 'Bỏ hết').then(function (ok) {
+        if (!ok) return;
+        CZ.clearShelf(); renderBan(); CZ.toast('Đã xoá tủ truyện');
+      });
+      return;
+    }
     CZ.confirm('Xoá lịch sử đọc trong máy này? Tiến độ đọc của mọi bộ sẽ mất.', 'Xoá').then(function (ok) {
       if (!ok) return;
       CZ.lib().forEach(function (n) {
@@ -230,68 +240,102 @@
           try { localStorage.removeItem('chuseoz-prog-' + k); localStorage.removeItem('chuseoz-when-' + k); } catch (e) {}
         });
       });
-      renderContinue(); heroPaint(false); CZ.toast('Đã xoá lịch sử đọc');
+      renderBan(); heroPaint(false); CZ.toast('Đã xoá lịch sử đọc');
     });
   });
+
+  /* ======================= KHÁM PHÁ: 4 TAB ============================= */
+  var EXP = ['new', 'rank', 'sched', 'adapt'];
+  function showExp(k) {
+    if (EXP.indexOf(k) < 0) k = 'new';
+    $$('#expTabs button').forEach(function (b) { b.classList.toggle('on', b.dataset.exp === k); });
+    $('#moi-cap-nhat').classList.toggle('hide', k !== 'new');
+    $('#bxh').classList.toggle('hide', k !== 'rank');
+    $('#lich').classList.toggle('hide', k !== 'sched');
+    $('#chuyen-the').classList.toggle('hide', k !== 'adapt');
+  }
+  $('#expTabs').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-exp]'); if (!b) return;
+    showExp(b.dataset.exp);
+  });
+  /* link cũ /#bxh, /#lich, /#chuyen-the, /#moi-cap-nhat → mở đúng tab */
+  function expFromHash() {
+    var h = (location.hash || '').replace('#', '');
+    if (h === 'bxh') return 'rank';
+    if (h === 'lich') return 'sched';
+    if (h === 'chuyen-the') return 'adapt';
+    if (h === 'moi-cap-nhat') return 'new';
+    return '';
+  }
+  window.addEventListener('hashchange', function () { var k = expFromHash(); if (k) showExp(k); });
 
   /* ======================= MỚI CẬP NHẬT ================================ */
   function renderNew() {
     var rows = CZ.lib().slice().sort(function (a, b) {
       return String(b.updated || '').localeCompare(String(a.updated || '')) || (b.chapters - a.chapters);
-    }).slice(0, 12);
-    $('#newSub').textContent = rows.length ? 'cập nhật gần nhất ' + CZ.dateVN(rows[0].updated) : '';
-    CZ.mountRail($('#newRail'), rows);
+    });
+    $('#expNew').textContent = rows.length;
+    $('#newSub').textContent = rows.length + ' bộ · cập nhật gần nhất ' + CZ.dateVN(rows[0] && rows[0].updated);
+    CZ.mountRail($('#newRail'), rows.slice(0, 12));
   }
 
-  /* ======================= BXH ========================================= */
-  var RANK_TABS = [{ k: 'views', l: 'Lượt đọc' }, { k: 'votes', l: 'Bình chọn' }, { k: 'new', l: 'Mới cập nhật' }];
-  var rankBy = 'views';
+  /* ======================= XẾP HẠNG ==================================== */
+  function statsOn() { return !!(CZ._memo.stats && CZ._memo.stats.on); }
+  function rankTabs() {
+    /* chưa đọc được số liệu Firebase thì không bày tab “lượt đọc / bình chọn” rỗng nghĩa */
+    return statsOn()
+      ? [{ k: 'views', l: 'Lượt đọc' }, { k: 'votes', l: 'Bình chọn' }, { k: 'new', l: 'Mới cập nhật' }, { k: 'chap', l: 'Nhiều chương' }]
+      : [{ k: 'new', l: 'Mới cập nhật' }, { k: 'chap', l: 'Nhiều chương' }, { k: 'votes', l: 'Bình chọn' }];
+  }
+  var rankBy = '';   /* rỗng = tự chọn: đọc được số thật thì xếp theo lượt đọc */
   function renderRank() {
-    var stats = CZ._memo.stats || { on: false, items: {} };
-    var lib = CZ.lib();
+    var lib = CZ.lib(), on = statsOn();
+    var tabs = rankTabs();
+    var by = (rankBy && tabs.some(function (t) { return t.k === rankBy; })) ? rankBy : (on ? 'views' : 'new');
+    $('#rankTabs').innerHTML = tabs.map(function (t) {
+      return '<button class="tab' + (t.k === by ? ' on' : '') + '" data-k="' + t.k + '" role="tab" aria-selected="' +
+        (t.k === by) + '">' + t.l + '</button>';
+    }).join('');
     var val = function (n, k) {
       var s = CZ.statsOf(n) || {};
-      return k === 'votes' ? (s.votes || 0) : k === 'views' ? (s.views || 0) : (Date.parse(n.updated + 'T00:00:00') || 0);
+      if (k === 'votes') return s.votes || 0;
+      if (k === 'views') return s.views || 0;
+      if (k === 'chap') return n.chapters || 0;
+      return Date.parse(String(n.updated || '') + 'T00:00:00') || 0;
     };
     var list = lib.slice().sort(function (a, b) {
-      return rankBy === 'new' ? (val(b, 'new') - val(a, 'new') || b.chapters - a.chapters)
-        : (val(b, rankBy) - val(a, rankBy) || b.chapters - a.chapters);
-    }).slice(0, 7);
-    var max = Math.max(1, list.map(function (n) { return rankBy === 'new' ? 0 : val(n, rankBy); }).reduce(function (a, b) { return Math.max(a, b); }, 1));
+      return (val(b, by) - val(a, by)) || (b.chapters - a.chapters);
+    }).slice(0, 8);
+    var max = Math.max(1, val(list[0] || {}, by));
     $('#rank').innerHTML = list.map(function (n, i) {
       var s = CZ.statsOf(n) || {};
-      var text, w = 0;
-      if (rankBy === 'new') text = n.updated ? CZ.timeAgo(n.updated) : '—';
-      else if (stats.on) { text = num(s[rankBy] || 0) + (rankBy === 'views' ? ' lượt' : ' phiếu'); w = Math.round(100 * (s[rankBy] || 0) / max); }
-      else { text = n.chapters + ' chương'; w = Math.round(100 * n.chapters / Math.max(1, Math.max.apply(null, lib.map(function (x) { return x.chapters; })))); }
+      var text = '—', w = 0;
+      if (by === 'new') text = n.updated ? CZ.timeAgo(n.updated) : '—';
+      else if (by === 'chap') { text = n.chapters + ' chương'; w = Math.round(100 * n.chapters / max); }
+      else if (on) { text = num(s[by] || 0) + (by === 'views' ? ' lượt' : ' phiếu'); w = Math.round(100 * (s[by] || 0) / max); }
       return '<a class="rank" href="' + esc(CZ.storyURL(n.slug)) + '" title="' + esc(n.title) + '">' +
         '<span class="n ' + (i < 3 ? 'top' : '') + '">' + (i + 1) + '</span>' +
-        (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async">' : '') +
+        (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async">' : '<img alt="">') +
         '<span class="tt"><b>' + esc(n.title) + '</b><span>' + esc(n.couple || n.author || '') +
-        (stats.on && rankBy !== 'new' && s.chapterCount ? ' · ' + s.chapterCount + ' chương' : '') + '</span></span>' +
+        (on && s.chapterCount ? ' · ' + s.chapterCount + ' chương' : '') + '</span></span>' +
         '<span class="v">' + text + '</span>' +
         (w ? '<i class="bar" style="width:' + w + '%"></i>' : '') + '</a>';
     }).join('') || '<div class="empty">Chưa có dữ liệu.</div>';
     var src = $('#rankSrc');
-    if (stats.on) {
+    if (on) {
       src.className = 'src';
       src.innerHTML = '<span class="dot"></span><span>số liệu thật từ Firebase (chuseoz-library)' +
-        (stats.saved ? ' · ' + CZ.timeAgo(stats.saved) : '') + (stats.stale ? ' · bản lưu trong máy' : '') + '</span>';
+        (CZ._memo.stats.saved ? ' · ' + CZ.timeAgo(CZ._memo.stats.saved) : '') +
+        (CZ._memo.stats.stale ? ' · bản lưu trong máy' : '') + '</span>';
     } else {
       src.className = 'src err';
-      src.innerHTML = '<span class="dot"></span><span>chưa đọc được số liệu Firebase (quyền đọc đang chặn) — bảng xếp theo ' +
-        '<b>số chương / ngày cập nhật</b>, web không hiện số ước lượng</span>';
+      src.innerHTML = '<span class="dot"></span><span>chưa đọc được số liệu Firebase (quyền đọc đang chặn) — ' +
+        'bảng xếp theo <b>ngày cập nhật / số chương</b>, web không hiện số ước lượng</span>';
     }
-  }
-  function paintRankTabs() {
-    $('#rankTabs').innerHTML = RANK_TABS.map(function (t) {
-      return '<button class="tab' + (t.k === rankBy ? ' on' : '') + '" data-k="' + t.k + '" role="tab" aria-selected="' +
-        (t.k === rankBy) + '">' + t.l + '</button>';
-    }).join('');
   }
   $('#rankTabs').addEventListener('click', function (e) {
     var b = e.target.closest('.tab'); if (!b) return;
-    rankBy = b.dataset.k; paintRankTabs(); renderRank();
+    rankBy = b.dataset.k; renderRank();
   });
 
   /* ======================= LỊCH RA CHƯƠNG ============================== */
@@ -299,21 +343,20 @@
   function renderSched(sch) {
     var items = (sch && sch.items) || [];
     var el = $('#sched');
+    $('#expSched').textContent = items.length;
     if (!items.length) {
       el.innerHTML = '<div class="empty">Chưa có lịch ra chương.</div>';
       $('#schedSrc').innerHTML = '<span class="dot"></span><span>nguồn: trang <b>Lịch ra chương</b> trên Blogger</span>';
       return;
     }
-    var last = (CZ._memo.reg || {}).rev || '';
     el.innerHTML = items.slice(0, 8).map(function (it) {
       var n = null;
       CZ.lib().some(function (x) { if (normTitle(x.title) === normTitle(it.title)) { n = x; return true; } return false; });
       return '<a class="sched' + (n ? ' clk' : '') + '" ' + (n ? 'href="' + esc(CZ.storyURL(n.slug)) + '"' : '') + '>' +
         '<div class="day">' + esc(it.days || '') + '</div>' +
         '<div class="info"><b>' + esc(it.title || '') + '</b><span>' +
-        (n ? (n.canRead ? esc(n.countLabel) + ' chương' : 'sắp ra mắt') : esc(it.detail || '')) + '</span></div></a>';
+        (n ? (n.canRead ? esc(CZ.countText(n)) : 'sắp ra mắt') : esc(it.detail || '')) + '</span></div></a>';
     }).join('');
-    $('#schedSub').textContent = items.length + ' mục';
     $('#schedSrc').innerHTML = '<span class="dot"></span><span>nguồn thật: <a href="' +
       esc(sch.source || 'https://chuseoz.blogspot.com/p/lich-ra-chuong.html') + '" target="_blank" rel="noopener">trang Lịch ra chương</a>' +
       (sch.updated ? ' · ' + CZ.dateVN(sch.updated) : '') + (sch.note ? ' — ' + esc(sch.note) : '') + '</span>';
@@ -333,33 +376,33 @@
     return '<a class="srow" href="' + esc(CZ.storyURL(first.slug || '')) + '" title="' + esc(name) + '">' +
       '<span class="sc">' + covers + '</span>' +
       '<span class="st"><b>' + esc(name) + '</b><em>' + (parts.length > 1 ? parts.length + ' phần · ' : '') +
-      esc(yrs.join(', ')) + (first.countLabel ? ' · ' + esc(first.countLabel) : '') + '</em></span>' +
+      esc(yrs.join(', ')) + (first.chapters ? ' · ' + esc(CZ.countText(first)) : '') + '</em></span>' +
       (parts.length > 1 ? '<span class="mul">×' + parts.length + '</span>' : '') + '</a>';
   }
   function renderLadder() {
     var lib = CZ.lib(), reg = CZ._memo.reg || {};
-    var serList = (reg.series || []);
-    var groups = serList.map(function (g) { return { name: g.name, parts: g.parts || [] }; });
+    var groups = (reg.series || []).map(function (g) { return { name: g.name, parts: g.parts || [] }; });
     var movies = lib.filter(function (n) { return n.adapt === 'phim'; });
     var none = lib.filter(function (n) { return !n.adapt; });
     var LT = [
-      { k: 'series', l: 'Series', c: groups.length, i: 'tv', d: 'Truyện đã dựng thành series — nhóm theo tên phim, bộ nhiều phần xếp trước.' },
-      { k: 'phim', l: 'Movie', c: movies.length, i: 'film', d: 'Truyện đã dựng thành phim điện ảnh.' },
+      { k: 'series', l: 'Series', c: groups.length, i: 'tv', d: 'Truyện đã dựng thành series truyền hình — nhóm theo tên phim, bộ nhiều phần xếp trước.' },
+      { k: 'phim', l: 'Phim điện ảnh', c: movies.length, i: 'film', d: 'Truyện đã dựng thành phim điện ảnh.' },
       { k: 'none', l: 'Chưa chuyển thể', c: none.length, i: 'book', d: 'Truyện chưa gắn nhãn chuyển thể trong dữ liệu.' }
     ];
     if (!ltab) ltab = (LT.find(function (t) { return t.c > 0; }) || LT[0]).k;
+    $('#expAdapt').textContent = groups.length + movies.length;
     $('#ltabs').innerHTML = LT.map(function (t) {
       return '<button class="tab' + (t.k === ltab ? ' on' : '') + '" data-k="' + t.k + '" role="tab" aria-selected="' +
         (t.k === ltab) + '">' + ic(t.i, 'i-s') + t.l + '<span class="ct">' + t.c + '</span></button>';
     }).join('');
     var cur = LT.find(function (t) { return t.k === ltab; }) || LT[0];
     $('#ldesc').textContent = cur.d;
-    $('#adSub').textContent = movies.length + ' phim · ' + groups.length + ' series · ' + none.length + ' chưa chuyển thể / ' + lib.length + ' bộ';
+    $('#adSub').textContent = groups.length + ' series · ' + movies.length + ' phim · ' + none.length + ' chưa chuyển thể / ' + lib.length + ' bộ';
     var box = $('#lcontent');
     if (ltab === 'phim') {
       box.innerHTML = movies.length
         ? '<div class="sgrid">' + movies.map(function (n) { return srowHTML([n.title], n.adaptName || n.title); }).join('') + '</div>'
-        : '<div class="empty"><div class="big">Chưa có bộ nào gắn nhãn <em>phim điện ảnh</em></div>' +
+        : '<div class="empty"><div class="big">Chưa có bộ nào gắn nhãn phim điện ảnh</div>' +
           'Toàn bộ ' + groups.length + ' bộ đã chuyển thể hiện là <b>series truyền hình</b> — xem tab <b>Series</b>.</div>';
       return;
     }
@@ -389,28 +432,38 @@
         return '<option value="' + esc(v) + '">' + esc(v) + '</option>';
       }).join('');
     };
-    $('#fStatus').innerHTML = [['', 'Mọi tình trạng'], ['done', 'Hoàn thành'], ['run', 'Đang cập nhật'], ['soon', 'Sắp ra mắt']]
-      .map(function (o) { return '<option value="' + o[0] + '">' + o[1] + '</option>'; }).join('');
     fill($('#fYear'), 'Mọi năm', years);
     fill($('#fAuthor'), 'Mọi tác giả', authors);
     fill($('#fCouple'), 'Mọi couple', couples);
-    $('#fSort').innerHTML = [
-      ['new', 'Mới cập nhật'], ['year-desc', 'Năm mới nhất'], ['year-asc', 'Năm cũ nhất'],
-      ['chap-desc', 'Nhiều chương nhất'], ['az', 'Tên A → Z'], ['views', 'Đọc nhiều nhất']
-    ].map(function (o) { return '<option value="' + o[0] + '">' + o[1] + '</option>'; }).join('');
+    var sorts = [['new', 'Mới cập nhật'], ['year-desc', 'Năm mới nhất'], ['year-asc', 'Năm cũ nhất'],
+      ['chap-desc', 'Nhiều chương nhất'], ['az', 'Tên A → Z']];
+    if (statsOn()) sorts.push(['views', 'Đọc nhiều nhất']);   /* chỉ khi có số thật */
+    $('#fSort').innerHTML = sorts.map(function (o) {
+      return '<option value="' + o[0] + '">' + o[1] + '</option>';
+    }).join('');
+    $('#tabs').innerHTML = tabDefs().map(function (t) {
+      return '<button class="tab' + (t.k === state.tab ? ' on' : '') + '" data-k="' + t.k + '" role="tab" aria-selected="' +
+        (t.k === state.tab) + '">' + t.l + '<span class="ct">' + t.c + '</span></button>';
+    }).join('');
+  }
+  /* dãy tab tình trạng / chuyển thể / 18+ — cũng là nguồn nhãn cho chip lọc */
+  function tabDefs() {
+    var lib = CZ.lib();
+    var byStatus = function (k) { return lib.filter(function (n) { return n.statusCls === k; }).length; };
     var TABS = [
       { k: 'all', l: 'Tất cả', c: lib.length },
-      { k: 'done', l: 'Hoàn thành', c: lib.filter(function (n) { return n.statusCls === 'done'; }).length },
-      { k: 'run', l: 'Đang cập nhật', c: lib.filter(function (n) { return n.statusCls === 'run'; }).length },
-      { k: 'soon', l: 'Sắp ra mắt', c: lib.filter(function (n) { return n.statusCls === 'soon'; }).length },
+      { k: 'done', l: 'Hoàn thành', c: byStatus('done') },
+      { k: 'run', l: 'Đang cập nhật', c: byStatus('run') },
+      { k: 'soon', l: 'Sắp ra mắt', c: byStatus('soon') },
       { k: 'series', l: 'Series', c: lib.filter(function (n) { return n.adapt === 'series'; }).length },
       { k: 'phim', l: 'Movie', c: lib.filter(function (n) { return n.adapt === 'phim'; }).length },
       { k: '18', l: '18+', c: lib.filter(function (n) { return n.is18; }).length }
     ];
-    $('#tabs').innerHTML = TABS.map(function (t) {
-      return '<button class="tab' + (t.k === state.tab ? ' on' : '') + '" data-k="' + t.k + '" role="tab" aria-selected="' +
-        (t.k === state.tab) + '">' + t.l + '<span class="ct">' + t.c + '</span></button>';
-    }).join('');
+    return TABS.filter(function (t) { return t.k === 'all' || t.c > 0; });
+  }
+  function tabLabel(k) {
+    var t = tabDefs().filter(function (x) { return x.k === k; })[0];
+    return t ? t.l : k;
   }
   function filtered() {
     var lib = CZ.lib().slice(), s = state.tab;
@@ -418,7 +471,6 @@
     else if (s === 'series') lib = lib.filter(function (n) { return n.adapt === 'series'; });
     else if (s === 'phim') lib = lib.filter(function (n) { return n.adapt === 'phim'; });
     else if (s === '18') lib = lib.filter(function (n) { return n.is18; });
-    if (state.status) lib = lib.filter(function (n) { return n.statusCls === state.status; });
     if (state.year) lib = lib.filter(function (n) { return String(n.year) === state.year; });
     if (state.author) lib = lib.filter(function (n) { return n.author === state.author; });
     if (state.couple) lib = lib.filter(function (n) { return n.couple === state.couple; });
@@ -471,8 +523,7 @@
         '<button class="pg ' + (state.page === total ? 'off' : '') + '" data-go="' + (state.page + 1) + '">Sau' + ic('right', 'i-s') + '</button>'
       : '';
     var picked = [];
-    if (state.tab !== 'all') picked.push(['tab', state.tab]);
-    if (state.status) picked.push(['status', state.status === 'done' ? 'Hoàn thành' : state.status === 'run' ? 'Đang cập nhật' : 'Sắp ra mắt']);
+    if (state.tab !== 'all') picked.push(['tab', tabLabel(state.tab)]);
     ['year', 'author', 'couple'].forEach(function (k) { if (state[k]) picked.push([k, state[k]]); });
     if (state.q) picked.push(['q', '“' + state.q + '”']);
     $('#fpick').innerHTML = picked.length
@@ -486,7 +537,9 @@
     $$('[data-rm]', $('#fpick')).forEach(function (b) {
       b.addEventListener('click', function () {
         var k = picked[+b.dataset.rm][0];
-        if (k === 'q') { state.q = ''; $('#q').value = ''; } else if (k === 'tab') state.tab = 'all'; else state[k] = '';
+        if (k === 'q') { state.q = ''; $('#q').value = ''; }
+        else if (k === 'tab') state.tab = 'all';
+        else state[k] = '';
         syncFilterUI(); state.page = 1; render();
       });
     });
@@ -502,13 +555,12 @@
     });
   }
   function clearAll() {
-    state.tab = 'all'; state.status = ''; state.year = state.author = state.couple = state.q = '';
+    state.tab = 'all'; state.year = state.author = state.couple = state.q = '';
     $('#q').value = ''; syncFilterUI(); state.page = 1; render();
   }
   function syncFilterUI() {
     $$('#tabs .tab').forEach(function (t) { t.classList.toggle('on', t.dataset.k === state.tab); });
     $('#fYear').value = state.year; $('#fAuthor').value = state.author; $('#fCouple').value = state.couple;
-    $('#fStatus').value = state.status || '';
   }
   var qTimer = null;
   $('#q').addEventListener('input', function (e) {
@@ -517,7 +569,6 @@
     qTimer = setTimeout(function () { state.q = v.trim(); state.page = 1; render(); }, 160);
   });
   $('#q').addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.target.value = ''; state.q = ''; state.page = 1; render(); } });
-  $('#fStatus').addEventListener('change', function (e) { state.status = e.target.value; state.page = 1; render(); });
   $('#fYear').addEventListener('change', function (e) { state.year = e.target.value; state.page = 1; render(); });
   $('#fAuthor').addEventListener('change', function (e) { state.author = e.target.value; state.page = 1; render(); });
   $('#fCouple').addEventListener('change', function (e) { state.couple = e.target.value; state.page = 1; render(); });
@@ -552,17 +603,21 @@
       hero.list = CZ.slides(reg).slice(0, 5);
       heroInit();
       renderFacts(lib);
-      renderContinue(); renderShelf(); renderNew();
-      paintRankTabs(); renderRank(); renderLadder();
-      buildFilters(); syncFilterUI(); render();
+      renderBan();
+      renderNew();
+      renderRank();
       CZ.schedule().then(renderSched).catch(function () { renderSched(null); });
-      CZ.onStats(function () { renderRank(); render(); });
+      renderLadder();
+      buildFilters();
+      render();
+      showExp(expFromHash() || 'new');
       CZ.reveal();
-    } catch (e) {
-      fail('lỗi dựng trang chủ', e);
-    }
+      /* số liệu Firebase về sau thì vẽ lại phần xếp hạng */
+      CZ.onStats(function () { renderRank(); buildFilters(); render(); });
+    } catch (e) { fail('lỗi dựng trang chủ', e); }
   }
+  /* quay lại tab (hoặc bấm Back) → dựng lại bàn đọc cho khớp dữ liệu trong máy */
+  window.addEventListener('pageshow', function () { if (CZ._memo.reg) { renderBan(); heroPaint(false); } });
   CZ.registry().then(function (r) { boot(r.reg); })
     .catch(function (e) { fail('lỗi tải registry', e); });
-  window.addEventListener('pageshow', function () { renderContinue(); renderShelf(); });
 })();

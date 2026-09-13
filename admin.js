@@ -269,12 +269,12 @@
       $('#chList').innerHTML = '<div class="row2 sm muted" style="padding:10px">bộ này chưa có chương nào</div>';
       return;
     }
-    var order = ch.map(function (_, i) { return i; }).reverse();
+    var order = ch.map(function (_, i) { return i; });      /* chương 1 ở trên, giống trang đọc */
     $('#chList').innerHTML = order.map(function (i, pos) {
       return '<div class="row2' + (i === CHAP ? ' on' : '') + '" data-i="' + i + '">' +
         '<span class="no">' + (i + 1) + '</span>' +
         '<span class="nm">' + esc(ch[i].t || ('Chương ' + (i + 1))) + '</span>' +
-        '<span class="row" style="gap:0">' + (pos === 0 ? '<span class="pill soon">mới nhất</span>' : '') +
+        '<span class="row" style="gap:0">' + (pos === order.length - 1 ? '<span class="pill soon">mới nhất</span>' : '') +
         '<button class="mv" data-up="' + i + '" title="Đưa lên">↑</button>' +
         '<button class="mv" data-dn="' + i + '" title="Đưa xuống">↓</button>' +
         '<button class="mv" data-go="' + i + '" title="Sửa chương">✎</button></span></div>';
@@ -657,10 +657,7 @@
     saveRegistry('Đã đổi tình trạng ' + ids.length + ' bộ thành “' + st + '”').then(function () { renderList(); });
   });
   $('#btnExport').addEventListener('click', function () {
-    var blob = new Blob([JSON.stringify(REG, null, 1)], { type: 'application/json' });
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob); a.download = 'chuseoz-registry-' + today() + '.json'; a.click();
-    setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+    CZ.download('chuseoz-registry-' + today() + '.json', JSON.stringify(REG, null, 1));
   });
   $('#btnAdd2').addEventListener('click', function () { show('new'); });
   $('#qkBody').addEventListener('input', function () { $('#qkStat').textContent = num(CZ.words(this.value)) + ' từ'; });

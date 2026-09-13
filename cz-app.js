@@ -209,10 +209,10 @@
   function rdGet() { return Object.assign({}, RD_DEF, jsonGet(LS.read, {}) || {}); }
   function rdSet(o) { var v = Object.assign(rdGet(), o || {}); jsonSet(LS.read, v); return v; }
 
-  /* sáng / tối (mặc định: tối) */
+  /* sáng / tối (mặc định: nền giấy sáng) */
   function themeInit() {
     var t = safeGet(LS.theme);
-    if (!t) { var old = safeGet(LS.dir); t = old === 'ctoi' ? 'dark' : old ? 'light' : 'dark'; }
+    if (!t) { var old = safeGet(LS.dir); t = old === 'ctoi' ? 'dark' : old ? 'light' : 'light'; }
     d.documentElement.setAttribute('data-theme', t);
     return t;
   }
@@ -331,6 +331,30 @@
   function qs(name) {
     try { return new URLSearchParams(location.search).get(name); } catch (e) { return null; }
   }
+  /* tải một tệp JSON về máy — có đường lùi cho trình duyệt cũ / môi trường thiếu Blob */
+  function download(name, text, mime) {
+    try {
+      var blob = new Blob([text], { type: mime || 'application/json' });
+      if (!w.URL || typeof w.URL.createObjectURL !== 'function') throw new Error('no-blob');
+      var a = d.createElement('a');
+      a.href = w.URL.createObjectURL(blob);
+      a.download = name;
+      d.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { try { w.URL.revokeObjectURL(a.href); } catch (e) {} }, 4000);
+      return true;
+    } catch (e) {
+      try {
+        var url = 'data:application/json;charset=utf-8,' + encodeURIComponent(text);
+        var b = d.createElement('a');
+        b.href = url; b.download = name; b.target = '_blank';
+        d.body.appendChild(b); b.click(); b.remove();
+        return true;
+      } catch (e2) {
+        toast('Trình duyệt không cho tải tệp — bạn copy nội dung trong bảng thay thế');
+        return false;
+      }
+    }
+  }
   function copy(text, okMsg) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       return navigator.clipboard.writeText(text).then(function () { toast(okMsg || 'Đã copy liên kết'); return true; })
@@ -354,6 +378,12 @@
     o.url = storyURL(o.slug);
     o.canRead = o.chapters > 0;
     return o;
+  }
+  /* “10 chương”, hoặc “9/10 chương” khi thẻ truyện ghi tổng dự kiến nhiều hơn số đã đăng */
+  function countText(n) {
+    if (!n) return '0 chương';
+    var c = parseInt(n.chapters, 10) || 0, d = parseInt(n.declared, 10) || c;
+    return d > c ? (c + '/' + d + ' chương') : (c + ' chương');
   }
   function adaptText(n) {
     var extra = (n.adaptName && n.adaptName !== n.title) ? ' · ' + n.adaptName : '';
@@ -422,7 +452,7 @@
       '<span class="scrim"></span>' +
       '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(n.status || 'Đang cập nhật') + '</span>' +
       (n.is18 ? '<span class="b18">18+</span>' : '') +
-      '<span class="foot"><span class="ch">' + esc(n.countLabel) + '</span></span>' +
+      '<span class="foot"><span class="ch">' + esc(countText(n)) + '</span></span>' +
       (pct ? '<span class="bar"><i style="width:' + pct + '%"></i></span>' : '') +
       '</div>' +
       '<h3>' + esc(n.title) + '</h3>' +
@@ -469,14 +499,21 @@
     var nums = (root || d).querySelectorAll('[data-count]');
     if (!nums.length) return;
     if (reduce || !w.IntersectionObserver) { Array.prototype.forEach.call(nums, function (b) { b.textContent = num(+b.dataset.count || 0); }); return; }
+    var fired = 0;
     var io = new IntersectionObserver(function (es) {
       es.forEach(function (e) {
+        fired++;
         if (!e.isIntersecting) return;
         countUp(e.target, +e.target.dataset.count || 0);
         io.unobserve(e.target);
       });
     }, { threshold: .4 });
     Array.prototype.forEach.call(nums, function (b) { b.textContent = '0'; io.observe(b); });
+    /* lưới an toàn: nếu máy không gọi lại observer (bị chặn, khung ẩn…) thì điền số luôn */
+    setTimeout(function () {
+      if (fired) return;
+      Array.prototype.forEach.call(nums, function (b) { b.textContent = num(+b.dataset.count || 0); });
+    }, 2500);
   }
   /* vạch tiến độ cuộn trang + nút lên đầu */
   function scrollUI() {
@@ -504,9 +541,8 @@
   function mountHeader(host, active) {
     if (!host) return;
     var NAV = [
-      { k: 'home', l: 'Trang chủ', i: 'home', h: '/' },
       { k: 'library', l: 'Thư viện', i: 'library', h: '/#thu-vien' },
-      { k: 'rank', l: 'BXH', i: 'trophy', h: '/#bxh' },
+      { k: 'rank', l: 'Xếp hạng', i: 'trophy', h: '/#bxh' },
       { k: 'sched', l: 'Lịch ra chương', i: 'calendar', h: '/#lich' },
       { k: 'adapt', l: 'Chuyển thể', i: 'film', h: '/#chuyen-the' }
     ];
@@ -555,8 +591,9 @@
       '<a href="' + BLOG + '/p/list-novel.html" target="_blank" rel="noopener" style="color:var(--acc)">blogspot chuseoz</a>.</p></div>' +
       '<div><h4>Khám phá</h4><a href="/#thu-vien">Thư viện truyện</a><a href="/#bxh">Bảng xếp hạng</a>' +
       '<a href="/#lich">Lịch ra chương</a><a href="/#chuyen-the">Chuyển thể</a></div>' +
-      '<div><h4>Liên kết</h4><a href="' + BLOG + '" target="_blank" rel="noopener">Blogger gốc</a>' +
-      '<a href="/admin">Trang quản trị</a><a href="/#doc-tiep">Đọc tiếp</a><a href="/#tu-truyen">Tủ truyện</a></div>' +
+      '<div><h4>Liên kết</h4><a href="/#ban-doc">Bàn đọc của bạn</a><a href="/admin">Trang quản trị</a>' +
+      '<a href="' + BLOG + '" target="_blank" rel="noopener">Blogger gốc</a>' +
+      '<a href="' + BLOG + '/p/list-novel.html" target="_blank" rel="noopener">Danh sách trên Blogger</a></div>' +
       '<div class="copy"><span>chuseoz · bản Cloudflare Pages · nguồn dữ liệu: ' +
       (w.CZ_SRC === 'kv' ? 'Cloudflare KV (sửa là thấy ngay)' : 'file tĩnh /data') + (rev ? ' · rev ' + esc(rev) : '') + '</span>' +
       '<span id="czFootNote"></span></div></div>';
@@ -631,7 +668,7 @@
       return '<a href="' + esc(storyURL(n.slug)) + '" class="' + (i === 0 ? 'on' : '') + '">' +
         (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy">' : '<img alt="">') +
         '<span><b>' + esc(n.title) + '</b><span>' + esc(n.author || '') +
-        (n.couple ? ' · ' + esc(n.couple) : '') + ' · ' + esc(n.countLabel) + '</span></span></a>';
+        (n.couple ? ' · ' + esc(n.couple) : '') + ' · ' + esc(countText(n)) + '</span></span></a>';
     }).join('') : '<div class="empty" style="border:0;background:none">Không tìm thấy truyện nào khớp “' + esc(q) + '”.</div>';
   }
   function paintLast() {
@@ -687,8 +724,8 @@
     isLiked: isLiked, toggleLike: toggleLike, marks: marks, toggleMark: toggleMark, chaptersRead: chaptersRead,
     rdGet: rdGet, rdSet: rdSet, themeInit: themeInit, themeToggle: themeToggle,
     icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo,
-    statusCls: statusCls, words: words, norm: norm, adaptText: adaptText,
-    storyURL: storyURL, readURL: readURL, slugify: slugify, qs: qs, copy: copy,
+    statusCls: statusCls, words: words, norm: norm, adaptText: adaptText, countText: countText,
+    storyURL: storyURL, readURL: readURL, slugify: slugify, qs: qs, copy: copy, download: download,
     card: card, mountRail: mountRail, reveal: reveal, countUp: countUp, scaleFacts: scaleFacts,
     scrollUI: scrollUI, mountShell: mountShell, mountHeader: mountHeader, mountFooter: mountFooter,
     openJump: openJump, toast: toast, modal: modal, confirm: confirmBox,

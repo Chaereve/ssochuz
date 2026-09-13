@@ -1,12 +1,13 @@
 <!doctype html>
-<html lang="vi" data-theme="dark">
+<html lang="vi" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
 <title>chuseoz · trang quản trị</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230e0c11'/%3E%3Cpath d='M16 7l7 4v10l-7 4-7-4V11z' fill='none' stroke='%23ff7d9c' stroke-width='2.4'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23faf8f4'/%3E%3Cpath d='M16 7l7 4v10l-7 4-7-4V11z' fill='none' stroke='%23a63a52' stroke-width='2.4'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="/cz.css">
+<script>/* chống nháy nền */try{var t=localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
 <body class="admin">
 <div class="abar"><div class="in">
@@ -23,14 +24,20 @@
 </div></div>
 
 <main class="amain">
+  <nav class="crumb"><a href="/">Trang chủ</a><span>›</span><a href="/#thu-vien">Thư viện</a><span>›</span><b>Trang quản trị</b></nav>
+  <div class="phead">
+    <h1>Trang quản trị</h1>
+    <p>Sửa truyện và chương ở đây là người đọc thấy ngay (1–2 giây) — không cần build, không cần deploy lại.
+      Không có Worker vẫn xem và sửa được dữ liệu trong repo, mọi thay đổi giữ trong máy bạn.</p>
+  </div>
   <div class="msgbar" id="msg"></div>
 
   <!-- ============ 1. KẾT NỐI ============ -->
   <section id="scConnect">
     <div class="card2">
       <h3>Nối trang quản trị với Cloudflare Worker</h3>
-      <p class="hint">Sửa truyện/chương ở đây là người đọc thấy ngay (1–2 giây), không cần build hay deploy lại.
-        Cần Worker <code>chuseoz-cms</code> đã gắn KV <code>CZ_KV</code> và secret <code>ADMIN_KEY</code> — hướng dẫn ở <code>worker/README.md</code>.</p>
+      <p class="hint">Cần Worker <code>chuseoz-cms</code> đã gắn KV <code>CZ_KV</code> và secret <code>ADMIN_KEY</code> —
+        hướng dẫn từng bước ở <code>worker/README.md</code> hoặc nút <b>Xem hướng dẫn 5 bước</b> bên dưới.</p>
       <div class="grid2">
         <div><label class="fl" for="inApi">URL Worker</label>
           <input class="inp" id="inApi" placeholder="https://chuseoz-cms.xxx.workers.dev" autocomplete="off"></div>
@@ -135,8 +142,8 @@
         <label class="fl" for="qkUrl">Link bài viết (để trống = tự tìm bài mới nhất khớp tên truyện)</label>
         <input class="inp" id="qkUrl" placeholder="https://chuseoz.blogspot.com/2026/05/…html">
         <div class="row mt">
-          <button class="btn pri" id="qkFetch">⬇ Lấy &amp; đăng thành chương mới</button>
-          <button class="btn ghost" id="qkFetchReplace">⬇ Lấy &amp; thay chương cuối</button>
+          <button class="btn pri" id="qkFetch">↓ Lấy &amp; đăng thành chương mới</button>
+          <button class="btn ghost" id="qkFetchReplace">↓ Lấy &amp; thay chương cuối</button>
         </div>
       </div>
       <div class="card2 hide" id="qkPrevBox">
@@ -208,7 +215,7 @@
           <button class="btn ghost sm" id="chNew">+ Thêm chương trống</button></div>
         <div class="grid2" style="margin-top:8px">
           <div>
-            <label class="fl">Danh sách chương (mới nhất ở trên)</label>
+            <label class="fl">Danh sách chương (chương 1 ở trên)</label>
             <div class="chlist" id="chList"></div>
           </div>
           <div>
@@ -256,14 +263,14 @@
         <h3>Đồng bộ · nạp · sao lưu</h3>
         <div class="kv" id="health"></div>
         <div class="row">
-          <button class="btn pri" id="btnSync">⟳ Đồng bộ lại từ Blogger</button>
+          <button class="btn pri" id="btnSync">Đồng bộ lại từ Blogger</button>
           <button class="btn" id="btnSeed">↑ Nạp dữ liệu repo lên KV</button>
           <button class="btn ghost" id="btnHealth">Kiểm tra Worker</button>
           <button class="btn ghost" id="btnStatsClear">Xoá cache số liệu</button>
         </div>
         <div class="row mt">
-          <button class="btn ghost" id="btnBackup">⬇ Sao lưu toàn bộ (JSON)</button>
-          <button class="btn ghost" id="btnRestore">⬆ Phục hồi từ file</button>
+          <button class="btn ghost" id="btnBackup">↓ Sao lưu toàn bộ (JSON)</button>
+          <button class="btn ghost" id="btnRestore">↑ Phục hồi từ file</button>
           <input type="file" id="fileRestore" accept="application/json" class="hide">
         </div>
         <div class="row mt"><button class="btn pri" id="sSave">Lưu cài đặt lên KV</button><span class="dirty"></span></div>

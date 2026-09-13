@@ -1,0 +1,72 @@
+{
+ "documents": [
+  {
+   "name": "projects/chuseoz-library/databases/(default)/documents/novelData/third-person",
+   "fields": {
+    "views": {
+     "integerValue": "1234"
+    },
+    "votes": {
+     "integerValue": "56"
+    },
+    "chapterCount": {
+     "integerValue": "9"
+    },
+    "lastChapterTitle": {
+     "stringValue": "Chương mới"
+    }
+   }
+  },
+  {
+   "name": "projects/chuseoz-library/databases/(default)/documents/novelData/hometown-romance-special",
+   "fields": {
+    "views": {
+     "integerValue": "987"
+    },
+    "votes": {
+     "integerValue": "31"
+    },
+    "chapterCount": {
+     "integerValue": "10"
+    },
+    "lastChapterTitle": {
+     "stringValue": "Chương mới"
+    }
+   }
+  },
+  {
+   "name": "projects/chuseoz-library/databases/(default)/documents/novelData/lunar-secret",
+   "fields": {
+    "views": {
+     "integerValue": "450"
+    },
+    "votes": {
+     "integerValue": "12"
+    },
+    "chapterCount": {
+     "integerValue": "8"
+    },
+    "lastChapterTitle": {
+     "stringValue": "Chương mới"
+    }
+   }
+  },
+  {
+   "name": "projects/chuseoz-library/databases/(default)/documents/novelData/co-vo-ho-anh-cua-toi",
+   "fields": {
+    "views": {
+     "integerValue": "320"
+    },
+    "votes": {
+     "integerValue": "9"
+    },
+    "chapterCount": {
+     "integerValue": "12"
+    },
+    "lastChapterTitle": {
+     "stringValue": "Chương mới"
+    }
+   }
+  }
+ ]
+}

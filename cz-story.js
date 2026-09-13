@@ -93,7 +93,6 @@
     var im = n.thumb || n.slide || '';
     var syn = n.synFull || n.syn || '';
     $('#shero').innerHTML =
-      '<div class="bg" aria-hidden="true">' + (im ? '<img src="' + esc(im) + '" alt="">' : '') + '</div>' +
       '<div class="in">' +
         '<div class="cover">' + (im ? '<img src="' + esc(im) + '" alt="Bìa ' + esc(n.title) + '" width="300" height="450" fetchpriority="high">' : '') +
           (n.is18 ? '<span class="b18">18+</span>' : '') + '</div>' +
@@ -101,10 +100,11 @@
           '<h1>' + esc(n.title) + '</h1>' +
           '<div class="meta">' +
             '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(n.status || '—') + '</span>' +
-            '<span>' + ic('book', 'i-s') + ' <b>' + esc(n.countLabel) + '</b></span>' +
+            '<span>' + ic('book', 'i-s') + ' <b>' + esc(CZ.countText(n)) + '</b></span>' +
             (n.author ? '<span>' + ic('pen', 'i-s') + ' ' + esc(n.author) + '</span>' : '') +
             (n.couple ? '<span>' + ic('users', 'i-s') + ' ' + esc(n.couple) + '</span>' : '') +
             (n.year ? '<span>' + esc(n.year) + '</span>' : '') +
+            '<span>' + ic('film', 'i-s') + ' ' + esc(CZ.adaptText(n)) + '</span>' +
             '<span>' + ic('refresh', 'i-s') + ' ' + esc(CZ.timeAgo(n.updated)) + '</span>' +
           '</div>' +
           '<p class="syn clamp" id="synBox">' + esc(syn) + '</p>' +
@@ -118,12 +118,6 @@
           (ch && n.chapters ? '<div class="prog"><div class="lbl"><span>Tiến độ đọc của bạn</span>' +
             '<span>chương ' + ch + '/' + n.chapters + ' · ' + progressPct(n, ch) + '%</span></div>' +
             '<div class="bar"><i style="width:' + progressPct(n, ch) + '%"></i></div></div>' : '') +
-          '<div class="info">' +
-            [['Tình trạng', n.status || '—', 'trạng thái'], ['Tác giả', n.author || '—', ''],
-             ['Couple', n.couple || 'Chưa cập nhật', ''], ['Số chương', n.countLabel + (n.declared > n.chapters ? ' (đã đăng ' + n.chapters + ')' : ''), ''],
-             ['Chuyển thể', CZ.adaptText(n), ''], ['Cập nhật', CZ.dateVN(n.updated), '']]
-              .map(function (r) { return '<div class="r"><span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b></div>'; }).join('') +
-          '</div>' +
           (n.synFull && n.synFull.length > (n.syn || '').length
             ? '<button class="synbtn mt" id="synMore">Xem mô tả đầy đủ</button>' : '') +
         '</div>' +
@@ -292,12 +286,12 @@
         var patch = {};
         patch[key] = (key === 'size' || key === 'width' || key === 'line') ? Number(v) : (key === 'justify' ? Number(v) : v);
         CZ.rdSet(patch);
-        applyRD(); paintSettings(); renderCur(false);
+        applyRD(); paintSettings(); relayout();
       });
     });
     $('#setReset').addEventListener('click', function () {
       CZ.rdSet({ mode: 'scroll', size: 18, font: 'serif', line: 1.85, theme: 'kem', width: 720, justify: 0 });
-      applyRD(); paintSettings(); renderCur(false); CZ.toast('Đã về mặc định');
+      applyRD(); paintSettings(); relayout(); CZ.toast('Đã về mặc định');
     });
   }
   function paintTOC() {
@@ -362,6 +356,11 @@
     PI = Math.min(PI, PAGES.length - 1);
     paintPage();
   }
+  /* đổi cỡ chữ / nền / kiểu xem giữa chừng: đo lại mà KHÔNG mất chỗ đang đọc */
+  function relayout() {
+    repaginate();
+    renderNav(CZ.rdGet().mode === 'paged' && PAGES.length > 0);
+  }
   function renderNav(isPage) {
     var s = CZ.rdGet();
     var prev = cur > 1, next = cur < CHS.length;
@@ -374,12 +373,14 @@
       ? (last ? (next ? 'Chương ' + (cur + 1) : 'Hết bộ') : 'Trang ' + (PI + 2))
       : (next ? 'Chương ' + (cur + 1) : 'Hết bộ');
     $('#rdNav').innerHTML =
-      '<button id="navPrev"' + ((paged ? (first && !prev) : !prev) ? ' class="off" disabled' : '') + '>' +
+      '<button id="navPrev" class="' + ((paged ? (first && !prev) : !prev) ? 'off' : '') + '"' +
+        ((paged ? (first && !prev) : !prev) ? ' disabled' : '') + '>' +
         '<b>' + ic('left', 'i-s') + ' ' + (paged ? (first ? 'Chương trước' : 'Trang trước') : 'Chương trước') + '</b>' +
         '<small>' + esc(left) + '</small></button>' +
       '<button id="navToc" class="mid"><b>' + ic('list', 'i-s') + ' Mục lục</b><small>chương ' + cur + '/' + CHS.length +
         (paged ? ' · trang ' + (PI + 1) + '/' + PAGES.length : '') + '</small></button>' +
-      '<button id="navNext" class="main"' + ((paged ? (last && !next) : !next) ? ' class="off" disabled' : '') + '>' +
+      '<button id="navNext" class="main' + ((paged ? (last && !next) : !next) ? ' off' : '') + '"' +
+        ((paged ? (last && !next) : !next) ? ' disabled' : '') + '>' +
         '<b>' + (paged ? (last ? 'Chương tiếp theo' : 'Trang sau') : 'Chương tiếp theo') + ' ' + ic('right', 'i-s') + '</b>' +
         '<small>' + esc(right) + '</small></button>';
     $('#navPrev').addEventListener('click', function () { turn(-1); });
@@ -415,7 +416,6 @@
     var w = CZ.words(c.html);
     $('#rdMeta').innerHTML = [
       N.author ? '<span>' + ic('pen', 'i-s') + ' ' + esc(N.author) + '</span>' : '',
-      '<span>' + ic('book', 'i-s') + ' Chương ' + cur + '/' + CHS.length + '</span>',
       w ? '<span>' + ic('clock', 'i-s') + ' ~' + Math.max(1, Math.round(w / 200)) + ' phút đọc</span>' : '',
       '<span>' + ic('eye', 'i-s') + ' ' + num(w) + ' từ</span>'
     ].join('');
@@ -439,8 +439,9 @@
     paintMark();
     $('#actLike').addEventListener('click', function () {
       var on = CZ.toggleLike(N);
+      var stx = CZ.statsOf(N);
       this.classList.toggle('on', on);
-      this.querySelector('span').textContent = on ? 'Đã thích' : 'Thích';
+      this.querySelector('span').textContent = (on ? 'Đã thích' : 'Thích') + (stx && stx.votes ? ' · ' + num(stx.votes) : '');
       toast(on ? 'Đã thích (lưu trên máy bạn)' : 'Đã bỏ thích');
     });
     $('#actSave').addEventListener('click', function () {
@@ -610,9 +611,9 @@
     $('#cmts').style.display = 'none';
     $('#rd').style.display = 'none';
   }
-  CZ.mountShell({ active: 'story' });          /* đầu trang hiện ngay */
+  CZ.mountShell({ active: 'library' });          /* đầu trang hiện ngay */
   function boot(reg) {
-    CZ.mountShell({ active: 'story' });
+    CZ.mountShell({ active: 'library' });
     if (!SLUG) { showError('Không rõ truyện nào', '<p class="muted">Đường dẫn thiếu tên truyện. Chọn một bộ trong thư viện để bắt đầu đọc.</p>'); return; }
     var meta = CZ.findLib(SLUG);
     if (reg && (!CZ._memo.reg)) CZ._memo.reg = reg;

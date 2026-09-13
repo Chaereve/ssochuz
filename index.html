@@ -1,20 +1,18 @@
 <!doctype html>
-<html lang="vi" data-theme="dark">
+<html lang="vi" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>chuseoz · thư viện truyện chuyển thể</title>
-<meta name="description" content="Thư viện truyện chuyển thể: series, phim, couple, bảng xếp hạng, lịch ra chương và trình đọc truyện. Dữ liệu thật từ chuseoz.blogspot.com.">
-<meta name="theme-color" content="#0e0c11">
+<meta name="description" content="Đọc truyện chuyển thể: series, phim, couple, lịch ra chương và bản đọc trong máy.">
+<meta name="theme-color" content="#faf8f4">
 <meta property="og:title" content="chuseoz · thư viện truyện chuyển thể">
 <meta property="og:description" content="Đọc truyện chuyển thể: series, phim, couple và lịch ra chương.">
 <meta property="og:type" content="website">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230e0c11'/%3E%3Cpath d='M9 8h11a3 3 0 0 1 3 3v13H12a3 3 0 0 1-3-3z' fill='none' stroke='%23ff7d9c' stroke-width='2.4'/%3E%3C/svg%3E">
-<link rel="preconnect" href="https://blogger.googleusercontent.com" crossorigin>
-<link rel="dns-prefetch" href="https://pbs.twimg.com">
-<link rel="dns-prefetch" href="https://images.justwatch.com">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23faf8f4'/%3E%3Cpath d='M10 8h9a3 3 0 0 1 3 3v13H13a3 3 0 0 1-3-3z' fill='none' stroke='%23a63a52' stroke-width='2.4'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <link rel="stylesheet" href="/cz.css">
+<script>/* chống nháy nền: áp tông màu đã lưu trước khi vẽ */try{var t=localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
 <body class="hpage">
 <div id="sprog" aria-hidden="true"><i></i></div>
@@ -23,14 +21,12 @@
 <main>
   <!-- ================= HERO LANDING ================= -->
   <section class="hero" id="hero" aria-label="Truyện nổi bật">
-    <div class="bg" aria-hidden="true"><img id="heroBgA" alt=""><img id="heroBgB" alt=""><span class="tint"></span></div>
     <div class="stage" id="stage" aria-live="polite"></div>
     <div class="foot">
       <div class="footin">
         <button class="arrow" id="hPrev" aria-label="Truyện trước"></button>
         <div class="dots" id="hDots" role="tablist" aria-label="Chọn truyện nổi bật"></div>
         <span class="count" id="hCount"></span>
-        <span class="grow"></span>
         <div class="strip" id="hStrip"></div>
         <button class="arrow" id="hNext" aria-label="Truyện kế tiếp"></button>
       </div>
@@ -42,75 +38,66 @@
   <section class="facts" aria-label="Số liệu thư viện"><div class="in" id="facts"></div></section>
 
   <div class="wrap">
-    <!-- ================= ĐỌC TIẾP ================= -->
-    <section class="sec fade" id="doc-tiep" hidden>
+    <!-- ================= BÀN ĐỌC (đang đọc dở · tủ truyện) ================= -->
+    <section class="sec" id="ban-doc" hidden>
       <div class="sechead">
-        <h2><span data-ic="play"></span>Đọc tiếp</h2>
-        <span class="sub" id="contSub"></span>
-        <span class="right"><button class="btn ghost sm" id="contClear">Xoá lịch sử đọc</button></span>
+        <h2>Bàn đọc của bạn</h2>
+        <span class="sub" id="banSub"></span>
+        <span class="right">
+          <span class="tabs sm" id="banTabs" role="tablist">
+            <button class="tab on" data-ban="doc" role="tab">Đang đọc dở<span class="ct" id="banDocCount"></span></button>
+            <button class="tab" data-ban="shelf" role="tab">Tủ truyện<span class="ct" id="banShelfCount"></span></button>
+          </span>
+          <button class="btn ghost sm" id="banClear">Xoá</button>
+        </span>
       </div>
       <div class="contcols" id="contRow"></div>
+      <div class="contcols hide" id="shelfRow"></div>
     </section>
 
-    <!-- ================= TỦ TRUYỆN ================= -->
-    <section class="sec fade" id="tu-truyen" hidden>
+    <!-- ================= KHÁM PHÁ (4 mục, chọn từng mục để xem) ================= -->
+    <section class="sec" id="kham-pha">
       <div class="sechead">
-        <h2><span data-ic="bookmark"></span>Tủ truyện của bạn</h2>
-        <span class="sub" id="shelfSub"></span>
-        <span class="right"><button class="btn ghost sm" id="shelfClear">Xoá hết</button></span>
+        <h2>Khám phá</h2>
+        <span class="sub">chọn một mục</span>
       </div>
-      <div class="contcols" id="shelfRow"></div>
-    </section>
+      <nav class="tabline" id="expTabs" role="tablist">
+        <button data-exp="new" class="on" role="tab">Mới cập nhật<span class="ct" id="expNew"></span></button>
+        <button data-exp="rank" role="tab">Xếp hạng<span class="ct" id="expRank"></span></button>
+        <button data-exp="sched" role="tab">Lịch ra chương<span class="ct" id="expSched"></span></button>
+        <button data-exp="adapt" role="tab">Chuyển thể<span class="ct" id="expAdapt"></span></button>
+      </nav>
 
-    <!-- ================= MỚI CẬP NHẬT ================= -->
-    <section class="sec fade" id="moi-cap-nhat">
-      <div class="sechead">
-        <h2><span data-ic="sparkle"></span>Mới cập nhật</h2>
-        <span class="sub" id="newSub"></span>
-        <span class="right"><a class="btn ghost sm" href="/#thu-vien">Xem thư viện<span data-ic="right"></span></a></span>
+      <div class="expane" id="moi-cap-nhat">
+        <div class="rail" id="newRail"></div>
+        <div class="src" id="newSrc"><span class="dot"></span><span id="newSub">đang tải…</span></div>
       </div>
-      <div class="rail" id="newRail"></div>
-    </section>
 
-    <!-- ================= BXH + LỊCH RA CHƯƠNG ================= -->
-    <section class="sec fade" id="bxh">
-      <div class="two">
-        <div class="panel">
-          <div class="sechead">
-            <h2><span data-ic="trophy"></span>Bảng xếp hạng</h2>
-            <span class="right"><span class="tabs" id="rankTabs" role="tablist"></span></span>
-          </div>
-          <div id="rank"></div>
-          <div class="src" id="rankSrc"><span class="dot"></span><span>đang tải số liệu…</span></div>
+      <div class="expane hide" id="bxh">
+        <div class="exhead"><span class="tabs sm" id="rankTabs" role="tablist"></span></div>
+        <div id="rank"></div>
+        <div class="src" id="rankSrc"><span class="dot"></span><span>đang tải số liệu…</span></div>
+      </div>
+
+      <div class="expane hide" id="lich">
+        <div id="sched"></div>
+        <div class="src" id="schedSrc"><span class="dot"></span><span>đang tải…</span></div>
+      </div>
+
+      <div class="expane hide" id="chuyen-the">
+        <div class="lbox">
+          <div class="ltabs" id="ltabs" role="tablist"></div>
+          <div class="ld" id="ldesc">—</div>
+          <div id="lcontent"></div>
         </div>
-        <div class="panel" id="lich">
-          <div class="sechead">
-            <h2><span data-ic="calendar"></span>Lịch ra chương</h2>
-            <span class="right"><span class="sub" id="schedSub">hàng tuần</span></span>
-          </div>
-          <div id="sched"></div>
-          <div class="src" id="schedSrc"><span class="dot"></span><span>đang tải…</span></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ================= CHUYỂN THỂ ================= -->
-    <section class="sec fade" id="chuyen-the">
-      <div class="sechead">
-        <h2><span data-ic="film"></span>Phân cấp chuyển thể</h2>
-        <span class="sub" id="adSub">—</span>
-      </div>
-      <div class="lbox">
-        <div class="ltabs" id="ltabs" role="tablist"></div>
-        <div class="ld" id="ldesc" style="color:var(--mut);font-size:13.5px;margin-bottom:12px">—</div>
-        <div id="lcontent"></div>
+        <div class="src"><span class="dot"></span><span id="adSub">—</span></div>
       </div>
     </section>
 
     <!-- ================= THƯ VIỆN ================= -->
-    <section class="sec fade" id="thu-vien">
+    <section class="sec" id="thu-vien">
       <div class="sechead">
-        <h2><span data-ic="library"></span>Thư viện truyện</h2>
+        <h2>Thư viện truyện</h2>
         <span class="sub">lọc theo tình trạng · năm · tác giả · couple</span>
       </div>
       <div class="fbox">
@@ -118,7 +105,6 @@
           <label class="search"><span data-ic="search"></span>
             <input id="q" placeholder="Tìm truyện, tác giả, couple…" autocomplete="off" spellcheck="false">
           </label>
-          <select class="sel" id="fStatus" aria-label="Tình trạng"></select>
           <select class="sel" id="fYear" aria-label="Năm"></select>
           <select class="sel" id="fAuthor" aria-label="Tác giả"></select>
           <select class="sel" id="fCouple" aria-label="Couple"></select>
@@ -128,11 +114,11 @@
             <button data-view="list" title="Xem dạng danh sách"><span data-ic="rows"></span></button>
           </div>
         </div>
-        <div class="row1" style="margin-bottom:0">
+        <div class="row1">
           <div class="tabs" id="tabs" role="tablist"></div>
         </div>
-        <div class="fpick mt" id="fpick"></div>
-        <div class="fcount mt" id="fcount"></div>
+        <div class="fpick" id="fpick"></div>
+        <div class="fcount" id="fcount"></div>
       </div>
       <div class="grid" id="grid"></div>
       <div class="pager" id="pager"></div>

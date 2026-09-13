@@ -1,13 +1,14 @@
 <!doctype html>
-<html lang="vi" data-theme="dark">
+<html lang="vi" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Đang tải… · chuseoz</title>
 <meta name="description" content="Thông tin truyện, danh sách chương và trình đọc truyện chuyển thể trên chuseoz.">
-<meta name="theme-color" content="#0e0c11">
+<meta name="theme-color" content="#faf8f4">
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <link rel="stylesheet" href="/cz.css">
+<script>/* chống nháy nền */try{var t=localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
 <body class="spage">
 <div id="sprog" aria-hidden="true"><i></i></div>
@@ -19,9 +20,9 @@
   <section class="shero" id="shero"></section>
   <section class="sec" id="chapSec">
     <div class="sechead">
-      <h2><span data-ic="list"></span>Danh sách chương</h2>
+      <h2>Danh sách chương</h2>
       <span class="sub" id="chapCount">—</span>
-      <span class="right"><a class="btn ghost sm" id="chapTop">Đọc chương mới nhất<span data-ic="up"></span></a></span>
+      <span class="right"><a class="btn ghost sm" id="chapTop">Chương mới nhất<span data-ic="up"></span></a></span>
     </div>
     <div class="chapbar">
       <label class="search"><span data-ic="search"></span>
@@ -38,9 +39,9 @@
   </section>
   <section class="sec" id="relSec">
     <div class="relcols">
-      <div><div class="sechead"><h2 style="font-size:16px"><span data-ic="tv"></span>Cùng series</h2></div><div class="relbox" id="relSeries"></div></div>
-      <div><div class="sechead"><h2 style="font-size:16px"><span data-ic="users"></span>Cùng couple</h2></div><div class="relbox" id="relCouple"></div></div>
-      <div><div class="sechead"><h2 style="font-size:16px"><span data-ic="pen"></span>Cùng tác giả</h2></div><div class="relbox" id="relAuthor"></div></div>
+      <div><div class="sechead"><h2>Cùng series</h2></div><div class="relbox" id="relSeries"></div></div>
+      <div><div class="sechead"><h2>Cùng couple</h2></div><div class="relbox" id="relCouple"></div></div>
+      <div><div class="sechead"><h2>Cùng tác giả</h2></div><div class="relbox" id="relAuthor"></div></div>
     </div>
   </section>
   <section class="cmts" id="cmts"><h3>Bình luận</h3><div id="giscus"></div>

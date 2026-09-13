@@ -1,9 +1,9 @@
 /* ============================================================================
    Kiểm thử TRANG CHỦ (bố cục hero landing)
-   - dựng được hero / số liệu / thư viện / BXH / lịch / chuyển thể
-   - thẻ truyện trỏ đúng /truyen/<slug>/ (mở tab mới được, không phải # ảo)
-   - tìm kiếm, lọc, phân trang chạy thật
-   - kệ “Đọc tiếp” + “Tủ truyện” dựng từ dữ liệu trong máy
+   - dựng được hero / số liệu / bàn đọc / khám phá (4 tab) / thư viện
+   - thẻ truyện trỏ đúng /truyen/<slug>/ (link thật, không phải # ảo)
+   - tìm kiếm, lọc, sắp xếp, phân trang chạy thật
+   - “Bàn đọc” gộp đang-đọc-dở + tủ truyện, xoá được từng bộ
    - KHÔNG hiện số lượt đọc khi Firebase bị chặn (không bịa số)
    ========================================================================== */
 const { page, dataFetch } = require('./mk');
@@ -29,7 +29,8 @@ const LIB = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data/registry
     cta: $$('#stage .slide.on .btn-row a, #stage .slide.on .btn-row button').map(b => b.textContent.trim()),
     readHref: ($('#stage .slide.on .btn-row a') || {}).getAttribute ? $('#stage .slide.on .btn-row a').getAttribute('href') : '',
     dots: $$('#hDots button').length,
-    strip: $$('#hStrip button').length
+    strip: $$('#hStrip button').length,
+    hasBlurBg: !!$('#hero .bg')
   };
   click($$('#hDots button')[1]); await wait(120);
   out.heroAfterDot = (($('#stage .slide.on h1') || {}).textContent || '').trim() === (LIB.find(n => n.slug === p.win.CZ.slides(p.win.CZ._memo.reg)[1].slug) || {}).title;
@@ -48,13 +49,14 @@ const LIB = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data/registry
   click(tabs[2]); await wait(200);
   out.tabFilter = { label: tabs[2].textContent.trim(), n: $$('#grid .card').length };
   click(tabs[0]); await wait(200);
-  /* lọc theo ô “Tình trạng” (trước đây là ô chết, không có lựa chọn nào) */
-  const st = $('#fStatus');
-  out.statusSel = { options: [...st.options].map(o => o.textContent), n0: $$('#grid .card').length };
-  st.value = 'done'; st.dispatchEvent(new win.Event('change', { bubbles: true })); await wait(220);
+  /* tình trạng lọc bằng dãy tab ngay trên lưới — không còn ô “Tình trạng” trùng lặp */
+  out.statusSel = { conOLoc: !!$('#fStatus'), n0: $$('#grid .card').length };
+  const stTab = $$('#tabs .tab').find(b => /Hoàn thành/.test(b.textContent));
+  click(stTab); await wait(220);
   out.statusFilter = { n: $$('#grid .card').length, chip: txt('#fpick'), fcount: txt('#fcount') };
-  st.value = ''; st.dispatchEvent(new win.Event('change', { bubbles: true })); await wait(200);
+  click($$('#tabs .tab')[0]); await wait(200);
   const sel = $('#fSort');
+  out.sortOptions = [...sel.options].map(o => o.textContent);
   sel.value = 'az'; sel.dispatchEvent(new win.Event('change', { bubbles: true })); await wait(200);
   out.sortAZ = (($('#grid .card h3') || {}).textContent || '').trim();
   sel.value = 'new'; sel.dispatchEvent(new win.Event('change', { bubbles: true })); await wait(150);
@@ -72,32 +74,49 @@ const LIB = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data/registry
   doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await wait(120);
   out.jumpClosedByEsc = !jb.classList.contains('on');
 
+  /* ---------- Khám phá: 4 tab, mở đúng nội dung ---------- */
+  out.exp = { tabs: $$('#expTabs button').map(b => b.textContent.trim()), visible: $$('#kham-pha > .expane:not(.hide)').map(d => d.id) };
+  click($$('#expTabs button')[1]); await wait(120);
+  out.expRank = { visible: $$('#kham-pha > .expane:not(.hide)').map(d => d.id), rows: $$('#rank .rank').length };
+  click($$('#expTabs button')[2]); await wait(120);
+  out.expSched = { visible: $$('#kham-pha > .expane:not(.hide)').map(d => d.id), rows: $$('#sched .sched').length };
+  click($$('#expTabs button')[3]); await wait(120);
+  out.expAdapt = { visible: $$('#kham-pha > .expane:not(.hide)').map(d => d.id), tabs: $$('#ltabs .tab').map(b => b.textContent.trim()), rows: $$('#lcontent .srow').length };
+  /* link cũ #bxh vẫn mở đúng tab */
+  p.win.location.hash = '#bxh'; await wait(150);
+  out.expHashLink = { visible: $$('#kham-pha > .expane:not(.hide)').map(d => d.id) };
+
   /* ---------- BXH: Firebase bị chặn thì không hiện số ---------- */
   out.rank = { rows: $$('#rank .rank').length, src: txt('#rankSrc'), tabs: $$('#rankTabs .tab').map(b => b.textContent.trim()) };
   out.rankHasNoFakeNumbers = !/lượt|phiếu/.test(txt('#rank'));
-  click($$('#rankTabs .tab')[2]); await wait(120);
-  out.rankNew = txt('#rank .rank');
+  const rc = $$('#rankTabs .tab');
+  click(rc[rc.length - 1]); await wait(120);
+  out.rankChap = txt('#rank .rank');
   out.sched = { rows: $$('#sched .sched').length, src: txt('#schedSrc') };
-  out.ladder = { tabs: $$('#ltabs .tab').map(b => b.textContent.trim()), rows: $$('#lcontent .srow').length };
-  out.newRail = $$('#newRail .card').length;
+  out.newRail = { n: $$('#newRail .card').length, sub: txt('#newSub') };
 
-  /* ---------- kệ “Đọc tiếp” ---------- */
-  out.continueHidden0 = $('#doc-tiep').hidden;
+  /* ---------- Bàn đọc: đang đọc dở + tủ truyện ---------- */
+  out.banHidden0 = $('#ban-doc').hidden;
   const a = LIB.find(n => n.chapters > 3), b = LIB.filter(n => n.chapters > 3)[1];
   LS.setItem('chuseoz-prog-' + a.slug, '2'); LS.setItem('chuseoz-when-' + a.slug, String(Date.now()));
   LS.setItem('chuseoz-prog-' + b.slug, '3'); LS.setItem('chuseoz-when-' + b.slug, String(Date.now() - 5000));
-  /* trang chủ dựng lại kệ khi quay lại tab */
   win.dispatchEvent(new win.Event('pageshow'));
   await wait(200);
-  out.continue = { hidden: $('#doc-tiep').hidden, rows: $$('#contRow .cont').length, sub: txt('#contSub'), first: txt('#contRow .cont b') };
-
-  /* ---------- tủ truyện (chỉ chứa bộ người dùng tự lưu) ---------- */
-  out.shelfHidden0 = $('#tu-truyen').hidden;
+  out.banDoc = {
+    hidden: $('#ban-doc').hidden, rows: $$('#contRow .cont').length,
+    sub: txt('#banSub'), first: txt('#contRow .cont b'), count: txt('#banDocCount'),
+    shelfShown: !$('#shelfRow').classList.contains('hide')
+  };
+  /* chuyển sang tủ truyện */
   LS.setItem('chuseoz-shelf', JSON.stringify([a.slug]));
   win.dispatchEvent(new win.Event('pageshow')); await wait(200);
-  out.shelf = { hidden: $('#tu-truyen').hidden, rows: $$('#shelfRow .cont').length, title: txt('#shelfRow .cont b') };
+  out.banShelfCount = txt('#banShelfCount');
+  click($$('#banTabs .tab')[1]); await wait(150);
+  out.banShelf = { rows: $$('#shelfRow .cont').length, title: txt('#shelfRow .cont b'), clearLabel: txt('#banClear') };
   click($$('#shelfRow [data-rm]')[0]); await wait(200);
   out.shelfAfterRemove = { rows: $$('#shelfRow .cont').length, ls: LS.getItem('chuseoz-shelf') };
+  click($$('#banTabs .tab')[0]); await wait(150);
+  out.banBackToDoc = !$('#contRow').classList.contains('hide');
 
   out.errors1 = errors.slice(0, 6);
   console.log(JSON.stringify(out, null, 1));
