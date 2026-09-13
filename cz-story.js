@@ -175,7 +175,7 @@
       void pane.offsetWidth;
       pane.classList.add('pin');
     }
-    if (k === 'cmt' && !TAB.loaded.cmt) { TAB.loaded.cmt = true; mountGiscus(); }
+    if (k === 'cmt' && !TAB.loaded.cmt) { TAB.loaded.cmt = true; mountComments(); }
     paintInk();
     if (scroll && pane) {
       var y = pane.getBoundingClientRect().top + window.scrollY - 76;
@@ -475,28 +475,175 @@
     $('#relSec').style.display = shown ? '' : 'none';
   }
 
-  /* khối Đánh giá chỉ dựng khi người đọc mở tab (không kéo script bình luận từ đầu) */
-  function mountGiscus() {
-    var g = ((CZ._memo.reg || {}).settings || {}).giscus || {};
+  /* khối Đánh giá / bình luận: dựng khi người đọc mở tab (không kéo gì từ đầu) */
+  function mountComments() {
     var box = $('#giscus');
     if (!box) return;
     var note = $('#cmtNote'), sub = $('#cmtSub');
-    if (!g.repo || !g.repoId) {
-      box.innerHTML = '<div class="empty">Chưa gắn hệ thống bình luận.<div class="mt">Khi chủ web điền repo giscus trong trang quản trị, ô đánh giá sẽ hiện ở đây — web không dẫn người đọc sang nơi khác.</div></div>';
-      if (note) note.textContent = 'Đánh giá chạy trên GitHub Discussions (giscus), gắn trong trang quản trị.';
+    var api = window.CZ_API || '';
+    if (!api) {
+      box.innerHTML = '<div class="empty">Chưa nối Worker — bình luận cần backend.<div class="mt">Điền <code>window.CZ_API</code> trong <b>cz-config.js</b> rồi deploy lại (xem worker/README.md).</div></div>';
+      if (note) note.textContent = '';
       if (sub) sub.textContent = '';
       return;
     }
-    if (note) note.textContent = 'Bình luận chạy trên GitHub Discussions (giscus) — không cần tài khoản riêng của web.';
     if (sub) sub.textContent = 'góp ý cho bộ truyện này';
-    box.innerHTML = '';
-    var s = document.createElement('script');
-    s.src = 'https://giscus.app/client.js'; s.async = true;
-    s.setAttribute('data-repo', g.repo); s.setAttribute('data-repo-id', g.repoId);
-    s.setAttribute('data-mapping', 'pathname'); s.setAttribute('data-term', location.pathname);
-    s.setAttribute('data-reactions-enabled', '1'); s.setAttribute('data-theme', 'preferred_color_scheme');
-    s.setAttribute('data-lang', 'vi'); s.crossOrigin = 'anonymous';
-    box.appendChild(s);
+    if (note) note.textContent = 'Bình luận lưu trên máy chủ, đăng nhập Google để gửi. Mỗi người chỉ xoá được bình luận của mình.';
+    box.innerHTML =
+      '<div class="cmt-wrap">' +
+        '<div class="cmt-form" id="cmtForm"></div>' +
+        '<div class="cmt-list" id="cmtList"><div class="cmt-status">Đang tải bình luận…</div></div>' +
+      '</div>';
+    renderCommentForm();
+    loadComments();
+    if (window.CZ_AUTH && window.CZ_AUTH.onAuth) window.CZ_AUTH.onAuth(renderCommentForm);
+  }
+
+  function renderCommentForm() {
+    var f = $('#cmtForm');
+    if (!f) return;
+    var u = (window.CZ_AUTH && window.CZ_AUTH.current && window.CZ_AUTH.current()) || null;
+    if (u) {
+      var av = u.picture
+        ? '<img class="cmt-ava" src="' + esc(u.picture) + '" alt="">'
+        : '<span class="cmt-ava cmt-ava--ph">' + esc((u.name || 'B')[0] || 'B') + '</span>';
+      f.innerHTML =
+        '<div class="cmt-me">' + av +
+          '<div class="cmt-field">' +
+            '<textarea id="cmtText" maxlength="2000" placeholder="Viết bình luận… (tối đa 2000 ký tự)"></textarea>' +
+            '<div class="cmt-actions">' +
+              '<span class="cmt-meta"><b>' + esc(u.name || u.email) + '</b> · <a href="#" id="cmtLogout">đăng xuất</a></span>' +
+              '<span class="cmt-count" id="cmtCount">0/2000</span>' +
+              '<button class="btn pri sm" id="cmtSend" type="button">Gửi</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      var ta = $('#cmtText'), cnt = $('#cmtCount');
+      if (ta) ta.addEventListener('input', function () { if (cnt) cnt.textContent = ta.value.length + '/2000'; });
+      var send = $('#cmtSend');
+      if (send) send.addEventListener('click', postCurrentComment);
+      var lo = $('#cmtLogout');
+      if (lo) lo.addEventListener('click', function (e) { e.preventDefault(); if (window.CZ_AUTH) window.CZ_AUTH.logout(); });
+    } else {
+      f.innerHTML =
+        '<div class="cmt-login"><p>Bạn cần đăng nhập Google để bình luận.</p>' +
+          '<button class="btn pri sm" id="cmtLogin" type="button"><svg class="i i-s glogo" viewBox="0 0 48 48" aria-hidden="true">' +
+          '<path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.3-.4-3.5z"/>' +
+          '<path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>' +
+          '<path fill="#4CAF50" d="M24 44c5.5 0 10.5-2.1 14.3-5.5l-6.6-5.6C29.7 34.6 27 35.5 24 35.5c-5.3 0-9.7-3.1-11.3-7.6l-6.5 5C9.6 39.6 16.2 44 24 44z"/>' +
+          '<path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.2-4.1 5.5l6.6 5.6C40.9 36.3 44 30.7 44 24c0-1.3-.1-2.3-.4-3.5z"/></svg>' +
+          'Đăng nhập Google</button></div>';
+      var lb = $('#cmtLogin');
+      if (lb) lb.addEventListener('click', function () {
+        if (window.CZ_AUTH) window.CZ_AUTH.loginGoogle().catch(function (e) { toast(e.message || 'Đăng nhập thất bại', 'err'); });
+      });
+    }
+  }
+
+  function postCurrentComment() {
+    var ta = $('#cmtText');
+    if (!ta) return;
+    var text = ta.value.replace(/\s+/g, ' ').trim();
+    if (!text) { ta.focus(); return; }
+    var u = (window.CZ_AUTH && window.CZ_AUTH.current && window.CZ_AUTH.current()) || null;
+    if (!u) { if (window.CZ_AUTH) window.CZ_AUTH.loginGoogle(); return; }
+    var send = $('#cmtSend');
+    if (send) { send.disabled = true; send.textContent = 'Đang gửi…'; }
+    fetch(window.CZ_API + '/api/comments/' + encodeURIComponent(N.slug), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer ' + (window.CZ_AUTH.token() || '') },
+      body: JSON.stringify({ text: text }),
+    }).then(function (r) {
+      return r.json().then(function (j) { if (!r.ok || !j.ok) throw new Error(j.error || ('Lỗi ' + r.status)); return j; });
+    }).then(function (j) {
+      if (ta) { ta.value = ''; }
+      var c = $('#cmtCount'); if (c) c.textContent = '0/2000';
+      prependComment(j.comment);
+      bumpTabCount(1);
+      toast('Đã gửi bình luận', 'ok');
+    }).catch(function (e) { toast(e.message || 'Gửi thất bại', 'err'); })
+      .then(function () { if (send) { send.disabled = false; send.textContent = 'Gửi'; } });
+  }
+
+  function loadComments() {
+    var list = $('#cmtList');
+    if (!list) return;
+    fetch(window.CZ_API + '/api/comments/' + encodeURIComponent(N.slug) + '?limit=200')
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j.ok) throw new Error(j.error || 'không tải được');
+        renderCommentList(j.comments || []);
+        bumpTabCount(j.count || (j.comments ? j.comments.length : 0), true);
+      })
+      .catch(function (e) { list.innerHTML = '<div class="cmt-status">Không tải được bình luận: ' + esc(e.message) + '</div>'; });
+  }
+
+  function renderCommentList(comments) {
+    var list = $('#cmtList');
+    if (!list) return;
+    if (!comments.length) { list.innerHTML = '<div class="cmt-status">Chưa có bình luận nào. Hãy là người đầu tiên!</div>'; return; }
+    list.innerHTML = comments.map(commentHTML).join('');
+    bindCommentDeletes();
+  }
+  function prependComment(c) {
+    var list = $('#cmtList');
+    if (!list) return;
+    if (list.querySelector('.cmt-status')) list.innerHTML = '';
+    var wrap = document.createElement('div');
+    wrap.innerHTML = commentHTML(c);
+    var el = wrap.firstChild;
+    if (el) list.insertBefore(el, list.firstChild);
+    bindCommentDeletes();
+  }
+  function commentHTML(c) {
+    var u = (window.CZ_AUTH && window.CZ_AUTH.current && window.CZ_AUTH.current()) || null;
+    var mine = u && u.uid && c.uid === u.uid;
+    var av = c.picture
+      ? '<img class="cmt-ava" src="' + esc(c.picture) + '" alt="">'
+      : '<span class="cmt-ava cmt-ava--ph">' + esc((c.name || 'B')[0] || 'B') + '</span>';
+    return '<div class="cmt-item" data-id="' + esc(c.id) + '">' + av +
+      '<div class="cmt-body"><div class="cmt-head"><b>' + esc(c.name || 'Bạn đọc') + '</b>' +
+      '<span class="cmt-time">' + timeAgo(c.createdAt) + '</span>' +
+      (mine ? '<button class="cmt-del" data-del="' + esc(c.id) + '" title="Xoá" aria-label="Xoá">✕</button>' : '') +
+      '</div><div class="cmt-text">' + esc(c.text) + '</div></div></div>';
+  }
+  function bindCommentDeletes() {
+    $$('#cmtList .cmt-del').forEach(function (b) {
+      if (b._b) return; b._b = true;
+      b.addEventListener('click', function () { deleteOwnComment(b.getAttribute('data-del')); });
+    });
+  }
+  function deleteOwnComment(id) {
+    fetch(window.CZ_API + '/api/comments/' + encodeURIComponent(N.slug) + '/' + encodeURIComponent(id), {
+      method: 'DELETE',
+      headers: { authorization: 'Bearer ' + (window.CZ_AUTH.token() || '') },
+    }).then(function (r) {
+      return r.json().then(function (j) { if (!r.ok || !j.ok) throw new Error(j.error || 'Lỗi'); return j; });
+    }).then(function () {
+      var sel = '#cmtList .cmt-item[data-id="' + (window.CSS && window.CSS.escape ? window.CSS.escape(id) : id) + '"]';
+      var el = $(sel);
+      if (el) el.remove();
+      bumpTabCount(-1);
+      toast('Đã xoá bình luận', 'ok');
+    }).catch(function (e) { toast(e.message || 'Xoá thất bại', 'err'); });
+  }
+  function bumpTabCount(delta, set) {
+    var tab = $('#storyTabs .stab[data-tab="cmt"]');
+    if (!tab) return;
+    var cur = parseInt(tab.getAttribute('data-count') || '0', 10) || 0;
+    var n = set ? Math.max(0, delta) : Math.max(0, cur + delta);
+    tab.setAttribute('data-count', n);
+    tab.innerHTML = 'Đánh giá' + (n ? ' <span class="ct">' + n + '</span>' : '');
+  }
+  function timeAgo(iso) {
+    var t = Date.parse(iso);
+    if (!t) return '';
+    var s = Math.floor((Date.now() - t) / 1000);
+    if (s < 60) return 'vừa xong';
+    if (s < 3600) return Math.floor(s / 60) + ' phút trước';
+    if (s < 86400) return Math.floor(s / 3600) + ' giờ trước';
+    if (s < 604800) return Math.floor(s / 86400) + ' ngày trước';
+    return new Date(t).toLocaleDateString('vi-VN');
   }
 
   /* ======================= 4. TRANG ĐỌC ================================= */

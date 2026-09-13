@@ -30,6 +30,11 @@ GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới c�
 | POST | `/api/sync` | cần khoá | đọc lại Blogger, ghép số chương/tình trạng/ngày |
 | POST | `/api/import` | cần khoá | lấy 1 bài viết Blogger thành chương mới (bỏ quảng cáo/bình luận) |
 | POST | `/api/stats/refresh` | cần khoá | xoá cache số liệu để đọc lại ngay |
+| POST | `/api/auth/google` | cần GOOGLE_CLIENT_ID + SESSION_SECRET | đổi Google idToken → session token (HS256) |
+| GET  | `/api/auth/me`      | có session | trả user từ session (làm mới thông tin) |
+| GET  | `/api/comments/<slug>` | mở | đọc bình luận công khai |
+| POST | `/api/comments/<slug>` | cần đăng nhập | gửi bình luận (gửi kèm `Authorization: Bearer <session>`) |
+| DELETE | `/api/comments/<slug>/<id>` | tác giả | xoá bình luận của chính mình |
 
 ## 1. Tạo Worker (5 phút, làm 1 lần)
 
@@ -220,3 +225,29 @@ vì dữ liệu đã đi qua KV.
 - Nếu lộ, đổi secret là xong (`Settings → Variables and Secrets`), hoặc tạo lại Worker.
 - Nên đặt `ALLOW_ORIGIN` = domain web của bạn để người khác không gọi API từ site lạ.
 - Muốn khoá đọc công khai? Đặt `READ_KEY` và thêm header khi gọi — hiện tại dữ liệu là nội dung công khai nên để mở.
+
+## 7. Bình luận & đăng nhập Google (người dùng)
+
+Từ v1.2.0, web có **đăng nhập Google thật** (Google Identity Services) và **bình luận lưu chung trên KV**.
+Không còn giả lập local — nút Đăng nhập chỉ bật khi đã cấu hình đủ.
+
+**Biến môi trường thêm (Settings → Variables and Secrets):**
+
+| Biến | Loại | Dùng để |
+|---|---|---|
+| `GOOGLE_CLIENT_ID` | Secret/biến | Client ID OAuth Web app — Worker kiểm tra `aud` của idToken |
+| `SESSION_SECRET` | **Secret** | ký session token bình luận (HS256), ≥ 32 ký tự |
+
+**Phía web (`cz-config.js`):**
+
+```js
+window.CZ_GOOGLE_CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com';   // để '' tắt đăng nhập
+```
+
+**Quy trình xác thực:** trình duyệt lấy idToken từ Google → `POST /api/auth/google` → Worker xác thực chữ ký
+bằng khoá công khai Google (cache 1h) + kiểm tra `aud`/`iss`/`exp` → cấp session token → lưu localStorage.
+Gửi bình luận kèm header `Authorization: Bearer <session>`. Chi tiết từng bước (tạo Client ID, consent screen,
+test) xem **`HUONG-DAN-DANG-NHAP-BINH-LUAN.md`** ở gốc repo.
+
+**Lưu ý:** bình luận là công khai, mỗi user chỉ xoá được bình luận của mình; bản này chưa có kiểm duyệt/admin xoá
+và chưa giới hạn tần suất (thêm sau nếu cần). Đăng nhập Google yêu cầu HTTPS (localhost được phép khi test).
