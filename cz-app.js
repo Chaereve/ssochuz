@@ -472,7 +472,7 @@
       '<span class="cl-side">' +
         '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(n.status || 'Đang cập nhật') + '</span>' +
         '<span class="cl-ch">' + esc(countText(n)) + '</span>' +
-        '<span class="cl-adapt">' + esc(n.year ? 'Năm ' + n.year : '—') + '</span>' +
+        '<span class="cl-year">' + esc(n.year ? 'Năm ' + n.year : '—') + '</span>' +
       '</span>' +
       '<span class="cl-go">' + (read ? 'Đọc tiếp' : 'Xem truyện') + icon('right', 'i-s') + '</span>' +
       '</a>';
