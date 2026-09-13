@@ -87,7 +87,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   const sizeOpts = $$('#setBody button[data-set="size"]');
   click(sizeOpts[3]); await wait(120);
   const themeOpts = $$('#setBody button[data-set="theme"]');
-  click(themeOpts[3]); await wait(120);
+  click(themeOpts[2]); await wait(120);  /* Tối — chỉ còn 3 tông */
   const modeOpts = $$('#setBody button[data-set="mode"]');
   click(modeOpts[1]); await wait(200);
   out.readerPref = LS.getItem('chuseoz-reader');
