@@ -19,17 +19,45 @@
   paintIcons();
 
   /* ======================= 0. ĐỌC URL ==================================== */
+  function safeDec(s) {
+    try { return decodeURIComponent(s); } catch (e) { try { return decodeURI(s); } catch (e2) { return s; } }
+  }
   function slugFromURL() {
-    var p = location.pathname.split('/').filter(Boolean);
-    /* /truyen/<slug>/  và  /reader/<slug>/ (đời cũ) — tên truyện nằm ngay trong đường dẫn */
-    if ((p[0] === 'truyen' || p[0] === 'reader') && p[1]) return decodeURIComponent(p[1]);
-    /* /truyen, /reader, /truyen.html… : đường dẫn không có tên truyện → đọc query ?slug= */
-    if (!p.length || p[0] === 'truyen' || p[0] === 'reader' || /\.html?$/i.test(p[0] || '')) {
+    var raw = location.pathname || '';
+    var p = raw.split('/').filter(Boolean).map(safeDec);
+    var reserved = { 'truyen': 1, 'reader': 1, 'admin': 1, 'api': 1, 'index': 1 };
+    /* /truyen/<slug>/ và /reader/<slug>/ (đời cũ) — tên truyện nằm ngay sau */
+    if (p.length >= 2 && (p[0] === 'truyen' || p[0] === 'reader')) {
+      var cand = p[1];
+      if (cand && !reserved[cand] && cand.indexOf('.html') < 0) return cand;
+      /* trường hợp /truyen// (slug rỗng do dữ liệu lỗi) → thử query */
+      if (!cand) return CZ.qs('slug') || CZ.qs('truyen') || '';
+    }
+    /* /truyen, /reader, /truyen.html… : không có tên truyện trong path → đọc query */
+    if (!p.length) return CZ.qs('slug') || CZ.qs('truyen') || '';
+    if (p.length === 1 && (p[0] === 'truyen' || p[0] === 'reader')) {
       return CZ.qs('slug') || CZ.qs('truyen') || '';
     }
-    /* đường dẫn lạ (mở thẳng tệp khi xem thử trên máy) → lấy khúc cuối */
-    if (p.length) return decodeURIComponent(p[p.length - 1]);
-    return CZ.qs('slug') || '';
+    if (p.length === 1 && /\.html?$/i.test(raw.split('/').pop() || '')) {
+      /* mở thẳng file truyen.html?slug=… hoặc /<slug>.html khi xem thử trên máy */
+      var q = CZ.qs('slug') || CZ.qs('truyen');
+      if (q) return q;
+      var base = p[0].replace(/\.html?$/i, '');
+      if (base && base !== 'truyen' && base !== 'reader' && !reserved[base]) return base;
+      return '';
+    }
+    /* đường dẫn lạ (mở thẳng tệp khi xem thử trên máy) → lấy khúc cuối, bỏ .html */
+    if (p.length) {
+      var last = p[p.length - 1];
+      if (last === 'truyen' || last === 'reader') return CZ.qs('slug') || CZ.qs('truyen') || '';
+      var m = last.match(/^(.+)\.html?$/i);
+      if (m) {
+        var b = m[1];
+        if (b && b !== 'truyen' && b !== 'reader' && !reserved[b]) return b;
+      }
+      if (!reserved[last]) return last;
+    }
+    return CZ.qs('slug') || CZ.qs('truyen') || '';
   }
   function chapterFromHash() {
     var m = /^#(?:chuong|page|chapter)-(\d+)$/i.exec(location.hash || '');
