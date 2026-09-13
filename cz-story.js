@@ -112,6 +112,16 @@
       (ch > 1 ? 'Mở đúng chỗ bạn đang đọc dở' : 'Bắt đầu từ chương đầu') + '">' + ic('play', 'i-s') +
       (ch > 1 ? 'Đọc tiếp' : 'Đọc từ đầu') + '</a>';
   }
+  /* số liệu thật đọc từ Firebase: chỉ hiện khi đọc được, không đoán số */
+  function statChip() {
+    var st = CZ.statsOf(N);
+    if (!st) return '';
+    var bits = [];
+    if (st.views) bits.push(num(st.views) + ' lượt đọc');
+    if (st.votes) bits.push(num(st.votes) + ' phiếu');
+    if (!bits.length) return '';
+    return '<span title="số liệu thật từ Firebase chuseoz-library">' + ic('eye', 'i-s') + ' ' + bits.join(' · ') + '</span>';
+  }
   function renderStory() {
     var n = N, ch = CZ.progress(n);
     var im = n.thumb || n.slide || '';
@@ -130,6 +140,7 @@
             (n.year ? '<span>' + esc(n.year) + '</span>' : '') +
             '<span>' + ic('film', 'i-s') + ' ' + esc(CZ.adaptText(n)) + '</span>' +
             '<span>' + ic('refresh', 'i-s') + ' ' + esc(CZ.timeAgo(n.updated)) + '</span>' +
+            statChip() +
           '</div>' +
           '<p class="syn clamp" id="synBox">' + esc(syn) + '</p>' +
           '<div class="btn-row">' + readBtn(n, ch) +
@@ -506,7 +517,7 @@
     $('#rdMark').title = on ? 'Bỏ đánh dấu chương này (B)' : 'Đánh dấu chương này (B)';
   }
   function shareChapter() {
-    CZ.copy(location.origin + CZ.storyURL(N.slug) + '#chuong-' + cur, 'Đã copy link chương ' + cur);
+    CZ.copy(location.origin + CZ.storyURL(N.slug) + '#chuong-' + cur, 'Đã copy link ' + chapLabel(cur));
   }
   /* ---- vào / ra chế độ đọc --------------------------------------------- */
   function enterReader(ch) {
@@ -566,7 +577,7 @@
   $('#rdMark').addEventListener('click', function () {
     var on = CZ.toggleMark(N, cur);
     paintMark(); paintTOC();
-    toast(on ? 'Đã đánh dấu chương ' + cur : 'Đã bỏ đánh dấu chương ' + cur);
+    toast(on ? 'Đã đánh dấu ' + chapLabel(cur) : 'Đã bỏ đánh dấu ' + chapLabel(cur));
   });
   $('#rdFocus').addEventListener('click', function () {
     var on = document.body.classList.toggle('rd-focus');
@@ -672,8 +683,8 @@
       route();
       /* nhắc khi vào bằng link chương cụ thể */
       var ch = chapterFromHash();
-      if (ch && CHS.length) setTimeout(function () { toast('Mở thẳng chương ' + ch + '/' + CHS.length + '.'); }, 400);
-      CZ.onStats(function () { if (reading) renderCur(true); });
+      if (ch && CHS.length) setTimeout(function () { toast('Mở thẳng ' + chapLabel(ch) + '.'); }, 400);
+      CZ.onStats(function () { renderStory(); if (reading) renderCur(true); });
     }).catch(function (e) {
       showError('Lỗi tải truyện', '<p class="muted">' + esc(e && e.message || e) + '</p>');
     });

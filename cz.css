@@ -627,9 +627,9 @@ body.rd-focus .rdbar .tools:hover { opacity: 1; }
 
 /* =========================== 14. QUẢN TRỊ ================================ */
 .abar { position: sticky; top: 0; z-index: 50; border-bottom: 1px solid var(--bd); background: var(--bg); }
-.abar .in { max-width: var(--maxw); margin: 0 auto; padding: 0 20px; height: 60px; display: flex; align-items: center;
+.abar .in { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; height: 60px; display: flex; align-items: center;
   gap: 12px; flex-wrap: nowrap; overflow-x: auto; }
-.amain { max-width: var(--maxw); margin: 0 auto; padding: 22px 20px 60px; }
+.amain { max-width: var(--maxw); margin: 0 auto; padding: 24px 24px 60px; }
 .msgbar { font-size: 13.5px; color: var(--mut); }
 .msgbar:not(:empty) { padding: 12px 15px; border: 1px solid var(--bd); border-left: 3px solid var(--acc);
   border-radius: var(--r); background: var(--surf); margin-bottom: 16px; }
