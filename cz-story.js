@@ -248,7 +248,11 @@
       ic('right', 'i-s') + ' <b>' + esc(n.title) + '</b>';
     $('#chapTop').setAttribute('href', n.canRead ? '#chuong-' + n.chapters : '#');
     $('#chapTop').style.display = n.canRead ? '' : 'none';
-    var cc=$('#chapCount'); if(cc) cc.textContent = n.canRead ? (n.chapters + ' chương') : '';
+    $('#chapCount').textContent = n.canRead
+      ? (n.declared > n.chapters
+        ? 'Đang có ' + n.chapters + '/' + n.declared + ' chương'
+        : 'Đang có ' + n.chapters + ' chương')
+      : 'chưa có chương nào — đang ở trạng thái “Sắp ra mắt”';
   }
 
   /* khối “Giới thiệu”: mô tả đầy đủ + bảng thông tin đọc được, không lặp lại phần đầu trang */
@@ -260,7 +264,8 @@
       box.className = 'synfull';
       box.textContent = full || 'Bộ này chưa có mô tả.';
     }
-    // synSub removed
+    var sub = $('#synSub');
+    if (sub) sub.textContent = full ? words(full) + ' từ · cập nhật ' + CZ.timeAgo(n.updated) : '';
     var rows = [
       ['Tác giả', n.author || '—'],
       ['Couple', n.couple || '—'],
@@ -419,10 +424,15 @@
     var g = ((CZ._memo.reg || {}).settings || {}).giscus || {};
     var box = $('#giscus');
     if (!box) return;
+    var note = $('#cmtNote'), sub = $('#cmtSub');
     if (!g.repo || !g.repoId) {
-      box.innerHTML = '<div class="empty">Bình luận chưa bật.</div>';
+      box.innerHTML = '<div class="empty">Chưa gắn hệ thống bình luận.<div class="mt">Khi chủ web điền repo giscus trong trang quản trị, ô đánh giá sẽ hiện ở đây — web không dẫn người đọc sang nơi khác.</div></div>';
+      if (note) note.textContent = 'Đánh giá chạy trên GitHub Discussions (giscus), gắn trong trang quản trị.';
+      if (sub) sub.textContent = '';
       return;
     }
+    if (note) note.textContent = 'Bình luận chạy trên GitHub Discussions (giscus) — không cần tài khoản riêng của web.';
+    if (sub) sub.textContent = 'góp ý cho bộ truyện này';
     box.innerHTML = '';
     var s = document.createElement('script');
     s.src = 'https://giscus.app/client.js'; s.async = true;

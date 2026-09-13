@@ -43,6 +43,7 @@
     <section class="sec" id="ban-doc" hidden>
       <div class="sechead">
         <h2>Bàn đọc của bạn</h2>
+        <span class="sub" id="banSub"></span>
         <span class="right">
           <span class="tabs sm" id="banTabs" role="tablist">
             <button class="tab on" data-ban="doc" role="tab">Đang đọc dở<span class="ct" id="banDocCount"></span></button>
@@ -59,6 +60,7 @@
     <section class="sec fade" id="moi-cap-nhat">
       <div class="sechead">
         <h2>Mới cập nhật</h2>
+        <span class="sub" id="newSub">đang tải…</span>
         <span class="right"><a class="btn ghost sm" href="/#thu-vien">Xem cả thư viện</a></span>
       </div>
       <div class="rail" id="newRail"></div>
@@ -68,18 +70,22 @@
     <section class="sec fade" id="bxh">
       <div class="sechead">
         <h2>Xếp hạng</h2>
+        <span class="sub" id="rankSub">đang tải số liệu…</span>
         <span class="right"><span class="tabs sm" id="rankTabs" role="tablist"></span></span>
       </div>
       <div id="rank"></div>
+      <div class="src" id="rankSrc"><span class="dot"></span><span>đang tải số liệu…</span></div>
     </section>
 
     <!-- ================= GÓC BIÊN TẬP VIÊN (Editor's Choice) ================= -->
     <section class="sec fade" id="bien-tap" hidden>
       <div class="sechead">
         <h2>Góc biên tập viên</h2>
+        <span class="sub" id="editSub">do biên tập chọn tay</span>
         <span class="right"><a class="btn ghost sm" href="/guide">Vì sao chọn?</a></span>
       </div>
       <div class="rail" id="editRail"></div>
+      <div class="src" id="editSrc"><span class="dot"></span><span>Những bộ chất lượng cao nhưng ít người biết — được đề xuất thủ công.</span></div>
     </section>
 
     <!-- ================= ỦNG HỘ (Donation) ================= -->
@@ -91,14 +97,17 @@
     <section class="sec fade" id="lich">
       <div class="sechead">
         <h2>Lịch ra chương</h2>
+        <span class="sub" id="schedSub">đang tải…</span>
       </div>
       <div id="sched"></div>
+      <div class="src" id="schedSrc"><span class="dot"></span><span>đang tải…</span></div>
     </section>
 
     <!-- ================= THƯ VIỆN ================= -->
     <section class="sec fade" id="thu-vien">
       <div class="sechead">
         <h2>Thư viện truyện</h2>
+        <span class="sub">tìm nhanh, rồi lọc theo tình trạng · năm · tác giả · couple</span>
       </div>
       <div class="fbox">
         <div class="row1">
