@@ -209,6 +209,51 @@ Một bộ chuyển động dùng chung, đặt trong `cz.css` (§11) + `cz-app.
 
 ---
 
+## 6b. Hệ thống hiệu ứng (vòng sáu) — theo đúng “nhịp” đã thống nhất
+
+Một bảng nhịp duy nhất trong `cz.css`, áp cho cả bốn trang:
+
+| Nhịp | Dùng ở đâu |
+|---|---|
+| `cubic-bezier(.25, 1, .5, 1)` | mọi chuyển động chính: trượt, nhấc, mở/đóng |
+| 0,18 – 0,26 giây | phản hồi nhỏ: trỏ, bấm, đổi màu chữ, gợn sóng |
+| 0,4 – 0,45 giây | đổi bố cục, đổi trang, chuyển chương |
+
+**Trang chủ & thư viện**
+
+- Thẻ truyện khi trỏ: ảnh bìa phóng **1,04**, bóng đổ hạ xuống và nhoè `0 15px 30px rgba(0,0,0,.15)`,
+  tiêu đề **nhích lên 4px** rồi đổi sang màu nhấn; bấm thì lún nhẹ.
+- Băng nổi bật: banner cũ **mờ dần rồi trượt sang trái**, banner mới **vào từ phải** và hiện dần, kèm
+  **nhoè chuyển động rất nhẹ** (2–5px) cho cảm giác như phim.
+- Lúc danh sách đang tải: khung xám có **vệt sáng chạy từ trái sang phải**.
+
+**Trang truyện**
+
+- Gạch chân của ba thẻ *Giới thiệu / Danh sách chương / Đánh giá* **trượt ngang** từ thẻ cũ sang thẻ
+  mới chứ không tắt đi bật lại (đo được: khớp đúng mép thẻ đang mở).
+- Nội dung mỗi thẻ **hiện dần và nhích lên 10px**.
+- Nút lưu vào tủ / thả tim: **phồng lên 1,3 rồi nảy về 1**, màu tô dần trong 0,2 giây.
+- Bộ dài: mỗi nhóm 24 chương **mở/đóng theo chiều cao mượt** (`grid-template-rows`), không cắt cụt.
+
+**Trang đọc**
+
+- Đổi chương: chương cũ **trượt sang trái + mờ đi**, chương mới **vào từ phải + nhoè nhẹ**; thanh trên
+  hiện một vệt quét mảnh trong lúc chờ — bố cục **không nhảy**.
+- Thanh công cụ nổi: cuộn xuống thì **trượt lên khỏi màn hình**, vừa cuộn lên là **về ngay**; đứng yên
+  3 giây cũng tự ẩn cho đỡ vướng.
+- Đổi tông nền đọc: `background-color` và `color` **chuyển trong 0,4 giây**, không chớp sáng.
+
+**Lỗi tìm thấy và đã sửa trong vòng này**
+
+- Bấm tab trong thư viện (Hoàn thành / Đang cập nhật / Sắp ra mắt) lọc đúng nhưng **dãy tab không đổi
+  trạng thái** — giờ tab, gạch chân trượt và `aria-selected` chạy theo bộ lọc.
+- Ô **Đi tới chương**: gõ số chương nhìn thấy trên danh sách lại nhảy lệch một chương ở truyện có
+  “Lời Mở Đầu”; giờ dò đúng số in trên tên chương, thêm nút **Đi** và nhận phím Enter.
+- Bìa hỏng hoặc thiếu ảnh: khung bìa **hiện tên truyện** thay vì để trống trơn (trước đó còn có thể
+  ném lỗi JS khi ảnh lỗi sau khi trang vẽ lại).
+
+---
+
 ## 7. Cần bạn làm (theo thứ tự)
 
 1. **Deploy**: gộp PR này vào `main` (Cloudflare Pages tự build). Sau đó mở thử `/`, một trang

@@ -24,22 +24,38 @@
   var state = { tab: 'all', adult: false, year: '', author: '', couple: '', q: '', sort: 'new', view: 'grid', page: 1, per: 24 };
 
   /* ======================= HERO ======================================== */
-  var hero = { list: [], i: 0, timer: null, auto: 8000 };
+  var hero = { list: [], i: 0, timer: null, auto: 8000, bg: 0 };
+  function pad2(k) { return (k < 10 ? '0' : '') + k; }
+  /* nền mờ phía sau lấy từ chính ảnh bìa; hai lớp chồng nhau để đổi mờ dần */
+  function heroBg(im) {
+    var box = $('#heroBg');
+    if (!box || !box.children.length || CZ.reduce) return;
+    var k = hero.bg ? 0 : 1;
+    box.children[k].style.backgroundImage = im ? 'url("' + im + '")' : 'none';
+    box.children[k].classList.toggle('on', !!im);
+    box.children[hero.bg].classList.remove('on');
+    hero.bg = k;
+  }
   function heroSlide(n, i) {
-    var p = CZ.progress(n), resume = p || 1;
-    var inShelf = CZ.inShelf(n);
+    var p = CZ.progress(n), resume = p || 1, tot = n.chapters || 0;
+    var inShelf = CZ.inShelf(n), im = n.thumb || n.slide || '';
+    var pct = tot && p ? Math.min(100, Math.round(p / tot * 100)) : 0;
     return '<article class="slide' + (i === 0 ? ' on' : '') + '" data-i="' + i + '" aria-label="' + esc(n.title) + '">' +
       '<div class="col">' +
         '<div class="info">' +
-          '<span class="eyebrow">' + (i === 0 ? 'Nổi bật' : 'Đề xuất cho bạn') + '</span>' +
-          '<h1>' + esc(n.title) + '</h1>' +
+          '<span class="eyebrow">' + (i === 0 ? 'Nổi bật hôm nay' : 'Đề xuất cho bạn') + '</span>' +
+          '<h1><a href="' + esc(CZ.storyURL(n.slug)) + '">' + esc(n.title) + '</a></h1>' +
           '<div class="meta">' +
             '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(n.status || '—') + '</span>' +
-            '<span><b>' + esc(CZ.countText(n)) + '</b></span>' +
-            (n.author ? '<span>Tác giả ' + esc(n.author) + '</span>' : '') +
-            (n.couple ? '<span>' + esc(n.couple) + '</span>' : '') +
+            (n.fresh ? '<span class="badge-new">Mới</span>' : '') +
+            '<span>' + ic('book', 'i-s') + ' <b>' + esc(CZ.countText(n)) + '</b></span>' +
+            (n.author ? '<span>' + ic('pen', 'i-s') + ' ' + esc(n.author) + '</span>' : '') +
+            (n.couple ? '<span>' + ic('users', 'i-s') + ' ' + esc(n.couple) + '</span>' : '') +
+            (n.updated ? '<span>' + ic('refresh', 'i-s') + ' ' + esc(CZ.timeAgo(n.updated)) + '</span>' : '') +
           '</div>' +
           '<p class="syn">' + esc(n.synFull || n.syn || '') + '</p>' +
+          (pct ? '<div class="prog"><span class="pb"><i style="width:' + pct + '%"></i></span>' +
+            '<span>đang đọc <b>chương ' + p + '</b>' + (tot ? ' / ' + tot : '') + ' · ' + pct + '%</span></div>' : '') +
           '<div class="btn-row">' +
             (n.canRead
               ? '<a class="btn pri lg" href="' + esc(CZ.readURL(n.slug, resume)) + '" title="' +
@@ -50,13 +66,37 @@
             '<button class="btn lg" data-shelf="' + esc(n.slug) + '" aria-pressed="' + (inShelf ? 'true' : 'false') + '">' +
               ic('bookmark', 'i-s') + '<span>' + (inShelf ? 'Đã lưu' : 'Lưu vào tủ') + '</span></button>' +
           '</div>' +
+          '<div class="keys">' +
+            '<span><kbd>←</kbd><kbd>→</kbd> đổi truyện</span>' +
+            '<span><kbd>⌘</kbd><kbd>K</kbd> tìm nhanh</span>' +
+            (n.canRead ? '<span>' + ic('book', 'i-s') + ' đọc ngay trên web</span>' : '') +
+          '</div>' +
         '</div>' +
-        '<a class="poster" href="' + esc(CZ.storyURL(n.slug)) + '" aria-label="' + esc(n.title) + '">' +
-          (n.thumb || n.slide ? '<img src="' + esc(n.thumb || n.slide) + '" alt="Bìa ' + esc(n.title) + '" width="300" height="450"' +
-            (i === 0 ? ' fetchpriority="high"' : ' loading="lazy"') + ' decoding="async">' : '') +
-          (n.is18 ? '<span class="b18">18+</span>' : '') +
-        '</a>' +
+        '<div class="posterwrap">' +
+          '<span class="idx" aria-hidden="true">' + pad2(i + 1) + '</span>' +
+          '<a class="poster" href="' + esc(CZ.storyURL(n.slug)) + '" aria-label="' + esc(n.title) + '">' +
+            (im ? '<img src="' + esc(im) + '" alt="Bìa ' + esc(n.title) + '" width="300" height="450"' +
+              (i === 0 ? ' fetchpriority="high"' : ' loading="lazy"') + ' decoding="async">' : '') +
+            '<span class="gloss"></span>' +
+            (n.is18 ? '<span class="b18">18+</span>' : '') +
+          '</a>' +
+          '<span class="pcap">' + (n.author || n.couple ? '<b>' + esc(n.author || n.couple) + '</b>' : '') +
+            (n.year ? (n.author || n.couple ? ' · ' : '') + 'năm ' + esc(n.year) : '') + '</span>' +
+        '</div>' +
       '</div></article>';
+  }
+  /* vẽ lại đúng một bộ: lớp .on, chấm, dải bìa, số đếm và nền mờ */
+  function paintSlide(i) {
+    var all = $$('#stage .slide');
+    if (!all.length) return;
+    hero.i = i;
+    all.forEach(function (s, k) { s.classList.toggle('on', k === i); });
+    $$('#hDots button').forEach(function (b, k) { b.classList.toggle('on', k === i); });
+    $$('#hStrip button').forEach(function (b, k) { b.classList.toggle('on', k === i); });
+    var c = $('#hCount');
+    if (c) c.textContent = (i + 1) + '/' + hero.list.length;
+    var n = hero.list[i] || {};
+    heroBg(n.thumb || n.slide || '');
   }
   function heroPaint(animate) {
     var stage = $('#stage');
@@ -70,16 +110,33 @@
       return '<button data-go="' + k + '" class="' + (k === hero.i ? 'on' : '') + '" title="' + esc(n.title) + '">' +
         (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" decoding="async">' : '') + '</button>';
     }).join('');
-    $('#hCount').textContent = (hero.i + 1) + '/' + hero.list.length;
+    paintSlide(hero.i);
     if (animate) restart();
   }
+  /* đổi bộ nổi bật: bộ cũ trượt sang trái rồi mờ đi (giữ lại một bản .ghost),
+     bộ mới trượt vào từ bên phải; chiều cao khối được khoá nên không nhảy bố cục */
   function goSlide(i) {
     if (!hero.list.length) return;
-    var all = $$('.slide'), dots = $$('#hDots button'), strip = $$('#hStrip button');
-    all[hero.i].classList.remove('on'); dots[hero.i].classList.remove('on'); strip[hero.i].classList.remove('on');
-    hero.i = (i + hero.list.length) % hero.list.length;
-    all[hero.i].classList.add('on'); dots[hero.i].classList.add('on'); strip[hero.i].classList.add('on');
-    $('#hCount').textContent = (hero.i + 1) + '/' + hero.list.length;
+    i = (i + hero.list.length) % hero.list.length;
+    var stage = $('#stage');
+    if (i === hero.i || !stage) { if (i !== hero.i) paintSlide(i); restart(); return; }
+    if (!CZ.reduce) {
+      var all = $$('.slide', stage), cur = all[hero.i];
+      if (cur && cur.cloneNode) {
+        var ghost = cur.cloneNode(true);
+        ghost.className = 'slide ghost';
+        ghost.setAttribute('aria-hidden', 'true');
+        var h = stage.offsetHeight;
+        if (h) stage.style.height = h + 'px';
+        stage.appendChild(ghost);
+        requestAnimationFrame(function () { ghost.classList.add('out'); });
+        setTimeout(function () {
+          if (ghost.parentNode) ghost.parentNode.removeChild(ghost);
+          if (!$$('.slide.ghost', stage).length) stage.style.height = '';
+        }, 480);
+      }
+    }
+    paintSlide(i);
     restart();
   }
   function restart() {
@@ -110,8 +167,9 @@
         if (!n) return;
         var on = CZ.toggleShelf(n);
         s.setAttribute('aria-pressed', on ? 'true' : 'false');
-        s.querySelector('span').textContent = on ? 'Đã lưu' : 'Lưu vào tủ';
         s.classList.toggle('on', on);
+        CZ.pop(s);
+        s.querySelector('span').textContent = on ? 'Đã lưu' : 'Lưu vào tủ';
         renderBan();
         CZ.toast(on ? 'Đã thêm vào tủ truyện' : 'Đã bỏ khỏi tủ truyện');
       }
@@ -255,6 +313,20 @@
     CZ.mountRail($('#newRail'), rows.slice(0, 12));
   }
 
+  /* thanh mục ở đầu trang có thêm số đếm thật: bao nhiêu bộ mới lên chương, tổng bao nhiêu bộ */
+  function navCounts() {
+    var fresh = CZ.lib().filter(function (n) { return n.fresh; }).length;
+    function put(k, n, title) {
+      var a = document.querySelector('#czNav a[data-k="' + k + '"]');
+      if (!a || a.querySelector('.ct')) return;
+      var sp = document.createElement('span');
+      sp.className = 'ct'; sp.textContent = n; sp.title = title;
+      a.appendChild(sp);
+    }
+    put('new', fresh, fresh + ' bộ vừa lên chương trong 10 ngày gần đây');
+    put('library', CZ.lib().length, CZ.lib().length + ' bộ trong thư viện');
+  }
+
   /* ======================= XẾP HẠNG ==================================== */
   function statsOn() { return !!(CZ._memo.stats && CZ._memo.stats.on); }
   function rankTabs() {
@@ -364,7 +436,9 @@
       return '<button class="tab' + (t.k === state.tab ? ' on' : '') + '" data-k="' + t.k + '" role="tab" aria-selected="' +
         (t.k === state.tab) + '">' + t.l + '<span class="ct">' + t.c + '</span></button>';
     }).join('');
+    retab();
   }
+  function retab() { if (CZ.inkAll) CZ.inkAll(); }
   /* dãy tab chỉ còn TÌNH TRẠNG; nhãn 18+ tách ra nhóm riêng bên cạnh */
   function tabDefs() {
     var lib = CZ.lib();
@@ -419,6 +493,7 @@
     return out;
   }
   function render() {
+    syncFilterUI();                      /* dãy tab phải chạy theo trạng thái lọc */
     var list = filtered();
     var total = Math.max(1, Math.ceil(list.length / state.per));
     if (state.page > total) state.page = 1;
@@ -429,6 +504,7 @@
       (slice.length ? slice.map(function (n) { return CZ.card(n, { view: state.view }); }).join('')
       : '<div class="empty" style="grid-column:1/-1"><div class="big">Không có truyện nào khớp</div>Thử bỏ một vài tiêu chí lọc.' +
         '<div class="mt"><button class="btn ghost" id="clrAll">Xoá tất cả lọc</button></div></div>');
+    stagger(grid);
     $('#pager').innerHTML = total > 1
       ? '<button class="pg ' + (state.page === 1 ? 'off' : '') + '" data-go="' + (state.page - 1) + '">' + ic('left', 'i-s') + 'Trước</button>' +
         pageList(total, state.page).map(function (p) {
@@ -472,12 +548,23 @@
       });
     });
   }
+  /* thẻ mới hiện ra lần lượt — nhịp 22ms, dừng ở thẻ thứ 14 cho khỏi chờ lâu */
+  function stagger(root) {
+    if (CZ.reduce || !root) return;
+    Array.prototype.forEach.call(root.querySelectorAll('.card'), function (c, i) {
+      c.style.setProperty('--d', Math.min(i, 14) * 22 + 'ms');
+    });
+  }
   function clearAll() {
     state.tab = 'all'; state.adult = false; state.year = state.author = state.couple = state.q = '';
     $('#q').value = ''; syncFilterUI(); state.page = 1; render();
   }
   function syncFilterUI() {
-    $$('#tabs .tab').forEach(function (t) { t.classList.toggle('on', t.dataset.k === state.tab); });
+    $$('#tabs .tab').forEach(function (t) {
+      var on = t.dataset.k === state.tab;
+      t.classList.toggle('on', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
     $$('#ageTabs .tab').forEach(function (t) {
       t.classList.toggle('on', state.adult);
       t.setAttribute('aria-pressed', state.adult ? 'true' : 'false');
@@ -502,6 +589,7 @@
   $('#ageTabs').addEventListener('click', function (e) {
     var b = e.target.closest('.tab'); if (!b) return;
     state.adult = !state.adult; state.page = 1; render();
+    if (CZ.inkAll) CZ.inkAll();          /* nhãn 18+ cũng có viên nền trượt */
   });
   $('#qClr').addEventListener('click', function () {
     $('#q').value = ''; state.q = ''; state.page = 1; render();
@@ -549,6 +637,7 @@
       buildFilters();
       render();
       CZ.reveal();
+      navCounts();
       /* số liệu Firebase về sau thì vẽ lại phần xếp hạng */
       CZ.onStats(function () { renderRank(); buildFilters(); render(); });
     } catch (e) { fail('lỗi dựng trang chủ', e); }

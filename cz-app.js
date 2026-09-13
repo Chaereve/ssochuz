@@ -487,6 +487,9 @@
     opts = opts || {};
     if (!list.length) { el.innerHTML = ''; return; }
     el.innerHTML = list.map(function (n) { return card(n, opts); }).join('');
+    if (!reduce) Array.prototype.forEach.call(el.querySelectorAll('.card'), function (c, i) {
+      c.style.setProperty('--d', Math.min(i, 12) * 24 + 'ms');
+    });
   }
   /* ---- ảnh hỏng (bị chặn hotlink, mạng yếu) → khung vẫn đẹp, không hiện icon vỡ ----
      Ảnh trong bài đọc thì giữ chỗ và hiện chữ thay thế; ảnh bìa thì bỏ ảnh,
@@ -605,6 +608,15 @@
     el.appendChild(sp);
     setTimeout(function () { if (sp.parentNode) sp.parentNode.removeChild(sp); }, 560);
   }
+  /* nảy nhẹ khi vừa lưu / thích / đánh dấu — phản hồi rõ ràng cho một cú bấm */
+  function pop(el) {
+    if (!el || !el.classList) return;
+    if (reduce) return;
+    el.classList.remove('pop');
+    void el.offsetWidth;
+    el.classList.add('pop');
+    setTimeout(function () { if (el.classList) el.classList.remove('pop'); }, 480);
+  }
   /* chuyển trang: vạch tiến độ trên cùng + nội dung hiện dần, không nhảy khô */
   function pageFx() {
     var bar = d.createElement('div');
@@ -641,22 +653,57 @@
     }, true);
   }
 
+  /* ======================= 7b. GẠCH CHÂN TRƯỢT CHO DÃY TAB ============= */
+  /* mọi dãy .tabs (trang chủ, quản trị…) đều có một viên nền / gạch chân trượt
+     sang nút đang mở thay vì bật/tắt đột ngột */
+  function ink(bar) {
+    var el = typeof bar === 'string' ? d.querySelector(bar) : bar;
+    if (!el || !el.querySelectorAll) return;
+    var iv = null;
+    Array.prototype.forEach.call(el.children, function (c) { if (c.classList && c.classList.contains('ink')) iv = c; });
+    if (!iv) {
+      iv = d.createElement('span');
+      iv.className = 'ink';
+      iv.setAttribute('aria-hidden', 'true');
+      el.insertBefore(iv, el.firstChild);
+    }
+    var on = el.querySelector('button.on');
+    if (!on) { iv.style.opacity = '0'; return; }
+    var bar2 = el.classList.contains('bar');
+    iv.style.left = on.offsetLeft + 'px';
+    iv.style.top = (bar2 ? (el.offsetHeight - 2) : on.offsetTop) + 'px';
+    iv.style.width = on.offsetWidth + 'px';
+    iv.style.height = (bar2 ? 2 : on.offsetHeight) + 'px';
+    iv.style.opacity = '1';
+  }
+  function inkAll() {
+    Array.prototype.forEach.call(d.querySelectorAll('.tabs'), function (b) { ink(b); });
+  }
+  function inkSoon() { setTimeout(inkAll, 0); }
+  w.addEventListener('resize', function () { inkSoon(); });
+  d.addEventListener('click', function (e) {
+    if (e.target && e.target.closest && e.target.closest('.tabs, .seg, [data-k], .stab')) inkSoon();
+  });
+  if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', inkAll); else inkAll();
+
   /* ======================= 8. ĐẦU TRANG / CHÂN TRANG =================== */
   function mountHeader(host, active) {
     if (!host) return;
+    /* thứ tự mục khớp đúng thứ tự trên trang chủ: mới cập nhật → xếp hạng → lịch → thư viện */
     var NAV = [
-      { k: 'library', l: 'Thư viện', i: 'library', h: '/#thu-vien' },
       { k: 'new', l: 'Mới cập nhật', i: 'sparkle', h: '/#moi-cap-nhat' },
       { k: 'rank', l: 'Xếp hạng', i: 'trophy', h: '/#bxh' },
-      { k: 'sched', l: 'Lịch ra chương', i: 'calendar', h: '/#lich' }
+      { k: 'sched', l: 'Lịch ra chương', i: 'calendar', h: '/#lich' },
+      { k: 'library', l: 'Thư viện', i: 'library', h: '/#thu-vien' }
     ];
     var links = NAV.map(function (n) {
-      return '<a href="' + n.h + '"' + (n.k === active ? ' class="on"' : '') + '>' + icon(n.i, 'i-s') + ' ' + n.l + '</a>';
+      return '<a href="' + n.h + '" data-k="' + n.k + '"' + (n.k === active ? ' class="on"' : '') + '>' +
+        icon(n.i, 'i-s') + ' ' + n.l + '</a>';
     }).join('');
     host.className = 'hdr';
     host.innerHTML = '<div class="in">' +
       '<a class="logo" href="/"><span class="dot"></span>chuseoz<i>.</i></a>' +
-      '<nav class="nav">' + links + '</nav>' +
+      '<nav class="nav" id="czNav"><span class="ink" id="czInk" aria-hidden="true"></span>' + links + '</nav>' +
       '<span class="grow"></span>' +
       '<button class="hbtn" id="czJump" title="Tìm truyện (Ctrl/Cmd + K)">' + icon('search', 'i-s') +
         '<span class="searchbtn-txt">Tìm truyện…</span><span class="k">⌘K</span></button>' +
@@ -675,6 +722,7 @@
     }
     paintTheme();
     tb.addEventListener('click', function () { themeToggle(); paintTheme(); });
+    navInk(host);
     var mnav = host.querySelector('#czMnav');
     host.querySelector('#czBurger').addEventListener('click', function () {
       slide(mnav);
@@ -688,6 +736,37 @@
       if (e.key === 'Escape') { var jb = d.getElementById('czJumpBox'); if (jb && jb.classList.contains('on') && jb._close) jb._close(); }
     });
   }
+  /* thanh mục ở đầu trang: gạch chân trượt sang mục đang xem, không chỉ là mấy chữ chết */
+  function navInk(host) {
+    var nav = host.querySelector('#czNav'), ink = host.querySelector('#czInk');
+    if (!nav || !ink) return;
+    var links = Array.prototype.slice.call(nav.querySelectorAll('a[data-k]'));
+    if (!links.length) return;
+    var ids = links.map(function (a) { return (a.getAttribute('href') || '').split('#')[1] || ''; });
+    var have = ids.filter(function (id) { return !!(id && d.getElementById(id)); }).length;
+    function mark(el) {
+      links.forEach(function (a) { a.classList.toggle('on', a === el); });
+      if (!el) { ink.style.opacity = '0'; return; }
+      ink.style.width = el.offsetWidth + 'px';
+      ink.style.transform = 'translateX(' + el.offsetLeft + 'px)';
+      ink.style.opacity = '1';
+    }
+    var here = links.filter(function (a) { return a.classList.contains('on'); })[0];
+    if (have < 2) { mark(here || links[0]); return; }
+    var tick = false;
+    function spy() {
+      tick = false;
+      var y = (w.scrollY || 0) + 150, cur = null;
+      ids.forEach(function (id, i) { var el = d.getElementById(id); if (el && el.offsetTop <= y) cur = i; });
+      mark(cur == null ? links[0] : links[cur]);
+    }
+    function run() { if (tick) return; tick = true; requestAnimationFrame(spy); }
+    w.addEventListener('scroll', run, { passive: true });
+    w.addEventListener('resize', run);
+    d.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('#czNav a'); if (a) mark(a); });
+    run();
+  }
+  /* chân trang: chỉ còn những gì thật cần — logo, bốn lối vào nội dung, một dòng meta */
   function mountFooter(host) {
     if (!host) return;
     host.className = 'ftr';
@@ -700,14 +779,11 @@
           '<a href="/#moi-cap-nhat">Mới cập nhật</a>' +
           '<a href="/#bxh">Xếp hạng</a>' +
           '<a href="/#lich">Lịch ra chương</a>' +
-          '<a href="/#ban-doc">Bàn đọc của bạn</a>' +
-          '<a href="/admin">Trang quản trị</a>' +
         '</nav>' +
       '</div>' +
       '<div class="fbottom">' +
-        '<span>chuseoz · thư viện truyện đọc trong máy, không quảng cáo</span>' +
-        '<span>' + (w.CZ_SRC === 'kv' ? 'dữ liệu Cloudflare KV' : 'dữ liệu /data') +
-        (rev ? ' · rev ' + esc(rev) : '') + '</span>' +
+        '<span>thư viện truyện đọc trên web · tiến độ lưu trong máy bạn</span>' +
+        '<span>rev ' + esc(rev || '—') + ' · nguồn dữ liệu ' + (w.CZ_SRC === 'kv' ? 'Cloudflare KV' : 'trong kho') + '</span>' +
       '</div></div>';
   }
   function mountShell(opt) {
@@ -850,7 +926,8 @@
     statusCls: statusCls, words: words, norm: norm, countText: countText, listHead: listHead,
     storyURL: storyURL, readURL: readURL, slugify: slugify, qs: qs, copy: copy, download: download,
     card: card, mountRail: mountRail, reveal: reveal, countUp: countUp, scaleFacts: scaleFacts,
-    scrollUI: scrollUI, slide: slide, pageFx: pageFx, mountShell: mountShell, mountHeader: mountHeader, mountFooter: mountFooter,
+    scrollUI: scrollUI, slide: slide, pageFx: pageFx, pop: pop, ink: ink, inkAll: inkAll,
+    mountShell: mountShell, mountHeader: mountHeader, mountFooter: mountFooter,
     openJump: openJump, toast: toast, modal: modal, confirm: confirmBox,
     reduce: reduce, hasAPI: !!API,
     _memo: memo, _setLib: function () { libCache = null; }

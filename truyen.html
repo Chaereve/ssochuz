@@ -18,11 +18,20 @@
 <main id="story" class="wrap" aria-live="polite">
   <nav class="crumb" id="crumb"><a href="/">Trang chủ</a></nav>
   <section class="shero" id="shero"></section>
+
+  <!-- ba khối nội dung, chuyển bằng thanh tab có gạch chân trượt -->
+  <div class="storytabs" id="storyTabs" role="tablist" aria-label="Nội dung truyện">
+    <span class="ink" id="stInk" aria-hidden="true"></span>
+    <button class="stab" data-tab="info" role="tab" aria-selected="false">Giới thiệu</button>
+    <button class="stab on" data-tab="chap" role="tab" aria-selected="true">Danh sách chương<span class="ct" id="tabChapCt"></span></button>
+    <button class="stab" data-tab="cmt" role="tab" aria-selected="false">Đánh giá</button>
+  </div>
+
   <section class="sec" id="chapSec">
-    <div class="sechead">
-      <h2>Danh sách chương</h2>
+    <div class="panehead">
       <span class="sub" id="chapCount">—</span>
-      <span class="right"><a class="btn ghost sm" id="chapTop">Chương mới nhất<span data-ic="up"></span></a></span>
+      <span class="grow"></span>
+      <a class="btn ghost sm" id="chapTop">Chương mới nhất<span data-ic="up"></span></a>
     </div>
     <div class="chapbar">
       <label class="search"><span data-ic="search"></span>
@@ -30,21 +39,42 @@
       </label>
       <div class="seg" id="chapSort" role="group" aria-label="Thứ tự chương">
         <button data-sort="new">Mới nhất trước</button>
-        <button data-sort="old" class="on">Từ đầu</button>
+        <button data-sort="old" class="on">Cũ nhất trước</button>
       </div>
-      <span class="jumpin">tới chương <input id="chapJump" type="number" min="1" inputmode="numeric" aria-label="Nhảy tới chương"></span>
+      <span class="jumpin">
+        <label for="chapJump">Đi tới chương</label>
+        <input id="chapJump" type="number" min="1" inputmode="numeric" placeholder="số" aria-label="Số chương cần tới">
+        <button class="btn ghost sm" id="chapGo" type="button" aria-label="Tới chương vừa nhập"><span data-ic="right"></span>Đi</button>
+      </span>
     </div>
     <div class="chapgrid" id="chapGrid"></div>
     <div class="pager" id="chapPager"></div>
   </section>
+
+  <section class="sec" id="pane-info" hidden>
+    <div class="infogrid">
+      <div>
+        <div class="sechead"><h2 id="synHead">Giới thiệu</h2><span class="sub" id="synSub"></span></div>
+        <div id="synFull"></div>
+      </div>
+      <div>
+        <div class="sechead"><h2>Thông tin</h2></div>
+        <div class="info" id="storyInfo"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cmts" id="pane-cmt" hidden>
+    <div class="sechead"><h2>Đánh giá &amp; bình luận</h2><span class="sub" id="cmtSub"></span></div>
+    <div id="giscus"></div>
+    <p class="sm muted" id="cmtNote"></p>
+  </section>
+
   <section class="sec" id="relSec">
     <div class="relcols">
       <div><div class="sechead"><h2>Cùng couple</h2></div><div class="relbox" id="relCouple"></div></div>
       <div><div class="sechead"><h2>Cùng tác giả</h2></div><div class="relbox" id="relAuthor"></div></div>
     </div>
-  </section>
-  <section class="cmts" id="cmts"><h3>Bình luận</h3><div id="giscus"></div>
-    <p class="sm muted" id="cmtNote"></p>
   </section>
 </main>
 
@@ -54,6 +84,7 @@
     <div class="in">
       <button class="ibo" id="rdBack" title="Về trang truyện (Esc)"></button>
       <div class="ttl"><b id="rdTitle">Đang tải…</b><span id="rdSub"></span></div>
+      <span class="rdpct" id="rdPct" title="phần chương đã đọc">0%</span>
       <div class="tools">
         <button class="ibo" id="rdPrev" title="Chương trước (←)" aria-label="Chương trước"></button>
         <button class="ibo" id="rdNext" title="Chương tiếp theo (→)" aria-label="Chương tiếp theo"></button>
@@ -76,6 +107,14 @@
   <div class="ract" id="rdActs"></div>
   <div class="rend" id="rdEnd"></div>
   <nav class="rnav" id="rdNav"></nav>
+  <p class="rdkeys">
+    <span><kbd>←</kbd><kbd>→</kbd> chuyển chương</span>
+    <span><kbd>Space</kbd> xuống trang</span>
+    <span><kbd>B</kbd> đánh dấu</span>
+    <span><kbd>L</kbd> mục lục</span>
+    <span><kbd>F</kbd> tập trung</span>
+    <span><kbd>Esc</kbd> về trang truyện</span>
+  </p>
 </section>
 
 <footer id="ftr"></footer>
