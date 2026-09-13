@@ -810,25 +810,34 @@
   function mountFooter(host) {
     if (!host) return;
     host.className = 'ftr';
-    var rev = (memo.reg && memo.reg.rev) || '';
     host.innerHTML = '<div class="in">' +
       '<div class="fmain">' +
-        '<div class="fleft">' +
+        '<div class="fcol fbrand">' +
           '<a class="logo" href="/"><span class="dot"></span>chuseoz<i>.</i></a>' +
-          '<div class="note">Trang hoạt động <b>phi thương mại</b>, phi lợi nhuận — được duy trì bởi tình yêu với truyện chuyển thể. Cảm ơn bạn đã ủng hộ và đồng hành cùng chuseoz.</div>' +
-          '<div class="note sm">Tiến độ đọc, tủ truyện và cài đặt được lưu trong máy bạn. Không yêu cầu đăng nhập.</div>' +
+          '<p class="fdesc">Thư viện truyện chuyển thể — dự án phi lợi nhuận, duy trì vì đam mê.</p>' +
         '</div>' +
-        '<div class="fright">' +
-          '<div><b>Liên hệ</b></div>' +
-          '<div class="row">FB: <a href="https://www.facebook.com/profile.php?id=61592803761987" target="_blank" rel="noopener">Facebook chuseoz</a> · Email: <a href="https://mail.google.com/mail/u/0/?fs=1&tf=cm&to=chuseoz.ofc@gmail.com" target="_blank" rel="noopener">chuseoz.ofc@gmail.com</a></div>' +
-          '<div>Khảo sát hàng tháng: <a href="https://forms.gle/YW3PvtrNVQ7xt8nCA" target="_blank" rel="noopener">forms.gle/YW3PvtrNVQ7xt8nCA</a></div>' +
-          '<div class="row"><a href="/guide">Hướng dẫn sử dụng</a> · <a href="/#thu-vien">Thư viện</a> · <a href="/admin">Quản trị</a></div>' +
+        '<div class="fcol">' +
+          '<h4>Contact</h4>' +
+          '<a href="https://www.facebook.com/profile.php?id=61592803761987" target="_blank" rel="noopener">' + icon('users','i-s') + ' Facebook</a>' +
+          '<a href="https://mail.google.com/mail/u/0/?fs=1&tf=cm&to=chuseoz.ofc@gmail.com" target="_blank" rel="noopener">' + icon('share','i-s') + ' chuseoz.ofc@gmail.com</a>' +
+          '<a href="https://forms.gle/YW3PvtrNVQ7xt8nCA" target="_blank" rel="noopener">' + icon('edit','i-s') + ' Form khảo sát</a>' +
         '</div>' +
-      '</div>' +
-      '<div class="fbottom">' +
-        '<span>chuseoz · đọc trên web · rev ' + esc(rev || '—') + '</span>' +
-        '<span>nguồn ' + (w.CZ_SRC === 'kv' ? 'Cloudflare KV' : 'trong kho') + ' · ' + new Date().getFullYear() + '</span>' +
+        '<div class="fcol">' +
+          '<h4>Follow us</h4>' +
+          '<div class="fsocial">' +
+            '<a href="https://www.facebook.com/profile.php?id=61592803761987" target="_blank" rel="noopener" title="Facebook">' + icon('users','i-s') + '</a>' +
+            '<a href="https://mail.google.com/mail/u/0/?fs=1&tf=cm&to=chuseoz.ofc@gmail.com" target="_blank" rel="noopener" title="Email">' + icon('share','i-s') + '</a>' +
+            '<a href="/guide" title="Hướng dẫn">' + icon('info','i-s') + '</a>' +
+          '</div>' +
+          '<div class="flinks">' +
+            '<a href="/guide">Hướng dẫn sử dụng</a>' +
+            '<a href="/#thu-vien">Thư viện</a>' +
+            '<a href="/#bxh">Xếp hạng</a>' +
+            '<a href="/#lich">Lịch ra chương</a>' +
+          '</div>' +
+        '</div>' +
       '</div></div>';
+  }
   }
   function mountShell(opt) {
     opt = opt || {};
