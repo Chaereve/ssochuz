@@ -52,6 +52,11 @@ tải lại trang, nút Back của trình duyệt trả về đúng danh sách c
 | Đoạn giới thiệu lặp ở tab Kết nối của trang quản trị | giữ một chỗ, chỗ còn lại chỉ nói việc cần làm |
 | Quãng trống giữa giao diện và bộ chữ | hái lại thang chữ theo từng trang (xem §5) |
 | Dòng phụ ở **Danh sách chương** | “9 chương đọc được · 9/45 theo thẻ truyện” nói hai lần một ý — nay chỉ còn “đang có 9/45 chương” |
+| Nút **Chương tiếp theo** ở cuối chương | trùng với thanh điều hướng ngay dưới; kiểu phân trang thì thanh lật trang đã làm việc đó — cuối chương nay chỉ còn một lời dẫn |
+| Lưới **62 ô tick** khi chọn truyện cho khối hero | rối mắt; nay thêm bằng ô tìm, xếp thứ tự bằng mũi tên, bỏ từng bộ |
+| Nút **Báo lỗi / bài gốc** nằm lẫn trong hàng nút | tách thành một dòng chữ nhỏ dưới hàng nút cho hàng nút không rớt dòng |
+| Khung **“Không có Worker vẫn dùng được”** | gộp thành một chú thích trong phần kết nối (đã thu gọn) |
+| Đoạn giới thiệu dài ở đầu trang quản trị | còn một dòng, phần việc chính lên gần màn hình đầu |
 
 ---
 
@@ -68,6 +73,9 @@ tải lại trang, nút Back của trình duyệt trả về đúng danh sách c
 | **Nhãn số chương** | chỗ ghi “10/10 chương”, chỗ ghi “10/10”, chỗ ghi “10/10 chương chương” | một hàm dùng chung: “9/45 chương”, đủ chương thì “36 chương” |
 | **Bảng xếp hạng** | mặc định sáng ở “Mới cập nhật” trong khi có số liệu thật | đọc được số Firebase là mặc định xếp theo **lượt đọc**; thêm kiểu sắp xếp “Đọc nhiều nhất” ở thư viện; nút “Thích” giữ số phiếu (“Đã thích · 56”) |
 | **Trang quản trị mở lên** | chỉ có form đăng nhập, không thấy dữ liệu cho tới khi bấm | có khoá đã lưu thì tự nối lại; chưa có thì tự mở dữ liệu tĩnh ngay |
+| **Xem theo danh sách** ở thư viện | lưới ép 3 cột, tên truyện rớt dòng thành một cột chữ, không có mô tả, không dùng được | mỗi bộ một hàng: bìa · tên + tình trạng · couple/tác giả/năm · mô tả 2 dòng · số chương · chuyển thể · thanh tiến độ đọc |
+| **Biểu tượng trong trang quản trị** | ô `<span data-ic>` không được thay bằng hình (mũi tên/kính lúp chỗ hiện chỗ không) | thay ngay lúc mở trang, như hai trang kia |
+| **Khối xám chờ** ở thư viện | mở trang là khoảng trắng tới khi dữ liệu về | hiện 12 khung xám kèm dòng “đang tải dữ liệu…” |
 | **Lọc tình trạng** | ô xổ xuống rỗng, bấm không có gì (bản cũ) | đã bỏ để khỏi trùng với dãy tab |
 | Nút **Xác nhận** trong hộp thoại | bấm OK mà coi như “Huỷ” | sửa `confirmBox()` trong `cz-app.js` |
 | Kệ **Đọc tiếp / Tủ truyện** | xoá hết truyện rồi kệ vẫn còn thẻ cũ | xoá nội dung kệ trước khi ẩn |
@@ -121,10 +129,12 @@ xem lớn. Đổi cỡ chữ / nền / kiểu xem giữa chừng thì **giữ ng
 Mọi lựa chọn lưu trong máy nên mở lại là y như cũ.
 
 **Trang quản trị (`/admin`)**
-7 tab: Thư viện · Đăng chương nhanh · Thêm bộ · Sửa bộ & chương · Cài đặt & đồng bộ ·
-Số liệu thật · Trợ giúp. Ưu tiên đọc/ghi qua Worker + KV (sửa là người đọc thấy sau 1–2 giây);
+Dãy tab theo kiểu bảng điều khiển (dính dưới thanh trên khi cuộn): Thư viện · Đăng chương nhanh ·
+Thêm bộ · Sửa bộ & chương · Cài đặt & đồng bộ · Số liệu thật · Trợ giúp. Phần nối Worker thu gọn
+một khối, chỉ mở khi cần. Ưu tiên đọc/ghi qua Worker + KV (sửa là người đọc thấy sau 1–2 giây);
 chưa nối Worker vẫn xem và sửa được `/data/*.json`, thay đổi giữ nháp trong máy, có sao lưu /
-phục hồi 1 tệp JSON. Danh sách chương xếp chương 1 lên trước, có nhãn “mới nhất”.
+phục hồi 1 tệp JSON. Danh sách chương xếp trên xuống dưới, số `#n` là thứ tự dữ liệu (số người
+đọc thấy là số trong tiêu đề chương), có nhãn “mới nhất” và nút lên/xuống/sửa bằng biểu tượng.
 
 ---
 
