@@ -310,6 +310,15 @@ textarea.inp { min-height: 120px; resize: vertical; line-height: 1.6; }
 .rail > * { scroll-snap-align: start; }
 @media (min-width: 1100px) { .rail { grid-auto-columns: 170px; } }
 .grid { display: grid; gap: 26px 18px; grid-template-columns: repeat(auto-fill, minmax(154px, 1fr)); }
+/* khung xám chờ lúc tải dữ liệu */
+.skcard { display: block; }
+.skcard .skth, .skcard .skl { display: block; border-radius: var(--r-sm); background: var(--surf2); position: relative;
+  overflow: hidden; }
+.skcard .skth { aspect-ratio: 2/3; border-radius: var(--r); border: 1px solid var(--bd); }
+.skcard .skl { height: 12px; margin-top: 11px; }
+.skcard .skl.short { width: 55%; margin-top: 7px; }
+.skcard .skth::after, .skcard .skl::after { content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, var(--surf3), transparent); animation: shine 1.3s infinite; }
 .grid.list-view { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
 @media (max-width: 560px) { .grid { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 22px 13px; } }
 
@@ -588,6 +597,10 @@ body.rd-scroll .rnav { padding-bottom: 40px; }
 .ract > .on { color: var(--rd-acc); border-color: var(--rd-acc); background: color-mix(in srgb, var(--rd-acc) 10%, transparent); }
 .ract .btn { padding: 9px 14px; font-size: 13px; border-radius: var(--r); }
 .ract .btn.ghost { border-color: var(--rd-bd); color: var(--rd-mut); }
+.ract .acts-note { flex: 1 1 100%; border: 0; background: transparent; padding: 2px 0 0; font-size: 12.5px;
+  font-weight: 400; color: var(--rd-mut); }
+.ract .acts-note a { display: inline-flex; align-items: center; gap: 5px; color: var(--rd-acc); }
+.ract .acts-note .i { width: 13px; height: 13px; }
 .toastline { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 12px); z-index: 80;
   background: var(--txt); color: var(--bg); padding: 11px 18px; border-radius: var(--r); font-size: 13.5px;
   font-weight: 600; box-shadow: var(--sh-lg); opacity: 0; transition: .24s var(--ease); pointer-events: none;

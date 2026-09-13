@@ -588,6 +588,15 @@
   });
 
   /* ======================= KHỞI ĐỘNG ================================== */
+  /* khung xám chờ: hiện ngay khi mở trang, dữ liệu về là thay bằng thẻ thật */
+  function skeleton(n) {
+    var grid = $('#grid');
+    if (!grid) return;
+    var one = '<div class="skcard" aria-hidden="true"><span class="skth"></span><span class="skl"></span><span class="skl short"></span></div>';
+    grid.innerHTML = new Array(n + 1).join(one);
+    $('#pager').innerHTML = '';
+    $('#fcount').textContent = 'đang tải dữ liệu…';
+  }
   function fail(msg, err) {
     if (window.console && console.warn) console.warn('[chuseoz]', msg, err || '');
     var grid = $('#grid');
@@ -620,6 +629,7 @@
   }
   /* quay lại tab (hoặc bấm Back) → dựng lại bàn đọc cho khớp dữ liệu trong máy */
   window.addEventListener('pageshow', function () { if (CZ._memo.reg) { renderBan(); heroPaint(false); } });
+  skeleton(12);
   CZ.registry().then(function (r) { boot(r.reg); })
     .catch(function (e) { fail('lỗi tải registry', e); });
 })();

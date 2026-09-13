@@ -472,8 +472,9 @@
         (CZ.inShelf(N) ? 'Đã lưu' : 'Lưu vào tủ') + '</span></button>',
       '<button id="actMark">' + ic('star', 'i-s') + '<span>Đánh dấu</span></button>',
       '<button id="actComment">' + ic('chat', 'i-s') + '<span>Bình luận</span></button>',
-      (N.blog ? '<a class="btn ghost sm" href="' + esc(N.blog) + '" target="_blank" rel="noopener">' + ic('alert', 'i-s') + 'Báo lỗi / bài gốc</a>' : ''),
-      '<button id="actShare">' + ic('share', 'i-s') + '<span>Chia sẻ</span></button>'
+      '<button id="actShare">' + ic('share', 'i-s') + '<span>Chia sẻ</span></button>',
+      (N.blog ? '<span class="acts-note">Thấy lỗi chính tả hay thiếu chữ? <a href="' + esc(N.blog) +
+        '" target="_blank" rel="noopener">' + ic('alert', 'i-s') + 'đọc bài gốc trên Blogger</a></span>' : '')
     ];
     if (st && st.views) acts.unshift('<span class="chip">' + ic('eye', 'i-s') + ' ' + num(st.views) + ' lượt đọc (Firebase)</span>');
     $('#rdActs').innerHTML = acts.join('');
