@@ -958,41 +958,61 @@
   }
 
   /* ------------------------------ số liệu ------------------------------- */
+  /* Lượt đọc/bình chọn do Worker đếm rồi lưu trên KV — không cần Firebase nữa. */
   function loadStats(force) {
     var st = $('#stState');
     st.className = 'msgbar show info';
-    st.innerHTML = '<span class="spin"></span> đang đọc số liệu từ Firebase…';
+    st.innerHTML = '<span class="spin"></span> đang đọc số liệu từ KV…';
     var p = force && ONLINE ? api('/api/stats/refresh', { method: 'POST' }).catch(function () {}) : Promise.resolve();
-    p.then(function () { return CZ.stats(); }).then(function (d) {
-      if (force) { CZ._memo.stats = null; }
+    p.then(function () {
+      if (force) CZ._memo.stats = null;
+      return CZ.stats();
+    }).then(function (d) {
       var items = (d && d.items) || {};
-      var keys = Object.keys(items).filter(function (k) { return k === k.toLowerCase(); });
-      var tv = keys.reduce(function (a, k) { return a + (items[k].views || 0); }, 0);
-      var tvv = keys.reduce(function (a, k) { return a + (items[k].votes || 0); }, 0);
-      $('#stTiles').innerHTML = [['Bộ có số liệu', num(keys.length)], ['Tổng lượt đọc', num(tv)], ['Tổng bình chọn', num(tvv)]]
+      var keys = Object.keys(items);
+      var sum = function (f) { return keys.reduce(function (a, k) { return a + (Number(items[k][f]) || 0); }, 0); };
+      $('#stTiles').innerHTML = [['Bộ có số liệu', num(keys.length)], ['Tổng lượt đọc', num(sum('views'))],
+        ['Lượt đọc hôm nay', num(sum('viewsDay'))], ['Tổng bình chọn', num(sum('votes'))]]
         .map(function (r) { return '<div class="tile"><b>' + r[1] + '</b><span>' + r[0] + '</span></div>'; }).join('');
       if (!keys.length) {
         st.className = 'msgbar show err';
-        st.innerHTML = 'Chưa đọc được số liệu Firebase (quyền đọc đang chặn). Mở Firebase Console → Firestore → Rules → cho phép ' +
-          '<code>read</code> với collection <code>novelData</code> (mẫu ở <code>worker/README.md §5</code>). Trong lúc đó web ngoài ' +
-          '<b>không hiện số nào</b> — không bịa số.';
+        st.innerHTML = 'Chưa có lượt đọc/bình chọn nào trên KV. Số sẽ tự tăng khi người đọc mở chương hoặc bấm <b>Thích</b> ' +
+          'trên web (Worker ghi qua <code>/api/view</code>, <code>/api/vote</code>). Muốn giữ số của site cũ thì bấm ' +
+          '<b>Nhập số cũ từ Firebase</b> — chỉ cần làm 1 lần.';
         $('#stTb').innerHTML = '';
         return;
       }
       st.className = 'msgbar show ok';
-      st.textContent = 'Số liệu thật · nguồn: ' + (d.source || 'firebase') + (d.stale ? ' (bản lưu trong máy)' : '');
+      st.textContent = 'Số liệu thật · nguồn: ' + (d.source || 'kv') + (d.saved ? ' · cập nhật ' + CZ.timeAgo(d.saved) : '') +
+        (d.stale ? ' (bản lưu trong máy)' : '');
       var by = {}; (REG.lib || []).forEach(function (n) { by[n.slug] = n; });
       var list = keys.map(function (k) { return Object.assign({ _k: k }, items[k]); })
         .sort(function (a, b) { return (b.views || 0) - (a.views || 0); }).slice(0, 60);
-      $('#stTb').innerHTML = '<thead><tr><th>#</th><th>Bộ truyện</th><th>Lượt đọc</th><th>Bình chọn</th><th>Chương</th></tr></thead><tbody>' +
+      $('#stTb').innerHTML = '<thead><tr><th>#</th><th>Bộ truyện</th><th>Lượt đọc</th><th>Hôm nay</th>' +
+        '<th>Bình chọn</th><th>Tuần này</th></tr></thead><tbody>' +
         list.map(function (r, i) {
           var n = by[r._k] || {};
           return '<tr><td>' + (i + 1) + '</td><td>' + (n.title ? esc(n.title) : esc(r._k)) + '</td>' +
-            '<td><b>' + num(r.views) + '</b></td><td>' + num(r.votes) + '</td><td>' + num(r.chapterCount) + '</td></tr>';
+            '<td><b>' + num(r.views) + '</b></td><td>' + num(r.viewsDay) + '</td>' +
+            '<td>' + num(r.votes) + '</td><td>' + num(r.votesWeek) + '</td></tr>';
         }).join('') + '</tbody>';
     }).catch(function (e) {
       st.className = 'msgbar show err';
       st.textContent = 'Lỗi đọc số liệu: ' + e.message;
+    });
+  }
+  /* kéo số lượt đọc/phiếu của site cũ (Firestore) về KV — làm 1 lần là đủ */
+  function importFbStats() {
+    var st = $('#stState');
+    st.className = 'msgbar show info';
+    st.innerHTML = '<span class="spin"></span> đang đọc số cũ từ Firebase…';
+    api('/api/stats/import-firebase', { method: 'POST' }).then(function (r) {
+      msg('Đã nạp số cũ của ' + num(r.updated) + ' bộ vào KV.', 'ok');
+      loadStats(true);
+    }).catch(function (e) {
+      st.className = 'msgbar show err';
+      st.innerHTML = 'Không nhập được: ' + esc(e.message) +
+        ' — Firestore đang chặn quyền đọc. Mở rules 1 lần (worker/README.md §5) rồi bấm lại, hoặc bỏ qua: web vẫn đếm số mới bình thường.';
     });
   }
 
@@ -1221,6 +1241,7 @@
     e.target.value = '';
   });
   $('#btnStats').addEventListener('click', function () { loadStats(true); });
+  $('#btnStatsFb').addEventListener('click', function () { importFbStats(); });
   window.addEventListener('beforeunload', function (e) {
     if (dirty.meta || dirty.book || dirty.set) { e.preventDefault(); e.returnValue = ''; }
   });

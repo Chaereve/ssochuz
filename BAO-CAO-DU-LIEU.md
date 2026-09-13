@@ -1,6 +1,6 @@
 # Soát dữ liệu truyện — chuseoz
 
-Chạy bằng `python3 tools/audit_data.py` · rev dữ liệu: `2026-09-12b` · nguồn: dữ liệu thật 100% từ chuseoz.blogspot.com (list-novel + /p/ + bài post), không có số liệu tự đặt
+Chạy bằng `python3 tools/audit_data.py` · rev dữ liệu: `2026-09-13a` · nguồn: dữ liệu do trang quản trị giữ — không còn phụ thuộc blogspot
 
 | Mục | Số |
 |---|---|
@@ -30,5 +30,5 @@ Không có lỗi nào.
 | Chain Baby | 14/14 | 15 | 1 | 14 | 0 |
 | Cô Vợ Hờ Đanh Đá Của Tôi | 5/40 | 7 | 2 | 5 | 0 |
 
-> Nguyên tắc: số liệu đọc/bình chọn **chỉ** lấy từ Firebase cũ (`chuseoz-library`).
-> Khi chưa đọc được thì web không hiện số nào và ghi rõ lý do, không ước lượng.
+> Nguyên tắc: số liệu đọc/bình chọn **chỉ** lấy từ Worker KV (`/api/stats` — Worker tự đếm).
+> Khi chưa có số thì web không hiện số nào và ghi rõ lý do, không ước lượng.

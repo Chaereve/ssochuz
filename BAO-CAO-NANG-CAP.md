@@ -98,9 +98,10 @@ Chạy `python3 tools/audit_data.py --md BAO-CAO-DU-LIEU.md` (báo cáo đầy �
   và “Sắp ra mắt” — bản gốc vẫn lưu nguyên văn trong `statusRaw` của từng bộ.
 - Bảng “Cách đếm chương” trong `BAO-CAO-DU-LIEU.md` tách rõ: Lời Mở Đầu / Chương 0 / chương đánh số / Ngoại truyện —
   để bất kỳ ai cũng kiểm lại được con số mà không phải tin lời.
-- **Số liệu đọc/bình chọn**: chỉ lấy từ Firebase cũ (`chuseoz-library`). Hiện Firestore đang chặn quyền đọc (403) nên web
-  **không hiện số nào** và ghi rõ lý do; BXH tạm xếp theo số chương + ngày cập nhật.
-  Mở quyền đọc theo mục 5 trong `worker/README.md` là số thật hiện ngay (cache 10 phút).
+- **Số liệu đọc/bình chọn**: **không còn lấy từ Firebase** (Firestore cũ chặn quyền đọc 403 nên số chết từ lâu).
+  Từ bản worker 1.4.0, Worker **tự đếm** lượt đọc (`POST /api/view`) và bình chọn (`POST /api/vote`) rồi lưu trên KV;
+  web đọc qua `GET /api/stats`. Số cũ của site Firebase nạp về KV **một lần** bằng nút *Nhập số cũ từ Firebase*
+  trong `/admin` (hoặc `--import-firebase` / `--stats-seed`). Chi tiết: `worker/README.md` §5.
 
 ---
 
@@ -142,7 +143,9 @@ node run.js
 
 1. Dán URL Worker vào `cz-config.js` (bước 4 ở mục 1) — đây là bước duy nhất phải deploy lại code.
 2. Vào `/admin` → **Nạp dữ liệu lên KV** → kiểm tra `python3 tools/push_to_kv.py --api ... --verify`.
-3. Mở quyền đọc Firestore (`chuseoz-library`) theo mục 5 của `worker/README.md` → bấm **Đọc lại & xoá cache** để có số thật.
+3. Deploy lại `worker/cms.js` bản 1.4.0 (bản đang chạy là 1.3.0 — chưa có `/api/view`, `/api/vote` và đăng nhập Google còn lỗi).
+4. Muốn giữ số lượt đọc/phiếu cũ: `/admin` → **Số liệu** → **Nhập số cũ từ Firebase** (cần mở quyền đọc Firestore 1 lần),
+   hoặc bỏ qua — web vẫn đếm số mới bình thường. Xem số bằng `python3 tools/push_to_kv.py --api ... --stats`.
 4. Từ đó: viết bài trên Blogger → `/admin` → **⬇ Lấy từ Blogger & đăng**. Hết.
 
 ## 7. Còn có thể làm tiếp (nếu bạn muốn)

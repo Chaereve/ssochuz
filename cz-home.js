@@ -5,7 +5,7 @@
    Mới cập nhật → Thư viện truyện → Xếp hạng → Lịch ra chương.
    Mỗi mục là MỘT KHỐI RIÊNG (không gom vào tab “Khám phá” như trước) nên cuộn
    là thấy hết, bấm menu là nhảy đúng khối, và mỗi khối tự đứng một mình.
-   Số liệu đọc chỉ lấy từ Firebase thật; không đọc được thì KHÔNG hiện số nào.
+   Số liệu đọc/bình chọn lấy từ Worker (KV); không đọc được thì KHÔNG hiện số nào.
    ========================================================================== */
 (function () {
   'use strict';
@@ -329,9 +329,13 @@
   function voteScore(n, k) {
     var s = CZ.statsOf(n) || {};
     var votes = Number(s.votes || 0);
+    /* Worker trả số phiếu theo từng khoảng (votesDay/Week/Month) nên tab
+       Ngày/Tuần/Tháng xếp theo hoạt động của khoảng đó; tổng phiếu vẫn tính
+       một phần để bộ có số cũ (chưa có ai bầu trong kỳ) không tụt về 0. */
+    var per = Number((k === 'day' ? s.votesDay : k === 'week' ? s.votesWeek : s.votesMonth) || 0);
     var trend = Number(s.trendingScore || 0);
     var half = k === 'day' ? 1.4 : k === 'week' ? 8 : 32;
-    var hot = votes * recencyW(n, half);
+    var hot = (per * 2 + votes * 0.2) * recencyW(n, half);
     if (k === 'day') hot += trend * 0.35;
     if (!statsOn()) hot = recencyW(n, half) * 100;
     return hot;
@@ -683,7 +687,7 @@
       render();
       CZ.reveal();
       navCounts();
-      /* số liệu Firebase về sau thì vẽ lại phần xếp hạng */
+      /* số liệu KV về sau thì vẽ lại phần xếp hạng */
       CZ.onStats(function () { renderRank(); buildFilters(); render(); });
     } catch (e) { fail('lỗi dựng trang chủ', e); }
   }

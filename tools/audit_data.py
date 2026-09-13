@@ -176,8 +176,8 @@ def main():
     if not shown:
         rep.append('| (không có bộ nào lệch) | | | | | |')
     rep.append('')
-    rep.append('> Nguyên tắc: số liệu đọc/bình chọn **chỉ** lấy từ Firebase cũ (`chuseoz-library`).\n'
-               '> Khi chưa đọc được thì web không hiện số nào và ghi rõ lý do, không ước lượng.\n')
+    rep.append('> Nguyên tắc: số liệu đọc/bình chọn **chỉ** lấy từ Worker KV (`/api/stats` — Worker tự đếm).\n'
+               '> Khi chưa có số thì web không hiện số nào và ghi rõ lý do, không ước lượng.\n')
     out = '\n'.join(rep)
     print(out)
     if a.md:
