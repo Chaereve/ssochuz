@@ -813,13 +813,21 @@ body.rd-paged .rdkeys { padding-bottom: 34px; }
 #rd.cut-in .rdhead, #rd.cut-in .rtext, #rd.cut-in .ract, #rd.cut-in .rend, #rd.cut-in .rnav {
   animation: chapIn var(--t-slow) var(--ease-out) both; }
 @keyframes chapIn { from { opacity: 0; transform: translateX(30px); filter: blur(3px); } }
+/* chế độ cuộn liên tục: chỉ mờ đi rồi hiện lại, không đẩy chữ sang ngang */
+#rd.cut-fade .rdhead, #rd.cut-fade .rtext, #rd.cut-fade .ract, #rd.cut-fade .rend, #rd.cut-fade .rnav {
+  opacity: 0; transition: opacity .17s linear; }
+#rd.cut-in-soft .rdhead, #rd.cut-in-soft .rtext, #rd.cut-in-soft .ract, #rd.cut-in-soft .rend, #rd.cut-in-soft .rnav {
+  animation: chapSoft var(--t-slow) var(--ease-out) both; }
+@keyframes chapSoft { from { opacity: 0; } }
 .rdbar.loading .rdprog { background-image: linear-gradient(90deg, transparent, color-mix(in srgb, var(--rd-acc) 40%, transparent), transparent);
   background-size: 45% 100%; background-repeat: no-repeat; animation: scan 900ms linear infinite; }
 @keyframes scan { from { background-position: -50% 0; } to { background-position: 150% 0; } }
 @media (prefers-reduced-motion: reduce) {
   #rd.cut-in .rdhead, #rd.cut-in .rtext, #rd.cut-in .ract, #rd.cut-in .rend, #rd.cut-in .rnav,
+  #rd.cut-in-soft .rdhead, #rd.cut-in-soft .rtext, #rd.cut-in-soft .ract, #rd.cut-in-soft .rend, #rd.cut-in-soft .rnav,
   .rdbar.loading .rdprog { animation: none; }
-  #rd.cut-out .rdhead, #rd.cut-out .rtext, #rd.cut-out .ract, #rd.cut-out .rend, #rd.cut-out .rnav { opacity: 1; transform: none; filter: none; }
+  #rd.cut-out .rdhead, #rd.cut-out .rtext, #rd.cut-out .ract, #rd.cut-out .rend, #rd.cut-out .rnav,
+  #rd.cut-fade .rdhead, #rd.cut-fade .rtext, #rd.cut-fade .ract, #rd.cut-fade .rend, #rd.cut-fade .rnav { opacity: 1; transform: none; filter: none; }
 }
 
 /* trang đọc: chữ nghỉ mắt hơn — chữ cái đầu, trích dẫn, đường ngắt cảnh, bôi đen */

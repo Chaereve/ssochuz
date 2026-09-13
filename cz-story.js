@@ -600,17 +600,20 @@
   function renderCur(keepScroll, dir) {
     if (!CHS[cur - 1]) return;
     var box = $('#rd'), bar = $('#rdBar');
+    /* hai kiểu chuyển chương: cuộn liên tục thì mờ dần + vệt quét (không xê dịch
+       ngang, mắt đang ở giữa trang), phân trang thì trượt trái → vào từ phải */
     if (dir && !keepScroll && !CZ.reduce && box && !swapping) {
+      var paged = CZ.rdGet().mode === 'paged';
       swapping = true;
-      box.classList.add('cut-out');
+      box.classList.add(paged ? 'cut-out' : 'cut-fade');
       if (bar) bar.classList.add('loading');
       setTimeout(function () {
         paintChapter(keepScroll);
         swapping = false;
-        box.classList.remove('cut-out');
-        box.classList.add('cut-in');
+        box.classList.remove('cut-out', 'cut-fade');
+        box.classList.add(paged ? 'cut-in' : 'cut-in-soft');
         if (bar) setTimeout(function () { bar.classList.remove('loading'); }, 120);
-        setTimeout(function () { box.classList.remove('cut-in'); }, 470);
+        setTimeout(function () { box.classList.remove('cut-in', 'cut-in-soft'); }, 470);
       }, 170);
       return;
     }

@@ -237,8 +237,9 @@ Một bảng nhịp duy nhất trong `cz.css`, áp cho cả bốn trang:
 
 **Trang đọc**
 
-- Đổi chương: chương cũ **trượt sang trái + mờ đi**, chương mới **vào từ phải + nhoè nhẹ**; thanh trên
-  hiện một vệt quét mảnh trong lúc chờ — bố cục **không nhảy**.
+- Đổi chương theo đúng hai kiểu đọc: **cuộn liên tục** thì nội dung **mờ dần rồi hiện lại** (không đẩy
+  chữ sang ngang vì mắt đang ở giữa trang) + vệt quét mảnh trên thanh trên; **phân trang** thì chương cũ
+  **trượt sang trái + mờ**, chương mới **vào từ phải + nhoè nhẹ** — bố cục **không nhảy** ở cả hai kiểu.
 - Thanh công cụ nổi: cuộn xuống thì **trượt lên khỏi màn hình**, vừa cuộn lên là **về ngay**; đứng yên
   3 giây cũng tự ẩn cho đỡ vướng.
 - Đổi tông nền đọc: `background-color` và `color` **chuyển trong 0,4 giây**, không chớp sáng.
