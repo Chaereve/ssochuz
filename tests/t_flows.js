@@ -51,7 +51,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   await wait(120);
   out.pickWidth = pick('Độ rộng cột chữ', 'Hẹp');
   await wait(120);
-  out.pickFont = pick('Kiểu chữ', 'Không chân');
+  out.pickFont = pick('Kiểu chữ', 'Sans');
   await wait(120);
   out.pickJust = pick('Căn đều hai bên', 'Bật');
   await wait(120);

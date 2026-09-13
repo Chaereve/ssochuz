@@ -6,16 +6,16 @@ const ROOT = require('path').join(__dirname, '..');
 
 function read(f) { return fs.readFileSync(path.join(ROOT, f), 'utf8'); }
 function inlineAll(html) {
-  return html.replace(/<script src="\/([A-Za-z0-9_.\-]+)"><\/script>/g, (m, f) => {
+  return html.replace(/<script src="\/([A-Za-z0-9_.\-]+)(?:\?[^"]*)?"><\/script>/g, (m, f) => {
     const p = path.join(ROOT, f);
     return fs.existsSync(p) ? '<script>' + fs.readFileSync(p, 'utf8') + '</script>' : m;
   });
 }
 function inline(html, files) {
   files.forEach(f => {
-    const tag = '<script src="/' + f + '"></script>';
+    const re = new RegExp('<script src="/' + f.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&') + '(?:\\?[^"]*)?"><\\/script>');
     const code = read(f);
-    html = html.replace(tag, () => '<script>' + code + '</script>');
+    html = html.replace(re, () => '<script>' + code + '</script>');
   });
   return html;
 }

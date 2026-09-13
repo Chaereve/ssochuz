@@ -11,7 +11,7 @@
 <meta property="og:type" content="website">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23faf8f4'/%3E%3Cpath d='M10 8h9a3 3 0 0 1 3 3v13H13a3 3 0 0 1-3-3z' fill='none' stroke='%23a63a52' stroke-width='2.4'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
-<link rel="stylesheet" href="/cz.css">
+<link rel="stylesheet" href="/cz.css?v=20260913e">
 <script>/* chống nháy nền: áp tông màu đã lưu trước khi vẽ */try{var t=localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
 <body class="hpage">
@@ -42,8 +42,7 @@
     <!-- ================= BÀN ĐỌC (đang đọc dở · tủ truyện) ================= -->
     <section class="sec" id="ban-doc" hidden>
       <div class="sechead">
-        <h2>Bàn đọc của bạn</h2>
-        <span class="sub" id="banSub"></span>
+        <h2>My Space</h2>
         <span class="right">
           <span class="tabs sm" id="banTabs" role="tablist">
             <button class="tab on" data-ban="doc" role="tab">Đang đọc dở<span class="ct" id="banDocCount"></span></button>
@@ -59,8 +58,7 @@
     <!-- ================= MỚI CẬP NHẬT ================= -->
     <section class="sec fade" id="moi-cap-nhat">
       <div class="sechead">
-        <h2>Mới cập nhật</h2>
-        <span class="sub" id="newSub"></span>
+        <h2>Lastest Update</h2>
         <span class="right"><a class="btn ghost sm" href="/#thu-vien" title="Xem cả thư viện">Xem tất cả</a></span>
       </div>
       <div class="rail" id="newRail"></div>
@@ -69,8 +67,7 @@
     <!-- ================= XẾP HẠNG ================= -->
     <section class="sec fade" id="bxh">
       <div class="sechead">
-        <h2>Xếp hạng</h2>
-        <span class="sub" id="rankSub"></span>
+        <h2>Top vote</h2>
         <span class="right"><span class="tabs sm" id="rankTabs" role="tablist"></span></span>
       </div>
       <div id="rank"></div>
@@ -79,20 +76,15 @@
     <!-- ================= GÓC BIÊN TẬP VIÊN (Editor's Choice) ================= -->
     <section class="sec fade" id="bien-tap" hidden>
       <div class="sechead">
-        <h2>Góc biên tập viên</h2>
-        <span class="sub" id="editSub"></span>
-        <span class="right"><a class="btn ghost sm" href="/guide" title="Vì sao chọn?"><span data-ic="info"></span> Vì sao?</a></span>
+        <h2>Chuseoz's choices</h2>
       </div>
       <div class="rail" id="editRail"></div>
     </section>
-
-    <!-- donation moved to footer only per request - section hidden -->
 
     <!-- ================= LỊCH RA CHƯƠNG ================= -->
     <section class="sec fade" id="lich">
       <div class="sechead">
         <h2>Lịch ra chương</h2>
-        <span class="sub" id="schedSub"></span>
       </div>
       <div id="sched"></div>
     </section>
@@ -100,7 +92,7 @@
     <!-- ================= THƯ VIỆN ================= -->
     <section class="sec fade" id="thu-vien">
       <div class="sechead">
-        <h2>Thư viện truyện</h2>
+        <h2>Library</h2>
       </div>
       <div class="fbox">
         <div class="row1">
@@ -142,11 +134,11 @@
 <footer id="ftr"></footer>
 <button id="toTop" aria-label="Lên đầu trang" title="Lên đầu trang"></button>
 
-<script src="/cz-config.js"></script>
+<script src="/cz-config.js?v=20260913e"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-<script src="/cz-app.js"></script>
-<script src="/cz-auth.js"></script>
-<script src="/cz-home.js"></script>
+<script src="/cz-app.js?v=20260913e"></script>
+<script src="/cz-auth.js?v=20260913e"></script>
+<script src="/cz-home.js?v=20260913e"></script>
 </body>
 </html>

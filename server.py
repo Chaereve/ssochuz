@@ -54,8 +54,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         return super().do_GET()
 
     def end_headers(self):
-        # No cache for html to avoid stale footer
-        if self.path.endswith(".html") or self.path.endswith("/"):
+        # No cache for html/css/js so preview shows latest UI
+        if self.path.endswith((".html", ".css", ".js")) or self.path.endswith("/"):
             self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
         super().end_headers()
 
