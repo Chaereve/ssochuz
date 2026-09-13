@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Đang tải… · chuseoz</title>
+<meta name="description" content="Thông tin truyện, danh sách chương và trình đọc truyện chuyển thể trên chuseoz.">
+<meta name="theme-color" content="#0e0c11">
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+<link rel="stylesheet" href="/cz.css">
+</head>
+<body class="spage">
+<div id="sprog" aria-hidden="true"><i></i></div>
+<header id="hdr"></header>
+
+<!-- ==================== TRANG TRUYỆN ==================== -->
+<main id="story" class="wrap" aria-live="polite">
+  <nav class="crumb" id="crumb"><a href="/">Trang chủ</a></nav>
+  <section class="shero" id="shero"></section>
+  <section class="sec" id="chapSec">
+    <div class="sechead">
+      <h2><span data-ic="list"></span>Danh sách chương</h2>
+      <span class="sub" id="chapCount">—</span>
+      <span class="right"><a class="btn ghost sm" id="chapTop">Đọc chương mới nhất<span data-ic="up"></span></a></span>
+    </div>
+    <div class="chapbar">
+      <label class="search"><span data-ic="search"></span>
+        <input id="chapQ" placeholder="Tìm số chương hoặc tên chương…" autocomplete="off" spellcheck="false">
+      </label>
+      <div class="seg" id="chapSort" role="group" aria-label="Thứ tự chương">
+        <button data-sort="new">Mới nhất trước</button>
+        <button data-sort="old" class="on">Từ đầu</button>
+      </div>
+      <span class="jumpin">tới chương <input id="chapJump" type="number" min="1" inputmode="numeric" aria-label="Nhảy tới chương"></span>
+    </div>
+    <div class="chapgrid" id="chapGrid"></div>
+    <div class="pager" id="chapPager"></div>
+  </section>
+  <section class="sec" id="relSec">
+    <div class="relcols">
+      <div><div class="sechead"><h2 style="font-size:16px"><span data-ic="tv"></span>Cùng series</h2></div><div class="relbox" id="relSeries"></div></div>
+      <div><div class="sechead"><h2 style="font-size:16px"><span data-ic="users"></span>Cùng couple</h2></div><div class="relbox" id="relCouple"></div></div>
+      <div><div class="sechead"><h2 style="font-size:16px"><span data-ic="pen"></span>Cùng tác giả</h2></div><div class="relbox" id="relAuthor"></div></div>
+    </div>
+  </section>
+  <section class="cmts" id="cmts"><h3>Bình luận</h3><div id="giscus"></div>
+    <p class="sm muted" id="cmtNote"></p>
+  </section>
+</main>
+
+<!-- ==================== TRANG ĐỌC ==================== -->
+<section id="rd" aria-live="polite">
+  <header class="rdbar" id="rdBar">
+    <div class="in">
+      <button class="ibo" id="rdBack" title="Về trang truyện (Esc)"></button>
+      <div class="ttl"><b id="rdTitle">Đang tải…</b><span id="rdSub"></span></div>
+      <div class="tools">
+        <button class="ibo" id="rdToc" title="Danh sách chương (L)"></button>
+        <button class="ibo" id="rdMark" title="Đánh dấu chương (B)"></button>
+        <button class="ibo" id="rdSet" title="Cài đặt đọc"></button>
+        <button class="ibo" id="rdFocus" title="Chế độ tập trung (F)"></button>
+        <button class="ibo" id="rdShare" title="Chia sẻ chương"></button>
+      </div>
+    </div>
+    <div class="rdprog"><i id="rdProgFill"></i></div>
+  </header>
+  <div class="rdhead">
+    <nav class="rdcrumb" id="rdCrumb"></nav>
+    <h1 id="rdHead">—</h1>
+    <div class="rdmeta" id="rdMeta"></div>
+  </div>
+  <article class="rtext nofont" id="rdText"></article>
+  <div class="ract" id="rdActs"></div>
+  <div class="rend" id="rdEnd"></div>
+  <nav class="rnav" id="rdNav"></nav>
+</section>
+
+<footer id="ftr"></footer>
+<button id="toTop" aria-label="Lên đầu trang"></button>
+<div class="toastline" id="rdToast" role="status" aria-live="polite"></div>
+
+<!-- ngăn kéo: mục lục + cài đặt đọc -->
+<div class="sheet" id="tocSheet">
+  <div class="scrim" data-shut></div>
+  <aside class="pan" role="dialog" aria-label="Mục lục">
+    <div class="ph"><h4 id="tocName">Mục lục</h4><span class="sm muted" id="tocSub"></span><button class="ibo" data-shut></button></div>
+    <label class="dsearch"><span data-ic="search"></span><input id="tocQ" placeholder="Tìm chương…" autocomplete="off"></label>
+    <div class="pb toc" id="tocList"></div>
+  </aside>
+</div>
+<div class="sheet" id="setSheet">
+  <div class="scrim" data-shut></div>
+  <aside class="pan" role="dialog" aria-label="Cài đặt đọc">
+    <div class="ph"><h4>Cài đặt đọc</h4><button class="ibo" data-shut></button></div>
+    <div class="pb" id="setBody"></div>
+  </aside>
+</div>
+<div class="lightbox" id="lightbox"><img alt="Ảnh trong chương"></div>
+
+<script src="/cz-config.js"></script>
+<script src="/cz-app.js"></script>
+<script src="/cz-story.js"></script>
+</body>
+</html>
