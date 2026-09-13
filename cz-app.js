@@ -444,7 +444,8 @@
       '<span class="scrim"></span>' +
       '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(n.status || 'Đang cập nhật') + '</span>' +
       (n.is18 ? '<span class="b18">18+</span>' : '') +
-      '<span class="foot"><span class="ch">' + esc(countText(n)) + '</span></span>' +
+      '<span class="foot"><span class="ch">' + esc(countText(n)) + '</span>' +
+        (n.fresh ? '<span class="badge-new">Mới</span>' : '') + '</span>' +
       (pct ? '<span class="bar"><i style="width:' + pct + '%"></i></span>' : '') +
       '</div>' +
       '<h3>' + esc(n.title) + '</h3>' +
@@ -462,6 +463,7 @@
       '<span class="cl-main">' +
         '<span class="cl-top"><b class="cl-t">' + esc(n.title) + '</b>' +
           (n.is18 ? '<span class="b18">18+</span>' : '') +
+          (n.fresh ? '<span class="badge-new">Mới</span>' : '') +
         '</span>' +
         '<span class="cl-meta">' + esc(bits.join(' · ') || '—') + '</span>' +
         '<span class="cl-syn">' + esc(n.syn || 'Chưa có mô tả cho bộ này.') + '</span>' +
@@ -545,21 +547,101 @@
   }
   /* vạch tiến độ cuộn trang + nút lên đầu */
   function scrollUI() {
-    var bar = d.querySelector('#sprog i'), top = d.querySelector('#toTop'), tick = false;
+    var bar = d.querySelector('#sprog i'), top = d.querySelector('#toTop'), tick = false, lastY = w.scrollY || 0;
     function run() {
       if (tick) return; tick = true;
       requestAnimationFrame(function () {
+        var y = w.scrollY || 0;
         var h = d.documentElement.scrollHeight - w.innerHeight;
-        if (bar) bar.style.width = (h > 0 ? Math.min(100, Math.max(0, w.scrollY / h * 100)) : 0) + '%';
-        if (top) top.classList.toggle('on', w.scrollY > 700);
-        d.body.classList.toggle('scrolled', w.scrollY > 8);
+        if (bar) bar.style.width = (h > 0 ? Math.min(100, Math.max(0, y / h * 100)) : 0) + '%';
+        if (top) top.classList.toggle('on', y > 700);
+        d.body.classList.toggle('scrolled', y > 8);
+        /* cuộn xuống thì thanh trên trượt đi, cuộn lên là hiện lại (trừ lúc đang mở menu) */
+        var dy = y - lastY;
+        if (Math.abs(dy) > 6) {
+          var menu = d.querySelector('#czMnav.on');
+          d.body.classList.toggle('nav-up', !reduce && !menu && dy > 0 && y > 320);
+          lastY = y;
+        }
         tick = false;
       });
     }
     w.addEventListener('scroll', run, { passive: true }); run();
     if (top) top.addEventListener('click', function () { w.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }); });
   }
-  /* ======================= 7. ĐẦU TRANG / CHÂN TRANG =================== */
+  /* ======================= 7. CHUYỂN ĐỘNG TƯƠNG TÁC ==================== */
+  /* mở/đóng mượt một khối (menu máy nhỏ, khối gấp…) */
+  function slide(el, on) {
+    if (!el) return false;
+    var open = typeof on === 'boolean' ? on : !el.classList.contains('on');
+    if (reduce) { el.classList.toggle('on', open); return open; }
+    el.classList.add('slid');
+    el.style.overflow = 'hidden';
+    if (open) {
+      el.classList.add('on');
+      el.style.maxHeight = '0px';
+      void el.offsetHeight;
+      el.style.maxHeight = (el.scrollHeight + 2) + 'px';
+      setTimeout(function () { if (el.classList.contains('on')) el.style.maxHeight = '1200px'; }, 440);
+    } else {
+      el.style.maxHeight = el.scrollHeight + 'px';
+      void el.offsetHeight;
+      el.style.maxHeight = '0px';
+      el.classList.remove('on');
+    }
+    return open;
+  }
+  /* gợn sóng nhẹ ngay chỗ con trỏ khi bấm nút */
+  function ripple(el, e) {
+    if (reduce || !el || !d.createElement) return;
+    var r = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+    if (!r || !r.width) return;
+    var size = Math.max(r.width, r.height);
+    var sp = d.createElement('span');
+    sp.className = 'rip';
+    sp.style.width = sp.style.height = size + 'px';
+    sp.style.left = ((e.clientX || r.left + r.width / 2) - r.left - size / 2) + 'px';
+    sp.style.top = ((e.clientY || r.top + r.height / 2) - r.top - size / 2) + 'px';
+    el.appendChild(sp);
+    setTimeout(function () { if (sp.parentNode) sp.parentNode.removeChild(sp); }, 560);
+  }
+  /* chuyển trang: vạch tiến độ trên cùng + nội dung hiện dần, không nhảy khô */
+  function pageFx() {
+    var bar = d.createElement('div');
+    bar.id = 'nprog'; bar.setAttribute('aria-hidden', 'true'); bar.innerHTML = '<i></i>';
+    d.body.appendChild(bar);
+    var fill = bar.firstChild;
+    d.body.classList.add('page-in');
+    if (!reduce) {
+      fill.style.width = '10%'; fill.style.opacity = '1';
+      requestAnimationFrame(function () { fill.style.width = '64%'; });
+      setTimeout(function () {
+        fill.style.width = '100%';
+        setTimeout(function () { fill.style.opacity = '0'; }, 220);
+      }, 240);
+    }
+    /* bắt cú bấm: gợn sóng cho nút, và điệu chuyển trang cho liên kết nội bộ */
+    d.addEventListener('click', function (e) {
+      if (e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      var el = e.target;
+      if (!el || !el.closest) return;
+      var hit = el.closest('.btn, .hbtn, .pg, .seg button, .qclr');
+      if (hit) ripple(hit, e);
+      var link = el.closest('a[href]');
+      if (!link || link.target === '_blank' || link.hasAttribute('download')) return;
+      var href = link.getAttribute('href') || '';
+      if (!href || href.charAt(0) === '#' || /^(mailto:|tel:)/i.test(href)) return;
+      var u; try { u = new URL(link.href, w.location.href); } catch (err) { return; }
+      if (u.origin !== w.location.origin) return;
+      if (u.pathname === w.location.pathname && u.search === w.location.search) return;
+      e.preventDefault();
+      fill.style.opacity = '1'; fill.style.width = '92%';
+      var go = function () { w.location.href = link.href; };
+      if (reduce) go(); else setTimeout(go, 170);
+    }, true);
+  }
+
+  /* ======================= 8. ĐẦU TRANG / CHÂN TRANG =================== */
   function mountHeader(host, active) {
     if (!host) return;
     var NAV = [
@@ -593,9 +675,12 @@
     }
     paintTheme();
     tb.addEventListener('click', function () { themeToggle(); paintTheme(); });
+    var mnav = host.querySelector('#czMnav');
     host.querySelector('#czBurger').addEventListener('click', function () {
-      host.querySelector('#czMnav').classList.toggle('on');
+      slide(mnav);
+      d.body.classList.remove('nav-up');
     });
+    mnav.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('a')) slide(mnav, false); });
     host.querySelector('#czJump').addEventListener('click', function () { openJump(); });
     d.addEventListener('keydown', function (e) {
       if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'k') { e.preventDefault(); openJump(); }
@@ -710,8 +795,16 @@
   function libList() {
     if (libCache) return libCache;
     var reg = memo.reg || {};
-    libCache = (reg.lib || []).map(norm);
-    return libCache;
+    var list = (reg.lib || []).map(norm);
+    /* bộ nào lên chương trong 10 ngày gần nhất (so với bộ mới nhất) thì gắn nhãn “Mới” */
+    var dates = list.map(function (n) { return String(n.updated || ''); }).sort();
+    var top = Date.parse(dates[dates.length - 1] || '');
+    if (!isNaN(top)) list.forEach(function (n) {
+      var t = Date.parse(n.updated || '');
+      n.fresh = !isNaN(t) && (top - t) <= 10 * 864e5;
+    });
+    libCache = list;
+    return list;
   }
   function slides(reg) {
     reg = reg || memo.reg || {};
@@ -757,12 +850,12 @@
     statusCls: statusCls, words: words, norm: norm, countText: countText, listHead: listHead,
     storyURL: storyURL, readURL: readURL, slugify: slugify, qs: qs, copy: copy, download: download,
     card: card, mountRail: mountRail, reveal: reveal, countUp: countUp, scaleFacts: scaleFacts,
-    scrollUI: scrollUI, mountShell: mountShell, mountHeader: mountHeader, mountFooter: mountFooter,
+    scrollUI: scrollUI, slide: slide, pageFx: pageFx, mountShell: mountShell, mountHeader: mountHeader, mountFooter: mountFooter,
     openJump: openJump, toast: toast, modal: modal, confirm: confirmBox,
     reduce: reduce, hasAPI: !!API,
     _memo: memo, _setLib: function () { libCache = null; }
   };
 
-  if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', function () { CZ.themeInit(); CZ.scrollUI(); });
-  else { CZ.themeInit(); CZ.scrollUI(); }
+  if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', function () { CZ.themeInit(); CZ.scrollUI(); CZ.pageFx(); });
+  else { CZ.themeInit(); CZ.scrollUI(); CZ.pageFx(); }
 })(window, document);

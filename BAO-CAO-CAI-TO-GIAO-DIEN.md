@@ -2,12 +2,15 @@
 
 Toàn bộ web dựng lại theo **bố cục hero landing làm chủ đạo**, dùng chung một hệ thống
 giao diện cho cả 4 trang: **trang chủ · trang truyện · trang đọc · trang quản trị**.
-Bốn vòng chỉnh sửa liên tiếp, mỗi vòng đi sâu thêm một lượt: **gọt bớt chỗ thừa**,
+Năm vòng chỉnh sửa liên tiếp, mỗi vòng đi sâu thêm một lượt: **gọt bớt chỗ thừa**,
 **đồng bộ giữa các trang**, **truy lỗi tận gốc** (kể cả lỗi cũ mà trình duyệt không báo ra),
 rồi **làm dày chỗ đọc và chỗ quản trị**.
-Vòng bốn (bản này thêm) có bốn việc: thanh điều hướng chương ngay trên đầu trang đọc,
-xem theo danh sách ở thư viện dựng lại lần hai, **tab Tổng quan** cho trang quản trị,
-và sửa lỗi hai khung cùng hiện ở trang quản trị.
+Vòng bốn: thanh điều hướng chương ngay trên đầu trang đọc, xem theo danh sách ở thư viện dựng
+lại lần hai, **tab Tổng quan** cho trang quản trị, sửa lỗi hai khung cùng hiện ở trang quản trị.
+Vòng năm (bản này thêm) làm năm việc: **cắt hẳn đường dây với Blogger** — đăng bài ngay trên
+web; **bỏ mục Phim / Series** cùng dữ liệu chuyển thể; **tách các mục trang chủ ra thành từng
+khối riêng** thay vì gom vào một khối tab; **gọn chân trang và làm huy hiệu rõ hơn**;
+và **thêm một bộ chuyển động** dùng chung cho cả bốn trang.
 
 ---
 
@@ -47,10 +50,10 @@ tải lại trang, nút Back của trình duyệt trả về đúng danh sách c
 | Bỏ / gộp | Vì sao |
 |---|---|
 | Ô lọc **Tình trạng** trong khung lọc thư viện | đã có dãy tab “Hoàn thành / Đang cập nhật / Sắp ra mắt …” ngay dưới — hai chỗ làm một việc |
-| Bảng **thông tin** ở trang truyện (6 dòng) | trùng hoàn toàn với hàng nhãn ngay trên tiêu đề; đã đưa “Chuyển thể” lên hàng nhãn |
+| Bảng **thông tin** ở trang truyện (6 dòng) | trùng hoàn toàn với hàng nhãn ngay trên tiêu đề |
 | Dòng **Chương x/y** ở hàng nhãn trang đọc | thanh đọc phía trên đã ghi; chỉ giữ số từ / số phút đọc |
 | Nhãn **18+** lặp ở hero và ở thẻ truyện | hero đã có nhãn 18+ trên bìa |
-| Mục **Trang chủ** trong thanh điều hướng | logo đã là đường về trang chủ; thanh còn 4 mục: Thư viện · Xếp hạng · Lịch · Chuyển thể |
+| Mục **Trang chủ** trong thanh điều hướng | logo đã là đường về trang chủ; thanh còn 4 mục: Thư viện · Mới cập nhật · Xếp hạng · Lịch ra chương |
 | Tiêu đề **“Xếp hạng thư viện”** trong tab Khám phá | tên tab đã nói rồi, chỉ còn dãy chọn tiêu chí |
 | Dòng nguồn của **Lịch ra chương** ở trên đầu khung | đưa xuống cuối cho giống các khung khác |
 | Đoạn giới thiệu lặp ở tab Kết nối của trang quản trị | giữ một chỗ, chỗ còn lại chỉ nói việc cần làm |
@@ -61,6 +64,12 @@ tải lại trang, nút Back của trình duyệt trả về đúng danh sách c
 | Nút **Báo lỗi / bài gốc** nằm lẫn trong hàng nút | tách thành một dòng chữ nhỏ dưới hàng nút cho hàng nút không rớt dòng |
 | Khung **“Không có Worker vẫn dùng được”** | gộp thành một chú thích trong phần kết nối (đã thu gọn) |
 | Đoạn giới thiệu dài ở đầu trang quản trị | còn một dòng, phần việc chính lên gần màn hình đầu |
+| Mọi đường dẫn **Blogger / blogspot** | menu, chân trang, nút “Bài gốc”, dẫn bình luận, ô “Lấy từ Blogger”, nút “Đồng bộ lại từ Blogger” — bạn chuyển hẳn sang đăng bài trên web |
+| Mục **Phim** và **Series** | tab Chuyển thể ở trang chủ, chip lọc, nhãn chuyển thể trên thẻ truyện, dải “Cùng series”, ô chuyển thể trong trang quản trị |
+| **Trường dữ liệu chết** trong `registry.json` | `series` (31 nhóm), `movies`, `adapt`/`adaptName` và 7 trường không nơi nào đọc — mỗi bộ còn 14 trường, tệp nhẹ đi hơn một nửa |
+| Khối tab gộp **Khám phá** (nay đã bỏ hẳn) | bốn mục chen trong một khối tab — nay mỗi mục là **một khối riêng** trên trang, cuộn là tới |
+| Dãy chip lọc **trộn nhiều cấp** | tình trạng lẫn nhãn 18+ trong một hàng — tách thành hai nhóm có nhãn riêng: **Tình trạng** · **Nhãn** |
+| **Chân trang ba cột** | “quá cầu kì” — nay một hàng: logo · 6 liên kết · một dòng nguồn dữ liệu |
 
 ---
 
@@ -77,7 +86,7 @@ tải lại trang, nút Back của trình duyệt trả về đúng danh sách c
 | **Nhãn số chương** | chỗ ghi “10/10 chương”, chỗ ghi “10/10”, chỗ ghi “10/10 chương chương” | một hàm dùng chung: “9/45 chương”, đủ chương thì “36 chương” |
 | **Bảng xếp hạng** | mặc định sáng ở “Mới cập nhật” trong khi có số liệu thật | đọc được số Firebase là mặc định xếp theo **lượt đọc**; thêm kiểu sắp xếp “Đọc nhiều nhất” ở thư viện; nút “Thích” giữ số phiếu (“Đã thích · 56”) |
 | **Trang quản trị mở lên** | chỉ có form đăng nhập, không thấy dữ liệu cho tới khi bấm | có khoá đã lưu thì tự nối lại; chưa có thì tự mở dữ liệu tĩnh ngay |
-| **Xem theo danh sách** ở thư viện | lưới ép 3 cột, tên truyện rớt dòng thành một cột chữ, không có mô tả, không dùng được | mỗi bộ một hàng: bìa · tên + tình trạng · couple/tác giả/năm · mô tả 2 dòng · số chương · chuyển thể · thanh tiến độ đọc |
+| **Xem theo danh sách** ở thư viện | lưới ép 3 cột, tên truyện rớt dòng thành một cột chữ, không có mô tả, không dùng được | mỗi bộ một hàng: bìa · tên + tình trạng · couple/tác giả/năm · mô tả 2 dòng · số chương · năm · thanh tiến độ đọc |
 | **Biểu tượng trong trang quản trị** | ô `<span data-ic>` không được thay bằng hình (mũi tên/kính lúp chỗ hiện chỗ không) | thay ngay lúc mở trang, như hai trang kia |
 | **Khối xám chờ** ở thư viện | mở trang là khoảng trắng tới khi dữ liệu về | hiện 12 khung xám kèm dòng “đang tải dữ liệu…” |
 | **Lọc tình trạng** | ô xổ xuống rỗng, bấm không có gì (bản cũ) | đã bỏ để khỏi trùng với dãy tab |
@@ -89,17 +98,22 @@ tải lại trang, nút Back của trình duyệt trả về đúng danh sách c
 | **Trang quản trị: hai khung chồng nhau** | mở trang là khung *Tổng quan* và khung *Thư viện* cùng hiện, cuộn xuống thấy bảng dữ liệu dính ngay dưới phần tổng quan | khung Thư viện thiếu `hide` (bản cũ mặc định mở Thư viện) — nay `#pane-list` có `hide` và `boot()` gọi `show('overview')` |
 | **Cuối chương: hai hàng chuyển chương** | vừa dòng “Hết chương · chương kế tiếp” vừa nút chuyển chương lặp lại | giữ **một** hàng nút ở `#rdNav`, thêm cặp nút ←/→ lên thanh trên; hết chương chỉ còn một dòng nhắc |
 | **Thanh trên trang đọc** | muốn sang chương kế phải cuộn xuống cuối | thêm ←/→ cạnh nhãn chương, chương đầu/chương cuối thì nút đó mờ đi |
-| **Xem theo danh sách (lần hai)** | hàng vẫn dễ rối: tình trạng nằm chung dòng tên, nhãn số chương dính sát nút, không có dòng tiêu đề cột | mỗi hàng có vạch màu tình trạng ở lề trái, cột phải xếp dọc *tình trạng → số chương → chuyển thể*, nút đổi thành “Đọc tiếp” / “Xem truyện”, thêm dòng tiêu đề **Bộ truyện · Tình trạng · chương** |
-| **Xem theo danh sách trên điện thoại** | dòng tiêu đề cột chữ dính liền nhau, cột tình trạng · số chương bị giấu nên hàng nào cũng giống hàng nào | máy nhỏ: ẩn dòng tiêu đề cột (hai cột thì nó vô nghĩa), đưa tình trạng + số chương + chuyển thể xuống thành một dòng dưới mô tả |
+| **Xem theo danh sách (lần hai)** | hàng vẫn dễ rối: tình trạng nằm chung dòng tên, nhãn số chương dính sát nút, không có dòng tiêu đề cột | mỗi hàng có vạch màu tình trạng ở lề trái, cột phải xếp dọc *tình trạng → số chương → năm*, nút đổi thành “Đọc tiếp” / “Xem truyện”, thêm dòng tiêu đề **Bộ truyện · Tình trạng · chương** |
+| **Xem theo danh sách trên điện thoại** | dòng tiêu đề cột chữ dính liền nhau, cột tình trạng · số chương bị giấu nên hàng nào cũng giống hàng nào | máy nhỏ: ẩn dòng tiêu đề cột (hai cột thì nó vô nghĩa), đưa tình trạng + số chương + năm xuống thành một dòng dưới mô tả |
 | **Thanh trên trang đọc trên điện thoại** | tên truyện co lại còn một chữ “T…”, nhãn chương rớt thành ba dòng số | thanh đọc một hàng gọn: nút về trang truyện · tên truyện + số chương · ←/→ · mục lục · cài đặt · chia sẻ (đánh dấu và chế độ tập trung để ở hàng nút cuối chương) |
 | **Nút trong trang quản trị** | “Ngắt kết nối” hiện cả khi chưa nối gì; thanh trên ở điện thoại chen chúc, ô số liệu dài một cột | nút chỉ hiện khi đã nối; thanh trên xuống dòng, ô số liệu chia hai cột |
+| **Bảng xếp hạng / Bàn đọc khi ảnh hỏng** | ảnh bìa bị gỡ khỏi trang là hàng co lại, tên truyện còn “Thi…”, tác giả rớt ba dòng | ảnh nằm trong khung cố định (`.rk-th`, `.ct-th`): gỡ ảnh thì cột vẫn đứng yên |
+| **Thanh trên ở máy nhỏ** | viết lại chân trang làm mất luôn luật ẩn menu của máy nhỏ — nút burger bấm không ra gì | trả luật về đúng khối `@media (max-width:760px)`; `check_css.py` báo ngay lớp `searchbtn-txt` mồ côi |
+| **Huy hiệu “Mới”** | nằm đè lên nhãn tình trạng trên thẻ hẹp | đưa xuống chân ảnh bìa, đứng cạnh nhãn số chương |
+| **Ô “Link bài gốc” trong trang quản trị** | bỏ ô mà quên chỗ đọc → `saveMeta` văng lỗi khi lưu | kiểm thử `cf_admin_test` bắt được; gỡ nốt chỗ đọc và hai trường dữ liệu thừa |
+| **Nhãn nhóm lọc** | “TÌNH TRẠNG” rớt thành hai dòng | cột nhãn đủ rộng, không xuống dòng |
 
 **Kiểm thử tự động**: `cd tests && node run.js` → **8/8 bài đạt** (~85 giây), không lỗi JS nào.
 
 ```
 ✓ t_config      cấu hình Worker
 ✓ t_html        soi HTML tĩnh: thuộc tính trùng, liên kết hỏng, biểu tượng thiếu
-✓ t_home        trang chủ: hero, số liệu, bàn đọc, 4 mục khám phá, thư viện
+✓ t_home        trang chủ: hero, số liệu, bàn đọc, bốn khối riêng, thư viện
 ✓ t_stats       số liệu Firebase thật: xếp hạng theo lượt đọc/bình chọn
 ✓ t_story       trang truyện + trang đọc (kể cả đánh số chương)
 ✓ t_flows       luồng người dùng: cài đặt đọc, phím tắt, ảnh, sáng/tối, quản trị
@@ -122,15 +136,16 @@ python3 tools/check_css.py  lớp CSS dùng mà chưa định nghĩa / định n
 **Trang chủ — hero landing (`/`)**
 Khối mở đầu lớn chạy 5 bìa truyện (tự chuyển 8 giây, có nút chọn), nút “Đọc tiếp / Trang truyện /
 Lưu vào tủ”. Bên dưới: dải số liệu thật, kệ **Bàn đọc của bạn** (Đang đọc dở · Tủ truyện, chỉ
-hiện khi bạn đã đọc/lưu), khối **Khám phá** 4 tab — *Mới cập nhật · Xếp hạng · Lịch ra chương ·
-Chuyển thể* — rồi **Thư viện truyện**: tìm kiếm, lọc năm/tác giả/couple, 7 tab tình trạng và
-chuyển thể, kiểu sắp xếp (có “Đọc nhiều nhất”), xem lưới/danh sách, phân trang.
+hiện khi bạn đã đọc/lưu), rồi **bốn khối riêng** — *Mới cập nhật · Xếp hạng · Lịch ra chương* —
+mỗi mục một khối, cuộn là tới, không gom vào một khối tab; sau đó là **Thư viện truyện**: tìm
+kiếm, lọc năm/tác giả/couple, nhóm **Tình trạng** và nhóm **Nhãn** tách riêng, kiểu sắp xếp
+(có “Đọc nhiều nhất”), xem lưới/danh sách, phân trang.
 
 **Trang truyện (`/truyen/<slug>/`)**
-Bìa lớn + nhãn (tình trạng · số chương · tác giả · couple · năm · chuyển thể · cập nhật), nút
-đọc, lưu vào tủ, chia sẻ, bài gốc; danh sách chương có tìm, sắp xếp cũ/mới, nhảy số chương,
-dấu đã đọc/đã đánh dấu; dải liên quan theo series / couple / tác giả; bình luận (khi gắn giscus)
-hoặc dẫn về Blogger.
+Bìa lớn + nhãn (tình trạng · số chương · tác giả · couple · năm · cập nhật), nút đọc, lưu vào tủ,
+chia sẻ, báo lỗi chữ; danh sách chương có tìm, sắp xếp cũ/mới, nhảy số chương, dấu đã đọc/đã đánh
+dấu; dải liên quan theo couple / tác giả; bình luận khi gắn giscus, chưa gắn thì phần bình luận
+được giấu (không dẫn đi đâu nữa).
 
 **Trang đọc (trong cùng trang truyện)**
 Nền Sáng/Kem/Xám/Tối, 4 cỡ chữ, 3 độ rộng, 3 giãn dòng, chữ có chân/không chân, căn đều,
@@ -142,23 +157,24 @@ Mọi lựa chọn lưu trong máy nên mở lại là y như cũ.
 
 **Danh sách thư viện (xem theo hàng)**
 Dòng tiêu đề cột, vạch màu tình trạng ở lề trái từng hàng (hoàn thành / đang cập nhật / sắp ra mắt),
-bìa, tên truyện + slug, tác giả · couple, mô tả ngắn, rồi tới cột phải: nhãn tình trạng, số chương,
-chuyển thể và nút **Đọc tiếp** (bộ đang đọc dở) hay **Xem truyện**. Quét một lượt là thấy bộ nào
+bìa, tên truyện + slug, tác giả · couple, mô tả ngắn, huy hiệu **Mới** cho bộ vừa lên chương, rồi
+tới cột phải: nhãn tình trạng, số chương, năm và nút **Đọc tiếp** (bộ đang đọc dở) hay **Xem truyện**. Quét một lượt là thấy bộ nào
 cần đọc tiếp, bộ nào chưa ra chương nào.
 
 **Trang quản trị (`/admin`)**
 Dãy tab theo kiểu bảng điều khiển (dính dưới thanh trên khi cuộn), phím **1…8** đổi tab:
 **Tổng quan** · Thư viện · Đăng chương nhanh · Thêm bộ · Sửa bộ & chương · Cài đặt & đồng bộ ·
-Số liệu thật · Trợ giúp. Tab Tổng quan mở sẵn mỗi lần vào: tám ô số liệu, mục **Việc nên xem lại**
-(thiếu mô tả, thiếu ảnh bìa, thiếu couple, thiếu năm, nhãn số chương lệch, bộ “sắp ra mắt” đã lâu,
-nhóm chuyển thể chỉ một phần) — mỗi việc kèm sẵn vài tên bộ và nút **Xem danh sách** để lọc thẳng
+Số liệu thật · Trợ giúp. Tab Tổng quan mở sẵn mỗi lần vào: bảy ô số liệu, mục **Việc nên xem lại**
+(thiếu mô tả, thiếu ảnh bìa, thiếu couple, thiếu năm, nhãn số chương lệch, bộ “sắp ra mắt” đã lâu) — mỗi việc kèm sẵn vài tên bộ và nút **Xem danh sách** để lọc thẳng
 ra bảng Thư viện rồi bấm **Bỏ lọc** quay về; dưới cùng là **Mới cập nhật**. Phần nối Worker thu gọn
 một khối, chỉ mở khi cần. Ưu tiên đọc/ghi qua Worker + KV (sửa là người đọc thấy sau 1–2 giây);
 chưa nối Worker vẫn xem và sửa được `/data/*.json`, thay đổi giữ nháp trong máy, có sao lưu /
 phục hồi 1 tệp JSON. Danh sách chương xếp trên xuống dưới, số `#n` là thứ tự dữ liệu (số người
 đọc thấy là số trong tiêu đề chương), có nhãn “mới nhất” và nút lên/xuống/sửa bằng biểu tượng.
 Chọn nhiều dòng rồi dùng ô **việc cần làm** ở thanh trên để đổi tình trạng hoặc gắn/bỏ nhãn 18+
-cho cả loạt.
+cho cả loạt. Ô **Đăng chương nhanh** nay có nút **Mở từ tệp trên máy** (nhận `.txt`, `.md`,
+`.html`): mở tệp là tiêu đề + nội dung tự vào ô soạn, `.html` thì hiểu thẳng thẻ, tệp chữ thì
+tách đoạn giúp — không còn phải dán link Blogger.
 
 ---
 
@@ -176,7 +192,24 @@ cho cả loạt.
 
 ---
 
-## 6. Cần bạn làm (theo thứ tự)
+## 6. Chuyển động & tiểu tiết (vòng năm)
+
+Một bộ chuyển động dùng chung, đặt trong `cz.css` (§11) + `cz-app.js`, tôn trọng thiết lập
+“giảm chuyển động” của hệ điều hành — bật là mọi hiệu ứng tự tắt, chỉ còn đổi màu.
+
+| Nhóm | Có gì |
+|---|---|
+| **Trỏ & bấm** | nút nhấc nhẹ + đổ bóng khi trỏ, lún xuống khi bấm, **gợn sóng** ngay chỗ con trỏ; thẻ truyện nhấc lên, ảnh bìa phóng rất nhẹ; liên kết đổi màu mượt (0,18–0,26 giây) |
+| **Nhập liệu** | ô nhập sáng viền khi trỏ vào, nhãn nhích lên khi gõ; nút “xoá ô tìm kiếm” hiện đúng lúc |
+| **Cuộn trang** | bốn khối trang chủ **hiện dần khi cuộn tới**; cuộn mượt khi bấm neo; thanh trên **thu nhỏ lại rồi trượt đi** khi cuộn xuống, hiện lại ngay khi cuộn lên; vạch tiến độ đọc trang ở mép trên |
+| **Đổi trang** | bấm một liên kết là vạch tiến độ chạy trước, nội dung trang mới **hiện dần** thay vì nhảy khô |
+| **Hộp thoại & ngăn kéo** | nền mờ dần kèm **làm nhoè nhẹ**, hộp thoại bật lên từ giữa (phóng nhẹ), ngăn kéo trượt vào; hộp tìm nhanh (⌘K) cùng kiểu |
+| **Mở/đóng** | menu máy nhỏ và các khối gấp mở/đóng **theo chiều cao**, không giật cục |
+| **Huy hiệu** | nhãn tình trạng có nền màu nhạt theo trạng thái, nhãn **18+** chuyển sắc đỏ nổi bật, huy hiệu **Mới** cho bộ vừa lên chương, số đếm trong tab thành viên thuốc |
+
+---
+
+## 7. Cần bạn làm (theo thứ tự)
 
 1. **Deploy**: gộp PR này vào `main` (Cloudflare Pages tự build). Sau đó mở thử `/`, một trang
    truyện, `/admin`.
@@ -186,23 +219,24 @@ cho cả loạt.
    web **không hiện số nào** (cố ý, không đoán số — và bảng xếp hạng tự chuyển sang xếp theo ngày
    cập nhật / số chương). Mở quyền đọc cho Firestore là có số ngay, không cần sửa code.
 4. **Bình luận**: điền `settings.giscus.repo` + `repoId` trong tab *Cài đặt* nếu muốn bình luận
-   ngay trên web (chưa có thì web dẫn về bài gốc Blogger).
+   ngay trên web (chưa gắn thì web giấu phần bình luận, không dẫn đi đâu nữa).
 
 ---
 
-## 7. Còn lại / giới hạn đã biết
+## 8. Còn lại / giới hạn đã biết
 
 - **Số chương** hiện lấy từ tiêu đề chương (“Chương 1: Học Sinh Mới” → Chương 1). Chương nào
   không ghi số (Lời Mở Đầu, Ngoại truyện…) thì hiện đúng tên, không gán số. Nếu sau này bạn muốn
   đánh số lại toàn bộ theo thứ tự đăng, chỉ cần đổi một hàm `chapSplit()` trong `cz-story.js`.
-- 17/62 bộ chưa có chương (“Sắp ra mắt”) — nút đọc bị khoá, có dẫn sang Blogger.
+- 17/62 bộ chưa có chương (“Sắp ra mắt”) — nút đọc chỉ bị khoá, không dẫn đi đâu nữa.
 - Ảnh bìa lấy từ `images.justwatch.com`; nếu host chặn hotlink thì thẻ truyện để lại khung giấy
   có chữ “chuseoz” mờ, không hiện icon ảnh vỡ.
 - Trang quản trị cần `ADMIN_KEY`; khoá chỉ nằm trong localStorage của máy bạn.
 - Số ở tab **Tổng quan** đếm từ chính nguồn đang mở — đã nối Worker thì là số trên KV, chưa nối thì
   là `/data/*.json` trong repo; nút **Đọc lại dữ liệu** nạp lại nguồn đang dùng.
 - Mục **Việc nên xem lại** chỉ là gợi ý dọn dữ liệu (thiếu mô tả / bìa / couple / năm, nhãn số chương
-  lệch, bộ “sắp ra mắt” quá 45 ngày, nhóm chuyển thể lẻ một bộ) — không phải lỗi, bấm vào là ra danh
-  sách để sửa.
+  lệch, bộ “sắp ra mắt” quá 45 ngày) — không phải lỗi, bấm vào là ra danh sách để sửa.
 - Ảnh chụp màn hình trong bài này không kèm theo repo; muốn xem lại giao diện thì mở
   `python3 tools/dev_server.py --port 8080` rồi vào `http://localhost:8080/`.
+- Phần **Worker** còn hai cửa `/api/import` + `/api/sync` của luồng Blogger cũ và `tools/sync_blogger.py`
+  — web không gọi tới nữa, cứ để đó cũng vô hại; muốn dọn hẳn thì xoá theo, web không phụ thuộc.

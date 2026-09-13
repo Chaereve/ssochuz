@@ -159,7 +159,8 @@
   function contRow(n) {
     var p = CZ.progress(n), tot = n.chapters, pct = tot ? Math.min(100, Math.round(p / tot * 100)) : 0;
     return '<article class="cont" data-open="' + esc(n.slug) + '" role="button" tabindex="0" title="Đọc tiếp ' + esc(n.title) + '">' +
-      (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async">' : '<img alt="">') +
+      '<span class="ct-th' + (n.thumb ? '' : ' noimg') + '">' +
+      (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async">' : '') + '</span>' +
       '<div><b>' + esc(n.title) + '</b>' +
       '<span class="st">còn ' + Math.max(0, tot - p) + ' chương' +
         (CZ.lastReadAt(n) ? ' · ' + CZ.timeAgo(new Date(CZ.lastReadAt(n)).toISOString()) : '') + '</span>' +
@@ -200,7 +201,8 @@
       $('#shelfRow').innerHTML = shelf.map(function (n) {
         var p = CZ.progress(n), tot = n.chapters;
         return '<article class="cont" data-open="' + esc(n.slug) + '" role="button" tabindex="0">' +
-          (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async">' : '<img alt="">') +
+          '<span class="ct-th' + (n.thumb ? '' : ' noimg') + '">' +
+          (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async">' : '') + '</span>' +
           '<div><b>' + esc(n.title) + '</b><span class="st">' +
           (tot ? (p ? 'đang ở chương ' + p + '/' + tot : num(tot) + ' chương') : 'sắp ra mắt') + '</span>' +
           (tot && p ? '<div class="pb"><i style="width:' + Math.round(p / tot * 100) + '%"></i></div>' : '') + '</div>' +
@@ -289,7 +291,8 @@
       else if (on) { text = num(s[by] || 0) + (by === 'views' ? ' lượt' : ' phiếu'); w = Math.round(100 * (s[by] || 0) / max); }
       return '<a class="rank" href="' + esc(CZ.storyURL(n.slug)) + '" title="' + esc(n.title) + '">' +
         '<span class="n ' + (i < 3 ? 'top' : '') + '">' + (i + 1) + '</span>' +
-        (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async">' : '<img alt="">') +
+        '<span class="rk-th' + (n.thumb ? '' : ' noimg') + '">' +
+        (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async">' : '') + '</span>' +
         '<span class="tt"><b>' + esc(n.title) + '</b><span>' + esc(n.couple || n.author || '') +
         (on && s.chapterCount ? ' · ' + s.chapterCount + ' chương' : '') + '</span></span>' +
         '<span class="v">' + text + '</span>' +
