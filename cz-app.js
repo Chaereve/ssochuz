@@ -275,7 +275,11 @@
     chart: '<path d="M4 20V6M10 20V10M16 20v-7M22 20H2"/>',
     save: '<path d="M5 4h11l3 3v13H5z"/><path d="M9 4v5h6V4M8 20v-6h8v6"/>',
     sparkle: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/>',
-    clock2: '<circle cx="12" cy="12" r="8.5"/><path d="M12 8v4.5l3 1.5"/>'
+    clock2: '<circle cx="12" cy="12" r="8.5"/><path d="M12 8v4.5l3 1.5"/>',
+    mail: '<rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="M3.5 6.5 12 12l8.5-5.5"/>',
+    heart_hand: '<path d="M12 20s-6-3.6-6-7.5A3.5 3.5 0 0 1 12 9a3.5 3.5 0 0 1 6 3.5C18 16.4 12 20 12 20z"/>',
+    donate: '<path d="M12 20s-6-3.6-6-7.5A3.5 3.5 0 0 1 12 9a3.5 3.5 0 0 1 6 3.5C18 16.4 12 20 12 20z"/><path d="M8 14h8M12 10v8"/>',
+    copy: '<rect x="9" y="9" width="10" height="10" rx="2"/><path d="M5 15V7a2 2 0 0 1 2-2h8"/>'
   };
   function icon(name, cls) {
     var p = P[name] || P.info;
@@ -693,16 +697,22 @@
   /* ======================= 8. ĐẦU TRANG / CHÂN TRANG =================== */
   function mountHeader(host, active) {
     if (!host) return;
-    /* thứ tự mục khớp đúng thứ tự trên trang chủ: mới cập nhật → xếp hạng → lịch → thư viện */
+    /* thứ tự mục khớp đúng thứ tự trên trang chủ: mới cập nhật → xếp hạng → lịch → thư viện → hướng dẫn
+       ưu tiên icon thay vì chữ theo yêu cầu */
     var NAV = [
       { k: 'new', l: 'Mới cập nhật', i: 'sparkle', h: '/#moi-cap-nhat' },
       { k: 'rank', l: 'Xếp hạng', i: 'trophy', h: '/#bxh' },
       { k: 'sched', l: 'Lịch ra chương', i: 'calendar', h: '/#lich' },
-      { k: 'library', l: 'Thư viện', i: 'library', h: '/#thu-vien' }
+      { k: 'library', l: 'Thư viện', i: 'library', h: '/#thu-vien' },
+      { k: 'guide', l: 'Hướng dẫn', i: 'info', h: '/guide' }
     ];
     var links = NAV.map(function (n) {
+      return '<a href="' + n.h + '" data-k="' + n.k + '"' + (n.k === active ? ' class="on"' : '') + ' title="' + esc(n.l) + '" aria-label="' + esc(n.l) + '">' +
+        icon(n.i, 'i-s') + '<span class="nav-lbl">' + esc(n.l) + '</span></a>';
+    }).join('');
+    var mLinks = NAV.map(function (n) {
       return '<a href="' + n.h + '" data-k="' + n.k + '"' + (n.k === active ? ' class="on"' : '') + '>' +
-        icon(n.i, 'i-s') + ' ' + n.l + '</a>';
+        icon(n.i, 'i-s') + ' ' + esc(n.l) + '</a>';
     }).join('');
     host.className = 'hdr';
     host.innerHTML = '<div class="in">' +
@@ -716,7 +726,7 @@
       '<a class="hbtn icon" href="/admin" title="Trang quản trị" aria-label="Trang quản trị">' + icon('gear', 'i-s') + '</a>' +
       '<button class="hbtn icon burger" id="czBurger" aria-label="Mở menu">' + icon('menu', 'i-s') + '</button>' +
       '</div>' +
-      '<div class="mnav" id="czMnav">' + links +
+      '<div class="mnav" id="czMnav">' + mLinks +
       '<a href="/#ban-doc">' + icon('bookmark', 'i-s') + ' Bàn đọc của bạn</a>' +
       '<a href="/admin">' + icon('gear', 'i-s') + ' Trang quản trị</a>' +
       '<a href="#" id="czAuthM">' + icon('users', 'i-s') + ' <span id="czAuthMTxt">Đăng nhập</span></a></div>';
@@ -806,34 +816,29 @@
     d.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('#czNav a'); if (a) mark(a); });
     run();
   }
-  /* chân trang: chỉ còn những gì thật cần — logo, bốn lối vào nội dung, một dòng meta */
+  /* chân trang v2 clean: gọn, phi thương mại, icon thay chữ, không còn Follow us */
   function mountFooter(host) {
     if (!host) return;
     host.className = 'ftr';
+    var cfg = reportCfg();
+    var email = cfg.email || 'chuseoz.ofc@gmail.com';
+    var form = cfg.form || 'https://forms.gle/YW3PvtrNVQ7xt8nCA';
     host.innerHTML = '<div class="in">' +
       '<div class="fmain">' +
         '<div class="fcol fbrand">' +
           '<a class="logo" href="/"><span class="dot"></span>chuseoz<i>.</i></a>' +
-          '<p class="fdesc">Thư viện truyện chuyển thể — dự án phi lợi nhuận, duy trì vì đam mê.</p>' +
+          '<p class="fdesc">Trang hoạt động phi thương mại, phi lợi nhuận — được duy trì bởi tình yêu với truyện chuyển thể. Cảm ơn bạn đã ủng hộ và đồng hành cùng chuseoz.</p>' +
         '</div>' +
-        '<div class="fcol">' +
-          '<h4>Contact</h4>' +
-          '<a href="https://www.facebook.com/profile.php?id=61592803761987" target="_blank" rel="noopener">' + icon('users','i-s') + ' Facebook</a>' +
-          '<a href="https://mail.google.com/mail/u/0/?fs=1&tf=cm&to=chuseoz.ofc@gmail.com" target="_blank" rel="noopener">' + icon('share','i-s') + ' chuseoz.ofc@gmail.com</a>' +
-          '<a href="https://forms.gle/YW3PvtrNVQ7xt8nCA" target="_blank" rel="noopener">' + icon('edit','i-s') + ' Form khảo sát</a>' +
-        '</div>' +
-        '<div class="fcol">' +
-          '<h4>Follow us</h4>' +
-          '<div class="fsocial">' +
-            '<a href="https://www.facebook.com/profile.php?id=61592803761987" target="_blank" rel="noopener" title="Facebook">' + icon('users','i-s') + '</a>' +
-            '<a href="https://mail.google.com/mail/u/0/?fs=1&tf=cm&to=chuseoz.ofc@gmail.com" target="_blank" rel="noopener" title="Email">' + icon('share','i-s') + '</a>' +
-            '<a href="/guide" title="Hướng dẫn">' + icon('info','i-s') + '</a>' +
-          '</div>' +
-          '<div class="flinks">' +
-            '<a href="/guide">Hướng dẫn sử dụng</a>' +
-            '<a href="/#thu-vien">Thư viện</a>' +
-            '<a href="/#bxh">Xếp hạng</a>' +
-            '<a href="/#lich">Lịch ra chương</a>' +
+        '<div class="fcol fnav">' +
+          '<div class="fsocial" aria-label="Liên kết nhanh">' +
+            '<a href="/#thu-vien" title="Thư viện" aria-label="Thư viện">' + icon('library','i-s') + '</a>' +
+            '<a href="/#bxh" title="Xếp hạng" aria-label="Xếp hạng">' + icon('trophy','i-s') + '</a>' +
+            '<a href="/#lich" title="Lịch ra chương" aria-label="Lịch ra chương">' + icon('calendar','i-s') + '</a>' +
+            '<a href="/#moi-cap-nhat" title="Mới cập nhật" aria-label="Mới cập nhật">' + icon('sparkle','i-s') + '</a>' +
+            '<a href="/guide" title="Hướng dẫn sử dụng" aria-label="Hướng dẫn sử dụng">' + icon('info','i-s') + '</a>' +
+            '<a href="https://www.facebook.com/profile.php?id=61592803761987" target="_blank" rel="noopener" title="Facebook" aria-label="Facebook">' + icon('users','i-s') + '</a>' +
+            '<a href="mailto:' + esc(email) + '" title="Email: ' + esc(email) + '" aria-label="Email">' + icon('mail','i-s') + '</a>' +
+            '<a href="' + esc(form) + '" target="_blank" rel="noopener" title="Form khảo sát / báo lỗi" aria-label="Form khảo sát">' + icon('edit','i-s') + '</a>' +
           '</div>' +
         '</div>' +
       '</div></div>';

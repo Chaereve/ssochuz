@@ -23,41 +23,41 @@
     try { return decodeURIComponent(s); } catch (e) { try { return decodeURI(s); } catch (e2) { return s; } }
   }
   function slugFromURL() {
+    /* ưu tiên query trước để tránh lỗi path */
+    var qSlug = CZ.qs('slug') || CZ.qs('truyen') || '';
+    if (qSlug) return qSlug.trim();
     var raw = location.pathname || '';
-    var p = raw.split('/').filter(Boolean).map(safeDec);
-    var reserved = { 'truyen': 1, 'reader': 1, 'admin': 1, 'api': 1, 'index': 1 };
-    /* /truyen/<slug>/ và /reader/<slug>/ (đời cũ) — tên truyện nằm ngay sau */
-    if (p.length >= 2 && (p[0] === 'truyen' || p[0] === 'reader')) {
-      var cand = p[1];
-      if (cand && !reserved[cand] && cand.indexOf('.html') < 0) return cand;
-      /* trường hợp /truyen// (slug rỗng do dữ liệu lỗi) → thử query */
-      if (!cand) return CZ.qs('slug') || CZ.qs('truyen') || '';
-    }
-    /* /truyen, /reader, /truyen.html… : không có tên truyện trong path → đọc query */
-    if (!p.length) return CZ.qs('slug') || CZ.qs('truyen') || '';
-    if (p.length === 1 && (p[0] === 'truyen' || p[0] === 'reader')) {
-      return CZ.qs('slug') || CZ.qs('truyen') || '';
-    }
-    if (p.length === 1 && /\.html?$/i.test(raw.split('/').pop() || '')) {
-      /* mở thẳng file truyen.html?slug=… hoặc /<slug>.html khi xem thử trên máy */
-      var q = CZ.qs('slug') || CZ.qs('truyen');
-      if (q) return q;
-      var base = p[0].replace(/\.html?$/i, '');
-      if (base && base !== 'truyen' && base !== 'reader' && !reserved[base]) return base;
-      return '';
-    }
-    /* đường dẫn lạ (mở thẳng tệp khi xem thử trên máy) → lấy khúc cuối, bỏ .html */
-    if (p.length) {
-      var last = p[p.length - 1];
-      if (last === 'truyen' || last === 'reader') return CZ.qs('slug') || CZ.qs('truyen') || '';
-      var m = last.match(/^(.+)\.html?$/i);
-      if (m) {
-        var b = m[1];
-        if (b && b !== 'truyen' && b !== 'reader' && !reserved[b]) return b;
+    var rawParts = raw.split('/').filter(Boolean);
+    var p = rawParts.map(safeDec);
+    var reserved = { 'truyen': 1, 'reader': 1, 'admin': 1, 'api': 1, 'index': 1, 'guide': 1, 'data': 1 };
+    /* /truyen/<slug>/ và /reader/<slug>/ — tên truyện nằm ngay sau */
+    for (var i = 0; i < p.length; i++) {
+      if (p[i] === 'truyen' || p[i] === 'reader') {
+        var cand = p[i + 1] || '';
+        cand = String(cand).trim();
+        if (cand) {
+          cand = cand.replace(/\.html?$/i, '');
+          if (cand && !reserved[cand] && cand.indexOf('.') < 0) return cand;
+        }
+        break;
       }
-      if (!reserved[last]) return last;
     }
-    return CZ.qs('slug') || CZ.qs('truyen') || '';
+    /* nếu không có tiền tố truyen/reader, thử lấy segment cuối cùng không phải reserved */
+    if (p.length) {
+      var last = String(p[p.length - 1] || '').trim().replace(/\.html?$/i, '');
+      if (last && !reserved[last] && last.length >= 2 && last.indexOf('.') < 0) {
+        /* tránh nhầm file css/js */
+        if (!/\.(js|css|json|png|jpg|jpeg|svg|ico)$/i.test(last)) return last;
+      }
+      /* thử từ cuối lên */
+      for (var j = p.length - 1; j >= 0; j--) {
+        var seg = String(p[j] || '').trim().replace(/\.html?$/i, '');
+        if (seg && !reserved[seg] && seg.length >= 2 && seg.indexOf('.') < 0) {
+          if (!/\.(js|css|json|png|jpg|jpeg|svg|ico)$/i.test(seg)) return seg;
+        }
+      }
+    }
+    return '';
   }
   function chapterFromHash() {
     var m = /^#(?:chuong|page|chapter)-(\d+)$/i.exec(location.hash || '');
@@ -464,12 +464,27 @@
     document.body.classList.toggle('rd-scroll', s.mode !== 'paged');
     var el = $('#rdText');
     if (el) {
+      el.classList.remove('nofont');
       el.classList.toggle('just', !!Number(s.justify));
     }
     document.documentElement.style.setProperty('--rd-size', (s.size||18) + 'px');
     document.documentElement.style.setProperty('--rd-line', s.line || 1.85);
     document.documentElement.style.setProperty('--rd-para', (s.para||1.05) + 'em');
     document.documentElement.style.setProperty('--rd-w', (s.width||720) + 'px');
+    /* đảm bảo font family được áp ngay cả khi CSS cũ còn cache */
+    if (el) {
+      var fontMap = {
+        'serif': 'var(--font-head)',
+        'georgia': 'Georgia, serif',
+        'times': '"Times New Roman", Times, serif',
+        'sans': 'var(--font)',
+        'inter': 'Inter, var(--font)',
+        'roboto': 'Roboto, var(--font)',
+        'arial': 'Arial, Helvetica, sans-serif'
+      };
+      var fam = fontMap[s.font] || 'var(--font-head)';
+      el.style.fontFamily = fam;
+    }
   }
   function paintSettings() {
     var s = CZ.rdGet();
@@ -752,10 +767,10 @@
         '<div class="mh"><h4>Báo lỗi chữ</h4></div>' +
         '<div class="mb"><p class="sm muted">Ghi rõ chỗ sai. Bạn có thể gửi qua email hoặc form khảo sát — trang đã kèm sẵn tên bộ, số chương và link.</p>' +
         '<textarea class="inp ta" id="rpText" rows="5" spellcheck="false">' + esc(text) + '</textarea>' +
-        '<div class="mt row"><a class="btn ghost sm" id="rpMail" href="#">' + ic('share', 'i-s') + 'Gửi email</a>' +
-        '<a class="btn ghost sm" id="rpForm" href="' + esc(cfg.form) + '" target="_blank" rel="noopener">Mở form</a></div></div>' +
+        '<div class="mt row"><a class="btn ghost sm" id="rpMail" href="#">' + ic('mail', 'i-s') + 'Gửi email</a>' +
+        '<a class="btn ghost sm" id="rpForm" href="' + esc(cfg.form) + '" target="_blank" rel="noopener">' + ic('edit','i-s') + ' Mở form</a></div></div>' +
         '<div class="mf"><button class="btn ghost" data-close>Đóng</button>' +
-        '<button class="btn pri" id="rpCopy">' + ic('share', 'i-s') + 'Copy nội dung</button></div>');
+        '<button class="btn pri" id="rpCopy">' + ic('copy','i-s') + 'Copy nội dung</button></div>');
       function mailHref(){
         var body = m.querySelector('#rpText').value;
         var subj = encodeURIComponent('Báo lỗi · ' + N.title + ' · ' + chapLabel(cur));
