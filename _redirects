@@ -1,7 +1,24 @@
 # Cloudflare Pages · chuseoz
-# Trang truyện + trang đọc nằm chung một tệp: /truyen/<slug>/ và /reader (đời cũ) đều trỏ về đó.
-/truyen/*      /truyen.html   200
-/truyen        /truyen.html   200
-/reader        /truyen.html   200
-/reader/*      /truyen.html   200
-/reader.html   /truyen.html   200
+# ---------------------------------------------------------------------------
+# Trang truyện và trang đọc nằm chung MỘT tệp (truyen.html). Các luật dưới đây
+# mở tệp đó mà KHÔNG đổi URL trên trình duyệt (proxy 200), nhờ vậy
+# cz-story.js vẫn đọc được tên truyện trong /truyen/<slug>/.
+#
+# ⚠ ĐÍCH ĐẾN KHÔNG ĐƯỢC LÀ "/truyen.html"  (đã từng làm chết cả trang truyện)
+#   Cloudflare Pages TỰ BỎ đuôi .html: gõ /truyen.html là nó 308 sang /truyen.
+#   Viết đích là /truyen.html thì chuỗi chạy thế này:
+#       /truyen/<slug>/  → proxy → /truyen.html → 308 → /truyen
+#       /truyen          → proxy → /truyen.html → 308 → /truyen   ⟲ lặp vô hạn
+#   trình duyệt báo "ssochuz.pages.dev redirected you too many times"
+#   (ERR_TOO_MANY_REDIRECTS).
+#   ĐÍCH ĐÚNG là "/truyen" — URL sạch, Pages tự phục vụ truyen.html và trả 200,
+#   không nhảy đi đâu nữa nên không thể lặp.
+#
+# Thứ tự: luật TĨNH viết trước, luật có dấu * viết sau (đúng yêu cầu của
+# Cloudflare — nhiều luật cùng khớp thì luật trên cùng được dùng).
+# ---------------------------------------------------------------------------
+/truyen.html   /truyen   200
+/reader        /truyen   200
+/reader.html   /truyen   200
+/truyen/*      /truyen   200
+/reader/*      /truyen   200

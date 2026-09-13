@@ -32,6 +32,18 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
 
+# Trang truyện: Cloudflare proxy /truyen/<slug>/ về truyen.html nên URL người đọc
+# KHÔNG kết thúc bằng .html — luật /*.html ở trên không với tới, phải khai riêng.
+/truyen
+  Cache-Control: public, max-age=0, must-revalidate
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
+/truyen/*
+  Cache-Control: public, max-age=0, must-revalidate
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
 # Sơ đồ web (sitemap) và robots: đổi khi thêm bộ mới
 /sitemap.xml
   Cache-Control: public, max-age=600

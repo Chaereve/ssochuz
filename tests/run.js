@@ -3,6 +3,7 @@
    Chạy:        node tests/run.js
    Mỗi bài in ra JSON; mọi khoá "errors*" phải là [] thì mới coi là đạt.
      t_config.js       cấu hình Worker (thiếu https://, thừa /, để trống)
+     t_html.js         HTML tĩnh + _redirects (đích .html ⇒ vòng lặp ERR_TOO_MANY_REDIRECTS)
      t_home.js         trang chủ: hero, thư viện, lọc/tìm, kệ đọc tiếp, tủ truyện
      t_stats.js        số liệu Firebase thật: BXH theo lượt đọc/bình chọn, sắp xếp “đọc nhiều nhất”
      t_story.js        trang truyện + trang đọc: chuyển chương, cài đặt, truyện 0 chương

@@ -7,6 +7,9 @@
    - tủ truyện / thích / đánh dấu
    - truyện 0 chương: khoá nút đọc, nói rõ “sắp ra mắt”, không lộ nội dung
    - Firebase bị chặn thì KHÔNG hiện số lượt đọc
+   - mọi dạng đường dẫn tới được trang này: /truyen/<slug>/, /truyen, /reader/<slug>/,
+     /truyen.html?slug=… — dạng nào cũng phải hiểu đúng tên truyện, không được lấy
+     chữ "truyen"/"reader" trong đường dẫn làm slug
    ========================================================================== */
 const { page, dataFetch } = require('./mk');
 const log = [];
@@ -169,6 +172,22 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     if (el) el.dispatchEvent(new pp.win.MouseEvent('click', { bubbles: true }));
     return !!el;
   }
+
+  /* ---------- các dạng đường dẫn Cloudflare Pages có thể đưa tới ----------
+     Pages proxy /truyen/<slug>/ về trang truyện mà GIỮ NGUYÊN URL, nhưng cũng có
+     lúc người đọc vào thẳng /truyen, /truyen.html?slug=… hoặc link /reader/<slug>/
+     đời cũ. Dạng nào cũng phải hiểu đúng, không được lấy chữ "truyen" làm tên truyện. */
+  const r6 = page('truyen.html', { url: 'https://ssochuz.pages.dev/truyen', fetch: dataFetch() });
+  const r7 = page('truyen.html', { url: 'https://ssochuz.pages.dev/reader/lunar-secret/', fetch: dataFetch() });
+  const r8 = page('truyen.html', { url: 'https://ssochuz.pages.dev/truyen.html?slug=third-person', fetch: dataFetch() });
+  await wait(1400);
+  const h1 = pp => (pp.doc.querySelector('#shero h1') || {}).textContent || '';
+  out.duongDan = {
+    khongCoSlug: { h1: h1(r6), noiRo: /thiếu tên truyện/i.test(r6.doc.body.textContent), loi: r6.errors.slice(0, 3) },
+    readerCoSlug: { h1: h1(r7), head: (r7.doc.querySelector('#rdHead') || {}).textContent, loi: r7.errors.slice(0, 3) },
+    htmlVoiQuery: { h1: h1(r8), loi: r8.errors.slice(0, 3) },
+    khongNhamTenTruyen: !/“truyen”|“reader”/.test(h1(r6) + h1(r7) + h1(r8))
+  };
 
 out.errors1 = errors.slice(0, 6);
   console.log(JSON.stringify(out, null, 1));
