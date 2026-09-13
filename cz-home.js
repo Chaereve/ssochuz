@@ -309,7 +309,7 @@
     var rows = CZ.lib().slice().sort(function (a, b) {
       return String(b.updated || '').localeCompare(String(a.updated || '')) || (b.chapters - a.chapters);
     });
-    $('#newSub').textContent = rows.length + ' bộ đang có trong thư viện · lần cập nhật gần nhất ' + CZ.timeAgo(rows[0] && rows[0].updated);
+    var _ns=$('#newSub'); if(_ns) _ns.textContent=''; // removed per user
     CZ.mountRail($('#newRail'), rows.slice(0, 12));
   }
 
@@ -370,18 +370,8 @@
         '<span class="v">' + text + '</span>' +
         (w ? '<i class="bar" style="width:' + w + '%"></i>' : '') + '</a>';
     }).join('') || '<div class="empty">Chưa có dữ liệu.</div>';
-    $('#rankSub').textContent = on ? 'số liệu thật từ Firebase' : 'xếp theo ngày cập nhật · số chương';
-    var src = $('#rankSrc');
-    if (on) {
-      src.className = 'src';
-      src.innerHTML = '<span class="dot"></span><span>số liệu thật từ Firebase (chuseoz-library)' +
-        (CZ._memo.stats.saved ? ' · ' + CZ.timeAgo(CZ._memo.stats.saved) : '') +
-        (CZ._memo.stats.stale ? ' · bản lưu trong máy' : '') + '</span>';
-    } else {
-      src.className = 'src err';
-      src.innerHTML = '<span class="dot"></span><span>chưa đọc được số liệu Firebase (quyền đọc đang chặn) — ' +
-        'bảng xếp theo <b>ngày cập nhật / số chương</b>, web không hiện số ước lượng</span>';
-    }
+    var _rs=$('#rankSub'); if(_rs) _rs.textContent=''; // removed
+    var src = $('#rankSrc'); if(src){ src.style.display='none'; src.textContent=''; } // removed per user
   }
   $('#rankTabs').addEventListener('click', function (e) {
     var b = e.target.closest('.tab'); if (!b) return;
@@ -393,10 +383,10 @@
   function renderSched(sch) {
     var items = (sch && sch.items) || [];
     var el = $('#sched');
-    $('#schedSub').textContent = items.length ? items.length + ' bộ có lịch đăng' : '';
+    var _ss=$('#schedSub'); if(_ss) _ss.textContent=''; // removed
     if (!items.length) {
       el.innerHTML = '<div class="empty">Chưa có lịch ra chương.</div>';
-      $('#schedSrc').innerHTML = '<span class="dot"></span><span>chưa có lịch nào được đăng</span>';
+      var _s0=$('#schedSrc'); if(_s0){ _s0.style.display='none'; }
       return;
     }
     el.innerHTML = items.slice(0, 8).map(function (it) {
@@ -407,8 +397,7 @@
         '<div class="info"><b>' + esc(it.title || '') + '</b><span>' +
         (n ? (n.canRead ? esc(CZ.countText(n)) : 'sắp ra mắt') : esc(it.detail || '')) + '</span></div></a>';
     }).join('');
-    $('#schedSrc').innerHTML = '<span class="dot"></span><span>lịch đăng trên web' +
-      (sch.updated ? ' · cập nhật ' + CZ.timeAgo(sch.updated) : '') + (sch.note ? ' — ' + esc(sch.note) : '') + '</span>';
+    var _s1=$('#schedSrc'); if(_s1){ _s1.style.display='none'; _s1.textContent=''; } // removed
   }
   function renderEditorChoice() {
     var el = $('#bien-tap'), rail = $('#editRail');
