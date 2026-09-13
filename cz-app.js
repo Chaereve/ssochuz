@@ -714,7 +714,7 @@
     /* header: icon + tên chức năng tiếng Anh cho gọn */
     var NAV = [
       { k: 'library', l: 'Library', vi: 'Library', i: 'library', h: '/#thu-vien' },
-      { k: 'new', l: 'Latest', vi: 'Latest Update', i: 'sparkle', h: '/#moi-cap-nhat' },
+      { k: 'new', l: 'Lastest', vi: 'Lastest Update', i: 'sparkle', h: '/#moi-cap-nhat' },
       { k: 'rank', l: 'Top vote', vi: 'Top vote', i: 'trophy', h: '/#bxh' },
       { k: 'sched', l: 'Schedule', vi: 'Lịch ra chương', i: 'calendar', h: '/#lich' }
     ];

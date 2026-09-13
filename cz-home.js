@@ -401,9 +401,17 @@
     return found;
   }
   function renderSched(sch) {
-    var items = (sch && sch.items) || [];
     var el = $('#sched');
     if (!el) return;
+    var items = (sch && sch.items) || [];
+    var local = ((CZ._memo.reg || {}).schedule || {}).items || [];
+    var usable = function (list) {
+      return list.filter(function (it) { return !!schedFind(it); });
+    };
+    if (local.length && usable(items).length < usable(local).length) {
+      items = local;
+      sch = (CZ._memo.reg || {}).schedule || sch;
+    }
     if (!items.length) {
       el.innerHTML = '<div class="empty">Chưa có lịch ra chương.</div>';
       return;
