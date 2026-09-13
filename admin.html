@@ -335,9 +335,12 @@
     <!-- ---------- SỐ LIỆU ---------- -->
     <div id="pane-stats" class="hide">
       <div class="card2">
-        <h3>Số liệu thật từ Firebase</h3>
-        <p class="hint">Chỉ hiện số đọc được thật. Firebase đang chặn quyền đọc thì web ngoài không hiện số nào (không bịa).</p>
-        <div class="row"><button class="btn pri" id="btnStats">Đọc lại &amp; xoá cache</button></div>
+        <h3>Số liệu xếp hạng — lưu trên Cloudflare KV</h3>
+        <p class="hint">Worker tự đếm lượt đọc khi người đọc mở chương và đếm phiếu khi bấm <b>Thích</b>; số nằm trên KV nên không cần Firebase. Số hiện ra = số cũ đã nạp + số đếm được.</p>
+        <div class="row">
+          <button class="btn pri" id="btnStats">Đọc lại</button>
+          <button class="btn ghost" id="btnStatsFb">Nhập số cũ từ Firebase</button>
+        </div>
         <div class="msgbar" id="stState"></div>
         <div class="tiles mt" id="stTiles"></div>
         <div style="overflow:auto;max-height:60vh" class="mt"><table class="tbl" id="stTb"></table></div>
@@ -388,8 +391,6 @@
 <div class="toasts" id="toasts"></div>
 
 <script src="/cz-config.js?v=20260913e"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="/cz-app.js?v=20260913e"></script>
 <script src="/cz-auth.js?v=20260913e"></script>
 <script src="/admin.js"></script>

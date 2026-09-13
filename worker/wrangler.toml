@@ -2,22 +2,28 @@ name = "chuseoz-cms"
 main = "worker/cms.js"
 compatibility_date = "2025-01-01"
 
-# Kênh đăng mới: dữ liệu nằm trong KV, sửa là web thấy ngay — không commit GitHub, không build.
+# Kênh đăng + số liệu xếp hạng: mọi thứ nằm trong KV, sửa là web thấy ngay —
+# không commit GitHub, không build, và KHÔNG cần Firebase.
 #
 # 1) Tạo KV namespace:   npx wrangler kv namespace create CZ_KV
-# 2) Dán id trả về vào đây (hoặc chạy: npx wrangler kv namespace create CZ_KV --binding CZ_KV)
-# 3) Đặt khoá quản trị:  npx wrangler secret put ADMIN_KEY
-# 4) Deploy:             npx wrangler deploy
+# 2) Dán id trả về vào đây (bắt buộc — để nguyên "DAN_ID_KV_VAO_DAY" thì deploy báo lỗi)
+#    hoặc chạy:          npx wrangler kv namespace create CZ_KV --binding CZ_KV
+# 3) Đặt khoá quản trị:  npx wrangler secret put ADMIN_KEY        (≥ 24 ký tự)
+# 4) Đặt khoá phiên:     npx wrangler secret put SESSION_SECRET   (≥ 32 ký tự)
+# 5) Đặt Client ID:      npx wrangler secret put GOOGLE_CLIENT_ID (muốn có đăng nhập/bình luận)
+# 6) Deploy:             npx wrangler deploy
 [[kv_namespaces]]
 binding = "CZ_KV"
 id = "DAN_ID_KV_VAO_DAY"
 
 [vars]
 BLOG = "https://chuseoz.blogspot.com"
-FIREBASE_PROJECT = "chuseoz-library"
 # Đổi thành domain web của bạn để chặt CORS, ví dụ:
 # ALLOW_ORIGIN = "https://chuseoz.pages.dev,https://chuseoz.blogspot.com"
 ALLOW_ORIGIN = "*"
+# TUỲ CHỌN — chỉ dùng cho POST /api/stats/import-firebase (kéo số liệu CŨ về KV 1 lần).
+# Lượt đọc/bình chọn mới do Worker tự đếm trên KV, không gọi tới Firebase.
+FIREBASE_PROJECT = "chuseoz-library"
 
 [observability]
 enabled = true

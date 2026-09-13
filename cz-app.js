@@ -2,7 +2,7 @@
    chuseoz · lõi dùng chung cho MỌI trang (chủ / truyện / đọc / quản trị)
    ----------------------------------------------------------------------------
    Gồm 4 phần, không phụ thuộc thư viện ngoài:
-     1. DỮ LIỆU   : Worker KV → cache máy → /data/*.json ; số liệu CHỈ từ Firebase
+     1. DỮ LIỆU   : Worker KV → cache máy → /data/*.json ; số liệu xếp hạng cũng từ KV
      2. GHI NHỚ   : tiến độ đọc, tủ truyện, thích, đánh dấu, cài đặt đọc, sáng/tối
      3. GIAO DIỆN : bộ icon, thẻ truyện, đầu trang/chân trang, tìm kiếm nổi,
                     toast, hộp thoại, hiệu ứng cuộn
@@ -86,7 +86,10 @@
     memo.books[slug] = p;
     return p;
   }
-  /* -- số liệu THẬT (Firebase) — không đọc được thì KHÔNG bịa số -------- */
+  /* -- số liệu xếp hạng: đọc từ Worker KV (không cần Firebase) ------------
+     Worker đếm lượt đọc/bình chọn rồi trả về qua /api/stats. Không đọc được
+     thì KHÔNG bịa số — bảng xếp hạng tự xếp theo số chương + ngày cập nhật.
+     CZ_STATS_DIRECT = true mới gọi thẳng Firestore cũ (chỉ để đối chiếu). */
   function fbVal(v) {
     if (v == null) return null;
     if (v.integerValue !== undefined) return Number(v.integerValue);
@@ -119,11 +122,11 @@
   function stats() {
     if (memo.stats) return Promise.resolve(memo.stats);
     var cached = lsGet('chuseoz-stats', TTL_STATS);
-    var p = (API ? jget(API + '/api/stats', 9000) : Promise.resolve(null)).then(function (r) {
-      if (r && r.ok && r.items && Object.keys(r.items).length) {
-        return { on: true, items: r.items, source: r.source || 'firebase', saved: r.fetchedAt || r.saved || '' };
+    var p = (API && !apiDown ? jget(API + '/api/stats', 9000) : Promise.resolve(null)).then(function (r) {
+      if (r && r.ok && r.items) {
+        return { on: true, items: r.items, source: r.source || 'kv', saved: r.fetchedAt || r.saved || '' };
       }
-      if (w.CZ_STATS_DIRECT === false) return null;
+      if (w.CZ_STATS_DIRECT !== true) return null;      /* mặc định: chỉ tin số trên KV */
       return fromFirestore();
     });
     return p.then(function (o) {
@@ -136,8 +139,54 @@
         memo.stats = st;
         return st;
       }
-      memo.stats = { on: false, items: {}, err: 'chưa đọc được số liệu Firebase (quyền đọc đang chặn)' };
+      memo.stats = { on: false, items: {}, err: API ? 'chưa có lượt đọc/bình chọn nào trên KV' : 'chưa nối Worker nên không có số liệu' };
       return memo.stats;
+    });
+  }
+
+  /* -- ĐẾM LƯỢT ĐỌC / BÌNH CHỌN (gửi lên Worker, lưu trên KV) -----------
+     vid = mã máy ẩn danh để 1 người không đếm/bầu nhiều lần; không phải định
+     danh, xoá localStorage là mất. Bình luận/đăng nhập thì vẫn theo Google. */
+  function vid() {
+    var id = safeGet('chuseoz-vid');
+    if (!id) {
+      id = 'v' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+      safeSet('chuseoz-vid', id);
+    }
+    return id;
+  }
+  function jpost(path, body, auth) {
+    if (!API) return Promise.resolve(null);
+    var h = { 'content-type': 'application/json' };
+    if (auth) h.authorization = 'Bearer ' + auth;
+    return fetch(API + path, {
+      method: 'POST', headers: h, body: JSON.stringify(body || {}),
+      keepalive: true, cache: 'no-store'
+    }).then(function (r) {
+      return r.json().catch(function () { return null; }).then(function (d) { return (r.ok && d) ? d : null; });
+    }).catch(function () { return null; });
+  }
+  function authToken() { try { return (w.CZ_AUTH && w.CZ_AUTH.token) ? (w.CZ_AUTH.token() || '') : ''; } catch (e) { return ''; } }
+  /* 1 máy · 1 bộ · 1 ngày = 1 lượt đọc (phía máy và phía Worker đều khử trùng lặp) */
+  function reportView(slug, ch) {
+    if (!API || !slug) return Promise.resolve(null);
+    var k = 'chuseoz-viewed-' + slug + '-' + new Date().toISOString().slice(0, 10);
+    if (safeGet(k)) return Promise.resolve(null);
+    safeSet(k, '1');
+    return jpost('/api/view', { slug: slug, vid: vid(), ch: ch || 0 }).then(function (r) {
+      if (r && r.counted) memo.stats = null;            /* lần đọc sau lấy số mới */
+      return r;
+    });
+  }
+  /* bầu / bỏ bầu: trả về { votes } để cập nhật số ngay trên nút */
+  function vote(slug, on) {
+    if (!API || !slug) return Promise.resolve(null);
+    return jpost('/api/vote', { slug: slug, vote: on ? 1 : 0, vid: vid() }, authToken()).then(function (r) {
+      if (r && r.ok && memo.stats && memo.stats.items && memo.stats.items[slug]) {
+        memo.stats.items[slug].votes = r.votes;         /* sửa số trong bộ nhớ để vẽ lại */
+        lsSet('chuseoz-stats', { t: Date.now(), v: memo.stats });
+      }
+      return r;
     });
   }
   function schedule() {
@@ -998,6 +1047,7 @@
   w.CZ = {
     API: API, normalizeApi: normalizeApi,
     registry: registry, book: book, stats: stats, schedule: schedule,
+    vid: vid, reportView: reportView, vote: vote,
     lib: libList, slides: slides, editorChoice: editorChoice, donationCfg: donationCfg, reportCfg: reportCfg, findLib: findLib, statsOf: statsOf, onStats: onStats,
     progress: progress, setProgress: setProgress, lastReadAt: lastReadAt,
     shelfIds: shelfIds, inShelf: inShelf, toggleShelf: toggleShelf, clearShelf: clearShelf,

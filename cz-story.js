@@ -193,7 +193,7 @@
       (ch > 1 ? 'Mở đúng chỗ bạn đang đọc dở' : 'Bắt đầu từ chương đầu') + '">' + ic('play', 'i-s') +
       (ch > 1 ? 'Đọc tiếp' : 'Đọc từ đầu') + '</a>';
   }
-  /* số liệu thật đọc từ Firebase: chỉ hiện khi đọc được, không đoán số */
+  /* số liệu thật (Worker đếm, lưu trên KV): chỉ hiện khi có, không đoán số */
   function statChip() {
     var st = CZ.statsOf(N);
     if (!st) return '';
@@ -201,7 +201,7 @@
     if (st.views) bits.push(num(st.views) + ' lượt đọc');
     if (st.votes) bits.push(num(st.votes) + ' phiếu');
     if (!bits.length) return '';
-    return '<span title="số liệu thật từ Firebase chuseoz-library">' + ic('eye', 'i-s') + ' ' + bits.join(' · ') + '</span>';
+    return '<span title="lượt đọc/bình chọn thật, lưu trên Cloudflare KV">' + ic('eye', 'i-s') + ' ' + bits.join(' · ') + '</span>';
   }
   function renderStory() {
     var n = N, ch = CZ.progress(n);
@@ -894,6 +894,14 @@
     }
     paintChapter(keepScroll);
   }
+  /* số lượt đọc trên chip: cộng thêm ngay sau khi Worker xác nhận đã đếm */
+  function bumpViews(d) {
+    var el = $('#rdViews');
+    if (!el) return;
+    var lab = el.querySelector('.lbl');
+    var cur = parseInt(String(lab ? lab.textContent : '').replace(/[^0-9]/g, '') || '0', 10);
+    if (lab) lab.textContent = num(cur + d) + ' lượt đọc';
+  }
   function paintChapter(keepScroll) {
     var c = CHS[cur - 1];
     if (!c) return;
@@ -910,6 +918,8 @@
       N.author ? '<span>' + ic('pen', 'i-s') + ' ' + esc(N.author) + '</span>' : ''
     ].filter(Boolean).join('');
     txt.innerHTML = cleanHTML(c.html);
+    /* đếm lượt đọc thật (Worker ghi lên KV); 1 máy · 1 bộ · 1 ngày = 1 lượt */
+    CZ.reportView(N.slug, cur).then(function (r) { if (r && r.counted) bumpViews(1); });
     PAGES = []; PI = 0;
     if (s.mode === 'paged') { PAGES = measure(txt); paintPage(); } else renderNav(false);
     /* số liệu thật của bộ (không có thì không hiện số) */
@@ -928,19 +938,28 @@
       actBtn('actShare', 'share', 'Chia sẻ', false),
       actBtn('actReport', 'alert', 'Báo lỗi chữ', false)
     ];
-    if (st && st.views) acts.unshift('<span class="chip" title="số liệu Firebase">' + ic('eye', 'i-s') + '<span class="lbl">' + num(st.views) + ' lượt đọc</span></span>');
+    if (st && st.views) acts.unshift('<span class="chip" id="rdViews" title="lượt đọc thật, lưu trên KV">' + ic('eye', 'i-s') + '<span class="lbl">' + num(st.views) + ' lượt đọc</span></span>');
     $('#rdActs').innerHTML = acts.join('');
     paintMark();
     $('#actLike').addEventListener('click', function () {
+      var btn = this;
       var on = CZ.toggleLike(N);
+      var paint = function (votes) {
+        var lab = (on ? 'Đã thích' : 'Thích') + (votes ? ' · ' + num(votes) : '');
+        btn.classList.toggle('on', on);
+        var sp = btn.querySelector('span');
+        if (sp) sp.textContent = lab;
+        btn.setAttribute('title', lab);
+        btn.setAttribute('aria-label', lab);
+      };
       var stx = CZ.statsOf(N);
-      var lab = (on ? 'Đã thích' : 'Thích') + (stx && stx.votes ? ' · ' + num(stx.votes) : '');
-      this.classList.toggle('on', on);
-      this.querySelector('span').textContent = lab;
-      this.setAttribute('title', lab);
-      this.setAttribute('aria-label', lab);
-      CZ.pop(this);
-      toast(on ? 'Đã thích (lưu trên máy bạn)' : 'Đã bỏ thích');
+      paint(stx && stx.votes);
+      CZ.pop(btn);
+      /* gửi lên Worker để phiếu nằm trên KV — ai mở web cũng thấy cùng con số */
+      CZ.vote(N.slug, on).then(function (r) {
+        if (r && r.ok) { paint(r.votes); toast(on ? 'Đã thích · ' + num(r.votes) + ' phiếu' : 'Đã bỏ thích'); }
+        else toast(on ? 'Đã thích (lưu trên máy bạn — chưa nối được Worker)' : 'Đã bỏ thích');
+      });
     });
     $('#actSave').addEventListener('click', function () {
       var on = CZ.toggleShelf(N);

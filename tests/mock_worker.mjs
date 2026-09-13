@@ -1,14 +1,19 @@
-/* Worker giả lập + máy chủ tĩnh chạy trên máy — thử kênh đăng KV trước khi lên Cloudflare.
+/* Worker giả lập chạy trên máy — dùng ĐÚNG code worker/cms.js thật + KV trong RAM,
+   kèm máy chủ tĩnh để thử cả trang quản trị lẫn web ngoài.
    Chạy:  node tests/mock_worker.mjs [port]
    Mở:    http://127.0.0.1:<port>/admin.html   (khoá giả lập: MOCK)
    Dữ liệu ghi vào RAM, tắt là hết — không ảnh hưởng Cloudflare thật.
-   Khoá quản trị đổi bằng biến môi trường ADMIN_KEY.                        */
+   Đổi khoá:  ADMIN_KEY=xxx node tests/mock_worker.mjs
+   Vì chạy chính worker/cms.js nên mọi endpoint (kể cả /api/view, /api/vote,
+   /api/comments) hành xử y hệt bản deploy — hết cảnh mock một đằng, thật một nẻo. */
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const worker = (await import(path.join(ROOT, 'worker', 'cms.js'))).default;
+
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp',
   '.xml': 'application/xml; charset=utf-8', '.txt': 'text/plain; charset=utf-8', '.md': 'text/markdown; charset=utf-8' };
@@ -29,63 +34,66 @@ function serveStatic(req, res) {
   res.end(d);
 }
 
-const PORT = Number(process.argv[2] || process.env.PORT || 8787);
-const KEY = process.env.ADMIN_KEY || 'MOCK';
-const KV = new Map();           /* giả lập Cloudflare KV */
-let last = null;
+/* ------------------------- KV trong RAM (đúng API Cloudflare KV) ---------- */
+class MemKV {
+  constructor() { this.m = new Map(); }
+  async get(k, opt) {
+    const v = this.m.get(k);
+    if (!v) return null;
+    if (v.exp && v.exp < Date.now()) { this.m.delete(k); return null; }
+    if (opt && opt.type === 'json') { try { return JSON.parse(v.value); } catch (e) { return null; } }
+    return v.value;
+  }
+  async getWithMetadata(k, opt) {
+    const v = this.m.get(k);
+    if (!v) return { value: null, metadata: null };
+    return { value: opt && opt.type === 'json' ? JSON.parse(v.value) : v.value, metadata: v.metadata || null };
+  }
+  async put(k, value, opt) {
+    this.m.set(k, { value: String(value), metadata: (opt && opt.metadata) || null, exp: opt && opt.expirationTtl ? Date.now() + opt.expirationTtl * 1000 : 0 });
+  }
+  async delete(k) { this.m.delete(k); }
+  async list({ prefix = '', limit = 1000, cursor } = {}) {
+    const all = [...this.m.keys()].filter((k) => k.startsWith(prefix)).sort();
+    const start = cursor ? all.indexOf(cursor) + 1 : 0;
+    const keys = all.slice(start, start + limit).map((name) => ({ name, metadata: (this.m.get(name) || {}).metadata }));
+    const done = start + limit >= all.length;
+    return { keys, list_complete: done, cursor: done ? undefined : all[start + limit - 1] };
+  }
+}
 
-const body = (req) => new Promise((res) => {
-  let b = '';
-  req.on('data', (c) => { b += c; });
-  req.on('end', () => res(b));
-});
-const json = (res, obj, status = 200) => {
-  const s = JSON.stringify(obj);
-  res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'content-length': Buffer.byteLength(s), 'access-control-allow-origin': '*' });
-  res.end(s);
+const PORT = Number(process.argv[2] || process.env.PORT || 8787);
+const env = {
+  ADMIN_KEY: process.env.ADMIN_KEY || 'MOCK',
+  CZ_KV: new MemKV(),
+  BLOG: process.env.BLOG || 'https://chuseoz.blogspot.com',
+  ALLOW_ORIGIN: '*',
+  SESSION_SECRET: process.env.SESSION_SECRET || 'mock-session-secret-dai-hon-32-ky-tu',
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
+  FIREBASE_PROJECT: process.env.FIREBASE_PROJECT || 'chuseoz-library',
 };
 
 http.createServer(async (req, res) => {
-  const url = new URL(req.url, 'http://x');
-  const p = url.pathname.replace(/\/+$/, '') || '/';
-  if (!p.startsWith('/api')) return serveStatic(req, res);
-  const auth = (req.headers['x-admin-key'] || '') === KEY;
-  const needAuth = !(req.method === 'GET' && (p === '/' || p === '/api/health' || p === '/api/registry' || p === '/api/schedule' || p === '/api/stats' || p.startsWith('/api/book/')));
-  if (needAuth && !auth) return json(res, { ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, 401);
+  const p = new URL(req.url, 'http://x').pathname;
+  if (!p.startsWith('/api') && p !== '/') return serveStatic(req, res);
 
-  try {
-    if (p === '/' || p === '/api/health') {
-      return json(res, { ok: true, version: 'mock', kv: true, books: [...KV.keys()].filter((k) => k.startsWith('book:')).length, regRev: (KV.get('registry') && JSON.parse(KV.get('registry')).rev) || '', lastWrite: last });
-    }
-    if (p === '/api/whoami') return json(res, { ok: true, role: 'admin', version: 'mock' });
-    if (p === '/api/registry') {
-      if (req.method === 'PUT') { KV.set('registry', await body(req)); last = new Date().toISOString(); return json(res, { ok: true }); }
-      const v = KV.get('registry');
-      return v ? json(res, JSON.parse(v)) : json(res, { ok: false, error: 'KV trống' }, 404);
-    }
-    const m = p.match(/^\/api\/book\/(.+)$/);
-    if (m) {
-      const slug = decodeURIComponent(m[1]);
-      const k = 'book:' + slug;
-      if (req.method === 'PUT') { KV.set(k, await body(req)); last = new Date().toISOString(); return json(res, { ok: true }); }
-      if (req.method === 'DELETE') { KV.delete(k); return json(res, { ok: true, deleted: slug }); }
-      const v = KV.get(k);
-      return v ? json(res, JSON.parse(v)) : json(res, { ok: false, error: 'chưa có' }, 404);
-    }
-    if (p === '/api/seed' && req.method === 'POST') {
-      const d = JSON.parse(await body(req));
-      let n = 0;
-      if (d.registry) KV.set('registry', JSON.stringify(d.registry));
-      for (const [slug, b] of Object.entries(d.books || {})) { KV.set('book:' + slug, JSON.stringify(b)); n++; }
-      last = new Date().toISOString();
-      return json(res, { ok: true, books: n, failed: [], registry: !!d.registry });
-    }
-    if (p === '/api/sync' && req.method === 'POST') return json(res, { ok: true, cards: 62, changed: 0, rev: new Date().toISOString() });
-    if (p === '/api/stats/refresh') return json(res, { ok: true, cleared: 'stats' });
-    if (p === '/api/stats') return json(res, { ok: true, items: {}, source: 'mock' });
-    if (p === '/api/schedule') return json(res, { ok: true, items: [], note: 'mock' });
-    return json(res, { ok: false, error: 'không có endpoint này', path: p }, 404);
-  } catch (e) {
-    return json(res, { ok: false, error: String(e && e.message || e) }, 500);
-  }
-}).listen(PORT, '0.0.0.0', () => console.log('Worker giả lập: http://127.0.0.1:' + PORT + '  (ADMIN_KEY=' + KEY + ')'));
+  const chunks = [];
+  for await (const c of req) chunks.push(c);
+  const body = Buffer.concat(chunks);
+  const headers = {};
+  Object.keys(req.headers).forEach((k) => { if (k !== 'host' && k !== 'connection' && k !== 'content-length') headers[k] = req.headers[k]; });
+
+  const r = await worker.fetch(new Request('http://127.0.0.1:' + PORT + req.url, {
+    method: req.method, headers, body: ['GET', 'HEAD'].includes(req.method) ? undefined : body,
+  }), env, { waitUntil: () => {} });
+
+  const out = Buffer.from(await r.arrayBuffer());
+  const h = {};
+  r.headers.forEach((v, k) => { h[k] = v; });
+  h['content-length'] = out.length;
+  res.writeHead(r.status, h);
+  res.end(out);
+}).listen(PORT, '0.0.0.0', () => {
+  console.log('Worker giả lập (code thật, KV trong RAM): http://127.0.0.1:' + PORT);
+  console.log('  ADMIN_KEY=' + env.ADMIN_KEY + (env.GOOGLE_CLIENT_ID ? '' : '   (chưa có GOOGLE_CLIENT_ID → chưa thử được đăng nhập Google)'));
+});

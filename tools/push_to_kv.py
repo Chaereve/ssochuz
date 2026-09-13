@@ -10,6 +10,11 @@ Ví dụ:
 
   # đồng bộ lại số chương/tình trạng từ blogspot:
   python3 tools/push_to_kv.py --api ... --key ... --sync
+
+  # số liệu xếp hạng (lượt đọc/bình chọn) — giờ nằm trên KV, không cần Firebase:
+  python3 tools/push_to_kv.py --api ... --stats                      # xem số đang có
+  python3 tools/push_to_kv.py --api ... --key ... --import-firebase  # kéo số CŨ về KV 1 lần
+  python3 tools/push_to_kv.py --api ... --key ... --stats-seed so-lieu-cu.json
 """
 import argparse, json, os, sys, urllib.request, urllib.error
 
@@ -44,6 +49,11 @@ def main():
     ap.add_argument('--auth', action='store_true', help='kiểm tra ADMIN_KEY có đúng không')
     ap.add_argument('--verify', action='store_true',
                     help='so sánh dữ liệu trên KV với file trong repo (không ghi gì)')
+    ap.add_argument('--import-firebase', action='store_true',
+                    help='kéo số lượt đọc/bình chọn CŨ từ Firestore về KV (làm 1 lần)')
+    ap.add_argument('--stats-seed',
+                    help='nạp số liệu cũ từ file JSON: {slug:{views,votes}} hoặc bản export Firestore')
+    ap.add_argument('--stats', action='store_true', help='xem số liệu xếp hạng đang có trên KV')
     a = ap.parse_args()
 
     if a.health:
@@ -55,6 +65,39 @@ def main():
     if a.sync:
         st, body = call(a.api, '/api/sync', 'POST', a.key, {})
         print(st, json.dumps(body, ensure_ascii=False)[:600]); return
+    if a.stats:
+        st, body = call(a.api, '/api/stats', 'GET')
+        items = body.get('items', {})
+        print('nguồn:', body.get('source'), '| số bộ:', len(items),
+              '| tổng lượt đọc:', sum(v.get('views', 0) for v in items.values()),
+              '| tổng phiếu:', sum(v.get('votes', 0) for v in items.values()))
+        for slug, v in sorted(items.items(), key=lambda kv: -kv[1].get('views', 0))[:15]:
+            print('  %-40s đọc %6s  phiếu %5s  (tuần: đọc %s / phiếu %s)' % (
+                slug, v.get('views', 0), v.get('votes', 0), v.get('viewsWeek', 0), v.get('votesWeek', 0)))
+        return
+    if a.import_firebase:
+        if not a.key:
+            sys.exit('Thiếu --key (ADMIN_KEY của Worker)')
+        st, body = call(a.api, '/api/stats/import-firebase', 'POST', a.key, {})
+        print(st, json.dumps(body, ensure_ascii=False)[:400]); return
+    if a.stats_seed:
+        if not a.key:
+            sys.exit('Thiếu --key (ADMIN_KEY của Worker)')
+        raw = json.load(open(a.stats_seed, encoding='utf-8'))
+        items = {}
+        if isinstance(raw, dict) and raw.get('documents'):        # bản export Firestore REST
+            for doc in raw['documents']:
+                slug = doc['name'].rstrip('/').split('/')[-1].replace('.html', '')
+                f = doc.get('fields', {})
+                num = lambda k: int(float(f.get(k, {}).get('integerValue', f.get(k, {}).get('doubleValue', 0)) or 0))
+                items[slug] = {'views': num('views'), 'votes': num('votes')}
+        else:                                                     # {slug: {views, votes}}
+            for slug, v in raw.items():
+                items[slug] = {'views': int(v.get('views', 0) or 0), 'votes': int(v.get('votes', 0) or 0)}
+        st, body = call(a.api, '/api/stats/seed', 'POST', a.key, {'items': items})
+        print(st, json.dumps(body, ensure_ascii=False)[:300])
+        print('đã nạp số cũ của %d bộ — chạy lại bao nhiêu lần cũng không cộng dồn' % len(items))
+        return
     if not a.key:
         sys.exit('Thiếu --key (ADMIN_KEY của Worker)')
 

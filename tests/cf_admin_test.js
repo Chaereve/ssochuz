@@ -4,7 +4,7 @@
    - đúng khoá → mở được thư viện
    - đăng chương nhanh / mở chương từ tệp trên máy / sửa thông tin bộ / thêm bộ /
      đổi tình trạng hàng loạt / lưu slide + lịch + giscus  → đúng dữ liệu gửi lên
-   - Firebase bị chặn → KHÔNG hiện số bịa
+   - KV chưa có lượt đọc nào → KHÔNG hiện số bịa (và báo rõ cách nạp số cũ)
    - chưa nối Worker vẫn xem được dữ liệu tĩnh (chế độ nháp)
    ========================================================================== */
 const fs = require('fs'), path = require('path');
@@ -75,8 +75,13 @@ function makeWorker() {
     }
     if (p === '/api/sync') return auth ? json({ ok: true, cards: 62, changed: 3, rev: '2026-09-13 10:00' }) : json({ ok: false, error: 'sai key' }, 401, false);
     if (p === '/api/seed') return auth ? json({ ok: true, books: 62 }) : json({ ok: false, error: 'sai key' }, 401, false);
-    if (p === '/api/stats/refresh') return auth ? json({ ok: true, cleared: 'stats' }) : json({ ok: false, error: 'sai key' }, 401, false);
-    if (p === '/api/stats') return json({ ok: false, error: 'chưa đọc được số liệu Firebase' }, 503, false);
+    if (p === '/api/stats/refresh') return auth ? json({ ok: true, cleared: 'stats_cache', flushed: 0 }) : json({ ok: false, error: 'sai key' }, 401, false);
+    if (p === '/api/stats') return json({ ok: true, source: 'kv', fetchedAt: new Date().toISOString(), items: {} });
+    if (p === '/api/view' && opt.method === 'POST') return json({ ok: true, counted: true });
+    if (p === '/api/vote' && opt.method === 'POST') return json({ ok: true, slug: JSON.parse(opt.body).slug, votes: 1, voted: true });
+    if (p === '/api/stats/import-firebase') return auth
+      ? json({ ok: false, error: 'chưa đọc được số liệu Firebase: Firestore trả về 403 (đang chặn quyền đọc — mở rules 1 lần rồi bấm lại)' }, 502, false)
+      : json({ ok: false, error: 'sai key' }, 401, false);
     return json({ ok: false, error: 'không có endpoint ' + p }, 404, false);
   }
   return { fetchMock, calls, books, REG, loadBook };
@@ -217,7 +222,7 @@ async function openAdmin(worker, key) {
     giscus: (w.REG.settings.giscus || {}).repo
   };
 
-  /* ---------- 10. số liệu: Firebase bị chặn → không bịa số ---------- */
+  /* ---------- 10. số liệu: KV trống → không bịa số ---------- */
   click($$(doc, '#tabs button').find(b => b.dataset.tab === 'stats'));
   await wait(600);
   out.soLieu = {

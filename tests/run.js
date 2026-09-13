@@ -9,12 +9,14 @@
      t_story.js        trang truyện + trang đọc: chuyển chương, cài đặt, truyện 0 chương
      t_flows.js        luồng thật: cài đặt đọc, đánh dấu, xoá chương/bộ, phím tắt
      t_sweep.js        bấm hết mọi nút trong trang xem có lỗi JS nào không
-     cf_admin_test.js  trang quản trị với Worker giả (đăng chương, sửa, cài đặt, số liệu) */
+     cf_admin_test.js  trang quản trị với Worker giả (đăng chương, sửa, cài đặt, số liệu)
+     t_worker.mjs      CHẠY THẬT worker/cms.js (KV giả trong RAM): kênh đăng, sync
+                       Blogger, đăng nhập Google, bình luận, đếm lượt đọc/bình chọn */
 const path = require('path'), { spawnSync } = require('child_process');
 const cands = (process.env.CZ_TEST_MODULES || '').split(path.delimiter).filter(Boolean)
   .concat([path.join(__dirname, 'node_modules'), path.join(__dirname, '..', 'node_modules')]);
 const env = Object.assign({}, process.env, { NODE_PATH: cands.join(path.delimiter) });
-const files = ['t_config.js', 't_html.js', 't_home.js', 't_stats.js', 't_story.js', 't_flows.js', 't_sweep.js', 'cf_admin_test.js'];
+const files = ['t_worker.mjs', 't_config.js', 't_html.js', 't_home.js', 't_stats.js', 't_story.js', 't_flows.js', 't_sweep.js', 'cf_admin_test.js'];
 let bad = 0;
 for (const f of files) {
   const r = spawnSync(process.execPath, [path.join(__dirname, f)], { encoding: 'utf8', timeout: 180000, env });
