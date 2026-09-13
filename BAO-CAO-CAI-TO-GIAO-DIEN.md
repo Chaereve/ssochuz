@@ -43,6 +43,15 @@ tải lại trang, nút Back của trình duyệt trả về đúng danh sách c
 `_redirects` giữ cho mọi link cũ còn sống; `sitemap.xml` + `robots.txt` sinh từ
 `data/registry.json` bằng `python3 tools/build_sitemap.py --base <tên miền của bạn>`.
 
+> ⚠ **Trong `_redirects`, đích của luật 200 không bao giờ được là tệp `.html`.**
+> Cloudflare Pages tự bỏ đuôi `.html` bằng chuyển hướng 308 (`/truyen.html` → `/truyen`),
+> nên viết `/truyen/* → /truyen.html 200` là tự tạo vòng lặp
+> `/truyen/<slug>/ → /truyen.html → /truyen → /truyen.html → …`, người đọc bấm vào
+> truyện sẽ thấy *“redirected you too many times”* (ERR_TOO_MANY_REDIRECTS).
+> Viết đúng: `/truyen/* → /truyen 200`. `node tools/check_html.js` và
+> `python3 tools/dev_server.py` đều tự bắt lỗi này — xem
+> `BAO-CAO-SUA-LOI-TRANG-TRUYEN.md`.
+
 ---
 
 ## 2. Đã gọt bớt (bớt chỗ thừa, dồn sự chú ý vào thứ đáng đọc)

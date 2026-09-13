@@ -2,11 +2,16 @@
 """
 chuseoz · máy chủ xem thử trên máy
 ================================================================
-Cloudflare Pages có 2 thứ mà `python3 -m http.server` không có:
-  1. Bỏ phần `.html` trên URL  (/admin  →  admin.html)
-  2. Đọc file `_redirects` để viết lại đường dẫn (/truyen/<slug>/ → truyen.html)
+Cloudflare Pages có 3 thứ mà `python3 -m http.server` không có:
+  1. Phục vụ URL sạch, không cần đuôi `.html`   (/admin  →  admin.html)
+  2. TỰ BỎ đuôi `.html` bằng chuyển hướng 308    (/admin.html  →  /admin)
+     ← chính điều này, ghép với `_redirects` trỏ về tệp `.html`, tạo ra vòng lặp
+       ERR_TOO_MANY_REDIRECTS từng làm chết trang truyện
+  3. Đọc file `_redirects` để viết lại đường dẫn (/truyen/<slug>/ → trang truyện)
 
-Script này mô phỏng đúng 2 điều đó để bạn xem thử y như bản thật:
+Script này mô phỏng đúng 3 điều đó để bạn xem thử y như bản thật, và tự đếm số
+lần nhảy: nếu `_redirects` tạo vòng lặp thì server trả 508 kèm đường đi, thay vì
+để trình duyệt treo "redirected you too many times" như bản deploy.
 
     python3 tools/dev_server.py                 # mở http://localhost:8080
     python3 tools/dev_server.py --port 9000
@@ -57,6 +62,33 @@ def load_redirects():
     return rules
 
 
+def audit_redirects(rules):
+    """Soi `_redirects` NGAY KHI KHỞI ĐỘNG: luật nào sẽ thành vòng lặp trên Pages.
+
+    Cloudflare Pages tự bỏ đuôi `.html` bằng 308, nên đích của luật 200 mà là tệp
+    `.html` thì URL sạch của nó rất dễ khớp ngược lại một luật khác → lặp vô hạn
+    (trình duyệt báo ERR_TOO_MANY_REDIRECTS). Đây chính là lỗi từng làm chết
+    trang truyện:  /truyen/* → /truyen.html → 308 → /truyen → /truyen.html → …
+    """
+    def matches(src, path):
+        if '*' in src:
+            head, _, tail = src.partition('*')
+            return path.startswith(head) and path.endswith(tail)
+        return src == path
+
+    bad = []
+    for src, dst, status in rules:
+        d = urllib.parse.urlsplit(dst).path
+        if status == '200' and re.search(r'\.html?$', d, re.I):
+            clean = re.sub(r'\.html?$', '', d, flags=re.I)
+            again = next((s for s, _, _ in rules if matches(s, clean)), None)
+            bad.append('%s → %s %s: đích là tệp .html nên Pages sẽ 308 về %s%s'
+                       % (src, dst, status, clean,
+                          (' — mà %s lại khớp luật "%s" ⇒ VÒNG LẶP' % (clean, again)) if again else '')
+                       + '  |  sửa thành: %s %s %s' % (src, clean, status))
+    return bad
+
+
 class Handler(SimpleHTTPRequestHandler):
     rules = []
     api = None            # None = tắt Worker, '' = tắt, 'URL' = dùng
@@ -99,6 +131,81 @@ class Handler(SimpleHTTPRequestHandler):
             elif src == url_path:
                 return dst, status
         return None, 0
+
+    def html_clean(self, url_path):
+        """Cloudflare Pages (html_handling = auto-trailing-slash) TỰ đổi đường dẫn:
+
+             /foo.html        → /foo      (308, bỏ đuôi .html)
+             /foo/index.html  → /foo/     (308)
+             /foo/            → /foo      (307, nếu foo là TỆP chứ không phải thư mục)
+
+        Đây chính là mấu chốt của lỗi ERR_TOO_MANY_REDIRECTS từng làm chết trang
+        truyện: _redirects proxy về "/truyen.html" thì Pages 308 sang "/truyen",
+        mà "/truyen" lại proxy về "/truyen.html" — cứ thế lặp vô hạn.
+        Trả về đường dẫn chuẩn, hoặc None nếu đường dẫn đã chuẩn rồi.
+        """
+        if url_path in ('', '/'):
+            return None
+        if re.search(r'/index\.html?$', url_path, re.I):
+            return re.sub(r'/index\.html?$', '/', url_path, flags=re.I)
+        if re.search(r'\.html?$', url_path, re.I):
+            return re.sub(r'\.html?$', '', url_path, flags=re.I)
+        if url_path.endswith('/') and len(url_path) > 1:
+            bare = url_path.rstrip('/')
+            if not os.path.isdir(os.path.join(ROOT, bare.lstrip('/'))):
+                return bare
+        return None
+
+    def route(self, url_path, query):
+        """Chạy đúng trình tự của Cloudflare Pages: _redirects → xử lý HTML → tệp thật.
+
+        Quan trọng: đích của luật 200 cũng bị xử lý HTML như một yêu cầu mới
+        (Pages làm vậy thật, nên mới sinh ra vòng lặp). Mình đếm số lần nhảy và
+        bắt vòng lặp ngay trong server — thay vì để trình duyệt treo như bản thật.
+        """
+        seen = []
+        pending = None      # bước 308 "bỏ đuôi .html" mà Pages sẽ gửi cho trình duyệt
+        p = url_path
+        for _ in range(12):
+            if p in seen:
+                return ('loop', seen + [p])
+            seen.append(p)
+            dst, status = self.rewrite(p)
+            if dst:
+                d = urllib.parse.urlsplit(dst)
+                if status == '200':                       # proxy: viết lại rồi đi tiếp
+                    query = d.query or query
+                    p = d.path
+                    continue
+                if status in ('301', '302', '303', '307', '308'):
+                    loc = dst if d.query or not query else dst + '?' + query
+                    return ('redirect', int(status), loc)
+            clean = self.html_clean(p)                    # Pages tự bỏ .html / dấu / thừa
+            if clean and clean != p:
+                if pending is None:
+                    pending = ('redirect', 308, clean + (('?' + query) if query else ''))
+                p = clean                                 # đi tiếp để xem có quay lại không
+                continue
+            full, rel = self.find_file(p)
+            if full:
+                return pending or ('file', full, rel)
+            return pending or ('miss', None)
+        return ('loop', seen)
+
+    def send_loop(self, chain):
+        """Vòng lặp redirect: trả 508 kèm đường đi để biết sửa chỗ nào."""
+        body = ('<h1>508 · Vòng lặp chuyển hướng trong _redirects</h1>'
+                '<p>Đường đi: <code>' + ' → '.join(chain) + ' → …</code></p>'
+                '<p>Đích của luật 200 KHÔNG ĐƯỢC là tệp <code>.html</code>: Cloudflare Pages '
+                'tự bỏ đuôi <code>.html</code> (308) nên sẽ quay lại đúng luật vừa khớp.</p>'
+                '<p>Ví dụ sai: <code>/truyen/*  /truyen.html  200</code><br>'
+                'Viết đúng: <code>/truyen/*  /truyen  200</code></p>').encode('utf-8')
+        self.send_response(508)
+        self.send_header('Content-Type', 'text/html; charset=utf-8')
+        self.send_header('Content-Length', str(len(body)))
+        self.send_header('Cache-Control', 'no-store')
+        self.end_headers()
+        self.wfile.write(body)
 
     def send_file(self, full, rel, head_only=False, extra_headers=None):
         try:
@@ -152,35 +259,19 @@ class Handler(SimpleHTTPRequestHandler):
         self.serve(True)
 
     def serve(self, head_only):
-        raw = self.path
-        split = urllib.parse.urlsplit(raw)
-        url_path = split.path
-        # 1) _redirects trước (giống Cloudflare Pages)
-        dst, status = self.rewrite(url_path)
-        if dst and status in ('200', '301', '302', '303', '307', '308'):
-            if dst.startswith('http'):
-                self.send_response(302)
-                self.send_header('Location', dst)
-                self.end_headers()
-                return
-            if status == '200':
-                full, rel = self.find_file(dst)
-                if full:
-                    # giữ nguyên query để trang tự đọc ?slug=…
-                    return self.send_file(full, rel, head_only)
-                self.send_error(404, 'rewrite target missing: ' + dst)
-                return
-            if split.query:                      # Cloudflare giữ nguyên query khi chuyển hướng
-                dst += ('&' if '?' in dst else '?') + split.query
-            self.send_response(int(status))
-            self.send_header('Location', dst)
+        split = urllib.parse.urlsplit(self.path)
+        res = self.route(split.path, split.query)
+        kind = res[0]
+        if kind == 'file':
+            return self.send_file(res[1], res[2], head_only)
+        if kind == 'redirect':
+            self.send_response(res[1])
+            self.send_header('Location', res[2])
             self.send_header('Content-Length', '0')
             self.end_headers()
             return
-        # 2) file/href thật
-        full, rel = self.find_file(url_path)
-        if full:
-            return self.send_file(full, rel, head_only)
+        if kind == 'loop':
+            return self.send_loop(res[1])
         self.send_error(404, 'Not Found')
 
 
@@ -217,6 +308,10 @@ def main():
     print('  · thư mục gốc:', ROOT)
     print('  · nguồn dữ liệu:', 'Worker KV ' + api if api else 'file tĩnh /data')
     print('  · viết lại đường dẫn:', ', '.join('%s → %s %s' % r for r in Handler.rules) or '(không có)')
+    for w in audit_redirects(Handler.rules):
+        print('  ⚠ _redirects SAI:', w)
+    if not audit_redirects(Handler.rules):
+        print('  · _redirects: không có luật nào dễ thành vòng lặp ✓')
     try:
         srv.serve_forever()
     except KeyboardInterrupt:

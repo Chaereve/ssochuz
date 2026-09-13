@@ -21,11 +21,13 @@
   /* ======================= 0. ĐỌC URL ==================================== */
   function slugFromURL() {
     var p = location.pathname.split('/').filter(Boolean);
-    if (p[0] === 'truyen' && p[1]) return decodeURIComponent(p[1]);
-    /* /reader cũ (và mọi trang .html) → lấy slug trong query */
-    if (p[0] === 'reader' || !p.length || /\.html?$/i.test(p[0] || '')) {
+    /* /truyen/<slug>/  và  /reader/<slug>/ (đời cũ) — tên truyện nằm ngay trong đường dẫn */
+    if ((p[0] === 'truyen' || p[0] === 'reader') && p[1]) return decodeURIComponent(p[1]);
+    /* /truyen, /reader, /truyen.html… : đường dẫn không có tên truyện → đọc query ?slug= */
+    if (!p.length || p[0] === 'truyen' || p[0] === 'reader' || /\.html?$/i.test(p[0] || '')) {
       return CZ.qs('slug') || CZ.qs('truyen') || '';
     }
+    /* đường dẫn lạ (mở thẳng tệp khi xem thử trên máy) → lấy khúc cuối */
     if (p.length) return decodeURIComponent(p[p.length - 1]);
     return CZ.qs('slug') || '';
   }
@@ -881,9 +883,15 @@
   window.addEventListener('hashchange', function () { route(); });
 
   /* ======================= 5. KHỞI ĐỘNG ================================= */
-  function showError(title, html) {
+  function showError(title, html, reload) {
     $('#shero').innerHTML = '<div class="in" style="grid-template-columns:1fr"><div>' +
-      '<h1>' + esc(title) + '</h1>' + html + '<div class="btn-row mt"><a class="btn pri" href="/">Về thư viện</a></div></div></div>';
+      '<h1>' + esc(title) + '</h1>' + html +
+      '<div class="btn-row mt"><a class="btn pri" href="/">Về thư viện</a>' +
+      (reload ? '<button class="btn ghost" type="button" id="errReload">Tải lại trang</button>' : '') +
+      '</div></div></div>';
+    var rb = $('#errReload');
+    if (rb) rb.addEventListener('click', function () { location.reload(); });
+    try { document.title = title + ' · chuseoz'; } catch (e) {}
     $('#chapSec').style.display = 'none';
     $('#relSec').style.display = 'none';
     $('#pane-cmt').style.display = 'none';
@@ -917,7 +925,7 @@
       if (!bk || !bk.chapters) {
         if (meta) {
           N = meta;
-          showError(meta.title, '<p class="muted">Chưa tải được nội dung bộ này — thử tải lại trang sau ít phút.</p>');
+          showError(meta.title, '<p class="muted">Chưa tải được nội dung bộ này — thử tải lại trang sau ít phút.</p>', true);
         } else {
           showError('Không tìm thấy truyện “' + SLUG + '”', '<p class="muted">Bộ này không có trong thư viện. Xem danh sách đầy đủ ở trang chủ.</p>');
         }
@@ -944,7 +952,7 @@
       if (ch && CHS.length) setTimeout(function () { toast('Mở thẳng ' + chapLabel(ch) + '.'); }, 400);
       CZ.onStats(function () { renderStory(); if (reading) renderCur(true); });
     }).catch(function (e) {
-      showError('Lỗi tải truyện', '<p class="muted">' + esc(e && e.message || e) + '</p>');
+      showError('Lỗi tải truyện', '<p class="muted">' + esc(e && e.message || e) + '</p>', true);
     });
   }
   CZ.registry().then(function (r) { boot(r.reg); }).catch(function () { boot(null); });
