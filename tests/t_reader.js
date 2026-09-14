@@ -93,7 +93,7 @@ function chFromLog(log) {
      1 + 2 + 3 + 5. TRANG ĐỌC: thích theo chương, bình luận trong trang đọc
      ===================================================================== */
   const p = page('truyen.html', {
-    url: 'https://chuseoz.pages.dev/truyen/third-person/',
+    url: 'https://ssochuz.pages.dev/truyen/third-person/',
     config: { CZ_API: BASE },
     fetch: fetchMock
   });
@@ -115,8 +115,8 @@ function chFromLog(log) {
   /* --- thích chương 2 --- */
   click('#actLike'); await wait(350);
   out.thichCh2 = {
-    lsTheoChuong: LS.getItem('chuseoz-like-third-person-2'),
-    lsCuTheoBo: LS.getItem('chuseoz-like-third-person'),      /* khoá cũ phải KHÔNG dùng nữa */
+    lsTheoChuong: LS.getItem('ssochuz-like-third-person-2'),
+    lsCuTheoBo: LS.getItem('ssochuz-like-third-person'),      /* khoá cũ phải KHÔNG dùng nữa */
     nut: txt('#actLike'),
     on: $('#actLike').classList.contains('on'),
     goiVote: log.filter(l => l.indexOf('POST /api/vote') === 0).slice(-1)[0] || '',
@@ -129,13 +129,13 @@ function chFromLog(log) {
     sub: txt('#rdSub'),
     nutThich: txt('#actLike'),
     daThich: $('#actLike').classList.contains('on'),
-    lsCh3: LS.getItem('chuseoz-like-third-person-3')
+    lsCh3: LS.getItem('ssochuz-like-third-person-3')
   };
   /* thích cả chương 3 → hai chương hai phiếu riêng */
   click('#actLike'); await wait(350);
   out.thichCh3 = {
-    lsCh2: LS.getItem('chuseoz-like-third-person-2'),
-    lsCh3: LS.getItem('chuseoz-like-third-person-3'),
+    lsCh2: LS.getItem('ssochuz-like-third-person-2'),
+    lsCh3: LS.getItem('ssochuz-like-third-person-3'),
     nut: txt('#actLike'),
     chapVotesTrenWorker: JSON.stringify(S.items['third-person'].chapVotes),
     tongPhieu: S.items['third-person'].votes
@@ -143,8 +143,8 @@ function chFromLog(log) {
   /* bỏ thích chương 3 → chương 2 vẫn còn */
   click('#actLike'); await wait(350);
   out.boThichCh3 = {
-    lsCh2: LS.getItem('chuseoz-like-third-person-2'),
-    lsCh3: LS.getItem('chuseoz-like-third-person-3'),
+    lsCh2: LS.getItem('ssochuz-like-third-person-2'),
+    lsCh3: LS.getItem('ssochuz-like-third-person-3'),
     chapVotesTrenWorker: JSON.stringify(S.items['third-person'].chapVotes),
     tongPhieu: S.items['third-person'].votes,
     nut: txt('#actLike')
@@ -164,8 +164,8 @@ function chFromLog(log) {
   click('#actSave'); await wait(150);
   click('#actMark'); await wait(150);
   out.tuVaDanhDau = {
-    shelf: LS.getItem('chuseoz-shelf'),
-    mark: LS.getItem('chuseoz-mark-third-person'),
+    shelf: LS.getItem('ssochuz-shelf'),
+    mark: LS.getItem('ssochuz-mark-third-person'),
     nutLuu: txt('#actSave'),
     nutDanhDau: txt('#actMark')
   };
@@ -194,10 +194,10 @@ function chFromLog(log) {
     goi: postLog,
     coChuong: /"ch":3/.test(postLog),
     coMaMay: /"vid":"/.test(postLog),
-    coTenKhach: postLog.indexOf('Người Thử') >= 0 || (LS.getItem('chuseoz-cmtname') === 'Người Thử'),
+    coTenKhach: postLog.indexOf('Người Thử') >= 0 || (LS.getItem('ssochuz-cmtname') === 'Người Thử'),
     hienTrongDanhSach: txt('#rdCmts .cmt-list').indexOf('Chương 3 hay quá') >= 0,
     soBinhLuan: txt('#rdCmts .cmt-n'),
-    tenMay: LS.getItem('chuseoz-cmtname')
+    tenMay: LS.getItem('ssochuz-cmtname')
   };
   /* reply ngay dưới bình luận của người khác */
   const rootComment = $('#rdCmts .cmt-item');
@@ -253,7 +253,7 @@ function chFromLog(log) {
       return undefined;
     };
     const p2 = page('truyen.html', {
-      url: 'https://chuseoz.pages.dev/truyen/be-my-angel/',
+      url: 'https://ssochuz.pages.dev/truyen/be-my-angel/',
       config: { CZ_API: BASE },
       fetch: dataFetch({ apiBase: BASE, api: api2 })
     });
@@ -269,7 +269,7 @@ function chFromLog(log) {
       dongChuong: t2('#chapCount'),
       oThongTin: infoRows.slice(0, 2),
       soChuongTrongLuoi: d2.querySelectorAll('#chapGrid .cha').length,
-      daTuSuaTrongMay: p2.win.localStorage.getItem('chuseoz-realcounts'),
+      daTuSuaTrongMay: p2.win.localStorage.getItem('ssochuz-realcounts'),
       hienDungSo: t2('#chapCount').indexOf(String(thatTrongFile)) >= 0 && t2('#chapCount').indexOf(String(soSai)) < 0,
       khongConSoSai: !/\b30\b/.test(t2('#chapCount')),
       loi: p2.errors.slice(0, 3)
@@ -308,11 +308,11 @@ function chFromLog(log) {
     const a = page('index.html', {
       config: { CZ_API: BASE }, fetch: fetchMock,
       setup(win) {
-        win.localStorage.setItem('chuseoz-user', JSON.stringify({
+        win.localStorage.setItem('ssochuz-user', JSON.stringify({
           uid: 'sb-admin', email: ADMIN_EMAIL, name: 'Chủ Trang', picture: '',
           exp: Math.floor(Date.now() / 1000) + 3600, provider: 'supabase'
         }));
-        win.localStorage.setItem('chuseoz-auth-token', 'phien-gia-lap');
+        win.localStorage.setItem('ssochuz-auth-token', 'phien-gia-lap');
       }
     });
     await wait(1400);
@@ -332,11 +332,11 @@ function chFromLog(log) {
     const n = page('index.html', {
       config: { CZ_API: BASE }, fetch: fetchMock,
       setup(win) {
-        win.localStorage.setItem('chuseoz-user', JSON.stringify({
+        win.localStorage.setItem('ssochuz-user', JSON.stringify({
           uid: 'sb-thuong', email: 'docgia@gmail.com', name: 'Đọc Giả', picture: '',
           exp: Math.floor(Date.now() / 1000) + 3600, provider: 'supabase'
         }));
-        win.localStorage.setItem('chuseoz-auth-token', 'phien-gia-lap');
+        win.localStorage.setItem('ssochuz-auth-token', 'phien-gia-lap');
       }
     });
     await wait(1400);

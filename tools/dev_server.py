@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-chuseoz · máy chủ xem thử trên máy
+ssochuz · máy chủ xem thử trên máy
 ================================================================
 Cloudflare Pages có 3 thứ mà `python3 -m http.server` không có:
   1. Phục vụ URL sạch, không cần đuôi `.html`   (/admin  →  admin.html)
@@ -237,7 +237,7 @@ class Handler(SimpleHTTPRequestHandler):
             return body
         api = self.api if self.api is not None else ''
         cfg = json.dumps(api)
-        patch = ('<script>/* chuseoz dev server */'
+        patch = ('<script>/* ssochuz dev server */'
                  'window.CZ_API=%s;window.CZ_DEV=true;</script>' % cfg)
         if '/cz-config.js' in html:
             html = html.replace('<script src="/cz-config.js"></script>', patch, 1)
@@ -276,7 +276,7 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 def main():
-    ap = argparse.ArgumentParser(description='chuseoz · xem thử trên máy (giống Cloudflare Pages)')
+    ap = argparse.ArgumentParser(description='ssochuz · xem thử trên máy (giống Cloudflare Pages)')
     ap.add_argument('--port', type=int, default=8080)
     ap.add_argument('--host', default='0.0.0.0')
     ap.add_argument('--api', nargs='?', const='__CFG__', default=None,
@@ -304,7 +304,7 @@ def main():
     Handler.api = api
     Handler.quiet = args.quiet
     srv = ThreadingHTTPServer((args.host, args.port), Handler)
-    print('chuseoz · xem thử trên máy — http://localhost:%d' % args.port)
+    print('ssochuz · xem thử trên máy — http://localhost:%d' % args.port)
     print('  · thư mục gốc:', ROOT)
     print('  · nguồn dữ liệu:', 'Worker KV ' + api if api else 'file tĩnh /data')
     print('  · viết lại đường dẫn:', ', '.join('%s → %s %s' % r for r in Handler.rules) or '(không có)')

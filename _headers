@@ -54,3 +54,7 @@
 
 /robots.txt
   Cache-Control: public, max-age=600
+
+# Icon / ảnh thương hiệu: đổi rất hiếm, cho cache dài
+/assets/*
+  Cache-Control: public, max-age=86400

@@ -379,11 +379,11 @@ async function openAdmin(worker, key) {
       /* máy của chủ trang: đã lưu URL Worker + ADMIN_KEY từ lần trước */
       win.localStorage.setItem('cz_kv_api', BASE);
       win.localStorage.setItem('cz_kv_key', KEY);
-      win.localStorage.setItem('chuseoz-user', JSON.stringify({
+      win.localStorage.setItem('ssochuz-user', JSON.stringify({
         uid: 'sb-1', email: bossEmail, name: 'Chủ Trang', picture: '',
         exp: Math.floor(Date.now() / 1000) + 3600, provider: 'supabase'
       }));
-      win.localStorage.setItem('chuseoz-auth-token', 'phien-gia-lap');
+      win.localStorage.setItem('ssochuz-auth-token', 'phien-gia-lap');
     }
   });
   await wait(500);

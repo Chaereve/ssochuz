@@ -1,5 +1,5 @@
 /* ============================================================================
-   chuseoz · TRANG TRUYỆN + TRANG ĐỌC  (một trang, hai chế độ)
+   ssochuz · TRANG TRUYỆN + TRANG ĐỌC  (một trang, hai chế độ)
    ----------------------------------------------------------------------------
    URL:  /truyen/<slug>/            → thông tin truyện + danh sách chương
          /truyen/<slug>/#chuong-12  → mở thẳng chương 12 (đọc tại chỗ, không tải lại)
@@ -225,7 +225,7 @@
           '<p class="syn clamp" id="synBox">' + esc(syn) + '</p>' +
           '<div class="btn-row">' + readBtn(n, ch) +
             (n.canRead && ch && ch < n.chapters ? '<a class="btn ghost lg" href="#chuong-' + n.chapters + '">' + ic('up', 'i-s') + 'Chương mới nhất</a>' : '') +
-            '<button class="btn ghost' + (CZ.isLiked(n, 0) ? ' on' : '') + '" id="likeBtn" aria-pressed="' + CZ.isLiked(n, 0) + '" title="Thích bộ truyện này — phiếu thích cũng cộng vào bảng xếp hạng">' + ic('heart', 'i-s') +
+            '<button class="btn ghost like' + (CZ.isLiked(n, 0) ? ' on' : '') + '" id="likeBtn" aria-pressed="' + CZ.isLiked(n, 0) + '" title="Thích bộ truyện này — phiếu thích cũng cộng vào bảng xếp hạng">' + ic('heart', 'i-s') +
               '<span>' + (CZ.isLiked(n, 0) ? 'Đã thích' : 'Thích') + (CZ.likeCount(n, 0) ? ' · ' + num(CZ.likeCount(n, 0)) : '') + '</span></button>' +
             '<button class="btn ghost' + (CZ.inShelf(n) ? ' on' : '') + '" id="shelfBtn" aria-pressed="' + CZ.inShelf(n) + '" title="Lưu vào tủ truyện của bạn (icon tủ sách)">' + ic('shelf', 'i-s') +
               '<span>' + (CZ.inShelf(n) ? 'Đã lưu' : 'Tủ truyện') + '</span></button>' +
@@ -259,13 +259,15 @@
     var lb = $('#likeBtn');
     if (lb) lb.addEventListener('click', function () {
       var on = CZ.toggleLike(n, 0);
+      var before = CZ.likeCount(n, 0);
       function paint(v) {
         lb.classList.toggle('on', on);
         lb.setAttribute('aria-pressed', on);
         var sp = lb.querySelector('span');
         if (sp) sp.textContent = (on ? 'Đã thích' : 'Thích') + (v ? ' · ' + num(v) : '');
       }
-      paint(CZ.likeCount(n, 0));
+      /* số nhảy NGAY khi bấm (bệnh cũ: chờ Worker trả về nên bỏ thích không thấy giảm) */
+      paint(Math.max(0, before + (on ? 1 : -1)));
       CZ.pop(lb);
       CZ.vote(n.slug, on, 0).then(function (r) {
         if (r && r.ok) {
@@ -861,6 +863,8 @@
     $('#actLike').addEventListener('click', function () {
       var btn = this;
       var on = CZ.toggleLike(N, cur);                 /* theo CHƯƠNG đang đọc */
+      var before = CZ.likeCount(N, cur);
+      var stNow = CZ.statsOf(N) || {};
       function paint(votes, total) {
         var lab = (on ? 'Đã thích' : 'Thích') + (votes ? ' · ' + num(votes) : '');
         btn.classList.toggle('on', on);
@@ -874,7 +878,9 @@
           if (l2) l2.textContent = num(total) + ' phiếu';
         }
       }
-      paint(CZ.likeCount(N, cur), (CZ.statsOf(N) || {}).votes);
+      /* số nhảy NGAY khi bấm, kể cả lúc bỏ thích; số chuẩn sẽ được Worker chỉnh lại */
+      var optTotal = stNow.votes != null ? Math.max(0, Number(stNow.votes) + (on ? 1 : -1)) : null;
+      paint(Math.max(0, before + (on ? 1 : -1)), optTotal);
       CZ.pop(btn);
       CZ.vote(N.slug, on, cur).then(function (r) {
         if (r && r.ok) {
@@ -952,7 +958,7 @@
     var pct = $('#rdPct');
     if (pct) pct.textContent = Math.round((CZ.rdGet().mode === 'paged' && PAGES.length ? (PI + 1) / PAGES.length : 1 / Math.max(1, CHS.length)) * 100) + '%';
     CZ.setProgress(N, cur);
-    try { document.title = c.t + ' · ' + N.title + ' — chuseoz'; } catch (e) {}
+    try { document.title = c.t + ' · ' + N.title + ' — ssochuz'; } catch (e) {}
     paintTOC(); paintTopNav();
     mountReaderComments();          /* bình luận theo chương, nằm cuối trang đọc */
     var cr = $('#crumbStory');
@@ -996,7 +1002,7 @@
     reading = false;
     document.body.classList.remove('reading');
     try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
-    try { document.title = N.title + ' · chuseoz'; } catch (e) {}
+    try { document.title = N.title + ' · ssochuz'; } catch (e) {}
     if (toComments) showTab('cmt', true);
     else window.scrollTo({ top: storyScroll, behavior: 'auto' });
     renderStory(); renderChapters();
@@ -1152,7 +1158,7 @@
       '</div></div></div>';
     var rb = $('#errReload');
     if (rb) rb.addEventListener('click', function () { location.reload(); });
-    try { document.title = title + ' · chuseoz'; } catch (e) {}
+    try { document.title = title + ' · ssochuz'; } catch (e) {}
     $('#chapSec').style.display = 'none';
     $('#relSec').style.display = 'none';
     $('#pane-cmt').style.display = 'none';
@@ -1221,7 +1227,7 @@
       }));
       N.url = CZ.storyURL(SLUG);
       N.canRead = CHS.length > 0;
-      try { document.title = N.title + ' · chuseoz'; } catch (e) {}
+      try { document.title = N.title + ' · ssochuz'; } catch (e) {}
       var md = document.querySelector('meta[name="description"]');
       if (md) md.setAttribute('content', (N.syn || N.title) .slice(0, 180));
       renderStory(); renderChapters(); renderRelated();

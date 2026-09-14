@@ -67,7 +67,7 @@ globalThis.fetch = async (url, init = {}) => {
 /* ============================ khoá RSA + idToken giả ======================== */
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'czw-'));
 execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-keyout', tmp + '/key.pem',
-  '-out', tmp + '/cert.pem', '-days', '1', '-nodes', '-subj', '/CN=chuseoz-test'], { stdio: 'ignore' });
+  '-out', tmp + '/cert.pem', '-days', '1', '-nodes', '-subj', '/CN=ssochuz-test'], { stdio: 'ignore' });
 execFileSync('openssl', ['x509', '-in', tmp + '/cert.pem', '-outform', 'der', '-out', tmp + '/cert.der'], { stdio: 'ignore' });
 const KEY_PEM = fs.readFileSync(tmp + '/key.pem', 'utf8');
 const X5C = fs.readFileSync(tmp + '/cert.der').toString('base64');
@@ -92,7 +92,7 @@ const ADMIN = 'khoa-quan-tri-dai-cho-du-24-ky-tu';
 const env = {
   ADMIN_KEY: ADMIN, CZ_KV: kv, BLOG: 'https://chuseoz.blogspot.com', ALLOW_ORIGIN: 'https://web.test',
   SESSION_SECRET: 'session-secret-dai-hon-32-ky-tu-cho-chac', GOOGLE_CLIENT_ID: 'CLIENT_ID_TEST',
-  FIREBASE_PROJECT: 'chuseoz-library', STATS_FLUSH_MS: '50',   /* bản thật gom 20 giây; test gom 50ms */
+  FIREBASE_PROJECT: 'ssochuz-library', STATS_FLUSH_MS: '50',   /* bản thật gom 20 giây; test gom 50ms */
 };
 const waits = [];
 const ctx = { waitUntil: (p) => waits.push(Promise.resolve(p)) };
@@ -406,8 +406,14 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     eq('vote/bỏ phiếu → 0', v3.body && v3.body.votes, 0);
     const an = await call('POST', '/api/vote', { body: { slug: 'lunar-secret', vote: 1, vid: 'khach-1' } });
     eq('vote/khách không cần đăng nhập', an.body && an.body.votes, 1);
+    /* phiếu đặt lúc ẩn danh vẫn gỡ được sau khi đăng nhập (gửi kèm vid) — hết bệnh "bỏ thích mà số không giảm" */
+    const un = await call('POST', '/api/vote', { headers: auth, body: { slug: 'lunar-secret', vote: 0, vid: 'khach-1' } });
+    eq('vote/đăng nhập gỡ được phiếu ẩn danh → 0', un.body && un.body.votes, 0);
+    await call('POST', '/api/vote', { body: { slug: 'lunar-secret', vote: 1, vid: 'khach-2' } });  /* để 1 phiếu cho mục seed bên dưới */
     const s = await call('GET', '/api/stats');
     eq('stats/đọc lại số phiếu', ((s.body.items || {})['lunar-secret'] || {}).votes, 1);
+    ck('stats/trả no-store để web luôn lấy số mới', String((s.headers || {}).get ? s.headers.get('cache-control') : '').includes('no-store'),
+      (s.headers || {}).get ? s.headers.get('cache-control') : '', 'no-store');
     eq('vote/slug lạ → 400', (await call('POST', '/api/vote', { body: { vote: 1 } })).status, 400);
   }
   {

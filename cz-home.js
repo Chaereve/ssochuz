@@ -1,5 +1,5 @@
 /* ============================================================================
-   chuseoz · TRANG CHỦ (bố cục hero landing)
+   ssochuz · TRANG CHỦ (bố cục hero landing)
    ----------------------------------------------------------------------------
    Thứ tự trang: hero → dải số liệu → Bàn đọc (đang đọc dở / tủ truyện) →
    Mới cập nhật → Thư viện truyện → Xếp hạng → Lịch ra chương.
@@ -330,7 +330,7 @@
       if (!ok) return;
       CZ.lib().forEach(function (n) {
         [n.postId, n.slug].filter(Boolean).forEach(function (k) {
-          try { localStorage.removeItem('chuseoz-prog-' + k); localStorage.removeItem('chuseoz-when-' + k); } catch (e) {}
+          try { localStorage.removeItem('ssochuz-prog-' + k); localStorage.removeItem('ssochuz-when-' + k); } catch (e) {}
         });
       });
       renderBan(); heroPaint(false); CZ.toast('Đã xoá lịch sử đọc');
@@ -683,7 +683,7 @@
     var b = e.target.closest('button'); if (!b) return;
     state.view = b.dataset.view;
     $$('#viewSeg button').forEach(function (x) { x.classList.toggle('on', x === b); });
-    try { localStorage.setItem('chuseoz-view', state.view); } catch (err) {}
+    try { localStorage.setItem('ssochuz-view', state.view); } catch (err) {}
     render();
   });
 
@@ -698,7 +698,7 @@
     $('#fcount').textContent = 'đang tải dữ liệu…';
   }
   function fail(msg, err) {
-    if (window.console && console.warn) console.warn('[chuseoz]', msg, err || '');
+    if (window.console && console.warn) console.warn('[ssochuz]', msg, err || '');
     var grid = $('#grid');
     if (grid) grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="big">Chưa tải được dữ liệu truyện</div>' +
       'Kiểm tra mạng rồi tải lại trang. Dữ liệu vẫn còn nguyên trong kho.</div>';
@@ -709,7 +709,7 @@
       CZ._setLib();
       var lib = CZ.lib();
       CZ.mountShell({ active: 'home' });       /* dựng lại để chân trang có rev mới */
-      try { var v = localStorage.getItem('chuseoz-view'); if (v === 'list') state.view = 'list'; } catch (e) {}
+      try { var v = localStorage.getItem('ssochuz-view'); if (v === 'list') state.view = 'list'; } catch (e) {}
       $$('#viewSeg button').forEach(function (x) { x.classList.toggle('on', x.dataset.view === state.view); });
       hero.list = CZ.slides(reg).slice(0, 5);
       heroInit();

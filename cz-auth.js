@@ -1,5 +1,5 @@
 /* ============================================================================
-   chuseoz · ĐĂNG NHẬP (Supabase Auth — mặc định) + phiên làm việc với Worker
+   ssochuz · ĐĂNG NHẬP (Supabase Auth — mặc định) + phiên làm việc với Worker
    ----------------------------------------------------------------------------
    Vì sao bỏ Google Identity Services làm mặc định:
      GIS bắt khai đúng "JavaScript origins" trong Google Cloud Console. Thiếu một
@@ -22,10 +22,10 @@
    ========================================================================== */
 (function (w, d) {
   'use strict';
-  var LS_USER = 'chuseoz-user';
-  var LS_TOKEN = 'chuseoz-auth-token';
-  var SB_STORAGE = 'chuseoz-sb';
-  var LS_PROFILE_PFX = 'chuseoz-profile-';   /* custom name/picture override per uid */
+  var LS_USER = 'ssochuz-user';
+  var LS_TOKEN = 'ssochuz-auth-token';
+  var SB_STORAGE = 'ssochuz-sb';
+  var LS_PROFILE_PFX = 'ssochuz-profile-';   /* custom name/picture override per uid */
   var user = null;          /* {uid,email,name,picture,exp,provider,admin,local} */
   var token = null;         /* session token của Worker, hoặc access_token Supabase */
   var listeners = [];
@@ -127,6 +127,140 @@
     }
     return Promise.resolve(merged);
   }
+
+  /* ---------- CẮT ẢNH ĐẠI DIỆN: kéo di chuyển · thu phóng · chụm 2 ngón -------
+     Mở hộp cắt, trả về data URL ảnh vuông 320px (phần trong vòng tròn).
+     Huỷ / lỗi thì resolve(null) để giữ ảnh cũ. */
+  function cropDialog(src) {
+    if (!w.CZ || !w.CZ.modal) return Promise.resolve(null);
+    var m = w.CZ.modal('czCrop',
+      '<div class="mh"><h4>Cắt ảnh đại diện</h4></div>' +
+      '<div class="mb">' +
+        '<div class="czcrop" id="czCropStage"><img alt="" draggable="false"></div>' +
+        '<div class="czcrop-tools">' +
+          '<button class="btn ghost sm" id="czCrOut" type="button" title="Thu nhỏ" aria-label="Thu nhỏ">−</button>' +
+          '<input type="range" id="czCrZoom" min="1" max="4" step="0.01" value="1" aria-label="Thu phóng ảnh">' +
+          '<button class="btn ghost sm" id="czCrIn" type="button" title="Phóng to" aria-label="Phóng to">+</button>' +
+          '<button class="btn ghost sm" id="czCrReset" type="button">Căn giữa</button>' +
+        '</div>' +
+        '<p class="sm muted mt">Kéo để di chuyển · lăn chuột hoặc chụm hai ngón để thu phóng. Phần nằm trong vòng tròn sẽ là ảnh đại diện.</p>' +
+      '</div>' +
+      '<div class="mf"><button class="btn ghost" data-close>Huỷ</button><button class="btn pri" id="czCrDone">Dùng ảnh này</button></div>');
+    var deferred = {};
+    var promise = new Promise(function (res) { deferred.res = res; });
+    var origClose = m._close;
+    m._close = function () { try { if (origClose) origClose(); } catch (e) {} deferred.res(null); };
+
+    var stage = m.querySelector('#czCropStage');
+    var img = m.querySelector('img');
+    var zoomIn = m.querySelector('#czCrZoom');
+    var st = { z: 1, x: 0, y: 0, base: 1, iw: 0, ih: 0, sw: 0, sh: 0, ready: false };
+
+    function clampPos() {
+      var s = st.base * st.z;
+      var mw = st.iw * s, mh = st.ih * s;
+      st.x = Math.min(0, Math.max(st.sw - mw, st.x));
+      st.y = Math.min(0, Math.max(st.sh - mh, st.y));
+    }
+    function apply() {
+      var s = st.base * st.z;
+      img.style.transform = 'translate(' + st.x + 'px,' + st.y + 'px) scale(' + s + ')';
+      if (zoomIn) zoomIn.value = String(st.z);
+    }
+    function setZoom(z, cx, cy) {
+      z = Math.max(1, Math.min(4, z));
+      var s0 = st.base * st.z, s1 = st.base * z;
+      /* giữ điểm (cx,cy) đứng yên khi phóng — phóng đúng chỗ chạm */
+      st.x = cx - (cx - st.x) * (s1 / s0);
+      st.y = cy - (cy - st.y) * (s1 / s0);
+      st.z = z;
+      clampPos(); apply();
+    }
+    function center() {
+      var s = st.base * st.z;
+      st.x = (st.sw - st.iw * s) / 2;
+      st.y = (st.sh - st.ih * s) / 2;
+      clampPos(); apply();
+    }
+
+    img.onload = function () {
+      st.sw = stage.clientWidth || 260; st.sh = stage.clientHeight || 260;
+      st.iw = img.naturalWidth || 1; st.ih = img.naturalHeight || 1;
+      st.base = Math.max(st.sw / st.iw, st.sh / st.ih);
+      st.ready = true; st.z = 1; center();
+    };
+    img.onerror = function () { toast('Không đọc được ảnh', 'err'); if (m._close) m._close(); };
+    try { img.crossOrigin = 'anonymous'; } catch (e) {}   /* ảnh https cho phép CORS thì cắt được */
+    img.src = src;
+
+    /* kéo + chụm: theo dõi tối đa 2 đầu chạm */
+    var pts = {};
+    function dist2() {
+      var a = Object.keys(pts);
+      if (a.length < 2) return 0;
+      var p = pts[a[0]], q = pts[a[1]];
+      return Math.hypot(p.x - q.x, p.y - q.y);
+    }
+    var pinch0 = 0, zoom0 = 1;
+    stage.addEventListener('pointerdown', function (e) {
+      e.preventDefault();
+      try { stage.setPointerCapture(e.pointerId); } catch (err) {}
+      pts[e.pointerId] = { x: e.clientX, y: e.clientY };
+      if (Object.keys(pts).length === 2) { pinch0 = dist2(); zoom0 = st.z; }
+    });
+    stage.addEventListener('pointermove', function (e) {
+      if (!pts[e.pointerId] || !st.ready) return;
+      var n = Object.keys(pts).length;
+      if (n === 1) {
+        var p = pts[e.pointerId];
+        st.x += e.clientX - p.x; st.y += e.clientY - p.y;
+        pts[e.pointerId] = { x: e.clientX, y: e.clientY };
+        clampPos(); apply();
+      } else if (n === 2 && pinch0) {
+        pts[e.pointerId] = { x: e.clientX, y: e.clientY };
+        var d = dist2();
+        var r = stage.getBoundingClientRect();
+        setZoom(zoom0 * (d / pinch0), e.clientX - r.left, e.clientY - r.top);
+      }
+    });
+    function up(e) { delete pts[e.pointerId]; pinch0 = 0; }
+    stage.addEventListener('pointerup', up);
+    stage.addEventListener('pointercancel', up);
+    stage.addEventListener('wheel', function (e) {
+      if (!st.ready) return;
+      e.preventDefault();
+      var r = stage.getBoundingClientRect();
+      setZoom(st.z * (e.deltaY < 0 ? 1.12 : 0.9), e.clientX - r.left, e.clientY - r.top);
+    }, { passive: false });
+
+    if (zoomIn) zoomIn.addEventListener('input', function () { setZoom(Number(zoomIn.value) || 1, st.sw / 2, st.sh / 2); });
+    var bi = m.querySelector('#czCrIn'), bo = m.querySelector('#czCrOut');
+    if (bi) bi.addEventListener('click', function () { setZoom(st.z * 1.25, st.sw / 2, st.sh / 2); });
+    if (bo) bo.addEventListener('click', function () { setZoom(st.z / 1.25, st.sw / 2, st.sh / 2); });
+    var br = m.querySelector('#czCrReset');
+    if (br) br.addEventListener('click', function () { st.z = 1; center(); });
+
+    m.querySelector('#czCrDone').addEventListener('click', function () {
+      if (!st.ready) return;
+      try {
+        var OUT = 320;
+        var cv = d.createElement('canvas');
+        cv.width = OUT; cv.height = OUT;
+        var ctx = cv.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, OUT, OUT);
+        var s = st.base * st.z;
+        ctx.drawImage(img, (-st.x) / s, (-st.y) / s, st.sw / s, st.sh / s, 0, 0, OUT, OUT);
+        var out = cv.toDataURL('image/jpeg', 0.92);
+        var r = deferred.res; deferred.res = function () {};
+        try { origClose(); } catch (e) {}
+        r(out);
+      } catch (e) {
+        toast('Không cắt được ảnh này (trang nguồn chặn đọc ảnh)', 'err');
+      }
+    });
+    return promise;
+  }
+
   function editProfileDialog() {
     if (!w.CZ || !w.CZ.modal) return Promise.reject(new Error('Chưa sẵn sàng'));
     var u = current();
@@ -141,7 +275,7 @@
         '<input class=\"inp\" id=\"czPfName\" maxlength=\"40\" value=\"' + w.CZ.esc(curName) + '\" placeholder=\"Tên của bạn\">' +
         '<label class=\"fl mt\" for=\"czPfPic\">Avatar URL</label>' +
         '<input class=\"inp\" id=\"czPfPic\" value=\"' + w.CZ.esc(curPic) + '\" placeholder=\"https://... hoặc để trống\">' +
-        '<div class=\"row mt\"><input type=\"file\" id=\"czPfFile\" accept=\"image/*\" class=\"hide\"><button class=\"btn ghost sm\" id=\"czPfPick\">Chọn ảnh từ máy…</button><span class=\"sm muted\" id=\"czPfFileName\"></span></div>' +
+        '<div class=\"row mt\"><input type=\"file\" id=\"czPfFile\" accept=\"image/*\" class=\"hide\"><button class=\"btn ghost sm\" id=\"czPfPick\">Chọn ảnh từ máy…</button><button class=\"btn ghost sm\" id=\"czPfCrop\">Cắt / chỉnh ảnh…</button><span class=\"sm muted\" id=\"czPfFileName\"></span></div>' +
         '<div class=\"row mt\" id=\"czPfPrev\" style=\"align-items:center;gap:12px\">' +
           (curPic ? '<img src=\"' + w.CZ.esc(curPic) + '\" alt=\"\" style=\"width:48px;height:48px;border-radius:50%;object-fit:cover\">' : '<span class=\"ava\" style=\"width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:var(--surf2)\">' + w.CZ.esc(String(curName||'B')[0].toUpperCase()) + '</span>') +
           '<span class=\"sm muted\">Xem trước</span></div>' +
@@ -165,17 +299,25 @@
     fileIn.addEventListener('change', function () {
       var f = fileIn.files && fileIn.files[0];
       if (!f) return;
-      if (f.size > 800 * 1024) { toast('Ảnh quá lớn (>800KB) — chọn ảnh nhỏ hơn', 'err'); return; }
+      if (f.size > 8 * 1024 * 1024) { toast('Ảnh quá lớn (>8MB) — chọn ảnh nhỏ hơn', 'err'); return; }
       var rd = new FileReader();
       rd.onload = function () {
         var dataUrl = String(rd.result || '');
-        inpPic.value = dataUrl;
         fileName.textContent = f.name + ' · ' + Math.round(f.size / 1024) + 'KB';
-        paintPrev();
-        toast('Đã nạp ảnh từ máy', 'ok');
+        /* mở hộp CẮT ẢNH: kéo / thu phóng trước khi dùng (ảnh lưu chỉ ~vài chục KB) */
+        cropDialog(dataUrl).then(function (res) {
+          if (res) { inpPic.value = res; paintPrev(); toast('Đã nạp và cắt ảnh từ máy', 'ok'); }
+        });
       };
       rd.onerror = function () { toast('Không đọc được tệp ảnh', 'err'); };
       rd.readAsDataURL(f);
+    });
+    m.querySelector('#czPfCrop').addEventListener('click', function () {
+      var src = inpPic.value.trim();
+      if (!src) { toast('Chọn ảnh từ máy hoặc dán link ảnh trước đã', 'err'); return; }
+      cropDialog(src).then(function (res) {
+        if (res) { inpPic.value = res; paintPrev(); toast('Đã cắt ảnh', 'ok'); }
+      });
     });
     var deferred = {};
     var promise = new Promise(function (res, rej) { deferred.res = res; deferred.rej = rej; });
@@ -265,7 +407,7 @@
             persistSession: true, autoRefreshToken: true, detectSessionInUrl: true,
             flowType: 'pkce', storageKey: SB_STORAGE
           },
-          global: { headers: { 'x-client-info': 'chuseoz-web' } }
+          global: { headers: { 'x-client-info': 'ssochuz-web' } }
         });
       }
       return sb;

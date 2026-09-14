@@ -1,5 +1,5 @@
 /* ============================================================================
-   chuseoz — Worker đọc/ghi dữ liệu truyện + số liệu xếp hạng trên Cloudflare KV
+   ssochuz — Worker đọc/ghi dữ liệu truyện + số liệu xếp hạng trên Cloudflare KV
    ----------------------------------------------------------------------------
    Vì sao dùng cái này: sửa truyện/chương trên trang quản trị là người đọc thấy
    NGAY (1–2 giây). Không commit GitHub, không đợi build, không tốn phút CI.
@@ -58,12 +58,12 @@
      GOOGLE_CLIENT_ID  (secret/tuỳ chọn)    — Client ID của OAuth Web app (Google Identity Services)
      SESSION_SECRET    (secret, bắt buộc*)  — chuỗi ngẫu nhiên ≥ 32 ký tự, ký session bình luận/đăng nhập
                                             (*) bắt buộc nếu bật bình luận/đăng nhập người dùng
-     STATS_FLUSH_MS    (tuỳ chọn) = 20000  — gom lượt đọc bao nhiêu mili-giây thì ghi KV
+     STATS_FLUSH_MS    (tuỳ chọn) = 10000  — gom lượt đọc bao nhiêu mili-giây thì ghi KV
      FIREBASE_PROJECT  (KHÔNG cần nữa)      — chỉ dùng cho /api/stats/import-firebase
                                               khi muốn kéo số liệu cũ về KV một lần
    ============================================================================ */
 
-const VERSION = '1.6.0';
+const VERSION = '1.7.0';
 const JSONH = { 'content-type': 'application/json; charset=utf-8' };
 
 export default {
@@ -646,7 +646,7 @@ async function seed(req, env, cors) {
    quy mô web này KV là đủ và rẻ hơn nhiều.
    ============================================================================ */
 const STATS_KEY = 'stats';
-const FLUSH_MS = 20000;      /* gom lượt đọc trong RAM bao lâu thì ghi (đổi bằng biến STATS_FLUSH_MS) */
+const FLUSH_MS = 10000;      /* gom lượt đọc trong RAM bao lâu thì ghi (đổi bằng biến STATS_FLUSH_MS) */
 const DAY_KEEP = 45;         /* giữ bao nhiêu ngày để xếp hạng ngày/tuần/tháng */
 const VOTER_CAP = 20000;     /* tối đa bao nhiêu người bầu/bộ (chống phình khoá) */
 let _buf = new Map();        /* slug -> { v: lượt đọc, o: phiếu } đang đệm */
@@ -784,16 +784,34 @@ function publicStat(it, today) {
   };
 }
 
-/* GET /api/stats — web đọc chỗ này để vẽ bảng xếp hạng (không cần Firebase) */
+/* GET /api/stats — web đọc chỗ này để vẽ bảng xếp hạng (không cần Firebase)
+   · Đọc kèm phần đang ĐỆM trong RAM (chưa kịp ghi KV) để lượt đọc/bình chọn
+     hiện ngay tức thì, không phải chờ đợt gom ~10 giây.
+   · `cache-control: no-store` — bản cũ để max-age=60 nên trình duyệt/CDN giữ
+     số CŨ tới một phút: vote xong không thấy tăng, bỏ vote không thấy giảm.
+     Số liệu phải luôn là con số mới nhất. */
 async function getStats(env, cors) {
   if (!env.CZ_KV) return noKV(cors);
-  await flushStats(env);
   const st = await readStats(env);
   const today = dayStr();
   const items = {};
   Object.keys(st.items).forEach((slug) => { items[slug] = publicStat(st.items[slug], today); });
+  /* cộng phần đang đệm (của cả những bộ chưa có mặt trong KV) */
+  for (const [slug, d] of _buf) {
+    if (!d.v && !d.o) continue;
+    const it = st.items[slug] || blankStat();
+    const clone = {
+      base: it.base || { views: 0, votes: 0 },
+      got: { views: ((it.got || {}).views || 0) + d.v, votes: ((it.got || {}).votes || 0) + d.o },
+      days: Object.assign({}, it.days), voters: it.voters, chap: it.chap, updatedAt: today,
+    };
+    const dd = Object.assign({ v: 0, o: 0 }, clone.days[today] || {});
+    dd.v += d.v; dd.o += d.o;
+    clone.days[today] = dd;
+    items[slug] = publicStat(clone, today);
+  }
   return json({ ok: true, source: 'kv', fetchedAt: new Date().toISOString(), updatedAt: st.updatedAt || '', items },
-    { cors, headers: { 'cache-control': 'public, max-age=60' } });
+    { cors, headers: { 'cache-control': 'no-store' } });
 }
 
 /* POST /api/view { slug, vid, ch } — 1 máy/1 bộ/1 ngày chỉ tính 1 lượt */
@@ -818,15 +836,22 @@ async function postView(req, env, ctx, cors) {
    · ch = 0 / không gửi  → phiếu cho CẢ BỘ (như cũ)
    · ch = 12              → phiếu cho riêng CHƯƠNG 12
    Mỗi người được thích MỖI CHƯƠNG MỘT LẦN (khoá voters là `who#ch`), và tổng
-   phiếu của bộ vẫn tăng để bảng xếp hạng ngoài trang chủ phản ánh đúng. */
+   phiếu của bộ vẫn tăng để bảng xếp hạng ngoài trang chủ phản ánh đúng.
+   BỎ PHIẾU: nhận cả khoá đăng nhập (g:…) lẫn khoá máy (a:vid/i:ip) — phiếu
+   đặt lúc ẩn danh vẫn gỡ được sau khi đăng nhập (và ngược lại), không còn
+   cảnh "bỏ thích mà số không giảm". */
 async function postVote(req, env, cors) {
   if (!env.CZ_KV) return noKV(cors);
   const body = await req.json().catch(() => ({}));
   const slug = cleanSlug(body.slug);
   if (!slug) return json({ ok: false, error: 'thiếu slug hợp lệ' }, { status: 400, cors });
   const u = (await userFromReq(req, env)).user;
-  const who = u ? 'g:' + hash(u.uid) : viewerOf(req, body);
-  if (!who) return json({ ok: false, error: 'thiếu vid (mã máy) để chống bầu nhiều lần' }, { status: 400, cors });
+  const ids = [];
+  if (u) ids.push('g:' + hash(u.uid));
+  const anon = viewerOf(req, body);
+  if (anon && ids.indexOf(anon) < 0) ids.push(anon);
+  if (!ids.length) return json({ ok: false, error: 'thiếu vid (mã máy) để chống bầu nhiều lần' }, { status: 400, cors });
+  const who = ids[0];
   const ch = Math.max(0, Math.min(99999, parseInt(body.ch, 10) || 0));
   const want = (body.vote === 1 || body.vote === true || body.vote === '1') ? 1 : 0;
   /* mỗi chương một phiếu nên hạn mức rộng hơn trước (40/giờ → 400/giờ) */
@@ -836,19 +861,20 @@ async function postVote(req, env, cors) {
   await flushStats(env);
   const st = await readStats(env);
   const it = statOf(st, slug);
-  const vkey = ch > 0 ? (who + '#' + ch) : who;
-  const has = !!it.voters[vkey];
+  const vkeys = ids.map((x) => (ch > 0 ? x + '#' + ch : x));
+  const vkey = vkeys[0];
+  const existing = vkeys.filter((k) => !!it.voters[k]);
   let changed = false;
-  if (want && !has) {
+  if (want && !existing.length) {
     if (Object.keys(it.voters).length < VOTER_CAP) it.voters[vkey] = 1;
     it.got.votes += 1; addDay(it, dayStr(), 0, 1);
     if (ch > 0) it.chap[ch] = (Number(it.chap[ch]) || 0) + 1;
     changed = true;
-  } else if (!want && has) {
-    delete it.voters[vkey];
-    it.got.votes = Math.max(0, it.got.votes - 1); addDay(it, dayStr(), 0, -1);
+  } else if (!want && existing.length) {
+    existing.forEach((k) => { delete it.voters[k]; });
+    it.got.votes = Math.max(0, it.got.votes - existing.length); addDay(it, dayStr(), 0, -existing.length);
     if (ch > 0) {
-      it.chap[ch] = Math.max(0, (Number(it.chap[ch]) || 0) - 1);
+      it.chap[ch] = Math.max(0, (Number(it.chap[ch]) || 0) - existing.length);
       if (!it.chap[ch]) delete it.chap[ch];
     }
     changed = true;

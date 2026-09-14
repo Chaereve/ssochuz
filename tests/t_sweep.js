@@ -54,29 +54,29 @@ async function sweep(label, p, opt = {}) {
   const out = {};
 
   const home = page('index.html', {
-    url: 'https://chuseoz.pages.dev/',
+    url: 'https://ssochuz.pages.dev/',
     fetch: dataFetch({ apiBase: 'https://cms.test' })
   });
   /* gieo sẵn dữ liệu để kệ Đọc tiếp / Tủ truyện có mặt */
-  home.win.localStorage.setItem('chuseoz-prog-third-person', JSON.stringify({ ch: 3, at: Date.now() }));
-  home.win.localStorage.setItem('chuseoz-shelf', JSON.stringify(['third-person']));
+  home.win.localStorage.setItem('ssochuz-prog-third-person', JSON.stringify({ ch: 3, at: Date.now() }));
+  home.win.localStorage.setItem('ssochuz-shelf', JSON.stringify(['third-person']));
   await wait(1200);
   out.home = await sweep('trang chủ', home);
 
   const story = page('truyen.html', {
-    url: 'https://chuseoz.pages.dev/truyen/third-person/',
+    url: 'https://ssochuz.pages.dev/truyen/third-person/',
     fetch: dataFetch({ apiBase: 'https://cms.test' })
   });
   await wait(1300);
   out.story = await sweep('trang truyện + trang đọc', story, { max: 220 });
 
   /* quản trị ở chế độ tĩnh (không có Worker): bấm hết các tab/nút */
-  const admin = page('admin.html', { url: 'https://chuseoz.pages.dev/admin', fetch: dataFetch({ apiBase: 'https://cms.test' }) });
+  const admin = page('admin.html', { url: 'https://ssochuz.pages.dev/admin', fetch: dataFetch({ apiBase: 'https://cms.test' }) });
   await wait(700);
   out.admin = await sweep('trang quản trị (không Worker)', admin, { max: 90 });
 
   const locked = page('truyen.html', {
-    url: 'https://chuseoz.pages.dev/truyen/my-boss/',
+    url: 'https://ssochuz.pages.dev/truyen/my-boss/',
     fetch: dataFetch({ apiBase: 'https://cms.test' })
   });
   await wait(1100);

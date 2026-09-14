@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Sinh `sitemap.xml` + `robots.txt` từ data/registry.json.
 
-    python3 tools/build_sitemap.py                          # dùng https://chuseoz.pages.dev
+    python3 tools/build_sitemap.py                          # dùng https://ssochuz.pages.dev
     python3 tools/build_sitemap.py --base https://ten-mien-cua-ban
     python3 tools/build_sitemap.py --base https://abc.pages.dev --dry   # chỉ in, không ghi
 
@@ -14,7 +14,7 @@ import sys
 from datetime import date
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DEFAULT_BASE = 'https://chuseoz.pages.dev'
+DEFAULT_BASE = 'https://ssochuz.pages.dev'
 
 
 def esc(s):

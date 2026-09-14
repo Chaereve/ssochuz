@@ -3,12 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Đang tải… · chuseoz</title>
-<meta name="description" content="Thông tin truyện, danh sách chương và trình đọc truyện chuyển thể trên chuseoz.">
+<title>Đang tải… · ssochuz</title>
+<meta name="description" content="Thông tin truyện, danh sách chương và trình đọc truyện chuyển thể trên ssochuz.">
 <meta name="theme-color" content="#faf8f4">
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <link rel="stylesheet" href="/cz.css?v=20260914b">
-<script>/* chống nháy nền */try{var t=localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<script>/* chống nháy nền */try{var t=localStorage.getItem('ssochuz-theme')||localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
 <body class="spage">
 <div id="sprog" aria-hidden="true"><i></i></div>
@@ -109,7 +113,6 @@
   <div class="ract" id="rdActs"></div>
   <!-- BÌNH LUẬN NGAY TRONG TRANG ĐỌC (theo từng chương) — cz-story.js dựng nội dung -->
   <section class="rdcmts" id="rdCmts" aria-label="Bình luận chương này"></section>
-  <!-- rdkeys hidden per request - was: phím tắt cuối trang đọc -->
 </section>
 
 <footer id="ftr"></footer>

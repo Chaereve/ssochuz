@@ -98,7 +98,7 @@ function makeApi(log, votes) {
   /* ---------- 3. trang đọc: đếm lượt đọc + bấm Thích gửi lên KV ---------- */
   const log2 = [], votes2 = {};
   const st = page('truyen.html', {
-    url: 'https://chuseoz.pages.dev/truyen/third-person/#chuong-2',
+    url: 'https://ssochuz.pages.dev/truyen/third-person/#chuong-2',
     config: { CZ_API: BASE },
     fetch: dataFetch({ apiBase: BASE, api: makeApi(log2, votes2), log: log2 })
   });

@@ -1,5 +1,5 @@
 /* ============================================================================
-   chuseoz · TRANG QUẢN TRỊ (bản viết lại)
+   ssochuz · TRANG QUẢN TRỊ (bản viết lại)
    ----------------------------------------------------------------------------
    Cách hoạt động: không đụng tới GitHub. Sửa xong bấm Lưu là ghi thẳng lên
    Cloudflare KV qua Worker, người đọc thấy sau 1–2 giây.
@@ -621,7 +621,7 @@
   function saveRegistry(okMsg) {
     if (!REG) return Promise.resolve();
     REG.rev = new Date().toISOString().slice(0, 16).replace('T', ' ');
-    REG.source = { synced: new Date().toISOString(), note: 'sửa từ trang quản trị chuseoz' };
+    REG.source = { synced: new Date().toISOString(), note: 'sửa từ trang quản trị ssochuz' };
     if (!ONLINE) {
       saveDraft(); dirty.meta = dirty.set = false; markDirty();
       msg('Chưa nối Worker — đã lưu nháp trong máy. Dùng “Sao lưu toàn bộ” để xuất JSON.', 'info');
@@ -664,7 +664,7 @@
       localStorage.setItem(LS.draft, JSON.stringify({ at: Date.now(), reg: REG, books: BOOKS }));
       // cũng cập nhật cache mà trang chủ đọc, để đổi slug thấy ngay cả khi chưa nối Worker
       try {
-        localStorage.setItem('chuseoz-reg', JSON.stringify({ t: Date.now(), v: REG }));
+        localStorage.setItem('ssochuz-reg', JSON.stringify({ t: Date.now(), v: REG }));
         // clear memo để CZ.lib() đọc lại
         if (window.CZ && CZ._memo) { CZ._memo.reg = null; CZ._setLib(); }
       } catch (e2) {}
@@ -1013,13 +1013,13 @@
     });
   }
   function backup() {
-    var dump = { _: 'chuseoz-backup', at: new Date().toISOString(), registry: REG, books: {} };
+    var dump = { _: 'ssochuz-backup', at: new Date().toISOString(), registry: REG, books: {} };
     var lib = (REG.lib || []), i = 0;
     var step = function () {
       if (i >= lib.length) {
         var blob = new Blob([JSON.stringify(dump)], { type: 'application/json' });
         var a = document.createElement('a');
-        a.href = URL.createObjectURL(blob); a.download = 'chuseoz-backup-' + today() + '.json'; a.click();
+        a.href = URL.createObjectURL(blob); a.download = 'ssochuz-backup-' + today() + '.json'; a.click();
         setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
         msg('Đã tải bản sao lưu (' + Object.keys(dump.books).length + ' bộ).', 'ok');
         return;
@@ -1779,7 +1779,7 @@
     saveRegistry(what).then(function () { renderList(); });
   });
   $('#btnExport').addEventListener('click', function () {
-    CZ.download('chuseoz-registry-' + today() + '.json', JSON.stringify(REG, null, 1));
+    CZ.download('ssochuz-registry-' + today() + '.json', JSON.stringify(REG, null, 1));
   });
   $('#btnAdd2').addEventListener('click', function () { show('new'); });
   $('#qkBody').addEventListener('input', function () { $('#qkStat').textContent = num(CZ.words(this.value)) + ' từ'; });
@@ -2011,7 +2011,7 @@
           missingChapterNumbers: r.gaps || [] };
       })
     };
-    CZ.download('chuseoz-doctor-' + today() + '.json', JSON.stringify(rep, null, 1));
+    CZ.download('ssochuz-doctor-' + today() + '.json', JSON.stringify(rep, null, 1));
     toast('Đã tải báo cáo', 'ok');
   });
 
@@ -2020,7 +2020,7 @@
   $('#cmQ').addEventListener('input', function () { MOD.q = this.value.trim(); paintMod(); });
   $('#cmBook').addEventListener('change', function () { MOD.slug = this.value; paintMod(); });
   $('#cmExport').addEventListener('click', function () {
-    CZ.download('chuseoz-comments-' + today() + '.json', JSON.stringify(MOD.all, null, 1));
+    CZ.download('ssochuz-comments-' + today() + '.json', JSON.stringify(MOD.all, null, 1));
     toast('Đã xuất ' + MOD.all.length + ' bình luận', 'ok');
   });
 
@@ -2031,7 +2031,7 @@
   $('#btnStatsCsv').addEventListener('click', function () {
     var items = STATS_LAST.items || {};
     if (!Object.keys(items).length) return toast('Chưa có số liệu để xuất', 'err');
-    CZ.download('chuseoz-stats-' + today() + '.csv', statsCsv(items, STATS_LAST.by || {}), 'text/csv');
+    CZ.download('ssochuz-stats-' + today() + '.csv', statsCsv(items, STATS_LAST.by || {}), 'text/csv');
     toast('Đã xuất CSV', 'ok');
   });
 

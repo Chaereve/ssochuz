@@ -4,14 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
-<title>chuseoz · trang quản trị</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23faf8f4'/%3E%3Cpath d='M16 7l7 4v10l-7 4-7-4V11z' fill='none' stroke='%23a63a52' stroke-width='2.4'/%3E%3C/svg%3E">
+<title>ssochuz · trang quản trị</title>
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
 <link rel="stylesheet" href="/cz.css?v=20260914b">
-<script>/* chống nháy nền */try{var t=localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<script>/* chống nháy nền */try{var t=localStorage.getItem('ssochuz-theme')||localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
 <body class="admin">
 <div class="abar"><div class="in">
-  <a class="logo" href="/"><span class="dot"></span>chuseoz<i>.</i></a>
+  <a class="logo" href="/"><span class="dot"></span>ssochuz<i>.</i></a>
   <span class="pill acc">quản trị</span>
   <span class="chip" id="chipConn"><span class="d"></span><span id="chipConnTxt">chưa nối Worker</span></span>
   <span class="chip hide" id="chipData"><span class="d"></span><span id="chipDataTxt">—</span></span>
@@ -37,7 +39,7 @@
   <!-- ============ 0. CỔNG VÀO — chỉ quản trị ============ -->
   <section id="gate">
     <div class="gate">
-      <h2>Trang quản trị chuseoz</h2>
+      <h2>Trang quản trị ssochuz</h2>
       <p class="gsub">Trang này <b>không mở cho người đọc</b>. Vào bằng một trong hai cách:
         đăng nhập tài khoản Google nằm trong danh sách quản trị, hoặc dùng khoá <code>ADMIN_KEY</code> của Worker.</p>
       <div class="grow2">

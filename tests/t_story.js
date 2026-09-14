@@ -14,7 +14,7 @@
 const { page, dataFetch } = require('./mk');
 const log = [];
 const p = page('truyen.html', {
-  url: 'https://chuseoz.pages.dev/truyen/third-person/',
+  url: 'https://ssochuz.pages.dev/truyen/third-person/',
   fetch: dataFetch({ apiBase: 'https://cms.test', log })
 });
 const { win, doc, errors } = p;
@@ -62,12 +62,12 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     crumb: txt('#rdCrumb'),
     nav: $$('#rdNav button').map(b => b.textContent.trim()),
     acts: $$('#rdActs > *').map(b => b.textContent.trim()),
-    progress: LS.getItem('chuseoz-prog-third-person')
+    progress: LS.getItem('ssochuz-prog-third-person')
   };
 
   /* ---------- chuyển chương bằng nút + phím ---------- */
   click('#navNext'); await wait(400);
-  out.afterNext = { head: txt('#rdHead'), progress: LS.getItem('chuseoz-prog-third-person') };
+  out.afterNext = { head: txt('#rdHead'), progress: LS.getItem('ssochuz-prog-third-person') };
   doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); await wait(300);
   out.afterKey = txt('#rdHead');
   doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true })); await wait(300);
@@ -76,9 +76,9 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   /* ---------- thích / lưu / đánh dấu ---------- */
   click('#actLike'); click('#actSave'); click('#actMark'); await wait(120);
   out.marks = {
-    like: LS.getItem('chuseoz-like-third-person'),
-    shelf: LS.getItem('chuseoz-shelf'),
-    mark: LS.getItem('chuseoz-mark-third-person')
+    like: LS.getItem('ssochuz-like-third-person'),
+    shelf: LS.getItem('ssochuz-shelf'),
+    mark: LS.getItem('ssochuz-mark-third-person')
   };
 
   /* ---------- cài đặt đọc ---------- */
@@ -90,7 +90,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   click(themeOpts[2]); await wait(120);  /* Tối — chỉ còn 3 tông */
   const modeOpts = $$('#setBody button[data-set="mode"]');
   click(modeOpts[1]); await wait(200);
-  out.readerPref = LS.getItem('chuseoz-reader');
+  out.readerPref = LS.getItem('ssochuz-reader');
   out.rdState = { theme: doc.body.dataset.rd, mode: win.CZ.rdGet().mode, size: win.CZ.rdGet().size };
   click($$('#setSheet [data-shut]')[0]); await wait(80);
 
@@ -107,17 +107,17 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   out.back = { reading: doc.body.classList.contains('reading'), hash: win.location.hash, chapNow: txt('#chapGrid .cha.now') };
 
   /* ---------- link cũ #page-N ---------- */
-  const r2 = page('truyen.html', { url: 'https://chuseoz.pages.dev/truyen/lunar-secret/#page-5', fetch: dataFetch() });
+  const r2 = page('truyen.html', { url: 'https://ssochuz.pages.dev/truyen/lunar-secret/#page-5', fetch: dataFetch() });
   await wait(1500);
   out.legacy = {
     errors: r2.errors.slice(0, 3),
     reading: r2.doc.body.classList.contains('reading'),
     head: (r2.doc.querySelector('#rdHead') || {}).textContent,
-    progress: r2.win.localStorage.getItem('chuseoz-prog-lunar-secret')
+    progress: r2.win.localStorage.getItem('ssochuz-prog-lunar-secret')
   };
 
   /* ---------- truyện 0 chương (“Sắp ra mắt”) ---------- */
-  const r3 = page('truyen.html', { url: 'https://chuseoz.pages.dev/truyen/my-boss/', fetch: dataFetch() });
+  const r3 = page('truyen.html', { url: 'https://ssochuz.pages.dev/truyen/my-boss/', fetch: dataFetch() });
   await wait(1400);
   const body3 = r3.doc.body.textContent.replace(/\s+/g, ' ').trim();
   out.locked = {
@@ -134,7 +134,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   
   /* ---------- link cũ /reader?slug=…&ch=… vẫn mở đúng chương ---------- */
   const r4 = page('truyen.html', {
-    url: 'https://chuseoz.pages.dev/reader?slug=third-person&ch=3',
+    url: 'https://ssochuz.pages.dev/reader?slug=third-person&ch=3',
     fetch: dataFetch({ apiBase: 'https://cms.test' }),
     config: { CZ_API: '' }
   });
@@ -149,7 +149,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   /* ---------- số chương hiển thị lấy từ TIÊU ĐỀ, không lấy vị trí ----------
      “Third Person” mở đầu bằng “Lời Mở Đầu” nên vị trí 2 thực ra là “Chương 1”. */
   const r5 = page('truyen.html', {
-    url: 'https://chuseoz.pages.dev/truyen/third-person/#chuong-2',
+    url: 'https://ssochuz.pages.dev/truyen/third-person/#chuong-2',
     fetch: dataFetch({ apiBase: 'https://cms.test' })
   });
   await wait(900);
