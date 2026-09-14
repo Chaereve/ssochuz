@@ -42,8 +42,8 @@ window.CZ_STATS_DIRECT = false;                           // số xếp hạng l
 window.CZ_AUTH_PROVIDER = 'supabase';
 
 /* --- SUPABASE (bắt buộc khi CZ_AUTH_PROVIDER = 'supabase') --------------- */
-window.CZ_SUPABASE_URL = '';          // ví dụ https://abcdefghijk.supabase.co
-window.CZ_SUPABASE_ANON_KEY = '';     // Project Settings → API → anon public
+window.CZ_SUPABASE_URL = 'https://hnyzrkdlmvelbgcowztk.supabase.co';          // ví dụ https://abcdefghijk.supabase.co
+window.CZ_SUPABASE_ANON_KEY = 'sb_publishable_G-a-An_7qBDMixg3G4kVDA_iwSon3O5';     // Project Settings → API → anon public
 
 /* --- GOOGLE (dùng khi CZ_AUTH_PROVIDER = 'google', hoặc làm nút dự phòng) -- */
 window.CZ_GOOGLE_CLIENT_ID = '164350528370-3jmoj701gt07kl4v832vpb25qsfd3qh2.apps.googleusercontent.com';
@@ -52,7 +52,7 @@ window.CZ_GOOGLE_CLIENT_ID = '164350528370-3jmoj701gt07kl4v832vpb25qsfd3qh2.apps
    Người thường đăng nhập vẫn chỉ là người đọc: mục "Quản trị" bị ẨN hoàn toàn
    và /admin chặn ngay từ cửa. Thêm email vào đây để cấp quyền (không phân biệt
    hoa thường). Cũng có thể đặt biến ADMIN_EMAILS trong Worker để khớp cả hai phía. */
-window.CZ_ADMIN_EMAILS = ['kimtong1906@gmail.com'];
+window.CZ_ADMIN_EMAILS = ['kimtong1906@gmail.com','freshstation01@gmail.com','chuseoz.ofc@gmail.com'];
 
 /* Firebase: KHÔNG còn dùng để đăng nhập hay xếp hạng.
    CZ_FIREBASE_PROJECT chỉ để /api/stats/import-firebase kéo số CŨ về KV 1 lần. */
