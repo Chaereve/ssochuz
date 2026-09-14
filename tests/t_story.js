@@ -40,6 +40,10 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     chapCount: txt('#chapCount')
   };
   out.chapters = { n: $$('#chapGrid .cha').length, first: txt('#chapGrid .cha') };
+  /* nút Thích phải LUÔN hiện ở trang truyện và có lớp .like nổi bật */
+  const lb = $('#likeBtn');
+  out.likeBtn = { present: !!lb, cls: lb ? lb.className : '', shelf: !!$('#shelfBtn') };
+  if (!lb || !lb.classList.contains('like')) out.errors0.push('nút Thích thiếu / không có lớp .like ở trang truyện');
   /* tìm chương */
   const cq = $('#chapQ');
   cq.value = 'kẹo'; cq.dispatchEvent(new win.Event('input', { bubbles: true })); await wait(250);

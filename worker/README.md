@@ -2,7 +2,10 @@
 
 **Mục tiêu:** sửa truyện/chương trên web quản trị ⇒ người đọc thấy **ngay** (vài giây), không commit GitHub, không đợi Cloudflare build, không tốn phút CI.
 Từ bản **1.4.0**: lượt đọc và bình chọn cũng nằm trên **KV** — **Firebase không còn cần nữa**.
-Từ bản **1.6.0** (đang dùng): đăng nhập qua **Supabase** (hết lỗi `origin_mismatch` của Google), thích **theo từng chương**, bình luận **ngay trong trang đọc** (khách chưa đăng nhập vẫn gửi được), và có `/api/recount` để **chữa dứt điểm số chương sai**.
+Từ bản **1.7.0** (đang dùng): số liệu vote/view đồng bộ NHANH và chính xác — `/api/stats` trả `no-store`
+và cộng cả phần đang đệm nên lượt đọc hiện ngay; bỏ phiếu nhận cả khoá đăng nhập lẫn khoá máy nên
+**gỡ vote luôn giảm đúng**; web đổi tên thương hiệu **ssochuz** (khoá localStorage tự chuyển, không mất dữ liệu).
+Trước đó, bản **1.6.0**: đăng nhập qua **Supabase** (hết lỗi `origin_mismatch` của Google), thích **theo từng chương**, bình luận **ngay trong trang đọc** (khách chưa đăng nhập vẫn gửi được), và có `/api/recount` để **chữa dứt điểm số chương sai**.
 
 ```
 Admin (admin.html)  ──PUT──▶  Worker (worker/cms.js)  ──▶  Cloudflare KV
@@ -19,13 +22,13 @@ GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới c�
 
 | Trước | Sau |
 |---|---|
-| `/api/health` trả 200 nhưng **thiếu header CORS** → trang `/admin` gọi từ domain khác bị trình duyệt chặn, fetch ném `Failed to fetch`, admin báo nhầm "Worker chưa deploy / KV id còn là placeholder" | `/api/health` (và `/`) trả kèm `Access-Control-Allow-Origin` như mọi endpoint khác. Kiểm tra: mở `<worker>/api/health` phải thấy `"version": "1.6.0"` |
+| `/api/health` trả 200 nhưng **thiếu header CORS** → trang `/admin` gọi từ domain khác bị trình duyệt chặn, fetch ném `Failed to fetch`, admin báo nhầm "Worker chưa deploy / KV id còn là placeholder" | `/api/health` (và `/`) trả kèm `Access-Control-Allow-Origin` như mọi endpoint khác. Kiểm tra: mở `<worker>/api/health` phải thấy `"version": "1.7.0"` |
 | Cache khoá công khai Supabase **cất nhầm kiểu**: lần verify token THỨ HAI trở đi (cùng isolate) ném lỗi `SubtleCrypto.verify: not a CryptoKey` → `POST /api/auth/supabase` và bình luận đều **401** dù token hoàn toàn hợp lệ | Cache cất đúng `{key, algo, alg}`; verify ổn định từ lần đầu đến lần thứ n (đã có test hồi quy) |
 | Bình luận bị 401 chỉ báo chung chung "Phiên đăng nhập hết hạn", không phân biệt được **hết hạn thật** với **Worker cấu hình sai** | Mọi 401 của `/api/auth/supabase`, `/api/auth/me`, `/api/comments/*` kèm **lý do thật** trong body (`token sai issuer…`, `chưa đặt SUPABASE_JWT_SECRET…`, `phiên hết hạn…`); web hiển thị đúng nguyên nhân, `cz-auth.js` ghi lý do ra console |
 | Khó biết Worker đặt `SUPABASE_URL` có đúng project không | 401 của `/api/auth/supabase` trả kèm `supabaseUrl` đang cấu hình; lỗi sai issuer nêu cả URL của token lẫn URL của Worker |
 
 > **Đang gặp lỗi 401/CORS khi bình luận?** Deploy lại bản này (`npx wrangler deploy`) rồi mở
-> `https://<worker>/api/health` — nếu `version` chưa phải `1.6.0` thì bản chạy trên mạng vẫn là bản cũ.
+> `https://<worker>/api/health` — nếu `version` chưa phải `1.7.0` thì bản chạy trên mạng vẫn là bản cũ.
 > Xem thêm mục **7c** bên dưới để bắt bệnh theo từng thông báo.
 
 ## Có gì mới ở bản 1.5.0
@@ -55,7 +58,7 @@ GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới c�
 | `ALLOW_ORIGIN` | không | mặc định `*`; muốn chặt thì điền tên miền web |
 | `BLOG` | không | feed Blogger cho nút "Đồng bộ Blogger" |
 | `FIREBASE_PROJECT` | không | chỉ dùng khi muốn kéo số liệu cũ từ Firestore (1 lần) |
-| `STATS_FLUSH_MS` | không | thời gian gom số liệu trước khi ghi KV (mặc định 20000) |
+| `STATS_FLUSH_MS` | không | thời gian gom số liệu trước khi ghi KV (mặc định 10000) |
 
 ## Danh sách API bản 1.6.0 (bổ sung cho bảng ở dưới)
 
@@ -185,7 +188,7 @@ node tests/t_worker.mjs        # hoặc: cd tests && node run.js  (chạy hết 
 
 Thông báo này chỉ nói rằng `GET /api/whoami` không chấp nhận khoá. Có ba trường hợp khác nhau:
 
-1. **Mở `<URL Worker>/api/health` trên tab mới.** Bản Worker mới phải trả `version: "1.6.0"` và
+1. **Mở `<URL Worker>/api/health` trên tab mới.** Bản Worker mới phải trả `version: "1.7.0"` và
    `adminConfigured: true`. Nếu `adminConfigured: false`, bạn đang đặt `ADMIN_KEY` ở nhầm Worker/
    Pages hoặc chưa bấm **Deploy** sau khi tạo secret.
 2. Trong Cloudflare → **Workers & Pages → chuseoz-cms → Settings → Variables and Secrets**,

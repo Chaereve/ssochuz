@@ -1244,6 +1244,15 @@ kbd { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; b
   .ract > *:hover, .tile:hover, .cha:hover { transform: none; }
   .card:hover .th, .relcard:hover, .tile:hover { box-shadow: none; }
 }
+/* đổi sáng/tối: pha màu mượt trong khoảnh khắc thay vì chớp nền đột ngột
+   (JS gắn .theming ~400ms khi bấm Theme; không ảnh hưởng thao tác thường) */
+html.theming, html.theming *, html.theming *::before, html.theming *::after {
+  transition: background-color .32s linear, color .32s linear, border-color .32s linear,
+    fill .32s linear, stroke .32s linear !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  html.theming, html.theming *, html.theming *::before, html.theming *::after { transition: none !important; }
+}
 
 /* ===================== 12b. NỀN ĐỌC (3 tông) + 3 FONT ================== */
 body[data-rd="sang"] { --rd-bg: #ffffff; --rd-tx: #191712; --rd-mut: #6d6659; --rd-bd: rgba(30, 22, 12, .12);
@@ -1403,6 +1412,13 @@ body.rd-fs .rdbar { position: fixed; left:0; right:0; }
 .czcrop-tools { display: flex; align-items: center; gap: 10px; margin: 14px auto 0; max-width: min(300px, 78vw); }
 .czcrop-tools input[type="range"] { flex: 1; accent-color: var(--acc); height: 26px; }
 @media (max-width: 480px) { .czcrop { width: 100%; } .czcrop-tools { max-width: 100%; } }
+/* màn rất hẹp: nút gọn lại để hàng nút không tràn / phải quấn quá nhiều */
+@media (max-width: 430px) {
+  .hero .btn-row .btn.lg, .shero .btn-row .btn.lg { padding: 11px 14px; font-size: 13.5px; }
+  .shero .btn-row .btn { padding: 9px 11px; font-size: 12.5px; gap: 6px; }
+  .chapbar .seg button { padding: 0 8px; font-size: 11.5px; }
+  .hero h1 { font-size: 30px; }
+}
 
 /* ==========================================================================
    v1.5 · ĐĂNG NHẬP (Supabase) · THÍCH THEO CHƯƠNG · BÌNH LUẬN TRONG TRANG ĐỌC

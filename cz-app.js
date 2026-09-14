@@ -379,6 +379,11 @@
   }
   function themeToggle() {
     var now = d.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    /* đổi nền mượt trong ~.35s thay vì chớp trắng/đen đột ngột */
+    if (!reduce) {
+      d.documentElement.classList.add('theming');
+      setTimeout(function () { d.documentElement.classList.remove('theming'); }, 400);
+    }
     d.documentElement.setAttribute('data-theme', now);
     safeSet(LS.theme, now);
     return now;
