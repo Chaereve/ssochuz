@@ -1239,7 +1239,7 @@
          vị trí trong kho chương nên không phải lúc nào cũng trùng tên chương thật. */
       var chLabel = String(opt.chLabel || '').trim();
       function chWord() { return chLabel || (chap ? 'chương ' + chap : ''); }
-      var state = { all: [], byChap: {}, filter: chap > 0 && opt.chapterFilter !== false ? 'chap' : 'all', busy: false, count: 0 };
+      var state = { all: [], byChap: {}, filter: chap > 0 && opt.chapterFilter !== false ? 'chap' : 'all', busy: false, count: 0, replyTo: '' };
 
       function u() { return (w.CZ_AUTH && w.CZ_AUTH.current && w.CZ_AUTH.current()) || null; }
       function tk() { return (w.CZ_AUTH && w.CZ_AUTH.token && w.CZ_AUTH.token()) || ''; }
@@ -1263,16 +1263,31 @@
           ? '<img class="cmt-ava" src="' + esc(o.picture) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
           : '<span class="cmt-ava cmt-ava--ph">' + esc(String((o && (o.name || 'B')) || 'B')[0].toUpperCase()) + '</span>';
       }
+      function replyForm(c) {
+        var me = u();
+        var target = c && (c.name || 'Bạn đọc');
+        return '<div class="cmt-reply-form" data-reply-form="' + esc(c.id) + '">' +
+          '<div class="cmt-reply-label">Trả lời <b>' + esc(target) + '</b></div>' +
+          (!me ? '<input class="cmt-name" data-reply-name maxlength="40" placeholder="Tên của bạn (không bắt buộc)" value="' + esc(guestName()) + '">' : '') +
+          '<div class="cmt-reply-row"><textarea data-reply-text="' + esc(c.id) + '" maxlength="2000" rows="2" placeholder="Viết câu trả lời…"></textarea>' +
+          '<div class="cmt-reply-actions"><span class="cmt-count" data-reply-count="' + esc(c.id) + '">0/2000</span>' +
+          '<button class="btn ghost sm" data-reply-cancel="' + esc(c.id) + '" type="button">Huỷ</button>' +
+          '<button class="btn pri sm" data-reply-send="' + esc(c.id) + '" type="button">Gửi trả lời</button></div></div>' +
+        '</div>';
+      }
       function itemHTML(c) {
-        var me = u() && (c.uid === u().uid || String(c.uid) === String(u().uid));
+        var meUser = u();
+        var me = meUser && (c.uid === meUser.uid || String(c.uid) === String(meUser.uid));
         var admin = !!(w.CZ_AUTH && w.CZ_AUTH.isAdmin && w.CZ_AUTH.isAdmin());
         return '<div class="cmt-item" data-id="' + esc(c.id) + '">' + ava(c) +
           '<div class="cmt-body"><div class="cmt-h"><b>' + esc(c.name || 'Bạn đọc') + '</b>' +
             (c.guest ? '<span class="cmt-guest" title="Bình luận khi chưa đăng nhập">khách</span>' : '') +
             (c.ch ? '<span class="cmt-ch">chương ' + esc(c.ch) + '</span>' : '') +
             '<span class="cmt-time">' + esc(timeAgo(c.createdAt)) + '</span>' +
+            '<button class="cmt-reply" data-reply="' + esc(c.id) + '" type="button">Trả lời</button>' +
             ((me || admin) ? '<button class="cmt-del" data-del="' + esc(c.id) + '" title="Xoá bình luận" aria-label="Xoá bình luận">✕</button>' : '') +
-          '</div><div class="cmt-text">' + esc(c.text) + '</div></div></div>';
+          '</div><div class="cmt-text">' + esc(c.text) + '</div>' +
+          (state.replyTo === c.id ? replyForm(c) : '') + '</div></div>';
       }
       function list() {
         var rows = state.filter === 'chap' ? state.all.filter(function (c) { return (Number(c.ch) || 0) === chap; }) : state.all;
@@ -1281,7 +1296,24 @@
             ? 'Chưa có bình luận nào cho ' + chWord() + '. Viết câu đầu tiên đi!'
             : 'Chưa có bình luận nào. Hãy là người đầu tiên!') + '</div>';
         }
-        return rows.map(itemHTML).join('');
+        var children = {};
+        rows.forEach(function (c) {
+          var parent = c.parentId ? String(c.parentId) : '';
+          (children[parent] || (children[parent] = [])).push(c);
+        });
+        var roots = rows.filter(function (c) {
+          var p = c.parentId ? String(c.parentId) : '';
+          return !p || !rows.some(function (x) { return String(x.id) === p; });
+        });
+        function branch(c, level, path) {
+          var id = String(c.id || '');
+          if (path[id]) return '';
+          var next = Object.assign({}, path); next[id] = true;
+          var html = '<div class="cmt-thread' + (level ? ' is-reply' : '') + '">' + itemHTML(c);
+          (children[id] || []).forEach(function (child) { html += branch(child, level + 1, next); });
+          return html + '</div>';
+        }
+        return roots.map(function (c) { return branch(c, 0, {}); }).join('');
       }
       /* tên khách được nhớ trong máy để lần sau khỏi gõ lại */
       function guestName() { return safeGet('chuseoz-cmtname') || ''; }
@@ -1348,6 +1380,28 @@
         if (lo) lo.addEventListener('click', function () { if (w.CZ_AUTH) w.CZ_AUTH.logout().then(function () { paint(); }); });
         var sd = host.querySelector('[data-send]');
         if (sd) sd.addEventListener('click', send);
+        host.querySelectorAll('[data-reply]').forEach(function (b) {
+          b.addEventListener('click', function () {
+            state.replyTo = state.replyTo === b.dataset.reply ? '' : b.dataset.reply;
+            paint();
+            var rt = host.querySelector('[data-reply-text="' + b.dataset.reply + '"]');
+            if (rt) rt.focus();
+          });
+        });
+        host.querySelectorAll('[data-reply-cancel]').forEach(function (b) {
+          b.addEventListener('click', function () { state.replyTo = ''; paint(); });
+        });
+        host.querySelectorAll('[data-reply-text]').forEach(function (ta) {
+          var id = ta.getAttribute('data-reply-text');
+          var cnt = host.querySelector('[data-reply-count="' + id + '"]');
+          if (cnt) ta.addEventListener('input', function () { cnt.textContent = ta.value.length + '/2000'; });
+          ta.addEventListener('keydown', function (e) {
+            if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'enter') sendReply(id);
+          });
+        });
+        host.querySelectorAll('[data-reply-send]').forEach(function (b) {
+          b.addEventListener('click', function () { sendReply(b.dataset.replySend); });
+        });
         host.querySelectorAll('[data-del]').forEach(function (b) {
           b.addEventListener('click', function () { del(b.dataset.del); });
         });
@@ -1356,6 +1410,66 @@
           host._czAuthBound = true;
           w.CZ_AUTH.onAuth(function () { try { paint(); } catch (e) {} });
         }
+      }
+      function makePayload(text, nameInput, parentId) {
+        var me = u();
+        var payload = { text: text, ch: chap, vid: vid() };
+        if (parentId) payload.parentId = String(parentId);
+        if (me) {
+          payload.name = String(me.name || '').trim().slice(0, 40) || guestName();
+          var pic = String(me.picture || '').trim();
+          if (pic.indexOf('data:') === 0) pic = '';
+          if (pic.length > 2000) pic = pic.slice(0, 2000);
+          payload.picture = pic;
+        } else {
+          payload.name = guestName() || (nameInput ? String(nameInput.value || '').trim().slice(0, 40) : '');
+        }
+        return payload;
+      }
+      function addSent(j) {
+        if (j.comment) {
+          state.all.unshift(j.comment);
+          state.count = j.count || (state.count + 1);
+          var k = String(Number(j.comment.ch) || 0);
+          state.byChap[k] = (Number(state.byChap[k]) || 0) + 1;
+        }
+      }
+      function sendReply(parentId) {
+        var safeId = String(parentId || '').replace(/[^A-Za-z0-9_-]/g, '');
+        var ta = host.querySelector('[data-reply-text="' + safeId + '"]');
+        var sd = host.querySelector('[data-reply-send="' + safeId + '"]');
+        var nm = host.querySelector('[data-reply-form="' + safeId + '"] [data-reply-name]');
+        var text = ta ? String(ta.value || '').replace(/[\r\n\t]+/g, ' ').trim() : '';
+        if (!text) { toast('Viết câu trả lời đã rồi hãy gửi', 'err'); if (ta) ta.focus(); return; }
+        if (!base()) { toast('Chưa nối Worker (cz-config.js) nên không gửi được trả lời', 'err'); return; }
+        if (state.busy) return;
+        state.busy = true;
+        if (sd) { sd.disabled = true; sd.textContent = 'Đang gửi…'; }
+        if (nm && String(nm.value || '').trim()) safeSet('chuseoz-cmtname', String(nm.value).trim().slice(0, 40));
+        var token = tk();
+        var payload = makePayload(text, nm, safeId);
+        fetch(base() + '/api/comments/' + encodeURIComponent(slug), {
+          method: 'POST',
+          headers: token ? { 'content-type': 'application/json', authorization: 'Bearer ' + token }
+                        : { 'content-type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).then(function (r) {
+          return r.json().catch(function () { return {}; }).then(function (j) {
+            if (!r.ok || !j.ok) throw new Error(j.error || ('HTTP ' + r.status));
+            return j;
+          });
+        }).then(function (j) {
+          state.busy = false;
+          addSent(j);
+          state.replyTo = '';
+          paint();
+          toast('Đã gửi trả lời', 'ok');
+          if (opt.onChanged) opt.onChanged(state.count);
+        }).catch(function (e) {
+          state.busy = false;
+          paint();
+          toast(String(e.message || 'Không gửi được trả lời'), 'err');
+        });
       }
       function send() {
         var ta = host.querySelector('[data-text]');
@@ -1368,20 +1482,8 @@
         if (sd) { sd.disabled = true; sd.textContent = 'Đang gửi…'; }
         var nm = host.querySelector('[data-name]');
         if (nm && String(nm.value || '').trim()) safeSet('chuseoz-cmtname', String(nm.value).trim().slice(0, 40));
-        var me = u();
         var token = tk();
-        var payload = { text: text, ch: chap, vid: vid() };
-        if (me) {
-          /* đã đăng nhập: gửi luôn name/picture để Worker không fallback sang guest.
-             data URL avatar thì bỏ qua để không phình KV. */
-          payload.name = String(me.name || '').trim().slice(0, 40) || guestName();
-          var _pic = String(me.picture || '').trim();
-          if (_pic.indexOf('data:') === 0) _pic = '';
-          if (_pic.length > 2000) _pic = _pic.slice(0, 2000);
-          payload.picture = _pic;
-        } else {
-          payload.name = guestName() || (nm ? String(nm.value || '').trim().slice(0, 40) : '');
-        }
+        var payload = makePayload(text, nm, '');
         fetch(base() + '/api/comments/' + encodeURIComponent(slug), {
           method: 'POST',
           headers: token ? { 'content-type': 'application/json', authorization: 'Bearer ' + token }
@@ -1402,12 +1504,7 @@
           });
         }).then(function (j) {
           state.busy = false;
-          if (j.comment) {
-            state.all.unshift(j.comment);
-            state.count = j.count || (state.count + 1);
-            var k = String(Number(j.comment.ch) || 0);
-            state.byChap[k] = (Number(state.byChap[k]) || 0) + 1;
-          }
+          addSent(j);
           paint();
           toast('Đã gửi bình luận', 'ok');
           if (opt.onChanged) opt.onChanged(state.count);

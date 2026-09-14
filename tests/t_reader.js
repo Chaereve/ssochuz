@@ -58,9 +58,12 @@ function makeApi(log, S) {
         const b = JSON.parse(opt.body || '{}');
         if (!String(b.text || '').trim()) return J({ ok: false, error: 'bình luận không được trống' }, false, 400);
         if (!b.vid && !b.uid) return J({ ok: false, error: 'không nhận được mã máy' }, false, 400);
-        const c = { id: 'c' + (arr.length + 1), uid: 'g:' + (b.vid || 'x'), name: b.name || 'Bạn đọc', picture: '', text: b.text, ch: Number(b.ch) || 0, guest: true, createdAt: new Date().toISOString() };
+        const parentId = String(b.parentId || '');
+        const parent = parentId ? arr.find(c => c.id === parentId) : null;
+        if (parentId && !parent) return J({ ok: false, error: 'bình luận gốc không còn tồn tại' }, false, 400);
+        const c = { id: 'c' + (arr.length + 1), uid: 'g:' + (b.vid || 'x'), name: b.name || 'Bạn đọc', picture: '', text: b.text, ch: parent ? parent.ch : (Number(b.ch) || 0), parentId: parent ? parent.id : '', guest: true, createdAt: new Date().toISOString() };
         arr.unshift(c);
-        return J({ ok: true, comment: c, count: arr.length, guest: true });
+        return J({ ok: true, comment: c, count: arr.length, guest: true, reply: !!parent });
       }
       const copy = JSON.parse(JSON.stringify(arr));       /* Worker thật trả JSON mới mỗi lần */
       const byChap = {};
@@ -196,6 +199,22 @@ function chFromLog(log) {
     soBinhLuan: txt('#rdCmts .cmt-n'),
     tenMay: LS.getItem('chuseoz-cmtname')
   };
+  /* reply ngay dưới bình luận của người khác */
+  const rootComment = $('#rdCmts .cmt-item');
+  const rootId = rootComment && rootComment.getAttribute('data-id');
+  click(rootComment && rootComment.querySelector('[data-reply]')); await wait(150);
+  const replyTa = rootId ? doc.querySelector('#rdCmts [data-reply-text="' + rootId + '"]') : null;
+  if (replyTa) { replyTa.value = 'Mình cũng thích chương này!'; replyTa.dispatchEvent(new win.Event('input', { bubbles: true })); }
+  click(rootId ? '#rdCmts [data-reply-send="' + rootId + '"]' : 'missing'); await wait(500);
+  const replyLog = log.filter(l => l.indexOf('POST /api/comments/third-person') === 0).slice(-1)[0] || '';
+  out.traLoiBinhLuan = {
+    coNutTraLoi: !!rootId,
+    coFormTraLoi: !!replyTa,
+    guiDungCha: replyLog.indexOf('"parentId":"' + rootId + '"') >= 0,
+    hienThiChuoi: !!$('#rdCmts .cmt-thread.is-reply') && txt('#rdCmts .cmt-list').indexOf('Mình cũng thích chương này') >= 0,
+    soRepliesTrongKho: S.cmts['third-person'].filter(c => c.parentId === rootId).length
+  };
+
   /* lọc theo chương: chỉ chương 3 */
   const fChap = $('#rdCmts .cmt-filters [data-f="chap"]');
   const fAll = $('#rdCmts .cmt-filters [data-f="all"]');

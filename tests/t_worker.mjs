@@ -172,6 +172,7 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
   eq('whoami/sai khoá → 401', (await call('GET', '/api/whoami', { headers: { 'x-admin-key': 'sai' } })).status, 401);
   ck('whoami/đúng khoá → admin', ((await call('GET', '/api/whoami', { headers: { 'x-admin-key': ADMIN } })).body || {}).role === 'admin',
     ((await call('GET', '/api/whoami', { headers: { 'x-admin-key': ADMIN } })).body || {}).role, 'admin');
+  eq('whoami/khoá dính khoảng trắng đầu-cuối vẫn dùng được', (await call('GET', '/api/whoami', { headers: { 'x-admin-key': '  ' + ADMIN + '  ' } })).status, 200);
 
   /* ---------- 4. registry / book / seed ---------- */
   const REG = { rev: '2026-09-13z', lib: [
@@ -348,7 +349,13 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     const p1 = await call('POST', '/api/comments/lunar-secret', { headers: auth, body: { text: 'Chương này hay quá!' } });
     const CID = (p1.body && p1.body.comment && p1.body.comment.id) || '';
     ck('comments/đăng được', !!(p1.body && p1.body.ok === true && CID), p1.body && p1.body.error, 'có comment.id');
-    eq('comments/đọc lại 1 bình luận', ((await call('GET', '/api/comments/lunar-secret')).body || {}).count, 1);
+    const pReply = await call('POST', '/api/comments/lunar-secret', { headers: auth, body: { text: 'Mình cũng nghĩ vậy!', parentId: CID } });
+    const RID = (pReply.body && pReply.body.comment && pReply.body.comment.id) || '';
+    ck('comments/trả lời được bình luận khác', !!(pReply.body && pReply.body.ok && pReply.body.reply && RID), pReply.body && pReply.body.error, 'reply:true + id');
+    eq('comments/reply giữ parentId', pReply.body && pReply.body.comment && pReply.body.comment.parentId, CID);
+    const threaded = ((await call('GET', '/api/comments/lunar-secret')).body || {}).comments || [];
+    ck('comments/đọc lại có quan hệ cha-con', threaded.some((c) => c.id === RID && c.parentId === CID), threaded, 'reply.parentId = CID');
+    eq('comments/reply parent không tồn tại → 400', (await call('POST', '/api/comments/lunar-secret', { headers: auth, body: { text: 'reply mồ côi', parentId: 'khong-co' } })).status, 400);
     /* người khác (token khác uid) không được xoá */
     routes = (u) => u.includes('/oauth2/v3/certs') ? { status: 200, body: { keys: [{ kty: 'RSA', kid: 'kid-test', n: NE.n, e: NE.e }] } } : null;
     const other = ((await call('POST', '/api/auth/google', { body: { credential: idToken({ sub: 'nguoi-khac', email: 'khac@gmail.com' }) } })).body || {}).token || '';
