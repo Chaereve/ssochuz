@@ -1,5 +1,5 @@
 /* ==========================================================================
-   chuseoz — cấu hình chung cho MỌI trang (index / reader / admin)
+   ssochuz — cấu hình chung cho MỌI trang (index / reader / admin)
    Sửa DUY NHẤT file này là đổi kênh dữ liệu + nhà cung cấp đăng nhập cho cả web.
    --------------------------------------------------------------------------
    CZ_API : URL Worker Cloudflare (xem worker/README.md).

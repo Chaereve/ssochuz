@@ -21,7 +21,7 @@ function inline(html, files) {
 }
 /* setup(w): chạy TRƯỚC khi script của trang chạy — dùng để giả lập phiên đăng nhập
    (localStorage) hoặc cấu hình (window.CZ_*) mà không phải sửa mã nguồn. */
-function page(file, { url = 'https://chuseoz.pages.dev/', fetch, config = {}, files = ['cz-config.js', 'cz-app.js'], setup = null } = {}) {
+function page(file, { url = 'https://ssochuz.pages.dev/', fetch, config = {}, files = ['cz-config.js', 'cz-app.js'], setup = null } = {}) {
   let html = read(file);
   html = inline(html, files);
   html = inlineAll(html);

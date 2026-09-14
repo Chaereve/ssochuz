@@ -98,8 +98,8 @@ const LIB = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data/registry
   /* ---------- Bàn đọc: đang đọc dở + tủ truyện ---------- */
   out.banHidden0 = $('#ban-doc').hidden;
   const a = LIB.find(n => n.chapters > 3), b = LIB.filter(n => n.chapters > 3)[1];
-  LS.setItem('chuseoz-prog-' + a.slug, '2'); LS.setItem('chuseoz-when-' + a.slug, String(Date.now()));
-  LS.setItem('chuseoz-prog-' + b.slug, '3'); LS.setItem('chuseoz-when-' + b.slug, String(Date.now() - 5000));
+  LS.setItem('ssochuz-prog-' + a.slug, '2'); LS.setItem('ssochuz-when-' + a.slug, String(Date.now()));
+  LS.setItem('ssochuz-prog-' + b.slug, '3'); LS.setItem('ssochuz-when-' + b.slug, String(Date.now() - 5000));
   win.dispatchEvent(new win.Event('pageshow'));
   await wait(200);
   out.banDoc = {
@@ -108,13 +108,13 @@ const LIB = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data/registry
     shelfShown: !$('#shelfRow').classList.contains('hide')
   };
   /* chuyển sang tủ truyện */
-  LS.setItem('chuseoz-shelf', JSON.stringify([a.slug]));
+  LS.setItem('ssochuz-shelf', JSON.stringify([a.slug]));
   win.dispatchEvent(new win.Event('pageshow')); await wait(200);
   out.banShelfCount = txt('#banShelfCount');
   click($$('#banTabs .tab')[1]); await wait(150);
   out.banShelf = { rows: $$('#shelfRow .cont').length, title: txt('#shelfRow .cont b'), clearLabel: txt('#banClear') };
   click($$('#shelfRow [data-rm]')[0]); await wait(200);
-  out.shelfAfterRemove = { rows: $$('#shelfRow .cont').length, ls: LS.getItem('chuseoz-shelf') };
+  out.shelfAfterRemove = { rows: $$('#shelfRow .cont').length, ls: LS.getItem('ssochuz-shelf') };
   click($$('#banTabs .tab')[0]); await wait(150);
   out.banBackToDoc = !$('#contRow').classList.contains('hide');
 

@@ -18,7 +18,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
      1. TRANG ĐỌC
      ===================================================================== */
   const p = page('truyen.html', {
-    url: 'https://chuseoz.pages.dev/truyen/third-person/',
+    url: 'https://ssochuz.pages.dev/truyen/third-person/',
     fetch: dataFetch({ apiBase: 'https://cms.test', log })
   });
   const { win, doc, errors } = p;
@@ -58,7 +58,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   out.pickMode = pick('Kiểu xem', 'Phân trang');
   await wait(250);
   out.settings = {
-    ls: JSON.parse(LS.getItem('chuseoz-reader') || '{}'),
+    ls: JSON.parse(LS.getItem('ssochuz-reader') || '{}'),
     bodyRd: doc.body.dataset.rd,
     sizeVar: win.document.documentElement.style.getPropertyValue('--rd-size'),
     widthVar: win.document.documentElement.style.getPropertyValue('--rd-w'),
@@ -77,15 +77,15 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   click('#actSave'); await wait(120);
   click('#actMark'); await wait(120);
   out.marks = {
-    like: LS.getItem('chuseoz-like-third-person'),
-    shelf: LS.getItem('chuseoz-shelf'),
-    mark: LS.getItem('chuseoz-mark-third-person'),
+    like: LS.getItem('ssochuz-like-third-person'),
+    shelf: LS.getItem('ssochuz-shelf'),
+    mark: LS.getItem('ssochuz-mark-third-person'),
     markBtnOn: $('#rdMark').classList.contains('on'),
     saveLabel: txt('#actSave span'),
     likeLabel: txt('#actLike span')
   };
   click('#actLike'); await wait(120);           /* bỏ thích lại */
-  out.unlike = LS.getItem('chuseoz-like-third-person');
+  out.unlike = LS.getItem('ssochuz-like-third-person');
 
   /* --- phím tắt --- */
   key('ArrowRight'); await wait(300);
@@ -138,7 +138,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   /* --- nút “Mặc định” trong cài đặt đọc --- */
   click('#rdSet'); await wait(200);
   click('#setReset'); await wait(200);
-  out.resetSettings = JSON.parse(LS.getItem('chuseoz-reader') || '{}');
+  out.resetSettings = JSON.parse(LS.getItem('ssochuz-reader') || '{}');
   click('#setSheet .ph .ibo'); await wait(150);
   /* --- phím ? hiện trợ giúp --- */
   key('?'); await wait(150);
@@ -177,7 +177,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   let BOOK = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'data/book/third-person.json'), 'utf8'));
   BOOK = JSON.parse(JSON.stringify(BOOK));
 
-  const a = page('admin.html', { url: 'https://chuseoz.pages.dev/admin', fetch: workerFetch });
+  const a = page('admin.html', { url: 'https://ssochuz.pages.dev/admin', fetch: workerFetch });
   const W = a.win, D = a.doc;
   const $a = s => D.querySelector(s), $$a = s => [...D.querySelectorAll(s)];
   const clk = s => { const e = typeof s === 'string' ? $a(s) : s; if (!e) return 'MISSING ' + s; e.dispatchEvent(new W.MouseEvent('click', { bubbles: true })); return 'ok'; };
@@ -241,7 +241,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
      3. ẢNH TRONG CHƯƠNG + ĐỔI TÔNG MÀU + MENU ĐIỆN THOẠI
      ===================================================================== */
   const img = page('truyen.html', {
-    url: 'https://chuseoz.pages.dev/truyen/co-vo-ho-anh-cua-toi/#chuong-2',
+    url: 'https://ssochuz.pages.dev/truyen/co-vo-ho-anh-cua-toi/#chuong-2',
     fetch: dataFetch({ apiBase: 'https://cms.test' })
   });
   await wait(1300);
@@ -263,7 +263,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   /* đổi sáng/tối ở đầu trang: có nhớ không */
   const tb = D2.querySelector('#czTheme');
   tb.dispatchEvent(new img.win.MouseEvent('click', { bubbles: true })); await wait(120);
-  out.theme = { attr: D2.documentElement.getAttribute('data-theme'), ls: img.win.localStorage.getItem('chuseoz-theme') };
+  out.theme = { attr: D2.documentElement.getAttribute('data-theme'), ls: img.win.localStorage.getItem('ssochuz-theme') };
   tb.dispatchEvent(new img.win.MouseEvent('click', { bubbles: true })); await wait(120);
   out.themeBack = D2.documentElement.getAttribute('data-theme');
   /* menu điện thoại */

@@ -1,5 +1,5 @@
 /* ============================================================================
-   chuseoz · lõi dùng chung cho MỌI trang (chủ / truyện / đọc / quản trị)
+   ssochuz · lõi dùng chung cho MỌI trang (chủ / truyện / đọc / quản trị)
    ----------------------------------------------------------------------------
    Gồm 4 phần, không phụ thuộc thư viện ngoài:
      1. DỮ LIỆU   : Worker KV → cache máy → /data/*.json ; số liệu xếp hạng cũng từ KV
@@ -11,6 +11,24 @@
    ========================================================================== */
 (function (w, d) {
   'use strict';
+
+  /* ======================= ĐỔI TÊN chuseoz → ssochuz ====================
+     Khoá localStorage cũ (chuseoz-*) được CHUYỂN SANG đầu ssochuz- một lần,
+     giữ nguyên tiến độ đọc, tủ truyện, lượt thích, cài đặt… của người dùng. */
+  try {
+    var _OLDP = 'chuseoz-', _NEWP = 'ssochuz-', _ks = [], _i = 0;
+    for (_i = 0; _i < localStorage.length; _i++) {
+      var _k0 = localStorage.key(_i);
+      if (_k0 && _k0.indexOf(_OLDP) === 0) _ks.push(_k0);
+    }
+    _ks.forEach(function (k0) {
+      var k1 = _NEWP + k0.slice(_OLDP.length);
+      try {
+        if (localStorage.getItem(k1) == null) localStorage.setItem(k1, localStorage.getItem(k0));
+        localStorage.removeItem(k0);
+      } catch (e) {}
+    });
+  } catch (e) {}
 
   /* ======================= 0. CẤU HÌNH ================================= */
   function normalizeApi(u) {
@@ -52,20 +70,20 @@
   /* -- thư viện: ưu tiên KV → cache → file tĩnh ------------------------- */
   function registry() {
     if (memo.reg) return Promise.resolve({ reg: memo.reg, src: memo.src });
-    var cached = lsGet('chuseoz-reg', TTL_REG);
+    var cached = lsGet('ssochuz-reg', TTL_REG);
     var useApi = !!API && !apiDown;
     var p = useApi ? jget(API + '/api/registry?_=' + Date.now(), 9000) : Promise.resolve(null);
     return p.then(function (api) {
       if (api && api.lib) {
         apiDown = false;
         memo.reg = api; memo.src = 'kv'; w.CZ_SRC = 'kv';
-        lsSet('chuseoz-reg', { t: Date.now(), v: api });
+        lsSet('ssochuz-reg', { t: Date.now(), v: api });
         return { reg: api, src: 'kv' };
       }
       if (useApi) apiDown = true;
       return jget('/data/registry.json?_=' + Date.now(), 9000).then(function (stat) {
         var reg = newer(stat, cached) || { lib: [] };
-        if (stat) lsSet('chuseoz-reg', { t: Date.now(), v: stat });
+        if (stat) lsSet('ssochuz-reg', { t: Date.now(), v: stat });
         memo.reg = reg; memo.src = 'static'; w.CZ_SRC = 'static';
         return { reg: reg, src: 'static' };
       });
@@ -125,8 +143,10 @@
   }
   function stats() {
     if (memo.stats) return Promise.resolve(memo.stats);
-    var cached = lsGet('chuseoz-stats', TTL_STATS);
-    var p = (API && !apiDown ? jget(API + '/api/stats', 9000) : Promise.resolve(null)).then(function (r) {
+    var cached = lsGet('ssochuz-stats', TTL_STATS);
+    /* ?_=… : vượt mọi tầng cache (trình duyệt/CDN) — số liệu phải luôn mới,
+       bệnh cũ: đáp ứng bị cache 60 giây nên vote/bỏ-vote không thấy đổi số */
+    var p = (API && !apiDown ? jget(API + '/api/stats?_=' + Date.now(), 9000) : Promise.resolve(null)).then(function (r) {
       if (r && r.ok && r.items) {
         return { on: true, items: r.items, source: r.source || 'kv', saved: r.fetchedAt || r.saved || '' };
       }
@@ -136,7 +156,7 @@
     return p.then(function (o) {
       if (o && o.on && o.items && Object.keys(o.items).length) {
         var had = memo.stats;
-        memo.stats = o; lsSet('chuseoz-stats', { t: Date.now(), v: o });
+        memo.stats = o; lsSet('ssochuz-stats', { t: Date.now(), v: o });
         if (had) notifyStats();
         return o;
       }
@@ -149,15 +169,22 @@
       return memo.stats;
     });
   }
+  /* buộc lấy số mới từ Worker rồi báo cho mọi nơi đang hiển thị số liệu vẽ lại —
+     dùng sau khi đếm lượt đọc/bình chọn để không phải chờ cache hay tải lại trang */
+  function refreshStats() {
+    if (!API || apiDown) return Promise.resolve(memo.stats);
+    memo.stats = null;
+    return stats();
+  }
 
   /* -- ĐẾM LƯỢT ĐỌC / BÌNH CHỌN (gửi lên Worker, lưu trên KV) -----------
      vid = mã máy ẩn danh để 1 người không đếm/bầu nhiều lần; không phải định
      danh, xoá localStorage là mất. Bình luận/đăng nhập thì vẫn theo Google. */
   function vid() {
-    var id = safeGet('chuseoz-vid');
+    var id = safeGet('ssochuz-vid');
     if (!id) {
       id = 'v' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
-      safeSet('chuseoz-vid', id);
+      safeSet('ssochuz-vid', id);
     }
     return id;
   }
@@ -176,7 +203,7 @@
   /* 1 máy · 1 bộ · 1 ngày = 1 lượt đọc (phía máy và phía Worker đều khử trùng lặp) */
   function reportView(slug, ch) {
     if (!API || !slug) return Promise.resolve(null);
-    var k = 'chuseoz-viewed-' + slug + '-' + new Date().toISOString().slice(0, 10);
+    var k = 'ssochuz-viewed-' + slug + '-' + new Date().toISOString().slice(0, 10);
     if (safeGet(k)) return Promise.resolve(null);
     safeSet(k, '1');
     return jpost('/api/view', { slug: slug, vid: vid(), ch: ch || 0 }).then(function (r) {
@@ -184,9 +211,11 @@
         /* cộng ngay vào số đang có để chip "lượt đọc" nhảy lên, rồi mới lấy số thật */
         if (memo.stats && memo.stats.items) {
           var it = memo.stats.items[slug];
-          if (it) { it.views = (Number(it.views) || 0) + 1; it.viewsDay = (Number(it.viewsDay) || 0) + 1; notifyStats(); }
+          if (it) { it.views = (Number(it.views) || 0) + 1; it.viewsDay = (Number(it.viewsDay) || 0) + 1; }
         }
-        memo.stats = null;                              /* lần đọc sau lấy số mới từ KV */
+        notifyStats();
+        /* lấy số chuẩn từ KV ngay (Worker đã tính cả phần đang đệm) */
+        refreshStats();
       }
       return r;
     });
@@ -220,7 +249,7 @@
     }
     it.trendingScore = Math.round((it.viewsDay || 0) + 0.4 * (it.viewsWeek || 0) + 2 * (it.votesDay || 0));
     memo.stats.on = true;
-    lsSet('chuseoz-stats', { t: Date.now(), v: memo.stats });
+    lsSet('ssochuz-stats', { t: Date.now(), v: memo.stats });
     libCache = null;
     notifyStats();
     return it;
@@ -235,8 +264,8 @@
 
   /* ======================= 2. GHI NHỚ TRONG MÁY ======================== */
   var LS = {
-    prog: 'chuseoz-prog-', when: 'chuseoz-when-', shelf: 'chuseoz-shelf',
-    like: 'chuseoz-like-', mark: 'chuseoz-mark-', read: 'chuseoz-reader', theme: 'chuseoz-theme', dir: 'chuseoz-dir'
+    prog: 'ssochuz-prog-', when: 'ssochuz-when-', shelf: 'ssochuz-shelf',
+    like: 'ssochuz-like-', mark: 'ssochuz-mark-', read: 'ssochuz-reader', theme: 'ssochuz-theme', dir: 'ssochuz-dir'
   };
   function keysOf(n) { return [n && n.postId, n && n.slug].filter(Boolean); }
 
@@ -275,9 +304,9 @@
   function clearShelf() { jsonSet(LS.shelf, []); }
 
   /* ---- THÍCH: mỗi chương một phiếu thích riêng --------------------------
-     Bệnh cũ: thích lưu theo BỘ (chuseoz-like-<slug>) nên thích chương 1 xong thì
+     Bệnh cũ: thích lưu theo BỘ (ssochuz-like-<slug>) nên thích chương 1 xong thì
      sang chương 2 nút vẫn "Đã thích" và bấm vào lại thành BỎ thích. Giờ khoá lưu
-     là chuseoz-like-<slug>-<chương>; thích cả bộ (nút ở trang truyện) dùng khoá cũ. */
+     là ssochuz-like-<slug>-<chương>; thích cả bộ (nút ở trang truyện) dùng khoá cũ. */
   function likeKey(n, ch) {
     var slug = (n && n.slug) || (typeof n === 'string' ? n : '');
     var c = Math.max(0, parseInt(ch, 10) || 0);
@@ -350,6 +379,11 @@
   }
   function themeToggle() {
     var now = d.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    /* đổi nền mượt trong ~.35s thay vì chớp trắng/đen đột ngột */
+    if (!reduce) {
+      d.documentElement.classList.add('theming');
+      setTimeout(function () { d.documentElement.classList.remove('theming'); }, 400);
+    }
     d.documentElement.setAttribute('data-theme', now);
     safeSet(LS.theme, now);
     return now;
@@ -524,9 +558,9 @@
      Chữa 3 lớp:
        1. Worker tự đếm lại mỗi lần ghi 1 bộ + có nút /api/recount (admin).
        2. Web mở bộ nào thì đối chiếu số chương thật của bộ đó và GHI NHỚ trong
-          máy (chuseoz-realcounts) — từ đó trang chủ/thư viện hiện đúng số.
+          máy (ssochuz-realcounts) — từ đó trang chủ/thư viện hiện đúng số.
        3. norm() dưới đây luôn lấy số đã đối chiếu thay cho nhãn cũ.            */
-  var LS_REAL = 'chuseoz-realcounts';
+  var LS_REAL = 'ssochuz-realcounts';
   var realMap = null;
   function realCounts() {
     if (realMap == null) { var m = jsonGet(LS_REAL, {}); realMap = (m && typeof m === 'object') ? m : {}; }
@@ -935,7 +969,7 @@
     /* header: icon + tên chức năng tiếng Anh cho gọn */
     var NAV = [
       { k: 'library', l: 'Library', vi: 'Library', i: 'library', h: '/#thu-vien' },
-      { k: 'new', l: 'Lastest', vi: 'Lastest Update', i: 'sparkle', h: '/#moi-cap-nhat' },
+      { k: 'new', l: 'Latest', vi: 'Latest Update', i: 'sparkle', h: '/#moi-cap-nhat' },
       { k: 'rank', l: 'Top vote', vi: 'Top vote', i: 'trophy', h: '/#bxh' },
       { k: 'sched', l: 'Schedule', vi: 'Lịch ra chương', i: 'calendar', h: '/#lich' }
     ];
@@ -949,7 +983,7 @@
     }).join('');
     host.className = 'hdr';
     host.innerHTML = '<div class="in">' +
-      '<a class="logo" href="/"><span class="dot"></span>chuseoz<i>.</i></a>' +
+      '<a class="logo" href="/"><span class="dot"></span>ssochuz<i>.</i></a>' +
       '<nav class="nav" id="czNav"><span class="ink" id="czInk" aria-hidden="true"></span>' + links + '</nav>' +
       '<span class="grow"></span>' +
       '<button class="hbtn" id="czJump" title="Search (⌘K)">' + icon('search', 'i-s') +
@@ -1131,8 +1165,8 @@
     host.innerHTML = '<div class="in">' +
       '<div class="fmain">' +
         '<div class="fbrand">' +
-          '<a class="logo" href="/"><span class="dot"></span>chuseoz<i>.</i></a>' +
-          '<p class="fdesc">Cảm ơn bạn đã ủng hộ và đồng hành cùng chuseoz!</p>' +
+          '<a class="logo" href="/"><span class="dot"></span>ssochuz<i>.</i></a>' +
+          '<p class="fdesc">Cảm ơn bạn đã ủng hộ và đồng hành cùng ssochuz!</p>' +
           '<p class="flinks">' +
             '<a href="/guide">Hướng dẫn</a>' +
             '<a href="' + esc(fb) + '" target="_blank" rel="noopener">Facebook</a>' +
@@ -1316,7 +1350,7 @@
         return roots.map(function (c) { return branch(c, 0, {}); }).join('');
       }
       /* tên khách được nhớ trong máy để lần sau khỏi gõ lại */
-      function guestName() { return safeGet('chuseoz-cmtname') || ''; }
+      function guestName() { return safeGet('ssochuz-cmtname') || ''; }
       function form() {
         var me = u();
         if (!me) {
@@ -1445,7 +1479,7 @@
         if (state.busy) return;
         state.busy = true;
         if (sd) { sd.disabled = true; sd.textContent = 'Đang gửi…'; }
-        if (nm && String(nm.value || '').trim()) safeSet('chuseoz-cmtname', String(nm.value).trim().slice(0, 40));
+        if (nm && String(nm.value || '').trim()) safeSet('ssochuz-cmtname', String(nm.value).trim().slice(0, 40));
         var token = tk();
         var payload = makePayload(text, nm, safeId);
         fetch(base() + '/api/comments/' + encodeURIComponent(slug), {
@@ -1481,7 +1515,7 @@
         state.busy = true;
         if (sd) { sd.disabled = true; sd.textContent = 'Đang gửi…'; }
         var nm = host.querySelector('[data-name]');
-        if (nm && String(nm.value || '').trim()) safeSet('chuseoz-cmtname', String(nm.value).trim().slice(0, 40));
+        if (nm && String(nm.value || '').trim()) safeSet('ssochuz-cmtname', String(nm.value).trim().slice(0, 40));
         var token = tk();
         var payload = makePayload(text, nm, '');
         fetch(base() + '/api/comments/' + encodeURIComponent(slug), {
@@ -1658,7 +1692,7 @@
 
   w.CZ = {
     API: API, normalizeApi: normalizeApi,
-    registry: registry, book: book, stats: stats, schedule: schedule,
+    registry: registry, book: book, stats: stats, refreshStats: refreshStats, schedule: schedule,
     vid: vid, reportView: reportView, vote: vote,
     lib: libList, slides: slides, editorChoice: editorChoice, donationCfg: donationCfg, reportCfg: reportCfg, findLib: findLib, statsOf: statsOf, onStats: onStats,
     progress: progress, setProgress: setProgress, lastReadAt: lastReadAt,

@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Be+Vietnam+Pro:wght@400;500;600&display=swap');
 /* ============================================================================
-   chuseoz · hệ thống giao diện dùng chung
+   ssochuz · hệ thống giao diện dùng chung
    (trang chủ · trang truyện · trang đọc · trang quản trị)
    ----------------------------------------------------------------------------
    Phong cách: tạp chí in — nền giấy, chữ có chân ở tiêu đề, đường kẻ mảnh 1px,
@@ -143,10 +143,6 @@ body.reading #sprog { display: none !important; }
 .nav a .nav-lbl { display: inline; font-size: 12px; font-weight: 700; letter-spacing: .01em; }
 .nav .ink { position: absolute; left: 0; bottom: -6px; width: 0; height: 2px; background: var(--acc); border-radius: 2px;
   opacity: 0; transition: transform var(--t-mid) var(--ease), width var(--t-mid) var(--ease), opacity var(--t) linear; pointer-events:none; }
-.nav .ct { display:none !important; /* hidden per request - was: position:absolute; top:-6px; right:-6px; padding: 1px 5px; border-radius: 99px; background: var(--acc); color:#fff; */
-  position:absolute; top:-6px; right:-6px; padding: 1px 5px; border-radius: 99px; background: var(--acc); color:#fff;
-  font-size: 9.5px; font-weight: 800; font-variant-numeric: tabular-nums; line-height:1.2; min-width:14px; text-align:center; }
-.nav a.on .ct { background: var(--acc); color:#fff; }
 .hbtn { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 11px; border: 1px solid var(--bd);
   border-radius: var(--r); color: var(--mut); font-size: 13px; font-weight: 650; background: transparent;
   transition: color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
@@ -206,6 +202,14 @@ body.reading #sprog { display: none !important; }
 .btn.sm { padding: 7px 11px; font-size: 12.5px; gap: 6px; }
 .btn.acc { border-color: var(--acc); color: var(--acc); }
 .btn.on { border-color: var(--acc); color: var(--acc); background: var(--acc-soft); }
+/* nút Thích (trang truyện): tim hồng nổi bật hẳn để không chìm vào dãy nút phụ */
+.btn.like { border-color: color-mix(in srgb, var(--acc) 38%, var(--bd)); color: var(--acc); }
+.btn.like .i { stroke: var(--acc); }
+.btn.like:hover { border-color: var(--acc); color: var(--acc);
+  background: color-mix(in srgb, var(--acc) 8%, transparent); }
+.btn.like.on { background: color-mix(in srgb, var(--acc) 13%, transparent);
+  border-color: color-mix(in srgb, var(--acc) 60%, var(--bd)); }
+.btn.like.on .i { fill: var(--acc); stroke: var(--acc); }
 .btn[disabled], .btn.off { opacity: .45; pointer-events: none; }
 .btn-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .hbtn, .pg, .seg button { position: relative; overflow: hidden; }
@@ -367,7 +371,7 @@ textarea.inp { min-height: 120px; resize: vertical; line-height: 1.6; }
   border-radius: 3px; pointer-events: none; }
 .hero .poster img { width: 100%; height: 100%; object-fit: cover; transition: transform var(--t-mid) var(--ease-out); }
 .hero .poster .b18 { position: absolute; top: 12px; left: 12px; z-index: 2; }
-.hero .poster.noimg::before { content: "chuseoz"; position: absolute; inset: 0; display: grid; place-items: center;
+.hero .poster.noimg::before { content: "ssochuz"; position: absolute; inset: 0; display: grid; place-items: center;
   font: 800 11px/1 var(--font); letter-spacing: .24em; text-transform: uppercase; color: var(--dim); opacity: .6; }
 .hero .poster .gloss { position: absolute; inset: 0; pointer-events: none; transform: translateX(-125%);
   background: linear-gradient(105deg, transparent 36%, rgba(255, 255, 255, .3) 50%, transparent 64%); }
@@ -471,7 +475,7 @@ textarea.inp { min-height: 120px; resize: vertical; line-height: 1.6; }
   animation: shimmer 1.5s linear infinite; }
 @keyframes shimmer { from { background-position: 130% 0; } to { background-position: -30% 0; } }
 .card .th.noimg { background: linear-gradient(160deg, var(--surf3), var(--surf2)); }
-.card .th.noimg::after { content: "chuseoz"; position: absolute; inset: 0; display: grid; place-items: center;
+.card .th.noimg::after { content: "ssochuz"; position: absolute; inset: 0; display: grid; place-items: center;
   font: 800 10.5px/1 var(--font); letter-spacing: .22em; text-transform: uppercase; color: var(--dim); opacity: .55; }
 .card h3 { font-family: var(--font-head); font-size: 14.5px; font-weight: 600; margin: 11px 0 3px; line-height: 1.35;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
@@ -643,7 +647,7 @@ textarea.inp { min-height: 120px; resize: vertical; line-height: 1.6; }
 .shero .cover:hover { transform: translateY(-4px); box-shadow: var(--sh-lg); }
 .shero .cover:hover img { transform: scale(1.03); }
 .shero .cover.noimg { background: linear-gradient(160deg, var(--surf3), var(--surf2)); }
-.shero .cover.noimg::before { content: "chuseoz"; position: absolute; top: 15px; left: 0; right: 0; text-align: center;
+.shero .cover.noimg::before { content: "ssochuz"; position: absolute; top: 15px; left: 0; right: 0; text-align: center;
   font: 800 10px/1 var(--font); letter-spacing: .28em; text-transform: uppercase; color: var(--dim); opacity: .6; }
 .shero .cover.noimg::after { content: attr(data-t); position: absolute; inset: auto 20px 24px; font-family: var(--font-head);
   font-size: 21px; font-weight: 700; line-height: 1.22; color: var(--mut); }
@@ -860,7 +864,6 @@ body.rd-hide .rdbar { transform: translateY(-100%); }
   text-align: center; font-family: var(--font); }
 .rtext a { color: var(--rd-acc); text-decoration: underline; text-underline-offset: 2px; }
 .rtext hr { border-top-color: var(--rd-bd); }
-/* nofont removed - font now controlled by --rd-font via body[data-rd-font] */
 /* cuối chương: một lời dẫn gọn, không lặp nút chuyển chương của thanh dưới */
 .rend { max-width: var(--rd-w, 720px); margin: 10px auto 0; padding: 0 24px 22px; }
 .rend .endrule { height: 1px; background: var(--rd-bd); margin-bottom: 18px; }
@@ -918,15 +921,6 @@ body.rd-focus .rdbar .tools:hover { opacity: 1; }
   font-size: 11.5px; font-weight: 700; color: var(--rd-mut); font-variant-numeric: tabular-nums;
   transition: color var(--t) var(--ease), border-color var(--t) var(--ease); }
 body.rd-focus .rdpct { opacity: .35; }
-.rdkeys { display: none !important; /* hidden per request */
-  /* original: display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; max-width: 900px; */
-  display: none; flex-wrap: wrap; justify-content: center; gap: 8px 18px; max-width: 900px;
-  margin: 0 auto; padding: 0 24px 56px; font-size: 11.5px; color: var(--rd-mut); }
-.rdkeys span { display: inline-flex; align-items: center; gap: 6px; }
-.rdkeys kbd { font-family: var(--font-mono); font-size: 10.5px; padding: 2px 6px; border: 1px solid var(--rd-bd);
-  border-bottom-width: 2px; border-radius: 4px; background: var(--rd-surf); color: var(--rd-mut); }
-body.rd-paged .rdkeys { padding-bottom: 34px; }
-@media (max-width: 760px) { .rdkeys { display: none; } }
 
 /* chuyển chương: cũ trượt sang trái rồi mờ đi, mới trượt vào từ phải */
 #rd .rdhead, #rd .rtext, #rd .ract, #rd .rend, #rd .rnav {
@@ -954,9 +948,7 @@ body.rd-paged .rdkeys { padding-bottom: 34px; }
   #rd.cut-fade .rdhead, #rd.cut-fade .rtext, #rd.cut-fade .ract, #rd.cut-fade .rend, #rd.cut-fade .rnav { opacity: 1; transform: none; filter: none; }
 }
 
-/* trang đọc: chữ nghỉ mắt hơn — chữ cái đầu, trích dẫn, đường ngắt cảnh, bôi đen */
-/* drop cap removed per request */
-.rtext > p:first-of-type::first-letter { all: unset; }
+/* trang đọc: chữ nghỉ mắt hơn — trích dẫn, đường ngắt cảnh, bôi đen */
 .rtext blockquote { margin: 1.4em 0; padding: 2px 0 2px 18px; border-left: 2px solid var(--rd-acc);
   color: var(--rd-mut); font-style: italic; }
 .rtext hr { border: 0; height: 1px; width: 38%; margin: 2.2em auto; background: var(--rd-bd); }
@@ -1245,6 +1237,22 @@ kbd { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; b
   *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
   html { scroll-behavior: auto; }
 }
+/* màn hình cảm ứng: tắt hiệu ứng "treo" của :hover để thao tác không bị khựng */
+@media (hover: none) {
+  .btn:hover, .hbtn:hover, .nav a:hover, .card:hover .th, .card:hover .th img, .relcard:hover,
+  .relcard:hover .rc-th img, .hero .posterwrap:hover .poster, .hero .posterwrap:hover .poster img,
+  .ract > *:hover, .tile:hover, .cha:hover { transform: none; }
+  .card:hover .th, .relcard:hover, .tile:hover { box-shadow: none; }
+}
+/* đổi sáng/tối: pha màu mượt trong khoảnh khắc thay vì chớp nền đột ngột
+   (JS gắn .theming ~400ms khi bấm Theme; không ảnh hưởng thao tác thường) */
+html.theming, html.theming *, html.theming *::before, html.theming *::after {
+  transition: background-color .32s linear, color .32s linear, border-color .32s linear,
+    fill .32s linear, stroke .32s linear !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  html.theming, html.theming *, html.theming *::before, html.theming *::after { transition: none !important; }
+}
 
 /* ===================== 12b. NỀN ĐỌC (3 tông) + 3 FONT ================== */
 body[data-rd="sang"] { --rd-bg: #ffffff; --rd-tx: #191712; --rd-mut: #6d6659; --rd-bd: rgba(30, 22, 12, .12);
@@ -1389,6 +1397,28 @@ body.page-in main { animation: pageIn var(--t-slow) var(--ease-out) both; }
 body:fullscreen { background: var(--rd-bg); }
 body:fullscreen .rdbar { background: var(--rd-bg); }
 body.rd-fs .rdbar { position: fixed; left:0; right:0; }
+
+/* ---- hộp CẮT ẢNH ĐẠI DIỆN: kéo di chuyển · thu phóng · chụm hai ngón ------------- */
+.czcrop { position: relative; width: min(300px, 78vw); aspect-ratio: 1 / 1; margin: 0 auto;
+  border-radius: var(--r); overflow: hidden; background: #14121a; touch-action: none;
+  cursor: grab; -webkit-user-select: none; user-select: none; }
+.czcrop:active { cursor: grabbing; }
+.czcrop img { position: absolute; left: 0; top: 0; max-width: none; transform-origin: 0 0;
+  -webkit-user-drag: none; user-select: none; will-change: transform; }
+/* vòng tròn cửa sổ: phần nằm ngoài bị che mờ */
+.czcrop::after { content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+  box-shadow: 0 0 0 999px rgba(0, 0, 0, .55);
+  outline: 2px solid color-mix(in srgb, #fff 28%, transparent); outline-offset: -2px; }
+.czcrop-tools { display: flex; align-items: center; gap: 10px; margin: 14px auto 0; max-width: min(300px, 78vw); }
+.czcrop-tools input[type="range"] { flex: 1; accent-color: var(--acc); height: 26px; }
+@media (max-width: 480px) { .czcrop { width: 100%; } .czcrop-tools { max-width: 100%; } }
+/* màn rất hẹp: nút gọn lại để hàng nút không tràn / phải quấn quá nhiều */
+@media (max-width: 430px) {
+  .hero .btn-row .btn.lg, .shero .btn-row .btn.lg { padding: 11px 14px; font-size: 13.5px; }
+  .shero .btn-row .btn { padding: 9px 11px; font-size: 12.5px; gap: 6px; }
+  .chapbar .seg button { padding: 0 8px; font-size: 11.5px; }
+  .hero h1 { font-size: 30px; }
+}
 
 /* ==========================================================================
    v1.5 · ĐĂNG NHẬP (Supabase) · THÍCH THEO CHƯƠNG · BÌNH LUẬN TRONG TRANG ĐỌC

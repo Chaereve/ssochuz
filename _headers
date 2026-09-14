@@ -22,6 +22,7 @@
 /cz-auth.js
   Cache-Control: no-cache
 
+
 # Dữ liệu: ngắn, để bản mới lên nhanh nhưng vẫn đỡ gọi mạng nhiều lần
 /data/*.json
   Cache-Control: public, max-age=300
@@ -54,3 +55,7 @@
 
 /robots.txt
   Cache-Control: public, max-age=600
+
+# Icon / ảnh thương hiệu: đổi rất hiếm, cho cache dài
+/assets/*
+  Cache-Control: public, max-age=86400

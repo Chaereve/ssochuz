@@ -1,4 +1,4 @@
-# Cloudflare Pages · chuseoz v2 clean
+# Cloudflare Pages · ssochuz v2 clean
 # ---------------------------------------------------------------------------
 # Trang truyện và trang đọc nằm chung MỘT tệp (truyen.html). Các luật dưới đây
 # mở tệp đó mà KHÔNG đổi URL trên trình duyệt (proxy 200), nhờ vậy
@@ -9,13 +9,11 @@
 # Thêm /truyen và /truyen/ explicit để tránh 404 khi click từ thư viện.
 # ---------------------------------------------------------------------------
 /truyen.html   /truyen   200
-/truyen        /truyen   200
 /truyen/       /truyen   200
 /reader        /truyen   200
 /reader/       /truyen   200
 /reader.html   /truyen   200
 /guide.html    /guide    200
-/guide         /guide    200
 /guide/        /guide    200
 /guide/*       /guide    200
 /truyen/*      /truyen   200
