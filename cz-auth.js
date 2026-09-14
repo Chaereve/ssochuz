@@ -52,7 +52,8 @@
     if (!cp) return u;
     var out = Object.assign({}, u);
     if (cp.name && String(cp.name).trim()) out.name = String(cp.name).trim().slice(0, 40);
-    if (cp.picture && String(cp.picture).trim()) out.picture = String(cp.picture).trim().slice(0, 500);
+    /* picture có thể là data URL ~1MB, nên cho phép dài hơn 500 */
+    if (cp.picture && String(cp.picture).trim()) out.picture = String(cp.picture).trim().slice(0, 1200000);
     out._custom = true;
     return out;
   }
@@ -99,7 +100,10 @@
   function updateProfile(patch) {
     patch = patch || {};
     var name = String(patch.name || '').trim().slice(0, 40);
-    var picture = String(patch.picture || '').trim().slice(0, 500);
+    var picture = String(patch.picture || '').trim();
+    /* data URL có thể dài ~1MB, chỉ cắt khi quá lớn để không làm hỏng ảnh */
+    if (picture.length > 1200000) picture = picture.slice(0, 1200000);
+    else if (picture.indexOf('data:') !== 0 && picture.length > 2000) picture = picture.slice(0, 2000);
     if (!user || !user.uid) return Promise.reject(new Error('Chưa đăng nhập'));
     if (!name) return Promise.reject(new Error('Tên không được trống'));
     var custom = { name: name, picture: picture, at: Date.now() };
@@ -107,10 +111,11 @@
     var merged = Object.assign({}, user, custom, { _custom: true });
     save(merged, token);
     toast('Đã cập nhật hồ sơ', 'ok');
-    /* đẩy lên Supabase để lần sau đăng nhập vẫn giữ */
+    /* đẩy lên Supabase để lần sau đăng nhập vẫn giữ — data URL thì bỏ qua vì Supabase chỉ nhận https */
+    var picForSupa = picture.indexOf('data:') === 0 ? '' : picture;
     if (sb) {
       try {
-        return sb.auth.updateUser({ data: { full_name: name, name: name, avatar_url: picture, picture: picture } })
+        return sb.auth.updateUser({ data: { full_name: name, name: name, avatar_url: picForSupa || undefined, picture: picForSupa || undefined } })
           .then(function (r) {
             if (r && r.error) throw new Error(r.error.message || 'Không cập nhật được Supabase');
             return merged;
@@ -150,9 +155,9 @@
     function paintPrev() {
       var n = inpName.value.trim() || 'B';
       var p = inpPic.value.trim();
-      prev.innerHTML = (p ? '<img src=\"' + w.CZ.esc(p) + '\" alt=\"\" style=\"width:48px;height:48px;border-radius:50%;object-fit:cover\" onerror=\"this.style.display=\\'none\\'\">'
-        : '<span class=\"ava\" style=\"width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:var(--surf2)\">' + w.CZ.esc(String(n)[0].toUpperCase()) + '</span>') +
-        '<span><b>' + w.CZ.esc(n) + '</b><br><span class=\"sm muted\">' + w.CZ.esc(u.email || '') + '</span></span>';
+      prev.innerHTML = (p ? '<img src="' + w.CZ.esc(p) + '" alt="" style="width:48px;height:48px;border-radius:50%;object-fit:cover" onerror="this.style.display=\'none\'">'
+        : '<span class="ava" style="width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:var(--surf2)">' + w.CZ.esc(String(n)[0].toUpperCase()) + '</span>') +
+        '<span><b>' + w.CZ.esc(n) + '</b><br><span class="sm muted">' + w.CZ.esc(u.email || '') + '</span></span>';
     }
     inpName.addEventListener('input', paintPrev);
     inpPic.addEventListener('input', paintPrev);
@@ -172,16 +177,36 @@
       rd.onerror = function () { toast('Không đọc được tệp ảnh', 'err'); };
       rd.readAsDataURL(f);
     });
+    var deferred = {};
+    var promise = new Promise(function (res, rej) { deferred.res = res; deferred.rej = rej; });
+    function closeWith(v) {
+      if (m._close) m._close();
+      deferred.res(v);
+    }
+    m._czClose = function () { deferred.res(null); };
+    /* khi modal đóng bằng nút Huỷ / Esc / scrim thì resolve null */
+    var origClose = m._close;
+    m._close = function () {
+      try { if (origClose) origClose(); } catch (e) {}
+      deferred.res(null);
+    };
     m.querySelector('#czPfSave').addEventListener('click', function () {
       var nm = inpName.value.trim();
       var pc = inpPic.value.trim();
       if (!nm) { toast('Tên không được trống', 'err'); return; }
-      updateProfile({ name: nm, picture: pc }).then(function () {
-        if (m._close) m._close();
+      updateProfile({ name: nm, picture: pc }).then(function (merged) {
+        if (m._close) {
+          /* tạm gỡ resolver để không double-resolve */
+          var r = deferred.res; deferred.res = function () {};
+          try { origClose(); } catch (e) {}
+          r(merged);
+        } else {
+          deferred.res(merged);
+        }
       }).catch(function (e) { toast(e.message || 'Không lưu được', 'err'); });
     });
     setTimeout(function () { if (inpName) inpName.focus(); }, 80);
-    return Promise.resolve(null);
+    return promise;
   }
 
   /* ------------------------------------------------------------------ admin */

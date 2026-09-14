@@ -629,8 +629,14 @@
     BOOK.slug = CUR.slug; BOOK.title = CUR.title; BOOK.author = CUR.author; BOOK.couple = CUR.couple;
     BOOK.chapters = BOOK.chapters || [];
     CUR.chapters = BOOK.chapters.length;
-    var declared = parseInt(String(CUR.countLabel || '').split('/')[1], 10) || 0;
-    CUR.countLabel = BOOK.chapters.length + '/' + Math.max(declared, BOOK.chapters.length);
+    var raw = String(CUR.countLabel || '');
+    var sec = raw.split('/')[1] || '';
+    var declared = sec.trim() === '—' ? 0 : (parseInt(sec, 10) || 0);
+    if (BOOK.chapters.length === 0) {
+      CUR.countLabel = declared > 0 ? ('0/' + declared) : '0/—';
+    } else {
+      CUR.countLabel = BOOK.chapters.length + '/' + Math.max(declared, BOOK.chapters.length);
+    }
     CUR.count = CUR.countLabel;
     CUR.updated = today();
     if (!ONLINE) {

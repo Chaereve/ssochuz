@@ -1384,9 +1384,13 @@ async function postComment(slug, req, env, cors) {
   const name = u
     ? (String(body.name || '').replace(/\s+/g, ' ').trim().slice(0, 40) || u.name || 'Bạn đọc')
     : (String(body.name || '').replace(/\s+/g, ' ').trim().slice(0, 40) || 'Bạn đọc');
-  const picture = u
-    ? (String(body.picture || '').trim().slice(0, 500) || u.picture || '')
-    : '';
+  var rawPic = String(body.picture || '').trim();
+  /* data URL avatar ~1MB không nên lưu vào KV — vừa tốn quota vừa dễ vỡ khi slice */
+  if (rawPic.indexOf('data:') === 0) rawPic = '';
+  if (rawPic.length > 2000) rawPic = rawPic.slice(0, 2000);
+  var sessPic = String((u && u.picture) || '').trim();
+  if (sessPic.indexOf('data:') === 0) sessPic = '';
+  const picture = u ? (rawPic || sessPic || '') : '';
   const ch = Math.max(0, Math.min(99999, parseInt(body.ch, 10) || 0));
   /* hai lớp chặn spam: theo MỖI CHƯƠNG và theo toàn trang, trong 10 phút.
      Khách bị chặn chặt hơn (2/6) so với tài khoản đã đăng nhập (3/12). */

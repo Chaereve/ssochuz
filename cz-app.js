@@ -1372,9 +1372,13 @@
         var token = tk();
         var payload = { text: text, ch: chap, vid: vid() };
         if (me) {
-          /* đã đăng nhập: gửi luôn name/picture để Worker không fallback sang guest */
+          /* đã đăng nhập: gửi luôn name/picture để Worker không fallback sang guest.
+             data URL avatar thì bỏ qua để không phình KV. */
           payload.name = String(me.name || '').trim().slice(0, 40) || guestName();
-          payload.picture = String(me.picture || '').trim().slice(0, 500);
+          var _pic = String(me.picture || '').trim();
+          if (_pic.indexOf('data:') === 0) _pic = '';
+          if (_pic.length > 2000) _pic = _pic.slice(0, 2000);
+          payload.picture = _pic;
         } else {
           payload.name = guestName() || (nm ? String(nm.value || '').trim().slice(0, 40) : '');
         }
