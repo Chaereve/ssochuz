@@ -14,7 +14,7 @@ compatibility_date = "2025-01-01"
 # 6) Deploy:             npx wrangler deploy
 [[kv_namespaces]]
 binding = "CZ_KV"
-id = "DAN_ID_KV_VAO_DAY"
+id = "c1e0e450c37f4a0abf804bf354c412d9"
 
 [vars]
 BLOG = "https://chuseoz.blogspot.com"
