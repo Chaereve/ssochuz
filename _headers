@@ -19,6 +19,9 @@
 /admin.js
   Cache-Control: no-cache
 
+/cz-auth.js
+  Cache-Control: no-cache
+
 # Dữ liệu: ngắn, để bản mới lên nhanh nhưng vẫn đỡ gọi mạng nhiều lần
 /data/*.json
   Cache-Control: public, max-age=300

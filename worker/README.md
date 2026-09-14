@@ -15,6 +15,19 @@ Admin (admin.html)  ──PUT──▶  Worker (worker/cms.js)  ──▶  Cloud
 
 GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới cần build); dữ liệu thì không đi qua GitHub nữa.
 
+## Có gì mới ở bản 1.5.1 (sửa lỗi đăng nhập + CORS đang gặp trên ssochuz.pages.dev)
+
+| Trước | Sau |
+|---|---|
+| `/api/health` trả 200 nhưng **thiếu header CORS** → trang `/admin` gọi từ domain khác bị trình duyệt chặn, fetch ném `Failed to fetch`, admin báo nhầm "Worker chưa deploy / KV id còn là placeholder" | `/api/health` (và `/`) trả kèm `Access-Control-Allow-Origin` như mọi endpoint khác. Kiểm tra: mở `<worker>/api/health` phải thấy `"version": "1.5.1"` |
+| Cache khoá công khai Supabase **cất nhầm kiểu**: lần verify token THỨ HAI trở đi (cùng isolate) ném lỗi `SubtleCrypto.verify: not a CryptoKey` → `POST /api/auth/supabase` và bình luận đều **401** dù token hoàn toàn hợp lệ | Cache cất đúng `{key, algo, alg}`; verify ổn định từ lần đầu đến lần thứ n (đã có test hồi quy) |
+| Bình luận bị 401 chỉ báo chung chung "Phiên đăng nhập hết hạn", không phân biệt được **hết hạn thật** với **Worker cấu hình sai** | Mọi 401 của `/api/auth/supabase`, `/api/auth/me`, `/api/comments/*` kèm **lý do thật** trong body (`token sai issuer…`, `chưa đặt SUPABASE_JWT_SECRET…`, `phiên hết hạn…`); web hiển thị đúng nguyên nhân, `cz-auth.js` ghi lý do ra console |
+| Khó biết Worker đặt `SUPABASE_URL` có đúng project không | 401 của `/api/auth/supabase` trả kèm `supabaseUrl` đang cấu hình; lỗi sai issuer nêu cả URL của token lẫn URL của Worker |
+
+> **Đang gặp lỗi 401/CORS khi bình luận?** Deploy lại bản này (`npx wrangler deploy`) rồi mở
+> `https://<worker>/api/health` — nếu `version` chưa phải `1.5.1` thì bản chạy trên mạng vẫn là bản cũ.
+> Xem thêm mục **7c** bên dưới để bắt bệnh theo từng thông báo.
+
 ## Có gì mới ở bản 1.5.0
 
 | Trước | Sau |
@@ -375,3 +388,33 @@ cấp session token của Worker → web lưu lại, dùng cho bình luận/bầ
 `/admin` → tab **Cài đặt** → nút *Hỏi Worker*, hoặc `curl https://<worker>/api/auth/config`.
 
 Chưa bật Supabase thì web tự quay về đường Google cũ (nếu có `GOOGLE_CLIENT_ID`), và người đọc vẫn bình luận được bằng tên khách.
+
+## 7c. Bắt bệnh nhanh: 401 khi bình luận / "Failed to fetch" ở trang quản trị
+
+Mở DevTools (F12) → tab Network/Console rồi đối chiếu:
+
+**1. `/admin` báo "Không nối được: Failed to fetch…":**
+- Mở `https://<worker>/api/health` trên tab mới. Nếu trang JSON hiện ra bình thường
+  mà admin vẫn lỗi → Worker đang chạy **bản cũ thiếu CORS của /api/health** (sửa từ 1.5.1) → deploy lại.
+- Nếu tab mới cũng không mở được → Worker chưa deploy, sai URL, hoặc bị tắt ở dashboard.
+
+**2. `POST /api/auth/supabase` trả 401 — đọc chữ trong `error`:**
+
+| Thấy chữ này | Bệnh | Cách chữa |
+|---|---|---|
+| `token sai issuer — token do "https://A…" cấp nhưng Worker đang đặt SUPABASE_URL="https://B…"` | Worker đặt `SUPABASE_URL` **nhầm project** Supabase | Đặt lại `SUPABASE_URL` đúng project trong `cz-config.js` |
+| `ký HS256 mà Worker chưa đặt SUPABASE_JWT_SECRET` | Project Supabase đời cũ ký JWT bằng secret | `npx wrangler secret put SUPABASE_JWT_SECRET` (JWT Secret trong Supabase → Settings → API) |
+| `không đọc được JWKS của Supabase` | `SUPABASE_URL` sai/không tồn tại | Sửa lại URL cho đúng |
+| `phiên đăng nhập đã hết hạn` | access_token quá 1 giờ | Đăng nhập lại (web tự làm khi bấm Đăng nhập) |
+| `chữ ký token Supabase không hợp lệ` | URL đúng project nhưng khoá không khớp (thường do nhầm project con, hoặc token bị sửa) | Kiểm tra lại `SUPABASE_URL`; đăng nhập lại cho có token mới |
+
+**3. Gửi bình luận báo "Không xác thực được phiên đăng nhập — <lý do>":**
+- Lý do thật nằm ngay sau dấu gạch ngang (từ 1.5.1). Nếu là `Worker chưa đặt SUPABASE_URL…`
+  hoặc `sai issuer` → chữa theo bảng trên. Nếu là `phiên … hết hạn` → bấm Đăng nhập lại.
+- Console có dòng `[cz-auth] Worker không đổi được session (401): …` cho biết vì sao
+  bước đổi token thất bại — web vẫn giữ token Supabase thô, nên chỉ cần sửa cấu hình
+  Worker là bình luận chạy lại mà không cần đăng nhập lại.
+
+**4. Check nhanh cấu hình Worker:** `GET /api/health` → khối `auth`:
+`supabase: true` (đã đặt SUPABASE_URL), `session: true` (đã đặt SESSION_SECRET),
+`supabaseHs256: true` (đã đặt SUPABASE_JWT_SECRET — chỉ cần với project cũ).

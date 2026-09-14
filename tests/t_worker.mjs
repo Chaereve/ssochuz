@@ -143,6 +143,15 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     const r = await call('GET', '/api/health');
     ck('health/có KV → ok:true', !!(r.body && r.body.ok === true), r.body && r.body.ok, true);
     ck('health/có version', !!(r.body && r.body.version), r.body && r.body.version, 'chuỗi');
+    /* HỒI QUY: /api/health BẮT BUỘC kèm header CORS. Thiếu nó thì admin.js gọi từ
+       domain khác bị trình duyệt chặn (dù status 200) và báo nhầm "Failed to fetch —
+       Worker chưa deploy". Đây chính là lỗi đã gặp trên ssochuz.pages.dev. */
+    eq('health/có Access-Control-Allow-Origin', r.headers.get('access-control-allow-origin'), 'https://web.test');
+    eq('health/có Vary: Origin', r.headers.get('vary'), 'Origin');
+    const rNoKv = await call('GET', '/api/health', { e: Object.assign({}, env, { CZ_KV: undefined }) });
+    eq('health/không KV vẫn có CORS', rNoKv.headers.get('access-control-allow-origin'), 'https://web.test');
+    const rRoot = await call('GET', '/');
+    eq('root "/" cũng có CORS', rRoot.headers.get('access-control-allow-origin'), 'https://web.test');
   }
 
   /* ---------- 2. preflight CORS phải cho phép header admin.js gửi -------- */
@@ -260,6 +269,53 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     const bad = idToken().split('.'); bad[1] = b64u(JSON.stringify({ sub: 'x', aud: 'CLIENT_ID_TEST', exp: 9999999999 }));
     eq('google/chữ ký không khớp → 401', (await call('POST', '/api/auth/google', { body: { credential: bad.join('.') } })).status, 401);
     eq('google/thiếu credential → 400', (await call('POST', '/api/auth/google', { body: {} })).status, 400);
+  }
+
+  /* ---------- 7b. đăng nhập Supabase: 401 PHẢI kèm lý do thật để web bắt bệnh ---------- */
+  {
+    const envSB = Object.assign({}, env, { SUPABASE_URL: 'https://sb.test' });
+    routes = (u) => u.includes('/auth/v1/.well-known/jwks.json')
+      ? { status: 200, body: { keys: [{ kty: 'RSA', kid: 'kid-test', n: NE.n, e: NE.e }] } } : null;
+    const sbTok = (over) => {
+      const now = Math.floor(Date.now() / 1000);
+      const p = Object.assign({
+        iss: 'https://sb.test/auth/v1', aud: 'authenticated', sub: 'sb-user-1',
+        email: 'docgia@gmail.com', email_verified: true, iat: now, exp: now + 3600,
+      }, over);
+      const h = { alg: 'RS256', kid: 'kid-test', typ: 'JWT' };
+      const data = b64u(JSON.stringify(h)) + '.' + b64u(JSON.stringify(p));
+      return data + '.' + b64u(crypto.sign('RSA-SHA256', Buffer.from(data), KEY_PEM));
+    };
+    /* token hợp lệ → đổi được session của Worker */
+    {
+      const r = await call('POST', '/api/auth/supabase', { e: envSB, body: { accessToken: sbTok({}) } });
+      ck('supabase/token đúng → có session', !!(r.body && r.body.ok === true && r.body.token), r.body && r.body.error, 'ok + token');
+      /* token Supabase thô cũng phải dùng thẳng được ở endpoint cần Bearer */
+      const raw = await call('POST', '/api/comments/lunar-secret', { e: envSB, headers: { authorization: 'Bearer ' + sbTok({}) }, body: { text: 'đọc bằng token thô', ch: 9 } });
+      ck('comments/token Supabase thô → đăng được', !!(raw.body && raw.body.ok === true), raw.body && raw.body.error, 'ok');
+      await call('DELETE', '/api/comments/lunar-secret/' + ((raw.body && raw.body.comment && raw.body.comment.id) || 'x'), { e: envSB, headers: { authorization: 'Bearer ' + sbTok({}) } });
+    }
+    /* sai issuer (Worker đặt SUPABASE_URL nhầm project) → 401 phải chỉ rõ cả 2 URL */
+    {
+      const r = await call('POST', '/api/auth/supabase', { e: envSB, body: { accessToken: sbTok({ iss: 'https://project-khac.supabase.co/auth/v1' }) } });
+      eq('supabase/sai issuer → 401', r.status, 401);
+      ck('supabase/401 nêu issuer thật của token', /project-khac\.supabase\.co/.test((r.body && r.body.error) || ''), r.body && r.body.error, 'có URL trong error');
+      eq('supabase/401 kèm SUPABASE_URL đang cấu hình', r.body && r.body.supabaseUrl, 'https://sb.test');
+    }
+    /* token rác → 401 kèm lý do (không được trả lỗi chung chung) */
+    {
+      const r = await call('POST', '/api/auth/supabase', { e: envSB, body: { accessToken: 'token-rac' } });
+      eq('supabase/token rác → 401', r.status, 401);
+      ck('supabase/401 có lý do', /sai định dạng/.test((r.body && r.body.error) || ''), r.body && r.body.error, 'nêu định dạng');
+    }
+    /* bình luận với Bearer rác → 401 kèm LÝ DO trong body (web hiển thị được bệnh thật,
+       không còn báo nhầm "phiên hết hạn") và KHÔNG âm thầm ghi thành khách */
+    {
+      const r = await call('POST', '/api/comments/lunar-secret', { e: envSB, headers: { authorization: 'Bearer token-rac' }, body: { text: 'thử bình luận', vid: 'may-test' } });
+      eq('comments/Bearer rác → 401', r.status, 401);
+      ck('comments/401 kèm lý do thật', /sai định dạng/.test((r.body && r.body.error) || ''), r.body && r.body.error, 'có lý do từ Worker');
+    }
+    routes = () => null;
   }
 
   /* ---------- 8. session + bình luận ---------- */

@@ -9,7 +9,7 @@ node run.js                # chạy hết
 
 | Bài | Kiểm cái gì |
 |---|---|
-| `t_worker.mjs` | **Chạy thật `worker/cms.js`** (KV giả trong RAM, không cần mạng): health khi chưa bind KV, khoá quản trị, preflight CORS (`x-admin-key`, `x-import-mode`), registry/book/seed, **sync Blogger bằng đúng file `_inbox/live2/list-novel.html`**, import 1 bài viết thành chương (bỏ quảng cáo/bình luận), **đăng nhập Google với idToken RS256 ký thật** (JWKS dạng `x5c` và dạng `n/e`, sai aud/exp/chữ ký phải chặn), bình luận (đăng/đọc/xoá/chặn spam), **đếm lượt đọc + bình chọn trên KV** và `/api/stats`. 83 kiểm tra |
+| `t_worker.mjs` | **Chạy thật `worker/cms.js`** (KV giả trong RAM, không cần mạng): health khi chưa bind KV **+ hồi quy: health PHẢI kèm header CORS**, khoá quản trị, preflight CORS (`x-admin-key`, `x-import-mode`), registry/book/seed, **sync Blogger bằng đúng file `_inbox/live2/list-novel.html`**, import 1 bài viết thành chương (bỏ quảng cáo/bình luận), **đăng nhập Google với idToken RS256 ký thật** (JWKS dạng `x5c` và dạng `n/e`, sai aud/exp/chữ ký phải chặn), **đăng nhập Supabase với JWT ký thật** (đúng token đổi được session, sai issuer → 401 nêu cả 2 URL, token rác → 401 kèm lý do, **verify lặp lại nhiều lần với cùng kid không được vỡ cache**), bình luận (đăng/đọc/xoá/chặn spam, **Bearer rác → 401 kèm lý do thật**), **đếm lượt đọc + bình chọn trên KV** và `/api/stats`. 96 kiểm tra |
 | `t_config.js` | `cz-config.js`: URL Worker dán thiếu `https://` hoặc thừa `/` vẫn phải trỏ đúng Worker (thiếu `https://` thì trình duyệt hiểu thành đường dẫn nội bộ → mọi lệnh gọi KV thất bại âm thầm); để trống thì dùng dữ liệu tĩnh |
 | `t_html.js` | Soi HTML tĩnh + **`_redirects`**: thuộc tính trùng, `href` nội bộ trỏ tới tệp không có, `data-ic` không có trong bộ icon, và **đích của luật 200 mà là tệp `.html` thì báo vòng lặp ERR_TOO_MANY_REDIRECTS** (Cloudflare Pages tự 308 bỏ đuôi `.html`; lỗi này từng làm chết trang truyện) |
 | `t_home.js` | Trang chủ: hero (5 bộ), kệ **Đọc tiếp** (dựng từ tiến độ đọc thật trong máy), **Tủ truyện** (nút lưu trong trang truyện → mục trên trang chủ → bỏ/xoá), thanh thống kê, BXH theo dữ liệu thật, lịch ra chương, tìm kiếm, lọc tab, phân trang, mở trang truyện, **truyện 0 chương phải khoá nút đọc** |
@@ -26,7 +26,7 @@ node run.js                # chạy hết
 `t_worker.mjs` và `mock_worker.mjs` **không cần jsdom** — chỉ cần Node 18+:
 
 ```bash
-node tests/t_worker.mjs          # 83 kiểm tra cho worker/cms.js
+node tests/t_worker.mjs          # 96 kiểm tra cho worker/cms.js
 node tests/mock_worker.mjs 8787  # worker thật + KV trong RAM, mở admin.html để bấm thử
 ```
 

@@ -62,7 +62,7 @@
                                               khi muốn kéo số liệu cũ về KV một lần
    ============================================================================ */
 
-const VERSION = '1.5.0';
+const VERSION = '1.5.1';
 const JSONH = { 'content-type': 'application/json; charset=utf-8' };
 
 export default {
@@ -76,7 +76,7 @@ export default {
        và Cloudflare trả trang lỗi 1101 thay vì JSON — rất khó đoán bệnh. */
     try {
       /* ---------- mở: chỉ đọc ---------- */
-      if (p === '/' || p === '/api/health') return await health(env);
+      if (p === '/' || p === '/api/health') return await health(env, cors);
       if (p === '/api/whoami' || p === '/api/auth') {
         if (!authed(req, env)) return json({ ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, { status: 401, cors });
         return json({ ok: true, role: 'admin', version: VERSION }, { cors });
@@ -466,8 +466,8 @@ async function logAct(env, text, req) {
     let who = 'admin-key';
     try {
       const h = (req && req.headers && req.headers.get('authorization')) || '';
-      const u = h ? await userFromReq(req, env) : null;
-      if (u && u.email) who = u.email;
+      const a = h ? await userFromReq(req, env) : null;
+      if (a && a.user && a.user.email) who = a.user.email;
     } catch (e) {}
     arr.unshift({ at: new Date().toISOString(), text: String(text || '').slice(0, 200), who });
     if (arr.length > 200) arr.length = 200;
@@ -529,8 +529,12 @@ async function adminStats(req, env, cors) {
   const days = Object.keys(series).sort().slice(-60).map((d) => Object.assign({ day: d }, series[d]));
   return json({ ok: true, updatedAt: st.updatedAt || '', items, days }, { cors, headers: { 'cache-control': 'no-store' } });
 }
-async function health(env) {
-  if (!env.CZ_KV) return json({ ok: true, version: VERSION, kv: false, books: 0, novels: 0, regRev: '', lastWrite: '', now: new Date().toISOString(), hint: 'chưa bind CZ_KV' });
+/* LƯU Ý: health PHẢI gửi kèm header CORS. Trang quản trị (admin.js) gọi
+   /api/health từ domain khác bằng fetch — nếu response thiếu
+   Access-Control-Allow-Origin thì trình duyệt CHẶN kết quả (dù status 200),
+   fetch ném "Failed to fetch" và admin báo nhầm là Worker chưa deploy. */
+async function health(env, cors) {
+  if (!env.CZ_KV) return json({ ok: true, version: VERSION, kv: false, books: 0, novels: 0, regRev: '', lastWrite: '', now: new Date().toISOString(), hint: 'chưa bind CZ_KV' }, { cors });
   const last = (await env.CZ_KV.get('_last')) || '';
   const reg = await env.CZ_KV.get('registry', { type: 'json' });
   let books = 0;
@@ -557,7 +561,7 @@ async function health(env) {
       supabaseHs256: !!(env.SUPABASE_JWT_SECRET), google: !!env.GOOGLE_CLIENT_ID,
       session: !!env.SESSION_SECRET, adminEmails: adminEmails(env),
     },
-  });
+  }, { cors });
 }
 async function getSchedule(env, ctx, cors) {
   if (!env.CZ_KV) return noKV(cors);
@@ -810,7 +814,7 @@ async function postVote(req, env, cors) {
   const body = await req.json().catch(() => ({}));
   const slug = cleanSlug(body.slug);
   if (!slug) return json({ ok: false, error: 'thiếu slug hợp lệ' }, { status: 400, cors });
-  const u = await userFromReq(req, env);
+  const u = (await userFromReq(req, env)).user;
   const who = u ? 'g:' + hash(u.uid) : viewerOf(req, body);
   if (!who) return json({ ok: false, error: 'thiếu vid (mã máy) để chống bầu nhiều lần' }, { status: 400, cors });
   const ch = Math.max(0, Math.min(99999, parseInt(body.ch, 10) || 0));
@@ -1177,9 +1181,13 @@ async function supabasePubKey(env, kid, alg) {
     algo = { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' };
     key = await crypto.subtle.importKey('jwk', { kty: k.kty || 'RSA', n: k.n, e: k.e, alg: k.alg || 'RS256', ext: true }, algo, false, ['verify']);
   }
-  _sbKeys.set(ck, key);
+  /* BUG ĐÃ SỬA: trước đây cache chỉ cất CryptoKey trần nhưng hàm trả về
+     { key, algo, alg } — lần verify THỨ HAI với cùng kid sẽ destruct ra
+     key = undefined → SubtleCrypto.verify ném lỗi → đăng nhập/bình luận 401. */
+  const entry = { key, algo, alg: upper };
+  _sbKeys.set(ck, entry);
   if (_sbKeys.size > 12) _sbKeys.delete(_sbKeys.keys().next().value);
-  return { key, algo, alg: upper };
+  return entry;
 }
 async function verifySupabaseToken(tok, env) {
   const parts = String(tok || '').split('.');
@@ -1207,7 +1215,7 @@ async function verifySupabaseToken(tok, env) {
   if (!aud.some((a) => a === 'authenticated' || a === 'anon')) throw new Error('token sai audience: ' + aud.join(','));
   const base = supabaseURL(env);
   if (base && payload.iss && String(payload.iss).indexOf(base) !== 0 && String(payload.iss).indexOf(base.replace(/^https?:\/\//, '')) < 0) {
-    throw new Error('token sai issuer (không phải của project này)');
+    throw new Error('token sai issuer — token do "' + payload.iss + '" cấp nhưng Worker đang đặt SUPABASE_URL="' + base + '" (đặt SUPABASE_URL trên Worker đúng project Supabase của web)');
   }
   if (payload.email && payload.email_verified === false) throw new Error('email chưa xác thực');
   return payload;
@@ -1237,22 +1245,26 @@ function isAdminUser(u, env) {
   const e = String(u.email || '').trim().toLowerCase();
   return !!e && adminEmails(env).indexOf(e) >= 0;
 }
+/* Trả { user, err }: err là LÝ DO token bị từ chối (hết hạn, sai chữ ký, sai
+   issuer, Worker thiếu biến …) để endpoint trả 401 kèm nguyên nhân thật —
+   người dùng không còn bị báo nhầm "phiên hết hạn" khi bệnh là cấu hình Worker. */
 async function userFromReq(req, env) {
   const h = req.headers.get('authorization') || '';
   const m = h.match(/^Bearer\s+(.+)$/i);
-  if (!m) return null;
+  if (!m) return { user: null, err: '' };
   const tok = m[1];
   const secret = env.SESSION_SECRET || '';
   if (secret) {
     const s = await verifySession(tok, secret);
-    if (s) return s;
+    if (s) return { user: s, err: '' };
   }
   /* chưa phải session của Worker → thử luôn access_token Supabase
      (để bình luận chạy được kể cả khi web chưa đổi token kịp) */
   if (supabaseURL(env) || env.SUPABASE_JWT_SECRET) {
-    try { return userFromSupabase(await verifySupabaseToken(tok, env)); } catch (e) { return null; }
+    try { return { user: userFromSupabase(await verifySupabaseToken(tok, env)), err: '' }; }
+    catch (e) { return { user: null, err: String((e && e.message) || e) }; }
   }
-  return null;
+  return { user: null, err: 'Worker chưa đặt SUPABASE_URL (hoặc SUPABASE_JWT_SECRET) nên không xác thực được token Supabase' };
 }
 /* exp gửi kèm để web tự biết khi nào hết phiên (không phải gọi /api/auth/me) */
 function publicUser(u, env) {
@@ -1308,7 +1320,15 @@ async function authSupabase(req, env, cors) {
   }
   let payload;
   try { payload = await verifySupabaseToken(tok, env); }
-  catch (e) { return json({ ok: false, error: 'xác thực Supabase thất bại: ' + e.message }, { status: 401, cors }); }
+  catch (e) {
+    /* trả kèm SUPABASE_URL đang cấu hình để web/dev đối chiếu ngay với project
+       thật (lỗi phổ biến nhất: Worker đặt URL của project Supabase KHÁC) */
+    return json({
+      ok: false,
+      error: 'xác thực Supabase thất bại: ' + e.message,
+      supabaseUrl: supabaseURL(env), hs256: !!(env.SUPABASE_JWT_SECRET),
+    }, { status: 401, cors });
+  }
   const user = userFromSupabase(payload);
   const secret = env.SESSION_SECRET || '';
   if (!secret) {
@@ -1332,8 +1352,8 @@ async function authConfig(env, cors) {
   }, { cors, headers: { 'cache-control': 'no-store' } });
 }
 async function authMe(req, env, cors) {
-  const u = await userFromReq(req, env);
-  if (!u) return json({ ok: false, error: 'chưa đăng nhập' }, { status: 401, cors });
+  const { user: u, err } = await userFromReq(req, env);
+  if (!u) return json({ ok: false, error: err ? ('token không hợp lệ: ' + err) : 'chưa đăng nhập' }, { status: 401, cors });
   return json({ ok: true, user: publicUser(u, env), admin: isAdminUser(u, env) }, { cors });
 }
 async function getComments(slug, req, env, cors) {
@@ -1356,14 +1376,16 @@ async function getComments(slug, req, env, cors) {
 async function postComment(slug, req, env, cors) {
   const authHeader = req.headers.get('authorization') || '';
   const hasAuth = /^Bearer\s+/i.test(authHeader);
-  const u = await userFromReq(req, env);
+  const { user: u, err: authErr } = await userFromReq(req, env);
   /* Nếu gửi kèm Bearer nhưng Worker không xác thực được (token hết hạn, hoặc Worker chưa có
      SUPABASE_URL/SESSION_SECRET) thì TRẢ 401 chứ không âm thầm biến thành khách — đây là
-     nguyên nhân chính của lỗi "đăng nhập rồi mà vẫn ghi tài khoản khách". */
+     nguyên nhân chính của lỗi "đăng nhập rồi mà vẫn ghi tài khoản khách".
+     Kèm LÝ DO thật trong body để web hiển thị đúng bệnh (hết hạn ≠ sai cấu hình). */
   if (hasAuth && !u) {
     return json({
       ok: false,
-      error: 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn — hãy đăng nhập lại. Nếu bạn là chủ trang, kiểm tra biến SUPABASE_URL và SESSION_SECRET trên Worker.',
+      error: 'Không xác thực được phiên đăng nhập' + (authErr ? ' — ' + authErr : ' — hãy đăng nhập lại') + '.',
+      hint: 'Nếu bạn là chủ trang, kiểm tra biến SUPABASE_URL (đúng project) và SESSION_SECRET trên Worker.',
     }, { status: 401, cors });
   }
   const body = await req.json().catch(() => ({}));
@@ -1413,7 +1435,7 @@ async function postComment(slug, req, env, cors) {
 }
 async function deleteComment(slug, id, req, env, cors) {
   const byKey = authed(req, env);            /* quản trị (ADMIN_KEY) xoá được mọi bình luận */
-  const u = await userFromReq(req, env);
+  const u = (await userFromReq(req, env)).user;
   const mod = byKey || isAdminUser(u, env);
   if (!u && !byKey) return json({ ok: false, error: 'cần đăng nhập' }, { status: 401, cors });
   if (!env.CZ_KV) return noKV(cors);

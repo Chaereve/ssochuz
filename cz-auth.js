@@ -308,7 +308,15 @@
           save(merged, j.token);
           return merged;
         }
-        /* Worker chưa đặt SUPABASE_URL/JWT secret → vẫn cho đăng nhập, dùng token Supabase */
+        /* Worker từ chối đổi token → ghi LÝ DO ra console để dễ bắt bệnh
+           (hay gặp nhất: SUPABASE_URL trên Worker sai project, thiếu SUPABASE_JWT_SECRET).
+           Vẫn cho đăng nhập bằng token Supabase thô — nhưng bình luận sẽ chỉ chạy
+           khi Worker tự verify được token đó. */
+        try {
+          console.warn('[cz-auth] Worker không đổi được session (' + r.status + '):',
+            (j && j.error) || 'không rõ lý do',
+            (j && j.supabaseUrl) ? ('SUPABASE_URL trên Worker: ' + j.supabaseUrl) : '');
+        } catch (e) {}
         save(Object.assign({}, u, { admin: u.admin }), accessToken);
         return u;
       });
