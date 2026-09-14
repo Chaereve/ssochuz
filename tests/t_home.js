@@ -118,6 +118,22 @@ const LIB = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data/registry
   click($$('#banTabs .tab')[0]); await wait(150);
   out.banBackToDoc = !$('#contRow').classList.contains('hide');
 
+  /* ---------- menu điện thoại: mở/đóng, Esc, bấm ra ngoài, có báo trạng thái ---------- */
+  {
+    const burger = $('#czBurger'), mnav = $('#czMnav');
+    const key = (k) => doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: k, bubbles: true }));
+    const st = () => ({ expanded: burger.getAttribute('aria-expanded'), open: mnav.classList.contains('on'), label: burger.getAttribute('aria-label') });
+    out.menuDau = st();
+    click(burger); await wait(60);
+    out.menuMo = st();
+    key('Escape'); await wait(60);
+    out.menuEsc = st();
+    click(burger); await wait(60);
+    click($('#hdr') || doc.body); await wait(60);
+    out.menuBamNgoai = st();
+    out.menuCo = { ariaControls: burger.getAttribute('aria-controls'), soLink: $$('#czMnav a').length, nhan: $$('#czNav a .nav-lbl').map(e => e.textContent.trim()) };
+  }
+
   out.errors1 = errors.slice(0, 6);
   console.log(JSON.stringify(out, null, 1));
   process.exit(0);

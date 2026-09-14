@@ -120,8 +120,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   out.story = {
     chapCount: txt('#chapCount'),
     relSeries: $$('#relSeries a').length,
-    relCouple: $$('#relCouple a').length,
-    cmtNote: txt('#cmtNote')
+    relCouple: $$('#relCouple a').length
   };
   out.errStory = errors.slice(0, 5);
   out.logCount = log.length;

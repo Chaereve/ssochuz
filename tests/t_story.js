@@ -40,10 +40,14 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     chapCount: txt('#chapCount')
   };
   out.chapters = { n: $$('#chapGrid .cha').length, first: txt('#chapGrid .cha') };
-  /* nút Thích phải LUÔN hiện ở trang truyện và có lớp .like nổi bật */
+  /* Trang truyện KHÔNG còn nút Thích (yêu cầu chủ trang: chỉ thích trong trang đọc) */
   const lb = $('#likeBtn');
-  out.likeBtn = { present: !!lb, cls: lb ? lb.className : '', shelf: !!$('#shelfBtn') };
-  if (!lb || !lb.classList.contains('like')) out.errors0.push('nút Thích thiếu / không có lớp .like ở trang truyện');
+  out.likeBtn = { present: !!lb, removed: !lb, shelf: !!$('#shelfBtn'), share: !!$('#shareBtn') };
+  if (lb) out.errors0.push('trang truyện vẫn còn nút Thích — yêu cầu là bỏ, chỉ để lại trong trang đọc');
+  /* icon SVG lấy từ IconBuddy (bộ Lucide): tim + tủ sách phải là 2 hình khác nhau */
+  const heroIcons = $$('#shero .btn-row svg').map(s => s.innerHTML.replace(/\s+/g, ' ').trim());
+  out.icons = { soIcon: heroIcons.length, khacNhau: new Set(heroIcons).size === heroIcons.length };
+  if (heroIcons.length && new Set(heroIcons).size !== heroIcons.length) out.errors0.push('hai nút ở trang truyện dùng trùng một icon');
   /* tìm chương */
   const cq = $('#chapQ');
   cq.value = 'kẹo'; cq.dispatchEvent(new win.Event('input', { bubbles: true })); await wait(250);
@@ -123,15 +127,23 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   /* ---------- truyện 0 chương (“Sắp ra mắt”) ---------- */
   const r3 = page('truyen.html', { url: 'https://ssochuz.pages.dev/truyen/my-boss/', fetch: dataFetch() });
   await wait(1400);
-  const body3 = r3.doc.body.textContent.replace(/\s+/g, ' ').trim();
+  /* chỉ lấy chữ NGƯỜI ĐỌC THẤY: bỏ nội dung <script>/<style> (mã nguồn nhúng trong trang) */
+  const body3 = (() => {
+    const c = r3.doc.body.cloneNode(true);
+    c.querySelectorAll('script, style, template').forEach(el => el.remove());
+    return c.textContent.replace(/\s+/g, ' ').trim();
+  })();
   out.locked = {
     errors: r3.errors.slice(0, 3),
     h1: (r3.doc.querySelector('#shero h1') || {}).textContent,
     readLocked: !!r3.doc.querySelector('#shero .btn-row button[disabled]'),
-    saysSoon: /chưa có chương|sắp ra mắt/i.test(body3),
+    saysSoon: /sắp ra mắt/i.test(body3),                 /* nhãn trạng thái trên đầu trang vẫn còn */
+    khongLapCauDai: !/chưa có chương nào/i.test(body3),  /* đã bỏ 2 dòng “chưa có chương nào — Sắp ra mắt” theo yêu cầu */
     hasBlogLink: /blogspot\.com/.test(r3.doc.body.innerHTML),
     noContent: (r3.doc.querySelector('#rdText') || {}).innerHTML === ''
   };
+  if (!out.locked.khongLapCauDai) out.errors0.push('trang truyện còn câu “chưa có chương nào — đang ở trạng thái Sắp ra mắt” (chủ trang yêu cầu bỏ)');
+  if (!out.locked.saysSoon) out.errors0.push('bộ “Sắp ra mắt” không còn nhãn trạng thái nào trên trang truyện');
   r3.win.location.hash = '#chuong-1'; await wait(250);
   out.lockedAfterHash = r3.doc.body.classList.contains('reading');
 

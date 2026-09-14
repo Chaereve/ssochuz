@@ -4,20 +4,21 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
-<title>ssochuz · trang quản trị</title>
-<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
-<link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
-<link rel="stylesheet" href="/cz.css?v=20260915a">
+<title>ssochuz library · trang quản trị</title>
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg?v=2">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=2">
+<link rel="icon" type="image/x-icon" href="/assets/favicon.ico?v=2">
+<link rel="stylesheet" href="/cz.css?v=20260915d">
 <script>/* chống nháy nền */try{var t=localStorage.getItem('ssochuz-theme')||localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
 <body class="admin">
 <div class="abar"><div class="in">
-  <a class="logo" href="/"><span class="dot"></span>ssochuz<i>.</i></a>
+  <a class="logo" href="/" title="ssochuz library"><span class="dot"></span>ssochuz<i> library</i></a>
   <span class="pill acc">quản trị</span>
   <span class="chip" id="chipConn"><span class="d"></span><span id="chipConnTxt">chưa nối Worker</span></span>
   <span class="chip hide" id="chipData"><span class="d"></span><span id="chipDataTxt">—</span></span>
   <span class="dirty" id="dirtyTxt"></span>
+  <button class="hbtn hide" id="btnDraftRestore" title="Máy này còn bản nháp chưa nạp lên KV — bấm để xem lại">Nháp trong máy</button>
   <span class="grow"></span>
   <span class="whoami hide" id="whoBox"></span>
   <span class="rolebadge hide" id="roleBadge"></span>
@@ -39,7 +40,7 @@
   <!-- ============ 0. CỔNG VÀO — chỉ quản trị ============ -->
   <section id="gate">
     <div class="gate">
-      <h2>Trang quản trị ssochuz</h2>
+      <h2>Trang quản trị ssochuz library</h2>
       <p class="gsub">Trang này <b>không mở cho người đọc</b>. Vào bằng một trong hai cách:
         đăng nhập tài khoản Google nằm trong danh sách quản trị, hoặc dùng khoá <code>ADMIN_KEY</code> của Worker.</p>
       <div class="grow2">
@@ -70,7 +71,9 @@
             <input class="inp" id="inApi" placeholder="https://chuseoz-cms.xxx.workers.dev" autocomplete="off"></div>
           <div><label class="fl" for="inKey">ADMIN_KEY</label>
             <input class="inp" id="inKey" type="password" placeholder="khoá quản trị" autocomplete="off">
-            <p class="hint">Dán đúng <code>Secret ADMIN_KEY</code> của <b>Worker này</b>, không phải <code>SESSION_SECRET</code> hay Supabase key. Khoá ở đầu/cuối được tự bỏ khoảng trắng.</p></div>
+            <p class="hint">Dán đúng <code>Secret ADMIN_KEY</code> của <b>Worker này</b>, không phải <code>SESSION_SECRET</code> hay Supabase key. Khoá ở đầu/cuối được tự bỏ khoảng trắng.</p>
+            <label class="chk" for="inRemember"><input type="checkbox" id="inRemember">
+              <span>Ghi nhớ khoá trên máy này <span class="sm muted">(mặc định: khoá chỉ sống trong tab đang mở — đóng trình duyệt là mất, an toàn hơn khi dùng máy chung)</span></span></label></div>
         </div>
         <div class="row mt">
           <button class="btn pri" id="btnConnect">Kiểm tra &amp; kết nối</button>
@@ -96,13 +99,15 @@
   <section id="scApp" class="hide">
     <div class="tabs bar sticky" id="tabs" role="tablist">
       <button data-tab="overview" class="on">Tổng quan</button>
-      <button data-tab="list">Thư viện</button>
+      <button data-tab="list">Thư viện<span class="ct" id="tabLibCt"></span></button>
       <button data-tab="quick">Đăng chương nhanh</button>
       <button data-tab="new">Thêm bộ</button>
       <button data-tab="edit" class="hide">Sửa bộ &amp; chương</button>
       <button data-tab="doctor">Bác sĩ dữ liệu</button>
-      <button data-tab="cmts">Bình luận</button>
+      <button data-tab="cmts">Bình luận<span class="ct" id="tabCmtCt"></span></button>
+      <button data-tab="reports">Báo lỗi<span class="ct" id="tabRepCt"></span></button>
       <button data-tab="stats">Số liệu thật</button>
+      <button data-tab="votes">Phiếu bầu<span class="ct" id="tabVotesCt"></span></button>
       <button data-tab="log">Nhật ký</button>
       <button data-tab="settings">Cài đặt &amp; đồng bộ</button>
       <button data-tab="help">Trợ giúp</button>
@@ -235,7 +240,8 @@
     <div id="pane-edit" class="hide">
       <div class="card2">
         <div class="row"><h3 id="edHead">Sửa bộ</h3><span class="grow"></span>
-          <a class="btn ghost sm" id="edView" target="_blank" rel="noopener">Mở trang truyện ↗</a>
+          <a class="btn ghost sm" id="edView" target="_blank" rel="noopener" title="Trang thông tin bộ truyện như người đọc thấy">Mở trang thông tin ↗</a>
+          <button class="btn ghost sm" id="edDup" title="Tạo một bộ mới giống bộ này (kèm chương) rồi sửa lại">Nhân bản bộ</button>
           <button class="btn ghost sm" id="edBack">← Về thư viện</button></div>
         <div class="grid3" style="margin-top:8px">
           <div><label class="fl" for="fTitle">Tên truyện</label><input class="inp" id="fTitle"></div>
@@ -280,6 +286,15 @@
             </div>
           </div>
         </div>
+        <div class="findbox">
+          <label class="search"><span data-ic="search"></span>
+            <input id="chFind" placeholder="Tìm chữ trong toàn bộ chương của bộ này (vd tên nhân vật, lỗi chính tả)…" autocomplete="off" spellcheck="false">
+          </label>
+          <button class="btn ghost sm" id="chFindGo">Tìm</button>
+          <button class="btn ghost sm hide" id="chFindClear">Xoá kết quả</button>
+          <span class="sm muted" id="chFindStat"></span>
+        </div>
+        <div class="findres hide" id="chFindRes"></div>
         <div class="savebar">
           <button class="btn pri" id="btnSaveCh">Lưu toàn bộ chương (Ctrl+S)</button>
           <span class="dirty"></span>
@@ -327,6 +342,22 @@
         <div class="msgbar" id="cmState"></div>
         <div class="tiles mt" id="cmTiles"></div>
         <div style="max-height:64vh;overflow:auto" class="mt" id="cmList"></div>
+      </div>
+    </div>
+
+    <!-- ---------- BÁO LỖI CHỮ NGƯỜI ĐỌC GỬI ---------- -->
+    <div id="pane-reports" class="hide">
+      <div class="card2">
+        <div class="row"><h3>Báo lỗi chữ người đọc gửi</h3><span class="grow"></span>
+          <input class="inp" id="rpQ" placeholder="Tìm trong nội dung báo lỗi…" style="max-width:240px">
+          <button class="btn ghost sm" id="rpReload">Đọc lại</button>
+          <button class="btn ghost sm" id="rpExport">Xuất JSON</button></div>
+        <p class="hint">Mỗi lần người đọc bấm <b>Gửi báo lỗi</b> ở trang đọc, nội dung được lưu vào KV (300 báo lỗi gần nhất) và
+          <b>gửi thẳng email</b> tới quản trị nếu Worker đã đặt <code>RESEND_API_KEY</code> + <code>MAIL_FROM</code>.
+          Bấm vào dòng để mở đúng chương bị báo.</p>
+        <div class="msgbar" id="rpState"></div>
+        <div class="tiles mt" id="rpTiles"></div>
+        <div style="max-height:64vh;overflow:auto" class="mt" id="rpList"></div>
       </div>
     </div>
 
@@ -380,10 +411,11 @@
       </div>
       <div class="card2">
         <h3>Báo lỗi & Liên hệ</h3>
-        <p class="hint">Nút Báo lỗi ở trang đọc sẽ mở email/form này. Đã chọn email_form.</p>
+        <p class="hint">Báo lỗi chữ ở trang đọc giờ gửi <b>tự động</b> về máy chủ (kèm email tới quản trị nếu Worker đã đặt <code>MAIL_TO</code>, hoặc <code>RESEND_API_KEY</code> + <code>MAIL_FROM</code>) — người đọc không phải copy gì.
+          Ô đầu là email nhận thư liên hệ; ô sau là link <b>khảo sát truyện</b> (để người đọc chọn truyện muốn web làm tiếp).</p>
         <div class="grid2">
-          <div><label class="fl" for="rEmail">Email nhận báo lỗi</label><input class="inp" id="rEmail" placeholder="chuseoz.ofc@gmail.com"></div>
-          <div><label class="fl" for="rForm">Form khảo sát / báo lỗi URL</label><input class="inp" id="rForm" placeholder="https://forms.gle/..."></div>
+          <div><label class="fl" for="rEmail">Email liên hệ / nhận báo lỗi</label><input class="inp" id="rEmail" placeholder="chuseoz.ofc@gmail.com"></div>
+          <div><label class="fl" for="rForm">Link khảo sát truyện (Google Form)</label><input class="inp" id="rForm" placeholder="https://forms.gle/..."></div>
         </div>
       </div>
       <div class="card2">
@@ -437,6 +469,11 @@
           <button class="btn ghost" id="btnStatsClear">Xoá cache số liệu</button>
         </div>
         <div class="row mt">
+          <button class="btn ghost hide" id="btnDraftUse">↺ Khôi phục nháp trong máy</button>
+          <button class="btn ghost hide" id="btnDraftDrop">Xoá nháp trong máy</button>
+          <span class="sm muted" id="draftInfo"></span>
+        </div>
+        <div class="row mt">
           <button class="btn ghost" id="btnBackup">↓ Sao lưu toàn bộ (JSON)</button>
           <button class="btn ghost" id="btnRestore">↑ Phục hồi từ file</button>
           <input type="file" id="fileRestore" accept="application/json" class="hide">
@@ -465,6 +502,56 @@
       </div>
     </div>
 
+    <!-- ---------- PHIẾU BẦU (gỡ phiếu từng người · reset) ---------- -->
+    <div id="pane-votes" class="hide">
+      <div class="card2">
+        <div class="row">
+          <h3>Ai đã bầu bộ này</h3><span class="grow"></span>
+          <button class="btn ghost sm" id="voReload">Đọc lại</button>
+        </div>
+        <p class="hint">Chọn một bộ để xem <b>từng người đã bầu</b>: phiếu cho cả bộ và phiếu cho từng chương
+          (khoá <code>voters</code> trong KV). Tick vào người muốn gỡ rồi bấm <b>Gỡ phiếu đã chọn</b> —
+          số phiếu ngoài web giảm ngay, kể cả phiếu đặt lúc chưa đăng nhập.</p>
+        <div class="row mt">
+          <label class="search" style="max-width:320px"><span data-ic="search"></span>
+            <input id="voFind" placeholder="Lọc danh sách truyện…" autocomplete="off" spellcheck="false">
+          </label>
+          <select class="sel" id="voBook" style="min-width:250px"></select>
+          <span class="vchips" id="voChap" role="tablist" aria-label="Lọc theo chương"></span>
+        </div>
+        <div class="msgbar" id="voState"></div>
+        <div class="tiles mt" id="voTiles"></div>
+        <div class="votelist mt" id="voList"></div>
+        <div class="savebar">
+          <button class="btn pri" id="voRemove">Gỡ phiếu đã chọn</button>
+          <span class="sm muted" id="voSel">chưa chọn phiếu nào</span>
+          <span class="grow"></span>
+          <label class="row sm"><input type="checkbox" id="voAll" style="width:auto"> chọn tất cả</label>
+          <button class="btn ghost" id="voClearSel">Bỏ chọn</button>
+        </div>
+      </div>
+      <div class="card2 danger">
+        <div class="row"><h3>Reset dữ liệu bầu</h3><span class="grow"></span><span class="pill bad">cẩn thận</span></div>
+        <p class="hint">Đưa phiếu về <b>0</b> để bắt đầu lại (ví dụ sau khi thử tính năng). <b>Lượt đọc không bị ảnh hưởng.</b>
+          Thao tác này xoá luôn danh sách người đã bầu nên <b>không hoàn tác được</b> — muốn giữ thì bấm
+          <b>Sao lưu toàn bộ</b> trước.</p>
+        <div class="row">
+          <span class="row"><label class="fl" for="rsScope" style="margin:0">Phạm vi</label>
+            <select class="sel" id="rsScope">
+              <option value="one">Chỉ bộ đang chọn</option>
+              <option value="all">Tất cả bộ trong thư viện</option>
+            </select></span>
+          <select class="sel" id="rsWhat">
+            <option value="">Toàn bộ phiếu (cả bộ + từng chương)</option>
+            <option value="ch">Chỉ phiếu của một chương</option>
+          </select>
+          <input class="inp hide" id="rsCh" type="number" min="1" inputmode="numeric" placeholder="số chương" style="width:120px">
+          <button class="btn" id="rsRun">Reset phiếu</button>
+          <span class="sm muted" id="rsHint"></span>
+        </div>
+      </div>
+    </div>
+
     <!-- ---------- TRỢ GIÚP ---------- -->
     <div id="pane-help" class="hide">
       <div class="card2">
@@ -480,7 +567,9 @@
         <h3>Phím tắt</h3>
         <div class="keys">
           <div><span class="kk"><kbd>Ctrl</kbd><kbd>S</kbd></span> lưu thông tin / chương đang sửa</div>
-          <div><span class="kk"><kbd>1</kbd><kbd>…</kbd><kbd>8</kbd></span> đổi tab</div>
+          <div><span class="kk"><kbd>1</kbd><kbd>…</kbd><kbd>9</kbd><kbd>0</kbd></span> đổi tab (1 Tổng quan → 0 Cài đặt)</div>
+          <div><span class="kk"><kbd>V</kbd></span> mở tab Phiếu bầu — gỡ phiếu từng người, reset phiếu</div>
+          <div><span class="kk"><kbd>R</kbd></span> mở tab Báo lỗi — xem báo lỗi chữ người đọc gửi</div>
           <div><span class="kk"><kbd>/</kbd><kbd>Ctrl</kbd><kbd>K</kbd></span> tìm nhanh trong thư viện</div>
           <div><span class="kk"><kbd>Esc</kbd></span> đóng hộp thoại</div>
         </div>
@@ -492,6 +581,28 @@
           <li>Ở thanh trên chọn <b>việc cần làm</b> — đổi tình trạng, gắn hoặc bỏ nhãn 18+ — rồi bấm <b>Áp dụng</b>.</li>
         </ol>
         <p class="hint">Muốn chọn nhanh cả danh sách đang lọc thì tick ô ở tiêu đề bảng trước.</p>
+      </div>
+      <div class="card2">
+        <h3>Gỡ phiếu &amp; reset dữ liệu bầu</h3>
+        <ol class="steps">
+          <li>Mở tab <b>Phiếu bầu</b> (phím <kbd>V</kbd>) → chọn bộ ở ô bên phải.</li>
+          <li>Danh sách chia theo <b>phiếu cả bộ</b> và <b>từng chương</b>. Tick người cần gỡ (hoặc <b>chọn tất cả</b>) → <b>Gỡ phiếu đã chọn</b>.</li>
+          <li>Cần xoá sạch để làm lại: dùng ô <b>Reset dữ liệu bầu</b> ở cuối tab — chọn phạm vi (một bộ / tất cả) và
+            có thể chỉ xoá phiếu của một chương. Lượt đọc vẫn giữ nguyên.</li>
+        </ol>
+        <p class="hint">Phiếu ẩn danh cũng gỡ được: mỗi phiếu lưu theo khoá máy (<code>a:…</code>) hoặc khoá tài khoản
+          (<code>g:…</code>) nên bỏ phiếu bằng cách nào cũng ra đúng người.</p>
+      </div>
+      <div class="card2">
+        <h3>Đọc báo lỗi chữ người đọc gửi</h3>
+        <ol class="steps">
+          <li>Mở tab <b>Báo lỗi</b> (phím <kbd>R</kbd>) — mọi lần bấm <b>Gửi báo lỗi</b> ở trang đọc đều nằm ở đây,
+            kèm tên bộ, số chương, link và người gửi.</li>
+          <li>Bấm <b>Mở</b> để nhảy tới đúng chương, <b>copy</b> để lấy nội dung, hoặc bấm phong bì để trả lời người báo.</li>
+          <li>Muốn nhận luôn qua email: điền <code>MAIL_TO</code> = email của bạn trong Worker (FormSubmit, không cần khoá —
+            lần đầu nhớ bấm “Confirm” trong thư xác nhận), hoặc dùng <code>RESEND_API_KEY</code> + <code>MAIL_FROM</code>.
+            Xem mục 5f của <code>worker/README.md</code>. Chưa đặt thì báo lỗi vẫn được lưu và hiện ở tab này.</li>
+        </ol>
       </div>
       <div class="card2">
         <h3>Khi có sự cố</h3>
@@ -508,9 +619,9 @@
 
 <div class="toasts" id="toasts"></div>
 
-<script src="/cz-config.js?v=20260915a"></script>
-<script src="/cz-app.js?v=20260915a"></script>
-<script src="/cz-auth.js?v=20260915a"></script>
-<script src="/admin.js?v=20260915a"></script>
+<script src="/cz-config.js?v=20260915d"></script>
+<script src="/cz-app.js?v=20260915d"></script>
+<script src="/cz-auth.js?v=20260915d"></script>
+<script src="/admin.js?v=20260915d"></script>
 </body>
 </html>

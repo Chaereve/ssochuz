@@ -35,6 +35,14 @@
      GET    /api/admin/comments         → mọi bình luận để kiểm duyệt (cần X-Admin-Key)
      GET    /api/admin/stats            → số liệu chi tiết + chuỗi 60 ngày (cần X-Admin-Key)
      GET    /api/admin/log              → nhật ký 200 thao tác gần nhất (cần X-Admin-Key)
+     GET    /api/admin/voters?slug=     → AI ĐÃ BẦU bộ này: phiếu cả bộ + phiếu từng
+                                           chương, kèm khoá người bầu (cần X-Admin-Key)
+     POST   /api/admin/vote-remove      → GỠ PHIẾU của người được chọn
+                                           { slug, ch, keys: [...] } (cần X-Admin-Key)
+     POST   /api/admin/votes/reset      → RESET dữ liệu bầu { slug?, ch? }
+                                           · không có slug = reset MỌI bộ
+                                           · không có ch   = xoá cả phiếu bộ lẫn phiếu chương
+                                           (cần X-Admin-Key)
 
      POST   /api/auth/supabase          → access_token Supabase → session (mở)
      POST   /api/auth/google            → idToken Google → session (mở, cách cũ)
@@ -61,10 +69,18 @@
      STATS_FLUSH_MS    (tuỳ chọn) = 10000  — gom lượt đọc bao nhiêu mili-giây thì ghi KV
      FIREBASE_PROJECT  (KHÔNG cần nữa)      — chỉ dùng cho /api/stats/import-firebase
                                               khi muốn kéo số liệu cũ về KV một lần
+     MAIL_TO           (tuỳ chọn)  — BẬT GỬI EMAIL báo lỗi chữ bằng FormSubmit, chỉ cần điền email nhận
+                                     (lần đầu FormSubmit gửi 1 thư xác nhận, bấm Confirm là xong)
+     RESEND_API_KEY    (tuỳ chọn)  — đường gửi chuyên nghiệp: khoá API resend.com (free 100 mail/ngày)
+     MAIL_FROM         (tuỳ chọn)  — địa chỉ gửi của Resend, vd: ssochuz library <bao-loi@ten-mien-cua-ban>
    ============================================================================ */
 
-const VERSION = '1.7.0';
-const JSONH = { 'content-type': 'application/json; charset=utf-8' };
+const VERSION = '1.9.1';
+const JSONH = {
+  'content-type': 'application/json; charset=utf-8',
+  'x-content-type-options': 'nosniff',
+  'referrer-policy': 'no-referrer',
+};
 
 export default {
   async fetch(req, env, ctx) {
@@ -72,6 +88,12 @@ export default {
     const cors = corsHeaders(req, env);
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     let p = url.pathname.replace(/\/+$/, '') || '/';
+
+    /* Cổng chặn dò khoá: áp cho MỌI endpoint có gửi X-Admin-Key (kể cả /api/whoami) */
+    if (req.headers.get('x-admin-key')) {
+      const blocked = await adminThrottle(req, env, cors);
+      if (blocked) return blocked;
+    }
 
     /* Mọi handler đều `await`: không await thì lỗi bên trong lọt ra ngoài try/catch
        và Cloudflare trả trang lỗi 1101 thay vì JSON — rất khó đoán bệnh. */
@@ -89,6 +111,9 @@ export default {
       /* ---------- số liệu xếp hạng: đếm lượt đọc / bình chọn ---------- */
       if (p === '/api/view' && req.method === 'POST') return await postView(req, env, ctx, cors);
       if (p === '/api/vote' && req.method === 'POST') return await postVote(req, env, cors);
+      /* báo lỗi chữ trong chương: người đọc bấm 1 nút là nội dung đi thẳng tới
+         hộp thư ban biên tập — tự lưu vào KV, không cần copy/mở Gmail nữa */
+      if (p === '/api/report' && req.method === 'POST') return await postReport(req, env, ctx, cors);
 
       /* ---------- người dùng: đăng nhập (Supabase/Google) + bình luận ---------- */
       if (p === '/api/auth/supabase' && req.method === 'POST') return await authSupabase(req, env, cors);
@@ -120,6 +145,10 @@ export default {
       if (p === '/api/admin/comments' && req.method === 'GET') return await adminComments(req, env, cors);
       if (p === '/api/admin/log' && req.method === 'GET') return await adminLog(req, env, cors);
       if (p === '/api/admin/stats' && req.method === 'GET') return await adminStats(req, env, cors);
+      if (p === '/api/admin/reports' && req.method === 'GET') return await adminReports(req, env, cors);
+      if (p === '/api/admin/voters' && req.method === 'GET') return await adminVoters(req, env, cors);
+      if (p === '/api/admin/vote-remove' && req.method === 'POST') return await adminVoteRemove(req, env, cors);
+      if (p === '/api/admin/votes/reset' && req.method === 'POST') return await adminVotesReset(req, env, cors);
       if (p === '/api/seed' && req.method === 'POST') return await seed(req, env, cors);
       if (p === '/api/sync' && req.method === 'POST') return await syncBlogger(req, env, cors);
       if (p === '/api/import' && req.method === 'POST') return await importPost(req, env, cors);
@@ -232,8 +261,15 @@ function cleanPost(raw) {
     keep.push(src);
     return '\u0000IMG' + (keep.length - 1) + '\u0000';
   });
-  h = h.replace(/<(b|strong|i|em|u)[^>]*>/gi, '<$1>')
-       .replace(/<a [^>]*href="(https?:\/\/[^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, '<a href="$1" rel="noopener" target="_blank">$2</a>')
+  /* Bỏ MỌI thuộc tính ngoài href http(s) của thẻ <a>: chặn onclick/onerror và cả
+     href="javascript:..." lọt từ bài Blogger vào thẳng trang đọc.
+       · thẻ chữ (b/strong/i/em/u/p): gỡ hết thuộc tính
+       · thẻ <a>: chỉ dựng lại khi href là http(s); còn lại bỏ thẻ, giữ chữ */
+  h = h.replace(/<(b|strong|i|em|u|p)\b[^>]*>/gi, '<$1>')
+       .replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, (m, inner) => {
+         const href = (m.match(/href="(https?:\/\/[^"]+)"/i) || [])[1];
+         return href ? '<a href="' + href + '" rel="noopener nofollow" target="_blank">' + inner + '</a>' : inner;
+       })
        .replace(/<\/(?!p>|b>|strong>|i>|em>|u>|a>)[a-z0-9]+>/gi, '')
        .replace(/<(?!\/?p[ >]|\/?b[ >]|\/?strong[ >]|\/?i[ >]|\/?em[ >]|\/?u[ >]|\/?a[ >])[a-z0-9]+[^>]*>/gi, '');
   const out = [];
@@ -262,14 +298,28 @@ function corsHeaders(req, env) {
   } else {
     const list = allowRaw.split(',').map((s) => s.trim()).filter(Boolean);
     if (origin) {
-      if (list.includes(origin)) {
+      /* So khớp theo TÊN MIỀN, đúng ranh giới dấu chấm: "chuseoz.pages.dev" chỉ nhận
+         chuseoz.pages.dev và x.chuseoz.pages.dev, KHÔNG nhận "acchuseoz.pages.dev"
+         (kiểu lỗi cũ: origin.endsWith(tên miền) nên bất kỳ tên miền nào có đuôi
+         giống vậy cũng được phản chiếu lại → trang lạ gọi được API). */
+      let host = '';
+      try { host = new URL(origin).host.toLowerCase(); } catch (e) { host = ''; }
+      const hostMatch = (d) => {
+        let dh = String(d || '').trim().toLowerCase();
+        if (!dh) return false;
+        dh = dh.replace(/^https?:\/\//, '').replace(/\/+$/, '').replace(/^\*\./, '');
+        return !!host && (host === dh || host.endsWith('.' + dh));
+      };
+      if (list.includes(origin) || list.some(hostMatch)) {
         ao = origin;
       } else {
-        /* cho phép preview: *.pages.dev, localhost, 127.0.0.1, *.e2b.app, vercel preview */
-        const okPreview = /^(https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?|https:\/\/.*\.pages\.dev|https:\/\/.*\.vercel\.app|https:\/\/.*\.e2b\.app)$/i.test(origin)
-          || list.some((d) => origin.endsWith(d.replace(/^\*\.?/, '.')) || origin === d);
+        /* Chỉ mở cho origin ĐỂ THỬ: localhost (máy chạy thử) và *.e2b.app (khung xem
+           trước khi sửa). KHÔNG mở cho mọi *.pages.dev nữa — bản xem trước của chính
+           web đã khớp ở luật đuôi tên miền bên trên (abc.ssochuz.pages.dev vẫn qua),
+           còn *.pages.dev của người khác thì không. */
+        const okPreview = /^(https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?|https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)*\.e2b\.app)$/i.test(origin);
         if (okPreview || list.includes('*')) ao = origin;
-        else ao = list[0] || origin || '*';
+        else ao = list[0] || '*' ;
       }
     } else {
       ao = list[0] || '*';
@@ -282,8 +332,9 @@ function corsHeaders(req, env) {
     'access-control-max-age': '86400',
     vary: 'Origin',
   };
-  /* khi trả về origin cụ thể (không phải *) thì cho phép credentials nếu cần */
-  if (ao !== '*') headers['access-control-allow-credentials'] = 'true';
+  /* KHÔNG gửi access-control-allow-credentials: web này xác thực bằng header
+     (X-Admin-Key / Authorization), không dùng cookie phiên — nên không có lý do
+     cho phép trình duyệt gửi kèm cookie từ một origin khác. */
   return headers;
 }
 function json(obj, { status = 200, cors = {}, headers = {} } = {}) {
@@ -297,6 +348,23 @@ function noKV(cors) {
     error: 'Worker chưa gắn KV CZ_KV — Settings → Bindings → KV namespace (Variable name CZ_KV), hoặc id trong wrangler.toml vẫn là DAN_ID_KV_VAO_DAY (placeholder). Tạo KV rồi dán id thật, deploy lại.',
   }, { status: 503, cors });
 }
+/* IP người gọi (Cloudflare luôn có cf-connecting-ip; x-forwarded-for chỉ là dự phòng). */
+function clientIp(req) {
+  if (!req || !req.headers) return '';
+  return String(req.headers.get('cf-connecting-ip')
+    || String(req.headers.get('x-forwarded-for') || '').split(',')[0]).trim().slice(0, 64);
+}
+/* Chống DÒ khoá quản trị: chỉ đếm các lần SAI (đúng thì không ảnh hưởng), quá
+   25 lần sai trong 10 phút từ cùng một IP thì khoá tạm 10 phút. */
+async function adminThrottle(req, env, cors) {
+  if (!env.CZ_KV) return null;
+  if (!req.headers.get('x-admin-key')) return null;
+  if (authed(req, env)) return null;
+  const ok = await rateLimit(env, 'rl:adm:' + hash(clientIp(req) || 'x'), 25, 600);
+  if (ok) return null;
+  return json({ ok: false, error: 'sai khoá quản trị quá nhiều lần — thử lại sau 10 phút' }, { status: 429, cors });
+}
+
 /* ADMIN_KEY thường bị dính khoảng trắng khi copy từ Dashboard/terminal.
    Chỉ bỏ khoảng trắng ở hai đầu — không đổi phần khoá ở giữa — để thao tác
    dán khoá an toàn hơn mà không làm giảm việc so sánh chính xác. */
@@ -539,6 +607,308 @@ async function adminStats(req, env, cors) {
   const days = Object.keys(series).sort().slice(-60).map((d) => Object.assign({ day: d }, series[d]));
   return json({ ok: true, updatedAt: st.updatedAt || '', items, days }, { cors, headers: { 'cache-control': 'no-store' } });
 }
+/* ============================================================================
+   QUẢN TRỊ PHIẾU BẦU (gỡ phiếu của từng người · reset dữ liệu bầu)
+   ----------------------------------------------------------------------------
+   Khoá trong `voters` có dạng:
+     `g:<hash>` / `a:<vid>` / `i:<hash>`         → phiếu cho CẢ BỘ
+     `g:<hash>#12` / `a:<vid>#12` / …            → phiếu cho CHƯƠNG 12
+   Trang quản trị đọc danh sách này để hiện từng người kèm ô tick; tick ai thì
+   gọi /api/admin/vote-remove để gỡ đúng phiếu của người đó.
+   Giá trị mỗi khoá: { t: <ISO lúc bầu> } — bản cũ lưu số 1, vẫn đọc được.
+   ============================================================================ */
+function voterKind(key) {
+  const s = String(key || '');
+  if (s.startsWith('g:')) return 'user';
+  if (s.startsWith('a:')) return 'device';
+  if (s.startsWith('i:')) return 'ip';
+  return 'other';
+}
+const VOTER_KIND_VI = { user: 'Tài khoản', device: 'Thiết bị', ip: 'Địa chỉ IP', other: 'Khác' };
+function voterInfo(key, ch) {
+  const raw = String(key || '');
+  const body = ch > 0 ? raw.replace(/#\d+$/, '') : raw;
+  const kind = voterKind(body);
+  return {
+    key: raw,
+    ch: ch || 0,
+    kind,
+    kindLabel: VOTER_KIND_VI[kind] || 'Khác',
+    id: body.replace(/^[a-z]+:/, ''),
+    at: '',
+  };
+}
+/* GET /api/admin/voters?slug= — ai đã bầu bộ này, theo từng chương */
+/* ---------------------------------------------------------------------------
+   BÁO LỖI CHỮ  (POST /api/report)
+   Người đọc chỉ bấm “Gửi báo lỗi” là xong: Worker lưu báo lỗi vào KV rồi GỬI
+   EMAIL tới mọi địa chỉ trong ADMIN_EMAILS, kèm tên bộ + chương + link. Không
+   phải copy nội dung rồi tự mở Gmail nữa.
+   · Gửi email cần 2 biến (không bắt buộc): RESEND_API_KEY, MAIL_FROM
+     (vd MAIL_FROM = "ssochuz library <bao-loi@ten-mien-cua-ban>").
+     Chưa cấu hình thì báo lỗi vẫn được lưu vào KV và hiện ở trang quản trị,
+     chỉ là không có email — hàm trả mailed:false kèm lý do.
+   · Chống spam: 6 lần/giờ cho mỗi máy, 40 lần/giờ cho mỗi IP.
+   --------------------------------------------------------------------------- */
+/* Link người dùng gửi kèm báo lỗi: CHỈ nhận http/https (bỏ javascript:, data:,
+   vbscript:…). Trang quản trị in link này ra nút “Mở” nên nếu nhận bừa thì
+   người lạ có thể nhét javascript: vào và chạy mã trong phiên quản trị. */
+function safeLink(u, env) {
+  const s = String(u || '').trim().slice(0, 300);
+  if (!/^https?:\/\//i.test(s)) return '';
+  try {
+    const h = new URL(s).host.toLowerCase();
+    const allow = String((env && env.ALLOW_ORIGIN) || '').split(',').map((x) => x.trim().replace(/^https?:\/\//, '').replace(/^\*\./, '')).filter(Boolean);
+    if (allow.length && allow.indexOf('*') < 0) {
+      const ok = allow.some((d) => h === d || h.endsWith('.' + d)
+        || /\.(pages\.dev|e2b\.app|blogspot\.com)$/i.test(h) || h === 'localhost');
+      if (!ok) return '';
+    }
+    return s;
+  } catch (e) { return ''; }
+}
+async function postReport(req, env, ctx, cors) {
+  if (!env.CZ_KV) return noKV(cors);
+  const body = await req.json().catch(() => ({}));
+  const text = String(body.text || '').trim().slice(0, 4000);
+  if (text.length < 3) return json({ ok: false, error: 'nội dung báo lỗi quá ngắn' }, { status: 400, cors });
+  const ip = clientIp(req);
+  const who = viewerOf(req, body);
+  if (!(await rateLimit(env, 'rl:report:' + (who || ('ip:' + hash(ip))), 6, 3600)) ||
+      !(await rateLimit(env, 'rl:report-ip:' + hash(ip || 'x'), 40, 3600))) {
+    return json({ ok: false, error: 'bạn đã gửi hơi nhiều báo lỗi — thử lại sau ít phút nhé' }, { status: 429, cors });
+  }
+  let user = null;
+  try { user = (await userFromReq(req, env)).user; } catch (e) { user = null; }
+  const it = {
+    at: new Date().toISOString(),
+    kind: String(body.kind || 'Báo lỗi chữ').replace(/[\r\n]+/g, ' ').slice(0, 60),
+    slug: cleanSlug(body.slug) || '',
+    title: String(body.title || '').replace(/[\r\n]+/g, ' ').slice(0, 140),
+    ch: Math.max(0, parseInt(body.ch, 10) || 0),
+    url: safeLink(body.url, env),
+    text,
+    who: (user && user.email) || who || 'khách',
+  };
+  const list = (await env.CZ_KV.get('report', { type: 'json' })) || [];
+  list.unshift(it);
+  if (list.length > 300) list.length = 300;
+  await env.CZ_KV.put('report', JSON.stringify(list));
+  await logAct(env, 'báo lỗi mới: ' + (it.title || it.slug || '?') + (it.ch ? ' · chương ' + it.ch : ''), req);
+  const mail = await mailReport(env, it);
+  return json({ ok: true, mailed: !!mail.sent, note: mail.reason || '', at: it.at }, { cors });
+}
+
+/* gửi email báo lỗi (Resend). Chưa cấu hình thì trả sent:false + lý do, KHÔNG ném lỗi. */
+/* Gửi email báo lỗi cho quản trị. Hai đường, tự chọn:
+   1) RESEND_API_KEY + MAIL_FROM  → Resend (thư đẹp, cần tên miền đã xác thực).
+   2) MAIL_TO                     → FormSubmit (KHÔNG cần khoá, không cần tên miền:
+      điền email nhận là xong; lần gửi đầu FormSubmit gửi 1 thư xác nhận, bấm
+      Confirm trong thư đó là từ đó về sau thư về đều).
+   Chưa đặt gì thì báo lỗi vẫn được lưu vào KV và hiện ở tab Báo lỗi trong /admin. */
+async function mailReport(env, it) {
+  const to = String(env.MAIL_TO || '').split(',').map((s) => s.trim()).filter(Boolean);
+  const admins = adminEmails(env);
+  const line = 'Báo lỗi · ' + (it.title || it.slug || 'không rõ bộ') + (it.ch ? ' · chương ' + it.ch : '');
+  const body = [
+    line,
+    it.url ? it.url : '(không có link)',
+    '',
+    it.text,
+    '',
+    '— Gửi từ ssochuz library lúc ' + it.at + ' · người gửi: ' + it.who,
+  ].join('\n');
+  const key = env.RESEND_API_KEY, from = env.MAIL_FROM;
+  if (key && from) {
+    if (!admins.length) return { sent: false, reason: 'chưa đặt ADMIN_EMAILS nên không biết gửi cho ai' };
+    try {
+      const r = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { authorization: 'Bearer ' + key, 'content-type': 'application/json' },
+        body: JSON.stringify({ from, to: admins, subject: line, text: body, reply_to: (it.who && it.who.indexOf('@') > 0) ? it.who : undefined }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok) return { sent: true, reason: 'đã gửi tới ' + admins.join(', ') };
+      return { sent: false, reason: 'Resend từ chối: ' + ((d && (d.message || d.error)) || r.status) };
+    } catch (e) {
+      return { sent: false, reason: 'lỗi gửi email: ' + String((e && e.message) || e) };
+    }
+  }
+  const box = to.length ? to : admins;
+  if (key && !from) return { sent: false, reason: 'thiếu MAIL_FROM (địa chỉ gửi) — điền địa chỉ đã xác thực trong Resend' };
+  if (!box.length) return { sent: false, reason: 'chưa đặt MAIL_TO (hoặc ADMIN_EMAILS) nên chưa biết gửi email cho ai' };
+  try {
+    const r = await fetch('https://formsubmit.co/ajax/' + encodeURIComponent(box[0]), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({
+        _subject: line,
+        _template: 'table',
+        _captcha: 'false',
+        'Truyện': it.title || it.slug || '',
+        'Chương': it.ch ? String(it.ch) : 'cả bộ',
+        'Link': it.url || '',
+        'Người gửi': it.who || 'khách',
+        'Nội dung báo lỗi': it.text,
+      }),
+    });
+    const d = await r.json().catch(() => ({}));
+    const msg = String((d && (d.message || d.error)) || '');
+    if (r.ok && String(d && d.success) === 'true') return { sent: true, reason: 'đã gửi email tới ' + box[0] };
+    if (/confirm|activat|xác nhận/i.test(msg)) {
+      return { sent: false, reason: 'FormSubmit vừa gửi 1 thư xác nhận tới ' + box[0] + ' — mở hộp thư bấm “Confirm/Activate” một lần là từ sau thư báo lỗi về thẳng hộp thư' };
+    }
+    return { sent: false, reason: 'FormSubmit từ chối: ' + (msg || r.status) };
+  } catch (e) {
+    return { sent: false, reason: 'lỗi gửi email: ' + String((e && e.message) || e) };
+  }
+}
+
+/* GET /api/admin/reports — danh sách báo lỗi gần nhất để trang quản trị xem lại */
+async function adminReports(req, env, cors) {
+  if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
+  if (!env.CZ_KV) return noKV(cors);
+  const items = (await env.CZ_KV.get('report', { type: 'json' })) || [];
+  const q = String(new URL(req.url).searchParams.get('q') || '').toLowerCase();
+  const out = q ? items.filter((x) => (x.text + ' ' + x.title + ' ' + x.slug).toLowerCase().indexOf(q) >= 0) : items;
+  return json({ ok: true, items: out.slice(0, 100), count: out.length, mail: !!env.RESEND_API_KEY && !!env.MAIL_FROM });
+}
+
+async function adminVoters(req, env, cors) {
+  if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
+  if (!env.CZ_KV) return noKV(cors);
+  const u = new URL(req.url);
+  const slug = cleanSlug(u.searchParams.get('slug'));
+  if (!slug) return json({ ok: false, error: 'thiếu slug hợp lệ' }, { status: 400, cors });
+  await flushStats(env);
+  const st = await readStats(env);
+  const it = statOf(st, slug);
+  const book = [];
+  const chapters = {};
+  Object.keys(it.voters || {}).forEach((key) => {
+    const m = String(key).match(/#(\d+)$/);
+    const ch = m ? parseInt(m[1], 10) : 0;
+    const val = it.voters[key];
+    const info = voterInfo(key, ch);
+    info.at = (val && typeof val === 'object' && val.t) ? val.t : '';
+    if (ch > 0) {
+      const box = chapters[ch] || (chapters[ch] = { count: 0, voters: [] });
+      box.voters.push(info);
+    } else book.push(info);
+  });
+  Object.keys(chapters).forEach((ch) => { chapters[ch].count = chapters[ch].voters.length; });
+  const pub = publicStat(it, dayStr());
+  return json({
+    ok: true, slug, source: 'kv',
+    total: pub.votes,                                   /* tổng phiếu đang hiện trên web */
+    counted: Math.max(0, (it.got || {}).votes || 0),    /* phần web tự đếm được */
+    base: Math.max(0, (it.base || {}).votes || 0),      /* số cũ nhập từ Firebase/file */
+    voters: Object.keys(it.voters || {}).length,
+    book: { count: book.length, voters: book },
+    chapters, chapVotes: pub.chapVotes,
+    updatedAt: it.updatedAt || '',
+  }, { cors, headers: { 'cache-control': 'no-store' } });
+}
+/* Trừ phiếu khỏi tổng: ưu tiên trừ phần web đếm được, hết thì trừ tiếp số cũ,
+   và trừ dần vào lịch sử ngày gần nhất để biểu đồ không đứng số cũ. */
+function decVotes(it, n) {
+  n = Math.max(0, Math.round(Number(n) || 0));
+  if (!n) return;
+  it.got = it.got || { views: 0, votes: 0 };
+  it.base = it.base || { views: 0, votes: 0 };
+  const cut = Math.min(it.got.votes || 0, n);
+  it.got.votes = Math.max(0, (it.got.votes || 0) - cut);
+  let left = n - cut;
+  if (left > 0) { it.base.votes = Math.max(0, (it.base.votes || 0) - left); left = 0; }
+  let rest = n;
+  Object.keys(it.days || {}).sort().reverse().forEach((k) => {
+    if (rest <= 0) return;
+    const d = it.days[k];
+    const take = Math.min(d.o || 0, rest);
+    d.o = (d.o || 0) - take;
+    rest -= take;
+  });
+}
+/* POST /api/admin/vote-remove { slug, ch, keys: [...] } — gỡ phiếu của người được chọn */
+async function adminVoteRemove(req, env, cors) {
+  if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
+  if (!env.CZ_KV) return noKV(cors);
+  const body = await req.json().catch(() => ({}));
+  const slug = cleanSlug(body.slug);
+  if (!slug) return json({ ok: false, error: 'thiếu slug hợp lệ' }, { status: 400, cors });
+  const ch = Math.max(0, Math.min(99999, parseInt(body.ch, 10) || 0));
+  const keys = (Array.isArray(body.keys) ? body.keys : [])
+    .map((k) => String(k || '').slice(0, 120)).filter(Boolean);
+  if (!keys.length) return json({ ok: false, error: 'chưa chọn phiếu nào để gỡ' }, { status: 400, cors });
+  const bad = keys.filter((k) => (ch > 0 ? !k.endsWith('#' + ch) : k.includes('#')));
+  if (bad.length) {
+    return json({ ok: false, error: 'có phiếu không thuộc ' + (ch > 0 ? ('chương ' + ch) : 'phiếu cả bộ') }, { status: 400, cors });
+  }
+  await flushStats(env);
+  const st = await readStats(env);
+  const it = statOf(st, slug);
+  let removed = 0;
+  keys.forEach((k) => { if (it.voters[k] != null) { delete it.voters[k]; removed++; } });
+  if (removed) {
+    decVotes(it, removed);
+    if (ch > 0) {
+      it.chap[ch] = Math.max(0, (Number(it.chap[ch]) || 0) - removed);
+      if (!it.chap[ch]) delete it.chap[ch];
+    }
+    it.updatedAt = new Date().toISOString();
+    await writeStats(env, st);
+  }
+  await logAct(env, 'gỡ ' + removed + ' phiếu ' + (ch > 0 ? ('chương ' + ch) : 'cả bộ') + ' · ' + slug, req);
+  const pub = publicStat(it, dayStr());
+  return json({ ok: true, slug, ch, removed, total: pub.votes, chapVotes: pub.chapVotes },
+    { cors, headers: { 'cache-control': 'no-store' } });
+}
+/* POST /api/admin/votes/reset { slug?, ch? } — đưa phiếu về 0 để bắt đầu lại
+   · không có slug → reset MỌI bộ
+   · không có ch   → xoá cả phiếu cả bộ lẫn phiếu từng chương (GIỮ lượt đọc)
+   · ch = 12       → chỉ xoá phiếu của chương 12 (của 1 bộ, hoặc của mọi bộ) */
+async function adminVotesReset(req, env, cors) {
+  if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
+  if (!env.CZ_KV) return noKV(cors);
+  const body = await req.json().catch(() => ({}));
+  const slug = cleanSlug(body.slug);
+  const hasCh = body.ch != null && body.ch !== '';
+  const ch = hasCh ? Math.max(1, Math.min(99999, parseInt(body.ch, 10) || 0)) : 0;
+  await flushStats(env);
+  const st = await readStats(env);
+  const targets = slug ? [slug] : Object.keys(st.items || {});
+  let stories = 0, cleared = 0;
+  targets.forEach((s) => {
+    const it = statOf(st, s);
+    it.got = it.got || { views: 0, votes: 0 };
+    it.base = it.base || { views: 0, votes: 0 };
+    it.days = it.days || {};
+    let n = 0;
+    if (ch > 0) {
+      Object.keys(it.voters || {}).forEach((k) => { if (String(k).endsWith('#' + ch)) { delete it.voters[k]; n++; } });
+      const shown = Number(it.chap[ch]) || 0;
+      if (shown > n) n = shown;                    /* số phiếu chương có thể lớn hơn số khoá còn lại */
+      if (it.chap[ch]) delete it.chap[ch];
+      decVotes(it, n);
+    } else {
+      n = Math.max(Object.keys(it.voters || {}).length,
+        (Number(it.got.votes) || 0) + (Number(it.base.votes) || 0));
+      it.voters = {};
+      it.chap = {};
+      it.got.votes = 0;
+      it.base.votes = 0;
+      Object.keys(it.days).forEach((d) => { it.days[d].o = 0; });
+    }
+    it.updatedAt = new Date().toISOString();
+    if (n) stories++;
+    cleared += n;
+  });
+  await writeStats(env, st);
+  await logAct(env, 'reset phiếu ' + (slug ? ('bộ ' + slug) : 'TẤT CẢ bộ') +
+    (ch > 0 ? (' · chỉ chương ' + ch) : '') + ' — xoá ' + cleared + ' phiếu', req);
+  return json({ ok: true, slug: slug || '', ch, stories, cleared },
+    { cors, headers: { 'cache-control': 'no-store' } });
+}
 /* LƯU Ý: health PHẢI gửi kèm header CORS. Trang quản trị (admin.js) gọi
    /api/health từ domain khác bằng fetch — nếu response thiếu
    Access-Control-Allow-Origin thì trình duyệt CHẶN kết quả (dù status 200),
@@ -570,6 +940,7 @@ async function health(env, cors) {
       supabase: !!supabaseURL(env), supabaseUrl: supabaseURL(env),
       supabaseHs256: !!(env.SUPABASE_JWT_SECRET), google: !!env.GOOGLE_CLIENT_ID,
       session: !!env.SESSION_SECRET, adminEmails: adminEmails(env),
+      mail: (!!env.RESEND_API_KEY && !!env.MAIL_FROM) || !!env.MAIL_TO,
     },
   }, { cors });
 }
@@ -823,6 +1194,12 @@ async function postView(req, env, ctx, cors) {
   const who = viewerOf(req, body);
   const day = dayStr();
   if (who && seenView(slug + '|' + who + '|' + day)) return json({ ok: true, counted: false }, { cors, headers: { 'cache-control': 'no-store' } });
+  /* Mã máy (vid) do web gửi nên có thể bị đổi liên tục để thổi số. Chặn theo IP
+     làm lớp thứ hai: quá 600 lượt/giờ từ một IP thì thôi không đếm nữa —
+     KHÔNG báo lỗi, người đọc bình thường (kể cả sau NAT) không thấy gì khác. */
+  if (!await rateLimit(env, 'rl:view-ip:' + hash(clientIp(req) || 'x'), 600, 3600)) {
+    return json({ ok: true, counted: false }, { cors, headers: { 'cache-control': 'no-store' } });
+  }
   const c = _buf.get(slug) || { v: 0, o: 0 };
   c.v += 1; _buf.set(slug, c);
   if (!_bufAt) _bufAt = Date.now();
@@ -858,6 +1235,10 @@ async function postVote(req, env, cors) {
   if (!await rateLimit(env, 'rl:vote:' + who, 400, 3600)) {
     return json({ ok: false, error: 'thao tác hơi nhanh, thử lại sau ít phút' }, { status: 429, cors });
   }
+  /* Lớp theo IP: đổi vid liên tục cũng không bơm phiếu vô hạn được */
+  if (!await rateLimit(env, 'rl:vote-ip:' + hash(clientIp(req) || 'x'), 150, 3600)) {
+    return json({ ok: false, error: 'thao tác hơi nhanh, thử lại sau ít phút' }, { status: 429, cors });
+  }
   await flushStats(env);
   const st = await readStats(env);
   const it = statOf(st, slug);
@@ -866,7 +1247,7 @@ async function postVote(req, env, cors) {
   const existing = vkeys.filter((k) => !!it.voters[k]);
   let changed = false;
   if (want && !existing.length) {
-    if (Object.keys(it.voters).length < VOTER_CAP) it.voters[vkey] = 1;
+    if (Object.keys(it.voters).length < VOTER_CAP) it.voters[vkey] = { t: new Date().toISOString() };
     it.got.votes += 1; addDay(it, dayStr(), 0, 1);
     if (ch > 0) it.chap[ch] = (Number(it.chap[ch]) || 0) + 1;
     changed = true;
@@ -1436,11 +1817,11 @@ async function postComment(slug, req, env, cors) {
   const name = u
     ? (String(body.name || '').replace(/\s+/g, ' ').trim().slice(0, 40) || u.name || 'Bạn đọc')
     : (String(body.name || '').replace(/\s+/g, ' ').trim().slice(0, 40) || 'Bạn đọc');
-  var rawPic = String(body.picture || '').trim();
-  if (rawPic.indexOf('data:') === 0) rawPic = '';
-  if (rawPic.length > 2000) rawPic = rawPic.slice(0, 2000);
+  /* Ảnh đại diện: chỉ nhận http/https (bỏ data:, javascript:…), tối đa 300 ký tự */
+  var rawPic = String(body.picture || '').trim().slice(0, 2000);
+  if (!/^https?:\/\//i.test(rawPic)) rawPic = '';
   var sessPic = String((u && u.picture) || '').trim();
-  if (sessPic.indexOf('data:') === 0) sessPic = '';
+  if (!/^https?:\/\//i.test(sessPic)) sessPic = '';
   const picture = u ? (rawPic || sessPic || '') : '';
   const ch = Math.max(0, Math.min(99999, parseInt(body.ch, 10) || 0));
   /* parentId là id của bình luận mà người đọc đang trả lời. Chỉ nhận id trong

@@ -25,6 +25,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 /* Worker giả: phiếu thích theo từng chương + bình luận có chương (đúng dáng 1.5.0) */
 function makeApi(log, S) {
   const REG = JSON.parse(read('data/registry.json'));
+  S.reports = S.reports || [];
   return (p, opt) => {
     opt = opt || {};
     log.push((opt.method || 'GET') + ' ' + p + (opt.body ? ' ' + String(opt.body).slice(0, 90) : ''));
@@ -38,6 +39,12 @@ function makeApi(log, S) {
     }
     if (p === '/api/stats') return J({ ok: true, source: 'kv', fetchedAt: new Date().toISOString(), items: S.items });
     if (p === '/api/view' && opt.method === 'POST') return J({ ok: true, counted: true });
+    if (p === '/api/report' && opt.method === 'POST') {
+      const b = JSON.parse(opt.body || '{}');
+      S.reports.push(b);
+      if (S.reportOff) return J({ ok: false, error: 'offline' }, false, 503);
+      return J({ ok: true, mailed: S.mailOn !== false, note: S.mailOn === false ? 'chưa đặt RESEND_API_KEY nên chưa gửi được email' : 'đã gửi tới ban biên tập', at: new Date().toISOString() });
+    }
     if (p === '/api/vote' && opt.method === 'POST') {
       const b = JSON.parse(opt.body || '{}');
       const slug = b.slug, ch = Number(b.ch) || 0;
@@ -80,7 +87,7 @@ function chFromLog(log) {
 }
 
 (async () => {
-  const out = {};
+  const out = { errors: [] };
   const log = [];
   const S = {
     items: { 'third-person': { views: 1234, votes: 56, viewsDay: 12, votesDay: 2, viewsWeek: 120, votesWeek: 20, viewsMonth: 400, votesMonth: 40, chapVotes: {} } },
@@ -101,6 +108,7 @@ function chFromLog(log) {
   const LS = win.localStorage;
   const $ = s => doc.querySelector(s), $$ = s => [...doc.querySelectorAll(s)];
   const txt = s => { const e = $(s); return e ? e.textContent.trim().replace(/\s+/g, ' ') : '<null>'; };
+  const closeModal = m => { const b = m && m.querySelector('[data-close]'); if (b) b.dispatchEvent(new win.MouseEvent('click', { bubbles: true })); };
   const click = s => { const e = typeof s === 'string' ? $(s) : s; if (!e) return 'MISSING ' + s; e.dispatchEvent(new win.MouseEvent('click', { bubbles: true })); return 'ok'; };
   await wait(1400);
 
@@ -380,6 +388,75 @@ function chFromLog(log) {
     };
     out.loiTrangChu = h.errors.slice(0, 4);
   }
+
+  /* --- 8. BÁO LỖI CHỮ: gửi tự động, không phải copy rồi mở Gmail --- */
+  click('#actReport'); await wait(200);
+  const rm = $('#czReport');
+  const rSend = rm && rm.querySelector('#rpSend');
+  out.baoLoi = {
+    tieuDe: rm ? (rm.querySelector('.mh h4') || {}).textContent.trim() : '<không mở được>',
+    nutGui: rSend ? rSend.textContent.replace(/\s+/g, ' ').trim() : '',
+    coCopyDuPhong: !!(rm && rm.querySelector('#rpCopy')),
+    khongConFormKhaoSat: !(rm && rm.querySelector('#rpForm')),
+    mauTin: rm ? rm.querySelector('#rpText').value.replace(/\n/g, ' | ').slice(0, 110) : ''
+  };
+  if (!rSend) out.errors.push('hộp thoại báo lỗi thiếu nút Gửi');
+  else {
+    /* gửi trống (chưa ghi gì) thì phải bị chặn, không gọi máy chủ */
+    rSend.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+    await wait(300);
+    out.baoLoiGuiTrong = { soLanGoi: S.reports.length, nhacNho: (rm.querySelector('#rpNote') || {}).textContent.slice(0, 60) };
+    if (S.reports.length) out.errors.push('báo lỗi gửi trống vẫn gọi máy chủ');
+    if (!(rm.querySelector('#rpNote') || {}).textContent) out.errors.push('báo lỗi gửi trống mà không nhắc người đọc');
+    /* ghi chỗ sai rồi gửi thật */
+    rm.querySelector('#rpText').value = rm.querySelector('#rpText').value + 'Chương 2 ghi “cô áy”, đúng là “cô ấy”.';
+    rSend.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+    await wait(500);
+    out.baoLoiGui = {
+      soLanGoi: S.reports.length,
+      slug: (S.reports[0] || {}).slug,
+      chuong: (S.reports[0] || {}).ch,
+      coLink: /#chuong-/.test(String((S.reports[0] || {}).url)),
+      noiDungDai: String((S.reports[0] || {}).text || '').length > 30,
+      xacNhanHien: !!(rm.querySelector('.okbox')),
+      oNhapAn: rm.querySelector('#rpText').style.display === 'none',
+      nutGuiAn: rSend.style.display === 'none'
+    };
+    if (!S.reports.length) out.errors.push('bấm Gửi báo lỗi mà không gọi /api/report');
+    if (!rm.querySelector('.okbox')) out.errors.push('gửi xong không hiện xác nhận cho người đọc');
+    if (!S.reports.length || S.reports[0].slug !== 'third-person') out.errors.push('nội dung báo lỗi thiếu slug bộ truyện');
+    if (!/#chuong-/.test(String((S.reports[0] || {}).url))) out.errors.push('báo lỗi thiếu link chương');
+  }
+  closeModal(rm);
+  await wait(150);
+  /* mất mạng / Worker chưa có endpoint → phải hiện đường dự phòng (copy + Gmail), không im lặng */
+  S.reportOff = true;
+  click('#actReport'); await wait(200);
+  const rm2 = $('#czReport');
+  rm2.querySelector('#rpText').value += 'Chương 3 bị lặp cả đoạn cuối.';
+  rm2.querySelector('#rpSend').dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+  await wait(400);
+  out.baoLoiDuPhong = {
+    hien2Nut: rm2.querySelector('#rpFall').style.display !== 'none',
+    ghiChu: (rm2.querySelector('#rpNote') || {}).textContent.slice(0, 90)
+  };
+  if (rm2.querySelector('#rpFall').style.display === 'none') out.errors.push('gửi thất bại mà không hiện nút dự phòng (copy / Gmail)');
+  S.reportOff = false;
+  closeModal(rm);
+  await wait(150);
+
+  /* --- 9. icon: bộ SVG mới lấy từ IconBuddy (bộ Lucide) --- */
+  const icTim = win.CZ.icon('heart', 'i-s'), icTu = win.CZ.icon('shelf', 'i-s');
+  out.iconMoi = {
+    tim: icTim.replace(/\s+/g, ' ').slice(0, 80),
+    tuSach: icTu.replace(/\s+/g, ' ').slice(0, 80),
+    laIconBuddy: /M2 9\.5a5\.5/.test(icTim),
+    khacNhau: icTim !== icTu,
+    duIcon: ['search', 'book', 'trophy', 'clock', 'trash', 'check', 'x', 'gear', 'users', 'mail', 'alert', 'eye']
+      .every(function (k) { var s = win.CZ.icon(k, 'i-s'); return s.indexOf('<svg') === 0 && s.length > 40; })
+  };
+  if (!out.iconMoi.laIconBuddy) out.errors.push('icon tim không phải bản Lucide (IconBuddy)');
+  if (!out.iconMoi.duIcon) out.errors.push('có icon cơ bản chưa đổi sang bộ mới');
 
   out.errors = errors.slice(0, 6);
   console.log(JSON.stringify(out, null, 1));

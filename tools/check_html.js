@@ -10,7 +10,14 @@
    ========================================================================== */
 const fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..');
-const PAGES = ['index.html', 'truyen.html', 'admin.html'];
+
+
+/* Mã nguồn đọc được nằm ở src/ (bản ở thư mục gốc là bản rút gọn do npm run build
+   sinh ra). Công cụ soi mã phải đọc bản NGUỒN. */
+function srcFile(name) {
+  const a = path.join(ROOT, 'src', name);
+  return fs.existsSync(a) ? a : path.join(ROOT, name);
+}const PAGES = ['index.html', 'truyen.html', 'admin.html'];
 
 /* --- bỏ phần trong dấu nháy để không soi nhầm thẻ nằm trong data-URI --- */
 function stripValues(html) {
@@ -42,7 +49,7 @@ for (const f of PAGES) {
     if (!ok) problems.push(`${f}: href="${p}" không trỏ tới trang/tệp nào`);
   }
   /* biểu tượng dùng trong HTML phải có trong bộ icon */
-  const iconsSrc = fs.readFileSync(path.join(ROOT, 'cz-app.js'), 'utf8');
+  const iconsSrc = fs.readFileSync(srcFile('cz-app.js'), 'utf8');
   for (const m of raw.matchAll(/data-ic="([a-z0-9-]+)"/g)) {
     const re = new RegExp('(^|\\s)' + m[1] + ":\\s*'", 'm');
     if (!re.test(iconsSrc)) problems.push(`${f}: data-ic="${m[1]}" không có trong bộ icon`);
@@ -102,7 +109,7 @@ function auditRedirects() {
     if (sh) problems.push(`_redirects:${r.line} luật "${r.src}" bị luật "${sh.src}" (dòng ${sh.line}) che mất — đưa luật tĩnh lên trước`);
   });
   /* link truyện mà cz-app.js sinh ra (/truyen/<slug>/) phải có luật phục vụ */
-  const m = fs.readFileSync(path.join(ROOT, 'cz-app.js'), 'utf8')
+  const m = fs.readFileSync(srcFile('cz-app.js'), 'utf8')
     .match(/function\s+storyURL\s*\([^)]*\)\s*\{\s*return\s*'([^']+)'/);
   if (m) {
     const prefix = m[1].replace(/\/$/, '');
