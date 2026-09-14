@@ -1391,8 +1391,10 @@
           return r.json().catch(function () { return {}; }).then(function (j) {
             if (!r.ok || !j.ok) {
               if (r.status === 401 && token) {
-                /* token hết hạn hoặc Worker chưa có SUPABASE_URL -> báo rõ, không âm thầm thành khách */
-                throw new Error('Phiên đăng nhập hết hạn — hãy đăng nhập lại (hoặc kiểm tra cấu hình SUPABASE_URL/SESSION_SECRET trên Worker)');
+                /* token hết hạn hoặc Worker chưa có SUPABASE_URL -> ưu tiên hiển thị
+                   LÝ DO thật từ body Worker (bản mới trả kèm nguyên nhân cụ thể),
+                   không âm thầm biến thành khách */
+                throw new Error(j.error || 'Phiên đăng nhập hết hạn — hãy đăng nhập lại (hoặc kiểm tra cấu hình SUPABASE_URL/SESSION_SECRET trên Worker)');
               }
               throw new Error(j.error || ('HTTP ' + r.status));
             }
