@@ -524,16 +524,16 @@
       CMT_READER = CZ.comments.mount(box, {
         slug: N.slug, ch: cur, chLabel: chapLabel(cur), compact: true,
         title: 'Bình luận ' + chapLabel(cur),
-        hint: 'nói về ' + chapLabel(cur) + ' — spoiler chương sau thì đừng viết ở đây'
+        hint: ''
       });
     } else {
       CMT_READER.setChapter(cur, chapLabel(cur));
-      /* tiêu đề + ghi chú cũng phải đổi theo chương vừa lật sang */
+      /* tiêu đề cũng phải đổi theo chương vừa lật sang — bỏ dòng spoiler theo yêu cầu */
       var hw = box.querySelector('.cmt-head2');
       if (hw) {
         var hb = hw.querySelector('b'), hh = hw.querySelector('.cmt-hint');
         if (hb) hb.textContent = 'Bình luận ' + chapLabel(cur);
-        if (hh) hh.textContent = 'nói về ' + chapLabel(cur) + ' — spoiler chương sau thì đừng viết ở đây';
+        if (hh) hh.textContent = '';
       }
     }
   }
@@ -1196,17 +1196,28 @@
       CHS = bk.chapters.map(function (c) { return { t: String(c.t || '').trim() || 'Chương', html: c.html || '' }; });
       /* Nhãn "x/y" chỉ được tin khi registry KHỚP số chương thật của kho chương.
          Registry treo "30/30" trong khi bộ chỉ còn 29 chương thì bỏ nhãn cũ đi,
-         không để con số 30 hiện ra ở trang chủ / trang truyện / mục lục nữa. */
+         không để con số 30 hiện ra ở trang chủ / trang truyện / mục lục nữa.
+         Truyện chưa ra (0 chương) thì nhãn là "0/—" hoặc "0/planned" nếu có planned. */
       var labOld = String((meta && meta.countLabel) || '').trim();
-      var mLab = /^(\d+)\s*\/\s*(\d+)$/.exec(labOld);
-      var planned = parseInt((meta && meta.planned) || 0, 10) || 0;
-      if (mLab && parseInt(mLab[1], 10) === CHS.length) planned = Math.max(planned, parseInt(mLab[2], 10) || 0);
-      planned = Math.max(planned, CHS.length);
+      var mLab = /^(\d+)\s*\/\s*(\d+|—)$/.exec(labOld);
+      var planned = parseInt((meta && (meta.planned || meta.declared)) || 0, 10) || 0;
+      if (mLab && mLab[2] !== '—') {
+        var first = parseInt(mLab[1], 10) || 0;
+        var second = parseInt(mLab[2], 10) || 0;
+        if (first === CHS.length) planned = Math.max(planned, second);
+      }
+      var labelNow;
+      if (CHS.length === 0) {
+        labelNow = planned > 0 ? ('0/' + planned) : '0/—';
+      } else {
+        planned = Math.max(planned, CHS.length);
+        labelNow = CHS.length + '/' + planned;
+      }
       CZ.reconcileCount(SLUG, CHS.length);       /* ghi nhớ số thật để mọi trang dùng chung */
       N = CZ.norm(Object.assign({}, meta || {}, {
         title: (meta && meta.title) || bk.title || SLUG, slug: SLUG,
         author: (meta && meta.author) || bk.author || '', couple: (meta && meta.couple) || bk.couple || '',
-        chapters: CHS.length, countLabel: CHS.length + '/' + planned
+        chapters: CHS.length, countLabel: labelNow, planned: planned
       }));
       N.url = CZ.storyURL(SLUG);
       N.canRead = CHS.length > 0;
