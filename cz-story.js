@@ -225,7 +225,9 @@
           '<p class="syn clamp" id="synBox">' + esc(syn) + '</p>' +
           '<div class="btn-row">' + readBtn(n, ch) +
             (n.canRead && ch && ch < n.chapters ? '<a class="btn ghost lg" href="#chuong-' + n.chapters + '">' + ic('up', 'i-s') + 'Chương mới nhất</a>' : '') +
-            '<button class="btn ghost" id="shelfBtn" aria-pressed="' + CZ.inShelf(n) + '">' + ic('bookmark', 'i-s') +
+            '<button class="btn ghost' + (CZ.isLiked(n, 0) ? ' on' : '') + '" id="likeBtn" aria-pressed="' + CZ.isLiked(n, 0) + '" title="Thích bộ truyện này — phiếu thích cũng cộng vào bảng xếp hạng">' + ic('heart', 'i-s') +
+              '<span>' + (CZ.isLiked(n, 0) ? 'Đã thích' : 'Thích') + (CZ.likeCount(n, 0) ? ' · ' + num(CZ.likeCount(n, 0)) : '') + '</span></button>' +
+            '<button class="btn ghost' + (CZ.inShelf(n) ? ' on' : '') + '" id="shelfBtn" aria-pressed="' + CZ.inShelf(n) + '" title="Lưu vào tủ truyện của bạn (icon tủ sách)">' + ic('shelf', 'i-s') +
               '<span>' + (CZ.inShelf(n) ? 'Đã lưu' : 'Tủ truyện') + '</span></button>' +
             '<button class="btn ghost" id="shareBtn">' + ic('share', 'i-s') + 'Chia sẻ</button>' +
           '</div>' +
@@ -252,6 +254,25 @@
       sh.querySelector('span').textContent = on ? 'Đã lưu' : 'Tủ truyện';
       CZ.pop(sh);
       CZ.toast(on ? 'Đã thêm vào tủ truyện' : 'Đã bỏ khỏi tủ truyện');
+    });
+    /* thích cả bộ (khác với thích từng chương trong trang đọc) */
+    var lb = $('#likeBtn');
+    if (lb) lb.addEventListener('click', function () {
+      var on = CZ.toggleLike(n, 0);
+      function paint(v) {
+        lb.classList.toggle('on', on);
+        lb.setAttribute('aria-pressed', on);
+        var sp = lb.querySelector('span');
+        if (sp) sp.textContent = (on ? 'Đã thích' : 'Thích') + (v ? ' · ' + num(v) : '');
+      }
+      paint(CZ.likeCount(n, 0));
+      CZ.pop(lb);
+      CZ.vote(n.slug, on, 0).then(function (r) {
+        if (r && r.ok) {
+          paint(r.total != null ? r.total : r.votes);
+          CZ.toast(on ? 'Cảm ơn bạn đã thích “' + n.title + '” · ' + num(r.total != null ? r.total : r.votes) + ' phiếu' : 'Đã bỏ thích');
+        } else CZ.toast(on ? 'Đã thích (lưu trong máy — chưa nối được Worker)' : 'Đã bỏ thích');
+      });
     });
     $('#shareBtn').addEventListener('click', function () { CZ.copy(location.origin + CZ.storyURL(n.slug), 'Đã copy link bộ truyện'); });
     renderInfo();
@@ -475,157 +496,46 @@
     $('#relSec').style.display = shown ? '' : 'none';
   }
 
-  /* khối Đánh giá / bình luận: dựng khi người đọc mở tab (không kéo gì từ đầu) */
+  /* ======================= 3b. BÌNH LUẬN =================================
+     Dùng chung khung bình luận của CZ.comments (cz-app.js) cho CẢ HAI nơi:
+       · tab "Đánh giá" của trang truyện   → bình luận chung của bộ (ch = 0)
+       · ngay trong TRANG ĐỌC              → bình luận theo từng chương
+     Vì vậy người đọc không phải thoát trang đọc mới góp ý được.               */
+  var CMT_STORY = null, CMT_READER = null;
   function mountComments() {
     var box = $('#giscus');
     if (!box) return;
     var note = $('#cmtNote'), sub = $('#cmtSub');
-    var api = window.CZ_API || '';
-    if (!api) {
-      box.innerHTML = '<div class="empty">Chưa nối Worker — bình luận cần backend.<div class="mt">Điền <code>window.CZ_API</code> trong <b>cz-config.js</b> rồi deploy lại (xem worker/README.md).</div></div>';
-      if (note) note.textContent = '';
-      if (sub) sub.textContent = '';
-      return;
-    }
     if (sub) sub.textContent = 'góp ý cho bộ truyện này';
-    if (note) note.textContent = 'Bình luận lưu trên máy chủ, đăng nhập Google để gửi. Mỗi người chỉ xoá được bình luận của mình.';
-    box.innerHTML =
-      '<div class="cmt-wrap">' +
-        '<div class="cmt-form" id="cmtForm"></div>' +
-        '<div class="cmt-list" id="cmtList"><div class="cmt-status">Đang tải bình luận…</div></div>' +
-      '</div>';
-    renderCommentForm();
-    loadComments();
-    if (window.CZ_AUTH && window.CZ_AUTH.onAuth) window.CZ_AUTH.onAuth(renderCommentForm);
-  }
-
-  function renderCommentForm() {
-    var f = $('#cmtForm');
-    if (!f) return;
-    var u = (window.CZ_AUTH && window.CZ_AUTH.current && window.CZ_AUTH.current()) || null;
-    if (u) {
-      var av = u.picture
-        ? '<img class="cmt-ava" src="' + esc(u.picture) + '" alt="">'
-        : '<span class="cmt-ava cmt-ava--ph">' + esc((u.name || 'B')[0] || 'B') + '</span>';
-      f.innerHTML =
-        '<div class="cmt-me">' + av +
-          '<div class="cmt-field">' +
-            '<textarea id="cmtText" maxlength="2000" placeholder="Viết bình luận… (tối đa 2000 ký tự)"></textarea>' +
-            '<div class="cmt-actions">' +
-              '<span class="cmt-meta"><b>' + esc(u.name || u.email) + '</b> · <a href="#" id="cmtLogout">đăng xuất</a></span>' +
-              '<span class="cmt-count" id="cmtCount">0/2000</span>' +
-              '<button class="btn pri sm" id="cmtSend" type="button">Gửi</button>' +
-            '</div>' +
-          '</div>' +
-        '</div>';
-      var ta = $('#cmtText'), cnt = $('#cmtCount');
-      if (ta) ta.addEventListener('input', function () { if (cnt) cnt.textContent = ta.value.length + '/2000'; });
-      var send = $('#cmtSend');
-      if (send) send.addEventListener('click', postCurrentComment);
-      var lo = $('#cmtLogout');
-      if (lo) lo.addEventListener('click', function (e) { e.preventDefault(); if (window.CZ_AUTH) window.CZ_AUTH.logout(); });
-    } else {
-      f.innerHTML =
-        '<div class="cmt-login"><p>Bạn cần đăng nhập Google để bình luận.</p>' +
-          '<button class="btn pri sm" id="cmtLogin" type="button"><svg class="i i-s glogo" viewBox="0 0 48 48" aria-hidden="true">' +
-          '<path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.3-.4-3.5z"/>' +
-          '<path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>' +
-          '<path fill="#4CAF50" d="M24 44c5.5 0 10.5-2.1 14.3-5.5l-6.6-5.6C29.7 34.6 27 35.5 24 35.5c-5.3 0-9.7-3.1-11.3-7.6l-6.5 5C9.6 39.6 16.2 44 24 44z"/>' +
-          '<path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.2-4.1 5.5l6.6 5.6C40.9 36.3 44 30.7 44 24c0-1.3-.1-2.3-.4-3.5z"/></svg>' +
-          'Đăng nhập Google</button></div>';
-      var lb = $('#cmtLogin');
-      if (lb) lb.addEventListener('click', function () {
-        if (window.CZ_AUTH) window.CZ_AUTH.loginGoogle().catch(function (e) { toast(e.message || 'Đăng nhập thất bại', 'err'); });
-      });
-    }
-  }
-
-  function postCurrentComment() {
-    var ta = $('#cmtText');
-    if (!ta) return;
-    var text = ta.value.replace(/\s+/g, ' ').trim();
-    if (!text) { ta.focus(); return; }
-    var u = (window.CZ_AUTH && window.CZ_AUTH.current && window.CZ_AUTH.current()) || null;
-    if (!u) { if (window.CZ_AUTH) window.CZ_AUTH.loginGoogle(); return; }
-    var send = $('#cmtSend');
-    if (send) { send.disabled = true; send.textContent = 'Đang gửi…'; }
-    fetch(window.CZ_API + '/api/comments/' + encodeURIComponent(N.slug), {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: 'Bearer ' + (window.CZ_AUTH.token() || '') },
-      body: JSON.stringify({ text: text }),
-    }).then(function (r) {
-      return r.json().then(function (j) { if (!r.ok || !j.ok) throw new Error(j.error || ('Lỗi ' + r.status)); return j; });
-    }).then(function (j) {
-      if (ta) { ta.value = ''; }
-      var c = $('#cmtCount'); if (c) c.textContent = '0/2000';
-      prependComment(j.comment);
-      bumpTabCount(1);
-      toast('Đã gửi bình luận', 'ok');
-    }).catch(function (e) { toast(e.message || 'Gửi thất bại', 'err'); })
-      .then(function () { if (send) { send.disabled = false; send.textContent = 'Gửi'; } });
-  }
-
-  function loadComments() {
-    var list = $('#cmtList');
-    if (!list) return;
-    fetch(window.CZ_API + '/api/comments/' + encodeURIComponent(N.slug) + '?limit=200')
-      .then(function (r) { return r.json(); })
-      .then(function (j) {
-        if (!j.ok) throw new Error(j.error || 'không tải được');
-        renderCommentList(j.comments || []);
-        bumpTabCount(j.count || (j.comments ? j.comments.length : 0), true);
-      })
-      .catch(function (e) { list.innerHTML = '<div class="cmt-status">Không tải được bình luận: ' + esc(e.message) + '</div>'; });
-  }
-
-  function renderCommentList(comments) {
-    var list = $('#cmtList');
-    if (!list) return;
-    if (!comments.length) { list.innerHTML = '<div class="cmt-status">Chưa có bình luận nào. Hãy là người đầu tiên!</div>'; return; }
-    list.innerHTML = comments.map(commentHTML).join('');
-    bindCommentDeletes();
-  }
-  function prependComment(c) {
-    var list = $('#cmtList');
-    if (!list) return;
-    if (list.querySelector('.cmt-status')) list.innerHTML = '';
-    var wrap = document.createElement('div');
-    wrap.innerHTML = commentHTML(c);
-    var el = wrap.firstChild;
-    if (el) list.insertBefore(el, list.firstChild);
-    bindCommentDeletes();
-  }
-  function commentHTML(c) {
-    var u = (window.CZ_AUTH && window.CZ_AUTH.current && window.CZ_AUTH.current()) || null;
-    var mine = u && u.uid && c.uid === u.uid;
-    var av = c.picture
-      ? '<img class="cmt-ava" src="' + esc(c.picture) + '" alt="">'
-      : '<span class="cmt-ava cmt-ava--ph">' + esc((c.name || 'B')[0] || 'B') + '</span>';
-    return '<div class="cmt-item" data-id="' + esc(c.id) + '">' + av +
-      '<div class="cmt-body"><div class="cmt-head"><b>' + esc(c.name || 'Bạn đọc') + '</b>' +
-      '<span class="cmt-time">' + timeAgo(c.createdAt) + '</span>' +
-      (mine ? '<button class="cmt-del" data-del="' + esc(c.id) + '" title="Xoá" aria-label="Xoá">✕</button>' : '') +
-      '</div><div class="cmt-text">' + esc(c.text) + '</div></div></div>';
-  }
-  function bindCommentDeletes() {
-    $$('#cmtList .cmt-del').forEach(function (b) {
-      if (b._b) return; b._b = true;
-      b.addEventListener('click', function () { deleteOwnComment(b.getAttribute('data-del')); });
+    if (note) note.textContent = 'Bình luận lưu trên máy chủ. Đăng nhập bằng Google/Supabase để gửi; bạn xoá được bình luận của chính mình. Muốn nói về một chương cụ thể thì mở chương đó trong trang đọc — khung bình luận ở cuối chương.';
+    CMT_STORY = CZ.comments.mount(box, {
+      slug: N.slug, ch: 0, title: 'Đánh giá & bình luận', chapterFilter: false,
+      hint: 'mọi người nói gì về bộ này',
+      onChanged: function (n) { bumpTabCount(n, true); }
     });
+    /* đăng nhập xong (quay về từ Supabase) thì vẽ lại khung để hiện ô viết */
+    if (window.CZ_AUTH && window.CZ_AUTH.onAuth) window.CZ_AUTH.onAuth(function () { if (CMT_STORY && TAB.loaded.cmt) CMT_STORY.reload(); });
   }
-  function deleteOwnComment(id) {
-    fetch(window.CZ_API + '/api/comments/' + encodeURIComponent(N.slug) + '/' + encodeURIComponent(id), {
-      method: 'DELETE',
-      headers: { authorization: 'Bearer ' + (window.CZ_AUTH.token() || '') },
-    }).then(function (r) {
-      return r.json().then(function (j) { if (!r.ok || !j.ok) throw new Error(j.error || 'Lỗi'); return j; });
-    }).then(function () {
-      var sel = '#cmtList .cmt-item[data-id="' + (window.CSS && window.CSS.escape ? window.CSS.escape(id) : id) + '"]';
-      var el = $(sel);
-      if (el) el.remove();
-      bumpTabCount(-1);
-      toast('Đã xoá bình luận', 'ok');
-    }).catch(function (e) { toast(e.message || 'Xoá thất bại', 'err'); });
+  /* khung bình luận TRONG TRANG ĐỌC — gắn theo chương đang mở */
+  function mountReaderComments() {
+    var box = $('#rdCmts');
+    if (!box || !N) return;
+    if (!CMT_READER) {
+      CMT_READER = CZ.comments.mount(box, {
+        slug: N.slug, ch: cur, chLabel: chapLabel(cur), compact: true,
+        title: 'Bình luận ' + chapLabel(cur),
+        hint: 'nói về ' + chapLabel(cur) + ' — spoiler chương sau thì đừng viết ở đây'
+      });
+    } else {
+      CMT_READER.setChapter(cur, chapLabel(cur));
+      /* tiêu đề + ghi chú cũng phải đổi theo chương vừa lật sang */
+      var hw = box.querySelector('.cmt-head2');
+      if (hw) {
+        var hb = hw.querySelector('b'), hh = hw.querySelector('.cmt-hint');
+        if (hb) hb.textContent = 'Bình luận ' + chapLabel(cur);
+        if (hh) hh.textContent = 'nói về ' + chapLabel(cur) + ' — spoiler chương sau thì đừng viết ở đây';
+      }
+    }
   }
   function bumpTabCount(delta, set) {
     var tab = $('#storyTabs .stab[data-tab="cmt"]');
@@ -922,50 +832,65 @@
     CZ.reportView(N.slug, cur).then(function (r) { if (r && r.counted) bumpViews(1); });
     PAGES = []; PI = 0;
     if (s.mode === 'paged') { PAGES = measure(txt); paintPage(); } else renderNav(false);
-    /* số liệu thật của bộ (không có thì không hiện số) */
+    /* ---- dải nút cuối chương: THÍCH tính riêng cho TỪNG CHƯƠNG -------------
+       Trước đây nút Thích lưu theo bộ nên thích một lần là sang chương sau không
+       thích được nữa (bấm lại thành bỏ thích). Giờ mỗi chương một phiếu, số phiếu
+       của chương hiện ngay trên nút, và tổng phiếu của bộ vẫn cộng lên bảng xếp hạng. */
     var st = CZ.statsOf(N);
     function actBtn(id, ico, label, on) {
       return '<button id="' + id + '" class="' + (on ? 'on' : '') + '" title="' + esc(label) + '" aria-label="' + esc(label) + '">' +
         ic(ico, 'i-s') + '<span class="lbl">' + esc(label) + '</span></button>';
     }
-    var likeL = (CZ.isLiked(N) ? 'Đã thích' : 'Thích') + (st && st.votes ? ' · ' + num(st.votes) : '');
-    var saveL = CZ.inShelf(N) ? 'Đã lưu' : 'Lưu vào tủ';
+    var liked = CZ.isLiked(N, cur);
+    var chapVotes = CZ.likeCount(N, cur);
+    var likeL = (liked ? 'Đã thích' : 'Thích') + (chapVotes ? ' · ' + num(chapVotes) : '');
+    var saveL = CZ.inShelf(N) ? 'Đã lưu trong tủ' : 'Lưu vào tủ';
+    var marked = CZ.marks(N).indexOf(cur) >= 0;
     var acts = [
-      actBtn('actLike', 'thumb', likeL, CZ.isLiked(N)),
-      actBtn('actSave', 'bookmark', saveL, CZ.inShelf(N)),
-      actBtn('actMark', 'bookmark', CZ.marks(N).indexOf(cur) >= 0 ? 'Đã đánh dấu' : 'Đánh dấu', CZ.marks(N).indexOf(cur) >= 0),
-      actBtn('actComment', 'chat', 'Bình luận', false),
+      actBtn('actLike', 'heart', likeL, liked),
+      actBtn('actSave', 'shelf', saveL, CZ.inShelf(N)),          /* icon TỦ SÁCH */
+      actBtn('actMark', 'bookmark', marked ? 'Đã đánh dấu' : 'Đánh dấu', marked),   /* icon THẺ */
+      actBtn('actComment', 'chat', 'Bình luận chương này', false),
       actBtn('actShare', 'share', 'Chia sẻ', false),
       actBtn('actReport', 'alert', 'Báo lỗi chữ', false)
     ];
     if (st && st.views) acts.unshift('<span class="chip" id="rdViews" title="lượt đọc thật, lưu trên KV">' + ic('eye', 'i-s') + '<span class="lbl">' + num(st.views) + ' lượt đọc</span></span>');
+    if (st && st.votes) acts.unshift('<span class="chip" id="rdVotes" title="tổng phiếu thích của bộ (mọi chương)">' + ic('trophy', 'i-s') + '<span class="lbl">' + num(st.votes) + ' phiếu</span></span>');
     $('#rdActs').innerHTML = acts.join('');
     paintMark();
     $('#actLike').addEventListener('click', function () {
       var btn = this;
-      var on = CZ.toggleLike(N);
-      var paint = function (votes) {
+      var on = CZ.toggleLike(N, cur);                 /* theo CHƯƠNG đang đọc */
+      function paint(votes, total) {
         var lab = (on ? 'Đã thích' : 'Thích') + (votes ? ' · ' + num(votes) : '');
         btn.classList.toggle('on', on);
-        var sp = btn.querySelector('span');
+        var sp = btn.querySelector('.lbl') || btn.querySelector('span');
         if (sp) sp.textContent = lab;
-        btn.setAttribute('title', lab);
+        btn.setAttribute('title', lab + ' (chương ' + cur + ')');
         btn.setAttribute('aria-label', lab);
-      };
-      var stx = CZ.statsOf(N);
-      paint(stx && stx.votes);
+        var tv = $('#rdVotes');
+        if (tv && total != null) {
+          var l2 = tv.querySelector('.lbl');
+          if (l2) l2.textContent = num(total) + ' phiếu';
+        }
+      }
+      paint(CZ.likeCount(N, cur), (CZ.statsOf(N) || {}).votes);
       CZ.pop(btn);
-      /* gửi lên Worker để phiếu nằm trên KV — ai mở web cũng thấy cùng con số */
-      CZ.vote(N.slug, on).then(function (r) {
-        if (r && r.ok) { paint(r.votes); toast(on ? 'Đã thích · ' + num(r.votes) + ' phiếu' : 'Đã bỏ thích'); }
-        else toast(on ? 'Đã thích (lưu trên máy bạn — chưa nối được Worker)' : 'Đã bỏ thích');
+      CZ.vote(N.slug, on, cur).then(function (r) {
+        if (r && r.ok) {
+          paint(r.votes, r.total != null ? r.total : r.votes);
+          toast(on ? ('Đã thích ' + chapLabel(cur) + ' · ' + num(r.votes) + ' người thích chương này') : ('Đã bỏ thích ' + chapLabel(cur)));
+        } else {
+          toast(on ? 'Đã thích (lưu trên máy bạn — chưa nối được Worker nên bảng xếp hạng chưa tăng)' : 'Đã bỏ thích');
+        }
       });
     });
     $('#actSave').addEventListener('click', function () {
       var on = CZ.toggleShelf(N);
-      var lab = on ? 'Đã lưu' : 'Lưu vào tủ';
+      var lab = on ? 'Đã lưu trong tủ' : 'Lưu vào tủ';
       this.classList.toggle('on', on);
-      this.querySelector('span').textContent = lab;
+      var sp = this.querySelector('.lbl') || this.querySelector('span');
+      if (sp) sp.textContent = lab;
       this.setAttribute('title', lab);
       this.setAttribute('aria-label', lab);
       CZ.pop(this);
@@ -977,7 +902,17 @@
       CZ.pop(this);
       toast(on ? 'Đã đánh dấu ' + chapLabel(cur) : 'Đã bỏ đánh dấu ' + chapLabel(cur));
     });
-    $('#actComment').addEventListener('click', function () { exitReader(true); });
+    /* Bình luận ngay trong trang đọc: cuộn xuống khung cuối chương (không thoát trang) */
+    $('#actComment').addEventListener('click', function () {
+      mountReaderComments();
+      var box = $('#rdCmts');
+      if (box) {
+        box.classList.add('on');
+        box.scrollIntoView({ behavior: CZ.reduce ? 'auto' : 'smooth', block: 'start' });
+        var ta = box.querySelector('[data-text]');
+        if (ta) setTimeout(function () { try { ta.focus(); } catch (e) {} }, 420);
+      }
+    });
     $('#actShare').addEventListener('click', shareChapter);
     var rp = $('#actReport');
     if (rp) rp.addEventListener('click', function () {
@@ -1019,6 +954,7 @@
     CZ.setProgress(N, cur);
     try { document.title = c.t + ' · ' + N.title + ' — chuseoz'; } catch (e) {}
     paintTOC(); paintTopNav();
+    mountReaderComments();          /* bình luận theo chương, nằm cuối trang đọc */
     var cr = $('#crumbStory');
     if (cr) cr.addEventListener('click', function (e) { e.preventDefault(); exitReader(); });
   }
@@ -1258,10 +1194,19 @@
       }
       BOOK = bk;
       CHS = bk.chapters.map(function (c) { return { t: String(c.t || '').trim() || 'Chương', html: c.html || '' }; });
+      /* Nhãn "x/y" chỉ được tin khi registry KHỚP số chương thật của kho chương.
+         Registry treo "30/30" trong khi bộ chỉ còn 29 chương thì bỏ nhãn cũ đi,
+         không để con số 30 hiện ra ở trang chủ / trang truyện / mục lục nữa. */
+      var labOld = String((meta && meta.countLabel) || '').trim();
+      var mLab = /^(\d+)\s*\/\s*(\d+)$/.exec(labOld);
+      var planned = parseInt((meta && meta.planned) || 0, 10) || 0;
+      if (mLab && parseInt(mLab[1], 10) === CHS.length) planned = Math.max(planned, parseInt(mLab[2], 10) || 0);
+      planned = Math.max(planned, CHS.length);
+      CZ.reconcileCount(SLUG, CHS.length);       /* ghi nhớ số thật để mọi trang dùng chung */
       N = CZ.norm(Object.assign({}, meta || {}, {
         title: (meta && meta.title) || bk.title || SLUG, slug: SLUG,
         author: (meta && meta.author) || bk.author || '', couple: (meta && meta.couple) || bk.couple || '',
-        chapters: CHS.length, countLabel: (meta && meta.countLabel) || (CHS.length + ' chương')
+        chapters: CHS.length, countLabel: CHS.length + '/' + planned
       }));
       N.url = CZ.storyURL(SLUG);
       N.canRead = CHS.length > 0;

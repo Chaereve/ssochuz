@@ -19,7 +19,9 @@ function inline(html, files) {
   });
   return html;
 }
-function page(file, { url = 'https://chuseoz.pages.dev/', fetch, config = {}, files = ['cz-config.js', 'cz-app.js'] } = {}) {
+/* setup(w): chạy TRƯỚC khi script của trang chạy — dùng để giả lập phiên đăng nhập
+   (localStorage) hoặc cấu hình (window.CZ_*) mà không phải sửa mã nguồn. */
+function page(file, { url = 'https://chuseoz.pages.dev/', fetch, config = {}, files = ['cz-config.js', 'cz-app.js'], setup = null } = {}) {
   let html = read(file);
   html = inline(html, files);
   html = inlineAll(html);
@@ -47,6 +49,7 @@ function page(file, { url = 'https://chuseoz.pages.dev/', fetch, config = {}, fi
       w.IntersectionObserver = w.IntersectionObserver || class { observe() {} unobserve() {} disconnect() {} };
       w.ResizeObserver = w.ResizeObserver || class { observe() {} unobserve() {} disconnect() {} };
       if (fetch) w.fetch = fetch;
+      if (setup) setup(w);
     }
   });
   return { dom, win: dom.window, doc: dom.window.document, errors };

@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex">
 <title>chuseoz · trang quản trị</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23faf8f4'/%3E%3Cpath d='M16 7l7 4v10l-7 4-7-4V11z' fill='none' stroke='%23a63a52' stroke-width='2.4'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="/cz.css?v=20260913e">
+<link rel="stylesheet" href="/cz.css?v=20260914a">
 <script>/* chống nháy nền */try{var t=localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
 <body class="admin">
@@ -17,6 +17,9 @@
   <span class="chip hide" id="chipData"><span class="d"></span><span id="chipDataTxt">—</span></span>
   <span class="dirty" id="dirtyTxt"></span>
   <span class="grow"></span>
+  <span class="whoami hide" id="whoBox"></span>
+  <span class="rolebadge hide" id="roleBadge"></span>
+  <button class="hbtn hide" id="btnLogout" title="Đăng xuất tài khoản quản trị">Đăng xuất</button>
   <a class="hbtn" href="/" target="_blank" rel="noopener">Xem web ↗</a>
   <button class="hbtn icon" id="btnTheme" title="Sáng / Tối" aria-label="Đổi nền sáng tối"></button>
   <a class="hbtn" href="/#thu-vien" title="Kiểm tra dữ liệu vừa lưu">Kiểm tra ↻</a>
@@ -30,6 +33,23 @@
     <p class="sm">Sửa ở đây là người đọc thấy ngay — không cần build, không cần deploy lại.</p>
   </div>
   <div class="msgbar" id="msg"></div>
+
+  <!-- ============ 0. CỔNG VÀO — chỉ quản trị ============ -->
+  <section id="gate">
+    <div class="gate">
+      <h2>Trang quản trị chuseoz</h2>
+      <p class="gsub">Trang này <b>không mở cho người đọc</b>. Vào bằng một trong hai cách:
+        đăng nhập tài khoản Google nằm trong danh sách quản trị, hoặc dùng khoá <code>ADMIN_KEY</code> của Worker.</p>
+      <div class="grow2">
+        <button class="btn pri" id="gateLogin">Đăng nhập bằng Google / Supabase</button>
+        <div class="sep">hoặc</div>
+        <button class="btn ghost" id="gateKey">Dùng khoá quản trị (ADMIN_KEY)</button>
+        <a class="btn ghost" href="/">Về trang chủ</a>
+      </div>
+      <div class="msgbar" id="gateMsg"></div>
+      <p class="who" id="gateWho">Chưa đăng nhập. Email quản trị đang cho phép: <b id="gateEmails">—</b></p>
+    </div>
+  </section>
 
   <!-- ============ 1. KẾT NỐI ============ -->
   <section id="scConnect">
@@ -77,8 +97,11 @@
       <button data-tab="quick">Đăng chương nhanh</button>
       <button data-tab="new">Thêm bộ</button>
       <button data-tab="edit" class="hide">Sửa bộ &amp; chương</button>
-      <button data-tab="settings">Cài đặt &amp; đồng bộ</button>
+      <button data-tab="doctor">Bác sĩ dữ liệu</button>
+      <button data-tab="cmts">Bình luận</button>
       <button data-tab="stats">Số liệu thật</button>
+      <button data-tab="log">Nhật ký</button>
+      <button data-tab="settings">Cài đặt &amp; đồng bộ</button>
       <button data-tab="help">Trợ giúp</button>
     </div>
 
@@ -90,6 +113,12 @@
         <p class="hint">Tính từ dữ liệu đang mở (KV hoặc tệp trong repo). Bấm vào một việc để sửa ngay.</p>
         <div class="tiles" id="ovTiles"></div>
         <div class="ovtasks" id="ovTasks"></div>
+      </div>
+      <div class="card2">
+        <div class="row"><h3>Tình trạng hệ thống</h3><span class="grow"></span>
+          <span class="sm muted">đăng nhập · số chương · Worker</span></div>
+        <p class="hint">Ba thứ hay hỏng nhất, bấm vào là tới chỗ sửa.</p>
+        <div class="doc" id="ovAuth"></div>
       </div>
       <div class="card2">
         <h3>Mới cập nhật</h3>
@@ -257,6 +286,55 @@
       </div>
     </div>
 
+    <!-- ---------- BÁC SĨ DỮ LIỆU ---------- -->
+    <div id="pane-doctor" class="hide">
+      <div class="card2">
+        <div class="row"><h3>Bác sĩ dữ liệu</h3><span class="grow"></span>
+          <button class="btn ghost sm" id="docRun">Quét lại</button></div>
+        <p class="hint">Soi <b>3 nguồn</b> cùng lúc: nhãn trong <b>registry</b> (số đang hiện ngoài web) · kho chương
+          trên <b>KV</b> (bản người đọc thật sự nhận) · file <b>/data/book/*.json trong repo GitHub</b>.
+          Lệch nhau là web hiện sai số chương — đúng bệnh "đã sửa 30/30 thành 29/29 mà web vẫn hiện 30".</p>
+        <div class="msgbar" id="docState"></div>
+        <div class="tiles mt" id="docTiles"></div>
+        <div class="docbar">
+          <button class="btn pri" id="docFixKv">↑ Nạp chương từ repo lên KV (sửa gốc)</button>
+          <button class="btn" id="docRecount">Đếm lại số chương trên KV</button>
+          <button class="btn ghost" id="docFixReg">Sửa nhãn trong registry</button>
+          <button class="btn ghost" id="docExport">Xuất báo cáo JSON</button>
+          <span class="sm muted" id="docSel"></span>
+        </div>
+        <div class="doc mt" id="docList"></div>
+      </div>
+    </div>
+
+    <!-- ---------- KIỂM DUYỆT BÌNH LUẬN ---------- -->
+    <div id="pane-cmts" class="hide">
+      <div class="card2">
+        <div class="row"><h3>Bình luận của người đọc</h3><span class="grow"></span>
+          <input class="inp" id="cmQ" placeholder="Tìm trong nội dung / tên người gửi…" style="max-width:240px">
+          <select class="sel" id="cmBook"><option value="">Mọi bộ truyện</option></select>
+          <button class="btn ghost sm" id="cmReload">Đọc lại</button>
+          <button class="btn ghost sm" id="cmExport">Xuất JSON</button></div>
+        <p class="hint">Mọi bình luận nằm trên KV (<code>cmt:&lt;slug&gt;</code>). Quản trị xoá được bình luận của bất kỳ ai;
+          người đọc thường chỉ xoá được của chính mình. Bình luận gửi từ trang đọc có kèm số chương.</p>
+        <div class="msgbar" id="cmState"></div>
+        <div class="tiles mt" id="cmTiles"></div>
+        <div style="max-height:64vh;overflow:auto" class="mt" id="cmList"></div>
+      </div>
+    </div>
+
+    <!-- ---------- NHẬT KÝ ---------- -->
+    <div id="pane-log" class="hide">
+      <div class="card2">
+        <div class="row"><h3>Nhật ký thao tác</h3><span class="grow"></span>
+          <button class="btn ghost sm" id="logReload">Đọc lại</button></div>
+        <p class="hint">Worker ghi lại 200 thao tác gần nhất (lưu bộ, thêm/xoá chương, nạp dữ liệu, đếm lại số chương,
+          kiểm duyệt bình luận) để biết ai đổi gì lúc nào.</p>
+        <div class="msgbar" id="logState"></div>
+        <div class="loglist" id="logList"></div>
+      </div>
+    </div>
+
     <!-- ---------- CÀI ĐẶT ---------- -->
     <div id="pane-settings" class="hide">
       <div class="card2">
@@ -308,6 +386,34 @@
         <label class="fl" for="sSchedNote">Ghi chú</label><input class="inp" id="sSchedNote">
       </div>
       <div class="card2">
+        <h3>Đăng nhập người đọc (Supabase)</h3>
+        <p class="hint">Lưu ở đây thì <b>không cần sửa code / deploy lại</b>: cấu hình nằm trên KV, web tự đọc.
+          Supabase Dashboard → Authentication → Providers → bật <b>Google</b>; URL Configuration → thêm domain web vào
+          <b>Redirect URLs</b>. Xong là hết cảnh <code>Lỗi 400: origin_mismatch</code> của Google.</p>
+        <div class="grid2">
+          <div><label class="fl" for="aUrl">Project URL</label>
+            <input class="inp" id="aUrl" placeholder="https://xxxxxxxx.supabase.co" autocomplete="off"></div>
+          <div><label class="fl" for="aKey">anon public key</label>
+            <input class="inp" id="aKey" placeholder="eyJhbGciOi…" autocomplete="off"></div>
+        </div>
+        <div class="grid2 mt">
+          <div><label class="fl" for="aProvider">Nhà cung cấp</label>
+            <select class="inp" id="aProvider">
+              <option value="supabase">Supabase (khuyến nghị)</option>
+              <option value="google">Google Identity Services (cách cũ)</option>
+              <option value="">Tắt đăng nhập</option>
+            </select></div>
+          <div><label class="fl" for="aGoogle">Google Client ID (chỉ cần khi chọn cách cũ)</label>
+            <input class="inp" id="aGoogle" placeholder="…apps.googleusercontent.com" autocomplete="off"></div>
+        </div>
+        <label class="fl mt" for="aAdmins">Email quản trị (phân cách bằng dấu phẩy)</label>
+        <input class="inp" id="aAdmins" placeholder="kimtong1906@gmail.com" autocomplete="off">
+        <p class="hint" style="margin-top:6px">Chỉ những email này thấy mục <b>Quản trị</b> ngoài web và vào được trang này.
+          Đặt thêm biến <code>ADMIN_EMAILS</code> trong Worker để Worker cũng nhận diện quản trị (xoá bình luận, cấp quyền).</p>
+        <div class="row mt"><span class="chip" id="aState"><span class="d"></span><span>chưa kiểm tra</span></span>
+          <button class="btn ghost sm" id="aCheck">Kiểm tra Worker đã sẵn sàng chưa</button></div>
+      </div>
+      <div class="card2">
         <h3>Bình luận (giscus)</h3>
         <p class="hint">Lấy repo + repoId tại giscus.app. Để trống thì trang truyện <b>giấu hẳn khối bình luận</b>.</p>
         <div class="grid2">
@@ -339,9 +445,14 @@
         <p class="hint">Worker tự đếm lượt đọc khi người đọc mở chương và đếm phiếu khi bấm <b>Thích</b>; số nằm trên KV nên không cần Firebase. Số hiện ra = số cũ đã nạp + số đếm được.</p>
         <div class="row">
           <button class="btn pri" id="btnStats">Đọc lại</button>
+          <button class="btn ghost" id="btnStatsCsv">Xuất CSV</button>
           <button class="btn ghost" id="btnStatsFb">Nhập số cũ từ Firebase</button>
         </div>
         <div class="msgbar" id="stState"></div>
+        <h3 style="margin-top:18px">30 ngày gần nhất</h3>
+        <div id="stChart"></div>
+        <div class="chartlg"><span><i style="background:var(--acc)"></i>lượt đọc</span>
+          <span><i style="background:var(--ok)"></i>phiếu thích</span></div>
         <div class="tiles mt" id="stTiles"></div>
         <div style="overflow:auto;max-height:60vh" class="mt"><table class="tbl" id="stTb"></table></div>
       </div>
@@ -390,9 +501,9 @@
 
 <div class="toasts" id="toasts"></div>
 
-<script src="/cz-config.js?v=20260913e"></script>
-<script src="/cz-app.js?v=20260913e"></script>
-<script src="/cz-auth.js?v=20260913e"></script>
-<script src="/admin.js"></script>
+<script src="/cz-config.js?v=20260914a"></script>
+<script src="/cz-app.js?v=20260914a"></script>
+<script src="/cz-auth.js?v=20260914a"></script>
+<script src="/admin.js?v=20260914a"></script>
 </body>
 </html>

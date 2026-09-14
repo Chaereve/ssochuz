@@ -81,7 +81,11 @@
         if (b && b.chapters && b.chapters.length) return b;
         return jget('/data/book/' + encodeURIComponent(slug) + '.json', 20000);
       })
-      .then(function (b) { memo.books[slug] = b || null; return b || null; })
+      .then(function (b) {
+        memo.books[slug] = b || null;
+        if (b && b.chapters && b.chapters.length) reconcileCount(slug, b.chapters.length);
+        return b || null;
+      })
       .catch(function () { memo.books[slug] = null; return null; });
     memo.books[slug] = p;
     return p;
@@ -131,7 +135,9 @@
     });
     return p.then(function (o) {
       if (o && o.on && o.items && Object.keys(o.items).length) {
+        var had = memo.stats;
         memo.stats = o; lsSet('chuseoz-stats', { t: Date.now(), v: o });
+        if (had) notifyStats();
         return o;
       }
       if (cached && cached.items && Object.keys(cached.items).length) {
@@ -174,20 +180,50 @@
     if (safeGet(k)) return Promise.resolve(null);
     safeSet(k, '1');
     return jpost('/api/view', { slug: slug, vid: vid(), ch: ch || 0 }).then(function (r) {
-      if (r && r.counted) memo.stats = null;            /* lần đọc sau lấy số mới */
-      return r;
-    });
-  }
-  /* bầu / bỏ bầu: trả về { votes } để cập nhật số ngay trên nút */
-  function vote(slug, on) {
-    if (!API || !slug) return Promise.resolve(null);
-    return jpost('/api/vote', { slug: slug, vote: on ? 1 : 0, vid: vid() }, authToken()).then(function (r) {
-      if (r && r.ok && memo.stats && memo.stats.items && memo.stats.items[slug]) {
-        memo.stats.items[slug].votes = r.votes;         /* sửa số trong bộ nhớ để vẽ lại */
-        lsSet('chuseoz-stats', { t: Date.now(), v: memo.stats });
+      if (r && r.counted) {
+        /* cộng ngay vào số đang có để chip "lượt đọc" nhảy lên, rồi mới lấy số thật */
+        if (memo.stats && memo.stats.items) {
+          var it = memo.stats.items[slug];
+          if (it) { it.views = (Number(it.views) || 0) + 1; it.viewsDay = (Number(it.viewsDay) || 0) + 1; notifyStats(); }
+        }
+        memo.stats = null;                              /* lần đọc sau lấy số mới từ KV */
       }
       return r;
     });
+  }
+  /* bầu / bỏ bầu — ch = 0: phiếu cho cả bộ, ch > 0: phiếu riêng chương đó.
+     Trả về { votes (số của nút), total (tổng phiếu của bộ), votesDay/Week/Month }.
+     Số được sửa NGAY trong bộ nhớ + cache nên bảng xếp hạng tăng tức thì,
+     không phải chờ 10 phút cache hay tải lại trang (bệnh cũ: vote rồi BXH đứng im). */
+  function vote(slug, on, ch) {
+    if (!API || !slug) return Promise.resolve(null);
+    var c = Math.max(0, parseInt(ch, 10) || 0);
+    return jpost('/api/vote', { slug: slug, vote: on ? 1 : 0, ch: c, vid: vid() }, authToken()).then(function (r) {
+      if (r && r.ok) applyVote(slug, c, r);
+      return r;
+    });
+  }
+  function applyVote(slug, ch, r) {
+    if (!memo.stats) memo.stats = { on: true, items: {}, source: 'local' };
+    if (!memo.stats.items) memo.stats.items = {};
+    var it = memo.stats.items[slug] || (memo.stats.items[slug] = { views: 0, votes: 0 });
+    var total = r.total != null ? Number(r.total) : Number(r.votes || it.votes || 0);
+    it.votes = Math.max(0, total);
+    if (r.votesDay != null) it.votesDay = Number(r.votesDay) || 0;
+    if (r.votesWeek != null) it.votesWeek = Number(r.votesWeek) || 0;
+    if (r.votesMonth != null) it.votesMonth = Number(r.votesMonth) || 0;
+    if (r.chapVotes) it.chapVotes = r.chapVotes;
+    else if (ch > 0) {
+      it.chapVotes = it.chapVotes || {};
+      it.chapVotes[String(ch)] = Math.max(0, Number(r.votes) || 0);
+      if (!it.chapVotes[String(ch)]) delete it.chapVotes[String(ch)];
+    }
+    it.trendingScore = Math.round((it.viewsDay || 0) + 0.4 * (it.viewsWeek || 0) + 2 * (it.votesDay || 0));
+    memo.stats.on = true;
+    lsSet('chuseoz-stats', { t: Date.now(), v: memo.stats });
+    libCache = null;
+    notifyStats();
+    return it;
   }
   function schedule() {
     if (memo.sched) return Promise.resolve(memo.sched);
@@ -238,9 +274,46 @@
   }
   function clearShelf() { jsonSet(LS.shelf, []); }
 
-  /* thích / đánh dấu chương */
-  function isLiked(n) { return !!n && safeGet(LS.like + n.slug) === '1'; }
-  function toggleLike(n) { var on = !isLiked(n); safeSet(LS.like + n.slug, on ? '1' : '0'); return on; }
+  /* ---- THÍCH: mỗi chương một phiếu thích riêng --------------------------
+     Bệnh cũ: thích lưu theo BỘ (chuseoz-like-<slug>) nên thích chương 1 xong thì
+     sang chương 2 nút vẫn "Đã thích" và bấm vào lại thành BỎ thích. Giờ khoá lưu
+     là chuseoz-like-<slug>-<chương>; thích cả bộ (nút ở trang truyện) dùng khoá cũ. */
+  function likeKey(n, ch) {
+    var slug = (n && n.slug) || (typeof n === 'string' ? n : '');
+    var c = Math.max(0, parseInt(ch, 10) || 0);
+    return LS.like + slug + (c > 0 ? '-' + c : '');
+  }
+  function isLiked(n, ch) { return safeGet(likeKey(n, ch)) === '1'; }
+  function toggleLike(n, ch) {
+    var on = !isLiked(n, ch);
+    safeSet(likeKey(n, ch), on ? '1' : '0');
+    return on;
+  }
+  /* danh sách chương đã thích + có thích cả bộ không (để hiện ở mục My Space) */
+  function likedChapters(n) {
+    var slug = (n && n.slug) || '';
+    var out = [];
+    if (!slug) return out;
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i) || '';
+        if (k.indexOf(LS.like + slug + '-') !== 0) continue;
+        var c = parseInt(k.slice((LS.like + slug + '-').length), 10);
+        if (c > 0 && localStorage.getItem(k) === '1') out.push(c);
+      }
+    } catch (e) {}
+    return out.sort(function (a, b) { return a - b; });
+  }
+  function likedCount(n) { return likedChapters(n).length + (isLiked(n, 0) ? 1 : 0); }
+  /* số phiếu đang có (từ KV) của một chương / của cả bộ — chưa có số thì trả 0 */
+  function likeCount(n, ch) {
+    var st = statsOf(n);
+    if (!st) return 0;
+    var c = Math.max(0, parseInt(ch, 10) || 0);
+    if (c > 0) return Number((st.chapVotes || {})[String(c)]) || 0;
+    return Number(st.votes) || 0;
+  }
+  /* ---- ĐÁNH DẤU chương (thẻ bookmark) — khác với "lưu vào tủ" (icon tủ sách) ---- */
   function marks(n) { var a = jsonGet(LS.mark + (n && n.slug), []); return Array.isArray(a) ? a : []; }
   function toggleMark(n, ch) {
     var a = marks(n), i = a.indexOf(ch);
@@ -296,6 +369,17 @@
     pen: '<path d="M5 19l3-1 9-9a2 2 0 0 0-2.8-2.8L5 15l-1 4z"/><path d="M13 6l4 4"/>',
     play: '<path d="M8 6.5a1 1 0 0 1 1.5-.8l8 4.5a1 1 0 0 1 0 1.6l-8 4.5A1 1 0 0 1 8 16z"/>',
     bookmark: '<path d="M6 4h12v14l-6-3-6 3V4z"/>',
+    /* "Lưu vào tủ" dùng icon TỦ SÁCH, "Đánh dấu chương" dùng icon THẺ ĐÁNH DẤU —
+       trước đây cả hai đều là bookmark nên không phân biệt được */
+    shelf: '<path d="M4 20h16"/><path d="M5 20V6a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v14"/><path d="M13 20V9a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v11"/><path d="M7 9h2M15 12h2" opacity=".6"/>',
+    user: '<circle cx="12" cy="8" r="3.4"/><path d="M5 20a7 7 0 0 1 14 0"/>',
+    logout: '<path d="M15 5H7a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h8"/><path d="M18 12H10M15.5 9l3 3-3 3"/>',
+    shield: '<path d="M12 3.5 19 6v6c0 4-3 6.6-7 8.5C8 18.6 5 16 5 12V6z"/><path d="m9.2 12 2 2 3.6-4"/>',
+    pulse: '<path d="M3 12h4l2-4 3 8 2.5-5 1.5 1h5"/>',
+    inbox: '<path d="M4 13h4l1.5 2.5h5L16 13h4"/><path d="M4 13 6.5 5h11L20 13v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/>',
+    history: '<path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1M3.5 5v4h4"/><path d="M12 8v4.5l3 1.8"/>',
+    wand: '<path d="m5 19 9-9M15.5 4.5l1 2 2 1-2 1-1 2-1-2-2-1 2-1z"/><path d="m19 13 .7 1.3 1.3.7-1.3.7-.7 1.3-.7-1.3-1.3-.7 1.3-.7z"/>',
+    google: '<path d="M20.6 12.2c0-.6-.1-1.2-.2-1.7H12v3.4h4.8a4.1 4.1 0 0 1-1.8 2.7v2.2h2.9c1.7-1.6 2.7-3.9 2.7-6.6z"/><path d="M12 21c2.4 0 4.5-.8 6-2.2l-2.9-2.2c-.8.5-1.8.9-3.1.9-2.4 0-4.4-1.6-5.1-3.8H3.9v2.3A9 9 0 0 0 12 21z"/><path d="M6.9 13.7a5.4 5.4 0 0 1 0-3.4V8H3.9a9 9 0 0 0 0 8z"/><path d="M12 6.6c1.3 0 2.5.5 3.5 1.4l2.6-2.6A9 9 0 0 0 3.9 8L6.9 10.3C7.6 8.1 9.6 6.6 12 6.6z"/>',
     heart: '<path d="M12 19.5s-6.5-4-6.5-8a3.8 3.8 0 0 1 6.5-2.7A3.8 3.8 0 0 1 18.5 11.5c0 4-6.5 8-6.5 8z"/>',
     share: '<circle cx="18" cy="6" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.8 15.8 7.2M8.2 13.2l7.6 3.6"/>',
     check: '<path d="m5.5 12 4 4 8-10" stroke-linecap="round" stroke-linejoin="round"/>',
@@ -433,6 +517,48 @@
     toast(text);
     return Promise.resolve(false);
   }
+  /* ---- SỐ CHƯƠNG THẬT (đối chiếu từ kho chương) ---------------------------
+     Bệnh: sửa 30/30 → 29/29 trong file JSON trên GitHub nhưng web vẫn hiện 30,
+     vì web đọc registry trên Cloudflare KV trước, và con số trong registry là
+     bản chép tay nên dễ lệch với số chương thật của bộ.
+     Chữa 3 lớp:
+       1. Worker tự đếm lại mỗi lần ghi 1 bộ + có nút /api/recount (admin).
+       2. Web mở bộ nào thì đối chiếu số chương thật của bộ đó và GHI NHỚ trong
+          máy (chuseoz-realcounts) — từ đó trang chủ/thư viện hiện đúng số.
+       3. norm() dưới đây luôn lấy số đã đối chiếu thay cho nhãn cũ.            */
+  var LS_REAL = 'chuseoz-realcounts';
+  var realMap = null;
+  function realCounts() {
+    if (realMap == null) { var m = jsonGet(LS_REAL, {}); realMap = (m && typeof m === 'object') ? m : {}; }
+    return realMap;
+  }
+  function realCount(slug) {
+    var m = realCounts(), v = m[slug];
+    return v == null ? null : (parseInt(v, 10) || 0);
+  }
+  /* gọi sau khi tải xong 1 bộ: real = số chương thật trong kho */
+  function reconcileCount(n, real) {
+    var slug = typeof n === 'string' ? n : (n && n.slug);
+    real = parseInt(real, 10);
+    if (!slug || !(real >= 0)) return false;
+    var m = realCounts();
+    var changed = Number(m[slug]) !== real;
+    m[slug] = real;
+    if (changed) jsonSet(LS_REAL, m);
+    /* sửa luôn bản registry đang nằm trong bộ nhớ để mọi khối vẽ lại cho đúng */
+    var reg = memo.reg;
+    if (reg && reg.lib) {
+      reg.lib.forEach(function (x) {
+        if (!x || x.slug !== slug) return;
+        if (Number(x.chapters) !== real) { x.chapters = real; x.countFixed = true; }
+      });
+    }
+    libCache = null;
+    if (changed) {
+      try { w.dispatchEvent(new CustomEvent('cz:count', { detail: { slug: slug, chapters: real } })); } catch (e) {}
+    }
+    return changed;
+  }
   /* chuẩn hoá 1 bộ trong registry thành dạng dùng chung cho mọi trang */
   function norm(n) {
     var o = Object.assign({}, n || {});
@@ -440,12 +566,17 @@
     o.author = authorFix(o.author);
     o.couple = String(o.couple || '').trim();
     o.chapters = parseInt(o.chapters, 10) || 0;
+    /* số chương đã đối chiếu từ kho chương thật luôn thắng nhãn cũ trong registry */
+    var rc = realCount(o.slug);
+    if (rc != null && rc !== o.chapters) { o.chapters = rc; o.countFixed = true; }
     o.is18 = !!o.is18;
     o.statusCls = statusCls(o.status);
     o.status = statusLabel(o.status);
     o.countLabel = o.countLabel || o.count || (o.chapters ? o.chapters + ' chương' : '0 chương');
     var parts = String(o.countLabel || '').split('/');
     o.declared = parseInt(parts[1], 10) || o.chapters;         /* tổng dự kiến */
+    /* đã đối chiếu số thật thì đừng để nhãn "29/30" cũ làm người đọc tưởng còn thiếu */
+    if (rc != null) o.declared = Math.max(o.chapters, parseInt(o.planned, 10) || 0);
     o.url = storyURL(o.slug);
     o.canRead = o.chapters > 0;
     return o;
@@ -784,12 +915,20 @@
         '<span class="searchbtn-txt">Search</span><span class="k">⌘K</span></button>' +
       '<button class="hbtn" id="czTheme" title="Theme" aria-label="Đổi nền">' + icon('moon', 'i-s') +
         '<span class="nav-lbl">Theme</span></button>' +
+      /* ---- ĐĂNG NHẬP: nút luôn có trên mọi trang (kể cả trang chủ) ---- */
+      '<div class="hauth" id="czAuth">' +
+        '<button class="hbtn authbtn" id="czAuthBtn" aria-haspopup="menu" aria-expanded="false">' +
+          '<span class="authic" id="czAuthIc"></span><span class="nav-lbl" id="czAuthTxt">Đăng nhập</span>' +
+        '</button>' +
+        '<div class="amenu" id="czAuthMenu" role="menu" aria-label="Tài khoản"></div>' +
+      '</div>' +
       '<button class="hbtn icon burger" id="czBurger" aria-label="Mở menu">' + icon('menu', 'i-s') + '</button>' +
       '</div>' +
       '<div class="mnav" id="czMnav">' + mLinks +
-      '<a href="/#ban-doc">' + icon('bookmark', 'i-s') + ' My Space</a>' +
+      '<a href="/#ban-doc">' + icon('shelf', 'i-s') + ' My Space</a>' +
       '<a href="/guide">' + icon('info', 'i-s') + ' Hướng dẫn</a>' +
-      '<a href="/admin">' + icon('gear', 'i-s') + ' Quản trị</a></div>';
+      /* mục Quản trị được vẽ trong paintAuth(): người thường KHÔNG thấy */
+      '<span id="czAuthMWrap"></span></div>';
 
     var tb = host.querySelector('#czTheme');
     function paintTheme() {
@@ -798,39 +937,97 @@
     }
     paintTheme();
     tb.addEventListener('click', function () { themeToggle(); paintTheme(); });
-    // Auth button
-    function paintAuth(){
-      var au = host.querySelector('#czAuthBtn'), txt = host.querySelector('#czAuthTxt');
-      var am = host.querySelector('#czAuthM'), mtxt = host.querySelector('#czAuthMTxt');
-      var u = (w.CZ_AUTH && w.CZ_AUTH.current && w.CZ_AUTH.current()) || null;
-      if(!au) return;
-      if(u){
-        if(txt) txt.textContent = (u.name || u.email || 'Bạn').split(' ')[0];
-        if(mtxt) mtxt.textContent = u.name || u.email;
-        au.title = 'Đã đăng nhập: '+(u.email||u.name)+' — bấm để đăng xuất';
-        am.title = au.title;
-      } else {
-        if(txt) txt.textContent = 'Đăng nhập';
-        if(mtxt) mtxt.textContent = 'Đăng nhập';
-        au.title = 'Đăng nhập Google (một chạm)';
-        if(am) am.title = au.title;
-      }
+
+    /* ---- nút đăng nhập + menu tài khoản ----
+       · Chưa đăng nhập: bấm là mở đăng nhập (Supabase → Google, hoặc link email).
+       · Đã đăng nhập: bấm mở menu (tủ truyện, đang đọc, quản trị [nếu là admin], đăng xuất).
+       · Mục "Quản trị" chỉ hiện với email nằm trong CZ_ADMIN_EMAILS — người đọc
+         thường không thấy đường vào trang admin nữa. */
+    function authUser() { return (w.CZ_AUTH && w.CZ_AUTH.current && w.CZ_AUTH.current()) || null; }
+    function isAdmin() { return !!(w.CZ_AUTH && w.CZ_AUTH.isAdmin && w.CZ_AUTH.isAdmin()); }
+    function closeMenu() {
+      var m = host.querySelector('#czAuthMenu'), b = host.querySelector('#czAuthBtn');
+      if (m) m.classList.remove('on');
+      if (b) b.setAttribute('aria-expanded', 'false');
+      d.body.classList.remove('authmenu-on');
     }
-    paintAuth();
-    var authBtn = host.querySelector('#czAuthBtn');
-    if(authBtn) authBtn.addEventListener('click', function(){
-      var u = (w.CZ_AUTH && w.CZ_AUTH.current && w.CZ_AUTH.current()) || null;
-      if(u){ w.CZ_AUTH.logout().then(paintAuth); }
-      else { w.CZ_AUTH.loginGoogle().then(paintAuth); }
+    function paintAuth() {
+      var btn = host.querySelector('#czAuthBtn');
+      if (!btn) return;
+      var ic0 = host.querySelector('#czAuthIc'), txt = host.querySelector('#czAuthTxt');
+      var menu = host.querySelector('#czAuthMenu');
+      var mwrap = host.querySelector('#czAuthMWrap');
+      var u = authUser();
+      var ad = isAdmin();
+      if (u) {
+        var short = String(u.name || u.email || 'Bạn').split(' ')[0];
+        btn.classList.add('hasuser');
+        if (ic0) {
+          ic0.innerHTML = u.picture
+            ? '<img src="' + esc(u.picture) + '" alt="" referrerpolicy="no-referrer">'
+            : '<span class="ava">' + esc(String(u.name || u.email || 'B')[0].toUpperCase()) + '</span>';
+        }
+        if (txt) txt.textContent = short;
+        btn.title = 'Đã đăng nhập: ' + (u.email || u.name) + ' — bấm để mở menu tài khoản';
+        if (menu) {
+          menu.innerHTML =
+            '<div class="amtop">' +
+              (u.picture ? '<img src="' + esc(u.picture) + '" alt="" referrerpolicy="no-referrer">'
+                         : '<span class="ava">' + esc(String(u.name || u.email || 'B')[0].toUpperCase()) + '</span>') +
+              '<span><b>' + esc(u.name || 'Bạn đọc') + '</b><span>' + esc(u.email || '') + '</span>' +
+              (ad ? '<em class="role">' + icon('shield', 'i-s') + 'quản trị</em>' : '') + '</span>' +
+            '</div>' +
+            '<a href="/#ban-doc" role="menuitem">' + icon('shelf', 'i-s') + 'Tủ truyện của tôi</a>' +
+            '<a href="/#ban-doc" role="menuitem">' + icon('clock', 'i-s') + 'Đang đọc dở</a>' +
+            (ad ? '<a href="/admin" role="menuitem" class="adm">' + icon('gear', 'i-s') + 'Trang quản trị</a>' : '') +
+            '<button type="button" role="menuitem" id="czAuthOut" class="out">' + icon('logout', 'i-s') + 'Đăng xuất</button>';
+        }
+        if (mwrap) {
+          mwrap.innerHTML = (ad ? '<a href="/admin" id="czAuthMAdmin">' + icon('shield', 'i-s') + ' Quản trị</a>' : '') +
+            '<a href="#" id="czAuthM">' + icon('logout', 'i-s') + ' <span id="czAuthMTxt">Đăng xuất</span></a>';
+        }
+      } else {
+        btn.classList.remove('hasuser');
+        if (ic0) ic0.innerHTML = icon('user', 'i-s');
+        if (txt) txt.textContent = 'Đăng nhập';
+        btn.title = 'Đăng nhập để bình luận và thích từng chương';
+        if (menu) menu.innerHTML = '';
+        if (mwrap) {
+          mwrap.innerHTML = '<a href="#" id="czAuthM">' + icon('user', 'i-s') +
+            ' <span id="czAuthMTxt">Đăng nhập</span></a>';
+        }
+      }
+      /* gắn lại sự kiện vì innerHTML vừa được vẽ mới */
+      var out = host.querySelector('#czAuthOut');
+      if (out) out.addEventListener('click', function () {
+        closeMenu();
+        w.CZ_AUTH.logout().then(function () { paintAuth(); });
+      });
+      var mBtn = host.querySelector('#czAuthM');
+      if (mBtn) mBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        var mn = host.querySelector('#czMnav'); if (mn) mn.classList.remove('on');
+        if (authUser()) w.CZ_AUTH.logout().then(function () { paintAuth(); });
+        else w.CZ_AUTH.login().then(function () { paintAuth(); });
+      });
+      closeMenu();
+    }
+    host.querySelector('#czAuthBtn').addEventListener('click', function (e) {
+      e.stopPropagation();
+      var menu = host.querySelector('#czAuthMenu');
+      if (!authUser()) { w.CZ_AUTH.login().catch(function () {}); return; }
+      var on = menu && menu.classList.contains('on');
+      if (on) { closeMenu(); return; }
+      paintAuth();
+      if (menu) { menu.classList.add('on'); d.body.classList.add('authmenu-on'); }
+      this.setAttribute('aria-expanded', 'true');
     });
-    var authM = host.querySelector('#czAuthM');
-    if(authM) authM.addEventListener('click', function(e){
-      e.preventDefault();
-      var u = (w.CZ_AUTH && w.CZ_AUTH.current && w.CZ_AUTH.current()) || null;
-      if(u){ w.CZ_AUTH.logout().then(function(){ paintAuth(); host.querySelector('#czMnav').classList.remove('on'); }); }
-      else { w.CZ_AUTH.loginGoogle().then(function(){ paintAuth(); host.querySelector('#czMnav').classList.remove('on'); }); }
+    d.addEventListener('click', function (e) {
+      if (e.target.closest && e.target.closest('#czAuth')) return;
+      closeMenu();
     });
-    if(w.CZ_AUTH && w.CZ_AUTH.onAuth) w.CZ_AUTH.onAuth(paintAuth);
+    d.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMenu(); });
+    if (w.CZ_AUTH && w.CZ_AUTH.onAuth) w.CZ_AUTH.onAuth(paintAuth); else paintAuth();
 
     navInk(host);
     var mnav = host.querySelector('#czMnav');
@@ -978,6 +1175,228 @@
     if (as[jumpCur]) as[jumpCur].scrollIntoView({ block: 'nearest' });
   }
 
+  /* ======================= 7c. BÌNH LUẬN (dùng chung) ======================
+     Một khung bình luận tái sử dụng: trang truyện (tab "Đánh giá") và NGAY TRONG
+     TRANG ĐỌC đều gọi chung hàm này, nên không còn cảnh phải thoát trang đọc mới
+     bình luận được. Có lọc theo chương, đếm số, xoá bình luận của mình (quản trị
+     xoá được của người khác), và tự hiện nút đăng nhập khi chưa đăng nhập.      */
+  var CMT = (function () {
+    var seq = 0;
+    function mount(host, opt) {
+      opt = opt || {};
+      if (!host) return null;
+      var id = 'czc' + (++seq);
+      var slug = String(opt.slug || '');
+      var chap = Math.max(0, parseInt(opt.ch, 10) || 0);
+      /* chLabel: chữ hiện cho người đọc ("Chương 1", "Ngoại truyện 2"…). Số `chap` chỉ là
+         vị trí trong kho chương nên không phải lúc nào cũng trùng tên chương thật. */
+      var chLabel = String(opt.chLabel || '').trim();
+      function chWord() { return chLabel || (chap ? 'chương ' + chap : ''); }
+      var state = { all: [], byChap: {}, filter: chap > 0 && opt.chapterFilter !== false ? 'chap' : 'all', busy: false, count: 0 };
+
+      function u() { return (w.CZ_AUTH && w.CZ_AUTH.current && w.CZ_AUTH.current()) || null; }
+      function tk() { return (w.CZ_AUTH && w.CZ_AUTH.token && w.CZ_AUTH.token()) || ''; }
+      function base() { return API; }
+      function head(txt, n) {
+        return '<div class="cmt-head2"><b>' + esc(txt) + '</b>' +
+          (n ? '<span class="cmt-n">' + num(n) + '</span>' : '') +
+          (opt.hint ? '<span class="cmt-hint">' + esc(opt.hint) + '</span>' : '') + '</div>';
+      }
+      function filters() {
+        if (opt.chapterFilter === false || !chap) return '';
+        var nAll = state.count, nCh = Number(state.byChap[String(chap)]) || 0;
+        return '<div class="cmt-filters" role="tablist">' +
+          '<button class="tab' + (state.filter === 'chap' ? ' on' : '') + '" data-f="chap" role="tab">' + esc(chWord()) +
+            (nCh ? ' <span class="ct">' + nCh + '</span>' : '') + '</button>' +
+          '<button class="tab' + (state.filter === 'all' ? ' on' : '') + '" data-f="all" role="tab">Tất cả' +
+            (nAll ? ' <span class="ct">' + nAll + '</span>' : '') + '</button></div>';
+      }
+      function ava(o) {
+        return o && o.picture
+          ? '<img class="cmt-ava" src="' + esc(o.picture) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+          : '<span class="cmt-ava cmt-ava--ph">' + esc(String((o && (o.name || 'B')) || 'B')[0].toUpperCase()) + '</span>';
+      }
+      function itemHTML(c) {
+        var me = u() && (c.uid === u().uid || String(c.uid) === String(u().uid));
+        var admin = !!(w.CZ_AUTH && w.CZ_AUTH.isAdmin && w.CZ_AUTH.isAdmin());
+        return '<div class="cmt-item" data-id="' + esc(c.id) + '">' + ava(c) +
+          '<div class="cmt-body"><div class="cmt-h"><b>' + esc(c.name || 'Bạn đọc') + '</b>' +
+            (c.guest ? '<span class="cmt-guest" title="Bình luận khi chưa đăng nhập">khách</span>' : '') +
+            (c.ch ? '<span class="cmt-ch">chương ' + esc(c.ch) + '</span>' : '') +
+            '<span class="cmt-time">' + esc(timeAgo(c.createdAt)) + '</span>' +
+            ((me || admin) ? '<button class="cmt-del" data-del="' + esc(c.id) + '" title="Xoá bình luận" aria-label="Xoá bình luận">✕</button>' : '') +
+          '</div><div class="cmt-text">' + esc(c.text) + '</div></div></div>';
+      }
+      function list() {
+        var rows = state.filter === 'chap' ? state.all.filter(function (c) { return (Number(c.ch) || 0) === chap; }) : state.all;
+        if (!rows.length) {
+          return '<div class="cmt-status">' + (state.filter === 'chap'
+            ? 'Chưa có bình luận nào cho ' + chWord() + '. Viết câu đầu tiên đi!'
+            : 'Chưa có bình luận nào. Hãy là người đầu tiên!') + '</div>';
+        }
+        return rows.map(itemHTML).join('');
+      }
+      /* tên khách được nhớ trong máy để lần sau khỏi gõ lại */
+      function guestName() { return safeGet('chuseoz-cmtname') || ''; }
+      function form() {
+        var me = u();
+        if (!me) {
+          /* KHÔNG bắt đăng nhập mới được bình luận: trang chưa bật Supabase thì người đọc
+             vẫn viết được (bình luận gắn với mã máy ẩn danh). Có tài khoản thì tốt hơn. */
+          return '<div class="cmt-form">' + ava({ name: guestName() || 'B' }) +
+            '<div class="cmt-field">' +
+              '<input class="cmt-name" data-name maxlength="40" placeholder="Tên của bạn (không bắt buộc)" value="' + esc(guestName()) + '">' +
+              '<textarea data-text maxlength="2000" rows="' + (opt.compact ? 2 : 3) + '" placeholder="' +
+                (chap ? 'Nghĩ gì về ' + chWord() + '…' : 'Viết bình luận…') + ' (tối đa 2000 ký tự)"></textarea>' +
+              '<div class="cmt-actions">' +
+                '<span class="cmt-meta">Gửi với tên khách · <button class="lk" data-login type="button">đăng nhập để có ảnh đại diện</button></span>' +
+                '<span class="cmt-count" data-count>0/2000</span>' +
+                '<button class="btn pri sm" data-send type="button">Gửi</button>' +
+              '</div>' +
+            '</div></div>';
+        }
+        return '<div class="cmt-form">' + ava(me) +
+          '<div class="cmt-field">' +
+            '<textarea data-text maxlength="2000" rows="' + (opt.compact ? 2 : 3) + '" placeholder="' +
+              (chap ? 'Nghĩ gì về ' + chWord() + '…' : 'Viết bình luận…') + ' (tối đa 2000 ký tự)"></textarea>' +
+            '<div class="cmt-actions">' +
+              '<span class="cmt-meta"><b>' + esc(me.name || me.email || 'Bạn đọc') + '</b> · <button class="lk" data-logout type="button">đăng xuất</button></span>' +
+              '<span class="cmt-count" data-count>0/2000</span>' +
+              '<button class="btn pri sm" data-send type="button">Gửi</button>' +
+            '</div>' +
+          '</div></div>';
+      }
+      function paint() {
+        host.innerHTML = '<div class="cmt-wrap' + (opt.compact ? ' cmt-compact' : '') + '" id="' + id + '">' +
+          head(opt.title || 'Bình luận', state.filter === 'chap' ? (Number(state.byChap[String(chap)]) || 0) : state.count) +
+          filters() +
+          '<div data-formbox>' + form() + '</div>' +
+          '<div class="cmt-list" data-list>' + (state.busy ? '<div class="cmt-status">Đang tải bình luận…</div>' : list()) + '</div>' +
+        '</div>';
+        bind();
+      }
+      function bind() {
+        var ta = host.querySelector('[data-text]');
+        var cnt = host.querySelector('[data-count]');
+        if (ta && cnt) {
+          ta.addEventListener('input', function () { cnt.textContent = ta.value.length + '/2000'; });
+          ta.addEventListener('keydown', function (e) {
+            if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'enter') send();
+          });
+        }
+        host.querySelectorAll('[data-f]').forEach(function (b) {
+          b.addEventListener('click', function () { state.filter = b.dataset.f; paint(); });
+        });
+        var lg = host.querySelector('[data-login]');
+        if (lg) lg.addEventListener('click', function () {
+          if (w.CZ_AUTH && w.CZ_AUTH.login) w.CZ_AUTH.login().catch(function () {});
+        });
+        var lo = host.querySelector('[data-logout]');
+        if (lo) lo.addEventListener('click', function () { if (w.CZ_AUTH) w.CZ_AUTH.logout().then(function () { paint(); }); });
+        var sd = host.querySelector('[data-send]');
+        if (sd) sd.addEventListener('click', send);
+        host.querySelectorAll('[data-del]').forEach(function (b) {
+          b.addEventListener('click', function () { del(b.dataset.del); });
+        });
+      }
+      function send() {
+        var ta = host.querySelector('[data-text]');
+        var sd = host.querySelector('[data-send]');
+        var text = ta ? String(ta.value || '').replace(/\s+/g, ' ').trim() : '';
+        if (!text) { toast('Viết gì đó đã rồi hãy gửi', 'err'); if (ta) ta.focus(); return; }
+        if (!base()) { toast('Chưa nối Worker (cz-config.js) nên không gửi được bình luận', 'err'); return; }
+        if (state.busy) return;
+        state.busy = true;
+        if (sd) { sd.disabled = true; sd.textContent = 'Đang gửi…'; }
+        var nm = host.querySelector('[data-name]');
+        if (nm && String(nm.value || '').trim()) safeSet('chuseoz-cmtname', String(nm.value).trim().slice(0, 40));
+        fetch(base() + '/api/comments/' + encodeURIComponent(slug), {
+          method: 'POST',
+          headers: tk() ? { 'content-type': 'application/json', authorization: 'Bearer ' + tk() }
+                        : { 'content-type': 'application/json' },
+          body: JSON.stringify({ text: text, ch: chap, vid: vid(), name: guestName() })
+        }).then(function (r) {
+          return r.json().catch(function () { return {}; }).then(function (j) {
+            if (!r.ok || !j.ok) throw new Error(j.error || ('HTTP ' + r.status));
+            return j;
+          });
+        }).then(function (j) {
+          state.busy = false;
+          if (j.comment) {
+            state.all.unshift(j.comment);
+            state.count = j.count || (state.count + 1);
+            var k = String(Number(j.comment.ch) || 0);
+            state.byChap[k] = (Number(state.byChap[k]) || 0) + 1;
+          }
+          paint();
+          toast('Đã gửi bình luận', 'ok');
+          if (opt.onChanged) opt.onChanged(state.count);
+        }).catch(function (e) {
+          state.busy = false;
+          paint();
+          toast(String(e.message || 'Không gửi được bình luận'), 'err');
+        });
+      }
+      function del(cid) {
+        if (!cid) return;
+        confirmBox('Xoá bình luận này? Không khôi phục được.', 'Xoá').then(function (ok) {
+          if (!ok) return;
+          fetch(base() + '/api/comments/' + encodeURIComponent(slug) + '/' + encodeURIComponent(cid), {
+            method: 'DELETE', headers: { authorization: 'Bearer ' + tk() }
+          }).then(function (r) {
+            return r.json().catch(function () { return {}; }).then(function (j) {
+              if (!r.ok || !j.ok) throw new Error(j.error || ('HTTP ' + r.status));
+              state.all = state.all.filter(function (c) { return c.id !== cid; });
+              state.count = Math.max(0, state.count - 1);
+              load(true);
+              toast('Đã xoá bình luận', 'ok');
+            });
+          }).catch(function (e) { toast(String(e.message || 'Không xoá được'), 'err'); });
+        });
+      }
+      function load(keepUI) {
+        if (!base()) {
+          host.innerHTML = '<div class="cmt-wrap"><div class="cmt-status">Chưa nối Worker (<code>cz-config.js</code>) nên chưa đọc được bình luận.</div></div>';
+          return Promise.resolve(0);
+        }
+        if (!keepUI) { state.busy = true; paint(); }
+        return fetch(base() + '/api/comments/' + encodeURIComponent(slug) + '?limit=200' + (chap ? '&ch=' : ''))
+          .then(function (r) { return r.json().catch(function () { return {}; }); })
+          .then(function (j) {
+            state.busy = false;
+            state.all = (j && j.comments) || [];
+            state.byChap = (j && j.byChapter) || {};
+            state.count = (j && j.count) || state.all.length;
+            paint();
+            if (opt.onChanged) opt.onChanged(state.count);
+            return state.count;
+          })
+          .catch(function (e) {
+            state.busy = false;
+            host.innerHTML = '<div class="cmt-wrap"><div class="cmt-status">Không tải được bình luận: ' + esc(e.message || 'lỗi mạng') + '</div></div>';
+            return 0;
+          });
+      }
+      paint();
+      load(true);
+      return {
+        reload: function () { return load(); },
+        setChapter: function (c, label) {
+          var n = Math.max(0, parseInt(c, 10) || 0);
+          if (label) chLabel = String(label).trim();
+          if (n === chap) { paint(); return; }
+          chap = n;
+          state.filter = (chap > 0 && opt.chapterFilter !== false) ? 'chap' : 'all';
+          paint();
+        },
+        chapter: function () { return chap; },
+        count: function () { return state.count; },
+        host: host
+      };
+    }
+    return { mount: mount };
+  })();
+
   /* ======================= 8. XUẤT RA NGOÀI ============================= */
   var libCache = null;
   function libList() {
@@ -1043,6 +1462,14 @@
       stats().then(function (s) { statsWatchers.splice(0).forEach(function (f) { f(s); }); });
     }
   }
+  /* ai muốn vẽ lại ngay khi số liệu đổi (bấm thích, đọc chương…) thì đăng ký ở đây */
+  var statsListeners = [];
+  function onStatsChange(fn) { statsListeners.push(fn); return fn; }
+  function notifyStats() {
+    var s = memo.stats;
+    statsListeners.forEach(function (f) { try { f(s); } catch (e) {} });
+    try { w.dispatchEvent(new CustomEvent('cz:stats', { detail: s })); } catch (e) {}
+  }
 
   w.CZ = {
     API: API, normalizeApi: normalizeApi,
@@ -1051,7 +1478,9 @@
     lib: libList, slides: slides, editorChoice: editorChoice, donationCfg: donationCfg, reportCfg: reportCfg, findLib: findLib, statsOf: statsOf, onStats: onStats,
     progress: progress, setProgress: setProgress, lastReadAt: lastReadAt,
     shelfIds: shelfIds, inShelf: inShelf, toggleShelf: toggleShelf, clearShelf: clearShelf,
-    isLiked: isLiked, toggleLike: toggleLike, marks: marks, toggleMark: toggleMark, chaptersRead: chaptersRead,
+    isLiked: isLiked, toggleLike: toggleLike, likedChapters: likedChapters, likedCount: likedCount, likeCount: likeCount,
+    marks: marks, toggleMark: toggleMark, chaptersRead: chaptersRead,
+    realCount: realCount, reconcileCount: reconcileCount, onStatsChange: onStatsChange, notifyStats: notifyStats,
     rdGet: rdGet, rdSet: rdSet, themeInit: themeInit, themeToggle: themeToggle,
     icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo,
     statusCls: statusCls, statusLabel: statusLabel, words: words, norm: norm, countText: countText, listHead: listHead,
@@ -1060,6 +1489,7 @@
     scrollUI: scrollUI, slide: slide, pageFx: pageFx, pop: pop, ink: ink, inkAll: inkAll,
     mountShell: mountShell, mountHeader: mountHeader, mountFooter: mountFooter,
     openJump: openJump, toast: toast, modal: modal, confirm: confirmBox,
+    comments: CMT,
     reduce: reduce, hasAPI: !!API,
     _memo: memo, _setLib: function () { libCache = null; }
   };

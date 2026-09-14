@@ -11,7 +11,7 @@
 <meta property="og:type" content="website">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23faf8f4'/%3E%3Cpath d='M10 8h9a3 3 0 0 1 3 3v13H13a3 3 0 0 1-3-3z' fill='none' stroke='%23a63a52' stroke-width='2.4'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
-<link rel="stylesheet" href="/cz.css?v=20260913e">
+<link rel="stylesheet" href="/cz.css?v=20260914a">
 <script>/* chống nháy nền: áp tông màu đã lưu trước khi vẽ */try{var t=localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
 <body class="hpage">
@@ -51,6 +51,8 @@
           <button class="btn ghost sm" id="banClear">Xoá</button>
         </span>
       </div>
+      <!-- ô tài khoản: mời đăng nhập khi chưa đăng nhập, chào + thống kê khi đã đăng nhập -->
+      <div class="authcard" id="banAuth" hidden></div>
       <div class="contcols" id="contRow"></div>
       <div class="contcols hide" id="shelfRow"></div>
     </section>
@@ -134,9 +136,9 @@
 <footer id="ftr"></footer>
 <button id="toTop" aria-label="Lên đầu trang" title="Lên đầu trang"></button>
 
-<script src="/cz-config.js?v=20260913e"></script>
-<script src="/cz-app.js?v=20260913e"></script>
-<script src="/cz-auth.js?v=20260913e"></script>
-<script src="/cz-home.js?v=20260913e"></script>
+<script src="/cz-config.js?v=20260914a"></script>
+<script src="/cz-app.js?v=20260914a"></script>
+<script src="/cz-auth.js?v=20260914a"></script>
+<script src="/cz-home.js?v=20260914a"></script>
 </body>
 </html>

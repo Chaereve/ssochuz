@@ -7,7 +7,7 @@
 <meta name="description" content="Thông tin truyện, danh sách chương và trình đọc truyện chuyển thể trên chuseoz.">
 <meta name="theme-color" content="#faf8f4">
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
-<link rel="stylesheet" href="/cz.css?v=20260913e">
+<link rel="stylesheet" href="/cz.css?v=20260914a">
 <script>/* chống nháy nền */try{var t=localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
 <body class="spage">
@@ -107,6 +107,8 @@
   <div class="rend" id="rdEnd"></div>
   <nav class="rnav" id="rdNav"></nav>
   <div class="ract" id="rdActs"></div>
+  <!-- BÌNH LUẬN NGAY TRONG TRANG ĐỌC (theo từng chương) — cz-story.js dựng nội dung -->
+  <section class="rdcmts" id="rdCmts" aria-label="Bình luận chương này"></section>
   <!-- rdkeys hidden per request - was: phím tắt cuối trang đọc -->
 </section>
 
@@ -132,9 +134,9 @@
 </div>
 <div class="lightbox" id="lightbox"><img alt="Ảnh trong chương"></div>
 
-<script src="/cz-config.js?v=20260913e"></script>
-<script src="/cz-app.js?v=20260913e"></script>
-<script src="/cz-auth.js?v=20260913e"></script>
-<script src="/cz-story.js?v=20260913e"></script>
+<script src="/cz-config.js?v=20260914a"></script>
+<script src="/cz-app.js?v=20260914a"></script>
+<script src="/cz-auth.js?v=20260914a"></script>
+<script src="/cz-story.js?v=20260914a"></script>
 </body>
 </html>

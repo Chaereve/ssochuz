@@ -100,10 +100,13 @@
       .catch(function (e) {
         ONLINE = false;
         msg('Không nối được: ' + e.message + ' — kiểm tra URL Worker, binding CZ_KV và secret ADMIN_KEY.', 'err');
+        if (!isAdmin()) gateHold('Khoá ADMIN_KEY chưa đúng hoặc Worker chưa reachable: ' + e.message +
+          ' — đăng nhập bằng tài khoản quản trị, hoặc nhập lại khoá.', 'err');
       })
       .then(function () { b.disabled = false; b.textContent = 'Kiểm tra & kết nối'; });
   }
   function openApp() {
+    gatePass(ONLINE ? 'key' : 'local');
     /* nối được Worker rồi thì giấu hẳn phần thiết lập; chưa nối thì thu gọn lại một dòng */
     $('#scConnect').classList.toggle('hide', ONLINE);
     setSetup(false);
@@ -290,18 +293,25 @@
         lib.filter(function (n) { return !(n.chapters || 0) && daysSince(n.updated) > 45; }))
     ].filter(function (t) { return t.n > 0; });
 
+    /* số liệu thật (nếu đã đọc) + tình trạng kênh đăng nhập: quản trị mở trang là thấy ngay */
+    var stItems = (CZ._memo.stats && CZ._memo.stats.on && CZ._memo.stats.items) || {};
+    var stKeys = Object.keys(stItems);
+    var sumF = function (f) { return stKeys.reduce(function (a, k) { return a + (Number(stItems[k][f]) || 0); }, 0); };
     var tiles = [
       { n: lib.length, l: 'Bộ truyện' },
       { n: has, l: 'Đã có chương' },
       { n: soon, l: 'Sắp ra mắt' },
       { n: chap, l: 'Chương đã đăng' },
       { n: eighteen, l: 'Gắn 18+' },
-      { n: has, l: 'Đã mở đọc' },
-      { n: Object.keys(picked).length, l: 'Thiếu thông tin' }
+      { n: Object.keys(picked).length, l: 'Thiếu thông tin' },
+      { n: stKeys.length, l: 'Bộ có số liệu' },
+      { n: sumF('views'), l: 'Lượt đọc (KV)' },
+      { n: sumF('votes'), l: 'Phiếu thích (KV)' }
     ];
     $('#ovTiles').innerHTML = tiles.map(function (t) {
       return '<div class="tile"><b>' + num(t.n) + '</b><span>' + t.l + '</span></div>';
     }).join('');
+    paintAuthPanel();
 
     $('#ovTasks').innerHTML = tasks.length
       ? '<div class="ovhead">Việc nên xem lại</div>' + tasks.map(function (t) {
@@ -364,6 +374,46 @@
       });
     });
   }
+  /* ô tình trạng hệ thống trong tab Tổng quan: đăng nhập, Worker, số chương lệch */
+  function paintAuthPanel() {
+    var box = $('#ovAuth');
+    if (!box) return;
+    var authCfg = (REG && REG.settings && REG.settings.auth) || {};
+    var sbCode = !!(window.CZ_SUPABASE_URL && window.CZ_SUPABASE_ANON_KEY);
+    var sbKv = !!(authCfg.supabaseUrl && authCfg.supabaseAnonKey);
+    var sbOn = sbCode || sbKv;
+    var emails = (window.CZ_AUTH && CZ_AUTH.adminEmails) ? CZ_AUTH.adminEmails() : [];
+    var docBad = DOC.rows.filter(function (r) { return r.issues.indexOf('regVsReal') >= 0 || r.issues.indexOf('kvVsRepo') >= 0; }).length;
+    box.innerHTML =
+      '<div class="docrow ' + (sbOn ? 'good' : 'warn') + '"><span class="di">' + ic(sbOn ? 'check' : 'alert', 'i-s') + '</span>' +
+        '<span class="dt"><b>Đăng nhập người đọc: ' + (sbOn ? (sbCode ? 'Supabase (cz-config.js)' : 'Supabase (lưu trên KV)') : 'CHƯA bật') + '</b>' +
+        '<span>' + (sbOn
+          ? 'Người đọc bấm "Đăng nhập" ở đầu trang là qua Supabase → Google, không dính lỗi origin_mismatch. Email quản trị: ' + esc(emails.join(', ') || '(chưa khai)')
+          : 'Vào tab <b>Cài đặt &amp; đồng bộ</b> → mục <b>Đăng nhập người đọc (Supabase)</b>, dán Project URL + anon key rồi Lưu. ' +
+            'Hoặc điền thẳng vào <code>cz-config.js</code>. Chi tiết: HUONG-DAN-DANG-NHAP-BINH-LUAN.md') + '</span></span>' +
+        '<button class="btn ghost sm" data-go2="settings">' + ic('gear', 'i-s') + 'Mở cài đặt</button></div>' +
+      '<div class="docrow ' + (docBad ? 'bad' : 'good') + '"><span class="di">' + ic(docBad ? 'alert' : 'pulse', 'i-s') + '</span>' +
+        '<span class="dt"><b>Số chương: ' + (DOC.rows.length ? (docBad ? docBad + ' bộ đang lệch' : 'khớp nhau') : 'chưa soi lần nào') + '</b>' +
+        '<span>Đối chiếu registry (số hiện ngoài web) ↔ KV (bản người đọc nhận) ↔ file trong repo GitHub. ' +
+        'Web hiện sai số chương thì soi ở đây ra ngay chỗ lệch.</span></span>' +
+        '<button class="btn ghost sm" id="ovDoc">' + ic('pulse', 'i-s') + (DOC.rows.length ? 'Soi lại' : 'Soi dữ liệu') + '</button></div>' +
+      '<div class="docrow ' + (ONLINE ? 'good' : 'warn') + '"><span class="di">' + ic(ONLINE ? 'cloud' : 'info', 'i-s') + '</span>' +
+        '<span class="dt"><b>Worker: ' + (ONLINE ? 'đã nối KV' : 'chưa nối — đang xem dữ liệu tĩnh') + '</b>' +
+        '<span>' + (ONLINE ? 'Sửa ở đây là người đọc thấy sau 1–2 giây, không cần build/deploy.'
+          : 'Mở khung "Nối Cloudflare Worker" rồi nhập URL + ADMIN_KEY để ghi thẳng lên KV.') + '</span></span>' +
+        '<button class="btn ghost sm" id="ovConn">' + ic('key', 'i-s') + (ONLINE ? 'Kiểm tra lại' : 'Nối Worker') + '</button></div>';
+    var od = box.querySelector('#ovDoc');
+    if (od) od.addEventListener('click', function () { show('doctor'); runDoctor(); });
+    var oc = box.querySelector('#ovConn');
+    if (oc) oc.addEventListener('click', function () {
+      $('#scConnect').classList.remove('hide'); setSetup(true);
+      $('#scConnect').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (ONLINE) health();
+    });
+    box.querySelectorAll('[data-go2]').forEach(function (b) {
+      b.addEventListener('click', function () { show(b.dataset.go2); });
+    });
+  }
   var OV_FILTER = null;
   function fillQuickBooks() {
     var sel = $('#qkBook');
@@ -376,7 +426,7 @@
 
   /* ------------------------------ sửa bộ -------------------------------- */
   function show(pane) {
-    ['overview', 'list', 'quick', 'new', 'edit', 'settings', 'stats', 'help'].forEach(function (k) {
+    ['overview', 'list', 'quick', 'new', 'edit', 'doctor', 'cmts', 'stats', 'log', 'settings', 'help'].forEach(function (k) {
       var el = $('#pane-' + k);
       if (el) el.classList.toggle('hide', k !== pane);
     });
@@ -850,6 +900,7 @@
   function renderSettings() {
     var s = REG.schedule || {};
     if (!$('#sSchedNote').value) $('#sSchedNote').value = s.note || 'Lịch có thể thay đổi nếu có việc đột xuất.';
+    renderAuthCfg();
   }
   function saveSettings() {
     var by = {}; (REG.lib || []).forEach(function (n) { by[n.slug] = n; });
@@ -877,10 +928,21 @@
       email: $('#rEmail') ? $('#rEmail').value.trim() : 'chuseoz.ofc@gmail.com',
       form: $('#rForm') ? $('#rForm').value.trim() : 'https://forms.gle/YW3PvtrNVQ7xt8nCA'
     };
+    /* cấu hình đăng nhập: lưu trên KV để KHÔNG phải sửa cz-config.js rồi deploy lại.
+       cz-config.js vẫn thắng nếu đã điền sẵn ở đó (xem cz-auth.js → applySettings). */
+    var auth = {
+      provider: $('#aProvider') ? $('#aProvider').value : 'supabase',
+      supabaseUrl: $('#aUrl') ? $('#aUrl').value.trim().replace(/\/+$/, '') : '',
+      supabaseAnonKey: $('#aKey') ? $('#aKey').value.trim() : '',
+      googleClientId: $('#aGoogle') ? $('#aGoogle').value.trim() : '',
+      adminEmails: ($('#aAdmins') ? $('#aAdmins').value : '').split(',')
+        .map(function (x) { return x.trim().toLowerCase(); }).filter(Boolean)
+    };
     REG.settings = Object.assign({}, REG.settings, {
       giscus: { repo: $('#sGiscusRepo').value.trim(), repoId: $('#sGiscusId').value.trim() },
       donation: don,
       report: rep,
+      auth: auth,
       editorChoice: ePicks
     });
     saveRegistry('Đã lưu cài đặt');
@@ -966,14 +1028,28 @@
     var p = force && ONLINE ? api('/api/stats/refresh', { method: 'POST' }).catch(function () {}) : Promise.resolve();
     p.then(function () {
       if (force) CZ._memo.stats = null;
-      return CZ.stats();
-    }).then(function (d) {
-      var items = (d && d.items) || {};
+      /* Worker bản mới có /api/admin/stats: kèm chuỗi 60 ngày + phiếu theo từng chương */
+      if (!ONLINE) return CZ.stats().then(function (d) { return { d: d, days: null, detail: false }; });
+      return api('/api/admin/stats').then(function (a) {
+        return { d: { on: true, items: a.items || {}, source: 'kv', saved: a.updatedAt }, days: a.days || [], detail: true };
+      }).catch(function () {
+        return CZ.stats().then(function (d) { return { d: d, days: null, detail: false }; });
+      });
+    }).then(function (pack) {
+      var d = pack.d, items = (d && d.items) || {};
       var keys = Object.keys(items);
+      var by = {}; (REG.lib || []).forEach(function (n) { by[n.slug] = n; });
       var sum = function (f) { return keys.reduce(function (a, k) { return a + (Number(items[k][f]) || 0); }, 0); };
+      var chapTotal = keys.reduce(function (a, k) {
+        var cv = items[k].chapVotes || {};
+        return a + Object.keys(cv).reduce(function (b, c) { return b + (Number(cv[c]) || 0); }, 0);
+      }, 0);
       $('#stTiles').innerHTML = [['Bộ có số liệu', num(keys.length)], ['Tổng lượt đọc', num(sum('views'))],
-        ['Lượt đọc hôm nay', num(sum('viewsDay'))], ['Tổng bình chọn', num(sum('votes'))]]
+        ['Lượt đọc hôm nay', num(sum('viewsDay'))], ['Tổng phiếu thích', num(sum('votes'))],
+        ['Phiếu trong tuần', num(sum('votesWeek'))], ['Phiếu theo chương', num(chapTotal)]]
         .map(function (r) { return '<div class="tile"><b>' + r[1] + '</b><span>' + r[0] + '</span></div>'; }).join('');
+      STATS_LAST = { items: items, by: by };
+      drawChart(pack.days);
       if (!keys.length) {
         st.className = 'msgbar show err';
         st.innerHTML = 'Chưa có lượt đọc/bình chọn nào trên KV. Số sẽ tự tăng khi người đọc mở chương hoặc bấm <b>Thích</b> ' +
@@ -984,23 +1060,31 @@
       }
       st.className = 'msgbar show ok';
       st.textContent = 'Số liệu thật · nguồn: ' + (d.source || 'kv') + (d.saved ? ' · cập nhật ' + CZ.timeAgo(d.saved) : '') +
-        (d.stale ? ' (bản lưu trong máy)' : '');
-      var by = {}; (REG.lib || []).forEach(function (n) { by[n.slug] = n; });
+        (d.stale ? ' (bản lưu trong máy)' : '') + (pack.detail ? '' : ' · Worker bản cũ nên chưa có chuỗi ngày/phiếu theo chương');
       var list = keys.map(function (k) { return Object.assign({ _k: k }, items[k]); })
-        .sort(function (a, b) { return (b.views || 0) - (a.views || 0); }).slice(0, 60);
+        .sort(function (a, b) { return (b.views || 0) - (a.views || 0); }).slice(0, 80);
+      var maxV = Math.max(1, list.reduce(function (a, r) { return Math.max(a, r.views || 0); }, 0));
       $('#stTb').innerHTML = '<thead><tr><th>#</th><th>Bộ truyện</th><th>Lượt đọc</th><th>Hôm nay</th>' +
-        '<th>Bình chọn</th><th>Tuần này</th></tr></thead><tbody>' +
+        '<th>Phiếu thích</th><th>Tuần</th><th>Người bầu</th><th>Chương được thích nhiều</th></tr></thead><tbody>' +
         list.map(function (r, i) {
           var n = by[r._k] || {};
-          return '<tr><td>' + (i + 1) + '</td><td>' + (n.title ? esc(n.title) : esc(r._k)) + '</td>' +
-            '<td><b>' + num(r.views) + '</b></td><td>' + num(r.viewsDay) + '</td>' +
-            '<td>' + num(r.votes) + '</td><td>' + num(r.votesWeek) + '</td></tr>';
+          var cv = r.chapVotes || {};
+          var top = Object.keys(cv).sort(function (a, b) { return cv[b] - cv[a]; }).slice(0, 3)
+            .map(function (c) { return 'ch' + c + ' (' + cv[c] + ')'; }).join(', ');
+          return '<tr><td>' + (i + 1) + '</td>' +
+            '<td>' + (n.title ? esc(n.title) : esc(r._k)) + '</td>' +
+            '<td><b>' + num(r.views) + '</b><i class="minibar" style="width:' + Math.round(60 * (r.views || 0) / maxV) + 'px"></i></td>' +
+            '<td>' + num(r.viewsDay) + '</td>' +
+            '<td><b>' + num(r.votes) + '</b></td><td>' + num(r.votesWeek) + '</td>' +
+            '<td>' + num(r.voters || 0) + '</td>' +
+            '<td class="sm">' + esc(top || '—') + '</td></tr>';
         }).join('') + '</tbody>';
     }).catch(function (e) {
       st.className = 'msgbar show err';
       st.textContent = 'Lỗi đọc số liệu: ' + e.message;
     });
   }
+  var STATS_LAST = { items: {}, by: {} };
   /* kéo số lượt đọc/phiếu của site cũ (Firestore) về KV — làm 1 lần là đủ */
   function importFbStats() {
     var st = $('#stState');
@@ -1016,21 +1100,501 @@
     });
   }
 
+  /* ======================= BÁC SĨ DỮ LIỆU =================================
+     Đối chiếu 3 nguồn cho từng bộ:
+       · registry  — con số đang hiện ngoài web (trang chủ, trang truyện, mục lục)
+       · KV        — kho chương người đọc THẬT SỰ nhận (bản này thắng)
+       · repo      — file /data/book/<slug>.json trên GitHub
+     Lệch nhau là web hiện sai số chương. Đây chính là bệnh "Be My Angel chỉ có 29
+     chương mà web vẫn hiện 30": sửa file trong repo nhưng bản trên KV chưa được nạp lại. */
+  var DOC = { rows: [], at: '', scanned: 0 };
+  function docState(text, kind) {
+    var el = $('#docState');
+    if (!el) return;
+    el.className = 'msgbar' + (text ? ' show ' + (kind || 'info') : '');
+    el.innerHTML = text || '';
+  }
+  function fetchRepoBook(slug) {
+    return fetch('/data/book/' + encodeURIComponent(slug) + '.json', { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .catch(function () { return null; });
+  }
+  function fetchKvBook(slug) {
+    if (!ONLINE) return Promise.resolve(null);
+    return api('/api/book/' + encodeURIComponent(slug), { auth: false })
+      .then(function (b) { return (b && b.chapters) ? b : null; })
+      .catch(function () { return null; });
+  }
+  /* chạy nhiều việc cùng lúc nhưng giới hạn số luồng để không nghẽn trình duyệt */
+  function pool(items, limit, run) {
+    var i = 0, busy = 0;
+    return new Promise(function (res) {
+      function next() {
+        if (i >= items.length && !busy) return res();
+        while (busy < limit && i < items.length) {
+          (function (it) {
+            busy++;
+            Promise.resolve(run(it)).then(function () { busy--; next(); }, function () { busy--; next(); });
+          })(items[i++]);
+        }
+      }
+      next();
+    });
+  }
+  function dupTitles(chs) {
+    var seen = {}, out = [];
+    (chs || []).forEach(function (c) {
+      var t = String((c && c.t) || '').trim().toLowerCase();
+      if (!t) return;
+      if (seen[t]) { if (out.indexOf(seen[t]) < 0) out.push(seen[t]); }
+      else seen[t] = t;
+    });
+    return out;
+  }
+  function runDoctor() {
+    if (!REG) return;
+    var lib = (REG.lib || []).slice();
+    DOC = { rows: [], at: new Date().toISOString(), scanned: lib.length };
+    docState('<span class="spin"></span> đang đối chiếu ' + lib.length + ' bộ · registry ↔ KV ↔ repo…', 'info');
+    var done = 0;
+    return pool(lib, 5, function (n) {
+      var slug = n.slug;
+      if (!slug) {
+        DOC.rows.push({ n: n, slug: '', reg: Number(n.chapters) || 0, kv: null, repo: null, issues: ['noslug'] });
+        return;
+      }
+      return Promise.all([fetchKvBook(slug), fetchRepoBook(slug)]).then(function (rs) {
+        var kv = rs[0], repo = rs[1];
+        var kvN = kv && kv.chapters ? kv.chapters.length : null;
+        var repoN = repo && repo.chapters ? repo.chapters.length : null;
+        var regN = Number(n.chapters) || 0;
+        /* số "thật" để đối chiếu: KV thắng (đó là thứ người đọc nhận), repo là phương án 2 */
+        var real = kvN != null ? kvN : repoN;
+        var issues = [];
+        var lab = String(n.countLabel || '').trim();
+        var m = /^(\d+)\s*\/\s*(\d+)$/.exec(lab);
+        if (!m) issues.push('label');
+        else if (parseInt(m[1], 10) !== regN) issues.push('labelReg');
+        if (real != null && regN !== real) issues.push('regVsReal');
+        if (kvN != null && repoN != null && kvN !== repoN) issues.push('kvVsRepo');
+        if (ONLINE && kvN == null && regN > 0) issues.push('kvMissing');
+        if (kvN == null && repoN == null && regN > 0) issues.push('noSource');
+        var src = kv || repo;
+        if (src && src.chapters) {
+          var dups = dupTitles(src.chapters);
+          if (dups.length) issues.push('dup:' + dups.length);
+          var empty = src.chapters.filter(function (c) { return !String((c && c.html) || '').trim(); }).length;
+          if (empty) issues.push('empty:' + empty);
+        }
+        if (!String(n.thumb || '').trim()) issues.push('nothumb');
+        if (!String(n.syn || n.synFull || '').trim()) issues.push('nosyn');
+        if (!String(n.author || '').trim()) issues.push('noauthor');
+        if (!String(n.couple || '').trim()) issues.push('nocouple');
+        if (!String(n.year || '').trim()) issues.push('noyear');
+        DOC.rows.push({ n: n, slug: slug, reg: regN, kv: kvN, repo: repoN, real: real, issues: issues });
+        done++;
+        if (done % 10 === 0) docState('<span class="spin"></span> đã soi ' + done + '/' + lib.length + ' bộ…', 'info');
+      });
+    }).then(function () { renderDoctor(); });
+  }
+  var DOC_LABEL = {
+    regVsReal: ['bad', 'Số chương ngoài web ≠ số chương thật', 'registry ghi {reg}, kho chương có {real} — người đọc thấy sai số'],
+    kvVsRepo: ['bad', 'KV lệch file trong repo GitHub', 'KV có {kv} chương, repo có {repo} — bạn sửa repo nhưng chưa nạp lên KV. Bấm "Nạp chương từ repo lên KV"'],
+    kvMissing: ['warn', 'KV chưa có chương nào', 'registry nói có {reg} chương nhưng KV trống — người đọc bấm vào sẽ không thấy chữ'],
+    noSource: ['warn', 'Không tìm thấy chương ở đâu cả', 'cả KV lẫn repo đều không có file chương'],
+    label: ['warn', 'Nhãn số chương sai định dạng', 'đang là "{lab}", nên là "29/29"'],
+    labelReg: ['warn', 'Nhãn lệch với trường số chương', 'nhãn "{lab}" nhưng trường chapters = {reg}'],
+    nothumb: ['warn', 'Thiếu ảnh bìa', ''],
+    nosyn: ['warn', 'Thiếu mô tả', ''],
+    noauthor: ['warn', 'Thiếu tác giả', ''],
+    nocouple: ['warn', 'Thiếu couple', ''],
+    noyear: ['warn', 'Thiếu năm', ''],
+    noslug: ['bad', 'Thiếu slug', 'không mở được trang truyện']
+  };
+  function renderDoctor() {
+    var rows = DOC.rows;
+    var bad = rows.filter(function (r) { return r.issues.some(function (i) { return (DOC_LABEL[i.split(':')[0]] || [])[0] === 'bad'; }); });
+    var warn = rows.filter(function (r) { return !bad.includes(r) && r.issues.length; });
+    var ok = rows.length - bad.length - warn.length;
+    var tiles = [
+      ['Đã soi', num(rows.length)], ['Sai nghiêm trọng', num(bad.length)],
+      ['Cần xem lại', num(warn.length)], ['Gọn gàng', num(ok)]
+    ];
+    $('#docTiles').innerHTML = tiles.map(function (t) {
+      return '<div class="tile"><b>' + t[1] + '</b><span>' + t[0] + '</span></div>';
+    }).join('');
+    var order = bad.concat(warn);
+    $('#docSel').textContent = DOC.at ? ('soi lúc ' + new Date(DOC.at).toLocaleTimeString('vi-VN') +
+      (ONLINE ? ' · nguồn KV: có' : ' · chưa nối Worker nên chỉ so repo')) : '';
+    if (!order.length) {
+      $('#docList').innerHTML = '<div class="docrow good"><span class="di">' + ic('check', 'i-s') + '</span>' +
+        '<span class="dt"><b>Dữ liệu khớp nhau cả ba nguồn</b><span>registry, KV và repo đang nói cùng một số chương. ' +
+        'Nếu ngoài web vẫn hiện số cũ thì đó là cache trình duyệt — bấm Ctrl+F5 hoặc vào tab Cài đặt → "Xoá cache số liệu".</span></span></div>';
+      docState('Xong: ' + rows.length + ' bộ, không thấy lệch.', 'ok');
+      return;
+    }
+    $('#docList').innerHTML = order.slice(0, 200).map(function (r, i) {
+      var lvl = bad.indexOf(r) >= 0 ? 'bad' : 'warn';
+      var bits = r.issues.map(function (k) {
+        var key = k.split(':')[0], extra = k.indexOf(':') > 0 ? k.slice(k.indexOf(':') + 1) : '';
+        var L = DOC_LABEL[key] || ['warn', key, ''];
+        var txt = L[2]
+          .replace('{reg}', r.reg).replace('{real}', r.real == null ? '—' : r.real)
+          .replace('{kv}', r.kv == null ? '—' : r.kv).replace('{repo}', r.repo == null ? '—' : r.repo)
+          .replace('{lab}', String(r.n.countLabel || ''));
+        if (key === 'dup') txt = 'các tiêu đề lặp: ' + extra + ' lần — thường là chương bị đăng trùng';
+        if (key === 'empty') txt = extra + ' chương chưa có nội dung';
+        return '<b>' + esc(L[1]) + '</b>' + (txt ? '<span>' + esc(txt) + '</span>' : '');
+      }).join('');
+      return '<div class="docrow ' + lvl + '"><span class="di">' + ic(lvl === 'bad' ? 'alert' : 'info', 'i-s') + '</span>' +
+        '<span class="dt"><b>' + esc(r.n.title || r.slug || '(thiếu tên)') + '</b>' +
+        '<span class="sm muted">slug <code>' + esc(r.slug || '—') + '</code> · registry <b>' + r.reg +
+        '</b> · KV <b>' + (r.kv == null ? '—' : r.kv) + '</b> · repo <b>' + (r.repo == null ? '—' : r.repo) + '</b></span>' +
+        bits + '</span>' +
+        '<span class="row" style="gap:6px"><button class="btn ghost sm" data-docedit="' + i + '">' + ic('edit', 'i-s') + 'Sửa</button></span></div>';
+    }).join('');
+    $$('#docList [data-docedit]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var r = order[parseInt(b.dataset.docedit, 10)];
+        if (r && r.slug) openEdit(r.slug, 'meta');
+      });
+    });
+    docState('Xong: ' + bad.length + ' bộ sai nghiêm trọng, ' + warn.length + ' bộ cần xem lại (trong ' + rows.length + ' bộ đã soi).', bad.length ? 'err' : 'ok');
+  }
+  /* sửa nhãn + số chương trong registry theo số thật vừa soi được */
+  function docFixRegistry() {
+    if (!DOC.rows.length) return toast('Quét trước đã', 'err');
+    var n = 0;
+    DOC.rows.forEach(function (r) {
+      if (r.real == null || !r.n) return;
+      if (Number(r.n.chapters) === r.real && String(r.n.countLabel) === r.real + '/' + r.real) return;
+      r.n.chapters = r.real;
+      r.n.countLabel = r.real + '/' + r.real;
+      r.n.count = r.n.countLabel;
+      n++;
+    });
+    if (!n) return toast('Không có gì phải sửa trong registry', 'info');
+    saveRegistry('Đã sửa số chương của ' + n + ' bộ theo kho chương thật').then(function () { renderList(); renderOverview(); });
+  }
+  function docRecount() {
+    if (!ONLINE) return msg('Cần nối Worker để đếm lại trên KV.', 'err');
+    var b = $('#docRecount'); b.disabled = true; b.innerHTML = '<span class="spin"></span> đang đếm…';
+    api('/api/recount', { method: 'POST' }).then(function (r) {
+      msg('Đã đếm lại ' + num(r.books) + ' bộ trên KV · sửa ' + num((r.fixed || []).length) + ' bộ' +
+        ((r.missing || []).length ? ' · ' + r.missing.length + ' bộ không có chương trên KV' : ''), (r.fixed || []).length ? 'ok' : 'info');
+      toast('Đã đếm lại số chương', 'ok');
+      return loadRegistry().then(function () { return runDoctor(); });
+    }).catch(function (e) {
+      msg('Không đếm lại được: ' + e.message + (String(e.message).indexOf('không có endpoint') >= 0
+        ? ' — Worker đang chạy là bản cũ, dán lại worker/cms.js rồi Deploy (xem worker/README.md).' : ''), 'err');
+    }).then(function () { b.disabled = false; b.textContent = 'Đếm lại số chương trên KV'; });
+  }
+  /* nạp chương từ repo lên KV — chữa tận gốc khi KV lệch repo */
+  function docPushRepo() {
+    if (!ONLINE) return msg('Cần nối Worker trước.', 'err');
+    var targets = DOC.rows.filter(function (r) {
+      return r.repo != null && (r.kv == null || r.kv !== r.repo || r.reg !== r.repo);
+    });
+    if (!targets.length) targets = DOC.rows.filter(function (r) { return r.repo != null; });
+    if (!targets.length) return msg('Không tìm thấy file chương nào trong repo để nạp.', 'err');
+    CZ.confirm('Nạp ' + targets.length + ' bộ từ file trong repo lên KV?\nChương trên KV của những bộ này sẽ bị ghi đè bằng bản trong repo (bản bạn đã sửa trên GitHub).', 'Nạp lên KV')
+      .then(function (ok) {
+        if (!ok) return;
+        var b = $('#docFixKv'); b.disabled = true;
+        var done = 0, fail = [];
+        return pool(targets, 4, function (r) {
+          b.innerHTML = '<span class="spin"></span> ' + (++done) + '/' + targets.length;
+          return fetchRepoBook(r.slug).then(function (bk) {
+            if (!bk) { fail.push(r.slug); return; }
+            return api('/api/book/' + encodeURIComponent(r.slug), { method: 'PUT', body: bk })
+              .catch(function () { fail.push(r.slug); });
+          });
+        }).then(function () {
+          b.disabled = false; b.textContent = '↑ Nạp chương từ repo lên KV (sửa gốc)';
+          msg('Đã nạp ' + (targets.length - fail.length) + '/' + targets.length + ' bộ lên KV' +
+            (fail.length ? ' · lỗi: ' + fail.slice(0, 6).join(', ') : ''), fail.length ? 'err' : 'ok');
+          toast('Đã nạp chương từ repo lên KV', 'ok');
+          return loadRegistry().then(function () { renderList(); renderOverview(); return runDoctor(); });
+        });
+      });
+  }
+
+  /* ======================= KIỂM DUYỆT BÌNH LUẬN =========================== */
+  var MOD = { all: [], q: '', slug: '' };
+  function modState(text, kind) {
+    var el = $('#cmState');
+    if (!el) return;
+    el.className = 'msgbar' + (text ? ' show ' + (kind || 'info') : '');
+    el.innerHTML = text || '';
+  }
+  function fillModBooks() {
+    var sel = $('#cmBook');
+    if (!sel || !REG) return;
+    var cur = sel.value;
+    sel.innerHTML = '<option value="">Mọi bộ truyện</option>' + (REG.lib || []).slice()
+      .sort(function (a, b) { return String(a.title).localeCompare(String(b.title), 'vi'); })
+      .map(function (n) { return '<option value="' + esc(n.slug) + '">' + esc(n.title) + '</option>'; }).join('');
+    sel.value = cur;
+  }
+  function loadMod() {
+    if (!ONLINE) { modState('Cần nối Worker để đọc bình luận (bình luận nằm trên KV).', 'err'); return Promise.resolve(); }
+    modState('<span class="spin"></span> đang đọc bình luận từ KV…', 'info');
+    return api('/api/admin/comments?limit=800').then(function (r) {
+      MOD.all = r.comments || [];
+      paintMod();
+      modState('Có ' + num(MOD.all.length) + ' bình luận trên ' + num(r.slugs || 0) + ' bộ.', 'ok');
+    }).catch(function (e) {
+      /* Worker bản cũ chưa có /api/admin/comments → gom từng bộ một */
+      var lib = (REG && REG.lib) || [];
+      return pool(lib, 5, function (n) {
+        return api('/api/comments/' + encodeURIComponent(n.slug) + '?limit=200', { auth: false }).then(function (r) {
+          (r.comments || []).forEach(function (c) { MOD.all.push(Object.assign({ slug: n.slug }, c)); });
+        }).catch(function () {});
+      }).then(function () {
+        MOD.all.sort(function (a, b) { return String(b.createdAt || '').localeCompare(String(a.createdAt || '')); });
+        paintMod();
+        modState('Worker chưa có /api/admin/comments nên đã gom từng bộ: ' + num(MOD.all.length) + ' bình luận. ' +
+          'Dán worker/cms.js mới rồi Deploy để có trang kiểm duyệt đầy đủ.', 'info');
+      });
+    });
+  }
+  function paintMod() {
+    var q = MOD.q.toLowerCase(), by = {};
+    if (REG) (REG.lib || []).forEach(function (n) { by[n.slug] = n; });
+    var rows = MOD.all.filter(function (c) {
+      if (MOD.slug && c.slug !== MOD.slug) return false;
+      if (!q) return true;
+      return (String(c.text || '') + ' ' + String(c.name || '') + ' ' + String(c.slug || '')).toLowerCase().indexOf(q) >= 0;
+    });
+    var byDay = {};
+    MOD.all.forEach(function (c) { var d = String(c.createdAt || '').slice(0, 10); byDay[d] = (byDay[d] || 0) + 1; });
+    var today = new Date().toISOString().slice(0, 10);
+    $('#cmTiles').innerHTML = [
+      ['Tổng bình luận', num(MOD.all.length)], ['Hôm nay', num(byDay[today] || 0)],
+      ['Người gửi khác nhau', num(Object.keys(MOD.all.reduce(function (a, c) { a[c.uid || c.name] = 1; return a; }, {})).length)],
+      ['Đang hiện', num(rows.length)]
+    ].map(function (t) { return '<div class="tile"><b>' + t[1] + '</b><span>' + t[0] + '</span></div>'; }).join('');
+    var box = $('#cmList');
+    if (!rows.length) { box.innerHTML = '<div class="empty sm">Chưa có bình luận nào khớp.</div>'; return; }
+    box.innerHTML = rows.slice(0, 400).map(function (c) {
+      var n = by[c.slug] || {};
+      var av = c.picture ? '<img class="modava" src="' + esc(c.picture) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+        : '<span class="modava">' + esc(String(c.name || 'B')[0].toUpperCase()) + '</span>';
+      return '<div class="modrow" data-id="' + esc(c.id) + '" data-slug="' + esc(c.slug) + '">' + av +
+        '<span class="mb2"><span class="mh2"><b>' + esc(c.name || 'Bạn đọc') + '</b>' +
+          '<span>' + esc(CZ.timeAgo(c.createdAt)) + '</span>' +
+          (c.ch ? '<span class="pill acc">chương ' + esc(c.ch) + '</span>' : '') +
+          '<a class="mslug" href="' + esc(CZ.storyURL(c.slug)) + '" target="_blank" rel="noopener">' + esc(n.title || c.slug) + ' ↗</a></span>' +
+          '<span class="mt2">' + esc(c.text) + '</span></span>' +
+        '<button class="btn ghost sm" data-modd title="Xoá bình luận này">' + ic('trash', 'i-s') + '</button></div>';
+    }).join('');
+    $$('#cmList [data-modd]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var row = b.closest('.modrow');
+        delMod(row.dataset.slug, row.dataset.id);
+      });
+    });
+  }
+  function delMod(slug, id) {
+    CZ.confirm('Xoá bình luận này khỏi KV? Không khôi phục được.', 'Xoá').then(function (ok) {
+      if (!ok) return;
+      api('/api/comments/' + encodeURIComponent(slug) + '/' + encodeURIComponent(id), { method: 'DELETE' })
+        .then(function () {
+          MOD.all = MOD.all.filter(function (c) { return c.id !== id; });
+          paintMod(); toast('Đã xoá bình luận', 'ok');
+        })
+        .catch(function (e) {
+          toast('Không xoá được: ' + e.message, 'err');
+        });
+    });
+  }
+
+  /* ======================= NHẬT KÝ HOẠT ĐỘNG ============================= */
+  function loadLog() {
+    if (!ONLINE) { $('#logState').className = 'msgbar show err'; $('#logState').textContent = 'Cần nối Worker để đọc nhật ký.'; return; }
+    $('#logState').className = 'msgbar show info';
+    $('#logState').innerHTML = '<span class="spin"></span> đang đọc nhật ký…';
+    api('/api/admin/log').then(function (r) {
+      var items = r.items || [];
+      $('#logState').className = 'msgbar show ok';
+      $('#logState').textContent = items.length ? (items.length + ' thao tác gần nhất (Worker giữ tối đa 200 dòng).') : 'Chưa có thao tác nào được ghi.';
+      $('#logList').innerHTML = items.map(function (l) {
+        return '<div class="logrow"><time>' + esc(String(l.at || '').replace('T', ' ').slice(0, 19)) + '</time>' +
+          '<span class="lw">' + esc(l.who || '—') + '</span><b>' + esc(l.text || '') + '</b></div>';
+      }).join('') || '<div class="empty sm">Trống.</div>';
+    }).catch(function (e) {
+      $('#logState').className = 'msgbar show err';
+      $('#logState').textContent = 'Không đọc được nhật ký: ' + e.message +
+        (String(e.message).indexOf('không có endpoint') >= 0 ? ' — Worker đang là bản cũ, dán worker/cms.js mới rồi Deploy.' : '');
+    });
+  }
+
+  /* ======================= BIỂU ĐỒ + CSV SỐ LIỆU ========================= */
+  function drawChart(days) {
+    var box = $('#stChart');
+    if (!box) return;
+    var d = (days || []).slice(-30);
+    if (!d.length) { box.innerHTML = '<div class="empty sm">Chưa có dữ liệu theo ngày trên KV (Worker bản mới ghi chuỗi ngày khi có lượt đọc/phiếu).</div>'; return; }
+    var W = 900, H = 150, pad = 18;
+    var max = Math.max(1, d.reduce(function (a, x) { return Math.max(a, x.views || 0, x.votes || 0); }, 0));
+    var bw = (W - pad * 2) / d.length;
+    function h(v) { return Math.round((H - 26) * (v / max)); }
+    var bars = d.map(function (x, i) {
+      var x0 = pad + i * bw;
+      var hv = h(x.views || 0), ho = h(x.votes || 0);
+      var t = x.day + ': ' + (x.views || 0) + ' lượt đọc, ' + (x.votes || 0) + ' phiếu';
+      return '<rect x="' + (x0 + bw * 0.14).toFixed(1) + '" y="' + (H - 16 - hv) + '" width="' + (bw * 0.36).toFixed(1) + '" height="' + hv + '" fill="var(--acc)" rx="1.5"><title>' + esc(t) + '</title></rect>' +
+        '<rect x="' + (x0 + bw * 0.52).toFixed(1) + '" y="' + (H - 16 - ho) + '" width="' + (bw * 0.36).toFixed(1) + '" height="' + ho + '" fill="var(--ok)" rx="1.5"><title>' + esc(t) + '</title></rect>';
+    }).join('');
+    var labels = [0, Math.floor(d.length / 2), d.length - 1].map(function (i) {
+      if (!d[i]) return '';
+      return '<text class="ax" x="' + (pad + i * bw + bw / 2).toFixed(1) + '" y="' + (H - 4) + '" text-anchor="middle">' + esc(String(d[i].day).slice(5)) + '</text>';
+    }).join('');
+    box.innerHTML = '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="Lượt đọc và phiếu thích 30 ngày">' +
+      '<line x1="' + pad + '" y1="' + (H - 16) + '" x2="' + (W - pad) + '" y2="' + (H - 16) + '" stroke="var(--bd)" />' +
+      '<text class="ax" x="' + pad + '" y="10">cao nhất ' + num(max) + '</text>' + bars + labels + '</svg>';
+  }
+  function statsCsv(items, by) {
+    var head = ['slug', 'ten', 'luot_doc', 'doc_hom_nay', 'doc_tuan', 'phieu', 'phieu_tuan', 'phieu_thang', 'so_nguoi_bau'];
+    var lines = [head.join(',')];
+    Object.keys(items).forEach(function (k) {
+      var r = items[k] || {}, n = by[k] || {};
+      lines.push([k, '"' + String(n.title || '').replace(/"/g, '""') + '"', r.views || 0, r.viewsDay || 0, r.viewsWeek || 0,
+        r.votes || 0, r.votesWeek || 0, r.votesMonth || 0, r.voters || ''].join(','));
+    });
+    return lines.join('\n');
+  }
+
+  /* ======================= CẤU HÌNH ĐĂNG NHẬP (SUPABASE) ================= */
+  function renderAuthCfg() {
+    var a = (REG && REG.settings && REG.settings.auth) || {};
+    function set(id, v) { var el = $(id); if (el && !el.value) el.value = v || ''; }
+    set('#aUrl', a.supabaseUrl || '');
+    set('#aKey', a.supabaseAnonKey || '');
+    set('#aGoogle', a.googleClientId || '');
+    set('#aProvider', a.provider || '');
+    if (a.provider && $('#aProvider')) $('#aProvider').value = a.provider;
+    set('#aAdmins', Array.isArray(a.adminEmails) ? a.adminEmails.join(', ') : (a.adminEmails || ''));
+    paintAuthState();
+  }
+  function paintAuthState(h) {
+    var c = $('#aState');
+    if (!c) return;
+    if (!h) { c.className = 'chip'; c.innerHTML = '<span class="d"></span><span>chưa kiểm tra</span>'; return; }
+    var bits = [];
+    bits.push(h.supabase ? 'Supabase: sẵn sàng' : 'Supabase: thiếu SUPABASE_URL');
+    bits.push(h.session ? 'session: ok' : 'session: thiếu SESSION_SECRET');
+    bits.push(h.google ? 'Google ID: có' : 'Google ID: không');
+    bits.push('ADMIN_EMAILS: ' + ((h.adminEmails || []).length || 0));
+    c.className = 'chip ' + (h.supabase && h.session ? 'ok' : 'err');
+    c.innerHTML = '<span class="d"></span><span>' + esc(bits.join(' · ')) + '</span>';
+  }
+  function checkAuthWorker() {
+    var st = $('#aState');
+    if (!ONLINE) { paintAuthState(null); return msg('Cần nối Worker để kiểm tra.', 'err'); }
+    if (st) { st.className = 'chip'; st.innerHTML = '<span class="spin"></span><span>đang hỏi Worker…</span>'; }
+    api('/api/health', { auth: false }).then(function (h) {
+      paintAuthState(h.auth || null);
+      if (!h.auth) msg('Worker đang là bản cũ (không có mục auth trong /api/health) — dán worker/cms.js mới rồi Deploy.', 'err');
+      else msg('Worker: ' + (h.auth.supabase ? 'đã bật Supabase' : 'CHƯA bật Supabase (thiếu SUPABASE_URL)') +
+        ' · ' + (h.auth.session ? 'có SESSION_SECRET' : 'thiếu SESSION_SECRET'), h.auth.supabase ? 'ok' : 'err');
+    }).catch(function (e) { msg('Không hỏi được Worker: ' + e.message, 'err'); });
+  }
+
   /* biểu tượng viết trong HTML: <span data-ic="search"> → hình thật */
   $$('[data-ic]').forEach(function (el) { el.outerHTML = ic(el.dataset.ic); });
 
-  /* -------------------- lúc mở trang: dùng được ngay --------------------- */
+  /* ======================= CỔNG VÀO TRANG QUẢN TRỊ ========================
+     Người đọc thường KHÔNG vào được: mục Quản trị ngoài web đã bị ẩn, và ở đây
+     cũng chặn. Hai cách qua cổng:
+       (a) đăng nhập Google/Supabase bằng email nằm trong danh sách quản trị;
+       (b) nhập đúng ADMIN_KEY của Worker (dành cho lúc chưa bật Supabase).    */
+  var AUTHED = false;
+  function authUser() { return (window.CZ_AUTH && CZ_AUTH.current && CZ_AUTH.current()) || null; }
+  function isAdmin() { return !!(window.CZ_AUTH && CZ_AUTH.isAdmin && CZ_AUTH.isAdmin()); }
+  function gateMsg(text, kind) {
+    var g = $('#gateMsg');
+    if (!g) return;
+    g.className = 'msgbar' + (text ? ' show ' + (kind || 'info') : '');
+    g.textContent = text || '';
+  }
+  function paintWho() {
+    var u = authUser(), box = $('#whoBox'), rb = $('#roleBadge'), lo = $('#btnLogout');
+    var ge = $('#gateEmails');
+    var emails = (window.CZ_AUTH && CZ_AUTH.adminEmails) ? CZ_AUTH.adminEmails() : (window.CZ_ADMIN_EMAILS || []);
+    if (ge) ge.textContent = emails.length ? emails.join(', ') : '(chưa khai email nào trong cz-config.js)';
+    if (box) {
+      box.classList.toggle('hide', !u);
+      box.innerHTML = u
+        ? (u.picture ? '<img src="' + esc(u.picture) + '" alt="" referrerpolicy="no-referrer">'
+                     : '<span class="ava">' + esc(String(u.name || u.email || 'A')[0].toUpperCase()) + '</span>') +
+          '<span>' + esc(u.name || u.email || '') + '</span>'
+        : '';
+    }
+    if (rb) {
+      rb.classList.toggle('hide', !(u && isAdmin()));
+      rb.innerHTML = ic('shield', 'i-s') + 'quản trị';
+    }
+    if (lo) lo.classList.toggle('hide', !u);
+    var gw = $('#gateWho');
+    if (gw) {
+      gw.innerHTML = u
+        ? 'Đang đăng nhập: <b>' + esc(u.email || u.name) + '</b> · ' +
+          (isAdmin() ? 'có quyền quản trị.' : '<b>không</b> nằm trong danh sách quản trị nên không vào được trang này.')
+        : 'Chưa đăng nhập. Email quản trị đang cho phép: <b>' + esc(emails.join(', ') || '—') + '</b>';
+    }
+  }
+  function gatePass(how) {
+    AUTHED = true;
+    var g = $('#gate'); if (g) g.classList.add('hide');
+    paintWho();
+  }
+  function gateHold(text, kind) {
+    AUTHED = false;
+    var g = $('#gate'); if (g) g.classList.remove('hide');
+    var app = $('#scApp'); if (app) app.classList.add('hide');
+    gateMsg(text || '', kind || 'info');
+    paintWho();
+  }
+  function gateTry() {
+    if (isAdmin()) { gatePass('login'); return true; }
+    return false;
+  }
+
+  /* -------------------- lúc mở trang: qua cổng rồi mới làm việc ------------- */
   (function boot() {
     show('overview');                                      /* mở sẵn bảng tổng quan */
+    paintWho();
     var savedApi = '', savedKey = '';
     try { savedApi = localStorage.getItem(LS.api) || ''; savedKey = localStorage.getItem(LS.key) || ''; } catch (e) {}
     if (savedApi) $('#inApi').value = savedApi;
     else if (CZ.API) $('#inApi').value = CZ.API;
     if (savedKey) $('#inKey').value = savedKey;
-    if (savedApi && savedKey) { connect(); return; }        /* tự nối lại Worker đã lưu */
-    viewStatic(true);                                      /* còn lại: xem dữ liệu tĩnh ngay */
-    msg('Đang xem dữ liệu tĩnh /data/*.json — nối Worker ở khung trên để sửa là người đọc thấy ngay.', 'info');
+    /* (a) đã đăng nhập đúng tài khoản quản trị → vào thẳng */
+    if (gateTry()) {
+      if (savedApi && savedKey) { connect(); return; }
+      viewStatic(true);
+      msg('Đã vào bằng tài khoản quản trị. Nối Worker ở khung trên để sửa là người đọc thấy ngay.', 'ok');
+      return;
+    }
+    /* (b) có khoá ADMIN_KEY đã lưu → thử lại khoá (connect() tự mở cổng nếu đúng) */
+    if (savedApi && savedKey) { connect(); return; }
+    gateHold('Chọn một cách đăng nhập để vào trang quản trị.', 'info');
   })();
+  /* trạng thái đăng nhập đổi (vừa quay về từ Supabase / đăng xuất) → xét lại cổng */
+  if (window.CZ_AUTH && CZ_AUTH.onAuth) CZ_AUTH.onAuth(function () {
+    paintWho();
+    if (isAdmin() && !AUTHED) {
+      gatePass('login');
+      msg('Đã xác nhận tài khoản quản trị — chào bạn!', 'ok');
+      var savedApi = '', savedKey = '';
+      try { savedApi = localStorage.getItem(LS.api) || ''; savedKey = localStorage.getItem(LS.key) || ''; } catch (e) {}
+      if (savedApi && savedKey) connect(); else viewStatic(true);
+    } else if (!isAdmin() && AUTHED && !ONLINE) {
+      /* vừa đăng xuất: đóng lại nếu không có khoá quản trị */
+      gateHold('Đã đăng xuất. Đăng nhập lại bằng tài khoản quản trị để tiếp tục.', 'info');
+    }
+  });
 
   /* ------------------------------ gắn sự kiện ---------------------------- */
   $('#btnConnect').addEventListener('click', connect);
@@ -1048,6 +1612,10 @@
   $('#btnSetup').addEventListener('click', function () { setSetup($('#setupBody').classList.contains('hide')); });
   $('#btnLocal').addEventListener('click', viewStatic);
   function viewStatic(quiet) {
+    if (!AUTHED && !isAdmin()) {
+      gateHold('Trang này không mở cho người đọc. Đăng nhập bằng tài khoản quản trị hoặc nhập ADMIN_KEY.', 'err');
+      return;
+    }
     ONLINE = false; API = ''; KEY = '';
     setConn('warn', 'dữ liệu tĩnh trong repo');
     openApp();
@@ -1064,6 +1632,9 @@
       var k = b.dataset.tab;
       if (k === 'stats') loadStats(false);
       if (k === 'overview') renderOverview();
+      if (k === 'doctor' && !DOC.rows.length) runDoctor();
+      if (k === 'cmts') { fillModBooks(); loadMod(); }
+      if (k === 'log') loadLog();
       if (k === 'edit' && !CUR) return;
       show(k);
     });
@@ -1182,8 +1753,12 @@
   });
   $('#btnDelBook').addEventListener('click', function () { if (CUR) delBook(CUR.slug); });
   $('#sSave').addEventListener('click', saveSettings);
-  ['#sSched', '#sSchedNote', '#sGiscusRepo', '#sGiscusId'].forEach(function (s) {
-    $(s).addEventListener('input', function () { dirty.set = true; markDirty(); });
+  ['#sSched', '#sSchedNote', '#sGiscusRepo', '#sGiscusId', '#aUrl', '#aKey', '#aGoogle', '#aAdmins']
+    .forEach(function (s) {
+      var el = $(s); if (el) el.addEventListener('input', function () { dirty.set = true; markDirty(); });
+    });
+  ['#aProvider'].forEach(function (s) {
+    var el = $(s); if (el) el.addEventListener('change', function () { dirty.set = true; markDirty(); });
   });
   $('#slidePick').addEventListener('click', function (e) {
     var b = e.target.closest('button');
@@ -1256,15 +1831,99 @@
     }
     if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'k') { e.preventDefault(); $('#q').focus(); return; }
     if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName || '')) return;
-    var map = { 1: 'overview', 2: 'list', 3: 'quick', 4: 'new', 5: 'edit', 6: 'settings', 7: 'stats', 8: 'help' };
+    var map = {
+      1: 'overview', 2: 'list', 3: 'quick', 4: 'new', 5: 'edit',
+      6: 'doctor', 7: 'cmts', 8: 'stats', 9: 'log', 0: 'settings'
+    };
     if (map[e.key]) {
       var k = map[e.key];
       if (k === 'edit' && !CUR) return;
       if (k === 'stats') loadStats(false);
       if (k === 'overview') renderOverview();
+      if (k === 'doctor' && !DOC.rows.length) runDoctor();
+      if (k === 'cmts') { fillModBooks(); loadMod(); }
+      if (k === 'log') loadLog();
       show(k);
     }
   });
+
+
+  /* ------------------- nút ở CỔNG đăng nhập + thanh trên ------------------ */
+  $('#gateLogin').addEventListener('click', function () {
+    var b = this;
+    b.disabled = true; b.innerHTML = '<span class="spin"></span> đang mở đăng nhập…';
+    gateMsg('Đang chuyển sang trang đăng nhập… Nếu trình duyệt chặn cửa sổ, hãy cho phép pop-up.', 'info');
+    (window.CZ_AUTH ? CZ_AUTH.login() : Promise.resolve(null))
+      .then(function () {
+        if (!isAdmin()) {
+          var u = authUser();
+          gateHold(u ? ('Tài khoản ' + (u.email || u.name) + ' KHÔNG nằm trong danh sách quản trị. ' +
+            'Thêm email đó vào CZ_ADMIN_EMAILS (cz-config.js) hoặc ADMIN_EMAILS (Worker), hoặc đăng nhập bằng tài khoản khác.')
+            : 'Chưa đăng nhập được — kiểm tra cấu hình Supabase trong cz-config.js.', 'err');
+        }
+      })
+      .catch(function () {})
+      .then(function () { b.disabled = false; b.textContent = 'Đăng nhập bằng Google / Supabase'; });
+  });
+  $('#gateKey').addEventListener('click', function () {
+    var sc = $('#scConnect');
+    if (sc) sc.classList.remove('hide');
+    setSetup(true);
+    $('#scConnect').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(function () { try { $('#inKey').focus(); } catch (e) {} }, 320);
+    gateMsg('Nhập URL Worker + ADMIN_KEY rồi bấm "Kiểm tra & kết nối".', 'info');
+  });
+  $('#btnLogout').addEventListener('click', function () {
+    if (!window.CZ_AUTH) return;
+    CZ_AUTH.logout().then(function () {
+      paintWho();
+      if (!ONLINE) gateHold('Đã đăng xuất.', 'info');
+      else msg('Đã đăng xuất tài khoản — phiên này vẫn mở bằng ADMIN_KEY.', 'info');
+    });
+  });
+
+  /* ------------------------------ BÁC SĨ DỮ LIỆU ------------------------- */
+  $('#docRun').addEventListener('click', function () {
+    var b = this; b.disabled = true; b.innerHTML = '<span class="spin"></span> đang quét…';
+    runDoctor().then(function () { b.disabled = false; b.textContent = 'Quét lại'; },
+      function () { b.disabled = false; b.textContent = 'Quét lại'; });
+  });
+  $('#docFixKv').addEventListener('click', docPushRepo);
+  $('#docRecount').addEventListener('click', docRecount);
+  $('#docFixReg').addEventListener('click', docFixRegistry);
+  $('#docExport').addEventListener('click', function () {
+    var rep = {
+      at: DOC.at, online: ONLINE, scanned: DOC.scanned,
+      rows: DOC.rows.map(function (r) {
+        return { slug: r.slug, title: r.n && r.n.title, registry: r.reg, kv: r.kv, repo: r.repo, issues: r.issues };
+      })
+    };
+    CZ.download('chuseoz-doctor-' + today() + '.json', JSON.stringify(rep, null, 1));
+    toast('Đã tải báo cáo', 'ok');
+  });
+
+  /* ------------------------------ BÌNH LUẬN ------------------------------ */
+  $('#cmReload').addEventListener('click', function () { MOD.all = []; loadMod(); });
+  $('#cmQ').addEventListener('input', function () { MOD.q = this.value.trim(); paintMod(); });
+  $('#cmBook').addEventListener('change', function () { MOD.slug = this.value; paintMod(); });
+  $('#cmExport').addEventListener('click', function () {
+    CZ.download('chuseoz-comments-' + today() + '.json', JSON.stringify(MOD.all, null, 1));
+    toast('Đã xuất ' + MOD.all.length + ' bình luận', 'ok');
+  });
+
+  /* ------------------------------- NHẬT KÝ ------------------------------- */
+  $('#logReload').addEventListener('click', loadLog);
+
+  /* ------------------------------- SỐ LIỆU ------------------------------- */
+  $('#btnStatsCsv').addEventListener('click', function () {
+    var items = STATS_LAST.items || {};
+    if (!Object.keys(items).length) return toast('Chưa có số liệu để xuất', 'err');
+    CZ.download('chuseoz-stats-' + today() + '.csv', statsCsv(items, STATS_LAST.by || {}), 'text/csv');
+    toast('Đã xuất CSV', 'ok');
+  });
+
+  /* --------------------------- CẤU HÌNH ĐĂNG NHẬP ------------------------ */
+  $('#aCheck').addEventListener('click', checkAuthWorker);
 
   /* ------------------------------ khởi động ---------------------------- */
   (function init() {
@@ -1275,13 +1934,6 @@
     try { savedApi = localStorage.getItem(LS.api) || ''; savedKey = localStorage.getItem(LS.key) || ''; } catch (e) {}
     if (savedApi) $('#inApi').value = savedApi;
     if (!savedApi && CZ.API) $('#inApi').value = CZ.API;     /* gợi ý từ cz-config.js */
-    if (savedKey) {
-      $('#inKey').value = savedKey;
-      API = CZ.normalizeApi(savedApi || CZ.API); KEY = savedKey;
-      api('/api/whoami').then(function () {
-        ONLINE = true; openApp();
-        msg('Đã tự kết nối lại bằng khoá đã lưu. Nếu đây không phải máy của bạn, bấm “Ngắt kết nối”.', 'info');
-      }).catch(function () { setConn('warn', 'khoá đã lưu không dùng được'); });
-    }
+    /* việc nối Worker do boot() ở trên lo — không gọi hai lần */
   })();
 })();

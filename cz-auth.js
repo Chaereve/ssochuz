@@ -1,46 +1,238 @@
-/* chuseoz · ĐĂNG NHẬP GOOGLE (Google Identity Services) + session Worker
-   ------------------------------------------------------------------------
-   · Người dùng bấm "Đăng nhập" → Google trả về idToken (JWT).
-   · Frontend gửi idToken cho Worker (POST /api/auth/google). Worker xác thực
-     chữ ký bằng khoá công khai của Google, rồi cấp session token (HS256).
-   · Session token lưu trong localStorage, gửi kèm header Authorization khi
-     đăng bình luận. Không cần Firebase để đăng nhập.
-   · Thiếu CZ_GOOGLE_CLIENT_ID → nút báo lỗi rõ ràng (không còn "local mock").
+/* ============================================================================
+   chuseoz · ĐĂNG NHẬP (Supabase Auth — mặc định) + phiên làm việc với Worker
+   ----------------------------------------------------------------------------
+   Vì sao bỏ Google Identity Services làm mặc định:
+     GIS bắt khai đúng "JavaScript origins" trong Google Cloud Console. Thiếu một
+     origin (domain mới, bản xem trước, http/https…) là Google chặn thẳng với
+     `Lỗi 400: origin_mismatch` và người dùng không thể đăng nhập.
+     Supabase Auth nhận redirect URL mềm hơn nhiều, tự xử lý PKCE/refresh token,
+     và vẫn cho đăng nhập bằng Google (Supabase làm trung gian OAuth).
+
+   Luồng:
+     1. Người đọc bấm "Đăng nhập" → chuyển sang Supabase → Google → quay về web.
+     2. Supabase JS tự đổi `?code=…` lấy phiên (session) và cất trong localStorage.
+     3. Web gửi access_token cho Worker (POST /api/auth/supabase) → Worker kiểm chữ ký
+        bằng JWKS của Supabase rồi cấp session token (HS256) dùng cho bình luận.
+        Nếu Worker chưa cấu hình, web dùng THẲNG access_token của Supabase
+        (Worker vẫn xác thực được) nên bình luận không bị chặn.
+     4. `CZ_AUTH.isAdmin()` quyết định hiện/ẩn mục Quản trị.
+
+   Không cấu hình Supabase? Đặt CZ_AUTH_PROVIDER='google' trong cz-config.js để
+   dùng lại cách cũ (vẫn còn trong file này), hoặc để '' để tắt đăng nhập.
    ========================================================================== */
 (function (w, d) {
   'use strict';
   var LS_USER = 'chuseoz-user';
   var LS_TOKEN = 'chuseoz-auth-token';
-  var user = null;
-  var token = null;
+  var SB_STORAGE = 'chuseoz-sb';
+  var user = null;          /* {uid,email,name,picture,exp,provider,admin,local} */
+  var token = null;         /* session token của Worker, hoặc access_token Supabase */
   var listeners = [];
+  var sb = null;            /* Supabase client */
+  var sbLoading = null;
   var gisReady = null;
+  var settingsApplied = false;
 
-  function load() {
-    try {
-      var raw = localStorage.getItem(LS_USER);
-      if (raw) user = JSON.parse(raw);
-      var t = localStorage.getItem(LS_TOKEN);
-      if (t) token = t;
-    } catch (e) { user = null; token = null; }
-    // client kiểm tra hạn session nhẹ (server vẫn xác thực lại mỗi request)
-    if (token && user && user.exp && user.exp * 1000 < Date.now()) { user = null; token = null; }
-  }
-  function save(u, t) {
-    user = u || null; token = t || null;
-    try {
-      if (user) localStorage.setItem(LS_USER, JSON.stringify(user)); else localStorage.removeItem(LS_USER);
-      if (token) localStorage.setItem(LS_TOKEN, token); else localStorage.removeItem(LS_TOKEN);
-    } catch (e) {}
-    listeners.forEach(function (fn) { try { fn(user); } catch (e) {} });
-  }
-  function onAuth(fn) { listeners.push(fn); if (user) fn(user); }
-  function current() { return user; }
-  function getToken() { return token; }
+  /* ---------------------------------------------------------------- tiện ích */
+  function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} }
+  function lsJSON(k) { try { return JSON.parse(lsGet(k) || 'null'); } catch (e) { return null; } }
   function api() { return w.CZ_API || ''; }
   function toast(msg, kind) { if (w.CZ && w.CZ.toast) w.CZ.toast(msg, kind); }
+  function provider() {
+    var p = String(w.CZ_AUTH_PROVIDER == null ? 'supabase' : w.CZ_AUTH_PROVIDER).toLowerCase();
+    if (p === 'google' || p === 'gis') return 'google';
+    if (p === 'none' || p === 'off' || p === '') return '';
+    return 'supabase';
+  }
+  function sbURL() { return String(w.CZ_SUPABASE_URL || '').trim(); }
+  function sbKey() { return String(w.CZ_SUPABASE_ANON_KEY || '').trim(); }
+  function googleId() { return String(w.CZ_GOOGLE_CLIENT_ID || '').trim(); }
+  function sbReady() { return provider() === 'supabase' && !!sbURL() && !!sbKey(); }
+  function gisReadyCfg() { return provider() === 'google' && !!googleId(); }
+  /* web đã cấu hình đăng nhập chưa (để giao diện biết nên hiện nút hay hiện hướng dẫn) */
+  function configured() { return sbReady() || gisReadyCfg(); }
 
-  /* tải Google Identity Services sớm (nếu có Client ID) để nút bấm không bị gián đoạn */
+  function save(u, t) {
+    user = u || null; token = t || null;
+    lsSet(LS_USER, user ? JSON.stringify(user) : null);
+    lsSet(LS_TOKEN, token || null);
+    listeners.forEach(function (fn) { try { fn(user); } catch (e) {} });
+    try { w.dispatchEvent(new CustomEvent('cz:auth', { detail: { user: user } })); } catch (e) {}
+  }
+  function load() {
+    var u = lsJSON(LS_USER), t = lsGet(LS_TOKEN);
+    if (u && u.exp && u.exp * 1000 < Date.now() - 60000) { u = null; t = null; }
+    user = u; token = t || null;
+  }
+  function onAuth(fn) { listeners.push(fn); try { fn(user); } catch (e) {} return fn; }
+  function current() { return user; }
+  function getToken() { return token; }
+
+  /* ------------------------------------------------------------------ admin */
+  function adminEmails() {
+    var list = (w.CZ_ADMIN_EMAILS || []).map(function (x) { return String(x || '').trim().toLowerCase(); });
+    /* Worker có thể khai thêm trong registry.settings.auth.adminEmails */
+    try {
+      var reg = (w.CZ && w.CZ._memo && w.CZ._memo.reg) || null;
+      var extra = reg && reg.settings && reg.settings.auth && reg.settings.auth.adminEmails;
+      if (typeof extra === 'string') extra = extra.split(',');
+      (Array.isArray(extra) ? extra : []).forEach(function (x) {
+        x = String(x || '').trim().toLowerCase();
+        if (x && list.indexOf(x) < 0) list.push(x);
+      });
+    } catch (e) {}
+    return list.filter(Boolean);
+  }
+  function isAdmin() {
+    if (!user) return false;
+    if (user.admin === true || user.role === 'admin') return true;
+    var e = String(user.email || '').trim().toLowerCase();
+    return !!e && adminEmails().indexOf(e) >= 0;
+  }
+
+  /* ============================== SUPABASE ================================ */
+  function loadSDK() {
+    if (w.supabase && w.supabase.createClient) return Promise.resolve(w.supabase);
+    if (sbLoading) return sbLoading;
+    var urls = [
+      'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
+      'https://unpkg.com/@supabase/supabase-js@2'
+    ];
+    sbLoading = new Promise(function (resolve, reject) {
+      var i = 0;
+      (function next() {
+        if (w.supabase && w.supabase.createClient) return resolve(w.supabase);
+        if (i >= urls.length) return reject(new Error('Không tải được thư viện Supabase (mạng/CDN bị chặn?)'));
+        var s = d.createElement('script');
+        s.src = urls[i++]; s.async = true;
+        s.onload = function () { (w.supabase && w.supabase.createClient) ? resolve(w.supabase) : next(); };
+        s.onerror = function () { s.remove(); next(); };
+        d.head.appendChild(s);
+      })();
+    });
+    return sbLoading;
+  }
+  function client() {
+    if (sb) return Promise.resolve(sb);
+    if (!sbReady()) {
+      return Promise.reject(new Error('Chưa cấu hình Supabase — dán Project URL + anon key vào cz-config.js hoặc lưu trong trang /admin'));
+    }
+    return loadSDK().then(function (lib) {
+      if (!sb) {
+        sb = lib.createClient(sbURL(), sbKey(), {
+          auth: {
+            persistSession: true, autoRefreshToken: true, detectSessionInUrl: true,
+            flowType: 'pkce', storageKey: SB_STORAGE
+          },
+          global: { headers: { 'x-client-info': 'chuseoz-web' } }
+        });
+      }
+      return sb;
+    });
+  }
+  /* user Supabase → user của web (giữ đúng shape cũ để mọi trang không phải sửa) */
+  function fromSupabase(su, accessToken) {
+    var md = (su && (su.user_metadata || {})) || {};
+    var exp = 0;
+    try { exp = su && su.expires_at ? Number(su.expires_at) : 0; } catch (e) {}
+    if (!exp && accessToken) {
+      try {
+        var p = JSON.parse(atob(String(accessToken).split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+        exp = Number(p.exp) || 0;
+      } catch (e) {}
+    }
+    var email = (su && su.email) || md.email || '';
+    return {
+      uid: (su && su.id) || '',
+      email: email,
+      name: md.full_name || md.name || md.user_name || email || 'Bạn đọc',
+      picture: md.avatar_url || md.picture || '',
+      provider: (su && ((su.app_metadata && su.app_metadata.provider) || '')) || 'supabase',
+      exp: exp || (Math.floor(Date.now() / 1000) + 3600)
+    };
+  }
+  /* gửi access_token cho Worker để lấy session token; Worker chưa sẵn sàng thì
+     dùng luôn access_token (Worker vẫn xác thực được bằng JWKS của Supabase) */
+  function exchange(u, accessToken) {
+    var base = api();
+    if (!base || !accessToken) { save(Object.assign({}, u, { local: !base }), accessToken || ''); return Promise.resolve(u); }
+    return fetch(base + '/api/auth/supabase', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ accessToken: accessToken, provider: 'supabase' })
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        if (r.ok && j && j.ok && j.token) {
+          var merged = Object.assign({}, u, j.user || {}, { admin: !!(j.admin || u.admin) });
+          save(merged, j.token);
+          return merged;
+        }
+        /* Worker chưa đặt SUPABASE_URL/JWT secret → vẫn cho đăng nhập, dùng token Supabase */
+        save(Object.assign({}, u, { admin: u.admin }), accessToken);
+        return u;
+      });
+    }).catch(function () { save(u, accessToken); return u; });
+  }
+  /* dọn URL sau khi Supabase trả code về (bỏ ?code=… cho sạch, tránh reload lại đổi lần nữa) */
+  function cleanURL() {
+    try {
+      var u = new URL(w.location.href);
+      var changed = false;
+      ['code', 'error', 'error_description', 'state', 'provider_token', 'provider_refresh_token'].forEach(function (k) {
+        if (u.searchParams.has(k)) { u.searchParams.delete(k); changed = true; }
+      });
+      if (changed && w.history && w.history.replaceState) {
+        w.history.replaceState(null, '', u.pathname + (u.searchParams.toString() ? '?' + u.searchParams.toString() : '') + u.hash);
+      }
+    } catch (e) {}
+  }
+  function syncFromSession(silent) {
+    return client().then(function (c) {
+      return c.auth.getSession().then(function (r) {
+        var sess = r && r.data && r.data.session;
+        if (sess && sess.access_token && sess.user) {
+          var u = fromSupabase(sess.user, sess.access_token);
+          /* giữ cờ admin Worker đã xác nhận (nếu user cũ trùng email) */
+          if (user && user.admin && String(user.email || '').toLowerCase() === String(u.email || '').toLowerCase()) u.admin = true;
+          return exchange(u, sess.access_token).then(function () { cleanURL(); return u; });
+        }
+        if (user && !silent) save(null, null);
+        return null;
+      });
+    }).catch(function () { return null; });
+  }
+  function loginSupabase(how) {
+    if (!sbReady()) return Promise.reject(new Error('Chưa cấu hình Supabase'));
+    return client().then(function (c) {
+      var back = w.location.origin + w.location.pathname;
+      if (how === 'email') {
+        var email = String(w.__czEmail || '').trim();
+        if (!email) return Promise.reject(new Error('Nhập email trước đã'));
+        return c.auth.signInWithOtp({
+          email: email,
+          options: { emailRedirectTo: back }
+        }).then(function (r) {
+          if (r && r.error) throw new Error(r.error.message || 'Không gửi được link đăng nhập');
+          toast('Đã gửi link đăng nhập tới ' + email + ' — mở email và bấm link đó', 'ok');
+          return null;
+        });
+      }
+      return c.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: back,
+          queryParams: { access_type: 'offline', prompt: 'select_account' },
+          skipBrowserRedirect: false
+        }
+      }).then(function (r) {
+        if (r && r.error) throw new Error(r.error.message || 'Supabase từ chối mở đăng nhập Google');
+        return null;                       /* trình duyệt sẽ chuyển trang sang Supabase */
+      });
+    });
+  }
+  function loginEmail(email) { w.__czEmail = email; return loginSupabase('email'); }
+
+  /* ====================== GOOGLE (cách cũ — vẫn giữ) ====================== */
   function ensureGIS() {
     if (w.google && w.google.accounts && w.google.accounts.id) return Promise.resolve();
     if (gisReady) return gisReady;
@@ -54,62 +246,48 @@
     });
     return gisReady;
   }
-
-  function exchange(credential) {
+  function exchangeGoogle(credential) {
     var base = api();
     if (!base) return Promise.reject(new Error('Chưa cấu hình CZ_API (cz-config.js)'));
     return fetch(base + '/api/auth/google', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ credential: credential }),
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ credential: credential })
     }).then(function (r) {
       return r.json().then(function (j) {
         if (!r.ok || !j.ok) throw new Error(j.error || ('Xác thực thất bại (' + r.status + ')'));
         return j;
       });
     }).then(function (j) {
-      save(j.user, j.token);
+      save(Object.assign({}, j.user, { provider: 'google', admin: !!j.admin }), j.token);
       toast('Đăng nhập: ' + (j.user.name || j.user.email), 'ok');
       return j.user;
     });
   }
-
-  function loginGoogle() {
-    var cid = w.CZ_GOOGLE_CLIENT_ID;
-    if (!cid) {
-      toast('Chưa cấu hình Google Client ID — xem worker/README.md §7', 'err');
-      return Promise.reject(new Error('thiếu CZ_GOOGLE_CLIENT_ID'));
-    }
+  function loginGoogleDirect() {
+    var cid = googleId();
+    if (!cid) return Promise.reject(new Error('Thiếu CZ_GOOGLE_CLIENT_ID'));
     return ensureGIS().then(function () {
       return new Promise(function (resolve, reject) {
         var settled = false;
         function cb(resp) {
           if (settled) return; settled = true;
-          if (resp && resp.credential) { exchange(resp.credential).then(resolve, reject); }
-          else { reject(new Error(resp && resp.error ? ('Google: ' + resp.error) : 'Đăng nhập bị huỷ')); }
+          if (resp && resp.credential) exchangeGoogle(resp.credential).then(resolve, reject);
+          else reject(new Error(resp && resp.error ? ('Google: ' + resp.error) : 'Đăng nhập bị huỷ'));
         }
         try {
           w.google.accounts.id.initialize({ client_id: cid, callback: cb, auto_select: false, cancel_on_tap_outside: true });
         } catch (e) { reject(e); return; }
         w.google.accounts.id.prompt(function (notice) {
           if (settled) return;
-          if (notice.isNotDisplayed && notice.isNotDisplayed()) {
-            // One Tap không hiện (chính sách/đã từ chối) → dùng nút Google thật
-            fallbackButton(cid, cb).then(resolve, reject);
-          } else if (notice.isSkipped && notice.isSkipped()) {
-            fallbackButton(cid, cb).then(resolve, reject);
-          } else if (notice.isDismissed && notice.isDismissed()) {
-            reject(new Error('Đăng nhập bị huỷ'));
-          }
+          if ((notice.isNotDisplayed && notice.isNotDisplayed()) || (notice.isSkipped && notice.isSkipped())) {
+            fallbackButton(cb).then(resolve, reject);
+          } else if (notice.isDismissed && notice.isDismissed()) reject(new Error('Đăng nhập bị huỷ'));
         });
-        // an toàn: nếu không có phản hồi nào (ví dụ đang cooldown), không treo vĩnh viễn
         setTimeout(function () { if (!settled) reject(new Error('Hết thời gian chờ đăng nhập')); }, 25000);
       });
     });
   }
-
-  /* nút Google thật (dự phòng khi One Tap bị chặn) */
-  function fallbackButton(cid, cb) {
+  function fallbackButton(cb) {
     return ensureGIS().then(function () {
       return new Promise(function (resolve, reject) {
         var host = d.getElementById('czGisHost');
@@ -122,45 +300,138 @@
         w.google.accounts.id.renderButton(host, { theme: 'outline', size: 'large', type: 'standard', width: 240 });
         setTimeout(function () {
           var btn = host.querySelector('div[role="button"], button');
-          if (btn) btn.click(); else reject(new Error('không render được nút Google'));
+          if (btn) btn.click(); else reject(new Error('Không render được nút Google'));
         }, 80);
       });
     });
   }
 
+  /* ================================ API CHUNG ============================= */
+  /* Hộp thoại chọn cách đăng nhập — dùng khi chưa cấu hình hoặc muốn đăng nhập email */
+  function loginDialog() {
+    if (!w.CZ || !w.CZ.modal) return Promise.reject(new Error('Chưa sẵn sàng'));
+    var why = sbReady() ? '' :
+      '<div class="mb"><div class="note warn"><b>Chưa bật đăng nhập.</b> Dán <code>Project URL</code> và ' +
+      '<code>anon key</code> của Supabase vào <code>cz-config.js</code> (hoặc lưu trong trang quản trị → ' +
+      'Cài đặt &amp; đồng bộ → mục Đăng nhập). Hướng dẫn 3 bước: <code>HUONG-DAN-DANG-NHAP-BINH-LUAN.md</code>.</div></div>';
+    var m = w.CZ.modal('czLogin',
+      '<div class="mh"><h4>Đăng nhập</h4></div>' + why +
+      '<div class="mb">' +
+        '<p class="sm muted">Đăng nhập để bình luận, thích từng chương và giữ danh tính của bạn trên web. ' +
+        'Truyện đang đọc và tủ truyện vẫn lưu trong máy kể cả khi chưa đăng nhập.</p>' +
+        (sbReady()
+          ? '<div class="row mt"><button class="btn pri" id="czLgGoogle">Tiếp tục với Google</button>' +
+            '<button class="btn ghost" id="czLgEmail">Link qua email</button></div>' +
+            '<div class="hide mt" id="czMailBox"><label class="fl" for="czMail">Email của bạn</label>' +
+            '<input class="inp" id="czMail" type="email" placeholder="ban@example.com" autocomplete="email">' +
+            '<button class="btn ghost sm mt" id="czMailSend">Gửi link đăng nhập</button></div>'
+          : (gisReadyCfg() ? '<div class="row mt"><button class="btn pri" id="czLgGoogle2">Tiếp tục với Google</button></div>' : '')) +
+      '</div>' +
+      '<div class="mf"><button class="btn ghost" data-close>Đóng</button></div>');
+    function bind(id, fn) { var b = m.querySelector(id); if (b) b.addEventListener('click', fn); }
+    bind('#czLgGoogle', function () { m._close(); doLogin('oauth'); });
+    bind('#czLgGoogle2', function () { m._close(); doLogin('google'); });
+    bind('#czLgEmail', function () { var b = m.querySelector('#czMailBox'); if (b) b.classList.toggle('hide'); var i = m.querySelector('#czMail'); if (i) i.focus(); });
+    bind('#czMailSend', function () {
+      var i = m.querySelector('#czMail');
+      var e = i ? String(i.value || '').trim() : '';
+      if (!/^\S+@\S+\.\S+$/.test(e)) { toast('Email chưa đúng', 'err'); return; }
+      loginEmail(e).then(function () { if (m._close) m._close(); })
+        .catch(function (er) { toast(er.message || 'Không gửi được', 'err'); });
+    });
+    return Promise.resolve(null);
+  }
+
+  function doLogin(how) {
+    var p;
+    if (how === 'google' || (how !== 'oauth' && provider() === 'google')) p = loginGoogleDirect();
+    else if (sbReady()) p = loginSupabase(how === 'email' ? 'email' : 'oauth');
+    else if (gisReadyCfg()) p = loginGoogleDirect();
+    else {
+      toast('Chưa cấu hình đăng nhập — xem HUONG-DAN-DANG-NHAP-BINH-LUAN.md', 'err');
+      return loginDialog().then(function () { return null; }).catch(function () { return null; });
+    }
+    return p.then(function (u) {
+      if (u) toast('Đăng nhập: ' + (u.name || u.email), 'ok');
+      return u;
+    }).catch(function (e) {
+      var m = (e && e.message) || 'Đăng nhập thất bại';
+      toast(m, 'err');
+      throw e;
+    });
+  }
+  /* mọi chỗ gọi đều đi qua đây để không bao giờ có promise bị bỏ rơi */
+  function login(how) {
+    if (!configured()) return loginDialog().then(function () { return null; }).catch(function () { return null; });
+    return doLogin(how).catch(function () { return null; });
+  }
   function logout() {
-    save(null, null);
-    toast('Đã đăng xuất');
-    return Promise.resolve();
+    var p = Promise.resolve();
+    if (sb) { try { p = sb.auth.signOut().catch(function () {}); } catch (e) { p = Promise.resolve(); } }
+    return p.then(function () {
+      save(null, null);
+      try { localStorage.removeItem(SB_STORAGE); } catch (e) {}
+      toast('Đã đăng xuất');
+      return null;
+    });
   }
-
-  /* làm tươi user từ Worker (ảnh/tên có thể đổi); gọi khi khởi động */
+  /* làm tươi user (ảnh/tên có thể đổi) — gọi lúc khởi động và khi quay lại tab */
   function refresh() {
-    if (!token) return;
-    var base = api();
-    if (!base) return;
-    fetch(base + '/api/auth/me', { headers: { authorization: 'Bearer ' + token } })
+    if (sbReady()) { syncFromSession(true); return; }
+    if (!token || !api()) return;
+    fetch(api() + '/api/auth/me', { headers: { authorization: 'Bearer ' + token } })
       .then(function (r) {
-        return r.json().then(function (j) {
-          if (j.ok && j.user) save(Object.assign({}, user, j.user), token);
-          else if (r.status === 401) save(null, null);
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          if (j && j.ok && j.user) save(Object.assign({}, user, j.user, { admin: !!(j.admin || (user && user.admin)) }), token);
+          else if (r.status === 401 && provider() !== 'supabase') save(null, null);
         });
-      })
-      .catch(function () {});
+      }).catch(function () {});
   }
+  /* nhận cấu hình từ KV (registry.settings.auth) — dán trong /admin là dùng được ngay */
+  function applySettings(s) {
+    s = s || {};
+    settingsApplied = true;
+    if (s.supabaseUrl && !sbURL()) w.CZ_SUPABASE_URL = String(s.supabaseUrl).trim().replace(/\/+$/, '');
+    if (s.supabaseAnonKey && !sbKey()) w.CZ_SUPABASE_ANON_KEY = String(s.supabaseAnonKey).trim();
+    if (s.googleClientId && !googleId()) w.CZ_GOOGLE_CLIENT_ID = String(s.googleClientId).trim();
+    if (s.provider) w.CZ_AUTH_PROVIDER = s.provider;
+    if (s.adminEmails) {
+      var a = typeof s.adminEmails === 'string' ? s.adminEmails.split(',') : s.adminEmails;
+      if (Array.isArray(a)) {
+        w.CZ_ADMIN_EMAILS = a.map(function (x) { return String(x || '').trim().toLowerCase(); }).filter(Boolean);
+      }
+    }
+    if (sbReady() && !sb) syncFromSession(true);
+  }
+  function isSettingsApplied() { return settingsApplied; }
 
+  /* ---------------------------------------------------------------- khởi động */
   load();
   w.CZ_AUTH = {
-    loginGoogle: loginGoogle,
-    logout: logout,
-    current: current,
-    token: getToken,
-    onAuth: onAuth,
-    refresh: refresh,
-    saveUser: save,
+    /* mới */
+    login: login, loginEmail: loginEmail, loginDialog: loginDialog,
+    provider: provider, configured: configured, isAdmin: isAdmin, adminEmails: adminEmails,
+    applySettings: applySettings, settingsApplied: isSettingsApplied, supabase: function () { return sb; },
+    /* giữ tên cũ để các trang/kiểm thử không phải sửa */
+    loginGoogle: function () { return login(provider() === 'google' ? 'google' : 'oauth'); },
+    logout: logout, current: current, token: getToken, onAuth: onAuth, refresh: refresh, saveUser: save
   };
-  // làm tươi nhẹ khi load (nếu đã đăng nhập)
-  if (d.readyState !== 'loading') refresh(); else d.addEventListener('DOMContentLoaded', refresh);
-  // tải GIS sớm nếu có Client ID
-  if (w.CZ_GOOGLE_CLIENT_ID) { try { ensureGIS(); } catch (e) {} }
+
+  function boot() {
+    /* cấu hình đăng nhập có thể nằm trong KV (dán ở trang /admin): đọc rồi áp dụng.
+       Đã cấu hình sẵn trong cz-config.js thì bỏ qua để không ghi đè ngược. */
+    if (w.CZ && w.CZ.registry && !configured()) {
+      w.CZ.registry().then(function (o) {
+        var s = o && o.reg && o.reg.settings && o.reg.settings.auth;
+        if (s) applySettings(s);
+      }).catch(function () {});
+    }
+    if (sbReady()) {
+      /* trang vừa quay về từ Supabase (?code=…) hay mở lại tab: đồng bộ phiên */
+      syncFromSession(false);
+      d.addEventListener('visibilitychange', function () { if (!d.hidden && sb) syncFromSession(true); });
+    } else if (token && api()) refresh();
+    if (gisReadyCfg()) { try { ensureGIS(); } catch (e) {} }
+  }
+  if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', boot); else boot();
 })(window, document);

@@ -1,6 +1,6 @@
 /* ==========================================================================
    chuseoz — cấu hình chung cho MỌI trang (index / reader / admin)
-   Sửa DUY NHẤT file này là đổi kênh dữ liệu cho cả web.
+   Sửa DUY NHẤT file này là đổi kênh dữ liệu + nhà cung cấp đăng nhập cho cả web.
    --------------------------------------------------------------------------
    CZ_API : URL Worker Cloudflare (xem worker/README.md).
             · Dán URL vào đây -> web đọc dữ liệu từ KV: sửa truyện trong
@@ -10,18 +10,51 @@
    CZ_STATS_DIRECT : true = đọc số liệu xếp hạng THẲNG từ Firebase cũ
             (chuseoz-library) thay vì từ Worker. Mặc định false: lượt đọc/bình
             chọn giờ nằm trên Cloudflare KV, KHÔNG cần Firebase nữa.
-            Chỉ bật true khi muốn đối chiếu với số cũ (cần mở quyền đọc Firestore).
+
+   --------------------------------------------------------------------------
+   ĐĂNG NHẬP — mặc định dùng SUPABASE (không còn lỗi origin_mismatch của Google)
+   --------------------------------------------------------------------------
+   Vì sao đổi: Google Identity Services bắt khai "JavaScript origins" trong
+   Google Cloud Console, thiếu một origin là báo `Lỗi 400: origin_mismatch`.
+   Supabase làm phần đó thay mình: chỉ cần thêm domain web vào
+   Supabase Dashboard → Authentication → URL Configuration → Redirect URLs.
+
+   3 bước để bật đăng nhập (xem HUONG-DAN-DANG-NHAP-BINH-LUAN.md):
+     1. Tạo project ở https://supabase.com → Authentication → Providers → Google
+        (dán Client ID/Secret của Google; Supabase tự lo redirect URI).
+     2. Authentication → URL Configuration:
+          Site URL          = https://<domain-web-của-bạn>
+          Redirect URLs     = https://<domain-web-của-bạn>/**  (thêm cả bản xem trước)
+     3. Project Settings → API: dán `Project URL` và `anon public` key xuống đây.
+        (anon key là khoá CÔNG KHAI — an toàn khi đặt ở frontend, quyền thật nằm
+         trong Row Level Security / phía Worker.)
+
+   Có thể dán trong file này HOẶC mở trang /admin → tab "Cài đặt & đồng bộ" →
+   mục "Đăng nhập (Supabase)" rồi lưu: cấu hình nằm trên KV, không cần deploy lại.
    ========================================================================== */
 window.CZ_API = 'chuseoz-cms.kimtong1906.workers.dev';   // để '' nếu chưa dùng Worker
 window.CZ_STATS_DIRECT = false;                           // số xếp hạng lấy từ KV; true = đọc thẳng Firebase cũ
-// Google Identity Services (đăng nhập người dùng + bình luận)
-//   · Tạo OAuth Client ID kiểu "Web application" ở Google Cloud Console,
-//     thêm JavaScript origin = domain web của bạn (vd https://chuseoz.pages.dev).
-//   · Dán Client ID vào đây. Chi tiết: worker/README.md §7 và HUONG-DAN-DANG-NHAP-BINH-LUAN.md
-window.CZ_GOOGLE_CLIENT_ID = '164350528370-3jmoj701gt07kl4v832vpb25qsfd3qh2.apps.googleusercontent.com';   // để '' sẽ tắt đăng nhập Google (bình luận hiện thông báo cấu hình)
+
+/* --- NHÀ CUNG CẤP ĐĂNG NHẬP ---------------------------------------------
+   'supabase' = dùng Supabase Auth (khuyến nghị)
+   'google'   = dùng Google Identity Services trực tiếp (cách cũ, hay lỗi origin)
+   ''         = tắt đăng nhập (bình luận sẽ báo cần đăng nhập)                 */
+window.CZ_AUTH_PROVIDER = 'supabase';
+
+/* --- SUPABASE (bắt buộc khi CZ_AUTH_PROVIDER = 'supabase') --------------- */
+window.CZ_SUPABASE_URL = '';          // ví dụ https://abcdefghijk.supabase.co
+window.CZ_SUPABASE_ANON_KEY = '';     // Project Settings → API → anon public
+
+/* --- GOOGLE (dùng khi CZ_AUTH_PROVIDER = 'google', hoặc làm nút dự phòng) -- */
+window.CZ_GOOGLE_CLIENT_ID = '164350528370-3jmoj701gt07kl4v832vpb25qsfd3qh2.apps.googleusercontent.com';
+
+/* --- AI ĐƯỢC VÀO TRANG QUẢN TRỊ ------------------------------------------
+   Người thường đăng nhập vẫn chỉ là người đọc: mục "Quản trị" bị ẨN hoàn toàn
+   và /admin chặn ngay từ cửa. Thêm email vào đây để cấp quyền (không phân biệt
+   hoa thường). Cũng có thể đặt biến ADMIN_EMAILS trong Worker để khớp cả hai phía. */
+window.CZ_ADMIN_EMAILS = ['kimtong1906@gmail.com'];
+
 /* Firebase: KHÔNG còn dùng để đăng nhập hay xếp hạng.
-   · Đăng nhập Google: Google Identity Services + Worker (cz-auth.js).
-   · Lượt đọc/bình chọn: Worker ghi lên KV (cz-app.js → /api/view, /api/vote).
    CZ_FIREBASE_PROJECT chỉ để /api/stats/import-firebase kéo số CŨ về KV 1 lần. */
 window.CZ_FIREBASE_PROJECT = window.CZ_FIREBASE_PROJECT || "chuseoz-library";
 
@@ -29,6 +62,16 @@ window.CZ_FIREBASE_PROJECT = window.CZ_FIREBASE_PROJECT || "chuseoz-library";
    (thiếu https:// thì trình duyệt hiểu thành đường dẫn trong web và mọi lệnh gọi
     Worker sẽ thất bại âm thầm — web lặng lẽ quay về dữ liệu tĩnh) */
 (function () {
-  var u = String(window.CZ_API || '').trim().replace(/\/+$/, '');
-  window.CZ_API = (u && !/^https?:\/\//i.test(u)) ? 'https://' + u : u;
+  function fix(u) {
+    u = String(u || '').trim().replace(/\/+$/, '');
+    return (u && !/^https?:\/\//i.test(u)) ? 'https://' + u : u;
+  }
+  window.CZ_API = fix(window.CZ_API);
+  window.CZ_SUPABASE_URL = fix(window.CZ_SUPABASE_URL);
+  /* danh sách email quản trị: luôn là mảng chữ thường, cắt khoảng trắng */
+  var a = window.CZ_ADMIN_EMAILS;
+  if (typeof a === 'string') a = a.split(',');
+  window.CZ_ADMIN_EMAILS = (Array.isArray(a) ? a : [])
+    .map(function (x) { return String(x || '').trim().toLowerCase(); })
+    .filter(Boolean);
 })();

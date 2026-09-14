@@ -267,7 +267,27 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     eq('auth/me/thiếu token → 401', (await call('GET', '/api/auth/me')).status, 401);
     const me = await call('GET', '/api/auth/me', { headers: { authorization: 'Bearer ' + TOKEN } });
     eq('auth/me/có token → email', me.body && me.body.user && me.body.user.email, 'docgia@gmail.com');
-    eq('comments/đăng khi chưa vào → 401', (await call('POST', '/api/comments/lunar-secret', { body: { text: 'hay' } })).status, 401);
+    /* khách chưa đăng nhập vẫn bình luận được, nhưng phải kèm mã máy (vid) */
+    eq('comments/khách thiếu vid → 400', (await call('POST', '/api/comments/lunar-secret', { body: { text: 'hay' } })).status, 400);
+    eq('comments/khách thiếu nội dung → 400', (await call('POST', '/api/comments/khach-thu', { body: { text: '  ', vid: 'may-khach' } })).status, 400);
+    {
+      const g1 = await call('POST', '/api/comments/khach-thu', { body: { text: 'khách bình luận', vid: 'may-khach', name: 'Khách Ẩn Danh' } });
+      ck('comments/khách đăng được', !!(g1.body && g1.body.ok === true && g1.body.guest === true), g1.body && g1.body.error, 'ok + guest:true');
+      const glist = ((await call('GET', '/api/comments/khach-thu')).body || {}).comments || [];
+      eq('comments/khách có nhãn guest', glist[0] && glist[0].guest, true);
+      eq('comments/khách giữ tên đã nhập', glist[0] && glist[0].name, 'Khách Ẩn Danh');
+      eq('comments/khách uid là mã ẩn danh', String(glist[0] && glist[0].uid).slice(0, 2), 'g:');
+      /* khách bị chặn spam chặt hơn tài khoản: 2 bình luận/chương/10 phút */
+      const gcodes = [];
+      for (let i = 0; i < 4; i++) gcodes.push((await call('POST', '/api/comments/khach-thu', { body: { text: 'spam khách ' + i, vid: 'may-khach' } })).status);
+      ck('comments/chặn spam khách (có 429)', gcodes.includes(429), gcodes, 'có 429');
+      /* khách không có phiên → không xoá được bình luận */
+      const gid = glist[0] && glist[0].id;
+      eq('comments/khách xoá → 401', (await call('DELETE', '/api/comments/khach-thu/' + gid)).status, 401);
+      /* quản trị (ADMIN_KEY) xoá được bình luận khách */
+      eq('comments/admin-key xoá bình luận khách → 200',
+        (await call('DELETE', '/api/comments/khach-thu/' + gid, { headers: { 'x-admin-key': env.ADMIN_KEY } })).status, 200);
+    }
     const auth = { authorization: 'Bearer ' + TOKEN };
     const p1 = await call('POST', '/api/comments/lunar-secret', { headers: auth, body: { text: 'Chương này hay quá!' } });
     const CID = (p1.body && p1.body.comment && p1.body.comment.id) || '';
