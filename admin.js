@@ -1174,14 +1174,51 @@
       next();
     });
   }
-  function dupTitles(chs) {
-    var seen = {}, out = [];
-    (chs || []).forEach(function (c) {
-      var t = String((c && c.t) || '').trim().toLowerCase();
+  /* Gom những tiêu đề chương xuất hiện hơn một lần. Hai bệnh này khác nhau hẳn,
+     đừng gộp làm một mà bảo người dùng "chắc đăng trùng":
+       · lặp cả tiêu đề LẪN nội dung → chương bị đăng trùng 2 lần → phải xoá 1 bản;
+       · lặp mỗi tiêu đề, chữ khác nhau → hai chương thật khác nhau bị đặt TRÙNG TÊN
+         (thường là đánh số nhầm: Be My Angel có 2 chương cùng ghi "Chương 16", rồi nhảy
+         thẳng sang 18 → chương thứ hai thực ra là Chương 17, chỉ sửa tên, xoá là mất truyện). */
+  function chapWords(html) {
+    /* Bản đảo chữ của một chương để đem so: bỏ <style>/<script>, bỏ thẻ, mở entity,
+       rồi bỏ mọi dấu câu/thặng thừa. Chỉ cần biết "chữ có giống nhau không" — so nguyên
+       chuỗi HTML thì 2 bản giống hết vẫn bị báo khác vì đổi <p> thành <div>. */
+    var t = String(html || '').replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>/gi, ' ');
+    t = t.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ');
+    t = t.replace(/&quot;|&#39;|&apos;|&lt;|&gt;|&amp;/gi, ' ');
+    t = t.toLowerCase().replace(/[^a-z0-9\u00c0-\u1eff\s]/g, ' ');
+    return t.replace(/\s+/g, ' ').trim();
+  }
+  function dupGroups(chs) {
+    var by = {}, order = [];
+    (chs || []).forEach(function (c, i) {
+      var t = String((c && c.t) || '').trim();
       if (!t) return;
-      if (seen[t]) { if (out.indexOf(seen[t]) < 0) out.push(seen[t]); }
-      else seen[t] = t;
+      var k = t.toLowerCase();
+      if (!by[k]) { by[k] = { t: t, at: [], body: [] }; order.push(k); }
+      by[k].at.push(i + 1);
+      by[k].body.push(chapWords(c && c.html));
     });
+    return order.map(function (k) {
+      var g = by[k], word = g.body.filter(function (b) { return b; });
+      return {
+        t: g.t, n: g.at.length, at: g.at,
+        same: word.length > 1 && word.every(function (b) { return b === word[0]; }),
+        countable: word.length > 1
+      };
+    }).filter(function (g) { return g.n > 1; });
+  }
+  /* số chương bị nhảy (đã có "Chương 5" và "Chương 7" mà thiếu 6) — bằng chứng cho ca đặt tên nhầm */
+  function chapterGaps(chs) {
+    var have = {}, out = [];
+    (chs || []).forEach(function (c) {
+      var m = /^\s*(?:chương|chuong)\s*(\d+)/i.exec(String((c && c.t) || ''));
+      if (m) have[parseInt(m[1], 10)] = 1;
+    });
+    var ks = Object.keys(have).map(Number).sort(function (a, b) { return a - b; });
+    if (ks.length < 2) return out;
+    for (var i = ks[0]; i <= ks[ks.length - 1]; i++) if (!have[i]) out.push(i);
     return out;
   }
   function runDoctor() {
@@ -1223,9 +1260,14 @@
         if (ONLINE && kvN == null && regN > 0) issues.push('kvMissing');
         if (kvN == null && repoN == null && regN > 0) issues.push('noSource');
         var src = kv || repo;
+        var dups = [], gaps = [];
         if (src && src.chapters) {
-          var dups = dupTitles(src.chapters);
-          if (dups.length) issues.push('dup:' + dups.length);
+          dups = dupGroups(src.chapters);
+          if (dups.length) gaps = chapterGaps(src.chapters);
+          var sameN = dups.filter(function (d) { return d.same; }).length;
+          var diffN = dups.length - sameN;
+          if (sameN) issues.push('dupSame:' + sameN);
+          if (diffN) issues.push('dupTitle:' + diffN);
           var empty = src.chapters.filter(function (c) { return !String((c && c.html) || '').trim(); }).length;
           if (empty) issues.push('empty:' + empty);
         }
@@ -1233,7 +1275,8 @@
         if (!String(n.syn || n.synFull || '').trim()) issues.push('nosyn');
         if (!String(n.author || '').trim()) issues.push('noauthor');
         if (!String(n.year || '').trim()) issues.push('noyear');
-        DOC.rows.push({ n: n, slug: slug, reg: regN, kv: kvN, repo: repoN, real: real, issues: issues });
+        DOC.rows.push({ n: n, slug: slug, reg: regN, kv: kvN, repo: repoN, real: real,
+          dups: dups, gaps: gaps, issues: issues });
         done++;
         if (done % 10 === 0) docState('<span class="spin"></span> đã soi ' + done + '/' + lib.length + ' bộ…', 'info');
       });
@@ -1250,8 +1293,26 @@
     nosyn: ['warn', 'Thiếu mô tả', ''],
     noauthor: ['warn', 'Thiếu tác giả', ''],
     noyear: ['warn', 'Thiếu năm', ''],
-    noslug: ['bad', 'Thiếu slug', 'không mở được trang truyện']
+    noslug: ['bad', 'Thiếu slug', 'không mở được trang truyện'],
+    dupSame: ['bad', 'Chương bị đăng trùng (cùng tên, cùng nội dung)',
+      'mở tab Sửa bộ → Sửa chương, xoá bản thừa, rồi bấm "Nạp chương từ repo lên KV" + "Đếm lại số chương trên KV"'],
+    dupTitle: ['warn', 'Trùng tiêu đề nhưng nội dung khác — chương bị đặt nhầm tên/nhầm số',
+      'KHÔNG phải đăng trùng. Mở tab Sửa bộ → Sửa chương rồi đổi lại tên cho đúng (xoá là mất 1 chương thật)']
   };
+  /* dòng mô tả chi tiết cho 2 loại trùng tiêu đề: chỉ rõ chương nào, tên gì, có nhảy số không */
+  function dupText(r, same) {
+    var g = (r.dups || []).filter(function (x) { return !!x.same === same; });
+    if (!g.length) return '';
+    var s = g.map(function (x) {
+      return 'chương #' + (x.at || []).join(', #') + ' cùng tên “' + x.t + '”' +
+        (x.same ? ' — chữ giống nhau' : (x.countable ? ' — chữ khác nhau' : ' — chưa so được vì chương rỗng'));
+    }).join(' · ');
+    if (!same && (r.gaps || []).length) {
+      s += ' · dãy chương nhảy số, thiếu Chương ' + r.gaps.join(' & Chương ') +
+        ' → bản đứng sau chính là Chương ' + r.gaps[0];
+    }
+    return s;
+  }
   function renderDoctor() {
     var rows = DOC.rows;
     var bad = rows.filter(function (r) { return r.issues.some(function (i) { return (DOC_LABEL[i.split(':')[0]] || [])[0] === 'bad'; }); });
@@ -1276,6 +1337,8 @@
     }
     $('#docList').innerHTML = order.slice(0, 200).map(function (r, i) {
       var lvl = bad.indexOf(r) >= 0 ? 'bad' : 'warn';
+      /* bệnh nằm ở kho chương (trùng tên, chương rỗng) thì mở thẳng vào danh sách chương */
+      var onChap = r.issues.some(function (k) { return /^(dupSame|dupTitle|empty)$/.test(k.split(':')[0]); });
       var bits = r.issues.map(function (k) {
         var key = k.split(':')[0], extra = k.indexOf(':') > 0 ? k.slice(k.indexOf(':') + 1) : '';
         var L = DOC_LABEL[key] || ['warn', key, ''];
@@ -1283,7 +1346,10 @@
           .replace('{reg}', r.reg).replace('{real}', r.real == null ? '—' : r.real)
           .replace('{kv}', r.kv == null ? '—' : r.kv).replace('{repo}', r.repo == null ? '—' : r.repo)
           .replace('{lab}', String(r.n.countLabel || ''));
-        if (key === 'dup') txt = 'các tiêu đề lặp: ' + extra + ' lần — thường là chương bị đăng trùng';
+        if (key === 'dupSame' || key === 'dupTitle') {
+          /* 'extra' chỉ là số nhóm trùng — vô dụng khi đã liệt kê đúng chương nào ở dưới */
+          txt = dupText(r, key === 'dupSame') + (txt ? ' — ' + txt : '');
+        }
         if (key === 'empty') txt = extra + ' chương chưa có nội dung';
         return '<b>' + esc(L[1]) + '</b>' + (txt ? '<span>' + esc(txt) + '</span>' : '');
       }).join('');
@@ -1292,12 +1358,12 @@
         '<span class="sm muted">slug <code>' + esc(r.slug || '—') + '</code> · registry <b>' + r.reg +
         '</b> · KV <b>' + (r.kv == null ? '—' : r.kv) + '</b> · repo <b>' + (r.repo == null ? '—' : r.repo) + '</b></span>' +
         bits + '</span>' +
-        '<span class="row" style="gap:6px"><button class="btn ghost sm" data-docedit="' + i + '">' + ic('edit', 'i-s') + 'Sửa</button></span></div>';
+        '<span class="row" style="gap:6px"><button class="btn ghost sm" data-docedit="' + i + '" data-docfocus="' + (onChap ? 'chap' : 'meta') + '">' + ic('edit', 'i-s') + (onChap ? 'Sửa chương' : 'Sửa') + '</button></span></div>';
     }).join('');
     $$('#docList [data-docedit]').forEach(function (b) {
       b.addEventListener('click', function () {
         var r = order[parseInt(b.dataset.docedit, 10)];
-        if (r && r.slug) openEdit(r.slug, 'meta');
+        if (r && r.slug) openEdit(r.slug, b.dataset.docfocus === 'chap' ? 'chap' : 'meta');
       });
     });
     docState('Xong: ' + bad.length + ' bộ sai nghiêm trọng, ' + warn.length + ' bộ cần xem lại (trong ' + rows.length + ' bộ đã soi).', bad.length ? 'err' : 'ok');
@@ -1938,7 +2004,11 @@
     var rep = {
       at: DOC.at, online: ONLINE, scanned: DOC.scanned,
       rows: DOC.rows.map(function (r) {
-        return { slug: r.slug, title: r.n && r.n.title, registry: r.reg, kv: r.kv, repo: r.repo, issues: r.issues };
+        return { slug: r.slug, title: r.n && r.n.title, registry: r.reg, kv: r.kv, repo: r.repo,
+          issues: r.issues,
+          /* trùng tiêu đề: same=true là đăng trùng thật, same=false là đặt tên nhầm */
+          dupTitles: (r.dups || []).map(function (d) { return { t: d.t, at: d.at, same: d.same }; }),
+          missingChapterNumbers: r.gaps || [] };
       })
     };
     CZ.download('chuseoz-doctor-' + today() + '.json', JSON.stringify(rep, null, 1));

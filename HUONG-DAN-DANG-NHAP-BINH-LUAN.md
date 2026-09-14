@@ -192,9 +192,33 @@ Bốn nút:
 | **Đếm lại số chương trên KV** | `POST /api/recount` | registry lệch KV |
 | **Sửa nhãn trong registry** | sửa `chapters` + `countLabel` theo số thật vừa soi | muốn sửa nhanh phía web |
 
-Ngoài số chương, tab này còn bắt được: chương **đăng trùng tiêu đề**, chương **rỗng không có chữ**, bộ **thiếu
-ảnh bìa / mô tả / tác giả / couple / năm**, bộ **không có chương ở đâu cả**, và nhãn sai định dạng.
-Có nút **Xuất báo cáo** (JSON) để lưu lại hoặc gửi cho người khác xem.
+Ngoài số chương, tab này còn bắt được: chương **trùng tiêu đề** (chia làm 2 loại — xem §7.1), chương **rỗng không
+có chữ**, bộ **thiếu ảnh bìa / mô tả / tác giả / couple / năm**, bộ **không có chương ở đâu cả**, và nhãn sai định
+dạng. Có nút **Xuất báo cáo** (JSON) để lưu lại hoặc gửi cho người khác xem.
+
+### 7.1. "Các tiêu đề lặp" — đừng vội nghĩ là đăng trùng
+
+Cảnh báo dạng này nghĩa là trong kho chương có **hai chương cùng một tên**, còn số liệu ba nguồn vẫn khớp
+(không lệch số chương):
+
+> **Be My Angel** · slug `be-my-angel` · registry **29** · KV **29** · repo **29** · *các tiêu đề lặp: 1 lần*
+
+Bác sĩ dữ liệu so **cả nội dung** (đã bỏ thẻ HTML) rồi tách thành 2 bệnh ngược nhau:
+
+| Dòng báo | Nghĩa là | Cách chữa |
+|---|---|---|
+| **Chương bị đăng trùng (cùng tên, cùng nội dung)** | một chương bị đăng 2 lần thật | xoá 1 bản trong tab *Sửa bộ → Sửa chương*, rồi *Nạp chương từ repo lên KV* + *Đếm lại số chương trên KV* |
+| **Trùng tiêu đề nhưng nội dung khác — đặt tên/số chương sai** | 2 chương **khác nhau**, chỉ vì tiêu đề bị ghi trùng | **đừng xoá** (xoá là mất 1 chương thật) — chỉ đổi lại tiêu đề |
+
+Ca thực tế của *Be My Angel*: chương #17 và #18 đều mang tên `Chương 16: Meow Meow`, chữ khác nhau hoàn toàn,
+và dãy chương nhảy `16 → 18` (thiếu 17). Danh sách chương trên blog thì ghi đúng
+`Chương 17: Âm Nhạc Là Cuộc Sống` — tức **phần tiêu đề chép trong bài viết bị quên sửa số**, khi dựng
+`data/book/be-my-angel.json` lấy theo tiêu đề trong bài nên bị lặp. Đã sửa lại tiêu đề chương #18 trong
+`data/book/be-my-angel.json`; trên Blogger cũng nên sửa luôn heading của `#page-18`, nếu không thì lần nạp lại
+từ blog sẽ mang về cái tên cũ.
+
+Với ca này, khi nào thấy nút **Sửa chương** (thay vì *Sửa*) ở dòng báo lỗi thì bấm vào là mở thẳng danh sách
+chương của bộ đó.
 
 > Sau khi nạp/đếm lại, nếu web vẫn hiện số cũ thì đó là **cache trình duyệt**: Ctrl+F5,
 > hoặc `/admin` → **Cài đặt** → *Xoá cache số liệu*.
