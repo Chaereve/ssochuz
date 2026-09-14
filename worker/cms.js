@@ -15,23 +15,35 @@
      GET    /api/stats                  → lượt đọc/bình chọn TỪ KV (mở)
 
      POST   /api/view                   → đếm 1 lượt đọc {slug, vid, ch} (mở)
-     POST   /api/vote                   → bầu/bỏ bầu {slug, vote:1|0, vid} (mở)
+     POST   /api/vote                   → bầu/bỏ bầu {slug, ch?, vote:1|0, vid}
+                                           · không gửi ch = phiếu cho cả bộ
+                                           · ch = 12      = phiếu riêng chương 12
+                                           trả về { votes, total, chapVotes, votesDay/Week/Month }
 
      PUT    /api/registry               → ghi dữ liệu thư viện      (cần X-Admin-Key)
-     PUT    /api/book/<slug>            → ghi 1 bộ + chương         (cần X-Admin-Key)
+     PUT    /api/book/<slug>            → ghi 1 bộ + chương, TỰ đếm lại số chương
+                                           trong registry          (cần X-Admin-Key)
      DELETE /api/book/<slug>            → xoá 1 bộ                  (cần X-Admin-Key)
+     POST   /api/recount                → đếm lại số chương của MỌI bộ, sửa registry
+                                           (chữa bệnh "hiện 30 mà chỉ có 29") (cần X-Admin-Key)
      POST   /api/seed                   → nạp nhiều bộ một lần      (cần X-Admin-Key)
      POST   /api/sync                   → đồng bộ lại từ Blogger    (cần X-Admin-Key)
      POST   /api/import                 → 1 bài Blogger → 1 chương  (cần X-Admin-Key)
      POST   /api/stats/seed             → nạp số liệu cũ (Firebase/file) (cần X-Admin-Key)
      POST   /api/stats/import-firebase  → tự kéo số cũ từ Firestore (cần X-Admin-Key)
      POST   /api/stats/refresh          → ghi hết số đang đệm ra KV (cần X-Admin-Key)
+     GET    /api/admin/comments         → mọi bình luận để kiểm duyệt (cần X-Admin-Key)
+     GET    /api/admin/stats            → số liệu chi tiết + chuỗi 60 ngày (cần X-Admin-Key)
+     GET    /api/admin/log              → nhật ký 200 thao tác gần nhất (cần X-Admin-Key)
 
-     POST   /api/auth/google            → idToken Google → session (mở)
+     POST   /api/auth/supabase          → access_token Supabase → session (mở)
+     POST   /api/auth/google            → idToken Google → session (mở, cách cũ)
      GET    /api/auth/me                → user từ session           (cần Bearer)
-     GET    /api/comments/<slug>        → đọc bình luận             (mở)
-     POST   /api/comments/<slug>        → gửi bình luận             (cần Bearer)
-     DELETE /api/comments/<slug>/<id>   → xoá bình luận của mình    (cần Bearer)
+     GET    /api/auth/config            → web đã bật đăng nhập chưa, bằng gì (mở)
+     GET    /api/comments/<slug>        → đọc bình luận (?ch=12 để lọc theo chương) (mở)
+     POST    /api/comments/<slug>       → gửi bình luận {text, ch}  (cần Bearer)
+     DELETE /api/comments/<slug>/<id>   → xoá bình luận của mình (hoặc của ai nếu là
+                                           quản trị: ADMIN_KEY / email trong ADMIN_EMAILS)
 
    ---------------------------------------------------------------------------
    BIẾN MÔI TRƯỜNG (Settings → Variables and Secrets)
@@ -39,6 +51,9 @@
      CZ_KV             (KV binding, bắt buộc)
      BLOG              (tuỳ chọn) = https://chuseoz.blogspot.com
      ALLOW_ORIGIN      (tuỳ chọn) = https://chuseoz.pages.dev  (nhiều domain: phẩy)
+     SUPABASE_URL      (bắt buộc nếu đăng nhập Supabase) = https://<ref>.supabase.co
+     SUPABASE_JWT_SECRET (chỉ project cũ ký HS256) — Auth → Settings → JWT Secret
+     ADMIN_EMAILS      (tuỳ chọn) = kimtong1906@gmail.com,abc@x.com — ai được vào /admin
      GOOGLE_CLIENT_ID  (secret/tuỳ chọn)    — Client ID của OAuth Web app (Google Identity Services)
      SESSION_SECRET    (secret, bắt buộc*)  — chuỗi ngẫu nhiên ≥ 32 ký tự, ký session bình luận/đăng nhập
                                             (*) bắt buộc nếu bật bình luận/đăng nhập người dùng
@@ -47,7 +62,7 @@
                                               khi muốn kéo số liệu cũ về KV một lần
    ============================================================================ */
 
-const VERSION = '1.4.0';
+const VERSION = '1.5.0';
 const JSONH = { 'content-type': 'application/json; charset=utf-8' };
 
 export default {
@@ -74,9 +89,11 @@ export default {
       if (p === '/api/view' && req.method === 'POST') return await postView(req, env, ctx, cors);
       if (p === '/api/vote' && req.method === 'POST') return await postVote(req, env, cors);
 
-      /* ---------- người dùng: đăng nhập Google + bình luận ---------- */
+      /* ---------- người dùng: đăng nhập (Supabase/Google) + bình luận ---------- */
+      if (p === '/api/auth/supabase' && req.method === 'POST') return await authSupabase(req, env, cors);
       if (p === '/api/auth/google' && req.method === 'POST') return await authGoogle(req, env, cors);
       if (p === '/api/auth/me' && req.method === 'GET') return await authMe(req, env, cors);
+      if (p === '/api/auth/config' && req.method === 'GET') return await authConfig(env, cors);
       let mc = p.match(/^\/api\/comments\/([^/]+)\/([^/]+)$/);
       if (mc && req.method === 'DELETE') return await deleteComment(decodeURIComponent(mc[1]), mc[2], req, env, cors);
       let mc2 = p.match(/^\/api\/comments\/([^/]+)$/);
@@ -87,14 +104,21 @@ export default {
       if (m && req.method === 'GET') return await getKV(env, 'book:' + decodeURIComponent(m[1]), cors, 300);
 
       /* ---------- cần khoá quản trị ---------- */
-      if (p === '/api/registry' && req.method === 'PUT') return await putKV(req, env, 'registry', cors);
-      if (m && req.method === 'PUT') return await putKV(req, env, 'book:' + decodeURIComponent(m[1]), cors);
+      if (p === '/api/registry' && req.method === 'PUT') return await putKV(req, env, 'registry', cors, 'cập nhật thư viện (registry)');
+      if (m && req.method === 'PUT') return await putBook(req, env, decodeURIComponent(m[1]), cors);
       if (m && req.method === 'DELETE') {
         if (!authed(req, env)) return json({ ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, { status: 401, cors });
         if (!env.CZ_KV) return noKV(cors);
-        await env.CZ_KV.delete('book:' + decodeURIComponent(m[1]));
-        return json({ ok: true, deleted: decodeURIComponent(m[1]) }, { cors });
+        const slug = decodeURIComponent(m[1]);
+        await env.CZ_KV.delete('book:' + slug);
+        await syncCountToRegistry(env, slug, null);       /* registry không còn treo số chương của bộ đã xoá */
+        await logAct(env, 'xoá bộ ' + slug, req);
+        return json({ ok: true, deleted: slug }, { cors });
       }
+      if (p === '/api/recount' && req.method === 'POST') return await recount(req, env, cors);
+      if (p === '/api/admin/comments' && req.method === 'GET') return await adminComments(req, env, cors);
+      if (p === '/api/admin/log' && req.method === 'GET') return await adminLog(req, env, cors);
+      if (p === '/api/admin/stats' && req.method === 'GET') return await adminStats(req, env, cors);
       if (p === '/api/seed' && req.method === 'POST') return await seed(req, env, cors);
       if (p === '/api/sync' && req.method === 'POST') return await syncBlogger(req, env, cors);
       if (p === '/api/import' && req.method === 'POST') return await importPost(req, env, cors);
@@ -174,16 +198,15 @@ async function importPost(req, env, cors) {
   await env.CZ_KV.put(bkey, JSON.stringify(book), { metadata: { saved: new Date().toISOString() } });
 
   if (nov) {
-    nov.chapters = book.chapters.length;
-    const tot = parseInt(String(nov.countLabel || '').split('/')[1], 10) || 0;
-    nov.countLabel = book.chapters.length + '/' + Math.max(tot, book.chapters.length);
     nov.updated = new Date().toISOString().slice(0, 10);
     if (nov.status === 'Sắp ra mắt') nov.status = 'Đang cập nhật';
+    await applyRealCounts(env, reg);            /* số chương + nhãn lấy theo chương thật */
     reg.rev = new Date().toISOString().slice(0, 16).replace('T', ' ');
     reg.source = { synced: new Date().toISOString(), note: 'nhập từ bài viết Blogger qua trang quản trị' };
     await env.CZ_KV.put('registry', JSON.stringify(reg), { metadata: { saved: new Date().toISOString(), rev: reg.rev } });
   }
   await env.CZ_KV.put('_last', new Date().toISOString());
+  await logAct(env, 'nhập chương từ Blogger: ' + slug + ' → ' + chapTitle, req);
   return json({ ok: true, added: chapTitle, chapters: book.chapters.length, url, title }, { cors });
 }
 
@@ -272,7 +295,7 @@ async function getKV(env, key, cors, cacheSec) {
   if (metadata && metadata.etag) h.etag = metadata.etag;
   return new Response(value, { headers: h });
 }
-async function putKV(req, env, key, cors) {
+async function putKV(req, env, key, cors, label) {
   if (!authed(req, env)) return json({ ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, { status: 401, cors });
   if (!env.CZ_KV) return noKV(cors);
   const body = await req.text();
@@ -283,7 +306,206 @@ async function putKV(req, env, key, cors) {
   const saved = new Date().toISOString();
   await env.CZ_KV.put(key, body, { metadata: { saved, rev: parsed.rev || '', bytes } });
   await env.CZ_KV.put('_last', saved);           // mốc thời gian ghi gần nhất
+  if (label) await logAct(env, label, req);
   return json({ ok: true, key, bytes, saved }, { cors });
+}
+
+/* ============================================================================
+   SỐ CHƯƠNG LUÔN KHỚP VỚI CHƯƠNG THẬT
+   ----------------------------------------------------------------------------
+   Bệnh cũ: sửa file JSON trên GitHub (30/30 → 29/29) nhưng web vẫn hiện 30, vì
+   web đọc registry TRÊN KV trước, file trong repo chỉ là đường dự phòng. Con số
+   trong registry lại là bản chép tay nên dễ lệch với số chương thật của bộ.
+   Cách chữa: (1) mỗi lần ghi 1 bộ, Worker tự đếm lại chương và sửa registry;
+   (2) có nút POST /api/recount để quét toàn bộ KV một lần;
+   (3) web tự đối chiếu số chương thật khi mở bộ truyện (cz-app.js → reconcile).
+   ============================================================================ */
+function chapLen(book) {
+  const c = book && Array.isArray(book.chapters) ? book.chapters : null;
+  return c ? c.length : null;
+}
+/* Nhãn số chương: "<đã đăng>/<dự kiến>". Dự kiến lấy từ trường `planned` (nếu
+   biên tập viên khai) — KHÔNG moi lại con số cũ trong nhãn, vì chính con số cũ
+   đó là thứ làm web hiện "30 chương" sau khi đã xoá chương và sửa nhãn thành 29/29. */
+function countLabelOf(n, real) {
+  const planned = Math.max(real, parseInt((n && n.planned) || 0, 10) || 0);
+  return real + '/' + planned;
+}
+/* ghi lại số chương thật vào registry; trả về {changed, was, now, label} */
+async function syncCountToRegistry(env, slug, book) {
+  if (!env.CZ_KV || !slug) return { changed: false };
+  const reg = await env.CZ_KV.get('registry', { type: 'json' });
+  if (!reg || !Array.isArray(reg.lib)) return { changed: false };
+  const n = reg.lib.find((x) => x && x.slug === slug);
+  if (!n) return { changed: false };
+  const real = chapLen(book);
+  if (real == null) return { changed: false };          /* không có sách → không đoán */
+  const was = Number(n.chapters) || 0;
+  const labelWas = String(n.countLabel || '');
+  const labelNow = countLabelOf(n, real);
+  const changed = was !== real || labelWas !== labelNow;
+  if (!changed) return { changed: false, was, now: real };
+  n.chapters = real;
+  n.countLabel = labelNow;
+  n.count = labelNow;
+  n.canRead = real > 0;
+  reg.rev = new Date().toISOString().slice(0, 16).replace('T', ' ');
+  await env.CZ_KV.put('registry', JSON.stringify(reg), { metadata: { saved: new Date().toISOString(), rev: reg.rev } });
+  await env.CZ_KV.put('_last', new Date().toISOString());
+  return { changed: true, was, now: real, labelWas, labelNow, rev: reg.rev };
+}
+/* PUT /api/book/<slug> — ghi 1 bộ RỒI tự sửa số chương trong registry */
+async function putBook(req, env, slug, cors) {
+  if (!authed(req, env)) return json({ ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, { status: 401, cors });
+  if (!env.CZ_KV) return noKV(cors);
+  const body = await req.text();
+  const bytes = new TextEncoder().encode(body).length;
+  if (bytes > 24 * 1024 * 1024) return json({ ok: false, error: 'dữ liệu quá lớn (>24MB)' }, { status: 413, cors });
+  let parsed;
+  try { parsed = JSON.parse(body); } catch (e) { return json({ ok: false, error: 'JSON lỗi: ' + e.message }, { status: 400, cors }); }
+  if (!Array.isArray(parsed.chapters)) parsed.chapters = [];
+  /* bỏ chương rỗng cả tiêu đề lẫn nội dung — chính chúng là thủ phạm làm lệch số chương */
+  const before = parsed.chapters.length;
+  parsed.chapters = parsed.chapters.filter((c) => c && (String(c.t || '').trim() || String(c.html || '').trim()));
+  const dropped = before - parsed.chapters.length;
+  parsed.slug = slug;
+  const saved = new Date().toISOString();
+  await env.CZ_KV.put('book:' + slug, JSON.stringify(parsed), { metadata: { saved, chapters: parsed.chapters.length, bytes } });
+  await env.CZ_KV.put('_last', saved);
+  const sync = await syncCountToRegistry(env, slug, parsed);
+  await logAct(env, 'lưu bộ ' + slug + ' (' + parsed.chapters.length + ' chương)', req);
+  return json({ ok: true, key: 'book:' + slug, bytes, saved, chapters: parsed.chapters.length, dropped, registry: sync }, { cors });
+}
+/* POST /api/recount — quét mọi bộ trên KV, đếm lại chương, sửa registry một lượt.
+   Đây là nút "chữa cháy" cho những bộ đang hiện sai số chương ngoài web. */
+/* đếm lại số chương THẬT của mọi bộ có trong KV rồi sửa registry.
+   Dùng chung cho /api/recount, /api/seed và /api/sync (3 chỗ từng làm lệch số). */
+async function applyRealCounts(env, reg) {
+  const out = { fixed: [], missing: [], orphan: [], books: 0 };
+  if (!env.CZ_KV || !reg || !Array.isArray(reg.lib)) return out;
+  const keys = [];
+  let cursor;
+  do {
+    const l = await env.CZ_KV.list({ prefix: 'book:', limit: 1000, cursor });
+    l.keys.forEach((k) => keys.push(k.name));
+    cursor = l.list_complete ? null : l.cursor;
+  } while (cursor);
+  out.books = keys.length;
+  const bySlug = {};
+  reg.lib.forEach((n) => { if (n && n.slug) bySlug[n.slug] = n; });
+  for (const k of keys) {
+    const slug = decodeURIComponent(k.slice('book:'.length));
+    const book = await env.CZ_KV.get(k, { type: 'json' });
+    const real = chapLen(book);
+    /* KV chưa có chương nào (bộ mới, hoặc dữ liệu chưa được nạp lên) thì ĐỪNG sửa:
+       ép về 0/0 sẽ xoá mất nhãn đúng vừa đồng bộ từ Blogger. */
+    if (real == null || real === 0) continue;
+    const n = bySlug[slug];
+    if (!n) { out.orphan.push({ slug, chapters: real }); continue; }
+    const was = Number(n.chapters) || 0;
+    const labelWas = String(n.countLabel || '');
+    const labelNow = countLabelOf(n, real);
+    if (was !== real || labelWas !== labelNow) {
+      n.chapters = real; n.countLabel = labelNow; n.count = labelNow; n.canRead = real > 0;
+      out.fixed.push({ slug, title: n.title || '', was, now: real, labelWas, labelNow });
+    }
+  }
+  reg.lib.forEach((n) => {
+    if (!n || !n.slug) return;
+    if (keys.indexOf('book:' + n.slug) < 0) out.missing.push({ slug: n.slug, title: n.title || '', chapters: Number(n.chapters) || 0 });
+  });
+  if (out.fixed.length) reg.rev = new Date().toISOString().slice(0, 16).replace('T', ' ');
+  return out;
+}
+/* POST /api/recount — nút "đếm lại số chương" trong trang quản trị.
+   Chữa đúng bệnh: web hiện 30 chương dù bộ chỉ có 29 (registry treo số cũ). */
+async function recount(req, env, cors) {
+  if (!authed(req, env)) return json({ ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, { status: 401, cors });
+  if (!env.CZ_KV) return noKV(cors);
+  const reg = (await env.CZ_KV.get('registry', { type: 'json' })) || { lib: [] };
+  reg.lib = reg.lib || [];
+  const res = await applyRealCounts(env, reg);
+  if (res.fixed.length) {
+    reg.source = { synced: new Date().toISOString(), note: 'đếm lại số chương từ kho chương trên KV (/api/recount)' };
+    await env.CZ_KV.put('registry', JSON.stringify(reg), { metadata: { saved: new Date().toISOString(), rev: reg.rev } });
+    await env.CZ_KV.put('_last', new Date().toISOString());
+    await logAct(env, 'đếm lại số chương: sửa ' + res.fixed.length + ' bộ', req);
+  }
+  return json({ ok: true, books: res.books, novels: reg.lib.length, fixed: res.fixed, missing: res.missing, orphan: res.orphan, rev: reg.rev || '' }, { cors });
+}
+
+/* ============================================================================
+   NHẬT KÝ HOẠT ĐỘNG (activity log) — 200 dòng gần nhất, khoá KV `log`
+   ============================================================================ */
+async function logAct(env, text, req) {
+  if (!env.CZ_KV) return;
+  try {
+    const arr = (await env.CZ_KV.get('log', { type: 'json' })) || [];
+    let who = 'admin-key';
+    try {
+      const h = (req && req.headers && req.headers.get('authorization')) || '';
+      const u = h ? await userFromReq(req, env) : null;
+      if (u && u.email) who = u.email;
+    } catch (e) {}
+    arr.unshift({ at: new Date().toISOString(), text: String(text || '').slice(0, 200), who });
+    if (arr.length > 200) arr.length = 200;
+    await env.CZ_KV.put('log', JSON.stringify(arr));
+  } catch (e) { /* nhật ký không được làm hỏng thao tác chính */ }
+}
+async function adminLog(req, env, cors) {
+  if (!authed(req, env)) return json({ ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, { status: 401, cors });
+  if (!env.CZ_KV) return noKV(cors);
+  const arr = (await env.CZ_KV.get('log', { type: 'json' })) || [];
+  return json({ ok: true, items: arr, count: arr.length }, { cors, headers: { 'cache-control': 'no-store' } });
+}
+/* GET /api/admin/comments?slug=&limit= — gộp bình luận của mọi bộ để kiểm duyệt */
+async function adminComments(req, env, cors) {
+  if (!authed(req, env)) return json({ ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, { status: 401, cors });
+  if (!env.CZ_KV) return noKV(cors);
+  const u = new URL(req.url);
+  const only = String(u.searchParams.get('slug') || '');
+  const limit = Math.min(parseInt(u.searchParams.get('limit') || '500', 10) || 500, 2000);
+  const keys = [];
+  let cursor;
+  do {
+    const l = await env.CZ_KV.list({ prefix: 'cmt:', limit: 1000, cursor });
+    l.keys.forEach((k) => keys.push(k.name));
+    cursor = l.list_complete ? null : l.cursor;
+  } while (cursor);
+  const out = [];
+  for (const k of keys) {
+    const slug = decodeURIComponent(k.slice('cmt:'.length));
+    if (only && slug !== only) continue;
+    const arr = (await env.CZ_KV.get(k, { type: 'json' })) || [];
+    arr.forEach((c) => out.push(Object.assign({ slug }, publicComment(c))));
+    if (out.length >= limit) break;
+  }
+  out.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+  return json({ ok: true, comments: out.slice(0, limit), count: out.length, slugs: keys.length },
+    { cors, headers: { 'cache-control': 'no-store' } });
+}
+/* GET /api/admin/stats — số liệu chi tiết (kèm chuỗi ngày + phiếu theo chương) */
+async function adminStats(req, env, cors) {
+  if (!authed(req, env)) return json({ ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, { status: 401, cors });
+  if (!env.CZ_KV) return noKV(cors);
+  await flushStats(env);
+  const st = await readStats(env);
+  const today = dayStr();
+  const items = {};
+  const series = {};
+  Object.keys(st.items).forEach((slug) => {
+    const it = st.items[slug] || {};
+    items[slug] = publicStat(it, today);
+    items[slug].voters = Object.keys(it.voters || {}).length;
+    items[slug].chapVotes = it.chap || {};
+    const days = it.days || {};
+    Object.keys(days).forEach((d) => {
+      const s = series[d] || (series[d] = { views: 0, votes: 0 });
+      s.views += days[d].v || 0; s.votes += days[d].o || 0;
+    });
+  });
+  const days = Object.keys(series).sort().slice(-60).map((d) => Object.assign({ day: d }, series[d]));
+  return json({ ok: true, updatedAt: st.updatedAt || '', items, days }, { cors, headers: { 'cache-control': 'no-store' } });
 }
 async function health(env) {
   if (!env.CZ_KV) return json({ ok: true, version: VERSION, kv: false, books: 0, novels: 0, regRev: '', lastWrite: '', now: new Date().toISOString(), hint: 'chưa bind CZ_KV' });
@@ -307,6 +529,12 @@ async function health(env) {
     ok: true, version: VERSION, kv: true, books, regRev: (reg && reg.rev) || '',
     novels: reg ? (reg.lib || []).length : 0, lastWrite: last, now: new Date().toISOString(),
     stats: { items: Object.keys(st.items).length, views, votes },
+    /* để trang quản trị biết kênh đăng nhập đã sẵn sàng chưa, thiếu biến nào */
+    auth: {
+      supabase: !!supabaseURL(env), supabaseUrl: supabaseURL(env),
+      supabaseHs256: !!(env.SUPABASE_JWT_SECRET), google: !!env.GOOGLE_CLIENT_ID,
+      session: !!env.SESSION_SECRET, adminEmails: adminEmails(env),
+    },
   });
 }
 async function getSchedule(env, ctx, cors) {
@@ -352,7 +580,17 @@ async function seed(req, env, cors) {
     catch (e) { out.failed.push(slug); }
   }
   await env.CZ_KV.put('_last', new Date().toISOString());
-  return json({ ok: true, ...out, registry: !!d.registry }, { cors });
+  /* nạp xong: đếm lại số chương để registry không treo con số cũ (bệnh "30 chương") */
+  let counts = { fixed: 0 };
+  if (d.registry) {
+    const reg2 = await env.CZ_KV.get('registry', { type: 'json' });
+    counts = await applyRealCounts(env, reg2);
+    if (counts.fixed.length) {
+      await env.CZ_KV.put('registry', JSON.stringify(reg2), { metadata: { saved: new Date().toISOString(), rev: reg2.rev || '' } });
+    }
+  }
+  await logAct(env, 'nạp dữ liệu: ' + out.books + ' bộ' + (counts.fixed && counts.fixed.length ? ' · sửa số chương ' + counts.fixed.length + ' bộ' : ''), req);
+  return json({ ok: true, ...out, registry: !!d.registry, recount: counts.fixed || [] }, { cors });
 }
 
 /* ============================================================================
@@ -402,7 +640,7 @@ function cleanSlug(s) {
   s = String(s || '').trim().toLowerCase();
   return /^[a-z0-9][a-z0-9._-]{0,79}$/.test(s) ? s : '';
 }
-function blankStat() { return { base: { views: 0, votes: 0 }, got: { views: 0, votes: 0 }, days: {}, voters: {}, updatedAt: '' }; }
+function blankStat() { return { base: { views: 0, votes: 0 }, got: { views: 0, votes: 0 }, days: {}, voters: {}, chap: {}, updatedAt: '' }; }
 async function readStats(env) {
   if (!env.CZ_KV) return { updatedAt: '', items: {} };
   let s = null;
@@ -421,6 +659,7 @@ function statOf(st, slug) {
   it.got = it.got || { views: 0, votes: 0 };
   it.days = it.days || {};
   it.voters = it.voters || {};
+  it.chap = it.chap || {};          /* phiếu theo từng chương: { '12': 3 } */
   return it;
 }
 function addDay(it, day, v, o) {
@@ -491,12 +730,19 @@ function buckets(it, today) {
 }
 function publicStat(it, today) {
   const b = buckets(it, today);
+  const chapVotes = {};
+  Object.keys(it.chap || {}).forEach((k) => {
+    const v = Math.max(0, Number(it.chap[k]) || 0);
+    if (v) chapVotes[k] = v;
+  });
   return {
     views: ((it.base || {}).views || 0) + ((it.got || {}).views || 0),
+    /* votes = TỔNG phiếu của bộ (phiếu chung + phiếu của từng chương) → bảng xếp hạng tăng thật */
     votes: Math.max(0, ((it.base || {}).votes || 0) + ((it.got || {}).votes || 0)),
     viewsDay: b.vd, votesDay: b.od,
     viewsWeek: b.vw, votesWeek: b.ow,
     viewsMonth: b.vm, votesMonth: b.om,
+    chapVotes,
     trendingScore: Math.round(b.vd + 0.4 * b.vw + 2 * b.ow),
     updatedAt: it.updatedAt || '',
   };
@@ -532,6 +778,11 @@ async function postView(req, env, ctx, cors) {
 }
 
 /* POST /api/vote { slug, vote: 1|0, vid } — bầu/bỏ bầu, 1 người 1 phiếu */
+/* POST /api/vote { slug, ch?, vote: 1|0, vid }
+   · ch = 0 / không gửi  → phiếu cho CẢ BỘ (như cũ)
+   · ch = 12              → phiếu cho riêng CHƯƠNG 12
+   Mỗi người được thích MỖI CHƯƠNG MỘT LẦN (khoá voters là `who#ch`), và tổng
+   phiếu của bộ vẫn tăng để bảng xếp hạng ngoài trang chủ phản ánh đúng. */
 async function postVote(req, env, cors) {
   if (!env.CZ_KV) return noKV(cors);
   const body = await req.json().catch(() => ({}));
@@ -540,25 +791,41 @@ async function postVote(req, env, cors) {
   const u = await userFromReq(req, env);
   const who = u ? 'g:' + hash(u.uid) : viewerOf(req, body);
   if (!who) return json({ ok: false, error: 'thiếu vid (mã máy) để chống bầu nhiều lần' }, { status: 400, cors });
+  const ch = Math.max(0, Math.min(99999, parseInt(body.ch, 10) || 0));
   const want = (body.vote === 1 || body.vote === true || body.vote === '1') ? 1 : 0;
-  if (!await rateLimit(env, 'rl:vote:' + who, 40, 3600)) {
+  /* mỗi chương một phiếu nên hạn mức rộng hơn trước (40/giờ → 400/giờ) */
+  if (!await rateLimit(env, 'rl:vote:' + who, 400, 3600)) {
     return json({ ok: false, error: 'thao tác hơi nhanh, thử lại sau ít phút' }, { status: 429, cors });
   }
   await flushStats(env);
   const st = await readStats(env);
   const it = statOf(st, slug);
-  const has = !!it.voters[who];
+  const vkey = ch > 0 ? (who + '#' + ch) : who;
+  const has = !!it.voters[vkey];
   let changed = false;
   if (want && !has) {
-    if (Object.keys(it.voters).length < VOTER_CAP) it.voters[who] = 1;
-    it.got.votes += 1; addDay(it, dayStr(), 0, 1); changed = true;
+    if (Object.keys(it.voters).length < VOTER_CAP) it.voters[vkey] = 1;
+    it.got.votes += 1; addDay(it, dayStr(), 0, 1);
+    if (ch > 0) it.chap[ch] = (Number(it.chap[ch]) || 0) + 1;
+    changed = true;
   } else if (!want && has) {
-    delete it.voters[who];
-    it.got.votes = Math.max(0, it.got.votes - 1); addDay(it, dayStr(), 0, -1); changed = true;
+    delete it.voters[vkey];
+    it.got.votes = Math.max(0, it.got.votes - 1); addDay(it, dayStr(), 0, -1);
+    if (ch > 0) {
+      it.chap[ch] = Math.max(0, (Number(it.chap[ch]) || 0) - 1);
+      if (!it.chap[ch]) delete it.chap[ch];
+    }
+    changed = true;
   }
   if (changed) { it.updatedAt = new Date().toISOString(); await writeStats(env, st); }
-  const votes = Math.max(0, it.base.votes + it.got.votes);
-  return json({ ok: true, slug, votes, voted: want === 1, changed }, { cors, headers: { 'cache-control': 'no-store' } });
+  const pub = publicStat(it, dayStr());
+  return json({
+    ok: true, slug, ch, changed, voted: want === 1,
+    votes: ch > 0 ? (Number(it.chap[ch]) || 0) : pub.votes,   /* con số hiện ngay trên nút */
+    total: pub.votes,                                            /* tổng phiếu của bộ (bảng xếp hạng) */
+    votesDay: pub.votesDay, votesWeek: pub.votesWeek, votesMonth: pub.votesMonth,
+    chapVotes: pub.chapVotes,
+  }, { cors, headers: { 'cache-control': 'no-store' } });
 }
 
 /* POST /api/stats/seed { items: { slug: { views, votes } } }  (cần khoá)
@@ -687,11 +954,14 @@ async function syncBlogger(req, env, cors) {
     n.statusRaw = c.status || n.statusRaw;
   }
   if (sched) reg.schedule = { ...sched, note: sched.note || 'Lịch có thể thay đổi nếu có việc đột xuất.' };
+  /* nhãn "30/30" trên Blogger có thể cũ hơn kho chương: số chương THẬT trong KV thắng.
+     (đây chính là chỗ từng kéo số chương đã xoá quay lại 30) */
+  const rc = await applyRealCounts(env, reg);
   reg.rev = new Date().toISOString().slice(0, 16).replace('T', ' ');
   reg.source = { synced: new Date().toISOString(), note: 'đồng bộ từ blogspot (list-novel + lịch ra chương)' };
   await env.CZ_KV.put('registry', JSON.stringify(reg), { metadata: { saved: new Date().toISOString(), rev: reg.rev } });
   await env.CZ_KV.put('_last', new Date().toISOString());
-  return json({ ok: true, cards: cards.length, changed, rev: reg.rev, schedule: !!sched, log: log.slice(0, 20) }, { cors });
+  return json({ ok: true, cards: cards.length, changed, rev: reg.rev, schedule: !!sched, log: log.slice(0, 20), recount: rc.fixed }, { cors });
 }
 /* thẻ truyện trên Blogger là <div class="truyen-card" ...> (có <div> lồng bên
    trong) nên không bắt cặp <div>…</div> bằng regex được: cắt theo thẻ mở rồi
@@ -851,21 +1121,132 @@ async function verifySession(token, secret) {
     return p;
   } catch (e) { return null; }
 }
+/* ============================================================================
+   XÁC THỰC TOKEN SUPABASE (JWT do Supabase Auth cấp)
+   ----------------------------------------------------------------------------
+   Supabase ký JWT bằng 1 trong 2 cách, Worker này nhận CẢ HAI:
+     · HS256 với "JWT Secret" (project cũ)  → đặt biến SUPABASE_JWT_SECRET
+     · RS256/ES256 với Signing Key mới      → không cần secret nào: Worker tự đọc
+       JWKS tại <SUPABASE_URL>/auth/v1/.well-known/jwks.json rồi kiểm chữ ký.
+   Chỉ cần đặt SUPABASE_URL (vd https://abcdef.supabase.co) là chạy.
+   ============================================================================ */
+function supabaseURL(env) { return String((env && env.SUPABASE_URL) || '').replace(/\/+$/, ''); }
+const _sbKeys = new Map();          /* kid -> CryptoKey (JWKS của Supabase) */
+async function supabaseJWKS(env) {
+  const base = supabaseURL(env);
+  if (!base) throw new Error('Worker chưa đặt biến SUPABASE_URL');
+  const r = await fetch(base + '/auth/v1/.well-known/jwks.json', { cf: { cacheTtl: 3600, cacheEverything: true } });
+  if (!r.ok) throw new Error('không đọc được JWKS của Supabase (' + r.status + ')');
+  const jwks = await r.json();
+  return (jwks && jwks.keys) || [];
+}
+async function supabasePubKey(env, kid, alg) {
+  const ck = kid + '|' + alg;
+  if (_sbKeys.has(ck)) return _sbKeys.get(ck);
+  const keys = await supabaseJWKS(env);
+  const k = keys.find((x) => x.kid === kid) || keys[0];
+  if (!k) throw new Error('JWKS của Supabase không có khoá nào');
+  const upper = String(alg || k.alg || 'RS256').toUpperCase();
+  let algo, key;
+  if (upper === 'ES256') {
+    algo = { name: 'ECDSA', namedCurve: 'P-256' };
+    key = await crypto.subtle.importKey('jwk', { kty: k.kty || 'EC', crv: k.crv || 'P-256', x: k.x, y: k.y, alg: k.alg || 'ES256', ext: true }, algo, false, ['verify']);
+  } else {
+    algo = { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' };
+    key = await crypto.subtle.importKey('jwk', { kty: k.kty || 'RSA', n: k.n, e: k.e, alg: k.alg || 'RS256', ext: true }, algo, false, ['verify']);
+  }
+  _sbKeys.set(ck, key);
+  if (_sbKeys.size > 12) _sbKeys.delete(_sbKeys.keys().next().value);
+  return { key, algo, alg: upper };
+}
+async function verifySupabaseToken(tok, env) {
+  const parts = String(tok || '').split('.');
+  if (parts.length !== 3) throw new Error('access_token sai định dạng');
+  const header = JSON.parse(_dec(_b64.toBytes(parts[0], true)));
+  const payload = JSON.parse(_dec(_b64.toBytes(parts[1], true)));
+  const alg = String(header.alg || '').toUpperCase();
+  const data = _enc(parts[0] + '.' + parts[1]);
+  const sig = _b64.toBytes(parts[2], true);
+  let ok = false;
+  if (alg === 'HS256') {
+    const sec = env.SUPABASE_JWT_SECRET || env.SUPABASE_SECRET || '';
+    if (!sec) throw new Error('token Supabase ký HS256 mà Worker chưa đặt SUPABASE_JWT_SECRET');
+    ok = await crypto.subtle.verify('HMAC', await hmacKey(sec), sig, data);
+  } else if (alg === 'RS256' || alg === 'ES256') {
+    const { key, algo, alg: a } = await supabasePubKey(env, header.kid, alg);
+    ok = a === 'ES256'
+      ? await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, key, sig, data)
+      : await crypto.subtle.verify({ name: 'RSASSA-PKCS1-v1_5' }, key, sig, data);
+  } else throw new Error('thuật toán token không hỗ trợ: ' + alg);
+  if (!ok) throw new Error('chữ ký token Supabase không hợp lệ');
+  const now = Math.floor(Date.now() / 1000);
+  if (payload.exp && payload.exp < now) throw new Error('phiên đăng nhập đã hết hạn — đăng nhập lại');
+  const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
+  if (!aud.some((a) => a === 'authenticated' || a === 'anon')) throw new Error('token sai audience: ' + aud.join(','));
+  const base = supabaseURL(env);
+  if (base && payload.iss && String(payload.iss).indexOf(base) !== 0 && String(payload.iss).indexOf(base.replace(/^https?:\/\//, '')) < 0) {
+    throw new Error('token sai issuer (không phải của project này)');
+  }
+  if (payload.email && payload.email_verified === false) throw new Error('email chưa xác thực');
+  return payload;
+}
+/* payload Supabase → user của web */
+function userFromSupabase(p) {
+  const md = p.user_metadata || {};
+  const am = p.app_metadata || {};
+  const email = p.email || md.email || '';
+  return {
+    uid: String(p.sub || p.user_id || ''),
+    email,
+    name: md.full_name || md.name || md.user_name || email || 'Bạn đọc',
+    picture: md.avatar_url || md.picture || '',
+    provider: am.provider || p.provider || 'supabase',
+    exp: Number(p.exp) || 0,
+  };
+}
+/* ai được coi là quản trị: ADMIN_EMAILS trong Worker, hoặc app_metadata.role */
+function adminEmails(env) {
+  return String((env && env.ADMIN_EMAILS) || '').split(',')
+    .map((s) => s.trim().toLowerCase()).filter(Boolean);
+}
+function isAdminUser(u, env) {
+  if (!u) return false;
+  if (u.role === 'admin' || u.admin === true) return true;
+  const e = String(u.email || '').trim().toLowerCase();
+  return !!e && adminEmails(env).indexOf(e) >= 0;
+}
 async function userFromReq(req, env) {
-  const secret = env.SESSION_SECRET || '';
-  if (!secret) return null;
   const h = req.headers.get('authorization') || '';
   const m = h.match(/^Bearer\s+(.+)$/i);
   if (!m) return null;
-  return verifySession(m[1], secret);
+  const tok = m[1];
+  const secret = env.SESSION_SECRET || '';
+  if (secret) {
+    const s = await verifySession(tok, secret);
+    if (s) return s;
+  }
+  /* chưa phải session của Worker → thử luôn access_token Supabase
+     (để bình luận chạy được kể cả khi web chưa đổi token kịp) */
+  if (supabaseURL(env) || env.SUPABASE_JWT_SECRET) {
+    try { return userFromSupabase(await verifySupabaseToken(tok, env)); } catch (e) { return null; }
+  }
+  return null;
 }
 /* exp gửi kèm để web tự biết khi nào hết phiên (không phải gọi /api/auth/me) */
-function publicUser(u) {
+function publicUser(u, env) {
   let exp = 0;
   try { exp = (u && u.exp) || 0; } catch (e) {}
-  return { uid: u.uid, email: u.email || '', name: u.name || 'Bạn đọc', picture: u.picture || '', exp };
+  return {
+    uid: u.uid, email: u.email || '', name: u.name || 'Bạn đọc', picture: u.picture || '', exp,
+    provider: u.provider || '', admin: isAdminUser(u, env),
+  };
 }
-function publicComment(c) { return { id: c.id, uid: c.uid, name: c.name || 'Bạn đọc', picture: c.picture || '', text: c.text, createdAt: c.createdAt }; }
+function publicComment(c) {
+  return {
+    id: c.id, uid: c.uid, name: c.name || 'Bạn đọc', picture: c.picture || '', text: c.text,
+    ch: Number(c.ch) || 0, guest: !!c.guest, createdAt: c.createdAt,
+  };
+}
 
 async function authGoogle(req, env, cors) {
   const secret = env.SESSION_SECRET || '';
@@ -882,55 +1263,127 @@ async function authGoogle(req, env, cors) {
   try { payload = await verifyGoogleIdToken(cred, cid); }
   catch (e) { return json({ ok: false, error: 'xác thực Google thất bại: ' + e.message }, { status: 401, cors }); }
   const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30;
-  const user = { uid: payload.sub, email: payload.email || '', name: payload.name || payload.email || 'Bạn đọc', picture: payload.picture || '', exp };
+  const user = { uid: payload.sub, email: payload.email || '', name: payload.name || payload.email || 'Bạn đọc', picture: payload.picture || '', exp, provider: 'google' };
   const token = await signSession(user, secret);
-  return json({ ok: true, token, user: publicUser(user) }, { cors });
+  return json({ ok: true, token, user: publicUser(user, env), admin: isAdminUser(user, env) }, { cors });
+}
+/* POST /api/auth/supabase { accessToken } — đổi access_token Supabase lấy session
+   token của Worker (HS256). Nếu Worker chưa đặt SESSION_SECRET thì vẫn trả user
+   để web dùng thẳng access_token (Worker xác thực được ở mọi endpoint cần Bearer). */
+async function authSupabase(req, env, cors) {
+  if (!supabaseURL(env) && !env.SUPABASE_JWT_SECRET) {
+    return json({
+      ok: false,
+      error: 'Worker chưa đặt biến SUPABASE_URL (vd https://abcdef.supabase.co)',
+      hint: 'Workers → Settings → Variables: SUPABASE_URL, và SUPABASE_JWT_SECRET nếu project ký JWT bằng HS256. Xem worker/README.md §7.',
+    }, { status: 500, cors });
+  }
+  const body = await req.json().catch(() => ({}));
+  const tok = String(body.accessToken || body.access_token || body.token || '');
+  if (!tok) return json({ ok: false, error: 'thiếu accessToken' }, { status: 400, cors });
+  if (!await rateLimit(env, 'rl:login:' + hash(req.headers.get('cf-connecting-ip') || 'x'), 60, 600)) {
+    return json({ ok: false, error: 'thử đăng nhập hơi nhiều, đợi 10 phút nữa' }, { status: 429, cors });
+  }
+  let payload;
+  try { payload = await verifySupabaseToken(tok, env); }
+  catch (e) { return json({ ok: false, error: 'xác thực Supabase thất bại: ' + e.message }, { status: 401, cors }); }
+  const user = userFromSupabase(payload);
+  const secret = env.SESSION_SECRET || '';
+  if (!secret) {
+    return json({ ok: true, token: tok, user: publicUser(user, env), admin: isAdminUser(user, env), session: 'supabase-direct' }, { cors });
+  }
+  const session = Object.assign({}, user, { exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30 });
+  const token = await signSession(session, secret);
+  return json({ ok: true, token, user: publicUser(user, env), admin: isAdminUser(user, env), session: 'worker' }, { cors });
+}
+/* GET /api/auth/config — web hỏi Worker xem đã bật đăng nhập chưa, nhà cung cấp nào.
+   Trả khoá CÔNG KHAI (anon key) thôi, không lộ secret. */
+async function authConfig(env, cors) {
+  return json({
+    ok: true,
+    supabase: !!supabaseURL(env),
+    supabaseUrl: supabaseURL(env),
+    google: !!env.GOOGLE_CLIENT_ID,
+    session: !!env.SESSION_SECRET,
+    adminEmails: adminEmails(env),
+    version: VERSION,
+  }, { cors, headers: { 'cache-control': 'no-store' } });
 }
 async function authMe(req, env, cors) {
   const u = await userFromReq(req, env);
   if (!u) return json({ ok: false, error: 'chưa đăng nhập' }, { status: 401, cors });
-  return json({ ok: true, user: publicUser(u) }, { cors });
+  return json({ ok: true, user: publicUser(u, env), admin: isAdminUser(u, env) }, { cors });
 }
 async function getComments(slug, req, env, cors) {
   if (!env.CZ_KV) return noKV(cors);
   const arr = (await env.CZ_KV.get('cmt:' + slug, { type: 'json' })) || [];
-  let limit = 200;
-  try { limit = Math.min(parseInt(new URL(req.url).searchParams.get('limit') || '200', 10) || 200, 300); } catch (e) {}
-  const comments = arr.slice(0, limit).map(publicComment);
-  return json({ ok: true, comments, count: arr.length, slug }, { cors, headers: { 'cache-control': 'public, max-age=15' } });
+  let limit = 200, ch = null;
+  try {
+    const q = new URL(req.url).searchParams;
+    limit = Math.min(parseInt(q.get('limit') || '200', 10) || 200, 500);
+    if (q.get('ch') != null && q.get('ch') !== '') ch = parseInt(q.get('ch'), 10) || 0;
+  } catch (e) {}
+  /* ch = số chương: chỉ trả bình luận của chương đó (0 = bình luận chung của bộ) */
+  const pool = ch == null ? arr : arr.filter((c) => (Number(c.ch) || 0) === ch);
+  const comments = pool.slice(0, limit).map(publicComment);
+  const byChap = {};
+  arr.forEach((c) => { const k = String(Number(c.ch) || 0); byChap[k] = (byChap[k] || 0) + 1; });
+  return json({ ok: true, comments, count: arr.length, shown: comments.length, slug, ch: ch, byChapter: byChap },
+    { cors, headers: { 'cache-control': 'public, max-age=15' } });
 }
 async function postComment(slug, req, env, cors) {
   const u = await userFromReq(req, env);
-  if (!u) return json({ ok: false, error: 'bạn cần đăng nhập để bình luận' }, { status: 401, cors });
   const body = await req.json().catch(() => ({}));
   const text = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 2000);
   if (text.length < 1) return json({ ok: false, error: 'bình luận không được trống' }, { status: 400, cors });
   if (!env.CZ_KV) return noKV(cors);
-  if (!await rateLimit(env, 'rl:cmt:' + hash(u.uid), 3, 600)) {
+  /* Khách CHƯA đăng nhập vẫn bình luận được — gắn với mã máy ẩn danh (vid) mà web
+     tự sinh. Lý do: bật Supabase là việc của chủ trang, còn người đọc không thể bị
+     mất quyền bình luận chỉ vì trang chưa cấu hình xong. Ai đã đăng nhập thì tên +
+     ảnh lấy thẳng từ tài khoản nên không giả mạo nhau được. */
+  const vid = String(body.vid || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
+  if (!u && !vid) {
+    return json({ ok: false, error: 'không nhận được mã máy — tải lại trang rồi thử lại' }, { status: 400, cors });
+  }
+  const uid = u ? u.uid : 'g:' + hash(vid);
+  const name = u ? (u.name || 'Bạn đọc')
+    : (String(body.name || '').replace(/\s+/g, ' ').trim().slice(0, 40) || 'Bạn đọc');
+  const picture = u ? (u.picture || '') : '';
+  const ch = Math.max(0, Math.min(99999, parseInt(body.ch, 10) || 0));
+  /* hai lớp chặn spam: theo MỖI CHƯƠNG và theo toàn trang, trong 10 phút.
+     Khách bị chặn chặt hơn (2/6) so với tài khoản đã đăng nhập (3/12). */
+  const perChap = u ? 3 : 2, perAll = u ? 12 : 6;
+  if (!await rateLimit(env, 'rl:cmt:' + hash(uid) + ':' + slug + ':' + ch, perChap, 600) ||
+      !await rateLimit(env, 'rl:cmt:' + hash(uid), perAll, 600)) {
     return json({ ok: false, error: 'bạn bình luận hơi nhanh — 10 phút nữa hãy gửi tiếp' }, { status: 429, cors });
   }
   const key = 'cmt:' + slug;
   const arr = (await env.CZ_KV.get(key, { type: 'json' })) || [];
   const c = {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-    uid: u.uid, name: u.name || 'Bạn đọc', picture: u.picture || '', text,
+    uid, name, picture, text, ch, guest: !u,
     createdAt: new Date().toISOString(),
   };
   arr.unshift(c);
   if (arr.length > 500) arr.length = 500;
   await env.CZ_KV.put(key, JSON.stringify(arr));
-  return json({ ok: true, comment: publicComment(c) }, { cors });
+  return json({ ok: true, comment: publicComment(c), count: arr.length, guest: !u }, { cors });
 }
 async function deleteComment(slug, id, req, env, cors) {
+  const byKey = authed(req, env);            /* quản trị (ADMIN_KEY) xoá được mọi bình luận */
   const u = await userFromReq(req, env);
-  if (!u) return json({ ok: false, error: 'cần đăng nhập' }, { status: 401, cors });
+  const mod = byKey || isAdminUser(u, env);
+  if (!u && !byKey) return json({ ok: false, error: 'cần đăng nhập' }, { status: 401, cors });
   if (!env.CZ_KV) return noKV(cors);
   const key = 'cmt:' + slug;
   const arr = (await env.CZ_KV.get(key, { type: 'json' })) || [];
   const idx = arr.findIndex((c) => c.id === id);
   if (idx < 0) return json({ ok: false, error: 'không thấy bình luận' }, { status: 404, cors });
-  if (arr[idx].uid !== u.uid) return json({ ok: false, error: 'chỉ xoá được bình luận của chính bạn' }, { status: 403, cors });
+  if (!mod && arr[idx].uid !== (u && u.uid)) {
+    return json({ ok: false, error: 'chỉ xoá được bình luận của chính bạn' }, { status: 403, cors });
+  }
   arr.splice(idx, 1);
   await env.CZ_KV.put(key, JSON.stringify(arr));
-  return json({ ok: true, deleted: id }, { cors });
+  if (mod) await logAct(env, 'kiểm duyệt: xoá bình luận ' + id + ' của bộ ' + slug, req);
+  return json({ ok: true, deleted: id, count: arr.length, moderated: !!mod }, { cors });
 }

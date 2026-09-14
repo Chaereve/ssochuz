@@ -21,7 +21,11 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
 /* phục vụ file tĩnh trong repo (giống Cloudflare Pages, đủ dùng cho việc thử) */
 function serveStatic(req, res) {
   let rel = decodeURIComponent(new URL(req.url, 'http://x').pathname);
-  if (/^\/truyen\/[^/]+\/?$/.test(rel)) rel = '/reader.html';      /* /truyen/<slug>/ → trang đọc */
+  /* Cloudflare Pages proxy các URL sạch về đúng file HTML (giống _redirects) */
+  if (/^\/truyen(\/[^/]*)?\/?$/.test(rel)) rel = '/truyen.html';
+  else if (/^\/reader(\/[^/]*)?\/?$/.test(rel)) rel = '/truyen.html';
+  else if (rel === '/admin' || rel === '/admin/') rel = '/admin.html';
+  else if (rel === '/guide' || rel === '/guide/') rel = '/guide.html';
   else if (rel.endsWith('/')) rel += 'index.html';
   const file = path.join(ROOT, path.normalize(rel).replace(/^(\.\.[\\/])+/, ''));
   if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
@@ -63,6 +67,7 @@ class MemKV {
 }
 
 const PORT = Number(process.argv[2] || process.env.PORT || 8787);
+const HOST = process.env.HOST || '0.0.0.0';
 const env = {
   ADMIN_KEY: process.env.ADMIN_KEY || 'MOCK',
   CZ_KV: new MemKV(),
@@ -70,8 +75,32 @@ const env = {
   ALLOW_ORIGIN: '*',
   SESSION_SECRET: process.env.SESSION_SECRET || 'mock-session-secret-dai-hon-32-ky-tu',
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
+  SUPABASE_URL: process.env.SUPABASE_URL || '',
+  SUPABASE_JWT_SECRET: process.env.SUPABASE_JWT_SECRET || '',
+  ADMIN_EMAILS: process.env.ADMIN_EMAILS || 'kimtong1906@gmail.com',
   FIREBASE_PROJECT: process.env.FIREBASE_PROJECT || 'chuseoz-library',
 };
+
+/* Nạp sẵn dữ liệu repo vào KV để bản xem trước hành xử y như production
+   (web đọc KV trước, file tĩnh chỉ là đường dự phòng). Tắt bằng NO_SEED=1. */
+async function seedFromRepo() {
+  if (process.env.NO_SEED) return 0;
+  const reg = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/registry.json'), 'utf8'));
+  await env.CZ_KV.put('registry', JSON.stringify(reg), { metadata: { saved: new Date().toISOString(), rev: reg.rev } });
+  const dir = path.join(ROOT, 'data/book');
+  let n = 0;
+  for (const f of fs.readdirSync(dir)) {
+    if (!f.endsWith('.json')) continue;
+    const slug = f.slice(0, -5);
+    const txt = fs.readFileSync(path.join(dir, f), 'utf8');
+    let chaps = 0;
+    try { chaps = (JSON.parse(txt).chapters || []).length; } catch (e) {}
+    await env.CZ_KV.put('book:' + slug, txt, { metadata: { saved: new Date().toISOString(), chapters: chaps } });
+    n++;
+  }
+  await env.CZ_KV.put('_last', new Date().toISOString());
+  return n;
+}
 
 http.createServer(async (req, res) => {
   const p = new URL(req.url, 'http://x').pathname;
@@ -93,7 +122,9 @@ http.createServer(async (req, res) => {
   h['content-length'] = out.length;
   res.writeHead(r.status, h);
   res.end(out);
-}).listen(PORT, '0.0.0.0', () => {
+}).listen(PORT, HOST, async () => {
+  const seeded = await seedFromRepo();
   console.log('Worker giả lập (code thật, KV trong RAM): http://127.0.0.1:' + PORT);
-  console.log('  ADMIN_KEY=' + env.ADMIN_KEY + (env.GOOGLE_CLIENT_ID ? '' : '   (chưa có GOOGLE_CLIENT_ID → chưa thử được đăng nhập Google)'));
+  console.log('  ADMIN_KEY=' + env.ADMIN_KEY + ' · đã nạp ' + seeded + ' bộ từ repo vào KV');
+  console.log('  ADMIN_EMAILS=' + env.ADMIN_EMAILS + (env.SUPABASE_URL ? ' · SUPABASE_URL=' + env.SUPABASE_URL : ' · (chưa đặt SUPABASE_URL → /api/auth/supabase sẽ báo thiếu)'));
 });

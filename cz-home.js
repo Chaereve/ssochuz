@@ -63,8 +63,8 @@
                 (p ? 'Đọc tiếp' : 'Đọc từ đầu') + '</a>'
               : '<button class="btn lg off" disabled>' + ic('clock', 'i-s') + 'Sắp ra mắt</button>') +
             '<a class="btn lg" href="' + esc(CZ.storyURL(n.slug)) + '">' + ic('info', 'i-s') + 'Trang truyện</a>' +
-            '<button class="btn lg" data-shelf="' + esc(n.slug) + '" aria-pressed="' + (inShelf ? 'true' : 'false') + '">' +
-              ic('bookmark', 'i-s') + '<span>' + (inShelf ? 'Đã lưu' : 'Lưu vào tủ') + '</span></button>' +
+            '<button class="btn lg' + (inShelf ? ' on' : '') + '" data-shelf="' + esc(n.slug) + '" aria-pressed="' + (inShelf ? 'true' : 'false') + '" title="Lưu vào tủ truyện (icon tủ sách)">' +
+              ic('shelf', 'i-s') + '<span>' + (inShelf ? 'Đã lưu' : 'Lưu vào tủ') + '</span></button>' +
           '</div>' +
           '<div class="keys">' +
             '<span><kbd>←</kbd><kbd>→</kbd> đổi truyện</span>' +
@@ -225,6 +225,40 @@
       '<div class="pb"><i style="width:' + pct + '%"></i></div></div>' +
       '<span class="go">Đọc tiếp</span></article>';
   }
+  /* ---- ô đăng nhập trong mục My Space (nút đăng nhập cũng có ở đầu trang) ---- */
+  function paintAuthHint(empty) {
+    var box = $('#banAuth');
+    if (!box) return;
+    var u = (window.CZ_AUTH && CZ_AUTH.current && CZ_AUTH.current()) || null;
+    var can = !!(window.CZ_AUTH && CZ_AUTH.configured && CZ_AUTH.configured());
+    if (u) {
+      var liked = CZ.lib().reduce(function (a, n) { return a + (CZ.likedChapters ? CZ.likedChapters(n).length : 0); }, 0);
+      box.hidden = false;
+      box.className = 'authcard on';
+      box.innerHTML =
+        (u.picture ? '<img src="' + esc(u.picture) + '" alt="" referrerpolicy="no-referrer">'
+                   : '<span class="ava">' + esc(String(u.name || u.email || 'B')[0].toUpperCase()) + '</span>') +
+        '<div><b>Xin chào, ' + esc((u.name || u.email || 'bạn').split(' ')[0]) + '!</b>' +
+        '<span>' + esc(u.email || '') + ' · ' + num(CZ.shelfIds().length) + ' bộ trong tủ · ' + num(liked) + ' chương đã thích</span></div>' +
+        '<span class="grow"></span>' +
+        (CZ_AUTH.isAdmin && CZ_AUTH.isAdmin() ? '<a class="btn ghost sm" href="/admin">' + ic('shield', 'i-s') + 'Quản trị</a>' : '') +
+        '<button class="btn ghost sm" id="banOut">' + ic('logout', 'i-s') + 'Đăng xuất</button>';
+      var ob = box.querySelector('#banOut');
+      if (ob) ob.addEventListener('click', function () { CZ_AUTH.logout().then(function () { renderBan(); }); });
+      return;
+    }
+    box.hidden = false;
+    box.className = 'authcard';
+    box.innerHTML = '<span class="ava">' + ic('user', 'i-s') + '</span>' +
+      '<div><b>' + (empty ? 'Bắt đầu bàn đọc của bạn' : 'Đăng nhập để bình luận &amp; thích chương') + '</b>' +
+      '<span>Đăng nhập bằng Google qua Supabase để bình luận, thích từng chương và giữ danh tính của bạn. ' +
+      'Tủ truyện cùng tiến độ đọc vẫn được lưu ngay trong máy này kể cả khi chưa đăng nhập.</span></div>' +
+      '<span class="grow"></span>' +
+      '<button class="btn pri sm" id="banLogin">' + ic('google', 'i-s') + 'Đăng nhập</button>' +
+      (can ? '' : '<span class="sm muted">chưa cấu hình Supabase</span>');
+    var lb = box.querySelector('#banLogin');
+    if (lb) lb.addEventListener('click', function () { CZ_AUTH.login().catch(function () {}); });
+  }
   var banTab = 'doc';
   function docList() {
     return CZ.lib().filter(function (n) { return n.canRead && CZ.progress(n) > 0; })
@@ -238,9 +272,11 @@
     if (!sec) return;
     var docs = docList(), shelf = shelfList();
     var empty = !docs.length && !shelf.length;
-    sec.hidden = empty;
+    sec.hidden = false;                       /* luôn hiện: chưa có gì thì mời đăng nhập/bắt đầu đọc */
+    paintAuthHint(empty);
     $('#contRow').innerHTML = ''; $('#shelfRow').innerHTML = '';
-    if (empty) return;
+    if (empty) { $('#banTabs').classList.add('hide'); $('#banClear').classList.add('hide'); return; }
+    $('#banTabs').classList.remove('hide'); $('#banClear').classList.remove('hide');
     if (banTab === 'doc' && !docs.length) banTab = 'shelf';
     if (banTab === 'shelf' && !shelf.length) banTab = 'doc';
     $('#banDocCount').textContent = docs.length ? String(docs.length) : '';
@@ -689,8 +725,17 @@
       navCounts();
       /* số liệu KV về sau thì vẽ lại phần xếp hạng */
       CZ.onStats(function () { renderRank(); buildFilters(); render(); });
+      /* bấm Thích (ở trang này hoặc vừa quay lại) → BXH phải nhảy lên ngay */
+      if (CZ.onStatsChange) CZ.onStatsChange(function () { renderRank(); });
+      window.addEventListener('cz:stats', function () { renderRank(); });
+      /* một bộ vừa được đối chiếu số chương thật → vẽ lại thẻ cho đúng */
+      window.addEventListener('cz:count', function () {
+        try { CZ._setLib(); } catch (e) {}
+        renderFacts(CZ.lib()); renderNew(); renderRank(); render(); renderBan();
+      });
     } catch (e) { fail('lỗi dựng trang chủ', e); }
   }
+  if (window.CZ_AUTH && CZ_AUTH.onAuth) CZ_AUTH.onAuth(function () { try { renderBan(); } catch (e) {} });
   /* quay lại tab (hoặc bấm Back) → dựng lại bàn đọc cho khớp dữ liệu trong máy */
   window.addEventListener('pageshow', function () { if (CZ._memo.reg) { renderBan(); heroPaint(false); } });
   skeleton(12);

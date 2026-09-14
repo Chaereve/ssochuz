@@ -2,6 +2,7 @@
 
 **Mục tiêu:** sửa truyện/chương trên web quản trị ⇒ người đọc thấy **ngay** (vài giây), không commit GitHub, không đợi Cloudflare build, không tốn phút CI.
 Từ bản **1.4.0**: lượt đọc và bình chọn cũng nằm trên **KV** — **Firebase không còn cần nữa**.
+Từ bản **1.5.0** (đang dùng): đăng nhập qua **Supabase** (hết lỗi `origin_mismatch` của Google), thích **theo từng chương**, bình luận **ngay trong trang đọc** (khách chưa đăng nhập vẫn gửi được), và có `/api/recount` để **chữa dứt điểm số chương sai**.
 
 ```
 Admin (admin.html)  ──PUT──▶  Worker (worker/cms.js)  ──▶  Cloudflare KV
@@ -13,6 +14,50 @@ Admin (admin.html)  ──PUT──▶  Worker (worker/cms.js)  ──▶  Cloud
 ```
 
 GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới cần build); dữ liệu thì không đi qua GitHub nữa.
+
+## Có gì mới ở bản 1.5.0
+
+| Trước | Sau |
+|---|---|
+| Đăng nhập Google báo **`400 origin_mismatch`** (phải khai đúng redirect URI cho từng tên miền, kể cả bản xem trước) | Đổi token **Supabase** sang session của Worker (`POST /api/auth/supabase`). Supabase dùng PKCE + trang redirect riêng nên thêm tên miền chỉ mất 1 dòng trong dashboard Supabase |
+| Chỉ có **1 nút thích cho cả bộ** | Thích **theo từng chương**: `POST /api/vote {slug, ch, vote, vid}`; phiếu lưu theo `người#chương`, bộ đếm `it.chap = {12: 3}` |
+| Bấm thích xong **bảng xếp hạng không đổi** | Vote ghi thẳng vào KV `stats` + chuỗi ngày, và `/api/vote` trả `votes/votesDay/votesWeek/votesMonth` để web vẽ lại Top vote ngay |
+| Bình luận chỉ hiện ở trang giới thiệu truyện (Giscus) | Bình luận nằm trên KV, lọc theo chương (`GET /api/comments/<slug>?ch=12`), hiện cả trong trang đọc |
+| Chưa đăng nhập thì **không bình luận được** | Khách gửi được bình luận kèm `vid` (mã máy ẩn danh) — chặn spam chặt hơn (2 bình luận/chương/10 phút, 6 bình luận/10 phút) |
+| **Số chương hiện sai** dù đã sửa file (vd "Be My Angel" repo 29 chương, web vẫn hiện 30) vì KV còn giữ bản cũ | `POST /api/recount` đếm lại từ chương thật trong KV rồi sửa `chapters` + `countLabel` trong registry; `PUT /api/book/<slug>` tự sửa nhãn sau khi ghi; `/admin` → tab **Bác sĩ dữ liệu** soi registry ↔ KV ↔ repo |
+| Không biết ai vừa làm gì trên KV | `log` (tối đa 200 dòng) + `GET /api/admin/log` |
+| Quản trị phải dò từng bộ để tìm bình luận xấu | `GET /api/admin/comments` (mọi bộ, có phân trang) + xoá bằng ADMIN_KEY |
+
+## Biến môi trường (Settings → Variables and Secrets)
+
+| Biến | Bắt buộc | Dùng làm gì |
+|---|---|---|
+| `CZ_KV` (binding KV) | ✅ | nơi chứa registry, chương, bình luận, số liệu |
+| `ADMIN_KEY` | ✅ | khoá cho `/admin` ghi dữ liệu (dài ≥ 24 ký tự) |
+| `SESSION_SECRET` | ✅ | ký session token HS256 (dài ≥ 32 ký tự) |
+| `SUPABASE_URL` | nên có | vd `https://xyz.supabase.co` — bật đăng nhập Supabase |
+| `SUPABASE_JWT_SECRET` | nên có | JWT Secret trong Supabase → Dashboard → Settings → API. Có biến này thì Worker tự verify token (HS256), không cần gọi mạng |
+| `ADMIN_EMAILS` | nên có | danh sách email quản trị, phân cách bằng dấu phẩy. Ai đăng nhập bằng email này thì `/api/auth/me` trả `admin: true` và mục **Quản trị** hiện ra |
+| `GOOGLE_CLIENT_ID` | không | đường cũ: đăng nhập thẳng bằng Google Identity Services |
+| `ALLOW_ORIGIN` | không | mặc định `*`; muốn chặt thì điền tên miền web |
+| `BLOG` | không | feed Blogger cho nút "Đồng bộ Blogger" |
+| `FIREBASE_PROJECT` | không | chỉ dùng khi muốn kéo số liệu cũ từ Firestore (1 lần) |
+| `STATS_FLUSH_MS` | không | thời gian gom số liệu trước khi ghi KV (mặc định 20000) |
+
+## Danh sách API bản 1.5.0 (bổ sung cho bảng ở dưới)
+
+| Method | Đường dẫn | Ai gọi | Việc |
+|---|---|---|---|
+| POST | `/api/vote` | mở | `{slug, ch?, vote: 1|0, vid}` — `ch` là số chương (bỏ `ch` = bầu cho cả bộ, như bản cũ). Trả `{votes, total, chapVotes, votesDay/Week/Month, voted, changed}` |
+| GET | `/api/comments/<slug>?ch=12` | mở | bình luận của riêng chương 12 + `byChapter` (số bình luận từng chương) |
+| POST | `/api/comments/<slug>` | mở | `{text, ch?, vid, name?}` — có session thì lấy tên/ảnh từ tài khoản, không có thì là bình luận khách |
+| DELETE | `/api/comments/<slug>/<id>` | tác giả hoặc quản trị | ADMIN_KEY / email quản trị xoá được của bất kỳ ai |
+| POST | `/api/recount` | cần khoá | đếm lại số chương thật trong KV, sửa `chapters` + `countLabel` của registry. Trả `{books, fixed[], missing[], orphan[]}` |
+| GET | `/api/admin/comments?limit=&slug=&q=` | cần khoá | mọi bình luận trên KV để kiểm duyệt |
+| GET | `/api/admin/log` | cần khoá | 200 thao tác gần nhất (ai, lúc nào, làm gì) |
+| GET | `/api/admin/stats` | cần khoá | số liệu chi tiết + chuỗi 60 ngày + phiếu theo từng chương |
+| POST | `/api/auth/supabase` | mở | đổi `access_token` của Supabase → session token của Worker |
+| GET | `/api/auth/config` | mở | web đọc để biết Supabase/Google đã bật chưa, ai là quản trị |
 
 ## Có gì mới ở bản 1.4.0 (sửa những thứ đang hỏng)
 
@@ -37,7 +82,7 @@ GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới c�
 | GET | `/api/schedule` | mở | lịch ra chương |
 | GET | `/api/stats` | mở | **lượt đọc/bình chọn từ KV** (tổng + hôm nay/tuần/tháng) |
 | POST | `/api/view` | mở | đếm 1 lượt đọc `{slug, vid, ch}` |
-| POST | `/api/vote` | mở | bầu/bỏ bầu `{slug, vote: 1|0, vid}` → trả số phiếu mới |
+| POST | `/api/vote` | mở | bầu/bỏ bầu `{slug, ch?, vote: 1|0, vid}` → trả số phiếu mới (kèm `chapVotes`) |
 | PUT | `/api/registry` | cần khoá | ghi toàn bộ thư viện |
 | PUT | `/api/book/<slug>` | cần khoá | ghi 1 bộ (thêm/sửa chương) |
 | DELETE | `/api/book/<slug>` | cần khoá | xoá 1 bộ khỏi KV |
@@ -49,9 +94,9 @@ GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới c�
 | POST | `/api/stats/refresh` | cần khoá | ghi hết số đang đệm xuống KV |
 | POST | `/api/auth/google` | cần GOOGLE_CLIENT_ID + SESSION_SECRET | đổi Google idToken → session token (HS256) |
 | GET | `/api/auth/me` | có session | trả user từ session |
-| GET | `/api/comments/<slug>` | mở | đọc bình luận công khai |
-| POST | `/api/comments/<slug>` | cần đăng nhập | gửi bình luận (`Authorization: Bearer <session>`) |
-| DELETE | `/api/comments/<slug>/<id>` | tác giả | xoá bình luận của chính mình |
+| GET | `/api/comments/<slug>` | mở | đọc bình luận công khai (`?ch=12` để lọc theo chương) |
+| POST | `/api/comments/<slug>` | mở | gửi bình luận `{text, ch?, vid}`; có `Authorization: Bearer <session>` thì gắn tên/ảnh tài khoản |
+| DELETE | `/api/comments/<slug>/<id>` | tác giả hoặc quản trị | xoá bình luận của chính mình (ADMIN_KEY xoá được mọi cái) |
 
 ## 1. Tạo Worker (5 phút, làm 1 lần)
 
@@ -253,7 +298,11 @@ Sau khi nạp xong thì **tắt Firebase luôn cũng được** — web không g
 | admin báo *KV chưa gắn* / API trả 503 | chưa bind namespace | Settings → Bindings → KV namespace, **Variable name** phải đúng chữ `CZ_KV` |
 | Lưu xong nhưng web vẫn dữ liệu cũ | chưa dán URL Worker vào `cz-config.js` | dán `window.CZ_API = 'https://...'` rồi deploy lại **một lần** |
 | Bấm **Đồng bộ Blogger** mà không đổi gì | trang blogspot đổi cấu trúc thẻ | Worker giờ đọc `<div class="truyen-card">`; nếu đổi nữa thì sửa `parseCards()` trong `worker/cms.js` |
-| Đăng nhập Google báo *Invalid keyData* | worker đang chạy là **bản cũ** | dán lại `worker/cms.js` (bản 1.4.0) rồi Deploy |
+| Đăng nhập Google báo *Invalid keyData* | worker đang chạy là **bản cũ** | dán lại `worker/cms.js` (bản 1.5.0) rồi Deploy |
+| Google báo **`400: origin_mismatch`** | redirect URI chưa khai trong Google Cloud Console | dùng Supabase thay (mục 7b): thêm tên miền vào Supabase → Authentication → URL Configuration là xong, không phải chờ Google duyệt |
+| Web hiện **sai số chương** dù file trong repo đã đúng | KV còn giữ bản cũ, mà web thì đọc KV trước | `/admin` → **Bác sĩ dữ liệu** → *Soi dữ liệu* → *Nạp chương từ repo lên KV* → *Đếm lại số chương trên KV*; hoặc gọi thẳng `POST /api/recount` kèm `x-admin-key` |
+| Bấm **Thích** mà Top vote không nhảy | web đang đọc bản JS cũ trong cache | Ctrl+F5; kiểm tra `?v=` ở cuối thẻ `<script>` trong HTML đã đổi chưa |
+| Bình luận báo *"không nhận được mã máy"* | web gửi thiếu `vid` (bản JS cũ) | Ctrl+F5 để lấy `cz-app.js` mới |
 | Đăng nhập Google báo *sai audience* | `GOOGLE_CLIENT_ID` trên Worker ≠ Client ID trong `cz-config.js` | sửa cho khớp 2 chỗ |
 | Nút **Thích** báo *lưu trên máy bạn* | web không gọi được Worker (sai URL/CORS) | xem Console; đặt `ALLOW_ORIGIN` có domain web của bạn |
 | Số liệu vẫn 0 sau khi có người đọc | chưa deploy bản 1.4.0, hoặc web gọi Worker khác | `/admin` → **Số liệu** → **Đọc lại**; `--stats` để xem KV |
@@ -288,4 +337,41 @@ window.CZ_GOOGLE_CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com';   // �
 Chi tiết từng bước (tạo Client ID, consent screen, test) xem **`HUONG-DAN-DANG-NHAP-BINH-LUAN.md`** ở gốc repo.
 Đăng nhập Google yêu cầu HTTPS (localhost/127.0.0.1 được phép khi test).
 
-**Lưu ý:** bình luận là công khai, mỗi user chỉ xoá được bình luận của mình; bản này chưa có kiểm duyệt/admin xoá.
+**Lưu ý:** bình luận là công khai. Tác giả xoá được bình luận của mình; **quản trị** (ADMIN_KEY hoặc email trong `ADMIN_EMAILS`) xoá được của bất kỳ ai, và xem toàn bộ ở `/admin` → tab **Bình luận**.
+
+## 7b. Đăng nhập bằng Supabase (khuyên dùng — hết lỗi `origin_mismatch`)
+
+Google Identity Services bắt khai **đúng** từng redirect URI, nên mỗi lần đổi tên miền (hoặc mở bản xem trước) là bị
+`400: origin_mismatch`. Supabase không vướng chuyện đó: nó dùng luồng PKCE và một trang redirect duy nhất.
+
+**1. Tạo project Supabase** → <https://supabase.com/dashboard> → *New project* (chọn region Singapore cho gần).
+
+**2. Bật Google làm nhà cung cấp** → *Authentication* → *Providers* → **Google** → bật →
+dán *Client ID* + *Client Secret* lấy từ Google Cloud Console (ứng dụng loại **Web**, không cần khai redirect URI của web mình —
+chỉ cần `https://<project>.supabase.co/auth/v1/callback`, Supabase tự tạo sẵn).
+
+**3. Khai tên miền web** → *Authentication* → *URL Configuration*:
+- **Site URL**: `https://ten-mien-that.com`
+- **Redirect URLs**: thêm tất cả những nơi có thể mở web — `https://ten-mien-that.com/**`, bản Pages tạm `https://*.pages.dev/**`, và `http://localhost:8787/**` khi test.
+
+**4. Lấy 2 giá trị** → *Settings* → *API*: `Project URL` và `anon public key`.
+Lấy thêm **JWT Secret** (cùng trang) để Worker tự verify token, khỏi phải gọi mạng.
+
+**5. Dán vào web** — 1 trong 2 cách:
+- `cz-config.js` (commit lên GitHub, đổi là phải deploy lại):
+  ```js
+  window.CZ_SUPABASE_URL = 'https://xyz.supabase.co';
+  window.CZ_SUPABASE_ANON_KEY = 'eyJhbGciOi...';
+  window.CZ_ADMIN_EMAILS = ['ban@gmail.com'];
+  ```
+- hoặc `/admin` → **Cài đặt & đồng bộ** → mục *Đăng nhập người đọc (Supabase)* → **Lưu** (lưu trên KV, đổi được ngay, không cần deploy).
+  `cz-config.js` thắng nếu cả hai nơi đều điền.
+
+**6. Đặt biến cho Worker:** `SUPABASE_URL`, `SUPABASE_JWT_SECRET`, `ADMIN_EMAILS`, `SESSION_SECRET`.
+
+**Luồng chạy thật:** người đọc bấm *Đăng nhập* → Supabase mở Google → quay về web với `access_token` →
+`POST /api/auth/supabase` → Worker verify chữ ký (HS256 bằng JWT Secret, hoặc RS256/ES256 bằng JWKS của Supabase) →
+cấp session token của Worker → web lưu lại, dùng cho bình luận/bầu chọn. Kiểm tra nhanh:
+`/admin` → tab **Cài đặt** → nút *Hỏi Worker*, hoặc `curl https://<worker>/api/auth/config`.
+
+Chưa bật Supabase thì web tự quay về đường Google cũ (nếu có `GOOGLE_CLIENT_ID`), và người đọc vẫn bình luận được bằng tên khách.

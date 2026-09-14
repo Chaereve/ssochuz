@@ -17,12 +17,42 @@ function makeWorker() {
   const REG = JSON.parse(read('data/registry.json'));
   const books = {};
   const calls = [];
+  const log = [{ at: '2026-09-14T02:00:00.000Z', who: 'admin-key', text: 'nạp 62 bộ lên KV' }];
+  const cmts = {
+    'be-my-angel': [
+      { id: 'c1', uid: 'u1', name: 'Bạn Đọc A', picture: '', text: 'Chương này hay quá', ch: 5, createdAt: '2026-09-14T01:00:00.000Z' },
+      { id: 'c2', uid: 'g:abc', name: 'Khách', picture: '', text: 'Quảng cáo spam', ch: 0, guest: true, createdAt: '2026-09-14T01:05:00.000Z' }
+    ]
+  };
   function loadBook(slug) {
     if (!books[slug]) {
       const p = path.join(__dirname, '..', 'data/book', slug + '.json');
       books[slug] = fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null;
     }
     return books[slug];
+  }
+  /* "Be My Angel" trên KV bị lệch: có 30 chương (bản cũ) trong khi repo có 29 —
+     đúng cái bệnh người dùng gặp: sửa file trong repo rồi mà web vẫn hiện 30.
+     Bộ nào admin vừa ghi lên KV (putted) thì KV trả bản mới, hết lệch. */
+  const putted = new Set();
+  function kvBook(slug) {
+    if (putted.has(slug)) return books[slug] || null;
+    const b = loadBook(slug);
+    if (!b) return null;
+    if (slug === 'be-my-angel') {
+      const c = JSON.parse(JSON.stringify(b));
+      c.chapters = c.chapters.concat([{ t: 'Chương ma (bản KV cũ)', html: '<p>cũ</p>' }]);
+      return c;
+    }
+    return b;
+  }
+  /* Worker thật: ghi 1 bộ xong thì sửa luôn chapters + countLabel trong registry */
+  function syncCount(slug) {
+    const b = books[slug];
+    const n = REG.lib.find((x) => x.slug === slug);
+    if (!b || !n || !Array.isArray(b.chapters)) return;
+    n.chapters = b.chapters.length;
+    n.countLabel = b.chapters.length + '/' + b.chapters.length;
   }
   function json(body, status, ok) {
     return Promise.resolve({
@@ -34,11 +64,69 @@ function makeWorker() {
     url = String(url); opt = opt || {};
     calls.push((opt.method || 'GET') + ' ' + url.replace(BASE, ''));
     if (url.includes('firestore.googleapis.com')) return json({ error: { code: 403 } }, 403, false);
+    /* file tĩnh trong repo (bác sĩ dữ liệu đọc để đối chiếu) */
+    if (!url.startsWith(BASE) && !url.startsWith('http')) {
+      const m = String(url).split('?')[0].match(/^\/data\/book\/([\w.\-]+)\.json$/);
+      if (m) {
+        const f = path.join(__dirname, '..', 'data/book', m[1] + '.json');
+        return fs.existsSync(f)
+          ? json(JSON.parse(fs.readFileSync(f, 'utf8')))
+          : json({ ok: false, error: 'không có file' }, 404, false);
+      }
+      if (String(url).split('?')[0] === '/data/registry.json') return json(REG);
+      return json({ ok: false, error: 'không phải Worker' }, 404, false);
+    }
     if (!url.startsWith(BASE)) return json({ ok: false, error: 'không phải Worker' }, 404, false);
     const p = url.slice(BASE.length).split('?')[0];
     const h = opt.headers || {};
     const auth = h['x-admin-key'] === KEY;
-    if (p === '/api/health') return json({ ok: true, version: '1.1.0', kv: true, books: Object.keys(books).length, novels: REG.lib.length, regRev: REG.rev, lastWrite: '2026-09-13T03:00:00Z' });
+    if (p === '/api/health') return json({
+      ok: true, version: '1.5.0', kv: true, books: Object.keys(books).length, novels: REG.lib.length,
+      regRev: REG.rev, lastWrite: '2026-09-13T03:00:00Z',
+      stats: { items: 2, views: 100, votes: 7 },
+      auth: { supabase: true, supabaseUrl: 'https://xyz.supabase.co', supabaseHs256: true, google: false, session: true, adminEmails: ['boss@gmail.com'] }
+    });
+    if (p === '/api/auth/config') return json({ ok: true, supabase: true, supabaseUrl: 'https://xyz.supabase.co', google: false, session: true, adminEmails: ['boss@gmail.com'], version: '1.5.0' });
+    if (p === '/api/recount') {
+      if (!auth) return json({ ok: false, error: 'sai key' }, 401, false);
+      const fixed = [];
+      REG.lib.forEach((n) => {
+        const b = kvBook(n.slug);
+        if (!b) return;
+        const real = (b.chapters || []).length;
+        if (Number(n.chapters) !== real || String(n.countLabel) !== real + '/' + real) {
+          fixed.push({ slug: n.slug, title: n.title, was: n.chapters, now: real, labelWas: n.countLabel, labelNow: real + '/' + real });
+          n.chapters = real; n.countLabel = real + '/' + real;
+        }
+      });
+      log.unshift({ at: new Date().toISOString(), who: 'admin-key', text: 'đếm lại số chương: sửa ' + fixed.length + ' bộ' });
+      return json({ ok: true, books: REG.lib.length, novels: REG.lib.length, fixed, missing: [], orphan: [], rev: REG.rev });
+    }
+    if (p === '/api/admin/comments') {
+      if (!auth) return json({ ok: false, error: 'sai key' }, 401, false);
+      const out = [];
+      Object.keys(cmts).forEach((slug) => cmts[slug].forEach((c) => out.push(Object.assign({ slug }, c))));
+      return json({ ok: true, comments: out, count: out.length, slugs: Object.keys(cmts).length });
+    }
+    if (p === '/api/admin/log') {
+      if (!auth) return json({ ok: false, error: 'sai key' }, 401, false);
+      return json({ ok: true, items: log, count: log.length });
+    }
+    if (p === '/api/admin/stats') {
+      if (!auth) return json({ ok: false, error: 'sai key' }, 401, false);
+      return json({
+        ok: true, updatedAt: new Date().toISOString(),
+        items: {
+          'third-person': { views: 120, viewsDay: 5, viewsWeek: 30, votes: 8, votesWeek: 3, votesMonth: 6, voters: 7, chapVotes: { 2: 5, 3: 3 } },
+          'be-my-angel': { views: 80, viewsDay: 2, viewsWeek: 9, votes: 4, votesWeek: 1, votesMonth: 2, voters: 4, chapVotes: { 5: 4 } }
+        },
+        days: [
+          { day: '2026-09-12', views: 40, votes: 3 },
+          { day: '2026-09-13', views: 55, votes: 5 },
+          { day: '2026-09-14', views: 61, votes: 9 }
+        ]
+      });
+    }
     if (p === '/api/whoami') return auth ? json({ ok: true, role: 'admin' }) : json({ ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, 401, false);
     if (p === '/api/registry' && (opt.method || 'GET') === 'GET') return json(REG);
     if (p === '/api/registry' && opt.method === 'PUT') {
@@ -50,13 +138,14 @@ function makeWorker() {
     if (m) {
       const slug = decodeURIComponent(m[1]);
       if ((opt.method || 'GET') === 'GET') {
-        const b = loadBook(slug);
+        const b = kvBook(slug);
         return b ? json(b) : json({ ok: false, error: 'chưa có' }, 404, false);
       }
       if (opt.method === 'PUT') {
         if (!auth) return json({ ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, 401, false);
         books[slug] = JSON.parse(opt.body);
-        return json({ ok: true });
+        putted.add(slug); syncCount(slug);
+        return json({ ok: true, chapters: (books[slug].chapters || []).length });
       }
       if (opt.method === 'DELETE') {
         if (!auth) return json({ ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, 401, false);
@@ -64,13 +153,23 @@ function makeWorker() {
         return json({ ok: true, deleted: slug });
       }
     }
+    const md = p.match(/^\/api\/comments\/([^/]+)\/([^/]+)$/);
+    if (md && opt.method === 'DELETE') {
+      if (!auth) return json({ ok: false, error: 'cần đăng nhập' }, 401, false);
+      const arr = cmts[decodeURIComponent(md[1])] || [];
+      const i = arr.findIndex((c) => c.id === decodeURIComponent(md[2]));
+      if (i < 0) return json({ ok: false, error: 'không thấy' }, 404, false);
+      arr.splice(i, 1);
+      log.unshift({ at: new Date().toISOString(), who: 'admin-key', text: 'kiểm duyệt: xoá bình luận ' + md[2] });
+      return json({ ok: true, deleted: md[2], count: arr.length, moderated: true });
+    }
     if (p === '/api/import') {
       if (!auth) return json({ ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, 401, false);
       const body = JSON.parse(opt.body);
       const b = loadBook(body.slug) || { title: body.slug, slug: body.slug, chapters: [] };
       b.chapters = b.chapters || [];
       b.chapters.push({ t: 'Chương ' + (b.chapters.length + 1) + ': Từ Blogger', html: '<p>Nội dung lấy từ Blogger.</p>' });
-      books[body.slug] = b;
+      books[body.slug] = b; putted.add(body.slug); syncCount(body.slug);
       return json({ ok: true, added: 'Chương ' + b.chapters.length, chapters: b.chapters.length, url: 'https://chuseoz.blogspot.com/x', mode: h['x-import-mode'] || 'append' });
     }
     if (p === '/api/sync') return auth ? json({ ok: true, cards: 62, changed: 3, rev: '2026-09-13 10:00' }) : json({ ok: false, error: 'sai key' }, 401, false);
@@ -84,7 +183,7 @@ function makeWorker() {
       : json({ ok: false, error: 'sai key' }, 401, false);
     return json({ ok: false, error: 'không có endpoint ' + p }, 404, false);
   }
-  return { fetchMock, calls, books, REG, loadBook };
+  return { fetchMock, calls, books, REG, loadBook, kvBook, cmts, log };
 }
 
 const $ = (d, s) => d.querySelector(s), $$ = (d, s) => [...d.querySelectorAll(s)];
@@ -241,7 +340,7 @@ async function openAdmin(worker, key) {
   if (okBtn) { click(okBtn); await wait(500); }
   out.dongBo = ($(doc, '#msg') || {}).textContent.slice(0, 70);
 
-  /* ---------- 12. chưa nối Worker vẫn xem được dữ liệu tĩnh ---------- */
+  /* ---------- 12. NGƯỜI ĐỌC THƯỜNG: cổng quản trị phải đóng ---------- */
   const off = page('admin.html', { fetch: (url, opt) => {
     url = String(url);
     if (url.startsWith('/data/registry.json')) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(JSON.parse(read('data/registry.json'))) });
@@ -255,18 +354,163 @@ async function openAdmin(worker, key) {
     return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
   } });
   await wait(700);
-  /* mở trang là dùng được ngay: chưa có khoá thì tự mở dữ liệu tĩnh, không bắt bấm gì */
-  out.tuMoDuLieuTinh = {
-    rowsTruocKhiBam: off.doc.querySelectorAll('#tb tbody tr').length,
-    khungKetNoiConHien: !off.doc.querySelector('#scConnect').classList.contains('hide'),
-    apiDaDienSan: (off.doc.querySelector('#inApi') || {}).value || ''
+  out.congDong = {
+    gateHien: !off.doc.querySelector('#gate').classList.contains('hide'),
+    appAn: off.doc.querySelector('#scApp').classList.contains('hide'),
+    coNutDangNhap: !!off.doc.querySelector('#gateLogin'),
+    aiDuocVao: String((off.doc.querySelector('#gateWho') || {}).textContent || '').replace(/\s+/g, ' ').slice(0, 90),
+    loi: off.errors.slice(0, 3)
   };
+  /* bấm "xem dữ liệu tĩnh" cũng không lọt — không có quyền thì không thấy gì */
   off.doc.querySelector('#btnLocal').dispatchEvent(new off.win.MouseEvent('click', { bubbles: true }));
-  await wait(500);
-  out.cheDoTinh = {
+  await wait(400);
+  out.congDongSauBam = {
+    appVanAn: off.doc.querySelector('#scApp').classList.contains('hide'),
     rows: off.doc.querySelectorAll('#tb tbody tr').length,
-    libCount: (off.doc.querySelector('#libCount') || {}).textContent,
-    errors: off.errors.slice(0, 4)
+    loi: off.errors.slice(0, 3)
+  };
+
+  /* ---------- 13. ĐĂNG NHẬP BẰNG EMAIL QUẢN TRỊ (Supabase) → vào được ---------- */
+  /* lấy đúng email đang khai trong cz-config.js — không hardcode để test khỏi cũ */
+  const bossEmail = (read('cz-config.js').match(/CZ_ADMIN_EMAILS\s*=\s*\[\s*'([^']+)'/) || [, ''])[1];
+  const adminPage = page('admin.html', {
+    fetch: w.fetchMock,
+    setup(win) {
+      /* máy của chủ trang: đã lưu URL Worker + ADMIN_KEY từ lần trước */
+      win.localStorage.setItem('cz_kv_api', BASE);
+      win.localStorage.setItem('cz_kv_key', KEY);
+      win.localStorage.setItem('chuseoz-user', JSON.stringify({
+        uid: 'sb-1', email: bossEmail, name: 'Chủ Trang', picture: '',
+        exp: Math.floor(Date.now() / 1000) + 3600, provider: 'supabase'
+      }));
+      win.localStorage.setItem('chuseoz-auth-token', 'phien-gia-lap');
+    }
+  });
+  await wait(500);
+  const adoc = adminPage.doc, awin = adminPage.win;
+  const aclick = s => { const e = typeof s === 'string' ? $(adoc, s) : s; if (!e) return 'MISSING ' + s; e.dispatchEvent(new awin.MouseEvent('click', { bubbles: true })); return 'ok'; };
+  out.dangNhapQuanTri = {
+    gateAn: $(adoc, '#gate').classList.contains('hide'),
+    appMo: !$(adoc, '#scApp').classList.contains('hide'),
+    aiDangNhap: String(($(adoc, '#whoBox') || {}).textContent || '').trim(),
+    huyHieuQuanTri: $(adoc, '#roleBadge') && !$(adoc, '#roleBadge').classList.contains('hide'),
+    coNutDangXuat: $(adoc, '#btnLogout') && !$(adoc, '#btnLogout').classList.contains('hide'),
+    loi: adminPage.errors.slice(0, 3)
+  };
+
+  /* ---------- 14. BÁC SĨ DỮ LIỆU: bắt đúng bệnh KV lệch repo ---------- */
+  aclick($$(adoc, '#tabs button').find(b => b.dataset.tab === 'doctor'));
+  await wait(1600);
+  const docRows = $$(adoc, '#docList .docrow');
+  const angelRow = docRows.find(r => /be-my-angel/.test(r.textContent));
+  out.bacSi = {
+    daQuet: ($(adoc, '#docSel') || {}).textContent.slice(0, 60),
+    tiles: String(($(adoc, '#docTiles') || {}).textContent || '').replace(/\s+/g, ' ').slice(0, 80),
+    soVanDe: docRows.length,
+    batDuocBeMyAngel: !!angelRow,
+    noiDung: angelRow ? String(angelRow.textContent || '').replace(/\s+/g, ' ').slice(0, 180) : '(không thấy)',
+    loi: adminPage.errors.slice(0, 3)
+  };
+  /* đếm lại trên KV → registry phải sửa nhãn cho khớp */
+  aclick('#docRecount');
+  await wait(900);
+  const angel = w.REG.lib.find(n => n.slug === 'be-my-angel');
+  out.bacSiDemLai = {
+    chapters: angel.chapters, countLabel: angel.countLabel,
+    msg: ($(adoc, '#msg') || {}).textContent.slice(0, 70)
+  };
+
+  /* ---------- 14b. CHỮA TẬN GỐC: nạp chương từ repo lên KV rồi đếm lại ---------- */
+  aclick('#docFixKv');
+  await wait(200);
+  const okKv = $(adoc, '#czOk');
+  out.napRepoCoXacNhan = !!okKv;
+  if (okKv) { aclick(okKv); await wait(1400); }
+  const kvAngel = w.kvBook('be-my-angel');
+  out.napRepoLenKv = {
+    chuongTrenKv: kvAngel ? (kvAngel.chapters || []).length : null,
+    chuongTrongRepo: (w.loadBook('be-my-angel').chapters || []).length,
+    msg: ($(adoc, '#msg') || {}).textContent.slice(0, 90)
+  };
+  const angel2 = w.REG.lib.find(n => n.slug === 'be-my-angel');
+  out.napRepoXongRegistry = { chapters: angel2.chapters, countLabel: angel2.countLabel };
+
+  /* ---------- 15. KIỂM DUYỆT BÌNH LUẬN ---------- */
+  aclick($$(adoc, '#tabs button').find(b => b.dataset.tab === 'cmts'));
+  await wait(700);
+  const modRows = $$(adoc, '#cmList .modrow');
+  out.kiemDuyet = {
+    soDong: modRows.length,
+    tiles: String(($(adoc, '#cmTiles') || {}).textContent || '').replace(/\s+/g, ' ').slice(0, 70),
+    coChuong: /chương 5/.test((modRows[0] || {}).textContent || ''),
+    coNhanKhach: /Khách/.test((modRows[1] || {}).textContent || ''),
+    loi: adminPage.errors.slice(0, 3)
+  };
+  /* lọc theo chữ */
+  $(adoc, '#cmQ').value = 'spam';
+  $(adoc, '#cmQ').dispatchEvent(new awin.Event('input', { bubbles: true }));
+  await wait(150);
+  out.kiemDuyetLoc = { soDong: $$(adoc, '#cmList .modrow').length };
+  $(adoc, '#cmQ').value = '';
+  $(adoc, '#cmQ').dispatchEvent(new awin.Event('input', { bubbles: true }));
+  await wait(150);
+  /* xoá bình luận khách (có hộp xác nhận) */
+  const delBtn = $$(adoc, '#cmList .modrow [data-modd]')[1];
+  aclick(delBtn);
+  await wait(150);
+  const okBtn2 = $(adoc, '#czOk');
+  out.kiemDuyetCoXacNhan = !!okBtn2;
+  if (okBtn2) { aclick(okBtn2); await wait(500); }
+  out.kiemDuyetXoa = {
+    conLai: $$(adoc, '#cmList .modrow').length,
+    trenWorker: (w.cmts['be-my-angel'] || []).length,
+    nhatKy: (w.log[0] || {}).text
+  };
+
+  /* ---------- 16. NHẬT KÝ HOẠT ĐỘNG ---------- */
+  aclick($$(adoc, '#tabs button').find(b => b.dataset.tab === 'log'));
+  await wait(500);
+  out.nhatKy = {
+    soDong: $$(adoc, '#logList .logrow').length,
+    trangThai: ($(adoc, '#logState') || {}).textContent.slice(0, 60),
+    dongDau: String(($(adoc, '#logList .logrow') || {}).textContent || '').replace(/\s+/g, ' ').slice(0, 80),
+    loi: adminPage.errors.slice(0, 3)
+  };
+
+  /* ---------- 17. SỐ LIỆU: biểu đồ + phiếu theo chương ---------- */
+  aclick($$(adoc, '#tabs button').find(b => b.dataset.tab === 'stats'));
+  await wait(700);
+  out.soLieuMoi = {
+    coBieuDo: !!$(adoc, '#stChart svg'),
+    soCot: $$(adoc, '#stChart svg rect').length,
+    tiles: String(($(adoc, '#stTiles') || {}).textContent || '').replace(/\s+/g, ' ').slice(0, 100),
+    chuongThichNhieu: /ch2 \(5\)/.test(String(($(adoc, '#stTb') || {}).textContent || '')),
+    trangThai: ($(adoc, '#stState') || {}).textContent.slice(0, 80),
+    loi: adminPage.errors.slice(0, 3)
+  };
+
+  /* ---------- 18. CẤU HÌNH ĐĂNG NHẬP SUPABASE ---------- */
+  aclick($$(adoc, '#tabs button').find(b => b.dataset.tab === 'settings'));
+  await wait(300);
+  $(adoc, '#aUrl').value = 'https://moinhat.supabase.co';
+  $(adoc, '#aKey').value = 'anon-key-thu';
+  $(adoc, '#aGoogle').value = '123.apps.googleusercontent.com';
+  $(adoc, '#aAdmins').value = 'Boss@Gmail.com , ban2@gmail.com';
+  $(adoc, '#aProvider').value = 'supabase';
+  aclick('#sSave');
+  await wait(600);
+  const authSaved = (w.REG.settings || {}).auth || {};
+  out.cauHinhDangNhap = {
+    url: authSaved.supabaseUrl, key: authSaved.supabaseAnonKey, provider: authSaved.provider,
+    emails: authSaved.adminEmails,
+    google: authSaved.googleClientId
+  };
+  /* hỏi Worker xem đã bật Supabase chưa */
+  aclick('#aCheck');
+  await wait(400);
+  out.cauHinhKiemTra = {
+    chip: String(($(adoc, '#aState') || {}).textContent || '').replace(/\s+/g, ' ').slice(0, 110),
+    loi: adminPage.errors.slice(0, 3)
   };
 
   out.errors = p.errors.slice(0, 6);
