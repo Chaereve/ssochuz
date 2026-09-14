@@ -9,11 +9,16 @@ Chạy bằng `python3 tools/audit_data.py` · rev dữ liệu: `2026-09-13a` ·
 | Tổng chương có nội dung thật | 1198 |
 | Bộ chưa có chương (khoá đọc) | 17 |
 | Số bộ trong bảng xếp hạng dùng số tự đặt | 0 |
+| Tiêu đề chương lặp cần đổi tên | 0 |
 | Lỗi cần sửa | 0 |
 
 ## Lỗi
 
 Không có lỗi nào.
+
+## Tiêu đề chương bị lặp (KHÔNG xoá — chỉ sửa tên)
+
+Không có bộ nào lặp tiêu đề chương.
 
 ## Chênh lệch giữa thẻ Blogger (cũ) và trang truyện (đang dùng)
 
