@@ -1926,6 +1926,17 @@
   });
   $('#btnStats').addEventListener('click', function () { loadStats(true); });
   $('#btnStatsFb').addEventListener('click', function () { importFbStats(); });
+  $('#btnStatsResetVotes').addEventListener('click', function () {
+    if (!confirm('Reset toàn bộ vote? Lượt đọc vẫn được giữ, nhưng tất cả phiếu và trạng thái đã vote trên máy chủ sẽ bị xoá.')) return;
+    var b = this;
+    b.disabled = true;
+    api('/api/stats/reset-votes', { method: 'POST' }).then(function (r) {
+      msg('Đã reset ' + (r.items || 0) + ' bộ truyện. Lượt đọc vẫn được giữ.', 'ok');
+      CZ._memo.stats = null;
+      loadStats(false);
+    }).catch(function (e) { msg('Reset vote thất bại: ' + e.message, 'err'); })
+      .then(function () { b.disabled = false; });
+  });
   window.addEventListener('beforeunload', function (e) {
     if (dirty.meta || dirty.book || dirty.set) { e.preventDefault(); e.returnValue = ''; }
   });

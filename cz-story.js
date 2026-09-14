@@ -235,7 +235,7 @@
             '<span>còn ' + Math.max(0, n.chapters - ch) + ' chương · ' + progressPct(n, ch) + '%</span></div>' +
             '<div class="bar"><i style="width:' + progressPct(n, ch) + '%"></i></div></div>' : '') +
           (n.synFull && n.synFull.length > (n.syn || '').length
-            ? '<button class="synbtn mt" id="synMore">Xem giới thiệu đầy đủ</button>' : '') +
+            ? '<button class="synbtn mt" id="synMore" type="button" aria-expanded="false">Xem thêm</button>' : '') +
         '</div>' +
       '</div>';
     /* bìa hỏng / chưa có ảnh: khung vẫn có tên truyện thay vì để trống trơn */
@@ -245,7 +245,11 @@
     var sb = $('#synBox');
     if (sb && syn.length < 200) sb.classList.remove('clamp');
     var more = $('#synMore');
-    if (more) more.addEventListener('click', function () { showTab('info', true); });
+    if (more) more.addEventListener('click', function () {
+      var expanded = sb.classList.toggle('expanded');
+      more.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      more.textContent = expanded ? 'Thu gọn' : 'Xem thêm';
+    });
     var sh = $('#shelfBtn');
     if (sh) sh.addEventListener('click', function () {
       var on = CZ.toggleShelf(n);
@@ -508,11 +512,11 @@
     var box = $('#giscus');
     if (!box) return;
     var note = $('#cmtNote'), sub = $('#cmtSub');
-    if (sub) sub.textContent = 'góp ý cho bộ truyện này';
-    if (note) note.textContent = 'Bình luận lưu trên máy chủ. Đăng nhập bằng Google/Supabase để gửi; bạn xoá được bình luận của chính mình. Muốn nói về một chương cụ thể thì mở chương đó trong trang đọc — khung bình luận ở cuối chương.';
+    if (sub) sub.textContent = '';
+    if (note) note.textContent = '';
     CMT_STORY = CZ.comments.mount(box, {
       slug: N.slug, ch: 0, title: 'Đánh giá & bình luận', chapterFilter: false,
-      hint: 'mọi người nói gì về bộ này',
+      hint: '',
       onChanged: function (n) { bumpTabCount(n, true); }
     });
     /* đăng nhập xong (quay về từ Supabase) thì vẽ lại khung để hiện ô viết */

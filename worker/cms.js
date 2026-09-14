@@ -132,6 +132,7 @@ export default {
         await env.CZ_KV.delete('stats_cache');      /* khoá cache của bản cũ (nếu còn) */
         return json({ ok: true, cleared: 'stats_cache', flushed }, { cors });
       }
+      if (p === '/api/stats/reset-votes' && req.method === 'POST') return await resetVotes(req, env, cors);
       return json({ ok: false, error: 'không có endpoint này', path: p }, { status: 404, cors });
     } catch (e) {
       return json({ ok: false, error: String((e && e.message) || e), version: VERSION }, { status: 500, cors });
@@ -888,6 +889,29 @@ async function postVote(req, env, cors) {
     votesDay: pub.votesDay, votesWeek: pub.votesWeek, votesMonth: pub.votesMonth,
     chapVotes: pub.chapVotes,
   }, { cors, headers: { 'cache-control': 'no-store' } });
+}
+
+/* POST /api/stats/reset-votes (cần khoá)
+   Xoá toàn bộ phiếu bình chọn nhưng giữ nguyên lượt đọc và thư viện. */
+async function resetVotes(req, env, cors) {
+  if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
+  if (!env.CZ_KV) return noKV(cors);
+  await flushStats(env);
+  const st = await readStats(env);
+  let items = 0;
+  Object.keys(st.items).forEach((slug) => {
+    const it = statOf(st, slug);
+    it.base.votes = 0;
+    it.got.votes = 0;
+    it.voters = {};
+    it.chap = {};
+    Object.keys(it.days).forEach((day) => { it.days[day].o = 0; });
+    it.updatedAt = new Date().toISOString();
+    items++;
+  });
+  for (const [slug, d] of _buf) { d.o = 0; if (!d.v) _buf.delete(slug); }
+  await writeStats(env, st);
+  return json({ ok: true, reset: 'votes', items }, { cors, headers: { 'cache-control': 'no-store' } });
 }
 
 /* POST /api/stats/seed { items: { slug: { views, votes } } }  (cần khoá)

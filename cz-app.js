@@ -265,7 +265,7 @@
   /* ======================= 2. GHI NHỚ TRONG MÁY ======================== */
   var LS = {
     prog: 'ssochuz-prog-', when: 'ssochuz-when-', shelf: 'ssochuz-shelf',
-    like: 'ssochuz-like-', mark: 'ssochuz-mark-', read: 'ssochuz-reader', theme: 'ssochuz-theme', dir: 'ssochuz-dir'
+    like: 'ssochuz-like-v2-', mark: 'ssochuz-mark-', read: 'ssochuz-reader', theme: 'ssochuz-theme', dir: 'ssochuz-dir'
   };
   function keysOf(n) { return [n && n.postId, n && n.slug].filter(Boolean); }
 
