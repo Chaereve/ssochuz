@@ -41,6 +41,7 @@
      GET    /api/auth/me                → user từ session           (cần Bearer)
      GET    /api/auth/config            → web đã bật đăng nhập chưa, bằng gì (mở)
      GET    /api/comments/<slug>        → đọc bình luận (?ch=12 để lọc theo chương) (mở)
+                                           · trả thêm parentId để dựng chuỗi trả lời
      POST    /api/comments/<slug>       → gửi bình luận {text, ch}  (cần Bearer)
      DELETE /api/comments/<slug>/<id>   → xoá bình luận của mình (hoặc của ai nếu là
                                            quản trị: ADMIN_KEY / email trong ADMIN_EMAILS)
@@ -62,7 +63,7 @@
                                               khi muốn kéo số liệu cũ về KV một lần
    ============================================================================ */
 
-const VERSION = '1.5.1';
+const VERSION = '1.6.0';
 const JSONH = { 'content-type': 'application/json; charset=utf-8' };
 
 export default {
@@ -78,7 +79,7 @@ export default {
       /* ---------- mở: chỉ đọc ---------- */
       if (p === '/' || p === '/api/health') return await health(env, cors);
       if (p === '/api/whoami' || p === '/api/auth') {
-        if (!authed(req, env)) return json({ ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, { status: 401, cors });
+        if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
         return json({ ok: true, role: 'admin', version: VERSION }, { cors });
       }
       if (p === '/api/registry' && req.method === 'GET') return await getKV(env, 'registry', cors, 30);
@@ -107,7 +108,7 @@ export default {
       if (p === '/api/registry' && req.method === 'PUT') return await putKV(req, env, 'registry', cors, 'cập nhật thư viện (registry)');
       if (m && req.method === 'PUT') return await putBook(req, env, decodeURIComponent(m[1]), cors);
       if (m && req.method === 'DELETE') {
-        if (!authed(req, env)) return json({ ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, { status: 401, cors });
+        if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
         if (!env.CZ_KV) return noKV(cors);
         const slug = decodeURIComponent(m[1]);
         await env.CZ_KV.delete('book:' + slug);
@@ -125,7 +126,7 @@ export default {
       if (p === '/api/stats/seed' && req.method === 'POST') return await seedStats(req, env, cors);
       if (p === '/api/stats/import-firebase' && req.method === 'POST') return await importFirebaseStats(req, env, cors);
       if (p === '/api/stats/refresh' && req.method === 'POST') {
-        if (!authed(req, env)) return json({ ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, { status: 401, cors });
+        if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
         if (!env.CZ_KV) return noKV(cors);
         const flushed = await flushStats(env);
         await env.CZ_KV.delete('stats_cache');      /* khoá cache của bản cũ (nếu còn) */
@@ -145,7 +146,7 @@ export default {
    Nội dung được làm sạch (bỏ script/quảng cáo/bình luận) rồi ghép vào cuối bộ
    và ghi lại registry — người đọc thấy ngay, không cần build.                 */
 async function importPost(req, env, cors) {
-  if (!authed(req, env)) return json({ ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, { status: 401, cors });
+  if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
   const body = await req.json().catch(() => ({}));
   const slug = String(body.slug || '').trim();
   if (!slug) return json({ ok: false, error: 'thiếu slug' }, { status: 400, cors });
@@ -296,9 +297,18 @@ function noKV(cors) {
     error: 'Worker chưa gắn KV CZ_KV — Settings → Bindings → KV namespace (Variable name CZ_KV), hoặc id trong wrangler.toml vẫn là DAN_ID_KV_VAO_DAY (placeholder). Tạo KV rồi dán id thật, deploy lại.',
   }, { status: 503, cors });
 }
+/* ADMIN_KEY thường bị dính khoảng trắng khi copy từ Dashboard/terminal.
+   Chỉ bỏ khoảng trắng ở hai đầu — không đổi phần khoá ở giữa — để thao tác
+   dán khoá an toàn hơn mà không làm giảm việc so sánh chính xác. */
+function adminKey(env) { return String((env && env.ADMIN_KEY) || '').trim(); }
+function adminAuthError(env) {
+  return adminKey(env)
+    ? 'sai X-Admin-Key — Worker đã nhận yêu cầu nhưng ADMIN_KEY không khớp secret đang chạy'
+    : 'Worker chưa đặt secret ADMIN_KEY — vào Settings → Variables and Secrets → Secret → ADMIN_KEY rồi Deploy lại';
+}
 function authed(req, env) {
-  const want = (env && env.ADMIN_KEY) || '';
-  const got = req.headers.get('x-admin-key') || '';
+  const want = adminKey(env);
+  const got = String(req.headers.get('x-admin-key') || '').trim();
   if (!want) return false;
   if (got.length !== want.length) return false;
   let diff = 0;
@@ -314,7 +324,7 @@ async function getKV(env, key, cors, cacheSec) {
   return new Response(value, { headers: h });
 }
 async function putKV(req, env, key, cors, label) {
-  if (!authed(req, env)) return json({ ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, { status: 401, cors });
+  if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
   if (!env.CZ_KV) return noKV(cors);
   const body = await req.text();
   const bytes = new TextEncoder().encode(body).length;
@@ -378,7 +388,7 @@ async function syncCountToRegistry(env, slug, book) {
 }
 /* PUT /api/book/<slug> — ghi 1 bộ RỒI tự sửa số chương trong registry */
 async function putBook(req, env, slug, cors) {
-  if (!authed(req, env)) return json({ ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, { status: 401, cors });
+  if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
   if (!env.CZ_KV) return noKV(cors);
   const body = await req.text();
   const bytes = new TextEncoder().encode(body).length;
@@ -442,7 +452,7 @@ async function applyRealCounts(env, reg) {
 /* POST /api/recount — nút "đếm lại số chương" trong trang quản trị.
    Chữa đúng bệnh: web hiện 30 chương dù bộ chỉ có 29 (registry treo số cũ). */
 async function recount(req, env, cors) {
-  if (!authed(req, env)) return json({ ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, { status: 401, cors });
+  if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
   if (!env.CZ_KV) return noKV(cors);
   const reg = (await env.CZ_KV.get('registry', { type: 'json' })) || { lib: [] };
   reg.lib = reg.lib || [];
@@ -475,14 +485,14 @@ async function logAct(env, text, req) {
   } catch (e) { /* nhật ký không được làm hỏng thao tác chính */ }
 }
 async function adminLog(req, env, cors) {
-  if (!authed(req, env)) return json({ ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, { status: 401, cors });
+  if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
   if (!env.CZ_KV) return noKV(cors);
   const arr = (await env.CZ_KV.get('log', { type: 'json' })) || [];
   return json({ ok: true, items: arr, count: arr.length }, { cors, headers: { 'cache-control': 'no-store' } });
 }
 /* GET /api/admin/comments?slug=&limit= — gộp bình luận của mọi bộ để kiểm duyệt */
 async function adminComments(req, env, cors) {
-  if (!authed(req, env)) return json({ ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, { status: 401, cors });
+  if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
   if (!env.CZ_KV) return noKV(cors);
   const u = new URL(req.url);
   const only = String(u.searchParams.get('slug') || '');
@@ -508,7 +518,7 @@ async function adminComments(req, env, cors) {
 }
 /* GET /api/admin/stats — số liệu chi tiết (kèm chuỗi ngày + phiếu theo chương) */
 async function adminStats(req, env, cors) {
-  if (!authed(req, env)) return json({ ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, { status: 401, cors });
+  if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
   if (!env.CZ_KV) return noKV(cors);
   await flushStats(env);
   const st = await readStats(env);
@@ -534,7 +544,7 @@ async function adminStats(req, env, cors) {
    Access-Control-Allow-Origin thì trình duyệt CHẶN kết quả (dù status 200),
    fetch ném "Failed to fetch" và admin báo nhầm là Worker chưa deploy. */
 async function health(env, cors) {
-  if (!env.CZ_KV) return json({ ok: true, version: VERSION, kv: false, books: 0, novels: 0, regRev: '', lastWrite: '', now: new Date().toISOString(), hint: 'chưa bind CZ_KV' }, { cors });
+  if (!env.CZ_KV) return json({ ok: true, version: VERSION, kv: false, books: 0, novels: 0, regRev: '', lastWrite: '', now: new Date().toISOString(), adminConfigured: !!adminKey(env), hint: 'chưa bind CZ_KV' }, { cors });
   const last = (await env.CZ_KV.get('_last')) || '';
   const reg = await env.CZ_KV.get('registry', { type: 'json' });
   let books = 0;
@@ -552,7 +562,7 @@ async function health(env, cors) {
     votes += Math.max(0, ((it.base || {}).votes || 0) + ((it.got || {}).votes || 0));
   });
   return json({
-    ok: true, version: VERSION, kv: true, books, regRev: (reg && reg.rev) || '',
+    ok: true, version: VERSION, kv: true, books, adminConfigured: !!adminKey(env), regRev: (reg && reg.rev) || '',
     novels: reg ? (reg.lib || []).length : 0, lastWrite: last, now: new Date().toISOString(),
     stats: { items: Object.keys(st.items).length, views, votes },
     /* để trang quản trị biết kênh đăng nhập đã sẵn sàng chưa, thiếu biến nào */
@@ -595,7 +605,7 @@ async function readScheduleFromBlog(env) {
   return { items, note, updated: new Date().toISOString().slice(0, 10), source: blog + '/p/lich-ra-chuong.html' };
 }
 async function seed(req, env, cors) {
-  if (!authed(req, env)) return json({ ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, { status: 401, cors });
+  if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
   if (!env.CZ_KV) return noKV(cors);
   let d; try { d = await req.json(); } catch (e) { return json({ ok: false, error: 'JSON lỗi' }, { status: 400, cors }); }
   const out = { books: 0, failed: [] };
@@ -857,7 +867,7 @@ async function postVote(req, env, cors) {
 /* POST /api/stats/seed { items: { slug: { views, votes } } }  (cần khoá)
    Nạp số cũ (từ Firebase hoặc file) làm “nền”; chạy lại bao nhiêu lần cũng vậy. */
 async function seedStats(req, env, cors) {
-  if (!authed(req, env)) return json({ ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, { status: 401, cors });
+  if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
   if (!env.CZ_KV) return noKV(cors);
   const body = await req.json().catch(() => ({}));
   const items = body.items || {};
@@ -882,7 +892,7 @@ async function seedStats(req, env, cors) {
    Chỉ cần khi muốn giữ số lượt đọc/phiếu của site cũ; Firestore đang chặn đọc
    thì phải mở rules 1 lần (worker/README.md §5). Sau đó không dùng Firebase nữa. */
 async function importFirebaseStats(req, env, cors) {
-  if (!authed(req, env)) return json({ ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, { status: 401, cors });
+  if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
   if (!env.CZ_KV) return noKV(cors);
   const project = env.FIREBASE_PROJECT || 'chuseoz-library';
   const items = {};
@@ -946,7 +956,7 @@ async function rateLimit(env, key, limit, ttlSec) {
    rồi ghép vào registry đang có trong KV. Chương thì đã nằm trong KV.
    --------------------------------------------------------------------------- */
 async function syncBlogger(req, env, cors) {
-  if (!authed(req, env)) return json({ ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, { status: 401, cors });
+  if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
   if (!env.CZ_KV) return noKV(cors);
   const blog = (env.BLOG || 'https://chuseoz.blogspot.com').replace(/\/+$/, '');
   const [listRes, sched] = await Promise.all([
@@ -1278,7 +1288,8 @@ function publicUser(u, env) {
 function publicComment(c) {
   return {
     id: c.id, uid: c.uid, name: c.name || 'Bạn đọc', picture: c.picture || '', text: c.text,
-    ch: Number(c.ch) || 0, guest: !!c.guest, createdAt: c.createdAt,
+    ch: Number(c.ch) || 0, parentId: c.parentId ? String(c.parentId) : '',
+    guest: !!c.guest, createdAt: c.createdAt,
   };
 }
 
@@ -1378,9 +1389,7 @@ async function postComment(slug, req, env, cors) {
   const hasAuth = /^Bearer\s+/i.test(authHeader);
   const { user: u, err: authErr } = await userFromReq(req, env);
   /* Nếu gửi kèm Bearer nhưng Worker không xác thực được (token hết hạn, hoặc Worker chưa có
-     SUPABASE_URL/SESSION_SECRET) thì TRẢ 401 chứ không âm thầm biến thành khách — đây là
-     nguyên nhân chính của lỗi "đăng nhập rồi mà vẫn ghi tài khoản khách".
-     Kèm LÝ DO thật trong body để web hiển thị đúng bệnh (hết hạn ≠ sai cấu hình). */
+     SUPABASE_URL/SESSION_SECRET) thì TRẢ 401 chứ không âm thầm biến thành khách. */
   if (hasAuth && !u) {
     return json({
       ok: false,
@@ -1392,46 +1401,49 @@ async function postComment(slug, req, env, cors) {
   const text = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 2000);
   if (text.length < 1) return json({ ok: false, error: 'bình luận không được trống' }, { status: 400, cors });
   if (!env.CZ_KV) return noKV(cors);
-  /* Khách CHƯA đăng nhập vẫn bình luận được — gắn với mã máy ẩn danh (vid) mà web
-     tự sinh. Lý do: bật Supabase là việc của chủ trang, còn người đọc không thể bị
-     mất quyền bình luận chỉ vì trang chưa cấu hình xong. Ai đã đăng nhập thì tên +
-     ảnh lấy thẳng từ tài khoản nên không giả mạo nhau được. */
+  /* Khách chưa đăng nhập vẫn bình luận được — gắn với mã máy ẩn danh. */
   const vid = String(body.vid || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
   if (!u && !vid) {
     return json({ ok: false, error: 'không nhận được mã máy — tải lại trang rồi thử lại' }, { status: 400, cors });
   }
   const uid = u ? u.uid : 'g:' + hash(vid);
-  /* khi đã đăng nhập: ưu tiên name/picture mà client gửi (custom profile lưu local),
-     fallback về thông tin trong session để không bị mất tên nếu client quên gửi. */
   const name = u
     ? (String(body.name || '').replace(/\s+/g, ' ').trim().slice(0, 40) || u.name || 'Bạn đọc')
     : (String(body.name || '').replace(/\s+/g, ' ').trim().slice(0, 40) || 'Bạn đọc');
   var rawPic = String(body.picture || '').trim();
-  /* data URL avatar ~1MB không nên lưu vào KV — vừa tốn quota vừa dễ vỡ khi slice */
   if (rawPic.indexOf('data:') === 0) rawPic = '';
   if (rawPic.length > 2000) rawPic = rawPic.slice(0, 2000);
   var sessPic = String((u && u.picture) || '').trim();
   if (sessPic.indexOf('data:') === 0) sessPic = '';
   const picture = u ? (rawPic || sessPic || '') : '';
   const ch = Math.max(0, Math.min(99999, parseInt(body.ch, 10) || 0));
-  /* hai lớp chặn spam: theo MỖI CHƯƠNG và theo toàn trang, trong 10 phút.
-     Khách bị chặn chặt hơn (2/6) so với tài khoản đã đăng nhập (3/12). */
+  /* parentId là id của bình luận mà người đọc đang trả lời. Chỉ nhận id trong
+     cùng bộ; ch của reply được giữ theo bình luận cha để bộ lọc chương không
+     làm rơi mất câu trả lời. Cho phép trả lời reply tiếp (thread nhiều tầng). */
+  const parentId = String(body.parentId || body.replyTo || '').trim().replace(/[^A-Za-z0-9_-]/g, '').slice(0, 80);
+  const key = 'cmt:' + slug;
+  const arr = (await env.CZ_KV.get(key, { type: 'json' })) || [];
+  let parent = null;
+  if (parentId) {
+    parent = arr.find((c) => String(c.id) === parentId);
+    if (!parent) return json({ ok: false, error: 'bình luận gốc không còn tồn tại — tải lại trang rồi thử lại' }, { status: 400, cors });
+  }
+  const finalCh = parent ? (Number(parent.ch) || 0) : ch;
+  /* hai lớp chặn spam: theo mỗi chương và toàn trang. Reply dùng cùng giới hạn. */
   const perChap = u ? 3 : 2, perAll = u ? 12 : 6;
-  if (!await rateLimit(env, 'rl:cmt:' + hash(uid) + ':' + slug + ':' + ch, perChap, 600) ||
+  if (!await rateLimit(env, 'rl:cmt:' + hash(uid) + ':' + slug + ':' + finalCh, perChap, 600) ||
       !await rateLimit(env, 'rl:cmt:' + hash(uid), perAll, 600)) {
     return json({ ok: false, error: 'bạn bình luận hơi nhanh — 10 phút nữa hãy gửi tiếp' }, { status: 429, cors });
   }
-  const key = 'cmt:' + slug;
-  const arr = (await env.CZ_KV.get(key, { type: 'json' })) || [];
   const c = {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-    uid, name, picture, text, ch, guest: !u,
+    uid, name, picture, text, ch: finalCh, parentId: parent ? String(parent.id) : '', guest: !u,
     createdAt: new Date().toISOString(),
   };
   arr.unshift(c);
   if (arr.length > 500) arr.length = 500;
   await env.CZ_KV.put(key, JSON.stringify(arr));
-  return json({ ok: true, comment: publicComment(c), count: arr.length, guest: !u }, { cors });
+  return json({ ok: true, comment: publicComment(c), count: arr.length, guest: !u, reply: !!parent }, { cors });
 }
 async function deleteComment(slug, id, req, env, cors) {
   const byKey = authed(req, env);            /* quản trị (ADMIN_KEY) xoá được mọi bình luận */
@@ -1446,8 +1458,20 @@ async function deleteComment(slug, id, req, env, cors) {
   if (!mod && arr[idx].uid !== (u && u.uid)) {
     return json({ ok: false, error: 'chỉ xoá được bình luận của chính bạn' }, { status: 403, cors });
   }
-  arr.splice(idx, 1);
-  await env.CZ_KV.put(key, JSON.stringify(arr));
+  const removed = new Set([id]);
+  /* Xoá luôn các câu trả lời nằm dưới bình luận gốc; nếu có thread nhiều tầng,
+     dọn tiếp tới khi không còn reply mồ côi. */
+  let changed = true;
+  while (changed) {
+    changed = false;
+    arr.forEach((c) => {
+      if (c.parentId && removed.has(String(c.parentId)) && !removed.has(String(c.id))) {
+        removed.add(String(c.id)); changed = true;
+      }
+    });
+  }
+  const kept = arr.filter((c) => !removed.has(String(c.id)));
+  await env.CZ_KV.put(key, JSON.stringify(kept));
   if (mod) await logAct(env, 'kiểm duyệt: xoá bình luận ' + id + ' của bộ ' + slug, req);
-  return json({ ok: true, deleted: id, count: arr.length, moderated: !!mod }, { cors });
+  return json({ ok: true, deleted: id, deletedCount: arr.length - kept.length, count: kept.length, moderated: !!mod }, { cors });
 }

@@ -752,6 +752,25 @@ mark.hit { background: var(--acc-soft); color: var(--acc); padding: 0 2px; borde
   padding: 2px 7px; border-radius: 6px; line-height: 1; }
 .cmt-del:hover { color: #c0392b; background: color-mix(in srgb, #c0392b 12%, transparent); }
 .cmt-text { margin-top: 3px; font-size: 14.5px; line-height: 1.7; color: var(--txt); white-space: pre-wrap; word-break: break-word; }
+.cmt-thread.is-reply { margin-left: 52px; border-left: 2px solid color-mix(in srgb, var(--acc) 22%, var(--bd)); padding-left: 12px; }
+.cmt-thread.is-reply .cmt-item { padding-top: 10px; padding-bottom: 10px; }
+.cmt-reply { margin-left: auto; border: 0; background: none; color: var(--acc); cursor: pointer; padding: 2px 5px; font: inherit; font-size: 12px; }
+.cmt-reply:hover { text-decoration: underline; }
+.cmt-del + .cmt-reply { margin-left: 0; }
+.cmt-h .cmt-del { margin-left: 0; }
+.cmt-reply-form { margin-top: 10px; padding: 10px 12px; border: 1px solid var(--bd); border-radius: var(--r); background: var(--surf2); }
+.cmt-reply-label { margin-bottom: 7px; color: var(--mut); font-size: 12px; }
+.cmt-reply-label b { color: var(--txt); }
+.cmt-reply-row { display: flex; flex-direction: column; gap: 7px; }
+.cmt-reply-row textarea { width: 100%; min-height: 58px; resize: vertical; border: 1px solid var(--bd); border-radius: var(--r-sm); background: var(--surf); color: var(--txt); padding: 8px 10px; font: inherit; font-size: 13.5px; line-height: 1.55; }
+.cmt-reply-row textarea:focus { outline: none; border-color: var(--acc); box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 15%, transparent); }
+.cmt-reply-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.cmt-reply-actions .cmt-count { margin-right: auto; }
+.rdcmts .cmt-thread.is-reply { border-left-color: color-mix(in srgb, var(--rd-acc, var(--acc)) 28%, var(--rd-bd, var(--bd))); }
+.rdcmts .cmt-reply-form { background: var(--rd-surf2, var(--surf2)); border-color: var(--rd-bd, var(--bd)); }
+.rdcmts .cmt-reply-label, .rdcmts .cmt-reply-form .cmt-count { color: var(--rd-mut, var(--mut)); }
+.rdcmts .cmt-reply-label b { color: var(--rd-tx, var(--txt)); }
+.rdcmts .cmt-reply-row textarea { background: var(--rd-surf, var(--surf)); border-color: var(--rd-bd, var(--bd)); color: var(--rd-tx, var(--txt)); }
 .glogo { width: 18px; height: 18px; flex: 0 0 auto; }
 
 
@@ -1476,7 +1495,10 @@ body.rd-fs .rdbar { position: fixed; left:0; right:0; }
   background: color-mix(in srgb, var(--rd-acc, var(--acc)) 12%, transparent); }
 .rdcmts .cmt-login { color: var(--rd-mut, var(--mut)); }
 body.rd-focus .rdcmts { display: none; }
-@media (max-width: 700px) { .rdcmts { padding: 0 16px 48px; } }
+@media (max-width: 700px) {
+  .rdcmts { padding: 0 16px 48px; }
+  .cmt-thread.is-reply { margin-left: 18px; padding-left: 8px; }
+}
 
 /* thích = trái tim; trạng thái đã thích thì tô đặc cho rõ */
 #actLike.on .i, #likeBtn.on .i { fill: currentColor; }

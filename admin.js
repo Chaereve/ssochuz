@@ -103,9 +103,17 @@
     if (!KEY) return msg('Nhập ADMIN_KEY đã.', 'err');
     var b = $('#btnConnect');
     b.disabled = true; b.innerHTML = '<span class="spin"></span> đang kiểm tra…';
-    Promise.all([api('/api/health', { auth: false }), api('/api/whoami')])
-      .then(function (rs) {
-        var h = rs[0];
+    /* Gọi health trước để phân biệt rõ: URL/CORS chết, Worker thiếu secret,
+       hay Worker có secret nhưng khoá vừa nhập không khớp. Promise.all trước đây
+       làm cả ba bệnh đều bị gom thành một câu "sai hoặc thiếu X-Admin-Key". */
+    api('/api/health', { auth: false })
+      .then(function (h) {
+        if (h.adminConfigured === false) {
+          throw new Error('Worker chưa nhận được secret ADMIN_KEY — đặt secret trên đúng Worker này rồi Deploy lại');
+        }
+        return api('/api/whoami').then(function () { return h; });
+      })
+      .then(function (h) {
         try { localStorage.setItem(LS.api, API); localStorage.setItem(LS.key, KEY); } catch (e) {}
         ONLINE = true;
         msg('Kết nối OK · ' + (h.kv ? 'KV sẵn sàng' : 'KV chưa gắn') + ' · ' + num(h.books) + ' bộ trên KV · rev ' + (h.regRev || '—'), 'ok');
@@ -113,8 +121,9 @@
       })
       .catch(function (e) {
         ONLINE = false;
-        msg('Không nối được: ' + e.message + ' — kiểm tra URL Worker, binding CZ_KV và secret ADMIN_KEY.', 'err');
-        if (!isAdmin()) gateHold('Khoá ADMIN_KEY chưa đúng hoặc Worker chưa reachable: ' + e.message +
+        var detail = String((e && e.message) || e || 'lỗi không xác định');
+        msg('Không nối được: ' + detail + ' — kiểm tra URL Worker, binding CZ_KV và secret ADMIN_KEY.', 'err');
+        if (!isAdmin()) gateHold('Khoá ADMIN_KEY chưa đúng hoặc Worker chưa reachable: ' + detail +
           ' — đăng nhập bằng tài khoản quản trị, hoặc nhập lại khoá.', 'err');
       })
       .then(function () { b.disabled = false; b.textContent = 'Kiểm tra & kết nối'; });
@@ -1417,6 +1426,7 @@
         '<span class="mb2"><span class="mh2"><b>' + esc(c.name || 'Bạn đọc') + '</b>' +
           '<span>' + esc(CZ.timeAgo(c.createdAt)) + '</span>' +
           (c.ch ? '<span class="pill acc">chương ' + esc(c.ch) + '</span>' : '') +
+          (c.parentId ? '<span class="pill">trả lời</span>' : '') +
           '<a class="mslug" href="' + esc(CZ.storyURL(c.slug)) + '" target="_blank" rel="noopener">' + esc(n.title || c.slug) + ' ↗</a></span>' +
           '<span class="mt2">' + esc(c.text) + '</span></span>' +
         '<button class="btn ghost sm" data-modd title="Xoá bình luận này">' + ic('trash', 'i-s') + '</button></div>';

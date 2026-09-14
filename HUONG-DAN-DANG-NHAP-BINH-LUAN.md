@@ -1,6 +1,6 @@
 # Hướng dẫn: Đăng nhập (Supabase) · Bình luận · Thích theo chương · Số chương
 
-*Cập nhật: 2026-09-14 · áp dụng cho `worker/cms.js` **v1.5.0** + `cz-auth.js` / `cz-app.js` / `cz-story.js` / `admin.js` mới.*
+*Cập nhật: 2026-09-14 · áp dụng cho `worker/cms.js` **v1.6.0** + `cz-auth.js` / `cz-app.js` / `cz-story.js` / `admin.js` mới.*
 
 Tài liệu này trả lời 4 câu hỏi:
 
@@ -79,14 +79,14 @@ npx wrangler secret put SUPABASE_JWT_SECRET
 npx wrangler secret put ADMIN_EMAILS
 ```
 
-Rồi **dán toàn bộ `worker/cms.js` (v1.5.0) vào Worker → Deploy** (code đã đổi nhiều, không deploy là web gọi
+Rồi **dán toàn bộ `worker/cms.js` (v1.6.0) vào Worker → Deploy** (code đã đổi nhiều, không deploy là web gọi
 các endpoint mới sẽ nhận `404 không có endpoint`).
 
 Kiểm tra nhanh:
 
 ```bash
 curl "https://chuseoz-cms.kimtong1906.workers.dev/api/health"
-# mong đợi: "version":"1.5.0" và "auth":{"supabase":true,...,"session":true,"adminEmails":[...]}
+# mong đợi: "version":"1.6.0" và "auth":{"supabase":true,...,"session":true,"adminEmails":[...]}
 ```
 
 `"supabase":false` nghĩa là Worker chưa thấy `SUPABASE_URL`.
@@ -240,7 +240,7 @@ node tests/mock_worker.mjs 8787
 ```
 
 ```bash
-cd tests && node run.js             # 10 bài kiểm thử giao diện + 96 kiểm tra cho worker
+cd tests && node run.js             # 10 bài kiểm thử giao diện + 100 kiểm tra cho worker
 ```
 
 ---
@@ -256,8 +256,8 @@ cd tests && node run.js             # 10 bài kiểm thử giao diện + 96 ki�
 | `/api/auth/supabase` báo *token sai issuer…* (kèm 2 URL) | `SUPABASE_URL` trên Worker **nhầm project** Supabase | đặt lại đúng project trong `cz-config.js` (xem `worker/README.md` §7c) |
 | *token Supabase không hợp lệ* | `SUPABASE_JWT_SECRET` sai, hoặc token hết hạn | copy lại JWT Secret; người đọc bấm đăng nhập lại |
 | Bình luận báo **"Không xác thực được phiên đăng nhập — …"** | lý do thật nằm sau dấu gạch ngang (hết hạn / sai cấu hình Worker) | đọc đúng chữ sau dấu gạch ngang; bảng tra chi tiết ở `worker/README.md` §7c |
-| `/admin` báo **"Không nối được: Failed to fetch"** dù Worker sống | Worker chạy bản cũ thiếu CORS ở `/api/health` (đã sửa từ 1.5.1) | deploy lại `worker/cms.js` bản mới; kiểm tra `<worker>/api/health` phải ra `"version": "1.5.1"` |
-| `404 không có endpoint /api/recount` | Worker đang chạy là **bản cũ** | dán lại `worker/cms.js` v1.5.0 → Deploy |
+| `/admin` báo **"Không nối được: Failed to fetch"** dù Worker sống | Worker chạy bản cũ thiếu CORS ở `/api/health` (đã sửa từ 1.5.1) | deploy lại `worker/cms.js` bản mới; kiểm tra `<worker>/api/health` phải ra `"version": "1.6.0"` |
+| `404 không có endpoint /api/recount` | Worker đang chạy là **bản cũ** | dán lại `worker/cms.js` v1.6.0 → Deploy |
 | Web hiện **sai số chương** | KV còn giữ bản cũ | mục 7: *Bác sĩ dữ liệu* → Nạp chương từ repo lên KV → Đếm lại |
 | Bấm **Thích** mà Top vote không nhảy | web đang chạy JS cũ trong cache | Ctrl+F5; kiểm tra `?v=` ở thẻ `<script>` đã đổi chưa |
 | Bình luận báo *"không nhận được mã máy"* | `cz-app.js` trong cache là bản cũ | Ctrl+F5 |
