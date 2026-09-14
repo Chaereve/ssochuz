@@ -550,7 +550,17 @@
     if (reg && reg.lib) {
       reg.lib.forEach(function (x) {
         if (!x || x.slug !== slug) return;
-        if (Number(x.chapters) !== real) { x.chapters = real; x.countFixed = true; }
+        var was = Number(x.chapters) || 0;
+        if (was !== real) {
+          x.chapters = real;
+          x.countFixed = true;
+          /* cập nhật nhãn: nếu chưa có planned thì 29/29, nếu có planned lớn hơn thì 29/planned,
+             nếu là 0 thì 0/— */
+          var planned = parseInt(x.planned || x.declared || 0, 10) || 0;
+          if (real === 0 && planned === 0) x.countLabel = '0/—';
+          else x.countLabel = real + '/' + Math.max(real, planned || real);
+          x.count = x.countLabel;
+        }
       });
     }
     libCache = null;
@@ -572,11 +582,36 @@
     o.is18 = !!o.is18;
     o.statusCls = statusCls(o.status);
     o.status = statusLabel(o.status);
-    o.countLabel = o.countLabel || o.count || (o.chapters ? o.chapters + ' chương' : '0 chương');
+    /* nhãn: nếu chưa có hoặc là dạng "0 chương" thì tạo lại cho đúng (0/— hoặc 29/29) */
+    var rawLabel = String(o.countLabel || o.count || '').trim();
+    if (!rawLabel || /chương/i.test(rawLabel)) {
+      if (o.chapters === 0) rawLabel = '0/—';
+      else {
+        var p = parseInt(o.planned || o.declared || 0, 10) || 0;
+        rawLabel = o.chapters + '/' + Math.max(o.chapters, p || o.chapters);
+      }
+    }
+    o.countLabel = rawLabel;
     var parts = String(o.countLabel || '').split('/');
-    o.declared = parseInt(parts[1], 10) || o.chapters;         /* tổng dự kiến */
+    var second = String(parts[1] || '').trim();
+    if (second === '—' || second === '' || second === '-') o.declared = o.chapters;
+    else o.declared = parseInt(second, 10) || o.chapters;
     /* đã đối chiếu số thật thì đừng để nhãn "29/30" cũ làm người đọc tưởng còn thiếu */
-    if (rc != null) o.declared = Math.max(o.chapters, parseInt(o.planned, 10) || 0);
+    if (rc != null) {
+      var planned = parseInt(o.planned, 10) || 0;
+      o.declared = Math.max(o.chapters, planned || 0);
+      /* đồng bộ lại nhãn cho khớp */
+      if (o.chapters === 0) o.countLabel = '0/—';
+      else o.countLabel = o.chapters + '/' + (o.declared || o.chapters);
+    }
+    /* Sắp ra mắt 0 chương thì nhãn 0/— là đúng, không phải thiếu */
+    if (o.chapters === 0 && o.statusCls === 'soon' && !/^\d+\/\d+$/.test(o.countLabel)) {
+      if (o.countLabel !== '0/—') {
+        var pl = parseInt(o.planned || 0, 10) || 0;
+        o.countLabel = pl > 0 ? ('0/' + pl) : '0/—';
+        o.declared = pl || 0;
+      }
+    }
     o.url = storyURL(o.slug);
     o.canRead = o.chapters > 0;
     return o;
@@ -584,7 +619,13 @@
   /* “10 chương”, hoặc “9/10 chương” khi thẻ truyện ghi tổng dự kiến nhiều hơn số đã đăng */
   function countText(n) {
     if (!n) return '0 chương';
-    var c = parseInt(n.chapters, 10) || 0, d = parseInt(n.declared, 10) || c;
+    var c = parseInt(n.chapters, 10) || 0, d = parseInt(n.declared, 10) || 0;
+    if (c === 0 && (String(n.countLabel || '').indexOf('—') >= 0 || d === 0)) {
+      /* truyện chưa ra: hiện đúng nhãn gốc (0/— hoặc 0/18) cho rõ */
+      var lbl = String(n.countLabel || '').trim();
+      if (/^\d+\/—$/.test(lbl) || /^\d+\/\d+$/.test(lbl)) return lbl;
+      return '0 chương';
+    }
     return d > c ? (c + '/' + d + ' chương') : (c + ' chương');
   }
 
@@ -977,6 +1018,7 @@
               '<span><b>' + esc(u.name || 'Bạn đọc') + '</b><span>' + esc(u.email || '') + '</span>' +
               (ad ? '<em class="role">' + icon('shield', 'i-s') + 'quản trị</em>' : '') + '</span>' +
             '</div>' +
+            '<button type="button" role="menuitem" id="czAuthEdit">' + icon('edit', 'i-s') + 'Chỉnh sửa hồ sơ</button>' +
             '<a href="/#ban-doc" role="menuitem">' + icon('shelf', 'i-s') + 'Tủ truyện của tôi</a>' +
             '<a href="/#ban-doc" role="menuitem">' + icon('clock', 'i-s') + 'Đang đọc dở</a>' +
             (ad ? '<a href="/admin" role="menuitem" class="adm">' + icon('gear', 'i-s') + 'Trang quản trị</a>' : '') +
@@ -998,6 +1040,11 @@
         }
       }
       /* gắn lại sự kiện vì innerHTML vừa được vẽ mới */
+      var editBtn = host.querySelector('#czAuthEdit');
+      if (editBtn) editBtn.addEventListener('click', function () {
+        closeMenu();
+        if (w.CZ_AUTH && w.CZ_AUTH.editProfileDialog) w.CZ_AUTH.editProfileDialog().catch(function () {});
+      });
       var out = host.querySelector('#czAuthOut');
       if (out) out.addEventListener('click', function () {
         closeMenu();
@@ -1260,7 +1307,9 @@
             '<textarea data-text maxlength="2000" rows="' + (opt.compact ? 2 : 3) + '" placeholder="' +
               (chap ? 'Nghĩ gì về ' + chWord() + '…' : 'Viết bình luận…') + ' (tối đa 2000 ký tự)"></textarea>' +
             '<div class="cmt-actions">' +
-              '<span class="cmt-meta"><b>' + esc(me.name || me.email || 'Bạn đọc') + '</b> · <button class="lk" data-logout type="button">đăng xuất</button></span>' +
+              '<span class="cmt-meta"><b>' + esc(me.name || me.email || 'Bạn đọc') + '</b> · ' +
+                '<button class="lk" data-editpf type="button">đổi tên/avatar</button> · ' +
+                '<button class="lk" data-logout type="button">đăng xuất</button></span>' +
               '<span class="cmt-count" data-count>0/2000</span>' +
               '<button class="btn pri sm" data-send type="button">Gửi</button>' +
             '</div>' +
@@ -1291,6 +1340,10 @@
         if (lg) lg.addEventListener('click', function () {
           if (w.CZ_AUTH && w.CZ_AUTH.login) w.CZ_AUTH.login().catch(function () {});
         });
+        var ep = host.querySelector('[data-editpf]');
+        if (ep) ep.addEventListener('click', function () {
+          if (w.CZ_AUTH && w.CZ_AUTH.editProfileDialog) w.CZ_AUTH.editProfileDialog().then(function () { paint(); }).catch(function () {});
+        });
         var lo = host.querySelector('[data-logout]');
         if (lo) lo.addEventListener('click', function () { if (w.CZ_AUTH) w.CZ_AUTH.logout().then(function () { paint(); }); });
         var sd = host.querySelector('[data-send]');
@@ -1298,6 +1351,11 @@
         host.querySelectorAll('[data-del]').forEach(function (b) {
           b.addEventListener('click', function () { del(b.dataset.del); });
         });
+        /* khi đăng nhập xong ở nơi khác, tự vẽ lại form để không còn là khách */
+        if (!host._czAuthBound && w.CZ_AUTH && w.CZ_AUTH.onAuth) {
+          host._czAuthBound = true;
+          w.CZ_AUTH.onAuth(function () { try { paint(); } catch (e) {} });
+        }
       }
       function send() {
         var ta = host.querySelector('[data-text]');
@@ -1310,14 +1368,34 @@
         if (sd) { sd.disabled = true; sd.textContent = 'Đang gửi…'; }
         var nm = host.querySelector('[data-name]');
         if (nm && String(nm.value || '').trim()) safeSet('chuseoz-cmtname', String(nm.value).trim().slice(0, 40));
+        var me = u();
+        var token = tk();
+        var payload = { text: text, ch: chap, vid: vid() };
+        if (me) {
+          /* đã đăng nhập: gửi luôn name/picture để Worker không fallback sang guest.
+             data URL avatar thì bỏ qua để không phình KV. */
+          payload.name = String(me.name || '').trim().slice(0, 40) || guestName();
+          var _pic = String(me.picture || '').trim();
+          if (_pic.indexOf('data:') === 0) _pic = '';
+          if (_pic.length > 2000) _pic = _pic.slice(0, 2000);
+          payload.picture = _pic;
+        } else {
+          payload.name = guestName() || (nm ? String(nm.value || '').trim().slice(0, 40) : '');
+        }
         fetch(base() + '/api/comments/' + encodeURIComponent(slug), {
           method: 'POST',
-          headers: tk() ? { 'content-type': 'application/json', authorization: 'Bearer ' + tk() }
+          headers: token ? { 'content-type': 'application/json', authorization: 'Bearer ' + token }
                         : { 'content-type': 'application/json' },
-          body: JSON.stringify({ text: text, ch: chap, vid: vid(), name: guestName() })
+          body: JSON.stringify(payload)
         }).then(function (r) {
           return r.json().catch(function () { return {}; }).then(function (j) {
-            if (!r.ok || !j.ok) throw new Error(j.error || ('HTTP ' + r.status));
+            if (!r.ok || !j.ok) {
+              if (r.status === 401 && token) {
+                /* token hết hạn hoặc Worker chưa có SUPABASE_URL -> báo rõ, không âm thầm thành khách */
+                throw new Error('Phiên đăng nhập hết hạn — hãy đăng nhập lại (hoặc kiểm tra cấu hình SUPABASE_URL/SESSION_SECRET trên Worker)');
+              }
+              throw new Error(j.error || ('HTTP ' + r.status));
+            }
             return j;
           });
         }).then(function (j) {
@@ -1360,7 +1438,15 @@
           return Promise.resolve(0);
         }
         if (!keepUI) { state.busy = true; paint(); }
-        return fetch(base() + '/api/comments/' + encodeURIComponent(slug) + '?limit=200' + (chap ? '&ch=' : ''))
+        /* lấy bình luận:
+           · trang truyện (ch=0, chapterFilter false) → chỉ lấy bình luận chung (ch=0)
+           · trang đọc (chap>0) → lấy HẾT để có đủ byChapter cho tab “Tất cả”,
+             rồi lọc ở client (list()).
+           Trước đây dòng này là '?limit=200' + (chap ? '&ch=' : '') → ch rỗng nên
+           luôn trả hết, và thiếu giá trị khi chap>0. */
+        var q = '?limit=200';
+        if (chap === 0 && opt.chapterFilter === false) q += '&ch=0';
+        return fetch(base() + '/api/comments/' + encodeURIComponent(slug) + q)
           .then(function (r) { return r.json().catch(function () { return {}; }); })
           .then(function (j) {
             state.busy = false;

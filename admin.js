@@ -60,21 +60,35 @@
   }
 
   /* ------------------------------ gọi Worker ---------------------------- */
+  function normalizeApi(u) {
+    u = String(u == null ? '' : u).trim().replace(/\/+$/, '');
+    if (u && !/^https?:\/\//i.test(u)) u = 'https://' + u;
+    return u;
+  }
   function api(path, opt) {
     opt = opt || {};
-    if (!API) return Promise.reject(new Error('chưa nối Worker'));
+    var base = normalizeApi(API || '');
+    if (!base) return Promise.reject(new Error('chưa nối Worker — nhập URL Worker (vd https://xxx.workers.dev)'));
     var headers = {};
     if (opt.body != null) headers['content-type'] = 'application/json';
     if (opt.auth !== false && KEY) headers['x-admin-key'] = KEY;
     if (opt.mode) headers['x-import-mode'] = opt.mode;
-    return fetch(API + path, {
-      method: opt.method || 'GET', headers: headers, cache: 'no-store',
+    return fetch(base + path, {
+      method: opt.method || 'GET', headers: headers, cache: 'no-store', mode: 'cors',
       body: opt.body != null ? JSON.stringify(opt.body) : undefined
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (d) {
-        if (!r.ok || d.ok === false) throw new Error(d.error || ('HTTP ' + r.status));
+        if (!r.ok || d.ok === false) throw new Error(d.error || ('HTTP ' + r.status + (r.status === 503 ? ' — Worker chưa gắn KV CZ_KV hoặc id trong wrangler.toml còn là placeholder' : '')));
         return d;
       });
+    }).catch(function (e) {
+      /* fetch lỗi mạng (Failed to fetch) → báo rõ hơn */
+      var m = String((e && e.message) || e || '');
+      if (/Failed to fetch|NetworkError|Load failed/i.test(m)) {
+        throw new Error('Failed to fetch — không nối được Worker tại ' + base +
+          ' (CORS, URL sai, Worker chưa deploy, hoặc KV id trong wrangler.toml còn là DAN_ID_KV_VAO_DAY). Mở ' + base + '/api/health trên tab mới để kiểm tra.');
+      }
+      throw e;
     });
   }
   function setConn(kind, text) {
@@ -83,9 +97,9 @@
     $('#chipConnTxt').textContent = text;
   }
   function connect() {
-    API = CZ.normalizeApi($('#inApi').value);
+    API = normalizeApi(CZ.normalizeApi($('#inApi').value) || $('#inApi').value);
     KEY = $('#inKey').value.trim();
-    if (!API) return msg('Nhập URL Worker đã.', 'err');
+    if (!API) return msg('Nhập URL Worker đã (vd https://xxx.workers.dev).', 'err');
     if (!KEY) return msg('Nhập ADMIN_KEY đã.', 'err');
     var b = $('#btnConnect');
     b.disabled = true; b.innerHTML = '<span class="spin"></span> đang kiểm tra…';
@@ -280,13 +294,15 @@
         lib.filter(function (n) { return !String(n.thumb || '').trim(); })),
       task('noslug', 'Thiếu slug / tác giả', 'Slug là đường dẫn của bộ, thiếu là không mở được trang truyện',
         lib.filter(function (n) { return !String(n.slug || '').trim() || !String(n.author || '').trim(); })),
-      task('nocouple', 'Thiếu couple', 'Dùng cho bộ lọc couple ở thư viện và dải “Cùng couple”',
-        lib.filter(function (n) { return !String(n.couple || '').trim(); })),
       task('noyear', 'Thiếu năm', 'Dùng cho bộ lọc năm và dòng thông tin trên thẻ',
         lib.filter(function (n) { return !String(n.year || '').trim(); })),
-      task('count', 'Nhãn số chương lệch', 'Nhãn ghi “x/y” nhưng số chương đã đăng không khớp x',
+      task('count', 'Nhãn số chương lệch', 'Nhãn ghi “x/y” nhưng số chương đã đăng không khớp x (bỏ qua Sắp ra mắt 0 chương)',
         lib.filter(function (n) {
-          var m = String(n.countLabel || '').match(/^(\d+)\s*\/\s*(\d+)$/);
+          /* cho phép 0/— cho truyện chưa ra, không coi là lệch */
+          if ((n.chapters || 0) === 0 && CZ.statusCls(n.status) === 'soon') return false;
+          var m = String(n.countLabel || '').match(/^(\d+)\s*\/\s*(\d+|—)$/);
+          if (!m) return false;
+          if (m[2] === '—') return parseInt(m[1], 10) !== 0 ? true : false;
           return m && parseInt(m[1], 10) !== (n.chapters || 0);
         })),
       task('stale', '“Sắp ra mắt” đã lâu', 'Đăng hơn 45 ngày vẫn chưa có chương nào',
@@ -356,11 +372,13 @@
           var hit = (k === 'nosyn' && !String(n.syn || '').trim()) ||
             (k === 'nothumb' && !String(n.thumb || '').trim()) ||
             (k === 'noslug' && (!String(n.slug || '').trim() || !String(n.author || '').trim())) ||
-            (k === 'nocouple' && !String(n.couple || '').trim()) ||
             (k === 'noyear' && !String(n.year || '').trim()) ||
             (k === 'stale' && !(n.chapters || 0) && daysSince(n.updated) > 45) ||
             (k === 'count' && (function () {
-              var m = String(n.countLabel || '').match(/^(\d+)\s*\/\s*(\d+)$/);
+              if ((n.chapters || 0) === 0 && CZ.statusCls(n.status) === 'soon') return false;
+              var m = String(n.countLabel || '').match(/^(\d+)\s*\/\s*(\d+|—)$/);
+              if (!m) return false;
+              if (m[2] === '—') return parseInt(m[1], 10) !== 0;
               return m && parseInt(m[1], 10) !== (n.chapters || 0);
             })()) ||
             false;
@@ -611,8 +629,14 @@
     BOOK.slug = CUR.slug; BOOK.title = CUR.title; BOOK.author = CUR.author; BOOK.couple = CUR.couple;
     BOOK.chapters = BOOK.chapters || [];
     CUR.chapters = BOOK.chapters.length;
-    var declared = parseInt(String(CUR.countLabel || '').split('/')[1], 10) || 0;
-    CUR.countLabel = BOOK.chapters.length + '/' + Math.max(declared, BOOK.chapters.length);
+    var raw = String(CUR.countLabel || '');
+    var sec = raw.split('/')[1] || '';
+    var declared = sec.trim() === '—' ? 0 : (parseInt(sec, 10) || 0);
+    if (BOOK.chapters.length === 0) {
+      CUR.countLabel = declared > 0 ? ('0/' + declared) : '0/—';
+    } else {
+      CUR.countLabel = BOOK.chapters.length + '/' + Math.max(declared, BOOK.chapters.length);
+    }
     CUR.count = CUR.countLabel;
     CUR.updated = today();
     if (!ONLINE) {
@@ -1172,10 +1196,20 @@
         var real = kvN != null ? kvN : repoN;
         var issues = [];
         var lab = String(n.countLabel || '').trim();
-        var m = /^(\d+)\s*\/\s*(\d+)$/.exec(lab);
-        if (!m) issues.push('label');
-        else if (parseInt(m[1], 10) !== regN) issues.push('labelReg');
-        if (real != null && regN !== real) issues.push('regVsReal');
+        /* cho phép 0/— cho truyện chưa ra, không báo lỗi */
+        var m = /^(\d+)\s*\/\s*(\d+|—)$/.exec(lab);
+        if (!m) {
+          /* nếu là Sắp ra mắt 0 chương mà không có nhãn, cũng không coi là lỗi */
+          if (!(regN === 0 && CZ.statusCls(n.status) === 'soon' && !lab)) issues.push('label');
+        } else {
+          if (m[2] === '—') {
+            if (regN !== 0 && parseInt(m[1], 10) !== regN) issues.push('labelReg');
+          } else if (parseInt(m[1], 10) !== regN) issues.push('labelReg');
+        }
+        if (real != null && regN !== real) {
+          /* truyện chưa ra (0 chương) thì không báo thiếu — đúng theo yêu cầu */
+          if (!(regN === 0 && CZ.statusCls(n.status) === 'soon' && real === 0)) issues.push('regVsReal');
+        }
         if (kvN != null && repoN != null && kvN !== repoN) issues.push('kvVsRepo');
         if (ONLINE && kvN == null && regN > 0) issues.push('kvMissing');
         if (kvN == null && repoN == null && regN > 0) issues.push('noSource');
@@ -1189,7 +1223,6 @@
         if (!String(n.thumb || '').trim()) issues.push('nothumb');
         if (!String(n.syn || n.synFull || '').trim()) issues.push('nosyn');
         if (!String(n.author || '').trim()) issues.push('noauthor');
-        if (!String(n.couple || '').trim()) issues.push('nocouple');
         if (!String(n.year || '').trim()) issues.push('noyear');
         DOC.rows.push({ n: n, slug: slug, reg: regN, kv: kvN, repo: repoN, real: real, issues: issues });
         done++;
@@ -1202,12 +1235,11 @@
     kvVsRepo: ['bad', 'KV lệch file trong repo GitHub', 'KV có {kv} chương, repo có {repo} — bạn sửa repo nhưng chưa nạp lên KV. Bấm "Nạp chương từ repo lên KV"'],
     kvMissing: ['warn', 'KV chưa có chương nào', 'registry nói có {reg} chương nhưng KV trống — người đọc bấm vào sẽ không thấy chữ'],
     noSource: ['warn', 'Không tìm thấy chương ở đâu cả', 'cả KV lẫn repo đều không có file chương'],
-    label: ['warn', 'Nhãn số chương sai định dạng', 'đang là "{lab}", nên là "29/29"'],
+    label: ['warn', 'Nhãn số chương sai định dạng', 'đang là "{lab}", nên là "29/29" hoặc "0/—" cho truyện chưa ra'],
     labelReg: ['warn', 'Nhãn lệch với trường số chương', 'nhãn "{lab}" nhưng trường chapters = {reg}'],
     nothumb: ['warn', 'Thiếu ảnh bìa', ''],
     nosyn: ['warn', 'Thiếu mô tả', ''],
     noauthor: ['warn', 'Thiếu tác giả', ''],
-    nocouple: ['warn', 'Thiếu couple', ''],
     noyear: ['warn', 'Thiếu năm', ''],
     noslug: ['bad', 'Thiếu slug', 'không mở được trang truyện']
   };
@@ -1267,9 +1299,10 @@
     var n = 0;
     DOC.rows.forEach(function (r) {
       if (r.real == null || !r.n) return;
-      if (Number(r.n.chapters) === r.real && String(r.n.countLabel) === r.real + '/' + r.real) return;
+      var wantLabel = r.real === 0 ? '0/—' : (r.real + '/' + r.real);
+      if (Number(r.n.chapters) === r.real && String(r.n.countLabel) === wantLabel) return;
       r.n.chapters = r.real;
-      r.n.countLabel = r.real + '/' + r.real;
+      r.n.countLabel = wantLabel;
       r.n.count = r.n.countLabel;
       n++;
     });

@@ -253,22 +253,37 @@ function normTitle(t) {
 
 /* =========================== tiện ích =========================== */
 function corsHeaders(req, env) {
-  const allow = (env && env.ALLOW_ORIGIN) || '*';
+  const allowRaw = String((env && env.ALLOW_ORIGIN) || '*').trim();
   const origin = req.headers.get('Origin') || '';
-  let ao = allow;
-  if (allow !== '*' && origin) {
-    const list = allow.split(',').map((s) => s.trim()).filter(Boolean);
-    ao = list.includes(origin) ? origin : list[0] || '*';
+  let ao = '*';
+  if (allowRaw === '*') {
+    ao = '*';
+  } else {
+    const list = allowRaw.split(',').map((s) => s.trim()).filter(Boolean);
+    if (origin) {
+      if (list.includes(origin)) {
+        ao = origin;
+      } else {
+        /* cho phép preview: *.pages.dev, localhost, 127.0.0.1, *.e2b.app, vercel preview */
+        const okPreview = /^(https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?|https:\/\/.*\.pages\.dev|https:\/\/.*\.vercel\.app|https:\/\/.*\.e2b\.app)$/i.test(origin)
+          || list.some((d) => origin.endsWith(d.replace(/^\*\.?/, '.')) || origin === d);
+        if (okPreview || list.includes('*')) ao = origin;
+        else ao = list[0] || origin || '*';
+      }
+    } else {
+      ao = list[0] || '*';
+    }
   }
-  return {
+  const headers = {
     'access-control-allow-origin': ao,
     'access-control-allow-methods': 'GET,PUT,POST,DELETE,OPTIONS',
-    /* thiếu x-import-mode thì nút “Lấy từ Blogger & đăng (thay chương cuối)” của
-       trang quản trị bị trình duyệt chặn ngay ở preflight — đã từng lỗi chỗ này. */
     'access-control-allow-headers': 'content-type,x-admin-key,x-import-mode,authorization',
     'access-control-max-age': '86400',
     vary: 'Origin',
   };
+  /* khi trả về origin cụ thể (không phải *) thì cho phép credentials nếu cần */
+  if (ao !== '*') headers['access-control-allow-credentials'] = 'true';
+  return headers;
 }
 function json(obj, { status = 200, cors = {}, headers = {} } = {}) {
   const h = { ...JSONH, ...cors, ...headers };
@@ -276,7 +291,10 @@ function json(obj, { status = 200, cors = {}, headers = {} } = {}) {
   return new Response(JSON.stringify(obj), { status, headers: h });
 }
 function noKV(cors) {
-  return json({ ok: false, kv: false, error: 'Worker chưa gắn KV — Settings → Bindings → KV namespace, đặt Variable name là CZ_KV' }, { status: 503, cors });
+  return json({
+    ok: false, kv: false,
+    error: 'Worker chưa gắn KV CZ_KV — Settings → Bindings → KV namespace (Variable name CZ_KV), hoặc id trong wrangler.toml vẫn là DAN_ID_KV_VAO_DAY (placeholder). Tạo KV rồi dán id thật, deploy lại.',
+  }, { status: 503, cors });
 }
 function authed(req, env) {
   const want = (env && env.ADMIN_KEY) || '';
@@ -328,7 +346,11 @@ function chapLen(book) {
    biên tập viên khai) — KHÔNG moi lại con số cũ trong nhãn, vì chính con số cũ
    đó là thứ làm web hiện "30 chương" sau khi đã xoá chương và sửa nhãn thành 29/29. */
 function countLabelOf(n, real) {
-  const planned = Math.max(real, parseInt((n && n.planned) || 0, 10) || 0);
+  real = Math.max(0, parseInt(real, 10) || 0);
+  const plannedRaw = parseInt((n && (n.planned || n.declared)) || 0, 10) || 0;
+  if (real === 0 && plannedRaw === 0) return '0/—';
+  const planned = Math.max(real, plannedRaw);
+  if (planned === 0) return real + '/—';
   return real + '/' + planned;
 }
 /* ghi lại số chương thật vào registry; trả về {changed, was, now, label} */
@@ -1332,7 +1354,18 @@ async function getComments(slug, req, env, cors) {
     { cors, headers: { 'cache-control': 'public, max-age=15' } });
 }
 async function postComment(slug, req, env, cors) {
+  const authHeader = req.headers.get('authorization') || '';
+  const hasAuth = /^Bearer\s+/i.test(authHeader);
   const u = await userFromReq(req, env);
+  /* Nếu gửi kèm Bearer nhưng Worker không xác thực được (token hết hạn, hoặc Worker chưa có
+     SUPABASE_URL/SESSION_SECRET) thì TRẢ 401 chứ không âm thầm biến thành khách — đây là
+     nguyên nhân chính của lỗi "đăng nhập rồi mà vẫn ghi tài khoản khách". */
+  if (hasAuth && !u) {
+    return json({
+      ok: false,
+      error: 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn — hãy đăng nhập lại. Nếu bạn là chủ trang, kiểm tra biến SUPABASE_URL và SESSION_SECRET trên Worker.',
+    }, { status: 401, cors });
+  }
   const body = await req.json().catch(() => ({}));
   const text = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 2000);
   if (text.length < 1) return json({ ok: false, error: 'bình luận không được trống' }, { status: 400, cors });
@@ -1346,9 +1379,18 @@ async function postComment(slug, req, env, cors) {
     return json({ ok: false, error: 'không nhận được mã máy — tải lại trang rồi thử lại' }, { status: 400, cors });
   }
   const uid = u ? u.uid : 'g:' + hash(vid);
-  const name = u ? (u.name || 'Bạn đọc')
+  /* khi đã đăng nhập: ưu tiên name/picture mà client gửi (custom profile lưu local),
+     fallback về thông tin trong session để không bị mất tên nếu client quên gửi. */
+  const name = u
+    ? (String(body.name || '').replace(/\s+/g, ' ').trim().slice(0, 40) || u.name || 'Bạn đọc')
     : (String(body.name || '').replace(/\s+/g, ' ').trim().slice(0, 40) || 'Bạn đọc');
-  const picture = u ? (u.picture || '') : '';
+  var rawPic = String(body.picture || '').trim();
+  /* data URL avatar ~1MB không nên lưu vào KV — vừa tốn quota vừa dễ vỡ khi slice */
+  if (rawPic.indexOf('data:') === 0) rawPic = '';
+  if (rawPic.length > 2000) rawPic = rawPic.slice(0, 2000);
+  var sessPic = String((u && u.picture) || '').trim();
+  if (sessPic.indexOf('data:') === 0) sessPic = '';
+  const picture = u ? (rawPic || sessPic || '') : '';
   const ch = Math.max(0, Math.min(99999, parseInt(body.ch, 10) || 0));
   /* hai lớp chặn spam: theo MỖI CHƯƠNG và theo toàn trang, trong 10 phút.
      Khách bị chặn chặt hơn (2/6) so với tài khoản đã đăng nhập (3/12). */
