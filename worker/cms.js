@@ -382,7 +382,10 @@ async function adminThrottle(req, env, cors) {
 /* ADMIN_KEY thường bị dính khoảng trắng khi copy từ Dashboard/terminal.
    Chỉ bỏ khoảng trắng ở hai đầu — không đổi phần khoá ở giữa — để thao tác
    dán khoá an toàn hơn mà không làm giảm việc so sánh chính xác. */
-function adminKey(env) { return String((env && env.ADMIN_KEY) || '').trim(); }
+function adminKey(env) {
+  /* Dashboard/password manager đôi khi thêm ký tự zero-width khi copy secret. */
+  return String((env && env.ADMIN_KEY) || '').replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+}
 function adminAuthError(env) {
   return adminKey(env)
     ? 'sai X-Admin-Key — Worker đã nhận yêu cầu nhưng ADMIN_KEY không khớp secret đang chạy'
