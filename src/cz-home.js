@@ -53,7 +53,9 @@
             (n.couple ? '<span>' + ic('users', 'i-s') + ' ' + esc(n.couple) + '</span>' : '') +
             (n.updated ? '<span>' + ic('refresh', 'i-s') + ' ' + esc(CZ.timeAgo(n.updated)) + '</span>' : '') +
           '</div>' +
-          '<p class="syn">' + esc(n.synFull || n.syn || '') + '</p>' +
+          /* hero trang chủ chỉ cần đoạn mở đầu: mô tả đầy đủ (có thể tới 3.300 ký
+             tự) nằm trong tệp chương và dành cho trang truyện */
+          '<p class="syn">' + esc(n.syn || n.synFull || '') + '</p>' +
           (pct ? '<div class="prog"><span class="pb"><i style="width:' + pct + '%"></i></span>' +
             '<span>đang đọc <b>chương ' + p + '</b>' + (tot ? ' / ' + tot : '') + ' · ' + pct + '%</span></div>' : '') +
           '<div class="btn-row">' +
@@ -142,12 +144,14 @@
   function restart() {
     var bar = $('#heroBar');
     if (!bar) return;
-    bar.style.transition = 'none'; bar.style.width = '0%';
+    bar.style.transition = 'none'; bar.style.transform = 'scaleX(0)';
     clearInterval(hero.timer);
     if (CZ.reduce || document.hidden) return;
     requestAnimationFrame(function () {
-      bar.style.transition = 'width ' + hero.auto + 'ms linear';
-      bar.style.width = '100%';
+      /* transform thay cho width: vạch này chạy suốt thời gian chờ, để width thì
+         mỗi khung hình một lần layout + paint ngay giữa lúc người dùng đang cuộn. */
+      bar.style.transition = 'transform ' + hero.auto + 'ms linear';
+      bar.style.transform = 'scaleX(1)';
     });
     hero.timer = setInterval(function () { goSlide(hero.i + 1); }, hero.auto);
   }
@@ -396,10 +400,10 @@
         '<span class="n' + (i < 3 ? ' top t' + (i + 1) : '') + '">' + (i + 1) + '</span>' +
         '<span class="rk-th' + (n.thumb ? '' : ' noimg') + '">' +
         (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async">' : '') + '</span>' +
-        '<span class="tt"><b>' + esc(n.title) + '</b><span>' + esc(n.couple || n.author || '') +
+        '<span class="tt"><b>' + esc(n.title) + '</b><span>' + esc(n.author || n.couple || '') +
         (on && s.chapterCount ? ' · ' + s.chapterCount + ' chương' : '') + '</span></span>' +
         '<span class="v">' + text + '</span>' +
-        (w ? '<i class="bar" style="--w:' + w + '%"></i>' : '') + '</a>';
+        (w ? '<i class="bar" style="--w:' + (w / 100) + '"></i>' : '') + '</a>';
     }).join('') || '<div class="empty">Chưa có dữ liệu.</div>';
     if (CZ.inkAll) CZ.inkAll();
   }

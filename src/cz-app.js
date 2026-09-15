@@ -392,7 +392,24 @@
     var t = safeGet(LS.theme);
     if (!t) { var old = safeGet(LS.dir); t = old === 'ctoi' ? 'dark' : old ? 'light' : 'light'; }
     d.documentElement.setAttribute('data-theme', t);
+    themeMeta();
     return t;
+  }
+  /* Thanh trình duyệt điện thoại tô theo <meta name="theme-color">. Không cập nhật
+     nó thì lật sang nền tối mà thanh địa chỉ vẫn trắng — đúng cái cảm giác “lệch
+     pha” trong lúc cả trang đang chuyển cảnh. Đọc thẳng TOKEN (không đọc
+     backgroundColor đã tính) để lấy màu ĐÍCH ngay trong frame đầu tiên, thay vì
+     giá trị đang dở chuyển tiếp; trang đọc thì lấy theo nền đọc (--rd-bg). */
+  function themeMeta() {
+    var m = d.querySelector('meta[name="theme-color"]');
+    if (!m) return;
+    var rd = !!(d.body && d.body.classList.contains('reading'));
+    var c = '';
+    try {
+      c = (w.getComputedStyle(rd ? d.body : d.documentElement).getPropertyValue(rd ? '--rd-bg' : '--bg') || '').trim();
+    } catch (e) {}
+    if (!/^(#|rgb|hsl)/i.test(c)) c = d.documentElement.getAttribute('data-theme') === 'dark' ? '#14110e' : '#faf8f4';
+    if (m.getAttribute('content') !== c) m.setAttribute('content', c);
   }
   /* Sáng ⇄ tối: đổi token trên html ngay trong cùng một frame.
      Không dùng View Transitions hoặc transition hàng nghìn phần tử: trình duyệt
@@ -404,6 +421,7 @@
     var now = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
     root.setAttribute('data-theme', now);
     safeSet(LS.theme, now);
+    themeMeta();
     return now;
   }
 
@@ -498,6 +516,20 @@
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
     });
+  }
+  /* Bản rút gọn của một đoạn chữ dài, dùng cho thẻ truyện, hero trang chủ và
+     meta description. KHÉP Ở DẤU CÂU khi còn chỗ; không khép được thì mới cắt ở
+     khoảng trắng — cắt cứng theo số ký tự (.slice(0, 220)) là thứ đã tạo ra
+     những câu đứt ngang giữa một từ trong registry trước đây.
+     Cùng một luật với syn_teaser() trong tools/sync_blogger.py. */
+  function teaser(text, limit) {
+    var s = String(text == null ? '' : text).replace(/\s+/g, ' ').trim();
+    var lim = parseInt(limit, 10) || 200;
+    if (s.length <= lim) return s;
+    var head = s.slice(0, lim);
+    var m = Math.max(head.lastIndexOf('.'), head.lastIndexOf('!'), head.lastIndexOf('?'));
+    if (m >= Math.floor(lim * 0.55)) return s.slice(0, m + 1).trim();
+    return head.slice(0, head.lastIndexOf(' ')).replace(/[\s,;:·|-]+$/, '') + '…';
   }
   function authorFix(a) {
     return String(a || '').replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
@@ -798,13 +830,17 @@
       (pct ? '<span class="bar"><i style="width:' + pct + '%"></i></span>' : '') +
       '</div>' +
       '<h3>' + esc(n.title) + '</h3>' +
-      '<div class="cb">' + (n.couple ? esc(n.couple) : esc(n.author || '')) + '</div>' +
+      /* dòng ngay dưới tên truyện là TÁC GIẢ. Bản cũ ưu tiên couple nên 25 bộ có
+         couple bị đề tên cặp đôi thay vì người viết — couple vẫn còn chỗ riêng của
+         nó ở bộ lọc, ở hero và trong trang truyện. */
+      '<div class="cb">' + esc(n.author || n.couple || '') + '</div>' +
       '</a>';
   }
   /* xem dạng danh sách: mỗi bộ một hàng, đủ thông tin để quyết định mở hay không */
   function cardList(n, img, pg, pct) {
     if (!n || !n.slug) return '<div class="card list off"><span class="cl-main"><span class="cl-top"><b class="cl-t">' + esc((n&&n.title)||'—') + '</b></span><span class="cl-meta">thiếu slug — sửa trong trang quản trị</span></span></div>';
-    var bits = [n.couple, n.couple && n.author ? n.author : (n.couple ? '' : n.author), n.year].filter(Boolean);
+    /* tác giả trước, couple sau — cùng thứ tự với thẻ lưới và với trang truyện */
+    var bits = [n.author, n.couple, n.year].filter(Boolean);
     var read = pg > 0;
     return '<a class="card list st-' + esc(n.statusCls || 'soon') + '" href="' + esc(storyURL(n.slug)) + '" data-t="' + esc(n.title) + '" title="' + esc(n.title) + '">' +
       '<span class="cl-th' + (img ? ' skel' : '') + '">' +
@@ -908,7 +944,9 @@
       requestAnimationFrame(function () {
         var y = w.scrollY || 0;
         var h = d.documentElement.scrollHeight - w.innerHeight;
-        if (bar) bar.style.width = (h > 0 ? Math.min(100, Math.max(0, y / h * 100)) : 0) + '%';
+        /* scaleX chứ không phải width: ghi width mỗi khung hình vừa bắt layout lại
+           vừa biến lần đọc scrollHeight ở khung kế thành đọc-cưỡng-bức. */
+        if (bar) bar.style.transform = 'scaleX(' + (h > 0 ? Math.min(1, Math.max(0, y / h)) : 0) + ')';
         if (top) top.classList.toggle('on', y > 700);
         d.body.classList.toggle('scrolled', y > 8);
         /* thanh trên không còn trượt theo / ẩn hiện khi cuộn — đứng yên với trang */
@@ -997,10 +1035,10 @@
     var fill = bar.firstChild;
     d.body.classList.add('page-in');
     if (!reduce) {
-      fill.style.width = '10%'; fill.style.opacity = '1';
-      requestAnimationFrame(function () { fill.style.width = '64%'; });
+      fill.style.transform = 'scaleX(.1)'; fill.style.opacity = '1';
+      requestAnimationFrame(function () { fill.style.transform = 'scaleX(.64)'; });
       setTimeout(function () {
-        fill.style.width = '100%';
+        fill.style.transform = 'scaleX(1)';
         setTimeout(function () { fill.style.opacity = '0'; }, 220);
       }, 240);
     }
@@ -1019,7 +1057,7 @@
       if (u.origin !== w.location.origin) return;
       if (u.pathname === w.location.pathname && u.search === w.location.search) return;
       e.preventDefault();
-      fill.style.opacity = '1'; fill.style.width = '92%';
+      fill.style.opacity = '1'; fill.style.transform = 'scaleX(.92)';
       var go = function () { w.location.href = link.href; };
       if (reduce) go(); else setTimeout(go, 170);
     }, true);
@@ -1042,8 +1080,10 @@
     var on = el.querySelector('button.on');
     if (!on) { iv.style.opacity = '0'; return; }
     var bar2 = el.classList.contains('bar');
-    iv.style.left = on.offsetLeft + 'px';
-    iv.style.top = (bar2 ? (el.offsetHeight - 2) : on.offsetTop) + 'px';
+    /* vị trí bằng translate3d (compositor); cỡ vẫn đặt width/height vì khung này
+       có viền 1px + bo góc, scale không đều sẽ làm viền méo. */
+    iv.style.transform = 'translate3d(' + on.offsetLeft + 'px,' +
+      (bar2 ? (el.offsetHeight - 2) : on.offsetTop) + 'px,0)';
     iv.style.width = on.offsetWidth + 'px';
     iv.style.height = (bar2 ? 2 : on.offsetHeight) + 'px';
     iv.style.opacity = '1';
@@ -1274,8 +1314,8 @@
     function mark(el) {
       links.forEach(function (a) { a.classList.toggle('on', a === el); });
       if (!el) { ink.style.opacity = '0'; return; }
-      ink.style.width = el.offsetWidth + 'px';
-      ink.style.transform = 'translateX(' + el.offsetLeft + 'px)';
+      /* .nav .ink có nền 100px: scaleX(w/100) cho đúng độ dài, không animate width */
+      ink.style.transform = 'translateX(' + el.offsetLeft + 'px) scaleX(' + (el.offsetWidth / 100) + ')';
       ink.style.opacity = '1';
     }
     var here = links.filter(function (a) { return a.classList.contains('on'); })[0];
@@ -1293,7 +1333,11 @@
     d.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('#czNav a'); if (a) mark(a); });
     run();
   }
-  /* chân trang: logo · lời cảm ơn · Hướng dẫn / Facebook / Khảo sát truyện */
+  /* Chân trang xếp như trang ghi công (colophon) của một tờ báo: tên báo, hai
+     cột đường dẫn THẬT, rồi dòng bản quyền ngăn bằng một đường kẻ tóc.
+     Bản cũ chỉ có logo + câu "Cảm ơn bạn đã ủng hộ và đồng hành cùng ssochuz
+     library!" + ba liên kết dồn hết vào cột trái: một câu lót không cho người đọc
+     biết thêm điều gì, và bỏ trống gần 70% bề ngang 1.180px. */
   function mountFooter(host) {
     if (!host) return;
     host.className = 'ftr';
@@ -1301,17 +1345,33 @@
     var fb = 'https://www.facebook.com/profile.php?id=61592803761987';
     var survey = cfg.form || 'https://forms.gle/YW3PvtrNVQ7xt8nCA';
     host.innerHTML = '<div class="in">' +
-      '<div class="fmain">' +
+      '<div class="fcols">' +
         '<div class="fbrand">' +
           '<a class="logo" href="/" title="ssochuz library"><span class="dot"></span>ssochuz<i> library</i></a>' +
-          '<p class="fdesc">Cảm ơn bạn đã ủng hộ và đồng hành cùng ssochuz library!</p>' +
-          '<p class="flinks">' +
-            '<a href="/guide">Hướng dẫn</a>' +
-            '<a href="' + esc(fb) + '" target="_blank" rel="noopener">Facebook</a>' +
-            '<a href="' + esc(survey) + '" target="_blank" rel="noopener" title="Khảo sát truyện bạn muốn đọc tiếp">Khảo sát truyện</a>' +
-          '</p>' +
+          '<p class="fdesc">Thư viện truyện chọn lọc — đọc ngay trong máy, giữ tiến độ từng chương, ' +
+            'lọc theo năm, tác giả, couple và theo dõi lịch ra chương.</p>' +
         '</div>' +
-      '</div></div>';
+        '<nav class="fcol" aria-label="Các mục trong thư viện">' +
+          '<h3>Mục</h3>' +
+          '<a href="/">Trang chủ</a>' +
+          '<a href="/#moi-cap-nhat">Mới cập nhật</a>' +
+          '<a href="/#bxh">Bình chọn nhiều nhất</a>' +
+          '<a href="/#lich">Lịch ra chương</a>' +
+          '<a href="/#thu-vien">Thư viện</a>' +
+        '</nav>' +
+        '<nav class="fcol" aria-label="Trợ giúp và kênh liên lạc">' +
+          '<h3>Kết nối</h3>' +
+          '<a href="/guide">Hướng dẫn sử dụng</a>' +
+          '<a href="' + esc(fb) + '" target="_blank" rel="noopener">Facebook</a>' +
+          '<a href="' + esc(survey) + '" target="_blank" rel="noopener" title="Khảo sát truyện bạn muốn đọc tiếp">Khảo sát truyện</a>' +
+          '<a href="/guide#bao-loi">Báo lỗi chữ</a>' +
+        '</nav>' +
+      '</div>' +
+      '<div class="fend">' +
+        '<span>© ' + new Date().getFullYear() + ' ssochuz library</span>' +
+        '<span>Truyện và bản dịch thuộc về tác giả tương ứng.</span>' +
+      '</div>' +
+    '</div>';
   }
   function mountShell(opt) {
     opt = opt || {};
@@ -1846,8 +1906,8 @@
     isLiked: isLiked, toggleLike: toggleLike, likedChapters: likedChapters, likedCount: likedCount, likeCount: likeCount,
     marks: marks, toggleMark: toggleMark, chaptersRead: chaptersRead,
     realCount: realCount, reconcileCount: reconcileCount, onStatsChange: onStatsChange, notifyStats: notifyStats,
-    rdGet: rdGet, rdSet: rdSet, themeInit: themeInit, themeToggle: themeToggle,
-    icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo,
+    rdGet: rdGet, rdSet: rdSet, themeInit: themeInit, themeToggle: themeToggle, themeMeta: themeMeta,
+    icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo, teaser: teaser,
     statusCls: statusCls, statusLabel: statusLabel, words: words, norm: norm, countText: countText, listHead: listHead,
     storyURL: storyURL, readURL: readURL, slugify: slugify, qs: qs, copy: copy, download: download,
     card: card, mountRail: mountRail, reveal: reveal, countUp: countUp, scaleFacts: scaleFacts,

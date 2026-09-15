@@ -338,14 +338,38 @@ async function openAdmin(worker, key) {
 
   /* ---------- 5. sửa thông tin bộ ---------- */
   click($(doc, '#tb [data-edit="' + slug + '"]'));
-  await wait(500);
+  await wait(800);
+  /* Ô mô tả PHẢI được nạp mô tả đầy đủ từ tệp chương. Registry chỉ giữ bản rút
+     gọn (đỡ nặng trang chủ), nên nếu ô nhập chỉ thấy bản rút gọn thì mỗi lần bấm
+     “Lưu thông tin” là một lần âm thầm xoá mất phần mô tả còn lại của bộ đó. */
+  const synBook = (w.loadBook(slug) || {}).synFull || '';
+  const synTrongO = $(doc, '#fSyn').value;
   $(doc, '#fTitle').value = 'Third Person (đã sửa)';
-  $(doc, '#fStatus').value = 'Hoàn thành';
+  /* #edStatus là ô tình trạng trong form sửa; #fStatus là BỘ LỌC ở danh sách —
+     trước đây test gán nhầm vào bộ lọc nên mục này chưa từng kiểm được gì */
+  $(doc, '#edStatus').value = 'Hoàn thành';
   $(doc, '#fCount').value = '10/45';
   click('#btnSaveMeta');
   await wait(500);
   const entry = w.REG.lib.find(n => n.slug === slug);
-  out.suaBo = { title: entry.title, status: entry.status, countLabel: entry.countLabel };
+  out.suaBo = {
+    title: entry.title, status: entry.status, countLabel: entry.countLabel,
+    moTaDayDuTrongTapChuong: synBook.length,
+    moTaTrongONhap: synTrongO.length,
+    moTaDayDuSauLuu: (entry.synFull || '').length,
+    banRutGonSauLuu: (entry.syn || '').length
+  };
+  if (synBook && synTrongO.length !== synBook.length) {
+    p.errors.push('ô mô tả ở trang quản trị không nạp mô tả đầy đủ: ' +
+      synTrongO.length + '/' + synBook.length + ' ký tự');
+  }
+  if (synBook && (entry.synFull || '').length !== synBook.length) {
+    p.errors.push('“Lưu thông tin” làm mất mô tả đầy đủ: ' +
+      (entry.synFull || '').length + '/' + synBook.length + ' ký tự');
+  }
+  if ((entry.syn || '').length > 220) {
+    p.errors.push('bản rút gọn dài quá 220 ký tự: ' + entry.syn.length);
+  }
 
   /* ---------- 6. sửa/xoá/đổi thứ tự chương ---------- */
   const nCh = $(doc, '#chList').querySelectorAll('.row2').length;
