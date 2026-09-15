@@ -392,7 +392,24 @@
     var t = safeGet(LS.theme);
     if (!t) { var old = safeGet(LS.dir); t = old === 'ctoi' ? 'dark' : old ? 'light' : 'light'; }
     d.documentElement.setAttribute('data-theme', t);
+    themeMeta();
     return t;
+  }
+  /* Thanh trình duyệt điện thoại tô theo <meta name="theme-color">. Không cập nhật
+     nó thì lật sang nền tối mà thanh địa chỉ vẫn trắng — đúng cái cảm giác “lệch
+     pha” trong lúc cả trang đang chuyển cảnh. Đọc thẳng TOKEN (không đọc
+     backgroundColor đã tính) để lấy màu ĐÍCH ngay trong frame đầu tiên, thay vì
+     giá trị đang dở chuyển tiếp; trang đọc thì lấy theo nền đọc (--rd-bg). */
+  function themeMeta() {
+    var m = d.querySelector('meta[name="theme-color"]');
+    if (!m) return;
+    var rd = !!(d.body && d.body.classList.contains('reading'));
+    var c = '';
+    try {
+      c = (w.getComputedStyle(rd ? d.body : d.documentElement).getPropertyValue(rd ? '--rd-bg' : '--bg') || '').trim();
+    } catch (e) {}
+    if (!/^(#|rgb|hsl)/i.test(c)) c = d.documentElement.getAttribute('data-theme') === 'dark' ? '#14110e' : '#faf8f4';
+    if (m.getAttribute('content') !== c) m.setAttribute('content', c);
   }
   /* Sáng ⇄ tối: đổi token trên html ngay trong cùng một frame.
      Không dùng View Transitions hoặc transition hàng nghìn phần tử: trình duyệt
@@ -404,6 +421,7 @@
     var now = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
     root.setAttribute('data-theme', now);
     safeSet(LS.theme, now);
+    themeMeta();
     return now;
   }
 
@@ -1846,7 +1864,7 @@
     isLiked: isLiked, toggleLike: toggleLike, likedChapters: likedChapters, likedCount: likedCount, likeCount: likeCount,
     marks: marks, toggleMark: toggleMark, chaptersRead: chaptersRead,
     realCount: realCount, reconcileCount: reconcileCount, onStatsChange: onStatsChange, notifyStats: notifyStats,
-    rdGet: rdGet, rdSet: rdSet, themeInit: themeInit, themeToggle: themeToggle,
+    rdGet: rdGet, rdSet: rdSet, themeInit: themeInit, themeToggle: themeToggle, themeMeta: themeMeta,
     icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo,
     statusCls: statusCls, statusLabel: statusLabel, words: words, norm: norm, countText: countText, listHead: listHead,
     storyURL: storyURL, readURL: readURL, slugify: slugify, qs: qs, copy: copy, download: download,

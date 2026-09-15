@@ -67,6 +67,7 @@ section[id], [id^="pane-"] { scroll-margin-top: 16px; }
   --t-close: .15s;  /* đóng — luôn nhanh hơn mở */
   --t-mid: .35s;    /* đổi bố cục, gấp/mở, đổi tông màu */
   --t-slow: .45s;   /* hiện dần khi cuộn, chuyển cảnh trang */
+  --t-theme: .16s;  /* lật nền sáng ⇄ tối — xem khối “LẬT NỀN” bên dưới vì sao là .16s */
   --mo-dist: 16px;  /* quãng dịch chuyển của lớp nổi */
   --mo-blur: 2px;   /* nhoè khi giao nhau giữa hai trạng thái */
   --mo-scale: .96;  /* thu nhỏ lúc chưa mở */
@@ -175,14 +176,30 @@ body.reading #sprog { display: none !important; }
      · mục điều hướng = chữ trơn, gạch mực trượt (#czInk) đè đúng lên đường kẻ đáy
      · tiện ích (tìm · nền · tài khoản) = một cụm cùng cỡ 36px, viền tóc
      · không còn nhấc lên/xuống khi trỏ — chỉ đổi màu mực và màu viền */
-.hdr { position: relative; z-index: 50; background: var(--bg); border-bottom: 1px solid var(--bd);
-  transition: background-color var(--t-mid) linear, border-color var(--t-mid) linear; }
-/* Trang chủ đổi nền qua một vài bề mặt lớn; không bật transition cho toàn bộ DOM
-   vì đó là nguyên nhân gây khựng trên điện thoại. */
-body.hpage { transition: background-color var(--t-mid) linear, color var(--t-mid) linear; }
-body.hpage .hero { transition: background-color var(--t-mid) linear, border-color var(--t-mid) linear; }
-body.hpage .facts { transition: border-color var(--t-mid) linear; }
-body.hpage .fbox { transition: background-color var(--t-mid) linear, border-color var(--t-mid) linear; }
+/* ---- LẬT NỀN SÁNG ⇄ TỐI ---------------------------------------------------
+   Vì sao bản cũ “lag”: nó cho CẢ `color` lẫn `background-color` nội suy tuyến
+   tính suốt .35s. Mà --txt và --bg đổi chỗ cho nhau (mực #191410 trên giấy
+   #faf8f4  ⇄  giấy #f2ebe0 trên mực #14110e), nên đúng GIỮA chặng hai màu gặp
+   nhau ở xám ~(134,130,125)/(135,132,129) — tương phản chữ/nền tụt còn **1,05:1**.
+   Nghĩa là cả trang CHỮ BIẾN MẤT ~115ms rồi mới hiện lại: mắt đọc đúng cái đó là
+   “khựng / đục”, không phải chuyện thiếu khung hình.
+   Cách sửa (đã đo lại bằng số):
+     1. CHỮ ĐỔI TỨC THÌ — bỏ `color` khỏi transition. Đỡ luôn khoản vẽ lại từng
+        dòng chữ mỗi khung hình, và không còn cảnh nửa trang đã đổi màu chữ, nửa
+        chưa (đa số phần tử ở đây tự đặt color nên vốn dĩ không phai theo body).
+     2. NỀN/VIỀN chỉ phai .16s theo `--ease-out` (.22,1,.36,1) — dốc mạnh ngay
+        đầu: nền đi được nửa đường chỉ sau 13% thời gian ⇒ cửa sổ chữ-mờ còn
+        ~21ms (≈1 khung hình) thay vì 115–175ms như .35s linear.
+     3. Gộp đúng các MẶT PHẲNG LỚN vào MỘT luật để cả trang lật cùng một nhịp,
+        mọi trang như nhau (bản cũ chỉ có trang chủ). Danh sách cố ý ngắn: thêm
+        phần tử là thêm việc cho máy yếu.
+   KHÔNG dùng View Transitions: phải chụp lại toàn trang rồi blend — trễ rõ trên
+   điện thoại và trong trang đọc (xem ghi chú themeToggle trong src/cz-app.js). */
+body, .hdr, .hero, .hero .foot, .facts, .ftr, .fbox, .sechead, .authcard {
+  transition: background-color var(--t-theme) var(--ease-out),
+              border-color var(--t-theme) var(--ease-out);
+}
+.hdr { position: relative; z-index: 50; background: var(--bg); border-bottom: 1px solid var(--bd); }
 .hdr .in { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; height: var(--hdr-h);
   display: flex; align-items: center; gap: 8px; }
 /* vạch tóc ngăn “điều hướng” khỏi “tiện ích” — chi tiết nhỏ kiểu bìa tạp chí,
@@ -280,7 +297,7 @@ body.hpage .fbox { transition: background-color var(--t-mid) linear, border-colo
 .tsw-sl {
   position: absolute; inset: 0; z-index: 0; border-radius: inherit; background: var(--surf3);
   box-shadow: inset 0 1px 2px rgba(30, 20, 10, .07);
-  transition: background-color .28s var(--ease-soft), box-shadow .2s var(--ease);
+  transition: background-color var(--t-theme) var(--ease-out), box-shadow .2s var(--ease);
   will-change: background-color;
 }
 .tsw-in:checked ~ .tsw-sl { background: var(--surf2); }
@@ -292,8 +309,9 @@ body.hpage .fbox { transition: background-color var(--t-mid) linear, border-colo
   box-sizing: border-box; border-radius: 50%; background: var(--surf); border: 1px solid var(--bd2);
   pointer-events: none; color: var(--mut); fill: none; stroke: currentColor; stroke-width: 1.7;
   transform-origin: 50% 50%; will-change: transform, opacity;
-  transition: transform .34s var(--ease), opacity .2s var(--ease-soft),
-    background-color .28s var(--ease-soft), border-color .28s var(--ease-soft), color .28s var(--ease-soft);
+  transition: transform .22s var(--ease), opacity .12s var(--ease-out),
+    background-color var(--t-theme) var(--ease-out), border-color var(--t-theme) var(--ease-out),
+    color var(--t-theme) var(--ease-out);
 }
 .tsw-icon.moon { opacity: 0; transform: translateX(-100%) rotate(-180deg); }
 .tsw-icon.sun { opacity: 1; transform: none; }
@@ -306,8 +324,7 @@ body.hpage .fbox { transition: background-color var(--t-mid) linear, border-colo
   .tsw, .tsw-sl, .tsw-icon { transition: none; }
 }
 
-.ftr { border-top: 1px solid var(--bd); background: var(--bg); margin-top: 80px;
-  transition: background-color var(--t-mid) linear, border-color var(--t-mid) linear; }
+.ftr { border-top: 1px solid var(--bd); background: var(--bg); margin-top: 80px; }
 .ftr .in { max-width: var(--maxw); margin: 0 auto; padding: 40px 24px 32px; }
 .ftr .fmain { display: flex; flex-direction: column; gap: 18px; }
 .ftr .fbrand { max-width: 52ch; }
@@ -561,8 +578,7 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .hero .pcap b { color: var(--mut); font-weight: 650; }
 /* thanh điều khiển của hero: nền đặc, KHÔNG kính mờ — đúng lời hứa “tạp chí in,
    không gradient/kính mờ” ở đầu tệp, và đỡ một lớp blur phải vẽ lại khi cuộn */
-.hero .foot { position: relative; border-top: 1px solid var(--bd); background: var(--bg);
-  transition: background-color var(--t-mid) linear, border-color var(--t-mid) linear; }
+.hero .foot { position: relative; border-top: 1px solid var(--bd); background: var(--bg); }
 .hero .footin { max-width: var(--maxw); margin: 0 auto; padding: 12px 24px; display: flex; align-items: center; gap: 12px; }
 .hero .arrow { width: 34px; height: 34px; border: 1px solid var(--bd); border-radius: var(--r); color: var(--mut);
   display: grid; place-items: center; transition: border-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease),
@@ -744,7 +760,8 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .contcols { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
 .cont { display: grid; grid-template-columns: 46px minmax(0, 1fr) auto auto; gap: 12px; align-items: center;
   padding: 12px; border: 1px solid var(--bd); border-radius: var(--r); background: var(--surf); cursor: pointer;
-  transition: border-color var(--t-fast) var(--ease), box-shadow var(--t) var(--ease), transform var(--t) var(--ease); }
+  transition: border-color var(--t-fast) var(--ease), box-shadow var(--t) var(--ease), transform var(--t) var(--ease),
+    background-color var(--t-theme) var(--ease-out); }
 .cont:hover { border-color: var(--bd2); transform: translateY(-1px); box-shadow: var(--sh-card); }
 .cont .ct-th { display: block; width: 46px; height: 66px; border-radius: var(--r-sm); overflow: hidden; background: var(--surf2); }
 .cont .ct-th img { width: 100%; height: 100%; object-fit: cover; }
@@ -764,7 +781,8 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .rank { position: relative; display: grid; grid-template-columns: 28px 46px 1fr auto; gap: 12px; align-items: center;
   padding: 12px 8px 16px; border-bottom: 1px solid var(--bd); color: var(--txt); border-radius: var(--r-sm);
   animation: rankIn var(--t-mid) var(--ease-out) both; animation-delay: var(--d, 0ms);
-  transition: background var(--t-fast) var(--ease), transform var(--t) var(--ease); }
+  transition: background-color var(--t-fast) var(--ease), transform var(--t) var(--ease),
+    border-color var(--t-theme) var(--ease-out); }
 .rank:last-child { border-bottom: 0; padding-bottom: 8px; }
 .rank:hover { background: color-mix(in srgb, var(--surf2) 70%, transparent); transform: translateX(2px); }
 .rank:hover .tt b { color: var(--acc); }
@@ -1154,9 +1172,13 @@ body.rd-focus .rdbar .tools:hover { opacity: 1; }
 body.rd-focus .rdpct { opacity: .35; }
 
 /* chuyển chương: cũ trượt sang trái rồi mờ đi, mới trượt vào từ phải */
+/* riêng cột chữ trong trang đọc mới cho `color` chuyển động — nhưng cũng chỉ
+   .2s ease-out: đổi nền đọc (sang/kem/tối) mà bắt cả chương sách vẽ lại chữ
+   trong .35s linear thì đúng là khựng. */
 #rd .rdhead, #rd .rtext, #rd .ract, #rd .rend, #rd .rnav {
   transition: opacity var(--t) var(--ease), transform var(--t) var(--ease), filter var(--t) var(--ease),
-    background-color var(--t-mid) linear, color var(--t-mid) linear, border-color var(--t-mid) linear; }
+    background-color var(--t-theme) var(--ease-out),
+    border-color var(--t-theme) var(--ease-out); }
 #rd.cut-out .rdhead, #rd.cut-out .rtext, #rd.cut-out .ract, #rd.cut-out .rend, #rd.cut-out .rnav {
   opacity: 0; transform: translateX(-30px); filter: blur(2px); }
 #rd.cut-in .rdhead, #rd.cut-in .rtext, #rd.cut-in .ract, #rd.cut-in .rend, #rd.cut-in .rnav {
@@ -1206,13 +1228,21 @@ body.reading ::selection { background: color-mix(in srgb, var(--rd-acc) 30%, tra
   color: var(--rd-mut); padding: 11px 10px 3px; }
 .sgrp .srow2 { border-bottom: 0; padding: 9px 10px; }
 
-/* nền đọc đổi mượt — giữ transform của thanh trên để khỏi nhấp nháy */
-body.reading { transition: background-color var(--t-mid) linear, color var(--t-mid) linear, border-color var(--t-mid) linear; }
-body.reading .rdbar { transition: transform .32s var(--ease), background-color var(--t-mid) linear, color var(--t-mid) linear, border-color var(--t-mid) linear; }
-body.reading .rdprog { transition: background-color var(--t-mid) linear, border-color var(--t-mid) linear; }
+/* Trang đọc theo đúng một nguyên tắc với thân trang: NỀN GIẤY phai .16s, MỰC đổi
+   tức thì, và giữ transform của thanh trên để khỏi nhấp nháy. Cột chữ ở đây dài
+   cả màn hình — cho `color` chuyển động là bắt máy vẽ lại từng dòng mỗi khung
+   hình, mà giữa chặng mực với giấy vẫn gặp nhau ở một màu xám đục (tương phản
+   ~1:1) nên chẳng đổi lại được gì. Các lớp (thanh công cụ, cột chữ, chân trang,
+   ngăn kéo) dùng chung một nhịp + một đường cong để về đích cùng lúc. */
+body.reading { transition: background-color var(--t-theme) var(--ease-out),
+  border-color var(--t-theme) var(--ease-out); }
+body.reading .rdbar { transition: transform .32s var(--ease), background-color var(--t-theme) var(--ease-out),
+  border-color var(--t-theme) var(--ease-out); }
+body.reading .rdprog { transition: background-color var(--t-theme) var(--ease-out), border-color var(--t-theme) var(--ease-out); }
 body.reading .sheet .pan, body.reading .sheet .pb, body.reading .toc a, body.reading .opts button,
 body.reading .sgrp, body.reading .toastline, body.reading .rnav button, body.reading .ract > * {
-  transition: background-color var(--t-mid) linear, color var(--t-mid) linear, border-color var(--t-mid) linear; }
+  transition: background-color var(--t-theme) var(--ease-out),
+    border-color var(--t-theme) var(--ease-out); }
 
 /* nút trong thanh đọc: nâng nhẹ khi trỏ */
 .ibo:hover { transform: translateY(-1px); }

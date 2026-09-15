@@ -234,7 +234,7 @@ cho hộp thoại / menu thả xuống.
 ## 6. Những gì GIỮ NGUYÊN (đúng ràng buộc)
 
 - **Thứ tự khối** trên trang chủ: Hero → Dải số → My Space → Mới cập nhật →
-  Bình chọn nhiều nhất → Biên tập viên chọn → Lịch ra chương → Thư viện.
+  Bình chọn nhiều nhất → ssochuz’s choices → Lịch ra chương → Thư viện.
 - **Logic thẻ**: ảnh bìa ở trên (tỉ lệ 2/3), tiêu đề, rồi metadata — không đổi
   thứ tự, không đổi vị trí DOM.
 - **Thanh đầu trang**: cùng một `mountHeader()`, cùng id (`#czNav`, `#czInk`,
@@ -258,3 +258,110 @@ python3 tools/dev_server.py --port 8080   # xem thử
 công tắc nền (`.tsw-sl`, `.tsw-in:checked ~ .tsw-icon.moon`, `.tsw-icon.sun`,
 `translate(-100%) rotate(-180deg)`) — bản mới vẫn giữ đủ, đã kiểm tra trên **bản
 đã rút gọn** chứ không chỉ bản nguồn.
+
+---
+
+## 8. Bổ sung 2026-09-15 (lần 2)
+
+### 8.1 Đổi tên mục · “Biên tập viên chọn” → “ssochuz’s choices”
+
+| Tệp | Chỗ sửa |
+|---|---|
+| `index.html` | `<h2>` của `#bien-tap` + chú thích khối |
+| `admin.html` | tiêu đề thẻ “Góc biên tập viên”, dòng gợi ý, placeholder ô tìm |
+
+Dùng dấu nháy cong `’` (U+2019) chứ không phải `'` thẳng: tiêu đề này dựng bằng
+chữ có chân (Iowan Old Style / Palatino / Georgia) nên nháy thẳng đứng trông như
+dấu nhấn máy chữ. `id="bien-tap"`, `#editRail` và toàn bộ luồng dữ liệu
+(`editorChoice` trong registry/KV) **giữ nguyên** → không vỡ liên kết `/#bien-tap`,
+không phải sửa Worker.
+
+### 8.2 Lật nền sáng ⇄ tối hết khựng
+
+**Đo ra bệnh thật chứ không đoán.** Bản cũ cho **cả `color` lẫn `background-color`
+nội suy tuyến tính suốt .35s**. Mà `--txt` và `--bg` của hai chế độ gần như **đổi
+chỗ cho nhau** (mực `#191410` trên giấy `#faf8f4` ⇄ giấy `#f2ebe0` trên mực
+`#14110e`), nên đúng **giữa chặng** hai màu gặp nhau ở cùng một xám:
+
+| đã đi được | nền | chữ | tương phản chữ/nền |
+|---|---|---|---|
+| 0 % | `(250,248,244)` | `(25,20,16)` | **17,2 : 1** |
+| 40 % | `(158,156,152)` | `(112,106,99)` | 1,95 : 1 |
+| **50 %** | `(135,132,129)` | `(134,128,120)` | **1,05 : 1** ← chữ tan vào nền |
+| 60 % | `(112,109,106)` | `(155,149,141)` | 1,73 : 1 |
+| 100 % | `(20,17,14)` | `(242,235,224)` | **15,9 : 1** |
+
+Cả trang **mất chữ ~115 ms** rồi mới hiện lại — mắt đọc đúng cái đó là “khựng/đục”,
+không phải chuyện thiếu khung hình. Ba lỗi chồng lên nhau, sửa cả ba:
+
+1. **Bỏ hẳn `color` khỏi nhịp đổi nền.** Ngoài khoản tương phản kể trên, `color`
+   trên `<body>` là màu **kế thừa** → bắt máy vẽ lại từng dòng chữ mỗi khung hình,
+   trong khi đa số phần tử ở đây *tự đặt* `color` nên vốn không phai theo `<body>`
+   → trước đó là phai lệch pha (chỗ mờ dần, chỗ giật cứng).
+   ```css
+   /* CŨ */ body.hpage { transition: background-color .35s linear, color .35s linear; }
+   /* MỚI */ body, .hdr, .hero, .hero .foot, .facts, .ftr, .fbox, .sechead, .authcard {
+              transition: background-color var(--t-theme) var(--ease-out),
+                          border-color  var(--t-theme) var(--ease-out); }
+   ```
+2. **`.35s linear` → `--t-theme: .16s` với `--ease-out` (`cubic-bezier(.22,1,.36,1)`)**
+   — dốc mạnh ngay đầu, nên nền đi được nửa đường chỉ sau **13 % thời gian**. Cửa sổ
+   chữ-mờ (tương phản < 3:1) còn **~21 ms ≈ 1 khung hình**, so với **175 ms** của
+   `.35s linear` (cùng công thức nội suy, chỉ khác nhịp và đường cong). `.16s` cũng
+   đúng tầm `--t-fast` mà hệ thống này vẫn dành cho “đổi màu”.
+3. **Phủ không đều** — trước chỉ `body.hpage/.hero/.facts/.fbox` chuyển tiếp, nên
+   trang chủ thì mờ dần còn trang truyện/quản trị thì giật cứng. Nay gộp đúng các mặt
+   phẳng lớn vào **một** luật, mọi trang như nhau. Danh sách cố ý ngắn: thêm phần tử
+   là thêm việc cho máy yếu.
+
+**Trang đọc** theo đúng nguyên tắc ấy (không phải ngoại lệ như bản nháp trước):
+`body.reading`, `.rdbar`, `.rdprog`, cột chữ `.rdhead/.rtext/.ract/.rend/.rnav` và
+ngăn kéo cài đặt đều về `--t-theme` + `--ease-out` (trước là `.35s linear` /
+`.32s linear` và có giữ `color`). Cột chữ dài cả màn hình nên bỏ `color` ở đây là
+chỗ giảm tải rõ nhất trên điện thoại.
+
+**Núm công tắc:** trượt `.26s → .22s` (vật thể thật, về đích sau cú lật nền một
+chút cho có đà), màu nền/viền theo `--t-theme`. Vẫn là transform — không đụng các
+chữ ký mà `tests/t_mobile.js` khoá. `prefers-reduced-motion` vẫn `transition: none
+!important` cho toàn bộ.
+
+**Vẫn không dùng View Transitions** — đúng quyết định cũ ghi trong `themeToggle()`:
+API đó phải chụp lại toàn trang rồi blend, trễ rõ trên điện thoại và trong trang đọc.
+
+### 8.3 `meta[name=theme-color]` — lỗi thật, không phải thẩm mỹ
+
+```js
+/* src/cz-app.js — gọi từ themeInit(), themeToggle(); src/cz-story.js gọi cuối applyRD() */
+function themeMeta() { … m.setAttribute('content', bg) }
+```
+
+Trước đây thẻ này cứng `#faf8f4`: lật sang nền tối thì **thanh địa chỉ điện thoại
+vẫn trắng** — một mảng sáng nằm trên trang tối, đúng lúc đang chuyển cảnh, nên cảm
+giác “lệch pha” càng rõ. Nay đọc thẳng token (`--bg`, hoặc `--rd-bg` khi đang trong
+trang đọc) để lấy màu **đích** ngay frame đầu, không phải giá trị đang dở chuyển tiếp.
+
+Gọi ở bốn chỗ, đủ mọi đường vào/ra: `themeInit()` (tải trang), `themeToggle()`
+(nút bấm), cuối `applyRD()` trong `src/cz-story.js` (vào trang đọc / đổi nền đọc),
+và `exitReader()` (thoát trang đọc thì trả thanh trình duyệt về màu nền của trang,
+không giữ lại màu giấy vừa đọc). `admin.html` không có thẻ này → hàm thoát sớm,
+không lỗi; `404.html` không nạp JS.
+
+### 8.4 Đã rà
+
+```
+npm run build · npm test            → 15/15 bài đạt
+node tools/check_html.js            → HTML sạch, 28 luật _redirects không vòng lặp
+node tools/check_calls.js           → không có hàm “ma”
+python3 tools/check_css.py          → 0 lớp dùng mà CSS chưa định nghĩa
+jsdom (trang chủ, dữ liệu thật /data):
+  #bien-tap hiện, h2 = “ssochuz’s choices”, 6 thẻ
+  header đủ: logo · 4 mục · #czInk · Tìm · công tắc · tài khoản · menu (7 mục)
+  light → dark → light đúng MỘT nhịp mỗi lần, meta #faf8f4 ↔ #14110e, có ghi localStorage
+  0 lỗi JS
+jsdom (trang truyện → vào chương 2 → thoát):
+  body.reading bật/tắt đúng, data-rd = kem, meta theo kịp, 0 lỗi JS
+  (jsdom không tính được custom property nên --rd-bg rơi về màu dự phòng —
+   trình duyệt thật sẽ lấy đúng màu giấy đọc)
+CSS sau khi dựng: không còn luật nào cho `color` phai theo nhịp đổi nền,
+  trừ núm công tắc .tsw-icon (22px, cố ý)
+```

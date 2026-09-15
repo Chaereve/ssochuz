@@ -592,6 +592,8 @@
       var fam = fontMap[s.font] || 'var(--font-head)';
       el.style.fontFamily = fam;
     }
+    /* nền đọc đổi thì thanh trình duyệt đổi theo, không ở lại màu của nền giấy */
+    if (CZ.themeMeta) CZ.themeMeta();
   }
   function paintSettings() {
     var s = CZ.rdGet();
@@ -1053,6 +1055,9 @@
   function exitReader(toComments) {
     reading = false;
     document.body.classList.remove('reading');
+    /* ra khỏi trang đọc thì thanh trình duyệt phải về màu nền của trang, không
+       giữ lại màu nền đọc (kem/tối) vừa dùng */
+    if (CZ.themeMeta) CZ.themeMeta();
     try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
     try { document.title = N.title + ' · ssochuz library'; } catch (e) {}
     if (toComments) showTab('cmt', true);
