@@ -43,14 +43,16 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 
   click('#czBurger'); await wait(60);
   const desktopLabels = [...doc.querySelectorAll('#czNav a')].map(a => a.textContent.trim());
-  const mobileLabels = [...mnav.querySelectorAll('a')].slice(0, desktopLabels.length).map(a => a.textContent.trim());
+  const mobileAllLabels = [...mnav.querySelectorAll('a')].map(a => a.textContent.trim());
+  const mobileLabels = mobileAllLabels.slice(0, desktopLabels.length);
   out.menuSauKhiBam = {
     on: mnav.classList.contains('on'),
     slid: mnav.classList.contains('slid'),
     aria: burger.getAttribute('aria-expanded'),
     soMuc: mnav.querySelectorAll('a').length,
     nhan: mobileLabels,
-    dongBoTen: JSON.stringify(desktopLabels) === JSON.stringify(mobileLabels)
+    dongBoTen: JSON.stringify(desktopLabels) === JSON.stringify(mobileLabels),
+    mySpace: mobileAllLabels.includes('My Space') && $('#ban-doc h2').textContent.trim() === 'My Space'
   };
   /* bấm lại lần nữa phải đóng được */
   click('#czBurger'); await wait(60);
@@ -142,6 +144,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   if (!out.menuSauKhiBam.on || !out.menuSauKhiBam.slid) loi.push('menu không mở khi bật giảm chuyển động');
   if (!out.menuSauKhiBam.soMuc || out.menuSauKhiBam.soMuc < 4) loi.push('menu mở nhưng không có mục nào');
   if (!out.menuSauKhiBam.dongBoTen) loi.push('tên menu mobile lệch với header web');
+  if (!out.menuSauKhiBam.mySpace) loi.push('My Space chưa đồng bộ giữa menu mobile và trang chủ');
   if (out.menuSauKhiBam.aria !== 'true') loi.push('aria-expanded không đổi');
   if (!out.menuDongLai) loi.push('bấm lần hai không đóng menu');
   if (!out.menuEscDong) loi.push('Esc không đóng menu');

@@ -144,7 +144,7 @@ python3 tools/check_css.py  lớp CSS dùng mà chưa định nghĩa / định n
 
 **Trang chủ — hero landing (`/`)**
 Khối mở đầu lớn chạy 5 bìa truyện (tự chuyển 8 giây, có nút chọn), nút “Đọc tiếp / Trang truyện /
-Lưu vào tủ”. Bên dưới: dải số liệu thật, kệ **Bàn đọc của bạn** (Đang đọc dở · Tủ truyện, chỉ
+Lưu vào tủ”. Bên dưới: dải số liệu thật, kệ **My Space** (Đang đọc dở · Tủ truyện, chỉ
 hiện khi bạn đã đọc/lưu), rồi **bốn khối riêng** — *Mới cập nhật · Xếp hạng · Lịch ra chương* —
 mỗi mục một khối, cuộn là tới, không gom vào một khối tab; sau đó là **Thư viện truyện**: tìm
 kiếm, lọc năm/tác giả/couple, nhóm **Tình trạng** và nhóm **Nhãn** tách riêng, kiểu sắp xếp

@@ -1104,7 +1104,7 @@
       '<button class="hbtn icon burger" id="czBurger" aria-label="Mở menu" aria-expanded="false" aria-controls="czMnav">' + icon('menu', 'i-s') + '</button>' +
       '</div>' +
       '<div class="mnav" id="czMnav">' + mLinks +
-      '<a href="/#ban-doc">' + icon('shelf', 'i-s') + ' Bàn đọc của bạn</a>' +
+      '<a href="/#ban-doc">' + icon('shelf', 'i-s') + ' My Space</a>' +
       '<a href="/guide">' + icon('info', 'i-s') + ' Hướng dẫn</a>' +
       /* mục Quản trị được vẽ trong paintAuth(): người thường KHÔNG thấy */
       '<span id="czAuthMWrap"></span></div>';
