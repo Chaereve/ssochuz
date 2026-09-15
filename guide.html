@@ -4,162 +4,81 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Hướng dẫn sử dụng · ssochuz library</title>
-<meta name="description" content="Hướng dẫn tìm truyện, đọc truyện, tủ sách, thích & bình chọn và báo lỗi trên ssochuz library.">
+<meta name="description" content="Cách tìm, đọc, lưu truyện và báo lỗi trên ssochuz library.">
 <meta name="theme-color" content="#faf8f4">
-<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg?v=2">
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=2">
-<link rel="icon" type="image/x-icon" href="/assets/favicon.ico?v=2">
-<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=2">
-<link rel="stylesheet" href="/cz.css?v=20260915f">
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg?v=3">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=3">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png?v=3">
+<link rel="stylesheet" href="/cz.css?v=20260915g">
 <script>try{var t=localStorage.getItem('ssochuz-theme')||localStorage.getItem('chuseoz-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 <style>
-.guide { max-width: 860px; margin: 0 auto; padding: 0 24px 56px; }
-.guide h1 { font-size: clamp(28px,4vw,40px); margin: 24px 0 8px; }
-.guide .lead { color: var(--mut); font-size: 16px; line-height: 1.7; margin-bottom: 24px; }
-.guide h2 { font-size: 22px; margin: 40px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--bd); scroll-margin-top: 80px; }
-.guide h3 { font-size: 16px; margin: 20px 0 8px; }
-.guide p, .guide li { font-size: 14.5px; line-height: 1.75; color: var(--txt); }
-.guide ul, .guide ol { margin: 8px 0 16px 20px; }
-.guide .card2 { margin: 16px 0; }
-.guide kbd { font-size: 12px; }
-.guide .toc { border: 1px solid var(--bd); border-radius: var(--r-lg); background: var(--surf); padding: 14px 18px; margin-bottom: 24px; }
-.guide .toc a { display: block; padding: 6px 0; font-size: 13.5px; color: var(--mut); }
-.guide .toc a:hover { color: var(--acc); }
-.guide .grid2 { display: grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap: 12px; }
-.guide .tip { border-left: 3px solid var(--acc); background: color-mix(in srgb, var(--acc) 6%, transparent); padding: 10px 14px; border-radius: 0 var(--r) var(--r) 0; font-size: 13.5px; color: var(--mut); margin: 12px 0; }
-@media (max-width: 700px){ .guide { padding: 0 16px 48px; } }
+.guide{max-width:820px;margin:auto;padding:0 24px 56px}.guide h1{font-size:clamp(28px,4vw,40px);margin:24px 0 8px}.guide .lead{color:var(--mut);font-size:16px;line-height:1.7;margin-bottom:24px}.guide h2{font-size:22px;margin:38px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--bd);scroll-margin-top:80px}.guide h3{font-size:16px;margin:20px 0 8px}.guide p,.guide li{font-size:14.5px;line-height:1.75;color:var(--txt)}.guide ul,.guide ol{margin:8px 0 16px 20px}.guide .card2{margin:16px 0}.guide kbd{font-size:12px}.guide .toc{border:1px solid var(--bd);border-radius:var(--r-lg);background:var(--surf);padding:14px 18px;margin-bottom:24px}.guide .toc a{display:block;padding:6px 0;font-size:13.5px;color:var(--mut)}.guide .toc a:hover{color:var(--acc)}.guide .tip{border-left:3px solid var(--acc);background:color-mix(in srgb,var(--acc) 6%,transparent);padding:10px 14px;border-radius:0 var(--r) var(--r) 0;font-size:13.5px;color:var(--mut);margin:12px 0}@media(max-width:700px){.guide{padding:0 16px 48px}}
 </style>
 </head>
 <body>
-<div id="sprog" aria-hidden="true"><i></i></div>
-<header id="hdr"></header>
-
+<div id="sprog" aria-hidden="true"><i></i></div><header id="hdr"></header>
 <main class="guide">
   <nav class="crumb" style="padding:24px 0 0"><a href="/">Trang chủ</a> <span>›</span> <b>Hướng dẫn</b></nav>
-  <h1>Hướng dẫn sử dụng ssochuz library</h1>
-  <p class="lead">Mọi thứ bạn cần để đọc truyện thoải mái trên ssochuz — tìm truyện, đọc, lưu tủ, thích và bình chọn. Mất chưa tới 3 phút để nắm hết.</p>
+  <h1>Dùng ssochuz thật dễ</h1>
+  <p class="lead">Tìm một bộ truyện, mở chương và lưu lại để đọc tiếp sau này. Dưới đây là những điều bạn cần biết — thường chỉ mất vài phút.</p>
+  <nav class="toc" aria-label="Mục lục">
+    <b>Mục lục</b>
+    <a href="#tim-kiem">1. Tìm truyện</a><a href="#doc-truyen">2. Đọc truyện</a><a href="#my-space">3. Lưu truyện và tiến độ</a><a href="#thich">4. Thích và bình chọn</a><a href="#tai-khoan">5. Tài khoản</a><a href="#bao-loi">6. Báo lỗi</a><a href="#meo">7. Phím tắt</a>
+  </nav>
 
-  <div class="toc">
-    <b style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:8px"><span style="width:20px;height:20px;display:grid;place-items:center;border:1px solid var(--bd);border-radius:6px">≡</span> Mục lục</b>
-    <a href="#tim-kiem"><span style="opacity:.5;margin-right:6px">01</span> Tìm truyện nhanh</a>
-    <a href="#doc-truyen"><span style="opacity:.5;margin-right:6px">02</span> Đọc truyện</a>
-    <a href="#my-space"><span style="opacity:.5;margin-right:6px">03</span> My Space — tủ truyện &amp; tiến độ</a>
-    <a href="#thich"><span style="opacity:.5;margin-right:6px">04</span> Thích &amp; bình chọn</a>
-    <a href="#tai-khoan"><span style="opacity:.5;margin-right:6px">05</span> Tài khoản, tên &amp; ảnh đại diện</a>
-    <a href="#bao-loi"><span style="opacity:.5;margin-right:6px">06</span> Báo lỗi &amp; liên hệ</a>
-    <a href="#meo"><span style="opacity:.5;margin-right:6px">07</span> Phím tắt</a>
-  </div>
-
-  <h2 id="tim-kiem">1. Tìm truyện nhanh</h2>
-  <div class="card2">
-    <ul>
-      <li>Bấm nút <b>Search</b> trên thanh đầu trang (hoặc phím <kbd>⌘</kbd><kbd>K</kbd> / <kbd>/</kbd>) để mở ô tìm nổi — gõ tên truyện, tác giả hoặc couple là thấy ngay.</li>
-      <li>Trong mục <b>Library</b>, ô tìm kiếm lớn lọc trực tiếp trên lưới truyện, không cần bấm Enter.</li>
-      <li>Bộ lọc: <b>Tình trạng</b> (hoàn thành / đang cập nhật / sắp ra), <b>18+</b>, <b>Năm</b>, <b>Tác giả</b>, <b>Couple</b>, <b>Sắp xếp</b>. Các điều kiện đang bật hiện thành chip — bấm <kbd>x</kbd> trên chip để bỏ từng cái.</li>
-      <li>Đổi kiểu hiển thị <b>lưới / danh sách</b> bằng hai nút cạnh ô sắp xếp.</li>
-    </ul>
-  </div>
+  <h2 id="tim-kiem">1. Tìm truyện</h2>
+  <div class="card2"><ul>
+    <li>Ở mục <b>Thư viện</b>, nhập tên truyện, tác giả hoặc couple. Kết quả lọc ngay khi bạn gõ.</li>
+    <li>Dùng các bộ lọc <b>Tình trạng</b>, <b>18+</b>, <b>Năm</b>, <b>Tác giả</b> và <b>Couple</b> để tìm nhanh hơn.</li>
+    <li>Chọn biểu tượng <b>lưới</b> hoặc <b>danh sách</b> để đổi cách xem. Các bộ lọc đang dùng có thể xoá ở ngay bên dưới ô tìm kiếm.</li>
+  </ul></div>
 
   <h2 id="doc-truyen">2. Đọc truyện</h2>
-  <div class="card2">
-    <h3>Vào chương &amp; thanh công cụ</h3>
-    <ul>
-      <li>Mở truyện → bấm <b>Đọc từ đầu / Đọc tiếp</b>; thanh công cụ tự ẩn sau vài giây để bạn tập trung, chạm màn hình hoặc cuộn lên là hiện lại.</li>
-      <li>Thanh công cụ có: về trang truyện, % tiến độ, chuyển chương ←/→, mục lục, đánh dấu, cài đặt đọc, chế độ tập trung, chia sẻ.</li>
-      <li>Vạch mảnh ở mép trên cho biết bạn đã đọc bao nhiêu phần trăm chương.</li>
-    </ul>
-    <h3>Tuỳ chỉnh dễ đọc</h3>
-    <ul>
-      <li><b>Cài đặt đọc</b> (nút bánh răng): cỡ chữ, giãn dòng, giãn đoạn, độ rộng cột, căn đều.</li>
-      <li><b>Font:</b> chữ sách (serif) hoặc không chân (sans). <b>Nền:</b> sáng / kem / tối — đổi nhanh bằng nút <b>Theme</b> trên đầu trang.</li>
-      <li><b>Chế độ tập trung (F):</b> ẩn hết ngoại trừ nội dung. Trong cài đặt có nút vào toàn màn hình thật.</li>
-    </ul>
-    <h3>Trên điện thoại</h3>
-    <ul>
-      <li>Vuốt ngang để đổi chương (chế độ cuộn).</li>
-      <li>Mọi nút đều nằm trong tầm ngón tay cái; thanh công cụ chạm là hiện.</li>
-    </ul>
-    <div class="tip">Tiến độ đọc được tự lưu trên máy — lần sau mở lại đúng chỗ đang đọc dở, kể cả khi không đăng nhập.</div>
-  </div>
+  <div class="card2"><ul>
+    <li>Mở trang truyện rồi chọn <b>Đọc từ đầu</b> hoặc <b>Đọc tiếp</b>. Tiến độ sẽ được tự lưu trên trình duyệt.</li>
+    <li>Thanh công cụ cho phép chuyển chương, mở mục lục, đánh dấu, chia sẻ và chỉnh cách đọc.</li>
+    <li>Trong <b>Cài đặt đọc</b>, bạn có thể đổi cỡ chữ, font, giãn dòng, độ rộng cột và màu nền. Nhấn <b>F</b> để bật chế độ tập trung.</li>
+    <li>Trên điện thoại, chạm màn hình để hiện thanh công cụ; vuốt ngang để chuyển chương.</li>
+  </ul><div class="tip">Tiến độ lưu trên thiết bị hiện tại. Nếu xoá dữ liệu trình duyệt hoặc đổi máy, tiến độ có thể bị mất.</div></div>
 
-  <h2 id="my-space">3. My Space — tủ truyện &amp; tiến độ</h2>
-  <div class="card2">
-    <ul>
-      <li><b>Tủ truyện:</b> bấm nút <b>Tủ truyện</b> (icon kệ sách) ở trang truyện hoặc trang đọc để lưu bộ bạn thích; mở lại thấy ngay ở mục <b>My Space</b> trên trang chủ.</li>
-      <li><b>Đang đọc dở:</b> các bộ đang đọc tự hiện ở My Space kèm % tiến độ.</li>
-      <li><b>Đánh dấu chương:</b> icon thẻ đánh dấu trong trang đọc giữ lại chương đáng nhớ để quay sau.</li>
-      <li>Nút <b>Xoá</b> ở My Space dọn lịch sử đọc hoặc bỏ trống tủ.</li>
-    </ul>
-    <div class="tip">Dữ liệu lưu ngay trên trình duyệt của bạn. Đổi máy / xoá dữ liệu web sẽ mất tiến độ.</div>
-  </div>
+  <h2 id="my-space">3. Lưu truyện và tiến độ</h2>
+  <div class="card2"><ul>
+    <li>Nhấn <b>Tủ truyện</b> trên trang truyện hoặc trang đọc để lưu một bộ.</li>
+    <li>Các bộ đang đọc và tủ truyện nằm trong <b>My Space</b> ở trang chủ, kèm phần trăm tiến độ.</li>
+    <li>Nhấn biểu tượng đánh dấu trong trang đọc để lưu một chương muốn quay lại.</li>
+    <li>Nút <b>Xoá</b> trong My Space dùng để dọn lịch sử đọc hoặc bỏ truyện khỏi tủ.</li>
+  </ul></div>
 
-  <h2 id="thich">4. Thích &amp; bình chọn</h2>
-  <div class="card2">
-    <ul>
-      <li>Nút <b>Thích</b> (trái tim) ở trang truyện là phiếu cho <b>cả bộ</b>; trong trang đọc, thích tính riêng <b>từng chương</b>.</li>
-      <li>Phiếu thích cộng thẳng vào bảng <b>Top vote</b> ngoài trang chủ — thích là số tăng ngay, bấm lại để bỏ thích và số giảm ngay.</li>
-      <li>Không cần tài khoản vẫn thích được; đăng nhập để phiếu gắn với tài khoản của bạn.</li>
-    </ul>
-  </div>
+  <h2 id="thich">4. Thích và bình chọn</h2>
+  <div class="card2"><ul>
+    <li>Nhấn trái tim ở trang truyện để thích <b>cả bộ</b>. Trong trang đọc, lượt thích áp dụng cho <b>chương đang xem</b>.</li>
+    <li>Nhấn lại để bỏ thích. Bạn không cần đăng nhập, nhưng đăng nhập giúp lượt thích gắn với tài khoản của mình.</li>
+  </ul></div>
 
-  <h2 id="tai-khoan">5. Tài khoản, tên &amp; ảnh đại diện</h2>
-  <div class="card2">
-    <ul>
-      <li>Bấm <b>Đăng nhập</b> trên đầu trang để bình luận và giữ hồ sơ ổn định.</li>
-      <li>Vào menu tài khoản → <b>Chỉnh sửa hồ sơ</b> để đổi tên hiển thị và ảnh đại diện.</li>
-      <li>Ảnh đại diện có thể chọn từ máy: kéo để dời, lăn chuột / chụm hai ngón để phóng to thu nhỏ, rồi bấm <b>Dùng ảnh này</b>.</li>
-    </ul>
-  </div>
+  <h2 id="tai-khoan">5. Tài khoản</h2>
+  <div class="card2"><ul>
+    <li>Chọn <b>Đăng nhập</b> trên đầu trang nếu bạn muốn bình luận và quản lý hồ sơ.</li>
+    <li>Vào menu tài khoản → <b>Chỉnh sửa hồ sơ</b> để đổi tên hiển thị hoặc ảnh đại diện.</li>
+    <li>Khi chọn ảnh, bạn có thể kéo và phóng to/thu nhỏ trước khi lưu.</li>
+  </ul></div>
 
-  <h2 id="bao-loi">6. Báo lỗi &amp; liên hệ</h2>
-  <div class="card2">
-    <ul>
-      <li>Trong trang đọc, cuối chương có nút <b>Báo lỗi chữ</b> — mẫu tin đã kèm sẵn tên truyện, số chương và link; bạn chỉ cần ghi chỗ sai rồi bấm <b>Gửi báo lỗi</b>, nội dung đi thẳng tới ban biên tập (không phải copy hay mở Gmail).</li>
-      <li>Nếu mất kết nối, hộp thoại cho <b>Copy nội dung</b> để bạn gửi qua kênh Facebook công khai; email nhận báo lỗi không được nhúng trong mã web.</li>
-      <li>Báo lỗi được lưu lại trên máy chủ để ban biên tập xem trong trang quản trị, và gửi kèm email nếu web đã bật thông báo qua thư.</li>
-      <li>Ô <b>Khảo sát truyện</b> ở chân trang là bảng hỏi riêng để bạn chọn truyện muốn web làm tiếp (không phải nơi báo lỗi).</li>
-      <li>Facebook: <a href="https://www.facebook.com/profile.php?id=61592803761987" target="_blank" rel="noopener">facebook.com/ssochuz</a></li>
-    </ul>
-  </div>
+  <h2 id="bao-loi">6. Báo lỗi</h2>
+  <div class="card2"><ul>
+    <li>Cuối chương, chọn <b>Báo lỗi chữ</b>. Điền nội dung sai và nhấn <b>Gửi báo lỗi</b>; tên truyện, chương và đường dẫn đã được điền sẵn.</li>
+    <li>Nếu đang mất kết nối, chọn <b>Copy nội dung</b> rồi gửi qua Facebook.</li>
+    <li><b>Khảo sát truyện</b> dùng để đề xuất truyện mới, không phải nơi báo lỗi.</li>
+    <li>Facebook: <a href="https://www.facebook.com/profile.php?id=61592803761987" target="_blank" rel="noopener">facebook.com/ssochuz</a></li>
+  </ul></div>
 
   <h2 id="meo">7. Phím tắt</h2>
-  <div class="card2">
-    <div class="grid2">
-      <div>
-        <h3>Khi đọc</h3>
-        <ul>
-          <li><kbd>←</kbd> <kbd>→</kbd> — chương trước / sau</li>
-          <li><kbd>Space</kbd> / <kbd>↓</kbd> — cuộn xuống</li>
-          <li><kbd>B</kbd> — đánh dấu chương</li>
-          <li><kbd>L</kbd> — mở mục lục</li>
-          <li><kbd>F</kbd> — chế độ tập trung</li>
-          <li><kbd>Esc</kbd> — về trang truyện / đóng hộp thoại</li>
-        </ul>
-      </div>
-      <div>
-        <h3>Khắp trang</h3>
-        <ul>
-          <li><kbd>/</kbd> hoặc <kbd>⌘</kbd><kbd>K</kbd> — tìm nhanh</li>
-          <li><kbd>↑</kbd> — nút lên đầu trang góc phải</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-
-  <p style="margin:36px 0 24px;color:var(--mut);font-size:13px">Cập nhật 14/09/2026 · Thấy chỗ nào khó dùng? Nhắn tụi mình qua Facebook hoặc email nhé.</p>
+  <div class="card2"><ul>
+    <li><kbd>←</kbd> <kbd>→</kbd>: chương trước / sau · <kbd>Space</kbd> hoặc <kbd>↓</kbd>: cuộn xuống</li>
+    <li><kbd>B</kbd>: đánh dấu chương · <kbd>L</kbd>: mở mục lục · <kbd>F</kbd>: chế độ tập trung</li>
+    <li><kbd>/</kbd> hoặc <kbd>⌘</kbd><kbd>K</kbd>: tìm nhanh · <kbd>Esc</kbd>: đóng hộp thoại hoặc về trang truyện</li>
+  </ul></div>
+  <p style="margin:36px 0 24px;color:var(--mut);font-size:13px">Cập nhật 15/09/2026 · Có chỗ nào chưa rõ? Nhắn tụi mình qua Facebook nhé.</p>
 </main>
-
-<footer id="ftr"></footer>
-<button id="toTop" aria-label="Lên đầu trang"></button>
-
-<script src="/cz-config.js?v=20260915f"></script>
-<script src="/cz-app.js?v=20260915f"></script>
-<script src="/cz-auth.js?v=20260915f"></script>
-<script>
-CZ.mountShell({active:'library'});
-document.querySelectorAll('[data-ic]').forEach(function(el){
-  el.outerHTML = CZ.icon(el.dataset.ic);
-});
-</script>
-</body>
-</html>
+<footer id="ftr"></footer><button id="toTop" aria-label="Lên đầu trang"></button>
+<script src="/cz-config.js?v=20260915g"></script><script src="/cz-app.js?v=20260915g"></script><script src="/cz-auth.js?v=20260915g"></script>
+<script>CZ.mountShell({active:'library'});document.querySelectorAll('[data-ic]').forEach(function(el){el.outerHTML=CZ.icon(el.dataset.ic);});</script>
+</body></html>

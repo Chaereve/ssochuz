@@ -118,8 +118,10 @@
   }
   function connect() {
     API = normalizeApi(CZ.normalizeApi($('#inApi').value) || $('#inApi').value);
-    KEY = $('#inKey').value.trim();
-    if (!API) return msg('Nhập URL Worker đã (vd https://xxx.workers.dev).', 'err');
+    /* Một số trình quản lý mật khẩu dán kèm ký tự zero-width. Bỏ chúng ở
+       đầu/cuối để khoá được gửi đúng chuỗi secret trong Cloudflare. */
+    KEY = String($('#inKey').value || '').replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+    if (!API) return msg('Nhập URL Worker đã (ví dụ: https://ten-worker.workers.dev).', 'err');
     if (!KEY) return msg('Nhập ADMIN_KEY đã.', 'err');
     var b = $('#btnConnect');
     b.disabled = true; b.innerHTML = '<span class="spin"></span> đang kiểm tra…';
