@@ -19,21 +19,23 @@ Supabase…), nội dung vốn công khai.
 
 ## Bộ icon
 
-Icon trong trang lấy từ **iconbuddy.com/solar** — bộ *Solar* của 480 Design, giấy phép
-CC BY 4.0 (đã ghi công ở chân trang). Bản máy đọc được lấy qua npm
-`@iconify-json/solar`, biến thể `-linear`.
+Icon giao diện dùng **Tabler Icons** bản outline từ package local `@tabler/icons`
+(giấy phép MIT). SVG được nhúng trực tiếp vào mã phát hành qua `var P`, nên không
+có request font/CSS/icon từ bên ngoài và vẫn hoạt động khi offline. Google dùng
+`brand-google` của Tabler; MoMo giữ hình thương hiệu riêng vì Tabler chưa có biểu
+tượng tương ứng.
 
 Khối `var P = { … }` trong `src/cz-app.js` **do máy sinh**, đừng sửa tay:
 
 ```bash
-node tools/gen_icons_solar.mjs      # sinh lại 70 icon + giữ 2 icon thương hiệu
-node tools/measure_icons.mjs        # (tuỳ chọn) đo lại hộp mực, cần `npm i sharp`
+node tools/gen_icons_tabler.mjs
+npm run build && npm test
 ```
 
-Bộ Solar vẽ đầy khung hơn bộ cũ (hình ~21/24 thay vì ~18/24) nên hai thứ đã được
-chỉnh cho cân: mỗi icon được bù tỉ lệ riêng để mọi hình đều ~20,6/24 (xem bảng `NORM`
-trong `tools/gen_icons_solar.mjs`), và cỡ hiển thị trong `src/cz.css` giảm còn `.94em`
-(`.i-s` 13,5px) để hộp mực bằng đúng bộ icon trước đây.
+Generator đọc SVG trong `@tabler/icons/categories/outline`, giữ nguyên public key
+mà template đang dùng, bù scale/tâm cho mũi tên và dấu nhỏ, đồng thời chia stroke
+ngược scale để nét đồng đều. CSS dùng một hộp inline chung (`.i` và `.i-s`) cho
+header, nút, card, admin, trang truyện và mobile.
 
 ## Quy trình sửa mã
 
@@ -41,7 +43,7 @@ trong `tools/gen_icons_solar.mjs`), và cỡ hiển thị trong `src/cz.css` gi�
 npm install       # chỉ cần một lần (esbuild)
 # sửa src/…
 npm run build     # sinh bản rút gọn ra thư mục gốc
-npm test          # 11 bài kiểm thử — chạy trên ĐÚNG bản đã rút gọn
+npm test          # toàn bộ bài kiểm thử — chạy trên ĐÚNG bản đã rút gọn
 ```
 
 Sửa thẳng tệp ở thư mục gốc sẽ bị **lần build sau ghi đè**. Bài `tools/check_src.js`

@@ -109,14 +109,14 @@ code { background: var(--surf2); border: 1px solid var(--bd); border-radius: var
 kbd { background: var(--surf2); border: 1px solid var(--bd); border-bottom-width: 2px; border-radius: var(--r-sm); padding: 1px 6px; }
 ::selection { background: var(--acc); color: #fff; }
 :focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
-/* Cỡ icon: bộ Solar (iconbuddy.com/solar) vẽ đầy khung hơn bộ cũ — hình chiếm
-   ~21/24 đơn vị thay vì ~18/24, nên nếu giữ nguyên cỡ cũ thì mọi icon trông to
-   hơn hẳn chữ bên cạnh. 0,94em là cỡ đã tính lại để hộp mực của Solar bằng đúng
-   hộp mực của bộ icon trước đó (khoảng 0,86em chữ) — nhờ vậy bố cục cũ không
-   xô lệch, mà icon nào trong bộ cũng đều nhau (xem tools/gen_icons_solar.mjs). */
-.i { width: .94em; height: .94em; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.7;
+/* Icon Tabler: toàn bộ nằm trên viewBox 24×24, nhưng nét/hộp mực từng hình
+   khác nhau. Generator bù scale và tâm trong src/cz-app.js; CSS chỉ giữ một
+   hộp inline ổn định để icon không làm nhảy baseline giữa header, nút, card,
+   admin và mobile. */
+.i { display: inline-block; width: .98em; height: .98em; min-width: .98em; flex: 0 0 auto;
+  vertical-align: -.15em; fill: none; stroke: currentColor; stroke-width: 1.7;
   stroke-linecap: round; stroke-linejoin: round; }
-.i-s { width: 13.5px; height: 13.5px; }
+.i-s { width: 14px; height: 14px; min-width: 14px; }
 .grow { flex: 1; }
 .hide { display: none !important; }
 .noscroll { overflow: hidden; }
@@ -159,6 +159,12 @@ body.reading #sprog { display: none !important; }
 
 .hdr { position: relative; z-index: 50; background: var(--bg); border-bottom: 1px solid var(--bd);
   transition: box-shadow var(--t) var(--ease), background-color var(--t-mid) linear, border-color var(--t-mid) linear; }
+/* Trang chủ đổi nền qua một vài bề mặt lớn; không bật transition cho toàn bộ DOM
+   vì đó là nguyên nhân gây khựng trên điện thoại. */
+body.hpage { transition: background-color var(--t-mid) linear, color var(--t-mid) linear; }
+body.hpage .hero { transition: background-color var(--t-mid) linear, border-color var(--t-mid) linear; }
+body.hpage .facts { transition: border-color var(--t-mid) linear; }
+body.hpage .fbox { transition: background-color var(--t-mid) linear, border-color var(--t-mid) linear; }
 .hdr .in { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; height: 58px; display: flex; align-items: center;
   gap: 22px; }
 .logo { display: inline-flex; align-items: center; gap: 9px; font-family: var(--font-logo); font-size: 23px; font-weight: 700; font-optical-sizing: auto;
@@ -188,30 +194,54 @@ body.reading #sprog { display: none !important; }
 .mnav a:last-child { border-bottom: 0; }
 
 /* ---- công tắc nền sáng / tối --------------------------------------------
-   Dựng theo mẫu uiverse.io/andrew-demchenk0/honest-stingray-90: rãnh 64×34,
-   con chạy 30px trượt 30px; mặt trời nằm bên phải (thấy khi đang nền sáng),
-   mặt trăng bên trái (hiện ra khi con chạy sang phải = nền tối). Mặt trời quay
-   15s/vòng, mặt trăng lắc ±10° mỗi 5s, nhưng chỉ khi trỏ vào / đang focus. */
-.tsw { position: relative; display: inline-flex; width: 64px; height: 34px; flex: 0 0 auto; cursor: pointer; }
-.tsw-in { position: absolute; opacity: 0; width: 0; height: 0; margin: 0; }
-.tsw-sl { position: absolute; inset: 0; border-radius: 30px; background: #73c0fc;
-  transition: background var(--t-mid) var(--ease); }
-.tsw-sl::before { content: ""; position: absolute; left: 2px; bottom: 2px; width: 30px; height: 30px; z-index: 2;
-  border-radius: 20px; background: #e8e8e8; box-shadow: 0 1px 3px rgba(20, 14, 8, .28);
-  transition: transform var(--t-mid) var(--ease-spring); }
-.tsw-in:checked + .tsw-sl { background: #183153; }
-.tsw-in:checked + .tsw-sl::before { transform: translateX(30px); }
-.tsw-in:focus-visible + .tsw-sl { box-shadow: 0 0 0 3px var(--ring); }
-.tsw-sl .i { position: absolute; width: 24px; height: 24px; z-index: 1; }
-.tsw-sl .i.sun { top: 5px; left: 35px; color: #183153; }   /* xanh navy trên nền xanh nhạt: 8,6:1 */
-.tsw-sl .i.moon { top: 5px; left: 5px; color: #9ecdfa; }
-.tsw:hover .i.sun, .tsw:focus-within .i.sun { animation: tswRot 15s linear infinite; }
-.tsw:hover .i.moon, .tsw:focus-within .i.moon { animation: tswTilt 5s linear infinite; }
-@keyframes tswRot { to { transform: rotate(360deg); } }
-@keyframes tswTilt { 25% { transform: rotate(-10deg); } 75% { transform: rotate(10deg); } }
+   Chuyển thể từ uiverse.io/catraco/brown-termite-67. Mẫu gốc 80×40; web dùng
+   64×32 ở desktop và 52×28 trên điện thoại để không ép chật thanh đầu trang.
+   Màu trời được hạ độ chói cho hợp nền giấy / mực đỏ của ssochuz, còn nhịp
+   trượt + xoay biểu tượng giữ đúng tinh thần mẫu. Checkbox vẫn là lớp tương tác
+   thật ở trên cùng nên bấm chuột, chạm và phím Space đều hoạt động. */
+.tsw {
+  --tsw-light-sky: #9fcfd2;
+  --tsw-dark-sky: #51466f;
+  --tsw-moon: #f2cf78;
+  --tsw-sun: #fff0a3;
+  position: relative; display: inline-block; width: 64px; height: 32px; flex: 0 0 auto;
+  overflow: hidden; border-radius: 5em; cursor: pointer; vertical-align: middle;
+  isolation: isolate; will-change: transform;
+  transition: transform var(--t-fast) var(--ease), filter var(--t-fast) var(--ease);
+}
+.tsw:hover { filter: saturate(1.08); }
+.tsw:active { transform: scale(.95); }
+/* Tên lớp gốc của Uiverse giữ lại để dễ đối chiếu; hành vi vẫn do các lớp
+   .tsw-* ở trên kiểm soát, nên không ảnh hưởng phần còn lại của giao diện. */
+.tsw.switch-name { display: inline-block; }
+.tsw .back { border-radius: inherit; }
+.tsw .checkbox { cursor: pointer; }
+.tsw-in {
+  position: absolute; inset: 0; z-index: 4; width: 100%; height: 100%; margin: 0;
+  opacity: 0; cursor: pointer;
+}
+.tsw-sl {
+  position: absolute; inset: 0; z-index: 0; border-radius: inherit; background: var(--tsw-light-sky);
+  transition: background-color .28s var(--ease-soft), box-shadow .2s var(--ease);
+  will-change: background-color;
+}
+.tsw-in:checked ~ .tsw-sl { background: var(--tsw-dark-sky); }
+.tsw-in:focus-visible ~ .tsw-sl { box-shadow: 0 0 0 3px var(--ring); }
+/* Mẫu Uiverse dùng icon SVG có chiều cao bằng rãnh, đệm .4em và translate(100%).
+   Cỡ icon ở đây khoá theo chiều cao để không phụ thuộc font của trang. */
+.tsw-icon {
+  position: absolute; left: 0; top: 0; z-index: 1; width: 32px; height: 32px; padding: 5px;
+  box-sizing: border-box; pointer-events: none; color: var(--tsw-moon); fill: currentColor; stroke: currentColor;
+  transform-origin: 50% 50%; will-change: transform, opacity;
+  transition: transform .38s var(--ease), opacity .24s var(--ease-soft);
+}
+.tsw-icon.moon { opacity: 0; transform: translateX(-100%) rotate(-180deg); }
+.tsw-icon.sun { color: var(--tsw-sun); opacity: 1; transform: none; }
+/* checked = nền tối trong hệ thống ssochuz: mặt trời trượt ra, mặt trăng trượt vào. */
+.tsw-in:checked ~ .tsw-icon.moon { opacity: 1; transform: translateX(100%) rotate(180deg); }
+.tsw-in:checked ~ .tsw-icon.sun { opacity: 0; transform: translateX(100%) rotate(180deg); }
 @media (prefers-reduced-motion: reduce) {
-  .tsw-sl, .tsw-sl::before { transition: none; }
-  .tsw:hover .i.sun, .tsw:hover .i.moon, .tsw:focus-within .i.sun, .tsw:focus-within .i.moon { animation: none; }
+  .tsw, .tsw-sl, .tsw-icon { transition: none; }
 }
 
 .ftr { border-top: 1px solid var(--bd); background: var(--bg); margin-top: 80px;
@@ -223,8 +253,6 @@ body.reading #sprog { display: none !important; }
 .ftr .fdesc { font-size: 14px; line-height: 1.7; color: var(--mut); margin: 10px 0 0; max-width: 46ch; }
 .ftr .flinks { margin: 14px 0 0; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13.5px; color: var(--mut); }
 .ftr .flinks a { color: var(--mut); }
-.ftr .fcred { margin: 10px 0 0; font-size: 12.5px; color: var(--dim); }
-.ftr .fcred a { color: var(--mut); }
 .ftr .flinks a:hover { color: var(--txt); }
 @media (max-width: 1080px) {
   .nav a { padding: 0 8px; gap: 5px; }
@@ -518,8 +546,8 @@ textarea.inp { min-height: 120px; resize: vertical; line-height: 1.6; }
 .card .th .scrim { position: absolute; inset: auto 0 0; height: 42%;
   background: linear-gradient(180deg, transparent, rgba(12, 8, 6, .82)); }
 .card .th .pill { position: absolute; top: 7px; left: 7px; max-width: calc(100% - 46px); overflow: hidden; text-overflow: ellipsis;
-  background: rgba(16, 10, 6, .72); border-color: transparent; color: #fff;
-  padding: 2px 7px; font-size: 9px; line-height: 1.25; font-weight: 650; letter-spacing: .02em; }
+  min-height: 0; background: rgba(16, 10, 6, .72); border-color: transparent; color: #fff;
+  padding: 3px 7px; font-size: 9.5px; line-height: 1.25; font-weight: 700; letter-spacing: .02em; }
 .card .th .pill .d { width: 4px; height: 4px; }
 .card .th .pill.done { color: #c8ead6; } .card .th .pill.run { color: #f3dfb8; } .card .th .pill.soon { color: #d8d4ea; }
 .card .th .b18 { position: absolute; top: 7px; right: 7px; }
@@ -577,7 +605,7 @@ textarea.inp { min-height: 120px; resize: vertical; line-height: 1.6; }
 .card.list .cl-top { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
 .card.list .cl-t { font-family: var(--font-head); font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
 .card.list:hover .cl-t { color: var(--acc); }
-.card.list .pill { margin: 0; padding: 2px 8px; font-size: 10px; }
+.card.list .pill { min-height: 0; margin: 0; padding: 3px 8px; font-size: 10px; }
 .card.list .b18 { position: static; }
 .card.list .cl-meta { display: block; font-size: 12.5px; color: var(--mut); margin-top: 3px; }
 .card.list .cl-syn { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
@@ -1206,6 +1234,10 @@ body.reading #toTop { display: none !important; }
 .abar .in { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; height: 60px; display: flex; align-items: center;
   gap: 12px; flex-wrap: nowrap; overflow-x: auto; }
 .amain { max-width: var(--maxw); margin: 0 auto; padding: 24px 24px 60px; }
+.admin .amain { padding-top: 20px; }
+.admin .card2 > .row { min-width: 0; }
+.admin .card2 > .row > .inp,
+.admin .card2 > .row > .sel { max-width: 100%; }
 .msgbar { font-size: 13.5px; color: var(--mut); }
 .msgbar:not(:empty) { padding: 12px 15px; border: 1px solid var(--bd); border-left: 3px solid var(--acc);
   border-radius: var(--r); background: var(--surf); margin-bottom: 16px; }
@@ -1316,6 +1348,9 @@ kbd { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; b
 
 /* =========================== TIỆN ÍCH & THIẾT BỊ ========================= */
 @media (max-width: 900px) {
+  .admin .amain { padding-top: 16px; }
+  .admin .tbl { min-width: 760px; }
+  .admin .keys { grid-template-columns: 1fr; }
   .hero .col { grid-template-columns: 1fr; gap: 24px; padding: 30px 16px 26px; }
   .hero .poster { order: -1; justify-self: start; width: min(56vw, 224px); margin-bottom: 2px; }
   .hero .strip { display: none; }
@@ -1327,6 +1362,14 @@ kbd { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; b
   .rdhead, .rtext, .ract, .rend, .rnav { padding-left: 18px; padding-right: 18px; }
 }
 @media (max-width: 620px) {
+  .admin .amain { padding: 14px 12px 44px; }
+  .admin .card2 { padding: 14px; }
+  .admin .tabs.bar.sticky { position: relative; top: auto; }
+  .admin .tabs.bar > button { padding: 10px 12px 11px; font-size: 13px; }
+  .admin .bulkbar { align-items: stretch; }
+  .admin .bulkbar .sel { flex: 1 1 210px; }
+  .admin .savebar { gap: 8px; }
+  .admin .keys > div { grid-template-columns: 116px 1fr; gap: 8px; }
   .sec { margin: 34px 0; }
   .sechead { flex-wrap: wrap; }
   .sechead h2 { font-size: 19px; }
@@ -1372,26 +1415,7 @@ kbd { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; b
   .ract > *:hover, .tile:hover, .cha:hover { transform: none; }
   .card:hover .th, .relcard:hover, .tile:hover { box-shadow: none; }
 }
-/* ĐỔI SÁNG/TỐI — cố tình KHÔNG dùng `*` transition: bản cũ bắt hàng nghìn
-   phần tử pha màu trong .32s nên bấm Theme là khựng (máy yếu càng rõ).
-   1) Có View Transitions → trình duyệt tự cross-fade 2 ảnh chụp: tắt hết
-      transition/animation của các phần tử để lớp pha không bị nhiễu. */
-html.theming-vt, html.theming-vt *, html.theming-vt *::before, html.theming-vt *::after {
-  transition: none !important; animation: none !important; }
-::view-transition-old(root), ::view-transition-new(root) {
-  animation-duration: .28s; animation-timing-function: cubic-bezier(.4, 0, .2, 1); }
-/* 2) Đường dự phòng: chỉ pha màu những khối lớn, nhẹ và nhanh */
-html.theming, html.theming body, html.theming main, html.theming .hdr, html.theming .abar,
-html.theming .ftr, html.theming .wrap, html.theming .sec, html.theming .card2, html.theming .card,
-html.theming .hero, html.theming .shero, html.theming .btn, html.theming .inp, html.theming .sel,
-html.theming .tile, html.theming .rank, html.theming .chapgrid a, html.theming .relcard,
-html.theming .stbl, html.theming .tbl, html.theming .msgbar, html.theming .toast {
-  transition: background-color .2s linear, color .2s linear, border-color .2s linear !important; }
-@media (prefers-reduced-motion: reduce) {
-  html.theming, html.theming * { transition: none !important; }
-  ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
-}
-
+/* Theme đổi token tức thì trong JS; không dùng cross-fade toàn trang để tránh lag. */
 /* ===================== 12b. NỀN ĐỌC (3 tông) + 3 FONT ================== */
 body[data-rd="sang"] { --rd-bg: #ffffff; --rd-tx: #191712; --rd-mut: #6d6659; --rd-bd: rgba(30, 22, 12, .12);
   --rd-surf: #fff; --rd-surf2: #f4f2ee; --rd-acc: #a63a52; }
@@ -1432,14 +1456,19 @@ body.page-in main { animation: pageIn var(--t-slow) var(--ease-out) both; }
   .flab { flex: 0 0 100%; padding-top: 0; }
 }
 
-/* huy hiệu: phẳng, gọn, không đổ bóng loè */
-.pill { padding: 3px 8px; font-weight: 700; border-style: solid; background: var(--surf); }
-.pill.done { color: var(--ok); background: color-mix(in srgb, var(--ok) 9%, transparent);
-  border-color: color-mix(in srgb, var(--ok) 28%, transparent); }
-.pill.run { color: var(--warn); background: color-mix(in srgb, var(--warn) 9%, transparent);
-  border-color: color-mix(in srgb, var(--warn) 28%, transparent); }
-.pill.soon { color: var(--dim); background: color-mix(in srgb, var(--dim) 10%, transparent);
-  border-color: color-mix(in srgb, var(--dim) 24%, transparent); }
+/* Huy hiệu trạng thái: đủ tương phản để quét nhanh, vẫn gọn trong card/bảng.
+   Dùng màu nền pha từ token thay vì màu cố định để giữ palette ở cả sáng/tối. */
+.pill { min-height: 23px; padding: 4px 9px; font-size: 11px; font-weight: 750;
+  letter-spacing: .025em; border-style: solid; background: var(--surf); transition:
+  color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease),
+  border-color var(--t-fast) var(--ease); }
+.pill .d { width: 6px; height: 6px; }
+.pill.done { color: var(--ok); background: color-mix(in srgb, var(--ok) 15%, var(--surf));
+  border-color: color-mix(in srgb, var(--ok) 46%, var(--bd)); }
+.pill.run { color: var(--warn); background: color-mix(in srgb, var(--warn) 15%, var(--surf));
+  border-color: color-mix(in srgb, var(--warn) 46%, var(--bd)); }
+.pill.soon { color: var(--acc); background: color-mix(in srgb, var(--acc) 13%, var(--surf));
+  border-color: color-mix(in srgb, var(--acc) 44%, var(--bd)); }
 .b18 { border: 0; padding: 2px 6px; border-radius: 4px; letter-spacing: .08em;
   background: var(--bad); color: #fff; box-shadow: none; }
 [data-theme="dark"] .b18 { background: #c2475a; }
@@ -1872,16 +1901,12 @@ body.rd-focus .rdcmts { display: none; }
 }
 
 /* ---- đầu trang trên máy nhỏ: công tắc sáng/tối nhỏ lại cho vừa một hàng ----
-   52×30, con chạy 26px trượt 22px (giữ đúng tỉ lệ mẫu uiverse nhưng vừa 360px).
+   52×28 vẫn giữ đúng tỉ lệ mẫu Uiverse, vùng chạm phủ kín toàn rãnh.
    Dưới 400px thì tên thương hiệu rút còn “ssochuz” (bỏ chữ “library” màu đỏ):
    trước đây chữ đó tự xuống dòng thứ hai làm đầu trang cao bất thường. */
 @media (max-width: 560px) {
-  .hdr .tsw { width: 52px; height: 30px; }
-  .hdr .tsw-sl::before { width: 26px; height: 26px; }
-  .hdr .tsw-in:checked + .tsw-sl::before { transform: translateX(22px); }
-  .hdr .tsw-sl .i { width: 20px; height: 20px; }
-  .hdr .tsw-sl .i.sun { top: 5px; left: 29px; }
-  .hdr .tsw-sl .i.moon { top: 5px; left: 4px; }
+  .hdr .tsw, .abar .tsw { width: 52px; height: 28px; }
+  .hdr .tsw-icon, .abar .tsw-icon { width: 28px; height: 28px; padding: 4px; }
 }
 @media (max-width: 400px) {
   .hdr .in { padding: 0 14px; gap: 8px; }

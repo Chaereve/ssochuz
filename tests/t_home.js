@@ -95,7 +95,7 @@ const LIB = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data/registry
   out.sched = { rows: $$('#sched .sched').length, src: txt('#schedSrc') };
   out.newRail = { n: $$('#newRail .card').length, sub: txt('#newSub') };
 
-  /* ---------- Bàn đọc: đang đọc dở + tủ truyện ---------- */
+  /* ---------- My Space: đang đọc dở + tủ truyện ---------- */
   out.banHidden0 = $('#ban-doc').hidden;
   const a = LIB.find(n => n.chapters > 3), b = LIB.filter(n => n.chapters > 3)[1];
   LS.setItem('ssochuz-prog-' + a.slug, '2'); LS.setItem('ssochuz-when-' + a.slug, String(Date.now()));

@@ -496,7 +496,7 @@
     $('#edView').href = CZ.storyURL(CUR.slug);
     $('#fTitle').value = CUR.title || ''; $('#fSlug').value = CUR.slug || '';
     $('#fAuthor').value = CUR.author || ''; $('#fCouple').value = CUR.couple || '';
-    $('#fYear').value = CUR.year || ''; $('#fStatus').value = CUR.status || 'Đang cập nhật';
+    $('#fYear').value = CUR.year || ''; $('#edStatus').value = CUR.status || 'Đang cập nhật';
     $('#fCount').value = CUR.countLabel || ''; $('#f18').value = CUR.is18 ? '1' : '0';
     $('#fUpdated').value = CUR.updated || today();
     $('#fThumb').value = CUR.thumb || CUR.slide || ''; $('#fSyn').value = CUR.synFull || CUR.syn || '';
@@ -517,7 +517,7 @@
     $('#edView').href = '#';
     $('#fTitle').value = CUR.title || ''; $('#fSlug').value = '';
     $('#fAuthor').value = CUR.author || ''; $('#fCouple').value = CUR.couple || '';
-    $('#fYear').value = CUR.year || ''; $('#fStatus').value = CUR.status || 'Đang cập nhật';
+    $('#fYear').value = CUR.year || ''; $('#edStatus').value = CUR.status || 'Đang cập nhật';
     $('#fCount').value = CUR.countLabel || ''; $('#f18').value = CUR.is18 ? '1' : '0';
     $('#fUpdated').value = CUR.updated || today();
     $('#fThumb').value = CUR.thumb || CUR.slide || ''; $('#fSyn').value = CUR.synFull || CUR.syn || '';
@@ -589,7 +589,7 @@
     CUR.title = $('#fTitle').value.trim() || CUR.title;
     CUR.slug = newSlug;
     CUR.author = $('#fAuthor').value.trim(); CUR.couple = $('#fCouple').value.trim();
-    CUR.year = $('#fYear').value.trim(); CUR.status = $('#fStatus').value;
+    CUR.year = $('#fYear').value.trim(); CUR.status = $('#edStatus').value;
     CUR.countLabel = $('#fCount').value.trim() || CUR.countLabel;
     CUR.is18 = $('#f18').value === '1';
     CUR.updated = $('#fUpdated').value || today();
@@ -2178,16 +2178,20 @@
     if (!quiet) msg('Đang xem dữ liệu tĩnh /data/*.json. Mọi thay đổi chỉ lưu nháp trong máy.', 'info');
   }
   $('#btnOut').addEventListener('click', disconnect);
-  /* công tắc sáng/tối (cùng kiểu với đầu trang web) */
+  /* công tắc sáng/tối — cùng cấu trúc Uiverse với đầu trang web */
   (function () {
     var tb = $('#btnTheme'), tin = $('#btnThemeIn');
-    var sl = tb.querySelector('.tsw-sl');
-    if (sl && !sl.querySelector('.i')) sl.innerHTML = ic('sun', 'sun') + ic('moon', 'moon');
+    var sl = tb && tb.querySelector('.tsw-sl');
+    /* admin.html là HTML tĩnh, nên chèn hai SVG vào sau rãnh; không chèn vào
+       .tsw-sl vì mẫu Uiverse dùng các anh em cùng cấp với back. */
+    if (tb && sl && !tb.querySelector('.tsw-icon')) {
+      sl.insertAdjacentHTML('afterend', ic('moon', 'tsw-icon moon') + ic('sun', 'tsw-icon sun'));
+    }
     function paint() {
       var dark = document.documentElement.getAttribute('data-theme') === 'dark';
       var lbl = dark ? 'Đang bật nền tối — bấm để về nền sáng' : 'Đang ở nền sáng — bấm để bật nền tối';
       if (tin) { tin.checked = dark; tin.setAttribute('aria-label', lbl); }
-      tb.setAttribute('title', lbl); tb.setAttribute('aria-label', lbl);
+      if (tb) { tb.setAttribute('title', lbl); tb.setAttribute('aria-label', lbl); }
     }
     paint();
     /* xem chú thích ở src/cz-app.js: chỉ nghe 'change' và chỉ lật khi đang lệch */
@@ -2279,7 +2283,7 @@
   });
   $('#nSlug').addEventListener('input', function () { this.dataset.touched = '1'; });
   $('#edBack').addEventListener('click', function () { show('list'); });
-  ['#fTitle', '#fSlug', '#fAuthor', '#fCouple', '#fYear', '#fStatus', '#fCount', '#f18', '#fUpdated', '#fThumb', '#fSyn']
+  ['#fTitle', '#fSlug', '#fAuthor', '#fCouple', '#fYear', '#edStatus', '#fCount', '#f18', '#fUpdated', '#fThumb', '#fSyn']
     .forEach(function (s) { $(s).addEventListener('input', function () { dirty.meta = true; markDirty(); }); });
   $('#fSlug').addEventListener('blur', function () {
     var v = this.value.trim();
@@ -2565,7 +2569,6 @@
   /* ------------------------------ khởi động ---------------------------- */
   (function init() {
     CZ.themeInit();
-    $('#btnTheme').innerHTML = ic(document.documentElement.getAttribute('data-theme') === 'light' ? 'sun' : 'moon', 'i-s');
     fillStatusFilter();
     var savedApi = '', savedKey = '';
     try { savedApi = localStorage.getItem(LS.api) || ''; savedKey = keyLoad(); } catch (e) {}
