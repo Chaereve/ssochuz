@@ -81,7 +81,7 @@
               (i === 0 ? ' fetchpriority="high"' : ' loading="lazy"') + ' decoding="async">' : '') +
             '<span class="gloss"></span>' +
             (n.is18 ? '<span class="b18">18+</span>' : '') +
-            (n.fresh ? '<span class="nw-ribbon"><span>Mới</span></span>' : '') +
+            (n.fresh ? '<span class="nw-bookmark"><span>Mới</span></span>' : '') +
           '</a>' +
           '<span class="pcap">' + (n.author || n.couple ? '<b>' + esc(n.author || n.couple) + '</b>' : '') +
             (n.year ? (n.author || n.couple ? ' · ' : '') + 'năm ' + esc(n.year) : '') + '</span>' +

@@ -218,7 +218,7 @@
       '<div class="in">' +
         '<div class="cover" data-t="' + esc(n.title) + '">' + (im ? '<img src="' + esc(im) + '" alt="Bìa ' + esc(n.title) + '" width="300" height="450" fetchpriority="high">' : '') +
           (n.is18 ? '<span class="b18">18+</span>' : '') +
-          (n.fresh ? '<span class="nw-ribbon"><span>Mới</span></span>' : '') + '</div>' +
+          (n.fresh ? '<span class="nw-bookmark"><span>Mới</span></span>' : '') + '</div>' +
         '<div>' +
           '<h1>' + esc(n.title) + '</h1>' +
           '<div class="meta">' +

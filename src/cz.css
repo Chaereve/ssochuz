@@ -738,21 +738,23 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .card .th .stic.st-soon { color: #d8d4ea; border-color: rgba(216, 212, 234, .8);
   background: color-mix(in srgb, #8f83c7 32%, rgba(14, 9, 5, .85));
   box-shadow: 0 0 10px color-mix(in srgb, #8f83c7 45%, transparent), 0 1px 4px rgba(10, 6, 4, .45); }
-/* Ruy băng góc “Mới” trên mọi bìa (lưới, hero, trang truyện): dải chéo 45° ở góc
-   trên-phải, chữ trắng viền sáng. Vì góc này đã có ruy băng nên huy hiệu 18+ của
-   thẻ lưới chuyển xuống hàng chân bìa, cạnh số chương — ba thứ ba góc, khỏi chồng. */
-.nw-ribbon { position: absolute; top: 0; right: 0; z-index: 2; width: 76px; height: 76px;
-  overflow: hidden; pointer-events: none; }
-.nw-ribbon > span { position: absolute; display: block; width: 112px; padding: 4px 0;
-  top: 18px; right: -28px; transform: rotate(45deg);
-  background: var(--acc); color: #fff; font-size: 9.5px; font-weight: 800;
-  letter-spacing: .12em; text-transform: uppercase; text-align: center; line-height: 1.3;
-  border-top: 1px solid rgba(255, 255, 255, .35);
-  border-bottom: 1px solid rgba(255, 255, 255, .35);
-  box-shadow: 0 2px 6px rgba(10, 6, 4, .4); }
+/* Bookmark “Mới” trên mọi bìa (lưới, hero, trang truyện): dải thả từ cạnh trên,
+   đuôi cắt chữ V bằng clip-path, chữ “MỚI” xếp dọc đứng chữ. Bóng đổ dùng filter
+   (tĩnh, ôm đúng hình đã cắt — box-shadow thường bị clip-path cắt mất).
+   Nền tối dùng hồng đậm để chữ trắng luôn đọc được trên mọi bìa. */
+.nw-bookmark { position: absolute; top: 0; right: 10px; z-index: 2; width: 28px; height: 56px;
+  display: flex; justify-content: center; padding-top: 6px; pointer-events: none;
+  background: var(--acc); color: #fff;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 9px), 0 100%);
+  filter: drop-shadow(0 2px 3px rgba(10, 6, 4, .4)); }
+.nw-bookmark > span { writing-mode: vertical-rl; text-orientation: upright;
+  font-size: 10px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, .3); }
+[data-theme="dark"] .nw-bookmark { background: #b23a52; }
 @media (max-width: 560px) {
-  .nw-ribbon { width: 64px; height: 64px; }
-  .nw-ribbon > span { width: 96px; top: 14px; right: -24px; padding: 3px 0; font-size: 9px; }
+  .nw-bookmark { width: 24px; height: 48px; right: 8px; padding-top: 5px;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 8px), 0 100%); }
+  .nw-bookmark > span { font-size: 9px; }
 }
 .card .th .foot .b18 { margin-left: auto; }
 .card .th .foot { position: absolute; inset: auto 8px 8px; display: flex; align-items: center; gap: 8px; color: #fff; }
@@ -1738,8 +1740,8 @@ body.page-in main { animation: pageIn var(--t-slow) var(--ease-out) both; }
 .b18 { background: var(--bad); color: #fff; }
 [data-theme="dark"] .b18 { background: #c2475a; }
 /* Huy hiệu Mới dạng pill (dùng ở hàng danh sách + dòng meta hero, nơi không có bìa
-   để gắn ruy băng): cùng khuôn với 18+ nhưng thêm chấm trắng “thở” (pulse) và
-   quầng sáng mực son. Trên bìa thì “Mới” là ruy băng chéo (.nw-ribbon). */
+   để gắn bookmark): cùng khuôn với 18+ nhưng thêm chấm trắng “thở” (pulse) và
+   quầng sáng mực son. Trên bìa thì “Mới” là bookmark thả (.nw-bookmark). */
 .badge-new { gap: 5px; background: var(--acc); color: #fff;
   box-shadow: 0 1px 6px color-mix(in srgb, var(--acc) 55%, transparent),
     0 1px 2px rgba(10, 6, 4, .35); }
@@ -1748,6 +1750,8 @@ body.page-in main { animation: pageIn var(--t-slow) var(--ease-out) both; }
 @keyframes newPulse { 0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: .45; transform: scale(.72); } }
 @media (prefers-reduced-motion: reduce) { .badge-new::before { animation: none; } }
+/* nền tối: hồng son gốc quá nhạt, chữ trắng khó đọc — dùng hồng đậm chung với ruy băng */
+[data-theme="dark"] .badge-new { background: #b23a52; }
 .tabs .ct { background: var(--surf2); border-radius: 99px; padding: 1px 7px; font-weight: 700; }
 .tabs > button.on .ct { background: color-mix(in srgb, var(--acc) 16%, transparent); color: var(--acc); }
 .fchip { display: inline-flex; align-items: center; gap: 7px; padding: 5px 6px 5px 11px; border-radius: 99px;

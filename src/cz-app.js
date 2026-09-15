@@ -828,9 +828,9 @@
     var pg = progress(n), pct = n.chapters ? Math.min(100, Math.round(pg / n.chapters * 100)) : 0;
     var img = n.thumb || n.slide || '';
     if (opts.view === 'list') return cardList(n, img, pg, pct);
-    /* thẻ lưới: tình trạng là KÝ HIỆU TRÒN ở góc trái bìa; “Mới” là RUY BĂNG CHÉO
-       ở góc phải bìa; 18+ nằm ở hàng chân bìa cạnh số chương. Ba thứ ba góc nên
-       không bao giờ chồng nhau (bản dải chữ cũ hay bị cắt chữ/đè nhau ở bìa hẹp).
+    /* thẻ lưới: tình trạng là KÝ HIỆU TRÒN ở góc trái bìa; “Mới” là BOOKMARK thả
+       từ cạnh trên-phải (đuôi cắt chữ V, chữ xếp dọc); 18+ nằm ở hàng chân bìa
+       cạnh số chương. Ba thứ ba góc nên không bao giờ chồng nhau.
        Chữ tình trạng đầy đủ vẫn có trong title/aria-label. */
     var stCls = n.statusCls || 'run';
     var stLab = statusLabel(n.statusCls || n.status);
@@ -839,7 +839,7 @@
       (img ? '<img src="' + esc(img) + '" alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" width="300" height="450">' : '') +
       '<span class="scrim"></span>' +
       '<span class="stic st-' + stCls + '" title="' + esc(stLab) + '" aria-label="Tình trạng: ' + esc(stLab) + '" role="img">' + icon(STATUS_ICON[stCls] || 'clock', 'i-s') + '</span>' +
-      (n.fresh ? '<span class="nw-ribbon"><span>Mới</span></span>' : '') +
+      (n.fresh ? '<span class="nw-bookmark"><span>Mới</span></span>' : '') +
       '<span class="foot"><span class="ch">' + esc(countText(n)) + '</span>' +
         (n.is18 ? '<span class="b18">18+</span>' : '') + '</span>' +
       (pct ? '<span class="bar"><i style="width:' + pct + '%"></i></span>' : '') +
