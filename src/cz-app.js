@@ -566,6 +566,15 @@
     if (s === 'done' || s === 'run' || s === 'soon') return STATUS_LABEL[s];
     return STATUS_LABEL[statusCls(s)] || 'Đang cập nhật';
   }
+  /* ký hiệu icon cho từng tình trạng (dùng chung bộ Tabler trong var P):
+       done → check (đã xong), run → refresh (đang ra tiếp), soon → hourglass (sắp ra).
+     Thẻ lưới chỉ hiện icon (gọn, không đè lên huy hiệu 18+); chữ đầy đủ vẫn nằm
+     trong title + aria-label để trỏ chuột và trình đọc màn hình đọc được. */
+  var STATUS_ICON = { done: 'check', run: 'refresh', soon: 'hourglass' };
+  function statusIcon(s) {
+    var k = (s === 'done' || s === 'run' || s === 'soon') ? s : statusCls(s);
+    return STATUS_ICON[k] || 'clock';
+  }
   function words(html) {
     var t = String(html || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
     return t ? t.split(' ').length : 0;
@@ -819,11 +828,16 @@
     var pg = progress(n), pct = n.chapters ? Math.min(100, Math.round(pg / n.chapters * 100)) : 0;
     var img = n.thumb || n.slide || '';
     if (opts.view === 'list') return cardList(n, img, pg, pct);
+    /* thẻ lưới: tình trạng là một KÝ HIỆU TRÒN 26px ở góc bìa (không phải dải chữ).
+       Dải chữ cũ dài 80–100px trên bìa 152px: vừa thô, vừa hay bị cắt chữ (ellipsis)
+       hoặc đè lên huy hiệu 18+ ở bìa hẹp. Chữ đầy đủ vẫn có trong title/aria-label. */
+    var stCls = n.statusCls || 'run';
+    var stLab = statusLabel(n.statusCls || n.status);
     return '<a class="card" href="' + esc(storyURL(n.slug)) + '" data-t="' + esc(n.title) + '" title="' + esc(n.title) + '">' +
       '<div class="th' + (img ? ' skel' : '') + '">' +
       (img ? '<img src="' + esc(img) + '" alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" width="300" height="450">' : '') +
       '<span class="scrim"></span>' +
-      '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(statusLabel(n.statusCls || n.status)) + '</span>' +
+      '<span class="stic st-' + stCls + '" title="' + esc(stLab) + '" aria-label="Tình trạng: ' + esc(stLab) + '" role="img">' + icon(STATUS_ICON[stCls] || 'clock', 'i-s') + '</span>' +
       (n.is18 ? '<span class="b18">18+</span>' : '') +
       '<span class="foot"><span class="ch">' + esc(countText(n)) + '</span>' +
         (n.fresh ? '<span class="badge-new">Mới</span>' : '') + '</span>' +
@@ -1908,7 +1922,7 @@
     realCount: realCount, reconcileCount: reconcileCount, onStatsChange: onStatsChange, notifyStats: notifyStats,
     rdGet: rdGet, rdSet: rdSet, themeInit: themeInit, themeToggle: themeToggle, themeMeta: themeMeta,
     icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo, teaser: teaser,
-    statusCls: statusCls, statusLabel: statusLabel, words: words, norm: norm, countText: countText, listHead: listHead,
+    statusCls: statusCls, statusLabel: statusLabel, statusIcon: statusIcon, words: words, norm: norm, countText: countText, listHead: listHead,
     storyURL: storyURL, readURL: readURL, slugify: slugify, qs: qs, copy: copy, download: download,
     card: card, mountRail: mountRail, reveal: reveal, countUp: countUp, scaleFacts: scaleFacts,
     scrollUI: scrollUI, slide: slide, pageFx: pageFx, pop: pop, setIcon: setIcon, shake: shake,

@@ -135,6 +135,9 @@
     var c = CHS[i - 1];
     if (!c) return 'Chương ' + i;
     var x = chapSplit(c);
+    /* ngoại truyện phải gọi bằng ký hiệu S (S1, S2…) — bản cũ gọi bừa “Chương 2”
+       nên trùng tên với chương chính và làm sai cả thanh đọc lẫn bình luận */
+    if ((x.kind || 'main') === 'extra') return x.no ? 'S' + x.no : (x.name || ('Chương ' + i));
     return x.no ? 'Chương ' + x.no : (x.name || ('Chương ' + i));
   }
   function chapTotal() {
@@ -353,12 +356,14 @@
       return '<div class="r"><span>' + esc(r[0]) + '</span><b>' + esc(String(r[1])) + '</b></div>';
     }).join('');
   }
-  /* một dòng chương: số · tên (tô sáng khi tìm) · dấu đã đọc / đã đánh dấu */
+  /* một dòng chương: số · tên (tô sáng khi tìm) · dấu đã đọc / đã đánh dấu.
+     Ký hiệu ngoại truyện là S (S1, S2…; S khi không ghi số) — gọn hơn NT cũ
+     và khớp với nhãn trong mục lục, trang đọc, bình luận. */
   function chapLink(x, prog, marks, q) {
     var on = x.i === prog ? ' now' : '';
     var sp = chapSplit(x.c);
     var k = sp.kind || 'main';
-    var no = k === 'open' ? 'Mở' : (k === 'extra' ? (sp.no ? 'NT' + sp.no : 'NT') : (sp.no || '—'));
+    var no = k === 'open' ? 'Mở' : (k === 'extra' ? (sp.no ? 'S' + sp.no : 'S') : (sp.no || '—'));
     return '<a class="cha k-' + k + on + '" href="#chuong-' + x.i + '" data-ch="' + x.i + '" title="' + esc(x.c.t) + '">' +
       '<span class="no">' + no + '</span><span class="nm">' + hl(sp.name, q) + '</span>' +
       (marks.indexOf(x.i) >= 0 ? '<span class="done marked" title="Chương đã đánh dấu">' + ic('bookmark', 'i-s') + '</span>'
@@ -695,8 +700,12 @@
       var n = i + 1;
       if (q && c.t.toLowerCase().indexOf(q) < 0 && String(n) !== q) return '';
       var sp = chapSplit(c);
+      var k = sp.kind || 'main';
+      /* cùng ký hiệu với danh sách chương (S1, S2… / Mở) — bản cũ chỉ hiện số nên
+         ngoại truyện 1 và chương 1 nhìn giống hệt nhau trong mục lục */
+      var tno = k === 'open' ? 'Mở' : (k === 'extra' ? (sp.no ? 'S' + sp.no : 'S') : (sp.no || '—'));
       return '<a href="#chuong-' + n + '" data-ch="' + n + '" class="' + (n === cur ? 'on' : '') + (n < prog ? ' read' : '') + '">' +
-        '<span class="no">' + (sp.no || '—') + '</span><span class="nm">' + esc(sp.name) + '</span>' +
+        '<span class="no">' + tno + '</span><span class="nm">' + esc(sp.name) + '</span>' +
         (marks.indexOf(n) >= 0 ? '<span class="ck">' + ic('bookmark', 'i-s') + '</span>'
           : (n < prog ? '<span class="ck">' + ic('check', 'i-s') + '</span>' : '<span></span>')) + '</a>';
     }).join('') || '<div class="empty" style="border:0;background:none">Không có chương nào khớp.</div>';

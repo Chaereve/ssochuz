@@ -725,6 +725,18 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   font-weight: 700; letter-spacing: .03em; }
 .card .th .pill .d { width: 4px; height: 4px; }
 .card .th .pill.done { color: #c8ead6; } .card .th .pill.run { color: #f3dfb8; } .card .th .pill.soon { color: #d8d4ea; }
+/* Ký hiệu tình trạng trên bìa lưới: vòng tròn 26px, icon Tabler 14px ở giữa.
+   Nhỏ hơn dải chữ cũ (~90px) nên không bao giờ đè lên huy hiệu 18+ góc đối diện,
+   cũng không còn cảnh chữ bị cắt dở (ellipsis) trên bìa hẹp. Màu icon giữ đúng
+   ba tông cũ của dải chữ để mắt quen không phải học lại. */
+.card .th .stic { position: absolute; top: 8px; left: 8px; z-index: 2; width: 26px; height: 26px;
+  display: grid; place-items: center; border-radius: 50%;
+  background: rgba(16, 10, 6, .72); border: 1px solid rgba(255, 255, 255, .24);
+  box-shadow: 0 1px 4px rgba(10, 6, 4, .4); }
+.card .th .stic .i { width: 14px; height: 14px; min-width: 14px; }
+.card .th .stic.st-done { color: #c8ead6; }
+.card .th .stic.st-run { color: #f3dfb8; }
+.card .th .stic.st-soon { color: #d8d4ea; }
 .card .th .b18 { position: absolute; top: 8px; right: 8px; }
 .card .th .foot { position: absolute; inset: auto 8px 8px; display: flex; align-items: center; gap: 8px; color: #fff; }
 .card .th .foot .ch { font-size: 11px; font-weight: 750; letter-spacing: .03em; line-height: 1.4;
@@ -1702,13 +1714,18 @@ body.page-in main { animation: pageIn var(--t-slow) var(--ease-out) both; }
   border-color: color-mix(in srgb, var(--warn) 46%, var(--bd)); }
 .pill.soon { color: var(--acc); background: color-mix(in srgb, var(--acc) 13%, var(--surf));
   border-color: color-mix(in srgb, var(--acc) 44%, var(--bd)); }
-.b18 { border: 0; padding: 2px 6px; border-radius: 4px; letter-spacing: .08em;
-  background: var(--bad); color: #fff; box-shadow: none; }
+/* Hai huy hiệu 18+ / Mới dùng CHUNG một khuôn: cùng cao 20px, cùng bo tròn pill,
+   cùng chữ 10px/800/.08em/in hoa, cùng viền sáng + bóng chân 1px để đọc được cả
+   trên bìa ảnh lẫn trên nền giấy. Chỉ khác màu: 18+ đỏ (--bad), Mới mực son (--acc).
+   Bản cũ mỗi nơi một kiểu (chữ nhật 4px, chỗ nền đỏ chữ trắng, chỗ nền trắng chữ
+   đỏ) nên nhìn rời rạc. */
+.b18, .badge-new { display: inline-flex; align-items: center; justify-content: center;
+  min-height: 20px; padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+  font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; line-height: 1.4;
+  border: 1px solid rgba(255, 255, 255, .28); box-shadow: 0 1px 4px rgba(10, 6, 4, .3); }
+.b18 { background: var(--bad); color: #fff; }
 [data-theme="dark"] .b18 { background: #c2475a; }
-.badge-new { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 4px;
-  font-size: 9.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
-  background: var(--acc); color: #fff; border: 0; box-shadow: none; }
-.card .th .badge-new { background: #fffdf8; color: var(--acc); }
+.badge-new { background: var(--acc); color: #fff; }
 .tabs .ct { background: var(--surf2); border-radius: 99px; padding: 1px 7px; font-weight: 700; }
 .tabs > button.on .ct { background: color-mix(in srgb, var(--acc) 16%, transparent); color: var(--acc); }
 .fchip { display: inline-flex; align-items: center; gap: 7px; padding: 5px 6px 5px 11px; border-radius: 99px;
@@ -1723,7 +1740,7 @@ body.page-in main { animation: pageIn var(--t-slow) var(--ease-out) both; }
 .card:active .th { transform: translateY(0) scale(.995); }
 .card .th img { transition: transform var(--t-mid) var(--ease-out); }
 .card:hover .th img { transform: scale(1.03); }
-.card .th .foot .badge-new { margin-left: auto; background: #fffdf8; color: var(--acc); }
+.card .th .foot .badge-new { margin-left: auto; }
 .card.list .badge-new { margin-left: 2px; }
 
 /* danh sách: dòng tiêu đề không dính theo khi cuộn */
