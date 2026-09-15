@@ -365,3 +365,186 @@ jsdom (trang truyện → vào chương 2 → thoát):
 CSS sau khi dựng: không còn luật nào cho `color` phai theo nhịp đổi nền,
   trừ núm công tắc .tsw-icon (22px, cố ý)
 ```
+
+---
+
+## 9. Bổ sung 2026-09-15 (lần 3)
+
+Bốn việc: (1) thẻ truyện đề nhầm couple thay vì tác giả, (2) mô tả truyện bị mất
+chữ + cần nút “Hiện thêm”, (3) khối thương hiệu “ssochuz library”, (4) rà lỗi.
+
+### 9.1 Dòng dưới tên truyện là TÁC GIẢ, không phải couple
+
+Bản cũ ưu tiên `couple` ở ba chỗ, nên **25/62 bộ** (số bộ có couple) bị đề tên cặp
+đôi thay vì người viết — và vì `card()` là hàm vẽ thẻ dùng chung, lỗi này nhân ra
+khắp trang chủ: dải “Mới cập nhật”, “ssochuz’s choices”, “My Space”, lưới Thư viện.
+
+| Tệp · chỗ | Cũ | Mới |
+|---|---|---|
+| `src/cz-app.js` · `card()` dòng `.cb` | `n.couple ? couple : author` | `n.author \|\| n.couple \|\| ''` |
+| `src/cz-app.js` · `cardList()` (xem dạng danh sách) | `[couple, (biểu thức rối), year]` | `[author, couple, year]` |
+| `src/cz-home.js` · `renderRank()` dòng `.tt` | `n.couple \|\| n.author` | `n.author \|\| n.couple` |
+
+Những chỗ **đã đúng sẵn**, không đụng: `.meta` của hero (hiện cả hai, có icon bút
+= tác giả, icon người = couple), `.pcap` dưới bìa, kết quả tìm nhanh ⌘K, hero trang
+truyện, danh sách truyện cùng tác giả/couple. Couple không mất đi — nó vẫn ở bộ lọc
+`#fCouple`, ở hero và trong bảng thông tin của trang truyện.
+
+> Lưu ý khi đối chiếu: “Salmonlover” trong registry hiện ra thành “SalmonLover” là
+> do `authorFix()` cố tình sửa cách viết hoa tên tác giả đó, không phải lỗi.
+
+### 9.2 Mô tả truyện: lấy lại 80% chữ đã mất + nút “Hiện thêm”
+
+**Hai lỗi chồng nhau.**
+
+**(a) Đường dữ liệu vứt chữ.** `tools/sync_blogger.py` chỉ làm một việc:
+
+```python
+new['syn'] = s[:300].rstrip() + '…'      # CŨ — cắt cứng, không giữ bản đầy đủ
+```
+
+Đo xong trên chính dữ liệu trong `_inbox/feed/pages_…json`:
+
+| | số ký tự |
+|---|---|
+| tổng mô tả thật có trên blog | **56.480** |
+| tổng mô tả còn lại trong `registry.json` | 11.424 |
+| bộ bị mất chữ | **61/62** |
+| độ dài mô tả đầy đủ: ngắn nhất / trung vị / dài nhất | 41 / 843 / 3.306 ký tự |
+
+Tức **~80% nội dung giới thiệu bị bỏ**, và câu thì đứt ngang giữa một từ
+(“…vô cùng ăn ý khi thưởng thức cùng…”).
+
+**(b) Giao diện giấu luôn phần còn lại.** `.synwrap.clamp { grid-template-rows: 0fr }`
+gấp **cả khối mô tả** về 0, nên bộ nào mô tả quá 260 ký tự thì trang truyện
+**không hiện một chữ nào** — chỉ còn trơ nút “Xem thêm”. Đây chính là “mô tả đang
+bị thiếu” nhìn thấy bằng mắt.
+
+**Đã sửa.**
+
+1. `syn_full_from_page()` — lấy mô tả **đầy đủ**, giữ ranh giới đoạn (`\n\n`), cắt
+   đúng trước danh sách chương, lọc dòng rác (`📚 DANH SÁCH CHƯƠNG`, “Tình trạng:”,
+   “Chương 12”…). Chỉ lột emoji/dấu đầu dòng, cố ý **không** lột dải `\u2000-\u206f`
+   vì dải đó chứa cả `‘ ’ “ ” —` mà mô tả ở đây mở đoạn bằng ngoặc kép rất nhiều.
+2. `syn_teaser()` — bản rút gọn cho thẻ/trang chủ/meta: khép ở dấu câu, không khép
+   được thì mới cắt ở khoảng trắng. Đã viết lại **58/62** teaser.
+3. **Mô tả đầy đủ nằm trong `data/book/<slug>.json`, không nằm trong registry.**
+   Registry là mục lục mà *mọi* trang phải tải: nhét 54 KB chữ vào đó là bắt trang
+   chủ tải **12,9 KB → 34,1 KB gzip (2,6 lần)**. Tệp chương vốn đã được tải khi mở
+   truyện (27,2 MB cho 62 bộ) nên +56 KB chỉ là **0,2%**. `synFull` được chèn ngay
+   sau `couple`, trước mảng `chapters`, để trường nhỏ không bị đẩy xuống cuối tệp.
+4. `src/cz-story.js` — gộp `synFull` từ tệp chương vào `N` (bản sửa trong trang quản
+   trị nằm ở registry nên được ưu tiên), tách đoạn và dựng mỗi đoạn một `<p class="syn">`.
+5. Nút đổi thành **“Hiện thêm” / “Thu gọn”**, `aria-controls="synIn"`, `aria-expanded`
+   đúng trạng thái. Phần hé ra là **5 dòng** (`max-height: 8.5em` = 5 × line-height
+   1.7) và **nhạt dần ở cuối** để biết là còn chữ, không phải chữ bị cắt cụt.
+6. Chiều cao khi bung do **JS đo thật rồi ghi inline** (`scrollHeight`), mở xong thì
+   thả về `none` để đổi cỡ cửa sổ không cắt chữ. Để một con số `max-height` cố định
+   thì hoặc cắt mất chữ của bộ dài nhất (3.306 ký tự ≈ 40 dòng), hoặc nhịp bung chạy
+   hụt hơi vì phải nội suy qua cả khúc không nhìn thấy.
+7. Đo thật: nội dung lọt trọn trong 5 dòng thì **bỏ kẹp và bỏ luôn nút** — màn hình
+   rộng không bị thừa một nút vô nghĩa.
+8. Tab “Giới thiệu” (`#synFull`) dựng mỗi đoạn một `<p>` (bỏ `white-space: pre-line`).
+9. Hero **trang chủ** đổi sang dùng bản rút gọn `n.syn` — không đổ 3.300 ký tự lên
+   trang chủ chỉ để CSS cắt còn 3 dòng.
+10. `save()` trong tool đổi sang `indent=2` + xuống dòng cuối tệp, đúng dạng
+    `data/registry.json` đang nằm trong kho (trước là `indent=1`: chạy sync một lần
+    là xới lại cả tệp). `rev` nâng `2026-09-13a → 2026-09-15a` để máy khách bỏ bộ
+    nhớ đệm cũ.
+
+**Kết quả đo được** (jsdom, bộ `love-bound`): trước 190 ký tự một đoạn → nay
+**2.005 ký tự / 13 đoạn**; bấm “Hiện thêm” → `open`, `aria-expanded="true"`, nhãn
+“Thu gọn”, `max-height` 908px rồi thả về `none`; bấm lần nữa → gấp lại, nhãn về
+“Hiện thêm”. Tab Giới thiệu đủ 13 đoạn, đoạn cuối trọn câu. `meta[name=description]`
+là teaser khép đúng dấu chấm.
+
+### 9.3 Khối thương hiệu “ssochuz library”
+
+**Vì sao trông như AI slop:** một câu lót không chứa thông tin gì
+(“Cảm ơn bạn đã ủng hộ và đồng hành cùng ssochuz library!”), ba liên kết, tất cả dồn
+vào cột trái của khung rộng 1.180px → bỏ trống gần 70% bề ngang; logo lặp lại lần thứ
+hai ở cỡ 26px (to hơn cả trên đầu trang); và một hình thoi nảy lò xo mỗi lần trỏ chuột.
+
+**Chân trang nay xếp như trang ghi công (colophon) của một tờ báo:**
+
+- lưới ba cột `1.7fr / 1fr / 1fr`, khoảng cách rơi đúng lưới 4/8px (`gap: 40px 32px`);
+- cột thương hiệu: logo + **một câu nói thật về trang** (“Thư viện truyện chọn lọc —
+  đọc ngay trong máy, giữ tiến độ từng chương, lọc theo năm, tác giả, couple và theo
+  dõi lịch ra chương.”) thay cho câu cảm ơn;
+- cột **Mục**: 5 đường dẫn trong trang có thật (`/`, `#moi-cap-nhat`, `#bxh`, `#lich`,
+  `#thu-vien`) — trước đây chân trang không dẫn đi đâu trong trang;
+- cột **Kết nối**: Hướng dẫn sử dụng, Facebook, Khảo sát truyện, Báo lỗi chữ
+  (`/guide#bao-loi` — anchor có thật trong `guide.html`);
+- dòng cuối tách bằng một đường kẻ tóc: `© 2026 ssochuz library` (năm lấy động) và
+  `Truyện và bản dịch thuộc về tác giả tương ứng.`;
+- nhãn cột dùng đúng kiểu chữ nhãn cả trang đang dùng (10,5px / 800 / .14em / in hoa),
+  liên kết chỉ gạch chân 1px khi trỏ — không ô bo tròn, không nền chênh, không icon
+  trang trí;
+- xuống 860px thành hai cột (thương hiệu chiếm trọn hàng), xuống 520px thành một cột.
+
+**Logo (cả đầu trang lẫn chân trang):**
+
+- `library` thôi không còn là chữ nghiêng màu mực son — nay là dòng chữ nhỏ giãn
+  khoảng cách (10,5px / 800 / .14em / in hoa, mực nhạt) nằm **chung đường chân chữ**
+  với `ssochuz`, đúng kiểu manchette báo và khớp với `.eyebrow` / `.sgrp h5` sẵn có;
+  căn giữa như trước làm dòng chữ nhỏ trôi lửng lơ giữa thân chữ lớn.
+- “dấu son” giữ khối vuông nhưng **bỏ xoay 45° và bỏ lò xo**: 7px, viền 1px màu mực
+  son, lòng trong suốt, chỉ đậm mực lên khi trỏ theo nhịp `--t-fast` — cùng nhịp với
+  mọi tương tác nhỏ khác trên trang.
+- Giữ nguyên `<span class="dot">` trong markup vì `admin.html` cũng dùng lớp này.
+
+### 9.4 Hai cái bẫy tìm thấy thêm khi rà
+
+**(a) Trang quản trị sẽ âm thầm xoá mô tả đầy đủ.** Vì mô tả đầy đủ nay nằm trong
+tệp chương còn ô nhập ở trang quản trị đọc từ registry, nên lần đầu bấm “Lưu thông
+tin” sau khi mở một bộ, form sẽ ghi **đúng bản rút gọn ~190 ký tự** thành `synFull`
+trong registry — và vì `src/cz-story.js` ưu tiên bản trong registry, phần mô tả còn
+lại biến mất mà không ai hay. Đã chặn:
+
+| Tệp · chỗ | Sửa |
+|---|---|
+| `src/admin.js` · `openEdit()` | nạp `synFull` từ tệp chương vào ô mô tả ngay khi sách tải xong, **chỉ khi người dùng chưa gõ gì** (`dirty.meta` còn tắt) để không đè chữ |
+| `src/admin.js` · lưu thông tin / tạo bộ mới / nhân bản | `slice(0, 220)` → `CZ.teaser(…, 220)` (khép ở dấu câu, không xé đôi một từ) |
+| `src/admin.js` · nhân bản | bản sao mang theo `synFull` sang cả tệp chương mới — trước đây chỉ copy `chapters`, bản sao sẽ mất mô tả |
+| `src/cz-app.js` | thêm `CZ.teaser(text, limit)`, cùng luật với `syn_teaser()` của tool sync |
+
+Đo lại bằng Worker giả: mở bộ `third-person` → ô mô tả **575/575** ký tự (trước khi
+sửa chỉ có ~190), bấm Lưu → `synFull` vẫn **575**, bản rút gọn **216** ký tự.
+
+**(b) `tests/cf_admin_test.js` kiểm thử nhầm ô.** Mục “sửa thông tin bộ” gán
+`#fStatus` — đó là **bộ lọc ở danh sách**, còn ô tình trạng trong form sửa là
+`#edStatus`. Nên suốt thời gian qua mục đó chưa từng kiểm được việc đổi tình trạng
+(`out.suaBo.status` luôn trả về giá trị cũ). Đã gán lại đúng ô: nay ra
+`status: "Hoàn thành"`. Cùng mục đó giờ kiểm thêm ba điều: ô mô tả có nạp đủ chữ
+không, lưu xong có mất chữ không, bản rút gọn có vượt 220 ký tự không — sai là đẩy
+vào `errors`, và `tests/run.js` sẽ chấm LỖI.
+
+### 9.5 Đã rà (lần 3)
+
+```
+npm run build                        → 546,5 kB → 350,8 kB
+node tests/run.js                    → 15/15 ĐẠT
+node tools/check_html.js             → HTML sạch, liên kết & biểu tượng đều có thật,
+                                       28 luật _redirects không vòng lặp
+node tools/check_calls.js            → không có hàm “ma”
+python3 tools/check_css.py           → 0 lớp dùng mà CSS chưa định nghĩa
+node tools/check_secrets.js          → không lộ secret/email trong tệp gửi xuống trình duyệt
+python3 -c ast.parse(sync_blogger)   → cú pháp tool OK
+
+jsdom trang chủ (dữ liệu thật /data):
+  chân trang 3 cột · 10 liên kết thật · hết câu “Cảm ơn bạn đã ủng hộ…”
+  42/42 thẻ có dòng dưới tên truyện là TÁC GIẢ (kể cả 5 bộ có couple)
+  8 dòng “Bình chọn nhiều nhất” là tác giả · 0 lỗi JS
+jsdom trang truyện:
+  love-bound              → 2.005 ký tự / 13 đoạn (trước: 190 ký tự / 1 đoạn)
+                            Hiện thêm ⇄ Thu gọn đúng, aria-expanded đúng,
+                            max-height 908px rồi thả về none
+  trọng-sinh-…-vượt-kho   → 3.274 ký tự / 17 đoạn, có kẹp + nút “Hiện thêm”
+  my-gorgeous-wife (ngắn) → bỏ kẹp và BỎ luôn nút, không thừa một nút vô nghĩa
+  tab Giới thiệu          → đủ 13 đoạn, đoạn cuối trọn câu
+  meta[name=description]  → teaser khép đúng dấu chấm
+jsdom trang quản trị (Worker giả):
+  ô mô tả 575/575 ký tự · lưu xong vẫn 575 · bản rút gọn 216 · nhân bản ra 1 bộ
+  có chương · status đổi được thành “Hoàn thành” · 0 lỗi JS
+jsdom guide.html: chân trang + logo hiện đúng, 0 lỗi JS
+```

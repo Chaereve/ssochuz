@@ -499,7 +499,16 @@
     dirty.meta = false; markDirty();
     BOOK = null; CHAP = -1;
     $('#chList').innerHTML = '<div class="row2 sm muted" style="padding:10px">đang tải chương…</div>';
-    bookOf(slug).then(function (b) { BOOK = b || { title: CUR.title, slug: slug, chapters: [] }; renderChapters(); });
+    bookOf(slug).then(function (b) {
+      BOOK = b || { title: CUR.title, slug: slug, chapters: [] };
+      /* Mô tả ĐẦY ĐỦ nằm trong tệp chương, còn ô nhập mới chỉ thấy bản rút gọn
+         trong registry. Không nạp bù vào thì lần “Lưu thông tin” kế tiếp sẽ ghi
+         đúng bản rút gọn ấy thành synFull và ÂM THẦM XOÁ phần còn lại của mô tả.
+         Chỉ điền khi người dùng chưa gõ gì (dirty.meta còn tắt) để không đè chữ. */
+      var fSyn = $('#fSyn');
+      if (BOOK.synFull && fSyn && !dirty.meta) fSyn.value = BOOK.synFull;
+      renderChapters();
+    });
     if (focus === 'chap') setTimeout(function () { $('#chList').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 200);
   }
   function openEditByIdx(idx, focus) {
@@ -590,7 +599,7 @@
     CUR.is18 = $('#f18').value === '1';
     CUR.updated = $('#fUpdated').value || today();
     CUR.thumb = $('#fThumb').value.trim(); CUR.slide = CUR.thumb;
-    CUR.synFull = $('#fSyn').value.trim(); CUR.syn = CUR.synFull.slice(0, 220);
+    CUR.synFull = $('#fSyn').value.trim(); CUR.syn = CZ.teaser(CUR.synFull, 220);
 
     var renamePromise = Promise.resolve();
     if (newSlug !== oldSlug) {
@@ -764,7 +773,7 @@
       couple: $('#nCouple').value.trim(), year: $('#nYear').value.trim() || String(new Date().getFullYear()),
       status: $('#nStatus').value,
       is18: $('#n18').value === '1', thumb: $('#nThumb').value.trim(), slide: $('#nThumb').value.trim(),
-      syn: $('#nSyn').value.trim().slice(0, 220), synFull: $('#nSyn').value.trim(),
+      syn: CZ.teaser($('#nSyn').value.trim(), 220), synFull: $('#nSyn').value.trim(),
       chapters: chapters.length, countLabel: chapters.length ? chapters.length + '/' + chapters.length : '0/—',
       updated: today()
     };
@@ -1991,8 +2000,11 @@
       meta.title = (CUR.title || 'Bộ mới') + ' (bản sao)';
       meta.slug = slug;
       meta.updated = today();
-      meta.syn = String(meta.synFull || '').slice(0, 220);
+      /* bản sao lấy mô tả đầy đủ từ tệp chương đang mở nếu ô nhập chưa có */
+      meta.synFull = String(meta.synFull || (BOOK && BOOK.synFull) || '').trim();
+      meta.syn = CZ.teaser(meta.synFull, 220);
       var book = { title: meta.title, slug: slug, author: meta.author, couple: meta.couple,
+        synFull: meta.synFull,
         chapters: JSON.parse(JSON.stringify(BOOK.chapters || [])) };
       (REG.lib || []).push(meta);
       BOOKS[slug] = book;

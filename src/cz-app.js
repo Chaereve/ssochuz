@@ -517,6 +517,20 @@
       return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
     });
   }
+  /* Bản rút gọn của một đoạn chữ dài, dùng cho thẻ truyện, hero trang chủ và
+     meta description. KHÉP Ở DẤU CÂU khi còn chỗ; không khép được thì mới cắt ở
+     khoảng trắng — cắt cứng theo số ký tự (.slice(0, 220)) là thứ đã tạo ra
+     những câu đứt ngang giữa một từ trong registry trước đây.
+     Cùng một luật với syn_teaser() trong tools/sync_blogger.py. */
+  function teaser(text, limit) {
+    var s = String(text == null ? '' : text).replace(/\s+/g, ' ').trim();
+    var lim = parseInt(limit, 10) || 200;
+    if (s.length <= lim) return s;
+    var head = s.slice(0, lim);
+    var m = Math.max(head.lastIndexOf('.'), head.lastIndexOf('!'), head.lastIndexOf('?'));
+    if (m >= Math.floor(lim * 0.55)) return s.slice(0, m + 1).trim();
+    return head.slice(0, head.lastIndexOf(' ')).replace(/[\s,;:·|-]+$/, '') + '…';
+  }
   function authorFix(a) {
     return String(a || '').replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
       .replace(/^salmonlover$/i, 'SalmonLover');
@@ -816,13 +830,17 @@
       (pct ? '<span class="bar"><i style="width:' + pct + '%"></i></span>' : '') +
       '</div>' +
       '<h3>' + esc(n.title) + '</h3>' +
-      '<div class="cb">' + (n.couple ? esc(n.couple) : esc(n.author || '')) + '</div>' +
+      /* dòng ngay dưới tên truyện là TÁC GIẢ. Bản cũ ưu tiên couple nên 25 bộ có
+         couple bị đề tên cặp đôi thay vì người viết — couple vẫn còn chỗ riêng của
+         nó ở bộ lọc, ở hero và trong trang truyện. */
+      '<div class="cb">' + esc(n.author || n.couple || '') + '</div>' +
       '</a>';
   }
   /* xem dạng danh sách: mỗi bộ một hàng, đủ thông tin để quyết định mở hay không */
   function cardList(n, img, pg, pct) {
     if (!n || !n.slug) return '<div class="card list off"><span class="cl-main"><span class="cl-top"><b class="cl-t">' + esc((n&&n.title)||'—') + '</b></span><span class="cl-meta">thiếu slug — sửa trong trang quản trị</span></span></div>';
-    var bits = [n.couple, n.couple && n.author ? n.author : (n.couple ? '' : n.author), n.year].filter(Boolean);
+    /* tác giả trước, couple sau — cùng thứ tự với thẻ lưới và với trang truyện */
+    var bits = [n.author, n.couple, n.year].filter(Boolean);
     var read = pg > 0;
     return '<a class="card list st-' + esc(n.statusCls || 'soon') + '" href="' + esc(storyURL(n.slug)) + '" data-t="' + esc(n.title) + '" title="' + esc(n.title) + '">' +
       '<span class="cl-th' + (img ? ' skel' : '') + '">' +
@@ -1311,7 +1329,11 @@
     d.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('#czNav a'); if (a) mark(a); });
     run();
   }
-  /* chân trang: logo · lời cảm ơn · Hướng dẫn / Facebook / Khảo sát truyện */
+  /* Chân trang xếp như trang ghi công (colophon) của một tờ báo: tên báo, hai
+     cột đường dẫn THẬT, rồi dòng bản quyền ngăn bằng một đường kẻ tóc.
+     Bản cũ chỉ có logo + câu "Cảm ơn bạn đã ủng hộ và đồng hành cùng ssochuz
+     library!" + ba liên kết dồn hết vào cột trái: một câu lót không cho người đọc
+     biết thêm điều gì, và bỏ trống gần 70% bề ngang 1.180px. */
   function mountFooter(host) {
     if (!host) return;
     host.className = 'ftr';
@@ -1319,17 +1341,33 @@
     var fb = 'https://www.facebook.com/profile.php?id=61592803761987';
     var survey = cfg.form || 'https://forms.gle/YW3PvtrNVQ7xt8nCA';
     host.innerHTML = '<div class="in">' +
-      '<div class="fmain">' +
+      '<div class="fcols">' +
         '<div class="fbrand">' +
           '<a class="logo" href="/" title="ssochuz library"><span class="dot"></span>ssochuz<i> library</i></a>' +
-          '<p class="fdesc">Cảm ơn bạn đã ủng hộ và đồng hành cùng ssochuz library!</p>' +
-          '<p class="flinks">' +
-            '<a href="/guide">Hướng dẫn</a>' +
-            '<a href="' + esc(fb) + '" target="_blank" rel="noopener">Facebook</a>' +
-            '<a href="' + esc(survey) + '" target="_blank" rel="noopener" title="Khảo sát truyện bạn muốn đọc tiếp">Khảo sát truyện</a>' +
-          '</p>' +
+          '<p class="fdesc">Thư viện truyện chọn lọc — đọc ngay trong máy, giữ tiến độ từng chương, ' +
+            'lọc theo năm, tác giả, couple và theo dõi lịch ra chương.</p>' +
         '</div>' +
-      '</div></div>';
+        '<nav class="fcol" aria-label="Các mục trong thư viện">' +
+          '<h3>Mục</h3>' +
+          '<a href="/">Trang chủ</a>' +
+          '<a href="/#moi-cap-nhat">Mới cập nhật</a>' +
+          '<a href="/#bxh">Bình chọn nhiều nhất</a>' +
+          '<a href="/#lich">Lịch ra chương</a>' +
+          '<a href="/#thu-vien">Thư viện</a>' +
+        '</nav>' +
+        '<nav class="fcol" aria-label="Trợ giúp và kênh liên lạc">' +
+          '<h3>Kết nối</h3>' +
+          '<a href="/guide">Hướng dẫn sử dụng</a>' +
+          '<a href="' + esc(fb) + '" target="_blank" rel="noopener">Facebook</a>' +
+          '<a href="' + esc(survey) + '" target="_blank" rel="noopener" title="Khảo sát truyện bạn muốn đọc tiếp">Khảo sát truyện</a>' +
+          '<a href="/guide#bao-loi">Báo lỗi chữ</a>' +
+        '</nav>' +
+      '</div>' +
+      '<div class="fend">' +
+        '<span>© ' + new Date().getFullYear() + ' ssochuz library</span>' +
+        '<span>Truyện và bản dịch thuộc về tác giả tương ứng.</span>' +
+      '</div>' +
+    '</div>';
   }
   function mountShell(opt) {
     opt = opt || {};
@@ -1865,7 +1903,7 @@
     marks: marks, toggleMark: toggleMark, chaptersRead: chaptersRead,
     realCount: realCount, reconcileCount: reconcileCount, onStatsChange: onStatsChange, notifyStats: notifyStats,
     rdGet: rdGet, rdSet: rdSet, themeInit: themeInit, themeToggle: themeToggle, themeMeta: themeMeta,
-    icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo,
+    icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo, teaser: teaser,
     statusCls: statusCls, statusLabel: statusLabel, words: words, norm: norm, countText: countText, listHead: listHead,
     storyURL: storyURL, readURL: readURL, slugify: slugify, qs: qs, copy: copy, download: download,
     card: card, mountRail: mountRail, reveal: reveal, countUp: countUp, scaleFacts: scaleFacts,

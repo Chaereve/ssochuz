@@ -53,7 +53,9 @@
             (n.couple ? '<span>' + ic('users', 'i-s') + ' ' + esc(n.couple) + '</span>' : '') +
             (n.updated ? '<span>' + ic('refresh', 'i-s') + ' ' + esc(CZ.timeAgo(n.updated)) + '</span>' : '') +
           '</div>' +
-          '<p class="syn">' + esc(n.synFull || n.syn || '') + '</p>' +
+          /* hero trang chủ chỉ cần đoạn mở đầu: mô tả đầy đủ (có thể tới 3.300 ký
+             tự) nằm trong tệp chương và dành cho trang truyện */
+          '<p class="syn">' + esc(n.syn || n.synFull || '') + '</p>' +
           (pct ? '<div class="prog"><span class="pb"><i style="width:' + pct + '%"></i></span>' +
             '<span>đang đọc <b>chương ' + p + '</b>' + (tot ? ' / ' + tot : '') + ' · ' + pct + '%</span></div>' : '') +
           '<div class="btn-row">' +
@@ -396,7 +398,7 @@
         '<span class="n' + (i < 3 ? ' top t' + (i + 1) : '') + '">' + (i + 1) + '</span>' +
         '<span class="rk-th' + (n.thumb ? '' : ' noimg') + '">' +
         (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async">' : '') + '</span>' +
-        '<span class="tt"><b>' + esc(n.title) + '</b><span>' + esc(n.couple || n.author || '') +
+        '<span class="tt"><b>' + esc(n.title) + '</b><span>' + esc(n.author || n.couple || '') +
         (on && s.chapterCount ? ' · ' + s.chapterCount + ' chương' : '') + '</span></span>' +
         '<span class="v">' + text + '</span>' +
         (w ? '<i class="bar" style="--w:' + w + '%"></i>' : '') + '</a>';

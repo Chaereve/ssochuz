@@ -208,15 +208,27 @@ body, .hdr, .hero, .hero .foot, .facts, .ftr, .fbox, .sechead, .authcard {
 .hdr .in > .grow::after { content: ""; position: absolute; right: 0; top: 50%; width: 1px; height: 20px;
   margin-top: -10px; background: var(--bd); }
 
-/* thương hiệu: chữ Fraunces, dấu son vuông xoay 45°, khoảng cách đặt bằng em
-   để co giãn đúng theo cỡ chữ (dùng gap của flex sẽ đẩy hai chữ ra quá xa) */
-.logo { display: inline-flex; align-items: center; font-family: var(--font-logo); font-size: 22px;
+/* thương hiệu đặt như manchette báo: tên riêng bằng Fraunces, còn "library" lùi
+   xuống thành dòng chữ nhỏ giãn khoảng cách, mực nhạt — cùng một kiểu chữ nhãn
+   (10,5px / 800 / .14em / in hoa) mà trang này vẫn dùng ở .eyebrow và .sgrp h5,
+   nên thương hiệu ăn nhập với phần còn lại thay vì nổi lên như một logo dán vào.
+   Hai chữ nằm chung đường chân chữ (baseline) chứ không căn giữa: căn giữa làm
+   dòng chữ nhỏ trôi lửng lơ giữa thân chữ lớn.
+   Dấu son giữ khối vuông nhưng BỎ xoay 45° và bỏ lò xo — một hình thoi nảy tanh
+   tách mỗi lần trỏ chuột là thứ trang sức không nói lên điều gì; nay nó chỉ đậm
+   mực lên khi trỏ, đúng bằng nhịp --t-fast của mọi tương tác nhỏ khác.
+   Khoảng cách đặt bằng em để co giãn theo cỡ chữ (dùng gap của flex sẽ đẩy hai
+   chữ ra quá xa). */
+.logo { display: inline-flex; align-items: baseline; font-family: var(--font-logo); font-size: 22px;
   font-weight: 700; font-optical-sizing: auto; color: var(--txt); letter-spacing: -.022em; line-height: 1; }
-.logo i { font-style: normal; margin-left: .26em; color: var(--acc); font-weight: 600; letter-spacing: -.012em; }
-.logo .dot { width: 8px; height: 8px; margin-right: 10px; flex: 0 0 auto; background: var(--acc);
-  border-radius: 1.5px; transform: rotate(45deg); transition: transform var(--t) var(--ease-spring); }
+.logo i { font-style: normal; margin-left: .42em; font-size: 10.5px; font-weight: 800;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--mut); }
+.logo .dot { width: 7px; height: 7px; margin-right: 9px; flex: 0 0 auto; align-self: center;
+  border: 1px solid var(--acc); background: transparent; }
 .logo:hover { color: var(--txt); }
-.logo:hover .dot { transform: rotate(45deg) scale(1.18); }
+.logo:hover i { color: var(--txt); }
+.logo:hover .dot { background: var(--acc); }
+.logo i, .logo .dot { transition: color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease); }
 
 /* điều hướng: chữ trơn, cao hết thanh để vùng bấm rộng, gạch mực nằm đúng trên
    đường kẻ đáy. KHÔNG đổi font-weight khi đang xem — trước đây .on in đậm làm
@@ -324,15 +336,33 @@ body, .hdr, .hero, .hero .foot, .facts, .ftr, .fbox, .sechead, .authcard {
   .tsw, .tsw-sl, .tsw-icon { transition: none; }
 }
 
+/* ---- chân trang: trang ghi công của một tờ báo ----------------------------
+   Ba cột trên lưới 4/8px (thương hiệu rộng hơn, hai cột đường dẫn bằng nhau),
+   dưới cùng là dòng bản quyền ngăn bằng một đường kẻ tóc. Không ô bo tròn,
+   không nền chênh, không cột nào "trang trí" — đúng ngôn ngữ in ấn của cả trang. */
 .ftr { border-top: 1px solid var(--bd); background: var(--bg); margin-top: 80px; }
-.ftr .in { max-width: var(--maxw); margin: 0 auto; padding: 40px 24px 32px; }
-.ftr .fmain { display: flex; flex-direction: column; gap: 18px; }
-.ftr .fbrand { max-width: 52ch; }
-.ftr .logo { font-size: 26px; font-family: var(--font-logo); font-weight: 700; letter-spacing: -.022em; }
-.ftr .fdesc { font-size: 14px; line-height: 1.7; color: var(--mut); margin: 10px 0 0; max-width: 46ch; }
-.ftr .flinks { margin: 14px 0 0; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13.5px; color: var(--mut); }
-.ftr .flinks a { color: var(--mut); }
-.ftr .flinks a:hover { color: var(--txt); }
+.ftr .in { max-width: var(--maxw); margin: 0 auto; padding: 44px 24px 0; }
+.ftr .fcols { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 40px 32px; padding-bottom: 36px; }
+.ftr .fbrand { max-width: 34ch; }
+.ftr .fdesc { font-size: 13.5px; line-height: 1.75; color: var(--mut); margin: 14px 0 0; }
+.ftr .fcol { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; }
+.ftr .fcol h3 { margin: 0 0 3px; font-family: var(--font); font-size: 10.5px; font-weight: 800;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+.ftr .fcol a { font-size: 13.5px; line-height: 1.5; color: var(--mut); padding: 1px 0;
+  border-bottom: 1px solid transparent;
+  transition: color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease); }
+.ftr .fcol a:hover { color: var(--txt); border-bottom-color: var(--bd2); }
+.ftr .fend { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px;
+  border-top: 1px solid var(--bd); padding: 16px 0 20px; font-size: 12.5px; color: var(--dim); }
+@media (max-width: 860px) {
+  .ftr .fcols { grid-template-columns: 1fr 1fr; gap: 32px 24px; padding-bottom: 32px; }
+  .ftr .fbrand { grid-column: 1 / -1; max-width: 46ch; }
+}
+@media (max-width: 520px) {
+  .ftr .fcols { grid-template-columns: 1fr; gap: 28px; }
+  .ftr .fend { flex-direction: column; gap: 6px; }
+}
 
 /* ---- nhịp của thanh đầu trang theo bề ngang -------------------------------
    Bốn bậc, mỗi bậc bỏ bớt một lớp chữ để không bao giờ phải bóp méo hộp:
@@ -365,7 +395,7 @@ body, .hdr, .hero, .hero .foot, .facts, .ftr, .fbox, .sechead, .authcard {
   .hbtn .searchbtn-txt, .hbtn .nav-lbl, .hbtn .k { display: none; }
   #czJump { width: var(--ctl); padding: 0; }
   .mnav { padding: 4px 16px 12px; }
-  .ftr .in { padding: 28px 16px 24px; }
+  .ftr .in { padding: 32px 16px 0; }
 }
 
 /* ========================= 3. NÚT & NHẬP LIỆU ============================= */
@@ -888,17 +918,28 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--bd); }
 .shero .meta b { color: var(--txt); }
 .shero .meta > span { display: inline-flex; align-items: center; gap: 6px; }
-.shero .syn { font-size: 15.5px; color: var(--mut); line-height: 1.7; margin-bottom: 8px; }
-/* Tóm tắt dài: xem thêm là bung TẠI CHỖ — gấp bằng grid-rows nên chiều cao chạy mượt */
-.synwrap { display: grid; grid-template-rows: 1fr; }
-.synwrap.clamp { grid-template-rows: 0fr; transition: grid-template-rows var(--t-close) var(--ease-close); }
-.synwrap.clamp.open { grid-template-rows: 1fr; transition: grid-template-rows var(--t) var(--ease); }
-.synwrap > .synin { overflow: hidden; }
-.synwrap.clamp > .synin { opacity: 0; filter: blur(var(--mo-blur));
-  transition: opacity var(--t-close) var(--ease-close), filter var(--t-close) var(--ease-close); }
-.synwrap.clamp.open > .synin { opacity: 1; filter: blur(0);
-  transition: opacity var(--t) var(--ease), filter var(--t) var(--ease); }
-.shero .syn { margin: 0 0 12px; }
+.shero .syn { font-size: 15.5px; color: var(--mut); line-height: 1.7; margin: 0 0 12px; }
+/* Mô tả dài: HÉ NĂM DÒNG, bấm “Hiện thêm” thì bung ngay tại chỗ.
+   Bản cũ gấp CẢ khối mô tả về `grid-template-rows: 0fr` — nghĩa là bộ nào mô tả
+   quá 260 ký tự thì trang truyện không hiện một chữ nào, chỉ còn trơ cái nút
+   “Xem thêm”. Nay chỉ phần đuôi bị gấp, đoạn mở đầu luôn đọc được.
+   Chiều cao khi bung do JS đo thật rồi ghi inline (renderStory trong
+   src/cz-story.js): để một con số max-height cố định thì hoặc cắt mất chữ của bộ
+   mô tả dài nhất (3.300 ký tự ≈ 40 dòng), hoặc nhịp bung chạy hụt hơi vì phải
+   nội suy qua cả khúc không nhìn thấy. */
+.synwrap > .synin { overflow: hidden; font-size: 15.5px; line-height: 1.7; }
+.synin > .syn:last-child { margin-bottom: 0; }
+.synwrap.clamp > .synin {
+  max-height: 8.5em;                      /* 5 dòng × line-height 1.7 */
+  /* chữ nhạt dần ở cuối phần hé ra: người đọc biết là còn nữa, không phải chữ cụt */
+  -webkit-mask-image: linear-gradient(#000 58%, rgba(0, 0, 0, 0));
+          mask-image: linear-gradient(#000 58%, rgba(0, 0, 0, 0));
+  transition: max-height var(--t-close) var(--ease-close);
+}
+.synwrap.clamp.open > .synin {
+  -webkit-mask-image: none; mask-image: none;
+  transition: max-height var(--t) var(--ease);
+}
 .synbtn .i { transition: transform var(--t-fast) var(--ease); }
 .synbtn[aria-expanded="true"] .i { transform: rotate(180deg); }
 .synbtn { display: inline-flex; align-items: center; gap: 5px; margin: 0 0 10px; font-size: 12.5px; font-weight: 700;
@@ -1040,7 +1081,10 @@ mark.hit { background: var(--acc-soft); color: var(--acc); padding: 0 2px; borde
 .pin { animation: paneIn var(--t-mid) var(--ease-out) both; }
 @keyframes paneIn { from { opacity: 0; transform: translateY(10px); } }
 .infogrid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 40px; align-items: start; }
-#synFull { font-size: 15.5px; line-height: 1.78; color: var(--mut); white-space: pre-line; }
+/* tab Giới thiệu: mô tả đầy đủ, mỗi đoạn một thẻ <p> (src/cz-story.js renderInfo) */
+#synFull { font-size: 15.5px; line-height: 1.78; color: var(--mut); }
+#synFull p { margin: 0 0 12px; }
+#synFull p:last-child { margin: 0; }
 .info { border-top: 1px solid var(--bd); }
 .info .r { display: flex; justify-content: space-between; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--bd);
   font-size: 13.5px; }

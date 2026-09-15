@@ -22,8 +22,32 @@ def load(path):
 
 
 def save(path, obj):
+    # indent=2 + xuống dòng cuối tệp: đúng dạng data/registry.json đang nằm trong
+    # kho, để mỗi lần sync diff chỉ ra đúng những trường đổi, không xới cả tệp
     with open(path, 'w', encoding='utf-8') as f:
-        json.dump(obj, f, ensure_ascii=False, indent=1)
+        f.write(json.dumps(obj, ensure_ascii=False, indent=2) + '\n')
+
+
+def save_book(path, obj):
+    """Tệp chương đang nằm ở dạng nén một dòng — ghi lại đúng dạng đó để diff không nổ."""
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(obj, f, ensure_ascii=False, separators=(',', ':'))
+
+
+def book_with_syn(bk, full):
+    """Chèn synFull ngay sau couple, trước mảng chapters — trường nhỏ không bị
+    đẩy xuống cuối tệp 400 KB, và thứ tự khoá vẫn ổn định giữa các lần sync."""
+    if bk.get('synFull') == full:
+        return bk
+    out = {}
+    for k in ('title', 'slug', 'author', 'couple'):
+        if k in bk:
+            out[k] = bk[k]
+    out['synFull'] = full
+    for k, v in bk.items():
+        if k not in out and k != 'synFull':
+            out[k] = v
+    return out
 
 
 def norm_key(s):
@@ -50,7 +74,7 @@ def page_text(content_html):
 
 # ---------------------------------------------------------------- dữ liệu vào
 def read_pages(path):
-    """feed pages -> {url: {title, text, published, updated, img}} + {norm_title: url}"""
+    """feed pages -> {url: {title, text, html, published, updated, img}} + {norm_title: url}"""
     feed = load(path)['feed']
     by_url, by_title = {}, {}
     for e in feed.get('entry', []):
@@ -60,6 +84,7 @@ def read_pages(path):
             'title': clean(e['title']['$t']),
             'url': url,
             'text': page_text(content),
+            'html': content,          # giữ HTML thô: mô tả đầy đủ cần ranh giới các <p>
             'published': e['published']['$t'][:10],
             'updated': e['updated']['$t'][:10],
             'img': (re.findall(r'<img[^>]+src="([^"]+)"', content) or [''])[0],
@@ -127,6 +152,74 @@ def syn_from_page(text):
     return body
 
 
+# ---------------------------------------------------------------- mô tả đầy đủ
+PARA_BREAK = re.compile(r'</p\s*>|<br\s*/?>|</div\s*>|</h[1-6]\s*>|</li\s*>', re.I)
+JUNK_LINE = re.compile(r'^(Chương|Đọc tiếp|Xem thêm|Truyện|Nguồn|Thể loại|Couple|Tình trạng|'
+                       r'Tên khác|Số chương|Cập nhật|Tác giả)\b', re.I)
+STOP_LINE = re.compile(r'^(Danh sách( các)? chương|Mục lục|Chương \d|List chapter)\b', re.I)
+# chỉ lột emoji/dấu đầu dòng — cố ý KHÔNG gồm dải \u2000-\u206f vì dải đó chứa cả
+# ‘ ’ “ ” —, mà mô tả ở đây mở đầu đoạn bằng ngoặc kép/gạch ngang rất nhiều
+LEAD_JUNK = re.compile(r'^[\s\u00a0\u2022\u2023\u25aa\u25cf\u2600-\u27bf\ufe0f'
+                       r'\U0001f000-\U0001faff]+')
+
+
+def syn_full_from_page(content_html):
+    """MÔ TẢ ĐẦY ĐỦ, giữ ranh giới đoạn bằng một dòng trống.
+
+    Bản cũ chỉ lấy `syn_from_page()` rồi cắt `[:300]`: 61/62 bộ bị mất chữ, tổng
+    cộng ~45.000 ký tự nội dung thật bị vứt đi, mà câu thì đứt ngang giữa chừng.
+    Trang giới thiệu trên Blogger có dạng:
+        <b>Tình trạng:</b> … <b>Tác giả:</b> …
+        <div style="margin-top:20px"><p>đoạn 1</p><p>đoạn 2</p>…
+        📚 DANH SÁCH CHƯƠNG <a class="chapter-link">Chương 1</a> …
+    nên cắt từ sau khối "Tác giả:" tới trước danh sách chương, đổi thẻ đóng đoạn /
+    ngắt dòng thành \\n, rồi rửa từng dòng.
+    """
+    t = str(content_html or '')
+    m = re.search(r'Tác giả:.*?</div>', t, re.S | re.I)
+    body = t[m.end():] if m else t
+    a = re.search(r'<a\b[^>]*class="[^"]*chapter-link', body, re.I) \
+        or re.search(r'<a\b[^>]*href="[^"]*#page-', body, re.I)
+    if a:
+        body = body[:a.start()]
+    body = re.sub(r'<style.*?</style>|<script.*?</script>', ' ', body, flags=re.S | re.I)
+    body = PARA_BREAK.sub('\n', body)
+    body = H.unescape(re.sub(r'<[^>]+>', ' ', body))
+    out = []
+    for line in body.split('\n'):
+        s = LEAD_JUNK.sub('', re.sub(r'\s+', ' ', line).replace('\u00a0', ' ')).strip()
+        s = re.sub(r'^18\+\s*', '', s).strip()
+        s = re.split(r'\s(?:Chương|Đọc|Xem)\s', s)[0]
+        s = re.sub(r'\s*[|·]\s*$', '', s).strip()
+        if not s or len(s) < 2:
+            continue
+        # tới tiêu đề danh sách chương là hết mô tả thật — dừng hẳn, phần sau là
+        # tên từng chương, để lẫn vào sẽ thành một đống chữ vô nghĩa
+        if STOP_LINE.match(s):
+            break
+        if JUNK_LINE.match(s):
+            continue
+        out.append(s)
+    return '\n\n'.join(out)
+
+
+def syn_teaser(text, limit=200):
+    """Câu mở đầu để dùng ở thẻ/trang chủ/thẻ meta — không xé đôi một từ.
+
+    Ưu tiên khép ở dấu chấm câu; không có chỗ khép tử tế thì mới cắt ở khoảng
+    trắng và thêm dấu ba chấm.
+    """
+    s = re.sub(r'\s+', ' ', str(text or '')).strip()
+    if len(s) <= limit:
+        return s
+    head = s[:limit]
+    m = max(head.rfind('.'), head.rfind('!'), head.rfind('?'))
+    if m >= int(limit * 0.55):
+        return s[:m + 1].strip()
+    return head.rsplit(' ', 1)[0].rstrip(' ,;:·|-') + '…'
+
+
+
 def parse_schedule(text):
     """'Thứ 2, 3: Third Person  Thứ 4, 5: ...' -> [{days, title}]"""
     items = []
@@ -161,6 +254,7 @@ def build(pages_path, posts_path, details_path, cards_path, registry_path, books
 
     rows, changes = [], []
     new_lib = []
+    dirty_books = {}      # slug -> tệp chương đã chèn synFull, ghi ra cuối hàm
     for n in reg['lib']:
         slug = n['slug']
         card = cards.get(slug, {})
@@ -225,10 +319,22 @@ def build(pages_path, posts_path, details_path, cards_path, registry_path, books
             new['updated'] = page['updated']
             new['published'] = page['published']
         if page:
-            s = syn_from_page(page['text'])
-            old_syn = re.sub(r'\s+', ' ', n.get('syn') or '').strip()
-            if len(s) > 40 and old_syn[:40] not in s:
-                new['syn'] = s[:300].rstrip() + '…'
+            full = syn_full_from_page(page.get('html') or '')
+            if len(full) > 40:
+                # MÔ TẢ ĐẦY ĐỦ đi theo từng bộ (data/book/<slug>.json), không nằm
+                # trong registry: registry là mục lục mà MỌI trang phải tải, nhét
+                # thêm 56 KB chữ vào đó là bắt trang chủ tải nặng gấp 2,6 lần
+                # (12,9 KB → 34,1 KB gzip). Trang truyện vốn đã tải tệp chương.
+                bk = books.get(slug)
+                if isinstance(bk, dict):
+                    fixed = book_with_syn(bk, full)
+                    if fixed != bk:
+                        books[slug] = fixed
+                        dirty_books[slug] = fixed
+                # syn trong registry là bản rút gọn cho thẻ / trang chủ / meta
+                # description. Bản cũ cắt cứng [:300] nên đứt giữa chừng một từ;
+                # nay khép ở dấu câu hoặc ranh giới từ.
+                new['syn'] = syn_teaser(full)
         new_lib.append(new)
 
         rows.append(dict(slug=slug, title=n['title'], old=dict(
@@ -295,6 +401,11 @@ def build(pages_path, posts_path, details_path, cards_path, registry_path, books
                          'registry': 'https://chuseoz.blogspot.com/p/list-novel.html',
                          'synced': datetime.datetime.now().isoformat(timespec='seconds')}
     save(out_path, reg_out)
+    # mô tả đầy đủ nằm ở tệp chương, chỉ ghi những bộ thật sự có thay đổi
+    for slug, bk in sorted(dirty_books.items()):
+        path = os.path.join(books_dir, slug + '.json')
+        if os.path.exists(path):
+            save_book(path, bk)
 
     lines = ['# Đối chiếu registry với dữ liệu blogspot (%s)' % reg_out['rev'], '']
     for r in rows:
@@ -308,7 +419,7 @@ def build(pages_path, posts_path, details_path, cards_path, registry_path, books
     if report_path:
         with open(report_path, 'w', encoding='utf-8') as f:
             f.write('\n'.join(lines) + '\n')
-    return reg_out, rows
+    return reg_out, rows, dirty_books
 
 
 if __name__ == '__main__':
@@ -322,8 +433,10 @@ if __name__ == '__main__':
     ap.add_argument('--out', default='data/registry.json')
     ap.add_argument('--report', default=None)
     a = ap.parse_args()
-    reg, rows = build(a.pages, a.posts, a.postdetails, a.cards, a.registry, a.books, a.out, a.report)
+    reg, rows, dirty_books = build(a.pages, a.posts, a.postdetails, a.cards, a.registry, a.books,
+                                   a.out, a.report)
     changed = [r for r in rows if any(str(r['old'].get(k)) != str(r['new'].get(k)) for k in r['old'])]
     print('lib: %d bộ | %d bộ có thay đổi' % (len(reg['lib']), len(changed)))
+    print('mô tả đầy đủ đã ghi vào %d tệp chương' % len(dirty_books))
     print('slides:', [s['title'] for s in reg['slides']])
     print('series:', len(reg['series']), '| schedule:', len((reg.get('schedule') or {}).get('items', [])))
