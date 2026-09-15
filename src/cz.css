@@ -353,32 +353,26 @@ body, .hdr, .hero, .hero .foot, .facts, .ftr, .fbox, .sechead, .authcard {
   .tsw, .tsw-sl, .tsw-icon { transition: none; }
 }
 
-/* ---- chân trang: trang ghi công của một tờ báo ----------------------------
-   Ba cột trên lưới 4/8px (thương hiệu rộng hơn, hai cột đường dẫn bằng nhau),
-   dưới cùng là dòng bản quyền ngăn bằng một đường kẻ tóc. Không ô bo tròn,
-   không nền chênh, không cột nào "trang trí" — đúng ngôn ngữ in ấn của cả trang. */
-.ftr { border-top: 1px solid var(--bd); background: var(--bg); margin-top: 80px; }
-.ftr .in { max-width: var(--maxw); margin: 0 auto; padding: 44px 24px 0; }
-.ftr .fcols { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) minmax(0, 1fr);
-  gap: 40px 32px; padding-bottom: 36px; }
-.ftr .fbrand { max-width: 34ch; }
-.ftr .fdesc { font-size: 13.5px; line-height: 1.75; color: var(--mut); margin: 14px 0 0; }
-.ftr .fcol { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; }
-.ftr .fcol h3 { margin: 0 0 3px; font-family: var(--font); font-size: 10.5px; font-weight: 800;
-  letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
-.ftr .fcol a { font-size: 13.5px; line-height: 1.5; color: var(--mut); padding: 1px 0;
-  border-bottom: 1px solid transparent;
-  transition: color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease); }
-.ftr .fcol a:hover { color: var(--txt); border-bottom-color: var(--bd2); }
-.ftr .fend { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px;
-  border-top: 1px solid var(--bd); padding: 16px 0 20px; font-size: 12.5px; color: var(--dim); }
-@media (max-width: 860px) {
-  .ftr .fcols { grid-template-columns: 1fr 1fr; gap: 32px 24px; padding-bottom: 32px; }
-  .ftr .fbrand { grid-column: 1 / -1; max-width: 46ch; }
-}
+/* ---- chân trang: dải nền tối chữ ký ------------------------------------------
+   Một cột dồn trái: logo (hình thoi hồng + “ssochuz” trắng + “library” hồng
+   nghiêng) → câu cảm ơn → 3 liên kết. Màu GHI CỐ ĐỊNH (không theo tông
+   sáng/tối) để chân trang luôn giống mẫu ở mọi chế độ. */
+.ftr { background: #171310; border-top: 1px solid rgba(255, 240, 220, .13); margin-top: 80px; }
+.ftr .in { max-width: var(--maxw); margin: 0 auto; padding: 48px 24px 52px; }
+.flogo { display: inline-flex; align-items: center; font-family: var(--font-logo);
+  font-size: 28px; font-weight: 700; letter-spacing: -.022em; line-height: 1; color: #f5efe6; }
+.flogo:hover { color: #fff; }
+.flogo .fdia { width: 10px; height: 10px; margin-right: 12px; flex: none;
+  background: #e0859b; transform: rotate(45deg); }
+.flogo em { font-style: italic; font-weight: 700; color: #e0859b; margin-left: .32em; }
+.fthanks { margin: 20px 0 0; max-width: 40ch; font-size: 15px; line-height: 1.7; color: #a89d8d; }
+.flinks { display: flex; flex-wrap: wrap; gap: 8px 28px; margin-top: 28px; }
+.flinks a { font-size: 14.5px; color: #a89d8d;
+  transition: color var(--t-fast) var(--ease); }
+.flinks a:hover { color: #f5efe6; }
 @media (max-width: 520px) {
-  .ftr .fcols { grid-template-columns: 1fr; gap: 28px; }
-  .ftr .fend { flex-direction: column; gap: 6px; }
+  .ftr .in { padding: 36px 16px 44px; }
+  .flogo { font-size: 24px; }
 }
 
 /* ---- nhịp của thanh đầu trang theo bề ngang -------------------------------
@@ -412,7 +406,7 @@ body, .hdr, .hero, .hero .foot, .facts, .ftr, .fbox, .sechead, .authcard {
   .hbtn .searchbtn-txt, .hbtn .nav-lbl, .hbtn .k { display: none; }
   #czJump { width: var(--ctl); padding: 0; }
   .mnav { padding: 4px 16px 12px; }
-  .ftr .in { padding: 32px 16px 0; }
+  .ftr .in { padding: 36px 16px 44px; }
 }
 
 /* ========================= 3. NÚT & NHẬP LIỆU ============================= */
@@ -1725,7 +1719,16 @@ body.page-in main { animation: pageIn var(--t-slow) var(--ease-out) both; }
   border: 1px solid rgba(255, 255, 255, .28); box-shadow: 0 1px 4px rgba(10, 6, 4, .3); }
 .b18 { background: var(--bad); color: #fff; }
 [data-theme="dark"] .b18 { background: #c2475a; }
-.badge-new { background: var(--acc); color: #fff; }
+/* Huy hiệu Mới: cùng khuôn pill với 18+ nhưng có thêm chấm trắng “thở” (pulse)
+   và quầng sáng mực son — nhìn là biết truyện vừa lên, kể cả trên bìa ảnh tối. */
+.badge-new { gap: 5px; background: var(--acc); color: #fff;
+  box-shadow: 0 1px 6px color-mix(in srgb, var(--acc) 55%, transparent),
+    0 1px 2px rgba(10, 6, 4, .35); }
+.badge-new::before { content: ""; width: 5px; height: 5px; border-radius: 50%;
+  background: #fff; flex: none; animation: newPulse 1.8s ease-in-out infinite; }
+@keyframes newPulse { 0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .45; transform: scale(.72); } }
+@media (prefers-reduced-motion: reduce) { .badge-new::before { animation: none; } }
 .tabs .ct { background: var(--surf2); border-radius: 99px; padding: 1px 7px; font-weight: 700; }
 .tabs > button.on .ct { background: color-mix(in srgb, var(--acc) 16%, transparent); color: var(--acc); }
 .fchip { display: inline-flex; align-items: center; gap: 7px; padding: 5px 6px 5px 11px; border-radius: 99px;

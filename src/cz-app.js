@@ -1347,11 +1347,9 @@
     d.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('#czNav a'); if (a) mark(a); });
     run();
   }
-  /* Chân trang xếp như trang ghi công (colophon) của một tờ báo: tên báo, hai
-     cột đường dẫn THẬT, rồi dòng bản quyền ngăn bằng một đường kẻ tóc.
-     Bản cũ chỉ có logo + câu "Cảm ơn bạn đã ủng hộ và đồng hành cùng ssochuz
-     library!" + ba liên kết dồn hết vào cột trái: một câu lót không cho người đọc
-     biết thêm điều gì, và bỏ trống gần 70% bề ngang 1.180px. */
+  /* Chân trang nền tối chữ ký: logo + câu cảm ơn + 3 liên kết, dồn cột trái.
+     Nền tối CỐ ĐỊNH ở cả hai tông sáng/tối để luôn giống mẫu (hình thoi hồng,
+     chữ “library” hồng nghiêng chỉ đọc được trên nền tối). */
   function mountFooter(host) {
     if (!host) return;
     host.className = 'ftr';
@@ -1359,32 +1357,13 @@
     var fb = 'https://www.facebook.com/profile.php?id=61592803761987';
     var survey = cfg.form || 'https://forms.gle/YW3PvtrNVQ7xt8nCA';
     host.innerHTML = '<div class="in">' +
-      '<div class="fcols">' +
-        '<div class="fbrand">' +
-          '<a class="logo" href="/" title="ssochuz library"><span class="dot"></span>ssochuz<i> library</i></a>' +
-          '<p class="fdesc">Thư viện truyện chọn lọc — đọc ngay trong máy, giữ tiến độ từng chương, ' +
-            'lọc theo năm, tác giả, couple và theo dõi lịch ra chương.</p>' +
-        '</div>' +
-        '<nav class="fcol" aria-label="Các mục trong thư viện">' +
-          '<h3>Mục</h3>' +
-          '<a href="/">Trang chủ</a>' +
-          '<a href="/#moi-cap-nhat">Mới cập nhật</a>' +
-          '<a href="/#bxh">Bình chọn nhiều nhất</a>' +
-          '<a href="/#lich">Lịch ra chương</a>' +
-          '<a href="/#thu-vien">Thư viện</a>' +
-        '</nav>' +
-        '<nav class="fcol" aria-label="Trợ giúp và kênh liên lạc">' +
-          '<h3>Kết nối</h3>' +
-          '<a href="/guide">Hướng dẫn sử dụng</a>' +
-          '<a href="' + esc(fb) + '" target="_blank" rel="noopener">Facebook</a>' +
-          '<a href="' + esc(survey) + '" target="_blank" rel="noopener" title="Khảo sát truyện bạn muốn đọc tiếp">Khảo sát truyện</a>' +
-          '<a href="/guide#bao-loi">Báo lỗi chữ</a>' +
-        '</nav>' +
-      '</div>' +
-      '<div class="fend">' +
-        '<span>© ' + new Date().getFullYear() + ' ssochuz library</span>' +
-        '<span>Truyện và bản dịch thuộc về tác giả tương ứng.</span>' +
-      '</div>' +
+      '<a class="flogo" href="/" title="ssochuz library"><span class="fdia" aria-hidden="true"></span>ssochuz<em>library</em></a>' +
+      '<p class="fthanks">Cảm ơn bạn đã ủng hộ và đồng hành cùng ssochuz library!</p>' +
+      '<nav class="flinks" aria-label="Trợ giúp và kênh liên lạc">' +
+        '<a href="/guide">Hướng dẫn</a>' +
+        '<a href="' + esc(fb) + '" target="_blank" rel="noopener">Facebook</a>' +
+        '<a href="' + esc(survey) + '" target="_blank" rel="noopener">Khảo sát truyện</a>' +
+      '</nav>' +
     '</div>';
   }
   function mountShell(opt) {
