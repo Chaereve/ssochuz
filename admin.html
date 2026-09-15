@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg?v=2">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=2">
 <link rel="icon" type="image/x-icon" href="/assets/favicon.ico?v=2">
-<link rel="stylesheet" href="/cz.css?v=20260915d">
+<link rel="stylesheet" href="/cz.css?v=20260915e">
 <script>/* chống nháy nền */try{var t=localStorage.getItem('ssochuz-theme')||localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
 <body class="admin">
@@ -24,7 +24,10 @@
   <span class="rolebadge hide" id="roleBadge"></span>
   <button class="hbtn hide" id="btnLogout" title="Đăng xuất tài khoản quản trị">Đăng xuất</button>
   <a class="hbtn" href="/" target="_blank" rel="noopener">Xem web ↗</a>
-  <button class="hbtn icon" id="btnTheme" title="Sáng / Tối" aria-label="Đổi nền sáng tối"></button>
+  <label class="tsw" id="btnTheme" title="Đổi nền sáng/tối">
+    <input type="checkbox" class="tsw-in" id="btnThemeIn" role="switch" aria-label="Nền tối">
+    <span class="tsw-sl" aria-hidden="true"></span>
+  </label>
   <a class="hbtn" href="/#thu-vien" title="Kiểm tra dữ liệu vừa lưu">Kiểm tra ↻</a>
   <button class="hbtn hide" id="btnOut">Ngắt kết nối</button>
 </div></div>
@@ -619,9 +622,9 @@
 
 <div class="toasts" id="toasts"></div>
 
-<script src="/cz-config.js?v=20260915d"></script>
-<script src="/cz-app.js?v=20260915d"></script>
-<script src="/cz-auth.js?v=20260915d"></script>
-<script src="/admin.js?v=20260915d"></script>
+<script src="/cz-config.js?v=20260915e"></script>
+<script src="/cz-app.js?v=20260915e"></script>
+<script src="/cz-auth.js?v=20260915e"></script>
+<script src="/admin.js?v=20260915e"></script>
 </body>
 </html>

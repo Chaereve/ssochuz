@@ -17,6 +17,24 @@ còn thấy ghi chú nội bộ (tên khoá KV, luồng quản trị, danh sách
 `cz-config.js` **không** rút gọn: đó là tệp cấu hình chủ web tự sửa (URL Worker,
 Supabase…), nội dung vốn công khai.
 
+## Bộ icon
+
+Icon trong trang lấy từ **iconbuddy.com/solar** — bộ *Solar* của 480 Design, giấy phép
+CC BY 4.0 (đã ghi công ở chân trang). Bản máy đọc được lấy qua npm
+`@iconify-json/solar`, biến thể `-linear`.
+
+Khối `var P = { … }` trong `src/cz-app.js` **do máy sinh**, đừng sửa tay:
+
+```bash
+node tools/gen_icons_solar.mjs      # sinh lại 70 icon + giữ 2 icon thương hiệu
+node tools/measure_icons.mjs        # (tuỳ chọn) đo lại hộp mực, cần `npm i sharp`
+```
+
+Bộ Solar vẽ đầy khung hơn bộ cũ (hình ~21/24 thay vì ~18/24) nên hai thứ đã được
+chỉnh cho cân: mỗi icon được bù tỉ lệ riêng để mọi hình đều ~20,6/24 (xem bảng `NORM`
+trong `tools/gen_icons_solar.mjs`), và cỡ hiển thị trong `src/cz.css` giảm còn `.94em`
+(`.i-s` 13,5px) để hộp mực bằng đúng bộ icon trước đây.
+
 ## Quy trình sửa mã
 
 ```bash

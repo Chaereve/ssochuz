@@ -10,6 +10,74 @@ Trạng thái kiểm thử sau khi xong: **12/12 bài đạt** (`node tests/run.
 
 ---
 
+## Đợt 2 (cùng ngày 15/09) — bộ icon Solar · shimmer · công tắc nền · **vá lỗi menu mobile**
+
+Bốn việc chủ trang yêu cầu, cộng phần soát lại cuối cùng:
+
+| Việc | Kết quả |
+| --- | --- |
+| **Icon các mục trong trang lấy từ iconbuddy.com/solar** | Đổi bộ Lucide → **bộ Solar** (480 Design, CC BY 4.0 — đã ghi công ở chân trang). 70 icon `-linear` sinh tự động bằng `node tools/gen_icons_solar.mjs`; 2 icon thương hiệu Google/MoMo giữ bản vẽ tay |
+| **Shimmer giống uiverse.io/Nawsome/light-husky-91** | Làm lại: một **dải sáng hẹp** (gradient 110°, sáng nhất ở 50%) trượt hết chiều ngang khối trong **1,2s**, chỉ animate `transform` — đúng công thức mẫu, mà không còn chạy `background-position` (tốn vẽ lại từng khung hình). Dải nằm **dưới nội dung** (::before) nên ảnh thật vừa hiện là tự che mất dải. Nền sáng dải 62% trắng, nền tối 10% (`--sheen`) |
+| **Nút light/dark giống uiverse.io/andrew-demchenk0/honest-stingray-90** | **Công tắc trượt** đúng mẫu: rãnh 64×34, con chạy 30px trượt 30px, mặt trời quay 15s/vòng và mặt trăng lắc ±10° mỗi 5s khi trỏ vào/focus. Dùng `role="switch"`, nhãn đọc máy nói rõ đang ở nền nào, mỗi cú bấm đổi **đúng một** nhịp. Trang quản trị dùng chung công tắc này |
+| **Lỗi: bấm nút menu trên mobile nhưng các mục không hiện** | Xem mục dưới — đã tìm ra **nguyên nhân thật** và vá, kèm bài kiểm thử riêng |
+
+### Lỗi menu mobile — nguyên nhân và cách vá
+
+Hàm `CZ.slide()` có hai nhánh. Nhánh thường thêm lớp `.slid` rồi tự chạy `max-height`;
+nhánh dành cho máy bật **“giảm chuyển động”** (Android tiết kiệm pin cũng bật sẵn mục này)
+**quên thêm `.slid`** — mà menu `.mnav` chỉ hiện nhờ `.slid` (`display: none` mặc định),
+nên nó bật lớp `.on` mà vẫn… `display:none`: bấm nút menu không thấy mục nào.
+
+Đã vá ba lớp, để không bao giờ tái phát:
+
+1. `slide()` thêm `.slid` **trước khi** rẽ nhánh `reduce` (`src/cz-app.js`).
+2. CSS mở menu bằng **cả** `.slid` **lẫn** `.on` (`.mnav.slid, .mnav.on { display: block }`).
+3. Thêm bài kiểm thử `tests/t_mobile.js`: giả lập `prefers-reduced-motion: reduce`, bấm nút
+   menu → menu phải mở, có ≥4 mục, `aria-expanded="true"`, bấm lần hai đóng được, Esc đóng được.
+   (Bài `t_home.js` cũ luôn giả lập `matches:false` nên không bắt được lỗi này.)
+
+Ngoài ra: bản đang chạy trên web lúc chủ trang gặp lỗi **chưa có** phần vá nút menu của đợt trước
+(commit đợt 1). Đẩy bản mới lên là cả hai lớp vá cùng có hiệu lực.
+
+### Tinh chỉnh cỡ icon cho đồng bộ
+
+Bộ Solar vẽ đầy khung hơn bộ cũ (hình chiếm ~21/24 đơn vị thay vì ~18/24), nên nếu giữ nguyên
+cỡ cũ thì **mọi icon trông to hơn chữ**. Đã xử lý hai tầng:
+
+- **Từng icon một**: đo hộp mực thật (render rồi tìm pixel có mực — `tools/measure_icons.mjs`)
+  rồi bù tỉ lệ + dời tâm sao cho mọi hình đều ~20,6/24. Nhờ vậy mũi tên, dấu ×, nút ＋ không còn
+  bé hẳn so với các icon khác; nét vẽ được chia ngược hệ số phóng nên mọi icon vẫn mảnh đúng 1,5.
+- **Cỡ hiển thị**: `.i` từ `1.05em` → **`.94em`**, `.i-s` 15 → **13,5px**, tiêu đề mục 18 → 16px,
+  dấu “đã đọc” 15 → 13,5px, nút × trong bảng quản trị 14 → 12,5px. Hộp mực sau khi tính lại **bằng
+  đúng** bộ icon cũ (≈0,86em chữ) nên bố cục cũ không xô lệch.
+
+Nhân lúc soát giao diện máy nhỏ, sửa thêm hai điểm:
+
+- **Tablet 761–940px**: logo + 4 chip chữ + nút Tìm + công tắc + nút đăng nhập cộng lại vượt bề
+  ngang màn hình nên chip bị bóp. Nay chip tự thu còn **icon** (mỗi chip đã có `title` +
+  `aria-label`), vùng bấm giữ 36px; lớp phủ chọn mục tự đo lại nên vẫn khớp.
+- **Điện thoại ≤560px**: công tắc thu còn 52×30 (icon 20px) cho vừa một hàng; **≤400px** tên
+  thương hiệu rút còn “ssochuz” — trước đây chữ “library” tự xuống dòng làm đầu trang cao bất thường.
+- Mặt trời trên nền xanh nhạt đổi sang màu navy `#183153` (**8,6:1** thay vì 1,5:1 như mẫu gốc).
+
+### Soát lại cuối đợt (bảo mật · bug · giao diện)
+
+| Phép soát | Kết quả |
+| --- | --- |
+| `node tests/run.js` | **13/13 bài đạt** (thêm `t_mobile.js`); `t_worker.mjs` **155/155** |
+| `node tools/check_html.js` | HTML sạch, `_redirects` **28 luật** an toàn, không vòng lặp |
+| `python3 tools/check_css.py` | **0** lớp dùng trong HTML/JS mà CSS chưa định nghĩa |
+| `node tools/check_calls.js` | Không có hàm “ma” |
+| Bảo mật phần mới | Không thêm miền/script ngoài nào (chỉ 1 liên kết ghi công tới `iconbuddy.com`); không `eval`, không `innerHTML` dựng từ dữ liệu người dùng; CSP và các header trong `_headers` **giữ nguyên**; hai công cụ mới nằm trong `/tools/*`, bài kiểm thử mới nằm trong `/tests/*` — đã bị luật 301 chặn sẵn, không cần thêm luật |
+| Kích thước bản phát hành | 557,2 kB → **377,3 kB** (rút gọn 32%) |
+| Phiên bản | Web **1.9.2**, HTML `?v=20260915e`. Worker **giữ 1.9.1** — đợt này **không sửa Worker**, nên **không cần deploy lại Worker** (nếu đợt trước đã deploy 1.9.1) |
+
+Ghi chú kỹ thuật nhỏ: `package.json` ghim `esbuild` đúng **0.25.0** (trước để `^0.25.0`). Bản rút gọn
+được so **từng byte** với `src/`, nên chỉ cần lệch phiên bản esbuild là `check_src.js` báo lỗi oan
+(khác 4 ký tự như `,function(){}()` vs `,(function(){}())`). Ghim lại cho bản build lặp lại y hệt.
+
+---
+
 ## 1. Bảo mật — đã tìm và vá
 
 | # | Lỗ hổng | Mức độ | Đã vá thế nào |

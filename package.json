@@ -1,13 +1,14 @@
 {
   "name": "ssochuz-library",
   "private": true,
-  "version": "1.9.1",
+  "version": "1.9.2",
   "description": "ssochuz library — web tĩnh. Mã nguồn đọc được nằm trong src/, bản phát hành (đã rút gọn) nằm ở thư mục gốc.",
   "scripts": {
     "build": "node tools/build_site.mjs",
     "test": "node tests/run.js"
   },
   "devDependencies": {
-    "esbuild": "^0.25.0"
+    "@iconify-json/solar": "^1.2.10",
+    "esbuild": "0.25.0"
   }
 }

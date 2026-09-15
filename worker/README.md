@@ -18,6 +18,15 @@ Admin (admin.html)  ──PUT──▶  Worker (worker/cms.js)  ──▶  Cloud
 
 GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới cần build); dữ liệu thì không đi qua GitHub nữa.
 
+## Có gì mới ở bản 1.9.2 — giao diện (CHỈ tệp tĩnh, **không cần deploy lại Worker**)
+
+| Trước | Sau |
+|---|---|
+| Icon bộ Lucide | Đổi sang **bộ Solar** (iconbuddy.com/solar — 480 Design, CC BY 4.0, đã ghi công ở chân trang). Mỗi icon được **bù tỉ lệ riêng** để mọi hình đều ~20,6/24 (mũi tên, dấu × trước đây bé hơn hẳn các icon khác) và cỡ hiển thị tính lại theo hộp mực thật → icon đều nhau, không to hơn chữ. Sinh tự động: `node tools/gen_icons_solar.mjs` |
+| Khối chờ (lưới truyện, trang đọc) chạy shimmer bằng `background-position` | Làm lại theo mẫu uiverse.io/Nawsome/light-husky-91: một **dải sáng hẹp** trượt hết chiều ngang khối trong 1,2s — chỉ animate `transform` nên máy yếu vẫn mượt; dải nằm dưới nội dung nên ảnh thật vừa hiện là tự che mất dải. Màu dải theo tông: `--sheen` 62% ở nền sáng, 10% ở nền tối |
+| Nút đổi nền sáng/tối hình mặt trăng | **Công tắc trượt** theo mẫu uiverse.io/andrew-demchenk0/honest-stingray-90 (rãnh 64×34, con chạy 30px trượt 30px, mặt trời quay 15s và mặt trăng lắc ±10° khi trỏ vào). Dưới 560px thu còn 52×30 cho vừa hàng; dưới 400px tên thương hiệu rút còn “ssochuz” (chữ “library” từng tự xuống dòng làm đầu trang cao bất thường). Có `role="switch"` + nhãn đọc máy nói đúng trạng thái, đổi đúng **một** nhịp mỗi cú bấm |
+| **Lỗi**: máy bật “giảm chuyển động” (Android tiết kiệm pin cũng bật) thì bấm nút menu trên điện thoại **không thấy mục nào** | Hàm `CZ.slide()` thiếu thêm lớp `.slid` ở nhánh reduced-motion — mà menu chỉ hiện nhờ lớp đó, nên nó vẫn `display:none`. Nay thêm `.slid` **trước** khi rẽ nhánh, và CSS mở menu bằng **cả** `.slid` **lẫn** `.on` để không bao giờ kẹt lại. Có bài kiểm thử riêng: `tests/t_mobile.js` (giả lập `prefers-reduced-motion: reduce` rồi bấm nút menu) |
+
 ## Có gì mới ở bản 1.9.1 — vá bảo mật + giấu mã nguồn khỏi Developer Tools
 
 | Lỗ hổng | Cách vá |
@@ -39,7 +48,7 @@ Chi tiết đầy đủ và cách tự kiểm tra: `BAO-CAO-BAO-MAT-VA-GIAO-DIEN
 |---|---|
 | Người đọc bấm **Báo lỗi chữ** → hộp thoại hiện nội dung rồi bắt **copy** và tự mở Gmail gửi (rất mất thời gian, nhiều bạn bỏ luôn) | Bấm **Gửi báo lỗi** là xong: `POST /api/report` nhận nội dung (kèm tên bộ, số chương, link, người gửi) → **lưu vào KV** và **gửi email** tới mọi địa chỉ trong `ADMIN_EMAILS`. Mất mạng thì hộp thoại tự hiện lại nút copy / Gmail để không ai bị kẹt |
 | Muốn xem lại báo lỗi phải vào KV bằng tay | Tab **Báo lỗi** trong `/admin` (phím `R`) liệt kê 300 báo lỗi gần nhất, bấm **Mở** là nhảy đúng chương, có nút copy và nút trả lời người báo. Endpoint `GET /api/admin/reports?q=` |
-| Icon web tự vẽ tay, chỗ dày chỗ mảnh | Toàn bộ icon SVG đổi sang **bộ Lucide (IconBuddy — iconbuddy.com)**, giấy phép mở, cùng lưới 24×24 nên nhìn đồng bộ. Hai icon thương hiệu Google / MoMo vẫn là bản vẽ tay |
+| Icon web tự vẽ tay, chỗ dày chỗ mảnh | Toàn bộ icon SVG đổi sang **bộ Lucide (IconBuddy — iconbuddy.com)**, giấy phép mở, cùng lưới 24×24 nên nhìn đồng bộ. Hai icon thương hiệu Google / MoMo giữ bản vẽ tay. (Bản 1.9.2 đổi tiếp sang bộ **Solar** — xem mục dưới.) |
 
 **Bật gửi email — chọn 1 trong 2 cách (không đặt gì cũng không sao, xem cuối mục):**
 
