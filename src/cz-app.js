@@ -1105,14 +1105,13 @@
       '<span class="grow"></span>' +
       '<button class="hbtn" id="czJump" title="Tìm truyện, tác giả, couple (⌘K)" aria-label="Tìm kiếm">' + icon('search', 'i-s') +
         '<span class="searchbtn-txt">Tìm</span><span class="k">⌘K</span></button>' +
-      /* công tắc sáng/tối — dựng theo mẫu uiverse.io/andrew-demchenk0/honest-stingray-90:
-         rãnh 64×34 có con chạy 30px, mặt trời bên phải (nền sáng) và mặt trăng
-         bên trái (nền tối). Giữ id #czTheme để không phải sửa test/JS khác. */
-      '<label class="tsw" id="czTheme" title="Đổi nền sáng/tối">' +
-        '<input type="checkbox" class="tsw-in" id="czThemeIn" role="switch" aria-label="Nền tối">' +
-        '<span class="tsw-sl" aria-hidden="true">' +
-          icon('sun', 'sun') + icon('moon', 'moon') +
-        '</span>' +
+      /* công tắc sáng/tối — lấy cấu trúc của uiverse.io/catraco/brown-termite-67:
+         rãnh bo tròn, biểu tượng trượt + xoay và đổi tông trời. Giữ id #czTheme
+         / #czThemeIn để trạng thái cũ, bàn phím và các bài kiểm thử không vỡ. */
+      '<label class="tsw switch-name" id="czTheme" title="Đổi nền sáng/tối">' +
+        '<input type="checkbox" class="tsw-in checkbox" id="czThemeIn" role="switch" aria-label="Nền tối">' +
+        '<span class="tsw-sl back" aria-hidden="true"></span>' +
+        icon('moon', 'tsw-icon moon') + icon('sun', 'tsw-icon sun') +
       '</label>' +
       /* ---- ĐĂNG NHẬP: nút luôn có trên mọi trang (kể cả trang chủ) ---- */
       '<div class="hauth" id="czAuth">' +

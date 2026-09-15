@@ -2178,16 +2178,20 @@
     if (!quiet) msg('Đang xem dữ liệu tĩnh /data/*.json. Mọi thay đổi chỉ lưu nháp trong máy.', 'info');
   }
   $('#btnOut').addEventListener('click', disconnect);
-  /* công tắc sáng/tối (cùng kiểu với đầu trang web) */
+  /* công tắc sáng/tối — cùng cấu trúc Uiverse với đầu trang web */
   (function () {
     var tb = $('#btnTheme'), tin = $('#btnThemeIn');
-    var sl = tb.querySelector('.tsw-sl');
-    if (sl && !sl.querySelector('.i')) sl.innerHTML = ic('sun', 'sun') + ic('moon', 'moon');
+    var sl = tb && tb.querySelector('.tsw-sl');
+    /* admin.html là HTML tĩnh, nên chèn hai SVG vào sau rãnh; không chèn vào
+       .tsw-sl vì mẫu Uiverse dùng các anh em cùng cấp với back. */
+    if (tb && sl && !tb.querySelector('.tsw-icon')) {
+      sl.insertAdjacentHTML('afterend', ic('moon', 'tsw-icon moon') + ic('sun', 'tsw-icon sun'));
+    }
     function paint() {
       var dark = document.documentElement.getAttribute('data-theme') === 'dark';
       var lbl = dark ? 'Đang bật nền tối — bấm để về nền sáng' : 'Đang ở nền sáng — bấm để bật nền tối';
       if (tin) { tin.checked = dark; tin.setAttribute('aria-label', lbl); }
-      tb.setAttribute('title', lbl); tb.setAttribute('aria-label', lbl);
+      if (tb) { tb.setAttribute('title', lbl); tb.setAttribute('aria-label', lbl); }
     }
     paint();
     /* xem chú thích ở src/cz-app.js: chỉ nghe 'change' và chỉ lật khi đang lệch */
@@ -2565,7 +2569,6 @@
   /* ------------------------------ khởi động ---------------------------- */
   (function init() {
     CZ.themeInit();
-    $('#btnTheme').innerHTML = ic(document.documentElement.getAttribute('data-theme') === 'light' ? 'sun' : 'moon', 'i-s');
     fillStatusFilter();
     var savedApi = '', savedKey = '';
     try { savedApi = localStorage.getItem(LS.api) || ''; savedKey = keyLoad(); } catch (e) {}

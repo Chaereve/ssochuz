@@ -18,7 +18,7 @@ Bốn việc chủ trang yêu cầu, cộng phần soát lại cuối cùng:
 | --- | --- |
 | **Icon các mục trong trang lấy từ iconbuddy.com/solar** | Đổi bộ Lucide → **bộ Solar** (480 Design, CC BY 4.0 — đã ghi công ở chân trang). 70 icon `-linear` sinh tự động bằng `node tools/gen_icons_solar.mjs`; 2 icon thương hiệu Google/MoMo giữ bản vẽ tay |
 | **Shimmer giống uiverse.io/Nawsome/light-husky-91** | Làm lại: một **dải sáng hẹp** (gradient 110°, sáng nhất ở 50%) trượt hết chiều ngang khối trong **1,2s**, chỉ animate `transform` — đúng công thức mẫu, mà không còn chạy `background-position` (tốn vẽ lại từng khung hình). Dải nằm **dưới nội dung** (::before) nên ảnh thật vừa hiện là tự che mất dải. Nền sáng dải 62% trắng, nền tối 10% (`--sheen`) |
-| **Nút light/dark giống uiverse.io/andrew-demchenk0/honest-stingray-90** | **Công tắc trượt** đúng mẫu: rãnh 64×34, con chạy 30px trượt 30px, mặt trời quay 15s/vòng và mặt trăng lắc ±10° mỗi 5s khi trỏ vào/focus. Dùng `role="switch"`, nhãn đọc máy nói rõ đang ở nền nào, mỗi cú bấm đổi **đúng một** nhịp. Trang quản trị dùng chung công tắc này |
+| **Nút light/dark theo uiverse.io/catraco/brown-termite-67** | **Công tắc trượt** chuyển thể đúng cấu trúc `back` + icon cùng cấp: rãnh 64×32 ở desktop, 52×28 trên điện thoại, biểu tượng trượt/xoay và đổi tông trời đã hạ độ chói cho hợp nền giấy / mực đỏ. Dùng `role="switch"`, checkbox trong suốt phủ kín rãnh, nhãn đọc máy nói rõ đang ở nền nào, mỗi cú bấm đổi **đúng một** nhịp. Trang quản trị dùng chung công tắc này |
 | **Lỗi: bấm nút menu trên mobile nhưng các mục không hiện** | Xem mục dưới — đã tìm ra **nguyên nhân thật** và vá, kèm bài kiểm thử riêng |
 
 ### Lỗi menu mobile — nguyên nhân và cách vá
@@ -56,9 +56,9 @@ Nhân lúc soát giao diện máy nhỏ, sửa thêm hai điểm:
 - **Tablet 761–940px**: logo + 4 chip chữ + nút Tìm + công tắc + nút đăng nhập cộng lại vượt bề
   ngang màn hình nên chip bị bóp. Nay chip tự thu còn **icon** (mỗi chip đã có `title` +
   `aria-label`), vùng bấm giữ 36px; lớp phủ chọn mục tự đo lại nên vẫn khớp.
-- **Điện thoại ≤560px**: công tắc thu còn 52×30 (icon 20px) cho vừa một hàng; **≤400px** tên
+- **Điện thoại ≤560px**: công tắc theo mẫu mới thu còn 52×28 (icon 28px, đệm 4px) cho vừa một hàng; vùng chạm vẫn phủ kín toàn rãnh. **≤400px** tên
   thương hiệu rút còn “ssochuz” — trước đây chữ “library” tự xuống dòng làm đầu trang cao bất thường.
-- Mặt trời trên nền xanh nhạt đổi sang màu navy `#183153` (**8,6:1** thay vì 1,5:1 như mẫu gốc).
+- Màu công tắc được hạ độ chói cho đồng bộ nền giấy / mực đỏ: ngày `#9fcfd2`, đêm `#51466f`, mặt trăng `#f2cf78`, mặt trời `#fff0a3`; không thêm script hay miền ngoài.
 
 ### Soát lại cuối đợt (bảo mật · bug · giao diện)
 

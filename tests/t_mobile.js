@@ -5,10 +5,11 @@
       slide() ở nhánh reduced-motion chỉ bật .on mà QUÊN thêm .slid — mà .mnav
       chỉ hiện nhờ .slid/.on, nên bấm nút menu không thấy mục nào. Bài này cố
       tình giả lập matchMedia trả về matches:true cho prefers-reduced-motion.
-   2. Công tắc sáng/tối (uiverse · honest-stingray-90): bấm đâu cũng chỉ đổi
+   2. Công tắc sáng/tối (uiverse · brown-termite-67): bấm đâu cũng chỉ đổi
       ĐÚNG MỘT lần, có nhớ trong localStorage, nhãn đọc máy nói đúng trạng thái.
    3. CSS: .mnav phải mở bằng CẢ .slid lẫn .on (chống tái phát); shimmer theo
-      mẫu uiverse · light-husky-91 dùng dải gradient trượt bằng transform.
+      mẫu uiverse · light-husky-91 dùng dải gradient trượt bằng transform; công
+      tắc mới giữ cấu trúc back + icon cùng cấp và trượt bằng transform.
    ========================================================================== */
 const { page, dataFetch } = require('./mk');
 const fs = require('fs'), path = require('path');
@@ -88,7 +89,9 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
       shimmer: /translateX?\(-100%\)/.test(shim) && /translateX?\(100%\)/.test(shim),
       shimmerCoBefore: /\.skel:{1,2}before|\.rskel:{1,2}before|\.skcard \.skth:{1,2}before/.test(t),
       shimmerNenDungTransform: /@keyframes shimmer/.test(t) && !/@keyframes shimmer[\s\S]{0,200}background-position/.test(t),
-      tsw: /\.tsw-sl:{1,2}before/.test(t) && /\.tsw-in:checked\s*\+\s*\.tsw-sl/.test(t)
+      tsw: /\.tsw-sl\s*\{/.test(t) && /\.tsw-in:checked\s*(?:\+|~)\s*\.tsw-sl/.test(t) &&
+        /\.tsw-in:checked\s*~\s*\.tsw-icon\.moon/.test(t) && /\.tsw-icon\.sun/.test(t),
+      tswUiverseLayout: /\.tsw-icon\s*\{/.test(t) && /translate(?:X)?\(-100%\) rotate\(-180deg\)/.test(t)
     };
   }
   /* icon trong bản phát hành có được chuẩn hoá (mỗi icon một hệ số) không */
@@ -107,6 +110,28 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     netONgoai: /stroke-width="\d+(\.\d+)?" transform="translate\(/.test(bodies)
   };
 
+  /* ---------- công tắc ở trang quản trị: hồi quy HTML bị xoá nhầm ----------
+     admin.html có công tắc tĩnh, còn hai SVG được admin.js chèn vào. Trước đây
+     init() gán innerHTML cho cả label sau khi khởi động, làm mất checkbox và
+     khiến trang quản trị không đổi nền được. */
+  const ap = page('admin.html', {
+    fetch: dataFetch(),
+    files: ['cz-config.js', 'cz-app.js', 'cz-auth.js', 'admin.js']
+  });
+  await wait(420);
+  const asw = ap.doc.querySelector('#btnTheme');
+  const ain = ap.doc.querySelector('#btnThemeIn');
+  const a0 = ap.doc.documentElement.getAttribute('data-theme');
+  if (ain) ain.click();
+  await wait(120);
+  out.adminTheme = {
+    input: !!ain,
+    icons: asw ? asw.querySelectorAll('.tsw-icon').length : 0,
+    changed: a0 !== ap.doc.documentElement.getAttribute('data-theme'),
+    errors: ap.errors.slice(0, 5)
+  };
+  out.errors1 = ap.errors.slice(0, 5);
+
   /* ---------- kết luận ---------- */
   const loi = [];
   if (!out.reduce) loi.push('không giả lập được chế độ giảm chuyển động');
@@ -124,12 +149,15 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     const c = out.css[k];
     if (!c.mnavMoBangSlid || !c.mnavMoBangOn) loi.push('cz.css(' + k + '): .mnav chưa mở bằng cả .slid lẫn .on');
     if (!c.shimmer || !c.shimmerCoBefore || !c.shimmerNenDungTransform) loi.push('cz.css(' + k + '): shimmer chưa theo mẫu (dải trượt bằng transform)');
-    if (!c.tsw) loi.push('cz.css(' + k + '): thiếu công tắc .tsw');
+    if (!c.tsw || !c.tswUiverseLayout) loi.push('cz.css(' + k + '): công tắc chưa theo cấu trúc brown-termite-67');
   }
   if (!out.themeChangeThua) loi.push("'change' phát thừa làm đổi nền lần nữa");
   if (!out.icon.khongConFillNone) loi.push('thân icon còn fill="none" (trạng thái .on không tô được)');
   if (!out.icon.netONgoai) loi.push('nét vẽ icon chưa gom ra lớp bọc chuẩn hoá');
   if (out.icon.soIconSolar < 60) loi.push('quá ít icon được chuẩn hoá: ' + out.icon.soIconSolar);
+  if (!out.adminTheme || !out.adminTheme.input || out.adminTheme.icons !== 2 || !out.adminTheme.changed) {
+    loi.push('công tắc trang quản trị mất checkbox/icon hoặc không đổi nền');
+  }
   if (!out.icon.coGoogle || !out.icon.coMomo) loi.push('mất icon thương hiệu Google/MoMo');
   out.loi = loi;
 

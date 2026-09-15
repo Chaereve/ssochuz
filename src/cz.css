@@ -188,30 +188,49 @@ body.reading #sprog { display: none !important; }
 .mnav a:last-child { border-bottom: 0; }
 
 /* ---- công tắc nền sáng / tối --------------------------------------------
-   Dựng theo mẫu uiverse.io/andrew-demchenk0/honest-stingray-90: rãnh 64×34,
-   con chạy 30px trượt 30px; mặt trời nằm bên phải (thấy khi đang nền sáng),
-   mặt trăng bên trái (hiện ra khi con chạy sang phải = nền tối). Mặt trời quay
-   15s/vòng, mặt trăng lắc ±10° mỗi 5s, nhưng chỉ khi trỏ vào / đang focus. */
-.tsw { position: relative; display: inline-flex; width: 64px; height: 34px; flex: 0 0 auto; cursor: pointer; }
-.tsw-in { position: absolute; opacity: 0; width: 0; height: 0; margin: 0; }
-.tsw-sl { position: absolute; inset: 0; border-radius: 30px; background: #73c0fc;
-  transition: background var(--t-mid) var(--ease); }
-.tsw-sl::before { content: ""; position: absolute; left: 2px; bottom: 2px; width: 30px; height: 30px; z-index: 2;
-  border-radius: 20px; background: #e8e8e8; box-shadow: 0 1px 3px rgba(20, 14, 8, .28);
-  transition: transform var(--t-mid) var(--ease-spring); }
-.tsw-in:checked + .tsw-sl { background: #183153; }
-.tsw-in:checked + .tsw-sl::before { transform: translateX(30px); }
-.tsw-in:focus-visible + .tsw-sl { box-shadow: 0 0 0 3px var(--ring); }
-.tsw-sl .i { position: absolute; width: 24px; height: 24px; z-index: 1; }
-.tsw-sl .i.sun { top: 5px; left: 35px; color: #183153; }   /* xanh navy trên nền xanh nhạt: 8,6:1 */
-.tsw-sl .i.moon { top: 5px; left: 5px; color: #9ecdfa; }
-.tsw:hover .i.sun, .tsw:focus-within .i.sun { animation: tswRot 15s linear infinite; }
-.tsw:hover .i.moon, .tsw:focus-within .i.moon { animation: tswTilt 5s linear infinite; }
-@keyframes tswRot { to { transform: rotate(360deg); } }
-@keyframes tswTilt { 25% { transform: rotate(-10deg); } 75% { transform: rotate(10deg); } }
+   Chuyển thể từ uiverse.io/catraco/brown-termite-67. Mẫu gốc 80×40; web dùng
+   64×32 ở desktop và 52×28 trên điện thoại để không ép chật thanh đầu trang.
+   Màu trời được hạ độ chói cho hợp nền giấy / mực đỏ của ssochuz, còn nhịp
+   trượt + xoay biểu tượng giữ đúng tinh thần mẫu. Checkbox vẫn là lớp tương tác
+   thật ở trên cùng nên bấm chuột, chạm và phím Space đều hoạt động. */
+.tsw {
+  --tsw-light-sky: #9fcfd2;
+  --tsw-dark-sky: #51466f;
+  --tsw-moon: #f2cf78;
+  --tsw-sun: #fff0a3;
+  position: relative; display: inline-block; width: 64px; height: 32px; flex: 0 0 auto;
+  overflow: hidden; border-radius: 5em; cursor: pointer; vertical-align: middle;
+  isolation: isolate;
+}
+/* Tên lớp gốc của Uiverse giữ lại để dễ đối chiếu; hành vi vẫn do các lớp
+   .tsw-* ở trên kiểm soát, nên không ảnh hưởng phần còn lại của giao diện. */
+.tsw.switch-name { display: inline-block; }
+.tsw .back { border-radius: inherit; }
+.tsw .checkbox { cursor: pointer; }
+.tsw-in {
+  position: absolute; inset: 0; z-index: 4; width: 100%; height: 100%; margin: 0;
+  opacity: 0; cursor: pointer;
+}
+.tsw-sl {
+  position: absolute; inset: 0; z-index: 0; border-radius: inherit; background: var(--tsw-light-sky);
+  transition: background-color var(--t-mid) var(--ease-soft);
+}
+.tsw-in:checked ~ .tsw-sl { background: var(--tsw-dark-sky); }
+.tsw-in:focus-visible ~ .tsw-sl { box-shadow: 0 0 0 3px var(--ring); }
+/* Mẫu Uiverse dùng icon SVG có chiều cao bằng rãnh, đệm .4em và translate(100%).
+   Cỡ icon ở đây khoá theo chiều cao để không phụ thuộc font của trang. */
+.tsw-icon {
+  position: absolute; left: 0; top: 0; z-index: 1; width: 32px; height: 32px; padding: 5px;
+  box-sizing: border-box; pointer-events: none; color: var(--tsw-moon); fill: currentColor; stroke: currentColor;
+  transition: transform .5s var(--ease), opacity .5s var(--ease);
+}
+.tsw-icon.moon { opacity: 0; transform: translateX(-100%) rotate(-180deg); }
+.tsw-icon.sun { color: var(--tsw-sun); opacity: 1; transform: none; }
+/* checked = nền tối trong hệ thống ssochuz: mặt trời trượt ra, mặt trăng trượt vào. */
+.tsw-in:checked ~ .tsw-icon.moon { opacity: 1; transform: translateX(100%) rotate(180deg); }
+.tsw-in:checked ~ .tsw-icon.sun { opacity: 0; transform: translateX(100%) rotate(180deg); }
 @media (prefers-reduced-motion: reduce) {
-  .tsw-sl, .tsw-sl::before { transition: none; }
-  .tsw:hover .i.sun, .tsw:hover .i.moon, .tsw:focus-within .i.sun, .tsw:focus-within .i.moon { animation: none; }
+  .tsw-sl, .tsw-icon { transition: none; }
 }
 
 .ftr { border-top: 1px solid var(--bd); background: var(--bg); margin-top: 80px;
@@ -1872,16 +1891,12 @@ body.rd-focus .rdcmts { display: none; }
 }
 
 /* ---- đầu trang trên máy nhỏ: công tắc sáng/tối nhỏ lại cho vừa một hàng ----
-   52×30, con chạy 26px trượt 22px (giữ đúng tỉ lệ mẫu uiverse nhưng vừa 360px).
+   52×28 vẫn giữ đúng tỉ lệ mẫu Uiverse, vùng chạm phủ kín toàn rãnh.
    Dưới 400px thì tên thương hiệu rút còn “ssochuz” (bỏ chữ “library” màu đỏ):
    trước đây chữ đó tự xuống dòng thứ hai làm đầu trang cao bất thường. */
 @media (max-width: 560px) {
-  .hdr .tsw { width: 52px; height: 30px; }
-  .hdr .tsw-sl::before { width: 26px; height: 26px; }
-  .hdr .tsw-in:checked + .tsw-sl::before { transform: translateX(22px); }
-  .hdr .tsw-sl .i { width: 20px; height: 20px; }
-  .hdr .tsw-sl .i.sun { top: 5px; left: 29px; }
-  .hdr .tsw-sl .i.moon { top: 5px; left: 4px; }
+  .hdr .tsw, .abar .tsw { width: 52px; height: 28px; }
+  .hdr .tsw-icon, .abar .tsw-icon { width: 28px; height: 28px; padding: 4px; }
 }
 @media (max-width: 400px) {
   .hdr .in { padding: 0 14px; gap: 8px; }
