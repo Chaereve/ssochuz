@@ -353,32 +353,28 @@ body, .hdr, .hero, .hero .foot, .facts, .ftr, .fbox, .sechead, .authcard {
   .tsw, .tsw-sl, .tsw-icon { transition: none; }
 }
 
-/* ---- chân trang: trang ghi công của một tờ báo ----------------------------
-   Ba cột trên lưới 4/8px (thương hiệu rộng hơn, hai cột đường dẫn bằng nhau),
-   dưới cùng là dòng bản quyền ngăn bằng một đường kẻ tóc. Không ô bo tròn,
-   không nền chênh, không cột nào "trang trí" — đúng ngôn ngữ in ấn của cả trang. */
-.ftr { border-top: 1px solid var(--bd); background: var(--bg); margin-top: 80px; }
-.ftr .in { max-width: var(--maxw); margin: 0 auto; padding: 44px 24px 0; }
-.ftr .fcols { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) minmax(0, 1fr);
-  gap: 40px 32px; padding-bottom: 36px; }
-.ftr .fbrand { max-width: 34ch; }
-.ftr .fdesc { font-size: 13.5px; line-height: 1.75; color: var(--mut); margin: 14px 0 0; }
-.ftr .fcol { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; }
-.ftr .fcol h3 { margin: 0 0 3px; font-family: var(--font); font-size: 10.5px; font-weight: 800;
-  letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
-.ftr .fcol a { font-size: 13.5px; line-height: 1.5; color: var(--mut); padding: 1px 0;
-  border-bottom: 1px solid transparent;
-  transition: color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease); }
-.ftr .fcol a:hover { color: var(--txt); border-bottom-color: var(--bd2); }
-.ftr .fend { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px;
-  border-top: 1px solid var(--bd); padding: 16px 0 20px; font-size: 12.5px; color: var(--dim); }
-@media (max-width: 860px) {
-  .ftr .fcols { grid-template-columns: 1fr 1fr; gap: 32px 24px; padding-bottom: 32px; }
-  .ftr .fbrand { grid-column: 1 / -1; max-width: 46ch; }
-}
+/* ---- chân trang: dải nền tối chữ ký ------------------------------------------
+   Một cột dồn trái: logo (hình thoi hồng + “ssochuz” trắng + “library” hồng
+   nghiêng) → câu cảm ơn → 3 liên kết. Màu GHI CỐ ĐỊNH (không theo tông
+   sáng/tối) để chân trang luôn giống mẫu ở mọi chế độ. */
+.ftr { background: #171310; border-top: 1px solid rgba(255, 240, 220, .13); margin-top: 80px; }
+.ftr .in { max-width: var(--maxw); margin: 0 auto; padding: 48px 24px 52px; }
+/* logo chân trang DÙNG CHUNG kiểu với đầu trang (.logo): cùng chữ Fraunces, cùng
+   chữ “library” nhỏ giãn cách, cùng dấu vuông — chỉ đổi màu cho hợp nền tối. */
+.ftr .logo { font-size: 24px; color: #f5efe6; }
+.ftr .logo i { color: #a89d8d; }
+.ftr .logo .dot { border-color: #e0859b; }
+.ftr .logo:hover { color: #fff; }
+.ftr .logo:hover i { color: #cfc4b4; }
+.ftr .logo:hover .dot { background: #e0859b; }
+.fthanks { margin: 20px 0 0; max-width: 40ch; font-size: 15px; line-height: 1.7; color: #a89d8d; }
+.flinks { display: flex; flex-wrap: wrap; gap: 8px 28px; margin-top: 28px; }
+.flinks a { font-size: 14.5px; color: #a89d8d;
+  transition: color var(--t-fast) var(--ease); }
+.flinks a:hover { color: #f5efe6; }
 @media (max-width: 520px) {
-  .ftr .fcols { grid-template-columns: 1fr; gap: 28px; }
-  .ftr .fend { flex-direction: column; gap: 6px; }
+  .ftr .in { padding: 36px 16px 44px; }
+  .ftr .logo { font-size: 22px; }
 }
 
 /* ---- nhịp của thanh đầu trang theo bề ngang -------------------------------
@@ -412,7 +408,7 @@ body, .hdr, .hero, .hero .foot, .facts, .ftr, .fbox, .sechead, .authcard {
   .hbtn .searchbtn-txt, .hbtn .nav-lbl, .hbtn .k { display: none; }
   #czJump { width: var(--ctl); padding: 0; }
   .mnav { padding: 4px 16px 12px; }
-  .ftr .in { padding: 32px 16px 0; }
+  .ftr .in { padding: 36px 16px 44px; }
 }
 
 /* ========================= 3. NÚT & NHẬP LIỆU ============================= */
@@ -725,7 +721,45 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   font-weight: 700; letter-spacing: .03em; }
 .card .th .pill .d { width: 4px; height: 4px; }
 .card .th .pill.done { color: #c8ead6; } .card .th .pill.run { color: #f3dfb8; } .card .th .pill.soon { color: #d8d4ea; }
-.card .th .b18 { position: absolute; top: 8px; right: 8px; }
+/* Ký hiệu tình trạng trên bìa lưới: vòng tròn 28px, icon Tabler 15px ở giữa.
+   Mỗi tình trạng một màu vòng + nền pha màu + quầng sáng riêng để nhận diện ngay
+   từ xa: xanh lá = hoàn thành, vàng be = đang cập nhật, tím nhạt = sắp ra mắt. */
+.card .th .stic { position: absolute; top: 8px; left: 8px; z-index: 2; width: 28px; height: 28px;
+  display: grid; place-items: center; border-radius: 50%;
+  background: rgba(14, 9, 5, .82); border: 1.5px solid rgba(255, 255, 255, .24);
+  box-shadow: 0 1px 4px rgba(10, 6, 4, .45); }
+.card .th .stic .i { width: 15px; height: 15px; min-width: 15px; }
+.card .th .stic.st-done { color: #c8ead6; border-color: rgba(200, 234, 214, .8);
+  background: color-mix(in srgb, var(--ok) 32%, rgba(14, 9, 5, .85));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--ok) 45%, transparent), 0 1px 4px rgba(10, 6, 4, .45); }
+.card .th .stic.st-run { color: #f3dfb8; border-color: rgba(243, 223, 184, .8);
+  background: color-mix(in srgb, var(--warn) 32%, rgba(14, 9, 5, .85));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--warn) 45%, transparent), 0 1px 4px rgba(10, 6, 4, .45); }
+.card .th .stic.st-soon { color: #d8d4ea; border-color: rgba(216, 212, 234, .8);
+  background: color-mix(in srgb, #8f83c7 32%, rgba(14, 9, 5, .85));
+  box-shadow: 0 0 10px color-mix(in srgb, #8f83c7 45%, transparent), 0 1px 4px rgba(10, 6, 4, .45); }
+/* Bookmark “NEW” trên mọi bìa (lưới, hero, trang truyện): dải thả từ cạnh trên,
+   đuôi cắt chữ V bằng clip-path, chữ “NEW” xếp dọc đứng chữ, phông serif cùng
+   họ với tiêu đề web cho sang. Tỉ lệ dải ≈ 1:2.6 (bookmark kinh điển); chữ chỉ
+   chiếm ~3/4 thân dải để có khoảng thở — line-height PHẢI chốt 1 vì chữ dọc
+   kế thừa line-height 1.62 của body sẽ phình tràn khỏi dải. Chữ căn giữa phần
+   thân (trừ đuôi V bằng padding đáy), bù 1px cho khoảng tracking thừa ở cuối
+   dòng dọc. Bóng đổ dùng filter tĩnh (ôm đúng hình đã cắt). */
+.nw-bookmark { position: absolute; top: 0; right: 10px; z-index: 2; width: 20px; height: 52px;
+  display: grid; place-items: center; padding: 5px 0 12px; pointer-events: none;
+  background: var(--acc); color: #fff;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 9px), 0 100%);
+  filter: drop-shadow(0 2px 3px rgba(10, 6, 4, .4)); }
+.nw-bookmark > span { writing-mode: vertical-rl; text-orientation: upright;
+  font-family: var(--font-head); font-size: 8px; font-weight: 700; line-height: 1;
+  letter-spacing: .14em; translate: 0 1px; text-shadow: 0 1px 1px rgba(0, 0, 0, .25); }
+[data-theme="dark"] .nw-bookmark { background: #b23a52; }
+@media (max-width: 560px) {
+  .nw-bookmark { width: 18px; height: 46px; right: 8px; padding: 4px 0 11px;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 8px), 0 100%); }
+  .nw-bookmark > span { font-size: 7px; }
+}
+.card .th .foot .b18 { margin-left: auto; }
 .card .th .foot { position: absolute; inset: auto 8px 8px; display: flex; align-items: center; gap: 8px; color: #fff; }
 .card .th .foot .ch { font-size: 11px; font-weight: 750; letter-spacing: .03em; line-height: 1.4;
   font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px rgba(10, 6, 4, .45); }
@@ -948,14 +982,9 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .shero .meta b { color: var(--txt); }
 .shero .meta > span { display: inline-flex; align-items: center; gap: 6px; }
 .shero .syn { font-size: 15.5px; color: var(--mut); line-height: 1.7; margin: 0 0 12px; }
-/* Mô tả dài: HÉ NĂM DÒNG, bấm “Hiện thêm” thì bung ngay tại chỗ.
-   Bản cũ gấp CẢ khối mô tả về `grid-template-rows: 0fr` — nghĩa là bộ nào mô tả
-   quá 260 ký tự thì trang truyện không hiện một chữ nào, chỉ còn trơ cái nút
-   “Xem thêm”. Nay chỉ phần đuôi bị gấp, đoạn mở đầu luôn đọc được.
-   Chiều cao khi bung do JS đo thật rồi ghi inline (renderStory trong
-   src/cz-story.js): để một con số max-height cố định thì hoặc cắt mất chữ của bộ
-   mô tả dài nhất (3.300 ký tự ≈ 40 dòng), hoặc nhịp bung chạy hụt hơi vì phải
-   nội suy qua cả khúc không nhìn thấy. */
+/* Mô tả ở đầu trang truyện chỉ là TÓM TẮT hé 5 dòng (phần đuôi nhạt dần); bản đầy
+   đủ nằm duy nhất trong tab “Giới thiệu”, nút “Đọc giới thiệu đầy đủ” nhảy sang
+   đó — không bung full tại chỗ để tóm tắt khỏi lặp hai lần trên một trang. */
 .synwrap > .synin { overflow: hidden; font-size: 15.5px; line-height: 1.7; }
 .synin > .syn:last-child { margin-bottom: 0; }
 .synwrap.clamp > .synin {
@@ -1702,13 +1731,30 @@ body.page-in main { animation: pageIn var(--t-slow) var(--ease-out) both; }
   border-color: color-mix(in srgb, var(--warn) 46%, var(--bd)); }
 .pill.soon { color: var(--acc); background: color-mix(in srgb, var(--acc) 13%, var(--surf));
   border-color: color-mix(in srgb, var(--acc) 44%, var(--bd)); }
-.b18 { border: 0; padding: 2px 6px; border-radius: 4px; letter-spacing: .08em;
-  background: var(--bad); color: #fff; box-shadow: none; }
+/* Hai huy hiệu 18+ / Mới dùng CHUNG một khuôn: cùng cao 20px, cùng bo tròn pill,
+   cùng chữ 10px/800/.08em/in hoa, cùng viền sáng + bóng chân 1px để đọc được cả
+   trên bìa ảnh lẫn trên nền giấy. Chỉ khác màu: 18+ đỏ (--bad), Mới mực son (--acc).
+   Bản cũ mỗi nơi một kiểu (chữ nhật 4px, chỗ nền đỏ chữ trắng, chỗ nền trắng chữ
+   đỏ) nên nhìn rời rạc. */
+.b18, .badge-new { display: inline-flex; align-items: center; justify-content: center;
+  min-height: 20px; padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+  font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; line-height: 1.4;
+  border: 1px solid rgba(255, 255, 255, .28); box-shadow: 0 1px 4px rgba(10, 6, 4, .3); }
+.b18 { background: var(--bad); color: #fff; }
 [data-theme="dark"] .b18 { background: #c2475a; }
-.badge-new { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 4px;
-  font-size: 9.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
-  background: var(--acc); color: #fff; border: 0; box-shadow: none; }
-.card .th .badge-new { background: #fffdf8; color: var(--acc); }
+/* Huy hiệu Mới dạng pill (dùng ở hàng danh sách + dòng meta hero, nơi không có bìa
+   để gắn bookmark): cùng khuôn với 18+ nhưng thêm chấm trắng “thở” (pulse) và
+   quầng sáng mực son. Trên bìa thì “Mới” là bookmark thả (.nw-bookmark). */
+.badge-new { gap: 5px; background: var(--acc); color: #fff;
+  box-shadow: 0 1px 6px color-mix(in srgb, var(--acc) 55%, transparent),
+    0 1px 2px rgba(10, 6, 4, .35); }
+.badge-new::before { content: ""; width: 5px; height: 5px; border-radius: 50%;
+  background: #fff; flex: none; animation: newPulse 1.8s ease-in-out infinite; }
+@keyframes newPulse { 0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .45; transform: scale(.72); } }
+@media (prefers-reduced-motion: reduce) { .badge-new::before { animation: none; } }
+/* nền tối: hồng son gốc quá nhạt, chữ trắng khó đọc — dùng hồng đậm chung với ruy băng */
+[data-theme="dark"] .badge-new { background: #b23a52; }
 .tabs .ct { background: var(--surf2); border-radius: 99px; padding: 1px 7px; font-weight: 700; }
 .tabs > button.on .ct { background: color-mix(in srgb, var(--acc) 16%, transparent); color: var(--acc); }
 .fchip { display: inline-flex; align-items: center; gap: 7px; padding: 5px 6px 5px 11px; border-radius: 99px;
@@ -1723,7 +1769,6 @@ body.page-in main { animation: pageIn var(--t-slow) var(--ease-out) both; }
 .card:active .th { transform: translateY(0) scale(.995); }
 .card .th img { transition: transform var(--t-mid) var(--ease-out); }
 .card:hover .th img { transform: scale(1.03); }
-.card .th .foot .badge-new { margin-left: auto; background: #fffdf8; color: var(--acc); }
 .card.list .badge-new { margin-left: 2px; }
 
 /* danh sách: dòng tiêu đề không dính theo khi cuộn */

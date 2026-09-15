@@ -566,6 +566,15 @@
     if (s === 'done' || s === 'run' || s === 'soon') return STATUS_LABEL[s];
     return STATUS_LABEL[statusCls(s)] || 'Đang cập nhật';
   }
+  /* ký hiệu icon cho từng tình trạng (dùng chung bộ Tabler trong var P):
+       done → check (đã xong), run → refresh (đang ra tiếp), soon → hourglass (sắp ra).
+     Thẻ lưới chỉ hiện icon (gọn, không đè lên huy hiệu 18+); chữ đầy đủ vẫn nằm
+     trong title + aria-label để trỏ chuột và trình đọc màn hình đọc được. */
+  var STATUS_ICON = { done: 'check', run: 'refresh', soon: 'hourglass' };
+  function statusIcon(s) {
+    var k = (s === 'done' || s === 'run' || s === 'soon') ? s : statusCls(s);
+    return STATUS_ICON[k] || 'clock';
+  }
   function words(html) {
     var t = String(html || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
     return t ? t.split(' ').length : 0;
@@ -819,14 +828,20 @@
     var pg = progress(n), pct = n.chapters ? Math.min(100, Math.round(pg / n.chapters * 100)) : 0;
     var img = n.thumb || n.slide || '';
     if (opts.view === 'list') return cardList(n, img, pg, pct);
+    /* thẻ lưới: tình trạng là KÝ HIỆU TRÒN ở góc trái bìa; “Mới” là BOOKMARK thả
+       từ cạnh trên-phải (đuôi cắt chữ V, chữ xếp dọc); 18+ nằm ở hàng chân bìa
+       cạnh số chương. Ba thứ ba góc nên không bao giờ chồng nhau.
+       Chữ tình trạng đầy đủ vẫn có trong title/aria-label. */
+    var stCls = n.statusCls || 'run';
+    var stLab = statusLabel(n.statusCls || n.status);
     return '<a class="card" href="' + esc(storyURL(n.slug)) + '" data-t="' + esc(n.title) + '" title="' + esc(n.title) + '">' +
       '<div class="th' + (img ? ' skel' : '') + '">' +
       (img ? '<img src="' + esc(img) + '" alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" width="300" height="450">' : '') +
       '<span class="scrim"></span>' +
-      '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(statusLabel(n.statusCls || n.status)) + '</span>' +
-      (n.is18 ? '<span class="b18">18+</span>' : '') +
+      '<span class="stic st-' + stCls + '" title="' + esc(stLab) + '" aria-label="Tình trạng: ' + esc(stLab) + '" role="img">' + icon(STATUS_ICON[stCls] || 'clock', 'i-s') + '</span>' +
+      (n.fresh ? '<span class="nw-bookmark"><span>NEW</span></span>' : '') +
       '<span class="foot"><span class="ch">' + esc(countText(n)) + '</span>' +
-        (n.fresh ? '<span class="badge-new">Mới</span>' : '') + '</span>' +
+        (n.is18 ? '<span class="b18">18+</span>' : '') + '</span>' +
       (pct ? '<span class="bar"><i style="width:' + pct + '%"></i></span>' : '') +
       '</div>' +
       '<h3>' + esc(n.title) + '</h3>' +
@@ -849,7 +864,7 @@
       '<span class="cl-main">' +
         '<span class="cl-top"><b class="cl-t">' + esc(n.title) + '</b>' +
           (n.is18 ? '<span class="b18">18+</span>' : '') +
-          (n.fresh ? '<span class="badge-new">Mới</span>' : '') +
+          (n.fresh ? '<span class="badge-new">NEW</span>' : '') +
         '</span>' +
         '<span class="cl-meta">' + esc(bits.join(' · ') || '—') + '</span>' +
         '<span class="cl-syn">' + esc(n.syn || 'Chưa có mô tả cho bộ này.') + '</span>' +
@@ -1333,11 +1348,8 @@
     d.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('#czNav a'); if (a) mark(a); });
     run();
   }
-  /* Chân trang xếp như trang ghi công (colophon) của một tờ báo: tên báo, hai
-     cột đường dẫn THẬT, rồi dòng bản quyền ngăn bằng một đường kẻ tóc.
-     Bản cũ chỉ có logo + câu "Cảm ơn bạn đã ủng hộ và đồng hành cùng ssochuz
-     library!" + ba liên kết dồn hết vào cột trái: một câu lót không cho người đọc
-     biết thêm điều gì, và bỏ trống gần 70% bề ngang 1.180px. */
+  /* Chân trang nền tối: logo (đồng bộ đầu trang) + câu cảm ơn + 3 liên kết,
+     dồn cột trái. Nền tối CỐ ĐỊNH ở cả hai tông sáng/tối để luôn giống mẫu. */
   function mountFooter(host) {
     if (!host) return;
     host.className = 'ftr';
@@ -1345,32 +1357,13 @@
     var fb = 'https://www.facebook.com/profile.php?id=61592803761987';
     var survey = cfg.form || 'https://forms.gle/YW3PvtrNVQ7xt8nCA';
     host.innerHTML = '<div class="in">' +
-      '<div class="fcols">' +
-        '<div class="fbrand">' +
-          '<a class="logo" href="/" title="ssochuz library"><span class="dot"></span>ssochuz<i> library</i></a>' +
-          '<p class="fdesc">Thư viện truyện chọn lọc — đọc ngay trong máy, giữ tiến độ từng chương, ' +
-            'lọc theo năm, tác giả, couple và theo dõi lịch ra chương.</p>' +
-        '</div>' +
-        '<nav class="fcol" aria-label="Các mục trong thư viện">' +
-          '<h3>Mục</h3>' +
-          '<a href="/">Trang chủ</a>' +
-          '<a href="/#moi-cap-nhat">Mới cập nhật</a>' +
-          '<a href="/#bxh">Bình chọn nhiều nhất</a>' +
-          '<a href="/#lich">Lịch ra chương</a>' +
-          '<a href="/#thu-vien">Thư viện</a>' +
-        '</nav>' +
-        '<nav class="fcol" aria-label="Trợ giúp và kênh liên lạc">' +
-          '<h3>Kết nối</h3>' +
-          '<a href="/guide">Hướng dẫn sử dụng</a>' +
-          '<a href="' + esc(fb) + '" target="_blank" rel="noopener">Facebook</a>' +
-          '<a href="' + esc(survey) + '" target="_blank" rel="noopener" title="Khảo sát truyện bạn muốn đọc tiếp">Khảo sát truyện</a>' +
-          '<a href="/guide#bao-loi">Báo lỗi chữ</a>' +
-        '</nav>' +
-      '</div>' +
-      '<div class="fend">' +
-        '<span>© ' + new Date().getFullYear() + ' ssochuz library</span>' +
-        '<span>Truyện và bản dịch thuộc về tác giả tương ứng.</span>' +
-      '</div>' +
+      '<a class="logo" href="/" title="ssochuz library"><span class="dot"></span>ssochuz<i>library</i></a>' +
+      '<p class="fthanks">Cảm ơn bạn đã ủng hộ và đồng hành cùng ssochuz library!</p>' +
+      '<nav class="flinks" aria-label="Trợ giúp và kênh liên lạc">' +
+        '<a href="/guide">Hướng dẫn</a>' +
+        '<a href="' + esc(fb) + '" target="_blank" rel="noopener">Facebook</a>' +
+        '<a href="' + esc(survey) + '" target="_blank" rel="noopener">Khảo sát truyện</a>' +
+      '</nav>' +
     '</div>';
   }
   function mountShell(opt) {
@@ -1908,7 +1901,7 @@
     realCount: realCount, reconcileCount: reconcileCount, onStatsChange: onStatsChange, notifyStats: notifyStats,
     rdGet: rdGet, rdSet: rdSet, themeInit: themeInit, themeToggle: themeToggle, themeMeta: themeMeta,
     icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo, teaser: teaser,
-    statusCls: statusCls, statusLabel: statusLabel, words: words, norm: norm, countText: countText, listHead: listHead,
+    statusCls: statusCls, statusLabel: statusLabel, statusIcon: statusIcon, words: words, norm: norm, countText: countText, listHead: listHead,
     storyURL: storyURL, readURL: readURL, slugify: slugify, qs: qs, copy: copy, download: download,
     card: card, mountRail: mountRail, reveal: reveal, countUp: countUp, scaleFacts: scaleFacts,
     scrollUI: scrollUI, slide: slide, pageFx: pageFx, pop: pop, setIcon: setIcon, shake: shake,
