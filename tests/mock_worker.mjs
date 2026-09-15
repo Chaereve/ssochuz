@@ -32,6 +32,17 @@ function serveStatic(req, res) {
     res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
     return res.end('Không thấy ' + rel);
   }
+  /* cz-config.js: bản xem thử tự trỏ về CHÍNH máy chủ này (theo host trình duyệt
+     đang mở) để web đọc KV giả + trang quản trị kết nối được ngay, không phải
+     sửa file rồi nhớ đổi lại. Chạy sau proxy https cũng đúng (host công khai). */
+  if (rel === '/cz-config.js') {
+    const host = String(req.headers['x-forwarded-host'] || req.headers.host || ('127.0.0.1:' + PORT)).split(',')[0].trim();
+    const proto = /^(localhost|127\.|0\.0\.0\.0|\[::1\])/.test(host) ? 'http' : 'https';
+    const js = fs.readFileSync(file, 'utf8')
+      .replace(/window\.CZ_API\s*=\s*'[^']*';/, "window.CZ_API = '" + proto + '://' + host + "';");
+    res.writeHead(200, { 'content-type': MIME['.js'], 'cache-control': 'no-store' });
+    return res.end(js);
+  }
   const d = fs.readFileSync(file);
   res.writeHead(200, { 'content-type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream',
     'content-length': d.length, 'cache-control': 'no-store' });
@@ -102,9 +113,50 @@ async function seedFromRepo() {
   return n;
 }
 
+/* Vài phiếu mẫu để tab “Phiếu bầu” có dữ liệu mà bấm thử ngay (chỉ ở bản xem
+   thử, KV nằm trong RAM nên tắt là hết). */
+async function seedDemoVotes() {
+  if (process.env.NO_SEED) return;
+  const now = Date.now();
+  const items = {
+    'third-person': { 'a:may-demo-1': now - 86400e3, 'a:may-demo-2#2': now - 7200e3, 'g:demo-user-a#2': now - 5400e3, 'a:may-demo-3#3': now - 3600e3 },
+    'be-my-angel': { 'g:demo-user-b': now - 43200e3, 'a:may-demo-4#5': now - 10800e3 },
+    'lunar-secret': { 'a:may-demo-5': now - 600e3 }
+  };
+  const stats = { updatedAt: new Date().toISOString(), items: {} };
+  Object.keys(items).forEach((slug) => {
+    const voters = {};
+    Object.keys(items[slug]).forEach((k) => { voters[k] = { t: new Date(items[slug][k]).toISOString() }; });
+    const chap = {};
+    Object.keys(voters).forEach((k) => {
+      const m = k.match(/#(\d+)$/);
+      if (m) chap[m[1]] = (Number(chap[m[1]]) || 0) + 1;
+    });
+    stats.items[slug] = { base: { views: 120, votes: 0 }, got: { views: 40, votes: Object.keys(voters).length },
+      days: { [new Date().toISOString().slice(0, 10)]: { v: 40, o: Object.keys(voters).length } }, voters, chap,
+      updatedAt: new Date().toISOString() };
+  });
+  await env.CZ_KV.put('stats', JSON.stringify(stats));
+}
+
+/* Vài báo lỗi mẫu để tab “Báo lỗi” trong /admin có sẵn thứ để xem khi thử máy. */
+async function seedDemoReports() {
+  if (process.env.NO_SEED) return;
+  const now = Date.now();
+  const items = [
+    { at: new Date(now - 3600e3).toISOString(), slug: 'third-person', title: 'Third Person', ch: 2,
+      url: '/truyen/third-person/#chuong-2', text: 'Chương 2: “cô áy” viết sai chính tả, đúng là “cô ấy”.', who: 'a:may-demo-9' },
+    { at: new Date(now - 26 * 3600e3).toISOString(), slug: 'be-my-angel', title: 'Be My Angel', ch: 5,
+      url: '/truyen/be-my-angel/#chuong-5', text: 'Thiếu dấu chấm cuối đoạn 3, với lại tên nhân vật bị lặp 2 lần.', who: 'docgia@gmail.com' }
+  ].map((x) => Object.assign({ kind: 'Báo lỗi chữ' }, x));
+  await env.CZ_KV.put('report', JSON.stringify(items));
+}
+
 http.createServer(async (req, res) => {
   const p = new URL(req.url, 'http://x').pathname;
-  if (!p.startsWith('/api') && p !== '/') return serveStatic(req, res);
+  /* '/' phục vụ luôn trang chủ (trước đây '/' trả JSON health của Worker khiến
+     bản xem thử mở lên chỉ thấy JSON); muốn xem health thì vào /api/health. */
+  if (!p.startsWith('/api')) return serveStatic(req, res);
 
   const chunks = [];
   for await (const c of req) chunks.push(c);
@@ -124,6 +176,8 @@ http.createServer(async (req, res) => {
   res.end(out);
 }).listen(PORT, HOST, async () => {
   const seeded = await seedFromRepo();
+  await seedDemoVotes();
+  await seedDemoReports();
   console.log('Worker giả lập (code thật, KV trong RAM): http://127.0.0.1:' + PORT);
   console.log('  ADMIN_KEY=' + env.ADMIN_KEY + ' · đã nạp ' + seeded + ' bộ từ repo vào KV');
   console.log('  ADMIN_EMAILS=' + env.ADMIN_EMAILS + (env.SUPABASE_URL ? ' · SUPABASE_URL=' + env.SUPABASE_URL : ' · (chưa đặt SUPABASE_URL → /api/auth/supabase sẽ báo thiếu)'));

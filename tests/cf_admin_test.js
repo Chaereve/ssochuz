@@ -34,6 +34,30 @@ function makeWorker() {
   /* "Be My Angel" trên KV bị lệch: có 30 chương (bản cũ) trong khi repo có 29 —
      đúng cái bệnh người dùng gặp: sửa file trong repo rồi mà web vẫn hiện 30.
      Bộ nào admin vừa ghi lên KV (putted) thì KV trả bản mới, hết lệch. */
+  /* phiếu bầu: khoá giống Worker thật (g: = tài khoản, a: = thiết bị, #ch = theo chương) */
+  const voters = {
+    'third-person': {
+      'a:may-a': { t: '2026-09-10T10:00:00.000Z' },
+      'a:may-b#2': { t: '2026-09-11T11:00:00.000Z' },
+      'g:abc123#2': { t: '2026-09-12T12:00:00.000Z' },
+      'a:may-c#3': { t: '2026-09-13T13:00:00.000Z' }
+    }
+  };
+  function voteKeys(slug) { return Object.keys(voters[slug] || {}); }
+  function voteTotals(slug) {
+    const ks = voteKeys(slug);
+    const chap = {};
+    ks.forEach((k) => {
+      const m = String(k).match(/#(\d+)$/);
+      if (m) chap[m[1]] = (chap[m[1]] || 0) + 1;
+    });
+    return { book: ks.filter((k) => k.indexOf('#') < 0).length, chap, total: ks.length };
+  }
+  const reports = [
+    { at: new Date(Date.now() - 3600e3).toISOString(), kind: 'Báo lỗi chữ', slug: 'be-my-angel', title: 'Be My Angel', ch: 12, url: 'https://web.test/truyen/be-my-angel/#chuong-12', text: 'Chương 12: “cô áy” viết sai, đúng là “cô ấy”.', who: 'docgia@gmail.com' },
+    { at: new Date(Date.now() - 7200e3).toISOString(), kind: 'Báo lỗi chữ', slug: 'third-person', title: 'Third Person', ch: 2, url: 'https://web.test/truyen/third-person/#chuong-2', text: 'Thiếu dấu chấm cuối đoạn 3.', who: 'a:may-abc' }
+  ];
+  let mail = true;          /* Worker giả: đã cấu hình Resend */
   const putted = new Set();
   function kvBook(slug) {
     if (putted.has(slug)) return books[slug] || null;
@@ -84,7 +108,7 @@ function makeWorker() {
       ok: true, version: '1.5.0', kv: true, books: Object.keys(books).length, novels: REG.lib.length,
       regRev: REG.rev, lastWrite: '2026-09-13T03:00:00Z',
       stats: { items: 2, views: 100, votes: 7 },
-      auth: { supabase: true, supabaseUrl: 'https://xyz.supabase.co', supabaseHs256: true, google: false, session: true, adminEmails: ['boss@gmail.com'] }
+      auth: { supabase: true, supabaseUrl: 'https://xyz.supabase.co', supabaseHs256: true, google: false, session: true, adminEmails: ['boss@gmail.com'], mail: true }
     });
     if (p === '/api/auth/config') return json({ ok: true, supabase: true, supabaseUrl: 'https://xyz.supabase.co', google: false, session: true, adminEmails: ['boss@gmail.com'], version: '1.5.0' });
     if (p === '/api/recount') {
@@ -112,6 +136,12 @@ function makeWorker() {
       if (!auth) return json({ ok: false, error: 'sai key' }, 401, false);
       return json({ ok: true, items: log, count: log.length });
     }
+    if (p === '/api/admin/reports') {
+      if (!auth) return json({ ok: false, error: 'sai key' }, 401, false);
+      const q = (new URL(url).searchParams.get('q') || '').toLowerCase();
+      const items = q ? reports.filter((x) => (x.text + ' ' + (x.title || '')).toLowerCase().indexOf(q) >= 0) : reports;
+      return json({ ok: true, items, count: items.length, mail: !!mail });
+    }
     if (p === '/api/admin/stats') {
       if (!auth) return json({ ok: false, error: 'sai key' }, 401, false);
       return json({
@@ -126,6 +156,55 @@ function makeWorker() {
           { day: '2026-09-14', views: 61, votes: 9 }
         ]
       });
+    }
+    if (p === '/api/admin/voters') {
+      if (!auth) return json({ ok: false, error: 'sai key' }, 401, false);
+      const slug = new URL(url).searchParams.get('slug') || '';
+      const ks = voteKeys(slug);
+      const book = [], chapters = {};
+      ks.forEach((k) => {
+        const m = String(k).match(/#(\d+)$/);
+        const ch = m ? Number(m[1]) : 0;
+        const kind = k.startsWith('g:') ? 'user' : k.startsWith('a:') ? 'device' : 'ip';
+        const info = { key: k, ch, kind, kindLabel: kind === 'user' ? 'Tài khoản' : kind === 'device' ? 'Thiết bị' : 'Địa chỉ IP',
+          id: k.replace(/^[a-z]+:/, '').replace(/#\d+$/, ''), at: (voters[slug][k] || {}).t || '' };
+        if (ch) (chapters[ch] || (chapters[ch] = { count: 0, voters: [] })).voters.push(info);
+        else book.push(info);
+      });
+      Object.keys(chapters).forEach((ch) => { chapters[ch].count = chapters[ch].voters.length; });
+      const t = voteTotals(slug);
+      return json({ ok: true, slug, source: 'kv', total: t.total, counted: t.total, base: 0,
+        voters: ks.length, book: { count: book.length, voters: book }, chapters, chapVotes: t.chap });
+    }
+    if (p === '/api/admin/vote-remove' && opt.method === 'POST') {
+      if (!auth) return json({ ok: false, error: 'sai key' }, 401, false);
+      const b = JSON.parse(opt.body || '{}');
+      const ch = Math.max(0, parseInt(b.ch, 10) || 0);
+      let removed = 0;
+      (b.keys || []).forEach((k) => {
+        if (ch > 0 && !String(k).endsWith('#' + ch)) return;
+        if (ch === 0 && String(k).indexOf('#') >= 0) return;
+        if (voters[b.slug] && voters[b.slug][k] != null) { delete voters[b.slug][k]; removed++; }
+      });
+      log.unshift({ at: new Date().toISOString(), who: 'admin-key', text: 'gỡ ' + removed + ' phiếu · ' + b.slug });
+      return json({ ok: true, slug: b.slug, ch, removed, total: voteTotals(b.slug).total });
+    }
+    if (p === '/api/admin/votes/reset' && opt.method === 'POST') {
+      if (!auth) return json({ ok: false, error: 'sai key' }, 401, false);
+      const b = JSON.parse(opt.body || '{}');
+      const ch = b.ch ? Math.max(1, parseInt(b.ch, 10)) : 0;
+      let cleared = 0, stories = 0;
+      const targets = b.slug ? [b.slug] : Object.keys(voters);
+      targets.forEach((s) => {
+        const ks = voteKeys(s);
+        const n = ks.filter((k) => (ch ? String(k).endsWith('#' + ch) : true)).length;
+        if (ch) ks.forEach((k) => { if (String(k).endsWith('#' + ch)) delete voters[s][k]; });
+        else voters[s] = {};
+        if (n) stories++;
+        cleared += n;
+      });
+      log.unshift({ at: new Date().toISOString(), who: 'admin-key', text: 'reset ' + cleared + ' phiếu' });
+      return json({ ok: true, slug: b.slug || '', ch, stories, cleared });
     }
     if (p === '/api/whoami') return auth ? json({ ok: true, role: 'admin' }) : json({ ok: false, error: 'sai hoặc thiếu X-Admin-Key' }, 401, false);
     if (p === '/api/registry' && (opt.method || 'GET') === 'GET') return json(REG);
@@ -183,7 +262,7 @@ function makeWorker() {
       : json({ ok: false, error: 'sai key' }, 401, false);
     return json({ ok: false, error: 'không có endpoint ' + p }, 404, false);
   }
-  return { fetchMock, calls, books, REG, loadBook, kvBook, cmts, log };
+  return { fetchMock, calls, books, REG, loadBook, kvBook, cmts, log, voters, voteKeys, voteTotals, reports };
 }
 
 const $ = (d, s) => d.querySelector(s), $$ = (d, s) => [...d.querySelectorAll(s)];
@@ -512,6 +591,111 @@ async function openAdmin(worker, key) {
     chip: String(($(adoc, '#aState') || {}).textContent || '').replace(/\s+/g, ' ').slice(0, 110),
     loi: adminPage.errors.slice(0, 3)
   };
+
+  /* ---------- 19. TAB PHIẾU BẦU: gỡ phiếu từng người + reset ---------- */
+  aclick($$(adoc, '#tabs button').find(b => b.dataset.tab === 'votes'));
+  $(adoc, '#voBook').value = 'third-person';
+  $(adoc, '#voBook').dispatchEvent(new awin.Event('change', { bubbles: true }));
+  await wait(700);
+  const vGroups = $$(adoc, '#voList .vgroup');
+  const vRows = $$(adoc, '#voList .vrow[data-k], #voList label.vrow');
+  out.phieuBau = {
+    soNhom: vGroups.length,
+    soNguoi: $$(adoc, '#voList [data-k]').length,
+    tiles: String(($(adoc, '#voTiles') || {}).textContent || '').replace(/\s+/g, ' ').slice(0, 80),
+    chips: $$(adoc, '#voChap button').length,
+    coNhanTaiKhoan: /Tài khoản/.test(String(($(adoc, '#voList') || {}).textContent || '')),
+    loi: adminPage.errors.slice(0, 3)
+  };
+  /* lọc theo chương 2 (chip) */
+  const chip2 = $$(adoc, '#voChap button').find(b => b.dataset.ch === '2');
+  aclick(chip2);
+  await wait(200);
+  out.phieuBauLocChuong = {
+    soNhom: $$(adoc, '#voList .vgroup').length,
+    soNguoi: $$(adoc, '#voList [data-k]').length
+  };
+  /* tick 1 người ở chương 2 rồi gỡ */
+  const firstCk = $$(adoc, '#voList [data-k]')[0];
+  const removedKey = firstCk.dataset.k;
+  firstCk.checked = true;
+  firstCk.dispatchEvent(new awin.Event('change', { bubbles: true }));
+  await wait(120);
+  out.phieuBauChon = String(($(adoc, '#voSel') || {}).textContent || '');
+  aclick('#voRemove');
+  await wait(150);
+  const okRm = $(adoc, '#czOk');
+  out.phieuBauCoXacNhan = !!okRm;
+  if (okRm) { aclick(okRm); await wait(800); }
+  out.phieuBauGo = {
+    daGo: w.voters['third-person'][removedKey] == null,
+    conLai: w.voteKeys('third-person').length,
+    msg: ($(adoc, '#msg') || {}).textContent.slice(0, 80)
+  };
+  /* reset toàn bộ phiếu của bộ đang chọn */
+  $(adoc, '#rsScope').value = 'one';
+  $(adoc, '#rsScope').dispatchEvent(new awin.Event('change', { bubbles: true }));
+  aclick('#rsRun');
+  await wait(150);
+  const okRs = $(adoc, '#czOk');
+  if (okRs) { aclick(okRs); await wait(800); }
+  out.phieuBauReset = {
+    conLai: w.voteKeys('third-person').length,
+    soNguoiTrenBang: $$(adoc, '#voList [data-k]').length,
+    msg: ($(adoc, '#msg') || {}).textContent.slice(0, 80),
+    loi: adminPage.errors.slice(0, 3)
+  };
+
+  /* ---------- 20. NHÂN BẢN BỘ + TÌM CHỮ TRONG CHƯƠNG ---------- */
+  aclick($$(adoc, '#tabs button').find(b => b.dataset.tab === 'list'));
+  await wait(200);
+  aclick($(adoc, '#tb [data-edit="be-my-angel"]'));
+  await wait(700);
+  $(adoc, '#chFind').value = 'chương';
+  $(adoc, '#chFind').dispatchEvent(new awin.Event('input', { bubbles: true }));
+  await wait(500);
+  out.timTrongChuong = {
+    soKetQua: $$(adoc, '#chFindRes .findrow').length,
+    coToSang: !!$(adoc, '#chFindRes mark'),
+    trangThai: ($(adoc, '#chFindStat') || {}).textContent.slice(0, 50),
+    loi: adminPage.errors.slice(0, 3)
+  };
+  const soBoTruoc = w.REG.lib.length;
+  aclick('#edDup');
+  await wait(150);
+  const okDup = $(adoc, '#czOk');
+  out.nhanBanCoXacNhan = !!okDup;
+  if (okDup) { aclick(okDup); await wait(1200); }
+  const dupEntry = w.REG.lib.find(n => /-copy$/.test(n.slug || ''));
+  out.nhanBan = {
+    themBo: w.REG.lib.length - soBoTruoc,
+    slug: dupEntry ? dupEntry.slug : '',
+    coChuong: !!(dupEntry && w.books[dupEntry.slug] && (w.books[dupEntry.slug].chapters || []).length),
+    loi: adminPage.errors.slice(0, 3)
+  };
+
+  /* ---------- 21. TAB BÁO LỖI: xem báo lỗi chữ người đọc gửi ---------- */
+  aclick($$(adoc, '#tabs button').find(b => b.dataset.tab === 'reports'));
+  await wait(700);
+  out.baoLoiAdmin = {
+    soDong: $$(adoc, '#rpList .reprow').length,
+    tiles: String(($(adoc, '#rpTiles') || {}).textContent || '').replace(/\s+/g, ' ').slice(0, 70),
+    trangThai: String(($(adoc, '#rpState') || {}).textContent || '').slice(0, 80),
+    demTrenTab: String(($(adoc, '#tabRepCt') || {}).textContent || ''),
+    coNutMo: $$(adoc, '#rpList a[target="_blank"]').length,
+    coNutCopy: $$(adoc, '#rpList [data-repcopy]').length,
+    coNutTraLoi: $$(adoc, '#rpList a[href^="mailto:"]').length,
+    dongDau: String(($(adoc, '#rpList .reprow') || {}).textContent || '').replace(/\s+/g, ' ').slice(0, 90),
+    loi: adminPage.errors.slice(0, 3)
+  };
+  /* lọc theo từ khoá */
+  $(adoc, '#rpQ').value = 'cô ấy';
+  $(adoc, '#rpQ').dispatchEvent(new awin.Event('input', { bubbles: true }));
+  await wait(200);
+  out.baoLoiLoc = { soDong: $$(adoc, '#rpList .reprow').length, tiles: String(($(adoc, '#rpTiles') || {}).textContent || '').replace(/\s+/g, ' ').slice(-30) };
+  $(adoc, '#rpQ').value = '';
+  $(adoc, '#rpQ').dispatchEvent(new awin.Event('input', { bubbles: true }));
+  await wait(150);
 
   out.errors = p.errors.slice(0, 6);
   console.log(JSON.stringify(out, null, 1));

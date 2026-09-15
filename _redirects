@@ -1,5 +1,35 @@
 # Cloudflare Pages · ssochuz v2 clean
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# GIẤU PHẦN NỘI BỘ KHỎI NGƯỜI ĐỌC
+# Mã nguồn đọc được nằm ở src/, mã Worker ở worker/, bài kiểm thử ở tests/, công
+# cụ ở tools/. Chỉ thư mục gốc + /data + /assets + các tệp .html mới được phát
+# hành. Thêm tệp nội bộ mới thì thêm một luật ở đây.
+#
+# Vì sao 301 mà không phải 404: Cloudflare Pages CHỈ nhận mã 3xx và 200 (proxy)
+# trong _redirects — bản ghi "rewrite 404" bị bỏ qua (xem docs Pages → Redirects),
+# nên đường dẫn nội bộ được đưa thẳng về trang chủ. Điều quan trọng là NỘI DUNG
+# KHÔNG ĐƯỢC GỬI ĐI: luật redirect luôn được áp trước khi phục vụ tệp tĩnh.
+# ---------------------------------------------------------------------------
+/src/*            /  301
+/worker/*         /  301
+/tests/*          /  301
+/tools/*          /  301
+/_inbox/*         /  301
+/blogger-theme/*  /  301
+/server.py        /  301
+/package.json     /  301
+/package-lock.json / 301
+/wrangler.toml    /  301
+/.gitignore       /  301
+/BAO-CAO-CAI-TO-GIAO-DIEN.md      /  301
+/BAO-CAO-BAO-MAT-VA-GIAO-DIEN.md  /  301
+/BAO-CAO-DU-LIEU.md               /  301
+/BAO-CAO-NANG-CAP.md              /  301
+/BAO-CAO-NANG-CAP-1.5.md          /  301
+/BAO-CAO-SUA-LOI-TRANG-TRUYEN.md  /  301
+/HUONG-DAN-DANG-NHAP-BINH-LUAN.md /  301
+
 # Trang truyện và trang đọc nằm chung MỘT tệp (truyen.html). Các luật dưới đây
 # mở tệp đó mà KHÔNG đổi URL trên trình duyệt (proxy 200), nhờ vậy
 # cz-story.js vẫn đọc được tên truyện trong /truyen/<slug>/.

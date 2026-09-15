@@ -18,17 +18,90 @@ Admin (admin.html)  ──PUT──▶  Worker (worker/cms.js)  ──▶  Cloud
 
 GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới cần build); dữ liệu thì không đi qua GitHub nữa.
 
+## Có gì mới ở bản 1.9.2 — giao diện (CHỈ tệp tĩnh, **không cần deploy lại Worker**)
+
+| Trước | Sau |
+|---|---|
+| Icon bộ Lucide | Đổi sang **bộ Solar** (iconbuddy.com/solar — 480 Design, CC BY 4.0, đã ghi công ở chân trang). Mỗi icon được **bù tỉ lệ riêng** để mọi hình đều ~20,6/24 (mũi tên, dấu × trước đây bé hơn hẳn các icon khác) và cỡ hiển thị tính lại theo hộp mực thật → icon đều nhau, không to hơn chữ. Sinh tự động: `node tools/gen_icons_solar.mjs` |
+| Khối chờ (lưới truyện, trang đọc) chạy shimmer bằng `background-position` | Làm lại theo mẫu uiverse.io/Nawsome/light-husky-91: một **dải sáng hẹp** trượt hết chiều ngang khối trong 1,2s — chỉ animate `transform` nên máy yếu vẫn mượt; dải nằm dưới nội dung nên ảnh thật vừa hiện là tự che mất dải. Màu dải theo tông: `--sheen` 62% ở nền sáng, 10% ở nền tối |
+| Nút đổi nền sáng/tối hình mặt trăng | **Công tắc trượt** theo mẫu uiverse.io/andrew-demchenk0/honest-stingray-90 (rãnh 64×34, con chạy 30px trượt 30px, mặt trời quay 15s và mặt trăng lắc ±10° khi trỏ vào). Dưới 560px thu còn 52×30 cho vừa hàng; dưới 400px tên thương hiệu rút còn “ssochuz” (chữ “library” từng tự xuống dòng làm đầu trang cao bất thường). Có `role="switch"` + nhãn đọc máy nói đúng trạng thái, đổi đúng **một** nhịp mỗi cú bấm |
+| **Lỗi**: máy bật “giảm chuyển động” (Android tiết kiệm pin cũng bật) thì bấm nút menu trên điện thoại **không thấy mục nào** | Hàm `CZ.slide()` thiếu thêm lớp `.slid` ở nhánh reduced-motion — mà menu chỉ hiện nhờ lớp đó, nên nó vẫn `display:none`. Nay thêm `.slid` **trước** khi rẽ nhánh, và CSS mở menu bằng **cả** `.slid` **lẫn** `.on` để không bao giờ kẹt lại. Có bài kiểm thử riêng: `tests/t_mobile.js` (giả lập `prefers-reduced-motion: reduce` rồi bấm nút menu) |
+
+## Có gì mới ở bản 1.9.1 — vá bảo mật + giấu mã nguồn khỏi Developer Tools
+
+| Lỗ hổng | Cách vá |
+|---|---|
+| **CORS so khớp sai ranh giới tên miền**: `ALLOW_ORIGIN = chuseoz.pages.dev` khiến `acchuseoz.pages.dev` (trang của người khác) cũng được phản chiếu origin → trang lạ gọi được API | So khớp theo **host** và đúng dấu chấm: chỉ `chuseoz.pages.dev` và `*.chuseoz.pages.dev`. Bỏ luôn `access-control-allow-credentials` (web xác thực bằng header, không dùng cookie). Bản xem trước chỉ mở cho `localhost` và `*.e2b.app` |
+| **Dò khoá quản trị**: gọi `/api/whoami` bao nhiêu lần cũng được để thử `X-Admin-Key` | Sai khoá quá **25 lần / 10 phút / IP** thì khoá tạm 10 phút (chỉ đếm lần SAI, nên chủ trang không bao giờ bị chặn oan) |
+| **Link độc hại lọt vào trang quản trị**: `POST /api/report` nhận `url` tuỳ ý, trang `/admin` in ra nút “Mở” → dán `javascript:` là chạy mã trong phiên quản trị | `url` chỉ nhận `http(s)` và phải thuộc tên miền của web (hoặc `*.pages.dev`, `*.blogspot.com`); còn lại lưu rỗng |
+| **HTML nhập từ Blogger giữ thuộc tính lạ**: `<p onclick=…>`, `<a href="javascript:…">` | `cleanPost()` gỡ hết thuộc tính của `p/b/strong/i/em/u`; thẻ `<a>` chỉ được dựng lại khi `href` là `http(s)` (kèm `rel="noopener nofollow"`), còn lại bỏ thẻ giữ chữ |
+| **Ảnh đại diện bình luận nhận mọi chuỗi** (kể cả `javascript:`) | Chỉ nhận `http(s)://…` |
+| **Thổi số lượt đọc / phiếu bầu**: đổi mã máy (`vid`) liên tục là mỗi lần tính một người mới | Thêm trần theo IP: lượt đọc ≤ 600/giờ (quá thì **không đếm** chứ không báo lỗi), phiếu ≤ 150/giờ |
+| **Mã nguồn và hệ thống lộ qua Developer Tools** | Bản phát hành được **rút gọn** (bỏ chú thích, đổi tên biến, không source map); mã đọc được nằm ở `src/` và bị `_redirects` chặn (`/src/*`, `/worker/*`, `/tests/*`, `/tools/*`, `/_inbox/*`, `*.md` → 301 về trang chủ); `_headers` thêm **Content-Security-Policy** cùng `nosniff`, `frame-ancestors`, `Referrer-Policy` |
+| **Khoá quản trị nằm trong `localStorage`** (đọc được nếu có lỗi chèn mã, còn lại trên máy dùng chung) | Mặc định cất trong `sessionStorage` (đóng trình duyệt là mất); chỉ khi tích *“Ghi nhớ khoá trên máy này”* mới ghi `localStorage` |
+
+Chi tiết đầy đủ và cách tự kiểm tra: `BAO-CAO-BAO-MAT-VA-GIAO-DIEN.md`.
+
+## Có gì mới ở bản 1.9.0 — báo lỗi chữ gửi thẳng vào email quản trị
+
+| Trước | Sau |
+|---|---|
+| Người đọc bấm **Báo lỗi chữ** → hộp thoại hiện nội dung rồi bắt **copy** và tự mở Gmail gửi (rất mất thời gian, nhiều bạn bỏ luôn) | Bấm **Gửi báo lỗi** là xong: `POST /api/report` nhận nội dung (kèm tên bộ, số chương, link, người gửi) → **lưu vào KV** và **gửi email** tới mọi địa chỉ trong `ADMIN_EMAILS`. Mất mạng thì hộp thoại tự hiện lại nút copy / Gmail để không ai bị kẹt |
+| Muốn xem lại báo lỗi phải vào KV bằng tay | Tab **Báo lỗi** trong `/admin` (phím `R`) liệt kê 300 báo lỗi gần nhất, bấm **Mở** là nhảy đúng chương, có nút copy và nút trả lời người báo. Endpoint `GET /api/admin/reports?q=` |
+| Icon web tự vẽ tay, chỗ dày chỗ mảnh | Toàn bộ icon SVG đổi sang **bộ Lucide (IconBuddy — iconbuddy.com)**, giấy phép mở, cùng lưới 24×24 nên nhìn đồng bộ. Hai icon thương hiệu Google / MoMo giữ bản vẽ tay. (Bản 1.9.2 đổi tiếp sang bộ **Solar** — xem mục dưới.) |
+
+**Bật gửi email — chọn 1 trong 2 cách (không đặt gì cũng không sao, xem cuối mục):**
+
+**Cách 1 — nhanh nhất, không cần khoá (khuyên dùng):** thêm **1 biến** trong
+Workers & Pages → Worker của bạn → Settings → Variables and Secrets:
+
+| Biến | Ví dụ | Ý nghĩa |
+|---|---|---|
+| `MAIL_TO` | `kimtong1906@gmail.com` | địa chỉ nhận thư báo lỗi — Worker gửi qua [FormSubmit](https://formsubmit.co) (miễn phí, không cần đăng ký) |
+
+Lần gửi **đầu tiên**, FormSubmit sẽ gửi 1 thư *“Confirm your email”* tới địa chỉ đó —
+mở hộp thư bấm **Confirm/Activate** một lần là từ đó mọi báo lỗi về thẳng hộp thư (hộp thoại
+ngoài web cũng nhắc đúng câu này). Sau khi xác nhận, thử lại bằng cách gửi 1 báo lỗi bất kỳ.
+
+**Cách 2 — thư đẹp, dùng tên miền riêng:** đăng ký [Resend](https://resend.com) (miễn phí 100 mail/ngày) rồi thêm:
+
+| Biến | Ví dụ | Ý nghĩa |
+|---|---|---|
+| `RESEND_API_KEY` | `re_xxxxxxxx` | khoá API của Resend (đặt dạng **Secret**) |
+| `MAIL_FROM` | `ssochuz library <bao-loi@ten-mien-cua-ban>` | địa chỉ gửi — phải là tên miền đã xác thực trong Resend |
+
+Có `RESEND_API_KEY` + `MAIL_FROM` thì Worker dùng Resend; chỉ có `MAIL_TO` thì dùng FormSubmit.
+
+Chưa đặt gì thì tính năng **vẫn chạy**: báo lỗi được lưu và hiện đầy đủ ở tab **Báo lỗi**,
+chỉ là không có email. Mở `<worker>/api/health` xem `auth.mail` — `true` là đã bật gửi email.
+
+## Có gì mới ở bản 1.8.0 — quản trị phiếu bầu (gỡ từng người · reset)
+
+| Việc | Endpoint | Ghi chú |
+|---|---|---|
+| Xem **ai đã bầu** một bộ (cả bộ + từng chương) | `GET /api/admin/voters?slug=<slug>` | trả `book`, `chapters`, `chapVotes`, `total`, `counted`, `base`; mỗi người kèm `key`, `kind` (`Tài khoản` / `Thiết bị` / `Địa chỉ IP`) và `at` (lúc bầu, có từ bản này) |
+| **Gỡ phiếu của người được chọn** | `POST /api/admin/vote-remove` | `{slug, ch, keys: [...]}` — `ch = 0` là phiếu cả bộ, `ch = 12` là phiếu chương 12. Trừ đúng số phiếu khỏi tổng (ưu tiên phần web đếm, hết thì trừ số cũ) và trừ vào lịch sử ngày để biểu đồ không đứng số cũ |
+| **Reset dữ liệu bầu** | `POST /api/admin/votes/reset` | `{slug?, ch?}` — không có `slug` = **mọi bộ**; không có `ch` = xoá cả phiếu bộ lẫn phiếu chương. **Lượt đọc, bình luận giữ nguyên** |
+
+Trang quản trị đã có tab **Phiếu bầu** (phím `V`): chọn bộ → danh sách người bầu chia theo
+“cả bộ / từng chương” → tick rồi bấm **Gỡ phiếu đã chọn**; cuối tab có ô **Reset dữ liệu bầu**
+(chọn phạm vi: một bộ hay tất cả, và có thể chỉ xoá phiếu của một chương).
+
+> Ô tick hoạt động cả với phiếu **đặt lúc chưa đăng nhập**: mỗi phiếu lưu theo khoá máy (`a:<vid>`)
+> hoặc khoá tài khoản (`g:<hash>`), nên gỡ bằng cách nào cũng ra đúng người. Muốn dọn sạch số liệu
+> thử nghiệm thì dùng Reset; xong người đọc thấy số mới ngay (không phải chờ cache).
+
 ## Có gì mới ở bản 1.6.0 (chẩn đoán ADMIN_KEY + trả lời bình luận)
 
 | Trước | Sau |
 |---|---|
-| `/api/health` trả 200 nhưng **thiếu header CORS** → trang `/admin` gọi từ domain khác bị trình duyệt chặn, fetch ném `Failed to fetch`, admin báo nhầm "Worker chưa deploy / KV id còn là placeholder" | `/api/health` (và `/`) trả kèm `Access-Control-Allow-Origin` như mọi endpoint khác. Kiểm tra: mở `<worker>/api/health` phải thấy `"version": "1.7.0"` |
+| `/api/health` trả 200 nhưng **thiếu header CORS** → trang `/admin` gọi từ domain khác bị trình duyệt chặn, fetch ném `Failed to fetch`, admin báo nhầm "Worker chưa deploy / KV id còn là placeholder" | `/api/health` (và `/`) trả kèm `Access-Control-Allow-Origin` như mọi endpoint khác. Kiểm tra: mở `<worker>/api/health` phải thấy `"version": "1.8.0"` |
 | Cache khoá công khai Supabase **cất nhầm kiểu**: lần verify token THỨ HAI trở đi (cùng isolate) ném lỗi `SubtleCrypto.verify: not a CryptoKey` → `POST /api/auth/supabase` và bình luận đều **401** dù token hoàn toàn hợp lệ | Cache cất đúng `{key, algo, alg}`; verify ổn định từ lần đầu đến lần thứ n (đã có test hồi quy) |
 | Bình luận bị 401 chỉ báo chung chung "Phiên đăng nhập hết hạn", không phân biệt được **hết hạn thật** với **Worker cấu hình sai** | Mọi 401 của `/api/auth/supabase`, `/api/auth/me`, `/api/comments/*` kèm **lý do thật** trong body (`token sai issuer…`, `chưa đặt SUPABASE_JWT_SECRET…`, `phiên hết hạn…`); web hiển thị đúng nguyên nhân, `cz-auth.js` ghi lý do ra console |
 | Khó biết Worker đặt `SUPABASE_URL` có đúng project không | 401 của `/api/auth/supabase` trả kèm `supabaseUrl` đang cấu hình; lỗi sai issuer nêu cả URL của token lẫn URL của Worker |
 
-> **Đang gặp lỗi 401/CORS khi bình luận?** Deploy lại bản này (`npx wrangler deploy`) rồi mở
-> `https://<worker>/api/health` — nếu `version` chưa phải `1.7.0` thì bản chạy trên mạng vẫn là bản cũ.
+> **Đang gặp lỗi 401/CORS khi bình luận?** Deploy lại bản mới nhất (`npx wrangler deploy`) rồi mở
+> `https://<worker>/api/health` — nếu `version` chưa phải `1.9.1` thì bản chạy trên mạng vẫn là bản cũ.
 > Xem thêm mục **7c** bên dưới để bắt bệnh theo từng thông báo.
 
 ## Có gì mới ở bản 1.5.0
@@ -58,6 +131,9 @@ GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới c�
 | `ALLOW_ORIGIN` | không | mặc định `*`; muốn chặt thì điền tên miền web |
 | `BLOG` | không | feed Blogger cho nút "Đồng bộ Blogger" |
 | `FIREBASE_PROJECT` | không | chỉ dùng khi muốn kéo số liệu cũ từ Firestore (1 lần) |
+| `MAIL_TO` | không | email nhận báo lỗi chữ (gửi qua FormSubmit — chỉ cần điền địa chỉ, không cần khoá) |
+| `RESEND_API_KEY` | không | đường chuyên nghiệp: khoá API resend.com (miễn phí 100 mail/ngày) |
+| `MAIL_FROM` | không | địa chỉ gửi của Resend, vd `ssochuz library <bao-loi@ten-mien-cua-ban>` |
 | `STATS_FLUSH_MS` | không | thời gian gom số liệu trước khi ghi KV (mặc định 10000) |
 
 ## Danh sách API bản 1.6.0 (bổ sung cho bảng ở dưới)
@@ -72,6 +148,11 @@ GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới c�
 | GET | `/api/admin/comments?limit=&slug=&q=` | cần khoá | mọi bình luận trên KV để kiểm duyệt |
 | GET | `/api/admin/log` | cần khoá | 200 thao tác gần nhất (ai, lúc nào, làm gì) |
 | GET | `/api/admin/stats` | cần khoá | số liệu chi tiết + chuỗi 60 ngày + phiếu theo từng chương |
+| POST | `/api/report` | mở | nhận báo lỗi chữ `{slug, title, ch, url, text, vid}`; lưu KV + gửi email quản trị (nếu có Resend); chặn spam 6 lần/giờ mỗi máy |
+| GET | `/api/admin/reports?q=` | cần khoá | 300 báo lỗi gần nhất (lọc theo từ khoá) |
+| GET | `/api/admin/voters?slug=` | cần khoá | ai đã bầu bộ này: phiếu cả bộ + từng chương, kèm khoá người bầu |
+| POST | `/api/admin/vote-remove` | cần khoá | gỡ phiếu của người được chọn `{slug, ch, keys}` |
+| POST | `/api/admin/votes/reset` | cần khoá | reset phiếu `{slug?, ch?}` (không `slug` = mọi bộ; không `ch` = cả bộ + từng chương) |
 | POST | `/api/auth/supabase` | mở | đổi `access_token` của Supabase → session token của Worker |
 | GET | `/api/auth/config` | mở | web đọc để biết Supabase/Google đã bật chưa, ai là quản trị |
 
@@ -108,6 +189,11 @@ GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới c�
 | POST | `/api/stats/seed` | cần khoá | nạp số liệu cũ `{items:{slug:{views,votes}}}` |
 | POST | `/api/stats/import-firebase` | cần khoá | tự kéo số cũ từ Firestore về KV (1 lần) |
 | POST | `/api/stats/refresh` | cần khoá | ghi hết số đang đệm xuống KV |
+| POST | `/api/report` | mở | báo lỗi chữ ở trang đọc (lưu KV + gửi email cho quản trị) |
+| GET | `/api/admin/reports` | cần khoá | danh sách báo lỗi để xem lại trong `/admin` |
+| GET | `/api/admin/voters?slug=` | cần khoá | danh sách người đã bầu (cả bộ + từng chương) |
+| POST | `/api/admin/vote-remove` | cần khoá | gỡ phiếu của người được chọn |
+| POST | `/api/admin/votes/reset` | cần khoá | reset dữ liệu bầu |
 | POST | `/api/auth/google` | cần GOOGLE_CLIENT_ID + SESSION_SECRET | đổi Google idToken → session token (HS256) |
 | GET | `/api/auth/me` | có session | trả user từ session |
 | GET | `/api/comments/<slug>` | mở | đọc bình luận công khai (`?ch=12` để lọc theo chương) |
@@ -353,6 +439,46 @@ Sau khi nạp xong thì **tắt Firebase luôn cũng được** — web không g
 Các file code (`cz-app.js`, `cz-home.js`, `cz-story.js`, `cz-config.js`, `cz.css`, `admin.js`) được đặt
 `Cache-Control: no-cache` trong `_headers`, nên sửa file nào rồi deploy lại là máy người dùng nhận bản mới ngay.
 Dữ liệu `/data/*.json` để cache ngắn (5 phút, riêng `data/book/*` 1 phút) vì dữ liệu đã đi qua KV.
+
+### 5e. Gỡ phiếu của một người / reset số liệu bầu
+
+Mở `/admin` → tab **Phiếu bầu** (hoặc bấm phím `V`).
+
+1. Chọn bộ ở ô bên phải (gõ vào ô tìm để lọc danh sách).
+2. Danh sách chia thành **Phiếu cho cả bộ** và từng **Chương N**; mỗi dòng là một người,
+   có nhãn *Tài khoản* / *Thiết bị* / *Địa chỉ IP* và thời điểm bầu.
+3. Tick người cần gỡ (hoặc **Chọn cả nhóm** / **chọn tất cả**) → **Gỡ phiếu đã chọn**.
+   Số phiếu ngoài web giảm ngay, phiếu theo chương cũng trừ theo.
+4. Muốn xoá sạch làm lại: ô **Reset dữ liệu bầu** ở cuối tab — chọn *Chỉ bộ đang chọn* hay
+   *Tất cả bộ trong thư viện*, và có thể giới hạn ở một chương. **Lượt đọc không bị ảnh hưởng.**
+
+Gọi thẳng bằng curl khi cần (khoá là `ADMIN_KEY` của Worker):
+
+```bash
+# xem ai đã bầu
+curl -H "x-admin-key: $ADMIN_KEY" "https://<worker>/api/admin/voters?slug=third-person"
+
+# gỡ 2 phiếu ở chương 12
+curl -X POST -H "x-admin-key: $ADMIN_KEY" -H 'content-type: application/json' \
+     -d '{"slug":"third-person","ch":12,"keys":["a:may-abc#12","g:9f2c1d#12"]}' \
+     https://<worker>/api/admin/vote-remove
+
+# reset toàn bộ phiếu của một bộ (giữ lượt đọc)
+curl -X POST -H "x-admin-key: $ADMIN_KEY" -H 'content-type: application/json' \
+     -d '{"slug":"third-person"}' https://<worker>/api/admin/votes/reset
+```
+
+### 5f. Nhận báo lỗi chữ từ người đọc
+
+1. Người đọc vào trang đọc → cuối chương bấm **Báo lỗi chữ** → ghi chỗ sai → **Gửi báo lỗi** (một lần bấm, không copy gì).
+2. Worker lưu vào KV (`report`, giữ 300 báo lỗi gần nhất) và gửi email kèm tên bộ, chương, link, người gửi —
+   điền `MAIL_TO` là có thư ngay (FormSubmit, miễn phí), hoặc `RESEND_API_KEY` + `MAIL_FROM` nếu muốn dùng Resend.
+3. Xem lại trong `/admin` → tab **Báo lỗi** (phím `R`). Bấm **Mở** để nhảy tới đúng chương.
+
+```bash
+# đọc danh sách báo lỗi gần nhất
+curl -H "x-admin-key: $ADMIN_KEY" "https://<worker>/api/admin/reports?q=chính tả"
+```
 
 ## 6. Bảo mật
 

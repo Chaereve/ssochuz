@@ -89,6 +89,7 @@ function idToken(over = {}, head = {}) {
 /* ============================ gọi worker =================================== */
 const kv = new FakeKV();
 const ADMIN = 'khoa-quan-tri-dai-cho-du-24-ky-tu';
+const ADMH = { 'x-admin-key': ADMIN };   /* header quản trị dùng chung cho mọi bài test */
 const env = {
   ADMIN_KEY: ADMIN, CZ_KV: kv, BLOG: 'https://chuseoz.blogspot.com', ALLOW_ORIGIN: 'https://web.test',
   SESSION_SECRET: 'session-secret-dai-hon-32-ky-tu-cho-chac', GOOGLE_CLIENT_ID: 'CLIENT_ID_TEST',
@@ -428,6 +429,190 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     eq('stats/số phiếu cũ + mới', ((s.body.items || {})['lunar-secret'] || {}).votes, 13);
     eq('stats/seed thiếu khoá → 401', (await call('POST', '/api/stats/seed', { body: { items: {} } })).status, 401);
     eq('stats/refresh → ok', ((await call('POST', '/api/stats/refresh', { headers: { 'x-admin-key': ADMIN } })).body || {}).ok, true);
+  }
+
+  /* ---------- 9b. QUẢN TRỊ PHIẾU BẦU: gỡ phiếu từng người + reset ---------- */
+  {
+    const authH = { authorization: 'Bearer ' + TOKEN };
+    /* bầu thêm: 1 tài khoản (phiếu bộ + phiếu chương 3), 2 khách (chương 3 và 4) */
+    await call('POST', '/api/vote', { headers: authH, body: { slug: 'lunar-secret', vote: 1, vid: 'may-q1' } });
+    await call('POST', '/api/vote', { headers: authH, body: { slug: 'lunar-secret', vote: 1, vid: 'may-q1', ch: 3 } });
+    await call('POST', '/api/vote', { body: { slug: 'lunar-secret', vote: 1, vid: 'khach-q3', ch: 3 } });
+    await call('POST', '/api/vote', { body: { slug: 'lunar-secret', vote: 1, vid: 'khach-q4', ch: 4 } });
+    const before = (await call('GET', '/api/stats')).body.items['lunar-secret'];
+
+    eq('voters/thiếu khoá quản trị → 401',
+      (await call('GET', '/api/admin/voters?slug=lunar-secret')).status, 401);
+    eq('voters/thiếu slug → 400', (await call('GET', '/api/admin/voters', { headers: ADMH })).status, 400);
+    const v = await call('GET', '/api/admin/voters?slug=lunar-secret', { headers: ADMH });
+    const vb = (v.body && v.body.book) || { count: 0, voters: [] };
+    const vc = (v.body && v.body.chapters) || {};
+    ck('voters/liệt kê được phiếu cả bộ', vb.count >= 2, vb.count, '>= 2');
+    eq('voters/phiếu chương 3 có 2 người', (vc['3'] || {}).count, 2);
+    eq('voters/phiếu chương 4 có 1 người', (vc['4'] || {}).count, 1);
+    ck('voters/có nhãn loại người bầu (tài khoản / thiết bị)',
+      ((vc['3'] || {}).voters || []).every((x) => !!x.kindLabel && !!x.key),
+      ((vc['3'] || {}).voters || []).map((x) => x.kindLabel), 'mỗi dòng có kindLabel');
+    ck('voters/khoá phiếu chương có hậu tố #3',
+      ((vc['3'] || {}).voters || []).every((x) => String(x.key).endsWith('#3')),
+      ((vc['3'] || {}).voters || []).map((x) => x.key), 'khoá kết thúc bằng #3');
+
+    /* gỡ 1 phiếu chương 3 */
+    const one = ((vc['3'] || {}).voters || [])[0] || {};
+    eq('vote-remove/khoá sai chương → 400',
+      (await call('POST', '/api/admin/vote-remove', { headers: { 'x-admin-key': ADMIN }, body: { slug: 'lunar-secret', ch: 4, keys: [one.key] } })).status, 400);
+    eq('vote-remove/thiếu khoá quản trị → 401',
+      (await call('POST', '/api/admin/vote-remove', { body: { slug: 'lunar-secret', ch: 3, keys: [one.key] } })).status, 401);
+    const rm = await call('POST', '/api/admin/vote-remove', { headers: { 'x-admin-key': ADMIN }, body: { slug: 'lunar-secret', ch: 3, keys: [one.key] } });
+    eq('vote-remove/gỡ đúng 1 phiếu', (rm.body || {}).removed, 1);
+    eq('vote-remove/tổng phiếu giảm 1', (rm.body || {}).total, before.votes - 1);
+    const v2 = await call('GET', '/api/admin/voters?slug=lunar-secret', { headers: ADMH });
+    eq('vote-remove/chương 3 còn 1 người', ((((v2.body || {}).chapters || {})['3'] || {}).count), 1);
+
+    /* reset phiếu của MỘT bộ: về 0, xoá cả phiếu chương, GIỮ lượt đọc */
+    const rs = await call('POST', '/api/admin/votes/reset', { headers: { 'x-admin-key': ADMIN }, body: { slug: 'lunar-secret' } });
+    eq('reset/báo ok', (rs.body || {}).ok, true);
+    const after = (await call('GET', '/api/stats')).body.items['lunar-secret'];
+    eq('reset/phiếu về 0', after.votes, 0);
+    eq('reset/xoá phiếu từng chương', Object.keys(after.chapVotes || {}).length, 0);
+    eq('reset/GIỮ lượt đọc', after.views, before.views);
+    const v3 = await call('GET', '/api/admin/voters?slug=lunar-secret', { headers: ADMH });
+    eq('reset/không còn người bầu nào', (((v3.body || {}).voters) || 0), 0);
+
+    /* reset toàn bộ (không gửi slug) — mọi bộ về 0 */
+    await call('POST', '/api/vote', { body: { slug: 'third-person', vote: 1, vid: 'khach-z' } });
+    const rAll = await call('POST', '/api/admin/votes/reset', { headers: { 'x-admin-key': ADMIN }, body: {} });
+    ck('reset toàn bộ/báo ok + có số bộ', !!(rAll.body && rAll.body.ok), rAll.body && rAll.body.error, 'ok');
+    const st2 = (await call('GET', '/api/stats')).body.items;
+    eq('reset toàn bộ/third-person về 0', (st2['third-person'] || {}).votes, 0);
+    eq('reset toàn bộ/thiếu khoá → 401', (await call('POST', '/api/admin/votes/reset', { body: {} })).status, 401);
+  }
+
+  /* ---------- 9c. BÁO LỖI CHỮ: gửi thẳng tới ban biên tập ---------- */
+  {
+    /* chưa đặt RESEND_API_KEY → vẫn nhận báo lỗi, chỉ là chưa gửi được email */
+    const r1 = await call('POST', '/api/report', { body: { slug: 'lunar-secret', title: 'Lunar Secret', ch: 7, url: 'https://web.test/truyen/lunar-secret/#chuong-7', text: 'Chương 7 sai chính tả chỗ “cô ấy” thành “cô áy”.', vid: 'may-bao-loi' } });
+    eq('báo lỗi/nhận được → ok', (r1.body || {}).ok, true);
+    eq('báo lỗi/chưa cấu hình mail → mailed:false', (r1.body || {}).mailed, false);
+    ck('báo lỗi/nói rõ lý do chưa gửi mail', /RESEND_API_KEY|MAIL_FROM|ADMIN_EMAILS/.test(String((r1.body || {}).note)), (r1.body || {}).note, 'có lý do');
+    const rep = await call('GET', '/api/admin/reports', { headers: ADMH });
+    eq('báo lỗi/lưu vào KV', (((rep.body || {}).items || [])[0] || {}).slug, 'lunar-secret');
+    eq('báo lỗi/giữ số chương', (((rep.body || {}).items || [])[0] || {}).ch, 7);
+    ck('báo lỗi/có link kèm theo', /#chuong-7/.test(String((((rep.body || {}).items || [])[0] || {}).url)), (((rep.body || {}).items || [])[0] || {}).url, 'có #chuong-7');
+    const lg = await call('GET', '/api/admin/log', { headers: ADMH });
+    ck('báo lỗi/có ghi nhật ký', ((lg.body || {}).items || []).some((x) => /báo lỗi mới/.test(x.text)), (lg.body || {}).items && (lg.body.items[0] || {}).text, 'có dòng báo lỗi');
+    /* nội dung quá ngắn thì từ chối */
+    eq('báo lỗi/quá ngắn → 400', (await call('POST', '/api/report', { body: { slug: 'lunar-secret', text: 'x' } })).status, 400);
+    /* có cấu hình Resend → gọi api.resend.com; ở đây chặn mạng nên phải KHÔNG ném lỗi ra ngoài */
+    const e2 = Object.assign({}, env, { RESEND_API_KEY: 'k-test', MAIL_FROM: 'ssochuz <bao-loi@web.test>' });
+    const r2 = await call('POST', '/api/report', { e: e2, body: { slug: 'lunar-secret', title: 'Lunar Secret', ch: 8, text: 'Chương 8 bị lặp cả đoạn cuối.', vid: 'may-bao-loi-2' } });
+    eq('báo lỗi/có mail key → vẫn trả ok (không nổ 500)', (r2.body || {}).ok, true);
+    eq('báo lỗi/không gửi được thì mailed:false', (r2.body || {}).mailed, false);
+    ck('báo lỗi/không gửi được thì nói rõ lý do', String((r2.body || {}).note || '').length > 0, (r2.body || {}).note, 'có lý do');
+    /* MAIL_TO: gửi bằng FormSubmit (không cần khoá) — chặn mạng để không gửi thư thật khi chạy test */
+    const realFetch = globalThis.fetch;
+    let mailCall = null;
+    globalThis.fetch = async (url, opt) => {
+      mailCall = { url: String(url), body: JSON.parse((opt || {}).body || '{}') };
+      return { ok: true, status: 200, json: async () => ({ success: 'true', message: 'Email sent' }) };
+    };
+    try {
+      const r3 = await call('POST', '/api/report', { e: Object.assign({}, env, { MAIL_TO: 'admin@web.test' }), body: { slug: 'third-person', title: 'Third Person', ch: 2, text: 'Chương 2 thiếu dấu chấm cuối đoạn.', vid: 'may-mail-1' } });
+      eq('báo lỗi/MAIL_TO gửi được → mailed:true', (r3.body || {}).mailed, true);
+      ck('báo lỗi/gọi đúng FormSubmit', /formsubmit\.co\/ajax\/admin%40web\.test/.test(String(mailCall && mailCall.url)), mailCall && mailCall.url, 'formsubmit.co/ajax/admin@web.test');
+      ck('báo lỗi/thư có nội dung + link', !!(mailCall && mailCall.body['Nội dung báo lỗi'] && /Third Person/.test(mailCall.body._subject)), mailCall && mailCall.body._subject, 'có tiêu đề');
+      /* lần đầu FormSubmit đòi xác nhận → phải nói rõ cho người đọc biết */
+      globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => ({ success: 'false', message: 'Please confirm your email address to activate the form' }) });
+      const r4 = await call('POST', '/api/report', { e: Object.assign({}, env, { MAIL_TO: 'admin@web.test' }), body: { slug: 'third-person', title: 'Third Person', ch: 4, text: 'Chương 4 lặp tên nhân vật.', vid: 'may-mail-2' } });
+      ck('báo lỗi/chưa xác nhận → nói rõ cách xác nhận', /Confirm|Activate|xác nhận/i.test(String((r4.body || {}).note)), (r4.body || {}).note, 'hướng dẫn xác nhận');
+      eq('báo lỗi/chưa xác nhận thì mailed:false', (r4.body || {}).mailed, false);
+      /* Resend có khoá mà thiếu MAIL_FROM → phải nói rõ thiếu gì */
+      const r5 = await call('POST', '/api/report', { e: Object.assign({}, env, { RESEND_API_KEY: 'k-test' }), body: { slug: 'third-person', text: 'Chương 1 sai dấu câu ở đoạn 2.', vid: 'may-mail-3' } });
+      ck('báo lỗi/thiếu MAIL_FROM → nói rõ', /MAIL_FROM/.test(String((r5.body || {}).note)), (r5.body || {}).note, 'nhắc MAIL_FROM');
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+
+    /* danh sách báo lỗi cần khoá quản trị */
+    eq('báo lỗi/danh sách thiếu khoá → 401', (await call('GET', '/api/admin/reports')).status, 401);
+    eq('báo lỗi/lọc theo từ khoá', (((await call('GET', '/api/admin/reports?q=nhân vật', { headers: ADMH })).body || {}).count), 1);
+    eq('báo lỗi/lọc từ khoá lạ → 0', (((await call('GET', '/api/admin/reports?q=khong-co-gi', { headers: ADMH })).body || {}).count), 0);
+  }
+
+  /* ---------- 9g. BẢO MẬT (bản vá 1.9.1) ---------- */
+  {
+    /* CORS: chỉ phản chiếu đúng tên miền trong ALLOW_ORIGIN, đúng ranh giới dấu chấm.
+       Lỗi cũ: origin.endsWith("chuseoz.pages.dev") nên "acchuseoz.pages.dev" cũng lọt. */
+    const r1 = await call('GET', '/api/health', { headers: { origin: 'https://acchuseoz.pages.dev' } });
+    ck('CORS/không phản chiếu tên miền na ná', r1.headers.get('access-control-allow-origin') !== 'https://acchuseoz.pages.dev',
+      r1.headers.get('access-control-allow-origin'), 'không phải origin của kẻ lạ');
+    const r2 = await call('GET', '/api/health', { headers: { origin: 'https://ac.web.test' } });
+    eq('CORS/vẫn cho tên miền con hợp lệ', r2.headers.get('access-control-allow-origin'), 'https://ac.web.test');
+    const r3 = await call('GET', '/api/health', { headers: { origin: 'https://web.test' } });
+    eq('CORS/không gửi allow-credentials', r3.headers.get('access-control-allow-credentials'), null);
+
+    /* Dò khoá quản trị: 25 lần sai / 10 phút là khoá tạm */
+    let last = null;
+    for (let i = 0; i < 26; i++) last = await call('GET', '/api/whoami', { headers: { 'x-admin-key': 'sai-khoa-' + i } });
+    eq('khoá/sai 26 lần → 429', last.status, 429);
+    eq('khoá/vẫn dùng được khoá đúng sau đó', (await call('GET', '/api/whoami', { headers: ADMH })).status, 200);
+
+    /* Link kèm báo lỗi: javascript:/data: phải bị bỏ (trang quản trị in ra nút “Mở”) */
+    await call('POST', '/api/report', { body: { slug: 'third-person', title: 'Third Person', ch: 1, text: 'Kiểm tra link độc hại trong báo lỗi.', url: 'javascript:alert(document.cookie)', vid: 'sec-1' } });
+    const rp = (await call('GET', '/api/admin/reports', { headers: ADMH })).body || {};
+    const row = (rp.items || []).find((x) => /độc hại/.test(String(x.text || ''))) || {};
+    eq('báo lỗi/link javascript: bị bỏ', row.url, '');
+    await call('POST', '/api/report', { body: { slug: 'third-person', title: 'Third Person', ch: 1, text: 'Link https hợp lệ phải giữ nguyên.', url: 'https://ssochuz.pages.dev/truyen/third-person/', vid: 'sec-2' } });
+    const rp2 = (await call('GET', '/api/admin/reports', { headers: ADMH })).body || {};
+    const row2 = (rp2.items || []).find((x) => /giữ nguyên/.test(String(x.text || ''))) || {};
+    eq('báo lỗi/link https giữ nguyên', row2.url, 'https://ssochuz.pages.dev/truyen/third-person/');
+  }
+
+  /* ---------- 9h. HTML nhập từ Blogger: bỏ thuộc tính lạ ---------- */
+  {
+    const dirty = `<html><head><title>Chương 9: Thử</title></head><body>
+      <div class="post-body entry-content">
+        <p onclick="alert(1)">Đoạn văn đủ dài để worker nhận là nội dung đọc được, có thuộc tính lạ.</p>
+        <p><a href="javascript:alert(2)" onmouseover="alert(3)">bấm thử</a> và <a href="https://vidu.test/x">link thật</a></p>
+        <p>Đoạn thứ ba cho đủ độ dài tối thiểu của bài viết hợp lệ.</p>
+      </div></body></html>`;
+    routes = (u) => {
+      if (/ssochuz-test-blog\.blogspot\.com/.test(u)) return { status: 200, body: dirty };
+      return null;
+    };
+    const r = await call('POST', '/api/import', {
+      e: Object.assign({}, env, { BLOG: 'https://ssochuz-test-blog.blogspot.com' }),
+      headers: { 'x-admin-key': ADMIN, 'x-import-mode': 'append' },
+      body: { slug: 'lunar-secret', url: 'https://ssochuz-test-blog.blogspot.com/2026/01/bai-thu.html' },
+    });
+    eq('nhập Blogger/thêm được chương', (r.body || {}).ok, true);
+    const book = (await call('GET', '/api/book/lunar-secret')).body || {};
+    const lastCh = (book.chapters || [])[(book.chapters || []).length - 1] || {};
+    ck('nhập Blogger/bỏ onclick, onmouseover', !/onclick|onmouseover/i.test(String(lastCh.html || '')), String(lastCh.html || '').slice(0, 120), 'không còn thuộc tính lạ');
+    ck('nhập Blogger/bỏ href javascript:', !/javascript:/i.test(String(lastCh.html || '')), String(lastCh.html || '').slice(0, 120), 'không còn javascript:');
+    ck('nhập Blogger/giữ link https + rel an toàn', /href="https:\/\/vidu\.test\/x"[^>]*rel="noopener nofollow"/.test(String(lastCh.html || '')), String(lastCh.html || '').slice(-160), 'link thật giữ nguyên');
+    routes = () => null;
+  }
+
+  /* ---------- 9i. ảnh đại diện bình luận phải là link http(s) ---------- */
+  {
+    const t = (await call('POST', '/api/auth/google', { body: { credential: idToken() } })).body || {};
+    const h = { authorization: 'Bearer ' + t.token };
+    await call('POST', '/api/comments/third-person', { headers: h, body: { text: 'Bình luận kèm ảnh bậy.', ch: 1, vid: 'pic-1', picture: 'javascript:alert(1)' } });
+    const got = (await call('GET', '/api/comments/third-person')).body || {};
+    const c = (got.items || got.comments || []).find((x) => /ảnh bậy/.test(String(x.text || ''))) || {};
+    ck('bình luận/ảnh javascript: bị bỏ', !/^javascript:/i.test(String(c.picture || '')),
+      c.picture, 'rỗng hoặc link http(s) khác');
+  }
+
+  /* ---------- 9j. chặn thổi lượt đọc: đổi mã máy liên tục vẫn bị chặn theo IP ---------- */
+  {
+    let counted = 0, refused = 0;
+    for (let i = 0; i < 620; i++) {
+      const r = await call('POST', '/api/view', { body: { slug: 'third-person', vid: 'may-' + i } });
+      if ((r.body || {}).counted) counted++; else refused++;
+    }
+    ck('lượt đọc/có trần theo IP', counted <= 601 && refused > 0, { counted, refused }, 'counted ≤ 601 và có lần bị từ chối');
   }
 
   /* ---------- 10. lặt vặt ---------- */

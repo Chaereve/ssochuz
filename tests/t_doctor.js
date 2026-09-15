@@ -17,7 +17,10 @@ const ROOT = path.join(__dirname, '..');
 /* admin.js là IIFE cho trình duyệt → không require được. Móc 4 hàm bằng cách cắt
    từ đúng tên hàm tới "function renderDoctor" rồi nạp vào 1 module tạm. */
 function loadDoctor() {
-  const src = fs.readFileSync(path.join(ROOT, 'admin.js'), 'utf8');
+  /* đọc bản NGUỒN (src/): bản phát hành ở gốc đã rút gọn nên không còn chú thích,
+     không còn thụt lề, không còn tên hàm gốc để cắt. */
+  const forSource = path.join(ROOT, 'src', 'admin.js');
+  const src = fs.readFileSync(fs.existsSync(forSource) ? forSource : path.join(ROOT, 'admin.js'), 'utf8');
   const names = ['chapWords', 'dupGroups', 'chapterGaps', 'dupText'];
   const start = src.indexOf('  function chapWords(');
   const end = src.indexOf('  function renderDoctor()');
