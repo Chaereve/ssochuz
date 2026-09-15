@@ -217,7 +217,8 @@
     $('#shero').innerHTML =
       '<div class="in">' +
         '<div class="cover" data-t="' + esc(n.title) + '">' + (im ? '<img src="' + esc(im) + '" alt="Bìa ' + esc(n.title) + '" width="300" height="450" fetchpriority="high">' : '') +
-          (n.is18 ? '<span class="b18">18+</span>' : '') + '</div>' +
+          (n.is18 ? '<span class="b18">18+</span>' : '') +
+          (n.fresh ? '<span class="nw-ribbon"><span>Mới</span></span>' : '') + '</div>' +
         '<div>' +
           '<h1>' + esc(n.title) + '</h1>' +
           '<div class="meta">' +
@@ -236,7 +237,7 @@
               }).join('') +
             '</div></div>' +
           (syn.length > 200
-            ? '<button class="synbtn" id="synToggle" type="button" aria-expanded="false" aria-controls="synIn">Hiện thêm' + ic('down', 'i-s') + '</button>'
+            ? '<button class="synbtn" id="synToggle" type="button">Đọc giới thiệu đầy đủ' + ic('right', 'i-s') + '</button>'
             : '') +
           '<div class="btn-row">' + readBtn(n, ch) +
             (n.canRead && ch && ch < n.chapters ? '<a class="btn ghost lg" href="#chuong-' + n.chapters + '">' + ic('up', 'i-s') + 'Chương mới nhất</a>' : '') +
@@ -253,7 +254,9 @@
     var cw = $('#shero .cover'), cim = cw ? cw.querySelector('img') : null;
     if (cim) cim.addEventListener('error', function () { if (cw && cw.isConnected) cw.classList.add('noimg'); });
     if (cw && (!cim || (cim.complete && !cim.naturalWidth))) cw.classList.add('noimg');
-    /* mô tả dài thì HÉ 5 DÒNG, bấm “Hiện thêm” là mở full NGAY TẠI CHỖ (không nhảy tab) */
+    /* Đầu trang chỉ HÉ 5 DÒNG làm tóm tắt; bản đầy đủ nằm DUY NHẤT trong tab
+       “Giới thiệu” — nút dưới đây nhảy sang tab đó (bản cũ bung full ngay tại
+       chỗ nên tóm tắt bị lặp hai lần trên cùng một trang). */
     var sw = $('#synWrap'), si = $('#synIn'), tg = $('#synToggle');
     /* đo thật chứ không đoán theo số ký tự: lọt trọn trong phần hé ra thì bỏ kẹp
        và bỏ luôn nút, để màn hình rộng không bị thừa một nút vô nghĩa */
@@ -262,22 +265,7 @@
       if (tg && tg.parentNode) tg.parentNode.removeChild(tg);
       tg = null;
     }
-    if (tg && sw && si) tg.addEventListener('click', function () {
-      var open = sw.classList.toggle('open');
-      tg.setAttribute('aria-expanded', open ? 'true' : 'false');
-      /* mũi tên không đổi icon, chỉ xoay 180° bằng CSS theo aria-expanded */
-      tg.firstChild.textContent = open ? 'Thu gọn' : 'Hiện thêm';
-      /* gấp/mở theo chiều cao THẬT của khối chữ: một con số max-height cố định
-         sẽ hoặc cắt mất chữ của bộ mô tả dài nhất (3.300 ký tự ≈ 40 dòng), hoặc
-         làm nhịp chạy hụt hơi vì phải nội suy qua cả khúc không nhìn thấy */
-      si.style.maxHeight = si.scrollHeight + 'px';   /* lấy mốc hiện tại */
-      void si.offsetHeight;                          /* buộc trình duyệt nhận mốc */
-      si.style.maxHeight = open ? (si.scrollHeight + 8) + 'px' : '';
-      if (open) setTimeout(function () {
-        /* mở xong thì thả về none: đổi cỡ cửa sổ hay đổi cỡ chữ sẽ không cắt chữ */
-        if (sw.classList.contains('open')) si.style.maxHeight = 'none';
-      }, 340);
-    });
+    if (tg) tg.addEventListener('click', function () { showTab('info', true); });
     var sh = $('#shelfBtn');
     if (sh) sh.addEventListener('click', function () {
       var on = CZ.toggleShelf(n);

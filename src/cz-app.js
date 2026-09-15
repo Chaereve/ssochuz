@@ -828,9 +828,10 @@
     var pg = progress(n), pct = n.chapters ? Math.min(100, Math.round(pg / n.chapters * 100)) : 0;
     var img = n.thumb || n.slide || '';
     if (opts.view === 'list') return cardList(n, img, pg, pct);
-    /* thẻ lưới: tình trạng là một KÝ HIỆU TRÒN 26px ở góc bìa (không phải dải chữ).
-       Dải chữ cũ dài 80–100px trên bìa 152px: vừa thô, vừa hay bị cắt chữ (ellipsis)
-       hoặc đè lên huy hiệu 18+ ở bìa hẹp. Chữ đầy đủ vẫn có trong title/aria-label. */
+    /* thẻ lưới: tình trạng là KÝ HIỆU TRÒN ở góc trái bìa; “Mới” là RUY BĂNG CHÉO
+       ở góc phải bìa; 18+ nằm ở hàng chân bìa cạnh số chương. Ba thứ ba góc nên
+       không bao giờ chồng nhau (bản dải chữ cũ hay bị cắt chữ/đè nhau ở bìa hẹp).
+       Chữ tình trạng đầy đủ vẫn có trong title/aria-label. */
     var stCls = n.statusCls || 'run';
     var stLab = statusLabel(n.statusCls || n.status);
     return '<a class="card" href="' + esc(storyURL(n.slug)) + '" data-t="' + esc(n.title) + '" title="' + esc(n.title) + '">' +
@@ -838,9 +839,9 @@
       (img ? '<img src="' + esc(img) + '" alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" width="300" height="450">' : '') +
       '<span class="scrim"></span>' +
       '<span class="stic st-' + stCls + '" title="' + esc(stLab) + '" aria-label="Tình trạng: ' + esc(stLab) + '" role="img">' + icon(STATUS_ICON[stCls] || 'clock', 'i-s') + '</span>' +
-      (n.is18 ? '<span class="b18">18+</span>' : '') +
+      (n.fresh ? '<span class="nw-ribbon"><span>Mới</span></span>' : '') +
       '<span class="foot"><span class="ch">' + esc(countText(n)) + '</span>' +
-        (n.fresh ? '<span class="badge-new">Mới</span>' : '') + '</span>' +
+        (n.is18 ? '<span class="b18">18+</span>' : '') + '</span>' +
       (pct ? '<span class="bar"><i style="width:' + pct + '%"></i></span>' : '') +
       '</div>' +
       '<h3>' + esc(n.title) + '</h3>' +
@@ -1347,9 +1348,8 @@
     d.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('#czNav a'); if (a) mark(a); });
     run();
   }
-  /* Chân trang nền tối chữ ký: logo + câu cảm ơn + 3 liên kết, dồn cột trái.
-     Nền tối CỐ ĐỊNH ở cả hai tông sáng/tối để luôn giống mẫu (hình thoi hồng,
-     chữ “library” hồng nghiêng chỉ đọc được trên nền tối). */
+  /* Chân trang nền tối: logo (đồng bộ đầu trang) + câu cảm ơn + 3 liên kết,
+     dồn cột trái. Nền tối CỐ ĐỊNH ở cả hai tông sáng/tối để luôn giống mẫu. */
   function mountFooter(host) {
     if (!host) return;
     host.className = 'ftr';
@@ -1357,7 +1357,7 @@
     var fb = 'https://www.facebook.com/profile.php?id=61592803761987';
     var survey = cfg.form || 'https://forms.gle/YW3PvtrNVQ7xt8nCA';
     host.innerHTML = '<div class="in">' +
-      '<a class="flogo" href="/" title="ssochuz library"><span class="fdia" aria-hidden="true"></span>ssochuz<em>library</em></a>' +
+      '<a class="logo" href="/" title="ssochuz library"><span class="dot"></span>ssochuz<i>library</i></a>' +
       '<p class="fthanks">Cảm ơn bạn đã ủng hộ và đồng hành cùng ssochuz library!</p>' +
       '<nav class="flinks" aria-label="Trợ giúp và kênh liên lạc">' +
         '<a href="/guide">Hướng dẫn</a>' +
