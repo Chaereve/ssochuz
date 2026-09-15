@@ -744,19 +744,19 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
    đáy), bù 1px cho khoảng tracking thừa ở cuối dòng dọc. Bóng đổ dùng filter
    (tĩnh, ôm đúng hình đã cắt — box-shadow thường bị clip-path cắt mất).
    Nền tối dùng hồng đậm để chữ trắng luôn đọc được trên mọi bìa. */
-.nw-bookmark { position: absolute; top: 0; right: 10px; z-index: 2; width: 26px; height: 54px;
-  display: grid; place-items: center; padding: 4px 0 12px; pointer-events: none;
+.nw-bookmark { position: absolute; top: 0; right: 10px; z-index: 2; width: 22px; height: 48px;
+  display: grid; place-items: center; padding: 3px 0 10px; pointer-events: none;
   background: var(--acc); color: #fff;
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 10px), 0 100%);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 8px), 0 100%);
   filter: drop-shadow(0 2px 3px rgba(10, 6, 4, .4)); }
 .nw-bookmark > span { writing-mode: vertical-rl; text-orientation: upright;
-  font-family: var(--font-head); font-size: 11px; font-weight: 700; letter-spacing: .18em;
+  font-family: var(--font-head); font-size: 9px; font-weight: 700; letter-spacing: .14em;
   translate: 0 1px; text-shadow: 0 1px 1px rgba(0, 0, 0, .35); }
 [data-theme="dark"] .nw-bookmark { background: #b23a52; }
 @media (max-width: 560px) {
-  .nw-bookmark { width: 22px; height: 46px; right: 8px; padding: 3px 0 10px;
-    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 8px), 0 100%); }
-  .nw-bookmark > span { font-size: 10px; }
+  .nw-bookmark { width: 20px; height: 42px; right: 8px; padding: 2px 0 9px;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 7px), 0 100%); }
+  .nw-bookmark > span { font-size: 8px; }
 }
 .card .th .foot .b18 { margin-left: auto; }
 .card .th .foot { position: absolute; inset: auto 8px 8px; display: flex; align-items: center; gap: 8px; color: #fff; }
