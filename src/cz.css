@@ -159,6 +159,12 @@ body.reading #sprog { display: none !important; }
 
 .hdr { position: relative; z-index: 50; background: var(--bg); border-bottom: 1px solid var(--bd);
   transition: box-shadow var(--t) var(--ease), background-color var(--t-mid) linear, border-color var(--t-mid) linear; }
+/* Trang chủ đổi nền qua một vài bề mặt lớn; không bật transition cho toàn bộ DOM
+   vì đó là nguyên nhân gây khựng trên điện thoại. */
+body.hpage { transition: background-color var(--t-mid) linear, color var(--t-mid) linear; }
+body.hpage .hero { transition: background-color var(--t-mid) linear, border-color var(--t-mid) linear; }
+body.hpage .facts { transition: border-color var(--t-mid) linear; }
+body.hpage .fbox { transition: background-color var(--t-mid) linear, border-color var(--t-mid) linear; }
 .hdr .in { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; height: 58px; display: flex; align-items: center;
   gap: 22px; }
 .logo { display: inline-flex; align-items: center; gap: 9px; font-family: var(--font-logo); font-size: 23px; font-weight: 700; font-optical-sizing: auto;
@@ -200,8 +206,11 @@ body.reading #sprog { display: none !important; }
   --tsw-sun: #fff0a3;
   position: relative; display: inline-block; width: 64px; height: 32px; flex: 0 0 auto;
   overflow: hidden; border-radius: 5em; cursor: pointer; vertical-align: middle;
-  isolation: isolate;
+  isolation: isolate; will-change: transform;
+  transition: transform var(--t-fast) var(--ease), filter var(--t-fast) var(--ease);
 }
+.tsw:hover { filter: saturate(1.08); }
+.tsw:active { transform: scale(.95); }
 /* Tên lớp gốc của Uiverse giữ lại để dễ đối chiếu; hành vi vẫn do các lớp
    .tsw-* ở trên kiểm soát, nên không ảnh hưởng phần còn lại của giao diện. */
 .tsw.switch-name { display: inline-block; }
@@ -213,7 +222,8 @@ body.reading #sprog { display: none !important; }
 }
 .tsw-sl {
   position: absolute; inset: 0; z-index: 0; border-radius: inherit; background: var(--tsw-light-sky);
-  transition: background-color var(--t-mid) var(--ease-soft);
+  transition: background-color .28s var(--ease-soft), box-shadow .2s var(--ease);
+  will-change: background-color;
 }
 .tsw-in:checked ~ .tsw-sl { background: var(--tsw-dark-sky); }
 .tsw-in:focus-visible ~ .tsw-sl { box-shadow: 0 0 0 3px var(--ring); }
@@ -222,7 +232,8 @@ body.reading #sprog { display: none !important; }
 .tsw-icon {
   position: absolute; left: 0; top: 0; z-index: 1; width: 32px; height: 32px; padding: 5px;
   box-sizing: border-box; pointer-events: none; color: var(--tsw-moon); fill: currentColor; stroke: currentColor;
-  transition: transform .5s var(--ease), opacity .5s var(--ease);
+  transform-origin: 50% 50%; will-change: transform, opacity;
+  transition: transform .38s var(--ease), opacity .24s var(--ease-soft);
 }
 .tsw-icon.moon { opacity: 0; transform: translateX(-100%) rotate(-180deg); }
 .tsw-icon.sun { color: var(--tsw-sun); opacity: 1; transform: none; }
@@ -230,7 +241,7 @@ body.reading #sprog { display: none !important; }
 .tsw-in:checked ~ .tsw-icon.moon { opacity: 1; transform: translateX(100%) rotate(180deg); }
 .tsw-in:checked ~ .tsw-icon.sun { opacity: 0; transform: translateX(100%) rotate(180deg); }
 @media (prefers-reduced-motion: reduce) {
-  .tsw-sl, .tsw-icon { transition: none; }
+  .tsw, .tsw-sl, .tsw-icon { transition: none; }
 }
 
 .ftr { border-top: 1px solid var(--bd); background: var(--bg); margin-top: 80px;

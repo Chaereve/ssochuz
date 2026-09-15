@@ -42,12 +42,15 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   out.menuTruocKhiBam = { on: mnav.classList.contains('on'), slid: mnav.classList.contains('slid') };
 
   click('#czBurger'); await wait(60);
+  const desktopLabels = [...doc.querySelectorAll('#czNav a')].map(a => a.textContent.trim());
+  const mobileLabels = [...mnav.querySelectorAll('a')].slice(0, desktopLabels.length).map(a => a.textContent.trim());
   out.menuSauKhiBam = {
     on: mnav.classList.contains('on'),
     slid: mnav.classList.contains('slid'),
     aria: burger.getAttribute('aria-expanded'),
     soMuc: mnav.querySelectorAll('a').length,
-    nhan: mnav.querySelectorAll('a').length ? [...mnav.querySelectorAll('a')].map(a => a.textContent.trim()).slice(0, 4) : []
+    nhan: mobileLabels,
+    dongBoTen: JSON.stringify(desktopLabels) === JSON.stringify(mobileLabels)
   };
   /* bấm lại lần nữa phải đóng được */
   click('#czBurger'); await wait(60);
@@ -138,6 +141,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   if (!out.reduce) loi.push('không giả lập được chế độ giảm chuyển động');
   if (!out.menuSauKhiBam.on || !out.menuSauKhiBam.slid) loi.push('menu không mở khi bật giảm chuyển động');
   if (!out.menuSauKhiBam.soMuc || out.menuSauKhiBam.soMuc < 4) loi.push('menu mở nhưng không có mục nào');
+  if (!out.menuSauKhiBam.dongBoTen) loi.push('tên menu mobile lệch với header web');
   if (out.menuSauKhiBam.aria !== 'true') loi.push('aria-expanded không đổi');
   if (!out.menuDongLai) loi.push('bấm lần hai không đóng menu');
   if (!out.menuEscDong) loi.push('Esc không đóng menu');

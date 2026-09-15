@@ -1062,21 +1062,22 @@
   /* ======================= 8. ĐẦU TRANG / CHÂN TRANG =================== */
   function mountHeader(host, active) {
     if (!host) return;
-    /* header: chỉ icon + nhãn ngắn, nhưng là TIẾNG VIỆT cho khớp phần còn lại
-       của web (trước đây để lẫn tiếng Anh: Library, Latest, Top vote, Schedule). */
+    /* Một nhãn dùng chung cho header desktop, menu mobile và tiêu đề các khối
+       trên trang. Trước đây desktop dùng tên rút gọn còn mobile dùng `vi`, nên
+       cùng một điểm đến lại hiện hai cách gọi khác nhau. */
     var NAV = [
-      { k: 'library', l: 'Thư viện', vi: 'Thư viện truyện', i: 'library', h: '/#thu-vien' },
-      { k: 'new', l: 'Mới', vi: 'Truyện mới cập nhật', i: 'sparkle', h: '/#moi-cap-nhat' },
-      { k: 'rank', l: 'Bình chọn', vi: 'Bảng xếp hạng theo bình chọn', i: 'trophy', h: '/#bxh' },
-      { k: 'sched', l: 'Lịch', vi: 'Lịch ra chương', i: 'calendar', h: '/#lich' }
+      { k: 'library', label: 'Thư viện', i: 'library', h: '/#thu-vien' },
+      { k: 'new', label: 'Mới cập nhật', i: 'sparkle', h: '/#moi-cap-nhat' },
+      { k: 'rank', label: 'Bình chọn nhiều nhất', i: 'trophy', h: '/#bxh' },
+      { k: 'sched', label: 'Lịch ra chương', i: 'calendar', h: '/#lich' }
     ];
     var links = NAV.map(function (n) {
-      return '<a href="' + n.h + '" data-k="' + n.k + '"' + (n.k === active ? ' class="on"' : '') + ' title="' + esc(n.vi) + '" aria-label="' + esc(n.vi) + '">' +
-        icon(n.i, 'i-s') + '<span class="nav-lbl">' + esc(n.l) + '</span></a>';
+      return '<a href="' + n.h + '" data-k="' + n.k + '"' + (n.k === active ? ' class="on"' : '') + ' title="' + esc(n.label) + '" aria-label="' + esc(n.label) + '">' +
+        icon(n.i, 'i-s') + '<span class="nav-lbl">' + esc(n.label) + '</span></a>';
     }).join('');
     var mLinks = NAV.map(function (n) {
-      return '<a href="' + n.h + '" data-k="' + n.k + '"' + (n.k === active ? ' class="on"' : '') + '>' +
-        icon(n.i, 'i-s') + ' ' + esc(n.vi) + '</a>';
+      return '<a href="' + n.h + '" data-k="' + n.k + '"' + (n.k === active ? ' class="on"' : '') + ' aria-label="' + esc(n.label) + '">' +
+        icon(n.i, 'i-s') + ' ' + esc(n.label) + '</a>';
     }).join('');
     host.className = 'hdr';
     host.innerHTML = '<div class="in">' +
@@ -1171,9 +1172,9 @@
               (ad ? '<em class="role">' + icon('shield', 'i-s') + 'quản trị</em>' : '') + '</span>' +
             '</div>' +
             '<button type="button" role="menuitem" id="czAuthEdit">' + icon('edit', 'i-s') + 'Chỉnh sửa hồ sơ</button>' +
-            '<a href="/#ban-doc" role="menuitem">' + icon('shelf', 'i-s') + 'Tủ truyện của tôi</a>' +
+            '<a href="/#ban-doc" role="menuitem">' + icon('shelf', 'i-s') + 'Tủ truyện</a>' +
             '<a href="/#ban-doc" role="menuitem">' + icon('clock', 'i-s') + 'Đang đọc dở</a>' +
-            (ad ? '<a href="/admin" role="menuitem" class="adm">' + icon('gear', 'i-s') + 'Trang quản trị</a>' : '') +
+            (ad ? '<a href="/admin" role="menuitem" class="adm">' + icon('gear', 'i-s') + 'Quản trị</a>' : '') +
             '<button type="button" role="menuitem" id="czAuthOut" class="out">' + icon('logout', 'i-s') + 'Đăng xuất</button>';
         }
         if (mwrap) {

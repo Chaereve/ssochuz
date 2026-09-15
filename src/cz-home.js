@@ -2,7 +2,7 @@
    ssochuz · TRANG CHỦ (bố cục hero landing)
    ----------------------------------------------------------------------------
    Thứ tự trang: hero → dải số liệu → Bàn đọc (đang đọc dở / tủ truyện) →
-   Mới cập nhật → Thư viện truyện → Xếp hạng → Lịch ra chương.
+   Mới cập nhật → Thư viện → Bình chọn nhiều nhất → Lịch ra chương.
    Mỗi mục là MỘT KHỐI RIÊNG (không gom vào tab “Khám phá” như trước) nên cuộn
    là thấy hết, bấm menu là nhảy đúng khối, và mỗi khối tự đứng một mình.
    Số liệu đọc/bình chọn lấy từ Worker (KV); không đọc được thì KHÔNG hiện số nào.
