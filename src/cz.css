@@ -54,9 +54,20 @@ section[id], [id^="pane-"] { scroll-margin-top: 16px; }
   --ctl: 36px;      /* chiều cao điều khiển (nút, ô, chip) trên thanh đầu trang */
   --ctl-lg: 40px;   /* chiều cao điều khiển một dòng trong nội dung (ô lọc, ô nhập) */
   /* ---- BỘ CHUYỂN ĐỘNG (theo thang đo transitions.dev) --------------------
-     Nguyên tắc: chỉ chạy trên transform / opacity / filter (không đụng layout),
-     MỞ chậm – ĐÓNG nhanh, khoảng cách 16px, nhoè 2px, thu 0.96, và mọi thứ
-     tắt hẳn khi người dùng bật “giảm chuyển động”. Đừng đặt nhịp riêng ở nơi khác. */
+     Nguyên tắc: chỉ chạy trên transform / opacity — hai thuộc tính duy nhất trình
+     duyệt chạy được trên luồng compositor, không cần layout lại hay vẽ lại.
+     MỞ chậm – ĐÓNG nhanh, khoảng cách 16px, thu 0.96, và mọi thứ tắt hẳn khi
+     người dùng bật “giảm chuyển động”. Đừng đặt nhịp riêng ở nơi khác.
+     BA ĐIỀU CẤM (đã dọn sạch ngày 2026-09-15, đừng thêm lại):
+       1. KHÔNG animate width/height/left/top/right/bottom/grid-template-rows cho
+          thứ chạy lặp lại theo khung hình (vạch tiến độ, con chạy tab). Thanh nào
+          cần lớn dần thì cho width cố định rồi scale theo trục X — xem #sprog i.
+       2. KHÔNG animate filter: blur(). Blur bắt trình duyệt dựng buffer ngoài cỡ
+          phần tử rồi lọc lại từng khung; trên slide hero hay cột chữ trang đọc
+          (to bằng cả màn hình) thì đó là chỗ giật thấy rõ nhất. Chỉ filter tĩnh
+          (nền hero blur 44px một lần) và brightness() trên nút nhỏ là được giữ.
+       3. KHÔNG backdrop-filter trên lớp phủ mở/đóng có transition: mỗi khung hình
+          phải lọc lại cả vùng màn hình phía sau. Nền tối hơn một chút là đủ. */
   --ease: cubic-bezier(.22, 1, .36, 1);         /* mở: vào nhanh, dừng êm */
   --ease-out: cubic-bezier(.22, 1, .36, 1);
   --ease-close: cubic-bezier(.4, 0, 1, 1);      /* đóng: đi thẳng, dứt khoát */
@@ -69,7 +80,6 @@ section[id], [id^="pane-"] { scroll-margin-top: 16px; }
   --t-slow: .45s;   /* hiện dần khi cuộn, chuyển cảnh trang */
   --t-theme: .16s;  /* lật nền sáng ⇄ tối — xem khối “LẬT NỀN” bên dưới vì sao là .16s */
   --mo-dist: 16px;  /* quãng dịch chuyển của lớp nổi */
-  --mo-blur: 2px;   /* nhoè khi giao nhau giữa hai trạng thái */
   --mo-scale: .96;  /* thu nhỏ lúc chưa mở */
   --sh-hover: 0 14px 30px -18px rgba(30, 20, 10, .5);
   --rd-size: 18px; --rd-line: 1.8; --rd-w: 720px; --rd-para: 1.05em; --rd-font: var(--font-head);
@@ -165,7 +175,11 @@ body.hpage { --maxw: 1220px; }              /* trang chủ rộng hơn cho hero 
 body.spage .wrap { max-width: 1080px; }     /* trang truyện/đọc hẹp hơn, mắt đỡ quét ngang */
 body.admin { --maxw: 1400px; }              /* bảng dữ liệu cần chỗ */
 #sprog { position: fixed; inset: 0 0 auto; height: 2px; z-index: 60; pointer-events: none; }
-#sprog i { display: block; height: 100%; width: 0; background: var(--acc); }
+/* Vạch này được JS ghi lại MỖI khung hình khi cuộn, nên nó phải là thuộc tính
+   compositor: width cố định 100% rồi scaleX. Ghi width từng khung vừa bắt layout
+   lại vừa làm lần đọc scrollHeight kế tiếp thành đọc-cưỡng-bức (layout thrash). */
+#sprog i { display: block; height: 100%; width: 100%; background: var(--acc);
+  transform: scaleX(0); transform-origin: 0 50%; }
 body.reading #sprog { display: none !important; }
 
 /* ---- THANH ĐẦU TRANG (masthead) -----------------------------------------
@@ -249,9 +263,12 @@ body, .hdr, .hero, .hero .foot, .facts, .ftr, .fbox, .sechead, .authcard {
 .nav a .nav-lbl { display: inline; font-size: inherit; font-weight: inherit; letter-spacing: inherit; }
 /* icon của mục điều hướng chỉ hiện khi nhãn chữ bị ẩn (màn 761–900px) */
 .nav a .i { display: none; }
-.nav .ink { position: absolute; left: 0; bottom: -1px; width: 0; height: 2px; background: var(--acc);
+/* Gạch chân trượt theo mục đang đọc. Nền rộng 100px, JS đặt
+   translateX(vị trí) + scaleX(rộng / 100) — cả hai đều là transform. */
+.nav .ink { position: absolute; left: 0; bottom: -1px; width: 100px; height: 2px; background: var(--acc);
   border-radius: 2px 2px 0 0; opacity: 0; pointer-events: none;
-  transition: transform var(--t-mid) var(--ease), width var(--t-mid) var(--ease), opacity var(--t) linear; }
+  transform: translateX(0) scaleX(0); transform-origin: 0 50%;
+  transition: transform var(--t-mid) var(--ease), opacity var(--t) linear; }
 
 /* cụm tiện ích: cùng một cỡ, cùng một kiểu viền; trỏ vào chỉ đổi màu, không nhấc */
 .hbtn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: var(--ctl);
@@ -512,9 +529,13 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .src.err .dot { background: var(--warn); }
 .src a { color: var(--mut); text-decoration: underline; text-underline-offset: 2px; }
 .tabs { position: relative; display: flex; gap: 3px; flex-wrap: wrap; align-items: center; }
+/* Con chạy tab. Vị trí đi bằng translate3d (compositor); riêng width/height giữ
+   transition vì khung này có viền 1px + bo góc — scale không đều sẽ làm viền méo.
+   Phần tử absolute không con nên đổi cỡ nó không kéo theo ai layout lại. */
 .tabs > .ink { position: absolute; z-index: 0; left: 0; top: 0; width: 0; height: 0; opacity: 0; pointer-events: none;
   border-radius: var(--r); background: var(--surf2); border: 1px solid var(--bd);
-  transition: left var(--t) var(--ease), top var(--t) var(--ease), width var(--t) var(--ease),
+  transform: translate3d(0, 0, 0);
+  transition: transform var(--t) var(--ease), width var(--t) var(--ease),
     height var(--t-mid) var(--ease), opacity var(--t) linear; }
 .tabs > button { position: relative; z-index: 1; }
 .tabs > button.on { background: transparent; border-color: transparent; }
@@ -560,8 +581,10 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .slide.on { display: block; animation: hIn var(--t-slow) var(--ease-out) both; }
 .slide.ghost { display: block; position: absolute; inset: 0; z-index: 2; pointer-events: none; animation: none; }
 .slide.ghost.out { animation: hOut var(--t-slow) var(--ease) both; }
-@keyframes hIn { from { opacity: 0; transform: translateX(28px); filter: blur(4px); } }
-@keyframes hOut { to { opacity: 0; transform: translateX(-28px) scale(.985); filter: blur(5px); } }
+/* Không blur ở đây: slide hero to gần bằng cả màn hình, blur 4–5px buộc trình
+   duyệt lọc lại cả vùng đó từng khung hình trong suốt 480ms đổi slide. */
+@keyframes hIn { from { opacity: 0; transform: translateX(28px); } }
+@keyframes hOut { to { opacity: 0; transform: translateX(-28px) scale(.985); } }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } }
 .hero .col { max-width: var(--maxw); margin: 0 auto; padding: 48px 24px 40px; display: grid;
   grid-template-columns: minmax(0, 1fr) 312px; gap: 48px; align-items: center; }
@@ -629,7 +652,10 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .hero .strip button.on { opacity: 1; border-color: var(--acc); }
 .hero .strip img { width: 100%; height: 100%; object-fit: cover; }
 .hero .bar { position: absolute; inset: auto 0 0; height: 2px; }
-.hero .bar i { display: block; height: 100%; width: 0; background: var(--acc); }
+/* Vạch đếm thời gian tự đổi slide: chạy liên tục 6–7 giây, mỗi khung một lần
+   layout nếu để width. scaleX thì compositor tự chạy, main thread rảnh. */
+.hero .bar i { display: block; height: 100%; width: 100%; background: var(--acc);
+  transform: scaleX(0); transform-origin: 0 50%; }
 @media (max-width: 900px) {
   .hero .col { grid-template-columns: 1fr; gap: 30px; padding: 34px 20px 30px; }
   .hero .posterwrap { max-width: 220px; }
@@ -751,7 +777,8 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .card.list.st-soon::before { background: var(--dim); opacity: .45; }
 /* .card.list.st-run / .st-done / .st-soon: màu vạch trạng thái đã đặt ở trên */
 .card.list:hover { background: var(--surf2); }
-.card.list:hover .cl-go { gap: 10px; }
+/* Bỏ `gap: 10px` lúc trỏ: gap là thuộc tính bố cục, mỗi khung hình lại xếp chỗ
+   cho cả nhãn lẫn mũi tên. Mũi tên trượt bằng transform bên dưới là đủ. */
 .card.list .cl-th { display: block; width: 76px; aspect-ratio: 2/3; border-radius: var(--r-sm); overflow: hidden;
   border: 1px solid var(--bd); background: var(--surf2); }
 .card.list .cl-th img { width: 100%; height: 100%; object-fit: cover; }
@@ -774,7 +801,7 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .card.list .cl-ch { display: block; font-size: 13.5px; font-weight: 700; color: var(--txt); }
 .card.list .cl-year { display: block; font-size: 12px; color: var(--dim); margin-top: 4px; }
 .card.list .cl-go { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; font-size: 12.5px;
-  font-weight: 700; color: var(--acc); white-space: nowrap; transition: gap var(--t-fast) var(--ease); }
+  font-weight: 700; color: var(--acc); white-space: nowrap; }
 @media (max-width: 900px) {
   /* xem theo danh sách trên máy nhỏ: bìa một khối bên trái, chữ xếp một cột bên phải */
   .card.list { grid-template-columns: 66px minmax(0, 1fr); gap: 12px; align-items: start; }
@@ -830,14 +857,16 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rank .tt span { display: block; font-size: 12px; line-height: 1.5; color: var(--mut); margin-top: 2px; }
 .rank .v { font-size: 12px; color: var(--mut); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* 8 thanh cùng lớn lên lúc vẽ bảng xếp hạng (--w là tỉ lệ 0–1, không phải %):
+   width cố định theo left/right rồi scaleX, tránh 8 animation layout chạy song song. */
 .rank .bar { position: absolute; left: 8px; right: 8px; bottom: 0; height: 2px; background: color-mix(in srgb, var(--acc) 55%, transparent);
-  width: 0; max-width: 100%; border-radius: 2px; transform-origin: left;
+  border-radius: 2px; transform: scaleX(0); transform-origin: 0 50%;
   animation: rankBar .55s var(--ease-out) both; animation-delay: var(--d, 40ms); }
 @keyframes rankIn { from { opacity: 0; transform: translateY(10px); } }
-@keyframes rankBar { from { width: 0; } to { width: var(--w, 0%); } }
+@keyframes rankBar { from { transform: scaleX(0); } to { transform: scaleX(var(--w, 0)); } }
 @media (prefers-reduced-motion: reduce) {
   .rank, .rank .bar { animation: none; }
-  .rank .bar { width: var(--w, 0%); }
+  .rank .bar { transform: scaleX(var(--w, 0)); }
 }
 
 .schedlist { display: flex; flex-direction: column; gap: 8px; }
@@ -1076,8 +1105,9 @@ mark.hit { background: var(--acc-soft); color: var(--acc); padding: 0 2px; borde
 .stab .ct { padding: 1px 7px; border-radius: 99px; background: var(--surf2); color: var(--dim);
   font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .stab.on .ct { background: color-mix(in srgb, var(--acc) 15%, transparent); color: var(--acc); }
-.storytabs .ink { position: absolute; left: 0; bottom: -1px; width: 0; height: 2px; background: var(--acc);
-  border-radius: 2px; opacity: 0; transition: transform var(--t-mid) var(--ease), width var(--t-mid) var(--ease); }
+.storytabs .ink { position: absolute; left: 0; bottom: -1px; width: 100px; height: 2px; background: var(--acc);
+  border-radius: 2px; opacity: 0; transform: translateX(0) scaleX(0); transform-origin: 0 50%;
+  transition: transform var(--t-mid) var(--ease), opacity var(--t) linear; }
 .pin { animation: paneIn var(--t-mid) var(--ease-out) both; }
 @keyframes paneIn { from { opacity: 0; transform: translateY(10px); } }
 .infogrid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 40px; align-items: start; }
@@ -1105,14 +1135,14 @@ mark.hit { background: var(--acc-soft); color: var(--acc); padding: 0 2px; borde
 .cvol .i { transition: transform var(--t-fast) var(--ease); }
 .cvol.on .i { transform: rotate(90deg); }
 .cvol .ct { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--dim); }
-/* Gấp/mở bằng grid-template-rows 0fr→1fr, ruột mờ + nhoè dần (không đo chiều cao bằng JS) */
+/* Gấp/mở bằng grid-template-rows 0fr→1fr (không đo chiều cao bằng JS); ruột chỉ
+   mờ dần — bỏ nhoè vì ruột là cả lưới chương, blur nó là lọc lại một vùng lớn. */
 .cgroup { display: grid; grid-template-rows: 0fr; grid-column: 1 / -1;
   transition: grid-template-rows var(--t-close) var(--ease-close); }
 .cgroup.on { grid-template-rows: 1fr; transition: grid-template-rows var(--t) var(--ease); }
-.cgroup > div { overflow: hidden; min-height: 0; opacity: 0; filter: blur(var(--mo-blur));
-  transition: opacity var(--t-close) var(--ease-close), filter var(--t-close) var(--ease-close); }
-.cgroup.on > div { opacity: 1; filter: blur(0);
-  transition: opacity var(--t) var(--ease), filter var(--t) var(--ease); }
+.cgroup > div { overflow: hidden; min-height: 0; opacity: 0;
+  transition: opacity var(--t-close) var(--ease-close); }
+.cgroup.on > div { opacity: 1; transition: opacity var(--t) var(--ease); }
 .cgroup .chapgrid { padding-bottom: 8px; }
 @media (prefers-reduced-motion: reduce) { .cgroup, .cvol .i { transition: none; } }
 
@@ -1138,7 +1168,8 @@ body.rd-hide .rdbar { transform: translateY(-100%); }
 .ibo:hover, .ibo.on { background: var(--rd-surf2); color: var(--rd-acc); border-color: var(--rd-bd); }
 #rdMark.on .i { fill: currentColor; }
 .rdprog { height: 2px; background: var(--rd-bd); }
-.rdprog i { display: block; height: 100%; width: 0; background: var(--rd-acc); }
+.rdprog i { display: block; height: 100%; width: 100%; background: var(--rd-acc);
+  transform: scaleX(0); transform-origin: 0 50%; }
 .rdhead { max-width: var(--rd-w, 720px); margin: 0 auto; padding: 40px 24px 0; }
 .rdhead .rdcrumb { font-size: 12.5px; color: var(--rd-mut); margin-bottom: 14px; display: flex; gap: 7px; flex-wrap: wrap;
   align-items: center; }
@@ -1215,32 +1246,42 @@ body.rd-focus .rdbar .tools:hover { opacity: 1; }
   transition: color var(--t) var(--ease), border-color var(--t) var(--ease); }
 body.rd-focus .rdpct { opacity: .35; }
 
-/* chuyển chương: cũ trượt sang trái rồi mờ đi, mới trượt vào từ phải */
-/* riêng cột chữ trong trang đọc mới cho `color` chuyển động — nhưng cũng chỉ
-   .2s ease-out: đổi nền đọc (sang/kem/tối) mà bắt cả chương sách vẽ lại chữ
-   trong .35s linear thì đúng là khựng. */
+/* chuyển chương: cũ trượt sang trái rồi mờ đi, mới trượt vào từ phải.
+   Trang đọc là nơi blur đắt nhất — 5 khối này gộp lại phủ gần hết màn hình và đổi
+   trạng thái mỗi lần lật chương — nên chỉ còn trượt + mờ, không filter.
+   Riêng cột chữ mới cho `color` chuyển động, và cũng chỉ .2s ease-out: đổi nền đọc
+   (sang/kem/tối) mà bắt cả chương sách vẽ lại chữ trong .35s linear thì đúng là khựng. */
 #rd .rdhead, #rd .rtext, #rd .ract, #rd .rend, #rd .rnav {
-  transition: opacity var(--t) var(--ease), transform var(--t) var(--ease), filter var(--t) var(--ease),
+  transition: opacity var(--t) var(--ease), transform var(--t) var(--ease),
     background-color var(--t-theme) var(--ease-out),
     border-color var(--t-theme) var(--ease-out); }
 #rd.cut-out .rdhead, #rd.cut-out .rtext, #rd.cut-out .ract, #rd.cut-out .rend, #rd.cut-out .rnav {
-  opacity: 0; transform: translateX(-30px); filter: blur(2px); }
+  opacity: 0; transform: translateX(-30px); }
 #rd.cut-in .rdhead, #rd.cut-in .rtext, #rd.cut-in .ract, #rd.cut-in .rend, #rd.cut-in .rnav {
   animation: chapIn var(--t-slow) var(--ease-out) both; }
-@keyframes chapIn { from { opacity: 0; transform: translateX(30px); filter: blur(3px); } }
+@keyframes chapIn { from { opacity: 0; transform: translateX(30px); } }
 /* chế độ cuộn liên tục: chỉ mờ đi rồi hiện lại, không đẩy chữ sang ngang */
 #rd.cut-fade .rdhead, #rd.cut-fade .rtext, #rd.cut-fade .ract, #rd.cut-fade .rend, #rd.cut-fade .rnav {
   opacity: 0; transition: opacity .17s linear; }
 #rd.cut-in-soft .rdhead, #rd.cut-in-soft .rtext, #rd.cut-in-soft .ract, #rd.cut-in-soft .rend, #rd.cut-in-soft .rnav {
   animation: chapSoft var(--t-slow) var(--ease-out) both; }
 @keyframes chapSoft { from { opacity: 0; } }
-.rdbar.loading .rdprog { background-image: linear-gradient(90deg, transparent, color-mix(in srgb, var(--rd-acc) 40%, transparent), transparent);
-  background-size: 45% 100%; background-repeat: no-repeat; animation: scan 900ms linear infinite; }
-@keyframes scan { from { background-position: -50% 0; } to { background-position: 150% 0; } }
+/* Dải sáng chạy suốt lúc tải chương. background-position bắt vẽ lại từng khung
+   hình; đổi sang khối ::after trượt bằng transform thì compositor tự lo, còn main
+   thread rảnh đúng lúc đang dựng nội dung chương mới. */
+.rdbar.loading .rdprog { position: relative; overflow: hidden; }
+/* giữ đúng thứ tự vẽ như hồi dải sáng còn là background: vạch tiến độ đè lên dải. */
+.rdbar.loading .rdprog i { position: relative; z-index: 1; }
+.rdbar.loading .rdprog::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 45%;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--rd-acc) 40%, transparent), transparent);
+  animation: scan 1.3s linear infinite; }
+/* 1.3s để giữ nguyên tốc độ quét: dải mới đi hết 166% chiều rộng (ra hẳn hai mép)
+   thay vì 110% như background-position cũ. */
+@keyframes scan { from { transform: translateX(-110%); } to { transform: translateX(260%); } }
 @media (prefers-reduced-motion: reduce) {
   #rd.cut-in .rdhead, #rd.cut-in .rtext, #rd.cut-in .ract, #rd.cut-in .rend, #rd.cut-in .rnav,
   #rd.cut-in-soft .rdhead, #rd.cut-in-soft .rtext, #rd.cut-in-soft .ract, #rd.cut-in-soft .rend, #rd.cut-in-soft .rnav,
-  .rdbar.loading .rdprog { animation: none; }
+  .rdbar.loading .rdprog::after { animation: none; }
   #rd.cut-out .rdhead, #rd.cut-out .rtext, #rd.cut-out .ract, #rd.cut-out .rend, #rd.cut-out .rnav,
   #rd.cut-fade .rdhead, #rd.cut-fade .rtext, #rd.cut-fade .ract, #rd.cut-fade .rend, #rd.cut-fade .rnav { opacity: 1; transform: none; filter: none; }
 }
@@ -1300,14 +1341,14 @@ body.reading .sgrp, body.reading .toastline, body.reading .rnav button, body.rea
 /* ======================= 13. LỚP NỔI (toast, modal, ngăn kéo) ============= */
 .toasts { position: fixed; right: 18px; bottom: 18px; z-index: 85; display: flex; flex-direction: column; gap: 10px;
   max-width: min(92vw, 380px); }
-/* Thông báo: trồi lên 350ms với mờ + nhoè + thu nhẹ, biến mất 250ms (đóng nhanh hơn mở). */
+/* Thông báo: trồi lên 350ms với mờ + thu nhẹ, biến mất 250ms (đóng nhanh hơn mở). */
 .toast { background: var(--surf); border: 1px solid var(--bd2); color: var(--txt); padding: 12px 16px;
-  border-radius: var(--r); font-size: 13.5px; box-shadow: var(--sh-lg); will-change: transform, opacity, filter;
-  opacity: 0; transform: translateY(var(--mo-dist)) scale(.97); filter: blur(var(--mo-blur));
-  transition: transform var(--t-mid) var(--ease), opacity var(--t-mid) var(--ease), filter var(--t-mid) var(--ease); }
-.toast.in { opacity: 1; transform: none; filter: blur(0); }
-.toast.out { opacity: 0; transform: translateY(6px) scale(.98); filter: blur(var(--mo-blur));
-  transition: transform var(--t-close) var(--ease-close), opacity var(--t-close) var(--ease-close), filter var(--t-close) var(--ease-close); }
+  border-radius: var(--r); font-size: 13.5px; box-shadow: var(--sh-lg);
+  opacity: 0; transform: translateY(var(--mo-dist)) scale(.97);
+  transition: transform var(--t-mid) var(--ease), opacity var(--t-mid) var(--ease); }
+.toast.in { opacity: 1; transform: none; }
+.toast.out { opacity: 0; transform: translateY(6px) scale(.98);
+  transition: transform var(--t-close) var(--ease-close), opacity var(--t-close) var(--ease-close); }
 .toast.ok { border-left: 3px solid var(--ok); }
 .toast.err { border-left: 3px solid var(--bad); }
 /* Hộp thoại: mở 250ms / đóng 150ms (bất đối xứng như transitions.dev), chỉ
@@ -1317,7 +1358,7 @@ body.reading .sgrp, body.reading .toastline, body.reading .rnav button, body.rea
    bấm. Vì vậy chính lớp phủ cuộn, và hộp thoại chừa lề dưới. */
 .modal { position: fixed; inset: 0; z-index: 88; display: none; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
 .modal.on { display: block; }
-.modal .scrim { position: absolute; inset: 0; background: rgba(18, 12, 8, .5);
+.modal .scrim { position: absolute; inset: 0; background: rgba(18, 12, 8, .56);
   opacity: 1; transition: opacity var(--t-close) var(--ease-close); }
 .modal.on .scrim { opacity: 1; }
 .modal.closing .scrim { opacity: 0; }
@@ -1344,7 +1385,7 @@ body.reading .sgrp, body.reading .toastline, body.reading .rnav button, body.rea
 .modal .mb .okbox b { font-size: 14.5px; }
 .jump { position: fixed; inset: 0; z-index: 87; display: none; overflow-y: auto; overscroll-behavior: contain; }
 .jump.on { display: block; }
-.jump .scrim { position: absolute; inset: 0; background: rgba(18, 12, 8, .5);
+.jump .scrim { position: absolute; inset: 0; background: rgba(18, 12, 8, .56);
   opacity: 1; transition: opacity var(--t-close) var(--ease-close); }
 .jump.closing .scrim { opacity: 0; }
 .jump .box { position: relative; margin: min(10vh, 48px) auto 32px; width: min(640px, 92vw); background: var(--surf);
@@ -1372,7 +1413,7 @@ body.reading .sgrp, body.reading .toastline, body.reading .rnav button, body.rea
   font-size: 12px; color: var(--dim); }
 .sheet { position: fixed; inset: 0; z-index: 65; display: none; }
 .sheet.on { display: block; }
-.sheet .scrim { position: absolute; inset: 0; background: rgba(18, 12, 8, .45);
+.sheet .scrim { position: absolute; inset: 0; background: rgba(18, 12, 8, .5);
   opacity: 1; transition: opacity var(--t-close) var(--ease-close); }
 .sheet.closing .scrim { opacity: 0; }
 .sheet .pan { position: absolute; right: 0; top: 0; bottom: 0; width: min(430px, 92vw);
@@ -1631,9 +1672,10 @@ body[data-rd-font="sans"], body[data-rd-font="bevn"], body[data-rd-font="roboto"
 
 /* thanh tiến trình mỗi lần chuyển trang (JS gắn vào <body>) */
 #nprog { position: fixed; inset: 0 0 auto; height: 2px; z-index: 70; pointer-events: none; }
-#nprog i { display: block; height: 100%; width: 0; background: var(--acc); opacity: 0;
+#nprog i { display: block; height: 100%; width: 100%; background: var(--acc); opacity: 0;
   box-shadow: 0 0 10px color-mix(in srgb, var(--acc) 70%, transparent);
-  transition: width var(--t-slow) var(--ease-out), opacity var(--t-fast) linear; }
+  transform: scaleX(0); transform-origin: 0 50%;
+  transition: transform var(--t-slow) var(--ease-out), opacity var(--t-fast) linear; }
 body.page-in main { animation: pageIn var(--t-slow) var(--ease-out) both; }
 @keyframes pageIn { from { opacity: 0; transform: translateY(10px); } }
 
@@ -1687,15 +1729,17 @@ body.page-in main { animation: pageIn var(--t-slow) var(--ease-out) both; }
 /* danh sách: dòng tiêu đề không dính theo khi cuộn */
 .grid.list-view .list-head { background: var(--bg); padding-top: 12px; }
 .card.list:hover { background: color-mix(in srgb, var(--surf2) 70%, transparent); }
-.card.list::before { transition: width var(--t) var(--ease), opacity var(--t) var(--ease); }
-.card.list:hover::before { width: 3px; opacity: 1; }
+.card.list::before { transition: transform var(--t) var(--ease), opacity var(--t) var(--ease);
+  transform-origin: 0 50%; }
+.card.list:hover::before { transform: scaleX(1.5); opacity: 1; }
 .card.list .cl-go .i { transition: transform var(--t-fast) var(--ease); }
-.card.list:hover .cl-go .i { transform: translateX(3px); }
+.card.list:hover .cl-go .i { transform: translateX(6px); }
 .card.list:active { background: var(--surf3); }
 
 /* hộp thoại & ngăn kéo: mờ dần + phóng rất nhẹ, không bật ra đột ngột */
-.modal .scrim, .sheet .scrim, .jump .scrim { opacity: 0; transition: opacity var(--t) var(--ease);
-  backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+/* Bỏ backdrop-filter: lớp phủ mờ dần 250ms, tức là lọc lại cả vùng màn hình phía
+   sau từng khung hình. Nền rgba đậm thêm .06 đủ tách nội dung nổi mà không tốn gì. */
+.modal .scrim, .sheet .scrim, .jump .scrim { opacity: 0; transition: opacity var(--t) var(--ease); }
 .modal.on .scrim, .sheet.on .scrim, .jump.on .scrim { opacity: 1; }
 .jump.on .box { animation: boxIn var(--t) var(--ease-out) both; }
 .modal .box, .modal .mbx { transition: transform var(--t) var(--ease-out), opacity var(--t) var(--ease-out); }
@@ -1705,17 +1749,17 @@ body.page-in main { animation: pageIn var(--t-slow) var(--ease-out) both; }
 .modal .box .mb .ta { width: 100%; }
 
 /* nảy nhẹ khi vừa lưu / thích / đánh dấu (JS: CZ.pop) */
-/* đổi icon tại chỗ (mặt trời ⇄ mặt trăng): thu nhỏ + nhoè rồi hiện lại */
+/* đổi icon tại chỗ (mặt trời ⇄ mặt trăng): thu nhỏ + xoay rồi hiện lại */
 .iswap .i, .i.iswap { animation: iswap var(--t) var(--ease-soft) both; }
 @keyframes iswap {
-  0% { transform: scale(.25) rotate(-25deg); opacity: 0; filter: blur(var(--mo-blur)); }
-  100% { transform: none; opacity: 1; filter: blur(0); }
+  0% { transform: scale(.25) rotate(-25deg); opacity: 0; }
+  100% { transform: none; opacity: 1; }
 }
-/* số vừa đổi (phiếu, lượt đọc): trồi lên kèm nhoè, không nhảy khô */
+/* số vừa đổi (phiếu, lượt đọc): trồi lên rồi dừng, không nhảy khô */
 .numrun { animation: numpop var(--t-mid) var(--ease-spring) both; }
 @keyframes numpop {
-  0% { transform: translateY(6px); opacity: .3; filter: blur(var(--mo-blur)); }
-  100% { transform: none; opacity: 1; filter: blur(0); }
+  0% { transform: translateY(6px); opacity: .3; }
+  100% { transform: none; opacity: 1; }
 }
 /* lỗi: rung nhẹ một nhịp rồi thôi */
 .shake { animation: shake var(--t-mid) var(--ease-soft); }
@@ -1728,7 +1772,9 @@ body.page-in main { animation: pageIn var(--t-slow) var(--ease-out) both; }
 }
 /* ảnh bìa hiện dần thay vì bật ra đột ngột */
 .card .th img, .poster img, .shero .cover img, .relcard img { animation: imgIn var(--t) var(--ease) both; }
-@keyframes imgIn { from { opacity: 0; filter: blur(3px); } to { opacity: 1; filter: blur(0); } }
+/* Ảnh bìa 300×450 mà blur thì mỗi tấm là một buffer lọc riêng; trang chủ có mấy
+   chục tấm hiện cùng lúc. Chỉ fade là đủ êm. */
+@keyframes imgIn { from { opacity: 0; } to { opacity: 1; } }
 /* dấu tick vẽ dần khi báo gửi thành công */
 .okbox .i path, .toast.ok .i path { stroke-dasharray: 26; animation: draw var(--t-mid) var(--ease) both; }
 @keyframes draw { from { stroke-dashoffset: 26; } to { stroke-dashoffset: 0; } }

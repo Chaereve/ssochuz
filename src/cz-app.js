@@ -944,7 +944,9 @@
       requestAnimationFrame(function () {
         var y = w.scrollY || 0;
         var h = d.documentElement.scrollHeight - w.innerHeight;
-        if (bar) bar.style.width = (h > 0 ? Math.min(100, Math.max(0, y / h * 100)) : 0) + '%';
+        /* scaleX chứ không phải width: ghi width mỗi khung hình vừa bắt layout lại
+           vừa biến lần đọc scrollHeight ở khung kế thành đọc-cưỡng-bức. */
+        if (bar) bar.style.transform = 'scaleX(' + (h > 0 ? Math.min(1, Math.max(0, y / h)) : 0) + ')';
         if (top) top.classList.toggle('on', y > 700);
         d.body.classList.toggle('scrolled', y > 8);
         /* thanh trên không còn trượt theo / ẩn hiện khi cuộn — đứng yên với trang */
@@ -1033,10 +1035,10 @@
     var fill = bar.firstChild;
     d.body.classList.add('page-in');
     if (!reduce) {
-      fill.style.width = '10%'; fill.style.opacity = '1';
-      requestAnimationFrame(function () { fill.style.width = '64%'; });
+      fill.style.transform = 'scaleX(.1)'; fill.style.opacity = '1';
+      requestAnimationFrame(function () { fill.style.transform = 'scaleX(.64)'; });
       setTimeout(function () {
-        fill.style.width = '100%';
+        fill.style.transform = 'scaleX(1)';
         setTimeout(function () { fill.style.opacity = '0'; }, 220);
       }, 240);
     }
@@ -1055,7 +1057,7 @@
       if (u.origin !== w.location.origin) return;
       if (u.pathname === w.location.pathname && u.search === w.location.search) return;
       e.preventDefault();
-      fill.style.opacity = '1'; fill.style.width = '92%';
+      fill.style.opacity = '1'; fill.style.transform = 'scaleX(.92)';
       var go = function () { w.location.href = link.href; };
       if (reduce) go(); else setTimeout(go, 170);
     }, true);
@@ -1078,8 +1080,10 @@
     var on = el.querySelector('button.on');
     if (!on) { iv.style.opacity = '0'; return; }
     var bar2 = el.classList.contains('bar');
-    iv.style.left = on.offsetLeft + 'px';
-    iv.style.top = (bar2 ? (el.offsetHeight - 2) : on.offsetTop) + 'px';
+    /* vị trí bằng translate3d (compositor); cỡ vẫn đặt width/height vì khung này
+       có viền 1px + bo góc, scale không đều sẽ làm viền méo. */
+    iv.style.transform = 'translate3d(' + on.offsetLeft + 'px,' +
+      (bar2 ? (el.offsetHeight - 2) : on.offsetTop) + 'px,0)';
     iv.style.width = on.offsetWidth + 'px';
     iv.style.height = (bar2 ? 2 : on.offsetHeight) + 'px';
     iv.style.opacity = '1';
@@ -1310,8 +1314,8 @@
     function mark(el) {
       links.forEach(function (a) { a.classList.toggle('on', a === el); });
       if (!el) { ink.style.opacity = '0'; return; }
-      ink.style.width = el.offsetWidth + 'px';
-      ink.style.transform = 'translateX(' + el.offsetLeft + 'px)';
+      /* .nav .ink có nền 100px: scaleX(w/100) cho đúng độ dài, không animate width */
+      ink.style.transform = 'translateX(' + el.offsetLeft + 'px) scaleX(' + (el.offsetWidth / 100) + ')';
       ink.style.opacity = '1';
     }
     var here = links.filter(function (a) { return a.classList.contains('on'); })[0];

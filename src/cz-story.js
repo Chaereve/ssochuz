@@ -153,8 +153,8 @@
     if (!bar || !ink) return;
     var on = bar.querySelector('.stab.on');
     if (!on) { ink.style.opacity = '0'; return; }
-    ink.style.width = on.offsetWidth + 'px';
-    ink.style.transform = 'translateX(' + on.offsetLeft + 'px)';
+    /* .storytabs .ink có nền 100px: scaleX(w/100), không animate width */
+    ink.style.transform = 'translateX(' + on.offsetLeft + 'px) scaleX(' + (on.offsetWidth / 100) + ')';
     ink.style.opacity = '1';
   }
   function showTab(k, scroll) {
@@ -760,7 +760,7 @@
     var kids = Array.prototype.slice.call(txt.children);
     if (!kids.length) return;
     kids.forEach(function (el, i) { el.style.display = (i >= seg[0] && i <= seg[1]) ? '' : 'none'; });
-    $('#rdProgFill').style.width = (PAGES.length > 1 ? Math.round((PI + 1) / PAGES.length * 100) : 100) + '%';
+    $('#rdProgFill').style.transform = 'scaleX(' + (PAGES.length > 1 ? (PI + 1) / PAGES.length : 1) + ')';
     renderNav(true);
   }
   function repaginate() {
@@ -1034,7 +1034,7 @@
       ? '<div class="endrule" aria-hidden="true"></div><div class="endline"><span class="endsub">Bộ này đang cập nhật — lưu vào tủ truyện để quay lại khi có chương mới.</span></div><a class="btn ghost sm mt" href="' + esc(CZ.storyURL(N.slug)) + '" id="endInfo">' + ic('info', 'i-s') + 'Thông tin truyện</a>'
       : '<div class="endrule" aria-hidden="true"></div>';
     if (!keepScroll) window.scrollTo({ top: 0, behavior: 'auto' });
-    $('#rdProgFill').style.width = (CHS.length ? Math.round(cur / CHS.length * 100) : 0) + '%';
+    $('#rdProgFill').style.transform = 'scaleX(' + (CHS.length ? cur / CHS.length : 0) + ')';
     var pct = $('#rdPct');
     if (pct) pct.textContent = Math.round((CZ.rdGet().mode === 'paged' && PAGES.length ? (PI + 1) / PAGES.length : 1 / Math.max(1, CHS.length)) * 100) + '%';
     CZ.setProgress(N, cur);
@@ -1111,30 +1111,37 @@
       wake();
     }, { passive: true });
   });
-  var rdLastY = 0;
+  var rdLastY = 0, rdTick = false;
   window.addEventListener('scroll', function () {
-    if (!reading) return;
-    var y = window.scrollY || 0, dy = y - rdLastY;
-    /* cuộn xuống: khoá wake một nhịp để pointermove khỏi nhấp nháy thanh trên */
-    if (Math.abs(dy) > 6) {
-      if (dy >= 12 && y > 160 && !document.body.classList.contains('rd-focus')) {
-        document.body.classList.add('rd-hide');
-        rdLock = 1;
-        clearTimeout(idleT);
-        clearTimeout(wake._ul);
-        wake._ul = setTimeout(function () { rdLock = 0; }, 320);
-      } else if (dy < 0) { rdLock = 0; wake(); }
-      rdLastY = y;
-    }
-    /* tiến độ đọc trong chương (theo vị trí cuộn) */
-    if (CZ.rdGet().mode === 'paged') return;
-    var h = document.documentElement.scrollHeight - window.innerHeight;
-    if (h > 0) {
-      var p = Math.min(100, Math.max(0, y / h * 100));
-      $('#rdProgFill').style.width = p + '%';
-      var pc = $('#rdPct');
-      if (pc) pc.textContent = Math.round(p) + '%';
-    }
+    /* sự kiện cuộn có thể bắn nhiều lần trong một khung hình; dồn về một lần
+       đọc-ghi duy nhất để không tính lại bố cục thừa. */
+    if (!reading || rdTick) return;
+    rdTick = true;
+    requestAnimationFrame(function () {
+      rdTick = false;
+      var y = window.scrollY || 0, dy = y - rdLastY;
+      /* cuộn xuống: khoá wake một nhịp để pointermove khỏi nhấp nháy thanh trên */
+      if (Math.abs(dy) > 6) {
+        if (dy >= 12 && y > 160 && !document.body.classList.contains('rd-focus')) {
+          document.body.classList.add('rd-hide');
+          rdLock = 1;
+          clearTimeout(idleT);
+          clearTimeout(wake._ul);
+          wake._ul = setTimeout(function () { rdLock = 0; }, 320);
+        } else if (dy < 0) { rdLock = 0; wake(); }
+        rdLastY = y;
+      }
+      /* tiến độ đọc trong chương (theo vị trí cuộn) */
+      if (CZ.rdGet().mode === 'paged') return;
+      var h = document.documentElement.scrollHeight - window.innerHeight;
+      if (h > 0) {
+        var f = Math.min(1, Math.max(0, y / h));
+        var fill = $('#rdProgFill');
+        if (fill) fill.style.transform = 'scaleX(' + f + ')';
+        var pc = $('#rdPct');
+        if (pc) pc.textContent = Math.round(f * 100) + '%';
+      }
+    });
   }, { passive: true });
 
   $('#storyTabs').addEventListener('click', function (e) {

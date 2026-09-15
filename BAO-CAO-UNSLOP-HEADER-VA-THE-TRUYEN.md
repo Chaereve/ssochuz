@@ -548,3 +548,118 @@ jsdom trang quản trị (Worker giả):
   có chương · status đổi được thành “Hoàn thành” · 0 lỗi JS
 jsdom guide.html: chân trang + logo hiện đúng, 0 lỗi JS
 ```
+
+---
+
+## 10. Bổ sung 2026-09-15 (lần 4) — độ mượt của animation toàn trang
+
+Yêu cầu: *“cải thiện độ mượt của animation toàn trang”*. Đây không phải việc thêm
+hiệu ứng mới mà là **dọn những hiệu ứng đang chạy sai tầng**: trình duyệt chỉ chạy
+mượt khi animation nằm trên `transform`/`opacity` (luồng compositor, không cần xếp
+chỗ lại, không cần vẽ lại). Mọi thứ khác — `width`, `left`, `top`, `gap`,
+`filter: blur()`, `backdrop-filter` — đều bắt luồng chính làm việc **ở từng khung
+hình**, và đó chính là chỗ khựng.
+
+### 10.1 Ba nhóm thủ phạm tìm thấy khi rà `src/cz.css` + `src/*.js`
+
+**Nhóm 1 — thuộc tính bố cục bị animate theo khung hình (10 khai báo).**
+Nặng nhất là ba vạch tiến độ: vạch cuộn trang `#sprog i` (JS ghi `style.width`
+*mỗi khung hình khi cuộn*), vạch tự đổi slide `.hero .bar i` (chạy **liên tục
+6–7 giây** bằng `transition: width … linear`), và tiến độ đọc `.rdprog i` (ghi
+theo sự kiện cuộn, chưa dồn khung). Cộng thêm vạch chuyển trang `#nprog i`,
+gạch chân `.nav .ink` / `.storytabs .ink` (animate `width`), con chạy `.tabs > .ink`
+(animate cả `left, top, width, height`), vạch trạng thái `.card.list::before`
+(`width`), và `gap` của cụm “Đọc tiếp”.
+
+Hệ quả kép: ghi `width` làm bẩn bố cục, nên lần đọc `scrollHeight` ở khung hình
+kế tiếp trở thành **đọc cưỡng bức** (layout thrash) ngay trong lúc người dùng
+đang cuộn.
+
+**Nhóm 2 — `filter: blur()` bị animate (18 chỗ).**
+Blur không phải “thuộc tính rẻ”: trình duyệt phải dựng một buffer ngoài cỡ phần
+tử rồi lọc lại từng khung. Mà các phần tử đang bị làm nhoè lại to nhất trang:
+hai slide hero lúc đổi bộ (`hIn` blur 4px / `hOut` blur 5px — mỗi slide gần bằng
+cả màn hình), **năm khối của trang đọc** `.rdhead/.rtext/.ract/.rend/.rnav`
+(blur 2–3px mỗi lần lật chương), ruột nhóm chương `.cgroup > div` (cả lưới
+chương), ảnh bìa `imgIn` (mấy chục tấm 300×450 hiện cùng lúc), `.toast`, `iswap`,
+`numpop`. Kèm theo là `backdrop-filter: blur(2px)` trên lớp phủ hộp thoại/tấm
+trượt/bảng nhảy chương — mờ dần 250ms nghĩa là **lọc lại cả vùng màn hình phía
+sau** từng khung hình.
+
+**Nhóm 3 — hai animation vô hạn chạy bằng paint.**
+`@keyframes rankBar` cho 8 thanh xếp hạng cùng lớn lên bằng `width` lúc vẽ bảng
+(8 animation layout song song ngay thời điểm bận nhất), và `@keyframes scan`
+quét `background-position` suốt lúc tải chương — đúng lúc đang dựng nội dung
+chương mới. Ngoài ra handler cuộn của trang đọc chạy **mỗi sự kiện cuộn** (có
+thể nhiều lần trong một khung hình) chứ không dồn về một khung.
+
+### 10.2 Đã sửa
+
+| Thủ phạm | Cách xử lý |
+| --- | --- |
+| `#sprog i`, `.hero .bar i`, `.rdprog i`, `#nprog i` | `width: 100%` cố định + `transform: scaleX(0)`, `transform-origin: 0 50%`; JS ghi `scaleX(tỉ lệ)` thay vì `width: %` |
+| `.nav .ink`, `.storytabs .ink` | nền `width: 100px`; JS đặt `translateX(offsetLeft) scaleX(offsetWidth / 100)` |
+| `.tabs > .ink` | vị trí sang `translate3d(x, y, 0)`; **giữ** `width/height` (khung có viền 1px + bo góc, scale không đều sẽ làm viền méo) |
+| `.card.list::before` | dày lên bằng `transform: scaleX(1.5)` |
+| `.card.list .cl-go` | bỏ animate `gap`; mũi tên trượt `translateX(6px)` (bù đúng phần gap đã bỏ) |
+| `@keyframes rankBar` | `scaleX(0) → scaleX(var(--w))`; `--w` đổi từ `62%` sang tỉ lệ `0.62` |
+| `@keyframes scan` | thành khối `::after` rộng 45% trượt `translateX`; giữ nguyên thứ tự vẽ bằng `.rdbar.loading .rdprog i { z-index: 1 }`; đổi 900ms → 1.3s để **tốc độ quét y như cũ** (dải mới đi 166% chiều rộng thay vì 110%) |
+| `hIn`, `hOut`, `chapIn`, `imgIn`, `iswap`, `numpop` | bỏ hẳn `filter: blur()`, chỉ còn trượt + mờ |
+| `.cgroup > div`, `.toast`, năm khối `#rd` | bỏ `filter` khỏi transition và khỏi trạng thái; `.toast` bỏ luôn `will-change: …, filter` |
+| lớp phủ `.modal/.sheet/.jump` | bỏ `backdrop-filter`, nền đậm lên `.5 → .56` và `.45 → .5` |
+| handler cuộn trang đọc | bọc `requestAnimationFrame` + khoá `rdTick` (nhả khoá ở **đầu** khung hình nên `return` giữa chừng không kẹt); thêm chặn null cho `#rdProgFill` |
+| `.btn` | giữ `filter` trong transition vì đó là `brightness(1.12)` lúc trỏ — phép nhân màu, không dựng buffer như blur |
+
+Token `--mo-blur` không còn ai dùng nên bị bỏ hẳn; “hiến pháp chuyển động” ở đầu
+`src/cz.css` được viết lại thành **ba điều cấm** (không animate thuộc tính bố cục
+cho thứ chạy lặp; không animate `filter: blur()`; không `backdrop-filter` trên lớp
+phủ có transition) để lần sau không ai thêm lại.
+
+### 10.3 Trước / sau (đo trên `src/cz.css`, cùng một bộ tiêu chí)
+
+```
+chỉ số                                     TRƯỚC    SAU
+khai báo transition chạy compositor           84     88
+khai báo transition animate thuộc tính
+   bố cục THEO KHUNG HÌNH (width/left/top/gap) 10      3
+khai báo transition có `filter`                  6      1   (chỉ .btn brightness)
+`filter: blur(` trong tệp                       18      1   (còn lại là nền hero TĨNH)
+`backdrop-filter`                                2      0
+@keyframes còn animate thuộc tính đắt          8/23   0/23
+chỗ JS ghi style.width                          14      2   (còn lại: gợn sóng đặt
+chỗ JS ghi style.left / style.top                4      2    theo toạ độ bấm + cỡ
+                                                             con chạy tab có viền)
+handler cuộn trang đọc                       mỗi sự kiện  1 lần/khung hình (rAF)
+```
+
+Ba chỗ `width/height` còn animate đều **một lần mỗi cú bấm** và có lý do giữ:
+`.tabs > .ink` (viền 1px sẽ méo nếu scale không đều) và `.hero .dots button`
+(chấm 2px lớn lên là để **đẩy** các chấm bên cạnh — scale sẽ đè lên nhau). Cùng
+nhóm “một lần, phải giữ luồng” là `max-height` của `.slid`/`.synwrap` và
+`grid-template-rows` của `.cgroup`: thứ gấp/mở trong luồng thì không thể thay
+bằng transform. `box-shadow` lúc trỏ (14 chỗ) giữ nguyên vì chỉ một phần tử bị
+trỏ tại một thời điểm, và `.card .th` đang `overflow: hidden` nên không thể dời
+bóng sang pseudo-element bên trong.
+
+### 10.4 Kiểm chứng
+
+```
+npm run build                        → 551.0 kB → 350.7 kB, ghi lại đủ 6 tệp gốc
+node tests/run.js                    → 15/15 ĐẠT
+node tools/check_html.js             → HTML sạch, 28 luật _redirects không vòng lặp
+node tools/check_calls.js            → không có hàm “ma”
+python3 tools/check_css.py           → 0 lớp dùng mà CSS chưa định nghĩa
+node tools/check_secrets.js          → không lộ secret
+/smoke_anim.js (67 phép kiểm)        → ĐẠT HẾT
+   · tra cz.css + cz-*.js ĐÃ NÉN (esbuild đổi ::before→:before,
+     translateX(0)→translate(0), translate3d(0,0,0)→translateZ(0), from/to→0%/100%)
+   · 12 @keyframes chỉ còn transform/opacity
+   · THỰC THI biểu thức JS với số giả: scaleX ∈ [0,1] cả khi h = 0, cuộn quá đáy,
+     y < 0, số lẻ; tiến độ phân trang/theo chương ∈ [0,1] cả khi danh sách rỗng;
+     --w = w/100 với w = 100/62/7/1/0
+   · gạch chân đúng mẫu số: nền CSS 100px ↔ JS chia 100
+cache-buster                         → v=20260915j (20 chỗ / 5 tệp HTML)
+```
+
+Không đổi một thẻ HTML nào, không đổi cấu trúc luật CSS nào — chỉ đổi **thuộc
+tính được animate** và chỗ JS ghi giá trị của chúng.
