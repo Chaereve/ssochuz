@@ -75,7 +75,7 @@
      MAIL_FROM         (tuỳ chọn)  — địa chỉ gửi của Resend, vd: ssochuz library <bao-loi@ten-mien-cua-ban>
    ============================================================================ */
 
-const VERSION = '1.9.1';
+const VERSION = '1.9.3';
 const JSONH = {
   'content-type': 'application/json; charset=utf-8',
   'x-content-type-options': 'nosniff',
@@ -258,7 +258,7 @@ function cleanPost(raw) {
        .replace(/<div[^>]+class="[^"]*(share|comment|reaction|related|adsbygoogle|post-footer|blog-pager)[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '');
   const keep = [];   /* giữ ảnh đúng thứ tự */
   h = h.replace(/<img[^>]+src="([^"]+)"[^>]*>/gi, (mm, src) => {
-    keep.push(src);
+    keep.push(safeImageSrc(src));
     return '\u0000IMG' + (keep.length - 1) + '\u0000';
   });
   /* Bỏ MỌI thuộc tính ngoài href http(s) của thẻ <a>: chặn onclick/onerror và cả
@@ -282,6 +282,18 @@ function cleanPost(raw) {
     imgs.forEach((src) => { if (src) out.push('<p><img src="' + src.replace(/"/g, '') + '" alt="" loading="lazy"></p>'); });
   });
   return out.join('\n');
+}
+
+/* Ảnh từ Blogger là dữ liệu không tin cậy: chỉ giữ URL http(s), bỏ userinfo
+   và control/quote để không thể biến thành javascript:/data: hoặc phá thuộc tính. */
+function safeImageSrc(src) {
+  const s = String(src || '').trim().slice(0, 1200);
+  if (!/^https?:\/\//i.test(s) || /[\u0000-\u001f\u007f"'<>]/.test(s)) return '';
+  try {
+    const u = new URL(s);
+    if (u.username || u.password) return '';
+    return u.href;
+  } catch (e) { return ''; }
 }
 
 function normTitle(t) {

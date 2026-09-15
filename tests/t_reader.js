@@ -445,20 +445,20 @@ function chFromLog(log) {
   closeModal(rm);
   await wait(150);
 
-  /* --- 9. icon: bộ SVG mới lấy từ IconBuddy (bộ Lucide) --- */
+  /* --- 9. icon: bộ SVG local từ Tabler, MoMo giữ hình thương hiệu --- */
   const icTim = win.CZ.icon('heart', 'i-s'), icTu = win.CZ.icon('shelf', 'i-s');
   out.iconMoi = {
     tim: icTim.replace(/\s+/g, ' ').slice(0, 80),
     tuSach: icTu.replace(/\s+/g, ' ').slice(0, 80),
-    laIconBuddy: /M2 9\.5a5\.5/.test(icTim),
+    laTabler: /<g stroke-width="1\.6" transform="translate\(-0\.72 -0\.72\) scale\(1\.06\)">/.test(icTim) && /M19\.5 12\.572/.test(icTim),
     khacNhau: icTim !== icTu,
     duIcon: ['search', 'book', 'trophy', 'clock', 'trash', 'check', 'x', 'gear', 'users', 'mail', 'alert', 'eye']
       .every(function (k) { var s = win.CZ.icon(k, 'i-s'); return s.indexOf('<svg') === 0 && s.length > 40; })
   };
-  if (!out.iconMoi.laIconBuddy) out.errors.push('icon tim không phải bản Lucide (IconBuddy)');
+  if (!out.iconMoi.laTabler) out.errors.push('icon tim chưa dùng bộ Tabler local');
   if (!out.iconMoi.duIcon) out.errors.push('có icon cơ bản chưa đổi sang bộ mới');
 
-  out.errors = errors.slice(0, 6);
+  out.errors = out.errors.concat(errors).slice(0, 6);
   console.log(JSON.stringify(out, null, 1));
   process.exit(0);
 })();

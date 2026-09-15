@@ -496,7 +496,7 @@
     $('#edView').href = CZ.storyURL(CUR.slug);
     $('#fTitle').value = CUR.title || ''; $('#fSlug').value = CUR.slug || '';
     $('#fAuthor').value = CUR.author || ''; $('#fCouple').value = CUR.couple || '';
-    $('#fYear').value = CUR.year || ''; $('#fStatus').value = CUR.status || 'Đang cập nhật';
+    $('#fYear').value = CUR.year || ''; $('#edStatus').value = CUR.status || 'Đang cập nhật';
     $('#fCount').value = CUR.countLabel || ''; $('#f18').value = CUR.is18 ? '1' : '0';
     $('#fUpdated').value = CUR.updated || today();
     $('#fThumb').value = CUR.thumb || CUR.slide || ''; $('#fSyn').value = CUR.synFull || CUR.syn || '';
@@ -517,7 +517,7 @@
     $('#edView').href = '#';
     $('#fTitle').value = CUR.title || ''; $('#fSlug').value = '';
     $('#fAuthor').value = CUR.author || ''; $('#fCouple').value = CUR.couple || '';
-    $('#fYear').value = CUR.year || ''; $('#fStatus').value = CUR.status || 'Đang cập nhật';
+    $('#fYear').value = CUR.year || ''; $('#edStatus').value = CUR.status || 'Đang cập nhật';
     $('#fCount').value = CUR.countLabel || ''; $('#f18').value = CUR.is18 ? '1' : '0';
     $('#fUpdated').value = CUR.updated || today();
     $('#fThumb').value = CUR.thumb || CUR.slide || ''; $('#fSyn').value = CUR.synFull || CUR.syn || '';
@@ -589,7 +589,7 @@
     CUR.title = $('#fTitle').value.trim() || CUR.title;
     CUR.slug = newSlug;
     CUR.author = $('#fAuthor').value.trim(); CUR.couple = $('#fCouple').value.trim();
-    CUR.year = $('#fYear').value.trim(); CUR.status = $('#fStatus').value;
+    CUR.year = $('#fYear').value.trim(); CUR.status = $('#edStatus').value;
     CUR.countLabel = $('#fCount').value.trim() || CUR.countLabel;
     CUR.is18 = $('#f18').value === '1';
     CUR.updated = $('#fUpdated').value || today();
@@ -2283,7 +2283,7 @@
   });
   $('#nSlug').addEventListener('input', function () { this.dataset.touched = '1'; });
   $('#edBack').addEventListener('click', function () { show('list'); });
-  ['#fTitle', '#fSlug', '#fAuthor', '#fCouple', '#fYear', '#fStatus', '#fCount', '#f18', '#fUpdated', '#fThumb', '#fSyn']
+  ['#fTitle', '#fSlug', '#fAuthor', '#fCouple', '#fYear', '#edStatus', '#fCount', '#f18', '#fUpdated', '#fThumb', '#fSyn']
     .forEach(function (s) { $(s).addEventListener('input', function () { dirty.meta = true; markDirty(); }); });
   $('#fSlug').addEventListener('blur', function () {
     var v = this.value.trim();

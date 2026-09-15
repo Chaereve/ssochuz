@@ -5,18 +5,18 @@ vào trang quản trị, 3 lỗi thổi số liệu/chèn mã từ dữ liệu n
 người ngoài tải mã nguồn và tài liệu nội bộ qua đường dẫn trực tiếp, rút gọn mã phát hành,
 chuyển toàn bộ chuyển động sang thang chuẩn transitions.dev, và sửa 9 điểm giao diện/mobile.**
 
-Trạng thái kiểm thử sau khi xong: **12/12 bài đạt** (`node tests/run.js`), trong đó
+Trạng thái kiểm thử sau khi xong: **13/13 bài đạt** (`node tests/run.js`), trong đó
 `t_worker.mjs` **155/155** (trước là 142 — thêm 13 phép kiểm bảo mật).
 
 ---
 
-## Đợt 2 (cùng ngày 15/09) — bộ icon Solar · shimmer · công tắc nền · **vá lỗi menu mobile**
+## Đợt 2 (cùng ngày 15/09) — bộ icon Tabler · shimmer · công tắc nền · **vá lỗi menu mobile**
 
 Bốn việc chủ trang yêu cầu, cộng phần soát lại cuối cùng:
 
 | Việc | Kết quả |
 | --- | --- |
-| **Icon các mục trong trang lấy từ iconbuddy.com/solar** | Đổi bộ Lucide → **bộ Solar** (480 Design, CC BY 4.0 — đã ghi công ở chân trang). 70 icon `-linear` sinh tự động bằng `node tools/gen_icons_solar.mjs`; 2 icon thương hiệu Google/MoMo giữ bản vẽ tay |
+| **Icon các mục trong trang lấy từ Tabler Icons** | Đổi bộ icon cũ → **Tabler Icons outline** (MIT, ghi trong mã nguồn). 72 icon outline sinh tự động bằng `node tools/gen_icons_tabler.mjs`; Google dùng icon thương hiệu Tabler, MoMo giữ hình thương hiệu riêng |
 | **Shimmer giống uiverse.io/Nawsome/light-husky-91** | Làm lại: một **dải sáng hẹp** (gradient 110°, sáng nhất ở 50%) trượt hết chiều ngang khối trong **1,2s**, chỉ animate `transform` — đúng công thức mẫu, mà không còn chạy `background-position` (tốn vẽ lại từng khung hình). Dải nằm **dưới nội dung** (::before) nên ảnh thật vừa hiện là tự che mất dải. Nền sáng dải 62% trắng, nền tối 10% (`--sheen`) |
 | **Nút light/dark theo uiverse.io/catraco/brown-termite-67** | **Công tắc trượt** chuyển thể đúng cấu trúc `back` + icon cùng cấp: rãnh 64×32 ở desktop, 52×28 trên điện thoại, biểu tượng trượt/xoay và đổi tông trời đã hạ độ chói cho hợp nền giấy / mực đỏ. Dùng `role="switch"`, checkbox trong suốt phủ kín rãnh, nhãn đọc máy nói rõ đang ở nền nào, mỗi cú bấm đổi **đúng một** nhịp. Trang quản trị dùng chung công tắc này |
 | **Lỗi: bấm nút menu trên mobile nhưng các mục không hiện** | Xem mục dưới — đã tìm ra **nguyên nhân thật** và vá, kèm bài kiểm thử riêng |
@@ -41,15 +41,14 @@ Ngoài ra: bản đang chạy trên web lúc chủ trang gặp lỗi **chưa có
 
 ### Tinh chỉnh cỡ icon cho đồng bộ
 
-Bộ Solar vẽ đầy khung hơn bộ cũ (hình chiếm ~21/24 đơn vị thay vì ~18/24), nên nếu giữ nguyên
-cỡ cũ thì **mọi icon trông to hơn chữ**. Đã xử lý hai tầng:
+Tabler có nhiều hình chiếm khung khác nhau; nếu dùng cùng một cỡ mặc định, mũi tên và dấu nhỏ
+dễ lệch cảm giác với icon nét đầy. Đã xử lý hai tầng:
 
-- **Từng icon một**: đo hộp mực thật (render rồi tìm pixel có mực — `tools/measure_icons.mjs`)
-  rồi bù tỉ lệ + dời tâm sao cho mọi hình đều ~20,6/24. Nhờ vậy mũi tên, dấu ×, nút ＋ không còn
-  bé hẳn so với các icon khác; nét vẽ được chia ngược hệ số phóng nên mọi icon vẫn mảnh đúng 1,5.
-- **Cỡ hiển thị**: `.i` từ `1.05em` → **`.94em`**, `.i-s` 15 → **13,5px**, tiêu đề mục 18 → 16px,
-  dấu “đã đọc” 15 → 13,5px, nút × trong bảng quản trị 14 → 12,5px. Hộp mực sau khi tính lại **bằng
-  đúng** bộ icon cũ (≈0,86em chữ) nên bố cục cũ không xô lệch.
+- **Từng icon một**: generator giữ viewBox 24×24, bù scale/tâm cho mũi tên và dấu nhỏ,
+  đồng thời chia stroke ngược hệ số phóng để nét không bị dày khi phóng. Vì vậy các icon
+  không bị lệch tâm hoặc bé hẳn trong cùng một hàng.
+- **Cỡ hiển thị**: `.i` dùng hộp `.98em`, `.i-s` 14px và baseline chung; các override
+  của card ảnh và mobile giữ badge/icon gọn, không làm bố cục cũ xô lệch.
 
 Nhân lúc soát giao diện máy nhỏ, sửa thêm hai điểm:
 
@@ -68,9 +67,9 @@ Nhân lúc soát giao diện máy nhỏ, sửa thêm hai điểm:
 | `node tools/check_html.js` | HTML sạch, `_redirects` **28 luật** an toàn, không vòng lặp |
 | `python3 tools/check_css.py` | **0** lớp dùng trong HTML/JS mà CSS chưa định nghĩa |
 | `node tools/check_calls.js` | Không có hàm “ma” |
-| Bảo mật phần mới | Không thêm miền/script ngoài nào (chỉ 1 liên kết ghi công tới `iconbuddy.com`); không `eval`, không `innerHTML` dựng từ dữ liệu người dùng; CSP và các header trong `_headers` **giữ nguyên**; hai công cụ mới nằm trong `/tools/*`, bài kiểm thử mới nằm trong `/tests/*` — đã bị luật 301 chặn sẵn, không cần thêm luật |
+| Bảo mật phần mới | Không thêm miền/script icon bên ngoài; không `eval`, không source map/secret; CSP và các header trong `_headers` tiếp tục giới hạn script/frame/kết nối; generator nằm trong `/tools/*`, bài kiểm thử trong `/tests/*` — đều bị luật redirect chặn khỏi bản phát hành |
 | Kích thước bản phát hành | 557,2 kB → **377,3 kB** (rút gọn 32%) |
-| Phiên bản | Web **1.9.2**, HTML `?v=20260915e`. Worker **giữ 1.9.1** — đợt này **không sửa Worker**, nên **không cần deploy lại Worker** (nếu đợt trước đã deploy 1.9.1) |
+| Phiên bản | Web **1.9.2**, HTML `?v=20260915e`. Worker **1.9.3** — thêm lọc URL ảnh trong sanitization Blogger, cần deploy lại Worker |
 
 Ghi chú kỹ thuật nhỏ: `package.json` ghim `esbuild` đúng **0.25.0** (trước để `^0.25.0`). Bản rút gọn
 được so **từng byte** với `src/`, nên chỉ cần lệch phiên bản esbuild là `check_src.js` báo lỗi oan
@@ -94,8 +93,8 @@ Ghi chú kỹ thuật nhỏ: `package.json` ghim `esbuild` đúng **0.25.0** (tr
 ### Tự kiểm tra nhanh
 
 ```bash
-node tests/t_worker.mjs     # 155 phép kiểm, có cả nhóm “BẢO MẬT (bản vá 1.9.1)”
-curl -s https://<worker>/api/health | grep version    # phải là 1.9.1
+node tests/t_worker.mjs     # 155 phép kiểm, có cả nhóm “BẢO MẬT (bản vá 1.9.3)”
+curl -s https://<worker>/api/health | grep version    # phải là 1.9.3
 curl -sI https://ssochuz.pages.dev/worker/cms.js      # phải 301 về /
 ```
 
@@ -177,8 +176,8 @@ hành vi menu điện thoại (mở → `aria-expanded=true`, `Esc` → đóng, 
 
 ## 5. Việc cần làm để lên sóng
 
-1. **Worker 1.9.1**: dán lại `worker/cms.js` vào Cloudflare → Deploy, rồi mở `/api/health`
-   xem `version` đã là `1.9.1`.
+1. **Worker 1.9.3**: dán lại `worker/cms.js` vào Cloudflare → Deploy, rồi mở `/api/health`
+   xem `version` đã là `1.9.3`.
 2. **Web**: đẩy thư mục gốc lên như thường lệ (Pages tự deploy theo GitHub). Nhớ rằng các
    tệp `cz-*.js`, `admin.js`, `cz.css` ở thư mục gốc là **bản rút gọn tự sinh** — sửa mã thì
    sửa trong `src/` rồi `npm run build`.

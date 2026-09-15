@@ -94,13 +94,14 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
       tswUiverseLayout: /\.tsw-icon\s*\{/.test(t) && /translate(?:X)?\(-100%\) rotate\(-180deg\)/.test(t)
     };
   }
-  /* icon trong bản phát hành có được chuẩn hoá (mỗi icon một hệ số) không */
+  /* icon Tabler trong bản phát hành có được chuẩn hoá (mỗi icon một hệ số) không */
   const app = fs.readFileSync(path.join(__dirname, '..', 'cz-app.js'), 'utf8');
   const srcApp = fs.readFileSync(path.join(__dirname, '..', 'src', 'cz-app.js'), 'utf8');
   /* thân từng icon = các dòng "    tên: '…'," trong bộ icon */
   const bodies = srcApp.split('\n').filter(l => /^    [a-z_0-9]+: '/.test(l)).join('\n');
   out.icon = {
-    soIconSolar: (app.match(/transform="translate\(|-?\d+ \d+\) scale\(/g) || []).length,
+    soIconTabler: (app.match(/transform="translate\(|-?\d+ \d+\) scale\(/g) || []).length,
+    coTabler: /Bộ icon SVG từ Tabler Icons/.test(srcApp) && /@tabler\/icons/.test(fs.readFileSync(path.join(__dirname, '..', 'tools', 'gen_icons_tabler.mjs'), 'utf8')),
     coGoogle: /google:/.test(app), coMomo: /momo:/.test(app),
     /* thân icon KHÔNG được tự đặt fill="none": trạng thái .on (tim đã thích,
        sao đã đánh dấu) tô bằng fill:currentColor từ CSS, còn fill="none" ở
@@ -154,7 +155,8 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   if (!out.themeChangeThua) loi.push("'change' phát thừa làm đổi nền lần nữa");
   if (!out.icon.khongConFillNone) loi.push('thân icon còn fill="none" (trạng thái .on không tô được)');
   if (!out.icon.netONgoai) loi.push('nét vẽ icon chưa gom ra lớp bọc chuẩn hoá');
-  if (out.icon.soIconSolar < 60) loi.push('quá ít icon được chuẩn hoá: ' + out.icon.soIconSolar);
+  if (!out.icon.coTabler) loi.push('bản phát hành chưa đánh dấu bộ Tabler local');
+  if (out.icon.soIconTabler < 60) loi.push('quá ít icon Tabler được chuẩn hoá: ' + out.icon.soIconTabler);
   if (!out.adminTheme || !out.adminTheme.input || out.adminTheme.icons !== 2 || !out.adminTheme.changed) {
     loi.push('công tắc trang quản trị mất checkbox/icon hoặc không đổi nền');
   }

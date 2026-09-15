@@ -289,9 +289,11 @@
     function paintPrev() {
       var n = inpName.value.trim() || 'B';
       var p = inpPic.value.trim();
-      prev.innerHTML = (p ? '<img src="' + w.CZ.esc(p) + '" alt="" style="width:48px;height:48px;border-radius:50%;object-fit:cover" onerror="this.style.display=\'none\'">'
+      prev.innerHTML = (p ? '<img src="' + w.CZ.esc(p) + '" alt="" style="width:48px;height:48px;border-radius:50%;object-fit:cover">'
         : '<span class="ava" style="width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:var(--surf2)">' + w.CZ.esc(String(n)[0].toUpperCase()) + '</span>') +
         '<span><b>' + w.CZ.esc(n) + '</b><br><span class="sm muted">' + w.CZ.esc(u.email || '') + '</span></span>';
+      var image = prev.querySelector('img');
+      if (image) image.addEventListener('error', function () { this.style.display = 'none'; });
     }
     inpName.addEventListener('input', paintPrev);
     inpPic.addEventListener('input', paintPrev);

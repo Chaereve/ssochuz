@@ -5,7 +5,7 @@
      t_config.js       cấu hình Worker (thiếu https://, thừa /, để trống)
      t_html.js         HTML tĩnh + _redirects (đích .html ⇒ vòng lặp ERR_TOO_MANY_REDIRECTS)
      t_mobile.js       MÁY NHỎ: menu mở được cả khi máy bật “giảm chuyển động”, công tắc
-                       sáng/tối đổi đúng một nhịp, bộ icon Solar được chuẩn hoá
+                       sáng/tối đổi đúng một nhịp, bộ icon Tabler được chuẩn hoá
      t_home.js         trang chủ: hero, thư viện, lọc/tìm, kệ đọc tiếp, tủ truyện
      t_stats.js        số liệu Firebase thật: BXH theo lượt đọc/bình chọn, sắp xếp “đọc nhiều nhất”
      t_story.js        trang truyện + trang đọc: chuyển chương, cài đặt, truyện 0 chương

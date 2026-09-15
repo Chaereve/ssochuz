@@ -44,7 +44,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   const lb = $('#likeBtn');
   out.likeBtn = { present: !!lb, removed: !lb, shelf: !!$('#shelfBtn'), share: !!$('#shareBtn') };
   if (lb) out.errors0.push('trang truyện vẫn còn nút Thích — yêu cầu là bỏ, chỉ để lại trong trang đọc');
-  /* icon SVG lấy từ IconBuddy (bộ Lucide): tim + tủ sách phải là 2 hình khác nhau */
+  /* icon SVG local từ Tabler: tim + tủ sách phải là 2 hình khác nhau */
   const heroIcons = $$('#shero .btn-row svg').map(s => s.innerHTML.replace(/\s+/g, ' ').trim());
   out.icons = { soIcon: heroIcons.length, khacNhau: new Set(heroIcons).size === heroIcons.length };
   if (heroIcons.length && new Set(heroIcons).size !== heroIcons.length) out.errors0.push('hai nút ở trang truyện dùng trùng một icon');

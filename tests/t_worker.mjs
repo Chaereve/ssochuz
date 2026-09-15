@@ -574,6 +574,7 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
       <div class="post-body entry-content">
         <p onclick="alert(1)">Đoạn văn đủ dài để worker nhận là nội dung đọc được, có thuộc tính lạ.</p>
         <p><a href="javascript:alert(2)" onmouseover="alert(3)">bấm thử</a> và <a href="https://vidu.test/x">link thật</a></p>
+        <p><img src="javascript:alert(4)" onerror="alert(5)">Ảnh có URL độc hại cũng phải bị bỏ.</p>
         <p>Đoạn thứ ba cho đủ độ dài tối thiểu của bài viết hợp lệ.</p>
       </div></body></html>`;
     routes = (u) => {
@@ -589,7 +590,7 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     const book = (await call('GET', '/api/book/lunar-secret')).body || {};
     const lastCh = (book.chapters || [])[(book.chapters || []).length - 1] || {};
     ck('nhập Blogger/bỏ onclick, onmouseover', !/onclick|onmouseover/i.test(String(lastCh.html || '')), String(lastCh.html || '').slice(0, 120), 'không còn thuộc tính lạ');
-    ck('nhập Blogger/bỏ href javascript:', !/javascript:/i.test(String(lastCh.html || '')), String(lastCh.html || '').slice(0, 120), 'không còn javascript:');
+    ck('nhập Blogger/bỏ href và src javascript:', !/javascript:/i.test(String(lastCh.html || '')), String(lastCh.html || '').slice(0, 120), 'không còn javascript:');
     ck('nhập Blogger/giữ link https + rel an toàn', /href="https:\/\/vidu\.test\/x"[^>]*rel="noopener nofollow"/.test(String(lastCh.html || '')), String(lastCh.html || '').slice(-160), 'link thật giữ nguyên');
     routes = () => null;
   }

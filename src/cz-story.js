@@ -308,8 +308,6 @@
       box.className = 'synfull';
       box.textContent = full || 'Bộ này chưa có mô tả.';
     }
-    var sub = $('#synSub');
-    if (sub) sub.textContent = full ? words(full) + ' từ · cập nhật ' + CZ.timeAgo(n.updated) : '';
     var rows = [
       ['Tác giả', n.author || '—'],
       ['Couple', n.couple || '—'],
@@ -329,8 +327,6 @@
       return '<div class="r"><span>' + esc(r[0]) + '</span><b>' + esc(String(r[1])) + '</b></div>';
     }).join('');
   }
-  function words(t) { return String(t || '').trim().split(/\s+/).filter(Boolean).length; }
-
   /* một dòng chương: số · tên (tô sáng khi tìm) · dấu đã đọc / đã đánh dấu */
   function chapLink(x, prog, marks, q) {
     var on = x.i === prog ? ' now' : '';
