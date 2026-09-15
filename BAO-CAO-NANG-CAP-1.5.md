@@ -30,7 +30,7 @@ domain khác (domain mới, `*.pages.dev`, bản xem trước, `127.0.0.1:8787`)
 
 **Đã sửa:**
 
-- `cz-config.js`: thêm `CZ_SUPABASE_URL`, `CZ_SUPABASE_ANON_KEY`, `CZ_ADMIN_EMAILS`, `CZ_AUTH_PROVIDER`.
+- `cz-config.js`: thêm cấu hình công khai `CZ_SUPABASE_URL`, `CZ_SUPABASE_ANON_KEY`, `CZ_AUTH_PROVIDER`; quyền quản trị hiện chỉ nằm trong Secret `ADMIN_EMAILS` của Worker.
 - `cz-auth.js` (viết lại ~430 dòng): **Supabase trước** — OAuth PKCE (Google qua Supabase), **magic link email**
   làm đường dự phòng, tự đổi `?code=…` khi quay về, giữ phiên, tự làm mới, đổi `access_token` của Supabase lấy
   **session token của Worker** (`POST /api/auth/supabase`). Đường Google cũ vẫn còn (`CZ_AUTH_PROVIDER='google'`).
@@ -159,11 +159,11 @@ Cải tiến ở các tab cũ:
   menu tài khoản trên desktop, menu điện thoại, và thanh điều hướng.
 - Mở thẳng `/admin` thì gặp **cổng**: chưa qua cổng thì **không thấy dữ liệu nào**, kể cả dữ liệu tĩnh trong repo
   (nút *Xem dữ liệu tĩnh* cũng bị chặn). Đăng nhập bằng tài khoản không có quyền thì cổng nói rõ
-  *"Tài khoản X không nằm trong danh sách quản trị"* và liệt kê các email đang được phép.
+  *"Tài khoản X không có quyền quản trị"* nhưng không tiết lộ các email đang được phép.
 - Qua cổng bằng 1 trong 2 cách: **đăng nhập email quản trị** hoặc **nhập đúng ADMIN_KEY**.
 
-**Bạn làm:** khai email của bạn vào `ADMIN_EMAILS` của Worker (và/hoặc `CZ_ADMIN_EMAILS` trong `cz-config.js`,
-hoặc ngay trong `/admin` → Cài đặt). Email đang khai sẵn: `kimtong1906@gmail.com`.
+**Bạn làm:** khai email của bạn bằng Secret `ADMIN_EMAILS` trên Worker. Không đặt email quản trị trong
+`cz-config.js`, registry hay trang `/admin`, vì các nội dung đó có thể đọc được từ trình duyệt.
 
 ---
 

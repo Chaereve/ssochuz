@@ -62,7 +62,7 @@
      ALLOW_ORIGIN      (tuỳ chọn) = https://chuseoz.pages.dev  (nhiều domain: phẩy)
      SUPABASE_URL      (bắt buộc nếu đăng nhập Supabase) = https://<ref>.supabase.co
      SUPABASE_JWT_SECRET (chỉ project cũ ký HS256) — Auth → Settings → JWT Secret
-     ADMIN_EMAILS      (tuỳ chọn) = kimtong1906@gmail.com,abc@x.com — ai được vào /admin
+     ADMIN_EMAILS      (secret/tuỳ chọn) — email được vào /admin; không đặt trong frontend/registry
      GOOGLE_CLIENT_ID  (secret/tuỳ chọn)    — Client ID của OAuth Web app (Google Identity Services)
      SESSION_SECRET    (secret, bắt buộc*)  — chuỗi ngẫu nhiên ≥ 32 ký tự, ký session bình luận/đăng nhập
                                             (*) bắt buộc nếu bật bình luận/đăng nhập người dùng
@@ -75,7 +75,7 @@
      MAIL_FROM         (tuỳ chọn)  — địa chỉ gửi của Resend, vd: ssochuz library <bao-loi@ten-mien-cua-ban>
    ============================================================================ */
 
-const VERSION = '1.9.3';
+const VERSION = '1.9.4';
 const JSONH = {
   'content-type': 'application/json; charset=utf-8',
   'x-content-type-options': 'nosniff',
@@ -233,7 +233,7 @@ async function importPost(req, env, cors) {
     await applyRealCounts(env, reg);            /* số chương + nhãn lấy theo chương thật */
     reg.rev = new Date().toISOString().slice(0, 16).replace('T', ' ');
     reg.source = { synced: new Date().toISOString(), note: 'nhập từ bài viết Blogger qua trang quản trị' };
-    await env.CZ_KV.put('registry', JSON.stringify(reg), { metadata: { saved: new Date().toISOString(), rev: reg.rev } });
+    await env.CZ_KV.put('registry', registryJSON(reg), { metadata: { saved: new Date().toISOString(), rev: reg.rev } });
   }
   await env.CZ_KV.put('_last', new Date().toISOString());
   await logAct(env, 'nhập chương từ Blogger: ' + slug + ' → ' + chapTitle, req);
@@ -302,7 +302,9 @@ function normTitle(t) {
 
 /* =========================== tiện ích =========================== */
 function corsHeaders(req, env) {
-  const allowRaw = String((env && env.ALLOW_ORIGIN) || '*').trim();
+  /* Production mặc định đóng theo hai domain thật; chỉ mở * khi quản trị chủ động
+     đặt ALLOW_ORIGIN="*" (không khuyến nghị). */
+  const allowRaw = String((env && env.ALLOW_ORIGIN) || 'https://ssochuz.pages.dev,https://chuseoz.blogspot.com').trim();
   const origin = req.headers.get('Origin') || '';
   let ao = '*';
   if (allowRaw === '*') {
@@ -395,22 +397,67 @@ function authed(req, env) {
   for (let i = 0; i < want.length; i++) diff |= got.charCodeAt(i) ^ want.charCodeAt(i);
   return diff === 0;
 }
+/* Registry là API công khai. Chỉ cho qua đúng các trường cấu hình đăng nhập vốn
+   bắt buộc phải công khai trong trình duyệt; xoá email quản trị, email nhận thư
+   và mọi trường lạ để một lần dán nhầm secret không biến thành rò rỉ lâu dài. */
+function isSafePublishableKey(value) {
+  const key = String(value || '').trim();
+  if (!key || /^sb_secret_/i.test(key)) return false;
+  /* Legacy anon/service_role đều là JWT: đọc claim role (không cần verify chỉ để
+     phân loại dữ liệu cấu hình). service_role tuyệt đối không được phát hành. */
+  if (key.split('.').length === 3) {
+    try {
+      let p = key.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      while (p.length % 4) p += '=';
+      const role = String(JSON.parse(atob(p)).role || '').toLowerCase();
+      if (role === 'service_role') return false;
+    } catch (e) { return false; }
+  }
+  return true;
+}
+function stripPrivateRegistrySettings(reg) {
+  if (!reg || typeof reg !== 'object') return reg;
+  const settings = reg.settings;
+  if (!settings || typeof settings !== 'object') return reg;
+  const auth = settings.auth;
+  if (auth && typeof auth === 'object' && !Array.isArray(auth)) {
+    const publicAuth = {};
+    ['provider', 'supabaseUrl', 'googleClientId'].forEach((k) => {
+      if (auth[k] !== undefined && auth[k] !== null && auth[k] !== '') publicAuth[k] = auth[k];
+    });
+    if (isSafePublishableKey(auth.supabaseAnonKey)) publicAuth.supabaseAnonKey = auth.supabaseAnonKey;
+    if (Object.keys(publicAuth).length) settings.auth = publicAuth;
+    else delete settings.auth;
+  } else if (Object.prototype.hasOwnProperty.call(settings, 'auth')) delete settings.auth;
+  const report = settings.report;
+  if (report && typeof report === 'object' && !Array.isArray(report) && report.form) {
+    settings.report = { form: report.form };
+  } else if (Object.prototype.hasOwnProperty.call(settings, 'report')) delete settings.report;
+  return reg;
+}
+function registryJSON(reg) { return JSON.stringify(stripPrivateRegistrySettings(reg)); }
 async function getKV(env, key, cors, cacheSec) {
   if (!env.CZ_KV) return noKV(cors);
   const { value, metadata } = await env.CZ_KV.getWithMetadata(key, { type: 'text' });
   if (value == null) return json({ ok: false, error: 'chưa có dữ liệu cho khoá ' + key }, { status: 404, cors });
+  let publicValue = value;
+  if (key === 'registry') {
+    try { publicValue = registryJSON(JSON.parse(value)); } catch (e) { publicValue = value; }
+  }
   const h = { ...JSONH, ...cors, 'cache-control': 'public, max-age=' + (cacheSec || 30), 'x-kv-key': key };
-  if (metadata && metadata.etag) h.etag = metadata.etag;
-  return new Response(value, { headers: h });
+  /* ETag cũ mô tả bản chưa lọc nên không gửi cho registry đã được làm sạch. */
+  if (key !== 'registry' && metadata && metadata.etag) h.etag = metadata.etag;
+  return new Response(publicValue, { headers: h });
 }
 async function putKV(req, env, key, cors, label) {
   if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
   if (!env.CZ_KV) return noKV(cors);
-  const body = await req.text();
-  const bytes = new TextEncoder().encode(body).length;
-  if (bytes > 24 * 1024 * 1024) return json({ ok: false, error: 'dữ liệu quá lớn (>24MB)' }, { status: 413, cors });
+  let body = await req.text();
+  if (new TextEncoder().encode(body).length > 24 * 1024 * 1024) return json({ ok: false, error: 'dữ liệu quá lớn (>24MB)' }, { status: 413, cors });
   let parsed;
   try { parsed = JSON.parse(body); } catch (e) { return json({ ok: false, error: 'JSON lỗi: ' + e.message }, { status: 400, cors }); }
+  if (key === 'registry') body = registryJSON(parsed);
+  const bytes = new TextEncoder().encode(body).length;
   const saved = new Date().toISOString();
   await env.CZ_KV.put(key, body, { metadata: { saved, rev: parsed.rev || '', bytes } });
   await env.CZ_KV.put('_last', saved);           // mốc thời gian ghi gần nhất
@@ -462,7 +509,7 @@ async function syncCountToRegistry(env, slug, book) {
   n.count = labelNow;
   n.canRead = real > 0;
   reg.rev = new Date().toISOString().slice(0, 16).replace('T', ' ');
-  await env.CZ_KV.put('registry', JSON.stringify(reg), { metadata: { saved: new Date().toISOString(), rev: reg.rev } });
+  await env.CZ_KV.put('registry', registryJSON(reg), { metadata: { saved: new Date().toISOString(), rev: reg.rev } });
   await env.CZ_KV.put('_last', new Date().toISOString());
   return { changed: true, was, now: real, labelWas, labelNow, rev: reg.rev };
 }
@@ -539,7 +586,7 @@ async function recount(req, env, cors) {
   const res = await applyRealCounts(env, reg);
   if (res.fixed.length) {
     reg.source = { synced: new Date().toISOString(), note: 'đếm lại số chương từ kho chương trên KV (/api/recount)' };
-    await env.CZ_KV.put('registry', JSON.stringify(reg), { metadata: { saved: new Date().toISOString(), rev: reg.rev } });
+    await env.CZ_KV.put('registry', registryJSON(reg), { metadata: { saved: new Date().toISOString(), rev: reg.rev } });
     await env.CZ_KV.put('_last', new Date().toISOString());
     await logAct(env, 'đếm lại số chương: sửa ' + res.fixed.length + ' bộ', req);
   }
@@ -739,11 +786,11 @@ async function mailReport(env, it) {
         headers: { authorization: 'Bearer ' + key, 'content-type': 'application/json' },
         body: JSON.stringify({ from, to: admins, subject: line, text: body, reply_to: (it.who && it.who.indexOf('@') > 0) ? it.who : undefined }),
       });
-      const d = await r.json().catch(() => ({}));
-      if (r.ok) return { sent: true, reason: 'đã gửi tới ' + admins.join(', ') };
-      return { sent: false, reason: 'Resend từ chối: ' + ((d && (d.message || d.error)) || r.status) };
+      await r.json().catch(() => ({}));
+      if (r.ok) return { sent: true, reason: 'đã chuyển email tới ban biên tập' };
+      return { sent: false, reason: 'dịch vụ email tạm từ chối (' + r.status + ')' };
     } catch (e) {
-      return { sent: false, reason: 'lỗi gửi email: ' + String((e && e.message) || e) };
+      return { sent: false, reason: 'chưa kết nối được dịch vụ email' };
     }
   }
   const box = to.length ? to : admins;
@@ -766,13 +813,13 @@ async function mailReport(env, it) {
     });
     const d = await r.json().catch(() => ({}));
     const msg = String((d && (d.message || d.error)) || '');
-    if (r.ok && String(d && d.success) === 'true') return { sent: true, reason: 'đã gửi email tới ' + box[0] };
+    if (r.ok && String(d && d.success) === 'true') return { sent: true, reason: 'đã chuyển email tới ban biên tập' };
     if (/confirm|activat|xác nhận/i.test(msg)) {
-      return { sent: false, reason: 'FormSubmit vừa gửi 1 thư xác nhận tới ' + box[0] + ' — mở hộp thư bấm “Confirm/Activate” một lần là từ sau thư báo lỗi về thẳng hộp thư' };
+      return { sent: false, reason: 'quản trị cần mở hộp thư nhận và bấm “Confirm/Activate” FormSubmit một lần' };
     }
-    return { sent: false, reason: 'FormSubmit từ chối: ' + (msg || r.status) };
+    return { sent: false, reason: 'dịch vụ email tạm từ chối (' + r.status + ')' };
   } catch (e) {
-    return { sent: false, reason: 'lỗi gửi email: ' + String((e && e.message) || e) };
+    return { sent: false, reason: 'chưa kết nối được dịch vụ email' };
   }
 }
 
@@ -951,7 +998,7 @@ async function health(env, cors) {
     auth: {
       supabase: !!supabaseURL(env), supabaseUrl: supabaseURL(env),
       supabaseHs256: !!(env.SUPABASE_JWT_SECRET), google: !!env.GOOGLE_CLIENT_ID,
-      session: !!env.SESSION_SECRET, adminEmails: adminEmails(env),
+      session: !!env.SESSION_SECRET, adminConfigured: adminEmails(env).length > 0,
       mail: (!!env.RESEND_API_KEY && !!env.MAIL_FROM) || !!env.MAIL_TO,
     },
   }, { cors });
@@ -992,7 +1039,7 @@ async function seed(req, env, cors) {
   if (!env.CZ_KV) return noKV(cors);
   let d; try { d = await req.json(); } catch (e) { return json({ ok: false, error: 'JSON lỗi' }, { status: 400, cors }); }
   const out = { books: 0, failed: [] };
-  if (d.registry) await env.CZ_KV.put('registry', JSON.stringify(d.registry), { metadata: { saved: new Date().toISOString(), rev: d.registry.rev || '' } });
+  if (d.registry) await env.CZ_KV.put('registry', registryJSON(d.registry), { metadata: { saved: new Date().toISOString(), rev: d.registry.rev || '' } });
   const books = d.books || {};
   for (const slug of Object.keys(books)) {
     try { await env.CZ_KV.put('book:' + slug, JSON.stringify(books[slug])); out.books++; }
@@ -1005,7 +1052,7 @@ async function seed(req, env, cors) {
     const reg2 = await env.CZ_KV.get('registry', { type: 'json' });
     counts = await applyRealCounts(env, reg2);
     if (counts.fixed.length) {
-      await env.CZ_KV.put('registry', JSON.stringify(reg2), { metadata: { saved: new Date().toISOString(), rev: reg2.rev || '' } });
+      await env.CZ_KV.put('registry', registryJSON(reg2), { metadata: { saved: new Date().toISOString(), rev: reg2.rev || '' } });
     }
   }
   await logAct(env, 'nạp dữ liệu: ' + out.books + ' bộ' + (counts.fixed && counts.fixed.length ? ' · sửa số chương ' + counts.fixed.length + ' bộ' : ''), req);
@@ -1414,7 +1461,7 @@ async function syncBlogger(req, env, cors) {
   const rc = await applyRealCounts(env, reg);
   reg.rev = new Date().toISOString().slice(0, 16).replace('T', ' ');
   reg.source = { synced: new Date().toISOString(), note: 'đồng bộ từ blogspot (list-novel + lịch ra chương)' };
-  await env.CZ_KV.put('registry', JSON.stringify(reg), { metadata: { saved: new Date().toISOString(), rev: reg.rev } });
+  await env.CZ_KV.put('registry', registryJSON(reg), { metadata: { saved: new Date().toISOString(), rev: reg.rev } });
   await env.CZ_KV.put('_last', new Date().toISOString());
   return json({ ok: true, cards: cards.length, changed, rev: reg.rev, schedule: !!sched, log: log.slice(0, 20), recount: rc.fixed }, { cors });
 }
@@ -1768,8 +1815,8 @@ async function authSupabase(req, env, cors) {
   const token = await signSession(session, secret);
   return json({ ok: true, token, user: publicUser(user, env), admin: isAdminUser(user, env), session: 'worker' }, { cors });
 }
-/* GET /api/auth/config — web hỏi Worker xem đã bật đăng nhập chưa, nhà cung cấp nào.
-   Trả khoá CÔNG KHAI (anon key) thôi, không lộ secret. */
+/* GET /api/auth/config — chỉ trả trạng thái công khai. Không trả email quản trị,
+   khoá ký token, ADMIN_KEY, khoá gửi mail hay bất kỳ secret nào. */
 async function authConfig(env, cors) {
   return json({
     ok: true,
@@ -1777,7 +1824,7 @@ async function authConfig(env, cors) {
     supabaseUrl: supabaseURL(env),
     google: !!env.GOOGLE_CLIENT_ID,
     session: !!env.SESSION_SECRET,
-    adminEmails: adminEmails(env),
+    adminConfigured: adminEmails(env).length > 0,
     version: VERSION,
   }, { cors, headers: { 'cache-control': 'no-store' } });
 }

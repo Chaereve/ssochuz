@@ -52,7 +52,7 @@ Chi tiết đầy đủ và cách tự kiểm tra: `BAO-CAO-BAO-MAT-VA-GIAO-DIEN
 
 | Trước | Sau |
 |---|---|
-| Người đọc bấm **Báo lỗi chữ** → hộp thoại hiện nội dung rồi bắt **copy** và tự mở Gmail gửi (rất mất thời gian, nhiều bạn bỏ luôn) | Bấm **Gửi báo lỗi** là xong: `POST /api/report` nhận nội dung (kèm tên bộ, số chương, link, người gửi) → **lưu vào KV** và **gửi email** tới mọi địa chỉ trong `ADMIN_EMAILS`. Mất mạng thì hộp thoại tự hiện lại nút copy / Gmail để không ai bị kẹt |
+| Người đọc bấm **Báo lỗi chữ** → hộp thoại hiện nội dung rồi bắt tự gửi (rất mất thời gian) | Bấm **Gửi báo lỗi** là xong: `POST /api/report` nhận nội dung → **lưu vào KV** và gửi email phía Worker. Mất mạng thì hộp thoại cho copy; địa chỉ nhận không bao giờ gửi xuống trình duyệt |
 | Muốn xem lại báo lỗi phải vào KV bằng tay | Tab **Báo lỗi** trong `/admin` (phím `R`) liệt kê 300 báo lỗi gần nhất, bấm **Mở** là nhảy đúng chương, có nút copy và nút trả lời người báo. Endpoint `GET /api/admin/reports?q=` |
 | Icon web tự vẽ tay, chỗ dày chỗ mảnh | Toàn bộ icon SVG đổi sang **Tabler Icons outline** (package local, giấy phép MIT), cùng lưới 24×24 nên nhìn đồng bộ. Google dùng icon thương hiệu của Tabler; MoMo giữ hình thương hiệu riêng vì Tabler chưa có biểu tượng tương ứng. |
 
@@ -63,7 +63,7 @@ Workers & Pages → Worker của bạn → Settings → Variables and Secrets:
 
 | Biến | Ví dụ | Ý nghĩa |
 |---|---|---|
-| `MAIL_TO` | `kimtong1906@gmail.com` | địa chỉ nhận thư báo lỗi — Worker gửi qua [FormSubmit](https://formsubmit.co) (miễn phí, không cần đăng ký) |
+| `MAIL_TO` | `owner@example.com` | **Secret** chứa địa chỉ nhận thư báo lỗi — Worker gửi qua [FormSubmit](https://formsubmit.co); không đặt trong frontend/registry |
 
 Lần gửi **đầu tiên**, FormSubmit sẽ gửi 1 thư *“Confirm your email”* tới địa chỉ đó —
 mở hộp thư bấm **Confirm/Activate** một lần là từ đó mọi báo lỗi về thẳng hộp thư (hộp thoại
@@ -132,12 +132,12 @@ Trang quản trị đã có tab **Phiếu bầu** (phím `V`): chọn bộ → d
 | `SESSION_SECRET` | ✅ | ký session token HS256 (dài ≥ 32 ký tự) |
 | `SUPABASE_URL` | nên có | vd `https://xyz.supabase.co` — bật đăng nhập Supabase |
 | `SUPABASE_JWT_SECRET` | nên có | JWT Secret trong Supabase → Dashboard → Settings → API. Có biến này thì Worker tự verify token (HS256), không cần gọi mạng |
-| `ADMIN_EMAILS` | nên có | danh sách email quản trị, phân cách bằng dấu phẩy. Ai đăng nhập bằng email này thì `/api/auth/me` trả `admin: true` và mục **Quản trị** hiện ra |
+| `ADMIN_EMAILS` (Secret) | nên có | danh sách email quản trị, phân cách bằng dấu phẩy. API chỉ trả cờ `admin: true`, không trả danh sách địa chỉ |
 | `GOOGLE_CLIENT_ID` | không | đường cũ: đăng nhập thẳng bằng Google Identity Services |
-| `ALLOW_ORIGIN` | không | mặc định `*`; muốn chặt thì điền tên miền web |
+| `ALLOW_ORIGIN` | nên có | danh sách chính xác các tên miền web; không dùng `*` ở production |
 | `BLOG` | không | feed Blogger cho nút "Đồng bộ Blogger" |
 | `FIREBASE_PROJECT` | không | chỉ dùng khi muốn kéo số liệu cũ từ Firestore (1 lần) |
-| `MAIL_TO` | không | email nhận báo lỗi chữ (gửi qua FormSubmit — chỉ cần điền địa chỉ, không cần khoá) |
+| `MAIL_TO` (Secret) | không | email nhận báo lỗi chữ phía Worker; không đặt trong registry/frontend |
 | `RESEND_API_KEY` | không | đường chuyên nghiệp: khoá API resend.com (miễn phí 100 mail/ngày) |
 | `MAIL_FROM` | không | địa chỉ gửi của Resend, vd `ssochuz library <bao-loi@ten-mien-cua-ban>` |
 | `STATS_FLUSH_MS` | không | thời gian gom số liệu trước khi ghi KV (mặc định 10000) |
@@ -528,20 +528,20 @@ chỉ cần `https://<project>.supabase.co/auth/v1/callback`, Supabase tự tạ
 - **Site URL**: `https://ten-mien-that.com`
 - **Redirect URLs**: thêm tất cả những nơi có thể mở web — `https://ten-mien-that.com/**`, bản Pages tạm `https://*.pages.dev/**`, và `http://localhost:8787/**` khi test.
 
-**4. Lấy 2 giá trị** → *Settings* → *API*: `Project URL` và `anon public key`.
-Lấy thêm **JWT Secret** (cùng trang) để Worker tự verify token, khỏi phải gọi mạng.
+**4. Lấy 2 giá trị công khai** → *Settings* → *API*: `Project URL` và `publishable/anon key`.
+Hai giá trị này bắt buộc xuất hiện trong trình duyệt và không phải bí mật. **Tuyệt đối không** dán `service_role`, secret key hoặc JWT Secret vào web/registry; JWT Secret chỉ đặt ở Worker.
 
 **5. Dán vào web** — 1 trong 2 cách:
 - `cz-config.js` (commit lên GitHub, đổi là phải deploy lại):
   ```js
   window.CZ_SUPABASE_URL = 'https://xyz.supabase.co';
-  window.CZ_SUPABASE_ANON_KEY = 'eyJhbGciOi...';
-  window.CZ_ADMIN_EMAILS = ['ban@gmail.com'];
+  window.CZ_SUPABASE_ANON_KEY = 'sb_publishable_...';
+  // Không đặt email quản trị hay secret trong file này.
   ```
 - hoặc `/admin` → **Cài đặt & đồng bộ** → mục *Đăng nhập người đọc (Supabase)* → **Lưu** (lưu trên KV, đổi được ngay, không cần deploy).
   `cz-config.js` thắng nếu cả hai nơi đều điền.
 
-**6. Đặt biến cho Worker:** `SUPABASE_URL`, `SUPABASE_JWT_SECRET`, `ADMIN_EMAILS`, `SESSION_SECRET`.
+**6. Đặt biến cho Worker:** `SUPABASE_URL`; đặt `SUPABASE_JWT_SECRET`, `ADMIN_EMAILS` và `SESSION_SECRET` dưới dạng **Secret**. Danh sách quản trị chỉ tồn tại ở đây.
 
 **Luồng chạy thật:** người đọc bấm *Đăng nhập* → Supabase mở Google → quay về web với `access_token` →
 `POST /api/auth/supabase` → Worker verify chữ ký (HS256 bằng JWT Secret, hoặc RS256/ES256 bằng JWKS của Supabase) →

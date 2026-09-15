@@ -89,7 +89,13 @@
   function load() {
     var u = lsJSON(LS_USER), t = lsGet(LS_TOKEN);
     if (u && u.exp && u.exp * 1000 < Date.now() - 60000) { u = null; t = null; }
-    if (u) u = mergeCustom(u);
+    if (u) {
+      u = mergeCustom(u);
+      /* localStorage do chính trình duyệt sửa được, nên cờ quyền cũ không đáng tin.
+         boot() sẽ hỏi Worker và cấp lại admin:true nếu phiên còn hợp lệ. */
+      u.admin = false;
+      delete u.role;
+    }
     user = u; token = t || null;
   }
   function onAuth(fn) { listeners.push(fn); try { fn(user); } catch (e) {} return fn; }
@@ -354,25 +360,11 @@
   }
 
   /* ------------------------------------------------------------------ admin */
-  function adminEmails() {
-    var list = (w.CZ_ADMIN_EMAILS || []).map(function (x) { return String(x || '').trim().toLowerCase(); });
-    /* Worker có thể khai thêm trong registry.settings.auth.adminEmails */
-    try {
-      var reg = (w.CZ && w.CZ._memo && w.CZ._memo.reg) || null;
-      var extra = reg && reg.settings && reg.settings.auth && reg.settings.auth.adminEmails;
-      if (typeof extra === 'string') extra = extra.split(',');
-      (Array.isArray(extra) ? extra : []).forEach(function (x) {
-        x = String(x || '').trim().toLowerCase();
-        if (x && list.indexOf(x) < 0) list.push(x);
-      });
-    } catch (e) {}
-    return list.filter(Boolean);
-  }
+  /* Không so email ở trình duyệt: danh sách quản trị mà nằm trong JS/registry thì
+     ai mở DevTools cũng đọc được. Chỉ tin cờ do Worker trả sau khi đã xác thực
+     chữ ký token; các API ghi dữ liệu vẫn kiểm quyền lại hoàn toàn ở máy chủ. */
   function isAdmin() {
-    if (!user) return false;
-    if (user.admin === true || user.role === 'admin') return true;
-    var e = String(user.email || '').trim().toLowerCase();
-    return !!e && adminEmails().indexOf(e) >= 0;
+    return !!(user && (user.admin === true || user.role === 'admin'));
   }
 
   /* ============================== SUPABASE ================================ */
@@ -448,7 +440,7 @@
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (j) {
         if (r.ok && j && j.ok && j.token) {
-          var merged = Object.assign({}, u, j.user || {}, { admin: !!(j.admin || u.admin) });
+          var merged = Object.assign({}, u, j.user || {}, { admin: !!j.admin });
           save(merged, j.token);
           return merged;
         }
@@ -461,10 +453,15 @@
             (j && j.error) || 'không rõ lý do',
             (j && j.supabaseUrl) ? ('SUPABASE_URL trên Worker: ' + j.supabaseUrl) : '');
         } catch (e) {}
-        save(Object.assign({}, u, { admin: u.admin }), accessToken);
-        return u;
+        var unverified = Object.assign({}, u, { admin: false });
+        save(unverified, accessToken);
+        return unverified;
       });
-    }).catch(function () { save(u, accessToken); return u; });
+    }).catch(function () {
+      var unverified = Object.assign({}, u, { admin: false });
+      save(unverified, accessToken);
+      return unverified;
+    });
   }
   /* dọn URL sau khi Supabase trả code về (bỏ ?code=… cho sạch, tránh reload lại đổi lần nữa) */
   function cleanURL() {
@@ -485,9 +482,8 @@
         var sess = r && r.data && r.data.session;
         if (sess && sess.access_token && sess.user) {
           var u = fromSupabase(sess.user, sess.access_token);
-          /* giữ cờ admin Worker đã xác nhận (nếu user cũ trùng email) */
-          if (user && user.admin && String(user.email || '').toLowerCase() === String(u.email || '').toLowerCase()) u.admin = true;
-          return exchange(u, sess.access_token).then(function () { cleanURL(); return u; });
+          /* Mỗi lần đồng bộ đều hỏi lại Worker; không giữ cờ admin cũ ở localStorage. */
+          return exchange(u, sess.access_token).then(function (verified) { cleanURL(); return verified; });
         }
         if (user && !silent) save(null, null);
         return null;
@@ -675,7 +671,7 @@
     fetch(api() + '/api/auth/me', { headers: { authorization: 'Bearer ' + token } })
       .then(function (r) {
         return r.json().catch(function () { return {}; }).then(function (j) {
-          if (j && j.ok && j.user) save(Object.assign({}, user, j.user, { admin: !!(j.admin || (user && user.admin)) }), token);
+          if (j && j.ok && j.user) save(Object.assign({}, user, j.user, { admin: !!j.admin }), token);
           else if (r.status === 401 && provider() !== 'supabase') save(null, null);
         });
       }).catch(function () {});
@@ -688,12 +684,7 @@
     if (s.supabaseAnonKey && !sbKey()) w.CZ_SUPABASE_ANON_KEY = String(s.supabaseAnonKey).trim();
     if (s.googleClientId && !googleId()) w.CZ_GOOGLE_CLIENT_ID = String(s.googleClientId).trim();
     if (s.provider) w.CZ_AUTH_PROVIDER = s.provider;
-    if (s.adminEmails) {
-      var a = typeof s.adminEmails === 'string' ? s.adminEmails.split(',') : s.adminEmails;
-      if (Array.isArray(a)) {
-        w.CZ_ADMIN_EMAILS = a.map(function (x) { return String(x || '').trim().toLowerCase(); }).filter(Boolean);
-      }
-    }
+    /* adminEmails cố ý không đọc từ cấu hình công khai; quyền chỉ do Worker cấp. */
     if (sbReady() && !sb) syncFromSession(true);
   }
   function isSettingsApplied() { return settingsApplied; }
@@ -703,7 +694,7 @@
   w.CZ_AUTH = {
     /* mới */
     login: login, loginEmail: loginEmail, loginDialog: loginDialog,
-    provider: provider, configured: configured, isAdmin: isAdmin, adminEmails: adminEmails,
+    provider: provider, configured: configured, isAdmin: isAdmin,
     applySettings: applySettings, settingsApplied: isSettingsApplied, supabase: function () { return sb; },
     updateProfile: updateProfile, editProfileDialog: editProfileDialog,
     getCustomProfile: getCustomProfile,
@@ -721,11 +712,14 @@
         if (s) applySettings(s);
       }).catch(function () {});
     }
+    /* Cờ admin trong localStorage đã bị xoá ở load(); hỏi Worker trước để phiên cũ
+       chỉ mở lại menu quản trị sau khi máy chủ xác nhận. */
+    if (token && api()) refresh();
     if (sbReady()) {
       /* trang vừa quay về từ Supabase (?code=…) hay mở lại tab: đồng bộ phiên */
       syncFromSession(false);
       d.addEventListener('visibilitychange', function () { if (!d.hidden && sb) syncFromSession(true); });
-    } else if (token && api()) refresh();
+    }
     if (gisReadyCfg()) { try { ensureGIS(); } catch (e) {} }
   }
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', boot); else boot();

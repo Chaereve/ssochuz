@@ -88,7 +88,7 @@ const env = {
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
   SUPABASE_URL: process.env.SUPABASE_URL || '',
   SUPABASE_JWT_SECRET: process.env.SUPABASE_JWT_SECRET || '',
-  ADMIN_EMAILS: process.env.ADMIN_EMAILS || 'kimtong1906@gmail.com',
+  ADMIN_EMAILS: process.env.ADMIN_EMAILS || 'owner@example.com',
   FIREBASE_PROJECT: process.env.FIREBASE_PROJECT || 'chuseoz-library',
 };
 

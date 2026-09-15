@@ -93,6 +93,7 @@ const ADMH = { 'x-admin-key': ADMIN };   /* header quản trị dùng chung cho 
 const env = {
   ADMIN_KEY: ADMIN, CZ_KV: kv, BLOG: 'https://chuseoz.blogspot.com', ALLOW_ORIGIN: 'https://web.test',
   SESSION_SECRET: 'session-secret-dai-hon-32-ky-tu-cho-chac', GOOGLE_CLIENT_ID: 'CLIENT_ID_TEST',
+  ADMIN_EMAILS: 'admin@example.com',
   FIREBASE_PROJECT: 'ssochuz-library', STATS_FLUSH_MS: '50',   /* bản thật gom 20 giây; test gom 50ms */
 };
 const waits = [];
@@ -144,6 +145,12 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     const r = await call('GET', '/api/health');
     ck('health/có KV → ok:true', !!(r.body && r.body.ok === true), r.body && r.body.ok, true);
     ck('health/có version', !!(r.body && r.body.version), r.body && r.body.version, 'chuỗi');
+    eq('health/chỉ báo đã cấu hình admin', r.body && r.body.auth && r.body.auth.adminConfigured, true);
+    ck('health/không lộ danh sách email quản trị', !JSON.stringify(r.body || {}).includes('admin@example.com') &&
+      !Object.prototype.hasOwnProperty.call((r.body && r.body.auth) || {}, 'adminEmails'), r.body && r.body.auth, 'không có adminEmails');
+    const ac = await call('GET', '/api/auth/config');
+    ck('auth/config không lộ email quản trị', !JSON.stringify(ac.body || {}).includes('admin@example.com') &&
+      !Object.prototype.hasOwnProperty.call(ac.body || {}, 'adminEmails'), ac.body, 'chỉ có adminConfigured');
     /* HỒI QUY: /api/health BẮT BUỘC kèm header CORS. Thiếu nó thì admin.js gọi từ
        domain khác bị trình duyệt chặn (dù status 200) và báo nhầm "Failed to fetch —
        Worker chưa deploy". Đây chính là lỗi đã gặp trên ssochuz.pages.dev. */
@@ -208,6 +215,31 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     eq('seed/2 bộ', r.body && r.body.books, 2);
     const h = await call('GET', '/api/health');
     eq('health/đếm 2 bộ', h.body && h.body.books, 2);
+
+    /* Dù admin/client cũ gửi nhầm email hoặc secret-like field vào registry,
+       Worker phải xoá trước khi lưu và trước khi trả API công khai. */
+    const privateReg = JSON.parse(JSON.stringify(REG));
+    privateReg.settings = Object.assign({}, privateReg.settings, {
+      auth: {
+        provider: 'supabase', supabaseUrl: 'https://public.supabase.co', supabaseAnonKey: 'sb_publishable_test',
+        googleClientId: 'public-client-id', adminEmails: ['admin@example.com'], serviceRoleKey: 'sb_secret_never-public'
+      },
+      report: { email: 'admin@example.com', form: 'https://forms.example.com/survey' }
+    });
+    await call('PUT', '/api/registry', { headers: ADMH, body: privateReg });
+    const pubReg = await call('GET', '/api/registry');
+    ck('registry/API không lộ email hoặc secret', !JSON.stringify(pubReg.body || {}).includes('admin@example.com') &&
+      !JSON.stringify(pubReg.body || {}).includes('sb_secret_never-public'), pubReg.body && pubReg.body.settings, 'đã lọc');
+    const rawReg = await kv.get('registry', { type: 'json' });
+    ck('registry/KV không lưu email quản trị', !JSON.stringify(rawReg || {}).includes('admin@example.com') &&
+      !JSON.stringify(rawReg || {}).includes('sb_secret_never-public'), rawReg && rawReg.settings, 'đã lọc trước khi lưu');
+    eq('registry/vẫn giữ publishable key công khai', rawReg.settings.auth.supabaseAnonKey, 'sb_publishable_test');
+    const servicePayload = b64u(JSON.stringify({ role: 'service_role' }));
+    privateReg.settings.auth.supabaseAnonKey = b64u('{}') + '.' + servicePayload + '.signature';
+    await call('PUT', '/api/registry', { headers: ADMH, body: privateReg });
+    const noService = await kv.get('registry', { type: 'json' });
+    ck('registry/chặn JWT service_role dán nhầm ô anon', !(noService.settings.auth || {}).supabaseAnonKey,
+      noService.settings.auth, 'không lưu service_role');
   }
 
   /* ---------- 5. sync từ Blogger (thẻ div.truyen-card thật) ---------- */
@@ -494,7 +526,8 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     const r1 = await call('POST', '/api/report', { body: { slug: 'lunar-secret', title: 'Lunar Secret', ch: 7, url: 'https://web.test/truyen/lunar-secret/#chuong-7', text: 'Chương 7 sai chính tả chỗ “cô ấy” thành “cô áy”.', vid: 'may-bao-loi' } });
     eq('báo lỗi/nhận được → ok', (r1.body || {}).ok, true);
     eq('báo lỗi/chưa cấu hình mail → mailed:false', (r1.body || {}).mailed, false);
-    ck('báo lỗi/nói rõ lý do chưa gửi mail', /RESEND_API_KEY|MAIL_FROM|ADMIN_EMAILS/.test(String((r1.body || {}).note)), (r1.body || {}).note, 'có lý do');
+    ck('báo lỗi/nói rõ lý do chưa gửi mail', String((r1.body || {}).note || '').length > 0 &&
+      !JSON.stringify(r1.body || {}).includes('admin@example.com'), (r1.body || {}).note, 'có lý do nhưng không lộ email');
     const rep = await call('GET', '/api/admin/reports', { headers: ADMH });
     eq('báo lỗi/lưu vào KV', (((rep.body || {}).items || [])[0] || {}).slug, 'lunar-secret');
     eq('báo lỗi/giữ số chương', (((rep.body || {}).items || [])[0] || {}).ch, 7);
@@ -519,12 +552,14 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     try {
       const r3 = await call('POST', '/api/report', { e: Object.assign({}, env, { MAIL_TO: 'admin@web.test' }), body: { slug: 'third-person', title: 'Third Person', ch: 2, text: 'Chương 2 thiếu dấu chấm cuối đoạn.', vid: 'may-mail-1' } });
       eq('báo lỗi/MAIL_TO gửi được → mailed:true', (r3.body || {}).mailed, true);
+      ck('báo lỗi/response công khai không lộ MAIL_TO', !JSON.stringify(r3.body || {}).includes('admin@web.test'), r3.body, 'không có địa chỉ nhận');
       ck('báo lỗi/gọi đúng FormSubmit', /formsubmit\.co\/ajax\/admin%40web\.test/.test(String(mailCall && mailCall.url)), mailCall && mailCall.url, 'formsubmit.co/ajax/admin@web.test');
       ck('báo lỗi/thư có nội dung + link', !!(mailCall && mailCall.body['Nội dung báo lỗi'] && /Third Person/.test(mailCall.body._subject)), mailCall && mailCall.body._subject, 'có tiêu đề');
       /* lần đầu FormSubmit đòi xác nhận → phải nói rõ cho người đọc biết */
       globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => ({ success: 'false', message: 'Please confirm your email address to activate the form' }) });
       const r4 = await call('POST', '/api/report', { e: Object.assign({}, env, { MAIL_TO: 'admin@web.test' }), body: { slug: 'third-person', title: 'Third Person', ch: 4, text: 'Chương 4 lặp tên nhân vật.', vid: 'may-mail-2' } });
       ck('báo lỗi/chưa xác nhận → nói rõ cách xác nhận', /Confirm|Activate|xác nhận/i.test(String((r4.body || {}).note)), (r4.body || {}).note, 'hướng dẫn xác nhận');
+      ck('báo lỗi/xác nhận cũng không lộ MAIL_TO', !JSON.stringify(r4.body || {}).includes('admin@web.test'), r4.body, 'không có địa chỉ nhận');
       eq('báo lỗi/chưa xác nhận thì mailed:false', (r4.body || {}).mailed, false);
       /* Resend có khoá mà thiếu MAIL_FROM → phải nói rõ thiếu gì */
       const r5 = await call('POST', '/api/report', { e: Object.assign({}, env, { RESEND_API_KEY: 'k-test' }), body: { slug: 'third-person', text: 'Chương 1 sai dấu câu ở đoạn 2.', vid: 'may-mail-3' } });

@@ -56,13 +56,18 @@ Làm được:
 - Bản phát hành đã rút gọn, không kèm source map, không còn chú thích nội bộ.
 - `_redirects` chặn `/src/`, `/worker/`, `/tests/`, `/tools/`, `/_inbox/`,
   `/blogger-theme/`, các tệp `.md` và `server.py` → gõ thẳng đường dẫn cũng không lấy được.
-- Toàn bộ khoá bí mật (ADMIN_KEY, SESSION_SECRET, RESEND_API_KEY…) chỉ nằm trên Worker;
-  mã trong trình duyệt không chứa gì để lộ.
+- Toàn bộ khoá bí mật (ADMIN_KEY, SESSION_SECRET, SUPABASE_JWT_SECRET,
+  RESEND_API_KEY…) và danh sách email quản trị chỉ nằm trên Worker.
+- `tools/check_secrets.js` quét bản phát hành để chặn dán nhầm secret/email riêng;
+  `npm test` tự chạy phép quét này.
 - `_headers` đặt Content-Security-Policy: kể cả khi kẻ xấu chèn được chữ vào trang
   (bình luận, báo lỗi) cũng không chạy được mã, không đọc trộm được khoá đang lưu.
 
 Không làm được (và không nên tin là làm được):
 
+- Supabase `publishable/anon key`, Google Client ID, URL Worker và dữ liệu truyện là
+  giá trị công khai bắt buộc để trình duyệt hoạt động. Chúng không phải secret; quyền
+  thật phải được chặn bằng RLS/kiểm tra token phía Worker.
 - Mã chạy trong trình duyệt thì **luôn** đọc được bằng DevTools → Sources. Rút gọn chỉ
   làm việc đọc tốn công, không phải chặn hẳn.
 - Chặn phím F12 / chuột phải **không** che được gì (còn tắt mở được, còn URL ảnh/API

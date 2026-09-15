@@ -69,7 +69,7 @@ Cloudflare → **Workers & Pages → `chuseoz-cms` → Settings → Variables an
 | `SESSION_SECRET` | ✅ | chuỗi ≥ 32 ký tự (`openssl rand -hex 32`) |
 | `SUPABASE_URL` | nên có | `https://xyz.supabase.co` |
 | `SUPABASE_JWT_SECRET` | nên có | JWT Secret ở bước 2.4 |
-| `ADMIN_EMAILS` | nên có | email quản trị, cách nhau bằng dấu phẩy, vd `kimtong1906@gmail.com` |
+| `ADMIN_EMAILS` | nên có | email quản trị, cách nhau bằng dấu phẩy, vd `owner@example.com` |
 | `GOOGLE_CLIENT_ID` | không | chỉ cần nếu dùng đường Google cũ |
 | `ALLOW_ORIGIN` | không | mặc định `*` |
 
@@ -86,7 +86,8 @@ Kiểm tra nhanh:
 
 ```bash
 curl "https://chuseoz-cms.kimtong1906.workers.dev/api/health"
-# mong đợi: "version":"1.6.0" và "auth":{"supabase":true,...,"session":true,"adminEmails":[...]}
+# mong đợi: có "auth":{"supabase":true,...,"session":true,"adminConfigured":true}
+# API chỉ trả trạng thái, không trả danh sách email quản trị.
 ```
 
 `"supabase":false` nghĩa là Worker chưa thấy `SUPABASE_URL`.
@@ -104,9 +105,9 @@ Ngay cạnh đó có nút **Hỏi Worker** để biết Worker đã bật Supaba
 **Cách B — trong `cz-config.js`** (phải commit + deploy lại frontend mỗi lần đổi):
 
 ```js
-window.CZ_SUPABASE_URL     = 'https://xyz.supabase.co';
-window.CZ_SUPABASE_ANON_KEY = 'eyJhbGciOi...';          // anon key, không phải service_role
-window.CZ_ADMIN_EMAILS     = ['kimtong1906@gmail.com'];  // ai được thấy mục Quản trị
+window.CZ_SUPABASE_URL      = 'https://xyz.supabase.co';
+window.CZ_SUPABASE_ANON_KEY = 'sb_publishable_...'; // công khai; tuyệt đối không dùng service_role/secret key
+// Email quản trị chỉ đặt bằng Secret ADMIN_EMAILS trên Worker.
 window.CZ_AUTH_PROVIDER    = 'supabase';                  // 'google' để dùng cách cũ, '' để tắt
 ```
 
@@ -229,8 +230,8 @@ chương của bộ đó.
 
 `/admin` giờ có **cổng**. Hai cách qua cổng:
 
-1. **Đăng nhập bằng email quản trị** (email đó phải nằm trong `CZ_ADMIN_EMAILS` của `cz-config.js`
-   hoặc `ADMIN_EMAILS` của Worker hoặc `registry.settings.auth.adminEmails`).
+1. **Đăng nhập bằng email quản trị** (email đó phải nằm trong Secret `ADMIN_EMAILS` của Worker).
+   Danh sách này không đặt trong `cz-config.js` hay `registry` vì hai nơi đó công khai.
 2. **Nhập đúng `ADMIN_KEY`** của Worker (dành cho lúc chưa bật Supabase).
 
 Người đọc thường:
@@ -275,7 +276,7 @@ cd tests && node run.js             # 10 bài kiểm thử giao diện + 100 ki�
 |---|---|---|
 | Google báo **`400: origin_mismatch`** | dùng đường Google trực tiếp, chưa khai origin | chuyển sang Supabase (mục 2–4), thêm domain vào **Redirect URLs** |
 | Nút Đăng nhập báo *chưa cấu hình* | chưa điền Supabase URL + anon key | `/admin` → Cài đặt → mục *Đăng nhập người đọc*, hoặc điền `cz-config.js` |
-| Đăng nhập xong vẫn không thấy mục **Quản trị** | email không nằm trong danh sách quản trị | thêm email vào `ADMIN_EMAILS` (Worker) hoặc `CZ_ADMIN_EMAILS` |
+| Đăng nhập xong vẫn không thấy mục **Quản trị** | Worker chưa xác nhận tài khoản | thêm email vào Secret `ADMIN_EMAILS` trên Worker, deploy rồi đăng nhập lại |
 | `/api/auth/supabase` báo *Worker chưa đặt SUPABASE_URL* | thiếu biến môi trường | đặt biến (mục 3) rồi Deploy lại Worker |
 | `/api/auth/supabase` báo *token sai issuer…* (kèm 2 URL) | `SUPABASE_URL` trên Worker **nhầm project** Supabase | đặt lại đúng project trong `cz-config.js` (xem `worker/README.md` §7c) |
 | *token Supabase không hợp lệ* | `SUPABASE_JWT_SECRET` sai, hoặc token hết hạn | copy lại JWT Secret; người đọc bấm đăng nhập lại |

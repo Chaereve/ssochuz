@@ -220,10 +220,9 @@
       return r;
     });
   }
-  /* GỬI BÁO LỖI CHỮ: một lần bấm là nội dung đi thẳng tới hộp thư ban biên tập
-     (Worker lo cả việc lưu lại + gửi email), không phải copy rồi mở Gmail nữa.
-     Trả về { ok, mailed, note, error }; chưa nối được Worker thì trả lỗi để giao
-     diện hiện đường dự phòng (copy / mở Gmail). */
+  /* GỬI BÁO LỖI CHỮ: một lần bấm là nội dung đi thẳng tới Worker. Địa chỉ nhận
+     thư chỉ nằm trong Secret MAIL_TO/ADMIN_EMAILS phía máy chủ, không gửi xuống
+     trình duyệt. Khi mất mạng, giao diện chỉ cho copy nội dung để tránh lộ email. */
   function sendReport(o) {
     if (!API) return Promise.resolve({ ok: false, error: 'offline' });
     return fetch(API + '/api/report', {
@@ -1135,8 +1134,8 @@
     /* ---- nút đăng nhập + menu tài khoản ----
        · Chưa đăng nhập: bấm là mở đăng nhập (Supabase → Google, hoặc link email).
        · Đã đăng nhập: bấm mở menu (tủ truyện, đang đọc, quản trị [nếu là admin], đăng xuất).
-       · Mục "Quản trị" chỉ hiện với email nằm trong CZ_ADMIN_EMAILS — người đọc
-         thường không thấy đường vào trang admin nữa. */
+       · Mục "Quản trị" chỉ hiện khi Worker trả admin:true sau khi xác thực;
+         danh sách email quản trị không nằm trong mã web. */
     function authUser() { return (w.CZ_AUTH && w.CZ_AUTH.current && w.CZ_AUTH.current()) || null; }
     function isAdmin() { return !!(w.CZ_AUTH && w.CZ_AUTH.isAdmin && w.CZ_AUTH.isAdmin()); }
     function closeMenu() {
@@ -1294,12 +1293,11 @@
     d.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('#czNav a'); if (a) mark(a); });
     run();
   }
-  /* chân trang: logo · lời cảm ơn · Hướng dẫn / Facebook / Email / Khảo sát truyện */
+  /* chân trang: logo · lời cảm ơn · Hướng dẫn / Facebook / Khảo sát truyện */
   function mountFooter(host) {
     if (!host) return;
     host.className = 'ftr';
     var cfg = reportCfg();
-    var email = cfg.email || 'chuseoz.ofc@gmail.com';
     var fb = 'https://www.facebook.com/profile.php?id=61592803761987';
     var survey = cfg.form || 'https://forms.gle/YW3PvtrNVQ7xt8nCA';
     host.innerHTML = '<div class="in">' +
@@ -1310,7 +1308,6 @@
           '<p class="flinks">' +
             '<a href="/guide">Hướng dẫn</a>' +
             '<a href="' + esc(fb) + '" target="_blank" rel="noopener">Facebook</a>' +
-            '<a href="mailto:' + esc(email) + '">Email</a>' +
             '<a href="' + esc(survey) + '" target="_blank" rel="noopener" title="Khảo sát truyện bạn muốn đọc tiếp">Khảo sát truyện</a>' +
           '</p>' +
         '</div>' +
@@ -1805,13 +1802,12 @@
     var d = (reg.settings && reg.settings.donation) || {};
     return d;
   }
-  /* Cấu hình liên hệ: `email` = nơi nhận thư liên hệ (và là địa chỉ dự phòng khi
-     nút Gửi báo lỗi trong trang đọc không gửi được), `form` = link KHẢO SÁT TRUYỆN
-     (người đọc chọn truyện muốn web làm tiếp) — không phải nơi báo lỗi nữa. */
+  /* Cấu hình công khai chỉ còn link khảo sát. Email nhận báo lỗi nằm trong Secret
+     MAIL_TO/ADMIN_EMAILS của Worker và tuyệt đối không đi vào registry/frontend. */
   function reportCfg(reg) {
     reg = reg || memo.reg || {};
     var r = (reg.settings && reg.settings.report) || {};
-    return { email: r.email || 'chuseoz.ofc@gmail.com', form: r.form || 'https://forms.gle/YW3PvtrNVQ7xt8nCA' };
+    return { form: r.form || 'https://forms.gle/YW3PvtrNVQ7xt8nCA' };
   }
   function findLib(id) {
     var lib = libList();

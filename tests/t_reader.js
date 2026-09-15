@@ -8,15 +8,15 @@
    4. Khách chưa đăng nhập vẫn bình luận được (kèm mã máy), có ô nhập tên.
    5. Icon "Lưu vào tủ" (tủ sách) KHÁC icon "Đánh dấu" (thẻ đánh dấu).
    6. Số chương phải đúng: registry nói 30 nhưng kho chương có 29 → web hiện 29.
-   7. Trang chủ có nút ĐĂNG NHẬP cho người đọc thường; mục Quản trị chỉ hiện
-      với đúng email quản trị.
+   7. Trang chủ có nút ĐĂNG NHẬP; mục Quản trị chỉ hiện sau khi Worker trả
+      admin:true, không dựa vào danh sách email công khai.
    Chạy:  cd tests && node t_reader.js
    ========================================================================== */
 const fs = require('fs'), path = require('path');
 const { page, dataFetch, read, ROOT } = require('./mk');
 
 const BASE = 'https://cms.test';
-const ADMIN_EMAIL = (read('cz-config.js').match(/CZ_ADMIN_EMAILS\s*=\s*\[\s*'([^']+)'/) || [, 'admin@gmail.com'])[1];
+const ADMIN_EMAIL = 'admin@example.com';
 const J = (b, ok, st) => Promise.resolve({
   ok: ok !== false, status: st || 200, json: () => Promise.resolve(b), text: () => Promise.resolve(JSON.stringify(b))
 });
@@ -30,8 +30,17 @@ function makeApi(log, S) {
     opt = opt || {};
     log.push((opt.method || 'GET') + ' ' + p + (opt.body ? ' ' + String(opt.body).slice(0, 90) : ''));
     if (p === '/api/registry') return J(REG);
-    if (p === '/api/health') return J({ ok: true, version: '1.5.0', kv: true, auth: { supabase: true, session: true, adminEmails: [ADMIN_EMAIL] } });
-    if (p === '/api/auth/config') return J({ ok: true, supabase: true, supabaseUrl: 'https://xyz.supabase.co', session: true, adminEmails: [ADMIN_EMAIL] });
+    if (p === '/api/health') return J({ ok: true, version: '1.9.4', kv: true, auth: { supabase: true, session: true, adminConfigured: true } });
+    if (p === '/api/auth/config') return J({ ok: true, supabase: true, supabaseUrl: 'https://xyz.supabase.co', session: true, adminConfigured: true });
+    if (p === '/api/auth/me') {
+      const h = opt.headers || {};
+      const admin = String(h.authorization || '').includes('admin-token');
+      return J({ ok: true, admin: admin, user: {
+        uid: admin ? 'sb-admin' : 'sb-thuong', email: admin ? ADMIN_EMAIL : 'reader@example.com',
+        name: admin ? 'Chủ Trang' : 'Đọc Giả', picture: '', exp: Math.floor(Date.now() / 1000) + 3600,
+        provider: 'supabase', admin: admin
+      } });
+    }
     const mb = p.match(/^\/api\/book\/([^/?]+)/);
     if (mb) {
       const f = path.join(ROOT, 'data/book', decodeURIComponent(mb[1]) + '.json');
@@ -312,7 +321,7 @@ function chFromLog(log) {
       coDangNhap: /đăng nhập/i.test((gd.querySelector('#czMnav') || {}).textContent || '')
     };
 
-    /* (b) đúng tài khoản quản trị (email trong cz-config.js) */
+    /* (b) Worker xác nhận phiên quản trị bằng admin:true */
     const a = page('index.html', {
       config: { CZ_API: BASE }, fetch: fetchMock,
       setup(win) {
@@ -320,7 +329,7 @@ function chFromLog(log) {
           uid: 'sb-admin', email: ADMIN_EMAIL, name: 'Chủ Trang', picture: '',
           exp: Math.floor(Date.now() / 1000) + 3600, provider: 'supabase'
         }));
-        win.localStorage.setItem('ssochuz-auth-token', 'phien-gia-lap');
+        win.localStorage.setItem('ssochuz-auth-token', 'admin-token');
       }
     });
     await wait(1400);
@@ -341,10 +350,10 @@ function chFromLog(log) {
       config: { CZ_API: BASE }, fetch: fetchMock,
       setup(win) {
         win.localStorage.setItem('ssochuz-user', JSON.stringify({
-          uid: 'sb-thuong', email: 'docgia@gmail.com', name: 'Đọc Giả', picture: '',
+          uid: 'sb-thuong', email: 'reader@example.com', name: 'Đọc Giả', picture: '',
           exp: Math.floor(Date.now() / 1000) + 3600, provider: 'supabase'
         }));
-        win.localStorage.setItem('ssochuz-auth-token', 'phien-gia-lap');
+        win.localStorage.setItem('ssochuz-auth-token', 'reader-token');
       }
     });
     await wait(1400);
@@ -429,7 +438,7 @@ function chFromLog(log) {
   }
   closeModal(rm);
   await wait(150);
-  /* mất mạng / Worker chưa có endpoint → phải hiện đường dự phòng (copy + Gmail), không im lặng */
+  /* mất mạng / Worker chưa có endpoint → phải hiện đường dự phòng copy, không lộ email */
   S.reportOff = true;
   click('#actReport'); await wait(200);
   const rm2 = $('#czReport');
@@ -440,7 +449,8 @@ function chFromLog(log) {
     hien2Nut: rm2.querySelector('#rpFall').style.display !== 'none',
     ghiChu: (rm2.querySelector('#rpNote') || {}).textContent.slice(0, 90)
   };
-  if (rm2.querySelector('#rpFall').style.display === 'none') out.errors.push('gửi thất bại mà không hiện nút dự phòng (copy / Gmail)');
+  if (rm2.querySelector('#rpFall').style.display === 'none') out.errors.push('gửi thất bại mà không hiện nút copy dự phòng');
+  if (rm2.querySelector('#rpMail')) out.errors.push('đường dự phòng còn nhúng email vào nút Gmail');
   S.reportOff = false;
   closeModal(rm);
   await wait(150);

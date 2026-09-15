@@ -2,7 +2,7 @@
 
 # File cấu hình + mã nguồn giao diện: sửa là thấy ngay, không bị dính cache
 /cz-config.js
-  Cache-Control: no-cache
+  Cache-Control: no-store, max-age=0
 
 /cz-app.js
   Cache-Control: no-cache

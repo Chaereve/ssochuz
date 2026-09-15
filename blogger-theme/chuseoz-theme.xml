@@ -1194,7 +1194,7 @@ body.rpage .dr .dsyn{font-size:12.5px;color:var(--rmut);margin:8px 14px 0;line-h
                     <b:section id='page_list_top' name='Page List (Top)' showaddelement='false'>
                       <b:widget id='PageList1' locked='true' title='' type='PageList' visible='false'>
                         <b:widget-settings>
-                          <b:widget-setting name='pageListJson'><![CDATA[{"4447437157126911043":{"href":"https://chuseoz.blogspot.com/p/list-novel.html","position":1,"title":"Trang chủ"},"link1":{"href":"mailto:yunio1910@gmail.com","position":2,"title":"DONATION - Q&A"},"link0":{"href":"http://chuseoz.blogspot.com/","position":0,"title":"Trang chủ"}}]]></b:widget-setting>
+                          <b:widget-setting name='pageListJson'><![CDATA[{"4447437157126911043":{"href":"https://chuseoz.blogspot.com/p/list-novel.html","position":1,"title":"Trang chủ"},"link1":{"href":"https://www.facebook.com/profile.php?id=61592803761987","position":2,"title":"DONATION - Q&A"},"link0":{"href":"http://chuseoz.blogspot.com/","position":0,"title":"Trang chủ"}}]]></b:widget-setting>
                           <b:widget-setting name='homeTitle'>Trang chủ</b:widget-setting>
                         </b:widget-settings>
                         <b:includable id='main'>
