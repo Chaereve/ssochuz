@@ -839,7 +839,7 @@
       (img ? '<img src="' + esc(img) + '" alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" width="300" height="450">' : '') +
       '<span class="scrim"></span>' +
       '<span class="stic st-' + stCls + '" title="' + esc(stLab) + '" aria-label="Tình trạng: ' + esc(stLab) + '" role="img">' + icon(STATUS_ICON[stCls] || 'clock', 'i-s') + '</span>' +
-      (n.fresh ? '<span class="nw-bookmark"><span>Mới</span></span>' : '') +
+      (n.fresh ? '<span class="nw-bookmark"><span>NEW</span></span>' : '') +
       '<span class="foot"><span class="ch">' + esc(countText(n)) + '</span>' +
         (n.is18 ? '<span class="b18">18+</span>' : '') + '</span>' +
       (pct ? '<span class="bar"><i style="width:' + pct + '%"></i></span>' : '') +
@@ -864,7 +864,7 @@
       '<span class="cl-main">' +
         '<span class="cl-top"><b class="cl-t">' + esc(n.title) + '</b>' +
           (n.is18 ? '<span class="b18">18+</span>' : '') +
-          (n.fresh ? '<span class="badge-new">Mới</span>' : '') +
+          (n.fresh ? '<span class="badge-new">NEW</span>' : '') +
         '</span>' +
         '<span class="cl-meta">' + esc(bits.join(' · ') || '—') + '</span>' +
         '<span class="cl-syn">' + esc(n.syn || 'Chưa có mô tả cho bộ này.') + '</span>' +

@@ -47,7 +47,7 @@
           '<h1><a href="' + esc(CZ.storyURL(n.slug)) + '">' + esc(n.title) + '</a></h1>' +
           '<div class="meta">' +
             '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(CZ.statusLabel(n.statusCls || n.status)) + '</span>' +
-            (n.fresh ? '<span class="badge-new">Mới</span>' : '') +
+            (n.fresh ? '<span class="badge-new">NEW</span>' : '') +
             '<span>' + ic('book', 'i-s') + ' <b>' + esc(CZ.countText(n)) + '</b></span>' +
             (n.author ? '<span>' + ic('pen', 'i-s') + ' ' + esc(n.author) + '</span>' : '') +
             (n.couple ? '<span>' + ic('users', 'i-s') + ' ' + esc(n.couple) + '</span>' : '') +
@@ -81,7 +81,7 @@
               (i === 0 ? ' fetchpriority="high"' : ' loading="lazy"') + ' decoding="async">' : '') +
             '<span class="gloss"></span>' +
             (n.is18 ? '<span class="b18">18+</span>' : '') +
-            (n.fresh ? '<span class="nw-bookmark"><span>Mới</span></span>' : '') +
+            (n.fresh ? '<span class="nw-bookmark"><span>NEW</span></span>' : '') +
           '</a>' +
           '<span class="pcap">' + (n.author || n.couple ? '<b>' + esc(n.author || n.couple) + '</b>' : '') +
             (n.year ? (n.author || n.couple ? ' · ' : '') + 'năm ' + esc(n.year) : '') + '</span>' +
