@@ -10,17 +10,18 @@ compatibility_date = "2025-01-01"
 #    hoặc chạy:          npx wrangler kv namespace create CZ_KV --binding CZ_KV
 # 3) Đặt khoá quản trị:  npx wrangler secret put ADMIN_KEY        (≥ 24 ký tự)
 # 4) Đặt khoá phiên:     npx wrangler secret put SESSION_SECRET   (≥ 32 ký tự)
-# 5) Đặt Client ID:      npx wrangler secret put GOOGLE_CLIENT_ID (muốn có đăng nhập/bình luận)
-# 6) Deploy:             npx wrangler deploy
+# 5) Đặt email quản trị: npx wrangler secret put ADMIN_EMAILS      (phân cách bằng dấu phẩy)
+# 6) Đặt Client ID:      npx wrangler secret put GOOGLE_CLIENT_ID (nếu dùng Google trực tiếp)
+# 7) Deploy:             npx wrangler deploy
 [[kv_namespaces]]
 binding = "CZ_KV"
 id = "c1e0e450c37f4a0abf804bf354c412d9"
 
 [vars]
 BLOG = "https://chuseoz.blogspot.com"
-# Đổi thành domain web của bạn để chặt CORS, ví dụ:
-# ALLOW_ORIGIN = "https://chuseoz.pages.dev,https://chuseoz.blogspot.com"
-ALLOW_ORIGIN = "*"
+# Chỉ cho các web thật gọi Worker; preview *.ssochuz.pages.dev cũng được nhận diện.
+# Nếu có custom domain, thêm nó vào danh sách này rồi deploy lại.
+ALLOW_ORIGIN = "https://ssochuz.pages.dev,https://chuseoz.blogspot.com"
 # TUỲ CHỌN — chỉ dùng cho POST /api/stats/import-firebase (kéo số liệu CŨ về KV 1 lần).
 # Lượt đọc/bình chọn mới do Worker tự đếm trên KV, không gọi tới Firebase.
 FIREBASE_PROJECT = "chuseoz-library"

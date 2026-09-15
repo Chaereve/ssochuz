@@ -108,9 +108,13 @@ function makeWorker() {
       ok: true, version: '1.5.0', kv: true, books: Object.keys(books).length, novels: REG.lib.length,
       regRev: REG.rev, lastWrite: '2026-09-13T03:00:00Z',
       stats: { items: 2, views: 100, votes: 7 },
-      auth: { supabase: true, supabaseUrl: 'https://xyz.supabase.co', supabaseHs256: true, google: false, session: true, adminEmails: ['boss@gmail.com'], mail: true }
+      auth: { supabase: true, supabaseUrl: 'https://xyz.supabase.co', supabaseHs256: true, google: false, session: true, adminConfigured: true, mail: true }
     });
-    if (p === '/api/auth/config') return json({ ok: true, supabase: true, supabaseUrl: 'https://xyz.supabase.co', google: false, session: true, adminEmails: ['boss@gmail.com'], version: '1.5.0' });
+    if (p === '/api/auth/config') return json({ ok: true, supabase: true, supabaseUrl: 'https://xyz.supabase.co', google: false, session: true, adminConfigured: true, version: '1.9.4' });
+    if (p === '/api/auth/me') return json({ ok: true, admin: true, user: {
+      uid: 'sb-1', email: 'admin@example.com', name: 'Chủ Trang', picture: '',
+      exp: Math.floor(Date.now() / 1000) + 3600, provider: 'supabase', admin: true
+    } });
     if (p === '/api/recount') {
       if (!auth) return json({ ok: false, error: 'sai key' }, 401, false);
       const fixed = [];
@@ -449,20 +453,19 @@ async function openAdmin(worker, key) {
     loi: off.errors.slice(0, 3)
   };
 
-  /* ---------- 13. ĐĂNG NHẬP BẰNG EMAIL QUẢN TRỊ (Supabase) → vào được ---------- */
-  /* lấy đúng email đang khai trong cz-config.js — không hardcode để test khỏi cũ */
-  const bossEmail = (read('cz-config.js').match(/CZ_ADMIN_EMAILS\s*=\s*\[\s*'([^']+)'/) || [, ''])[1];
+  /* ---------- 13. WORKER XÁC NHẬN PHIÊN QUẢN TRỊ → vào được ---------------- */
+  const bossEmail = 'admin@example.com';
   const adminPage = page('admin.html', {
     fetch: w.fetchMock,
     setup(win) {
       /* máy của chủ trang: đã lưu URL Worker + ADMIN_KEY từ lần trước */
       win.localStorage.setItem('cz_kv_api', BASE);
-      win.localStorage.setItem('cz_kv_key', KEY);
+      win.sessionStorage.setItem('cz_kv_key', KEY);
       win.localStorage.setItem('ssochuz-user', JSON.stringify({
         uid: 'sb-1', email: bossEmail, name: 'Chủ Trang', picture: '',
         exp: Math.floor(Date.now() / 1000) + 3600, provider: 'supabase'
       }));
-      win.localStorage.setItem('ssochuz-auth-token', 'phien-gia-lap');
+      win.localStorage.setItem('ssochuz-auth-token', 'admin-token');
     }
   });
   await wait(500);
@@ -574,14 +577,13 @@ async function openAdmin(worker, key) {
   $(adoc, '#aUrl').value = 'https://moinhat.supabase.co';
   $(adoc, '#aKey').value = 'anon-key-thu';
   $(adoc, '#aGoogle').value = '123.apps.googleusercontent.com';
-  $(adoc, '#aAdmins').value = 'Boss@Gmail.com , ban2@gmail.com';
   $(adoc, '#aProvider').value = 'supabase';
   aclick('#sSave');
   await wait(600);
   const authSaved = (w.REG.settings || {}).auth || {};
   out.cauHinhDangNhap = {
     url: authSaved.supabaseUrl, key: authSaved.supabaseAnonKey, provider: authSaved.provider,
-    emails: authSaved.adminEmails,
+    khongLuuEmailQuanTri: authSaved.adminEmails === undefined,
     google: authSaved.googleClientId
   };
   /* hỏi Worker xem đã bật Supabase chưa */

@@ -17,22 +17,17 @@
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
   var esc = CZ.esc, num = CZ.num, ic = CZ.icon;
   var LS = { api: 'cz_kv_api', key: 'cz_kv_key', draft: 'cz_admin_draft' };
-  /* Khoá quản trị KHÔNG mặc định nằm lại trên máy: cất trong sessionStorage (mất khi
-     đóng tab/trình duyệt). Chỉ khi chủ máy tự tích "Ghi nhớ khoá trên máy này" mới ghi
-     vào localStorage. Lý do: lỗ hổng chèn mã ở bất kỳ đâu trên web cũng đọc được
-     localStorage — khoá nằm đó thì người lạ mở máy là vào được trang quản trị. */
+  /* ADMIN_KEY không được ghi lâu dài vào localStorage. Nó chỉ sống trong tab hiện
+     tại (sessionStorage) và biến nhớ; đóng tab là mất. Xoá luôn bản localStorage
+     của các phiên bản cũ để giảm rủi ro khi máy bị dùng chung hoặc dính XSS. */
   function keySave() {
-    try { sessionStorage.removeItem(LS.key); localStorage.removeItem(LS.key); } catch (e) {}
-    try {
-      if ($('#inRemember') && $('#inRemember').checked) localStorage.setItem(LS.key, KEY);
-      else sessionStorage.setItem(LS.key, KEY);
-    } catch (e) {}
+    try { localStorage.removeItem(LS.key); sessionStorage.setItem(LS.key, KEY); } catch (e) {}
   }
   function keyLoad() {
-    try { return localStorage.getItem(LS.key) || sessionStorage.getItem(LS.key) || ''; } catch (e) { return ''; }
-  }
-  function keyWasRemembered() {
-    try { return !!localStorage.getItem(LS.key); } catch (e) { return false; }
+    try {
+      localStorage.removeItem(LS.key);              /* dọn bản "ghi nhớ" cũ */
+      return sessionStorage.getItem(LS.key) || '';
+    } catch (e) { return ''; }
   }
   function keyDrop() {
     try { localStorage.removeItem(LS.key); } catch (e) {}
@@ -433,13 +428,12 @@
     var sbCode = !!(window.CZ_SUPABASE_URL && window.CZ_SUPABASE_ANON_KEY);
     var sbKv = !!(authCfg.supabaseUrl && authCfg.supabaseAnonKey);
     var sbOn = sbCode || sbKv;
-    var emails = (window.CZ_AUTH && CZ_AUTH.adminEmails) ? CZ_AUTH.adminEmails() : [];
     var docBad = DOC.rows.filter(function (r) { return r.issues.indexOf('regVsReal') >= 0 || r.issues.indexOf('kvVsRepo') >= 0; }).length;
     box.innerHTML =
       '<div class="docrow ' + (sbOn ? 'good' : 'warn') + '"><span class="di">' + ic(sbOn ? 'check' : 'alert', 'i-s') + '</span>' +
         '<span class="dt"><b>Đăng nhập người đọc: ' + (sbOn ? (sbCode ? 'Supabase (cz-config.js)' : 'Supabase (lưu trên KV)') : 'CHƯA bật') + '</b>' +
         '<span>' + (sbOn
-          ? 'Người đọc bấm "Đăng nhập" ở đầu trang là qua Supabase → Google, không dính lỗi origin_mismatch. Email quản trị: ' + esc(emails.join(', ') || '(chưa khai)')
+          ? 'Người đọc bấm "Đăng nhập" ở đầu trang là qua Supabase → Google. Quyền quản trị được Worker xác nhận; danh sách email không gửi xuống web.'
           : 'Vào tab <b>Cài đặt &amp; đồng bộ</b> → mục <b>Đăng nhập người đọc (Supabase)</b>, dán Project URL + anon key rồi Lưu. ' +
             'Hoặc điền thẳng vào <code>cz-config.js</code>. Chi tiết: HUONG-DAN-DANG-NHAP-BINH-LUAN.md') + '</span></span>' +
         '<button class="btn ghost sm" data-go2="settings">' + ic('gear', 'i-s') + 'Mở cài đặt</button></div>' +
@@ -953,7 +947,6 @@
     if ($('#dMomo')) $('#dMomo').value = don.momo || '';
     if ($('#dQr')) $('#dQr').value = don.qr || '';
     if ($('#dMsg')) $('#dMsg').value = don.message || '';
-    if ($('#rEmail')) $('#rEmail').value = rep.email || 'chuseoz.ofc@gmail.com';
     if ($('#rForm')) $('#rForm').value = rep.form || 'https://forms.gle/YW3PvtrNVQ7xt8nCA';
     renderEdit();
   }
@@ -984,8 +977,9 @@
       qr: $('#dQr') ? $('#dQr').value.trim() : '',
       message: $('#dMsg') ? $('#dMsg').value.trim() : ''
     };
+    /* Địa chỉ nhận báo lỗi nằm trong Secret MAIL_TO/ADMIN_EMAILS của Worker,
+       registry công khai chỉ giữ link khảo sát. */
     var rep = {
-      email: $('#rEmail') ? $('#rEmail').value.trim() : 'chuseoz.ofc@gmail.com',
       form: $('#rForm') ? $('#rForm').value.trim() : 'https://forms.gle/YW3PvtrNVQ7xt8nCA'
     };
     /* cấu hình đăng nhập: lưu trên KV để KHÔNG phải sửa cz-config.js rồi deploy lại.
@@ -994,9 +988,7 @@
       provider: $('#aProvider') ? $('#aProvider').value : 'supabase',
       supabaseUrl: $('#aUrl') ? $('#aUrl').value.trim().replace(/\/+$/, '') : '',
       supabaseAnonKey: $('#aKey') ? $('#aKey').value.trim() : '',
-      googleClientId: $('#aGoogle') ? $('#aGoogle').value.trim() : '',
-      adminEmails: ($('#aAdmins') ? $('#aAdmins').value : '').split(',')
-        .map(function (x) { return x.trim().toLowerCase(); }).filter(Boolean)
+      googleClientId: $('#aGoogle') ? $('#aGoogle').value.trim() : ''
     };
     REG.settings = Object.assign({}, REG.settings, {
       giscus: { repo: $('#sGiscusRepo').value.trim(), repoId: $('#sGiscusId').value.trim() },
@@ -1675,7 +1667,6 @@
     set('#aGoogle', a.googleClientId || '');
     set('#aProvider', a.provider || '');
     if (a.provider && $('#aProvider')) $('#aProvider').value = a.provider;
-    set('#aAdmins', Array.isArray(a.adminEmails) ? a.adminEmails.join(', ') : (a.adminEmails || ''));
     paintAuthState();
   }
   function paintAuthState(h) {
@@ -1686,7 +1677,7 @@
     bits.push(h.supabase ? 'Supabase: sẵn sàng' : 'Supabase: thiếu SUPABASE_URL');
     bits.push(h.session ? 'session: ok' : 'session: thiếu SESSION_SECRET');
     bits.push(h.google ? 'Google ID: có' : 'Google ID: không');
-    bits.push('ADMIN_EMAILS: ' + ((h.adminEmails || []).length || 0));
+    bits.push(h.adminConfigured ? 'quản trị: đã cấu hình kín' : 'quản trị: thiếu ADMIN_EMAILS');
     c.className = 'chip ' + (h.supabase && h.session ? 'ok' : 'err');
     c.innerHTML = '<span class="d"></span><span>' + esc(bits.join(' · ')) + '</span>';
   }
@@ -2075,9 +2066,6 @@
   }
   function paintWho() {
     var u = authUser(), box = $('#whoBox'), rb = $('#roleBadge'), lo = $('#btnLogout');
-    var ge = $('#gateEmails');
-    var emails = (window.CZ_AUTH && CZ_AUTH.adminEmails) ? CZ_AUTH.adminEmails() : (window.CZ_ADMIN_EMAILS || []);
-    if (ge) ge.textContent = emails.length ? emails.join(', ') : '(chưa khai email nào trong cz-config.js)';
     if (box) {
       box.classList.toggle('hide', !u);
       box.innerHTML = u
@@ -2095,8 +2083,8 @@
     if (gw) {
       gw.innerHTML = u
         ? 'Đang đăng nhập: <b>' + esc(u.email || u.name) + '</b> · ' +
-          (isAdmin() ? 'có quyền quản trị.' : '<b>không</b> nằm trong danh sách quản trị nên không vào được trang này.')
-        : 'Chưa đăng nhập. Email quản trị đang cho phép: <b>' + esc(emails.join(', ') || '—') + '</b>';
+          (isAdmin() ? 'Worker đã xác nhận quyền quản trị.' : '<b>không</b> có quyền quản trị trên Worker.')
+        : 'Chưa đăng nhập. Danh sách tài khoản quản trị được giữ kín trên Worker.';
     }
   }
   function gatePass(how) {
@@ -2122,7 +2110,6 @@
     paintWho();
     var savedApi = '', savedKey = '';
     try { savedApi = localStorage.getItem(LS.api) || ''; savedKey = keyLoad(); } catch (e) {}
-    var rem = $('#inRemember'); if (rem) rem.checked = keyWasRemembered();
     if (savedApi) $('#inApi').value = savedApi;
     else if (CZ.API) $('#inApi').value = CZ.API;
     if (savedKey) $('#inKey').value = savedKey;
@@ -2328,7 +2315,7 @@
   });
   $('#btnDelBook').addEventListener('click', function () { if (CUR) delBook(CUR.slug); });
   $('#sSave').addEventListener('click', saveSettings);
-  ['#sSched', '#sSchedNote', '#sGiscusRepo', '#sGiscusId', '#aUrl', '#aKey', '#aGoogle', '#aAdmins']
+  ['#sSched', '#sSchedNote', '#sGiscusRepo', '#sGiscusId', '#aUrl', '#aKey', '#aGoogle']
     .forEach(function (s) {
       var el = $(s); if (el) el.addEventListener('input', function () { dirty.set = true; markDirty(); });
     });
@@ -2377,7 +2364,7 @@
     renderEdit(); epSearch();
     toast('Đã xoá hết Editor\'s Choice');
   });
-  ['#dEnabled','#dBank','#dAccNo','#dAccName','#dMomo','#dQr','#dMsg','#rEmail','#rForm'].forEach(function (s) {
+  ['#dEnabled','#dBank','#dAccNo','#dAccName','#dMomo','#dQr','#dMsg','#rForm'].forEach(function (s) {
     var el = $(s); if (el) el.addEventListener('input', function () { dirty.set = true; markDirty(); });
   });
   
@@ -2444,8 +2431,8 @@
       .then(function () {
         if (!isAdmin()) {
           var u = authUser();
-          gateHold(u ? ('Tài khoản ' + (u.email || u.name) + ' KHÔNG nằm trong danh sách quản trị. ' +
-            'Thêm email đó vào CZ_ADMIN_EMAILS (cz-config.js) hoặc ADMIN_EMAILS (Worker), hoặc đăng nhập bằng tài khoản khác.')
+          gateHold(u ? ('Tài khoản ' + (u.email || u.name) + ' không được Worker cấp quyền quản trị. ' +
+            'Thêm tài khoản vào Secret ADMIN_EMAILS trên Worker rồi đăng nhập lại, hoặc dùng tài khoản khác.')
             : 'Chưa đăng nhập được — kiểm tra cấu hình Supabase trong cz-config.js.', 'err');
         }
       })

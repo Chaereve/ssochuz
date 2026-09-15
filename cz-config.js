@@ -42,17 +42,16 @@ window.CZ_STATS_DIRECT = false;                           // số xếp hạng l
 window.CZ_AUTH_PROVIDER = 'supabase';
 
 /* --- SUPABASE (bắt buộc khi CZ_AUTH_PROVIDER = 'supabase') --------------- */
-window.CZ_SUPABASE_URL = 'https://hnyzrkdlmvelbgcowztk.supabase.co';          // ví dụ https://abcdefghijk.supabase.co
-window.CZ_SUPABASE_ANON_KEY = 'sb_publishable_G-a-An_7qBDMixg3G4kVDA_iwSon3O5';     // Project Settings → API → anon public
+window.CZ_SUPABASE_URL = 'https://hnyzrkdlmvelbgcowztk.supabase.co';          // URL công khai — DevTools thấy là bình thường
+window.CZ_SUPABASE_ANON_KEY = 'sb_publishable_G-a-An_7qBDMixg3G4kVDA_iwSon3O5';     // khoá CÔNG KHAI; không bao giờ dán sb_secret_/service_role
 
 /* --- GOOGLE (dùng khi CZ_AUTH_PROVIDER = 'google', hoặc làm nút dự phòng) -- */
 window.CZ_GOOGLE_CLIENT_ID = '164350528370-3jmoj701gt07kl4v832vpb25qsfd3qh2.apps.googleusercontent.com';
 
-/* --- AI ĐƯỢC VÀO TRANG QUẢN TRỊ ------------------------------------------
-   Người thường đăng nhập vẫn chỉ là người đọc: mục "Quản trị" bị ẨN hoàn toàn
-   và /admin chặn ngay từ cửa. Thêm email vào đây để cấp quyền (không phân biệt
-   hoa thường). Cũng có thể đặt biến ADMIN_EMAILS trong Worker để khớp cả hai phía. */
-window.CZ_ADMIN_EMAILS = ['kimtong1906@gmail.com','freshstation01@gmail.com','chuseoz.ofc@gmail.com'];
+/* --- QUYỀN QUẢN TRỊ -------------------------------------------------------
+   KHÔNG đặt email quản trị hay khoá bí mật trong file này. Worker xác nhận quyền
+   bằng biến Secret ADMIN_EMAILS rồi chỉ trả về cờ admin:true sau khi đăng nhập.
+   Nhờ vậy danh sách tài khoản quản trị không xuất hiện trong DevTools/API công khai. */
 
 /* Firebase: KHÔNG còn dùng để đăng nhập hay xếp hạng.
    CZ_FIREBASE_PROJECT chỉ để /api/stats/import-firebase kéo số CŨ về KV 1 lần. */
@@ -68,10 +67,4 @@ window.CZ_FIREBASE_PROJECT = window.CZ_FIREBASE_PROJECT || "chuseoz-library";
   }
   window.CZ_API = fix(window.CZ_API);
   window.CZ_SUPABASE_URL = fix(window.CZ_SUPABASE_URL);
-  /* danh sách email quản trị: luôn là mảng chữ thường, cắt khoảng trắng */
-  var a = window.CZ_ADMIN_EMAILS;
-  if (typeof a === 'string') a = a.split(',');
-  window.CZ_ADMIN_EMAILS = (Array.isArray(a) ? a : [])
-    .map(function (x) { return String(x || '').trim().toLowerCase(); })
-    .filter(Boolean);
 })();

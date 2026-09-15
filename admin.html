@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg?v=2">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png?v=2">
 <link rel="icon" type="image/x-icon" href="/assets/favicon.ico?v=2">
-<link rel="stylesheet" href="/cz.css?v=20260915e">
+<link rel="stylesheet" href="/cz.css?v=20260915f">
 <script>/* chống nháy nền */try{var t=localStorage.getItem('ssochuz-theme')||localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
 <body class="admin">
@@ -53,7 +53,7 @@
         <a class="btn ghost" href="/">Về trang chủ</a>
       </div>
       <div class="msgbar" id="gateMsg"></div>
-      <p class="who" id="gateWho">Chưa đăng nhập. Email quản trị đang cho phép: <b id="gateEmails">—</b></p>
+      <p class="who" id="gateWho">Chưa đăng nhập. Danh sách tài khoản quản trị được giữ kín trên Worker.</p>
     </div>
   </section>
 
@@ -74,9 +74,7 @@
             <input class="inp" id="inApi" placeholder="https://chuseoz-cms.xxx.workers.dev" autocomplete="off"></div>
           <div><label class="fl" for="inKey">ADMIN_KEY</label>
             <input class="inp" id="inKey" type="password" placeholder="khoá quản trị" autocomplete="off">
-            <p class="hint">Dán đúng <code>Secret ADMIN_KEY</code> của <b>Worker này</b>, không phải <code>SESSION_SECRET</code> hay Supabase key. Khoá ở đầu/cuối được tự bỏ khoảng trắng.</p>
-            <label class="chk" for="inRemember"><input type="checkbox" id="inRemember">
-              <span>Ghi nhớ khoá trên máy này <span class="sm muted">(mặc định: khoá chỉ sống trong tab đang mở — đóng trình duyệt là mất, an toàn hơn khi dùng máy chung)</span></span></label></div>
+            <p class="hint">Dán đúng <code>Secret ADMIN_KEY</code> của <b>Worker này</b>, không phải <code>SESSION_SECRET</code> hay Supabase key. Khoá chỉ sống trong tab hiện tại; đóng tab là bị xoá và không có tuỳ chọn lưu lâu dài.</p></div>
         </div>
         <div class="row mt">
           <button class="btn pri" id="btnConnect">Kiểm tra &amp; kết nối</button>
@@ -413,13 +411,10 @@
         </div>
       </div>
       <div class="card2">
-        <h3>Báo lỗi & Liên hệ</h3>
-        <p class="hint">Báo lỗi chữ ở trang đọc giờ gửi <b>tự động</b> về máy chủ (kèm email tới quản trị nếu Worker đã đặt <code>MAIL_TO</code>, hoặc <code>RESEND_API_KEY</code> + <code>MAIL_FROM</code>) — người đọc không phải copy gì.
-          Ô đầu là email nhận thư liên hệ; ô sau là link <b>khảo sát truyện</b> (để người đọc chọn truyện muốn web làm tiếp).</p>
-        <div class="grid2">
-          <div><label class="fl" for="rEmail">Email liên hệ / nhận báo lỗi</label><input class="inp" id="rEmail" placeholder="chuseoz.ofc@gmail.com"></div>
-          <div><label class="fl" for="rForm">Link khảo sát truyện (Google Form)</label><input class="inp" id="rForm" placeholder="https://forms.gle/..."></div>
-        </div>
+        <h3>Báo lỗi &amp; liên hệ</h3>
+        <p class="hint">Báo lỗi chữ được gửi <b>tự động</b> về Worker. Địa chỉ nhận thư phải đặt bằng Secret <code>MAIL_TO</code> hoặc <code>ADMIN_EMAILS</code> trên Worker, nên không xuất hiện trong HTML, registry hay DevTools của người đọc.</p>
+        <label class="fl" for="rForm">Link khảo sát truyện (Google Form)</label>
+        <input class="inp" id="rForm" placeholder="https://forms.gle/...">
       </div>
       <div class="card2">
         <h3>Lịch ra chương</h3>
@@ -435,8 +430,9 @@
         <div class="grid2">
           <div><label class="fl" for="aUrl">Project URL</label>
             <input class="inp" id="aUrl" placeholder="https://xxxxxxxx.supabase.co" autocomplete="off"></div>
-          <div><label class="fl" for="aKey">anon public key</label>
-            <input class="inp" id="aKey" placeholder="eyJhbGciOi…" autocomplete="off"></div>
+          <div><label class="fl" for="aKey">Publishable / anon key (khoá công khai)</label>
+            <input class="inp" id="aKey" placeholder="sb_publishable_…" autocomplete="off">
+            <span class="hint sm">Chỉ dùng publishable/anon key; tuyệt đối không dán <code>service_role</code> hoặc secret key.</span></div>
         </div>
         <div class="grid2 mt">
           <div><label class="fl" for="aProvider">Nhà cung cấp</label>
@@ -448,10 +444,7 @@
           <div><label class="fl" for="aGoogle">Google Client ID (chỉ cần khi chọn cách cũ)</label>
             <input class="inp" id="aGoogle" placeholder="…apps.googleusercontent.com" autocomplete="off"></div>
         </div>
-        <label class="fl mt" for="aAdmins">Email quản trị (phân cách bằng dấu phẩy)</label>
-        <input class="inp" id="aAdmins" placeholder="kimtong1906@gmail.com" autocomplete="off">
-        <p class="hint" style="margin-top:6px">Chỉ những email này thấy mục <b>Quản trị</b> ngoài web và vào được trang này.
-          Đặt thêm biến <code>ADMIN_EMAILS</code> trong Worker để Worker cũng nhận diện quản trị (xoá bình luận, cấp quyền).</p>
+        <p class="note warn mt"><b>Danh sách quản trị không lưu ở đây.</b> Hãy đặt <code>ADMIN_EMAILS</code> bằng Secret trên Cloudflare Worker. Worker chỉ trả cờ <code>admin:true</code> cho đúng tài khoản; địa chỉ thật không được gửi xuống trình duyệt.</p>
         <div class="row mt"><span class="chip" id="aState"><span class="d"></span><span>chưa kiểm tra</span></span>
           <button class="btn ghost sm" id="aCheck">Kiểm tra Worker đã sẵn sàng chưa</button></div>
       </div>
@@ -622,9 +615,9 @@
 
 <div class="toasts" id="toasts"></div>
 
-<script src="/cz-config.js?v=20260915e"></script>
-<script src="/cz-app.js?v=20260915e"></script>
-<script src="/cz-auth.js?v=20260915e"></script>
-<script src="/admin.js?v=20260915e"></script>
+<script src="/cz-config.js?v=20260915f"></script>
+<script src="/cz-app.js?v=20260915f"></script>
+<script src="/cz-auth.js?v=20260915f"></script>
+<script src="/admin.js?v=20260915f"></script>
 </body>
 </html>

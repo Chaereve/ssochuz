@@ -1,8 +1,8 @@
 {
   "name": "ssochuz-library",
   "private": true,
-  "version": "1.9.2",
-  "description": "ssochuz library — web tĩnh. Mã nguồn đọc được nằm trong src/, bản phát hành (đã rút gọn) nằm ở thư mục gốc.",
+  "version": "1.9.4",
+  "description": "ssochuz library — web tĩnh. Mã nguồn đọc được nằm trong src/, bản phát hành (đã rút gọn, không chứa secret/email quản trị) nằm ở thư mục gốc.",
   "scripts": {
     "build": "node tools/build_site.mjs",
     "test": "node tests/run.js"

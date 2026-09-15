@@ -931,7 +931,6 @@
     $('#actShare').addEventListener('click', shareChapter);
     var rp = $('#actReport');
     if (rp) rp.addEventListener('click', function () {
-      var cfg = CZ.reportCfg ? CZ.reportCfg() : { email: 'chuseoz.ofc@gmail.com', form: 'https://forms.gle/YW3PvtrNVQ7xt8nCA' };
       var head = 'Báo lỗi · ' + N.title + ' · ' + chapLabel(cur);
       var link = location.origin + location.pathname + '#chuong-' + cur;
       var text = head + '\n' + link + '\n\nChỗ cần sửa: ';
@@ -943,7 +942,6 @@
         '<div class="sm muted rpcount" id="rpCount" aria-live="off"></div>' +
         '<div class="mt row" id="rpFall" style="display:none">' +
           '<button class="btn ghost sm" id="rpCopy" type="button">' + ic('copy', 'i-s') + ' Copy nội dung</button>' +
-          '<a class="btn ghost sm" id="rpMail" href="#">' + ic('mail', 'i-s') + ' Gửi bằng Gmail của bạn</a>' +
         '</div></div>' +
         '<div class="mf"><span class="sm muted" id="rpNote" role="status" aria-live="polite"></span>' +
         '<button class="btn ghost" data-close>Đóng</button>' +
@@ -959,18 +957,12 @@
       }
       if (cbox) { paintCount(); ta.addEventListener('input', paintCount); }
       function fallback(why) {
-        note.textContent = why + ' Bạn có thể copy nội dung hoặc gửi bằng Gmail của mình:';
+        note.textContent = why + ' Bạn có thể copy nội dung rồi gửi qua kênh liên hệ công khai.';
         var f = m.querySelector('#rpFall');
         if (f) f.style.display = '';
       }
       m.querySelector('#rpCopy').addEventListener('click', function () {
         CZ.copy(ta.value, 'Đã copy nội dung báo lỗi');
-      });
-      m.querySelector('#rpMail').addEventListener('click', function (e) {
-        e.preventDefault();
-        var subj = encodeURIComponent(head);
-        window.open('https://mail.google.com/mail/?fs=1&tf=cm&to=' + encodeURIComponent(cfg.email) +
-          '&su=' + subj + '&body=' + encodeURIComponent(ta.value), '_blank', 'noopener');
       });
       send.addEventListener('click', function () {
         var body = ta.value.trim();
