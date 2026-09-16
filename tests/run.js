@@ -29,12 +29,16 @@
      t_sw_img.js       chạy THẬT sw.js trong phạm vi giả: tự đọc CSP của mình — CSP mở
                        thì tải hộ + cache ảnh bìa, CSP chặn thì để trình duyệt tải (không
                        request lỗi nào), bị chặn bất ngờ thì nhường 302 — không bao giờ
-                       trả ảnh lỗi (đúng lỗi "vào trang lần đầu còn bìa, F5 là mất bìa") */
+                       trả ảnh lỗi (đúng lỗi "vào trang lần đầu còn bìa, F5 là mất bìa")
+     t_devserver.js    bật THẬT tools/dev_server.py rồi gọi HTTP: /truyen, /truyen/,
+                       /truyen/<slug>/, /reader/<slug>/, /admin, /admin.html (308)… phải
+                       giống Cloudflare Pages (không 404/508), và bộ bắt vòng lặp
+                       _redirects vẫn phải trả 508 khi luật sai */
 const path = require('path'), { spawnSync } = require('child_process');
 const cands = (process.env.CZ_TEST_MODULES || '').split(path.delimiter).filter(Boolean)
   .concat([path.join(__dirname, 'node_modules'), path.join(__dirname, '..', 'node_modules')]);
 const env = Object.assign({}, process.env, { NODE_PATH: cands.join(path.delimiter) });
-const files = [path.join('..', 'tools', 'check_src.js'), path.join('..', 'tools', 'check_secrets.js'), path.join('..', 'tools', 'check_headers.js'), 't_worker.mjs', 't_config.js', 't_html.js', 't_follow.js', 't_feed.js', 't_push.js', 't_people.js', 't_notif.js', 't_pwa.js', 't_sw_img.js', 't_preload.js', 't_view.js', 't_chapter_url.js', 't_home.js', 't_mobile.js', 't_stats.js', 't_story.js', 't_reader.js', 't_flows.js', 't_doctor.js', 't_sweep.js', 'cf_admin_test.js'];
+const files = [path.join('..', 'tools', 'check_src.js'), path.join('..', 'tools', 'check_secrets.js'), path.join('..', 'tools', 'check_headers.js'), 't_worker.mjs', 't_config.js', 't_html.js', 't_follow.js', 't_feed.js', 't_push.js', 't_people.js', 't_notif.js', 't_pwa.js', 't_sw_img.js', 't_devserver.js', 't_preload.js', 't_view.js', 't_chapter_url.js', 't_home.js', 't_mobile.js', 't_stats.js', 't_story.js', 't_reader.js', 't_flows.js', 't_doctor.js', 't_sweep.js', 'cf_admin_test.js'];
 let bad = 0;
 for (const f of files) {
   const r = spawnSync(process.execPath, [path.join(__dirname, f)], { encoding: 'utf8', timeout: 180000, env });
