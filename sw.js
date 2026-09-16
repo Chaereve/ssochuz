@@ -12,7 +12,7 @@
    ⚠ MỖI LẦN ĐỔI ?v= TĨNH (cz.css/cz-*.js): sửa cả PRECACHE dưới đây + tăng
    CZ_SW_VER → trình duyệt tự tải SW mới, hiện “Đã có bản cập nhật — tải lại”.
    ========================================================================== */
-var CZ_SW_VER = '20260917s';
+var CZ_SW_VER = '20260917t';
 
 /* kho shell theo version (update là thay kho mới, xoá kho cũ);
    kho trang/API/ảnh KHÔNG theo version để dữ liệu offline còn lại sau update */
@@ -209,7 +209,10 @@ function imgFirst(req) {
     return cache.match(req).then(function (hit) {
       if (hit) {
         /* chạm lại để ảnh hay xem không bị dọn (keys() trả theo thứ tự chèn) */
-        cache.delete(req).then(function () { cache.put(req, hit); }).catch(function () {});
+        /* Cache.put() consumes its Response. Clone before re-inserting so the
+           response returned to the page remains readable and Chrome does not log
+           “Response body is already used”. */
+        cache.delete(req).then(function () { cache.put(req, hit.clone()); }).catch(function () {});
         return hit;
       }
       return fetch(req).then(function (res) {

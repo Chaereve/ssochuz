@@ -1024,6 +1024,7 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   transition: max-height var(--t-close) var(--ease-close);
 }
 .synwrap.clamp.open > .synin {
+  max-height: none;
   -webkit-mask-image: none; mask-image: none;
   transition: max-height var(--t) var(--ease);
 }
@@ -2332,4 +2333,67 @@ body.rd-focus .rdcmts { display: none; }
   .hdr .in > .grow { min-width: 0; }          /* màn 320px: không chừa chỗ chết */
   .hdr .logo { font-size: 18px; }
   .hdr .logo i { display: none; }
+}
+/* Responsive polish — giữ bố cục biên tập, chỉ làm rõ nhịp và vùng chạm trên màn hình nhỏ. */
+@media (max-width: 700px) {
+  .wrap { padding-left: 16px; padding-right: 16px; }
+  .hdr .in { height: 56px; padding: 0 14px; gap: 4px; }
+  .logo { font-size: 19px; }
+  .logo i { display: none; }
+  .nav { display: none; }
+  .hbtn.burger { display: inline-flex; }
+  .mnav { padding-left: 16px; padding-right: 16px; }
+  .hero { min-height: 510px; }
+  .hero .stage { padding: 72px 16px 82px; }
+  .hero h1 { font-size: clamp(28px, 9vw, 40px); }
+  .hero .syn { -webkit-line-clamp: 3; }
+  .hero .btn-row, .shero .btn-row { gap: 8px; }
+  .hero .btn, .shero .btn { min-height: 40px; }
+  .fbox { padding: 14px; }
+  .fbox .row1 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .fbox .search { grid-column: 1 / -1; }
+  .fbox .sel { min-width: 0; width: 100%; }
+  .seg { grid-column: 1 / -1; justify-self: start; }
+  .sechead { align-items: flex-start; gap: 10px; }
+  .sechead h2 { font-size: 22px; }
+  .rail { margin-right: -16px; padding-right: 16px; }
+  .card .body { padding: 10px; }
+  .card .ctitle { font-size: 14px; }
+  .facts .in { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .toast { max-width: calc(100vw - 32px); }
+  .nmenu { position: fixed; top: 62px; right: 12px; width: min( calc(100vw - 24px), 360px); max-height: 68vh; }
+}
+@media (max-width: 430px) {
+  .hero { min-height: 470px; }
+  .hero .stage { padding-top: 62px; }
+  .fbox .row1 { grid-template-columns: 1fr; }
+  .seg { grid-column: auto; }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .card .th { aspect-ratio: 2 / 3; }
+  .facts .in { grid-template-columns: repeat(2, 1fr); }
+}
+/* Người dùng có thể đọc trọn tên tác giả/couple; chỉ cắt ảnh, không cắt chữ. */
+.people .pcard .pbody b { display: block; overflow-wrap: anywhere; white-space: normal; }
+.people .pcard .pmeta { white-space: normal; line-height: 1.45; }
+.people .pcard { min-width: 0; align-items: flex-start; }
+.people .pcard .pth { min-width: 74px; }
+@media (max-width: 560px) {
+  .people .grid { grid-template-columns: 1fr; gap: 10px; }
+  .people .pcard { padding: 12px; }
+  .people .pcard .pth { min-width: 68px; }
+}
+/* Admin trên mobile là app thao tác: thanh tab có thể cuộn ngang, bảng giữ cột mà không bóp chữ. */
+.admin .tabs.bar { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+.admin .tabs.bar button { flex: 0 0 auto; min-height: 40px; }
+@media (max-width: 700px) {
+  .amain { padding-left: 14px; padding-right: 14px; }
+  .abar .in { padding: 0 14px; gap: 6px; }
+  .abar .logo i, .abar .chip, .abar .dirty, .abar .whoami, .abar .rolebadge { display: none; }
+  .abar .hbtn { padding-left: 9px; padding-right: 9px; }
+  .admin .grid2 { grid-template-columns: 1fr; }
+  .admin .row { flex-wrap: wrap; }
+  .admin .row > .grow { min-width: 100%; }
+  .admin .tbl { min-width: 760px; }
+  .admin .card2 { padding: 14px; }
+  .admin textarea.inp { min-height: 180px; }
 }

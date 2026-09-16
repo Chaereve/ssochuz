@@ -393,7 +393,13 @@
       if (tg && tg.parentNode) tg.parentNode.removeChild(tg);
       tg = null;
     }
-    if (tg) tg.addEventListener('click', function () { showTab('info', true); });
+    if (tg) tg.addEventListener('click', function () {
+      /* Cho phép đọc ngay tại chỗ: không bắt người đọc đổi tab và mất vị trí. */
+      var open = !sw.classList.contains('open');
+      sw.classList.toggle('open', open);
+      tg.setAttribute('aria-expanded', open ? 'true' : 'false');
+      tg.lastChild && (tg.lastChild.nodeValue = open ? 'Thu gọn' : 'Đọc giới thiệu đầy đủ');
+    });
     var sh = $('#shelfBtn');
     if (sh) sh.addEventListener('click', function () {
       var on = CZ.toggleShelf(n);
