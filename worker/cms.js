@@ -87,7 +87,7 @@ export { PrivateBooks } from './private-books.js';
      VAPID_PRIVATE     (secret, bắt buộc nếu bật push) — khoá riêng VAPID base64url (`wrangler secret put VAPID_PRIVATE`)
    ============================================================================ */
 
-const VERSION = '1.9.7';
+const VERSION = '1.9.8';
 const JSONH = {
   'content-type': 'application/json; charset=utf-8',
   'x-content-type-options': 'nosniff',
@@ -116,8 +116,14 @@ export default {
         let id;
         if (owner) {
           const auth = await userFromReq(req, env);
-          if (!auth.user || !auth.user.uid || !auth.user.exp || auth.user.exp <= Date.now() / 1000)
-            return json({ error: 'Vui lòng đăng nhập lại.' }, { status: 401, cors, headers: { 'cache-control': 'no-store' } });
+          const expired = auth.user && (!auth.user.uid || !auth.user.exp || auth.user.exp <= Date.now() / 1000);
+          if (!auth.user || expired) {
+            const why = expired ? 'Phiên đã hết hạn' : (auth.err ? auth.err : 'Chưa đăng nhập');
+            return json({
+              error: 'Chưa mở được không gian của bạn — ' + why + '. Vui lòng bấm “Đăng xuất & đăng nhập lại” rồi thử lại.',
+              hint: 'Chủ trang: nếu lỗi nhắc ghim project Supabase, đặt biến SUPABASE_URL trên Worker hoặc lưu Project URL ở /admin → Cài đặt & đồng bộ → Đăng nhập (worker 1.9.8).',
+            }, { status: 401, cors, headers: { 'cache-control': 'no-store' } });
+          }
           id = await profileId(auth.user.uid);
         } else {
           if (req.method !== 'GET') return json({ error: 'Không được phép.' }, { status: 405, cors });
@@ -1019,6 +1025,7 @@ async function putKV(req, env, key, cors, label) {
   const saved = new Date().toISOString();
   await env.CZ_KV.put(key, body, { metadata: { saved, rev: parsed.rev || '', bytes } });
   await env.CZ_KV.put('_last', saved);           // mốc thời gian ghi gần nhất
+  if (key === 'registry') sbPinReset(env);       // ghim Supabase (nếu đổi) có hiệu lực ngay
   if (label) await logAct(env, label, req);
   return json({ ok: true, key, bytes, saved }, { cors });
 }
@@ -1559,13 +1566,19 @@ async function health(env, cors) {
     ok: true, version: VERSION, kv: true, books, adminConfigured: !!adminKey(env), regRev: (reg && reg.rev) || '',
     novels: reg ? (reg.lib || []).length : 0, lastWrite: last, now: new Date().toISOString(),
     stats: { items: Object.keys(st.items).length, views, votes },
-    /* để trang quản trị biết kênh đăng nhập đã sẵn sàng chưa, thiếu biến nào */
-    auth: {
-      supabase: !!supabaseURL(env), supabaseUrl: supabaseURL(env),
-      supabaseHs256: !!(env.SUPABASE_JWT_SECRET), google: !!env.GOOGLE_CLIENT_ID,
-      session: !!env.SESSION_SECRET, adminConfigured: adminEmails(env).length > 0,
-      mail: (!!env.RESEND_API_KEY && !!env.MAIL_FROM) || !!env.MAIL_TO,
-    },
+    /* để trang quản trị biết kênh đăng nhập đã sẵn sàng chưa, thiếu biến nào.
+       supabaseUrl = GHIM đang có hiệu lực (biến trên Worker hoặc URL quản trị
+       lưu trong KV); supabaseKv = ghim đang lấy từ KV (không cần deploy lại). */
+    auth: await (async () => {
+      const pin = await supabasePin(env);
+      return {
+        supabase: !!pin, supabaseUrl: pin,
+        supabaseEnv: !!supabaseURL(env), supabaseKv: !supabaseURL(env) && !!pin,
+        supabaseHs256: !!(env.SUPABASE_JWT_SECRET), google: !!env.GOOGLE_CLIENT_ID,
+        session: !!env.SESSION_SECRET, adminConfigured: adminEmails(env).length > 0,
+        mail: (!!env.RESEND_API_KEY && !!env.MAIL_FROM) || !!env.MAIL_TO,
+      };
+    })(),
   }, { cors });
 }
 async function getSchedule(env, ctx, cors) {
@@ -1604,7 +1617,7 @@ async function seed(req, env, cors) {
   if (!env.CZ_KV) return noKV(cors);
   let d; try { d = await req.json(); } catch (e) { return json({ ok: false, error: 'JSON lỗi' }, { status: 400, cors }); }
   const out = { books: 0, failed: [] };
-  if (d.registry) await env.CZ_KV.put('registry', registryJSON(d.registry), { metadata: { saved: new Date().toISOString(), rev: d.registry.rev || '' } });
+  if (d.registry) { await env.CZ_KV.put('registry', registryJSON(d.registry), { metadata: { saved: new Date().toISOString(), rev: d.registry.rev || '' } }); sbPinReset(env); }
   const books = d.books || {};
   for (const slug of Object.keys(books)) {
     try { await env.CZ_KV.put('book:' + slug, JSON.stringify(books[slug])); out.books++; }
@@ -2316,19 +2329,51 @@ async function verifySession(token, secret) {
    Chỉ cần đặt SUPABASE_URL (vd https://abcdef.supabase.co) là chạy.
    ============================================================================ */
 function supabaseURL(env) { return String((env && env.SUPABASE_URL) || '').replace(/\/+$/, ''); }
-const _sbKeys = new Map();          /* kid -> CryptoKey (JWKS của Supabase) */
-async function supabaseJWKS(env) {
-  const base = supabaseURL(env);
-  if (!base) throw new Error('Worker chưa đặt biến SUPABASE_URL');
+const _sbKeys = new Map();          /* '<base>|kid|alg' -> CryptoKey (JWKS của Supabase) */
+/* --- GHIM PROJECT SUPABASE (bản 1.9.8) -------------------------------------
+   Vì sao cần: project đang dùng khoá public mới `sb_publishable_…` và Supabase
+   ký access_token bằng cặp khoá BẤT ĐỐI XỨNG (ES256 — xem
+   /auth/v1/.well-known/jwks.json của project). HS256 với "JWT secret" cũ thì
+   KHÔNG còn đủ: token mới mang header alg=ES256, verify bằng secret cũ luôn
+   thất bại ⇒ đăng nhập xong vẫn bị mọi API trả 401 (đúng bệnh "My Space lỗi
+   nghiêm trọng / đánh giá sao không lưu được" của chủ trang).
+   Worker phải biết ĐÚNG project để (a) lấy JWKS kiểm chữ ký, (b) chặn token do
+   project KHÁC cấp — không ghim thì kẻ xấu tự tạo project riêng, tự ký token
+   mang email quản trị là vào được trang quản trị.
+   Ghim lấy theo thứ tự: biến SUPABASE_URL trên Worker → URL quản trị lưu trong
+   KV (registry.settings.auth.supabaseUrl, dán ở /admin → Cài đặt & đồng bộ →
+   Đăng nhập rồi Lưu). Nhờ đường KV mà sửa ghim KHÔNG cần deploy lại Worker. */
+const SUPABASE_HOST_RE = /^https:\/\/[a-z0-9][a-z0-9-]*\.supabase\.(co|in|net)$/i;
+const _sbPinCache = new WeakMap();   /* CZ_KV -> {t, url} — mỗi KV một ghim */
+async function supabasePin(env) {
+  const envUrl = supabaseURL(env);
+  if (envUrl) return envUrl;
+  const kv = env && env.CZ_KV;
+  if (!kv) return '';
+  let c = _sbPinCache.get(kv);
+  if (c && c.t > Date.now()) return c.url;
+  c = { t: Date.now() + 60000, url: '' };
+  _sbPinCache.set(kv, c);
+  try {
+    const reg = await kv.get('registry', { type: 'json' });
+    const u = String((reg && reg.settings && reg.settings.auth && reg.settings.auth.supabaseUrl) || '').trim().replace(/\/+$/, '');
+    if (u && SUPABASE_HOST_RE.test(u)) c.url = u;
+  } catch (e) { /* KV lỗi → coi như chưa ghim, verify sẽ báo lỗi rõ ràng */ }
+  return c.url;
+}
+/* quản trị vừa Lưu registry (đổi ghim?) → bỏ cache để hiệu lực ngay */
+function sbPinReset(env) { try { if (env && env.CZ_KV) _sbPinCache.delete(env.CZ_KV); } catch (e) {} }
+async function supabaseJWKS(env, base) {
+  if (!base) throw new Error('Worker chưa ghim project Supabase — đặt biến SUPABASE_URL trên Worker, hoặc /admin → Cài đặt & đồng bộ → Đăng nhập rồi Lưu');
   const r = await fetch(base + '/auth/v1/.well-known/jwks.json', { cf: { cacheTtl: 3600, cacheEverything: true } });
   if (!r.ok) throw new Error('không đọc được JWKS của Supabase (' + r.status + ')');
   const jwks = await r.json();
   return (jwks && jwks.keys) || [];
 }
-async function supabasePubKey(env, kid, alg) {
-  const ck = kid + '|' + alg;
+async function supabasePubKey(env, kid, alg, base) {
+  const ck = base + '|' + kid + '|' + alg;
   if (_sbKeys.has(ck)) return _sbKeys.get(ck);
-  const keys = await supabaseJWKS(env);
+  const keys = await supabaseJWKS(env, base);
   const k = keys.find((x) => x.kid === kid) || keys[0];
   if (!k) throw new Error('JWKS của Supabase không có khoá nào');
   const upper = String(alg || k.alg || 'RS256').toUpperCase();
@@ -2356,13 +2401,17 @@ async function verifySupabaseToken(tok, env) {
   const alg = String(header.alg || '').toUpperCase();
   const data = _enc(parts[0] + '.' + parts[1]);
   const sig = _b64.toBytes(parts[2], true);
+  /* ghim project TRƯỚC khi chọn đường verify — cả ES256/RS256 (JWKS) lẫn
+     kiểm tra issuer đều phải trỏ đúng project đã ghim */
+  const base = await supabasePin(env);
   let ok = false;
   if (alg === 'HS256') {
     const sec = env.SUPABASE_JWT_SECRET || env.SUPABASE_SECRET || '';
     if (!sec) throw new Error('token Supabase ký HS256 mà Worker chưa đặt SUPABASE_JWT_SECRET');
     ok = await crypto.subtle.verify('HMAC', await hmacKey(sec), sig, data);
   } else if (alg === 'RS256' || alg === 'ES256') {
-    const { key, algo, alg: a } = await supabasePubKey(env, header.kid, alg);
+    if (!base) throw new Error('token Supabase ký ' + alg + ' (khoá bất đối xứng — project dùng khoá public mới) mà Worker chưa ghim project: đặt biến SUPABASE_URL trên Worker (https://<ref>.supabase.co) hoặc /admin → Cài đặt & đồng bộ → Đăng nhập rồi Lưu');
+    const { key, algo, alg: a } = await supabasePubKey(env, header.kid, alg, base);
     ok = a === 'ES256'
       ? await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, key, sig, data)
       : await crypto.subtle.verify({ name: 'RSASSA-PKCS1-v1_5' }, key, sig, data);
@@ -2372,9 +2421,8 @@ async function verifySupabaseToken(tok, env) {
   if (payload.exp && payload.exp < now) throw new Error('phiên đăng nhập đã hết hạn — đăng nhập lại');
   const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
   if (!aud.some((a) => a === 'authenticated' || a === 'anon')) throw new Error('token sai audience: ' + aud.join(','));
-  const base = supabaseURL(env);
   if (base && payload.iss && String(payload.iss).indexOf(base) !== 0 && String(payload.iss).indexOf(base.replace(/^https?:\/\//, '')) < 0) {
-    throw new Error('token sai issuer — token do "' + payload.iss + '" cấp nhưng Worker đang đặt SUPABASE_URL="' + base + '" (đặt SUPABASE_URL trên Worker đúng project Supabase của web)');
+    throw new Error('token sai issuer — token do "' + payload.iss + '" cấp nhưng Worker đang ghim project "' + base + '" (đặt SUPABASE_URL trên Worker đúng project Supabase của web, hoặc sửa lại Project URL ở /admin)');
   }
   if (payload.email && payload.email_verified === false) throw new Error('email chưa xác thực');
   return payload;
@@ -2419,7 +2467,7 @@ async function userFromReq(req, env) {
   }
   /* chưa phải session của Worker → thử luôn access_token Supabase
      (để bình luận chạy được kể cả khi web chưa đổi token kịp) */
-  if (supabaseURL(env) || env.SUPABASE_JWT_SECRET) {
+  if (supabaseURL(env) || env.SUPABASE_JWT_SECRET || (await supabasePin(env))) {
     try { return { user: userFromSupabase(await verifySupabaseToken(tok, env)), err: '' }; }
     catch (e) { return { user: null, err: String((e && e.message) || e) }; }
   }
@@ -2465,10 +2513,11 @@ async function authGoogle(req, env, cors) {
    token của Worker (HS256). Nếu Worker chưa đặt SESSION_SECRET thì vẫn trả user
    để web dùng thẳng access_token (Worker xác thực được ở mọi endpoint cần Bearer). */
 async function authSupabase(req, env, cors) {
-  if (!supabaseURL(env) && !env.SUPABASE_JWT_SECRET) {
+  const pinned = await supabasePin(env);
+  if (!pinned && !env.SUPABASE_JWT_SECRET) {
     return json({
       ok: false,
-      error: 'Worker chưa đặt biến SUPABASE_URL (vd https://abcdef.supabase.co)',
+      error: 'Worker chưa ghim project Supabase — đặt biến SUPABASE_URL (vd https://abcdef.supabase.co) trên Worker, hoặc /admin → Cài đặt & đồng bộ → Đăng nhập rồi Lưu (không cần deploy lại)',
       hint: 'Workers → Settings → Variables: SUPABASE_URL, và SUPABASE_JWT_SECRET nếu project ký JWT bằng HS256. Xem worker/README.md §7.',
     }, { status: 500, cors });
   }
@@ -2501,10 +2550,13 @@ async function authSupabase(req, env, cors) {
 /* GET /api/auth/config — chỉ trả trạng thái công khai. Không trả email quản trị,
    khoá ký token, ADMIN_KEY, khoá gửi mail hay bất kỳ secret nào. */
 async function authConfig(env, cors) {
+  const pin = await supabasePin(env);
   return json({
     ok: true,
-    supabase: !!supabaseURL(env),
-    supabaseUrl: supabaseURL(env),
+    supabase: !!pin,
+    supabaseUrl: pin,
+    supabaseEnv: !!supabaseURL(env),
+    supabaseKv: !supabaseURL(env) && !!pin,
     google: !!env.GOOGLE_CLIENT_ID,
     session: !!env.SESSION_SECRET,
     adminConfigured: adminEmails(env).length > 0,

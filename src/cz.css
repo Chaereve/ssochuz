@@ -1235,12 +1235,18 @@ body.rd-hide .rdbar { transform: translateY(-100%); }
 .rdhead .rdmeta { display: flex; gap: 16px; flex-wrap: wrap; color: var(--rd-mut); font-size: 12.5px; }
 .rdhead .rdmeta > span { display: inline-flex; align-items: center; gap: 6px; }
 .rtext { max-width: var(--rd-w, 720px); margin: 0 auto; padding: 26px 24px 20px; font-family: var(--rd-font, var(--font-head));
-  font-size: var(--rd-size, 18px); line-height: var(--rd-line, 1.8); }
+  font-size: var(--rd-size, 18px); line-height: var(--rd-line, 1.8); overflow-wrap: break-word; }
 .rtext > *:first-child { margin-top: 0; }
 .rtext p { margin: 0 0 var(--rd-para, 1.05em); }
 .rtext.just p { text-align: justify; text-justify: inter-word; }
 .rtext h2, .rtext h3 { margin: 1.6em 0 .6em; line-height: 1.3; }
+/* nội dung chương nhập từ Blogger: ảnh/iframe/table có thể mang size gốc lớn hơn
+   cột chữ — không chặn max-width là chọc thủng trang đọc trên cả máy tính lẫn phone */
+.rtext img, .rtext video { max-width: 100%; height: auto; }
+.rtext iframe, .rtext embed, .rtext object { max-width: 100%; }
 .rtext img { border-radius: var(--r); margin: 10px auto; display: block; cursor: zoom-in; }
+.rtext table { display: block; max-width: 100%; overflow-x: auto; }
+.rtext pre { white-space: pre-wrap; overflow-x: auto; }
 .rtext img.badimg { min-height: 78px; width: 100%; padding: 26px 14px; cursor: default;
   border: 1px dashed var(--rd-bd); background: var(--rd-surf2); color: var(--rd-mut); font-size: 12.5px;
   text-align: center; font-family: var(--font); }
@@ -1534,8 +1540,13 @@ body.reading #toTop { display: none !important; }
 
 /* =========================== 14. QUẢN TRỊ ================================ */
 .abar { position: sticky; top: 0; z-index: 50; border-bottom: 1px solid var(--bd); background: var(--bg); }
-.abar .in { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; height: 60px; display: flex; align-items: center;
-  gap: 12px; flex-wrap: nowrap; overflow-x: auto; }
+/* BUG đã sửa (16/09): trước đây .abar .in ép "height:60px + flex-wrap:nowrap +
+   overflow-x:auto" — máy 1024–1400px đầy chip/nút là thanh cuộn ngang bị chính
+   chiều cao 60px cắt lòi; còn khoảng 621–850px lại "wrap" mà vẫn khoéc 60px nên
+   hàng thứ hai đè lên nội dung bên dưới. Nay co giãn tự do: đủ chỗ thì một hàng,
+   hết chỗ thì xuống hàng, không bao giờ tràn. */
+.abar .in { max-width: var(--maxw); margin: 0 auto; padding: 8px 24px; min-height: 60px; display: flex; align-items: center;
+  gap: 8px 12px; flex-wrap: wrap; }
 .amain { max-width: var(--maxw); margin: 0 auto; padding: 24px 24px 60px; }
 .admin .amain { padding-top: 20px; }
 .admin .card2 > .row { min-width: 0; }
@@ -2606,3 +2617,64 @@ body.rd-focus .rdcmts { display: none; }
 @media(prefers-reduced-motion:reduce) {
   .fade.in, .pin, .modal.on .box, .jump.on .box { animation: none !important; }
 }
+
+/* ==========================================================================
+   BẢN VÁ GIAO DIỆN 16/09 — chống "lòi ra ngoài" ở trang đọc, My Space và admin
+   ----------------------------------------------------------------------------
+   Bệnh do chủ trang báo: giao diện trang lẫn trang quản trị còn nhiều chỗ bị
+   tràn ra ngoài. Các điểm đã soi và vá ở dưới đây chọn theo nguyên nhân thật:
+   nội dung nhập từ Blogger (ảnh/table size gốc), chữ dài không có dấu cách
+   (URL Worker, slug, email), và thanh đầu trang admin khoéc chiều cao.
+   ========================================================================== */
+
+/* ---- 1. chữ dài không có dấu cách trong admin: URL, slug, email ----------
+   Ô "hint" hay dán link Worker dài; .logrow b ghi thao tác kèm slug dài;
+   .vgroup-head b là tên bộ truyện. Không bẻ chữ là chúng đẩy cả khối tràn. */
+.hint code, .note code, .kv code, .docrow code, .logrow b, .logrow .lw,
+.vgroup-head b, .modrow .mslug, .gate .who b, .whoami b, .amtop b, .amtop span > span {
+  overflow-wrap: anywhere; }
+.admin .hint, .admin .note { min-width: 0; }
+.admin .card2 > .row { max-width: 100%; }
+
+/* ---- 2. My Space: chọn truyện vào tủ + dòng lịch sử ----------------------
+   Tên truyện dài phải xuống hàng trong ô pick, không đẩy checkbox lệch khung. */
+.shelf-picker label span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.shelf-picker label { align-items: flex-start; }
+.shelf-picker input { margin-top: 2px; }
+.space-dialog .row { flex-wrap: wrap; }
+
+/* ---- 3. admin: thanh tab dọc lún dưới thanh đầu trang khi bar xuống hàng --
+   .abar .in giờ co giãn được (có thể cao ~104px trên máy hẹp) thì sticky top
+   84px của cột tab sẽ chui sau bar. Trên dải máy hẹp hạ mốc neo xuống. */
+@media (max-width: 1050px) {
+  .admin #tabs { top: 116px; }
+}
+
+/* ---- 4. admin: khung xem trước chương & KV JSON bẻ chữ, bảng cuộn trong ----
+   Ô xem trước dán nguyên văn HTML người dùng dán vào — phải bẻ được chữ. */
+#qkPrev, #setupBody .hint, #privateResult { overflow-wrap: anywhere; }
+.admin .card2 .tbl { min-width: 0; }
+.admin .tbl td .row { flex-wrap: wrap; justify-content: flex-end; }
+@media (max-width: 700px) {
+  .admin .tbl td .row { justify-content: flex-start; }
+}
+
+/* ---- 5. trang truyện: hàng "thao tác" và khối đánh giá không tràn ------------
+   Màn rất hẹp (≤360px): 5 sao + số điểm + nút rút đánh giá phải xuống hàng
+   gọn thay vì ép nhau tràn mép. */
+@media (max-width: 360px) {
+  .editable-rating .stars .st { width: 32px; height: 42px; padding: 4px; }
+  .editable-rating svg { width: 22px; height: 22px; }
+  .rating-control { gap: 8px; }
+  .rating-remove { white-space: nowrap; }
+}
+
+/* ---- 6. sơ hở chung: mọi ảnh nội dung không được to hơn khung -------------- */
+.cmt-body img, .reprow img, .docrow img { max-width: 100%; height: auto; }
+
+/* ---- 7. trang truyện: tên dài / giá trị dài không đẩy vỡ khung ------------- */
+.shero h1, .shero .info .r b, .shero .meta b { overflow-wrap: anywhere; }
+.shero .info .r { min-width: 0; }
+.rdhead h1 { overflow-wrap: anywhere; }
+.synbtn { max-width: 100%; }
+.synbtn .syn-label { min-width: 0; }

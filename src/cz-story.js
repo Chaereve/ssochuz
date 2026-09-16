@@ -325,7 +325,11 @@
       ratingBusy = false;
       if (seq !== ratingSeq) { repaintRating(); return; }
       myStars = result && result.ok ? value : old;
-      repaintRating(result && result.ok ? (value ? 'Đã lưu ' + value + '/5 sao.' : 'Đã rút đánh giá của bạn.') : 'Chưa lưu được. Đánh giá cũ được giữ nguyên, vui lòng thử lại.');
+      /* máy chủ từ chối phiên đăng nhập (Worker chưa ghim project Supabase…):
+         nói đúng bệnh thay vì chỉ báo "chưa lưu được" chung chung */
+      var authBlocked = !result && value && window.CZ_AUTH && CZ_AUTH.current() && CZ_AUTH._verify && CZ_AUTH._verify.error;
+      repaintRating(result && result.ok ? (value ? 'Đã lưu ' + value + '/5 sao.' : 'Đã rút đánh giá của bạn.')
+        : (authBlocked ? 'Máy chủ chưa xác nhận được phiên đăng nhập của bạn nên chưa lưu điểm. Bấm Đăng xuất rồi Đăng nhập lại ở đầu trang (hoặc thử lại khi chưa đăng nhập).' : 'Chưa lưu được. Đánh giá cũ được giữ nguyên, vui lòng thử lại.'));
       if (result && result.ok) CZ.toast(value ? 'Đã đánh giá ' + value + ' trên 5 sao' : 'Đã rút đánh giá', 'ok');
       var focus = value ? $('#shero [data-star="'+value+'"]') : $('#shero [data-star="1"]');
       if (focus) focus.focus({preventScroll:true});

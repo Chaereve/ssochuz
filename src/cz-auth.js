@@ -344,6 +344,20 @@
   }
   /* gửi access_token cho Worker để lấy session token; Worker chưa sẵn sàng thì
      dùng luôn access_token (Worker vẫn xác thực được bằng JWKS của Supabase) */
+  function recordVerifyError(status, error) {
+    /* ghi lại để My Space / trang quản trị giải thích tại sao phiên "đăng nhập
+       rồi mà vẫn 401" (bệnh hay gặp: Worker chưa ghim project Supabase) */
+    try { w.CZ_AUTH._verify = { at: Date.now(), status: status, error: String(error || 'không rõ lý do') }; } catch (e) {}
+  }
+  function justLoggedIn() {
+    try { return w.sessionStorage.getItem('ssochuz-auth-pending') === '1'; } catch (e) { return false; }
+  }
+  function markLoginPending() {
+    try { w.sessionStorage.setItem('ssochuz-auth-pending', '1'); } catch (e) {}
+  }
+  function clearLoginPending() {
+    try { w.sessionStorage.removeItem('ssochuz-auth-pending'); } catch (e) {}
+  }
   function exchange(u, accessToken) {
     var base = api();
     if (!base || !accessToken) { save(Object.assign({}, u, { local: !base }), accessToken || ''); return Promise.resolve(u); }
@@ -364,34 +378,45 @@
       return r.json().catch(function () { return {}; }).then(function (j) {
         if (r.ok && j && j.ok && j.token) {
           var merged = Object.assign({}, u, j.user || {}, { admin: !!j.admin });
+          clearLoginPending();
+          try { w.CZ_AUTH._verify = null; } catch (e) {}
           save(merged, j.token);
           return merged;
         }
         /* Worker từ chối đổi token → ghi LÝ DO ra console để dễ bắt bệnh
-           (hay gặp nhất: SUPABASE_URL trên Worker sai project, thiếu SUPABASE_JWT_SECRET).
+           (hay gặp nhất: Worker chưa ghim đúng project Supabase — bản token mới
+           của Supabase ký ES256 nên bắt buộc Worker phải có Project URL).
            Vẫn cho đăng nhập bằng token Supabase thô — nhưng bình luận sẽ chỉ chạy
            khi Worker tự verify được token đó. */
+        var reason = (j && j.error) || ('máy chủ trả ' + r.status);
         try {
-          console.warn('[cz-auth] Worker không đổi được session (' + r.status + '):',
-            (j && j.error) || 'không rõ lý do',
+          console.warn('[cz-auth] Worker không đổi được session (' + r.status + '):', reason,
             (j && j.supabaseUrl) ? ('SUPABASE_URL trên Worker: ' + j.supabaseUrl) : '');
         } catch (e) {}
+        recordVerifyError(r.status, reason);
+        if (justLoggedIn()) {
+          clearLoginPending();
+          toast('Đã đăng nhập Google, nhưng Worker chưa xác thực được phiên này (' + reason + '). Vui lòng báo quản trị — chi tiết nằm ở trang My Space.', 'err');
+        }
         var unverified = Object.assign({}, u, { admin: false });
         save(unverified, accessToken);
         return unverified;
       });
     }).catch(function () {
+      recordVerifyError(0, 'mất mạng — không gọi được Worker');
       var unverified = Object.assign({}, u, { admin: false });
       save(unverified, accessToken);
       return unverified;
     });
   }
-  /* dọn URL sau khi Supabase trả code về (bỏ ?code=… cho sạch, tránh reload lại đổi lần nữa) */
+  /* dọn URL sau khi Supabase trả code về (bỏ ?code=… cho sạch, tránh reload lại đổi lần nữa).
+     Bổ sung token_hash/type: link qua email quay về dạng ?token_hash=…&type=magiclink —
+     thiếu là F5 một cái web lại chạy verifyOtp lần nữa (và báo "link hết hiệu lực"). */
   function cleanURL() {
     try {
       var u = new URL(w.location.href);
       var changed = false;
-      ['code', 'error', 'error_description', 'state', 'provider_token', 'provider_refresh_token'].forEach(function (k) {
+      ['code', 'error', 'error_description', 'state', 'provider_token', 'provider_refresh_token', 'token_hash', 'type'].forEach(function (k) {
         if (u.searchParams.has(k)) { u.searchParams.delete(k); changed = true; }
       });
       if (changed && w.history && w.history.replaceState) {
@@ -399,17 +424,38 @@
       }
     } catch (e) {}
   }
+  /* Link qua email quay về dạng ?token_hash=…&type=magiclink (khác ?code= của
+     Google OAuth) — supabase-js KHÔNG tự đổi dạng này, phải gọi verifyOtp.
+     Trước đây bỏ sót nên "link qua email" bấm xong vẫn chưa đăng nhập được. */
+  function consumeMagicLink(c) {
+    var q = null;
+    try { q = new URL(w.location.href).searchParams; } catch (e) { return Promise.resolve(null); }
+    var hash = q.get('token_hash') || '';
+    var type = String(q.get('type') || 'magiclink').toLowerCase();
+    var ok = ['signup', 'invite', 'magiclink', 'recovery', 'email_change', 'email'].indexOf(type) >= 0 ? type : 'magiclink';
+    if (!hash || !q.get('type')) return Promise.resolve(null);
+    return c.auth.verifyOtp({ tokenHash: hash, type: ok }).then(function (r) {
+      if (r && r.error) throw new Error(r.error.message || 'Link đăng nhập không còn hiệu lực');
+      return r;
+    });
+  }
   function syncFromSession(silent) {
     return client().then(function (c) {
-      return c.auth.getSession().then(function (r) {
-        var sess = r && r.data && r.data.session;
-        if (sess && sess.access_token && sess.user) {
-          var u = fromSupabase(sess.user, sess.access_token);
-          /* Mỗi lần đồng bộ đều hỏi lại Worker; không giữ cờ admin cũ ở localStorage. */
-          return exchange(u, sess.access_token).then(function (verified) { cleanURL(); return verified; });
-        }
-        if (user && !silent) save(null, null);
+      /* link email (?)token_hash=…) phải đổi TRƯỚC khi đọc session */
+      return consumeMagicLink(c).catch(function (e) {
+        if (justLoggedIn()) { clearLoginPending(); toast(e && e.message ? e.message : 'Link đăng nhập không còn hiệu lực', 'err'); }
         return null;
+      }).then(function () {
+        return c.auth.getSession().then(function (r) {
+          var sess = r && r.data && r.data.session;
+          if (sess && sess.access_token && sess.user) {
+            var u = fromSupabase(sess.user, sess.access_token);
+            /* Mỗi lần đồng bộ đều hỏi lại Worker; không giữ cờ admin cũ ở localStorage. */
+            return exchange(u, sess.access_token).then(function (verified) { cleanURL(); return verified; });
+          }
+          if (user && !silent) save(null, null);
+          return null;
+        });
       });
     }).catch(function () { return null; });
   }
@@ -425,6 +471,7 @@
           options: { emailRedirectTo: back }
         }).then(function (r) {
           if (r && r.error) throw new Error(r.error.message || 'Không gửi được link đăng nhập');
+          markLoginPending();
           toast('Đã gửi link đăng nhập tới ' + email + ' — mở email và bấm link đó', 'ok');
           return null;
         });
@@ -438,7 +485,8 @@
         }
       }).then(function (r) {
         if (r && r.error) throw new Error(r.error.message || 'Supabase từ chối mở đăng nhập Google');
-        return null;                       /* trình duyệt sẽ chuyển trang sang Supabase */
+        markLoginPending();                 /* trình duyệt sẽ chuyển trang sang Supabase */
+        return null;
       });
     });
   }

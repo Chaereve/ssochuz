@@ -364,6 +364,93 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     routes = () => null;
   }
 
+  /* ---------- 7c. Supabase ES256 + GHIM PROJECT từ KV (bản 1.9.8) ----------
+     Project dùng khoá public mới (`sb_publishable_…`) → access_token ký bằng
+     cặp khoá bất đối xứng ES256, JWKS nằm ở /auth/v1/.well-known/jwks.json.
+     Worker KHÔNG có biến SUPABASE_URL thì phải đọc ghim từ
+     registry.settings.auth.supabaseUrl (quản trị Lưu ở /admin) — sửa ghim
+     không cần deploy lại Worker. Không ghim gì cả → 500 kèm hướng dẫn rõ. */
+  {
+    const { publicKey, privateKey } = crypto.generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+    const pubJwk = publicKey.export({ format: 'jwk' });
+    /* chữ ký ECDSA của Node là DER; JWT ES256 dùng raw r||s (32+32 byte) */
+    const derToRaw = (sig) => {
+      let o = 2;
+      if (sig[1] & 0x80) o += sig[1] & 0x7f;
+      const rLen = sig[o + 1], r = sig.slice(o + 2, o + 2 + rLen);
+      const sLen = sig[o + 2 + rLen + 1], s = sig.slice(o + 2 + rLen + 2);
+      const pad = (b) => (b.length >= 32 ? b.slice(-32) : Buffer.concat([Buffer.alloc(32 - b.length), b]));
+      return Buffer.concat([pad(r), pad(s)]);
+    };
+    const esTok = (over = {}, issBase = 'https://sbpin.supabase.co') => {
+      const now = Math.floor(Date.now() / 1000);
+      const p = Object.assign({
+        iss: issBase + '/auth/v1', aud: 'authenticated', sub: 'sb-es-user',
+        email: 'docgia.es@gmail.com', email_verified: true, iat: now, exp: now + 3600,
+      }, over);
+      const h = { alg: 'ES256', kid: 'ec-kid', typ: 'JWT' };
+      const data = b64u(JSON.stringify(h)) + '.' + b64u(JSON.stringify(p));
+      return data + '.' + b64u(derToRaw(crypto.sign('sha256', Buffer.from(data), privateKey)));
+    };
+    const serveEsJwks = () => {
+      routes = (u) => u.includes('/auth/v1/.well-known/jwks.json')
+        ? { status: 200, body: { keys: [{ kty: 'EC', crv: 'P-256', kid: 'ec-kid', use: 'sig', alg: 'ES256', x: pubJwk.x, y: pubJwk.y }] } } : null;
+    };
+
+    /* (1) chưa ghim project ở đâu cả → 500 kèm HƯỚNG DẪN đặt ghim
+       (xoá ghim do phần test registry phía trên lưu trước) */
+    {
+      const before = (await call('GET', '/api/registry')).body;
+      const clean = JSON.parse(JSON.stringify(before));
+      clean.settings = clean.settings || {};
+      clean.settings.auth = { provider: 'supabase' };
+      await call('PUT', '/api/registry', { headers: ADMH, body: clean });
+      const r = await call('POST', '/api/auth/supabase', { e: env, body: { accessToken: esTok({}) } });
+      eq('supabase-ES256/chưa ghim project → 500', r.status, 500);
+      ck('supabase-ES256/500 hướng dẫn cách ghim', /ghim project Supabase/.test((r.body && r.body.error) || '') && /Cài đặt & đồng bộ|SUPABASE_URL/.test(((r.body && r.body.hint) || '') + ((r.body && r.body.error) || '')), r.body, 'nêu đủ 2 cách');
+    }
+    /* (2) quản trị Lưu Project URL vào registry (đúng việc /admin làm) → ghim từ KV */
+    {
+      const cur = (await call('GET', '/api/registry')).body;
+      const reg = JSON.parse(JSON.stringify(cur));
+      reg.settings = reg.settings || {};
+      reg.settings.auth = { provider: 'supabase', supabaseUrl: 'https://sbpin.supabase.co', supabaseAnonKey: 'sb_publishable_test' };
+      const put = await call('PUT', '/api/registry', { headers: ADMH, body: reg });
+      eq('supabase-ES256/Lưu registry có ghim → ok', put.status, 200);
+      const h = await call('GET', '/api/health');
+      eq('supabase-ES256/health nhận ghim từ KV', h.body && h.body.auth && h.body.auth.supabase, true);
+      eq('supabase-ES256/health ghi rõ nguồn ghim KV', h.body && h.body.auth && h.body.auth.supabaseKv, true);
+      eq('supabase-ES256/health trả URL ghim', h.body && h.body.auth && h.body.auth.supabaseUrl, 'https://sbpin.supabase.co');
+    }
+    /* (3) token ES256 đúng → verify bằng JWKS của project đã ghim, có session */
+    {
+      serveEsJwks();
+      const r = await call('POST', '/api/auth/supabase', { e: env, body: { accessToken: esTok({}) } });
+      ck('supabase-ES256/verify ES256 qua ghim KV → session', !!(r.body && r.body.ok === true && r.body.token), r.body && r.body.error, 'ok + token');
+      /* token ES256 thô cũng phải qua được userFromReq ở endpoint cần Bearer */
+      const cmt = await call('POST', '/api/comments/lunar-secret', { e: env, headers: { authorization: 'Bearer ' + esTok({}) }, body: { text: 'bình luận bằng token ES256', vid: 'may-es' } });
+      ck('supabase-ES256/endpoint Bearer nhận token thô', !!(cmt.body && cmt.body.ok === true), cmt.body && cmt.body.error, 'ok');
+      await call('DELETE', '/api/comments/lunar-secret/' + ((cmt.body && cmt.body.comment && cmt.body.comment.id) || 'x'), { e: env, headers: { authorization: 'Bearer ' + esTok({}) } });
+      /* token do project KHÁC cấp → chặn, lỗi nêu cả hai URL */
+      const bad = await call('POST', '/api/auth/supabase', { e: env, body: { accessToken: esTok({ iss: 'https://project-khac.supabase.co/auth/v1' }) } });
+      eq('supabase-ES256/token project khác → 401', bad.status, 401);
+      ck('supabase-ES256/401 nêu cả project thật lẫn project của token', /project-khac\.supabase\.co/.test((bad.body && bad.body.error) || '') && /sbpin\.supabase\.co/.test((bad.body && bad.body.error) || ''), bad.body && bad.body.error, '2 URL trong error');
+      /* chữ ký hỏng phải bị chặn (đảm bảo verify thật, không bỏ qua) */
+      const junk = await call('POST', '/api/auth/supabase', { e: env, body: { accessToken: esTok({}).slice(0, -4) + 'AAAA' } });
+      eq('supabase-ES256/chữ ký sai → 401', junk.status, 401);
+      routes = () => null;
+    }
+    /* (4) quản trị xoá ghim → Worker lại từ chối rõ ràng (không kẹt cache 60s) */
+    {
+      const cur = (await call('GET', '/api/registry')).body;
+      const reg = JSON.parse(JSON.stringify(cur));
+      reg.settings.auth = { provider: 'supabase' };
+      await call('PUT', '/api/registry', { headers: ADMH, body: reg });
+      const h = await call('GET', '/api/health');
+      eq('supabase-ES256/xoá ghim → health mất ghim ngay', h.body && h.body.auth && h.body.auth.supabase, false);
+    }
+  }
+
   /* ---------- 8. session + bình luận ---------- */
   {
     eq('auth/me/thiếu token → 401', (await call('GET', '/api/auth/me')).status, 401);

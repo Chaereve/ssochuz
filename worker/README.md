@@ -11,7 +11,11 @@ mỗi máy/truyện/ngày (khoá `ssochuz-viewsent-…`), “sửa thấy ngay�
 Từ bản **1.9.6**: có **RSS feed** — `GET /feed.xml` (30 chương mới nhất)
 và `GET /feed.xml?slug=<slug>` (chương mới của 1 bộ), chuẩn RSS 2.0, cache biên 10 phút,
 mỗi lần ghi chương tự xoá cache nên chương mới lên feed ngay.
-Từ bản **1.9.7** (đang dùng): có **thông báo đẩy "ra chương mới"** (Web Push + VAPID) —
+Từ bản **1.9.8** (đang dùng): **vá hẳn bệnh "đăng nhập xong vẫn 401"** — project Supabase
+dùng khoá public `sb_publishable_…` ký token bằng **ES256**, Worker phải **ghim đúng project**
+(biến `SUPABASE_URL` hoặc Project URL lưu ở `/admin` → Cài đặt & đồng bộ → Lưu) rồi verify bằng
+JWKS. Đổi ghim **không cần deploy lại**. My Space/bình luận/đánh giá sao hoạt động lại bình thường.
+Trước đó, bản **1.9.7**: có **thông báo đẩy "ra chương mới"** (Web Push + VAPID) —
 bấm "Theo dõi" thì web hỏi bật thông báo, admin lưu chương mới là subscriber nhận tin
 trong ≤10 phút qua Cron Trigger, bấm vào mở thẳng URL chương.
 Trước đó, bản **1.6.0**: đăng nhập qua **Supabase** (hết lỗi `origin_mismatch` của Google), thích **theo từng chương**, bình luận **ngay trong trang đọc** (khách chưa đăng nhập vẫn gửi được), và có `/api/recount` để **chữa dứt điểm số chương sai**.
@@ -26,6 +30,19 @@ Admin (admin.html)  ──PUT──▶  Worker (worker/cms.js)  ──▶  Cloud
 ```
 
 GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới cần build); dữ liệu thì không đi qua GitHub nữa.
+
+## Có gì mới ở bản 1.9.8 — ghim project Supabase, hết bệnh "đăng nhập xong vẫn 401"
+
+| | |
+|---|---|
+| **Bệnh** | Người đọc đăng nhập Google **thành công** nhưng My Space báo lỗi, đánh giá sao/bình luận bị từ chối 401, quyền quản trị không mở. Nguyên nhân: project dùng khoá `sb_publishable_…` → access_token ký **ES256**; Worker chỉ đặt `SUPABASE_JWT_SECRET` (HS256) nên verify luôn thất bại, mọi endpoint cần Bearer đều 401 |
+| **Chữa** | Worker đọc **ghim project** theo thứ tự: biến `SUPABASE_URL` → Project URL quản trị lưu trong KV (`registry.settings.auth.supabaseUrl`, điền ở `/admin` → Cài đặt & đồng bộ → Đăng nhập → Lưu). Token ES256/RS256 được verify bằng JWKS của đúng project đó; token của project **khác** bị chặn kèm lỗi nêu cả hai URL |
+| **Không cần deploy khi đổi ghim** | `PUT /api/registry` (nút Lưu trong /admin) tự invalidate cache ghim; `/api/health` + `/api/auth/config` trả `supabaseEnv` / `supabaseKv` để biết ghim đang lấy từ đâu |
+| **Bảo mật** | Không ghim project nào cả thì **từ chối rõ ràng** (500/401 kèm hướng dẫn) — Worker cố tình KHÔNG chấp nhận "project nào cũng được", vì kẻ xấu tự tạo project riêng, tự ký token mang email quản trị là lên được quyền admin |
+| **Kiểm thử** | `t_worker.mjs` thêm nhóm *supabase-ES256*: token ES256 ký thật + JWKS giả → session ok; không ghim → 500 hướng dẫn; token project khác → 401 nêu 2 URL; xoá ghim → health mất ghim ngay |
+
+Sau khi deploy: `curl https://<worker>/api/health` phải trả `version: 1.9.8`, và
+`auth.supabaseUrl` phải là URL project thật (không rỗng).
 
 ## Có gì mới ở bản 1.9.7 — thông báo đẩy "ra chương mới" (Web Push)
 
@@ -186,8 +203,8 @@ Trang quản trị đã có tab **Phiếu bầu** (phím `V`): chọn bộ → d
 | `CZ_KV` (binding KV) | ✅ | nơi chứa registry, chương, bình luận, số liệu |
 | `ADMIN_KEY` | ✅ | khoá cho `/admin` ghi dữ liệu (dài ≥ 24 ký tự) |
 | `SESSION_SECRET` | ✅ | ký session token HS256 (dài ≥ 32 ký tự) |
-| `SUPABASE_URL` | nên có | vd `https://xyz.supabase.co` — bật đăng nhập Supabase |
-| `SUPABASE_JWT_SECRET` | nên có | JWT Secret trong Supabase → Dashboard → Settings → API. Có biến này thì Worker tự verify token (HS256), không cần gọi mạng |
+| `SUPABASE_URL` | **bắt buộc cho đăng nhập** (hoặc ghim bằng KV, xem §7b) | vd `https://xyz.supabase.co` — Worker lấy JWKS verify token ES256/RS256 và chặn token của project lạ. Từ 1.9.8 đặt thiếu vẫn được bù bằng Project URL lưu ở `/admin`, nhưng nên đặt cho chắc |
+| `SUPABASE_JWT_SECRET` | tuỳ | chỉ cần khi project còn ký JWT HS256 (bản cũ). Project dùng khoá `sb_publishable_…` ký ES256 → thứ quan trọng là `SUPABASE_URL`/ghim KV, secret này bỏ trống cũng được |
 | `ADMIN_EMAILS` (Secret) | nên có | danh sách email quản trị, phân cách bằng dấu phẩy. API chỉ trả cờ `admin: true`, không trả danh sách địa chỉ |
 | `GOOGLE_CLIENT_ID` | không | đường cũ: đăng nhập thẳng bằng Google Identity Services |
 | `ALLOW_ORIGIN` | nên có | danh sách chính xác các tên miền web; không dùng `*` ở production |
@@ -607,10 +624,29 @@ Hai giá trị này bắt buộc xuất hiện trong trình duyệt và không p
 
 **6. Đặt biến cho Worker:** `SUPABASE_URL`; đặt `SUPABASE_JWT_SECRET`, `ADMIN_EMAILS` và `SESSION_SECRET` dưới dạng **Secret**. Danh sách quản trị chỉ tồn tại ở đây.
 
+> ### ⚠️ Bắt buộc từ bản 1.9.8 — Worker phải GHIM đúng project Supabase
+>
+> Project mới của Supabase (dùng khoá public `sb_publishable_…`) ký access_token bằng **cặp khoá
+> bất đối xứng ES256** (xem `https://<project>.supabase.co/auth/v1/.well-known/jwks.json`).
+> Đặt mỗi mình `SUPABASE_JWT_SECRET` là **KHÔNG đủ** — verify HS256 luôn thất bại, hậu quả là
+> người đọc đăng nhập Google xong vẫn bị **mọi** API trả 401: My Space báo "Vui lòng đăng nhập
+> lại", đánh giá sao/bình luận không lưu được. Đây đúng là bệnh "My Space lỗi nghiêm trọng".
+>
+> Worker cần biết **Project URL** — 1 trong 2 cách, làm xong là chạy ngay, không cần deploy lại:
+> 1. Dashboard Cloudflare → Workers → `chuseoz-cms` → Settings → Variables → thêm
+>    `SUPABASE_URL = https://<ref>.supabase.co` (vd `https://hnyzrkdlmvelbgcowztk.supabase.co`).
+> 2. Hoặc mở `/admin` → **Cài đặt & đồng bộ** → mục *Đăng nhập người đọc (Supabase)* →
+>    điền **Project URL + anon key** → **Lưu** (Worker đọc ghim từ KV).
+>
+> Nhờ ghim, Worker verify ES256/RS256 bằng JWKS của đúng project — và **chặn** token do project
+> khác tự ý cấp (nếu không ghim thì kẻ xấu tự tạo project riêng, tự ký token mang email quản trị
+> là vào được trang quản trị, nênWorker cố tình không chấp nhận "project nào cũng được").
+
 **Luồng chạy thật:** người đọc bấm *Đăng nhập* → Supabase mở Google → quay về web với `access_token` →
-`POST /api/auth/supabase` → Worker verify chữ ký (HS256 bằng JWT Secret, hoặc RS256/ES256 bằng JWKS của Supabase) →
-cấp session token của Worker → web lưu lại, dùng cho bình luận/bầu chọn. Kiểm tra nhanh:
-`/admin` → tab **Cài đặt** → nút *Hỏi Worker*, hoặc `curl https://<worker>/api/auth/config`.
+`POST /api/auth/supabase` → Worker verify chữ ký (HS256 bằng JWT Secret, hoặc RS256/ES256 bằng JWKS của
+project đã ghim) → cấp session token của Worker → web lưu lại, dùng cho bình luận/bầu chọn. Kiểm tra nhanh:
+`/admin` → tab **Cài đặt** → nút *Hỏi Worker* (phải thấy "Supabase: sẵn sàng"), hoặc `curl https://<worker>/api/auth/config`
+— `supabase` phải là `true`, kèm `supabaseEnv` (ghim bằng biến) / `supabaseKv` (ghim bằng KV).
 
 Chưa bật Supabase thì web tự quay về đường Google cũ (nếu có `GOOGLE_CLIENT_ID`), và người đọc vẫn bình luận được bằng tên khách.
 
@@ -627,11 +663,12 @@ Mở DevTools (F12) → tab Network/Console rồi đối chiếu:
 
 | Thấy chữ này | Bệnh | Cách chữa |
 |---|---|---|
-| `token sai issuer — token do "https://A…" cấp nhưng Worker đang đặt SUPABASE_URL="https://B…"` | Worker đặt `SUPABASE_URL` **nhầm project** Supabase | Đặt lại `SUPABASE_URL` đúng project trong `cz-config.js` |
+| `token Supabase ký ES256/RS256 … mà Worker chưa ghim project` / `/api/auth/supabase` trả 500 "chưa ghim project" | Project ký bằng khoá bất đối xứng (khoá `sb_publishable_…`) mà Worker chưa biết Project URL — **đây là lỗi "đăng nhập xong vẫn 401" của bản 1.9.7 trở xuống** | Đặt biến `SUPABASE_URL` trên Worker **hoặc** `/admin` → Cài đặt & đồng bộ → Đăng nhập → điền Project URL + anon key → Lưu (xem §7b) |
+| `token sai issuer — token do "https://A…" cấp nhưng Worker đang đặt SUPABASE_URL="https://B…"` | Worker ghim **nhầm project** Supabase | Đặt lại `SUPABASE_URL` đúng project (hoặc sửa Project URL ở `/admin` rồi Lưu) |
 | `ký HS256 mà Worker chưa đặt SUPABASE_JWT_SECRET` | Project Supabase đời cũ ký JWT bằng secret | `npx wrangler secret put SUPABASE_JWT_SECRET` (JWT Secret trong Supabase → Settings → API) |
-| `không đọc được JWKS của Supabase` | `SUPABASE_URL` sai/không tồn tại | Sửa lại URL cho đúng |
+| `không đọc được JWKS của Supabase` | URL ghim sai/không tồn tại | Sửa lại URL cho đúng |
 | `phiên đăng nhập đã hết hạn` | access_token quá 1 giờ | Đăng nhập lại (web tự làm khi bấm Đăng nhập) |
-| `chữ ký token Supabase không hợp lệ` | URL đúng project nhưng khoá không khớp (thường do nhầm project con, hoặc token bị sửa) | Kiểm tra lại `SUPABASE_URL`; đăng nhập lại cho có token mới |
+| `chữ ký token Supabase không hợp lệ` | URL đúng project nhưng khoá không khớp (project vừa xoay khoá, hoặc token bị sửa) | Đăng nhập lại cho có token mới; Supabase → JWT Keys giữ nguyên khoá cũ trong thời gian chuyển tiếp |
 
 **3. Gửi bình luận báo "Không xác thực được phiên đăng nhập — <lý do>":**
 - Lý do thật nằm ngay sau dấu gạch ngang (từ 1.5.1). Nếu là `Worker chưa đặt SUPABASE_URL…`

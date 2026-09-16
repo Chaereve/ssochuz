@@ -84,7 +84,19 @@
       space = data; hero(space.profile,true); profileForm(); cloud();
       $('#spaceStatus').textContent = '';
       if (space.version > 0 && CZ_AUTH.applyServerProfile) CZ_AUTH.applyServerProfile(space.profile);
-    } catch (e) { if (ticket === epoch) { $('#spaceStatus').textContent = e.message; var retry = document.createElement('button'); retry.className='btn ghost sm'; retry.textContent='Thử lại'; retry.onclick=function(){loadAccount(true);}; $('#spaceStatus').appendChild(retry); } }
+    } catch (e) { if (ticket === epoch) { spaceError(e.message); } } }
+  function spaceError(msg) {
+    msg = msg || 'Không tải được dữ liệu.';
+    $('#spaceStatus').textContent = msg;
+    var retry = document.createElement('button'); retry.className='btn ghost sm'; retry.textContent='Thử lại'; retry.onclick=function(){loadAccount(true);};
+    $('#spaceStatus').appendChild(retry);
+    /* phiên đăng nhập bị Worker từ chối (VD: Worker chưa ghim project Supabase):
+       cho đăng xuất sạch rồi đăng nhập lại ngay tại chỗ, không phải tự mò */
+    if (/đăng nhập lại|Phiên đăng nhập|phiên đăng nhập/i.test(msg)) {
+      var out = document.createElement('button'); out.className='btn ghost sm'; out.textContent='Đăng xuất & đăng nhập lại';
+      out.onclick=async function(){ out.disabled=true; try { await CZ_AUTH.logout(); } catch(_e){} CZ_AUTH.login('oauth'); };
+      $('#spaceStatus').appendChild(out);
+    }
   }
   async function mutate(change) {
     if (!space || busy) throw Error('Vui lòng chờ dữ liệu hoặc thao tác trước hoàn tất.');

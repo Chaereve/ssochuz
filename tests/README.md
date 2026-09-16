@@ -64,5 +64,9 @@ Bài này dùng dữ liệu giả, không ghi production; kiểm tra 1440/768/39
 ### My Space / profile / rút sao
 
 Runner đã thêm `t_member_spaces.mjs` (Worker và quyền truy cập), `t_space.js` (UI) và `t_rating_withdraw.js`.
+`t_auth_flow.js`: **luồng đăng nhập Supabase sau bản vá 1.9.8** — link email (`?token_hash=`) phải gọi
+`verifyOtp` rồi dọn URL; Worker từ chối đổi token thì web giữ phiên dự phòng + ghi lý do vào
+`CZ_AUTH._verify`; My Space gặp 401 từ `/api/me/space` thì hiện nút "Thử lại" và
+"Đăng xuất & đăng nhập lại" kèm đúng lý do máy chủ trả.
 
 Bài Chromium riêng: `CHROMIUM_EXECUTABLE=/path/to/chromium node tests/t_space_browser.js` khi server.py đang chạy. Dùng mock dịch vụ, không ghi production. Có thể dùng `LAYOUT_SCREENSHOTS` trỏ thư mục ngoài repo để chụp bố cục.
