@@ -460,6 +460,28 @@
     box.querySelectorAll('[data-go2]').forEach(function (b) {
       b.addEventListener('click', function () { show(b.dataset.go2); });
     });
+    /* Worker phải GHIM đúng project Supabase (bản 1.9.8): web có bật đăng nhập
+       mà Worker chưa ghim thì người đọc đăng nhập xong vẫn bị mọi API 401 —
+       đúng bệnh "My Space lỗi nghiêm trọng / đánh giá sao không lưu". */
+    if (ONLINE && sbOn) {
+      api('/api/health', { auth: false }).then(function (h) {
+        var a = h && h.auth;
+        if (!a) return;                       /* Worker bản cũ: dòng health trong tab Cài đặt đã nhắc dán worker mới */
+        if (a.supabase) return;
+        var wrap = document.createElement('div');
+        wrap.innerHTML =
+          '<div class="docrow bad"><span class="di">' + ic('alert', 'i-s') + '</span>' +
+          '<span class="dt"><b>Worker chưa ghim project Supabase — đăng nhập sẽ lỗi 401</b>' +
+          '<span>Web đã bật Supabase nhưng Worker không biết Project URL nên không xác thực được phiên ' +
+          '(project dùng khoá <code>sb_publishable_…</code> ký ES256). Người đọc đăng nhập xong vẫn bị My Space, ' +
+          'bình luận, đánh giá sao từ chối. Sửa: dán <code>worker/cms.js</code> bản 1.9.8 rồi đặt biến ' +
+          '<code>SUPABASE_URL</code> trên Worker, hoặc vào tab <b>Cài đặt &amp; đồng bộ</b> điền Project URL + anon key rồi Lưu.</span></span>' +
+          '<button class="btn ghost sm" data-go2="settings">' + ic('gear', 'i-s') + 'Sửa ngay</button></div>';
+        var row = wrap.firstElementChild;
+        row.querySelector('[data-go2]').addEventListener('click', function () { show('settings'); });
+        box.appendChild(row);
+      }).catch(function () {});
+    }
   }
   var OV_FILTER = null;
   function fillQuickBooks() {
@@ -1703,7 +1725,8 @@
     if (!c) return;
     if (!h) { c.className = 'chip'; c.innerHTML = '<span class="d"></span><span>chưa kiểm tra</span>'; return; }
     var bits = [];
-    bits.push(h.supabase ? 'Supabase: sẵn sàng' : 'Supabase: thiếu SUPABASE_URL');
+    bits.push(h.supabase ? ('Supabase: sẵn sàng' + (h.supabaseKv ? ' (ghim từ KV)' : (h.supabaseEnv ? ' (biến Worker)' : '')))
+                         : 'Supabase: CHƯA ghim project — đặt biến SUPABASE_URL trên Worker hoặc điền Project URL + anon key ở đây rồi Lưu');
     bits.push(h.session ? 'session: ok' : 'session: thiếu SESSION_SECRET');
     bits.push(h.google ? 'Google ID: có' : 'Google ID: không');
     bits.push(h.adminConfigured ? 'quản trị: đã cấu hình kín' : 'quản trị: thiếu ADMIN_EMAILS');
@@ -1717,8 +1740,9 @@
     api('/api/health', { auth: false }).then(function (h) {
       paintAuthState(h.auth || null);
       if (!h.auth) msg('Worker đang là bản cũ (không có mục auth trong /api/health) — dán worker/cms.js mới rồi Deploy.', 'err');
-      else msg('Worker: ' + (h.auth.supabase ? 'đã bật Supabase' : 'CHƯA bật Supabase (thiếu SUPABASE_URL)') +
-        ' · ' + (h.auth.session ? 'có SESSION_SECRET' : 'thiếu SESSION_SECRET'), h.auth.supabase ? 'ok' : 'err');
+      else if (h.auth.supabase) msg('Worker: đã bật Supabase' + (h.auth.supabaseKv ? ' (ghim project từ KV — đổi ở mục Đăng nhập bên dưới rồi Lưu)' : '') +
+        ' · ' + (h.auth.session ? 'có SESSION_SECRET' : 'thiếu SESSION_SECRET'), 'ok');
+      else msg('Worker: CHƯA ghim project Supabase — người đọc đăng nhập xong vẫn bị mọi API từ chối (401). Người đọc vẫn thấy "lỗi phiên". Xử lý: dán worker/cms.js bản 1.9.8 rồi (1) đặt biến SUPABASE_URL trên Worker, hoặc (2) điền Project URL + anon key ở mục Đăng nhập dưới đây rồi Lưu.', 'err');
     }).catch(function (e) { msg('Không hỏi được Worker: ' + e.message, 'err'); });
   }
 

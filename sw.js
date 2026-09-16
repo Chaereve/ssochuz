@@ -12,7 +12,7 @@
    ⚠ MỖI LẦN ĐỔI ?v= TĨNH (cz.css/cz-*.js): sửa cả PRECACHE dưới đây + tăng
    CZ_SW_VER → trình duyệt tự tải SW mới, hiện “Đã có bản cập nhật — tải lại”.
    ========================================================================== */
-var CZ_SW_VER = '20260918g';
+var CZ_SW_VER = '20260916a';
 
 /* kho shell theo version (update là thay kho mới, xoá kho cũ);
    kho trang/API/ảnh KHÔNG theo version để dữ liệu offline còn lại sau update */
@@ -37,15 +37,15 @@ var PRECACHE = [
   '/couple/',
   '/my-space',
   '/profile',
-  '/cz-space.js?v=20260918e',
+  '/cz-space.js?v=20260916a',
   '/manifest.webmanifest',
-  '/cz.css?v=20260918g',
-  '/cz-app.js?v=20260918e',
-  '/cz-home.js?v=20260918e',
-  '/cz-story.js?v=20260918g',
-  '/cz-people.js?v=20260918c',
+  '/cz.css?v=20260916a',
+  '/cz-app.js?v=20260916a',
+  '/cz-home.js?v=20260916a',
+  '/cz-story.js?v=20260916a',
+  '/cz-people.js?v=20260916a',
   '/cz-config.js?v=20260917h',
-  '/cz-auth.js?v=20260918e',
+  '/cz-auth.js?v=20260916a',
   '/ssochuz.png?v=1'
 ];
 

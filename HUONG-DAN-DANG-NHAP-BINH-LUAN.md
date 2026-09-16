@@ -1,6 +1,19 @@
 # Hướng dẫn: Đăng nhập (Supabase) · Bình luận · Thích theo chương · Số chương
 
-*Cập nhật: 2026-09-14 · áp dụng cho `worker/cms.js` **v1.6.0** + `cz-auth.js` / `cz-app.js` / `cz-story.js` / `admin.js` mới.*
+*Cập nhật: 2026-09-16 · áp dụng cho `worker/cms.js` **v1.9.8** + `cz-auth.js` / `cz-app.js` / `cz-story.js` / `admin.js` mới.*
+
+> ## 🚨 Đang gặp "đăng nhập xong vẫn báo lỗi / My Space không dùng được / đánh giá sao không lưu"?
+>
+> Nguyên nhân đã xác định (16/09): project Supabase đang dùng **khoá public `sb_publishable_…`** —
+> token đăng nhập được ký bằng **khoá bất đối xứng ES256**, còn Worker đang chạy bản cũ chỉ đặt
+> `SUPABASE_JWT_SECRET` (HS256) nên **không xác thực được token mới** → mọi API trả 401 sau khi
+> đăng nhập (My Space, bình luận, đánh giá sao, quyền quản trị).
+>
+> **Chữa trong 2 phút, không cần deploy lại:** mở `/admin` → **Cài đặt & đồng bộ** → mục
+> *Đăng nhập người đọc (Supabase)* → điền **Project URL** (`https://hnyzrkdlmvelbgcowztk.supabase.co`)
+> + **anon key** (đang có sẵn trong `cz-config.js`) → **Lưu**. Hoặc đặt biến `SUPABASE_URL` trên
+> Worker (Cloudflare Dashboard → Workers → chuseoz-cms → Settings → Variables) rồi redeploy.
+> Chi tiết kỹ thuật: `worker/README.md` §7b (mục ⚠️ 1.9.8).
 
 Tài liệu này trả lời 4 câu hỏi:
 
