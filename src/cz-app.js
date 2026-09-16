@@ -596,6 +596,7 @@
     shield_off: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M17.67 17.667a12 12 0 0 1 -5.67 3.333a12 12 0 0 1 -8.5 -15c.794 .036 1.583 -.006 2.357 -.124m3.128 -.926a11.997 11.997 0 0 0 3.015 -1.95a12 12 0 0 0 8.5 3a12 12 0 0 1 -1.116 9.376" /> <path d="M3 3l18 18" /></g>',
     google: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M20.945 11a9 9 0 1 1 -3.284 -5.997l-2.655 2.392a5.5 5.5 0 1 0 2.119 6.605h-4.125v-3h7.945" /></g>',
     bell: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /> <path d="M9 17v1a3 3 0 0 0 6 0v-1" /></g>',
+    rss: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M4 19a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /> <path d="M4 4a16 16 0 0 1 16 16" /> <path d="M4 11a9 9 0 0 1 9 9" /></g>',
     momo: '<rect x="4" y="4" width="16" height="16" rx="4.5"/><path d="M8.4 12c0-2 1.6-3.6 3.6-3.6s3.6 1.6 3.6 3.6-1.6 3.6-3.6 3.6S8.4 14 8.4 12z"/><circle cx="12" cy="12" r="1.2"/>'
   };
 
@@ -1575,6 +1576,7 @@
         '<a href="/guide">Hướng dẫn</a>' +
         '<a href="' + esc(fb) + '" target="_blank" rel="noopener">Facebook</a>' +
         '<a href="' + esc(survey) + '" target="_blank" rel="noopener">Khảo sát truyện</a>' +
+        (API ? '<a href="' + esc(API + '/feed.xml') + '" target="_blank" rel="noopener" title="RSS chương mới (dùng cho Feedly, Inoreader…)">' + icon('rss', 'i-s') + 'RSS</a>' : '') +
       '</nav>' +
     '</div>';
   }

@@ -13,6 +13,8 @@
      GET    /api/book/<slug>            → 1 bộ: tiêu đề + các chương (mở)
      GET    /api/schedule               → lịch ra chương (mở)
      GET    /api/stats                  → lượt đọc/bình chọn TỪ KV (mở)
+     GET    /feed.xml                   → RSS 2.0: 30 chương mới nhất (mở)
+     GET    /feed.xml?slug=<slug>       → RSS 2.0: chương mới của 1 bộ (mở)
 
      POST   /api/view                   → đếm 1 lượt đọc {slug, vid, ch} (mở)
      POST   /api/vote                   → bầu/bỏ bầu {slug, ch?, vote:1|0, vid}
@@ -60,6 +62,7 @@
      CZ_KV             (KV binding, bắt buộc)
      BLOG              (tuỳ chọn) = https://chuseoz.blogspot.com
      ALLOW_ORIGIN      (tuỳ chọn) = https://chuseoz.pages.dev  (nhiều domain: phẩy)
+     SITE_BASE         (tuỳ chọn) = https://ssochuz.pages.dev  (gốc dựng link trong /feed.xml; để trống = domain này)
      SUPABASE_URL      (bắt buộc nếu đăng nhập Supabase) = https://<ref>.supabase.co
      SUPABASE_JWT_SECRET (chỉ project cũ ký HS256) — Auth → Settings → JWT Secret
      ADMIN_EMAILS      (secret/tuỳ chọn) — email được vào /admin; không đặt trong frontend/registry
@@ -75,7 +78,7 @@
      MAIL_FROM         (tuỳ chọn)  — địa chỉ gửi của Resend, vd: ssochuz library <bao-loi@ten-mien-cua-ban>
    ============================================================================ */
 
-const VERSION = '1.9.5';
+const VERSION = '1.9.6';
 const JSONH = {
   'content-type': 'application/json; charset=utf-8',
   'x-content-type-options': 'nosniff',
@@ -108,6 +111,7 @@ export default {
       if (p === '/api/registry' && req.method === 'GET') return await edgeCached(req, cors, EDGE_TTL.registry, () => getKV(env, 'registry', cors, 60));
       if (p === '/api/schedule' && req.method === 'GET') return await getSchedule(env, ctx, cors);
       if (p === '/api/stats' && req.method === 'GET') return await edgeCached(req, cors, EDGE_TTL.stats, () => getStats(env, cors));
+      if (p === '/feed.xml' && req.method === 'GET') return await edgeCached(req, cors, EDGE_TTL.feed, () => getFeed(req, env, cors), feedKeyOf);
 
       /* ---------- số liệu xếp hạng: đếm lượt đọc / bình chọn ----------
          Lượt đọc KHÔNG xoá cache (người đọc đông mà mỗi lượt lại xoá thì cache
@@ -140,12 +144,12 @@ export default {
       /* ---------- cần khoá quản trị ---------- */
       if (p === '/api/registry' && req.method === 'PUT') {
         const r = await putKV(req, env, 'registry', cors, 'cập nhật thư viện (registry)');
-        if (r.ok) await edgePurge(org + '/api/registry');
+        if (r.ok) { await edgePurge(org + '/api/registry'); await purgeFeed(org); }
         return r;
       }
       if (m && req.method === 'PUT') {
         const r = await putBook(req, env, decodeURIComponent(m[1]), cors);
-        if (r.ok) await edgePurge(org + '/api/book/' + m[1], org + '/api/registry');   /* m[1] còn nguyên mã hoá — đúng khoá cache lúc GET */
+        if (r.ok) { await edgePurge(org + '/api/book/' + m[1], org + '/api/registry'); await purgeFeed(org); }   /* m[1] còn nguyên mã hoá — đúng khoá cache lúc GET */
         return r;
       }
       if (m && req.method === 'DELETE') {
@@ -156,6 +160,7 @@ export default {
         await syncCountToRegistry(env, slug, null);       /* registry không còn treo số chương của bộ đã xoá */
         await logAct(env, 'xoá bộ ' + slug, req);
         await edgePurge(org + '/api/book/' + m[1], org + '/api/registry');
+        await purgeFeed(org);
         return json({ ok: true, deleted: slug }, { cors });
       }
       if (p === '/api/recount' && req.method === 'POST') {
@@ -183,12 +188,13 @@ export default {
         if (r.ok) {
           await edgePurge(org + '/api/registry', org + '/api/stats');
           await edgePurgePrefix(org, '/api/book/');
+          await purgeFeed(org);
         }
         return r;
       }
       if (p === '/api/sync' && req.method === 'POST') {
         const r = await syncBlogger(req, env, cors);
-        if (r.ok) await edgePurge(org + '/api/registry', org + '/api/stats');
+        if (r.ok) { await edgePurge(org + '/api/registry', org + '/api/stats'); await purgeFeed(org); }
         return r;
       }
       if (p === '/api/import' && req.method === 'POST') return await importPost(req, env, cors);
@@ -288,6 +294,7 @@ async function importPost(req, env, cors) {
   await logAct(env, 'nhập chương từ Blogger: ' + slug + ' → ' + chapTitle, req);
   const iorg = new URL(req.url).origin;
   await edgePurge(iorg + '/api/book/' + encodeURIComponent(slug), iorg + '/api/registry');
+  await purgeFeed(iorg);
   return json({ ok: true, added: chapTitle, chapters: book.chapters.length, url, title }, { cors });
 }
 
@@ -508,14 +515,20 @@ function registryJSON(reg) { return JSON.stringify(stripPrivateRegistrySettings(
 function edgeCache() {
   try { return (typeof caches !== 'undefined' && caches.default) || null; } catch (e) { return null; }
 }
-const EDGE_TTL = { registry: 60, book: 300, stats: 60 };   /* giây, theo URL */
-async function edgeCached(req, cors, secs, load) {
-  if (req.url.indexOf('?') >= 0) {
-    const raw = await load();
-    try { raw.headers.set('x-cz-cache', 'BYPASS'); } catch (e) {}
-    return raw;
+const EDGE_TTL = { registry: 60, book: 300, stats: 60, feed: 600 };   /* giây, theo URL */
+async function edgeCached(req, cors, secs, load, keyFn) {
+  let key = req.url;
+  if (key.indexOf('?') >= 0) {
+    /* URL có query: chỉ cache khi caller đưa hàm chuẩn hoá khoá (như feed dùng
+       feedKeyOf) — nếu không vẫn đi thẳng KV để tránh bị bơm đầy cache bằng
+       khoá rác (?_=123, ?_=124…). */
+    key = (typeof keyFn === 'function' && keyFn(req)) || '';
+    if (!key) {
+      const raw = await load();
+      try { raw.headers.set('x-cz-cache', 'BYPASS'); } catch (e) {}
+      return raw;
+    }
   }
-  const key = req.url;
   const box = edgeCache();
   if (box) {
     let hit = null;
@@ -565,6 +578,123 @@ async function edgePurgePrefix(origin, prefix) {
       try { await box.delete(u); } catch (e) {}
     }
   }
+}
+/* feed RSS cũng lưu ở biên: xoá cả feed chung lẫn feed từng bộ khi truyện/chương đổi */
+async function purgeFeed(org) {
+  await edgePurge(org + '/feed.xml');
+  await edgePurgePrefix(org, '/feed.xml?');
+}
+/* ==================== RSS 2.0: /feed.xml và /feed.xml?slug= ====================
+   Feed reader (Feedly/Inoreader/…) poll nhiều lần mỗi ngày nên Worker TỰ cache
+   10 phút ở biên. Mỗi lần làm mới feed chung chỉ đọc tối đa 13 khoá KV
+   (1 registry + 12 bộ mới cập nhật nhất) — khoảng 1.9k lượt đọc/ngày, nằm gọn
+   trong free tier. Mỗi lần ghi chương (PUT/DELETE/import/seed/sync/…) đều xoá
+   bản lưu nên chương mới lên feed ngay. */
+function feedKeyOf(req) {
+  /* khoá cache CHUẨN của feed: tối đa 63 mục (1 feed chung + 62 bộ), tham số rác
+     (?slug=x&utm=1,2,…) gộp hết về một khoá nên không bơm đầy cache được */
+  try {
+    const u = new URL(req.url);
+    const raw = u.searchParams.get('slug') || '';
+    const s = cleanSlug(raw);
+    if (raw && !s) return '';   /* slug bậy: không cache, để handler trả 400 */
+    return u.origin + '/feed.xml' + (s ? '?slug=' + s : '');
+  } catch (e) { return ''; }
+}
+function escXml(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+}
+function rfc822(s) {
+  const d = s ? new Date(s) : new Date();
+  return isNaN(d.getTime()) ? new Date().toUTCString() : d.toUTCString();
+}
+function chapSnippet(html, len) {
+  const t = String(html || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ')
+    .replace(/\s+/g, ' ').trim();
+  if (t.length <= len) return t;
+  return t.slice(0, len).replace(/\s+\S*$/, '') + '…';
+}
+function feedChapTitle(c, i) {
+  return String((c && c.t) || '').trim() || ('Chương ' + (i + 1));
+}
+async function getFeed(req, env, cors) {
+  if (!env.CZ_KV) return noKV(cors);
+  const u = new URL(req.url);
+  const rawSlug = String(u.searchParams.get('slug') || '');
+  const slug = cleanSlug(rawSlug);
+  if (rawSlug && !slug) return json({ ok: false, error: 'slug không hợp lệ' }, { status: 400, cors });
+  const base = String(env.SITE_BASE || 'https://ssochuz.pages.dev').replace(/\/+$/, '') || 'https://ssochuz.pages.dev';
+  const reg = (await env.CZ_KV.get('registry', { type: 'json' })) || { lib: [] };
+  const lib = Array.isArray(reg.lib) ? reg.lib : [];
+  const bySlug = {};
+  lib.forEach((n) => { if (n && n.slug) bySlug[n.slug] = n; });
+  let chan, items = [];
+  if (slug) {
+    const nov = bySlug[slug];
+    const book = await env.CZ_KV.get('book:' + slug, { type: 'json' });
+    const chs = (book && Array.isArray(book.chapters)) ? book.chapters : [];
+    if (!chs.length) return json({ ok: false, error: 'bộ này chưa có chương nào' }, { status: 404, cors });
+    const title = (nov && nov.title) || (book && book.title) || slug;
+    chan = {
+      title: title + ' — ssochuz library',
+      link: base + '/truyen/' + slug + '/',
+      desc: (nov && nov.syn) || (book && book.syn) || ('Đọc truyện ' + title + ' trên ssochuz library.'),
+    };
+    const pub = rfc822((nov && nov.updated) || (reg && reg.rev));
+    items = chs.map((c, i) => ({
+      t: feedChapTitle(c, i),
+      link: base + '/truyen/' + slug + '/chuong-' + (i + 1) + '/',
+      pub, desc: chapSnippet(c.html, 300),
+    })).reverse().slice(0, 50);
+  } else {
+    const cands = lib.filter((n) => n && n.slug && (parseInt(n.chapters, 10) || 0) > 0)
+      .sort((a, b) => String(b.updated || '').localeCompare(String(a.updated || ''))).slice(0, 12);
+    const books = await Promise.all(cands.map((n) => env.CZ_KV.get('book:' + n.slug, { type: 'json' }).catch(() => null)));
+    cands.forEach((n, k) => {
+      const book = books[k];
+      const chs = (book && Array.isArray(book.chapters)) ? book.chapters : [];
+      const take = chs.slice(-5);
+      take.forEach((c, j) => {
+        const pos = chs.length - take.length + j + 1;
+        items.push({
+          t: (n.title || n.slug) + ' — ' + feedChapTitle(c, pos - 1),
+          link: base + '/truyen/' + n.slug + '/chuong-' + pos + '/',
+          pub: rfc822(n.updated || (reg && reg.rev)),
+          desc: chapSnippet(c.html, 300),
+          date: String(n.updated || ''),
+        });
+      });
+    });
+    items.sort((a, b) => String(b.date).localeCompare(String(a.date))).splice(30);
+    chan = {
+      title: 'ssochuz library — Chương mới',
+      link: base + '/',
+      desc: 'Chương mới đăng trên ssochuz library — cập nhật mỗi 10 phút.',
+    };
+  }
+  const self = u.origin + '/feed.xml' + (slug ? '?slug=' + slug : '');
+  const xml = '<?xml version="1.0" encoding="UTF-8"?>\n' +
+    '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">\n<channel>\n' +
+    '  <title>' + escXml(chan.title) + '</title>\n' +
+    '  <link>' + escXml(chan.link) + '</link>\n' +
+    '  <description>' + escXml(chan.desc) + '</description>\n' +
+    '  <language>vi-vn</language>\n' +
+    '  <lastBuildDate>' + new Date().toUTCString() + '</lastBuildDate>\n' +
+    '  <atom:link href="' + escXml(self) + '" rel="self" type="application/rss+xml" />\n' +
+    items.map((it) => '  <item>\n    <title>' + escXml(it.t) + '</title>\n' +
+      '    <link>' + escXml(it.link) + '</link>\n' +
+      '    <guid isPermaLink="true">' + escXml(it.link) + '</guid>\n' +
+      '    <pubDate>' + it.pub + '</pubDate>\n' +
+      '    <description>' + escXml(it.desc) + '</description>\n  </item>').join('\n') +
+    '\n</channel>\n</rss>\n';
+  return new Response(xml, {
+    headers: {
+      ...cors,
+      'content-type': 'application/rss+xml; charset=utf-8',
+      'cache-control': 'public, max-age=0, s-maxage=600',
+    },
+  });
 }
 async function getKV(env, key, cors, cacheSec) {
   if (!env.CZ_KV) return noKV(cors);

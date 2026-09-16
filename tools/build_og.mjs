@@ -27,6 +27,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SITE = 'https://ssochuz.pages.dev';   // domain chính — og:url/canonical luôn trỏ về đây
+const WORKER = 'https://chuseoz-cms.kimtong1906.workers.dev';   // gốc feed RSS riêng từng truyện (/feed.xml?slug=)
 
 /* thoát chuỗi cho thuộc tính HTML lẫn nội dung <title> */
 function esc(s) {
@@ -77,6 +78,7 @@ for (const n of lib) {
     '<title>' + esc(title) + ' · ssochuz library</title>\n' +
     '<meta name="description" content="' + esc(desc) + '">\n' +
     '<link rel="canonical" href="' + esc(url) + '">\n' +
+    '<link rel="alternate" type="application/rss+xml" title="RSS: ' + esc(title) + ' — ssochuz library" href="' + WORKER + '/feed.xml?slug=' + slug + '">\n' +
     '<meta property="og:type" content="book">\n' +
     '<meta property="og:site_name" content="ssochuz library">\n' +
     '<meta property="og:locale" content="vi_VN">\n' +

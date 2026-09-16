@@ -5,9 +5,12 @@ Từ bản **1.4.0**: lượt đọc và bình chọn cũng nằm trên **KV** �
 Từ bản **1.7.0**: số liệu vote/view đồng bộ NHANH và chính xác — `/api/stats` cộng cả phần đang đệm
 nên lượt đọc hiện ngay; bỏ phiếu nhận cả khoá đăng nhập lẫn khoá máy nên **gỡ vote luôn giảm đúng**;
 web đổi tên thương hiệu **ssochuz** (khoá localStorage tự chuyển, không mất dữ liệu).
-Từ bản **1.9.5** (đang dùng): 3 đường đọc nhiều (`registry`/`book`/`stats`) có **cache biên** —
+Từ bản **1.9.5**: 3 đường đọc nhiều (`registry`/`book`/`stats`) có **cache biên** —
 hàng trăm người cùng đọc một phút thì KV chỉ tốn 1 lượt đọc; web chỉ gửi 1 POST `/api/view`
 mỗi máy/truyện/ngày (khoá `ssochuz-viewsent-…`), “sửa thấy ngay” vẫn giữ nhờ tự xoá cache sau mỗi lần ghi.
+Từ bản **1.9.6** (đang dùng): có **RSS feed** — `GET /feed.xml` (30 chương mới nhất)
+và `GET /feed.xml?slug=<slug>` (chương mới của 1 bộ), chuẩn RSS 2.0, cache biên 10 phút,
+mỗi lần ghi chương tự xoá cache nên chương mới lên feed ngay.
 Trước đó, bản **1.6.0**: đăng nhập qua **Supabase** (hết lỗi `origin_mismatch` của Google), thích **theo từng chương**, bình luận **ngay trong trang đọc** (khách chưa đăng nhập vẫn gửi được), và có `/api/recount` để **chữa dứt điểm số chương sai**.
 
 ```
@@ -20,6 +23,23 @@ Admin (admin.html)  ──PUT──▶  Worker (worker/cms.js)  ──▶  Cloud
 ```
 
 GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới cần build); dữ liệu thì không đi qua GitHub nữa.
+
+## Có gì mới ở bản 1.9.6 — RSS feed chương mới
+
+| Endpoint | Việc |
+|---|---|
+| `GET /feed.xml` | RSS 2.0: 30 chương mới nhất toàn web, mỗi item link thẳng URL chương `/truyen/<slug>/chuong-<n>/` |
+| `GET /feed.xml?slug=<slug>` | RSS 2.0: tối đa 50 chương mới nhất của 1 bộ (mới trước) |
+
+Feed reader (Feedly, Inoreader…) poll nhiều lần mỗi ngày nên feed được cache biên 10 phút
+(`s-maxage=600`, kiểm chứng bằng header `x-cz-cache`); mỗi lần làm mới feed chung chỉ đọc
+tối đa 13 khoá KV (1 registry + 12 bộ mới cập nhật nhất) nên tốn chưa tới 2k lượt đọc/ngày.
+Mỗi lần ghi chương (PUT/DELETE book, import, seed, sync…) đều tự xoá cache feed nên chương
+mới lên feed ngay. Link trong feed dựng từ biến `SITE_BASE` (mặc định
+`https://ssochuz.pages.dev`). Web tĩnh trỏ tới feed bằng thẻ
+`<link rel="alternate" type="application/rss+xml">` (trong `<head>` + file OG từng truyện)
+và nút RSS ở footer + trang truyện. Sau khi deploy, kiểm tra bằng
+[W3C Feed Validator](https://validator.w3.org/feed/) rồi thêm URL feed vào Feedly.
 
 ## Có gì mới ở bản 1.9.5 — cache biên + đếm lượt đọc tiết kiệm quota
 
@@ -150,6 +170,7 @@ Trang quản trị đã có tab **Phiếu bầu** (phím `V`): chọn bộ → d
 | `ADMIN_EMAILS` (Secret) | nên có | danh sách email quản trị, phân cách bằng dấu phẩy. API chỉ trả cờ `admin: true`, không trả danh sách địa chỉ |
 | `GOOGLE_CLIENT_ID` | không | đường cũ: đăng nhập thẳng bằng Google Identity Services |
 | `ALLOW_ORIGIN` | nên có | danh sách chính xác các tên miền web; không dùng `*` ở production |
+| `SITE_BASE` | không | gốc dựng link chương trong `/feed.xml` (mặc định `https://ssochuz.pages.dev`) |
 | `BLOG` | không | feed Blogger cho nút "Đồng bộ Blogger" |
 | `FIREBASE_PROJECT` | không | chỉ dùng khi muốn kéo số liệu cũ từ Firestore (1 lần) |
 | `MAIL_TO` (Secret) | không | email nhận báo lỗi chữ phía Worker; không đặt trong registry/frontend |
@@ -199,6 +220,8 @@ Trang quản trị đã có tab **Phiếu bầu** (phím `V`): chọn bộ → d
 | GET | `/api/book/<slug>` | mở | tiêu đề + các chương của 1 bộ |
 | GET | `/api/schedule` | mở | lịch ra chương |
 | GET | `/api/stats` | mở | **lượt đọc/bình chọn từ KV** (tổng + hôm nay/tuần/tháng) |
+| GET | `/feed.xml` | mở | RSS 2.0: 30 chương mới nhất toàn web (cache biên 10 phút) |
+| GET | `/feed.xml?slug=<slug>` | mở | RSS 2.0: chương mới của 1 bộ (tối đa 50, mới trước) |
 | POST | `/api/view` | mở | đếm 1 lượt đọc `{slug, vid, ch}` |
 | POST | `/api/vote` | mở | bầu/bỏ bầu `{slug, ch?, vote: 1|0, vid}` → trả số phiếu mới (kèm `chapVotes`) |
 | PUT | `/api/registry` | cần khoá | ghi toàn bộ thư viện |

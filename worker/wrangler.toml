@@ -22,6 +22,8 @@ BLOG = "https://chuseoz.blogspot.com"
 # Chỉ cho các web thật gọi Worker; preview *.ssochuz.pages.dev cũng được nhận diện.
 # Nếu có custom domain, thêm nó vào danh sách này rồi deploy lại.
 ALLOW_ORIGIN = "https://ssochuz.pages.dev,https://chuseoz.blogspot.com"
+# Gốc dựng link chương trong GET /feed.xml (RSS). Có custom domain thì đổi cả hai chỗ rồi deploy lại.
+SITE_BASE = "https://ssochuz.pages.dev"
 # TUỲ CHỌN — chỉ dùng cho POST /api/stats/import-firebase (kéo số liệu CŨ về KV 1 lần).
 # Lượt đọc/bình chọn mới do Worker tự đếm trên KV, không gọi tới Firebase.
 FIREBASE_PROJECT = "chuseoz-library"

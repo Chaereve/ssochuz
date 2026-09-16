@@ -275,6 +275,8 @@
             '<button class="btn ghost' + (CZ.inShelf(n) ? ' on' : '') + '" id="shelfBtn" aria-pressed="' + CZ.inShelf(n) + '" title="Lưu vào tủ truyện của bạn (icon tủ sách)">' + ic('shelf', 'i-s') +
               '<span>' + (CZ.inShelf(n) ? 'Đã lưu' : 'Tủ truyện') + '</span></button>' +
             '<button class="btn ghost" id="shareBtn">' + ic('share', 'i-s') + 'Chia sẻ</button>' +
+            /* RSS riêng bộ này — feed reader theo dõi được từng truyện */
+            (CZ.API ? '<a class="btn ghost" href="' + esc(CZ.API + '/feed.xml?slug=' + encodeURIComponent(n.slug)) + '" target="_blank" rel="noopener" title="RSS riêng bộ này (dùng cho Feedly, Inoreader…)">' + ic('rss', 'i-s') + 'RSS</a>' : '') +
           '</div>' +
           (ch && n.chapters ? '<div class="prog"><div class="lbl"><span>Tiến độ đọc của bạn</span>' +
             '<span>còn ' + Math.max(0, n.chapters - ch) + ' chương · ' + progressPct(n, ch) + '%</span></div>' +
@@ -1491,6 +1493,17 @@
         } catch (e) { cn = null; }
       }
       if (cn) { try { cn.setAttribute('href', location.origin + storyPath()); } catch (e) {} }
+      /* feed reader tự phát hiện được RSS riêng bộ này qua thẻ alternate */
+      if (CZ.API) {
+        try {
+          var rss = document.createElement('link');
+          rss.setAttribute('rel', 'alternate');
+          rss.setAttribute('type', 'application/rss+xml');
+          rss.setAttribute('title', 'RSS: ' + N.title + ' — ssochuz library');
+          rss.setAttribute('href', CZ.API + '/feed.xml?slug=' + encodeURIComponent(SLUG));
+          document.head.appendChild(rss);
+        } catch (e) {}
+      }
       renderStory(); renderChapters(); renderRelated();
       showTab(/danh-gia|binh-luan/.test(location.hash) ? 'cmt' : (/gioi-thieu/.test(location.hash) ? 'info' : 'chap'));
       CZ.reveal();

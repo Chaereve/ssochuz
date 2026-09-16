@@ -746,6 +746,93 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     }
   }
 
+  /* ---------- 12. RSS FEED: /feed.xml + /feed.xml?slug= ---------- */
+  {
+    const realCaches = globalThis.caches;
+    const fake = new FakeCache();
+    globalThis.caches = { default: fake };
+    try {
+      await call('PUT', '/api/registry', {
+        headers: ADMH,
+        body: {
+          rev: 'feed-t1',
+          lib: [
+            { title: 'Truyện A & Bờ', slug: 'truyen-a', author: 'TG A', syn: 'Mô tả A <hay>', chapters: 3, updated: '2026-09-10' },
+            { title: 'Truyện B', slug: 'truyen-b', author: 'TG B', syn: 'Mô tả B', chapters: 1, updated: '2026-09-15' },
+          ],
+        },
+      });
+      await call('PUT', '/api/book/truyen-a', {
+        headers: ADMH,
+        body: {
+          title: 'Truyện A & Bờ', slug: 'truyen-a',
+          chapters: [
+            { t: 'Chương 1: Mở <đầu>', html: '<p>Đoạn 1 &amp; đoạn 2.</p><p>Thêm chữ cho dài thêm một chút để kiểm tra đoạn mô tả trong feed.</p>' },
+            { t: 'Chương 2', html: '<p>Nội dung chương hai.</p>' },
+            { t: 'Chương 3: Kết & mở', html: '<p>Kết thúc.</p>' },
+          ],
+        },
+      });
+      await call('PUT', '/api/book/truyen-b', {
+        headers: ADMH,
+        body: { title: 'Truyện B', slug: 'truyen-b', chapters: [{ t: 'Chương 1', html: '<p>Chỉ một chương.</p>' }] },
+      });
+      const items = (txt) => (String(txt).match(/<item>/g) || []).length;
+      const bal = (txt, t) => {
+        const open = (String(txt).match(new RegExp('<' + t + '[ >]', 'g')) || []).length;
+        const close = (String(txt).match(new RegExp('</' + t + '>', 'g')) || []).length;
+        return open === close && open > 0;
+      };
+      /* --- feed chung --- */
+      const f1 = await call('GET', '/feed.xml');
+      eq('feed/chung status 200 + content-type rss', [f1.status, (f1.headers.get('content-type') || '').split(';')[0]], [200, 'application/rss+xml']);
+      eq('feed/chung lần 1 MISS', f1.headers.get('x-cz-cache'), 'MISS');
+      eq('feed/chung header s-maxage=600', (f1.headers.get('cache-control') || '').includes('s-maxage=600'), true);
+      eq('feed/chung có 4 items (3+1)', items(f1.text), 4);
+      ck('feed/chung link thẳng URL chương', f1.text.includes('<link>https://ssochuz.pages.dev/truyen/truyen-a/chuong-3/</link>'), f1.text.slice(0, 400), 'link /truyen/<slug>/chuong-<n>/');
+      ck('feed/chung thoát ký tự XML', f1.text.includes('Truyện A &amp; Bờ') && !/Truyện A & Bờ/.test(f1.text), f1.text.slice(0, 300), '&amp; &lt; &gt;');
+      ck('feed/chung description không còn thẻ HTML', !/<\/?p[ >]/.test(f1.text), f1.text.slice(0, 300), 'đoạn văn thuần');
+      ck('feed/chung có atom self + language vi', f1.text.includes('rel="self"') && f1.text.includes('<language>vi-vn</language>'), f1.text.slice(0, 400), 'atom:link + vi-vn');
+      ck('feed/chung pubDate RFC 822', /<pubDate>[A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT<\/pubDate>/.test(f1.text), (f1.text.match(/<pubDate>[^<]*<\/pubDate>/) || [''])[0], 'Wed, 10 Sep 2026 … GMT');
+      ck('feed/chung XML cân thẻ', f1.text.startsWith('<?xml') && bal(f1.text, 'rss') && bal(f1.text, 'channel') && bal(f1.text, 'item'), 'đầu: ' + f1.text.slice(0, 60), '<?xml … <rss> <channel> <item> cân nhau');
+      ck('feed/chung bộ mới cập nhật đứng trước', f1.text.indexOf('truyen-b/chuong-1') < f1.text.indexOf('truyen-a/chuong-3'), 'vị trí truyen-b < truyen-a', 'mới trước');
+      const rd = () => kv.reads;
+      let r0 = rd();
+      const f2 = await call('GET', '/feed.xml');
+      eq('feed/chung lần 2 HIT + không đọc KV', [f2.headers.get('x-cz-cache'), rd() - r0], ['HIT', 0]);
+      /* --- feed riêng từng bộ --- */
+      const fs1 = await call('GET', '/feed.xml?slug=truyen-a');
+      eq('feed/riêng status + 3 items', [fs1.status, items(fs1.text)], [200, 3]);
+      ck('feed/riêng chỉ có truyện A', !fs1.text.includes('truyen-b/'), fs1.text.slice(0, 200), 'không lẫn bộ khác');
+      ck('feed/riêng chương mới đứng trước', fs1.text.indexOf('chuong-3') < fs1.text.indexOf('chuong-2'), 'vị trí c3 < c2', 'mới trước');
+      eq('feed/riêng lần 2 HIT', (await call('GET', '/feed.xml?slug=truyen-a')).headers.get('x-cz-cache'), 'HIT');
+      eq('feed/tham số rác vẫn HIT cùng khoá', (await call('GET', '/feed.xml?slug=truyen-a&utm=x')).headers.get('x-cz-cache'), 'HIT');
+      ck('feed/không lưu khoá rác', ![...fake.store.keys()].some((u) => u.includes('utm=')), [...fake.store.keys()], 'không key nào chứa utm=');
+      eq('feed/slug lạ → 404', (await call('GET', '/feed.xml?slug=khong-co')).status, 404);
+      eq('feed/slug bậy → 400', (await call('GET', '/feed.xml?slug=../x')).status, 400);
+      /* --- ghi chương mới → feed mất cache + thấy chương mới --- */
+      await call('PUT', '/api/book/truyen-a', {
+        headers: ADMH,
+        body: {
+          title: 'Truyện A & Bờ', slug: 'truyen-a',
+          chapters: [
+            { t: 'Chương 1', html: '<p>1.</p>' }, { t: 'Chương 2', html: '<p>2.</p>' },
+            { t: 'Chương 3', html: '<p>3.</p>' }, { t: 'Chương 4: Mới toanh', html: '<p>4.</p>' },
+          ],
+        },
+      });
+      const f3 = await call('GET', '/feed.xml');
+      eq('feed/PUT book → feed chung MISS', f3.headers.get('x-cz-cache'), 'MISS');
+      ck('feed/thấy chương mới ngay', f3.text.includes('chuong-4'), f3.text.slice(0, 200), 'chuong-4');
+      eq('feed/PUT book → feed riêng MISS', (await call('GET', '/feed.xml?slug=truyen-a')).headers.get('x-cz-cache'), 'MISS');
+      /* --- SITE_BASE custom --- */
+      const fc = await call('GET', '/feed.xml?slug=truyen-b', { e: Object.assign({}, env, { SITE_BASE: 'https://vidu.test' }) });
+      ck('feed/SITE_BASE custom', fc.text.includes('https://vidu.test/truyen/truyen-b/chuong-1/'), fc.text.slice(0, 300), 'link theo SITE_BASE');
+    } finally {
+      globalThis.caches = realCaches;
+    }
+  }
+
   fs.rmSync(tmp, { recursive: true, force: true });
 
   const bad = checks.filter((c) => !c.ok);
