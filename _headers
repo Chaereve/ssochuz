@@ -56,6 +56,15 @@
 /robots.txt
   Cache-Control: public, max-age=600
 
+# PWA: manifest đúng MIME; sw.js không cache để bản mới có hiệu lực ngay
+/manifest.webmanifest
+  Content-Type: application/manifest+json; charset=utf-8
+  Cache-Control: public, max-age=600
+
+/sw.js
+  Content-Type: application/javascript; charset=utf-8
+  Cache-Control: no-cache
+
 # Icon / ảnh thương hiệu: đổi rất hiếm, cho cache dài
 /assets/*
   Cache-Control: public, max-age=86400

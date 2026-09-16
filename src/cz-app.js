@@ -1234,6 +1234,8 @@
       '<a class="logo" href="/" title="ssochuz library"><span class="dot"></span>ssochuz<i> library</i></a>' +
       '<nav class="nav" id="czNav"><span class="ink" id="czInk" aria-hidden="true"></span>' + links + '</nav>' +
       '<span class="grow"></span>' +
+      '<button class="hbtn" id="czInstall" hidden title="Cài app ssochuz library" aria-label="Cài app ssochuz library">' + icon('download', 'i-s') +
+        '<span class="nav-lbl">Cài app</span></button>' +
       '<button class="hbtn" id="czJump" title="Tìm truyện, tác giả, couple (⌘K)" aria-label="Tìm kiếm">' + icon('search', 'i-s') +
         '<span class="searchbtn-txt">Tìm</span><span class="k">⌘K</span></button>' +
       /* công tắc sáng/tối — lấy cấu trúc của uiverse.io/catraco/brown-termite-67:
@@ -1408,11 +1410,114 @@
       if (e.key === 'Escape' && mnav.classList.contains('on')) { slide(mnav, false); paintMenu(); try { burger.focus(); } catch (err) {} }
     });
     host.querySelector('#czJump').addEventListener('click', function () { openJump(); });
+    var insBtn = host.querySelector('#czInstall');
+    if (insBtn) insBtn.addEventListener('click', function () { installApp(); });
+    paintInstall();
     d.addEventListener('keydown', function (e) {
       if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'k') { e.preventDefault(); openJump(); }
       if (e.key === '/' && !/^(INPUT|TEXTAREA|SELECT)$/.test((e.target.tagName || ''))) { e.preventDefault(); openJump(); }
       if (e.key === 'Escape') { var jb = d.getElementById('czJumpBox'); if (jb && jb.classList.contains('on') && jb._close) jb._close(); }
     });
+  }
+  /* ======================= PWA: SW + CÀI APP + BÁO OFFLINE ============ */
+  var deferredPrompt = null, swWaiting = null, swWantReload = false;
+  function netBars() {
+    var w = d.getElementById('czNet');
+    if (!w) {
+      w = d.createElement('div'); w.id = 'czNet'; w.className = 'netbars'; w.setAttribute('aria-live', 'polite');
+      w.innerHTML =
+        '<div class="netbar" id="czOffline" hidden>' + icon('cloud2', 'i-s') + '<span>Đang offline — đọc bản đã lưu</span></div>' +
+        '<div class="netbar" id="czUpdate" hidden>' + icon('refresh', 'i-s') + '<span>Đã có bản cập nhật</span>' +
+          '<button class="btn pri sm" id="czUpdateBtn" type="button">Tải lại</button></div>';
+      d.body.appendChild(w);
+      w.querySelector('#czUpdateBtn').addEventListener('click', applyUpdate);
+    }
+    return w;
+  }
+  function paintOffline() {
+    netBars();
+    var bar = d.getElementById('czOffline');
+    if (bar) bar.hidden = !!navigator.onLine;
+  }
+  function showUpdateBar(w) {
+    swWaiting = w;
+    netBars();
+    var bar = d.getElementById('czUpdate');
+    if (bar) bar.hidden = false;
+  }
+  function applyUpdate() {
+    var bar = d.getElementById('czUpdate');
+    if (bar) bar.hidden = true;
+    if (swWaiting) {
+      swWantReload = true;
+      try { swWaiting.postMessage({ type: 'SKIP_WAITING' }); }
+      catch (e) { try { location.reload(); } catch (e2) {} }
+    } else { try { location.reload(); } catch (e) {} }
+  }
+  function isIOS() {
+    return /iphone|ipad|ipod/i.test(navigator.userAgent || '') && !w.MSStream;
+  }
+  function isStandalone() {
+    try {
+      if (w.matchMedia && w.matchMedia('(display-mode: standalone)').matches) return true;
+    } catch (e) {}
+    return navigator.standalone === true;
+  }
+  /* nút Cài app chỉ hiện khi: trình duyệt cho cài (có beforeinstallprompt),
+     hoặc iOS chưa cài (hiện để mở hướng dẫn bằng tay) — đã cài rồi thì ẩn */
+  function paintInstall() {
+    var b = d.getElementById('czInstall');
+    if (!b) return;
+    b.hidden = isStandalone() ? true : !(deferredPrompt || isIOS());
+  }
+  function installApp() {
+    if (deferredPrompt) {
+      var pr = deferredPrompt;
+      deferredPrompt = null; paintInstall();
+      try {
+        pr.prompt();
+        if (pr.userChoice && pr.userChoice.then) pr.userChoice.then(function () {}).catch(function () {});
+      } catch (e) {}
+      return;
+    }
+    if (isIOS()) {
+      modal('czIosGuide',
+        '<div class="mh"><h4>Cài app ssochuz library</h4></div>' +
+        '<div class="mb"><p>iPhone/iPad chưa hỗ trợ nút cài tự động — bạn cài bằng tay nhé:</p>' +
+        '<p><b>1.</b> Bấm nút <b>Chia sẻ</b> ' + icon('share', 'i-s') + ' ở thanh công cụ Safari.<br>' +
+        '<b>2.</b> Chọn <b>Thêm vào Màn hình chính</b>.<br>' +
+        '<b>3.</b> Bấm <b>Thêm</b> là xong — app mở toàn màn hình, đọc được offline.</p></div>' +
+        '<div class="mf"><button class="btn pri" data-close>Đã hiểu</button></div>');
+    }
+  }
+  function swRegister() {
+    try {
+      navigator.serviceWorker.register('/sw.js').then(function (reg) {
+        /* bản mới về tới lúc trang đang đóng → báo cập nhật ngay khi mở lại */
+        if (reg.waiting && navigator.serviceWorker.controller) showUpdateBar(reg.waiting);
+        reg.addEventListener('updatefound', function () {
+          var nw = reg.installing;
+          if (!nw) return;
+          nw.addEventListener('statechange', function () {
+            if (nw.state === 'installed' && navigator.serviceWorker.controller) showUpdateBar(nw);
+          });
+        });
+      }).catch(function () {});
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (swWantReload) { swWantReload = false; try { location.reload(); } catch (e) {} }
+      });
+    } catch (e) {}
+  }
+  function pwaInit() {
+    netBars(); paintOffline(); paintInstall();
+    w.addEventListener('online', paintOffline);
+    w.addEventListener('offline', paintOffline);
+    if (!('serviceWorker' in navigator)) return;
+    if (location.protocol !== 'http:' && location.protocol !== 'https:') return;
+    w.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferredPrompt = e; paintInstall(); });
+    w.addEventListener('appinstalled', function () { deferredPrompt = null; paintInstall(); toast('Đã cài app ssochuz library'); });
+    /* đăng ký sau khi trang tải xong để không giành mạng với nội dung chính */
+    if (d.readyState === 'complete') swRegister(); else w.addEventListener('load', swRegister);
   }
   /* thanh mục ở đầu trang: gạch chân trượt sang mục đang xem, không chỉ là mấy chữ chết */
   function navInk(host) {
@@ -2011,6 +2116,6 @@
     _memo: memo, _setLib: function () { libCache = null; }
   };
 
-  if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', function () { CZ.themeInit(); CZ.scrollUI(); CZ.pageFx(); });
-  else { CZ.themeInit(); CZ.scrollUI(); CZ.pageFx(); }
+  if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', function () { CZ.themeInit(); CZ.scrollUI(); CZ.pageFx(); pwaInit(); });
+  else { CZ.themeInit(); CZ.scrollUI(); CZ.pageFx(); pwaInit(); }
 })(window, document);

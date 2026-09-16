@@ -1384,6 +1384,20 @@ body.reading .sgrp, body.reading .toastline, body.reading .rnav button, body.rea
   transition: transform var(--t-close) var(--ease-close), opacity var(--t-close) var(--ease-close); }
 .toast.ok { border-left: 3px solid var(--ok); }
 .toast.err { border-left: 3px solid var(--bad); }
+/* ---- PWA: thanh báo offline / có bản cập nhật (dưới cùng, giữa màn hình) ----
+   Nằm trên toast (85) nhưng dưới hộp thoại (88); nút Tải lại dùng .btn có sẵn. */
+.netbars { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 86;
+  display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none;
+  width: max-content; max-width: calc(100vw - 32px); }
+.netbar { display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  background: var(--surf); border: 1px solid var(--bd2); border-radius: 999px;
+  color: var(--txt); font-size: 13px; font-weight: 600; white-space: nowrap;
+  box-shadow: var(--sh-card); pointer-events: auto; }
+.netbar[hidden] { display: none; }
+.netbar .i-s { flex: none; }
+#czOffline { border-left: 3px solid var(--acc); }
+#czUpdate { border-left: 3px solid var(--ok, var(--acc)); }
+@media (max-width: 560px) { .netbar { font-size: 12.5px; padding: 9px 12px; } }
 /* Hộp thoại: mở 250ms / đóng 150ms (bất đối xứng như transitions.dev), chỉ
    chạy transform + opacity nên không giật; đóng thì gỡ .on sau khi chạy xong. */
 /* LƯU Ý ĐIỆN THOẠI: hộp thoại cao hơn màn hình (form báo lỗi, danh sách dài) mà
