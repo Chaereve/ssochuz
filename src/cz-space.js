@@ -54,7 +54,7 @@
     $('#myStats').innerHTML = '<div id="myStatsPanel" class="space-stat-grid">' + [[s.total,'Chương đã đọc'],[s.today,'Chương hôm nay'],[s.streak,'Ngày liên tiếp'],[history.length,'Truyện đã mở']].map(function (p) { return '<div><strong>' + CZ.num(p[0]) + '</strong><span>' + p[1] + '</span></div>'; }).join('') + '</div><div class="space-week" aria-label="Số chương đã đọc 7 ngày qua">' + s.week.map(function (d) { return '<div><b>' + d.n + '</b><i style="height:' + Math.max(3,100*d.n/max) + 'px"></i><small>' + d.k.slice(6) + '/' + d.k.slice(4,6) + '</small></div>'; }).join('') + '</div>';
   }
   function tab() {
-    var key = location.hash.slice(1), keys = ['shelves','history','edit-profile'];
+    var key = location.hash.slice(1), keys = ['shelves','history','stats','edit-profile'];
     if (!keys.includes(key)) key = 'shelves';
     keys.forEach(function (k) {
       var panel = $('#space-' + k), active = k === key;
