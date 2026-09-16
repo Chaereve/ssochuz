@@ -2678,3 +2678,341 @@ body.rd-focus .rdcmts { display: none; }
 .rdhead h1 { overflow-wrap: anywhere; }
 .synbtn { max-width: 100%; }
 .synbtn .syn-label { min-width: 0; }
+
+/* ==========================================================================
+   MY SPACE + RANKING · polish pass
+   ----------------------------------------------------------------------------
+   Hai khu vực này có chuyển động có chủ đích: vào nhẹ, hover rõ, không bounce
+   và chỉ dùng opacity/transform để không làm layout nhảy. Tôn trọng reduced
+   motion ở cuối khối.
+   ========================================================================== */
+
+/* ---- Ranking: bảng có nhịp đọc, không còn là một cột chữ phẳng ------------- */
+#bxh .rank {
+  animation: rankingRowIn .52s var(--ease-out) both !important;
+  animation-delay: var(--d, 0ms) !important;
+  background: transparent;
+  transition: background-color var(--t-fast) var(--ease), transform var(--t) var(--ease),
+    border-color var(--t-fast) var(--ease), box-shadow var(--t) var(--ease);
+}
+#bxh .rank:hover {
+  transform: translateX(4px) !important;
+  background: color-mix(in srgb, var(--acc) 5%, var(--surf));
+  border-color: color-mix(in srgb, var(--acc) 28%, var(--bd));
+  box-shadow: 0 10px 24px -22px color-mix(in srgb, var(--acc) 80%, transparent);
+}
+#bxh .rank:hover .n.top { transform: scale(1.12) !important; }
+#bxh .rank:hover .rk-th { transform: translateY(-3px) !important; box-shadow: var(--sh-card); }
+#bxh .rank .rk-th { transition: transform var(--t) var(--ease), box-shadow var(--t) var(--ease); }
+#bxh .rank .tt b { transition: color var(--t-fast) var(--ease), transform var(--t) var(--ease); }
+#bxh .rank:hover .tt b { color: var(--acc); transform: translateX(2px); }
+#bxh .rank .v { display: inline-flex; align-items: baseline; gap: 4px; color: var(--mut); }
+#bxh .rank .v b { color: var(--acc); font-weight: 750; font-variant-numeric: tabular-nums; }
+#bxh .rank .bar {
+  animation: rankingBarIn .65s var(--ease-out) both !important;
+  animation-delay: var(--d, 40ms) !important;
+  height: 3px;
+  left: 10px;
+  right: 10px;
+  background: linear-gradient(90deg, var(--acc), color-mix(in srgb, var(--acc) 28%, transparent));
+  opacity: .7;
+}
+#bxh .rank:nth-child(1) .n { text-shadow: 0 0 18px color-mix(in srgb, var(--acc) 35%, transparent); }
+@keyframes rankingRowIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes rankingBarIn { from { opacity: 0; transform: scaleX(0); } to { opacity: .7; transform: scaleX(var(--w, 0)); } }
+
+/* ---- My Space: editorial hero + hierarchy -------------------------------- */
+.space-page { --space-radius: 18px; --space-line: color-mix(in srgb, var(--bd) 78%, transparent); }
+.space-wrap { max-width: 1180px; padding: 24px 28px 88px; }
+.space-hero {
+  position: relative;
+  isolation: isolate;
+  min-height: 190px;
+  overflow: hidden;
+  gap: 26px;
+  padding: 42px 0 38px;
+  border-bottom: 1px solid var(--space-line);
+  background: radial-gradient(circle at 2% 30%, color-mix(in srgb, var(--acc) 11%, transparent), transparent 30%),
+    radial-gradient(circle at 88% 18%, color-mix(in srgb, var(--acc) 7%, transparent), transparent 32%);
+}
+.space-hero::before { content: ""; position: absolute; z-index: -1; width: 280px; height: 280px; right: 8%; top: -172px; border: 1px solid color-mix(in srgb, var(--acc) 22%, transparent); border-radius: 50%; transform: rotate(-18deg); }
+.space-hero::after { content: ""; position: absolute; z-index: -1; width: 420px; height: 1px; right: -70px; bottom: 25px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--acc) 28%, transparent)); transform: rotate(-14deg); }
+.space-hero-orbit { position: absolute; z-index: -1; left: 22px; top: 20px; width: 136px; height: 136px; border: 1px solid color-mix(in srgb, var(--acc) 22%, transparent); border-radius: 50%; transform: rotate(32deg); pointer-events: none; }
+.space-hero-orbit::before { content: ""; position: absolute; inset: 14px -8px; border: 1px solid color-mix(in srgb, var(--acc) 12%, transparent); border-radius: 50%; }
+.space-hero-orbit span { position: absolute; width: 5px; height: 5px; top: 9px; right: 22px; border-radius: 50%; background: var(--acc); box-shadow: 0 0 0 5px color-mix(in srgb, var(--acc) 12%, transparent); }
+.space-hero-orbit i { position: absolute; right: 12px; bottom: 10px; color: var(--acc); font-style: normal; font-size: 12px; }
+.space-hero-avatar { position: relative; z-index: 1; width: 112px; height: 112px; border: 1px solid color-mix(in srgb, var(--acc) 48%, var(--bd)); box-shadow: 0 0 0 7px color-mix(in srgb, var(--acc) 7%, transparent), 0 18px 34px -24px color-mix(in srgb, var(--acc) 80%, transparent); background: var(--surf); }
+.space-hero-avatar::after { content: ""; position: absolute; inset: -7px; border: 1px solid color-mix(in srgb, var(--acc) 24%, transparent); border-radius: 50%; pointer-events: none; }
+.space-hero-avatar img { transition: transform .45s var(--ease); }
+.space-hero-avatar:hover img { transform: scale(1.045); }
+.space-hero-label { display: flex; align-items: center; gap: 9px; }
+.space-live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--acc); box-shadow: 0 0 0 4px color-mix(in srgb, var(--acc) 12%, transparent); }
+.space-intro { position: relative; z-index: 1; }
+.space-hero h1 { margin-top: 7px; font-size: clamp(30px, 4.2vw, 48px); letter-spacing: -.035em; }
+.space-hero .space-bio { max-width: 60ch; margin: 12px 0 14px; }
+.space-hero-rule { width: min(290px, 70%); height: 2px; overflow: hidden; background: var(--space-line); }
+.space-hero-rule span { display: block; width: 34%; height: 100%; background: var(--acc); transform-origin: left center; animation: spaceRuleIn .7s var(--ease-out) both; }
+.space-hero-action { position: relative; z-index: 1; margin-left: auto; white-space: nowrap; }
+@keyframes spaceRuleIn { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+.space-tabs { position: relative; gap: 2px; padding: 0; margin: 4px 0 38px; border-bottom: 1px solid var(--space-line); }
+.space-tabs button { position: relative; display: inline-flex; align-items: center; gap: 10px; min-height: 64px; padding: 8px 20px 9px; border: 0; color: var(--mut); transition: color var(--t-fast) var(--ease), background-color var(--t) var(--ease); }
+.space-tabs button::after { content: ""; position: absolute; left: 20px; right: 20px; bottom: -1px; height: 2px; background: var(--acc); transform: scaleX(0); transform-origin: left center; transition: transform var(--t) var(--ease); }
+.space-tabs button:hover { color: var(--txt); background: color-mix(in srgb, var(--acc) 4%, transparent); }
+.space-tabs button.on { color: var(--txt); border-color: transparent; }
+.space-tabs button.on::after { transform: scaleX(1); }
+.space-tab-index { color: var(--dim); font: 700 10px var(--font-mono); letter-spacing: .08em; transition: color var(--t-fast) var(--ease); }
+.space-tabs button.on .space-tab-index { color: var(--acc); }
+.space-view-enter { animation: spaceViewIn .42s var(--ease-out) both; }
+@keyframes spaceViewIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.space-section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin: 0 0 22px; }
+.space-section-head h2 { font-size: clamp(25px, 3vw, 32px); letter-spacing: -.025em; }
+.section-eyebrow { margin: 0 0 8px; color: var(--acc); font: 700 10px/1.3 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; }
+.space-section-head .space-note { max-width: 56ch; margin: 9px 0 0; }
+.space-count { display: inline-flex; align-items: baseline; gap: 7px; flex: none; padding: 9px 0 4px 18px; border-left: 1px solid var(--space-line); color: var(--mut); font-size: 12px; }
+.space-count strong { color: var(--acc); font: 700 24px/1 var(--font-head); }
+.space-count.small { padding: 0 0 0 14px; border-left: 0; font-size: 12px; }
+.space-count.small strong { font-size: 18px; }
+.space-guest { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 20px; padding: 22px 24px; margin: -8px 0 30px; border-color: color-mix(in srgb, var(--acc) 20%, var(--bd)); background: linear-gradient(105deg, color-mix(in srgb, var(--acc) 7%, var(--surf)), var(--surf)); }
+.space-guest h2 { font-size: 19px; margin-bottom: 5px; }
+.space-guest p { color: var(--mut); font-size: 13px; line-height: 1.7; margin: 0; }
+.space-guest .space-kicker { color: var(--acc); font-size: 10px; margin-bottom: 7px; }
+.space-guest-mark { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid color-mix(in srgb, var(--acc) 30%, var(--bd)); border-radius: 50%; color: var(--acc); font-size: 18px; }
+
+/* Một workspace duy nhất: tủ cloud là nội dung chính, danh sách local thu gọn
+   thành lớp phụ thay vì hai panel “tủ truyện” có cùng trọng lượng. */
+.space-shelf-workspace { display: grid; grid-template-columns: minmax(205px, 246px) minmax(0, 1fr); gap: 20px; align-items: start; }
+.space-shelf-sidebar { position: sticky; top: 78px; padding: 16px; border: 1px solid var(--space-line); border-radius: var(--space-radius); background: linear-gradient(145deg, color-mix(in srgb, var(--surf2) 70%, var(--surf)), var(--surf)); }
+.space-shelf-sidebar-head, .space-device-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.space-shelf-sidebar-head { padding: 2px 2px 13px; border-bottom: 1px solid var(--space-line); }
+.space-shelf-sidebar-head .section-eyebrow { margin: 0; color: var(--mut); }
+.icon-btn { display: grid; place-items: center; width: 29px; height: 29px; border: 1px solid var(--bd); border-radius: 9px; color: var(--acc); font-size: 20px; line-height: 1; transition: background-color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
+.icon-btn:hover { border-color: var(--acc); background: var(--acc-soft); transform: rotate(90deg); }
+.space-shelf-list { display: flex; flex-direction: column; gap: 5px; margin: 12px 0 0; }
+.space-shelf { position: relative; display: grid; grid-template-columns: 27px minmax(0, 1fr) auto; grid-template-rows: auto auto; align-items: center; gap: 3px 9px; min-height: 62px; padding: 10px 10px; border: 1px solid transparent; border-radius: 12px; background: transparent; text-align: left; opacity: 0; animation: spaceShelfIn .42s var(--ease-out) var(--space-delay, 0ms) forwards; transition: background-color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), transform var(--t) var(--ease); }
+.space-shelf:hover { transform: translateX(3px); border-color: var(--bd); background: color-mix(in srgb, var(--surf) 78%, transparent); }
+.space-shelf.on { border-color: color-mix(in srgb, var(--acc) 32%, var(--bd)); background: color-mix(in srgb, var(--acc) 8%, var(--surf)); }
+.space-shelf-icon { display: grid; place-items: center; width: 27px; height: 27px; grid-row: 1 / span 2; border-radius: 8px; color: var(--mut); background: var(--surf2); }
+.space-shelf.on .space-shelf-icon { color: var(--acc); background: color-mix(in srgb, var(--acc) 12%, var(--surf)); }
+.space-shelf b { min-width: 0; overflow-wrap: anywhere; font-size: 13px; }
+.space-shelf small { grid-column: 2; color: var(--mut); font-size: 11px; }
+.space-shelf-arrow { color: var(--dim); font-size: 14px; opacity: 0; transition: opacity var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
+.space-shelf:hover .space-shelf-arrow, .space-shelf.on .space-shelf-arrow { opacity: 1; }
+.space-shelf.on .space-shelf-arrow { color: var(--acc); }
+@keyframes spaceShelfIn { from { opacity: 0; transform: translateX(-7px); } to { opacity: 1; transform: none; } }
+.space-import-btn { width: 100%; margin-top: 13px; justify-content: center; }
+.space-shelf-detail { min-width: 0; }
+.shelf-detail-panel, .shelf-empty-panel { margin: 0; min-height: 280px; padding: 24px; border-radius: var(--space-radius); background: linear-gradient(145deg, var(--surf), color-mix(in srgb, var(--surf2) 28%, var(--surf))); }
+.shelf-detail-panel .sechead { align-items: flex-start; margin-bottom: 14px; }
+.shelf-detail-panel .sechead .section-eyebrow { margin-bottom: 5px; }
+.shelf-detail-panel h3 { font-size: 25px; }
+.shelf-empty-panel { display: grid; place-items: center; align-content: center; text-align: center; }
+.space-empty-mark { display: grid; place-items: center; width: 46px; height: 46px; margin-bottom: 14px; border: 1px solid color-mix(in srgb, var(--acc) 30%, var(--bd)); border-radius: 50%; color: var(--acc); }
+.shelf-empty-panel h3 { font-size: 19px; }
+.space-public-shelves .space-panel { margin: 0 0 18px; }
+.space-device-shelf { margin-top: 18px; padding: 17px 20px 20px; border: 1px solid var(--space-line); border-radius: var(--space-radius); background: color-mix(in srgb, var(--surf2) 30%, transparent); }
+.space-device-shelf > .space-note { margin: 5px 0 16px; font-size: 12px; }
+.space-device-head h3 { font-size: 16px; }
+.space-device-shelf .grid { gap: 18px 14px; }
+.space-device-shelf.has-cloud { padding: 13px 16px 15px; border-style: dashed; background: transparent; }
+.space-device-shelf.has-cloud > .space-note { display: none; }
+.space-device-shelf.has-cloud .space-device-head { margin-bottom: 8px; }
+.space-device-shelf.has-cloud .space-device-head h3 { font-size: 14px; }
+.space-book-cell { min-width: 0; opacity: 0; animation: spaceCardIn .5s var(--ease-out) var(--space-delay, 0ms) forwards; }
+@keyframes spaceCardIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.space-page .space-book-cell > .card { transition: transform var(--t) var(--ease), opacity var(--t-fast) var(--ease); }
+.space-page .space-book-cell > .card:hover { transform: translateY(-4px) !important; }
+.space-page .space-book-cell > .card:hover .th { transform: translateY(-1px) !important; }
+.local-book > button { transition: color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
+.local-book > button:hover { transform: translateY(-1px); }
+
+/* Lịch sử / thống kê ------------------------------------------------------- */
+.space-history { border-top: 1px solid var(--space-line); }
+.space-history-row { padding: 18px 12px; border-bottom: 1px solid var(--space-line); transition: background-color var(--t-fast) var(--ease), padding-left var(--t) var(--ease); }
+.space-history-row:hover { padding-left: 18px; background: color-mix(in srgb, var(--acc) 5%, transparent); }
+.space-history-row > span:last-child { font-weight: 700; }
+.space-stat-grid { gap: 10px; border: 0; background: transparent; }
+.space-stat-grid > div { position: relative; padding: 22px 20px; border: 1px solid var(--space-line); border-radius: 14px; background: var(--surf); overflow: hidden; animation: spaceStatIn .45s var(--ease-out) both; }
+.space-stat-grid > div:nth-child(2) { animation-delay: 60ms; }
+.space-stat-grid > div:nth-child(3) { animation-delay: 120ms; }
+.space-stat-grid > div:nth-child(4) { animation-delay: 180ms; }
+.space-stat-grid > div::after { content: ""; position: absolute; right: -24px; bottom: -28px; width: 88px; height: 88px; border: 1px solid color-mix(in srgb, var(--acc) 17%, transparent); border-radius: 50%; }
+.space-stat-grid strong { position: relative; z-index: 1; font-size: 36px; }
+.space-week { position: relative; min-height: 150px; margin-top: 14px; padding: 24px 20px 12px; border: 1px solid var(--space-line); border-radius: 14px; background: var(--surf); border-bottom: 1px solid var(--space-line); }
+.space-week > div { justify-content: flex-end; min-width: 34px; }
+.space-week i { min-height: 3px; background: linear-gradient(180deg, var(--acc), color-mix(in srgb, var(--acc) 34%, var(--surf))); transform-origin: bottom; animation: spaceBarIn .55s var(--ease-out) both; }
+.space-week > div:nth-child(2) i { animation-delay: 50ms; }.space-week > div:nth-child(3) i { animation-delay: 100ms; }.space-week > div:nth-child(4) i { animation-delay: 150ms; }.space-week > div:nth-child(5) i { animation-delay: 200ms; }.space-week > div:nth-child(6) i { animation-delay: 250ms; }.space-week > div:nth-child(7) i { animation-delay: 300ms; }
+@keyframes spaceStatIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes spaceBarIn { from { opacity: 0; transform: scaleY(0); } to { opacity: .75; transform: scaleY(1); } }
+
+/* Hồ sơ + avatar editor ---------------------------------------------------- */
+.profile-card { margin: 0; padding: 30px; border-radius: var(--space-radius); background: linear-gradient(145deg, var(--surf), color-mix(in srgb, var(--surf2) 25%, var(--surf))); }
+.profile-card .space-section-head { margin-bottom: 5px; }
+#profileForm { max-width: none; }
+.profile-fields-grid { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 24px; }
+.space-avatar-edit { align-items: flex-start; gap: 25px; margin: 26px 0 28px; padding: 20px; border: 1px solid var(--space-line); border-radius: 15px; background: color-mix(in srgb, var(--surf2) 35%, transparent); }
+.avatar-editor-preview { display: flex; flex-direction: column; align-items: center; gap: 9px; flex: none; }
+.avatar-editor-preview .space-avatar { width: 128px; height: 128px; border-color: color-mix(in srgb, var(--acc) 35%, var(--bd)); box-shadow: 0 8px 24px -20px var(--acc); }
+.avatar-preview-caption { color: var(--mut); font-size: 11px; text-align: center; }
+.avatar-editor-copy { min-width: 0; flex: 1; }
+.avatar-editor-copy .fl { margin-top: 0 !important; }
+.avatar-editor-copy input { display: block; max-width: 100%; margin-top: 8px; font-size: 13px; }
+.avatar-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.avatar-actions .btn { min-height: 32px; }
+#profileMessage { min-height: 1.7em; margin: 16px 0 0; color: var(--mut); font-size: 12.5px; }
+#profileMessage:not(:empty) { padding: 10px 12px; border-left: 2px solid var(--acc); background: color-mix(in srgb, var(--acc) 6%, transparent); }
+.profile-actions { padding-top: 20px; border-top: 1px solid var(--space-line); }
+
+@media (max-width: 800px) {
+  .space-wrap { padding-left: 20px; padding-right: 20px; }
+  .space-hero { min-height: 0; padding: 32px 0 30px; }
+  .space-hero-avatar { width: 92px; height: 92px; }
+  .space-shelf-workspace { grid-template-columns: minmax(175px, 215px) minmax(0, 1fr); gap: 12px; }
+  .shelf-detail-panel, .shelf-empty-panel { padding: 18px; }
+  .profile-fields-grid { grid-template-columns: 1fr; gap: 4px; }
+}
+@media (max-width: 600px) {
+  .space-wrap { padding: 13px 16px 56px; }
+  .space-hero { display: grid; grid-template-columns: 78px minmax(0, 1fr); align-items: start; gap: 16px; padding: 28px 0 25px; }
+  .space-hero-orbit { left: -7px; top: 10px; width: 105px; height: 105px; }
+  .space-hero-avatar { width: 78px; height: 78px; font-size: 30px; }
+  .space-hero h1 { margin-top: 4px; font-size: 29px; }
+  .space-hero .space-bio { margin: 8px 0 10px; font-size: 13px; }
+  .space-hero-action { grid-column: 1/-1; justify-self: start; margin-left: 0; }
+  .space-tabs { gap: 0; margin-bottom: 30px; overflow-x: auto; }
+  .space-tabs button { min-height: 56px; padding: 7px 14px; gap: 7px; font-size: 13px; }
+  .space-tabs button::after { left: 14px; right: 14px; }
+  .space-tab-index { font-size: 9px; }
+  .space-section-head { align-items: flex-start; flex-direction: column; gap: 12px; margin-bottom: 18px; }
+  .space-section-head .space-count { align-self: flex-start; }
+  .space-guest { grid-template-columns: auto minmax(0, 1fr); gap: 12px; padding: 18px; }
+  .space-guest .btn { grid-column: 1/-1; width: 100%; }
+  .space-shelf-workspace { display: block; }
+  .space-shelf-sidebar { position: static; margin-bottom: 12px; padding: 11px; }
+  .space-shelf-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 9px; }
+  .space-shelf { min-height: 58px; padding: 8px; }
+  .space-shelf small { font-size: 10px; }
+  .space-shelf-detail { margin-top: 12px; }
+  .shelf-detail-panel, .shelf-empty-panel { min-height: 220px; }
+  .shelf-detail-panel .sechead { align-items: flex-start; }
+  .shelf-detail-panel .sechead .row { width: 100%; }
+  .shelf-detail-panel .sechead .row .btn { flex: 1; }
+  .space-device-shelf { padding: 15px 12px; }
+  .space-device-shelf.has-cloud { padding: 11px 12px; }
+  .space-device-shelf .grid, .space-wrap .space-book-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .space-device-shelf.has-cloud #localShelf { gap: 14px 10px; }
+  .space-history-row { padding: 16px 8px; gap: 12px; }
+  .space-history-row > span:last-child { font-size: 11px; }
+  .space-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .space-stat-grid > div { padding: 17px 14px; }
+  .space-stat-grid strong { font-size: 29px; }
+  .space-week { gap: 4px; padding-left: 8px; padding-right: 8px; }
+  .space-week i { width: 14px; }
+  .profile-card { padding: 20px 16px; }
+  .space-avatar-edit { flex-direction: column; align-items: stretch; padding: 16px; }
+  .avatar-editor-preview { align-items: flex-start; }
+  .avatar-editor-preview .space-avatar { width: 104px; height: 104px; }
+  .profile-actions { align-items: stretch; }
+  .profile-actions .btn { flex: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #bxh .rank, #bxh .rank .bar, .space-page *, .space-page *::before, .space-page *::after { animation: none !important; transition: none !important; }
+  #bxh .rank, #bxh .rank:hover, #bxh .rank:hover .n.top, #bxh .rank:hover .rk-th,
+  .space-page .space-book-cell > .card:hover, .space-page .space-book-cell > .card:hover .th { transform: none !important; }
+  #bxh .rank .bar { transform: scaleX(var(--w, 0)); opacity: .7; }
+}
+
+/* ==========================================================================
+   BẢN TINH GỌN · header, admin workspace và nhịp chuyển động
+   ========================================================================== */
+
+/* Hai tiện ích này ưu tiên không gian: nhãn vẫn còn trong title/aria-label để
+   người dùng bàn phím và trình đọc màn hình không mất ngữ cảnh. */
+.hdr #czInstall, .hdr #czJump { width: 38px; min-width: 38px; height: 36px; padding: 0; gap: 0; justify-content: center; }
+.hdr #czInstall .nav-lbl, .hdr #czJump .searchbtn-txt, .hdr #czJump .k { display: none; }
+.hdr #czInstall .i, .hdr #czJump .i { width: 17px; height: 17px; }
+
+/* Chuyển động chậm hơn một nhịp: hover vẫn phản hồi ngay, phần vào/ra có đủ
+   thời gian để mắt theo kịp, tránh cảm giác “AI slop”. */
+:root { --t-fast: 210ms; --t: 360ms; --t-mid: 520ms; --t-slow: 680ms; }
+.fade.in { animation-duration: 520ms !important; }
+#bxh .rank { animation-duration: 680ms !important; }
+#bxh .rank .bar { animation-duration: 820ms !important; }
+.space-view-enter { animation-duration: 620ms; }
+.space-hero-rule span { animation-duration: 820ms; }
+.space-shelf { animation-duration: 620ms; }
+.space-book-cell { animation-duration: 680ms; }
+.space-stat-grid > div { animation-duration: 620ms; }
+.space-week i { animation-duration: 760ms; }
+
+/* Admin: thanh trên là một command bar mảnh; trạng thái và thao tác có nhóm,
+   không còn một dãy chip/nút ngang cùng độ ưu tiên. */
+.admin .abar { position: sticky; top: 0; z-index: 50; background: color-mix(in srgb, var(--bg) 92%, var(--surf)); box-shadow: 0 8px 24px -24px rgba(0,0,0,.65); }
+.admin .abar .in { max-width: 1480px; min-height: 68px; height: auto; padding: 0 32px; gap: 12px; }
+.admin-bar-brand, .admin-bar-state, .admin-bar-account, .admin-bar-tools { display: flex; align-items: center; min-width: 0; }
+.admin-bar-brand { gap: 12px; flex: none; }
+.admin-bar-brand .pill { font-size: 10px; }
+.admin-bar-state { gap: 7px; }
+.admin-bar-state .chip { max-width: 170px; overflow: hidden; text-overflow: ellipsis; }
+.admin-bar-state .dirty { max-width: 116px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-bar-account { gap: 8px; flex: none; }
+.admin-bar-tools { gap: 6px; flex: none; }
+.admin-tool { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-width: 36px; }
+.admin-tool .i { width: 15px; height: 15px; }
+.admin-tool-label { white-space: nowrap; }
+.admin .abar .whoami { max-width: 190px; }
+.admin .abar .rolebadge { white-space: nowrap; }
+.admin .abar .tsw { flex: none; }
+.admin .abar .hbtn:hover { transform: translateY(-1px); }
+
+/* Sidebar: chỉ nhóm việc thường dùng luôn mở; tác vụ hiếm nằm trong một nhóm
+   thu gọn, nhưng vẫn là button thật nên keyboard shortcut/API cũ không đổi. */
+.admin #tabs { gap: 3px; padding: 14px 10px; border-radius: 16px; background: linear-gradient(145deg, color-mix(in srgb, var(--surf2) 65%, var(--surf)), var(--surf)); }
+.admin #tabs > .admin-nav-label { padding: 10px 11px 5px; color: var(--dim); font: 700 10px/1.3 var(--font-mono); letter-spacing: .13em; text-transform: uppercase; }
+.admin #tabs > .admin-nav-label:first-child { padding-top: 3px; }
+.admin #tabs button, .admin #tabs summary { display: flex; align-items: center; gap: 9px; min-height: 38px; border: 1px solid transparent; color: var(--mut); transition: color var(--t-fast) var(--ease), background-color var(--t) var(--ease), border-color var(--t-fast) var(--ease), transform var(--t) var(--ease); }
+.admin #tabs button:hover, .admin #tabs summary:hover { color: var(--txt); background: color-mix(in srgb, var(--acc) 5%, transparent); transform: translateX(2px); }
+.admin #tabs button.on { color: var(--acc); background: color-mix(in srgb, var(--acc) 10%, var(--surf)); border-color: color-mix(in srgb, var(--acc) 18%, transparent); }
+.admin .admin-nav-icon { display: inline-grid; place-items: center; width: 17px; height: 17px; color: currentColor; flex: none; }
+.admin .admin-nav-icon .i { width: 15px; height: 15px; }
+.admin #tabs .ct { margin-left: auto; }
+.admin-nav-more { margin: 8px 2px 0; border-top: 1px solid var(--bd); padding-top: 7px; }
+.admin-nav-more summary { list-style: none; cursor: pointer; padding: 7px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; }
+.admin-nav-more summary::-webkit-details-marker { display: none; }
+.admin-nav-chevron { margin-left: auto; font-size: 16px; color: var(--dim); transition: transform var(--t) var(--ease); }
+.admin-nav-more[open] .admin-nav-chevron { transform: rotate(180deg); }
+.admin-nav-subgroup { display: flex; flex-direction: column; gap: 3px; margin-top: 5px; padding-left: 8px; border-left: 1px solid var(--bd); }
+.admin-nav-subgroup button { padding-left: 10px !important; font-size: 12px !important; min-height: 36px !important; }
+.admin-nav-more:has(button.on) summary { color: var(--acc); }
+
+/* Tóm tắt: dùng một biên rõ ràng khi mở, không phụ thuộc vào max-height:none
+   (một số trình duyệt giữ vùng overflow cũ trong lúc transition). */
+.synwrap.clamp.open > .synin { max-height: 5000px; height: auto; overflow: visible !important; mask-image: none !important; -webkit-mask-image: none !important; }
+.synwrap.clamp > .synin { transition: max-height 560ms var(--ease); }
+.synbtn .i { transition-duration: 420ms; }
+
+@media (max-width: 1050px) {
+  .admin .abar .in { padding-left: 22px; padding-right: 22px; }
+  .admin-bar-state .chip { max-width: 140px; }
+  .admin .abar .whoami { max-width: 130px; }
+  .admin-tool-label { display: none; }
+  .admin-tool { width: 36px; padding-left: 0; padding-right: 0; }
+}
+@media (max-width: 850px) {
+  .admin .abar .in { min-height: 62px; padding-left: 16px; padding-right: 16px; }
+  .admin-bar-state .chip { max-width: 132px; }
+  .admin-bar-brand .pill { display: none; }
+  .admin #tabs .admin-nav-more { grid-column: 1 / -1; }
+}
+@media (max-width: 620px) {
+  .admin .abar .in { gap: 7px; }
+  .admin .abar .logo { font-size: 18px; }
+  .admin-bar-state { display: none; }
+  .admin-bar-account .rolebadge { display: none; }
+  .admin .abar .whoami { max-width: 40px; }
+  .admin .abar .whoami > span { display: none; }
+  .admin-bar-tools { margin-left: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin #tabs button, .admin #tabs summary, .admin-nav-chevron { transition: none !important; }
+}

@@ -275,14 +275,15 @@
       .filter(function (r) { return r.score > 0; })
       .sort(function (a, b) { return b.score - a.score || a.n.slug.localeCompare(b.n.slug); }).slice(0, 8) : [];
     $('#rankSummary').textContent = (rankMode === 'views' ? 'Top View' : 'Top Vote') + ' · ' + tabs.find(function (t) { return t.k === rankBy; }).l;
+    var peak = rows.length ? rows[0].score : 0;
     $('#rank').innerHTML = rows.map(function (row, i) {
-      var n = row.n;
-      return '<a class="rank" href="' + esc(CZ.storyURL(n.slug)) + '">' +
+      var n = row.n, ratio = peak ? Math.max(.12, row.score / peak) : 0;
+      return '<a class="rank" href="' + esc(CZ.storyURL(n.slug)) + '" style="--d:' + (i * 55) + 'ms;--w:' + ratio.toFixed(3) + '">' +
         '<span class="n' + (i < 3 ? ' top t' + (i + 1) : '') + '">' + (i + 1) + '</span>' +
         '<span class="rk-th' + (n.thumb ? '' : ' noimg') + '">' +
         (n.thumb ? '<img src="' + esc(n.thumb) + '"' + CZ.coverFB(n, n.thumb) + ' alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</span>' +
         '<span class="tt"><b>' + esc(n.title) + '</b><span>' + esc(n.author || n.couple || '') + '</span></span>' +
-        '<span class="v">' + num(row.score) + (rankMode === 'views' ? ' lượt đọc' : ' lượt thích') + '</span></a>';
+        '<span class="v"><b>' + num(row.score) + '</b>' + (rankMode === 'views' ? ' lượt đọc' : ' lượt thích') + '</span><i class="bar" aria-hidden="true"></i></a>';
     }).join('') || (on ? '<p class="empty">Chưa có hoạt động trong khoảng thời gian này.</p>' : '');
     renderRecommended();
     if (CZ.inkAll) CZ.inkAll();

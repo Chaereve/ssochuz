@@ -347,6 +347,14 @@
     var remove=$('#removeRating');if(remove)remove.onclick=function(){submit(0);};
   }
   var synopsisOpen = false;
+  function syncSynopsis(wrap) {
+    var inner = wrap && wrap.querySelector('.synin');
+    if (!inner) return;
+    /* Inline state is deliberate: the hero is repainted after stats/votes and
+       some layouts retain the old measured max-height for one frame. */
+    if (synopsisOpen) inner.style.setProperty('max-height', 'none');
+    else inner.style.removeProperty('max-height');
+  }
   function renderStory() {
     var n = N, ch = CZ.progress(n);
     var im = n.thumb || n.slide || '';
@@ -405,9 +413,11 @@
     // Keep the control available: measuring before fonts/layout settle used to
     // delete it permanently. Preserve expansion when votes/stats repaint hero.
     var sw = $('#synWrap'), tg = $('#synToggle');
+    syncSynopsis(sw);
     if (tg) tg.addEventListener('click', function () {
       synopsisOpen = !synopsisOpen;
       sw.classList.toggle('open', synopsisOpen);
+      syncSynopsis(sw);
       tg.setAttribute('aria-expanded', String(synopsisOpen));
       tg.querySelector('.syn-label').textContent = synopsisOpen ? 'Thu gọn' : 'Đọc giới thiệu đầy đủ';
     });

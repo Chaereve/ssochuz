@@ -501,7 +501,8 @@
     });
     $$('#tabs button').forEach(function (b) { b.classList.toggle('on', b.dataset.tab === pane); b.setAttribute('aria-current', b.dataset.tab === pane ? 'page' : 'false'); });
     $('#tabs button[data-tab="edit"]').classList.toggle('hide', !CUR);
-    var on = $('#tabs button.on');
+    var on = $('#tabs button.on'), more = $('#tabs .admin-nav-more');
+    if (more) more.open = !!(on && more.contains(on));
     if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'center' });
     window.scrollTo({ top: 0, behavior: 'auto' });
   }

@@ -12,25 +12,33 @@
 <script>/* chống nháy nền */try{var t=localStorage.getItem('ssochuz-theme')||localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
 <body class="admin">
-<div class="abar"><div class="in">
-  <a class="logo" href="/" title="ssochuz library"><span class="dot"></span>ssochuz<i> library</i></a>
-  <span class="pill acc">quản trị</span>
-  <span class="chip" id="chipConn"><span class="d"></span><span id="chipConnTxt">chưa nối Worker</span></span>
-  <span class="chip hide" id="chipData"><span class="d"></span><span id="chipDataTxt">—</span></span>
-  <span class="dirty" id="dirtyTxt"></span>
-  <button class="hbtn hide" id="btnDraftRestore" title="Máy này còn bản nháp chưa nạp lên KV — bấm để xem lại">Nháp trong máy</button>
+<header class="abar"><div class="in">
+  <div class="admin-bar-brand">
+    <a class="logo" href="/" title="ssochuz library"><span class="dot"></span>ssochuz<i> library</i></a>
+    <span class="pill acc">quản trị</span>
+  </div>
+  <div class="admin-bar-state" aria-live="polite">
+    <span class="chip" id="chipConn"><span class="d"></span><span id="chipConnTxt">chưa nối Worker</span></span>
+    <span class="chip hide" id="chipData"><span class="d"></span><span id="chipDataTxt">—</span></span>
+    <span class="dirty" id="dirtyTxt"></span>
+    <button class="hbtn admin-tool draft-tool hide" id="btnDraftRestore" title="Máy này còn bản nháp chưa nạp lên KV — bấm để xem lại" aria-label="Mở bản nháp trong máy"><span data-ic="copy"></span><span class="admin-tool-label">Nháp</span></button>
+  </div>
   <span class="grow"></span>
-  <span class="whoami hide" id="whoBox"></span>
-  <span class="rolebadge hide" id="roleBadge"></span>
-  <button class="hbtn hide" id="btnLogout" title="Đăng xuất tài khoản quản trị">Đăng xuất</button>
-  <a class="hbtn" href="/" target="_blank" rel="noopener">Xem web ↗</a>
-  <label class="tsw switch-name" id="btnTheme" title="Đổi nền sáng/tối">
-    <input type="checkbox" class="tsw-in checkbox" id="btnThemeIn" role="switch" aria-label="Nền tối">
-    <span class="tsw-sl back" aria-hidden="true"></span>
-  </label>
-  <a class="hbtn" href="/#thu-vien" title="Kiểm tra dữ liệu vừa lưu">Kiểm tra ↻</a>
-  <button class="hbtn hide" id="btnOut">Ngắt kết nối</button>
-</div></div>
+  <div class="admin-bar-account">
+    <span class="whoami hide" id="whoBox"></span>
+    <span class="rolebadge hide" id="roleBadge"></span>
+    <button class="hbtn admin-tool hide" id="btnLogout" title="Đăng xuất tài khoản quản trị" aria-label="Đăng xuất"><span data-ic="logout"></span><span class="admin-tool-label">Đăng xuất</span></button>
+  </div>
+  <div class="admin-bar-tools" aria-label="Công cụ trang quản trị">
+    <a class="hbtn admin-tool" href="/" target="_blank" rel="noopener" title="Mở trang web" aria-label="Mở trang web"><span data-ic="right"></span><span class="admin-tool-label">Web</span></a>
+    <label class="tsw switch-name" id="btnTheme" title="Đổi nền sáng/tối">
+      <input type="checkbox" class="tsw-in checkbox" id="btnThemeIn" role="switch" aria-label="Nền tối">
+      <span class="tsw-sl back" aria-hidden="true"></span>
+    </label>
+    <a class="hbtn admin-tool" href="/#thu-vien" title="Kiểm tra dữ liệu vừa lưu" aria-label="Kiểm tra dữ liệu vừa lưu"><span data-ic="refresh"></span><span class="admin-tool-label">Kiểm tra</span></a>
+    <button class="hbtn admin-tool hide" id="btnOut" title="Ngắt kết nối Worker" aria-label="Ngắt kết nối"><span data-ic="logout"></span><span class="admin-tool-label">Ngắt kết nối</span></button>
+  </div>
+</div></header>
 
 <main class="amain">
   <nav class="crumb"><a href="/">Trang chủ</a><span>›</span><a href="/#thu-vien">Thư viện</a><span>›</span><b>Trang quản trị</b></nav>
@@ -99,23 +107,29 @@
   <!-- ============ 2. ỨNG DỤNG ============ -->
   <section id="scApp" class="hide">
     <nav class="tabs bar sticky" id="tabs" aria-label="Điều hướng quản trị">
-      <span class="admin-nav-label">Biên tập</span>
-      <button data-tab="overview" class="on">Tổng quan</button>
-      <button data-tab="list">Thư viện<span class="ct" id="tabLibCt"></span></button>
-      <button data-tab="quick">Đăng chương nhanh</button>
-      <button data-tab="new">Thêm bộ</button>
-      <button data-tab="edit" class="hide">Sửa bộ &amp; chương</button>
-      <button data-tab="private">Truyện riêng tư</button>
-      <span class="admin-nav-label">Kiểm duyệt</span>
-      <button data-tab="cmts">Bình luận<span class="ct" id="tabCmtCt"></span></button>
-      <button data-tab="reports">Báo lỗi<span class="ct" id="tabRepCt"></span></button>
-      <span class="admin-nav-label">Vận hành</span>
-      <button data-tab="stats">Thống kê</button>
-      <button data-tab="doctor">Kiểm tra dữ liệu</button>
-      <button data-tab="votes">Phiếu bầu<span class="ct" id="tabVotesCt"></span></button>
-      <button data-tab="log">Nhật ký</button>
-      <button data-tab="settings">Cài đặt &amp; đồng bộ</button>
-      <button data-tab="help">Trợ giúp</button>
+      <span class="admin-nav-label">Làm việc</span>
+      <button data-tab="overview" class="on"><span class="admin-nav-icon" data-ic="chart"></span>Tổng quan</button>
+      <button data-tab="list"><span class="admin-nav-icon" data-ic="library"></span>Thư viện<span class="ct" id="tabLibCt"></span></button>
+      <button data-tab="quick"><span class="admin-nav-icon" data-ic="pencil"></span>Đăng chương nhanh</button>
+      <button data-tab="new"><span class="admin-nav-icon" data-ic="plus"></span>Thêm bộ</button>
+      <button data-tab="edit" class="hide"><span class="admin-nav-icon" data-ic="edit"></span>Sửa bộ &amp; chương</button>
+
+      <span class="admin-nav-label">Chất lượng</span>
+      <button data-tab="cmts"><span class="admin-nav-icon" data-ic="chat"></span>Bình luận<span class="ct" id="tabCmtCt"></span></button>
+      <button data-tab="reports"><span class="admin-nav-icon" data-ic="alert"></span>Báo lỗi<span class="ct" id="tabRepCt"></span></button>
+      <button data-tab="doctor"><span class="admin-nav-icon" data-ic="pulse"></span>Kiểm tra dữ liệu</button>
+
+      <details class="admin-nav-more">
+        <summary><span class="admin-nav-icon" data-ic="gear"></span><span>Vận hành nâng cao</span><span class="admin-nav-chevron">⌄</span></summary>
+        <div class="admin-nav-subgroup">
+          <button data-tab="private"><span class="admin-nav-icon" data-ic="lock_open"></span>Truyện riêng tư</button>
+          <button data-tab="stats"><span class="admin-nav-icon" data-ic="chart"></span>Thống kê</button>
+          <button data-tab="votes"><span class="admin-nav-icon" data-ic="heart"></span>Phiếu bầu<span class="ct" id="tabVotesCt"></span></button>
+          <button data-tab="log"><span class="admin-nav-icon" data-ic="history"></span>Nhật ký</button>
+          <button data-tab="settings"><span class="admin-nav-icon" data-ic="gear"></span>Cài đặt &amp; đồng bộ</button>
+          <button data-tab="help"><span class="admin-nav-icon" data-ic="info"></span>Trợ giúp</button>
+        </div>
+      </details>
     </nav>
 
     <section id="pane-private" class="hide">

@@ -139,6 +139,9 @@
      Huỷ / lỗi thì resolve(null) để giữ ảnh cũ. */
   function cropDialog(src) {
     if (!w.CZ || !w.CZ.modal) return Promise.resolve(null);
+    var deferred = {}, settled = false;
+    var promise = new Promise(function (res) { deferred.res = res; });
+    function finish(value) { if (!settled) { settled = true; deferred.res(value); } }
     var m = w.CZ.modal('czCrop',
       '<div class="mh"><h4>Cắt ảnh đại diện</h4></div>' +
       '<div class="mb">' +
@@ -151,11 +154,10 @@
         '</div>' +
         '<p class="sm muted mt">Kéo để di chuyển · lăn chuột hoặc chụm hai ngón để thu phóng. Phần nằm trong vòng tròn sẽ là ảnh đại diện.</p>' +
       '</div>' +
-      '<div class="mf"><button class="btn ghost" data-close>Huỷ</button><button class="btn pri" id="czCrDone">Dùng ảnh này</button></div>');
-    var deferred = {};
-    var promise = new Promise(function (res) { deferred.res = res; });
+      '<div class="mf"><button class="btn ghost" data-close>Huỷ</button><button class="btn pri" id="czCrDone">Dùng ảnh này</button></div>',
+      { onClose: function () { finish(null); } });
     var origClose = m._close;
-    m._close = function () { try { if (origClose) origClose(); } catch (e) {} deferred.res(null); };
+    m._close = function () { try { if (origClose) origClose(); } catch (e) {} finish(null); };
 
     var stage = m.querySelector('#czCropStage');
     var img = m.querySelector('img');
@@ -257,9 +259,8 @@
         var s = st.base * st.z;
         ctx.drawImage(img, (-st.x) / s, (-st.y) / s, st.sw / s, st.sh / s, 0, 0, OUT, OUT);
         var out = cv.toDataURL('image/jpeg', 0.92);
-        var r = deferred.res; deferred.res = function () {};
+        finish(out);
         try { origClose(); } catch (e) {}
-        r(out);
       } catch (e) {
         toast('Không cắt được ảnh này (trang nguồn chặn đọc ảnh)', 'err');
       }
@@ -667,7 +668,7 @@
     login: login, loginEmail: loginEmail, loginDialog: loginDialog,
     provider: provider, configured: configured, isAdmin: isAdmin,
     applySettings: applySettings, settingsApplied: isSettingsApplied, supabase: function () { return sb; },
-    applyServerProfile: applyServerProfile, updateProfile: updateProfile, editProfileDialog: editProfileDialog,
+    applyServerProfile: applyServerProfile, updateProfile: updateProfile, editProfileDialog: editProfileDialog, cropAvatar: cropDialog,
     getCustomProfile: getCustomProfile,
     /* giữ tên cũ để các trang/kiểm thử không phải sửa */
     loginGoogle: function () { return login(provider() === 'google' ? 'google' : 'oauth'); },
