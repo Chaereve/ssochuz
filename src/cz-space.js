@@ -4,7 +4,7 @@
   'use strict';
   var $ = function (s) { return document.querySelector(s); }, esc = CZ.esc;
   var isPublic = document.body.dataset.public === 'true';
-  var space = null, selectedShelf = '', editingShelf = '', selected = new Set(), avatar = '';
+  var space = null, selectedShelf = '', editingShelf = '', selected = new Set(), avatar = '', avatarSource = '';
   var epoch = 0, identity, busy = false, avatarBusy = false;
   function user() { return window.CZ_AUTH && CZ_AUTH.current(); }
   async function request(path, method, body) {
@@ -24,17 +24,27 @@
     return p.avatar ? '<img src="' + esc(p.avatar) + '" alt="Ảnh đại diện" width="96" height="96">' : '<span aria-hidden="true">' + esc((p.name || 'B')[0].toUpperCase()) + '</span>';
   }
   function hero(p, owner) {
-    $('#spaceHero').innerHTML = '<div class="space-avatar">' + portrait(p) + '</div><div class="space-intro"><p class="space-kicker">' + (owner ? 'MY SPACE / GÓC ĐỌC CỦA BẠN' : 'SSOCHUZ / HỒ SƠ BẠN ĐỌC') + '</p><h1>' + esc(p.name || 'My Space') + '</h1><p class="space-bio">' + esc(p.bio || (owner ? 'Gom những câu chuyện yêu thích về một nơi.' : 'Một người yêu những câu chuyện.')) + '</p></div>' + (owner ? '<a class="btn ghost" href="#edit-profile">Chỉnh sửa hồ sơ</a>' : '');
+    var name = p.name || 'My Space';
+    $('#spaceHero').innerHTML = '<div class="space-hero-orbit" aria-hidden="true"><span></span><i>✦</i></div>' +
+      '<div class="space-avatar space-hero-avatar">' + portrait(p) + '</div>' +
+      '<div class="space-intro"><div class="space-hero-label"><p class="space-kicker">' + (owner ? 'MY SPACE / GÓC ĐỌC CỦA BẠN' : 'SSOCHUZ / HỒ SƠ BẠN ĐỌC') + '</p><span class="space-live-dot" aria-hidden="true"></span></div>' +
+      '<h1>' + esc(name) + '</h1><p class="space-bio">' + esc(p.bio || (owner ? 'Gom những câu chuyện yêu thích về một nơi.' : 'Một người yêu những câu chuyện.')) + '</p>' +
+      '<div class="space-hero-rule" aria-hidden="true"><span></span></div></div>' +
+      (owner ? '<a class="btn ghost space-hero-action" href="#edit-profile">Chỉnh sửa hồ sơ <span aria-hidden="true">↗</span></a>' : '');
   }
   function bookGrid(slugs) {
     var books = slugs.map(function (s) { return CZ.findLib(s); }).filter(Boolean);
-    return books.length ? '<div class="grid">' + books.map(function (n) { return CZ.card(n); }).join('') + '</div>' : '<p class="empty">Chưa có truyện trong tủ này.</p>';
+    return books.length ? '<div class="grid space-book-grid">' + books.map(function (n, i) { return '<div class="space-book-cell" style="--space-delay:' + (i * 45) + 'ms">' + CZ.card(n) + '</div>'; }).join('') + '</div>' : '<p class="empty">Chưa có truyện trong tủ này.</p>';
   }
   function localData() {
     var ids = CZ.shelfIds();
-    $('#localShelf').innerHTML = ids.map(function (slug) {
+    var localSection = document.querySelector('.local-shelf');
+    if (localSection) localSection.classList.toggle('has-cloud', !!space);
+    var localCount = $('#localShelfCount');
+    if (localCount) localCount.innerHTML = ids.length ? '<strong>' + ids.length + '</strong> truyện' : 'Chưa có truyện';
+    $('#localShelf').innerHTML = ids.map(function (slug, i) {
       var n = CZ.findLib(slug);
-      return n ? '<div class="local-book">' + CZ.card(n) + '<button class="btn ghost sm" data-remove-local="' + esc(slug) + '">Bỏ khỏi tủ</button></div>' : '';
+      return n ? '<div class="local-book space-book-cell" style="--space-delay:' + (i * 45) + 'ms">' + CZ.card(n) + '<button class="btn ghost sm" data-remove-local="' + esc(slug) + '">Bỏ khỏi tủ</button></div>' : '';
     }).join('') || '<p class="empty">Tủ còn trống. Bấm Lưu ở trang truyện để thêm vào đây.</p>';
     var history = CZ.lib().filter(function (n) { return CZ.progress(n) > 0; }).sort(function (a,b) { return CZ.lastReadAt(b) - CZ.lastReadAt(a); });
     $('#spaceHistory').innerHTML = history.map(function (n) {
@@ -46,33 +56,55 @@
   function tab() {
     var key = location.hash.slice(1), keys = ['shelves','history','stats','edit-profile'];
     if (!keys.includes(key)) key = 'shelves';
-    keys.forEach(function (k) { $('#space-' + k).hidden = key !== k; });
-    document.querySelectorAll('[data-space-tab]').forEach(function (b) { b.classList.toggle('on', b.dataset.spaceTab === key); b.setAttribute('aria-pressed',String(b.dataset.spaceTab === key)); });
+    keys.forEach(function (k) {
+      var panel = $('#space-' + k), active = k === key;
+      panel.hidden = !active;
+      panel.classList.toggle('space-view-active', active);
+      if (active) {
+        panel.classList.remove('space-view-enter');
+        void panel.offsetWidth;
+        panel.classList.add('space-view-enter');
+      }
+    });
+    document.querySelectorAll('[data-space-tab]').forEach(function (b) {
+      var active = b.dataset.spaceTab === key;
+      b.classList.toggle('on', active); b.setAttribute('aria-pressed',String(active)); b.setAttribute('aria-selected',String(active));
+    });
   }
   function cloud() {
     $('#cloudShelves').hidden = !space;
     $('#importShelf').hidden = !space || !CZ.shelfIds().length;
+    var shelfCount = $('#spaceShelfCount');
+    if (shelfCount) shelfCount.innerHTML = space ? '<strong>' + space.shelves.length + '</strong><span>' + (space.shelves.length === 1 ? 'tủ của bạn' : 'tủ của bạn') + '</span>' : '<strong>—</strong><span>tủ của bạn</span>';
     if (!space) return;
-    $('#shelfList').innerHTML = space.shelves.map(function (s) {
-      return '<button class="space-shelf' + (s.id === selectedShelf ? ' on' : '') + '" data-shelf="' + esc(s.id) + '" aria-pressed="' + (s.id === selectedShelf) + '"><span>' + CZ.icon(s.visibility === 'public' ? 'users' : 'lock','i-s') + '</span><b>' + esc(s.name) + '</b><small>' + s.books.length + ' truyện · ' + (s.visibility === 'public' ? 'Công khai' : 'Riêng tư') + '</small></button>';
+    $('#shelfList').innerHTML = space.shelves.map(function (s, i) {
+      return '<button class="space-shelf' + (s.id === selectedShelf ? ' on' : '') + '" data-shelf="' + esc(s.id) + '" aria-pressed="' + (s.id === selectedShelf) + '" style="--space-delay:' + (i * 45) + 'ms"><span class="space-shelf-icon">' + CZ.icon(s.visibility === 'public' ? 'users' : 'lock','i-s') + '</span><b>' + esc(s.name) + '</b><small>' + s.books.length + ' truyện · ' + (s.visibility === 'public' ? 'Công khai' : 'Riêng tư') + '</small><span class="space-shelf-arrow" aria-hidden="true">↗</span></button>';
     }).join('') || '<p class="empty">Tạo tủ đầu tiên — dành cho truyện muốn đọc, truyện yêu thích, hoặc một couple riêng.</p>';
     var shelf = space.shelves.find(function (s) { return s.id === selectedShelf; });
     if (!shelf && space.shelves.length) { selectedShelf = space.shelves[0].id; return cloud(); }
-    $('#shelfContent').innerHTML = shelf ? '<div class="space-panel"><div class="sechead"><h3>' + esc(shelf.name) + '</h3><div class="row"><button class="btn ghost sm" data-edit-shelf>Sửa tủ</button><button class="btn ghost sm" data-delete-shelf>Xoá tủ</button></div></div><p class="space-bio">' + esc(shelf.description) + '</p>' + bookGrid(shelf.books) + '</div>' : '';
+    $('#shelfContent').innerHTML = shelf ? '<div class="space-panel shelf-detail-panel"><div class="sechead"><div><p class="section-eyebrow">ĐANG XEM</p><h3>' + esc(shelf.name) + '</h3></div><div class="row"><button class="btn ghost sm" data-edit-shelf>Sửa tủ</button><button class="btn ghost sm" data-delete-shelf>Xoá tủ</button></div></div>' + (shelf.description ? '<p class="space-bio">' + esc(shelf.description) + '</p>' : '') + bookGrid(shelf.books) + '</div>' : '<div class="space-panel shelf-empty-panel"><span class="space-empty-mark" aria-hidden="true">✦</span><h3>Chọn một tủ để bắt đầu</h3><p class="space-note">Tạo một tủ nhỏ cho những câu chuyện bạn đang để mắt tới.</p></div>';
   }
   function profileForm() {
     var p = space.profile;
     $('#profileName').value = p.name; $('#profileBio').value = p.bio;
-    avatar = p.avatar; $('#avatarPreview').innerHTML = portrait(p);
+    avatar = p.avatar; avatarSource = p.avatar; $('#avatarPreview').innerHTML = portrait(p);
+    var adjust = $('#adjustAvatar'); if (adjust) adjust.hidden = !avatar;
     $('#profileFields').disabled = false;
     $('#myPublicLink').hidden = false; $('#myPublicLink').href = '/profile?id=' + space.id;
+  }
+  function releaseAvatarSource() {
+    if (avatarSource && avatarSource.indexOf('blob:') === 0) {
+      try { URL.revokeObjectURL(avatarSource); } catch (e) {}
+    }
+    avatarSource = '';
   }
   async function loadAccount(force) {
     var u = user(), key = u && u.uid;
     if (!force && key === identity) return;
     identity = key; var ticket = ++epoch;
-    space = null; selectedShelf = ''; avatar = ''; $('#profileFields').disabled = true;
+    releaseAvatarSource(); space = null; selectedShelf = ''; avatar = ''; $('#profileFields').disabled = true;
     $('#profileName').value = ''; $('#profileBio').value = ''; $('#avatarPreview').innerHTML = '';
+    if ($('#adjustAvatar')) $('#adjustAvatar').hidden = true;
     $('#shelfList').innerHTML = ''; $('#shelfContent').innerHTML = ''; $('#myPublicLink').hidden = true;
     if ($('#shelfDialog').open) $('#shelfDialog').close();
     $('#spaceGuest').hidden = !!u; cloud();
@@ -81,7 +113,7 @@
     $('#spaceStatus').textContent = 'Đang mở không gian của bạn…';
     try {
       var data = await request('/api/me/space'); if (ticket !== epoch) return;
-      space = data; hero(space.profile,true); profileForm(); cloud();
+      space = data; hero(space.profile,true); profileForm(); cloud(); localData();
       $('#spaceStatus').textContent = '';
       if (space.version > 0 && CZ_AUTH.applyServerProfile) CZ_AUTH.applyServerProfile(space.profile);
     } catch (e) { if (ticket === epoch) { spaceError(e.message); } } }
@@ -160,13 +192,19 @@
       try {if(selected.size>200)throw Error('Mỗi tủ chứa tối đa 200 truyện.');var name=$('#shelfName').value.trim();var before=space.shelves.map(function(s){return s.id;});await mutate({shelf:{id:editingShelf||undefined,name:name,description:$('#shelfDescription').value,visibility:$('#shelfVisibility').value,books:[...selected]}});if(!editingShelf){selectedShelf=(space.shelves.find(function(s){return !before.includes(s.id);})||{}).id;cloud();}$('#shelfDialog').close();}
       catch(err){$('#shelfMessage').textContent=err.message;}finally{button.disabled=false;}
     };
-    $('#removeAvatar').onclick=function(){avatar='';$('#avatarFile').value='';$('#avatarPreview').innerHTML=portrait({name:$('#profileName').value});};
+    $('#removeAvatar').onclick=function(){releaseAvatarSource();avatar='';$('#avatarFile').value='';$('#avatarPreview').innerHTML=portrait({name:$('#profileName').value});if($('#adjustAvatar'))$('#adjustAvatar').hidden=true;$('#profileMessage').textContent='Ảnh đại diện sẽ được bỏ khi bạn lưu hồ sơ.';};
+    $('#adjustAvatar').onclick=async function(){
+      if (!avatarSource || !CZ_AUTH.cropAvatar) return;
+      var button=this; button.disabled=true;
+      try { var cropped=await CZ_AUTH.cropAvatar(avatarSource); if(cropped){ avatar=cropped; avatarSource=cropped; $('#avatarPreview').innerHTML=portrait({avatar:avatar}); $('#profileMessage').textContent='Đã căn chỉnh ảnh. Bấm Lưu hồ sơ để cập nhật.'; } }
+      catch(err){ $('#profileMessage').textContent=err.message; } finally { button.disabled=false; }
+    };
     $('#avatarFile').onchange=async function(){var file=this.files[0];if(!file)return;avatarBusy=true;var ticket=epoch;
-      try {if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>8*1024*1024)throw Error('Chọn ảnh PNG, JPEG hoặc WebP dưới 8 MB.');var image=await createImageBitmap(file);var canvas=document.createElement('canvas');canvas.width=canvas.height=256;var size=Math.min(image.width,image.height);canvas.getContext('2d').drawImage(image,(image.width-size)/2,(image.height-size)/2,size,size,0,0,256,256);image.close();if(ticket!==epoch)return;avatar=canvas.toDataURL('image/jpeg',.85);$('#avatarPreview').innerHTML=portrait({avatar:avatar});$('#profileMessage').textContent='Ảnh đã sẵn sàng. Bấm Lưu hồ sơ để cập nhật.';}
-      catch(err){$('#profileMessage').textContent=err.message;}finally{avatarBusy=false;}
+      try {if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>8*1024*1024)throw Error('Chọn ảnh PNG, JPEG hoặc WebP dưới 8 MB.');releaseAvatarSource();avatarSource=URL.createObjectURL(file);var image=await createImageBitmap(file);var canvas=document.createElement('canvas');canvas.width=canvas.height=256;var size=Math.min(image.width,image.height);canvas.getContext('2d').drawImage(image,(image.width-size)/2,(image.height-size)/2,size,size,0,0,256,256);image.close();if(ticket!==epoch)return;avatar=canvas.toDataURL('image/jpeg',.85);$('#avatarPreview').innerHTML=portrait({avatar:avatar});if($('#adjustAvatar'))$('#adjustAvatar').hidden=false;$('#profileMessage').textContent='Ảnh đã sẵn sàng. Bạn có thể di chuyển và cắt ảnh trước khi lưu.';}
+      catch(err){releaseAvatarSource();$('#profileMessage').textContent=err.message;}finally{avatarBusy=false;}
     };
     $('#profileForm').onsubmit=async function(e){e.preventDefault();var button=$('#saveProfile');button.disabled=true;
-      try {if(avatarBusy)throw Error('Vui lòng chờ xử lý ảnh xong.');await mutate({profile:{name:$('#profileName').value,bio:$('#profileBio').value,avatar:avatar}});hero(space.profile,true);CZ_AUTH.applyServerProfile(space.profile);$('#profileMessage').textContent='Đã lưu hồ sơ công khai.';}
+      try {if(avatarBusy)throw Error('Vui lòng chờ xử lý ảnh xong.');await mutate({profile:{name:$('#profileName').value,bio:$('#profileBio').value,avatar:avatar}});releaseAvatarSource();avatarSource=space.profile.avatar;hero(space.profile,true);CZ_AUTH.applyServerProfile(space.profile);if($('#adjustAvatar'))$('#adjustAvatar').hidden=!avatar;$('#profileMessage').textContent='Đã lưu hồ sơ công khai.';}
       catch(err){$('#profileMessage').textContent=err.message;}finally{button.disabled=false;}
     };
     CZ.reveal();
