@@ -79,6 +79,7 @@
       if (api && api.lib) {
         apiDown = false;
         memo.reg = api; memo.src = 'kv'; w.CZ_SRC = 'kv';
+        paintNotif();   /* số chương từ KV về là chuông cập nhật */
         lsSet('ssochuz-reg', { t: Date.now(), v: api });
         return { reg: api, src: 'kv' };
       }
@@ -87,6 +88,7 @@
         var reg = newer(stat, cached) || { lib: [] };
         if (stat) lsSet('ssochuz-reg', { t: Date.now(), v: stat });
         memo.reg = reg; memo.src = 'static'; w.CZ_SRC = 'static';
+        paintNotif();
         return { reg: reg, src: 'static' };
       });
     });
@@ -378,6 +380,7 @@
     if (!Object.prototype.hasOwnProperty.call(m, slug)) return;
     var now = chaptersOf(n);
     if (now !== (parseInt(m[slug], 10) || 0)) { m[slug] = now; jsonSet(LS.follow, m); }
+    paintNotif();   /* mở truyện là chuông đầu trang tắt số ngay */
   }
   /* huy hiệu đỏ “N chương mới” — luôn dựng sẵn rồi ẩn/hiện để khỏi vá lại DOM */
   function followBadge(n) {
@@ -410,6 +413,7 @@
       if (c > 0) { x.removeAttribute('hidden'); x.textContent = num(c) + ' chương mới'; }
       else { x.setAttribute('hidden', ''); x.textContent = ''; }
     });
+    paintNotif();   /* chuông đầu trang đổi theo */
   }
 
   /* ---- THÔNG BÁO ĐẨY "RA CHƯƠNG MỚI" (Web Push + VAPID) ------------------
@@ -484,7 +488,15 @@
       markPushAsked();
       var m = modal('czPush',
         '<div class="mh"><h4>Bật thông báo chương mới?</h4></div>' +
-        '<div class="mb"><p class="sm">Mỗi khi truyện bạn theo dõi ra chương mới, máy sẽ báo ngay — kể cả khi không mở web.</p></div>' +
+        '<div class="mb pushbox">' +
+          '<span class="pushic">' + icon('bell') + '</span>' +
+          '<p class="pushlead">Truyện bạn theo dõi ra chương mới là máy báo ngay.</p>' +
+          '<ul>' +
+            '<li>' + icon('check', 'i-s') + 'Báo cả khi không mở web, trên điện thoại lẫn máy tính</li>' +
+            '<li>' + icon('check', 'i-s') + 'Chỉ báo truyện bạn đã bấm Theo dõi</li>' +
+            '<li>' + icon('check', 'i-s') + 'Tắt lúc nào cũng được, không spam</li>' +
+          '</ul>' +
+        '</div>' +
         '<div class="mf"><button class="btn ghost" data-close>Để sau</button>' +
         '<button class="btn pri" id="pushOk">' + icon('bell', 'i-s') + ' Bật thông báo</button></div>');
       m.querySelector('#pushOk').addEventListener('click', function () {
@@ -503,6 +515,51 @@
       if (!Object.keys(followMap()).length) pushUnsubscribe();
     } catch (e) { /* bỏ follow mà lỗi push thì kệ — việc chính đã xong */ }
   }
+
+  /* ---- TRUNG TÂM THÔNG BÁO (chuông ở đầu trang) ----------------------------
+     Liệt kê truyện đã theo dõi mà có chương mới — đọc từ localStorage +
+     registry đã fetch (chi phí 0 request, như huy hiệu đỏ NV2). */
+  function notifItems() {
+    var fm = followMap(), out = [];
+    Object.keys(fm).forEach(function (slug) {
+      var n = findLib(slug);
+      var c = n ? newChapters(n) : 0;
+      if (n && c > 0) out.push({ n: n, c: c });
+    });
+    out.sort(function (a, b) { return String(b.n.updated || '').localeCompare(String(a.n.updated || '')); });
+    return out;
+  }
+  function paintNotif() {
+    var btn = d.getElementById('czNotifBtn'), menu = d.getElementById('czNotifMenu');
+    if (!btn || !menu) return;
+    var items = notifItems(), total = 0, i;
+    for (i = 0; i < items.length; i++) total += items[i].c;
+    var dot = d.getElementById('czNotifCount');
+    if (dot) {
+      if (total > 0) { dot.removeAttribute('hidden'); dot.textContent = total > 99 ? '99+' : String(total); }
+      else { dot.setAttribute('hidden', ''); dot.textContent = ''; }
+    }
+    btn.classList.toggle('hasnew', total > 0);
+    btn.setAttribute('aria-label', total > 0 ? ('Thông báo chương mới (' + total + ' chương chưa đọc)') : 'Thông báo chương mới');
+    menu.innerHTML = '<div class="nhead">' + icon('bell', 'i-s') + '<b>Chương mới</b>' +
+      (total ? '<span>' + total + ' chưa đọc</span>' : '') + '</div>' +
+      (items.length ? items.map(function (it) {
+        var n = it.n, im = n.thumb || n.slide || '';
+        return '<a href="' + esc(storyURL(n.slug)) + '" role="menuitem">' +
+          '<span class="nth' + (im ? '' : ' noimg') + '">' +
+            (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" decoding="async">' : '') + '</span>' +
+          '<span class="ntx"><b>' + esc(n.title) + '</b>' +
+          '<span class="nsub"><i class="nnum">' + it.c + ' chương mới</i> · ' + esc(timeAgo(n.updated)) + '</span></span>' +
+          icon('right', 'i-s') + '</a>';
+      }).join('') : '<div class="nempty">Chưa có chương mới.<br>Truyện bạn theo dõi ra chương là báo ở đây.</div>');
+  }
+  function closeNotif() {
+    var m = d.getElementById('czNotifMenu'), b = d.getElementById('czNotifBtn');
+    if (m) m.classList.remove('on');
+    if (b) b.setAttribute('aria-expanded', 'false');
+  }
+  /* quay lại trang (Back/bfcache) thì vẽ lại badge — truyện vừa đọc đã tắt huy hiệu */
+  w.addEventListener('pageshow', function () { paintNotif(); });
 
   /* ---- THÍCH: mỗi chương một phiếu thích riêng --------------------------
      Bệnh cũ: thích lưu theo BỘ (ssochuz-like-<slug>) nên thích chương 1 xong thì
@@ -1343,6 +1400,13 @@
         '<span class="nav-lbl">Cài app</span></button>' +
       '<button class="hbtn" id="czJump" title="Tìm truyện, tác giả, couple (⌘K)" aria-label="Tìm kiếm">' + icon('search', 'i-s') +
         '<span class="searchbtn-txt">Tìm</span><span class="k">⌘K</span></button>' +
+      /* chuông trung tâm thông báo: truyện đã theo dõi có chương mới thì hiện số */
+      '<div class="hnotif" id="czNotif">' +
+        '<button class="hbtn icon" id="czNotifBtn" aria-haspopup="menu" aria-expanded="false" aria-label="Thông báo chương mới" title="Thông báo chương mới">' +
+          icon('bell', 'i-s') + '<span class="ndot" id="czNotifCount" hidden></span>' +
+        '</button>' +
+        '<div class="nmenu" id="czNotifMenu" role="menu" aria-label="Truyện có chương mới"></div>' +
+      '</div>' +
       /* công tắc sáng/tối — lấy cấu trúc của uiverse.io/catraco/brown-termite-67:
          rãnh bo tròn, biểu tượng trượt + xoay và đổi tông trời. Giữ id #czTheme
          / #czThemeIn để trạng thái cũ, bàn phím và các bài kiểm thử không vỡ. */
@@ -1485,6 +1549,24 @@
     });
     d.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMenu(); });
     if (w.CZ_AUTH && w.CZ_AUTH.onAuth) w.CZ_AUTH.onAuth(paintAuth); else paintAuth();
+
+    /* ---- chuông thông báo: bấm mở panel, bấm ngoài/Esc thì đóng ---- */
+    var nbtn = host.querySelector('#czNotifBtn');
+    if (nbtn) nbtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var menu = host.querySelector('#czNotifMenu');
+      var on = menu && menu.classList.contains('on');
+      if (on) { closeNotif(); return; }
+      paintNotif();
+      if (menu) menu.classList.add('on');
+      this.setAttribute('aria-expanded', 'true');
+    });
+    d.addEventListener('click', function (e) {
+      if (e.target.closest && e.target.closest('#czNotif')) return;
+      closeNotif();
+    });
+    d.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeNotif(); });
+    paintNotif();
 
     navInk(host);
     var mnav = host.querySelector('#czMnav');
