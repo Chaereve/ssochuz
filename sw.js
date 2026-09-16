@@ -12,7 +12,7 @@
    ⚠ MỖI LẦN ĐỔI ?v= TĨNH (cz.css/cz-*.js): sửa cả PRECACHE dưới đây + tăng
    CZ_SW_VER → trình duyệt tự tải SW mới, hiện “Đã có bản cập nhật — tải lại”.
    ========================================================================== */
-var CZ_SW_VER = '20260917l';
+var CZ_SW_VER = '20260917m';
 
 /* kho shell theo version (update là thay kho mới, xoá kho cũ);
    kho trang/API/ảnh KHÔNG theo version để dữ liệu offline còn lại sau update */
@@ -21,6 +21,14 @@ var C_PAGES = 'ssochuz-pages';
 var C_API = 'ssochuz-api';
 var C_IMG = 'ssochuz-img';
 var IMG_MAX = 200;
+/* SW có được phép gọi mạng ra host ngoài không (đọc từ CSP của chính sw.js):
+   null = chưa biết, true = được, false = bị chặn */
+var IMG_REMOTE_OK = null;
+var imgProbeAt = 0;
+/* host ngoài bị chặn khi ĐANG offline (mạng đứt, không phải CSP) → nhớ riêng từng host */
+var IMG_HOST_OFF = {};
+/* URL đã nhường cho trình duyệt → đừng chặn lại lần nữa (chặn lại là thành vòng lặp) */
+var IMG_HANDOFF = {};
 
 var PRECACHE = [
   '/',
@@ -62,6 +70,7 @@ self.addEventListener('install', function (e) {
 });
 
 self.addEventListener('activate', function (e) {
+  imgProbe();      /* biết chắc CSP của mình trước khi đứng ra tải hộ ảnh bìa */
   e.waitUntil(caches.keys().then(function (keys) {
     return Promise.all(keys.map(function (k) {
       /* chỉ dọn kho shell CŨ — kho trang/API/ảnh giữ lại để còn đọc offline */
@@ -105,6 +114,95 @@ function swr(req, cacheName) {
   });
 }
 
+/* ===================== ẢNH BÌA ==============================================
+   Bìa truyện phần lớn nằm ở host NGOÀI: cdn-local.mebmarket.com, pbs.twimg.com,
+   m.media-amazon.com, i.mydramalist.com, image.tmdb.org… Service worker là một
+   “văn bản” riêng, nên nó chịu **CSP của chính tệp sw.js** (xem `_headers`),
+   không phải CSP của trang. connect-src trong đó chỉ mở 'self' + workers.dev/
+   supabase/e2b → mọi lần SW đứng ra `fetch()` ảnh ở host ngoài đều bị chặn
+   ngay, và bản cũ trả về ảnh lỗi ⇒ trang gỡ bìa đi.
+   Triệu chứng đúng như người dùng báo: LẦN ĐẦU mở trang thì bìa hiện (SW chưa
+   nắm quyền, trình duyệt tự tải), tới lúc F5 — SW đã nắm quyền — là mất sạch bìa.
+
+   Nay, ba lớp theo thứ tự:
+   1. TỰ ĐỌC CSP CỦA CHÍNH MÌNH — đọc header `connect-src` của phản hồi sw.js.
+      Chỉ khi CSP thật sự cho ra ngoài thì SW mới đứng ra tải hộ bìa (⇒ cache
+      được, đọc offline có bìa). Chưa biết / bị chặn ⇒ **để trình duyệt tải**:
+      bìa vẫn hiện, không có request lỗi nào trong console.
+   2. Nếu đang tải hộ mà bị chặn (CSP đổi sau khi SW đã cài, mạng đứt…) ⇒ trả
+      **302 về đúng URL** để TRÌNH DUYỆT tự đi lấy, và nhớ lại (URL vừa nhường,
+      host ngoài đang offline) ⇒ lần sau SW đứng ngoài luôn: không lặp chuyển
+      hướng, không rác console.
+   3. KHÔNG BAO GIỜ trả ảnh lỗi cho bìa (không `Response.error()`).
+   `_headers` đã mở riêng `connect-src *` cho /sw.js nên bình thường SW vẫn tải
+   hộ được — bìa vẫn nằm trong kho offline như thiết kế.
+   ========================================================================= */
+function isRemote(url) { return url.origin !== self.location.origin; }
+/* CSP có cho gọi mạng ra host ngoài không (đọc đúng dòng connect-src).
+   Chỉ nhận khi CSP mở cho MỌI nơi: `*` hoặc nguồn theo giao thức (`https:`).
+   Kể cả khi CSP có `https://*.workers.dev` — vẫn KHÔNG tính là mở, vì host ảnh
+   bìa (mebmarket, twimg, amazon…) không nằm trong danh sách đó. Có CSP mà không
+   đọc được gì ⇒ coi như chặn (thà để trình duyệt tải bìa còn hơn thử rồi lỗi). */
+function cspAllowsRemote(csp) {
+  if (!csp) return true;                          /* không có CSP ⇒ không ai chặn */
+  var m = /connect-src([^;]*)/i.exec(csp) || /default-src([^;]*)/i.exec(csp);
+  var parts = (m ? m[1] : '').toLowerCase().split(/\s+/);
+  for (var i = 0; i < parts.length; i++) {
+    if (parts[i] === '*' || parts[i] === 'https:' || parts[i] === 'http:') return true;
+  }
+  return false;
+}
+/* hỏi chính phản hồi sw.js xem CSP đang áp cho mình là gì.
+   Dùng cache: 'force-cache' — bản sw.js trong cache trình duyệt chính là phản hồi
+   đã cài SW này (đúng CSP đang áp cho nó), lại không tốn request mỗi lần SW khởi
+   động. Không đọc được (chưa có cache, mạng lỗi) ⇒ null = chưa biết. */
+function imgProbeNow() {
+  return fetch(self.location.href, { cache: 'force-cache' }).then(function (res) {
+    return cspAllowsRemote((res && res.headers.get('content-security-policy')) || '');
+  }).catch(function () { return null; });
+}
+/* dò một lần cho mỗi lần SW khởi động (thử lại cách nhau 60 giây nếu chưa ra kết quả) */
+function imgProbe() {
+  if (IMG_REMOTE_OK !== null) return;
+  var now = Date.now();
+  if (imgProbeAt && now - imgProbeAt < 60000) return;
+  imgProbeAt = now;
+  imgProbeNow().then(function (v) { if (v !== null) IMG_REMOTE_OK = v; }).catch(function () {});
+}
+/* đã nhường cho trình duyệt rồi thì đừng chặn lại */
+function imgSkip(url) {
+  if (IMG_HANDOFF[url.href] === 1) return true;
+  return isRemote(url) && IMG_HOST_OFF[url.host] === 1;   /* host ngoài hỏng khi đang offline */
+}
+/* chỉ lưu ảnh thật: vài CDN trả trang HTML 200 khi chặn hotlink — lưu vào là hỏng bìa mãi */
+function isImgRes(res) {
+  if (!res) return false;
+  if (res.type === 'opaque') return true;      /* không đọc được header → cứ thử lưu */
+  if (!res.ok) return false;
+  var ct = (res.headers.get('content-type') || '').toLowerCase();
+  return ct === '' || ct.indexOf('image/') === 0;
+}
+/* 302 về đúng URL: lần này để trình duyệt đi lấy ảnh, không qua CSP của sw.js */
+function imgHandoff(req) {
+  IMG_HANDOFF[req.url] = 1;
+  try {
+    var u = new URL(req.url);
+    IMG_HANDOFF[u.href] = 1;
+    if (!isRemote(u)) return handOffRes(req.url);
+    var nav = self.navigator || {};
+    /* Đang có mạng mà fetch vẫn bị từ chối ⇒ gần như chắc chắn CSP chặn host ngoài,
+       không phải mạng hỏng. Từ đây thôi đứng ra tải hộ ảnh host ngoài, để không
+       phải nếm lại lỗi đó cho từng tên miền ảnh một (rác console).
+       Nếu đang OFFLINE thì chỉ nhớ riêng host đó — mở lại web là thử lại. */
+    if (nav.onLine === false) IMG_HOST_OFF[u.host] = 1;
+    else IMG_REMOTE_OK = false;
+  } catch (e) {}
+  return handOffRes(req.url);
+}
+function handOffRes(url) {
+  return new Response('', { status: 302, headers: { Location: url, 'Cache-Control': 'no-store' } });
+}
+
 /* ảnh: cache-first + giới hạn 200 mục (xoá ảnh cũ nhất khi đầy) */
 function imgFirst(req) {
   return caches.open(C_IMG).then(function (cache) {
@@ -115,7 +213,7 @@ function imgFirst(req) {
         return hit;
       }
       return fetch(req).then(function (res) {
-        if (res && (res.ok || res.type === 'opaque')) {
+        if (isImgRes(res)) {
           var copy = res.clone();
           cache.put(req, copy).then(function () {
             cache.keys().then(function (keys) {
@@ -127,6 +225,9 @@ function imgFirst(req) {
           }).catch(function () {});
         }
         return res;
+      }).catch(function () {
+        /* bị CSP chặn (hoặc mạng đứt): TUYỆT ĐỐI không trả ảnh lỗi nữa — mất bìa */
+        return imgHandoff(req);
       });
     });
   });
@@ -165,8 +266,13 @@ self.addEventListener('fetch', function (e) {
     e.respondWith(swr(req, C_API)); return;
   }
   /* ảnh bìa có khi không gắn destination (trình duyệt cũ) → bắt thêm theo đuôi */
-  if (req.destination === 'image' || /\.(png|jpe?g|gif|webp|svg|ico)(\?|#|$)/i.test(url.pathname)) {
-    e.respondWith(imgFirst(req)); return;
+  if (req.destination === 'image' || /\.(png|jpe?g|gif|webp|svg|ico|avif)(\?|#|$)/i.test(url.pathname)) {
+    /* bìa ở host NGOÀI: chỉ đứng ra tải hộ khi CHẮC CHẮN được phép (xem khối ẢNH BÌA).
+       Chưa biết thì kịp dò CSP và lần này để trình duyệt tự tải — bìa luôn hiện. */
+    if (isRemote(url) && IMG_REMOTE_OK !== true) { imgProbe(); return; }
+    /* URL/host vừa nhường cho trình duyệt: đi thẳng, không chặn lại (chặn lại là mất bìa) */
+    if (!imgSkip(url)) e.respondWith(imgFirst(req));
+    return;
   }
   /* tệp tĩnh cùng host (js/css/manifest/icon): có mới dùng mới, offline dùng cũ */
   if (url.origin === self.location.origin) { e.respondWith(swr(req, C_SHELL)); return; }
