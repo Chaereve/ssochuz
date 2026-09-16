@@ -5,6 +5,7 @@
   "description": "ssochuz library — web tĩnh. Mã nguồn đọc được nằm trong src/, bản phát hành (đã rút gọn, không chứa secret/email quản trị) nằm ở thư mục gốc.",
   "scripts": {
     "build": "node tools/build_site.mjs",
+    "og": "node tools/build_og.mjs",
     "test": "node tests/run.js"
   },
   "devDependencies": {

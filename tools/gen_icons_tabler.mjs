@@ -38,6 +38,7 @@ const MAP = {
   pen: 'pencil',
   play: 'player-play',
   bookmark: 'bookmark',
+  bell: 'bell',
   shelf: 'bookmarks',
   user: 'user',
   logout: 'logout',

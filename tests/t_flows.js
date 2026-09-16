@@ -112,7 +112,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   click($$('#chapGrid .cha')[3]); await wait(300);
   out.chapClickOpens = { reading: doc.body.classList.contains('reading'), sub: txt('#rdSub') };
   key('Escape'); await wait(200);
-  out.sortUI = { active: txt('#chapSort .on'), topHref: $('#chapTop').getAttribute('href') };
+  out.sortUI = { active: txt('#chapSort .on'), topGone: !$('#chapTop') };
   click($$('#chapSort button')[0]); await wait(200);
   out.sortNewFirst = txt('#chapGrid .cha .nm');
   click($$('#chapSort button')[1]); await wait(200);

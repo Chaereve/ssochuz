@@ -36,7 +36,7 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
 
-# Trang truyện: Cloudflare proxy /truyen/<slug>/ về truyen.html nên URL người đọc
+# Trang truyện: mỗi bộ có file tĩnh riêng truyen/<slug>/index.html nên URL người đọc
 # KHÔNG kết thúc bằng .html — luật /*.html ở trên không với tới, phải khai riêng.
 /truyen
   Cache-Control: public, max-age=0, must-revalidate
@@ -55,6 +55,15 @@
 
 /robots.txt
   Cache-Control: public, max-age=600
+
+# PWA: manifest đúng MIME; sw.js không cache để bản mới có hiệu lực ngay
+/manifest.webmanifest
+  Content-Type: application/manifest+json; charset=utf-8
+  Cache-Control: public, max-age=600
+
+/sw.js
+  Content-Type: application/javascript; charset=utf-8
+  Cache-Control: no-cache
 
 # Icon / ảnh thương hiệu: đổi rất hiếm, cho cache dài
 /assets/*

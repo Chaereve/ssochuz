@@ -26,14 +26,16 @@ const worker = (await import(path.join(ROOT, 'worker', 'cms.js'))).default;
 
 /* ============================ KV giả (như Cloudflare KV) ==================== */
 class FakeKV {
-  constructor() { this.m = new Map(); this.writes = 0; }
+  constructor() { this.m = new Map(); this.writes = 0; this.reads = 0; }
   async get(k, opt) {
+    this.reads++;
     const v = this.m.get(k);
     if (v === undefined) return null;
     if (opt && opt.type === 'json') { try { return JSON.parse(v.value); } catch (e) { return null; } }
     return v.value;
   }
   async getWithMetadata(k, opt) {
+    this.reads++;
     const v = this.m.get(k);
     if (v === undefined) return { value: null, metadata: null };
     return { value: opt && opt.type === 'json' ? JSON.parse(v.value) : v.value, metadata: v.metadata || null };
@@ -47,6 +49,16 @@ class FakeKV {
     const done = start + limit >= all.length;
     return { keys, list_complete: done, cursor: done ? undefined : all[start + limit - 1] };
   }
+}
+
+/* ============================ cache biên giả (như caches.default) =========== */
+class FakeCache {
+  constructor() { this.store = new Map(); }
+  static key(input) { return String((input && input.url) || input); }
+  async match(input) { const r = this.store.get(FakeCache.key(input)); return r ? r.clone() : undefined; }
+  async put(input, res) { this.store.set(FakeCache.key(input), res.clone ? res.clone() : res); }
+  async delete(input) { return this.store.delete(FakeCache.key(input)); }
+  async keys() { return [...this.store.keys()].map((u) => ({ url: u })); }
 }
 
 /* ============================ fetch giả ==================================== */
@@ -445,8 +457,10 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     await call('POST', '/api/vote', { body: { slug: 'lunar-secret', vote: 1, vid: 'khach-2' } });  /* để 1 phiếu cho mục seed bên dưới */
     const s = await call('GET', '/api/stats');
     eq('stats/đọc lại số phiếu', ((s.body.items || {})['lunar-secret'] || {}).votes, 1);
-    ck('stats/trả no-store để web luôn lấy số mới', String((s.headers || {}).get ? s.headers.get('cache-control') : '').includes('no-store'),
-      (s.headers || {}).get ? s.headers.get('cache-control') : '', 'no-store');
+    /* từ 1.9.5: stats lưu ở biên 60 giây (tiết kiệm lượt đọc KV), trình duyệt luôn
+       hỏi lại (max-age=0) nên vẫn thấy số mới sau mỗi lần ghi nhờ purge */
+    ck('stats/header cache s-maxage=60 + max-age=0', String((s.headers || {}).get ? s.headers.get('cache-control') : '') === 'public, max-age=0, s-maxage=60',
+      (s.headers || {}).get ? s.headers.get('cache-control') : '', 'public, max-age=0, s-maxage=60');
     eq('vote/slug lạ → 400', (await call('POST', '/api/vote', { body: { vote: 1 } })).status, 400);
   }
   {
@@ -654,6 +668,353 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
   /* ---------- 10. lặt vặt ---------- */
   eq('404/đường dẫn lạ', (await call('GET', '/api/khong-co')).status, 404);
   eq('500/không KV mà đọc registry', (await call('GET', '/api/registry', { e: Object.assign({}, env, { CZ_KV: undefined }) })).status, 503);
+
+  /* ---------- 11. CACHE BIÊN: đọc nhiều, KV chỉ tốn 1 lần ---------- */
+  {
+    const realCaches = globalThis.caches;
+    const fake = new FakeCache();
+    globalThis.caches = { default: fake };
+    try {
+      await call('PUT', '/api/registry', { headers: ADMH, body: { rev: 'cache-t1', lib: [{ title: 'Cache Truyện', slug: 'cache-truyen', chapters: 1 }] } });
+      await call('PUT', '/api/book/cache-truyen', { headers: ADMH, body: { title: 'Cache Truyện', slug: 'cache-truyen', chapters: [{ t: 'Chương 1', html: '<p>x</p>' }] } });
+      const rd = () => kv.reads;
+      /* registry: lần 1 MISS đọc KV đúng 1 lần, lần 2 HIT không chạm KV */
+      let r0 = rd();
+      const g1 = await call('GET', '/api/registry');
+      eq('cache/registry lần 1 MISS + đọc KV 1 lần', [g1.headers.get('x-cz-cache'), rd() - r0], ['MISS', 1]);
+      eq('cache/registry header s-maxage=60', (g1.headers.get('cache-control') || '').includes('s-maxage=60'), true);
+      r0 = rd();
+      const g2 = await call('GET', '/api/registry');
+      eq('cache/registry lần 2 HIT + không đọc KV', [g2.headers.get('x-cz-cache'), rd() - r0, ((g2.body && g2.body.lib) || []).length], ['HIT', 0, 1]);
+      /* trúng cache mà origin khác vẫn nhận đúng CORS của mình (không nhận nhầm) */
+      const g3 = await call('GET', '/api/registry', { headers: { origin: 'https://app.web.test' } });
+      eq('cache/HIT đắp CORS mới theo origin', [g3.headers.get('x-cz-cache'), g3.headers.get('access-control-allow-origin')], ['HIT', 'https://app.web.test']);
+      /* quá hạn dùng → MISS và đọc lại KV */
+      const gk = 'https://cms.test/api/registry';
+      const stored = await fake.match(gk);
+      const gh = new Headers(stored.headers);
+      gh.set('x-cz-cached-at', String(Date.now() - 120000));
+      fake.store.set(gk, new Response(await stored.text(), { status: 200, headers: gh }));
+      r0 = rd();
+      const g4 = await call('GET', '/api/registry');
+      eq('cache/registry quá hạn → MISS + đọc lại KV', [g4.headers.get('x-cz-cache'), rd() - r0], ['MISS', 1]);
+      /* URL có query đi thẳng KV, không lưu rác vào cache */
+      r0 = rd();
+      const g5 = await call('GET', '/api/registry?_=' + Date.now());
+      eq('cache/URL có query → BYPASS + đọc KV', [g5.headers.get('x-cz-cache'), rd() - r0 >= 1], ['BYPASS', true]);
+      ck('cache/không lưu khoá có query', ![...fake.store.keys()].some((u) => u.includes('?_=')), [...fake.store.keys()], 'không key nào chứa ?_=');
+      /* book: MISS rồi HIT, hạn 300 giây */
+      r0 = rd();
+      const b1 = await call('GET', '/api/book/cache-truyen');
+      eq('cache/book lần 1 MISS + đọc KV 1 lần', [b1.headers.get('x-cz-cache'), rd() - r0], ['MISS', 1]);
+      eq('cache/book header s-maxage=300', (b1.headers.get('cache-control') || '').includes('s-maxage=300'), true);
+      r0 = rd();
+      const b2 = await call('GET', '/api/book/cache-truyen');
+      eq('cache/book lần 2 HIT + không đọc KV', [b2.headers.get('x-cz-cache'), rd() - r0], ['HIT', 0]);
+      /* lỗi không lưu: GET bộ không có → 404 và lần sau vẫn đọc lại KV */
+      await call('GET', '/api/book/khong-co-bo-nay');
+      r0 = rd();
+      eq('cache/404 không lưu (lần sau vẫn đọc KV)', [(await call('GET', '/api/book/khong-co-bo-nay')).status, rd() - r0 >= 1], [404, true]);
+      /* PUT book → cả book lẫn registry đều bị xoá cache */
+      await call('PUT', '/api/book/cache-truyen', { headers: ADMH, body: { title: 'Cache Truyện Sửa', slug: 'cache-truyen', chapters: [{ t: 'Chương 1', html: '<p>y</p>' }] } });
+      r0 = rd();
+      const b3 = await call('GET', '/api/book/cache-truyen');
+      eq('cache/PUT book → book MISS + thấy chữ mới', [b3.headers.get('x-cz-cache'), rd() - r0 >= 1, b3.body && b3.body.title], ['MISS', true, 'Cache Truyện Sửa']);
+      r0 = rd();
+      const g6 = await call('GET', '/api/registry');
+      eq('cache/PUT book → registry cũng MISS', [g6.headers.get('x-cz-cache'), rd() - r0 >= 1], ['MISS', true]);
+      /* stats: MISS rồi HIT; lượt đọc không xoá, bình chọn thì xoá */
+      r0 = rd();
+      const s1 = await call('GET', '/api/stats');
+      eq('cache/stats lần 1 MISS + đọc KV', [s1.headers.get('x-cz-cache'), rd() - r0 >= 1], ['MISS', true]);
+      eq('cache/stats header s-maxage=60', (s1.headers.get('cache-control') || '').includes('s-maxage=60'), true);
+      r0 = rd();
+      const s2 = await call('GET', '/api/stats');
+      eq('cache/stats lần 2 HIT + không đọc KV', [s2.headers.get('x-cz-cache'), rd() - r0], ['HIT', 0]);
+      await call('POST', '/api/view', { body: { slug: 'cache-truyen', vid: 'may-cache-9' } });
+      eq('cache/lượt đọc không xoá cache stats', (await call('GET', '/api/stats')).headers.get('x-cz-cache'), 'HIT');
+      await call('POST', '/api/vote', { body: { slug: 'cache-truyen', vote: 1, vid: 'may-cache-1' } });
+      r0 = rd();
+      const s3 = await call('GET', '/api/stats');
+      eq('cache/bình chọn → stats MISS + đọc lại KV', [s3.headers.get('x-cz-cache'), rd() - r0 >= 1], ['MISS', true]);
+      eq('cache/sau bình chọn vẫn HIT lại được', (await call('GET', '/api/stats')).headers.get('x-cz-cache'), 'HIT');
+      /* nút làm mới số liệu của admin cũng xoá cache biên */
+      await call('POST', '/api/stats/refresh', { headers: ADMH });
+      eq('cache/stats/refresh → stats MISS', (await call('GET', '/api/stats')).headers.get('x-cz-cache'), 'MISS');
+    } finally {
+      globalThis.caches = realCaches;
+    }
+  }
+
+  /* ---------- 12. RSS FEED: /feed.xml + /feed.xml?slug= ---------- */
+  {
+    const realCaches = globalThis.caches;
+    const fake = new FakeCache();
+    globalThis.caches = { default: fake };
+    try {
+      await call('PUT', '/api/registry', {
+        headers: ADMH,
+        body: {
+          rev: 'feed-t1',
+          lib: [
+            { title: 'Truyện A & Bờ', slug: 'truyen-a', author: 'TG A', syn: 'Mô tả A <hay>', chapters: 3, updated: '2026-09-10' },
+            { title: 'Truyện B', slug: 'truyen-b', author: 'TG B', syn: 'Mô tả B', chapters: 1, updated: '2026-09-15' },
+          ],
+        },
+      });
+      await call('PUT', '/api/book/truyen-a', {
+        headers: ADMH,
+        body: {
+          title: 'Truyện A & Bờ', slug: 'truyen-a',
+          chapters: [
+            { t: 'Chương 1: Mở <đầu>', html: '<p>Đoạn 1 &amp; đoạn 2.</p><p>Thêm chữ cho dài thêm một chút để kiểm tra đoạn mô tả trong feed.</p>' },
+            { t: 'Chương 2', html: '<p>Nội dung chương hai.</p>' },
+            { t: 'Chương 3: Kết & mở', html: '<p>Kết thúc.</p>' },
+          ],
+        },
+      });
+      await call('PUT', '/api/book/truyen-b', {
+        headers: ADMH,
+        body: { title: 'Truyện B', slug: 'truyen-b', chapters: [{ t: 'Chương 1', html: '<p>Chỉ một chương.</p>' }] },
+      });
+      const items = (txt) => (String(txt).match(/<item>/g) || []).length;
+      const bal = (txt, t) => {
+        const open = (String(txt).match(new RegExp('<' + t + '[ >]', 'g')) || []).length;
+        const close = (String(txt).match(new RegExp('</' + t + '>', 'g')) || []).length;
+        return open === close && open > 0;
+      };
+      /* --- feed chung --- */
+      const f1 = await call('GET', '/feed.xml');
+      eq('feed/chung status 200 + content-type rss', [f1.status, (f1.headers.get('content-type') || '').split(';')[0]], [200, 'application/rss+xml']);
+      eq('feed/chung lần 1 MISS', f1.headers.get('x-cz-cache'), 'MISS');
+      eq('feed/chung header s-maxage=600', (f1.headers.get('cache-control') || '').includes('s-maxage=600'), true);
+      eq('feed/chung có 4 items (3+1)', items(f1.text), 4);
+      ck('feed/chung link thẳng URL chương', f1.text.includes('<link>https://ssochuz.pages.dev/truyen/truyen-a/chuong-3/</link>'), f1.text.slice(0, 400), 'link /truyen/<slug>/chuong-<n>/');
+      ck('feed/chung thoát ký tự XML', f1.text.includes('Truyện A &amp; Bờ') && !/Truyện A & Bờ/.test(f1.text), f1.text.slice(0, 300), '&amp; &lt; &gt;');
+      ck('feed/chung description không còn thẻ HTML', !/<\/?p[ >]/.test(f1.text), f1.text.slice(0, 300), 'đoạn văn thuần');
+      ck('feed/chung có atom self + language vi', f1.text.includes('rel="self"') && f1.text.includes('<language>vi-vn</language>'), f1.text.slice(0, 400), 'atom:link + vi-vn');
+      ck('feed/chung pubDate RFC 822', /<pubDate>[A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT<\/pubDate>/.test(f1.text), (f1.text.match(/<pubDate>[^<]*<\/pubDate>/) || [''])[0], 'Wed, 10 Sep 2026 … GMT');
+      ck('feed/chung XML cân thẻ', f1.text.startsWith('<?xml') && bal(f1.text, 'rss') && bal(f1.text, 'channel') && bal(f1.text, 'item'), 'đầu: ' + f1.text.slice(0, 60), '<?xml … <rss> <channel> <item> cân nhau');
+      ck('feed/chung bộ mới cập nhật đứng trước', f1.text.indexOf('truyen-b/chuong-1') < f1.text.indexOf('truyen-a/chuong-3'), 'vị trí truyen-b < truyen-a', 'mới trước');
+      const rd = () => kv.reads;
+      let r0 = rd();
+      const f2 = await call('GET', '/feed.xml');
+      eq('feed/chung lần 2 HIT + không đọc KV', [f2.headers.get('x-cz-cache'), rd() - r0], ['HIT', 0]);
+      /* --- feed riêng từng bộ --- */
+      const fs1 = await call('GET', '/feed.xml?slug=truyen-a');
+      eq('feed/riêng status + 3 items', [fs1.status, items(fs1.text)], [200, 3]);
+      ck('feed/riêng chỉ có truyện A', !fs1.text.includes('truyen-b/'), fs1.text.slice(0, 200), 'không lẫn bộ khác');
+      ck('feed/riêng chương mới đứng trước', fs1.text.indexOf('chuong-3') < fs1.text.indexOf('chuong-2'), 'vị trí c3 < c2', 'mới trước');
+      eq('feed/riêng lần 2 HIT', (await call('GET', '/feed.xml?slug=truyen-a')).headers.get('x-cz-cache'), 'HIT');
+      eq('feed/tham số rác vẫn HIT cùng khoá', (await call('GET', '/feed.xml?slug=truyen-a&utm=x')).headers.get('x-cz-cache'), 'HIT');
+      ck('feed/không lưu khoá rác', ![...fake.store.keys()].some((u) => u.includes('utm=')), [...fake.store.keys()], 'không key nào chứa utm=');
+      eq('feed/slug lạ → 404', (await call('GET', '/feed.xml?slug=khong-co')).status, 404);
+      eq('feed/slug bậy → 400', (await call('GET', '/feed.xml?slug=../x')).status, 400);
+      /* --- ghi chương mới → feed mất cache + thấy chương mới --- */
+      await call('PUT', '/api/book/truyen-a', {
+        headers: ADMH,
+        body: {
+          title: 'Truyện A & Bờ', slug: 'truyen-a',
+          chapters: [
+            { t: 'Chương 1', html: '<p>1.</p>' }, { t: 'Chương 2', html: '<p>2.</p>' },
+            { t: 'Chương 3', html: '<p>3.</p>' }, { t: 'Chương 4: Mới toanh', html: '<p>4.</p>' },
+          ],
+        },
+      });
+      const f3 = await call('GET', '/feed.xml');
+      eq('feed/PUT book → feed chung MISS', f3.headers.get('x-cz-cache'), 'MISS');
+      ck('feed/thấy chương mới ngay', f3.text.includes('chuong-4'), f3.text.slice(0, 200), 'chuong-4');
+      eq('feed/PUT book → feed riêng MISS', (await call('GET', '/feed.xml?slug=truyen-a')).headers.get('x-cz-cache'), 'MISS');
+      /* --- SITE_BASE custom --- */
+      const fc = await call('GET', '/feed.xml?slug=truyen-b', { e: Object.assign({}, env, { SITE_BASE: 'https://vidu.test' }) });
+      ck('feed/SITE_BASE custom', fc.text.includes('https://vidu.test/truyen/truyen-b/chuong-1/'), fc.text.slice(0, 300), 'link theo SITE_BASE');
+    } finally {
+      globalThis.caches = realCaches;
+    }
+  }
+
+  /* ---------- 13. WEB PUSH "RA CHƯƠNG MỚI" ---------- */
+  {
+    const b64u = (b) => Buffer.from(b).toString('base64url');
+    /* khoá VAPID riêng cho bài test */
+    const vp = crypto.generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+    const vpub = vp.publicKey.export({ type: 'spki', format: 'der' }).slice(-65);
+    const vprv = vp.privateKey.export({ type: 'sec1', format: 'der' }).slice(7, 39);
+    const envPush = Object.assign({}, env, {
+      VAPID_PUBLIC: b64u(vpub), VAPID_PRIVATE: b64u(vprv), SITE_BASE: 'https://web.test',
+    });
+    /* 1 trình duyệt giả (cặp ECDH + auth secret của PushManager) */
+    const cli = crypto.createECDH('prime256v1');
+    cli.generateKeys();
+    const cliPub = b64u(cli.getPublicKey());
+    const cliAuth = b64u(crypto.randomBytes(16));
+    const subBody = (ep) => ({ endpoint: ep, keys: { p256dh: cliPub, auth: cliAuth } });
+    /* giải mã bản tin aes128gcm (RFC 8291) để đối chiếu với payload gốc */
+    const decryptPush = (bodyBytes, ecdh, authB64) => {
+      const b = Buffer.from(bodyBytes);
+      const salt = b.subarray(0, 16);
+      const rs = b.readUInt32BE(16);
+      const idlen = b[20];
+      const srvPub = b.subarray(21, 21 + idlen);
+      const ct = b.subarray(21 + idlen);
+      const shared = ecdh.computeSecret(srvPub);
+      const auth = Buffer.from(authB64.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
+      const prk = crypto.createHmac('sha256', auth).update(shared).digest();
+      const hkdf1 = (info) => crypto.createHmac('sha256', prk)
+        .update(Buffer.concat([Buffer.from(info, 'utf8'), Buffer.from([1])])).digest();
+      const cek = hkdf1('Content-Encoding: aes128gcm\0').subarray(0, 16);
+      const nonce = hkdf1('Content-Encoding: nonce\0').subarray(0, 12);
+      const dec = crypto.createDecipheriv('aes-128-gcm', cek, nonce);
+      dec.setAuthTag(ct.subarray(ct.length - 16));
+      const pt = Buffer.concat([dec.update(ct.subarray(0, ct.length - 16)), dec.final()]);
+      let end = pt.length;
+      while (end > 0 && pt[end - 1] === 0) end--;
+      return { text: pt.subarray(0, end - 1).toString('utf8'), delim: pt[end - 1], rs };
+    };
+    const pushKeys = () => [...kv.m.keys()].filter((k) => k.startsWith('push:'));
+    const getQ = async () => (await kv.get('pushq', { type: 'json' })) || [];
+    const scheduled = async (e) => {
+      await worker.scheduled({}, e || envPush, ctx);
+      await Promise.all(waits.splice(0));
+    };
+    /* dọn sạch sub/queue cũ (nếu bài test chạy lại trên cùng KV giả) */
+    pushKeys().forEach((k) => kv.m.delete(k));
+    kv.m.delete('pushq');
+
+    /* --- đăng ký / huỷ --- */
+    const s1 = await call('POST', '/api/push-sub', { e: envPush, body: subBody('https://push.test/sub1') });
+    eq('push/đăng ký ok', [s1.status, !!(s1.body && s1.body.ok), pushKeys().length], [200, true, 1]);
+    eq('push/thiếu endpoint → 400', (await call('POST', '/api/push-sub', { e: envPush, body: { keys: {} } })).status, 400);
+    const badKeys = subBody('https://push.test/bad');
+    badKeys.keys.p256dh = 'ngan';
+    eq('push/khoá ngắn → 400', (await call('POST', '/api/push-sub', { e: envPush, body: badKeys })).status, 400);
+    const un = await call('POST', '/api/push-sub', { e: envPush, body: { endpoint: 'https://push.test/sub1', remove: true } });
+    eq('push/huỷ đăng ký', [(un.body && un.body.removed), pushKeys().length], [true, 0]);
+
+    /* --- admin lưu chương mới → vào hàng đợi --- */
+    await call('POST', '/api/push-sub', { e: envPush, body: subBody('https://push.test/may-1') });
+    await call('PUT', '/api/registry', {
+      headers: ADMH, e: envPush,
+      body: { rev: 'push-t1', lib: [{ title: 'Truyện Push', slug: 'truyen-push', chapters: 2, updated: '2026-09-16' }] },
+    });
+    const book2 = { title: 'Truyện Push', slug: 'truyen-push', chapters: [{ t: 'Chương 1', html: '<p>1</p>' }, { t: 'Chương 2', html: '<p>2</p>' }] };
+    await call('PUT', '/api/book/truyen-push', { headers: ADMH, e: envPush, body: book2 });
+    let q = await getQ();
+    eq('push/PUT tăng 2 chương → 1 job chương mới nhất', [q.length, q[0] && q[0].ch, q[0] && q[0].slug], [1, 2, 'truyen-push']);
+    /* sửa chữ (không tăng chương) → không báo */
+    await call('PUT', '/api/book/truyen-push', {
+      headers: ADMH, e: envPush,
+      body: { title: 'Truyện Push', slug: 'truyen-push', chapters: [{ t: 'Chương 1', html: '<p>1 sửa</p>' }, { t: 'Chương 2', html: '<p>2</p>' }] },
+    });
+    eq('push/sửa chữ không tăng chương → không thêm job', (await getQ()).length, 1);
+    kv.m.delete('pushq');
+
+    /* --- cron drain: gửi thật, giải mã được, VAPID verify được --- */
+    await call('PUT', '/api/book/truyen-push', {
+      headers: ADMH, e: envPush,
+      body: { title: 'Truyện Push', slug: 'truyen-push', chapters: [{ t: 'Chương 1', html: '<p>1</p>' }, { t: 'Chương 2', html: '<p>2</p>' }, { t: 'Chương 3: Tin vui', html: '<p>3</p>' }] },
+    });
+    const caps = [];
+    routes = (u, init) => {
+      if (String(u).startsWith('https://push.test/')) {
+        caps.push({ u: String(u), init });
+        const code = u.includes('chet404') ? 404 : u.includes('chet410') ? 410 : 201;
+        return { status: code, body: '' };
+      }
+      return null;
+    };
+    await scheduled();
+    routes = () => null;
+    eq('push/cron gửi đúng 1 tin tới sub', caps.length, 1);
+    const hdrs = (caps[0] && caps[0].init.headers) || {};
+    ck('push/header aes128gcm + vapid', hdrs['content-encoding'] === 'aes128gcm' && /^vapid t=[^,]+, k=.+/.test(hdrs.authorization || ''), hdrs, 'vapid t=…, k=…');
+    /* verify chữ ký JWT VAPID bằng public key */
+    const jwt = (hdrs.authorization || '').match(/^vapid t=([^,]+),/) || [];
+    let vapidOk = false, vapidAud = '';
+    try {
+      const parts = String(jwt[1] || '').split('.');
+      const vb = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+      vapidAud = vb.aud;
+      const vk = crypto.createPublicKey({
+        key: { kty: 'EC', crv: 'P-256', x: b64u(vpub.slice(1, 33)), y: b64u(vpub.slice(33, 65)) }, format: 'jwk',
+      });
+      /* WebCrypto ký ra raw R||S (đúng chuẩn JWS); Node verify cần DER nên đổi dạng */
+      const raw = Buffer.from(parts[2].replace(/-/g, '+').replace(/_/g, '/'), 'base64');
+      const derInt = (x) => {
+        while (x.length > 1 && x[0] === 0) x = x.subarray(1);
+        if (x[0] & 0x80) x = Buffer.concat([Buffer.from([0]), x]);
+        return Buffer.concat([Buffer.from([2, x.length]), x]);
+      };
+      const seq = Buffer.concat([derInt(raw.subarray(0, 32)), derInt(raw.subarray(32, 64))]);
+      const der = Buffer.concat([Buffer.from([0x30, seq.length]), seq]);
+      vapidOk = crypto.verify('sha256', Buffer.from(parts[0] + '.' + parts[1]), vk, der);
+    } catch (e) { vapidOk = false; }
+    eq('push/JWT VAPID ký đúng + aud là push service', [vapidOk, vapidAud], [true, 'https://push.test']);
+    /* giải mã body và đối chiếu payload */
+    const pt = decryptPush(caps[0].init.body, cli, cliAuth);
+    let pay = null;
+    try { pay = JSON.parse(pt.text); } catch (e) { pay = null; }
+    eq('push/giải mã đúng + nội dung đúng mẫu', [pt.delim, pay && pay.title, pay && pay.body, pay && pay.url],
+      [2, '📖 Truyện Push', 'Chương 3: Tin vui đã ra mắt!', 'https://web.test/truyen/truyen-push/chuong-3/']);
+    eq('push/job xong → hàng đợi rỗng', (await getQ()).length, 0);
+
+    /* --- sub chết (404/410) thì xoá --- */
+    await call('POST', '/api/push-sub', { e: envPush, body: subBody('https://push.test/chet404') });
+    await call('POST', '/api/push-sub', { e: envPush, body: subBody('https://push.test/chet410') });
+    eq('push/có 3 subs trước drain', pushKeys().length, 3);
+    await call('PUT', '/api/book/truyen-push', {
+      headers: ADMH, e: envPush,
+      body: { title: 'Truyện Push', slug: 'truyen-push', chapters: [{ t: 'C1', html: '<p>1</p>' }, { t: 'C2', html: '<p>2</p>' }, { t: 'C3', html: '<p>3</p>' }, { t: 'Chương 4', html: '<p>4</p>' }] },
+    });
+    const caps2 = [];
+    routes = (u, init) => {
+      if (String(u).startsWith('https://push.test/')) {
+        caps2.push(String(u));
+        const code = u.includes('chet404') ? 404 : u.includes('chet410') ? 410 : 201;
+        return { status: code, body: '' };
+      }
+      return null;
+    };
+    await scheduled();
+    routes = () => null;
+    eq('push/gửi cả 3 (kể cả sub sắp chết)', caps2.length, 3);
+    eq('push/xoá 2 sub chết, giữ sub sống', pushKeys().length, 1);
+
+    /* --- tối đa 45 tin/invocation --- */
+    for (let i = 0; i < 50; i++) {
+      await kv.put('push:t' + i, JSON.stringify({ endpoint: 'https://push.test/b' + i, keys: { p256dh: cliPub, auth: cliAuth } }));
+    }
+    await kv.put('pushq', JSON.stringify([{
+      id: 'batch1', slug: 'truyen-push', ch: 5, chapTitle: 'Chương 5', title: 'Truyện Push',
+      url: 'https://web.test/truyen/truyen-push/chuong-5/', at: new Date().toISOString(), sent: {},
+    }]));
+    let n1 = 0;
+    routes = (u) => (String(u).startsWith('https://push.test/') ? (n1++, { status: 201, body: '' }) : null);
+    await scheduled();
+    routes = () => null;
+    q = await getQ();
+    eq('push/invocation 1 gửi đúng 45 tin', n1, 45);
+    eq('push/job chưa xong (còn sub chưa gửi)', [q.length, q[0] && q[0].done !== true], [1, true]);
+    let n2 = 0;
+    routes = (u) => (String(u).startsWith('https://push.test/') ? (n2++, { status: 201, body: '' }) : null);
+    await scheduled();
+    routes = () => null;
+    eq('push/invocation 2 gửi nốt 6 tin (50+1 sub sống)', n2, 6);
+    eq('push/xong hết → hàng đợi rỗng', (await getQ()).length, 0);
+    pushKeys().forEach((k) => kv.m.delete(k));
+    kv.m.delete('pushq');
+
+    /* --- chưa cấu hình VAPID / hàng đợi rỗng → cron không làm gì --- */
+    await kv.put('pushq', JSON.stringify([{ id: 'x', slug: 's', ch: 1, chapTitle: 'C1', title: 'T', url: 'https://web.test/', sent: {} }]));
+    let n3 = 0;
+    routes = (u) => (String(u).startsWith('https://push.test/') ? (n3++, { status: 201, body: '' }) : null);
+    await scheduled(Object.assign({}, env, { VAPID_PUBLIC: '', VAPID_PRIVATE: '' }));
+    routes = () => null;
+    eq('push/thiếu VAPID → không gửi, job còn nguyên', [n3, (await getQ()).length], [0, 1]);
+    kv.m.delete('pushq');
+    await scheduled();
+    eq('push/hàng đợi rỗng → cron êm', true, true);
+  }
 
   fs.rmSync(tmp, { recursive: true, force: true });
 

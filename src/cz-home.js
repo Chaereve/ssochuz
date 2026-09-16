@@ -77,8 +77,8 @@
         '<div class="posterwrap">' +
           '<span class="idx" aria-hidden="true">' + pad2(i + 1) + '</span>' +
           '<a class="poster" href="' + esc(CZ.storyURL(n.slug)) + '" aria-label="' + esc(n.title) + '">' +
-            (im ? '<img src="' + esc(im) + '" alt="Bìa ' + esc(n.title) + '" width="300" height="450"' +
-              (i === 0 ? ' fetchpriority="high"' : ' loading="lazy"') + ' decoding="async">' : '') +
+            (im ? '<img src="' + esc(im) + '"' + CZ.coverFB(n, im) + ' alt="Bìa ' + esc(n.title) + '" width="300" height="450"' +
+              (i === 0 ? ' fetchpriority="high" referrerpolicy="no-referrer"' : ' loading="lazy"') + ' decoding="async" referrerpolicy="no-referrer">' : '') +
             '<span class="gloss"></span>' +
             (n.is18 ? '<span class="b18">18+</span>' : '') +
             (n.fresh ? '<span class="nw-bookmark"><span>NEW</span></span>' : '') +
@@ -111,7 +111,7 @@
     $('#hStrip').innerHTML = hero.list.map(function (n, k) {
       var im = n.thumb || n.slide;
       return '<button data-go="' + k + '" class="' + (k === hero.i ? 'on' : '') + '" title="' + esc(n.title) + '">' +
-        (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" decoding="async">' : '') + '</button>';
+        (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</button>';
     }).join('');
     paintSlide(hero.i);
     if (animate) restart();
@@ -223,8 +223,8 @@
     var p = CZ.progress(n), tot = n.chapters, pct = tot ? Math.min(100, Math.round(p / tot * 100)) : 0;
     return '<article class="cont" data-open="' + esc(n.slug) + '" role="button" tabindex="0" title="Đọc tiếp ' + esc(n.title) + '">' +
       '<span class="ct-th' + (n.thumb ? '' : ' noimg') + '">' +
-      (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async">' : '') + '</span>' +
-      '<div><b>' + esc(n.title) + '</b>' +
+      (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</span>' +
+      '<div><b>' + esc(n.title) + ' ' + CZ.followBadge(n) + '</b>' +
       '<span class="st">còn ' + Math.max(0, tot - p) + ' chương' +
         (CZ.lastReadAt(n) ? ' · ' + CZ.timeAgo(new Date(CZ.lastReadAt(n)).toISOString()) : '') + '</span>' +
       '<div class="pb"><i style="width:' + pct + '%"></i></div></div>' +
@@ -298,8 +298,8 @@
         var p = CZ.progress(n), tot = n.chapters;
         return '<article class="cont" data-open="' + esc(n.slug) + '" role="button" tabindex="0">' +
           '<span class="ct-th' + (n.thumb ? '' : ' noimg') + '">' +
-          (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async">' : '') + '</span>' +
-          '<div><b>' + esc(n.title) + '</b><span class="st">' +
+          (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</span>' +
+          '<div><b>' + esc(n.title) + ' ' + CZ.followBadge(n) + '</b><span class="st">' +
           (tot ? (p ? 'đang ở chương ' + p + '/' + tot : num(tot) + ' chương') : 'sắp ra mắt') + '</span>' +
           (tot && p ? '<div class="pb"><i style="width:' + Math.round(p / tot * 100) + '%"></i></div>' : '') + '</div>' +
           (tot ? '<span class="go">Đọc tiếp</span>' : '<span class="go"></span>') +
@@ -400,7 +400,7 @@
       return '<a class="rank" href="' + esc(CZ.storyURL(n.slug)) + '" title="' + esc(n.title) + '" style="--d:' + (i * 45) + 'ms">' +
         '<span class="n' + (i < 3 ? ' top t' + (i + 1) : '') + '">' + (i + 1) + '</span>' +
         '<span class="rk-th' + (n.thumb ? '' : ' noimg') + '">' +
-        (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async">' : '') + '</span>' +
+        (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</span>' +
         '<span class="tt"><b>' + esc(n.title) + '</b><span>' + esc(n.author || n.couple || '') +
         (on && s.chapterCount ? ' · ' + s.chapterCount + ' chương' : '') + '</span></span>' +
         '<span class="v">' + text + '</span>' +
@@ -472,7 +472,7 @@
         : esc(it.detail || '');
       return '<a class="sched' + (n ? ' clk' : '') + '" ' + href + '>' +
         '<span class="sch-th' + (im ? '' : ' noimg') + '">' +
-          (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" decoding="async">' : '') + '</span>' +
+          (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</span>' +
         '<span class="sch-days">' + (days || '<i>—</i>') + '</span>' +
         '<span class="sch-info"><b>' + esc(title) + '</b><span>' + meta + '</span></span></a>';
     }).join('') + '</div>' +
@@ -615,7 +615,10 @@
     $('#qClr').classList.toggle('hide', !state.q);
     $('#fcount').innerHTML = '<b>' + list.length + '</b> truyện' +
       (picked.length ? ' · đang lọc ' + picked.length + ' tiêu chí' : '') +
-      (total > 1 ? ' · trang ' + state.page + '/' + total : '');
+      (total > 1 ? ' · trang ' + state.page + '/' + total : '') +
+      /* lọc theo tác giả/couple thì dẫn sang trang riêng của người đó */
+      (state.author ? ' · <a href="/tac-gia/?q=' + encodeURIComponent(CZ.slugify(state.author)) + '">Xem tất cả truyện của ' + esc(state.author) + '</a>' : '') +
+      (state.couple ? ' · <a href="/couple/?q=' + encodeURIComponent(CZ.slugify(state.couple)) + '">Xem tất cả truyện của ' + esc(state.couple) + '</a>' : '');
     $$('[data-rm]', $('#fpick')).forEach(function (b) {
       b.addEventListener('click', function () {
         var k = picked[+b.dataset.rm][0];

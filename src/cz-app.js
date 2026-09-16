@@ -72,11 +72,14 @@
     if (memo.reg) return Promise.resolve({ reg: memo.reg, src: memo.src });
     var cached = lsGet('ssochuz-reg', TTL_REG);
     var useApi = !!API && !apiDown;
-    var p = useApi ? jget(API + '/api/registry?_=' + Date.now(), 9000) : Promise.resolve(null);
+    /* URL ổn định (không ?_=…) để trúng cache biên của Worker — dữ liệu vẫn mới
+       nhờ hạn dùng 60 giây + Worker tự xoá cache mỗi lần ghi. */
+    var p = useApi ? jget(API + '/api/registry', 9000) : Promise.resolve(null);
     return p.then(function (api) {
       if (api && api.lib) {
         apiDown = false;
         memo.reg = api; memo.src = 'kv'; w.CZ_SRC = 'kv';
+        paintNotif();   /* số chương từ KV về là chuông cập nhật */
         lsSet('ssochuz-reg', { t: Date.now(), v: api });
         return { reg: api, src: 'kv' };
       }
@@ -85,6 +88,7 @@
         var reg = newer(stat, cached) || { lib: [] };
         if (stat) lsSet('ssochuz-reg', { t: Date.now(), v: stat });
         memo.reg = reg; memo.src = 'static'; w.CZ_SRC = 'static';
+        paintNotif();
         return { reg: reg, src: 'static' };
       });
     });
@@ -144,9 +148,10 @@
   function stats() {
     if (memo.stats) return Promise.resolve(memo.stats);
     var cached = lsGet('ssochuz-stats', TTL_STATS);
-    /* ?_=… : vượt mọi tầng cache (trình duyệt/CDN) — số liệu phải luôn mới,
-       bệnh cũ: đáp ứng bị cache 60 giây nên vote/bỏ-vote không thấy đổi số */
-    var p = (API && !apiDown ? jget(API + '/api/stats?_=' + Date.now(), 9000) : Promise.resolve(null)).then(function (r) {
+    /* URL ổn định để trúng cache biên (Worker giữ 60 giây, tiết kiệm lượt đọc KV).
+       Bệnh cũ “vote rồi mà số không đổi vì cache” nay khỏi bằng 2 lớp: web vẽ
+       số mới ngay khi bấm (lạc quan), Worker tự xoá cache sau mỗi lần ghi. */
+    var p = (API && !apiDown ? jget(API + '/api/stats', 9000) : Promise.resolve(null)).then(function (r) {
       if (r && r.ok && r.items) {
         return { on: true, items: r.items, source: r.source || 'kv', saved: r.fetchedAt || r.saved || '' };
       }
@@ -201,21 +206,29 @@
   }
   function authToken() { try { return (w.CZ_AUTH && w.CZ_AUTH.token) ? (w.CZ_AUTH.token() || '') : ''; } catch (e) { return ''; } }
   /* 1 máy · 1 bộ · 1 ngày = 1 lượt đọc (phía máy và phía Worker đều khử trùng lặp) */
+  /* Đếm lượt đọc: mỗi máy + mỗi truyện + mỗi ngày chỉ gửi 1 lần — kiểm tra
+     TRƯỚC khi POST nên tải lại 10 lần cũng chỉ tốn 1 request (tiết kiệm quota
+     ghi KV của Worker). Khoá cũ `ssochuz-viewed-…` (ngày UTC) vẫn được đọc để
+     không đếm trùng trong ngày người đọc chuyển từ bản cũ sang (ghi thì chỉ
+     ghi khoá mới, theo ngày trên máy người đọc). */
   function reportView(slug, ch) {
     if (!API || !slug) return Promise.resolve(null);
-    var k = 'ssochuz-viewed-' + slug + '-' + new Date().toISOString().slice(0, 10);
-    if (safeGet(k)) return Promise.resolve(null);
+    var d = new Date();
+    function p2(n) { return ('0' + n).slice(-2); }
+    var k = 'ssochuz-viewsent-' + slug + '-' + d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate());
+    var legacy = 'ssochuz-viewed-' + slug + '-' + d.toISOString().slice(0, 10);
+    if (safeGet(k) || safeGet(legacy)) return Promise.resolve(null);
     safeSet(k, '1');
     return jpost('/api/view', { slug: slug, vid: vid(), ch: ch || 0 }).then(function (r) {
       if (r && r.counted) {
-        /* cộng ngay vào số đang có để chip "lượt đọc" nhảy lên, rồi mới lấy số thật */
+        /* cộng ngay vào số đang có để chip "lượt đọc" nhảy lên — không gọi lại
+           /api/stats vì đáp ứng đang nằm trong cache biên 60 giây, gọi cũng chỉ
+           nhận số cũ (số chuẩn tự về ở lần mở trang sau) */
         if (memo.stats && memo.stats.items) {
           var it = memo.stats.items[slug];
           if (it) { it.views = (Number(it.views) || 0) + 1; it.viewsDay = (Number(it.viewsDay) || 0) + 1; }
         }
         notifyStats();
-        /* lấy số chuẩn từ KV ngay (Worker đã tính cả phần đang đệm) */
-        refreshStats();
       }
       return r;
     });
@@ -281,7 +294,7 @@
 
   /* ======================= 2. GHI NHỚ TRONG MÁY ======================== */
   var LS = {
-    prog: 'ssochuz-prog-', when: 'ssochuz-when-', shelf: 'ssochuz-shelf',
+    prog: 'ssochuz-prog-', when: 'ssochuz-when-', shelf: 'ssochuz-shelf', follow: 'ssochuz-follow',
     like: 'ssochuz-like-', mark: 'ssochuz-mark-', read: 'ssochuz-reader', theme: 'ssochuz-theme', dir: 'ssochuz-dir'
   };
   function keysOf(n) { return [n && n.postId, n && n.slug].filter(Boolean); }
@@ -319,6 +332,234 @@
     return i < 0;
   }
   function clearShelf() { jsonSet(LS.shelf, []); }
+
+  /* ---- THEO DÕI: chuông báo “có chương mới”, tốn 0 request -----------------
+     Mỗi lần web load đã tải sẵn số chương trong registry — chỉ cần nhớ “lúc bấm
+     theo dõi bộ này có mấy chương” rồi trừ là ra số chương mới, không gọi thêm
+     API, không ghi KV. Khoá ssochuz-follow: { <slug>: <số chương lúc theo dõi> } */
+  function followMap() {
+    var m = jsonGet(LS.follow, {});
+    return (m && typeof m === 'object' && !Array.isArray(m)) ? m : {};
+  }
+  function chaptersOf(n) {
+    var o = (n && n.slug) ? n : findLib(n);
+    var c = Math.max(0, parseInt((o && o.chapters) || 0, 10) || 0);
+    /* registry đôi khi treo số cao hơn chương thật (bệnh “hiện 30 mà chỉ có 29”):
+       lấy max với số thật đã đối chiếu để huy hiệu không báo số ảo */
+    if (o && o.slug) {
+      var real = realCount(o.slug);
+      if (real != null && real > c) c = real;
+    }
+    return c;
+  }
+  function isFollowed(n) {
+    var slug = (n && n.slug) || (typeof n === 'string' ? n : '');
+    return !!slug && Object.prototype.hasOwnProperty.call(followMap(), slug);
+  }
+  function toggleFollow(n) {
+    var slug = (n && n.slug) || (typeof n === 'string' ? n : '');
+    if (!slug) return false;
+    var m = followMap();
+    var on = !Object.prototype.hasOwnProperty.call(m, slug);
+    if (on) m[slug] = chaptersOf(n); else delete m[slug];
+    jsonSet(LS.follow, m);
+    return on;
+  }
+  /* số chương ra thêm kể từ lúc bấm theo dõi (0 = chưa có gì mới / chưa theo dõi) */
+  function newChapters(n) {
+    var slug = (n && n.slug) || (typeof n === 'string' ? n : '');
+    if (!slug || !Object.prototype.hasOwnProperty.call(followMap(), slug)) return 0;
+    var m = followMap();
+    return Math.max(0, chaptersOf(n) - (parseInt(m[slug], 10) || 0));
+  }
+  /* mở truyện (hoặc đọc tới chương mới nhất) là coi như đã biết hết chương hiện có */
+  function markFollowSeen(n) {
+    var slug = (n && n.slug) || (typeof n === 'string' ? n : '');
+    if (!slug) return;
+    var m = followMap();
+    if (!Object.prototype.hasOwnProperty.call(m, slug)) return;
+    var now = chaptersOf(n);
+    if (now !== (parseInt(m[slug], 10) || 0)) { m[slug] = now; jsonSet(LS.follow, m); }
+    paintNotif();   /* mở truyện là chuông đầu trang tắt số ngay */
+  }
+  /* huy hiệu đỏ “N chương mới” — luôn dựng sẵn rồi ẩn/hiện để khỏi vá lại DOM */
+  function followBadge(n) {
+    var slug = (n && n.slug) || '';
+    if (!slug) return '';
+    var c = newChapters(n);
+    return '<span class="badge-newchap" data-newbadge="' + esc(slug) + '"' + (c > 0 ? '' : ' hidden') + '>' +
+      (c > 0 ? num(c) + ' chương mới' : '') + '</span>';
+  }
+  function followBtn(n, cls) {
+    var slug = (n && n.slug) || '';
+    if (!slug) return '';
+    var on = isFollowed(n);
+    return '<button type="button" class="' + (cls || 'followbtn') + (on ? ' on' : '') + '" data-followbtn="' + esc(slug) + '"' +
+      ' aria-pressed="' + on + '" title="' + (on ? 'Bỏ theo dõi (không báo chương mới nữa)' : 'Theo dõi — báo khi có chương mới') + '"' +
+      ' aria-label="' + (on ? 'Bỏ theo dõi ' : 'Theo dõi ') + esc((n && n.title) || slug) + '">' + icon('bell', 'i-s') + '</button>';
+  }
+  /* bấm chuông ở đâu thì mọi nút + huy hiệu của bộ đó trên trang đều đổi theo */
+  function refreshFollowUI(slug) {
+    var n = findLib(slug);
+    var on = isFollowed(slug), c = n ? newChapters(n) : 0;
+    Array.prototype.forEach.call(d.querySelectorAll('[data-followbtn="' + slug + '"]'), function (b) {
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', on);
+      b.setAttribute('title', on ? 'Bỏ theo dõi (không báo chương mới nữa)' : 'Theo dõi — báo khi có chương mới');
+      var lb = b.querySelector('.lbl');
+      if (lb) lb.textContent = on ? 'Đang theo dõi' : 'Theo dõi';
+    });
+    Array.prototype.forEach.call(d.querySelectorAll('[data-newbadge="' + slug + '"]'), function (x) {
+      if (c > 0) { x.removeAttribute('hidden'); x.textContent = num(c) + ' chương mới'; }
+      else { x.setAttribute('hidden', ''); x.textContent = ''; }
+    });
+    paintNotif();   /* chuông đầu trang đổi theo */
+  }
+
+  /* ---- THÔNG BÁO ĐẨY "RA CHƯƠNG MỚI" (Web Push + VAPID) ------------------
+     Bấm "Theo dõi" → hỏi bật thông báo → PushManager.subscribe với VAPID key
+     → POST /api/push-sub. Bỏ theo dõi truyện cuối cùng → tự huỷ đăng ký. */
+  var VAPID = String(w.CZ_VAPID_PUBLIC_KEY || '').trim();
+  var PUSH_ASK_KEY = 'ssochuz-push-ask';
+  function pushReady() {
+    return !!(API && VAPID && 'Notification' in w && 'PushManager' in w && navigator.serviceWorker);
+  }
+  function b64ToU8(s) {
+    s = String(s || '').replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    var bin = atob(s), out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  function pushSend(sub, remove) {
+    var j = sub && sub.toJSON ? sub.toJSON() : null;
+    var endpoint = (j && j.endpoint) || (sub && sub.endpoint) || '';
+    if (!endpoint) return Promise.resolve(null);
+    var body = remove ? { endpoint: endpoint, remove: true }
+      : { endpoint: endpoint, keys: (j && j.keys) || {} };
+    return jpost('/api/push-sub', body);
+  }
+  function pushSubscribe() {
+    return navigator.serviceWorker.ready.then(function (reg) {
+      return reg.pushManager.getSubscription().then(function (sub) {
+        /* đã đăng ký rồi → gửi lại sub lên server (ghi đè, không hỏi nữa) */
+        if (sub) return pushSend(sub, false).then(function () { return 'old'; });
+        if (Notification.permission === 'denied') return 'denied';
+        var p = Notification.permission === 'granted' ? Promise.resolve('granted')
+          : Notification.requestPermission();
+        return p.then(function (perm) {
+          if (perm !== 'granted') return 'no';
+          return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(VAPID) })
+            .then(function (s2) { return pushSend(s2, false).then(function () { return 'new'; }); });
+        });
+      });
+    }).catch(function () { return 'err'; });
+  }
+  function pushUnsubscribe() {
+    if (!('PushManager' in w) || !navigator.serviceWorker) return Promise.resolve();
+    return navigator.serviceWorker.ready.then(function (reg) {
+      return reg.pushManager.getSubscription().then(function (sub) {
+        if (!sub) return;
+        var ep = '';
+        try { ep = sub.endpoint || ''; } catch (e) {}
+        return sub.unsubscribe().catch(function () {}).then(function () {
+          if (ep) pushSend({ endpoint: ep }, true);
+        });
+      });
+    }).catch(function () {});
+  }
+  function markPushAsked() { try { jsonSet(PUSH_ASK_KEY, Date.now()); } catch (e) {} }
+  /* hỏi bật thông báo sau khi bấm Theo dõi (bấm "Để sau" thì 7 ngày hỏi lại 1 lần) */
+  function maybeAskPush() {
+    if (!pushReady()) return;
+    if (Notification.permission === 'denied') return;
+    var last = 0;
+    try { last = parseInt(jsonGet(PUSH_ASK_KEY, 0) || '0', 10) || 0; } catch (e) {}
+    if (last && Date.now() - last < 7 * 86400000) return;
+    /* đã đăng ký hoặc đã được cấp quyền → subscribe im lặng, không hỏi */
+    navigator.serviceWorker.ready.then(function (reg) {
+      return reg.pushManager.getSubscription();
+    }).then(function (sub) {
+      if (sub) { pushSend(sub, false); markPushAsked(); return; }
+      if (Notification.permission === 'granted') {
+        pushSubscribe().then(function () { markPushAsked(); });
+        return;
+      }
+      markPushAsked();
+      var m = modal('czPush',
+        '<div class="mh"><h4>Bật thông báo chương mới?</h4></div>' +
+        '<div class="mb pushbox">' +
+          '<span class="pushic">' + icon('bell') + '</span>' +
+          '<p class="pushlead">Truyện bạn theo dõi ra chương mới là máy báo ngay.</p>' +
+          '<ul>' +
+            '<li>' + icon('check', 'i-s') + 'Báo cả khi không mở web, trên điện thoại lẫn máy tính</li>' +
+            '<li>' + icon('check', 'i-s') + 'Chỉ báo truyện bạn đã bấm Theo dõi</li>' +
+            '<li>' + icon('check', 'i-s') + 'Tắt lúc nào cũng được, không spam</li>' +
+          '</ul>' +
+        '</div>' +
+        '<div class="mf"><button class="btn ghost" data-close>Để sau</button>' +
+        '<button class="btn pri" id="pushOk">' + icon('bell', 'i-s') + ' Bật thông báo</button></div>');
+      m.querySelector('#pushOk').addEventListener('click', function () {
+        m._close();
+        pushSubscribe().then(function (r) {
+          if (r === 'new' || r === 'old') toast('Đã bật thông báo chương mới');
+          else if (r === 'denied' || r === 'no') toast('Chưa bật được — kiểm tra quyền thông báo của trình duyệt');
+        });
+      });
+    }).catch(function () {});
+  }
+  /* hook gọi sau mỗi lần bấm chuông theo dõi (hero + reader dùng chung) */
+  function followPushHook(on) {
+    if (on) { maybeAskPush(); return; }
+    try {
+      if (!Object.keys(followMap()).length) pushUnsubscribe();
+    } catch (e) { /* bỏ follow mà lỗi push thì kệ — việc chính đã xong */ }
+  }
+
+  /* ---- TRUNG TÂM THÔNG BÁO (chuông ở đầu trang) ----------------------------
+     Liệt kê truyện đã theo dõi mà có chương mới — đọc từ localStorage +
+     registry đã fetch (chi phí 0 request, như huy hiệu đỏ NV2). */
+  function notifItems() {
+    var fm = followMap(), out = [];
+    Object.keys(fm).forEach(function (slug) {
+      var n = findLib(slug);
+      var c = n ? newChapters(n) : 0;
+      if (n && c > 0) out.push({ n: n, c: c });
+    });
+    out.sort(function (a, b) { return String(b.n.updated || '').localeCompare(String(a.n.updated || '')); });
+    return out;
+  }
+  function paintNotif() {
+    var btn = d.getElementById('czNotifBtn'), menu = d.getElementById('czNotifMenu');
+    if (!btn || !menu) return;
+    var items = notifItems(), total = 0, i;
+    for (i = 0; i < items.length; i++) total += items[i].c;
+    var dot = d.getElementById('czNotifCount');
+    if (dot) {
+      if (total > 0) { dot.removeAttribute('hidden'); dot.textContent = total > 99 ? '99+' : String(total); }
+      else { dot.setAttribute('hidden', ''); dot.textContent = ''; }
+    }
+    btn.classList.toggle('hasnew', total > 0);
+    btn.setAttribute('aria-label', total > 0 ? ('Thông báo chương mới (' + total + ' chương chưa đọc)') : 'Thông báo chương mới');
+    menu.innerHTML = '<div class="nhead">' + icon('bell', 'i-s') + '<b>Chương mới</b>' +
+      (total ? '<span>' + total + ' chưa đọc</span>' : '') + '</div>' +
+      (items.length ? items.map(function (it) {
+        var n = it.n, im = n.thumb || n.slide || '';
+        return '<a href="' + esc(storyURL(n.slug)) + '" role="menuitem">' +
+          '<span class="nth' + (im ? '' : ' noimg') + '">' +
+            (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</span>' +
+          '<span class="ntx"><b>' + esc(n.title) + '</b>' +
+          '<span class="nsub"><i class="nnum">' + it.c + ' chương mới</i> · ' + esc(timeAgo(n.updated)) + '</span></span>' +
+          icon('right', 'i-s') + '</a>';
+      }).join('') : '<div class="nempty">Chưa có chương mới.<br>Truyện bạn theo dõi ra chương là báo ở đây.</div>');
+  }
+  function closeNotif() {
+    var m = d.getElementById('czNotifMenu'), b = d.getElementById('czNotifBtn');
+    if (m) m.classList.remove('on');
+    if (b) b.setAttribute('aria-expanded', 'false');
+  }
+  /* quay lại trang (Back/bfcache) thì vẽ lại badge — truyện vừa đọc đã tắt huy hiệu */
+  w.addEventListener('pageshow', function () { paintNotif(); });
 
   /* ---- THÍCH: mỗi chương một phiếu thích riêng --------------------------
      Bệnh cũ: thích lưu theo BỘ (ssochuz-like-<slug>) nên thích chương 1 xong thì
@@ -503,6 +744,8 @@
     hourglass: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M6.5 7h11" /> <path d="M6.5 17h11" /> <path d="M6 20v-2a6 6 0 1 1 12 0v2a1 1 0 0 1 -1 1h-10a1 1 0 0 1 -1 -1" /> <path d="M6 4v2a6 6 0 1 0 12 0v-2a1 1 0 0 0 -1 -1h-10a1 1 0 0 0 -1 1" /></g>',
     shield_off: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M17.67 17.667a12 12 0 0 1 -5.67 3.333a12 12 0 0 1 -8.5 -15c.794 .036 1.583 -.006 2.357 -.124m3.128 -.926a11.997 11.997 0 0 0 3.015 -1.95a12 12 0 0 0 8.5 3a12 12 0 0 1 -1.116 9.376" /> <path d="M3 3l18 18" /></g>',
     google: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M20.945 11a9 9 0 1 1 -3.284 -5.997l-2.655 2.392a5.5 5.5 0 1 0 2.119 6.605h-4.125v-3h7.945" /></g>',
+    bell: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /> <path d="M9 17v1a3 3 0 0 0 6 0v-1" /></g>',
+    rss: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M4 19a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /> <path d="M4 4a16 16 0 0 1 16 16" /> <path d="M4 11a9 9 0 0 1 9 9" /></g>',
     momo: '<rect x="4" y="4" width="16" height="16" rx="4.5"/><path d="M8.4 12c0-2 1.6-3.6 3.6-3.6s3.6 1.6 3.6 3.6-1.6 3.6-3.6 3.6S8.4 14 8.4 12z"/><circle cx="12" cy="12" r="1.2"/>'
   };
 
@@ -580,7 +823,7 @@
     return t ? t.split(' ').length : 0;
   }
   function storyURL(slug) { slug = String(slug||'').trim(); if (!slug) return '/truyen/'; return '/truyen/' + encodeURIComponent(slug) + '/'; }
-  function readURL(slug, ch) { return storyURL(slug) + (ch ? '#chuong-' + ch : ''); }
+  function readURL(slug, ch) { return storyURL(slug) + (ch ? 'chuong-' + ch + '/' : ''); }
   function slugify(s) {
     return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/đ/g, 'd').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -819,6 +1062,12 @@
     });
   }
 
+  /* thuộc tính ảnh bìa dự phòng: đang dùng thumb thì dự phòng là slide
+     (chỉ khi hai ảnh khác nhau) — imgSettle đọc data-fb này khi ảnh lỗi */
+  function coverFB(n, img) {
+    if (!n || !img || img !== n.thumb || !n.slide || n.slide === n.thumb) return '';
+    return ' data-fb="' + esc(n.slide) + '"';
+  }
   /* ======================= 6. THẺ TRUYỆN & DẢI ========================= */
   function card(n, opts) {
     opts = opts || {};
@@ -834,12 +1083,15 @@
        Chữ tình trạng đầy đủ vẫn có trong title/aria-label. */
     var stCls = n.statusCls || 'run';
     var stLab = statusLabel(n.statusCls || n.status);
-    return '<a class="card" href="' + esc(storyURL(n.slug)) + '" data-t="' + esc(n.title) + '" title="' + esc(n.title) + '">' +
+    /* thẻ bọc thêm .cardwrap để giữ chỗ cho huy hiệu “N chương mới” phủ ở góc
+       bìa (nút chuông theo dõi đã chuyển vào trang truyện cho gọn) */
+    return '<div class="cardwrap"><a class="card" href="' + esc(storyURL(n.slug)) + '" data-t="' + esc(n.title) + '" title="' + esc(n.title) + '">' +
       '<div class="th' + (img ? ' skel' : '') + '">' +
-      (img ? '<img src="' + esc(img) + '" alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" width="300" height="450">' : '') +
+      (img ? '<img src="' + esc(img) + '"' + coverFB(n, img) + ' alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer" width="300" height="450">' : '') +
       '<span class="scrim"></span>' +
       '<span class="stic st-' + stCls + '" title="' + esc(stLab) + '" aria-label="Tình trạng: ' + esc(stLab) + '" role="img">' + icon(STATUS_ICON[stCls] || 'clock', 'i-s') + '</span>' +
       (n.fresh ? '<span class="nw-bookmark"><span>NEW</span></span>' : '') +
+      followBadge(n) +
       '<span class="foot"><span class="ch">' + esc(countText(n)) + '</span>' +
         (n.is18 ? '<span class="b18">18+</span>' : '') + '</span>' +
       (pct ? '<span class="bar"><i style="width:' + pct + '%"></i></span>' : '') +
@@ -849,7 +1101,7 @@
          couple bị đề tên cặp đôi thay vì người viết — couple vẫn còn chỗ riêng của
          nó ở bộ lọc, ở hero và trong trang truyện. */
       '<div class="cb">' + esc(n.author || n.couple || '') + '</div>' +
-      '</a>';
+      '</a></div>';
   }
   /* xem dạng danh sách: mỗi bộ một hàng, đủ thông tin để quyết định mở hay không */
   function cardList(n, img, pg, pct) {
@@ -857,14 +1109,15 @@
     /* tác giả trước, couple sau — cùng thứ tự với thẻ lưới và với trang truyện */
     var bits = [n.author, n.couple, n.year].filter(Boolean);
     var read = pg > 0;
-    return '<a class="card list st-' + esc(n.statusCls || 'soon') + '" href="' + esc(storyURL(n.slug)) + '" data-t="' + esc(n.title) + '" title="' + esc(n.title) + '">' +
+    return '<div class="cardwrap listwrap"><a class="card list st-' + esc(n.statusCls || 'soon') + '" href="' + esc(storyURL(n.slug)) + '" data-t="' + esc(n.title) + '" title="' + esc(n.title) + '">' +
       '<span class="cl-th' + (img ? ' skel' : '') + '">' +
-        (img ? '<img src="' + esc(img) + '" alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" width="300" height="450">' : '') +
+        (img ? '<img src="' + esc(img) + '"' + coverFB(n, img) + ' alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer" width="300" height="450">' : '') +
       '</span>' +
       '<span class="cl-main">' +
         '<span class="cl-top"><b class="cl-t">' + esc(n.title) + '</b>' +
           (n.is18 ? '<span class="b18">18+</span>' : '') +
           (n.fresh ? '<span class="badge-new">NEW</span>' : '') +
+          followBadge(n) +
         '</span>' +
         '<span class="cl-meta">' + esc(bits.join(' · ') || '—') + '</span>' +
         '<span class="cl-syn">' + esc(n.syn || 'Chưa có mô tả cho bộ này.') + '</span>' +
@@ -876,7 +1129,7 @@
         '<span class="cl-year">' + esc(n.year ? 'Năm ' + n.year : '—') + '</span>' +
       '</span>' +
       '<span class="cl-go">' + (read ? 'Đọc tiếp' : 'Xem truyện') + icon('right', 'i-s') + '</span>' +
-      '</a>';
+      '</a></div>';
   }
   /* hàng tiêu đề cho kiểu xem danh sách (chỉ là nhãn, không bấm được) */
   function listHead() {
@@ -903,12 +1156,31 @@
     var box = el.closest && el.closest('.skel');
     if (box) box.classList.remove('skel');
     if (e.type !== 'error') return;
+    /* ảnh chính hỏng thì thử ảnh dự phòng (data-fb) trước khi bỏ khung —
+       vài bộ có cả thumb lẫn slide, phí một lần thử còn hơn mất bìa */
+    if (!el._fbTried && el.getAttribute && el.getAttribute('data-fb')) {
+      el._fbTried = 1;
+      el.src = el.getAttribute('data-fb');
+      el.removeAttribute('data-fb');
+      return;
+    }
     box = el.parentNode;
     if (el.remove) el.remove();
     if (box && box.classList && box.classList !== d.body.classList) box.classList.add('noimg');
   }
   d.addEventListener('error', imgSettle, true);
   d.addEventListener('load', imgSettle, true);
+  d.addEventListener('click', function (e) {
+    var b = e.target && e.target.closest ? e.target.closest('[data-followbtn]') : null;
+    if (!b) return;
+    e.preventDefault(); e.stopPropagation();
+    var slug = b.getAttribute('data-followbtn');
+    var on = toggleFollow(findLib(slug) || { slug: slug });
+    refreshFollowUI(slug);
+    pop(b);
+    toast(on ? 'Đã theo dõi — có chương mới sẽ hiện huy hiệu đỏ' : 'Đã bỏ theo dõi');
+    followPushHook(on);   /* hỏi bật thông báo đẩy (chỉ khi đủ điều kiện push) */
+  }, true);
 
   /* hiệu ứng hiện dần khi cuộn tới (tôn trọng giảm chuyển động) */
   var reduce = !!(w.matchMedia && w.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -1122,8 +1394,10 @@
     var NAV = [
       { k: 'library', label: 'Thư viện', i: 'library', h: '/#thu-vien' },
       { k: 'new', label: 'Mới cập nhật', i: 'sparkle', h: '/#moi-cap-nhat' },
-      { k: 'rank', label: 'Bình chọn nhiều nhất', i: 'trophy', h: '/#bxh' },
-      { k: 'sched', label: 'Lịch ra chương', i: 'calendar', h: '/#lich' }
+      { k: 'rank', label: 'Bình chọn', i: 'trophy', h: '/#bxh' },
+      { k: 'sched', label: 'Lịch ra chương', i: 'calendar', h: '/#lich' },
+      { k: 'authors', label: 'Tác giả', i: 'pen', h: '/tac-gia/' },
+      { k: 'couples', label: 'Couple', i: 'users', h: '/couple/' }
     ];
     var links = NAV.map(function (n) {
       return '<a href="' + n.h + '" data-k="' + n.k + '"' + (n.k === active ? ' class="on"' : '') + ' title="' + esc(n.label) + '" aria-label="' + esc(n.label) + '">' +
@@ -1138,8 +1412,17 @@
       '<a class="logo" href="/" title="ssochuz library"><span class="dot"></span>ssochuz<i> library</i></a>' +
       '<nav class="nav" id="czNav"><span class="ink" id="czInk" aria-hidden="true"></span>' + links + '</nav>' +
       '<span class="grow"></span>' +
+      '<button class="hbtn" id="czInstall" hidden title="Cài app ssochuz library" aria-label="Cài app ssochuz library">' + icon('download', 'i-s') +
+        '<span class="nav-lbl">Cài app</span></button>' +
       '<button class="hbtn" id="czJump" title="Tìm truyện, tác giả, couple (⌘K)" aria-label="Tìm kiếm">' + icon('search', 'i-s') +
         '<span class="searchbtn-txt">Tìm</span><span class="k">⌘K</span></button>' +
+      /* chuông trung tâm thông báo: truyện đã theo dõi có chương mới thì hiện số */
+      '<div class="hnotif" id="czNotif">' +
+        '<button class="hbtn icon" id="czNotifBtn" aria-haspopup="menu" aria-expanded="false" aria-label="Thông báo chương mới" title="Thông báo chương mới">' +
+          icon('bell', 'i-s') + '<span class="ndot" id="czNotifCount" hidden></span>' +
+        '</button>' +
+        '<div class="nmenu" id="czNotifMenu" role="menu" aria-label="Truyện có chương mới"></div>' +
+      '</div>' +
       /* công tắc sáng/tối — lấy cấu trúc của uiverse.io/catraco/brown-termite-67:
          rãnh bo tròn, biểu tượng trượt + xoay và đổi tông trời. Giữ id #czTheme
          / #czThemeIn để trạng thái cũ, bàn phím và các bài kiểm thử không vỡ. */
@@ -1283,6 +1566,24 @@
     d.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMenu(); });
     if (w.CZ_AUTH && w.CZ_AUTH.onAuth) w.CZ_AUTH.onAuth(paintAuth); else paintAuth();
 
+    /* ---- chuông thông báo: bấm mở panel, bấm ngoài/Esc thì đóng ---- */
+    var nbtn = host.querySelector('#czNotifBtn');
+    if (nbtn) nbtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var menu = host.querySelector('#czNotifMenu');
+      var on = menu && menu.classList.contains('on');
+      if (on) { closeNotif(); return; }
+      paintNotif();
+      if (menu) menu.classList.add('on');
+      this.setAttribute('aria-expanded', 'true');
+    });
+    d.addEventListener('click', function (e) {
+      if (e.target.closest && e.target.closest('#czNotif')) return;
+      closeNotif();
+    });
+    d.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeNotif(); });
+    paintNotif();
+
     navInk(host);
     var mnav = host.querySelector('#czMnav');
     var burger = host.querySelector('#czBurger');
@@ -1312,11 +1613,114 @@
       if (e.key === 'Escape' && mnav.classList.contains('on')) { slide(mnav, false); paintMenu(); try { burger.focus(); } catch (err) {} }
     });
     host.querySelector('#czJump').addEventListener('click', function () { openJump(); });
+    var insBtn = host.querySelector('#czInstall');
+    if (insBtn) insBtn.addEventListener('click', function () { installApp(); });
+    paintInstall();
     d.addEventListener('keydown', function (e) {
       if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'k') { e.preventDefault(); openJump(); }
       if (e.key === '/' && !/^(INPUT|TEXTAREA|SELECT)$/.test((e.target.tagName || ''))) { e.preventDefault(); openJump(); }
       if (e.key === 'Escape') { var jb = d.getElementById('czJumpBox'); if (jb && jb.classList.contains('on') && jb._close) jb._close(); }
     });
+  }
+  /* ======================= PWA: SW + CÀI APP + BÁO OFFLINE ============ */
+  var deferredPrompt = null, swWaiting = null, swWantReload = false;
+  function netBars() {
+    var w = d.getElementById('czNet');
+    if (!w) {
+      w = d.createElement('div'); w.id = 'czNet'; w.className = 'netbars'; w.setAttribute('aria-live', 'polite');
+      w.innerHTML =
+        '<div class="netbar" id="czOffline" hidden>' + icon('cloud2', 'i-s') + '<span>Đang offline — đọc bản đã lưu</span></div>' +
+        '<div class="netbar" id="czUpdate" hidden>' + icon('refresh', 'i-s') + '<span>Đã có bản cập nhật</span>' +
+          '<button class="btn pri sm" id="czUpdateBtn" type="button">Tải lại</button></div>';
+      d.body.appendChild(w);
+      w.querySelector('#czUpdateBtn').addEventListener('click', applyUpdate);
+    }
+    return w;
+  }
+  function paintOffline() {
+    netBars();
+    var bar = d.getElementById('czOffline');
+    if (bar) bar.hidden = !!navigator.onLine;
+  }
+  function showUpdateBar(w) {
+    swWaiting = w;
+    netBars();
+    var bar = d.getElementById('czUpdate');
+    if (bar) bar.hidden = false;
+  }
+  function applyUpdate() {
+    var bar = d.getElementById('czUpdate');
+    if (bar) bar.hidden = true;
+    if (swWaiting) {
+      swWantReload = true;
+      try { swWaiting.postMessage({ type: 'SKIP_WAITING' }); }
+      catch (e) { try { location.reload(); } catch (e2) {} }
+    } else { try { location.reload(); } catch (e) {} }
+  }
+  function isIOS() {
+    return /iphone|ipad|ipod/i.test(navigator.userAgent || '') && !w.MSStream;
+  }
+  function isStandalone() {
+    try {
+      if (w.matchMedia && w.matchMedia('(display-mode: standalone)').matches) return true;
+    } catch (e) {}
+    return navigator.standalone === true;
+  }
+  /* nút Cài app chỉ hiện khi: trình duyệt cho cài (có beforeinstallprompt),
+     hoặc iOS chưa cài (hiện để mở hướng dẫn bằng tay) — đã cài rồi thì ẩn */
+  function paintInstall() {
+    var b = d.getElementById('czInstall');
+    if (!b) return;
+    b.hidden = isStandalone() ? true : !(deferredPrompt || isIOS());
+  }
+  function installApp() {
+    if (deferredPrompt) {
+      var pr = deferredPrompt;
+      deferredPrompt = null; paintInstall();
+      try {
+        pr.prompt();
+        if (pr.userChoice && pr.userChoice.then) pr.userChoice.then(function () {}).catch(function () {});
+      } catch (e) {}
+      return;
+    }
+    if (isIOS()) {
+      modal('czIosGuide',
+        '<div class="mh"><h4>Cài app ssochuz library</h4></div>' +
+        '<div class="mb"><p>iPhone/iPad chưa hỗ trợ nút cài tự động — bạn cài bằng tay nhé:</p>' +
+        '<p><b>1.</b> Bấm nút <b>Chia sẻ</b> ' + icon('share', 'i-s') + ' ở thanh công cụ Safari.<br>' +
+        '<b>2.</b> Chọn <b>Thêm vào Màn hình chính</b>.<br>' +
+        '<b>3.</b> Bấm <b>Thêm</b> là xong — app mở toàn màn hình, đọc được offline.</p></div>' +
+        '<div class="mf"><button class="btn pri" data-close>Đã hiểu</button></div>');
+    }
+  }
+  function swRegister() {
+    try {
+      navigator.serviceWorker.register('/sw.js').then(function (reg) {
+        /* bản mới về tới lúc trang đang đóng → báo cập nhật ngay khi mở lại */
+        if (reg.waiting && navigator.serviceWorker.controller) showUpdateBar(reg.waiting);
+        reg.addEventListener('updatefound', function () {
+          var nw = reg.installing;
+          if (!nw) return;
+          nw.addEventListener('statechange', function () {
+            if (nw.state === 'installed' && navigator.serviceWorker.controller) showUpdateBar(nw);
+          });
+        });
+      }).catch(function () {});
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (swWantReload) { swWantReload = false; try { location.reload(); } catch (e) {} }
+      });
+    } catch (e) {}
+  }
+  function pwaInit() {
+    netBars(); paintOffline(); paintInstall();
+    w.addEventListener('online', paintOffline);
+    w.addEventListener('offline', paintOffline);
+    if (!('serviceWorker' in navigator)) return;
+    if (location.protocol !== 'http:' && location.protocol !== 'https:') return;
+    w.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferredPrompt = e; paintInstall(); });
+    w.addEventListener('appinstalled', function () { deferredPrompt = null; paintInstall(); toast('Đã cài app ssochuz library'); });
+    /* đăng ký sau khi trang tải xong để không giành mạng với nội dung chính */
+    if (d.readyState === 'complete') swRegister(); else w.addEventListener('load', swRegister);
   }
   /* thanh mục ở đầu trang: gạch chân trượt sang mục đang xem, không chỉ là mấy chữ chết */
   function navInk(host) {
@@ -1363,6 +1767,7 @@
         '<a href="/guide">Hướng dẫn</a>' +
         '<a href="' + esc(fb) + '" target="_blank" rel="noopener">Facebook</a>' +
         '<a href="' + esc(survey) + '" target="_blank" rel="noopener">Khảo sát truyện</a>' +
+        (API ? '<a href="' + esc(API + '/feed.xml') + '" target="_blank" rel="noopener" title="RSS chương mới (dùng cho Feedly, Inoreader…)">' + icon('rss', 'i-s') + 'RSS</a>' : '') +
       '</nav>' +
     '</div>';
   }
@@ -1441,7 +1846,7 @@
     jumpCur = 0;
     res.innerHTML = jumpList.length ? jumpList.map(function (n, i) {
       return '<a href="' + esc(storyURL(n.slug)) + '" class="' + (i === 0 ? 'on' : '') + '">' +
-        (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy">' : '<img alt="">') +
+        (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '<img alt="">') +
         '<span><b>' + esc(n.title) + '</b><span>' + esc(n.author || '') +
         (n.couple ? ' · ' + esc(n.couple) : '') + ' · ' + esc(countText(n)) + '</span></span></a>';
     }).join('') : '<div class="empty" style="border:0;background:none">Không tìm thấy truyện nào khớp “' + esc(q) + '”.</div>';
@@ -1896,6 +2301,9 @@
     lib: libList, slides: slides, editorChoice: editorChoice, donationCfg: donationCfg, reportCfg: reportCfg, findLib: findLib, statsOf: statsOf, onStats: onStats,
     progress: progress, setProgress: setProgress, lastReadAt: lastReadAt,
     shelfIds: shelfIds, inShelf: inShelf, toggleShelf: toggleShelf, clearShelf: clearShelf,
+    followMap: followMap, isFollowed: isFollowed, toggleFollow: toggleFollow, newChapters: newChapters,
+    markFollowSeen: markFollowSeen, followBadge: followBadge, followBtn: followBtn, refreshFollowUI: refreshFollowUI,
+    followPushHook: followPushHook,
     isLiked: isLiked, toggleLike: toggleLike, likedChapters: likedChapters, likedCount: likedCount, likeCount: likeCount,
     marks: marks, toggleMark: toggleMark, chaptersRead: chaptersRead,
     realCount: realCount, reconcileCount: reconcileCount, onStatsChange: onStatsChange, notifyStats: notifyStats,
@@ -1903,7 +2311,7 @@
     icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo, teaser: teaser,
     statusCls: statusCls, statusLabel: statusLabel, statusIcon: statusIcon, words: words, norm: norm, countText: countText, listHead: listHead,
     storyURL: storyURL, readURL: readURL, slugify: slugify, qs: qs, copy: copy, download: download,
-    card: card, mountRail: mountRail, reveal: reveal, countUp: countUp, scaleFacts: scaleFacts,
+    card: card, coverFB: coverFB, mountRail: mountRail, reveal: reveal, countUp: countUp, scaleFacts: scaleFacts,
     scrollUI: scrollUI, slide: slide, pageFx: pageFx, pop: pop, setIcon: setIcon, shake: shake,
     msWait: function () { return ms('--t-close', 150); }, ink: ink, inkAll: inkAll,
     mountShell: mountShell, mountHeader: mountHeader, mountFooter: mountFooter,
@@ -1913,6 +2321,6 @@
     _memo: memo, _setLib: function () { libCache = null; }
   };
 
-  if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', function () { CZ.themeInit(); CZ.scrollUI(); CZ.pageFx(); });
-  else { CZ.themeInit(); CZ.scrollUI(); CZ.pageFx(); }
+  if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', function () { CZ.themeInit(); CZ.scrollUI(); CZ.pageFx(); pwaInit(); });
+  else { CZ.themeInit(); CZ.scrollUI(); CZ.pageFx(); pwaInit(); }
 })(window, document);

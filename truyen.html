@@ -6,10 +6,12 @@
 <title>Đang tải… · ssochuz library</title>
 <meta name="description" content="Thông tin truyện, danh sách chương và trình đọc truyện chuyển thể trên ssochuz library.">
 <meta name="theme-color" content="#faf8f4">
+<link rel="alternate" type="application/rss+xml" title="ssochuz library — Chương mới (RSS)" href="https://chuseoz-cms.kimtong1906.workers.dev/feed.xml">
 <link rel="icon" type="image/png" href="/ssochuz.png?v=1">
 <link rel="apple-touch-icon" href="/ssochuz.png?v=1">
+<link rel="manifest" href="/manifest.webmanifest">
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
-<link rel="stylesheet" href="/cz.css?v=20260916i">
+<link rel="stylesheet" href="/cz.css?v=20260917d">
 <script>/* chống nháy nền */try{var t=localStorage.getItem('ssochuz-theme')||localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
 <body class="spage">
@@ -32,8 +34,6 @@
   <section class="sec" id="chapSec">
     <div class="panehead">
       <span class="sub" id="chapCount">—</span>
-      <span class="grow"></span>
-      <a class="btn ghost sm" id="chapTop">Chương mới nhất<span data-ic="up"></span></a>
     </div>
     <div class="chapbar">
       <label class="search"><span data-ic="search"></span>
@@ -120,7 +120,7 @@
 <div class="sheet" id="tocSheet">
   <div class="scrim" data-shut></div>
   <aside class="pan" role="dialog" aria-label="Mục lục">
-    <div class="ph"><h4 id="tocName">Mục lục</h4><span class="sm muted" id="tocSub"></span><button class="ibo" data-shut></button></div>
+    <div class="ph"><h4 id="tocName">Mục lục</h4><span class="sm muted" id="tocSub"></span><button class="ibo" data-shut title="Đóng" aria-label="Đóng"></button></div>
     <label class="dsearch"><span data-ic="search"></span><input id="tocQ" placeholder="Tìm chương…" autocomplete="off"></label>
     <div class="pb toc" id="tocList"></div>
   </aside>
@@ -128,15 +128,15 @@
 <div class="sheet" id="setSheet">
   <div class="scrim" data-shut></div>
   <aside class="pan" role="dialog" aria-label="Cài đặt đọc">
-    <div class="ph"><h4>Cài đặt đọc</h4><button class="ibo" data-shut></button></div>
+    <div class="ph"><h4>Cài đặt đọc</h4><button class="ibo" data-shut title="Đóng" aria-label="Đóng"></button></div>
     <div class="pb" id="setBody"></div>
   </aside>
 </div>
 <div class="lightbox" id="lightbox"><img alt="Ảnh trong chương"></div>
 
-<script src="/cz-config.js?v=20260915j"></script>
-<script src="/cz-app.js?v=20260916i"></script>
+<script src="/cz-config.js?v=20260917h"></script>
+<script src="/cz-app.js?v=20260917k"></script>
 <script src="/cz-auth.js?v=20260915j"></script>
-<script src="/cz-story.js?v=20260916i"></script>
+<script src="/cz-story.js?v=20260917k"></script>
 </body>
 </html>

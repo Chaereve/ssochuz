@@ -2,9 +2,18 @@
 
 **Mục tiêu:** sửa truyện/chương trên web quản trị ⇒ người đọc thấy **ngay** (vài giây), không commit GitHub, không đợi Cloudflare build, không tốn phút CI.
 Từ bản **1.4.0**: lượt đọc và bình chọn cũng nằm trên **KV** — **Firebase không còn cần nữa**.
-Từ bản **1.7.0** (đang dùng): số liệu vote/view đồng bộ NHANH và chính xác — `/api/stats` trả `no-store`
-và cộng cả phần đang đệm nên lượt đọc hiện ngay; bỏ phiếu nhận cả khoá đăng nhập lẫn khoá máy nên
-**gỡ vote luôn giảm đúng**; web đổi tên thương hiệu **ssochuz** (khoá localStorage tự chuyển, không mất dữ liệu).
+Từ bản **1.7.0**: số liệu vote/view đồng bộ NHANH và chính xác — `/api/stats` cộng cả phần đang đệm
+nên lượt đọc hiện ngay; bỏ phiếu nhận cả khoá đăng nhập lẫn khoá máy nên **gỡ vote luôn giảm đúng**;
+web đổi tên thương hiệu **ssochuz** (khoá localStorage tự chuyển, không mất dữ liệu).
+Từ bản **1.9.5**: 3 đường đọc nhiều (`registry`/`book`/`stats`) có **cache biên** —
+hàng trăm người cùng đọc một phút thì KV chỉ tốn 1 lượt đọc; web chỉ gửi 1 POST `/api/view`
+mỗi máy/truyện/ngày (khoá `ssochuz-viewsent-…`), “sửa thấy ngay” vẫn giữ nhờ tự xoá cache sau mỗi lần ghi.
+Từ bản **1.9.6**: có **RSS feed** — `GET /feed.xml` (30 chương mới nhất)
+và `GET /feed.xml?slug=<slug>` (chương mới của 1 bộ), chuẩn RSS 2.0, cache biên 10 phút,
+mỗi lần ghi chương tự xoá cache nên chương mới lên feed ngay.
+Từ bản **1.9.7** (đang dùng): có **thông báo đẩy "ra chương mới"** (Web Push + VAPID) —
+bấm "Theo dõi" thì web hỏi bật thông báo, admin lưu chương mới là subscriber nhận tin
+trong ≤10 phút qua Cron Trigger, bấm vào mở thẳng URL chương.
 Trước đó, bản **1.6.0**: đăng nhập qua **Supabase** (hết lỗi `origin_mismatch` của Google), thích **theo từng chương**, bình luận **ngay trong trang đọc** (khách chưa đăng nhập vẫn gửi được), và có `/api/recount` để **chữa dứt điểm số chương sai**.
 
 ```
@@ -17,6 +26,53 @@ Admin (admin.html)  ──PUT──▶  Worker (worker/cms.js)  ──▶  Cloud
 ```
 
 GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới cần build); dữ liệu thì không đi qua GitHub nữa.
+
+## Có gì mới ở bản 1.9.7 — thông báo đẩy "ra chương mới" (Web Push)
+
+| Thành phần | Việc |
+|---|---|
+| `POST /api/push-sub` | nhận subscription từ trình duyệt, lưu key `push:<hash>` (1 ghi/thiết bị); `{remove:true}` để huỷ |
+| `PUT /api/book` + `POST /api/import` | tăng số chương → ghi job vào key `pushq` (sửa chữ không báo; chỉ ghi khi đang có subscriber) |
+| Cron `*/10 * * * *` | drain hàng đợi, tối đa 45 tin/invocation (free giới hạn 50 subrequest); push trả 404/410 → xoá sub |
+| Service worker | hiện "📖 Tên truyện — Chương n: … đã ra mắt!", bấm vào mở thẳng URL chương |
+
+Mã hoá `aes128gcm` + ký VAPID (ES256) tự làm bằng WebCrypto, không thêm thư viện.
+Cấu hình lần đầu (làm 1 lần):
+1. Khoá công khai đã nằm sẵn trong `wrangler.toml` (`VAPID_PUBLIC`) và `cz-config.js`.
+2. Đặt khoá riêng: `npx wrangler secret put VAPID_PRIVATE` rồi dán khoá (nhận riêng, không commit).
+3. Cron đã nằm trong `wrangler.toml` (`[triggers]`), deploy là tự chạy.
+4. Deploy: `npx wrangler deploy`, kiểm tra `/api/health` trả `version: 1.9.7`.
+Muốn tự sinh cặp khoá mới: `node -e "const {generateKeyPairSync}=require('node:crypto');const{publicKey,privateKey}=generateKeyPairSync('ec',{namedCurve:'prime256v1'});const u=b=>b.toString('base64url');console.log('PUB:',u(publicKey.export({type:'spki',format:'der'}).slice(-65)));console.log('PRV:',u(privateKey.export({type:'sec1',format:'der'}).slice(7,39)))"`
+rồi thay `VAPID_PUBLIC` (2 file trên) + đặt lại secret `VAPID_PRIVATE`.
+
+## Có gì mới ở bản 1.9.6 — RSS feed chương mới
+
+| Endpoint | Việc |
+|---|---|
+| `GET /feed.xml` | RSS 2.0: 30 chương mới nhất toàn web, mỗi item link thẳng URL chương `/truyen/<slug>/chuong-<n>/` |
+| `GET /feed.xml?slug=<slug>` | RSS 2.0: tối đa 50 chương mới nhất của 1 bộ (mới trước) |
+
+Feed reader (Feedly, Inoreader…) poll nhiều lần mỗi ngày nên feed được cache biên 10 phút
+(`s-maxage=600`, kiểm chứng bằng header `x-cz-cache`); mỗi lần làm mới feed chung chỉ đọc
+tối đa 13 khoá KV (1 registry + 12 bộ mới cập nhật nhất) nên tốn chưa tới 2k lượt đọc/ngày.
+Mỗi lần ghi chương (PUT/DELETE book, import, seed, sync…) đều tự xoá cache feed nên chương
+mới lên feed ngay. Link trong feed dựng từ biến `SITE_BASE` (mặc định
+`https://ssochuz.pages.dev`). Web tĩnh trỏ tới feed bằng thẻ
+`<link rel="alternate" type="application/rss+xml">` (trong `<head>` + file OG từng truyện)
+và nút RSS ở footer + trang truyện. Sau khi deploy, kiểm tra bằng
+[W3C Feed Validator](https://validator.w3.org/feed/) rồi thêm URL feed vào Feedly.
+
+## Có gì mới ở bản 1.9.5 — cache biên + đếm lượt đọc tiết kiệm quota
+
+| Trước | Sau |
+|---|---|
+| Mỗi lượt tải trang đọc KV 2–3 lần (`registry` + `stats` + `book`, URL nào cũng gắn `?_=…` phá cache) | `GET /api/registry` (60 giây), `/api/book/<slug>` (300 giây), `/api/stats` (60 giây) phục vụ từ **cache biên**, KV chỉ tốn 1 lượt đọc cho cả phút cao điểm; URL ổn định, không `?_=…` |
+| `/api/stats` trả `no-store` vì sợ “vote rồi mà số không đổi” | Vẫn thấy số mới ngay nhờ 2 lớp: Worker **tự xoá cache sau mỗi lần ghi** (bình chọn, nhập chương, seed…), web **vẽ số mới ngay khi bấm** (lạc quan) |
+| Tải lại trang là gửi lại POST `/api/view` (Worker tự khử trùng lặp, nhưng vẫn tốn request) | Web kiểm tra `localStorage ssochuz-viewsent-<slug>-<yyyymmdd>` **trước** khi POST — mỗi máy/truyện/ngày chỉ 1 request; khoá cũ `ssochuz-viewed-…` vẫn được đọc để không đếm trùng khi chuyển bản |
+
+Header `x-cz-cache` (`HIT`/`MISS`/`BYPASS`) trên 3 đường GET để kiểm chứng bằng DevTools.
+Sau khi cập nhật phải deploy lại `worker/cms.js` và kiểm tra `/api/health` trả `version: 1.9.5`.
+URL có query (`?_=…` của bản web cũ) đi thẳng KV, không đọc/ghi cache.
 
 ## Có gì mới ở bản 1.9.3 — vá sanitization ảnh nhập từ Blogger
 
@@ -135,6 +191,9 @@ Trang quản trị đã có tab **Phiếu bầu** (phím `V`): chọn bộ → d
 | `ADMIN_EMAILS` (Secret) | nên có | danh sách email quản trị, phân cách bằng dấu phẩy. API chỉ trả cờ `admin: true`, không trả danh sách địa chỉ |
 | `GOOGLE_CLIENT_ID` | không | đường cũ: đăng nhập thẳng bằng Google Identity Services |
 | `ALLOW_ORIGIN` | nên có | danh sách chính xác các tên miền web; không dùng `*` ở production |
+| `SITE_BASE` | không | gốc dựng link chương trong `/feed.xml` (mặc định `https://ssochuz.pages.dev`) |
+| `VAPID_PUBLIC` | cần cho push | khoá công khai VAPID base64url (không nhạy cảm, nằm trong `wrangler.toml`) |
+| `VAPID_PRIVATE` (Secret) | cần cho push | khoá riêng VAPID base64url (`wrangler secret put VAPID_PRIVATE`) |
 | `BLOG` | không | feed Blogger cho nút "Đồng bộ Blogger" |
 | `FIREBASE_PROJECT` | không | chỉ dùng khi muốn kéo số liệu cũ từ Firestore (1 lần) |
 | `MAIL_TO` (Secret) | không | email nhận báo lỗi chữ phía Worker; không đặt trong registry/frontend |
@@ -184,6 +243,10 @@ Trang quản trị đã có tab **Phiếu bầu** (phím `V`): chọn bộ → d
 | GET | `/api/book/<slug>` | mở | tiêu đề + các chương của 1 bộ |
 | GET | `/api/schedule` | mở | lịch ra chương |
 | GET | `/api/stats` | mở | **lượt đọc/bình chọn từ KV** (tổng + hôm nay/tuần/tháng) |
+| GET | `/feed.xml` | mở | RSS 2.0: 30 chương mới nhất toàn web (cache biên 10 phút) |
+| GET | `/feed.xml?slug=<slug>` | mở | RSS 2.0: chương mới của 1 bộ (tối đa 50, mới trước) |
+| POST | `/api/push-sub` | mở | đăng ký (`{endpoint, keys}`) / huỷ (`{endpoint, remove:true}`) nhận thông báo đẩy |
+| Cron | `*/10 * * * *` | — | drain key `pushq`, tối đa 45 tin/invocation, xoá sub chết (404/410) |
 | POST | `/api/view` | mở | đếm 1 lượt đọc `{slug, vid, ch}` |
 | POST | `/api/vote` | mở | bầu/bỏ bầu `{slug, ch?, vote: 1|0, vid}` → trả số phiếu mới (kèm `chapVotes`) |
 | PUT | `/api/registry` | cần khoá | ghi toàn bộ thư viện |

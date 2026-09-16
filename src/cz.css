@@ -249,13 +249,13 @@ body, .hdr, .hero, .hero .foot, .facts, .ftr, .fbox, .sechead, .authcard {
    cả dãy mục xô ngang mỗi lần cuộn trang. */
 .nav { position: relative; display: flex; align-items: center; align-self: stretch; margin-right: 8px; }
 .nav a { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  height: 100%; padding: 0 12px; border: 0; background: none; color: var(--mut);
+  height: 100%; padding: 0 10px; border: 0; background: none; color: var(--mut);
   font-size: 13.5px; font-weight: 600; letter-spacing: .004em; white-space: nowrap;
   transition: color var(--t-fast) var(--ease); }
 .nav a:hover { color: var(--txt); }
 .nav a.on { color: var(--txt); }
 /* gạch mờ khi trỏ (chưa phải mục đang xem) — kẻ từ trái sang, biến mất khi .on */
-.nav a::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: 0; height: 2px;
+.nav a::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: 0; height: 2px;
   background: var(--bd2); transform: scaleX(0); transform-origin: 50% 50%; opacity: 0;
   transition: transform var(--t) var(--ease), opacity var(--t-fast) linear; }
 .nav a:hover::after { transform: scaleX(1); opacity: 1; }
@@ -277,7 +277,10 @@ body, .hdr, .hero, .hero .foot, .facts, .ftr, .fbox, .sechead, .authcard {
   transition: color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease); }
 .hbtn:hover { color: var(--txt); border-color: var(--bd2); background: var(--surf2); }
 .hbtn:active { background: var(--surf3); }
-.hbtn.icon { width: var(--ctl); padding: 0; }
+/* nút chỉ có icon (chuông, menu) bỏ viền cho nhẹ đầu trang — trỏ vào mới hiện nền */
+.hbtn.icon { width: var(--ctl); padding: 0; border-color: transparent; background: transparent; }
+.hbtn.icon:hover { background: var(--surf2); border-color: transparent; }
+.hbtn.icon:active { background: var(--surf3); }
 .hbtn.burger { display: none; }
 .hbtn .nav-lbl, .hbtn .searchbtn-txt { font-size: 13px; font-weight: 600; letter-spacing: .004em; }
 /* phím tắt ⌘K: chữ đơn cách, đặt trong ô nhỏ — cùng ngôn ngữ với kbd của hero */
@@ -381,17 +384,17 @@ body, .hdr, .hero, .hero .foot, .facts, .ftr, .fbox, .sechead, .authcard {
    Bốn bậc, mỗi bậc bỏ bớt một lớp chữ để không bao giờ phải bóp méo hộp:
      ≤1080px  chữ nhỏ lại một nấc, giấu phím tắt ⌘K
      ≤ 980px  nút tài khoản chỉ còn avatar
-     ≤ 900px  mục điều hướng chỉ còn icon (mỗi icon vẫn có title + aria-label)
+     ≤1020px  mục điều hướng chỉ còn icon (mỗi icon vẫn có title + aria-label)
      ≤ 760px  nút tìm kiếm chỉ còn icon, hiện nút menu, thanh cao 56px
    Lớp phủ #czInk tự đo theo mục đang chọn nên vẫn khớp ở mọi bậc. */
 @media (max-width: 1080px) {
   .hdr .logo, .abar .logo { font-size: 20px; }
-  .nav a { padding: 0 10px; font-size: 12.5px; }
-  .nav a::after { left: 10px; right: 10px; }
+  .nav a { padding: 0 8px; font-size: 12.5px; }
+  .nav a::after { left: 8px; right: 8px; }
   .hbtn .nav-lbl, .hbtn .searchbtn-txt { font-size: 12.5px; }
   .hbtn .k { display: none; }
 }
-@media (max-width: 900px) {
+@media (max-width: 1020px) {
   .hdr .in > .grow::after { display: none; }
   .nav a { width: 40px; padding: 0; }
   .nav a .nav-lbl { display: none; }
@@ -849,7 +852,7 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 
 /* ========================= 8. BÀN ĐỌC ==================================== */
 .contcols { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
-.cont { display: grid; grid-template-columns: 46px minmax(0, 1fr) auto auto; gap: 12px; align-items: center;
+.cont { display: grid; grid-template-columns: 46px minmax(0, 1fr) auto auto auto; gap: 12px; align-items: center;
   padding: 12px; border: 1px solid var(--bd); border-radius: var(--r); background: var(--surf); cursor: pointer;
   transition: border-color var(--t-fast) var(--ease), box-shadow var(--t) var(--ease), transform var(--t) var(--ease),
     background-color var(--t-theme) var(--ease-out); }
@@ -867,6 +870,10 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .cont .go { font-size: 12px; font-weight: 700; color: var(--acc); white-space: nowrap; }
 .cont .rm { color: var(--dim); padding: 4px 6px; border-radius: var(--r-sm); }
 .cont .rm:hover { color: var(--bad); background: var(--surf2); }
+.cont .foll { display: grid; place-items: center; padding: 0; width: 30px; height: 30px; border-radius: 50%;
+  border: 1px solid var(--bd); background: transparent; color: var(--dim); cursor: pointer; }
+.cont .foll:hover { color: var(--acc); border-color: var(--acc); }
+.cont .foll.on { background: var(--acc); border-color: transparent; color: #fff; }
 
 /* =================== 9. BXH · LỊCH · CHUYỂN THỂ ========================== */
 .rank { position: relative; display: grid; grid-template-columns: 28px 46px 1fr auto; gap: 12px; align-items: center;
@@ -1380,6 +1387,20 @@ body.reading .sgrp, body.reading .toastline, body.reading .rnav button, body.rea
   transition: transform var(--t-close) var(--ease-close), opacity var(--t-close) var(--ease-close); }
 .toast.ok { border-left: 3px solid var(--ok); }
 .toast.err { border-left: 3px solid var(--bad); }
+/* ---- PWA: thanh báo offline / có bản cập nhật (dưới cùng, giữa màn hình) ----
+   Nằm trên toast (85) nhưng dưới hộp thoại (88); nút Tải lại dùng .btn có sẵn. */
+.netbars { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 86;
+  display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none;
+  width: max-content; max-width: calc(100vw - 32px); }
+.netbar { display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  background: var(--surf); border: 1px solid var(--bd2); border-radius: 999px;
+  color: var(--txt); font-size: 13px; font-weight: 600; white-space: nowrap;
+  box-shadow: var(--sh-card); pointer-events: auto; }
+.netbar[hidden] { display: none; }
+.netbar .i-s { flex: none; }
+#czOffline { border-left: 3px solid var(--acc); }
+#czUpdate { border-left: 3px solid var(--ok, var(--acc)); }
+@media (max-width: 560px) { .netbar { font-size: 12.5px; padding: 9px 12px; } }
 /* Hộp thoại: mở 250ms / đóng 150ms (bất đối xứng như transitions.dev), chỉ
    chạy transform + opacity nên không giật; đóng thì gỡ .on sau khi chạy xong. */
 /* LƯU Ý ĐIỆN THOẠI: hộp thoại cao hơn màn hình (form báo lỗi, danh sách dài) mà
@@ -1736,7 +1757,7 @@ body.page-in main { animation: pageIn var(--t-slow) var(--ease-out) both; }
    trên bìa ảnh lẫn trên nền giấy. Chỉ khác màu: 18+ đỏ (--bad), Mới mực son (--acc).
    Bản cũ mỗi nơi một kiểu (chữ nhật 4px, chỗ nền đỏ chữ trắng, chỗ nền trắng chữ
    đỏ) nên nhìn rời rạc. */
-.b18, .badge-new { display: inline-flex; align-items: center; justify-content: center;
+.b18, .badge-new, .badge-newchap { display: inline-flex; align-items: center; justify-content: center;
   min-height: 20px; padding: 3px 9px; border-radius: 999px; white-space: nowrap;
   font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; line-height: 1.4;
   border: 1px solid rgba(255, 255, 255, .28); box-shadow: 0 1px 4px rgba(10, 6, 4, .3); }
@@ -1755,6 +1776,26 @@ body.page-in main { animation: pageIn var(--t-slow) var(--ease-out) both; }
 @media (prefers-reduced-motion: reduce) { .badge-new::before { animation: none; } }
 /* nền tối: hồng son gốc quá nhạt, chữ trắng khó đọc — dùng hồng đậm chung với ruy băng */
 [data-theme="dark"] .badge-new { background: #b23a52; }
+/* ---- THEO DÕI: nút chuông + huy hiệu đỏ “N chương mới” ----------------------
+   Huy hiệu đỏ chữ trắng đọc được cả hai tông nền; nút chuông phủ trên bìa nên
+   thẻ lưới/danh sách được bọc thêm .cardwrap (link giữ nguyên bên trong). */
+.badge-newchap { background: #c8102e; color: #fff; text-transform: none; letter-spacing: .02em;
+  box-shadow: 0 1px 6px rgba(200, 16, 46, .55), 0 1px 2px rgba(10, 6, 4, .35); }
+[data-theme="dark"] .badge-newchap { background: #d7263d; }
+.badge-newchap[hidden] { display: none !important; }
+.cardwrap { position: relative; }
+.cardwrap > .card.list { padding-right: 54px; }   /* chừa chỗ cho chuông */
+.followbtn { position: absolute; z-index: 3; display: grid; place-items: center; padding: 0;
+  width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, .55); background: rgba(12, 8, 6, .55); color: #fff; }
+.cardwrap > .followbtn { top: 44px; left: 8px; }   /* dưới ký hiệu tình trạng, không đụng bookmark NEW */
+.cardwrap.listwrap > .followbtn { top: 50%; right: 10px; left: auto; transform: translateY(-50%); }
+.followbtn:hover { background: rgba(12, 8, 6, .78); }
+.followbtn.on { background: var(--acc); border-color: transparent; }
+.followbtn:focus-visible, .cont .foll:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+.card .th .badge-newchap { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 2;
+  max-width: calc(100% - 84px); overflow: hidden; text-overflow: ellipsis; }
+.cont .badge-newchap { margin-left: 6px; vertical-align: 1px; }
 .tabs .ct { background: var(--surf2); border-radius: 99px; padding: 1px 7px; font-weight: 700; }
 .tabs > button.on .ct { background: color-mix(in srgb, var(--acc) 16%, transparent); color: var(--acc); }
 .fchip { display: inline-flex; align-items: center; gap: 7px; padding: 5px 6px 5px 11px; border-radius: 99px;
@@ -1945,6 +1986,46 @@ body.rd-fs .rdbar { position: fixed; left:0; right:0; }
   .authbtn { width: var(--ctl); padding: 0; justify-content: center; }
   .amenu { width: min(88vw, 264px); }
 }
+
+/* ---- chuông trung tâm thông báo ở đầu trang ---- */
+.hnotif { position: relative; display: inline-flex; }
+.hnotif .ndot { position: absolute; top: 2px; right: 2px; min-width: 17px; height: 17px; padding: 0 4px;
+  border-radius: 99px; background: var(--bad); color: #fff; font-size: 10.5px; font-weight: 800; line-height: 17px;
+  text-align: center; font-variant-numeric: tabular-nums; pointer-events: none; }
+.hnotif .hbtn.hasnew { color: var(--acc); border-color: color-mix(in srgb, var(--acc) 45%, transparent); }
+.nmenu { position: absolute; right: 0; top: calc(100% + 8px); width: 320px; max-height: min(70vh, 420px);
+  overflow: auto; z-index: 70; border: 1px solid var(--bd); border-radius: var(--r-lg); background: var(--surf);
+  box-shadow: var(--sh-lg); padding: 6px; opacity: 0; transform: translateY(-6px) scale(.985); pointer-events: none;
+  transition: opacity var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
+.nmenu.on { opacity: 1; transform: none; pointer-events: auto; }
+.nmenu .nhead { display: flex; align-items: center; gap: 8px; padding: 9px 10px 11px;
+  border-bottom: 1px solid var(--bd); margin-bottom: 5px; }
+.nmenu .nhead b { font-size: 13.5px; }
+.nmenu .nhead span { margin-left: auto; font-size: 12px; color: var(--mut); }
+.nmenu a[role="menuitem"] { display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+  border-radius: var(--r); transition: background var(--t-fast) var(--ease); }
+.nmenu a[role="menuitem"]:hover { background: var(--surf2); }
+.nmenu .nth { width: 40px; height: 56px; border-radius: 6px; overflow: hidden; flex: none;
+  border: 1px solid var(--bd); background: var(--surf2); }
+.nmenu .nth img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.nmenu .ntx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.nmenu .ntx b { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nmenu .nsub { font-size: 12px; color: var(--mut); }
+.nmenu .nnum { font-style: normal; font-weight: 700; color: var(--acc); }
+.nmenu .nempty { padding: 22px 12px; text-align: center; font-size: 13px; color: var(--mut); line-height: 1.7; }
+@media (max-width: 980px) {
+  .nmenu { width: min(88vw, 320px); }
+}
+
+/* ---- hộp hỏi bật thông báo đẩy ---- */
+.pushbox { text-align: center; }
+.pushbox .pushic { display: inline-grid; place-items: center; width: 60px; height: 60px; border-radius: 50%;
+  background: var(--acc-soft); color: var(--acc); margin: 2px auto 10px; }
+.pushbox .pushic .i { width: 26px; height: 26px; }
+.pushbox .pushlead { font-size: 14.5px; font-weight: 600; margin: 0 0 12px; }
+.pushbox ul { list-style: none; margin: 0; padding: 0; text-align: left; display: flex; flex-direction: column; gap: 8px; }
+.pushbox li { display: flex; gap: 9px; align-items: flex-start; font-size: 13.5px; color: var(--mut); line-height: 1.6; }
+.pushbox li .i { flex: none; margin-top: 3px; color: var(--ok); }
 
 /* ---- ô tài khoản trong mục My Space ở trang chủ ---- */
 .authcard { display: flex; align-items: center; gap: 14px; padding: 14px 16px; margin-bottom: 16px;
