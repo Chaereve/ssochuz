@@ -26,14 +26,16 @@ const worker = (await import(path.join(ROOT, 'worker', 'cms.js'))).default;
 
 /* ============================ KV giả (như Cloudflare KV) ==================== */
 class FakeKV {
-  constructor() { this.m = new Map(); this.writes = 0; }
+  constructor() { this.m = new Map(); this.writes = 0; this.reads = 0; }
   async get(k, opt) {
+    this.reads++;
     const v = this.m.get(k);
     if (v === undefined) return null;
     if (opt && opt.type === 'json') { try { return JSON.parse(v.value); } catch (e) { return null; } }
     return v.value;
   }
   async getWithMetadata(k, opt) {
+    this.reads++;
     const v = this.m.get(k);
     if (v === undefined) return { value: null, metadata: null };
     return { value: opt && opt.type === 'json' ? JSON.parse(v.value) : v.value, metadata: v.metadata || null };
@@ -47,6 +49,16 @@ class FakeKV {
     const done = start + limit >= all.length;
     return { keys, list_complete: done, cursor: done ? undefined : all[start + limit - 1] };
   }
+}
+
+/* ============================ cache biên giả (như caches.default) =========== */
+class FakeCache {
+  constructor() { this.store = new Map(); }
+  static key(input) { return String((input && input.url) || input); }
+  async match(input) { const r = this.store.get(FakeCache.key(input)); return r ? r.clone() : undefined; }
+  async put(input, res) { this.store.set(FakeCache.key(input), res.clone ? res.clone() : res); }
+  async delete(input) { return this.store.delete(FakeCache.key(input)); }
+  async keys() { return [...this.store.keys()].map((u) => ({ url: u })); }
 }
 
 /* ============================ fetch giả ==================================== */
@@ -445,8 +457,10 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     await call('POST', '/api/vote', { body: { slug: 'lunar-secret', vote: 1, vid: 'khach-2' } });  /* để 1 phiếu cho mục seed bên dưới */
     const s = await call('GET', '/api/stats');
     eq('stats/đọc lại số phiếu', ((s.body.items || {})['lunar-secret'] || {}).votes, 1);
-    ck('stats/trả no-store để web luôn lấy số mới', String((s.headers || {}).get ? s.headers.get('cache-control') : '').includes('no-store'),
-      (s.headers || {}).get ? s.headers.get('cache-control') : '', 'no-store');
+    /* từ 1.9.5: stats lưu ở biên 60 giây (tiết kiệm lượt đọc KV), trình duyệt luôn
+       hỏi lại (max-age=0) nên vẫn thấy số mới sau mỗi lần ghi nhờ purge */
+    ck('stats/header cache s-maxage=60 + max-age=0', String((s.headers || {}).get ? s.headers.get('cache-control') : '') === 'public, max-age=0, s-maxage=60',
+      (s.headers || {}).get ? s.headers.get('cache-control') : '', 'public, max-age=0, s-maxage=60');
     eq('vote/slug lạ → 400', (await call('POST', '/api/vote', { body: { vote: 1 } })).status, 400);
   }
   {
@@ -654,6 +668,83 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
   /* ---------- 10. lặt vặt ---------- */
   eq('404/đường dẫn lạ', (await call('GET', '/api/khong-co')).status, 404);
   eq('500/không KV mà đọc registry', (await call('GET', '/api/registry', { e: Object.assign({}, env, { CZ_KV: undefined }) })).status, 503);
+
+  /* ---------- 11. CACHE BIÊN: đọc nhiều, KV chỉ tốn 1 lần ---------- */
+  {
+    const realCaches = globalThis.caches;
+    const fake = new FakeCache();
+    globalThis.caches = { default: fake };
+    try {
+      await call('PUT', '/api/registry', { headers: ADMH, body: { rev: 'cache-t1', lib: [{ title: 'Cache Truyện', slug: 'cache-truyen', chapters: 1 }] } });
+      await call('PUT', '/api/book/cache-truyen', { headers: ADMH, body: { title: 'Cache Truyện', slug: 'cache-truyen', chapters: [{ t: 'Chương 1', html: '<p>x</p>' }] } });
+      const rd = () => kv.reads;
+      /* registry: lần 1 MISS đọc KV đúng 1 lần, lần 2 HIT không chạm KV */
+      let r0 = rd();
+      const g1 = await call('GET', '/api/registry');
+      eq('cache/registry lần 1 MISS + đọc KV 1 lần', [g1.headers.get('x-cz-cache'), rd() - r0], ['MISS', 1]);
+      eq('cache/registry header s-maxage=60', (g1.headers.get('cache-control') || '').includes('s-maxage=60'), true);
+      r0 = rd();
+      const g2 = await call('GET', '/api/registry');
+      eq('cache/registry lần 2 HIT + không đọc KV', [g2.headers.get('x-cz-cache'), rd() - r0, ((g2.body && g2.body.lib) || []).length], ['HIT', 0, 1]);
+      /* trúng cache mà origin khác vẫn nhận đúng CORS của mình (không nhận nhầm) */
+      const g3 = await call('GET', '/api/registry', { headers: { origin: 'https://app.web.test' } });
+      eq('cache/HIT đắp CORS mới theo origin', [g3.headers.get('x-cz-cache'), g3.headers.get('access-control-allow-origin')], ['HIT', 'https://app.web.test']);
+      /* quá hạn dùng → MISS và đọc lại KV */
+      const gk = 'https://cms.test/api/registry';
+      const stored = await fake.match(gk);
+      const gh = new Headers(stored.headers);
+      gh.set('x-cz-cached-at', String(Date.now() - 120000));
+      fake.store.set(gk, new Response(await stored.text(), { status: 200, headers: gh }));
+      r0 = rd();
+      const g4 = await call('GET', '/api/registry');
+      eq('cache/registry quá hạn → MISS + đọc lại KV', [g4.headers.get('x-cz-cache'), rd() - r0], ['MISS', 1]);
+      /* URL có query đi thẳng KV, không lưu rác vào cache */
+      r0 = rd();
+      const g5 = await call('GET', '/api/registry?_=' + Date.now());
+      eq('cache/URL có query → BYPASS + đọc KV', [g5.headers.get('x-cz-cache'), rd() - r0 >= 1], ['BYPASS', true]);
+      ck('cache/không lưu khoá có query', ![...fake.store.keys()].some((u) => u.includes('?_=')), [...fake.store.keys()], 'không key nào chứa ?_=');
+      /* book: MISS rồi HIT, hạn 300 giây */
+      r0 = rd();
+      const b1 = await call('GET', '/api/book/cache-truyen');
+      eq('cache/book lần 1 MISS + đọc KV 1 lần', [b1.headers.get('x-cz-cache'), rd() - r0], ['MISS', 1]);
+      eq('cache/book header s-maxage=300', (b1.headers.get('cache-control') || '').includes('s-maxage=300'), true);
+      r0 = rd();
+      const b2 = await call('GET', '/api/book/cache-truyen');
+      eq('cache/book lần 2 HIT + không đọc KV', [b2.headers.get('x-cz-cache'), rd() - r0], ['HIT', 0]);
+      /* lỗi không lưu: GET bộ không có → 404 và lần sau vẫn đọc lại KV */
+      await call('GET', '/api/book/khong-co-bo-nay');
+      r0 = rd();
+      eq('cache/404 không lưu (lần sau vẫn đọc KV)', [(await call('GET', '/api/book/khong-co-bo-nay')).status, rd() - r0 >= 1], [404, true]);
+      /* PUT book → cả book lẫn registry đều bị xoá cache */
+      await call('PUT', '/api/book/cache-truyen', { headers: ADMH, body: { title: 'Cache Truyện Sửa', slug: 'cache-truyen', chapters: [{ t: 'Chương 1', html: '<p>y</p>' }] } });
+      r0 = rd();
+      const b3 = await call('GET', '/api/book/cache-truyen');
+      eq('cache/PUT book → book MISS + thấy chữ mới', [b3.headers.get('x-cz-cache'), rd() - r0 >= 1, b3.body && b3.body.title], ['MISS', true, 'Cache Truyện Sửa']);
+      r0 = rd();
+      const g6 = await call('GET', '/api/registry');
+      eq('cache/PUT book → registry cũng MISS', [g6.headers.get('x-cz-cache'), rd() - r0 >= 1], ['MISS', true]);
+      /* stats: MISS rồi HIT; lượt đọc không xoá, bình chọn thì xoá */
+      r0 = rd();
+      const s1 = await call('GET', '/api/stats');
+      eq('cache/stats lần 1 MISS + đọc KV', [s1.headers.get('x-cz-cache'), rd() - r0 >= 1], ['MISS', true]);
+      eq('cache/stats header s-maxage=60', (s1.headers.get('cache-control') || '').includes('s-maxage=60'), true);
+      r0 = rd();
+      const s2 = await call('GET', '/api/stats');
+      eq('cache/stats lần 2 HIT + không đọc KV', [s2.headers.get('x-cz-cache'), rd() - r0], ['HIT', 0]);
+      await call('POST', '/api/view', { body: { slug: 'cache-truyen', vid: 'may-cache-9' } });
+      eq('cache/lượt đọc không xoá cache stats', (await call('GET', '/api/stats')).headers.get('x-cz-cache'), 'HIT');
+      await call('POST', '/api/vote', { body: { slug: 'cache-truyen', vote: 1, vid: 'may-cache-1' } });
+      r0 = rd();
+      const s3 = await call('GET', '/api/stats');
+      eq('cache/bình chọn → stats MISS + đọc lại KV', [s3.headers.get('x-cz-cache'), rd() - r0 >= 1], ['MISS', true]);
+      eq('cache/sau bình chọn vẫn HIT lại được', (await call('GET', '/api/stats')).headers.get('x-cz-cache'), 'HIT');
+      /* nút làm mới số liệu của admin cũng xoá cache biên */
+      await call('POST', '/api/stats/refresh', { headers: ADMH });
+      eq('cache/stats/refresh → stats MISS', (await call('GET', '/api/stats')).headers.get('x-cz-cache'), 'MISS');
+    } finally {
+      globalThis.caches = realCaches;
+    }
+  }
 
   fs.rmSync(tmp, { recursive: true, force: true });
 

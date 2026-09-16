@@ -2,9 +2,12 @@
 
 **Mục tiêu:** sửa truyện/chương trên web quản trị ⇒ người đọc thấy **ngay** (vài giây), không commit GitHub, không đợi Cloudflare build, không tốn phút CI.
 Từ bản **1.4.0**: lượt đọc và bình chọn cũng nằm trên **KV** — **Firebase không còn cần nữa**.
-Từ bản **1.7.0** (đang dùng): số liệu vote/view đồng bộ NHANH và chính xác — `/api/stats` trả `no-store`
-và cộng cả phần đang đệm nên lượt đọc hiện ngay; bỏ phiếu nhận cả khoá đăng nhập lẫn khoá máy nên
-**gỡ vote luôn giảm đúng**; web đổi tên thương hiệu **ssochuz** (khoá localStorage tự chuyển, không mất dữ liệu).
+Từ bản **1.7.0**: số liệu vote/view đồng bộ NHANH và chính xác — `/api/stats` cộng cả phần đang đệm
+nên lượt đọc hiện ngay; bỏ phiếu nhận cả khoá đăng nhập lẫn khoá máy nên **gỡ vote luôn giảm đúng**;
+web đổi tên thương hiệu **ssochuz** (khoá localStorage tự chuyển, không mất dữ liệu).
+Từ bản **1.9.5** (đang dùng): 3 đường đọc nhiều (`registry`/`book`/`stats`) có **cache biên** —
+hàng trăm người cùng đọc một phút thì KV chỉ tốn 1 lượt đọc; web chỉ gửi 1 POST `/api/view`
+mỗi máy/truyện/ngày (khoá `ssochuz-viewsent-…`), “sửa thấy ngay” vẫn giữ nhờ tự xoá cache sau mỗi lần ghi.
 Trước đó, bản **1.6.0**: đăng nhập qua **Supabase** (hết lỗi `origin_mismatch` của Google), thích **theo từng chương**, bình luận **ngay trong trang đọc** (khách chưa đăng nhập vẫn gửi được), và có `/api/recount` để **chữa dứt điểm số chương sai**.
 
 ```
@@ -17,6 +20,18 @@ Admin (admin.html)  ──PUT──▶  Worker (worker/cms.js)  ──▶  Cloud
 ```
 
 GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới cần build); dữ liệu thì không đi qua GitHub nữa.
+
+## Có gì mới ở bản 1.9.5 — cache biên + đếm lượt đọc tiết kiệm quota
+
+| Trước | Sau |
+|---|---|
+| Mỗi lượt tải trang đọc KV 2–3 lần (`registry` + `stats` + `book`, URL nào cũng gắn `?_=…` phá cache) | `GET /api/registry` (60 giây), `/api/book/<slug>` (300 giây), `/api/stats` (60 giây) phục vụ từ **cache biên**, KV chỉ tốn 1 lượt đọc cho cả phút cao điểm; URL ổn định, không `?_=…` |
+| `/api/stats` trả `no-store` vì sợ “vote rồi mà số không đổi” | Vẫn thấy số mới ngay nhờ 2 lớp: Worker **tự xoá cache sau mỗi lần ghi** (bình chọn, nhập chương, seed…), web **vẽ số mới ngay khi bấm** (lạc quan) |
+| Tải lại trang là gửi lại POST `/api/view` (Worker tự khử trùng lặp, nhưng vẫn tốn request) | Web kiểm tra `localStorage ssochuz-viewsent-<slug>-<yyyymmdd>` **trước** khi POST — mỗi máy/truyện/ngày chỉ 1 request; khoá cũ `ssochuz-viewed-…` vẫn được đọc để không đếm trùng khi chuyển bản |
+
+Header `x-cz-cache` (`HIT`/`MISS`/`BYPASS`) trên 3 đường GET để kiểm chứng bằng DevTools.
+Sau khi cập nhật phải deploy lại `worker/cms.js` và kiểm tra `/api/health` trả `version: 1.9.5`.
+URL có query (`?_=…` của bản web cũ) đi thẳng KV, không đọc/ghi cache.
 
 ## Có gì mới ở bản 1.9.3 — vá sanitization ảnh nhập từ Blogger
 

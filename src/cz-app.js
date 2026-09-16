@@ -72,7 +72,9 @@
     if (memo.reg) return Promise.resolve({ reg: memo.reg, src: memo.src });
     var cached = lsGet('ssochuz-reg', TTL_REG);
     var useApi = !!API && !apiDown;
-    var p = useApi ? jget(API + '/api/registry?_=' + Date.now(), 9000) : Promise.resolve(null);
+    /* URL ổn định (không ?_=…) để trúng cache biên của Worker — dữ liệu vẫn mới
+       nhờ hạn dùng 60 giây + Worker tự xoá cache mỗi lần ghi. */
+    var p = useApi ? jget(API + '/api/registry', 9000) : Promise.resolve(null);
     return p.then(function (api) {
       if (api && api.lib) {
         apiDown = false;
@@ -144,9 +146,10 @@
   function stats() {
     if (memo.stats) return Promise.resolve(memo.stats);
     var cached = lsGet('ssochuz-stats', TTL_STATS);
-    /* ?_=… : vượt mọi tầng cache (trình duyệt/CDN) — số liệu phải luôn mới,
-       bệnh cũ: đáp ứng bị cache 60 giây nên vote/bỏ-vote không thấy đổi số */
-    var p = (API && !apiDown ? jget(API + '/api/stats?_=' + Date.now(), 9000) : Promise.resolve(null)).then(function (r) {
+    /* URL ổn định để trúng cache biên (Worker giữ 60 giây, tiết kiệm lượt đọc KV).
+       Bệnh cũ “vote rồi mà số không đổi vì cache” nay khỏi bằng 2 lớp: web vẽ
+       số mới ngay khi bấm (lạc quan), Worker tự xoá cache sau mỗi lần ghi. */
+    var p = (API && !apiDown ? jget(API + '/api/stats', 9000) : Promise.resolve(null)).then(function (r) {
       if (r && r.ok && r.items) {
         return { on: true, items: r.items, source: r.source || 'kv', saved: r.fetchedAt || r.saved || '' };
       }
@@ -201,21 +204,29 @@
   }
   function authToken() { try { return (w.CZ_AUTH && w.CZ_AUTH.token) ? (w.CZ_AUTH.token() || '') : ''; } catch (e) { return ''; } }
   /* 1 máy · 1 bộ · 1 ngày = 1 lượt đọc (phía máy và phía Worker đều khử trùng lặp) */
+  /* Đếm lượt đọc: mỗi máy + mỗi truyện + mỗi ngày chỉ gửi 1 lần — kiểm tra
+     TRƯỚC khi POST nên tải lại 10 lần cũng chỉ tốn 1 request (tiết kiệm quota
+     ghi KV của Worker). Khoá cũ `ssochuz-viewed-…` (ngày UTC) vẫn được đọc để
+     không đếm trùng trong ngày người đọc chuyển từ bản cũ sang (ghi thì chỉ
+     ghi khoá mới, theo ngày trên máy người đọc). */
   function reportView(slug, ch) {
     if (!API || !slug) return Promise.resolve(null);
-    var k = 'ssochuz-viewed-' + slug + '-' + new Date().toISOString().slice(0, 10);
-    if (safeGet(k)) return Promise.resolve(null);
+    var d = new Date();
+    function p2(n) { return ('0' + n).slice(-2); }
+    var k = 'ssochuz-viewsent-' + slug + '-' + d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate());
+    var legacy = 'ssochuz-viewed-' + slug + '-' + d.toISOString().slice(0, 10);
+    if (safeGet(k) || safeGet(legacy)) return Promise.resolve(null);
     safeSet(k, '1');
     return jpost('/api/view', { slug: slug, vid: vid(), ch: ch || 0 }).then(function (r) {
       if (r && r.counted) {
-        /* cộng ngay vào số đang có để chip "lượt đọc" nhảy lên, rồi mới lấy số thật */
+        /* cộng ngay vào số đang có để chip "lượt đọc" nhảy lên — không gọi lại
+           /api/stats vì đáp ứng đang nằm trong cache biên 60 giây, gọi cũng chỉ
+           nhận số cũ (số chuẩn tự về ở lần mở trang sau) */
         if (memo.stats && memo.stats.items) {
           var it = memo.stats.items[slug];
           if (it) { it.views = (Number(it.views) || 0) + 1; it.viewsDay = (Number(it.viewsDay) || 0) + 1; }
         }
         notifyStats();
-        /* lấy số chuẩn từ KV ngay (Worker đã tính cả phần đang đệm) */
-        refreshStats();
       }
       return r;
     });

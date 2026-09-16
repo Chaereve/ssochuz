@@ -75,7 +75,7 @@
      MAIL_FROM         (tuỳ chọn)  — địa chỉ gửi của Resend, vd: ssochuz library <bao-loi@ten-mien-cua-ban>
    ============================================================================ */
 
-const VERSION = '1.9.4';
+const VERSION = '1.9.5';
 const JSONH = {
   'content-type': 'application/json; charset=utf-8',
   'x-content-type-options': 'nosniff',
@@ -88,6 +88,7 @@ export default {
     const cors = corsHeaders(req, env);
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     let p = url.pathname.replace(/\/+$/, '') || '/';
+    const org = url.origin;   /* gốc dùng dựng khoá cache khi cần xoá sau mỗi lần ghi */
 
     /* Cổng chặn dò khoá: áp cho MỌI endpoint có gửi X-Admin-Key (kể cả /api/whoami) */
     if (req.headers.get('x-admin-key')) {
@@ -104,13 +105,20 @@ export default {
         if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
         return json({ ok: true, role: 'admin', version: VERSION }, { cors });
       }
-      if (p === '/api/registry' && req.method === 'GET') return await getKV(env, 'registry', cors, 30);
+      if (p === '/api/registry' && req.method === 'GET') return await edgeCached(req, cors, EDGE_TTL.registry, () => getKV(env, 'registry', cors, 60));
       if (p === '/api/schedule' && req.method === 'GET') return await getSchedule(env, ctx, cors);
-      if (p === '/api/stats' && req.method === 'GET') return await getStats(env, cors);
+      if (p === '/api/stats' && req.method === 'GET') return await edgeCached(req, cors, EDGE_TTL.stats, () => getStats(env, cors));
 
-      /* ---------- số liệu xếp hạng: đếm lượt đọc / bình chọn ---------- */
+      /* ---------- số liệu xếp hạng: đếm lượt đọc / bình chọn ----------
+         Lượt đọc KHÔNG xoá cache (người đọc đông mà mỗi lượt lại xoá thì cache
+         vô nghĩa — số đọc trễ tối đa 60 giây là chấp nhận được); bình chọn thì
+         xoá để bảng xếp hạng thấy số mới ngay. */
       if (p === '/api/view' && req.method === 'POST') return await postView(req, env, ctx, cors);
-      if (p === '/api/vote' && req.method === 'POST') return await postVote(req, env, cors);
+      if (p === '/api/vote' && req.method === 'POST') {
+        const vr = await postVote(req, env, cors);
+        if (vr.ok) await edgePurge(org + '/api/stats');
+        return vr;
+      }
       /* báo lỗi chữ trong chương: người đọc bấm 1 nút là nội dung đi thẳng tới
          hộp thư ban biên tập — tự lưu vào KV, không cần copy/mở Gmail nữa */
       if (p === '/api/report' && req.method === 'POST') return await postReport(req, env, ctx, cors);
@@ -127,11 +135,19 @@ export default {
       if (mc2 && req.method === 'POST') return await postComment(decodeURIComponent(mc2[1]), req, env, cors);
 
       let m = p.match(/^\/api\/book\/(.+)$/);
-      if (m && req.method === 'GET') return await getKV(env, 'book:' + decodeURIComponent(m[1]), cors, 300);
+      if (m && req.method === 'GET') return await edgeCached(req, cors, EDGE_TTL.book, () => getKV(env, 'book:' + decodeURIComponent(m[1]), cors, 300));
 
       /* ---------- cần khoá quản trị ---------- */
-      if (p === '/api/registry' && req.method === 'PUT') return await putKV(req, env, 'registry', cors, 'cập nhật thư viện (registry)');
-      if (m && req.method === 'PUT') return await putBook(req, env, decodeURIComponent(m[1]), cors);
+      if (p === '/api/registry' && req.method === 'PUT') {
+        const r = await putKV(req, env, 'registry', cors, 'cập nhật thư viện (registry)');
+        if (r.ok) await edgePurge(org + '/api/registry');
+        return r;
+      }
+      if (m && req.method === 'PUT') {
+        const r = await putBook(req, env, decodeURIComponent(m[1]), cors);
+        if (r.ok) await edgePurge(org + '/api/book/' + m[1], org + '/api/registry');   /* m[1] còn nguyên mã hoá — đúng khoá cache lúc GET */
+        return r;
+      }
       if (m && req.method === 'DELETE') {
         if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
         if (!env.CZ_KV) return noKV(cors);
@@ -139,26 +155,59 @@ export default {
         await env.CZ_KV.delete('book:' + slug);
         await syncCountToRegistry(env, slug, null);       /* registry không còn treo số chương của bộ đã xoá */
         await logAct(env, 'xoá bộ ' + slug, req);
+        await edgePurge(org + '/api/book/' + m[1], org + '/api/registry');
         return json({ ok: true, deleted: slug }, { cors });
       }
-      if (p === '/api/recount' && req.method === 'POST') return await recount(req, env, cors);
+      if (p === '/api/recount' && req.method === 'POST') {
+        const r = await recount(req, env, cors);
+        if (r.ok) await edgePurge(org + '/api/registry', org + '/api/stats');
+        return r;
+      }
       if (p === '/api/admin/comments' && req.method === 'GET') return await adminComments(req, env, cors);
       if (p === '/api/admin/log' && req.method === 'GET') return await adminLog(req, env, cors);
       if (p === '/api/admin/stats' && req.method === 'GET') return await adminStats(req, env, cors);
       if (p === '/api/admin/reports' && req.method === 'GET') return await adminReports(req, env, cors);
       if (p === '/api/admin/voters' && req.method === 'GET') return await adminVoters(req, env, cors);
-      if (p === '/api/admin/vote-remove' && req.method === 'POST') return await adminVoteRemove(req, env, cors);
-      if (p === '/api/admin/votes/reset' && req.method === 'POST') return await adminVotesReset(req, env, cors);
-      if (p === '/api/seed' && req.method === 'POST') return await seed(req, env, cors);
-      if (p === '/api/sync' && req.method === 'POST') return await syncBlogger(req, env, cors);
+      if (p === '/api/admin/vote-remove' && req.method === 'POST') {
+        const r = await adminVoteRemove(req, env, cors);
+        if (r.ok) await edgePurge(org + '/api/stats');
+        return r;
+      }
+      if (p === '/api/admin/votes/reset' && req.method === 'POST') {
+        const r = await adminVotesReset(req, env, cors);
+        if (r.ok) await edgePurge(org + '/api/stats');
+        return r;
+      }
+      if (p === '/api/seed' && req.method === 'POST') {
+        const r = await seed(req, env, cors);
+        if (r.ok) {
+          await edgePurge(org + '/api/registry', org + '/api/stats');
+          await edgePurgePrefix(org, '/api/book/');
+        }
+        return r;
+      }
+      if (p === '/api/sync' && req.method === 'POST') {
+        const r = await syncBlogger(req, env, cors);
+        if (r.ok) await edgePurge(org + '/api/registry', org + '/api/stats');
+        return r;
+      }
       if (p === '/api/import' && req.method === 'POST') return await importPost(req, env, cors);
-      if (p === '/api/stats/seed' && req.method === 'POST') return await seedStats(req, env, cors);
-      if (p === '/api/stats/import-firebase' && req.method === 'POST') return await importFirebaseStats(req, env, cors);
+      if (p === '/api/stats/seed' && req.method === 'POST') {
+        const r = await seedStats(req, env, cors);
+        if (r.ok) await edgePurge(org + '/api/stats');
+        return r;
+      }
+      if (p === '/api/stats/import-firebase' && req.method === 'POST') {
+        const r = await importFirebaseStats(req, env, cors);
+        if (r.ok) await edgePurge(org + '/api/stats');
+        return r;
+      }
       if (p === '/api/stats/refresh' && req.method === 'POST') {
         if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
         if (!env.CZ_KV) return noKV(cors);
         const flushed = await flushStats(env);
         await env.CZ_KV.delete('stats_cache');      /* khoá cache của bản cũ (nếu còn) */
+        await edgePurge(org + '/api/stats');        /* và bản lưu ở biên của bản mới */
         return json({ ok: true, cleared: 'stats_cache', flushed }, { cors });
       }
       return json({ ok: false, error: 'không có endpoint này', path: p }, { status: 404, cors });
@@ -237,6 +286,8 @@ async function importPost(req, env, cors) {
   }
   await env.CZ_KV.put('_last', new Date().toISOString());
   await logAct(env, 'nhập chương từ Blogger: ' + slug + ' → ' + chapTitle, req);
+  const iorg = new URL(req.url).origin;
+  await edgePurge(iorg + '/api/book/' + encodeURIComponent(slug), iorg + '/api/registry');
   return json({ ok: true, added: chapTitle, chapters: book.chapters.length, url, title }, { cors });
 }
 
@@ -439,6 +490,82 @@ function stripPrivateRegistrySettings(reg) {
   return reg;
 }
 function registryJSON(reg) { return JSON.stringify(stripPrivateRegistrySettings(reg)); }
+/* ================= CACHE BIÊN CHO 3 ĐƯỜNG ĐỌC NHIỀU ==================
+   GET /api/registry, /api/book/<slug>, /api/stats: hàng trăm người cùng đọc
+   trong một phút thì KV chỉ bị đọc 1 lần — các lần sau Worker phục vụ từ bản
+   lưu ở biên (edge), không chạm KV nên không tốn quota đọc.
+   · Worker TỰ quản lý hạn dùng: lúc ghi dán mốc giờ vào header nội bộ
+     `x-cz-cached-at`, lần đọc sau quá hạn thì coi như trượt và đọc lại từ KV
+     (không trông chờ tầng ngoài tôn trọng Cache-Control).
+   · CORS theo từng origin nên PHẢI lột sạch trước khi ghi — khi đọc trúng thì
+     đắp CORS mới đúng origin người đang hỏi (nếu không người sau nhận nhầm
+     origin của người trước, trình duyệt chặn oan).
+   · URL có query (dạng phá cache `?_=…` của bản web cũ) đi thẳng KV, không
+     ghi/đọc bản lưu — vừa luôn mới vừa tránh bị bơm đầy cache bằng khoá rác.
+   · Mỗi lần GHI thành công (PUT/DELETE/vote/seed/…) đều xoá đúng mục cache
+     liên quan nên “sửa thấy ngay” vẫn giữ nguyên. Header `x-cz-cache`
+     (HIT/MISS/BYPASS) để ngoài trình duyệt kiểm chứng được bằng DevTools. */
+function edgeCache() {
+  try { return (typeof caches !== 'undefined' && caches.default) || null; } catch (e) { return null; }
+}
+const EDGE_TTL = { registry: 60, book: 300, stats: 60 };   /* giây, theo URL */
+async function edgeCached(req, cors, secs, load) {
+  if (req.url.indexOf('?') >= 0) {
+    const raw = await load();
+    try { raw.headers.set('x-cz-cache', 'BYPASS'); } catch (e) {}
+    return raw;
+  }
+  const key = req.url;
+  const box = edgeCache();
+  if (box) {
+    let hit = null;
+    try { hit = await box.match(key); } catch (e) { hit = null; }
+    if (hit) {
+      let fresh = false;
+      try { fresh = (Date.now() - (parseInt(hit.headers.get('x-cz-cached-at') || '0', 10) || 0)) < secs * 1000; } catch (e) { fresh = false; }
+      if (fresh) {
+        try {
+          const h = new Headers(hit.headers);
+          h.delete('x-cz-cached-at');
+          Object.keys(cors).forEach((k) => h.set(k, cors[k]));
+          h.set('x-cz-cache', 'HIT');
+          return new Response(hit.body, { status: hit.status, statusText: hit.statusText, headers: h });
+        } catch (e) { /* đọc ra hỏng thì làm lại từ KV bên dưới */ }
+      } else { try { await box.delete(key); } catch (e) {} }
+    }
+  }
+  const res = await load();
+  /* chỉ lưu đáp ứng thành công — lỗi (404/503/…) luôn đọc lại từ KV */
+  if (box && res && res.status === 200) {
+    try {
+      const h = new Headers(res.headers);
+      ['access-control-allow-origin', 'access-control-allow-methods', 'access-control-allow-headers',
+       'access-control-max-age', 'vary', 'x-cz-cache'].forEach((k) => h.delete(k));
+      h.set('x-cz-cached-at', String(Date.now()));
+      await box.put(key, new Response(res.clone().body, { status: res.status, statusText: res.statusText, headers: h }));
+    } catch (e) { /* ghi cache hỏng thì bỏ qua — đáp ứng thật vẫn trả bình thường */ }
+  }
+  try { res.headers.set('x-cz-cache', 'MISS'); } catch (e) {}
+  return res;
+}
+async function edgePurge(...urls) {
+  const box = edgeCache();
+  if (!box) return;
+  for (const u of urls) { try { await box.delete(u); } catch (e) {} }
+}
+/* xoá cả chùm /api/book/* (khi seed chạm nhiều bộ một lúc) */
+async function edgePurgePrefix(origin, prefix) {
+  const box = edgeCache();
+  if (!box || typeof box.keys !== 'function') return;
+  let keys = [];
+  try { keys = await box.keys(); } catch (e) { return; }
+  for (const k of keys) {
+    const u = String((k && k.url) || k || '');
+    if (u === origin + prefix || u.startsWith(origin + prefix)) {
+      try { await box.delete(u); } catch (e) {}
+    }
+  }
+}
 async function getKV(env, key, cors, cacheSec) {
   if (!env.CZ_KV) return noKV(cors);
   const { value, metadata } = await env.CZ_KV.getWithMetadata(key, { type: 'text' });
@@ -447,7 +574,9 @@ async function getKV(env, key, cors, cacheSec) {
   if (key === 'registry') {
     try { publicValue = registryJSON(JSON.parse(value)); } catch (e) { publicValue = value; }
   }
-  const h = { ...JSONH, ...cors, 'cache-control': 'public, max-age=' + (cacheSec || 30), 'x-kv-key': key };
+  /* max-age=0: trình duyệt luôn hỏi lại → trúng cache biên (nhanh mà không tốn
+     lượt đọc KV); s-maxage: bản lưu ở biên dùng được từng này giây. */
+  const h = { ...JSONH, ...cors, 'cache-control': 'public, max-age=0, s-maxage=' + (cacheSec || 60), 'x-kv-key': key };
   /* ETag cũ mô tả bản chưa lọc nên không gửi cho registry đã được làm sạch. */
   if (key !== 'registry' && metadata && metadata.etag) h.etag = metadata.etag;
   return new Response(publicValue, { headers: h });
@@ -1220,9 +1349,9 @@ function publicStat(it, today) {
 /* GET /api/stats — web đọc chỗ này để vẽ bảng xếp hạng (không cần Firebase)
    · Đọc kèm phần đang ĐỆM trong RAM (chưa kịp ghi KV) để lượt đọc/bình chọn
      hiện ngay tức thì, không phải chờ đợt gom ~10 giây.
-   · `cache-control: no-store` — bản cũ để max-age=60 nên trình duyệt/CDN giữ
-     số CŨ tới một phút: vote xong không thấy tăng, bỏ vote không thấy giảm.
-     Số liệu phải luôn là con số mới nhất. */
+   · Bản lưu ở biên dùng được 60 giây (tiết kiệm lượt đọc KV). Bệnh cũ “vote
+     xong không thấy tăng vì cache” nay khỏi bằng 2 lớp: Worker tự XOÁ cache
+     sau mỗi lần ghi số liệu, còn web vẽ số mới ngay khi bấm (lạc quan). */
 async function getStats(env, cors) {
   if (!env.CZ_KV) return noKV(cors);
   const st = await readStats(env);
@@ -1244,7 +1373,7 @@ async function getStats(env, cors) {
     items[slug] = publicStat(clone, today);
   }
   return json({ ok: true, source: 'kv', fetchedAt: new Date().toISOString(), updatedAt: st.updatedAt || '', items },
-    { cors, headers: { 'cache-control': 'no-store' } });
+    { cors, headers: { 'cache-control': 'public, max-age=0, s-maxage=60' } });
 }
 
 /* POST /api/view { slug, vid, ch } — 1 máy/1 bộ/1 ngày chỉ tính 1 lượt */
