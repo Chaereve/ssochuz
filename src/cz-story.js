@@ -850,6 +850,43 @@
     var cur = parseInt(String(lab ? lab.textContent : '').replace(/[^0-9]/g, '') || '0', 10);
     if (lab) lab.textContent = num(cur + d) + ' lượt đọc';
   }
+  /* ---- PRELOAD chương kế: chữ cả bộ đã nằm sẵn trong máy (CHS), chỉ còn ẢNH
+     trong chương là phải chờ mạng. Cuộn quá nửa chương (hoặc sau 5 giây) thì
+     tải trước ảnh + dựng sẵn HTML sạch của ĐÚNG 1 chương kế (N+1) — SW tự giữ
+     ảnh vào cache. Bấm next là hiện ngay, không chờ. */
+  var PRE = { ch: 0, html: '', timer: null, done: false };
+  function preNextReset() {
+    PRE.ch = 0; PRE.html = ''; PRE.done = false;
+    if (PRE.timer) { try { clearTimeout(PRE.timer); } catch (e) {} PRE.timer = null; }
+  }
+  function preNextImgs(html) {
+    /* máy bật tiết kiệm dữ liệu thì thôi, không tải trước ảnh */
+    try { if (navigator.connection && navigator.connection.saveData) return; } catch (e) {}
+    var tags = String(html || '').match(/<img[^>]+src="[^"]+"/gi) || [];
+    tags.slice(0, 12).forEach(function (t) {
+      var u = (t.match(/src="([^"]+)"/i) || [])[1] || '';
+      if (!u || u.indexOf('data:') === 0 || u.indexOf('blob:') === 0) return;
+      try {
+        /* no-cors để ảnh ngoài host không lỗi CORS — SW vẫn cache được (opaque) */
+        fetch(u, { mode: 'no-cors', credentials: 'omit' }).catch(function () {});
+      } catch (e) {}
+    });
+  }
+  function preNextFire() {
+    if (PRE.done) return;
+    PRE.done = true;
+    if (PRE.timer) { try { clearTimeout(PRE.timer); } catch (e) {} PRE.timer = null; }
+    var nx = cur + 1;
+    /* CHỈ đúng 1 chương kế — không preload xa hơn */
+    if (nx < 1 || nx > CHS.length || !CHS[nx - 1]) return;
+    PRE.ch = nx;
+    try { PRE.html = cleanHTML(CHS[nx - 1].html || ''); } catch (e) { PRE.html = ''; }
+    preNextImgs(CHS[nx - 1].html || '');
+  }
+  function preNextArm() {
+    preNextReset();
+    try { PRE.timer = setTimeout(preNextFire, 5000); } catch (e) {}
+  }
   function paintChapter(keepScroll) {
     var c = CHS[cur - 1];
     if (!c) return;
@@ -865,7 +902,9 @@
     $('#rdMeta').innerHTML = [
       N.author ? '<span>' + ic('pen', 'i-s') + ' ' + esc(N.author) + '</span>' : ''
     ].filter(Boolean).join('');
-    txt.innerHTML = cleanHTML(c.html);
+    /* chương kế đã preload thì dùng luôn HTML dựng sẵn — lật trang tức thì */
+    txt.innerHTML = (PRE.ch === cur && PRE.html) ? PRE.html : cleanHTML(c.html);
+    preNextArm();
     /* đếm lượt đọc thật (Worker ghi lên KV); 1 máy · 1 bộ · 1 ngày = 1 lượt */
     CZ.reportView(N.slug, cur).then(function (r) { if (r && r.counted) bumpViews(1); });
     if (cur >= N.chapters && CZ.markFollowSeen) CZ.markFollowSeen(N);
@@ -1092,6 +1131,7 @@
   }
   function exitReader(toComments) {
     reading = false;
+    preNextReset();
     document.body.classList.remove('reading');
     /* ra khỏi trang đọc thì thanh trình duyệt phải về màu nền của trang, không
        giữ lại màu nền đọc (kem/tối) vừa dùng */
@@ -1152,6 +1192,7 @@
         if (fill) fill.style.transform = 'scaleX(' + f + ')';
         var pc = $('#rdPct');
         if (pc) pc.textContent = Math.round(f * 100) + '%';
+        if (f >= 0.5) preNextFire();
       }
     });
   }, { passive: true });
