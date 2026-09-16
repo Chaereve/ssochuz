@@ -26,7 +26,7 @@ ALLOW_ORIGIN = "https://ssochuz.pages.dev,https://chuseoz.blogspot.com"
 SITE_BASE = "https://ssochuz.pages.dev"
 # Khoá CÔNG KHAI VAPID cho Web Push (không nhạy cảm — web cũng nhúng key này).
 # Khoá RIÊNG đặt bằng: npx wrangler secret put VAPID_PRIVATE  (không ghi vào file này)
-VAPID_PUBLIC = "BOEBMf7G8y2UNs1kpGDZVldlNEAQYJTAL2jLjopVk-mzLnqM1LzY08DN2ubBuURQIwzXH96iCqDytcIwFRIIuKk"
+VAPID_PUBLIC = "BDzU2yh_uWzhaTZ6HZe3s-aLk6w5BnKCv5gTzUZYNjTyObcAlJa5GnZGrbfwHeOdUpDistwMgMaKvnmqLiXzobs"
 
 # Cron rút dần hàng đợi push "ra chương mới" — mỗi 10 phút, mỗi lần tối đa 45 tin.
 [triggers]
