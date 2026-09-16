@@ -284,6 +284,39 @@
     notifyStats();
     return it;
   }
+  /* -- ĐÁNH GIÁ SAO (N11): POST /api/rate với rating 1..5 ------------------
+     Tách khỏi vote cũ; chỉ trang truyện gọi qua nút sao trong shero. Ghi trượt
+     thì thử LẠI ĐÚNG 1 LẦN sau 1,2 giây rồi mới bỏ cuộc — vì free-tier KV giới
+     hạn 1 ghi/giây/key nên lần nhắc lại giúp tránh mất điểm do xung đột. */
+  function rate(slug, stars) {
+    if (!API || !slug) return Promise.resolve(null);
+    return new Promise(function (resolve) {
+      var tries = 0;
+      function attempt(cbOk) {
+        jpost('/api/rate', { slug: slug, rating: stars, vid: vid() }, authToken()).then(function (r) {
+          if (r && r.ok) {
+            applyRating(slug, r);
+            resolve(r);
+            return;
+          }
+          if (tries < 1) { tries += 1; setTimeout(function () { attempt(cbOk); }, 1200); return; }
+          resolve(null);
+        });
+      }
+      attempt(resolve);
+    });
+  }
+  /* sửa ngay dòng đang hiển thị theo số Worker trả về (trung bình/số lượt) */
+  function applyRating(slug, r) {
+    if (!memo.stats) memo.stats = { on: true, items: {}, source: 'local' };
+    if (!memo.stats.items) memo.stats.items = {};
+    var it = memo.stats.items[slug] || (memo.stats.items[slug] = { views: 0, votes: 0 });
+    if (r.ratingAvg != null) it.rating = Number(r.ratingAvg) || 0;
+    if (r.ratingCount != null) it.ratingCount = Math.max(0, Number(r.ratingCount) || 0);
+    lsSet('ssochuz-stats', { t: Date.now(), v: memo.stats });
+    notifyStats();
+    return it;
+  }
   function schedule() {
     if (memo.sched) return Promise.resolve(memo.sched);
     return (API ? jget(API + '/api/schedule', 9000) : Promise.resolve(null)).then(function (r) {
@@ -2367,7 +2400,7 @@
   w.CZ = {
     API: API, normalizeApi: normalizeApi,
     registry: registry, book: book, stats: stats, refreshStats: refreshStats, schedule: schedule,
-    vid: vid, reportView: reportView, sendReport: sendReport, vote: vote,
+    vid: vid, reportView: reportView, sendReport: sendReport, vote: vote, rate: rate,
     lib: libList, slides: slides, editorChoice: editorChoice, donationCfg: donationCfg, reportCfg: reportCfg, findLib: findLib, statsOf: statsOf, onStats: onStats,
     progress: progress, setProgress: setProgress, lastReadAt: lastReadAt,
     shelfIds: shelfIds, inShelf: inShelf, toggleShelf: toggleShelf, clearShelf: clearShelf,

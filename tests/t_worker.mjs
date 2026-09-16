@@ -534,6 +534,33 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     eq('reset toàn bộ/thiếu khoá → 401', (await call('POST', '/api/admin/votes/reset', { body: {} })).status, 401);
   }
 
+  /* ---------- 9b2. ĐÁNH GIÁ SAO (N11) — tách khỏi bình chọn cũ ---------- */
+  {
+    const auth = { authorization: 'Bearer ' + TOKEN };
+    const r1 = await call('POST', '/api/rate', { headers: auth, body: { slug: 'lunar-secret', rating: 4 } });
+    eq('rating/lần đầu 4 sao', [r1.status, r1.body && r1.body.rating, r1.body && r1.body.ratingCount], [200, 4, 1]);
+    /* cùng người gửi lại → SỬA điểm, số lượt vẫn 1 */
+    const r2 = await call('POST', '/api/rate', { headers: auth, body: { slug: 'lunar-secret', rating: 5 } });
+    eq('rating/sửa điểm không tăng lượt', [r2.body && r2.body.rating, r2.body && r2.body.ratingCount, r2.body && r2.body.ratingAvg], [5, 1, 5]);
+    /* người thứ 2 (khách) 3 sao → trung bình (5+3)/2 = 4 */
+    const r3 = await call('POST', '/api/rate', { body: { slug: 'lunar-secret', rating: 3, vid: 'khach-rate-1' } });
+    eq('rating/người thứ 2', [r3.body && r3.body.ratingCount, r3.body && r3.body.ratingAvg], [2, 4]);
+    /* /api/stats kèm sẵn trung bình + số lượt (không cần request riêng) */
+    const s = await call('GET', '/api/stats');
+    const it = (s.body.items || {})['lunar-secret'] || {};
+    eq('rating/stats có trung bình + lượt', [it.rating, it.ratingCount], [4, 2]);
+    /* gỡ điểm → số lượt giảm, trung bình còn lại của khách */
+    const r4 = await call('POST', '/api/rate', { headers: auth, body: { slug: 'lunar-secret', rating: 0 } });
+    eq('rating/gỡ điểm ok', [r4.body && r4.body.rating, r4.body && r4.body.ratingCount], [0, 1]);
+    /* dữ liệu nằm trong key riêng rate:/rateagg: — không đụng key vote cũ */
+    eq('rating/có rateagg:<slug>', [...kv.m.keys()].some((k) => k === 'rateagg:lunar-secret'), true);
+    eq('rating/có key rate:<slug>:<uid>', [...kv.m.keys()].filter((k) => k.startsWith('rate:')).length >= 1, true);
+    /* điểm lạ → 400 */
+    eq('rating/6 sao → 400', (await call('POST', '/api/rate', { body: { slug: 'lunar-secret', rating: 6, vid: 'x' } })).status, 400);
+    eq('rating/0.5 sao → 400', (await call('POST', '/api/rate', { body: { slug: 'lunar-secret', rating: 3.5, vid: 'x' } })).status, 400);
+    eq('rating/thiếu slug → 400', (await call('POST', '/api/rate', { body: { rating: 3, vid: 'x' } })).status, 400);
+  }
+
   /* ---------- 9c. BÁO LỖI CHỮ: gửi thẳng tới ban biên tập ---------- */
   {
     /* chưa đặt RESEND_API_KEY → vẫn nhận báo lỗi, chỉ là chưa gửi được email */

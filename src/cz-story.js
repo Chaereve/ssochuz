@@ -233,6 +233,54 @@
     if (!bits.length) return '';
     return '<span title="lượt đọc/bình chọn thật, lưu trên Cloudflare KV">' + ic('eye', 'i-s') + ' ' + bits.join(' · ') + '</span>';
   }
+  /* -- N11: hàng 5 sao cạnh tên/tình trạng/số chương trong shero --------------
+     Mỗi người 1 điểm, bấm lại để SỬA — điểm ghi lên KV `rate:` (tách khỏi vote
+     cũ). Chưa nối Worker thì hiển thị dạng đọc, không bấm được. */
+  function ratingTag() {
+    var st = CZ.statsOf(N) || {};
+    var avg = Number(st.rating) || 0;
+    var n = Number(st.ratingCount) || 0;
+    var frac = Math.round(avg) || 0;      /* số sao vàng hiển thị theo trung bình làm tròn */
+    var press = !!CZ.API;
+    var txt = avg ? (avg.toFixed(1).replace('.', ',') + ' / 5</b> · ' + num(n) + ' lượt') : 'chưa có</b>';
+    var lead = press ? '<span class="rl">Đánh giá: <b>' + txt + '</span>' : '<span class="rl">Đánh giá sao cần nối Worker</span>';
+    return '<div class="rating' + (press ? '' : ' ro') + '" aria-label="Đánh giá sao bộ truyện" role="group">' +
+      lead +
+      '<div class="stars' + (press ? ' act' : '') + '">' + [1, 2, 3, 4, 5].map(function (s) {
+        return '<button' + (press ? '' : ' disabled') + ' type="button" data-star="' + s + '" aria-label="' + s + ' sao"' +
+          ' class="st' + (s <= frac ? ' on' : '') + '" title="' + (press ? (s + ' sao') : '') + '"></button>';
+      }).join('') + '</div></div>';
+  }
+  function bindRating() {
+    var starsEls = $$('#shero .stars.act [data-star]');
+    if (!starsEls.length) return;
+    function paint(rl, starsAct, count, avg) {
+      starsEls.forEach(function (b) {
+        b.classList.toggle('on', parseInt(b.getAttribute('data-star'), 10) <= starsAct);
+      });
+      if (rl) rl.innerHTML = count
+        ? 'Đánh giá: <b>' + avg.toFixed(1).replace('.', ',') + ' / 5</b> · ' + num(count) + ' lượt'
+        : 'Đánh giá: <b>chưa có</b>';
+    }
+    starsEls.forEach(function (st) {
+      st.addEventListener('click', function () {
+        var stars = parseInt(this.getAttribute('data-star'), 10);
+        if (!(stars >= 1 && stars <= 5)) return;
+        var rl = document.querySelector('#shero .rl');
+        paint(rl, stars, 1, stars);           /* phản hồi tức thì trên 1 lượt */
+        CZ.rate(N.slug, stars).then(function (r) {
+          if (r && r.ok) {
+            paint(rl, Math.round(Number(r.ratingAvg) || stars) || stars, Math.max(1, Number(r.ratingCount) || 1), Number(r.ratingAvg) || stars);
+            CZ.toast('Đã đánh giá ' + stars + '/5 cho “' + N.title + '”');
+          } else {
+            var back = CZ.statsOf(N) || {};
+            paint(rl, Math.round(Number(back.rating) || 0) || 0, Number(back.ratingCount) || 0, Number(back.rating) || 0);
+            CZ.toast('Chưa gửi được điểm — thử lại sau ít giây');
+          }
+        });
+      });
+    });
+  }
   function renderStory() {
     var n = N, ch = CZ.progress(n);
     var im = n.thumb || n.slide || '';
@@ -257,6 +305,7 @@
             '<span>' + ic('refresh', 'i-s') + ' ' + esc(CZ.timeAgo(n.updated)) + '</span>' +
             statChip() +
           '</div>' +
+          ratingTag() +
           '<div class="synwrap' + (syn.length > 200 ? ' clamp' : '') + '" id="synWrap">' +
             '<div class="synin" id="synIn">' +
               paras.map(function (x, i) {
@@ -331,6 +380,7 @@
       });
     });
     $('#shareBtn').addEventListener('click', function () { CZ.copy(location.origin + CZ.storyURL(n.slug), 'Đã copy link bộ truyện'); });
+    bindRating();
     renderInfo();
     var ct = $('#tabChapCt');
     if (ct) ct.textContent = n.canRead ? n.chapters : '';

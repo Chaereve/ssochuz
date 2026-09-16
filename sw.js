@@ -12,7 +12,7 @@
    ⚠ MỖI LẦN ĐỔI ?v= TĨNH (cz.css/cz-*.js): sửa cả PRECACHE dưới đây + tăng
    CZ_SW_VER → trình duyệt tự tải SW mới, hiện “Đã có bản cập nhật — tải lại”.
    ========================================================================== */
-var CZ_SW_VER = '20260917o';
+var CZ_SW_VER = '20260917q';
 
 /* kho shell theo version (update là thay kho mới, xoá kho cũ);
    kho trang/API/ảnh KHÔNG theo version để dữ liệu offline còn lại sau update */
@@ -36,10 +36,10 @@ var PRECACHE = [
   '/tac-gia/',
   '/couple/',
   '/manifest.webmanifest',
-  '/cz.css?v=20260917e',
-  '/cz-app.js?v=20260917n',
+  '/cz.css?v=20260917f',
+  '/cz-app.js?v=20260917p',
   '/cz-home.js?v=20260917l',
-  '/cz-story.js?v=20260917n',
+  '/cz-story.js?v=20260917p',
   '/cz-people.js?v=20260917j',
   '/cz-config.js?v=20260917h',
   '/cz-auth.js?v=20260915j',
@@ -52,7 +52,7 @@ function isApiRead(path) {
     path === '/api/book' || path.indexOf('/api/book/') === 0 || path.indexOf('/api/book?') === 0;
 }
 function isApiWrite(path) {
-  return path === '/api/view' || path === '/api/vote' || path === '/api/report' ||
+  return path === '/api/view' || path === '/api/vote' || path === '/api/rate' || path === '/api/report' ||
     path.indexOf('/api/comments') === 0 || path === '/api/book' || path.indexOf('/api/book/') === 0 ||
     path === '/api/registry' || path === '/api/stats' || path === '/api/schedule' ||
     path.indexOf('/api/stats/') === 0 || path.indexOf('/api/admin/') === 0 || path.indexOf('/api/auth/') === 0 ||
