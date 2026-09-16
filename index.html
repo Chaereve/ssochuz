@@ -15,7 +15,7 @@
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://ssochuz.pages.dev/ssochuz.png">
   <!-- N13: bỏ preconnect Firestore — không còn đọc thẳng Firestore từ máy khách -->
-<link rel="stylesheet" href="/cz.css?v=20260917g">
+<link rel="stylesheet" href="/cz.css?v=20260918g">
 <script>/* chống nháy nền: áp tông màu đã lưu trước khi vẽ */try{var t=localStorage.getItem('ssochuz-theme')||localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
 <body class="hpage">
@@ -43,26 +43,6 @@
   <section class="facts" aria-label="Số liệu thư viện"><div class="in" id="facts"></div></section>
 
   <div class="wrap">
-    <!-- ================= BÀN ĐỌC (đang đọc dở · tủ truyện) ================= -->
-    <section class="sec" id="ban-doc" hidden>
-      <div class="sechead">
-        <h2>My Space</h2>
-        <span class="right">
-          <span class="tabs sm" id="banTabs" role="tablist">
-            <button class="tab on" data-ban="doc" role="tab">Đang đọc dở<span class="ct" id="banDocCount"></span></button>
-            <button class="tab" data-ban="shelf" role="tab">Tủ truyện<span class="ct" id="banShelfCount"></span></button>
-          </span>
-          <button class="btn ghost sm" id="banClear">Xoá</button>
-        </span>
-      </div>
-      <!-- ô tài khoản: mời đăng nhập khi chưa đăng nhập, chào + thống kê khi đã đăng nhập -->
-      <div class="authcard" id="banAuth" hidden></div>
-      <!-- N10: thống kê đọc cá nhân (tuần · chuỗi ngày · tổng chương, chỉ lưu trong máy) -->
-      <div class="mystats-wrap" id="myStats"></div>
-      <div class="contcols" id="contRow"></div>
-      <div class="contcols hide" id="shelfRow"></div>
-    </section>
-
     <!-- ================= MỚI CẬP NHẬT ================= -->
     <section class="sec fade" id="moi-cap-nhat">
       <div class="sechead">
@@ -75,10 +55,21 @@
     <!-- ================= XẾP HẠNG ================= -->
     <section class="sec fade" id="bxh">
       <div class="sechead">
-        <h2>Bình chọn nhiều nhất</h2>
-        <span class="right"><span class="tabs sm" id="rankTabs" role="tablist"></span></span>
+        <h2>Ranking</h2>
+        <div class="tabs sm ranking-modes" id="rankModes" role="group" aria-label="Hạng mục Ranking">
+          <button class="on" data-mode="views" aria-pressed="true">Top View</button>
+          <button data-mode="votes" aria-pressed="false">Top Vote</button>
+        </div>
       </div>
-      <div id="rank"></div>
+      <div class="ranking-toolbar">
+        <h3 id="rankSummary">Top View · Tuần</h3>
+        <div class="tabs sm" id="rankTabs" role="group" aria-label="Khoảng thời gian"></div>
+      </div>
+      <div id="rank" aria-live="polite" aria-atomic="true"></div>
+      <section class="worth-section" aria-labelledby="worthTitle">
+        <div class="sechead"><h3 id="worthTitle">Đáng xem</h3></div>
+        <div class="rail" id="worthRail"></div>
+      </section>
     </section>
 
     <!-- ============ GÓC BIÊN TẬP VIÊN · “ssochuz’s choices” ============ -->
@@ -143,8 +134,8 @@
 <button id="toTop" aria-label="Lên đầu trang" title="Lên đầu trang"></button>
 
 <script src="/cz-config.js?v=20260917h"></script>
-<script src="/cz-app.js?v=20260917r"></script>
-<script src="/cz-auth.js?v=20260915j"></script>
-<script src="/cz-home.js?v=20260917m"></script>
+<script src="/cz-app.js?v=20260918e"></script>
+<script src="/cz-auth.js?v=20260918e"></script>
+<script src="/cz-home.js?v=20260918e"></script>
 </body>
 </html>

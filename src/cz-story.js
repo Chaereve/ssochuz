@@ -215,7 +215,7 @@
   }
 
   /* ======================= 3. TRANG TRUYỆN ============================== */
-  /* Ba khối: Giới thiệu · Danh sách chương · Đánh giá.
+  /* Ba khối: Thông tin · Danh sách chương · Đánh giá.
      Gạch chân trượt sang tab đang mở; nội dung hiện lên bằng fade + trượt nhẹ. */
   var TAB = { cur: 'chap', loaded: {} };
   function tabPane(k) { return k === 'info' ? $('#pane-info') : k === 'cmt' ? $('#pane-cmt') : $('#chapSec'); }
@@ -279,54 +279,70 @@
     if (!bits.length) return '';
     return '<span title="lượt đọc/bình chọn thật, lưu trên Cloudflare KV">' + ic('eye', 'i-s') + ' ' + bits.join(' · ') + '</span>';
   }
-  /* -- N11: hàng 5 sao cạnh tên/tình trạng/số chương trong shero --------------
-     Mỗi người 1 điểm, bấm lại để SỬA — điểm ghi lên KV `rate:` (tách khỏi vote
-     cũ). Chưa nối Worker thì hiển thị dạng đọc, không bấm được. */
+  /* Editable rating with an adjacent value, matching the requested Rating API.
+     Keep the native JS stack and persist changes through the existing Worker. */
+  var myStars = 0, ratingBusy = false, ratingKey = '', ratingSeq = 0;
   function ratingTag() {
-    var st = CZ.statsOf(N) || {};
-    var avg = Number(st.rating) || 0;
-    var n = Number(st.ratingCount) || 0;
-    var frac = Math.round(avg) || 0;      /* số sao vàng hiển thị theo trung bình làm tròn */
-    var press = !!CZ.API;
-    var txt = avg ? (avg.toFixed(1).replace('.', ',') + ' / 5</b> · ' + num(n) + ' lượt') : 'chưa có</b>';
-    var lead = press ? '<span class="rl">Đánh giá: <b>' + txt + '</span>' : '<span class="rl">Đánh giá sao cần nối Worker</span>';
-    return '<div class="rating' + (press ? '' : ' ro') + '" aria-label="Đánh giá sao bộ truyện" role="group">' +
-      lead +
-      '<div class="stars' + (press ? ' act' : '') + '">' + [1, 2, 3, 4, 5].map(function (s) {
-        return '<button' + (press ? '' : ' disabled') + ' type="button" data-star="' + s + '" aria-label="' + s + ' sao"' +
-          ' class="st' + (s <= frac ? ' on' : '') + '" title="' + (press ? (s + ' sao') : '') + '"></button>';
-      }).join('') + '</div></div>';
+    var st = CZ.statsOf(N) || {}, avg = Number(st.rating) || 0, count = Number(st.ratingCount) || 0;
+    return '<div class="rating editable-rating" aria-label="Đánh giá truyện">' +
+      '<div class="rating-main"><span class="rl">Đánh giá: <b>' + (count ? avg.toFixed(1).replace('.', ',') + ' / 5' : 'chưa có') + '</b>' + (count ? ' · ' + num(count) + ' lượt' : '') + '</span>' +
+      '<div class="rating-control"><div class="stars act" role="radiogroup" aria-label="Số sao của bạn">' + [1,2,3,4,5].map(function(s){
+        return '<button type="button" role="radio" aria-checked="' + (s === myStars) + '" aria-label="' + s + ' sao" tabindex="' + (s === (myStars || 1) ? '0' : '-1') + '" data-star="' + s + '" class="st' + (s <= myStars ? ' on' : '') + '"' + (!CZ.API || ratingBusy ? ' disabled' : '') + '><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21 7 14.2 2 9.3l6.9-1Z"/></svg></button>';
+      }).join('') + '</div><span class="rating-value" id="ratingValue" aria-label="Đánh giá của bạn"><b>' + myStars + '</b><span> / 5</span></span></div><button class="rating-remove" type="button" id="removeRating"' + (!myStars ? ' hidden' : '') + (ratingBusy || !CZ.API ? ' disabled' : '') + '>Rút đánh giá</button></div><span class="rating-own" id="ratingOwn" role="status">' + (myStars ? 'Bạn đã chọn ' + myStars + '/5 sao.' : 'Chọn số sao để đánh giá truyện.') + '</span></div>';
+  }
+  function repaintRating(message) {
+    var old = $('#shero .rating'); if (!old) return;
+    // Update in place: replacing the SVGs restarted every transition and lost focus.
+    var st = CZ.statsOf(N) || {}, avg = Number(st.rating) || 0, count = Number(st.ratingCount) || 0;
+    old.querySelector('.rl').innerHTML = 'Đánh giá: <b>' + (count ? avg.toFixed(1).replace('.', ',') + ' / 5' : 'chưa có') + '</b>' + (count ? ' · ' + num(count) + ' lượt' : '');
+    old.querySelector('.stars').setAttribute('aria-busy', String(ratingBusy));
+    old.querySelector('#ratingValue b').textContent = String(myStars);
+    old.querySelectorAll('[data-star]').forEach(function (button) {
+      var value = Number(button.dataset.star);
+      button.classList.toggle('on', value <= myStars);
+      button.setAttribute('aria-checked', String(value === myStars));
+      button.tabIndex = value === (myStars || 1) ? 0 : -1;
+      button.disabled = !CZ.API || ratingBusy;
+    });
+    var remove = old.querySelector('#removeRating');
+    remove.hidden = !myStars; remove.disabled = !CZ.API || ratingBusy;
+    old.querySelector('#ratingOwn').textContent = message || (myStars ? 'Bạn đã chọn ' + myStars + '/5 sao.' : 'Chọn số sao để đánh giá truyện.');
+  }
+  function loadMyRating(force) {
+    var u = window.CZ_AUTH && CZ_AUTH.current(), key = (u ? u.uid : 'guest') + ':' + SLUG;
+    if (!N || !CZ.API || (!force && key === ratingKey)) return;
+    ratingKey = key; myStars = 0; var seq = ++ratingSeq;
+    repaintRating();
+    CZ.myRating(SLUG).then(function(r){if(seq !== ratingSeq)return;myStars = r && r.ok ? Number(r.rating) || 0 : 0;repaintRating(r && r.ok ? '' : 'Chưa tải được đánh giá cá nhân. Bạn vẫn có thể chọn số sao.');});
   }
   function bindRating() {
-    var starsEls = $$('#shero .stars.act [data-star]');
-    if (!starsEls.length) return;
-    function paint(rl, starsAct, count, avg) {
-      starsEls.forEach(function (b) {
-        b.classList.toggle('on', parseInt(b.getAttribute('data-star'), 10) <= starsAct);
-      });
-      if (rl) rl.innerHTML = count
-        ? 'Đánh giá: <b>' + avg.toFixed(1).replace('.', ',') + ' / 5</b> · ' + num(count) + ' lượt'
-        : 'Đánh giá: <b>chưa có</b>';
+    var buttons = $$('#shero [data-star]');
+    async function submit(value) {
+      if (ratingBusy || !CZ.API) return;
+      var old = myStars, seq = ++ratingSeq; ratingBusy = true;
+      repaintRating('Đang lưu đánh giá…');
+      var result = await CZ.rate(SLUG,value);
+      ratingBusy = false;
+      if (seq !== ratingSeq) { repaintRating(); return; }
+      myStars = result && result.ok ? value : old;
+      repaintRating(result && result.ok ? (value ? 'Đã lưu ' + value + '/5 sao.' : 'Đã rút đánh giá của bạn.') : 'Chưa lưu được. Đánh giá cũ được giữ nguyên, vui lòng thử lại.');
+      if (result && result.ok) CZ.toast(value ? 'Đã đánh giá ' + value + ' trên 5 sao' : 'Đã rút đánh giá', 'ok');
+      var focus = value ? $('#shero [data-star="'+value+'"]') : $('#shero [data-star="1"]');
+      if (focus) focus.focus({preventScroll:true});
     }
-    starsEls.forEach(function (st) {
-      st.addEventListener('click', function () {
-        var stars = parseInt(this.getAttribute('data-star'), 10);
-        if (!(stars >= 1 && stars <= 5)) return;
-        var rl = document.querySelector('#shero .rl');
-        paint(rl, stars, 1, stars);           /* phản hồi tức thì trên 1 lượt */
-        CZ.rate(N.slug, stars).then(function (r) {
-          if (r && r.ok) {
-            paint(rl, Math.round(Number(r.ratingAvg) || stars) || stars, Math.max(1, Number(r.ratingCount) || 1), Number(r.ratingAvg) || stars);
-            CZ.toast('Đã đánh giá ' + stars + '/5 cho “' + N.title + '”');
-          } else {
-            var back = CZ.statsOf(N) || {};
-            paint(rl, Math.round(Number(back.rating) || 0) || 0, Number(back.ratingCount) || 0, Number(back.rating) || 0);
-            CZ.toast('Chưa gửi được điểm — thử lại sau ít giây');
-          }
-        });
-      });
+    buttons.forEach(function(b){
+      b.onclick=function(){submit(Number(b.dataset.star));};
+      b.onkeydown=function(e){
+        var n=Number(b.dataset.star), next;
+        if(e.key==='ArrowRight'||e.key==='ArrowUp')next=n===5?1:n+1;
+        if(e.key==='ArrowLeft'||e.key==='ArrowDown')next=n===1?5:n-1;
+        if(e.key==='Home')next=1;if(e.key==='End')next=5;
+        if(next){e.preventDefault();submit(next);}
+      };
     });
+    var remove=$('#removeRating');if(remove)remove.onclick=function(){submit(0);};
   }
+  var synopsisOpen = false;
   function renderStory() {
     var n = N, ch = CZ.progress(n);
     var im = n.thumb || n.slide || '';
@@ -352,14 +368,14 @@
             statChip() +
           '</div>' +
           ratingTag() +
-          '<div class="synwrap' + (syn.length > 200 ? ' clamp' : '') + '" id="synWrap">' +
+          '<div class="synwrap' + (syn ? ' clamp' : '') + (synopsisOpen ? ' open' : '') + '" id="synWrap">' +
             '<div class="synin" id="synIn">' +
               paras.map(function (x, i) {
                 return '<p class="syn"' + (i ? '' : ' id="synBox"') + '>' + esc(x) + '</p>';
               }).join('') +
             '</div></div>' +
-          (syn.length > 200
-            ? '<button class="synbtn" id="synToggle" type="button">Đọc giới thiệu đầy đủ' + ic('right', 'i-s') + '</button>'
+          (syn
+            ? '<button class="synbtn" id="synToggle" type="button" aria-controls="synIn" aria-expanded="' + synopsisOpen + '"><span class="syn-label">' + (synopsisOpen ? 'Thu gọn' : 'Đọc giới thiệu đầy đủ') + '</span>' + ic('right', 'i-s') + '</button>'
             : '') +
           '<div class="btn-row">' + readBtn(n, ch) +
             (n.canRead && ch && ch < n.chapters ? '<a class="btn ghost lg" href="' + chapterPath(n.chapters) + '">' + ic('up', 'i-s') + 'Chương mới nhất</a>' : '') +
@@ -371,7 +387,7 @@
               '<span>' + (CZ.inShelf(n) ? 'Đã lưu' : 'Tủ truyện') + '</span></button>' +
             '<button class="btn ghost" id="shareBtn">' + ic('share', 'i-s') + 'Chia sẻ</button>' +
             /* RSS riêng bộ này — feed reader theo dõi được từng truyện */
-            (CZ.API ? '<a class="btn ghost" href="' + esc(CZ.API + '/feed.xml?slug=' + encodeURIComponent(n.slug)) + '" target="_blank" rel="noopener" title="RSS riêng bộ này (dùng cho Feedly, Inoreader…)">' + ic('rss', 'i-s') + 'RSS</a>' : '') +
+            (CZ.API && SLUG.indexOf('private-') !== 0 ? '<a class="btn ghost" href="' + esc(CZ.API + '/feed.xml?slug=' + encodeURIComponent(n.slug)) + '" target="_blank" rel="noopener" title="RSS riêng bộ này (dùng cho Feedly, Inoreader…)">' + ic('rss', 'i-s') + 'RSS</a>' : '') +
           '</div>' +
           (ch && n.chapters ? '<div class="prog"><div class="lbl"><span>Tiến độ đọc của bạn</span>' +
             '<span>còn ' + Math.max(0, n.chapters - ch) + ' chương · ' + progressPct(n, ch) + '%</span></div>' +
@@ -382,23 +398,14 @@
     var cw = $('#shero .cover'), cim = cw ? cw.querySelector('img') : null;
     if (cim) cim.addEventListener('error', function () { if (cw && cw.isConnected) cw.classList.add('noimg'); });
     if (cw && (!cim || (cim.complete && !cim.naturalWidth))) cw.classList.add('noimg');
-    /* Đầu trang chỉ HÉ 5 DÒNG làm tóm tắt; bản đầy đủ nằm DUY NHẤT trong tab
-       “Giới thiệu” — nút dưới đây nhảy sang tab đó (bản cũ bung full ngay tại
-       chỗ nên tóm tắt bị lặp hai lần trên cùng một trang). */
-    var sw = $('#synWrap'), si = $('#synIn'), tg = $('#synToggle');
-    /* đo thật chứ không đoán theo số ký tự: lọt trọn trong phần hé ra thì bỏ kẹp
-       và bỏ luôn nút, để màn hình rộng không bị thừa một nút vô nghĩa */
-    if (sw && si && si.scrollHeight <= si.clientHeight + 4) {
-      sw.classList.remove('clamp');
-      if (tg && tg.parentNode) tg.parentNode.removeChild(tg);
-      tg = null;
-    }
+    // Keep the control available: measuring before fonts/layout settle used to
+    // delete it permanently. Preserve expansion when votes/stats repaint hero.
+    var sw = $('#synWrap'), tg = $('#synToggle');
     if (tg) tg.addEventListener('click', function () {
-      /* Cho phép đọc ngay tại chỗ: không bắt người đọc đổi tab và mất vị trí. */
-      var open = !sw.classList.contains('open');
-      sw.classList.toggle('open', open);
-      tg.setAttribute('aria-expanded', open ? 'true' : 'false');
-      tg.lastChild && (tg.lastChild.nodeValue = open ? 'Thu gọn' : 'Đọc giới thiệu đầy đủ');
+      synopsisOpen = !synopsisOpen;
+      sw.classList.toggle('open', synopsisOpen);
+      tg.setAttribute('aria-expanded', String(synopsisOpen));
+      tg.querySelector('.syn-label').textContent = synopsisOpen ? 'Thu gọn' : 'Đọc giới thiệu đầy đủ';
     });
     var sh = $('#shelfBtn');
     if (sh) sh.addEventListener('click', function () {
@@ -469,19 +476,9 @@
     if (CZ.markFollowSeen) CZ.markFollowSeen(n);
   }
 
-  /* khối “Giới thiệu”: mô tả đầy đủ + bảng thông tin đọc được, không lặp lại phần đầu trang */
+  /* Tab Thông tin chỉ chứa metadata; tóm tắt nằm ở đầu trang. */
   function renderInfo() {
     var n = N, ch = CZ.progress(n), st = CZ.statsOf(n);
-    var full = String(n.synFull || n.syn || '').trim();
-    var box = $('#synFull');
-    if (box) {
-      box.className = 'synfull';
-      /* đủ chữ, mỗi đoạn một thẻ <p> — bản này không kẹp, ai vào tab Giới thiệu
-         là muốn đọc trọn */
-      box.innerHTML = (full ? full.split(/\n+/) : ['Bộ này chưa có mô tả.'])
-        .map(function (x) { return x.trim(); }).filter(Boolean)
-        .map(function (x) { return '<p>' + esc(x) + '</p>'; }).join('');
-    }
     var rows = [
       ['Tác giả', n.author || '—'],
       ['Couple', n.couple || '—'],
@@ -1574,7 +1571,24 @@
     if (!SLUG) { showError('Không rõ truyện nào', '<p class="muted">Đường dẫn thiếu tên truyện. Chọn một bộ trong thư viện để bắt đầu đọc.</p>'); return; }
     var meta = CZ.findLib(SLUG);
     if (reg && (!CZ._memo.reg)) CZ._memo.reg = reg;
-    CZ.book(SLUG).then(function (bk) {
+    (window.czPrivateBook ? Promise.resolve(window.czPrivateBook) : CZ.book(SLUG)).then(function (bk) {
+      if (bk && bk.locked) {
+        showError('Truyện riêng tư', '<p>Nội dung chỉ được tải sau khi xác minh mật khẩu. Không hỗ trợ đọc ngoại tuyến.</p><form id="unlockBook"><label for="bookPassword">Mật khẩu truyện</label><input class="inp" id="bookPassword" type="password" autocomplete="off" required maxlength="256"><button class="btn pri" type="submit">Mở truyện</button><p id="unlockMessage" role="status"></p></form>');
+        $('#unlockBook').onsubmit = async function (event) {
+          event.preventDefault();
+          var button = this.querySelector('button'); button.disabled = true;
+          try {
+            if (!CZ.API) throw new Error('Chưa kết nối kho riêng tư.');
+            var response = await fetch(CZ.API + '/api/private/' + encodeURIComponent(SLUG), { method: 'POST', cache: 'no-store', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ password: $('#bookPassword').value }) });
+            $('#bookPassword').value = '';
+            var data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Không mở được truyện.');
+            ['chapSec', 'relSec', 'pane-cmt', 'pane-info', 'storyTabs', 'rd'].forEach(function (id) { $('#' + id).style.display = ''; });
+            window.czPrivateBook = data; boot(reg); window.czPrivateBook = null;
+          } catch (error) { $('#unlockMessage').textContent = error.message; button.disabled = false; }
+        };
+        return;
+      }
       if (!bk || !bk.chapters) {
         if (meta) {
           N = meta;
@@ -1612,7 +1626,7 @@
         /* mô tả ĐẦY ĐỦ nằm trong tệp chương (data/book/<slug>.json) để registry —
            thứ mọi trang phải tải — khỏi phình gấp 2,6 lần. Bản sửa trong trang
            quản trị nằm ở registry nên được ưu tiên. */
-        synFull: (meta && meta.synFull) || bk.synFull || (meta && meta.syn) || '',
+        synFull: String((meta && meta.synFull) || '').trim() || String(bk.synFull || '').trim() || String(bk.syn || '').trim() || (meta && meta.syn) || '',
         chapters: CHS.length, countLabel: labelNow, planned: planned
       }));
       N.url = CZ.storyURL(SLUG);
@@ -1631,7 +1645,7 @@
       }
       if (cn) { try { cn.setAttribute('href', location.origin + storyPath()); } catch (e) {} }
       /* feed reader tự phát hiện được RSS riêng bộ này qua thẻ alternate */
-      if (CZ.API) {
+      if (CZ.API && SLUG.indexOf('private-') !== 0) {
         try {
           var rss = document.createElement('link');
           rss.setAttribute('rel', 'alternate');
@@ -1641,8 +1655,8 @@
           document.head.appendChild(rss);
         } catch (e) {}
       }
-      renderStory(); renderChapters(); renderRelated();
-      showTab(/danh-gia|binh-luan/.test(location.hash) ? 'cmt' : (/gioi-thieu/.test(location.hash) ? 'info' : 'chap'));
+      renderStory(); renderChapters(); renderRelated(); loadMyRating(false);
+      showTab(/danh-gia|binh-luan/.test(location.hash) ? 'cmt' : (/gioi-thieu|thong-tin/.test(location.hash) ? 'info' : 'chap'));
       CZ.reveal();
       route(chapterFromHash() ? 'hash' : 'path');
       /* nhắc khi vào bằng link chương cụ thể */
@@ -1653,5 +1667,6 @@
       showError('Lỗi tải truyện', '<p class="muted">' + esc(e && e.message || e) + '</p>', true);
     });
   }
+  if (window.CZ_AUTH) CZ_AUTH.onAuth(function () { loadMyRating(false); });
   CZ.registry().then(function (r) { boot(r.reg); }).catch(function () { boot(null); });
 })();

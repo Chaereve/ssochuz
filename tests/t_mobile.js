@@ -52,7 +52,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     soMuc: mnav.querySelectorAll('a').length,
     nhan: mobileLabels,
     dongBoTen: JSON.stringify(desktopLabels) === JSON.stringify(mobileLabels),
-    mySpace: mobileAllLabels.includes('My Space') && $('#ban-doc h2').textContent.trim() === 'My Space'
+    mySpace: mobileAllLabels.includes('My Space') && !!doc.querySelector('a[href="/my-space"]') && !$('#ban-doc')
   };
   /* bấm lại lần nữa phải đóng được */
   click('#czBurger'); await wait(60);

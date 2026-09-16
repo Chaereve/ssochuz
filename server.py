@@ -31,6 +31,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self.serve_file("guide.html")
         if dec_path == "/admin" or dec_path == "/admin/" or path == "/admin" or path == "/admin/":
             return self.serve_file("admin.html")
+        if dec_path.rstrip('/') in ('/my-space', '/profile'):
+            return self.serve_file(dec_path.strip('/') + '.html')
         # For /data, /css, /js etc, serve as static
         # Remove leading /
         rel = path.lstrip("/")

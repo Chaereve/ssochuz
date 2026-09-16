@@ -77,7 +77,8 @@ function makeApi(log, votes) {
     ten: r.querySelector('.tt b').textContent.trim(),
     so: r.querySelector('.v').textContent.trim()
   }));
-  out.rankCoSoThat = /phiếu/.test(txt(p.doc, '#rank'));
+  out.rankCoSoThat = /lượt đọc/.test(txt(p.doc, '#rank'));
+  p.doc.querySelector('[data-mode="votes"]').click();
   out.khongUocLuong = !/ước lượng/.test(txt(p.doc, '#rank'));
 
   /* đổi tab Tháng → vẫn có số, thứ tự có thể đổi theo phiếu tháng */

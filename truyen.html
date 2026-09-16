@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="/ssochuz.png?v=1">
 <link rel="manifest" href="/manifest.webmanifest">
   <!-- N13: bỏ preconnect Firestore — không còn đọc thẳng Firestore từ máy khách -->
-<link rel="stylesheet" href="/cz.css?v=20260917g">
+<link rel="stylesheet" href="/cz.css?v=20260918g">
 <script>/* chống nháy nền */try{var t=localStorage.getItem('ssochuz-theme')||localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
 <body class="spage">
@@ -26,7 +26,7 @@
   <!-- ba khối nội dung, chuyển bằng thanh tab có gạch chân trượt -->
   <div class="storytabs" id="storyTabs" role="tablist" aria-label="Nội dung truyện">
     <span class="ink" id="stInk" aria-hidden="true"></span>
-    <button class="stab" data-tab="info" role="tab" aria-selected="false">Giới thiệu</button>
+    <button class="stab" data-tab="info" role="tab" aria-selected="false">Thông tin</button>
     <button class="stab on" data-tab="chap" role="tab" aria-selected="true">Danh sách chương<span class="ct" id="tabChapCt"></span></button>
     <button class="stab" data-tab="cmt" role="tab" aria-selected="false">Đánh giá</button>
   </div>
@@ -54,16 +54,8 @@
   </section>
 
   <section class="sec" id="pane-info" hidden>
-    <div class="infogrid">
-      <div>
-        <div class="sechead"><h2 id="synHead">Giới thiệu</h2></div>
-        <div id="synFull"></div>
-      </div>
-      <div>
-        <div class="sechead"><h2>Thông tin</h2></div>
-        <div class="info" id="storyInfo"></div>
-      </div>
-    </div>
+    <div class="sechead"><h2>Thông tin truyện</h2></div>
+    <div class="info" id="storyInfo"></div>
   </section>
 
   <section class="cmts" id="pane-cmt" hidden>
@@ -135,8 +127,8 @@
 <div class="lightbox" id="lightbox"><img alt="Ảnh trong chương"></div>
 
 <script src="/cz-config.js?v=20260917h"></script>
-<script src="/cz-app.js?v=20260917r"></script>
-<script src="/cz-auth.js?v=20260915j"></script>
-<script src="/cz-story.js?v=20260917q"></script>
+<script src="/cz-app.js?v=20260918e"></script>
+<script src="/cz-auth.js?v=20260918e"></script>
+<script src="/cz-story.js?v=20260918g"></script>
 </body>
 </html>

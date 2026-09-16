@@ -12,7 +12,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
-const JS = ['cz-app.js', 'cz-auth.js', 'cz-home.js', 'cz-story.js', 'admin.js'];
+const JS = ['cz-app.js', 'cz-auth.js', 'cz-home.js', 'cz-story.js', 'cz-space.js', 'cz-people.js', 'admin.js'];
 const CSS = ['cz.css'];
 
 async function main() {

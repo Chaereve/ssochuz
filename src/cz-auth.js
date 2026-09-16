@@ -268,101 +268,14 @@
   }
 
   function editProfileDialog() {
-    if (!w.CZ || !w.CZ.modal) return Promise.reject(new Error('Chưa sẵn sàng'));
-    var u = current();
-    if (!u) { toast('Đăng nhập trước đã', 'err'); return Promise.reject(new Error('Chưa đăng nhập')); }
-    var curName = u.name || '';
-    var curPic = u.picture || '';
-    var m = w.CZ.modal('czProfile',
-      '<div class=\"mh\"><h4>Chỉnh sửa hồ sơ</h4></div>' +
-      '<div class=\"mb\">' +
-        '<p class=\"sm muted\">Tên và ảnh đại diện sẽ hiện khi bạn bình luận và ở mục My Space. Ảnh có thể là link https:// hoặc chọn tệp từ máy (sẽ lưu dưới dạng data URL trong máy bạn).</p>' +
-        '<label class=\"fl\" for=\"czPfName\">Tên hiển thị</label>' +
-        '<input class=\"inp\" id=\"czPfName\" maxlength=\"40\" value=\"' + w.CZ.esc(curName) + '\" placeholder=\"Tên của bạn\">' +
-        '<label class=\"fl mt\" for=\"czPfPic\">Avatar URL</label>' +
-        '<input class=\"inp\" id=\"czPfPic\" value=\"' + w.CZ.esc(curPic) + '\" placeholder=\"https://... hoặc để trống\">' +
-        '<div class=\"row mt\"><input type=\"file\" id=\"czPfFile\" accept=\"image/*\" class=\"hide\"><button class=\"btn ghost sm\" id=\"czPfPick\">Chọn ảnh từ máy…</button><button class=\"btn ghost sm\" id=\"czPfCrop\">Cắt / chỉnh ảnh…</button><span class=\"sm muted\" id=\"czPfFileName\"></span></div>' +
-        '<div class=\"row mt\" id=\"czPfPrev\" style=\"align-items:center;gap:12px\">' +
-          (curPic ? '<img src=\"' + w.CZ.esc(curPic) + '\" alt=\"\" style=\"width:48px;height:48px;border-radius:50%;object-fit:cover\">' : '<span class=\"ava\" style=\"width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:var(--surf2)\">' + w.CZ.esc(String(curName||'B')[0].toUpperCase()) + '</span>') +
-          '<span class=\"sm muted\">Xem trước</span></div>' +
-      '</div>' +
-      '<div class=\"mf\"><button class=\"btn ghost\" data-close>Huỷ</button><button class=\"btn pri\" id=\"czPfSave\">Lưu</button></div>');
-    var inpName = m.querySelector('#czPfName');
-    var inpPic = m.querySelector('#czPfPic');
-    var prev = m.querySelector('#czPfPrev');
-    var fileIn = m.querySelector('#czPfFile');
-    var fileName = m.querySelector('#czPfFileName');
-    function paintPrev() {
-      var n = inpName.value.trim() || 'B';
-      var p = inpPic.value.trim();
-      prev.innerHTML = (p ? '<img src="' + w.CZ.esc(p) + '" alt="" style="width:48px;height:48px;border-radius:50%;object-fit:cover">'
-        : '<span class="ava" style="width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:var(--surf2)">' + w.CZ.esc(String(n)[0].toUpperCase()) + '</span>') +
-        '<span><b>' + w.CZ.esc(n) + '</b><br><span class="sm muted">' + w.CZ.esc(u.email || '') + '</span></span>';
-      var image = prev.querySelector('img');
-      if (image) image.addEventListener('error', function () { this.style.display = 'none'; });
-    }
-    inpName.addEventListener('input', paintPrev);
-    inpPic.addEventListener('input', paintPrev);
-    m.querySelector('#czPfPick').addEventListener('click', function () { fileIn.click(); });
-    fileIn.addEventListener('change', function () {
-      var f = fileIn.files && fileIn.files[0];
-      if (!f) return;
-      if (f.size > 8 * 1024 * 1024) { toast('Ảnh quá lớn (>8MB) — chọn ảnh nhỏ hơn', 'err'); return; }
-      var rd = new FileReader();
-      rd.onload = function () {
-        var dataUrl = String(rd.result || '');
-        fileName.textContent = f.name + ' · ' + Math.round(f.size / 1024) + 'KB';
-        /* mở hộp CẮT ẢNH: kéo / thu phóng trước khi dùng (ảnh lưu chỉ ~vài chục KB) */
-        cropDialog(dataUrl).then(function (res) {
-          if (res) { inpPic.value = res; paintPrev(); toast('Đã nạp và cắt ảnh từ máy', 'ok'); }
-        });
-      };
-      rd.onerror = function () { toast('Không đọc được tệp ảnh', 'err'); };
-      rd.readAsDataURL(f);
-    });
-    m.querySelector('#czPfCrop').addEventListener('click', function () {
-      var src = inpPic.value.trim();
-      if (!src) { toast('Chọn ảnh từ máy hoặc dán link ảnh trước đã', 'err'); return; }
-      cropDialog(src).then(function (res) {
-        if (res) { inpPic.value = res; paintPrev(); toast('Đã cắt ảnh', 'ok'); }
-      });
-    });
-    var deferred = {};
-    var promise = new Promise(function (res, rej) { deferred.res = res; deferred.rej = rej; });
-    function closeWith(v) {
-      if (m._close) m._close();
-      deferred.res(v);
-    }
-    m._czClose = function () { deferred.res(null); };
-    /* khi modal đóng bằng nút Huỷ / Esc / scrim thì resolve null */
-    var origClose = m._close;
-    m._close = function () {
-      try { if (origClose) origClose(); } catch (e) {}
-      deferred.res(null);
-    };
-    m.querySelector('#czPfSave').addEventListener('click', function () {
-      var nm = inpName.value.trim();
-      var pc = inpPic.value.trim();
-      if (!nm) { toast('Tên không được trống', 'err'); return; }
-      updateProfile({ name: nm, picture: pc }).then(function (merged) {
-        if (m._close) {
-          /* tạm gỡ resolver để không double-resolve */
-          var r = deferred.res; deferred.res = function () {};
-          try { origClose(); } catch (e) {}
-          r(merged);
-        } else {
-          deferred.res(merged);
-        }
-      }).catch(function (e) { toast(e.message || 'Không lưu được', 'err'); });
-    });
-    setTimeout(function () { if (inpName) inpName.focus(); }, 80);
-    return promise;
+    location.href = '/my-space#edit-profile';
+    return Promise.resolve();
   }
-
-  /* ------------------------------------------------------------------ admin */
-  /* Không so email ở trình duyệt: danh sách quản trị mà nằm trong JS/registry thì
-     ai mở DevTools cũng đọc được. Chỉ tin cờ do Worker trả sau khi đã xác thực
-     chữ ký token; các API ghi dữ liệu vẫn kiểm quyền lại hoàn toàn ở máy chủ. */
+  function applyServerProfile(profile) {
+    if (!user) return;
+    setCustomProfile(user.uid, { name: profile.name, picture: profile.avatar || '', at: Date.now() });
+    save(Object.assign({}, user, { name: profile.name, picture: profile.avatar || '' }), token);
+  }
   function isAdmin() {
     return !!(user && (user.admin === true || user.role === 'admin'));
   }
@@ -706,7 +619,7 @@
     login: login, loginEmail: loginEmail, loginDialog: loginDialog,
     provider: provider, configured: configured, isAdmin: isAdmin,
     applySettings: applySettings, settingsApplied: isSettingsApplied, supabase: function () { return sb; },
-    updateProfile: updateProfile, editProfileDialog: editProfileDialog,
+    applyServerProfile: applyServerProfile, updateProfile: updateProfile, editProfileDialog: editProfileDialog,
     getCustomProfile: getCustomProfile,
     /* giữ tên cũ để các trang/kiểm thử không phải sửa */
     loginGoogle: function () { return login(provider() === 'google' ? 'google' : 'oauth'); },

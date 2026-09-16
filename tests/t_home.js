@@ -95,28 +95,9 @@ const LIB = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data/registry
   out.sched = { rows: $$('#sched .sched').length, src: txt('#schedSrc') };
   out.newRail = { n: $$('#newRail .card').length, sub: txt('#newSub') };
 
-  /* ---------- My Space: đang đọc dở + tủ truyện ---------- */
-  out.banHidden0 = $('#ban-doc').hidden;
-  const a = LIB.find(n => n.chapters > 3), b = LIB.filter(n => n.chapters > 3)[1];
-  LS.setItem('ssochuz-prog-' + a.slug, '2'); LS.setItem('ssochuz-when-' + a.slug, String(Date.now()));
-  LS.setItem('ssochuz-prog-' + b.slug, '3'); LS.setItem('ssochuz-when-' + b.slug, String(Date.now() - 5000));
-  win.dispatchEvent(new win.Event('pageshow'));
-  await wait(200);
-  out.banDoc = {
-    hidden: $('#ban-doc').hidden, rows: $$('#contRow .cont').length,
-    sub: txt('#banSub'), first: txt('#contRow .cont b'), count: txt('#banDocCount'),
-    shelfShown: !$('#shelfRow').classList.contains('hide')
-  };
-  /* chuyển sang tủ truyện */
-  LS.setItem('ssochuz-shelf', JSON.stringify([a.slug]));
-  win.dispatchEvent(new win.Event('pageshow')); await wait(200);
-  out.banShelfCount = txt('#banShelfCount');
-  click($$('#banTabs .tab')[1]); await wait(150);
-  out.banShelf = { rows: $$('#shelfRow .cont').length, title: txt('#shelfRow .cont b'), clearLabel: txt('#banClear') };
-  click($$('#shelfRow [data-rm]')[0]); await wait(200);
-  out.shelfAfterRemove = { rows: $$('#shelfRow .cont').length, ls: LS.getItem('ssochuz-shelf') };
-  click($$('#banTabs .tab')[0]); await wait(150);
-  out.banBackToDoc = !$('#contRow').classList.contains('hide');
+  /* My Space is now a separate page; its history/shelves are covered in t_space.js. */
+  out.spaceSeparate = !$('#ban-doc') && !!doc.querySelector('a[href="/my-space"]');
+  if (!out.spaceSeparate) errors.push('My Space must link to its own page, not render on home');
 
   /* ---------- menu điện thoại: mở/đóng, Esc, bấm ra ngoài, có báo trạng thái ---------- */
   {

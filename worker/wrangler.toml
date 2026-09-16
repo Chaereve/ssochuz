@@ -1,5 +1,5 @@
 name = "chuseoz-cms"
-main = "worker/cms.js"
+main = "cms.js"
 compatibility_date = "2025-01-01"
 
 # Kênh đăng + số liệu xếp hạng: mọi thứ nằm trong KV, sửa là web thấy ngay —
@@ -37,3 +37,19 @@ FIREBASE_PROJECT = "chuseoz-library"
 
 [observability]
 enabled = true
+
+[[durable_objects.bindings]]
+name = "PRIVATE_BOOKS"
+class_name = "PrivateBooks"
+
+[[migrations]]
+tag = "private-books-v1"
+new_sqlite_classes = ["PrivateBooks"]
+
+[[durable_objects.bindings]]
+name = "MEMBER_SPACES"
+class_name = "MemberSpaces"
+
+[[migrations]]
+tag = "member-spaces-v1"
+new_sqlite_classes = ["MemberSpaces"]

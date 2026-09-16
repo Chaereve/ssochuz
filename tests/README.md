@@ -48,3 +48,21 @@ Máy chủ này mô phỏng **đúng 3 hành vi** của Cloudflare Pages: URL s�
 trả **508 kèm đường đi** (`/truyen.html → /truyen → /truyen.html → …`) để biết sửa chỗ nào,
 chứ không để trình duyệt treo "redirected you too many times" như bản thật.
 
+
+### Ranking / tóm tắt (mới)
+
+`node tests/run.js` đã bao gồm `t_ranking.js`, `t_ranking_worker.mjs`, `t_synopsis.js`.
+
+Kiểm tra bố cục bằng Chromium thật (không nằm trong runner jsdom):
+
+1. Chạy `python3 server.py`.
+2. Cài browser Playwright nếu chưa có: `npx playwright install chromium` từ thư mục tests.
+3. Chạy `node tests/t_layout_browser.js` từ gốc repo; có thể đặt `CHROMIUM_EXECUTABLE` để dùng binary riêng.
+
+Bài này dùng dữ liệu giả, không ghi production; kiểm tra 1440/768/390/320 px, 6 lựa chọn Ranking, sao, chiều cao mở/đóng tóm tắt và tràn ngang các trang. Biến `LAYOUT_SCREENSHOTS` tùy chọn chỉ tới thư mục ảnh ngoài repo.
+
+### My Space / profile / rút sao
+
+Runner đã thêm `t_member_spaces.mjs` (Worker và quyền truy cập), `t_space.js` (UI) và `t_rating_withdraw.js`.
+
+Bài Chromium riêng: `CHROMIUM_EXECUTABLE=/path/to/chromium node tests/t_space_browser.js` khi server.py đang chạy. Dùng mock dịch vụ, không ghi production. Có thể dùng `LAYOUT_SCREENSHOTS` trỏ thư mục ngoài repo để chụp bố cục.

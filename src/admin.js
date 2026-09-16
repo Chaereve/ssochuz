@@ -473,11 +473,11 @@
 
   /* ------------------------------ sửa bộ -------------------------------- */
   function show(pane) {
-    ['overview', 'list', 'quick', 'new', 'edit', 'doctor', 'cmts', 'reports', 'stats', 'votes', 'log', 'settings', 'help'].forEach(function (k) {
+    ['private', 'overview', 'list', 'quick', 'new', 'edit', 'doctor', 'cmts', 'reports', 'stats', 'votes', 'log', 'settings', 'help'].forEach(function (k) {
       var el = $('#pane-' + k);
       if (el) el.classList.toggle('hide', k !== pane);
     });
-    $$('#tabs button').forEach(function (b) { b.classList.toggle('on', b.dataset.tab === pane); });
+    $$('#tabs button').forEach(function (b) { b.classList.toggle('on', b.dataset.tab === pane); b.setAttribute('aria-current', b.dataset.tab === pane ? 'page' : 'false'); });
     $('#tabs button[data-tab="edit"]').classList.toggle('hide', !CUR);
     var on = $('#tabs button.on');
     if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'center' });
@@ -2608,4 +2608,21 @@
     paintDraftChip();                    /* có nháp thì hiện nút, không hỏi hộp thoại */
     /* việc nối Worker do boot() ở trên lo — không gọi hai lần */
   })();
+  $('#privateForm').addEventListener('submit', async function (event) {
+    event.preventDefault();
+    var button = this.querySelector('button'); button.disabled = true;
+    var result = $('#privateResult'); result.textContent = 'Đang lưu vào kho riêng tư…';
+    try {
+      var file = $('#privateFile').files[0];
+      if (!file || file.size > 1900000) throw new Error('Chọn tệp JSON dưới 1,9 MB.');
+      var slug = $('#privateSlug').value;
+      if (!/^private-[a-z0-9-]+$/.test(slug)) throw new Error('Mã phải bắt đầu bằng private-.');
+      var book = JSON.parse(await file.text());
+      if (!confirm('Lưu toàn bộ nội dung và thay mật khẩu của ' + slug + '?')) { result.textContent = 'Đã huỷ, chưa thay đổi dữ liệu.'; return; }
+      await api('/api/private/' + slug, { method: 'PUT', body: { password: $('#privatePassword').value, book: book } });
+      $('#privatePassword').value = ''; $('#privateFile').value = '';
+      result.textContent = 'Đã lưu. Đường dẫn gửi người đọc: ' + location.origin + '/truyen.html?slug=' + slug;
+    } catch (error) { result.textContent = error.message; }
+    finally { button.disabled = false; }
+  });
 })();

@@ -12,15 +12,22 @@
 
    Chạy:  npm run build        (cần: npm install — chỉ esbuild)
    ========================================================================== */
-import { readFileSync, writeFileSync, statSync, existsSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync, statSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
+// Reserved private content must never become a public static fallback.
+for (const dir of ['data/book', 'truyen']) {
+  if (existsSync(path.join(ROOT, dir)) && readdirSync(path.join(ROOT, dir)).some(n => n.startsWith('private-'))) {
+    throw new Error('Không được phát hành nội dung private- trong ' + dir);
+  }
+}
+
 /* src → thư mục gốc (đúng đường dẫn mà các trang HTML đang gọi) */
-const JS = ['cz-app.js', 'cz-auth.js', 'cz-home.js', 'cz-story.js', 'cz-people.js', 'admin.js'];
+const JS = ['cz-app.js', 'cz-auth.js', 'cz-home.js', 'cz-story.js', 'cz-people.js', 'cz-space.js', 'admin.js'];
 const CSS = ['cz.css'];
 
 const kb = (n) => (n / 1024).toFixed(1) + ' kB';

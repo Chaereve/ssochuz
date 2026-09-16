@@ -43,16 +43,16 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     'registry +2 chuong phai hien “2 chương mới” (thay: ' + (badge ? badge.textContent : '<thieu>') + ')');
   const posts = log.filter(u => /^POST/.test(u));
   ok(posts.length === 0, 'huy hieu khong duoc phat sinh request (thay POST: ' + posts.join(',') + ')');
-  /* hàng tủ truyện: có huy hiệu, không chuông */
-  LS.setItem('ssochuz-shelf', JSON.stringify([slug]));
-  win.dispatchEvent(new win.Event('pageshow')); await wait(250);
-  const shelfTab = $$('#banTabs .tab').find(b => b.dataset.ban === 'shelf');
-  if (shelfTab) { click(shelfTab); await wait(150); }
-  win.dispatchEvent(new win.Event('pageshow')); await wait(250);
-  ok(!doc.querySelector('#shelfRow [data-followbtn]'), 'hang tu truyen phai BO nut chuong');
-  const sbadge = doc.querySelector('#shelfRow [data-newbadge="' + slug + '"]');
-  ok(sbadge && !sbadge.hasAttribute('hidden') && /chương mới/.test(sbadge.textContent),
-    'tu truyen phai hien huy hieu chuong moi (thay: ' + (sbadge ? sbadge.textContent : '<thieu>') + ')');
+  /* Tủ moved to My Space; the saved-card badge still appears without a bell. */
+  const sp = page('my-space.html', { fetch: dataFetch(), setup(w) {
+    w.localStorage.setItem('ssochuz-shelf', JSON.stringify([slug]));
+    w.localStorage.setItem('ssochuz-follow', JSON.stringify({ [slug]: Math.max(0, ch0 - 2) }));
+  }});
+  await wait(400);
+  ok(!sp.doc.querySelector('#localShelf [data-followbtn]'), 'tu truyen khong co nut chuong');
+  const sbadge = sp.doc.querySelector('#localShelf [data-newbadge="' + slug + '"]');
+  ok(sbadge && !sbadge.hasAttribute('hidden') && /chương mới/.test(sbadge.textContent), 'My Space must retain new chapter badge');
+  sp.dom.window.close();
 
   /* ---------- trang truyện: hero CÓ chuông, đồng bộ với reader ---------- */
   const RS = 'third-person';

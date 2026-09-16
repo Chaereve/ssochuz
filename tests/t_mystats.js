@@ -77,7 +77,7 @@ function makeApi(log) {
   out.sauNext = { total: s2.total, curUrl: st.win.location.pathname };
 
   /* ---------- 3. mystats không phát sinh POST nào ngoài /api/view có sẵn ---------- */
-  out.khongPostMoi = !log.some(u => /POST/.test(u) && !/\/api\/view/.test(u));
+  out.khongPostMoi = !log.some(u => /POST/.test(u) && !/\/api\/(view|rate\/me)/.test(u));
 
   /* ---------- 4. khoá đúng ngày + không ghi trùng ngày hôm sau ---------- */
   const raw = JSON.parse(st.win.localStorage.getItem('ssochuz-mystats') || '{"days":{}}');
@@ -85,7 +85,7 @@ function makeApi(log) {
   out.khoaNgay = { soNgay: days.length, mau: days[0] || '' };
 
   /* ---------- 5. trang chủ My Space hiện khối thống kê ---------- */
-  const home = page('index.html', {
+  const home = page('my-space.html', {
     setup(w) {
       w.localStorage.setItem('ssochuz-mystats', JSON.stringify({
         total: 5,
@@ -103,11 +103,11 @@ function makeApi(log) {
   const panel = $(home.doc, '#myStats');
   out.mySpace = {
     coKhoi: !!panel,
-    tong: panel ? (panel.querySelector('.ms-m b') || {}).textContent : '',
-    soO: panel ? panel.querySelectorAll('.ms-m').length : 0,
-    soCot: panel ? panel.querySelectorAll('svg rect').length : 0,
-    ngayLienTiep: panel ? (panel.querySelectorAll('.ms-m b')[1] || {}).textContent : '',
-    homNay: panel ? (panel.querySelectorAll('.ms-m b')[2] || {}).textContent : ''
+    tong: panel ? (panel.querySelector('.space-stat-grid strong') || {}).textContent : '',
+    soO: panel ? panel.querySelectorAll('.space-stat-grid > div').length : 0,
+    soCot: panel ? panel.querySelectorAll('.space-week i').length : 0,
+    ngayLienTiep: panel ? (panel.querySelectorAll('.space-stat-grid strong')[2] || {}).textContent : '',
+    homNay: panel ? (panel.querySelectorAll('.space-stat-grid strong')[1] || {}).textContent : ''
   };
   out.errors0 = home.errors.slice(0, 5).concat(st.errors.slice(0, 5));
 
@@ -121,7 +121,7 @@ function makeApi(log) {
   eq('thống kê/không POST mới lên Worker', out.khongPostMoi, true);
   eq('thống kê/lưu đúng 1 ngày khoá', out.khoaNgay.soNgay, 1);
   eq('MySpace/có khối thống kê', out.mySpace.coKhoi, true);
-  eq('MySpace/3 con số', out.mySpace.soO, 3);
+  eq('MySpace/4 con số', out.mySpace.soO, 4);
   eq('MySpace/tổng chương = 5', out.mySpace.tong, '5');
   eq('MySpace/chuỗi ngày đọc = 3', out.mySpace.ngayLienTiep, '3');
   eq('MySpace/hôm nay = 1', out.mySpace.homNay, '1');
