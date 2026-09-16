@@ -94,6 +94,8 @@
      kích hoạt sự kiện nên phải gọi enterReader trực tiếp; còn rớt về hash thì
      hashchange sẽ gọi route() → enterReader, khỏi gọi nữa) */
   function openChapterURL(ch) {
+    /* 18+ chưa xác nhận: chặn ngay, KHÔNG đổi URL (khỏi push chương vào lịch sử) */
+    if (isAdult() && !confirmed18()) { modal18(); return; }
     if (navChapterURL(ch)) enterReader(ch);
   }
   var SLUG = slugFromURL();
@@ -108,6 +110,45 @@
   var chState = { q: '', sort: 'old', page: 1, per: 24 };
   var PAGES = [], PI = 0;  /* chế độ phân trang */
 
+  /* ======================= 1b. CHẶN 18+ (N12) ============================
+     Truyện is18 hỏi xác nhận MỘT lần (không vội khi người đọc tắt tab). Xác nhận
+     xong ghi `ssochuz-confirmed18` (có hạn 12 tháng) và mở khoá nội dung. Chưa
+     xác nhận: mọi nút đọc/điều hướng đều chặn lại bằng modal, không nạp nội dung. */
+  var LS18 = 'ssochuz-confirmed18';
+  function confirmed18() {
+    try {
+      var v = parseInt(localStorage.getItem(LS18) || '0', 10);
+      if (!v) return false;
+      return (Date.now() - v) < 365 * 86400000;
+    } catch (e) { return false; }
+  }
+  function confirm18() {
+    try { localStorage.setItem(LS18, String(Date.now())); } catch (e) {}
+  }
+  function reset18() {
+    try { localStorage.removeItem(LS18); } catch (e) {}
+  }
+  function isAdult() { return !!(N && N.is18); }
+  /* bấm Đọc/next… mà chưa xác nhận độ tuổi → chặn, hiện modal */
+  function adultGuard(go) {
+    if (!isAdult() || confirmed18()) return go();
+    modal18(go);
+  }
+  function modal18(after) {
+    CZ.modal('cz18plus', '' +
+      '<div class="mh"><h4>Nội dung dành cho người trưởng thành</h4></div>' +
+      '<div class="mb"><p>“' + esc(String((N && N.title) || 'Truyện này')) + '” có nội dung <b>18+</b> — chỉ dành cho người từ 18 tuổi trở lên.</p>' +
+      '<p>Tôi xác nhận mình đã đủ 18 tuổi và đồng ý xem nội dung này.</p></div>' +
+      '<div class="mf"><button class="btn ghost" data-close>Không — quay lại</button>' +
+      '<button class="btn pri" id="cz18ok">' + ic('check', 'i-s') + 'Tôi đã đủ 18 tuổi</button></div>');
+    var ok = document.getElementById('cz18ok');
+    if (ok) ok.addEventListener('click', function () {
+      confirm18();
+      var m18 = document.getElementById('cz18plus');
+      if (m18 && m18._close) m18._close();
+      if (after) setTimeout(after, 80);   /* đợi hộp thoại đóng rồi mới mở đọc */
+    });
+  }
   /* ======================= 2. DỌN HTML CHƯƠNG ===========================
      Nội dung lấy từ kho chương trên web nên vẫn giữ in đậm/nghiêng/ảnh/link, nhưng bỏ
      mọi thứ nguy hiểm (script, iframe, thuộc tính on*, link javascript:).      */
@@ -219,6 +260,11 @@
   }
   function readBtn(n, ch) {
     if (!n.canRead) return '<button class="btn pri lg off" disabled>' + ic('clock', 'i-s') + 'Chưa có chương — sắp ra mắt</button>';
+    /* truyện 18+ chưa xác nhận: nút thành chốt chặn, không đi thẳng vào chương */
+    if (isAdult() && !confirmed18()) {
+      return '<button class="btn pri lg" id="adultGate" type="button" title="Cần xác nhận độ tuổi để đọc">' +
+        ic('lock', 'i-s') + 'Xác nhận 18+ để đọc</button>';
+    }
     return '<a class="btn pri lg" href="' + chapterPath(ch || 1) + '" title="' +
       (ch > 1 ? 'Mở đúng chỗ bạn đang đọc dở' : 'Bắt đầu từ chương đầu') + '">' + ic('play', 'i-s') +
       (ch > 1 ? 'Đọc tiếp' : 'Đọc từ đầu') + '</a>';
@@ -380,6 +426,28 @@
       });
     });
     $('#shareBtn').addEventListener('click', function () { CZ.copy(location.origin + CZ.storyURL(n.slug), 'Đã copy link bộ truyện'); });
+    /* chốt 18+: nút Đọc thành modal xác nhận, xác nhận xong mở thẳng chương */
+    var ag = $('#adultGate');
+    if (ag) ag.addEventListener('click', function () {
+      adultGuard(function () {
+        renderStory();
+        var want = CZ.progress(n) || 1;
+        enterReader(Math.max(1, Math.min(CHS.length, want)));
+      });
+    });
+    /* nút “Đặt lại” cho phép thiết lập lại xác nhận 18+ (dành cho máy dùng chung) */
+    if (isAdult() && confirmed18()) {
+      var rg = $('#shero .btn-row');
+      if (rg) {
+        var rb = document.createElement('button');
+        rb.className = 'btn ghost sm'; rb.type = 'button'; rb.id = 'reset18';
+        rb.innerHTML = 'Đặt lại xác nhận 18+';
+        rb.addEventListener('click', function () {
+          reset18(); renderStory(); CZ.toast('Đã đặt lại — lần đọc sau sẽ hỏi xác nhận 18+');
+        });
+        rg.appendChild(rb);
+      }
+    }
     bindRating();
     renderInfo();
     var ct = $('#tabChapCt');
@@ -1261,6 +1329,8 @@
   /* ---- vào / ra chế độ đọc --------------------------------------------- */
   function enterReader(ch) {
     if (!CHS.length) return;
+    /* truyện 18+ chưa xác nhận: hộp thoại thay cho việc nạp nội dung */
+    if (isAdult() && !confirmed18()) { modal18(); return; }
     ch = Math.max(1, Math.min(CHS.length, ch || 1));
     var dir = reading && ch !== cur ? (ch > cur ? 1 : -1) : 0;
     cur = ch;

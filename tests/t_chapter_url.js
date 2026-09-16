@@ -37,7 +37,8 @@ function api(p, opt) {
   return undefined;
 }
 const mkpage = (url, log) => page('truyen.html', {
-  url, config: { CZ_API: BASE }, fetch: dataFetch({ apiBase: BASE, api, log: log || [] })
+  url, config: { CZ_API: BASE }, fetch: dataFetch({ apiBase: BASE, api, log: log || [] }),
+  setup(w) { try { w.localStorage.setItem('ssochuz-confirmed18', String(Date.now())); } catch (e) {} }
 });
 /* giả lập khớp luật _redirects của Pages: luật đầu trúng thì thắng */
 function redirectTarget(reqPath) {

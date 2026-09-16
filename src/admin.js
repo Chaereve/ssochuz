@@ -609,7 +609,11 @@
       }
       if (BOOK && (BOOK.slug === oldSlug || !BOOK.slug)) BOOK.slug = newSlug;
       if (REG.slides) {
-        REG.slides.forEach(function (s) { if (s.slug === oldSlug) s.slug = newSlug; });
+        REG.slides = REG.slides.map(function (s) {
+          var sl = slideSlug(s);
+          if (sl !== oldSlug) return s;
+          return (sl && s && typeof s === 'object') ? Object.assign({}, s, { slug: newSlug }) : newSlug;
+        });
       }
       if (REG.editorChoice) {
         REG.editorChoice = REG.editorChoice.map(function (x) { var sl = typeof x === 'string' ? x : (x && x.slug); return sl === oldSlug ? newSlug : sl; });
@@ -708,7 +712,7 @@
     CZ.confirm('Xoá bộ “' + (n ? n.title : slug) + '” khỏi thư viện' + (ONLINE ? ' và trên KV' : ' (chỉ trong bản nháp)') + '?', 'Xoá').then(function (ok) {
       if (!ok) return;
       REG.lib = REG.lib.filter(function (x) { return x.slug !== slug; });
-      REG.slides = (REG.slides || []).filter(function (x) { return x.slug !== slug; });
+      REG.slides = (REG.slides || []).filter(function (x) { return slideSlug(x) !== slug; });
       REG.editorChoice = (REG.editorChoice || []).filter(function (x) { var sl = typeof x === 'string' ? x : (x && x.slug); return sl !== slug; });
       if (REG.settings && REG.settings.editorChoice) REG.settings.editorChoice = (REG.settings.editorChoice || []).filter(function (x) { var sl = typeof x === 'string' ? x : (x && x.slug); return sl !== slug; });
       delete BOOKS[slug];
@@ -725,7 +729,7 @@
     CZ.confirm('Xoá bộ “' + n.title + '” (thiếu slug) khỏi thư viện?', 'Xoá').then(function (ok) {
       if (!ok) return;
       REG.lib.splice(idx,1);
-      if (REG.slides) REG.slides = REG.slides.filter(function (x) { return x !== n && x.slug !== n.slug; });
+      if (REG.slides) REG.slides = REG.slides.filter(function (x) { return x !== n && slideSlug(x) !== n.slug; });
       if (REG.editorChoice) REG.editorChoice = REG.editorChoice.filter(function (x) { var sl = typeof x === 'string' ? x : (x && x.slug); return sl !== n.slug && x !== n; });
       if (REG.settings && REG.settings.editorChoice) REG.settings.editorChoice = REG.settings.editorChoice.filter(function (x) { var sl = typeof x === 'string' ? x : (x && x.slug); return sl !== n.slug && x !== n; });
       delete BOOKS[n.slug];
@@ -795,8 +799,22 @@
 
   /* ------------------------------ cài đặt ------------------------------- */
   /* danh sách truyện đang chọn cho khối hero: đúng thứ tự, có ảnh bìa, sửa được ngay */
+  /* N12: danh sách hero trả về object {slug, reason} — chuỗi cũ vẫn chạy bình thường. */
+  function slideSlug(x) { return typeof x === 'string' ? x : (x && x.slug); }
   function slidePicks() {
-    return (REG.slides || []).map(function (s) { return s.slug; }).filter(Boolean);
+    return (REG.slides || []).map(function (s) {
+      return {
+        slug: slideSlug(s) || '',
+        reason: (s && typeof s === 'object' && s.reason != null) ? String(s.reason) : ''
+      };
+    }).filter(function (s) { return s.slug; });
+  }
+  /* ghi lại danh sách hero: không có nhãn thì để chuỗi slug gọn, có nhãn thì để object */
+  function slideStore(list) {
+    return list.map(function (s) {
+      var reason = String((s && s.reason) || '').trim();
+      return reason ? { slug: s.slug, reason: reason } : s.slug;
+    });
   }
   function editPicks() {
     var raw = REG.editorChoice || (REG.settings && REG.settings.editorChoice) || [];
@@ -807,14 +825,16 @@
     var by = {};
     (REG.lib || []).forEach(function (n) { by[n.slug] = n; });
     $('#slidePick').innerHTML = picks.length
-      ? picks.map(function (slug, i) {
-        var n = by[slug] || {};
-        return '<div class="hprow" data-slug="' + esc(slug) + '">' +
+      ? picks.map(function (s, i) {
+        var n = by[s.slug] || {};
+        return '<div class="hprow" data-slug="' + esc(s.slug) + '">' +
           '<span class="hpno">' + (i + 1) + '</span>' +
           '<span class="hpth' + (n.thumb ? ' skel' : '') + '">' +
             (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async">' : '') + '</span>' +
-          '<span class="hpinfo"><b>' + esc(n.title || slug) + '</b><span>' + esc(n.author || '') +
-            (n.chapters ? ' · ' + num(n.chapters) + ' chương' : '') + '</span></span>' +
+          '<span class="hpinfo"><b>' + esc(n.title || s.slug) + '</b><span>' + esc(n.author || '') +
+            (n.chapters ? ' · ' + num(n.chapters) + ' chương' : '') + '</span>' +
+            '<input class="hpreason" type="text" data-r="' + i + '" value="' + esc(s.reason) + '" maxlength="60" ' +
+            'placeholder="Nhãn slide (mặc định: Nổi bật hôm nay / Đề xuất cho bạn)" aria-label="Nhãn giới thiệu slide ' + (i + 1) + '"></span>' +
           '<span class="hpbtns">' +
             '<button class="mv" data-up="' + i + '" title="Lên một bậc" aria-label="Lên một bậc"' + (i === 0 ? ' disabled' : '') + '>' + ic('up', 'i-s') + '</button>' +
             '<button class="mv" data-down="' + i + '" title="Xuống một bậc" aria-label="Xuống một bậc"' + (i === picks.length - 1 ? ' disabled' : '') + '>' + ic('down', 'i-s') + '</button>' +
@@ -900,27 +920,23 @@
   function hpMove(from, to) {
     var picks = slidePicks();
     if (to < 0 || to >= picks.length) return;
-    var by = {};
-    (REG.lib || []).forEach(function (n) { by[n.slug] = n; });
     var list = picks.slice();
     var item = list.splice(from, 1)[0];
     list.splice(to, 0, item);
-    REG.slides = list.map(function (s) { return by[s]; }).filter(Boolean);
+    REG.slides = slideStore(list);
     dirty.set = true; markDirty(); renderSlides();
   }
   function hpDrop(i) {
-    var picks = slidePicks();
-    var by = {};
-    (REG.lib || []).forEach(function (n) { by[n.slug] = n; });
-    var list = picks.slice(); list.splice(i, 1);
-    REG.slides = list.map(function (s) { return by[s]; }).filter(Boolean);
+    var list = slidePicks();
+    list.splice(i, 1);
+    REG.slides = slideStore(list);
     dirty.set = true; markDirty(); renderSlides(); hpSearch();
   }
   function hpSearch() {
     var box = $('#hpFound'), q = ($('#hpFind').value || '').trim().toLowerCase();
     if (!q) { box.classList.add('hide'); box.innerHTML = ''; return; }
     var picks = slidePicks();
-    var hits = (REG.lib || []).filter(function (n) { return (n.chapters || 0) > 0 && picks.indexOf(n.slug) < 0; })
+    var hits = (REG.lib || []).filter(function (n) { return (n.chapters || 0) > 0 && !picks.some(function (p) { return p.slug === n.slug; }); })
       .filter(function (n) {
         return String(n.title || '').toLowerCase().indexOf(q) >= 0 || String(n.author || '').toLowerCase().indexOf(q) >= 0;
       }).slice(0, 8);
@@ -934,11 +950,12 @@
   }
   function hpAdd(slug) {
     var picks = slidePicks();
-    if (picks.indexOf(slug) >= 0) return;
+    if (picks.some(function (p) { return p.slug === slug; })) return;
     if (picks.length >= 6) return toast('Tối đa 6 bộ cho khối hero', 'err');
     var n = (REG.lib || []).find(function (x) { return x.slug === slug; });
     if (!n) return;
-    REG.slides = picks.concat([slug]).map(function (s) { return s === slug ? n : (REG.lib || []).find(function (x) { return x.slug === s; }); }).filter(Boolean);
+    picks.push({ slug: slug, reason: '' });
+    REG.slides = slideStore(picks);
     dirty.set = true; markDirty();
     $('#hpFind').value = '';
     renderSlides(); hpSearch();
@@ -968,7 +985,8 @@
   }
   function saveSettings() {
     var by = {}; (REG.lib || []).forEach(function (n) { by[n.slug] = n; });
-    REG.slides = slidePicks().slice(0, 6).map(function (s) { return by[s]; }).filter(Boolean);
+    /* N12: giữ cả nhãn `reason`; chỉ giữ bộ còn tồn tại trong thư viện */
+    REG.slides = slideStore(slidePicks().slice(0, 6).filter(function (s) { return by[s.slug]; }));
     var ePicks = editPicks();
     REG.editorChoice = ePicks;
     var items = $('#sSched').value.split('\n').map(function (l) { return l.trim(); }).filter(Boolean).map(function (l) {
@@ -2344,6 +2362,18 @@
     if (b.dataset.up !== undefined) hpMove(i, i - 1);
     else if (b.dataset.down !== undefined) hpMove(i, i + 1);
     else hpDrop(i);
+  });
+  /* N12: gõ nhãn giới thiệu từng slide (mất focus là nhớ vào REG + báo chưa lưu) */
+  $('#slidePick').addEventListener('input', function (e) {
+    var inp = e.target && e.target.closest && e.target.closest('input.hpreason');
+    if (!inp) return;
+    var i = parseInt(inp.dataset.r, 10);
+    if (isNaN(i)) return;
+    var list = slidePicks();
+    if (!list[i]) return;
+    list[i].reason = inp.value;
+    REG.slides = slideStore(list);
+    dirty.set = true; markDirty();
   });
   $('#hpFind').addEventListener('input', hpSearch);
   $('#hpFound').addEventListener('click', function (e) {

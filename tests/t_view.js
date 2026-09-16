@@ -39,7 +39,8 @@ function api(p, opt) {
   const log = [];
   const a = page('truyen.html', {
     url: 'https://ssochuz.pages.dev/truyen/' + SLUG + '/',
-    config: { CZ_API: BASE }, fetch: dataFetch({ apiBase: BASE, api, log })
+    config: { CZ_API: BASE }, fetch: dataFetch({ apiBase: BASE, api, log }),
+    setup(w) { try { w.localStorage.setItem('ssochuz-confirmed18', String(Date.now())); } catch (e) {} }
   });
   await wait(1500);
   a.win.location.hash = '#chuong-1'; await wait(600);
@@ -62,6 +63,7 @@ function api(p, opt) {
     config: { CZ_API: BASE }, fetch: dataFetch({ apiBase: BASE, api, log: logB }),
     setup(w) {
       try { w.localStorage.setItem('ssochuz-viewed-' + SLUG + '-' + new Date().toISOString().slice(0, 10), '1'); } catch (e) {}
+      try { w.localStorage.setItem('ssochuz-confirmed18', String(Date.now())); } catch (e) {}
     }
   });
   await wait(1500);

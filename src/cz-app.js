@@ -2341,9 +2341,15 @@
     reg = reg || memo.reg || {};
     var by = {};
     (reg.lib || []).forEach(function (n) { by[n.slug] = n; });
-    /* registry chỉ giữ danh sách slug của khối hero — khỏi nhân đôi dữ liệu bộ truyện */
-    var s = (reg.slides || []).map(function (x) { return by[typeof x === 'string' ? x : (x && x.slug)]; })
-      .filter(Boolean).map(norm);
+    /* registry chỉ giữ danh sách slug của khối hero — khỏi nhân đôi dữ liệu bộ truyện.
+       N12: slide có thể kèm `reason` (lý do giới thiệu của ban biên tập); nhãn mặc định
+       vẫn theo vị trí (slide đầu = “Nổi bật hôm nay”, các slide sau = “Đề xuất cho bạn”). */
+    var s = (reg.slides || []).map(function (x) {
+      var n = by[typeof x === 'string' ? x : (x && x.slug)];
+      if (!n) return null;
+      if (x && typeof x === 'object' && !(x.reason == null)) return Object.assign({}, x, n, { _reason: String(x.reason || '').trim() });
+      return n;
+    }).filter(Boolean).map(norm);
     if (s.length) return s;
     return (reg.lib || []).map(norm)
       .filter(function (n) { return n.canRead; })
