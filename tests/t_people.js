@@ -90,6 +90,26 @@ const byCount = (lib, f) => {
   ok(/Không tìm thấy/.test(p7.doc.querySelector('#ppGrid').textContent), 'q la phai bao khong tim thay + hien tat ca');
   ok(p7.doc.querySelectorAll('#ppGrid .pcard').length === AUTHORS.length, 'q la phai hien full danh sach');
 
+  /* ---------- F. ô lọc tên + mục nav ---------- */
+  const navHrefs = [...p3.doc.querySelectorAll('#czNav a')].map(a => a.getAttribute('href'));
+  ok(navHrefs.includes('/tac-gia/') && navHrefs.includes('/couple/'), 'nav thieu muc Tac gia/Couple (thay: ' + JSON.stringify(navHrefs) + ')');
+  ok(p3.doc.querySelector('#czNav a[href="/tac-gia/"].on'), 'o trang tac-gia thi muc Tac gia phai sang');
+  const q = p3.doc.querySelector('#ppQ');
+  ok(q && !p3.doc.querySelector('#ppQWrap').hasAttribute('hidden'), 'trang danh sach phai co o loc ten');
+  if (q) {
+    const probe = p3.win.CZ.slugify(AUTHORS[AUTHORS.length - 1][0]).slice(0, 5);
+    q.value = probe;
+    q.dispatchEvent(new p3.win.Event('input', { bubbles: true }));
+    await wait(120);
+    const shown = [...p3.doc.querySelectorAll('#ppGrid .pcard')].filter(c => c.style.display !== 'none').length;
+    ok(shown >= 1 && shown < AUTHORS.length, 'go loc phai thu hep danh sach (thay: ' + shown + '/' + AUTHORS.length + ')');
+    ok(/Tìm thấy/.test(p3.doc.querySelector('#ppSub').textContent), 'loc phai cap nhat dong dem');
+    q.value = 'zzzz-khong-co';
+    q.dispatchEvent(new p3.win.Event('input', { bubbles: true }));
+    await wait(120);
+    ok(/Không có tác giả nào khớp/.test(p3.doc.querySelector('#ppGrid').textContent), 'loc khong khop phai bao ro');
+  }
+
   /* ---------- G. link từ trang truyện ---------- */
   const RS = 'third-person';
   const meta = LIB.find(n => n.slug === RS);

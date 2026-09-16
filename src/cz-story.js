@@ -243,7 +243,7 @@
     if (!paras.length) paras = ['Bộ này chưa có mô tả.'];
     $('#shero').innerHTML =
       '<div class="in">' +
-        '<div class="cover" data-t="' + esc(n.title) + '">' + (im ? '<img src="' + esc(im) + '" alt="Bìa ' + esc(n.title) + '" width="300" height="450" fetchpriority="high">' : '') +
+        '<div class="cover" data-t="' + esc(n.title) + '">' + (im ? '<img src="' + esc(im) + '"' + CZ.coverFB(n, im) + ' alt="Bìa ' + esc(n.title) + '" width="300" height="450" fetchpriority="high" referrerpolicy="no-referrer">' : '') +
           (n.is18 ? '<span class="b18">18+</span>' : '') +
           (n.fresh ? '<span class="nw-bookmark"><span>NEW</span></span>' : '') + '</div>' +
         '<div>' +
@@ -336,8 +336,6 @@
     if (ct) ct.textContent = n.canRead ? n.chapters : '';
     $('#crumb').innerHTML = '<a href="/">Trang chủ</a> ' + ic('right', 'i-s') + ' <a href="/#thu-vien">Thư viện</a> ' +
       ic('right', 'i-s') + ' <b>' + esc(n.title) + '</b>';
-    $('#chapTop').setAttribute('href', n.canRead ? chapterPath(n.chapters) : '#');
-    $('#chapTop').style.display = n.canRead ? '' : 'none';
     /* bộ chưa ra chương thì để trống — nhãn trạng thái đã nằm ở đầu trang, không nhắc lại */
     $('#chapCount').textContent = !n.canRead ? ''
       : (n.declared > n.chapters
@@ -536,7 +534,7 @@
     var img = n.thumb || n.slide || '';
     return '<a class="relcard" href="' + esc(CZ.storyURL(n.slug)) + '" title="' + esc(n.title) + '">' +
       '<span class="rc-th' + (img ? '' : ' noimg') + '">' +
-        (img ? '<img src="' + esc(img) + '" alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" width="120" height="180">' : '') +
+        (img ? '<img src="' + esc(img) + '"' + CZ.coverFB(n, img) + ' alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer" width="120" height="180">' : '') +
       '</span>' +
       '<span class="rc-body">' +
         '<b>' + esc(n.title) + '</b>' +

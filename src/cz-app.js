@@ -547,7 +547,7 @@
         var n = it.n, im = n.thumb || n.slide || '';
         return '<a href="' + esc(storyURL(n.slug)) + '" role="menuitem">' +
           '<span class="nth' + (im ? '' : ' noimg') + '">' +
-            (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" decoding="async">' : '') + '</span>' +
+            (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</span>' +
           '<span class="ntx"><b>' + esc(n.title) + '</b>' +
           '<span class="nsub"><i class="nnum">' + it.c + ' chương mới</i> · ' + esc(timeAgo(n.updated)) + '</span></span>' +
           icon('right', 'i-s') + '</a>';
@@ -1062,6 +1062,12 @@
     });
   }
 
+  /* thuộc tính ảnh bìa dự phòng: đang dùng thumb thì dự phòng là slide
+     (chỉ khi hai ảnh khác nhau) — imgSettle đọc data-fb này khi ảnh lỗi */
+  function coverFB(n, img) {
+    if (!n || !img || img !== n.thumb || !n.slide || n.slide === n.thumb) return '';
+    return ' data-fb="' + esc(n.slide) + '"';
+  }
   /* ======================= 6. THẺ TRUYỆN & DẢI ========================= */
   function card(n, opts) {
     opts = opts || {};
@@ -1081,7 +1087,7 @@
        bìa (nút chuông theo dõi đã chuyển vào trang truyện cho gọn) */
     return '<div class="cardwrap"><a class="card" href="' + esc(storyURL(n.slug)) + '" data-t="' + esc(n.title) + '" title="' + esc(n.title) + '">' +
       '<div class="th' + (img ? ' skel' : '') + '">' +
-      (img ? '<img src="' + esc(img) + '" alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" width="300" height="450">' : '') +
+      (img ? '<img src="' + esc(img) + '"' + coverFB(n, img) + ' alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer" width="300" height="450">' : '') +
       '<span class="scrim"></span>' +
       '<span class="stic st-' + stCls + '" title="' + esc(stLab) + '" aria-label="Tình trạng: ' + esc(stLab) + '" role="img">' + icon(STATUS_ICON[stCls] || 'clock', 'i-s') + '</span>' +
       (n.fresh ? '<span class="nw-bookmark"><span>NEW</span></span>' : '') +
@@ -1105,7 +1111,7 @@
     var read = pg > 0;
     return '<div class="cardwrap listwrap"><a class="card list st-' + esc(n.statusCls || 'soon') + '" href="' + esc(storyURL(n.slug)) + '" data-t="' + esc(n.title) + '" title="' + esc(n.title) + '">' +
       '<span class="cl-th' + (img ? ' skel' : '') + '">' +
-        (img ? '<img src="' + esc(img) + '" alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" width="300" height="450">' : '') +
+        (img ? '<img src="' + esc(img) + '"' + coverFB(n, img) + ' alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer" width="300" height="450">' : '') +
       '</span>' +
       '<span class="cl-main">' +
         '<span class="cl-top"><b class="cl-t">' + esc(n.title) + '</b>' +
@@ -1150,6 +1156,14 @@
     var box = el.closest && el.closest('.skel');
     if (box) box.classList.remove('skel');
     if (e.type !== 'error') return;
+    /* ảnh chính hỏng thì thử ảnh dự phòng (data-fb) trước khi bỏ khung —
+       vài bộ có cả thumb lẫn slide, phí một lần thử còn hơn mất bìa */
+    if (!el._fbTried && el.getAttribute && el.getAttribute('data-fb')) {
+      el._fbTried = 1;
+      el.src = el.getAttribute('data-fb');
+      el.removeAttribute('data-fb');
+      return;
+    }
     box = el.parentNode;
     if (el.remove) el.remove();
     if (box && box.classList && box.classList !== d.body.classList) box.classList.add('noimg');
@@ -1380,8 +1394,10 @@
     var NAV = [
       { k: 'library', label: 'Thư viện', i: 'library', h: '/#thu-vien' },
       { k: 'new', label: 'Mới cập nhật', i: 'sparkle', h: '/#moi-cap-nhat' },
-      { k: 'rank', label: 'Bình chọn nhiều nhất', i: 'trophy', h: '/#bxh' },
-      { k: 'sched', label: 'Lịch ra chương', i: 'calendar', h: '/#lich' }
+      { k: 'rank', label: 'Bình chọn', i: 'trophy', h: '/#bxh' },
+      { k: 'sched', label: 'Lịch ra chương', i: 'calendar', h: '/#lich' },
+      { k: 'authors', label: 'Tác giả', i: 'pen', h: '/tac-gia/' },
+      { k: 'couples', label: 'Couple', i: 'users', h: '/couple/' }
     ];
     var links = NAV.map(function (n) {
       return '<a href="' + n.h + '" data-k="' + n.k + '"' + (n.k === active ? ' class="on"' : '') + ' title="' + esc(n.label) + '" aria-label="' + esc(n.label) + '">' +
@@ -1830,7 +1846,7 @@
     jumpCur = 0;
     res.innerHTML = jumpList.length ? jumpList.map(function (n, i) {
       return '<a href="' + esc(storyURL(n.slug)) + '" class="' + (i === 0 ? 'on' : '') + '">' +
-        (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy">' : '<img alt="">') +
+        (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '<img alt="">') +
         '<span><b>' + esc(n.title) + '</b><span>' + esc(n.author || '') +
         (n.couple ? ' · ' + esc(n.couple) : '') + ' · ' + esc(countText(n)) + '</span></span></a>';
     }).join('') : '<div class="empty" style="border:0;background:none">Không tìm thấy truyện nào khớp “' + esc(q) + '”.</div>';
@@ -2295,7 +2311,7 @@
     icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo, teaser: teaser,
     statusCls: statusCls, statusLabel: statusLabel, statusIcon: statusIcon, words: words, norm: norm, countText: countText, listHead: listHead,
     storyURL: storyURL, readURL: readURL, slugify: slugify, qs: qs, copy: copy, download: download,
-    card: card, mountRail: mountRail, reveal: reveal, countUp: countUp, scaleFacts: scaleFacts,
+    card: card, coverFB: coverFB, mountRail: mountRail, reveal: reveal, countUp: countUp, scaleFacts: scaleFacts,
     scrollUI: scrollUI, slide: slide, pageFx: pageFx, pop: pop, setIcon: setIcon, shake: shake,
     msWait: function () { return ms('--t-close', 150); }, ink: ink, inkAll: inkAll,
     mountShell: mountShell, mountHeader: mountHeader, mountFooter: mountFooter,

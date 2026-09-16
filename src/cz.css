@@ -249,13 +249,13 @@ body, .hdr, .hero, .hero .foot, .facts, .ftr, .fbox, .sechead, .authcard {
    cả dãy mục xô ngang mỗi lần cuộn trang. */
 .nav { position: relative; display: flex; align-items: center; align-self: stretch; margin-right: 8px; }
 .nav a { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  height: 100%; padding: 0 12px; border: 0; background: none; color: var(--mut);
+  height: 100%; padding: 0 10px; border: 0; background: none; color: var(--mut);
   font-size: 13.5px; font-weight: 600; letter-spacing: .004em; white-space: nowrap;
   transition: color var(--t-fast) var(--ease); }
 .nav a:hover { color: var(--txt); }
 .nav a.on { color: var(--txt); }
 /* gạch mờ khi trỏ (chưa phải mục đang xem) — kẻ từ trái sang, biến mất khi .on */
-.nav a::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: 0; height: 2px;
+.nav a::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: 0; height: 2px;
   background: var(--bd2); transform: scaleX(0); transform-origin: 50% 50%; opacity: 0;
   transition: transform var(--t) var(--ease), opacity var(--t-fast) linear; }
 .nav a:hover::after { transform: scaleX(1); opacity: 1; }
@@ -277,7 +277,10 @@ body, .hdr, .hero, .hero .foot, .facts, .ftr, .fbox, .sechead, .authcard {
   transition: color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease); }
 .hbtn:hover { color: var(--txt); border-color: var(--bd2); background: var(--surf2); }
 .hbtn:active { background: var(--surf3); }
-.hbtn.icon { width: var(--ctl); padding: 0; }
+/* nút chỉ có icon (chuông, menu) bỏ viền cho nhẹ đầu trang — trỏ vào mới hiện nền */
+.hbtn.icon { width: var(--ctl); padding: 0; border-color: transparent; background: transparent; }
+.hbtn.icon:hover { background: var(--surf2); border-color: transparent; }
+.hbtn.icon:active { background: var(--surf3); }
 .hbtn.burger { display: none; }
 .hbtn .nav-lbl, .hbtn .searchbtn-txt { font-size: 13px; font-weight: 600; letter-spacing: .004em; }
 /* phím tắt ⌘K: chữ đơn cách, đặt trong ô nhỏ — cùng ngôn ngữ với kbd của hero */
@@ -381,17 +384,17 @@ body, .hdr, .hero, .hero .foot, .facts, .ftr, .fbox, .sechead, .authcard {
    Bốn bậc, mỗi bậc bỏ bớt một lớp chữ để không bao giờ phải bóp méo hộp:
      ≤1080px  chữ nhỏ lại một nấc, giấu phím tắt ⌘K
      ≤ 980px  nút tài khoản chỉ còn avatar
-     ≤ 900px  mục điều hướng chỉ còn icon (mỗi icon vẫn có title + aria-label)
+     ≤1020px  mục điều hướng chỉ còn icon (mỗi icon vẫn có title + aria-label)
      ≤ 760px  nút tìm kiếm chỉ còn icon, hiện nút menu, thanh cao 56px
    Lớp phủ #czInk tự đo theo mục đang chọn nên vẫn khớp ở mọi bậc. */
 @media (max-width: 1080px) {
   .hdr .logo, .abar .logo { font-size: 20px; }
-  .nav a { padding: 0 10px; font-size: 12.5px; }
-  .nav a::after { left: 10px; right: 10px; }
+  .nav a { padding: 0 8px; font-size: 12.5px; }
+  .nav a::after { left: 8px; right: 8px; }
   .hbtn .nav-lbl, .hbtn .searchbtn-txt { font-size: 12.5px; }
   .hbtn .k { display: none; }
 }
-@media (max-width: 900px) {
+@media (max-width: 1020px) {
   .hdr .in > .grow::after { display: none; }
   .nav a { width: 40px; padding: 0; }
   .nav a .nav-lbl { display: none; }
