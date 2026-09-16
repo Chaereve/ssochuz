@@ -615,7 +615,10 @@
     $('#qClr').classList.toggle('hide', !state.q);
     $('#fcount').innerHTML = '<b>' + list.length + '</b> truyện' +
       (picked.length ? ' · đang lọc ' + picked.length + ' tiêu chí' : '') +
-      (total > 1 ? ' · trang ' + state.page + '/' + total : '');
+      (total > 1 ? ' · trang ' + state.page + '/' + total : '') +
+      /* lọc theo tác giả/couple thì dẫn sang trang riêng của người đó */
+      (state.author ? ' · <a href="/tac-gia/?q=' + encodeURIComponent(CZ.slugify(state.author)) + '">Xem tất cả truyện của ' + esc(state.author) + '</a>' : '') +
+      (state.couple ? ' · <a href="/couple/?q=' + encodeURIComponent(CZ.slugify(state.couple)) + '">Xem tất cả truyện của ' + esc(state.couple) + '</a>' : '');
     $$('[data-rm]', $('#fpick')).forEach(function (b) {
       b.addEventListener('click', function () {
         var k = picked[+b.dataset.rm][0];

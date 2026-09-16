@@ -378,6 +378,13 @@
     if (info) info.innerHTML = rows.map(function (r) {
       return '<div class="r"><span>' + esc(r[0]) + '</span><b>' + esc(String(r[1])) + '</b></div>';
     }).join('');
+    /* dòng Khám phá: sang trang riêng của tác giả/couple */
+    if (info && (n.author || n.couple)) {
+      var more = [];
+      if (n.author) more.push('<a href="/tac-gia/?q=' + encodeURIComponent(CZ.slugify(n.author)) + '">Xem tất cả truyện của ' + esc(n.author) + '</a>');
+      if (n.couple) more.push('<a href="/couple/?q=' + encodeURIComponent(CZ.slugify(n.couple)) + '">Xem tất cả truyện của ' + esc(n.couple) + '</a>');
+      info.innerHTML += '<div class="r"><span>Khám phá</span><b>' + more.join('<br>') + '</b></div>';
+    }
   }
   /* một dòng chương: số · tên (tô sáng khi tìm) · dấu đã đọc / đã đánh dấu.
      Ký hiệu ngoại truyện là S (S1, S2…; S khi không ghi số) — gọn hơn NT cũ
