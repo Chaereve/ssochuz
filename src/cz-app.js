@@ -612,6 +612,76 @@
     var p = progress(n); return p > 0 ? p : 0;
   }
 
+  /* ---- THỐNG KÊ ĐỌC CÁ NHÂN (N10) -----------------------------------------
+     Chỉ lưu TRONG MÁY (localStorage `ssochuz-mystats`), không gửi lên Worker,
+     không phát sinh request/ghi KV nào. Đếm MỘT chương khi:
+       · đọc cuộn tới ≥ 90% trang chương (chế độ cuộn), hoặc
+       · bấm Chương tiếp theo (next) — xem như đã đọc xong chương hiện tại.
+     Mỗi chương một bộ chỉ tính 1 lần/ngày (khoá trong `days`).
+     Dọn dữ liệu cũ hơn 90 ngày để localStorage không phình. */
+  var LS_STATS = 'ssochuz-mystats';
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function dayKey(d) {
+    d = d || new Date();
+    return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate());   /* yyyymmdd — theo múi giờ máy đọc */
+  }
+  function myStats() {
+    var o = jsonGet(LS_STATS, null);
+    if (!o || !o.days || typeof o.days !== 'object') o = { days: {} };
+    if (!o.total && o.total !== 0) o.total = 0;
+    return o;
+  }
+  function myStatsSave(o) { jsonSet(LS_STATS, o); }
+  /* “đọc xong 1 chương”: chỉ tính khi chuỗi khoá chưa có ngày hôm nay */
+  function myReadAdd(slug, ch) {
+    slug = String(slug || '').trim();
+    if (!slug) return false;
+    var o = myStats(), key = dayKey();
+    var row = o.days[key] || (o.days[key] = { s: {} });
+    var c = String(ch > 0 ? 'c' + Math.max(1, parseInt(ch, 10)) : 'x');
+    if (row.s[slug + ':' + c]) return false;   /* đã tính chương này hôm nay */
+    row.s[slug + ':' + c] = 1;
+    o.total = (parseInt(o.total, 10) || 0) + 1;
+    /* giữ lại tối đa 90 ngày gần nhất để bộ nhớ máy không lớn dần mãi */
+    var ks = Object.keys(o.days).sort();
+    while (ks.length > 90) delete o.days[ks.shift()];
+    myStatsSave(o);
+    return true;
+  }
+  /* trả về {total, today, streak, week:[n,n,n,n,n,n,n], last} cho giao diện My Space */
+  function myReadSummary() {
+    var o = myStats();
+    var total = parseInt(o.total, 10) || 0;
+    var todayK = dayKey();
+    var today = 0, last = '';
+    var byDay = {};
+    Object.keys(o.days).forEach(function (k) {
+      var t = 0, row = o.days[k];
+      Object.keys(row.s || {}).forEach(function (kk) { if (row.s[kk]) t += 1; });
+      byDay[k] = t;
+      if (t > 0) { last = k > (last || '') ? k : last; }
+    });
+    today = byDay[todayK] || 0;
+    /* streak = số ngày liên tiếp có đọc tính lùi từ hôm qua (hôm nay chưa chốt) */
+    var streak = today > 0 ? 1 : 0;
+    var t0 = new Date(); t0.setHours(12, 0, 0, 0);
+    var ONE = 86400000;
+    t0.setTime(t0.getTime() - ONE);                       /* bắt đầu từ hôm qua */
+    for (var g = 0; g < 800; g++) {
+      var kk = dayKey(t0);
+      if (byDay[kk] > 0) { streak += 1; t0.setTime(t0.getTime() - ONE); }
+      else break;
+    }
+    /* 7 ngày (hôm nay → 6 ngày trước) cho biểu đồ cột */
+    var week = [], cur = new Date(); cur.setHours(12, 0, 0, 0);
+    for (var i = 6; i >= 0; i--) {
+      var dd = new Date(cur.getTime() - i * ONE);
+      var kk = dayKey(dd);
+      week.push({ d: dd, k: kk, n: byDay[kk] || 0 });
+    }
+    return { total: total, today: today, streak: streak, week: week, last: last };
+  }
+
   /* cài đặt đọc — 2 font (serif / sans) · 3 nền (sang / kem / toi) */
   var RD_DEF = { mode: 'scroll', size: 18, font: 'serif', line: 1.85, para: 1.05, theme: 'kem', width: 720, justify: 0 };
   var RD_FONTS = { serif: 1, sans: 1 };
@@ -2306,6 +2376,7 @@
     followPushHook: followPushHook,
     isLiked: isLiked, toggleLike: toggleLike, likedChapters: likedChapters, likedCount: likedCount, likeCount: likeCount,
     marks: marks, toggleMark: toggleMark, chaptersRead: chaptersRead,
+    myReadAdd: myReadAdd, myReadSummary: myReadSummary,
     realCount: realCount, reconcileCount: reconcileCount, onStatsChange: onStatsChange, notifyStats: notifyStats,
     rdGet: rdGet, rdSet: rdSet, themeInit: themeInit, themeToggle: themeToggle, themeMeta: themeMeta,
     icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo, teaser: teaser,

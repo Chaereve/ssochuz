@@ -852,6 +852,8 @@
   function go(ch, pageHint) {
     if (ch < 1) return toast('Đây là chương đầu tiên.');
     if (ch > CHS.length) return toast('Bạn đã ở chương cuối.');
+    /* N10: bấm Chương tiếp theo đồng nghĩa đã đọc xong chương hiện tại */
+    if (ch === cur + 1 && N && CZ.myReadAdd) CZ.myReadAdd(N.slug, cur);
     openChapterURL(ch);
     if (pageHint === 'last') setTimeout(function () { PI = Math.max(0, PAGES.length - 1); paintPage(); }, 30);
   }
@@ -1289,6 +1291,9 @@
         var pc = $('#rdPct');
         if (pc) pc.textContent = Math.round(f * 100) + '%';
         if (f >= 0.5) preNextFire();
+        /* N10: cuộn tới ~cuối chương (≥90%) là tính 1 chương đọc vào
+           thống kê cá nhân — chỉ lưu trong máy, không gửi request nào */
+        if (f >= 0.9 && N && CZ.myReadAdd) CZ.myReadAdd(N.slug, cur);
       }
     });
   }, { passive: true });

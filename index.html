@@ -15,7 +15,7 @@
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://ssochuz.pages.dev/ssochuz.png">
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
-<link rel="stylesheet" href="/cz.css?v=20260917d">
+<link rel="stylesheet" href="/cz.css?v=20260917e">
 <script>/* chống nháy nền: áp tông màu đã lưu trước khi vẽ */try{var t=localStorage.getItem('ssochuz-theme')||localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
 <body class="hpage">
@@ -57,6 +57,8 @@
       </div>
       <!-- ô tài khoản: mời đăng nhập khi chưa đăng nhập, chào + thống kê khi đã đăng nhập -->
       <div class="authcard" id="banAuth" hidden></div>
+      <!-- N10: thống kê đọc cá nhân (tuần · chuỗi ngày · tổng chương, chỉ lưu trong máy) -->
+      <div class="mystats-wrap" id="myStats"></div>
       <div class="contcols" id="contRow"></div>
       <div class="contcols hide" id="shelfRow"></div>
     </section>
@@ -141,8 +143,8 @@
 <button id="toTop" aria-label="Lên đầu trang" title="Lên đầu trang"></button>
 
 <script src="/cz-config.js?v=20260917h"></script>
-<script src="/cz-app.js?v=20260917k"></script>
+<script src="/cz-app.js?v=20260917n"></script>
 <script src="/cz-auth.js?v=20260915j"></script>
-<script src="/cz-home.js?v=20260917j"></script>
+<script src="/cz-home.js?v=20260917l"></script>
 </body>
 </html>
