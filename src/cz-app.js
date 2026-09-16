@@ -281,7 +281,7 @@
 
   /* ======================= 2. GHI NHỚ TRONG MÁY ======================== */
   var LS = {
-    prog: 'ssochuz-prog-', when: 'ssochuz-when-', shelf: 'ssochuz-shelf',
+    prog: 'ssochuz-prog-', when: 'ssochuz-when-', shelf: 'ssochuz-shelf', follow: 'ssochuz-follow',
     like: 'ssochuz-like-', mark: 'ssochuz-mark-', read: 'ssochuz-reader', theme: 'ssochuz-theme', dir: 'ssochuz-dir'
   };
   function keysOf(n) { return [n && n.postId, n && n.slug].filter(Boolean); }
@@ -319,6 +319,87 @@
     return i < 0;
   }
   function clearShelf() { jsonSet(LS.shelf, []); }
+
+  /* ---- THEO DÕI: chuông báo “có chương mới”, tốn 0 request -----------------
+     Mỗi lần web load đã tải sẵn số chương trong registry — chỉ cần nhớ “lúc bấm
+     theo dõi bộ này có mấy chương” rồi trừ là ra số chương mới, không gọi thêm
+     API, không ghi KV. Khoá ssochuz-follow: { <slug>: <số chương lúc theo dõi> } */
+  function followMap() {
+    var m = jsonGet(LS.follow, {});
+    return (m && typeof m === 'object' && !Array.isArray(m)) ? m : {};
+  }
+  function chaptersOf(n) {
+    var o = (n && n.slug) ? n : findLib(n);
+    var c = Math.max(0, parseInt((o && o.chapters) || 0, 10) || 0);
+    /* registry đôi khi treo số cao hơn chương thật (bệnh “hiện 30 mà chỉ có 29”):
+       lấy max với số thật đã đối chiếu để huy hiệu không báo số ảo */
+    if (o && o.slug) {
+      var real = realCount(o.slug);
+      if (real != null && real > c) c = real;
+    }
+    return c;
+  }
+  function isFollowed(n) {
+    var slug = (n && n.slug) || (typeof n === 'string' ? n : '');
+    return !!slug && Object.prototype.hasOwnProperty.call(followMap(), slug);
+  }
+  function toggleFollow(n) {
+    var slug = (n && n.slug) || (typeof n === 'string' ? n : '');
+    if (!slug) return false;
+    var m = followMap();
+    var on = !Object.prototype.hasOwnProperty.call(m, slug);
+    if (on) m[slug] = chaptersOf(n); else delete m[slug];
+    jsonSet(LS.follow, m);
+    return on;
+  }
+  /* số chương ra thêm kể từ lúc bấm theo dõi (0 = chưa có gì mới / chưa theo dõi) */
+  function newChapters(n) {
+    var slug = (n && n.slug) || (typeof n === 'string' ? n : '');
+    if (!slug || !Object.prototype.hasOwnProperty.call(followMap(), slug)) return 0;
+    var m = followMap();
+    return Math.max(0, chaptersOf(n) - (parseInt(m[slug], 10) || 0));
+  }
+  /* mở truyện (hoặc đọc tới chương mới nhất) là coi như đã biết hết chương hiện có */
+  function markFollowSeen(n) {
+    var slug = (n && n.slug) || (typeof n === 'string' ? n : '');
+    if (!slug) return;
+    var m = followMap();
+    if (!Object.prototype.hasOwnProperty.call(m, slug)) return;
+    var now = chaptersOf(n);
+    if (now !== (parseInt(m[slug], 10) || 0)) { m[slug] = now; jsonSet(LS.follow, m); }
+  }
+  /* huy hiệu đỏ “N chương mới” — luôn dựng sẵn rồi ẩn/hiện để khỏi vá lại DOM */
+  function followBadge(n) {
+    var slug = (n && n.slug) || '';
+    if (!slug) return '';
+    var c = newChapters(n);
+    return '<span class="badge-newchap" data-newbadge="' + esc(slug) + '"' + (c > 0 ? '' : ' hidden') + '>' +
+      (c > 0 ? num(c) + ' chương mới' : '') + '</span>';
+  }
+  function followBtn(n, cls) {
+    var slug = (n && n.slug) || '';
+    if (!slug) return '';
+    var on = isFollowed(n);
+    return '<button type="button" class="' + (cls || 'followbtn') + (on ? ' on' : '') + '" data-followbtn="' + esc(slug) + '"' +
+      ' aria-pressed="' + on + '" title="' + (on ? 'Bỏ theo dõi (không báo chương mới nữa)' : 'Theo dõi — báo khi có chương mới') + '"' +
+      ' aria-label="' + (on ? 'Bỏ theo dõi ' : 'Theo dõi ') + esc((n && n.title) || slug) + '">' + icon('bell', 'i-s') + '</button>';
+  }
+  /* bấm chuông ở đâu thì mọi nút + huy hiệu của bộ đó trên trang đều đổi theo */
+  function refreshFollowUI(slug) {
+    var n = findLib(slug);
+    var on = isFollowed(slug), c = n ? newChapters(n) : 0;
+    Array.prototype.forEach.call(d.querySelectorAll('[data-followbtn="' + slug + '"]'), function (b) {
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', on);
+      b.setAttribute('title', on ? 'Bỏ theo dõi (không báo chương mới nữa)' : 'Theo dõi — báo khi có chương mới');
+      var lb = b.querySelector('.lbl');
+      if (lb) lb.textContent = on ? 'Đang theo dõi' : 'Theo dõi';
+    });
+    Array.prototype.forEach.call(d.querySelectorAll('[data-newbadge="' + slug + '"]'), function (x) {
+      if (c > 0) { x.removeAttribute('hidden'); x.textContent = num(c) + ' chương mới'; }
+      else { x.setAttribute('hidden', ''); x.textContent = ''; }
+    });
+  }
 
   /* ---- THÍCH: mỗi chương một phiếu thích riêng --------------------------
      Bệnh cũ: thích lưu theo BỘ (ssochuz-like-<slug>) nên thích chương 1 xong thì
@@ -503,6 +584,7 @@
     hourglass: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M6.5 7h11" /> <path d="M6.5 17h11" /> <path d="M6 20v-2a6 6 0 1 1 12 0v2a1 1 0 0 1 -1 1h-10a1 1 0 0 1 -1 -1" /> <path d="M6 4v2a6 6 0 1 0 12 0v-2a1 1 0 0 0 -1 -1h-10a1 1 0 0 0 -1 1" /></g>',
     shield_off: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M17.67 17.667a12 12 0 0 1 -5.67 3.333a12 12 0 0 1 -8.5 -15c.794 .036 1.583 -.006 2.357 -.124m3.128 -.926a11.997 11.997 0 0 0 3.015 -1.95a12 12 0 0 0 8.5 3a12 12 0 0 1 -1.116 9.376" /> <path d="M3 3l18 18" /></g>',
     google: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M20.945 11a9 9 0 1 1 -3.284 -5.997l-2.655 2.392a5.5 5.5 0 1 0 2.119 6.605h-4.125v-3h7.945" /></g>',
+    bell: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /> <path d="M9 17v1a3 3 0 0 0 6 0v-1" /></g>',
     momo: '<rect x="4" y="4" width="16" height="16" rx="4.5"/><path d="M8.4 12c0-2 1.6-3.6 3.6-3.6s3.6 1.6 3.6 3.6-1.6 3.6-3.6 3.6S8.4 14 8.4 12z"/><circle cx="12" cy="12" r="1.2"/>'
   };
 
@@ -834,12 +916,15 @@
        Chữ tình trạng đầy đủ vẫn có trong title/aria-label. */
     var stCls = n.statusCls || 'run';
     var stLab = statusLabel(n.statusCls || n.status);
-    return '<a class="card" href="' + esc(storyURL(n.slug)) + '" data-t="' + esc(n.title) + '" title="' + esc(n.title) + '">' +
+    /* nút chuông KHÔNG được nằm trong <a> (HTML cấm nút trong link) nên thẻ được
+       bọc thêm .cardwrap: link giữ nguyên, chuông phủ ở góc bìa */
+    return '<div class="cardwrap"><a class="card" href="' + esc(storyURL(n.slug)) + '" data-t="' + esc(n.title) + '" title="' + esc(n.title) + '">' +
       '<div class="th' + (img ? ' skel' : '') + '">' +
       (img ? '<img src="' + esc(img) + '" alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" width="300" height="450">' : '') +
       '<span class="scrim"></span>' +
       '<span class="stic st-' + stCls + '" title="' + esc(stLab) + '" aria-label="Tình trạng: ' + esc(stLab) + '" role="img">' + icon(STATUS_ICON[stCls] || 'clock', 'i-s') + '</span>' +
       (n.fresh ? '<span class="nw-bookmark"><span>NEW</span></span>' : '') +
+      followBadge(n) +
       '<span class="foot"><span class="ch">' + esc(countText(n)) + '</span>' +
         (n.is18 ? '<span class="b18">18+</span>' : '') + '</span>' +
       (pct ? '<span class="bar"><i style="width:' + pct + '%"></i></span>' : '') +
@@ -849,7 +934,7 @@
          couple bị đề tên cặp đôi thay vì người viết — couple vẫn còn chỗ riêng của
          nó ở bộ lọc, ở hero và trong trang truyện. */
       '<div class="cb">' + esc(n.author || n.couple || '') + '</div>' +
-      '</a>';
+      '</a>' + followBtn(n) + '</div>';
   }
   /* xem dạng danh sách: mỗi bộ một hàng, đủ thông tin để quyết định mở hay không */
   function cardList(n, img, pg, pct) {
@@ -857,7 +942,7 @@
     /* tác giả trước, couple sau — cùng thứ tự với thẻ lưới và với trang truyện */
     var bits = [n.author, n.couple, n.year].filter(Boolean);
     var read = pg > 0;
-    return '<a class="card list st-' + esc(n.statusCls || 'soon') + '" href="' + esc(storyURL(n.slug)) + '" data-t="' + esc(n.title) + '" title="' + esc(n.title) + '">' +
+    return '<div class="cardwrap listwrap"><a class="card list st-' + esc(n.statusCls || 'soon') + '" href="' + esc(storyURL(n.slug)) + '" data-t="' + esc(n.title) + '" title="' + esc(n.title) + '">' +
       '<span class="cl-th' + (img ? ' skel' : '') + '">' +
         (img ? '<img src="' + esc(img) + '" alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" width="300" height="450">' : '') +
       '</span>' +
@@ -865,6 +950,7 @@
         '<span class="cl-top"><b class="cl-t">' + esc(n.title) + '</b>' +
           (n.is18 ? '<span class="b18">18+</span>' : '') +
           (n.fresh ? '<span class="badge-new">NEW</span>' : '') +
+          followBadge(n) +
         '</span>' +
         '<span class="cl-meta">' + esc(bits.join(' · ') || '—') + '</span>' +
         '<span class="cl-syn">' + esc(n.syn || 'Chưa có mô tả cho bộ này.') + '</span>' +
@@ -876,7 +962,7 @@
         '<span class="cl-year">' + esc(n.year ? 'Năm ' + n.year : '—') + '</span>' +
       '</span>' +
       '<span class="cl-go">' + (read ? 'Đọc tiếp' : 'Xem truyện') + icon('right', 'i-s') + '</span>' +
-      '</a>';
+      '</a>' + followBtn(n) + '</div>';
   }
   /* hàng tiêu đề cho kiểu xem danh sách (chỉ là nhãn, không bấm được) */
   function listHead() {
@@ -909,6 +995,16 @@
   }
   d.addEventListener('error', imgSettle, true);
   d.addEventListener('load', imgSettle, true);
+  d.addEventListener('click', function (e) {
+    var b = e.target && e.target.closest ? e.target.closest('[data-followbtn]') : null;
+    if (!b) return;
+    e.preventDefault(); e.stopPropagation();
+    var slug = b.getAttribute('data-followbtn');
+    var on = toggleFollow(findLib(slug) || { slug: slug });
+    refreshFollowUI(slug);
+    pop(b);
+    toast(on ? 'Đã theo dõi — có chương mới sẽ hiện huy hiệu đỏ' : 'Đã bỏ theo dõi');
+  }, true);
 
   /* hiệu ứng hiện dần khi cuộn tới (tôn trọng giảm chuyển động) */
   var reduce = !!(w.matchMedia && w.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -1896,6 +1992,8 @@
     lib: libList, slides: slides, editorChoice: editorChoice, donationCfg: donationCfg, reportCfg: reportCfg, findLib: findLib, statsOf: statsOf, onStats: onStats,
     progress: progress, setProgress: setProgress, lastReadAt: lastReadAt,
     shelfIds: shelfIds, inShelf: inShelf, toggleShelf: toggleShelf, clearShelf: clearShelf,
+    followMap: followMap, isFollowed: isFollowed, toggleFollow: toggleFollow, newChapters: newChapters,
+    markFollowSeen: markFollowSeen, followBadge: followBadge, followBtn: followBtn, refreshFollowUI: refreshFollowUI,
     isLiked: isLiked, toggleLike: toggleLike, likedChapters: likedChapters, likedCount: likedCount, likeCount: likeCount,
     marks: marks, toggleMark: toggleMark, chaptersRead: chaptersRead,
     realCount: realCount, reconcileCount: reconcileCount, onStatsChange: onStatsChange, notifyStats: notifyStats,

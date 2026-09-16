@@ -310,6 +310,8 @@
       : (n.declared > n.chapters
         ? 'Đang có ' + n.chapters + '/' + n.declared + ' chương'
         : 'Đang có ' + n.chapters + ' chương');
+    /* mở truyện là đã biết hết chương hiện có → huy hiệu “N chương mới” tắt */
+    if (CZ.markFollowSeen) CZ.markFollowSeen(n);
   }
 
   /* khối “Giới thiệu”: mô tả đầy đủ + bảng thông tin đọc được, không lặp lại phần đầu trang */
@@ -866,6 +868,7 @@
     txt.innerHTML = cleanHTML(c.html);
     /* đếm lượt đọc thật (Worker ghi lên KV); 1 máy · 1 bộ · 1 ngày = 1 lượt */
     CZ.reportView(N.slug, cur).then(function (r) { if (r && r.counted) bumpViews(1); });
+    if (cur >= N.chapters && CZ.markFollowSeen) CZ.markFollowSeen(N);
     PAGES = []; PI = 0;
     if (s.mode === 'paged') { PAGES = measure(txt); paintPage(); } else renderNav(false);
     /* ---- dải nút cuối chương: THÍCH tính riêng cho TỪNG CHƯƠNG -------------
@@ -885,6 +888,7 @@
     var acts = [
       actBtn('actLike', 'heart', likeL, liked),
       actBtn('actSave', 'shelf', saveL, CZ.inShelf(N)),          /* icon TỦ SÁCH */
+      actBtn('actFollow', 'bell', CZ.isFollowed(N) ? 'Đang theo dõi' : 'Theo dõi', CZ.isFollowed(N)),
       actBtn('actMark', 'bookmark', marked ? 'Đã đánh dấu' : 'Đánh dấu', marked),   /* icon THẺ */
       actBtn('actComment', 'chat', 'Bình luận chương này', false),
       actBtn('actShare', 'share', 'Chia sẻ', false),
@@ -935,6 +939,17 @@
       this.setAttribute('aria-label', lab);
       CZ.pop(this);
       toast(on ? 'Đã thêm vào tủ truyện' : 'Đã bỏ khỏi tủ truyện');
+    });
+    $('#actFollow').addEventListener('click', function () {
+      var on = CZ.toggleFollow(N);
+      var lab = on ? 'Đang theo dõi' : 'Theo dõi';
+      this.classList.toggle('on', on);
+      var sp = this.querySelector('.lbl') || this.querySelector('span');
+      if (sp) sp.textContent = lab;
+      this.setAttribute('title', lab);
+      this.setAttribute('aria-label', lab);
+      CZ.pop(this);
+      toast(on ? 'Đã theo dõi — có chương mới sẽ hiện huy hiệu đỏ' : 'Đã bỏ theo dõi');
     });
     $('#actMark').addEventListener('click', function () {
       var on = CZ.toggleMark(N, cur);

@@ -849,7 +849,7 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 
 /* ========================= 8. BÀN ĐỌC ==================================== */
 .contcols { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
-.cont { display: grid; grid-template-columns: 46px minmax(0, 1fr) auto auto; gap: 12px; align-items: center;
+.cont { display: grid; grid-template-columns: 46px minmax(0, 1fr) auto auto auto; gap: 12px; align-items: center;
   padding: 12px; border: 1px solid var(--bd); border-radius: var(--r); background: var(--surf); cursor: pointer;
   transition: border-color var(--t-fast) var(--ease), box-shadow var(--t) var(--ease), transform var(--t) var(--ease),
     background-color var(--t-theme) var(--ease-out); }
@@ -867,6 +867,10 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .cont .go { font-size: 12px; font-weight: 700; color: var(--acc); white-space: nowrap; }
 .cont .rm { color: var(--dim); padding: 4px 6px; border-radius: var(--r-sm); }
 .cont .rm:hover { color: var(--bad); background: var(--surf2); }
+.cont .foll { display: grid; place-items: center; padding: 0; width: 30px; height: 30px; border-radius: 50%;
+  border: 1px solid var(--bd); background: transparent; color: var(--dim); cursor: pointer; }
+.cont .foll:hover { color: var(--acc); border-color: var(--acc); }
+.cont .foll.on { background: var(--acc); border-color: transparent; color: #fff; }
 
 /* =================== 9. BXH · LỊCH · CHUYỂN THỂ ========================== */
 .rank { position: relative; display: grid; grid-template-columns: 28px 46px 1fr auto; gap: 12px; align-items: center;
@@ -1736,7 +1740,7 @@ body.page-in main { animation: pageIn var(--t-slow) var(--ease-out) both; }
    trên bìa ảnh lẫn trên nền giấy. Chỉ khác màu: 18+ đỏ (--bad), Mới mực son (--acc).
    Bản cũ mỗi nơi một kiểu (chữ nhật 4px, chỗ nền đỏ chữ trắng, chỗ nền trắng chữ
    đỏ) nên nhìn rời rạc. */
-.b18, .badge-new { display: inline-flex; align-items: center; justify-content: center;
+.b18, .badge-new, .badge-newchap { display: inline-flex; align-items: center; justify-content: center;
   min-height: 20px; padding: 3px 9px; border-radius: 999px; white-space: nowrap;
   font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; line-height: 1.4;
   border: 1px solid rgba(255, 255, 255, .28); box-shadow: 0 1px 4px rgba(10, 6, 4, .3); }
@@ -1755,6 +1759,26 @@ body.page-in main { animation: pageIn var(--t-slow) var(--ease-out) both; }
 @media (prefers-reduced-motion: reduce) { .badge-new::before { animation: none; } }
 /* nền tối: hồng son gốc quá nhạt, chữ trắng khó đọc — dùng hồng đậm chung với ruy băng */
 [data-theme="dark"] .badge-new { background: #b23a52; }
+/* ---- THEO DÕI: nút chuông + huy hiệu đỏ “N chương mới” ----------------------
+   Huy hiệu đỏ chữ trắng đọc được cả hai tông nền; nút chuông phủ trên bìa nên
+   thẻ lưới/danh sách được bọc thêm .cardwrap (link giữ nguyên bên trong). */
+.badge-newchap { background: #c8102e; color: #fff; text-transform: none; letter-spacing: .02em;
+  box-shadow: 0 1px 6px rgba(200, 16, 46, .55), 0 1px 2px rgba(10, 6, 4, .35); }
+[data-theme="dark"] .badge-newchap { background: #d7263d; }
+.badge-newchap[hidden] { display: none !important; }
+.cardwrap { position: relative; }
+.cardwrap > .card.list { padding-right: 54px; }   /* chừa chỗ cho chuông */
+.followbtn { position: absolute; z-index: 3; display: grid; place-items: center; padding: 0;
+  width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, .55); background: rgba(12, 8, 6, .55); color: #fff; }
+.cardwrap > .followbtn { top: 44px; left: 8px; }   /* dưới ký hiệu tình trạng, không đụng bookmark NEW */
+.cardwrap.listwrap > .followbtn { top: 50%; right: 10px; left: auto; transform: translateY(-50%); }
+.followbtn:hover { background: rgba(12, 8, 6, .78); }
+.followbtn.on { background: var(--acc); border-color: transparent; }
+.followbtn:focus-visible, .cont .foll:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+.card .th .badge-newchap { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 2;
+  max-width: calc(100% - 84px); overflow: hidden; text-overflow: ellipsis; }
+.cont .badge-newchap { margin-left: 6px; vertical-align: 1px; }
 .tabs .ct { background: var(--surf2); border-radius: 99px; padding: 1px 7px; font-weight: 700; }
 .tabs > button.on .ct { background: color-mix(in srgb, var(--acc) 16%, transparent); color: var(--acc); }
 .fchip { display: inline-flex; align-items: center; gap: 7px; padding: 5px 6px 5px 11px; border-radius: 99px;

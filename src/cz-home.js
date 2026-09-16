@@ -224,11 +224,11 @@
     return '<article class="cont" data-open="' + esc(n.slug) + '" role="button" tabindex="0" title="Đọc tiếp ' + esc(n.title) + '">' +
       '<span class="ct-th' + (n.thumb ? '' : ' noimg') + '">' +
       (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async">' : '') + '</span>' +
-      '<div><b>' + esc(n.title) + '</b>' +
+      '<div><b>' + esc(n.title) + ' ' + CZ.followBadge(n) + '</b>' +
       '<span class="st">còn ' + Math.max(0, tot - p) + ' chương' +
         (CZ.lastReadAt(n) ? ' · ' + CZ.timeAgo(new Date(CZ.lastReadAt(n)).toISOString()) : '') + '</span>' +
       '<div class="pb"><i style="width:' + pct + '%"></i></div></div>' +
-      '<span class="go">Đọc tiếp</span></article>';
+      '<span class="go">Đọc tiếp</span>' + CZ.followBtn(n, 'foll') + '</article>';
   }
   /* ---- ô đăng nhập trong mục My Space (nút đăng nhập cũng có ở đầu trang) ---- */
   function paintAuthHint(empty) {
@@ -299,10 +299,11 @@
         return '<article class="cont" data-open="' + esc(n.slug) + '" role="button" tabindex="0">' +
           '<span class="ct-th' + (n.thumb ? '' : ' noimg') + '">' +
           (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async">' : '') + '</span>' +
-          '<div><b>' + esc(n.title) + '</b><span class="st">' +
+          '<div><b>' + esc(n.title) + ' ' + CZ.followBadge(n) + '</b><span class="st">' +
           (tot ? (p ? 'đang ở chương ' + p + '/' + tot : num(tot) + ' chương') : 'sắp ra mắt') + '</span>' +
           (tot && p ? '<div class="pb"><i style="width:' + Math.round(p / tot * 100) + '%"></i></div>' : '') + '</div>' +
           (tot ? '<span class="go">Đọc tiếp</span>' : '<span class="go"></span>') +
+          CZ.followBtn(n, 'foll') +
           '<span class="rm" data-rm="' + esc(n.slug) + '" title="Bỏ khỏi tủ">' + ic('x', 'i-s') + '</span></article>';
       }).join('');
     }
