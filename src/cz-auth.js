@@ -434,10 +434,20 @@
   function exchange(u, accessToken) {
     var base = api();
     if (!base || !accessToken) { save(Object.assign({}, u, { local: !base }), accessToken || ''); return Promise.resolve(u); }
-    return fetch(base + '/api/auth/supabase', {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ accessToken: accessToken, provider: 'supabase' })
-    }).then(function (r) {
+    /* Supabase redirect + visibilitychange có thể gọi exchange hai lần. Một lần
+       retry có backoff giúp tránh 429 mà không tạo vòng lặp request. */
+    function request(attempt) {
+      return fetch(base + '/api/auth/supabase', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ accessToken: accessToken, provider: 'supabase' })
+      }).then(function (r) {
+        if (r.status === 429 && attempt < 1) {
+          return new Promise(function (resolve) { setTimeout(resolve, 1800); }).then(function () { return request(attempt + 1); });
+        }
+        return r;
+      });
+    }
+    return request(0).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (j) {
         if (r.ok && j && j.ok && j.token) {
           var merged = Object.assign({}, u, j.user || {}, { admin: !!j.admin });
