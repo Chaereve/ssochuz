@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Santy Nextdoor · ssochuz library</title>
+<meta name="description" content="Đêm Giáng sinh, một người phụ nữ trong trang phục bà già Noel gợi cảm xuất hiện trước cửa nhà tôi lúc nửa đêm. Cô ấy đến để phát quà sao? Không hề! Cô ấy xuất hiện trong tình trạng say bí tỉ.">
+<link rel="canonical" href="https://ssochuz.pages.dev/truyen/santy-nextdoor/">
+<meta property="og:type" content="book">
+<meta property="og:site_name" content="ssochuz library">
+<meta property="og:locale" content="vi_VN">
+<meta property="og:title" content="Santy Nextdoor">
+<meta property="og:description" content="Đêm Giáng sinh, một người phụ nữ trong trang phục bà già Noel gợi cảm xuất hiện trước cửa nhà tôi lúc nửa đêm. Cô ấy đến để phát quà sao? Không hề! Cô ấy xuất hiện trong tình trạng say bí tỉ.">
+<meta property="og:image" content="https://cdn-local.mebmarket.com/meb/server1/411642/Thumbnail/book_detail_large.gif?2">
+<meta property="og:url" content="https://ssochuz.pages.dev/truyen/santy-nextdoor/">
+<meta property="book:author" content="RainbowCandy">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Santy Nextdoor">
+<meta name="twitter:description" content="Đêm Giáng sinh, một người phụ nữ trong trang phục bà già Noel gợi cảm xuất hiện trước cửa nhà tôi lúc nửa đêm. Cô ấy đến để phát quà sao? Không hề! Cô ấy xuất hiện trong tình trạng say bí tỉ.">
+<meta name="twitter:image" content="https://cdn-local.mebmarket.com/meb/server1/411642/Thumbnail/book_detail_large.gif?2">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Book","name":"Santy Nextdoor","inLanguage":"vi","url":"https://ssochuz.pages.dev/truyen/santy-nextdoor/","image":"https://cdn-local.mebmarket.com/meb/server1/411642/Thumbnail/book_detail_large.gif?2","description":"Đêm Giáng sinh, một người phụ nữ trong trang phục bà già Noel gợi cảm xuất hiện trước cửa nhà tôi lúc nửa đêm. Cô ấy đến để phát quà sao? Không hề! Cô ấy xuất hiện trong tình trạng say bí tỉ.","author":{"@type":"Person","name":"RainbowCandy"}}</script>
+<meta name="theme-color" content="#faf8f4">
+<link rel="icon" type="image/png" href="/ssochuz.png?v=1">
+<link rel="apple-touch-icon" href="/ssochuz.png?v=1">
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+<link rel="stylesheet" href="/cz.css?v=20260916i">
+<script>/* chống nháy nền */try{var t=localStorage.getItem('ssochuz-theme')||localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+</head>
+<body class="spage">
+<div id="sprog" aria-hidden="true"><i></i></div>
+<header id="hdr"></header>
+
+<!-- ==================== TRANG TRUYỆN ==================== -->
+<main id="story" class="wrap" aria-live="polite">
+  <nav class="crumb" id="crumb"><a href="/">Trang chủ</a></nav>
+  <section class="shero" id="shero"></section>
+
+  <!-- ba khối nội dung, chuyển bằng thanh tab có gạch chân trượt -->
+  <div class="storytabs" id="storyTabs" role="tablist" aria-label="Nội dung truyện">
+    <span class="ink" id="stInk" aria-hidden="true"></span>
+    <button class="stab" data-tab="info" role="tab" aria-selected="false">Giới thiệu</button>
+    <button class="stab on" data-tab="chap" role="tab" aria-selected="true">Danh sách chương<span class="ct" id="tabChapCt"></span></button>
+    <button class="stab" data-tab="cmt" role="tab" aria-selected="false">Đánh giá</button>
+  </div>
+
+  <section class="sec" id="chapSec">
+    <div class="panehead">
+      <span class="sub" id="chapCount">—</span>
+      <span class="grow"></span>
+      <a class="btn ghost sm" id="chapTop">Chương mới nhất<span data-ic="up"></span></a>
+    </div>
+    <div class="chapbar">
+      <label class="search"><span data-ic="search"></span>
+        <input id="chapQ" placeholder="Tìm số chương hoặc tên chương…" autocomplete="off" spellcheck="false">
+      </label>
+      <div class="seg" id="chapSort" role="group" aria-label="Thứ tự chương">
+        <button data-sort="new">Mới nhất trước</button>
+        <button data-sort="old" class="on">Cũ nhất trước</button>
+      </div>
+      <span class="jumpin">
+        <label for="chapJump">Đi tới chương</label>
+        <input id="chapJump" type="number" min="1" inputmode="numeric" placeholder="số" aria-label="Số chương cần tới">
+        <button class="btn ghost sm" id="chapGo" type="button" aria-label="Tới chương vừa nhập"><span data-ic="right"></span>Đi</button>
+      </span>
+    </div>
+    <div class="chapgrid" id="chapGrid"></div>
+    <div class="pager" id="chapPager"></div>
+  </section>
+
+  <section class="sec" id="pane-info" hidden>
+    <div class="infogrid">
+      <div>
+        <div class="sechead"><h2 id="synHead">Giới thiệu</h2></div>
+        <div id="synFull"></div>
+      </div>
+      <div>
+        <div class="sechead"><h2>Thông tin</h2></div>
+        <div class="info" id="storyInfo"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cmts" id="pane-cmt" hidden>
+    <div class="sechead"><h2>Đánh giá &amp; bình luận</h2></div>
+    <div id="giscus"></div>
+  </section>
+
+  <section class="sec" id="relSec">
+    <div class="relcols">
+      <div><div class="sechead"><h2>Cùng couple</h2></div><div class="relbox" id="relCouple"></div></div>
+      <div><div class="sechead"><h2>Cùng tác giả</h2></div><div class="relbox" id="relAuthor"></div></div>
+    </div>
+  </section>
+</main>
+
+<!-- ==================== TRANG ĐỌC ==================== -->
+<section id="rd" aria-live="polite">
+  <header class="rdbar" id="rdBar">
+    <div class="in">
+      <button class="ibo" id="rdBack" title="Về trang truyện (Esc)"></button>
+      <div class="ttl"><b id="rdTitle">Đang tải…</b><span id="rdSub"></span></div>
+      <span class="rdpct" id="rdPct" title="phần chương đã đọc">0%</span>
+      <div class="tools">
+        <button class="ibo" id="rdPrev" title="Chương trước (←)" aria-label="Chương trước"></button>
+        <button class="ibo" id="rdNext" title="Chương tiếp theo (→)" aria-label="Chương tiếp theo"></button>
+        <span class="tsep" aria-hidden="true"></span>
+        <button class="ibo" id="rdToc" title="Danh sách chương (L)"></button>
+        <button class="ibo" id="rdMark" title="Đánh dấu chương (B)"></button>
+        <button class="ibo" id="rdSet" title="Cài đặt đọc"></button>
+        <button class="ibo" id="rdFocus" title="Chế độ tập trung (F)"></button>
+        <button class="ibo" id="rdShare" title="Chia sẻ chương"></button>
+      </div>
+    </div>
+    <div class="rdprog"><i id="rdProgFill"></i></div>
+  </header>
+  <div class="rdhead">
+    <nav class="rdcrumb" id="rdCrumb"></nav>
+    <h1 id="rdHead">—</h1>
+    <div class="rdmeta" id="rdMeta"></div>
+  </div>
+  <article class="rtext" id="rdText"></article>
+  <div class="rend" id="rdEnd"></div>
+  <nav class="rnav" id="rdNav"></nav>
+  <div class="ract" id="rdActs"></div>
+  <!-- BÌNH LUẬN NGAY TRONG TRANG ĐỌC (theo từng chương) — cz-story.js dựng nội dung -->
+  <section class="rdcmts" id="rdCmts" aria-label="Bình luận chương này"></section>
+</section>
+
+<footer id="ftr"></footer>
+<button id="toTop" aria-label="Lên đầu trang"></button>
+<div class="toastline" id="rdToast" role="status" aria-live="polite"></div>
+
+<!-- ngăn kéo: mục lục + cài đặt đọc -->
+<div class="sheet" id="tocSheet">
+  <div class="scrim" data-shut></div>
+  <aside class="pan" role="dialog" aria-label="Mục lục">
+    <div class="ph"><h4 id="tocName">Mục lục</h4><span class="sm muted" id="tocSub"></span><button class="ibo" data-shut></button></div>
+    <label class="dsearch"><span data-ic="search"></span><input id="tocQ" placeholder="Tìm chương…" autocomplete="off"></label>
+    <div class="pb toc" id="tocList"></div>
+  </aside>
+</div>
+<div class="sheet" id="setSheet">
+  <div class="scrim" data-shut></div>
+  <aside class="pan" role="dialog" aria-label="Cài đặt đọc">
+    <div class="ph"><h4>Cài đặt đọc</h4><button class="ibo" data-shut></button></div>
+    <div class="pb" id="setBody"></div>
+  </aside>
+</div>
+<div class="lightbox" id="lightbox"><img alt="Ảnh trong chương"></div>
+
+<script src="/cz-config.js?v=20260915j"></script>
+<script src="/cz-app.js?v=20260916i"></script>
+<script src="/cz-auth.js?v=20260915j"></script>
+<script src="/cz-story.js?v=20260916i"></script>
+</body>
+</html>
