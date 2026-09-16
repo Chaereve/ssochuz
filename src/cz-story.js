@@ -268,6 +268,10 @@
             : '') +
           '<div class="btn-row">' + readBtn(n, ch) +
             (n.canRead && ch && ch < n.chapters ? '<a class="btn ghost lg" href="' + chapterPath(n.chapters) + '">' + ic('up', 'i-s') + 'Chương mới nhất</a>' : '') +
+            /* nút chuông chuyển từ card trang chủ vào đây cho gọn — bấm ở đâu
+               (hero/reader) thì hai nơi tự đổi theo nhờ refreshFollowUI */
+            '<button class="btn ghost' + (CZ.isFollowed(n) ? ' on' : '') + '" data-followbtn="' + esc(n.slug) + '" aria-pressed="' + CZ.isFollowed(n) + '" title="' + (CZ.isFollowed(n) ? 'Bỏ theo dõi (không báo chương mới nữa)' : 'Theo dõi — báo khi có chương mới') + '">' + ic('bell', 'i-s') +
+              '<span class="lbl">' + (CZ.isFollowed(n) ? 'Đang theo dõi' : 'Theo dõi') + '</span></button>' +
             '<button class="btn ghost' + (CZ.inShelf(n) ? ' on' : '') + '" id="shelfBtn" aria-pressed="' + CZ.inShelf(n) + '" title="Lưu vào tủ truyện của bạn (icon tủ sách)">' + ic('shelf', 'i-s') +
               '<span>' + (CZ.inShelf(n) ? 'Đã lưu' : 'Tủ truyện') + '</span></button>' +
             '<button class="btn ghost" id="shareBtn">' + ic('share', 'i-s') + 'Chia sẻ</button>' +
@@ -1014,6 +1018,7 @@
       if (sp) sp.textContent = lab;
       this.setAttribute('title', lab);
       this.setAttribute('aria-label', lab);
+      CZ.refreshFollowUI(N.slug);   /* nút hero + huy hiệu đổi theo */
       CZ.pop(this);
       toast(on ? 'Đã theo dõi — có chương mới sẽ hiện huy hiệu đỏ' : 'Đã bỏ theo dõi');
     });

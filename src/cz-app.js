@@ -927,8 +927,8 @@
        Chữ tình trạng đầy đủ vẫn có trong title/aria-label. */
     var stCls = n.statusCls || 'run';
     var stLab = statusLabel(n.statusCls || n.status);
-    /* nút chuông KHÔNG được nằm trong <a> (HTML cấm nút trong link) nên thẻ được
-       bọc thêm .cardwrap: link giữ nguyên, chuông phủ ở góc bìa */
+    /* thẻ bọc thêm .cardwrap để giữ chỗ cho huy hiệu “N chương mới” phủ ở góc
+       bìa (nút chuông theo dõi đã chuyển vào trang truyện cho gọn) */
     return '<div class="cardwrap"><a class="card" href="' + esc(storyURL(n.slug)) + '" data-t="' + esc(n.title) + '" title="' + esc(n.title) + '">' +
       '<div class="th' + (img ? ' skel' : '') + '">' +
       (img ? '<img src="' + esc(img) + '" alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" width="300" height="450">' : '') +
@@ -945,7 +945,7 @@
          couple bị đề tên cặp đôi thay vì người viết — couple vẫn còn chỗ riêng của
          nó ở bộ lọc, ở hero và trong trang truyện. */
       '<div class="cb">' + esc(n.author || n.couple || '') + '</div>' +
-      '</a>' + followBtn(n) + '</div>';
+      '</a></div>';
   }
   /* xem dạng danh sách: mỗi bộ một hàng, đủ thông tin để quyết định mở hay không */
   function cardList(n, img, pg, pct) {
@@ -973,7 +973,7 @@
         '<span class="cl-year">' + esc(n.year ? 'Năm ' + n.year : '—') + '</span>' +
       '</span>' +
       '<span class="cl-go">' + (read ? 'Đọc tiếp' : 'Xem truyện') + icon('right', 'i-s') + '</span>' +
-      '</a>' + followBtn(n) + '</div>';
+      '</a></div>';
   }
   /* hàng tiêu đề cho kiểu xem danh sách (chỉ là nhãn, không bấm được) */
   function listHead() {
