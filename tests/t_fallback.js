@@ -93,7 +93,7 @@ function flakyApi(calls) {
   eq('N13/không còn preconnect firestore', out.conPreconnect, 0);
   eq('N13/registry trượt → gọi đúng 2 lần (gọi + retry 1)', out.kvRetry.lanGoiRegistry, 2);
   eq('N13/rớt về dữ liệu tĩnh', out.kvRetry.nguonDuLieu, 'static');
-  eq('N13/hiện banner dữ liệu dự phòng', out.kvRetry.bannerFallback, true);
+  eq('Tải dự phòng im lặng, không hiện banner', out.kvRetry.bannerFallback, false);
   eq('N13/ghi nhớ fallback 10 phút', out.kvRetry.nho10Phut, true);
   eq('N13/book rớt → vẫn đọc được từ /data', out.book.title.length > 0, true);
   eq('N13/10 phút sau mới thử lại Worker', out.khongGoiLai, true);

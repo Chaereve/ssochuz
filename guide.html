@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" href="/ssochuz.png?v=1">
 <link rel="apple-touch-icon" href="/ssochuz.png?v=1">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="stylesheet" href="/cz.css?v=20260917g">
+<link rel="stylesheet" href="/cz.css?v=20260918g">
 <script>try{var t=localStorage.getItem('ssochuz-theme')||localStorage.getItem('chuseoz-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 <style>
 .guide{max-width:820px;margin:auto;padding:0 24px 56px}.guide h1{font-size:clamp(28px,4vw,40px);margin:24px 0 8px}.guide .lead{color:var(--mut);font-size:16px;line-height:1.7;margin-bottom:24px}.guide h2{font-size:22px;margin:38px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--bd);scroll-margin-top:80px}.guide h3{font-size:16px;margin:20px 0 8px}.guide p,.guide li{font-size:14.5px;line-height:1.75;color:var(--txt)}.guide ul,.guide ol{margin:8px 0 16px 20px}.guide .card2{margin:16px 0}.guide kbd{font-size:12px}.guide .toc{border:1px solid var(--bd);border-radius:var(--r-lg);background:var(--surf);padding:14px 18px;margin-bottom:24px}.guide .toc a{display:block;padding:6px 0;font-size:13.5px;color:var(--mut)}.guide .toc a:hover{color:var(--acc)}.guide .tip{border-left:3px solid var(--acc);background:color-mix(in srgb,var(--acc) 6%,transparent);padding:10px 14px;border-radius:0 var(--r) var(--r) 0;font-size:13.5px;color:var(--mut);margin:12px 0}@media(max-width:700px){.guide{padding:0 16px 48px}}
@@ -23,10 +23,23 @@
   <h1>Dùng ssochuz thật dễ</h1>
   <p class="lead">Tìm một bộ truyện, mở chương và lưu lại để đọc tiếp sau này. Dưới đây là những điều bạn cần biết — thường chỉ mất vài phút.</p>
   <nav class="toc" aria-label="Mục lục">
-    <b>Mục lục</b>
+    <b>Mục lục</b><a href="#ranking">Ranking và Đáng xem</a><a href="#truyen-khoa">Truyện có mật khẩu</a><a href="#danh-ba">Tìm tác giả và couple</a>
     <a href="#tim-kiem">1. Tìm truyện</a><a href="#doc-truyen">2. Đọc truyện</a><a href="#my-space">3. Lưu truyện và tiến độ</a><a href="#thich">4. Thích và bình chọn</a><a href="#tai-khoan">5. Tài khoản</a><a href="#bao-loi">6. Báo lỗi</a><a href="#meo">7. Phím tắt</a>
   </nav>
 
+  <section aria-labelledby="truyen-khoa">
+  <h2 id="truyen-khoa">Truyện có mật khẩu</h2>
+  <p>Mở đường dẫn riêng do người đăng gửi, nhập <b>mật khẩu truyện</b> và chọn <b>Mở truyện</b>. Đây không phải mật khẩu Google hay Supabase. Đăng nhập tài khoản không tự cấp quyền đọc.</p>
+  <ul><li>Nội dung chỉ tải sau khi máy chủ xác minh. Mật khẩu không được lưu trên thiết bị; tải lại trang cần nhập lại.</li><li>Truyện riêng tư không hỗ trợ đọc ngoại tuyến và không xuất hiện trong RSS. Nếu mất mạng, hãy kết nối lại rồi thử.</li><li>Sai mật khẩu: liên hệ người đăng. Khi hiện “Quá nhiều lần thử”, đợi 15 phút; giới hạn được áp dụng chung cho truyện để chống dò mật khẩu từ nhiều nguồn.</li><li>Không chia sẻ mật khẩu hoặc sao chép nội dung khi chưa có sự đồng ý của người đăng.</li></ul>
+  </section>
+  <h2 id="danh-ba">Tìm tác giả và couple</h2>
+  <p>Mở <a href="/tac-gia/">Tác giả</a> hoặc <a href="/couple/">Couple</a> từ menu. Gõ tên vào ô lọc; mỗi thẻ hiển thị tên đầy đủ và thống kê truyện. Chọn thẻ để xem các bộ mới cập nhật trước. Dùng liên kết “Tất cả” phía trên để quay lại danh sách.</p>
+  <div class="tip">Muốn giảm chuyển động? Bật “Giảm chuyển động” trong cài đặt trợ năng của hệ điều hành. Web sẽ tắt hiệu ứng chuyển cảnh và cuộn mượt.</div>
+  <h2 id="ranking">Ranking và Đáng xem</h2>
+  <p><b>Ranking</b> có hai mục: <b>Top View</b> xếp theo lượt đọc; <b>Top Vote</b> xếp theo lượt thích của bộ và các chương. Mỗi mục có Ngày, Tuần và Tháng. Con số cạnh truyện là số trong kỳ đang chọn, không phải tổng từ trước đến nay.</p>
+  <p>Ngày tính theo mốc UTC; Tuần là 7 ngày gần nhất, Tháng là 31 ngày gần nhất, bao gồm ngày hiện tại. Khi kỳ chưa có dữ liệu, web hiển thị thông báo thay vì lấy tổng số hoặc tự chuyển sang hạng mục khác.</p>
+  <p>Dãy <b>Đáng xem</b> phía dưới xếp theo điểm sao trung bình. Nếu bằng điểm, truyện có nhiều đánh giá hơn đứng trước. Sao đánh giá độc lập với nút Thích và không cộng vào Top Vote.</p>
+  <p>Ở trang truyện, chọn <b>Đọc giới thiệu đầy đủ</b> để mở toàn bộ tóm tắt ngay tại chỗ; chọn <b>Thu gọn</b> để đóng lại. Tab <b>Thông tin</b> chỉ hiển thị tác giả, couple và các thông tin của truyện.</p>
   <h2 id="tim-kiem">1. Tìm truyện</h2>
   <div class="card2"><ul>
     <li>Ở mục <b>Thư viện</b>, nhập tên truyện, tác giả hoặc couple. Kết quả lọc ngay khi bạn gõ.</li>
@@ -45,24 +58,27 @@
   <h2 id="my-space">3. Lưu truyện và tiến độ</h2>
   <div class="card2"><ul>
     <li>Nhấn <b>Tủ truyện</b> trên trang truyện hoặc trang đọc để lưu một bộ.</li>
-    <li>Các bộ đang đọc và tủ truyện nằm trong <b>My Space</b> ở trang chủ, kèm phần trăm tiến độ.</li>
+    <li>Mở <a href="/my-space">My Space</a> từ menu. Đây là trang riêng cho tủ truyện, lịch sử, thống kê đọc và hồ sơ.</li>
     <li>Nhấn biểu tượng đánh dấu trong trang đọc để lưu một chương muốn quay lại.</li>
-    <li>Nút <b>Xoá</b> trong My Space dùng để dọn lịch sử đọc hoặc bỏ truyện khỏi tủ.</li>
+    <li>Tủ trên thiết bị, lịch sử và thống kê chỉ ở trình duyệt hiện tại. Nút <b>Xoá lịch sử</b> dọn tiến độ đọc, không xoá thống kê chương đã đọc.</li>
   </ul></div>
 
+  <div class="card2"><h3>Tạo tủ công khai hoặc riêng tư</h3><ol><li>Đăng nhập, vào My Space → Tủ truyện → <b>Tạo tủ mới</b>.</li><li>Đặt tên, chọn truyện và quyền xem. Tủ mới mặc định là <b>Chỉ mình tôi</b>.</li><li>Bấm Lưu. Bạn có thể sửa tên, thêm/bớt truyện, đổi quyền xem hoặc xoá tủ.</li></ol><p>Tủ theo tài khoản lưu ở máy chủ, dùng được khi đăng nhập trên thiết bị khác. Tủ công khai xuất hiện trên hồ sơ; tủ riêng tư không được trả về cho người khác. Bạn có thể tạo tối đa 24 tủ, mỗi tủ 200 truyện.</p><p>Dùng <b>Tạo tủ từ danh sách này</b> để sao chép tủ cũ trên thiết bị lên tài khoản. Không tự động tải lịch sử hay thống kê lên hồ sơ. Khi đổi tủ công khai thành riêng tư, web dừng chia sẻ nhưng không thể thu hồi bản sao đã được người khác giữ lại.</p></div>
   <h2 id="thich">4. Thích và bình chọn</h2>
   <div class="card2"><ul>
     <li>Nhấn trái tim ở trang truyện để thích <b>cả bộ</b>. Trong trang đọc, lượt thích áp dụng cho <b>chương đang xem</b>.</li>
     <li>Nhấn lại để bỏ thích. Bạn không cần đăng nhập, nhưng đăng nhập giúp lượt thích gắn với tài khoản của mình.</li>
   </ul></div>
 
+  <div class="card2"><p>Hàng sao trên trang truyện hiển thị <b>số sao của bạn</b>; điểm trung bình của mọi người được ghi riêng bên cạnh. Chọn 1–5 sao để gửi hoặc sửa đánh giá. Bấm <b>Rút đánh giá</b> để xoá số sao của mình; điểm trung bình và số lượt sẽ được tính lại.</p><p>Dùng Tab để tới hàng sao, phím mũi tên để chọn. Đánh giá khi đăng nhập gắn với tài khoản; đánh giá khi chưa đăng nhập gắn với mã trình duyệt. Muốn rút một đánh giá cũ, dùng cùng tài khoản hoặc cùng trình duyệt đã đánh giá lúc chưa đăng nhập.</p></div>
   <h2 id="tai-khoan">5. Tài khoản</h2>
   <div class="card2"><ul>
     <li>Chọn <b>Đăng nhập</b> trên đầu trang nếu bạn muốn bình luận và quản lý hồ sơ.</li>
-    <li>Vào menu tài khoản → <b>Chỉnh sửa hồ sơ</b> để đổi tên hiển thị hoặc ảnh đại diện.</li>
-    <li>Khi chọn ảnh, bạn có thể kéo và phóng to/thu nhỏ trước khi lưu.</li>
+    <li>Vào My Space → <b>Hồ sơ của tôi</b> để đổi tên hiển thị, mô tả bản thân và ảnh đại diện. Bấm <b>Lưu hồ sơ</b> để cập nhật lên máy chủ.</li>
+    <li>Ảnh PNG/JPEG/WebP dưới 8 MB được cắt vuông ở giữa và thu nhỏ trước khi lưu. Tên, ảnh và mô tả là công khai; email, lịch sử và thống kê không xuất hiện trên hồ sơ.</li>
   </ul></div>
 
+  <p>Bấm <b>Xem hồ sơ công khai</b> để lấy đường dẫn chia sẻ. Bạn cũng có thể bấm tên người đã đăng nhập trong bình luận để xem hồ sơ và tủ công khai của họ. Người chưa tạo hồ sơ sẽ có thông báo chưa có hồ sơ.</p>
   <h2 id="bao-loi">6. Báo lỗi</h2>
   <div class="card2"><ul>
     <li>Cuối chương, chọn <b>Báo lỗi chữ</b>. Điền nội dung sai và nhấn <b>Gửi báo lỗi</b>; tên truyện, chương và đường dẫn đã được điền sẵn.</li>
@@ -80,6 +96,6 @@
   <p style="margin:36px 0 24px;color:var(--mut);font-size:13px">Cập nhật 15/09/2026 · Có chỗ nào chưa rõ? Nhắn tụi mình qua Facebook nhé.</p>
 </main>
 <footer id="ftr"></footer><button id="toTop" aria-label="Lên đầu trang"></button>
-<script src="/cz-config.js?v=20260917h"></script><script src="/cz-app.js?v=20260917r"></script><script src="/cz-auth.js?v=20260915j"></script>
+<script src="/cz-config.js?v=20260917h"></script><script src="/cz-app.js?v=20260918e"></script><script src="/cz-auth.js?v=20260918e"></script>
 <script>CZ.mountShell({active:'library'});document.querySelectorAll('[data-ic]').forEach(function(el){el.outerHTML=CZ.icon(el.dataset.ic);});</script>
 </body></html>

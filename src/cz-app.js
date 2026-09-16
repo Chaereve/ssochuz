@@ -127,6 +127,7 @@
   function book(slug) {
     slug = String(slug || '');
     if (!slug) return Promise.resolve(null);
+    if (slug.indexOf('private-') === 0) return Promise.resolve({ locked: true });
     if (memo.books[slug]) return memo.books[slug];
     var p = (useApi() ? jgetApi(API + '/api/book/' + encodeURIComponent(slug), 15000) : Promise.resolve(null))
       .then(function (b) {
@@ -257,8 +258,8 @@
            /api/stats vì đáp ứng đang nằm trong cache biên 60 giây, gọi cũng chỉ
            nhận số cũ (số chuẩn tự về ở lần mở trang sau) */
         if (memo.stats && memo.stats.items) {
-          var it = memo.stats.items[slug];
-          if (it) { it.views = (Number(it.views) || 0) + 1; it.viewsDay = (Number(it.viewsDay) || 0) + 1; }
+          var it = memo.stats.items[slug] || (memo.stats.items[slug] = { views: 0, votes: 0 });
+          if (it) { it.views = (Number(it.views) || 0) + 1; it.viewsDay = (Number(it.viewsDay) || 0) + 1; it.viewsWeek = (Number(it.viewsWeek) || 0) + 1; it.viewsMonth = (Number(it.viewsMonth) || 0) + 1; }
         }
         notifyStats();
       }
@@ -322,10 +323,11 @@
      hạn 1 ghi/giây/key nên lần nhắc lại giúp tránh mất điểm do xung đột. */
   function rate(slug, stars) {
     if (!API || !slug) return Promise.resolve(null);
+    var actor = authToken(); // A retry must never switch to a different signed-in account.
     return new Promise(function (resolve) {
       var tries = 0;
       function attempt(cbOk) {
-        jpost('/api/rate', { slug: slug, rating: stars, vid: vid() }, authToken()).then(function (r) {
+        jpost('/api/rate', { slug: slug, rating: stars, vid: vid() }, actor).then(function (r) {
           if (r && r.ok) {
             applyRating(slug, r);
             resolve(r);
@@ -345,6 +347,7 @@
     var it = memo.stats.items[slug] || (memo.stats.items[slug] = { views: 0, votes: 0 });
     if (r.ratingAvg != null) it.rating = Number(r.ratingAvg) || 0;
     if (r.ratingCount != null) it.ratingCount = Math.max(0, Number(r.ratingCount) || 0);
+    memo.stats.on = true;
     lsSet('ssochuz-stats', { t: Date.now(), v: memo.stats });
     notifyStats();
     return it;
@@ -1528,9 +1531,10 @@
        trên trang. Trước đây desktop dùng tên rút gọn còn mobile dùng `vi`, nên
        cùng một điểm đến lại hiện hai cách gọi khác nhau. */
     var NAV = [
+      { k: 'space', label: 'My Space', i: 'shelf', h: '/my-space' },
       { k: 'library', label: 'Thư viện', i: 'library', h: '/#thu-vien' },
       { k: 'new', label: 'Mới cập nhật', i: 'sparkle', h: '/#moi-cap-nhat' },
-      { k: 'rank', label: 'Bình chọn', i: 'trophy', h: '/#bxh' },
+      { k: 'rank', label: 'Ranking', i: 'trophy', h: '/#bxh' },
       { k: 'sched', label: 'Lịch ra chương', i: 'calendar', h: '/#lich' },
       { k: 'authors', label: 'Tác giả', i: 'pen', h: '/tac-gia/' },
       { k: 'couples', label: 'Couple', i: 'users', h: '/couple/' }
@@ -1577,7 +1581,6 @@
       '<button class="hbtn icon burger" id="czBurger" aria-label="Mở menu" aria-expanded="false" aria-controls="czMnav">' + icon('menu', 'i-s') + '</button>' +
       '</div>' +
       '<div class="mnav" id="czMnav">' + mLinks +
-      '<a href="/#ban-doc">' + icon('shelf', 'i-s') + ' My Space</a>' +
       '<a href="/guide">' + icon('info', 'i-s') + ' Hướng dẫn</a>' +
       /* mục Quản trị được vẽ trong paintAuth(): người thường KHÔNG thấy */
       '<span id="czAuthMWrap"></span></div>';
@@ -1645,8 +1648,8 @@
               (ad ? '<em class="role">' + icon('shield', 'i-s') + 'quản trị</em>' : '') + '</span>' +
             '</div>' +
             '<button type="button" role="menuitem" id="czAuthEdit">' + icon('edit', 'i-s') + 'Chỉnh sửa hồ sơ</button>' +
-            '<a href="/#ban-doc" role="menuitem">' + icon('shelf', 'i-s') + 'Tủ truyện</a>' +
-            '<a href="/#ban-doc" role="menuitem">' + icon('clock', 'i-s') + 'Đang đọc dở</a>' +
+            '<a href="/my-space" role="menuitem">' + icon('shelf', 'i-s') + 'Tủ truyện</a>' +
+            '<a href="/my-space#history" role="menuitem">' + icon('clock', 'i-s') + 'Đang đọc dở</a>' +
             (ad ? '<a href="/admin" role="menuitem" class="adm">' + icon('gear', 'i-s') + 'Quản trị</a>' : '') +
             '<button type="button" role="menuitem" id="czAuthOut" class="out">' + icon('logout', 'i-s') + 'Đăng xuất</button>';
         }
@@ -1784,18 +1787,19 @@
     var bar = d.getElementById('czOffline');
     if (bar) bar.hidden = !!navigator.onLine;
   }
-  /* N13: báo "đang dùng dữ liệu dự phòng" khi đã rớt khỏi Worker; nút Thử lại
-     xoá ghi nhớ 10 phút và tải lại trang để nối lại máy chủ. */
+  /* Fallback stays automatic and silent; API backoff and recovery are unchanged. */
   function paintFallback() {
     netBars();
     var bar = d.getElementById('czFallback');
-    if (bar) bar.hidden = !(apiDown || apiBanned());
+    if (bar) bar.hidden = true; // Fallback is automatic, not a recurring reader notification.
   }
   function showUpdateBar(w) {
     swWaiting = w;
     netBars();
     var bar = d.getElementById('czUpdate');
-    if (bar) bar.hidden = false;
+    if (bar) bar.hidden = true;
+    // Keep the new worker waiting. It activates naturally after old tabs close;
+    // never reload an active reading/admin session or show an entry banner.
   }
   function applyUpdate() {
     var bar = d.getElementById('czUpdate');
@@ -1845,7 +1849,7 @@
   function swRegister() {
     try {
       navigator.serviceWorker.register('/sw.js').then(function (reg) {
-        /* bản mới về tới lúc trang đang đóng → báo cập nhật ngay khi mở lại */
+        /* Track waiting workers silently; activation follows the normal SW lifecycle. */
         if (reg.waiting && navigator.serviceWorker.controller) showUpdateBar(reg.waiting);
         reg.addEventListener('updatefound', function () {
           var nw = reg.installing;
@@ -2065,7 +2069,7 @@
         var me = meUser && (c.uid === meUser.uid || String(c.uid) === String(meUser.uid));
         var admin = !!(w.CZ_AUTH && w.CZ_AUTH.isAdmin && w.CZ_AUTH.isAdmin());
         return '<div class="cmt-item" data-id="' + esc(c.id) + '">' + ava(c) +
-          '<div class="cmt-body"><div class="cmt-h"><b>' + esc(c.name || 'Bạn đọc') + '</b>' +
+          '<div class="cmt-body"><div class="cmt-h">' + (c.profileId && /^[a-f0-9]{64}$/.test(c.profileId) ? '<a class="cmt-profile" href="/profile?id=' + c.profileId + '"><b>' + esc(c.name || 'Bạn đọc') + '</b></a>' : '<b>' + esc(c.name || 'Bạn đọc') + '</b>') +
             (c.guest ? '<span class="cmt-guest" title="Bình luận khi chưa đăng nhập">khách</span>' : '') +
             (c.ch ? '<span class="cmt-ch">chương ' + esc(c.ch) + '</span>' : '') +
             '<span class="cmt-time">' + esc(timeAgo(c.createdAt)) + '</span>' +
@@ -2452,7 +2456,7 @@
   w.CZ = {
     API: API, normalizeApi: normalizeApi,
     registry: registry, book: book, stats: stats, refreshStats: refreshStats, schedule: schedule,
-    vid: vid, reportView: reportView, sendReport: sendReport, vote: vote, rate: rate,
+    vid: vid, reportView: reportView, sendReport: sendReport, vote: vote, rate: rate, myRating: function (slug) { return jpost('/api/rate/me', { slug: slug, vid: vid() }, authToken()); },
     lib: libList, slides: slides, editorChoice: editorChoice, donationCfg: donationCfg, reportCfg: reportCfg, findLib: findLib, statsOf: statsOf, onStats: onStats,
     progress: progress, setProgress: setProgress, lastReadAt: lastReadAt,
     shelfIds: shelfIds, inShelf: inShelf, toggleShelf: toggleShelf, clearShelf: clearShelf,

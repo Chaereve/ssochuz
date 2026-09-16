@@ -1,3 +1,6 @@
+import { profileId } from './member-spaces.js';
+export { MemberSpaces } from './member-spaces.js';
+export { PrivateBooks } from './private-books.js';
 /* ============================================================================
    ssochuz — Worker đọc/ghi dữ liệu truyện + số liệu xếp hạng trên Cloudflare KV
    ----------------------------------------------------------------------------
@@ -108,6 +111,49 @@ export default {
     /* Mọi handler đều `await`: không await thì lỗi bên trong lọt ra ngoài try/catch
        và Cloudflare trả trang lỗi 1101 thay vì JSON — rất khó đoán bệnh. */
     try {
+      if (p === '/api/me/space' || /^\/api\/profiles\/[a-f0-9]{64}$/.test(p)) {
+        const owner = p === '/api/me/space';
+        let id;
+        if (owner) {
+          const auth = await userFromReq(req, env);
+          if (!auth.user || !auth.user.uid || !auth.user.exp || auth.user.exp <= Date.now() / 1000)
+            return json({ error: 'Vui lòng đăng nhập lại.' }, { status: 401, cors, headers: { 'cache-control': 'no-store' } });
+          id = await profileId(auth.user.uid);
+        } else {
+          if (req.method !== 'GET') return json({ error: 'Không được phép.' }, { status: 405, cors });
+          id = p.split('/').pop();
+        }
+        if (!env.MEMBER_SPACES) return json({ error: 'Kho hồ sơ chưa được triển khai. Tủ trên thiết bị vẫn dùng được.' }, { status: 503, cors });
+        if (!['GET', 'PUT'].includes(req.method)) return json({ error: 'Không được phép.' }, { status: 405, cors });
+        let raw;
+        if (req.method === 'PUT') {
+          if (!env.CZ_KV || !await rateLimit(env, 'rl:space:' + id, 120, 3600)) return json({ error: 'Thao tác quá nhanh, vui lòng thử lại sau.' }, { status: 429, cors });
+          const reader = req.body && req.body.getReader();
+          if (!reader) return json({ error: 'Thiếu dữ liệu.' }, { status: 400, cors });
+          const chunks = []; let size = 0;
+          while (true) { const part = await reader.read(); if (part.done) break; size += part.value.length; if (size > 300000) { await reader.cancel(); return json({ error: 'Dữ liệu quá lớn.' }, { status: 413, cors }); } chunks.push(part.value); }
+          raw = new Blob(chunks);
+        }
+        const stub = env.MEMBER_SPACES.get(env.MEMBER_SPACES.idFromName(id));
+        const res = await stub.fetch(new Request('https://members.internal/' + (owner ? 'owner' : 'public'), { method: req.method, body: raw }));
+        const data = await res.json();
+        return json({ ...data, id }, { status: res.status, cors, headers: { 'cache-control': 'private, no-store' } });
+      }
+      if (p === '/api/rate/me' && req.method === 'POST') return await myRating(req, env, cors);
+
+      // A reserved namespace: never fall through to public KV or cached book routes.
+      const privateMatch = /^\/api\/(?:book|private)\/(private-[a-z0-9-]+)$/.exec(p);
+      if (privateMatch) {
+        if (!env.PRIVATE_BOOKS) return json({ error: 'Kho riêng tư chưa được triển khai.' }, { status: 503, cors });
+        if (req.method === 'PUT' && !authed(req, env)) return json({ error: 'Cần quyền quản trị.' }, { status: 401, cors });
+        if (!['POST', 'PUT'].includes(req.method) || !p.startsWith('/api/private/'))
+          return json({ error: 'Truyện được bảo vệ bằng mật khẩu.' }, { status: 403, cors });
+        const raw = await req.text();
+        if (raw.length > (req.method === 'PUT' ? 2000000 : 4096)) return json({ error: 'Dữ liệu quá lớn.' }, { status: 413, cors });
+        const stub = env.PRIVATE_BOOKS.get(env.PRIVATE_BOOKS.idFromName(privateMatch[1]));
+        const result = await stub.fetch(new Request('https://private.internal/', { method: req.method, body: raw }));
+        return new Response(result.body, { status: result.status, headers: { ...cors, ...JSONH, 'cache-control': 'private, no-store' } });
+      }
       /* ---------- mở: chỉ đọc ---------- */
       if (p === '/' || p === '/api/health') return await health(env, cors);
       if (p === '/api/whoami' || p === '/api/auth') {
@@ -1833,8 +1879,13 @@ async function postVote(req, env, cors) {
     if (ch > 0) it.chap[ch] = (Number(it.chap[ch]) || 0) + 1;
     changed = true;
   } else if (!want && existing.length) {
-    existing.forEach((k) => { delete it.voters[k]; });
-    it.got.votes = Math.max(0, it.got.votes - existing.length); addDay(it, dayStr(), 0, -existing.length);
+    existing.forEach((k) => {
+      // Remove from the original voting day, not today's unrelated votes.
+      const originalDay = String(it.voters[k].t || '').slice(0, 10);
+      if (it.days[originalDay]) it.days[originalDay].o = Math.max(0, (Number(it.days[originalDay].o) || 0) - 1);
+      delete it.voters[k];
+    });
+    it.got.votes = Math.max(0, it.got.votes - existing.length);
     if (ch > 0) {
       it.chap[ch] = Math.max(0, (Number(it.chap[ch]) || 0) - existing.length);
       if (!it.chap[ch]) delete it.chap[ch];
@@ -1894,12 +1945,25 @@ function ratingSetLast(k, t) {
   ratingWrites.set(k, t);
   if (ratingWrites.size > 400) ratingWrites = new Map();
 }
+async function myRating(req, env, cors) {
+  if (!env.CZ_KV) return noKV(cors);
+  const body = await req.json().catch(() => ({}));
+  const slug = cleanSlug(body.slug);
+  if (!slug) return json({ error: 'Thiếu truyện.' }, { status: 400, cors });
+  const auth = await userFromReq(req, env);
+  if (req.headers.has('authorization') && !auth.user) return json({ error: 'Phiên đăng nhập không hợp lệ.' }, { status: 401, cors });
+  const who = auth.user ? 'g:' + hash(auth.user.uid) : viewerOf(req, body);
+  if (!who) return json({ error: 'Thiếu danh tính.' }, { status: 400, cors });
+  const r = await env.CZ_KV.get('rate:' + slug + ':' + who, { type: 'json' });
+  return json({ ok: true, rating: (r && r.s) || 0 }, { cors, headers: { 'cache-control': 'private, no-store' } });
+}
 async function postRate(req, env, cors) {
   if (!env.CZ_KV) return noKV(cors);
   const body = await req.json().catch(() => ({}));
   const slug = cleanSlug(body.slug);
   if (!slug) return json({ ok: false, error: 'thiếu slug hợp lệ' }, { status: 400, cors });
   const u = (await userFromReq(req, env)).user;
+  if (req.headers.has('authorization') && !u) return json({ error: 'Phiên đăng nhập không hợp lệ.' }, { status: 401, cors });
   const ids = [];
   if (u) ids.push('g:' + hash(u.uid));
   const anon = viewerOf(req, body);
@@ -2463,7 +2527,7 @@ async function getComments(slug, req, env, cors) {
   } catch (e) {}
   /* ch = số chương: chỉ trả bình luận của chương đó (0 = bình luận chung của bộ) */
   const pool = ch == null ? arr : arr.filter((c) => (Number(c.ch) || 0) === ch);
-  const comments = pool.slice(0, limit).map(publicComment);
+  const comments = await Promise.all(pool.slice(0, limit).map(async c => ({ ...publicComment(c), profileId: !c.guest && c.uid ? await profileId(c.uid) : '' })));
   const byChap = {};
   arr.forEach((c) => { const k = String(Number(c.ch) || 0); byChap[k] = (byChap[k] || 0) + 1; });
   return json({ ok: true, comments, count: arr.length, shown: comments.length, slug, ch: ch, byChapter: byChap },
@@ -2492,7 +2556,7 @@ async function postComment(slug, req, env, cors) {
     return json({ ok: false, error: 'không nhận được mã máy — tải lại trang rồi thử lại' }, { status: 400, cors });
   }
   const uid = u ? u.uid : 'g:' + hash(vid);
-  const name = u
+  let name = u
     ? (String(body.name || '').replace(/\s+/g, ' ').trim().slice(0, 40) || u.name || 'Bạn đọc')
     : (String(body.name || '').replace(/\s+/g, ' ').trim().slice(0, 40) || 'Bạn đọc');
   /* Ảnh đại diện: chỉ nhận http/https (bỏ data:, javascript:…), tối đa 300 ký tự */
@@ -2500,7 +2564,12 @@ async function postComment(slug, req, env, cors) {
   if (!/^https?:\/\//i.test(rawPic)) rawPic = '';
   var sessPic = String((u && u.picture) || '').trim();
   if (!/^https?:\/\//i.test(sessPic)) sessPic = '';
-  const picture = u ? (rawPic || sessPic || '') : '';
+  let picture = u ? (rawPic || sessPic || '') : '';
+  if (u && env.MEMBER_SPACES) {
+    const id = await profileId(u.uid);
+    const response = await env.MEMBER_SPACES.get(env.MEMBER_SPACES.idFromName(id)).fetch(new Request('https://members.internal/public'));
+    if (response.ok) { const member = await response.json(); name = member.profile.name; picture = member.profile.avatar; }
+  }
   const ch = Math.max(0, Math.min(99999, parseInt(body.ch, 10) || 0));
   /* parentId là id của bình luận mà người đọc đang trả lời. Chỉ nhận id trong
      cùng bộ; ch của reply được giữ theo bình luận cha để bộ lọc chương không
@@ -2528,7 +2597,7 @@ async function postComment(slug, req, env, cors) {
   arr.unshift(c);
   if (arr.length > 500) arr.length = 500;
   await env.CZ_KV.put(key, JSON.stringify(arr));
-  return json({ ok: true, comment: publicComment(c), count: arr.length, guest: !u, reply: !!parent }, { cors });
+  return json({ ok: true, comment: { ...publicComment(c), profileId: u ? await profileId(u.uid) : '' }, count: arr.length, guest: !u, reply: !!parent }, { cors });
 }
 async function deleteComment(slug, id, req, env, cors) {
   const byKey = authed(req, env);            /* quản trị (ADMIN_KEY) xoá được mọi bình luận */

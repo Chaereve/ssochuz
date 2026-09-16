@@ -9,6 +9,7 @@
    ========================================================================== */
 (function () {
   'use strict';
+  if (location.hash === '#ban-doc') { location.replace('/my-space'); return; }
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
   var esc = CZ.esc, ic = CZ.icon, num = CZ.num;
@@ -176,7 +177,7 @@
         s.classList.toggle('on', on);
         CZ.pop(s);
         s.querySelector('span').textContent = on ? 'Đã lưu' : 'Lưu vào tủ';
-        renderBan();
+
         CZ.toast(on ? 'Đã thêm vào tủ truyện' : 'Đã bỏ khỏi tủ truyện');
       }
     });
@@ -219,181 +220,6 @@
     CZ.scaleFacts($('#facts'));
   }
 
-  /* ======================= BÀN ĐỌC ===================================== */
-  function contRow(n) {
-    var p = CZ.progress(n), tot = n.chapters, pct = tot ? Math.min(100, Math.round(p / tot * 100)) : 0;
-    return '<article class="cont" data-open="' + esc(n.slug) + '" role="button" tabindex="0" title="Đọc tiếp ' + esc(n.title) + '">' +
-      '<span class="ct-th' + (n.thumb ? '' : ' noimg') + '">' +
-      (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</span>' +
-      '<div><b>' + esc(n.title) + ' ' + CZ.followBadge(n) + '</b>' +
-      '<span class="st">còn ' + Math.max(0, tot - p) + ' chương' +
-        (CZ.lastReadAt(n) ? ' · ' + CZ.timeAgo(new Date(CZ.lastReadAt(n)).toISOString()) : '') + '</span>' +
-      '<div class="pb"><i style="width:' + pct + '%"></i></div></div>' +
-      '<span class="go">Đọc tiếp</span></article>';
-  }
-  /* ---- ô đăng nhập trong mục My Space (nút đăng nhập cũng có ở đầu trang) ---- */
-  function paintAuthHint(empty) {
-    var box = $('#banAuth');
-    if (!box) return;
-    var u = (window.CZ_AUTH && CZ_AUTH.current && CZ_AUTH.current()) || null;
-    var can = !!(window.CZ_AUTH && CZ_AUTH.configured && CZ_AUTH.configured());
-    if (u) {
-      var liked = CZ.lib().reduce(function (a, n) { return a + (CZ.likedChapters ? CZ.likedChapters(n).length : 0); }, 0);
-      box.hidden = false;
-      box.className = 'authcard on';
-      box.innerHTML =
-        (u.picture ? '<img src="' + esc(u.picture) + '" alt="" referrerpolicy="no-referrer">'
-                   : '<span class="ava">' + esc(String(u.name || u.email || 'B')[0].toUpperCase()) + '</span>') +
-        '<div><b>Xin chào, ' + esc((u.name || u.email || 'bạn').split(' ')[0]) + '!</b>' +
-        '<span>' + esc(u.email || '') + ' · ' + num(CZ.shelfIds().length) + ' bộ trong tủ · ' + num(liked) + ' chương đã thích</span></div>' +
-        '<span class="grow"></span>' +
-        (CZ_AUTH.isAdmin && CZ_AUTH.isAdmin() ? '<a class="btn ghost sm" href="/admin">' + ic('shield', 'i-s') + 'Quản trị</a>' : '') +
-        '<button class="btn ghost sm" id="banOut">' + ic('logout', 'i-s') + 'Đăng xuất</button>';
-      var ob = box.querySelector('#banOut');
-      if (ob) ob.addEventListener('click', function () { CZ_AUTH.logout().then(function () { renderBan(); }); });
-      return;
-    }
-    box.hidden = false;
-    box.className = 'authcard';
-    box.innerHTML = '<span class="ava">' + ic('user', 'i-s') + '</span>' +
-      '<div><b>' + (empty ? 'Bắt đầu bàn đọc của bạn' : 'Đăng nhập để bình luận &amp; thích chương') + '</b>' +
-      '<span>Đăng nhập bằng Google qua Supabase để bình luận, thích từng chương và giữ danh tính của bạn. ' +
-      'Tủ truyện cùng tiến độ đọc vẫn được lưu ngay trong máy này kể cả khi chưa đăng nhập.</span></div>' +
-      '<span class="grow"></span>' +
-      '<button class="btn pri sm" id="banLogin">' + ic('google', 'i-s') + 'Đăng nhập</button>' +
-      (can ? '' : '<span class="sm muted">chưa cấu hình Supabase</span>');
-    var lb = box.querySelector('#banLogin');
-    if (lb) lb.addEventListener('click', function () { CZ_AUTH.login().catch(function () {}); });
-  }
-  var banTab = 'doc';
-  function docList() {
-    return CZ.lib().filter(function (n) { return n.canRead && CZ.progress(n) > 0; })
-      .sort(function (a, b) { return CZ.lastReadAt(b) - CZ.lastReadAt(a); });
-  }
-  function shelfList() {
-    return CZ.shelfIds().map(function (s) { return CZ.findLib(s); }).filter(Boolean);
-  }
-  /* ================= THỐNG KÊ ĐỌC CÁ NHÂN (N10) ==========================
-     Tuần · chuỗi ngày đọc · tổng chương + biểu đồ cột 7 ngày (SVG inline),
-     chỉ đọc localStorage `ssochuz-mystats` — không tốn request/ghi KV. */
-  var WD = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-  function myStatsPanel() {
-    if (!(CZ.myReadSummary && CZ.myReadAdd)) return '';
-    var s = CZ.myReadSummary();
-    var max = 0, i;
-    for (i = 0; i < s.week.length; i++) max = Math.max(max, s.week[i].n);
-    var bw = 30, bh = 56, bs = 10, g = 6, W = 40, gap = 12;
-    var bars = '', labels = '';
-    for (i = 0; i < s.week.length; i++) {
-      var it = s.week[i];
-      var h = max ? Math.max(3, Math.round(bh * it.n / max)) : (it.n ? Math.max(3, bh - 6) : 3);
-      if (!max && !it.n) h = 3;
-      var x = i * bw + gap;
-      var y = bs + (bh - h);
-      var isToday = it.k === myDayTodayKey();
-      bars += '<rect x="' + x + '" y="' + y + '" width="' + g + '" height="' + Math.max(3, h) + '" rx="3"' +
-        (isToday ? ' class="on"' : '') + '><title>' + it.n + ' chương · ' + esc(it.k.slice(6, 8) + '/' + it.k.slice(4, 6)) + '</title></rect>';
-      labels += '<text x="' + (x + g / 2) + '" y="' + (bs + bh + 14) + '" text-anchor="middle"' +
-        (isToday ? ' class="on"' : '') + '>' + esc(WD[it.d.getDay()]) + '</text>';
-    }
-    var svg = '<svg class="mychart" viewBox="0 0 ' + (i * bw) + ' ' + (bs + bh + 24) + '" role="img" aria-label="Biểu đồ chương đã đọc 7 ngày qua">' + bars + labels + '</svg>';
-    return '<div class="mystats" id="myStatsPanel">' +
-      '<div class="ms-tot">' +
-        '<div class="ms-m"><b data-count="' + s.total + '">' + num(s.total) + '</b><span>chương đã đọc</span></div>' +
-        '<div class="ms-m"><b>' + s.streak + '</b><span>ngày đọc liên tiếp</span></div>' +
-        '<div class="ms-m"><b>' + s.today + '</b><span>hôm nay</span></div>' +
-      '</div>' + svg + '</div>';
-  }
-  function myDayTodayKey() {
-    try {
-      var d = new Date();
-      var p2 = function (n) { return (n < 10 ? '0' : '') + n; };
-      return d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate());
-    } catch (e) { return ''; }
-  }
-  function renderMyStats() {
-    var box = $('#myStats');
-    if (!box) return;
-    if (!(CZ.myReadSummary && CZ.myReadAdd)) { box.innerHTML = ''; return; }
-    var html = myStatsPanel();
-    box.innerHTML = html;
-    /* số “chương đã đọc” đếm lên cho sinh động — cùng cơ chế dải số liệu */
-    var nums = box.querySelectorAll('[data-count]');
-    if (nums.length && CZ.countUp) Array.prototype.forEach.call(nums, function (b) {
-      CZ.countUp(b, parseInt(b.getAttribute('data-count'), 10) || 0);
-    });
-  }
-  function renderBan() {
-    var sec = $('#ban-doc');
-    if (!sec) return;
-    var docs = docList(), shelf = shelfList();
-    var empty = !docs.length && !shelf.length;
-    sec.hidden = false;                       /* luôn hiện: chưa có gì thì mời đăng nhập/bắt đầu đọc */
-    paintAuthHint(empty);
-    renderMyStats();
-    $('#contRow').innerHTML = ''; $('#shelfRow').innerHTML = '';
-    if (empty) { $('#banTabs').classList.add('hide'); $('#banClear').classList.add('hide'); return; }
-    $('#banTabs').classList.remove('hide'); $('#banClear').classList.remove('hide');
-    if (banTab === 'doc' && !docs.length) banTab = 'shelf';
-    if (banTab === 'shelf' && !shelf.length) banTab = 'doc';
-    $('#banDocCount').textContent = docs.length ? String(docs.length) : '';
-    $('#banShelfCount').textContent = shelf.length ? String(shelf.length) : '';
-    $$('#banTabs .tab').forEach(function (b) { b.classList.toggle('on', b.dataset.ban === banTab); });
-    $('#contRow').classList.toggle('hide', banTab !== 'doc');
-    $('#shelfRow').classList.toggle('hide', banTab !== 'shelf');
-    var clr = $('#banClear');
-    clr.textContent = banTab === 'doc' ? 'Xoá lịch sử đọc' : 'Bỏ hết khỏi tủ';
-    if (banTab === 'doc') {
-      $('#contRow').innerHTML = docs.slice(0, 8).map(contRow).join('');
-    } else {
-      $('#shelfRow').innerHTML = shelf.map(function (n) {
-        var p = CZ.progress(n), tot = n.chapters;
-        return '<article class="cont" data-open="' + esc(n.slug) + '" role="button" tabindex="0">' +
-          '<span class="ct-th' + (n.thumb ? '' : ' noimg') + '">' +
-          (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</span>' +
-          '<div><b>' + esc(n.title) + ' ' + CZ.followBadge(n) + '</b><span class="st">' +
-          (tot ? (p ? 'đang ở chương ' + p + '/' + tot : num(tot) + ' chương') : 'sắp ra mắt') + '</span>' +
-          (tot && p ? '<div class="pb"><i style="width:' + Math.round(p / tot * 100) + '%"></i></div>' : '') + '</div>' +
-          (tot ? '<span class="go">Đọc tiếp</span>' : '<span class="go"></span>') +
-          '<span class="rm" data-rm="' + esc(n.slug) + '" title="Bỏ khỏi tủ">' + ic('x', 'i-s') + '</span></article>';
-      }).join('');
-    }
-  }
-  $('#banTabs').addEventListener('click', function (e) {
-    var b = e.target.closest('.tab'); if (!b) return;
-    banTab = b.dataset.ban; renderBan();
-  });
-  $('#contRow').addEventListener('click', function (e) {
-    var c = e.target.closest('[data-open]'); if (!c) return;
-    var n = CZ.findLib(c.dataset.open); if (n) location.href = CZ.readURL(n.slug, CZ.progress(n) || 1);
-  });
-  $('#shelfRow').addEventListener('click', function (e) {
-    var rm = e.target.closest('[data-rm]');
-    if (rm) { CZ.toggleShelf({ slug: rm.dataset.rm }); renderBan(); CZ.toast('Đã bỏ khỏi tủ truyện'); return; }
-    var c = e.target.closest('[data-open]'); if (!c) return;
-    var n = CZ.findLib(c.dataset.open);
-    if (n) location.href = n.canRead ? CZ.readURL(n.slug, CZ.progress(n) || 1) : CZ.storyURL(n.slug);
-  });
-  $('#banClear').addEventListener('click', function () {
-    if (banTab === 'shelf') {
-      if (!CZ.shelfIds().length) return;
-      CZ.confirm('Bỏ hết ' + CZ.shelfIds().length + ' bộ khỏi tủ truyện?', 'Bỏ hết').then(function (ok) {
-        if (!ok) return;
-        CZ.clearShelf(); renderBan(); CZ.toast('Đã xoá tủ truyện');
-      });
-      return;
-    }
-    CZ.confirm('Xoá lịch sử đọc trong máy này? Tiến độ đọc của mọi bộ sẽ mất.', 'Xoá').then(function (ok) {
-      if (!ok) return;
-      CZ.lib().forEach(function (n) {
-        [n.postId, n.slug].filter(Boolean).forEach(function (k) {
-          try { localStorage.removeItem('ssochuz-prog-' + k); localStorage.removeItem('ssochuz-when-' + k); } catch (e) {}
-        });
-      });
-      renderBan(); heroPaint(false); CZ.toast('Đã xoá lịch sử đọc');
-    });
-  });
-
   /* ======================= MỚI CẬP NHẬT ================================ */
   function renderNew() {
     var rows = CZ.lib().slice().sort(function (a, b) {
@@ -407,82 +233,68 @@
     // intentionally empty - no count badges in header
   }
 
-  /* ======================= XẾP HẠNG (top voted: ngày / tuần / tháng) === */
+  /* Ranking uses period counters only: never mix lifetime totals or recency. */
   function statsOn() { return !!(CZ._memo.stats && CZ._memo.stats.on); }
   function rankTabs() {
     return [{ k: 'day', l: 'Ngày' }, { k: 'week', l: 'Tuần' }, { k: 'month', l: 'Tháng' }];
   }
-  var rankBy = 'week';
-  function recencyW(n, halfDays) {
-    var t = Date.parse(String(n.updated || '')) || 0;
-    if (!t) return 0.12;
-    var days = Math.max(0, (Date.now() - t) / 864e5);
-    return Math.exp(-days / Math.max(0.6, halfDays));
-  }
-  function voteScore(n, k) {
-    var s = CZ.statsOf(n) || {};
-    var votes = Number(s.votes || 0);
-    /* Worker trả số phiếu theo từng khoảng (votesDay/Week/Month) nên tab
-       Ngày/Tuần/Tháng xếp theo hoạt động của khoảng đó; tổng phiếu vẫn tính
-       một phần để bộ có số cũ (chưa có ai bầu trong kỳ) không tụt về 0. */
-    var per = Number((k === 'day' ? s.votesDay : k === 'week' ? s.votesWeek : s.votesMonth) || 0);
-    var trend = Number(s.trendingScore || 0);
-    var half = k === 'day' ? 1.4 : k === 'week' ? 8 : 32;
-    var hot = (per * 2 + votes * 0.2) * recencyW(n, half);
-    if (k === 'day') hot += trend * 0.35;
-    if (!statsOn()) hot = recencyW(n, half) * 100;
-    return hot;
-  }
-  function renderRank() {
-    var lib = CZ.lib(), on = statsOn();
-    var tabs = rankTabs();
-    var by = (rankBy && tabs.some(function (t) { return t.k === rankBy; })) ? rankBy : 'week';
-    /* N12: "Bình chọn nhiều nhất" mà KHÔNG bộ nào có phiếu → xếp theo lượt đọc
-       thật (nếu có), hoặc ẩn hẳn khối — không bày bảng toàn "0 phiếu". */
-    var mode = 'votes';
-    var anyVotes = false, anyViews = false;
-    if (on) {
-      anyVotes = lib.some(function (n) { return ((CZ.statsOf(n) || {}).votes || 0) > 0; });
-      anyViews = lib.some(function (n) { return ((CZ.statsOf(n) || {}).views || 0) > 0; });
-    }
-    if (!on || (!anyVotes && !anyViews)) {
-      $('#rank').innerHTML = ''; $('#bxh').hidden = true;
-      if (CZ.inkAll) CZ.inkAll();
+  var rankBy = 'week', rankMode = 'views';
+  function positive(value) { var n = Number(value); return Number.isFinite(n) && n > 0 ? n : 0; }
+  function renderRecommended() {
+    var rail = $('#worthRail');
+    if (!rail) return;
+    var rows = statsOn() ? CZ.lib().map(function (n) {
+      var s = CZ.statsOf(n) || {};
+      return { n: n, rating: positive(s.rating), count: positive(s.ratingCount) };
+    }).filter(function (r) { return r.rating > 0 && r.rating <= 5 && r.count > 0; })
+      .sort(function (a, b) { return b.rating - a.rating || b.count - a.count || a.n.slug.localeCompare(b.n.slug); }).slice(0, 12) : [];
+    if (!rows.length) {
+      rail.innerHTML = statsOn() ? '<p class="empty">Chưa có truyện được đánh giá sao.</p>' : '';
       return;
     }
-    if (!anyVotes && anyViews) mode = 'views';
+    CZ.mountRail(rail, rows.map(function (r) { return r.n; }));
+    rail.querySelectorAll('.card').forEach(function (card, i) {
+      var score = document.createElement('span');
+      score.className = 'worth-score';
+      score.textContent = '★ ' + rows[i].rating.toFixed(1) + '/5 · ' + num(rows[i].count) + ' đánh giá';
+      card.appendChild(score);
+    });
+  }
+  function renderRank() {
+    var on = statsOn(), tabs = rankTabs();
     $('#bxh').hidden = false;
-    $('#bxh .sechead h2').textContent = mode === 'views' ? 'Đọc nhiều nhất' : 'Bình chọn nhiều nhất';
-    $('#rankTabs').innerHTML = mode === 'views' ? '' : tabs.map(function (t) {
-      return '<button class="tab' + (t.k === by ? ' on' : '') + '" data-k="' + t.k + '" role="tab" aria-selected="' +
-        (t.k === by ? 'true' : 'false') + '">' + t.l + '</button>';
+    $('#rankModes').querySelectorAll('button').forEach(function (b) {
+      var active = b.dataset.mode === rankMode;
+      b.classList.toggle('on', active); b.setAttribute('aria-pressed', String(active));
+    });
+    $('#rankTabs').innerHTML = tabs.map(function (t) {
+      return '<button class="tab' + (t.k === rankBy ? ' on' : '') + '" data-k="' + t.k + '" aria-pressed="' + (t.k === rankBy) + '">' + t.l + '</button>';
     }).join('');
-    var rows = lib.map(function (n) {
-      var s = CZ.statsOf(n) || {};
-      return mode === 'views' ? { n: n, s: Number(s.views) || 0 } : { n: n, s: voteScore(n, by) };
-    }).sort(function (a, b) { return (b.s - a.s) || ((b.n.chapters || 0) - (a.n.chapters || 0)); }).slice(0, 8);
-    var max = Math.max(1, rows[0] ? rows[0].s : 1);
+    var key = rankMode + ({ day: 'Day', week: 'Week', month: 'Month' }[rankBy]);
+    var rows = on ? CZ.lib().map(function (n) { return { n: n, score: positive((CZ.statsOf(n) || {})[key]) }; })
+      .filter(function (r) { return r.score > 0; })
+      .sort(function (a, b) { return b.score - a.score || a.n.slug.localeCompare(b.n.slug); }).slice(0, 8) : [];
+    $('#rankSummary').textContent = (rankMode === 'views' ? 'Top View' : 'Top Vote') + ' · ' + tabs.find(function (t) { return t.k === rankBy; }).l;
     $('#rank').innerHTML = rows.map(function (row, i) {
-      var n = row.n, s = CZ.statsOf(n) || {};
-      var w = Math.round(100 * row.s / max);
-      var text = mode === 'views'
-        ? (num(s.views || 0) + ' lượt đọc')
-        : (on ? (num(s.votes || 0) + ' phiếu') : (n.updated ? CZ.timeAgo(n.updated) : '—'));
-      return '<a class="rank" href="' + esc(CZ.storyURL(n.slug)) + '" title="' + esc(n.title) + '" style="--d:' + (i * 45) + 'ms">' +
+      var n = row.n;
+      return '<a class="rank" href="' + esc(CZ.storyURL(n.slug)) + '">' +
         '<span class="n' + (i < 3 ? ' top t' + (i + 1) : '') + '">' + (i + 1) + '</span>' +
         '<span class="rk-th' + (n.thumb ? '' : ' noimg') + '">' +
-        (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</span>' +
-        '<span class="tt"><b>' + esc(n.title) + '</b><span>' + esc(n.author || n.couple || '') +
-        (on && s.chapterCount ? ' · ' + s.chapterCount + ' chương' : '') + '</span></span>' +
-        '<span class="v">' + text + '</span>' +
-        (w ? '<i class="bar" style="--w:' + (w / 100) + '"></i>' : '') + '</a>';
-    }).join('') || '<div class="empty">Chưa có dữ liệu.</div>';
+        (n.thumb ? '<img src="' + esc(n.thumb) + '"' + CZ.coverFB(n, n.thumb) + ' alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</span>' +
+        '<span class="tt"><b>' + esc(n.title) + '</b><span>' + esc(n.author || n.couple || '') + '</span></span>' +
+        '<span class="v">' + num(row.score) + (rankMode === 'views' ? ' lượt đọc' : ' lượt thích') + '</span></a>';
+    }).join('') || (on ? '<p class="empty">Chưa có hoạt động trong khoảng thời gian này.</p>' : '');
+    renderRecommended();
     if (CZ.inkAll) CZ.inkAll();
   }
-
   $('#rankTabs').addEventListener('click', function (e) {
-    var b = e.target.closest('.tab'); if (!b) return;
+    var b = e.target.closest('[data-k]'); if (!b) return;
     rankBy = b.dataset.k; renderRank();
+    $('#rankTabs [data-k="' + rankBy + '"]').focus({ preventScroll: true });
+  });
+  $('#rankModes').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-mode]'); if (!b) return;
+    rankMode = b.dataset.mode; renderRank();
   });
 
   /* ======================= LỊCH RA CHƯƠNG ============================== */
@@ -802,8 +614,7 @@
       hero.list = CZ.slides(reg).slice(0, 5);
       heroInit();
       renderFacts(lib);
-      renderBan();
-      renderMyStats();
+
       renderNew();
       renderRank();
       renderEditorChoice();
@@ -815,18 +626,16 @@
       /* số liệu KV về sau thì vẽ lại phần xếp hạng */
       CZ.onStats(function () { renderRank(); buildFilters(); render(); });
       /* bấm Thích (ở trang này hoặc vừa quay lại) → BXH phải nhảy lên ngay */
-      if (CZ.onStatsChange) CZ.onStatsChange(function () { renderRank(); });
       window.addEventListener('cz:stats', function () { renderRank(); });
       /* một bộ vừa được đối chiếu số chương thật → vẽ lại thẻ cho đúng */
       window.addEventListener('cz:count', function () {
         try { CZ._setLib(); } catch (e) {}
-        renderFacts(CZ.lib()); renderNew(); renderRank(); render(); renderBan();
+        renderFacts(CZ.lib()); renderNew(); renderRank(); render();
       });
     } catch (e) { fail('lỗi dựng trang chủ', e); }
   }
-  if (window.CZ_AUTH && CZ_AUTH.onAuth) CZ_AUTH.onAuth(function () { try { renderBan(); } catch (e) {} });
   /* quay lại tab (hoặc bấm Back) → dựng lại bàn đọc cho khớp dữ liệu trong máy */
-  window.addEventListener('pageshow', function () { if (CZ._memo.reg) { renderBan(); heroPaint(false); } });
+  window.addEventListener('pageshow', function () { if (CZ._memo.reg) {  heroPaint(false); } });
   skeleton(12);
   CZ.registry().then(function (r) { boot(r.reg); })
     .catch(function (e) { fail('lỗi tải registry', e); });

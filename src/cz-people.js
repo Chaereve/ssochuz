@@ -81,7 +81,7 @@
       em.textContent = 'Không có ' + kindLabel().toLowerCase() + ' nào khớp “' + q.value.trim() + '”.';
       document.querySelector('#ppSub').textContent = needle
         ? ('Tìm thấy ' + shown + ' / ' + total + ' ' + kindLabel().toLowerCase())
-        : (total + ' ' + kindLabel().toLowerCase() + ' · chọn một mục để xem truyện');
+        : (total + ' ' + kindLabel().toLowerCase());
     };
   }
   function renderOne(name) {
@@ -110,7 +110,7 @@
     document.querySelector('#crumb').innerHTML = '<a href="/">Trang chủ</a> <span>›</span> ' +
       '<a href="/#thu-vien">Thư viện</a> <span>›</span> <b>Tất cả ' + kindLabel().toLowerCase() + '</b>';
     document.querySelector('#ppTitle').textContent = 'Tất cả ' + kindLabel().toLowerCase();
-    document.querySelector('#ppSub').textContent = names.length + ' ' + kindLabel().toLowerCase() + ' · chọn một mục để xem truyện';
+    document.querySelector('#ppSub').textContent = names.length + ' ' + kindLabel().toLowerCase();
     document.querySelector('#ppGrid').innerHTML =
       (missQ ? '<div class="empty" style="grid-column:1/-1">Không tìm thấy “' + esc(missQ) + '” — hiện tất cả ' + kindLabel().toLowerCase() + '.</div>' : '') +
       names.map(function (name) {

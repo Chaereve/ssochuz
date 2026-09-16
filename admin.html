@@ -8,7 +8,7 @@
 <link rel="icon" type="image/png" href="/ssochuz.png?v=1">
 <link rel="apple-touch-icon" href="/ssochuz.png?v=1">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="stylesheet" href="/cz.css?v=20260917g">
+<link rel="stylesheet" href="/cz.css?v=20260918g">
 <script>/* chống nháy nền */try{var t=localStorage.getItem('ssochuz-theme')||localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
 <body class="admin">
@@ -36,7 +36,7 @@
   <nav class="crumb"><a href="/">Trang chủ</a><span>›</span><a href="/#thu-vien">Thư viện</a><span>›</span><b>Trang quản trị</b></nav>
   <div class="phead slim">
     <h1>Trang quản trị</h1>
-    <p class="sm">Sửa ở đây là người đọc thấy ngay — không cần build, không cần deploy lại.</p>
+    <p class="sm">Không gian biên tập · Nội dung, kiểm duyệt và vận hành được tách theo từng công việc.</p>
   </div>
   <div class="msgbar" id="msg"></div>
 
@@ -98,22 +98,38 @@
 
   <!-- ============ 2. ỨNG DỤNG ============ -->
   <section id="scApp" class="hide">
-    <div class="tabs bar sticky" id="tabs" role="tablist">
+    <nav class="tabs bar sticky" id="tabs" aria-label="Điều hướng quản trị">
+      <span class="admin-nav-label">Biên tập</span>
       <button data-tab="overview" class="on">Tổng quan</button>
       <button data-tab="list">Thư viện<span class="ct" id="tabLibCt"></span></button>
       <button data-tab="quick">Đăng chương nhanh</button>
       <button data-tab="new">Thêm bộ</button>
       <button data-tab="edit" class="hide">Sửa bộ &amp; chương</button>
-      <button data-tab="doctor">Bác sĩ dữ liệu</button>
+      <button data-tab="private">Truyện riêng tư</button>
+      <span class="admin-nav-label">Kiểm duyệt</span>
       <button data-tab="cmts">Bình luận<span class="ct" id="tabCmtCt"></span></button>
       <button data-tab="reports">Báo lỗi<span class="ct" id="tabRepCt"></span></button>
-      <button data-tab="stats">Số liệu thật</button>
+      <span class="admin-nav-label">Vận hành</span>
+      <button data-tab="stats">Thống kê</button>
+      <button data-tab="doctor">Kiểm tra dữ liệu</button>
       <button data-tab="votes">Phiếu bầu<span class="ct" id="tabVotesCt"></span></button>
       <button data-tab="log">Nhật ký</button>
       <button data-tab="settings">Cài đặt &amp; đồng bộ</button>
       <button data-tab="help">Trợ giúp</button>
-    </div>
+    </nav>
 
+    <section id="pane-private" class="hide">
+      <div class="card2"><p class="admin-nav-label">Biên tập / Kho bảo mật</p><h2>Truyện riêng tư</h2>
+      <p class="hint">Kho riêng biệt, không xuất JSON công khai, RSS hay đọc offline. Chỉ dùng cho nội dung chưa từng công khai. Đổi mật khẩu bằng cách lưu lại cùng mã truyện; người đã đọc vẫn có thể giữ bản sao.</p>
+      <form id="privateForm">
+      <label class="fl" for="privateSlug">Mã truyện riêng tư</label><input class="inp" id="privateSlug" pattern="private-[a-z0-9-]+" placeholder="private-ten-truyen" required>
+      <label class="fl" for="privatePassword">Mật khẩu mới · ít nhất 16 ký tự</label><input class="inp" id="privatePassword" type="password" minlength="16" maxlength="256" autocomplete="new-password" required>
+      <label class="fl" for="privateFile">Tệp nội dung JSON (title, chapters: [{t, html}])</label><input class="inp" id="privateFile" type="file" accept=".json,application/json" required>
+      <p class="hint">Tệp chỉ gửi đến kho riêng tư. Giữ bản gốc an toàn để cập nhật nội dung sau này. Lưu cùng mã sẽ thay toàn bộ truyện.</p>
+      <label><input type="checkbox" required> Tôi xác nhận nội dung chưa có trong repo, Blogger, file tĩnh hay kho công khai.</label>
+      <div class="row mt"><button class="btn pri" type="submit">Lưu truyện và mật khẩu</button></div><p id="privateResult" role="status"></p>
+      </form></div>
+    </section>
     <!-- ---------- TỔNG QUAN ---------- -->
     <div id="pane-overview">
       <div class="card2">
@@ -616,8 +632,8 @@
 <div class="toasts" id="toasts"></div>
 
 <script src="/cz-config.js?v=20260917h"></script>
-<script src="/cz-app.js?v=20260917r"></script>
-<script src="/cz-auth.js?v=20260915j"></script>
-<script src="/admin.js?v=20260917k"></script>
+<script src="/cz-app.js?v=20260918e"></script>
+<script src="/cz-auth.js?v=20260918e"></script>
+<script src="/admin.js?v=20260918a"></script>
 </body>
 </html>

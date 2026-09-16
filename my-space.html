@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="vi" data-theme="light"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Không gian đọc và hồ sơ bạn đọc trên ssochuz library.">
+<meta name="robots" content="noindex">
+<title>My Space · ssochuz library</title>
+<link rel="icon" href="/ssochuz.png"><link rel="stylesheet" href="/cz.css?v=20260918g">
+<script>try{var t=localStorage.getItem('ssochuz-theme');if(t)document.documentElement.dataset.theme=t;}catch(e){}</script>
+</head><body class="space-page" data-public="false">
+<header id="hdr"></header><main class="space-wrap">
+<nav class="crumb"><a href="/">Trang chủ</a><span>›</span><b>My Space</b></nav>
+<div id="spaceHero" class="space-hero"><p class="space-kicker">SSOCHUZ / BẠN ĐỌC</p><h1>My Space</h1></div>
+<p id="spaceStatus" class="space-status" role="status" aria-live="polite"></p>
+<section id="spaceGuest" class="space-panel" hidden><h2>Một góc riêng cho những câu chuyện bạn yêu.</h2><p>Đăng nhập để tạo hồ sơ và tủ truyện của riêng bạn. Tủ trên thiết bị và lịch sử đọc bên dưới vẫn dùng được khi chưa đăng nhập.</p><button class="btn pri" id="spaceLogin">Đăng nhập</button></section>
+<div class="space-tabs" role="group" aria-label="My Space">
+<button data-space-tab="shelves" class="on" aria-pressed="true">Tủ truyện</button><button data-space-tab="history" aria-pressed="false">Lịch sử đọc</button><button data-space-tab="stats" aria-pressed="false">Thống kê</button><button data-space-tab="edit-profile" aria-pressed="false">Hồ sơ của tôi</button>
+</div>
+<section id="space-shelves">
+<div id="cloudShelves" hidden>
+<div class="sechead"><h2>Tủ của tôi</h2><button class="btn pri sm" id="newShelf">Tạo tủ mới</button></div>
+<div id="shelfList" class="space-shelf-list"></div><div id="shelfContent"></div>
+</div>
+<section class="space-panel local-shelf"><div class="sechead"><h2>Tủ trên thiết bị</h2><button class="btn ghost sm" id="importShelf" hidden>Tạo tủ từ danh sách này</button></div><p class="space-note">Những truyện bạn đã bấm Lưu. Danh sách này chỉ ở trình duyệt hiện tại, chưa được chia sẻ.</p><div class="grid" id="localShelf"></div></section>
+</section>
+<section id="space-history" hidden><div class="sechead"><h2>Lịch sử đọc</h2><button class="btn ghost sm" id="clearHistory">Xoá lịch sử</button></div><p class="space-note">Chỉ lưu trên thiết bị này, không xuất hiện trong hồ sơ công khai.</p><div id="spaceHistory" class="space-history"></div></section>
+<section id="space-stats" hidden><h2>Nhịp đọc của bạn</h2><p class="space-note">Thống kê riêng trên thiết bị này. Một chương được tính khi đọc xong hoặc chuyển sang chương tiếp.</p><div id="myStats"></div></section>
+<section id="space-edit-profile" hidden>
+<div class="space-panel"><h2>Hồ sơ của tôi</h2><p class="space-note">Tên hiển thị, ảnh và mô tả là công khai. Email, lịch sử và thống kê đọc không được chia sẻ.</p>
+<form id="profileForm"><fieldset id="profileFields" disabled>
+<div class="space-avatar-edit"><div id="avatarPreview" class="space-avatar"></div><div><label class="fl" for="avatarFile">Ảnh đại diện</label><input type="file" id="avatarFile" accept="image/png,image/jpeg,image/webp"><button class="btn ghost sm" id="removeAvatar" type="button">Bỏ ảnh</button><p class="space-note">PNG, JPEG hoặc WebP · tối đa 8 MB. Ảnh được cắt vuông và thu nhỏ trước khi lưu.</p></div></div>
+<label class="fl" for="profileName">Tên hiển thị</label><input class="inp" id="profileName" maxlength="40" required autocomplete="nickname">
+<label class="fl" for="profileBio">Vài dòng về bạn</label><textarea class="inp" id="profileBio" rows="5" maxlength="500" placeholder="Những thể loại, tác giả hoặc câu chuyện bạn yêu thích…"></textarea>
+<div class="row mt"><button class="btn pri" id="saveProfile" type="submit">Lưu hồ sơ</button><a class="btn ghost" id="myPublicLink" href="/profile" hidden>Xem hồ sơ công khai ↗</a></div></fieldset><p id="profileMessage" role="status"></p></form></div>
+</section>
+<dialog id="shelfDialog" class="space-dialog"><form id="shelfForm">
+<div class="sechead"><h2 id="shelfFormTitle">Tạo tủ truyện</h2><button type="button" class="btn ghost sm" id="closeShelf">Đóng</button></div>
+<label class="fl" for="shelfName">Tên tủ</label><input class="inp" id="shelfName" maxlength="60" required>
+<label class="fl" for="shelfDescription">Mô tả</label><textarea class="inp" id="shelfDescription" rows="2" maxlength="300"></textarea>
+<label class="fl" for="shelfVisibility">Ai có thể xem?</label><select class="inp" id="shelfVisibility"><option value="private">Chỉ mình tôi — Riêng tư</option><option value="public">Mọi người — Công khai</option></select>
+<p class="space-note">Tủ công khai hiển thị trên hồ sơ của bạn. Chuyển sang riêng tư sẽ ngừng chia sẻ; không thể thu hồi bản người khác đã sao chép.</p>
+<label class="fl" for="shelfSearch">Thêm truyện vào tủ <span id="selectedCount"></span></label><input class="inp" id="shelfSearch" placeholder="Tìm theo tên truyện, tác giả…" type="search"><div id="shelfPicker" class="shelf-picker"></div>
+<p id="shelfMessage" role="status"></p><div class="row mt"><button class="btn pri" id="saveShelf" type="submit">Lưu tủ truyện</button></div>
+</form></dialog>
+</main><footer id="ftr"></footer><button id="toTop" aria-label="Lên đầu trang"></button>
+<script src="/cz-config.js?v=20260917h"></script><script src="/cz-app.js?v=20260918e"></script><script src="/cz-auth.js?v=20260918e"></script><script src="/cz-space.js?v=20260918e"></script>
+</body></html>

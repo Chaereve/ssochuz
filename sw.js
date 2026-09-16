@@ -12,7 +12,7 @@
    ⚠ MỖI LẦN ĐỔI ?v= TĨNH (cz.css/cz-*.js): sửa cả PRECACHE dưới đây + tăng
    CZ_SW_VER → trình duyệt tự tải SW mới, hiện “Đã có bản cập nhật — tải lại”.
    ========================================================================== */
-var CZ_SW_VER = '20260917t';
+var CZ_SW_VER = '20260918g';
 
 /* kho shell theo version (update là thay kho mới, xoá kho cũ);
    kho trang/API/ảnh KHÔNG theo version để dữ liệu offline còn lại sau update */
@@ -35,14 +35,17 @@ var PRECACHE = [
   '/truyen/',
   '/tac-gia/',
   '/couple/',
+  '/my-space',
+  '/profile',
+  '/cz-space.js?v=20260918e',
   '/manifest.webmanifest',
-  '/cz.css?v=20260917g',
-  '/cz-app.js?v=20260917r',
-  '/cz-home.js?v=20260917m',
-  '/cz-story.js?v=20260917q',
-  '/cz-people.js?v=20260917j',
+  '/cz.css?v=20260918g',
+  '/cz-app.js?v=20260918e',
+  '/cz-home.js?v=20260918e',
+  '/cz-story.js?v=20260918g',
+  '/cz-people.js?v=20260918c',
   '/cz-config.js?v=20260917h',
-  '/cz-auth.js?v=20260915j',
+  '/cz-auth.js?v=20260918e',
   '/ssochuz.png?v=1'
 ];
 
@@ -254,6 +257,9 @@ self.addEventListener('fetch', function (e) {
   var req = e.request, url;
   try { url = new URL(req.url); } catch (err) { return; }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+
+  // Never persist authenticated/profile responses, including public shelf visibility.
+  if ((req.headers && req.headers.has('authorization')) || /^\/api\/(me\/|profiles\/|rate\/me)/.test(url.pathname)) { e.respondWith(fetch(req, { cache: 'no-store' })); return; }
 
   /* ---- KHÔNG cache request ghi; ghi API xong thì xoá cache API ---- */
   if (req.method !== 'GET') {

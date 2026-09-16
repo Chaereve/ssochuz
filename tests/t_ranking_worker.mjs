@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import worker from '../worker/cms.js';
+const now=new Date();
+const day=n=>new Date(now.getTime()-n*86400000).toISOString().slice(0,10);
+const data=new Map();
+const item={base:{views:100000,votes:100000},got:{views:0,votes:10},chap:{},voters:{'a:old-reader':{t:day(8)+'T12:00:00Z'}},days:{[day(0)]:{v:1,o:2},[day(6)]:{v:10,o:3},[day(7)]:{v:100,o:1},[day(8)]:{v:0,o:1},[day(30)]:{v:1000,o:2},[day(31)]:{v:10000,o:1}}};
+data.set('stats',JSON.stringify({items:{sample:item}}));
+const env={CZ_KV:{get:async(k,opt)=>opt?.type==='json'?JSON.parse(data.get(k)||'null'):data.get(k)||null,put:async(k,v)=>data.set(k,v),delete:async k=>data.delete(k),list:async()=>({keys:[],list_complete:true})}};
+const response=await worker.fetch(new Request('https://test/api/vote',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({slug:'sample',vid:'old-reader',vote:0})}),env,{});
+assert.equal(response.status,200);const result=await response.json();
+assert.equal(result.votesDay,2,'Removing an 8-day-old like must not subtract today');
+assert.equal(result.votesWeek,5);assert.equal(result.votesMonth,8);
+const stats=await (await worker.fetch(new Request('https://test/api/stats'),env,{})).json();
+assert.equal(stats.items.sample.viewsDay,1);assert.equal(stats.items.sample.viewsWeek,11);assert.equal(stats.items.sample.viewsMonth,1111);
+assert.equal(stats.items.sample.votesDay,2);assert.equal(stats.items.sample.votesWeek,5);assert.equal(stats.items.sample.votesMonth,8);
+console.log('Worker Ranking: 1/7/31-day boundaries, exclusion of lifetime totals, unlike original date passed.');

@@ -43,6 +43,8 @@
 /reader        /truyen   200
 /reader/       /truyen   200
 /reader.html   /truyen   200
+/my-space/    /my-space    200
+/profile/     /profile     200
 /guide.html    /guide    200
 /guide/        /guide    200
 /guide/*       /guide    200

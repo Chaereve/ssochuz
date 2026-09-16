@@ -112,10 +112,10 @@ function api(p, opt, statsItems) {
   eq('18+/có nút Đặt lại xác nhận', out.nutDatLai, true);
   eq('18+/đặt lại xoá ghi nhớ', out.datLaiXoaLocal, true);
   eq('hero/slide dùng nhãn reason', out.heroReason.join('|'), 'Lựa chọn của ban biên tập');
-  eq('BXH/0 phiếu → tiêu đề Đọc nhiều nhất', out.rankTitle, 'Đọc nhiều nhất');
-  eq('BXH/0 phiếu → ẩn tab thời gian', out.rankTabs, 0);
-  eq('BXH/0 phiếu → vẫn có hàng xếp lượt đọc', out.rankRows > 0, true);
-  eq('BXH/không phiếu lẫn lượt đọc → ẩn khối', out.rankHiddenWhenEmpty, true);
+  eq('Ranking giữ đúng tên dù không có phiếu', out.rankTitle, 'Ranking');
+  eq('Ranking luôn có ba kỳ', out.rankTabs, 3);
+  eq('Không lấy tổng view thay view kỳ còn thiếu', out.rankRows, 0);
+  eq('Ranking rỗng vẫn cho chọn hạng mục', out.rankHiddenWhenEmpty, false);
 
   out.fail = errs;
   console.log(JSON.stringify(out, null, 1));
