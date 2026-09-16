@@ -13,6 +13,10 @@
                        trong trang đọc (khách cũng gửi được), icon tủ/thẻ khác nhau,
                        số chương tự sửa, nút đăng nhập ở trang chủ, ẩn mục Quản trị
      t_flows.js        luồng thật: cài đặt đọc, đánh dấu, xoá chương/bộ, phím tắt
+     t_mystats.js      N10 thống kê đọc cá nhân (localStorage, không tốn request/KV)
+     t_rating.js       N11 đánh giá sao (chỉ trang truyện, retry 1 lần khi ghi trượt)
+     t_adult.js        N12 vá giao diện: nhãn hero, BXH phụ số liệu, chốt 18+
+     t_fallback.js     N13 phao cứu sinh: bỏ preconnect Firestore, retry 1 lần rồi rớt tĩnh
      t_doctor.js       Bác sĩ dữ liệu · soi trùng tiêu đề chương (KHÔNG cần jsdom): tách
                        "đăng trùng" (giống cả chữ) với "đặt nhầm tên/số" (khác chữ, nhảy số chương),
                        rồi quét toàn bộ data/book coi còn bộ nào lặp tiêu đề không
@@ -38,7 +42,7 @@ const path = require('path'), { spawnSync } = require('child_process');
 const cands = (process.env.CZ_TEST_MODULES || '').split(path.delimiter).filter(Boolean)
   .concat([path.join(__dirname, 'node_modules'), path.join(__dirname, '..', 'node_modules')]);
 const env = Object.assign({}, process.env, { NODE_PATH: cands.join(path.delimiter) });
-const files = [path.join('..', 'tools', 'check_src.js'), path.join('..', 'tools', 'check_secrets.js'), path.join('..', 'tools', 'check_headers.js'), 't_worker.mjs', 't_config.js', 't_html.js', 't_follow.js', 't_feed.js', 't_push.js', 't_people.js', 't_notif.js', 't_pwa.js', 't_sw_img.js', 't_devserver.js', 't_preload.js', 't_view.js', 't_chapter_url.js', 't_home.js', 't_mobile.js', 't_stats.js', 't_story.js', 't_reader.js', 't_flows.js', 't_doctor.js', 't_sweep.js', 'cf_admin_test.js'];
+const files = [path.join('..', 'tools', 'check_src.js'), path.join('..', 'tools', 'check_secrets.js'), path.join('..', 'tools', 'check_headers.js'), 't_worker.mjs', 't_config.js', 't_html.js', 't_follow.js', 't_feed.js', 't_push.js', 't_people.js', 't_notif.js', 't_pwa.js', 't_sw_img.js', 't_devserver.js', 't_preload.js', 't_view.js', 't_chapter_url.js', 't_home.js', 't_mobile.js', 't_stats.js', 't_story.js', 't_reader.js', 't_flows.js', 't_doctor.js', 't_sweep.js', 't_mystats.js', 't_rating.js', 't_adult.js', 't_fallback.js', 'cf_admin_test.js'];
 let bad = 0;
 for (const f of files) {
   const r = spawnSync(process.execPath, [path.join(__dirname, f)], { encoding: 'utf8', timeout: 180000, env });

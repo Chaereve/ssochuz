@@ -94,6 +94,8 @@
      kích hoạt sự kiện nên phải gọi enterReader trực tiếp; còn rớt về hash thì
      hashchange sẽ gọi route() → enterReader, khỏi gọi nữa) */
   function openChapterURL(ch) {
+    /* 18+ chưa xác nhận: chặn ngay, KHÔNG đổi URL (khỏi push chương vào lịch sử) */
+    if (isAdult() && !confirmed18()) { modal18(); return; }
     if (navChapterURL(ch)) enterReader(ch);
   }
   var SLUG = slugFromURL();
@@ -108,6 +110,45 @@
   var chState = { q: '', sort: 'old', page: 1, per: 24 };
   var PAGES = [], PI = 0;  /* chế độ phân trang */
 
+  /* ======================= 1b. CHẶN 18+ (N12) ============================
+     Truyện is18 hỏi xác nhận MỘT lần (không vội khi người đọc tắt tab). Xác nhận
+     xong ghi `ssochuz-confirmed18` (có hạn 12 tháng) và mở khoá nội dung. Chưa
+     xác nhận: mọi nút đọc/điều hướng đều chặn lại bằng modal, không nạp nội dung. */
+  var LS18 = 'ssochuz-confirmed18';
+  function confirmed18() {
+    try {
+      var v = parseInt(localStorage.getItem(LS18) || '0', 10);
+      if (!v) return false;
+      return (Date.now() - v) < 365 * 86400000;
+    } catch (e) { return false; }
+  }
+  function confirm18() {
+    try { localStorage.setItem(LS18, String(Date.now())); } catch (e) {}
+  }
+  function reset18() {
+    try { localStorage.removeItem(LS18); } catch (e) {}
+  }
+  function isAdult() { return !!(N && N.is18); }
+  /* bấm Đọc/next… mà chưa xác nhận độ tuổi → chặn, hiện modal */
+  function adultGuard(go) {
+    if (!isAdult() || confirmed18()) return go();
+    modal18(go);
+  }
+  function modal18(after) {
+    CZ.modal('cz18plus', '' +
+      '<div class="mh"><h4>Nội dung dành cho người trưởng thành</h4></div>' +
+      '<div class="mb"><p>“' + esc(String((N && N.title) || 'Truyện này')) + '” có nội dung <b>18+</b> — chỉ dành cho người từ 18 tuổi trở lên.</p>' +
+      '<p>Tôi xác nhận mình đã đủ 18 tuổi và đồng ý xem nội dung này.</p></div>' +
+      '<div class="mf"><button class="btn ghost" data-close>Không — quay lại</button>' +
+      '<button class="btn pri" id="cz18ok">' + ic('check', 'i-s') + 'Tôi đã đủ 18 tuổi</button></div>');
+    var ok = document.getElementById('cz18ok');
+    if (ok) ok.addEventListener('click', function () {
+      confirm18();
+      var m18 = document.getElementById('cz18plus');
+      if (m18 && m18._close) m18._close();
+      if (after) setTimeout(after, 80);   /* đợi hộp thoại đóng rồi mới mở đọc */
+    });
+  }
   /* ======================= 2. DỌN HTML CHƯƠNG ===========================
      Nội dung lấy từ kho chương trên web nên vẫn giữ in đậm/nghiêng/ảnh/link, nhưng bỏ
      mọi thứ nguy hiểm (script, iframe, thuộc tính on*, link javascript:).      */
@@ -219,6 +260,11 @@
   }
   function readBtn(n, ch) {
     if (!n.canRead) return '<button class="btn pri lg off" disabled>' + ic('clock', 'i-s') + 'Chưa có chương — sắp ra mắt</button>';
+    /* truyện 18+ chưa xác nhận: nút thành chốt chặn, không đi thẳng vào chương */
+    if (isAdult() && !confirmed18()) {
+      return '<button class="btn pri lg" id="adultGate" type="button" title="Cần xác nhận độ tuổi để đọc">' +
+        ic('lock', 'i-s') + 'Xác nhận 18+ để đọc</button>';
+    }
     return '<a class="btn pri lg" href="' + chapterPath(ch || 1) + '" title="' +
       (ch > 1 ? 'Mở đúng chỗ bạn đang đọc dở' : 'Bắt đầu từ chương đầu') + '">' + ic('play', 'i-s') +
       (ch > 1 ? 'Đọc tiếp' : 'Đọc từ đầu') + '</a>';
@@ -232,6 +278,54 @@
     if (st.votes) bits.push(num(st.votes) + ' phiếu');
     if (!bits.length) return '';
     return '<span title="lượt đọc/bình chọn thật, lưu trên Cloudflare KV">' + ic('eye', 'i-s') + ' ' + bits.join(' · ') + '</span>';
+  }
+  /* -- N11: hàng 5 sao cạnh tên/tình trạng/số chương trong shero --------------
+     Mỗi người 1 điểm, bấm lại để SỬA — điểm ghi lên KV `rate:` (tách khỏi vote
+     cũ). Chưa nối Worker thì hiển thị dạng đọc, không bấm được. */
+  function ratingTag() {
+    var st = CZ.statsOf(N) || {};
+    var avg = Number(st.rating) || 0;
+    var n = Number(st.ratingCount) || 0;
+    var frac = Math.round(avg) || 0;      /* số sao vàng hiển thị theo trung bình làm tròn */
+    var press = !!CZ.API;
+    var txt = avg ? (avg.toFixed(1).replace('.', ',') + ' / 5</b> · ' + num(n) + ' lượt') : 'chưa có</b>';
+    var lead = press ? '<span class="rl">Đánh giá: <b>' + txt + '</span>' : '<span class="rl">Đánh giá sao cần nối Worker</span>';
+    return '<div class="rating' + (press ? '' : ' ro') + '" aria-label="Đánh giá sao bộ truyện" role="group">' +
+      lead +
+      '<div class="stars' + (press ? ' act' : '') + '">' + [1, 2, 3, 4, 5].map(function (s) {
+        return '<button' + (press ? '' : ' disabled') + ' type="button" data-star="' + s + '" aria-label="' + s + ' sao"' +
+          ' class="st' + (s <= frac ? ' on' : '') + '" title="' + (press ? (s + ' sao') : '') + '"></button>';
+      }).join('') + '</div></div>';
+  }
+  function bindRating() {
+    var starsEls = $$('#shero .stars.act [data-star]');
+    if (!starsEls.length) return;
+    function paint(rl, starsAct, count, avg) {
+      starsEls.forEach(function (b) {
+        b.classList.toggle('on', parseInt(b.getAttribute('data-star'), 10) <= starsAct);
+      });
+      if (rl) rl.innerHTML = count
+        ? 'Đánh giá: <b>' + avg.toFixed(1).replace('.', ',') + ' / 5</b> · ' + num(count) + ' lượt'
+        : 'Đánh giá: <b>chưa có</b>';
+    }
+    starsEls.forEach(function (st) {
+      st.addEventListener('click', function () {
+        var stars = parseInt(this.getAttribute('data-star'), 10);
+        if (!(stars >= 1 && stars <= 5)) return;
+        var rl = document.querySelector('#shero .rl');
+        paint(rl, stars, 1, stars);           /* phản hồi tức thì trên 1 lượt */
+        CZ.rate(N.slug, stars).then(function (r) {
+          if (r && r.ok) {
+            paint(rl, Math.round(Number(r.ratingAvg) || stars) || stars, Math.max(1, Number(r.ratingCount) || 1), Number(r.ratingAvg) || stars);
+            CZ.toast('Đã đánh giá ' + stars + '/5 cho “' + N.title + '”');
+          } else {
+            var back = CZ.statsOf(N) || {};
+            paint(rl, Math.round(Number(back.rating) || 0) || 0, Number(back.ratingCount) || 0, Number(back.rating) || 0);
+            CZ.toast('Chưa gửi được điểm — thử lại sau ít giây');
+          }
+        });
+      });
+    });
   }
   function renderStory() {
     var n = N, ch = CZ.progress(n);
@@ -257,6 +351,7 @@
             '<span>' + ic('refresh', 'i-s') + ' ' + esc(CZ.timeAgo(n.updated)) + '</span>' +
             statChip() +
           '</div>' +
+          ratingTag() +
           '<div class="synwrap' + (syn.length > 200 ? ' clamp' : '') + '" id="synWrap">' +
             '<div class="synin" id="synIn">' +
               paras.map(function (x, i) {
@@ -331,6 +426,29 @@
       });
     });
     $('#shareBtn').addEventListener('click', function () { CZ.copy(location.origin + CZ.storyURL(n.slug), 'Đã copy link bộ truyện'); });
+    /* chốt 18+: nút Đọc thành modal xác nhận, xác nhận xong mở thẳng chương */
+    var ag = $('#adultGate');
+    if (ag) ag.addEventListener('click', function () {
+      adultGuard(function () {
+        renderStory();
+        var want = CZ.progress(n) || 1;
+        enterReader(Math.max(1, Math.min(CHS.length, want)));
+      });
+    });
+    /* nút “Đặt lại” cho phép thiết lập lại xác nhận 18+ (dành cho máy dùng chung) */
+    if (isAdult() && confirmed18()) {
+      var rg = $('#shero .btn-row');
+      if (rg) {
+        var rb = document.createElement('button');
+        rb.className = 'btn ghost sm'; rb.type = 'button'; rb.id = 'reset18';
+        rb.innerHTML = 'Đặt lại xác nhận 18+';
+        rb.addEventListener('click', function () {
+          reset18(); renderStory(); CZ.toast('Đã đặt lại — lần đọc sau sẽ hỏi xác nhận 18+');
+        });
+        rg.appendChild(rb);
+      }
+    }
+    bindRating();
     renderInfo();
     var ct = $('#tabChapCt');
     if (ct) ct.textContent = n.canRead ? n.chapters : '';
@@ -852,6 +970,8 @@
   function go(ch, pageHint) {
     if (ch < 1) return toast('Đây là chương đầu tiên.');
     if (ch > CHS.length) return toast('Bạn đã ở chương cuối.');
+    /* N10: bấm Chương tiếp theo đồng nghĩa đã đọc xong chương hiện tại */
+    if (ch === cur + 1 && N && CZ.myReadAdd) CZ.myReadAdd(N.slug, cur);
     openChapterURL(ch);
     if (pageHint === 'last') setTimeout(function () { PI = Math.max(0, PAGES.length - 1); paintPage(); }, 30);
   }
@@ -1209,6 +1329,8 @@
   /* ---- vào / ra chế độ đọc --------------------------------------------- */
   function enterReader(ch) {
     if (!CHS.length) return;
+    /* truyện 18+ chưa xác nhận: hộp thoại thay cho việc nạp nội dung */
+    if (isAdult() && !confirmed18()) { modal18(); return; }
     ch = Math.max(1, Math.min(CHS.length, ch || 1));
     var dir = reading && ch !== cur ? (ch > cur ? 1 : -1) : 0;
     cur = ch;
@@ -1289,6 +1411,9 @@
         var pc = $('#rdPct');
         if (pc) pc.textContent = Math.round(f * 100) + '%';
         if (f >= 0.5) preNextFire();
+        /* N10: cuộn tới ~cuối chương (≥90%) là tính 1 chương đọc vào
+           thống kê cá nhân — chỉ lưu trong máy, không gửi request nào */
+        if (f >= 0.9 && N && CZ.myReadAdd) CZ.myReadAdd(N.slug, cur);
       }
     });
   }, { passive: true });

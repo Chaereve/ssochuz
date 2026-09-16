@@ -242,13 +242,14 @@ Trang quản trị đã có tab **Phiếu bầu** (phím `V`): chọn bộ → d
 | GET | `/api/registry` | mở | toàn bộ thư viện (62 bộ + slides + lịch + series) |
 | GET | `/api/book/<slug>` | mở | tiêu đề + các chương của 1 bộ |
 | GET | `/api/schedule` | mở | lịch ra chương |
-| GET | `/api/stats` | mở | **lượt đọc/bình chọn từ KV** (tổng + hôm nay/tuần/tháng) |
+| GET | `/api/stats` | mở | **lượt đọc/bình chọn + đánh giá sao từ KV** (tổng + hôm nay/tuần/tháng + `rating`/`ratingCount`) |
 | GET | `/feed.xml` | mở | RSS 2.0: 30 chương mới nhất toàn web (cache biên 10 phút) |
 | GET | `/feed.xml?slug=<slug>` | mở | RSS 2.0: chương mới của 1 bộ (tối đa 50, mới trước) |
 | POST | `/api/push-sub` | mở | đăng ký (`{endpoint, keys}`) / huỷ (`{endpoint, remove:true}`) nhận thông báo đẩy |
 | Cron | `*/10 * * * *` | — | drain key `pushq`, tối đa 45 tin/invocation, xoá sub chết (404/410) |
 | POST | `/api/view` | mở | đếm 1 lượt đọc `{slug, vid, ch}` |
 | POST | `/api/vote` | mở | bầu/bỏ bầu `{slug, ch?, vote: 1|0, vid}` → trả số phiếu mới (kèm `chapVotes`) |
+| POST | `/api/rate` | mở | đánh giá sao `{slug, rating: 1..5}` (0 = gỡ điểm) — 1 người 1 điểm, sửa được; lưu `rate:<slug>:<uid>` + `rateagg:<slug>` |
 | PUT | `/api/registry` | cần khoá | ghi toàn bộ thư viện |
 | PUT | `/api/book/<slug>` | cần khoá | ghi 1 bộ (thêm/sửa chương) |
 | DELETE | `/api/book/<slug>` | cần khoá | xoá 1 bộ khỏi KV |

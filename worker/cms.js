@@ -12,7 +12,7 @@
      GET    /api/registry               → toàn bộ dữ liệu thư viện  (mở)
      GET    /api/book/<slug>            → 1 bộ: tiêu đề + các chương (mở)
      GET    /api/schedule               → lịch ra chương (mở)
-     GET    /api/stats                  → lượt đọc/bình chọn TỪ KV (mở)
+     GET    /api/stats                  → lượt đọc/bình chọn + ĐÁNH GIÁ SAO TỪ KV (mở)
      GET    /feed.xml                   → RSS 2.0: 30 chương mới nhất (mở)
      GET    /feed.xml?slug=<slug>       → RSS 2.0: chương mới của 1 bộ (mở)
 
@@ -21,6 +21,7 @@
 
      POST   /api/view                   → đếm 1 lượt đọc {slug, vid, ch} (mở)
      POST   /api/vote                   → bầu/bỏ bầu {slug, ch?, vote:1|0, vid}
+     POST   /api/rate                   → đánh giá sao 1..5 {slug, rating} (1 người 1 điểm, sửa được)
                                            · không gửi ch = phiếu cho cả bộ
                                            · ch = 12      = phiếu riêng chương 12
                                            trả về { votes, total, chapVotes, votesDay/Week/Month }
@@ -127,6 +128,11 @@ export default {
         const vr = await postVote(req, env, cors);
         if (vr.ok) await edgePurge(org + '/api/stats');
         return vr;
+      }
+      if (p === '/api/rate' && req.method === 'POST') {
+        const rr = await postRate(req, env, cors);
+        if (rr.ok) await edgePurge(org + '/api/stats');
+        return rr;
       }
       /* báo lỗi chữ trong chương: người đọc bấm 1 nút là nội dung đi thẳng tới
          hộp thư ban biên tập — tự lưu vào KV, không cần copy/mở Gmail nữa */
@@ -1739,6 +1745,9 @@ async function getStats(env, cors) {
   const today = dayStr();
   const items = {};
   Object.keys(st.items).forEach((slug) => { items[slug] = publicStat(st.items[slug], today); });
+  /* N11: + trung bình sao / số lượt đánh giá (KV rateagg:<slug>) — hòa vào cùng
+     đáp ứng /api/stats để web KHÔNG phải thêm request mới. */
+  await insertRatings(env, items);
   /* cộng phần đang đệm (của cả những bộ chưa có mặt trong KV) */
   for (const [slug, d] of _buf) {
     if (!d.v && !d.o) continue;
@@ -1841,6 +1850,103 @@ async function postVote(req, env, cors) {
     votesDay: pub.votesDay, votesWeek: pub.votesWeek, votesMonth: pub.votesMonth,
     chapVotes: pub.chapVotes,
   }, { cors, headers: { 'cache-control': 'no-store' } });
+}
+
+/* ---- ĐÁNH GIÁ SAO (N11) -------------------------------------------------
+   KHAY RIÊNG với bình chọn cũ: `rate:<slug>:<uid>` (điểm của từng người) +
+   `rateagg:<slug>` (tổng khối lượng {sum, n} để tính trung bình). vote cũ và
+   chapVotes KHÔNG đổi dáng. 1 người 1 điểm, gửi lại là SỬA điểm đó; rating 0
+   = gỡ điểm. Khoá người dùng theo đăng nhập (`g:` băm uid) nếu có, nếu không
+   mới về vid máy/IP (`a:…`) — tránh thay vid là bùng điểm. */
+function ratingWho(ids) { return ids && ids[0] ? ids[0] : ''; }
+async function rateBook(env, key) {
+  try { return await env.CZ_KV.get(key, { type: 'json' }); } catch (e) { return null; }
+}
+/* + trung bình/số lượt vào danh sách items của /api/stats (đọc KV bớt vì chỉ
+   1 lần list + batch get — không phát sinh truy cập từng key riêng lẻ). */
+async function insertRatings(env, items) {
+  if (!env.CZ_KV) return;
+  try {
+    const seen = new Set(); const aggs = [];
+    let cursor;
+    do {
+      const l = await env.CZ_KV.list({ prefix: 'rateagg:', limit: 1000, cursor });
+      for (const k of l.keys) { if (seen.has(k.name)) continue; seen.add(k.name); aggs.push(k.name); }
+      cursor = l.list_complete ? undefined : l.cursor;
+    } while (cursor);
+    if (!aggs.length) return;
+    const rows = await Promise.all(aggs.map((k) => rateBook(env, k).then((r) => ({ k, r })).catch(() => null)));
+    for (const row of rows) {
+      if (!row || !row.r) continue;
+      const slug = row.k.slice('rateagg:'.length);
+      const n = Math.max(0, Math.round(row.r && row.r.n) || 0);
+      const sum = Math.max(0, Math.round(row.r && row.r.sum) || 0);
+      if (n <= 0) continue;
+      const it = items[slug] || (items[slug] = { views: 0, votes: 0 });
+      it.rating = Math.round((sum / n) * 10) / 10;
+      it.ratingCount = n;
+    }
+  } catch (e) { /* lỗi đọc KV không được chặn /api/stats — bỏ phần sao đi */ }
+}
+let ratingWrites = new Map();   /* chặn 2 lần ghi cùng key trong <1s (KV tối đa 1 ghi/giây/key) */
+function ratingLastKey(k) { return ratingWrites.get(k) || 0; }
+function ratingSetLast(k, t) {
+  ratingWrites.set(k, t);
+  if (ratingWrites.size > 400) ratingWrites = new Map();
+}
+async function postRate(req, env, cors) {
+  if (!env.CZ_KV) return noKV(cors);
+  const body = await req.json().catch(() => ({}));
+  const slug = cleanSlug(body.slug);
+  if (!slug) return json({ ok: false, error: 'thiếu slug hợp lệ' }, { status: 400, cors });
+  const u = (await userFromReq(req, env)).user;
+  const ids = [];
+  if (u) ids.push('g:' + hash(u.uid));
+  const anon = viewerOf(req, body);
+  if (anon && ids.indexOf(anon) < 0) ids.push(anon);
+  if (!ids.length) return json({ ok: false, error: 'thiếu vid (mã máy) để chống đánh giá nhiều lần' }, { status: 400, cors });
+  const raw = body.rating;
+  const wantF = (raw === 0 || raw === '0') ? 0 : Number(raw);
+  if (!(raw !== null && raw !== undefined && raw !== '' && Number.isFinite(wantF) && Number.isInteger(wantF) && wantF >= 0 && wantF <= 5)) {
+    return json({ ok: false, error: 'rating phải là số nguyên 1..5 (0 = gỡ điểm)' }, { status: 400, cors });
+  }
+  const want = wantF;
+  const who = ratingWho(ids);
+  if (!await rateLimit(env, 'rl:rate:' + who, 60, 3600)) {
+    return json({ ok: false, error: 'thao tác hơi nhanh, thử lại sau ít phút' }, { status: 429, cors });
+  }
+  const KEY = 'rate:' + slug + ':' + who;
+  const AGG = 'rateagg:' + slug;
+  const hold = ratingLastKey(KEY);
+  const wait = hold + 1100 - Date.now();
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+  let prev = null; let agg = null; let error = null;
+  try {
+    prev = await env.CZ_KV.get(KEY, { type: 'json' }) || { s: 0, t: '' };
+    for (let attempt = 0; attempt < 2; attempt++) {
+      ratingSetLast(KEY, Date.now());
+      try {
+        agg = await env.CZ_KV.get(AGG, { type: 'json' }) || { sum: 0, n: 0 };
+        const prevStar = Math.max(1, Math.min(5, parseInt(prev.s, 10) || 5));
+        if (prev.s) { agg.sum = Math.max(0, (agg.sum || 0) - prevStar); agg.n = Math.max(0, (agg.n || 0) - 1); }
+        if (want > 0) { agg.sum = (agg.sum || 0) + want; agg.n = (agg.n || 0) + 1; }
+        if (agg.n <= 0) { await env.CZ_KV.delete(AGG); agg = { sum: 0, n: 0 }; }
+        else { await env.CZ_KV.put(AGG, JSON.stringify(agg)); }
+        if (want > 0) await env.CZ_KV.put(KEY, JSON.stringify({ s: want, t: new Date().toISOString() }));
+        else await env.CZ_KV.delete(KEY);
+        prev = { s: want, t: new Date().toISOString() };
+        error = null;
+        break;                                     /* ghi xong là ra, không thử lại */
+      } catch (e) { error = String((e && e.message) || e); }
+    }
+    if (error != null) return json({ ok: false, error: 'ghi KV lỗi, thử lại: ' + error }, { status: 502, cors });
+  } catch (e) {
+    return json({ ok: false, error: 'đọc KV lỗi: ' + String((e && e.message) || e) }, { status: 502, cors });
+  }
+  const n = Math.max(0, (agg && agg.n) || 0);
+  const avg = n > 0 ? Math.round(((agg && agg.sum) || 0) / n * 10) / 10 : 0;
+  return json({ ok: true, slug, rating: want, ratingCount: n, ratingAvg: avg, source: 'kv' },
+    { cors, headers: { 'cache-control': 'no-store' } });
 }
 
 /* POST /api/stats/seed { items: { slug: { views, votes } } }  (cần khoá)

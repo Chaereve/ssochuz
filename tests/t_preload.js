@@ -25,7 +25,8 @@ const IMG2 = imgsOf(2).map(srcOf), IMG6 = imgsOf(6).map(srcOf);
   const logA = [];
   const a = page('truyen.html', {
     url: 'https://ssochuz.pages.dev/truyen/co-vo-ho-anh-cua-toi/',
-    fetch: dataFetch({ log: logA })
+    fetch: dataFetch({ log: logA }),
+    setup(w) { try { w.localStorage.setItem('ssochuz-confirmed18', String(Date.now())); } catch (e) {} }
   });
   await wait(1200);
   out.errors0 = a.errors.slice(0, 5);
@@ -42,7 +43,8 @@ const IMG2 = imgsOf(2).map(srcOf), IMG6 = imgsOf(6).map(srcOf);
   const logB = [];
   const b = page('truyen.html', {
     url: 'https://ssochuz.pages.dev/truyen/co-vo-ho-anh-cua-toi/',
-    fetch: dataFetch({ log: logB })
+    fetch: dataFetch({ log: logB }),
+    setup(w) { try { w.localStorage.setItem('ssochuz-confirmed18', String(Date.now())); } catch (e) {} }
   });
   await wait(1200);
   b.win.location.hash = '#chuong-1'; await wait(400);
@@ -57,7 +59,8 @@ const IMG2 = imgsOf(2).map(srcOf), IMG6 = imgsOf(6).map(srcOf);
   const logC = [];
   const c = page('truyen.html', {
     url: 'https://ssochuz.pages.dev/truyen/co-vo-ho-anh-cua-toi/',
-    fetch: dataFetch({ log: logC })
+    fetch: dataFetch({ log: logC }),
+    setup(w) { try { w.localStorage.setItem('ssochuz-confirmed18', String(Date.now())); } catch (e) {} }
   });
   await wait(1200);
   c.win.location.hash = '#chuong-7'; await wait(400);

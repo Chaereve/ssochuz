@@ -40,10 +40,11 @@
     var p = CZ.progress(n), resume = p || 1, tot = n.chapters || 0;
     var inShelf = CZ.inShelf(n), im = n.thumb || n.slide || '';
     var pct = tot && p ? Math.min(100, Math.round(p / tot * 100)) : 0;
+    var eyebrow = (n._reason && n._reason.trim()) || (i === 0 ? 'Nổi bật hôm nay' : 'Đề xuất cho bạn');
     return '<article class="slide' + (i === 0 ? ' on' : '') + '" data-i="' + i + '" aria-label="' + esc(n.title) + '">' +
       '<div class="col">' +
         '<div class="info">' +
-          '<span class="eyebrow">' + (i === 0 ? 'Nổi bật hôm nay' : 'Đề xuất cho bạn') + '</span>' +
+          '<span class="eyebrow">' + esc(eyebrow) + '</span>' +
           '<h1><a href="' + esc(CZ.storyURL(n.slug)) + '">' + esc(n.title) + '</a></h1>' +
           '<div class="meta">' +
             '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(CZ.statusLabel(n.statusCls || n.status)) + '</span>' +
@@ -78,7 +79,7 @@
           '<span class="idx" aria-hidden="true">' + pad2(i + 1) + '</span>' +
           '<a class="poster" href="' + esc(CZ.storyURL(n.slug)) + '" aria-label="' + esc(n.title) + '">' +
             (im ? '<img src="' + esc(im) + '"' + CZ.coverFB(n, im) + ' alt="Bìa ' + esc(n.title) + '" width="300" height="450"' +
-              (i === 0 ? ' fetchpriority="high" referrerpolicy="no-referrer"' : ' loading="lazy"') + ' decoding="async" referrerpolicy="no-referrer">' : '') +
+              (i === 0 ? ' fetchpriority="high"' : ' loading="lazy"') + ' decoding="async" referrerpolicy="no-referrer">' : '') +
             '<span class="gloss"></span>' +
             (n.is18 ? '<span class="b18">18+</span>' : '') +
             (n.fresh ? '<span class="nw-bookmark"><span>NEW</span></span>' : '') +
@@ -272,6 +273,56 @@
   function shelfList() {
     return CZ.shelfIds().map(function (s) { return CZ.findLib(s); }).filter(Boolean);
   }
+  /* ================= THỐNG KÊ ĐỌC CÁ NHÂN (N10) ==========================
+     Tuần · chuỗi ngày đọc · tổng chương + biểu đồ cột 7 ngày (SVG inline),
+     chỉ đọc localStorage `ssochuz-mystats` — không tốn request/ghi KV. */
+  var WD = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+  function myStatsPanel() {
+    if (!(CZ.myReadSummary && CZ.myReadAdd)) return '';
+    var s = CZ.myReadSummary();
+    var max = 0, i;
+    for (i = 0; i < s.week.length; i++) max = Math.max(max, s.week[i].n);
+    var bw = 30, bh = 56, bs = 10, g = 6, W = 40, gap = 12;
+    var bars = '', labels = '';
+    for (i = 0; i < s.week.length; i++) {
+      var it = s.week[i];
+      var h = max ? Math.max(3, Math.round(bh * it.n / max)) : (it.n ? Math.max(3, bh - 6) : 3);
+      if (!max && !it.n) h = 3;
+      var x = i * bw + gap;
+      var y = bs + (bh - h);
+      var isToday = it.k === myDayTodayKey();
+      bars += '<rect x="' + x + '" y="' + y + '" width="' + g + '" height="' + Math.max(3, h) + '" rx="3"' +
+        (isToday ? ' class="on"' : '') + '><title>' + it.n + ' chương · ' + esc(it.k.slice(6, 8) + '/' + it.k.slice(4, 6)) + '</title></rect>';
+      labels += '<text x="' + (x + g / 2) + '" y="' + (bs + bh + 14) + '" text-anchor="middle"' +
+        (isToday ? ' class="on"' : '') + '>' + esc(WD[it.d.getDay()]) + '</text>';
+    }
+    var svg = '<svg class="mychart" viewBox="0 0 ' + (i * bw) + ' ' + (bs + bh + 24) + '" role="img" aria-label="Biểu đồ chương đã đọc 7 ngày qua">' + bars + labels + '</svg>';
+    return '<div class="mystats" id="myStatsPanel">' +
+      '<div class="ms-tot">' +
+        '<div class="ms-m"><b data-count="' + s.total + '">' + num(s.total) + '</b><span>chương đã đọc</span></div>' +
+        '<div class="ms-m"><b>' + s.streak + '</b><span>ngày đọc liên tiếp</span></div>' +
+        '<div class="ms-m"><b>' + s.today + '</b><span>hôm nay</span></div>' +
+      '</div>' + svg + '</div>';
+  }
+  function myDayTodayKey() {
+    try {
+      var d = new Date();
+      var p2 = function (n) { return (n < 10 ? '0' : '') + n; };
+      return d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate());
+    } catch (e) { return ''; }
+  }
+  function renderMyStats() {
+    var box = $('#myStats');
+    if (!box) return;
+    if (!(CZ.myReadSummary && CZ.myReadAdd)) { box.innerHTML = ''; return; }
+    var html = myStatsPanel();
+    box.innerHTML = html;
+    /* số “chương đã đọc” đếm lên cho sinh động — cùng cơ chế dải số liệu */
+    var nums = box.querySelectorAll('[data-count]');
+    if (nums.length && CZ.countUp) Array.prototype.forEach.call(nums, function (b) {
+      CZ.countUp(b, parseInt(b.getAttribute('data-count'), 10) || 0);
+    });
+  }
   function renderBan() {
     var sec = $('#ban-doc');
     if (!sec) return;
@@ -279,6 +330,7 @@
     var empty = !docs.length && !shelf.length;
     sec.hidden = false;                       /* luôn hiện: chưa có gì thì mời đăng nhập/bắt đầu đọc */
     paintAuthHint(empty);
+    renderMyStats();
     $('#contRow').innerHTML = ''; $('#shelfRow').innerHTML = '';
     if (empty) { $('#banTabs').classList.add('hide'); $('#banClear').classList.add('hide'); return; }
     $('#banTabs').classList.remove('hide'); $('#banClear').classList.remove('hide');
@@ -385,18 +437,37 @@
     var lib = CZ.lib(), on = statsOn();
     var tabs = rankTabs();
     var by = (rankBy && tabs.some(function (t) { return t.k === rankBy; })) ? rankBy : 'week';
-    $('#rankTabs').innerHTML = tabs.map(function (t) {
+    /* N12: "Bình chọn nhiều nhất" mà KHÔNG bộ nào có phiếu → xếp theo lượt đọc
+       thật (nếu có), hoặc ẩn hẳn khối — không bày bảng toàn "0 phiếu". */
+    var mode = 'votes';
+    var anyVotes = false, anyViews = false;
+    if (on) {
+      anyVotes = lib.some(function (n) { return ((CZ.statsOf(n) || {}).votes || 0) > 0; });
+      anyViews = lib.some(function (n) { return ((CZ.statsOf(n) || {}).views || 0) > 0; });
+    }
+    if (!on || (!anyVotes && !anyViews)) {
+      $('#rank').innerHTML = ''; $('#bxh').hidden = true;
+      if (CZ.inkAll) CZ.inkAll();
+      return;
+    }
+    if (!anyVotes && anyViews) mode = 'views';
+    $('#bxh').hidden = false;
+    $('#bxh .sechead h2').textContent = mode === 'views' ? 'Đọc nhiều nhất' : 'Bình chọn nhiều nhất';
+    $('#rankTabs').innerHTML = mode === 'views' ? '' : tabs.map(function (t) {
       return '<button class="tab' + (t.k === by ? ' on' : '') + '" data-k="' + t.k + '" role="tab" aria-selected="' +
-        (t.k === by) + '">' + t.l + '</button>';
+        (t.k === by ? 'true' : 'false') + '">' + t.l + '</button>';
     }).join('');
-    var scored = lib.map(function (n) { return { n: n, s: voteScore(n, by) }; })
-      .sort(function (a, b) { return (b.s - a.s) || ((b.n.chapters || 0) - (a.n.chapters || 0)); })
-      .slice(0, 8);
-    var max = Math.max(1, scored[0] ? scored[0].s : 1);
-    $('#rank').innerHTML = scored.map(function (row, i) {
+    var rows = lib.map(function (n) {
+      var s = CZ.statsOf(n) || {};
+      return mode === 'views' ? { n: n, s: Number(s.views) || 0 } : { n: n, s: voteScore(n, by) };
+    }).sort(function (a, b) { return (b.s - a.s) || ((b.n.chapters || 0) - (a.n.chapters || 0)); }).slice(0, 8);
+    var max = Math.max(1, rows[0] ? rows[0].s : 1);
+    $('#rank').innerHTML = rows.map(function (row, i) {
       var n = row.n, s = CZ.statsOf(n) || {};
       var w = Math.round(100 * row.s / max);
-      var text = on ? (num(s.votes || 0) + ' phiếu') : (n.updated ? CZ.timeAgo(n.updated) : '—');
+      var text = mode === 'views'
+        ? (num(s.views || 0) + ' lượt đọc')
+        : (on ? (num(s.votes || 0) + ' phiếu') : (n.updated ? CZ.timeAgo(n.updated) : '—'));
       return '<a class="rank" href="' + esc(CZ.storyURL(n.slug)) + '" title="' + esc(n.title) + '" style="--d:' + (i * 45) + 'ms">' +
         '<span class="n' + (i < 3 ? ' top t' + (i + 1) : '') + '">' + (i + 1) + '</span>' +
         '<span class="rk-th' + (n.thumb ? '' : ' noimg') + '">' +
@@ -408,6 +479,7 @@
     }).join('') || '<div class="empty">Chưa có dữ liệu.</div>';
     if (CZ.inkAll) CZ.inkAll();
   }
+
   $('#rankTabs').addEventListener('click', function (e) {
     var b = e.target.closest('.tab'); if (!b) return;
     rankBy = b.dataset.k; renderRank();
@@ -704,6 +776,14 @@
     grid.innerHTML = new Array(n + 1).join(one);
     $('#pager').innerHTML = '';
     $('#fcount').textContent = 'đang tải dữ liệu…';
+    skeletonNumbers();    /* N12: dải số liệu cũng có khung xám chờ thay vì trống trơn */
+  }
+  /* N12: khối số liệu hiện khung xương trước, số thật (đã đối chiếu realcounts)
+     về là thế chỗ ngay — không nhấp nháy như bản cũ. */
+  function skeletonNumbers() {
+    var box = $('#facts');
+    if (!box) return;
+    box.innerHTML = new Array(5).join('<div class="f fsk"><span class="ln rskel"></span><span class="ln sm rskel"></span></div>');
   }
   function fail(msg, err) {
     if (window.console && console.warn) console.warn('[ssochuz]', msg, err || '');
@@ -723,6 +803,7 @@
       heroInit();
       renderFacts(lib);
       renderBan();
+      renderMyStats();
       renderNew();
       renderRank();
       renderEditorChoice();

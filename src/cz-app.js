@@ -45,6 +45,26 @@
   var memo = { reg: null, src: '', books: {}, stats: null, sched: null };
   /* Worker lỗi/chặn một lần trong phiên ⇒ các lần sau đi thẳng vào /data (khỏi chờ 9 giây mỗi trang) */
   var apiDown = false;
+  /* N13 — phao cứu sinh: nhớ việc đã rớt về dữ liệu tĩnh để 10 phút sau không đập cửa
+     Worker khi nó đang chết (tiết kiệm request). Từng cặp key phải khớp với docs. */
+  var LS_FALLBACK = 'ssochuz-fallback';
+  function markFallback() {
+    try { localStorage.setItem(LS_FALLBACK, String(Date.now() + 10 * 60 * 1000)); } catch (e) {}
+    apiDown = true;
+  }
+  function clearFallback() {
+    try { localStorage.removeItem(LS_FALLBACK); } catch (e) {}
+    apiDown = false;
+  }
+  function apiBanned() {
+    try {
+      var t = parseInt(localStorage.getItem(LS_FALLBACK) || '0', 10);
+      if (t && Date.now() < t) return true;
+      if (t) localStorage.removeItem(LS_FALLBACK);
+    } catch (e) {}
+    return false;
+  }
+  function useApi() { return !!API && !apiDown && !apiBanned(); }
 
   function jget(url, ms) {
     var opt = {}, ctl = null, to = null;
@@ -54,6 +74,14 @@
       if (!r || !r.ok) return null;
       return r.json().catch(function () { return null; });
     }).catch(function () { if (to) clearTimeout(to); return null; });
+  }
+  /* N13: gọi API một lần, lỗi thì thử lại ĐÚNG 1 lần nữa rồi mới chịu rớt tĩnh.
+     Áp dụng cho GET (registry/book/stats) — POST không lặp lại tránh ghi trùng KV. */
+  function jgetApi(url, ms) {
+    return jget(url, ms).then(function (r) {
+      if (r != null) return r;
+      return jget(url, ms);
+    });
   }
   function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   function lsGet(k, ttl) {
@@ -71,24 +99,26 @@
   function registry() {
     if (memo.reg) return Promise.resolve({ reg: memo.reg, src: memo.src });
     var cached = lsGet('ssochuz-reg', TTL_REG);
-    var useApi = !!API && !apiDown;
+    var useApiNow = useApi();
     /* URL ổn định (không ?_=…) để trúng cache biên của Worker — dữ liệu vẫn mới
        nhờ hạn dùng 60 giây + Worker tự xoá cache mỗi lần ghi. */
-    var p = useApi ? jget(API + '/api/registry', 9000) : Promise.resolve(null);
+    var p = useApiNow ? jgetApi(API + '/api/registry', 9000) : Promise.resolve(null);
     return p.then(function (api) {
       if (api && api.lib) {
-        apiDown = false;
+        clearFallback();
         memo.reg = api; memo.src = 'kv'; w.CZ_SRC = 'kv';
         paintNotif();   /* số chương từ KV về là chuông cập nhật */
         lsSet('ssochuz-reg', { t: Date.now(), v: api });
+        paintFallback();
         return { reg: api, src: 'kv' };
       }
-      if (useApi) apiDown = true;
+      if (useApiNow) markFallback();    /* N13: nhớ 10 phút khỏi đập cửa Worker */
       return jget('/data/registry.json?_=' + Date.now(), 9000).then(function (stat) {
         var reg = newer(stat, cached) || { lib: [] };
         if (stat) lsSet('ssochuz-reg', { t: Date.now(), v: stat });
         memo.reg = reg; memo.src = 'static'; w.CZ_SRC = 'static';
         paintNotif();
+        paintFallback();
         return { reg: reg, src: 'static' };
       });
     });
@@ -98,9 +128,10 @@
     slug = String(slug || '');
     if (!slug) return Promise.resolve(null);
     if (memo.books[slug]) return memo.books[slug];
-    var p = (API && !apiDown ? jget(API + '/api/book/' + encodeURIComponent(slug), 15000) : Promise.resolve(null))
+    var p = (useApi() ? jgetApi(API + '/api/book/' + encodeURIComponent(slug), 15000) : Promise.resolve(null))
       .then(function (b) {
-        if (b && b.chapters && b.chapters.length) return b;
+        if (b && b.chapters && b.chapters.length) { clearFallback(); return b; }
+        /* N13: chương lấy không được từ Worker → rớt về file tĩnh vẫn đọc được */
         return jget('/data/book/' + encodeURIComponent(slug) + '.json', 20000);
       })
       .then(function (b) {
@@ -151,8 +182,9 @@
     /* URL ổn định để trúng cache biên (Worker giữ 60 giây, tiết kiệm lượt đọc KV).
        Bệnh cũ “vote rồi mà số không đổi vì cache” nay khỏi bằng 2 lớp: web vẽ
        số mới ngay khi bấm (lạc quan), Worker tự xoá cache sau mỗi lần ghi. */
-    var p = (API && !apiDown ? jget(API + '/api/stats', 9000) : Promise.resolve(null)).then(function (r) {
+    var p = (useApi() ? jgetApi(API + '/api/stats', 9000) : Promise.resolve(null)).then(function (r) {
       if (r && r.ok && r.items) {
+        clearFallback();
         return { on: true, items: r.items, source: r.source || 'kv', saved: r.fetchedAt || r.saved || '' };
       }
       if (w.CZ_STATS_DIRECT !== true) return null;      /* mặc định: chỉ tin số trên KV */
@@ -281,6 +313,39 @@
     memo.stats.on = true;
     lsSet('ssochuz-stats', { t: Date.now(), v: memo.stats });
     libCache = null;
+    notifyStats();
+    return it;
+  }
+  /* -- ĐÁNH GIÁ SAO (N11): POST /api/rate với rating 1..5 ------------------
+     Tách khỏi vote cũ; chỉ trang truyện gọi qua nút sao trong shero. Ghi trượt
+     thì thử LẠI ĐÚNG 1 LẦN sau 1,2 giây rồi mới bỏ cuộc — vì free-tier KV giới
+     hạn 1 ghi/giây/key nên lần nhắc lại giúp tránh mất điểm do xung đột. */
+  function rate(slug, stars) {
+    if (!API || !slug) return Promise.resolve(null);
+    return new Promise(function (resolve) {
+      var tries = 0;
+      function attempt(cbOk) {
+        jpost('/api/rate', { slug: slug, rating: stars, vid: vid() }, authToken()).then(function (r) {
+          if (r && r.ok) {
+            applyRating(slug, r);
+            resolve(r);
+            return;
+          }
+          if (tries < 1) { tries += 1; setTimeout(function () { attempt(cbOk); }, 1200); return; }
+          resolve(null);
+        });
+      }
+      attempt(resolve);
+    });
+  }
+  /* sửa ngay dòng đang hiển thị theo số Worker trả về (trung bình/số lượt) */
+  function applyRating(slug, r) {
+    if (!memo.stats) memo.stats = { on: true, items: {}, source: 'local' };
+    if (!memo.stats.items) memo.stats.items = {};
+    var it = memo.stats.items[slug] || (memo.stats.items[slug] = { views: 0, votes: 0 });
+    if (r.ratingAvg != null) it.rating = Number(r.ratingAvg) || 0;
+    if (r.ratingCount != null) it.ratingCount = Math.max(0, Number(r.ratingCount) || 0);
+    lsSet('ssochuz-stats', { t: Date.now(), v: memo.stats });
     notifyStats();
     return it;
   }
@@ -612,6 +677,76 @@
     var p = progress(n); return p > 0 ? p : 0;
   }
 
+  /* ---- THỐNG KÊ ĐỌC CÁ NHÂN (N10) -----------------------------------------
+     Chỉ lưu TRONG MÁY (localStorage `ssochuz-mystats`), không gửi lên Worker,
+     không phát sinh request/ghi KV nào. Đếm MỘT chương khi:
+       · đọc cuộn tới ≥ 90% trang chương (chế độ cuộn), hoặc
+       · bấm Chương tiếp theo (next) — xem như đã đọc xong chương hiện tại.
+     Mỗi chương một bộ chỉ tính 1 lần/ngày (khoá trong `days`).
+     Dọn dữ liệu cũ hơn 90 ngày để localStorage không phình. */
+  var LS_STATS = 'ssochuz-mystats';
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function dayKey(d) {
+    d = d || new Date();
+    return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate());   /* yyyymmdd — theo múi giờ máy đọc */
+  }
+  function myStats() {
+    var o = jsonGet(LS_STATS, null);
+    if (!o || !o.days || typeof o.days !== 'object') o = { days: {} };
+    if (!o.total && o.total !== 0) o.total = 0;
+    return o;
+  }
+  function myStatsSave(o) { jsonSet(LS_STATS, o); }
+  /* “đọc xong 1 chương”: chỉ tính khi chuỗi khoá chưa có ngày hôm nay */
+  function myReadAdd(slug, ch) {
+    slug = String(slug || '').trim();
+    if (!slug) return false;
+    var o = myStats(), key = dayKey();
+    var row = o.days[key] || (o.days[key] = { s: {} });
+    var c = String(ch > 0 ? 'c' + Math.max(1, parseInt(ch, 10)) : 'x');
+    if (row.s[slug + ':' + c]) return false;   /* đã tính chương này hôm nay */
+    row.s[slug + ':' + c] = 1;
+    o.total = (parseInt(o.total, 10) || 0) + 1;
+    /* giữ lại tối đa 90 ngày gần nhất để bộ nhớ máy không lớn dần mãi */
+    var ks = Object.keys(o.days).sort();
+    while (ks.length > 90) delete o.days[ks.shift()];
+    myStatsSave(o);
+    return true;
+  }
+  /* trả về {total, today, streak, week:[n,n,n,n,n,n,n], last} cho giao diện My Space */
+  function myReadSummary() {
+    var o = myStats();
+    var total = parseInt(o.total, 10) || 0;
+    var todayK = dayKey();
+    var today = 0, last = '';
+    var byDay = {};
+    Object.keys(o.days).forEach(function (k) {
+      var t = 0, row = o.days[k];
+      Object.keys(row.s || {}).forEach(function (kk) { if (row.s[kk]) t += 1; });
+      byDay[k] = t;
+      if (t > 0) { last = k > (last || '') ? k : last; }
+    });
+    today = byDay[todayK] || 0;
+    /* streak = số ngày liên tiếp có đọc tính lùi từ hôm qua (hôm nay chưa chốt) */
+    var streak = today > 0 ? 1 : 0;
+    var t0 = new Date(); t0.setHours(12, 0, 0, 0);
+    var ONE = 86400000;
+    t0.setTime(t0.getTime() - ONE);                       /* bắt đầu từ hôm qua */
+    for (var g = 0; g < 800; g++) {
+      var kk = dayKey(t0);
+      if (byDay[kk] > 0) { streak += 1; t0.setTime(t0.getTime() - ONE); }
+      else break;
+    }
+    /* 7 ngày (hôm nay → 6 ngày trước) cho biểu đồ cột */
+    var week = [], cur = new Date(); cur.setHours(12, 0, 0, 0);
+    for (var i = 6; i >= 0; i--) {
+      var dd = new Date(cur.getTime() - i * ONE);
+      var kk = dayKey(dd);
+      week.push({ d: dd, k: kk, n: byDay[kk] || 0 });
+    }
+    return { total: total, today: today, streak: streak, week: week, last: last };
+  }
+
   /* cài đặt đọc — 2 font (serif / sans) · 3 nền (sang / kem / toi) */
   var RD_DEF = { mode: 'scroll', size: 18, font: 'serif', line: 1.85, para: 1.05, theme: 'kem', width: 720, justify: 0 };
   var RD_FONTS = { serif: 1, sans: 1 };
@@ -745,6 +880,7 @@
     shield_off: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M17.67 17.667a12 12 0 0 1 -5.67 3.333a12 12 0 0 1 -8.5 -15c.794 .036 1.583 -.006 2.357 -.124m3.128 -.926a11.997 11.997 0 0 0 3.015 -1.95a12 12 0 0 0 8.5 3a12 12 0 0 1 -1.116 9.376" /> <path d="M3 3l18 18" /></g>',
     google: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M20.945 11a9 9 0 1 1 -3.284 -5.997l-2.655 2.392a5.5 5.5 0 1 0 2.119 6.605h-4.125v-3h7.945" /></g>',
     bell: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /> <path d="M9 17v1a3 3 0 0 0 6 0v-1" /></g>',
+    database: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><ellipse cx="12" cy="5" rx="9" ry="3" /> <path d="M3 5v14a9 3 0 0 0 18 0v-14" /> <path d="M3 12a9 3 0 0 0 18 0" /></g>',
     rss: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M4 19a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /> <path d="M4 4a16 16 0 0 1 16 16" /> <path d="M4 11a9 9 0 0 1 9 9" /></g>',
     momo: '<rect x="4" y="4" width="16" height="16" rx="4.5"/><path d="M8.4 12c0-2 1.6-3.6 3.6-3.6s3.6 1.6 3.6 3.6-1.6 3.6-3.6 3.6S8.4 14 8.4 12z"/><circle cx="12" cy="12" r="1.2"/>'
   };
@@ -1630,9 +1766,15 @@
       w = d.createElement('div'); w.id = 'czNet'; w.className = 'netbars'; w.setAttribute('aria-live', 'polite');
       w.innerHTML =
         '<div class="netbar" id="czOffline" hidden>' + icon('cloud2', 'i-s') + '<span>Đang offline — đọc bản đã lưu</span></div>' +
+        '<div class="netbar" id="czFallback" hidden>' + icon('database', 'i-s') + '<span>Đang dùng dữ liệu dự phòng</span>' +
+          '<button class="btn pri sm" id="czFallbackBtn" type="button" title="Thử nối lại máy chủ">Thử lại</button></div>' +
         '<div class="netbar" id="czUpdate" hidden>' + icon('refresh', 'i-s') + '<span>Đã có bản cập nhật</span>' +
           '<button class="btn pri sm" id="czUpdateBtn" type="button">Tải lại</button></div>';
       d.body.appendChild(w);
+      w.querySelector('#czFallbackBtn').addEventListener('click', function () {
+        clearFallback(); paintFallback();
+        try { location.reload(); } catch (e) {}
+      });
       w.querySelector('#czUpdateBtn').addEventListener('click', applyUpdate);
     }
     return w;
@@ -1641,6 +1783,13 @@
     netBars();
     var bar = d.getElementById('czOffline');
     if (bar) bar.hidden = !!navigator.onLine;
+  }
+  /* N13: báo "đang dùng dữ liệu dự phòng" khi đã rớt khỏi Worker; nút Thử lại
+     xoá ghi nhớ 10 phút và tải lại trang để nối lại máy chủ. */
+  function paintFallback() {
+    netBars();
+    var bar = d.getElementById('czFallback');
+    if (bar) bar.hidden = !(apiDown || apiBanned());
   }
   function showUpdateBar(w) {
     swWaiting = w;
@@ -2238,9 +2387,15 @@
     reg = reg || memo.reg || {};
     var by = {};
     (reg.lib || []).forEach(function (n) { by[n.slug] = n; });
-    /* registry chỉ giữ danh sách slug của khối hero — khỏi nhân đôi dữ liệu bộ truyện */
-    var s = (reg.slides || []).map(function (x) { return by[typeof x === 'string' ? x : (x && x.slug)]; })
-      .filter(Boolean).map(norm);
+    /* registry chỉ giữ danh sách slug của khối hero — khỏi nhân đôi dữ liệu bộ truyện.
+       N12: slide có thể kèm `reason` (lý do giới thiệu của ban biên tập); nhãn mặc định
+       vẫn theo vị trí (slide đầu = “Nổi bật hôm nay”, các slide sau = “Đề xuất cho bạn”). */
+    var s = (reg.slides || []).map(function (x) {
+      var n = by[typeof x === 'string' ? x : (x && x.slug)];
+      if (!n) return null;
+      if (x && typeof x === 'object' && !(x.reason == null)) return Object.assign({}, x, n, { _reason: String(x.reason || '').trim() });
+      return n;
+    }).filter(Boolean).map(norm);
     if (s.length) return s;
     return (reg.lib || []).map(norm)
       .filter(function (n) { return n.canRead; })
@@ -2297,7 +2452,7 @@
   w.CZ = {
     API: API, normalizeApi: normalizeApi,
     registry: registry, book: book, stats: stats, refreshStats: refreshStats, schedule: schedule,
-    vid: vid, reportView: reportView, sendReport: sendReport, vote: vote,
+    vid: vid, reportView: reportView, sendReport: sendReport, vote: vote, rate: rate,
     lib: libList, slides: slides, editorChoice: editorChoice, donationCfg: donationCfg, reportCfg: reportCfg, findLib: findLib, statsOf: statsOf, onStats: onStats,
     progress: progress, setProgress: setProgress, lastReadAt: lastReadAt,
     shelfIds: shelfIds, inShelf: inShelf, toggleShelf: toggleShelf, clearShelf: clearShelf,
@@ -2306,6 +2461,7 @@
     followPushHook: followPushHook,
     isLiked: isLiked, toggleLike: toggleLike, likedChapters: likedChapters, likedCount: likedCount, likeCount: likeCount,
     marks: marks, toggleMark: toggleMark, chaptersRead: chaptersRead,
+    myReadAdd: myReadAdd, myReadSummary: myReadSummary,
     realCount: realCount, reconcileCount: reconcileCount, onStatsChange: onStatsChange, notifyStats: notifyStats,
     rdGet: rdGet, rdSet: rdSet, themeInit: themeInit, themeToggle: themeToggle, themeMeta: themeMeta,
     icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo, teaser: teaser,
