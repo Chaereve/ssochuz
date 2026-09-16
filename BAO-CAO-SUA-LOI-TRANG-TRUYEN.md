@@ -83,3 +83,48 @@ Bản cũ và bản mới chạy song song trên máy (`python3 tools/dev_server
    `ssochuz.pages.dev` rồi tải lại — bản thân server đã hết lặp.
 3. Nếu sau này thêm trang mới cần URL đẹp: trong `_redirects` chỉ được trỏ về **URL sạch**
    (`/ten-trang`), không trỏ về `/ten-trang.html`. `node tools/check_html.js` sẽ nhắc.
+
+---
+
+## 6. Cập nhật 16/09/2026 — máy chủ xem thử phục vụ đúng trang truyện (404/508)
+
+Sau khi sửa vòng lặp trên bản deploy, **máy chủ xem thử trên máy vẫn không mở được trang truyện**
+(kiểm chứng trên bản `HEAD` sạch, không liên quan tới các thay đổi sau đó):
+
+| Đường dẫn | Trước | Sau |
+|---|---|---|
+| `/truyen` | **404** | 200 (phục vụ `truyen.html`) |
+| `/truyen/` | **404** | 200 |
+| `/truyen.html` | **404** | 200 |
+| `/truyen/third-person` | **508** | 200 |
+| `/truyen/third-person/` | **508** | 200 (đúng trang của bộ đó) |
+| `/truyen/third-person/?ch=3` | **508** | 200 (query giữ nguyên) |
+| `/reader/third-person/` | **404** | 200 |
+
+Hai lỗi, cả hai đều ở `tools/dev_server.py` — phần mô phỏng Cloudflare Pages:
+
+1. **`/truyen` bị 404** — `find_file()` gặp thư mục `truyen/` (chứa các trang truyện con, **không**
+   có `index.html`) rồi bỏ cuộc luôn, quên mất tệp `truyen.html` nằm ngay cạnh. Thứ tự đúng của
+   Pages (html_handling = auto-trailing-slash): thư mục có `index.html` → phục vụ nó; thư mục
+   **không** có `index.html` → vẫn thử `tên.html` trước khi trả 404.
+2. **`/truyen/<slug>/` bị 508** — mỗi bộ có luật `/truyen/<slug>/ → /truyen/<slug>/ 200`
+   (**tự trỏ về chính nó**, sinh ra khi mọi bộ đều có luật riêng). Pages coi đó là *không viết lại
+   gì* rồi phục vụ tệp thật; máy chủ xem thử lại hiểu là vòng lặp nên trả 508. Nay luật tự-trỏ-về-mình
+   được coi là không viết lại — nhưng **bộ bắt vòng lặp thật vẫn còn nguyên** (luật kiểu
+   `/truyen/* → /truyen.html 200` vẫn trả 508 kèm đường đi, xem mục 2).
+
+Sửa gọn trong đúng hai chỗ: `Handler.find_file()` (thêm nhánh thư-mục-không-có-index → `tên.html`)
+và `Handler.route()` (bỏ qua luật tự trỏ về chính nó, so sánh theo **đường dẫn** nên `?ch=3` vẫn
+vào tới trang).
+
+| File | Sửa gì |
+|---|---|
+| `tools/dev_server.py` | Hai nhánh trên, kèm chú thích ngay tại chỗ để lần sau không “tối ưu” ngược lại. |
+| `tests/t_devserver.js` **(mới)** | Bật thật máy chủ rồi gọi HTTP kiểm 18 đường dẫn (kể cả `?ch=3` và link đời cũ), kiểm nội dung đúng bộ truyện, `admin.html` → 308 → `/admin`, đường dẫn lạ → 404; và dựng **thư mục tạm** có `_redirects` sai như bản cũ để chắc rằng **508 vẫn bật** khi luật thật sự lặp. Chạy trong `npm test`. |
+| `tests/run.js`, `tests/README.md` | Đưa bài mới vào danh sách chạy và ghi lại mô tả. |
+
+Kiểm chứng: chạy bài mới với `tools/dev_server.py` **bản cũ** thì báo đúng 9 đường dẫn hỏng
+(`/truyen` 404, `/truyen/third-person/` 508…) và 2 lỗi nội dung; với bản mới thì đạt hết.
+
+> ⚠ Đây chỉ là **công cụ xem thử trên máy** — bản deploy không chạy python, `_redirects`/`_headers`
+> và Pages mới là thứ quyết định. Sửa này để bạn nhìn thấy đúng những gì người đọc sẽ thấy.

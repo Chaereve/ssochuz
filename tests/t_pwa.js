@@ -3,6 +3,8 @@
    - mọi trang đều gắn manifest; manifest đủ trường installable, icon đúng cỡ
    - sw.js có CZ_SW_VER, precache khớp ?v= trong HTML, KHÔNG cache request ghi,
      ảnh giới hạn 200 mục, có SKIP_WAITING
+   - bìa truyện KHÔNG BAO GIỜ mất vì service worker: bị CSP chặn tải hộ thì phải
+     nhường cho trình duyệt (302), và _headers phải có luật CSP riêng cho /sw.js
    - trang chủ: nút Cài app ẩn sẵn, thanh offline/cập nhật ẩn sẵn, offline hiện banner
    ========================================================================== */
 const { page, dataFetch } = require('./mk');
@@ -65,10 +67,29 @@ const pngSize = f => {
   });
   ['/', '/truyen/', '/ssochuz.png'].forEach(u => ok(sw.includes("'" + u), 'sw.js precache thieu ' + u));
 
+  /* ---------- bìa truyện: SW không được làm mất bìa ---------- */
+  const imgSec = sw.slice(sw.indexOf('function imgFirst'), sw.indexOf('function navFallback'));
+  ok(imgSec.length > 0, 'sw.js thieu phan xu ly anh bia');
+  ok(!/Response\.error\(\)/.test(imgSec), 'sw.js khong duoc tra anh loi cho bia (dung loi "F5 la mat bia")');
+  ok(/status: 302/.test(sw), 'sw.js phai nhuong (302) cho trinh duyet tu tai bia khi bi chan');
+  ok(/IMG_REMOTE_OK/.test(sw) && /IMG_HANDOFF/.test(sw), 'sw.js phai nho host/URL da nhuong de khong chan lai');
+  ok(/navigator/.test(sw), 'sw.js phai phan biet CSP chan voi mat mang (navigator.onLine)');
+  ok(/cspAllowsRemote/.test(sw) && /content-security-policy/i.test(sw), 'sw.js phai tu doc CSP cua chinh no truoc khi dung ra tai ho anh bia');
+
   /* ---------- _headers ---------- */
   const hd = read('_headers');
   ok(/\/sw\.js[\s\S]*?Cache-Control: no-cache/.test(hd), '_headers thieu no-cache cho /sw.js');
   ok(/manifest\.webmanifest[\s\S]*?application\/manifest\+json/.test(hd), '_headers thieu MIME cho manifest');
+  /* sw.js chịu CSP của CHÍNH nó: thiếu luật riêng là SW bị chặn khi tải hộ ảnh bìa */
+  const swRule = hd.slice(hd.indexOf('\n/sw.js') + 1);
+  ok(/^\/sw\.js/.test(swRule), '_headers: khong tim thay khoi luat /sw.js');
+  ok(/^\/sw\.js[\s\S]*?! Content-Security-Policy/.test(swRule), '_headers: /sw.js phai bo CSP chung (! Content-Security-Policy)');
+  ok(/^\/sw\.js[\s\S]*?connect-src \*/.test(swRule), '_headers: CSP rieng cua /sw.js phai mo connect-src * (de SW tai ho anh bia host ngoai)');
+  /* luật bỏ CSP phải nằm SAU luật đã đặt CSP — Cloudflare áp theo thứ tự trong tệp */
+  ok(hd.indexOf('\n/sw.js') > hd.indexOf('\n/*\n'), '_headers: khoi /sw.js phai nam SAU khoi /* (bo CSP chung moi co tac dung)');
+  /* trang và mọi tệp khác vẫn phải giữ CSP nghiêm như cũ */
+  const allRule = hd.slice(hd.indexOf('\n/*\n') + 1);
+  ok(/connect-src 'self' https:\/\/\*\.workers\.dev/.test(allRule), '_headers: luat /* phai giu CSP nghiêm cho trang');
 
   /* ---------- jsdom: nut cai app + thanh banner ---------- */
   const p = page('index.html', { fetch: dataFetch() });

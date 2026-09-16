@@ -100,6 +100,19 @@ class Handler(SimpleHTTPRequestHandler):
 
     # ---------- tìm file thật trên đĩa ----------
     def find_file(self, url_path):
+        """Tìm tệp thật cho một đường dẫn URL, theo đúng thứ tự của Cloudflare Pages
+        (html_handling = auto-trailing-slash):
+
+            /thu-muc/   → thu-muc/index.html
+            /ten        → ten.html      (kể cả khi CÓ thư mục "ten" nhưng trong đó
+                                         không có index.html — đúng ca của /truyen:
+                                         truyen.html nằm cạnh thư mục truyen/ chứa
+                                         các trang truyện con)
+            /ten        → ten           (tệp không có đuôi)
+            /ten        → ten/index.html
+
+        Thiếu nhánh thứ hai nên `/truyen` từng trả 404 dù `truyen.html` có sẵn.
+        """
         p = urllib.parse.unquote(url_path)
         p = posixpath.normpath(p).lstrip('/')
         if p in ('', '.'):
@@ -109,6 +122,9 @@ class Handler(SimpleHTTPRequestHandler):
             for cand in ('index.html', 'index.htm'):
                 if os.path.exists(os.path.join(full, cand)):
                     return os.path.join(full, cand), p.rstrip('/') + '/' + cand
+            # Thư mục không có index.html: Pages vẫn thử "ten.html" trước khi bỏ cuộc
+            if not os.path.splitext(p.rstrip('/'))[1] and os.path.isfile(full.rstrip('/') + '.html'):
+                return full.rstrip('/') + '.html', p.rstrip('/') + '.html'
             return None, None
         if os.path.isfile(full):
             return full, p
@@ -173,11 +189,19 @@ class Handler(SimpleHTTPRequestHandler):
             dst, status = self.rewrite(p)
             if dst:
                 d = urllib.parse.urlsplit(dst)
+                # So sánh ĐƯỜNG DẪN thôi: luật không kèm query thì query của người
+                # đọc vẫn được giữ nguyên (?ch=3 vẫn phải vào tới trang truyện).
+                same = (d.path == p and (not d.query or d.query == query))
                 if status == '200':                       # proxy: viết lại rồi đi tiếp
-                    query = d.query or query
-                    p = d.path
-                    continue
-                if status in ('301', '302', '303', '307', '308'):
+                    # Luật TỰ TRỎ VỀ CHÍNH NÓ (mỗi bộ truyện đều có luật
+                    # `/truyen/<slug>/ → /truyen/<slug>/ 200`) không phải vòng lặp:
+                    # Pages coi như không viết lại gì rồi phục vụ tệp thật —
+                    # trước đây server trả 508 nên mọi trang truyện đều không mở được.
+                    if not same:
+                        query = d.query or query
+                        p = d.path
+                        continue
+                elif status in ('301', '302', '303', '307', '308'):
                     loc = dst if d.query or not query else dst + '?' + query
                     return ('redirect', int(status), loc)
             clean = self.html_clean(p)                    # Pages tự bỏ .html / dấu / thừa
