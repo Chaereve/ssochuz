@@ -1023,6 +1023,7 @@
       CZ.refreshFollowUI(N.slug);   /* nút hero + huy hiệu đổi theo */
       CZ.pop(this);
       toast(on ? 'Đã theo dõi — có chương mới sẽ hiện huy hiệu đỏ' : 'Đã bỏ theo dõi');
+      if (CZ.followPushHook) CZ.followPushHook(on);   /* hỏi bật thông báo đẩy */
     });
     $('#actMark').addEventListener('click', function () {
       var on = CZ.toggleMark(N, cur);

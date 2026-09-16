@@ -8,9 +8,12 @@ web đổi tên thương hiệu **ssochuz** (khoá localStorage tự chuyển, k
 Từ bản **1.9.5**: 3 đường đọc nhiều (`registry`/`book`/`stats`) có **cache biên** —
 hàng trăm người cùng đọc một phút thì KV chỉ tốn 1 lượt đọc; web chỉ gửi 1 POST `/api/view`
 mỗi máy/truyện/ngày (khoá `ssochuz-viewsent-…`), “sửa thấy ngay” vẫn giữ nhờ tự xoá cache sau mỗi lần ghi.
-Từ bản **1.9.6** (đang dùng): có **RSS feed** — `GET /feed.xml` (30 chương mới nhất)
+Từ bản **1.9.6**: có **RSS feed** — `GET /feed.xml` (30 chương mới nhất)
 và `GET /feed.xml?slug=<slug>` (chương mới của 1 bộ), chuẩn RSS 2.0, cache biên 10 phút,
 mỗi lần ghi chương tự xoá cache nên chương mới lên feed ngay.
+Từ bản **1.9.7** (đang dùng): có **thông báo đẩy "ra chương mới"** (Web Push + VAPID) —
+bấm "Theo dõi" thì web hỏi bật thông báo, admin lưu chương mới là subscriber nhận tin
+trong ≤10 phút qua Cron Trigger, bấm vào mở thẳng URL chương.
 Trước đó, bản **1.6.0**: đăng nhập qua **Supabase** (hết lỗi `origin_mismatch` của Google), thích **theo từng chương**, bình luận **ngay trong trang đọc** (khách chưa đăng nhập vẫn gửi được), và có `/api/recount` để **chữa dứt điểm số chương sai**.
 
 ```
@@ -23,6 +26,24 @@ Admin (admin.html)  ──PUT──▶  Worker (worker/cms.js)  ──▶  Cloud
 ```
 
 GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới cần build); dữ liệu thì không đi qua GitHub nữa.
+
+## Có gì mới ở bản 1.9.7 — thông báo đẩy "ra chương mới" (Web Push)
+
+| Thành phần | Việc |
+|---|---|
+| `POST /api/push-sub` | nhận subscription từ trình duyệt, lưu key `push:<hash>` (1 ghi/thiết bị); `{remove:true}` để huỷ |
+| `PUT /api/book` + `POST /api/import` | tăng số chương → ghi job vào key `pushq` (sửa chữ không báo; chỉ ghi khi đang có subscriber) |
+| Cron `*/10 * * * *` | drain hàng đợi, tối đa 45 tin/invocation (free giới hạn 50 subrequest); push trả 404/410 → xoá sub |
+| Service worker | hiện "📖 Tên truyện — Chương n: … đã ra mắt!", bấm vào mở thẳng URL chương |
+
+Mã hoá `aes128gcm` + ký VAPID (ES256) tự làm bằng WebCrypto, không thêm thư viện.
+Cấu hình lần đầu (làm 1 lần):
+1. Khoá công khai đã nằm sẵn trong `wrangler.toml` (`VAPID_PUBLIC`) và `cz-config.js`.
+2. Đặt khoá riêng: `npx wrangler secret put VAPID_PRIVATE` rồi dán khoá (nhận riêng, không commit).
+3. Cron đã nằm trong `wrangler.toml` (`[triggers]`), deploy là tự chạy.
+4. Deploy: `npx wrangler deploy`, kiểm tra `/api/health` trả `version: 1.9.7`.
+Muốn tự sinh cặp khoá mới: `node -e "const {generateKeyPairSync}=require('node:crypto');const{publicKey,privateKey}=generateKeyPairSync('ec',{namedCurve:'prime256v1'});const u=b=>b.toString('base64url');console.log('PUB:',u(publicKey.export({type:'spki',format:'der'}).slice(-65)));console.log('PRV:',u(privateKey.export({type:'sec1',format:'der'}).slice(7,39)))"`
+rồi thay `VAPID_PUBLIC` (2 file trên) + đặt lại secret `VAPID_PRIVATE`.
 
 ## Có gì mới ở bản 1.9.6 — RSS feed chương mới
 
@@ -171,6 +192,8 @@ Trang quản trị đã có tab **Phiếu bầu** (phím `V`): chọn bộ → d
 | `GOOGLE_CLIENT_ID` | không | đường cũ: đăng nhập thẳng bằng Google Identity Services |
 | `ALLOW_ORIGIN` | nên có | danh sách chính xác các tên miền web; không dùng `*` ở production |
 | `SITE_BASE` | không | gốc dựng link chương trong `/feed.xml` (mặc định `https://ssochuz.pages.dev`) |
+| `VAPID_PUBLIC` | cần cho push | khoá công khai VAPID base64url (không nhạy cảm, nằm trong `wrangler.toml`) |
+| `VAPID_PRIVATE` (Secret) | cần cho push | khoá riêng VAPID base64url (`wrangler secret put VAPID_PRIVATE`) |
 | `BLOG` | không | feed Blogger cho nút "Đồng bộ Blogger" |
 | `FIREBASE_PROJECT` | không | chỉ dùng khi muốn kéo số liệu cũ từ Firestore (1 lần) |
 | `MAIL_TO` (Secret) | không | email nhận báo lỗi chữ phía Worker; không đặt trong registry/frontend |
@@ -222,6 +245,8 @@ Trang quản trị đã có tab **Phiếu bầu** (phím `V`): chọn bộ → d
 | GET | `/api/stats` | mở | **lượt đọc/bình chọn từ KV** (tổng + hôm nay/tuần/tháng) |
 | GET | `/feed.xml` | mở | RSS 2.0: 30 chương mới nhất toàn web (cache biên 10 phút) |
 | GET | `/feed.xml?slug=<slug>` | mở | RSS 2.0: chương mới của 1 bộ (tối đa 50, mới trước) |
+| POST | `/api/push-sub` | mở | đăng ký (`{endpoint, keys}`) / huỷ (`{endpoint, remove:true}`) nhận thông báo đẩy |
+| Cron | `*/10 * * * *` | — | drain key `pushq`, tối đa 45 tin/invocation, xoá sub chết (404/410) |
 | POST | `/api/view` | mở | đếm 1 lượt đọc `{slug, vid, ch}` |
 | POST | `/api/vote` | mở | bầu/bỏ bầu `{slug, ch?, vote: 1|0, vid}` → trả số phiếu mới (kèm `chapVotes`) |
 | PUT | `/api/registry` | cần khoá | ghi toàn bộ thư viện |

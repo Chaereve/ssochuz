@@ -833,6 +833,189 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     }
   }
 
+  /* ---------- 13. WEB PUSH "RA CHƯƠNG MỚI" ---------- */
+  {
+    const b64u = (b) => Buffer.from(b).toString('base64url');
+    /* khoá VAPID riêng cho bài test */
+    const vp = crypto.generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+    const vpub = vp.publicKey.export({ type: 'spki', format: 'der' }).slice(-65);
+    const vprv = vp.privateKey.export({ type: 'sec1', format: 'der' }).slice(7, 39);
+    const envPush = Object.assign({}, env, {
+      VAPID_PUBLIC: b64u(vpub), VAPID_PRIVATE: b64u(vprv), SITE_BASE: 'https://web.test',
+    });
+    /* 1 trình duyệt giả (cặp ECDH + auth secret của PushManager) */
+    const cli = crypto.createECDH('prime256v1');
+    cli.generateKeys();
+    const cliPub = b64u(cli.getPublicKey());
+    const cliAuth = b64u(crypto.randomBytes(16));
+    const subBody = (ep) => ({ endpoint: ep, keys: { p256dh: cliPub, auth: cliAuth } });
+    /* giải mã bản tin aes128gcm (RFC 8291) để đối chiếu với payload gốc */
+    const decryptPush = (bodyBytes, ecdh, authB64) => {
+      const b = Buffer.from(bodyBytes);
+      const salt = b.subarray(0, 16);
+      const rs = b.readUInt32BE(16);
+      const idlen = b[20];
+      const srvPub = b.subarray(21, 21 + idlen);
+      const ct = b.subarray(21 + idlen);
+      const shared = ecdh.computeSecret(srvPub);
+      const auth = Buffer.from(authB64.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
+      const prk = crypto.createHmac('sha256', auth).update(shared).digest();
+      const hkdf1 = (info) => crypto.createHmac('sha256', prk)
+        .update(Buffer.concat([Buffer.from(info, 'utf8'), Buffer.from([1])])).digest();
+      const cek = hkdf1('Content-Encoding: aes128gcm\0').subarray(0, 16);
+      const nonce = hkdf1('Content-Encoding: nonce\0').subarray(0, 12);
+      const dec = crypto.createDecipheriv('aes-128-gcm', cek, nonce);
+      dec.setAuthTag(ct.subarray(ct.length - 16));
+      const pt = Buffer.concat([dec.update(ct.subarray(0, ct.length - 16)), dec.final()]);
+      let end = pt.length;
+      while (end > 0 && pt[end - 1] === 0) end--;
+      return { text: pt.subarray(0, end - 1).toString('utf8'), delim: pt[end - 1], rs };
+    };
+    const pushKeys = () => [...kv.m.keys()].filter((k) => k.startsWith('push:'));
+    const getQ = async () => (await kv.get('pushq', { type: 'json' })) || [];
+    const scheduled = async (e) => {
+      await worker.scheduled({}, e || envPush, ctx);
+      await Promise.all(waits.splice(0));
+    };
+    /* dọn sạch sub/queue cũ (nếu bài test chạy lại trên cùng KV giả) */
+    pushKeys().forEach((k) => kv.m.delete(k));
+    kv.m.delete('pushq');
+
+    /* --- đăng ký / huỷ --- */
+    const s1 = await call('POST', '/api/push-sub', { e: envPush, body: subBody('https://push.test/sub1') });
+    eq('push/đăng ký ok', [s1.status, !!(s1.body && s1.body.ok), pushKeys().length], [200, true, 1]);
+    eq('push/thiếu endpoint → 400', (await call('POST', '/api/push-sub', { e: envPush, body: { keys: {} } })).status, 400);
+    const badKeys = subBody('https://push.test/bad');
+    badKeys.keys.p256dh = 'ngan';
+    eq('push/khoá ngắn → 400', (await call('POST', '/api/push-sub', { e: envPush, body: badKeys })).status, 400);
+    const un = await call('POST', '/api/push-sub', { e: envPush, body: { endpoint: 'https://push.test/sub1', remove: true } });
+    eq('push/huỷ đăng ký', [(un.body && un.body.removed), pushKeys().length], [true, 0]);
+
+    /* --- admin lưu chương mới → vào hàng đợi --- */
+    await call('POST', '/api/push-sub', { e: envPush, body: subBody('https://push.test/may-1') });
+    await call('PUT', '/api/registry', {
+      headers: ADMH, e: envPush,
+      body: { rev: 'push-t1', lib: [{ title: 'Truyện Push', slug: 'truyen-push', chapters: 2, updated: '2026-09-16' }] },
+    });
+    const book2 = { title: 'Truyện Push', slug: 'truyen-push', chapters: [{ t: 'Chương 1', html: '<p>1</p>' }, { t: 'Chương 2', html: '<p>2</p>' }] };
+    await call('PUT', '/api/book/truyen-push', { headers: ADMH, e: envPush, body: book2 });
+    let q = await getQ();
+    eq('push/PUT tăng 2 chương → 1 job chương mới nhất', [q.length, q[0] && q[0].ch, q[0] && q[0].slug], [1, 2, 'truyen-push']);
+    /* sửa chữ (không tăng chương) → không báo */
+    await call('PUT', '/api/book/truyen-push', {
+      headers: ADMH, e: envPush,
+      body: { title: 'Truyện Push', slug: 'truyen-push', chapters: [{ t: 'Chương 1', html: '<p>1 sửa</p>' }, { t: 'Chương 2', html: '<p>2</p>' }] },
+    });
+    eq('push/sửa chữ không tăng chương → không thêm job', (await getQ()).length, 1);
+    kv.m.delete('pushq');
+
+    /* --- cron drain: gửi thật, giải mã được, VAPID verify được --- */
+    await call('PUT', '/api/book/truyen-push', {
+      headers: ADMH, e: envPush,
+      body: { title: 'Truyện Push', slug: 'truyen-push', chapters: [{ t: 'Chương 1', html: '<p>1</p>' }, { t: 'Chương 2', html: '<p>2</p>' }, { t: 'Chương 3: Tin vui', html: '<p>3</p>' }] },
+    });
+    const caps = [];
+    routes = (u, init) => {
+      if (String(u).startsWith('https://push.test/')) {
+        caps.push({ u: String(u), init });
+        const code = u.includes('chet404') ? 404 : u.includes('chet410') ? 410 : 201;
+        return { status: code, body: '' };
+      }
+      return null;
+    };
+    await scheduled();
+    routes = () => null;
+    eq('push/cron gửi đúng 1 tin tới sub', caps.length, 1);
+    const hdrs = (caps[0] && caps[0].init.headers) || {};
+    ck('push/header aes128gcm + vapid', hdrs['content-encoding'] === 'aes128gcm' && /^vapid t=[^,]+, k=.+/.test(hdrs.authorization || ''), hdrs, 'vapid t=…, k=…');
+    /* verify chữ ký JWT VAPID bằng public key */
+    const jwt = (hdrs.authorization || '').match(/^vapid t=([^,]+),/) || [];
+    let vapidOk = false, vapidAud = '';
+    try {
+      const parts = String(jwt[1] || '').split('.');
+      const vb = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+      vapidAud = vb.aud;
+      const vk = crypto.createPublicKey({
+        key: { kty: 'EC', crv: 'P-256', x: b64u(vpub.slice(1, 33)), y: b64u(vpub.slice(33, 65)) }, format: 'jwk',
+      });
+      /* WebCrypto ký ra raw R||S (đúng chuẩn JWS); Node verify cần DER nên đổi dạng */
+      const raw = Buffer.from(parts[2].replace(/-/g, '+').replace(/_/g, '/'), 'base64');
+      const derInt = (x) => {
+        while (x.length > 1 && x[0] === 0) x = x.subarray(1);
+        if (x[0] & 0x80) x = Buffer.concat([Buffer.from([0]), x]);
+        return Buffer.concat([Buffer.from([2, x.length]), x]);
+      };
+      const seq = Buffer.concat([derInt(raw.subarray(0, 32)), derInt(raw.subarray(32, 64))]);
+      const der = Buffer.concat([Buffer.from([0x30, seq.length]), seq]);
+      vapidOk = crypto.verify('sha256', Buffer.from(parts[0] + '.' + parts[1]), vk, der);
+    } catch (e) { vapidOk = false; }
+    eq('push/JWT VAPID ký đúng + aud là push service', [vapidOk, vapidAud], [true, 'https://push.test']);
+    /* giải mã body và đối chiếu payload */
+    const pt = decryptPush(caps[0].init.body, cli, cliAuth);
+    let pay = null;
+    try { pay = JSON.parse(pt.text); } catch (e) { pay = null; }
+    eq('push/giải mã đúng + nội dung đúng mẫu', [pt.delim, pay && pay.title, pay && pay.body, pay && pay.url],
+      [2, '📖 Truyện Push', 'Chương 3: Tin vui đã ra mắt!', 'https://web.test/truyen/truyen-push/chuong-3/']);
+    eq('push/job xong → hàng đợi rỗng', (await getQ()).length, 0);
+
+    /* --- sub chết (404/410) thì xoá --- */
+    await call('POST', '/api/push-sub', { e: envPush, body: subBody('https://push.test/chet404') });
+    await call('POST', '/api/push-sub', { e: envPush, body: subBody('https://push.test/chet410') });
+    eq('push/có 3 subs trước drain', pushKeys().length, 3);
+    await call('PUT', '/api/book/truyen-push', {
+      headers: ADMH, e: envPush,
+      body: { title: 'Truyện Push', slug: 'truyen-push', chapters: [{ t: 'C1', html: '<p>1</p>' }, { t: 'C2', html: '<p>2</p>' }, { t: 'C3', html: '<p>3</p>' }, { t: 'Chương 4', html: '<p>4</p>' }] },
+    });
+    const caps2 = [];
+    routes = (u, init) => {
+      if (String(u).startsWith('https://push.test/')) {
+        caps2.push(String(u));
+        const code = u.includes('chet404') ? 404 : u.includes('chet410') ? 410 : 201;
+        return { status: code, body: '' };
+      }
+      return null;
+    };
+    await scheduled();
+    routes = () => null;
+    eq('push/gửi cả 3 (kể cả sub sắp chết)', caps2.length, 3);
+    eq('push/xoá 2 sub chết, giữ sub sống', pushKeys().length, 1);
+
+    /* --- tối đa 45 tin/invocation --- */
+    for (let i = 0; i < 50; i++) {
+      await kv.put('push:t' + i, JSON.stringify({ endpoint: 'https://push.test/b' + i, keys: { p256dh: cliPub, auth: cliAuth } }));
+    }
+    await kv.put('pushq', JSON.stringify([{
+      id: 'batch1', slug: 'truyen-push', ch: 5, chapTitle: 'Chương 5', title: 'Truyện Push',
+      url: 'https://web.test/truyen/truyen-push/chuong-5/', at: new Date().toISOString(), sent: {},
+    }]));
+    let n1 = 0;
+    routes = (u) => (String(u).startsWith('https://push.test/') ? (n1++, { status: 201, body: '' }) : null);
+    await scheduled();
+    routes = () => null;
+    q = await getQ();
+    eq('push/invocation 1 gửi đúng 45 tin', n1, 45);
+    eq('push/job chưa xong (còn sub chưa gửi)', [q.length, q[0] && q[0].done !== true], [1, true]);
+    let n2 = 0;
+    routes = (u) => (String(u).startsWith('https://push.test/') ? (n2++, { status: 201, body: '' }) : null);
+    await scheduled();
+    routes = () => null;
+    eq('push/invocation 2 gửi nốt 6 tin (50+1 sub sống)', n2, 6);
+    eq('push/xong hết → hàng đợi rỗng', (await getQ()).length, 0);
+    pushKeys().forEach((k) => kv.m.delete(k));
+    kv.m.delete('pushq');
+
+    /* --- chưa cấu hình VAPID / hàng đợi rỗng → cron không làm gì --- */
+    await kv.put('pushq', JSON.stringify([{ id: 'x', slug: 's', ch: 1, chapTitle: 'C1', title: 'T', url: 'https://web.test/', sent: {} }]));
+    let n3 = 0;
+    routes = (u) => (String(u).startsWith('https://push.test/') ? (n3++, { status: 201, body: '' }) : null);
+    await scheduled(Object.assign({}, env, { VAPID_PUBLIC: '', VAPID_PRIVATE: '' }));
+    routes = () => null;
+    eq('push/thiếu VAPID → không gửi, job còn nguyên', [n3, (await getQ()).length], [0, 1]);
+    kv.m.delete('pushq');
+    await scheduled();
+    eq('push/hàng đợi rỗng → cron êm', true, true);
+  }
+
   fs.rmSync(tmp, { recursive: true, force: true });
 
   const bad = checks.filter((c) => !c.ok);

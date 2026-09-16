@@ -412,6 +412,98 @@
     });
   }
 
+  /* ---- THÔNG BÁO ĐẨY "RA CHƯƠNG MỚI" (Web Push + VAPID) ------------------
+     Bấm "Theo dõi" → hỏi bật thông báo → PushManager.subscribe với VAPID key
+     → POST /api/push-sub. Bỏ theo dõi truyện cuối cùng → tự huỷ đăng ký. */
+  var VAPID = String(w.CZ_VAPID_PUBLIC_KEY || '').trim();
+  var PUSH_ASK_KEY = 'ssochuz-push-ask';
+  function pushReady() {
+    return !!(API && VAPID && 'Notification' in w && 'PushManager' in w && navigator.serviceWorker);
+  }
+  function b64ToU8(s) {
+    s = String(s || '').replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    var bin = atob(s), out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  function pushSend(sub, remove) {
+    var j = sub && sub.toJSON ? sub.toJSON() : null;
+    var endpoint = (j && j.endpoint) || (sub && sub.endpoint) || '';
+    if (!endpoint) return Promise.resolve(null);
+    var body = remove ? { endpoint: endpoint, remove: true }
+      : { endpoint: endpoint, keys: (j && j.keys) || {} };
+    return jpost('/api/push-sub', body);
+  }
+  function pushSubscribe() {
+    return navigator.serviceWorker.ready.then(function (reg) {
+      return reg.pushManager.getSubscription().then(function (sub) {
+        /* đã đăng ký rồi → gửi lại sub lên server (ghi đè, không hỏi nữa) */
+        if (sub) return pushSend(sub, false).then(function () { return 'old'; });
+        if (Notification.permission === 'denied') return 'denied';
+        var p = Notification.permission === 'granted' ? Promise.resolve('granted')
+          : Notification.requestPermission();
+        return p.then(function (perm) {
+          if (perm !== 'granted') return 'no';
+          return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(VAPID) })
+            .then(function (s2) { return pushSend(s2, false).then(function () { return 'new'; }); });
+        });
+      });
+    }).catch(function () { return 'err'; });
+  }
+  function pushUnsubscribe() {
+    if (!('PushManager' in w) || !navigator.serviceWorker) return Promise.resolve();
+    return navigator.serviceWorker.ready.then(function (reg) {
+      return reg.pushManager.getSubscription().then(function (sub) {
+        if (!sub) return;
+        var ep = '';
+        try { ep = sub.endpoint || ''; } catch (e) {}
+        return sub.unsubscribe().catch(function () {}).then(function () {
+          if (ep) pushSend({ endpoint: ep }, true);
+        });
+      });
+    }).catch(function () {});
+  }
+  function markPushAsked() { try { jsonSet(PUSH_ASK_KEY, Date.now()); } catch (e) {} }
+  /* hỏi bật thông báo sau khi bấm Theo dõi (bấm "Để sau" thì 7 ngày hỏi lại 1 lần) */
+  function maybeAskPush() {
+    if (!pushReady()) return;
+    if (Notification.permission === 'denied') return;
+    var last = 0;
+    try { last = parseInt(jsonGet(PUSH_ASK_KEY, 0) || '0', 10) || 0; } catch (e) {}
+    if (last && Date.now() - last < 7 * 86400000) return;
+    /* đã đăng ký hoặc đã được cấp quyền → subscribe im lặng, không hỏi */
+    navigator.serviceWorker.ready.then(function (reg) {
+      return reg.pushManager.getSubscription();
+    }).then(function (sub) {
+      if (sub) { pushSend(sub, false); markPushAsked(); return; }
+      if (Notification.permission === 'granted') {
+        pushSubscribe().then(function () { markPushAsked(); });
+        return;
+      }
+      markPushAsked();
+      var m = modal('czPush',
+        '<div class="mh"><h4>Bật thông báo chương mới?</h4></div>' +
+        '<div class="mb"><p class="sm">Mỗi khi truyện bạn theo dõi ra chương mới, máy sẽ báo ngay — kể cả khi không mở web.</p></div>' +
+        '<div class="mf"><button class="btn ghost" data-close>Để sau</button>' +
+        '<button class="btn pri" id="pushOk">' + icon('bell', 'i-s') + ' Bật thông báo</button></div>');
+      m.querySelector('#pushOk').addEventListener('click', function () {
+        m._close();
+        pushSubscribe().then(function (r) {
+          if (r === 'new' || r === 'old') toast('Đã bật thông báo chương mới');
+          else if (r === 'denied' || r === 'no') toast('Chưa bật được — kiểm tra quyền thông báo của trình duyệt');
+        });
+      });
+    }).catch(function () {});
+  }
+  /* hook gọi sau mỗi lần bấm chuông theo dõi (hero + reader dùng chung) */
+  function followPushHook(on) {
+    if (on) { maybeAskPush(); return; }
+    try {
+      if (!Object.keys(followMap()).length) pushUnsubscribe();
+    } catch (e) { /* bỏ follow mà lỗi push thì kệ — việc chính đã xong */ }
+  }
+
   /* ---- THÍCH: mỗi chương một phiếu thích riêng --------------------------
      Bệnh cũ: thích lưu theo BỘ (ssochuz-like-<slug>) nên thích chương 1 xong thì
      sang chương 2 nút vẫn "Đã thích" và bấm vào lại thành BỎ thích. Giờ khoá lưu
@@ -1016,6 +1108,7 @@
     refreshFollowUI(slug);
     pop(b);
     toast(on ? 'Đã theo dõi — có chương mới sẽ hiện huy hiệu đỏ' : 'Đã bỏ theo dõi');
+    followPushHook(on);   /* hỏi bật thông báo đẩy (chỉ khi đủ điều kiện push) */
   }, true);
 
   /* hiệu ứng hiện dần khi cuộn tới (tôn trọng giảm chuyển động) */
@@ -2112,6 +2205,7 @@
     shelfIds: shelfIds, inShelf: inShelf, toggleShelf: toggleShelf, clearShelf: clearShelf,
     followMap: followMap, isFollowed: isFollowed, toggleFollow: toggleFollow, newChapters: newChapters,
     markFollowSeen: markFollowSeen, followBadge: followBadge, followBtn: followBtn, refreshFollowUI: refreshFollowUI,
+    followPushHook: followPushHook,
     isLiked: isLiked, toggleLike: toggleLike, likedChapters: likedChapters, likedCount: likedCount, likeCount: likeCount,
     marks: marks, toggleMark: toggleMark, chaptersRead: chaptersRead,
     realCount: realCount, reconcileCount: reconcileCount, onStatsChange: onStatsChange, notifyStats: notifyStats,

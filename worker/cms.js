@@ -16,6 +16,9 @@
      GET    /feed.xml                   → RSS 2.0: 30 chương mới nhất (mở)
      GET    /feed.xml?slug=<slug>       → RSS 2.0: chương mới của 1 bộ (mở)
 
+     POST   /api/push-sub               → đăng ký / huỷ nhận thông báo đẩy {endpoint, keys} (mở)
+                                           · lưu key push:<hash>, Cron 10 phút/lần gửi tối đa 45 tin/invocation
+
      POST   /api/view                   → đếm 1 lượt đọc {slug, vid, ch} (mở)
      POST   /api/vote                   → bầu/bỏ bầu {slug, ch?, vote:1|0, vid}
                                            · không gửi ch = phiếu cho cả bộ
@@ -76,9 +79,11 @@
                                      (lần đầu FormSubmit gửi 1 thư xác nhận, bấm Confirm là xong)
      RESEND_API_KEY    (tuỳ chọn)  — đường gửi chuyên nghiệp: khoá API resend.com (free 100 mail/ngày)
      MAIL_FROM         (tuỳ chọn)  — địa chỉ gửi của Resend, vd: ssochuz library <bao-loi@ten-mien-cua-ban>
+     VAPID_PUBLIC      (bắt buộc nếu bật push) — khoá công khai VAPID base64url (nằm trong wrangler.toml, không nhạy cảm)
+     VAPID_PRIVATE     (secret, bắt buộc nếu bật push) — khoá riêng VAPID base64url (`wrangler secret put VAPID_PRIVATE`)
    ============================================================================ */
 
-const VERSION = '1.9.6';
+const VERSION = '1.9.7';
 const JSONH = {
   'content-type': 'application/json; charset=utf-8',
   'x-content-type-options': 'nosniff',
@@ -126,6 +131,7 @@ export default {
       /* báo lỗi chữ trong chương: người đọc bấm 1 nút là nội dung đi thẳng tới
          hộp thư ban biên tập — tự lưu vào KV, không cần copy/mở Gmail nữa */
       if (p === '/api/report' && req.method === 'POST') return await postReport(req, env, ctx, cors);
+      if (p === '/api/push-sub' && req.method === 'POST') return await pushSub(req, env, cors);
 
       /* ---------- người dùng: đăng nhập (Supabase/Google) + bình luận ---------- */
       if (p === '/api/auth/supabase' && req.method === 'POST') return await authSupabase(req, env, cors);
@@ -221,6 +227,11 @@ export default {
       return json({ ok: false, error: String((e && e.message) || e), version: VERSION }, { status: 500, cors });
     }
   },
+  /* Cron Trigger (10 phút/lần, cấu hình trong wrangler.toml) rút dần hàng đợi
+     thông báo đẩy — mỗi invocation gửi tối đa 45 tin (free giới hạn 50 subrequest) */
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(drainPushQueue(env).catch(() => {}));
+  },
 };
 
 /* ==================== lấy 1 bài viết Blogger thành chương ====================
@@ -295,6 +306,7 @@ async function importPost(req, env, cors) {
   const iorg = new URL(req.url).origin;
   await edgePurge(iorg + '/api/book/' + encodeURIComponent(slug), iorg + '/api/registry');
   await purgeFeed(iorg);
+  await enqueuePush(env, slug, book.chapters.length, chapTitle);   /* nhập từ Blogger cũng là chương mới */
   return json({ ok: true, added: chapTitle, chapters: book.chapters.length, url, title }, { cors });
 }
 
@@ -358,6 +370,238 @@ function normTitle(t) {
   return String(t || '').toLowerCase().replace(/[^a-z0-9à-ỹ]+/gi, '');
 }
 
+/* ============================================================================
+   THÔNG BÁO ĐẨY "RA CHƯƠNG MỚI" (Web Push + VAPID)
+   ----------------------------------------------------------------------------
+   Luồng: bấm "Theo dõi" → web hỏi bật thông báo → PushManager.subscribe →
+   POST /api/push-sub lưu key `push:<hash>` (1 ghi/thiết bị, hiếm khi xảy ra).
+   Admin lưu chương mới (PUT book / import) → ghi job vào key `pushq` (chỉ ghi
+   khi đang có subscriber). Cron 10 phút/lần drain tối đa 45 tin/invocation
+   (free giới hạn 50 subrequest). Push trả 404/410 → xoá subscription.
+   Mã hoá aes128gcm (RFC 8291) + ký VAPID ES256 tự làm bằng WebCrypto, không
+   thêm thư viện.
+   ============================================================================ */
+const PUSH_BATCH = 45;          /* số tin tối đa mỗi invocation cron */
+const PUSH_TTL = 7 * 86400;     /* push service giữ tin 7 ngày nếu máy offline */
+function pushKey(endpoint) {
+  const tail = String(endpoint || '').replace(/[^a-zA-Z0-9]/g, '').slice(-10);
+  return 'push:' + hash(String(endpoint || '')) + ':' + tail;
+}
+function b64uToBytes(s) {
+  s = String(s || '').replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  const bin = atob(s);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+function bytesToB64u(b) {
+  let s = '';
+  const v = new Uint8Array(b);
+  for (let i = 0; i < v.length; i++) s += String.fromCharCode(v[i]);
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+async function hmacSha256(keyBytes, dataBytes) {
+  const k = await crypto.subtle.importKey('raw', keyBytes, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return new Uint8Array(await crypto.subtle.sign('HMAC', k, dataBytes));
+}
+/* HKDF-Expand 1 vòng (đủ vì chỉ cần ≤ 32 bytes): T = HMAC(PRK, info || 0x01) */
+async function hkdfExpand(prk, infoStr, len) {
+  const info = new TextEncoder().encode(infoStr);
+  const data = new Uint8Array(info.length + 1);
+  data.set(info, 0);
+  data[info.length] = 1;
+  return (await hmacSha256(prk, data)).slice(0, len);
+}
+/* JWT VAPID (ES256): ký bằng private key, sub là domain web */
+async function vapidToken(env, aud) {
+  const pub = b64uToBytes(env.VAPID_PUBLIC || '');
+  const prv = b64uToBytes(env.VAPID_PRIVATE || '');
+  if (pub.length !== 65 || prv.length !== 32) throw new Error('VAPID key sai định dạng');
+  const jwk = {
+    kty: 'EC', crv: 'P-256',
+    x: bytesToB64u(pub.slice(1, 33)), y: bytesToB64u(pub.slice(33, 65)), d: bytesToB64u(prv),
+  };
+  const key = await crypto.subtle.importKey('jwk', jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+  const head = bytesToB64u(new TextEncoder().encode(JSON.stringify({ typ: 'JWT', alg: 'ES256' })));
+  const pay = bytesToB64u(new TextEncoder().encode(JSON.stringify({
+    aud, exp: Math.floor(Date.now() / 1000) + 12 * 3600,
+    sub: String(env.SITE_BASE || 'https://ssochuz.pages.dev').replace(/\/+$/, '') || 'https://ssochuz.pages.dev',
+  })));
+  const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, new TextEncoder().encode(head + '.' + pay));
+  return head + '.' + pay + '.' + bytesToB64u(sig);
+}
+/* mã hoá payload theo RFC 8291 (aes128gcm, 1 record duy nhất) */
+async function encryptPush(sub, payloadBytes) {
+  const cliPub = b64uToBytes(sub.keys.p256dh);
+  const auth = b64uToBytes(sub.keys.auth);
+  if (cliPub.length !== 65 || auth.length !== 16) throw new Error('subscription keys sai');
+  const srv = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+  const srvPubRaw = new Uint8Array(await crypto.subtle.exportKey('raw', srv.publicKey));
+  const cliKey = await crypto.subtle.importKey('raw', cliPub, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+  const shared = new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: cliKey }, srv.privateKey, 256));
+  const prk = await hmacSha256(auth, shared);   /* HKDF-Extract(salt=auth, ikm=shared) */
+  const cek = await hkdfExpand(prk, 'Content-Encoding: aes128gcm\0', 16);
+  const nonce = await hkdfExpand(prk, 'Content-Encoding: nonce\0', 12);
+  /* plaintext || 0x02 (delimiter, không pad thêm vì tin ngắn) */
+  const pt = new Uint8Array(payloadBytes.length + 1);
+  pt.set(payloadBytes, 0);
+  pt[payloadBytes.length] = 2;
+  const cekKey = await crypto.subtle.importKey('raw', cek, { name: 'AES-GCM' }, false, ['encrypt']);
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce, tagLength: 128 }, cekKey, pt));
+  const out = new Uint8Array(16 + 4 + 1 + 65 + ct.length);
+  crypto.getRandomValues(out.subarray(0, 16));  /* salt */
+  new DataView(out.buffer).setUint32(16, 4096); /* record size */
+  out[20] = 65;
+  out.set(srvPubRaw, 21);
+  out.set(ct, 86);
+  return out;
+}
+/* gửi 1 tin: trả {ok, dead} — dead=true khi sub đã chết (404/410) cần xoá */
+async function sendPush(env, sub, payload) {
+  const aud = new URL(sub.endpoint).origin;
+  const jwt = await vapidToken(env, aud);
+  const body = await encryptPush(sub, new TextEncoder().encode(JSON.stringify(payload)));
+  const r = await fetch(sub.endpoint, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/octet-stream',
+      'content-encoding': 'aes128gcm',
+      ttl: String(PUSH_TTL),
+      authorization: 'vapid t=' + jwt + ', k=' + String(env.VAPID_PUBLIC || '').trim(),
+    },
+    body,
+  });
+  if (r.status === 404 || r.status === 410) return { ok: false, dead: true };
+  return { ok: r.ok, dead: false, status: r.status };
+}
+/* POST /api/push-sub {endpoint, keys:{p256dh, auth}} — đăng ký;
+   {endpoint, remove:true} — huỷ. Mở cho mọi người đọc (không cần khoá admin). */
+async function pushSub(req, env, cors) {
+  if (!env.CZ_KV) return noKV(cors);
+  const body = await req.json().catch(() => ({}));
+  const endpoint = String(body.endpoint || '').trim().slice(0, 500);
+  if (!/^https:\/\//.test(endpoint)) return json({ ok: false, error: 'thiếu endpoint push hợp lệ' }, { status: 400, cors });
+  const key = pushKey(endpoint);
+  if (body.remove) {
+    await env.CZ_KV.delete(key);
+    return json({ ok: true, removed: true }, { cors });
+  }
+  const keys = body.keys || {};
+  let p, a;
+  try { p = b64uToBytes(keys.p256dh); a = b64uToBytes(keys.auth); }
+  catch (e) { return json({ ok: false, error: 'khoá push sai định dạng' }, { status: 400, cors }); }
+  if (p.length !== 65 || a.length !== 16) return json({ ok: false, error: 'khoá push sai độ dài' }, { status: 400, cors });
+  /* chống spam ghi KV: mỗi IP 30 lần/giờ */
+  if (!await rateLimit(env, 'rl:push:' + hash(clientIp(req) || 'x'), 30, 3600)) {
+    return json({ ok: false, error: 'thao tác hơi nhanh, thử lại sau ít phút' }, { status: 429, cors });
+  }
+  await env.CZ_KV.put(key, JSON.stringify({
+    endpoint, keys: { p256dh: String(keys.p256dh), auth: String(keys.auth) },
+    ua: String(req.headers.get('user-agent') || '').slice(0, 120), at: new Date().toISOString(),
+  }));
+  return json({ ok: true, hash: key.slice('push:'.length) }, { cors });
+}
+/* đọc toàn bộ subscription còn sống (tối đa 1000 — đủ cho quy mô web này) */
+async function listPushSubs(env) {
+  const out = [];
+  let cursor;
+  do {
+    const l = await env.CZ_KV.list({ prefix: 'push:', limit: 1000, cursor });
+    for (const k of l.keys) {
+      try {
+        const s = await env.CZ_KV.get(k.name, { type: 'json' });
+        if (s && s.endpoint && s.keys) out.push({ key: k.name, sub: s });
+      } catch (e) {}
+    }
+    cursor = l.list_complete ? null : l.cursor;
+  } while (cursor);
+  return out;
+}
+/* admin vừa lưu chương mới → ghi job vào hàng đợi (chỉ khi đang có subscriber) */
+async function enqueuePush(env, slug, ch, chapTitle) {
+  if (!env.CZ_KV) return { queued: false };
+  try {
+    const reg = await env.CZ_KV.get('registry', { type: 'json' });
+    const nov = reg && reg.lib ? reg.lib.find((n) => n.slug === slug) : null;
+    const l = await env.CZ_KV.list({ prefix: 'push:', limit: 1 });
+    if (!l.keys.length) return { queued: false, reason: 'no-subs' };
+    const base = String(env.SITE_BASE || 'https://ssochuz.pages.dev').replace(/\/+$/, '') || 'https://ssochuz.pages.dev';
+    const q = (await env.CZ_KV.get('pushq', { type: 'json' })) || [];
+    /* gộp job trùng (lưu 2 lần liên tiếp cùng chương thì chỉ báo 1 lần) */
+    if (!q.some((j) => j && j.slug === slug && j.ch === ch)) {
+      q.push({
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        slug, ch: ch || 0, chapTitle: String(chapTitle || '').slice(0, 140),
+        title: (nov && nov.title) || slug,
+        url: base + '/truyen/' + slug + '/chuong-' + ch + '/',
+        at: new Date().toISOString(), sent: {},
+      });
+      if (q.length > 50) q.splice(0, q.length - 50);   /* hàng đợi không phình vô hạn */
+      await env.CZ_KV.put('pushq', JSON.stringify(q));
+    }
+    return { queued: true };
+  } catch (e) { return { queued: false, reason: String((e && e.message) || e) }; }
+}
+/* tách tên riêng của chương ("Chương 5: Cuốn Vở" → "Cuốn Vở") để ráp câu báo */
+function pushChapName(chapTitle) {
+  const m = /^(?:chương|chuong|chap|chapter)\s*\d+\s*[:.\-–—]?\s*(.*)$/i.exec(String(chapTitle || '').trim());
+  return m ? m[1].trim() : String(chapTitle || '').trim();
+}
+/* Cron drain: gửi tối đa PUSH_BATCH tin, sub chết thì xoá, job xong thì gỡ */
+async function drainPushQueue(env) {
+  const stat = { sent: 0, failed: 0, removed: 0, jobs: 0, jobsLeft: 0 };
+  if (!env.CZ_KV) return stat;
+  if (!env.VAPID_PUBLIC || !env.VAPID_PRIVATE) return stat;   /* chưa cấu hình VAPID */
+  let q = [];
+  try { q = (await env.CZ_KV.get('pushq', { type: 'json' })) || []; } catch (e) { return stat; }
+  if (!q.length) return stat;
+  const subs = await listPushSubs(env);
+  if (!subs.length) {   /* không còn ai nhận → dọn sạch hàng đợi */
+    await env.CZ_KV.put('pushq', '[]');
+    return stat;
+  }
+  let budget = PUSH_BATCH;
+  const deadKeys = [];
+  for (const job of q) {
+    if (budget <= 0) break;
+    job.sent = job.sent || {};
+    const todo = subs.filter((s) => !job.sent[s.key] && deadKeys.indexOf(s.key) < 0).slice(0, budget);
+    if (!todo.length) { job.done = true; continue; }
+    const nm = pushChapName(job.chapTitle);
+    const payload = {
+      title: '📖 ' + job.title,
+      body: 'Chương ' + job.ch + (nm ? ': ' + nm : '') + ' đã ra mắt!',
+      url: job.url, tag: 'chuong-moi-' + job.slug + '-' + job.ch,
+    };
+    /* gửi song song từng đợt 9 tin cho nhanh mà vẫn gọn log */
+    for (let i = 0; i < todo.length; i += 9) {
+      const batch = todo.slice(i, i + 9);
+      const res = await Promise.all(batch.map((s) =>
+        sendPush(env, s.sub, payload).then((r) => ({ s, r })).catch(() => ({ s, r: { ok: false } }))
+      ));
+      for (const it of res) {
+        job.sent[it.s.key] = 1;
+        budget--;
+        if (it.r.ok) stat.sent++;
+        else if (it.r.dead) { stat.removed++; deadKeys.push(it.s.key); }
+        else stat.failed++;
+      }
+    }
+    if (subs.every((s) => job.sent[s.key])) job.done = true;
+  }
+  for (const k of deadKeys) { try { await env.CZ_KV.delete(k); } catch (e) {} }
+  const left = q.filter((j) => !j.done);
+  stat.jobs = q.length - left.length;
+  stat.jobsLeft = left.length;
+  await env.CZ_KV.put('pushq', JSON.stringify(left));
+  if (stat.sent || stat.removed || stat.failed) {
+    await logAct(env, 'push chương mới: gửi ' + stat.sent + ' tin' +
+      (stat.removed ? ' · xoá ' + stat.removed + ' sub chết' : '') +
+      (stat.failed ? ' · lỗi ' + stat.failed : ''), null);
+  }
+  return stat;
+}
 /* =========================== tiện ích =========================== */
 function corsHeaders(req, env) {
   /* Production mặc định đóng theo hai domain thật; chỉ mở * khi quản trị chủ động
@@ -779,6 +1023,9 @@ async function syncCountToRegistry(env, slug, book) {
 async function putBook(req, env, slug, cors) {
   if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
   if (!env.CZ_KV) return noKV(cors);
+  /* đọc bản cũ để biết có THÊM chương mới không (push chỉ báo chương mới, không báo sửa chữ) */
+  const oldBook = await env.CZ_KV.get('book:' + slug, { type: 'json' }).catch(() => null);
+  const oldLen = oldBook && Array.isArray(oldBook.chapters) ? oldBook.chapters.length : 0;
   const body = await req.text();
   const bytes = new TextEncoder().encode(body).length;
   if (bytes > 24 * 1024 * 1024) return json({ ok: false, error: 'dữ liệu quá lớn (>24MB)' }, { status: 413, cors });
@@ -795,6 +1042,10 @@ async function putBook(req, env, slug, cors) {
   await env.CZ_KV.put('_last', saved);
   const sync = await syncCountToRegistry(env, slug, parsed);
   await logAct(env, 'lưu bộ ' + slug + ' (' + parsed.chapters.length + ' chương)', req);
+  if (parsed.chapters.length > oldLen) {
+    const last = parsed.chapters[parsed.chapters.length - 1] || {};
+    await enqueuePush(env, slug, parsed.chapters.length, last.t || '');
+  }
   return json({ ok: true, key: 'book:' + slug, bytes, saved, chapters: parsed.chapters.length, dropped, registry: sync }, { cors });
 }
 /* POST /api/recount — quét mọi bộ trên KV, đếm lại chương, sửa registry một lượt.

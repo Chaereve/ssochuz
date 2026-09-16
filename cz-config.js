@@ -34,6 +34,7 @@
    ========================================================================== */
 window.CZ_API = 'chuseoz-cms.kimtong1906.workers.dev';   // để '' nếu chưa dùng Worker
 window.CZ_STATS_DIRECT = false;                           // số xếp hạng lấy từ KV; true = đọc thẳng Firebase cũ
+window.CZ_VAPID_PUBLIC_KEY = 'BOEBMf7G8y2UNs1kpGDZVldlNEAQYJTAL2jLjopVk-mzLnqM1LzY08DN2ubBuURQIwzXH96iCqDytcIwFRIIuKk';   // khoá CÔNG KHAI VAPID cho Web Push (DevTools thấy là bình thường; khoá RIÊNG nằm trong secret Worker)
 
 /* --- NHÀ CUNG CẤP ĐĂNG NHẬP ---------------------------------------------
    'supabase' = dùng Supabase Auth (khuyến nghị)

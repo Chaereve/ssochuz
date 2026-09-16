@@ -12,7 +12,7 @@
    ⚠ MỖI LẦN ĐỔI ?v= TĨNH (cz.css/cz-*.js): sửa cả PRECACHE dưới đây + tăng
    CZ_SW_VER → trình duyệt tự tải SW mới, hiện “Đã có bản cập nhật — tải lại”.
    ========================================================================== */
-var CZ_SW_VER = '20260917g';
+var CZ_SW_VER = '20260917h';
 
 /* kho shell theo version (update là thay kho mới, xoá kho cũ);
    kho trang/API/ảnh KHÔNG theo version để dữ liệu offline còn lại sau update */
@@ -27,10 +27,10 @@ var PRECACHE = [
   '/truyen/',
   '/manifest.webmanifest',
   '/cz.css?v=20260917b',
-  '/cz-app.js?v=20260917g',
+  '/cz-app.js?v=20260917h',
   '/cz-home.js?v=20260917f',
-  '/cz-story.js?v=20260917g',
-  '/cz-config.js?v=20260915j',
+  '/cz-story.js?v=20260917h',
+  '/cz-config.js?v=20260917h',
   '/cz-auth.js?v=20260915j',
   '/ssochuz.png?v=1'
 ];
@@ -168,4 +168,39 @@ self.addEventListener('fetch', function (e) {
   /* tệp tĩnh cùng host (js/css/manifest/icon): có mới dùng mới, offline dùng cũ */
   if (url.origin === self.location.origin) { e.respondWith(swr(req, C_SHELL)); return; }
   /* còn lại (Giscus, Supabase, Google…): mạng trực tiếp, không cache */
+});
+
+/* ================= THÔNG BÁO ĐẨY "RA CHƯƠNG MỚI" =====================
+   Worker gửi payload {title, body, url, tag} đã mã hoá; SW hiện notification,
+   bấm vào thì mở thẳng URL chương (ưu tiên tab đang mở của web). */
+self.addEventListener('push', function (e) {
+  var d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (err) { d = {}; }
+  var title = d.title || 'ssochuz library';
+  var opt = {
+    body: d.body || 'Có chương mới!',
+    icon: '/ssochuz.png',
+    badge: '/ssochuz.png',
+    tag: d.tag || 'chuong-moi',
+    renotify: true,
+    lang: 'vi',
+    data: { url: d.url || '/' }
+  };
+  e.waitUntil(self.registration.showNotification(title, opt));
+});
+self.addEventListener('notificationclick', function (e) {
+  e.notification.close();
+  var url = (e.notification.data && e.notification.data.url) || '/';
+  e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
+    /* ưu tiên tab đang mở của web: chuyển thẳng tới chương rồi focus */
+    for (var i = 0; i < list.length; i++) {
+      try {
+        if (new URL(list[i].url).origin === self.location.origin && 'focus' in list[i]) {
+          var c = list[i];
+          return ('navigate' in c ? c.navigate(url) : Promise.resolve(c)).then(function (x) { return x.focus(); });
+        }
+      } catch (err) { /* url lạ thì bỏ qua tab này */ }
+    }
+    if (clients.openWindow) return clients.openWindow(url);
+  }));
 });
