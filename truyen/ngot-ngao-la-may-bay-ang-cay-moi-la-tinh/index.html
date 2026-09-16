@@ -25,7 +25,7 @@
 <link rel="icon" type="image/png" href="/ssochuz.png?v=1">
 <link rel="apple-touch-icon" href="/ssochuz.png?v=1">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <!-- N13: bỏ preconnect Firestore — không còn đọc thẳng Firestore từ máy khách -->
 <link rel="stylesheet" href="/cz.css?v=20260917g">
 <script>/* chống nháy nền */try{var t=localStorage.getItem('ssochuz-theme')||localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
@@ -150,7 +150,7 @@
 <div class="lightbox" id="lightbox"><img alt="Ảnh trong chương"></div>
 
 <script src="/cz-config.js?v=20260917h"></script>
-<script src="/cz-app.js?v=20260917q"></script>
+<script src="/cz-app.js?v=20260917r"></script>
 <script src="/cz-auth.js?v=20260915j"></script>
 <script src="/cz-story.js?v=20260917q"></script>
 </body>

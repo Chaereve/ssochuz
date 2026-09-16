@@ -45,6 +45,26 @@
   var memo = { reg: null, src: '', books: {}, stats: null, sched: null };
   /* Worker lỗi/chặn một lần trong phiên ⇒ các lần sau đi thẳng vào /data (khỏi chờ 9 giây mỗi trang) */
   var apiDown = false;
+  /* N13 — phao cứu sinh: nhớ việc đã rớt về dữ liệu tĩnh để 10 phút sau không đập cửa
+     Worker khi nó đang chết (tiết kiệm request). Từng cặp key phải khớp với docs. */
+  var LS_FALLBACK = 'ssochuz-fallback';
+  function markFallback() {
+    try { localStorage.setItem(LS_FALLBACK, String(Date.now() + 10 * 60 * 1000)); } catch (e) {}
+    apiDown = true;
+  }
+  function clearFallback() {
+    try { localStorage.removeItem(LS_FALLBACK); } catch (e) {}
+    apiDown = false;
+  }
+  function apiBanned() {
+    try {
+      var t = parseInt(localStorage.getItem(LS_FALLBACK) || '0', 10);
+      if (t && Date.now() < t) return true;
+      if (t) localStorage.removeItem(LS_FALLBACK);
+    } catch (e) {}
+    return false;
+  }
+  function useApi() { return !!API && !apiDown && !apiBanned(); }
 
   function jget(url, ms) {
     var opt = {}, ctl = null, to = null;
@@ -54,6 +74,14 @@
       if (!r || !r.ok) return null;
       return r.json().catch(function () { return null; });
     }).catch(function () { if (to) clearTimeout(to); return null; });
+  }
+  /* N13: gọi API một lần, lỗi thì thử lại ĐÚNG 1 lần nữa rồi mới chịu rớt tĩnh.
+     Áp dụng cho GET (registry/book/stats) — POST không lặp lại tránh ghi trùng KV. */
+  function jgetApi(url, ms) {
+    return jget(url, ms).then(function (r) {
+      if (r != null) return r;
+      return jget(url, ms);
+    });
   }
   function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   function lsGet(k, ttl) {
@@ -71,24 +99,26 @@
   function registry() {
     if (memo.reg) return Promise.resolve({ reg: memo.reg, src: memo.src });
     var cached = lsGet('ssochuz-reg', TTL_REG);
-    var useApi = !!API && !apiDown;
+    var useApiNow = useApi();
     /* URL ổn định (không ?_=…) để trúng cache biên của Worker — dữ liệu vẫn mới
        nhờ hạn dùng 60 giây + Worker tự xoá cache mỗi lần ghi. */
-    var p = useApi ? jget(API + '/api/registry', 9000) : Promise.resolve(null);
+    var p = useApiNow ? jgetApi(API + '/api/registry', 9000) : Promise.resolve(null);
     return p.then(function (api) {
       if (api && api.lib) {
-        apiDown = false;
+        clearFallback();
         memo.reg = api; memo.src = 'kv'; w.CZ_SRC = 'kv';
         paintNotif();   /* số chương từ KV về là chuông cập nhật */
         lsSet('ssochuz-reg', { t: Date.now(), v: api });
+        paintFallback();
         return { reg: api, src: 'kv' };
       }
-      if (useApi) apiDown = true;
+      if (useApiNow) markFallback();    /* N13: nhớ 10 phút khỏi đập cửa Worker */
       return jget('/data/registry.json?_=' + Date.now(), 9000).then(function (stat) {
         var reg = newer(stat, cached) || { lib: [] };
         if (stat) lsSet('ssochuz-reg', { t: Date.now(), v: stat });
         memo.reg = reg; memo.src = 'static'; w.CZ_SRC = 'static';
         paintNotif();
+        paintFallback();
         return { reg: reg, src: 'static' };
       });
     });
@@ -98,9 +128,10 @@
     slug = String(slug || '');
     if (!slug) return Promise.resolve(null);
     if (memo.books[slug]) return memo.books[slug];
-    var p = (API && !apiDown ? jget(API + '/api/book/' + encodeURIComponent(slug), 15000) : Promise.resolve(null))
+    var p = (useApi() ? jgetApi(API + '/api/book/' + encodeURIComponent(slug), 15000) : Promise.resolve(null))
       .then(function (b) {
-        if (b && b.chapters && b.chapters.length) return b;
+        if (b && b.chapters && b.chapters.length) { clearFallback(); return b; }
+        /* N13: chương lấy không được từ Worker → rớt về file tĩnh vẫn đọc được */
         return jget('/data/book/' + encodeURIComponent(slug) + '.json', 20000);
       })
       .then(function (b) {
@@ -151,8 +182,9 @@
     /* URL ổn định để trúng cache biên (Worker giữ 60 giây, tiết kiệm lượt đọc KV).
        Bệnh cũ “vote rồi mà số không đổi vì cache” nay khỏi bằng 2 lớp: web vẽ
        số mới ngay khi bấm (lạc quan), Worker tự xoá cache sau mỗi lần ghi. */
-    var p = (API && !apiDown ? jget(API + '/api/stats', 9000) : Promise.resolve(null)).then(function (r) {
+    var p = (useApi() ? jgetApi(API + '/api/stats', 9000) : Promise.resolve(null)).then(function (r) {
       if (r && r.ok && r.items) {
+        clearFallback();
         return { on: true, items: r.items, source: r.source || 'kv', saved: r.fetchedAt || r.saved || '' };
       }
       if (w.CZ_STATS_DIRECT !== true) return null;      /* mặc định: chỉ tin số trên KV */
@@ -848,6 +880,7 @@
     shield_off: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M17.67 17.667a12 12 0 0 1 -5.67 3.333a12 12 0 0 1 -8.5 -15c.794 .036 1.583 -.006 2.357 -.124m3.128 -.926a11.997 11.997 0 0 0 3.015 -1.95a12 12 0 0 0 8.5 3a12 12 0 0 1 -1.116 9.376" /> <path d="M3 3l18 18" /></g>',
     google: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M20.945 11a9 9 0 1 1 -3.284 -5.997l-2.655 2.392a5.5 5.5 0 1 0 2.119 6.605h-4.125v-3h7.945" /></g>',
     bell: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /> <path d="M9 17v1a3 3 0 0 0 6 0v-1" /></g>',
+    database: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><ellipse cx="12" cy="5" rx="9" ry="3" /> <path d="M3 5v14a9 3 0 0 0 18 0v-14" /> <path d="M3 12a9 3 0 0 0 18 0" /></g>',
     rss: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M4 19a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /> <path d="M4 4a16 16 0 0 1 16 16" /> <path d="M4 11a9 9 0 0 1 9 9" /></g>',
     momo: '<rect x="4" y="4" width="16" height="16" rx="4.5"/><path d="M8.4 12c0-2 1.6-3.6 3.6-3.6s3.6 1.6 3.6 3.6-1.6 3.6-3.6 3.6S8.4 14 8.4 12z"/><circle cx="12" cy="12" r="1.2"/>'
   };
@@ -1733,9 +1766,15 @@
       w = d.createElement('div'); w.id = 'czNet'; w.className = 'netbars'; w.setAttribute('aria-live', 'polite');
       w.innerHTML =
         '<div class="netbar" id="czOffline" hidden>' + icon('cloud2', 'i-s') + '<span>Đang offline — đọc bản đã lưu</span></div>' +
+        '<div class="netbar" id="czFallback" hidden>' + icon('database', 'i-s') + '<span>Đang dùng dữ liệu dự phòng</span>' +
+          '<button class="btn pri sm" id="czFallbackBtn" type="button" title="Thử nối lại máy chủ">Thử lại</button></div>' +
         '<div class="netbar" id="czUpdate" hidden>' + icon('refresh', 'i-s') + '<span>Đã có bản cập nhật</span>' +
           '<button class="btn pri sm" id="czUpdateBtn" type="button">Tải lại</button></div>';
       d.body.appendChild(w);
+      w.querySelector('#czFallbackBtn').addEventListener('click', function () {
+        clearFallback(); paintFallback();
+        try { location.reload(); } catch (e) {}
+      });
       w.querySelector('#czUpdateBtn').addEventListener('click', applyUpdate);
     }
     return w;
@@ -1744,6 +1783,13 @@
     netBars();
     var bar = d.getElementById('czOffline');
     if (bar) bar.hidden = !!navigator.onLine;
+  }
+  /* N13: báo "đang dùng dữ liệu dự phòng" khi đã rớt khỏi Worker; nút Thử lại
+     xoá ghi nhớ 10 phút và tải lại trang để nối lại máy chủ. */
+  function paintFallback() {
+    netBars();
+    var bar = d.getElementById('czFallback');
+    if (bar) bar.hidden = !(apiDown || apiBanned());
   }
   function showUpdateBar(w) {
     swWaiting = w;
