@@ -425,7 +425,7 @@ function chFromLog(log) {
       soLanGoi: S.reports.length,
       slug: (S.reports[0] || {}).slug,
       chuong: (S.reports[0] || {}).ch,
-      coLink: /#chuong-/.test(String((S.reports[0] || {}).url)),
+      coLink: /\/chuong-\d+\/|#chuong-/.test(String((S.reports[0] || {}).url)),
       noiDungDai: String((S.reports[0] || {}).text || '').length > 30,
       xacNhanHien: !!(rm.querySelector('.okbox')),
       oNhapAn: rm.querySelector('#rpText').style.display === 'none',
@@ -434,7 +434,7 @@ function chFromLog(log) {
     if (!S.reports.length) out.errors.push('bấm Gửi báo lỗi mà không gọi /api/report');
     if (!rm.querySelector('.okbox')) out.errors.push('gửi xong không hiện xác nhận cho người đọc');
     if (!S.reports.length || S.reports[0].slug !== 'third-person') out.errors.push('nội dung báo lỗi thiếu slug bộ truyện');
-    if (!/#chuong-/.test(String((S.reports[0] || {}).url))) out.errors.push('báo lỗi thiếu link chương');
+    if (!/\/chuong-\d+\/|#chuong-/.test(String((S.reports[0] || {}).url))) out.errors.push('báo lỗi thiếu link chương');
   }
   closeModal(rm);
   await wait(150);

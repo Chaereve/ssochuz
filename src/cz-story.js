@@ -2,7 +2,9 @@
    ssochuz · TRANG TRUYỆN + TRANG ĐỌC  (một trang, hai chế độ)
    ----------------------------------------------------------------------------
    URL:  /truyen/<slug>/            → thông tin truyện + danh sách chương
-         /truyen/<slug>/#chuong-12  → mở thẳng chương 12 (đọc tại chỗ, không tải lại)
+         /truyen/<slug>/chuong-12/   → mở thẳng chương 12 (pushState, không tải lại;
+                                       tải trực tiếp link này cũng vào đúng chương)
+         /truyen/<slug>/#chuong-12  → link cũ, vẫn chạy (tự chuẩn hoá về URL chương)
          /truyen/<slug>/#page-12    → link cũ, vẫn chạy
    Vì sao gộp: người đọc bấm “Đọc chương 5” là chữ hiện ngay (sách đã nằm trong máy),
    không phải chờ tải trang mới; và nút Back của trình duyệt trả về đúng danh sách chương.
@@ -63,12 +65,37 @@
     var m = /^#(?:chuong|page|chapter)-(\d+)$/i.exec(location.hash || '');
     return m ? parseInt(m[1], 10) : 0;
   }
+  /* URL chương dạng /truyen/<slug>/chuong-<n>/ (chuẩn từ NV6) */
+  function chapterFromPath() {
+    var m = /\/chuong-(\d+)\/?$/i.exec(location.pathname || '');
+    return m ? parseInt(m[1], 10) : 0;
+  }
   /* link cũ kiểu /reader?slug=x&ch=5 hoặc ?chuong=5 vẫn mở đúng chương */
   function chapterFromQuery() {
     var q = parseInt(CZ.qs('ch') || CZ.qs('chuong') || '0', 10);
     return q > 0 ? q : 0;
   }
-  function chapterWanted() { return chapterFromHash() || chapterFromQuery(); }
+  function chapterWanted() { return chapterFromPath() || chapterFromHash() || chapterFromQuery(); }
+  function storyPath() { return '/truyen/' + encodeURIComponent(SLUG) + '/'; }
+  function chapterPath(ch) { return storyPath() + 'chuong-' + ch + '/'; }
+  /* đưa thanh địa chỉ về đúng URL chương (không thêm mục lịch sử) — dùng sau khi
+     vào bằng link cũ (#chuong-5, ?ch=5) để copy URL là được link chuẩn */
+  function syncChapterURL(ch) {
+    if (chapterFromPath() === ch) return;
+    try { history.replaceState({ ch: ch }, '', chapterPath(ch)); } catch (e) {}
+  }
+  /* chuyển tới chương bằng pushState để Back/Forward mượt; môi trường lạ không
+     pushState được (vd mở file trực tiếp) thì rớt về cơ chế hash cũ */
+  function navChapterURL(ch) {
+    try { history.pushState({ ch: ch }, '', chapterPath(ch)); return true; }
+    catch (e) { location.hash = '#chuong-' + ch; return false; }
+  }
+  /* mở chương: đẩy URL chương vào lịch sử rồi vẽ nội dung (pushState không tự
+     kích hoạt sự kiện nên phải gọi enterReader trực tiếp; còn rớt về hash thì
+     hashchange sẽ gọi route() → enterReader, khỏi gọi nữa) */
+  function openChapterURL(ch) {
+    if (navChapterURL(ch)) enterReader(ch);
+  }
   var SLUG = slugFromURL();
 
   /* ======================= 1. TRẠNG THÁI ================================= */
@@ -192,7 +219,7 @@
   }
   function readBtn(n, ch) {
     if (!n.canRead) return '<button class="btn pri lg off" disabled>' + ic('clock', 'i-s') + 'Chưa có chương — sắp ra mắt</button>';
-    return '<a class="btn pri lg" href="#chuong-' + (ch || 1) + '" title="' +
+    return '<a class="btn pri lg" href="' + chapterPath(ch || 1) + '" title="' +
       (ch > 1 ? 'Mở đúng chỗ bạn đang đọc dở' : 'Bắt đầu từ chương đầu') + '">' + ic('play', 'i-s') +
       (ch > 1 ? 'Đọc tiếp' : 'Đọc từ đầu') + '</a>';
   }
@@ -240,7 +267,7 @@
             ? '<button class="synbtn" id="synToggle" type="button">Đọc giới thiệu đầy đủ' + ic('right', 'i-s') + '</button>'
             : '') +
           '<div class="btn-row">' + readBtn(n, ch) +
-            (n.canRead && ch && ch < n.chapters ? '<a class="btn ghost lg" href="#chuong-' + n.chapters + '">' + ic('up', 'i-s') + 'Chương mới nhất</a>' : '') +
+            (n.canRead && ch && ch < n.chapters ? '<a class="btn ghost lg" href="' + chapterPath(n.chapters) + '">' + ic('up', 'i-s') + 'Chương mới nhất</a>' : '') +
             '<button class="btn ghost' + (CZ.inShelf(n) ? ' on' : '') + '" id="shelfBtn" aria-pressed="' + CZ.inShelf(n) + '" title="Lưu vào tủ truyện của bạn (icon tủ sách)">' + ic('shelf', 'i-s') +
               '<span>' + (CZ.inShelf(n) ? 'Đã lưu' : 'Tủ truyện') + '</span></button>' +
             '<button class="btn ghost" id="shareBtn">' + ic('share', 'i-s') + 'Chia sẻ</button>' +
@@ -303,7 +330,7 @@
     if (ct) ct.textContent = n.canRead ? n.chapters : '';
     $('#crumb').innerHTML = '<a href="/">Trang chủ</a> ' + ic('right', 'i-s') + ' <a href="/#thu-vien">Thư viện</a> ' +
       ic('right', 'i-s') + ' <b>' + esc(n.title) + '</b>';
-    $('#chapTop').setAttribute('href', n.canRead ? '#chuong-' + n.chapters : '#');
+    $('#chapTop').setAttribute('href', n.canRead ? chapterPath(n.chapters) : '#');
     $('#chapTop').style.display = n.canRead ? '' : 'none';
     /* bộ chưa ra chương thì để trống — nhãn trạng thái đã nằm ở đầu trang, không nhắc lại */
     $('#chapCount').textContent = !n.canRead ? ''
@@ -354,7 +381,7 @@
     var sp = chapSplit(x.c);
     var k = sp.kind || 'main';
     var no = k === 'open' ? 'Mở' : (k === 'extra' ? (sp.no ? 'S' + sp.no : 'S') : (sp.no || '—'));
-    return '<a class="cha k-' + k + on + '" href="#chuong-' + x.i + '" data-ch="' + x.i + '" title="' + esc(x.c.t) + '">' +
+    return '<a class="cha k-' + k + on + '" href="' + chapterPath(x.i) + '" data-ch="' + x.i + '" title="' + esc(x.c.t) + '">' +
       '<span class="no">' + no + '</span><span class="nm">' + hl(sp.name, q) + '</span>' +
       (marks.indexOf(x.i) >= 0 ? '<span class="done marked" title="Chương đã đánh dấu">' + ic('bookmark', 'i-s') + '</span>'
         : (x.i < prog ? '<span class="done" title="Đã đọc">' + ic('check', 'i-s') + '</span>' : '')) + '</a>';
@@ -477,7 +504,7 @@
       if (chapSplit(CHS[i]).no === want) { pos = i + 1; break; }
     }
     if (!pos) pos = Math.max(1, Math.min(CHS.length, want));
-    location.hash = '#chuong-' + pos;
+    openChapterURL(pos);
   }
   function jumpFrom(el) {
     var want = parseInt(el.value, 10);
@@ -694,7 +721,7 @@
       /* cùng ký hiệu với danh sách chương (S1, S2… / Mở) — bản cũ chỉ hiện số nên
          ngoại truyện 1 và chương 1 nhìn giống hệt nhau trong mục lục */
       var tno = k === 'open' ? 'Mở' : (k === 'extra' ? (sp.no ? 'S' + sp.no : 'S') : (sp.no || '—'));
-      return '<a href="#chuong-' + n + '" data-ch="' + n + '" class="' + (n === cur ? 'on' : '') + (n < prog ? ' read' : '') + '">' +
+      return '<a href="' + chapterPath(n) + '" data-ch="' + n + '" class="' + (n === cur ? 'on' : '') + (n < prog ? ' read' : '') + '">' +
         '<span class="no">' + tno + '</span><span class="nm">' + esc(sp.name) + '</span>' +
         (marks.indexOf(n) >= 0 ? '<span class="ck">' + ic('bookmark', 'i-s') + '</span>'
           : (n < prog ? '<span class="ck">' + ic('check', 'i-s') + '</span>' : '<span></span>')) + '</a>';
@@ -814,7 +841,7 @@
   function go(ch, pageHint) {
     if (ch < 1) return toast('Đây là chương đầu tiên.');
     if (ch > CHS.length) return toast('Bạn đã ở chương cuối.');
-    location.hash = '#chuong-' + ch;
+    openChapterURL(ch);
     if (pageHint === 'last') setTimeout(function () { PI = Math.max(0, PAGES.length - 1); paintPage(); }, 30);
   }
   /* đổi chương: nội dung cũ mờ dần rồi trượt sang trái, chương mới trượt vào từ phải.
@@ -1011,7 +1038,7 @@
     var rp = $('#actReport');
     if (rp) rp.addEventListener('click', function () {
       var head = 'Báo lỗi · ' + N.title + ' · ' + chapLabel(cur);
-      var link = location.origin + location.pathname + '#chuong-' + cur;
+      var link = location.origin + chapterPath(cur);
       var text = head + '\n' + link + '\n\nChỗ cần sửa: ';
       var m = CZ.modal('czReport',
         '<div class="mh"><h4>Báo lỗi chữ</h4></div>' +
@@ -1110,7 +1137,61 @@
     }
   }
   function shareChapter() {
-    CZ.copy(location.origin + CZ.storyURL(N.slug) + '#chuong-' + cur, 'Đã copy link ' + chapLabel(cur));
+    CZ.copy(location.origin + chapterPath(cur), 'Đã copy link ' + chapLabel(cur));
+  }
+  /* ---- thẻ meta theo chương (SEO + tab trình duyệt) -----------------------
+     Khối JSON-LD tĩnh của trang truyện được giữ nguyên khi xem thông tin;
+     vào chương thì thay bằng khối Chapter, ra khỏi thì trả lại bản gốc. */
+  var ldNode = null, ldOriginal = '', canonOriginal = '', ldCreated = false;
+  (function cacheStoryMeta() {
+    try {
+      ldNode = document.querySelector('script[type="application/ld+json"]');
+      if (ldNode) ldOriginal = ldNode.textContent || '';
+      var cn = document.querySelector('link[rel="canonical"]');
+      if (cn) canonOriginal = cn.getAttribute('href') || '';
+    } catch (e) {}
+  })();
+  function paintChapterMeta() {
+    if (!N) return;
+    try {
+      var chapURL = location.origin + chapterPath(cur);
+      document.title = chapLabel(cur) + ' · ' + N.title + ' · ssochuz library';
+      var cn = document.querySelector('link[rel="canonical"]');
+      if (cn) cn.setAttribute('href', chapURL);
+      var c = CHS[cur - 1] || {};
+      var txt = String(c.html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      var md = document.querySelector('meta[name="description"]');
+      if (md && txt) md.setAttribute('content', (chapLabel(cur) + ' — ' + txt).slice(0, 180));
+      var ld = {
+        '@context': 'https://schema.org', '@type': 'Chapter', position: cur,
+        name: chapSplit(c).full || chapLabel(cur), url: chapURL,
+        isPartOf: {
+          '@type': 'Book', name: N.title, url: location.origin + storyPath(),
+          author: N.author ? { '@type': 'Person', name: N.author } : undefined
+        }
+      };
+      var node = ldNode || document.querySelector('script[type="application/ld+json"]');
+      if (!node) {
+        node = document.createElement('script');
+        node.setAttribute('type', 'application/ld+json');
+        document.head.appendChild(node);
+        ldNode = node; ldCreated = true;
+      }
+      node.textContent = JSON.stringify(ld);
+    } catch (e) {}
+  }
+  function restoreStoryMeta() {
+    if (!N) return;
+    try {
+      var cn = document.querySelector('link[rel="canonical"]');
+      var md = document.querySelector('meta[name="description"]');
+      if (md) md.setAttribute('content', (N.syn || N.title).slice(0, 180));
+      if (cn) cn.setAttribute('href', canonOriginal || (location.origin + storyPath()));
+      var node = ldNode || document.querySelector('script[type="application/ld+json"]');
+      if (!node) return;
+      if (ldOriginal) node.textContent = ldOriginal;
+      else if (ldCreated) { node.remove(); ldNode = null; ldCreated = false; }
+    } catch (e) {}
   }
   /* ---- vào / ra chế độ đọc --------------------------------------------- */
   function enterReader(ch) {
@@ -1127,6 +1208,7 @@
     $('#rdShare').innerHTML = ic('share', 'i-s');
     applyRD();
     renderCur(false, dir);
+    paintChapterMeta();
     wake();
   }
   function exitReader(toComments) {
@@ -1136,8 +1218,9 @@
     /* ra khỏi trang đọc thì thanh trình duyệt phải về màu nền của trang, không
        giữ lại màu nền đọc (kem/tối) vừa dùng */
     if (CZ.themeMeta) CZ.themeMeta();
-    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    try { history.replaceState(null, '', storyPath() + location.search); } catch (e) {}
     try { document.title = N.title + ' · ssochuz library'; } catch (e) {}
+    restoreStoryMeta();
     if (toComments) showTab('cmt', true);
     else window.scrollTo({ top: storyScroll, behavior: 'auto' });
     renderStory(); renderChapters();
@@ -1280,17 +1363,33 @@
     window.__rdRT = setTimeout(function () { if (reading) repaginate(); }, 180);
   });
 
-  /* ---- định tuyến theo hash -------------------------------------------- */
-  function route(ev) {
-    var ch = chapterWanted();
-    /* link ?ch=… : chuẩn hoá về hash để Back/Forward hoạt động như nhau */
-    if (ch && !chapterFromHash() && location.search) {
-      try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) { ev = ev; }
-    }
-    if (ch) enterReader(ch);
+  /* ---- định tuyến: URL chương là chuẩn, hash/query cũ vẫn chạy ------------
+     hashchange (vừa có hash mới) thì tin hash; popstate/tải trang thì tin path.
+     Vào bằng link cũ là chuẩn hoá ngay về URL chương để copy được link chuẩn. */
+  function route(trust) {
+    var ch = trust === 'hash'
+      ? (chapterFromHash() || chapterFromPath() || chapterFromQuery())
+      : (chapterFromPath() || chapterFromHash() || chapterFromQuery());
+    if (ch) { enterReader(ch); syncChapterURL(ch); }
     else if (reading) exitReader();
   }
-  window.addEventListener('hashchange', function () { route(); });
+  window.addEventListener('hashchange', function () { route('hash'); });
+  window.addEventListener('popstate', function () { route('path'); });
+  /* bấm link chương thì đi bằng pushState (nhanh, không tải lại); bấm giữa,
+     Ctrl/⌘/Shift/Alt thì để trình duyệt tự mở tab mới như thường */
+  document.addEventListener('click', function (e) {
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    if (!a) return;
+    var href = a.getAttribute('href') || '';
+    var m = /\/chuong-(\d+)\/?$/i.exec(href) || /^#(?:chuong|page|chapter)-(\d+)$/i.exec(href);
+    if (!m) return;
+    if (href.charAt(0) !== '#' && a.origin && a.origin !== location.origin) return;
+    var ch = parseInt((a.getAttribute('data-ch') || m[1]), 10);
+    if (!ch || !CHS.length) return;
+    e.preventDefault();
+    openChapterURL(Math.max(1, Math.min(CHS.length, ch)));
+  });
 
   /* ======================= 5. KHỞI ĐỘNG ================================= */
   function showError(title, html, reload) {
@@ -1377,12 +1476,22 @@
       try { document.title = N.title + ' · ssochuz library'; } catch (e) {}
       var md = document.querySelector('meta[name="description"]');
       if (md) md.setAttribute('content', (N.syn || N.title) .slice(0, 180));
+      /* shell chung không có canonical tĩnh — tạo và trỏ về URL truyện */
+      var cn = document.querySelector('link[rel="canonical"]');
+      if (!cn) {
+        try {
+          cn = document.createElement('link');
+          cn.setAttribute('rel', 'canonical');
+          document.head.appendChild(cn);
+        } catch (e) { cn = null; }
+      }
+      if (cn) { try { cn.setAttribute('href', location.origin + storyPath()); } catch (e) {} }
       renderStory(); renderChapters(); renderRelated();
       showTab(/danh-gia|binh-luan/.test(location.hash) ? 'cmt' : (/gioi-thieu/.test(location.hash) ? 'info' : 'chap'));
       CZ.reveal();
-      route();
+      route(chapterFromHash() ? 'hash' : 'path');
       /* nhắc khi vào bằng link chương cụ thể */
-      var ch = chapterFromHash();
+      var ch = chapterWanted();
       if (ch && CHS.length) setTimeout(function () { toast('Mở thẳng ' + chapLabel(ch) + '.'); }, 400);
       CZ.onStats(function () { renderStory(); if (reading) renderCur(true); });
     }).catch(function (e) {

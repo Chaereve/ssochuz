@@ -673,7 +673,7 @@
     return t ? t.split(' ').length : 0;
   }
   function storyURL(slug) { slug = String(slug||'').trim(); if (!slug) return '/truyen/'; return '/truyen/' + encodeURIComponent(slug) + '/'; }
-  function readURL(slug, ch) { return storyURL(slug) + (ch ? '#chuong-' + ch : ''); }
+  function readURL(slug, ch) { return storyURL(slug) + (ch ? 'chuong-' + ch + '/' : ''); }
   function slugify(s) {
     return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/đ/g, 'd').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');

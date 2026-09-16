@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Sinh `sitemap.xml` + `robots.txt` từ data/registry.json.
+"""Sinh `sitemap.xml` + `robots.txt` từ data/registry.json + data/book/*.json.
 
     python3 tools/build_sitemap.py                          # dùng https://ssochuz.pages.dev
     python3 tools/build_sitemap.py --base https://ten-mien-cua-ban
     python3 tools/build_sitemap.py --base https://abc.pages.dev --dry   # chỉ in, không ghi
 
-Chạy lại mỗi khi thêm bộ truyện mới (hoặc sau khi đổi tên miền).
+Gồm trang chủ + từng truyện + từng chương (/truyen/<slug>/chuong-<n>/).
+Chạy lại mỗi khi thêm bộ/chương mới (hoặc sau khi đổi tên miền).
 """
 import argparse
 import json
@@ -35,12 +36,25 @@ def main():
     lib = reg.get('lib', [])
     today = date.today().isoformat()
 
+    def book_chapters(slug):
+        """Đếm số chương đọc được của một bộ (thiếu file thì coi như 0)."""
+        try:
+            with open(os.path.join(ROOT, 'data', 'book', slug + '.json'), encoding='utf-8') as f:
+                return len(json.load(f).get('chapters', []))
+        except (OSError, ValueError):
+            return 0
+
     urls = [(base + '/', today, '1.0', 'daily')]
     for b in lib:
         slug = b.get('slug')
         if not slug:
             continue
-        urls.append((base + '/truyen/' + slug + '/', b.get('updated') or today, '0.8', 'weekly'))
+        updated = b.get('updated') or today
+        urls.append((base + '/truyen/' + slug + '/', updated, '0.8', 'weekly'))
+        # URL từng chương (NV6): /truyen/<slug>/chuong-<n>/ — chương cũ ít đổi
+        # nên monthly; dữ liệu không có ngày từng chương nên lấy ngày của truyện.
+        for i in range(1, book_chapters(slug) + 1):
+            urls.append((base + '/truyen/' + slug + '/chuong-' + str(i) + '/', updated, '0.6', 'monthly'))
 
     body = ['<?xml version="1.0" encoding="UTF-8"?>',
             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
