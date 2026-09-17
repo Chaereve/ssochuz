@@ -80,4 +80,40 @@ phải có ở `:root` vì hộp chọn tủ nằm trên trang truyện; kèm ch
 `CZ_AUTH._verify`; My Space gặp 401 từ `/api/me/space` thì hiện nút "Thử lại" và
 "Đăng xuất & đăng nhập lại" kèm đúng lý do máy chủ trả.
 
-Bài Chromium riêng: `CHROMIUM_EXECUTABLE=/path/to/chromium node tests/t_space_browser.js` khi server.py đang chạy. Dùng mock dịch vụ, không ghi production. Có thể dùng `LAYOUT_SCREENSHOTS` trỏ thư mục ngoài repo để chụp bố cục.
+Bài Chromium riêng: `python3 server.py &` rồi `CHROMIUM_EXECUTABLE=/path/to/chromium node tests/t_space_browser.js`
+(cổng 8000). Dùng mock dịch vụ, không ghi production. Có thể dùng `LAYOUT_SCREENSHOTS` trỏ thư mục ngoài repo để chụp bố cục.
+
+**Đã chạy thật lần đầu 17/09/2026** (Chromium 153 headless): 11/11 cỡ đạt + hai vòng luồng đạt, lặp 3 lần kết quả như nhau.
+Máy nào không tải được Chromium của Playwright từ CDN (playwright.azureedge.net) thì lấy bản tĩnh từ npm:
+
+```bash
+npm i @sparticuz/chromium          # gói chứa chromium.br (~70MB)
+# giải nén bin/chromium.br bằng zlib.brotliDecompressSync, rồi:
+LD_LIBRARY_PATH=<thư mục lib NSS đã giải nén> CHROMIUM_EXECUTABLE=<đường dẫn chromium> node tests/t_space_browser.js
+```
+
+Khi chạy thật, bài đo còn tự bắt được mấy chỗ **sai trong chính phép đo** (đã sửa): `inner()` phải trừ cả
+bề rộng viền (`.space-hero` có `border:1px`), chờ hộp thoại đóng phải chờ cờ `open` (không dùng
+`waitForSelector('#shelfDialog:not([open])')` vì hộp đóng là `display:none`), phép đo tràn ngang tách
+`contentOverflow` (bỏ header dùng chung + vùng cuộn riêng `.space-tabs`), và phép đo "chữ đè ảnh" chỉ áp
+dụng khi ảnh–chữ cùng hàng (≤340px hero xuống hàng).
+
+Lưu ý: bài này **cảnh báo** (không fail) về lỗi **có trước**: header dùng chung tràn ngang ở dải ~1021–1199px
+(1024px: khách 91px, đã đăng nhập 48px; cả trang chủ) vì ngưỡng thu gọn nav đặt ở ≤1020px thay vì ~1200px —
+xem §5 của `BAO-CAO-CAN-CHINH-HERO-VA-HOP-THOAI-MY-SPACE.md`.
+
+`t_space_browser.js` là bài **đo toạ độ thật** — phần mà jsdom không làm được, nên nó bổ sung cho `t_space_hero.js`
+(bài kia khoá cấu trúc, bài này đo kết quả):
+
+- **vòng A** chạy 11 cỡ màn hình (1440/1280/1024/834/768/700/640/480/390/360/320), chỉ tải trang rồi đo:
+  tâm `.space-hero-ring` phải trùng tâm `.space-hero-avatar` **trong 1px** ở mọi cỡ, khe vòng–ảnh đều bốn phía,
+  ảnh không tràn khỏi hộp và không đè cột chữ; trang không tràn ngang; nút "Chỉnh sửa hồ sơ" sát mép trong
+  của hero (>700px) hoặc xuống hàng và cao ≥40px (≤700px); hộp thoại nằm **giữa màn hình**, nút đóng sát mép
+  phải đầu hộp và **cách chữ tiêu đề >8px** (đo bằng `Range` vì khối `<div>` cha giãn hết chỗ), tiêu đề – ô nhập
+  thẳng hàng dọc, mép phải ô nhập = mép trong thân hộp trừ đúng bề rộng thanh cuộn; **cuộn hết thân hộp thì đầu
+  và chân không nhúc nhích**; nút Lưu luôn trong màn hình; `prefers-reduced-motion` thì hộp không chạy animation.
+- **vòng B** chạy luồng thật ở 1440px và 390px: hồ sơ + ảnh đại diện (lưu xong ảnh thật vẫn đồng tâm với vòng),
+  lưu trượt thì giữ bản nháp, nút **Huỷ** không tạo tủ, bộ đếm `0/200 → 1/200`, tủ riêng tư ↔ công khai,
+  hồ sơ công khai không lộ email/nháp và không có cột thao tác, và hộp **"Chọn tủ lưu truyện" trên trang truyện**
+  phải bo góc 18px/14px + viền không rơi về `currentColor` (hai biến `--space-*` phải có ở `:root`), không dùng
+  `.ibo`, không cuộn lồng, bấm tủ thì trạng thái **lật** tại chỗ.
