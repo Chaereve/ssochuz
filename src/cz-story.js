@@ -1710,15 +1710,23 @@
       document.body.appendChild(dlg);
     }
 
-    dlg.innerHTML = '<div class="sechead">' +
+    /* Cùng một khung head/body/foot với hộp thoại tủ truyện bên My Space để hai
+       nơi trông như một sản phẩm: nút đóng cùng kiểu, tiêu đề bên trái – nút bên
+       phải, thân tự cuộn, chân hộp luôn thấy được. Không dùng .ibo vì lớp đó tô
+       màu bằng biến --rd-* chỉ có trên body[data-rd] của trang đọc. */
+    dlg.innerHTML = '<div class="space-dialog-head">' +
       '<div><p class="section-eyebrow">TỦ TRUYỆN CỦA BẠN</p><h2>Chọn tủ lưu truyện</h2></div>' +
-      '<button class="ibo" type="button" data-close-shelf-modal title="Đóng" aria-label="Đóng">' + ic('x', 'i-s') + '</button>' +
+      '<button class="space-dialog-close" type="button" data-close-shelf-modal title="Đóng" aria-label="Đóng">' + ic('x', 'i-s') + '</button>' +
       '</div>' +
-      '<p class="space-note" style="margin-top:0">Lưu <b>' + esc(n.title) + '</b> vào tủ của bạn để tìm đọc lại bất kỳ lúc nào.</p>' +
-      '<div id="storyShelfModalBody"><p class="empty">Đang tải danh sách tủ…</p></div>';
+      '<div class="space-dialog-body">' +
+      '<p class="space-note space-dialog-lead">Lưu <b>' + esc(n.title) + '</b> vào tủ của bạn để tìm đọc lại bất kỳ lúc nào.</p>' +
+      '<div id="storyShelfModalBody"><p class="empty">Đang tải danh sách tủ…</p></div>' +
+      '</div>' +
+      '<div class="space-dialog-foot">' +
+      '<button class="btn pri" type="button" data-close-shelf-modal>Xong</button>' +
+      '</div>';
 
-    var closeBtn = dlg.querySelector('[data-close-shelf-modal]');
-    if (closeBtn) closeBtn.onclick = function () { dlg.close(); };
+    dlg.querySelectorAll('[data-close-shelf-modal]').forEach(function (b) { b.onclick = function () { dlg.close(); }; });
     dlg.onclick = function (e) { if (e.target === dlg) dlg.close(); };
 
     dlg.showModal();
@@ -1736,7 +1744,7 @@
       if (!bodyEl) return;
 
       if (!shelves.length) {
-        bodyEl.innerHTML = '<div class="shelf-detail-empty" style="margin:16px 0">' +
+        bodyEl.innerHTML = '<div class="shelf-detail-empty">' +
           '<p>Bạn chưa tạo tủ truyện nào trên tài khoản.</p>' +
           '<a class="btn pri sm" href="/my-space.html#shelves">Tạo tủ trong My Space ↗</a>' +
           '</div>';
@@ -1753,13 +1761,9 @@
             '</div>' +
             '<span class="shelf-choice-status">' + (has ? '✓ Đã lưu' : '+ Lưu vào tủ') + '</span>' +
             '</button>';
-        }).join('') + '</div>' +
-        '<div style="margin-top:14px; text-align:right">' +
-        '<button class="btn pri sm" type="button" data-close-shelf-modal>Xong</button>' +
-        '</div>';
-
-        var cBtn = bodyEl.querySelector('[data-close-shelf-modal]');
-        if (cBtn) cBtn.onclick = function () { dlg.close(); };
+        }).join('') + '</div>';
+        /* Nút "Xong" nằm ở chân hộp (.space-dialog-foot) — dựng một lần khi mở,
+           không ghép lại theo danh sách, nên không bị nhảy chỗ khi bấm lưu. */
       }
 
       renderChoices();

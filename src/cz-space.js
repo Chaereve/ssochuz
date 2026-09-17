@@ -91,12 +91,22 @@
     /* Lời dẫn mặc định: chủ trang chưa đăng nhập thì nói về việc sắp làm, khách
        xem hồ sơ công khai thì một câu trung tính. */
     var bio = p.bio || (owner ? (p.checking ? 'Đang kiểm tra phiên đăng nhập…' : (p.guest ? 'Một người yêu những câu chuyện.' : 'Gom những câu chuyện yêu thích về một nơi.')) : 'Một người yêu những câu chuyện.');
-    host.innerHTML = '<div class="space-hero-orbit" aria-hidden="true"><span></span><i>✦</i></div>' +
+    /* Cấu trúc hero: [hộp ảnh + vòng đồng tâm] [khối chữ] [cột thao tác].
+       Vòng tròn nằm TRONG hộp ảnh (CSS: inset:0) nên luôn đồng tâm với ảnh ở mọi
+       mốc màn hình — bản cũ đặt vòng absolute theo hero bằng left/top cứng nên
+       lệch ảnh 36px ngang / 2px dọc trên máy và 29px / 13px trên điện thoại.
+       Giữ đúng khung này trong HTML tĩnh (my-space.html, profile.html) để trang
+       chưa nạp JS không hiện nhãn và tiêu đề nằm ngang hàng nhau. */
+    host.innerHTML = '<div class="space-hero-portrait">' +
+      '<span class="space-hero-ring" aria-hidden="true"></span>' +
       '<div class="space-avatar space-hero-avatar">' + portrait(p) + '</div>' +
-      '<div class="space-intro"><div class="space-hero-label"><p class="space-kicker">' + (owner ? 'MY SPACE / GÓC ĐỌC CỦA BẠN' : 'SSOCHUZ / HỒ SƠ BẠN ĐỌC') + '</p><span class="space-live-dot" aria-hidden="true"></span></div>' +
+      '</div>' +
+      '<div class="space-intro">' +
+      '<div class="space-hero-label"><span class="space-live-dot" aria-hidden="true"></span>' +
+      '<p class="space-kicker">' + (owner ? 'MY SPACE / GÓC ĐỌC CỦA BẠN' : 'SSOCHUZ / HỒ SƠ BẠN ĐỌC') + '</p></div>' +
       '<h1>' + esc(name) + '</h1><p class="space-bio">' + esc(bio) + '</p>' +
-      '<div class="space-hero-rule" aria-hidden="true"><span></span></div></div>' +
-      (owner && user() ? '<a class="btn ghost space-hero-action" href="#edit-profile">Chỉnh sửa hồ sơ <span aria-hidden="true">↗</span></a>' : '');
+      '</div>' +
+      (owner && user() ? '<div class="space-hero-side"><a class="btn ghost" href="#edit-profile">Chỉnh sửa hồ sơ <span aria-hidden="true">↗</span></a></div>' : '');
     if (owner) host.hidden = false;
   }
   function heroFromAccount() {
@@ -421,6 +431,12 @@
       space = data; cloud(); return data;
     } finally { busy = false; }
   }
+  /* Đếm số truyện đã chọn, hiện cạnh nhãn "Thêm truyện vào tủ" theo đúng kiểu
+     bộ đếm 0/2000 của khung bình luận (không còn ngoặc đơn "(3/200)"). */
+  function pickedCount() {
+    var el = $('#selectedCount');
+    if (el) el.textContent = selected.size + '/200';
+  }
   function picker() {
     var q = CZ.slugify($('#shelfSearch').value);
     var all = CZ.lib().filter(function (n) { return !n.slug.startsWith('private-') && (!q || CZ.slugify(n.title + ' ' + n.author + ' ' + n.couple).includes(q)); });
@@ -434,7 +450,7 @@
         ? esc(shown.length + '/' + all.length + ' truyện') + ' <button class="btn ghost sm" type="button" data-picker-more>Hiện thêm</button>'
         : esc(all.length + ' truyện khớp');
     }
-    $('#selectedCount').textContent = '(' + selected.size + '/200)';
+    pickedCount();
   }
   function editShelf(shelf, importLocal) {
     if (!space) return;
@@ -667,12 +683,14 @@
       }
     };
     $('#closeShelf').onclick = function () { $('#shelfDialog').close(); };
+    /* Nút "Huỷ" ở chân hộp: cùng một hành động với dấu ✕, cho người quen nút chữ. */
+    if ($('#cancelShelf')) $('#cancelShelf').onclick = function () { $('#shelfDialog').close(); };
     $('#shelfSearch').oninput = function () { pickerLimit = 40; picker(); };
     $('#shelfPicker').onchange = function (e) {
       var b = e.target.closest('[data-book]');
       if (!b) return;
       if (b.checked) selected.add(b.dataset.book); else selected.delete(b.dataset.book);
-      $('#selectedCount').textContent = '(' + selected.size + '/200)';
+      pickedCount();
     };
     $('#shelfPickerInfo').onclick = function (e) {
       if (e.target.closest('[data-picker-more]')) { pickerLimit += 40; picker(); }
