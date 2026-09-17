@@ -18,6 +18,7 @@
 const path = require('path');
 process.chdir(path.join(__dirname, '..'));
 const mk = require('./mk.js');
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const SB_ERROR = 'Worker chưa ghim project Supabase — đặt biến SUPABASE_URL trên Worker, hoặc /admin → Cài đặt & đồng bộ → Đăng nhập rồi Lưu';
 const ME_ERROR = 'Chưa mở được không gian của bạn — token Supabase ký ES256 mà Worker chưa ghim project. Vui lòng bấm “Đăng xuất & đăng nhập lại” rồi thử lại.';
@@ -29,6 +30,7 @@ function fakeSDK(win, state) {
       return { auth: {
         async verifyOtp(p) { state.verifyOtp = p; return { data: { user: { id: 'u9', email: 'a@b.c' } }, error: null }; },
         async getSession() { return { data: { session: state.session || null } }; },
+        onAuthStateChange(cb) { state.cb = cb; return { data: { subscription: { unsubscribe() {} } } }; },
         async signOut() { state.signedOut = true; return { error: null }; },
       } };
     },
@@ -103,6 +105,72 @@ function ok(name, cond, extra) { if (!cond) { console.error('LỖI:', name, extr
     ok('C/nút Đăng xuất & đăng nhập lại', btns.some((t) => /Đăng xuất & đăng nhập lại/.test(t)), btns.join(' | '));
     ok('C/status nêu đúng lý do từ Worker', /ghim project|ES256/.test(doc.querySelector('#spaceStatus').textContent), doc.querySelector('#spaceStatus').textContent.slice(0, 120));
     ok('C/không lỗi JS', errors.length === 0, errors.join(' | '));
+  }
+
+
+  /* ---------- D. Quay về từ Google: phiên về MUỘN qua onAuthStateChange ----------
+     Bệnh thật (17/09): supabase-js còn đang đổi `?code=…`, trang đọc session được
+     null rồi kết luận ngay "khách" — đăng nhập Google xong vẫn thấy lời mời đăng
+     nhập, tên/ảnh không hiện, phải F5 mới đúng. */
+  {
+    const state = {};
+    const { doc, win, errors } = await mk.page('/my-space.html', {
+      url: 'https://ssochuz.pages.dev/my-space?code=abc123',
+      fetch: (url) => {
+        const u = String(url);
+        if (u.includes('/api/auth/supabase')) return Promise.resolve(new Response(JSON.stringify({ ok: true, token: 'worker-tok', user: { uid: 'u9', name: 'Bạn Thử', email: 'a@b.c', picture: 'https://lh3.googleusercontent.com/a/photo' }, admin: false })));
+        if (u.includes('/api/me/space')) return Promise.resolve(new Response(JSON.stringify({ id: 'a'.repeat(64), version: 0, profile: { name: 'Bạn đọc', bio: '', avatar: '' }, shelves: [] })));
+        if (u.includes('/api/registry')) return Promise.resolve(new Response(JSON.stringify({ rev: 'x', lib: [] })));
+        return Promise.resolve(new Response('{}'));
+      },
+      config: { CZ_API: 'https://api.test' },
+      files: ['cz-config.js', 'cz-app.js', 'cz-auth.js', 'cz-space.js'],
+      setup(w) { fakeSDK(w, state); state.session = null; },
+    });
+    await wait(250);
+    ok('D/chưa chốt được phiên thì KHÔNG mời đăng nhập', doc.querySelector('#spaceGuest').hidden === true, doc.querySelector('#spaceGuest').hidden);
+    ok('D/trạng thái phiên là "checking"', win.CZ_AUTH.state() === 'checking', win.CZ_AUTH.state());
+    state.session = sbSession();                       /* supabase-js đổi code xong */
+    if (state.cb) state.cb('SIGNED_IN', state.session);
+    await wait(400);
+    ok('D/phiên chốt là "in"', win.CZ_AUTH.state() === 'in', win.CZ_AUTH.state());
+    ok('D/lời mời đăng nhập biến mất', doc.querySelector('#spaceGuest').hidden === true);
+    ok('D/hero hiện tên tài khoản Google', /Bạn Thử/.test(doc.querySelector('#spaceHero').textContent), doc.querySelector('#spaceHero').textContent.slice(0, 60));
+    ok('D/không lỗi JS', errors.length === 0, errors.join(' | '));
+  }
+
+  /* ---------- E. Hồ sơ máy chủ không được xoá ảnh Google ----------
+     applyServerProfile cũ gán picture = avatar || '' — hồ sơ mới chưa chọn ảnh
+     (avatar rỗng) là ảnh Google trên thanh đầu trang bị xoá ngay khi mở My Space. */
+  {
+    const { win, errors } = await mk.page('/my-space.html', {
+      url: 'https://ssochuz.pages.dev/my-space',
+      fetch: (url) => {
+        const u = String(url);
+        if (u.includes('/api/me/space')) return Promise.resolve(new Response(JSON.stringify({ id: 'a'.repeat(64), version: 0, profile: { name: 'Bạn đọc', bio: '', avatar: '' }, shelves: [] })));
+        if (u.includes('/api/registry')) return Promise.resolve(new Response(JSON.stringify({ rev: 'x', lib: [] })));
+        return Promise.resolve(new Response('{}'));
+      },
+      config: { CZ_API: 'https://api.test' },
+      files: ['cz-config.js', 'cz-app.js', 'cz-auth.js', 'cz-space.js'],
+      setup(w) {
+        w.localStorage.setItem('ssochuz-user', JSON.stringify({ uid: 'u1', name: 'Nguyễn Văn A', email: 'a@b.c', picture: 'https://lh3.googleusercontent.com/a/photo', exp: Math.floor(Date.now() / 1000) + 9999 }));
+        w.localStorage.setItem('ssochuz-auth-token', 'tok');
+      },
+    });
+    await wait(250);
+    const A = win.CZ_AUTH;
+    A.applyServerProfile({ name: 'Bạn đọc', bio: '', avatar: '' });
+    ok('E/hồ sơ trống không xoá ảnh Google', A.current().picture === 'https://lh3.googleusercontent.com/a/photo', A.current().picture);
+    ok('E/hồ sơ trống không kéo tên về "Bạn đọc"', A.current().name === 'Nguyễn Văn A', A.current().name);
+    A.applyServerProfile({ name: 'A Tí', bio: 'thích đọc', avatar: '' });
+    ok('E/tên trong hồ sơ thì thắng', A.current().name === 'A Tí', A.current().name);
+    ok('E/chưa chọn ảnh vẫn giữ ảnh Google', A.current().picture === 'https://lh3.googleusercontent.com/a/photo');
+    A.applyServerProfile({ name: 'A Tí', bio: 'thích đọc', avatar: '', avatarOff: true });
+    ok('E/bấm "Bỏ ảnh" thì ảnh mới bị xoá', A.current().picture === '', A.current().picture);
+    A.applyServerProfile({ name: 'A Tí', bio: 'thích đọc', avatar: 'data:image/jpeg;base64,AAAA' });
+    ok('E/ảnh tự cắt thì được áp', A.current().picture === 'data:image/jpeg;base64,AAAA');
+    ok('E/không lỗi JS', errors.length === 0, errors.join(' | '));
   }
 
   console.log(JSON.stringify({ dat: pass.length, errors0: [] }, null, 2));

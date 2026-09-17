@@ -2531,10 +2531,17 @@ body.rd-focus .rdcmts { display: none; }
 .space-wrap .grid { grid-template-columns: repeat(auto-fill,minmax(150px,1fr)); }
 .local-book { min-width: 0; }
 .local-book > button { margin-top: 8px; }
-.space-history-row { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 22px 0; border-bottom: 1px solid var(--bd); color: var(--txt); }
-.space-history-row small { display: block; color: var(--mut); margin-top: 6px; }
-.space-history-row b { overflow-wrap: anywhere; }
-.space-history-row > span:last-child { flex: none; color: var(--acc); font-size: 12px; }
+.space-history .space-history-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 14px 12px; border-bottom: 1px solid var(--bd); color: var(--txt); }
+.space-history-cover { width: 44px; height: 62px; border-radius: 5px; object-fit: cover; background: var(--surf2); }
+.space-history-cover.noimg { display: grid; place-items: center; color: var(--dim); font: 700 15px var(--font-head); }
+.space-history-main { min-width: 0; }
+.space-history-main b { display: block; overflow-wrap: anywhere; }
+.space-history-main small { display: block; color: var(--mut); margin-top: 5px; }
+.space-history-bar { height: 3px; margin-top: 8px; background: var(--space-line); border-radius: 2px; overflow: hidden; }
+.space-history-bar i { display: block; height: 100%; background: var(--acc); }
+.space-history-tail { display: flex; align-items: center; gap: 10px; }
+.space-history-tail .go { color: var(--acc); font-size: 12px; font-weight: 700; white-space: nowrap; }
+.space-history-tail .btn { padding: 5px 9px; font-size: 12px; }
 .space-stat-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); border: 1px solid var(--bd); border-radius: 12px; background: var(--surf); }
 .space-stat-grid > div { padding: 26px; }
 .space-stat-grid strong { display: block; color: var(--acc); font: 700 34px var(--font-head); margin-bottom: 10px; }
@@ -2828,9 +2835,9 @@ body.rd-focus .rdcmts { display: none; }
 
 /* Lịch sử / thống kê ------------------------------------------------------- */
 .space-history { border-top: 1px solid var(--space-line); }
-.space-history-row { padding: 18px 12px; border-bottom: 1px solid var(--space-line); transition: background-color var(--t-fast) var(--ease), padding-left var(--t) var(--ease); }
+.space-history-row { transition: background-color var(--t-fast) var(--ease), padding-left var(--t) var(--ease); }
 .space-history-row:hover { padding-left: 18px; background: color-mix(in srgb, var(--acc) 5%, transparent); }
-.space-history-row > span:last-child { font-weight: 700; }
+.space-history-row.is-done .space-history-bar i { background: var(--ok); }
 .space-stat-grid { gap: 10px; border: 0; background: transparent; }
 .space-stat-grid > div { position: relative; padding: 22px 20px; border: 1px solid var(--space-line); border-radius: 14px; background: var(--surf); overflow: hidden; animation: spaceStatIn .45s var(--ease-out) both; }
 .space-stat-grid > div:nth-child(2) { animation-delay: 60ms; }
@@ -2861,7 +2868,50 @@ body.rd-focus .rdcmts { display: none; }
 .avatar-actions .btn { min-height: 32px; }
 #profileMessage { min-height: 1.7em; margin: 16px 0 0; color: var(--mut); font-size: 12.5px; }
 #profileMessage:not(:empty) { padding: 10px 12px; border-left: 2px solid var(--acc); background: color-mix(in srgb, var(--acc) 6%, transparent); }
+#profileMessage[data-kind="ok"]:not(:empty) { border-left-color: var(--ok); background: color-mix(in srgb, var(--ok) 7%, transparent); }
+#profileMessage[data-kind="err"]:not(:empty) { border-left-color: var(--bad); background: color-mix(in srgb, var(--bad) 7%, transparent); }
 .profile-actions { padding-top: 20px; border-top: 1px solid var(--space-line); }
+
+/* Dòng trạng thái phiên: nói rõ đang kiểm tra / lỗi vì sao / đã xong ---------
+   (#spaceStatus là nơi duy nhất báo trạng thái — rỗng thì phải biến mất hẳn) */
+.space-status:empty { display: none; }
+.space-status[data-kind] { display: flex; align-items: flex-start; gap: 12px; padding: 13px 15px; margin: 4px 0 18px; border: 1px solid var(--space-line); border-radius: 12px; background: color-mix(in srgb, var(--surf2) 40%, transparent); color: var(--mut); font-size: 13px; line-height: 1.65; }
+.space-status[data-kind="load"] { border-color: color-mix(in srgb, var(--acc) 26%, var(--space-line)); color: var(--txt); }
+.space-status[data-kind="err"] { border-left: 3px solid var(--bad); color: var(--txt); }
+.space-status[data-kind="ok"] { border-left: 3px solid var(--ok); color: var(--txt); }
+.space-status .btn { flex: none; }
+.space-session-body { min-width: 0; flex: 1; }
+.space-session-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.space-status .spin { display: inline-block; width: 13px; height: 13px; margin-right: 8px; border: 2px solid color-mix(in srgb, var(--acc) 30%, transparent); border-top-color: var(--acc); border-radius: 50%; animation: spaceSpin .8s linear infinite; vertical-align: -2px; }
+@keyframes spaceSpin { to { transform: rotate(360deg); } }
+.space-login-note { display: grid; gap: 12px; padding: 18px; border: 1px dashed color-mix(in srgb, var(--acc) 30%, var(--bd)); border-radius: 13px; background: color-mix(in srgb, var(--acc) 4%, transparent); }
+.space-login-note h3 { font-size: 16px; }
+.space-login-note p { margin: 0; color: var(--mut); font-size: 13px; line-height: 1.7; }
+.space-diag { margin-top: 12px; border: 1px solid var(--space-line); border-radius: 10px; background: var(--surf); }
+.space-diag summary { padding: 10px 13px; cursor: pointer; color: var(--mut); font-size: 12.5px; font-weight: 600; }
+.space-diag dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 14px; margin: 0; padding: 4px 14px 14px; font-size: 12px; }
+.space-diag dt { color: var(--dim); }
+.space-diag dd { min-width: 0; margin: 0; overflow-wrap: anywhere; font-family: var(--font-mono); }
+.fl-title { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.fl-count { color: var(--dim); font: 600 11px var(--font-mono); }
+.fl-count.over { color: var(--bad); }
+.avatar-drop-hint { margin: 8px 0 0; color: var(--dim); font-size: 11.5px; }
+.space-avatar-edit.dragging { border-color: var(--acc); background: color-mix(in srgb, var(--acc) 8%, transparent); }
+.avatar-editor-preview .space-avatar { cursor: pointer; }
+
+/* Chi tiết tủ: mỗi bìa có nút bỏ nhanh, không phải mở hộp sửa tủ -----------
+   Nút nằm DƯỚI bìa (giống danh sách trên thiết bị), không phủ lên huy hiệu
+   tình trạng / bookmark "Mới" ở góc bìa. */
+.space-page .space-book-cell > .btn { width: 100%; margin-top: 8px; justify-content: center; }
+.space-page .space-book-cell > .btn:hover { border-color: var(--acc); color: var(--acc); }
+.shelf-picker-box { margin-top: 12px; border: 1px solid var(--bd); border-radius: 8px; overflow: hidden; }
+.shelf-picker-box .shelf-picker { max-height: 280px; margin: 0; border: 0; border-radius: 0; }
+.shelf-picker-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-top: 1px solid var(--bd); color: var(--mut); font-size: 12px; }
+.shelf-picker-foot:empty { display: none; }
+.shelf-detail-meta { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0 16px; color: var(--dim); font-size: 12px; }
+.shelf-detail-empty { display: grid; place-items: center; gap: 12px; padding: 34px 16px; border: 1px dashed var(--space-line); border-radius: 13px; text-align: center; color: var(--mut); }
+.shelf-detail-empty p { margin: 0; font-size: 13px; }
+.space-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 
 @media (max-width: 800px) {
   .space-wrap { padding-left: 20px; padding-right: 20px; }
@@ -2901,8 +2951,11 @@ body.rd-focus .rdcmts { display: none; }
   .space-device-shelf.has-cloud { padding: 11px 12px; }
   .space-device-shelf .grid, .space-wrap .space-book-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .space-device-shelf.has-cloud #localShelf { gap: 14px 10px; }
-  .space-history-row { padding: 16px 8px; gap: 12px; }
-  .space-history-row > span:last-child { font-size: 11px; }
+  .space-history .space-history-row { grid-template-columns: 34px minmax(0, 1fr); gap: 11px; padding: 13px 6px; }
+  .space-history-cover { width: 34px; height: 48px; }
+  .space-history-tail { grid-column: 1 / -1; justify-content: space-between; }
+  .space-status[data-kind] { flex-direction: column; }
+  .space-status .btn { width: 100%; }
   .space-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .space-stat-grid > div { padding: 17px 14px; }
   .space-stat-grid strong { font-size: 29px; }
@@ -3016,3 +3069,19 @@ body.rd-focus .rdcmts { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .admin #tabs button, .admin #tabs summary, .admin-nav-chevron { transition: none !important; }
 }
+
+/* ============================================================================
+   CUỐI TỆP · LUẬT NỀN TẢNG — [hidden] phải THẮNG mọi `display:` của class.
+   ----------------------------------------------------------------------------
+   Vì sao cần !important: luật `[hidden]{display:none}` của trình duyệt là kiểu
+   "user agent", mà khai báo thường của tác giả luôn đè được nó — nên
+   `.space-guest{display:grid}` hay `.space-hero{display:flex}` đã vô hiệu hoá
+   thuộc tính hidden. Hậu quả thật: khối "hãy đăng nhập" vẫn nằm chình ình trên
+   My Space sau khi đã đăng nhập Google; nút "Nhập danh sách đã lưu" và "Xem hồ
+   sơ công khai" cũng hiện sai lúc. Mọi chỗ ẩn/hiện bằng el.hidden đều nhờ luật này.
+   Vì sao đặt ở CUỐI tệp: bài kiểm thử jsdom so khớp khai báo theo thứ tự tệp
+   (jsdom bỏ qua thứ tự ưu tiên của !important giữa các luật), nên luật này phải
+   nằm sau mọi luật đặt `display:` — đổi chỗ là bài kiểm tra "đã đăng nhập thì
+   không còn lời mời đăng nhập" đỏ ngay, và đó chính là điều ta muốn.
+   ========================================================================== */
+[hidden] { display: none !important; }

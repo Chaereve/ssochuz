@@ -21,10 +21,15 @@ function inline(html, files) {
 }
 /* setup(w): chạy TRƯỚC khi script của trang chạy — dùng để giả lập phiên đăng nhập
    (localStorage) hoặc cấu hình (window.CZ_*) mà không phải sửa mã nguồn. */
-function page(file, { url = 'https://ssochuz.pages.dev/', fetch, config = {}, files = ['cz-config.js', 'cz-app.js'], setup = null } = {}) {
+function page(file, { url = 'https://ssochuz.pages.dev/', fetch, config = {}, files = ['cz-config.js', 'cz-app.js'], setup = null, css = false } = {}) {
   let html = read(file);
   html = inline(html, files);
   html = inlineAll(html);
+  /* css: true → nhúng luôn cz.css vào trang để jsdom tính được getComputedStyle.
+     Cần cho các bài kiểm tra "ẩn/hiện": luật [hidden] của trình duyệt là kiểu
+     user-agent nên bị `display:` của class đè — đúng cái bẫy đã làm khối "hãy
+     đăng nhập" hiện sai trên My Space. */
+  if (css) html = html.replace(/<link rel="stylesheet" href="\/(cz\.css)(?:\?[^"]*)?">/g, () => '<style>' + read('cz.css') + '</style>');
   if (config.CZ_API !== undefined) {
     html = html.replace(/window\.CZ_API\s*=\s*(window\.CZ_API\s*\|\|\s*)?'[^']*';/,
       "window.CZ_API=" + JSON.stringify(config.CZ_API) + ";");
