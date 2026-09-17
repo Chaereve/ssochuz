@@ -87,7 +87,7 @@ export { PrivateBooks } from './private-books.js';
      VAPID_PRIVATE     (secret, bắt buộc nếu bật push) — khoá riêng VAPID base64url (`wrangler secret put VAPID_PRIVATE`)
    ============================================================================ */
 
-const VERSION = '1.9.8';
+const VERSION = '1.9.9';
 const JSONH = {
   'content-type': 'application/json; charset=utf-8',
   'x-content-type-options': 'nosniff',
@@ -113,7 +113,7 @@ export default {
     try {
       if (p === '/api/me/space' || /^\/api\/profiles\/[a-f0-9]{64}$/.test(p)) {
         const owner = p === '/api/me/space';
-        let id;
+        let id, seedName = '', seedPic = '';
         if (owner) {
           const auth = await userFromReq(req, env);
           const expired = auth.user && (!auth.user.uid || !auth.user.exp || auth.user.exp <= Date.now() / 1000);
@@ -121,10 +121,15 @@ export default {
             const why = expired ? 'Phiên đã hết hạn' : (auth.err ? auth.err : 'Chưa đăng nhập');
             return json({
               error: 'Chưa mở được không gian của bạn — ' + why + '. Vui lòng bấm “Đăng xuất & đăng nhập lại” rồi thử lại.',
-              hint: 'Chủ trang: nếu lỗi nhắc ghim project Supabase, đặt biến SUPABASE_URL trên Worker hoặc lưu Project URL ở /admin → Cài đặt & đồng bộ → Đăng nhập (worker 1.9.8).',
+              hint: 'Chủ trang: nếu lỗi nhắc ghim project Supabase, đặt biến SUPABASE_URL trên Worker hoặc lưu Project URL ở /admin → Cài đặt & đồng bộ → Đăng nhập (worker 1.9.9).',
             }, { status: 401, cors, headers: { 'cache-control': 'no-store' } });
           }
           id = await profileId(auth.user.uid);
+          /* Danh tính đã xác thực — gửi kèm để hồ sơ MỚI không khởi tạo bằng
+             "Bạn đọc" + ảnh rỗng (bệnh: đăng nhập Google xong My Space vẫn hiện
+             tên chung chung cho tới khi người dùng tự lưu hồ sơ). */
+          seedName = String(auth.user.name || '').slice(0, 40);
+          seedPic = String(auth.user.picture || '').slice(0, 2048);
         } else {
           if (req.method !== 'GET') return json({ error: 'Không được phép.' }, { status: 405, cors });
           id = p.split('/').pop();
@@ -141,7 +146,14 @@ export default {
           raw = new Blob(chunks);
         }
         const stub = env.MEMBER_SPACES.get(env.MEMBER_SPACES.idFromName(id));
-        const res = await stub.fetch(new Request('https://members.internal/' + (owner ? 'owner' : 'public'), { method: req.method, body: raw }));
+        const inner = { method: req.method, body: raw };
+        if (owner && (seedName || seedPic)) {
+          inner.headers = {
+            'x-cz-name': encodeURIComponent(seedName),
+            'x-cz-pic': encodeURIComponent(seedPic),
+          };
+        }
+        const res = await stub.fetch(new Request('https://members.internal/' + (owner ? 'owner' : 'public'), inner));
         const data = await res.json();
         return json({ ...data, id }, { status: res.status, cors, headers: { 'cache-control': 'private, no-store' } });
       }

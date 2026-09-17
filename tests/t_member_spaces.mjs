@@ -5,7 +5,8 @@ import {MemberSpaces,profileId} from '../worker/member-spaces.js';
 const objects=new Map();
 function object(id){if(!objects.has(id)){const db=new Map();let q=Promise.resolve();objects.set(id,new MemberSpaces({storage:{get:async k=>structuredClone(db.get(k)),put:async(k,v)=>db.set(k,structuredClone(v))},blockConcurrencyWhile(fn){const next=q.then(fn);q=next.catch(()=>{});return next;}}));}return objects.get(id);}
 const kv=new Map();const env={SESSION_SECRET:'s'.repeat(48),CZ_KV:{get:async(k,opt)=>opt?.type==='json'?JSON.parse(kv.get(k)||'null'):kv.get(k)||null,put:async(k,v)=>kv.set(k,v),delete:async k=>kv.delete(k),list:async()=>({keys:[],list_complete:true})},MEMBER_SPACES:{idFromName:x=>x,get:object}};
-function token(uid,expired=false){const data=Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'})).toString('base64url')+'.'+Buffer.from(JSON.stringify({uid,email:uid+'@private.test',name:'Secret Auth Name',exp:Math.floor(Date.now()/1000)+(expired?-100:3600)})).toString('base64url');return data+'.'+crypto.createHmac('sha256',env.SESSION_SECRET).update(data).digest('base64url');}
+function token(uid,expired=false,picture=''){const data=Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'})).toString('base64url')+'.'+Buffer.from(JSON.stringify({uid,email:uid+'@private.test',name:'Secret Auth Name',picture,exp:Math.floor(Date.now()/1000)+(expired?-100:3600)})).toString('base64url');return data+'.'+crypto.createHmac('sha256',env.SESSION_SECRET).update(data).digest('base64url');}
+async function callTok(path,method,tok,body){const headers={'content-type':'application/json',authorization:'Bearer '+tok};const res=await worker.fetch(new Request('https://test'+path,{method,headers,body:body?JSON.stringify(body):undefined}),env,{});return {res,data:await res.json()};}
 async function call(path,method='GET',body,who){const headers={'content-type':'application/json'};if(who)headers.authorization='Bearer '+token(who);const res=await worker.fetch(new Request('https://test'+path,{method,headers,body:body?JSON.stringify(body):undefined}),env,{});return {res,data:await res.json()};}
 let r=await call('/api/me/space');assert.equal(r.res.status,401);
 r=await call('/api/me/space','GET',null,'alice');assert.equal(r.res.status,200);const id=r.data.id;assert.equal(id,await profileId('alice'));assert.match(r.res.headers.get('cache-control'),/no-store/);
@@ -25,6 +26,42 @@ r=await call('/api/me/space','PUT',{version:4,shelf:{name:'bad',books:['private-
 r=await call('/api/me/space','PUT',{version:4,deleteShelf:secretId},'alice');assert.equal(r.res.status,200);assert.equal(r.data.shelves.length,0);
 const forbidden=await worker.fetch(new Request('https://test/api/me/space',{headers:{authorization:'Bearer '+token('alice',true)}}),env,{});assert.equal(forbidden.status,401);
 const missing=await worker.fetch(new Request('https://test/api/me/space',{headers:{authorization:'Bearer '+token('alice')}}),{SESSION_SECRET:env.SESSION_SECRET},{});assert.equal(missing.status,503);
+/* ---- Hồi quy 17/09: hồ sơ MỚI phải mang danh tính tài khoản đã xác thực ----
+   Bản 1.9.8 khởi tạo mọi hồ sơ bằng "Bạn đọc" + ảnh rỗng, nên người vừa đăng
+   nhập Google mở My Space là thấy tên chung chung; nếu họ chỉ sửa mô tả rồi lưu
+   thì "Bạn đọc" bị ghi vĩnh viễn. Ảnh Google (https) cũng bị từ chối. */
+const gpic = 'https://lh3.googleusercontent.com/a/photo';
+const carol = token('carol', false, gpic);
+r = await callTok('/api/me/space', 'GET', carol);
+assert.equal(r.res.status, 200);
+assert.equal(r.data.profile.name, 'Secret Auth Name', 'Không gian mới lấy tên từ tài khoản đã xác thực');
+assert.equal(r.data.profile.avatar, gpic, 'Ảnh Google (https) được nhận làm ảnh đại diện');
+assert.equal(r.data.profile.avatarOff, false);
+const carolAgain = await callTok('/api/me/space', 'GET', carol);
+assert.deepEqual(carolAgain.data.profile, r.data.profile, 'Gieo danh tính chỉ một lần, GET sau vẫn y nguyên');
+assert.equal(carolAgain.data.version, 0, 'Gieo danh tính không làm tăng version (chưa phải người dùng tự sửa)');
+// ảnh http (không phải https) và ảnh rác không được nhận khi gieo
+const insecure = await callTok('/api/me/space', 'GET', token('erin', false, 'http://insecure.test/a.jpg'));
+assert.equal(insecure.data.profile.avatar, '', 'Chỉ nhận ảnh tài khoản https');
+assert.equal(insecure.data.profile.name, 'Secret Auth Name', 'Vẫn giữ tên dù ảnh không hợp lệ');
+// PUT: ảnh https hợp lệ được lưu; ảnh http bị từ chối; "Bỏ ảnh" xoá hẳn và nhớ cờ
+r = await callTok('/api/me/space', 'PUT', carol, { version: 0, profile: { name: 'Carol', bio: 'thích truyện dài', avatar: 'https://example.test/a.jpg' } });
+assert.equal(r.res.status, 200);
+assert.equal(r.data.profile.avatar, 'https://example.test/a.jpg');
+assert.equal(r.data.profile.avatarOff, false);
+r = await callTok('/api/me/space', 'PUT', carol, { version: 1, profile: { name: 'Carol', bio: 'thích truyện dài', avatar: 'http://insecure.test/a.jpg' } });
+assert.equal(r.res.status, 400, 'Ảnh http bị từ chối khi lưu');
+r = await callTok('/api/me/space', 'PUT', carol, { version: 1, profile: { name: 'Carol', bio: 'thích truyện dài', avatar: '', avatarOff: true } });
+assert.equal(r.res.status, 200);
+assert.equal(r.data.profile.avatar, '', '"Bỏ ảnh" xoá hẳn ảnh');
+assert.equal(r.data.profile.avatarOff, true, 'Nhớ rằng người dùng đã chủ động bỏ ảnh');
+r = await callTok('/api/me/space', 'PUT', carol, { version: 2, profile: { name: 'Carol' } });
+assert.equal(r.res.status, 200);
+assert.equal(r.data.profile.avatar, '', 'Khách cũ chỉ gửi tên: giữ nguyên quyết định về ảnh');
+assert.equal(r.data.profile.avatarOff, true);
+const pubCarol = await call('/api/profiles/' + (await profileId('carol')));
+assert.equal(pubCarol.data.profile.name, 'Carol');
+
 // Rating ownership and withdrawal through the real worker.
 r=await call('/api/rate','POST',{slug:'third-person',rating:5,vid:'alice-device'},'alice');assert.equal(r.data.ratingCount,1);
 r=await call('/api/rate/me','POST',{slug:'third-person',vid:'alice-device'},'alice');assert.equal(r.data.rating,5);
@@ -32,4 +69,4 @@ r=await call('/api/rate/me','POST',{slug:'third-person',vid:'alice-device'},'bob
 r=await call('/api/rate','POST',{slug:'third-person',rating:0,vid:'bob-device'},'bob');assert.equal(r.data.ratingCount,1,'Bob cannot withdraw Alice rating');
 r=await call('/api/rate','POST',{slug:'third-person',rating:0,vid:'alice-device'},'alice');assert.equal(r.data.ratingCount,0);assert.equal(r.data.ratingAvg,0);
 r=await call('/api/rate/me','POST',{slug:'third-person',vid:'alice-device'},'alice');assert.equal(r.data.rating,0);
-console.log('Member Spaces: real Worker auth, cross-user isolation, private/public switching, no-store, version conflicts, avatar validation, delete, fail-closed and own-rating withdrawal passed');
+console.log('Member Spaces (1.9.9: gieo danh tính tài khoản, ảnh https, cờ avatarOff): real Worker auth, cross-user isolation, private/public switching, no-store, version conflicts, avatar validation, delete, fail-closed and own-rating withdrawal passed');

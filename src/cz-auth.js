@@ -17,6 +17,19 @@
         (Worker vẫn xác thực được) nên bình luận không bị chặn.
      4. `CZ_AUTH.isAdmin()` quyết định hiện/ẩn mục Quản trị.
 
+   TRẠNG THÁI PHIÊN — vì sao phải có (bản 1.9.9):
+     Trước đây trang chỉ đọc phiên ĐÚNG MỘT LẦN lúc tải. Khi quay về từ Google,
+     supabase-js còn đang đổi `?code=…` → lần đọc đó trả về null, và không ai
+     nghe tiếp sự kiện SIGNED_IN của supabase-js nữa. Hậu quả: đăng nhập xong
+     trang My Space vẫn nằm nguyên ở trạng thái khách ("hãy đăng nhập"), tên/ảnh
+     không bao giờ hiện ra cho tới khi người dùng tự F5.
+     Nay `CZ_AUTH.state()` nói rõ ba trạng thái:
+        'checking' — đang hỏi Supabase/Worker, UI phải chờ chứ đừng kết luận;
+        'in'       — có phiên;
+        'out'      — chắc chắn chưa đăng nhập.
+     `CZ_AUTH.whenSettled()` trả Promise kết thúc khi lần kiểm tra đầu xong.
+     `CZ_AUTH.onAuth(fn)` vẫn như cũ: fn được gọi mỗi khi phiên đổi.
+
    Không cấu hình Supabase? Đặt CZ_AUTH_PROVIDER='google' trong cz-config.js để
    dùng lại cách cũ (vẫn còn trong file này), hoặc để '' để tắt đăng nhập.
    ========================================================================== */
@@ -24,15 +37,20 @@
   'use strict';
   var LS_USER = 'ssochuz-user';
   var LS_TOKEN = 'ssochuz-auth-token';
+  var LS_VIA = 'ssochuz-auth-via';           /* token đến từ Worker hay Supabase thô */
   var SB_STORAGE = 'ssochuz-sb';
   var LS_PROFILE_PFX = 'ssochuz-profile-';   /* custom name/picture override per uid */
   var user = null;          /* {uid,email,name,picture,exp,provider,admin,local} */
   var token = null;         /* session token của Worker, hoặc access_token Supabase */
+  var via = '';             /* 'worker' | 'supabase' | 'local' | 'google' */
   var listeners = [];
   var sb = null;            /* Supabase client */
   var sbLoading = null;
   var gisReady = null;
   var settingsApplied = false;
+  var settled = false;      /* đã kiểm tra phiên xong lần đầu chưa */
+  var settleWaiters = [];
+  var authBound = false;    /* đã nghe sự kiện của supabase-js chưa */
 
   function profileKey(uid) { return LS_PROFILE_PFX + (uid ? String(uid) : 'guest'); }
   function getCustomProfile(uid) {
@@ -52,8 +70,13 @@
     if (!cp) return u;
     var out = Object.assign({}, u);
     if (cp.name && String(cp.name).trim()) out.name = String(cp.name).trim().slice(0, 40);
-    /* picture có thể là data URL ~1MB, nên cho phép dài hơn 500 */
-    if (cp.picture && String(cp.picture).trim()) out.picture = String(cp.picture).trim().slice(0, 1200000);
+    /* picture có thể là data URL ~1MB, nên cho phép dài hơn 500.
+       pictureSet = người dùng ĐÃ QUYẾT ĐỊNH về ảnh: có ảnh thì dùng ảnh đó,
+       ảnh rỗng nghĩa là đã bấm "Bỏ ảnh" — phải giữ rỗng, không được rơi về ảnh
+       Google, nếu không thì "bỏ ảnh" xong F5 một cái là ảnh cũ quay lại. */
+    var pic = cp.picture && String(cp.picture).trim();
+    if (pic) out.picture = String(cp.picture).trim().slice(0, 1200000);
+    else if (cp.pictureSet) out.picture = '';
     out._custom = true;
     return out;
   }
@@ -78,11 +101,14 @@
   /* web đã cấu hình đăng nhập chưa (để giao diện biết nên hiện nút hay hiện hướng dẫn) */
   function configured() { return sbReady() || gisReadyCfg(); }
 
-  function save(u, t) {
+  function save(u, t, src) {
     if (u && u.uid) u = mergeCustom(u);
     user = u || null; token = t || null;
+    if (!user) via = '';
+    else if (src !== undefined) via = src || '';
     lsSet(LS_USER, user ? JSON.stringify(user) : null);
     lsSet(LS_TOKEN, token || null);
+    lsSet(LS_VIA, user ? (via || '') : null);
     listeners.forEach(function (fn) { try { fn(user); } catch (e) {} });
     try { w.dispatchEvent(new CustomEvent('cz:auth', { detail: { user: user } })); } catch (e) {}
   }
@@ -96,11 +122,47 @@
       u.admin = false;
       delete u.role;
     }
-    user = u; token = t || null;
+    user = u; token = t || null; via = u ? (lsGet(LS_VIA) || '') : '';
   }
   function onAuth(fn) { listeners.push(fn); try { fn(user); } catch (e) {} return fn; }
   function current() { return user ? mergeCustom(user) : null; }
   function getToken() { return token; }
+  function state() { return user ? 'in' : (settled ? 'out' : 'checking'); }
+  function settle() {
+    if (settled) return;
+    settled = true;
+    settleWaiters.splice(0).forEach(function (fn) { try { fn(user); } catch (e) {} });
+    try { w.dispatchEvent(new CustomEvent('cz:auth-ready', { detail: { user: user } })); } catch (e) {}
+  }
+  function whenSettled() {
+    if (settled) return Promise.resolve(user);
+    return new Promise(function (res) { settleWaiters.push(res); });
+  }
+  function onReady(fn) {
+    if (settled) { try { fn(user); } catch (e) {} return fn; }
+    return whenSettled().then(function (u) { try { fn(u); } catch (e) {} });
+  }
+  /* Ảnh chụp nhanh tình trạng đăng nhập — My Space/admin in ra khi có trục trặc,
+     để "đăng nhập rồi mà vẫn 401" có ngay dữ kiện thay vì phải đoán. */
+  function diagnose() {
+    return {
+      provider: provider(),
+      configured: configured(),
+      supabaseUrl: sbURL(),
+      hasSupabaseClient: !!sb,
+      state: state(),
+      uid: (user && user.uid) || '',
+      email: (user && user.email) || '',
+      name: (user && user.name) || '',
+      hasPicture: !!(user && user.picture),
+      tokenSource: via || (token ? 'không rõ' : 'không có'),
+      exp: (user && user.exp) || 0,
+      verify: w.CZ_AUTH && w.CZ_AUTH._verify ? w.CZ_AUTH._verify : null
+    };
+  }
+  /* Phiên đã được Worker xác nhận chưa? (token Supabase thô thì chưa) */
+  function verified() { return via === 'worker' || via === 'google'; }
+  function tokenIsSupabase() { return via === 'supabase'; }
 
   /* chỉnh sửa tên + avatar cho người dùng (lưu local + đẩy lên Supabase nếu có) */
   function updateProfile(patch) {
@@ -112,7 +174,11 @@
     else if (picture.indexOf('data:') !== 0 && picture.length > 2000) picture = picture.slice(0, 2000);
     if (!user || !user.uid) return Promise.reject(new Error('Chưa đăng nhập'));
     if (!name) return Promise.reject(new Error('Tên không được trống'));
-    var custom = { name: name, picture: picture, at: Date.now() };
+    var cp = getCustomProfile(user.uid) || {};
+    /* Chỉ đánh dấu "đã quyết định về ảnh" khi lần này ảnh thật sự đổi — sửa mỗi
+       tên mà lại ghi picture:'' thì ảnh Google của người dùng bị xoá oan. */
+    var pictureSet = (cp.pictureSet === true) || (picture !== String(user.picture || ''));
+    var custom = { name: name, picture: picture, pictureSet: pictureSet, at: Date.now() };
     setCustomProfile(user.uid, custom);
     var merged = Object.assign({}, user, custom, { _custom: true });
     save(merged, token);
@@ -272,10 +338,37 @@
     location.href = '/my-space#edit-profile';
     return Promise.resolve();
   }
+  /* Hồ sơ công khai trên My Space là nguồn sự thật cho TÊN + ẢNH hiển thị.
+     Ba luật, mỗi luật vá một bệnh có thật:
+       · Tên trống hoặc còn là chỗ giữ chỗ "Bạn đọc" → giữ tên tài khoản Google,
+         đừng kéo người dùng về tên vô nghĩa khi họ chưa từng lưu hồ sơ.
+       · Ảnh: chỉ ghi đè khi hồ sơ máy chủ THẬT SỰ có ý kiến (có ảnh, hoặc
+         avatarOff = người dùng đã bấm "Bỏ ảnh"). Hồ sơ chưa từng chọn ảnh mà
+         xoá ảnh Google đi là mất ảnh của người dùng — bệnh cũ.
+       · Không đổi gì thì KHÔNG save() (save nào cũng bắn sự kiện cho mọi trang,
+         lặp lại sẽ thành vòng lặp tải dữ liệu vô tận). */
   function applyServerProfile(profile) {
-    if (!user) return;
-    setCustomProfile(user.uid, { name: profile.name, picture: profile.avatar || '', at: Date.now() });
-    save(Object.assign({}, user, { name: profile.name, picture: profile.avatar || '' }), token);
+    if (!user || !profile) return;
+    var name = String(profile.name || '').trim().slice(0, 40);
+    if (name === 'Bạn đọc') name = '';
+    var avatar = String(profile.avatar || '').trim().slice(0, 1200000);
+    var decided = !!avatar || profile.avatarOff === true;
+    var cp = getCustomProfile(user.uid) || {};
+    var cur = current() || user;
+    var nextName = name || cur.name || '';
+    var nextPicture = decided ? avatar : String(cur.picture || '');
+    if (String(cur.name || '') === nextName && String(cur.picture || '') === nextPicture) {
+      if (decided && (cp.pictureSet !== true || String(cp.picture || '') !== avatar)) {
+        /* ảnh giống nhau nhưng cờ quyết định chưa lưu — ghi cho lần sau */
+        setCustomProfile(user.uid, Object.assign({}, cp, { pictureSet: true, picture: avatar, at: Date.now() }));
+      }
+      return;
+    }
+    var custom = Object.assign({}, cp, { name: name || '', at: Date.now() });
+    if (decided) { custom.picture = avatar; custom.pictureSet = true; }
+    else if (cp.pictureSet === undefined) custom.pictureSet = false;
+    setCustomProfile(user.uid, custom);
+    save(Object.assign({}, user, { name: nextName, picture: nextPicture }), token, via);
   }
   function isAdmin() {
     return !!(user && (user.admin === true || user.role === 'admin'));
@@ -317,6 +410,7 @@
           },
           global: { headers: { 'x-client-info': 'ssochuz-web' } }
         });
+        bindAuthEvents(sb);
       }
       return sb;
     });
@@ -361,7 +455,7 @@
   }
   function exchange(u, accessToken) {
     var base = api();
-    if (!base || !accessToken) { save(Object.assign({}, u, { local: !base }), accessToken || ''); return Promise.resolve(u); }
+    if (!base || !accessToken) { save(Object.assign({}, u, { local: !base }), accessToken || '', 'local'); return Promise.resolve(u); }
     /* Supabase redirect + visibilitychange có thể gọi exchange hai lần. Một lần
        retry có backoff giúp tránh 429 mà không tạo vòng lặp request. */
     function request(attempt) {
@@ -381,7 +475,7 @@
           var merged = Object.assign({}, u, j.user || {}, { admin: !!j.admin });
           clearLoginPending();
           try { w.CZ_AUTH._verify = null; } catch (e) {}
-          save(merged, j.token);
+          save(merged, j.token, 'worker');
           return merged;
         }
         /* Worker từ chối đổi token → ghi LÝ DO ra console để dễ bắt bệnh
@@ -400,13 +494,13 @@
           toast('Đã đăng nhập Google, nhưng Worker chưa xác thực được phiên này (' + reason + '). Vui lòng báo quản trị — chi tiết nằm ở trang My Space.', 'err');
         }
         var unverified = Object.assign({}, u, { admin: false });
-        save(unverified, accessToken);
+        save(unverified, accessToken, 'supabase');
         return unverified;
       });
     }).catch(function () {
       recordVerifyError(0, 'mất mạng — không gọi được Worker');
       var unverified = Object.assign({}, u, { admin: false });
-      save(unverified, accessToken);
+      save(unverified, accessToken, 'supabase');
       return unverified;
     });
   }
@@ -440,25 +534,89 @@
       return r;
     });
   }
+  /* Trang vừa quay về từ Supabase? (`?code=…` của Google, `?token_hash=…` của
+     link email, hoặc cờ sessionStorage đặt trước khi rời trang). */
+  function justCameBack() {
+    try {
+      var q = new URL(w.location.href).searchParams;
+      if (q.get('code') || q.get('token_hash')) return true;
+    } catch (e) {}
+    return justLoggedIn();
+  }
+  /* Supabase trả lỗi về qua URL (người dùng bấm huỷ ở Google, redirect URL chưa
+     khai trong Dashboard…). Không có nhánh này thì trang im lặng như chưa từng
+     đăng nhập, người dùng chỉ thấy "vẫn chưa vào được". */
+  function urlAuthError() {
+    try {
+      var q = new URL(w.location.href).searchParams;
+      var e = q.get('error_description') || q.get('error') || '';
+      return e ? decodeURIComponent(String(e)).slice(0, 200) : '';
+    } catch (x) { return ''; }
+  }
+  /* supabase-js đổi `?code=…` BẤT ĐỒNG BỘ với lần gọi getSession() đầu tiên trong
+     một số bản: đọc ngay thì được null. Chờ ngắn rồi hỏi lại vài nhịp — đây là
+     đúng ca "đăng nhập Google xong vẫn bị coi là khách" của bản 1.9.8. */
+  function awaitSession(c, tries) {
+    return c.auth.getSession().then(function (r) {
+      var sess = r && r.data && r.data.session;
+      if (sess && sess.access_token && sess.user) return sess;
+      if (tries <= 0 || !justCameBack()) return null;
+      return new Promise(function (res) { setTimeout(res, 450); }).then(function () { return awaitSession(c, tries - 1); });
+    });
+  }
   function syncFromSession(silent) {
+    var urlErr = urlAuthError();
     return client().then(function (c) {
+      bindAuthEvents(c);
       /* link email (?)token_hash=…) phải đổi TRƯỚC khi đọc session */
       return consumeMagicLink(c).catch(function (e) {
         if (justLoggedIn()) { clearLoginPending(); toast(e && e.message ? e.message : 'Link đăng nhập không còn hiệu lực', 'err'); }
         return null;
       }).then(function () {
-        return c.auth.getSession().then(function (r) {
-          var sess = r && r.data && r.data.session;
-          if (sess && sess.access_token && sess.user) {
+        if (urlErr && !user) { toast('Đăng nhập chưa xong: ' + urlErr, 'err'); cleanURL(); settle(); return null; }
+        return awaitSession(c, justCameBack() ? 8 : 0).then(function (sess) {
+          if (sess) {
             var u = fromSupabase(sess.user, sess.access_token);
             /* Mỗi lần đồng bộ đều hỏi lại Worker; không giữ cờ admin cũ ở localStorage. */
             return exchange(u, sess.access_token).then(function (verified) { cleanURL(); return verified; });
           }
-          if (user && !silent) save(null, null);
+          /* Chưa có phiên: chỉ kết luận "đã đăng xuất" khi KHÔNG phải vừa quay về
+             từ Supabase — nếu đang chờ đổi code thì kết luận sớm là báo oan
+             "chưa đăng nhập" cho người vừa đăng nhập xong. */
+          if (user && !silent && !justCameBack()) save(null, null, '');
           return null;
         });
       });
     }).catch(function () { return null; });
+  }
+  /* Nghe thẳng sự kiện của supabase-js: SIGNED_IN (đổi code xong), TOKEN_REFRESHED,
+     USER_UPDATED, SIGNED_OUT. Thiếu phần này thì trang chỉ biết phiên lúc tải —
+     đăng nhập ở tab khác, hoặc quay về từ Google, UI đứng im như chưa đăng nhập. */
+  function bindAuthEvents(c) {
+    if (authBound || !c || !c.auth || typeof c.auth.onAuthStateChange !== 'function') return;
+    authBound = true;
+    try {
+      var r = c.auth.onAuthStateChange(function (evt, sess) {
+        try {
+          if (evt === 'SIGNED_OUT') {
+            if (!sess) { save(null, null, ''); settle(); }
+            return;
+          }
+          if (!sess || !sess.access_token || !sess.user) {
+            if (evt === 'INITIAL_SESSION') settle();
+            return;
+          }
+          var u = fromSupabase(sess.user, sess.access_token);
+          /* TOKEN_REFRESHED: phiên Worker còn hạn thì giữ nguyên token cũ (30 ngày)
+             đỡ một vòng gọi mạng; chưa đổi được thì đổi luôn. */
+          if (evt === 'TOKEN_REFRESHED' && verified()) { save(u, token, via); settle(); return; }
+          exchange(u, sess.access_token).then(function () { cleanURL(); settle(); });
+        } catch (e) { settle(); }
+      });
+      /* supabase-js cũ trả về {data:{subscription}} — không cần unsubscribe vì
+         trang sống cùng client, nhưng tránh lỗi console nếu có. */
+      if (r && r.data && r.data.subscription && typeof r.data.subscription.unsubscribe !== 'function') r.data.subscription = null;
+    } catch (e) {}
   }
   function loginSupabase(how) {
     if (!sbReady()) return Promise.reject(new Error('Chưa cấu hình Supabase'));
@@ -519,7 +677,7 @@
         return j;
       });
     }).then(function (j) {
-      save(Object.assign({}, j.user, { provider: 'google', admin: !!j.admin }), j.token);
+      save(Object.assign({}, j.user, { provider: 'google', admin: !!j.admin }), j.token, 'google');
       toast('Đăng nhập: ' + (j.user.name || j.user.email), 'ok');
       return j.user;
     });
@@ -630,23 +788,28 @@
     var p = Promise.resolve();
     if (sb) { try { p = sb.auth.signOut().catch(function () {}); } catch (e) { p = Promise.resolve(); } }
     return p.then(function () {
-      save(null, null);
+      save(null, null, '');
       try { localStorage.removeItem(SB_STORAGE); } catch (e) {}
+      settle();
       toast('Đã đăng xuất');
       return null;
     });
   }
-  /* làm tươi user (ảnh/tên có thể đổi) — gọi lúc khởi động và khi quay lại tab */
+  /* làm tươi user (ảnh/tên có thể đổi) — gọi lúc khởi động, khi quay lại tab, và
+     khi My Space bấm "Kiểm tra lại phiên". Trả Promise để nơi gọi biết lúc nào
+     dữ liệu đã mới (nút bấm cần tắt/bật cho đúng). */
   function refresh() {
-    if (sbReady()) { syncFromSession(true); return; }
-    if (!token || !api()) return;
-    fetch(api() + '/api/auth/me', { headers: { authorization: 'Bearer ' + token } })
+    if (sbReady()) return syncFromSession(true).then(function (u) { settle(); return u; });
+    if (!token || !api()) { settle(); return Promise.resolve(user); }
+    return fetch(api() + '/api/auth/me', { headers: { authorization: 'Bearer ' + token } })
       .then(function (r) {
         return r.json().catch(function () { return {}; }).then(function (j) {
-          if (j && j.ok && j.user) save(Object.assign({}, user, j.user, { admin: !!j.admin }), token);
-          else if (r.status === 401 && provider() !== 'supabase') save(null, null);
+          if (j && j.ok && j.user) save(Object.assign({}, user, j.user, { admin: !!j.admin }), token, via);
+          else if (r.status === 401 && provider() !== 'supabase') save(null, null, '');
+          return user;
         });
-      }).catch(function () {});
+      }).catch(function () { return user; })
+      .then(function (u) { settle(); return u; });
   }
   /* nhận cấu hình từ KV (registry.settings.auth) — dán trong /admin là dùng được ngay */
   function applySettings(s) {
@@ -670,6 +833,9 @@
     applySettings: applySettings, settingsApplied: isSettingsApplied, supabase: function () { return sb; },
     applyServerProfile: applyServerProfile, updateProfile: updateProfile, editProfileDialog: editProfileDialog, cropAvatar: cropDialog,
     getCustomProfile: getCustomProfile,
+    /* trạng thái phiên (1.9.9) — xem khối chú thích đầu tệp */
+    state: state, whenSettled: whenSettled, onReady: onReady, diagnose: diagnose,
+    verified: verified, tokenIsSupabase: tokenIsSupabase,
     /* giữ tên cũ để các trang/kiểm thử không phải sửa */
     loginGoogle: function () { return login(provider() === 'google' ? 'google' : 'oauth'); },
     logout: logout, current: current, token: getToken, onAuth: onAuth, refresh: refresh, saveUser: save
@@ -678,21 +844,29 @@
   function boot() {
     /* cấu hình đăng nhập có thể nằm trong KV (dán ở trang /admin): đọc rồi áp dụng.
        Đã cấu hình sẵn trong cz-config.js thì bỏ qua để không ghi đè ngược. */
+    var first = Promise.resolve();
     if (w.CZ && w.CZ.registry && !configured()) {
-      w.CZ.registry().then(function (o) {
+      first = w.CZ.registry().then(function (o) {
         var s = o && o.reg && o.reg.settings && o.reg.settings.auth;
         if (s) applySettings(s);
-      }).catch(function () {});
+        return null;
+      }).catch(function () { return null; });
     }
     /* Cờ admin trong localStorage đã bị xoá ở load(); hỏi Worker trước để phiên cũ
        chỉ mở lại menu quản trị sau khi máy chủ xác nhận. */
-    if (token && api()) refresh();
+    if (token && api()) first = first.then(function () { return refresh(); });
     if (sbReady()) {
-      /* trang vừa quay về từ Supabase (?code=…) hay mở lại tab: đồng bộ phiên */
-      syncFromSession(false);
+      /* trang vừa quay về từ Supabase (?code=…) hay mở lại tab: đồng bộ phiên.
+         Chờ `first` để cấu hình đọc từ KV kịp áp dụng trước khi tạo client. */
+      first = first.then(function () { return syncFromSession(false); }).then(function () { settle(); });
       d.addEventListener('visibilitychange', function () { if (!d.hidden && sb) syncFromSession(true); });
     }
     if (gisReadyCfg()) { try { ensureGIS(); } catch (e) {} }
+    /* Không cấu hình gì để kiểm tra, hoặc mọi thứ đã xong: chốt trạng thái.
+       Lưới an toàn 8 giây để giao diện không bao giờ đứng ở "đang kiểm tra". */
+    if (!configured() && !token) settle();
+    else first.then(settle);
+    try { setTimeout(settle, 8000); } catch (e) {}
   }
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', boot); else boot();
 })(window, document);

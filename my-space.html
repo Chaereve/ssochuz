@@ -4,25 +4,26 @@
 <meta name="description" content="Không gian đọc và hồ sơ bạn đọc trên ssochuz library.">
 <meta name="robots" content="noindex">
 <title>My Space · ssochuz library</title>
-<link rel="icon" href="/ssochuz.png"><link rel="stylesheet" href="/cz.css?v=20260916a">
+<link rel="icon" href="/ssochuz.png"><link rel="stylesheet" href="/cz.css?v=20260917a">
 <script>try{var t=localStorage.getItem('ssochuz-theme');if(t)document.documentElement.dataset.theme=t;}catch(e){}</script>
 </head><body class="space-page" data-public="false">
 <header id="hdr"></header><main class="space-wrap">
 <nav class="crumb"><a href="/">Trang chủ</a><span>›</span><b>My Space</b></nav>
 <div id="spaceHero" class="space-hero" hidden><p class="space-kicker">SSOCHUZ / BẠN ĐỌC</p><h1>My Space</h1></div>
 <p id="spaceStatus" class="space-status" role="status" aria-live="polite"></p>
+<details id="spaceDiag" class="space-diag" hidden><summary>Chi tiết kỹ thuật của phiên đăng nhập</summary><dl id="spaceDiagList"></dl></details>
 <section id="spaceGuest" class="space-panel space-guest" hidden>
   <div class="space-guest-mark" aria-hidden="true">✦</div>
-  <div><p class="space-kicker">KHÔNG GIAN CỦA RIÊNG BẠN</p><h2>Một góc riêng cho những câu chuyện bạn yêu.</h2><p>Đăng nhập để tạo hồ sơ và đồng bộ tủ truyện giữa các thiết bị. Danh sách đã lưu và lịch sử đọc trên máy này vẫn dùng được khi chưa đăng nhập.</p></div>
-  <button class="btn pri" id="spaceLogin">Đăng nhập</button>
+  <div><p class="space-kicker">KHÔNG GIAN CỦA RIÊNG BẠN</p><h2>Một góc riêng cho những câu chuyện bạn yêu.</h2><p>Đăng nhập để tạo hồ sơ, đồng bộ tủ truyện giữa các thiết bị và giữ tên/ảnh của bạn khi bình luận. Danh sách đã lưu và lịch sử đọc trên máy này vẫn dùng được khi chưa đăng nhập.</p></div>
+  <button class="btn pri" id="spaceLogin" type="button">Đăng nhập</button>
 </section>
 <nav class="space-tabs" role="tablist" aria-label="My Space">
-  <button data-space-tab="shelves" class="on" aria-pressed="true" role="tab"><span class="space-tab-index">01</span><span>Tủ truyện</span></button>
-  <button data-space-tab="history" aria-pressed="false" role="tab"><span class="space-tab-index">02</span><span>Lịch sử đọc</span></button>
-  <button data-space-tab="stats" aria-pressed="false" role="tab"><span class="space-tab-index">03</span><span>Thống kê</span></button>
-  <button data-space-tab="edit-profile" aria-pressed="false" role="tab"><span class="space-tab-index">04</span><span>Hồ sơ của tôi</span></button>
+  <button id="tab-shelves" data-space-tab="shelves" class="on" aria-pressed="true" aria-selected="true" aria-controls="space-shelves" role="tab" type="button"><span class="space-tab-index" aria-hidden="true">01</span><span>Tủ truyện</span></button>
+  <button id="tab-history" data-space-tab="history" aria-pressed="false" aria-selected="false" aria-controls="space-history" role="tab" tabindex="-1" type="button"><span class="space-tab-index" aria-hidden="true">02</span><span>Lịch sử đọc</span></button>
+  <button id="tab-stats" data-space-tab="stats" aria-pressed="false" aria-selected="false" aria-controls="space-stats" role="tab" tabindex="-1" type="button"><span class="space-tab-index" aria-hidden="true">03</span><span>Thống kê</span></button>
+  <button id="tab-edit-profile" data-space-tab="edit-profile" aria-pressed="false" aria-selected="false" aria-controls="space-edit-profile" role="tab" tabindex="-1" type="button"><span class="space-tab-index" aria-hidden="true">04</span><span>Hồ sơ của tôi</span></button>
 </nav>
-<section id="space-shelves" class="space-view" role="tabpanel">
+<section id="space-shelves" class="space-view" role="tabpanel" aria-labelledby="tab-shelves" tabindex="-1">
   <div class="space-section-head">
     <div><p class="section-eyebrow">THƯ VIỆN RIÊNG</p><h2>Tủ truyện</h2></div>
     <div id="spaceShelfCount" class="space-count" aria-live="polite"><strong>—</strong><span>tủ của bạn</span></div>
@@ -37,27 +38,35 @@
   </div>
   <section class="space-device-shelf local-shelf" aria-labelledby="deviceShelfTitle">
     <div class="space-device-head"><div><p class="section-eyebrow">LƯU TRÊN THIẾT BỊ</p><h3 id="deviceShelfTitle">Danh sách đã lưu</h3></div><span id="localShelfCount" class="space-count small" aria-live="polite"></span></div>
-    <p class="space-note">Đã lưu trên trình duyệt này · chưa đăng nhập thì không đồng bộ.</p>
+    <p class="space-note" id="localShelfNote">Đã lưu trên trình duyệt này · chưa đăng nhập thì không đồng bộ.</p>
     <div class="grid" id="localShelf"></div>
   </section>
 </section>
-<section id="space-history" class="space-view" hidden role="tabpanel">
-  <div class="space-section-head"><div><p class="section-eyebrow">DẤU TRANG CỦA BẠN</p><h2>Lịch sử đọc</h2></div><button class="btn ghost sm" id="clearHistory">Xoá lịch sử</button></div>
+<section id="space-history" class="space-view" hidden role="tabpanel" aria-labelledby="tab-history" tabindex="-1">
+  <div class="space-section-head"><div><p class="section-eyebrow">DẤU TRANG CỦA BẠN</p><h2>Lịch sử đọc</h2><p class="space-note">Tiến độ nằm trên thiết bị này; tủ truyện mới đồng bộ theo tài khoản.</p></div><button class="btn ghost sm" id="clearHistory" type="button">Xoá lịch sử</button></div>
   <div id="spaceHistory" class="space-history"></div>
 </section>
-<section id="space-stats" class="space-view" hidden role="tabpanel">
+<section id="space-stats" class="space-view" hidden role="tabpanel" aria-labelledby="tab-stats" tabindex="-1">
   <div class="space-section-head"><div><p class="section-eyebrow">NHỊP ĐỌC</p><h2>Thống kê cá nhân</h2><p class="space-note">Thống kê riêng trên thiết bị này. Một chương được tính khi đọc xong hoặc chuyển sang chương tiếp.</p></div></div>
   <div id="myStats"></div>
 </section>
-<section id="space-edit-profile" class="space-view" hidden role="tabpanel">
+<section id="space-edit-profile" class="space-view" hidden role="tabpanel" aria-labelledby="tab-edit-profile" tabindex="-1">
   <div class="space-panel profile-card"><div class="space-section-head"><div><p class="section-eyebrow">DẤU ẤN CỦA BẠN</p><h2>Hồ sơ của tôi</h2><p class="space-note">Tên, ảnh và mô tả công khai; email, lịch sử và thống kê riêng tư.</p></div></div>
+    <div id="profileGuestNote" class="space-login-note" hidden>
+      <h3>Hồ sơ cần một tài khoản</h3>
+      <p>Đăng nhập bằng Google để giữ tên và ảnh đại diện của bạn trên mọi thiết bị, và để bình luận bằng chính danh tính đó.</p>
+      <div class="row"><button class="btn pri" id="profileLogin" type="button">Đăng nhập</button></div>
+    </div>
     <form id="profileForm"><fieldset id="profileFields" disabled>
-      <div class="space-avatar-edit">
-        <div class="avatar-editor-preview"><div id="avatarPreview" class="space-avatar"></div></div>
-        <div class="avatar-editor-copy"><label class="fl" for="avatarFile">Ảnh đại diện</label><input type="file" id="avatarFile" accept="image/png,image/jpeg,image/webp"><div class="avatar-actions"><button class="btn ghost sm" id="adjustAvatar" type="button" hidden>Di chuyển &amp; cắt ảnh</button><button class="btn ghost sm" id="removeAvatar" type="button">Bỏ ảnh</button></div></div>
+      <div class="space-avatar-edit" id="avatarEditor">
+        <div class="avatar-editor-preview"><div id="avatarPreview" class="space-avatar"></div><p class="avatar-preview-caption">Bấm vào ảnh hoặc kéo tệp vào đây</p></div>
+        <div class="avatar-editor-copy"><label class="fl" for="avatarFile">Ảnh đại diện</label><input type="file" id="avatarFile" accept="image/png,image/jpeg,image/webp"><div class="avatar-actions"><button class="btn ghost sm" id="adjustAvatar" type="button" hidden>Di chuyển &amp; cắt ảnh</button><button class="btn ghost sm" id="useAccountAvatar" type="button" hidden>Dùng ảnh Google</button><button class="btn ghost sm" id="removeAvatar" type="button">Bỏ ảnh</button></div><p class="avatar-drop-hint">PNG, JPEG hoặc WebP · tối đa 8 MB · ảnh được nén về 256px trước khi lưu.</p></div>
       </div>
-      <div class="profile-fields-grid"><div><label class="fl" for="profileName">Tên hiển thị</label><input class="inp" id="profileName" maxlength="40" required autocomplete="nickname"></div><div><label class="fl" for="profileBio">Vài dòng về bạn</label><textarea class="inp" id="profileBio" rows="5" maxlength="500" placeholder="Những thể loại, tác giả hoặc câu chuyện bạn yêu thích…"></textarea></div></div>
-      <div class="row mt profile-actions"><button class="btn pri" id="saveProfile" type="submit">Lưu hồ sơ</button><a class="btn ghost" id="myPublicLink" href="/profile" hidden>Xem hồ sơ công khai ↗</a></div>
+      <div class="profile-fields-grid">
+        <div><div class="fl-title"><label class="fl" for="profileName">Tên hiển thị</label><span class="fl-count" id="profileNameCount">0/40</span></div><input class="inp" id="profileName" maxlength="40" required autocomplete="nickname"></div>
+        <div><div class="fl-title"><label class="fl" for="profileBio">Vài dòng về bạn</label><span class="fl-count" id="profileBioCount">0/500</span></div><textarea class="inp" id="profileBio" rows="5" maxlength="500" placeholder="Những thể loại, tác giả hoặc câu chuyện bạn yêu thích…"></textarea></div>
+      </div>
+      <div class="row mt profile-actions"><button class="btn pri" id="saveProfile" type="submit">Lưu hồ sơ</button><a class="btn ghost" id="myPublicLink" href="/profile" hidden>Xem hồ sơ công khai ↗</a><button class="btn ghost" id="copyProfileLink" type="button" hidden>Sao chép liên kết</button></div>
     </fieldset><p id="profileMessage" role="status"></p></form>
   </div>
 </section>
@@ -67,9 +76,10 @@
 <label class="fl" for="shelfDescription">Mô tả</label><textarea class="inp" id="shelfDescription" rows="2" maxlength="300"></textarea>
 <label class="fl" for="shelfVisibility">Ai có thể xem?</label><select class="inp" id="shelfVisibility"><option value="private">Chỉ mình tôi — Riêng tư</option><option value="public">Mọi người — Công khai</option></select>
 <p class="space-note">Tủ công khai hiển thị trên hồ sơ của bạn. Chuyển sang riêng tư sẽ ngừng chia sẻ; không thể thu hồi bản người khác đã sao chép.</p>
-<label class="fl" for="shelfSearch">Thêm truyện vào tủ <span id="selectedCount"></span></label><input class="inp" id="shelfSearch" placeholder="Tìm theo tên truyện, tác giả…" type="search"><div id="shelfPicker" class="shelf-picker"></div>
+<label class="fl" for="shelfSearch">Thêm truyện vào tủ <span id="selectedCount"></span></label><input class="inp" id="shelfSearch" placeholder="Tìm theo tên truyện, tác giả…" type="search">
+<div class="shelf-picker-box"><div id="shelfPicker" class="shelf-picker"></div><p class="shelf-picker-foot" id="shelfPickerInfo"></p></div>
 <p id="shelfMessage" role="status"></p><div class="row mt"><button class="btn pri" id="saveShelf" type="submit">Lưu tủ truyện</button></div>
 </form></dialog>
 </main><footer id="ftr"></footer><button id="toTop" aria-label="Lên đầu trang"></button>
-<script src="/cz-config.js?v=20260917h"></script><script src="/cz-app.js?v=20260916a"></script><script src="/cz-auth.js?v=20260916a"></script><script src="/cz-space.js?v=20260916a"></script>
+<script src="/cz-config.js?v=20260917a"></script><script src="/cz-app.js?v=20260917a"></script><script src="/cz-auth.js?v=20260917a"></script><script src="/cz-space.js?v=20260917a"></script>
 </body></html>
