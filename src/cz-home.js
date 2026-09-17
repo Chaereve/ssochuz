@@ -326,15 +326,14 @@
       var hit = CZ.findLib(it.slug);
       if (hit) return hit;
     }
-    var want = String(it && it.title || '').toLowerCase();
+    /* Không đoán theo title: các truyện có tên gần giống nhau từng khiến lịch
+       hiển thị nhầm bìa/tựa. Dữ liệu mới bắt buộc dùng slug; title chỉ là
+       fallback cho dữ liệu cũ và phải khớp tuyệt đối (không prefix match). */
+    var want = String(it && it.title || '').trim().toLowerCase();
     if (!want) return null;
-    var found = null;
-    CZ.lib().some(function (x) {
-      var t = String(x.title || '').toLowerCase();
-      if (t === want || t.indexOf(want) === 0 || want.indexOf(t) === 0) { found = x; return true; }
-      return false;
-    });
-    return found;
+    return CZ.lib().find(function (x) {
+      return String(x.title || '').trim().toLowerCase() === want;
+    }) || null;
   }
   function renderSched(sch) {
     var el = $('#sched');

@@ -1197,7 +1197,10 @@
   }
   function renderSched() {
     var s = REG.schedule || {};
-    $('#sSched').value = (s.items || []).map(function (i) { return [i.days, i.title, i.detail || ''].join(' | '); }).join('\n');
+    $('#sSched').value = (s.items || []).map(function (i) {
+      /* Hiển thị slug để admin không vô tình sửa nhầm tựa truyện. */
+      return [i.days, i.slug || i.title || '', i.detail || ''].join(' | ');
+    }).join('\n');
     $('#sSchedNote').value = s.note || $('#sSchedNote').value || '';
     $('#sGiscusRepo').value = ((REG.settings || {}).giscus || {}).repo || '';
     $('#sGiscusId').value = ((REG.settings || {}).giscus || {}).repoId || '';
@@ -1226,7 +1229,10 @@
     REG.editorChoice = ePicks;
     var items = $('#sSched').value.split('\n').map(function (l) { return l.trim(); }).filter(Boolean).map(function (l) {
       var p = l.split('|').map(function (x) { return x.trim(); });
-      return { days: p[0] || '', title: p[1] || '', detail: p[2] || '' };
+      var slug = p[1] || '';
+      var book = (REG.lib || []).find(function (x) { return x.slug === slug; });
+      if (!book) throw new Error('Lịch có slug không tồn tại: ' + slug);
+      return { days: p[0] || '', slug: slug, title: book.title, detail: p[2] || '' };
     });
     REG.schedule = {
       items: items, note: $('#sSchedNote').value.trim(),
