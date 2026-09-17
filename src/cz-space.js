@@ -130,10 +130,13 @@
     }
     var localCount = $('#localShelfCount');
     if (localCount) localCount.innerHTML = ids.length ? '<strong>' + CZ.num(ids.length) + '</strong> truyện' : 'Chưa có truyện';
-    $('#localShelf').innerHTML = ids.map(function (slug, i) {
-      var n = CZ.findLib(slug);
-      return n ? '<div class="local-book space-book-cell" style="--space-delay:' + (i * 45) + 'ms">' + CZ.card(n) + '<button class="btn ghost sm" type="button" data-remove-local="' + esc(slug) + '">Bỏ khỏi tủ</button></div>' : '';
-    }).join('') || '<p class="empty">Tủ còn trống. Bấm Lưu ở trang truyện để thêm vào đây.</p>';
+    var localShelfEl = $('#localShelf');
+    if (localShelfEl) {
+      localShelfEl.innerHTML = ids.map(function (slug, i) {
+        var n = CZ.findLib(slug);
+        return n ? '<div class="local-book space-book-cell" style="--space-delay:' + (i * 45) + 'ms">' + CZ.card(n) + '<button class="btn ghost sm" type="button" data-remove-local="' + esc(slug) + '">Bỏ khỏi tủ</button></div>' : '';
+      }).join('') || '<p class="empty">Tủ còn trống. Bấm Lưu ở trang truyện để thêm vào đây.</p>';
+    }
 
     var history = CZ.lib().filter(function (n) { return CZ.progress(n) > 0; }).sort(function (a, b) { return CZ.lastReadAt(b) - CZ.lastReadAt(a); });
     $('#spaceHistory').innerHTML = history.map(function (n) {
@@ -597,7 +600,8 @@
     };
     var profileLogin = $('#profileLogin');
     if (profileLogin) profileLogin.onclick = async function () { profileLogin.disabled = true; try { await CZ_AUTH.login(); } catch (e) {} finally { profileLogin.disabled = false; } };
-    $('#localShelf').onclick = function (e) {
+    var localShelfEl = $('#localShelf');
+    if (localShelfEl) localShelfEl.onclick = function (e) {
       var b = e.target.closest('[data-remove-local]');
       if (b) { CZ.toggleShelf({ slug: b.dataset.removeLocal }); localData(); }
     };

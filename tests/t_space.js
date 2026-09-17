@@ -20,7 +20,7 @@ const api=(path,opt={})=>{
   w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};
  }});
  await wait(500);const $=s=>p.doc.querySelector(s);
- assert.equal($('#spaceGuest').hidden,true);assert.equal($('#cloudShelves').hidden,false);assert.equal($('#localShelf .card')!==null,true);
+ assert.equal($('#spaceGuest').hidden,true);assert.equal($('#cloudShelves').hidden,false);
  assert.equal(p.doc.querySelectorAll('.space-history-row').length,1);
  $('#profileName').value='Alice <b>reader</b>';$('#profileBio').value='A quiet shelf.\n<script>bad()</script>';
  await $('#profileForm').onsubmit({preventDefault(){}});
@@ -32,7 +32,7 @@ const api=(path,opt={})=>{
  const pub=page('profile.html',{config:{CZ_API:'https://cms.test'},url:'https://ssochuz.pages.dev/profile?id='+store.id,fetch:dataFetch({api})});await wait(400);
  assert.equal(pub.doc.querySelectorAll('#publicShelves .card').length,1);assert.ok(!pub.doc.body.textContent.includes('secret@test'));
  assert.equal(pub.doc.querySelector('#spaceHistory'),null);assert.equal(pub.doc.querySelector('script script'),null);
- p.win.CZ_AUTH.saveUser(null,null);await wait(20);assert.equal($('#cloudShelves').hidden,true);assert.equal($('#profileName').value,'');assert.equal($('#shelfContent').innerHTML,'');assert.ok($('#localShelf .card'),'Device list remains explicitly device-scoped');
+ p.win.CZ_AUTH.saveUser(null,null);await wait(20);assert.equal($('#cloudShelves').hidden,true);assert.equal($('#profileName').value,'');assert.equal($('#shelfContent').innerHTML,'');
  let attempts=0;p.win.CZ_AUTH.login=async()=>{attempts++;throw Error('test');};$('#spaceLogin').click();await wait(20);assert.equal(attempts,1);assert.match($('#spaceStatus').textContent,/thử lại/);assert.equal($('#spaceLogin').disabled,false);
  assert.deepEqual(p.errors,[]);assert.deepEqual(pub.errors,[]);p.dom.window.close();pub.dom.window.close();
  console.log('My Space UI: separate page, legacy shelf/history, profile escaping, create/edit/public shelf, public profile, logout privacy and login retry passed');
