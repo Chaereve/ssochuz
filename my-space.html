@@ -25,7 +25,15 @@
 <section id="space-shelves" class="space-view" role="tabpanel" aria-labelledby="tab-shelves" tabindex="-1">
   <div class="space-section-head">
     <div><p class="section-eyebrow">THƯ VIỆN RIÊNG</p><h2>Tủ truyện</h2></div>
-    <div id="spaceShelfCount" class="space-count" aria-live="polite"><strong>—</strong><span>tủ của bạn</span></div>
+    <div class="row" style="align-items:center;gap:14px">
+      <button class="btn pri sm" id="openNewShelf" type="button">+ Tạo tủ truyện</button>
+      <div id="spaceShelfCount" class="space-count" aria-live="polite"><strong>—</strong><span>tủ của bạn</span></div>
+    </div>
+  </div>
+  <div id="shelfGuestNotice" class="space-panel space-login-note" hidden>
+    <h3>Tủ truyện cá nhân cần đăng nhập</h3>
+    <p>Đăng nhập để tạo tủ truyện riêng, phân loại những câu chuyện yêu thích và đồng bộ qua lại giữa các thiết bị.</p>
+    <div class="row"><button class="btn pri" id="shelfLogin" type="button">Đăng nhập để tạo tủ</button></div>
   </div>
   <div id="cloudShelves" class="space-shelf-workspace" hidden>
     <aside class="space-shelf-sidebar" aria-label="Danh sách tủ truyện">

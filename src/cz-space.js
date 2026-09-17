@@ -261,12 +261,20 @@
     var note = $('#profileGuestNote'), fields = $('#profileFields');
     if (note) note.hidden = !show;
     if (fields) fields.disabled = !!show || !user();
+    var shelfNotice = $('#shelfGuestNotice');
+    if (shelfNotice) shelfNotice.hidden = !show;
+    var openBtn = $('#openNewShelf');
+    if (openBtn) openBtn.hidden = !!show;
   }
   function paintSession() {
     var st = authState(), u = user();
     $('#spaceGuest').hidden = !!u || st === 'checking';
     var loginBtn = $('#spaceLogin');
     if (loginBtn) loginBtn.hidden = !!u;
+    var shelfNotice = $('#shelfGuestNotice');
+    if (shelfNotice) shelfNotice.hidden = !!u || st === 'checking';
+    var openBtn = $('#openNewShelf');
+    if (openBtn) openBtn.hidden = !u;
   }
   function diagLine(k, v) { return '<dt>' + esc(k) + '</dt><dd>' + esc(String(v == null || v === '' ? '—' : v)) + '</dd>'; }
   function paintDiag(extra) {
@@ -628,6 +636,10 @@
       if (CZ.toast) CZ.toast('Đã xoá lịch sử đọc trên thiết bị này');
     };
     $('#newShelf').onclick = function () { editShelf(); };
+    var openNewBtn = $('#openNewShelf');
+    if (openNewBtn) openNewBtn.onclick = function () { editShelf(); };
+    var shelfLoginBtn = $('#shelfLogin');
+    if (shelfLoginBtn) shelfLoginBtn.onclick = async function () { shelfLoginBtn.disabled = true; try { await CZ_AUTH.login(); } catch (e) {} finally { shelfLoginBtn.disabled = false; } };
     $('#importShelf').onclick = function () { editShelf(null, true); };
     $('#shelfList').onclick = function (e) {
       var b = e.target.closest('[data-shelf]');

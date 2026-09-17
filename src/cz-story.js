@@ -423,12 +423,7 @@
     });
     var sh = $('#shelfBtn');
     if (sh) sh.addEventListener('click', function () {
-      var on = CZ.toggleShelf(n);
-      sh.setAttribute('aria-pressed', on);
-      sh.classList.toggle('on', on);
-      sh.querySelector('span').textContent = on ? 'Đã lưu' : 'Tủ truyện';
-      CZ.pop(sh);
-      CZ.toast(on ? 'Đã thêm vào tủ truyện' : 'Đã bỏ khỏi tủ truyện');
+      openShelfModal(n);
     });
     /* Nút Thích ở TRANG TRUYỆN đã bỏ theo yêu cầu — chỉ còn thích TỪNG CHƯƠNG
        trong trang đọc. Mã cũ giữ lại để lỡ HTML đang cache còn nút thì vẫn chạy. */
@@ -1144,15 +1139,7 @@
       });
     });
     $('#actSave').addEventListener('click', function () {
-      var on = CZ.toggleShelf(N);
-      var lab = on ? 'Đã lưu trong tủ' : 'Lưu vào tủ';
-      this.classList.toggle('on', on);
-      var sp = this.querySelector('.lbl') || this.querySelector('span');
-      if (sp) sp.textContent = lab;
-      this.setAttribute('title', lab);
-      this.setAttribute('aria-label', lab);
-      CZ.pop(this);
-      toast(on ? 'Đã thêm vào tủ truyện' : 'Đã bỏ khỏi tủ truyện');
+      openShelfModal(N);
     });
     $('#actFollow').addEventListener('click', function () {
       var on = CZ.toggleFollow(N);
@@ -1681,6 +1668,164 @@
       showError('Lỗi tải truyện', '<p class="muted">' + esc(e && e.message || e) + '</p>', true);
     });
   }
+  function syncShelfButtons(isSaved) {
+    var sh = $('#shelfBtn');
+    if (sh) {
+      sh.setAttribute('aria-pressed', String(!!isSaved));
+      sh.classList.toggle('on', !!isSaved);
+      var sp = sh.querySelector('span');
+      if (sp) sp.textContent = isSaved ? 'Đã lưu' : 'Tủ truyện';
+      CZ.pop(sh);
+    }
+    var act = $('#actSave');
+    if (act) {
+      var lab = isSaved ? 'Đã lưu trong tủ' : 'Lưu vào tủ';
+      act.classList.toggle('on', !!isSaved);
+      var sp2 = act.querySelector('.lbl') || act.querySelector('span');
+      if (sp2) sp2.textContent = lab;
+      act.setAttribute('title', lab);
+      act.setAttribute('aria-label', lab);
+      CZ.pop(act);
+    }
+  }
+
+  async function openShelfModal(n) {
+    if (!n || !n.slug) return;
+    var u = window.CZ_AUTH && CZ_AUTH.current();
+    var token = window.CZ_AUTH && CZ_AUTH.token();
+
+    if (!u || !token || !CZ.API) {
+      var on = CZ.toggleShelf(n);
+      syncShelfButtons(on);
+      toast(on ? 'Đã thêm vào tủ truyện' : 'Đã bỏ khỏi tủ truyện');
+      return;
+    }
+
+    var dlg = $('#storyShelfDialog');
+    if (!dlg) {
+      dlg = document.createElement('dialog');
+      dlg.id = 'storyShelfDialog';
+      dlg.className = 'space-dialog';
+      dlg.setAttribute('aria-label', 'Chọn tủ truyện');
+      document.body.appendChild(dlg);
+    }
+
+    dlg.innerHTML = '<div class="sechead">' +
+      '<div><p class="section-eyebrow">TỦ TRUYỆN CỦA BẠN</p><h2>Chọn tủ lưu truyện</h2></div>' +
+      '<button class="ibo" type="button" data-close-shelf-modal title="Đóng" aria-label="Đóng">' + ic('x', 'i-s') + '</button>' +
+      '</div>' +
+      '<p class="space-note" style="margin-top:0">Lưu <b>' + esc(n.title) + '</b> vào tủ của bạn để tìm đọc lại bất kỳ lúc nào.</p>' +
+      '<div id="storyShelfModalBody"><p class="empty">Đang tải danh sách tủ…</p></div>';
+
+    var closeBtn = dlg.querySelector('[data-close-shelf-modal]');
+    if (closeBtn) closeBtn.onclick = function () { dlg.close(); };
+    dlg.onclick = function (e) { if (e.target === dlg) dlg.close(); };
+
+    dlg.showModal();
+
+    try {
+      var res = await fetch(CZ.API + '/api/me/space', {
+        headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' },
+        cache: 'no-store'
+      });
+      if (!res.ok) throw new Error('Không tải được danh sách tủ');
+      var space = await res.json();
+      var shelves = (space && space.shelves) || [];
+
+      var bodyEl = $('#storyShelfModalBody');
+      if (!bodyEl) return;
+
+      if (!shelves.length) {
+        bodyEl.innerHTML = '<div class="shelf-detail-empty" style="margin:16px 0">' +
+          '<p>Bạn chưa tạo tủ truyện nào trên tài khoản.</p>' +
+          '<a class="btn pri sm" href="/my-space.html#shelves">Tạo tủ trong My Space ↗</a>' +
+          '</div>';
+        return;
+      }
+
+      function renderChoices() {
+        bodyEl.innerHTML = '<div class="shelf-choice-list">' + shelves.map(function (s) {
+          var has = Array.isArray(s.books) && s.books.indexOf(n.slug) >= 0;
+          return '<button type="button" class="shelf-choice-item' + (has ? ' on' : '') + '" data-toggle-shelf-id="' + esc(s.id) + '">' +
+            '<div class="shelf-choice-main">' +
+            '<span class="shelf-choice-name">' + esc(s.name) + '</span>' +
+            '<span class="shelf-choice-meta">' + CZ.num((s.books || []).length) + ' truyện · ' + (s.visibility === 'public' ? 'Công khai' : 'Riêng tư') + '</span>' +
+            '</div>' +
+            '<span class="shelf-choice-status">' + (has ? '✓ Đã lưu' : '+ Lưu vào tủ') + '</span>' +
+            '</button>';
+        }).join('') + '</div>' +
+        '<div style="margin-top:14px; text-align:right">' +
+        '<button class="btn pri sm" type="button" data-close-shelf-modal>Xong</button>' +
+        '</div>';
+
+        var cBtn = bodyEl.querySelector('[data-close-shelf-modal]');
+        if (cBtn) cBtn.onclick = function () { dlg.close(); };
+      }
+
+      renderChoices();
+
+      bodyEl.onclick = async function (e) {
+        var item = e.target.closest('[data-toggle-shelf-id]');
+        if (!item || item.disabled) return;
+        var sid = item.dataset.toggleShelfId;
+        var s = shelves.find(function (x) { return x.id === sid; });
+        if (!s) return;
+
+        var curBooks = Array.isArray(s.books) ? s.books.slice() : [];
+        var idx = curBooks.indexOf(n.slug);
+        var willAdd = idx < 0;
+        if (willAdd) curBooks.push(n.slug); else curBooks.splice(idx, 1);
+
+        item.disabled = true;
+        try {
+          var putRes = await fetch(CZ.API + '/api/me/space', {
+            method: 'PUT',
+            headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' },
+            body: JSON.stringify({
+              version: space.version,
+              shelf: { id: s.id, name: s.name, description: s.description, visibility: s.visibility, books: curBooks }
+            })
+          });
+          if (!putRes.ok) {
+            var errData = await putRes.json().catch(function () { return {}; });
+            throw new Error(errData.error || 'Lỗi khi cập nhật tủ');
+          }
+          var updatedSpace = await putRes.json();
+          if (updatedSpace && updatedSpace.version) space.version = updatedSpace.version;
+          s.books = curBooks;
+
+          // Cập nhật tủ lưu trên máy (local shelf) để đồng bộ trạng thái nút
+          var anySaved = shelves.some(function (x) { return Array.isArray(x.books) && x.books.indexOf(n.slug) >= 0; });
+          var localIds = CZ.shelfIds();
+          var locIdx = localIds.indexOf(n.slug);
+          if (anySaved && locIdx < 0) {
+            localIds.push(n.slug);
+            localStorage.setItem('ssochuz-shelf', JSON.stringify(localIds));
+          } else if (!anySaved && locIdx >= 0) {
+            localIds.splice(locIdx, 1);
+            localStorage.setItem('ssochuz-shelf', JSON.stringify(localIds));
+          }
+          syncShelfButtons(anySaved);
+
+          toast(willAdd ? ('Đã thêm vào tủ “' + s.name + '”') : ('Đã bỏ khỏi tủ “' + s.name + '”'));
+          renderChoices();
+        } catch (err) {
+          toast(err.message || 'Không thể lưu vào tủ lúc này');
+          renderChoices();
+        }
+      };
+
+    } catch (err) {
+      var body = $('#storyShelfModalBody');
+      if (body) {
+        body.innerHTML = '<p class="empty" style="color:var(--err,#e55)">' + esc(err.message || 'Không tải được danh sách tủ') + '</p>' +
+          '<div style="text-align:right;margin-top:12px"><button class="btn sm ghost" type="button" data-close-shelf-modal>Đóng</button></div>';
+        var cBtn2 = body.querySelector('[data-close-shelf-modal]');
+        if (cBtn2) cBtn2.onclick = function () { dlg.close(); };
+      }
+    }
+  }
+
   if (window.CZ_AUTH) CZ_AUTH.onAuth(function () { loadMyRating(false); });
   CZ.registry().then(function (r) { boot(r.reg); }).catch(function () { boot(null); });
 })();
