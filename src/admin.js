@@ -472,9 +472,14 @@
         var a = h && h.auth;
         if (!a) return;                       /* Worker bản cũ: dòng health trong tab Cài đặt đã nhắc dán worker mới */
         if (a.supabase) return;
+        /* paintAuthPanel() chạy lại mỗi lần vào tab Tổng quan (và sau mọi tác
+           vụ) — mỗi lần lại bắn một request /api/health nữa. Nếu append thẳng,
+           hai request chồng nhau sẽ dựng HAI thẻ 401 giống hệt. Trước khi ghép
+           thẻ mới thì gỡ mọi thẻ cũ (dấu .row-sbpin) ra khỏi hộp. */
+        box.querySelectorAll('.row-sbpin').forEach(function (n) { n.remove(); });
         var wrap = document.createElement('div');
         wrap.innerHTML =
-          '<div class="docrow bad"><span class="di">' + ic('alert', 'i-s') + '</span>' +
+          '<div class="docrow bad row-sbpin"><span class="di">' + ic('alert', 'i-s') + '</span>' +
           '<span class="dt"><b>Worker chưa ghim project Supabase — đăng nhập sẽ lỗi 401</b>' +
           '<span>Web đã bật Supabase nhưng Worker không biết Project URL nên không xác thực được phiên ' +
           '(project dùng khoá <code>sb_publishable_…</code> ký ES256). Người đọc đăng nhập xong vẫn bị My Space, ' +
