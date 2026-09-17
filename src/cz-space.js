@@ -515,6 +515,18 @@
       } catch (err) { setMessage($('#profileMessage'), err.message, 'err'); }
       finally { button.disabled = false; }
     };
+    /* cắt tự động 256px khi người dùng bỏ qua hộp thoại cắt (bấm Huỷ) */
+    async function autoCrop256(file) {
+      var image = await createImageBitmap(file);
+      var canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 256;
+      var size = Math.min(image.width, image.height);
+      var ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 256, 256);
+      ctx.drawImage(image, (image.width - size) / 2, (image.height - size) / 2, size, size, 0, 0, 256, 256);
+      try { image.close(); } catch (e) {}
+      return canvas.toDataURL('image/jpeg', 0.85);
+    }
     async function takeAvatarFile(file) {
       if (!file) return;
       avatarBusy = true;
@@ -522,22 +534,25 @@
       try {
         if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) throw Error('Chỉ nhận ảnh PNG, JPEG hoặc WebP.');
         if (file.size > 8 * 1024 * 1024) throw Error('Ảnh lớn hơn 8 MB — chọn ảnh nhỏ hơn.');
-        setMessage($('#profileMessage'), 'Đang xử lý ảnh…');
+        setMessage($('#profileMessage'), 'Đang mở hộp cắt ảnh…');
         releaseAvatarSource();
         avatarSource = URL.createObjectURL(file);
-        var image = await createImageBitmap(file);
-        var canvas = document.createElement('canvas');
-        canvas.width = canvas.height = 256;
-        var size = Math.min(image.width, image.height);
-        var ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 256, 256);
-        ctx.drawImage(image, (image.width - size) / 2, (image.height - size) / 2, size, size, 0, 0, 256, 256);
-        image.close();
+        /* mở hộp cắt NGAY khi tải ảnh lên — không bắt người dùng bấm thêm
+           nút riêng. Bỏ qua (Huỷ) thì tự cắt vuông 256px ở giữa. */
+        var cropped = null;
+        if (window.CZ_AUTH && CZ_AUTH.cropAvatar) {
+          try { cropped = await CZ_AUTH.cropAvatar(avatarSource); } catch (e) { cropped = null; }
+        }
         if (ticket !== epoch) return;
-        avatar = canvas.toDataURL('image/jpeg', 0.85);
-        avatarOff = false;
+        if (cropped) {
+          avatar = cropped; avatarSource = cropped; avatarOff = false;
+        } else {
+          avatar = await autoCrop256(file);
+          avatarOff = false;
+        }
         paintAvatar();
-        setMessage($('#profileMessage'), 'Ảnh đã sẵn sàng. ' + ADJUST_HINT, 'ok');
+        setMessage($('#profileMessage'),
+          cropped ? 'Đã cắt ảnh. Bấm Lưu hồ sơ để cập nhật.' : 'Ảnh đã sẵn sàng (cắt tự động). ' + ADJUST_HINT, 'ok');
       } catch (err) {
         releaseAvatarSource();
         setMessage($('#profileMessage'), err.message || 'Không đọc được ảnh này.', 'err');

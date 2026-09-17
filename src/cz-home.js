@@ -49,6 +49,7 @@
           '<h1><a href="' + esc(CZ.storyURL(n.slug)) + '">' + esc(n.title) + '</a></h1>' +
           '<div class="meta">' +
             '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(CZ.statusLabel(n.statusCls || n.status)) + '</span>' +
+            (n.locked ? '<span class="pill lock" title="Truyện có mật mã — cần mật mã để đọc">' + ic('lock', 'i-s') + 'Có mật mã</span>' : '') +
             (n.fresh ? '<span class="badge-new">NEW</span>' : '') +
             '<span>' + ic('book', 'i-s') + ' <b>' + esc(CZ.countText(n)) + '</b></span>' +
             (n.author ? '<span>' + ic('pen', 'i-s') + ' ' + esc(n.author) + '</span>' : '') +
@@ -62,9 +63,13 @@
             '<span>đang đọc <b>chương ' + p + '</b>' + (tot ? ' / ' + tot : '') + ' · ' + pct + '%</span></div>' : '') +
           '<div class="btn-row">' +
             (n.canRead
-              ? '<a class="btn pri lg" href="' + esc(CZ.readURL(n.slug, resume)) + '" title="' +
-                  (p ? 'Mở đúng chỗ bạn đang đọc dở' : 'Bắt đầu từ chương đầu') + '">' + ic('play', 'i-s') +
-                (p ? 'Đọc tiếp' : 'Đọc từ đầu') + '</a>'
+              ? (n.locked
+                /* truyện khóa mật mã: dẫn về trang truyện (có chốt nhập mật mã),
+                   không dẫn thẳng vào chương — mở chương là lộ nội dung */
+                ? '<a class="btn pri lg" href="' + esc(CZ.storyURL(n.slug)) + '" title="Truyện này có mật mã — vào trang truyện để nhập mật mã">' + ic('lock', 'i-s') + 'Nhập mật mã để đọc</a>'
+                : '<a class="btn pri lg" href="' + esc(CZ.readURL(n.slug, resume)) + '" title="' +
+                    (p ? 'Mở đúng chỗ bạn đang đọc dở' : 'Bắt đầu từ chương đầu') + '">' + ic('play', 'i-s') +
+                  (p ? 'Đọc tiếp' : 'Đọc từ đầu') + '</a>')
               : '<button class="btn lg off" disabled>' + ic('clock', 'i-s') + 'Sắp ra mắt</button>') +
             '<a class="btn lg" href="' + esc(CZ.storyURL(n.slug)) + '" title="Thông tin bộ truyện, mục lục, bình luận">' + ic('info', 'i-s') + 'Thông tin</a>' +
             '<button class="btn lg' + (inShelf ? ' on' : '') + '" data-shelf="' + esc(n.slug) + '" aria-pressed="' + (inShelf ? 'true' : 'false') + '" title="Lưu vào tủ truyện (icon tủ sách)">' +
@@ -83,6 +88,7 @@
               (i === 0 ? ' fetchpriority="high"' : ' loading="lazy"') + ' decoding="async" referrerpolicy="no-referrer">' : '') +
             '<span class="gloss"></span>' +
             (n.is18 ? '<span class="b18">18+</span>' : '') +
+            (n.locked ? '<span class="lock-cover" title="Truyện có mật mã" aria-label="Truyện có mật mã">' + ic('lock', 'i-s') + '</span>' : '') +
             (n.fresh ? '<span class="nw-bookmark"><span>NEW</span></span>' : '') +
           '</a>' +
           '<span class="pcap">' + (n.author || n.couple ? '<b>' + esc(n.author || n.couple) + '</b>' : '') +
