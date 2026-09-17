@@ -130,10 +130,13 @@
     }
     var localCount = $('#localShelfCount');
     if (localCount) localCount.innerHTML = ids.length ? '<strong>' + CZ.num(ids.length) + '</strong> truyện' : 'Chưa có truyện';
-    $('#localShelf').innerHTML = ids.map(function (slug, i) {
-      var n = CZ.findLib(slug);
-      return n ? '<div class="local-book space-book-cell" style="--space-delay:' + (i * 45) + 'ms">' + CZ.card(n) + '<button class="btn ghost sm" type="button" data-remove-local="' + esc(slug) + '">Bỏ khỏi tủ</button></div>' : '';
-    }).join('') || '<p class="empty">Tủ còn trống. Bấm Lưu ở trang truyện để thêm vào đây.</p>';
+    var localShelfEl = $('#localShelf');
+    if (localShelfEl) {
+      localShelfEl.innerHTML = ids.map(function (slug, i) {
+        var n = CZ.findLib(slug);
+        return n ? '<div class="local-book space-book-cell" style="--space-delay:' + (i * 45) + 'ms">' + CZ.card(n) + '<button class="btn ghost sm" type="button" data-remove-local="' + esc(slug) + '">Bỏ khỏi tủ</button></div>' : '';
+      }).join('') || '<p class="empty">Tủ còn trống. Bấm Lưu ở trang truyện để thêm vào đây.</p>';
+    }
 
     var history = CZ.lib().filter(function (n) { return CZ.progress(n) > 0; }).sort(function (a, b) { return CZ.lastReadAt(b) - CZ.lastReadAt(a); });
     $('#spaceHistory').innerHTML = history.map(function (n) {
@@ -258,12 +261,20 @@
     var note = $('#profileGuestNote'), fields = $('#profileFields');
     if (note) note.hidden = !show;
     if (fields) fields.disabled = !!show || !user();
+    var shelfNotice = $('#shelfGuestNotice');
+    if (shelfNotice) shelfNotice.hidden = !show;
+    var openBtn = $('#openNewShelf');
+    if (openBtn) openBtn.hidden = !!show;
   }
   function paintSession() {
     var st = authState(), u = user();
     $('#spaceGuest').hidden = !!u || st === 'checking';
     var loginBtn = $('#spaceLogin');
     if (loginBtn) loginBtn.hidden = !!u;
+    var shelfNotice = $('#shelfGuestNotice');
+    if (shelfNotice) shelfNotice.hidden = !!u || st === 'checking';
+    var openBtn = $('#openNewShelf');
+    if (openBtn) openBtn.hidden = !u;
   }
   function diagLine(k, v) { return '<dt>' + esc(k) + '</dt><dd>' + esc(String(v == null || v === '' ? '—' : v)) + '</dd>'; }
   function paintDiag(extra) {
@@ -597,7 +608,8 @@
     };
     var profileLogin = $('#profileLogin');
     if (profileLogin) profileLogin.onclick = async function () { profileLogin.disabled = true; try { await CZ_AUTH.login(); } catch (e) {} finally { profileLogin.disabled = false; } };
-    $('#localShelf').onclick = function (e) {
+    var localShelfEl = $('#localShelf');
+    if (localShelfEl) localShelfEl.onclick = function (e) {
       var b = e.target.closest('[data-remove-local]');
       if (b) { CZ.toggleShelf({ slug: b.dataset.removeLocal }); localData(); }
     };
@@ -624,6 +636,10 @@
       if (CZ.toast) CZ.toast('Đã xoá lịch sử đọc trên thiết bị này');
     };
     $('#newShelf').onclick = function () { editShelf(); };
+    var openNewBtn = $('#openNewShelf');
+    if (openNewBtn) openNewBtn.onclick = function () { editShelf(); };
+    var shelfLoginBtn = $('#shelfLogin');
+    if (shelfLoginBtn) shelfLoginBtn.onclick = async function () { shelfLoginBtn.disabled = true; try { await CZ_AUTH.login(); } catch (e) {} finally { shelfLoginBtn.disabled = false; } };
     $('#importShelf').onclick = function () { editShelf(null, true); };
     $('#shelfList').onclick = function (e) {
       var b = e.target.closest('[data-shelf]');

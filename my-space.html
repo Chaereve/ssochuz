@@ -11,7 +11,6 @@
 <nav class="crumb"><a href="/">Trang chủ</a><span>›</span><b>My Space</b></nav>
 <div id="spaceHero" class="space-hero" hidden><p class="space-kicker">SSOCHUZ / BẠN ĐỌC</p><h1>My Space</h1></div>
 <p id="spaceStatus" class="space-status" role="status" aria-live="polite"></p>
-<details id="spaceDiag" class="space-diag" hidden><summary>Chi tiết kỹ thuật của phiên đăng nhập</summary><dl id="spaceDiagList"></dl></details>
 <section id="spaceGuest" class="space-panel space-guest" hidden>
   <div class="space-guest-mark" aria-hidden="true">✦</div>
   <div><p class="space-kicker">KHÔNG GIAN CỦA RIÊNG BẠN</p><h2>Một góc riêng cho những câu chuyện bạn yêu.</h2><p>Đăng nhập để tạo hồ sơ, đồng bộ tủ truyện giữa các thiết bị và giữ tên/ảnh của bạn khi bình luận. Danh sách đã lưu và lịch sử đọc trên máy này vẫn dùng được khi chưa đăng nhập.</p></div>
@@ -26,7 +25,15 @@
 <section id="space-shelves" class="space-view" role="tabpanel" aria-labelledby="tab-shelves" tabindex="-1">
   <div class="space-section-head">
     <div><p class="section-eyebrow">THƯ VIỆN RIÊNG</p><h2>Tủ truyện</h2></div>
-    <div id="spaceShelfCount" class="space-count" aria-live="polite"><strong>—</strong><span>tủ của bạn</span></div>
+    <div class="row" style="align-items:center;gap:14px">
+      <button class="btn pri sm" id="openNewShelf" type="button">+ Tạo tủ truyện</button>
+      <div id="spaceShelfCount" class="space-count" aria-live="polite"><strong>—</strong><span>tủ của bạn</span></div>
+    </div>
+  </div>
+  <div id="shelfGuestNotice" class="space-panel space-login-note" hidden>
+    <h3>Tủ truyện cá nhân cần đăng nhập</h3>
+    <p>Đăng nhập để tạo tủ truyện riêng, phân loại những câu chuyện yêu thích và đồng bộ qua lại giữa các thiết bị.</p>
+    <div class="row"><button class="btn pri" id="shelfLogin" type="button">Đăng nhập để tạo tủ</button></div>
   </div>
   <div id="cloudShelves" class="space-shelf-workspace" hidden>
     <aside class="space-shelf-sidebar" aria-label="Danh sách tủ truyện">
@@ -36,11 +43,6 @@
     </aside>
     <div id="shelfContent" class="space-shelf-detail"></div>
   </div>
-  <section class="space-device-shelf local-shelf" aria-labelledby="deviceShelfTitle">
-    <div class="space-device-head"><div><p class="section-eyebrow">LƯU TRÊN THIẾT BỊ</p><h3 id="deviceShelfTitle">Danh sách đã lưu</h3></div><span id="localShelfCount" class="space-count small" aria-live="polite"></span></div>
-    <p class="space-note" id="localShelfNote">Đã lưu trên trình duyệt này · chưa đăng nhập thì không đồng bộ.</p>
-    <div class="grid" id="localShelf"></div>
-  </section>
 </section>
 <section id="space-history" class="space-view" hidden role="tabpanel" aria-labelledby="tab-history" tabindex="-1">
   <div class="space-section-head"><div><p class="section-eyebrow">DẤU TRANG CỦA BẠN</p><h2>Lịch sử đọc</h2><p class="space-note">Tiến độ nằm trên thiết bị này; tủ truyện mới đồng bộ theo tài khoản.</p></div><button class="btn ghost sm" id="clearHistory" type="button">Xoá lịch sử</button></div>

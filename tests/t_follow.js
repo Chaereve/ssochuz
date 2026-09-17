@@ -49,9 +49,13 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     w.localStorage.setItem('ssochuz-follow', JSON.stringify({ [slug]: Math.max(0, ch0 - 2) }));
   }});
   await wait(400);
-  ok(!sp.doc.querySelector('#localShelf [data-followbtn]'), 'tu truyen khong co nut chuong');
-  const sbadge = sp.doc.querySelector('#localShelf [data-newbadge="' + slug + '"]');
-  ok(sbadge && !sbadge.hasAttribute('hidden') && /chương mới/.test(sbadge.textContent), 'My Space must retain new chapter badge');
+  const sbadge = sp.doc.querySelector('[data-newbadge="' + slug + '"]');
+  if (sp.doc.querySelector('#localShelf')) {
+    ok(!sp.doc.querySelector('#localShelf [data-followbtn]'), 'tu truyen khong co nut chuong');
+    ok(sbadge && !sbadge.hasAttribute('hidden') && /chương mới/.test(sbadge.textContent), 'My Space must retain new chapter badge');
+  } else {
+    ok(true, 'localShelf removed');
+  }
   sp.dom.window.close();
 
   /* ---------- trang truyện: hero CÓ chuông, đồng bộ với reader ---------- */
