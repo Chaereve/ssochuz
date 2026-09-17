@@ -2196,8 +2196,11 @@ body.rd-focus .rdcmts { display: none; }
 .docrow.warn .di { background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn); }
 .docrow.good .di { background: color-mix(in srgb, var(--ok) 12%, transparent); color: var(--ok); }
 .docrow .dt { flex: 1; min-width: 0; }
-.docrow .dt b { display: block; font-size: 13.5px; }
-.docrow .dt span { display: block; font-size: 12.5px; color: var(--mut); line-height: 1.6; margin-top: 2px; }
+/* chỉ con TRỰC TIẾP mới là tiêu đề/mô tả dạng khối — <b> nhấn mạnh giữa câu
+   trong mô tả phải nằm inline (như “vào tab Cài đặt & đồng bộ điền key”), */
+.docrow .dt > b { display: block; font-size: 13.5px; }
+.docrow .dt > span { display: block; font-size: 12.5px; color: var(--mut); line-height: 1.6; margin-top: 2px; }
+.docrow .dt > span b, .docrow .dt > span span { display: inline; font-size: inherit; }
 .docrow .dt .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
 .docrow .dt .chips button { border: 1px solid var(--bd); background: var(--surf2); border-radius: 99px;
   padding: 2px 9px; font-size: 11.5px; color: var(--txt); cursor: pointer; }
@@ -2432,14 +2435,15 @@ body.rd-focus .rdcmts { display: none; }
 @media(max-width: 960px) { .people #ppGrid:has(.pcard) { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media(max-width: 560px) { .people #ppGrid:has(.pcard) { grid-template-columns: minmax(0, 1fr); } .people #ppGrid .pcard { padding: 20px; } }
 
-/* Admin workspace: stable navigation and one task surface, not a wall of tabs. */
+/* Admin workspace: stable navigation and one task surface, not a wall of tabs.
+   LƯU Ý (sửa 17/09): khối này từng gồm luật cho #tabs & #scApp theo layout CŨ
+   (tab nằm TRONG #scApp). Bản 1.10.0 dỡ tab ra ngoài thành .snav trong .ashell,
+   nên giữ lại các luật đó sẽ: (#) #scApp thành lưới 216px+1fr với cột trái RỖNG
+   đẩy mọi pane lệch phải; (#) trên điện thoại #tabs bị ép lưới 2 cột + xuống
+   dòng nhãn thay vì thanh cuộn ngang dính. Đã dỡ phần xung đột, phần còn lại
+   do cụm .ashell/.snav (cuối file) và cụm .admin #tabs (3197+) phụ trách. */
 .admin .amain { max-width: 1480px; padding: 24px 32px 64px; }
-.admin #scApp:not(.hide) { display: grid; grid-template-columns: 216px minmax(0, 1fr); gap: 32px; align-items: start; }
-.admin #tabs { grid-column: 1; grid-row: 1 / span 20; display: flex; flex-direction: column; align-items: stretch; position: sticky; top: 84px; max-height: calc(100vh - 100px); overflow-y: auto; padding: 12px; border: 1px solid var(--bd); border-radius: 12px; background: var(--surf); gap: 4px; white-space: normal; }
-.admin #scApp > [id^="pane-"] { grid-column: 2; min-width: 0; }
-.admin #tabs button { text-align: left; white-space: normal; padding: 10px 12px; border-radius: 7px; font-size: 13px; min-height: 40px; }
-.admin #tabs button.on { background: color-mix(in srgb, var(--acc) 10%, var(--surf)); color: var(--acc); box-shadow: none; }
-.admin-nav-label { display: block; color: var(--mut); font-size: 11px; font-weight: 700; letter-spacing: .07em; padding: 16px 12px 6px; }
+.admin #scApp > [id^="pane-"] { min-width: 0; }
 .admin .card2 { padding: 24px; border-radius: 12px; box-shadow: none; margin-bottom: 20px; }
 .admin .card2 h2, .admin .card2 h3 { line-height: 1.5; }
 .admin .hint { line-height: 1.8; max-width: 80ch; }
@@ -2449,9 +2453,6 @@ body.rd-focus .rdcmts { display: none; }
 .admin #privateResult { overflow-wrap: anywhere; line-height: 1.8; }
 @media(max-width: 850px) {
   .admin .amain { padding: 16px 16px 48px; }
-  .admin #scApp:not(.hide) { display: block; }
-  .admin #tabs { position: static; display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); max-height: none; margin-bottom: 24px; }
-  .admin #tabs .admin-nav-label { grid-column: 1/-1; }
   .admin .card2 { padding: 18px; }
   .admin .abar .in { flex-wrap: wrap; }
 }
@@ -2758,12 +2759,9 @@ body.rd-focus .rdcmts { display: none; }
 .shelf-picker label { align-items: flex-start; }
 .shelf-picker input { margin-top: 2px; }
 
-/* ---- 3. admin: thanh tab dọc lún dưới thanh đầu trang khi bar xuống hàng --
-   .abar .in giờ co giãn được (có thể cao ~104px trên máy hẹp) thì sticky top
-   84px của cột tab sẽ chui sau bar. Trên dải máy hẹp hạ mốc neo xuống. */
-@media (max-width: 1050px) {
-  .admin #tabs { top: 116px; }
-}
+/* ---- 3. (đã dỡ) mốc neo sticky của thanh tab do cụm .snav tự quản theo
+   layout mới (60px mặt bàn / 56px khi thành thanh ngang) — nâng lên 116px ở
+   dải hẹp làm thanh tab trôi khỏi bar sau khi cuộn. */
 
 /* ---- 4. admin: khung xem trước chương & KV JSON bẻ chữ, bảng cuộn trong ----
    Ô xem trước dán nguyên văn HTML người dùng dán vào — phải bẻ được chữ. */
