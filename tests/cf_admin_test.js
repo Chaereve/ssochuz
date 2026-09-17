@@ -305,13 +305,18 @@ async function openAdmin(worker, key) {
     chip: ($(doc, '#chipDataTxt') || {}).textContent
   };
 
-  /* ---------- 3. đăng chương nhanh ---------- */
+  /* ---------- 3. soạn chương bằng trình soạn mới (thay "đăng chương nhanh") ---------- */
   const slug = 'third-person';
   const before = w.loadBook(slug).chapters.length;
-  $(doc, '#qkBook').value = slug;
-  $(doc, '#qkTitle').value = 'Khởi Đầu Mới';
-  $(doc, '#qkBody').value = 'Đoạn một.\n\nĐoạn hai.';
-  click('#qkPub');
+  click($(doc, '#tb [data-edit="' + slug + '"]'));
+  await wait(800);
+  click('#chNew');
+  await wait(120);
+  $(doc, '#chTitle').value = 'Khởi Đầu Mới';
+  $(doc, '#edBody').innerHTML = '<p>Đoạn một.</p><p>Đoạn hai.</p>';
+  click('#chSave');
+  await wait(120);
+  click('#btnSaveCh');
   await wait(600);
   const after = (w.books[slug] && w.books[slug].chapters.length) || 0;
   out.dangChuong = {
@@ -323,16 +328,14 @@ async function openAdmin(worker, key) {
   };
 
   /* ---------- 4. mở chương từ tệp trên máy (thay cho luồng Blogger cũ) ---------- */
-  const fi = $(doc, '#qkFile');
+  const fi = $(doc, '#chFile');
   const file = new win.File(['Dòng một.\n\nDòng hai.'], 'chuong-10.txt', { type: 'text/plain' });
   Object.defineProperty(fi, 'files', { value: [file], configurable: true });
   fi.dispatchEvent(new win.Event('change', { bubbles: true }));
   await wait(400);
   out.moTep = {
-    coNoiDung: $(doc, '#qkBody').value.indexOf('Dòng một') >= 0,
-    tieuDe: $(doc, '#qkTitle').value,
-    tenTep: ($(doc, '#qkFileName') || {}).textContent,
-    kieu: $(doc, '#qkMode').value,
+    coNoiDung: $(doc, '#edBody').innerHTML.indexOf('Dòng một') >= 0,
+    tieuDe: $(doc, '#chTitle').value,
     soChuongSau: w.loadBook(slug).chapters.length
   };
 
@@ -526,10 +529,13 @@ async function openAdmin(worker, key) {
     msg: ($(adoc, '#msg') || {}).textContent.slice(0, 70)
   };
 
-  /* ---------- 14b. CHỮA TẬN GỐC: nạp chương từ repo lên KV rồi đếm lại ---------- */
+  /* ---------- 14b. CHỮA TẬN GỐC: nạp chương từ repo lên KV rồi đếm lại ----------
+     nút nay có xác nhận 2 BƯỚC: lần 1 "vũ trang" nút, lần 2 mới mở hộp thoại */
+  aclick('#docFixKv');
   aclick('#docFixKv');
   await wait(200);
   const okKv = $(adoc, '#czOk');
+  out.napRepoCoXacNhan2Buoc = !!okKv;
   out.napRepoCoXacNhan = !!okKv;
   if (okKv) { aclick(okKv); await wait(1400); }
   const kvAngel = w.kvBook('be-my-angel');
@@ -658,9 +664,10 @@ async function openAdmin(worker, key) {
     conLai: w.voteKeys('third-person').length,
     msg: ($(adoc, '#msg') || {}).textContent.slice(0, 80)
   };
-  /* reset toàn bộ phiếu của bộ đang chọn */
+  /* reset toàn bộ phiếu của bộ đang chọn — xác nhận 2 bước (nút) rồi hộp thoại */
   $(adoc, '#rsScope').value = 'one';
   $(adoc, '#rsScope').dispatchEvent(new awin.Event('change', { bubbles: true }));
+  aclick('#rsRun');
   aclick('#rsRun');
   await wait(150);
   const okRs = $(adoc, '#czOk');

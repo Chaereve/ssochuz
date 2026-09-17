@@ -199,7 +199,7 @@
       REG.lib = REG.lib || [];
       REG.editorChoice = REG.editorChoice || (REG.settings && REG.settings.editorChoice) || [];
       dirty.meta = dirty.set = false; markDirty();
-      renderList(); fillQuickBooks(); fillVoteBooks(); renderSlides(); renderSched(); renderSettings(); renderOverview();
+      renderList(); fillVoteBooks(); renderSlides(); renderSched(); renderSettings(); renderOverview();
       $('#libCount').textContent = num(REG.lib.length);
       setTabCt('tabLibCt', REG.lib.length);
       paintDraftChip();      /* có nháp thì hiện nút nhỏ trên thanh trên — KHÔNG hỏi bằng hộp thoại */
@@ -253,13 +253,17 @@
       var idx = (REG.lib || []).indexOf(n);
       var ck = selected[n.slug] ? ' checked' : '';
       var slugDisp = n.slug || '<span style="color:#c33">(thiếu slug)</span>';
+      /* huy hiệu ổ khóa: bộ đang có mật mã (thẻ công khai, chương khóa) */
+      var lockIc = (n.lock === 1 || n.lock === true)
+        ? '<span class="locki" title="Đang có mật mã — thẻ công khai, chương khóa">' + ic('lock', 'i-s') + '</span>'
+        : '';
       return '<tr>' +
-        '<td><input type="checkbox" data-ck="' + esc(n.slug) + '" data-idx="' + idx + '"' + ck + ' style="width:auto"></td>' +
-        '<td><span class="ttl">' + esc(n.title) + '</span><span class="sub">' + slugDisp + (n.is18 ? ' · 18+' : '') + '</span></td>' +
-        '<td><span class="sm">' + esc(n.author || '—') + '</span><br><span class="sub">' + esc(n.couple || '') + '</span></td>' +
-        '<td><b>' + num(n.chapters || 0) + '</b><span class="sub"> ' + esc(n.countLabel || '') + '</span></td>' +
-        '<td><span class="pill ' + CZ.statusCls(n.status) + '"><span class="d"></span>' + esc(n.status || '—') + '</span></td>' +
-        '<td class="sm">' + esc(CZ.dateVN(n.updated)) + '</td>' +
+        '<td class="cck"><input type="checkbox" data-ck="' + esc(n.slug) + '" data-idx="' + idx + '"' + ck + ' style="width:auto"></td>' +
+        '<td data-lb="Bộ"><span class="ttl">' + lockIc + esc(n.title) + '</span><span class="sub">' + slugDisp + (n.is18 ? ' · 18+' : '') + '</span></td>' +
+        '<td data-lb="Tác giả"><span class="sm">' + esc(n.author || '—') + '</span><br><span class="sub">' + esc(n.couple || '') + '</span></td>' +
+        '<td data-lb="Chương"><b>' + num(n.chapters || 0) + '</b><span class="sub"> ' + esc(n.countLabel || '') + '</span></td>' +
+        '<td data-lb="Tình trạng"><span class="pill ' + CZ.statusCls(n.status) + '"><span class="d"></span>' + esc(n.status || '—') + '</span></td>' +
+        '<td data-lb="Cập nhật" class="sm">' + esc(CZ.dateVN(n.updated)) + '</td>' +
         '<td class="row" style="gap:4px">' +
           '<button class="btn ghost sm" data-edit="' + esc(n.slug) + '" data-idx="' + idx + '">' + ic('edit', 'i-s') + 'Sửa</button>' +
           '<button class="btn ghost sm" data-chap="' + esc(n.slug) + '" data-idx="' + idx + '">' + ic('list', 'i-s') + '</button>' +
@@ -484,27 +488,31 @@
     }
   }
   var OV_FILTER = null;
-  function fillQuickBooks() {
-    var sel = $('#qkBook');
-    var cur = sel.value;
-    sel.innerHTML = (REG.lib || []).slice().sort(function (a, b) { return String(a.title).localeCompare(String(b.title), 'vi'); })
-      .filter(function (n) { return n.slug; })
-      .map(function (n) { return '<option value="' + esc(n.slug) + '">' + esc(n.title) + ' (' + num(n.chapters || 0) + ' chương)</option>'; }).join('');
-    if (cur) sel.value = cur;
-  }
 
   /* ------------------------------ sửa bộ -------------------------------- */
   function show(pane) {
-    ['private', 'overview', 'list', 'quick', 'new', 'edit', 'doctor', 'cmts', 'reports', 'stats', 'votes', 'log', 'settings', 'help'].forEach(function (k) {
+    ['overview', 'list', 'new', 'edit', 'doctor', 'cmts', 'reports', 'stats', 'votes', 'log', 'settings'].forEach(function (k) {
       var el = $('#pane-' + k);
       if (el) el.classList.toggle('hide', k !== pane);
     });
     $$('#tabs button').forEach(function (b) { b.classList.toggle('on', b.dataset.tab === pane); b.setAttribute('aria-current', b.dataset.tab === pane ? 'page' : 'false'); });
     $('#tabs button[data-tab="edit"]').classList.toggle('hide', !CUR);
-    var on = $('#tabs button.on'), more = $('#tabs .admin-nav-more');
-    if (more) more.open = !!(on && more.contains(on));
-    if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'center' });
+    var on = $('#tabs button.on');
+    if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     window.scrollTo({ top: 0, behavior: 'auto' });
+  }
+  /* vỏ tab Sửa bộ: ảnh bìa xem trước + huy hiệu khóa + nhãn tab */
+  function paintEditChrome() {
+    var img = $('#coverImg'), prev = $('#coverPrev');
+    if (img && prev) {
+      var u = $('#fThumb').value.trim();
+      img.src = u || '';
+      prev.classList.toggle('empty', !u);
+      if (u) img.onerror = function () { prev.classList.add('empty'); };
+    }
+    paintLockState();
+    var eb = $('#tabs button[data-tab="edit"] .ct');
+    if (eb) { eb.textContent = CUR ? CUR.title : ''; eb.title = CUR ? ('Đang sửa: ' + CUR.title) : ''; }
   }
   function openEdit(slug, focus) {
     CUR = (REG.lib || []).find(function (n) { return n.slug === slug; });
@@ -520,6 +528,7 @@
     $('#fUpdated').value = CUR.updated || today();
     $('#fThumb').value = CUR.thumb || CUR.slide || ''; $('#fSyn').value = CUR.synFull || CUR.syn || '';
     dirty.meta = false; markDirty();
+    paintEditChrome();
     BOOK = null; CHAP = -1;
     $('#chList').innerHTML = '<div class="row2 sm muted" style="padding:10px">đang tải chương…</div>';
     bookOf(slug).then(function (b) {
@@ -550,6 +559,7 @@
     $('#fUpdated').value = CUR.updated || today();
     $('#fThumb').value = CUR.thumb || CUR.slide || ''; $('#fSyn').value = CUR.synFull || CUR.syn || '';
     dirty.meta = true; markDirty();
+    paintEditChrome();
     BOOK = null; CHAP = -1;
     $('#chList').innerHTML = '<div class="row2 sm muted" style="padding:10px">bộ này chưa có slug — nhập slug mới rồi bấm Lưu thông tin.</div>';
     if (focus === 'chap') setTimeout(function () { $('#chList').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 200);
@@ -592,9 +602,190 @@
     if (i < 0 || i >= ch.length) return;
     CHAP = i;
     $('#chTitle').value = ch[i].t || '';
-    $('#chBody').value = ch[i].html || '';
-    $('#chStat').textContent = num(CZ.words(ch[i].html)) + ' từ';
+    /* trình soạn chữ thật: nội dung là HTML, giữ nguyên định dạng cũ
+       (chương xưa lưu dạng <div>…</div> — trình đọc tự quy về <p>) */
+    var ed = $('#edBody');
+    ed.innerHTML = ch[i].html || '';
+    /* ảnh /api/img/… nằm trên Worker — trong trình soạn phải hiện đúng:
+       viết lại thành URL tuyệt đối của Worker đang nối */
+    if (API) $$('.rte img', ed).forEach(function (im) {
+      var s = String(im.getAttribute('src') || '');
+      if (/^\s*\/api\/img\//.test(s)) im.setAttribute('src', normalizeApi(API) + s.replace(/^\s+/, ''));
+    });
+    chStat();
     renderChapters();
+    try { ed.focus(); } catch (e) {}
+  }
+  function chStat() {
+    var ed = $('#edBody');
+    var n = CZ.words(ed ? (ed.innerHTML || '') : '');
+    var st = $('#chStat');
+    if (st) st.textContent = num(n) + ' từ · ' + num((ed ? (ed.textContent || '').trim().length : 0)) + ' ký tự';
+  }
+  /* thu nội dung từ trình soạn — giữ HTML thật, chỉ dọn nốt:
+     bỏ thẻ bị vấy style inline vô nghĩa, giữ lại img/br/định dạng cơ bản.
+     KHÔNG sanitize thô như trang đọc: đây là dữ liệu NGUỒN, trang đọc sẽ
+     sanitize khi hiển thị (cleanHTML). */
+  function edHtml() {
+    var ed = $('#edBody');
+    if (!ed) return '';
+    var html = ed.innerHTML;
+    /* trình soạn đang hiện URL tuyệt đối của Worker (để ảnh render được) —
+       trước khi lưu phải viết về lại đường dẫn TƯƠNG ĐỐI /api/img/… để nội
+       dung không dính cứng tên miền Worker */
+    if (API) {
+      var abs = normalizeApi(API) + '/api/img/';
+      html = html.split(abs).join('/api/img/');
+    }
+    return html.trim() === '<br>' ? '' : html;
+  }
+  function edSaveCurrent(silent) {
+    if (!BOOK || CHAP < 0) return false;
+    BOOK.chapters[CHAP] = { t: ($('#chTitle').value || '').trim() || ('Chương ' + (CHAP + 1)), html: edHtml() };
+    dirty.book = true; markDirty();
+    if (!silent) { toast('Đã cập nhật chương ' + (CHAP + 1) + ' (nhớ bấm “Lưu toàn bộ chương”)', 'ok'); }
+    return true;
+  }
+  /* ---------------- trình soạn chuyên nghiệp (bản 1.10.0) ----------------
+     · định dạng: đậm/nghiêng/gạch chân/gạch ngang · H2/H3/đoạn/trích dẫn
+       · đường phân cách · canh trái-giữa-phải
+     · ảnh: lên từ máy → nén WebP trong TRÌNH DUYỆT (cạnh lớn ≤1400px,
+       quality 0.82) → POST /api/img (KV Worker) → chèn <img src="/api/img/<id>">
+     · nạp tệp .txt/.md/.html vào chương đang sửa (mỗi dòng trống = 1 đoạn)
+   Mọi thứ chạy contenteditable — không cần thư viện ngoài, HTML ra đúng
+   dạng web đang dùng (thẻ block, img, br).                                    */
+  function edExec(cmd, val) {
+    var ed = $('#edBody');
+    if (!ed) return;
+    ed.focus();
+    try { document.execCommand(cmd, false, val || null); } catch (e) {}
+    dirty.book = true; markDirty(); chStat();
+  }
+  function edBlock(tag) {
+    var ed = $('#edBody');
+    if (!ed) return;
+    ed.focus();
+    try { document.execCommand('formatBlock', false, tag); } catch (e) {}
+    dirty.book = true; markDirty();
+  }
+  /* nén ảnh trong trình duyệt: resize tối đa 1400px rồi encode WebP.
+     Trả về Promise<{type, data (base64), bytes}>. */
+  function compressImage(file, maxPx) {
+    maxPx = maxPx || 1400;
+    return new Promise(function (resolve, reject) {
+      var rd = new FileReader();
+      rd.onerror = function () { reject(new Error('Không đọc được tệp ảnh.')); };
+      rd.onload = function () {
+        var img = new Image();
+        img.onerror = function () { reject(new Error('Tệp này không phải ảnh hợp lệ.')); };
+        img.onload = function () {
+          try {
+            var w = img.naturalWidth, h = img.naturalHeight;
+            if (!w || !h) throw new Error('Ảnh rỗng.');
+            var k = Math.min(1, maxPx / Math.max(w, h));
+            var cw = Math.max(1, Math.round(w * k)), ch2 = Math.max(1, Math.round(h * k));
+            var cv = document.createElement('canvas');
+            cv.width = cw; cv.height = ch2;
+            var cx = cv.getContext('2d');
+            /* nền trắng trước khi vẽ: ảnh PNG trong suốt không ra ảnh viền đen */
+            cx.fillStyle = '#ffffff'; cx.fillRect(0, 0, cw, ch2);
+            cx.drawImage(img, 0, 0, cw, ch2);
+            var data = cv.toDataURL('image/webp', 0.82);
+            var b64 = data.slice(data.indexOf(',') + 1);
+            resolve({ type: 'image/webp', data: b64, bytes: Math.floor(b64.replace(/=+$/, '').length * 3 / 4) });
+          } catch (e) { reject(e); }
+        };
+        img.src = rd.result;
+      };
+      rd.readAsDataURL(file);
+    });
+  }
+  function uploadImgData(c) {
+    return api('/api/img', { method: 'POST', body: { data: c.data, type: c.type } })
+      .then(function (r) {
+        if (!r || !r.ok || !r.url) throw new Error((r && r.error) || 'Lên ảnh thất bại.');
+        return r;
+      });
+  }
+  function uploadImageFile(file, onBusy) {
+    if (!file) return Promise.resolve(null);
+    if (!/image\/(jpeg|png|webp)/.test(file.type)) return Promise.reject(new Error('Chỉ nhận ảnh JPEG, PNG hoặc WebP.'));
+    if (file.size > 12 * 1024 * 1024) return Promise.reject(new Error('Ảnh quá lớn (trên 12 MB) — hãy giảm kích thước trước.'));
+    onBusy('Đang nén ảnh trong trình duyệt…');
+    return compressImage(file, 1400)
+      .then(function (c) {
+        onBusy('Đang lên ' + Math.max(1, Math.round(c.bytes / 1024)) + ' KB lên Worker…');
+        return uploadImgData(c).then(function (r) { onBusy(''); return r; });
+      })
+      .catch(function (e) { onBusy(''); throw e; });
+  }
+  /* chèn ảnh vào vị trí con trỏ trong chương. Nội dung LƯU là đường dẫn
+     tương đối /api/img/…; để admin thấy ảnh ngay trong trình soạn, hiển thị
+     bằng URL tuyệt đối của Worker (edHtml sẽ viết ngược khi lưu). */
+  function edInsertImage(url, alt) {
+    var ed = $('#edBody');
+    if (!ed) return;
+    ed.focus();
+    var src = API && /^\s*\//.test(url) ? normalizeApi(API) + url.replace(/^\s+/, '') : url;
+    var html = '<p><img src="' + esc(src) + '" alt="' + esc(alt || '') + '" style="max-width:100%;height:auto"></p>';
+    try { document.execCommand('insertHTML', false, html); }
+    catch (e) { ed.insertAdjacentHTML('beforeend', html); }
+    dirty.book = true; markDirty(); chStat();
+  }
+  /* nạp tệp .txt/.md/.html vào chương đang mở (gộp thêm vào nội dung có sẵn) */
+  function importChapterFile(file) {
+    if (!file) return;
+    var rd = new FileReader();
+    rd.onerror = function () { toast('Không đọc được tệp này', 'err'); };
+    rd.onload = function () {
+      var txt = String(rd.result || '');
+      var isHtml = /\.html?$/i.test(file.name) || /^\s*<[a-z][\s\S]*>/i.test(txt.slice(0, 300));
+      var html;
+      if (isHtml) {
+        /* giữ HTML thật của tệp, chỉ chèn vào — người viết sẽ xem lại rồi lưu */
+        html = txt.trim();
+      } else {
+        /* chữ thường / markdown thô: mỗi dòng trống = 1 đoạn (mã textToHtml cũ) */
+        html = textToHtml(txt, 'para');
+      }
+      if (!edSaveCurrent(true)) {
+        /* chưa có chương nào: tạo một chương mới nhận tệp */
+        if (!BOOK) return toast('Mở một bộ trước đã', 'err');
+        BOOK.chapters.push({ t: '', html: '' });
+        CHAP = BOOK.chapters.length - 1;
+        openChap(CHAP);
+      }
+      if (!$('#chTitle').value.trim()) {
+        $('#chTitle').value = file.name.replace(/\.[a-z]+$/i, '').replace(/[-_]+/g, ' ').trim();
+      }
+      $('#edBody').insertAdjacentHTML('beforeend', html);
+      dirty.book = true; markDirty(); chStat();
+      toast('Đã nạp “' + file.name + '” — kiểm tra lại rồi bấm Lưu chương này', 'ok');
+      renderChapters();
+    };
+    rd.readAsText(file);
+  }
+  /* ---------------- trạng thái khóa mật mã trong tab Sửa bộ --------------- */
+  function paintLockState() {
+    var st = $('#lockState');
+    if (!st || !CUR) return;
+    var on = !!(CUR.lock === 1 || CUR.lock === true);
+    st.className = 'pill ' + (on ? 'acc' : '');
+    st.innerHTML = on
+      ? ic('lock', 'i-s') + 'đang có mật mã'
+      : ic('lock_open', 'i-s') + 'chưa khóa';
+    if (on) $('#btnUnlock').classList.remove('hide'); else $('#btnUnlock').classList.add('hide');
+  }
+  function lockBook(password) {
+    if (!CUR || !CUR.slug) return Promise.reject(new Error('Bộ này chưa có slug — lưu thông tin trước.'));
+    if (!ONLINE) return Promise.reject(new Error('Chưa nối Worker — khóa mật mã cần KV thật.'));
+    return api('/api/lock/set', { method: 'POST', body: { slug: CUR.slug, password: password } })
+      .then(function (r) {
+        if (!r || !r.ok) throw new Error((r && r.error) || 'Không làm được.');
+        if (r.locked) { CUR.lock = 1; } else { delete CUR.lock; }
+        paintLockState(); renderList();
+        return r;
+      });
   }
 
   /* ------------------------------ lưu ----------------------------------- */
@@ -670,7 +861,7 @@
         $('#edView').href = CZ.storyURL(CUR.slug);
         $('#fSlug').value = CUR.slug;
         if (newSlug !== oldSlug) {
-          renderList(); fillQuickBooks(); renderSlides();
+          renderList(); renderSlides();
           toast('Đã đổi slug: ' + oldSlug + ' → ' + newSlug, 'ok');
         }
       });
@@ -688,7 +879,7 @@
     return api('/api/registry', { method: 'PUT', body: REG }).then(function () {
       dirty.meta = dirty.set = false; markDirty();
       msg(okMsg + ' · ' + new Date().toLocaleTimeString('vi-VN'), 'ok');
-      toast(okMsg, 'ok'); renderList(); fillQuickBooks(); fillVoteBooks(); renderSlides(); renderOverview(); health();
+      toast(okMsg, 'ok'); renderList(); fillVoteBooks(); renderSlides(); renderOverview(); health();
     }).catch(function (e) { msg('Lưu thất bại: ' + e.message, 'err'); toast('Lỗi: ' + e.message, 'err'); });
   }
   function saveBook(okMsg) {
@@ -704,7 +895,7 @@
     } else {
       CUR.countLabel = BOOK.chapters.length + '/' + Math.max(declared, BOOK.chapters.length);
     }
-    CUR.count = CUR.countLabel;
+    /* KHÔNG ghi `count` nữa — bản sao chết của countLabel, web tự tính (CZ.norm) */
     CUR.updated = today();
     if (!ONLINE) {
       saveDraft(); dirty.book = false; markDirty();
@@ -746,6 +937,46 @@
       });
     });
   }
+  /* xoá bộ không hỏi lại — dùng cho nút đã BẤM HAI LẦN (arm2) trong tab Sửa */
+  function delBookRun(slug) {
+    var n = (REG.lib || []).find(function (x) { return x.slug === slug; });
+    REG.lib = (REG.lib || []).filter(function (x) { return x.slug !== slug; });
+    REG.slides = (REG.slides || []).filter(function (x) { return slideSlug(x) !== slug; });
+    REG.editorChoice = (REG.editorChoice || []).filter(function (x) { var sl = typeof x === 'string' ? x : (x && x.slug); return sl !== slug; });
+    if (REG.settings && REG.settings.editorChoice) REG.settings.editorChoice = (REG.settings.editorChoice || []).filter(function (x) { var sl = typeof x === 'string' ? x : (x && x.slug); return sl !== slug; });
+    delete BOOKS[slug];
+    var done = ONLINE ? api('/api/book/' + encodeURIComponent(slug), { method: 'DELETE' }).catch(function () {}) : Promise.resolve();
+    done.then(function () { return saveRegistry('Đã xoá “' + (n ? n.title : slug) + '”'); }).then(function () {
+      if (CUR && CUR.slug === slug) { CUR = null; show('list'); }
+      renderList();
+    });
+  }
+  /* xác nhận hai bước cho thao tác nguy hiểm: lần 1 nút đổi màu + chữ
+     “xác nhận”, lần 2 mới chạy. Quên bấm trong 8 giây thì tự huỷ. */
+  function arm2(btn, label2, fn) {
+    if (!btn) return;
+    if (btn._armed) {
+      btn._armed = false;
+      clearTimeout(btn._armT);
+      btn.classList.remove('armed');
+      btn.innerHTML = btn._armHtml || '';
+      delete btn._armHtml;
+      fn();
+      return;
+    }
+    btn._armed = true;
+    btn._armHtml = btn.innerHTML;
+    btn.classList.add('armed');
+    btn.innerHTML = ic('alert', 'i-s') + label2;
+    btn._armT = setTimeout(function () {
+      if (!btn._armed) return;
+      btn._armed = false;
+      clearTimeout(btn._armT);
+      btn.classList.remove('armed');
+      btn.innerHTML = btn._armHtml || '';
+      delete btn._armHtml;
+    }, 8000);
+  }
   function delBookByIdx(idx) {
     var n = (REG.lib || [])[idx];
     if (!n) return;
@@ -763,30 +994,6 @@
     });
   }
 
-  /* ------------------------------ đăng chương --------------------------- */
-  function quickPublish() {
-    var slug = $('#qkBook').value;
-    var n = (REG.lib || []).find(function (x) { return x.slug === slug; });
-    if (!n) return toast('Chọn truyện trước', 'err');
-    var body = $('#qkBody').value;
-    if (!body.trim()) return toast('Chưa có nội dung chương', 'err');
-    var b = $('#qkPub'); b.disabled = true; b.innerHTML = '<span class="spin"></span> đang đăng…';
-    bookOf(slug).then(function (bk) {
-      var book = bk || { title: n.title, slug: slug, author: n.author, couple: n.couple, chapters: [] };
-      book.chapters = book.chapters || [];
-      var num2 = book.chapters.length + 1;
-      var title = $('#qkTitle').value.trim() || ('Chương ' + num2);
-      if (!/^\s*(chương|chương\s*\d+)/i.test(title)) title = 'Chương ' + num2 + ': ' + title;
-      book.chapters.push({ t: title, html: textToHtml(body, $('#qkMode').value) });
-      BOOKS[slug] = book;
-      BOOK = book; CUR = n;
-      return saveBook('Đã đăng “' + title + '” · bộ này giờ có ' + book.chapters.length + ' chương');
-    }).then(function () {
-      $('#qkBody').value = ''; $('#qkTitle').value = ''; $('#qkStat').textContent = '0 từ';
-      fillQuickBooks(); renderList();
-    }).catch(function (e) { msg('Đăng lỗi: ' + e.message, 'err'); })
-      .then(function () { b.disabled = false; b.textContent = 'Đăng chương'; });
-  }
   /* ------------------------------ thêm bộ ------------------------------- */
   function addBook() {
     var title = $('#nTitle').value.trim();
@@ -816,7 +1023,7 @@
       return saveRegistry('Đã tạo truyện “' + title + '”');
     }).then(function () {
       ['#nTitle', '#nSlug', '#nAuthor', '#nCouple', '#nYear', '#nThumb', '#nSyn', '#nChap'].forEach(function (s) { $(s).value = ''; });
-      renderList(); fillQuickBooks(); show('list');
+      renderList(); show('list');
     }).catch(function (e) { msg('Tạo truyện lỗi: ' + e.message, 'err'); });
   }
 
@@ -1293,6 +1500,58 @@
     for (var i = ks[0]; i <= ks[ks.length - 1]; i++) if (!have[i]) out.push(i);
     return out;
   }
+  /* ---------------- kiểm kho KV (bản 1.10.0) ---------------------------
+     GET /api/admin/kv → tổng dung lượng + nhóm theo tiền tố khoá. Giúp trả
+     lời "KV phình vì thứ gì": chương (book:), ảnh (img:), bình luận (cmt:),
+     phiếu (voters) hay registry. Nhóm chưa biết tên hiện ở cuối. */
+  function loadKV() {
+    var box = $('#kvAudit'), st = $('#kvState');
+    if (!box) return;
+    if (!ONLINE) {
+      if (st) st.innerHTML = 'Chưa nối Worker — kiểm kho cần KV thật.';
+      box.innerHTML = '';
+      return;
+    }
+    if (st) st.innerHTML = '<span class="spin"></span> đang liệt kê kho…';
+    box.innerHTML = '';
+    api('/api/admin/kv').then(function (r) {
+      var keys = r.keys || 0, bytes = r.bytes || 0;
+      var groups = r.groups || [];
+      var total = 0;
+      groups.forEach(function (g) { total += g.bytes || 0; });
+      var html = '<div class="kvtiles">' +
+        '<div class="kvtile"><b>' + num(keys) + '</b><span>khoá trên KV</span></div>' +
+        '<div class="kvtile"><b>' + kb(bytes) + '</b><span>dung lượng (chưa nén? KV tính byte gốc)</span></div>' +
+      '</div>';
+      if (!groups.length) {
+        html += '<div class="sm muted">Kho trống.</div>';
+      } else {
+        /* nhóm to nhất lên trước để thấy ngay thứ đang phình */
+        groups = groups.slice().sort(function (a, b) { return (b.bytes || 0) - (a.bytes || 0); });
+        var maxB = Math.max.apply(null, groups.map(function (g) { return g.bytes || 0; }).concat([1]));
+        html += '<table class="tbl kvtab"><thead><tr><th>Nhóm khoá</th><th>Số khoá</th><th style="text-align:right">Dung lượng</th><th>Tỉ trọng</th></tr></thead><tbody>';
+        groups.forEach(function (g) {
+          var pct = Math.min(100, Math.round(((g.bytes || 0) / maxB) * 100));
+          html += '<tr><td><code>' + esc(g.prefix) + '</code></td><td>' + num(g.keys) + '</td>' +
+            '<td style="text-align:right">' + kb(g.bytes || 0) + '</td>' +
+            '<td><span class="kvbar"><span style="width:' + pct + '%"></span></span></td></tr>';
+        });
+        html += '</tbody></table>';
+      }
+      if (st) st.innerHTML = '';
+      box.innerHTML = html;
+    }).catch(function (e) {
+      if (st) st.innerHTML = esc(e.message);
+      box.innerHTML = '';
+    });
+  }
+  function kb(n) {
+    n = n || 0;
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    return (n / 1024 / 1024).toFixed(2) + ' MB';
+  }
+
   function runDoctor() {
     if (!REG) return;
     var lib = (REG.lib || []).slice();
@@ -2014,7 +2273,7 @@
     $$('#chFindRes [data-i]').forEach(function (b) {
       b.addEventListener('click', function () {
         openChap(Number(b.dataset.i));
-        var box2 = $('#chBody');
+        var box2 = $('#edBody');
         if (box2) box2.scrollIntoView({ behavior: 'smooth', block: 'center' });
       });
     });
@@ -2093,7 +2352,7 @@
       REG.lib = REG.lib || [];
       REG.editorChoice = REG.editorChoice || (REG.settings && REG.settings.editorChoice) || [];
       dirty.meta = dirty.set = true; markDirty();
-      renderList(); fillQuickBooks(); fillVoteBooks(); renderSlides(); renderSched(); renderSettings(); renderOverview();
+      renderList(); fillVoteBooks(); renderSlides(); renderSched(); renderSettings(); renderOverview();
       $('#libCount').textContent = num(REG.lib.length);
       msg('Đã nạp bản nháp trong máy — kiểm tra rồi bấm Lưu để ghi lên KV.', 'info');
       toast('Đã nạp bản nháp', 'ok');
@@ -2132,8 +2391,17 @@
         : '';
     }
     if (rb) {
-      rb.classList.toggle('hide', !(u && isAdmin()));
-      rb.innerHTML = ic('shield', 'i-s') + 'quản trị';
+      /* huy hiệu quyền: nói rõ vào bằng TÀI KHOẢN hay bằng KHOÁ ADMIN_KEY */
+      if (!(u && isAdmin()) && MODE !== 'key') {
+        rb.classList.add('hide'); rb.innerHTML = '';
+      } else {
+        var viaKey = MODE === 'key' || (!u && MODE === 'key');
+        rb.classList.remove('hide');
+        rb.title = viaKey
+          ? 'Quản trị bằng khoá ADMIN_KEY của Worker (không gắn tài khoản)'
+          : 'Quản trị bằng tài khoản Google trong danh sách Worker (ADMIN_EMAILS)';
+        rb.innerHTML = ic(viaKey ? 'key' : 'shield', 'i-s') + (viaKey ? 'quản trị · khoá' : 'quản trị · Google');
+      }
     }
     if (lo) lo.classList.toggle('hide', !u);
     var gw = $('#gateWho');
@@ -2144,15 +2412,23 @@
         : 'Chưa đăng nhập. Danh sách tài khoản quản trị được giữ kín trên Worker.';
     }
   }
+  /* MODE = cách đã qua cổng: 'login' (tài khoản Google/Supabase) | 'key'
+     (ADMIN_KEY) | 'local' (dữ liệu tĩnh). Huy hiệu ở thanh trên nói rõ
+     quyền này đến từ đâu — cùng một mức quyền, khác nguồn xác nhận. */
+  var MODE = '';
   function gatePass(how) {
     AUTHED = true;
+    MODE = how;
     var g = $('#gate'); if (g) g.classList.add('hide');
+    var sh = $('#ashell'); if (sh) sh.classList.add('authed');
     paintWho();
   }
   function gateHold(text, kind) {
     AUTHED = false;
+    MODE = '';
     var g = $('#gate'); if (g) g.classList.remove('hide');
     var app = $('#scApp'); if (app) app.classList.add('hide');
+    var sh = $('#ashell'); if (sh) sh.classList.remove('authed');
     gateMsg(text || '', kind || 'info');
     paintWho();
   }
@@ -2251,7 +2527,7 @@
       if (k === 'stats') loadStats(false);
       if (k === 'votes') { fillVoteBooks(); if (ONLINE && !VO.data) loadVoters($('#voBook').value); paintVotes(); }
       if (k === 'overview') renderOverview();
-      if (k === 'doctor' && !DOC.rows.length) runDoctor();
+      if (k === 'doctor') { if (!DOC.rows.length) runDoctor(); if (ONLINE) loadKV(); }
       if (k === 'cmts') { fillModBooks(); loadMod(); }
       if (k === 'log') loadLog();
       if (k === 'edit' && !CUR) return;
@@ -2292,35 +2568,6 @@
     CZ.download('ssochuz-registry-' + today() + '.json', JSON.stringify(REG, null, 1));
   });
   $('#btnAdd2').addEventListener('click', function () { show('new'); });
-  $('#qkBody').addEventListener('input', function () { $('#qkStat').textContent = num(CZ.words(this.value)) + ' từ'; });
-  $('#qkPub').addEventListener('click', quickPublish);
-  /* mở tệp từ máy: .txt / .md / .html → đổ vào ô soạn, tên tệp thành tiêu đề chương */
-  $('#qkFileBtn').addEventListener('click', function () { $('#qkFile').click(); });
-  $('#qkFile').addEventListener('change', function () {
-    var f = this.files && this.files[0];
-    if (!f) return;
-    var rd = new FileReader();
-    rd.onload = function () {
-      var txt = String(rd.result || '');
-      var isHtml = /\.html?$/i.test(f.name) || /^\s*<[a-z][\s\S]*>/i.test(txt.slice(0, 200));
-      $('#qkBody').value = txt;
-      $('#qkMode').value = isHtml ? 'raw' : 'para';
-      if (!$('#qkTitle').value.trim()) {
-        var base = f.name.replace(/\.[a-z]+$/i, '').replace(/[-_]+/g, ' ').trim();
-        $('#qkTitle').value = base;
-      }
-      $('#qkStat').textContent = num(CZ.words(txt)) + ' từ';
-      $('#qkFileName').textContent = f.name + ' · ' + num(CZ.words(txt)) + ' từ';
-      toast('Đã mở ' + f.name, 'ok');
-    };
-    rd.onerror = function () { toast('Không đọc được tệp này', 'err'); };
-    rd.readAsText(f);
-  });
-  $('#qkPreview').addEventListener('click', function () {
-    $('#qkPrevBox').classList.remove('hide');
-    $('#qkPrev').innerHTML = textToHtml($('#qkBody').value, $('#qkMode').value) ||
-      '<span class="sm muted">Chưa có nội dung.</span>';
-  });
   $('#btnNew').addEventListener('click', addBook);
   $('#nTitle').addEventListener('input', function () {
     if (!$('#nSlug').dataset.touched) $('#nSlug').value = slugify(this.value);
@@ -2342,12 +2589,58 @@
   $('#btnSaveMeta').addEventListener('click', function () { saveMeta(); });
   $('#btnDraft').addEventListener('click', saveDraft);
   $('#chTitle').addEventListener('input', function () { dirty.book = true; markDirty(); });
-  $('#chBody').addEventListener('input', function () { dirty.book = true; markDirty(); $('#chStat').textContent = num(CZ.words(this.value)) + ' từ'; });
+  /* trình soạn: gõ là tính lại từ/ký tự + đánh dấu chưa lưu */
+  var edIn = $('#edBody');
+  if (edIn) edIn.addEventListener('input', function () { dirty.book = true; markDirty(); chStat(); });
+  /* thanh định dạng: B/I/U/S · H2/H3/Đoạn/trích dẫn · gạch phân cách · canh */
+  $('#edToolbar').addEventListener('click', function (e) {
+    var b = e.target && e.target.closest ? e.target.closest('button') : null;
+    if (!b) return;
+    if (b.dataset.cmd) edExec(b.dataset.cmd, null);
+    else if (b.dataset.block) edBlock(b.dataset.block);
+    else if (b.dataset.align) edExec('justify' + b.dataset.align.charAt(0).toUpperCase() + b.dataset.align.slice(1), null);
+    else if (b.dataset.img !== undefined) $('#edImg').click();
+  });
+  /* Ctrl+B/I/U vẫn hoạt động tự nhiên trong contenteditable — chỉ giữ focus
+     cho khu soạn khi bấm chuột vào khung */
+  if (edIn) edIn.addEventListener('keydown', function (e) {
+    if (e.key === 'Tab') { /* Tab = thụt dòng 2 nấc (lời hứa của trình soạn) */
+      e.preventDefault();
+      try { document.execCommand('insertText', false, '  '); } catch (x) {}
+    }
+  });
+  /* ảnh trong chương: lên từ máy → nén WebP → KV → chèn <img> */
+  $('#edImg').addEventListener('change', function () {
+    var f = this.files && this.files[0];
+    this.value = '';
+    if (!f) return;
+    var ed2 = $('#edBody');
+    uploadImageFile(f, function (busy) {
+      var old = ed2.innerHTML;
+      if (busy) {
+        if (old.indexOf('img-uploading') < 0) ed2.insertAdjacentHTML('beforeend', '<p class="img-uploading"><span class="spin"></span> ' + esc(busy) + '</p>');
+        return;
+      }
+    }).then(function (r) {
+      var tag = $('#edBody .img-uploading'); if (tag) tag.remove();
+      if (!r) return;
+      edInsertImage(r.url, $('#chTitle').value.trim() || '');
+      toast('Đã chèn ảnh (' + Math.max(1, Math.round(r.bytes / 1024)) + ' KB) — bấm “Lưu chương này” rồi “Lưu toàn bộ chương”', 'ok');
+    }).catch(function (e) {
+      var tag = $('#edBody .img-uploading'); if (tag) tag.remove();
+      toast(e.message, 'err');
+    });
+  });
+  /* mở tệp chương từ máy: .txt/.md/.html */
+  $('#chFileBtn').addEventListener('click', function () { $('#chFile').click(); });
+  $('#chFile').addEventListener('change', function () {
+    var f = this.files && this.files[0];
+    this.value = '';
+    if (f) importChapterFile(f);
+  });
   $('#chSave').addEventListener('click', function () {
-    if (!BOOK || CHAP < 0) return toast('Chọn một chương trong danh sách trước', 'err');
-    BOOK.chapters[CHAP] = { t: $('#chTitle').value.trim() || ('Chương ' + (CHAP + 1)), html: $('#chBody').value };
-    dirty.book = true; markDirty(); renderChapters();
-    toast('Đã cập nhật chương ' + (CHAP + 1) + ' (nhớ bấm Lưu toàn bộ chương)', 'ok');
+    if (!edSaveCurrent(true)) return toast('Chọn một chương trong danh sách trước', 'err');
+    renderChapters();
   });
   $('#chDel').addEventListener('click', function () {
     if (!BOOK || CHAP < 0) return;
@@ -2355,7 +2648,7 @@
     CZ.confirm('Xoá chương ' + (i + 1) + ' — ' + (BOOK.chapters[i].t || '') + '?', 'Xoá').then(function (ok) {
       if (!ok) return;
       BOOK.chapters.splice(i, 1); CHAP = -1;
-      $('#chTitle').value = ''; $('#chBody').value = '';
+      $('#chTitle').value = ''; edIn.innerHTML = ''; chStat();
       dirty.book = true; markDirty(); renderChapters();
     });
   });
@@ -2367,10 +2660,76 @@
     dirty.book = true; markDirty();
   });
   $('#btnSaveCh').addEventListener('click', function () {
-    if (CHAP >= 0 && BOOK) BOOK.chapters[CHAP] = { t: $('#chTitle').value.trim() || ('Chương ' + (CHAP + 1)), html: $('#chBody').value };
-    saveBook('Đã lưu chương');
+    if (edSaveCurrent(true)) saveBook('Đã lưu chương');
   });
-  $('#btnDelBook').addEventListener('click', function () { if (CUR) delBook(CUR.slug); });
+  /* xoá bộ: BẤM HAI LẦN (nút tự chuyển thành “xác nhận” 8 giây) */
+  $('#btnDelBook').addEventListener('click', function () {
+    if (!CUR) return;
+    var self = this;
+    arm2(this, 'Bấm lần nữa để XOÁ TOÀN BỘ', function () { delBookRun(CUR.slug); self.blur(); });
+  });
+  /* ảnh bìa: lên từ máy → nén WebP → KV → điền URL vào ô */
+  $('#btnCoverUp').addEventListener('click', function () { $('#coverFile').click(); });
+  $('#coverFile').addEventListener('change', function () {
+    var f = this.files && this.files[0];
+    this.value = '';
+    if (!f) return;
+    var busy = $('#coverBusy');
+    uploadImageFile(f, function (t) { busy.textContent = t || ''; })
+      .then(function (r) {
+        busy.textContent = '';
+        if (!r) return;
+        /* ảnh sống trên Worker (domain khác web) → URL tuyệt đối */
+        var abs = CZ.API ? (CZ.API.replace(/\/+$/, '') + r.url) : r.url;
+        $('#fThumb').value = abs;
+        var im = $('#coverImg'); if (im) im.src = abs;
+        var prev = $('#coverPrev'); if (prev) prev.classList.remove('empty');
+        CUR = CUR || {}; CUR.thumb = abs; CUR.slide = abs;
+        dirty.meta = true; markDirty();
+        toast('Đã lên ảnh bìa (' + Math.max(1, Math.round(r.bytes / 1024)) + ' KB) — nhớ bấm “Lưu thông tin”', 'ok');
+      })
+      .catch(function (e) { busy.textContent = ''; toast(e.message, 'err'); });
+  });
+  $('#fThumb').addEventListener('input', function () {
+    var im = $('#coverImg'), prev = $('#coverPrev');
+    if (im) { im.src = this.value.trim(); }
+    if (prev) prev.classList.toggle('empty', !this.value.trim());
+  });
+  /* khóa mật mã */
+  $('#btnLock').addEventListener('click', function () {
+    if (!CUR) return;
+    var p1 = $('#lockPw').value, p2 = $('#lockPw2').value;
+    if (p1.length < 8) return msg('Mật mã cần tối thiểu 8 ký tự.', 'err');
+    if (p1 !== p2) return msg('Hai ô mật mã không khớp nhau.', 'err');
+    var self = this;
+    arm2(this, 'Khóa/đổi mật mã — bấm lần nữa', function () {
+      self.blur();
+      var busy2 = $('#lockBusy');
+      busy2.textContent = 'Đang gửi lên Worker…';
+      lockBook(p1).then(function () {
+        busy2.textContent = '';
+        $('#lockPw').value = ''; $('#lockPw2').value = '';
+        toast(CUR.lock ? 'Đã khóa “' + CUR.title + '” — chương chỉ mở với mật mã' : 'Đã bỏ khóa', 'ok');
+        msg('Mật mã đã đổi trên Worker. Người đọc sẽ nhập mật mã mới; token cũ (còn hạn) vẫn mở tới khi hết hạn.', 'ok');
+      }).catch(function (e) {
+        busy2.textContent = '';
+        msg(e.message, 'err');
+      });
+    });
+  });
+  $('#btnUnlock').addEventListener('click', function () {
+    if (!CUR) return;
+    var self = this;
+    arm2(this, 'Bỏ khóa — bấm lần nữa', function () {
+      self.blur();
+      var busy3 = $('#lockBusy');
+      busy3.textContent = 'Đang bỏ khóa…';
+      lockBook('').then(function () {
+        busy3.textContent = '';
+        toast('Đã bỏ khóa “' + CUR.title + '” — chương công khai trở lại', 'ok');
+      }).catch(function (e) { busy3.textContent = ''; msg(e.message, 'err'); });
+    });
+  });
   $('#sSave').addEventListener('click', saveSettings);
   ['#sSched', '#sSchedNote', '#sGiscusRepo', '#sGiscusId', '#aUrl', '#aKey', '#aGoogle']
     .forEach(function (s) {
@@ -2437,11 +2796,19 @@
     var el = $(s); if (el) el.addEventListener('input', function () { dirty.set = true; markDirty(); });
   });
   
-  $('#btnSeed').addEventListener('click', seedKV);
+  $('#btnSeed').addEventListener('click', function () {
+    /* nạp đè toàn bộ KV — xác nhận 2 bước (nút) + 1 bước (hộp thoại) */
+    var self = this;
+    arm2(this, 'Nạp đè toàn bộ KV — bấm lần nữa', function () { self.blur(); seedKV(); });
+  });
   $('#btnHealth').addEventListener('click', function () { health().then(function () { toast('Đã kiểm tra Worker', 'ok'); }); });
   $('#btnStatsClear').addEventListener('click', function () { loadStats(true); show('stats'); });
   $('#btnBackup').addEventListener('click', backup);
-  $('#btnRestore').addEventListener('click', function () { $('#fileRestore').click(); });
+  $('#btnRestore').addEventListener('click', function () {
+    /* phục hồi từ file ghi đè dữ liệu — xác nhận 2 bước trước khi mở chọn tệp */
+    var self = this;
+    arm2(this, 'Phục hồi từ file — bấm lần nữa', function () { self.blur(); $('#fileRestore').click(); });
+  });
   $('#fileRestore').addEventListener('change', function (e) {
     var f = e.target.files[0]; if (f) restore(f);
     e.target.value = '';
@@ -2454,17 +2821,16 @@
   document.addEventListener('keydown', function (e) {
     if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 's') {
       e.preventDefault();
-      if (!$('#pane-edit').classList.contains('hide')) { saveMeta(); saveBook('Đã lưu bộ & chương'); }
+      if (!$('#pane-edit').classList.contains('hide')) { saveMeta(); if (edSaveCurrent(true)) saveBook('Đã lưu bộ & chương'); }
       else if (!$('#pane-settings').classList.contains('hide')) saveSettings();
-      else if (!$('#pane-quick').classList.contains('hide')) quickPublish();
       else toast('Không có gì để lưu ở tab này');
       return;
     }
     if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'k') { e.preventDefault(); $('#q').focus(); return; }
     if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName || '')) return;
     var map = {
-      1: 'overview', 2: 'list', 3: 'quick', 4: 'new', 5: 'edit',
-      6: 'doctor', 7: 'cmts', 8: 'stats', 9: 'log', 0: 'settings'
+      1: 'overview', 2: 'list', 3: 'new', 4: 'edit',
+      5: 'doctor', 6: 'cmts', 7: 'stats', 8: 'votes', 9: 'log', 0: 'settings'
     };
     if (String(e.key).toLowerCase() === 'v') {
       fillVoteBooks();
@@ -2482,7 +2848,7 @@
       if (k === 'stats') loadStats(false);
       if (k === 'votes') { fillVoteBooks(); if (ONLINE && !VO.data) loadVoters($('#voBook').value); paintVotes(); }
       if (k === 'overview') renderOverview();
-      if (k === 'doctor' && !DOC.rows.length) runDoctor();
+      if (k === 'doctor') { if (!DOC.rows.length) runDoctor(); if (ONLINE) loadKV(); }
       if (k === 'cmts') { fillModBooks(); loadMod(); }
       if (k === 'reports' && !REP.all.length) loadReports();
       if (k === 'log') loadLog();
@@ -2531,7 +2897,12 @@
     runDoctor().then(function () { b.disabled = false; b.textContent = 'Quét lại'; },
       function () { b.disabled = false; b.textContent = 'Quét lại'; });
   });
-  $('#docFixKv').addEventListener('click', docPushRepo);
+  $('#kvRun').addEventListener('click', loadKV);
+  $('#docFixKv').addEventListener('click', function () {
+    /* nạp chương từ repo ghi đè kho chương trên KV — xác nhận 2 bước */
+    var self = this;
+    arm2(this, 'Nạp đè chương từ repo — bấm lần nữa', function () { self.blur(); docPushRepo(); });
+  });
   $('#docRecount').addEventListener('click', docRecount);
   $('#docFixReg').addEventListener('click', docFixRegistry);
   $('#docExport').addEventListener('click', function () {
@@ -2593,7 +2964,11 @@
       ? ('bộ: ' + (VO.slug ? titleOf(VO.slug) : 'chưa chọn — sang ô trên chọn bộ'))
       : 'mọi bộ trong thư viện';
   });
-  $('#rsRun').addEventListener('click', resetVotes);
+  $('#rsRun').addEventListener('click', function () {
+    /* reset phiếu không hoàn tác được — xác nhận 2 bước (nút) + 1 bước (hộp thoại) */
+    var self = this;
+    arm2(this, 'Reset phiếu — bấm lần nữa', function () { self.blur(); resetVotes(); });
+  });
 
   /* --------------------- NHÂN BẢN + TÌM TRONG CHƯƠNG ---------------------- */
   $('#edDup').addEventListener('click', dupBook);
@@ -2633,21 +3008,5 @@
     paintDraftChip();                    /* có nháp thì hiện nút, không hỏi hộp thoại */
     /* việc nối Worker do boot() ở trên lo — không gọi hai lần */
   })();
-  $('#privateForm').addEventListener('submit', async function (event) {
-    event.preventDefault();
-    var button = this.querySelector('button'); button.disabled = true;
-    var result = $('#privateResult'); result.textContent = 'Đang lưu vào kho riêng tư…';
-    try {
-      var file = $('#privateFile').files[0];
-      if (!file || file.size > 1900000) throw new Error('Chọn tệp JSON dưới 1,9 MB.');
-      var slug = $('#privateSlug').value;
-      if (!/^private-[a-z0-9-]+$/.test(slug)) throw new Error('Mã phải bắt đầu bằng private-.');
-      var book = JSON.parse(await file.text());
-      if (!confirm('Lưu toàn bộ nội dung và thay mật khẩu của ' + slug + '?')) { result.textContent = 'Đã huỷ, chưa thay đổi dữ liệu.'; return; }
-      await api('/api/private/' + slug, { method: 'PUT', body: { password: $('#privatePassword').value, book: book } });
-      $('#privatePassword').value = ''; $('#privateFile').value = '';
-      result.textContent = 'Đã lưu. Đường dẫn gửi người đọc: ' + location.origin + '/truyen.html?slug=' + slug;
-    } catch (error) { result.textContent = error.message; }
-    finally { button.disabled = false; }
-  });
+
 })();

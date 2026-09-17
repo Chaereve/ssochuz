@@ -123,14 +123,49 @@
       });
     });
   }
+  /* -- token mở truyện khóa mật mã (bản 1.10.0) --------------------------
+     Worker trả token 6 giờ khi nhập đúng mật mã (POST /api/lock). Cất vào
+     sessionStorage (không phải localStorage): đóng tab là mất — khóa truyện
+     vẫn là khóa, không để mật mã "ở lại máy" qua nhiều phiên như đăng nhập. */
+  var LOCK_PFX = 'ssochuz-lock-';
+  function lockToken(slug) {
+    try {
+      var v = JSON.parse(sessionStorage.getItem(LOCK_PFX + slug) || 'null');
+      if (v && v.token && v.exp * 1000 > Date.now()) return v.token;
+    } catch (e) {}
+    return '';
+  }
+  function setLockToken(slug, token, exp) {
+    try { sessionStorage.setItem(LOCK_PFX + slug, JSON.stringify({ token: String(token || ''), exp: Number(exp) || 0 })); } catch (e) {}
+  }
+  function clearLockToken(slug) {
+    try { sessionStorage.removeItem(LOCK_PFX + slug); } catch (e) {}
+  }
+  /* bỏ nhớ bộ đang mở — dùng sau khi mở khóa thành công để tải lại từ API */
+  function forgetBook(slug) {
+    try { delete memo.books[slug]; } catch (e) {}
+  }
   /* -- một bộ: chương + nội dung ---------------------------------------- */
   function book(slug) {
     slug = String(slug || '');
     if (!slug) return Promise.resolve(null);
     if (slug.indexOf('private-') === 0) return Promise.resolve({ locked: true });
     if (memo.books[slug]) return memo.books[slug];
-    var p = (useApi() ? jgetApi(API + '/api/book/' + encodeURIComponent(slug), 15000) : Promise.resolve(null))
+    var entry = findLib(slug);
+    var tok = lockToken(slug);
+    /* Bộ khóa mật mã mà chưa mở khóa: KHÔNG gọi API, KHÔNG rớt về file tĩnh
+       (data/book/*.json có đủ chương — rớt là lộ nội dung). Trả về vỏ để
+       trang truyện vẽ chốt nhập mật mã. */
+    if (entry && entry.locked && !tok) {
+      memo.books[slug] = Promise.resolve({ locked: true, chapters: [] });
+      return memo.books[slug];
+    }
+    var url = API + '/api/book/' + encodeURIComponent(slug) + (tok ? '?token=' + encodeURIComponent(tok) : '');
+    var p = (useApi() ? jgetApi(url, 15000) : Promise.resolve(null))
       .then(function (b) {
+        /* Worker trả vỏ {locked:true, chapters:[]} = token hết hạn/sai —
+           KHÔNG được rớt về file tĩnh, phải về chốt nhập mật mã */
+        if (b && b.locked) { clearFallback(); return b; }
         if (b && b.chapters && b.chapters.length) { clearFallback(); return b; }
         /* N13: chương lấy không được từ Worker → rớt về file tĩnh vẫn đọc được */
         return jget('/data/book/' + encodeURIComponent(slug) + '.json', 20000);
@@ -1065,6 +1100,9 @@
     var rc = realCount(o.slug);
     if (rc != null && rc !== o.chapters) { o.chapters = rc; o.countFixed = true; }
     o.is18 = !!o.is18;
+    /* cờ khóa mật mã (bản 1.10.0): registry chỉ mang CỜ `lock:1` — mật mã/băm
+       nằm riêng trong bản ghi book trên KV, web không bao giờ thấy. */
+    o.locked = o.lock === 1 || o.lock === true;
     o.statusCls = statusCls(o.status);
     o.status = statusLabel(o.status);
     /* nhãn: nếu chưa có hoặc là dạng "0 chương" thì tạo lại cho đúng (0/— hoặc 29/29) */
@@ -1230,6 +1268,7 @@
       '<span class="scrim"></span>' +
       '<span class="stic st-' + stCls + '" title="' + esc(stLab) + '" aria-label="Tình trạng: ' + esc(stLab) + '" role="img">' + icon(STATUS_ICON[stCls] || 'clock', 'i-s') + '</span>' +
       (n.fresh ? '<span class="nw-bookmark"><span>NEW</span></span>' : '') +
+      (n.locked ? '<span class="lock-bookmark" title="Truyện có mật mã — bấm vào để nhập mật mã và đọc" aria-label="Truyện có mật mã">' + icon('lock', 'i-s') + '</span>' : '') +
       followBadge(n) +
       '<span class="foot"><span class="ch">' + esc(countText(n)) + '</span>' +
         (n.is18 ? '<span class="b18">18+</span>' : '') + '</span>' +
@@ -1254,6 +1293,7 @@
       '</span>' +
       '<span class="cl-main">' +
         '<span class="cl-top"><b class="cl-t">' + esc(n.title) + '</b>' +
+          (n.locked ? '<span class="b18 locktag" title="Truyện có mật mã">' + icon('lock', 'i-s') + '</span>' : '') +
           (n.is18 ? '<span class="b18">18+</span>' : '') +
           (n.fresh ? '<span class="badge-new">NEW</span>' : '') +
           followBadge(n) +
@@ -2455,7 +2495,8 @@
 
   w.CZ = {
     API: API, normalizeApi: normalizeApi,
-    registry: registry, book: book, stats: stats, refreshStats: refreshStats, schedule: schedule,
+    registry: registry, book: book, forgetBook: forgetBook, stats: stats, refreshStats: refreshStats, schedule: schedule,
+    lockToken: lockToken, setLockToken: setLockToken, clearLockToken: clearLockToken,
     vid: vid, reportView: reportView, sendReport: sendReport, vote: vote, rate: rate, myRating: function (slug) { return jpost('/api/rate/me', { slug: slug, vid: vid() }, authToken()); },
     lib: libList, slides: slides, editorChoice: editorChoice, donationCfg: donationCfg, reportCfg: reportCfg, findLib: findLib, statsOf: statsOf, onStats: onStats,
     progress: progress, setProgress: setProgress, lastReadAt: lastReadAt,

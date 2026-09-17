@@ -162,7 +162,13 @@
         if (n.indexOf('on') === 0 || ((n === 'href' || n === 'src') && /^\s*(javascript|data):/i.test(v))) el.removeAttribute(a.name);
       });
       if (el.tagName === 'A') { el.setAttribute('target', '_blank'); el.setAttribute('rel', 'noopener nofollow'); }
-      if (el.tagName === 'IMG') { el.setAttribute('loading', 'lazy'); el.setAttribute('decoding', 'async'); el.removeAttribute('width'); el.removeAttribute('height'); }
+      if (el.tagName === 'IMG') {
+        el.setAttribute('loading', 'lazy'); el.setAttribute('decoding', 'async'); el.removeAttribute('width'); el.removeAttribute('height');
+        /* ảnh từ trang quản trị sống trên Worker (KV), không nằm trong site
+           tĩnh — đường dẫn tương đối /api/img/… phải trỏ về đúng Worker */
+        var src = String(el.getAttribute('src') || '');
+        if (CZ.API && /^\s*\/api\/img\//i.test(src)) el.setAttribute('src', CZ.API + src.replace(/^\s+/, ''));
+      }
     });
     /* <div> chỉ chứa chữ → <p> cho đúng nhịp đoạn văn */
     $$('div', tmp).forEach(function (d) {
@@ -259,6 +265,10 @@
     return Math.max(1, Math.min(100, Math.round(ch / tot * 100)));
   }
   function readBtn(n, ch) {
+    /* truyện khóa mật mã chưa mở: nút Đọc thành chốt dẫn tới hộp nhập mật mã */
+    if (n.locked && !CHS.length) {
+      return '<button class="btn pri lg" id="lockBtn" type="button" title="Cần mật mã để đọc truyện này">' + ic('lock', 'i-s') + 'Mở khóa để đọc</button>';
+    }
     if (!n.canRead) return '<button class="btn pri lg off" disabled>' + ic('clock', 'i-s') + 'Chưa có chương — sắp ra mắt</button>';
     /* truyện 18+ chưa xác nhận: nút thành chốt chặn, không đi thẳng vào chương */
     if (isAdult() && !confirmed18()) {
@@ -367,11 +377,13 @@
       '<div class="in">' +
         '<div class="cover" data-t="' + esc(n.title) + '">' + (im ? '<img src="' + esc(im) + '"' + CZ.coverFB(n, im) + ' alt="Bìa ' + esc(n.title) + '" width="300" height="450" fetchpriority="high" referrerpolicy="no-referrer">' : '') +
           (n.is18 ? '<span class="b18">18+</span>' : '') +
+          (n.locked ? '<span class="lock-cover" title="Truyện có mật mã — cần mật mã để đọc" aria-label="Truyện có mật mã">' + ic('lock', 'i-s') + '</span>' : '') +
           (n.fresh ? '<span class="nw-bookmark"><span>NEW</span></span>' : '') + '</div>' +
         '<div>' +
           '<h1>' + esc(n.title) + '</h1>' +
           '<div class="meta">' +
             '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(CZ.statusLabel(n.statusCls || n.status)) + '</span>' +
+            (n.locked ? '<span class="pill lock" title="Truyện được bảo vệ bằng mật mã — thẻ và giới thiệu công khai, chương cần mật mã">' + ic('lock', 'i-s') + 'Có mật mã</span>' : '') +
             '<span>' + ic('book', 'i-s') + ' <b>' + esc(CZ.countText(n)) + '</b></span>' +
             (n.author ? '<span>' + ic('pen', 'i-s') + ' ' + esc(n.author) + '</span>' : '') +
             (n.couple ? '<span>' + ic('users', 'i-s') + ' ' + esc(n.couple) + '</span>' : '') +
@@ -448,6 +460,14 @@
       });
     });
     $('#shareBtn').addEventListener('click', function () { CZ.copy(location.origin + CZ.storyURL(n.slug), 'Đã copy link bộ truyện'); });
+    /* khóa mật mã: nút Đọc dẫn xuống hộp nhập mật mã ở phần chương */
+    var lk = $('#lockBtn');
+    if (lk) lk.addEventListener('click', function () {
+      var g = $('#lockGate');
+      if (g) g.scrollIntoView({ behavior: CZ.reduce ? 'auto' : 'smooth', block: 'center' });
+      var inp = $('#unlockPw');
+      if (inp) setTimeout(function () { inp.focus({ preventScroll: true }); }, 250);
+    });
     /* chốt 18+: nút Đọc thành modal xác nhận, xác nhận xong mở thẳng chương */
     var ag = $('#adultGate');
     if (ag) ag.addEventListener('click', function () {
@@ -1567,13 +1587,100 @@
   }
   CZ.mountShell({ active: 'library' });          /* đầu trang hiện ngay */
   skeletonStory();
+  /* ======================= 3b. CHỐT MẬT MÃ (bản 1.10.0) ===================
+     Truyện có `lock:1` trong registry: hero + giới thiệu VẪN công khai (thẻ ở
+     trang chủ cũng vậy), nhưng phần chương thay bằng hộp nhập mật mã. Nhập
+     đúng → Worker cấp token 6 giờ (sessionStorage, đóng tab là hết) → loadBook
+     lại và trang tự biến về bản đọc bình thường, kể cả đang đứng ở URL chương. */
+  function renderLockGate(meta) {
+    N = CZ.norm(Object.assign({}, meta || {}, { title: (meta && meta.title) || SLUG, slug: SLUG }));
+    N.url = CZ.storyURL(SLUG);
+    N.canRead = false;
+    try { document.title = N.title + ' · ssochuz library'; } catch (e) {}
+    renderStory();
+    var sec = $('#chapSec');
+    if (sec) {
+      /* KHÔNG thay innerHTML của #chapSec — các nút tìm/sắp/xếp chương đã
+         BIND từ boot; phá DOM là lần render kế tiếp chết (lỗi chapCount null).
+         Chỉ thêm class .lockon (CSS ẩn các khối) + chèn hộp khóa vào đầu. */
+      sec.classList.add('lockon');
+      var oldGate = $('#lockGate');
+      if (oldGate) oldGate.remove();
+      sec.insertAdjacentHTML('afterbegin',
+        '<div class="lockgate" id="lockGate">' +
+          '<span class="lg-ic" aria-hidden="true">' + ic('lock') + '</span>' +
+          '<h3>Truyện này được bảo vệ bằng mật mã</h3>' +
+          '<p class="lg-sub">“' + esc(N.title) + '” chỉ mở cho người có mật mã do chủ web cung cấp. ' +
+          'Thẻ truyện và phần giới thiệu vẫn công khai — danh sách chương và nội dung chỉ hiện sau khi mở khóa.</p>' +
+          (CZ.API ? '' : '<p class="lg-warn">Máy này đang dùng dữ liệu tĩnh (chưa nối được Worker) nên không xác minh mật mã được. Hãy mở web khi có kết nối rồi thử lại.</p>') +
+          '<form id="unlockForm" novalidate>' +
+            '<label class="fl" for="unlockPw">Mật mã của truyện</label>' +
+            '<div class="lg-row">' +
+              '<input class="inp" id="unlockPw" type="password" placeholder="Nhập mật mã" autocomplete="off" spellcheck="false" required maxlength="256">' +
+              '<button class="btn pri" type="submit">' + ic('lock_open', 'i-s') + 'Mở truyện</button>' +
+            '</div>' +
+          '</form>' +
+          '<p class="lg-msg" id="unlockMsg" role="status"></p>' +
+        '</div>');
+      bindGate();
+    }
+    /* bình luận chưa được xem trước khi mở khóa — tránh lộ nội dung qua comment */
+    var cmtTab = $('#storyTabs [data-tab="cmt"]');
+    if (cmtTab) cmtTab.style.display = 'none';
+    showTab('chap');
+    CZ.reveal();
+    try { document.querySelector('meta[name="description"]').setAttribute('content', (N.syn || N.title).slice(0, 180)); } catch (e) {}
+  }
+  function bindGate() {
+    var form = $('#unlockForm');
+    if (!form) return;
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var inp = $('#unlockPw'), btn = form.querySelector('button[type="submit"]'), msgEl = $('#unlockMsg');
+      if (!CZ.API) {
+        msgEl.textContent = 'Chưa nối Worker — không mở khóa được ở chế độ dữ liệu tĩnh.';
+        msgEl.className = 'lg-msg err';
+        return;
+      }
+      if (!inp.value) { inp.focus(); return; }
+      btn.disabled = true; btn.textContent = 'Đang mở…';
+      msgEl.textContent = ''; msgEl.className = 'lg-msg';
+      fetch(CZ.API + '/api/lock', {
+        method: 'POST', cache: 'no-store',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ slug: SLUG, password: inp.value })
+      }).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, j: j }; });
+      }).then(function (o) {
+        if (!o.ok || !o.j || !o.j.ok || !o.j.token) throw new Error((o.j && o.j.error) || 'Không mở được — kiểm tra lại mật mã.');
+        CZ.setLockToken(SLUG, o.j.token, o.j.exp);
+        CZ.forgetBook(SLUG);
+        CZ.toast('Đã mở khóa — token hết hạn sau 6 giờ (đóng tab là hết ngay).', 'ok');
+        loadBook();
+      }).catch(function (err) {
+        msgEl.textContent = (err && err.message) || 'Không mở được — kiểm tra lại mật mã.';
+        msgEl.className = 'lg-msg err';
+        btn.disabled = false; btn.textContent = 'Mở truyện';
+        inp.focus();
+      });
+    });
+  }
+
   function boot(reg) {
     CZ.mountShell({ active: 'library' });
     if (!SLUG) { showError('Không rõ truyện nào', '<p class="muted">Đường dẫn thiếu tên truyện. Chọn một bộ trong thư viện để bắt đầu đọc.</p>'); return; }
-    var meta = CZ.findLib(SLUG);
     if (reg && (!CZ._memo.reg)) CZ._memo.reg = reg;
+    loadBook();
+  }
+  /* tải chương của bộ đang mở. Bộ khóa mật mã chưa mở → vẽ chốt nhập mật mã
+     (renderLockGate); mở thành công (token trong sessionStorage) → vẽ thường.
+     loadBook() gọi lại được nên sau khi mở khóa không cần tải lại trang. */
+  function loadBook() {
+    var meta = CZ.findLib(SLUG);
+    var isLocked = !!(meta && meta.locked);
     (window.czPrivateBook ? Promise.resolve(window.czPrivateBook) : CZ.book(SLUG)).then(function (bk) {
-      if (bk && bk.locked) {
+      if (bk && bk.locked && !bk.chapters && !isLocked && SLUG.indexOf('private-') === 0) {
+        /* kho truyện riêng tư đời cũ (Durable Object) — luồng riêng, giữ nguyên */
         showError('Truyện riêng tư', '<p>Nội dung chỉ được tải sau khi xác minh mật khẩu. Không hỗ trợ đọc ngoại tuyến.</p><form id="unlockBook"><label for="bookPassword">Mật khẩu truyện</label><input class="inp" id="bookPassword" type="password" autocomplete="off" required maxlength="256"><button class="btn pri" type="submit">Mở truyện</button><p id="unlockMessage" role="status"></p></form>');
         $('#unlockBook').onsubmit = async function (event) {
           event.preventDefault();
@@ -1585,9 +1692,15 @@
             var data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Không mở được truyện.');
             ['chapSec', 'relSec', 'pane-cmt', 'pane-info', 'storyTabs', 'rd'].forEach(function (id) { $('#' + id).style.display = ''; });
-            window.czPrivateBook = data; boot(reg); window.czPrivateBook = null;
+            window.czPrivateBook = data; loadBook(); window.czPrivateBook = null;
           } catch (error) { $('#unlockMessage').textContent = error.message; button.disabled = false; }
         };
+        return;
+      }
+      /* truyện khóa mật mã mà chưa có token hợp lệ: CZ.book trả về vỏ
+         {locked:true, chapters:[]} (không rớt về file tĩnh) → chốt nhập mật mã */
+      if (isLocked && !(bk && bk.chapters && bk.chapters.length)) {
+        renderLockGate(meta);
         return;
       }
       if (!bk || !bk.chapters) {
@@ -1601,6 +1714,14 @@
       }
       BOOK = bk;
       CHS = bk.chapters.map(function (c) { return { t: String(c.t || '').trim() || 'Chương', html: c.html || '' }; });
+      /* mở khóa xong (hoặc bộ thường): gỡ chốt mật mã khỏi phần chương */
+      var secUn = $('#chapSec');
+      if (secUn) secUn.classList.remove('lockon');
+      var gateOut = $('#lockGate');
+      if (gateOut) gateOut.remove();
+      /* trả lại tab bình luận bị ẩn lúc đang khóa */
+      var cmtBack = $('#storyTabs [data-tab="cmt"]');
+      if (cmtBack) cmtBack.style.display = '';
       /* Nhãn "x/y" chỉ được tin khi registry KHỚP số chương thật của kho chương.
          Registry treo "30/30" trong khi bộ chỉ còn 29 chương thì bỏ nhãn cũ đi,
          không để con số 30 hiện ra ở trang chủ / trang truyện / mục lục nữa.

@@ -3245,6 +3245,213 @@ body.rd-focus .rdcmts { display: none; }
 }
 
 /* ============================================================================
+   KHÓA TRUYỆN BẰNG MẬT MÃ (bản 1.10.0)
+   ----------------------------------------------------------------------------
+   Thẻ truyện VẪN hiện ở trang chủ/thư viện — chỉ thêm huy hiệu ổ khóa.
+   Trang truyện: hero + giới thiệu công khai, phần chương thay bằng hộp nhập
+   mật mã (.lockgate). Mốc thiết kế: cùng ngôn ngữ với chốt 18+ (pill, badge).
+   ========================================================================== */
+/* huy hiệu ổ khóa trên bìa (thẻ lưới, hero trang chủ, trang truyện) */
+.lock-cover { position: absolute; top: 8px; right: 8px; z-index: 2;
+  display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+  background: color-mix(in srgb, #1c1917 78%, transparent); color: #f5e9d8;
+  border: 1px solid color-mix(in srgb, var(--gold, #c9a227) 55%, transparent);
+  backdrop-filter: blur(3px); pointer-events: none; }
+.lock-cover .i { width: 13px; height: 13px; }
+.card .th .lock-cover { top: 8px; right: 8px; }
+@media (max-width: 560px) { .lock-cover { width: 22px; height: 22px; } .lock-cover .i { width: 11px; height: 11px; } }
+/* pill "Có mật mã" trong hàng meta (hero + trang truyện) */
+.pill.lock { background: color-mix(in srgb, var(--gold, #c9a227) 16%, var(--surf2));
+  color: color-mix(in srgb, var(--gold, #b8860b) 75%, var(--txt));
+  border: 1px solid color-mix(in srgb, var(--gold, #c9a227) 35%, transparent); font-weight: 700; }
+.pill.lock .i { width: 11px; height: 11px; }
+/* huy hiệu trên bìa ở chế độ thẻ LƯỚI (góc phải-trên, cạnh NEW) */
+.lock-bookmark { position: absolute; top: 8px; right: 8px; z-index: 2;
+  display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+  background: color-mix(in srgb, #1c1917 80%, transparent); color: #f5e9d8;
+  border: 1px solid color-mix(in srgb, var(--gold, #c9a227) 55%, transparent);
+  backdrop-filter: blur(3px); pointer-events: none; }
+.lock-bookmark .i { width: 13px; height: 13px; }
+/* thẻ danh sách: icon nhỏ cạnh tên */
+.cl-top .locktag { width: 15px; height: 15px; border: none; padding: 0;
+  color: color-mix(in srgb, var(--gold, #b8860b) 80%, var(--txt)); background: none; }
+/* ------- hộp nhập mật mã (thay phần danh sách chương) -------
+   #chapSec.lockon: phần chương VẪN ở trong DOM (các nút tìm/sắp đã bind từ
+   boot — phá DOM là lần render sau chết) nhưng bị ẩn; chỉ hộp khóa hiện. */
+#chapSec.lockon .panehead, #chapSec.lockon .chapbar,
+#chapSec.lockon #chapGrid, #chapSec.lockon #chapPager { display: none; }
+.lockgate { max-width: 560px; margin: 8px auto 0; padding: 30px 26px 26px;
+  border: 1px solid var(--bd); border-radius: 16px; text-align: center;
+  background:
+    radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--gold, #c9a227) 7%, transparent), transparent 60%),
+    var(--surf);
+  box-shadow: 0 14px 40px -24px rgba(10, 6, 4, .35); }
+.lockgate .lg-ic { display: grid; place-items: center; width: 58px; height: 58px; margin: 0 auto 14px;
+  border-radius: 50%; background: color-mix(in srgb, var(--gold, #c9a227) 14%, var(--surf2));
+  color: color-mix(in srgb, var(--gold, #b8860b) 80%, var(--txt));
+  border: 1px solid color-mix(in srgb, var(--gold, #c9a227) 40%, transparent); }
+.lockgate .lg-ic .i { width: 26px; height: 26px; }
+.lockgate h3 { margin: 0 0 8px; font-size: 20px; }
+.lockgate .lg-sub { margin: 0 0 18px; color: var(--mut); font-size: 13.5px; line-height: 1.65; }
+.lockgate .lg-warn { margin: 0 0 14px; padding: 10px 12px; border-radius: 10px; font-size: 12.5px;
+  color: color-mix(in srgb, var(--err, #c0392b) 80%, var(--txt));
+  background: color-mix(in srgb, var(--err, #c0392b) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--err, #c0392b) 25%, transparent); }
+.lockgate .fl { text-align: left; }
+.lockgate .lg-row { display: flex; gap: 8px; }
+.lockgate .lg-row .inp { flex: 1; min-width: 0; }
+.lockgate .lg-msg { min-height: 1.2em; margin: 10px 0 0; font-size: 13px; color: var(--mut); }
+.lockgate .lg-msg.err { color: var(--err, #c0392b); font-weight: 600; }
+@media (max-width: 560px) {
+  .lockgate { margin: 4px 0 0; padding: 24px 16px 20px; }
+  .lockgate .lg-row { flex-direction: column; }
+  .lockgate .lg-row .btn { width: 100%; }
+}
+
+/* ============================================================================
+   TRANG QUẢN TRỊ B · VẸN THẰNG + TRÌNH SOẠN CHỮ THẬT (bản 1.10.0)
+   ----------------------------------------------------------------------------
+   .ashell  : lưới sidebar (mặt bàn) + nội dung. Chưa đăng nhập (cổng #gate)
+              thì sidebar ẩn — chỉ còn hộp cổng giữa trang.
+   .snav    : thanh điều hướng. Mặt bàn = dọc trái; ≤900px = ngang cuộn trên.
+   .rte*    : trình soạn chương — thanh định dạng + khung contenteditable.
+   .coverbox: ô ảnh bìa (xem trước + lên ảnh từ máy).
+   .kvtile* : kiểm kho KV (tổng dung lượng + tỉ trọng từng nhóm khoá).
+   .armed   : trạng thái "đã bấm lần 1" của nút nguy hiểm — chờ lần 2.
+   ========================================================================== */
+.ashell { display: grid; grid-template-columns: 224px minmax(0, 1fr); gap: 22px; align-items: start; }
+.ashell .smain { min-width: 0; }
+.ashell:not(.authed) .snav { display: none; }
+.ashell:not(.authed) { grid-template-columns: 1fr; }
+.snav { position: sticky; top: 60px; display: flex; flex-direction: column; gap: 2px;
+  border: 1px solid var(--bd); border-radius: var(--r-lg); background: var(--surf);
+  padding: 10px; max-height: calc(100vh - 76px); overflow: auto; scrollbar-width: thin; }
+.admin-nav-label { font-size: 10.5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--dim); padding: 12px 10px 5px; }
+.admin-nav-label:first-child { padding-top: 2px; }
+.snav button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 9px 10px; border: 0; border-radius: var(--r); background: transparent;
+  color: var(--mut); font: 600 13.5px/1.3 var(--font); cursor: pointer; white-space: nowrap; }
+.snav button:hover { background: var(--surf2); color: var(--txt); }
+.snav button.on { background: var(--acc-soft); color: var(--acc); }
+.snav button.on .admin-nav-icon .i { color: var(--acc); }
+.admin-nav-icon { width: 17px; height: 17px; display: grid; place-items: center; flex: none; }
+.admin-nav-icon .i, .snav button .i { width: 16px; height: 16px; color: var(--dim); }
+.snav button .ct { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--dim);
+  background: var(--surf2); border-radius: 99px; padding: 1px 7px; font-variant-numeric: tabular-nums;
+  max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.snav button.on .ct { background: color-mix(in srgb, var(--acc) 16%, transparent); color: var(--acc); }
+.snav .hide { display: none; }
+/* chưa qua cổng: nắn nội dung về giữa cho đẹp */
+.ashell:not(.authed) .smain { max-width: 560px; margin: 0 auto; width: 100%; }
+
+/* huy hiệu quyền ở thanh trên: Google hay khoá */
+.rolebadge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700;
+  color: var(--acc); background: var(--acc-soft); border: 1px solid color-mix(in srgb, var(--acc) 35%, transparent);
+  border-radius: 99px; padding: 3px 10px; }
+.rolebadge .i { width: 13px; height: 13px; }
+
+/* ---------------- trình soạn chương (contenteditable) -------------------- */
+.edgrid { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 16px; align-items: start; }
+.edleft .chlist { max-height: 460px; }
+.rte-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 3px;
+  border: 1px solid var(--bd); border-bottom: 0; border-radius: var(--r) var(--r) 0 0;
+  background: var(--surf2); padding: 6px 8px; position: sticky; top: 60px; z-index: 5; }
+.rte-tools button { min-width: 30px; height: 30px; padding: 0 8px; display: inline-flex; align-items: center;
+  justify-content: center; gap: 5px; border: 1px solid transparent; border-radius: var(--r-sm);
+  background: transparent; color: var(--mut); font: 700 12.5px/1 var(--font); cursor: pointer; }
+.rte-tools button:hover { background: var(--surf); color: var(--txt); border-color: var(--bd); }
+.rte-tools button:active { transform: translateY(1px); }
+.rte-tools .i { width: 14px; height: 14px; }
+.rte-sep { width: 1px; height: 20px; background: var(--bd); margin: 0 5px; flex: none; }
+.rte { border: 1px solid var(--bd); border-radius: 0 0 var(--r) var(--r); background: var(--surf);
+  min-height: 420px; max-height: 62vh; overflow: auto; padding: 18px 20px;
+  font: 15.5px/1.85 var(--font); color: var(--txt); outline: none; }
+.rte:focus { border-color: var(--acc); box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 14%, transparent); }
+.rte:empty::before, .rte[data-placeholder]:not(:focus):empty::before { content: attr(data-placeholder); color: var(--dim); }
+.rte h2 { font-family: var(--font-head); font-size: 22px; line-height: 1.3; margin: 20px 0 10px; }
+.rte h3 { font-family: var(--font-head); font-size: 18px; line-height: 1.35; margin: 16px 0 8px; }
+.rte p { margin: 0 0 12px; }
+.rte blockquote { margin: 14px 0; padding: 8px 16px; border-left: 3px solid var(--acc);
+  background: var(--bg2); color: var(--mut); border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.rte img { max-width: 100%; height: auto; border-radius: var(--r-sm); margin: 10px 0; display: block; }
+.rte hr { border: 0; border-top: 1px solid var(--bd2); margin: 22px 0; }
+.rte .img-uploading { display: flex; align-items: center; gap: 8px; color: var(--mut); font-size: 13px; }
+
+/* ô ảnh bìa */
+.coverbox { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px; margin: 16px 0 4px;
+  border: 1px dashed var(--bd2); border-radius: var(--r); padding: 14px; background: var(--bg2); }
+.coverprev { width: 150px; aspect-ratio: 2/3; border-radius: var(--r-sm); overflow: hidden;
+  background: var(--surf2); display: grid; place-items: center; color: var(--dim); }
+.coverprev img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.coverprev.empty { background: repeating-linear-gradient(45deg, var(--surf2), var(--surf2) 8px, var(--bg2) 8px, var(--bg2) 16px); }
+.coverctl { min-width: 0; }
+.coverctl .row { margin-top: 2px; }
+.coverctl .inp { flex: 1; min-width: 0; }
+.coverctl .btn { flex: none; }
+
+/* kiểm kho KV */
+.kvtiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.kvtile { border: 1px solid var(--bd); border-radius: var(--r); background: var(--surf); padding: 14px 16px; }
+.kvtile b { display: block; font-family: var(--font-head); font-size: 24px; font-variant-numeric: tabular-nums; }
+.kvtile span { font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); }
+.kvtab { margin-top: 4px; }
+.kvtab code { font-size: 12.5px; }
+.kvbar { display: block; width: 100%; max-width: 160px; height: 7px; border-radius: 99px;
+  background: var(--surf2); overflow: hidden; }
+.kvbar span { display: block; height: 100%; background: var(--acc); border-radius: 99px; }
+
+/* huy hiệu ổ khóa trong bảng thư viện */
+.locki { display: inline-flex; vertical-align: -3px; margin-right: 6px; color: var(--acc); }
+.locki .i { width: 13px; height: 13px; }
+
+/* nút nguy hiểm: trạng thái "bấm lần nữa" (xác nhận 2 bước) */
+.btn.armed { background: var(--bad); border-color: var(--bad); color: #fff; animation: armedpulse 1s ease-in-out infinite; }
+.btn.armed .i { width: 14px; height: 14px; }
+@keyframes armedpulse { 50% { opacity: .78; } }
+
+/* ---------- điện thoại: sidebar thành thanh ngang, bảng thành thẻ ---------- */
+@media (max-width: 900px) {
+  .ashell { grid-template-columns: 1fr; gap: 14px; }
+  .snav { position: sticky; top: 56px; z-index: 25; flex-direction: row; gap: 3px;
+    max-height: none; overflow-x: auto; overflow-y: hidden; padding: 8px;
+    border-radius: var(--r); background: var(--surf);
+    -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .snav::-webkit-scrollbar { display: none; }
+  .admin-nav-label { display: none; }
+  .snav button { width: auto; flex: none; padding: 8px 12px; }
+  .snav button .ct { margin-left: 6px; max-width: 44px; }
+  .snav .hide { display: none; }
+  .ashell:not(.authed) { grid-template-columns: 1fr; }
+  .edgrid { grid-template-columns: 1fr; }
+  .edleft .chlist { max-height: 220px; }
+  .rte { min-height: 300px; }
+  .rte-tools { top: 56px; }
+  .coverbox { grid-template-columns: 110px minmax(0, 1fr); }
+  .coverprev { width: 110px; }
+}
+@media (max-width: 620px) {
+  .coverbox { grid-template-columns: 1fr; }
+  .coverprev { width: 120px; max-width: 100%; }
+  .savebar { margin: 14px -14px -14px; padding: 12px 14px; }
+  /* bảng thư viện → thẻ: không cuộn ngang, mỗi bộ một khối có nhãn */
+  #pane-list .tbl { min-width: 0; }
+  #pane-list .tbl thead { display: none; }
+  #pane-list .tbl, #pane-list .tbl tbody, #pane-list .tbl tr { display: block; width: 100%; }
+  #pane-list .tbl tr { border: 1px solid var(--bd); border-radius: var(--r); background: var(--surf);
+    margin-bottom: 10px; padding: 4px 0; }
+  #pane-list .tbl tr:hover { background: var(--surf); }
+  #pane-list .tbl td { display: flex; align-items: center; gap: 8px; width: auto;
+    border: 0; padding: 7px 12px; }
+  #pane-list .tbl td::before { content: attr(data-lb); font-size: 10px; font-weight: 800;
+    letter-spacing: .09em; text-transform: uppercase; color: var(--dim); min-width: 82px; flex: none; }
+  #pane-list .tbl td.cck { padding-top: 10px; }
+  #pane-list .tbl td.cck::before { content: none; }
+  #pane-list .tbl td:last-child::before { content: none; }
+  #pane-list .tbl td:last-child .row { justify-content: flex-start; }
+}
+
+/* ============================================================================
    CUỐI TỆP · LUẬT NỀN TẢNG — [hidden] phải THẮNG mọi `display:` của class.
    ----------------------------------------------------------------------------
    Vì sao cần !important: luật `[hidden]{display:none}` của trình duyệt là kiểu

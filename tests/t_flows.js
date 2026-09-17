@@ -216,14 +216,14 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     chon: titleBefore, deleted: !BOOK.chapters.some(c => c.t === titleBefore),
     firstRow: txtA('#chList .row2 .nm'), lastBadge: txtA('#chList .row2:last-child .pill')
   };
-  $a('#chTitle').value = 'Chương thử'; $a('#chBody').value = 'nội dung';
   clk('#chNew'); await wait(200);
+  $a('#chTitle').value = 'Chương thử'; $a('#edBody').innerHTML = '<p>nội dung</p>';
   out.adminChNew = { n: $$a('#chList .row2').length };
 
-  /* xoá bộ (qua hộp thoại xác nhận) */
+  /* xoá bộ — xác nhận 2 bước trên chính nút (arm2): lần 1 "vũ trang", lần 2 chạy */
   const libBefore = REG.lib.length;
-  clk('#btnDelBook'); await wait(300);
-  clk('#czOk'); await wait(700);
+  clk('#btnDelBook'); await wait(150);
+  clk('#btnDelBook'); await wait(700);
   out.adminDelBook = { before: libBefore, after: REG.lib.length, gone: !REG.lib.some(x => x.slug === 'third-person'), msg: txtA('#msg').slice(0, 60) };
 
   /* ngắt kết nối không được làm treo trang */
