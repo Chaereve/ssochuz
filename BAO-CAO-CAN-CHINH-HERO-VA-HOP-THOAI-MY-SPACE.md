@@ -127,13 +127,46 @@ bài kiểm thử "luôn đạt": nó **bắt được 6/7** lỗi liệt kê �
 
 ---
 
-## 5. Còn gì nên làm tiếp (chưa làm trong bản này)
+## 5. Việc làm tiếp
 
-- `tests/t_space_browser.js` vẫn kiểm tra `#localShelf` — khối "danh sách lưu trên
-  thiết bị" đã bị bỏ ở bản trước, nên bài đó **đã lỗi thời** (không nằm trong
-  `tests/run.js`, chỉ chạy tay với Chromium). Nên viết lại theo khung mới, đo luôn
-  toạ độ thật của vòng tròn và ảnh (`boundingBox`) ở 1440/834/700/640/390/320px —
-  đó là phép đo trực tiếp cho chữ "lệch", jsdom không làm được.
+- **ĐÃ LÀM** — `tests/t_space_browser.js` từng kiểm tra `#localShelf` (khối "danh sách
+  lưu trên thiết bị" đã bỏ ở bản trước) nên **đã lỗi thời**, ai chạy là hỏng ngay.
+  Đã viết lại thành bài **đo toạ độ thật** bằng Chromium, bù đúng chỗ jsdom chịu thua:
+  vòng A đo 11 cỡ màn hình (tâm vòng trùng tâm ảnh trong 1px, khe đều bốn phía, ảnh
+  không tràn hộp, nút đóng sát mép phải và cách chữ tiêu đề >8px, tiêu đề – ô nhập
+  thẳng hàng dọc, hộp nằm giữa màn hình, cuộn thân hộp thì đầu/chân đứng yên, nút Lưu
+  luôn trong màn hình, reduced-motion tắt animation); vòng B chạy luồng thật ở 1440px
+  và 390px, gồm cả hộp "Chọn tủ lưu truyện" **trên trang truyện** — nơi phải đo mới
+  thấy được hai lỗi `border-radius` về 0 và viền về `currentColor`.
+  Bài này cần Chromium nên **không nằm trong `tests/run.js`**; chạy tay:
+  `python3 server.py & CHROMIUM_EXECUTABLE=/path/to/chromium node tests/t_space_browser.js`.
+- **ĐÃ CHẠY THẬT lần đầu (17/09/2026)** — Chromium 153 headless, `server.py` cổng 8000,
+  dịch vụ giả: **11/11 cỡ đạt + cả hai vòng luồng đạt** (ba lần liên tiếp, kết quả như
+  nhau). Lần chạy thật này bắt được 5 lỗi nằm trong chính bài đo (không phải lỗi trang),
+  đã sửa:
+  - `inner()` quên trừ **bề rộng viền**: `.space-hero` có `border:1px` nên phép đo lệch
+    đúng 1px mỗi bên → báo nhầm "cột thao tác không trọn bề ngang" ở ≤700px (thật ra
+    cột 614px = đúng bề ngang trong của hero);
+  - `waitForSelector('#shelfDialog:not([open])')` (3 chỗ) chờ một `<dialog>` **đang hiện**
+    nhưng đã đóng — hộp đóng là `display:none` nên không bao giờ thoả; đổi thành chờ đúng
+    cờ `open` tắt;
+  - phép đo "tràn ngang" của cả trang tính cả **header dùng chung** (lỗi có trước, xem
+    mục dưới) và tính cả phần tử nằm trong **vùng cuộn riêng** (`.space-tabs`
+    `overflow-x:auto`) → tách thành `contentOverflow` (chỉ nội dung trang này, bỏ qua vùng
+    cuộn riêng; header chỉ cảnh báo);
+  - phép đo "cột chữ đè hộp ảnh" chỉ đúng khi ảnh–chữ **cùng hàng**; ở ≤340px hero tự
+    xuống hàng (đo thật ở 320px: ảnh y=148, chữ y=238) nên phải đòi chữ nằm **dưới** ảnh.
+- **LỖI CÓ TRƯỚC, CHƯA SỬA (ngoài phạm vi bản này)** — **header dùng chung tràn ngang ở
+  dải ~1021–1199px**: đo thật ngày 17/09/2026 trên `my-space.html` **và** `index.html`,
+  cả khách lẫn đã đăng nhập — 1024px: **khách 91px, đã đăng nhập 48px**; dải 1040–1190px
+  (khách 3–75px) và 1040–1140px (đã đăng nhập 9–49px, hai dải so le nhau);
+  **hết tràn từ 1200px** (đã kiểm tra 1200–1290px: sạch). Nguyên nhân: luật thu gọn ở `src/cz.css` đặt ngưỡng **≤1020px**
+  (`.nav a{width:40px}` + ẩn `.nav-lbl`, và `.hauth .nav-lbl{display:none}` ở **≤980px**)
+  trong khi thanh cần tới ~1200px mới vừa; phần thừa tràn ra mép phải (ảnh chụp 1024px cho
+  thấy nút tài khoản thò ra ngoài). Không do PR này: `src/cz.css` y hệt ở `a56dee6`
+  (trước #30) và ở #31. Cách sửa rẻ nhất: nâng hai ngưỡng đó từ 1020/980 lên ~1200px
+  (đổi giao diện nhẹ ở cửa sổ 1021–1200px: nav chỉ còn icon). Sau khi sửa, có thể siết lại
+  phép đo thành `m.docOverflow` như bản đầu.
 - Trang `/profile` công khai có thể dùng lại `.space-hero-side` cho nút "My Space
   của tôi ↗" (hiện nằm ở `.space-section-head` bên dưới) để hai trang cùng một nhịp.
 
