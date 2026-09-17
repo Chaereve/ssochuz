@@ -4,7 +4,7 @@
    - trang đọc: thích – lưu – đánh dấu – bình luận – chia sẻ (lưu thật vào máy)
    - danh sách chương: nhảy số chương, tìm chương (tô sáng), đổi thứ tự, phân trang
    - quản trị: xoá chương, đổi thứ tự chương, xoá bộ (đều phải qua hộp thoại xác nhận)
-   - quản trị: ngắt kết nối, phím tắt Ctrl+S
+   - quản trị: ngắt kết nối; quản trị KHÔNG được có phím tắt (yêu cầu của chủ trang)
    Chạy:  cd tests && node t_flows.js
    ========================================================================== */
 const { page, dataFetch } = require('./mk');
@@ -230,11 +230,27 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   clk('#btnOut'); await wait(300);
   out.adminDisconnect = { key: W.localStorage.getItem('cz_kv_key') };
 
-  /* phím tắt Ctrl+S không gây lỗi */
-  D.dispatchEvent(new W.KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true }));
+  /* quản trị KHÔNG có phím tắt (yêu cầu của chủ trang): Ctrl+S, Ctrl+K, số/chữ
+     đơn lẻ đều phải bị bỏ qua — không lưu, không đổi tab, không gây lỗi JS */
+  const visiblePanes = () => $$a('#ashell [id^="pane-"]:not(.hide)').map(e => e.id).join(',');
+  const panesBefore = visiblePanes();
+  const msgBefore = txtA('#msg');
+  for (const k of [
+    { key: 's', ctrlKey: true }, { key: 's', metaKey: true }, { key: 'k', ctrlKey: true },
+    { key: '1' }, { key: '5' }, { key: '0' }, { key: 'v' }, { key: 'r' }
+  ]) {
+    D.dispatchEvent(new W.KeyboardEvent('keydown', Object.assign({ bubbles: true }, k)));
+    await wait(60);
+  }
   await wait(200);
+  const noShot = { panesStay: visiblePanes() === panesBefore, msgStay: txtA('#msg') === msgBefore };
+  out.noAdminShortcuts = noShot;
+  const shortcutFail = [];
+  if (!noShot.panesStay) shortcutFail.push('bấm số/chữ ngoài ô nhập vẫn đổi tab quản trị');
+  if (!noShot.msgStay) shortcutFail.push('Ctrl+S vẫn tự lưu/hiện thông báo ở trang quản trị');
+  if (shortcutFail.length) console.log('PHÍM TẮT VẪN CÒN: ' + shortcutFail.join('; '));
+  out.shortcutFail = shortcutFail;
   out.errAdmin = a.errors.slice(0, 6);
-  out.afterShortcutMsg = txtA('#msg').slice(0, 60);
 
   /* =====================================================================
      3. ẢNH TRONG CHƯƠNG + ĐỔI TÔNG MÀU + MENU ĐIỆN THOẠI
@@ -275,7 +291,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 
   out.tong = { loiTrangDoc: out.errStory.length, loiQuanTri: out.errAdmin.length, loiTrangAnh: out.errImg.length };
   console.log(JSON.stringify(out, null, 1));
-  const bad = a.errors.length + errors.length;
+  const bad = a.errors.length + errors.length + (out.shortcutFail || []).length;
   console.log(bad ? 'CÒN ' + bad + ' LỖI JS' : 'Không lỗi JS nào');
-  process.exit(0);
+  process.exit(bad ? 1 : 0);
 })();
