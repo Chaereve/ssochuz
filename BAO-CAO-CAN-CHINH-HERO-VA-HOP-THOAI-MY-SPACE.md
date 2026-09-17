@@ -167,6 +167,11 @@ bài kiểm thử "luôn đạt": nó **bắt được 6/7** lỗi liệt kê �
   (trước #30) và ở #31. Cách sửa rẻ nhất: nâng hai ngưỡng đó từ 1020/980 lên ~1200px
   (đổi giao diện nhẹ ở cửa sổ 1021–1200px: nav chỉ còn icon). Sau khi sửa, có thể siết lại
   phép đo thành `m.docOverflow` như bản đầu.
+- **ĐÃ SỬA (PR #34)** — nâng ngưỡng thu gọn nav trong `src/cz.css` từ **≤1020px** lên
+  **≤1200px** (nav chỉ còn icon trong dải 761–1200px, `title`/`aria-label` vẫn đủ). Tái đo
+  bằng Chromium 153 thật trên cùng dải 1020–1360px, cả khách lẫn đã đăng nhập: **tràn 0px ở
+  mọi cỡ**. Vòng A của `tests/t_space_browser.js` đã đổi từ "cảnh báo header tràn" sang
+  **đo thẳng `docOverflow` ≤1px** — phép hồi quy cho lỗi cũ (header tràn lại là bài đỏ).
 - Trang `/profile` công khai có thể dùng lại `.space-hero-side` cho nút "My Space
   của tôi ↗" (hiện nằm ở `.space-section-head` bên dưới) để hai trang cùng một nhịp.
 

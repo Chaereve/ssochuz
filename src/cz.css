@@ -384,9 +384,15 @@ body, .hdr, .hero, .hero .foot, .facts, .ftr, .fbox, .sechead, .authcard {
    Bốn bậc, mỗi bậc bỏ bớt một lớp chữ để không bao giờ phải bóp méo hộp:
      ≤1080px  chữ nhỏ lại một nấc, giấu phím tắt ⌘K
      ≤ 980px  nút tài khoản chỉ còn avatar
-     ≤1020px  mục điều hướng chỉ còn icon (mỗi icon vẫn có title + aria-label)
+     ≤1200px  mục điều hướng chỉ còn icon (mỗi icon vẫn có title + aria-label)
      ≤ 760px  nút tìm kiếm chỉ còn icon, hiện nút menu, thanh cao 56px
-   Lớp phủ #czInk tự đo theo mục đang chọn nên vẫn khớp ở mọi bậc. */
+   Lớp phủ #czInk tự đo theo mục đang chọn nên vẫn khớp ở mọi bậc.
+
+   Ngưỡng icon nav là ≤1200px chứ KHÔNG phải ≤1020px: trước đây dải 1021–1199px
+   để lộ cả nhãn chữ nav lẫn chữ nút công cụ, thanh cần tới ~1200px mới vừa nên
+   nút tài khoản thò ra mép phải (đo thật 17/09: 1024px tràn 91px với khách,
+   48px khi đã đăng nhập; hết tràn từ ~1210px). Ẩn nhãn nav sớm hơn để thanh dài
+   nhất luôn vừa: nhãn chỉ còn chữ trong dải 761–1200px. */
 @media (max-width: 1080px) {
   .hdr .logo, .abar .logo { font-size: 20px; }
   .nav a { padding: 0 8px; font-size: 12.5px; }
@@ -394,7 +400,7 @@ body, .hdr, .hero, .hero .foot, .facts, .ftr, .fbox, .sechead, .authcard {
   .hbtn .nav-lbl, .hbtn .searchbtn-txt { font-size: 12.5px; }
   .hbtn .k { display: none; }
 }
-@media (max-width: 1020px) {
+@media (max-width: 1200px) {
   .hdr .in > .grow::after { display: none; }
   .nav a { width: 40px; padding: 0; }
   .nav a .nav-lbl { display: none; }
