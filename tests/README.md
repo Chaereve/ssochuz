@@ -65,7 +65,7 @@ Bài này dùng dữ liệu giả, không ghi production; kiểm tra 1440/768/39
 
 Runner đã thêm `t_member_spaces.mjs` (Worker và quyền truy cập), `t_space.js` (UI) và `t_rating_withdraw.js`.
 
-`t_space_hero.js`: **căn chỉnh hero "MY SPACE / GÓC ĐỌC CỦA BẠN" + hộp thoại tủ truyện** — jsdom không dàn
+`t_space_hero.js`: **căn chỉnh hero "Hồ sơ của bạn" + hộp thoại tủ truyện** — jsdom không dàn
 trang nên bài này khoá **cấu trúc khiến việc lệch không thể xảy ra** thay vì đo toạ độ: vòng tròn phải là
 con của hộp ảnh và `inset:0` (cấm `left/top/width/height` cứng), mọi cỡ ảnh đi qua `--sp-ava`/`--sp-ring`,
 `.space-hero` không được có `grid-template-columns` ở bất kỳ mốc nào (đúng lỗi vỡ ở dải 601–700px), không

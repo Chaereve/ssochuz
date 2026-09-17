@@ -1,6 +1,6 @@
 # BÁO CÁO · CĂN CHỈNH HERO "MY SPACE / GÓC ĐỌC CỦA BẠN" VÀ HỘP THOẠI TỦ TRUYỆN
 
-> Bản `?v=20260917b` · `CZ_SW_VER = '20260917b'`
+> Bản `?v=20260917c` · `CZ_SW_VER = '20260917c'` (mục 6: chữ nghĩa theo yêu cầu chủ trang)
 > Sửa ở `src/` rồi chạy `npm run build` — bản rút gọn ở thư mục gốc đã sinh lại.
 > Kiểm chứng: `node tests/run.js` → **41/41 bài đạt**, trong đó có bài mới
 > `tests/t_space_hero.js` khoá riêng phần căn chỉnh này.
@@ -136,3 +136,33 @@ bài kiểm thử "luôn đạt": nó **bắt được 6/7** lỗi liệt kê �
   đó là phép đo trực tiếp cho chữ "lệch", jsdom không làm được.
 - Trang `/profile` công khai có thể dùng lại `.space-hero-side` cho nút "My Space
   của tôi ↗" (hiện nằm ở `.space-section-head` bên dưới) để hai trang cùng một nhịp.
+
+---
+
+## 6. Bản `20260917c` — chữ nghĩa theo yêu cầu chủ trang
+
+Chủ trang yêu cầu bỏ bớt chữ kỹ thuật và câu lấp chỗ. Đã làm đúng 5 việc:
+
+| # | Yêu cầu | Trước | Sau |
+|---|---|---|---|
+| 1 | Đổi nhãn hero | `MY SPACE / GÓC ĐỌC CỦA BẠN` | **`Hồ sơ của bạn`** (đổi cả trong `src/cz-space.js` lẫn HTML tĩnh của `my-space.html` để hai bản không lệch nhau) |
+| 2 | Ghi ngắn gọn khối "hãy đăng nhập" | "Đăng nhập để tạo hồ sơ, đồng bộ tủ truyện giữa các thiết bị và giữ tên/ảnh **của bạn** khi bình luận. **Danh sách đã lưu và lịch sử đọc trên máy này vẫn dùng được khi chưa đăng nhập.**" (34 chữ) | "Đăng nhập để tạo hồ sơ, đồng bộ tủ truyện giữa các thiết bị và giữ tên/ảnh khi bình luận. **Chưa đăng nhập thì** danh sách đã lưu và lịch sử đọc trên máy này vẫn dùng được." (29 chữ — giữ đủ 3 ý, không mất thông tin) |
+| 3 | Bỏ ghi chú ở mục **Lịch sử đọc** | "Tiến độ nằm trên thiết bị này; tủ truyện mới đồng bộ theo tài khoản." | Xoá hẳn `<p class="space-note">` |
+| 4 | Bỏ ghi chú ở mục **Thống kê cá nhân** | "Thống kê riêng trên thiết bị này. Một chương được tính khi đọc xong hoặc chuyển sang chương tiếp." | Xoá hẳn `<p class="space-note">` |
+| 5 | Bỏ câu lấp chỗ trong hero | "Một người yêu những câu chuyện." (hiện ở **hai** nhánh: khách chưa đăng nhập và hồ sơ công khai) | Không còn. Lời dẫn rỗng thì `.space-bio:empty{display:none}` cho hero **tự co lại** thay vì chừa một dòng chữ vô nghĩa |
+
+Hai chi tiết kèm theo, vì bỏ chữ thì kiểu chữ phải theo:
+
+- Nhãn hero từ **thẻ in hoa không dấu** thành **một câu chữ thường có dấu**, nên
+  `10px` + khoảng chữ `.14em` làm dấu tiếng Việt nhoè đi → nâng `11,5px`, thu khoảng
+  cách còn `.06em`, hạ đậm `700 → 650` (chỉ trong `.space-hero-label .space-kicker`,
+  nhãn `KHÔNG GIAN CỦA RIÊNG BẠN` ở khối khách giữ nguyên kiểu cũ).
+- Lời dẫn mặc định **vẫn giữ** cho tài khoản đã đăng nhập mà chưa sửa hồ sơ
+  ("Gom những câu chuyện yêu thích về một nơi.") và dòng trạng thái
+  "Đang kiểm tra phiên đăng nhập…" — hai câu này **có nghĩa**, không nằm trong danh
+  sách chủ trang yêu cầu bỏ.
+
+`tests/t_space_hero.js` kiểm thêm: nhãn hero đúng chữ "Hồ sơ của bạn", hồ sơ công khai
+chưa viết lời dẫn thì `.space-bio` **rỗng**, tài khoản chưa viết lời dẫn thì nhận câu
+mặc định, và bản rút gọn `cz-space.js` **không còn** chuỗi "Một người yêu những câu chuyện".
+`node tests/run.js` → 41/41 đạt. `?v=` và `CZ_SW_VER` tăng sang `20260917c`.

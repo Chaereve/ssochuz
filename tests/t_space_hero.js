@@ -1,4 +1,4 @@
-/* My Space: hero "MY SPACE / GÓC ĐỌC CỦA BẠN" và hộp thoại tủ truyện phải CĂN ĐÚNG.
+/* My Space: hero "Hồ sơ của bạn" và hộp thoại tủ truyện phải CĂN ĐÚNG.
    ---------------------------------------------------------------------------
    Chủ trang báo hero bị lệch. Nguyên nhân không phải một con số sai mà là CÁCH căn:
    vòng trang trí neo vào hero bằng left/top cứng trong khi ảnh đại diện do flex/grid
@@ -21,7 +21,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const css = read('cz.css');
 const reg = JSON.parse(read('data/registry.json')), slug = reg.lib[0].slug;
 const user = { uid: 'alice', name: 'Alice', email: 'secret@test', exp: Math.floor(Date.now() / 1000) + 3600 };
-const store = { id: 'a'.repeat(64), version: 3, profile: { name: 'Alice', bio: 'Mỗi ngày một câu chuyện.', avatar: '' }, shelves: [{ id: 'shelf-1', name: 'Muốn đọc', description: '', visibility: 'private', books: [slug], updatedAt: Date.now() }] };
+const store = { id: 'a'.repeat(64), version: 3, profile: { name: 'Alice', bio: '', avatar: '' }, shelves: [{ id: 'shelf-1', name: 'Muốn đọc', description: '', visibility: 'private', books: [slug], updatedAt: Date.now() }] };
 const J = (d, s = 200) => Promise.resolve({ ok: s < 400, status: s, json: async () => structuredClone(d), text: async () => JSON.stringify(d) });
 const api = (p, o = {}) => {
   if (p === '/api/auth/me') return J({ ok: true, user });
@@ -116,8 +116,15 @@ void root;
   assert.ok($('.space-hero-portrait > .space-avatar.space-hero-avatar'), 'ảnh phải nằm TRONG hộp ảnh');
   assert.ok(hero.querySelector('.space-hero-orbit') === null, 'không còn .space-hero-orbit');
   assert.ok(hero.querySelector('.space-hero-rule') === null, 'không còn .space-hero-rule');
-  assert.ok($('.space-intro > .space-hero-label > .space-kicker'), 'nhãn phải nằm trong khối chữ');
+  const kicker = $('.space-intro > .space-hero-label > .space-kicker');
+  assert.ok(kicker, 'nhãn phải nằm trong khối chữ');
+  assert.equal(kicker.textContent, 'Hồ sơ của bạn', 'nhãn hero của chủ trang là "Hồ sơ của bạn"');
+  /* không còn câu lấp chỗ trong hero: chưa đăng nhập / hồ sơ công khai chưa viết
+     lời dẫn thì dòng .space-bio phải rỗng để CSS ẩn hẳn đi */
+  assert.ok(!/Một người yêu những câu chuyện/.test(read('cz-space.js')), 'không còn câu lấp chỗ "Một người yêu những câu chuyện."');
   assert.equal($('#spaceHero h1').textContent, 'Alice', 'hero hiện tên tài khoản');
+  assert.equal($('.space-hero .space-bio').textContent, 'Gom những câu chuyện yêu thích về một nơi.',
+    'tài khoản chưa viết lời dẫn thì giữ câu mặc định có nghĩa');
   assert.ok($('.space-hero-side > .btn'), 'nút "Chỉnh sửa hồ sơ" nằm trong cột thao tác');
   /* jsdom có tính getComputedStyle cho luật không nằm trong @media */
   const cs = p.win.getComputedStyle(portraitEl);
@@ -170,6 +177,8 @@ void root;
   const ph = pub.doc.querySelector('#spaceHero');
   assert.ok(pub.doc.querySelector('.space-hero-portrait > .space-hero-ring'), 'hồ sơ công khai cũng phải có vòng đồng tâm trong hộp ảnh');
   assert.equal(ph.querySelector('.space-hero-side'), null, 'hồ sơ công khai không có nút "Chỉnh sửa hồ sơ"');
+  assert.equal(ph.querySelector('.space-bio').textContent.trim(), '', 'hồ sơ công khai chưa có lời dẫn thì để trống, không lấp bằng câu vô nghĩa');
+  assert.equal(ph.querySelector('.space-kicker').textContent, 'SSOCHUZ / HỒ SƠ BẠN ĐỌC', 'nhãn hồ sơ công khai giữ nguyên');
   assert.ok(!ph.textContent.includes('secret@test'), 'không lộ email');
   /* HTML tĩnh (chưa chạy JS) phải cùng khung với bản JS dựng, nếu không chữ
      nhãn và tiêu đề hiện ngang hàng nhau trong tích tắc đầu tiên */

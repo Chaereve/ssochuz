@@ -4,7 +4,7 @@
    Mỗi bài in ra JSON; mọi khoá "errors*" phải là [] thì mới coi là đạt.
      t_config.js       cấu hình Worker (thiếu https://, thừa /, để trống)
      t_html.js         HTML tĩnh + _redirects (đích .html ⇒ vòng lặp ERR_TOO_MANY_REDIRECTS)
-     t_space_hero.js   MY SPACE: hero "GÓC ĐỌC CỦA BẠN" phải CĂN ĐÚNG — vòng tròn là
+     t_space_hero.js   MY SPACE: hero "Hồ sơ của bạn" phải CĂN ĐÚNG — vòng tròn là
                        con của hộp ảnh (đồng tâm theo cấu trúc, không neo left/top cứng),
                        mọi cỡ ảnh đi qua --sp-ava, không còn .space-hero trong @media đặt
                        cột lưới; hộp thoại tủ truyện có head/body/foot (nút lưu luôn thấy

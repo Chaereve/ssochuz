@@ -88,9 +88,13 @@
     var host = $('#spaceHero');
     if (!host) return;
     var name = p.name || 'My Space';
-    /* Lời dẫn mặc định: chủ trang chưa đăng nhập thì nói về việc sắp làm, khách
-       xem hồ sơ công khai thì một câu trung tính. */
-    var bio = p.bio || (owner ? (p.checking ? 'Đang kiểm tra phiên đăng nhập…' : (p.guest ? 'Một người yêu những câu chuyện.' : 'Gom những câu chuyện yêu thích về một nơi.')) : 'Một người yêu những câu chuyện.');
+    /* Lời dẫn: chỉ hiện khi CÓ chữ để nói. Bỏ câu lấp chỗ "Một người yêu những
+       câu chuyện." (chủ trang yêu cầu) — chưa đăng nhập hoặc hồ sơ công khai chưa
+       viết lời dẫn thì để trống, CSS `.space-bio:empty{display:none}` cho hero tự
+       co lại thay vì chừa một dòng chữ vô nghĩa. Chỉ giữ lời dẫn mặc định cho
+       tài khoản đã đăng nhập mà chưa sửa hồ sơ, và dòng trạng thái khi đang kiểm
+       tra phiên. */
+    var bio = p.bio || (p.checking ? 'Đang kiểm tra phiên đăng nhập…' : (owner && user() ? 'Gom những câu chuyện yêu thích về một nơi.' : ''));
     /* Cấu trúc hero: [hộp ảnh + vòng đồng tâm] [khối chữ] [cột thao tác].
        Vòng tròn nằm TRONG hộp ảnh (CSS: inset:0) nên luôn đồng tâm với ảnh ở mọi
        mốc màn hình — bản cũ đặt vòng absolute theo hero bằng left/top cứng nên
@@ -103,7 +107,7 @@
       '</div>' +
       '<div class="space-intro">' +
       '<div class="space-hero-label"><span class="space-live-dot" aria-hidden="true"></span>' +
-      '<p class="space-kicker">' + (owner ? 'MY SPACE / GÓC ĐỌC CỦA BẠN' : 'SSOCHUZ / HỒ SƠ BẠN ĐỌC') + '</p></div>' +
+      '<p class="space-kicker">' + (owner ? 'Hồ sơ của bạn' : 'SSOCHUZ / HỒ SƠ BẠN ĐỌC') + '</p></div>' +
       '<h1>' + esc(name) + '</h1><p class="space-bio">' + esc(bio) + '</p>' +
       '</div>' +
       (owner && user() ? '<div class="space-hero-side"><a class="btn ghost" href="#edit-profile">Chỉnh sửa hồ sơ <span aria-hidden="true">↗</span></a></div>' : '');
