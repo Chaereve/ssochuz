@@ -198,8 +198,34 @@ void root;
   assert.ok(!story.includes('class="ibo" type="button" data-close-shelf-modal'),
     'nút đóng hộp chọn tủ không được dùng .ibo (biến --rd-* chỉ có ở trang đọc)');
 
+  /* ---------- 5. chữ nghĩa trên trang: ngắn và không lặp ý ba lần ----------
+     Trang này từng có BA khối cùng nói "đăng nhập để đồng bộ giữa các thiết bị"
+     (khách chưa đăng nhập thấy hai khối cùng lúc), và nhãn "KHÔNG GIAN CỦA RIÊNG
+     BẠN" lặp chữ "riêng" với tiêu đề ngay dưới. Khoá bằng NGÂN SÁCH CHỮ và phép
+     dò chuỗi 3 chữ trùng nhau, để lần sau có viết lại câu khác vẫn phải giữ nhịp. */
+  const words = (t) => t.toLowerCase().replace(/[.,;:!?…«»"']/g, ' ').split(/\s+/).filter(Boolean);
+  const guestTop = $('#spaceGuest p'), shelfNote = $('#shelfGuestNotice p'), profileNote = $('#profileGuestNote p');
+  assert.ok(guestTop && shelfNote && profileNote, 'phải còn ba khối nhắc đăng nhập');
+  assert.ok(words(guestTop.textContent).length <= 28, 'câu dẫn khối trên phải ≤ 28 chữ, đang là ' + words(guestTop.textContent).length);
+  assert.ok(words(shelfNote.textContent).length <= 16, 'nhắc trong tab Tủ truyện phải ≤ 16 chữ, đang là ' + words(shelfNote.textContent).length);
+  assert.ok(words(profileNote.textContent).length <= 16, 'nhắc trong tab Hồ sơ phải ≤ 16 chữ, đang là ' + words(profileNote.textContent).length);
+  const grams = (el) => { const w = words(el.textContent); return new Set(w.slice(0, -2).map((_, i) => w.slice(i, i + 3).join(' '))); };
+  const pairs = [[guestTop, shelfNote], [guestTop, profileNote], [shelfNote, profileNote]];
+  for (const [a, b] of pairs) {
+    const g = grams(a), dup = [...grams(b)].filter((x) => g.has(x));
+    assert.deepEqual(dup, [], 'hai khối nhắc đăng nhập lặp nhau: ' + dup.join(' / '));
+  }
+  const guestKicker = $('#spaceGuest .space-kicker').textContent, guestH2 = $('#spaceGuest h2').textContent;
+  const rieng = (words(guestKicker).concat(words(guestH2)).filter((w) => w === 'riêng')).length;
+  assert.ok(rieng <= 1, 'nhãn và tiêu đề của khối khách không được lặp chữ "riêng"');
+  /* mấy câu kỹ thuật chủ trang đã yêu cầu bỏ — không được quay lại */
+  const htmlSpace = read('my-space.html');
+  for (const gone of ['Tiến độ nằm trên thiết bị này', 'Thống kê riêng trên thiết bị này', 'Một người yêu những câu chuyện', 'MY SPACE / GÓC ĐỌC CỦA BẠN']) {
+    assert.ok(!htmlSpace.includes(gone) && !read('cz-space.js').includes(gone), 'không được đưa trở lại: "' + gone + '"');
+  }
+
   assert.deepEqual(p.errors, []);
   assert.deepEqual(pub.errors, []);
   p.dom.window.close(); pub.dom.window.close();
-  console.log('My Space hero + hộp thoại: vòng đồng tâm theo cấu trúc, cỡ ảnh qua --sp-ava, head/body/foot đúng chỗ, bộ đếm 0/200, hồ sơ công khai cùng khung — đạt');
+  console.log('My Space hero + hộp thoại: vòng đồng tâm theo cấu trúc, cỡ ảnh qua --sp-ava, head/body/foot đúng chỗ, bộ đếm 0/200, hồ sơ công khai cùng khung, ba khối nhắc đăng nhập không lặp ý — đạt');
 })().catch((e) => { console.error(e); process.exit(1); });

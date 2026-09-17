@@ -166,3 +166,30 @@ Hai chi tiết kèm theo, vì bỏ chữ thì kiểu chữ phải theo:
 chưa viết lời dẫn thì `.space-bio` **rỗng**, tài khoản chưa viết lời dẫn thì nhận câu
 mặc định, và bản rút gọn `cz-space.js` **không còn** chuỗi "Một người yêu những câu chuyện".
 `node tests/run.js` → 41/41 đạt. `?v=` và `CZ_SW_VER` tăng sang `20260917c`.
+
+---
+
+## 7. Dọn chữ lặp trên trang My Space (bản `20260917c`)
+
+Chủ trang báo câu nhắc đăng nhập vẫn dài. Soi lại thì vấn đề không chỉ là độ dài:
+**trang nói cùng một ý ba lần**, và khách chưa đăng nhập thấy **hai khối cùng lúc**
+(khối trên nằm ngoài các tab nên hiện ở mọi tab).
+
+| Khối | Trước | Sau |
+|---|---|---|
+| `#spaceGuest` (trên cùng, hiện ở mọi tab) | Nhãn `KHÔNG GIAN CỦA RIÊNG BẠN` **lặp chữ "riêng"** với tiêu đề "Một **góc riêng** cho những câu chuyện bạn yêu." — câu dẫn 36 chữ kể chi tiết việc đồng bộ và tên/ảnh | Nhãn `BẠN ĐỌC`; câu dẫn **24 chữ**, chỉ nói ý chung + câu trấn an: "Đăng nhập để hồ sơ và tủ truyện được lưu theo tài khoản. Danh sách đã lưu và lịch sử đọc trên máy này vẫn dùng được." |
+| `#shelfGuestNotice` (tab Tủ truyện) | "Tủ truyện cá nhân cần đăng nhập" + "Đăng nhập để tạo tủ truyện riêng, phân loại những câu chuyện yêu thích và đồng bộ qua lại giữa các thiết bị." (20 chữ, **lặp** ý khối trên, lặp chữ "đăng nhập" với nút ngay dưới) | "**Tủ truyện cần một tài khoản**" + "Tạo tủ, phân loại truyện yêu thích và mở lại ở bất kỳ thiết bị nào." (**13 chữ**) |
+| `#profileGuestNote` (tab Hồ sơ) | "Đăng nhập bằng Google để giữ tên và ảnh đại diện của bạn trên mọi thiết bị, và để bình luận bằng chính danh tính đó." (24 chữ) | "Tên và ảnh đại diện theo bạn trên mọi thiết bị, kể cả khi bình luận." (**13 chữ**) |
+
+Cách chia việc để không lặp: **khối trên nói tại sao** (lưu theo tài khoản + dữ liệu
+trên máy vẫn dùng được), **mỗi khối trong tab nói đúng một dòng cho mục đó**. Hai
+tiêu đề nhỏ nay song song nhau: "Tủ truyện cần một tài khoản" / "Hồ sơ cần một tài
+khoản".
+
+`tests/t_space_hero.js` khoá bằng **ngân sách chữ** chứ không khoá nguyên văn (để lần
+sau viết lại câu khác vẫn được, miễn giữ nhịp): khối trên ≤ 28 chữ, hai khối trong
+tab ≤ 16 chữ, **không cặp nào dùng chung một chuỗi 3 chữ**, nhãn và tiêu đề khối
+khách không được lặp chữ "riêng", và bốn câu chủ trang đã yêu cầu bỏ
+(`Tiến độ nằm trên thiết bị này…`, `Thống kê riêng trên thiết bị này…`,
+`Một người yêu những câu chuyện.`, `MY SPACE / GÓC ĐỌC CỦA BẠN`) không được quay lại
+ở cả HTML lẫn bản rút gọn.
