@@ -80,4 +80,21 @@ phải có ở `:root` vì hộp chọn tủ nằm trên trang truyện; kèm ch
 `CZ_AUTH._verify`; My Space gặp 401 từ `/api/me/space` thì hiện nút "Thử lại" và
 "Đăng xuất & đăng nhập lại" kèm đúng lý do máy chủ trả.
 
-Bài Chromium riêng: `CHROMIUM_EXECUTABLE=/path/to/chromium node tests/t_space_browser.js` khi server.py đang chạy. Dùng mock dịch vụ, không ghi production. Có thể dùng `LAYOUT_SCREENSHOTS` trỏ thư mục ngoài repo để chụp bố cục.
+Bài Chromium riêng: `CHROMIUM_EXECUTABLE=/path/to/chromium node tests/t_space_browser.js` khi `server.py` đang chạy
+(cổng 8000). Dùng mock dịch vụ, không ghi production. Có thể dùng `LAYOUT_SCREENSHOTS` trỏ thư mục ngoài repo để chụp bố cục.
+
+`t_space_browser.js` là bài **đo toạ độ thật** — phần mà jsdom không làm được, nên nó bổ sung cho `t_space_hero.js`
+(bài kia khoá cấu trúc, bài này đo kết quả):
+
+- **vòng A** chạy 11 cỡ màn hình (1440/1280/1024/834/768/700/640/480/390/360/320), chỉ tải trang rồi đo:
+  tâm `.space-hero-ring` phải trùng tâm `.space-hero-avatar` **trong 1px** ở mọi cỡ, khe vòng–ảnh đều bốn phía,
+  ảnh không tràn khỏi hộp và không đè cột chữ; trang không tràn ngang; nút "Chỉnh sửa hồ sơ" sát mép trong
+  của hero (>700px) hoặc xuống hàng và cao ≥40px (≤700px); hộp thoại nằm **giữa màn hình**, nút đóng sát mép
+  phải đầu hộp và **cách chữ tiêu đề >8px** (đo bằng `Range` vì khối `<div>` cha giãn hết chỗ), tiêu đề – ô nhập
+  thẳng hàng dọc, mép phải ô nhập = mép trong thân hộp trừ đúng bề rộng thanh cuộn; **cuộn hết thân hộp thì đầu
+  và chân không nhúc nhích**; nút Lưu luôn trong màn hình; `prefers-reduced-motion` thì hộp không chạy animation.
+- **vòng B** chạy luồng thật ở 1440px và 390px: hồ sơ + ảnh đại diện (lưu xong ảnh thật vẫn đồng tâm với vòng),
+  lưu trượt thì giữ bản nháp, nút **Huỷ** không tạo tủ, bộ đếm `0/200 → 1/200`, tủ riêng tư ↔ công khai,
+  hồ sơ công khai không lộ email/nháp và không có cột thao tác, và hộp **"Chọn tủ lưu truyện" trên trang truyện**
+  phải bo góc 18px/14px + viền không rơi về `currentColor` (hai biến `--space-*` phải có ở `:root`), không dùng
+  `.ibo`, không cuộn lồng, bấm tủ thì trạng thái **lật** tại chỗ.

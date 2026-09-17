@@ -127,13 +127,19 @@ bài kiểm thử "luôn đạt": nó **bắt được 6/7** lỗi liệt kê �
 
 ---
 
-## 5. Còn gì nên làm tiếp (chưa làm trong bản này)
+## 5. Việc làm tiếp
 
-- `tests/t_space_browser.js` vẫn kiểm tra `#localShelf` — khối "danh sách lưu trên
-  thiết bị" đã bị bỏ ở bản trước, nên bài đó **đã lỗi thời** (không nằm trong
-  `tests/run.js`, chỉ chạy tay với Chromium). Nên viết lại theo khung mới, đo luôn
-  toạ độ thật của vòng tròn và ảnh (`boundingBox`) ở 1440/834/700/640/390/320px —
-  đó là phép đo trực tiếp cho chữ "lệch", jsdom không làm được.
+- **ĐÃ LÀM** — `tests/t_space_browser.js` từng kiểm tra `#localShelf` (khối "danh sách
+  lưu trên thiết bị" đã bỏ ở bản trước) nên **đã lỗi thời**, ai chạy là hỏng ngay.
+  Đã viết lại thành bài **đo toạ độ thật** bằng Chromium, bù đúng chỗ jsdom chịu thua:
+  vòng A đo 11 cỡ màn hình (tâm vòng trùng tâm ảnh trong 1px, khe đều bốn phía, ảnh
+  không tràn hộp, nút đóng sát mép phải và cách chữ tiêu đề >8px, tiêu đề – ô nhập
+  thẳng hàng dọc, hộp nằm giữa màn hình, cuộn thân hộp thì đầu/chân đứng yên, nút Lưu
+  luôn trong màn hình, reduced-motion tắt animation); vòng B chạy luồng thật ở 1440px
+  và 390px, gồm cả hộp "Chọn tủ lưu truyện" **trên trang truyện** — nơi phải đo mới
+  thấy được hai lỗi `border-radius` về 0 và viền về `currentColor`.
+  Bài này cần Chromium nên **không nằm trong `tests/run.js`**; chạy tay:
+  `python3 server.py & CHROMIUM_EXECUTABLE=/path/to/chromium node tests/t_space_browser.js`.
 - Trang `/profile` công khai có thể dùng lại `.space-hero-side` cho nút "My Space
   của tôi ↗" (hiện nằm ở `.space-section-head` bên dưới) để hai trang cùng một nhịp.
 
