@@ -143,12 +143,11 @@ const MEASURE = () => {
       }
 
       /* -- 2. không tràn ngang ở bất kỳ cỡ nào -- */
-      /* Header DÙNG CHUNG tràn ngang ở dải ~1021–1199px (đo 17/09/2026: khách 91px, đã
-         đăng nhập 48px ở 1024px; trang chủ cũng bị). Đó là lỗi có TRƯỚC, không do My Space,
-         nên phép đo ở đây chỉ bắt phần tràn do NỘI DUNG My Space; phần header chỉ cảnh báo.
-         Ai sửa header (nâng ngưỡng thu gọn nav từ ≤1020px lên ~1200px) có thể siết lại
-         thành m.docOverflow như bản đầu — xem §5 của báo cáo kèm theo. */
-      if (m.docOverflow > 1) console.log('      ↳ cảnh báo: header dùng chung tràn ngang ' + m.docOverflow + 'px (lỗi có trước, ngoài phạm vi bài này)');
+      /* Header dùng chung từng tràn ở dải ~1021–1199px (đo 17/09/2026: 1024px khách
+         91px, đã đăng nhập 48px). Đã sửa ở src/cz.css: ngưỡng thu gọn nav nâng từ
+         ≤1020px lên ≤1200px. Vòng A chạy ở 1024px (dải từng tràn) nên siết đo docOverflow
+         trực tiếp — chính là phép hồi quy cho lỗi đó; nếu tràn trở lại, bài này đỏ. */
+      assert.ok(m.docOverflow <= 1, width + 'px: cả trang (gồm header dùng chung) tràn ngang ' + m.docOverflow + 'px');
       assert.ok(m.contentOverflow <= 1, width + 'px: nội dung My Space tràn ngang ' + m.contentOverflow + 'px');
       assert.ok(m.hero.w <= m.vw + 0.5, width + 'px: hero rộng hơn màn hình');
 

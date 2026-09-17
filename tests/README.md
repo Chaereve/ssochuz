@@ -98,9 +98,10 @@ bề rộng viền (`.space-hero` có `border:1px`), chờ hộp thoại đóng 
 `contentOverflow` (bỏ header dùng chung + vùng cuộn riêng `.space-tabs`), và phép đo "chữ đè ảnh" chỉ áp
 dụng khi ảnh–chữ cùng hàng (≤340px hero xuống hàng).
 
-Lưu ý: bài này **cảnh báo** (không fail) về lỗi **có trước**: header dùng chung tràn ngang ở dải ~1021–1199px
-(1024px: khách 91px, đã đăng nhập 48px; cả trang chủ) vì ngưỡng thu gọn nav đặt ở ≤1020px thay vì ~1200px —
-xem §5 của `BAO-CAO-CAN-CHINH-HERO-VA-HOP-THOAI-MY-SPACE.md`.
+Lưu ý: trước đây bài chỉ **cảnh báo** (không fail) về lỗi **có trước**: header dùng chung tràn ngang ở dải
+~1021–1199px (1024px: khách 91px, đã đăng nhập 48px; cả trang chủ) vì ngưỡng thu gọn nav đặt ở ≤1020px
+thay vì ~1200px. Lỗi đã sửa ở `src/cz.css` (ngưỡng nav nâng lên ≤1200px), nên vòng A giờ **đo thẳng
+`docOverflow`** ở mọi cỡ (kể cả 1024px trong dải từng tràn) làm hồi quy — header tràn trở lại là bài đỏ.
 
 `t_space_browser.js` là bài **đo toạ độ thật** — phần mà jsdom không làm được, nên nó bổ sung cho `t_space_hero.js`
 (bài kia khoá cấu trúc, bài này đo kết quả):
