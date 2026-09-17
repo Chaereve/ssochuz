@@ -4,16 +4,16 @@
 <meta name="description" content="Không gian đọc và hồ sơ bạn đọc trên ssochuz library.">
 <meta name="robots" content="noindex">
 <title>My Space · ssochuz library</title>
-<link rel="icon" href="/ssochuz.png"><link rel="stylesheet" href="/cz.css?v=20260917a">
+<link rel="icon" href="/ssochuz.png"><link rel="stylesheet" href="/cz.css?v=20260917c">
 <script>try{var t=localStorage.getItem('ssochuz-theme');if(t)document.documentElement.dataset.theme=t;}catch(e){}</script>
 </head><body class="space-page" data-public="false">
 <header id="hdr"></header><main class="space-wrap">
 <nav class="crumb"><a href="/">Trang chủ</a><span>›</span><b>My Space</b></nav>
-<div id="spaceHero" class="space-hero" hidden><p class="space-kicker">SSOCHUZ / BẠN ĐỌC</p><h1>My Space</h1></div>
+<div id="spaceHero" class="space-hero" hidden><div class="space-hero-portrait"><span class="space-hero-ring" aria-hidden="true"></span><div class="space-avatar space-hero-avatar"><span aria-hidden="true">M</span></div></div><div class="space-intro"><div class="space-hero-label"><span class="space-live-dot" aria-hidden="true"></span><p class="space-kicker">Hồ sơ của bạn</p></div><h1>My Space</h1></div></div>
 <p id="spaceStatus" class="space-status" role="status" aria-live="polite"></p>
 <section id="spaceGuest" class="space-panel space-guest" hidden>
   <div class="space-guest-mark" aria-hidden="true">✦</div>
-  <div><p class="space-kicker">KHÔNG GIAN CỦA RIÊNG BẠN</p><h2>Một góc riêng cho những câu chuyện bạn yêu.</h2><p>Đăng nhập để tạo hồ sơ, đồng bộ tủ truyện giữa các thiết bị và giữ tên/ảnh của bạn khi bình luận. Danh sách đã lưu và lịch sử đọc trên máy này vẫn dùng được khi chưa đăng nhập.</p></div>
+  <div><p class="space-kicker">BẠN ĐỌC</p><h2>Một góc riêng cho những câu chuyện bạn yêu.</h2><p>Đăng nhập để hồ sơ và tủ truyện được lưu theo tài khoản. Danh sách đã lưu và lịch sử đọc trên máy này vẫn dùng được.</p></div>
   <button class="btn pri" id="spaceLogin" type="button">Đăng nhập</button>
 </section>
 <nav class="space-tabs" role="tablist" aria-label="My Space">
@@ -25,14 +25,14 @@
 <section id="space-shelves" class="space-view" role="tabpanel" aria-labelledby="tab-shelves" tabindex="-1">
   <div class="space-section-head">
     <div><p class="section-eyebrow">THƯ VIỆN RIÊNG</p><h2>Tủ truyện</h2></div>
-    <div class="row" style="align-items:center;gap:14px">
+    <div class="space-head-tools">
       <button class="btn pri sm" id="openNewShelf" type="button">+ Tạo tủ truyện</button>
       <div id="spaceShelfCount" class="space-count" aria-live="polite"><strong>—</strong><span>tủ của bạn</span></div>
     </div>
   </div>
   <div id="shelfGuestNotice" class="space-panel space-login-note" hidden>
-    <h3>Tủ truyện cá nhân cần đăng nhập</h3>
-    <p>Đăng nhập để tạo tủ truyện riêng, phân loại những câu chuyện yêu thích và đồng bộ qua lại giữa các thiết bị.</p>
+    <h3>Tủ truyện cần một tài khoản</h3>
+    <p>Tạo tủ, phân loại truyện yêu thích và mở lại ở bất kỳ thiết bị nào.</p>
     <div class="row"><button class="btn pri" id="shelfLogin" type="button">Đăng nhập để tạo tủ</button></div>
   </div>
   <div id="cloudShelves" class="space-shelf-workspace" hidden>
@@ -45,18 +45,18 @@
   </div>
 </section>
 <section id="space-history" class="space-view" hidden role="tabpanel" aria-labelledby="tab-history" tabindex="-1">
-  <div class="space-section-head"><div><p class="section-eyebrow">DẤU TRANG CỦA BẠN</p><h2>Lịch sử đọc</h2><p class="space-note">Tiến độ nằm trên thiết bị này; tủ truyện mới đồng bộ theo tài khoản.</p></div><button class="btn ghost sm" id="clearHistory" type="button">Xoá lịch sử</button></div>
+  <div class="space-section-head"><div><p class="section-eyebrow">DẤU TRANG CỦA BẠN</p><h2>Lịch sử đọc</h2></div><button class="btn ghost sm" id="clearHistory" type="button">Xoá lịch sử</button></div>
   <div id="spaceHistory" class="space-history"></div>
 </section>
 <section id="space-stats" class="space-view" hidden role="tabpanel" aria-labelledby="tab-stats" tabindex="-1">
-  <div class="space-section-head"><div><p class="section-eyebrow">NHỊP ĐỌC</p><h2>Thống kê cá nhân</h2><p class="space-note">Thống kê riêng trên thiết bị này. Một chương được tính khi đọc xong hoặc chuyển sang chương tiếp.</p></div></div>
+  <div class="space-section-head"><div><p class="section-eyebrow">NHỊP ĐỌC</p><h2>Thống kê cá nhân</h2></div></div>
   <div id="myStats"></div>
 </section>
 <section id="space-edit-profile" class="space-view" hidden role="tabpanel" aria-labelledby="tab-edit-profile" tabindex="-1">
   <div class="space-panel profile-card"><div class="space-section-head"><div><p class="section-eyebrow">DẤU ẤN CỦA BẠN</p><h2>Hồ sơ của tôi</h2><p class="space-note">Tên, ảnh và mô tả công khai; email, lịch sử và thống kê riêng tư.</p></div></div>
     <div id="profileGuestNote" class="space-login-note" hidden>
       <h3>Hồ sơ cần một tài khoản</h3>
-      <p>Đăng nhập bằng Google để giữ tên và ảnh đại diện của bạn trên mọi thiết bị, và để bình luận bằng chính danh tính đó.</p>
+      <p>Tên và ảnh đại diện theo bạn trên mọi thiết bị, kể cả khi bình luận.</p>
       <div class="row"><button class="btn pri" id="profileLogin" type="button">Đăng nhập</button></div>
     </div>
     <form id="profileForm"><fieldset id="profileFields" disabled>
@@ -72,16 +72,26 @@
     </fieldset><p id="profileMessage" role="status"></p></form>
   </div>
 </section>
-<dialog id="shelfDialog" class="space-dialog"><form id="shelfForm">
-<div class="sechead"><h2 id="shelfFormTitle">Tạo tủ truyện</h2><button type="button" class="btn ghost sm" id="closeShelf">Đóng</button></div>
-<label class="fl" for="shelfName">Tên tủ</label><input class="inp" id="shelfName" maxlength="60" required>
+<dialog id="shelfDialog" class="space-dialog" aria-labelledby="shelfFormTitle"><form id="shelfForm">
+<div class="space-dialog-head">
+  <div><p class="section-eyebrow">TỦ TRUYỆN</p><h2 id="shelfFormTitle">Tạo tủ truyện</h2></div>
+  <button type="button" class="space-dialog-close" id="closeShelf" title="Đóng" aria-label="Đóng">✕</button>
+</div>
+<div class="space-dialog-body">
+<label class="fl" for="shelfName">Tên tủ</label><input class="inp" id="shelfName" maxlength="60" required placeholder="Ví dụ: Truyện muốn đọc">
 <label class="fl" for="shelfDescription">Mô tả</label><textarea class="inp" id="shelfDescription" rows="2" maxlength="300"></textarea>
 <label class="fl" for="shelfVisibility">Ai có thể xem?</label><select class="inp" id="shelfVisibility"><option value="private">Chỉ mình tôi — Riêng tư</option><option value="public">Mọi người — Công khai</option></select>
 <p class="space-note">Tủ công khai hiển thị trên hồ sơ của bạn. Chuyển sang riêng tư sẽ ngừng chia sẻ; không thể thu hồi bản người khác đã sao chép.</p>
-<label class="fl" for="shelfSearch">Thêm truyện vào tủ <span id="selectedCount"></span></label><input class="inp" id="shelfSearch" placeholder="Tìm theo tên truyện, tác giả…" type="search">
+<div class="fl-title"><label class="fl" for="shelfSearch">Thêm truyện vào tủ</label><span class="fl-count" id="selectedCount">0/200</span></div>
+<input class="inp" id="shelfSearch" placeholder="Tìm theo tên truyện, tác giả…" type="search">
 <div class="shelf-picker-box"><div id="shelfPicker" class="shelf-picker"></div><p class="shelf-picker-foot" id="shelfPickerInfo"></p></div>
-<p id="shelfMessage" role="status"></p><div class="row mt"><button class="btn pri" id="saveShelf" type="submit">Lưu tủ truyện</button></div>
+</div>
+<div class="space-dialog-foot">
+<p id="shelfMessage" role="status"></p>
+<button class="btn ghost" id="cancelShelf" type="button">Huỷ</button>
+<button class="btn pri" id="saveShelf" type="submit">Lưu tủ truyện</button>
+</div>
 </form></dialog>
 </main><footer id="ftr"></footer><button id="toTop" aria-label="Lên đầu trang"></button>
-<script src="/cz-config.js?v=20260917a"></script><script src="/cz-app.js?v=20260917a"></script><script src="/cz-auth.js?v=20260917a"></script><script src="/cz-space.js?v=20260917a"></script>
+<script src="/cz-config.js?v=20260917c"></script><script src="/cz-app.js?v=20260917c"></script><script src="/cz-auth.js?v=20260917c"></script><script src="/cz-space.js?v=20260917c"></script>
 </body></html>

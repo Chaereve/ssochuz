@@ -64,6 +64,17 @@ Bài này dùng dữ liệu giả, không ghi production; kiểm tra 1440/768/39
 ### My Space / profile / rút sao
 
 Runner đã thêm `t_member_spaces.mjs` (Worker và quyền truy cập), `t_space.js` (UI) và `t_rating_withdraw.js`.
+
+`t_space_hero.js`: **căn chỉnh hero "Hồ sơ của bạn" + hộp thoại tủ truyện** — jsdom không dàn
+trang nên bài này khoá **cấu trúc khiến việc lệch không thể xảy ra** thay vì đo toạ độ: vòng tròn phải là
+con của hộp ảnh và `inset:0` (cấm `left/top/width/height` cứng), mọi cỡ ảnh đi qua `--sp-ava`/`--sp-ring`,
+`.space-hero` không được có `grid-template-columns` ở bất kỳ mốc nào (đúng lỗi vỡ ở dải 601–700px), không
+còn `.space-hero-orbit`/`.space-hero-rule`/`.space-hero-action`; hộp thoại phải có head/body/foot với nút
+đóng ở cuối hàng tiêu đề và `#saveShelf`/`#cancelShelf`/`#shelfMessage` ở chân hộp, `.space-dialog` không
+được đặt `display` ngoài `[open]` (nếu không hộp thoại hiện ra dù chưa mở), `--space-radius`/`--space-line`
+phải có ở `:root` vì hộp chọn tủ nằm trên trang truyện; kèm chạy thật luồng mở hộp → chọn truyện → bộ đếm
+`1/200` → lưu → hộp đóng. Chạy ngược trên bản cũ nó bắt được 6/7 lỗi đã liệt kê trong
+`BAO-CAO-CAN-CHINH-HERO-VA-HOP-THOAI-MY-SPACE.md`.
 `t_auth_flow.js`: **luồng đăng nhập Supabase sau bản vá 1.9.8** — link email (`?token_hash=`) phải gọi
 `verifyOtp` rồi dọn URL; Worker từ chối đổi token thì web giữ phiên dự phòng + ghi lý do vào
 `CZ_AUTH._verify`; My Space gặp 401 từ `/api/me/space` thì hiện nút "Thử lại" và
