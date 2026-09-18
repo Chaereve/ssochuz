@@ -8,12 +8,13 @@
 <link rel="icon" type="image/png" href="/ssochuz.png?v=1">
 <link rel="apple-touch-icon" href="/ssochuz.png?v=1">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="stylesheet" href="/cz.css?v=20260917f">
+<link rel="stylesheet" href="/cz.css?v=20260918a">
 <script>/* chống nháy nền */try{var t=localStorage.getItem('ssochuz-theme')||localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
 <body class="admin">
 <header class="abar"><div class="in">
   <div class="admin-bar-brand">
+    <button class="hbtn icon admin-tool" id="navToggle" title="Thu / mở thanh điều hướng" aria-label="Thu mở thanh điều hướng"><span data-ic="navhide"></span></button>
     <a class="logo" href="/" title="ssochuz library"><span class="dot"></span>ssochuz<i> library</i></a>
     <span class="pill acc">quản trị</span>
   </div>
@@ -74,13 +75,14 @@
       <!-- ============ 0. CỔNG VÀO — chỉ quản trị ============ -->
       <section id="gate">
         <div class="gate">
-          <h2>Trang quản trị ssochuz library</h2>
+          <div class="gate-brand"><span class="dot"></span>ssochuz<i> library</i></div>
+          <h2>Trang quản trị</h2>
           <p class="gsub">Trang này <b>không mở cho người đọc</b>. Vào bằng một trong hai cách:
             đăng nhập tài khoản Google nằm trong danh sách quản trị, hoặc dùng khoá <code>ADMIN_KEY</code> của Worker.</p>
           <div class="grow2">
-            <button class="btn pri" id="gateLogin">Đăng nhập bằng Google / Supabase</button>
+            <button class="btn pri lg" id="gateLogin"><span data-ic="google"></span>Đăng nhập bằng Google / Supabase</button>
             <div class="sep">hoặc</div>
-            <button class="btn ghost" id="gateKey">Dùng khoá quản trị (ADMIN_KEY)</button>
+            <button class="btn ghost lg" id="gateKey"><span data-ic="key"></span>Dùng khoá quản trị (ADMIN_KEY)</button>
             <a class="btn ghost" href="/">Về trang chủ</a>
           </div>
           <div class="msgbar" id="gateMsg"></div>
@@ -93,7 +95,7 @@
         <div class="card2 setup">
           <div class="row">
             <div class="grow">
-              <h3>Nối Cloudflare Worker</h3>
+              <h3><span class="h-ic" data-ic="cloud"></span>Nối Cloudflare Worker</h3>
               <p class="hint">Sửa trực tiếp lên KV — người đọc thấy sau 1–2 giây. Cần Worker <code>chuseoz-cms</code>
                 đã gắn KV <code>CZ_KV</code> và secret <code>ADMIN_KEY</code>.</p>
             </div>
@@ -132,9 +134,16 @@
 
         <!-- ---------- TỔNG QUAN ---------- -->
         <div id="pane-overview">
+          <div class="quickrow" aria-label="Thao tác nhanh">
+            <button class="quick" data-goto="new"><span data-ic="plus"></span><span>Thêm bộ mới</span></button>
+            <button class="quick" data-goto="list"><span data-ic="library"></span><span>Mở thư viện</span></button>
+            <button class="quick" data-goto="doctor"><span data-ic="pulse"></span><span>Soi dữ liệu</span></button>
+            <button class="quick" data-goto="cmts"><span data-ic="chat"></span><span>Duyệt bình luận</span></button>
+            <button class="quick" data-goto="stats"><span data-ic="chart"></span><span>Xem số liệu</span></button>
+          </div>
           <div class="card2">
-            <div class="row"><h3>Tình trạng dữ liệu</h3><span class="grow"></span>
-              <button class="btn ghost sm" id="ovReload">Đọc lại dữ liệu</button></div>
+            <div class="row"><h3><span class="h-ic" data-ic="grid"></span>Tình trạng dữ liệu</h3><span class="grow"></span>
+              <button class="btn ghost sm" id="ovReload"><span data-ic="refresh"></span>Đọc lại dữ liệu</button></div>
             <p class="hint">Tính từ dữ liệu đang mở (KV hoặc tệp trong repo). Bấm vào một việc để sửa ngay.</p>
             <div class="tiles" id="ovTiles"></div>
             <div class="ovtasks" id="ovTasks"></div>
@@ -154,10 +163,13 @@
         <!-- ---------- THƯ VIỆN ---------- -->
         <div id="pane-list" class="hide">
           <div class="card2">
-            <div class="row">
-              <div><b id="libCount">—</b> <span class="sm muted">bộ trong dữ liệu</span></div>
+            <div class="row"><h3><span class="h-ic" data-ic="library"></span>Thư viện</h3><span class="grow"></span>
+              <div><b id="libCount">—</b> <span class="sm muted">bộ trong dữ liệu</span></div></div>
+            <div class="row libtools">
+              <label class="search libq"><span data-ic="search"></span>
+                <input id="q" placeholder="Tìm theo tên, tác giả, slug…" autocomplete="off" spellcheck="false">
+              </label>
               <span class="grow"></span>
-              <input class="inp" id="q" placeholder="Tìm theo tên, tác giả, slug…" style="max-width:260px">
               <select class="sel" id="fStatus"></select>
               <select class="sel" id="fSort">
                 <option value="new">Mới cập nhật</option>
@@ -165,7 +177,7 @@
                 <option value="az">Tên A→Z</option>
               </select>
               <button class="btn ghost sm hide" id="ovClear">Bỏ lọc</button>
-              <button class="btn ghost sm" id="btnAdd2">Thêm bộ</button>
+              <button class="btn ghost sm" id="btnAdd2"><span data-ic="plus"></span>Thêm bộ</button>
             </div>
             <div class="bulkbar row mt">
               <label class="row sm"><input type="checkbox" id="ckAll" style="width:auto"> chọn tất cả</label>
@@ -177,8 +189,8 @@
                 <option value="18:1">Gắn nhãn 18+</option>
                 <option value="18:0">Bỏ nhãn 18+</option>
               </select>
-              <button class="btn ghost sm" id="btnBulk">Áp dụng</button>
-              <button class="btn ghost sm" id="btnExport">Xuất JSON thư viện</button>
+              <button class="btn ghost sm" id="btnBulk"><span data-ic="check"></span>Áp dụng</button>
+              <button class="btn ghost sm" id="btnExport"><span data-ic="download"></span>Xuất JSON thư viện</button>
               <span class="sm muted" id="selCount"></span>
             </div>
             <div style="overflow:auto;max-height:64vh">
@@ -195,7 +207,7 @@
         <!-- ---------- THÊM BỘ ---------- -->
         <div id="pane-new" class="hide">
           <div class="card2">
-            <h3>Thêm bộ mới</h3>
+            <h3><span class="h-ic" data-ic="plus"></span>Thêm bộ mới</h3>
             <p class="hint">Tạo thẻ truyện mới (chưa có chương thì để trống ô nội dung — bộ sẽ hiện “Sắp ra mắt”).</p>
             <div class="grid2">
               <div><label class="fl" for="nTitle">Tên truyện *</label><input class="inp" id="nTitle"></div>
@@ -211,17 +223,17 @@
             </div>
             <label class="fl" for="nSyn">Mô tả</label><textarea class="inp" id="nSyn" style="min-height:80px"></textarea>
             <label class="fl" for="nChap">Chương 1 (không bắt buộc)</label><textarea class="inp" id="nChap"></textarea>
-            <div class="savebar"><button class="btn pri" id="btnNew">Tạo bộ</button></div>
+            <div class="savebar"><button class="btn pri" id="btnNew"><span data-ic="plus"></span>Tạo bộ</button></div>
           </div>
         </div>
 
         <!-- ---------- SỬA BỘ & CHƯƠNG (trình soạn chuyên nghiệp) ---------- -->
         <div id="pane-edit" class="hide">
           <div class="card2">
-            <div class="row"><h3 id="edHead">Sửa bộ</h3><span class="grow"></span>
-              <a class="btn ghost sm" id="edView" target="_blank" rel="noopener" title="Trang thông tin bộ truyện như người đọc thấy">Mở trang thông tin ↗</a>
-              <button class="btn ghost sm" id="edDup" title="Tạo một bộ mới giống bộ này (kèm chương) rồi sửa lại">Nhân bản bộ</button>
-              <button class="btn ghost sm" id="edBack">← Về thư viện</button></div>
+            <div class="row"><h3 id="edHead">Sửa bộ</h3><span class="gspan class="grow"></span>
+              <a class="btn ghost sm" id="edView" target="_blank" rel="noopener" title="Trang thông tin bộ truyện như người đọc thấy"><span data-ic="eye"></span>Mở trang thông tin</a>
+              <button class="btn ghost sm" id="edDup" title="Tạo một bộ mới giống bộ này (kèm chương) rồi sửa lại"><span data-ic="copy"></span>Nhân bản bộ</button>
+              <button class="btn ghost sm" id="edBack"><span data-ic="left"></span>Về thư viện</button></div>
             <div class="grid3" style="margin-top:8px">
               <div><label class="fl" for="fTitle">Tên truyện</label><input class="inp" id="fTitle"></div>
               <div><label class="fl" for="fSlug">Slug (đường dẫn /truyen/&lt;slug&gt;/)</label><input class="inp" id="fSlug" placeholder="vd: my-truyen-hay"><span class="hint sm">Đổi slug sẽ đổi đường dẫn truyện. Hệ thống sẽ tự chuyển dữ liệu chương sang slug mới và xoá slug cũ trên KV.</span></div>
@@ -241,7 +253,7 @@
                 <label class="fl" for="fThumb">Ảnh bìa</label>
                 <div class="row">
                   <input class="inp" id="fThumb" placeholder="https://… hoặc bấm “Lên ảnh bìa…” bên cạnh">
-                  <button class="btn ghost sm" id="btnCoverUp" title="Lên ảnh bìa từ máy — tự nén WebP trong trình duyệt rồi lưu trên KV">Lên ảnh bìa…</button>
+                  <button class="btn ghost sm" id="btnCoverUp" title="Lên ảnh bìa từ máy — tự nén WebP trong trình duyệt rồi lưu trên KV"><span data-ic="upload"></span>Lên ảnh bìa…</button>
                   <input type="file" id="coverFile" class="hide" accept="image/jpeg,image/png,image/webp">
                 </div>
                 <p class="hint sm">Ảnh lên từ máy được nén ngay trong trình duyệt (WebP, cạnh lớn ~1200px) rồi lưu
@@ -251,7 +263,7 @@
             </div>
             <label class="fl" for="fSyn">Mô tả</label><textarea class="inp" id="fSyn" style="min-height:80px"></textarea>
             <div class="savebar">
-              <button class="btn pri" id="btnSaveMeta">Lưu thông tin (Ctrl+S)</button>
+              <button class="btn pri" id="btnSaveMeta"><span data-ic="save"></span>Lưu thông tin</button>
               <span class="dirty"></span>
               <span class="grow"></span>
               <button class="btn ghost" id="btnDraft">Lưu nháp trong máy</button>
@@ -259,7 +271,7 @@
           </div>
 
           <div class="card2">
-            <div class="row"><h3>Khóa mật mã</h3><span class="grow"></span>
+            <div class="row"><h3><span class="h-ic" data-ic="lock"></span>Khóa mật mã</h3><span class="grow"></span>
               <span class="pill" id="lockState">chưa kiểm tra</span></div>
             <p class="hint">Bật khóa: <b>thẻ truyện và giới thiệu VẪN công khai</b> ở trang chủ/thư viện (có huy hiệu ổ
               khóa), nhưng <b>danh sách chương và nội dung</b> chỉ mở cho ai có mật mã. Mật mã 8–256 ký tự, băm PBKDF2
@@ -277,50 +289,186 @@
             </div>
           </div>
 
-          <div class="card2">
-            <div class="row"><h3>Chương <span class="pill" id="chN">0</span></h3><span class="grow"></span>
-              <button class="btn ghost sm" id="chNew" title="Thêm một chương trống ở cuối bộ">+ Chương trống</button>
-              <button class="btn ghost sm" id="chFileBtn" title="Mở tệp .txt / .md / .html trong máy — nội dung đổ vào chương đang sửa, tên tệp thành tiêu đề">Mở tệp chương…</button>
+          <div class="card2 wdoc-card">
+            <div class="row"><h3><span class="h-ic" data-ic="book_open"></span>Chương <span class="pill" id="chN">0</span></h3><span class="grow"></span>
+              <button class="btn ghost sm" id="chNew" title="Thêm một chương trống ở cuối bộ"><span data-ic="plus"></span>Chương trống</button>
+              <button class="btn ghost sm" id="chFileBtn" title="Mở tệp .txt / .md / .html trong máy — nội dung đổ vào chương đang sửa, tên tệp thành tiêu đề"><span data-ic="upload"></span>Mở tệp chương…</button>
               <input type="file" id="chFile" class="hide" accept=".txt,.md,.markdown,.html,.htm,text/plain,text/html,text/markdown">
             </div>
-            <div class="edgrid" style="margin-top:8px">
-              <div class="edleft">
-                <label class="fl">Danh sách chương (trên xuống dưới)</label>
-                <div class="chlist" id="chList"></div>
-                <p class="hint" style="margin-top:8px">Bấm một dòng để sửa. Hai nút mũi tên đổi vị trí chương —
-                  số <b>#n</b> là thứ tự trong dữ liệu, số người đọc thấy nằm trong tiêu đề (“Chương 3: …”).</p>
-              </div>
-              <div class="edright">
-                <label class="fl">Tiêu đề chương</label><input class="inp" id="chTitle">
-                <div class="rte-tools" id="edToolbar" role="toolbar" aria-label="Định dạng chương">
-                  <button type="button" data-cmd="bold" title="Đậm (Ctrl+B)"><b>B</b></button>
-                  <button type="button" data-cmd="italic" title="Nghiêng (Ctrl+I)"><i>I</i></button>
-                  <button type="button" data-cmd="underline" title="Gạch chân (Ctrl+U)"><u>U</u></button>
-                  <button type="button" data-cmd="strikeThrough" title="Gạch ngang"><s>S</s></button>
-                  <span class="rte-sep" aria-hidden="true"></span>
-                  <button type="button" data-block="h2" title="Tiêu đề lớn trong chương">H2</button>
-                  <button type="button" data-block="h3" title="Tiêu đề nhỏ trong chương">H3</button>
-                  <button type="button" data-block="p" title="Đoạn văn thường">Đoạn</button>
-                  <button type="button" data-block="blockquote" title="Đoạn trích dẫn">❝</button>
-                  <button type="button" data-cmd="insertHorizontalRule" title="Chèn đường phân cách">—</button>
-                  <span class="rte-sep" aria-hidden="true"></span>
-                  <button type="button" data-align="left" title="Canh trái">⇤</button>
-                  <button type="button" data-align="center" title="Canh giữa">↔</button>
-                  <button type="button" data-align="right" title="Canh phải">⇥</button>
-                  <span class="rte-sep" aria-hidden="true"></span>
-                  <button type="button" data-img title="Chèn ảnh vào chương — lên từ máy, tự nén WebP trong trình duyệt, lưu trên KV"><span data-ic="upload"></span>Ảnh</button>
-                  <input type="file" id="edImg" class="hide" accept="image/jpeg,image/png,image/webp">
+            <!-- ===== PHÒNG SOẠN KIỂU WORD: danh sách chương + trang giấy + thanh trạng thái ===== -->
+            <div class="wdoc" id="wdoc">
+              <aside class="wside" aria-label="Danh sách chương">
+                <div class="wside-head">
+                  <label class="search wside-q"><span data-ic="search"></span>
+                    <input id="chListQ" placeholder="Lọc chương…" autocomplete="off" spellcheck="false" aria-label="Lọc danh sách chương">
+                  </label>
                 </div>
-                <div class="rte" id="edBody" contenteditable="true" aria-label="Nội dung chương"
-                  data-placeholder="Bấm vào đây để viết chương… (có thể dùng Mở tệp chương… để nạp .txt/.md/.html)"></div>
-                <div class="row mt">
-                  <button class="btn pri sm" id="chSave">Lưu chương này vào bộ</button>
-                  <button class="btn ghost sm" id="chDel">Xoá chương</button>
-                  <span class="sm muted" id="chStat"></span>
+                <div class="chlist" id="chList"></div>
+                <p class="hint wside-hint">Bấm một dòng để sửa · nút mũi tên đổi vị trí ·
+                  số <b>#n</b> là thứ tự trong dữ liệu, số người đọc thấy nằm trong tiêu đề (“Chương 3: …”).</p>
+              </aside>
+              <div class="wmain">
+                <div class="wdoc-head">
+                  <span class="wch-nav" role="group" aria-label="Đi tới chương trước / sau">
+                    <button type="button" class="wbtn" id="chPrev" title="Về chương trước"><span data-ic="left"></span></button>
+                    <button type="button" class="wbtn" id="chNext" title="Tới chương sau"><span data-ic="right"></span></button>
+                  </span>
+                  <input class="inp wch-title" id="chTitle" placeholder="Tiêu đề chương…" autocomplete="off"
+                    aria-label="Tiêu đề chương" title="Tiêu đề chương">
+                  <span class="wch-meta sm muted" id="chMeta"></span>
+                  <span class="grow"></span>
+                  <button class="btn pri sm" id="chSave" title="Đưa nội dung đang soạn vào bộ (nhớ bấm Lưu toàn bộ chương ở cuối)"><span data-ic="save"></span>Lưu chương này</button>
+                  <button class="btn ghost sm" id="chDel" title="Xoá chương đang mở"><span data-ic="trash"></span>Xoá</button>
+                </div>
+                <div class="wribbon" id="edToolbar" role="toolbar" aria-label="Thanh định dạng kiểu Word">
+                  <div class="wgroup" role="group" aria-label="Hoàn tác">
+                    <button type="button" class="wbtn" data-cmd="undo" title="Hoàn tác"><span data-ic="undo"></span></button>
+                    <button type="button" class="wbtn" data-cmd="redo" title="Làm lại"><span data-ic="redo"></span></button>
+                    <span class="wcap">Sửa</span>
+                  </div>
+                  <div class="wgroup" role="group" aria-label="Phông chữ">
+                    <span class="wrow">
+                      <select class="wsel wfont" id="edFont" title="Phông chữ" aria-label="Phông chữ">
+                        <option value="">Phông mặc định</option>
+                        <option value="Georgia,'Times New Roman',serif">Georgia</option>
+                        <option value="'Palatino Linotype',Palatino,Georgia,serif">Palatino</option>
+                        <option value="'Times New Roman',Times,serif">Times New Roman</option>
+                        <option value="Arial,Helvetica,sans-serif">Arial</option>
+                        <option value="'Be Vietnam Pro',Arial,sans-serif">Be Vietnam Pro</option>
+                        <option value="'Courier New',monospace">Courier New</option>
+                      </select>
+                      <select class="wsel wsize" id="edSize" title="Cỡ chữ" aria-label="Cỡ chữ">
+                        <option value="">Cỡ…</option>
+                        <option value="13">13</option>
+                        <option value="14">14</option>
+                        <option value="15">15</option>
+                        <option value="16">16</option>
+                        <option value="17">17</option>
+                        <option value="18">18</option>
+                        <option value="20">20</option>
+                        <option value="22">22</option>
+                        <option value="24">24</option>
+                        <option value="28">28</option>
+                        <option value="32">32</option>
+                      </select>
+                    </span>
+                    <span class="wrow">
+                      <button type="button" class="wbtn" data-cmd="bold" title="Đậm"><span data-ic="bold"></span></button>
+                      <button type="button" class="wbtn" data-cmd="italic" title="Nghiêng"><span data-ic="italic"></span></button>
+                      <button type="button" class="wbtn" data-cmd="underline" title="Gạch chân"><span data-ic="uline"></span></button>
+                      <button type="button" class="wbtn" data-cmd="strikeThrough" title="Gạch ngang"><span data-ic="strike"></span></button>
+                      <button type="button" class="wbtn" data-case title="Đổi HOA / thường chỗ đang chọn"><span data-ic="acase"></span></button>
+                      <button type="button" class="wbtn" data-cmd="removeFormat" title="Xoá hết định dạng chỗ đang chọn"><span data-ic="clearfmt"></span></button>
+                      <label class="wcolor" title="Màu chữ"><span data-ic="fontcolor"></span><input type="color" id="edColor" value="#a63a52" aria-label="Màu chữ"></label>
+                      <label class="wcolor" title="Màu nền chữ (đánh dấu)"><span data-ic="hilite"></span><input type="color" id="edHilite" value="#ffe08a" aria-label="Màu nền chữ"></label>
+                    </span>
+                    <span class="wcap">Phông</span>
+                  </div>
+                  <div class="wgroup" role="group" aria-label="Đoạn văn">
+                    <span class="wrow">
+                      <select class="wsel wstyle" id="edStyle" title="Kiểu đoạn" aria-label="Kiểu đoạn">
+                        <option value="p">Đoạn văn</option>
+                        <option value="h2">Tiêu đề 1</option>
+                        <option value="h3">Tiêu đề 2</option>
+                        <option value="blockquote">Trích dẫn</option>
+                      </select>
+                      <button type="button" class="wbtn" data-block="h2" title="Tiêu đề lớn trong chương">H2</button>
+                      <button type="button" class="wbtn" data-block="h3" title="Tiêu đề nhỏ trong chương">H3</button>
+                      <button type="button" class="wbtn" data-block="blockquote" title="Đoạn trích dẫn"><span data-ic="quote"></span></button>
+                    </span>
+                    <span class="wrow">
+                      <button type="button" class="wbtn" data-list="ul" title="Danh sách gạch đầu dòng"><span data-ic="list"></span></button>
+                      <button type="button" class="wbtn" data-list="ol" title="Danh sách đánh số"><span data-ic="numlist"></span></button>
+                      <button type="button" class="wbtn" data-align="left" title="Canh trái"><span data-ic="aleft"></span></button>
+                      <button type="button" class="wbtn" data-align="center" title="Canh giữa"><span data-ic="acenter"></span></button>
+                      <button type="button" class="wbtn" data-align="right" title="Canh phải"><span data-ic="aright"></span></button>
+                      <button type="button" class="wbtn" data-align="justify" title="Canh đều hai bên"><span data-ic="ajustify"></span></button>
+                      <button type="button" class="wbtn" data-cmd="outdent" title="Giảm thụt lề"><span data-ic="indout"></span></button>
+                      <button type="button" class="wbtn" data-cmd="indent" title="Tăng thụt lề"><span data-ic="indin"></span></button>
+                      <label class="wline" title="Giãn dòng"><span data-ic="lineheight"></span>
+                        <select class="wsel" id="edLine" aria-label="Giãn dòng">
+                          <option value="">Dòng…</option>
+                          <option value="1.4">1,0</option>
+                          <option value="1.6">1,15</option>
+                          <option value="1.9">1,5</option>
+                          <option value="2.2">2,0</option>
+                        </select>
+                      </label>
+                    </span>
+                    <span class="wcap">Đoạn</span>
+                  </div>
+                  <div class="wgroup" role="group" aria-label="Chèn">
+                    <span class="wrow">
+                      <button type="button" class="wbtn wide" data-img title="Chèn ảnh vào chương — lên từ máy, tự nén WebP trong trình duyệt, lưu trên KV"><span data-ic="imgadd"></span>Ảnh</button>
+                      <input type="file" id="edImg" class="hide" accept="image/jpeg,image/png,image/webp">
+                      <button type="button" class="wbtn wide" data-link title="Chèn / sửa liên kết cho chữ đang chọn"><span data-ic="link"></span>Link</button>
+                      <button type="button" class="wbtn" data-unlink title="Gỡ liên kết"><span data-ic="unlink"></span></button>
+                    </span>
+                    <span class="wrow">
+                      <button type="button" class="wbtn wide" data-cmd="insertHorizontalRule" title="Chèn đường phân cách"><span data-ic="hrline"></span>Kẻ ngang</button>
+                      <button type="button" class="wbtn wide" data-table title="Chèn bảng 3 cột (bấm Tab để đi qua các ô)"><span data-ic="table"></span>Bảng</button>
+                      <button type="button" class="wbtn wide" data-exp="txt" title="Tải chương đang soạn về máy dạng .txt"><span data-ic="filedown"></span>TXT</button>
+                      <button type="button" class="wbtn wide" data-exp="html" title="Tải chương đang soạn về máy dạng .html"><span data-ic="filedown"></span>HTML</button>
+                    </span>
+                    <span class="wcap">Chèn</span>
+                  </div>
+                  <div class="wgroup" role="group" aria-label="Xem và tìm">
+                    <span class="wrow">
+                      <button type="button" class="wbtn wide" data-find title="Tìm chữ trong chương đang soạn"><span data-ic="search"></span>Tìm</button>
+                      <button type="button" class="wbtn wide" data-replace title="Tìm và thay thế trong chương đang soạn"><span data-ic="replace"></span>Thay thế</button>
+                      <button type="button" class="wbtn wide" data-pastetxt title="Dán dưới dạng chữ thường (bỏ mọi định dạng khi dán từ Word / web)"><span data-ic="pastetxt"></span>Dán chữ</button>
+                    </span>
+                    <span class="wrow">
+                      <button type="button" class="wbtn" data-marks title="Hiện / ẩn ký hiệu đoạn (¶)"><span data-ic="para"></span></button>
+                      <button type="button" class="wbtn wide" data-preview title="Xem thử đúng kiểu chữ trang đọc"><span data-ic="eye"></span>Xem thử</button>
+                      <button type="button" class="wbtn wide" data-focus title="Chế độ tập trung: giấu danh sách chương"><span data-ic="focus"></span>Tập trung</button>
+                      <button type="button" class="wbtn" data-full title="Soạn toàn màn hình"><span data-ic="expand"></span></button>
+                    </span>
+                    <span class="wcap">Xem</span>
+                  </div>
+                </div>
+                <div class="wfind hide" id="edFindBar" role="search" aria-label="Tìm và thay thế trong chương">
+                  <label class="search wfind-q"><span data-ic="search"></span>
+                    <input id="edFindQ" placeholder="Tìm trong chương…" autocomplete="off" spellcheck="false">
+                  </label>
+                  <span class="sm muted wfind-ct" id="edFindCt"></span>
+                  <button type="button" class="wbtn" id="edFindPrev" title="Kết quả trước"><span data-ic="up"></span></button>
+                  <button type="button" class="wbtn" id="edFindNext" title="Kết quả sau"><span data-ic="down"></span></button>
+                  <label class="search wfind-q"><span data-ic="replace"></span>
+                    <input id="edRepQ" placeholder="Thay bằng…" autocomplete="off" spellcheck="false">
+                  </label>
+                  <button type="button" class="btn ghost sm" id="edRepOne">Thay 1 chỗ</button>
+                  <button type="button" class="btn ghost sm" id="edRepAll">Thay tất cả</button>
+                  <button type="button" class="wbtn" id="edFindX" title="Đóng" aria-label="Đóng tìm kiếm"><span data-ic="x"></span></button>
+                </div>
+                <div class="wlinkpop hide" id="edLinkPop" role="dialog" aria-label="Chèn liên kết">
+                  <label class="search"><span data-ic="link"></span>
+                    <input id="edLinkUrl" placeholder="https://…" autocomplete="off" spellcheck="false">
+                  </label>
+                  <button type="button" class="btn pri sm" id="edLinkOk">Chèn link</button>
+                  <button type="button" class="btn ghost sm" id="edLinkOff">Gỡ link</button>
+                  <button type="button" class="wbtn" id="edLinkX" title="Đóng" aria-label="Đóng"><span data-ic="x"></span></button>
+                </div>
+                <div class="wpage-wrap" id="wPageWrap">
+                  <div class="wpage" id="wPage">
+                    <div class="rte wedit" id="edBody" contenteditable="true" aria-label="Nội dung chương" spellcheck="true"
+                      data-placeholder="Bấm vào đây để viết chương… (có thể dùng “Mở tệp chương…” để nạp .txt / .md / .html)"></div>
+                  </div>
+                </div>
+                <div class="wstatus" aria-live="polite">
+                  <span class="wst" id="chStat"></span>
+                  <span class="wst wst-save" id="edSaved"></span>
+                  <span class="grow"></span>
+                  <span class="wzoom" role="group" aria-label="Thu phóng trang soạn">
+                    <button type="button" class="wbtn" id="edZoomOut" title="Thu nhỏ"><span data-ic="zout"></span></button>
+                    <button type="button" class="wzoom-val" id="edZoomVal" title="Về cỡ 100%">100%</button>
+                    <button type="button" class="wbtn" id="edZoomIn" title="Phóng to"><span data-ic="zin"></span></button>
+                  </span>
                 </div>
               </div>
             </div>
             <div class="findbox">
+              <span class="findbox-lb sm muted">Tìm trong toàn bộ truyện:</span>
               <label class="search"><span data-ic="search"></span>
                 <input id="chFind" placeholder="Tìm chữ trong toàn bộ chương của bộ này (vd tên nhân vật, lỗi chính tả)…" autocomplete="off" spellcheck="false">
               </label>
@@ -330,7 +478,7 @@
             </div>
             <div class="findres hide" id="chFindRes"></div>
             <div class="savebar">
-              <button class="btn pri" id="btnSaveCh">Lưu toàn bộ chương (Ctrl+S)</button>
+              <button class="btn pri" id="btnSaveCh">Lưu toàn bộ chương</button>
               <span class="dirty"></span>
               <span class="grow"></span>
               <button class="btn ghost danger" id="btnDelBook">Xoá bộ này</button>
@@ -382,11 +530,11 @@
         <!-- ---------- KIỂM DUYỆT BÌNH LUẬN ---------- -->
         <div id="pane-cmts" class="hide">
           <div class="card2">
-            <div class="row"><h3>Bình luận của người đọc</h3><span class="grow"></span>
+            <div class="row"><h3><span class="h-ic" data-ic="chat"></span>Bình luận của người đọc</h3><span class="grow"></span>
               <input class="inp" id="cmQ" placeholder="Tìm trong nội dung / tên người gửi…" style="max-width:240px">
               <select class="sel" id="cmBook"><option value="">Mọi bộ truyện</option></select>
-              <button class="btn ghost sm" id="cmReload">Đọc lại</button>
-              <button class="btn ghost sm" id="cmExport">Xuất JSON</button></div>
+              <button class="btn ghost sm" id="cmReload"><span data-ic="refresh"></span>Đọc lại</button>
+              <button class="btn ghost sm" id="cmExport"><span data-ic="download"></span>Xuất JSON</button></div>
             <p class="hint">Mọi bình luận nằm trên KV (<code>cmt:&lt;slug&gt;</code>). Quản trị xoá được bình luận của bất kỳ ai;
               người đọc thường chỉ xoá được của chính mình. Bình luận gửi từ trang đọc có kèm số chương.</p>
             <div class="msgbar" id="cmState"></div>
@@ -398,10 +546,10 @@
         <!-- ---------- BÁO LỖI CHỮ NGƯỜI ĐỌC GỬI ---------- -->
         <div id="pane-reports" class="hide">
           <div class="card2">
-            <div class="row"><h3>Báo lỗi chữ người đọc gửi</h3><span class="grow"></span>
+            <div class="row"><h3><span class="h-ic" data-ic="alert"></span>Báo lỗi chữ người đọc gửi</h3><span class="grow"></span>
               <input class="inp" id="rpQ" placeholder="Tìm trong nội dung báo lỗi…" style="max-width:240px">
-              <button class="btn ghost sm" id="rpReload">Đọc lại</button>
-              <button class="btn ghost sm" id="rpExport">Xuất JSON</button></div>
+              <button class="btn ghost sm" id="rpReload"><span data-ic="refresh"></span>Đọc lại</button>
+              <button class="btn ghost sm" id="rpExport"><span data-ic="download"></span>Xuất JSON</button></div>
             <p class="hint">Mỗi lần người đọc bấm <b>Gửi báo lỗi</b> ở trang đọc, nội dung được lưu vào KV (300 báo lỗi gần nhất) và
               <b>gửi thẳng email</b> tới quản trị nếu Worker đã đặt <code>RESEND_API_KEY</code> + <code>MAIL_FROM</code> hoặc <code>MAIL_TO</code> / <code>ADMIN_EMAILS</code>.
               Bấm vào dòng để mở đúng chương bị báo.</p>
@@ -414,8 +562,8 @@
         <!-- ---------- NHẬT KÝ ---------- -->
         <div id="pane-log" class="hide">
           <div class="card2">
-            <div class="row"><h3>Nhật ký thao tác</h3><span class="grow"></span>
-              <button class="btn ghost sm" id="logReload">Đọc lại</button></div>
+            <div class="row"><h3><span class="h-ic" data-ic="history"></span>Nhật ký thao tác</h3><span class="grow"></span>
+              <button class="btn ghost sm" id="logReload"><span data-ic="refresh"></span>Đọc lại</button></div>
             <p class="hint">Worker ghi lại 200 thao tác gần nhất (lưu bộ, thêm/xoá chương, khóa/bỏ khóa, lên ảnh,
               nạp dữ liệu, đếm lại số chương, kiểm duyệt bình luận) để biết ai đổi gì lúc nào.</p>
             <div class="msgbar" id="logState"></div>
@@ -426,7 +574,7 @@
         <!-- ---------- CÀI ĐẶT ---------- -->
         <div id="pane-settings" class="hide">
           <div class="card2">
-            <h3>Trang chủ: truyện cho khối hero</h3>
+            <h3><span class="h-ic" data-ic="star"></span>Trang chủ: truyện cho khối hero</h3>
             <p class="hint">Tối đa 6 bộ, xếp theo thứ tự bên dưới. Không chọn gì thì trang chủ tự lấy các bộ mới cập nhật.</p>
             <div class="heroPick">
               <div class="hplist" id="slidePick"></div>
@@ -443,7 +591,7 @@
             </div>
           </div>
           <div class="card2">
-            <h3>Góc biên tập viên · “ssochuz’s choices”</h3>
+            <h3><span class="h-ic" data-ic="sparkle"></span>Góc biên tập viên · “ssochuz’s choices”</h3>
             <p class="hint">Chọn tay những bộ chất lượng cao nhưng ít người biết — hiện ở trang chủ sau mục Xếp hạng, dưới tiêu đề <b>ssochuz’s choices</b>. Không giới hạn số lượng nhưng nên 4-8 bộ.</p>
             <div class="heroPick">
               <div class="hplist" id="editPick"></div>
@@ -460,19 +608,19 @@
             </div>
           </div>
           <div class="card2">
-            <h3>Báo lỗi &amp; liên hệ</h3>
+            <h3><span class="h-ic" data-ic="mail"></span>Báo lỗi &amp; liên hệ</h3>
             <p class="hint">Báo lỗi chữ được gửi <b>tự động</b> về Worker. Địa chỉ nhận thư phải đặt bằng Secret <code>MAIL_TO</code> hoặc <code>ADMIN_EMAILS</code> trên Worker, nên không xuất hiện trong HTML, registry hay DevTools của người đọc.</p>
             <label class="fl" for="rForm">Link khảo sát truyện (Google Form)</label>
             <input class="inp" id="rForm" placeholder="https://forms.gle/...">
           </div>
           <div class="card2">
-            <h3>Lịch ra chương</h3>
+            <h3><span class="h-ic" data-ic="calendar"></span>Lịch ra chương</h3>
             <p class="hint">Mỗi dòng một mục: <code>Ngày | slug truyện | ghi chú</code>. Dùng đúng <b>slug</b> trong thư viện để lịch luôn trỏ đúng truyện (có thể bỏ ghi chú). Tên truyện và bìa sẽ tự lấy từ thư viện, không nhập tay.</p>
             <textarea class="inp" id="sSched" style="min-height:150px" spellcheck="false" placeholder="Thứ 2, 3 | third-person | 20:00&#10;Thứ 4 | co-vo-ho-anh-cua-toi |"></textarea>
             <label class="fl" for="sSchedNote">Ghi chú</label><input class="inp" id="sSchedNote">
           </div>
           <div class="card2">
-            <h3>Đăng nhập người đọc (Supabase)</h3>
+            <h3><span class="h-ic" data-ic="user_circle"></span>Đăng nhập người đọc (Supabase)</h3>
             <p class="hint">Lưu ở đây thì <b>không cần sửa code / deploy lại</b>: cấu hình nằm trên KV, web tự đọc.
               Supabase Dashboard → Authentication → Providers → bật <b>Google</b>; URL Configuration → thêm domain web vào
               <b>Redirect URLs</b>. Xong là hết cảnh <code>Lỗi 400: origin_mismatch</code> của Google.</p>
@@ -498,7 +646,7 @@
               <button class="btn ghost sm" id="aCheck">Kiểm tra Worker đã sẵn sàng chưa</button></div>
           </div>
           <div class="card2">
-            <h3>Bình luận (giscus)</h3>
+            <h3><span class="h-ic" data-ic="chat"></span>Bình luận (giscus)</h3>
             <p class="hint">Lấy repo + repoId tại giscus.app. Để trống thì trang truyện <b>giấu hẳn khối bình luận</b>.</p>
             <div class="grid2">
               <div><label class="fl" for="sGiscusRepo">repo</label><input class="inp" id="sGiscusRepo" placeholder="user/repo"></div>
@@ -506,7 +654,7 @@
             </div>
           </div>
           <div class="card2">
-            <h3>Đồng bộ · nạp · sao lưu</h3>
+            <h3><span class="h-ic" data-ic="refresh"></span>Đồng bộ · nạp · sao lưu</h3>
             <div class="kv" id="health"></div>
             <div class="row">
               <button class="btn" id="btnSeed">↑ Nạp dữ liệu repo lên KV</button>
@@ -523,7 +671,7 @@
               <button class="btn ghost" id="btnRestore">↑ Phục hồi từ file</button>
               <input type="file" id="fileRestore" accept="application/json" class="hide">
             </div>
-            <div class="row mt"><button class="btn pri" id="sSave">Lưu cài đặt lên KV</button><span class="dirty"></span></div>
+            <div class="row mt"><button class="btn pri" id="sSave"><span data-ic="save"></span>Lưu cài đặt lên KV</button><span class="dirty"></span></div>
             <p class="hint mt">Các nút thao tác lớn (nạp dữ liệu, phục hồi, reset phiếu, xoá bộ) đều yêu cầu
               <b>bấm hai lần</b> để xác nhận — chống chạm nhầm khi tay lướt.</p>
           </div>
@@ -532,11 +680,11 @@
         <!-- ---------- SỐ LIỆU ---------- -->
         <div id="pane-stats" class="hide">
           <div class="card2">
-            <h3>Số liệu xếp hạng — lưu trên Cloudflare KV</h3>
+            <h3><span class="h-ic" data-ic="chart"></span>Số liệu xếp hạng — lưu trên Cloudflare KV</h3>
             <p class="hint">Worker tự đếm lượt đọc khi người đọc mở chương và đếm phiếu khi bấm <b>Thích</b>; số nằm trên KV nên không cần Firebase. Số hiện ra = số cũ đã nạp + số đếm được.</p>
             <div class="row">
-              <button class="btn pri" id="btnStats">Đọc lại</button>
-              <button class="btn ghost" id="btnStatsCsv">Xuất CSV</button>
+              <button class="btn pri" id="btnStats"><span data-ic="refresh"></span>Đọc lại</button>
+              <button class="btn ghost" id="btnStatsCsv"><span data-ic="download"></span>Xuất CSV</button>
               <button class="btn ghost" id="btnStatsFb">Nhập số cũ từ Firebase</button>
             </div>
             <div class="msgbar" id="stState"></div>
@@ -553,8 +701,8 @@
         <div id="pane-votes" class="hide">
           <div class="card2">
             <div class="row">
-              <h3>Ai đã bầu bộ này</h3><span class="grow"></span>
-              <button class="btn ghost sm" id="voReload">Đọc lại</button>
+              <h3><span class="h-ic" data-ic="heart"></span>Ai đã bầu bộ này</h3><span class="grow"></span>
+              <button class="btn ghost sm" id="voReload"><span data-ic="refresh"></span>Đọc lại</button>
             </div>
             <p class="hint">Chọn một bộ để xem <b>từng người đã bầu</b>: phiếu cho cả bộ và phiếu cho từng chương
               (khoá <code>voters</code> trong KV). Tick vào người muốn gỡ rồi bấm <b>Gỡ phiếu đã chọn</b> —
@@ -578,7 +726,7 @@
             </div>
           </div>
           <div class="card2 danger">
-            <div class="row"><h3>Reset dữ liệu bầu</h3><span class="grow"></span><span class="pill bad">cẩn thận</span></div>
+            <div class="row"><h3><span class="h-ic" data-ic="alert"></span>Reset dữ liệu bầu</h3><span class="grow"></span><span class="pill bad">cẩn thận</span></div>
             <p class="hint">Đưa phiếu về <b>0</b> để bắt đầu lại (ví dụ sau khi thử tính năng). <b>Lượt đọc không bị ảnh hưởng.</b>
               Thao tác này xoá luôn danh sách người đã bầu nên <b>không hoàn tác được</b> — muốn giữ thì bấm
               <b>Sao lưu toàn bộ</b> trước.</p>
