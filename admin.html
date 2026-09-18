@@ -350,10 +350,16 @@
               <i>đăng trùng</i> (cùng tên <b>và</b> cùng nội dung → xoá 1 bản) với <i>đặt tên nhầm</i> (cùng tên nhưng
               nội dung khác, dãy chương nhảy số → chỉ sửa lại tiêu đề, xoá là mất 1 chương thật).
               Dòng nào có nút <b>Sửa chương</b> nghĩa là bệnh nằm trong kho chương, bấm vào là tới thẳng danh sách chương.</p>
+            <p class="hint">Lệch <b>KV ↔ repo</b> có <u>hai chiều, chữa ngược nhau</u> — đọc kỹ dòng báo trước khi bấm:
+              <b>repo nhiều chương hơn KV</b> (sửa file trên GitHub chưa nạp lên) → <i>↑ Nạp chương từ repo lên KV</i>;
+              <b>KV nhiều chương hơn repo</b> (bạn đăng chương ngay trong trang quản trị, file <code>data/book/*.json</code>
+              chưa theo kịp — người đọc không bị ảnh hưởng) → <i>↓ Lưu file repo từ KV</i> rồi commit lên GitHub.
+              Nạp đè repo lên KV ở chiều thứ hai là <b>xoá mất chương vừa đăng</b>.</p>
             <div class="msgbar" id="docState"></div>
             <div class="tiles mt" id="docTiles"></div>
             <div class="docbar">
               <button class="btn pri" id="docFixKv">↑ Nạp chương từ repo lên KV (sửa gốc)</button>
+              <button class="btn" id="docPullRepo" title="Tải file data/book/&lt;slug&gt;.json đúng bằng bản trên KV để commit lên GitHub">↓ Lưu file repo từ KV</button>
               <button class="btn" id="docRecount">Đếm lại số chương trên KV</button>
               <button class="btn ghost" id="docFixReg">Sửa nhãn trong registry</button>
               <button class="btn ghost" id="docExport">Xuất báo cáo JSON</button>

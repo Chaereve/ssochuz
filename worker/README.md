@@ -516,6 +516,7 @@ Sau khi nạp xong thì **tắt Firebase luôn cũng được** — web không g
 | Đăng nhập Google báo *Invalid keyData* | worker đang chạy là **bản cũ** | dán lại `worker/cms.js` (bản 1.5.0) rồi Deploy |
 | Google báo **`400: origin_mismatch`** | redirect URI chưa khai trong Google Cloud Console | dùng Supabase thay (mục 7b): thêm tên miền vào Supabase → Authentication → URL Configuration là xong, không phải chờ Google duyệt |
 | Web hiện **sai số chương** dù file trong repo đã đúng | KV còn giữ bản cũ, mà web thì đọc KV trước | `/admin` → **Bác sĩ dữ liệu** → *Soi dữ liệu* → *Nạp chương từ repo lên KV* → *Đếm lại số chương trên KV*; hoặc gọi thẳng `POST /api/recount` kèm `x-admin-key` |
+| Bác sĩ báo **KV lệch file trong repo** dù truyện đã lên web (`KV` > `repo`) | chương được đăng **ngay trong trang quản trị** (`PUT /api/book/<slug>` chỉ ghi KV, không tự sửa file GitHub) — người đọc không bị ảnh hưởng | `/admin` → **Bác sĩ dữ liệu** → *↓ Lưu file repo từ KV* → bỏ file vào `data/book/` → commit. **Đừng** bấm *Nạp chương từ repo lên KV* ở chiều này: bản repo ít chương hơn sẽ ghi đè và **xoá mất chương đã đăng** |
 | Bấm **Thích** mà Top vote không nhảy | web đang đọc bản JS cũ trong cache | Ctrl+F5; kiểm tra `?v=` ở cuối thẻ `<script>` trong HTML đã đổi chưa |
 | Bình luận báo *"không nhận được mã máy"* | web gửi thiếu `vid` (bản JS cũ) | Ctrl+F5 để lấy `cz-app.js` mới |
 | Đăng nhập Google báo *sai audience* | `GOOGLE_CLIENT_ID` trên Worker ≠ Client ID trong `cz-config.js` | sửa cho khớp 2 chỗ |

@@ -434,7 +434,10 @@
     var sbCode = !!(window.CZ_SUPABASE_URL && window.CZ_SUPABASE_ANON_KEY);
     var sbKv = !!(authCfg.supabaseUrl && authCfg.supabaseAnonKey);
     var sbOn = sbCode || sbKv;
-    var docBad = DOC.rows.filter(function (r) { return r.issues.indexOf('regVsReal') >= 0 || r.issues.indexOf('kvVsRepo') >= 0; }).length;
+    /* đếm cả 2 chiều lệch KV ↔ repo (repoAhead / kvAhead) — mỗi chiều chữa một kiểu */
+    var docBad = DOC.rows.filter(function (r) {
+      return r.issues.some(function (k) { return /^(regVsReal|repoAhead|kvAhead)$/.test(k.split(':')[0]); });
+    }).length;
     box.innerHTML =
       '<div class="docrow ' + (sbOn ? 'good' : 'warn') + '"><span class="di">' + ic(sbOn ? 'check' : 'alert', 'i-s') + '</span>' +
         '<span class="dt"><b>Đăng nhập người đọc: ' + (sbOn ? (sbCode ? 'Supabase (cz-config.js)' : 'Supabase (lưu trên KV)') : 'CHƯA bật') + '</b>' +
@@ -1342,7 +1345,10 @@
   /* ------------------------------ nạp dữ liệu --------------------------- */
   function seedKV() {
     if (!ONLINE) return msg('Cần nối Worker trước.', 'err');
-    CZ.confirm('Nạp TOÀN BỘ registry + các bộ trong repo lên KV?\nDữ liệu đang có trên KV sẽ bị ghi đè.', 'Nạp lên KV').then(function (ok) {
+    CZ.confirm('Nạp TOÀN BỘ registry + các bộ trong repo lên KV?\nDữ liệu đang có trên KV sẽ bị ghi đè.' +
+      '\n\n⚠ Bộ nào bạn vừa ĐĂNG CHƯƠNG TRONG TRANG QUẢN TRỊ mà chưa lưu về repo (Bác sĩ dữ liệu báo ' +
+      '"KV nhiều chương hơn repo") sẽ BỊ MẤT chương — vào Bác sĩ dữ liệu bấm "↓ Lưu file repo từ KV", ' +
+      'commit lên GitHub rồi hãy nạp.', 'Nạp lên KV').then(function (ok) {
       if (!ok) return;
       var b = $('#btnSeed'); b.disabled = true;
       fetch('/data/registry.json').then(function (r) { return r.json(); }).then(function (reg) {
@@ -1497,8 +1503,13 @@
        · registry  — con số đang hiện ngoài web (trang chủ, trang truyện, mục lục)
        · KV        — kho chương người đọc THẬT SỰ nhận (bản này thắng)
        · repo      — file /data/book/<slug>.json trên GitHub
-     Lệch nhau là web hiện sai số chương. Đây chính là bệnh "Be My Angel chỉ có 29
-     chương mà web vẫn hiện 30": sửa file trong repo nhưng bản trên KV chưa được nạp lại. */
+     Lệch registry ↔ KV là web hiện sai số chương — đúng bệnh "Be My Angel chỉ có 29
+     chương mà web vẫn hiện 30": sửa file trong repo nhưng bản trên KV chưa được nạp lại.
+     Lệch KV ↔ repo thì PHẢI xét chiều (xem syncIssue), vì hai chiều chữa NGƯỢC nhau:
+       · repo > KV → sửa file trên GitHub chưa nạp lên KV → "↑ Nạp chương từ repo lên KV";
+       · KV > repo → đăng chương trong trang quản trị, file repo chưa theo kịp
+                     → "↓ Lưu file repo từ KV" rồi commit; nạp đè repo lên KV ở chiều này
+                       là xoá mất chương vừa đăng. */
   var DOC = { rows: [], at: '', scanned: 0 };
   function docState(text, kind) {
     var el = $('#docState');
@@ -1513,7 +1524,11 @@
   }
   function fetchKvBook(slug) {
     if (!ONLINE) return Promise.resolve(null);
-    return api('/api/book/' + encodeURIComponent(slug), { auth: false })
+    /* đọc BẰNG KHOÁ QUẢN TRỊ: bộ đang khóa mật mã mà đọc kiểu khách thì Worker chỉ trả
+       vỏ {locked:true, chapters:[]} → bác sĩ tưởng bộ đó 0 chương rồi xui "nạp repo lên
+       KV", tức là ghi đè bản rỗng lên kho chương thật. Khoá sai/hết hạn thì Worker tự
+       trả bản công khai như cũ, không mất gì. */
+    return api('/api/book/' + encodeURIComponent(slug), {})
       .then(function (b) { return (b && b.chapters) ? b : null; })
       .catch(function () { return null; });
   }
@@ -1667,7 +1682,8 @@
           /* truyện chưa ra (0 chương) thì không báo thiếu — đúng theo yêu cầu */
           if (!(regN === 0 && CZ.statusCls(n.status) === 'soon' && real === 0)) issues.push('regVsReal');
         }
-        if (kvN != null && repoN != null && kvN !== repoN) issues.push('kvVsRepo');
+        var sync = syncIssue(kvN, repoN);
+        if (sync) issues.push(sync);
         if (ONLINE && kvN == null && regN > 0) issues.push('kvMissing');
         if (kvN == null && repoN == null && regN > 0) issues.push('noSource');
         var src = kv || repo;
@@ -1695,7 +1711,17 @@
   }
   var DOC_LABEL = {
     regVsReal: ['bad', 'Số chương ngoài web ≠ số chương thật', 'registry ghi {reg}, kho chương có {real} — người đọc thấy sai số'],
-    kvVsRepo: ['bad', 'KV lệch file trong repo GitHub', 'KV có {kv} chương, repo có {repo} — bạn sửa repo nhưng chưa nạp lên KV. Bấm "Nạp chương từ repo lên KV"'],
+    repoAhead: ['bad', 'File trong repo GitHub chưa được nạp lên KV',
+      'repo có {repo} chương, KV chỉ {kv} — bạn sửa/thêm chương trong file trên GitHub mà chưa nạp lên KV nên người đọc vẫn nhận bản cũ. Bấm "↑ Nạp chương từ repo lên KV"'],
+    /* CHIỀU NGƯỢC LẠI, chữa ngược lại — gộp chung 2 chiều vào một câu "KV lệch repo"
+       rồi xui "nạp repo lên KV" là xui người dùng ghi đè bản ÍT chương hơn lên KV:
+       đúng bệnh "Vượt Khỏi Đường Chân Trời (Special) — KV 1 · repo 0", chương vừa đăng
+       trong trang quản trị sẽ bị xoá sạch nếu bấm theo lời nhắc cũ. */
+    kvAhead: ['warn', 'Chương trên KV chưa được lưu về file repo',
+      'KV có {kv} chương, file repo chỉ {repo} — bạn đăng/sửa chương ngay trong trang quản trị (ghi thẳng lên KV) nên file data/book/<slug>.json chưa theo kịp. ' +
+      'Người đọc KHÔNG bị ảnh hưởng, web vẫn hiện đủ {kv} chương. Muốn hết báo: bấm "↓ Lưu file repo từ KV" rồi commit file đó lên GitHub. ' +
+      'ĐỪNG bấm "↑ Nạp chương từ repo lên KV" cho bộ này — bản repo đang ít hơn sẽ xoá mất {diff} chương trên KV. ' +
+      'Nếu KV đúng là đang thừa chương rác/đăng trùng thì sửa trong tab Sửa bộ → Sửa chương rồi mới nạp repo lên KV.'],
     kvMissing: ['warn', 'KV chưa có chương nào', 'registry nói có {reg} chương nhưng KV trống — người đọc bấm vào sẽ không thấy chữ'],
     noSource: ['warn', 'Không tìm thấy chương ở đâu cả', 'cả KV lẫn repo đều không có file chương'],
     label: ['warn', 'Nhãn số chương sai định dạng', 'đang là "{lab}", nên là "29/29" hoặc "0/—" cho truyện chưa ra'],
@@ -1706,10 +1732,40 @@
     noyear: ['warn', 'Thiếu năm', ''],
     noslug: ['bad', 'Thiếu slug', 'không mở được trang truyện'],
     dupSame: ['bad', 'Chương bị đăng trùng (cùng tên, cùng nội dung)',
-      'mở tab Sửa bộ → Sửa chương, xoá bản thừa, rồi bấm "Nạp chương từ repo lên KV" + "Đếm lại số chương trên KV"'],
+      'mở tab Sửa bộ → Sửa chương, xoá bản thừa. Chương trùng nằm trong file repo thì xoá ở đó rồi bấm "↑ Nạp chương từ repo lên KV"; chỉ KV bị thì xoá thẳng trong trang quản trị là đủ'],
     dupTitle: ['warn', 'Trùng tiêu đề nhưng nội dung khác — chương bị đặt nhầm tên/nhầm số',
       'KHÔNG phải đăng trùng. Mở tab Sửa bộ → Sửa chương rồi đổi lại tên cho đúng (xoá là mất 1 chương thật)']
   };
+  /* KV và file repo lệch nhau thì PHẢI nói rõ lệch về phía nào — hai phía chữa NGƯỢC
+     nhau, nói nhầm một câu là mất chương:
+       · repo > KV : sửa/thêm chương trong file trên GitHub mà chưa nạp lên KV
+                     → chữa bằng "↑ Nạp chương từ repo lên KV";
+       · KV  > repo: đăng/sửa chương ngay trong trang quản trị (ghi thẳng KV) nên file
+                     repo chưa theo kịp → chữa bằng "↓ Lưu file repo từ KV" rồi commit.
+                     Nạp repo lên KV ở phía này là ghi đè bản ít chương hơn = xoá chương
+                     đã đăng (bệnh thật: Special "endless blue beyond" KV 1 · repo 0).
+     Thiếu một trong hai nguồn (null) thì chưa đủ căn cứ, không kết luận. */
+  function syncIssue(kvN, repoN) {
+    if (kvN == null || repoN == null || kvN === repoN) return '';
+    return repoN > kvN ? 'repoAhead' : 'kvAhead';
+  }
+  /* điền số vào dòng mô tả bệnh — tách thành hàm riêng để kiểm thử được bằng Node */
+  function docText(key, r) {
+    r = r || {};
+    var vals = {
+      reg: r.reg == null ? '—' : r.reg,
+      real: r.real == null ? '—' : r.real,
+      kv: r.kv == null ? '—' : r.kv,
+      repo: r.repo == null ? '—' : r.repo,
+      diff: Math.max(0, (r.kv || 0) - (r.repo || 0)),
+      lab: String((r.n && r.n.countLabel) || '')
+    };
+    /* thế MỌI lần lặp của cùng một biến: lời nhắc kvAhead nhắc {kv} tới 2 lần, mà
+       String.replace với chuỗi mẫu chỉ thế chỗ ĐẦU TIÊN (sót lại "{kv}" trên màn hình) */
+    return String((DOC_LABEL[key] || [])[2] || '').replace(/\{(reg|real|kv|repo|diff|lab)\}/g, function (m, k) {
+      return vals[k] == null ? '—' : vals[k];
+    });
+  }
   /* dòng mô tả chi tiết cho 2 loại trùng tiêu đề: chỉ rõ chương nào, tên gì, có nhảy số không */
   function dupText(r, same) {
     var g = (r.dups || []).filter(function (x) { return !!x.same === same; });
@@ -1750,13 +1806,13 @@
       var lvl = bad.indexOf(r) >= 0 ? 'bad' : 'warn';
       /* bệnh nằm ở kho chương (trùng tên, chương rỗng) thì mở thẳng vào danh sách chương */
       var onChap = r.issues.some(function (k) { return /^(dupSame|dupTitle|empty)$/.test(k.split(':')[0]); });
+      /* KV đang nhiều chương hơn file repo → cho nút lưu về repo NGAY TẠI DÒNG đó,
+         để người dùng không phải đoán xem nên bấm nút nào ở thanh công cụ */
+      var canPull = r.issues.indexOf('kvAhead') >= 0 && ONLINE;
       var bits = r.issues.map(function (k) {
         var key = k.split(':')[0], extra = k.indexOf(':') > 0 ? k.slice(k.indexOf(':') + 1) : '';
         var L = DOC_LABEL[key] || ['warn', key, ''];
-        var txt = L[2]
-          .replace('{reg}', r.reg).replace('{real}', r.real == null ? '—' : r.real)
-          .replace('{kv}', r.kv == null ? '—' : r.kv).replace('{repo}', r.repo == null ? '—' : r.repo)
-          .replace('{lab}', String(r.n.countLabel || ''));
+        var txt = docText(key, r);
         if (key === 'dupSame' || key === 'dupTitle') {
           /* 'extra' chỉ là số nhóm trùng — vô dụng khi đã liệt kê đúng chương nào ở dưới */
           txt = dupText(r, key === 'dupSame') + (txt ? ' — ' + txt : '');
@@ -1769,8 +1825,17 @@
         '<span class="sm muted">slug <code>' + esc(r.slug || '—') + '</code> · registry <b>' + r.reg +
         '</b> · KV <b>' + (r.kv == null ? '—' : r.kv) + '</b> · repo <b>' + (r.repo == null ? '—' : r.repo) + '</b></span>' +
         bits + '</span>' +
-        '<span class="row" style="gap:6px"><button class="btn ghost sm" data-docedit="' + i + '" data-docfocus="' + (onChap ? 'chap' : 'meta') + '">' + ic('edit', 'i-s') + (onChap ? 'Sửa chương' : 'Sửa') + '</button></span></div>';
+        '<span class="row" style="gap:6px">' +
+        (canPull ? '<button class="btn ghost sm" data-docpull="' + i + '" title="Tải file data/book/' + esc(r.slug || '') + '.json đúng bằng bản trên KV để commit lên GitHub">' +
+          ic('download', 'i-s') + 'Lưu file repo</button>' : '') +
+        '<button class="btn ghost sm" data-docedit="' + i + '" data-docfocus="' + (onChap ? 'chap' : 'meta') + '">' + ic('edit', 'i-s') + (onChap ? 'Sửa chương' : 'Sửa') + '</button></span></div>';
     }).join('');
+    $$('#docList [data-docpull]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var r = order[parseInt(b.dataset.docpull, 10)];
+        if (r && r.slug) pullRepo([r]);
+      });
+    });
     $$('#docList [data-docedit]').forEach(function (b) {
       b.addEventListener('click', function () {
         var r = order[parseInt(b.dataset.docedit, 10)];
@@ -1808,7 +1873,7 @@
         ? ' — Worker đang chạy là bản cũ, dán lại worker/cms.js rồi Deploy (xem worker/README.md).' : ''), 'err');
     }).then(function () { b.disabled = false; b.textContent = 'Đếm lại số chương trên KV'; });
   }
-  /* nạp chương từ repo lên KV — chữa tận gốc khi KV lệch repo */
+  /* nạp chương từ repo lên KV — chữa tận gốc khi file repo MỚI HƠN kho chương trên KV */
   function docPushRepo() {
     if (!ONLINE) return msg('Cần nối Worker trước.', 'err');
     var targets = DOC.rows.filter(function (r) {
@@ -1816,7 +1881,22 @@
     });
     if (!targets.length) targets = DOC.rows.filter(function (r) { return r.repo != null; });
     if (!targets.length) return msg('Không tìm thấy file chương nào trong repo để nạp.', 'err');
-    CZ.confirm('Nạp ' + targets.length + ' bộ từ file trong repo lên KV?\nChương trên KV của những bộ này sẽ bị ghi đè bằng bản trong repo (bản bạn đã sửa trên GitHub).', 'Nạp lên KV')
+    /* Bộ mà KV đang có NHIỀU chương hơn repo: nạp repo lên là XOÁ bớt chương trên KV.
+       Không cấm — có khi KV đúng là đang thừa chương rác (Be My Angel từng thừa 1
+       chương ma) — nhưng phải kể tên từng bộ trước khi người dùng bấm xác nhận. */
+    var risky = targets.filter(function (r) { return r.kv != null && r.kv > r.repo; });
+    var lost = risky.reduce(function (a, r) { return a + (r.kv - r.repo); }, 0);
+    var note = 'Nạp ' + targets.length + ' bộ từ file trong repo lên KV?\n' +
+      'Chương trên KV của những bộ này sẽ bị ghi đè bằng bản trong repo (bản bạn đã sửa trên GitHub).';
+    if (risky.length) {
+      note += '\n\n⚠ ' + risky.length + ' bộ đang có KV NHIỀU chương hơn repo — nạp là MẤT ' + lost + ' chương trên KV:\n' +
+        risky.slice(0, 8).map(function (r) {
+          return '· ' + ((r.n && r.n.title) || r.slug) + ' (KV ' + r.kv + ' → repo ' + r.repo + ')';
+        }).join('\n') + (risky.length > 8 ? '\n· … và ' + (risky.length - 8) + ' bộ nữa' : '') +
+        '\n\nNếu những bộ này lệch vì bạn ĐĂNG CHƯƠNG TRONG TRANG QUẢN TRỊ (chứ không phải vì KV thừa chương rác) ' +
+        'thì đừng nạp đè — bấm "↓ Lưu file repo từ KV" để lấy bản KV về commit lên GitHub.';
+    }
+    CZ.confirm(note, 'Nạp lên KV')
       .then(function (ok) {
         if (!ok) return;
         var b = $('#docFixKv'); b.disabled = true;
@@ -1836,6 +1916,42 @@
           return loadRegistry().then(function () { renderList(); renderOverview(); return runDoctor(); });
         });
       });
+  }
+
+  /* LƯU CHƯƠNG TỪ KV VỀ FILE data/book/<slug>.json — chiều NGƯỢC của nút nạp repo lên KV.
+     Đăng/sửa chương trong trang quản trị là ghi thẳng lên KV, file trong GitHub không tự
+     theo kịp nên bác sĩ cứ báo "KV lệch file trong repo" mãi. Nút này tải ĐÚNG BẢN KV
+     xuống máy (nguyên từng ký tự, không gõ lại tay) để bỏ vào data/book/ rồi commit.
+     Chưa commit thì bác sĩ vẫn báo — đó là nhắc đúng việc còn thiếu, không phải lỗi web. */
+  function pullRepo(rows) {
+    if (!ONLINE) return msg('Cần nối Worker trước.', 'err');
+    rows = (rows && rows.length) ? rows.slice()
+      : DOC.rows.filter(function (r) { return r.issues.indexOf('kvAhead') >= 0; });
+    rows = rows.filter(function (r) { return r && r.slug && r.kv != null; });
+    if (!rows.length) return msg('Không có bộ nào cần lưu về repo — chỉ bộ nào KV nhiều chương hơn file repo mới cần.', 'info');
+    var okN = 0, fail = [], i = 0;
+    function next() {
+      if (i >= rows.length) return finish();
+      var r = rows[i++];
+      /* đọc bằng khoá quản trị để lấy TRỌN bộ: bộ đang khóa mật mã mà đọc kiểu khách thì
+         chỉ nhận được vỏ rỗng, lưu về repo thành ra làm mất chương */
+      return api('/api/book/' + encodeURIComponent(r.slug), {}).then(function (bk) {
+        if (!bk || !Array.isArray(bk.chapters)) throw new Error('KV không trả chương');
+        if (bk.lock) delete bk.lock;          /* mật mã/băm không bao giờ được nằm trong repo */
+        CZ.download(r.slug + '.json', JSON.stringify(bk) + '\n');
+        okN++;
+      }).catch(function () { fail.push(r.slug); }).then(function () {
+        /* rải đều: trình duyệt hay chặn khi một trang tải nhiều file cùng một lúc */
+        return new Promise(function (res) { setTimeout(res, i < rows.length ? 400 : 0); });
+      }).then(next);
+    }
+    function finish() {
+      msg('Đã tải ' + okN + '/' + rows.length + ' file — bỏ vào thư mục data/book/ của repo (đè lên file cùng tên) rồi commit lên GitHub; deploy xong là hết báo lệch.' +
+        (fail.length ? ' Không tải được: ' + fail.slice(0, 5).join(', ') + '.' : ''), fail.length ? 'err' : 'ok');
+      toast(okN ? ('Đã tải ' + okN + ' file data/book') : 'Không tải được file nào', okN ? 'ok' : 'err');
+    }
+    msg('Đang lấy ' + rows.length + ' bộ từ KV về máy…', 'info');
+    return next();
   }
 
   /* ======================= KIỂM DUYỆT BÌNH LUẬN =========================== */
@@ -2960,6 +3076,11 @@
   });
   $('#docRecount').addEventListener('click', docRecount);
   $('#docFixReg').addEventListener('click', docFixRegistry);
+  $('#docPullRepo').addEventListener('click', function () {
+    /* chiều ngược của nút nạp repo lên KV: lấy bản KV về file data/book/<slug>.json.
+       Không ghi gì lên KV nên không cần xác nhận 2 bước. */
+    pullRepo();
+  });
   $('#docExport').addEventListener('click', function () {
     var rep = {
       at: DOC.at, online: ONLINE, scanned: DOC.scanned,

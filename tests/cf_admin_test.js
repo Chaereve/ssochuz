@@ -482,6 +482,7 @@ async function openAdmin(worker, key) {
 
   /* ---------- 13. WORKER XÁC NHẬN PHIÊN QUẢN TRỊ → vào được ---------------- */
   const bossEmail = 'admin@example.com';
+  const savedDownloads = [];
   const adminPage = page('admin.html', {
     fetch: w.fetchMock,
     setup(win) {
@@ -493,6 +494,11 @@ async function openAdmin(worker, key) {
         exp: Math.floor(Date.now() / 1000) + 3600, provider: 'supabase'
       }));
       win.localStorage.setItem('ssochuz-auth-token', 'admin-token');
+      /* jsdom không có URL.createObjectURL nên CZ.download rơi sang nhánh data: URL —
+         chặn click của <a download> để kiểm thử thấy được file nào đang được tải về */
+      win.HTMLAnchorElement.prototype.click = function () {
+        if (this.download) savedDownloads.push({ name: this.download, href: this.href });
+      };
     }
   });
   await wait(500);
@@ -520,6 +526,57 @@ async function openAdmin(worker, key) {
     noiDung: angelRow ? String(angelRow.textContent || '').replace(/\s+/g, ' ').slice(0, 180) : '(không thấy)',
     loi: adminPage.errors.slice(0, 3)
   };
+
+  /* ---------- 14a. KV NHIỀU CHƯƠNG HƠN REPO: phải chẩn đúng CHIỀU ----------
+     Be My Angel trên KV có 30 chương, file repo 29 → cùng dạng chênh với bộ
+     "Vượt Khỏi Đường Chân Trời (Special)" (KV 1 · repo 0) mà chủ trang kêu:
+     truyện đã đăng lên web rồi mà bác sĩ vẫn bảo "bạn sửa repo nhưng chưa nạp lên KV".
+     Chẩn sai chiều thì nút chữa sẽ XOÁ chương, nên dòng báo phải:
+       · nói là "chưa được lưu về file repo", KHÔNG xui nạp repo lên KV;
+       · có nút "↓ Lưu file repo" tải đúng bản KV về để commit. */
+  const angelTxt = angelRow ? String(angelRow.textContent || '').replace(/\s+/g, ' ') : '';
+  const pullBtn = angelRow && angelRow.querySelector('[data-docpull]');
+  out.kvNhieuHonRepo = {
+    noiDung: angelTxt.slice(0, 200),
+    noiDungChuaLuuVeRepo: /chưa được lưu về file repo/.test(angelTxt),
+    khongConXuiNapDe: !/bạn sửa repo nhưng chưa nạp lên KV/.test(angelTxt),
+    coNutLuuFileRepo: !!pullBtn,
+    loi: adminPage.errors.slice(0, 3)
+  };
+  if (pullBtn) {
+    /* chờ dòng "Đã tải …" hiện ra: hàng đợi timer của jsdom chạy chậm hơn trình duyệt
+       thật (đo được 0.3–1.4s cho một setTimeout 0ms) nên phải dò chứ không chờ cứng */
+    aclick(pullBtn);
+    for (let k = 0; k < 40; k++) {
+      await wait(100);
+      if (/Đã tải \d+\/\d+ file/.test(String(($(adoc, '#msg') || {}).textContent || ''))) break;
+    }
+  }
+  /* file tải về phải là ĐÚNG BẢN KV (30 chương), không phải bản repo 29 chương */
+  let pulled = null;
+  const dl = savedDownloads.find(x => x.name === 'be-my-angel.json');
+  if (dl) { try { pulled = JSON.parse(decodeURIComponent(String(dl.href).split(',')[1] || '')); } catch (e) { pulled = null; } }
+  out.luuFileRepoTuKv = {
+    daTai: savedDownloads.map(x => x.name),
+    soChuongTrongFile: pulled && Array.isArray(pulled.chapters) ? pulled.chapters.length : null,
+    msg: String(($(adoc, '#msg') || {}).textContent || '').slice(0, 110)
+  };
+  /* các điều kiện BẮT BUỘC — sai là bài kiểm thử phải đỏ (out.errors lấy từ p.errors) */
+  if (!out.kvNhieuHonRepo.noiDungChuaLuuVeRepo) {
+    p.errors.push('bác sĩ chưa chẩn đúng chiều KV > repo (phải nói "chưa được lưu về file repo"): ' + out.kvNhieuHonRepo.noiDung.slice(0, 120));
+  }
+  if (!out.kvNhieuHonRepo.khongConXuiNapDe) {
+    p.errors.push('bác sĩ vẫn xui "bạn sửa repo nhưng chưa nạp lên KV" cho bộ KV nhiều chương hơn repo — bấm theo là xoá mất chương');
+  }
+  if (!out.kvNhieuHonRepo.coNutLuuFileRepo) {
+    p.errors.push('dòng KV > repo thiếu nút "↓ Lưu file repo"');
+  }
+  if (out.luuFileRepoTuKv.soChuongTrongFile !== 30) {
+    p.errors.push('file data/book tải từ KV phải đúng bản KV (30 chương), thấy ' + out.luuFileRepoTuKv.soChuongTrongFile);
+  }
+  if (!/Đã tải 1\/1 file/.test(out.luuFileRepoTuKv.msg)) {
+    p.errors.push('nút "↓ Lưu file repo từ KV" không báo đã tải xong: "' + out.luuFileRepoTuKv.msg + '"');
+  }
   /* đếm lại trên KV → registry phải sửa nhãn cho khớp */
   aclick('#docRecount');
   await wait(900);
@@ -530,13 +587,27 @@ async function openAdmin(worker, key) {
   };
 
   /* ---------- 14b. CHỮA TẬN GỐC: nạp chương từ repo lên KV rồi đếm lại ----------
-     nút nay có xác nhận 2 BƯỚC: lần 1 "vũ trang" nút, lần 2 mới mở hộp thoại */
+     nút nay có xác nhận 2 BƯỚC: lần 1 "vũ trang" nút, lần 2 mới mở hộp thoại.
+     Hộp thoại phải KỂ TÊN bộ sẽ mất chương (KV 30 → repo 29) trước khi cho bấm:
+     nạp đè repo lên KV là ghi đè, không phải đồng bộ hai chiều. */
   aclick('#docFixKv');
   aclick('#docFixKv');
   await wait(200);
   const okKv = $(adoc, '#czOk');
+  const confirmTxt = String(($(adoc, '#czConfirm .mb') || {}).textContent || '').replace(/\s+/g, ' ');
   out.napRepoCoXacNhan2Buoc = !!okKv;
   out.napRepoCoXacNhan = !!okKv;
+  out.napRepoCanhBaoMatChuong = {
+    noiDung: confirmTxt.slice(0, 200),
+    keTenBoSeMatChuong: /MẤT \d+ chương trên KV/.test(confirmTxt) && /be-my-angel|Be My Angel/.test(confirmTxt),
+    chiDanChieuNguoc: /Lưu file repo từ KV/.test(confirmTxt)
+  };
+  if (!out.napRepoCanhBaoMatChuong.keTenBoSeMatChuong) {
+    p.errors.push('hộp xác nhận "nạp repo lên KV" không kể tên bộ sẽ MẤT chương: ' + confirmTxt.slice(0, 140));
+  }
+  if (!out.napRepoCanhBaoMatChuong.chiDanChieuNguoc) {
+    p.errors.push('hộp xác nhận không chỉ cách chữa chiều ngược lại ("↓ Lưu file repo từ KV")');
+  }
   if (okKv) { aclick(okKv); await wait(1400); }
   const kvAngel = w.kvBook('be-my-angel');
   out.napRepoLenKv = {
