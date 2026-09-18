@@ -178,6 +178,61 @@
         d.parentNode.replaceChild(p, d);
       }
     });
+    // Chống nhân đôi dòng trống: <p><br></p>, <p></p>, <div><br></div> liên tiếp chỉ giữ 1,
+    // đồng thời bỏ dòng trống ở đầu/cuối và gộp nhiều <br> trong cùng 1 đoạn.
+    try {
+      function isEmptyBlock(el) {
+        if (!el || el.nodeType !== 1) return false;
+        var tag = el.tagName ? el.tagName.toLowerCase() : '';
+        if (tag !== 'p' && tag !== 'div') return false;
+        if (el.querySelector('img, iframe, video, hr, table, ul, ol, blockquote, h1, h2, h3, h4, figure')) return false;
+        var txt = (el.textContent || '').replace(/\u00a0/g, ' ').trim();
+        var inner = (el.innerHTML || '').replace(/<br\s*\/?>/gi, '').replace(/&nbsp;/gi, '').trim();
+        return !txt && !inner;
+      }
+      // Gộp nhiều <br> liên tiếp trong cùng 1 đoạn thành 1 để không nhân đôi
+      $$('p', tmp).forEach(function (p) {
+        if (p.querySelector('img')) return;
+        p.innerHTML = p.innerHTML.replace(/(<br\s*\/?>\s*){2,}/gi, '<br>');
+      });
+      // Với mỗi phần tử cha, gộp các khối trống liên tiếp thành 1
+      function collapseInParent(parent) {
+        var kids = Array.prototype.slice.call(parent.childNodes);
+        var prevEmpty = false;
+        kids.forEach(function (node) {
+          if (node.nodeType !== 1) { prevEmpty = false; return; }
+          if (isEmptyBlock(node)) {
+            if (prevEmpty) { try { node.remove(); } catch (e2) {} }
+            else { prevEmpty = true; }
+          } else {
+            prevEmpty = false;
+            // đệ quy dọn bên trong
+            if (node.childNodes && node.childNodes.length) collapseInParent(node);
+          }
+        });
+      }
+      collapseInParent(tmp);
+      // Bỏ trống đầu/cuối ở cấp gốc
+      var topKids = Array.prototype.slice.call(tmp.childNodes);
+      for (var i = 0; i < topKids.length; i++) {
+        var n = topKids[i];
+        if (n.nodeType !== 1) continue;
+        if (isEmptyBlock(n)) { try { n.remove(); } catch (e3) {} }
+        else break;
+      }
+      topKids = Array.prototype.slice.call(tmp.childNodes);
+      for (var j = topKids.length - 1; j >= 0; j--) {
+        var nj = topKids[j];
+        if (nj.nodeType !== 1) continue;
+        if (isEmptyBlock(nj)) { try { nj.remove(); } catch (e4) {} }
+        else break;
+      }
+      // Dọn <div> trống sót lại không có khối con
+      $$('div', tmp).forEach(function (d) {
+        if (d.querySelector('div,p,ul,ol,blockquote,table,img,figure,h1,h2,h3,h4,hr')) return;
+        if (isEmptyBlock(d)) { try { d.remove(); } catch (e5) {} }
+      });
+    } catch (e) {}
     return tmp.innerHTML;
   }
 
