@@ -936,7 +936,28 @@
       "syn": "Khi Fah-anan, \"chị đại\" màn ảnh bất cần truyền thông với biệt danh \"nữ hoàng thị phi\", tình cờ gặp gỡ Nuengtara, người thừa kế út của tỷ phú Charoenkiat. Trớ trêu thay, một sự cố đã đẩy…"
     }
   ],
-  "slides": [],
+  "slides": [
+    {
+      "slug": "lunar-secret",
+      "reason": "Lựa chọn của ban biên tập"
+    },
+    {
+      "slug": "bake-love-feelings",
+      "reason": "Đề xuất cho bạn"
+    },
+    {
+      "slug": "enemies-with-benefits",
+      "reason": "Đề xuất cho bạn"
+    },
+    {
+      "slug": "nguoi-chong-xau-xa-cua-co-vo-beo",
+      "reason": "Đề xuất cho bạn"
+    },
+    {
+      "slug": "my-only-sunshine",
+      "reason": "Đề xuất cho bạn"
+    }
+  ],
   "settings": {
     "giscus": {
       "repo": "",
