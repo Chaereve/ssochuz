@@ -35,16 +35,20 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 def call(api, path, key=None, timeout=120):
     url = api.rstrip('/') + path
     req = urllib.request.Request(url, method='GET')
+    req.add_header('User-Agent', 'Mozilla/5.0 (compatible; ssochuz-sync/1.0; +https://github.com/Chaereve/ssochuz)')
     if key:
         req.add_header('x-admin-key', key)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
             return r.status, json.loads(r.read().decode() or '{}')
     except urllib.error.HTTPError as e:
+        raw_body = ''
         try:
-            return e.code, json.loads(e.read().decode())
+            raw_body = e.read().decode(errors='replace')
+            return e.code, json.loads(raw_body)
         except Exception:
-            return e.code, {}
+            clean_body = re.sub(r'<[^>]+>', ' ', raw_body).strip()
+            return e.code, {'error': ' '.join(clean_body.split())[:300] if clean_body else ('HTTP ' + str(e.code))}
     except (urllib.error.URLError, OSError) as e:
         # Không nối được Worker (DNS, TLS, hết giờ, runner bị chặn ra Internet…).
         # Trước đây văng traceback urllib — đọc trong log Actions không biết lỗi gì,
@@ -108,11 +112,19 @@ def main():
     if not a.key:
         sys.exit('Thiếu --key (ADMIN_KEY của Worker) — BẮT BUỘC, xem chốt an toàn 1 trong ghi chú đầu file.')
 
+    # Chuẩn hoá khoá: gỡ khoảng trắng đầu/cuối, nháy bao quanh, ký tự zero-width
+    # (tránh lỗi 401/403 khi copy-paste secret trên GitHub Actions hoặc terminal)
+    a.key = re.sub(r'[\u200B-\u200D\uFEFF]', '', a.key).strip().strip('\'"')
+    if not a.key:
+        sys.exit('ADMIN_KEY bị rỗng sau khi chuẩn hoá (chỉ toàn khoảng trắng hoặc nháy rỗng).')
+
     # Chốt 1: xác nhận khoá đúng TRƯỚC khi kéo. Khoá sai thì Worker trả bản khách
     # — bộ đang khóa mật mã sẽ về "vỏ rỗng" và ghi đè xuống repo là mất chương.
     st, me = call(a.api, '/api/whoami', a.key)
     if st != 200 or not me.get('ok'):
-        sys.exit('ADMIN_KEY không đúng (HTTP %s) — dừng, không kéo/ ghi gì cả.' % st)
+        err = me.get('error') or me.get('message') or ''
+        hint = (' (%s)' % err) if err else ''
+        sys.exit('ADMIN_KEY không đúng (HTTP %s%s) — dừng, không kéo/ ghi gì cả.' % (st, hint))
 
     st, reg = call(a.api, '/api/registry', a.key)
     if st != 200 or not isinstance(reg.get('lib'), list):
