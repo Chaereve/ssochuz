@@ -1619,7 +1619,7 @@ async function postReportImage(req, env, cors) {
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(type)) {
     return json({ ok: false, error: 'Chỉ nhận ảnh JPG, PNG hoặc WebP.' }, { status: 400, cors });
   }
-  const data = String(body.data || '').replace(/^data:[^;,]+;base64,/, '').replace(/\\s/g, '');
+  const data = String(body.data || '').replace(/^data:[^;,]+;base64,/, '').replace(/\s/g, '');
   if (!/^[A-Za-z0-9+/]{16,}={0,2}$/.test(data)) {
     return json({ ok: false, error: 'Dữ liệu ảnh không hợp lệ.' }, { status: 400, cors });
   }
