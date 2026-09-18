@@ -630,19 +630,77 @@
   /* thu nội dung từ trình soạn — giữ HTML thật, chỉ dọn nốt:
      bỏ thẻ bị vấy style inline vô nghĩa, giữ lại img/br/định dạng cơ bản.
      KHÔNG sanitize thô như trang đọc: đây là dữ liệu NGUỒN, trang đọc sẽ
-     sanitize khi hiển thị (cleanHTML). */
+     sanitize khi hiển thị (cleanHTML).
+     FIX blank-line duplication: gộp <p><br></p> liên tiếp thành 1, bỏ trống đầu/cuối,
+     gộp <br><br> trong cùng đoạn, chuẩn hoá <div> → <p>. */
   function edHtml() {
     var ed = $('#edBody');
     if (!ed) return '';
     var html = ed.innerHTML;
-    /* trình soạn đang hiện URL tuyệt đối của Worker (để ảnh render được) —
-       trước khi lưu phải viết về lại đường dẫn TƯƠNG ĐỐI /api/img/… để nội
-       dung không dính cứng tên miền Worker */
     if (API) {
       var abs = normalizeApi(API) + '/api/img/';
       html = html.split(abs).join('/api/img/');
     }
-    return html.trim() === '<br>' ? '' : html;
+    var t = html.trim();
+    if (!t || t === '<br>' || t === '<div><br></div>' || t === '<p><br></p>') return '';
+    try {
+      var tmp = document.createElement('div');
+      tmp.innerHTML = html;
+      function isEmptyBlock(el) {
+        if (!el || el.nodeType !== 1) return false;
+        var tag = (el.tagName || '').toLowerCase();
+        if (tag !== 'p' && tag !== 'div') return false;
+        if (el.querySelector('img, iframe, video, hr, table, ul, ol, blockquote, h1, h2, h3, h4, figure')) return false;
+        var txt = (el.textContent || '').replace(/\u00a0/g, ' ').trim();
+        var inner = (el.innerHTML || '').replace(/<br\s*\/?>/gi, '').replace(/&nbsp;/gi, '').replace(/\s+/g, '').trim();
+        return !txt && !inner;
+      }
+      // Chuẩn hoá <div> chỉ chứa chữ thành <p> để tránh <div><br></div> nhân đôi
+      var divs = Array.prototype.slice.call(tmp.querySelectorAll('div'));
+      divs.forEach(function (d) {
+        if (d.querySelector('div,p,ul,ol,blockquote,table,img,figure,h1,h2,h3,h4,hr')) return;
+        var p = document.createElement('p');
+        p.innerHTML = d.innerHTML || '<br>';
+        if (d.parentNode) d.parentNode.replaceChild(p, d);
+      });
+      // Gộp <br> liên tiếp trong cùng 1 đoạn
+      Array.prototype.slice.call(tmp.querySelectorAll('p')).forEach(function (p) {
+        if (p.querySelector('img')) return;
+        p.innerHTML = p.innerHTML.replace(/(<br\s*\/?>\s*){2,}/gi, '<br>');
+      });
+      // Gộp khối trống liên tiếp thành 1 ở mỗi parent
+      function collapse(parent) {
+        var kids = Array.prototype.slice.call(parent.childNodes);
+        var prevEmpty = false;
+        kids.forEach(function (node) {
+          if (node.nodeType !== 1) { prevEmpty = false; return; }
+          if (isEmptyBlock(node)) {
+            if (prevEmpty) { try { node.remove(); } catch (e2) {} }
+            else { prevEmpty = true; }
+          } else {
+            prevEmpty = false;
+            if (node.childNodes && node.childNodes.length) collapse(node);
+          }
+        });
+      }
+      collapse(tmp);
+      // Bỏ trống đầu/cuối
+      var top = Array.prototype.slice.call(tmp.childNodes);
+      for (var i = 0; i < top.length; i++) {
+        var n = top[i];
+        if (n.nodeType !== 1) continue;
+        if (isEmptyBlock(n)) { try { n.remove(); } catch (e3) {} } else break;
+      }
+      top = Array.prototype.slice.call(tmp.childNodes);
+      for (var j = top.length - 1; j >= 0; j--) {
+        var nj = top[j];
+        if (nj.nodeType !== 1) continue;
+        if (isEmptyBlock(nj)) { try { nj.remove(); } catch (e4) {} } else break;
+      }
+      html = tmp.innerHTML.trim();
+    } catch (e) {}
+    if (!html || html === '<br>' || html === '<p><br></p>' || html === '<div><br></div>') return '';
+    return html;
   }
   function edSaveCurrent(silent) {
     if (!BOOK || CHAP < 0) return false;
@@ -2611,9 +2669,16 @@
   $('#btnSaveMeta').addEventListener('click', function () { saveMeta(); });
   $('#btnDraft').addEventListener('click', saveDraft);
   $('#chTitle').addEventListener('input', function () { dirty.book = true; markDirty(); });
-  /* trình soạn: gõ là tính lại từ/ký tự + đánh dấu chưa lưu */
+  /* trình soạn: gõ là tính lại từ/ký tự + đánh dấu chưa lưu
+     Đặt defaultParagraphSeparator='p' để tránh <div><br></div> nhân đôi dòng trống */
   var edIn = $('#edBody');
-  if (edIn) edIn.addEventListener('input', function () { dirty.book = true; markDirty(); chStat(); });
+  if (edIn) {
+    edIn.addEventListener('input', function () { dirty.book = true; markDirty(); chStat(); });
+    try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (e) {}
+    edIn.addEventListener('focus', function () {
+      try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (e2) {}
+    });
+  }
   /* thanh định dạng: B/I/U/S · H2/H3/Đoạn/trích dẫn · gạch phân cách · canh */
   $('#edToolbar').addEventListener('click', function (e) {
     var b = e.target && e.target.closest ? e.target.closest('button') : null;

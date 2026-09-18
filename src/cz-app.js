@@ -1796,8 +1796,17 @@
     if (insBtn) insBtn.addEventListener('click', function () { installApp(); });
     paintInstall();
     d.addEventListener('keydown', function (e) {
-      if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'k') { e.preventDefault(); openJump(); }
-      if (e.key === '/' && !/^(INPUT|TEXTAREA|SELECT)$/.test((e.target.tagName || ''))) { e.preventDefault(); openJump(); }
+      var t = e.target;
+      var isForm = t && /^(INPUT|TEXTAREA|SELECT)$/.test((t.tagName || ''));
+      var isCE = false;
+      try {
+        isCE = !!(t && (t.isContentEditable || (t.closest && t.closest('[contenteditable=\"true\"], [contenteditable=\"\"]'))));
+      } catch (ex) { isCE = !!(t && t.isContentEditable); }
+      if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'k') {
+        if (isForm || isCE) return;
+        e.preventDefault(); openJump();
+      }
+      if (e.key === '/' && !isForm && !isCE) { e.preventDefault(); openJump(); }
       if (e.key === 'Escape') { var jb = d.getElementById('czJumpBox'); if (jb && jb.classList.contains('on') && jb._close) jb._close(); }
     });
   }
