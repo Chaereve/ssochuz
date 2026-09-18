@@ -93,8 +93,13 @@
     if (opt.body != null) headers['content-type'] = 'application/json';
     if (opt.auth !== false && KEY) headers['x-admin-key'] = KEY;
     if (opt.mode) headers['x-import-mode'] = opt.mode;
+    /* Đừng để admin bị treo vô hạn khi URL Worker cũ hoặc DNS đang chết. AbortController
+       được kiểm tra có tồn tại để bản xem thử/Trình duyệt cũ vẫn chạy như trước. */
+    var controller = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer = controller ? setTimeout(function () { controller.abort(); }, 12000) : null;
     return fetch(base + path, {
       method: opt.method || 'GET', headers: headers, cache: 'no-store', mode: 'cors',
+      signal: controller ? controller.signal : undefined,
       body: opt.body != null ? JSON.stringify(opt.body) : undefined
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (d) {
@@ -102,14 +107,19 @@
         return d;
       });
     }).catch(function (e) {
-      /* fetch lỗi mạng (Failed to fetch) → báo rõ hơn */
+      /* Luôn dọn timer; nếu abort do timeout thì nói đúng bệnh thay vì giả là sai key. */
+      if (timer) clearTimeout(timer);
       var m = String((e && e.message) || e || '');
+      if (e && e.name === 'AbortError') {
+        throw new Error('Hết thời gian chờ Worker (12 giây) tại ' + base +
+          '. Kiểm tra URL/deploy bằng cách mở ' + base + '/api/health.');
+      }
       if (/Failed to fetch|NetworkError|Load failed/i.test(m)) {
         throw new Error('Failed to fetch — không nối được Worker tại ' + base +
-          ' (CORS, URL sai, Worker chưa deploy, hoặc KV id trong wrangler.toml còn là DAN_ID_KV_VAO_DAY). Mở ' + base + '/api/health trên tab mới để kiểm tra.');
+          ' (CORS, URL sai hoặc Worker chưa deploy). Mở ' + base + '/api/health trên tab mới để kiểm tra.');
       }
       throw e;
-    });
+    }).finally(function () { if (timer) clearTimeout(timer); });
   }
   function setConn(kind, text) {
     var c = $('#chipConn');
@@ -145,9 +155,11 @@
       .catch(function (e) {
         ONLINE = false;
         var detail = String((e && e.message) || e || 'lỗi không xác định');
-        msg('Không nối được: ' + detail + ' — kiểm tra URL Worker, binding CZ_KV và secret ADMIN_KEY.', 'err');
-        if (!isAdmin()) gateHold('Khoá ADMIN_KEY chưa đúng hoặc Worker chưa reachable: ' + detail +
-          ' — đăng nhập bằng tài khoản quản trị, hoặc nhập lại khoá.', 'err');
+        msg('Không nối được: ' + detail + ' — đang mở chế độ dữ liệu tĩnh để không bị kẹt.', 'err');
+        /* Lỗi Worker không được khóa toàn bộ trang quản trị. Người quản trị vẫn có thể
+           xem dữ liệu local, sửa nháp/xuất JSON; khi Worker sống lại chỉ cần bấm kết nối
+           lại. Trước đây gateHold giữ nguyên màn hình lỗi khiến cảm giác như trang chết. */
+        openApp();
       })
       .then(function () { b.disabled = false; b.textContent = 'Kiểm tra & kết nối'; });
   }
