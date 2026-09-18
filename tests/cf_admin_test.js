@@ -59,6 +59,11 @@ function makeWorker() {
   ];
   let mail = true;          /* Worker giả: đã cấu hình Resend */
   const putted = new Set();
+  /* Giả lập đúng bệnh người dùng gặp: Worker bản ≤ 1.10.0 quên gửi header CORS ở
+     /api/admin/reports. Worker vẫn trả 200 OK, dữ liệu đúng, key đúng — nhưng
+     TRÌNH DUYỆT chặn không cho trang admin đọc response, nên fetch() ném
+     TypeError("Failed to fetch") chứ không có mã HTTP nào để mà đoán. */
+  const corsBlock = { reports: false };
   function kvBook(slug) {
     if (putted.has(slug)) return books[slug] || null;
     const b = loadBook(slug);
@@ -87,6 +92,9 @@ function makeWorker() {
   function fetchMock(url, opt) {
     url = String(url); opt = opt || {};
     calls.push((opt.method || 'GET') + ' ' + url.replace(BASE, ''));
+    if (corsBlock.reports && String(url).indexOf('/api/admin/reports') >= 0) {
+      return Promise.reject(new TypeError('Failed to fetch'));
+    }
     if (url.includes('firestore.googleapis.com')) return json({ error: { code: 403 } }, 403, false);
     /* file tĩnh trong repo (bác sĩ dữ liệu đọc để đối chiếu) */
     if (!url.startsWith(BASE) && !url.startsWith('http')) {
@@ -266,7 +274,7 @@ function makeWorker() {
       : json({ ok: false, error: 'sai key' }, 401, false);
     return json({ ok: false, error: 'không có endpoint ' + p }, 404, false);
   }
-  return { fetchMock, calls, books, REG, loadBook, kvBook, cmts, log, voters, voteKeys, voteTotals, reports };
+  return { fetchMock, calls, books, REG, loadBook, kvBook, cmts, log, voters, voteKeys, voteTotals, reports, corsBlock };
 }
 
 const $ = (d, s) => d.querySelector(s), $$ = (d, s) => [...d.querySelectorAll(s)];
@@ -801,7 +809,39 @@ async function openAdmin(worker, key) {
   $(adoc, '#rpQ').dispatchEvent(new awin.Event('input', { bubbles: true }));
   await wait(150);
 
-  out.errors = p.errors.slice(0, 6);
+  /* ---------- 21b.tab Báo lỗi chết vì CORS: admin phải TỰ CHẨN ĐOÁN đúng bệnh ----
+     Worker chặn đọc response thì fetch chỉ ném "Failed to fetch", nhìn hệt bệnh
+     "sai URL / chưa deploy". admin.js phải tự thử /api/health rồi nói rõ: health
+     OK ⇒ dán worker/cms.js mới (≥1.10.1) vào Worker rồi Deploy, không phải đi
+     sửa KEY hay wrangler.toml. */
+  const problems = [];
+  w.corsBlock.reports = true;
+  aclick('#rpReload');
+  await wait(700);
+  const rpErr = String(($(adoc, '#rpState') || {}).textContent || '');
+  out.baoLoiTuChanDoan = {
+    baoFailedToFetch: /Failed to fetch/.test(rpErr),
+    nhanRaHealthVanOK: /health vẫn trả OK/i.test(rpErr),
+    keoLenPhienBanWorker: /1\.10\./.test(rpErr),
+    huongDanDanWorkerMoi: /worker\/cms\.js/.test(rpErr) && /Deploy/i.test(rpErr),
+    khongDoanSaiURL: !/Worker chưa deploy$/.test(rpErr.trim()),
+    chuVanVeDungTab: $$(adoc, '#rpList .reprow').length >= 0,
+    loi: adminPage.errors.slice(0, 3)
+  };
+  w.corsBlock.reports = false;
+  if (!out.baoLoiTuChanDoan.nhanRaHealthVanOK) problems.push('tab Báo lỗi không nhận ra "health OK ⇒ lỗi ở endpoint" khi bị chặn CORS');
+  if (!out.baoLoiTuChanDoan.huongDanDanWorkerMoi) problems.push('tab Báo lỗi không hướng dẫn dán worker/cms.js mới + Deploy');
+  /* bật lại rồi bấm Đọc lại ⇒ phải thấy danh sách bình thường */
+  aclick('#rpReload');
+  await wait(700);
+  out.baoLoiSachBenhSauDo = {
+    soDong: $$(adoc, '#rpList .reprow').length,
+    trangThai: String(($(adoc, '#rpState') || {}).textContent || '').slice(0, 60),
+  };
+  if (!out.baoLoiSachBenhSauDo.soDong) problems.push('tab Báo lỗi không đọc lại được sau khi hết chặn CORS');
+  await wait(150);
+
+  out.errors = p.errors.concat(problems).slice(0, 6);
   console.log(JSON.stringify(out, null, 1));
   process.exit(0);
 })();
