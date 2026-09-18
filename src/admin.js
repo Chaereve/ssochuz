@@ -2117,7 +2117,9 @@
           '<span class="pill acc">' + chap + '</span>' +
           '<span>' + esc(CZ.timeAgo(r.at)) + '</span>' +
           '<span class="sm muted">' + esc(r.who || 'khách') + '</span></span>' +
-          '<span class="mt2">' + esc(r.text) + '</span></span>' +
+          '<span class="mt2">' + esc(r.text) + '</span>' +
+          (r.image ? '<a class="sm" href="' + esc(CZ.normalizeApi(API) + r.image) + '" target="_blank" rel="noopener">🖼️ Xem ảnh chụp</a>' : '') +
+          '</span>' +
         '<span class="ract">' +
           '<a class="btn ghost sm" href="' + esc(openUrl) + '" target="_blank" rel="noopener" title="Mở đúng chương bị báo">' + ic('link', 'i-s') + ' Mở</a>' +
           '<button class="btn ghost sm" data-repcopy="' + i + '" title="Copy nội dung báo lỗi">' + ic('copy', 'i-s') + '</button>' +
