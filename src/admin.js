@@ -949,6 +949,12 @@
     REG.slides = (REG.slides || []).filter(function (x) { return slideSlug(x) !== slug; });
     REG.editorChoice = (REG.editorChoice || []).filter(function (x) { var sl = typeof x === 'string' ? x : (x && x.slug); return sl !== slug; });
     if (REG.settings && REG.settings.editorChoice) REG.settings.editorChoice = (REG.settings.editorChoice || []).filter(function (x) { var sl = typeof x === 'string' ? x : (x && x.slug); return sl !== slug; });
+    /* bộ bị xoá cũng phải ra khỏi lịch cập nhật — nếu không "Lưu cài đặt"
+       sẽ báo "Lịch có slug không tồn tại" (lỗi thật 17/09/2026) */
+    if (REG.schedule && REG.schedule.items) {
+      REG.schedule.items = REG.schedule.items.filter(function (it) { return (it.slug || '') !== slug; });
+      if ($('#sSched')) renderSched();
+    }
     delete BOOKS[slug];
     var done = ONLINE ? api('/api/book/' + encodeURIComponent(slug), { method: 'DELETE' }).catch(function () {}) : Promise.resolve();
     done.then(function () { return saveRegistry('Đã xoá “' + (n ? n.title : slug) + '”'); }).then(function () {
@@ -1223,6 +1229,7 @@
   }
   function saveSettings() {
     var by = {}; (REG.lib || []).forEach(function (n) { by[n.slug] = n; });
+    var schedDropped = [];
     /* N12: giữ cả nhãn `reason`; chỉ giữ bộ còn tồn tại trong thư viện */
     REG.slides = slideStore(slidePicks().slice(0, 6).filter(function (s) { return by[s.slug]; }));
     var ePicks = editPicks();
@@ -1231,9 +1238,13 @@
       var p = l.split('|').map(function (x) { return x.trim(); });
       var slug = p[1] || '';
       var book = (REG.lib || []).find(function (x) { return x.slug === slug; });
-      if (!book) throw new Error('Lịch có slug không tồn tại: ' + slug);
+      /* dòng lịch trỏ tới bộ không có thật thì BỎ dòng đó kèm cảnh báo, không
+         làm chết cả lần lưu cài đặt (dòng thừa thường đến từ bộ vừa xoá hoặc
+         lịch sync từ KV chưa khớp thư viện) */
+      if (!book) { schedDropped.push(slug || '(trống)'); return null; }
       return { days: p[0] || '', slug: slug, title: book.title, detail: p[2] || '' };
-    });
+    }).filter(Boolean);
+    if (schedDropped.length) toast('Lịch: bỏ ' + schedDropped.length + ' dòng không có bộ: ' + schedDropped.join(', '), 'info');
     REG.schedule = {
       items: items, note: $('#sSchedNote').value.trim(),
       updated: today()
@@ -2829,43 +2840,11 @@
   window.addEventListener('beforeunload', function (e) {
     if (dirty.meta || dirty.book || dirty.set) { e.preventDefault(); e.returnValue = ''; }
   });
-  document.addEventListener('keydown', function (e) {
-    if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 's') {
-      e.preventDefault();
-      if (!$('#pane-edit').classList.contains('hide')) { saveMeta(); if (edSaveCurrent(true)) saveBook('Đã lưu bộ & chương'); }
-      else if (!$('#pane-settings').classList.contains('hide')) saveSettings();
-      else toast('Không có gì để lưu ở tab này');
-      return;
-    }
-    if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'k') { e.preventDefault(); $('#q').focus(); return; }
-    if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName || '')) return;
-    var map = {
-      1: 'overview', 2: 'list', 3: 'new', 4: 'edit',
-      5: 'doctor', 6: 'cmts', 7: 'stats', 8: 'votes', 9: 'log', 0: 'settings'
-    };
-    if (String(e.key).toLowerCase() === 'v') {
-      fillVoteBooks();
-      if (ONLINE && !VO.data) loadVoters($('#voBook').value);
-      paintVotes(); show('votes'); return;
-    }
-    /* R = xem báo lỗi chữ người đọc gửi */
-    if (String(e.key).toLowerCase() === 'r') {
-      if (!REP.all.length) loadReports();
-      show('reports'); return;
-    }
-    if (map[e.key]) {
-      var k = map[e.key];
-      if (k === 'edit' && !CUR) return;
-      if (k === 'stats') loadStats(false);
-      if (k === 'votes') { fillVoteBooks(); if (ONLINE && !VO.data) loadVoters($('#voBook').value); paintVotes(); }
-      if (k === 'overview') renderOverview();
-      if (k === 'doctor') { if (!DOC.rows.length) runDoctor(); if (ONLINE) loadKV(); }
-      if (k === 'cmts') { fillModBooks(); loadMod(); }
-      if (k === 'reports' && !REP.all.length) loadReports();
-      if (k === 'log') loadLog();
-      show(k);
-    }
-  });
+  /* KHÔNG có phím tắt ở trang quản trị (yêu cầu của chủ trang 17/09/2026):
+     những tổ hợp như Ctrl+S/Ctrl+K hay bấm số để đổi tab gây phiền khi gõ nội
+     dung và dễ bấm nhầm. Muốn lưu hay đổi tab thì bấm nút trên giao diện.
+     Riêng Enter trong ô nhập (kết nối, tìm chương) và Tab trong ô soạn chương
+     vẫn giữ — đó là thao tác gõ chữ thông thường, không phải phím tắt. */
 
 
   /* ------------------- nút ở CỔNG đăng nhập + thanh trên ------------------ */

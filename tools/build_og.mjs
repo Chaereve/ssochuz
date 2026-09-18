@@ -102,13 +102,20 @@ for (const n of lib) {
   slugs.push(slug);
 }
 
-/* --- viết lại khối luật từng-truyện trong _redirects (giữa 2 mốc) --- */
+/* --- viết lại khối luật từng-truyện trong _redirects (giữa 2 mốc) ---
+   CHỈ 2 luật TĨNH cho mỗi bộ (/truyen/<slug> và /truyen/<slug>/). KHÔNG sinh
+   luật splat (/truyen/<slug>/*) nữa: Pages chỉ áp đúng một số luật động đầu
+   tệp (có dấu *) — tệp cũ có 71 luật động nên từ khoảng luật 20–30 trở đi bị
+   BỎ IM LẶNG, khiến link chương /truyen/<slug>/chuong-N/ của phần lớn bộ
+   truyện rơi vào 404 ("một số bộ truyện bị lỗi link", 17/09/2026). Chapter
+   URL nay do MỘT luật splat chung duy nhất ở CUỐI tệp hứng hết:
+   /truyen/* → trang truyện. Hai luật tĩnh dưới đây có nhiệm vụ giữ trang
+   từng bộ (trả index.html có thẻ OG) đứng TRƯỚC luật chung đó. */
 const BEG = '# -- OG-BEGIN: luật từng truyện do tools/build_og.mjs tự sinh (đừng sửa tay) --';
 const END = '# -- OG-END --';
 const rules = slugs.map((s) =>
   '/truyen/' + s + '   /truyen/' + s + '/   200\n' +
-  '/truyen/' + s + '/  /truyen/' + s + '/   200\n' +
-  '/truyen/' + s + '/* /truyen/' + s + '/   200').join('\n');
+  '/truyen/' + s + '/  /truyen/' + s + '/   200').join('\n');
 const block = BEG + '\n' + rules + '\n' + END;
 const rdPath = path.join(ROOT, '_redirects');
 let rd = readFileSync(rdPath, 'utf8');
@@ -121,5 +128,6 @@ if (rd.includes(BEG) && rd.includes(END)) {
 }
 writeFileSync(rdPath, rd);
 
-console.log('OG tĩnh: đã sinh ' + made + ' file truyen/<slug>/index.html + ' + (slugs.length * 3) + ' luật trong _redirects.');
+console.log('OG tĩnh: đã sinh ' + made + ' file truyen/<slug>/index.html + ' + (slugs.length * 2) + ' luật tĩnh trong _redirects.');
+console.log('Luật chương (splat) KHÔNG sinh theo từng bộ nữa — xem luật chung /truyen/* ở cuối _redirects.');
 console.log('Nhớ upload lại thư mục truyen/ và file _redirects lên Pages.');

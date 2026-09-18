@@ -11,12 +11,18 @@
 # nên đường dẫn nội bộ được đưa thẳng về trang chủ. Điều quan trọng là NỘI DUNG
 # KHÔNG ĐƯỢC GỬI ĐI: luật redirect luôn được áp trước khi phục vụ tệp tĩnh.
 # ---------------------------------------------------------------------------
-/src/*            /  301
-/worker/*         /  301
-/tests/*          /  301
-/tools/*          /  301
-/_inbox/*         /  301
-/blogger-theme/*  /  301
+# QUAN TRỌNG VỀ SỐ LUẬT (bài học 17/09/2026 — "một số bộ truyện bị lỗi link"):
+# Pages chỉ áp đúng một số luật ĐỘNG (luật có dấu *) ĐẦU TỆP, phần còn lại bị
+# BỎ IM LẶNG không báo lỗi. Tệp cũ có 71 luật động (mỗi bộ 3 luật) nên từ khoảng
+# luật 20–30 trở đi đều bị bỏ: link chương /truyen/<slug>/chuong-N/ của phần
+# lớn bộ truyện và /reader/* rơi thẳng vào 404. Vì vậy:
+#   1) luật TĨNH (không có *) đứng trước, luật ĐỘNG dồn về CUỐI tệp (đúng khuyến
+#      nghị của docs Pages → Redirects);
+#   2) TỔNG số luật động phải giữ ≤ ~20. tools/build_og.mjs chỉ sinh luật tĩnh
+#      cho từng bộ; KHÔNG được thêm luật * cho từng bộ truyện nữa.
+# ---------------------------------------------------------------------------
+# ===== 1) LUẬT TĨNH (đường dẫn chính xác, không dấu *) =====================
+# --- a) giấu tệp nội bộ ---
 /server.py        /  301
 /package.json     /  301
 /package-lock.json / 301
@@ -34,15 +40,21 @@
 /BAO-CAO-UNSLOP-HEADER-VA-THE-TRUYEN.md / 301
 /BAO-CAO-SUA-LOI-DANG-NHAP-VA-GIAO-DIEN.md / 301
 /HUONG-DAN-DANG-NHAP-BINH-LUAN.md /  301
-
+/BAO-CAO-SUA-LOI-LINK-VA-PHIM-TAT.md /  301
+# --- b) slug cũ → slug mới (bộ Special từng có dấu gạch dưới trong slug ở repo,
+#        trong khi KV dùng dấu gạch ngang — 17/09/2026). Giữ 301 để link cũ
+#        (tìm kiếm, bài chia sẻ) không 404. Khi không còn ai dùng thì xoá.
+/truyen/vuot-khoi-uong-chan-troi-endless-blue_01775777241  /truyen/vuot-khoi-uong-chan-troi-endless-blue-01775777241/  301
+/truyen/vuot-khoi-uong-chan-troi-endless-blue_01775777241/ /truyen/vuot-khoi-uong-chan-troi-endless-blue-01775777241/  301
+# --- c) URL sạch (proxy 200) ---
 # Trang truyện và trang đọc nằm chung MỘT tệp (truyen.html). Các luật dưới đây
 # mở tệp đó mà KHÔNG đổi URL trên trình duyệt (proxy 200), nhờ vậy
 # cz-story.js vẫn đọc được tên truyện trong /truyen/<slug>/.
 #
 # ĐÍCH ĐÚNG là "/truyen" — URL sạch, Pages tự phục vụ truyen.html và trả 200,
-# không nhảy đi đâu nữa nên không thể lặp (xem comment cũ).
-# Thêm /truyen và /truyen/ explicit để tránh 404 khi click từ thư viện.
-# ---------------------------------------------------------------------------
+# không nhảy đi đâu nữa nên không thể lặp. TUYỆT ĐỐI không dùng đích là tệp
+# .html: Pages tự 308 bỏ đuôi .html nên đích .html sinh vòng lặp
+# ERR_TOO_MANY_REDIRECTS (lỗi từng làm chết trang truyện).
 /truyen.html   /truyen   200
 /truyen/       /truyen   200
 /reader        /truyen   200
@@ -52,194 +64,148 @@
 /profile/     /profile     200
 /guide.html    /guide    200
 /guide/        /guide    200
-/guide/*       /guide    200
+# --- d) luật TĨNH từng truyện (sinh bởi tools/build_og.mjs, 2 luật mỗi bộ) ---
+# Nhiệm vụ: giữ URL của từng bộ trúng luật này (đứng TRƯỚC luật chung /truyen/*
+# ở cuối tệp) để trang bộ truyện được phục vụ từ tệp tĩnh truyen/<slug>/index.html
+# — bot Zalo/Facebook/Telegram đọc thẻ OG ngay trong HTML, không chạy JS.
 # -- OG-BEGIN: luật từng truyện do tools/build_og.mjs tự sinh (đừng sửa tay) --
 /truyen/hometown-romance-special   /truyen/hometown-romance-special/   200
 /truyen/hometown-romance-special/  /truyen/hometown-romance-special/   200
-/truyen/hometown-romance-special/* /truyen/hometown-romance-special/   200
 /truyen/lunar-secret   /truyen/lunar-secret/   200
 /truyen/lunar-secret/  /truyen/lunar-secret/   200
-/truyen/lunar-secret/* /truyen/lunar-secret/   200
 /truyen/bake-love-feelings   /truyen/bake-love-feelings/   200
 /truyen/bake-love-feelings/  /truyen/bake-love-feelings/   200
-/truyen/bake-love-feelings/* /truyen/bake-love-feelings/   200
 /truyen/love-design   /truyen/love-design/   200
 /truyen/love-design/  /truyen/love-design/   200
-/truyen/love-design/* /truyen/love-design/   200
 /truyen/yours-ever   /truyen/yours-ever/   200
 /truyen/yours-ever/  /truyen/yours-ever/   200
-/truyen/yours-ever/* /truyen/yours-ever/   200
 /truyen/love-on-hire   /truyen/love-on-hire/   200
 /truyen/love-on-hire/  /truyen/love-on-hire/   200
-/truyen/love-on-hire/* /truyen/love-on-hire/   200
 /truyen/love-bound   /truyen/love-bound/   200
 /truyen/love-bound/  /truyen/love-bound/   200
-/truyen/love-bound/* /truyen/love-bound/   200
 /truyen/hometown-romance   /truyen/hometown-romance/   200
 /truyen/hometown-romance/  /truyen/hometown-romance/   200
-/truyen/hometown-romance/* /truyen/hometown-romance/   200
 /truyen/be-my-angel   /truyen/be-my-angel/   200
 /truyen/be-my-angel/  /truyen/be-my-angel/   200
-/truyen/be-my-angel/* /truyen/be-my-angel/   200
 /truyen/love-fribe   /truyen/love-fribe/   200
 /truyen/love-fribe/  /truyen/love-fribe/   200
-/truyen/love-fribe/* /truyen/love-fribe/   200
 /truyen/chain   /truyen/chain/   200
 /truyen/chain/  /truyen/chain/   200
-/truyen/chain/* /truyen/chain/   200
 /truyen/chain-baby   /truyen/chain-baby/   200
 /truyen/chain-baby/  /truyen/chain-baby/   200
-/truyen/chain-baby/* /truyen/chain-baby/   200
 /truyen/un-trovert   /truyen/un-trovert/   200
 /truyen/un-trovert/  /truyen/un-trovert/   200
-/truyen/un-trovert/* /truyen/un-trovert/   200
 /truyen/my-only-sunshine   /truyen/my-only-sunshine/   200
 /truyen/my-only-sunshine/  /truyen/my-only-sunshine/   200
-/truyen/my-only-sunshine/* /truyen/my-only-sunshine/   200
 /truyen/frozen-valentine   /truyen/frozen-valentine/   200
 /truyen/frozen-valentine/  /truyen/frozen-valentine/   200
-/truyen/frozen-valentine/* /truyen/frozen-valentine/   200
 /truyen/in-arms-of-control   /truyen/in-arms-of-control/   200
 /truyen/in-arms-of-control/  /truyen/in-arms-of-control/   200
-/truyen/in-arms-of-control/* /truyen/in-arms-of-control/   200
 /truyen/buy-my-boss   /truyen/buy-my-boss/   200
 /truyen/buy-my-boss/  /truyen/buy-my-boss/   200
-/truyen/buy-my-boss/* /truyen/buy-my-boss/   200
 /truyen/nguoi-chong-xau-xa-cua-co-vo-beo   /truyen/nguoi-chong-xau-xa-cua-co-vo-beo/   200
 /truyen/nguoi-chong-xau-xa-cua-co-vo-beo/  /truyen/nguoi-chong-xau-xa-cua-co-vo-beo/   200
-/truyen/nguoi-chong-xau-xa-cua-co-vo-beo/* /truyen/nguoi-chong-xau-xa-cua-co-vo-beo/   200
 /truyen/by-your-side   /truyen/by-your-side/   200
 /truyen/by-your-side/  /truyen/by-your-side/   200
-/truyen/by-your-side/* /truyen/by-your-side/   200
 /truyen/be-my-sugar   /truyen/be-my-sugar/   200
 /truyen/be-my-sugar/  /truyen/be-my-sugar/   200
-/truyen/be-my-sugar/* /truyen/be-my-sugar/   200
 /truyen/be-my-sugar-special   /truyen/be-my-sugar-special/   200
 /truyen/be-my-sugar-special/  /truyen/be-my-sugar-special/   200
-/truyen/be-my-sugar-special/* /truyen/be-my-sugar-special/   200
 /truyen/like-palette   /truyen/like-palette/   200
 /truyen/like-palette/  /truyen/like-palette/   200
-/truyen/like-palette/* /truyen/like-palette/   200
 /truyen/santy-nextdoor   /truyen/santy-nextdoor/   200
 /truyen/santy-nextdoor/  /truyen/santy-nextdoor/   200
-/truyen/santy-nextdoor/* /truyen/santy-nextdoor/   200
 /truyen/snake2-fish2   /truyen/snake2-fish2/   200
 /truyen/snake2-fish2/  /truyen/snake2-fish2/   200
-/truyen/snake2-fish2/* /truyen/snake2-fish2/   200
 /truyen/ghost-house   /truyen/ghost-house/   200
 /truyen/ghost-house/  /truyen/ghost-house/   200
-/truyen/ghost-house/* /truyen/ghost-house/   200
 /truyen/the-fire   /truyen/the-fire/   200
 /truyen/the-fire/  /truyen/the-fire/   200
-/truyen/the-fire/* /truyen/the-fire/   200
 /truyen/in-love-forever   /truyen/in-love-forever/   200
 /truyen/in-love-forever/  /truyen/in-love-forever/   200
-/truyen/in-love-forever/* /truyen/in-love-forever/   200
 /truyen/the-hidden-blood   /truyen/the-hidden-blood/   200
 /truyen/the-hidden-blood/  /truyen/the-hidden-blood/   200
-/truyen/the-hidden-blood/* /truyen/the-hidden-blood/   200
 /truyen/bo-ao-la-tho-than-linh-nghiem-trong-7   /truyen/bo-ao-la-tho-than-linh-nghiem-trong-7/   200
 /truyen/bo-ao-la-tho-than-linh-nghiem-trong-7/  /truyen/bo-ao-la-tho-than-linh-nghiem-trong-7/   200
-/truyen/bo-ao-la-tho-than-linh-nghiem-trong-7/* /truyen/bo-ao-la-tho-than-linh-nghiem-trong-7/   200
 /truyen/tinh-day-hot-luon-tho-than-lam-vo   /truyen/tinh-day-hot-luon-tho-than-lam-vo/   200
 /truyen/tinh-day-hot-luon-tho-than-lam-vo/  /truyen/tinh-day-hot-luon-tho-than-lam-vo/   200
-/truyen/tinh-day-hot-luon-tho-than-lam-vo/* /truyen/tinh-day-hot-luon-tho-than-lam-vo/   200
 /truyen/tho-than-oi-con-khan-nham-roi   /truyen/tho-than-oi-con-khan-nham-roi/   200
 /truyen/tho-than-oi-con-khan-nham-roi/  /truyen/tho-than-oi-con-khan-nham-roi/   200
-/truyen/tho-than-oi-con-khan-nham-roi/* /truyen/tho-than-oi-con-khan-nham-roi/   200
 /truyen/hidden-heart   /truyen/hidden-heart/   200
 /truyen/hidden-heart/  /truyen/hidden-heart/   200
-/truyen/hidden-heart/* /truyen/hidden-heart/   200
 /truyen/like-puzzle   /truyen/like-puzzle/   200
 /truyen/like-puzzle/  /truyen/like-puzzle/   200
-/truyen/like-puzzle/* /truyen/like-puzzle/   200
 /truyen/like-pillow   /truyen/like-pillow/   200
 /truyen/like-pillow/  /truyen/like-pillow/   200
-/truyen/like-pillow/* /truyen/like-pillow/   200
 /truyen/villain-star   /truyen/villain-star/   200
 /truyen/villain-star/  /truyen/villain-star/   200
-/truyen/villain-star/* /truyen/villain-star/   200
 /truyen/ngot-ngao-la-may-bay-ang-cay-moi-la-tinh   /truyen/ngot-ngao-la-may-bay-ang-cay-moi-la-tinh/   200
 /truyen/ngot-ngao-la-may-bay-ang-cay-moi-la-tinh/  /truyen/ngot-ngao-la-may-bay-ang-cay-moi-la-tinh/   200
-/truyen/ngot-ngao-la-may-bay-ang-cay-moi-la-tinh/* /truyen/ngot-ngao-la-may-bay-ang-cay-moi-la-tinh/   200
 /truyen/built-in-love   /truyen/built-in-love/   200
 /truyen/built-in-love/  /truyen/built-in-love/   200
-/truyen/built-in-love/* /truyen/built-in-love/   200
 /truyen/da-xoa-khuat-phuc-nhan-ngu   /truyen/da-xoa-khuat-phuc-nhan-ngu/   200
 /truyen/da-xoa-khuat-phuc-nhan-ngu/  /truyen/da-xoa-khuat-phuc-nhan-ngu/   200
-/truyen/da-xoa-khuat-phuc-nhan-ngu/* /truyen/da-xoa-khuat-phuc-nhan-ngu/   200
 /truyen/enemies-with-benefits   /truyen/enemies-with-benefits/   200
 /truyen/enemies-with-benefits/  /truyen/enemies-with-benefits/   200
-/truyen/enemies-with-benefits/* /truyen/enemies-with-benefits/   200
 /truyen/vuot-khoi-uong-chan-troi-endless-blue   /truyen/vuot-khoi-uong-chan-troi-endless-blue/   200
 /truyen/vuot-khoi-uong-chan-troi-endless-blue/  /truyen/vuot-khoi-uong-chan-troi-endless-blue/   200
-/truyen/vuot-khoi-uong-chan-troi-endless-blue/* /truyen/vuot-khoi-uong-chan-troi-endless-blue/   200
 /truyen/my-mermaid-om-tron-tieu-nhan-ngu   /truyen/my-mermaid-om-tron-tieu-nhan-ngu/   200
 /truyen/my-mermaid-om-tron-tieu-nhan-ngu/  /truyen/my-mermaid-om-tron-tieu-nhan-ngu/   200
-/truyen/my-mermaid-om-tron-tieu-nhan-ngu/* /truyen/my-mermaid-om-tron-tieu-nhan-ngu/   200
 /truyen/gia-roi-thi-yeu-luon-i   /truyen/gia-roi-thi-yeu-luon-i/   200
 /truyen/gia-roi-thi-yeu-luon-i/  /truyen/gia-roi-thi-yeu-luon-i/   200
-/truyen/gia-roi-thi-yeu-luon-i/* /truyen/gia-roi-thi-yeu-luon-i/   200
 /truyen/busaba-lac-loi-giua-em-trang   /truyen/busaba-lac-loi-giua-em-trang/   200
 /truyen/busaba-lac-loi-giua-em-trang/  /truyen/busaba-lac-loi-giua-em-trang/   200
-/truyen/busaba-lac-loi-giua-em-trang/* /truyen/busaba-lac-loi-giua-em-trang/   200
 /truyen/trong-sinh-thanh-nang-dau-vuot-kho   /truyen/trong-sinh-thanh-nang-dau-vuot-kho/   200
 /truyen/trong-sinh-thanh-nang-dau-vuot-kho/  /truyen/trong-sinh-thanh-nang-dau-vuot-kho/   200
-/truyen/trong-sinh-thanh-nang-dau-vuot-kho/* /truyen/trong-sinh-thanh-nang-dau-vuot-kho/   200
 /truyen/neu-yeu-xin-ung-tan-nhan   /truyen/neu-yeu-xin-ung-tan-nhan/   200
 /truyen/neu-yeu-xin-ung-tan-nhan/  /truyen/neu-yeu-xin-ung-tan-nhan/   200
-/truyen/neu-yeu-xin-ung-tan-nhan/* /truyen/neu-yeu-xin-ung-tan-nhan/   200
 /truyen/cang-them-oan-han   /truyen/cang-them-oan-han/   200
 /truyen/cang-them-oan-han/  /truyen/cang-them-oan-han/   200
-/truyen/cang-them-oan-han/* /truyen/cang-them-oan-han/   200
 /truyen/boi-chang-ngan-con-tim-rung-ong   /truyen/boi-chang-ngan-con-tim-rung-ong/   200
 /truyen/boi-chang-ngan-con-tim-rung-ong/  /truyen/boi-chang-ngan-con-tim-rung-ong/   200
-/truyen/boi-chang-ngan-con-tim-rung-ong/* /truyen/boi-chang-ngan-con-tim-rung-ong/   200
 /truyen/co-vo-ho-anh-cua-toi   /truyen/co-vo-ho-anh-cua-toi/   200
 /truyen/co-vo-ho-anh-cua-toi/  /truyen/co-vo-ho-anh-cua-toi/   200
-/truyen/co-vo-ho-anh-cua-toi/* /truyen/co-vo-ho-anh-cua-toi/   200
 /truyen/duoi-bong-tinh-thuy-chung   /truyen/duoi-bong-tinh-thuy-chung/   200
 /truyen/duoi-bong-tinh-thuy-chung/  /truyen/duoi-bong-tinh-thuy-chung/   200
-/truyen/duoi-bong-tinh-thuy-chung/* /truyen/duoi-bong-tinh-thuy-chung/   200
 /truyen/pgrace-khong-nhan-loi-yeu-au   /truyen/pgrace-khong-nhan-loi-yeu-au/   200
 /truyen/pgrace-khong-nhan-loi-yeu-au/  /truyen/pgrace-khong-nhan-loi-yeu-au/   200
-/truyen/pgrace-khong-nhan-loi-yeu-au/* /truyen/pgrace-khong-nhan-loi-yeu-au/   200
 /truyen/my-sassy-bodyguard   /truyen/my-sassy-bodyguard/   200
 /truyen/my-sassy-bodyguard/  /truyen/my-sassy-bodyguard/   200
-/truyen/my-sassy-bodyguard/* /truyen/my-sassy-bodyguard/   200
 /truyen/beauty-and-bike   /truyen/beauty-and-bike/   200
 /truyen/beauty-and-bike/  /truyen/beauty-and-bike/   200
-/truyen/beauty-and-bike/* /truyen/beauty-and-bike/   200
 /truyen/third-person   /truyen/third-person/   200
 /truyen/third-person/  /truyen/third-person/   200
-/truyen/third-person/* /truyen/third-person/   200
 /truyen/did-you-know   /truyen/did-you-know/   200
 /truyen/did-you-know/  /truyen/did-you-know/   200
-/truyen/did-you-know/* /truyen/did-you-know/   200
-/truyen/vuot-khoi-uong-chan-troi-endless-blue_01775777241   /truyen/vuot-khoi-uong-chan-troi-endless-blue_01775777241/   200
-/truyen/vuot-khoi-uong-chan-troi-endless-blue_01775777241/  /truyen/vuot-khoi-uong-chan-troi-endless-blue_01775777241/   200
-/truyen/vuot-khoi-uong-chan-troi-endless-blue_01775777241/* /truyen/vuot-khoi-uong-chan-troi-endless-blue_01775777241/   200
+/truyen/vuot-khoi-uong-chan-troi-endless-blue-01775777241   /truyen/vuot-khoi-uong-chan-troi-endless-blue-01775777241/   200
+/truyen/vuot-khoi-uong-chan-troi-endless-blue-01775777241/  /truyen/vuot-khoi-uong-chan-troi-endless-blue-01775777241/   200
 /truyen/love-above-clouds   /truyen/love-above-clouds/   200
 /truyen/love-above-clouds/  /truyen/love-above-clouds/   200
-/truyen/love-above-clouds/* /truyen/love-above-clouds/   200
 /truyen/my-wife   /truyen/my-wife/   200
 /truyen/my-wife/  /truyen/my-wife/   200
-/truyen/my-wife/* /truyen/my-wife/   200
 /truyen/my-boss   /truyen/my-boss/   200
 /truyen/my-boss/  /truyen/my-boss/   200
-/truyen/my-boss/* /truyen/my-boss/   200
 /truyen/my-gorgeous-wife   /truyen/my-gorgeous-wife/   200
 /truyen/my-gorgeous-wife/  /truyen/my-gorgeous-wife/   200
-/truyen/my-gorgeous-wife/* /truyen/my-gorgeous-wife/   200
 /truyen/love-me-to-hurt-me   /truyen/love-me-to-hurt-me/   200
 /truyen/love-me-to-hurt-me/  /truyen/love-me-to-hurt-me/   200
-/truyen/love-me-to-hurt-me/* /truyen/love-me-to-hurt-me/   200
 /truyen/love-status-is-blocked   /truyen/love-status-is-blocked/   200
 /truyen/love-status-is-blocked/  /truyen/love-status-is-blocked/   200
-/truyen/love-status-is-blocked/* /truyen/love-status-is-blocked/   200
 /truyen/beside-dragon   /truyen/beside-dragon/   200
 /truyen/beside-dragon/  /truyen/beside-dragon/   200
-/truyen/beside-dragon/* /truyen/beside-dragon/   200
 # -- OG-END --
+# ===== 2) LUẬT ĐỘNG (có dấu *) — PHẢI nằm cuối tệp, TỔNG SỐ ≤ ~20 ==========
+/src/*            /  301
+/worker/*         /  301
+/tests/*          /  301
+/tools/*          /  301
+/_inbox/*         /  301
+/blogger-theme/*  /  301
+/guide/*       /guide    200
+# slug cũ kèm đường dẫn con (link chương cũ) → slug mới
+/truyen/vuot-khoi-uong-chan-troi-endless-blue_01775777241/* /truyen/vuot-khoi-uong-chan-troi-endless-blue-01775777241/:splat 301
+# Lưới an toàn chung — hứng: link chương của MỌI bộ (/truyen/<slug>/chuong-N/),
+# bộ mới đã có trên KV nhưng chưa kịp deploy tệp tĩnh, và link gõ sai.
+# Trang truyện từng bộ KHÔNG trúng luật này vì khối OG ở trên đứng trước.
 /truyen/*      /truyen   200
 /reader/*      /truyen   200

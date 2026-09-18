@@ -6,7 +6,7 @@
    - link cũ #chuong-5 vẫn mở đúng + tự chuẩn hoá về URL chương
    - Back/Forward chuyển chương mượt (popstate)
    - CZ.readURL trả URL chương dạng path (không còn hash)
-   - _redirects: /truyen/<slug>/chuong-7/ rewrite 200 về shell /truyen/<slug>/
+   - _redirects: /truyen/<slug>/chuong-7/ rewrite 200 về shell chung /truyen
    - sitemap.xml chứa đủ URL từng chương (1 + 62 + 1198)
    Chạy:  cd tests && node t_chapter_url.js
    ========================================================================== */
@@ -103,13 +103,19 @@ function redirectTarget(reqPath) {
   ok(a.win.CZ.readURL('be-my-angel', 5) === '/truyen/be-my-angel/chuong-5/', 'E: CZ.readURL dang path');
   ok(a.win.CZ.readURL('be-my-angel', 0) === '/truyen/be-my-angel/', 'E: CZ.readURL khong chuong → trang truyen');
 
-  /* ---------- F. _redirects rewrite 200 ---------- */
+  /* ---------- F. _redirects rewrite 200 ----------
+     Từ 17/09/2026: Pages chỉ áp một số luật ĐỘNG đầu tệp nên KHÔNG còn luật
+     splat riêng từng bộ — link chương rơi vào luật chung CUỐI tệp
+     `/truyen/* → /truyen 200` (đủ để trang đọc chạy: cz-story.js tự đọc
+     slug + số chương trong URL). Luật tĩnh riêng từng bộ chỉ còn nhiệm vụ
+     giữ trang truyện (/truyen/<slug>/) KHÔNG trúng luật chung, để bot thấy
+     thẻ OG trong tệp truyen/<slug>/index.html. */
   ['lunar-secret', 'be-my-angel', SLUG].forEach(s => {
     const r = redirectTarget('/truyen/' + s + '/chuong-7/');
-    ok(r && r.code === '200' && r.dst === '/truyen/' + s + '/', 'F: /truyen/' + s + '/chuong-7/ → 200 ve shell (' + JSON.stringify(r) + ')');
+    ok(r && r.code === '200' && r.dst === '/truyen', 'F: /truyen/' + s + '/chuong-7/ → 200 ve shell chung (' + JSON.stringify(r) + ')');
   });
   const rIdx = redirectTarget('/truyen/be-my-angel/');
-  ok(rIdx && rIdx.code === '200', 'F: URL truyen van 200');
+  ok(rIdx && rIdx.code === '200' && rIdx.dst === '/truyen/be-my-angel/', 'F: URL truyen van 200 ve dung trang cua bo');
 
   /* ---------- G. sitemap du URL chuong ---------- */
   const sm = read('sitemap.xml');
