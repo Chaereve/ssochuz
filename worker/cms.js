@@ -207,6 +207,7 @@ export default {
       }
       /* báo lỗi chữ trong chương: người đọc bấm 1 nút là nội dung đi thẳng tới
          hộp thư ban biên tập — tự lưu vào KV, không cần copy/mở Gmail nữa */
+      if (p === '/api/report-image' && req.method === 'POST') return await postReportImage(req, env, cors);
       if (p === '/api/report' && req.method === 'POST') return await postReport(req, env, ctx, cors);
       if (p === '/api/push-sub' && req.method === 'POST') return await pushSub(req, env, cors);
 
@@ -1608,6 +1609,30 @@ function safeLink(u, env) {
     return s;
   } catch (e) { return ''; }
 }
+async function postReportImage(req, env, cors) {
+  if (!env.CZ_KV) return noKV(cors);
+  if (!await rateLimit(env, 'rl:report-image:' + hash(clientIp(req) || 'x'), 12, 3600)) {
+    return json({ ok: false, error: 'Bạn đã tải lên hơi nhiều ảnh — thử lại sau ít phút nhé.' }, { status: 429, cors });
+  }
+  const body = await req.json().catch(() => ({}));
+  const type = String(body.type || '');
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(type)) {
+    return json({ ok: false, error: 'Chỉ nhận ảnh JPG, PNG hoặc WebP.' }, { status: 400, cors });
+  }
+  const data = String(body.data || '').replace(/^data:[^;,]+;base64,/, '').replace(/\\s/g, '');
+  if (!/^[A-Za-z0-9+/]{16,}={0,2}$/.test(data)) {
+    return json({ ok: false, error: 'Dữ liệu ảnh không hợp lệ.' }, { status: 400, cors });
+  }
+  /* 4 MB sau khi nén, đủ cho ảnh chụp màn hình nhưng không cho phép lạm dụng KV. */
+  if (data.length > 5.5 * 1024 * 1024) {
+    return json({ ok: false, error: 'Ảnh quá lớn — ảnh chụp sẽ được nén tự động, giới hạn 4 MB.' }, { status: 413, cors });
+  }
+  const id = (typeof crypto.randomUUID === 'function') ? crypto.randomUUID()
+    : 'ri' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  const bytes = Math.floor(data.replace(/=+$/, '').length * 3 / 4);
+  await env.CZ_KV.put('img:' + id, data, { metadata: { type: type, bytes: bytes, report: true, at: new Date().toISOString() } });
+  return json({ ok: true, url: '/api/img/' + id, bytes: bytes }, { cors });
+}
 async function postReport(req, env, ctx, cors) {
   if (!env.CZ_KV) return noKV(cors);
   const body = await req.json().catch(() => ({}));
@@ -1628,6 +1653,7 @@ async function postReport(req, env, ctx, cors) {
     title: String(body.title || '').replace(/[\r\n]+/g, ' ').slice(0, 140),
     ch: Math.max(0, parseInt(body.ch, 10) || 0),
     url: safeLink(body.url, env),
+    image: /^\/api\/img\/[a-z0-9-]{10,80}$/i.test(String(body.image || '')) ? String(body.image) : '',
     text,
     who: (user && user.email) || who || 'khách',
   };
@@ -1654,6 +1680,7 @@ async function mailReport(env, it) {
   const body = [
     line,
     it.url ? it.url : '(không có link)',
+    it.image ? 'Ảnh chụp: ' + new URL(it.image, String(env.SITE_BASE || 'https://ssochuz.pages.dev')).href : '',
     '',
     it.text,
     '',
@@ -1689,6 +1716,7 @@ async function mailReport(env, it) {
         'Truyện': it.title || it.slug || '',
         'Chương': it.ch ? String(it.ch) : 'cả bộ',
         'Link': it.url || '',
+        'Ảnh chụp': it.image || '(không có)',
         'Người gửi': it.who || 'khách',
         'Nội dung báo lỗi': it.text,
       }),

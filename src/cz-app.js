@@ -318,6 +318,45 @@
       });
     }).catch(function () { return { ok: false, error: 'offline' }; });
   }
+  /* Ảnh chụp màn hình báo lỗi: nén ở máy người dùng trước khi gửi để không
+     đẩy ảnh gốc lớn lên mạng. Ảnh chỉ được lưu trong KV với mã ngẫu nhiên. */
+  function uploadReportImage(file) {
+    if (!file) return Promise.resolve(null);
+    if (!/^image\/(jpeg|png|webp)$/i.test(file.type)) return Promise.reject(new Error('Chỉ nhận ảnh JPG, PNG hoặc WebP.'));
+    if (file.size > 12 * 1024 * 1024) return Promise.reject(new Error('Ảnh gốc quá lớn (tối đa 12 MB).'));
+    return new Promise(function (resolve, reject) {
+      var rd = new FileReader();
+      rd.onerror = function () { reject(new Error('Không đọc được ảnh.')); };
+      rd.onload = function () {
+        var img = new Image();
+        img.onerror = function () { reject(new Error('Ảnh không hợp lệ.')); };
+        img.onload = function () {
+          try {
+            var scale = Math.min(1, 1800 / Math.max(img.naturalWidth, img.naturalHeight));
+            var cv = document.createElement('canvas');
+            cv.width = Math.max(1, Math.round(img.naturalWidth * scale));
+            cv.height = Math.max(1, Math.round(img.naturalHeight * scale));
+            var cx = cv.getContext('2d');
+            cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height);
+            cx.drawImage(img, 0, 0, cv.width, cv.height);
+            var raw = cv.toDataURL('image/webp', 0.82), comma = raw.indexOf(',');
+            var data = raw.slice(comma + 1);
+            if (data.length > 5.5 * 1024 * 1024) throw new Error('Ảnh sau khi nén vẫn quá lớn.');
+            fetch(API + '/api/report-image', {
+              method: 'POST', headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ type: 'image/webp', data: data }), cache: 'no-store'
+            }).then(function (r) { return r.json().catch(function () { return null; }).then(function (d) {
+              if (!r.ok || !d || !d.ok) throw new Error((d && d.error) || ('máy chủ trả ' + r.status));
+              resolve(d.url);
+            }); }).catch(reject);
+          } catch (e) { reject(e); }
+        };
+        img.src = rd.result;
+      };
+      rd.readAsDataURL(file);
+    });
+  }
+
   /* bầu / bỏ bầu — ch = 0: phiếu cho cả bộ, ch > 0: phiếu riêng chương đó.
      Trả về { votes (số của nút), total (tổng phiếu của bộ), votesDay/Week/Month }.
      Số được sửa NGAY trong bộ nhớ + cache nên bảng xếp hạng tăng tức thì,
@@ -2506,7 +2545,7 @@
     API: API, normalizeApi: normalizeApi,
     registry: registry, book: book, forgetBook: forgetBook, stats: stats, refreshStats: refreshStats, schedule: schedule,
     lockToken: lockToken, setLockToken: setLockToken, clearLockToken: clearLockToken,
-    vid: vid, reportView: reportView, sendReport: sendReport, vote: vote, rate: rate, myRating: function (slug) { return jpost('/api/rate/me', { slug: slug, vid: vid() }, authToken()); },
+    vid: vid, reportView: reportView, sendReport: sendReport, uploadReportImage: uploadReportImage, vote: vote, rate: rate, myRating: function (slug) { return jpost('/api/rate/me', { slug: slug, vid: vid() }, authToken()); },
     lib: libList, slides: slides, editorChoice: editorChoice, donationCfg: donationCfg, reportCfg: reportCfg, findLib: findLib, statsOf: statsOf, onStats: onStats,
     progress: progress, setProgress: setProgress, lastReadAt: lastReadAt,
     shelfIds: shelfIds, inShelf: inShelf, toggleShelf: toggleShelf, clearShelf: clearShelf,

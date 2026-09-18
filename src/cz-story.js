@@ -1257,6 +1257,9 @@
         '<div class="mb"><p class="sm muted">Ghi rõ chỗ sai rồi bấm <b>Gửi báo lỗi</b> — nội dung tới thẳng hộp thư ban biên tập, ' +
           'trang đã kèm sẵn tên bộ, số chương và link nên bạn không phải copy gì cả.</p>' +
         '<textarea class="inp ta" id="rpText" rows="6" maxlength="4000" spellcheck="false">' + esc(text) + '</textarea>' +
+        '<label class="sm muted" for="rpImage">Ảnh chụp màn hình (không bắt buộc)</label>' +
+        '<input class="inp" id="rpImage" type="file" accept="image/jpeg,image/png,image/webp">' +
+        '<div class="sm muted" id="rpImageNote">Ảnh sẽ được nén trước khi tải lên (tối đa 12 MB ảnh gốc).</div>' +
         '<div class="sm muted rpcount" id="rpCount" aria-live="off"></div>' +
         '<div class="mt row" id="rpFall" style="display:none">' +
           '<button class="btn ghost sm" id="rpCopy" type="button">' + ic('copy', 'i-s') + ' Copy nội dung</button>' +
@@ -1264,7 +1267,7 @@
         '<div class="mf"><span class="sm muted" id="rpNote" role="status" aria-live="polite"></span>' +
         '<button class="btn ghost" data-close>Đóng</button>' +
         '<button class="btn pri" id="rpSend">' + ic('mail', 'i-s') + ' Gửi báo lỗi</button></div>');
-      var ta = m.querySelector('#rpText'), note = m.querySelector('#rpNote'), send = m.querySelector('#rpSend');
+      var ta = m.querySelector('#rpText'), imageInput = m.querySelector('#rpImage'), imageNote = m.querySelector('#rpImageNote'), note = m.querySelector('#rpNote'), send = m.querySelector('#rpSend');
       /* Đếm ký tự: máy chủ chỉ nhận 4000 ký tự, hiện sẵn cho người viết biết mình còn bao nhiêu */
       var cbox = m.querySelector('#rpCount');
       function paintCount() {
@@ -1295,8 +1298,13 @@
         var old = send.innerHTML;
         send.innerHTML = 'Đang gửi…';
         note.textContent = '';
-        CZ.sendReport({ slug: N.slug, title: N.title, ch: cur, url: link, text: body, vid: CZ.vid() })
-          .then(function (r) {
+        var imageJob = imageInput && imageInput.files && imageInput.files[0]
+          ? CZ.uploadReportImage(imageInput.files[0])
+          : Promise.resolve('');
+        if (imageNote && imageInput && imageInput.files[0]) imageNote.textContent = 'Đang nén và tải ảnh lên…';
+        imageJob.then(function (image) {
+          return CZ.sendReport({ slug: N.slug, title: N.title, ch: cur, url: link, text: body, image: image || '', vid: CZ.vid() });
+        }).then(function (r) {
             send.disabled = false;
             send.innerHTML = old;
             if (r && r.ok) {
