@@ -2048,21 +2048,26 @@
 
   /* ================== BÁO LỖI CHỮ NGƯỜI ĐỌC GỬI =========================
      Mỗi lần người đọc bấm “Gửi báo lỗi” ở trang đọc, Worker nhận và (nếu đã
-     cấu hình Resend) gửi luôn email cho quản trị; ở đây đọc lại toàn bộ để
+     cấu hình Resend hoặc Mail) gửi luôn email cho quản trị; ở đây đọc lại toàn bộ để
      khỏi phải vào KV bằng tay.                                            */
   var REP = { all: [], q: '' };
   function loadReports() {
-    if (!ONLINE) { repState('Cần nối Worker để đọc báo lỗi (báo lỗi nằm trên KV).', 'err'); return Promise.resolve(); }
+    if (!ONLINE) {
+      repState('Cần nối Worker để đọc báo lỗi (báo lỗi nằm trên KV).', 'err');
+      paintReports();
+      return Promise.resolve();
+    }
     repState('<span class="spin"></span> đang đọc báo lỗi từ KV…', 'info');
     return api('/api/admin/reports').then(function (r) {
       REP.all = r.items || [];
       paintReports();
       repState(REP.all.length
-        ? ('Có ' + num(REP.all.length) + ' báo lỗi gần nhất' + (r.mail ? ' · Worker đã bật gửi email cho quản trị.' : ' · Worker CHƯA bật gửi email (thiếu RESEND_API_KEY / MAIL_FROM).'))
+        ? ('Có ' + num(REP.all.length) + ' báo lỗi gần nhất' + (r.mail ? ' · Worker đã bật gửi email cho quản trị.' : ' · Worker CHƯA bật gửi email (thiếu RESEND_API_KEY / MAIL_FROM hoặc MAIL_TO / ADMIN_EMAILS).'))
         : 'Chưa có báo lỗi nào — yên tâm.', 'ok');
     }).catch(function (e) {
       repState('Không đọc được báo lỗi: ' + e.message +
         (String(e.message).indexOf('không có endpoint') >= 0 ? ' — Worker đang là bản cũ, dán worker/cms.js mới rồi Deploy.' : ''), 'err');
+      paintReports();
     });
   }
   function repState(html, kind) {
@@ -2073,10 +2078,16 @@
   }
   function paintReports() {
     if (!$('#rpList')) return;
-    var q = REP.q.toLowerCase();
+    var q = REP.q.toLowerCase(), bySlug = {};
+    if (REG && REG.lib) {
+      REG.lib.forEach(function (n) { if (n.slug) bySlug[n.slug] = n; });
+    }
     var rows = REP.all.filter(function (r) {
       if (!q) return true;
-      return (String(r.text || '') + ' ' + String(r.title || '') + ' ' + String(r.slug || '') + ' ' + String(r.who || '')).toLowerCase().indexOf(q) >= 0;
+      var book = bySlug[r.slug] || {};
+      var t = r.title || book.title || '';
+      var chStr = r.ch ? ('chương ' + r.ch + ' ' + r.ch) : 'cả bộ';
+      return (String(r.text || '') + ' ' + t + ' ' + String(r.slug || '') + ' ' + String(r.who || '') + ' ' + chStr).toLowerCase().indexOf(q) >= 0;
     });
     setTabCt('tabRepCt', REP.all.length);
     var today = new Date().toISOString().slice(0, 10);
@@ -2089,23 +2100,44 @@
       ['Đang hiện', num(rows.length)]
     ].map(function (t) { return '<div class="tile"><b>' + t[1] + '</b><span>' + t[0] + '</span></div>'; }).join('');
     var box = $('#rpList');
-    if (!rows.length) { box.innerHTML = '<div class="empty sm">' + (REP.all.length ? 'Không có báo lỗi nào khớp từ khoá.' : 'Chưa có báo lỗi nào.') + '</div>'; return; }
+    if (!rows.length) {
+      var emptyMsg = !ONLINE
+        ? 'Cần nối Worker để đọc báo lỗi (báo lỗi nằm trên KV).'
+        : (REP.all.length ? 'Không có báo lỗi nào khớp từ khoá.' : 'Chưa có báo lỗi nào.');
+      box.innerHTML = '<div class="empty sm">' + emptyMsg + '</div>';
+      return;
+    }
     box.innerHTML = rows.slice(0, 300).map(function (r, i) {
       var chap = r.ch ? 'chương ' + esc(r.ch) : 'cả bộ';
+      var book = bySlug[r.slug] || {};
+      var title = r.title || book.title || r.slug || 'Không rõ bộ';
+      var openUrl = r.url || (r.slug ? (r.ch ? CZ.readURL(r.slug, r.ch) : CZ.storyURL(r.slug)) : '#');
       return '<div class="reprow" data-i="' + i + '">' +
-        '<span class="mb2"><span class="mh2"><b>' + esc(r.title || r.slug || 'Không rõ bộ') + '</b>' +
+        '<span class="mb2"><span class="mh2"><b>' + esc(title) + '</b>' +
           '<span class="pill acc">' + chap + '</span>' +
           '<span>' + esc(CZ.timeAgo(r.at)) + '</span>' +
           '<span class="sm muted">' + esc(r.who || 'khách') + '</span></span>' +
           '<span class="mt2">' + esc(r.text) + '</span></span>' +
         '<span class="ract">' +
-          '<a class="btn ghost sm" href="' + esc(r.url || (r.slug ? CZ.storyURL(r.slug) : '#')) + '" target="_blank" rel="noopener" title="Mở đúng chương bị báo">' + ic('link', 'i-s') + ' Mở</a>' +
+          '<a class="btn ghost sm" href="' + esc(openUrl) + '" target="_blank" rel="noopener" title="Mở đúng chương bị báo">' + ic('link', 'i-s') + ' Mở</a>' +
           '<button class="btn ghost sm" data-repcopy="' + i + '" title="Copy nội dung báo lỗi">' + ic('copy', 'i-s') + '</button>' +
-          '<a class="btn ghost sm" href="mailto:' + esc(r.who && r.who.indexOf('@') > 0 ? r.who : '') + '?subject=' + encodeURIComponent('Báo lỗi · ' + (r.title || r.slug || '')) + '&body=' + encodeURIComponent(String(r.text || '')) + '" title="Trả lời người báo">' + ic('mail', 'i-s') + '</a>' +
+          '<a class="btn ghost sm" href="mailto:' + esc(r.who && r.who.indexOf('@') > 0 ? r.who : '') + '?subject=' + encodeURIComponent('Báo lỗi · ' + title) + '&body=' + encodeURIComponent(String(r.text || '')) + '" title="Trả lời người báo">' + ic('mail', 'i-s') + '</a>' +
         '</span></div>';
     }).join('');
+    box.querySelectorAll('.reprow').forEach(function (row) {
+      row.addEventListener('click', function (e) {
+        if (e.target.closest('.ract') || e.target.closest('a') || e.target.closest('button')) return;
+        var a = row.querySelector('.ract a');
+        if (a && a.href && a.href !== '#' && !a.href.startsWith('mailto:')) {
+          window.open(a.href, '_blank', 'noopener');
+        }
+      });
+    });
     $$('#rpList [data-repcopy]').forEach(function (b) {
-      b.addEventListener('click', function () { CZ.copy(String((rows[+b.dataset.repcopy] || {}).text || ''), 'Đã copy nội dung báo lỗi'); });
+      b.addEventListener('click', function (e) {
+        e.stopPropagation();
+        CZ.copy(String((rows[+b.dataset.repcopy] || {}).text || ''), 'Đã copy nội dung báo lỗi');
+      });
     });
   }
 
@@ -2725,6 +2757,7 @@
       if (k === 'overview') renderOverview();
       if (k === 'doctor') { if (!DOC.rows.length) runDoctor(); if (ONLINE) loadKV(); }
       if (k === 'cmts') { fillModBooks(); loadMod(); }
+      if (k === 'reports') loadReports();
       if (k === 'log') loadLog();
       if (k === 'edit' && !CUR) return;
       show(k);
@@ -3111,6 +3144,7 @@
   $('#rpExport').addEventListener('click', function () {
     if (!REP.all.length) { toast('Chưa có báo lỗi nào để xuất', 'err'); return; }
     CZ.download('ssochuz-bao-loi-' + today() + '.json', JSON.stringify(REP.all, null, 1));
+    toast('Đã xuất ' + REP.all.length + ' báo lỗi', 'ok');
   });
   $('#logReload').addEventListener('click', loadLog);
 
