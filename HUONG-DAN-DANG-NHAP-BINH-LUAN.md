@@ -247,6 +247,49 @@ chương của bộ đó.
 > Sau khi nạp/đếm lại, nếu web vẫn hiện số cũ thì đó là **cache trình duyệt**: Ctrl+F5,
 > hoặc `/admin` → **Cài đặt** → *Xoá cache số liệu*.
 
+### 7.2. Kéo dữ liệu KV về repo sau mỗi đợt đăng
+
+**Ghi nhớ một câu: KV là bản gốc, repo là bản sao lưu.** Đăng/sửa chương trong `/admin` là ghi
+thẳng lên KV — người đọc thấy ngay, không cần deploy. Nhưng file `data/book/<slug>.json` +
+`data/registry.json` trong repo **đứng yên** (đó chính là lý do Bác sĩ dữ liệu báo
+*"KV nhiều chương hơn repo"* — ví dụ ca bộ Special: KV 1 chương, repo 0). Ba cách kéo về:
+
+| Cách | Làm gì | Khi nào |
+|---|---|---|
+| **Nút trong `/admin`** | Bác sĩ dữ liệu → **↓ Lưu file repo từ KV** → bỏ file vào `data/book/` → commit | lệch 1–2 bộ, không muốn mở terminal |
+| **Một lệnh** | `python3 tools/pull_from_kv.py --derived` → commit | sau mỗi đợt đăng, kéo cả 62 bộ |
+| **GitHub Actions** | tab **Actions** → *Đồng bộ KV → repo* → **Run workflow** (tự commit) | muốn bấm 1 nút trên GitHub, hoặc bật `schedule` trong `.github/workflows/sync-kv-to-repo.yml` cho tự chạy mỗi đêm |
+
+Lệnh đầy đủ:
+
+```bash
+export ADMIN_KEY='<Secret ADMIN_KEY của Worker>'
+python3 tools/pull_from_kv.py --derived
+git add data sitemap.xml robots.txt _redirects truyen
+git commit -m "đồng bộ KV → repo" && git push
+```
+
+Tuỳ chọn: `--dry` chỉ xem không ghi · `--only <slug>` chỉ kéo 1 bộ (registry vẫn được khớp theo KV)
+· `--derived` sinh lại `sitemap.xml`/`robots.txt` + thẻ OG (`truyen/*`, `_redirects`) — **phải chạy
+sau khi kéo**, vì sitemap đếm số chương từ file trong repo. URL Worker tự đọc từ `cz-config.js`
+(`window.CZ_API`) nên thường chỉ cần đặt `ADMIN_KEY`. Script giữ đúng khuôn file đang có
+(JSON nén 1 dòng, không xuống dòng cuối) nên bộ nào không đổi thì **không sinh diff**.
+
+Ba chốt an toàn của script (đúng tinh thần §7):
+
+1. **Đọc bằng `ADMIN_KEY`** — truyện đang khóa mật mã mà đọc kiểu khách thì Worker chỉ trả
+   "vỏ rỗng" (`locked:true`, `chapters:[]`); ghi vỏ đó xuống repo là mất chương. Script kiểm khoá
+   qua `/api/whoami` trước khi kéo bất cứ thứ gì.
+2. **Không bao giờ ghi trường `lock`** (salt + băm mật mã) vào repo công khai — script gỡ ra
+   trước khi ghi file; khóa trên KV không hề đổi. Nếu sau đó nạp ngược lên KV (file không có
+   `lock`), Worker tự giữ khóa cũ (`putBook` ⇢ xem `worker/cms.js`).
+3. **Bỏ qua bộ mà KV ít chương hơn repo** — đó là chiều lệch ngược, chữa bằng
+   `tools/push_to_kv.py --only <slug>` (hoặc nút *↑ Nạp chương từ repo lên KV*), không phải kéo về.
+
+> **Quy tắc vàng:** đừng bao giờ bấm **↑ Nạp dữ liệu repo lên KV** khi repo đang tụt sau KV —
+> cả hai nút đó giờ đều có cảnh báo kể tên từng bộ sẽ mất chương. Lệch chiều nào, chữa chiều đó:
+> KV mới hơn thì KÉO VỀ, repo mới hơn thì ĐẨY LÊN.
+
 ---
 
 ## 8. Trang quản trị: ai vào được

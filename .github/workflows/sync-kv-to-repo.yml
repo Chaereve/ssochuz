@@ -1,0 +1,62 @@
+# Đồng bộ dữ liệu KV → repo (bản sao lưu) — nút bấm trong tab Actions.
+#
+# VÌ SAO CẦN WORKFLOW NÀY: đăng/sửa chương trong /admin là ghi thẳng lên KV,
+# file data/book/<slug>.json + data/registry.json trong repo đứng yên. Workflow
+# chạy tools/pull_from_kv.py để kéo bản KV về repo rồi TỰ COMMIT. Reader không
+# bị ảnh hưởng dù chưa chạy — KV là bản gốc, repo chỉ là bản sao lưu.
+#
+# DÙNG: tab Actions → "Đồng bộ KV → repo" → Run workflow. Cần Secret ADMIN_KEY
+# (Settings → Secrets and variables → Actions). URL Worker tự lấy từ cz-config.js
+# (window.CZ_API) nên đổi Worker chỉ cần sửa cz-config.js.
+#
+# Muốn tự chạy mỗi đêm (múi giờ VN) thì bỏ comment 2 dòng `schedule` dưới đây:
+name: Đồng bộ KV → repo
+
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: 'Chỉ kéo 1 bộ (slug) — để trống = kéo registry + tất cả các bộ'
+        required: false
+        default: ''
+  # schedule:
+  #   - cron: '17 17 * * *'   # 17:17 UTC = 00:17 giờ VN mỗi đêm
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Kéo KV về repo + sinh lại sitemap/OG
+        env:
+          ADMIN_KEY: ${{ secrets.ADMIN_KEY }}
+        run: |
+          set -euo pipefail
+          ARGS="--derived"
+          if [ -n "${{ inputs.only }}" ]; then ARGS="$ARGS --only ${{ inputs.only }}"; fi
+          python3 tools/pull_from_kv.py $ARGS
+
+      - name: Commit nếu có thay đổi
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data sitemap.xml robots.txt _redirects truyen
+          if git diff --cached --quiet; then
+            echo "KV và repo đã khớp nhau — không có gì để commit."
+          else
+            git commit -m "đồng bộ KV → repo"
+            git push
+          fi
