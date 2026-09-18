@@ -1712,7 +1712,8 @@ async function adminReports(req, env, cors) {
   const items = (await env.CZ_KV.get('report', { type: 'json' })) || [];
   const q = String(new URL(req.url).searchParams.get('q') || '').toLowerCase();
   const out = q ? items.filter((x) => (x.text + ' ' + x.title + ' ' + x.slug).toLowerCase().indexOf(q) >= 0) : items;
-  return json({ ok: true, items: out.slice(0, 100), count: out.length, mail: !!env.RESEND_API_KEY && !!env.MAIL_FROM });
+  const hasMail = (!!env.RESEND_API_KEY && !!env.MAIL_FROM) || !!env.MAIL_TO || !!(env.ADMIN_EMAILS && String(env.ADMIN_EMAILS).trim());
+  return json({ ok: true, items: out.slice(0, 300), count: out.length, mail: hasMail });
 }
 
 async function adminVoters(req, env, cors) {

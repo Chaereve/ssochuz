@@ -2209,7 +2209,8 @@ body.rd-focus .rdcmts { display: none; }
 
 /* kiểm duyệt bình luận */
 /* báo lỗi chữ người đọc gửi (tab Báo lỗi trong /admin) */
-.reprow { display: flex; gap: 11px; align-items: flex-start; padding: 12px 4px; border-bottom: 1px solid var(--bd); }
+.reprow { display: flex; gap: 11px; align-items: flex-start; padding: 12px 8px; border-bottom: 1px solid var(--bd); border-radius: var(--r-sm); cursor: pointer; transition: background-color var(--t-fast) var(--ease); }
+.reprow:hover { background: color-mix(in srgb, var(--acc) 5%, transparent); }
 .reprow .mb2 { flex: 1; min-width: 0; }
 .reprow .mh2 { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 12.5px; color: var(--mut); }
 .reprow .mh2 b { color: var(--txt); font-size: 13px; }
