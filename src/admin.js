@@ -103,7 +103,13 @@
       body: opt.body != null ? JSON.stringify(opt.body) : undefined
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (d) {
-        if (!r.ok || d.ok === false) throw new Error(d.error || ('HTTP ' + r.status + (r.status === 503 ? ' — Worker chưa gắn KV CZ_KV hoặc id trong wrangler.toml còn là placeholder' : '')));
+        if (!r.ok || d.ok === false) {
+          /* Gắn httpStatus vào error để nơi gọi phân biệt được 404 (Worker bản cũ
+             chưa có endpoint) với 401 (sai khoá) — mỗi bệnh một câu chữa khác nhau. */
+          var er = new Error(d.error || ('HTTP ' + r.status + (r.status === 503 ? ' — Worker chưa gắn KV CZ_KV hoặc id trong wrangler.toml còn là placeholder' : '')));
+          er.httpStatus = r.status;
+          throw er;
+        }
         return d;
       });
     }).catch(function (e) {
@@ -115,8 +121,15 @@
           '. Kiểm tra URL/deploy bằng cách mở ' + base + '/api/health.');
       }
       if (/Failed to fetch|NetworkError|Load failed/i.test(m)) {
+        /* "Failed to fetch" KHÔNG chỉ nghĩa là Worker chết: nếu MỘT endpoint quên trả
+           header CORS thì trình duyệt chặn response (dù Worker trả 200 OK, key đúng)
+           và fetch cũng ném đúng câu này. Vì vậy phải gợi ý cả cách phân biệt:
+           health chạy OK mà endpoint kia chết → bệnh ở Worker (bản cũ), không phải
+           ở URL/KV. Worker 1.10.1 có lớp bảo hiểm đắp CORS lên mọi response. */
         throw new Error('Failed to fetch — không nối được Worker tại ' + base +
-          ' (CORS, URL sai hoặc Worker chưa deploy). Mở ' + base + '/api/health trên tab mới để kiểm tra.');
+          ' (CORS, URL sai, Worker chưa deploy, hoặc Worker bản cũ thiếu header CORS ở endpoint này). ' +
+          'Mở ' + base + '/api/health trên tab mới để kiểm tra: nếu JSON hiện ra bình thường ' +
+          'mà chức năng này vẫn lỗi → dán worker/cms.js mới (≥ 1.10.1) vào Worker rồi Deploy lại.');
       }
       throw e;
     }).finally(function () { if (timer) clearTimeout(timer); });
@@ -2077,9 +2090,43 @@
         ? ('Có ' + num(REP.all.length) + ' báo lỗi gần nhất' + (r.mail ? ' · Worker đã bật gửi email cho quản trị.' : ' · Worker CHƯA bật gửi email (thiếu RESEND_API_KEY / MAIL_FROM hoặc MAIL_TO / ADMIN_EMAILS).'))
         : 'Chưa có báo lỗi nào — yên tâm.', 'ok');
     }).catch(function (e) {
-      repState('Không đọc được báo lỗi: ' + e.message +
-        (String(e.message).indexOf('không có endpoint') >= 0 ? ' — Worker đang là bản cũ, dán worker/cms.js mới rồi Deploy.' : ''), 'err');
-      paintReports();
+      var m = String((e && e.message) || e);
+      if (String(e && e.httpStatus) === '404' || m.indexOf('không có endpoint') >= 0) {
+        repState('Không đọc được báo lỗi: Worker chưa có endpoint /api/admin/reports — dán worker/cms.js mới rồi Deploy.', 'err');
+        paintReports();
+        return;
+      }
+      if (!/Failed to fetch|NetworkError|Load failed/i.test(m)) {
+        repState('Không đọc được báo lỗi: ' + esc(m), 'err');
+        paintReports();
+        return;
+      }
+      /* "Failed to fetch" ở ĐÚNG tab này trong khi các tab khác của admin vẫn chạy
+         = Worker chặn trình duyệt ĐỌC response (thiếu access-control-allow-origin),
+         không phải sai URL. Bản ≤ 1.10.0 quên header này ở /api/admin/reports.
+         Thử /api/health (endpoint mở, luôn có CORS) để phân biệt hai bệnh:
+           health OK     → dán worker/cms.js mới vào Worker rồi Deploy (không cần
+                           đụng tới KV, ADMIN_KEY, wrangler.toml hay địa chỉ Worker);
+           cũng không OK → đúng là URL sai / Worker chưa deploy / domain chưa nằm
+                           trong ALLOW_ORIGIN.                                    */
+      repState('<span class="spin"></span> đang đọc báo lỗi… — không nối được, đang kiểm tra Worker.', 'info');
+      return api('/api/health', { auth: false }).then(function (h) {
+        repState('Không đọc được báo lỗi: ' + esc(m) +
+          ' → nhưng <b>/api/health vẫn trả OK</b>' + (h && h.version ? ' (Worker bản <b>' + esc(String(h.version)) + '</b>)' : '') +
+          ', nên KHÔNG phải sai URL, chưa deploy, thiếu KV hay sai ADMIN_KEY. Bệnh thật: Worker đang chạy ' +
+          'bản cũ, endpoint <code>/api/admin/reports</code> trả dữ liệu mà quên header CORS nên trình duyệt chặn. ' +
+          'Chữa: mở Worker trong Cloudflare → <b>Quick Edit</b> → dán TOÀN BỘ tệp <code>worker/cms.js</code> bản mới → ' +
+          '<b>Save and Deploy</b>. Xong mở <code>' + esc(normalizeApi(API)) + '/api/health</code> thấy ' +
+          '<code>"version": "1.10.1"</code> là bấm Đọc lại được.', 'err');
+        paintReports();
+      }, function () {
+        repState('Không đọc được báo lỗi: ' + esc(m) + ' — và /api/health cũng không gọi được, nên đúng là ' +
+          'Worker chưa deploy / sai URL / domain của trang quản trị chưa nằm trong <code>ALLOW_ORIGIN</code> của Worker. ' +
+          'Mở <code>' + esc(normalizeApi(API)) + '/api/health</code> trên tab mới: nếu không hiện JSON thì chữa nối trước ' +
+          '(xem mục “Kết nối” ở đầu trang), nếu hiện JSON mà vẫn lỗi thì Worker đang chạy bản ≤ 1.10.0 — dán ' +
+          '<code>worker/cms.js</code> mới rồi Deploy.', 'err');
+        paintReports();
+      });
     });
   }
   function repState(html, kind) {

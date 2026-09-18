@@ -51,6 +51,12 @@ export { PrivateBooks } from './private-books.js';
      GET    /api/admin/comments         → mọi bình luận để kiểm duyệt (cần X-Admin-Key)
      GET    /api/admin/stats            → số liệu chi tiết + chuỗi 60 ngày (cần X-Admin-Key)
      GET    /api/admin/log              → nhật ký 200 thao tác gần nhất (cần X-Admin-Key)
+     POST   /api/report                 → người đọc báo lỗi chữ trong chương (mở, có chống spam)
+     GET    /api/admin/reports          → 300 báo lỗi gần nhất, ?q=TỪ KHOÁ (cần X-Admin-Key)
+                                           · MỌI endpoint đều phải trả kèm `cors`: thiếu một
+                                             dòng là trình duyệt chặn response (dù 200 OK) và
+                                             trang quản trị chỉ báo "Failed to fetch"
+                                             — đúng bệnh của bản ≤ 1.10.0 ở endpoint này
      GET    /api/admin/voters?slug=     → AI ĐÃ BẦU bộ này: phiếu cả bộ + phiếu từng
                                            chương, kèm khoá người bầu (cần X-Admin-Key)
      POST   /api/admin/vote-remove      → GỠ PHIẾU của người được chọn
@@ -94,14 +100,24 @@ export { PrivateBooks } from './private-books.js';
      VAPID_PRIVATE     (secret, bắt buộc nếu bật push) — khoá riêng VAPID base64url (`wrangler secret put VAPID_PRIVATE`)
    ============================================================================ */
 
-const VERSION = '1.10.0';
+const VERSION = '1.10.1';
 const JSONH = {
   'content-type': 'application/json; charset=utf-8',
   'x-content-type-options': 'nosniff',
   'referrer-policy': 'no-referrer',
 };
 
-export default {
+/* ============================ LỐI VÀO WORKER ===============================
+   `handler.fetch` chứa mọi endpoint. `export default` bên dưới chỉ thêm một lớp
+   BẢO HIỂM: bảo đảm MỌI response đều mang header CORS.
+
+   Vì sao cần lớp này: mỗi handler phải tự truyền `cors` vào json(); chỉ một
+   handler quên là y như rằng… endpoint đó chết. Đúng cái bệnh của
+   GET /api/admin/reports ở bản ≤ 1.10.0: Worker trả 200 OK, dữ liệu đúng,
+   key đúng, nhưng không có `access-control-allow-origin` → TRÌNH DUYỆT chặn
+   response, fetch() ném "Failed to fetch" và trang quản trị báo nhầm là
+   "CORS, URL sai, Worker chưa deploy". Kiểm tra bằng mắt thường không ra. */
+const handler = {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
     const cors = corsHeaders(req, env);
@@ -331,6 +347,39 @@ export default {
     ctx.waitUntil(drainPushQueue(env).catch(() => {}));
   },
 };
+
+export default {
+  /* Lớp bảo hiểm CORS — xem ghi chú ở `handler` phía trên. */
+  async fetch(req, env, ctx) {
+    let res;
+    try {
+      res = await handler.fetch(req, env, ctx);
+    } catch (e) {
+      /* Lỗi lọt ra NGOÀI try/catch của handler (URL hỏng, adminThrottle chết…)
+         thì Cloudflare trả trang lỗi 1101 không kèm CORS — trình duyệt chỉ báo
+         "Failed to fetch", admin lại đoán sai là chưa deploy. Trả JSON 500 có
+         header CORS + lý do thật để trang quản trị in đúng bệnh. */
+      res = json({ ok: false, error: 'Worker lỗi nội bộ: ' + String((e && e.message) || e), version: VERSION },
+        { status: 500, cors: corsHeaders(req, env) });
+    }
+    return ensureCors(res, req, env);
+  },
+  scheduled: (event, env, ctx) => handler.scheduled(event, env, ctx),
+};
+
+/* Đắp header CORS lên response nếu handler nào đó quên gửi. Response đã có
+   `access-control-allow-origin` (kể cả bản đắp theo origin từ cache biên) thì
+   giữ nguyên — không ghi đè origin đã được chọn đúng ở lớp trong. */
+function ensureCors(res, req, env) {
+  if (!res || !res.headers) return res;
+  if (res.headers.get('access-control-allow-origin')) return res;
+  try {
+    const cors = corsHeaders(req, env);
+    const h = new Headers(res.headers);
+    Object.keys(cors).forEach((k) => { if (!h.has(k)) h.set(k, cors[k]); });
+    return new Response(res.body, { status: res.status, statusText: res.statusText || undefined, headers: h });
+  } catch (e) { return res; }
+}
 
 /* ==================== lấy 1 bài viết Blogger thành chương ====================
    POST /api/import  { slug, url? }
@@ -1741,7 +1790,12 @@ async function adminReports(req, env, cors) {
   const q = String(new URL(req.url).searchParams.get('q') || '').toLowerCase();
   const out = q ? items.filter((x) => (x.text + ' ' + x.title + ' ' + x.slug).toLowerCase().indexOf(q) >= 0) : items;
   const hasMail = (!!env.RESEND_API_KEY && !!env.MAIL_FROM) || !!env.MAIL_TO || !!(env.ADMIN_EMAILS && String(env.ADMIN_EMAILS).trim());
-  return json({ ok: true, items: out.slice(0, 300), count: out.length, mail: hasMail });
+  /* Bản ≤ 1.10.0 thiếu `{ cors, … }` ở dòng dưới → trình duyệt chặn response
+     (200 OK mà không có Access-Control-Allow-Origin), tab Báo lỗi chỉ báo
+     "Failed to fetch" trong khi mọi tab khác vẫn chạy. ĐỪNG BỎ: endpoint admin
+     nào cũng phải trả `cors`, và `no-store` vì danh sách này có email người đọc. */
+  return json({ ok: true, items: out.slice(0, 300), count: out.length, mail: hasMail },
+    { cors, headers: { 'cache-control': 'no-store' } });
 }
 
 async function adminVoters(req, env, cors) {

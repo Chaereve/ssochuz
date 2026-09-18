@@ -11,7 +11,10 @@ mỗi máy/truyện/ngày (khoá `ssochuz-viewsent-…`), “sửa thấy ngay�
 Từ bản **1.9.6**: có **RSS feed** — `GET /feed.xml` (30 chương mới nhất)
 và `GET /feed.xml?slug=<slug>` (chương mới của 1 bộ), chuẩn RSS 2.0, cache biên 10 phút,
 mỗi lần ghi chương tự xoá cache nên chương mới lên feed ngay.
-Từ bản **1.9.8** (đang dùng): **vá hẳn bệnh "đăng nhập xong vẫn 401"** — project Supabase
+Từ bản **1.10.1**: MỌI response của Worker đều được **bảo đảm mang header CORS** (kể cả lúc
+Worker ném lỗi) — hết cảnh "một tab của /admin báo *Failed to fetch* trong khi mọi tab khác
+vẫn chạy". Đây chính là bệnh của tab **Báo lỗi** ở bản ≤ 1.10.0 (xem mục 7c).
+Từ bản **1.9.8**: **vá hẳn bệnh "đăng nhập xong vẫn 401"** — project Supabase
 dùng khoá public `sb_publishable_…` ký token bằng **ES256**, Worker phải **ghim đúng project**
 (biến `SUPABASE_URL` hoặc Project URL lưu ở `/admin` → Cài đặt & đồng bộ → Lưu) rồi verify bằng
 JWKS. Đổi ghim **không cần deploy lại**. My Space/bình luận/đánh giá sao hoạt động lại bình thường.
@@ -30,6 +33,16 @@ Admin (admin.html)  ──PUT──▶  Worker (worker/cms.js)  ──▶  Cloud
 ```
 
 GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới cần build); dữ liệu thì không đi qua GitHub nữa.
+
+## Có gì mới ở bản 1.10.1 — sửa dứt điểm tab **Báo lỗi** báo "Failed to fetch"
+
+| | |
+|---|---|
+| **Bệnh** | Trang `/admin` nối Worker bình thường (thư viện, số liệu, nhật ký, bình luận đều chạy) **nhưng riêng tab Báo lỗi** hiện: `Không đọc được báo lỗi: Failed to fetch — không nối được Worker…`. Làm đủ mọi hướng dẫn (đúng URL, đúng `ADMIN_KEY`, KV đã bind, `ALLOW_ORIGIN` đã có domain) mà vẫn lỗi |
+| **Nguyên nhân thật** | `GET /api/admin/reports` trả **200 OK + đúng dữ liệu** nhưng handler quên truyền `cors` vào `json()` → response **không có** `access-control-allow-origin`. Trình duyệt chặn không cho trang khác origin đọc response, `fetch()` chỉ ném `TypeError: Failed to fetch` — nhìn y hệt bệnh "URL sai / Worker chưa deploy", nên càng chữa càng lệch |
+| **Chữa** | (1) `adminReports` trả đủ `{ cors, 'cache-control': 'no-store' }`; (2) thêm **lớp bảo hiểm** `ensureCors()` ở lối vào Worker: response nào thiếu header CORS thì tự đắp thêm, và lỗi lọt ra ngoài `try/catch` cũng được trả thành JSON 500 **có CORS** thay vì trang lỗi 1101 của Cloudflare. Quên `cors` ở handler mới vì thế không còn thành bug "im lặng" nữa |
+| **Nhận biết đã chữa** | Mở `<worker>/api/health` phải thấy `"version": "1.10.1"`. Từ bản này, tab Báo lỗi còn lỗi là lỗi thật (thiếu `ADMIN_KEY`, chưa có báo lỗi nào trong KV…), không phải do CORS |
+| **Test khoá bệnh** | `tests/t_worker.mjs` có mục *CORS/quét endpoint*: gọi hết mọi endpoint (cả đường 401/404/500) và bắt buộc từng response phải có `access-control-allow-origin`. `tests/cf_admin_test.js` giả lập đúng cảnh "bị chặn CORS" và đòi trang quản trị **tự chẩn đoán** (health OK ⇒ dán `worker/cms.js` mới rồi Deploy) |
 
 ## Có gì mới ở bản 1.9.8 — ghim project Supabase, hết bệnh "đăng nhập xong vẫn 401"
 
@@ -568,6 +581,11 @@ curl -X POST -H "x-admin-key: $ADMIN_KEY" -H 'content-type: application/json' \
 curl -H "x-admin-key: $ADMIN_KEY" "https://<worker>/api/admin/reports?q=chính tả"
 ```
 
+> **Mẹo phân bệnh nhanh:** chạy đúng câu `curl` ở trên (curl không bị chặn CORS như trình duyệt).
+> Nếu curl in ra danh sách báo lỗi mà tab **Báo lỗi** vẫn đỏ chữ `Failed to fetch` → dữ liệu có
+> sẵn, khoá đúng, Worker sống — chỉ có điều Worker đang chạy bản ≤ 1.10.0 **thiếu header CORS**
+> ở endpoint này. Cách chữa: mục **7c, bước 1b** (dán `worker/cms.js` mới → Deploy).
+
 ## 6. Bảo mật
 
 - `ADMIN_KEY` chỉ nằm trong localStorage của trình duyệt bạn và trong secret của Worker — **không** nằm trong code.
@@ -659,6 +677,16 @@ Mở DevTools (F12) → tab Network/Console rồi đối chiếu:
 - Mở `https://<worker>/api/health` trên tab mới. Nếu trang JSON hiện ra bình thường
   mà admin vẫn lỗi → Worker đang chạy **bản cũ thiếu CORS của /api/health** (sửa từ 1.5.1) → deploy lại.
 - Nếu tab mới cũng không mở được → Worker chưa deploy, sai URL, hoặc bị tắt ở dashboard.
+
+**1b. Chỉ MỘT tab (thường là *Báo lỗi*) báo "Failed to fetch", các tab khác vẫn chạy:**
+→ KHÔNG phải bệnh kết nối. Worker vẫn trả 200 OK, chỉ thiếu `access-control-allow-origin`
+nên trình duyệt chặn trang admin đọc response. Bản ≤ **1.10.0** quên header này ở
+`GET /api/admin/reports`. Cách chữa duy nhất: mở Worker → **Quick Edit** → dán TOÀN BỘ
+tệp `worker/cms.js` bản mới → **Save and Deploy** (không cần đụng `ADMIN_KEY`, KV,
+`wrangler.toml` hay URL trong ô Kết nối). Kiểm tra lại bằng cách mở `<worker>/api/health`
+— phải thấy `"version": "1.10.1"` — rồi bấm **Đọc lại** ở tab Báo lỗi.
+(Từ 1.10.1 trang quản trị tự làm bước chẩn đoán này: nếu `api/health` vẫn OK mà endpoint
+kia chết, dòng đỏ sẽ nói thẳng là do Worker bản cũ.)
 
 **2. `POST /api/auth/supabase` trả 401 — đọc chữ trong `error`:**
 

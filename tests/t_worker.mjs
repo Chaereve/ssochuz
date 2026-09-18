@@ -700,6 +700,17 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     eq('báo lỗi/danh sách thiếu khoá → 401', (await call('GET', '/api/admin/reports')).status, 401);
     eq('báo lỗi/lọc theo từ khoá', (((await call('GET', '/api/admin/reports?q=nhân vật', { headers: ADMH })).body || {}).count), 1);
     eq('báo lỗi/lọc từ khoá lạ → 0', (((await call('GET', '/api/admin/reports?q=khong-co-gi', { headers: ADMH })).body || {}).count), 0);
+
+    /* HỒI QUY — bệnh thật mà chủ trang gặp: bản ≤ 1.10.0 trả 200 OK + đúng dữ liệu
+       cho /api/admin/reports nhưng QUÊN `cors` → trình duyệt chặn response, tab
+       Báo lỗi chỉ báo "Failed to fetch" dù Worker, KV, ADMIN_KEY đều đúng.
+       Thiếu `cors` ở MỘT endpoint thì chỉ endpoint đó chết, nên phải test thẳng
+       header của từng endpoint chứ không tin "admin kết nối OK là ổn". */
+    eq('báo lỗi/admin/reports PHẢI có Access-Control-Allow-Origin', rep.headers.get('access-control-allow-origin'), 'https://web.test');
+    eq('báo lỗi/admin/reports PHẢI có Vary: Origin', rep.headers.get('vary'), 'Origin');
+    eq('báo lỗi/admin/reports không cho cache biên giữ (danh sách có email người đọc)', rep.headers.get('cache-control'), 'no-store');
+    eq('báo lỗi/admin/reports lúc 401 cũng phải có CORS', (await call('GET', '/api/admin/reports')).headers.get('access-control-allow-origin'), 'https://web.test');
+    eq('báo lỗi/admin/reports lúc chưa gắn KV cũng có CORS', (await call('GET', '/api/admin/reports', { headers: ADMH, e: Object.assign({}, env, { CZ_KV: undefined }) })).headers.get('access-control-allow-origin'), 'https://web.test');
   }
 
   /* ---------- 9g. BẢO MẬT (bản vá 1.9.1) ---------- */
@@ -713,6 +724,28 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     eq('CORS/vẫn cho tên miền con hợp lệ', r2.headers.get('access-control-allow-origin'), 'https://ac.web.test');
     const r3 = await call('GET', '/api/health', { headers: { origin: 'https://web.test' } });
     eq('CORS/không gửi allow-credentials', r3.headers.get('access-control-allow-credentials'), null);
+
+    /* QUÉT MỌI ENDPOINT (kể cả đường lỗi 401/404/500/503): response nào trả về
+       trình duyệt cũng PHẢI mang access-control-allow-origin. Một handler quên
+       `cors` không để lại dấu hiệu nào ngoài "Failed to fetch" ở đúng một ô của
+       trang quản trị — khó soi lắm, nên khoá chặt bằng danh sách dưới đây:
+       thêm endpoint mới là thêm một dòng vào đây. */
+    const CORS_SWEEP = [
+      ['GET', '/api/', 0], ['GET', '/api/health', 0], ['GET', '/api/whoami', 0], ['GET', '/api/whoami', 1],
+      ['GET', '/api/registry', 0], ['GET', '/api/schedule', 0], ['GET', '/api/stats', 0], ['GET', '/feed.xml', 0],
+      ['GET', '/api/book/lunar-secret', 0], ['GET', '/api/book/khong-tai-day', 0],
+      ['GET', '/api/auth/config', 0], ['GET', '/api/auth/me', 0],
+      ['GET', '/api/comments/lunar-secret', 0], ['GET', '/api/img/khong-co-anh-nay-nhe', 0],
+      ['GET', '/api/admin/reports', 0], ['GET', '/api/admin/reports', 1], ['GET', '/api/admin/comments', 1],
+      ['GET', '/api/admin/log', 1], ['GET', '/api/admin/stats', 1], ['GET', '/api/admin/kv', 1],
+      ['GET', '/api/admin/voters?slug=lunar-secret', 1], ['GET', '/api/chua-co-endpoint-dau', 0],
+      ['POST', '/api/report', 0], ['POST', '/api/lock', 0], ['POST', '/api/vote', 0], ['PUT', '/api/registry', 0],
+    ];
+    for (const [meth, ep, needKey] of CORS_SWEEP) {
+      const rr = await call(meth, ep, { headers: needKey ? ADMH : {}, body: meth === 'GET' ? undefined : {} });
+      ck('CORS/quét ' + meth + ' ' + ep, rr.headers.get('access-control-allow-origin') === 'https://web.test',
+        rr.headers.get('access-control-allow-origin') + ' (HTTP ' + rr.status + ')', 'https://web.test');
+    }
 
     /* Dò khoá quản trị: 25 lần sai / 10 phút là khoá tạm */
     let last = null;
