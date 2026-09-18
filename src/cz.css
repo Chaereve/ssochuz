@@ -3815,7 +3815,7 @@ img.modava { display: inline-block; }
 .wch-meta { flex: none; font-variant-numeric: tabular-nums; }
 /* ----- ribbon ----- */
 .wribbon {
-  display: flex; align-items: stretch; gap: 0; flex-wrap: wrap;
+  display: flex; align-items: stretch; flex-wrap: wrap; column-gap: 0; row-gap: 8px;
   padding: 7px 8px; background: color-mix(in srgb, var(--surf2) 55%, var(--surf));
   border-bottom: 1px solid var(--bd);
   position: sticky; top: 68px; z-index: 20;
@@ -3829,7 +3829,7 @@ img.modava { display: inline-block; }
 .wrow { display: flex; align-items: center; gap: 2px; }
 .wcap {
   font-size: 9.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
-  color: var(--dim); text-align: center; margin-top: 1px; user-select: none;
+  color: var(--dim); text-align: center; margin-top: auto; padding-top: 2px; user-select: none;
 }
 .wbtn {
   min-width: 30px; height: 30px; padding: 0 7px; display: inline-flex; align-items: center;
@@ -3904,6 +3904,9 @@ img.modava { display: inline-block; }
 .wedit:focus { border: 0; box-shadow: none; }
 .wedit:empty::before { color: var(--dim); opacity: .8; }
 .wedit p { margin: 0 0 1em; }
+/* trình duyệt đôi khi ngắt đoạn bằng <div> (dán nội dung lạ, IME): cho cùng nhịp với <p> */
+.wedit div { margin: 0 0 1em; }
+.wedit div.img-uploading { margin: 0; }
 .wedit h2 { font-size: 24px; margin: 1.3em 0 .55em; line-height: 1.35; }
 .wedit h3 { font-size: 19.5px; margin: 1.2em 0 .5em; line-height: 1.4; }
 .wedit ul, .wedit ol { margin: 0 0 1em 1.4em; padding: 0; }
@@ -3973,7 +3976,9 @@ body.wfull { overflow: hidden; }
   .wdoc.full .wmain { height: calc(100vh - 16px); }
   .wpage-wrap { padding: 14px 10px; max-height: 62vh; }
   .wedit { padding: 30px 22px 44px; font-size: 16px; }
-  .wribbon { top: 56px; }
+  /* màn nhỏ: ribbon một hàng vuốt ngang thay vì xếp 4–5 tầng che chỗ soạn */
+  .wribbon { top: 56px; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; row-gap: 0;
+    -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
   .wdoc-head .btn .admin-tool-label, .wdoc-head .btn { font-size: 12px; }
   .wch-meta { display: none; }
 }
