@@ -115,7 +115,15 @@ def main():
             lc = len(json.load(open(loc, encoding='utf-8')).get('chapters', [])) if os.path.exists(loc) else 0
             kc = len(bk.get('chapters', [])) if st == 200 else -1
             if kc != lc:
-                print('  LỆCH %-42s KV=%s repo=%s' % (slug, kc, lc)); diff += 1
+                # hai chiều lệch chữa NGƯỢC nhau — nói rõ để không push đè làm mất chương
+                if kc > lc:
+                    fix = ('KV nhiều hơn repo: chương đăng trong trang quản trị chưa được lưu về file. '
+                           'Lấy bản KV về ghi đè data/book/%s.json rồi commit — ĐỪNG chạy --only %s '
+                           '(push repo lên KV sẽ xoá %d chương đã đăng).' % (slug, slug, kc - lc))
+                else:
+                    fix = ('repo nhiều hơn KV: sửa file xong chưa nạp lên KV — '
+                           'chạy --only %s (hoặc /admin → Bác sĩ dữ liệu → Nạp chương từ repo lên KV).' % slug)
+                print('  LỆCH %-42s KV=%s repo=%s\n        %s' % (slug, kc, lc, fix)); diff += 1
         print('xong — %d bộ lệch' % diff)
         return
 

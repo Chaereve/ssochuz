@@ -1,33 +1,42 @@
 /* ============================================================================
-   Bác sĩ dữ liệu · phần soi TRÙNG TIÊU ĐỀ CHƯƠNG (admin.js).
-   Bài này KHÔNG cần jsdom: bóc thẳng 4 hàm chapWords/dupGroups/chapterGaps/dupText
-   ra khỏi admin.js rồi chạy trên Node, vì bệnh "các tiêu đề lặp: 1 lần" nằm ở
-   logic phân loại chứ không nằm ở giao diện.
+   Bác sĩ dữ liệu (admin.js) — 2 phần, đều KHÔNG cần jsdom: bóc thẳng hàm ra khỏi
+   src/admin.js rồi chạy trên Node, vì cả hai bệnh đều nằm ở logic phân loại chứ
+   không nằm ở giao diện.
 
-   Điều quan trọng nhất phải giữ được: 2 loại trùng tiêu đề chữa NGƯỢC NHAU.
+   (1) TRÙNG TIÊU ĐỀ CHƯƠNG — 2 loại chữa NGƯỢC NHAU:
      · trùng tên + trùng chữ  = chương bị đăng 2 lần  → xoá 1 bản
      · trùng tên, khác chữ    = đặt tên/nhầm số chương → chỉ đổi tiêu đề (xoá là mất truyện)
    Nên mã tuyệt đối không được gộp chung rồi kết luận "thường là chương bị đăng trùng".
+
+   (2) KV LỆCH FILE TRONG REPO — 2 CHIỀU chữa NGƯỢC NHAU (bệnh thật của bộ
+   "Vượt Khỏi Đường Chân Trời (Special)": KV 1 · repo 0, chương vừa đăng trong trang
+   quản trị):
+     · repo > KV = sửa file GitHub chưa nạp lên KV → "↑ Nạp chương từ repo lên KV"
+     · KV > repo = đăng chương trong trang quản trị, file repo chưa theo kịp
+                   → "↓ Lưu file repo từ KV"; xui bấm nút nạp đè ở chiều này là xui
+                     người dùng ghi đè bản ít chương hơn lên KV = XOÁ chương đã đăng.
 
    Chạy: node tests/t_doctor.js
    ========================================================================== */
 const fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..');
 
-/* admin.js là IIFE cho trình duyệt → không require được. Móc 4 hàm bằng cách cắt
+/* admin.js là IIFE cho trình duyệt → không require được. Móc các hàm bằng cách cắt
    từ đúng tên hàm tới "function renderDoctor" rồi nạp vào 1 module tạm. */
 function loadDoctor() {
   /* đọc bản NGUỒN (src/): bản phát hành ở gốc đã rút gọn nên không còn chú thích,
      không còn thụt lề, không còn tên hàm gốc để cắt. */
   const forSource = path.join(ROOT, 'src', 'admin.js');
   const src = fs.readFileSync(fs.existsSync(forSource) ? forSource : path.join(ROOT, 'admin.js'), 'utf8');
-  const names = ['chapWords', 'dupGroups', 'chapterGaps', 'dupText'];
+  const names = ['chapWords', 'dupGroups', 'chapterGaps', 'dupText', 'syncIssue', 'docText', 'DOC_LABEL'];
   const start = src.indexOf('  function chapWords(');
   const end = src.indexOf('  function renderDoctor()');
   if (start < 0 || end < 0) throw new Error('không tìm thấy khu vực Bác sĩ dữ liệu trong admin.js');
   const chunk = src.slice(start, end);
   names.forEach(n => {
-    if (chunk.indexOf('function ' + n + '(') < 0) throw new Error('admin.js thiếu hàm ' + n);
+    if (chunk.indexOf('function ' + n + '(') < 0 && chunk.indexOf('var ' + n + ' =') < 0) {
+      throw new Error('admin.js thiếu hàm/bảng ' + n);
+    }
   });
   const file = path.join(require('os').tmpdir(), 'chuseoz-doctor-fns.js');
   fs.writeFileSync(file, chunk + '\nmodule.exports=' + JSON.stringify(names) +
@@ -35,7 +44,7 @@ function loadDoctor() {
   return require(file);
 }
 
-const { dupGroups, chapterGaps, dupText } = loadDoctor();
+const { dupGroups, chapterGaps, dupText, syncIssue, docText, DOC_LABEL } = loadDoctor();
 const errors = [];
 const out = {};
 function ck(cond, msg) { if (!cond) errors.push(msg); }
@@ -117,6 +126,51 @@ books.forEach(f => {
 });
 out.kiemToanBoRepo = { soBo: books.length, conTrungTieuDe: stillBad };
 ck(stillBad.length === 0, 'còn bộ lặp tiêu đề chương trong data/book: ' + stillBad.join(' | '));
+
+/* ---------- 8. KV ↔ REPO LỆCH NHAU: phải nói đúng CHIỀU, xui đúng nút ----------
+   Bệnh thật: "Vượt Khỏi Đường Chân Trời - endless blue beyond (Special)" được đăng
+   1 chương ngay trong trang quản trị → KV 1, file data/book/*.json trong repo vẫn 0.
+   Bản cũ gộp mọi chênh lệch thành một câu "KV lệch file trong repo GitHub — bạn sửa
+   repo nhưng chưa nạp lên KV" rồi xui bấm "Nạp chương từ repo lên KV"; bấm theo là
+   ghi đè bản 0 chương lên KV = XOÁ SẠCH chương vừa đăng. */
+const docRow = (reg, kv, repo) => ({ reg, kv, repo, real: kv == null ? repo : kv, n: { countLabel: reg + '/' + reg } });
+out.kvLechRepo = {
+  kvNhieuHonRepo: syncIssue(1, 0), repoNhieuHonKv: syncIssue(29, 30),
+  bangNhau: syncIssue(30, 30), thieuKv: syncIssue(null, 5), thieuRepo: syncIssue(5, null)
+};
+ck(syncIssue(1, 0) === 'kvAhead', 'KV nhiều chương hơn repo phải báo kvAhead, thấy "' + syncIssue(1, 0) + '"');
+ck(syncIssue(29, 30) === 'repoAhead', 'repo nhiều chương hơn KV phải báo repoAhead, thấy "' + syncIssue(29, 30) + '"');
+ck(syncIssue(30, 30) === '', 'hai nguồn bằng nhau thì không được báo lệch');
+ck(syncIssue(null, 5) === '' && syncIssue(5, null) === '', 'thiếu một trong hai nguồn thì chưa đủ căn cứ, không được kết luận lệch');
+
+/* hai chiều phải là HAI bệnh khác mức: KV đi trước repo không phải "sai nghiêm trọng" */
+out.mucDo = { kvAhead: DOC_LABEL.kvAhead && DOC_LABEL.kvAhead[0], repoAhead: DOC_LABEL.repoAhead && DOC_LABEL.repoAhead[0] };
+ck(DOC_LABEL.kvAhead && DOC_LABEL.kvAhead[0] === 'warn', 'KV > repo chỉ là việc còn thiếu (warn), không phải lỗi nghiêm trọng của web');
+ck(DOC_LABEL.repoAhead && DOC_LABEL.repoAhead[0] === 'bad', 'repo > KV là người đọc đang nhận bản cũ — phải xếp bad');
+ck(!DOC_LABEL.kvVsRepo, 'không được giữ nhãn "kvVsRepo" cũ: nhãn đó không phân biệt chiều nên luôn xui sai một nửa số ca');
+
+/* lời nhắc chiều KV > repo: chỉ nút lưu về repo + CẤM nạp đè + nói rõ mất mấy chương */
+const kvAheadTxt = docText('kvAhead', docRow(1, 1, 0));
+out.nhacKvAhead = kvAheadTxt;
+ck(/Lưu file repo từ KV/.test(kvAheadTxt), 'chiều KV > repo phải chỉ nút "↓ Lưu file repo từ KV" · thấy "' + kvAheadTxt + '"');
+ck(/ĐỪNG bấm "↑ Nạp chương từ repo lên KV"/.test(kvAheadTxt),
+  'chiều KV > repo phải CẤM bấm nạp đè — thiếu câu cấm là người dùng mất chương vừa đăng');
+ck(/xoá mất 1 chương trên KV/.test(kvAheadTxt),
+  'phải nói rõ mất bao nhiêu chương (KV 1 − repo 0 = 1) · thấy "' + kvAheadTxt + '"');
+ck(/Người đọc KHÔNG bị ảnh hưởng/.test(kvAheadTxt),
+  'phải nói rõ người đọc không bị ảnh hưởng, kẻo chủ trang tưởng trang truyện đang hỏng');
+ck(!/\{kv\}|\{repo\}|\{diff\}/.test(kvAheadTxt), 'dòng báo còn chỗ chưa điền số: "' + kvAheadTxt + '"');
+
+/* lời nhắc chiều repo > KV: vẫn phải xui nạp repo lên KV (đúng bệnh Be My Angel) */
+const repoAheadTxt = docText('repoAhead', docRow(29, 29, 30));
+out.nhacRepoAhead = repoAheadTxt;
+ck(/Nạp chương từ repo lên KV/.test(repoAheadTxt), 'chiều repo > KV phải xui nạp repo lên KV · thấy "' + repoAheadTxt + '"');
+ck(/repo có 30 chương, KV chỉ 29/.test(repoAheadTxt), 'phải điền đúng số của từng nguồn · thấy "' + repoAheadTxt + '"');
+
+/* hồi quy trên chính bộ đang bị kêu: registry 1 · KV 1 · repo 0 */
+const specialRow = docRow(1, 1, 0);
+out.boDangBiKeu = { slug: 'vuot-khoi-uong-chan-troi-endless-blue-01775777241', benh: syncIssue(specialRow.kv, specialRow.repo), nhac: docText(syncIssue(1, 0), specialRow).slice(0, 90) };
+ck(syncIssue(specialRow.kv, specialRow.repo) === 'kvAhead', 'bộ Special (KV 1 · repo 0) phải được chẩn là "chưa lưu về repo", không phải "chưa nạp lên KV"');
 
 out.errors = errors;
 console.log(JSON.stringify(out, null, 1));

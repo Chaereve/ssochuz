@@ -192,17 +192,27 @@ nên web hiện 30. Không phải lỗi giao diện.
 **Cách chữa dứt điểm bằng giao diện** — `/admin` → tab **Bác sĩ dữ liệu** (phím `6`):
 
 Tab này đối chiếu **3 nguồn** cho từng bộ: `registry` (con số đang hiện ngoài web) ↔ `KV` (bản người đọc thật sự
-nhận) ↔ `repo` (file trên GitHub), rồi liệt kê đúng bộ đang lệch, vd:
+nhận) ↔ `repo` (file trên GitHub), rồi liệt kê đúng bộ đang lệch.
 
-> **Be My Angel** — `be-my-angel` · registry **29** · KV **30** · repo **29**
-> · Số chương ngoài web ≠ số chương thật · **KV lệch file trong repo GitHub** (bạn sửa repo nhưng chưa nạp lên KV)
+**Lệch KV ↔ repo có HAI CHIỀU, chữa ngược nhau** — đọc kỹ dòng báo trước khi bấm:
 
-Bốn nút:
+| Dòng báo | Vì sao có | Chữa bằng |
+|---|---|---|
+| **File trong repo GitHub chưa được nạp lên KV** (`repo` > `KV`) | bạn sửa/thêm chương trong file trên GitHub mà chưa nạp lên KV → người đọc vẫn nhận bản cũ | **↑ Nạp chương từ repo lên KV** |
+| **Chương trên KV chưa được lưu về file repo** (`KV` > `repo`) | bạn **đăng chương ngay trong trang quản trị** (ghi thẳng KV) nên file `data/book/<slug>.json` chưa theo kịp. **Người đọc không bị ảnh hưởng** | **↓ Lưu file repo từ KV** (hoặc nút *Lưu file repo* ngay trên dòng đó) → bỏ file vào `data/book/` → commit + deploy |
+
+> Ca thật: **Vượt Khỏi Đường Chân Trời - endless blue beyond (Special)** — `vuot-khoi-uong-chan-troi-endless-blue-01775777241`
+> · registry **1** · KV **1** · repo **0**. Truyện đã lên web bình thường; dòng báo chỉ nhắc *file trong GitHub chưa
+> có chương vừa đăng*. Chiều này mà bấm *↑ Nạp chương từ repo lên KV* là **ghi đè bản 0 chương lên KV = xoá mất
+> chương đã đăng**, nên bác sĩ giờ cấm thẳng trong dòng báo và hộp xác nhận cũng kể tên từng bộ sẽ mất chương.
+
+Năm nút:
 
 | Nút | Làm gì | Khi nào dùng |
 |---|---|---|
 | **Quét lại** | soi 62 bộ, ~10 giây | mỗi lần nghi số chương sai |
-| **↑ Nạp chương từ repo lên KV** | `PUT /api/book/<slug>` cho những bộ đang lệch — **chữa gốc** | KV lệch repo (đúng bệnh Be My Angel) |
+| **↑ Nạp chương từ repo lên KV** | `PUT /api/book/<slug>` cho những bộ đang lệch — **chữa gốc** khi repo mới hơn | `repo` > `KV` (đúng bệnh Be My Angel) |
+| **↓ Lưu file repo từ KV** | tải `data/book/<slug>.json` **đúng bằng bản KV** về máy để commit | `KV` > `repo` (đăng chương trong trang quản trị) |
 | **Đếm lại số chương trên KV** | `POST /api/recount` | registry lệch KV |
 | **Sửa nhãn trong registry** | sửa `chapters` + `countLabel` theo số thật vừa soi | muốn sửa nhanh phía web |
 
@@ -297,6 +307,7 @@ cd tests && node run.js             # 10 bài kiểm thử giao diện + 100 ki�
 | `/admin` báo **"Không nối được: Failed to fetch"** dù Worker sống | Worker chạy bản cũ thiếu CORS ở `/api/health` (đã sửa từ 1.5.1) | deploy lại `worker/cms.js` bản mới; kiểm tra `<worker>/api/health` phải ra `"version": "1.6.0"` |
 | `404 không có endpoint /api/recount` | Worker đang chạy là **bản cũ** | dán lại `worker/cms.js` v1.6.0 → Deploy |
 | Web hiện **sai số chương** | KV còn giữ bản cũ | mục 7: *Bác sĩ dữ liệu* → Nạp chương từ repo lên KV → Đếm lại |
+| Truyện **đã đăng chương** mà bác sĩ vẫn báo *KV lệch file trong repo* | chương đăng trong trang quản trị chưa được lưu về file GitHub (`KV` > `repo`) | mục 7: bấm **↓ Lưu file repo từ KV** rồi commit file vào `data/book/`; **đừng** nạp repo lên KV — chiều này nạp đè là mất chương |
 | Bấm **Thích** mà Top vote không nhảy | web đang chạy JS cũ trong cache | Ctrl+F5; kiểm tra `?v=` ở thẻ `<script>` đã đổi chưa |
 | Bình luận báo *"không nhận được mã máy"* | `cz-app.js` trong cache là bản cũ | Ctrl+F5 |
 | Bình luận báo *"bạn bình luận hơi nhanh"* | chạm trần chống spam | chờ 10 phút (3 bình luận/chương với tài khoản, 2 với khách) |
