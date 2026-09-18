@@ -16,13 +16,14 @@ Ví dụ:
   python3 tools/push_to_kv.py --api ... --key ... --import-firebase  # kéo số CŨ về KV 1 lần
   python3 tools/push_to_kv.py --api ... --key ... --stats-seed so-lieu-cu.json
 """
-import argparse, json, os, sys, urllib.request, urllib.error
+import argparse, json, os, re, sys, urllib.request, urllib.error
 
 
 def call(api, path, method='POST', key=None, payload=None, timeout=120):
     url = api.rstrip('/') + path
     data = json.dumps(payload).encode() if payload is not None else None
     req = urllib.request.Request(url, data=data, method=method)
+    req.add_header('User-Agent', 'Mozilla/5.0 (compatible; ssochuz-sync/1.0; +https://github.com/Chaereve/ssochuz)')
     req.add_header('content-type', 'application/json')
     if key:
         req.add_header('x-admin-key', key)
@@ -55,6 +56,8 @@ def main():
                     help='nạp số liệu cũ từ file JSON: {slug:{views,votes}} hoặc bản export Firestore')
     ap.add_argument('--stats', action='store_true', help='xem số liệu xếp hạng đang có trên KV')
     a = ap.parse_args()
+    if a.key:
+        a.key = re.sub(r'[\u200B-\u200D\uFEFF]', '', a.key).strip().strip('\'"')
 
     if a.health:
         print(call(a.api, '/api/health', 'GET'))

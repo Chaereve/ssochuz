@@ -39,15 +39,19 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Verify ADMIN_KEY is present
+        env:
+          ADMIN_KEY: ${{ secrets.ADMIN_KEY }}
+        run: |
+          set -euo pipefail
+          : "${ADMIN_KEY:?Thiếu secret ADMIN_KEY — vào Settings > Secrets and variables > Actions > New repository secret, tên ADMIN_KEY, giá trị = Secret ADMIN_KEY của Worker (Cloudflare > Worker > Settings > Variables and Secrets), không phải SESSION_SECRET}"
+          echo "ADMIN_KEY is present (${#ADMIN_KEY} characters)"
+
       - name: Kéo KV về repo + sinh lại sitemap/OG
         env:
           ADMIN_KEY: ${{ secrets.ADMIN_KEY }}
         run: |
           set -euo pipefail
-
-          # Báo rõ LẤY KHOÁ Ở ĐÂU: đây là Secret ADMIN_KEY của Worker, không phải
-          # chuỗi tự nghĩ ra — sai khoá thì pull_from_kv.py chặn ngay ở /api/whoami.
-          : "${ADMIN_KEY:?Thiếu secret ADMIN_KEY — vào Settings > Secrets and variables > Actions > New repository secret, tên ADMIN_KEY, giá trị = Secret ADMIN_KEY của Worker (Cloudflare > Worker > Settings > Variables and Secrets), không phải SESSION_SECRET}"
 
           ARGS=(--derived)
           if [ -n "${{ inputs.only }}" ]; then
