@@ -185,6 +185,13 @@
     $('#btnOut').classList.toggle('hide', !ONLINE);   /* chưa nối thì không có gì để ngắt */
     setConn(ONLINE ? 'ok' : 'warn', ONLINE ? 'Cloudflare KV' : 'xem dữ liệu tĩnh');
     loadRegistry().then(function () { renderOverview(); if (ONLINE) { health(); loadReports(); } });
+    edStickTop();
+    if (!window.__edStickWired) {
+      window.__edStickWired = 1;
+      window.addEventListener('resize', edStickTop);
+      if (document.fonts && document.fonts.ready) { try { document.fonts.ready.then(edStickTop); } catch (e) {} }
+      setTimeout(edStickTop, 400);
+    }
   }
   function disconnect() {
     keyDrop();
@@ -538,6 +545,14 @@
     log: ['Nhật ký', 'Worker ghi lại ai đã đổi gì, lúc nào.'],
     settings: ['Cài đặt', 'Hero trang chủ, lịch ra chương, đồng bộ và sao lưu.']
   };
+  /* ribbon + cột chương dính dưới thanh trên: đo chiều cao thật của .abar
+     (thanh này xuống dòng khi hẹp → top cứng 68px là ribbon chui xuống dưới). */
+  function edStickTop() {
+    var h = 68;
+    try { var bar = document.querySelector('.abar'); if (bar) h = Math.round(bar.getBoundingClientRect().height) || 68; } catch (e) {}
+    try { var rb = $('#edToolbar'); if (rb) rb.style.top = h + 'px'; } catch (e2) {}
+    try { var ws = document.querySelector('.wside'); if (ws) ws.style.top = (h + 12) + 'px'; } catch (e3) {}
+  }
   function show(pane) {
     ['overview', 'list', 'new', 'edit', 'doctor', 'cmts', 'reports', 'stats', 'votes', 'log', 'settings'].forEach(function (k) {
       var el = $('#pane-' + k);
@@ -557,6 +572,7 @@
     var on = $('#tabs button.on');
     if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     window.scrollTo({ top: 0, behavior: 'auto' });
+    edStickTop();
   }
   /* vỏ tab Sửa bộ: ảnh bìa xem trước + huy hiệu khóa + nhãn tab */
   function paintEditChrome() {
@@ -3529,7 +3545,7 @@
     el.addEventListener('pointerdown', selSave);
     el.addEventListener('mousedown', selSave);
     el.addEventListener('focus', selSave);
-    el.addEventListener('input', function () { edFocus(); selRestore(); edCmd(pair[1], el.value); dirty.book = true; markDirty(); chStat(); });
+    el.addEventListener('input', function () { edFocus(); selRestore(); edCmd(pair[1], el.value); var sw = $(pair[0] + 'Sw'); if (sw) sw.style.background = el.value; dirty.book = true; markDirty(); chStat(); });
   });
   /* hộp chèn link */
   (function () {

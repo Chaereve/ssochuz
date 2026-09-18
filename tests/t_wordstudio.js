@@ -216,6 +216,15 @@ function api(path, opt) {
   click('#edToolbar [data-exp="html"]'); await wait(120);
   out.xuat = { khongLoi: true };
 
+  /* ---------- 9b. dai mau + dinh top ---------- */
+  input('#edColor', '#ff0000');
+  doc.querySelector('#edColor').dispatchEvent(new win.Event('input', { bubbles: true }));
+  await wait(80);
+  out.mau = {
+    daiDoiMau: String(doc.querySelector('#edColorSw').style.background || '').length > 0,
+    ribbonDinhTop: doc.querySelector('#edToolbar').style.top
+  };
+
   /* ---------- 10. sidebar thu gọn ---------- */
   click('#navToggle'); await wait(80);
   out.nav = { thuDuoc: $('#ashell').classList.contains('nav-min') };
@@ -253,6 +262,8 @@ function api(path, opt) {
   if (!out.dan.sachMso) hard.push('dán Word chưa sạch');
   if (!out.dan.batDanChu) hard.push('nút dán chữ không bật');
   if (!out.nav.thuDuoc || !out.nav.moLai) hard.push('thu/mở sidebar lỗi');
+  if (!out.mau.daiDoiMau) hard.push('dải màu không đổi theo màu đã chọn');
+  if (!/\d+px/.test(out.mau.ribbonDinhTop)) hard.push('ribbon chưa dính top theo thanh trên: ' + out.mau.ribbonDinhTop);
   if (out.errors.length) hard.push('có lỗi JS: ' + out.errors.join(' | '));
   if (hard.length) { console.log('TRẮNG: ' + hard.join(' · ')); process.exit(1); }
   console.log('Đen: phòng soạn Word hoạt động đúng.');

@@ -3814,14 +3814,15 @@ img.modava { display: inline-block; }
 .wch-title:focus { border-color: var(--acc); background: var(--surf); }
 .wch-meta { flex: none; font-variant-numeric: tabular-nums; }
 /* ----- ribbon ----- */
+/* Một hàng duy nhất, vuốt/cuộn ngang khi hẹp — các hàng so le nhìn xô lệch. */
 .wribbon {
-  display: flex; align-items: stretch; flex-wrap: wrap; column-gap: 0; row-gap: 8px;
+  display: flex; align-items: stretch; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
   padding: 7px 8px; background: color-mix(in srgb, var(--surf2) 55%, var(--surf));
-  border-bottom: 1px solid var(--bd);
+  border-bottom: 1px solid var(--bd); scrollbar-width: thin;
   position: sticky; top: 68px; z-index: 20;
 }
 .wgroup {
-  display: flex; flex-direction: column; gap: 3px; padding: 3px 10px 1px; flex: none;
+  display: flex; flex-direction: column; gap: 3px; padding: 3px 8px 1px; flex: none;
   border-right: 1px solid var(--bd);
 }
 .wgroup:first-child { padding-left: 4px; }
@@ -3832,8 +3833,8 @@ img.modava { display: inline-block; }
   color: var(--dim); text-align: center; margin-top: auto; padding-top: 2px; user-select: none;
 }
 .wbtn {
-  min-width: 30px; height: 30px; padding: 0 7px; display: inline-flex; align-items: center;
-  justify-content: center; gap: 6px; border: 1px solid transparent; border-radius: 7px;
+  min-width: 30px; height: 30px; padding: 0 6px; display: inline-flex; align-items: center;
+  justify-content: center; gap: 5px; border: 1px solid transparent; border-radius: 7px;
   background: transparent; color: var(--mut); font-size: 12.5px; font-weight: 700; white-space: nowrap;
   transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
 }
@@ -3842,25 +3843,30 @@ img.modava { display: inline-block; }
 .wbtn.on { background: var(--acc-soft); color: var(--acc); border-color: color-mix(in srgb, var(--acc) 40%, transparent); }
 .wbtn:disabled { opacity: .32; pointer-events: none; }
 .wbtn .i { width: 15px; height: 15px; }
-.wbtn.wide { font-size: 12px; padding: 0 9px; }
+.wbtn.wide { font-size: 12px; padding: 0 8px; }
 .wsel {
   height: 30px; padding: 0 5px; font-size: 12.5px; font-weight: 600; color: var(--txt);
   border: 1px solid var(--bd); border-radius: 7px; background: var(--surf); max-width: 100%;
 }
 .wsel:hover { border-color: var(--bd2); }
 .wsel:focus { outline: 0; border-color: var(--acc); box-shadow: 0 0 0 3px var(--ring); }
-.wfont { width: 128px; }
-.wsize { width: 62px; }
-.wstyle { width: 102px; }
+.wfont { width: 116px; }
+.wsize { width: 60px; }
+.wstyle { width: 94px; }
 .wcolor {
-  display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  position: relative; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   min-width: 32px; height: 30px; border: 1px solid transparent; border-radius: 7px; cursor: pointer; color: var(--mut);
 }
-.wcolor:hover { background: var(--surf); border-color: var(--bd); color: var(--txt); }
+.wcolor:hover, .wcolor:focus-within { background: var(--surf); border-color: var(--bd); color: var(--txt); }
 .wcolor .i { width: 15px; height: 15px; }
-.wcolor input {
-  width: 24px; height: 7px; padding: 0; border: 1px solid var(--bd2); border-radius: 2px;
-  background: none; cursor: pointer; display: block;
+.wsw { width: 24px; height: 7px; border-radius: 2px; border: 1px solid var(--bd2); }
+#edColorSw { background: #a63a52; }
+#edHiliteSw { background: #ffe08a; }
+/* input màu phủ kín cả nút để bấm đâu cũng mở bảng màu; ẩn hẳn vì mỗi trình duyệt
+   vẽ một cỡ (Safari vẽ to đè cả hàng nút) — dải .wsw giả hiển thị màu thay. */
+.wcolor input[type="color"] {
+  position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0;
+  border: 0; opacity: 0; cursor: pointer;
 }
 .wline { display: inline-flex; align-items: center; gap: 3px; color: var(--mut); }
 .wline .i { width: 15px; height: 15px; }
@@ -3976,9 +3982,7 @@ body.wfull { overflow: hidden; }
   .wdoc.full .wmain { height: calc(100vh - 16px); }
   .wpage-wrap { padding: 14px 10px; max-height: 62vh; }
   .wedit { padding: 30px 22px 44px; font-size: 16px; }
-  /* màn nhỏ: ribbon một hàng vuốt ngang thay vì xếp 4–5 tầng che chỗ soạn */
-  .wribbon { top: 56px; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; row-gap: 0;
-    -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+  .wribbon { top: 56px; -webkit-overflow-scrolling: touch; }
   .wdoc-head .btn .admin-tool-label, .wdoc-head .btn { font-size: 12px; }
   .wch-meta { display: none; }
 }
