@@ -66,6 +66,14 @@ const pngSize = f => {
     ok(sw.includes('/' + f + '?v=' + htmlVs[f]), 'sw.js precache lech version ' + f + ' (HTML: ?v=' + htmlVs[f] + ')');
   });
   ['/', '/truyen/', '/ssochuz.png'].forEach(u => ok(sw.includes("'" + u), 'sw.js precache thieu ' + u));
+  /* moi trang phai tu nhat quan: tat ca ?v= cz.* trong CUNG mot trang chi duoc
+     1 version (18/09: admin.html tung lech CSS ?v=a + JS ?v=f -> trinh duyet
+     chay JS cu tren HTML moi, ribbon hien toan icon "i" la) */
+  ['index.html', 'truyen.html', 'admin.html', 'guide.html', '404.html', 'my-space.html', 'profile.html'].forEach(f => {
+    const vs = [...read(f).matchAll(/\/(?:cz(?:\.css|-[a-z]+\.js)|admin\.js)\?v=([0-9a-z]+)/g)].map(m => m[1]);
+    const uniq = [...new Set(vs)];
+    ok(uniq.length <= 1, f + ' lech version trong trang: ' + uniq.join(', '));
+  });
 
   /* ---------- bìa truyện: SW không được làm mất bìa ---------- */
   const imgSec = sw.slice(sw.indexOf('function imgFirst'), sw.indexOf('function navFallback'));

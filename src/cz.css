@@ -3578,6 +3578,9 @@ body.admin .savebar {
 @media (max-width: 620px) {
   body.admin .savebar { margin-bottom: -14px; }
 }
+/* thẻ phòng soạn không lót đáy (padding-bottom:0) nên thanh lưu không được
+   margin âm — âm là nó thò ra ngoài viền thẻ (lỗi 18/09). */
+body.admin .wdoc-card .savebar { margin-bottom: 0; }
 
 /* ---------- 1f. bảng dữ liệu ---------- */
 .admin .tbl th {
@@ -3586,8 +3589,8 @@ body.admin .savebar {
   padding: 9px 12px; white-space: nowrap;
 }
 .admin .tbl td { padding: 9px 12px; }
-.admin .tbl tbody tr { border-bottom: 1px solid var(--bd); }
-.admin .tbl tbody tr:last-child { border-bottom: 0; }
+/* KHÔNG kẻ thêm viền ở <tr>: ô <td> đã có viền dưới, kẻ nữa là đường ngăn
+   dày gấp đôi (lỗi 18/09). */
 .cellmain { display: flex; align-items: center; gap: 11px; min-width: 0; }
 .cellth {
   width: 36px; aspect-ratio: 2/3; flex: none; border-radius: 4px; overflow: hidden;
@@ -3606,7 +3609,7 @@ body.admin .savebar {
 /* ---------- 1g. ô số liệu ---------- */
 .admin .tile { border-radius: 12px; box-shadow: var(--sh); }
 .admin .tile b { font-size: 26px; letter-spacing: -.01em; }
-.tiles { gap: 12px; margin-top: 14px; }
+body.admin .tiles { gap: 12px; margin-top: 14px; }
 
 /* ---------- 2a. cổng vào ---------- */
 .ashell:not(.authed) .smain { max-width: 600px; }
@@ -3630,7 +3633,7 @@ body.admin .savebar {
 .gate .msgbar { text-align: left; }
 
 /* ---------- 2b. tổng quan: lối tắt + việc + mới cập nhật ---------- */
-.quickrow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-bottom: 20px; }
+.quickrow { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 20px; }
 .quick {
   display: flex; align-items: center; gap: 10px; padding: 13px 14px;
   border: 1px solid var(--bd); border-radius: 12px; background: var(--surf);
@@ -3640,7 +3643,6 @@ body.admin .savebar {
 }
 .quick .i { width: 17px; height: 17px; color: var(--acc); flex: none; }
 .quick:hover { border-color: color-mix(in srgb, var(--acc) 45%, var(--bd)); background: var(--acc-soft); color: var(--acc); }
-@media (max-width: 900px) { .quickrow { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .ovhead { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin: 18px 0 10px; }
 .ovtask {
   border: 1px solid var(--bd); border-radius: 12px; background: var(--surf);
@@ -3697,7 +3699,9 @@ img.modava { display: inline-block; }
 .reprow .ract .btn { flex: none; }
 
 /* ---------- 2e. hero / choices / phiếu / biểu đồ ---------- */
-.hprow { border-radius: 10px; padding: 8px 10px; }
+/* cột số thứ tự 34px: số serif 17px hai chữ số (“10”…) vẫn vừa (cột cũ 24px
+   là tràn khi “ssochuz’s choices” quá 9 bộ — lỗi 18/09). */
+.hprow { border-radius: 10px; padding: 8px 10px; grid-template-columns: 34px 38px minmax(0, 1fr) auto; }
 .hpth {
   width: 38px; aspect-ratio: 2/3; border-radius: 4px; overflow: hidden; flex: none;
   background: var(--surf2); border: 1px solid var(--bd);
@@ -3707,11 +3711,14 @@ img.modava { display: inline-block; }
 .hpinfo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .hpinfo b { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hpinfo > span { font-size: 12px; color: var(--mut); }
-.hpreason {
-  margin-top: 5px; height: 30px; padding: 0 9px; font-size: 12.5px;
-  border: 1px solid var(--bd); border-radius: 6px; background: var(--bg); max-width: 420px; width: 100%;
+/* Phải ghi cả .hpinfo để thắng luật cũ cùng tên (không là hai luật trộn lẫn),
+   và dùng đúng biến --txt/--acc (luật cũ gõ nhầm --tx/--ac không tồn tại). */
+.hpinfo .hpreason {
+  display: block; margin-top: 5px; height: 32px; padding: 0 9px; font-size: 12.5px;
+  color: var(--txt); border: 1px solid var(--bd); border-radius: 6px; background: var(--bg);
+  max-width: 420px; width: 100%;
 }
-.hpreason:focus { outline: 0; border-color: var(--acc); box-shadow: 0 0 0 3px var(--ring); }
+.hpinfo .hpreason:focus { outline: 0; border-color: var(--acc); box-shadow: 0 0 0 3px var(--ring); }
 .hpbtns { display: flex; gap: 2px; }
 .hpfound {
   margin-top: 8px; border: 1px solid var(--bd); border-radius: 10px; background: var(--surf);
@@ -3751,9 +3758,11 @@ img.modava { display: inline-block; }
   align-items: baseline;
 }
 .findrow:hover { border-color: var(--acc); }
-.fno { font-size: 12px; color: var(--mut); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.fno b { color: var(--acc); margin-right: 6px; font-variant-numeric: tabular-nums; }
-.ftxt { font-size: 13px; color: var(--txt); overflow-wrap: anywhere; }
+/* Ghi cả .findrow để thắng luật cũ (không là số chương bị display:block rớt
+   dòng, chữ trích dẫn sai màu — lỗi 18/09). */
+.findrow .fno { font-size: 12px; color: var(--mut); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.findrow .fno b { display: inline; color: var(--acc); margin-right: 6px; font-size: 12.5px; }
+.findrow .ftxt { font-size: 13px; line-height: 1.6; color: var(--txt); min-width: 0; overflow-wrap: anywhere; }
 .ftxt mark, .findrow mark { background: color-mix(in srgb, var(--warn) 30%, transparent); border-radius: 2px; padding: 0 1px; }
 @media (max-width: 620px) { .findrow { grid-template-columns: 1fr; gap: 3px; } }
 .minibar { display: inline-block; height: 5px; border-radius: 3px; background: var(--acc); opacity: .55; margin-left: 8px; vertical-align: middle; }
@@ -3806,9 +3815,9 @@ img.modava { display: inline-block; }
 .wch-meta { flex: none; font-variant-numeric: tabular-nums; }
 /* ----- ribbon ----- */
 .wribbon {
-  display: flex; align-items: stretch; gap: 0; overflow-x: auto; overflow-y: hidden;
+  display: flex; align-items: stretch; gap: 0; flex-wrap: wrap;
   padding: 7px 8px; background: color-mix(in srgb, var(--surf2) 55%, var(--surf));
-  border-bottom: 1px solid var(--bd); scrollbar-width: thin;
+  border-bottom: 1px solid var(--bd);
   position: sticky; top: 68px; z-index: 20;
 }
 .wgroup {
@@ -3947,7 +3956,7 @@ img.modava { display: inline-block; }
 /* ----- soạn toàn màn hình ----- */
 body.wfull { overflow: hidden; }
 .wdoc.full {
-  position: fixed; inset: 0; z-index: 90; margin: 0; padding: 12px;
+  position: fixed; inset: 0; z-index: 80; margin: 0; padding: 12px;
   background: var(--bg); grid-template-columns: 280px minmax(0, 1fr); gap: 12px;
   animation: wfullIn .22s ease-out;
 }
