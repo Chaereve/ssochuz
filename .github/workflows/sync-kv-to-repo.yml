@@ -44,9 +44,17 @@ jobs:
           ADMIN_KEY: ${{ secrets.ADMIN_KEY }}
         run: |
           set -euo pipefail
-          ARGS="--derived"
-          if [ -n "${{ inputs.only }}" ]; then ARGS="$ARGS --only ${{ inputs.only }}"; fi
-          python3 tools/pull_from_kv.py $ARGS
+
+          : "${ADMIN_KEY:?GitHub Actions secret ADMIN_KEY chưa được cấu hình}"
+
+          ARGS=(--derived)
+          if [ -n "${{ inputs.only }}" ]; then
+            ARGS+=(--only "${{ inputs.only }}")
+          fi
+
+          python3 tools/pull_from_kv.py \
+            "${ARGS[@]}" \
+            --key "$ADMIN_KEY"
 
       - name: Commit nếu có thay đổi
         run: |
