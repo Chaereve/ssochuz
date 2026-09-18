@@ -45,7 +45,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          : "${ADMIN_KEY:?GitHub Actions secret ADMIN_KEY chưa được cấu hình}"
+          # Báo rõ LẤY KHOÁ Ở ĐÂU: đây là Secret ADMIN_KEY của Worker, không phải
+          # chuỗi tự nghĩ ra — sai khoá thì pull_from_kv.py chặn ngay ở /api/whoami.
+          : "${ADMIN_KEY:?Thiếu secret ADMIN_KEY — vào Settings > Secrets and variables > Actions > New repository secret, tên ADMIN_KEY, giá trị = Secret ADMIN_KEY của Worker (Cloudflare > Worker > Settings > Variables and Secrets), không phải SESSION_SECRET}"
 
           ARGS=(--derived)
           if [ -n "${{ inputs.only }}" ]; then

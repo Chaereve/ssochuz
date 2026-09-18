@@ -45,6 +45,13 @@ def call(api, path, key=None, timeout=120):
             return e.code, json.loads(e.read().decode())
         except Exception:
             return e.code, {}
+    except (urllib.error.URLError, OSError) as e:
+        # Không nối được Worker (DNS, TLS, hết giờ, runner bị chặn ra Internet…).
+        # Trước đây văng traceback urllib — đọc trong log Actions không biết lỗi gì,
+        # dễ nhầm với "khoá sai". Báo 1 dòng rõ ràng rồi dừng, không ghi gì cả.
+        sys.exit('Không nối được Worker %s (%s) — kiểm tra window.CZ_API trong cz-config.js, '
+                 'Worker đã deploy chưa, và máy chạy script có ra được Internet không.'
+                 % (api, getattr(e, 'reason', e)))
 
 
 def api_from_config():
