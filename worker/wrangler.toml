@@ -21,7 +21,9 @@ id = "c1e0e450c37f4a0abf804bf354c412d9"
 BLOG = "https://chuseoz.blogspot.com"
 # Chỉ cho các web thật gọi Worker; preview *.ssochuz.pages.dev cũng được nhận diện.
 # Nếu có custom domain, thêm nó vào danh sách này rồi deploy lại.
-ALLOW_ORIGIN = "https://ssochuz.pages.dev,https://chuseoz.blogspot.com"
+# Cả hai hostname đều đang được dùng cho trang quản trị; nếu thiếu chuseoz.pages.dev,
+# trình duyệt chặn /api/admin/reports ở bước CORS preflight và admin chỉ báo Failed to fetch.
+ALLOW_ORIGIN = "https://ssochuz.pages.dev,https://chuseoz.pages.dev,https://chuseoz.blogspot.com"
 # Gốc dựng link chương trong GET /feed.xml (RSS). Có custom domain thì đổi cả hai chỗ rồi deploy lại.
 SITE_BASE = "https://ssochuz.pages.dev"
 # Khoá CÔNG KHAI VAPID cho Web Push (không nhạy cảm — web cũng nhúng key này).

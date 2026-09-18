@@ -703,7 +703,7 @@ async function drainPushQueue(env) {
 function corsHeaders(req, env) {
   /* Production mặc định đóng theo hai domain thật; chỉ mở * khi quản trị chủ động
      đặt ALLOW_ORIGIN="*" (không khuyến nghị). */
-  const allowRaw = String((env && env.ALLOW_ORIGIN) || 'https://ssochuz.pages.dev,https://chuseoz.blogspot.com').trim();
+  const allowRaw = String((env && env.ALLOW_ORIGIN) || 'https://ssochuz.pages.dev,https://chuseoz.pages.dev,https://chuseoz.blogspot.com').trim();
   const origin = req.headers.get('Origin') || '';
   let ao = '*';
   if (allowRaw === '*') {
