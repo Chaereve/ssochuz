@@ -184,10 +184,21 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   await wait(500);
   W.localStorage.setItem('cz_kv_api', 'https://cms.test');
   W.localStorage.setItem('cz_kv_key', FAKE_KEY);
+  /* Bản nháp đặt TRƯỚC khi nối Worker để loadRegistry() → paintDraftChip() kịp
+     hiện nút. Nháp chỉ giữ 3 bộ trong khi registry trên KV có 62 — đủ để thấy
+     hai con số trên màn hình có theo kịp nhau hay không. */
+  const draftReg = JSON.parse(JSON.stringify(REG));
+  draftReg.lib = draftReg.lib.slice(0, 3);
+  W.localStorage.setItem('cz_admin_draft', JSON.stringify({ at: Date.now(), reg: draftReg, books: {} }));
   clk('#inApi'); $a('#inApi').value = 'https://cms.test';
   clk('#inKey'); $a('#inKey').value = FAKE_KEY;
   clk('#btnConnect'); await wait(700);
   out.adminConnected = { appShown: !$a('#scApp').classList.contains('hide'), rows: $$a('#tb tbody tr').length };
+  out.adminDraftChip = {
+    shown: !$a('#btnDraftUse').classList.contains('hide'),
+    /* vừa nối Worker xong: cả hai chỗ đều đếm theo registry trên KV */
+    libCount: txtA('#libCount'), tabBadge: txtA('#tabLibCt')
+  };
 
   /* mở “Sửa bộ & chương” của third-person */
   const row = $$a('#tb tbody tr').find(r => /Third Person/i.test(r.textContent));
@@ -195,6 +206,55 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   if (row) { clk([...row.querySelectorAll('button')].find(b => /sửa/i.test(b.textContent)) || row); await wait(600); }
   out.adminEditOpen = { pane: !$a('#pane-edit').classList.contains('hide'), head: txtA('#edHead'), chaps: $$a('#chList .row2').length };
   const before = BOOK.chapters.length;
+
+  /* thời gian đọc trong trang quản trị: mỗi dòng chương + thanh thống kê dưới ô soạn.
+     Người viết cần biết chương dài bao lâu để giữ độ dài đều tay giữa các chương. */
+  const chRows = $$a('#chList .row2');
+  clk(chRows[1] || chRows[0]); await wait(300);      /* mở một chương có nội dung */
+  out.adminReadTime = {
+    rows: chRows.length,
+    rowsWithTm: chRows.filter(r => r.querySelector('.tm')).length,
+    stat: txtA('#chStat'),
+    statHasTime: /đọc hết ~\d+ (phút|giờ)/.test(txtA('#chStat'))
+  };
+  if (chRows.length && out.adminReadTime.rowsWithTm !== chRows.length) {
+    console.log('ADMIN THIẾU THỜI GIAN ĐỌC: ' + out.adminReadTime.rowsWithTm + '/' + chRows.length + ' dòng chương');
+  }
+  if (!out.adminReadTime.statHasTime) console.log('THANH THỐNG KÊ THIẾU THỜI GIAN ĐỌC: ' + out.adminReadTime.stat);
+
+  /* “kiểm tra chương” dưới ô soạn: chỉ báo thứ ĐO ĐƯỢC (độ dài, tường chữ,
+     chương rỗng), ngưỡng lấy từ 1.198 chương thật. Máy không chấm văn nên
+     bài này cũng chỉ kiểm đúng những thứ máy hứa. */
+  const edB = $a('#edBody');
+  const keepHtml = edB.innerHTML;                       /* giữ nguyên để test sau không bị ảnh hưởng */
+  const chkOf = () => txtA('#chCheck');
+  edB.innerHTML = Array(50).fill('chữ').join(' ');
+  edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(150);
+  const shortNote = chkOf();
+  edB.innerHTML = '<p>' + 'a'.repeat(900) + '</p><p>' + 'b'.repeat(900) + '</p><p>“' +
+    Array(900).fill('nói').join(' ') + '”</p>';
+  edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(150);
+  const wallNote = chkOf();
+  edB.innerHTML = '';
+  edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(150);
+  const emptyNote = chkOf();
+  edB.innerHTML = keepHtml;                             /* trả lại chương thật */
+  edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(200);
+  out.chapCheck = {
+    short: shortNote, wall: wallNote, empty: emptyNote,
+    restored: chkOf(),
+    shortOk: /Chương ngắn/.test(shortNote),
+    wallOk: /đoạn dài hơn 500 ký tự/.test(wallNote),
+    emptyOk: /chưa có chữ/.test(emptyNote),
+    /* chương thật ~1.400 từ, đoạn ngắn → không được báo động gì.
+       Kiểm theo ĐÚNG chữ trong thông báo (“đoạn dài hơn 500 ký tự”), không phải
+       chữ “tường” vốn chỉ có trong chú thích mã nguồn. */
+    quietOnGoodChapter: ['Chương ngắn', 'đoạn dài hơn', 'chưa có chữ', 'rất dài']
+      .every(function (s) { return chkOf().indexOf(s) < 0; })
+  };
+  if (!out.chapCheck.shortOk) console.log('KHÔNG BÁO CHƯƠNG NGẮN: ' + shortNote);
+  if (!out.chapCheck.wallOk) console.log('KHÔNG BÁO TƯỜNG CHỮ: ' + wallNote);
+  if (!out.chapCheck.emptyOk) console.log('KHÔNG BÁO CHƯƠNG RỖNG: ' + emptyNote);
 
   /* đổi thứ tự: đưa chương cuối xuống? (đưa lên) */
   const rows = $$a('#chList .row2');
@@ -208,14 +268,24 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   /* xoá 1 chương (qua hộp thoại xác nhận) */
   clk($$a('#chList .row2')[0]); await wait(200);
   const titleBefore = $a('#chTitle').value;
+  const titlesBefore = $$a('#chList .row2 .nm').map(e => e.textContent.trim());
   clk('#chDel'); await wait(300);
   out.confirmOpen = !!$a('#czConfirm');
   clk('#czOk'); await wait(300);
+  const titlesAfter = $$a('#chList .row2 .nm').map(e => e.textContent.trim());
   out.adminChDel = {
     before: before, after: $$a('#chList .row2').length,
-    chon: titleBefore, deleted: !BOOK.chapters.some(c => c.t === titleBefore),
+    chon: titleBefore,
+    /* Đo trên DANH SÁCH CHƯƠNG mà người quản trị đang nhìn, KHÔNG soi biến BOOK
+       của worker giả. Worker giả trả object bằng THAM CHIẾU, nên chừng nào admin
+       chưa bấm “Lưu toàn bộ chương” thì BOOK của test và của admin là cùng một
+       object; vừa có một lần PUT là biến BOOK bị gán sang object MỚI và phép soi
+       cũ đọc phải bản chụp từ trước lúc xoá (báo “chưa xoá” dù danh sách đã mất
+       đúng dòng đó). */
+    deleted: titlesAfter.indexOf(titleBefore) < 0 && titlesAfter.length === titlesBefore.length - 1,
     firstRow: txtA('#chList .row2 .nm'), lastBadge: txtA('#chList .row2:last-child .pill')
   };
+  if (!out.adminChDel.deleted) console.log('XOÁ CHƯƠNG KHÔNG ĂN: ' + JSON.stringify(titlesAfter).slice(0, 160));
   clk('#chNew'); await wait(200);
   $a('#chTitle').value = 'Chương thử'; $a('#edBody').innerHTML = '<p>nội dung</p>';
   out.adminChNew = { n: $$a('#chList .row2').length };
@@ -225,6 +295,36 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   clk('#btnDelBook'); await wait(150);
   clk('#btnDelBook'); await wait(700);
   out.adminDelBook = { before: libBefore, after: REG.lib.length, gone: !REG.lib.some(x => x.slug === 'third-person'), msg: txtA('#msg').slice(0, 60) };
+
+  /* HỒI QUY · nạp bản nháp phải sửa CẢ HAI con số trên màn hình.
+     Bản cũ chỉ cập nhật #libCount, còn huy hiệu trên tab “Thư viện” vẫn đếm theo
+     registry vừa đọc từ KV → sau khi dùng nháp, cùng một màn hình hiện hai số
+     khác nhau (loadRegistry() có setTabCt('tabLibCt'), useDraft() thì bỏ sót).
+     Đặt ở CUỐI khối quản trị: nháp chỉ có 3 bộ nên nếu nạp sớm, các bài phía sau
+     (tìm bộ Third Person, mở danh sách chương) sẽ không còn dữ liệu để chạy. */
+  clk('#btnDraftUse'); await wait(300);
+  clk('#czOk'); await wait(600);
+  out.adminDraftBadge = {
+    libCount: txtA('#libCount'),
+    tabBadge: txtA('#tabLibCt'),
+    agree: txtA('#libCount') === txtA('#tabLibCt'),
+    applied: txtA('#libCount') === '3' && txtA('#tabLibCt') === '3'
+  };
+  if (!out.adminDraftBadge.agree) console.log('LỆCH SỐ BỘ SAU KHI NẠP NHÁP: #libCount=' +
+    txtA('#libCount') + ' · tab=' + txtA('#tabLibCt'));
+
+  /* HỒI QUY · nhãn nút KHÔNG được hứa phím tắt mà trang không có.
+     Chủ trang đã bỏ mọi phím tắt ở trang quản trị (17/09/2026) và bài này ở dưới
+     còn kiểm tra Ctrl+S phải KHÔNG làm gì — nhưng hai nút lưu vẫn ghi “(Ctrl+S)”
+     nên người dùng bấm theo thì chẳng có chuyện gì xảy ra.
+     Ngoại lệ duy nhất: B/I/U trong ô soạn (title “Đậm (Ctrl+B)”…) là hành vi
+     contenteditable của chính trình duyệt, không phải phím tắt do trang tự cài. */
+  const NATIVE_TITLE = /^(Đậm|Nghiêng|Gạch chân)\s*\(Ctrl\+[BIU]\)$/i;
+  out.adminNoFakeShortcuts = $$a('#ashell button, #scConnect button')
+    .map(b => ({ t: (b.textContent || '').trim().replace(/\s+/g, ' '), a: b.getAttribute('title') || '' }))
+    .filter(x => /Ctrl\s*\+|Phím tắt/i.test(x.t + ' ' + x.a) && !NATIVE_TITLE.test(x.a))
+    .map(x => (x.t || '(không chữ)') + ' · title="' + x.a + '"');
+  if (out.adminNoFakeShortcuts.length) console.log('NHÃN HỨA PHÍM TẮT KHÔNG CÓ: ' + out.adminNoFakeShortcuts.join(' · '));
 
   /* ngắt kết nối không được làm treo trang */
   clk('#btnOut'); await wait(300);
@@ -289,9 +389,34 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   out.burgerClosed = !D2.querySelector('#czMnav').classList.contains('on');
   out.errImg = img.errors.slice(0, 5);
 
-  out.tong = { loiTrangDoc: out.errStory.length, loiQuanTri: out.errAdmin.length, loiTrangAnh: out.errImg.length };
+  const rtFail = [];
+  if (out.adminReadTime && out.adminReadTime.rows && out.adminReadTime.rowsWithTm !== out.adminReadTime.rows) {
+    rtFail.push('danh sách chương ở trang quản trị thiếu thời gian đọc');
+  }
+  if (out.adminReadTime && !out.adminReadTime.statHasTime) {
+    rtFail.push('thanh thống kê dưới ô soạn thiếu thời gian đọc');
+  }
+  if (out.chapCheck && !(out.chapCheck.shortOk && out.chapCheck.wallOk && out.chapCheck.emptyOk && out.chapCheck.quietOnGoodChapter)) {
+    rtFail.push('kiểm tra chương báo sai: ' + JSON.stringify(out.chapCheck).slice(0, 220));
+  }
+  /* xoá chương từng chỉ được in ra chứ không làm bài đỏ — giờ tính luôn */
+  if (out.adminChDel && !out.adminChDel.deleted) rtFail.push('xoá chương không mất khỏi danh sách');
+  out.editorFail = rtFail;
+  out.tong = {
+    loiTrangDoc: out.errStory.length, loiQuanTri: out.errAdmin.length, loiTrangAnh: out.errImg.length,
+    leSoBoSauNhapNhap: out.adminDraftBadge && !out.adminDraftBadge.agree ? 1 : 0,
+    nhanHuaPhimTat: (out.adminNoFakeShortcuts || []).length,
+    trinhSoan: rtFail.length
+  };
   console.log(JSON.stringify(out, null, 1));
-  const bad = a.errors.length + errors.length + (out.shortcutFail || []).length;
-  console.log(bad ? 'CÒN ' + bad + ' LỖI JS' : 'Không lỗi JS nào');
+  /* các hồi quy mới cũng phải làm bài đỏ, không chỉ in ra cho vui:
+     · #libCount và huy hiệu tab “Thư viện” lệch nhau sau khi nạp nháp
+     · nhãn nút còn hứa phím tắt mà trang quản trị không cài
+     · trình soạn: thiếu thời gian đọc, hoặc “kiểm tra chương” báo sai */
+  const bad = a.errors.length + errors.length + (out.shortcutFail || []).length
+    + (out.adminDraftBadge && out.adminDraftBadge.agree ? 0 : 1)
+    + ((out.adminNoFakeShortcuts || []).length ? 1 : 0)
+    + rtFail.length;
+  console.log(bad ? 'CÒN ' + bad + ' LỖI' : 'Không lỗi nào');
   process.exit(bad ? 1 : 0);
 })();

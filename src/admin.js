@@ -608,10 +608,14 @@
     }
     var order = ch.map(function (_, i) { return i; });      /* chương 1 ở trên, giống trang đọc */
     $('#chList').innerHTML = order.map(function (i, pos) {
+      /* thời gian đọc từng chương — cùng công thức 200 từ/phút như ngoài web đọc */
+      var rt = CZ.readTimeText(CZ.words(ch[i].html));
       return '<div class="row2' + (i === CHAP ? ' on' : '') + '" data-i="' + i + '">' +
         '<span class="no">#' + (i + 1) + '</span>' +
         '<span class="nm">' + esc(ch[i].t || ('Chương ' + (i + 1))) + '</span>' +
-        '<span class="row" style="gap:0">' + (pos === order.length - 1 ? '<span class="pill soon">mới nhất</span>' : '') +
+        '<span class="row" style="gap:0">' +
+        (rt ? '<span class="tm" title="Đọc hết khoảng ' + esc(rt) + '">' + esc(rt) + '</span>' : '') +
+        (pos === order.length - 1 ? '<span class="pill soon">mới nhất</span>' : '') +
         '<button class="mv" data-up="' + i + '" title="Đưa lên" aria-label="Đưa lên">' + ic('up', 'i-s') + '</button>' +
         '<button class="mv" data-dn="' + i + '" title="Đưa xuống" aria-label="Đưa xuống">' + ic('down', 'i-s') + '</button>' +
         '<button class="mv" data-go="' + i + '" title="Sửa chương" aria-label="Sửa chương">' + ic('edit', 'i-s') + '</button></span></div>';
@@ -653,7 +657,63 @@
     var ed = $('#edBody');
     var n = CZ.words(ed ? (ed.innerHTML || '') : '');
     var st = $('#chStat');
-    if (st) st.textContent = num(n) + ' từ · ' + num((ed ? (ed.textContent || '').trim().length : 0)) + ' ký tự';
+    /* thêm thời gian đọc: người viết cần biết chương này đọc hết bao lâu để
+       giữ độ dài đều tay giữa các chương */
+    var rt = CZ.readTimeText(n);
+    if (st) st.textContent = num(n) + ' từ · ' + num((ed ? (ed.textContent || '').trim().length : 0)) + ' ký tự' +
+      (rt ? ' · đọc hết ~' + rt : '');
+    chapCheck();
+  }
+  /* ------------------ KIỂM TRA CHƯƠNG (chỉ báo thứ ĐO ĐƯỢC) ---------------
+     Ngưỡng KHÔNG đặt theo cảm tính — đo trên chính 1.198 chương có nội dung
+     trong data/book ngày 19/09/2026:
+       · từ/chương: trung vị 3.087 · p5 = 1.572 · p95 = 6.455 · max 17.612
+         → dưới 600 từ là hụt thật (cả kho chỉ 7 chương dưới 400 từ)
+         → trên 8.000 từ là dài bất thường (31 chương, ~2,6%)
+       · ký tự/đoạn: trung vị 92 · p90 = 266 · p99 = 459 · max 1.160
+         → đoạn trên 500 ký tự nằm ngoài p99: đúng nghĩa “tường chữ” trên điện thoại
+       · tỉ lệ đoạn có thoại: trung vị 0,51 · p10 = 0,33
+         → dưới 0,15 (và chương đủ dài) là gần như chỉ kể, không có thoại
+     MÁY KHÔNG chấm được văn: mở đầu có hấp dẫn không, chương kết có dừng đúng
+     nhịp thay đổi không, thông tin có “trực đổ” không — đó là phán đoán của
+     người viết. Vì vậy ở đây chỉ nói về độ dài/ngắt đoạn/thoại, không chấm điểm
+     “chất lượng” chung chung để người dùng khỏi tưởng máy hiểu văn. */
+  var CHK = { shortWords: 600, longWords: 8000, wallChars: 500, dlgRatio: 0.15, dlgMinWords: 800 };
+  function chapCheck() {
+    var box = $('#chCheck');
+    if (!box) return;
+    var ed = $('#edBody');
+    if (!ed) { box.innerHTML = ''; return; }
+    /* đếm từ BẰNG ĐÚNG hàm mà #chStat đang hiện — hai nơi không bao giờ lệch nhau */
+    var nWords = CZ.words(ed.innerHTML);
+    var blocks = Array.prototype.slice.call(ed.children).filter(function (el) { return el.nodeType === 1; })
+      .map(function (el) { return String(el.textContent || '').replace(/\u00a0/g, ' ').trim(); })
+      .filter(function (t) { return t; });
+    var walls = 0, dlg = 0;
+    blocks.forEach(function (t) {
+      if (t.length > CHK.wallChars) walls++;
+      if (/[“”„"]/.test(t)) dlg++;
+    });
+    var notes = [];
+    if (!nWords) notes.push(['bad', 'alert', 'Chương chưa có chữ.']);
+    else {
+      if (nWords < CHK.shortWords) notes.push(['warn', 'alert', 'Chương ngắn (' + num(nWords) +
+        ' từ) — cả kho này trung bình 3.087 từ/chương.']);
+      if (nWords > CHK.longWords) notes.push(['info', 'info', 'Chương rất dài (' + num(nWords) +
+        ' từ) — cân nhắc tách làm 2 chương để người đọc đỡ mỏi.']);
+      if (walls) notes.push([walls > 3 ? 'warn' : 'info', walls > 3 ? 'alert' : 'info', walls +
+        ' đoạn dài hơn ' + CHK.wallChars + ' ký tự — khó đọc trên điện thoại, nên tách đoạn ngắn hơn.']);
+      var ratio = blocks.length ? dlg / blocks.length : 0;
+      if (nWords > CHK.dlgMinWords && ratio < CHK.dlgRatio) notes.push(['info', 'info',
+        'Gần như không có thoại (' + Math.round(ratio * 100) + '% số đoạn) — chương nghiêng hẳn về kể/diễn giải.']);
+    }
+    box.innerHTML = notes.length
+      ? notes.map(function (n) {
+          return '<div class="chk ' + n[0] + '">' + ic(n[1], 'i-s') + '<span>' + esc(n[2]) + '</span></div>';
+        }).join('')
+      : (nWords
+        ? '<div class="chk ok">' + ic('check', 'i-s') + '<span>Độ dài và ngắt đoạn ổn so với mặt bằng của kho.</span></div>'
+        : '');
   }
   /* thu nội dung từ trình soạn — giữ HTML thật, chỉ dọn nốt:
      bỏ thẻ bị vấy style inline vô nghĩa, giữ lại img/br/định dạng cơ bản.
@@ -2643,6 +2703,10 @@
       dirty.meta = dirty.set = true; markDirty();
       renderList(); fillVoteBooks(); renderSlides(); renderSched(); renderSettings(); renderOverview();
       $('#libCount').textContent = num(REG.lib.length);
+      /* huy hiệu số bộ trên tab “Thư viện” phải theo kịp bản nháp — loadRegistry()
+         có dòng này còn useDraft() từng bỏ sót, nên sau khi nạp nháp màn hình hiện
+         HAI con số khác nhau: #libCount đếm theo nháp, tab vẫn đếm theo registry KV. */
+      setTabCt('tabLibCt', REG.lib.length);
       msg('Đã nạp bản nháp trong máy — kiểm tra rồi bấm Lưu để ghi lên KV.', 'info');
       toast('Đã nạp bản nháp', 'ok');
     });

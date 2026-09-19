@@ -1074,6 +1074,9 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .cha .done .i { width: 13.5px; height: 13.5px; }
 .cha .done.marked { color: var(--acc); }
 .cha .done.marked .i { fill: currentColor; }
+/* thời gian đọc + dấu đã đọc gộp vào một ô cuối của lưới 3 cột */
+.cha .end { display: inline-flex; align-items: center; gap: 6px; }
+.cha .tm { font-size: 11.5px; color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .cha.now .nm { font-weight: 700; }
 .cha.now .no { color: var(--acc); font-weight: 800; }
 .cha.off { opacity: .5; pointer-events: none; }
@@ -1646,6 +1649,10 @@ body.reading #toTop { display: none !important; }
 .chlist .row2.on { background: var(--acc-soft); color: var(--acc); font-weight: 700; }
 .chlist .row2 .no { text-align: right; color: var(--dim); font-variant-numeric: tabular-nums; font-size: 12.5px; }
 .chlist .row2 .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* thời gian đọc ước lượng của từng chương (200 từ/phút) — chữ nhỏ, không tranh
+   chỗ với tên chương, tắt ở màn hình hẹp */
+.chlist .row2 .tm { font-size: 11.5px; color: var(--dim); padding-right: 8px;
+  font-variant-numeric: tabular-nums; white-space: nowrap; }
 .mv { width: 26px; height: 26px; border: 1px solid transparent; border-radius: var(--r-sm); color: var(--dim);
   display: grid; place-items: center; }
 .mv .i { width: 12.5px; height: 12.5px; }
@@ -3353,6 +3360,21 @@ body.rd-focus .rdcmts { display: none; }
 /* ---------------- trình soạn chương (contenteditable) -------------------- */
 .edgrid { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 16px; align-items: start; }
 .edleft .chlist { max-height: 460px; }
+/* khối “kiểm tra chương” dưới ô soạn — chỉ nói về độ dài/ngắt đoạn/thoại */
+.chcheck { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.chcheck:empty { display: none; }
+.chk { display: flex; align-items: flex-start; gap: 6px; font-size: 12.5px; line-height: 1.45;
+  padding: 6px 9px; border: 1px solid var(--bd); border-left-width: 3px; border-radius: var(--r-sm);
+  background: var(--surf2); color: var(--mut); }
+.chk .i { width: 14px; height: 14px; flex: none; margin-top: 1px; }
+.chk.ok { border-left-color: var(--ok); color: var(--mut); }
+.chk.ok .i { color: var(--ok); }
+.chk.info { border-left-color: var(--acc); }
+.chk.info .i { color: var(--acc); }
+.chk.warn { border-left-color: var(--warn); color: var(--txt); }
+.chk.warn .i { color: var(--warn); }
+.chk.bad { border-left-color: var(--bad); color: var(--txt); }
+.chk.bad .i { color: var(--bad); }
 .rte-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 3px;
   border: 1px solid var(--bd); border-bottom: 0; border-radius: var(--r) var(--r) 0 0;
   background: var(--surf2); padding: 6px 8px; position: sticky; top: 60px; z-index: 5; }

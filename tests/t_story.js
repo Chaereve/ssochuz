@@ -40,6 +40,23 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     chapCount: txt('#chapCount')
   };
   out.chapters = { n: $$('#chapGrid .cha').length, first: txt('#chapGrid .cha') };
+  /* Thời gian đọc ước lượng trên từng chương (200 từ/phút).
+     Ba điều phải giữ: mỗi dòng có nhãn phút, lưới .cha vẫn đúng 3 phần tử con
+     (số · tên · cuối) để không rơi vào cột ngầm, và tiêu đề chuột kể cả thời gian. */
+  const chas = $$('#chapGrid .cha');
+  out.chapReadTime = {
+    n: chas.length,
+    withTm: chas.filter(a => a.querySelector('.tm')).length,
+    threeCols: chas.every(a => a.children.length === 3),
+    inTitle: chas.filter(a => /đọc hết ~\d+/.test(a.getAttribute('title') || '')).length,
+    sample: chas.slice(0, 3).map(a => (a.querySelector('.tm') || {}).textContent)
+  };
+  if (chas.length && out.chapReadTime.withTm !== chas.length) {
+    out.errors0.push('danh sách chương thiếu thời gian đọc: ' + out.chapReadTime.withTm + '/' + chas.length + ' dòng');
+  }
+  if (chas.length && !out.chapReadTime.threeCols) {
+    out.errors0.push('dòng chương không còn đúng 3 cột (số · tên · cuối) — thời gian đọc bị đẩy sang cột ngầm');
+  }
   /* Trang truyện KHÔNG còn nút Thích (yêu cầu chủ trang: chỉ thích trong trang đọc) */
   const lb = $('#likeBtn');
   out.likeBtn = { present: !!lb, removed: !lb, shelf: !!$('#shelfBtn'), share: !!$('#shareBtn') };

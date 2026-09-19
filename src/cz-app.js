@@ -1035,6 +1035,24 @@
     var t = String(html || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
     return t ? t.split(' ').length : 0;
   }
+  /* Thời gian đọc ước lượng — 200 từ/phút, mức đọc chậm rãi cho truyện chữ.
+     Trả về số PHÚT nguyên, làm tròn và tối thiểu 1 phút khi có nội dung thật
+     (chương 80 từ mà hiện “0 phút” thì người đọc tưởng trang trắng). */
+  var READ_WPM = 200;
+  function readMins(nWords) {
+    var w = parseInt(nWords, 10) || 0;
+    if (w <= 0) return 0;
+    return Math.max(1, Math.round(w / READ_WPM));
+  }
+  /* Chuỗi hiển thị ngắn cho danh sách chương (“6 phút” / “1 giờ 5 phút”).
+     Trả về chuỗi rỗng khi chưa có nội dung để không phải hiện “0 phút”. */
+  function readTimeText(nWords) {
+    var m = readMins(nWords);
+    if (!m) return '';
+    if (m < 60) return m + ' phút';
+    var h = Math.floor(m / 60), r = m % 60;
+    return h + ' giờ' + (r ? ' ' + r + ' phút' : '');
+  }
   function storyURL(slug) { slug = String(slug||'').trim(); if (!slug) return '/truyen/'; return '/truyen/' + encodeURIComponent(slug) + '/'; }
   function readURL(slug, ch) { return storyURL(slug) + (ch ? 'chuong-' + ch + '/' : ''); }
   function slugify(s) {
@@ -2559,6 +2577,7 @@
     rdGet: rdGet, rdSet: rdSet, themeInit: themeInit, themeToggle: themeToggle, themeMeta: themeMeta,
     icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo, teaser: teaser,
     statusCls: statusCls, statusLabel: statusLabel, statusIcon: statusIcon, words: words, norm: norm, countText: countText, listHead: listHead,
+    readMins: readMins, readTimeText: readTimeText,
     storyURL: storyURL, readURL: readURL, slugify: slugify, qs: qs, copy: copy, download: download,
     card: card, coverFB: coverFB, mountRail: mountRail, reveal: reveal, countUp: countUp, scaleFacts: scaleFacts,
     scrollUI: scrollUI, slide: slide, pageFx: pageFx, pop: pop, setIcon: setIcon, shake: shake,

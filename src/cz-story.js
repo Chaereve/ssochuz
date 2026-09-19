@@ -592,15 +592,33 @@
   /* một dòng chương: số · tên (tô sáng khi tìm) · dấu đã đọc / đã đánh dấu.
      Ký hiệu ngoại truyện là S (S1, S2…; S khi không ghi số) — gọn hơn NT cũ
      và khớp với nhãn trong mục lục, trang đọc, bình luận. */
+  /* Thời gian đọc ước lượng của chương thứ i (1-based).
+     Đếm từ trên HTML là việc nặng: bộ dài nhất trong kho (32 chương · 1.8 MB chữ)
+     tốn ~50 ms nếu đếm lại cả bộ, mà danh sách chương vẽ lại theo từng phím gõ
+     tìm kiếm và mỗi lần đổi trang → tính MỘT lần rồi nhớ theo số chương. */
+  var rtCache = {};
+  function chapReadTime(i, c) {
+    if (rtCache[i] === undefined) {
+      rtCache[i] = CZ.readTimeText(CZ.words(c ? c.html : ''));
+    }
+    return rtCache[i];
+  }
   function chapLink(x, prog, marks, q) {
     var on = x.i === prog ? ' now' : '';
     var sp = chapSplit(x.c);
     var k = sp.kind || 'main';
     var no = k === 'open' ? 'Mở' : (k === 'extra' ? (sp.no ? 'S' + sp.no : 'S') : (sp.no || '—'));
-    return '<a class="cha k-' + k + on + '" href="' + chapterPath(x.i) + '" data-ch="' + x.i + '" title="' + esc(x.c.t) + '">' +
+    /* thời gian đọc ước lượng — giúp người đọc chọn chương hợp với quỹ thời gian */
+    var rt = chapReadTime(x.i, x.c);
+    var done = marks.indexOf(x.i) >= 0
+      ? '<span class="done marked" title="Chương đã đánh dấu">' + ic('bookmark', 'i-s') + '</span>'
+      : (x.i < prog ? '<span class="done" title="Đã đọc">' + ic('check', 'i-s') + '</span>' : '');
+    return '<a class="cha k-' + k + on + '" href="' + chapterPath(x.i) + '" data-ch="' + x.i + '" title="' + esc(x.c.t) +
+      (rt ? ' · đọc hết ~' + esc(rt) : '') + '">' +
       '<span class="no">' + no + '</span><span class="nm">' + hl(sp.name, q) + '</span>' +
-      (marks.indexOf(x.i) >= 0 ? '<span class="done marked" title="Chương đã đánh dấu">' + ic('bookmark', 'i-s') + '</span>'
-        : (x.i < prog ? '<span class="done" title="Đã đọc">' + ic('check', 'i-s') + '</span>' : '')) + '</a>';
+      /* thời gian + dấu đã đọc nằm CHUNG một ô: lưới .cha là 3 cột (số · tên · cuối),
+         tách thành 2 ô sẽ rơi vào cột ngầm và đẩy lệch cả hàng */
+      '<span class="end">' + (rt ? '<span class="tm">' + esc(rt) + '</span>' : '') + done + '</span></a>';
   }
   function hl(t, q) {
     if (!q) return esc(t);
@@ -1777,6 +1795,7 @@
       }
       BOOK = bk;
       CHS = bk.chapters.map(function (c) { return { t: String(c.t || '').trim() || 'Chương', html: c.html || '' }; });
+      rtCache = {};         /* chương đã đổi → số từ/time đọc nhớ ở lượt trước vô nghĩa */
       /* mở khóa xong (hoặc bộ thường): gỡ chốt mật mã khỏi phần chương */
       var secUn = $('#chapSec');
       if (secUn) secUn.classList.remove('lockon');
