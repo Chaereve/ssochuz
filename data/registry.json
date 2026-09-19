@@ -1,5 +1,5 @@
 {
-  "rev": "2026-09-18 01:14",
+  "rev": "2026-09-19 17:14",
   "lib": [
     {
       "title": "HOMETOWN ROMANCE - SPECIAL",
@@ -820,11 +820,11 @@
       "couple": "",
       "year": "2026",
       "status": "Đang cập nhật",
-      "chapters": 1,
+      "chapters": 4,
       "is18": false,
       "thumb": "https://pbs.twimg.com/media/HGwHDzHagAEhA-H?format=jpg&name=4096x4096",
-      "countLabel": "1/1",
-      "updated": "2026-09-18",
+      "countLabel": "4/4",
+      "updated": "2026-09-19",
       "slide": "https://pbs.twimg.com/media/HGwHDzHagAEhA-H?format=jpg&name=4096x4096",
       "syn": "Vào cái ngày mảnh đất quê hương chìm trong biển lửa dưới gót giày của quân xâm lược... Khi những khát khao cá nhân phải nhường bước cho lý tưởng cứu quốc, câu chuyện tình yêu của hai cô gái giữa năm Phật lịch 2485 đã…",
       "_oldSlug": "vuot-khoi-uong-chan-troi-endless-blue-01775777241",
@@ -936,28 +936,7 @@
       "syn": "Khi Fah-anan, \"chị đại\" màn ảnh bất cần truyền thông với biệt danh \"nữ hoàng thị phi\", tình cờ gặp gỡ Nuengtara, người thừa kế út của tỷ phú Charoenkiat. Trớ trêu thay, một sự cố đã đẩy…"
     }
   ],
-  "slides": [
-    {
-      "slug": "lunar-secret",
-      "reason": "Lựa chọn của ban biên tập"
-    },
-    {
-      "slug": "bake-love-feelings",
-      "reason": "Đề xuất cho bạn"
-    },
-    {
-      "slug": "enemies-with-benefits",
-      "reason": "Đề xuất cho bạn"
-    },
-    {
-      "slug": "nguoi-chong-xau-xa-cua-co-vo-beo",
-      "reason": "Đề xuất cho bạn"
-    },
-    {
-      "slug": "my-only-sunshine",
-      "reason": "Đề xuất cho bạn"
-    }
-  ],
+  "slides": [],
   "settings": {
     "giscus": {
       "repo": "",
@@ -1018,8 +997,8 @@
     "updated": "2026-09-17"
   },
   "source": {
-    "synced": "2026-09-18T01:14:56.912Z",
-    "note": "đếm lại số chương từ kho chương trên KV (/api/recount)"
+    "synced": "2026-09-19T17:14:31.115Z",
+    "note": "sửa từ trang quản trị ssochuz"
   },
   "editorChoice": [
     "lunar-secret",
