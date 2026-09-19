@@ -8,7 +8,7 @@
 <link rel="icon" type="image/png" href="/ssochuz.png?v=1">
 <link rel="apple-touch-icon" href="/ssochuz.png?v=1">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="stylesheet" href="/cz.css?v=20260917f">
+<link rel="stylesheet" href="/cz.css?v=20260920a">
 <script>/* chống nháy nền */try{var t=localStorage.getItem('ssochuz-theme')||localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
 <body class="admin">
@@ -307,6 +307,19 @@
                   <button type="button" data-align="left" title="Canh trái">⇤</button>
                   <button type="button" data-align="center" title="Canh giữa">↔</button>
                   <button type="button" data-align="right" title="Canh phải">⇥</button>
+                  <button type="button" data-align="full" title="Canh đều hai bên">≡</button>
+                  <span class="rte-sep" aria-hidden="true"></span>
+                  <button type="button" data-cmd="insertUnorderedList" title="Danh sách dấu chấm">•≡</button>
+                  <button type="button" data-cmd="insertOrderedList" title="Danh sách đánh số">1.</button>
+                  <button type="button" data-cmd="outdent" title="Bớt thụt lề">⇤−</button>
+                  <button type="button" data-cmd="indent" title="Thụt lề vào">⇥+</button>
+                  <span class="rte-sep" aria-hidden="true"></span>
+                  <button type="button" data-link title="Chèn hoặc sửa liên kết cho vùng đang chọn"><span data-ic="link"></span>Link</button>
+                  <button type="button" data-cmd="unlink" title="Bỏ liên kết, giữ lại chữ">Bỏ link</button>
+                  <span class="rte-sep" aria-hidden="true"></span>
+                  <button type="button" data-cmd="removeFormat" title="Xoá đậm/nghiêng/màu… của vùng đang chọn">Xoá định dạng</button>
+                  <button type="button" data-cmd="undo" title="Hoàn tác">↶</button>
+                  <button type="button" data-cmd="redo" title="Làm lại">↷</button>
                   <span class="rte-sep" aria-hidden="true"></span>
                   <button type="button" data-img title="Chèn ảnh vào chương — lên từ máy, tự nén WebP trong trình duyệt, lưu trên KV"><span data-ic="upload"></span>Ảnh</button>
                   <input type="file" id="edImg" class="hide" accept="image/jpeg,image/png,image/webp">
@@ -315,9 +328,12 @@
                   data-placeholder="Bấm vào đây để viết chương… (có thể dùng Mở tệp chương… để nạp .txt/.md/.html)"></div>
                 <div class="row mt">
                   <button class="btn pri sm" id="chSave">Lưu chương này vào bộ</button>
+                  <button class="btn ghost sm" id="chPreview" title="Xem trước đúng như trang người đọc"><span data-ic="eye"></span>Xem trước</button>
+                  <button class="btn ghost sm" id="chFull" title="Viết toàn màn hình — bấm lại hoặc Esc để thoát"><span data-ic="expand"></span>Toàn màn hình</button>
                   <button class="btn ghost sm" id="chDel">Xoá chương</button>
                   <span class="sm muted" id="chStat"></span>
                 </div>
+                <div class="savestate sm" id="chSaveState" role="status" aria-live="polite"></div>
                 <div class="chcheck" id="chCheck" role="status" aria-live="polite"></div>
               </div>
             </div>
@@ -606,9 +622,9 @@
 
 <div class="toasts" id="toasts"></div>
 
-<script src="/cz-config.js?v=20260917f"></script>
-<script src="/cz-app.js?v=20260917f"></script>
-<script src="/cz-auth.js?v=20260917f"></script>
-<script src="/admin.js?v=20260917f"></script>
+<script src="/cz-config.js?v=20260920a"></script>
+<script src="/cz-app.js?v=20260920a"></script>
+<script src="/cz-auth.js?v=20260920a"></script>
+<script src="/admin.js?v=20260920a"></script>
 </body>
 </html>

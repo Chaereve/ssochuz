@@ -3375,6 +3375,24 @@ body.rd-focus .rdcmts { display: none; }
 .chk.warn .i { color: var(--warn); }
 .chk.bad { border-left-color: var(--bad); color: var(--txt); }
 .chk.bad .i { color: var(--bad); }
+/* chỉ báo tự lưu nháp dưới ô soạn */
+.savestate { min-height: 18px; margin-top: 6px; color: var(--dim); display: flex; align-items: center;
+  gap: 8px; flex-wrap: wrap; }
+.savestate:empty { display: none; }
+.savestate.ok { color: var(--ok); }
+.savestate.wait { color: var(--warn); }
+.savestate.err { color: var(--bad); }
+/* xem trước chương: dựng lại đúng khung chữ của trang đọc để so được thật */
+.prevbody { max-height: 62vh; overflow: auto; font-family: var(--font-head); font-size: 17px; line-height: 1.8; }
+.prevbody img { max-width: 100%; height: auto; }
+.prevbody p { margin: 0 0 1em; }
+.prevbody ul, .prevbody ol { margin: 0 0 1em 1.4em; padding: 0; }
+/* viết toàn màn hình: phủ ô soạn lên cả trang, giữ thanh định dạng dính đầu */
+body.ed-full .edright { position: fixed; inset: 0; z-index: 70; background: var(--bg); padding: 14px 16px;
+  overflow: auto; display: flex; flex-direction: column; gap: 10px; }
+body.ed-full .edright > .fl { display: none; }
+body.ed-full .edright .rte { flex: 1 1 auto; min-height: 50vh; }
+body.ed-full .edright .rte-tools { top: 0; }
 .rte-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 3px;
   border: 1px solid var(--bd); border-bottom: 0; border-radius: var(--r) var(--r) 0 0;
   background: var(--surf2); padding: 6px 8px; position: sticky; top: 60px; z-index: 5; }

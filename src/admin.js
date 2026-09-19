@@ -650,6 +650,11 @@
       if (/^\s*\/api\/img\//.test(s)) im.setAttribute('src', normalizeApi(API) + s.replace(/^\s+/, ''));
     });
     chStat();
+    /* chương vừa mở là mốc so của nháp: không đặt autoLast thì lần gõ đầu tiên sẽ
+       ghi đè luôn bản nháp cũ trước khi người viết kịp khôi phục */
+    autoLast = ed.innerHTML || '';
+    saveState('', '');
+    autoOffer();
     renderChapters();
     try { ed.focus(); } catch (e) {}
   }
@@ -794,6 +799,10 @@
     if (!BOOK || CHAP < 0) return false;
     BOOK.chapters[CHAP] = { t: ($('#chTitle').value || '').trim() || ('Chương ' + (CHAP + 1)), html: edHtml() };
     dirty.book = true; markDirty();
+    /* nội dung đã vào bộ → bản nháp cục bộ hết nhiệm vụ, giữ lại chỉ khiến lần mở
+       sau báo “còn nháp” với đúng chữ vừa lưu */
+    autoDrop();
+    saveState('Đã cập nhật chương ' + (CHAP + 1) + ' vào bộ — bấm “Lưu toàn bộ chương” để ghi lên KV', 'ok');
     if (!silent) { toast('Đã cập nhật chương ' + (CHAP + 1) + ' (nhớ bấm “Lưu toàn bộ chương”)', 'ok'); }
     return true;
   }
@@ -810,7 +819,7 @@
     if (!ed) return;
     ed.focus();
     try { document.execCommand(cmd, false, val || null); } catch (e) {}
-    dirty.book = true; markDirty(); chStat();
+    dirty.book = true; markDirty(); chStat(); autoSchedule();
   }
   function edBlock(tag) {
     var ed = $('#edBody');
@@ -818,6 +827,166 @@
     ed.focus();
     try { document.execCommand('formatBlock', false, tag); } catch (e) {}
     dirty.book = true; markDirty();
+  }
+  /* ---------------- LIÊN KẾT: chèn · sửa · bỏ ----------------------------
+     execCommand('createLink') cần vùng chọn CÒN SỐNG, mà hộp thoại lại cướp tiêu
+     điểm và có animation mở 40ms. Nên: bắt vùng chọn mỗi lần nó nằm trong ô soạn
+     (selectionchange), cất bản sao lại, và trả về đúng chỗ ngay trước khi chèn. */
+  var edRange = null;
+  function edKeepRange() {
+    var s = window.getSelection && window.getSelection();
+    var ed = $('#edBody');
+    if (!s || !s.rangeCount || !ed) return;
+    var r = s.getRangeAt(0);
+    if (ed.contains(r.startContainer)) edRange = r.cloneRange();
+  }
+  function edUseRange() {
+    var ed = $('#edBody');
+    if (!ed) return false;
+    ed.focus();
+    if (!edRange) {
+      /* chưa từng chọn gì: đặt con trỏ ở cuối để còn chèn được */
+      var r = document.createRange();
+      r.selectNodeContents(ed); r.collapse(false);
+      var s0 = window.getSelection(); s0.removeAllRanges(); s0.addRange(r);
+      return true;
+    }
+    var s = window.getSelection();
+    s.removeAllRanges(); s.addRange(edRange);
+    return true;
+  }
+  function edLinkAt() {
+    var s = window.getSelection && window.getSelection();
+    var ed = $('#edBody');
+    if (!s || !s.anchorNode || !ed) return null;
+    var el = s.anchorNode.nodeType === 1 ? s.anchorNode : s.anchorNode.parentNode;
+    return (el && ed.contains(el) && el.closest) ? el.closest('a[href]') : null;
+  }
+  function edLink() {
+    var ed = $('#edBody');
+    if (!ed) return;
+    edKeepRange();
+    var cur = edLinkAt();
+    var m = CZ.modal('czLink',
+      '<div class="mh"><h4>' + (cur ? 'Sửa liên kết' : 'Chèn liên kết') + '</h4></div>' +
+      '<div class="mb"><label class="fl" for="lkUrl">Địa chỉ</label>' +
+        '<input class="inp" id="lkUrl" type="text" placeholder="https://…" autocomplete="off" spellcheck="false">' +
+        '<p class="hint sm" id="lkErr" role="alert"></p></div>' +
+      '<div class="mf"><button class="btn ghost" data-close>Huỷ</button>' +
+        (cur ? '<button class="btn ghost" id="lkOff">Bỏ liên kết</button>' : '') +
+        '<span class="grow"></span>' +
+        '<button class="btn pri" id="lkOk">' + (cur ? 'Cập nhật' : 'Chèn') + '</button></div>');
+    var inp = m.querySelector('#lkUrl'), err = m.querySelector('#lkErr');
+    if (cur) inp.value = cur.getAttribute('href') || '';
+    function apply() {
+      var ok = CZ.safeLink(inp.value);
+      if (!ok) {
+        err.textContent = 'Địa chỉ không hợp lệ — chỉ nhận http(s), đường dẫn nội bộ (/…) hoặc neo (#…).';
+        inp.focus();
+        return;
+      }
+      edUseRange();
+      try { document.execCommand('createLink', false, ok); }
+      catch (e) { toast('Trình duyệt không chèn được liên kết', 'err'); }
+      dirty.book = true; markDirty(); chStat(); autoSave(true);
+      m._close();
+    }
+    m.querySelector('#lkOk').addEventListener('click', apply);
+    inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); apply(); } });
+    var off = m.querySelector('#lkOff');
+    if (off) off.addEventListener('click', function () {
+      edUseRange();
+      try { document.execCommand('unlink'); } catch (e2) {}
+      dirty.book = true; markDirty(); autoSave(true);
+      m._close();
+    });
+  }
+  /* ---------------- TỰ LƯU NHÁP CHƯƠNG (không gọi API) -------------------
+     Chỉ ghi ra localStorage, KHÔNG PUT lên Worker: tự động ghi chương đang viết
+     dở lên KV là đẩy bản chưa xong cho người đọc, và mỗi lần gõ lại tốn một lần
+     ghi KV. Nháp này là lưới an toàn khi sập tab / mất mạng; lưu thật vẫn là nút
+     “Lưu chương này vào bộ”. Tách theo slug + số chương để không đè nhau. */
+  var AUTO_MS = 2000, autoT = null, autoLast = '';
+  function autoKey() {
+    return (CUR && CUR.slug && CHAP >= 0) ? ('cz_ch_draft:' + CUR.slug + ':' + CHAP) : '';
+  }
+  function saveState(text, kind) {
+    var el = $('#chSaveState');
+    if (!el) return;
+    el.className = 'savestate sm' + (kind ? ' ' + kind : '');
+    el.textContent = text || '';
+  }
+  function autoSave(force) {
+    var k = autoKey();
+    if (!k) return;
+    var ed = $('#edBody');
+    if (!ed) return;
+    var html = ed.innerHTML || '';
+    if (!force && html === autoLast) return;      /* không đổi thì không ghi lại */
+    autoLast = html;
+    try {
+      localStorage.setItem(k, JSON.stringify({ at: Date.now(), html: html, t: $('#chTitle').value || '' }));
+      saveState('Nháp trong máy lúc ' + new Date().toLocaleTimeString('vi-VN'), 'ok');
+    } catch (e) {
+      saveState('Không lưu được nháp trong máy (bộ nhớ trình duyệt đầy)', 'err');
+    }
+  }
+  function autoSchedule() {
+    saveState('Chưa lưu', 'wait');
+    clearTimeout(autoT);
+    autoT = setTimeout(function () { autoSave(false); }, AUTO_MS);
+  }
+  function autoDrop() {
+    var k = autoKey();
+    clearTimeout(autoT); autoLast = '';
+    if (k) { try { localStorage.removeItem(k); } catch (e) {} }
+  }
+  /* mở chương mà máy này còn nháp KHÁC bản trong bộ → cho khôi phục, không tự
+     nạp đè (tự nạp sẽ âm thầm thay chữ người viết vừa lưu lên KV). */
+  function autoOffer() {
+    var k = autoKey();
+    if (!k) return;
+    var d = null;
+    try { d = JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { d = null; }
+    var ed = $('#edBody');
+    if (!d || !ed || d.html === ed.innerHTML) return;
+    var when = new Date(d.at).toLocaleString('vi-VN');
+    var box = $('#chSaveState');
+    if (!box) return;
+    box.className = 'savestate sm wait';
+    box.innerHTML = '';
+    box.appendChild(document.createTextNode('Còn nháp trong máy lúc ' + when + ' chưa đưa vào bộ. '));
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn ghost sm'; b.textContent = 'Khôi phục nháp';
+    b.addEventListener('click', function () {
+      ed.innerHTML = d.html;
+      if (d.t) $('#chTitle').value = d.t;
+      autoLast = d.html;
+      dirty.book = true; markDirty(); chStat();
+      saveState('Đã khôi phục nháp — nhớ bấm “Lưu chương này vào bộ”', 'ok');
+    });
+    box.appendChild(b);
+  }
+  /* ---------------- XEM TRƯỚC + VIẾT TOÀN MÀN HÌNH ----------------------- */
+  function edPreview() {
+    var html = edHtml();
+    /* edHtml() đổi ảnh về /api/img/… (đường tương đối để lưu); xem trước trên
+       trang quản trị là domain khác nên phải trỏ lại Worker, giống openChap() */
+    if (API) html = html.split('/api/img/').join(normalizeApi(API) + '/api/img/');
+    var n = CZ.words(html);
+    var rt = CZ.readTimeText(n);
+    CZ.modal('czPrev',
+      '<div class="mh"><h4>Xem trước — ' + esc(($('#chTitle').value || '').trim() || 'chưa đặt tiêu đề') + '</h4></div>' +
+      '<div class="mb prevbody">' + (html ? CZ.sanitize(html) : '<p class="muted">Chương chưa có nội dung.</p>') + '</div>' +
+      '<div class="mf"><span class="sm muted">' + num(n) + ' từ' + (rt ? ' · đọc hết ~' + rt : '') + '</span>' +
+        '<span class="grow"></span><button class="btn pri" data-close>Đóng</button></div>');
+  }
+  function edFull(on) {
+    var want = (on == null) ? !document.body.classList.contains('ed-full') : !!on;
+    document.body.classList.toggle('ed-full', want);
+    var b = $('#chFull');
+    if (b) b.setAttribute('aria-pressed', want ? 'true' : 'false');
+    if (want) { var ed = $('#edBody'); if (ed) { try { ed.focus(); } catch (e) {} } }
   }
   /* nén ảnh trong trình duyệt: resize tối đa 1400px rồi encode WebP.
      Trả về Promise<{type, data (base64), bytes}>. */
@@ -2947,7 +3116,7 @@
      Đặt defaultParagraphSeparator='p' để tránh <div><br></div> nhân đôi dòng trống */
   var edIn = $('#edBody');
   if (edIn) {
-    edIn.addEventListener('input', function () { dirty.book = true; markDirty(); chStat(); });
+    edIn.addEventListener('input', function () { dirty.book = true; markDirty(); chStat(); autoSchedule(); });
     try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (e) {}
     edIn.addEventListener('focus', function () {
       try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (e2) {}
@@ -2960,6 +3129,7 @@
     if (b.dataset.cmd) edExec(b.dataset.cmd, null);
     else if (b.dataset.block) edBlock(b.dataset.block);
     else if (b.dataset.align) edExec('justify' + b.dataset.align.charAt(0).toUpperCase() + b.dataset.align.slice(1), null);
+    else if (b.dataset.link !== undefined) edLink();
     else if (b.dataset.img !== undefined) $('#edImg').click();
   });
   /* Ctrl+B/I/U vẫn hoạt động tự nhiên trong contenteditable — chỉ giữ focus
@@ -2969,6 +3139,20 @@
       e.preventDefault();
       try { document.execCommand('insertText', false, '  '); } catch (x) {}
     }
+    edKeepRange();
+  });
+  /* nhớ vùng chọn mỗi khi nó nằm trong ô soạn — hộp thoại liên kết cướp tiêu điểm
+     nên không thể trông vào selection tại thời điểm bấm nút “Chèn” */
+  document.addEventListener('selectionchange', function () { edKeepRange(); });
+  if (edIn) edIn.addEventListener('mouseup', function () { edKeepRange(); });
+  $('#chPreview').addEventListener('click', edPreview);
+  $('#chFull').addEventListener('click', function () { edFull(); });
+  /* Esc thoát chế độ viết toàn màn hình — nhường hộp thoại trước: hộp nào đang mở
+     thì Esc phải đóng hộp, không được vừa đóng hộp vừa thoát toàn màn hình */
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (document.querySelector('.modal.on')) return;
+    if (document.body.classList.contains('ed-full')) edFull(false);
   });
   /* ảnh trong chương: lên từ máy → nén WebP → KV → chèn <img> */
   $('#edImg').addEventListener('change', function () {

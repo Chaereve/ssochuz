@@ -1053,6 +1053,45 @@
     var h = Math.floor(m / 60), r = m % 60;
     return h + ' giờ' + (r ? ' ' + r + ' phút' : '');
   }
+  /* Dọn HTML trước khi NHÚP VÀO TRANG bằng innerHTML.
+     innerHTML không chạy <script>, nhưng <img onerror=…> thì vẫn nổ, nên mọi chỗ
+     dựng HTML từ dữ liệu người dùng đều phải đi qua đây. Dùng DANH SÁCH CHẶN
+     giống hệt cleanHTML() ở trang đọc — một nguồn sự thật, không mỗi nơi một bản.
+     Trả về chuỗi HTML đã dọn (không sửa chuỗi gốc). */
+  var SANITIZE_DROP = 'script,style,iframe,form,object,embed,link,meta,input,button';
+  function sanitize(html) {
+    var tmp = d.createElement('div');
+    tmp.innerHTML = String(html == null ? '' : html);
+    var drop = tmp.querySelectorAll(SANITIZE_DROP), i;
+    for (i = 0; i < drop.length; i++) drop[i].remove();
+    var all = tmp.querySelectorAll('*');
+    for (i = 0; i < all.length; i++) {
+      var el = all[i];
+      Array.prototype.slice.call(el.attributes || []).forEach(function (a) {
+        var n = String(a.name || '').toLowerCase(), v = String(a.value || '');
+        if (n.indexOf('on') === 0 || ((n === 'href' || n === 'src') && /^\s*(javascript|data|vbscript):/i.test(v))) {
+          el.removeAttribute(a.name);
+        }
+      });
+      if (el.tagName === 'A') { el.setAttribute('target', '_blank'); el.setAttribute('rel', 'noopener nofollow'); }
+    }
+    return tmp.innerHTML;
+  }
+  /* Kiểm tra một URL người dùng dán vào có an toàn để làm liên kết không.
+     Trả về URL đã chuẩn hoá, hoặc chuỗi rỗng nếu phải chặn. Chặn ở đây (lúc
+     nhập) VÀ sanitize() chặn lại lần nữa (lúc render) — hai lớp, không tin một lớp. */
+  function safeLink(raw) {
+    var u = String(raw == null ? '' : raw).replace(/[\u0000-\u001f\u200B-\u200D\uFEFF]/g, '').trim();
+    if (!u) return '';
+    if (/^(javascript|data|vbscript|file):/i.test(u)) return '';
+    /* "javascript : alert(1)" — khoảng trắng trước dấu hai chấm vẫn bị một số
+       trình duyệt bỏ qua, nên phải xoá khoảng trắng rồi mới xét tiền tố */
+    if (/^(javascript|data|vbscript|file):/i.test(u.replace(/\s+/g, ''))) return '';
+    if (/^#/.test(u)) return u;                                  /* neo trong trang */
+    if (/^\/[^/]/.test(u)) return u;                             /* đường dẫn nội bộ */
+    if (!/^https?:\/\//i.test(u)) u = 'https://' + u;            /* thiếu giao thức */
+    return /^https?:\/\/[^\s]+$/i.test(u) ? u : '';
+  }
   function storyURL(slug) { slug = String(slug||'').trim(); if (!slug) return '/truyen/'; return '/truyen/' + encodeURIComponent(slug) + '/'; }
   function readURL(slug, ch) { return storyURL(slug) + (ch ? 'chuong-' + ch + '/' : ''); }
   function slugify(s) {
@@ -2577,7 +2616,7 @@
     rdGet: rdGet, rdSet: rdSet, themeInit: themeInit, themeToggle: themeToggle, themeMeta: themeMeta,
     icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo, teaser: teaser,
     statusCls: statusCls, statusLabel: statusLabel, statusIcon: statusIcon, words: words, norm: norm, countText: countText, listHead: listHead,
-    readMins: readMins, readTimeText: readTimeText,
+    readMins: readMins, readTimeText: readTimeText, sanitize: sanitize, safeLink: safeLink,
     storyURL: storyURL, readURL: readURL, slugify: slugify, qs: qs, copy: copy, download: download,
     card: card, coverFB: coverFB, mountRail: mountRail, reveal: reveal, countUp: countUp, scaleFacts: scaleFacts,
     scrollUI: scrollUI, slide: slide, pageFx: pageFx, pop: pop, setIcon: setIcon, shake: shake,

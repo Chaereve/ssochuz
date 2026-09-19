@@ -256,6 +256,113 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   if (!out.chapCheck.wallOk) console.log('KHÔNG BÁO TƯỜNG CHỮ: ' + wallNote);
   if (!out.chapCheck.emptyOk) console.log('KHÔNG BÁO CHƯƠNG RỖNG: ' + emptyNote);
 
+  /* =====================================================================
+     TRÌNH SOẠN · thanh định dạng, liên kết, xem trước, toàn màn hình, tự lưu
+     jsdom KHÔNG có document.execCommand (typeof === 'undefined'), nên không thể
+     kiểm hiệu ứng định dạng thật. Ở đây gắn máy ghi để bắt ĐÚNG LỆNH admin.js
+     phát ra cho trình duyệt — kiểm được phần ta viết (điều phối nút, lọc URL,
+     khôi phục vùng chọn), còn phần trình duyệt tự làm thì để trình duyệt.
+     ===================================================================== */
+  const execCalls = [];
+  D.execCommand = function (cmd, ui, val) { execCalls.push([cmd, val === undefined ? null : val]); return true; };
+  const onBox = (s) => { const e = $a(s); return !!e && e.classList.contains('on'); };   /* CZ.modal tái dùng phần tử, đóng = bỏ class .on */
+
+  const tbBtns = $$a('#edToolbar button');
+  const tbHas = (k, v) => tbBtns.filter((b) => b.dataset[k] === v).length;
+  out.editorTools = {
+    link: tbHas('link', ''), list: tbHas('cmd', 'insertUnorderedList'), ol: tbHas('cmd', 'insertOrderedList'),
+    indent: tbHas('cmd', 'indent'), outdent: tbHas('cmd', 'outdent'), unlink: tbHas('cmd', 'unlink'),
+    removeFormat: tbHas('cmd', 'removeFormat'), undo: tbHas('cmd', 'undo'), redo: tbHas('cmd', 'redo'),
+    alignFull: tbHas('align', 'full'),
+    preview: !!$a('#chPreview'), full: !!$a('#chFull'), saveState: !!$a('#chSaveState'),
+    /* §19: không được có nút chỉ-có-biểu-tượng mà không có tên đọc được */
+    nutKhongTen: tbBtns.filter((b) => !b.textContent.trim() && !b.title).map((b) => b.outerHTML.slice(0, 60)),
+  };
+
+  edB.focus();
+  const selR = D.createRange(); selR.selectNodeContents(edB);
+  const sel0 = W.getSelection(); sel0.removeAllRanges(); sel0.addRange(selR);
+  D.dispatchEvent(new W.Event('selectionchange'));
+  execCalls.length = 0;
+  ['insertUnorderedList', 'insertOrderedList', 'outdent', 'indent', 'unlink', 'removeFormat', 'undo', 'redo']
+    .forEach((c) => clk('[data-cmd="' + c + '"]'));
+  clk('[data-align="full"]'); await wait(250);
+  out.editorCmds = execCalls.map((c) => c[0]);
+
+  /* liên kết: chặn javascript: (không được phát lệnh), rồi chèn URL hợp lệ */
+  clk('[data-link]'); await wait(250);
+  const linkOpen = { hop: onBox('#czLink'), input: !!$a('#lkUrl'), nut: !!$a('#lkOk') };
+  $a('#lkUrl').value = 'javascript:alert(1)';
+  execCalls.length = 0;
+  clk('#lkOk'); await wait(250);
+  const linkBlocked = { vanMo: onBox('#czLink'), baoLoi: txtA('#lkErr'), khongPhatLenh: execCalls.length === 0 };
+  $a('#lkUrl').value = '  https://example.com  ';
+  execCalls.length = 0;
+  clk('#lkOk'); await wait(300);
+  const linkOk = execCalls.filter((c) => c[0] === 'createLink');
+  out.editorLink = {
+    mo: linkOpen.hop && linkOpen.input && linkOpen.nut,
+    chanJs: linkBlocked.vanMo && linkBlocked.khongPhatLenh && /không hợp lệ/.test(linkBlocked.baoLoi),
+    dongHop: !onBox('#czLink'),
+    /* URL phải được CẮT khoảng trắng trước khi đưa vào href */
+    chenDung: linkOk.length === 1 && linkOk[0][1] === 'https://example.com',
+  };
+  /* safeLink là chốt chặn dùng chung — kiểm thẳng bảng ca nguy hiểm */
+  const SL = W.CZ.safeLink;
+  out.editorSafeLink = {
+    chan: ['javascript:alert(1)', 'JaVaScRiPt:alert(1)', 'java\tscript:alert(1)', '  javascript :alert(1)',
+      'data:text/html,x', 'vbscript:msgbox(1)', 'file:///etc/passwd', '', '   '].filter((u) => SL(u) !== ''),
+    cho: [['https://example.com', 'https://example.com'], ['example.com', 'https://example.com'],
+      ['/truyen/abc/', '/truyen/abc/'], ['#chuong-1', '#chuong-1'],
+      ['http://a.com/x?b=1#c', 'http://a.com/x?b=1#c']].filter((p) => SL(p[0]) !== p[1]),
+  };
+
+  /* xem trước: phải render nội dung VÀ lọc sạch HTML bẩn */
+  edB.innerHTML = '<p>Một hai ba bốn</p><a href="https://example.com">liên kết</a>' +
+    '<img src="/api/img/abc.webp" onerror="alert(1)"><script>alert(9)<\/script>';
+  edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(200);
+  clk('#chPreview'); await wait(350);
+  const pvBody = $a('#czPrev .prevbody');
+  const pvOut = {
+    mo: onBox('#czPrev'),
+    noiDung: /Một hai ba bốn/.test(txtA('#czPrev')),
+    soTu: /từ/.test(txtA('#czPrev .mf')),
+    giuLienKet: !!pvBody && /<a href="https:\/\/example\.com"/i.test(pvBody.innerHTML),
+    lotOnerror: !!pvBody && !/onerror/i.test(pvBody.innerHTML),
+    lotScript: !!pvBody && !/<script/i.test(pvBody.innerHTML),
+    anhTroWorker: !!pvBody && /src="https:\/\/cms\.test\/api\/img\//.test(pvBody.innerHTML),
+  };
+  clk('#czPrev [data-close]'); await wait(350);
+  out.editorPreview = Object.assign(pvOut, { dongDuoc: !onBox('#czPrev') });
+
+  /* toàn màn hình: bật, Esc tắt, aria-pressed phải theo kịp */
+  clk('#chFull'); await wait(200);
+  const fullOn = D.body.classList.contains('ed-full');
+  const ariaOn = $a('#chFull').getAttribute('aria-pressed');
+  D.dispatchEvent(new W.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await wait(200);
+  out.editorFull = {
+    bat: fullOn, ariaOn: ariaOn,
+    escTat: !D.body.classList.contains('ed-full'), ariaOff: $a('#chFull').getAttribute('aria-pressed'),
+  };
+
+  /* tự lưu nháp: gõ → 2s → có bản nháp trong máy; đưa vào bộ → xoá nháp */
+  edB.innerHTML = '<p>Chữ mới chưa lưu ở đâu cả và đủ dài để khác hẳn bản gốc trong bộ.</p>';
+  edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(300);
+  const stTruoc = txtA('#chSaveState');
+  await wait(2600);
+  const dKey = Object.keys(W.localStorage).filter((k) => /^cz_ch_draft:/.test(k));
+  out.editorAutoSave = {
+    key: dKey.length === 1 ? dKey[0] : null,
+    cho: /Chưa lưu/.test(stTruoc),
+    bao: /Nháp trong máy lúc/.test(txtA('#chSaveState')),
+    dungNoiDung: dKey.length === 1 && /Chữ mới chưa lưu/.test(JSON.parse(W.localStorage.getItem(dKey[0])).html),
+  };
+  clk('#chSave'); await wait(350);
+  out.editorAutoSave.xoaKhiLuu = !Object.keys(W.localStorage).some((k) => /^cz_ch_draft:/.test(k));
+
+  edB.innerHTML = keepHtml;                             /* trả lại chương thật cho test sau */
+  edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(200);
+
   /* đổi thứ tự: đưa chương cuối xuống? (đưa lên) */
   const rows = $$a('#chList .row2');
   out.adminReorder = { hasBtn: !!rows[2] && !!rows[2].querySelector('[data-up]'), beforeList: rows.slice(0, 3).map(r => txtA.call ? r.querySelector('.nm').textContent.trim() : '') };
@@ -401,6 +508,39 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   }
   /* xoá chương từng chỉ được in ra chứ không làm bài đỏ — giờ tính luôn */
   if (out.adminChDel && !out.adminChDel.deleted) rtFail.push('xoá chương không mất khỏi danh sách');
+  /* trình soạn: mọi nút trên thanh phải tồn tại, có tên đọc được, và phát đúng lệnh */
+  const etWant = ['link', 'list', 'ol', 'indent', 'outdent', 'unlink', 'removeFormat', 'undo', 'redo', 'alignFull'];
+  if (out.editorTools) {
+    etWant.forEach((k) => { if (out.editorTools[k] !== 1) rtFail.push('thanh định dạng thiếu nút ' + k); });
+    if (!out.editorTools.preview) rtFail.push('thiếu nút xem trước');
+    if (!out.editorTools.full) rtFail.push('thiếu nút toàn màn hình');
+    if (!out.editorTools.saveState) rtFail.push('thiếu chỗ báo trạng thái lưu');
+    if (out.editorTools.nutKhongTen.length) rtFail.push('nút không có tên đọc được: ' + out.editorTools.nutKhongTen.join(' | '));
+  }
+  const cmdWant = ['insertUnorderedList', 'insertOrderedList', 'outdent', 'indent', 'unlink', 'removeFormat', 'undo', 'redo', 'justifyFull'];
+  if (out.editorCmds && JSON.stringify(out.editorCmds) !== JSON.stringify(cmdWant)) {
+    rtFail.push('nút định dạng phát sai lệnh: ' + JSON.stringify(out.editorCmds));
+  }
+  if (out.editorLink && !(out.editorLink.mo && out.editorLink.chanJs && out.editorLink.dongHop && out.editorLink.chenDung)) {
+    rtFail.push('chèn liên kết sai: ' + JSON.stringify(out.editorLink));
+  }
+  if (out.editorSafeLink && (out.editorSafeLink.chan.length || out.editorSafeLink.cho.length)) {
+    rtFail.push('lọc URL sai — lẽ ra chặn: ' + JSON.stringify(out.editorSafeLink.chan) +
+      ' · lẽ ra cho: ' + JSON.stringify(out.editorSafeLink.cho));
+  }
+  if (out.editorPreview && !(out.editorPreview.mo && out.editorPreview.noiDung && out.editorPreview.soTu &&
+      out.editorPreview.giuLienKet && out.editorPreview.lotOnerror && out.editorPreview.lotScript &&
+      out.editorPreview.anhTroWorker && out.editorPreview.dongDuoc)) {
+    rtFail.push('xem trước sai: ' + JSON.stringify(out.editorPreview));
+  }
+  if (out.editorFull && !(out.editorFull.bat && out.editorFull.escTat &&
+      out.editorFull.ariaOn === 'true' && out.editorFull.ariaOff === 'false')) {
+    rtFail.push('toàn màn hình sai: ' + JSON.stringify(out.editorFull));
+  }
+  if (out.editorAutoSave && !(out.editorAutoSave.key && out.editorAutoSave.cho && out.editorAutoSave.bao &&
+      out.editorAutoSave.dungNoiDung && out.editorAutoSave.xoaKhiLuu)) {
+    rtFail.push('tự lưu nháp sai: ' + JSON.stringify(out.editorAutoSave));
+  }
   out.editorFail = rtFail;
   out.tong = {
     loiTrangDoc: out.errStory.length, loiQuanTri: out.errAdmin.length, loiTrangAnh: out.errImg.length,
