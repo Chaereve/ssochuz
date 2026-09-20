@@ -915,6 +915,90 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     }
     if (!(ex.rong && ex.rong.khongTai && ex.rong.bao)) rtFail.push('xuất chương rỗng mà không báo: ' + JSON.stringify(ex.rong));
   }
+  /* TUỲ CHỌN TÌM & THAY · CỠ ẢNH (nút bấm và kéo chuột).
+     Hai tuỳ chọn cùng đọc qua edMatches() nên số đếm và việc thay không lệch nhau. */
+  const setOpts = (cs, ww) => {
+    $a('#edFindCase').checked = cs; $a('#edFindCase').dispatchEvent(new W.Event('change', { bubbles: true }));
+    $a('#edFindWord').checked = ww; $a('#edFindWord').dispatchEvent(new W.Event('change', { bubbles: true }));
+  };
+  const demKhop = () => { const m = txtA('#edFindStat').match(/^(\d+)/); return m ? +m[1] : -1; };
+  const putFind = async (q) => {
+    $a('#edFind').value = q;
+    $a('#edFind').dispatchEvent(new W.Event('input', { bubbles: true }));
+    await wait(400);
+  };
+  out.editorFindOpts = {};
+  /* "nam" có 5 lần nếu bỏ qua hoa/thường, nhưng chỉ 2 lần viết thường */
+  edB.innerHTML = '<p>Nam nói với nam. Nam và nam.</p><p data-ten="Nam">x</p><h3>Nam</h3>';
+  edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(200);
+  setOpts(false, false); await putFind('nam');
+  out.editorFindOpts.hoaThuongTat = demKhop();
+  setOpts(true, false); await wait(400);
+  out.editorFindOpts.hoaThuongBat = demKhop();
+  /* "am" nằm trong "Đam": bật đúng-cả-từ phải bỏ chỗ đó. Chữ "Đ" có dấu vẫn phải
+     được coi là CHỮ — nếu dùng \b thì "Đam" bị cắt thành "Đ" + "am" và lọt lưới. */
+  edB.innerHTML = '<p>Đam mê. am là am.</p>';
+  edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(200);
+  setOpts(false, false); await putFind('am');
+  out.editorFindOpts.caTuTat = demKhop();
+  setOpts(false, true); await wait(400);
+  out.editorFindOpts.caTuBat = demKhop();
+  /* thay hết 3 chỗ trong CÙNG một text node: phải thay từ cuối về đầu, không thì
+     chỉ số những chỗ sau lệch đi và chữ bị gặm mất */
+  edB.innerHTML = '<p>nam nam nam</p>';
+  edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(200);
+  setOpts(false, false); await putFind('nam');
+  $a('#edRepl').value = 'X';
+  clk('#edReplAll'); await wait(400);
+  out.editorFindOpts.thayCungNode = edB.textContent.trim();
+
+  /* CỠ ẢNH: nút bấm đổi class và không cộng dồn; kéo chuột ở góc dưới-phải cũng
+     đổi class. Không chèn thẻ "nút nắm" nào vào DOM nên nội dung lưu ra vẫn sạch. */
+  edB.innerHTML = '<figure class="fig fig-c"><img src="/api/img/x.webp" alt="a"><figcaption>c</figcaption></figure>';
+  edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(200);
+  const figBox = () => edB.querySelector('figure.fig');
+  pickNode(figBox().querySelector('img'));
+  clk('[data-imgsize="50"]'); await wait(250);
+  const w50 = figBox().className;
+  clk('[data-imgsize="100"]'); await wait(250);
+  const w100 = figBox().className;
+  clk('[data-imgsize="25"]'); await wait(250);
+  out.editorImgSize = { nut50: w50, nut100: w100, nut25: figBox().className };
+  const imgKeo = figBox().querySelector('img');
+  const RECT = { left: 100, top: 50, right: 300, bottom: 200, width: 200, height: 150, x: 100, y: 50 };
+  imgKeo.getBoundingClientRect = () => RECT;
+  figBox().getBoundingClientRect = () => RECT;
+  const keoBatDau = (x, y) => imgKeo.dispatchEvent(new W.MouseEvent('mousedown', { bubbles: true, clientX: x, clientY: y }));
+  const keoDen = (x) => D.dispatchEvent(new W.MouseEvent('mousemove', { bubbles: true, clientX: x, clientY: 190 }));
+  keoBatDau(298, 198); keoDen(180);                  /* 40% -> làm tròn xuống 50% */
+  const dangKeo = figBox().className;
+  D.dispatchEvent(new W.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  await wait(200);
+  const sauEsc = figBox().className;
+  keoBatDau(298, 198); keoDen(250);                  /* 75% */
+  D.dispatchEvent(new W.MouseEvent('mouseup', { bubbles: true }));
+  await wait(200);
+  out.editorImgSize.keoChuot = dangKeo;
+  out.editorImgSize.escHuyKeo = sauEsc;
+  out.editorImgSize.nhaChuot = figBox().className;
+  keoBatDau(150, 100);                               /* bấm giữa ảnh: KHÔNG phải kéo giãn */
+  out.editorImgSize.bamGiuaKhongKeo = figBox().className;
+  D.dispatchEvent(new W.MouseEvent('mouseup', { bubbles: true }));
+
+  const fo = out.editorFindOpts || {};
+  if (fo.hoaThuongTat !== 5) rtFail.push('tìm "nam" bỏ qua hoa/thường phải ra 5 chỗ, thực tế ' + fo.hoaThuongTat);
+  if (fo.hoaThuongBat !== 2) rtFail.push('bật phân biệt hoa/thường phải ra 2 chỗ "nam" thường, thực tế ' + fo.hoaThuongBat);
+  if (fo.caTuTat !== 3) rtFail.push('tìm "am" chưa bật đúng-cả-từ phải ra 3 chỗ, thực tế ' + fo.caTuTat);
+  if (fo.caTuBat !== 2) rtFail.push('bật đúng-cả-từ phải bỏ "am" trong "Đam" còn 2 chỗ, thực tế ' + fo.caTuBat);
+  if (fo.thayCungNode !== 'X X X') rtFail.push('thay 3 chỗ trong cùng text node sai: ' + JSON.stringify(fo.thayCungNode));
+  const isz = out.editorImgSize || {};
+  if (isz.nut50 !== 'fig fig-c fig-w50') rtFail.push('nút 50% đặt sai class: ' + isz.nut50);
+  if (isz.nut100 !== 'fig fig-c fig-w100') rtFail.push('nút 100% sai class (cộng dồn?): ' + isz.nut100);
+  if (isz.nut25 !== 'fig fig-c fig-w25') rtFail.push('nút 25% đặt sai class: ' + isz.nut25);
+  if (isz.keoChuot !== 'fig fig-c fig-resizing fig-w50') rtFail.push('kéo chuột không đổi cỡ ảnh: ' + isz.keoChuot);
+  if (isz.escHuyKeo !== 'fig fig-c fig-w25') rtFail.push('Esc không huỷ kéo / không trả cỡ cũ: ' + isz.escHuyKeo);
+  if (isz.nhaChuot !== 'fig fig-c fig-w75') rtFail.push('nhả chuột không chốt cỡ: ' + isz.nhaChuot);
+  if (isz.bamGiuaKhongKeo !== 'fig fig-c fig-w75') rtFail.push('bấm giữa ảnh mà vẫn kéo giãn: ' + isz.bamGiuaKhongKeo);
   out.editorFail = rtFail;
   out.tong = {
     loiTrangDoc: out.errStory.length, loiQuanTri: out.errAdmin.length, loiTrangAnh: out.errImg.length,

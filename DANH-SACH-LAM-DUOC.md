@@ -16,12 +16,12 @@
 ⬜ Danh sách việc cần làm (checkbox)
 ✅ Chú thích dưới ảnh
 ✅ Căn ảnh trái/giữa/phải
-⬜ Kéo giãn ảnh
+✅ Kéo giãn ảnh (4 cỡ 25/50/75/100% — nút bấm hoặc kéo góc dưới-phải, Esc huỷ)
 ⬜ Cắt ảnh (crop)
 ✅ Bảng biểu: chèn, thêm/xoá dòng cột, dòng tiêu đề
 ✅ Khung cảnh báo (thông tin / cảnh báo / lỗi)
 ✅ Khối code
-✅ Tìm **và thay thế** (hiện mới có tìm)
+✅ Tìm **và thay thế** + phân biệt hoa/thường + đúng cả từ
 ✅ Dán ảnh bằng Ctrl+V
 ✅ Kéo thả ảnh vào ô soạn
 ✅ Dán từ Word / Google Docs mà sạch định dạng

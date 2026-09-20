@@ -8,7 +8,7 @@
 <link rel="icon" type="image/png" href="/ssochuz.png?v=1">
 <link rel="apple-touch-icon" href="/ssochuz.png?v=1">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="stylesheet" href="/cz.css?v=20260920a">
+<link rel="stylesheet" href="/cz.css?v=20260920b">
 <script>/* chống nháy nền */try{var t=localStorage.getItem('ssochuz-theme')||localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
 <body class="admin">
@@ -340,6 +340,10 @@
                   <button type="button" data-imgalign="l" title="Căn ảnh sang trái">⇤</button>
                   <button type="button" data-imgalign="c" title="Căn ảnh ra giữa">↔</button>
                   <button type="button" data-imgalign="r" title="Căn ảnh sang phải">⇥</button>
+                  <button type="button" data-imgsize="25" title="Thu ảnh còn 25% chiều ngang">25%</button>
+                  <button type="button" data-imgsize="50" title="Thu ảnh còn 50% chiều ngang">50%</button>
+                  <button type="button" data-imgsize="75" title="Thu ảnh còn 75% chiều ngang">75%</button>
+                  <button type="button" data-imgsize="100" title="Cho ảnh về full chiều ngang">100%</button>
                   <input type="file" id="edImg" class="hide" accept="image/jpeg,image/png,image/webp">
                 </div>
                 <div class="rte" id="edBody" contenteditable="true" aria-label="Nội dung chương"
@@ -360,6 +364,8 @@
                 <div class="fr row mt">
                   <input class="inp" id="edFind" type="text" placeholder="Tìm trong chương này" aria-label="Tìm trong chương này" autocomplete="off">
                   <input class="inp" id="edRepl" type="text" placeholder="Thay bằng" aria-label="Thay bằng" autocomplete="off">
+                  <label class="cb" title="Có bật thì “Nam” sẽ không khớp với “nam”"><input type="checkbox" id="edFindCase"> Phân biệt hoa/thường</label>
+                  <label class="cb" title="Có bật thì chỉ khớp đúng cả từ — “nam” không khớp trong “nam tính”"><input type="checkbox" id="edFindWord"> Đúng cả từ</label>
                   <button class="btn ghost sm" id="edReplOne" title="Thay chỗ đầu tiên tìm thấy">Thay 1</button>
                   <button class="btn ghost sm" id="edReplAll" title="Thay mọi chỗ trong chương này">Thay hết</button>
                   <span class="sm muted" id="edFindStat" role="status" aria-live="polite"></span>
@@ -651,9 +657,9 @@
 
 <div class="toasts" id="toasts"></div>
 
-<script src="/cz-config.js?v=20260920a"></script>
-<script src="/cz-app.js?v=20260920a"></script>
-<script src="/cz-auth.js?v=20260920a"></script>
-<script src="/admin.js?v=20260920a"></script>
+<script src="/cz-config.js?v=20260920b"></script>
+<script src="/cz-app.js?v=20260920b"></script>
+<script src="/cz-auth.js?v=20260920b"></script>
+<script src="/admin.js?v=20260920b"></script>
 </body>
 </html>

@@ -3412,6 +3412,18 @@ body.rd-focus .rdcmts { display: none; }
 .rte .fig-c, .rtext .fig-c { text-align: center; }
 .rte .fig-r, .rtext .fig-r { text-align: right; }
 .rte .fig-r figcaption, .rtext .fig-r figcaption { text-align: right; }
+/* cỡ ảnh theo phần trăm chiều ngang khung chữ — chỉ là class, không ghi style
+   inline nên nội dung lưu ra không mang thuộc tính style */
+.rte .fig-w25 img, .rtext .fig-w25 img { width: 25%; }
+.rte .fig-w50 img, .rtext .fig-w50 img { width: 50%; }
+.rte .fig-w75 img, .rtext .fig-w75 img { width: 75%; }
+.rte .fig-w100 img, .rtext .fig-w100 img { width: 100%; }
+/* đang kéo giãn ảnh trong ô soạn */
+.rte figure.fig-resizing { outline: 2px dashed var(--acc); outline-offset: 3px; }
+.rte figure.fig-resizing img { cursor: ew-resize; }
+@media (prefers-reduced-motion: reduce) {
+  .rte figure.fig-resizing { outline-style: solid; }
+}
 /* chỉ báo tự lưu nháp dưới ô soạn */
 .savestate { min-height: 18px; margin-top: 6px; color: var(--dim); display: flex; align-items: center;
   gap: 8px; flex-wrap: wrap; }

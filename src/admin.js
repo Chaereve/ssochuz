@@ -1115,6 +1115,64 @@
     box.classList.add('fig-' + pos);
     dirty.book = true; markDirty(); autoSchedule();
   }
+  var FIGW = [25, 50, 75, 100];
+  function edFigBox(img) {
+    if (!img) return null;
+    var box = img.closest ? img.closest('figure.fig') : null;
+    return (box && box !== $('#edBody')) ? box : null;
+  }
+  function edImgSize(pct) {
+    var img = edImgAt();
+    if (!img) return edImgFail();
+    var box = edFigBox(img);
+    if (!box) return toast('Ảnh này chưa có khung — bấm “Chú thích” để tạo khung trước', 'err');
+    edFigSetW(box, pct);
+    dirty.book = true; markDirty(); autoSchedule();
+  }
+  function edFigSetW(box, pct) {
+    box.classList.remove('fig-w25', 'fig-w50', 'fig-w75', 'fig-w100');
+    box.classList.add('fig-w' + pct);
+  }
+  /* Kéo chuột ở mép dưới-phải của ảnh để đổi cỡ. Không chèn thẻ "nút nắm" nào vào
+     DOM vì thẻ đó sẽ bị lưu theo chương; chỉ đổi class trên <figure> nên nội dung
+     lưu ra vẫn sạch. Nhả chuột thì kết thúc, Esc thì huỷ và trả cỡ cũ. */
+  var resize = null;
+  function edResizeStart(ev) {
+    var ed = $('#edBody');
+    if (!ed || !ev.target || ev.target.tagName !== 'IMG' || !ed.contains(ev.target)) return;
+    var box = edFigBox(ev.target);
+    if (!box) return;
+    var r = ev.target.getBoundingClientRect();
+    if (!r || !r.width) return;
+    if (ev.clientX < r.right - 18 || ev.clientY < r.bottom - 18) return;   /* không ở góc */
+    resize = { img: ev.target, box: box, cls: box.className, x0: ev.clientX };
+    box.classList.add('fig-resizing');
+    ev.preventDefault();
+    document.addEventListener('mousemove', edResizeMove, true);
+    document.addEventListener('mouseup', edResizeEnd, true);
+  }
+  function edResizeMove(ev) {
+    if (!resize) return;
+    ev.preventDefault();
+    var r = resize.box.getBoundingClientRect();
+    if (!r || !r.width) return;
+    var pct = ((ev.clientX - r.left) / r.width) * 100, best = 100, d = 1e9, i, g;
+    for (i = 0; i < FIGW.length; i++) {
+      g = Math.abs(FIGW[i] - pct);
+      if (g < d) { d = g; best = FIGW[i]; }
+    }
+    if (!resize.box.classList.contains('fig-w' + best)) edFigSetW(resize.box, best);
+  }
+  function edResizeEnd(cancel) {
+    if (!resize) return;
+    document.removeEventListener('mousemove', edResizeMove, true);
+    document.removeEventListener('mouseup', edResizeEnd, true);
+    var box = resize.box;
+    box.classList.remove('fig-resizing');
+    if (cancel === true) box.className = resize.cls;      /* Esc: trả lại cỡ trước khi kéo */
+    else if (box.className !== resize.cls) { dirty.book = true; markDirty(); autoSchedule(); }
+    resize = null;
+  }
   /* ---------------- TÌM VÀ THAY TRONG CHƯƠNG -----------------------------
      Chỉ đi qua các TEXT NODE, không đụng tới thẻ: thay bằng chuỗi thường trên
      innerHTML sẽ phá luôn thuộc tính và tên thẻ trùng chữ cần tìm. */
@@ -1126,16 +1184,35 @@
     while ((n = w.nextNode())) if (n.nodeValue) out.push(n);
     return out;
   }
-  function edCountFind() {
+  /* Ký tự chữ/số — tính cả chữ tiếng Việt có dấu (Latin-1 mở rộng, Latin
+     Extended-A/B và Latin Extended Additional) để "đúng cả từ" không cắt nhầm
+     "Đam" thành "Đ" + "am". Không dùng \b vì \b coi chữ có dấu là không-phải-chữ. */
+  var WORDCH = /[A-Za-z0-9_\u00C0-\u024F\u1E00-\u1EFF]/;
+  function edIsWord(c) { return !!c && WORDCH.test(c); }
+  /* Danh sách chỗ khớp: [{node, at}]. Đếm và thay đều đọc từ đây nên hai việc
+     không bao giờ lệch nhau khi người dùng đổi tuỳ chọn. */
+  function edMatches() {
     var q = ($('#edFind') || {}).value || '';
+    var out = [];
+    if (!q) return out;
+    var cs = !!($('#edFindCase') && $('#edFindCase').checked);
+    var ww = !!($('#edFindWord') && $('#edFindWord').checked);
+    var lq = cs ? q : q.toLowerCase(), len = q.length;
+    edTextNodes().forEach(function (n) {
+      var v = n.nodeValue, hv = cs ? v : v.toLowerCase(), i = 0, k;
+      while ((k = hv.indexOf(lq, i)) >= 0) {
+        i = k + len;
+        if (ww && (edIsWord(v.charAt(k - 1)) || edIsWord(v.charAt(k + len)))) continue;
+        out.push({ node: n, at: k });
+      }
+    });
+    return out;
+  }
+  function edCountFind() {
     var stat = $('#edFindStat');
     if (!stat) return 0;
-    if (!q) { stat.textContent = ''; return 0; }
-    var lq = q.toLowerCase(), hits = 0;
-    edTextNodes().forEach(function (n) {
-      var lv = n.nodeValue.toLowerCase(), i = 0, k;
-      while ((k = lv.indexOf(lq, i)) >= 0) { hits++; i = k + lq.length; }
-    });
+    if (!(($('#edFind') || {}).value || '')) { stat.textContent = ''; return 0; }
+    var hits = edMatches().length;
     stat.textContent = hits ? (hits + ' chỗ khớp trong chương này') : 'không thấy trong chương này';
     return hits;
   }
@@ -1143,24 +1220,26 @@
     var q = ($('#edFind') || {}).value || '';
     var to = ($('#edRepl') || {}).value || '';
     if (!q) { toast('Nhập chữ cần tìm trước đã', 'err'); return; }
-    var lq = q.toLowerCase();
-    var nodes = edTextNodes(), done = 0;
-    for (var i = 0; i < nodes.length; i++) {
-      var v = nodes[i].nodeValue, lv = v.toLowerCase();
-      var out = '', from = 0, k;
-      while ((k = lv.indexOf(lq, from)) >= 0) {
-        out += v.slice(from, k) + to;
-        from = k + lq.length;
-        done++;
-        if (once) break;
-      }
-      if (!done) continue;
-      out += v.slice(from);
-      nodes[i].nodeValue = out;
-      if (once) break;
-    }
-    if (!done) { toast('Không thấy “' + q + '” trong chương này', 'err'); edCountFind(); return; }
-    toast('Đã thay ' + done + (done > 1 ? ' chỗ' : ' chỗ') + ' — nhớ bấm “Lưu chương này vào bộ”', 'ok');
+    var hits = edMatches();
+    if (once) hits = hits.slice(0, 1);
+    if (!hits.length) { toast('Không thấy “' + q + '” trong chương này', 'err'); edCountFind(); return; }
+    /* Gom theo text node rồi thay từ CUỐI về ĐẦU: thay chỗ trước sẽ làm mọi chỉ
+       số phía sau trong cùng node lệch đi. */
+    var groups = [];
+    hits.forEach(function (h) {
+      var g = null, i;
+      for (i = 0; i < groups.length; i++) if (groups[i].node === h.node) { g = groups[i]; break; }
+      if (!g) { g = { node: h.node, at: [] }; groups.push(g); }
+      g.at.push(h.at);
+    });
+    groups.forEach(function (g) {
+      var v = g.node.nodeValue;
+      g.at.slice().sort(function (a, b) { return b - a; }).forEach(function (k) {
+        v = v.slice(0, k) + to + v.slice(k + q.length);
+      });
+      g.node.nodeValue = v;
+    });
+    toast('Đã thay ' + hits.length + ' chỗ — nhớ bấm “Lưu chương này vào bộ”', 'ok');
     dirty.book = true; markDirty(); chStat(); autoSchedule();
     edCountFind();
   }
@@ -3496,6 +3575,7 @@
     else if (b.dataset.special !== undefined) edSpecial();
     else if (b.dataset.cap !== undefined) edImgCaption();
     else if (b.dataset.imgalign) edImgAlign(b.dataset.imgalign);
+    else if (b.dataset.imgsize) edImgSize(parseInt(b.dataset.imgsize, 10));
     else if (b.dataset.callout) edCallout(b.dataset.callout);
     else if (b.dataset.code !== undefined) edCodeBlock();
     else if (b.dataset.table !== undefined) edTable();
@@ -3535,6 +3615,9 @@
   });
   $('#chExpHtml').addEventListener('click', edExportHtml);
   $('#chExpTxt').addEventListener('click', edExportTxt);
+  $('#edBody').addEventListener('mousedown', edResizeStart);
+  $('#edFindCase').addEventListener('change', edCountFind);
+  $('#edFindWord').addEventListener('change', edCountFind);
   edToolsShow((function () {
     try { return localStorage.getItem(ED_TOOLS_KEY) !== '0'; } catch (e) { return true; }
   })());
@@ -3542,6 +3625,9 @@
      thì Esc phải đóng hộp, không được vừa đóng hộp vừa thoát toàn màn hình */
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
+    /* đang kéo giãn ảnh thì huỷ kéo trước — Esc phải trả ảnh về cỡ cũ, không được
+       thoát luôn chế độ tập trung/toàn màn hình trong lúc con trỏ còn ở ảnh */
+    if (resize) { edResizeEnd(true); return; }
     if (document.querySelector('.modal.on')) return;
     /* ưu tiên thoát chế độ tập trung trước, vì nó hay bật kèm toàn màn hình */
     if (document.body.classList.contains('ed-focus')) { edFocus(false); return; }
