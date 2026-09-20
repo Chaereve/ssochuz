@@ -62,6 +62,37 @@ jobs:
             "${ARGS[@]}" \
             --key "$ADMIN_KEY"
 
+      - name: Chặn chương nháp lọt vào repo công khai
+        run: |
+          set -euo pipefail
+          # Lớp chặn CUỐI CÙNG. tools/pull_from_kv.py đã cắt chương chưa đăng,
+          # nhưng repo này công khai nên nếu có lúc nào đó script hỏng thì nội
+          # dung chưa phát hành sẽ nằm vĩnh viễn trong lịch sử Git. Thà để
+          # workflow đỏ còn hơn lộ truyện.
+          python3 - <<'PY'
+          import glob, json, sys
+          xau = []
+          for f in sorted(glob.glob('data/book/*.json')):
+              try:
+                  with open(f, encoding='utf-8') as fh:
+                      book = json.load(fh)
+              except (OSError, ValueError) as e:
+                  xau.append('%s: không đọc được (%s)' % (f, e)); continue
+              for i, ch in enumerate(book.get('chapters') or [], 1):
+                  if not isinstance(ch, dict):
+                      continue
+                  if ch.get('draft'):
+                      xau.append('%s · chương %d còn cờ draft' % (f, i))
+                  if ch.get('publishAt'):
+                      xau.append('%s · chương %d còn publishAt' % (f, i))
+          if xau:
+              print('DỪNG LẠI — có chương chưa đăng trong bản sao repo:')
+              for d in xau:
+                  print('  - ' + d)
+              sys.exit(1)
+          print('Bản sao repo sạch: không có chương nháp hay hẹn giờ.')
+          PY
+
       - name: Commit nếu có thay đổi
         run: |
           set -euo pipefail

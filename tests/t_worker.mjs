@@ -1163,6 +1163,165 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     eq('push/hàng đợi rỗng → cron êm', true, true);
   }
 
+
+  /* ======================================================================
+     NHÓM 1.11.0 — CHƯƠNG NHÁP, HẸN GIỜ ĐĂNG, CHỐNG GHI ĐÈ
+     ----------------------------------------------------------------------
+     Đây là nhóm quan trọng nhất về dữ liệu: chương chưa đăng TUYỆT ĐỐI không
+     được lọt ra bất kỳ lối công khai nào (trang đọc, số chương, registry,
+     feed RSS, push). Repo là công khai nên lộ một lần là lộ vĩnh viễn.
+     ====================================================================== */
+  {
+    const SL = 'bo-thu-nhap';
+    const GIO_SAU = new Date(Date.now() + 3600e3).toISOString();   /* 1 giờ nữa */
+    const GIO_TRUOC = new Date(Date.now() - 3600e3).toISOString(); /* 1 giờ trước */
+
+    await call('PUT', '/api/registry', {
+      body: { rev: '2026-09-21 10:00', lib: [{ title: 'Bộ thử nháp', slug: SL, chapters: 0, countLabel: '0/—' }] },
+      headers: ADMH,
+    });
+    const putNhap = await call('PUT', '/api/book/' + SL, {
+      body: {
+        title: 'Bộ thử nháp', slug: SL,
+        chapters: [
+          { t: 'Chương 1: Đã đăng', html: '<p>Chữ công khai một.</p>' },
+          { t: 'Chương 2: Đã đăng', html: '<p>Chữ công khai hai.</p>' },
+          { t: 'Chương 3: Hẹn giờ', html: '<p>BÍ MẬT HẸN GIỜ.</p>', publishAt: GIO_SAU },
+          { t: 'Chương 4: Nháp', html: '<p>BÍ MẬT NHÁP.</p>', draft: true },
+        ],
+      },
+      headers: ADMH,
+    });
+    eq('nháp/lưu được, chỉ đếm chương đã đăng', [putNhap.status, putNhap.body.chapters, putNhap.body.chaptersAll],
+      [200, 2, 4]);
+
+    /* --- người đọc KHÔNG được thấy chương nháp/hẹn giờ --- */
+    const congKhai = await call('GET', '/api/book/' + SL);
+    const chsCK = (congKhai.body && congKhai.body.chapters) || [];
+    eq('nháp/người đọc chỉ thấy 2 chương', chsCK.length, 2);
+    ck('nháp/không lộ chữ của chương nháp', !/BÍ MẬT/.test(congKhai.text), congKhai.text.slice(0, 120), 'không chứa BÍ MẬT');
+    ck('nháp/không lộ cờ draft & publishAt', !/"draft"|"publishAt"/.test(congKhai.text), congKhai.text.slice(0, 120), 'không có trường quản trị');
+
+    /* --- quản trị PHẢI thấy đủ 4 chương để còn sửa --- */
+    const cuaAdmin = await call('GET', '/api/book/' + SL, { headers: ADMH });
+    eq('nháp/quản trị thấy đủ 4 chương', ((cuaAdmin.body || {}).chapters || []).length, 4);
+
+    /* --- registry: số chương công khai --- */
+    const reg1 = await call('GET', '/api/registry');
+    const nov1 = ((reg1.body || {}).lib || []).find((n) => n.slug === SL) || {};
+    eq('nháp/registry đếm 2 chương đã đăng', nov1.chapters, 2);
+
+    /* --- feed RSS không được chứa chương nháp --- */
+    const feed = await call('GET', '/feed.xml?slug=' + SL);
+    ck('nháp/feed RSS không lộ chương nháp', !/BÍ MẬT/.test(feed.text), feed.text.slice(0, 160), 'feed sạch');
+    eq('nháp/feed chỉ có 2 mục', (feed.text.match(/<item>/g) || []).length, 2);
+
+    /* --- recount cũng chỉ đếm chương đã đăng --- */
+    await call('POST', '/api/recount', { headers: ADMH });
+    const reg2 = await call('GET', '/api/registry');
+    const nov2 = ((reg2.body || {}).lib || []).find((n) => n.slug === SL) || {};
+    eq('nháp/recount vẫn đếm 2', nov2.chapters, 2);
+
+    /* --- push: thêm chương NHÁP không được đánh thức ai --- */
+    await kv.put('pushq', JSON.stringify([]));
+    await call('PUT', '/api/book/' + SL, {
+      body: {
+        title: 'Bộ thử nháp', slug: SL,
+        chapters: [
+          { t: 'Chương 1: Đã đăng', html: '<p>Chữ công khai một.</p>' },
+          { t: 'Chương 2: Đã đăng', html: '<p>Chữ công khai hai.</p>' },
+          { t: 'Chương 3: Hẹn giờ', html: '<p>BÍ MẬT HẸN GIỜ.</p>', publishAt: GIO_SAU },
+          { t: 'Chương 4: Nháp', html: '<p>BÍ MẬT NHÁP.</p>', draft: true },
+          { t: 'Chương 5: Nháp nữa', html: '<p>BÍ MẬT NHÁP 2.</p>', draft: true },
+        ],
+      },
+      headers: ADMH,
+    });
+    const q1 = (await kv.get('pushq', { type: 'json' })) || [];
+    eq('nháp/thêm chương nháp KHÔNG đẩy push', q1.length, 0);
+
+    /* --- hẹn giờ: tới giờ thì cron đăng --- */
+    await call('PUT', '/api/book/' + SL, {
+      body: {
+        title: 'Bộ thử nháp', slug: SL,
+        chapters: [
+          { t: 'Chương 1: Đã đăng', html: '<p>Chữ công khai một.</p>' },
+          { t: 'Chương 2: Đã đăng', html: '<p>Chữ công khai hai.</p>' },
+          { t: 'Chương 3: Tới giờ rồi', html: '<p>Chữ đã tới giờ.</p>', publishAt: GIO_TRUOC },
+        ],
+      },
+      headers: ADMH,
+    });
+    const reg3 = await call('GET', '/api/registry');
+    const nov3 = ((reg3.body || {}).lib || []).find((n) => n.slug === SL) || {};
+    eq('hẹn giờ/quá giờ là công khai ngay', nov3.chapters, 3);
+    const ck3 = await call('GET', '/api/book/' + SL);
+    eq('hẹn giờ/người đọc thấy 3 chương', ((ck3.body || {}).chapters || []).length, 3);
+
+    /* --- cron đăng chương tới hạn: đặt hàng đợi thủ công rồi chạy scheduled --- */
+    await call('PUT', '/api/book/' + SL, {
+      body: {
+        title: 'Bộ thử nháp', slug: SL,
+        chapters: [
+          { t: 'Chương 1', html: '<p>Một.</p>' },
+          { t: 'Chương 2', html: '<p>Hai.</p>' },
+          { t: 'Chương 3: Hẹn', html: '<p>Ba.</p>', publishAt: new Date(Date.now() + 1200).toISOString() },
+        ],
+      },
+      headers: ADMH,
+    });
+    const qSched = (await kv.get('schedq', { type: 'json' })) || {};
+    ck('hẹn giờ/vào hàng đợi schedq', !!qSched[SL], qSched, 'có ' + SL);
+    const regTruoc = await call('GET', '/api/registry');
+    const novTruoc = ((regTruoc.body || {}).lib || []).find((n) => n.slug === SL) || {};
+    eq('hẹn giờ/trước giờ vẫn 2 chương', novTruoc.chapters, 2);
+
+    await new Promise((r) => setTimeout(r, 1400));       /* chờ qua mốc hẹn */
+    await worker.scheduled({}, env, ctx);
+    await Promise.all(waits.splice(0));
+    const regSau = await call('GET', '/api/registry');
+    const novSau = ((regSau.body || {}).lib || []).find((n) => n.slug === SL) || {};
+    eq('hẹn giờ/cron đăng đúng giờ → 3 chương', novSau.chapters, 3);
+    const qSau = (await kv.get('schedq', { type: 'json' })) || {};
+    eq('hẹn giờ/đăng xong thì gỡ khỏi hàng đợi', qSau[SL], undefined);
+
+    /* --- chống ghi đè: x-book-saved lệch ⇒ 409 --- */
+    const metaNow = await kv.getWithMetadata('book:' + SL, { type: 'text' });
+    const savedThat = (metaNow.metadata || {}).saved;
+    const xungDot = await call('PUT', '/api/book/' + SL, {
+      body: { title: 'Bộ thử nháp', slug: SL, chapters: [{ t: 'Ghi đè', html: '<p>x</p>' }] },
+      headers: Object.assign({}, ADMH, { 'x-book-saved': '2020-01-01T00:00:00.000Z' }),
+    });
+    eq('xung đột/bản cũ bị chặn 409', [xungDot.status, !!(xungDot.body || {}).conflict], [409, true]);
+    ck('xung đột/trả về mốc trên máy chủ', (xungDot.body || {}).savedOnServer === savedThat,
+      (xungDot.body || {}).savedOnServer, savedThat);
+    const conNguyen = await call('GET', '/api/book/' + SL, { headers: ADMH });
+    eq('xung đột/dữ liệu KHÔNG bị ghi đè', ((conNguyen.body || {}).chapters || []).length, 3);
+
+    /* gửi ĐÚNG mốc ⇒ ghi bình thường */
+    const dungMoc = await call('PUT', '/api/book/' + SL, {
+      body: { title: 'Bộ thử nháp', slug: SL, chapters: [{ t: 'Chương 1', html: '<p>Một.</p>' }] },
+      headers: Object.assign({}, ADMH, { 'x-book-saved': savedThat }),
+    });
+    eq('xung đột/đúng mốc thì lưu được', dungMoc.status, 200);
+
+    /* không gửi header ⇒ giữ hành vi cũ (bản quản trị cũ vẫn chạy) */
+    const khongHeader = await call('PUT', '/api/book/' + SL, {
+      body: { title: 'Bộ thử nháp', slug: SL, chapters: [{ t: 'Chương 1', html: '<p>Một.</p>' }] },
+      headers: ADMH,
+    });
+    eq('xung đột/không gửi header vẫn lưu như cũ', khongHeader.status, 200);
+
+    /* --- chương cũ {t, html} phải công khai như trước (tương thích ngược) --- */
+    const SL2 = 'bo-kieu-cu';
+    await call('PUT', '/api/book/' + SL2, {
+      body: { title: 'Bộ kiểu cũ', slug: SL2, chapters: [{ t: 'C1', html: '<p>a</p>' }, { t: 'C2', html: '<p>b</p>' }] },
+      headers: ADMH,
+    });
+    const cu = await call('GET', '/api/book/' + SL2);
+    eq('tương thích/chương cũ không có draft vẫn công khai', ((cu.body || {}).chapters || []).length, 2);
+  }
+
   fs.rmSync(tmp, { recursive: true, force: true });
 
   const bad = checks.filter((c) => !c.ok);

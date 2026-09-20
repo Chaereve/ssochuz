@@ -27,9 +27,41 @@ Khuôn file giữ đúng y hệt hiện trạng repo nên bộ nào không đổ
 diff: data/book/<slug>.json = JSON nén 1 dòng, KHÔNG xuống dòng cuối;
 data/registry.json = thụt 2 khoảng, có xuống dòng cuối.
 """
-import argparse, json, os, re, subprocess, sys, urllib.request, urllib.error
+import argparse, datetime, json, os, re, subprocess, sys, urllib.request, urllib.error
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def _is_public_chapter(ch, now=None):
+    """Chương này người đọc có được thấy không?
+
+    Phải KHỚP TỪNG LUẬT với isPublicChapter() trong worker/cms.js. Hai nơi lệch
+    nhau là có chỗ rò chương nháp.
+    """
+    if not isinstance(ch, dict):
+        return False
+    if ch.get('draft'):
+        return False
+    at = ch.get('publishAt')
+    if not at:
+        return True
+    try:
+        t = datetime.datetime.fromisoformat(str(at).replace('Z', '+00:00'))
+    except ValueError:
+        return True                      # giờ hẹn hỏng ⇒ coi như không hẹn
+    if t.tzinfo is None:
+        t = t.replace(tzinfo=datetime.timezone.utc)
+    return t <= (now or datetime.datetime.now(datetime.timezone.utc))
+
+
+def public_chapters(chapters, now=None):
+    """Cắt từ chương chưa công khai ĐẦU TIÊN trở đi (không lọc xen giữa)."""
+    out = []
+    for ch in (chapters or []):
+        if not _is_public_chapter(ch, now):
+            break
+        out.append(ch)
+    return out
 
 
 def call(api, path, key=None, timeout=120):
@@ -150,6 +182,19 @@ def main():
             # Vỏ rỗng của bộ khóa — khoá đã qua whoami nên gần như không thể gặp;
             # gặp thì tuyệt đối không ghi đè.
             print('  ✗ %-40s KV trả vỏ RỖNG kiểu khách (locked) — bỏ qua, KHÔNG ghi' % slug); n_err += 1; continue
+        # Chốt 1b (bản 1.11.0): CẮT CHƯƠNG CHƯA ĐĂNG trước mọi thứ khác.
+        # Lệnh gọi ở trên dùng x-admin-key nên Worker trả TRỌN bộ, kể cả chương
+        # nháp và chương đang hẹn giờ. Repo này CÔNG KHAI — ghi chương nháp
+        # xuống đây là lộ nội dung chưa phát hành, mà lộ một lần thì còn lại
+        # vĩnh viễn trong lịch sử Git. Quy tắc phải KHỚP isPublicChapter()
+        # trong worker/cms.js: cắt từ chương chưa công khai đầu tiên trở đi để
+        # số thứ tự các chương phía trước không bị xê dịch (bình luận, phiếu
+        # bầu và lượt đọc đều gắn theo số thứ tự chương).
+        book['chapters'] = public_chapters(book['chapters'])
+        for ch in book['chapters']:
+            for admin_only in ('draft', 'publishAt', 'note', 'id'):
+                ch.pop(admin_only, None)
+
         kv_ch = len(book['chapters'])
         try:
             with open(path, encoding='utf-8') as f:

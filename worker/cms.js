@@ -100,7 +100,64 @@ export { PrivateBooks } from './private-books.js';
      VAPID_PRIVATE     (secret, bắt buộc nếu bật push) — khoá riêng VAPID base64url (`wrangler secret put VAPID_PRIVATE`)
    ============================================================================ */
 
-const VERSION = '1.10.1';
+const VERSION = '1.11.0';
+
+/* ============================================================================
+   CHƯƠNG NHÁP VÀ HẸN GIỜ ĐĂNG (bản 1.11.0)
+   ----------------------------------------------------------------------------
+   Chương có thể mang thêm các trường TUỲ CHỌN do trang quản trị ghi vào:
+     draft      true  = đang viết, người đọc KHÔNG được thấy
+     publishAt  ISO   = hẹn giờ; trước giờ đó coi như chưa đăng
+     id, note, updatedAt, words — chỉ phục vụ trang quản trị
+
+   Chương cũ dạng {t, html} KHÔNG có các trường này ⇒ mặc định CÔNG KHAI, nên
+   toàn bộ dữ liệu cũ chạy y như trước (tương thích ngược tuyệt đối).
+
+   isPublic() là MỘT nguồn sự thật duy nhất. Mọi lối ra công khai đều phải hỏi
+   nó: trang đọc, đếm số chương, registry, feed RSS, push, và bản đồng bộ về
+   repo. Chỉ cần một chỗ quên là chương nháp lọt ra ngoài — mà repo thì công
+   khai, lộ một lần là lộ vĩnh viễn.
+
+   LƯU Ý VỀ SỐ THỨ TỰ CHƯƠNG: bình luận, phiếu bầu và lượt đọc đều gắn theo VỊ
+   TRÍ chương (chuong-1, chuong-2…). Vì vậy chương chưa công khai bị cắt ở
+   CUỐI danh sách, KHÔNG lọc xen giữa — nếu lọc xen giữa thì mọi chương phía
+   sau bị dồn số, kéo theo bình luận và phiếu bầu gắn nhầm chương.           */
+function isPublicChapter(ch, now) {
+  if (!ch || typeof ch !== 'object') return false;
+  if (ch.draft) return false;
+  if (!ch.publishAt) return true;
+  const at = Date.parse(ch.publishAt);
+  if (isNaN(at)) return true;               /* giờ hẹn hỏng ⇒ coi như không hẹn */
+  return at <= (now == null ? Date.now() : now);
+}
+
+/* Danh sách chương công khai: cắt từ chương chưa công khai ĐẦU TIÊN trở đi.
+   Giữ nguyên số thứ tự của mọi chương phía trước. */
+function publicChapters(chapters, now) {
+  const all = Array.isArray(chapters) ? chapters : [];
+  const t = now == null ? Date.now() : now;
+  let n = 0;
+  while (n < all.length && isPublicChapter(all[n], t)) n++;
+  return all.slice(0, n);
+}
+
+/* Số chương công khai — thay cho chapters.length ở mọi chỗ công khai. */
+function publicChapterCount(chapters, now) {
+  return publicChapters(chapters, now).length;
+}
+
+/* Bản công khai của một bộ: bỏ chương chưa đăng và các trường chỉ dành cho
+   trang quản trị, để chúng không lọt xuống trình duyệt người đọc. */
+function publicBook(book, now) {
+  if (!book || typeof book !== 'object') return book;
+  const out = Object.assign({}, book);
+  out.chapters = publicChapters(book.chapters, now).map((c) => {
+    const o = Object.assign({}, c);
+    delete o.draft; delete o.publishAt; delete o.note; delete o.id;
+    return o;
+  });
+  return out;
+}
 const JSONH = {
   'content-type': 'application/json; charset=utf-8',
   'x-content-type-options': 'nosniff',
@@ -345,6 +402,8 @@ const handler = {
      thông báo đẩy — mỗi invocation gửi tối đa 45 tin (free giới hạn 50 subrequest) */
   async scheduled(event, env, ctx) {
     ctx.waitUntil(drainPushQueue(env).catch(() => {}));
+    /* 1.11.0 — đăng các chương đã tới giờ hẹn */
+    ctx.waitUntil(publishDueChapters(env).catch(() => {}));
   },
 };
 
@@ -690,6 +749,97 @@ async function enqueuePush(env, slug, ch, chapTitle) {
     return { queued: true };
   } catch (e) { return { queued: false, reason: String((e && e.message) || e) }; }
 }
+/* ============================================================================
+   HẸN GIỜ ĐĂNG CHƯƠNG (1.11.0)
+   ----------------------------------------------------------------------------
+   Khoá KV `schedq` giữ danh sách bộ đang có chương hẹn giờ kèm mốc sớm nhất.
+   Cron chạy mỗi 5 phút (khai trong wrangler.toml) sẽ:
+     · tìm bộ có chương đã tới giờ,
+     · cập nhật lại số chương trong registry (chương đó thành công khai),
+     · đẩy push một lần, xoá cache biên, ghi nhật ký, rồi gỡ khỏi hàng đợi.
+
+   ĐỘ TRỄ: chương hiện ra chậm nhất = chu kỳ cron (5 phút) + thời gian sống của
+   cache biên (EDGE_TTL.registry / .book / .feed). Giao diện quản trị nói rõ
+   con số này để chủ trang không tưởng là hỏng.
+   ========================================================================== */
+async function updateScheduleQueue(env, slug, chapters) {
+  if (!env.CZ_KV) return;
+  try {
+    const now = Date.now();
+    /* mốc hẹn gần nhất còn ở tương lai của bộ này */
+    let next = 0;
+    (Array.isArray(chapters) ? chapters : []).forEach((c) => {
+      if (!c || c.draft || !c.publishAt) return;
+      const at = Date.parse(c.publishAt);
+      if (!isNaN(at) && at > now && (!next || at < next)) next = at;
+    });
+    const q = (await env.CZ_KV.get('schedq', { type: 'json' })) || {};
+    if (next) q[slug] = new Date(next).toISOString();
+    else delete q[slug];
+    await env.CZ_KV.put('schedq', JSON.stringify(q));
+  } catch (e) { /* hàng đợi hỏng không được làm hỏng thao tác lưu */ }
+}
+
+/* Cron: đăng mọi chương đã tới giờ. */
+async function publishDueChapters(env) {
+  const stat = { checked: 0, published: 0, books: [] };
+  if (!env.CZ_KV) return stat;
+  const q = (await env.CZ_KV.get('schedq', { type: 'json' })) || {};
+  const now = Date.now();
+  const base = String(env.SITE_BASE || 'https://ssochuz.pages.dev').replace(/\/+$/, '');
+  let changed = false;
+
+  for (const slug of Object.keys(q)) {
+    stat.checked++;
+    const due = Date.parse(q[slug] || '');
+    if (isNaN(due) || due > now) continue;             /* chưa tới giờ */
+
+    const book = await env.CZ_KV.get('book:' + slug, { type: 'json' }).catch(() => null);
+    if (!book || !Array.isArray(book.chapters)) { delete q[slug]; changed = true; continue; }
+
+    /* So số chương công khai THẬT ở thời điểm này với con số registry đang
+       ghi. KHÔNG so "trước/sau một mili giây" — qua giờ hẹn rồi thì hai mốc đó
+       cho cùng kết quả và cron sẽ chẳng bao giờ đăng gì cả. */
+    const after = publicChapterCount(book.chapters, now);
+    const reg = (await env.CZ_KV.get('registry', { type: 'json' })) || { lib: [] };
+    const nov = (reg.lib || []).find((n) => n && n.slug === slug);
+    const before = nov ? (parseInt(nov.chapters, 10) || 0) : 0;
+    if (after > before) {
+      /* registry phải khớp số chương mới để trang chủ và nhãn hiện đúng */
+      if (nov) {
+        nov.chapters = after;
+        nov.countLabel = countLabelOf(nov, after);
+        nov.updated = new Date(now).toISOString().slice(0, 10);
+        reg.rev = new Date(now).toISOString().slice(0, 16).replace('T', ' ');
+        await env.CZ_KV.put('registry', JSON.stringify(reg));
+      }
+      const pub = publicChapters(book.chapters, now);
+      const last = pub[pub.length - 1] || {};
+      await enqueuePush(env, slug, after, last.t || '');
+      await logAct(env, 'hẹn giờ: đăng chương ' + after + ' của bộ ' + slug);
+      if (base) {
+        await edgePurge(base + '/api/book/' + encodeURIComponent(slug), base + '/api/registry');
+        await purgeFeed(base);
+      }
+      stat.published++;
+      stat.books.push({ slug, chapters: after });
+    }
+
+    /* tính lại mốc kế tiếp; hết chương hẹn thì gỡ khỏi hàng đợi */
+    let next = 0;
+    book.chapters.forEach((c) => {
+      if (!c || c.draft || !c.publishAt) return;
+      const at = Date.parse(c.publishAt);
+      if (!isNaN(at) && at > now && (!next || at < next)) next = at;
+    });
+    if (next) q[slug] = new Date(next).toISOString();
+    else delete q[slug];
+    changed = true;
+  }
+  if (changed) await env.CZ_KV.put('schedq', JSON.stringify(q));
+  return stat;
+}
+
 /* tách tên riêng của chương ("Chương 5: Cuốn Vở" → "Cuốn Vở") để ráp câu báo */
 function pushChapName(chapTitle) {
   const m = /^(?:chương|chuong|chap|chapter)\s*\d+\s*[:.\-–—]?\s*(.*)$/i.exec(String(chapTitle || '').trim());
@@ -1026,7 +1176,8 @@ async function getFeed(req, env, cors) {
     /* chương của truyện khóa mật mã KHÔNG được lọt ra feed RSS */
     if (nov && nov.lock) return json({ ok: false, error: 'bộ này đã được khóa mật mã — không có feed công khai' }, { status: 404, cors });
     const book = await env.CZ_KV.get('book:' + slug, { type: 'json' });
-    const chs = (book && Array.isArray(book.chapters)) ? book.chapters : [];
+    /* 1.11.0 — feed RSS chỉ có chương ĐÃ ĐĂNG */
+    const chs = publicChapters(book && book.chapters);
     if (!chs.length) return json({ ok: false, error: 'bộ này chưa có chương nào' }, { status: 404, cors });
     const title = (nov && nov.title) || (book && book.title) || slug;
     chan = {
@@ -1047,7 +1198,8 @@ async function getFeed(req, env, cors) {
     const books = await Promise.all(cands.map((n) => env.CZ_KV.get('book:' + n.slug, { type: 'json' }).catch(() => null)));
     cands.forEach((n, k) => {
       const book = books[k];
-      const chs = (book && Array.isArray(book.chapters)) ? book.chapters : [];
+      /* 1.11.0 — feed RSS chỉ có chương ĐÃ ĐĂNG */
+      const chs = publicChapters(book && book.chapters);
       const take = chs.slice(-5);
       take.forEach((c, j) => {
         const pos = chs.length - take.length + j + 1;
@@ -1196,11 +1348,12 @@ async function getBookPublic(req, env, cors) {
         /* chỉ trả vỏ: KHÔNG có chương, không synFull, không salt/hash */
         return new Response(JSON.stringify({ title: book.title || slug, slug: slug, locked: true, chapters: [] }), { headers: h });
       }
-      const out = Object.assign({}, book, { locked: true, lockUntil: exp });
+      const out = Object.assign({}, publicBook(book), { locked: true, lockUntil: exp });
       delete out.lock;
       return new Response(JSON.stringify(out), { headers: h });
     }
-    return new Response(value, { headers: h });
+    /* 1.11.0 — cắt chương nháp/chưa tới giờ hẹn trước khi gửi cho người đọc */
+    return new Response(JSON.stringify(publicBook(book)), { headers: h });
   });
 }
 /* POST /api/lock { slug, password } — nhập mật mã → token 6 giờ */
@@ -1398,9 +1551,11 @@ async function putKV(req, env, key, cors, label) {
    (2) có nút POST /api/recount để quét toàn bộ KV một lần;
    (3) web tự đối chiếu số chương thật khi mở bộ truyện (cz-app.js → reconcile).
    ============================================================================ */
+/* Số chương dùng cho REGISTRY và mọi nhãn công khai ⇒ chỉ đếm chương đã đăng.
+   Chương nháp/hẹn giờ không được làm tăng con số người đọc nhìn thấy. */
 function chapLen(book) {
   const c = book && Array.isArray(book.chapters) ? book.chapters : null;
-  return c ? c.length : null;
+  return c ? publicChapterCount(c) : null;
 }
 /* Nhãn số chương: "<đã đăng>/<dự kiến>". Dự kiến lấy từ trường `planned` (nếu
    biên tập viên khai) — KHÔNG moi lại con số cũ trong nhãn, vì chính con số cũ
@@ -1441,7 +1596,26 @@ async function putBook(req, env, slug, cors) {
   if (!env.CZ_KV) return noKV(cors);
   /* đọc bản cũ để biết có THÊM chương mới không (push chỉ báo chương mới, không báo sửa chữ) */
   const oldBook = await env.CZ_KV.get('book:' + slug, { type: 'json' }).catch(() => null);
-  const oldLen = oldBook && Array.isArray(oldBook.chapters) ? oldBook.chapters.length : 0;
+  /* push chỉ báo chương ĐÃ ĐĂNG — thêm một chương nháp không được đánh thức ai */
+  const oldLen = publicChapterCount(oldBook && oldBook.chapters);
+
+  /* ---- 1.11.0 · CHỐNG GHI ĐÈ KHI HAI TAB CÙNG SỬA ----------------------
+     Trang quản trị gửi kèm `x-book-saved` = mốc thời gian của bản nó đang
+     giữ. Nếu trên KV đã có bản mới hơn (người khác, hoặc chính mình ở tab
+     khác, vừa lưu) thì KHÔNG ghi đè mà trả 409 để giao diện hỏi ý người dùng.
+     Không gửi header ⇒ giữ nguyên hành vi cũ, nên bản quản trị cũ vẫn chạy. */
+  const sentSaved = String(req.headers.get('x-book-saved') || '').trim();
+  if (sentSaved && oldBook) {
+    const meta = await env.CZ_KV.getWithMetadata('book:' + slug, { type: 'text' }).catch(() => null);
+    const onServer = String((meta && meta.metadata && meta.metadata.saved) || '');
+    if (onServer && onServer !== sentSaved) {
+      return json({
+        ok: false, conflict: true, savedOnServer: onServer, savedOnClient: sentSaved,
+        error: 'Bản trên máy chủ đã thay đổi sau lần bạn mở. Tải bản mới nhất hoặc xác nhận ghi đè.',
+      }, { status: 409, cors });
+    }
+  }
+
   const body = await req.text();
   const bytes = new TextEncoder().encode(body).length;
   if (bytes > 24 * 1024 * 1024) return json({ ok: false, error: 'dữ liệu quá lớn (>24MB)' }, { status: 413, cors });
@@ -1457,15 +1631,26 @@ async function putBook(req, env, slug, cors) {
      (không thấy được nó), nên giữ nguyên bản cũ để tránh lưu chương là tự mở khóa */
   if (oldBook && oldBook.lock && !parsed.lock) parsed.lock = oldBook.lock;
   const saved = new Date().toISOString();
-  await env.CZ_KV.put('book:' + slug, JSON.stringify(parsed), { metadata: { saved, chapters: parsed.chapters.length, bytes } });
+  const pubLen = publicChapterCount(parsed.chapters);
+  await env.CZ_KV.put('book:' + slug, JSON.stringify(parsed), { metadata: { saved, chapters: pubLen, bytes } });
   await env.CZ_KV.put('_last', saved);
   const sync = await syncCountToRegistry(env, slug, parsed);
-  await logAct(env, 'lưu bộ ' + slug + ' (' + parsed.chapters.length + ' chương)', req);
-  if (parsed.chapters.length > oldLen) {
-    const last = parsed.chapters[parsed.chapters.length - 1] || {};
-    await enqueuePush(env, slug, parsed.chapters.length, last.t || '');
+  await logAct(env, 'lưu bộ ' + slug + ' (' + pubLen + ' chương đăng / ' +
+    parsed.chapters.length + ' tổng)', req);
+  /* chỉ báo push khi có thêm chương ĐÃ ĐĂNG */
+  if (pubLen > oldLen) {
+    const pub = publicChapters(parsed.chapters);
+    const last = pub[pub.length - 1] || {};
+    await enqueuePush(env, slug, pubLen, last.t || '');
   }
-  return json({ ok: true, key: 'book:' + slug, bytes, saved, chapters: parsed.chapters.length, dropped, registry: sync }, { cors });
+  /* Có chương hẹn giờ ⇒ ghi vào hàng đợi để cron đăng đúng giờ (xem scheduled). */
+  await updateScheduleQueue(env, slug, parsed.chapters);
+  return json({
+    ok: true, key: 'book:' + slug, bytes, saved,
+    chapters: pubLen,                       /* số chương ĐÃ ĐĂNG (như trước) */
+    chaptersAll: parsed.chapters.length,    /* tổng kể cả nháp/hẹn giờ */
+    dropped, registry: sync,
+  }, { cors });
 }
 /* POST /api/recount — quét mọi bộ trên KV, đếm lại chương, sửa registry một lượt.
    Đây là nút "chữa cháy" cho những bộ đang hiện sai số chương ngoài web. */
