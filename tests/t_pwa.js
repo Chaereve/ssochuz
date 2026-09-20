@@ -27,6 +27,37 @@ const pngSize = f => {
   PAGES.forEach(f => {
     ok(read(f).includes('<link rel="manifest" href="/manifest.webmanifest">'), f + ' thieu link manifest');
   });
+
+  /* ---------- 62 TRANG truyen/<slug>/index.html PHẢI ĐỒNG BỘ VỚI truyen.html ----------
+     tools/build_og.mjs lấy truyen.html làm khuôn rồi sinh ra 62 trang tĩnh (đang
+     được commit) để crawler và người đọc vào thẳng /truyen/<slug>/ nhận ngay thẻ
+     OG + JSON-LD. Vì là BẢN SAO nên mỗi lần sửa truyen.html hoặc bump ?v= mà quên
+     chạy `npm run og` thì 62 trang đó âm thầm cũ: thiếu nút mới và bắt trình duyệt
+     dùng bản JS/CSS đã cache từ đời trước. Đã xảy ra thật với ô #tocFull (Cụm 7).
+     Chốt ở đây: mọi id của khuôn phải có trong từng trang, và ?v= phải giống hệt. */
+  {
+    const shellSrc = read('truyen.html');
+    const idsShell = new Set((shellSrc.match(/id="[A-Za-z0-9_-]+"/g) || []));
+    const vShell = JSON.stringify([...new Set(shellSrc.match(/\?v=[0-9a-z]+/g) || [])].sort());
+    const dirs = fs.existsSync(path.join(ROOT, 'truyen')) ? fs.readdirSync(path.join(ROOT, 'truyen')) : [];
+    const pre = dirs.map(d => path.join('truyen', d, 'index.html'))
+      .filter(f => fs.existsSync(path.join(ROOT, f)));
+    ok(pre.length >= 50, 'phải có ít nhất 50 trang truyen/<slug>/index.html, thấy ' + pre.length);
+    let lechId = [], lechV = [];
+    pre.forEach(f => {
+      const s = read(f);
+      const ids = new Set(s.match(/id="[A-Za-z0-9_-]+"/g) || []);
+      const thieu = [...idsShell].filter(x => !ids.has(x));
+      if (thieu.length) lechId.push(f + ' thiếu ' + thieu.join(','));
+      const v = JSON.stringify([...new Set(s.match(/\?v=[0-9a-z]+/g) || [])].sort());
+      if (v !== vShell) lechV.push(f + ' = ' + v);
+    });
+    ok(lechId.length === 0,
+      lechId.length + '/62 trang prerender lệch cấu trúc với truyen.html — chạy `npm run og`: ' + lechId.slice(0, 3).join(' | '));
+    ok(lechV.length === 0,
+      lechV.length + '/62 trang prerender lệch ?v= với truyen.html — chạy `npm run og`: ' + lechV.slice(0, 3).join(' | '));
+  }
+
   let mf = null;
   try { mf = JSON.parse(read('manifest.webmanifest')); } catch (e) { ok(false, 'manifest.webmanifest hong JSON: ' + e.message); }
   if (mf) {
