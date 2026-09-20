@@ -103,7 +103,7 @@ Ngoài ra có **tab "Bác sĩ dữ liệu"** (`#pane-doctor`) soi cùng lúc 3 n
 | **2.2 Real-time notifications panel / "ai đang đọc"** | Không có WebSocket miễn phí ở đây. Polling thì mỗi lần poll là 1 đọc KV — 1.000 người × 30 s = hết hạn mức đọc trong chưa tới 1 giờ. **Không nên làm** |
 | **2.11 Unique visitors / Bounce rate / Session duration** | §17 cấm khẳng định các số này. Muốn có thật thì phải gắn analytics ngoài — mà §25 cấm analytics trả phí. **Đánh dấu "chưa khả dụng"**, không giả lập |
 | **6.1 Reader demographics / Drop-off points** | Cần thu thập và **lưu** dữ liệu từng phiên → ghi KV. Không kham nổi ở free. Device/browser thì suy ra được từ `User-Agent` mà không lưu, nhưng **không được** gọi đó là thống kê nhân khẩu |
-| **12.1 Password hashing / 2FA** | Repo **không tự quản lý mật khẩu** — auth đi qua Supabase và Google (`authSupabase`, `authGoogle`, 40 lần nhắc supabase trong `cz-auth.js`). 2FA vì thế thuộc về Supabase, không phải việc của Worker. Muốn tự làm 2FA thì phải tự quản mật khẩu → tự gánh bcrypt/argon2 + reset + verify email. **Không khuyến nghị** |
+| **12.1 Password hashing** | Repo **không tự quản lý mật khẩu** — auth đi qua Supabase và Google (`authSupabase`, `authGoogle`). Muốn tự quản thì phải gánh bcrypt/argon2 + reset + verify email, mà email thì bị chặn (mục C). **Phần mật khẩu: không khuyến nghị.** Riêng **2FA thì chuyển xuống B+** — làm được |
 | **9.1 Multi-language UI** | Làm được (tự viết dictionary, không cần next-i18next). Nhưng repo đang hardcode `lang="vi"` và toàn bộ chuỗi tiếng Việt nằm rải trong JS — tách ra là **đụng vào hầu hết file**. Chỉ nên làm khi thật sự cần bản tiếng Anh |
 
 ---
@@ -118,7 +118,7 @@ Ngoài ra có **tab "Bác sĩ dữ liệu"** (`#pane-doctor`) soi cùng lúc 3 n
 | **13.1/13.2 Transactional emails (welcome, reset password, digest)** | Cloudflare **không gửi email được** từ Worker ở gói free (Email Workers cần trả phí); §25 cấm Resend. **Không có đường nào $0.** Phải đánh dấu `NOT IMPLEMENTED — requires paid service` |
 | **13.3 In-app messaging (nhắn tin riêng)** | Cần lưu hội thoại + realtime. Ghi KV quá đắt |
 | **10.1–10.4 AI features (auto description, grammar, plagiarism, dịch, kiểm duyệt ảnh)** | §25 cấm OpenAI/Claude/Gemini. Không có model chạy free trong Worker (giới hạn CPU/bộ nhớ) |
-| **5.1 Full-text search trong nội dung 1.198 chương** | §25 cấm Algolia/Elasticsearch. KV không có full-text index. Tự build index trong Worker thì vượt trần CPU free. **Chỉ tìm được tiêu đề/tác giả/tag** (đang làm được) |
+| **5.1 Full-text search TOÀN TRANG, tức thời, cả 1.199 chương cùng lúc** | Đo thật: full-text toàn kho là **18,7 triệu ký tự = 7,7 MB sau gzip** — quá nặng để tải một phát. Algolia/Elasticsearch bị §25 cấm, KV không có index, tự index trong Worker thì vượt trần CPU free. **Nhưng xem B+** — tìm trong *một bộ truyện* và tìm *toàn bộ tiêu đề chương* thì hoàn toàn free |
 | **6.2 Real-time dashboard, DAU/WAU/MAU, retention, churn, MRR/ARR/LTV** | Cần kho dữ liệu sự kiện + realtime. §17 cấm khẳng định nếu không đo được thật |
 | **11.2 Native app (React Native/Flutter)** | Ngoài phạm vi hoàn toàn; cần tài khoản Apple ($99/năm) và Google ($25) |
 | **12.3 Point-in-time recovery, off-site backup** | KV free **không có** snapshot/rollback. Tự làm được bản "tải toàn bộ JSON về máy" (đã có `/api/admin/kv` + export) — đó là backup thủ công, **không phải** point-in-time |
@@ -148,6 +148,70 @@ Ngoài ra có **tab "Bác sĩ dữ liệu"** (`#pane-doctor`) soi cùng lúc 3 n
 10. Version history (chốt: có phá quy tắc §11 không)
 11. Charts tự vẽ bằng SVG cho tab stats
 12. Ctrl+K (chốt: có bỏ yêu cầu "không phím tắt" không)
+
+---
+
+## B+. SOÁT LẠI LẦN 2 — những mục tôi đã đánh giá thấp
+
+Phần này viết thêm sau khi bị chất vấn "sao ít vậy". Đo lại thì **tôi đã sai ở nhiều chỗ**. Tất cả số liệu dưới đây đo bằng lệnh trên repo ngày 20/09/2026.
+
+### B+1. Hoá ra ĐÃ CÓ SẴN mà tôi bỏ sót
+
+| Mục yêu cầu | Bằng chứng |
+|---|---|
+| **14.4 RSS feeds** | **Đã có đầy đủ.** `worker/cms.js:1072` sinh XML `<rss version="2.0">`, serve ở `/feed.xml`, và `src/cz-app.js:2068` đã có link "RSS chương mới (dùng cho Feedly, Inoreader…)" |
+| **4.2 Reading stats + streak + biểu đồ** | **Đã có.** `ssochuz-mystats` — theo `tests/t_mystats.js`: "tổng chương · chuỗi ngày đọc · hôm nay + **biểu đồ 7 cột**", và **không phát sinh request/ghi KV nào** |
+| **4.6 Follow truyện** | **Đã có.** `ssochuz-follow: { <slug>: <số chương lúc theo dõi> }` (`src/cz-app.js:481`) |
+| **2.12 Storage settings** | **Đã có một phần.** `kvAudit` (`worker/cms.js`) gộp khoá theo prefix, đếm `keys` + `bytes` + `unknownBytes` từng nhóm |
+| **2.6/2.7 Schedule publish (backend)** | **Route đã có sẵn:** `/api/schedule` (`worker/cms.js:205`). Chỉ thiếu UI datetime picker |
+| **2.13 In-app notifications** | Đã có nền: `notifItems`, `notifyStats`, `pushq` |
+
+Nghĩa là mục **4.2, 4.6 và 14.4 trong danh sách yêu cầu về cơ bản đã xong** — tôi đã không kiểm tới.
+
+### B+2. Tôi nói "khó/không làm được" nhưng thật ra $0
+
+| Mục | Vì sao làm được — đã kiểm |
+|---|---|
+| **1.9 Export .docx** | Tôi từng gạch đi. **Sai.** `.docx` chỉ là file ZIP chứa XML, và `CompressionStream('deflate-raw')` là **API có sẵn của trình duyệt** — kiểm tra thực tế: `typeof CompressionStream === 'function'`, tạo được stream `deflate-raw`. Vậy **tự đóng gói ZIP không cần thư viện nào** (không JSZip). §25 thoả mãn |
+| **12.1 2FA (TOTP)** | Tôi từng nói "không khuyến nghị". **Sai một nửa.** TOTP chỉ là HMAC-SHA1 + base32 + cửa sổ thời gian. Đã chạy thử: `crypto.subtle.importKey('HMAC', hash:'SHA-1')` → `sign()` **hoạt động**. Tự viết ~40 dòng, không thư viện, không cần quản mật khẩu — gắn thẳng vào **khoá quản trị** đang có là được |
+| **5.1 Tìm trong nội dung MỘT bộ truyện** | Đo thật: full-text mỗi bộ **trung bình 296 KB, bộ lớn nhất 1.291 KB**. Tải một bộ rồi tìm trong đó là hoàn toàn free. Đây là tính năng người đọc cần nhất ("tìm nhân vật trong truyện này") |
+| **5.1 Tìm toàn bộ tiêu đề 1.199 chương** | Index tiêu đề **chỉ 21 KB sau gzip**. Sinh lúc build (`tools/build_site.mjs`), tải một phát, tìm tức thời. Rẻ gần như bằng không |
+| **1.5 Crop ảnh bìa** | `canvas` + `toDataURL` **đang được dùng ở 4 file** (`admin.js`, `cz-app.js`, `cz-auth.js`, `cz-space.js`). Crop chỉ là vẽ lại vùng chọn — cùng kỹ thuật đang có |
+| **3.4 Share quote thành ảnh** | Cùng canvas đó. Vẽ chữ lên nền, `toDataURL` → `CZ.download()` hoặc `navigator.share()`. Không cần dịch vụ nào |
+| **1.5 Paste ảnh từ clipboard (Ctrl+V)** | Đo: `grep -c "addEventListener('paste'\|'drop'\|dragover" src/admin.js` = **0** — chưa làm. Nhưng đường ống đã sẵn: sự kiện `paste` → `clipboardData.files` → **`/api/img` đang chạy**. Chỉ thiếu listener |
+| **1.5 Drag & drop ảnh** | Như trên, cùng endpoint. 0 handler hiện tại |
+| **1.9 Paste từ Word / Google Docs** | Sự kiện `paste` lấy `text/html`, đưa qua **`CZ.sanitize()` vừa viết** là sạch. Bộ lọc đã có sẵn, không phải làm mới |
+| **1.10 Version history / Restore / Compare** | Tôi từng nói "tốn KV". **Chỉ đúng nếu lưu lên server.** Lưu ở **IndexedDB** thì free — và đo được: repo **chưa dùng IndexedDB ở đâu cả**, trong khi localStorage chỉ ~5 MB. IndexedDB chứa được hàng trăm MB, đủ giữ lịch sử chương thật sự. Vẫn là per-machine, nhưng là versioning **thật**, không phải giả |
+| **4.6 Badges / Achievements / Reading challenges** | Nền đã có sẵn (`ssochuz-mystats` đếm chương + streak, `ssochuz-shelf`, `ssochuz-mark-`, `ssochuz-like-`). Badge chỉ là đọc các bộ đếm đó rồi so ngưỡng — **0 ghi KV** |
+| **2.2/2.11 Charts (line/bar/pie/area)** | Không cần Chart.js. Biểu đồ 7 cột **đã tự vẽ bằng code nhà** — cùng mẫu đó mở rộng ra line/pie/area bằng `<svg>` |
+| **3.4/6.1 Scroll depth, completion rate, chapters per session** | Tính **trong trình duyệt**, lưu localStorage, 0 ghi KV. Đây chính là lý do §17 cấm: không được gọi nó là "bounce rate"/"session duration" toàn trang, nhưng **mức độ đọc hết chương của chính người đó** thì đo được thật |
+| **12.3 Download backup** | `/api/admin/kv` **đã có** phần kiểm kê. Mở rộng để trả luôn giá trị → tải JSON về máy. Restore thì cần route mới (có ghi KV, nhưng restore là việc hiếm) |
+| **1.2 Color picker / Font size slider** | `<input type="color">` và `<input type="range">` là **native**, không thư viện |
+| **2.6 Datetime picker (schedule)** | `<input type="datetime-local">` native + route `/api/schedule` đã có |
+| **5.2 Random story / "Because you read X"** | Không cần AI. Registry **đã tải sẵn ở client** — trùng tag/thể loại là suy ra được, thuần JS |
+| **10.1 Auto-generate tags / auto-categorization** | **Không cần LLM.** Đếm tần suất từ khoá (TF-IDF) trên chính chương đó rồi so với bảng tag sẵn có. Làm được, miễn phí, và **trung thực** (không giả vờ "hiểu" văn) |
+| **10.3 Spam keyword filter** | Danh sách từ khoá + ngưỡng — không cần AI |
+| **1.9 Print preview / Print stylesheet** | `@media print` + `window.print()`. §25 cho phép rõ |
+| **2.5 Drag & drop reorder** | HTML5 Drag and Drop API, native |
+| **2.5 Bulk actions + Export CSV** | `CZ.download` + `text/csv` **đã có sẵn hàm** (`src/admin.js:3512`) |
+| **1.5 AVIF** | `canvas.toBlob('image/avif')` — thử, không được thì lùi về WebP đang dùng |
+| **3.4 Bookmark đoạn văn cụ thể** | localStorage, cùng họ với `ssochuz-mark-` đang có |
+| **15.1 Sitemap auto-generate** | `sitemap.xml` hiện là **file tĩnh nằm trong repo** (213 KB). Chuyển vào `tools/build_site.mjs` để tự sinh là việc nhỏ |
+| **14.4 Webhooks** | Worker `fetch()` ra ngoài được — không cần hàng đợi trả phí |
+| **1.9 Distraction-free mode** | Đã có `edFull()` làm nền, chỉ cần ẩn thêm thanh công cụ |
+| **9.1 i18n** | Tôi từng nói "đụng hầu hết file". **Nói quá.** Làm dần được: bọc chuỗi theo từng màn hình, không cần next-i18next |
+
+### B+3. Vẫn KHÔNG làm được với $0 (giữ nguyên kết luận)
+
+Email dưới mọi hình thức · AI qua API · full-text tức thời toàn trang · Stripe/PayPal/premium · app native · "ai đang online" real-time · unique visitors/bounce/retention/churn thật · point-in-time recovery cho KV · Sentry/Datadog.
+
+### B+4. Đếm lại
+
+| Nhóm | Lần 1 tôi nói | Sau khi soát lại |
+|---|---|---|
+| Đã có sẵn | ~25 mục | **~31 mục** (thêm RSS, reading stats + streak + chart, follow, kvAudit, schedule route, notif) |
+| Làm được $0 | ~35 mục | **~60 mục** |
+| Không làm được | ~13 nhóm | **9 nhóm** (2FA, .docx, in-story full-text, version history, crop, share-as-image, paste/drag-drop, badges, charts đã được cứu) |
 
 ---
 
