@@ -33,6 +33,10 @@
 /data/*.json
   Cache-Control: public, max-age=300
 
+# Bảng tên chương cho ô tìm nhanh — sinh lại mỗi lần build, đổi khi thêm chương
+/chuong-index.json
+  Cache-Control: public, max-age=300, must-revalidate
+
 /data/book/*
   Cache-Control: public, max-age=60
 

@@ -79,6 +79,12 @@ function dataFetch({ api = null, apiBase = 'https://cms.test', stats = null, log
         return ret({ ok: false, error: 'chưa cấu hình api trong test' }, false, 404);
       }
       if (url.startsWith('/data/registry.json')) return ret(JSON.parse(read('data/registry.json')));
+      /* bảng tên chương cho ô tìm nhanh — do tools/build_site.mjs sinh ra thư mục gốc */
+      if (url.split('?')[0].endsWith('/chuong-index.json')) {
+        const p = path.join(ROOT, 'chuong-index.json');
+        if (fs.existsSync(p)) return ret(JSON.parse(fs.readFileSync(p, 'utf8')));
+        return ret({ ok: false }, false, 404);
+      }
       const m2 = url.match(/\/data\/book\/([\w.\-]+)\.json/);
       if (m2) {
         const p = path.join(ROOT, 'data/book', decodeURIComponent(m2[1]) + '.json');

@@ -3694,6 +3694,13 @@ body.ed-focus .rte { min-height: 62vh; }
 .sk-row:nth-child(odd) { background: var(--surf2); }
 .sk-row kbd { flex: 0 0 116px; text-align: center; }
 .sk-note { color: var(--mut); font-size: 12px; padding-top: 12px; }
+/* ---- Ô TÌM NHANH: nhãn nhóm “Truyện” / “Chương” và dòng kết quả chương ------ */
+.jump .res .jhead { padding: 9px 18px 4px; font-size: 10.5px; font-weight: 700;
+  letter-spacing: .09em; text-transform: uppercase; color: var(--mut); }
+.jump .res a.jchap { grid-template-columns: 1fr; padding-left: 18px; }
+.jump .res a.jchap b { font-weight: 600; }
+.jump .res mark, .jump .res a b mark { background: color-mix(in srgb, var(--acc) 26%, transparent);
+  color: inherit; border-radius: 2px; padding: 0 1px; }
 /* ============================================================================
    CUỐI TỆP · LUẬT NỀN TẢNG — [hidden] phải THẮNG mọi `display:` của class.
    ----------------------------------------------------------------------------

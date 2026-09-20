@@ -2256,8 +2256,80 @@
     d.body.classList.add('noscroll');
     var inp = box.querySelector('#czJumpInput');
     inp.value = ''; paint('');
+    loadChapIdx();                       /* nạp bảng tên chương, chỉ lần đầu */
     setTimeout(function () { inp.focus(); }, 40);
     if (!memo.reg) registry().then(function () { paint(inp.value); });
+  }
+  /* ---- TRA TIÊU ĐỀ 1.199 CHƯƠNG CHO Ô TÌM NHANH ---------------------------
+     Bảng tên chương do tools/build_site.mjs sinh ra (~68 kB, ~22 kB khi nén).
+     Nạp LƯỜI: chỉ gọi khi người đọc thật sự mở ô tìm, và chỉ một lần mỗi phiên.
+     Không có bảng thì ô tìm vẫn chạy bình thường, chỉ kém phần chương — không
+     báo lỗi, không hiện nút giả. */
+  var chapIdx = null, chapIdxState = 0;      /* 0 chưa gọi · 1 đang tải · 2 xong/thua */
+  function loadChapIdx() {
+    if (chapIdxState) return;
+    chapIdxState = 1;
+    fetch('/chuong-index.json').then(function (r) {
+      return r.ok ? r.json() : null;
+    }).then(function (j) {
+      chapIdx = (j && typeof j === 'object' && !Array.isArray(j)) ? j : null;
+      chapIdxState = 2;
+      var box = d.getElementById('czJumpBox');
+      var inp = box && box.querySelector('#czJumpInput');
+      if (box && inp && !box.classList.contains('off')) paint(inp.value);
+    }).catch(function () { chapIdx = null; chapIdxState = 2; });
+  }
+  /* Gấp dấu để tìm không cần gõ đúng dấu (“hat mam” vẫn ra “Hạt Mầm”). Gấp TỪNG
+     KÝ TỰ nên độ dài không đổi và chỉ số khớp dùng lại được trên chuỗi gốc — đó
+     là điều kiện để emph() cắt đúng chữ. Chữ nào gấp ra khác 1 ký tự thì bỏ gấp
+     cho riêng chuỗi đó chứ không đoán mò. */
+  function foldChar(c) {
+    var f = c.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (f === 'đ') f = 'd';
+    return f;
+  }
+  function foldStr(x) {
+    var t = String(x == null ? '' : x), out = '';
+    for (var i = 0; i < t.length; i++) {
+      var f = foldChar(t.charAt(i));
+      if (f.length !== 1) return t.toLowerCase();
+      out += f;
+    }
+    return out;
+  }
+  /* tô đậm chữ khớp: thoát HTML trước rồi mới bọc <mark>, nên chữ “<script>” trong
+     tên chương không bao giờ thành thẻ thật */
+  function emph(txt, ql) {
+    var t = String(txt == null ? '' : txt);
+    if (!ql) return esc(t);
+    var low = foldStr(t), k = low.indexOf(foldStr(ql)), out = '', i = 0;
+    while (k >= 0) {
+      out += esc(t.slice(i, k)) + '<mark>' + esc(t.slice(k, k + ql.length)) + '</mark>';
+      i = k + ql.length;
+      k = low.indexOf(ql, i);
+    }
+    return out + esc(t.slice(i));
+  }
+  /* chương khớp, xếp theo độ dài phần khớp ở đầu tên rồi tới số chương nhỏ trước */
+  function chapHits(ql, cap) {
+    if (!chapIdx || !ql) return [];
+    var out = [], qf = foldStr(ql);
+    Object.keys(chapIdx).forEach(function (slug) {
+      var n = findLib(slug);
+      if (!n) return;
+      var arr = chapIdx[slug] || [];
+      for (var i = 0; i < arr.length; i++) {
+        var t = String(arr[i] || ''), low = foldStr(t), k = low.indexOf(qf);
+        if (k < 0) continue;
+        out.push({ slug: slug, ten: t, ch: i + 1, bo: n.title, dau: k === 0 ? 1 : 0 });
+        if (out.length > 4000) return;
+      }
+    });
+    out.sort(function (a, b) {
+      return b.dau - a.dau || a.ten.length - b.ten.length ||
+        (a.bo < b.bo ? -1 : a.bo > b.bo ? 1 : 0) || a.ch - b.ch;
+    });
+    return out.slice(0, cap);
   }
   function paint(q) {
     var box = d.getElementById('czJumpBox'); if (!box) return;
@@ -2274,17 +2346,31 @@
       if (String(n.year || '').indexOf(ql) >= 0) s += 1;
       return s;
     }
-    jumpList = lib.map(function (n) { return { n: n, s: score(n) }; })
+    var books = lib.map(function (n) { return { n: n, s: score(n) }; })
       .filter(function (x) { return x.s > 0; })
       .sort(function (a, b) { return b.s - a.s || (b.n.chapters - a.n.chapters); })
-      .slice(0, 24).map(function (x) { return x.n; });
+      .slice(0, ql ? 12 : 24).map(function (x) { return x.n; });
+    var chaps = chapHits(ql, 12);
+    /* jumpList phải đúng bằng số thẻ <a> vẽ ra, vì phím ↑↓/Enter đếm theo thẻ */
+    jumpList = books.concat(chaps);
     jumpCur = 0;
-    res.innerHTML = jumpList.length ? jumpList.map(function (n, i) {
-      return '<a href="' + esc(storyURL(n.slug)) + '" class="' + (i === 0 ? 'on' : '') + '">' +
-        (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '<img alt="">') +
-        '<span><b>' + esc(n.title) + '</b><span>' + esc(n.author || '') +
-        (n.couple ? ' · ' + esc(n.couple) : '') + ' · ' + esc(countText(n)) + '</span></span></a>';
-    }).join('') : '<div class="empty" style="border:0;background:none">Không tìm thấy truyện nào khớp “' + esc(q) + '”.</div>';
+    var html = '';
+    if (books.length) {
+      html += '<div class="jhead">Truyện</div>' + books.map(function (n, i) {
+        return '<a href="' + esc(storyURL(n.slug)) + '" class="' + (i === 0 ? 'on' : '') + '">' +
+          (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '<img alt="">') +
+          '<span><b>' + emph(n.title, ql) + '</b><span>' + emph(n.author || '', ql) +
+          (n.couple ? ' · ' + esc(n.couple) : '') + ' · ' + esc(countText(n)) + '</span></span></a>';
+      }).join('');
+    }
+    if (chaps.length) {
+      html += '<div class="jhead">Chương' + (chapIdxState < 2 ? ' (đang nạp thêm…)' : '') + '</div>' +
+        chaps.map(function (c) {
+          return '<a class="jchap" href="' + esc(readURL(c.slug, c.ch)) + '">' +
+            '<span><b>' + emph(c.ten, ql) + '</b><span>' + esc(c.bo) + ' · chương ' + c.ch + '</span></span></a>';
+        }).join('');
+    }
+    res.innerHTML = html || '<div class="empty" style="border:0;background:none">Không tìm thấy truyện hay chương nào khớp “' + esc(q) + '”.</div>';
   }
   function paintLast() {
     var box = d.getElementById('czJumpBox'); if (!box) return;

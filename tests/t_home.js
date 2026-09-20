@@ -74,6 +74,59 @@ const LIB = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data/registry
   doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await wait(120);
   out.jumpClosedByEsc = !jb.classList.contains('on');
 
+  /* ---------- TÌM TIÊU ĐỀ 1.199 CHƯƠNG + TÔ ĐẬM CHỮ KHỚP -------------------
+     Bảng tên chương nạp LƯỜI khi mở ô tìm, nên phải chờ một nhịp rồi mới đo.
+     Gõ KHÔNG DẤU vẫn phải ra — đó là lý do có foldStr() trong cz-app.js. */
+  const f4 = [];
+  const ck4 = (ten, nhan, can) => { if (String(nhan) !== String(can)) f4.push(ten + ' (nhận: ' + JSON.stringify(nhan) + ', cần: ' + JSON.stringify(can) + ')'); };
+  let soLanTaiIdx = 0;
+  const fetchGoc = win.fetch;
+  win.fetch = function (u, o) { if (String(u).indexOf('chuong-index.json') >= 0) soLanTaiIdx++; return fetchGoc.apply(this, arguments); };
+  click('#czJump'); await wait(200);
+  ji.value = 'hat mam'; ji.dispatchEvent(new win.Event('input', { bubbles: true }));
+  await wait(700);                                     /* chờ nạp bảng tên chương */
+  const jchap = () => [...doc.querySelectorAll('#czJumpRes a.jchap')];
+  out.jumpChuong = {
+    soDongChuong: jchap().length,
+    hrefDau: jchap()[0] ? jchap()[0].getAttribute('href') : '',
+    tenDau: jchap()[0] ? jchap()[0].textContent.trim().replace(/\s+/g, ' ') : '',
+    coMark: !!doc.querySelector('#czJumpRes mark'),
+    chuTrongMark: [...doc.querySelectorAll('#czJumpRes a.jchap mark')].map(m => m.textContent).slice(0, 4),
+    nhanNhom: [...doc.querySelectorAll('#czJumpRes .jhead')].map(h => h.textContent.trim())
+  };
+  /* gõ chữ có ký tự HTML: phải thành CHỮ, không thành thẻ */
+  ji.value = '<script>'; ji.dispatchEvent(new win.Event('input', { bubbles: true }));
+  await wait(400);
+  out.jumpChuong.thoatHtml = {
+    conTheScript: !!doc.querySelector('#czJumpRes script'),
+    chuConNguyen: /<script>/.test(doc.querySelector('#czJumpRes').textContent)
+  };
+  /* đóng rồi mở lại: bảng đã nhớ thì KHÔNG được gọi mạng lần hai */
+  doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await wait(200);
+  click('#czJump'); await wait(200);
+  ji.value = 'hat mam'; ji.dispatchEvent(new win.Event('input', { bubbles: true })); await wait(400);
+  out.jumpChuong.taiIndexMotLan = soLanTaiIdx;
+  out.jumpChuong.lanHaiVanCo = jchap().length > 0;
+  win.fetch = fetchGoc;
+  doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await wait(150);
+
+  ck4('tìm chương/gõ không dấu vẫn ra chương', out.jumpChuong.soDongChuong > 0, true);
+  ck4('tìm chương/link tới đúng chương 3 của third-person', out.jumpChuong.hrefDau, '/truyen/third-person/chuong-3/');
+  ck4('tìm chương/có tô đậm chữ khớp', out.jumpChuong.coMark, true);
+  ck4('tìm chương/chữ trong <mark> là “Hạt Mầm”', out.jumpChuong.chuTrongMark.join(''), 'Hạt Mầm');
+  /* “hat mam” không khớp TÊN SÁCH nào nên nhóm “Truyện” không hiện — đúng,
+     đừng vẽ nhãn cho nhóm rỗng. Nhóm “Chương” phải có. */
+  ck4('tìm chương/có nhãn nhóm Chương', out.jumpChuong.nhanNhom.indexOf('Chương') >= 0, true);
+  ck4('tìm chương/không vẽ nhãn cho nhóm rỗng', out.jumpChuong.nhanNhom.indexOf('Truyện'), -1);
+  ck4('tìm chương/chữ “<script>” không thành thẻ', out.jumpChuong.thoatHtml.conTheScript, false);
+  ck4('tìm chương/chữ “<script>” hiện nguyên xi', out.jumpChuong.thoatHtml.chuConNguyen, true);
+  /* bộ đếm cài SAU lần mở ô tìm đầu tiên ở trên, nên bảng đã nạp trước đó rồi.
+     Điều cần giữ: mở lại và gõ tiếp KHÔNG gọi mạng thêm lần nào. */
+  ck4('tìm chương/mở lại không tải lại bảng', out.jumpChuong.taiIndexMotLan, 0);
+  ck4('tìm chương/mở lại vẫn tìm được', out.jumpChuong.lanHaiVanCo, true);
+  out.errors4 = f4;
+  if (f4.length) console.log('TÌM CHƯƠNG: ' + f4.join(' | '));
+
   /* ---------- Khám phá: 4 tab, mở đúng nội dung ---------- */
   out.exp = { tabs: $$('#expTabs button').map(b => b.textContent.trim()), visible: $$('#kham-pha > .expane:not(.hide)').map(d => d.id) };
   click($$('#expTabs button')[1]); await wait(120);

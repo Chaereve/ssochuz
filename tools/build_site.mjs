@@ -76,6 +76,22 @@ const outTotal = rows.reduce((a, r) => a + r[2], 0);
 rows.forEach(([f, a, b]) => console.log('  ' + f.padEnd(14) + kb(a).padStart(9) + '  →  ' + kb(b).padStart(9) +
   '  (' + Math.round(100 - (b / a) * 100) + '% nhỏ hơn)'));
 console.log('Tổng: ' + kb(srcTotal) + '  →  ' + kb(outTotal) + ' · đã ghi ra thư mục gốc.');
+/* Ô tìm nhanh (Ctrl+K) cần tra tiêu đề của 1.199 chương, mà tiêu đề nằm rải trong
+   62 file data/book/*.json (~7,7 MB) — không thể bắt trình duyệt tải hết chỉ để
+   tìm. Nên sinh sẵn một bảng CHỈ TÊN CHƯƠNG (~68 kB, ~22 kB khi nén) để nạp lười
+   đúng một lần rồi giữ trong bộ nhớ. */
+const idx = {};
+let soChuong = 0;
+for (const f of readdirSync(path.join(ROOT, 'data', 'book')).filter((x) => x.endsWith('.json')).sort()) {
+  const b = JSON.parse(readFileSync(path.join(ROOT, 'data', 'book', f), 'utf8'));
+  if (!b.slug) continue;
+  idx[b.slug] = (b.chapters || []).map((c) => String(c.t || ''));
+  soChuong += idx[b.slug].length;
+}
+const idxTo = path.join(ROOT, 'chuong-index.json');
+writeFileSync(idxTo, JSON.stringify(idx));
+console.log('  Đã ghi chuong-index.json (' + Object.keys(idx).length + ' bộ · ' + soChuong +
+  ' tiêu đề chương · ' + kb(statSync(idxTo).size) + ')');
 /* sitemap.xml + robots.txt phải theo kịp dữ liệu. Script Python đã có sẵn từ lâu
    nhưng chưa được nối vào đây, nên thêm bộ/chương mới mà quên chạy tay là sitemap
    âm thầm cũ. Thiếu python3 thì báo rõ chứ không làm hỏng cả lần build. */

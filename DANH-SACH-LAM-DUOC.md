@@ -109,9 +109,9 @@
 ## TÌM KIẾM & KHÁM PHÁ
 
 ✅ Tìm trong nội dung **một bộ truyện** (ô `#tocFull` trong mục lục — Cụm 7, tìm trong máy, không gọi mạng)
-⬜ Tìm tiêu đề toàn bộ 1.199 chương
-⬜ Gợi ý khi đang gõ
-⬜ Tô đậm chữ khớp trong kết quả
+✅ Tìm tiêu đề toàn bộ 1.199 chương — ô tìm nhanh (Ctrl+K) tra cả tên chương; `tools/build_site.mjs` sinh sẵn `chuong-index.json` (62 bộ · 1199 tiêu đề · 67,8 kB, ~22 kB nén), nạp lười đúng một lần. Gõ KHÔNG DẤU vẫn ra
+✅ Gợi ý khi đang gõ — CÓ MỘT PHẦN TỪ TRƯỚC: ô tìm nhanh và ô `#q` ở trang chủ đều vẽ kết quả ngay khi gõ, không phải bấm Enter (dòng này đánh dấu sai). Nay phần gợi ý có thêm chương
+✅ Tô đậm chữ khớp trong kết quả — `emph()` bọc `<mark>` quanh đúng chữ khớp, thoát HTML trước rồi mới bọc nên chữ “<script>” không thành thẻ
 ✅ "Vì bạn đã đọc X" — soi theo TÁC GIẢ + CẶP NHÂN VẬT, tính trong máy, không dùng AI
 ⬜ Bộ sưu tập theo dịp (Tết, Halloween…)
 
