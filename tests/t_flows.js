@@ -415,6 +415,76 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     tuChoiPdf: /Chỉ nhận tệp ảnh/.test(txtA('#toasts')),
   };
 
+  /* KHỐI MỚI: chỉ số · ký tự đặc biệt · khung cảnh báo · code · bảng.
+     Khung cảnh báo cố tình dùng <aside> chứ không <div>: cả edHtml() lẫn
+     cleanHTML() đều đổi <div> chỉ-chứa-chữ thành <p> mà KHÔNG xét class, nên
+     <div class="callout"> sẽ mất class khi lưu. Bài này khoá lại quyết định đó. */
+  const tbBtns2 = $$a('#edToolbar button');
+  const has2 = (k, v) => tbBtns2.filter((b) => b.dataset[k] === v).length;
+  out.editorBlocks = {
+    sub: has2('cmd', 'subscript'), sup: has2('cmd', 'superscript'), special: has2('special', ''),
+    callout: ['info', 'warn', 'bad'].every((k) => has2('callout', k) === 1),
+    code: has2('code', ''), table: has2('table', ''),
+    trow: has2('trow', ''), tcol: has2('tcol', ''), thead: has2('thead', ''),
+    tdel: has2('tdel', 'row') === 1 && has2('tdel', 'col') === 1,
+    khongTen: tbBtns2.filter((b) => !b.textContent.trim() && !b.title).length,
+  };
+  execCalls.length = 0;
+  clk('[data-cmd="subscript"]'); clk('[data-cmd="superscript"]');
+  const chiSo = execCalls.map((c) => c[0]);
+  out.editorBlocks.chiSo = chiSo.indexOf('subscript') >= 0 && chiSo.indexOf('superscript') >= 0;
+
+  execCalls.length = 0;
+  clk('[data-callout="warn"]'); await wait(200);
+  const cIns = execCalls.find((c) => c[0] === 'insertHTML');
+  out.editorBlocks.khungLaAside = !!cIns && /<aside class="callout warn">/.test(cIns[1]);
+
+  clk('[data-special]'); await wait(350);
+  const spBox = $a('#czSpecial');
+  out.editorBlocks.kyTu = {
+    mo: !!spBox && spBox.classList.contains('on'),
+    soNut: spBox ? spBox.querySelectorAll('.spch').length : 0,
+    coDau: !!spBox && /©/.test(spBox.textContent) && /—/.test(spBox.textContent),
+  };
+  execCalls.length = 0;
+  if (spBox) clk(spBox.querySelector('.spch'));
+  await wait(250);
+  out.editorBlocks.kyTu.chenDuoc = execCalls.some((c) => c[0] === 'insertText' && c[1].length > 0);
+  if ($a('#czSpecial')) clk('#czSpecial [data-close]');
+  await wait(300);
+
+  /* bảng: thêm/xoá dòng cột bằng DOM thật, không cần execCommand */
+  edB.innerHTML = '<table class="tb"><tbody>' +
+    '<tr><td>a1</td><td>a2</td><td>a3</td></tr>' +
+    '<tr><td>b1</td><td>b2</td><td>b3</td></tr></tbody></table>';
+  edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(200);
+  const pickCell = (r, c) => {
+    const cell = edB.querySelectorAll('table.tb tr')[r].cells[c];
+    const rg2 = D.createRange(); rg2.selectNodeContents(cell);
+    const s2 = W.getSelection(); s2.removeAllRanges(); s2.addRange(rg2);
+    D.dispatchEvent(new W.Event('selectionchange'));
+  };
+  const shape = () => { const t = edB.querySelector('table.tb'); return t ? t.rows.length + 'x' + t.rows[0].cells.length : 'KHONG'; };
+  pickCell(1, 1);
+  out.editorBlocks.bang = { truoc: shape() };
+  clk('[data-trow]'); await wait(200); out.editorBlocks.bang.themDong = shape();
+  clk('[data-tcol]'); await wait(200); out.editorBlocks.bang.themCot = shape();
+  clk('[data-thead]'); await wait(200);
+  out.editorBlocks.bang.dongDau = edB.querySelector('table.tb').rows[0].cells[0].tagName;
+  clk('[data-tdel="col"]'); await wait(200); out.editorBlocks.bang.xoaCot = shape();
+  /* sau khi xoá cột, con trỏ phải được đưa về ô còn sống để xoá dòng ăn tiếp */
+  clk('[data-tdel="row"]'); await wait(200); out.editorBlocks.bang.xoaDong = shape();
+  clk('[data-tdel="row"]'); await wait(200);            /* 2x3 -> 1x3, van xoa duoc */
+  clk('[data-tdel="row"]'); await wait(280);            /* lan nay phai TU CHOI */
+  out.editorBlocks.bang.tuChoiXoaDongCuoi = shape() === '1x3' && /chỉ còn một dòng/.test(txtA('#toasts'));
+
+  /* <aside> phải sống sót qua edHtml() khi đưa vào bộ */
+  edB.innerHTML = '<aside class="callout info"><b>Thông tin:</b> giữ nguyên nhé</aside><p>đoạn thường</p>';
+  edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(250);
+  clk('#chSave'); await wait(400);
+  const savedCh = (BOOK.chapters.filter((c) => /giữ nguyên nhé/.test(c.html || ''))[0] || {}).html || '';
+  out.editorBlocks.asideSongSot = /<aside class="callout info">/.test(savedCh) && !/<p class="callout/.test(savedCh);
+
   edB.innerHTML = keepHtml;                             /* trả lại chương thật cho test sau */
   edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(200);
 
@@ -604,6 +674,26 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   const dd = out.editorDragDrop;
   if (dd && !(dd.sangDenKhiKeo && dd.tatDenSauTha && dd.chanMacDinh && dd.tuChoiPdf)) {
     rtFail.push('kéo thả ảnh sai: ' + JSON.stringify(dd));
+  }
+  const eb = out.editorBlocks;
+  if (eb) {
+    ['sub', 'sup', 'special', 'code', 'table', 'trow', 'tcol', 'thead'].forEach((k) => {
+      if (eb[k] !== 1) rtFail.push('thanh định dạng thiếu nút ' + k);
+    });
+    if (!eb.callout) rtFail.push('thiếu nút khung cảnh báo');
+    if (!eb.tdel) rtFail.push('thiếu nút xoá dòng/cột');
+    if (eb.khongTen) rtFail.push('có nút không tên đọc được: ' + eb.khongTen);
+    if (!eb.chiSo) rtFail.push('nút chỉ số phát sai lệnh');
+    if (!eb.khungLaAside) rtFail.push('khung cảnh báo không dùng <aside> — sẽ mất class khi lưu');
+    if (!(eb.kyTu && eb.kyTu.mo && eb.kyTu.soNut > 50 && eb.kyTu.coDau && eb.kyTu.chenDuoc)) {
+      rtFail.push('bảng ký tự đặc biệt sai: ' + JSON.stringify(eb.kyTu));
+    }
+    const bg = eb.bang;
+    if (!(bg && bg.truoc === '2x3' && bg.themDong === '3x3' && bg.themCot === '3x4' &&
+        bg.dongDau === 'TH' && bg.xoaCot === '3x3' && bg.xoaDong === '2x3' && bg.tuChoiXoaDongCuoi)) {
+      rtFail.push('thao tác bảng sai: ' + JSON.stringify(bg));
+    }
+    if (!eb.asideSongSot) rtFail.push('<aside class="callout"> không sống sót qua edHtml()');
   }
   out.editorFail = rtFail;
   out.tong = {

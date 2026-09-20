@@ -3378,6 +3378,30 @@ body.rd-focus .rdcmts { display: none; }
 /* báo hiệu ô soạn đang nhận ảnh kéo vào */
 .rte.dragging { border-color: var(--acc); background: color-mix(in srgb, var(--acc) 7%, transparent);
   outline: 2px dashed var(--acc); outline-offset: -4px; }
+/* khối do trình soạn chèn: khung cảnh báo · code · bảng. Dùng chung cho cả ô soạn
+   (.rte) và trang đọc (.rtext) để người viết thấy đúng thứ độc giả sẽ thấy. */
+.rte .callout, .rtext .callout { border-left: 4px solid var(--acc); border-radius: var(--r-sm);
+  padding: 10px 14px; margin: 0 0 1em; background: color-mix(in srgb, var(--acc) 8%, transparent); }
+.rte .callout.warn, .rtext .callout.warn { border-left-color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 10%, transparent); }
+.rte .callout.bad, .rtext .callout.bad { border-left-color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 10%, transparent); }
+.rte .callout b, .rtext .callout b { display: inline-block; margin-right: 4px; }
+.rte pre, .rtext pre { background: var(--surf2); border: 1px solid var(--bd); border-radius: var(--r-sm);
+  padding: 12px 14px; margin: 0 0 1em; overflow-x: auto; }
+.rte pre code, .rtext pre code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 14px; line-height: 1.6; white-space: pre; background: none; padding: 0; }
+.rte table.tb, .rtext table.tb { border-collapse: collapse; width: 100%; margin: 0 0 1em; font-size: 15px; }
+.rte table.tb th, .rtext table.tb th, .rte table.tb td, .rtext table.tb td {
+  border: 1px solid var(--bd); padding: 7px 10px; text-align: left; vertical-align: top; }
+.rte table.tb th, .rtext table.tb th { background: var(--surf2); font-weight: 700; }
+/* bảng chọn ký tự đặc biệt */
+.spgrp { margin-bottom: 14px; }
+.sphead { font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+.spgrid { display: flex; flex-wrap: wrap; gap: 4px; }
+.spch { min-width: 34px; height: 34px; padding: 0 6px; border: 1px solid var(--bd); border-radius: var(--r-sm);
+  background: var(--surf); color: var(--txt); font-size: 17px; cursor: pointer; }
+.spch:hover { border-color: var(--acc); color: var(--acc); }
 /* chỉ báo tự lưu nháp dưới ô soạn */
 .savestate { min-height: 18px; margin-top: 6px; color: var(--dim); display: flex; align-items: center;
   gap: 8px; flex-wrap: wrap; }

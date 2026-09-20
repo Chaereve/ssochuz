@@ -901,6 +901,157 @@
       m._close();
     });
   }
+  /* ---------------- CHÈN KHỐI: khung cảnh báo · code · bảng --------------
+     Dùng <aside> cho khung cảnh báo chứ không dùng <div>: cả edHtml() lẫn
+     cleanHTML() đều đổi <div> chỉ-chứa-chữ thành <p> và KHÔNG xét class, nên
+     <div class="callout"> sẽ mất class khi lưu. <aside> không nằm trong luật đó
+     và cũng không bị bộ lọc nào chặn — không phải sửa bộ lọc. */
+  function edInsertBlock(html) {
+    var ed = $('#edBody');
+    if (!ed) return;
+    ed.focus();
+    try { document.execCommand('insertHTML', false, html); }
+    catch (e) { toast('Trình duyệt không chèn được khối này', 'err'); return; }
+    dirty.book = true; markDirty(); chStat(); autoSchedule();
+  }
+  var CALLOUT_TXT = { info: 'Thông tin', warn: 'Lưu ý', bad: 'Cảnh báo' };
+  function edCallout(kind) {
+    var label = CALLOUT_TXT[kind] || CALLOUT_TXT.info;
+    edInsertBlock('<aside class="callout ' + kind + '"><b>' + label + ':</b> viết vào đây</aside><p><br></p>');
+  }
+  function edCodeBlock() {
+    edInsertBlock('<pre><code>dán code vào đây</code></pre><p><br></p>');
+  }
+  function edTable() {
+    var rows = '', i, j, cells;
+    for (i = 0; i < 3; i++) {
+      cells = '';
+      for (j = 0; j < 3; j++) cells += '<td>&nbsp;</td>';
+      rows += '<tr>' + cells + '</tr>';
+    }
+    edInsertBlock('<table class="tb"><tbody>' + rows + '</tbody></table><p><br></p>');
+  }
+  /* bảng và ô đang chứa con trỏ — mọi phép thêm/xoá dòng cột đều dựa vào đây */
+  function edCellAt() {
+    var s = window.getSelection && window.getSelection();
+    var ed = $('#edBody');
+    if (!s || !s.anchorNode || !ed) return null;
+    var el = s.anchorNode.nodeType === 1 ? s.anchorNode : s.anchorNode.parentNode;
+    if (!el || !ed.contains(el) || !el.closest) return null;
+    var cell = el.closest('td,th'), tbl = el.closest('table');
+    if (!cell || !tbl || !ed.contains(tbl)) return null;
+    return { cell: cell, tbl: tbl, row: cell.parentNode };
+  }
+  function edTableFail() { toast('Đặt con trỏ vào trong một ô của bảng trước đã', 'err'); }
+  /* Sau khi thêm/xoá dòng cột, ô đang chứa con trỏ có thể đã bị gỡ khỏi DOM —
+     để nguyên thì phép sửa kế tiếp báo "đặt con trỏ vào ô" dù người viết vẫn đang
+     ở trong bảng. Nên tự đưa con trỏ về một ô còn sống. */
+  function edFocusCell(tbl, r, c) {
+    if (!tbl || !tbl.rows.length) return;
+    var row = tbl.rows[Math.min(r || 0, tbl.rows.length - 1)];
+    var cell = row.cells[Math.min(c || 0, row.cells.length - 1)];
+    if (!cell) return;
+    try {
+      var rg = document.createRange();
+      rg.selectNodeContents(cell); rg.collapse(false);
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(rg);
+      edKeepRange();
+    } catch (e) {}
+  }
+  function edTableChanged() { dirty.book = true; markDirty(); chStat(); autoSchedule(); }
+  function edAddRow() {
+    var at = edCellAt();
+    if (!at) return edTableFail();
+    var cols = at.row.children.length;
+    var tr = document.createElement('tr');
+    for (var i = 0; i < cols; i++) {
+      var td = document.createElement('td');
+      td.innerHTML = '&nbsp;';
+      tr.appendChild(td);
+    }
+    at.row.parentNode.insertBefore(tr, at.row.nextSibling);
+    edTableChanged();
+    edFocusCell(at.tbl, at.row.rowIndex + 1, 0);
+  }
+  function edAddCol() {
+    var at = edCellAt();
+    if (!at) return edTableFail();
+    var idx = Array.prototype.indexOf.call(at.row.children, at.cell);
+    Array.prototype.slice.call(at.tbl.rows).forEach(function (r) {
+      var td = document.createElement(r.cells[0] && r.cells[0].tagName === 'TH' ? 'th' : 'td');
+      td.innerHTML = '&nbsp;';
+      if (r.cells[idx]) r.insertBefore(td, r.cells[idx].nextSibling);
+      else r.appendChild(td);
+    });
+    edTableChanged();
+    edFocusCell(at.tbl, at.row.rowIndex, idx + 1);
+  }
+  function edDelRow() {
+    var at = edCellAt();
+    if (!at) return edTableFail();
+    if (at.tbl.rows.length < 2) { toast('Bảng chỉ còn một dòng — muốn xoá cả bảng thì chọn bảng rồi bấm Backspace', 'err'); return; }
+    var gone = at.row.rowIndex, tbl = at.tbl;
+    at.row.parentNode.removeChild(at.row);
+    edTableChanged();
+    edFocusCell(tbl, Math.max(0, gone - 1), 0);
+  }
+  function edDelCol() {
+    var at = edCellAt();
+    if (!at) return edTableFail();
+    var idx = Array.prototype.indexOf.call(at.row.children, at.cell);
+    var rows = Array.prototype.slice.call(at.tbl.rows);
+    if (rows[0].cells.length < 2) { toast('Bảng chỉ còn một cột — muốn xoá cả bảng thì chọn bảng rồi bấm Backspace', 'err'); return; }
+    var tbl = at.tbl, gone = at.row.rowIndex;
+    rows.forEach(function (r) { if (r.cells[idx]) r.cells[idx].parentNode.removeChild(r.cells[idx]); });
+    edTableChanged();
+    edFocusCell(tbl, gone, Math.max(0, idx - 1));
+  }
+  function edHeadRow() {
+    var at = edCellAt();
+    if (!at) return edTableFail();
+    var first = at.tbl.rows[0];
+    if (!first) return;
+    var toHead = first.cells[0] && first.cells[0].tagName !== 'TH';
+    Array.prototype.slice.call(first.cells).forEach(function (c) {
+      var el = document.createElement(toHead ? 'th' : 'td');
+      el.innerHTML = c.innerHTML;
+      c.parentNode.replaceChild(el, c);
+    });
+    toast(toHead ? 'Đã đổi dòng đầu thành dòng tiêu đề' : 'Đã bỏ dòng tiêu đề', 'ok');
+    edTableChanged();
+    edFocusCell(at.tbl, 0, 0);
+  }
+  /* ---------------- KÝ TỰ ĐẶC BIỆT -------------------------------------- */
+  var SPECIALS = [
+    ['Dấu câu', '— – … ‹ › « » ‘ ’ “ ” † ‡ ¶ § © ® ™ ° ± × ÷ ‰'],
+    ['Mũi tên', '← ↑ → ↓ ↔ ⇐ ⇒ ⇠ ⇢ ▲ ▼ ◀ ▶'],
+    ['Toán', '≈ ≠ ≤ ≥ ∞ ∑ ∏ √ ∂ ∆ ∫ µ π Ω € £ ¥ ₩ ₫'],
+    ['Emoji', '😀 😅 😭 😍 🤔 👍 🙏 💪 🔥 ✨ ⭐ ❤️ 💔 🎉 📖 ✍️ 🌙 ☀️']
+  ];
+  function edSpecial() {
+    var body = SPECIALS.map(function (g) {
+      return '<div class="spgrp"><div class="sphead">' + esc(g[0]) + '</div><div class="spgrid">' +
+        g[1].split(' ').map(function (ch) {
+          return '<button type="button" class="spch" data-ch="' + esc(ch) + '" title="Chèn ' + esc(ch) + '">' + esc(ch) + '</button>';
+        }).join('') + '</div></div>';
+    }).join('');
+    var m = CZ.modal('czSpecial',
+      '<div class="mh"><h4>Ký tự đặc biệt</h4></div>' +
+      '<div class="mb">' + body + '</div>' +
+      '<div class="mf"><span class="grow"></span><button class="btn pri" data-close>Xong</button></div>');
+    m.addEventListener('click', function (e) {
+      var b = e.target.closest('.spch');
+      if (!b) return;
+      var ch = b.dataset.ch;
+      m._close();
+      var ed = $('#edBody');
+      if (!ed) return;
+      ed.focus();
+      try { document.execCommand('insertText', false, ch); }
+      catch (err) { toast('Trình duyệt không chèn được ký tự', 'err'); return; }
+      dirty.book = true; markDirty(); chStat(); autoSchedule();
+    });
+  }
   /* ---------------- TỰ LƯU NHÁP CHƯƠNG (không gọi API) -------------------
      Chỉ ghi ra localStorage, KHÔNG PUT lên Worker: tự động ghi chương đang viết
      dở lên KV là đẩy bản chưa xong cho người đọc, và mỗi lần gõ lại tốn một lần
@@ -3130,6 +3281,15 @@
     else if (b.dataset.block) edBlock(b.dataset.block);
     else if (b.dataset.align) edExec('justify' + b.dataset.align.charAt(0).toUpperCase() + b.dataset.align.slice(1), null);
     else if (b.dataset.link !== undefined) edLink();
+    else if (b.dataset.special !== undefined) edSpecial();
+    else if (b.dataset.callout) edCallout(b.dataset.callout);
+    else if (b.dataset.code !== undefined) edCodeBlock();
+    else if (b.dataset.table !== undefined) edTable();
+    else if (b.dataset.trow !== undefined) edAddRow();
+    else if (b.dataset.tcol !== undefined) edAddCol();
+    else if (b.dataset.thead !== undefined) edHeadRow();
+    else if (b.dataset.tdel === 'row') edDelRow();
+    else if (b.dataset.tdel === 'col') edDelCol();
     else if (b.dataset.img !== undefined) $('#edImg').click();
   });
   /* Ctrl+B/I/U vẫn hoạt động tự nhiên trong contenteditable — chỉ giữ focus
