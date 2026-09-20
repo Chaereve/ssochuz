@@ -3616,6 +3616,14 @@ body.ed-focus .rte { min-height: 62vh; }
   .rtext figcaption { font-size: 8.5pt; color: #444 !important; }
 }
 
+/* ---------------- LINK "BỎ QUA TỚI NỘI DUNG" ------------------------------
+   Người dùng bàn phím phải Tab qua hết menu mới tới được chữ. Link này nằm
+   ngay đầu <body> và chỉ hiện khi nhận focus. KHÔNG được ẩn bằng display:none —
+   ẩn kiểu đó thì trình đọc màn hình và phím Tab bỏ qua luôn, mất tác dụng. */
+.skip { position: fixed; left: -9999px; top: 10px; z-index: 300; }
+.skip:focus { left: 10px; padding: 10px 16px; border-radius: var(--r-sm);
+  background: var(--acc); color: #fff; font-weight: 600; text-decoration: none;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, .28); }
 /* ============================================================================
    CUỐI TỆP · LUẬT NỀN TẢNG — [hidden] phải THẮNG mọi `display:` của class.
    ----------------------------------------------------------------------------

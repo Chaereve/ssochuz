@@ -58,6 +58,69 @@ const pngSize = f => {
       lechV.length + '/62 trang prerender lệch ?v= với truyen.html — chạy `npm run og`: ' + lechV.slice(0, 3).join(' | '));
   }
 
+  /* ---------- LINK "BỎ QUA TỚI NỘI DUNG" (bàn phím / trình đọc màn hình) ----------
+     Phải là PHẦN TỬ ĐẦU TIÊN trong <body>, trỏ tới một id CÓ THẬT trong cùng
+     trang, và KHÔNG được ẩn bằng display:none — ẩn kiểu đó thì phím Tab bỏ qua
+     luôn, coi như không có. */
+  {
+    const TRANG = ['index.html', 'truyen.html', 'admin.html', 'guide.html',
+      'my-space.html', 'profile.html', '404.html'];
+    TRANG.forEach(f => {
+      const s = read(f);
+      const m = s.match(/<body[^>]*>\s*([\s\S]{0,200})/);
+      ok(!!m && /<a class="skip"/.test(m[1]), f + ': link bỏ qua không nằm ngay đầu <body>');
+      const href = (s.match(/<a class="skip" href="#([A-Za-z0-9_-]+)"/) || [])[1];
+      ok(!!href, f + ': link bỏ qua thiếu href="#…"');
+      ok(!!href && new RegExp('id="' + href + '"').test(s),
+        f + ': link bỏ qua trỏ #' + href + ' nhưng trang không có id đó');
+      ok(/Bỏ qua/.test(s), f + ': link bỏ qua không có chữ cho trình đọc màn hình');
+    });
+    const css = read('cz.css');
+    ok(/\.skip\s*{/.test(css), 'cz.css thiếu luật .skip');
+    const khoi = (css.match(/\.skip\s*{[^}]*}/) || [''])[0];
+    ok(/position:\s*fixed|position:\s*absolute/.test(khoi), '.skip phải được đẩy ra ngoài khung nhìn bằng position');
+    ok(!/display:\s*none/.test(khoi), '.skip KHÔNG được ẩn bằng display:none — ẩn vậy thì không focus được');
+    ok(/\.skip:focus/.test(css), 'thiếu .skip:focus để hiện ra khi dùng bàn phím');
+    /* 62 trang prerender là BẢN SAO của truyen.html — cũng phải có link bỏ qua */
+    const preDirs = fs.existsSync(path.join(ROOT, 'truyen')) ? fs.readdirSync(path.join(ROOT, 'truyen')) : [];
+    const preFiles = preDirs.map(d => path.join('truyen', d, 'index.html'))
+      .filter(f => fs.existsSync(path.join(ROOT, f)));
+    const thieuSkip = preFiles.filter(f => !/<a class="skip"/.test(read(f)));
+    ok(preFiles.length >= 50 && thieuSkip.length === 0,
+      thieuSkip.length + '/' + preFiles.length + ' trang prerender thiếu link bỏ qua — chạy `npm run og`');
+  }
+
+  /* ---------- sitemap.xml PHẢI THEO KỊP data/ ----------
+     Không gọi Python trong bài kiểm thử; đối chiếu thẳng số đường dẫn và từng
+     đường dẫn chương với data/registry.json + data/book/*.json. */
+  {
+    const sm = read('sitemap.xml');
+    const locs = sm.match(/<loc>([^<]+)<\/loc>/g) || [];
+    const reg = JSON.parse(read('data/registry.json'));
+    const books = (reg.lib || []).map(n => String(n.slug || '')).filter(Boolean);
+    let chuong = 0;
+    const thieu = [];
+    books.forEach(slug => {
+      const f = path.join('data/book', slug + '.json');
+      if (!fs.existsSync(path.join(ROOT, f))) return;
+      const b = JSON.parse(read(f));
+      const n = (b.chapters || []).length;
+      chuong += n;
+      if (sm.indexOf('/truyen/' + slug + '/') < 0) thieu.push('trang truyện ' + slug);
+      for (let i = 1; i <= n; i++) {
+        if (sm.indexOf('/truyen/' + slug + '/chuong-' + i + '/') < 0) { thieu.push(slug + '/chuong-' + i); break; }
+      }
+    });
+    const mongDoi = 1 + books.length + chuong;
+    ok(locs.length === mongDoi,
+      'sitemap có ' + locs.length + ' đường dẫn, dữ liệu thật cần ' + mongDoi +
+      ' (1 trang chủ + ' + books.length + ' truyện + ' + chuong + ' chương) — chạy `npm run build`');
+    ok(thieu.length === 0, 'sitemap thiếu: ' + thieu.slice(0, 4).join(', '));
+    ok(/<loc>https:\/\/ssochuz\.pages\.dev\/<\/loc>/.test(sm), 'sitemap thiếu trang chủ');
+    ok(read('robots.txt').indexOf('Sitemap:') >= 0, 'robots.txt không trỏ tới sitemap');
+  }
+
+
   let mf = null;
   try { mf = JSON.parse(read('manifest.webmanifest')); } catch (e) { ok(false, 'manifest.webmanifest hong JSON: ' + e.message); }
   if (mf) {

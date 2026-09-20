@@ -13,6 +13,7 @@
    Chạy:  npm run build        (cần: npm install — chỉ esbuild)
    ========================================================================== */
 import { readdirSync, readFileSync, writeFileSync, statSync, existsSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
@@ -75,4 +76,11 @@ const outTotal = rows.reduce((a, r) => a + r[2], 0);
 rows.forEach(([f, a, b]) => console.log('  ' + f.padEnd(14) + kb(a).padStart(9) + '  →  ' + kb(b).padStart(9) +
   '  (' + Math.round(100 - (b / a) * 100) + '% nhỏ hơn)'));
 console.log('Tổng: ' + kb(srcTotal) + '  →  ' + kb(outTotal) + ' · đã ghi ra thư mục gốc.');
+/* sitemap.xml + robots.txt phải theo kịp dữ liệu. Script Python đã có sẵn từ lâu
+   nhưng chưa được nối vào đây, nên thêm bộ/chương mới mà quên chạy tay là sitemap
+   âm thầm cũ. Thiếu python3 thì báo rõ chứ không làm hỏng cả lần build. */
+const sm = spawnSync('python3', [path.join(ROOT, 'tools', 'build_sitemap.py')], { cwd: ROOT, encoding: 'utf8' });
+if (sm.status === 0) console.log('  ' + String(sm.stdout || '').trim());
+else console.log('  CHƯA sinh được sitemap.xml/robots.txt (cần python3): ' +
+  (sm.error ? sm.error.message : String(sm.stderr || '').trim().split('\n')[0]));
 console.log('Nhớ chạy: node tests/run.js  (bài kiểm thử nạp đúng bản đã rút gọn)');

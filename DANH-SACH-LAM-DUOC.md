@@ -126,9 +126,9 @@
 ✅ Header bảo mật: CSP, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy, COOP, HSTS
 ✅ `rel="canonical"` — 62 trang truyện (lúc build) + trang chương (lúc chạy)
 ✅ JSON-LD: `Book`+`Person` (trang truyện), `Chapter` (trang chương)
-⬜ Sitemap tự sinh khi build
-⬜ Link "bỏ qua tới nội dung" cho người dùng bàn phím
-⬜ Viền nét khi focus
+✅ Sitemap tự sinh khi build — `npm run build` nay gọi `tools/build_sitemap.py` (1 trang chủ + 62 truyện + 1.199 chương = 1.262 đường dẫn); có test đối chiếu với `data/`
+✅ Link "bỏ qua tới nội dung" — phần tử đầu `<body>` ở cả 7 trang + 62 trang prerender, ẩn bằng `position` chứ không `display:none`
+✅ Viền nét khi focus — ĐÃ CÓ TỪ TRƯỚC: `:focus-visible{outline:2px solid var(--acc)}` toàn cục ở `cz.css:132`
 ⬜ Trang cookie / riêng tư / DMCA
 ⬜ Ảnh AVIF (rơi về WebP nếu máy không hỗ trợ)
 ⬜ ESLint + Prettier + CI tự động
