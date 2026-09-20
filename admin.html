@@ -8,7 +8,7 @@
 <link rel="icon" type="image/png" href="/ssochuz.png?v=1">
 <link rel="apple-touch-icon" href="/ssochuz.png?v=1">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="stylesheet" href="/cz.css?v=20260920d">
+<link rel="stylesheet" href="/cz.css?v=20260920e">
 <script>/* chống nháy nền */try{var t=localStorage.getItem('ssochuz-theme')||localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
 <body class="admin">
@@ -344,6 +344,12 @@
                   <button type="button" data-imgsize="50" title="Thu ảnh còn 50% chiều ngang">50%</button>
                   <button type="button" data-imgsize="75" title="Thu ảnh còn 75% chiều ngang">75%</button>
                   <button type="button" data-imgsize="100" title="Cho ảnh về full chiều ngang">100%</button>
+                  <button type="button" data-fg="c0392b" class="sw" style="color:#c0392b" title="Tô chữ đang bôi đen thành màu đỏ">A</button>
+                  <button type="button" data-fg="1f6fb2" class="sw" style="color:#1f6fb2" title="Tô chữ đang bôi đen thành màu xanh dương">A</button>
+                  <button type="button" data-fg="147a3d" class="sw" style="color:#147a3d" title="Tô chữ đang bôi đen thành màu xanh lá">A</button>
+                  <button type="button" data-bg="fff176" class="sw" style="background:#fff176" title="Bút dạ vàng — tô nền chữ đang bôi đen">&nbsp;</button>
+                  <button type="button" data-bg="a5f3c4" class="sw" style="background:#a5f3c4" title="Bút dạ xanh — tô nền chữ đang bôi đen">&nbsp;</button>
+                  <button type="button" data-nocolor title="Bỏ màu chữ và màu nền trong vùng đang bôi đen">Bỏ màu</button>
                   <input type="file" id="edImg" class="hide" accept="image/jpeg,image/png,image/webp">
                 </div>
                 <div class="rte" id="edBody" contenteditable="true" aria-label="Nội dung chương"
@@ -356,6 +362,7 @@
                   <button class="btn ghost sm" id="edToolsToggle" title="Ẩn hoặc hiện thanh định dạng"><span data-ic="rows"></span>Thanh định dạng</button>
                   <button class="btn ghost sm" id="chExpHtml" title="Tải chương này về máy dưới dạng .html">Xuất .html</button>
                   <button class="btn ghost sm" id="chExpTxt" title="Tải chương này về máy dưới dạng chữ thuần .txt">Xuất .txt</button>
+                  <button class="btn ghost sm" id="chExpDocx" title="Tải chương này về máy dưới dạng .docx mở được bằng Word — ảnh được thay bằng dòng ghi chú">Xuất .docx</button>
                   <button class="btn ghost sm" id="chHist" title="Xem và khôi phục các bản đã lưu trong máy — mỗi lần lưu chương sẽ chụp một bản">Lịch sử</button>
                   <button class="btn ghost sm" id="chDel">Xoá chương</button>
                   <span class="sm muted" id="chStat"></span>
@@ -658,9 +665,9 @@
 
 <div class="toasts" id="toasts"></div>
 
-<script src="/cz-config.js?v=20260920d"></script>
-<script src="/cz-app.js?v=20260920d"></script>
-<script src="/cz-auth.js?v=20260920d"></script>
-<script src="/admin.js?v=20260920d"></script>
+<script src="/cz-config.js?v=20260920e"></script>
+<script src="/cz-app.js?v=20260920e"></script>
+<script src="/cz-auth.js?v=20260920e"></script>
+<script src="/admin.js?v=20260920e"></script>
 </body>
 </html>

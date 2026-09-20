@@ -1622,6 +1622,370 @@
     CZ.download(edFileBase() + '.txt', head + txt + '\n', 'text/plain;charset=utf-8');
     toast('Đã tải ' + edFileBase() + '.txt', 'ok');
   }
+  /* ---------------- XUẤT .DOCX — không dùng thư viện ------------------------
+     .docx thực chất là một tệp ZIP chứa vài tệp XML, và dựng tay được vì:
+     · ZIP cho phép lưu KHÔNG NÉN (method 0) — Word, LibreOffice và Google Docs
+       đều đọc được, nên không cần CompressionStream (trình duyệt cũ không có).
+     · CRC-32 chỉ là một bảng 256 số.
+     Ảnh KHÔNG nhúng vào tệp: ảnh chương nằm trên Worker (KV) chứ không nằm
+     trong site tĩnh, kéo về rồi nhúng sẽ tốn một vòng mạng cho mỗi ảnh và dễ
+     hỏng — nên thay bằng dòng “[Ảnh: …]” để người viết biết chỗ đó có ảnh.
+     Điều này nói rõ trong thông báo sau khi tải, không để người dùng đoán. */
+  var CRC_TAB = null;
+  function crcTable() {
+    if (CRC_TAB) return CRC_TAB;
+    CRC_TAB = new Uint32Array(256);
+    for (var i = 0; i < 256; i++) {
+      var c = i, k;
+      for (k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      CRC_TAB[i] = c >>> 0;
+    }
+    return CRC_TAB;
+  }
+  function crc32(bytes) {
+    var t = crcTable(), c = 0xFFFFFFFF, i;
+    for (i = 0; i < bytes.length; i++) c = t[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+  /* Tệp .docx phải đúng byte UTF-8 thì Word mới đọc được tiếng Việt. TextEncoder
+     có ở mọi trình duyệt tải được tệp; nếu thiếu thì tự mã hoá lấy (kể cả cặp
+     surrogate) chứ không bỏ dấu. */
+  var DX_ENC;
+  function dxBytes(s) {
+    if (!DX_ENC && typeof TextEncoder === 'function') DX_ENC = new TextEncoder();
+    if (DX_ENC) return DX_ENC.encode(String(s));
+    var str = String(s), out = [], i, c, d;
+    for (i = 0; i < str.length; i++) {
+      c = str.charCodeAt(i);
+      if (c < 0x80) out.push(c);
+      else if (c < 0x800) out.push(0xC0 | (c >> 6), 0x80 | (c & 63));
+      else if (c >= 0xD800 && c < 0xDC00 && i + 1 < str.length) {
+        d = str.charCodeAt(++i);
+        c = 0x10000 + ((c - 0xD800) << 10) + (d - 0xDC00);
+        out.push(0xF0 | (c >> 18), 0x80 | ((c >> 12) & 63), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+      } else out.push(0xE0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+    }
+    return new Uint8Array(out);
+  }
+  function zipStore(files) {
+    var chunks = [], central = [], offset = 0, i;
+    files.forEach(function (f) {
+      var nm = dxBytes(f.name), body = f.data, crc = crc32(body);
+      var lh = new Uint8Array(30 + nm.length), v = new DataView(lh.buffer);
+      v.setUint32(0, 0x04034b50, true);
+      v.setUint16(4, 20, true);
+      v.setUint16(6, 0x0800, true);          /* bit 11: tên tệp là UTF-8 */
+      v.setUint16(8, 0, true);               /* method 0 = store, không nén */
+      v.setUint16(10, 0, true);
+      v.setUint16(12, 0x2821, true);         /* 01/01/2000 — ngày hợp lệ, cố định */
+      v.setUint32(14, crc, true);
+      v.setUint32(18, body.length, true);
+      v.setUint32(22, body.length, true);
+      v.setUint16(26, nm.length, true);
+      v.setUint16(28, 0, true);
+      lh.set(nm, 30);
+      chunks.push(lh, body);
+      var cd = new Uint8Array(46 + nm.length), w = new DataView(cd.buffer);
+      w.setUint32(0, 0x02014b50, true);
+      w.setUint16(4, 20, true); w.setUint16(6, 20, true);
+      w.setUint16(8, 0x0800, true);
+      w.setUint16(10, 0, true);
+      w.setUint16(12, 0, true); w.setUint16(14, 0x2821, true);
+      w.setUint32(16, crc, true);
+      w.setUint32(20, body.length, true);
+      w.setUint32(24, body.length, true);
+      w.setUint16(28, nm.length, true);
+      w.setUint16(30, 0, true); w.setUint16(32, 0, true);
+      w.setUint16(34, 0, true); w.setUint16(36, 0, true);
+      w.setUint32(38, 0, true);
+      w.setUint32(42, offset, true);
+      cd.set(nm, 46);
+      central.push(cd);
+      offset += lh.length + body.length;
+    });
+    var cdSize = 0;
+    for (i = 0; i < central.length; i++) cdSize += central[i].length;
+    var end = new Uint8Array(22), e = new DataView(end.buffer);
+    e.setUint32(0, 0x06054b50, true);
+    e.setUint16(8, files.length, true);
+    e.setUint16(10, files.length, true);
+    e.setUint32(12, cdSize, true);
+    e.setUint32(16, offset, true);
+    var all = chunks.concat(central, [end]), total = 0;
+    for (i = 0; i < all.length; i++) total += all[i].length;
+    var out = new Uint8Array(total), at = 0;
+    for (i = 0; i < all.length; i++) { out.set(all[i], at); at += all[i].length; }
+    return out;
+  }
+  function dxEsc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function dxHex(c) {
+    c = String(c || '').trim();
+    var m = c.match(/^#?([0-9a-f]{6})$/i);
+    if (m) return m[1].toUpperCase();
+    m = c.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+    if (m) {
+      var h = function (x) { var s = Math.max(0, Math.min(255, +x)).toString(16); return (s.length < 2 ? '0' : '') + s; };
+      return (h(m[1]) + h(m[2]) + h(m[3])).toUpperCase();
+    }
+    return '';
+  }
+  /* Word chỉ nhận 16 tên màu tô có sẵn, không nhận mã hex — phải ánh xạ */
+  var DX_HL = { 'FFFF00': 'yellow', '00FF00': 'green', '00FFFF': 'cyan', 'FF00FF': 'magenta',
+    '0000FF': 'blue', 'FF0000': 'red', '000080': 'darkBlue', '008080': 'darkCyan',
+    '008000': 'darkGreen', '800080': 'darkMagenta', '800000': 'darkRed', '808000': 'darkYellow',
+    '808080': 'darkGray', 'C0C0C0': 'lightGray' };
+  function dxWordHl(c) { return DX_HL[dxHex(c)] || 'yellow'; }
+  function dxRPr(st) {
+    var p = '';
+    if (st.mono) p += '<w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/>';
+    if (st.b) p += '<w:b/>';
+    if (st.i) p += '<w:i/>';
+    if (st.u) p += '<w:u w:val="single"/>';
+    if (st.s) p += '<w:strike/>';
+    if (st.color) p += '<w:color w:val="' + dxEsc(st.color) + '"/>';
+    if (st.hl) p += '<w:highlight w:val="' + dxEsc(st.hl) + '"/>';
+    if (st.sz) p += '<w:sz w:val="' + st.sz + '"/>';
+    return p ? '<w:rPr>' + p + '</w:rPr>' : '';
+  }
+  function dxNewSt(st) {
+    return { b: st.b, i: st.i, u: st.u, s: st.s, mono: st.mono, color: st.color, hl: st.hl, sz: st.sz };
+  }
+  var DX_BLANK = { b: false, i: false, u: false, s: false, mono: false };
+  function dxInline(node, st, out) {
+    Array.prototype.forEach.call(node.childNodes, function (n) {
+      if (n.nodeType === 3) {
+        var t = n.nodeValue || '';
+        if (!t) return;
+        out.push('<w:r>' + dxRPr(st) + '<w:t xml:space="preserve">' + dxEsc(t) + '</w:t></w:r>');
+        return;
+      }
+      if (n.nodeType !== 1) return;
+      var tag = n.tagName.toLowerCase();
+      if (tag === 'br') { out.push('<w:r><w:br/></w:r>'); return; }
+      if (tag === 'img') {
+        out.push('<w:r><w:rPr><w:i/></w:rPr><w:t xml:space="preserve">[Ảnh: ' +
+          dxEsc(n.getAttribute('alt') || 'không có mô tả') + ']</w:t></w:r>');
+        return;
+      }
+      var ns = dxNewSt(st);
+      if (tag === 'b' || tag === 'strong') ns.b = true;
+      else if (tag === 'i' || tag === 'em') ns.i = true;
+      else if (tag === 'u') ns.u = true;
+      else if (tag === 's' || tag === 'del' || tag === 'strike') ns.s = true;
+      else if (tag === 'code') ns.mono = true;
+      /* màu chữ / bút dạ được trình soạn ghi bằng style nên phải đọc lại từ đó */
+      var sty = (n.getAttribute && n.getAttribute('style')) || '';
+      var mc = sty.match(/(?:^|;)\s*color\s*:\s*([^;]+)/i);
+      if (mc && dxHex(mc[1])) ns.color = dxHex(mc[1]);
+      var mh = sty.match(/background(?:-color)?\s*:\s*([^;]+)/i);
+      if (mh && dxHex(mh[1])) ns.hl = dxWordHl(mh[1]);
+      dxInline(n, ns, out);
+    });
+  }
+  function dxParaRuns(el, st) {
+    var r = [];
+    dxInline(el, st, r);
+    return r.join('');
+  }
+  function dxList(el, out, depth, ordered) {
+    var idx = 0;
+    Array.prototype.forEach.call(el.children, function (li) {
+      if (li.tagName.toLowerCase() !== 'li') return;
+      idx++;
+      var runs = [];
+      /* chỉ lấy phần trực tiếp của <li>; danh sách con xử lý ở lượt đệ quy sau */
+      Array.prototype.forEach.call(li.childNodes, function (n) {
+        if (n.nodeType === 1 && /^(ul|ol)$/i.test(n.tagName)) return;
+        dxInline({ childNodes: [n] }, DX_BLANK, runs);
+      });
+      out.push('<w:p><w:pPr><w:ind w:left="' + (360 + depth * 360) + '" w:hanging="240"/></w:pPr>' +
+        '<w:r><w:t xml:space="preserve">' + dxEsc(ordered ? (idx + '. ') : '\u2022 ') + '</w:t></w:r>' +
+        runs.join('') + '</w:p>');
+      Array.prototype.forEach.call(li.children, function (sub) {
+        if (/^(ul|ol)$/i.test(sub.tagName)) dxList(sub, out, depth + 1, sub.tagName.toLowerCase() === 'ol');
+      });
+    });
+  }
+  function dxTable(el, out) {
+    var rowsXml = '';
+    var border = '<w:top w:val="single" w:sz="4" w:color="999999"/><w:left w:val="single" w:sz="4" w:color="999999"/>' +
+      '<w:bottom w:val="single" w:sz="4" w:color="999999"/><w:right w:val="single" w:sz="4" w:color="999999"/>';
+    Array.prototype.forEach.call(el.querySelectorAll('tr'), function (tr) {
+      var cells = '';
+      Array.prototype.forEach.call(tr.children, function (td) {
+        var st = dxNewSt(DX_BLANK);
+        st.b = td.tagName.toLowerCase() === 'th';
+        cells += '<w:tc><w:tcPr><w:tcW w:w="0" w:type="auto"/><w:tcBorders>' + border +
+          '</w:tcBorders></w:tcPr><w:p>' + dxParaRuns(td, st) + '</w:p></w:tc>';
+      });
+      if (cells) rowsXml += '<w:tr>' + cells + '</w:tr>';
+    });
+    if (!rowsXml) return;
+    out.push('<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/><w:tblBorders>' + border +
+      '<w:insideH w:val="single" w:sz="4" w:color="999999"/><w:insideV w:val="single" w:sz="4" w:color="999999"/>' +
+      '</w:tblBorders></w:tblPr>' + rowsXml + '</w:tbl><w:p/>');
+  }
+  function dxBlocks(root, out, depth) {
+    Array.prototype.forEach.call(root.childNodes, function (n) {
+      if (n.nodeType === 3) {
+        var t = (n.nodeValue || '').replace(/\s+/g, ' ');
+        if (t.trim()) out.push('<w:p><w:pPr><w:spacing w:after="160"/></w:pPr>' +
+          '<w:r><w:t xml:space="preserve">' + dxEsc(t) + '</w:t></w:r></w:p>');
+        return;
+      }
+      if (n.nodeType !== 1) return;
+      var tag = n.tagName.toLowerCase();
+      if (/^h[1-6]$/.test(tag)) {
+        var h = dxNewSt(DX_BLANK);
+        h.b = true;
+        h.sz = tag === 'h1' ? 40 : tag === 'h2' ? 34 : tag === 'h3' ? 28 : 26;
+        out.push('<w:p><w:pPr><w:spacing w:before="240" w:after="120"/><w:keepNext/></w:pPr>' +
+          dxParaRuns(n, h) + '</w:p>');
+        return;
+      }
+      if (tag === 'ul' || tag === 'ol') { dxList(n, out, depth, tag === 'ol'); return; }
+      if (tag === 'table') { dxTable(n, out); return; }
+      if (tag === 'hr') {
+        out.push('<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="6" w:color="AAAAAA"/></w:pBdr></w:pPr></w:p>');
+        return;
+      }
+      if (tag === 'pre') {
+        var pst = dxNewSt(DX_BLANK);
+        pst.mono = true;
+        out.push('<w:p><w:pPr><w:shd w:val="clear" w:fill="F2F2F2"/></w:pPr>' + dxParaRuns(n, pst) + '</w:p>');
+        return;
+      }
+      if (tag === 'figure') {
+        var im = n.querySelector('img');
+        if (im) out.push('<w:p><w:r><w:rPr><w:i/></w:rPr><w:t xml:space="preserve">[Ảnh: ' +
+          dxEsc(im.getAttribute('alt') || 'không có mô tả') + ']</w:t></w:r></w:p>');
+        var fc = n.querySelector('figcaption');
+        if (fc) {
+          var cst = dxNewSt(DX_BLANK);
+          cst.i = true; cst.sz = 20;
+          out.push('<w:p><w:pPr><w:jc w:val="center"/></w:pPr>' + dxParaRuns(fc, cst) + '</w:p>');
+        }
+        return;
+      }
+      if (tag === 'aside' || tag === 'blockquote') {
+        var qst = dxNewSt(DX_BLANK);
+        qst.i = (tag === 'blockquote');
+        out.push('<w:p><w:pPr><w:pBdr><w:left w:val="single" w:sz="12" w:color="BBBBBB"/></w:pBdr>' +
+          '<w:ind w:left="360"/></w:pPr>' + dxParaRuns(n, qst) + '</w:p>');
+        return;
+      }
+      /* khối chứa khối con thì đệ quy; còn lại coi là một đoạn */
+      if (n.querySelector && n.querySelector('p,ul,ol,table,figure,aside,blockquote,pre,h1,h2,h3,h4,h5,h6')) {
+        dxBlocks(n, out, depth);
+        return;
+      }
+      var runs = dxParaRuns(n, DX_BLANK);
+      if (runs) out.push('<w:p><w:pPr><w:spacing w:after="160"/></w:pPr>' + runs + '</w:p>');
+    });
+  }
+  function edToDocx() {
+    var ed = $('#edBody');
+    if (!ed) return null;
+    var out = [], title = ($('#chTitle').value || '').trim();
+    if (title) {
+      var tst = dxNewSt(DX_BLANK);
+      tst.b = true; tst.sz = 44;
+      out.push('<w:p><w:pPr><w:spacing w:after="240"/><w:jc w:val="center"/></w:pPr>' +
+        '<w:r>' + dxRPr(tst) + '<w:t xml:space="preserve">' + dxEsc(title) + '</w:t></w:r></w:p>');
+    }
+    dxBlocks(ed, out, 0);
+    var body = out.join('');
+    if (!/<w:t[ >]/.test(body)) return null;
+    var docXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+      '<w:body>' + body +
+      '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/>' +
+      '<w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/>' +
+      '</w:sectPr></w:body></w:document>';
+    var ct = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+      '<Default Extension="xml" ContentType="application/xml"/>' +
+      '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
+      '</Types>';
+    var rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>' +
+      '</Relationships>';
+    return zipStore([
+      { name: '[Content_Types].xml', data: dxBytes(ct) },
+      { name: '_rels/.rels', data: dxBytes(rels) },
+      { name: 'word/document.xml', data: dxBytes(docXml) },
+    ]);
+  }
+  function edExportDocx() {
+    var bytes = edToDocx();
+    if (!bytes) { toast('Chương chưa có nội dung để xuất', 'err'); return; }
+    var ten = edFileBase() + '.docx';
+    if (CZ.download(ten, bytes, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')) {
+      toast('Đã tải ' + ten + ' — ảnh trong chương được thay bằng dòng ghi chú', 'ok');
+    } else {
+      toast('Trình duyệt này không tải được tệp .docx — dùng “Xuất .html” rồi mở bằng Word', 'err');
+    }
+  }
+  /* ---------------- MÀU CHỮ · BÚT DẠ TÔ NỀN ---------------------------------
+     Không dùng execCommand('foreColor'): lệnh đó đã bị loại khỏi chuẩn và jsdom
+     không có, nên không kiểm thử được. Thay vào đó tự bọc vùng chọn trong một
+     <span style> — admin.js vốn đã giữ vùng chọn trong edRange để chèn liên kết.
+     <span> sống sót qua edHtml() lẫn cleanHTML() vì cả hai chỉ đổi <div> thành
+     <p> và gỡ các thuộc tính bắt đầu bằng "on" cùng href/src nguy hiểm, không
+     đụng tới style. */
+  function edSelRange() {
+    var ed = $('#edBody');
+    if (!ed) return null;
+    var s = window.getSelection && window.getSelection();
+    if (s && s.rangeCount) {
+      var r = s.getRangeAt(0);
+      if (ed.contains(r.startContainer)) return r;
+    }
+    if (edRange && ed.contains(edRange.startContainer)) return edRange;
+    return null;
+  }
+  function edPaint(fg, bg) {
+    var css = '';
+    if (fg) css += 'color:#' + fg + ';';
+    if (bg) css += 'background:#' + bg + ';';
+    if (!css) return;
+    var r = edSelRange();
+    if (!r || r.collapsed) { toast('Bôi đen đoạn chữ cần tô trước đã', 'err'); return; }
+    var sp = document.createElement('span');
+    sp.setAttribute('style', css);
+    try { r.surroundContents(sp); }
+    catch (e) {
+      /* vùng chọn cắt ngang thẻ: bọc bằng surroundContents sẽ ném lỗi,
+         phải cắt nội dung ra rồi đặt lại */
+      try { sp.appendChild(r.extractContents()); r.insertNode(sp); }
+      catch (e2) { toast('Vùng chọn này phức tạp quá, thử bôi đen gọn hơn', 'err'); return; }
+    }
+    dirty.book = true; markDirty(); chStat(); autoSchedule();
+  }
+  function edNoPaint() {
+    var ed = $('#edBody');
+    if (!ed) return;
+    var r = edSelRange();
+    if (!r) { toast('Bôi đen đoạn chữ trước đã', 'err'); return; }
+    var n = 0;
+    Array.prototype.slice.call(ed.querySelectorAll('span[style]')).forEach(function (sp) {
+      var st = sp.getAttribute('style') || '';
+      if (!/color|background/i.test(st)) return;
+      if (typeof r.intersectsNode === 'function' && !r.intersectsNode(sp)) return;
+      var parent = sp.parentNode;
+      if (!parent) return;
+      while (sp.firstChild) parent.insertBefore(sp.firstChild, sp);
+      parent.removeChild(sp);
+      n++;
+    });
+    if (!n) { toast('Không thấy chữ nào đang tô màu trong vùng chọn', 'err'); return; }
+    dirty.book = true; markDirty(); chStat(); autoSchedule();
+    toast('Đã bỏ màu ' + n + ' chỗ', 'ok');
+  }
   /* nén ảnh trong trình duyệt: resize tối đa 1400px rồi encode WebP.
      Trả về Promise<{type, data (base64), bytes}>. */
   function compressImage(file, maxPx) {
@@ -3768,6 +4132,9 @@
     else if (b.dataset.cap !== undefined) edImgCaption();
     else if (b.dataset.imgalign) edImgAlign(b.dataset.imgalign);
     else if (b.dataset.imgsize) edImgSize(parseInt(b.dataset.imgsize, 10));
+    else if (b.dataset.fg) edPaint(b.dataset.fg, '');
+    else if (b.dataset.bg) edPaint('', b.dataset.bg);
+    else if (b.hasAttribute('data-nocolor')) edNoPaint();
     else if (b.dataset.callout) edCallout(b.dataset.callout);
     else if (b.dataset.code !== undefined) edCodeBlock();
     else if (b.dataset.table !== undefined) edTable();
@@ -3807,6 +4174,7 @@
   });
   $('#chExpHtml').addEventListener('click', edExportHtml);
   $('#chExpTxt').addEventListener('click', edExportTxt);
+  $('#chExpDocx').addEventListener('click', edExportDocx);
   $('#chHist').addEventListener('click', histBox);
   $('#edBody').addEventListener('mousedown', edResizeStart);
   $('#edFindCase').addEventListener('change', edCountFind);

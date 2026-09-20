@@ -10,7 +10,7 @@
 ✅ Bảng ký tự đặc biệt (©, ®, ™, emoji…)
 ✅ Ẩn/hiện thanh công cụ
 ✅ Chế độ tập trung (ẩn hết, chỉ còn chữ)
-⬜ Màu chữ + bút dạ tô nền
+✅ Màu chữ + bút dạ tô nền (bọc <span style>, bỏ màu được)
 ⬜ Chỉnh cỡ chữ bằng thanh trượt
 ⬜ Căn phải–trái (cho tiếng Ả Rập)
 ⬜ Danh sách việc cần làm (checkbox)
@@ -27,7 +27,7 @@
 ✅ Kéo thả ảnh vào ô soạn
 ✅ Dán từ Word / Google Docs mà sạch định dạng
 ✅ In chương (window.print() + @media print, đổi tiêu đề thành “bộ — chương”)
-✅ Xuất .html · .txt  ⬜ .docx · PDF (qua in)
+✅ Xuất .html · .txt · .docx (ZIP không nén, tự dựng — không thư viện)  ⬜ PDF (qua in)
 ✅ Lịch sử phiên bản + khôi phục + xem trước + **so sánh hai bản** (lưu trong máy, 12 bản/chương, trần 1 MB)
 ⬜ Ngắt trang
 

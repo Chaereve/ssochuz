@@ -1203,6 +1203,157 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   if (!ss.anDoanGiuNguyen) rtFail.push('hiện cả những đoạn không đổi, khó đọc');
   if (!ss.haiBanTrung) rtFail.push('hai bản trùng nhau mà không báo “giống hệt nhau”');
   if (!(ss.thoatHtml && ss.conChu)) rtFail.push('kết quả so sánh không thoát HTML: ' + JSON.stringify(ss));
+  /* ---- XUẤT .DOCX (không dùng thư viện) ------------------------------------
+     .docx là một tệp ZIP dựng tay, lưu KHÔNG NÉN nên không cần CompressionStream.
+     Ở đây đọc lại bằng DataView rồi đối chiếu CRC-32 với zlib.crc32 — một bộ cài
+     đặt độc lập — để chắc tệp mở được bằng công cụ giải nén thật.
+     TextEncoder KHÔNG có trong jsdom nên mã UTF-8 dự phòng tự chạy; vì vậy gắn
+     thêm TextEncoder thật vào window rồi so byte: hai đường phải ra giống hệt,
+     không thì bản chạy trên trình duyệt khác bản vừa kiểm. */
+  out.editorDocx = {};
+  const z8 = require('zlib');
+  const dlGoc8 = W.CZ.download;
+  const xuatDocx8 = async () => {
+    let got = null;
+    W.CZ.download = (t, n, m) => { got = { t, n, m }; return true; };
+    clk('#chExpDocx'); await wait(350);
+    W.CZ.download = dlGoc8;
+    return got;
+  };
+  const docXml8 = (bytes) => {
+    /* đọc ZIP: đi từng local header rồi lấy EOCD, không dựa vào thứ tự mình ghi */
+    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const td = new TextDecoder();
+    let off = 0, ten = [], crcOk = true, dx = '';
+    while (off + 4 < bytes.length && dv.getUint32(off, true) === 0x04034b50) {
+      const crc = dv.getUint32(off + 14, true), csize = dv.getUint32(off + 18, true);
+      const nlen = dv.getUint16(off + 26, true), elen = dv.getUint16(off + 28, true);
+      const nm = td.decode(bytes.subarray(off + 30, off + 30 + nlen));
+      const data = bytes.subarray(off + 30 + nlen + elen, off + 30 + nlen + elen + csize);
+      ten.push(nm);
+      if (nm === 'word/document.xml') dx = td.decode(data);
+      if (z8.crc32(data) !== crc) crcOk = false;
+      off += 30 + nlen + elen + csize;
+    }
+    let eocd = -1, soTep = -1;
+    for (let i = bytes.length - 22; i >= 0; i--) {
+      if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; soTep = dv.getUint16(i + 10, true); break; }
+    }
+    return { ten, crcOk, dx, eocd, soTep };
+  };
+  const nut8 = $a('#chExpDocx');
+  out.editorDocx.coNut = !!nut8 && !!nut8.title;
+  edB.innerHTML = '<h2>Tiêu đề</h2><p>đoạn <b>đậm</b> và <i>nghiêng</i></p>' +
+    '<ul><li>mục một</li><li>mục hai</li></ul>' +
+    '<figure class="fig"><img src="/api/img/x.webp" alt="ảnh bìa"><figcaption>chú thích</figcaption></figure>' +
+    '<p>&lt;the&gt; &amp; ký tự \ud83d\ude00</p>';
+  edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(250);
+  const kq8 = await xuatDocx8();
+  const laBytes8 = !!kq8 && ArrayBuffer.isView(kq8.n) && kq8.n.BYTES_PER_ELEMENT === 1;
+  out.editorDocx.ten = kq8 ? kq8.t : null;
+  out.editorDocx.mime = kq8 ? kq8.m : null;
+  out.editorDocx.laBytes = laBytes8;
+  if (laBytes8) {
+    const b8 = kq8.n;
+    const dv8 = new DataView(b8.buffer, b8.byteOffset, b8.byteLength);
+    out.editorDocx.chuKyDau = dv8.getUint32(0, true) === 0x04034b50;
+    const z = docXml8(b8);
+    out.editorDocx.danhSachTep = z.ten;
+    out.editorDocx.crcDung = z.crcOk;
+    out.editorDocx.coEocd = z.eocd >= 0;
+    out.editorDocx.soTepTrongEocd = z.soTep;
+    /* hai đường mã hoá UTF-8 phải cho ra từng byte giống hệt */
+    const duPhong8 = Buffer.from(b8.buffer, b8.byteOffset, b8.byteLength);
+    const TE8 = W.TextEncoder;
+    W.TextEncoder = TextEncoder;
+    const kqTe8 = await xuatDocx8();
+    W.TextEncoder = TE8;
+    out.editorDocx.maHoaGiongNhau = !!kqTe8 &&
+      Buffer.from(kqTe8.n.buffer, kqTe8.n.byteOffset, kqTe8.n.byteLength).equals(duPhong8);
+    const dx = z.dx;
+    out.editorDocx.doc = {
+      coTieuDe: /Tiêu đề/.test(dx),
+      coDam: /<w:b\/>/.test(dx) && /đậm/.test(dx),
+      coNghieng: /<w:i\/>/.test(dx) && /nghiêng/.test(dx),
+      coGachDauDong: /\u2022 /.test(dx),
+      anhThanhChu: /\[Ảnh: ảnh bìa\]/.test(dx),
+      coChuThich: /chú thích/.test(dx),
+      thoatThe: /&lt;the&gt; &amp; ký tự/.test(dx),
+      coEmoji: /\ud83d\ude00/.test(dx),
+      coSectPr: /<w:sectPr>/.test(dx),
+      khongConTheHtml: !/<(p|b|i|ul|li|figure|img)\b/.test(dx),
+    };
+  }
+
+  /* ---- MÀU CHỮ · BÚT DẠ --------------------------------------------------
+     Không dùng execCommand('foreColor'): lệnh đó đã rời khỏi chuẩn và jsdom
+     không cài, nên kiểm thử sẽ xanh giả. Ở đây bọc vùng chọn trong <span style>. */
+  out.editorMau = {};
+  const chonChu8 = (tu) => {
+    /* đi hết text node: sau lần tô đầu firstChild đã là <span> chứ không còn là chữ */
+    const w8 = D.createTreeWalker(edB, 4, null);
+    let n8;
+    while ((n8 = w8.nextNode())) {
+      const i8 = (n8.nodeValue || '').indexOf(tu);
+      if (i8 < 0) continue;
+      const r8 = D.createRange();
+      r8.setStart(n8, i8); r8.setEnd(n8, i8 + tu.length);
+      const s8 = W.getSelection(); s8.removeAllRanges(); s8.addRange(r8);
+      D.dispatchEvent(new W.Event('selectionchange'));
+      return true;
+    }
+    return false;
+  };
+  edB.innerHTML = '<p>chu mau va chu thuong</p>';
+  edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(250);
+  chonChu8('chu mau'); clk('[data-fg="c0392b"]'); await wait(250);
+  out.editorMau.mauChu = /<span style="color:#c0392b;">chu mau<\/span>/.test(edB.innerHTML);
+  chonChu8('chu thuong'); clk('[data-bg="fff176"]'); await wait(250);
+  out.editorMau.butDa = /<span style="background:#fff176;">chu thuong<\/span>/.test(edB.innerHTML);
+  /* lưu rồi xuất: màu phải đi vào .docx dưới dạng <w:color> / <w:highlight> */
+  clk('#chSave'); await wait(400);
+  /* edHtml() nằm trong IIFE nên kiểm qua “Xuất .html” — nút đó dùng đúng edHtml().
+     Đây là bằng chứng <span style> sống sót qua bước chuẩn hoá trước khi ghi KV. */
+  let htmlXuat8 = null;
+  W.CZ.download = (t, n) => { htmlXuat8 = String(n); return true; };
+  clk('#chExpHtml'); await wait(300);
+  W.CZ.download = dlGoc8;
+  out.editorMau.edHtmlGiu = !!htmlXuat8 &&
+    /<span style="color:#c0392b;">/.test(htmlXuat8) &&
+    /<span style="background:#fff176;">/.test(htmlXuat8);
+  const kqM8 = await xuatDocx8();
+  if (kqM8 && ArrayBuffer.isView(kqM8.n)) {
+    const dxM = docXml8(kqM8.n).dx;
+    out.editorMau.docxCoMau = /<w:color w:val="C0392B"\/>/.test(dxM);
+    out.editorMau.docxCoButDa = /<w:highlight w:val="yellow"\/>/.test(dxM);
+  } else { out.editorMau.docxCoMau = false; out.editorMau.docxCoButDa = false; }
+  /* bỏ màu: gỡ <span> nhưng phải giữ nguyên chữ */
+  const rAll8 = D.createRange();
+  rAll8.selectNodeContents(edB);
+  const sAll8 = W.getSelection(); sAll8.removeAllRanges(); sAll8.addRange(rAll8);
+  D.dispatchEvent(new W.Event('selectionchange'));
+  clk('[data-nocolor]'); await wait(300);
+  out.editorMau.boMau = !/<span style=/.test(edB.innerHTML) && /chu mau/.test(edB.textContent) &&
+    /chu thuong/.test(edB.textContent);
+  /* chưa bôi đen (caret thu gọn) thì phải báo, không được tô bừa */
+  const n0 = edB.querySelector('p').firstChild;
+  const rColl8 = D.createRange();
+  rColl8.setStart(n0, 0); rColl8.collapse(true);
+  sAll8.removeAllRanges(); sAll8.addRange(rColl8);
+  D.dispatchEvent(new W.Event('selectionchange'));
+  clk('[data-fg="c0392b"]'); await wait(300);
+  out.editorMau.baoKhiKhongChon = /Bôi đen/.test(txtA('#toasts'));
+  /* chương trống trơn (không tiêu đề, không nội dung) thì phải từ chối xuất */
+  const tieuDeGoc8 = $a('#chTitle').value;
+  $a('#chTitle').value = '';
+  edB.innerHTML = '';
+  edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(250);
+  const kqR8 = await xuatDocx8();
+  out.editorDocx.rongTuChoi = kqR8 === null && /chưa có nội dung/.test(txtA('#toasts'));
+  $a('#chTitle').value = tieuDeGoc8;
+  edB.innerHTML = '<p>chu mau va chu thuong</p>';
+  edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(200);
+
   out.editorFail = rtFail;
   out.tong = {
     loiTrangDoc: out.errStory.length, loiQuanTri: out.errAdmin.length, loiTrangAnh: out.errImg.length,

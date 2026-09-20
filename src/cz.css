@@ -3441,6 +3441,9 @@ body.rd-focus .rdcmts { display: none; }
 .cb { display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
   font-size: 13px; color: var(--mut); user-select: none; }
 .cb input { margin: 0; }
+/* nút bảng màu chữ / bút dạ trong thanh định dạng */
+#edToolbar .sw { min-width: 30px; padding: 3px 6px; font-weight: 700; line-height: 1.2; }
+#edToolbar .sw[data-bg] { color: #222; border-color: var(--line); }
 .tocfull { padding: 6px 12px 0; }
 .histsel { flex: 0 0 auto; }
 /* chữ chỉ dành cho trình đọc màn hình */

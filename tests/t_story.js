@@ -240,6 +240,9 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     '<figure class="fig fig-c"><img src="/api/img/x.webp" alt="anh"><figcaption>Chú thích ảnh</figcaption></figure>' +
     '<div class="callout">div này sẽ thành p</div>' +
     '<ul><li>mục một</li></ul>' +
+    /* Trình soạn tô màu chữ / bút dạ bằng <span style> — bộ lọc phía người đọc
+       phải giữ nguyên, không thì định dạng người viết cất công tô sẽ biến mất. */
+    '<p>chữ <span style="color:#c0392b;">màu đỏ</span> và <span style="background:#fff176;">tô vàng</span></p>' +
     '<p><a href="https://example.com">link tốt</a></p>' +
     /* BA thẻ dưới đây PHẢI bị gỡ sạch: web này không có giọng đọc audio và không
        có video (yêu cầu chủ trang). iframe/object/embed chặn YouTube/Vimeo. */
@@ -281,6 +284,11 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   kiem(/<ul><li>mục một<\/li><\/ul>/.test(rdH), 'mất danh sách <ul><li>');
   kiem(/href="https:\/\/example\.com"/.test(rdH), 'mất liên kết hợp lệ');
   kiem(/rel="noopener nofollow"/.test(rdH), 'thiếu rel="noopener nofollow" trên liên kết');
+  /* màu chữ + bút dạ của trình soạn phải đi qua được bộ lọc phía người đọc */
+  kiem(/<span style="color:#c0392b;">màu đỏ<\/span>/.test(rdH),
+    'mất <span style="color:…"> — màu chữ của trình soạn bị bộ lọc phía người đọc gỡ');
+  kiem(/<span style="background:#fff176;">tô vàng<\/span>/.test(rdH),
+    'mất <span style="background:…"> — bút dạ của trình soạn bị bộ lọc phía người đọc gỡ');
   /* KHÔNG được còn audio/video/iframe — web này không có giọng đọc và không có video */
   kiem(!/<audio/i.test(rdH), 'CÒN <audio> trong chương — web không được có giọng đọc audio');
   kiem(!/<video/i.test(rdH), 'CÒN <video> trong chương — web không được có video');
