@@ -6,8 +6,8 @@
 
 ## TRÌNH SOẠN
 
-⬜ Chỉ số dưới / chỉ số trên
-⬜ Bảng ký tự đặc biệt (©, ®, ™, emoji…)
+✅ Chỉ số dưới / chỉ số trên
+✅ Bảng ký tự đặc biệt (©, ®, ™, emoji…)
 ⬜ Ẩn/hiện thanh công cụ
 ⬜ Chế độ tập trung (ẩn hết, chỉ còn chữ)
 ⬜ Màu chữ + bút dạ tô nền
@@ -18,9 +18,9 @@
 ⬜ Căn ảnh trái/giữa/phải
 ⬜ Kéo giãn ảnh
 ⬜ Cắt ảnh (crop)
-⬜ Bảng biểu: chèn, thêm/xoá dòng cột, dòng tiêu đề
-⬜ Khung cảnh báo (thông tin / cảnh báo / lỗi)
-⬜ Khối code
+✅ Bảng biểu: chèn, thêm/xoá dòng cột, dòng tiêu đề
+✅ Khung cảnh báo (thông tin / cảnh báo / lỗi)
+✅ Khối code
 ⬜ Tìm **và thay thế** (hiện mới có tìm)
 ✅ Dán ảnh bằng Ctrl+V
 ✅ Kéo thả ảnh vào ô soạn
