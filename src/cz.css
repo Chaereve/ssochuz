@@ -2202,6 +2202,13 @@ body.rd-focus .rdcmts { display: none; }
 .docrow.bad .di { background: color-mix(in srgb, var(--bad) 12%, transparent); color: var(--bad); }
 .docrow.warn .di { background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn); }
 .docrow.good .di { background: color-mix(in srgb, var(--ok) 12%, transparent); color: var(--ok); }
+/* ô điểm SEO: hiện CON SỐ thay vì icon để xếp hạng nhìn là biết ngay */
+.docrow .di.seoscore { width: 38px; height: 30px; font-weight: 700; font-size: 13px;
+  font-variant-numeric: tabular-nums; }
+.docrow .di.seoscore.A { background: color-mix(in srgb, var(--ok) 14%, transparent); color: var(--ok); }
+.docrow .di.seoscore.B { background: var(--surf2); color: var(--fg); }
+.docrow .di.seoscore.C { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn); }
+.docrow .di.seoscore.D { background: color-mix(in srgb, var(--bad) 14%, transparent); color: var(--bad); }
 .docrow .dt { flex: 1; min-width: 0; }
 /* chỉ con TRỰC TIẾP mới là tiêu đề/mô tả dạng khối — <b> nhấn mạnh giữa câu
    trong mô tả phải nằm inline (như “vào tab Cài đặt & đồng bộ điền key”), */

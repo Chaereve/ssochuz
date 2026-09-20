@@ -28,7 +28,7 @@ function loadDoctor() {
      không còn thụt lề, không còn tên hàm gốc để cắt. */
   const forSource = path.join(ROOT, 'src', 'admin.js');
   const src = fs.readFileSync(fs.existsSync(forSource) ? forSource : path.join(ROOT, 'admin.js'), 'utf8');
-  const names = ['chapWords', 'dupGroups', 'chapterGaps', 'dupText', 'syncIssue', 'docText', 'DOC_LABEL'];
+  const names = ['chapWords', 'dupGroups', 'chapterGaps', 'dupText', 'syncIssue', 'docText', 'DOC_LABEL', 'seoScore', 'SEO_W'];
   const start = src.indexOf('  function chapWords(');
   const end = src.indexOf('  function renderDoctor()');
   if (start < 0 || end < 0) throw new Error('không tìm thấy khu vực Bác sĩ dữ liệu trong admin.js');
@@ -44,7 +44,7 @@ function loadDoctor() {
   return require(file);
 }
 
-const { dupGroups, chapterGaps, dupText, syncIssue, docText, DOC_LABEL } = loadDoctor();
+const { dupGroups, chapterGaps, dupText, syncIssue, docText, DOC_LABEL, seoScore, SEO_W } = loadDoctor();
 const errors = [];
 const out = {};
 function ck(cond, msg) { if (!cond) errors.push(msg); }
@@ -171,6 +171,75 @@ ck(/repo có 30 chương, KV chỉ 29/.test(repoAheadTxt), 'phải điền đún
 const specialRow = docRow(1, 1, 0);
 out.boDangBiKeu = { slug: 'vuot-khoi-uong-chan-troi-endless-blue-01775777241', benh: syncIssue(specialRow.kv, specialRow.repo), nhac: docText(syncIssue(1, 0), specialRow).slice(0, 90) };
 ck(syncIssue(specialRow.kv, specialRow.repo) === 'kvAhead', 'bộ Special (KV 1 · repo 0) phải được chẩn là "chưa lưu về repo", không phải "chưa nạp lên KV"');
+
+/* ---------- 3. CHẤM ĐIỂM SEO ------------------------------------------------
+   Chỉ chấm những gì ĐO ĐƯỢC BẰNG SỐ. Kiểm ở đây rằng: bộ đủ hết phải đạt 100 và
+   không bị trừ mục nào; bộ trống trơn phải rớt xuống D và nêu đủ 9 mục; và mỗi
+   lời nhắc phải mang CON SỐ thật chứ không nói “cần cải thiện” chung chung. */
+const namNay = new Date().getFullYear();
+const chuongThat = (n, chu) => Array.from({ length: n }, (_, i) => ({ t: 'Chương ' + (i + 1), html: '<p>' + (chu || 'nội dung chương ').repeat(30) + '</p>' }));
+const boDayDu = {
+  title: 'Hometown Romance Special', slug: 'hometown-romance-special',
+  syn: 'Một cuộc hôn nhân chưa bao giờ êm đềm nhưng lại gắn kết hai người một cách hoàn hảo, giống như ly vang đỏ đắt tiền không hiểu sao lại vô cùng ăn ý.'.slice(0, 150),
+  thumb: 'https://example.com/bia.jpg', author: 'Lambo', couple: 'Lookmhee x Sonya',
+  year: String(namNay), chapters: 10,
+};
+const seoDu = seoScore(boDayDu, { chapters: chuongThat(10) });
+out.seoBoDayDu = { diem: seoDu.diem, xep: seoDu.xep, soMucTru: seoDu.loi.length };
+ck(seoDu.diem === 100, 'bộ đủ hết phải đạt 100 điểm, thấy ' + seoDu.diem + ' · bị trừ: ' + JSON.stringify(seoDu.loi.map(l => l.ma)));
+ck(seoDu.xep === 'A', 'bộ đủ hết phải xếp hạng A, thấy ' + seoDu.xep);
+ck(seoDu.loi.length === 0, 'bộ đủ hết không được trừ mục nào, thấy ' + JSON.stringify(seoDu.loi));
+
+const seoTrong = seoScore({}, null);
+out.seoBoTrong = { diem: seoTrong.diem, xep: seoTrong.xep, soMucTru: seoTrong.loi.length, cacMuc: seoTrong.loi.map(l => l.ma) };
+ck(seoTrong.xep === 'D', 'bộ trống trơn phải xếp hạng D, thấy ' + seoTrong.xep);
+ck(seoTrong.loi.length === 9, 'bộ trống trơn phải nêu đủ 9 mục cần sửa, thấy ' + seoTrong.loi.length);
+ck(seoTrong.diem === 0, 'bộ trống trơn phải 0 điểm, thấy ' + seoTrong.diem);
+
+/* lời nhắc phải mang con số thật */
+const seoSynNgan = seoScore(Object.assign({}, boDayDu, { syn: 'Truyện hay lắm các bạn ơi.' }), { chapters: chuongThat(10) });
+const loiSyn = seoSynNgan.loi.filter(l => l.ma === 'syn')[0];
+out.seoSynNgan = { diem: seoSynNgan.diem, loi: loiSyn && loiSyn.msg };
+ck(!!loiSyn && /26 ký tự/.test(loiSyn.msg), 'mô tả 26 ký tự phải bị nhắc đúng con số, thấy ' + (loiSyn && loiSyn.msg));
+ck(seoSynNgan.diem < 100, 'mô tả quá ngắn phải bị trừ điểm');
+
+const seoSlugHoa = seoScore(Object.assign({}, boDayDu, { slug: 'Truyen-Hay' }), { chapters: chuongThat(10) });
+const loiSlug = seoSlugHoa.loi.filter(l => l.ma === 'slug')[0];
+out.seoSlugHoa = { loi: loiSlug && loiSlug.msg };
+ck(!!loiSlug && /ký tự không hợp lệ/.test(loiSlug.msg), 'slug có chữ hoa phải bị nhắc, thấy ' + (loiSlug && loiSlug.msg));
+
+const seoMotChuong = seoScore(boDayDu, { chapters: chuongThat(1) });
+out.seoMotChuong = { diem: seoMotChuong.diem, loi: seoMotChuong.loi.map(l => l.msg) };
+ck(seoMotChuong.loi.some(m => /Mới có 1 chương/.test(m.msg)), 'bộ 1 chương phải bị nhắc “mới có 1 chương”');
+ck(seoMotChuong.diem < 100 && seoMotChuong.diem > 0, 'bộ 1 chương phải bị trừ một phần chứ không phải trắng tay');
+
+/* tổng trọng số phải đúng 100 — đổi trọng số mà quên cân đối là lộ ngay */
+const tongW = Object.keys(SEO_W).reduce((t, k) => t + SEO_W[k], 0);
+out.seoTrongSo = { tong: tongW, cacMuc: SEO_W };
+ck(tongW === 100, 'tổng trọng số SEO phải đúng 100, thấy ' + tongW);
+
+/* chấm thật trên 62 bộ trong repo: không bộ nào ra NaN hay ngoài 0–100 */
+const booksSeo = fs.readdirSync(path.join(ROOT, 'data', 'book')).filter(f => /\.json$/.test(f));
+const reg = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'registry.json'), 'utf8'));
+const bySlug = {};
+reg.lib.forEach(n => { bySlug[n.slug] = n; });
+let loai = { A: 0, B: 0, C: 0, D: 0 }, tb = 0, hu = [];
+booksSeo.forEach(f => {
+  const n = bySlug[f.replace(/\.json$/, '')];
+  if (!n) return;
+  let src = null;
+  try { src = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'book', f), 'utf8')); } catch (e) {}
+  const sc = seoScore(n, src);
+  if (!(sc.diem >= 0 && sc.diem <= 100) || !Number.isFinite(sc.diem)) hu.push(n.slug + '=' + sc.diem);
+  if (!/^[ABCD]$/.test(sc.xep)) hu.push(n.slug + ' hạng ' + sc.xep);
+  loai[sc.xep]++; tb += sc.diem;
+});
+out.seoToanThuVien = {
+  soBo: booksSeo.length, phanBo: loai,
+  trungBinh: Math.round(tb / Math.max(1, booksSeo.length)), hong: hu.slice(0, 5),
+};
+ck(hu.length === 0, 'có bộ chấm ra điểm hỏng: ' + JSON.stringify(hu.slice(0, 5)));
+ck(booksSeo.length > 50, 'phải chấm được trên thư viện thật (>50 bộ), thấy ' + booksSeo.length);
 
 out.errors = errors;
 console.log(JSON.stringify(out, null, 1));

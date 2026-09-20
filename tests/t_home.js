@@ -115,6 +115,88 @@ const LIB = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data/registry
     out.menuCo = { ariaControls: burger.getAttribute('aria-controls'), soLink: $$('#czMnav a').length, nhan: $$('#czNav a .nav-lbl').map(e => e.textContent.trim()) };
   }
 
+  /* ---------- “VÌ BẠN ĐÃ ĐỌC X” — gợi ý theo tác giả / cặp nhân vật ----------
+     Thư viện KHÔNG có trường thể loại nên gợi ý soi theo tác giả và cặp — căn cứ
+     được ghi rõ ngay trên giao diện. Lịch sử đọc nằm trong localStorage nên phải
+     dựng TRANG MỚI có seed sẵn, không dùng lại trang `p` ở trên. */
+  {
+    const cuaTacGia = LIB.filter(n => (n.author || '').trim().toLowerCase() === 'salmonlover').map(n => n.slug);
+    const cuaCap = LIB.filter(n => (n.couple || '').trim() === 'Lookmhee x Sonya').map(n => n.slug);
+    const lichSu = (slugs) => {
+      const s = {};
+      slugs.forEach((sl, i) => { s[sl + ':c' + (i + 1)] = 1; s[sl + ':c' + (i + 2)] = 1; });
+      return JSON.stringify({ days: { 20260920: { s: s } }, total: slugs.length * 2 });
+    };
+    const mo = async (hist) => {
+      const r = page('index.html', {
+        fetch: dataFetch(), css: true,
+        setup: hist ? (w) => { w.localStorage.setItem('ssochuz-mystats', hist); } : null,
+      });
+      await wait(1800);
+      return r;
+    };
+    const slugs = (r) => [...r.doc.querySelectorAll('#vbdRail .card')]
+      .map(c => (c.getAttribute('href') || '').replace(/^\/truyen\//, '').replace(/\/$/, ''));
+
+    /* registry ghi không thống nhất hoa/thường: “SalmonLover” và “Salmonlover”
+       là cùng một người — gợi ý phải gộp được cả hai cách viết. */
+    const r1 = await mo(lichSu([cuaTacGia[0]]));
+    const sec1 = r1.doc.querySelector('#vi-ban-da-doc');
+    const why1 = (r1.doc.querySelector('#vbdWhy') || {}).textContent || '';
+    out.viBanDaDoc = {
+      hien: !!sec1 && !sec1.hidden && r1.win.getComputedStyle(sec1).display !== 'none',
+      title: ((r1.doc.querySelector('#vbdTitle') || {}).textContent || '').trim(),
+      why: why1.trim().replace(/\s+/g, ' ').slice(0, 220),
+      soThe: slugs(r1).length,
+      khopDanhSach: JSON.stringify(slugs(r1).slice().sort()) ===
+        JSON.stringify(cuaTacGia.filter(x => x !== cuaTacGia[0]).sort()),
+      gopDuCaHoaThuong: cuaTacGia.length === 6 && slugs(r1).length === 5,
+      khongGoiLaiBoDaDoc: slugs(r1).indexOf(cuaTacGia[0]) < 0,
+      whyNeuCanCu: /cùng tác giả/.test(why1),
+      whyNoiKhongDungAI: /không dùng AI/.test(why1),
+      loiJs: r1.errors.filter(e => !/Not implemented/.test(String(e))).slice(0, 3),
+    };
+
+    /* KHÔNG có lịch sử → cả khối phải ẩn, không được hiện một dải gợi ý vô nghĩa */
+    const r2 = await mo(null);
+    const sec2 = r2.doc.querySelector('#vi-ban-da-doc');
+    out.viBanDaDoc.anKhiChuaDoc = !!sec2 && sec2.hidden &&
+      r2.win.getComputedStyle(sec2).display === 'none';
+
+    /* lịch sử trỏ tới slug không có trong thư viện → không được đoán mò */
+    const r3 = await mo(lichSu(['slug-khong-ton-tai']));
+    const sec3 = r3.doc.querySelector('#vi-ban-da-doc');
+    out.viBanDaDoc.anKhiSlugLa = !!sec3 && sec3.hidden;
+
+    /* đọc 1 bộ của một cặp → bộ kia của cặp đó phải được gợi ý */
+    const r4 = await mo(lichSu([cuaCap[0]]));
+    const why4 = (r4.doc.querySelector('#vbdWhy') || {}).textContent || '';
+    out.viBanDaDoc.theoCap = {
+      hien: !(r4.doc.querySelector('#vi-ban-da-doc') || { hidden: true }).hidden,
+      coBoCuaCap: slugs(r4).indexOf(cuaCap[1]) >= 0,
+      whyCoTenCap: /Lookmhee x Sonya/.test(why4),
+    };
+    /* run.js chỉ đọc exit code và các khoá errorsN — nên mọi assertion ở trên
+       phải quy về một danh sách lỗi CÓ TÊN thì hỏng mới thật sự bị phát hiện */
+    const v = out.viBanDaDoc, f = [];
+    const ck = (ok, ten) => { if (!ok) f.push(ten); };
+    ck(v.hien, 'đã đọc 1 bộ mà khối “Vì bạn đã đọc” không hiện');
+    ck(v.soThe === 5, 'phải gợi ý đúng 5 bộ chưa đọc của cùng tác giả, thấy ' + v.soThe);
+    ck(v.khopDanhSach, 'danh sách gợi ý sai: ' + JSON.stringify(v.soThe));
+    ck(v.gopDuCaHoaThuong, 'không gộp được “SalmonLover” với “Salmonlover” — so khớp phải thường hoá');
+    ck(v.khongGoiLaiBoDaDoc, 'gợi ý lại chính bộ người đọc đã đọc');
+    ck(v.whyNeuCanCu, 'không nói rõ căn cứ gợi ý');
+    ck(v.whyNoiKhongDungAI, 'không nói rõ là không dùng AI');
+    ck(v.anKhiChuaDoc, 'chưa đọc gì mà khối gợi ý vẫn hiện');
+    ck(v.anKhiSlugLa, 'lịch sử trỏ slug lạ mà vẫn gợi ý — đoán mò');
+    ck(v.theoCap.hien && v.theoCap.coBoCuaCap, 'đọc 1 bộ của một cặp mà không gợi ý bộ kia của cặp đó');
+    ck(v.theoCap.whyCoTenCap, 'gợi ý theo cặp mà không nêu tên cặp');
+    ck(v.loiJs.length === 0, 'lỗi JS khi dựng khối gợi ý: ' + v.loiJs.join(' | '));
+    out.errors2 = errors.slice(0, 6);
+    out.errors3 = f;
+  }
+
+
   out.errors1 = errors.slice(0, 6);
   console.log(JSON.stringify(out, null, 1));
   process.exit(0);

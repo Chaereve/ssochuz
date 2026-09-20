@@ -207,6 +207,30 @@ function openAdmin(worker, key) {
     goiDuoc: w.calls.indexOf('GET /api/admin/kv') >= 0
   };
 
+  /* ---------- 4b. chấm điểm SEO trong tab Bác sĩ dữ liệu ----------
+     Quét trước rồi mới chấm: điểm lấy từ dữ liệu vừa đối chiếu 3 nguồn. */
+  click('#docRun');
+  await wait(1500);
+  click('#docSeo');
+  await wait(500);
+  out.seo = {
+    coNut: !!$(doc, '#docSeo') && !!$(doc, '#docSeo').title,
+    soTile: $$(doc, '#docTiles .tile').length,
+    nhanTile: $$(doc, '#docTiles .tile span').map(e => e.textContent.trim()),
+    trungBinh: String(($$(doc, '#docTiles .tile b')[0] || {}).textContent || '').trim(),
+    soDong: $$(doc, '#docList .docrow').length,
+    coOdiem: $$(doc, '#docList .di.seoscore').length,
+    diemDau: String(($$(doc, '#docList .di.seoscore')[0] || {}).textContent || '').trim(),
+    /* danh sách xếp THẤP lên cao: ô điểm đầu phải ≤ ô điểm cuối */
+    thapLenCao: (() => {
+      const ds = $$(doc, '#docList .di.seoscore').map(e => parseInt(e.textContent, 10));
+      return ds.length > 1 && ds[0] <= ds[ds.length - 1];
+    })(),
+    moiDongCoLyDo: $$(doc, '#docList .docrow').every(r =>
+      /đủ hết, không có gì để sửa/.test(r.textContent) || r.querySelectorAll('.dt > b').length > 0),
+    trangThai: String($(doc, '#docState').textContent || '').trim().replace(/\s+/g, ' ').slice(0, 110),
+  };
+
   /* ---------- 5. nút nguy hiểm xác nhận 2 bước (xoá bộ) ---------- */
   const libBefore = w.REG.lib.length;
   click('#btnDelBook');                 /* lần 1: vũ trang, CHƯA xoá */
@@ -239,6 +263,12 @@ function openAdmin(worker, key) {
   if (!out.arm2.armed) hard.push('lần 1 không vũ trang nút');
   if (!out.arm2.chuaXoa) hard.push('lần 1 đã xoá (sai — phải đợi lần 2)');
   if (!out.arm2.xoaXong || !out.arm2.gone) hard.push('lần 2 chưa xoá bộ');
+  if (!out.seo.coNut) hard.push('chưa có nút Chấm điểm SEO');
+  if (out.seo.soDong < 1) hard.push('chấm SEO không vẽ dòng nào');
+  if (out.seo.coOdiem !== out.seo.soDong) hard.push('mỗi dòng phải có 1 ô điểm: ' + out.seo.coOdiem + '/' + out.seo.soDong);
+  if (!/^\d+$/.test(out.seo.diemDau)) hard.push('ô điểm không phải con số: ' + out.seo.diemDau);
+  if (!out.seo.thapLenCao) hard.push('danh sách SEO phải xếp từ thấp lên cao');
+  if (!out.seo.moiDongCoLyDo) hard.push('có dòng SEO không nêu lý do bị trừ');
   if (out.errors.length) hard.push('có lỗi JS: ' + out.errors.join(' | '));
   if (hard.length) { console.log('TRẮNG: ' + hard.join(' · ')); process.exit(1); }
   console.log('Đen: gương mặt quản trị mới hoạt động đúng.');

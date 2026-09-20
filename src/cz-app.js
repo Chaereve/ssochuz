@@ -790,6 +790,23 @@
     myStatsSave(o);
     return true;
   }
+  /* Danh sách slug mà người đọc ĐÃ đọc xong ít nhất một chương, kèm số chương
+     đã đọc của từng bộ. Lấy từ chính bộ đếm trong máy nên không hỏi Worker và
+     không phát sinh lượt đọc KV nào — mục “Vì bạn đã đọc X” chỉ cần chừng đó.
+     Khoá trong `days` có dạng "<slug>:c<số>" (slug không chứa dấu hai chấm). */
+  function readSlugs() {
+    var o = myStats(), dem = {};
+    Object.keys(o.days || {}).forEach(function (k) {
+      var row = o.days[k] && o.days[k].s;
+      if (!row) return;
+      Object.keys(row).forEach(function (key) {
+        var i = key.lastIndexOf(':');
+        var slug = i > 0 ? key.slice(0, i) : '';
+        if (slug) dem[slug] = (dem[slug] || 0) + 1;
+      });
+    });
+    return dem;
+  }
   /* trả về {total, today, streak, week:[n,n,n,n,n,n,n], last} cho giao diện My Space */
   function myReadSummary() {
     var o = myStats();
@@ -2611,7 +2628,7 @@
     followPushHook: followPushHook,
     isLiked: isLiked, toggleLike: toggleLike, likedChapters: likedChapters, likedCount: likedCount, likeCount: likeCount,
     marks: marks, toggleMark: toggleMark, chaptersRead: chaptersRead,
-    myReadAdd: myReadAdd, myReadSummary: myReadSummary,
+    myReadAdd: myReadAdd, myReadSummary: myReadSummary, readSlugs: readSlugs,
     realCount: realCount, reconcileCount: reconcileCount, onStatsChange: onStatsChange, notifyStats: notifyStats,
     rdGet: rdGet, rdSet: rdSet, themeInit: themeInit, themeToggle: themeToggle, themeMeta: themeMeta,
     icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo, teaser: teaser,

@@ -368,6 +368,67 @@
     }).join('') + '</div>' +
       (sch.note ? '<p class="schnote">' + esc(sch.note) + '</p>' : '');
   }
+  /* ============== VÌ BẠN ĐÃ ĐỌC X ========================================
+     Gợi ý xếp theo CÙNG TÁC GIẢ và CẶP NHÂN VẬT với những bộ người đọc đã đọc.
+     Thư viện KHÔNG có trường thể loại (registry chỉ có title, slug, author,
+     couple, year, status, chapters, is18, thumb, countLabel, updated, slide,
+     syn) nên không thể soi theo thể loại mà không bịa nhãn — vì vậy căn cứ được
+     ghi rõ ngay trên giao diện. Toàn bộ chạy trong máy: đọc localStorage rồi
+     lọc lib, không gửi gì đi đâu, không ghi KV, không dùng AI. */
+  function renderBecause() {
+    var el = $('#vi-ban-da-doc'), rail = $('#vbdRail');
+    if (!el || !rail) return;
+    var dem = {};
+    try { dem = CZ.readSlugs ? CZ.readSlugs() : {}; } catch (e) { dem = {}; }
+    var lib = [];
+    try { lib = CZ.lib() || []; } catch (e2) { lib = []; }
+    var by = {};
+    lib.forEach(function (n) { if (n && n.slug) by[n.slug] = n; });
+    /* sức nặng của từng tác giả / cặp trong các bộ ĐÃ đọc: couple đặc hiệu hơn
+       tác giả nên nhân hệ số cao hơn */
+    var wA = {}, wC = {}, docNhieu = '', nhieuNhat = 0;
+    Object.keys(dem).forEach(function (s) {
+      var n = by[s];
+      if (!n) return;
+      var a = String(n.author || '').trim().toLowerCase();
+      var c = String(n.couple || '').trim().toLowerCase();
+      if (a) wA[a] = (wA[a] || 0) + dem[s];
+      if (c) wC[c] = (wC[c] || 0) + dem[s] * 2;
+      if (dem[s] > nhieuNhat) { nhieuNhat = dem[s]; docNhieu = n.title; }
+    });
+    var ung = [];
+    lib.forEach(function (n) {
+      if (!n || !n.slug || dem[n.slug]) return;         /* đã đọc thì không gợi ý lại */
+      var a = String(n.author || '').trim().toLowerCase();
+      var c = String(n.couple || '').trim().toLowerCase();
+      var diem = (a && wA[a] ? wA[a] : 0) + (c && wC[c] ? wC[c] : 0);
+      if (diem > 0) ung.push({ n: n, diem: diem });
+    });
+    if (!ung.length) { el.hidden = true; return; }
+    ung.sort(function (x, y) {
+      return (y.diem - x.diem) ||
+        String(y.n.updated || '').localeCompare(String(x.n.updated || ''));
+    });
+    /* kể đúng căn cứ: liệt kê tác giả/cặp đã khớp kèm số bộ, không nói chung chung */
+    var topA = Object.keys(wA).sort(function (x, y) { return wA[y] - wA[x]; }).slice(0, 2);
+    var topC = Object.keys(wC).sort(function (x, y) { return wC[y] - wC[x]; }).slice(0, 1);
+    var tenA = topA.map(function (k) { return (by[Object.keys(dem).filter(function (s) {
+      return by[s] && String(by[s].author || '').trim().toLowerCase() === k;
+    })[0]] || {}).author || k; });
+    var tenC = topC.map(function (k) { return (by[Object.keys(dem).filter(function (s) {
+      return by[s] && String(by[s].couple || '').trim().toLowerCase() === k;
+    })[0]] || {}).couple || k; });
+    var soBoDaDoc = Object.keys(dem).filter(function (s) { return by[s]; }).length;
+    var vi = [];
+    if (tenA.length) vi.push('cùng tác giả ' + tenA.map(function (t) { return '“' + esc(t) + '”'; }).join(' và '));
+    if (tenC.length) vi.push('cùng cặp ' + tenC.map(function (t) { return '“' + esc(t) + '”'; }).join(' và '));
+    $('#vbdTitle').textContent = 'Vì bạn đã đọc' + (docNhieu ? ' ' + docNhieu : '');
+    $('#vbdWhy').innerHTML = 'Bạn đã đọc <b>' + soBoDaDoc + '</b> bộ trong thư viện này — ' +
+      'đây là những bộ khác ' + vi.join(' và ') + ', bạn chưa đọc. ' +
+      'Xếp hạng tính ngay trong máy bạn từ lịch sử đọc, không gửi dữ liệu đi đâu và không dùng AI.';
+    el.hidden = false;
+    CZ.mountRail(rail, ung.slice(0, 12).map(function (x) { return x.n; }));
+  }
   function renderEditorChoice() {
     var el = $('#bien-tap'), rail = $('#editRail');
     if (!el || !rail) return;
@@ -624,6 +685,7 @@
       renderNew();
       renderRank();
       renderEditorChoice();
+      renderBecause();
       CZ.schedule().then(renderSched).catch(function () { renderSched(null); });
       buildFilters();
       render();

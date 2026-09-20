@@ -51,7 +51,7 @@
 ⬜ Chọn nhiều truyện → xoá/xuất bản cùng lúc
 ⬜ Sửa nhanh ngay trong bảng
 ⬜ Kéo thả để xếp thứ tự
-⬜ Chấm điểm SEO cho mỗi truyện
+✅ Chấm điểm SEO cho mỗi truyện (9 mục đo được bằng số, 0–100 điểm, hạng A–D, mỗi mục trừ kèm con số thật)
 ⬜ Hẹn giờ đăng (backend đã sẵn)
 ⬜ Tải toàn bộ dữ liệu về máy (backup)
 ⬜ Khôi phục từ file backup
@@ -112,11 +112,12 @@
 ⬜ Tìm tiêu đề toàn bộ 1.199 chương
 ⬜ Gợi ý khi đang gõ
 ⬜ Tô đậm chữ khớp trong kết quả
-⬜ "Vì bạn đã đọc X" (soi theo thể loại, không cần AI)
+✅ "Vì bạn đã đọc X" — soi theo TÁC GIẢ + CẶP NHÂN VẬT, tính trong máy, không dùng AI
 ⬜ Bộ sưu tập theo dịp (Tết, Halloween…)
 
 ✅ Tìm theo tên truyện / tác giả
-✅ Lọc theo thể loại · năm · cặp nhân vật · trạng thái
+✅ Lọc theo năm · tác giả · cặp nhân vật · trạng thái · nhãn 18+
+⬜ Lọc theo thể loại — THƯ VIỆN CHƯA CÓ TRƯỜNG THỂ LOẠI (registry chỉ có title, slug, author, couple, year, status, chapters, is18, thumb, countLabel, updated, slide, syn)
 
 ---
 

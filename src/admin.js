@@ -2899,6 +2899,59 @@
     return (n / 1024 / 1024).toFixed(2) + ' MB';
   }
 
+  /* ---------------- CHẤM ĐIỂM SEO -------------------------------------------
+     Chỉ chấm những thứ ĐO ĐƯỢC BẰNG SỐ trên dữ liệu có sẵn: độ dài tiêu đề, độ
+     dài mô tả, có ảnh bìa chưa, slug hợp lệ chưa, được mấy chương, chương đầu có
+     chữ thật không. KHÔNG chấm “truyện hay hay dở” — máy không đọc hiểu được
+     văn, chấm cái đó là nói dối với người viết. Mỗi mục trừ điểm đều kèm CON SỐ
+     thật để biết sửa gì, không báo “cần cải thiện” chung chung. */
+  var SEO_W = { title: 18, slug: 12, syn: 20, thumb: 14, author: 10, couple: 6, year: 6, chuong: 8, chuongDau: 6 };
+  function seoScore(n, src) {
+    n = n || {};
+    var diem = 0, loi = [];
+    function cong(ma, phan, msg) {
+      var w = SEO_W[ma];
+      diem += Math.round(w * phan);
+      if (phan < 1) loi.push({ ma: ma, msg: msg });
+    }
+    var t = String(n.title || '').trim();
+    if (t.length >= 10 && t.length <= 70) cong('title', 1, '');
+    else if (t.length >= 5 && t.length <= 90) cong('title', 0.5,
+      'Tiêu đề ' + t.length + ' ký tự — kết quả tìm kiếm cắt khoảng 60 ký tự, gọn trong 10–70 là vừa');
+    else cong('title', 0, 'Tiêu đề ' + (t.length || 0) + ' ký tự — nên đặt 10–70 ký tự');
+    var sl = String(n.slug || '').trim();
+    if (/^[a-z0-9]+(-[a-z0-9]+)*$/.test(sl) && sl.length >= 3 && sl.length <= 60) cong('slug', 1, '');
+    else cong('slug', 0, sl
+      ? 'Slug “' + sl + '” ' + (sl.length > 60 ? 'dài ' + sl.length + ' ký tự' : 'có ký tự không hợp lệ') +
+        ' — chỉ nên dùng chữ thường, số và dấu gạch, 3–60 ký tự'
+      : 'Chưa có slug — truyện không mở được bằng đường dẫn riêng');
+    var syn = String(n.syn || n.synFull || '').trim();
+    if (syn.length >= 70 && syn.length <= 300) cong('syn', 1, '');
+    else if (syn.length >= 30 && syn.length <= 500) cong('syn', 0.5,
+      'Mô tả ' + syn.length + ' ký tự — nên 70–300 để hiện đủ trong kết quả tìm kiếm');
+    else cong('syn', 0, syn
+      ? 'Mô tả ' + syn.length + ' ký tự — quá ' + (syn.length < 70 ? 'ngắn' : 'dài') + ', nên 70–300 ký tự'
+      : 'Chưa có mô tả — kết quả tìm kiếm sẽ không hiện đoạn giới thiệu nào');
+    cong('thumb', String(n.thumb || '').trim() ? 1 : 0,
+      'Chưa có ảnh bìa — khi chia sẻ lên mạng xã hội sẽ không có hình');
+    cong('author', String(n.author || '').trim() ? 1 : 0, 'Chưa ghi tác giả');
+    cong('couple', String(n.couple || '').trim() ? 1 : 0,
+      'Chưa ghi cặp nhân vật — đây là một trong bốn bộ lọc người đọc đang dùng');
+    var y = String(n.year || '').trim(), yy = parseInt(y, 10);
+    cong('year', (/^\d{4}$/.test(y) && yy >= 1990 && yy <= new Date().getFullYear() + 1) ? 1 : 0,
+      y ? 'Năm “' + y + '” không hợp lệ — ghi 4 chữ số' : 'Chưa ghi năm');
+    var ch = (src && src.chapters) ? src.chapters : null;
+    var soCh = ch ? ch.length : (Number(n.chapters) || 0);
+    if (soCh >= 3) cong('chuong', 1, '');
+    else if (soCh >= 1) cong('chuong', 0.5, 'Mới có ' + soCh + ' chương — dưới 3 chương thì người đọc mới khó ở lại');
+    else cong('chuong', 0, 'Chưa có chương nào để đọc');
+    var dau = ch && ch[0] ? String(ch[0].html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '';
+    if (dau.length >= 300) cong('chuongDau', 1, '');
+    else if (dau.length > 0) cong('chuongDau', 0.5, 'Chương đầu chỉ ' + dau.length + ' ký tự chữ — nên trên 300');
+    else cong('chuongDau', 0, ch ? 'Chương đầu chưa có chữ' : 'Chưa đọc được chương đầu để chấm');
+    diem = Math.max(0, Math.min(100, diem));
+    return { diem: diem, xep: diem >= 85 ? 'A' : diem >= 70 ? 'B' : diem >= 50 ? 'C' : 'D', loi: loi };
+  }
   function runDoctor() {
     if (!REG) return;
     var lib = (REG.lib || []).slice();
@@ -2908,7 +2961,8 @@
     return pool(lib, 5, function (n) {
       var slug = n.slug;
       if (!slug) {
-        DOC.rows.push({ n: n, slug: '', reg: Number(n.chapters) || 0, kv: null, repo: null, issues: ['noslug'] });
+        DOC.rows.push({ n: n, slug: '', reg: Number(n.chapters) || 0, kv: null, repo: null,
+          issues: ['noslug'], seo: seoScore(n, null) });
         return;
       }
       return Promise.all([fetchKvBook(slug), fetchRepoBook(slug)]).then(function (rs) {
@@ -2955,13 +3009,19 @@
         if (!String(n.author || '').trim()) issues.push('noauthor');
         if (!String(n.year || '').trim()) issues.push('noyear');
         DOC.rows.push({ n: n, slug: slug, reg: regN, kv: kvN, repo: repoN, real: real,
-          dups: dups, gaps: gaps, issues: issues });
+          dups: dups, gaps: gaps, issues: issues, seo: seoScore(n, src) });
         done++;
         if (done % 10 === 0) docState('<span class="spin"></span> đã soi ' + done + '/' + lib.length + ' bộ…', 'info');
       });
     }).then(function () { renderDoctor(); });
   }
   var DOC_LABEL = {
+    /* nhãn cho từng mục trừ điểm SEO — chỉ dùng phần [1] (tên mục) */
+    seo_title: ['warn', 'Tiêu đề', ''], seo_slug: ['warn', 'Đường dẫn (slug)', ''],
+    seo_syn: ['warn', 'Mô tả', ''], seo_thumb: ['warn', 'Ảnh bìa', ''],
+    seo_author: ['warn', 'Tác giả', ''], seo_couple: ['warn', 'Cặp nhân vật', ''],
+    seo_year: ['warn', 'Năm', ''], seo_chuong: ['warn', 'Số chương', ''],
+    seo_chuongDau: ['warn', 'Chương đầu', ''],
     regVsReal: ['bad', 'Số chương ngoài web ≠ số chương thật', 'registry ghi {reg}, kho chương có {real} — người đọc thấy sai số'],
     repoAhead: ['bad', 'File trong repo GitHub chưa được nạp lên KV',
       'repo có {repo} chương, KV chỉ {kv} — bạn sửa/thêm chương trong file trên GitHub mà chưa nạp lên KV nên người đọc vẫn nhận bản cũ. Bấm "↑ Nạp chương từ repo lên KV"'],
@@ -3095,6 +3155,48 @@
       });
     });
     docState('Xong: ' + bad.length + ' bộ sai nghiêm trọng, ' + warn.length + ' bộ cần xem lại (trong ' + rows.length + ' bộ đã soi).', bad.length ? 'err' : 'ok');
+  }
+  /* ---------------- DANH SÁCH THEO ĐIỂM SEO --------------------------------
+     Xếp từ THẤP lên cao: bộ cần sửa nhất nằm trên cùng. Mỗi dòng nêu đúng số đo
+     đang thiếu, không nói “cần cải thiện” chung chung. */
+  function renderSeo() {
+    var rows = DOC.rows.filter(function (r) { return r.seo; });
+    if (!rows.length) { docState('Quét dữ liệu trước đã — chưa có gì để chấm', 'err'); return; }
+    rows = rows.slice().sort(function (a, b) { return a.seo.diem - b.seo.diem; });
+    var tb = 0;
+    rows.forEach(function (r) { tb += r.seo.diem; });
+    tb = Math.round(tb / rows.length);
+    var xep = { A: 0, B: 0, C: 0, D: 0 };
+    rows.forEach(function (r) { xep[r.seo.xep]++; });
+    $('#docTiles').innerHTML = [
+      ['Điểm trung bình', num(tb)], ['A (85–100)', num(xep.A)],
+      ['B–C (50–84)', num(xep.B + xep.C)], ['D (dưới 50)', num(xep.D)]
+    ].map(function (t) {
+      return '<div class="tile"><b>' + t[1] + '</b><span>' + t[0] + '</span></div>';
+    }).join('');
+    $('#docSel').textContent = 'chấm lúc ' + new Date(DOC.at).toLocaleTimeString('vi-VN') +
+      ' · chỉ đo những gì đếm được bằng số, không chấm nội dung hay hay dở';
+    $('#docList').innerHTML = rows.map(function (r, i) {
+      var sc = r.seo, cls = sc.xep === 'A' ? 'good' : sc.xep === 'B' ? '' : sc.xep === 'C' ? 'warn' : 'bad';
+      var bits = sc.loi.map(function (l) {
+        return '<b>' + esc(DOC_LABEL['seo_' + l.ma] ? DOC_LABEL['seo_' + l.ma][1] : l.ma) + '</b><span>' + esc(l.msg) + '</span>';
+      }).join('');
+      return '<div class="docrow ' + cls + '"><span class="di seoscore ' + sc.xep + '">' + sc.diem + '</span>' +
+        '<span class="dt"><b>' + esc(r.n.title || r.slug || '(thiếu tên)') + '</b>' +
+        '<span class="sm muted">slug <code>' + esc(r.slug || '—') + '</code> · hạng <b>' + sc.xep + '</b> · ' +
+        (sc.loi.length ? sc.loi.length + ' mục cần sửa' : 'đủ hết, không có gì để sửa') + '</span>' +
+        bits + '</span>' +
+        '<span class="row" style="gap:6px">' +
+        '<button class="btn ghost sm" data-seoedit="' + i + '">' + ic('edit', 'i-s') + 'Sửa</button></span></div>';
+    }).join('');
+    $$('#docList [data-seoedit]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var r = rows[parseInt(b.dataset.seoedit, 10)];
+        if (r && r.slug) openEdit(r.slug, 'meta');
+      });
+    });
+    docState('Đã chấm ' + rows.length + ' bộ · trung bình ' + tb + '/100 · ' +
+      xep.D + ' bộ dưới 50 điểm.', xep.D ? 'err' : 'ok');
   }
   /* sửa nhãn + số chương trong registry theo số thật vừa soi được */
   function docFixRegistry() {
@@ -4525,6 +4627,7 @@
     runDoctor().then(function () { b.disabled = false; b.textContent = 'Quét lại'; },
       function () { b.disabled = false; b.textContent = 'Quét lại'; });
   });
+  $('#docSeo').addEventListener('click', function () { renderSeo(); });
   $('#kvRun').addEventListener('click', loadKV);
   $('#docFixKv').addEventListener('click', function () {
     /* nạp chương từ repo ghi đè kho chương trên KV — xác nhận 2 bước */
@@ -4544,6 +4647,8 @@
       rows: DOC.rows.map(function (r) {
         return { slug: r.slug, title: r.n && r.n.title, registry: r.reg, kv: r.kv, repo: r.repo,
           issues: r.issues,
+          seo: r.seo ? { diem: r.seo.diem, xep: r.seo.xep,
+            canSua: r.seo.loi.map(function (l) { return l.msg; }) } : null,
           /* trùng tiêu đề: same=true là đăng trùng thật, same=false là đặt tên nhầm */
           dupTitles: (r.dups || []).map(function (d) { return { t: d.t, at: d.at, same: d.same }; }),
           missingChapterNumbers: r.gaps || [] };
