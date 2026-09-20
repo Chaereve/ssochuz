@@ -37,15 +37,15 @@ var PRECACHE = [
   '/couple/',
   '/my-space',
   '/profile',
-  '/cz-space.js?v=20260920b',
+  '/cz-space.js?v=20260920c',
   '/manifest.webmanifest',
-  '/cz.css?v=20260920b',
-  '/cz-app.js?v=20260920b',
-  '/cz-home.js?v=20260920b',
-  '/cz-story.js?v=20260920b',
-  '/cz-people.js?v=20260920b',
-  '/cz-config.js?v=20260920b',
-  '/cz-auth.js?v=20260920b',
+  '/cz.css?v=20260920c',
+  '/cz-app.js?v=20260920c',
+  '/cz-home.js?v=20260920c',
+  '/cz-story.js?v=20260920c',
+  '/cz-people.js?v=20260920c',
+  '/cz-config.js?v=20260920c',
+  '/cz-auth.js?v=20260920c',
   '/ssochuz.png?v=1'
 ];
 

@@ -653,6 +653,9 @@
     /* chương vừa mở là mốc so của nháp: không đặt autoLast thì lần gõ đầu tiên sẽ
        ghi đè luôn bản nháp cũ trước khi người viết kịp khôi phục */
     autoLast = ed.innerHTML || '';
+    /* chụp bản gốc ngay lúc mở: nếu người viết sửa hỏng rồi mới bấm lưu thì bản
+       lấy từ KV vẫn còn trong lịch sử. Mở đi mở lại không tạo bản trùng. */
+    histSave('lúc mở chương');
     saveState('', '');
     autoOffer();
     renderChapters();
@@ -802,6 +805,7 @@
     /* nội dung đã vào bộ → bản nháp cục bộ hết nhiệm vụ, giữ lại chỉ khiến lần mở
        sau báo “còn nháp” với đúng chữ vừa lưu */
     autoDrop();
+    histSave('lúc lưu chương');
     saveState('Đã cập nhật chương ' + (CHAP + 1) + ' vào bộ — bấm “Lưu toàn bộ chương” để ghi lên KV', 'ok');
     if (!silent) { toast('Đã cập nhật chương ' + (CHAP + 1) + ' (nhớ bấm “Lưu toàn bộ chương”)', 'ok'); }
     return true;
@@ -1242,6 +1246,124 @@
     toast('Đã thay ' + hits.length + ' chỗ — nhớ bấm “Lưu chương này vào bộ”', 'ok');
     dirty.book = true; markDirty(); chStat(); autoSchedule();
     edCountFind();
+  }
+  /* ---------------- LỊCH SỬ PHIÊN BẢN CHƯƠNG (chỉ nằm trong máy) -------------
+     Mỗi lần “Lưu chương này vào bộ” thì chụp một bản. Khôi phục nhầm vẫn quay
+     lại được vì bản đang viết cũng được chụp trước khi ghi đè.
+     Trần 1 MB là cố ý: localStorage dùng chung cho nháp, kệ sách, đánh dấu,
+     thống kê… — chiếm hết chỗ sẽ làm hỏng mấy thứ kia. Vượt trần thì bỏ bản cũ
+     nhất trước. Con số này hiện ngay trong hộp thoại để người viết biết giới hạn. */
+  var HIST_MAX = 12, HIST_BYTES = 1024 * 1024, HIST_KEY = 'cz_ch_hist';
+  function histKey() {
+    /* lấy slug từ CUR, không có thì lấy từ BOOK: vài luồng (xoá chương, xoá bộ)
+       đặt CUR = null trong khi BOOK và CHAP vẫn hợp lệ — nếu chỉ dựa vào CUR thì
+       lịch sử sẽ im lặng không lưu đúng lúc người viết cần nó nhất. */
+    var sl = (CUR && CUR.slug) || (BOOK && BOOK.slug) || '';
+    return (sl && CHAP >= 0) ? (sl + ':' + CHAP) : '';
+  }
+  function histAll() {
+    try {
+      var o = JSON.parse(localStorage.getItem(HIST_KEY) || '{}');
+      return (o && typeof o === 'object') ? o : {};
+    } catch (e) { return {}; }
+  }
+  function histSize(all) {
+    var t = 0, k;
+    for (k in all) if (all.hasOwnProperty(k)) t += JSON.stringify(all[k]).length;
+    return t;
+  }
+  function histTrim(all) {
+    while (histSize(all) > HIST_BYTES) {
+      var worst = '', worstAt = Infinity, k;
+      for (k in all) {
+        if (!all.hasOwnProperty(k) || !all[k].length) continue;
+        if (all[k][0].at < worstAt) { worstAt = all[k][0].at; worst = k; }
+      }
+      if (!worst) break;
+      all[worst].shift();                       /* bản cũ nhất của chương cũ nhất */
+      if (!all[worst].length) delete all[worst];
+    }
+    return all;
+  }
+  function histWrite(all) {
+    try {
+      localStorage.setItem(HIST_KEY, JSON.stringify(histTrim(all)));
+      return true;
+    } catch (e) {
+      /* đầy bộ nhớ: bỏ nửa số bản cũ của chương này rồi thử lại đúng một lần */
+      var k = histKey();
+      if (k && all[k]) all[k] = all[k].slice(Math.ceil(all[k].length / 2));
+      try { localStorage.setItem(HIST_KEY, JSON.stringify(histTrim(all))); return true; }
+      catch (e2) { toast('Bộ nhớ trình duyệt đầy — không lưu được phiên bản', 'err'); return false; }
+    }
+  }
+  function histSave(why) {
+    var k = histKey(), ed = $('#edBody');
+    if (!k || !ed) return false;
+    var html = ed.innerHTML || '';
+    if (!/<[a-z]/i.test(html)) return false;    /* chương rỗng thì không chụp */
+    var all = histAll(), arr = all[k] || [];
+    var last = arr[arr.length - 1];
+    if (last && last.html === html) return false;   /* không đổi thì không chụp lại */
+    arr.push({ at: Date.now(), t: ($('#chTitle') || {}).value || '', html: html, why: why || '' });
+    while (arr.length > HIST_MAX) arr.shift();
+    all[k] = arr;
+    return histWrite(all);
+  }
+  function histBox() {
+    var k = histKey();
+    if (!k) { toast('Mở một chương trước đã', 'err'); return; }
+    var arr = (histAll()[k] || []).slice().reverse();   /* mới nhất lên trước */
+    var rows = arr.map(function (v, i) {
+      return '<li><div class="histline"><b>' + CZ.dateVN(v.at) + ' ' + CZ.timeAgo(v.at) + '</b>' +
+        '<span class="sm muted">' + CZ.words(String(v.html).replace(/<[^>]*>/g, ' ')) + ' chữ' +
+        (v.why ? ' · ' + CZ.esc(v.why) : '') + '</span></div>' +
+        '<div class="histact"><button class="btn ghost sm" data-hv="' + i + '">Xem</button>' +
+        '<button class="btn pri sm" data-hr="' + i + '">Khôi phục</button></div></li>';
+    }).join('');
+    var m = CZ.modal('czHist',
+      '<div class="mh"><h4>Phiên bản đã lưu trong máy</h4></div>' +
+      '<div class="mb">' +
+        (rows ? '<ul class="histlist">' + rows + '</ul>'
+              : '<p class="hint">Chưa có phiên bản nào. Mỗi lần bấm “Lưu chương này vào bộ” sẽ lưu một bản.</p>') +
+        '<p class="hint sm">Tối đa ' + HIST_MAX + ' bản cho mỗi chương, tổng ' +
+        Math.round(HIST_BYTES / 1024) + ' KB cho cả web — nằm trong máy này, không đưa lên mạng. ' +
+        'Muốn xoá thì bấm nút dưới.</p></div>' +
+      '<div class="mf"><button class="btn ghost sm" id="histWipe">Xoá lịch sử chương này</button>' +
+        '<span class="grow"></span><button class="btn ghost" data-close>Đóng</button></div>');
+    m.querySelectorAll('[data-hv]').forEach(function (b) {
+      b.addEventListener('click', function () { histPeek(arr[+b.dataset.hv]); });
+    });
+    m.querySelectorAll('[data-hr]').forEach(function (b) {
+      b.addEventListener('click', function () { histBack(arr[+b.dataset.hr]); });
+    });
+    m.querySelector('#histWipe').addEventListener('click', function () {
+      var all = histAll();
+      delete all[k];
+      histWrite(all);
+      toast('Đã xoá lịch sử của chương này', 'ok');
+      m._close();
+    });
+  }
+  function histPeek(v) {
+    if (!v) return;
+    var d = document.createElement('div');
+    d.innerHTML = CZ.sanitize(v.html || '');       /* bản cũ cũng phải lọc lại */
+    CZ.modal('czHistView',
+      '<div class="mh"><h4>Bản ' + CZ.dateVN(v.at) + '</h4></div>' +
+      '<div class="mb"><div class="histpeek">' + d.innerHTML + '</div></div>' +
+      '<div class="mf"><span class="grow"></span><button class="btn ghost" data-close>Đóng</button></div>');
+  }
+  function histBack(v) {
+    if (!v) return;
+    var ed = $('#edBody');
+    if (!ed) return;
+    histSave('trước khi khôi phục');              /* để khôi phục nhầm còn quay lại */
+    ed.innerHTML = CZ.sanitize(v.html || '');
+    dirty.book = true; markDirty(); chStat(); autoSchedule();
+    var md = document.querySelector('#czHist');
+    if (md && md._close) md._close();
+    toast('Đã khôi phục bản ' + CZ.dateVN(v.at) + ' — nhớ bấm “Lưu chương này vào bộ”', 'ok');
   }
   /* ---------------- TỰ LƯU NHÁP CHƯƠNG (không gọi API) -------------------
      Chỉ ghi ra localStorage, KHÔNG PUT lên Worker: tự động ghi chương đang viết
@@ -3615,6 +3737,7 @@
   });
   $('#chExpHtml').addEventListener('click', edExportHtml);
   $('#chExpTxt').addEventListener('click', edExportTxt);
+  $('#chHist').addEventListener('click', histBox);
   $('#edBody').addEventListener('mousedown', edResizeStart);
   $('#edFindCase').addEventListener('change', edCountFind);
   $('#edFindWord').addEventListener('change', edCountFind);

@@ -25,9 +25,9 @@
 ✅ Dán ảnh bằng Ctrl+V
 ✅ Kéo thả ảnh vào ô soạn
 ✅ Dán từ Word / Google Docs mà sạch định dạng
-⬜ In / xem trước khi in
+✅ In chương (window.print() + @media print, đổi tiêu đề thành “bộ — chương”)
 ✅ Xuất .html · .txt  ⬜ .docx · PDF (qua in)
-⬜ Lịch sử phiên bản + khôi phục + so sánh (lưu trong máy)
+✅ Lịch sử phiên bản + khôi phục + xem trước (lưu trong máy, 12 bản/chương, trần 1 MB)  ⬜ so sánh hai bản
 ⬜ Ngắt trang
 
 ✅ Đậm · nghiêng · gạch chân · gạch ngang

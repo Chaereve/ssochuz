@@ -176,6 +176,29 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   let BOOK = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'data/book/third-person.json'), 'utf8'));
   BOOK = JSON.parse(JSON.stringify(BOOK));
 
+  /* PROBE IN CHUONG */
+  out.inChuong = {};
+  const cssGoc = require('fs').readFileSync(require('path').join(__dirname, '..', 'cz.css'), 'utf8');
+  out.inChuong.coCssIn = /@media print/.test(cssGoc) && /\.rtext/.test(cssGoc.split('@media print')[1] || '');
+  out.inChuong.trongChuong = !!doc.querySelector('#rdText') && doc.querySelector('#rdText').textContent.trim().length > 50;
+  click('#rdSet'); await wait(400);
+  const nutIn = doc.querySelector('#setPrint');
+  out.inChuong.coNut = !!nutIn;
+  out.inChuong.coTitle = !!(nutIn && nutIn.title);
+  let soLanIn = 0;
+  win.print = () => { soLanIn++; };
+  const tenCu = doc.title;
+  click('#setPrint'); await wait(250);
+  out.inChuong.goiPrint = soLanIn === 1;
+  win.dispatchEvent(new win.Event('beforeprint'));
+  await wait(150);
+  out.inChuong.tieuDeLucIn = doc.title;
+  out.inChuong.coLopIn = doc.body.classList.contains('is-printing');
+  win.dispatchEvent(new win.Event('afterprint'));
+  await wait(150);
+  out.inChuong.traTieuDe = doc.title === tenCu;
+  out.inChuong.boLopIn = !doc.body.classList.contains('is-printing');
+
   const a = page('admin.html', { url: 'https://ssochuz.pages.dev/admin', fetch: workerFetch });
   const W = a.win, D = a.doc;
   const $a = s => D.querySelector(s), $$a = s => [...D.querySelectorAll(s)];
@@ -999,6 +1022,79 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   if (isz.escHuyKeo !== 'fig fig-c fig-w25') rtFail.push('Esc không huỷ kéo / không trả cỡ cũ: ' + isz.escHuyKeo);
   if (isz.nhaChuot !== 'fig fig-c fig-w75') rtFail.push('nhả chuột không chốt cỡ: ' + isz.nhaChuot);
   if (isz.bamGiuaKhongKeo !== 'fig fig-c fig-w75') rtFail.push('bấm giữa ảnh mà vẫn kéo giãn: ' + isz.bamGiuaKhongKeo);
+  /* IN CHUONG (trang doc) va LICH SU PHIEN BAN (trang quan tri).
+     Lich su phai mo lai chuong truoc: test adminChDel phia tren da dat CHAP = -1
+     va dua giao dien ve danh sach bo. */
+  const rows6 = $$a('#chList .row2');
+  for (const r6 of rows6) { clk(r6); await wait(400); if (edB.innerHTML.length > 200) break; }
+  const histAll6 = () => { try { return JSON.parse(W.localStorage.getItem('cz_ch_hist') || '{}'); } catch (e) { return {}; } };
+  const histKeys6 = () => Object.keys(histAll6());
+  const histArr6 = () => { const k = histKeys6(); return k.length ? histAll6()[k[k.length - 1]] : []; };
+  out.editorLichSu = {};
+  W.localStorage.removeItem('cz_ch_hist');
+  edB.innerHTML = '<p>ban goc</p>';
+  edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(200);
+  clk('#chSave'); await wait(500);
+  out.editorLichSu.luuRaMotBan = histArr6().length;
+  out.editorLichSu.key = histKeys6().join(',');
+  clk('#chSave'); await wait(400);
+  /* luu lai dung noi dung cu thi KHONG duoc chup them ban trung */
+  out.editorLichSu.khongChupTrung = histArr6().length;
+  edB.innerHTML = '<p>ban sua</p>';
+  edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(200);
+  clk('#chSave'); await wait(500);
+  out.editorLichSu.suaThiChup = histArr6().length;
+  clk('#chHist'); await wait(500);
+  const hopLs = $a('#czHist');
+  out.editorLichSu.moHop = !!(hopLs && hopLs.classList.contains('on'));
+  out.editorLichSu.soDong = $$a('#czHist .histlist li').length;
+  out.editorLichSu.hienGioiHan = /Tối đa 12 bản/.test(hopLs ? hopLs.textContent : '');
+  clk('#czHist [data-hr="1"]'); await wait(500);
+  out.editorLichSu.khoiPhucDuoc = /ban goc/.test(edB.textContent);
+  /* ban xem thuoc phai loc lai HTML: ban cu co the chua the nguy hiem */
+  edB.innerHTML = '<p>an toan</p><script>window.__hackLs = 1;<\/script>';
+  edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(200);
+  clk('#chSave'); await wait(500);
+  clk('#chHist'); await wait(400);
+  clk('#czHist [data-hv="0"]'); await wait(500);
+  const pvLs = $a('#czHistView');
+  out.editorLichSu.xemThuoc = {
+    mo: !!(pvLs && pvLs.classList.contains('on')),
+    khongConScript: !(pvLs && /<script/i.test(pvLs.innerHTML)),
+    khongChayMa: W.__hackLs === undefined,
+    conChu: !!(pvLs && /an toan/.test(pvLs.textContent)),
+  };
+  /* tran 12 ban cho moi chuong */
+  for (let i = 0; i < 20; i++) {
+    edB.innerHTML = '<p>lan ' + i + '</p>';
+    edB.dispatchEvent(new W.Event('input', { bubbles: true }));
+    await wait(50); clk('#chSave'); await wait(110);
+  }
+  await wait(400);
+  out.editorLichSu.tranMoiChuong = histArr6().length;
+  clk('#chHist'); await wait(400);
+  clk('#czHist #histWipe'); await wait(500);
+  out.editorLichSu.xoaHet = histArr6().length;
+
+  const ls = out.editorLichSu || {};
+  if (ls.luuRaMotBan !== 1) rtFail.push('lưu chương không chụp đúng 1 bản, thực tế ' + ls.luuRaMotBan);
+  if (!/^third-person:\d+$/.test(ls.key || '')) rtFail.push('khoá lịch sử sai (CUR null mà không fallback về BOOK?): ' + ls.key);
+  if (ls.khongChupTrung !== 1) rtFail.push('lưu lại y nguyên mà vẫn chụp thêm bản: ' + ls.khongChupTrung);
+  if (ls.suaThiChup !== 2) rtFail.push('sửa nội dung rồi lưu phải có 2 bản, thực tế ' + ls.suaThiChup);
+  if (!ls.moHop) rtFail.push('nút Lịch sử không mở được hộp thoại');
+  if (ls.soDong !== 2) rtFail.push('hộp thoại phải liệt kê 2 bản, thực tế ' + ls.soDong);
+  if (!ls.hienGioiHan) rtFail.push('hộp thoại không nói rõ giới hạn dung lượng cho người viết');
+  if (!ls.khoiPhucDuoc) rtFail.push('bấm Khôi phục mà nội dung không đổi về bản cũ');
+  const xt = ls.xemThuoc || {};
+  if (!(xt.mo && xt.khongConScript && xt.khongChayMa && xt.conChu)) rtFail.push('ô xem trước phiên bản sai: ' + JSON.stringify(xt));
+  if (ls.tranMoiChuong !== 12) rtFail.push('không giữ đúng trần 12 bản mỗi chương, thực tế ' + ls.tranMoiChuong);
+  if (ls.xoaHet !== 0) rtFail.push('nút xoá lịch sử không xoá: ' + ls.xoaHet);
+  const pr = out.inChuong || {};
+  if (!(pr.coNut && pr.coTitle)) rtFail.push('thiếu nút In chương này trong cài đặt đọc: ' + JSON.stringify(pr));
+  if (!pr.goiPrint) rtFail.push('bấm In mà không gọi window.print()');
+  if (!/— Chương/.test(pr.tieuDeLucIn || '')) rtFail.push('beforeprint không đổi tiêu đề thành "bộ — chương": ' + pr.tieuDeLucIn);
+  if (!(pr.coLopIn && pr.traTieuDe && pr.boLopIn)) rtFail.push('beforeprint/afterprint dọn không sạch: ' + JSON.stringify(pr));
+  if (!pr.coCssIn) rtFail.push('cz.css đã build thiếu khối @media print');
   out.editorFail = rtFail;
   out.tong = {
     loiTrangDoc: out.errStory.length, loiQuanTri: out.errAdmin.length, loiTrangAnh: out.errImg.length,

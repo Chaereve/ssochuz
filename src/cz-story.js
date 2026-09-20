@@ -912,6 +912,7 @@
         row('Căn đều hai bên', 'justify', [{ k: 0, l: 'Tắt' }, { k: 1, l: 'Bật' }])) +
       grp('Nền đọc', row('Nền đọc', 'theme', RD_THEMES)) +
       '<div class="srow2" style="border:0"><span></span>' +
+      '<button class="btn ghost sm" id="setPrint" title="In chương đang đọc — trình duyệt sẽ hỏi in ra giấy hay lưu PDF">In chương này</button>' +
       '<button class="btn ghost sm" id="setReset">Về mặc định</button></div>';
     $$('#setBody [data-set]').forEach(function (b) {
       b.addEventListener('click', function () {
@@ -945,7 +946,30 @@
       CZ.rdSet({ mode: 'scroll', size: 18, font: 'serif', line: 1.85, para: 1.05, theme: 'kem', width: 720, justify: 0 });
       applyRD(); paintSettings(); relayout(); CZ.toast('Đã về mặc định');
     });
+    $('#setPrint').addEventListener('click', printChapter);
   }
+  /* ---- IN CHƯƠNG: dùng window.print() của trình duyệt, không sinh PDF ở web ----
+     Trình duyệt in đúng tiêu đề trang lên đầu giấy, nên trước khi in phải đổi
+     document.title thành “tên bộ — tên chương”, in xong thì trả lại. */
+  var titleTruocIn = '';
+  function printChapter() {
+    if (!cur || !CHS.length) { CZ.toast('Mở một chương rồi hãy in', 'err'); return; }
+    if (typeof window.print !== 'function') { CZ.toast('Trình duyệt này không in được', 'err'); return; }
+    try { window.print(); }
+    catch (e) { CZ.toast('Không in được: ' + (e && e.message ? e.message : e), 'err'); }
+  }
+  window.addEventListener('beforeprint', function () {
+    document.body.classList.add('is-printing');
+    try {
+      titleTruocIn = document.title;
+      var ten = (N && N.title ? N.title : '') + (cur && CHS[cur - 1] ? ' — ' + chapLabel(cur) : '');
+      if (ten.trim()) document.title = ten;
+    } catch (e) {}
+  });
+  window.addEventListener('afterprint', function () {
+    document.body.classList.remove('is-printing');
+    if (titleTruocIn) { document.title = titleTruocIn; titleTruocIn = ''; }
+  });
   function paintTOC() {
     $('#tocName').textContent = N.title;
     var pr = CZ.progress(N);
