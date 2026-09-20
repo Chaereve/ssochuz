@@ -53,8 +53,8 @@
 ⬜ Kéo thả để xếp thứ tự
 ✅ Chấm điểm SEO cho mỗi truyện (9 mục đo được bằng số, 0–100 điểm, hạng A–D, mỗi mục trừ kèm con số thật)
 ⬜ Hẹn giờ đăng (backend đã sẵn)
-⬜ Tải toàn bộ dữ liệu về máy (backup)
-⬜ Khôi phục từ file backup
+✅ Tải toàn bộ dữ liệu về máy (backup) — nút `#btnBackup` → JSON
+✅ Khôi phục từ file backup — `#btnRestore` + `#fileRestore`, xác nhận 2 bước
 ⬜ Chặn spam bình luận theo từ khoá
 ⬜ Tự sinh tag gợi ý từ nội dung
 ⬜ Bảo mật 2 lớp cho trang quản trị
@@ -75,7 +75,7 @@
 ⬜ Chia sẻ một câu thành ảnh
 ⬜ Đánh dấu từng đoạn văn
 ⬜ Tải trước chương kế tiếp
-⬜ Thanh tiến độ đọc
+✅ Thanh tiến độ đọc (`#rdProgFill`, scaleX theo trang/chương — truyen.html:92, cz-story.js:1105·1435·1596)
 ⬜ Menu dưới cùng cho điện thoại
 ⬜ Vuốt để sang chương
 ⬜ Nút "đọc truyện ngẫu nhiên"
@@ -108,7 +108,7 @@
 
 ## TÌM KIẾM & KHÁM PHÁ
 
-⬜ Tìm trong nội dung **một bộ truyện**
+✅ Tìm trong nội dung **một bộ truyện** (ô `#tocFull` trong mục lục — Cụm 7, tìm trong máy, không gọi mạng)
 ⬜ Tìm tiêu đề toàn bộ 1.199 chương
 ⬜ Gợi ý khi đang gõ
 ⬜ Tô đậm chữ khớp trong kết quả
