@@ -45,7 +45,7 @@
 
 ## TRANG QUẢN TRỊ
 
-⬜ Ô tìm nhanh (Ctrl+K)
+✅ Ô tìm nhanh (Ctrl+K) — mở ô tìm tab + 62 truyện + chương của bộ đang mở; tìm bỏ dấu. Trước đó trang quản trị cố ý không có phím tắt nào, chủ trang đã cho phép thêm đúng phím này
 ⬜ Sidebar thu gọn được
 ⬜ Biểu đồ: đường, cột, tròn (tự vẽ, không cần thư viện)
 ⬜ Chọn nhiều truyện → xoá/xuất bản cùng lúc
@@ -73,11 +73,11 @@
 
 ✅ Trả lời bình luận (nhiều tầng)
 ⬜ Chia sẻ một câu thành ảnh
-⬜ Đánh dấu từng đoạn văn
-⬜ Tải trước chương kế tiếp
+✅ Đánh dấu từng đoạn văn — bật trong Cài đặt đọc → bấm vào đoạn để tô nền; `ssochuz-pmark-<slug>`, dùng chung chỉ số cho cả chế độ cuộn và phân trang. Mặc định TẮT và không đụng DOM chương
+✅ Tải trước chương kế tiếp — CÓ SẴN từ trước: `preNextFire()`/`preNextArm()` trong `src/cz-story.js` nạp đúng 1 chương kế sau 5 s nghỉ cùng ảnh của nó (dòng checklist này đánh dấu sai)
 ✅ Thanh tiến độ đọc (`#rdProgFill`, scaleX theo trang/chương — truyen.html:92, cz-story.js:1105·1435·1596)
 ⬜ Menu dưới cùng cho điện thoại
-⬜ Vuốt để sang chương
+✅ Vuốt để sang chương — CÓ SẴN từ trước: `touchstart`/`touchend` trong `src/cz-story.js`, ngưỡng 70 px và tự tắt ở chế độ phân trang (dòng checklist này đánh dấu sai)
 ⬜ Nút "đọc truyện ngẫu nhiên"
 
 ✅ Đổi nền · cỡ chữ · kiểu chữ · giãn dòng · độ rộng · căn đều

@@ -909,16 +909,19 @@
         row('Kiểu chữ', 'font', FONTS) +
         sliderRow('Giãn dòng', 'line', 1.4, 2.4, 0.05, '') +
         sliderRow('Giãn đoạn', 'para', 0.6, 1.8, 0.05, 'em') +
-        row('Căn đều hai bên', 'justify', [{ k: 0, l: 'Tắt' }, { k: 1, l: 'Bật' }])) +
+        row('Căn đều hai bên', 'justify', [{ k: 0, l: 'Tắt' }, { k: 1, l: 'Bật' }]) +
+        row('Đánh dấu đoạn', 'markPara', [{ k: 0, l: 'Tắt' }, { k: 1, l: 'Bật' }]) +
+        '<p class="hint sm">Bật lên rồi bấm vào bất kỳ đoạn nào để tô nền — tiện khi đọc lại. Chỉ lưu trên máy này.</p>') +
       grp('Nền đọc', row('Nền đọc', 'theme', RD_THEMES)) +
       '<div class="srow2" style="border:0"><span></span>' +
       '<button class="btn ghost sm" id="setPrint" title="In chương đang đọc — trình duyệt sẽ hỏi in ra giấy hay lưu PDF">In chương này</button>' +
+      '<button class="btn ghost sm" id="setClearMark" title="Xoá mọi đoạn đã tô nền trong chương này">Xoá đánh dấu chương này</button>' +
       '<button class="btn ghost sm" id="setReset">Về mặc định</button></div>';
     $$('#setBody [data-set]').forEach(function (b) {
       b.addEventListener('click', function () {
         var key = b.dataset.set, v = b.dataset.v;
         var patch = {};
-        patch[key] = (key === 'size' || key === 'width' || key === 'line' || key === 'para') ? Number(v) : (key === 'justify' ? Number(v) : v);
+        patch[key] = (key === 'size' || key === 'width' || key === 'line' || key === 'para' || key === 'justify' || key === 'markPara') ? Number(v) : v;
         CZ.rdSet(patch);
         applyRD(); paintSettings(); relayout();
       });
@@ -947,6 +950,13 @@
       applyRD(); paintSettings(); relayout(); CZ.toast('Đã về mặc định');
     });
     $('#setPrint').addEventListener('click', printChapter);
+    $('#setClearMark').addEventListener('click', async function () {
+      if (!CZ.paraMarks(N, cur).length) { toast('Chương này chưa đánh dấu đoạn nào'); return; }
+      if (!await CZ.confirm('Xoá mọi đoạn đã tô nền trong ' + chapLabel(cur) + '?', 'Xoá đánh dấu')) return;
+      CZ.clearParaMarks(N, cur);
+      paintParaMarks();
+      toast('Đã xoá đánh dấu của chương này');
+    });
   }
   /* ---- IN CHƯƠNG: dùng window.print() của trình duyệt, không sinh PDF ở web ----
      Trình duyệt in đúng tiêu đề trang lên đầu giấy, nên trước khi in phải đổi
@@ -1118,6 +1128,39 @@
   function relayout() {
     repaginate();
     renderNav(CZ.rdGet().mode === 'paged' && PAGES.length > 0);
+    paintParaMarks();
+  }
+  /* ---- ĐÁNH DẤU TỪNG ĐOẠN -------------------------------------------------
+     Bật trong Cài đặt đọc → “Đánh dấu đoạn”. Khi bật, bấm vào một đoạn sẽ tô nền
+     đoạn đó; bấm lại thì bỏ. Chỉ số đoạn là vị trí khối trong #rdText — đúng thứ
+     tự mà measure()/paintPage() đang đếm, nên chế độ cuộn và phân trang dùng
+     chung một bộ chỉ số và đổi kiểu xem không làm mất đánh dấu. */
+  function paintParaMarks() {
+    var txt = $('#rdText');
+    if (!txt || !N) return;
+    var on = Number(CZ.rdGet().markPara) === 1, list = on ? CZ.paraMarks(N, cur) : [];
+    Array.prototype.forEach.call(txt.children, function (el, i) {
+      if (on) {
+        el.classList.add('pickable');
+        el.classList.toggle('hl', list.indexOf(i) >= 0);
+      } else if (el.classList.contains('pickable') || el.classList.contains('hl')) {
+        /* tắt rồi thì trả DOM về đúng như cũ: không để sót thuộc tính class rỗng,
+           vì nhiều bài kiểm thử so innerHTML của #rdText theo chuỗi nguyên xi */
+        el.classList.remove('pickable');
+        el.classList.remove('hl');
+        /* xoá token cuối xong thì thuộc tính class còn lại RỖNG chứ không tự mất —
+           phải gỡ hẳn, nếu không nội dung chương dính <p class=""> sau khi tắt */
+        if (!el.classList.length) el.removeAttribute('class');
+      }
+    });
+  }
+  function toggleParaAt(el) {
+    /* chỉ số lấy ngay lúc bấm, không gắn data-* vào nội dung chương */
+    var i = Array.prototype.indexOf.call($('#rdText').children, el);
+    if (i < 0) return;
+    var on = CZ.toggleParaMark(N, cur, i);
+    el.classList.toggle('hl', on);
+    toast(on ? 'Đã đánh dấu đoạn này — chỉ lưu trên máy bạn' : 'Đã bỏ đánh dấu đoạn');
   }
   function renderNav(isPage) {
     var s = CZ.rdGet();
@@ -1250,6 +1293,7 @@
     /* chương kế đã preload thì dùng luôn HTML dựng sẵn — lật trang tức thì */
     txt.innerHTML = (PRE.ch === cur && PRE.html) ? PRE.html : cleanHTML(c.html);
     preNextArm();
+    paintParaMarks();
     /* đếm lượt đọc thật (Worker ghi lên KV); 1 máy · 1 bộ · 1 ngày = 1 lượt */
     CZ.reportView(N.slug, cur).then(function (r) { if (r && r.counted) bumpViews(1); });
     if (cur >= N.chapters && CZ.markFollowSeen) CZ.markFollowSeen(N);
@@ -1683,6 +1727,15 @@
       x0 = y0 = null;
     }, { passive: true });
   })();
+  /* bấm vào đoạn để đánh dấu — chỉ ăn khi người đọc tự bật trong Cài đặt đọc,
+     và nhường đường cho link/nút nằm trong đoạn */
+  $('#rdText').addEventListener('click', function (e) {
+    if (Number(CZ.rdGet().markPara) !== 1 || !N) return;
+    var t = e.target;
+    if (t.closest && t.closest('a, button, input, select, textarea')) return;
+    var el = t.closest ? t.closest('#rdText > *') : null;
+    if (el) toggleParaAt(el);
+  });
   window.addEventListener('resize', function () {
     clearTimeout(window.__rdRT);
     window.__rdRT = setTimeout(function () { if (reading) repaginate(); }, 180);

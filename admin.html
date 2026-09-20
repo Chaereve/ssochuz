@@ -8,7 +8,7 @@
 <link rel="icon" type="image/png" href="/ssochuz.png?v=1">
 <link rel="apple-touch-icon" href="/ssochuz.png?v=1">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="stylesheet" href="/cz.css?v=20260920g">
+<link rel="stylesheet" href="/cz.css?v=20260920h">
 <script>/* chống nháy nền */try{var t=localStorage.getItem('ssochuz-theme')||localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
 <body class="admin">
@@ -37,9 +37,20 @@
       <span class="tsw-sl back" aria-hidden="true"></span>
     </label>
     <a class="hbtn admin-tool" href="/#thu-vien" title="Kiểm tra dữ liệu vừa lưu" aria-label="Kiểm tra dữ liệu vừa lưu"><span data-ic="refresh"></span><span class="admin-tool-label">Kiểm tra</span></a>
+    <button class="hbtn admin-tool" id="btnQuick" type="button" title="Tìm nhanh (Ctrl+K)" aria-label="Tìm nhanh"><span data-ic="search"></span><span class="admin-tool-label">Tìm nhanh</span></button>
     <button class="hbtn admin-tool hide" id="btnOut" title="Ngắt kết nối Worker" aria-label="Ngắt kết nối"><span data-ic="logout"></span><span class="admin-tool-label">Ngắt kết nối</span></button>
   </div>
 </div></header>
+
+<div id="qsBox" class="qsbox" hidden role="dialog" aria-modal="true" aria-label="Tìm nhanh">
+  <div class="qs-in">
+    <input id="qsInput" type="search" autocomplete="off" spellcheck="false"
+      placeholder="Tên mục, tên truyện hoặc tên chương…"
+      aria-label="Từ khoá tìm nhanh" aria-controls="qsList">
+    <div id="qsList" class="qs-list" role="listbox" aria-label="Kết quả tìm nhanh"></div>
+    <p class="qs-hint" id="qsHint">↑ ↓ chọn · Enter mở · Esc đóng</p>
+  </div>
+</div>
 
 <main id="main" class="amain">
   <div class="ashell" id="ashell">
@@ -667,9 +678,9 @@
 
 <div class="toasts" id="toasts"></div>
 
-<script src="/cz-config.js?v=20260920g"></script>
-<script src="/cz-app.js?v=20260920g"></script>
-<script src="/cz-auth.js?v=20260920g"></script>
-<script src="/admin.js?v=20260920g"></script>
+<script src="/cz-config.js?v=20260920h"></script>
+<script src="/cz-app.js?v=20260920h"></script>
+<script src="/cz-auth.js?v=20260920h"></script>
+<script src="/admin.js?v=20260920h"></script>
 </body>
 </html>

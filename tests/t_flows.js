@@ -199,6 +199,103 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   out.inChuong.traTieuDe = doc.title === tenCu;
   out.inChuong.boLopIn = !doc.body.classList.contains('is-printing');
 
+  /* DANH DAU TUNG DOAN VAN (trang doc).
+     Mac dinh TAT: trang doc khong doi gi voi nguoi chua bat. Bat len trong Cai dat
+     doc -> bam vao mot doan de to nen. Luu localStorage khoa ssochuz-pmark-<slug>
+     = { "<so chuong>": [chi so khoi, ...] } — chi so la vi tri khoi trong #rdText,
+     dung thu tu che do phan trang dang dem nen doi kieu xem khong mat danh dau. */
+  out.danhDauDoan = {};
+  const paras = () => $$('#rdText > *');
+  const PMK = 'ssochuz-pmark-third-person';
+  out.danhDauDoan.macDinhTat = paras().length > 0
+    && paras().every(e => !e.classList.contains('hl') && !e.classList.contains('pickable'));
+  out.danhDauDoan.soDoan = paras().length;
+  /* bằng chứng là tính năng tắt thì KHÔNG đụng vào DOM chương: t_story.js so
+     innerHTML của #rdText theo chuỗi nguyên xi (<aside class="callout info">…),
+     nên chỉ cần thêm một thuộc tính data-* thôi là bài đó đỏ. */
+  const rdTruoc = $('#rdText').innerHTML;
+  out.danhDauDoan.khongDoiDomKhiTat = !/\s(data-pi|class="")/.test(rdTruoc);
+
+  click('#rdSet'); await wait(350);
+  out.danhDauDoan.coHangCaiDat = $$('#setBody .srow2')
+    .some(r => (r.querySelector('span') || {}).textContent.trim() === 'Đánh dấu đoạn');
+  out.danhDauDoan.bat = pick('Đánh dấu đoạn', 'Bật');
+  await wait(250);
+  out.danhDauDoan.luChon = LS.getItem('ssochuz-reader');
+  out.danhDauDoan.pickableSauKhiBat = paras().every(e => e.classList.contains('pickable'));
+
+  /* bam doan thu 3 */
+  const doan3 = paras()[2];
+  doan3.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+  await wait(200);
+  out.danhDauDoan.sauBam = {
+    coHl: doan3.classList.contains('hl'),
+    trongMay: LS.getItem(PMK)
+  };
+  /* bam lai de bo */
+  doan3.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+  await wait(200);
+  out.danhDauDoan.sauBamLai = {
+    conHl: doan3.classList.contains('hl'),
+    khoaBiXoa: LS.getItem(PMK)
+  };
+  /* danh dau 2 doan roi lat sang chuong khac: danh dau chuong cu phai giu nguyen */
+  paras()[1].dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+  paras()[4].dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+  await wait(200);
+  out.danhDauDoan.haiDoan = LS.getItem(PMK);
+  click('#rdNext'); await wait(600);
+  out.danhDauDoan.sangChuongKhac = {
+    chuong: txt('#rdSub'),
+    khongDoHl: $$('#rdText > .hl').length
+  };
+  click('#rdPrev'); await wait(600);
+  out.danhDauDoan.quayLai = {
+    chuong: txt('#rdSub'),
+    soHl: $$('#rdText > .hl').length
+  };
+  /* doi kieu xem sang phan trang: danh dau van giu */
+  click('#rdSet'); await wait(300);
+  pick('Kiểu xem', 'Phân trang'); await wait(400);
+  out.danhDauDoan.phanTrang = { soHl: $$('#rdText > .hl').length, cheDo: (JSON.parse(LS.getItem('ssochuz-reader') || '{}')).mode };
+  pick('Kiểu xem', 'Cuộn liên tục'); await wait(400);
+
+  /* link trong doan khong bi danh dau deo theo — chuong nay khong co link that
+     (da doi data/book/third-person.json chuong 2: 0 the <a>) nen tu chen mot cai */
+  const doanCoLink = paras()[6] || paras()[0];
+  doanCoLink.insertAdjacentHTML('beforeend', '<a href="/#thu-vien" id="_lkTest">thư viện</a>');
+  const linkTrongDoan = $('#_lkTest');
+  out.danhDauDoan.coLinkTrongChuong = !!linkTrongDoan;
+  {
+    const truoc = LS.getItem(PMK);
+    const hlTruoc = doanCoLink.classList.contains('hl');
+    linkTrongDoan.dispatchEvent(new win.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await wait(200);
+    out.danhDauDoan.linkKhongDoiDanhDau = LS.getItem(PMK) === truoc
+      && doanCoLink.classList.contains('hl') === hlTruoc;
+  }
+  /* nut xoa danh dau cua chuong */
+  click('#rdSet'); await wait(300);
+  const nutXoa = $('#setClearMark');
+  out.danhDauDoan.coNutXoa = !!nutXoa;
+  win.CZ.confirm = async () => true;
+  click('#setClearMark'); await wait(300);
+  out.danhDauDoan.sauXoa = {
+    trongMay: LS.getItem(PMK),
+    soHl: $$('#rdText > .hl').length
+  };
+  /* tat di thi trang doc tro lai nhu cu */
+  pick('Đánh dấu đoạn', 'Tắt'); await wait(300);
+  out.danhDauDoan.tatDi = paras().every(e => !e.classList.contains('hl') && !e.classList.contains('pickable'));
+  const lk = $('#_lkTest');
+  if (lk) lk.remove();
+  /* so nguyên xi innerHTML với bản gốc là so sai: chính bài này có chèn link vào
+     một đoạn. Cái cần đo là tắt xong KHÔNG còn cặn: không lớp hl/pickable, và
+     không thuộc tính class="" rỗng (jsdom lẫn trình duyệt đều để lại nếu quên gỡ). */
+  const rdSau = $('#rdText').innerHTML;
+  out.danhDauDoan.sachSauKhiTat = !/class=""/.test(rdSau)
+    && !/class="[^"]*\b(hl|pickable)\b/.test(rdSau);
+
   /* TIM TRONG NOI DUNG CHUONG (trang doc).
      Toan bo HTML cac chuong da nam san trong CHS nen day la loc trong may:
      khong dung chi muc, khong goi mang. */
@@ -784,8 +881,10 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
      nên người dùng bấm theo thì chẳng có chuyện gì xảy ra.
      Ngoại lệ duy nhất: B/I/U trong ô soạn (title “Đậm (Ctrl+B)”…) là hành vi
      contenteditable của chính trình duyệt, không phải phím tắt do trang tự cài. */
-  const NATIVE_TITLE = /^(Đậm|Nghiêng|Gạch chân)\s*\(Ctrl\+[BIU]\)$/i;
-  out.adminNoFakeShortcuts = $$a('#ashell button, #scConnect button')
+  /* nhãn chỉ được hứa phím tắt THẬT SỰ có trong trang quản trị: Ctrl+B/I/U của
+     trình soạn, và Ctrl+K mở ô tìm nhanh (được kiểm thật ở khối quickSearch dưới). */
+  const NATIVE_TITLE = /^((Đậm|Nghiêng|Gạch chân)\s*\(Ctrl\+[BIU]\)|Tìm nhanh \(Ctrl\+K\))$/i;
+  out.adminNoFakeShortcuts = $$a('#ashell button, #scConnect button, .abar button')
     .map(b => ({ t: (b.textContent || '').trim().replace(/\s+/g, ' '), a: b.getAttribute('title') || '' }))
     .filter(x => /Ctrl\s*\+|Phím tắt/i.test(x.t + ' ' + x.a) && !NATIVE_TITLE.test(x.a))
     .map(x => (x.t || '(không chữ)') + ' · title="' + x.a + '"');
@@ -795,8 +894,10 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   clk('#btnOut'); await wait(300);
   out.adminDisconnect = { key: W.localStorage.getItem('cz_kv_key') };
 
-  /* quản trị KHÔNG có phím tắt (yêu cầu của chủ trang): Ctrl+S, Ctrl+K, số/chữ
-     đơn lẻ đều phải bị bỏ qua — không lưu, không đổi tab, không gây lỗi JS */
+  /* quản trị có ĐÚNG MỘT phím tắt là Ctrl+K (chủ trang đã đổi yêu cầu, trước đó
+     là không có gì). Ctrl+S và số/chữ đơn lẻ vẫn phải bị bỏ qua — không lưu,
+     không đổi tab, không gây lỗi JS. Ctrl+K nằm trong danh sách này để chứng tỏ
+     nó cũng không lén đổi tab hay hiện thông báo. */
   const visiblePanes = () => $$a('#ashell [id^="pane-"]:not(.hide)').map(e => e.id).join(',');
   const panesBefore = visiblePanes();
   const msgBefore = txtA('#msg');
@@ -815,6 +916,60 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   if (!noShot.msgStay) shortcutFail.push('Ctrl+S vẫn tự lưu/hiện thông báo ở trang quản trị');
   if (shortcutFail.length) console.log('PHÍM TẮT VẪN CÒN: ' + shortcutFail.join('; '));
   out.shortcutFail = shortcutFail;
+  /* ---- Ô TÌM NHANH Ctrl+K: phím tắt duy nhất của trang quản trị ------------- */
+  out.quickSearch = {};
+  const qsBox = $a('#qsBox'), qsInp = $a('#qsInput');
+  const qsRows = () => $$a('#qsList .qs-row');
+  out.quickSearch.coKhung = !!qsBox && !!qsInp && !!$a('#btnQuick');
+  /* hộp phải AN trong HTML. Không đọc qsBox.hidden ở đây được: khối kiểm phím tắt
+     ngay trên đã bấm Ctrl+K (đúng ra phải mở hộp), nên trạng thái lúc này là mở. */
+  out.quickSearch.anTrongHtml = /<div id="qsBox"[^>]*\shidden\b/.test(
+    require('fs').readFileSync(require('path').join(__dirname, '..', 'admin.html'), 'utf8'));
+  D.dispatchEvent(new W.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  await wait(150);
+  out.quickSearch.anSauEsc = qsBox ? qsBox.hidden : null;
+  /* mở bằng nút */
+  clk('#btnQuick'); await wait(200);
+  out.quickSearch.moBangNut = qsBox ? !qsBox.hidden : false;
+  out.quickSearch.soDongKhiRong = qsRows().length;
+  /* Esc đóng */
+  D.dispatchEvent(new W.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  await wait(150);
+  out.quickSearch.dongBangEsc = qsBox ? qsBox.hidden : null;
+  /* mở bằng phím tắt */
+  D.dispatchEvent(new W.KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
+  await wait(200);
+  out.quickSearch.moBangPhim = qsBox ? !qsBox.hidden : false;
+  /* gõ tên mục: phải lọc theo kiểu bỏ dấu */
+  qsInp.value = 'bac si';
+  qsInp.dispatchEvent(new W.Event('input', { bubbles: true }));
+  await wait(200);
+  out.quickSearch.locBoDau = qsRows().map(r => r.querySelector('b').textContent);
+  /* gõ tên truyện — các bài kiểm trước có XOÁ bộ, nên không được mã hoá cứng một cái tên.
+     Lấy slug của một bộ CÒN SỐNG ngay trong bảng thư viện rồi tìm theo slug đó. */
+  if (!$a('#tb [data-edit]')) { clk('#tabs button[data-tab="list"]'); await wait(400); }
+  const nutSua = $a('#tb [data-edit]');
+  out.quickSearch.slugSong = nutSua ? nutSua.dataset.edit : '';
+  qsInp.value = out.quickSearch.slugSong;
+  qsInp.dispatchEvent(new W.Event('input', { bubbles: true }));
+  await wait(250);
+  out.quickSearch.timTruyen = qsRows().map(r => r.querySelector('b').textContent + ' · ' + r.querySelector('small').textContent).slice(0, 4);
+  /* gõ bừa: phải báo không thấy chứ không im lặng */
+  qsInp.value = 'zzzzkhongco';
+  qsInp.dispatchEvent(new W.Event('input', { bubbles: true }));
+  await wait(200);
+  out.quickSearch.baoKhiKhongThay = !!$a('#qsList .qs-none');
+  /* mũi tên xuống rồi Enter: nhảy sang tab Thống kê */
+  qsInp.value = 'thống kê';
+  qsInp.dispatchEvent(new W.Event('input', { bubbles: true }));
+  await wait(200);
+  qsInp.dispatchEvent(new W.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  await wait(350);
+  out.quickSearch.enterNhayTab = {
+    paneHien: $$a('#ashell [id^="pane-"]:not(.hide)').map(e => e.id).join(','),
+    daDong: qsBox ? qsBox.hidden : null
+  };
+
   out.errAdmin = a.errors.slice(0, 6);
 
   /* =====================================================================
@@ -1366,10 +1521,59 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
      · #libCount và huy hiệu tab “Thư viện” lệch nhau sau khi nạp nháp
      · nhãn nút còn hứa phím tắt mà trang quản trị không cài
      · trình soạn: thiếu thời gian đọc, hoặc “kiểm tra chương” báo sai */
+  const qsFail = [];
+  const qs = out.quickSearch || {};
+  const qk = (ten, nhan, can) => { if (String(nhan) !== String(can)) qsFail.push(ten + ' (nhan: ' + JSON.stringify(nhan) + ', can: ' + JSON.stringify(can) + ')'); };
+  qk('quickSearch/co khung + nut', qs.coKhung, true);
+  qk('quickSearch/an trong HTML', qs.anTrongHtml, true);
+  qk('quickSearch/Esc an hop di', qs.anSauEsc, true);
+  qk('quickSearch/nut mo duoc', qs.moBangNut, true);
+  qk('quickSearch/rong thi liet ke 10 muc (chua mo bo nao)', qs.soDongKhiRong, 10);
+  qk('quickSearch/Esc dong lai', qs.dongBangEsc, true);
+  qk('quickSearch/Ctrl+K mo duoc', qs.moBangPhim, true);
+  qk('quickSearch/go bo dau van thay "Bác sĩ dữ liệu"', (qs.locBoDau || []).join('|'), 'Bác sĩ dữ liệu');
+  qk('quickSearch/co bo song de tim', (qs.slugSong || '').length > 0, true);
+  qk('quickSearch/tim theo slug ra dung bo', (qs.timTruyen || []).length > 0
+    && (qs.timTruyen || []).some(x => / · Truyện · /.test(x)), true);
+  qk('quickSearch/khong thay thi bao chu khong im lang', qs.baoKhiKhongThay, true);
+  qk('quickSearch/Enter nhay dung tab stats', qs.enterNhayTab && qs.enterNhayTab.paneHien, 'pane-stats');
+  qk('quickSearch/mo xong tu dong dong', qs.enterNhayTab && qs.enterNhayTab.daDong, true);
+  if (qsFail.length) console.log('TIM NHANH: ' + qsFail.join(' | '));
+
+  const pmFail = [];
+  const d = out.danhDauDoan || {};
+  const ck = (ten, nhan, can) => { if (String(nhan) !== String(can)) pmFail.push(ten + ' (nhan: ' + JSON.stringify(nhan) + ', can: ' + JSON.stringify(can) + ')'); };
+  ck('danhDauDoan/mac dinh tat', d.macDinhTat, true);
+  ck('danhDauDoan/tat thi khong de sot data-*/class rong', d.khongDoiDomKhiTat, true);
+  ck('danhDauDoan/co hang cai dat', d.coHangCaiDat, true);
+  ck('danhDauDoan/bat duoc', d.bat, 'ok');
+  ck('danhDauDoan/cai dat ghi markPara=1', /"markPara":1/.test(d.luChon || ''), true);
+  ck('danhDauDoan/pickable sau khi bat', d.pickableSauKhiBat, true);
+  ck('danhDauDoan/bam thi to nen', d.sauBam && d.sauBam.coHl, true);
+  ck('danhDauDoan/luu {"2":[2]}', d.sauBam && d.sauBam.trongMay, '{"2":[2]}');
+  ck('danhDauDoan/bam lai thi bo', d.sauBamLai && d.sauBamLai.conHl, false);
+  ck('danhDauDoan/het danh dau thi xoa khoa', d.sauBamLai && d.sauBamLai.khoaBiXoa, '{}');
+  ck('danhDauDoan/luu du 2 doan', d.haiDoan, '{"2":[1,4]}');
+  ck('danhDauDoan/chuong khac khong do nen', d.sangChuongKhac && d.sangChuongKhac.khongDoHl, 0);
+  /* CHS[0] cua bo nay la "Loi Mo Dau" nen cur=2 mang ten "Chuong 1" — chapLabel
+     co tinh doc so tu ten chuong, khong dem theo chi so mang. Khoa lai de ai doi
+     cach dat ten chuong ma lam lech nhan thi bai do. */
+  ck('danhDauDoan/nhan chuong ke (lech 1 vi co Loi Mo Dau)', d.sangChuongKhac && d.sangChuongKhac.chuong, 'Chương 2 / 8');
+  ck('danhDauDoan/nhan khi quay lai', d.quayLai && d.quayLai.chuong, 'Chương 1 / 8');
+  ck('danhDauDoan/quay lai van con 2 doan', d.quayLai && d.quayLai.soHl, 2);
+  ck('danhDauDoan/phan trang van giu 2 doan', d.phanTrang && d.phanTrang.soHl, 2);
+  ck('danhDauDoan/link khong keo theo danh dau', d.linkKhongDoiDanhDau, true);
+  ck('danhDauDoan/co nut xoa', d.coNutXoa, true);
+  ck('danhDauDoan/xoa het trong may', d.sauXoa && d.sauXoa.trongMay, '{}');
+  ck('danhDauDoan/xoa het tren man hinh', d.sauXoa && d.sauXoa.soHl, 0);
+  ck('danhDauDoan/tat di thi sach lop', d.tatDi, true);
+  ck('danhDauDoan/tat xong khong con can lop hay class=""', d.sachSauKhiTat, true);
+  if (pmFail.length) console.log('DANH DAU DOAN: ' + pmFail.join(' | '));
+
   const bad = a.errors.length + errors.length + (out.shortcutFail || []).length
     + (out.adminDraftBadge && out.adminDraftBadge.agree ? 0 : 1)
     + ((out.adminNoFakeShortcuts || []).length ? 1 : 0)
-    + rtFail.length;
+    + rtFail.length + pmFail.length + qsFail.length;
   console.log(bad ? 'CÒN ' + bad + ' LỖI' : 'Không lỗi nào');
   process.exit(bad ? 1 : 0);
 })();

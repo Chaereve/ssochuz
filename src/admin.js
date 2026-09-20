@@ -4143,6 +4143,113 @@
       paint();
     });
   })();
+  /* ---- TÌM NHANH (Ctrl+K) -------------------------------------------------
+     Trang quản trị trước đây cố ý không có phím tắt nào. Chủ trang đã đổi yêu
+     cầu, nên nay có ĐÚNG MỘT phím tắt: Ctrl/Cmd+K mở ô tìm nhanh. Số, chữ đơn
+     lẻ và Ctrl+S vẫn không làm gì cả — có bài kiểm thử giữ nguyên điều đó.
+     Tìm trong máy, không gọi API: tab + 62 bộ trong REG + chương của bộ đang mở. */
+  var QS_TABS = [['overview', 'Tổng quan'], ['list', 'Thư viện'], ['new', 'Thêm truyện mới'],
+    ['edit', 'Sửa truyện đang mở'], ['doctor', 'Bác sĩ dữ liệu'], ['cmts', 'Bình luận'],
+    ['reports', 'Báo cáo'], ['stats', 'Thống kê'], ['votes', 'Lượt thích'],
+    ['log', 'Nhật ký hoạt động'], ['settings', 'Cài đặt']];
+  var QS_MAX = 40, qsSel = 0, qsRows = [];
+  function qsFold(s) {
+    return String(s == null ? '' : s).toLowerCase().normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/\s+/g, ' ').trim();
+  }
+  function qsBuild(q) {
+    var k = qsFold(q), out = [];
+    QS_TABS.forEach(function (t) {
+      if (t[0] === 'edit' && !CUR) return;
+      if (!k || qsFold(t[1]).indexOf(k) >= 0) out.push({ kind: 'tab', i: t[0], ten: t[1], phu: 'Mục' });
+    });
+    if (k) {
+      (REG && REG.lib ? REG.lib : []).forEach(function (n, i) {
+        var s = qsFold(n.title) + ' ' + qsFold(n.author) + ' ' + qsFold(n.slug);
+        if (s.indexOf(k) >= 0) out.push({ kind: 'book', i: i, ten: n.title, phu: 'Truyện · ' + (n.author || '—') });
+      });
+      ((BOOK && BOOK.chapters) || []).forEach(function (c, i) {
+        if (qsFold(c.t).indexOf(k) >= 0) {
+          out.push({ kind: 'chap', i: i, ten: c.t, phu: 'Chương của ' + ((BOOK && BOOK.title) || 'bộ đang mở') });
+        }
+      });
+    }
+    return out.slice(0, QS_MAX);
+  }
+  function qsPaint() {
+    var host = $('#qsList');
+    if (!host) return;
+    host.innerHTML = qsRows.length ? qsRows.map(function (r, i) {
+      return '<button type="button" role="option" class="qs-row' + (i === qsSel ? ' on' : '') + '" data-i="' + i + '"' +
+        ' aria-selected="' + (i === qsSel ? 'true' : 'false') + '">' +
+        '<b>' + esc(r.ten) + '</b><small>' + esc(r.phu) + '</small></button>';
+    }).join('') : '<p class="qs-none">Không thấy gì khớp. Thử tên khác, hoặc mở bộ truyện trước khi tìm chương.</p>';
+    var on = host.querySelector('.qs-row.on');
+    if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest' });
+  }
+  function qsRun(r) {
+    closeQuick();
+    if (!r) return;
+    if (r.kind === 'tab') {
+      var b = $('#tabs button[data-tab="' + r.i + '"]');
+      if (b) b.click();
+    } else if (r.kind === 'book') {
+      openEditByIdx(r.i, 'meta');
+    } else if (r.kind === 'chap') {
+      if (!CUR) { show('list'); return; }
+      show('edit');
+      openChap(r.i);
+    }
+  }
+  function openQuick() {
+    var box = $('#qsBox');
+    if (!box) return;
+    qsRows = qsBuild(''); qsSel = 0;
+    box.hidden = false;
+    $('#qsInput').value = '';
+    qsPaint();
+    $('#qsInput').focus();
+  }
+  function closeQuick() {
+    var box = $('#qsBox');
+    if (box) box.hidden = true;
+  }
+  function quickSearch() {
+    var box = $('#qsBox'), inp = $('#qsInput'), list = $('#qsList'), btn = $('#btnQuick');
+    if (!box || !inp || !list) return;
+    if (btn) btn.addEventListener('click', openQuick);
+    inp.addEventListener('input', function () {
+      qsRows = qsBuild(inp.value); qsSel = 0; qsPaint();
+    });
+    inp.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (!qsRows.length) return;
+        qsSel = (qsSel + (e.key === 'ArrowDown' ? 1 : -1) + qsRows.length) % qsRows.length;
+        qsPaint();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        qsRun(qsRows[qsSel]);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closeQuick();
+      }
+    });
+    list.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-i]');
+      if (b) qsRun(qsRows[Number(b.dataset.i)]);
+    });
+    box.addEventListener('click', function (e) { if (e.target === box) closeQuick(); });
+    document.addEventListener('keydown', function (e) {
+      if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'k') {
+        e.preventDefault();
+        if (box.hidden) openQuick(); else { inp.focus(); inp.select(); }
+      } else if (e.key === 'Escape' && !box.hidden) {
+        closeQuick();
+      }
+    });
+  }
+
   $$('#tabs button').forEach(function (b) {
     b.addEventListener('click', function () {
       var k = b.dataset.tab;
@@ -4745,6 +4852,7 @@
     if (savedApi) $('#inApi').value = savedApi;
     if (!savedApi && CZ.API) $('#inApi').value = CZ.API;     /* gợi ý từ cz-config.js */
     paintDraftChip();                    /* có nháp thì hiện nút, không hỏi hộp thoại */
+    quickSearch();                       /* ô tìm nhanh Ctrl+K */
     /* việc nối Worker do boot() ở trên lo — không gọi hai lần */
   })();
 

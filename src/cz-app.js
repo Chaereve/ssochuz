@@ -836,6 +836,44 @@
     var p = progress(n); return p > 0 ? p : 0;
   }
 
+  /* ---- ĐÁNH DẤU TỪNG ĐOẠN — khác `marks()` ở trên -------------------------
+     `marks()` đánh dấu CẢ CHƯƠNG (thẻ bookmark trên thanh công cụ). Cái này tô
+     nền TỪNG KHỐI văn bản bên trong chương. Khoá ssochuz-pmark-<slug> =
+     { "<số chương>": [chỉ số khối, …] } — chỉ số là vị trí khối trong #rdText,
+     đúng thứ tự mà chế độ phân trang đang đếm nên hai chế độ dùng chung. */
+  var LS_PMARK = 'ssochuz-pmark-', PMARK_MAX_CHUONG = 300, PMARK_MAX_DOAN = 400;
+  function pmarkMap(n) {
+    var m = jsonGet(LS_PMARK + (n && n.slug), {});
+    return (m && typeof m === 'object' && !Array.isArray(m)) ? m : {};
+  }
+  function paraMarks(n, ch) {
+    var a = pmarkMap(n)[String(ch)];
+    return Array.isArray(a) ? a.filter(function (x) { return typeof x === 'number' && x >= 0; }) : [];
+  }
+  function toggleParaMark(n, ch, i) {
+    if (!n || !n.slug || !(i >= 0)) return false;
+    var m = pmarkMap(n), k = String(ch);
+    var a = Array.isArray(m[k]) ? m[k].slice() : [], p = a.indexOf(i);
+    if (p >= 0) a.splice(p, 1); else a.push(i);
+    if (a.length) m[k] = a.sort(function (x, y) { return x - y; }).slice(0, PMARK_MAX_DOAN);
+    else delete m[k];
+    /* chỉ giữ lại PMARK_MAX_CHUONG chương gần nhất để không phình localStorage */
+    var ks = Object.keys(m);
+    if (ks.length > PMARK_MAX_CHUONG) {
+      ks.sort(function (x, y) { return Number(x) - Number(y); })
+        .slice(0, ks.length - PMARK_MAX_CHUONG).forEach(function (x) { delete m[x]; });
+    }
+    jsonSet(LS_PMARK + n.slug, m);
+    return p < 0;
+  }
+  function clearParaMarks(n, ch) {
+    if (!n || !n.slug) return;
+    var m = pmarkMap(n);
+    if (ch == null) { jsonSet(LS_PMARK + n.slug, {}); return; }
+    delete m[String(ch)];
+    jsonSet(LS_PMARK + n.slug, m);
+  }
+
   /* ---- THỐNG KÊ ĐỌC CÁ NHÂN (N10) -----------------------------------------
      Chỉ lưu TRONG MÁY (localStorage `ssochuz-mystats`), không gửi lên Worker,
      không phát sinh request/ghi KV nào. Đếm MỘT chương khi:
@@ -2709,7 +2747,8 @@
     markFollowSeen: markFollowSeen, followBadge: followBadge, followBtn: followBtn, refreshFollowUI: refreshFollowUI,
     followPushHook: followPushHook,
     isLiked: isLiked, toggleLike: toggleLike, likedChapters: likedChapters, likedCount: likedCount, likeCount: likeCount,
-    marks: marks, toggleMark: toggleMark, chaptersRead: chaptersRead,
+    marks: marks, toggleMark: toggleMark,
+    paraMarks: paraMarks, toggleParaMark: toggleParaMark, clearParaMarks: clearParaMarks, chaptersRead: chaptersRead,
     myReadAdd: myReadAdd, myReadSummary: myReadSummary, readSlugs: readSlugs,
     SHELF_CATS: SHELF_CATS, SHELF_CAT_LABEL: SHELF_CAT_LABEL, shelfCats: shelfCats,
     catOf: catOf, setCat: setCat, noteOf: noteOf, setNote: setNote,
