@@ -360,6 +360,61 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   clk('#chSave'); await wait(350);
   out.editorAutoSave.xoaKhiLuu = !Object.keys(W.localStorage).some((k) => /^cz_ch_draft:/.test(k));
 
+  /* DÁN TỪ WORD + KÉO THẢ ẢNH.
+     Hai ngả này dễ hỏng âm thầm: Word nhét <o:p>, class MsoNormal, style mso-* và
+     <img src="file:///C:/…"> trỏ về đĩa máy người viết (độc giả thấy ảnh vỡ).
+     jsdom không có execCommand nên ta soi HTML mà admin định chèn. */
+  const mkCd = (files, html, text) => ({ files: files || [], getData: (t) => (t === 'text/html' ? (html || '') : (text || '')) });
+  const firePaste = (cd) => {
+    const ev = new W.Event('paste', { bubbles: true, cancelable: true });
+    ev.clipboardData = cd;
+    edB.focus(); edB.dispatchEvent(ev);
+    return ev;
+  };
+  const wordHtml = '<html><head><style>b{}</style></head><body>' +
+    '<p class="MsoNormal">Đoạn một <o:p></o:p></p>' +
+    '<p><span style="mso-bidi-font-family:Arial">Đoạn hai</span></p>' +
+    '<img src="file:///C:/Users/x/AppData/Local/Temp/msohtmlclip1/01/image001.png">' +
+    '<a href="javascript:alert(1)">link độc</a><script>alert(2)<\/script>' +
+    '<!--[if gte vml 1]><v:shape></v:shape><![endif]--></body></html>';
+  execCalls.length = 0;
+  const evWord = firePaste(mkCd([], wordHtml, 'Đoạn một Đoạn hai'));
+  await wait(300);
+  const insWord = execCalls.find((c) => c[0] === 'insertHTML');
+  const hw = insWord ? insWord[1] : '';
+  out.editorPasteWord = {
+    chanDanMacDinh: evWord.defaultPrevented,
+    dungLenh: !!insWord,
+    giuChu: /Đoạn một/.test(hw) && /Đoạn hai/.test(hw),
+    sachMsoClass: !/MsoNormal/i.test(hw),
+    sachMsoStyle: !/mso-/i.test(hw),
+    sachOp: !/<o:p/i.test(hw),
+    sachAnhFileLocal: !/file:/i.test(hw),
+    sachJsLink: !/javascript:/i.test(hw),
+    sachScript: !/<script/i.test(hw),
+    sachCommentVml: !/v:shape/i.test(hw),
+  };
+
+  /* kéo thả: đèn báo sáng khi kéo, tắt khi thả, từ chối tệp không phải ảnh */
+  const fireDrag = (type, files) => {
+    const ev = new W.Event(type, { bubbles: true, cancelable: true });
+    ev.dataTransfer = { types: ['Files'], files: files || [] };
+    edB.dispatchEvent(ev);
+    return ev;
+  };
+  fireDrag('dragover'); await wait(150);
+  const dragOn = edB.classList.contains('dragging');
+  const evDrop = fireDrag('drop', [{ name: 'bia.jpg', type: 'image/jpeg', size: 4096 }]);
+  await wait(400);
+  const evPdf = fireDrag('drop', [{ name: 'bao-cao.pdf', type: 'application/pdf', size: 999 }]);
+  await wait(300);
+  out.editorDragDrop = {
+    sangDenKhiKeo: dragOn,
+    tatDenSauTha: !edB.classList.contains('dragging'),
+    chanMacDinh: evDrop.defaultPrevented,
+    tuChoiPdf: /Chỉ nhận tệp ảnh/.test(txtA('#toasts')),
+  };
+
   edB.innerHTML = keepHtml;                             /* trả lại chương thật cho test sau */
   edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(200);
 
@@ -540,6 +595,15 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   if (out.editorAutoSave && !(out.editorAutoSave.key && out.editorAutoSave.cho && out.editorAutoSave.bao &&
       out.editorAutoSave.dungNoiDung && out.editorAutoSave.xoaKhiLuu)) {
     rtFail.push('tự lưu nháp sai: ' + JSON.stringify(out.editorAutoSave));
+  }
+  const pw = out.editorPasteWord;
+  if (pw && !(pw.chanDanMacDinh && pw.dungLenh && pw.giuChu && pw.sachMsoClass && pw.sachMsoStyle &&
+      pw.sachOp && pw.sachAnhFileLocal && pw.sachJsLink && pw.sachScript && pw.sachCommentVml)) {
+    rtFail.push('dán từ Word chưa sạch: ' + JSON.stringify(pw));
+  }
+  const dd = out.editorDragDrop;
+  if (dd && !(dd.sangDenKhiKeo && dd.tatDenSauTha && dd.chanMacDinh && dd.tuChoiPdf)) {
+    rtFail.push('kéo thả ảnh sai: ' + JSON.stringify(dd));
   }
   out.editorFail = rtFail;
   out.tong = {

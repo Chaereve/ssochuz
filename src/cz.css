@@ -3375,6 +3375,9 @@ body.rd-focus .rdcmts { display: none; }
 .chk.warn .i { color: var(--warn); }
 .chk.bad { border-left-color: var(--bad); color: var(--txt); }
 .chk.bad .i { color: var(--bad); }
+/* báo hiệu ô soạn đang nhận ảnh kéo vào */
+.rte.dragging { border-color: var(--acc); background: color-mix(in srgb, var(--acc) 7%, transparent);
+  outline: 2px dashed var(--acc); outline-offset: -4px; }
 /* chỉ báo tự lưu nháp dưới ô soạn */
 .savestate { min-height: 18px; margin-top: 6px; color: var(--dim); display: flex; align-items: center;
   gap: 8px; flex-wrap: wrap; }

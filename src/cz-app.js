@@ -1069,7 +1069,7 @@
       var el = all[i];
       Array.prototype.slice.call(el.attributes || []).forEach(function (a) {
         var n = String(a.name || '').toLowerCase(), v = String(a.value || '');
-        if (n.indexOf('on') === 0 || ((n === 'href' || n === 'src') && /^\s*(javascript|data|vbscript):/i.test(v))) {
+        if (n.indexOf('on') === 0 || ((n === 'href' || n === 'src') && /^\s*(javascript|data|vbscript|file):/i.test(v))) {
           el.removeAttribute(a.name);
         }
       });

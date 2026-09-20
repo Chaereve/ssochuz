@@ -159,7 +159,9 @@
     $$('*', tmp).forEach(function (el) {
       Array.prototype.slice.call(el.attributes || []).forEach(function (a) {
         var n = String(a.name || '').toLowerCase(), v = String(a.value || '');
-        if (n.indexOf('on') === 0 || ((n === 'href' || n === 'src') && /^\s*(javascript|data):/i.test(v))) el.removeAttribute(a.name);
+        /* Cùng danh sách giao thức bị chặn với CZ.sanitize() — thiếu một cái là
+           phía người đọc hở đúng chỗ đó (vbscript: trên IE cũ, file: trỏ đĩa máy). */
+        if (n.indexOf('on') === 0 || ((n === 'href' || n === 'src') && /^\s*(javascript|data|vbscript|file):/i.test(v))) el.removeAttribute(a.name);
       });
       if (el.tagName === 'A') { el.setAttribute('target', '_blank'); el.setAttribute('rel', 'noopener nofollow'); }
       if (el.tagName === 'IMG') {

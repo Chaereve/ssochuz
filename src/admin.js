@@ -3145,6 +3145,8 @@
      nên không thể trông vào selection tại thời điểm bấm nút “Chèn” */
   document.addEventListener('selectionchange', function () { edKeepRange(); });
   if (edIn) edIn.addEventListener('mouseup', function () { edKeepRange(); });
+  if (edIn) edIn.addEventListener('paste', edPasteClean);
+  edWiringDragDrop();
   $('#chPreview').addEventListener('click', edPreview);
   $('#chFull').addEventListener('click', function () { edFull(); });
   /* Esc thoát chế độ viết toàn màn hình — nhường hộp thoại trước: hộp nào đang mở
@@ -3155,16 +3157,15 @@
     if (document.body.classList.contains('ed-full')) edFull(false);
   });
   /* ảnh trong chương: lên từ máy → nén WebP → KV → chèn <img> */
-  $('#edImg').addEventListener('change', function () {
-    var f = this.files && this.files[0];
-    this.value = '';
+  /* Nhận MỘT tệp ảnh từ bất kỳ ngả nào (nút chọn tệp · Ctrl+V · kéo thả) rồi
+     nén → lên Worker → chèn vào chương. Ba ngả dùng chung một hàm để không lệch
+     nhau về thông báo hay cách dọn dòng “đang lên ảnh”. */
+  function edTakeFile(f) {
     if (!f) return;
     var ed2 = $('#edBody');
     uploadImageFile(f, function (busy) {
-      var old = ed2.innerHTML;
-      if (busy) {
-        if (old.indexOf('img-uploading') < 0) ed2.insertAdjacentHTML('beforeend', '<p class="img-uploading"><span class="spin"></span> ' + esc(busy) + '</p>');
-        return;
+      if (busy && ed2.innerHTML.indexOf('img-uploading') < 0) {
+        ed2.insertAdjacentHTML('beforeend', '<p class="img-uploading"><span class="spin"></span> ' + esc(busy) + '</p>');
       }
     }).then(function (r) {
       var tag = $('#edBody .img-uploading'); if (tag) tag.remove();
@@ -3175,7 +3176,83 @@
       var tag = $('#edBody .img-uploading'); if (tag) tag.remove();
       toast(e.message, 'err');
     });
+  }
+  $('#edImg').addEventListener('change', function () {
+    var f = this.files && this.files[0];
+    this.value = '';
+    edTakeFile(f);
   });
+  /* DÁN (Ctrl+V) vào ô soạn — hai ngả:
+     · có ảnh trong clipboard (chụp màn hình, copy ảnh từ web) → lên Worker như bấm nút;
+     · chỉ có chữ/HTML (dán từ Word, Google Docs) → CHẶN cách dán mặc định và tự
+       chèn bản đã lọc, vì Word nhét kèm hàng đống <o:p>, style nội tuyến và
+       <img src="file:///C:/…"> trỏ về máy người viết — dán thô là hỏng chương. */
+  function edPasteClean(e) {
+    var cd = e.clipboardData || window.clipboardData;
+    if (!cd) return;
+    var files = cd.files || [];
+    var imgs = [];
+    for (var i = 0; i < files.length; i++) if (/^image\//.test(files[i].type || '')) imgs.push(files[i]);
+    if (imgs.length) {
+      e.preventDefault();
+      imgs.forEach(edTakeFile);
+      return;
+    }
+    var html = cd.getData('text/html');
+    var text = cd.getData('text/plain');
+    if (!html && !text) return;
+    e.preventDefault();
+    var ed = $('#edBody');
+    ed.focus();
+    if (html) {
+      /* chỉ giữ phần <body> — Word gửi cả một tài liệu HTML kèm <head> và comment
+         có điều kiện; lấy nguyên khối là rước rác vào chương */
+      var m = /<body[^>]*>([\s\S]*)<\/body>/i.exec(html);
+      var inner = m ? m[1] : html;
+      inner = inner.replace(/<!--[\s\S]*?-->/g, '')
+        .replace(/<\s*(o:p|w:[^>]*|v:[^>]*|style|script|meta|link)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '')
+        .replace(/<\s*(o:p|w:[^>\/]*|v:[^>\/]*)[^>]*\/?\s*>/gi, '')
+        .replace(/<!--[^>]*>/g, '')
+        /* Ảnh Word dán kèm trỏ về đĩa máy người viết (file:///C:/…/msohtmlclip1/…).
+           Với độc giả đó là ảnh vỡ, nên bỏ hẳn chứ không giữ lại làm rác. */
+        .replace(/<img[^>]+src\s*=\s*["']?\s*file:[^>]*>/gi, '')
+        /* class="MsoNormal" và style="mso-…" là dấu vết riêng của Word, không có
+           tác dụng hiển thị trên web — giữ lại chỉ làm phình HTML của chương. */
+        .replace(/\sclass\s*=\s*(["'])[^"']*\bMso[^"']*\1/gi, '')
+        .replace(/\sstyle\s*=\s*(["'])[^"']*mso-[^"']*\1/gi, '');
+      var clean = CZ.sanitize(inner);
+      try { document.execCommand('insertHTML', false, clean); }
+      catch (err) { toast('Trình duyệt không dán được — hãy dán bằng chữ thuần', 'err'); return; }
+    } else {
+      try { document.execCommand('insertText', false, text); } catch (err2) {}
+    }
+    dirty.book = true; markDirty(); chStat(); autoSchedule();
+  }
+  /* KÉO THẢ ảnh vào ô soạn — cùng đường ống edTakeFile */
+  function edWiringDragDrop() {
+    var ed = $('#edBody');
+    if (!ed) return;
+    ['dragenter', 'dragover'].forEach(function (ev) {
+      ed.addEventListener(ev, function (e) {
+        if (!e.dataTransfer || Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') < 0) return;
+        e.preventDefault();
+        ed.classList.add('dragging');
+      });
+    });
+    ['dragleave', 'dragend'].forEach(function (ev) {
+      ed.addEventListener(ev, function () { ed.classList.remove('dragging'); });
+    });
+    ed.addEventListener('drop', function (e) {
+      ed.classList.remove('dragging');
+      var files = (e.dataTransfer && e.dataTransfer.files) || [];
+      if (!files.length) return;
+      e.preventDefault();
+      for (var i = 0; i < files.length; i++) {
+        if (/^image\//.test(files[i].type || '')) edTakeFile(files[i]);
+        else toast('Chỉ nhận tệp ảnh — bỏ qua “' + (files[i].name || 'tệp') + '”', 'err');
+      }
+    });
+  }
   /* mở tệp chương từ máy: .txt/.md/.html */
   $('#chFileBtn').addEventListener('click', function () { $('#chFile').click(); });
   $('#chFile').addEventListener('change', function () {
