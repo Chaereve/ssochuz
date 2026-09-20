@@ -16,6 +16,7 @@ import { readdirSync, readFileSync, writeFileSync, statSync, existsSync } from '
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
+import { adminBuildOptions, ADMIN_BUDGET_BYTES } from './admin_build.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -27,8 +28,15 @@ for (const dir of ['data/book', 'truyen']) {
 }
 
 /* src → thư mục gốc (đúng đường dẫn mà các trang HTML đang gọi) */
-const JS = ['cz-app.js', 'cz-auth.js', 'cz-home.js', 'cz-story.js', 'cz-people.js', 'cz-space.js', 'admin.js'];
+const JS = ['cz-app.js', 'cz-auth.js', 'cz-home.js', 'cz-story.js', 'cz-people.js', 'cz-space.js'];
 const CSS = ['cz.css'];
+
+/* Trang quản trị có đường build RIÊNG: nó dùng trình soạn thảo cài qua npm
+   (TipTap) nên bắt buộc phải BUNDLE, trong khi các tệp cz-*.js của trang người
+   đọc vẫn gọi nhau qua window.CZ nên giữ nguyên bundle:false.
+   tools/check_src.js phải dùng ĐÚNG bộ tham số này, nếu không phép so từng byte
+   sẽ báo lệch. Hai nơi cùng đọc từ adminBuildOptions() để không bao giờ lệch. */
+const ADMIN_OUT = 'admin.js';
 
 const kb = (n) => (n / 1024).toFixed(1) + ' kB';
 const rows = [];
@@ -64,10 +72,40 @@ async function minifyCss(file) {
   rows.push([file, before, Buffer.byteLength(code)]);
 }
 
+/* Trang quản trị: bundle riêng + canh ngân sách 650 kB. */
+async function buildAdmin() {
+  const entry = path.join(ROOT, 'src/admin/main.js');
+  if (!existsSync(entry)) throw new Error('thiếu src/admin/main.js');
+  const before = srcTreeSize(path.join(ROOT, 'src/admin'));
+  const out = await build(adminBuildOptions(ROOT));
+  const code = out.outputFiles[0].text;
+  const bytes = Buffer.byteLength(code);
+  writeFileSync(path.join(ROOT, ADMIN_OUT), code + '\n');
+  rows.push([ADMIN_OUT, before, bytes]);
+  if (bytes > ADMIN_BUDGET_BYTES) {
+    throw new Error('admin.js ' + kb(bytes) + ' vượt ngân sách ' + kb(ADMIN_BUDGET_BYTES) +
+      ' — xem lại thư viện đang gom vào bundle');
+  }
+  console.log('  admin.js: ' + kb(bytes) + ' / ngân sách ' + kb(ADMIN_BUDGET_BYTES) +
+    ' (còn trống ' + kb(ADMIN_BUDGET_BYTES - bytes) + ')');
+}
+
+/* tổng dung lượng mã nguồn admin, chỉ để in cho dễ so sánh */
+function srcTreeSize(dir) {
+  let n = 0;
+  for (const name of readdirSync(dir)) {
+    const p = path.join(dir, name);
+    const st = statSync(p);
+    n += st.isDirectory() ? srcTreeSize(p) : st.size;
+  }
+  return n;
+}
+
 for (const f of JS) {
   if (!existsSync(path.join(ROOT, 'src', f))) throw new Error('thiếu src/' + f);
   await minify(f);
 }
+await buildAdmin();
 for (const f of CSS) await minifyCss(f);
 
 const srcTotal = rows.reduce((a, r) => a + r[1], 0);

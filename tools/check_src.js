@@ -12,8 +12,10 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
-const JS = ['cz-app.js', 'cz-auth.js', 'cz-home.js', 'cz-story.js', 'cz-space.js', 'cz-people.js', 'admin.js'];
+const JS = ['cz-app.js', 'cz-auth.js', 'cz-home.js', 'cz-story.js', 'cz-space.js', 'cz-people.js'];
 const CSS = ['cz.css'];
+/* admin.js đi đường riêng (bundle TipTap) — xem tools/admin_build.mjs */
+const ADMIN_OUT = 'admin.js';
 
 async function main() {
   let esbuild;
@@ -24,6 +26,32 @@ async function main() {
   }
   const errors = [];
   const rows = [];
+
+  /* --- trang quản trị: build bằng ĐÚNG tham số của build_site.mjs --------- */
+  try {
+    const { adminBuildOptions, ADMIN_BUDGET_BYTES } = await import('./admin_build.mjs');
+    const outPath = path.join(ROOT, ADMIN_OUT);
+    if (!fs.existsSync(path.join(ROOT, 'src/admin/main.js'))) {
+      errors.push('thiếu src/admin/main.js');
+    } else if (!fs.existsSync(outPath)) {
+      errors.push('thiếu bản phát hành admin.js — chạy: npm run build');
+    } else {
+      const out = await esbuild.build(adminBuildOptions(ROOT));
+      const want = out.outputFiles[0].text + '\n';
+      const got = fs.readFileSync(outPath, 'utf8');
+      const same = want === got;
+      const bytes = fs.statSync(outPath).size;
+      rows.push({ file: ADMIN_OUT, khop: same, gocBytes: bytes, nganSach: ADMIN_BUDGET_BYTES });
+      if (!same) errors.push('admin.js: bản ở thư mục gốc KHÁC mã nguồn src/admin/ — chạy `npm run build`');
+      if (bytes > ADMIN_BUDGET_BYTES) {
+        errors.push('admin.js ' + (bytes / 1024).toFixed(1) + ' kB vượt ngân sách ' +
+          (ADMIN_BUDGET_BYTES / 1024).toFixed(1) + ' kB');
+      }
+    }
+  } catch (e) {
+    errors.push('không build được trang quản trị: ' + (e && e.message || e));
+  }
+
   for (const f of [...JS, ...CSS]) {
     const srcPath = path.join(ROOT, 'src', f);
     const outPath = path.join(ROOT, f);

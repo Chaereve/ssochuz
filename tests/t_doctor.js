@@ -26,8 +26,16 @@ const ROOT = path.join(__dirname, '..');
 function loadDoctor() {
   /* đọc bản NGUỒN (src/): bản phát hành ở gốc đã rút gọn nên không còn chú thích,
      không còn thụt lề, không còn tên hàm gốc để cắt. */
-  const forSource = path.join(ROOT, 'src', 'admin.js');
-  const src = fs.readFileSync(fs.existsSync(forSource) ? forSource : path.join(ROOT, 'admin.js'), 'utf8');
+  /* Bản 2.0: mã quản trị cũ chuyển vào src/admin/legacy.js (xem
+     KE-HOACH-TRANG-QUAN-TRI-V2.md). Vẫn chấp nhận đường dẫn cũ để bài kiểm thử
+     chạy được trên các nhánh chưa chuyển. */
+    const ungVien = [
+    path.join(ROOT, 'src', 'admin', 'legacy.js'),
+    path.join(ROOT, 'src', 'admin.js'),
+    path.join(ROOT, 'admin.js'),
+  ];
+  const forSource = ungVien.find((p) => fs.existsSync(p));
+  const src = fs.readFileSync(forSource, 'utf8');
   const names = ['chapWords', 'dupGroups', 'chapterGaps', 'dupText', 'syncIssue', 'docText', 'DOC_LABEL'];
   const start = src.indexOf('  function chapWords(');
   const end = src.indexOf('  function renderDoctor()');

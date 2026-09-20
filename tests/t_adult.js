@@ -124,7 +124,13 @@ function api(p, opt, statsItems) {
 
   function mkRegWithReason() {
     const r = JSON.parse(JSON.stringify(REG));
-    r.slides = (r.slides || []).map((x, i) => {
+    /* registry thật có thể để `slides` RỖNG (bản đồng bộ KV → repo hiện tại đang
+       như vậy). Khi đó cz-app.slides() rơi vào nhánh dự phòng "5 bộ mới nhất" và
+       không slide nào mang `reason` — bài kiểm tra nhãn ban biên tập sẽ vô nghĩa.
+       Vì thế tự dựng danh sách slide từ `lib` khi registry chưa cấu hình hero. */
+    let base = r.slides || [];
+    if (!base.length) base = (r.lib || []).slice(0, 3).map(n => n.slug);
+    r.slides = base.map((x, i) => {
       const s = typeof x === 'string' ? { slug: x } : { ...x };
       if (i === 0) s.reason = 'Lựa chọn của ban biên tập';
       return s;
