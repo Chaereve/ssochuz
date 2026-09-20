@@ -16,6 +16,7 @@
   var isPublic = document.body.dataset.public === 'true';
   var space = null, selectedShelf = '', editingShelf = '', selected = new Set(), avatar = '', avatarSource = '', avatarOff = false;
   var epoch = 0, identity, busy = false, avatarBusy = false, loadFailed = false, seededFor = '', pickerLimit = 40;
+  var localFilter = 'all';      /* kệ sách đang lọc theo nhóm nào — giữ giữa các lần vẽ lại */
 
   function user() { return window.CZ_AUTH && CZ_AUTH.current(); }
   function authState() {
@@ -146,10 +147,44 @@
     if (localCount) localCount.innerHTML = ids.length ? '<strong>' + CZ.num(ids.length) + '</strong> truyện' : 'Chưa có truyện';
     var localShelfEl = $('#localShelf');
     if (localShelfEl) {
-      localShelfEl.innerHTML = ids.map(function (slug, i) {
+      /* KỆ SÁCH PHÂN LOẠI — lọc theo nhóm, đổi nhóm và ghi chú riêng cho từng bộ.
+         Nhóm nằm ở localStorage riêng nên danh sách cũ không cần di chuyển gì. */
+      var CATS = CZ.SHELF_CATS, LAB = CZ.SHELF_CAT_LABEL;
+      var dem = { all: ids.length };
+      CATS.forEach(function (c) { dem[c] = 0; });
+      var hang = ids.map(function (slug) {
         var n = CZ.findLib(slug);
-        return n ? '<div class="local-book space-book-cell" style="--space-delay:' + (i * 45) + 'ms">' + CZ.card(n) + '<button class="btn ghost sm" type="button" data-remove-local="' + esc(slug) + '">Bỏ khỏi tủ</button></div>' : '';
-      }).join('') || '<p class="empty">Tủ còn trống. Bấm Lưu ở trang truyện để thêm vào đây.</p>';
+        if (!n) return null;
+        var c = CZ.catOf(n);
+        dem[c]++;
+        return { n: n, c: c };
+      }).filter(Boolean);
+      if (localFilter !== 'all' && !dem[localFilter]) localFilter = 'all';
+      var chips = '<div class="shelfchips" id="shelfChips" role="group" aria-label="Lọc kệ sách theo nhóm">' +
+        ['all'].concat(CATS).map(function (c) {
+          return '<button type="button" class="shchip' + (localFilter === c ? ' on' : '') + '" data-cat="' + c + '"' +
+            ' aria-pressed="' + (localFilter === c ? 'true' : 'false') + '">' +
+            (c === 'all' ? 'Tất cả' : esc(LAB[c])) + ' <b>' + CZ.num(dem[c] || 0) + '</b></button>';
+        }).join('') + '</div>';
+      var shown = hang.filter(function (h) { return localFilter === 'all' || h.c === localFilter; });
+      localShelfEl.innerHTML = chips + (shown.map(function (h, i) {
+        var slug = h.n.slug, ghiChu = CZ.noteOf(h.n);
+        return '<div class="local-book space-book-cell" data-cat="' + h.c + '" style="--space-delay:' + (i * 45) + 'ms">' +
+          CZ.card(h.n) +
+          '<div class="space-book-ctl">' +
+            '<select class="inp sm" data-cat-set="' + esc(slug) + '" aria-label="Phân loại truyện ' + esc(h.n.title) + '">' +
+              CATS.map(function (c) {
+                return '<option value="' + c + '"' + (h.c === c ? ' selected' : '') + '>' + esc(LAB[c]) + '</option>';
+              }).join('') +
+            '</select>' +
+            '<button class="btn ghost sm" type="button" data-remove-local="' + esc(slug) + '">Bỏ khỏi tủ</button>' +
+          '</div>' +
+          '<label class="space-mynote-lab">Ghi chú riêng (chỉ lưu trên máy này)' +
+            '<textarea class="inp space-mynote" data-note="' + esc(slug) + '" rows="2" maxlength="2000"' +
+            ' placeholder="VD: đang chờ chương mới, thích cặp phụ hơn…" aria-label="Ghi chú riêng cho ' + esc(h.n.title) + '">' +
+            esc(ghiChu) + '</textarea></label>' +
+        '</div>';
+      }).join('') || '<p class="empty">' + (ids.length ? 'Nhóm này chưa có truyện nào.' : 'Tủ còn trống. Bấm Lưu ở trang truyện để thêm vào đây.') + '</p>');
     }
 
     var history = CZ.lib().filter(function (n) { return CZ.progress(n) > 0; }).sort(function (a, b) { return CZ.lastReadAt(b) - CZ.lastReadAt(a); });
@@ -176,7 +211,32 @@
     }).join('') + '</div><div class="space-week" role="img" aria-label="Số chương đã đọc 7 ngày qua">' + s.week.map(function (d) {
       return '<div><b>' + d.n + '</b><i style="height:' + Math.max(3, 100 * d.n / max) + 'px"></i><small>' + d.k.slice(6) + '/' + d.k.slice(4, 6) + '</small></div>';
     }).join('') + '</div>' +
-      (s.total ? '' : '<p class="empty">Chưa có số liệu — mở một chương và đọc tới cuối để bắt đầu đếm.</p>');
+      (s.total ? '' : '<p class="empty">Chưa có số liệu — mở một chương và đọc tới cuối để bắt đầu đếm.</p>') +
+      /* THỬ THÁCH THEO QUÝ: mốc tính từ ngày trên máy, không cần tài khoản/server */
+      (function () {
+        var c = CZ.myChallenge(), pct = Math.min(100, Math.round(c.da / c.dich * 100));
+        return '<section class="space-challenge" aria-labelledby="chalTitle">' +
+          '<h3 id="chalTitle">Thử thách quý ' + c.quy + '/' + c.nam + '</h3>' +
+          '<p class="hint sm">Đọc <b>' + CZ.num(c.dich) + '</b> chương trong quý này. Đã đọc <b>' + CZ.num(c.da) +
+          '</b> chương trong <b>' + CZ.num(c.ngay) + '</b> ngày' + (c.conLaiNgay ? ', còn <b>' + c.conLaiNgay + '</b> ngày nữa hết quý' : '') +
+          '. Đây là mốc bạn tự đặt và chỉ đếm trên máy này — không có phần thưởng, không gửi đi đâu.</p>' +
+          '<div class="chalbar" role="img" aria-label="Đã hoàn thành ' + pct + '% thử thách quý"><i style="width:' + pct + '%"></i></div>' +
+          '<p class="chalstate">' + (c.xong ? 'Đã xong thử thách quý này.' : 'Còn ' + CZ.num(c.con) + ' chương nữa.') + '</p>' +
+        '</section>';
+      })() +
+      /* HUY HIỆU: mỗi cái gắn một con số đếm được từ bộ đếm trong máy */
+      (function () {
+        var bd = CZ.myBadges(), du = bd.filter(function (b) { return b.du; }).length;
+        return '<section class="space-badges" aria-labelledby="badgeTitle">' +
+          '<h3 id="badgeTitle">Huy hiệu <span class="hint sm">(' + du + '/' + bd.length + ' đã đạt)</span></h3>' +
+          '<div class="badges">' + bd.map(function (b) {
+            return '<div class="badge' + (b.du ? ' on' : '') + '" title="' + esc(b.mo) + '">' +
+              '<b>' + (b.du ? '✓' : CZ.num(b.da) + '/' + CZ.num(b.dich)) + '</b>' +
+              '<span>' + esc(b.ten) + '</span><small>' + esc(b.mo) + '</small></div>';
+          }).join('') + '</div>' +
+          '<p class="hint sm">Huy hiệu tự tính từ số chương và số ngày bạn đã đọc trên máy này — không cần đăng nhập, không có xếp hạng với người khác.</p>' +
+        '</section>';
+      })();
   }
   function tab(focusPanel) {
     var key = location.hash.slice(1), keys = ['shelves', 'history', 'stats', 'edit-profile'];
@@ -644,10 +704,30 @@
     var profileLogin = $('#profileLogin');
     if (profileLogin) profileLogin.onclick = async function () { profileLogin.disabled = true; try { await CZ_AUTH.login(); } catch (e) {} finally { profileLogin.disabled = false; } };
     var localShelfEl = $('#localShelf');
-    if (localShelfEl) localShelfEl.onclick = function (e) {
-      var b = e.target.closest('[data-remove-local]');
-      if (b) { CZ.toggleShelf({ slug: b.dataset.removeLocal }); localData(); }
-    };
+    if (localShelfEl) {
+      localShelfEl.onclick = function (e) {
+        var chip = e.target.closest('[data-cat]');
+        if (chip && chip.tagName === 'BUTTON') { localFilter = chip.dataset.cat; localData(); return; }
+        var b = e.target.closest('[data-remove-local]');
+        if (b) { CZ.toggleShelf({ slug: b.dataset.removeLocal }); localData(); }
+      };
+      /* đổi nhóm và gõ ghi chú đều đi qua 'change' — ghi chú chỉ ghi khi rời ô,
+         không ghi mỗi phím để không dựng lại cả kệ giữa lúc đang gõ */
+      localShelfEl.onchange = function (e) {
+        var sel = e.target.closest('[data-cat-set]');
+        if (sel) {
+          CZ.setCat({ slug: sel.dataset.catSet }, sel.value);
+          localData();
+          if (CZ.toast) CZ.toast('Đã chuyển sang nhóm “' + CZ.SHELF_CAT_LABEL[sel.value] + '”');
+          return;
+        }
+        var ta = e.target.closest('[data-note]');
+        if (ta) {
+          var t = CZ.setNote({ slug: ta.dataset.note }, ta.value);
+          if (CZ.toast) CZ.toast(t ? 'Đã lưu ghi chú trên máy này' : 'Đã xoá ghi chú');
+        }
+      };
+    }
     $('#spaceHistory').onclick = async function (e) {
       var b = e.target.closest('[data-forget]');
       if (!b) return;

@@ -92,10 +92,10 @@
 
 ## NGƯỜI DÙNG
 
-⬜ Huy hiệu thành tích (đọc 10 chương, 100 chương…)
-⬜ Thử thách đọc theo mùa
-⬜ Ghi chú riêng cho từng truyện
-⬜ Kệ sách phân loại: đang đọc / đã xong / muốn đọc / bỏ
+✅ Huy hiệu thành tích (đọc 10 chương, 100 chương…) — 11 huy hiệu, tự tính từ bộ đếm trong máy, không cần đăng nhập
+✅ Thử thách đọc theo mùa — mốc 100 chương/quý, tính theo ngày trên máy, UI nói rõ không có phần thưởng
+✅ Ghi chú riêng cho từng truyện — `ssochuz-note-<slug>`, tối đa 2000 ký tự, xoá trắng thì xoá luôn khoá
+✅ Kệ sách phân loại: đang đọc / đã xong / muốn đọc / bỏ — `ssochuz-shelf-cat`, giữ nguyên mảng `ssochuz-shelf` cũ
 
 ✅ Thống kê đọc: tổng chương · chuỗi ngày · hôm nay · biểu đồ 7 cột
 ✅ Theo dõi truyện

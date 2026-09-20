@@ -475,6 +475,88 @@
   }
   function clearShelf() { jsonSet(LS.shelf, []); }
 
+  /* ---- KỆ SÁCH PHÂN LOẠI · GHI CHÚ RIÊNG · HUY HIỆU · THỬ THÁCH THEO QUÝ ----
+     Cả bốn chỉ đọc/ghi localStorage: KHÔNG gọi Worker, KHÔNG tốn một lượt ghi KV.
+     `ssochuz-shelf` giữ NGUYÊN dạng mảng slug cũ — phân loại nằm ở khoá riêng
+     `ssochuz-shelf-cat` nên người dùng cũ không phải di chuyển dữ liệu gì: bộ nào
+     chưa phân loại thì tự xếp theo tiến độ (có đọc dở → Đang đọc, chưa → Muốn đọc). */
+  var LS_SCAT = 'ssochuz-shelf-cat', LS_NOTE = 'ssochuz-note-';
+  var SHELF_CATS = ['reading', 'done', 'want', 'dropped'];
+  var SHELF_CAT_LABEL = { reading: 'Đang đọc', done: 'Đã xong', want: 'Muốn đọc', dropped: 'Bỏ' };
+  function shelfCats() {
+    var m = jsonGet(LS_SCAT, {});
+    return (m && typeof m === 'object' && !Array.isArray(m)) ? m : {};
+  }
+  function catOf(n) {
+    if (!n || !n.slug) return '';
+    var m = shelfCats();
+    if (SHELF_CATS.indexOf(m[n.slug]) >= 0) return m[n.slug];
+    return progress(n) > 0 ? 'reading' : 'want';
+  }
+  function setCat(n, c) {
+    if (!n || !n.slug) return;
+    var m = shelfCats();
+    if (SHELF_CATS.indexOf(c) >= 0) m[n.slug] = c; else delete m[n.slug];
+    jsonSet(LS_SCAT, m);
+  }
+  function noteOf(n) {
+    var ks = keysOf(typeof n === 'string' ? { slug: n } : n);
+    for (var i = 0; i < ks.length; i++) {
+      var v = safeGet(LS_NOTE + ks[i]);
+      if (v) return v;
+    }
+    return '';
+  }
+  function setNote(n, txt) {
+    var t = String(txt == null ? '' : txt).slice(0, 2000);
+    keysOf(typeof n === 'string' ? { slug: n } : n).forEach(function (k) {
+      if (t) safeSet(LS_NOTE + k, t);
+      else { try { localStorage.removeItem(LS_NOTE + k); } catch (e) {} }
+    });
+    return t;
+  }
+  /* Huy hiệu: mỗi cái gắn với MỘT con số đếm được từ bộ đếm trong máy. Không có
+     huy hiệu nào cần server chấm, và không cái nào nói về “chất lượng đọc”. */
+  var BADGES = [
+    { id: 'ch10', ten: 'Khởi động', mo: 'đọc 10 chương', lay: function (s) { return s.total; }, dich: 10 },
+    { id: 'ch50', ten: 'Đều tay', mo: 'đọc 50 chương', lay: function (s) { return s.total; }, dich: 50 },
+    { id: 'ch100', ten: 'Trăm chương', mo: 'đọc 100 chương', lay: function (s) { return s.total; }, dich: 100 },
+    { id: 'ch500', ten: 'Năm trăm chương', mo: 'đọc 500 chương', lay: function (s) { return s.total; }, dich: 500 },
+    { id: 'ngay3', ten: 'Ba ngày liền', mo: 'đọc 3 ngày liên tiếp', lay: function (s) { return s.streak; }, dich: 3 },
+    { id: 'ngay7', ten: 'Một tuần liền', mo: 'đọc 7 ngày liên tiếp', lay: function (s) { return s.streak; }, dich: 7 },
+    { id: 'ngay30', ten: 'Một tháng liền', mo: 'đọc 30 ngày liên tiếp', lay: function (s) { return s.streak; }, dich: 30 },
+    { id: 'bo3', ten: 'Ba bộ', mo: 'mở 3 bộ khác nhau', lay: function (s, b) { return b; }, dich: 3 },
+    { id: 'bo10', ten: 'Mười bộ', mo: 'mở 10 bộ khác nhau', lay: function (s, b) { return b; }, dich: 10 },
+    { id: 'bo25', ten: 'Hai lăm bộ', mo: 'mở 25 bộ khác nhau', lay: function (s, b) { return b; }, dich: 25 },
+    { id: 'homnay10', ten: 'Một buổi no nê', mo: 'đọc 10 chương trong một ngày', lay: function (s) { return s.today; }, dich: 10 }
+  ];
+  function myBadges() {
+    var s = myReadSummary(), soBo = Object.keys(readSlugs()).length;
+    return BADGES.map(function (b) {
+      var n = Math.max(0, parseInt(b.lay(s, soBo), 10) || 0);
+      return { id: b.id, ten: b.ten, mo: b.mo, dich: b.dich, da: Math.min(n, b.dich), du: n >= b.dich };
+    });
+  }
+  /* Thử thách theo QUÝ hiện tại. Mốc tính từ ngày trên máy người đọc — không cần
+     server, không cần tài khoản, và nói rõ đây là mốc tự đặt chứ không có thưởng. */
+  function myChallenge() {
+    var o = myStats(), d = new Date(), q = Math.floor(d.getMonth() / 3) + 1;
+    var dau = '' + d.getFullYear() + pad2((q - 1) * 3 + 1) + '01';
+    var cuoi = new Date(d.getFullYear(), q * 3, 1);
+    var cuoiK = '' + cuoi.getFullYear() + pad2(cuoi.getMonth() + 1) + pad2(cuoi.getDate());
+    var n = 0, ngay = 0;
+    Object.keys(o.days || {}).forEach(function (k) {
+      if (k < dau || k >= cuoiK) return;
+      var row = o.days[k] && o.days[k].s;
+      var c = row ? Object.keys(row).length : 0;
+      if (c) { n += c; ngay++; }
+    });
+    var dich = 100, con = Math.max(0, dich - n);
+    var het = Math.max(0, Math.ceil((cuoi.getTime() - d.getTime()) / 86400000));
+    return { quy: q, nam: d.getFullYear(), da: n, ngay: ngay, dich: dich, con: con,
+      xong: n >= dich, conLaiNgay: het };
+  }
+
   /* ---- THEO DÕI: chuông báo “có chương mới”, tốn 0 request -----------------
      Mỗi lần web load đã tải sẵn số chương trong registry — chỉ cần nhớ “lúc bấm
      theo dõi bộ này có mấy chương” rồi trừ là ra số chương mới, không gọi thêm
@@ -2629,6 +2711,9 @@
     isLiked: isLiked, toggleLike: toggleLike, likedChapters: likedChapters, likedCount: likedCount, likeCount: likeCount,
     marks: marks, toggleMark: toggleMark, chaptersRead: chaptersRead,
     myReadAdd: myReadAdd, myReadSummary: myReadSummary, readSlugs: readSlugs,
+    SHELF_CATS: SHELF_CATS, SHELF_CAT_LABEL: SHELF_CAT_LABEL, shelfCats: shelfCats,
+    catOf: catOf, setCat: setCat, noteOf: noteOf, setNote: setNote,
+    myBadges: myBadges, myChallenge: myChallenge,
     realCount: realCount, reconcileCount: reconcileCount, onStatsChange: onStatsChange, notifyStats: notifyStats,
     rdGet: rdGet, rdSet: rdSet, themeInit: themeInit, themeToggle: themeToggle, themeMeta: themeMeta,
     icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo, teaser: teaser,
