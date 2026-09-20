@@ -22,9 +22,9 @@
 ⬜ Khung cảnh báo (thông tin / cảnh báo / lỗi)
 ⬜ Khối code
 ⬜ Tìm **và thay thế** (hiện mới có tìm)
-⬜ Dán ảnh bằng Ctrl+V
-⬜ Kéo thả ảnh vào ô soạn
-⬜ Dán từ Word / Google Docs mà sạch định dạng
+✅ Dán ảnh bằng Ctrl+V
+✅ Kéo thả ảnh vào ô soạn
+✅ Dán từ Word / Google Docs mà sạch định dạng
 ⬜ In / xem trước khi in
 ⬜ Xuất .html · .txt · **.docx** · PDF (qua in)
 ⬜ Lịch sử phiên bản + khôi phục + so sánh (lưu trong máy)
@@ -71,7 +71,7 @@
 
 ## TRANG ĐỌC
 
-⬜ Nút **Trả lời** bình luận (server đã hỗ trợ sẵn, chỉ thiếu nút)
+✅ Trả lời bình luận (nhiều tầng)
 ⬜ Chia sẻ một câu thành ảnh
 ⬜ Đánh dấu từng đoạn văn
 ⬜ Tải trước chương kế tiếp
@@ -122,9 +122,9 @@
 
 ## SEO & KỸ THUẬT
 
-⬜ **Thiếu header bảo mật** (`_headers` hiện chỉ có cache)
-⬜ `rel="canonical"` cho mọi trang
-⬜ Dữ liệu có cấu trúc JSON-LD (hiện rich snippet trên Google)
+✅ Header bảo mật: CSP, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy, COOP, HSTS
+✅ `rel="canonical"` — 62 trang truyện (lúc build) + trang chương (lúc chạy)
+✅ JSON-LD: `Book`+`Person` (trang truyện), `Chapter` (trang chương)
 ⬜ Sitemap tự sinh khi build
 ⬜ Link "bỏ qua tới nội dung" cho người dùng bàn phím
 ⬜ Viền nét khi focus
