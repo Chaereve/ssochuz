@@ -240,7 +240,13 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     '<figure class="fig fig-c"><img src="/api/img/x.webp" alt="anh"><figcaption>Chú thích ảnh</figcaption></figure>' +
     '<div class="callout">div này sẽ thành p</div>' +
     '<ul><li>mục một</li></ul>' +
-    '<p><a href="https://example.com">link tốt</a></p>';
+    '<p><a href="https://example.com">link tốt</a></p>' +
+    /* BA thẻ dưới đây PHẢI bị gỡ sạch: web này không có giọng đọc audio và không
+       có video (yêu cầu chủ trang). iframe/object/embed chặn YouTube/Vimeo. */
+    '<audio controls src="/am-thanh.mp3"></audio>' +
+    '<video controls><source src="/phim.mp4" type="video/mp4"></video>' +
+    '<iframe src="https://www.youtube.com/embed/abc"></iframe>' +
+    '<p>đoạn sau khối bị chặn</p>';
   const r9 = page('truyen.html', {
     url: 'https://ssochuz.pages.dev/truyen/third-person/',
     fetch: dataFetch({ apiBase: 'https://cms.test' }),
@@ -266,6 +272,14 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   kiem(/<ul><li>mục một<\/li><\/ul>/.test(rdH), 'mất danh sách <ul><li>');
   kiem(/href="https:\/\/example\.com"/.test(rdH), 'mất liên kết hợp lệ');
   kiem(/rel="noopener nofollow"/.test(rdH), 'thiếu rel="noopener nofollow" trên liên kết');
+  /* KHÔNG được còn audio/video/iframe — web này không có giọng đọc và không có video */
+  kiem(!/<audio/i.test(rdH), 'CÒN <audio> trong chương — web không được có giọng đọc audio');
+  kiem(!/<video/i.test(rdH), 'CÒN <video> trong chương — web không được có video');
+  kiem(!/<source/i.test(rdH), 'CÒN <source> của video trong chương');
+  kiem(!/<iframe/i.test(rdH), 'CÒN <iframe> trong chương (nhúng YouTube/Vimeo)');
+  kiem(!/\.mp3|\.mp4/i.test(rdH), 'CÒN đường dẫn tệp .mp3/.mp4 trong chương');
+  /* gỡ khối bị chặn nhưng KHÔNG được làm rớt phần chữ đứng sau nó */
+  kiem(/đoạn sau khối bị chặn/.test(rdH), 'gỡ audio/video làm rớt luôn chữ đứng sau');
   /* bằng chứng ngược: <div class="callout"> PHẢI bị đổi thành <p> và mất class */
   kiem(!/<div class="callout">/.test(rdH) && /<p>div này sẽ thành p<\/p>/.test(rdH),
     'luật đổi <div> chỉ-chứa-chữ thành <p> đã thay đổi — kiểm tra lại lý do trình soạn dùng <aside>');

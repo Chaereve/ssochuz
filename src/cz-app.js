@@ -1058,7 +1058,7 @@
      dựng HTML từ dữ liệu người dùng đều phải đi qua đây. Dùng DANH SÁCH CHẶN
      giống hệt cleanHTML() ở trang đọc — một nguồn sự thật, không mỗi nơi một bản.
      Trả về chuỗi HTML đã dọn (không sửa chuỗi gốc). */
-  var SANITIZE_DROP = 'script,style,iframe,form,object,embed,link,meta,input,button';
+  var SANITIZE_DROP = 'script,style,iframe,form,object,embed,link,meta,input,button,audio,video,source,track';
   function sanitize(html) {
     var tmp = d.createElement('div');
     tmp.innerHTML = String(html == null ? '' : html);

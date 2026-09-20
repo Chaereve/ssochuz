@@ -84,9 +84,13 @@
 #     bìa ở host ngoài cho kho đọc offline.
 #   · script-src-attr chặn inline event handler; frame-ancestors + X-Frame-Options
 #     chống bị nhúng vào trang lạ (clickjacking).
+#   · media-src 'none' — web này KHÔNG có giọng đọc audio và KHÔNG có video
+#     (yêu cầu của chủ trang 20/09/2026). Chặn ở tầng header để kể cả khi có thẻ
+#     <audio>/<video> lọt vào nội dung thì trình duyệt cũng không phát được.
+#     Bộ lọc HTML (cleanHTML / CZ.sanitize) cũng gỡ các thẻ đó — hai lớp độc lập.
 # ============================================================================
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://accounts.google.com; script-src-attr 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' https:; connect-src 'self' https://*.workers.dev https://*.supabase.co https://firestore.googleapis.com https://accounts.google.com https://*.e2b.app; frame-src 'self' https://accounts.google.com https://*.supabase.co; form-action 'self' https://formsubmit.co; base-uri 'self'; object-src 'none'; worker-src 'self' blob:; frame-ancestors 'self'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://accounts.google.com; script-src-attr 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'none'; connect-src 'self' https://*.workers.dev https://*.supabase.co https://firestore.googleapis.com https://accounts.google.com https://*.e2b.app; frame-src 'self' https://accounts.google.com https://*.supabase.co; form-action 'self' https://formsubmit.co; base-uri 'self'; object-src 'none'; worker-src 'self' blob:; frame-ancestors 'self'; upgrade-insecure-requests
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: SAMEORIGIN

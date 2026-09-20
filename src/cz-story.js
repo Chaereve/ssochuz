@@ -155,7 +155,10 @@
   function cleanHTML(html) {
     var tmp = document.createElement('div');
     tmp.innerHTML = String(html || '');
-    $$('script,style,iframe,form,object,embed,link,meta,input,button', tmp).forEach(function (el) { el.remove(); });
+    /* audio/video/source/track bị chặn theo yêu cầu của chủ trang: web này
+       KHÔNG có giọng đọc audio và KHÔNG có video. iframe/object/embed đã chặn
+       từ trước nên YouTube/Vimeo cũng không nhúng vào được. */
+    $$('script,style,iframe,form,object,embed,link,meta,input,button,audio,video,source,track', tmp).forEach(function (el) { el.remove(); });
     $$('*', tmp).forEach(function (el) {
       Array.prototype.slice.call(el.attributes || []).forEach(function (a) {
         var n = String(a.name || '').toLowerCase(), v = String(a.value || '');

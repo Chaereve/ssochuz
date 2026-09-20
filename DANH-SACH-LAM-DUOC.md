@@ -28,7 +28,6 @@
 ⬜ In / xem trước khi in
 ✅ Xuất .html · .txt  ⬜ .docx · PDF (qua in)
 ⬜ Lịch sử phiên bản + khôi phục + so sánh (lưu trong máy)
-⬜ Chèn video YouTube/Vimeo
 ⬜ Ngắt trang
 
 ✅ Đậm · nghiêng · gạch chân · gạch ngang
@@ -140,6 +139,13 @@
 ✅ PWA + đọc offline
 
 ---
+
+## CẤM — KHÔNG BAO GIỜ LÀM (yêu cầu chủ trang 20/09/2026)
+
+**Giọng đọc audio (text-to-speech) và video dưới mọi hình thức.** Đã bịt hai lớp:
+blocklist của `cleanHTML()` và `CZ.sanitize()` gỡ `audio,video,source,track`;
+CSP đặt `media-src 'none'` nên kể cả thẻ lọt vào thì trình duyệt cũng không phát.
+Có test hồi quy ở cả `t_story.js` và `t_flows.js`.
 
 ## KHÔNG LÀM ĐƯỢC VỚI $0
 

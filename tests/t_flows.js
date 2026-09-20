@@ -309,6 +309,21 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   };
   /* safeLink là chốt chặn dùng chung — kiểm thẳng bảng ca nguy hiểm */
   const SL = W.CZ.safeLink;
+  /* CZ.sanitize phải gỡ audio/video/iframe: web này không có giọng đọc audio và
+     không có video, nên cả ô xem trước lẫn trang đọc đều không được hiện chúng */
+  const sanMedia = W.CZ.sanitize('<p>chữ</p><audio src="/a.mp3"></audio>' +
+    '<video><source src="/v.mp4"></video><iframe src="https://youtube.com/embed/x"></iframe>' +
+    '<object data="/x"></object><embed src="/y"><p>chữ sau</p>');
+  out.editorSanitizeMedia = {
+    khongAudio: !/<audio/i.test(sanMedia),
+    khongVideo: !/<video/i.test(sanMedia),
+    khongSource: !/<source/i.test(sanMedia),
+    khongIframe: !/<iframe/i.test(sanMedia),
+    khongObject: !/<object/i.test(sanMedia),
+    khongEmbed: !/<embed/i.test(sanMedia),
+    khongMp: !/\.mp3|\.mp4/i.test(sanMedia),
+    giuChu: /chữ/.test(sanMedia) && /chữ sau/.test(sanMedia),
+  };
   out.editorSafeLink = {
     chan: ['javascript:alert(1)', 'JaVaScRiPt:alert(1)', 'java\tscript:alert(1)', '  javascript :alert(1)',
       'data:text/html,x', 'vbscript:msgbox(1)', 'file:///etc/passwd', '', '   '].filter((u) => SL(u) !== ''),
@@ -804,6 +819,11 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   if (out.editorSafeLink && (out.editorSafeLink.chan.length || out.editorSafeLink.cho.length)) {
     rtFail.push('lọc URL sai — lẽ ra chặn: ' + JSON.stringify(out.editorSafeLink.chan) +
       ' · lẽ ra cho: ' + JSON.stringify(out.editorSafeLink.cho));
+  }
+  const sm = out.editorSanitizeMedia;
+  if (sm && !(sm.khongAudio && sm.khongVideo && sm.khongSource && sm.khongIframe &&
+      sm.khongObject && sm.khongEmbed && sm.khongMp && sm.giuChu)) {
+    rtFail.push('CZ.sanitize chưa gỡ audio/video/iframe: ' + JSON.stringify(sm));
   }
   if (out.editorPreview && !(out.editorPreview.mo && out.editorPreview.noiDung && out.editorPreview.soTu &&
       out.editorPreview.giuLienKet && out.editorPreview.lotOnerror && out.editorPreview.lotScript &&
