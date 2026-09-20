@@ -222,6 +222,61 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     khongNhamTenTruyen: !/“truyen”|“reader”/.test(h1(r6) + h1(r7) + h1(r8))
   };
 
+  /* ---------- CÁC KHỐI TRÌNH SOẠN CHÈN PHẢI SỐNG SÓT TỚI TRANG ĐỌC -------
+     Trình soạn (cụm 2-3) chèn <aside class="callout">, <pre><code>, <table class="tb">,
+     <figure class="fig"><figcaption>. Trang đọc lại dọn HTML bằng cleanHTML() —
+     một DANH SÁCH CHẶN có kèm luật đổi <div> chỉ-chứa-chữ thành <p>. Nếu sau này
+     ai đổi bộ lọc đó, các khối trên có thể âm thầm mất định dạng mà không bài nào
+     kêu. Bài này dựng thật một chương chứa đủ khối rồi soi DOM đã render.
+     Chèn qua window.czPrivateBook vì loadBook() ưu tiên nó trước khi gọi CZ.book().
+     Kèm một <div class="callout"> làm CHỨNG CỨ ngược: nó PHẢI bị đổi thành <p> —
+     đó chính là lý do trình soạn dùng <aside> chứ không dùng <div>. */
+  const KHOI_HTML =
+    '<p>đoạn mở đầu</p>' +
+    '<aside class="callout info"><b>Thông tin:</b> nội dung khung</aside>' +
+    '<aside class="callout warn"><b>Lưu ý:</b> khung vàng</aside>' +
+    '<pre><code>var x = 1;</code></pre>' +
+    '<table class="tb"><tbody><tr><th>đầu</th></tr><tr><td>thân</td></tr></tbody></table>' +
+    '<figure class="fig fig-c"><img src="/api/img/x.webp" alt="anh"><figcaption>Chú thích ảnh</figcaption></figure>' +
+    '<div class="callout">div này sẽ thành p</div>' +
+    '<ul><li>mục một</li></ul>' +
+    '<p><a href="https://example.com">link tốt</a></p>';
+  const r9 = page('truyen.html', {
+    url: 'https://ssochuz.pages.dev/truyen/third-person/',
+    fetch: dataFetch({ apiBase: 'https://cms.test' }),
+    setup: (w) => { w.czPrivateBook = { title: 'Third Person', slug: 'third-person', author: 'Ai đó', chapters: [{ t: 'Chương thử khối', html: KHOI_HTML }] }; },
+  });
+  await wait(1600);
+  const chas9 = [...r9.doc.querySelectorAll('#chapGrid .cha')];
+  if (chas9[0]) chas9[0].dispatchEvent(new r9.win.MouseEvent('click', { bubbles: true }));
+  await wait(1500);
+  const rdEl = r9.doc.querySelector('.rtext');
+  const rdH = rdEl ? rdEl.innerHTML : '';
+  const khoiFail = [];
+  const kiem = (ok, ten) => { if (!ok) khoiFail.push(ten); };
+  kiem(!!rdEl && /đoạn mở đầu/.test(rdEl.textContent), 'chương chưa render');
+  kiem(/<aside class="callout info">/.test(rdH), 'mất <aside class="callout info">');
+  kiem(/<aside class="callout warn">/.test(rdH), 'mất <aside class="callout warn">');
+  kiem(/nội dung khung/.test(rdH), 'mất chữ trong khung cảnh báo');
+  kiem(/<pre>/.test(rdH) && /<code>var x = 1;<\/code>/.test(rdH), 'mất khối code <pre><code>');
+  kiem(/<table class="tb">/.test(rdH), 'mất <table class="tb">');
+  kiem(/<th>đầu<\/th>/.test(rdH) && /<td>thân<\/td>/.test(rdH), 'mất ô <th>/<td> trong bảng');
+  kiem(/<figure class="fig fig-c">/.test(rdH), 'mất <figure class="fig fig-c"> (căn giữa)');
+  kiem(/<figcaption>Chú thích ảnh<\/figcaption>/.test(rdH), 'mất <figcaption> chú thích ảnh');
+  kiem(/<ul><li>mục một<\/li><\/ul>/.test(rdH), 'mất danh sách <ul><li>');
+  kiem(/href="https:\/\/example\.com"/.test(rdH), 'mất liên kết hợp lệ');
+  kiem(/rel="noopener nofollow"/.test(rdH), 'thiếu rel="noopener nofollow" trên liên kết');
+  /* bằng chứng ngược: <div class="callout"> PHẢI bị đổi thành <p> và mất class */
+  kiem(!/<div class="callout">/.test(rdH) && /<p>div này sẽ thành p<\/p>/.test(rdH),
+    'luật đổi <div> chỉ-chứa-chữ thành <p> đã thay đổi — kiểm tra lại lý do trình soạn dùng <aside>');
+  out.khoiTrinhSoan = {
+    render: !!rdEl && /đoạn mở đầu/.test(rdEl.textContent),
+    du: khoiFail.length === 0,
+    loi: khoiFail,
+    loiJs: r9.errors.filter((e) => !/Not implemented/.test(String(e))).slice(0, 3),
+  };
+  out.errors2 = khoiFail.concat(out.khoiTrinhSoan.loiJs);
+
 out.errors1 = errors.slice(0, 6);
   console.log(JSON.stringify(out, null, 1));
   process.exit(0);

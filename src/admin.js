@@ -1251,6 +1251,106 @@
     if (b) b.setAttribute('aria-pressed', want ? 'true' : 'false');
     if (want) { var ed = $('#edBody'); if (ed) { try { ed.focus(); } catch (e) {} } }
   }
+  /* ---------------- ẨN THANH ĐỊNH DẠNG + CHẾ ĐỘ TẬP TRUNG ----------------
+     Hai việc khác nhau: ẩn thanh định dạng là sở thích lâu dài (nhớ trong máy),
+     còn chế độ tập trung là tạm thời để viết một mạch — thoát bằng Esc. */
+  var ED_TOOLS_KEY = 'cz_ed_tools';
+  function edToolsShow(on) {
+    var tb = $('#edToolbar');
+    if (!tb) return;
+    tb.classList.toggle('hide', !on);
+    var b = $('#edToolsToggle');
+    if (b) b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    try { localStorage.setItem(ED_TOOLS_KEY, on ? '1' : '0'); } catch (e) {}
+  }
+  function edFocus(on) {
+    var want = (on == null) ? !document.body.classList.contains('ed-focus') : !!on;
+    document.body.classList.toggle('ed-focus', want);
+    var b = $('#chFocus');
+    if (b) b.setAttribute('aria-pressed', want ? 'true' : 'false');
+    if (want) { var ed = $('#edBody'); if (ed) { try { ed.focus(); } catch (e) {} } }
+  }
+  /* ---------------- XUẤT CHƯƠNG RA MÁY -----------------------------------
+     Chỉ dùng Blob + CZ.download() sẵn có — không thư viện, không dịch vụ nào.
+     .docx cũng làm được bằng CompressionStream nhưng để đợt sau. */
+  function edFileBase() {
+    var t = (($('#chTitle').value || '').trim() || 'chuong')
+      .toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')     /* bỏ dấu để tên tệp an toàn */
+      .replace(/đ/g, 'd')
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    var slug = (CUR && CUR.slug) ? CUR.slug : 'truyen';
+    return slug + '-' + (t || 'chuong');
+  }
+  function edExportHtml() {
+    var body = edHtml();
+    if (!body) { toast('Chương chưa có nội dung để xuất', 'err'); return; }
+    var title = ($('#chTitle').value || '').trim() || 'Chương';
+    var doc = '<!doctype html>\n<html lang="vi">\n<head>\n<meta charset="utf-8">\n' +
+      '<meta name="viewport" content="width=device-width,initial-scale=1">\n' +
+      '<title>' + esc(title) + '</title>\n</head>\n<body>\n<h1>' + esc(title) + '</h1>\n' +
+      body + '\n</body>\n</html>\n';
+    CZ.download(edFileBase() + '.html', doc, 'text/html;charset=utf-8');
+    toast('Đã tải ' + edFileBase() + '.html', 'ok');
+  }
+  function edToText() {
+    var ed = $('#edBody');
+    if (!ed) return '';
+    var clone = ed.cloneNode(true);
+    Array.prototype.slice.call(clone.querySelectorAll('br')).forEach(function (b) {
+      b.parentNode.insertBefore(document.createTextNode('\n'), b);
+      b.parentNode.removeChild(b);
+    });
+    var out = [];
+    /* phải xét THEO LOẠI THẺ chứ không lấy textContent của khối cha: <ul> và
+       <figure> là con cấp một, nếu gộp luôn thì các <li> dính vào nhau thành
+       "mục mộtmục hai" và chú thích ảnh mất dấu ngoặc. */
+    function block(el) {
+      var tag = (el.tagName || '').toLowerCase();
+      var i, t;
+      if (tag === 'ul' || tag === 'ol') {
+        var n = 0;
+        for (i = 0; i < el.children.length; i++) {
+          var li = el.children[i];
+          if ((li.tagName || '').toLowerCase() !== 'li') continue;
+          n++;
+          t = (li.textContent || '').replace(/\u00a0/g, ' ').trim();
+          if (t) out.push((tag === 'ol' ? n + '. ' : '• ') + t);
+        }
+        return;
+      }
+      if (tag === 'figure') {
+        var im = el.querySelector('img');
+        if (im && (im.getAttribute('alt') || '').trim()) out.push('(ảnh: ' + im.getAttribute('alt').trim() + ')');
+        var cap = el.querySelector('figcaption');
+        if (cap && (cap.textContent || '').trim()) out.push('(' + cap.textContent.trim() + ')');
+        return;
+      }
+      if (tag === 'table') {
+        for (i = 0; i < (el.rows || []).length; i++) {
+          var cells = Array.prototype.slice.call(el.rows[i].cells).map(function (c) {
+            return (c.textContent || '').replace(/\s+/g, ' ').trim();
+          });
+          out.push('| ' + cells.join(' | ') + ' |');
+        }
+        return;
+      }
+      t = (el.textContent || '').replace(/\u00a0/g, ' ').trim();
+      if (!t) return;
+      if (/^h[1-6]$/.test(tag)) out.push('\n' + t + '\n');
+      else if (tag === 'pre') out.push(el.textContent || '');
+      else out.push(t);
+    }
+    Array.prototype.slice.call(clone.children).forEach(block);
+    return out.join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
+  }
+  function edExportTxt() {
+    var txt = edToText();
+    if (!txt) { toast('Chương chưa có nội dung để xuất', 'err'); return; }
+    var head = (($('#chTitle').value || '').trim() || 'Chương') + '\n\n';
+    CZ.download(edFileBase() + '.txt', head + txt + '\n', 'text/plain;charset=utf-8');
+    toast('Đã tải ' + edFileBase() + '.txt', 'ok');
+  }
   /* nén ảnh trong trình duyệt: resize tối đa 1400px rồi encode WebP.
      Trả về Promise<{type, data (base64), bytes}>. */
   function compressImage(file, maxPx) {
@@ -3429,11 +3529,22 @@
   $('#edReplAll').addEventListener('click', function () { edReplace(false); });
   $('#chPreview').addEventListener('click', edPreview);
   $('#chFull').addEventListener('click', function () { edFull(); });
+  $('#chFocus').addEventListener('click', function () { edFocus(); });
+  $('#edToolsToggle').addEventListener('click', function () {
+    edToolsShow($('#edToolbar').classList.contains('hide'));
+  });
+  $('#chExpHtml').addEventListener('click', edExportHtml);
+  $('#chExpTxt').addEventListener('click', edExportTxt);
+  edToolsShow((function () {
+    try { return localStorage.getItem(ED_TOOLS_KEY) !== '0'; } catch (e) { return true; }
+  })());
   /* Esc thoát chế độ viết toàn màn hình — nhường hộp thoại trước: hộp nào đang mở
      thì Esc phải đóng hộp, không được vừa đóng hộp vừa thoát toàn màn hình */
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
     if (document.querySelector('.modal.on')) return;
+    /* ưu tiên thoát chế độ tập trung trước, vì nó hay bật kèm toàn màn hình */
+    if (document.body.classList.contains('ed-focus')) { edFocus(false); return; }
     if (document.body.classList.contains('ed-full')) edFull(false);
   });
   /* ảnh trong chương: lên từ máy → nén WebP → KV → chèn <img> */

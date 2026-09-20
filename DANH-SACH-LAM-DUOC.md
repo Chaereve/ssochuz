@@ -8,8 +8,8 @@
 
 ✅ Chỉ số dưới / chỉ số trên
 ✅ Bảng ký tự đặc biệt (©, ®, ™, emoji…)
-⬜ Ẩn/hiện thanh công cụ
-⬜ Chế độ tập trung (ẩn hết, chỉ còn chữ)
+✅ Ẩn/hiện thanh công cụ
+✅ Chế độ tập trung (ẩn hết, chỉ còn chữ)
 ⬜ Màu chữ + bút dạ tô nền
 ⬜ Chỉnh cỡ chữ bằng thanh trượt
 ⬜ Căn phải–trái (cho tiếng Ả Rập)
@@ -26,7 +26,7 @@
 ✅ Kéo thả ảnh vào ô soạn
 ✅ Dán từ Word / Google Docs mà sạch định dạng
 ⬜ In / xem trước khi in
-⬜ Xuất .html · .txt · **.docx** · PDF (qua in)
+✅ Xuất .html · .txt  ⬜ .docx · PDF (qua in)
 ⬜ Lịch sử phiên bản + khôi phục + so sánh (lưu trong máy)
 ⬜ Chèn video YouTube/Vimeo
 ⬜ Ngắt trang

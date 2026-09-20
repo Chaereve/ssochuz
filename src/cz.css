@@ -3430,6 +3430,13 @@ body.ed-full .edright { position: fixed; inset: 0; z-index: 70; background: var(
 body.ed-full .edright > .fl { display: none; }
 body.ed-full .edright .rte { flex: 1 1 auto; min-height: 50vh; }
 body.ed-full .edright .rte-tools { top: 0; }
+/* chế độ tập trung: chỉ còn chữ — ẩn ô thông tin bên trái và thanh định dạng.
+   Khác với toàn màn hình ở chỗ đây là trạng thái TẠM thời, thoát bằng Esc. */
+body.ed-focus .edleft { display: none; }
+body.ed-focus .edgrid { grid-template-columns: 1fr; }
+body.ed-focus .edright { max-width: 760px; margin: 0 auto; }
+body.ed-focus .rte-tools, body.ed-focus .fr, body.ed-focus .chcheck { display: none; }
+body.ed-focus .rte { min-height: 62vh; }
 .rte-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 3px;
   border: 1px solid var(--bd); border-bottom: 0; border-radius: var(--r) var(--r) 0 0;
   background: var(--surf2); padding: 6px 8px; position: sticky; top: 60px; z-index: 5; }

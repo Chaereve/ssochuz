@@ -560,6 +560,83 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   out.editorImg.figSongSot = /<figure class="fig fig-c">/.test(savedFig) &&
     /<figcaption>Chú thích quan trọng<\/figcaption>/.test(savedFig);
 
+  /* ẨN THANH ĐỊNH DẠNG · CHẾ ĐỘ TẬP TRUNG · XUẤT CHƯƠNG.
+     Xuất tệp thì soi nội dung đưa cho CZ.download() — không cần tải thật. */
+  out.editorView = {
+    nut: !!$a('#chFocus') && !!$a('#edToolsToggle') && !!$a('#chExpHtml') && !!$a('#chExpTxt'),
+    khongTen: ['#chFocus', '#edToolsToggle', '#chExpHtml', '#chExpTxt']
+      .filter((s) => { const e = $a(s); return e && !e.textContent.trim() && !e.title; }).length,
+  };
+  clk('#edToolsToggle'); await wait(220);
+  const tbAn = $a('#edToolbar').classList.contains('hide');
+  const tbAria = $a('#edToolsToggle').getAttribute('aria-pressed');
+  const tbLs = W.localStorage.getItem('cz_ed_tools');
+  clk('#edToolsToggle'); await wait(220);
+  out.editorView.thanhDinhDang = {
+    anDuoc: tbAn, ariaKhiAn: tbAria, nhoTrongMay: tbLs === '0',
+    hienLai: !$a('#edToolbar').classList.contains('hide') && W.localStorage.getItem('cz_ed_tools') === '1',
+  };
+  clk('#chFocus'); await wait(220);
+  const fBat = D.body.classList.contains('ed-focus');
+  const fAria = $a('#chFocus').getAttribute('aria-pressed');
+  D.dispatchEvent(new W.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  await wait(220);
+  out.editorView.tapTrung = {
+    bat: fBat, ariaOn: fAria,
+    escTat: !D.body.classList.contains('ed-focus'), ariaOff: $a('#chFocus').getAttribute('aria-pressed'),
+  };
+  /* Esc phải NHƯỜNG hộp thoại: đang mở hộp thì Esc đóng hộp, không thoát tập trung */
+  clk('#chFocus'); await wait(180);
+  W.CZ.modal('czTestEsc', '<div class="mh"><h4>t</h4></div><div class="mb">x</div>' +
+    '<div class="mf"><button class="btn pri" data-close>OK</button></div>');
+  await wait(220);
+  D.dispatchEvent(new W.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  await wait(280);
+  out.editorView.escNhuongHopThoai = !$a('#czTestEsc').classList.contains('on') && D.body.classList.contains('ed-focus');
+  clk('#chFocus'); await wait(180);
+
+  const taiXuat = [];
+  const downloadGoc = W.CZ.download;
+  W.CZ.download = function (ten, nd, mime) { taiXuat.push({ ten: ten, nd: String(nd), mime: mime }); };
+  edB.innerHTML = '<h3>Tiêu đề nhỏ</h3><p>Đoạn <b>đậm</b> và <i>nghiêng</i>.</p>' +
+    '<ul><li>mục một</li><li>mục hai</li></ul>' +
+    '<pre><code>var x = 1;</code></pre>' +
+    '<figure class="fig fig-c"><img src="/api/img/a.webp" alt="anh bia"><figcaption>Chú thích</figcaption></figure>' +
+    '<p><a href="https://example.com">link</a></p>';
+  edB.dispatchEvent(new W.Event('input', { bubbles: true }));
+  $a('#chTitle').value = 'Chương Đặc Biệt 01';
+  $a('#chTitle').dispatchEvent(new W.Event('input', { bubbles: true }));
+  await wait(280);
+  clk('#chExpHtml'); await wait(280);
+  clk('#chExpTxt'); await wait(280);
+  const fh = taiXuat[0] || {}, ft = taiXuat[1] || {};
+  out.editorXuat = {
+    html: {
+      ten: fh.ten, mime: fh.mime,
+      coDoctype: /^<!doctype html>/.test(fh.nd || ''),
+      coTieuDe: /<h1>Chương Đặc Biệt 01<\/h1>/.test(fh.nd || ''),
+      giuDinhDang: /Đoạn <b>đậm<\/b>/.test(fh.nd || ''),
+      tenKhongDau: !!fh.ten && !/[^\x00-\x7F]/.test(fh.ten),
+    },
+    txt: {
+      ten: ft.ten, mime: ft.mime,
+      khongConThe: !/<[a-z]/i.test(ft.nd || ''),
+      coTieuDe: /Chương Đặc Biệt 01/.test(ft.nd || ''),
+      /* <li> phải tách dòng — nếu chỉ lấy textContent của <ul> thì dính liền */
+      liTachDong: /• mục một/.test(ft.nd || '') && /• mục hai/.test(ft.nd || ''),
+      codeNguyenVen: /var x = 1;/.test(ft.nd || ''),
+      chuThichTrongNgoac: /\(Chú thích\)/.test(ft.nd || ''),
+    },
+  };
+  /* chương rỗng thì phải báo, không được tải tệp rỗng */
+  taiXuat.length = 0;
+  edB.innerHTML = '';
+  edB.dispatchEvent(new W.Event('input', { bubbles: true }));
+  await wait(280);
+  clk('#chExpTxt'); await wait(280);
+  out.editorXuat.rong = { khongTai: taiXuat.length === 0, bao: /chưa có nội dung/.test(txtA('#toasts')) };
+  W.CZ.download = downloadGoc;
+
   edB.innerHTML = keepHtml;                             /* trả lại chương thật cho test sau */
   edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(200);
 
@@ -791,6 +868,32 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
       rtFail.push('thay hết sai (có phá HTML?): ' + JSON.stringify(ef.thayHet));
     }
     if (!ef.baoKhiKhongThay) rtFail.push('thay chữ không tồn tại mà không báo gì');
+  }
+  const ev2 = out.editorView;
+  if (ev2) {
+    if (!ev2.nut) rtFail.push('thiếu nút tập trung / ẩn thanh định dạng / xuất chương');
+    if (ev2.khongTen) rtFail.push('có nút không tên đọc được: ' + ev2.khongTen);
+    const tbd = ev2.thanhDinhDang;
+    if (!(tbd && tbd.anDuoc && tbd.ariaKhiAn === 'false' && tbd.nhoTrongMay && tbd.hienLai)) {
+      rtFail.push('ẩn/hiện thanh định dạng sai: ' + JSON.stringify(tbd));
+    }
+    const tt = ev2.tapTrung;
+    if (!(tt && tt.bat && tt.ariaOn === 'true' && tt.escTat && tt.ariaOff === 'false')) {
+      rtFail.push('chế độ tập trung sai: ' + JSON.stringify(tt));
+    }
+    if (!ev2.escNhuongHopThoai) rtFail.push('Esc không nhường hộp thoại (vừa đóng hộp vừa thoát tập trung)');
+  }
+  const ex = out.editorXuat;
+  if (ex) {
+    const hx = ex.html;
+    if (!(hx && hx.coDoctype && hx.coTieuDe && hx.giuDinhDang && hx.tenKhongDau && /\.html$/.test(hx.ten || ''))) {
+      rtFail.push('xuất .html sai: ' + JSON.stringify(hx));
+    }
+    const tx = ex.txt;
+    if (!(tx && tx.khongConThe && tx.coTieuDe && tx.liTachDong && tx.codeNguyenVen && tx.chuThichTrongNgoac && /\.txt$/.test(tx.ten || ''))) {
+      rtFail.push('xuất .txt sai: ' + JSON.stringify(tx));
+    }
+    if (!(ex.rong && ex.rong.khongTai && ex.rong.bao)) rtFail.push('xuất chương rỗng mà không báo: ' + JSON.stringify(ex.rong));
   }
   out.editorFail = rtFail;
   out.tong = {
