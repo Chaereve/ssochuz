@@ -336,6 +336,10 @@
                   <button type="button" data-cmd="redo" title="Làm lại">↷</button>
                   <span class="rte-sep" aria-hidden="true"></span>
                   <button type="button" data-img title="Chèn ảnh vào chương — lên từ máy, tự nén WebP trong trình duyệt, lưu trên KV"><span data-ic="upload"></span>Ảnh</button>
+                  <button type="button" data-cap title="Thêm hoặc sửa dòng chú thích dưới ảnh đang chọn">Chú thích</button>
+                  <button type="button" data-imgalign="l" title="Căn ảnh sang trái">⇤</button>
+                  <button type="button" data-imgalign="c" title="Căn ảnh ra giữa">↔</button>
+                  <button type="button" data-imgalign="r" title="Căn ảnh sang phải">⇥</button>
                   <input type="file" id="edImg" class="hide" accept="image/jpeg,image/png,image/webp">
                 </div>
                 <div class="rte" id="edBody" contenteditable="true" aria-label="Nội dung chương"
@@ -349,6 +353,13 @@
                 </div>
                 <div class="savestate sm" id="chSaveState" role="status" aria-live="polite"></div>
                 <div class="chcheck" id="chCheck" role="status" aria-live="polite"></div>
+                <div class="fr row mt">
+                  <input class="inp" id="edFind" type="text" placeholder="Tìm trong chương này" aria-label="Tìm trong chương này" autocomplete="off">
+                  <input class="inp" id="edRepl" type="text" placeholder="Thay bằng" aria-label="Thay bằng" autocomplete="off">
+                  <button class="btn ghost sm" id="edReplOne" title="Thay chỗ đầu tiên tìm thấy">Thay 1</button>
+                  <button class="btn ghost sm" id="edReplAll" title="Thay mọi chỗ trong chương này">Thay hết</button>
+                  <span class="sm muted" id="edFindStat" role="status" aria-live="polite"></span>
+                </div>
               </div>
             </div>
             <div class="findbox">

@@ -1052,6 +1052,118 @@
       dirty.book = true; markDirty(); chStat(); autoSchedule();
     });
   }
+  /* ---------------- CHÚ THÍCH VÀ CĂN ẢNH ---------------------------------
+     Ảnh có chú thích thì bọc trong <figure class="fig">: figure ĐÃ nằm trong
+     danh sách được edHtml() và cleanHTML() bảo vệ khỏi bị đổi thành <p>, nên
+     chú thích sống sót tới trang đọc mà không phải sửa bộ lọc. */
+  function edImgAt() {
+    var s = window.getSelection && window.getSelection();
+    var ed = $('#edBody');
+    if (!s || !s.anchorNode || !ed) return null;
+    var el = s.anchorNode.nodeType === 1 ? s.anchorNode : s.anchorNode.parentNode;
+    if (!el || !ed.contains(el) || !el.closest) return null;
+    var img = el.tagName === 'IMG' ? el : el.closest('img');
+    if (!img) {
+      /* con trỏ nằm ngay trước/sau ảnh trong cùng khối cũng coi là "đang ở ảnh" */
+      var box = el.closest('p,figure');
+      img = box ? box.querySelector('img') : null;
+    }
+    return (img && ed.contains(img)) ? img : null;
+  }
+  function edImgFail() { toast('Bấm vào một ảnh trong chương trước đã', 'err'); }
+  function edImgCaption() {
+    var img = edImgAt();
+    if (!img) return edImgFail();
+    var fig = img.closest('figure.fig');
+    if (!fig) {
+      fig = document.createElement('figure');
+      fig.className = 'fig';
+      img.parentNode.insertBefore(fig, img);
+      fig.appendChild(img);
+    }
+    var cap = fig.querySelector('figcaption');
+    var m = CZ.modal('czCap',
+      '<div class="mh"><h4>Chú thích ảnh</h4></div>' +
+      '<div class="mb"><label class="fl" for="capTxt">Dòng chữ dưới ảnh</label>' +
+        '<input class="inp" id="capTxt" type="text" maxlength="200" placeholder="Để trống thì bỏ chú thích" autocomplete="off">' +
+        '<p class="hint sm">Bỏ trống và bấm Cập nhật để xoá chú thích.</p></div>' +
+      '<div class="mf"><span class="grow"></span><button class="btn ghost" data-close>Huỷ</button>' +
+        '<button class="btn pri" id="capOk">Cập nhật</button></div>');
+    var inp = m.querySelector('#capTxt');
+    if (cap) inp.value = cap.textContent || '';
+    m.querySelector('#capOk').addEventListener('click', function () {
+      var v = inp.value.trim();
+      var old = fig.querySelector('figcaption');
+      if (old) old.remove();
+      if (v) {
+        var fc = document.createElement('figcaption');
+        fc.textContent = v;                      /* textContent: không nhận HTML từ ô nhập */
+        fig.appendChild(fc);
+      } else if (!fig.querySelector('img')) {
+        fig.remove();
+      }
+      dirty.book = true; markDirty(); chStat(); autoSchedule();
+      m._close();
+    });
+  }
+  function edImgAlign(pos) {
+    var img = edImgAt();
+    if (!img) return edImgFail();
+    var box = img.closest('figure.fig') || img.parentNode;
+    if (!box || box === $('#edBody')) return edImgFail();
+    box.classList.remove('fig-l', 'fig-c', 'fig-r');
+    box.classList.add('fig-' + pos);
+    dirty.book = true; markDirty(); autoSchedule();
+  }
+  /* ---------------- TÌM VÀ THAY TRONG CHƯƠNG -----------------------------
+     Chỉ đi qua các TEXT NODE, không đụng tới thẻ: thay bằng chuỗi thường trên
+     innerHTML sẽ phá luôn thuộc tính và tên thẻ trùng chữ cần tìm. */
+  function edTextNodes() {
+    var ed = $('#edBody');
+    var out = [];
+    if (!ed) return out;
+    var w = document.createTreeWalker(ed, NodeFilter.SHOW_TEXT, null), n;
+    while ((n = w.nextNode())) if (n.nodeValue) out.push(n);
+    return out;
+  }
+  function edCountFind() {
+    var q = ($('#edFind') || {}).value || '';
+    var stat = $('#edFindStat');
+    if (!stat) return 0;
+    if (!q) { stat.textContent = ''; return 0; }
+    var lq = q.toLowerCase(), hits = 0;
+    edTextNodes().forEach(function (n) {
+      var lv = n.nodeValue.toLowerCase(), i = 0, k;
+      while ((k = lv.indexOf(lq, i)) >= 0) { hits++; i = k + lq.length; }
+    });
+    stat.textContent = hits ? (hits + ' chỗ khớp trong chương này') : 'không thấy trong chương này';
+    return hits;
+  }
+  function edReplace(once) {
+    var q = ($('#edFind') || {}).value || '';
+    var to = ($('#edRepl') || {}).value || '';
+    if (!q) { toast('Nhập chữ cần tìm trước đã', 'err'); return; }
+    var lq = q.toLowerCase();
+    var nodes = edTextNodes(), done = 0;
+    for (var i = 0; i < nodes.length; i++) {
+      var v = nodes[i].nodeValue, lv = v.toLowerCase();
+      var out = '', from = 0, k;
+      while ((k = lv.indexOf(lq, from)) >= 0) {
+        out += v.slice(from, k) + to;
+        from = k + lq.length;
+        done++;
+        if (once) break;
+      }
+      if (!done) continue;
+      out += v.slice(from);
+      nodes[i].nodeValue = out;
+      if (once) break;
+    }
+    if (!done) { toast('Không thấy “' + q + '” trong chương này', 'err'); edCountFind(); return; }
+    toast('Đã thay ' + done + (done > 1 ? ' chỗ' : ' chỗ') + ' — nhớ bấm “Lưu chương này vào bộ”', 'ok');
+    dirty.book = true; markDirty(); chStat(); autoSchedule();
+    edCountFind();
+  }
   /* ---------------- TỰ LƯU NHÁP CHƯƠNG (không gọi API) -------------------
      Chỉ ghi ra localStorage, KHÔNG PUT lên Worker: tự động ghi chương đang viết
      dở lên KV là đẩy bản chưa xong cho người đọc, và mỗi lần gõ lại tốn một lần
@@ -3282,6 +3394,8 @@
     else if (b.dataset.align) edExec('justify' + b.dataset.align.charAt(0).toUpperCase() + b.dataset.align.slice(1), null);
     else if (b.dataset.link !== undefined) edLink();
     else if (b.dataset.special !== undefined) edSpecial();
+    else if (b.dataset.cap !== undefined) edImgCaption();
+    else if (b.dataset.imgalign) edImgAlign(b.dataset.imgalign);
     else if (b.dataset.callout) edCallout(b.dataset.callout);
     else if (b.dataset.code !== undefined) edCodeBlock();
     else if (b.dataset.table !== undefined) edTable();
@@ -3307,6 +3421,12 @@
   if (edIn) edIn.addEventListener('mouseup', function () { edKeepRange(); });
   if (edIn) edIn.addEventListener('paste', edPasteClean);
   edWiringDragDrop();
+  var edFT = null;
+  $('#edFind').addEventListener('input', function () { clearTimeout(edFT); edFT = setTimeout(edCountFind, 220); });
+  $('#edFind').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); edReplace(true); } });
+  $('#edRepl').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); edReplace(true); } });
+  $('#edReplOne').addEventListener('click', function () { edReplace(true); });
+  $('#edReplAll').addEventListener('click', function () { edReplace(false); });
   $('#chPreview').addEventListener('click', edPreview);
   $('#chFull').addEventListener('click', function () { edFull(); });
   /* Esc thoát chế độ viết toàn màn hình — nhường hộp thoại trước: hộp nào đang mở

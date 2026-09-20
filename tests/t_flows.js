@@ -485,6 +485,81 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   const savedCh = (BOOK.chapters.filter((c) => /giữ nguyên nhé/.test(c.html || ''))[0] || {}).html || '';
   out.editorBlocks.asideSongSot = /<aside class="callout info">/.test(savedCh) && !/<p class="callout/.test(savedCh);
 
+  /* CHÚ THÍCH + CĂN ẢNH, và TÌM & THAY trong chương.
+     Thay thế đi qua TEXT NODE chứ không thay trên innerHTML — nếu thay trên
+     innerHTML thì chữ trùng tên thẻ/thuộc tính sẽ bị phá, nên bài này cố tình
+     đặt data-nam="…" và thẻ <h3> chứa đúng chữ cần thay để bắt lỗi đó. */
+  const tbBtns3 = $$a('#edToolbar button');
+  out.editorImg = {
+    nutCap: tbBtns3.filter((b) => b.dataset.cap !== undefined).length,
+    nutCan: ['l', 'c', 'r'].filter((p) => tbBtns3.filter((b) => b.dataset.imgalign === p).length === 1).length,
+    coUI: !!$a('#edFind') && !!$a('#edRepl') && !!$a('#edReplOne') && !!$a('#edReplAll') && !!$a('#edFindStat'),
+  };
+  edB.innerHTML = '<p>trước</p><p><img src="/api/img/x.webp" alt="anh"></p><p>sau</p>';
+  edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(200);
+  const pickNode = (el) => {
+    const rg3 = D.createRange(); rg3.selectNode(el);
+    const s3 = W.getSelection(); s3.removeAllRanges(); s3.addRange(rg3);
+    D.dispatchEvent(new W.Event('selectionchange'));
+  };
+  pickNode(edB.querySelector('img'));
+  clk('[data-cap]'); await wait(350);
+  const capOpen = !!$a('#czCap') && $a('#czCap').classList.contains('on');
+  $a('#capTxt').value = 'Bìa chương ba';
+  $a('#capTxt').dispatchEvent(new W.Event('input', { bubbles: true }));
+  clk('#capOk'); await wait(350);
+  const figEl = edB.querySelector('figure.fig');
+  out.editorImg.chuThich = {
+    moHop: capOpen,
+    coFigure: !!figEl,
+    coCaption: !!figEl && /Bìa chương ba/.test((figEl.querySelector('figcaption') || {}).textContent || ''),
+    anhVanTrong: !!figEl && !!figEl.querySelector('img'),
+  };
+  pickNode(edB.querySelector('figure.fig img'));
+  clk('[data-imgalign="l"]'); await wait(180); const clsL = edB.querySelector('figure.fig').className;
+  clk('[data-imgalign="c"]'); await wait(180); const clsC = edB.querySelector('figure.fig').className;
+  clk('[data-imgalign="r"]'); await wait(180); const clsR = edB.querySelector('figure.fig').className;
+  out.editorImg.can = { l: clsL, c: clsC, r: clsR,
+    khongCongDon: clsL === 'fig fig-l' && clsC === 'fig fig-c' && clsR === 'fig fig-r' };
+  pickNode(edB.querySelectorAll('p')[0]);
+  clk('[data-cap]'); await wait(280);
+  out.editorImg.baoKhiKhongAnh = /Bấm vào một ảnh/.test(txtA('#toasts'));
+
+  /* thuộc tính data-ten="Nam" cố tình chứa ĐÚNG chữ cần thay và ĐÚNG hoa thường:
+     nếu thay trên innerHTML thì thuộc tính này bị sửa theo, còn đi qua text node
+     thì không — đây là chỗ phân biệt hai cách làm. */
+  edB.innerHTML = '<p>Hắn nói với Nam. Nam im lặng. tên Nam lần nữa.</p>' +
+    '<p data-ten="Nam">không đụng thuộc tính</p><h3>Nam là tiêu đề</h3>';
+  edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(200);
+  $a('#edFind').value = 'Nam';
+  $a('#edFind').dispatchEvent(new W.Event('input', { bubbles: true }));
+  await wait(450);
+  out.editorFind = { dem: txtA('#edFindStat'), dungSo: /4 chỗ khớp/.test(txtA('#edFindStat')) };
+  $a('#edRepl').value = 'Minh';
+  clk('#edReplOne'); await wait(350);
+  out.editorFind.thayMot = /^<p>Hắn nói với Minh\. Nam/.test(edB.innerHTML) && /3 chỗ khớp/.test(txtA('#edFindStat'));
+  clk('#edReplAll'); await wait(350);
+  out.editorFind.thayHet = {
+    hetKhop: /không thấy/.test(txtA('#edFindStat')),
+    khongConNam: !/Nam/.test(edB.textContent),
+    thuocTinhNguyenVen: /data-ten="Nam"/.test(edB.innerHTML),
+    theKhongBiPha: edB.querySelectorAll('p').length === 2 && edB.querySelectorAll('h3').length === 1,
+  };
+  $a('#edFind').value = 'zzzzkhongco';
+  $a('#edFind').dispatchEvent(new W.Event('input', { bubbles: true }));
+  await wait(450);
+  clk('#edReplAll'); await wait(300);
+  out.editorFind.baoKhiKhongThay = /Không thấy/.test(txtA('#toasts'));
+
+  /* figure + figcaption phải sống sót qua edHtml() */
+  edB.innerHTML = '<figure class="fig fig-c"><img src="/api/img/x.webp" alt="a">' +
+    '<figcaption>Chú thích quan trọng</figcaption></figure><p>hết</p>';
+  edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(250);
+  clk('#chSave'); await wait(450);
+  const savedFig = (BOOK.chapters.filter((c) => /Chú thích quan trọng/.test(c.html || ''))[0] || {}).html || '';
+  out.editorImg.figSongSot = /<figure class="fig fig-c">/.test(savedFig) &&
+    /<figcaption>Chú thích quan trọng<\/figcaption>/.test(savedFig);
+
   edB.innerHTML = keepHtml;                             /* trả lại chương thật cho test sau */
   edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(200);
 
@@ -694,6 +769,28 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
       rtFail.push('thao tác bảng sai: ' + JSON.stringify(bg));
     }
     if (!eb.asideSongSot) rtFail.push('<aside class="callout"> không sống sót qua edHtml()');
+  }
+  const ei = out.editorImg;
+  if (ei) {
+    if (ei.nutCap !== 1) rtFail.push('thiếu nút chú thích ảnh');
+    if (ei.nutCan !== 3) rtFail.push('thiếu nút căn ảnh trái/giữa/phải');
+    if (!ei.coUI) rtFail.push('thiếu ô tìm & thay trong chương');
+    if (!(ei.chuThich && ei.chuThich.moHop && ei.chuThich.coFigure && ei.chuThich.coCaption && ei.chuThich.anhVanTrong)) {
+      rtFail.push('chú thích ảnh sai: ' + JSON.stringify(ei.chuThich));
+    }
+    if (!(ei.can && ei.can.khongCongDon)) rtFail.push('căn ảnh sai: ' + JSON.stringify(ei.can));
+    if (!ei.baoKhiKhongAnh) rtFail.push('bấm chú thích khi không có ảnh mà không báo gì');
+    if (!ei.figSongSot) rtFail.push('<figure>/<figcaption> không sống sót qua edHtml()');
+  }
+  const ef = out.editorFind;
+  if (ef) {
+    if (!ef.dungSo) rtFail.push('đếm sai số chỗ khớp: ' + ef.dem);
+    if (!ef.thayMot) rtFail.push('thay một chỗ sai');
+    if (!(ef.thayHet && ef.thayHet.hetKhop && ef.thayHet.khongConNam &&
+        ef.thayHet.thuocTinhNguyenVen && ef.thayHet.theKhongBiPha)) {
+      rtFail.push('thay hết sai (có phá HTML?): ' + JSON.stringify(ef.thayHet));
+    }
+    if (!ef.baoKhiKhongThay) rtFail.push('thay chữ không tồn tại mà không báo gì');
   }
   out.editorFail = rtFail;
   out.tong = {

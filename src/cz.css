@@ -3402,6 +3402,16 @@ body.rd-focus .rdcmts { display: none; }
 .spch { min-width: 34px; height: 34px; padding: 0 6px; border: 1px solid var(--bd); border-radius: var(--r-sm);
   background: var(--surf); color: var(--txt); font-size: 17px; cursor: pointer; }
 .spch:hover { border-color: var(--acc); color: var(--acc); }
+/* ảnh có chú thích: <figure class="fig"> — dùng chung ô soạn và trang đọc */
+.rte figure.fig, .rtext figure.fig { margin: 0 0 1.2em; text-align: center; }
+.rte figure.fig img, .rtext figure.fig img { max-width: 100%; height: auto; }
+.rte figure.fig figcaption, .rtext figure.fig figcaption { font-size: 13.5px; line-height: 1.55;
+  color: var(--mut); margin-top: 6px; text-align: center; }
+.rte .fig-l, .rtext .fig-l { text-align: left; }
+.rte .fig-l figcaption, .rtext .fig-l figcaption { text-align: left; }
+.rte .fig-c, .rtext .fig-c { text-align: center; }
+.rte .fig-r, .rtext .fig-r { text-align: right; }
+.rte .fig-r figcaption, .rtext .fig-r figcaption { text-align: right; }
 /* chỉ báo tự lưu nháp dưới ô soạn */
 .savestate { min-height: 18px; margin-top: 6px; color: var(--dim); display: flex; align-items: center;
   gap: 8px; flex-wrap: wrap; }

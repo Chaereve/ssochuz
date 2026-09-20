@@ -14,14 +14,14 @@
 ⬜ Chỉnh cỡ chữ bằng thanh trượt
 ⬜ Căn phải–trái (cho tiếng Ả Rập)
 ⬜ Danh sách việc cần làm (checkbox)
-⬜ Chú thích dưới ảnh
-⬜ Căn ảnh trái/giữa/phải
+✅ Chú thích dưới ảnh
+✅ Căn ảnh trái/giữa/phải
 ⬜ Kéo giãn ảnh
 ⬜ Cắt ảnh (crop)
 ✅ Bảng biểu: chèn, thêm/xoá dòng cột, dòng tiêu đề
 ✅ Khung cảnh báo (thông tin / cảnh báo / lỗi)
 ✅ Khối code
-⬜ Tìm **và thay thế** (hiện mới có tìm)
+✅ Tìm **và thay thế** (hiện mới có tìm)
 ✅ Dán ảnh bằng Ctrl+V
 ✅ Kéo thả ảnh vào ô soạn
 ✅ Dán từ Word / Google Docs mà sạch định dạng
