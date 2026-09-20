@@ -45,7 +45,7 @@
 
 ## TRANG QUẢN TRỊ
 
-✅ Ô tìm nhanh (Ctrl+K) — mở ô tìm tab + 62 truyện + chương của bộ đang mở; tìm bỏ dấu. Trước đó trang quản trị cố ý không có phím tắt nào, chủ trang đã cho phép thêm đúng phím này
+✅ Ô tìm nhanh (Ctrl+K) — mở ô tìm tab + 62 truyện + chương của bộ đang mở; khớp bỏ dấu. Kèm bộ phím tắt cho trang quản trị: Ctrl/⌘+S lưu (chương nếu đang mở chương, không thì thông tin truyện), 1–9 và 0 nhảy mục, ? hiện bảng phím tắt, Esc đóng. Số/chữ trần KHÔNG ăn khi con trỏ đang trong ô nhập hoặc trình soạn
 ⬜ Sidebar thu gọn được
 ⬜ Biểu đồ: đường, cột, tròn (tự vẽ, không cần thư viện)
 ⬜ Chọn nhiều truyện → xoá/xuất bản cùng lúc

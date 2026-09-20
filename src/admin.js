@@ -4240,14 +4240,92 @@
       if (b) qsRun(qsRows[Number(b.dataset.i)]);
     });
     box.addEventListener('click', function (e) { if (e.target === box) closeQuick(); });
-    document.addEventListener('keydown', function (e) {
-      if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'k') {
-        e.preventDefault();
-        if (box.hidden) openQuick(); else { inp.focus(); inp.select(); }
-      } else if (e.key === 'Escape' && !box.hidden) {
-        closeQuick();
-      }
+  }
+
+  /* ---- PHÍM TẮT CỦA TRANG QUẢN TRỊ ----------------------------------------
+     Trước đây trang này cố ý không có phím tắt nào; chủ trang đã cho phép nên
+     nay có một bộ nhỏ, và BẢNG PHÍM TẮT sinh ra từ chính danh sách này nên nhãn
+     không thể trôi khỏi hành vi thật. Quy tắc chung: phím chữ/số trần KHÔNG ăn
+     khi con trỏ đang ở trong ô nhập hay trình soạn, để gõ chữ không nhảy lung
+     tung; riêng Ctrl/Cmd+S và Ctrl/Cmd+K thì ăn ở mọi nơi. */
+  var SK_TAB_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
+  function tabBtn(k) { return $('#tabs button[data-tab="' + k + '"]'); }
+  function jumpTab(k) {
+    var b = tabBtn(k);
+    if (!b || b.classList.contains('hide')) return false;
+    b.click();
+    return true;
+  }
+  function inTextField(t) {
+    if (!t) return false;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || '')) return true;
+    try { return !!(t.isContentEditable || (t.closest && t.closest('[contenteditable="true"], [contenteditable=""]'))); }
+    catch (e) { return !!t.isContentEditable; }
+  }
+  /* Ctrl+S: đang mở chương thì lưu chương (kèm cả bộ), không thì lưu thông tin
+     truyện. Bấm đúng cái nút sẵn có để không viết lại luật lưu lần thứ hai. */
+  function saveByKey() {
+    if (!CUR) return 'Chưa mở truyện nào để lưu';
+    var pane = $('#pane-edit');
+    if (!pane || pane.classList.contains('hide')) return 'Mở mục “Sửa truyện” rồi hãy lưu';
+    var nut = CHAP >= 0 ? $('#btnSaveCh') : $('#btnSaveMeta');
+    if (!nut) return 'Không thấy nút lưu';
+    nut.click();
+    return '';
+  }
+  function skRows() {
+    var rows = [['Ctrl / ⌘ + K', 'Tìm nhanh: mục, truyện, chương'],
+      ['Ctrl / ⌘ + S', 'Lưu chương đang mở, hoặc lưu thông tin truyện'],
+      ['?', 'Hiện bảng phím tắt này'], ['Esc', 'Đóng ô tìm nhanh / bảng phím tắt']];
+    QS_TABS.forEach(function (t, i) {
+      if (i >= SK_TAB_KEYS.length) return;
+      rows.push([SK_TAB_KEYS[i], 'Tới mục “' + t[1] + '”']);
     });
+    rows.push(['', 'Phím số và phím ? không ăn khi con trỏ đang ở trong ô nhập hoặc trình soạn.']);
+    return rows;
+  }
+  function openKeys() {
+    var box = $('#skBox'), host = $('#skList');
+    if (!box || !host) return;
+    host.innerHTML = skRows().map(function (r) {
+      return '<div class="sk-row' + (r[0] ? '' : ' sk-note') + '">' +
+        (r[0] ? '<kbd>' + esc(r[0]) + '</kbd>' : '<span></span>') + '<span>' + esc(r[1]) + '</span></div>';
+    }).join('');
+    box.hidden = false;
+  }
+  function closeKeys() { var box = $('#skBox'); if (box) box.hidden = true; }
+  function bindShortcuts() {
+    if (!$('#qsBox')) return;
+    document.addEventListener('keydown', function (e) {
+      var k = String(e.key || ''), low = k.toLowerCase();
+      /* Ctrl/⌘+K ăn ở mọi nơi */
+      if ((e.ctrlKey || e.metaKey) && low === 'k') {
+        e.preventDefault();
+        var box = $('#qsBox');
+        if (box.hidden) openQuick(); else { $('#qsInput').focus(); $('#qsInput').select(); }
+        return;
+      }
+      /* Ctrl/⌘+S: chặn việc trình duyệt lưu trang web lại */
+      if ((e.ctrlKey || e.metaKey) && low === 's') {
+        e.preventDefault();
+        var loi = saveByKey();
+        if (loi && typeof toast === 'function') toast(loi, 'err');
+        return;
+      }
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (k === 'Escape') {
+        if (!$('#qsBox').hidden) { closeQuick(); return; }
+        if (!$('#skBox').hidden) { closeKeys(); return; }
+        return;
+      }
+      /* tới đây là phím trần: không được ăn khi đang gõ chữ */
+      if (inTextField(e.target)) return;
+      if (k === '?') { e.preventDefault(); openKeys(); return; }
+      var i = SK_TAB_KEYS.indexOf(k);
+      if (i >= 0 && QS_TABS[i]) { e.preventDefault(); jumpTab(QS_TABS[i][0]); }
+    });
+    var sk = $('#skBox');
+    if (sk) sk.addEventListener('click', function (e) { if (e.target === sk) closeKeys(); });
   }
 
   $$('#tabs button').forEach(function (b) {
@@ -4853,6 +4931,7 @@
     if (!savedApi && CZ.API) $('#inApi').value = CZ.API;     /* gợi ý từ cz-config.js */
     paintDraftChip();                    /* có nháp thì hiện nút, không hỏi hộp thoại */
     quickSearch();                       /* ô tìm nhanh Ctrl+K */
+    bindShortcuts();                     /* bộ phím tắt của trang quản trị */
     /* việc nối Worker do boot() ở trên lo — không gọi hai lần */
   })();
 

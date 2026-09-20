@@ -894,28 +894,72 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   clk('#btnOut'); await wait(300);
   out.adminDisconnect = { key: W.localStorage.getItem('cz_kv_key') };
 
-  /* quản trị có ĐÚNG MỘT phím tắt là Ctrl+K (chủ trang đã đổi yêu cầu, trước đó
-     là không có gì). Ctrl+S và số/chữ đơn lẻ vẫn phải bị bỏ qua — không lưu,
-     không đổi tab, không gây lỗi JS. Ctrl+K nằm trong danh sách này để chứng tỏ
-     nó cũng không lén đổi tab hay hiện thông báo. */
-  const visiblePanes = () => $$a('#ashell [id^="pane-"]:not(.hide)').map(e => e.id).join(',');
-  const panesBefore = visiblePanes();
-  const msgBefore = txtA('#msg');
+  /* Trang quản trị NAY CÓ phím tắt (chủ trang đã đổi yêu cầu; trước đó cố ý
+     không có gì nên bài cũ ở đây khẳng định ngược lại). Hành vi thật của từng
+     phím được kiểm ở khối out.phimTat bên dưới. Chỗ này chỉ giữ một việc: bấm
+     lung tung các phím đó KHÔNG được gây lỗi JS hay làm treo trang. */
   for (const k of [
     { key: 's', ctrlKey: true }, { key: 's', metaKey: true }, { key: 'k', ctrlKey: true },
-    { key: '1' }, { key: '5' }, { key: '0' }, { key: 'v' }, { key: 'r' }
+    { key: '1' }, { key: '5' }, { key: '0' }, { key: 'v' }, { key: 'r' }, { key: '?' }
   ]) {
-    D.dispatchEvent(new W.KeyboardEvent('keydown', Object.assign({ bubbles: true }, k)));
+    D.dispatchEvent(new W.KeyboardEvent('keydown', Object.assign({ bubbles: true, cancelable: true }, k)));
     await wait(60);
   }
-  await wait(200);
-  const noShot = { panesStay: visiblePanes() === panesBefore, msgStay: txtA('#msg') === msgBefore };
-  out.noAdminShortcuts = noShot;
+  await wait(250);
+  /* dọn: đóng ô tìm nhanh / bảng phím tắt mà vòng lặp trên vừa mở */
+  D.dispatchEvent(new W.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  await wait(120);
+  D.dispatchEvent(new W.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  await wait(120);
   const shortcutFail = [];
-  if (!noShot.panesStay) shortcutFail.push('bấm số/chữ ngoài ô nhập vẫn đổi tab quản trị');
-  if (!noShot.msgStay) shortcutFail.push('Ctrl+S vẫn tự lưu/hiện thông báo ở trang quản trị');
-  if (shortcutFail.length) console.log('PHÍM TẮT VẪN CÒN: ' + shortcutFail.join('; '));
+  if ($a('#qsBox') && !$a('#qsBox').hidden) shortcutFail.push('Esc không đóng được ô tìm nhanh');
+  if ($a('#skBox') && !$a('#skBox').hidden) shortcutFail.push('Esc không đóng được bảng phím tắt');
+  if (a.errors.length) shortcutFail.push('bấm phím tắt gây ' + a.errors.length + ' lỗi JS: ' + a.errors[0]);
+  if (shortcutFail.length) console.log('PHÍM TẮT: ' + shortcutFail.join('; '));
   out.shortcutFail = shortcutFail;
+  /* ---- BỘ PHÍM TẮT CỦA TRANG QUẢN TRỊ --------------------------------------
+     Chủ trang đã cho phép có phím tắt (trước đó trang này cố ý không có gì).
+     Điều vẫn PHẢI giữ: phím số/chữ trần không được ăn khi con trỏ đang trong ô
+     nhập hoặc trình soạn, và Ctrl+S phải chặn việc trình duyệt lưu trang lại. */
+  out.phimTat = {};
+  const kd = (o) => { const e = new W.KeyboardEvent('keydown', Object.assign({ bubbles: true, cancelable: true }, o)); D.dispatchEvent(e); return e; };
+  const panes = () => $$a('#ashell [id^="pane-"]:not(.hide)').map(e => e.id).join(',');
+  /* số trần nhảy mục — 5 là “Bác sĩ dữ liệu”, 1 là “Tổng quan” theo QS_TABS */
+  kd({ key: '5' }); await wait(280);
+  out.phimTat.so5 = panes();
+  kd({ key: '1' }); await wait(280);
+  out.phimTat.so1 = panes();
+  /* chữ trần vô nghĩa thì không được làm gì cả */
+  const paneSauSo = panes(), msgSauSo = txtA('#msg');
+  kd({ key: 'v' }); kd({ key: 'r' }); await wait(220);
+  out.phimTat.chuTranVoHai = panes() === paneSauSo && txtA('#msg') === msgSauSo;
+  /* số KHÔNG được ăn khi con trỏ đang ở trong ô nhập */
+  const oNhap = $a('#q');
+  const paneTruocNhap = panes();
+  oNhap.focus();
+  oNhap.dispatchEvent(new W.KeyboardEvent('keydown', { key: '5', bubbles: true, cancelable: true }));
+  await wait(280);
+  out.phimTat.soTrongONhap = panes() === paneTruocNhap;
+  oNhap.blur();
+  /* Ctrl+S phải chặn trình duyệt lưu trang, và khi chưa mở truyện thì nói rõ */
+  const msgTruocS = txtA('#msg');
+  const evS = kd({ key: 's', ctrlKey: true }); await wait(400);
+  out.phimTat.ctrlSKhiChuaMo = {
+    chanLuTrang: evS.defaultPrevented,
+    msgKhongDoi: txtA('#msg') === msgTruocS,
+    bao: /Chưa mở truyện nào để lưu/.test($a('#toasts') ? $a('#toasts').textContent : '')
+  };
+  /* CHƯA mở bộ nào ở đây: các bài kiểm trình soạn phía sau dựa vào #chList của
+     bộ đang mở, mở bộ khác là phá chúng. Phần “Ctrl+S lưu thật” nằm ở cuối tệp. */
+  /* ? mở bảng phím tắt, Esc đóng */
+  const skBox = $a('#skBox');
+  out.phimTat.coBang = !!skBox;
+  kd({ key: '?' }); await wait(250);
+  out.phimTat.bangMo = skBox ? !skBox.hidden : null;
+  out.phimTat.bangLietKe = $$a('#skList kbd').map(k => k.textContent.trim());
+  kd({ key: 'Escape' }); await wait(220);
+  out.phimTat.bangDong = skBox ? skBox.hidden : null;
+
   /* ---- Ô TÌM NHANH Ctrl+K: phím tắt duy nhất của trang quản trị ------------- */
   out.quickSearch = {};
   const qsBox = $a('#qsBox'), qsInp = $a('#qsInput');
@@ -1521,6 +1565,51 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
      · #libCount và huy hiệu tab “Thư viện” lệch nhau sau khi nạp nháp
      · nhãn nút còn hứa phím tắt mà trang quản trị không cài
      · trình soạn: thiếu thời gian đọc, hoặc “kiểm tra chương” báo sai */
+  /* ---- Ctrl+S LÚC CÓ TRUYỆN ĐỂ LƯU — đặt ở CUỐI vì nó phải mở một bộ, mà mở
+     bộ thì #chList đổi, các bài kiểm trình soạn ở trên sẽ sai hết ------------- */
+  out.phimTatLuu = {};
+  {
+    if (!$a('#tb [data-edit]')) { clk('#tabs button[data-tab="list"]'); await wait(450); }
+    const nutMo = $a('#tb [data-edit]');
+    out.phimTatLuu.coBoDeMo = !!nutMo;
+    if (nutMo) {
+      nutMo.dispatchEvent(new W.MouseEvent('click', { bubbles: true }));
+      await wait(800);
+      const panes = () => $$a('#ashell [id^="pane-"]:not(.hide)').map(e => e.id).join(',');
+      const paneTruoc = panes(), msgTruoc = txtA('#msg');
+      const ev = new W.KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true, cancelable: true });
+      D.dispatchEvent(ev); await wait(900);
+      out.phimTatLuu.ctrlS = {
+        chanLuTrang: ev.defaultPrevented,
+        vanOMucSua: panes() === paneTruoc && /pane-edit/.test(panes()),
+        msgDoi: txtA('#msg') !== msgTruoc,
+        msg: txtA('#msg')
+      };
+    }
+  }
+
+  const skFail = [];
+  const sk = out.phimTat || {};
+  const skk = (ten, nhan, can) => { if (String(nhan) !== String(can)) skFail.push(ten + ' (nhan: ' + JSON.stringify(nhan) + ', can: ' + JSON.stringify(can) + ')'); };
+  skk('phimTat/so 5 nhay muc Bac si du lieu', sk.so5, 'pane-doctor');
+  skk('phimTat/so 1 nhay muc Tong quan', sk.so1, 'pane-overview');
+  skk('phimTat/chu tran vo nghia khong lam gi', sk.chuTranVoHai, true);
+  skk('phimTat/so khong an khi dang go trong o nhap', sk.soTrongONhap, true);
+  skk('phimTat/Ctrl+S chan trinh duyet luu trang', sk.ctrlSKhiChuaMo && sk.ctrlSKhiChuaMo.chanLuTrang, true);
+  skk('phimTat/chua mo truyen thi khong luu am', sk.ctrlSKhiChuaMo && sk.ctrlSKhiChuaMo.msgKhongDoi, true);
+  skk('phimTat/chua mo truyen thi bao ro', sk.ctrlSKhiChuaMo && sk.ctrlSKhiChuaMo.bao, true);
+  const skl = out.phimTatLuu || {};
+  skk('phimTat/co bo de mo thu luu', skl.coBoDeMo, true);
+  skk('phimTat/Ctrl+S luc da mo truyen van chan luu trang', skl.ctrlS && skl.ctrlS.chanLuTrang, true);
+  skk('phimTat/Ctrl+S luu xong van o muc Sua', skl.ctrlS && skl.ctrlS.vanOMucSua, true);
+  skk('phimTat/Ctrl+S luu that (msg doi)', skl.ctrlS && skl.ctrlS.msgDoi, true);
+  skk('phimTat/co bang phim tat', sk.coBang, true);
+  skk('phimTat/? mo bang', sk.bangMo, true);
+  skk('phimTat/bang liet ke du 14 phim', (sk.bangLietKe || []).length, 14);
+  skk('phimTat/bang co noi Ctrl / ⌘ + S', (sk.bangLietKe || []).indexOf('Ctrl / ⌘ + S') >= 0, true);
+  skk('phimTat/Esc dong bang', sk.bangDong, true);
+  if (skFail.length) console.log('PHIM TAT: ' + skFail.join(' | '));
+
   const qsFail = [];
   const qs = out.quickSearch || {};
   const qk = (ten, nhan, can) => { if (String(nhan) !== String(can)) qsFail.push(ten + ' (nhan: ' + JSON.stringify(nhan) + ', can: ' + JSON.stringify(can) + ')'); };
@@ -1573,7 +1662,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   const bad = a.errors.length + errors.length + (out.shortcutFail || []).length
     + (out.adminDraftBadge && out.adminDraftBadge.agree ? 0 : 1)
     + ((out.adminNoFakeShortcuts || []).length ? 1 : 0)
-    + rtFail.length + pmFail.length + qsFail.length;
+    + rtFail.length + pmFail.length + qsFail.length + skFail.length;
   console.log(bad ? 'CÒN ' + bad + ' LỖI' : 'Không lỗi nào');
   process.exit(bad ? 1 : 0);
 })();
