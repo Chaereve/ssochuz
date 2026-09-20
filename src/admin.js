@@ -1315,7 +1315,9 @@
     if (!k) { toast('Mở một chương trước đã', 'err'); return; }
     var arr = (histAll()[k] || []).slice().reverse();   /* mới nhất lên trước */
     var rows = arr.map(function (v, i) {
-      return '<li><div class="histline"><b>' + CZ.dateVN(v.at) + ' ' + CZ.timeAgo(v.at) + '</b>' +
+      return '<li><label class="cb histsel" title="Tích đúng hai bản rồi bấm So sánh">' +
+        '<input type="checkbox" data-hs="' + i + '"><span class="sr">Chọn bản này để so sánh</span></label>' +
+        '<div class="histline"><b>' + CZ.dateVN(v.at) + ' ' + CZ.timeAgo(v.at) + '</b>' +
         '<span class="sm muted">' + CZ.words(String(v.html).replace(/<[^>]*>/g, ' ')) + ' chữ' +
         (v.why ? ' · ' + CZ.esc(v.why) : '') + '</span></div>' +
         '<div class="histact"><button class="btn ghost sm" data-hv="' + i + '">Xem</button>' +
@@ -1329,13 +1331,27 @@
         '<p class="hint sm">Tối đa ' + HIST_MAX + ' bản cho mỗi chương, tổng ' +
         Math.round(HIST_BYTES / 1024) + ' KB cho cả web — nằm trong máy này, không đưa lên mạng. ' +
         'Muốn xoá thì bấm nút dưới.</p></div>' +
-      '<div class="mf"><button class="btn ghost sm" id="histWipe">Xoá lịch sử chương này</button>' +
+      '<div class="mf"><button class="btn ghost sm" id="histDiff" title="Tích đúng hai bản ở trên rồi bấm nút này">So sánh hai bản đã chọn</button>' +
+        '<button class="btn ghost sm" id="histWipe">Xoá lịch sử chương này</button>' +
         '<span class="grow"></span><button class="btn ghost" data-close>Đóng</button></div>');
     m.querySelectorAll('[data-hv]').forEach(function (b) {
       b.addEventListener('click', function () { histPeek(arr[+b.dataset.hv]); });
     });
     m.querySelectorAll('[data-hr]').forEach(function (b) {
       b.addEventListener('click', function () { histBack(arr[+b.dataset.hr]); });
+    });
+    m.querySelector('#histDiff').addEventListener('click', function () {
+      var sel = [];
+      Array.prototype.forEach.call(m.querySelectorAll('[data-hs]'), function (x) {
+        if (x.checked) sel.push(+x.dataset.hs);
+      });
+      if (sel.length !== 2) { toast('Tích đúng hai phiên bản rồi hãy so', 'err'); return; }
+      var x = arr[sel[0]], y = arr[sel[1]], t;
+      /* Luôn so theo chiều thời gian: bản CŨ là gốc, bản MỚI là đích. Danh sách
+         đang xếp mới trước nên tích hai ô liên tiếp sẽ ra cặp (mới, cũ) — để nguyên
+         thì đoạn vừa VIẾT THÊM lại hiện thành đoạn bị BỎ. */
+      if (x.at > y.at) { t = x; x = y; y = t; }
+      histDiff(x, y);
     });
     m.querySelector('#histWipe').addEventListener('click', function () {
       var all = histAll();
@@ -1352,6 +1368,60 @@
     CZ.modal('czHistView',
       '<div class="mh"><h4>Bản ' + CZ.dateVN(v.at) + '</h4></div>' +
       '<div class="mb"><div class="histpeek">' + d.innerHTML + '</div></div>' +
+      '<div class="mf"><span class="grow"></span><button class="btn ghost" data-close>Đóng</button></div>');
+  }
+  /* ---- SO SÁNH HAI PHIÊN BẢN -----------------------------------------------
+     So theo ĐOẠN VĂN chứ không theo chữ: một chương vài chục đến vài trăm đoạn
+     nên bảng quy hoạch động còn nhỏ, còn so từng chữ sẽ là hàng triệu ô và đứng
+     trình duyệt. Với người viết thì “đoạn nào thêm, đoạn nào bỏ” cũng đúng là
+     thứ cần xem. */
+  function histParas(html) {
+    var d = document.createElement('div'), out = [];
+    d.innerHTML = CZ.sanitize(html || '');
+    Array.prototype.forEach.call(d.childNodes, function (n) {
+      var t = (n.nodeType === 1 ? n.textContent : n.nodeValue) || '';
+      t = t.replace(/\s+/g, ' ').trim();
+      if (t) out.push(t);
+    });
+    return out;
+  }
+  function lcsDiff(a, b) {
+    var n = a.length, m = b.length, i, j;
+    if (n * m > 4000000) return null;              /* quá dài: chịu, báo lại cho người dùng */
+    var dp = [];
+    for (i = 0; i <= n; i++) dp.push(new Array(m + 1).fill(0));
+    for (i = n - 1; i >= 0; i--) {
+      for (j = m - 1; j >= 0; j--) {
+        dp[i][j] = (a[i] === b[j]) ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+      }
+    }
+    var out = [];
+    i = 0; j = 0;
+    while (i < n && j < m) {
+      if (a[i] === b[j]) { out.push({ k: 'same', t: a[i] }); i++; j++; }
+      else if (dp[i + 1][j] >= dp[i][j + 1]) { out.push({ k: 'del', t: a[i] }); i++; }
+      else { out.push({ k: 'add', t: b[j] }); j++; }
+    }
+    while (i < n) { out.push({ k: 'del', t: a[i] }); i++; }
+    while (j < m) { out.push({ k: 'add', t: b[j] }); j++; }
+    return out;
+  }
+  function histDiff(va, vb) {
+    if (!va || !vb) { toast('Chọn đúng hai phiên bản để so', 'err'); return; }
+    var d = lcsDiff(histParas(va.html), histParas(vb.html));
+    if (!d) { toast('Hai bản quá dài để so từng đoạn', 'err'); return; }
+    var add = 0, del = 0, same = 0;
+    var rows = d.map(function (r) {
+      if (r.k === 'add') add++; else if (r.k === 'del') del++; else same++;
+      if (r.k === 'same') return '';
+      return '<p class="df-' + r.k + '">' + (r.k === 'add' ? '+ ' : '− ') + CZ.esc(r.t) + '</p>';
+    }).join('');
+    CZ.modal('czHistDiff',
+      '<div class="mh"><h4>So sánh hai phiên bản</h4></div>' +
+      '<div class="mb"><p class="hint sm">' + CZ.dateVN(va.at) + ' → ' + CZ.dateVN(vb.at) +
+        ' · <b class="df-addn">+' + add + ' đoạn</b> · <b class="df-deln">−' + del + ' đoạn</b> · ' +
+        same + ' đoạn giữ nguyên</p>' +
+        '<div class="histpeek">' + (rows || '<p class="hint">Hai bản giống hệt nhau.</p>') + '</div></div>' +
       '<div class="mf"><span class="grow"></span><button class="btn ghost" data-close>Đóng</button></div>');
   }
   function histBack(v) {

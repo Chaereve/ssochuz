@@ -199,6 +199,49 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   out.inChuong.traTieuDe = doc.title === tenCu;
   out.inChuong.boLopIn = !doc.body.classList.contains('is-printing');
 
+  /* TIM TRONG NOI DUNG CHUONG (trang doc).
+     Toan bo HTML cac chuong da nam san trong CHS nen day la loc trong may:
+     khong dung chi muc, khong goi mang. */
+  out.timNoiDung = {};
+  click('#rdToc'); await wait(450);
+  const nutFull = doc.querySelector('#tocFull');
+  out.timNoiDung.coNut = !!nutFull;
+  out.timNoiDung.coTitle = !!(nutFull && nutFull.closest('label') && nutFull.closest('label').title);
+  const demDong = () => doc.querySelectorAll('#tocList a').length;
+  const Q7 = 'người';
+  const inp = doc.querySelector('#tocQ');
+  inp.value = Q7;
+  inp.dispatchEvent(new win.Event('input', { bubbles: true }));
+  await wait(500);
+  out.timNoiDung.chiTieuDe = demDong();
+  out.timNoiDung.subTieuDe = txt('#tocSub');
+  nutFull.checked = true;
+  nutFull.dispatchEvent(new win.Event('change', { bubbles: true }));
+  await wait(700);
+  out.timNoiDung.caNoiDung = demDong();
+  out.timNoiDung.subNoiDung = txt('#tocSub');
+  out.timNoiDung.coDanhDau = doc.querySelectorAll('#tocList .tocsnip mark').length;
+  out.timNoiDung.markDungChu = [...doc.querySelectorAll('#tocList .tocsnip mark')].every(m => m.textContent.toLowerCase() === Q7);
+  out.timNoiDung.coDemCho = doc.querySelectorAll('#tocList .tochit').length;
+  out.timNoiDung.khongLotThe = ![...doc.querySelectorAll('#tocList .tocsnip')].some(s => /<(p|div|span|br|script)\b/i.test(s.innerHTML));
+  inp.value = 'zzzzkhongcotuchuyen';
+  inp.dispatchEvent(new win.Event('input', { bubbles: true }));
+  await wait(700);
+  out.timNoiDung.khongThay = /Không có chương nào khớp/.test(doc.querySelector('#tocList').textContent);
+  /* “div” có 0 lần trong chữ nhưng 2251 lần trong markup của bộ này: nếu bóc thẻ
+     bằng innerHTML thay vì textContent thì tìm “div” sẽ ra hàng loạt kết quả rác.
+     Đây là chỗ phân biệt hai cách bóc — chỉ soi thẻ lọt hay không thì KHÔNG bắt được. */
+  inp.value = 'div';
+  inp.dispatchEvent(new win.Event('input', { bubbles: true }));
+  await wait(700);
+  out.timNoiDung.khongKhopMarkup = /Không có chương nào khớp/.test(doc.querySelector('#tocList').textContent);
+  nutFull.checked = false;
+  nutFull.dispatchEvent(new win.Event('change', { bubbles: true }));
+  inp.value = '';
+  inp.dispatchEvent(new win.Event('input', { bubbles: true }));
+  await wait(600);
+  out.timNoiDung.tatLaiDu = demDong();
+
   const a = page('admin.html', { url: 'https://ssochuz.pages.dev/admin', fetch: workerFetch });
   const W = a.win, D = a.doc;
   const $a = s => D.querySelector(s), $$a = s => [...D.querySelectorAll(s)];
@@ -1095,6 +1138,71 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   if (!/— Chương/.test(pr.tieuDeLucIn || '')) rtFail.push('beforeprint không đổi tiêu đề thành "bộ — chương": ' + pr.tieuDeLucIn);
   if (!(pr.coLopIn && pr.traTieuDe && pr.boLopIn)) rtFail.push('beforeprint/afterprint dọn không sạch: ' + JSON.stringify(pr));
   if (!pr.coCssIn) rtFail.push('cz.css đã build thiếu khối @media print');
+  /* SO SANH HAI PHIEN BAN trong hop thoai lich su */
+  const rows7 = $$a('#chList .row2');
+  for (const r7 of rows7) { clk(r7); await wait(400); if (edB.innerHTML.length > 200) break; }
+  W.localStorage.removeItem('cz_ch_hist');
+  edB.innerHTML = '<p>doan giu nguyen</p><p>doan se bi xoa</p>';
+  edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(200);
+  clk('#chSave'); await wait(500);
+  edB.innerHTML = '<p>doan giu nguyen</p><p>doan moi them vao</p>';
+  edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(200);
+  clk('#chSave'); await wait(500);
+  clk('#chHist'); await wait(500);
+  out.editorSoSanh = { soOChon: $$a('#czHist [data-hs]').length };
+  clk('#czHist #histDiff'); await wait(300);
+  out.editorSoSanh.chonMotThiBao = /Tích đúng hai phiên bản/.test(txtA('#toasts'));
+  let tich7 = $$a('#czHist [data-hs]');
+  tich7[0].checked = true; tich7[1].checked = true;
+  clk('#czHist #histDiff'); await wait(600);
+  let df7 = $a('#czHistDiff');
+  out.editorSoSanh.moHop = !!(df7 && df7.classList.contains('on'));
+  /* danh sach xep MOI truoc nen o tich 0 la ban moi: doan them phai la doan moi viet */
+  out.editorSoSanh.doanThem = !!df7.querySelector('.df-add') &&
+    /doan moi them vao/.test(df7.querySelector('.df-add').textContent);
+  out.editorSoSanh.doanXoa = !!df7.querySelector('.df-del') &&
+    /doan se bi xoa/.test(df7.querySelector('.df-del').textContent);
+  out.editorSoSanh.anDoanGiuNguyen = ![...df7.querySelectorAll('.df-add,.df-del')]
+    .some(e => /doan giu nguyen/.test(e.textContent));
+  /* khoi phuc ban cu roi luu ngay -> sinh ban moi trung ban cu, dung de test nhanh giong het */
+  clk('#czHist [data-hr="1"]'); await wait(600);
+  clk('#chSave'); await wait(600);
+  clk('#chHist'); await wait(500);
+  tich7 = $$a('#czHist [data-hs]');
+  tich7[0].checked = true; tich7[2].checked = true;
+  clk('#czHist #histDiff'); await wait(600);
+  out.editorSoSanh.haiBanTrung = /giống hệt nhau/.test($a('#czHistDiff').textContent);
+  /* chu trong truyen co the chua ky tu giong the — phai duoc thoat, khong chay */
+  edB.innerHTML = '<p>&lt;script&gt;alert(1)&lt;/script&gt; chu thuong</p>';
+  edB.dispatchEvent(new W.Event('input', { bubbles: true })); await wait(200);
+  clk('#chSave'); await wait(500);
+  clk('#chHist'); await wait(500);
+  tich7 = $$a('#czHist [data-hs]');
+  tich7[0].checked = true; tich7[1].checked = true;
+  clk('#czHist #histDiff'); await wait(600);
+  const df8 = $a('#czHistDiff');
+  out.editorSoSanh.thoatHtml = !/<script/i.test(df8.innerHTML);
+  out.editorSoSanh.conChu = /chu thuong/.test(df8.textContent);
+
+  const tm = out.timNoiDung || {};
+  if (!(tm.coNut && tm.coTitle)) rtFail.push('thiếu nút “Tìm cả trong nội dung” trong mục lục: ' + JSON.stringify(tm));
+  if (tm.chiTieuDe !== 0) rtFail.push('tìm chỉ-theo-tên mà vẫn ra kết quả cho chữ không có trong tên: ' + tm.chiTieuDe);
+  if (!(tm.caNoiDung > 0)) rtFail.push('bật tìm trong nội dung mà không ra chương nào: ' + tm.caNoiDung);
+  if (!/chỗ khớp trong \d+ chương/.test(tm.subNoiDung || '')) rtFail.push('không báo số chỗ khớp: ' + tm.subNoiDung);
+  if (!(tm.coDanhDau > 0 && tm.markDungChu)) rtFail.push('đánh dấu chỗ khớp sai: ' + JSON.stringify(tm));
+  if (!tm.khongLotThe) rtFail.push('khúc trích dẫn để lọt thẻ HTML của chương ra màn hình');
+  if (!tm.khongThay) rtFail.push('tìm chữ không tồn tại mà không báo “không khớp”');
+  if (!tm.khongKhopMarkup) rtFail.push('tìm “div” mà vẫn ra kết quả — đang khớp cả thẻ HTML chứ không phải chữ');
+  if (!(tm.tatLaiDu > 0)) rtFail.push('tắt tìm trong nội dung rồi mà danh sách không trở lại');
+  const ss = out.editorSoSanh || {};
+  if (ss.soOChon !== 2) rtFail.push('hộp lịch sử phải có 2 ô chọn để so, thực tế ' + ss.soOChon);
+  if (!ss.chonMotThiBao) rtFail.push('chọn 1 bản rồi bấm So sánh mà không báo lỗi');
+  if (!ss.moHop) rtFail.push('bấm So sánh không mở được hộp kết quả');
+  if (!ss.doanThem) rtFail.push('không hiện đoạn MỚI THÊM (chiều so bị ngược?)');
+  if (!ss.doanXoa) rtFail.push('không hiện đoạn BỊ XOÁ');
+  if (!ss.anDoanGiuNguyen) rtFail.push('hiện cả những đoạn không đổi, khó đọc');
+  if (!ss.haiBanTrung) rtFail.push('hai bản trùng nhau mà không báo “giống hệt nhau”');
+  if (!(ss.thoatHtml && ss.conChu)) rtFail.push('kết quả so sánh không thoát HTML: ' + JSON.stringify(ss));
   out.editorFail = rtFail;
   out.tong = {
     loiTrangDoc: out.errStory.length, loiQuanTri: out.errAdmin.length, loiTrangAnh: out.errImg.length,

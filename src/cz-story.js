@@ -970,27 +970,80 @@
     document.body.classList.remove('is-printing');
     if (titleTruocIn) { document.title = titleTruocIn; titleTruocIn = ''; }
   });
+  /* ---- TÌM TRONG NỘI DUNG CHƯƠNG -------------------------------------------
+     Toàn bộ HTML các chương đã nằm sẵn trong CHS (tải một lần cùng quyển sách),
+     nên tìm trong nội dung là lọc ngay trong máy: không dựng chỉ mục, không gọi
+     mạng, không tốn thêm dung lượng. Chữ sau khi bỏ thẻ được cache trên chính đối
+     tượng chương (_txt) để gõ tiếp không phải bóc thẻ lại từ đầu. */
+  var TOC_MAXHIT = 60;
+  function chapText(c) {
+    if (c._txt == null) {
+      var d = document.createElement('div');
+      d.innerHTML = c.html || '';
+      c._txt = (d.textContent || '').replace(/\s+/g, ' ').trim();
+    }
+    return c._txt;
+  }
+  function countHit(txt, q) {
+    var lt = txt.toLowerCase(), i = 0, n = 0, k;
+    while ((k = lt.indexOf(q, i)) >= 0) { n++; i = k + q.length; }
+    return n;
+  }
+  /* Trích một khúc quanh chỗ khớp. Thoát HTML từng mảnh rồi mới bọc <mark>, để chữ
+     trong truyện không bao giờ bị hiểu thành thẻ. */
+  function snipHtml(txt, q) {
+    var i = txt.toLowerCase().indexOf(q);
+    if (i < 0) return '';
+    var s = Math.max(0, i - 45), e = Math.min(txt.length, i + q.length + 70);
+    return (s > 0 ? '…' : '') + esc(txt.slice(s, i)) +
+      '<mark>' + esc(txt.slice(i, i + q.length)) + '</mark>' +
+      esc(txt.slice(i + q.length, e)) + (e < txt.length ? '…' : '');
+  }
   function paintTOC() {
     $('#tocName').textContent = N.title;
     var pr = CZ.progress(N);
-    $('#tocSub').textContent = CHS.length + ' chương' + (pr ? ' · đang ở chương ' + pr : '');
     var q = ($('#tocQ').value || '').trim().toLowerCase();
+    var full = !!($('#tocFull') && $('#tocFull').checked);
     var prog = CZ.progress(N), marks = CZ.marks(N);
-    $('#tocList').innerHTML = CHS.map(function (c, i) {
-      var n = i + 1;
-      if (q && c.t.toLowerCase().indexOf(q) < 0 && String(n) !== q) return '';
+    var rows = '', hitCh = 0, hitAll = 0;
+    for (var i = 0; i < CHS.length; i++) {
+      var c = CHS[i], n = i + 1;
+      var inT = !q || c.t.toLowerCase().indexOf(q) >= 0 || String(n) === q;
+      var cnt = 0, snip = '';
+      if (q && full) {
+        var tx = chapText(c);
+        cnt = countHit(tx, q);
+        if (cnt) { hitCh++; hitAll += cnt; snip = snipHtml(tx, q); }
+        else if (!inT) continue;
+      } else if (q && !inT) continue;
+      if (hitCh > TOC_MAXHIT) continue;        /* vẫn đếm hết, chỉ ngưng vẽ */
       var sp = chapSplit(c);
       var k = sp.kind || 'main';
       /* cùng ký hiệu với danh sách chương (S1, S2… / Mở) — bản cũ chỉ hiện số nên
          ngoại truyện 1 và chương 1 nhìn giống hệt nhau trong mục lục */
       var tno = k === 'open' ? 'Mở' : (k === 'extra' ? (sp.no ? 'S' + sp.no : 'S') : (sp.no || '—'));
-      return '<a href="' + chapterPath(n) + '" data-ch="' + n + '" class="' + (n === cur ? 'on' : '') + (n < prog ? ' read' : '') + '">' +
-        '<span class="no">' + tno + '</span><span class="nm">' + esc(sp.name) + '</span>' +
+      rows += '<a href="' + chapterPath(n) + '" data-ch="' + n + '" class="' + (n === cur ? 'on' : '') + (n < prog ? ' read' : '') + '">' +
+        '<span class="no">' + tno + '</span><span class="nm">' + esc(sp.name) +
+        (snip ? '<i class="tocsnip">' + snip + '</i>' : '') +
+        (cnt ? '<b class="tochit">' + cnt + ' chỗ</b>' : '') + '</span>' +
         (marks.indexOf(n) >= 0 ? '<span class="ck">' + ic('bookmark', 'i-s') + '</span>'
           : (n < prog ? '<span class="ck">' + ic('check', 'i-s') + '</span>' : '<span></span>')) + '</a>';
-    }).join('') || '<div class="empty" style="border:0;background:none">Không có chương nào khớp.</div>';
+    }
+    $('#tocList').innerHTML = rows ||
+      '<div class="empty" style="border:0;background:none">Không có chương nào khớp.</div>';
+    $('#tocSub').textContent = (q && full && hitAll)
+      ? (hitAll + ' chỗ khớp trong ' + hitCh + ' chương' +
+         (hitCh > TOC_MAXHIT ? ' — chỉ hiện ' + TOC_MAXHIT + ' chương đầu' : ''))
+      : (CHS.length + ' chương' + (pr ? ' · đang ở chương ' + pr : ''));
   }
-  $('#tocQ').addEventListener('input', paintTOC);
+  var tocT = null;
+  function tocSoon() {
+    /* bộ lớn nhất ~1,4 triệu chữ: lọc lại sau mỗi phím bấm sẽ khựng, nên đợi 220ms */
+    clearTimeout(tocT);
+    tocT = setTimeout(paintTOC, 220);
+  }
+  $('#tocQ').addEventListener('input', tocSoon);
+  if ($('#tocFull')) $('#tocFull').addEventListener('change', paintTOC);
   function sheet(id, on) {
     var el = $(id);
     if (on) {

@@ -22,12 +22,13 @@
 ✅ Khung cảnh báo (thông tin / cảnh báo / lỗi)
 ✅ Khối code
 ✅ Tìm **và thay thế** + phân biệt hoa/thường + đúng cả từ
+✅ Tìm trong toàn bộ nội dung truyện (lọc ngay trong máy, hiện khúc trích dẫn + số chỗ khớp)
 ✅ Dán ảnh bằng Ctrl+V
 ✅ Kéo thả ảnh vào ô soạn
 ✅ Dán từ Word / Google Docs mà sạch định dạng
 ✅ In chương (window.print() + @media print, đổi tiêu đề thành “bộ — chương”)
 ✅ Xuất .html · .txt  ⬜ .docx · PDF (qua in)
-✅ Lịch sử phiên bản + khôi phục + xem trước (lưu trong máy, 12 bản/chương, trần 1 MB)  ⬜ so sánh hai bản
+✅ Lịch sử phiên bản + khôi phục + xem trước + **so sánh hai bản** (lưu trong máy, 12 bản/chương, trần 1 MB)
 ⬜ Ngắt trang
 
 ✅ Đậm · nghiêng · gạch chân · gạch ngang

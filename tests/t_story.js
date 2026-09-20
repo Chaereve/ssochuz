@@ -247,10 +247,19 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     '<video controls><source src="/phim.mp4" type="video/mp4"></video>' +
     '<iframe src="https://www.youtube.com/embed/abc"></iframe>' +
     '<p>đoạn sau khối bị chặn</p>';
+  /* Chữ trong chương có thể chứa ký tự "<" thật (toán tử, mặt cười <3, hay ai đó
+     dán nguyên đoạn mã). Khúc trích dẫn được chèn bằng innerHTML nên bắt buộc phải
+     thoát — đây là chỗ kiểm đúng lớp esc() mà dữ liệu sách thật không kích hoạt được.
+     Phải đặt cụm nguy hiểm SAU chữ khớp: nếu đặt trước thì <mark> chen vào giữa và
+     trình duyệt nuốt thẻ hỏng, test sẽ xanh giả. */
+  const HTML_KY_TU =
+    '<p>so sanh 3 &lt; 5 thi nho hon</p>' +
+    '<p>tim kiem gi do &lt;i data-lot="1"&gt; va het</p>' +
+    '<p>chu thuong &lt;script&gt;window.__lot=1&lt;/script&gt; van la chu</p>';
   const r9 = page('truyen.html', {
     url: 'https://ssochuz.pages.dev/truyen/third-person/',
     fetch: dataFetch({ apiBase: 'https://cms.test' }),
-    setup: (w) => { w.czPrivateBook = { title: 'Third Person', slug: 'third-person', author: 'Ai đó', chapters: [{ t: 'Chương thử khối', html: KHOI_HTML }] }; },
+    setup: (w) => { w.czPrivateBook = { title: 'Third Person', slug: 'third-person', author: 'Ai đó', chapters: [{ t: 'Chương thử khối', html: KHOI_HTML }, { t: 'Chương có ký tự lạ', html: HTML_KY_TU }] }; },
   });
   await wait(1600);
   const chas9 = [...r9.doc.querySelectorAll('#chapGrid .cha')];
@@ -289,7 +298,39 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     loi: khoiFail,
     loiJs: r9.errors.filter((e) => !/Not implemented/.test(String(e))).slice(0, 3),
   };
-  out.errors2 = khoiFail.concat(out.khoiTrinhSoan.loiJs);
+  /* ---- TÌM TRONG NỘI DUNG: khúc trích dẫn phải THOÁT ký tự "<" trong chữ ----
+     Ô tìm kiếm dựng chuỗi rồi gán innerHTML, nên nếu quên esc() thì đoạn chữ
+     "<script>…" trong truyện sẽ thành thẻ thật và chạy ngay trong mục lục. */
+  const tocFail = [];
+  const kiemToc = (ok, ten) => { if (!ok) tocFail.push(ten); };
+  const nutToc = r9.doc.querySelector('#rdToc');
+  if (nutToc) nutToc.dispatchEvent(new r9.win.MouseEvent('click', { bubbles: true }));
+  await wait(500);
+  const fullCb = r9.doc.querySelector('#tocFull');
+  kiemToc(!!fullCb, 'mục lục thiếu ô “Tìm cả trong nội dung”');
+  if (fullCb) {
+    fullCb.checked = true;
+    fullCb.dispatchEvent(new r9.win.Event('change', { bubbles: true }));
+  }
+  const oToc = r9.doc.querySelector('#tocQ');
+  oToc.value = 'tim kiem';
+  oToc.dispatchEvent(new r9.win.Event('input', { bubbles: true }));
+  await wait(700);
+  const danhSach = r9.doc.querySelector('#tocList');
+  kiemToc(!!danhSach.querySelector('.tocsnip'), 'không trích được khúc có chữ khớp');
+  kiemToc(!danhSach.querySelector('script'), 'chữ "<script>" trong truyện đã thành THẺ thật trong mục lục');
+  /* Chỗ phân biệt thật: quên esc() thì "<i data-lot=1>" trong chữ truyện sẽ thành
+     PHẦN TỬ thật trong mục lục. Không soi chuỗi "&lt;…" trên innerHTML vì <mark>
+     bọc đúng chữ khớp nên chuỗi đó bị cắt làm ba. */
+  kiemToc(!danhSach.querySelector('[data-lot]'),
+    'chữ "<i data-lot=1>" trong truyện đã thành PHẦN TỬ trong mục lục — thiếu esc()');
+  kiemToc(/data-lot/.test(danhSach.textContent), 'chữ có ký tự "<" không hiện nguyên xi');
+  kiemToc(!danhSach.querySelector('script'), 'chữ "<script>" trong truyện đã thành THẺ thật');
+  kiemToc(!/__lot/.test(String(r9.win.__lot)), 'mã dán trong chữ truyện đã chạy');
+  kiemToc(/chỗ khớp trong \d+ chương/.test(r9.doc.querySelector('#tocSub').textContent),
+    'không báo số chỗ khớp: ' + r9.doc.querySelector('#tocSub').textContent);
+  out.timNoiDungThoat = { du: tocFail.length === 0, loi: tocFail };
+  out.errors2 = khoiFail.concat(out.khoiTrinhSoan.loiJs, tocFail);
 
 out.errors1 = errors.slice(0, 6);
   console.log(JSON.stringify(out, null, 1));

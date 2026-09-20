@@ -3437,6 +3437,29 @@ body.rd-focus .rdcmts { display: none; }
 .histact { display: flex; gap: 6px; }
 .histpeek { max-height: 50vh; overflow: auto; border: 1px solid var(--line);
   border-radius: 10px; padding: 12px 14px; font-size: 14px; line-height: 1.65; }
+/* ô tick dùng chung (hộp lịch sử, tuỳ chọn tìm & thay, tìm trong nội dung) */
+.cb { display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  font-size: 13px; color: var(--mut); user-select: none; }
+.cb input { margin: 0; }
+.tocfull { padding: 6px 12px 0; }
+.histsel { flex: 0 0 auto; }
+/* chữ chỉ dành cho trình đọc màn hình */
+.sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+/* kết quả tìm trong nội dung chương */
+.tocsnip { display: block; font-style: normal; font-size: 12px; line-height: 1.5;
+  color: var(--mut); margin-top: 3px; overflow-wrap: anywhere; }
+.tocsnip mark, .histpeek mark { background: color-mix(in srgb, var(--acc) 30%, transparent);
+  color: inherit; padding: 0 2px; border-radius: 3px; }
+.tochit { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 600;
+  color: var(--acc); vertical-align: middle; }
+/* so sánh hai phiên bản: đoạn thêm / đoạn bỏ */
+.df-add { color: #147a3d; background: rgba(31, 160, 84, .12); border-left: 3px solid #1fa054;
+  padding: 4px 8px; margin: 0 0 4px; border-radius: 0 6px 6px 0; }
+.df-del { color: #a12b2b; background: rgba(200, 60, 60, .1); border-left: 3px solid #c83c3c;
+  padding: 4px 8px; margin: 0 0 4px; border-radius: 0 6px 6px 0; text-decoration: line-through; }
+.df-addn { color: #147a3d; }
+.df-deln { color: #a12b2b; }
 .savestate.ok { color: var(--ok); }
 .savestate.wait { color: var(--warn); }
 .savestate.err { color: var(--bad); }
