@@ -29,12 +29,14 @@ if (w) {
     ready() { return mounted && !!ED.getEditor(); },
 
     /* legacy.js gọi khi phần tử #edBody đã có trong DOM. */
-    mount(el, onChange) {
+    mount(el, onChange, opts) {
       if (mounted) return true;
       if (!el) return false;
       try {
         ED.setOnChange(onChange);
-        ED.mountEditor(el);
+        /* opts.onImage: menu "/" chọn "Chèn ảnh" thì gọi ngược ra trang quản
+           trị để mở hộp chọn tệp (input#edImg) — trình soạn không tự mở được. */
+        ED.mountEditor(el, opts || {});
         mounted = !!ED.getEditor();
       } catch (e) {
         /* Trình soạn hỏng thì KHÔNG được làm chết cả trang quản trị:

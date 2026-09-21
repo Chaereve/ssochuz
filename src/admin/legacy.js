@@ -2918,6 +2918,9 @@
        không cần execCommand nữa; gắn không được thì giữ nguyên đường cũ. */
     var gan = w.CZEditor && w.CZEditor.mount(edIn, function () {
       dirty.book = true; markDirty(); chStat();
+    }, {
+      /* menu "/" → mục "Chèn ảnh" dùng lại đúng nút tải ảnh sẵn có */
+      onImage: function () { var f = $('#edImg'); if (f) f.click(); },
     });
     if (!gan) {
       edIn.addEventListener('input', function () { dirty.book = true; markDirty(); chStat(); });

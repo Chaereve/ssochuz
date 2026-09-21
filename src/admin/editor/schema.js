@@ -32,6 +32,7 @@ import Image from '@tiptap/extension-image';
 import TextAlign from '@tiptap/extension-text-align';
 import Placeholder from '@tiptap/extension-placeholder';
 import { Node } from '@tiptap/core';
+import { SlashMenu } from './slash.js';
 
 /* --- Lời tác giả: <aside class="note"> ----------------------------------- */
 const AuthorNote = Node.create({
@@ -68,6 +69,8 @@ function chapterExtensions(opts) {
     Placeholder.configure({
       placeholder: o.placeholder || 'Bấm vào đây để viết chương… gõ “/” để chèn khối.',
     }),
+    /* Menu gõ "/" — onImage nối ra nút chọn tệp có sẵn của trang quản trị. */
+    SlashMenu({ onImage: o.onImage }),
   ];
 }
 

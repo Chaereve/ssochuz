@@ -28,6 +28,8 @@
      t_html_contract.js HỢP ĐỒNG HTML chương (module thuần, không cần jsdom): dọn hai lần
                        bằng dọn một lần, không mất chữ, chỉ còn thẻ trong danh sách trắng,
                        dán Word/Google Docs/Notion sạch, và rà THẬT toàn bộ data/book
+     t_editor_slash.js  menu gõ "/" : chỉ mở đầu dòng/sau khoảng trắng, lọc tiếng Việt
+                        không dấu, chèn xong không sót chuỗi "/tu-khoa"
      t_editor_api.js    clear()/appendHtml(): xoá chương và nạp tệp phải đi qua trình soạn
                         (TipTap tự quản DOM nên innerHTML='' im lặng không tác dụng)
      t_editor_schema.js TRÌNH SOẠN MỚI (TipTap) có nuốt chữ chương cũ không: nạp schema thật
@@ -55,7 +57,7 @@ const cands = (process.env.CZ_TEST_MODULES || '').split(path.delimiter).filter(B
   .concat([path.join(__dirname, 'node_modules'), path.join(__dirname, '..', 'node_modules')]);
 const env = Object.assign({}, process.env, { NODE_PATH: cands.join(path.delimiter) });
 const files = [path.join('..', 'tools', 'check_src.js'), path.join('..', 'tools', 'check_secrets.js'), path.join('..', 'tools', 'check_headers.js'), 't_worker.mjs', 't_private.mjs', 't_member_spaces.mjs', 't_space.js', 't_space_hero.js', 't_auth_flow.js', 't_rating_withdraw.js', 't_private_ui.js', 't_config.js', 't_html.js', 't_follow.js', 't_feed.js', 't_push.js', 't_people.js', 't_notif.js', 't_pwa.js', 't_sw_img.js', 't_devserver.js', 't_preload.js', 't_view.js', 't_chapter_url.js', 't_home.js', 't_mobile.js', 't_stats.js', 't_ranking.js', 't_quiet_home.js', 't_ranking_worker.mjs', 't_synopsis.js', 't_story.js', 't_reader.js', 't_flows.js', 't_doctor.js', 't_html_contract.js', 't_editor_schema.js',
-  't_editor_api.js', 't_sweep.js', 't_mystats.js', 't_rating.js', 't_adult.js', 't_fallback.js', 't_lock.mjs', 't_lock_ui.js', 't_admin_ui.js', 'cf_admin_test.js'];
+  't_editor_api.js', 't_editor_slash.js', 't_sweep.js', 't_mystats.js', 't_rating.js', 't_adult.js', 't_fallback.js', 't_lock.mjs', 't_lock_ui.js', 't_admin_ui.js', 'cf_admin_test.js'];
 let bad = 0;
 for (const f of files) {
   const r = spawnSync(process.execPath, [path.join(__dirname, f)], { encoding: 'utf8', timeout: 180000, env });
