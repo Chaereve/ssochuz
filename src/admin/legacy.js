@@ -2971,6 +2971,13 @@
     }, {
       /* menu "/" → mục "Chèn ảnh" dùng lại đúng nút tải ảnh sẵn có */
       onImage: function () { var f = $('#edImg'); if (f) f.click(); },
+      /* nút liên kết trên thanh nổi. Trả null = huỷ (không đụng gì),
+         chuỗi rỗng = gỡ liên kết. Dùng prompt vì lệnh định dạng cần trả lời
+         NGAY: hộp thoại bất đồng bộ của trang sẽ làm mất vùng bôi đen. */
+      hoiLienKet: function (cu) {
+        try { return window.prompt('Địa chỉ liên kết (để trống để gỡ):', cu || ''); }
+        catch (e) { return null; }
+      },
     });
     if (!gan) {
       edIn.addEventListener('input', function () { dirty.book = true; markDirty(); chStat(); henTuLuu(); });

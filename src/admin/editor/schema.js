@@ -33,6 +33,7 @@ import TextAlign from '@tiptap/extension-text-align';
 import Placeholder from '@tiptap/extension-placeholder';
 import { Node } from '@tiptap/core';
 import { SlashMenu } from './slash.js';
+import { BubbleMenu } from './bubble.js';
 
 /* --- Lời tác giả: <aside class="note"> ----------------------------------- */
 const AuthorNote = Node.create({
@@ -71,6 +72,9 @@ function chapterExtensions(opts) {
     }),
     /* Menu gõ "/" — onImage nối ra nút chọn tệp có sẵn của trang quản trị. */
     SlashMenu({ onImage: o.onImage }),
+    /* Thanh nổi khi bôi đen chữ. hoiLienKet do bên ngoài truyền (legacy.js
+       dùng hộp thoại sẵn có của trang) — trình soạn không tự mở prompt. */
+    BubbleMenu({ hoiLienKet: o.hoiLienKet }),
   ];
 }
 

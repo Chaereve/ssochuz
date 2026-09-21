@@ -187,11 +187,11 @@ function SlashMenu(opts) {
           view(view) {
             box = taoHop(view.dom.ownerDocument);
             /* gắn vào cha của vùng soạn để không nằm trong nội dung chương */
+            /* Đặt hộp vào #edBody (.rte) — chính là cha của vùng ProseMirror.
+               Khung này cuộn được và có position:relative nên hộp bám theo nội
+               dung khi cuộn, thay vì trôi lại giữa màn hình. */
             const neo = view.dom.parentNode;
-            if (neo) {
-              /* .rte cuộn được; hộp phải bám theo nên đặt trong chính .rte */
-              view.dom.appendChild ? view.dom.parentNode.appendChild(box) : neo.appendChild(box);
-            }
+            if (neo) neo.appendChild(box);
             box.addEventListener('mousedown', (e) => {
               /* mousedown chứ không phải click: giữ con trỏ trong trình soạn */
               e.preventDefault();
