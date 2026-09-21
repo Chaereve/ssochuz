@@ -53,6 +53,8 @@ if (w) {
     align(dir) { ED.setAlign(dir); },
     link(href) { ED.setLink(href); },
     focus() { ED.focus(); },
+    clear() { ED.clear(); },
+    append(html, api) { ED.appendHtml(html, api); },
 
     /* Trả true nếu đã xử lý xong; false để legacy.js dùng execCommand như cũ. */
     cmd(name, val) {

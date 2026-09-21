@@ -878,7 +878,9 @@
       if (!$('#chTitle').value.trim()) {
         $('#chTitle').value = file.name.replace(/\.[a-z]+$/i, '').replace(/[-_]+/g, ' ').trim();
       }
-      $('#edBody').insertAdjacentHTML('beforeend', html);
+      /* Như trên: phải đi qua trình soạn, không chèn thẳng vào DOM. */
+      if (w.CZEditor && w.CZEditor.ready()) w.CZEditor.append(html, API ? normalizeApi(API) : '');
+      else $('#edBody').insertAdjacentHTML('beforeend', html);
       dirty.book = true; markDirty(); chStat();
       toast('Đã nạp “' + file.name + '” — kiểm tra lại rồi bấm Lưu chương này', 'ok');
       renderChapters();
@@ -2949,8 +2951,12 @@
     if (!f) return;
     var ed2 = $('#edBody');
     uploadImageFile(f, function (busy) {
-      var old = ed2.innerHTML;
       if (busy) {
+        /* Không chèn ô "đang tải" vào trong khung soạn khi dùng trình soạn mới:
+           ProseMirror sở hữu vùng DOM đó, chèn thẳng vào sẽ bị xoá lúc vẽ lại
+           hoặc lọt vào nội dung chương. Báo bằng toast cho an toàn. */
+        if (w.CZEditor && w.CZEditor.ready()) { toast(busy, 'info'); return; }
+        var old = ed2.innerHTML;
         if (old.indexOf('img-uploading') < 0) ed2.insertAdjacentHTML('beforeend', '<p class="img-uploading"><span class="spin"></span> ' + esc(busy) + '</p>');
         return;
       }
@@ -2981,7 +2987,12 @@
     CZ.confirm('Xoá chương ' + (i + 1) + ' — ' + (BOOK.chapters[i].t || '') + '?', 'Xoá').then(function (ok) {
       if (!ok) return;
       BOOK.chapters.splice(i, 1); CHAP = -1;
-      $('#chTitle').value = ''; edIn.innerHTML = ''; chStat();
+      $('#chTitle').value = '';
+      /* Trình soạn mới tự quản DOM: phải gọi clear(), gán innerHTML='' vô tác
+         dụng (chữ của chương vừa xoá sẽ còn nguyên trong khung). */
+      if (w.CZEditor && w.CZEditor.ready()) w.CZEditor.clear();
+      else edIn.innerHTML = '';
+      chStat();
       dirty.book = true; markDirty(); renderChapters();
     });
   });

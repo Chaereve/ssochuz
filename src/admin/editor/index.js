@@ -113,11 +113,35 @@ function setLink(href) {
   if (!href) { editor.chain().focus().unsetLink().run(); return; }
   editor.chain().focus().extendMarkRange('link').setLink({ href }).run();
 }
+/* Xoá sạch nội dung. CẦN hàm riêng vì TipTap tự quản DOM: gán
+   el.innerHTML = '' KHÔNG xoá được (ProseMirror giữ trạng thái trong bộ nhớ và
+   vẽ lại y như cũ ở lần cập nhật kế tiếp). Đây chính là lỗi khi xoá chương:
+   chữ của chương vừa xoá vẫn nằm nguyên trong khung soạn. */
+function clear() {
+  if (!editor) return;
+  editor.commands.clearContent(true);
+}
+
+/* Chèn thêm HTML vào CUỐI nội dung (nạp tệp .txt/.md/.html).
+   Tương tự: insertAdjacentHTML('beforeend') không đi qua ProseMirror nên phần
+   chèn sẽ biến mất ngay khi người dùng gõ tiếp. */
+function appendHtml(html, api) {
+  if (!editor) return;
+  const clean = normalizeChapterHtml(html || '');
+  if (!clean) return;
+  /* Chèn tại vị trí cuối tài liệu thay vì .focus('end'): không kéo màn hình
+     nhảy lung tung khi nạp tệp dài, và không phụ thuộc vào việc trình soạn
+     đang được focus hay không. */
+  const end = editor.state.doc.content.size;
+  editor.commands.insertContentAt(end, toAbsolute(clean, api));
+}
+
 function isEmpty() { return !editor || editor.isEmpty; }
 function focus() { if (editor) editor.commands.focus(); }
 
 export {
   mountEditor, getEditor, setChapterHtml, getChapterHtml, stats, setOnChange,
   insertImage, commands, setBlock, setAlign, setLink, isEmpty, focus,
+  clear, appendHtml,
   toAbsolute, toRelative,
 };
