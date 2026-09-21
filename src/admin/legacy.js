@@ -656,6 +656,9 @@
     }
     chStat();
     renderChapters();
+    if (boTuLuu) boTuLuu.huy();
+    datChipTuLuu('');
+    if (CUR) hoiKhoiPhuc(CUR.slug, i, ch[i].html || '');
     try { ed.focus(); } catch (e) {}
   }
   function chStat() {
@@ -748,10 +751,57 @@
     if (!html || html === '<br>' || html === '<p><br></p>' || html === '<div><br></div>') return '';
     return html;
   }
+  /* ---------------- TỰ LƯU CHƯƠNG ĐANG VIẾT VÀO MÁY ----------------------
+     Lưới an toàn cho tình huống đóng nhầm tab / mất điện / trình duyệt sập.
+     Ghi vào IndexedDB sau 2 giây ngừng gõ, mỗi chương một bản ghi.
+     KHÔNG thay nút Lưu: đây chỉ là bản trong máy, chưa lên KV. */
+  var boTuLuu = w.CZAutosave && w.CZAutosave.taoBoLuu ? w.CZAutosave.taoBoLuu({
+    onLuu: function () { datChipTuLuu('Đã tự lưu trong máy lúc ' + new Date().toLocaleTimeString('vi-VN')); },
+  }) : null;
+  function datChipTuLuu(text) {
+    var el = $('#chAuto');
+    if (el) el.textContent = text || '';
+  }
+  function henTuLuu() {
+    if (!boTuLuu || !CUR || !BOOK || CHAP < 0) return;
+    boTuLuu.dat(CUR.slug, CHAP, ($('#chTitle').value || '').trim(), edHtml());
+  }
+  /* Bỏ nháp của chương vừa ghi lên KV (đã an toàn, không cần lưới nữa). */
+  function boNhapChuong(slug, idx) {
+    if (w.CZAutosave && w.CZAutosave.xoa) w.CZAutosave.xoa(slug, idx);
+  }
+  /* Mở chương: nếu trong máy còn bản mới hơn bản trên KV thì mời khôi phục. */
+  function hoiKhoiPhuc(slug, idx, htmlKV) {
+    if (!w.CZAutosave || !w.CZAutosave.doc) return;
+    w.CZAutosave.doc(slug, idx).then(function (d) {
+      if (!d || !d.html) return;
+      /* giống hệt bản trên KV thì nháp vô nghĩa — dọn luôn cho sạch */
+      if (String(d.html) === String(htmlKV || '')) { boNhapChuong(slug, idx); return; }
+      /* chỉ mời khi vẫn đang ở đúng chương đó */
+      if (!CUR || CUR.slug !== slug || CHAP !== idx) return;
+      datChipTuLuu('');
+      CZ.confirm('Máy này còn bản tự lưu lúc ' + new Date(d.at).toLocaleString('vi-VN') +
+        ' cho chương này, khác với bản đang có trên KV.\n' +
+        'Dùng bản trong máy? (Bấm Bỏ qua để giữ bản trên KV và xoá bản tự lưu.)', 'Dùng bản trong máy')
+        .then(function (ok) {
+          if (!CUR || CUR.slug !== slug || CHAP !== idx) return;
+          if (!ok) { boNhapChuong(slug, idx); datChipTuLuu(''); return; }
+          if (w.CZEditor && w.CZEditor.ready()) w.CZEditor.setHtml(d.html, API ? normalizeApi(API) : '');
+          else $('#edBody').innerHTML = d.html;
+          if (d.title) $('#chTitle').value = d.title;
+          dirty.book = true; markDirty(); chStat();
+          datChipTuLuu('Đã khôi phục bản tự lưu — kiểm tra rồi bấm Lưu');
+        });
+    });
+  }
   function edSaveCurrent(silent) {
     if (!BOOK || CHAP < 0) return false;
     BOOK.chapters[CHAP] = { t: ($('#chTitle').value || '').trim() || ('Chương ' + (CHAP + 1)), html: edHtml() };
     dirty.book = true; markDirty();
+    /* nội dung đã nằm trong BOOK -> nháp tự lưu của chương này hết nhiệm vụ */
+    if (boTuLuu) boTuLuu.huy();
+    if (CUR) boNhapChuong(CUR.slug, CHAP);
+    datChipTuLuu('');
     if (!silent) { toast('Đã cập nhật chương ' + (CHAP + 1) + ' (nhớ bấm “Lưu toàn bộ chương”)', 'ok'); }
     return true;
   }
@@ -2909,7 +2959,7 @@
   });
   $('#btnSaveMeta').addEventListener('click', function () { saveMeta(); });
   $('#btnDraft').addEventListener('click', saveDraft);
-  $('#chTitle').addEventListener('input', function () { dirty.book = true; markDirty(); });
+  $('#chTitle').addEventListener('input', function () { dirty.book = true; markDirty(); henTuLuu(); });
   /* trình soạn: gõ là tính lại từ/ký tự + đánh dấu chưa lưu
      Đặt defaultParagraphSeparator='p' để tránh <div><br></div> nhân đôi dòng trống */
   var edIn = $('#edBody');
@@ -2917,13 +2967,13 @@
     /* Bản 2.0: gắn trình soạn TipTap vào đúng phần tử #edBody. Gắn được thì
        không cần execCommand nữa; gắn không được thì giữ nguyên đường cũ. */
     var gan = w.CZEditor && w.CZEditor.mount(edIn, function () {
-      dirty.book = true; markDirty(); chStat();
+      dirty.book = true; markDirty(); chStat(); henTuLuu();
     }, {
       /* menu "/" → mục "Chèn ảnh" dùng lại đúng nút tải ảnh sẵn có */
       onImage: function () { var f = $('#edImg'); if (f) f.click(); },
     });
     if (!gan) {
-      edIn.addEventListener('input', function () { dirty.book = true; markDirty(); chStat(); });
+      edIn.addEventListener('input', function () { dirty.book = true; markDirty(); chStat(); henTuLuu(); });
       try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (e) {}
       edIn.addEventListener('focus', function () {
         try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (e2) {}
@@ -3163,8 +3213,17 @@
   $('#btnStats').addEventListener('click', function () { loadStats(true); });
   $('#btnStatsFb').addEventListener('click', function () { importFbStats(); });
   window.addEventListener('beforeunload', function (e) {
+    /* còn chữ chưa kịp tự lưu thì ghi ngay, đừng chờ hết 2 giây */
+    if (boTuLuu && boTuLuu.dangCho()) boTuLuu.ghiNgay();
     if (dirty.meta || dirty.book || dirty.set) { e.preventDefault(); e.returnValue = ''; }
   });
+  /* Chuyển tab / khoá máy cũng là lúc dễ mất bài: trình duyệt di động có thể
+     huỷ trang mà KHÔNG chạy beforeunload, nhưng visibilitychange thì có. */
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden' && boTuLuu && boTuLuu.dangCho()) boTuLuu.ghiNgay();
+  });
+  /* dọn nháp tự lưu quá 7 ngày, chạy nền không chặn gì */
+  if (w.CZAutosave && w.CZAutosave.don) { try { w.CZAutosave.don(); } catch (e) {} }
   /* KHÔNG có phím tắt ở trang quản trị (yêu cầu của chủ trang 17/09/2026):
      những tổ hợp như Ctrl+S/Ctrl+K hay bấm số để đổi tab gây phiền khi gõ nội
      dung và dễ bấm nhầm. Muốn lưu hay đổi tab thì bấm nút trên giao diện.

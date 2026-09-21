@@ -19,6 +19,7 @@
 import { normalizeChapterHtml } from './lib/html-contract.js';
 import { isPublic, countWords, readingMinutes, chapterState } from './lib/chapter.js';
 import * as ED from './editor/index.js';
+import * as AS from './editor/autosave.js';
 
 const w = typeof window !== 'undefined' ? window : null;
 
@@ -69,6 +70,12 @@ if (w) {
       if (typeof fn === 'function') { fn(); return true; }
       return false;
     },
+  };
+
+  /* Tự lưu chương đang viết vào máy (IndexedDB). Xem editor/autosave.js. */
+  w.CZAutosave = {
+    luu: AS.luu, doc: AS.doc, xoa: AS.xoa, tatCa: AS.tatCa, don: AS.don,
+    taoBoLuu: AS.taoBoLuu,
   };
 
   /* Hàm thuần dùng chung cho các khu vực mới và cho bài kiểm thử. */
