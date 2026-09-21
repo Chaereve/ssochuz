@@ -148,18 +148,29 @@ function openAdmin(worker, key) {
     coChenAnh: !!$$(doc, '#edToolbar button').find(b => b.dataset.img !== undefined),
     nutUpAnh: !!$(doc, '#edImg')
   };
+  /* Bản 2.0 dùng trình soạn TipTap: nó tự quản lý DOM bên trong #edBody nên
+     gán thẳng innerHTML rồi bắn sự kiện 'input' KHÔNG còn tác dụng (ProseMirror
+     không đọc DOM do người ngoài ghi vào). Hàm này đổ nội dung đúng cách: qua
+     cầu nối window.CZEditor nếu có, không thì quay lại cách cũ. */
+  const setEdHtml = (html) => {
+    if (win.CZEditor && win.CZEditor.ready()) {
+      win.CZEditor.setHtml(html, '');
+      return;
+    }
+    ed.innerHTML = html;
+    ed.dispatchEvent(new win.Event('input', { bubbles: true }));
+  };
+
   /* mở chương đầu tiên (CHAP ≥ 0) rồi gõ: đếm từ/ký tự cập nhật + chưa lưu */
   click($$(doc, '#chList .row2')[0]);
   await wait(200);
-  ed.innerHTML = '<p>Đoạn đầu tiên.</p>';
-  ed.dispatchEvent(new win.Event('input', { bubbles: true }));
+  setEdHtml('<p>Đoạn đầu tiên.</p>');
   await wait(120);
   out.trinhSoan.demTu = String($(doc, '#chStat').textContent || '');
   /* ảnh /api/img/… : trong trình soạn phải render đúng (URL Worker tuyệt đối),
      nhưng khi lưu phải trả về TƯƠNG ĐỐI — nội dung không dính cứng tên miền.
      Đi đúng luồng thật: gõ ảnh → lưu → mở lại chương (openChap viết lại URL). */
-  ed.innerHTML = '<p>Hình minh hoạ</p><p><img src="/api/img/1234-abc" alt=""></p>';
-  ed.dispatchEvent(new win.Event('input', { bubbles: true }));
+  setEdHtml('<p>Hình minh hoạ</p><p><img src="/api/img/1234-abc" alt=""></p>');
   await wait(120);
   click('#chSave');
   await wait(120);
@@ -170,7 +181,8 @@ function openAdmin(worker, key) {
     ? 'duong-dan-tuong-doi' : (savedHtml.indexOf('cms.test/api/img') >= 0 ? 'DICH-CUNG-TEN-MIEN' : 'khong-thay-anh');
   click($(doc, '#chList .row2.on'));       /* mở lại chương vừa lưu */
   await wait(200);
-  out.trinhSoan.anchTrongSoan = String(ed.querySelector('img') ? ed.querySelector('img').getAttribute('src') : '');
+  const imgTrongSoan = ed.querySelector('img');
+  out.trinhSoan.anchTrongSoan = String(imgTrongSoan ? imgTrongSoan.getAttribute('src') : '');
 
   /* ---------- 3. thẻ khóa mật mã ---------- */
   out.khoaTruoc = String($(doc, '#lockState').textContent || '').trim();

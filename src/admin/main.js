@@ -10,28 +10,14 @@
 
    Các tệp cz-*.js của trang người đọc GIỮ NGUYÊN `bundle: false`.
 
+   THỨ TỰ HAI DÒNG DƯỚI ĐÂY LÀ CÓ CHỦ Ý, ĐỪNG ĐỔI:
+     1. bridge.js  dựng window.CZEditor (cầu nối sang trình soạn mới)
+     2. legacy.js  là IIFE, nạp vào là chạy ngay và cần cầu nối đã sẵn sàng
+   Đổi thứ tự = trang âm thầm quay về trình soạn contenteditable cũ.
+
    Chuyển đổi theo từng giai đoạn (xem KE-HOACH-TRANG-QUAN-TRI-V2.md):
-   - Giai đoạn 1: main.js nạp legacy.js (mã cũ, nguyên vẹn) để trang quản trị
-     chạy y như trước, đồng thời mở sẵn hạ tầng module mới.
-   - Giai đoạn 2-3: chuyển dần từng khu vực sang src/admin/pages/*.
-   - Chỉ xoá legacy.js khi mọi tính năng đã chuyển xong và test xanh.
+   chuyển dần từng khu vực sang src/admin/pages/*, chỉ xoá legacy.js khi mọi
+   tính năng đã chuyển xong và test xanh.
    ========================================================================== */
-
-/* Hạ tầng thuần (chạy được cả trên Node) — nạp sẵn để các khu vực mới dùng. */
-import { normalizeChapterHtml } from './lib/html-contract.js';
-import { isPublic, countWords, readingMinutes } from './lib/chapter.js';
-
-/* Mã quản trị hiện hành. Đây là IIFE, nạp vào là tự chạy. */
+import './bridge.js';
 import './legacy.js';
-
-/* Cầu nối cho các module sẽ viết ở giai đoạn sau + cho bài kiểm thử trình duyệt.
-   KHÔNG lộ bất kỳ khoá bí mật nào ở đây — chỉ là hàm thuần xử lý chữ. */
-const w = typeof window !== 'undefined' ? window : null;
-if (w) {
-  w.CZAdmin = Object.assign(w.CZAdmin || {}, {
-    normalizeChapterHtml,
-    isPublic,
-    countWords,
-    readingMinutes,
-  });
-}

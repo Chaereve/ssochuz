@@ -15,6 +15,10 @@
   'use strict';
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  /* Cầu nối sang trình soạn chương mới (TipTap) — xem src/admin/editor/.
+     Dùng qua window.CZEditor để mã cũ trong tệp này không phải import gì cả;
+     nếu trình soạn chưa gắn được thì mọi chỗ tự rơi về contenteditable cũ. */
+  var w = window;
   var esc = CZ.esc, num = CZ.num, ic = CZ.icon;
   var LS = { api: 'cz_kv_api', key: 'cz_kv_key', draft: 'cz_admin_draft' };
   /* ADMIN_KEY không được ghi lâu dài vào localStorage. Nó chỉ sống trong tab hiện
@@ -638,22 +642,33 @@
     /* trình soạn chữ thật: nội dung là HTML, giữ nguyên định dạng cũ
        (chương xưa lưu dạng <div>…</div> — trình đọc tự quy về <p>) */
     var ed = $('#edBody');
-    ed.innerHTML = ch[i].html || '';
-    /* ảnh /api/img/… nằm trên Worker — trong trình soạn phải hiện đúng:
-       viết lại thành URL tuyệt đối của Worker đang nối */
-    if (API) $$('.rte img', ed).forEach(function (im) {
-      var s = String(im.getAttribute('src') || '');
-      if (/^\s*\/api\/img\//.test(s)) im.setAttribute('src', normalizeApi(API) + s.replace(/^\s+/, ''));
-    });
+    /* Bản 2.0 dùng trình soạn TipTap (src/admin/editor). Nó tự lo việc đổi
+       /api/img/… sang URL tuyệt đối của Worker. Nếu vì lý do nào đó trình soạn
+       chưa gắn được thì rơi về contenteditable như bản cũ. */
+    if (w.CZEditor && w.CZEditor.ready()) {
+      w.CZEditor.setHtml(ch[i].html || '', API ? normalizeApi(API) : '');
+    } else {
+      ed.innerHTML = ch[i].html || '';
+      if (API) $$('.rte img', ed).forEach(function (im) {
+        var s = String(im.getAttribute('src') || '');
+        if (/^\s*\/api\/img\//.test(s)) im.setAttribute('src', normalizeApi(API) + s.replace(/^\s+/, ''));
+      });
+    }
     chStat();
     renderChapters();
     try { ed.focus(); } catch (e) {}
   }
   function chStat() {
+    var st = $('#chStat');
+    if (!st) return;
+    if (w.CZEditor && w.CZEditor.ready()) {
+      var s2 = w.CZEditor.stats(API ? normalizeApi(API) : '');
+      st.textContent = num(s2.words) + ' từ · ' + num(s2.chars) + ' ký tự · ~' + s2.minutes + ' phút đọc';
+      return;
+    }
     var ed = $('#edBody');
     var n = CZ.words(ed ? (ed.innerHTML || '') : '');
-    var st = $('#chStat');
-    if (st) st.textContent = num(n) + ' từ · ' + num((ed ? (ed.textContent || '').trim().length : 0)) + ' ký tự';
+    st.textContent = num(n) + ' từ · ' + num((ed ? (ed.textContent || '').trim().length : 0)) + ' ký tự';
   }
   /* thu nội dung từ trình soạn — giữ HTML thật, chỉ dọn nốt:
      bỏ thẻ bị vấy style inline vô nghĩa, giữ lại img/br/định dạng cơ bản.
@@ -664,6 +679,9 @@
   function edHtml() {
     var ed = $('#edBody');
     if (!ed) return '';
+    /* Trình soạn mới đã trả HTML đúng hợp đồng (src/admin/lib/html-contract.js),
+       không cần chạy lại bộ dọn thủ công phía dưới. */
+    if (w.CZEditor && w.CZEditor.ready()) return w.CZEditor.getHtml(API ? normalizeApi(API) : '');
     var html = ed.innerHTML;
     if (API) {
       var abs = normalizeApi(API) + '/api/img/';
@@ -748,6 +766,9 @@
   function edExec(cmd, val) {
     var ed = $('#edBody');
     if (!ed) return;
+    if (w.CZEditor && w.CZEditor.ready() && w.CZEditor.cmd(cmd, val)) {
+      dirty.book = true; markDirty(); chStat(); return;
+    }
     ed.focus();
     try { document.execCommand(cmd, false, val || null); } catch (e) {}
     dirty.book = true; markDirty(); chStat();
@@ -755,6 +776,10 @@
   function edBlock(tag) {
     var ed = $('#edBody');
     if (!ed) return;
+    if (w.CZEditor && w.CZEditor.ready()) {
+      w.CZEditor.block(tag);
+      dirty.book = true; markDirty(); chStat(); return;
+    }
     ed.focus();
     try { document.execCommand('formatBlock', false, tag); } catch (e) {}
     dirty.book = true; markDirty();
@@ -816,6 +841,10 @@
   function edInsertImage(url, alt) {
     var ed = $('#edBody');
     if (!ed) return;
+    if (w.CZEditor && w.CZEditor.ready()) {
+      w.CZEditor.image(url, alt, API ? normalizeApi(API) : '');
+      dirty.book = true; markDirty(); chStat(); return;
+    }
     ed.focus();
     var src = API && /^\s*\//.test(url) ? normalizeApi(API) + url.replace(/^\s+/, '') : url;
     var html = '<p><img src="' + esc(src) + '" alt="' + esc(alt || '') + '" style="max-width:100%;height:auto"></p>';
@@ -2883,11 +2912,18 @@
      Đặt defaultParagraphSeparator='p' để tránh <div><br></div> nhân đôi dòng trống */
   var edIn = $('#edBody');
   if (edIn) {
-    edIn.addEventListener('input', function () { dirty.book = true; markDirty(); chStat(); });
-    try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (e) {}
-    edIn.addEventListener('focus', function () {
-      try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (e2) {}
+    /* Bản 2.0: gắn trình soạn TipTap vào đúng phần tử #edBody. Gắn được thì
+       không cần execCommand nữa; gắn không được thì giữ nguyên đường cũ. */
+    var gan = w.CZEditor && w.CZEditor.mount(edIn, function () {
+      dirty.book = true; markDirty(); chStat();
     });
+    if (!gan) {
+      edIn.addEventListener('input', function () { dirty.book = true; markDirty(); chStat(); });
+      try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (e) {}
+      edIn.addEventListener('focus', function () {
+        try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (e2) {}
+      });
+    }
   }
   /* thanh định dạng: B/I/U/S · H2/H3/Đoạn/trích dẫn · gạch phân cách · canh */
   $('#edToolbar').addEventListener('click', function (e) {
