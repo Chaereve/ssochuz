@@ -193,6 +193,8 @@
 /truyen/love-status-is-blocked/  /truyen/love-status-is-blocked/   200
 /truyen/beside-dragon   /truyen/beside-dragon/   200
 /truyen/beside-dragon/  /truyen/beside-dragon/   200
+/truyen/pls-love   /truyen/pls-love/   200
+/truyen/pls-love/  /truyen/pls-love/   200
 # -- OG-END --
 # ===== 2) LUẬT ĐỘNG (có dấu *) — PHẢI nằm cuối tệp, TỔNG SỐ ≤ ~20 ==========
 /src/*            /  301

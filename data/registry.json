@@ -1,5 +1,5 @@
 {
-  "rev": "2026-09-19 17:14",
+  "rev": "2026-09-21 16:16",
   "lib": [
     {
       "title": "HOMETOWN ROMANCE - SPECIAL",
@@ -80,16 +80,18 @@
       "title": "Love On Hire",
       "slug": "love-on-hire",
       "author": "Yuufuku",
-      "couple": "Enjoy x June",
+      "couple": "Ginny x Jayna",
       "year": "2025",
       "status": "Hoàn thành",
       "chapters": 63,
       "is18": true,
-      "thumb": "https://cdn-local.mebmarket.com/meb/server1/409980/Thumbnail/book_detail_large.gif?3",
+      "thumb": "https://chuseoz-cms.kimtong1906.workers.dev/api/img/394cd5df-3a7d-4d4f-9160-8b0a5d4919b3",
       "countLabel": "63/63",
       "updated": "2026-05-29",
-      "slide": "https://cdn-local.mebmarket.com/meb/server1/409980/Thumbnail/book_detail_large.gif?3",
-      "syn": "Thitinan chưa bao giờ ở lại. Theerachat chưa từng mất kiểm soát. Cho đến khi một nụ hôn cuốn họ chìm quá sâu, và cả hai đều quên mất cách để dừng lại. Dục vọng rực cháy hóa thành những đêm…"
+      "slide": "https://chuseoz-cms.kimtong1906.workers.dev/api/img/394cd5df-3a7d-4d4f-9160-8b0a5d4919b3",
+      "syn": "Thitinan chưa bao giờ ở lại. Theerachat chưa từng mất kiểm soát. Cho đến khi một nụ hôn cuốn họ chìm quá sâu, và cả hai đều quên mất cách để dừng lại. Dục vọng rực cháy hóa thành những đêm…",
+      "_oldSlug": "love-on-hire",
+      "synFull": "Thitinan chưa bao giờ ở lại. Theerachat chưa từng mất kiểm soát. Cho đến khi một nụ hôn cuốn họ chìm quá sâu, và cả hai đều quên mất cách để dừng lại. Dục vọng rực cháy hóa thành những đêm…"
     },
     {
       "title": "Love Bound",
@@ -790,13 +792,14 @@
       "couple": "Garn x Mimie",
       "year": "2022",
       "status": "Đang cập nhật",
-      "chapters": 9,
+      "chapters": 13,
       "is18": false,
       "thumb": "https://pbs.twimg.com/media/HQuHMUUbYAAx7RG?format=jpg&name=4096x4096",
-      "countLabel": "9/9",
-      "updated": "2026-09-08",
+      "countLabel": "13/13",
+      "updated": "2026-09-21",
       "slide": "https://pbs.twimg.com/media/HQuHMUUbYAAx7RG?format=jpg&name=4096x4096",
-      "syn": "Khi quá khứ... là một ẩn số Những manh mối... khiến lòng bối rối Tình yêu... đẩy ta vào cạm bẫy Lòng người... dối lừa làm ta lạc bước Chris, một cô gái bị mất trí nhớ, đang tĩnh dưỡng và…"
+      "syn": "Khi quá khứ... là một ẩn số Những manh mối... khiến lòng bối rối Tình yêu... đẩy ta vào cạm bẫy Lòng người... dối lừa làm ta lạc bước Chris, một cô gái bị mất trí nhớ, đang tĩnh dưỡng và…",
+      "_oldSlug": "third-person"
     },
     {
       "title": "Did You Know",
@@ -934,6 +937,23 @@
       "updated": "2026-08-28",
       "slide": "https://cdn-local.mebmarket.com/meb/server1/347169/Thumbnail/book_detail_large.gif?21",
       "syn": "Khi Fah-anan, \"chị đại\" màn ảnh bất cần truyền thông với biệt danh \"nữ hoàng thị phi\", tình cờ gặp gỡ Nuengtara, người thừa kế út của tỷ phú Charoenkiat. Trớ trêu thay, một sự cố đã đẩy…"
+    },
+    {
+      "title": "PLS LOVE",
+      "slug": "pls-love",
+      "author": "REVERSE",
+      "couple": "Lena x Miu",
+      "year": "2025",
+      "status": "Đang cập nhật",
+      "is18": true,
+      "thumb": "https://chuseoz-cms.kimtong1906.workers.dev/api/img/47522d68-8284-45df-bd57-acd816bed9c0",
+      "slide": "https://chuseoz-cms.kimtong1906.workers.dev/api/img/47522d68-8284-45df-bd57-acd816bed9c0",
+      "syn": "Khi át chủ bài của quán lounge, cô gái với danh xưng 'Thiên thần', phải làm một công việc quan trọng cho nữ doanh nhân luôn coi thường và căm ghét cô đến tột cùng, thế nhưng lại có cớ sự khiến cả hai kết thúc trên…",
+      "synFull": "Khi át chủ bài của quán lounge, cô gái với danh xưng 'Thiên thần', phải làm một công việc quan trọng cho nữ doanh nhân luôn coi thường và căm ghét cô đến tột cùng, thế nhưng lại có cớ sự khiến cả hai kết thúc trên giường cùng nhau.\nMối quan hệ ngày càng lún sâu, sau cùng sẽ kết thúc ra sao?\nYêu Em được không?\nDù nghe thế nào cũng là cùng một câu hỏi, thế nhưng người cất lời lại dùng trong hai ngữ cảnh hoàn toàn khác nhau.\nPhakinee hỏi vì không chắc liệu một người phụ nữ như Panapsorn có chịu dừng chân bên mình hay không.\nTrong khi đó, Panapsorn hỏi vì chẳng biết một kẻ thấp hèn như cô có quyền yêu đối phương hay không.",
+      "chapters": 0,
+      "countLabel": "0/—",
+      "updated": "2026-09-21",
+      "_oldSlug": "pls-love"
     }
   ],
   "slides": [],
@@ -997,7 +1017,7 @@
     "updated": "2026-09-17"
   },
   "source": {
-    "synced": "2026-09-19T17:14:31.115Z",
+    "synced": "2026-09-21T16:16:03.760Z",
     "note": "sửa từ trang quản trị ssochuz"
   },
   "editorChoice": [
