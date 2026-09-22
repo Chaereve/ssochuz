@@ -49,3 +49,16 @@ export function computeOverview(registry, statsItems = {}) {
     recent: lib.slice().sort((a, b) => String(b.updated || '').localeCompare(String(a.updated || ''))).slice(0, 6),
   };
 }
+
+/* Bình luận nghi spam: có link, lặp ký tự, hoặc IN HOA quá nhiều */
+export function spamSuspects(comments) {
+  const list = (comments && comments.items) || [];
+  return list.filter((comment) => {
+    const text = String(comment.text || '');
+    const letters = text.replace(/[^A-Za-zÀ-ỹ]/g, '');
+    const upper = letters.replace(/[^A-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝĐ]/g, '');
+    return /(https?:\/\/|www\.)/i.test(text)
+      || /(.)\1{7,}/.test(text)
+      || (letters.length > 20 && upper.length / Math.max(1, letters.length) > 0.75);
+  });
+}

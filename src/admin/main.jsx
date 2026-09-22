@@ -77,14 +77,20 @@ function App() {
 
   async function loadOperationalCounts() {
     if (!store.getState().online) return;
-    const [reports, comments] = await Promise.allSettled([api.adminReports(), api.adminComments(800)]);
+    const [reports, comments, stats] = await Promise.allSettled([api.adminReports(), api.adminComments(800), api.adminStats()]);
     if (reports.status === 'fulfilled') {
       const value = reports.value || {};
-      store.setState({ reports: { count: Number(value.count != null ? value.count : (value.items || []).length) || 0, items: value.items || [], loaded: true } });
+      const items = value.items || [];
+      store.setState({ reports: { count: Number(value.count != null ? value.count : items.length) || 0, open: Number(value.open != null ? value.open : items.filter((x) => !x.done).length) || 0, items, loaded: true } });
     }
     if (comments.status === 'fulfilled') {
       const value = comments.value || {};
       store.setState({ comments: { count: Number(value.count != null ? value.count : (value.comments || []).length) || 0, items: value.comments || [], loaded: true } });
+    }
+    /* số liệu thật cho Overview (trước đây tiles lượt đọc/phiếu luôn = 0 vì
+       không ai nạp adminStats vào store) */
+    if (stats.status === 'fulfilled' && stats.value) {
+      store.setState({ stats: { items: stats.value.items || {}, days: stats.value.days || [], updatedAt: stats.value.updatedAt || '', loaded: true } });
     }
   }
 
@@ -383,8 +389,23 @@ function App() {
   async function refreshReports(query = '') {
     if (!state.online) throw new Error('Cần nối Worker để đọc báo lỗi.');
     const value = await api.adminReports(query);
-    store.setState({ reports: { count: Number(value.count != null ? value.count : (value.items || []).length) || 0, items: value.items || [], loaded: true, mail: !!value.mail } });
+    const items = value.items || [];
+    store.setState({ reports: { count: Number(value.count != null ? value.count : items.length) || 0, open: Number(value.open != null ? value.open : items.filter((x) => !x.done).length) || 0, items, loaded: true, mail: !!value.mail } });
     return value;
+  }
+
+  /* đánh dấu đã xử lý / mở lại 1 báo lỗi (PATCH /api/admin/reports) */
+  async function markReport(id, done) {
+    if (!state.online) throw new Error('Cần nối Worker để đổi trạng thái báo lỗi.');
+    ensureQuota(2, done ? 'đánh dấu đã xử lý' : 'mở lại báo lỗi');
+    trackQuotaWrite(2, done ? 'đánh dấu đã xử lý' : 'mở lại báo lỗi');
+    const res = await api.patchReport(id, done);
+    const cur = store.getState().reports || {};
+    const items = (cur.items || []).map((x) => (x.id === id ? Object.assign({}, x, { done, doneAt: res && res.doneAt }) : x));
+    const open = Number(res && res.open != null ? res.open : items.filter((x) => !x.done).length) || 0;
+    store.setState({ reports: Object.assign({}, cur, { items, open, loaded: true }) });
+    toast(done ? 'Đã đánh dấu xử lý xong.' : 'Đã mở lại báo lỗi.', 'ok');
+    return res;
   }
 
   async function loadAdminStats() {
@@ -518,6 +539,39 @@ function App() {
     return { ok: true, file, books: Object.keys(books).length, failedBooks: fail };
   }
 
+  /* Khôi phục từ file backup (đối trọng của "Tải backup JSON"): đọc file, kiểm
+     tra shape, hỏi xác nhận mạnh rồi ghi registry + từng book qua endpoint cũ. */
+  async function restoreBackup(file) {
+    if (!state.online) throw new Error('Khôi phục backup cần nối Worker bằng ADMIN_KEY.');
+    if (!file) throw new Error('Chưa chọn file backup.');
+    let payload = null;
+    try { payload = JSON.parse(await file.text()); }
+    catch (e) { throw new Error('File không phải JSON đọc được: ' + (e.message || e)); }
+    const reg = payload && payload.registry;
+    const books = payload && payload.books;
+    if (!reg || !Array.isArray(reg.lib) || typeof books !== 'object' || books == null) {
+      throw new Error('File backup sai dạng — thiếu registry.lib hoặc books.');
+    }
+    const slugs = Object.keys(books).filter((k) => books[k] && books[k].slug);
+    const ok = await confirmBox('Khôi phục registry (' + reg.lib.length + ' bộ) + ' + slugs.length + ' book đè lên dữ liệu KV hiện tại? Thao tác ghi hàng loạt, chỉ dùng khi đang khôi phục sau sự cố.', 'Khôi phục');
+    if (!ok) return null;
+    const typed = window.prompt('Gõ KHÔI PHỤC để xác nhận ghi đè KV:', '');
+    if (typed !== 'KHÔI PHỤC') { toast('Đã huỷ khôi phục.', 'err'); return null; }
+    const cost = 1 + slugs.length;
+    ensureQuota(cost, 'khôi phục backup');
+    trackQuotaWrite(cost, 'khôi phục backup');
+    await api.putRegistry(reg);
+    let done = 0, fail = 0;
+    for (const slug of slugs) {
+      try { await api.putBook(slug, books[slug]); done++; }
+      catch (e) { fail++; toast('Lỗi ghi bộ “' + slug + '”: ' + (e.message || e), 'err'); }
+    }
+    setBookCache({});
+    await loadRegistryFromCurrent(true);
+    toast('Khôi phục xong: registry + ' + done + '/' + slugs.length + ' book' + (fail ? ' (lỗi ' + fail + ')' : ''), fail ? 'err' : 'ok');
+    return { ok: !fail, registry: reg.lib.length, books: done, failed: fail };
+  }
+
   async function loadVoters(slug) {
     if (!state.online) throw new Error('Cần nối Worker để đọc phiếu bầu.');
     return api.adminVoters(slug);
@@ -634,11 +688,11 @@ function App() {
   else if (activeTab === 'edit') pane = <BookEditor registry={state.registry} slug={currentSlug} bookData={bookCache[currentSlug]} bookLoading={bookLoading} apiBase={state.apiBase} onLoadBook={loadBookForEdit} onSave={saveMeta} onSaveBook={saveBookChapters} onUploadImage={uploadImage} onLock={setBookLock} onUnlock={unlockBook} onDuplicate={duplicateBook} onBack={() => setActiveTab('list')} onDelete={deleteBook} />;
   else if (activeTab === 'doctor') pane = <DoctorPanel state={state} onKvAudit={loadKvAudit} onScanBooks={scanBooks} onRecount={runRecount} onReload={reload} />;
   else if (activeTab === 'cmts') pane = <CommentsPanel state={state} onLoad={refreshComments} onDelete={deleteComment} />;
-  else if (activeTab === 'reports') pane = <ReportsPanel state={state} onLoad={refreshReports} />;
+  else if (activeTab === 'reports') pane = <ReportsPanel state={state} onLoad={refreshReports} onMark={markReport} />;
   else if (activeTab === 'stats') pane = <StatsPanel state={state} onLoad={loadAdminStats} />;
   else if (activeTab === 'votes') pane = <VotesPanel state={state} onLoadVoters={loadVoters} onRemoveVotes={removeVotes} onResetVotes={resetVotes} />;
   else if (activeTab === 'log') pane = <LogPanel state={state} onLoad={loadAdminLog} />;
-  else if (activeTab === 'settings') pane = <SettingsPanel state={state} onReload={reload} onRecount={runRecount} onStatsRefresh={runStatsRefresh} onImportBlogger={importBloggerChapter} onSyncBlogger={syncFromBlogger} onDownloadBackup={downloadBackup} />;
+  else if (activeTab === 'settings') pane = <SettingsPanel state={state} onReload={reload} onRecount={runRecount} onStatsRefresh={runStatsRefresh} onImportBlogger={importBloggerChapter} onSyncBlogger={syncFromBlogger} onDownloadBackup={downloadBackup} onRestoreBackup={restoreBackup} />;
   else pane = <PlaceholderTab tab={activeTab} />;
 
   return (

@@ -1,6 +1,7 @@
 import { h } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { pct } from '../utils/format.js';
+import { spamSuspects } from '../utils/overview.js';
 
 function num(value) { return Number(value || 0).toLocaleString('vi-VN'); }
 function dateText(value) {
@@ -92,18 +93,26 @@ export function CommentsPanel({ state, onLoad, onDelete }) {
   const [error, setError] = useState('');
   const [q, setQ] = useState('');
   const [slug, setSlug] = useState('');
+  const [onlySpam, setOnlySpam] = useState(false);
   const data = state.comments || {};
+  const spamKeys = useMemo(() => {
+    const set = {};
+    spamSuspects(data).forEach((c) => { set[c.slug + ':' + c.id] = 1; });
+    return set;
+  }, [data]);
   const rows = useMemo(() => {
     const query = q.toLowerCase();
-    return (data.items || []).filter((c) => (!slug || c.slug === slug) && (!query || (String(c.text || '') + ' ' + String(c.name || '') + ' ' + String(c.slug || '')).toLowerCase().includes(query)));
-  }, [data.items, q, slug]);
+    return (data.items || []).filter((c) => (!slug || c.slug === slug)
+      && (!onlySpam || spamKeys[c.slug + ':' + c.id])
+      && (!query || (String(c.text || '') + ' ' + String(c.name || '') + ' ' + String(c.slug || '')).toLowerCase().includes(query)));
+  }, [data.items, q, slug, onlySpam, spamKeys]);
   const load = async () => { setBusy(true); setError(''); try { await onLoad(); } catch (e) { setError(e.message || String(e)); } finally { setBusy(false); } };
   useEffect(() => { if (state.online && !data.loaded && !busy) load(); }, [state.online]);
   return <div id="pane-cmts" class="v2pane"><section class="card2">
     <div class="row"><h3>Bình luận</h3><span class="grow"></span><LoaderButton busy={busy} onClick={load}>Đọc bình luận</LoaderButton></div>
     <NeedOnline state={state}><p class="hint">Đang có {num(data.count != null ? data.count : (data.items || []).length)} bình luận trong bộ nhớ admin v2.{data.fallback ? ' Worker cũ nên đang gom từng bộ.' : ''}</p></NeedOnline>
     {error ? <div class="msgbar show err">{error}</div> : null}
-    <div class="row v2filters"><input class="inp" placeholder="Tìm nội dung/người gửi/slug" value={q} onInput={(e) => setQ(e.currentTarget.value)} /><select class="inp" value={slug} onChange={(e) => setSlug(e.currentTarget.value)}><option value="">Mọi bộ</option>{((state.registry && state.registry.lib) || []).map((b) => <option key={b.slug} value={b.slug}>{b.title}</option>)}</select></div>
+    <div class="row v2filters"><input class="inp" placeholder="Tìm nội dung/người gửi/slug" value={q} onInput={(e) => setQ(e.currentTarget.value)} /><select class="inp" value={slug} onChange={(e) => setSlug(e.currentTarget.value)}><option value="">Mọi bộ</option>{((state.registry && state.registry.lib) || []).map((b) => <option key={b.slug} value={b.slug}>{b.title}</option>)}</select><button type="button" class={`btn ghost sm ${onlySpam ? 'v2tab-on' : ''}`} onClick={() => setOnlySpam(!onlySpam)}>Chỉ nghi spam ({spamSuspects(data).length})</button></div>
     <div class="v2listcards">{rows.length ? rows.slice(0, 400).map((c) => <article class="v2itemrow" key={c.slug + ':' + c.id}>
       <div><b>{c.name || 'Bạn đọc'}</b><span class="sm muted"> · {dateText(c.createdAt)} · <StoryLink registry={state.registry} slug={c.slug} /> {c.ch ? <span class="pill acc">chương {c.ch}</span> : null}</span><p>{c.text}</p></div>
       <button class="btn ghost sm danger" type="button" onClick={() => onDelete(c.slug, c.id)}>Xoá</button>
@@ -111,43 +120,96 @@ export function CommentsPanel({ state, onLoad, onDelete }) {
   </section></div>;
 }
 
-export function ReportsPanel({ state, onLoad }) {
+export function ReportsPanel({ state, onLoad, onMark }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [q, setQ] = useState('');
+  const [scope, setScope] = useState('all');
   const data = state.reports || {};
   const rows = useMemo(() => {
     const query = q.toLowerCase();
-    return (data.items || []).filter((r) => !query || (String(r.text || '') + ' ' + String(r.title || '') + ' ' + String(r.slug || '')).toLowerCase().includes(query));
-  }, [data.items, q]);
+    return (data.items || []).filter((r) => (scope === 'all' || (scope === 'open' ? !r.done : !!r.done))
+      && (!query || (String(r.text || '') + ' ' + String(r.title || '') + ' ' + String(r.slug || '')).toLowerCase().includes(query)));
+  }, [data.items, q, scope]);
+  const openCount = (data.items || []).filter((x) => !x.done).length;
+  const mark = async (r) => {
+    setError('');
+    try { await onMark(r.id, !r.done); } catch (e) { setError(e.message || String(e)); }
+  };
   const load = async () => { setBusy(true); setError(''); try { await onLoad(q); } catch (e) { setError(e.message || String(e)); } finally { setBusy(false); } };
   useEffect(() => { if (state.online && !data.loaded && !busy) load(); }, [state.online]);
   return <div id="pane-reports" class="v2pane"><section class="card2">
     <div class="row"><h3>Báo lỗi</h3><span class="grow"></span><LoaderButton busy={busy} onClick={load}>Đọc báo lỗi</LoaderButton></div>
-    <NeedOnline state={state}><p class="hint">Endpoint hiện chỉ có danh sách đọc; chưa có PATCH id/status nên admin v2 không tự thêm trạng thái xử lý.</p></NeedOnline>
+    <NeedOnline state={state}><p class="hint">Bấm “Xử lý xong” để ghi trạng thái vào KV (PATCH /api/admin/reports); Tổng quan đếm “Báo lỗi chưa xử lý” theo số chưa xử lý.</p></NeedOnline>
     {error ? <div class="msgbar show err">{error}</div> : null}
-    <div class="row v2filters"><input class="inp" placeholder="Tìm báo lỗi" value={q} onInput={(e) => setQ(e.currentTarget.value)} /><button class="btn ghost sm" type="button" onClick={load}>Tìm</button></div>
-    <div class="v2listcards">{rows.length ? rows.slice(0, 300).map((r) => <article class="v2itemrow" key={(r.id || '') + ':' + r.slug + ':' + String(r.at)}>
-      <div><b>{r.kind || 'Báo lỗi'}</b><span class="sm muted"> · {dateText(r.at)} · <StoryLink registry={state.registry} slug={r.slug} /> {r.ch ? <span class="pill acc">chương {r.ch}</span> : null}</span><p>{r.text}</p>{r.url ? <a class="btn ghost sm" href={r.url} target="_blank" rel="noreferrer">Mở vị trí ↗</a> : null}{r.image ? <a class="btn ghost sm" href={apiAsset(state, r.image)} target="_blank" rel="noreferrer">Ảnh đính kèm ↗</a> : null}</div>
+    <div class="row v2filters">
+      <input class="inp" placeholder="Tìm báo lỗi" value={q} onInput={(e) => setQ(e.currentTarget.value)} />
+      <button class="btn ghost sm" type="button" onClick={load}>Tìm</button>
+      <span class="v2reptabs">
+        <button type="button" class={scope === 'all' ? 'v2tab-on' : ''} onClick={() => setScope('all')}>Tất cả ({num(data.count)})</button>
+        <button type="button" class={scope === 'open' ? 'v2tab-on' : ''} onClick={() => setScope('open')}>Chưa xử lý ({num(openCount)})</button>
+        <button type="button" class={scope === 'done' ? 'v2tab-on' : ''} onClick={() => setScope('done')}>Đã xử lý</button>
+      </span>
+    </div>
+    <div class="v2listcards">{rows.length ? rows.slice(0, 300).map((r) => <article class={`v2itemrow ${r.done ? 'v2done' : ''}`} key={(r.id || '') + ':' + r.slug + ':' + String(r.at)}>
+      <div><b>{r.kind || 'Báo lỗi'}</b>{r.done ? <span class="pill v2donepill">đã xử lý</span> : null}<span class="sm muted"> · {dateText(r.at)} · <StoryLink registry={state.registry} slug={r.slug} /> {r.ch ? <span class="pill acc">chương {r.ch}</span> : null}</span><p>{r.text}</p>{r.url ? <a class="btn ghost sm" href={r.url} target="_blank" rel="noreferrer">Mở vị trí ↗</a> : null}{r.image ? <a class="btn ghost sm" href={apiAsset(state, r.image)} target="_blank" rel="noreferrer">Ảnh đính kèm ↗</a> : null}</div>
+      <button class={`btn ghost sm ${r.done ? '' : 'v2okbtn'}`} type="button" disabled={!r.id || !onMark} onClick={() => mark(r)}>{r.done ? 'Mở lại' : 'Xử lý xong'}</button>
     </article>) : <div class="empty sm">Chưa có báo lỗi nào khớp.</div>}</div>
   </section></div>;
+}
+
+/* Biểu đồ cột dùng chung (Overview + Stats) */
+export function BarsChart({ days, take = 30 }) {
+  const last = (days || []).slice(-take);
+  const maxV = Math.max(1, ...last.map((d) => Number(d.views) || 0));
+  if (!last.length) return <p class="hint">Chưa có chuỗi ngày nào.</p>;
+  return (
+    <div class="v2chart v2chart-lg" role="img" aria-label="Biểu đồ lượt đọc theo ngày">
+      {last.map((d) => (
+        <div class="v2chart-col" key={d.day} title={d.day + ' · ' + (Number(d.views) || 0) + ' đọc · ' + (Number(d.votes) || 0) + ' phiếu'}>
+          <span class="v2chart-bar" style={{ height: Math.round((Number(d.views) || 0) / maxV * 100) + '%' }}></span>
+          <span class="v2chart-dot" style={{ height: Math.max(4, Math.round((Number(d.votes) || 0) / maxV * 100)) + 'px' }}></span>
+          <i>{d.day.slice(5)}</i>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function StatsPanel({ state, onLoad }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [stats, setStats] = useState(null);
+  const [chapSlug, setChapSlug] = useState('');
   const load = async () => { setBusy(true); setError(''); try { setStats(await onLoad()); } catch (e) { setError(e.message || String(e)); } finally { setBusy(false); } };
   useEffect(() => { if (state.online && !stats && !busy) load(); }, [state.online]);
   const top = useMemo(() => Object.entries((stats && stats.items) || {}).map(([slug, it]) => Object.assign({ slug }, it)).sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 40), [stats]);
   const totalViews = top.reduce((a, it) => a + (Number(it.views) || 0), 0);
   const totalVotes = top.reduce((a, it) => a + (Number(it.votes) || 0), 0);
+  const lib = (state.registry && state.registry.lib) || [];
+  const pick = chapSlug || (top[0] && top[0].slug) || '';
+  const chapRows = useMemo(() => {
+    const it = ((stats && stats.items) || {})[pick];
+    if (!it || !it.chapVotes) return [];
+    return Object.entries(it.chapVotes)
+      .map(([ch, c]) => ({ ch: Number(ch) || 0, count: (c && (c.o != null ? c.o : c.votes)) || (typeof c === 'number' ? c : 0) }))
+      .filter((x) => x.count > 0)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+  }, [stats, pick]);
+  const titleOf = (slug) => { const b = lib.find((x) => x.slug === slug); return (b && b.title) || slug; };
   return <div id="pane-stats" class="v2pane"><section class="card2">
     <div class="row"><h3>Thống kê</h3><span class="grow"></span><LoaderButton busy={busy} onClick={load}>Đọc thống kê KV</LoaderButton></div>
     <NeedOnline state={state}><p class="hint">Thống kê chi tiết nằm trong KV; tab này không ghi dữ liệu.</p></NeedOnline>
     {error ? <div class="msgbar show err">{error}</div> : null}
     <div class="tiles v2tiles4"><div class="tile"><b>{num(top.length)}</b><span>bộ có số liệu</span></div><div class="tile"><b>{num(totalViews)}</b><span>lượt đọc trong top</span></div><div class="tile"><b>{num(totalVotes)}</b><span>phiếu trong top</span></div><div class="tile"><b>{num((stats && stats.days && stats.days.length) || 0)}</b><span>ngày có chuỗi</span></div></div>
+    <div class="row"><h3>Lượt đọc 30 ngày</h3></div>
+    <BarsChart days={(stats && stats.days) || []} />
     <div class="v2table-wrap"><table class="tbl v2book-table"><thead><tr><th>Bộ</th><th>Views</th><th>Votes</th><th>Voters</th><th>Hôm nay</th></tr></thead><tbody>{top.map((it) => <tr key={it.slug}><td><StoryLink registry={state.registry} slug={it.slug} /></td><td>{num(it.views)}</td><td>{num(it.votes)}</td><td>{num(it.voters)}</td><td>{num(it.viewsToday)} đọc · {num(it.votesToday)} phiếu</td></tr>)}</tbody></table>{!top.length ? <div class="empty sm">Chưa có dữ liệu thống kê trong phiên này.</div> : null}</div>
+    {top.length ? <div>
+      <div class="row"><h3>Phiếu theo chương</h3><span class="grow"></span><select class="sel" value={pick} onChange={(e) => setChapSlug(e.currentTarget.value)}>{top.map((it) => <option key={it.slug} value={it.slug}>{titleOf(it.slug)}</option>)}</select></div>
+      {chapRows.length ? <div class="v2table-wrap"><table class="tbl v2book-table"><thead><tr><th>Chương</th><th>Phiếu</th></tr></thead><tbody>{chapRows.map((x) => <tr key={x.ch}><td>Chương {num(x.ch)}</td><td>{num(x.count)}</td></tr>)}</tbody></table></div> : <p class="hint">Bộ này chưa có phiếu khóa theo chương nào.</p>}
+    </div> : null}
   </section></div>;
 }
 
@@ -191,7 +253,7 @@ export function LogPanel({ state, onLoad }) {
   </section></div>;
 }
 
-export function SettingsPanel({ state, onReload, onRecount, onStatsRefresh, onImportBlogger, onSyncBlogger, onDownloadBackup }) {
+export function SettingsPanel({ state, onReload, onRecount, onStatsRefresh, onImportBlogger, onSyncBlogger, onDownloadBackup, onRestoreBackup }) {
   const lib = (state.registry && state.registry.lib) || [];
   const [slug, setSlug] = useState((lib[0] && lib[0].slug) || '');
   const [url, setUrl] = useState('');
@@ -215,6 +277,11 @@ export function SettingsPanel({ state, onReload, onRecount, onStatsRefresh, onIm
         <b>Backup một file</b>
         <p class="hint">Tải registry + book JSON hiện có. Mặc định strip lock hash để file backup an toàn hơn khi dùng cho repo.</p>
         <button class="btn ghost sm" type="button" disabled={!!busy} onClick={() => run('backup', onDownloadBackup)}>Tải backup JSON</button>
+      </div>
+      <div class="v2mini">
+        <b>Khôi phục từ backup</b>
+        <p class="hint">Chọn file backup JSON (do nút “Tải backup JSON” tạo) để ghi đè registry + book lên KV. Hỏi xác nhận mạnh và tính quota từng lượt ghi.</p>
+        <input class="inp" type="file" accept=".json,application/json" onChange={(e) => { const f = e.currentTarget.files && e.currentTarget.files[0]; if (f && onRestoreBackup) onRestoreBackup(f).catch((er) => setResult('Lỗi: ' + (er.message || er))); e.currentTarget.value = ''; }} />
       </div>
       <div class="v2mini">
         <b>Nhập chương từ Blogger</b>

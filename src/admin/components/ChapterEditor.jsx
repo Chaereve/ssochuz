@@ -1,8 +1,13 @@
 import { h } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { createRichTextEditor, fileToChapterHtml, htmlStats } from '../utils/richTextEditor.js';
+import { createRichTextEditor, fileToChapterHtml, htmlStats, splitChaptersTxt } from '../utils/richTextEditor.js';
+import { readTime } from '../utils/format.js';
 
 function clone(value) { return JSON.parse(JSON.stringify(value || {})); }
+function quickWords(html) {
+  const text = String(html || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/\s+/g, ' ').trim();
+  return text ? text.split(/\s+/).length : 0;
+}
 function draftKey(slug, index) { return 'ssochuz_admin_v2_chdraft:' + slug + ':' + index; }
 function readDraft(slug, index) {
   try { return JSON.parse(localStorage.getItem(draftKey(slug, index)) || 'null'); } catch (e) { return null; }
@@ -12,6 +17,10 @@ function writeDraft(slug, index, data) {
 }
 function dropDraft(slug, index) {
   try { localStorage.removeItem(draftKey(slug, index)); } catch (e) {}
+}
+function toast(message, kind) {
+  if (window.CZ && window.CZ.toast) window.CZ.toast(message, kind);
+  else console[kind === 'err' ? 'error' : 'log'](message);
 }
 function apiRoot(apiBase) { return String(apiBase || (window.CZ && window.CZ.API) || '').replace(/\/+$/, ''); }
 function htmlForEditor(html, apiBase) {
@@ -72,6 +81,7 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
   const [draft, setDraft] = useState(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef(null);
+  const multiRef = useRef(null);
   const imageRef = useRef(null);
   const initRef = useRef({ title: '', html: '' }); // nội dung gốc của chương đang mở (chưa gõ)
 
@@ -174,6 +184,28 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
     };
     reader.readAsText(file);
   };
+  /* nhập 1 file .txt gồm NHIỀU chương: tách theo dòng "Chương X" rồi nối vào
+     cuối book và LƯU LUÔN (2 lượt ghi: book + registry) */
+  const importMultiTxt = async (file) => {
+    if (!file || !localBook) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const parts = splitChaptersTxt(reader.result || '');
+      if (!parts.length) { toast('Không tách được chương nào từ file này.', 'err'); return; }
+      const ok = window.confirm('Tách được ' + parts.length + ' chương từ “' + file.name + '”. Nối vào cuối bộ và lưu ngay?');
+      if (!ok) return;
+      const next = clone(localBook);
+      next.chapters = Array.isArray(next.chapters) ? next.chapters : [];
+      next.chapters = next.chapters.concat(parts);
+      try {
+        await onSaveBook(next);
+        setLocalBook(next);
+        setIndex(next.chapters.length - parts.length);
+        toast('Đã nhập ' + parts.length + ' chương từ file.', 'ok');
+      } catch (e) { /* onSaveBook đã toast lỗi */ }
+    };
+    reader.readAsText(file);
+  };
   const uploadImageFile = async (file) => {
     if (!file) return '';
     if (!onUploadImage) throw new Error('Chưa nối chức năng upload ảnh.');
@@ -205,7 +237,7 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
       {loading ? <div class="empty sm">Đang đọc chương…</div> : null}
       <div class="v2chapter-grid">
         <aside class="v2chapter-list">
-          {chapters.length ? chapters.map((chapter, i) => <button type="button" class={i === index ? 'on' : ''} onClick={() => setIndex(i)}><b>{i + 1}</b><span>{chapter.t || ('Chương ' + (i + 1))}</span></button>) : <div class="empty sm">Chưa có chương.</div>}
+          {chapters.length ? chapters.map((chapter, i) => <button type="button" class={i === index ? 'on' : ''} key={i} onClick={() => setIndex(i)}><b>{i + 1}</b><span>{chapter.t || ('Chương ' + (i + 1))}</span><em>{quickWords(chapter.html)} từ</em></button>) : <div class="empty sm">Chưa có chương.</div>}
         </aside>
         <div class="v2chapter-editor">
           <label class="fl">Tên chương</label>
@@ -213,11 +245,13 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
           <Toolbar editor={editor} />
           <div class="v2tiphost" ref={setHost}></div>
           <div class="row mt v2chap-actions">
-            <span class="sm muted">{stat.words} từ · {stat.chars} ký tự{draft ? ' · có nháp autosave' : ''}</span>
+            <span class="sm muted">{stat.words} từ · {stat.chars} ký tự · ~{readTime(stat.words)} phút đọc{draft ? ' · có nháp autosave' : ''}</span>
             <span class="grow"></span>
             <input ref={fileRef} class="hide" type="file" accept=".txt,.html,.htm,text/plain,text/html" onChange={(e) => importFile(e.currentTarget.files && e.currentTarget.files[0])} />
+            <input ref={multiRef} class="hide" type="file" accept=".txt,text/plain" onChange={(e) => { importMultiTxt(e.currentTarget.files && e.currentTarget.files[0]); e.currentTarget.value = ''; }} />
             <input ref={imageRef} class="hide" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => chooseImage(e.currentTarget.files && e.currentTarget.files[0])} />
             <button class="btn ghost sm" type="button" onClick={() => fileRef.current && fileRef.current.click()}>Import .txt/.html</button>
+            <button class="btn ghost sm" type="button" disabled={!localBook} title="1 file .txt nhiều chương — tách theo dòng “Chương X” rồi nối vào cuối bộ" onClick={() => multiRef.current && multiRef.current.click()}>Nhập nhiều chương</button>
             <button class="btn ghost sm" type="button" disabled={uploading} onClick={() => imageRef.current && imageRef.current.click()}>{uploading ? 'Đang nén ảnh…' : 'Upload ảnh'}</button>
             {draft ? <button class="btn ghost sm" type="button" onClick={restoreDraft}>Khôi phục nháp</button> : null}
             <button class="btn ghost sm" type="button" onClick={() => setPreview(!preview)}>{preview ? 'Ẩn preview' : 'Preview độc giả'}</button>

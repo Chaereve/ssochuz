@@ -664,6 +664,31 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     ck('báo lỗi/có ghi nhật ký', ((lg.body || {}).items || []).some((x) => /báo lỗi mới/.test(x.text)), (lg.body || {}).items && (lg.body.items[0] || {}).text, 'có dòng báo lỗi');
     /* nội dung quá ngắn thì từ chối */
     eq('báo lỗi/quá ngắn → 400', (await call('POST', '/api/report', { body: { slug: 'lunar-secret', text: 'x' } })).status, 400);
+
+    /* PATCH báo lỗi: đánh dấu đã xử lý / mở lại (tính năng admin v2 mới) */
+    const rep2 = await call('GET', '/api/admin/reports', { headers: ADMH });
+    const first = ((rep2.body || {}).items || []).find((x) => /cô áy/.test(x.text));
+    ck('báo lỗi/mỗi báo lỗi có id ổn định', !!first && !!first.id, first && first.id, 'có id');
+    ck('báo lỗi/trả số chưa xử lý (open)', typeof (rep2.body || {}).open === 'number', (rep2.body || {}).open, 'open');
+    const openBefore = (rep2.body || {}).open;
+    const p1 = await call('PATCH', '/api/admin/reports', { headers: ADMH, body: { id: first.id, done: true } });
+    eq('báo lỗi/PATCH đánh dấu xử lý → ok', (p1.body || {}).ok, true);
+    eq('báo lỗi/PATCH → open giảm 1', (p1.body || {}).open, openBefore - 1);
+    const rep3 = await call('GET', '/api/admin/reports', { headers: ADMH });
+    eq('báo lỗi/sau PATCH → done:true', (((rep3.body || {}).items || []).find((x) => x.id === first.id) || {}).done, true);
+    const p2 = await call('PATCH', '/api/admin/reports', { headers: ADMH, body: { id: first.id, done: false } });
+    eq('báo lỗi/PATCH mở lại → open tăng', (p2.body || {}).open, openBefore);
+    eq('báo lỗi/PATCH id lạ → 404', (await call('PATCH', '/api/admin/reports', { headers: ADMH, body: { id: 'khong-ton-tai', done: true } })).status, 404);
+    eq('báo lỗi/PATCH thiếu id → 400', (await call('PATCH', '/api/admin/reports', { headers: ADMH, body: {} })).status, 400);
+    eq('báo lỗi/PATCH không khoá → 401', (await call('PATCH', '/api/admin/reports', { body: { id: first.id, done: true } })).status, 401);
+
+    /* /api/admin/kv trả quota thật: writesToday + lastReset + quotaSupported */
+    const kv = await call('GET', '/api/admin/kv', { headers: ADMH });
+    ck('kv audit/trả writesToday', typeof (kv.body || {}).writesToday === 'number' && (kv.body || {}).writesToday > 0,
+      (kv.body || {}).writesToday, 'số nguyên dương (đã có ghi hôm nay)');
+    ck('kv audit/trả lastReset (đầu ngày)', /^\d{4}-\d{2}-\d{2}T00:00:00/.test(String((kv.body || {}).lastReset || '')),
+      (kv.body || {}).lastReset, 'đầu ngày ISO');
+    eq('kv audit/quotaSupported:true', (kv.body || {}).quotaSupported, true);
     /* có cấu hình Resend → gọi api.resend.com; ở đây chặn mạng nên phải KHÔNG ném lỗi ra ngoài */
     const e2 = Object.assign({}, env, { RESEND_API_KEY: 'k-test', MAIL_FROM: 'ssochuz <bao-loi@web.test>' });
     const r2 = await call('POST', '/api/report', { e: e2, body: { slug: 'lunar-secret', title: 'Lunar Secret', ch: 8, text: 'Chương 8 bị lặp cả đoạn cuối.', vid: 'may-bao-loi-2' } });

@@ -36,7 +36,10 @@ const chapCount = (reg.lib || []).reduce((sum, b) => sum + (Number(b.chapters) |
   click('button[data-tab="list"]');
   await wait(200);
   out.list = { rows: doc.querySelectorAll('.v2book-table tbody tr').length };
-  assert.strictEqual(out.list.rows, libCount);
+  /* danh sách có phân trang 24 bộ/trang → trang 1 nhiều nhất 24 dòng */
+  const PAGE = 24;
+  assert.ok(out.list.rows === Math.min(PAGE, libCount), 'số dòng trang 1 sai: ' + out.list.rows);
+  assert.ok(!!doc.querySelector('.v2pager'), 'thiếu phân trang khi bộ > 24');
 
   click(doc.querySelector('.v2book-table tbody tr .v2actions button'));
   await wait(1200);

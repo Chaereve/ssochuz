@@ -446,6 +446,11 @@
             '<span>' + ic('refresh', 'i-s') + ' ' + esc(CZ.timeAgo(n.updated)) + '</span>' +
             statChip() +
           '</div>' +
+          /* tags chất truyện (FICTBASE-style) — chỉ nhãn, không link, hiện ngay
+             dưới dòng metadata của hero */
+          (Array.isArray(n.tags) && n.tags.length
+            ? '<div class="stags">' + n.tags.map(function (t) { return '<span class="stag">' + esc(String(t).slice(0, 30)) + '</span>'; }).join('') + '</div>'
+            : '') +
           ratingTag() +
           '<div class="synwrap' + (syn ? ' clamp' : '') + (synopsisOpen ? ' open' : '') + '" id="synWrap">' +
             '<div class="synin" id="synIn">' +

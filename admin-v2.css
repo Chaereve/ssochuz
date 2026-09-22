@@ -137,3 +137,46 @@
   .v2book-table td:before{content:attr(data-lb);display:block;font-size:11px;text-transform:uppercase;color:var(--mut);letter-spacing:.04em;margin-bottom:2px}
   .v2actions{white-space:normal}
 }
+
+/* ===== Bổ sung đợt cải tạo (Novelist/FICTBASE-style) ===== */
+/* Biểu đồ cột lượt đọc */
+.v2chart{display:flex;align-items:flex-end;gap:6px;height:120px;padding:6px 2px 0}
+.v2chart-lg{height:160px}
+.v2chart-col{flex:1;min-width:14px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;height:100%;position:relative}
+.v2chart-bar{display:block;width:100%;max-width:26px;min-height:2px;border-radius:4px 4px 0 0;background:color-mix(in srgb,var(--acc) 55%,var(--surf3));transition:height .2s ease}
+.v2chart-dot{display:block;width:5px;height:4px;border-radius:50%;background:var(--ok)}
+.v2chart-col i{font-style:normal;font-size:9.5px;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+/* Bìa thu nhỏ trong bảng thư viện */
+.v2rowmain{display:flex;gap:10px;align-items:flex-start;min-width:0}
+.v2thumb{flex:none;width:34px;height:46px;border-radius:6px;overflow:hidden;background:var(--surf2);display:grid;place-items:center}
+.v2thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.v2thumb-empty{background:repeating-linear-gradient(45deg,var(--surf2),var(--surf2) 5px,var(--bg2) 5px,var(--bg2) 10px)}
+.v2rowtext{min-width:0;display:block}
+.v2rowtags{display:block;margin-top:3px}
+.v2rowtags i{display:inline-block;font-style:normal;font-size:10.5px;color:var(--dim);background:var(--surf2);border-radius:99px;padding:1px 7px;margin-right:4px}
+/* Phân trang */
+.v2pager{gap:12px;align-items:center}
+/* Tabs lọc báo lỗi */
+.v2reptabs{display:inline-flex;gap:4px;margin-left:8px}
+.v2reptabs button{border:1px solid var(--bd);border-radius:999px;background:var(--surf);color:var(--mut);font-size:12px;font-weight:600;padding:5px 11px;cursor:pointer}
+.v2reptabs button:hover{border-color:var(--bd2);color:var(--txt)}
+.v2reptabs button.v2tab-on,.btn.v2tab-on{background:var(--acc-soft);border-color:color-mix(in srgb,var(--acc) 40%,transparent);color:var(--acc)}
+/* Báo lỗi đã xử lý */
+.v2itemrow.v2done{opacity:.66}
+.v2itemrow.v2done b{opacity:.8}
+.v2donepill{background:color-mix(in srgb,var(--ok) 14%,var(--surf2));color:var(--ok);border:1px solid color-mix(in srgb,var(--ok) 30%,transparent);font-weight:650}
+.v2okbtn{color:var(--ok)}
+/* Ô nhập tags */
+.v2tags .inp{max-width:420px}
+.v2tags-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center}
+.v2tag{display:inline-flex;align-items:center;font-size:12px;font-weight:600;border:1px solid var(--bd);border-radius:999px;background:var(--surf);color:var(--mut);padding:4px 11px;cursor:pointer}
+.v2tag:hover{border-color:var(--bd2);color:var(--txt)}
+.v2tag.on{background:var(--acc-soft);border-color:color-mix(in srgb,var(--acc) 38%,transparent);color:var(--acc)}
+/* Đếm từ trong danh sách chương */
+.v2chapter-list em{grid-column:2;font-style:normal;font-size:10.5px;color:var(--dim);font-variant-numeric:tabular-nums}
+.v2chapter-list button{grid-template-rows:auto auto}
+@media(max-width:760px){
+  .v2chart{gap:3px}
+  .v2chart-col i{display:none}
+  .v2reptabs{margin-left:0}
+}

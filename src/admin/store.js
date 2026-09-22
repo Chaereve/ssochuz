@@ -8,7 +8,7 @@ export const initialState = {
   registry: null,
   loading: false,
   error: '',
-  stats: { items: {}, loaded: false },
+  stats: { items: {}, days: [], updatedAt: '', loaded: false },
   reports: { count: 0, items: [], loaded: false },
   comments: { count: 0, items: [], loaded: false },
   quota: { writesToday: 0, limit: 1000, warningThreshold: 800, criticalThreshold: 950, lastReset: '', source: 'client-estimate', supported: false },

@@ -100,7 +100,7 @@ export { PrivateBooks } from './private-books.js';
      VAPID_PRIVATE     (secret, bắt buộc nếu bật push) — khoá riêng VAPID base64url (`wrangler secret put VAPID_PRIVATE`)
    ============================================================================ */
 
-const VERSION = '1.10.1';
+const VERSION = '1.11.0';
 const JSONH = {
   'content-type': 'application/json; charset=utf-8',
   'x-content-type-options': 'nosniff',
@@ -291,6 +291,7 @@ const handler = {
       if (p === '/api/admin/log' && req.method === 'GET') return await adminLog(req, env, cors);
       if (p === '/api/admin/stats' && req.method === 'GET') return await adminStats(req, env, cors);
       if (p === '/api/admin/reports' && req.method === 'GET') return await adminReports(req, env, cors);
+      if (p === '/api/admin/reports' && req.method === 'PATCH') return await patchReport(req, env, cors);
       if (p === '/api/admin/voters' && req.method === 'GET') return await adminVoters(req, env, cors);
       if (p === '/api/admin/kv' && req.method === 'GET') return await kvAudit(req, env, cors);
       if (p === '/api/admin/vote-remove' && req.method === 'POST') {
@@ -790,7 +791,7 @@ function corsHeaders(req, env) {
   }
   const headers = {
     'access-control-allow-origin': ao,
-    'access-control-allow-methods': 'GET,PUT,POST,DELETE,OPTIONS',
+    'access-control-allow-methods': 'GET,PUT,PATCH,POST,DELETE,OPTIONS',
     'access-control-allow-headers': 'content-type,x-admin-key,x-import-mode,authorization',
     'access-control-max-age': '86400',
     vary: 'Origin',
@@ -1348,18 +1349,35 @@ async function kvAudit(req, env, cors) {
     else { g.unknownBytes++; unknown++; }
   };
   let cursor;
+  let writesToday = 0;
+  const today = dayStr();
   for (let guard = 0; guard < 60; guard++) {
     const l = await env.CZ_KV.list({ limit: 1000, cursor });
-    (l.keys || []).forEach((k) => add(k.name, k.metadata));
+    (l.keys || []).forEach((k) => {
+      add(k.name, k.metadata);
+      /* đếm lượt ghi HÔM NAY cho quota: key nào có mốc ghi (metadata.saved của
+         book/registry, metadata.at của ảnh) đúng hôm nay tính 1 lần ghi */
+      const stamp = (k.metadata && (k.metadata.saved || k.metadata.at)) || '';
+      if (String(stamp).slice(0, 10) === today) writesToday++;
+    });
     cursor = l.list_complete ? null : l.cursor;
     if (!cursor) break;
   }
+  /* các thao tác không có metadata (lock/vote/import/sync/xoá bình luận…) đều
+     ghi vào `log` — mỗi mục log hôm nay tính thêm 1 lượt ghi */
+  try {
+    const logs = (await env.CZ_KV.get('log', { type: 'json' })) || [];
+    logs.forEach((x) => { if (String((x && x.at) || '').slice(0, 10) === today) writesToday++; });
+  } catch (e) {}
   const order = ['book', 'img', 'cmt', 'voters', 'rateagg', 'stats_cache', 'registry', 'log', 'push', 'rl', 'seenview', 'other'];
   const out = [];
   const push = (p) => { const g = groups[p]; if (g) { out.push(Object.assign({ prefix: p }, g)); delete groups[p]; } };
   order.forEach(push);
   Object.keys(groups).forEach(push);
-  return json({ ok: true, keys: totalKeys, bytes: totalBytes, unknownBytes: unknown, groups: out }, { cors });
+  return json({
+    ok: true, keys: totalKeys, bytes: totalBytes, unknownBytes: unknown, groups: out,
+    writesToday: Math.min(writesToday, 5000), lastReset: today + 'T00:00:00.000Z', quotaSupported: true,
+  }, { cors });
 }
 
 async function putKV(req, env, key, cors, label) {
@@ -1706,6 +1724,7 @@ async function postReport(req, env, ctx, cors) {
     text,
     who: (user && user.email) || who || 'khách',
   };
+  it.id = reportIdOf(it);
   const list = (await env.CZ_KV.get('report', { type: 'json' })) || [];
   list.unshift(it);
   if (list.length > 300) list.length = 300;
@@ -1713,6 +1732,12 @@ async function postReport(req, env, ctx, cors) {
   await logAct(env, 'báo lỗi mới: ' + (it.title || it.slug || '?') + (it.ch ? ' · chương ' + it.ch : ''), req);
   const mail = await mailReport(env, it);
   return json({ ok: true, mailed: !!mail.sent, note: mail.reason || '', at: it.at }, { cors });
+}
+
+/* id ổn định của 1 báo lỗi (báo lỗi cũ trong KV không có id — tính tại chỗ theo
+   nội dung để PATCH đánh dấu đã xử lý mà không phải migrate dữ liệu cũ) */
+function reportIdOf(it) {
+  return hash([it.at, it.slug, it.ch, it.text].join('|'));
 }
 
 /* gửi email báo lỗi (Resend). Chưa cấu hình thì trả sent:false + lý do, KHÔNG ném lỗi. */
@@ -1782,20 +1807,42 @@ async function mailReport(env, it) {
   }
 }
 
-/* GET /api/admin/reports — danh sách báo lỗi gần nhất để trang quản trị xem lại */
+/* GET /api/admin/reports — danh sách báo lỗi gần nhất để trang quản trị xem lại
+   PATCH /api/admin/reports — đánh dấu đã xử lý / mở lại 1 báo lỗi {id, done} */
 async function adminReports(req, env, cors) {
   if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
   if (!env.CZ_KV) return noKV(cors);
-  const items = (await env.CZ_KV.get('report', { type: 'json' })) || [];
+  const items = ((await env.CZ_KV.get('report', { type: 'json' })) || []).map((x) => (
+    Object.assign({}, x, { id: x.id || reportIdOf(x), done: !!x.done })
+  ));
   const q = String(new URL(req.url).searchParams.get('q') || '').toLowerCase();
   const out = q ? items.filter((x) => (x.text + ' ' + x.title + ' ' + x.slug).toLowerCase().indexOf(q) >= 0) : items;
+  const open = items.filter((x) => !x.done).length;
   const hasMail = (!!env.RESEND_API_KEY && !!env.MAIL_FROM) || !!env.MAIL_TO || !!(env.ADMIN_EMAILS && String(env.ADMIN_EMAILS).trim());
   /* Bản ≤ 1.10.0 thiếu `{ cors, … }` ở dòng dưới → trình duyệt chặn response
      (200 OK mà không có Access-Control-Allow-Origin), tab Báo lỗi chỉ báo
      "Failed to fetch" trong khi mọi tab khác vẫn chạy. ĐỪNG BỎ: endpoint admin
      nào cũng phải trả `cors`, và `no-store` vì danh sách này có email người đọc. */
-  return json({ ok: true, items: out.slice(0, 300), count: out.length, mail: hasMail },
+  return json({ ok: true, items: out.slice(0, 300), count: out.length, open, mail: hasMail },
     { cors, headers: { 'cache-control': 'no-store' } });
+}
+
+async function patchReport(req, env, cors) {
+  if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
+  if (!env.CZ_KV) return noKV(cors);
+  const body = await req.json().catch(() => ({}));
+  const id = String(body.id || '');
+  const done = !!body.done;
+  if (!id) return json({ ok: false, error: 'thiếu id báo lỗi' }, { status: 400, cors });
+  const list = (await env.CZ_KV.get('report', { type: 'json' })) || [];
+  const it = list.find((x) => reportIdOf(x) === id);
+  if (!it) return json({ ok: false, error: 'không thấy báo lỗi cần đổi trạng thái' }, { status: 404, cors });
+  it.done = done;
+  it.doneAt = done ? new Date().toISOString() : '';
+  await env.CZ_KV.put('report', JSON.stringify(list));
+  await logAct(env, (done ? 'đã xử lý báo lỗi: ' : 'mở lại báo lỗi: ') + (it.title || it.slug || '?'), req);
+  const open = list.filter((x) => !x.done).length;
+  return json({ ok: true, id, done, open }, { cors, headers: { 'cache-control': 'no-store' } });
 }
 
 async function adminVoters(req, env, cors) {

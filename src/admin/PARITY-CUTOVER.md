@@ -3,6 +3,13 @@
 Ngày lập: 2026-09-22  
 Phạm vi: chỉ đổi frontend/static routing; không đổi Worker, KV schema, registry/book JSON schema.
 
+## Bổ sung 2026-09-23 (cải tạo theo Novelist/FICTBASE — xem BAO-CAO-CAI-TAO-ADMIN-V2.md)
+
+- Worker 1.11.0: `PATCH /api/admin/reports` (đánh dấu đã xử lý) + `/api/admin/kv` trả
+  `writesToday` thật. Admin v2: biểu đồ lượt đọc, báo lỗi có trạng thái, thư viện có
+  bìa + phân trang + lọc, tags chip (hiện cả ở trang truyện), nhập .txt nhiều chương,
+  khôi phục backup. Suite 51/51 bài đạt.
+
 ## Bổ sung 2026-09-22 (cuộc tinh chỉnh UI sau cutover)
 
 Cutover route đã chạy đúng (`/admin` → admin v2, `/admin-legacy` giữ admin cũ). Đợt này sửa các

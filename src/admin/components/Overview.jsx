@@ -1,21 +1,10 @@
 import { h, Fragment } from 'preact';
-import { computeOverview } from '../utils/overview.js';
+import { computeOverview, spamSuspects } from '../utils/overview.js';
+import { BarsChart } from './OperationalPanels.jsx';
 import { countText, dateVN, num } from '../utils/format.js';
 
 function Tile({ value, label, hint }) {
   return <div class="tile"><b>{num(value)}</b><span>{label}</span>{hint ? <small>{hint}</small> : null}</div>;
-}
-
-function spamSuspects(comments) {
-  const list = (comments && comments.items) || [];
-  return list.filter((comment) => {
-    const text = String(comment.text || '');
-    const letters = text.replace(/[^A-Za-zÀ-ỹ]/g, '');
-    const upper = letters.replace(/[^A-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝĐ]/g, '');
-    return /(https?:\/\/|www\.)/i.test(text)
-      || /(.)\1{7,}/.test(text)
-      || (letters.length > 20 && upper.length / Math.max(1, letters.length) > 0.75);
-  }).length;
 }
 
 function SystemRow({ kind = 'good', icon = 'check', title, children }) {
@@ -31,10 +20,11 @@ export function Overview({ state, onReload, onTodo }) {
   const supabaseInCode = !!(window.CZ_SUPABASE_URL && window.CZ_SUPABASE_ANON_KEY);
   const supabaseInKv = !!(authCfg.supabaseUrl && authCfg.supabaseAnonKey);
   const supabaseOn = supabaseInCode || supabaseInKv;
-  const reportCount = (state.reports && state.reports.count) || 0;
-  const spamCount = spamSuspects(state.comments);
+  const reportCount = (state.reports && (state.reports.open != null ? state.reports.open : state.reports.count)) || 0;
+  const spamCount = spamSuspects(state.comments).length;
   const lockedCount = ov.lib.filter((book) => book.lock).length;
   const quota = state.quota || {};
+  const statsDays = (state.stats && state.stats.days) || [];
 
   return (
     <div id="pane-overview" class="v2overview">
@@ -88,6 +78,11 @@ export function Overview({ state, onReload, onTodo }) {
             {quota.supported ? 'Worker trả writesToday/lastReset.' : 'Endpoint /api/admin/kv hiện chưa trả writesToday; quota v2 đang ở chế độ ước tính phía client.'}
           </SystemRow>
         </div>
+      </section>
+
+      <section class="card2">
+        <div class="row"><h3>Lượt đọc 14 ngày</h3><span class="grow"></span><span class="sm muted">{statsDays.length ? 'cập nhật ' + (state.stats.updatedAt || '').slice(0, 16).replace('T', ' ') : 'chưa có số liệu'}</span></div>
+        {statsDays.length ? <BarsChart days={statsDays} take={14} /> : <p class="hint">Nối Worker để xem biểu đồ lượt đọc/phiếu theo ngày từ số liệu KV.</p>}
       </section>
 
       <section class="card2">

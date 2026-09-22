@@ -17,3 +17,9 @@ export function pct(value, total) {
   const t = Math.max(1, Number(total) || 1);
   return Math.max(0, Math.min(100, Math.round((Number(value) || 0) / t * 100)));
 }
+
+/* Thời gian đọc ước tính theo số từ (đọc tiếng Việt ~220 từ/phút) */
+export function readTime(words) {
+  const m = Math.max(1, Math.round((Number(words) || 0) / 220));
+  return m;
+}

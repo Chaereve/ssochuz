@@ -1,9 +1,10 @@
 import { h } from 'preact';
 import { useMemo, useRef, useState } from 'preact/hooks';
-import { slugify } from '../utils/books.js';
+import { slugify, allTags } from '../utils/books.js';
+import { TagsField } from './TagsField.jsx';
 
 export function NewBook({ registry, onCreate, onUploadImage }) {
-  const [form, setForm] = useState({ title: '', slug: '', author: '', couple: '', year: '', status: 'Đang cập nhật', is18: '0', thumb: '', synopsis: '', chapter: '' });
+  const [form, setForm] = useState({ title: '', slug: '', author: '', couple: '', year: '', status: 'Đang cập nhật', is18: '0', thumb: '', synopsis: '', chapter: '', tags: '' });
   const [coverBusy, setCoverBusy] = useState(false);
   const coverRef = useRef(null);
   const update = (key, value) => setForm((prev) => Object.assign({}, prev, { [key]: value }));
@@ -23,7 +24,7 @@ export function NewBook({ registry, onCreate, onUploadImage }) {
     event.preventDefault();
     const ok = onCreate ? await onCreate(Object.assign({}, form, { slug })) : false;
     if (ok) {
-      setForm({ title: '', slug: '', author: '', couple: '', year: '', status: 'Đang cập nhật', is18: '0', thumb: '', synopsis: '', chapter: '' });
+      setForm({ title: '', slug: '', author: '', couple: '', year: '', status: 'Đang cập nhật', is18: '0', thumb: '', synopsis: '', chapter: '', tags: '' });
       if (coverRef.current) coverRef.current.value = '';
     }
   };
@@ -47,6 +48,8 @@ export function NewBook({ registry, onCreate, onUploadImage }) {
             <div class={`coverbox ${form.thumb ? '' : 'empty'}`}>{form.thumb ? <img src={form.thumb} alt="" /> : <span>Chưa có ảnh bìa</span>}</div>
             <div><input ref={coverRef} class="hide" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => uploadCover(e.currentTarget.files && e.currentTarget.files[0])} /><button class="btn ghost sm" type="button" disabled={coverBusy} onClick={() => coverRef.current && coverRef.current.click()}>{coverBusy ? 'Đang nén bìa…' : 'Upload bìa'}</button><p class="hint">Dùng cùng endpoint <code>/api/img</code>; không tạo backend mới.</p></div>
           </div>
+          <label class="fl">Tags (thể loại/chất truyện)</label>
+          <TagsField value={form.tags} suggestions={allTags(registry)} onChange={(tags) => update('tags', tags)} />
           <label class="fl">Mô tả</label><textarea class="inp" value={form.synopsis} onInput={(e) => update('synopsis', e.currentTarget.value)} style="min-height:88px" />
           <label class="fl">Chương 1 (không bắt buộc)</label><textarea class="inp" value={form.chapter} onInput={(e) => update('chapter', e.currentTarget.value)} />
           <div class="savebar"><button class="btn pri" type="submit" disabled={!form.title.trim() || !slug || exists}>Tạo bộ</button></div>
