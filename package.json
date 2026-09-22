@@ -4,12 +4,22 @@
   "version": "1.9.4",
   "description": "ssochuz library — web tĩnh. Mã nguồn đọc được nằm trong src/, bản phát hành (đã rút gọn, không chứa secret/email quản trị) nằm ở thư mục gốc.",
   "scripts": {
-    "build": "node tools/build_site.mjs",
+    "build": "node tools/build_site.mjs && npm run build:admin-v2",
     "og": "node tools/build_og.mjs",
-    "test": "node tests/run.js"
+    "test": "node tests/run.js",
+    "build:admin-v2": "node tools/build_admin_v2.mjs"
   },
   "devDependencies": {
     "@tabler/icons": "^3.46.0",
     "esbuild": "0.25.0"
+  },
+  "dependencies": {
+    "@tiptap/core": "^2.27.3",
+    "@tiptap/extension-image": "^2.27.3",
+    "@tiptap/extension-link": "^2.27.3",
+    "@tiptap/extension-text-align": "^2.27.3",
+    "@tiptap/extension-underline": "^2.27.3",
+    "@tiptap/starter-kit": "^2.27.3",
+    "preact": "^10.24.3"
   }
 }

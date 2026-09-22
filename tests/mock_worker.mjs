@@ -1,7 +1,8 @@
 /* Worker giả lập chạy trên máy — dùng ĐÚNG code worker/cms.js thật + KV trong RAM,
    kèm máy chủ tĩnh để thử cả trang quản trị lẫn web ngoài.
    Chạy:  node tests/mock_worker.mjs [port]
-   Mở:    http://127.0.0.1:<port>/admin.html   (khoá giả lập: MOCK)
+   Mở:    http://127.0.0.1:<port>/admin   (admin v2, khoá giả lập: MOCK)
+   Legacy: http://127.0.0.1:<port>/admin-legacy
    Dữ liệu ghi vào RAM, tắt là hết — không ảnh hưởng Cloudflare thật.
    Đổi khoá:  ADMIN_KEY=xxx node tests/mock_worker.mjs
    Vì chạy chính worker/cms.js nên mọi endpoint (kể cả /api/view, /api/vote,
@@ -24,7 +25,8 @@ function serveStatic(req, res) {
   /* Cloudflare Pages proxy các URL sạch về đúng file HTML (giống _redirects) */
   if (/^\/truyen(\/[^/]*)?\/?$/.test(rel)) rel = '/truyen.html';
   else if (/^\/reader(\/[^/]*)?\/?$/.test(rel)) rel = '/truyen.html';
-  else if (rel === '/admin' || rel === '/admin/') rel = '/admin.html';
+  else if (rel === '/admin' || rel === '/admin/' || rel === '/admin-v2' || rel === '/admin-v2/') rel = '/admin-v2.html';
+  else if (rel === '/admin-legacy' || rel === '/admin-legacy/') rel = '/admin.html';
   else if (rel === '/guide' || rel === '/guide/') rel = '/guide.html';
   else if (rel.endsWith('/')) rel += 'index.html';
   const file = path.join(ROOT, path.normalize(rel).replace(/^(\.\.[\\/])+/, ''));

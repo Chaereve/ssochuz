@@ -321,7 +321,7 @@ Tab **Tổng quan** có ô *Tình trạng hệ thống* báo 3 thứ hay hỏng 
 node tests/mock_worker.mjs 8787     # worker THẬT + KV trong RAM, tự nạp 62 bộ từ data/
 ```
 
-Mở `http://127.0.0.1:8787/admin.html` → URL Worker `http://127.0.0.1:8787` → khoá `MOCK`.
+Mở `http://127.0.0.1:8787/admin` → URL Worker `http://127.0.0.1:8787` → khoá `MOCK` (admin cũ ở `/admin-legacy`).
 Muốn thử đăng nhập thật thì chạy kèm biến:
 
 ```bash
