@@ -99,6 +99,8 @@ async function boot(root) {
       ['/couple/', 200, 'trang couple (thư mục có index.html)'],
       ['/tac-gia/', 200, 'trang tác giả'],
       ['/admin', 200, 'trang quản trị (URL sạch)'],
+      ['/admin-v2', 200, 'trang quản trị v2 (URL sạch)'],
+      ['/admin-v2/', 200, 'trang quản trị v2 với dấu /'],
       ['/data/registry.json', 200, 'dữ liệu tĩnh'],
       ['/sw.js', 200, 'service worker'],
       ['/khong-ton-tai', 404, 'đường dẫn không có thật'],
@@ -120,6 +122,8 @@ async function boot(root) {
     ok(/Third Person/.test(story.body), '/truyen/third-person/ phải là trang của bộ Third Person');
     const lib = await get(port, '/truyen');
     ok(/<html/i.test(lib.body) && lib.body.length > 3000, '/truyen phải trả về trang thật (không phải trang lỗi)');
+    const adminV2 = await get(port, '/admin-v2');
+    ok(/adminV2Root/.test(adminV2.body) && /admin-v2\.js/.test(adminV2.body), '/admin-v2 phải trả về admin-v2.html');
   } finally {
     try { proc.kill('SIGKILL'); } catch (e) {}
   }

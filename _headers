@@ -19,6 +19,20 @@
 /admin.js
   Cache-Control: no-cache
 
+/admin-v2.js
+  Cache-Control: no-cache
+
+/admin-v2.css
+  Cache-Control: no-cache
+
+/admin-v2
+  Cache-Control: no-store, max-age=0
+  X-Robots-Tag: noindex
+
+/admin-v2/
+  Cache-Control: no-store, max-age=0
+  X-Robots-Tag: noindex
+
 /cz-auth.js
   Cache-Control: no-cache
 

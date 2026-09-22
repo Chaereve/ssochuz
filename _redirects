@@ -64,6 +64,8 @@
 /profile/     /profile     200
 /guide.html    /guide    200
 /guide/        /guide    200
+/admin-v2.html  /admin-v2       200
+/admin-v2/     /admin-v2       200
 # --- d) luật TĨNH từng truyện (sinh bởi tools/build_og.mjs, 2 luật mỗi bộ) ---
 # Nhiệm vụ: giữ URL của từng bộ trúng luật này (đứng TRƯỚC luật chung /truyen/*
 # ở cuối tệp) để trang bộ truyện được phục vụ từ tệp tĩnh truyen/<slug>/index.html
