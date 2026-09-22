@@ -95,6 +95,7 @@ export class AdminApi {
   registry() { return this.request('/api/registry', { auth: false }); }
   kvStats() { return this.request('/api/admin/kv'); }
   adminReports(query = '') { return this.request('/api/admin/reports' + (query ? '?q=' + encodeURIComponent(query) : '')); }
+  patchReport(id, done) { return this.request('/api/admin/reports', { method: 'PATCH', body: { id, done: !!done } }); }
   adminComments(limit = 800, slug = '') { return this.request('/api/admin/comments?limit=' + encodeURIComponent(limit) + (slug ? '&slug=' + encodeURIComponent(slug) : '')); }
   adminStats() { return this.request('/api/admin/stats'); }
   adminLog() { return this.request('/api/admin/log'); }

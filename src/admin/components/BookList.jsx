@@ -1,8 +1,9 @@
 import { h } from 'preact';
-import { useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useState } from 'preact/hooks';
 import { countText, dateVN, num, statusCls } from '../utils/format.js';
 
 const STATUSES = ['', 'Hoàn thành', 'Đang cập nhật', 'Sắp ra mắt'];
+const PAGE_SIZE = 24;
 
 function csvCell(value) {
   return '"' + String(value == null ? '' : value).replace(/"/g, '""') + '"';
@@ -21,27 +22,34 @@ export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulk
   const [status, setStatus] = useState('');
   const [sort, setSort] = useState('new');
   const [bulk, setBulk] = useState('');
+  const [flag, setFlag] = useState('all');
+  const [page, setPage] = useState(1);
   const lib = registry && registry.lib ? registry.lib : [];
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     return lib.filter((book) => {
       if (status && book.status !== status) return false;
+      if (flag === '18' && !book.is18) return false;
+      if (flag === 'lock' && !book.lock) return false;
       if (!q) return true;
-      return [book.title, book.author, book.couple, book.slug].some((value) => String(value || '').toLowerCase().includes(q));
+      return [book.title, book.author, book.couple, book.slug].concat(Array.isArray(book.tags) ? book.tags : []).some((value) => String(value || '').toLowerCase().includes(q));
     }).sort((a, b) => {
       if (sort === 'chap') return (Number(b.chapters) || 0) - (Number(a.chapters) || 0);
       if (sort === 'az') return String(a.title || '').localeCompare(String(b.title || ''), 'vi');
       return String(b.updated || '').localeCompare(String(a.updated || ''));
     });
-  }, [lib, query, status, sort]);
+  }, [lib, query, status, sort, flag]);
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  useEffect(() => { if (page > pages) setPage(1); }, [pages]);
+  const pageRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const selectedMap = selected || {};
   const selectedCount = Object.keys(selectedMap).length;
-  const allChecked = rows.length > 0 && rows.every((book) => selectedMap[book.slug]);
+  const allChecked = pageRows.length > 0 && pageRows.every((book) => selectedMap[book.slug]);
   const setOne = (slug, checked) => onSelected(Object.assign({}, selectedMap, checked ? { [slug]: 1 } : Object.fromEntries(Object.entries(selectedMap).filter(([key]) => key !== slug))));
   const setAll = (checked) => {
     const next = Object.assign({}, selectedMap);
-    rows.forEach((book) => { if (checked) next[book.slug] = 1; else delete next[book.slug]; });
+    pageRows.forEach((book) => { if (checked) next[book.slug] = 1; else delete next[book.slug]; });
     onSelected(next);
   };
   const exportJson = () => download('ssochuz-library-filtered.json', JSON.stringify({ lib: rows }, null, 2), 'application/json;charset=utf-8');
@@ -61,9 +69,14 @@ export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulk
         <div class="row v2filters">
           <div><b>{num(rows.length)}</b> <span class="sm muted">/ {num(lib.length)} bộ</span></div>
           <span class="grow"></span>
-          <input class="inp" value={query} onInput={(e) => setQuery(e.currentTarget.value)} placeholder="Tìm theo tên, tác giả, slug…" />
-          <select class="sel" value={status} onChange={(e) => setStatus(e.currentTarget.value)}>
-            {STATUSES.map((item) => <option value={item}>{item || 'Tất cả tình trạng'}</option>)}
+          <input class="inp" value={query} onInput={(e) => { setQuery(e.currentTarget.value); setPage(1); }} placeholder="Tìm theo tên, tác giả, tag, slug…" />
+          <select class="sel" value={status} onChange={(e) => { setStatus(e.currentTarget.value); setPage(1); }}>
+            {STATUSES.map((item) => <option key={item || 'all'} value={item}>{item || 'Tất cả tình trạng'}</option>)}
+          </select>
+          <select class="sel" value={flag} onChange={(e) => { setFlag(e.currentTarget.value); setPage(1); }}>
+            <option value="all">Mọi nhãn</option>
+            <option value="18">Chỉ 18+</option>
+            <option value="lock">Đang khóa mật mã</option>
           </select>
           <select class="sel" value={sort} onChange={(e) => setSort(e.currentTarget.value)}>
             <option value="new">Mới cập nhật</option><option value="chap">Nhiều chương</option><option value="az">Tên A→Z</option>
@@ -89,20 +102,33 @@ export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulk
           <table class="tbl v2book-table">
             <thead><tr><th></th><th>Bộ truyện</th><th>Tác giả / couple</th><th>Số chương</th><th>Tình trạng</th><th>Cập nhật</th><th>Thao tác</th></tr></thead>
             <tbody>
-              {rows.map((book) => (
-                <tr>
+              {pageRows.map((book) => (
+                <tr key={book.slug}>
                   <td data-lb="Chọn"><input type="checkbox" checked={!!selectedMap[book.slug]} onChange={(e) => setOne(book.slug, e.currentTarget.checked)} /></td>
-                  <td data-lb="Bộ truyện"><b>{book.title}</b>{book.lock ? <span class="pill acc v2lock" title="Truyện đang có mật mã">🔒 khóa</span> : null}<span class="sm muted">{book.slug}</span></td>
+                  <td data-lb="Bộ truyện">
+                    <span class="v2rowmain">
+                      <span class={`v2thumb ${book.thumb ? '' : 'v2thumb-empty'}`}>{book.thumb ? <img src={book.thumb} alt="" loading="lazy" decoding="async" /> : null}</span>
+                      <span class="v2rowtext"><b>{book.title}</b>{book.lock ? <span class="pill acc v2lock" title="Truyện đang có mật mã">🔒 khóa</span> : null}<span class="sm muted">{book.slug}</span>{Array.isArray(book.tags) && book.tags.length ? <span class="v2rowtags">{book.tags.slice(0, 3).map((t) => <i key={t}>{t}</i>)}{book.tags.length > 3 ? <i>+{book.tags.length - 3}</i> : null}</span> : null}</span>
+                    </span>
+                  </td>
                   <td data-lb="Tác giả / couple"><span>{book.author || '—'}</span><span class="sm muted">{book.couple || ''}</span></td>
                   <td data-lb="Số chương">{countText(book)}</td>
-                  <td data-lb="Tình trạng"><span class={`st ${statusCls(book.status)}`}>{book.status || '—'}</span>{book.is18 ? <span class="pill warn">18+</span> : null}</td>
+                  <td data-lb="Tình trạng"><span class={`pill ${statusCls(book.status)}`}><span class="d"></span>{book.status || '—'}</span>{book.is18 ? <span class="pill warn">18+</span> : null}</td>
                   <td data-lb="Cập nhật">{dateVN(book.updated)}</td>
                   <td data-lb="Thao tác" class="v2actions"><button class="btn ghost sm" type="button" onClick={() => onEdit(book.slug)}>Sửa</button><button class="btn ghost sm danger" type="button" onClick={() => onDelete(book.slug)}>Xoá</button></td>
                 </tr>
               ))}
+              {!pageRows.length ? <tr><td colSpan="7"><div class="empty sm">Không có bộ nào khớp bộ lọc.</div></td></tr> : null}
             </tbody>
           </table>
         </div>
+        {pages > 1 ? (
+          <div class="row mt v2pager">
+            <button class="btn ghost sm" type="button" disabled={page <= 1} onClick={() => setPage(page - 1)}>← Trang trước</button>
+            <span class="sm muted">Trang {num(page)}/{num(pages)}</span>
+            <button class="btn ghost sm" type="button" disabled={page >= pages} onClick={() => setPage(page + 1)}>Trang sau →</button>
+          </div>
+        ) : null}
       </section>
     </div>
   );

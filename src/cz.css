@@ -3465,3 +3465,8 @@ body.rd-focus .rdcmts { display: none; }
    không còn lời mời đăng nhập" đỏ ngay, và đó chính là điều ta muốn.
    ========================================================================== */
 [hidden] { display: none !important; }
+
+/* tags chất truyện ở hero trang truyện (admin v2 ghi trường tags vào registry) */
+.stags{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px}
+.stag{display:inline-flex;align-items:center;font-size:12px;font-weight:600;color:var(--mut);background:var(--surf2);border:1px solid var(--bd);border-radius:999px;padding:3px 10px;line-height:1.4}
+[data-theme=dark] .stag{color:var(--mut)}

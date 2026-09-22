@@ -90,6 +90,7 @@ export function metaFromForm(book, values) {
   out.slide = out.thumb;
   out.synFull = values.synopsis || '';
   out.syn = teaser(values.synopsis || out.synFull || out.syn || '', 220);
+  out.tags = Array.isArray(values.tags) ? parseTags(values.tags.join(',')) : parseTags(values.tags);
   return out;
 }
 
@@ -104,9 +105,37 @@ export function newBookRecord(values) {
     status: values.status || (chapters.length ? 'Đang cập nhật' : 'Sắp ra mắt'),
     countLabel: chapters.length ? '1/1' : '0/—',
     is18: values.is18, updated: today(), thumb: String(values.thumb || '').trim(),
-    synopsis: String(values.synopsis || '').trim(),
+    synopsis: String(values.synopsis || '').trim(), tags: values.tags,
   });
   meta.chapters = chapters.length;
   const book = { title: meta.title, slug, author: meta.author, couple: meta.couple, chapters };
   return { meta, book };
+}
+
+/* Chuỗi tags ô nhập → mảng gọn: tách dấu phẩy, bỏ trống/lặp (không phân biệt
+   hoa thường), giới hạn 12 thẻ · mỗi thẻ ≤ 30 ký tự (kiểu FICTBASE) */
+export function parseTags(value) {
+  const seen = {};
+  return String(value || '').split(/[,;]/).map((t) => t.trim().slice(0, 30)).filter((t) => {
+    if (!t) return false;
+    const k = t.toLowerCase();
+    if (seen[k]) return false;
+    seen[k] = 1;
+    return true;
+  }).slice(0, 12);
+}
+
+/* Mọi tag đã dùng trong thư viện — để gợi ý chip bấm một cái là thêm */
+export function allTags(registry) {
+  const seen = {};
+  const out = [];
+  ((registry && registry.lib) || []).forEach((book) => {
+    (book && Array.isArray(book.tags) ? book.tags : []).forEach((t) => {
+      const k = String(t || '').toLowerCase();
+      if (!k || seen[k]) return;
+      seen[k] = 1;
+      out.push(String(t));
+    });
+  });
+  return out;
 }

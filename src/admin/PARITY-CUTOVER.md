@@ -3,6 +3,30 @@
 Ngày lập: 2026-09-22  
 Phạm vi: chỉ đổi frontend/static routing; không đổi Worker, KV schema, registry/book JSON schema.
 
+## Bổ sung 2026-09-23 (cải tạo theo Novelist/FICTBASE — xem BAO-CAO-CAI-TAO-ADMIN-V2.md)
+
+- Worker 1.11.0: `PATCH /api/admin/reports` (đánh dấu đã xử lý) + `/api/admin/kv` trả
+  `writesToday` thật. Admin v2: biểu đồ lượt đọc, báo lỗi có trạng thái, thư viện có
+  bìa + phân trang + lọc, tags chip (hiện cả ở trang truyện), nhập .txt nhiều chương,
+  khôi phục backup. Suite 51/51 bài đạt.
+
+## Bổ sung 2026-09-22 (cuộc tinh chỉnh UI sau cutover)
+
+Cutover route đã chạy đúng (`/admin` → admin v2, `/admin-legacy` giữ admin cũ). Đợt này sửa các
+lỗi giao diện/chức năng còn sót của v2, thêm chi tiết xem `BAO-CAO-ADMIN-V2-TINH-CHINH.md`:
+
+- Sidebar v2 giờ dùng đúng hệ class `.snav`/`.admin-nav-label`/`.admin-nav-icon` của `cz.css`
+  (trước đây class `.aside`/`.admin-nav` không có style nào → sidebar vỡ hoàn toàn).
+- Pill tình trạng truyện đổi `st done/updating` → `pill run/done/soon` khớp `cz.css`.
+- Bổ sung style thiếu: `.pill.warn`, `.msgbar.info`, màu chấm `.chip.ok/.warn/.bad`, 
+  checkbox bảng, thead dính khi cuộn bảng thư viện, hộp bìa v2 không bị `.coverbox` cũ đè.
+- Soạn chương: hết flash nội dung chương cũ khi đổi chương; autosave nháp chỉ ghi khi
+  thật sự sửa chữ; lưu/xoá/dời chương không còn unhandled rejection.
+- Thêm bộ: form tự xoá sau khi tạo thành công; nút "Đọc dữ liệu chương" hoạt động lại khi
+  lần đọc đầu thất bại; nút đổi nền sáng/tối ở thanh đầu trang.
+- Test: `t_admin_v2.js` tính số liệu từ `data/registry.json` thay vì hardcode;
+  `t_adult.js` trồng slide khi registry không còn `slides` (data đã đổi theo thời gian).
+
 ## Quyết định cutover
 
 - `/admin` và `/admin/` mở **admin v2**.

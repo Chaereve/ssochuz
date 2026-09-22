@@ -129,6 +129,12 @@ function api(p, opt, statsItems) {
       if (i === 0) s.reason = 'Lựa chọn của ban biên tập';
       return s;
     });
+    /* data hiện tại có thể để slides rỗng (hero rơi nhánh fallback) — trồng một
+       slide có reason để bài kiểm tra đúng ý đồ: hero phải đọc nhãn reason */
+    if (!r.slides.length) {
+      const first = (r.lib || [])[0] || {};
+      if (first.slug) r.slides = [{ slug: first.slug, reason: 'Lựa chọn của ban biên tập' }];
+    }
     return r;
   }
 

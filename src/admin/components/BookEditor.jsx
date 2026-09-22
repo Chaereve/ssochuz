@@ -1,6 +1,7 @@
 import { h } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { slugify } from '../utils/books.js';
+import { slugify, allTags } from '../utils/books.js';
+import { TagsField } from './TagsField.jsx';
 import { ChapterEditor } from './ChapterEditor.jsx';
 
 const emptyForm = { title: '', slug: '', author: '', couple: '', year: '', status: 'Đang cập nhật', countLabel: '', is18: '0', updated: '', thumb: '', synopsis: '' };
@@ -12,6 +13,7 @@ function formFromBook(book) {
     year: book.year || '', status: book.status || 'Đang cập nhật', countLabel: book.countLabel || '',
     is18: book.is18 ? '1' : '0', updated: book.updated || '', thumb: book.thumb || '',
     synopsis: book.synFull || book.syn || '',
+    tags: Array.isArray(book.tags) ? book.tags.join(', ') : '',
   };
 }
 
@@ -74,6 +76,8 @@ export function BookEditor({ registry, slug, bookData, bookLoading, apiBase, onL
                 <div><label class="fl">Ngày cập nhật</label><input class="inp" type="date" value={form.updated} onInput={(e) => update('updated', e.currentTarget.value)} /></div>
                 <div><label class="fl">Ảnh bìa</label><input class="inp" value={form.thumb} onInput={(e) => update('thumb', e.currentTarget.value)} /></div>
               </div>
+              <label class="fl">Tags (thể loại/chất truyện)</label>
+              <TagsField value={form.tags} suggestions={allTags(registry)} onChange={(tags) => update('tags', tags)} />
               <label class="fl">Mô tả</label><textarea class="inp" value={form.synopsis} onInput={(e) => update('synopsis', e.currentTarget.value)} style="min-height:130px" />
             </div>
           </div>
