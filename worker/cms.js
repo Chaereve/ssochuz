@@ -100,7 +100,7 @@ export { PrivateBooks } from './private-books.js';
      VAPID_PRIVATE     (secret, bắt buộc nếu bật push) — khoá riêng VAPID base64url (`wrangler secret put VAPID_PRIVATE`)
    ============================================================================ */
 
-const VERSION = '1.11.0';
+const VERSION = '1.12.0';
 const JSONH = {
   'content-type': 'application/json; charset=utf-8',
   'x-content-type-options': 'nosniff',
@@ -199,9 +199,12 @@ const handler = {
       if (p === '/' || p === '/api/health') return await health(env, cors);
       if (p === '/api/whoami' || p === '/api/auth') {
         if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
-        return json({ ok: true, role: 'admin', via: 'key', version: VERSION }, { cors });
+        return json({ ok: true, role: 'super_admin', permissions: ['*'], via: 'key', version: VERSION }, { cors });
       }
-      if (p === '/api/registry' && req.method === 'GET') return await edgeCached(req, cors, EDGE_TTL.registry, () => getKV(env, 'registry', cors, 60));
+      if (p === '/api/registry' && req.method === 'GET') {
+        if (authed(req, env)) return await getKV(env, 'registry', cors, 0, { admin: true });
+        return await edgeCached(req, cors, EDGE_TTL.registry, () => getKV(env, 'registry', cors, 60, { public: true }));
+      }
       if (p === '/api/schedule' && req.method === 'GET') return await getSchedule(env, ctx, cors);
       if (p === '/api/stats' && req.method === 'GET') return await edgeCached(req, cors, EDGE_TTL.stats, () => getStats(env, cors));
       if (p === '/feed.xml' && req.method === 'GET') return await edgeCached(req, cors, EDGE_TTL.feed, () => getFeed(req, env, cors), feedKeyOf);
@@ -868,6 +871,28 @@ function isSafePublishableKey(value) {
   }
   return true;
 }
+function isPubliclyListed(n) {
+  if (!n || typeof n !== 'object') return false;
+  const vis = String(n.visibility || 'public').toLowerCase();
+  if (vis === 'private') return false;
+  const pub = String(n.pubStatus || 'published').toLowerCase();
+  if (pub === 'draft' || pub === 'pending_review' || pub === 'pending' || pub === 'rejected' || pub === 'archived') return false;
+  if (pub === 'scheduled') {
+    const at = Date.parse(n.publishedAt || n.published_at || '');
+    if (!at || at > Date.now()) return false;
+  }
+  return true;
+}
+function publicRegistryJSON(reg) {
+  let copy;
+  try { copy = JSON.parse(JSON.stringify(reg || {})); } catch (e) { copy = reg || {}; }
+  if (copy.settings && typeof copy.settings === 'object') {
+    delete copy.settings.staff;
+    delete copy.settings.roles;
+  }
+  if (Array.isArray(copy.lib)) copy.lib = copy.lib.filter(isPubliclyListed);
+  return JSON.stringify(stripPrivateRegistrySettings(copy));
+}
 function stripPrivateRegistrySettings(reg) {
   if (!reg || typeof reg !== 'object') return reg;
   const settings = reg.settings;
@@ -1091,17 +1116,20 @@ async function getFeed(req, env, cors) {
     },
   });
 }
-async function getKV(env, key, cors, cacheSec) {
+async function getKV(env, key, cors, cacheSec, mode) {
   if (!env.CZ_KV) return noKV(cors);
   const { value, metadata } = await env.CZ_KV.getWithMetadata(key, { type: 'text' });
   if (value == null) return json({ ok: false, error: 'chưa có dữ liệu cho khoá ' + key }, { status: 404, cors });
   let publicValue = value;
   if (key === 'registry') {
-    try { publicValue = registryJSON(JSON.parse(value)); } catch (e) { publicValue = value; }
+    try {
+      const parsed = JSON.parse(value);
+      publicValue = (mode && mode.admin) ? registryJSON(parsed) : publicRegistryJSON(parsed);
+    } catch (e) { publicValue = value; }
   }
   /* max-age=0: trình duyệt luôn hỏi lại → trúng cache biên (nhanh mà không tốn
      lượt đọc KV); s-maxage: bản lưu ở biên dùng được từng này giây. */
-  const h = { ...JSONH, ...cors, 'cache-control': 'public, max-age=0, s-maxage=' + (cacheSec || 60), 'x-kv-key': key };
+  const h = { ...JSONH, ...cors, 'cache-control': (mode && mode.admin ? 'private, no-store' : 'public, max-age=0, s-maxage=' + (cacheSec || 60)), 'x-kv-key': key };
   /* ETag cũ mô tả bản chưa lọc nên không gửi cho registry đã được làm sạch. */
   if (key !== 'registry' && metadata && metadata.etag) h.etag = metadata.etag;
   return new Response(publicValue, { headers: h });
@@ -1453,6 +1481,18 @@ async function syncCountToRegistry(env, slug, book) {
   await env.CZ_KV.put('_last', new Date().toISOString());
   return { changed: true, was, now: real, labelWas, labelNow, rev: reg.rev };
 }
+function sanitizeChapterHtml(html) {
+  let h = String(html || '');
+  h = h.replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+    .replace(/<object[\s\S]*?<\/object>/gi, '')
+    .replace(/<embed\b[^>]*>/gi, '')
+    .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/\s(href|src)\s*=\s*(['"])\s*(javascript|data):[^'"]*\2/gi, ' $1=$2$2')
+    .replace(/<img([^>]*?)src=(['"])blob:[^'"]+\2[^>]*>/gi, '');
+  return h;
+}
 /* PUT /api/book/<slug> — ghi 1 bộ RỒI tự sửa số chương trong registry */
 async function putBook(req, env, slug, cors) {
   if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
@@ -1466,6 +1506,7 @@ async function putBook(req, env, slug, cors) {
   let parsed;
   try { parsed = JSON.parse(body); } catch (e) { return json({ ok: false, error: 'JSON lỗi: ' + e.message }, { status: 400, cors }); }
   if (!Array.isArray(parsed.chapters)) parsed.chapters = [];
+  parsed.chapters.forEach((c) => { if (c) c.html = sanitizeChapterHtml(c.html); });
   /* bỏ chương rỗng cả tiêu đề lẫn nội dung — chính chúng là thủ phạm làm lệch số chương */
   const before = parsed.chapters.length;
   parsed.chapters = parsed.chapters.filter((c) => c && (String(c.t || '').trim() || String(c.html || '').trim()));

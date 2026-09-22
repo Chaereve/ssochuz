@@ -11,8 +11,14 @@ import { NewBook } from './components/NewBook.jsx';
 import { BookEditor } from './components/BookEditor.jsx';
 import { PlaceholderTab } from './components/PlaceholderTab.jsx';
 import { DoctorPanel, CommentsPanel, ReportsPanel, StatsPanel, VotesPanel, LogPanel, SettingsPanel } from './components/OperationalPanels.jsx';
-import { cloneRegistry, metaFromForm, newBookRecord, removeBookReferences, renameReferences, touchRegistry } from './utils/books.js';
+import { cloneRegistry, metaFromForm, newBookRecord, removeBookReferences, renameReferences, slugify, touchRegistry } from './utils/books.js';
 import { compressImage } from './utils/images.js';
+import { GenreManager } from './components/GenreManager.jsx';
+import { HomepageCMS } from './components/HomepageCMS.jsx';
+import { UsersPanel } from './components/UsersPanel.jsx';
+import { RolesPanel } from './components/RolesPanel.jsx';
+import { ChaptersHub } from './components/ChaptersHub.jsx';
+
 
 const api = new AdminApi(loadSavedConnection());
 const store = createAdminStore({ apiBase: loadSavedConnection().apiBase });
@@ -58,6 +64,7 @@ function App() {
   const [currentSlug, setCurrentSlug] = useState('');
   const [bookCache, setBookCache] = useState({});
   const [bookLoading, setBookLoading] = useState(false);
+  const [listQuery, setListQuery] = useState('');
 
   useEffect(() => store.subscribe(setState), []);
   useEffect(() => quota.subscribe((snap) => store.setState({ quota: snap })), []);
@@ -623,6 +630,7 @@ function App() {
       registry.lib = (registry.lib || []).map((book) => {
         if (!slugs.includes(book.slug)) return book;
         if (kind === 'st') return Object.assign({}, book, { status: value });
+        if (kind === 'pub') return Object.assign({}, book, { pubStatus: value });
         if (kind === '18') return Object.assign({}, book, { is18: value === '1' });
         return book;
       });
@@ -650,9 +658,39 @@ function App() {
   function handleTab(tab) {
     if (tab === 'edit' && !currentSlug) { toast('Chọn một bộ trong tab Thư viện trước đã.', 'info'); return; }
     setActiveTab(tab);
-    if (!['overview', 'list', 'new', 'edit', 'doctor', 'cmts', 'reports', 'stats', 'votes', 'log', 'settings'].includes(tab)) toast('Module này sẽ rebuild ở phase sau. Admin cũ vẫn ở /admin-legacy để đối chiếu.', 'info');
   }
   function editSlug(slug) { setCurrentSlug(slug); setActiveTab('edit'); loadBookForEdit(slug).catch(() => {}); }
+  function handleSearch(q) { setListQuery(q || ''); setActiveTab('list'); }
+
+  async function saveGenres(next, msg, extra) {
+    const registry = cloneRegistry(state.registry);
+    registry.settings = registry.settings || {};
+    registry.settings.genres = next;
+    if (extra && extra.remap) {
+      (registry.lib || []).forEach((book) => {
+        if (book && (book.genre === extra.remap.from || book.genre === extra.remap.from)) book.genre = extra.remap.to;
+      });
+    }
+    await writeRegistry(registry, msg || 'Đã lưu thể loại');
+  }
+
+  async function saveHomepage(payload) {
+    const registry = cloneRegistry(state.registry);
+    registry.slides = payload.slides || [];
+    registry.editorChoice = payload.editorChoice || [];
+    registry.settings = registry.settings || {};
+    registry.settings.editorChoice = payload.editorChoice || [];
+    registry.settings.announcement = payload.announcement || { enabled: false, text: '', href: '' };
+    if (payload.schedule) registry.schedule = Object.assign({}, registry.schedule || {}, payload.schedule);
+    await writeRegistry(registry, 'Đã lưu trang chủ');
+  }
+
+  async function saveStaff(rows) {
+    const registry = cloneRegistry(state.registry);
+    registry.settings = registry.settings || {};
+    registry.settings.staff = rows;
+    await writeRegistry(registry, 'Đã lưu nhân sự');
+  }
   function handleTodo(kind, book) {
     if (book && book.slug) return editSlug(book.slug);
     if (kind === 'cmts' || kind === 'reports') return setActiveTab(kind);
@@ -683,9 +721,14 @@ function App() {
 
   let pane;
   if (activeTab === 'overview') pane = <Overview state={state} onReload={reload} onTodo={handleTodo} />;
-  else if (activeTab === 'list') pane = <BookList registry={state.registry} selected={selected} onSelected={setSelected} onEdit={editSlug} onNew={() => setActiveTab('new')} onBulkUpdate={bulkUpdate} onDelete={deleteBook} />;
+  else if (activeTab === 'list') pane = <BookList registry={state.registry} selected={selected} onSelected={setSelected} onEdit={editSlug} onNew={() => setActiveTab('new')} onBulkUpdate={bulkUpdate} onDelete={deleteBook} apiBase={state.apiBase} initialQuery={listQuery} />;
   else if (activeTab === 'new') pane = <NewBook registry={state.registry} onCreate={createBook} onUploadImage={uploadImage} />;
   else if (activeTab === 'edit') pane = <BookEditor registry={state.registry} slug={currentSlug} bookData={bookCache[currentSlug]} bookLoading={bookLoading} apiBase={state.apiBase} onLoadBook={loadBookForEdit} onSave={saveMeta} onSaveBook={saveBookChapters} onUploadImage={uploadImage} onLock={setBookLock} onUnlock={unlockBook} onDuplicate={duplicateBook} onBack={() => setActiveTab('list')} onDelete={deleteBook} />;
+  else if (activeTab === 'chapters') pane = <ChaptersHub registry={state.registry} apiBase={state.apiBase} onEdit={editSlug} />;
+  else if (activeTab === 'genres') pane = <GenreManager registry={state.registry} onSave={saveGenres} />;
+  else if (activeTab === 'homepage') pane = <HomepageCMS registry={state.registry} apiBase={state.apiBase} onSave={saveHomepage} />;
+  else if (activeTab === 'users') pane = <UsersPanel registry={state.registry} onEdit={editSlug} />;
+  else if (activeTab === 'roles') pane = <RolesPanel registry={state.registry} role={state.role} onSave={saveStaff} />;
   else if (activeTab === 'doctor') pane = <DoctorPanel state={state} onKvAudit={loadKvAudit} onScanBooks={scanBooks} onRecount={runRecount} onReload={reload} />;
   else if (activeTab === 'cmts') pane = <CommentsPanel state={state} onLoad={refreshComments} onDelete={deleteComment} />;
   else if (activeTab === 'reports') pane = <ReportsPanel state={state} onLoad={refreshReports} onMark={markReport} />;
@@ -696,7 +739,7 @@ function App() {
   else pane = <PlaceholderTab tab={activeTab} />;
 
   return (
-    <Layout state={state} activeTab={activeTab} currentSlug={currentSlug} onTab={handleTab} onDisconnect={disconnect}>
+    <Layout state={state} activeTab={activeTab} currentSlug={currentSlug} onTab={handleTab} onDisconnect={disconnect} onSearch={handleSearch}>
       {notice ? <div class="msgbar show info v2notice">{notice}</div> : null}
       {state.error ? <div class="msgbar show err v2notice">{state.error}</div> : null}
       {pane}

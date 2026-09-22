@@ -422,7 +422,7 @@
   }
   function renderStory() {
     var n = N, ch = CZ.progress(n);
-    var im = n.thumb || n.slide || '';
+    var im = CZ.coverSrc(n);
     var syn = String(n.synFull || n.syn || '').trim();
     /* mô tả lấy từ blog xuống có nhiều đoạn; giữ nguyên ranh giới đoạn thay vì
        đổ thành một bức tường chữ */
@@ -446,10 +446,9 @@
             '<span>' + ic('refresh', 'i-s') + ' ' + esc(CZ.timeAgo(n.updated)) + '</span>' +
             statChip() +
           '</div>' +
-          /* tags chất truyện (FICTBASE-style) — chỉ nhãn, không link, hiện ngay
-             dưới dòng metadata của hero */
-          (Array.isArray(n.tags) && n.tags.length
-            ? '<div class="stags">' + n.tags.map(function (t) { return '<span class="stag">' + esc(String(t).slice(0, 30)) + '</span>'; }).join('') + '</div>'
+          /* thể loại (không dùng tags) — nhãn dưới dòng metadata của hero */
+          (CZ.genreLabel(n)
+            ? '<div class="stags"><span class="stag">' + esc(String(CZ.genreLabel(n)).slice(0, 30)) + '</span></div>'
             : '') +
           ratingTag() +
           '<div class="synwrap' + (syn ? ' clamp' : '') + (synopsisOpen ? ' open' : '') + '" id="synWrap">' +
@@ -741,7 +740,7 @@
   if (goBtn) goBtn.addEventListener('click', function () { jumpFrom($('#chapJump')); });
 
   function relCard(n) {
-    var img = n.thumb || n.slide || '';
+    var img = CZ.coverSrc(n);
     return '<a class="relcard" href="' + esc(CZ.storyURL(n.slug)) + '" title="' + esc(n.title) + '">' +
       '<span class="rc-th' + (img ? '' : ' noimg') + '">' +
         (img ? '<img src="' + esc(img) + '"' + CZ.coverFB(n, img) + ' alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer" width="120" height="180">' : '') +

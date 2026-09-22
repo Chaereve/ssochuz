@@ -80,6 +80,7 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
   const [preview, setPreview] = useState(false);
   const [draft, setDraft] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [dragFrom, setDragFrom] = useState(-1);
   const fileRef = useRef(null);
   const multiRef = useRef(null);
   const imageRef = useRef(null);
@@ -130,7 +131,7 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
     const next = clone(localBook);
     next.chapters = Array.isArray(next.chapters) ? next.chapters : [];
     if (!next.chapters[index]) next.chapters[index] = { t: title || ('Chương ' + (index + 1)), html: '' };
-    next.chapters[index] = { t: title || ('Chương ' + (index + 1)), html: htmlForStorage(html || '', apiBase) };
+    next.chapters[index] = Object.assign({}, next.chapters[index], { t: title || ('Chương ' + (index + 1)), html: htmlForStorage(html || '', apiBase), status: next.chapters[index].status || 'published' });
     try {
       await onSaveBook(next);
       setLocalBook(next);
@@ -142,7 +143,7 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
   const addChapter = () => {
     const next = clone(localBook || { title: slug, slug, chapters: [] });
     next.chapters = Array.isArray(next.chapters) ? next.chapters : [];
-    next.chapters.push({ t: 'Chương ' + (next.chapters.length + 1), html: '<p></p>' });
+    next.chapters.push({ t: 'Chương ' + (next.chapters.length + 1), html: '<p></p>', status: 'draft' });
     setLocalBook(next); setIndex(next.chapters.length - 1);
   };
   const deleteChapter = async () => {
@@ -158,10 +159,12 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
     } catch (e) { /* đã toast lỗi */ }
   };
   const moveChapter = async (delta) => {
-    const to = index + delta;
-    if (!localBook || to < 0 || to >= chapters.length) return;
+    await reorderChapter(index, index + delta);
+  };
+  const reorderChapter = async (from, to) => {
+    if (!localBook || from === to || from < 0 || to < 0 || to >= chapters.length) return;
     const next = clone(localBook);
-    const [item] = next.chapters.splice(index, 1);
+    const [item] = next.chapters.splice(from, 1);
     next.chapters.splice(to, 0, item);
     try {
       await onSaveBook(next);
@@ -237,11 +240,33 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
       {loading ? <div class="empty sm">Đang đọc chương…</div> : null}
       <div class="v2chapter-grid">
         <aside class="v2chapter-list">
-          {chapters.length ? chapters.map((chapter, i) => <button type="button" class={i === index ? 'on' : ''} key={i} onClick={() => setIndex(i)}><b>{i + 1}</b><span>{chapter.t || ('Chương ' + (i + 1))}</span><em>{quickWords(chapter.html)} từ</em></button>) : <div class="empty sm">Chưa có chương.</div>}
+          {chapters.length ? chapters.map((chapter, i) => (
+            <button type="button" class={i === index ? 'on' : ''} key={i} draggable="true"
+              onDragStart={() => setDragFrom(i)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => { e.preventDefault(); reorderChapter(dragFrom, i); setDragFrom(-1); }}
+              onClick={() => setIndex(i)}>
+              <b>{i + 1}</b><span>{chapter.t || ('Chương ' + (i + 1))}</span>
+              <em>{quickWords(chapter.html)} từ{chapter.status && chapter.status !== 'published' ? ' · ' + chapter.status : ''}</em>
+            </button>
+          )) : <div class="empty sm">Chưa có chương.</div>}
         </aside>
         <div class="v2chapter-editor">
           <label class="fl">Tên chương</label>
           <input class="inp" value={title} onInput={(e) => setTitle(e.currentTarget.value)} placeholder={'Chương ' + (index + 1)} />
+          <label class="fl">Trạng thái chương
+            <select class="inp" value={(chapters[index] && chapters[index].status) || 'published'} onChange={(e) => {
+              if (!localBook) return;
+              const next = clone(localBook);
+              if (next.chapters[index]) next.chapters[index].status = e.target.value;
+              setLocalBook(next);
+            }}>
+              <option value="draft">Nháp</option>
+              <option value="scheduled">Hẹn giờ</option>
+              <option value="published">Xuất bản</option>
+              <option value="hidden">Ẩn</option>
+            </select>
+          </label>
           <Toolbar editor={editor} />
           <div class="v2tiphost" ref={setHost}></div>
           <div class="row mt v2chap-actions">

@@ -1,4 +1,5 @@
 import { cz } from './format.js';
+import { persistableCover } from './cover.js';
 
 export function slugify(value) {
   return cz().slugify ? cz().slugify(value) : String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -30,6 +31,27 @@ export function touchRegistry(registry, note = 'sửa từ trang quản trị ss
   registry.rev = new Date().toISOString().slice(0, 16).replace('T', ' ');
   registry.source = { synced: new Date().toISOString(), note };
   return registry;
+}
+
+export const COMPLETION_STATUSES = ['Đang cập nhật', 'Hoàn thành', 'Sắp ra mắt'];
+export const PUB_STATUSES = [
+  { id: 'draft', label: 'Nháp' },
+  { id: 'pending_review', label: 'Chờ duyệt' },
+  { id: 'approved', label: 'Đã duyệt' },
+  { id: 'scheduled', label: 'Hẹn giờ' },
+  { id: 'published', label: 'Xuất bản' },
+  { id: 'rejected', label: 'Từ chối' },
+  { id: 'archived', label: 'Lưu trữ' },
+];
+export const VISIBILITIES = [
+  { id: 'public', label: 'Công khai' },
+  { id: 'unlisted', label: 'Không liệt kê (chỉ link)' },
+  { id: 'private', label: 'Riêng tư' },
+];
+
+export function pubLabel(id) {
+  const hit = PUB_STATUSES.find((x) => x.id === id);
+  return (hit && hit.label) || 'Xuất bản';
 }
 
 export function renameReferences(registry, oldSlug, newSlug) {
@@ -86,18 +108,27 @@ export function metaFromForm(book, values) {
   out.countLabel = values.countLabel || out.countLabel || '0/—';
   out.is18 = values.is18 === true || values.is18 === '1';
   out.updated = values.updated || today();
-  out.thumb = values.thumb || '';
+  out.thumb = persistableCover(values.thumb || '');
   out.slide = out.thumb;
+  out.coverAlt = String(values.coverAlt || values.cover_alt || out.coverAlt || '').trim().slice(0, 120);
   out.synFull = values.synopsis || '';
   out.syn = teaser(values.synopsis || out.synFull || out.syn || '', 220);
-  out.tags = Array.isArray(values.tags) ? parseTags(values.tags.join(',')) : parseTags(values.tags);
+  out.genre = String(values.genre || '').trim();
+  out.pubStatus = values.pubStatus || out.pubStatus || 'published';
+  out.visibility = values.visibility || out.visibility || 'public';
+  out.publishedAt = values.publishedAt || out.publishedAt || '';
+  if (out.pubStatus !== 'scheduled') {
+    /* giữ publishedAt nếu đã xuất bản; xoá lịch tương lai khi không còn hẹn giờ */
+    if (out.pubStatus === 'published' && !out.publishedAt) out.publishedAt = today();
+  }
+  delete out.tags;
   return out;
 }
 
 export function newBookRecord(values) {
   const slug = slugify(values.slug || values.title);
   const firstChapter = String(values.chapter || '').trim();
-  const chapters = firstChapter ? [{ t: 'Chương 1', html: textToHtml(firstChapter) }] : [];
+  const chapters = firstChapter ? [{ t: 'Chương 1', html: textToHtml(firstChapter), status: 'published' }] : [];
   const meta = metaFromForm({}, {
     title: String(values.title || '').trim(), slug,
     author: String(values.author || '').trim(), couple: String(values.couple || '').trim(),
@@ -105,37 +136,13 @@ export function newBookRecord(values) {
     status: values.status || (chapters.length ? 'Đang cập nhật' : 'Sắp ra mắt'),
     countLabel: chapters.length ? '1/1' : '0/—',
     is18: values.is18, updated: today(), thumb: String(values.thumb || '').trim(),
-    synopsis: String(values.synopsis || '').trim(), tags: values.tags,
+    synopsis: String(values.synopsis || '').trim(),
+    genre: values.genre, coverAlt: values.coverAlt,
+    pubStatus: values.pubStatus || 'draft',
+    visibility: values.visibility || 'public',
+    publishedAt: values.publishedAt || '',
   });
   meta.chapters = chapters.length;
   const book = { title: meta.title, slug, author: meta.author, couple: meta.couple, chapters };
   return { meta, book };
-}
-
-/* Chuỗi tags ô nhập → mảng gọn: tách dấu phẩy, bỏ trống/lặp (không phân biệt
-   hoa thường), giới hạn 12 thẻ · mỗi thẻ ≤ 30 ký tự (kiểu FICTBASE) */
-export function parseTags(value) {
-  const seen = {};
-  return String(value || '').split(/[,;]/).map((t) => t.trim().slice(0, 30)).filter((t) => {
-    if (!t) return false;
-    const k = t.toLowerCase();
-    if (seen[k]) return false;
-    seen[k] = 1;
-    return true;
-  }).slice(0, 12);
-}
-
-/* Mọi tag đã dùng trong thư viện — để gợi ý chip bấm một cái là thêm */
-export function allTags(registry) {
-  const seen = {};
-  const out = [];
-  ((registry && registry.lib) || []).forEach((book) => {
-    (book && Array.isArray(book.tags) ? book.tags : []).forEach((t) => {
-      const k = String(t || '').toLowerCase();
-      if (!k || seen[k]) return;
-      seen[k] = 1;
-      out.push(String(t));
-    });
-  });
-  return out;
 }

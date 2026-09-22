@@ -190,8 +190,8 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
   /* ---------- 3. khoá quản trị ---------- */
   eq('whoami/thiếu khoá → 401', (await call('GET', '/api/whoami')).status, 401);
   eq('whoami/sai khoá → 401', (await call('GET', '/api/whoami', { headers: { 'x-admin-key': 'sai' } })).status, 401);
-  ck('whoami/đúng khoá → admin', ((await call('GET', '/api/whoami', { headers: { 'x-admin-key': ADMIN } })).body || {}).role === 'admin',
-    ((await call('GET', '/api/whoami', { headers: { 'x-admin-key': ADMIN } })).body || {}).role, 'admin');
+  ck('whoami/đúng khoá → super_admin', ((await call('GET', '/api/whoami', { headers: { 'x-admin-key': ADMIN } })).body || {}).role === 'super_admin',
+    ((await call('GET', '/api/whoami', { headers: { 'x-admin-key': ADMIN } })).body || {}).role, 'super_admin');
   eq('whoami/khoá dính khoảng trắng đầu-cuối vẫn dùng được', (await call('GET', '/api/whoami', { headers: { 'x-admin-key': '  ' + ADMIN + '  ' } })).status, 200);
 
   /* ---------- 4. registry / book / seed ---------- */

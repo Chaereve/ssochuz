@@ -1,99 +1,112 @@
 import { h } from 'preact';
-import { useEffect, useRef, useState } from 'preact/hooks';
-import { slugify, allTags } from '../utils/books.js';
-import { TagsField } from './TagsField.jsx';
+import { useEffect, useState } from 'preact/hooks';
+import { slugify, COMPLETION_STATUSES, PUB_STATUSES, VISIBILITIES } from '../utils/books.js';
 import { ChapterEditor } from './ChapterEditor.jsx';
-
-const emptyForm = { title: '', slug: '', author: '', couple: '', year: '', status: 'Đang cập nhật', countLabel: '', is18: '0', updated: '', thumb: '', synopsis: '' };
-
-function formFromBook(book) {
-  if (!book) return emptyForm;
-  return {
-    title: book.title || '', slug: book.slug || '', author: book.author || '', couple: book.couple || '',
-    year: book.year || '', status: book.status || 'Đang cập nhật', countLabel: book.countLabel || '',
-    is18: book.is18 ? '1' : '0', updated: book.updated || '', thumb: book.thumb || '',
-    synopsis: book.synFull || book.syn || '',
-    tags: Array.isArray(book.tags) ? book.tags.join(', ') : '',
-  };
-}
+import { GenreSelect } from './GenreSelect.jsx';
+import { ImageUploader } from './ImageUploader.jsx';
+import { persistableCover } from '../utils/cover.js';
 
 export function BookEditor({ registry, slug, bookData, bookLoading, apiBase, onLoadBook, onSave, onSaveBook, onUploadImage, onLock, onUnlock, onDuplicate, onBack, onDelete }) {
-  const book = ((registry && registry.lib) || []).find((item) => item.slug === slug) || null;
-  const [form, setForm] = useState(formFromBook(book));
-  const [coverBusy, setCoverBusy] = useState(false);
+  const book = ((registry && registry.lib) || []).find((item) => item.slug === slug);
+  const [form, setForm] = useState({
+    title: '', slug: '', author: '', couple: '', year: '', status: 'Đang cập nhật',
+    is18: false, thumb: '', coverAlt: '', synopsis: '', genre: '',
+    pubStatus: 'published', visibility: 'public', publishedAt: '',
+  });
   const [lockPw, setLockPw] = useState('');
   const [lockPw2, setLockPw2] = useState('');
-  const coverRef = useRef(null);
-  useEffect(() => setForm(formFromBook(book)), [slug, book && book.title]);
-  if (!book) {
-    return <div id="pane-edit" class="v2pane"><section class="card2"><h3>Chưa chọn bộ</h3><p class="hint">Chọn một bộ trong tab Thư viện để sửa metadata.</p><button class="btn ghost" type="button" onClick={onBack}>Về thư viện</button></section></div>;
-  }
-  const update = (key, value) => setForm((prev) => Object.assign({}, prev, { [key]: value }));
-  const uploadCover = async (file) => {
-    if (!file || !onUploadImage) return;
-    setCoverBusy(true);
+  const [lockBusy, setLockBusy] = useState(false);
+  useEffect(() => {
+    if (!book) return;
+    setForm({
+      title: book.title || '', slug: book.slug || '', author: book.author || '', couple: book.couple || '',
+      year: book.year || '', status: book.status || 'Đang cập nhật', is18: !!book.is18,
+      thumb: persistableCover(book.thumb || book.slide || ''),
+      coverAlt: book.coverAlt || '',
+      synopsis: book.synFull || book.syn || '',
+      genre: book.genre || '',
+      pubStatus: book.pubStatus || 'published',
+      visibility: book.visibility || 'public',
+      publishedAt: book.publishedAt || '',
+    });
+    setLockPw('');
+    setLockPw2('');
+  }, [slug]);
+  useEffect(() => { if (slug && onLoadBook) onLoadBook(slug); }, [slug]);
+  if (!book) return <div id="pane-edit" class="empty">Chưa chọn bộ. Vào tab Thư viện rồi bấm Sửa.</div>;
+  function update(key, value) { setForm((cur) => Object.assign({}, cur, { [key]: value })); }
+  async function saveLock(e) {
+    e.preventDefault();
+    setLockBusy(true);
     try {
-      const url = await onUploadImage(file, { max: 900, quality: 0.84 });
-      if (url) update('thumb', url);
-    } catch (error) {
-      if (window.CZ && window.CZ.toast) window.CZ.toast('Upload bìa lỗi: ' + (error.message || error), 'err');
-    } finally { setCoverBusy(false); }
-  };
-  const submitLock = () => {
-    if (lockPw !== lockPw2) { window.CZ && window.CZ.toast ? window.CZ.toast('Hai ô mật mã chưa khớp.', 'err') : alert('Hai ô mật mã chưa khớp.'); return; }
-    if (onLock) onLock(book.slug, lockPw).then(() => { setLockPw(''); setLockPw2(''); }).catch(() => {});
-  };
-  const nextSlug = slugify(form.slug || form.title || book.slug);
-  const duplicate = nextSlug !== book.slug && !!((registry && registry.lib) || []).find((item) => item.slug === nextSlug);
-  const submit = (event) => {
-    event.preventDefault();
-    onSave(book.slug, Object.assign({}, form, { slug: nextSlug, is18: form.is18 === '1' }));
-  };
+      if (lockPw !== lockPw2) throw new Error('Hai ô mật mã chưa khớp.');
+      await onLock(book.slug, lockPw);
+      setLockPw(''); setLockPw2('');
+    }
+    finally { setLockBusy(false); }
+  }
+
   return (
-    <div id="pane-edit" class="v2pane">
-      <section class="card2">
-        <div class="row"><h3>Sửa metadata: {book.title}</h3><span class="grow"></span><button class="btn ghost sm" type="button" onClick={() => onDuplicate && onDuplicate(book.slug)}>Nhân bản bộ</button><a class="btn ghost sm" href={(window.CZ && window.CZ.storyURL ? window.CZ.storyURL(book.slug) : '/truyen/' + book.slug + '/')} target="_blank" rel="noreferrer">Mở trang thông tin ↗</a><button class="btn ghost sm" type="button" onClick={onBack}>← Về thư viện</button></div>
-        <p class="hint">Metadata lưu cùng registry. Bên dưới là trình soạn chương TipTap; output vẫn là HTML trong shape cũ <code>chapters[].html</code>.</p>
-        <form onSubmit={submit}>
-          <div class="v2edit-grid">
-            <div class="v2cover-preview">
-              <div class={`coverbox ${form.thumb ? '' : 'empty'}`}>{form.thumb ? <img src={form.thumb} alt="" /> : <span>Chưa có ảnh bìa</span>}</div>
-              {book.lock ? <span class="pill acc">🔒 đang khóa mật mã</span> : <span class="pill">chưa khóa</span>}
-              <input ref={coverRef} class="hide" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => uploadCover(e.currentTarget.files && e.currentTarget.files[0])} />
-              <button class="btn ghost sm" type="button" disabled={coverBusy} onClick={() => coverRef.current && coverRef.current.click()}>{coverBusy ? 'Đang nén bìa…' : 'Upload bìa'}</button>
-              <p class="hint">Ảnh upload sẽ nén trên máy rồi lưu qua <code>/api/img</code>.</p>
-            </div>
-            <div>
-              <div class="grid2">
-                <div><label class="fl">Tên truyện</label><input class="inp" value={form.title} onInput={(e) => update('title', e.currentTarget.value)} required /></div>
-                <div><label class="fl">Slug</label><input class="inp" value={form.slug} onInput={(e) => update('slug', e.currentTarget.value)} /><p class={`hint ${duplicate ? 'errtxt' : ''}`}>URL: <code>/truyen/{nextSlug || '...'}/</code>{duplicate ? ' — slug đã tồn tại' : nextSlug !== book.slug ? ' — sẽ đổi đường dẫn và chuyển book KV' : ''}</p></div>
-                <div><label class="fl">Tác giả</label><input class="inp" value={form.author} onInput={(e) => update('author', e.currentTarget.value)} /></div>
-                <div><label class="fl">Couple</label><input class="inp" value={form.couple} onInput={(e) => update('couple', e.currentTarget.value)} /></div>
-                <div><label class="fl">Năm</label><input class="inp" value={form.year} onInput={(e) => update('year', e.currentTarget.value)} /></div>
-                <div><label class="fl">Tình trạng</label><select class="inp" value={form.status} onChange={(e) => update('status', e.currentTarget.value)}><option>Đang cập nhật</option><option>Hoàn thành</option><option>Sắp ra mắt</option></select></div>
-                <div><label class="fl">Nhãn số chương</label><input class="inp" value={form.countLabel} onInput={(e) => update('countLabel', e.currentTarget.value)} placeholder="29/29" /></div>
-                <div><label class="fl">18+</label><select class="inp" value={form.is18} onChange={(e) => update('is18', e.currentTarget.value)}><option value="0">Không</option><option value="1">Có</option></select></div>
-                <div><label class="fl">Ngày cập nhật</label><input class="inp" type="date" value={form.updated} onInput={(e) => update('updated', e.currentTarget.value)} /></div>
-                <div><label class="fl">Ảnh bìa</label><input class="inp" value={form.thumb} onInput={(e) => update('thumb', e.currentTarget.value)} /></div>
-              </div>
-              <label class="fl">Tags (thể loại/chất truyện)</label>
-              <TagsField value={form.tags} suggestions={allTags(registry)} onChange={(tags) => update('tags', tags)} />
-              <label class="fl">Mô tả</label><textarea class="inp" value={form.synopsis} onInput={(e) => update('synopsis', e.currentTarget.value)} style="min-height:130px" />
-            </div>
-          </div>
-          <div class="savebar"><button class="btn pri" type="submit" disabled={!nextSlug || duplicate}>Lưu metadata</button><button class="btn ghost danger" type="button" onClick={() => onDelete(book.slug)}>Xoá bộ</button></div>
-        </form>
-      </section>
-      <section class="card2 v2lock-panel">
-        <div class="row"><h3>Khóa mật mã</h3><span class="grow"></span><span class={book.lock ? 'pill acc' : 'pill'}>{book.lock ? 'đang có mật mã' : 'chưa khóa'}</span></div>
-        <p class="hint">Card truyện vẫn công khai, nhưng danh sách chương chỉ mở khi độc giả nhập đúng mật mã. Mật mã không lưu trong registry.</p>
-        <div class="grid2">
-          <div><label class="fl">Mật mã mới</label><input class="inp" type="password" value={lockPw} onInput={(e) => setLockPw(e.currentTarget.value)} placeholder="tối thiểu 8 ký tự" /></div>
-          <div><label class="fl">Nhập lại mật mã</label><input class="inp" type="password" value={lockPw2} onInput={(e) => setLockPw2(e.currentTarget.value)} /></div>
+    <div id="pane-edit">
+      <div class="row"><button class="btn ghost sm" type="button" onClick={onBack}>← Thư viện</button><span class="grow"></span>
+        <button class="btn ghost sm" type="button" onClick={() => onDuplicate && onDuplicate(book.slug)}>Nhân bản bộ</button>
+        <button class="btn ghost sm" type="button" onClick={() => onDelete(book.slug)}>Xoá bộ</button></div>
+      <form class="v2form" onSubmit={(e) => { e.preventDefault(); onSave(book.slug, Object.assign({}, form, { slug: slugify(form.slug || form.title), is18: form.is18 ? '1' : '0', thumb: persistableCover(form.thumb) })); }}>
+        <h3>Sửa metadata: {book.title}</h3>
+        <label class="fl">Tên<input class="inp" value={form.title} onInput={(e) => update('title', e.target.value)} /></label>
+        <label class="fl">Slug<input class="inp" value={form.slug} onInput={(e) => update('slug', e.target.value)} /></label>
+        <label class="fl">Tác giả<input class="inp" value={form.author} onInput={(e) => update('author', e.target.value)} /></label>
+        <label class="fl">Couple<input class="inp" value={form.couple} onInput={(e) => update('couple', e.target.value)} /></label>
+        <label class="fl">Thể loại
+          <GenreSelect registry={registry} value={form.genre} onChange={(v) => update('genre', v)} />
+        </label>
+        <div class="row">
+          <label class="fl">Tình trạng hoàn thành
+            <select class="inp" value={form.status} onChange={(e) => update('status', e.target.value)}>
+              {COMPLETION_STATUSES.map((s) => <option key={s}>{s}</option>)}
+            </select>
+          </label>
+          <label class="fl">Trạng thái xuất bản
+            <select class="inp" value={form.pubStatus} onChange={(e) => update('pubStatus', e.target.value)}>
+              {PUB_STATUSES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+            </select>
+          </label>
+          <label class="fl">Hiển thị
+            <select class="inp" value={form.visibility} onChange={(e) => update('visibility', e.target.value)}>
+              {VISIBILITIES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+            </select>
+          </label>
         </div>
-        <div class="row mt"><button class="btn pri sm" type="button" onClick={submitLock} disabled={!lockPw || lockPw.length < 8}>Đặt / đổi mật mã</button><button class="btn ghost sm danger" type="button" onClick={() => onUnlock && onUnlock(book.slug)}>Bỏ khóa</button></div>
-      </section>
-      <ChapterEditor slug={book.slug} book={bookData} loading={bookLoading} apiBase={apiBase} onLoad={() => onLoadBook && onLoadBook(book.slug)} onSaveBook={onSaveBook} onUploadImage={onUploadImage} />
+        <p class="hint">Tình trạng hoàn thành (Đang cập nhật / Hoàn thành / Sắp ra mắt) khác trạng thái xuất bản (nháp, chờ duyệt, hẹn giờ, xuất bản, lưu trữ).</p>
+        {form.pubStatus === 'scheduled' ? (
+          <label class="fl">Hẹn giờ xuất bản
+            <input class="inp" type="datetime-local" value={form.publishedAt} onInput={(e) => update('publishedAt', e.target.value)} />
+          </label>
+        ) : null}
+        <label class="chk"><input type="checkbox" checked={form.is18} onChange={(e) => update('is18', e.target.checked)} /> 18+</label>
+        <ImageUploader
+          value={form.thumb}
+          altValue={form.coverAlt}
+          onChange={(url) => update('thumb', persistableCover(url))}
+          onAltChange={(v) => update('coverAlt', v)}
+          onUpload={onUploadImage}
+          apiBase={apiBase}
+          label="Ảnh bìa"
+        />
+        <label class="fl">Tóm tắt<textarea class="inp ta" value={form.synopsis} onInput={(e) => update('synopsis', e.target.value)} /></label>
+        <button class="btn pri" type="submit">Lưu metadata</button>
+      </form>
+      <form class="v2form v2lock-panel" onSubmit={saveLock}>
+        <h3>Khóa mật mã</h3>
+        <p class="hint">{book.lock ? 'Bộ này đang khóa. Nhập mật mã mới để đổi, hoặc bỏ khóa.' : 'Đặt mật mã thì thẻ vẫn công khai, chương chỉ mở khi nhập đúng.'}</p>
+        <label class="fl">Mật mã (tối thiểu 8 ký tự)<input class="inp" type="password" value={lockPw} onInput={(e) => setLockPw(e.target.value)} autocomplete="new-password" /></label>
+        <label class="fl">Nhập lại mật mã<input class="inp" type="password" value={lockPw2} onInput={(e) => setLockPw2(e.target.value)} autocomplete="new-password" /></label>
+        <div class="row">
+          <button class="btn" disabled={lockBusy || lockPw.length < 8} type="button" onClick={saveLock}>Đặt / đổi mật mã</button>
+          {book.lock ? <button class="btn ghost" type="button" disabled={lockBusy} onClick={() => onUnlock(book.slug)}>Bỏ khóa</button> : null}
+        </div>
+      </form>
+      <ChapterEditor slug={slug} book={bookData} loading={bookLoading} apiBase={apiBase} onSaveBook={onSaveBook} onUploadImage={onUploadImage} />
     </div>
   );
 }
