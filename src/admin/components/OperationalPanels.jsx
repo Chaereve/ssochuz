@@ -231,6 +231,6 @@ export function SettingsPanel({ state, onReload, onRecount, onStatsRefresh, onIm
       </div>
     </div>
     {result ? <pre class="v2result">{result}</pre> : null}
-    <div class="savebar"><button class="btn ghost" type="button" onClick={onReload}>Đọc lại dữ liệu</button><button class="btn ghost" type="button" disabled={!state.online || !!busy} onClick={() => run('stats', onStatsRefresh)}>Flush stats cache</button><button class="btn pri" type="button" disabled={!state.online || !!busy} onClick={() => run('recount', onRecount)}>Đếm lại số chương</button><a class="btn ghost" href="/admin.html">Mở admin cũ</a></div>
+    <div class="savebar"><button class="btn ghost" type="button" onClick={onReload}>Đọc lại dữ liệu</button><button class="btn ghost" type="button" disabled={!state.online || !!busy} onClick={() => run('stats', onStatsRefresh)}>Flush stats cache</button><button class="btn pri" type="button" disabled={!state.online || !!busy} onClick={() => run('recount', onRecount)}>Đếm lại số chương</button><a class="btn ghost" href="/admin-legacy">Mở admin cũ</a></div>
   </section></div>;
 }

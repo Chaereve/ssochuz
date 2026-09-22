@@ -65,13 +65,13 @@ export function Layout({ state, activeTab, currentSlug = '', onTab, onDisconnect
               );
             })}
           </nav>
-          <p class="hint v2side-note">Admin v2 chạy song song bản cũ. Tab ghi dữ liệu luôn báo quota và hỏi xác nhận mạnh.</p>
+          <p class="hint v2side-note">Admin v2 đang thay `/admin`; bản cũ giữ ở `/admin-legacy` để rollback. Tab ghi dữ liệu luôn báo quota và hỏi xác nhận mạnh.</p>
         </aside>
         <main class="smain v2main">
-          <nav class="crumb"><a href="/">Trang chủ</a><span>›</span><a href="/admin.html">Admin cũ</a><span>›</span><b>Admin v2</b></nav>
+          <nav class="crumb"><a href="/">Trang chủ</a><span>›</span><a href="/admin-legacy">Admin cũ</a><span>›</span><b>Admin v2</b></nav>
           <div class="phead slim">
             <h1>Trang quản trị v2</h1>
-            <p class="sm">Kiến trúc module hoá · chạy song song bản cũ · chỉ ghi production khi nối Worker bằng ADMIN_KEY.</p>
+            <p class="sm">Kiến trúc module hoá · cutover vào /admin · chỉ ghi production khi nối Worker bằng ADMIN_KEY.</p>
           </div>
           {children}
         </main>

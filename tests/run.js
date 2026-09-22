@@ -40,8 +40,8 @@
                        request lỗi nào), bị chặn bất ngờ thì nhường 302 — không bao giờ
                        trả ảnh lỗi (đúng lỗi "vào trang lần đầu còn bìa, F5 là mất bìa")
      t_devserver.js    bật THẬT tools/dev_server.py rồi gọi HTTP: /truyen, /truyen/,
-                       /truyen/<slug>/, /reader/<slug>/, /admin, /admin.html (308)… phải
-                       giống Cloudflare Pages (không 404/508), và bộ bắt vòng lặp
+                       /truyen/<slug>/, /reader/<slug>/, /admin (v2), /admin-legacy,
+                       /admin.html (308)… phải giống Cloudflare Pages (không 404/508), và bộ bắt vòng lặp
                        _redirects vẫn phải trả 508 khi luật sai */
 const path = require('path'), { spawnSync } = require('child_process');
 const cands = (process.env.CZ_TEST_MODULES || '').split(path.delimiter).filter(Boolean)

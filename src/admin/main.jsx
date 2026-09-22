@@ -595,7 +595,7 @@ function App() {
   function handleTab(tab) {
     if (tab === 'edit' && !currentSlug) { toast('Chọn một bộ trong tab Thư viện trước đã.', 'info'); return; }
     setActiveTab(tab);
-    if (!['overview', 'list', 'new', 'edit', 'doctor', 'cmts', 'reports', 'stats', 'votes', 'log', 'settings'].includes(tab)) toast('Module này sẽ rebuild ở phase sau. Admin cũ vẫn dùng đủ chức năng.', 'info');
+    if (!['overview', 'list', 'new', 'edit', 'doctor', 'cmts', 'reports', 'stats', 'votes', 'log', 'settings'].includes(tab)) toast('Module này sẽ rebuild ở phase sau. Admin cũ vẫn ở /admin-legacy để đối chiếu.', 'info');
   }
   function editSlug(slug) { setCurrentSlug(slug); setActiveTab('edit'); loadBookForEdit(slug).catch(() => {}); }
   function handleTodo(kind, book) {

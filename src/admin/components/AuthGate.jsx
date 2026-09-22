@@ -23,7 +23,7 @@ export function AuthGate({ defaultApi = '', defaultKey = '', busy = false, messa
         <span class="pill acc">admin v2</span>
         <h1>Trang quản trị ssochuz library</h1>
         <p class="gsub">
-          Bản admin v2 đang chạy song song admin cũ: đã có Tổng quan, Thư viện, thêm/sửa bộ,
+          Admin v2 đang nhận route /admin; admin cũ giữ ở /admin-legacy để theo dõi sau cutover:
           editor chương và các module vận hành cơ bản để đối chiếu trước cutover.
         </p>
         <div class="v2gate-actions">

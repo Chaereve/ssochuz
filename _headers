@@ -25,11 +25,27 @@
 /admin-v2.css
   Cache-Control: no-cache
 
+/admin
+  Cache-Control: no-store, max-age=0
+  X-Robots-Tag: noindex
+
+/admin/
+  Cache-Control: no-store, max-age=0
+  X-Robots-Tag: noindex
+
 /admin-v2
   Cache-Control: no-store, max-age=0
   X-Robots-Tag: noindex
 
 /admin-v2/
+  Cache-Control: no-store, max-age=0
+  X-Robots-Tag: noindex
+
+/admin-legacy
+  Cache-Control: no-store, max-age=0
+  X-Robots-Tag: noindex
+
+/admin-legacy/
   Cache-Control: no-store, max-age=0
   X-Robots-Tag: noindex
 

@@ -123,8 +123,8 @@ else {
 const mf = headersFor(rules, '/manifest.webmanifest').get('content-type') || '';
 if (!/application\/manifest\+json/.test(mf)) errors.push(FILE + ': manifest.webmanifest thiếu Content-Type application/manifest+json');
 
-/* 5. admin-v2 dùng route sạch (/admin-v2), không rơi qua luật /*.html nên phải tự no-store/noindex */
-['/admin-v2', '/admin-v2/'].forEach(p => {
+/* 5. các route quản trị dùng URL sạch, không rơi qua luật /*.html nên phải tự no-store/noindex */
+['/admin', '/admin/', '/admin-v2', '/admin-v2/', '/admin-legacy', '/admin-legacy/'].forEach(p => {
   const h = headersFor(rules, p);
   if (!/no-store/.test(h.get('cache-control') || '')) errors.push(FILE + ': ' + p + ' phải Cache-Control: no-store để trang quản trị không dính bản cũ');
   if (!/noindex/i.test(h.get('x-robots-tag') || '')) errors.push(FILE + ': ' + p + ' phải X-Robots-Tag: noindex');

@@ -10,7 +10,7 @@ export function PlaceholderTab({ tab }) {
       <section class="card2 v2placeholder">
         <span class="pill acc">phase sau</span>
         <h3>{LABELS[tab] || tab}</h3>
-        <p class="hint">Module này sẽ được rebuild sau khi List/New/Edit metadata được duyệt. Admin cũ vẫn còn ở <a href="/admin.html">/admin.html</a> để dùng đủ chức năng production.</p>
+        <p class="hint">Module này đang giữ chỗ phòng trường hợp cần mở rộng thêm. Admin cũ vẫn còn ở <a href="/admin-legacy">/admin-legacy</a> trong giai đoạn theo dõi sau cutover.</p>
       </section>
     </div>
   );
