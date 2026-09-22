@@ -63,7 +63,7 @@ export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulk
           <span class="grow"></span>
           <input class="inp" value={query} onInput={(e) => setQuery(e.currentTarget.value)} placeholder="Tìm theo tên, tác giả, slug…" />
           <select class="sel" value={status} onChange={(e) => setStatus(e.currentTarget.value)}>
-            {STATUSES.map((item) => <option value={item}>{item || 'Tất cả tình trạng'}</option>)}
+            {STATUSES.map((item) => <option key={item || 'all'} value={item}>{item || 'Tất cả tình trạng'}</option>)}
           </select>
           <select class="sel" value={sort} onChange={(e) => setSort(e.currentTarget.value)}>
             <option value="new">Mới cập nhật</option><option value="chap">Nhiều chương</option><option value="az">Tên A→Z</option>
@@ -90,12 +90,12 @@ export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulk
             <thead><tr><th></th><th>Bộ truyện</th><th>Tác giả / couple</th><th>Số chương</th><th>Tình trạng</th><th>Cập nhật</th><th>Thao tác</th></tr></thead>
             <tbody>
               {rows.map((book) => (
-                <tr>
+                <tr key={book.slug}>
                   <td data-lb="Chọn"><input type="checkbox" checked={!!selectedMap[book.slug]} onChange={(e) => setOne(book.slug, e.currentTarget.checked)} /></td>
                   <td data-lb="Bộ truyện"><b>{book.title}</b>{book.lock ? <span class="pill acc v2lock" title="Truyện đang có mật mã">🔒 khóa</span> : null}<span class="sm muted">{book.slug}</span></td>
                   <td data-lb="Tác giả / couple"><span>{book.author || '—'}</span><span class="sm muted">{book.couple || ''}</span></td>
                   <td data-lb="Số chương">{countText(book)}</td>
-                  <td data-lb="Tình trạng"><span class={`st ${statusCls(book.status)}`}>{book.status || '—'}</span>{book.is18 ? <span class="pill warn">18+</span> : null}</td>
+                  <td data-lb="Tình trạng"><span class={`pill ${statusCls(book.status)}`}><span class="d"></span>{book.status || '—'}</span>{book.is18 ? <span class="pill warn">18+</span> : null}</td>
                   <td data-lb="Cập nhật">{dateVN(book.updated)}</td>
                   <td data-lb="Thao tác" class="v2actions"><button class="btn ghost sm" type="button" onClick={() => onEdit(book.slug)}>Sửa</button><button class="btn ghost sm danger" type="button" onClick={() => onDelete(book.slug)}>Xoá</button></td>
                 </tr>

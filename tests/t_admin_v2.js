@@ -3,6 +3,12 @@ const assert = require('assert');
 const { page, dataFetch } = require('./mk');
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/* số liệu kỳ vọng tính từ registry thật trong repo — không hardcode để không lỗi thời */
+const reg = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'data', 'registry.json'), 'utf8'));
+const viNum = (n) => (Number(n) || 0).toLocaleString('vi-VN');
+const libCount = (reg.lib || []).length;
+const chapCount = (reg.lib || []).reduce((sum, b) => sum + (Number(b.chapters) || 0), 0);
+
 (async () => {
   const out = {};
   const p = page('admin-v2.html', { fetch: dataFetch(), url: 'https://ssochuz.pages.dev/admin-v2.html' });
@@ -24,13 +30,13 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   await wait(800);
   const tiles = [...doc.querySelectorAll('.tile')].map((el) => el.textContent.replace(/\s+/g, ' ').trim());
   out.overview = { tiles: tiles.slice(0, 6), recent: doc.querySelectorAll('.ovrec').length };
-  assert.ok(tiles.some((text) => /^63Bộ truyện/.test(text)), 'sai số bộ overview');
-  assert.ok(tiles.some((text) => /^1\.206Chương đã đăng/.test(text)), 'sai số chương overview');
+  assert.ok(tiles.some((text) => new RegExp('^' + viNum(libCount) + 'Bộ truyện').test(text)), 'sai số bộ overview');
+  assert.ok(tiles.some((text) => new RegExp('^' + viNum(chapCount) + 'Chương đã đăng').test(text)), 'sai số chương overview');
 
   click('button[data-tab="list"]');
   await wait(200);
   out.list = { rows: doc.querySelectorAll('.v2book-table tbody tr').length };
-  assert.strictEqual(out.list.rows, 63);
+  assert.strictEqual(out.list.rows, libCount);
 
   click(doc.querySelector('.v2book-table tbody tr .v2actions button'));
   await wait(1200);

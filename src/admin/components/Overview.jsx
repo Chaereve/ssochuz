@@ -42,7 +42,7 @@ export function Overview({ state, onReload, onTodo }) {
         <div class="row"><h3>Tình trạng dữ liệu</h3><span class="grow"></span><button class="btn ghost sm" type="button" onClick={onReload}>{state.loading ? 'Đang đọc…' : 'Đọc lại dữ liệu'}</button></div>
         <p class="hint">Tính từ dữ liệu đang mở ({state.online ? 'KV qua Worker' : 'file /data/*.json trong repo'}). Các công thức giữ theo admin cũ để đối chiếu.</p>
         <div class="tiles">
-          {ov.tiles.map((tile) => <Tile value={tile.value} label={tile.label} />)}
+          {ov.tiles.map((tile) => <Tile key={tile.label} value={tile.value} label={tile.label} />)}
           <Tile value={quota.writesToday || 0} label="Quota KV hôm nay" hint={quota.supported ? 'nguồn Worker' : 'Worker chưa có counter'} />
         </div>
         <div class="v2today">
@@ -56,7 +56,7 @@ export function Overview({ state, onReload, onTodo }) {
         <div class="ovtasks">
           <div class="ovhead">Việc nên xem lại</div>
           {ov.tasks.length ? ov.tasks.map((task) => (
-            <div class="ovtask">
+            <div class="ovtask" key={task.key}>
               <div class="ovrow">
                 <span class="ovpill">{num(task.count)}</span>
                 <span class="ovtt"><b>{task.title}</b><span>{task.hint}</span></span>
@@ -64,7 +64,7 @@ export function Overview({ state, onReload, onTodo }) {
                 <button class="btn ghost sm" type="button" onClick={() => onTodo && onTodo(task.key)}>Xem danh sách</button>
               </div>
               <div class="ovchips">
-                {task.items.map((book) => <button class="ovchip" type="button" onClick={() => onTodo && onTodo('edit', book)}>{book.title}</button>)}
+                {task.items.map((book) => <button class="ovchip" type="button" key={book.slug} onClick={() => onTodo && onTodo('edit', book)}>{book.title}</button>)}
                 {task.count > task.items.length ? <span class="sm muted">… và {num(task.count - task.items.length)} bộ nữa</span> : null}
               </div>
             </div>
@@ -94,7 +94,7 @@ export function Overview({ state, onReload, onTodo }) {
         <h3>Mới cập nhật</h3>
         <div class="ovrecent">
           {ov.recent.length ? ov.recent.map((book) => (
-            <button class="ovrec" type="button" onClick={() => onTodo && onTodo('edit', book)}>
+            <button class="ovrec" type="button" key={book.slug} onClick={() => onTodo && onTodo('edit', book)}>
               <span class={`ovth ${book.thumb ? 'skel' : ''}`}>{book.thumb ? <img src={book.thumb} alt="" loading="lazy" decoding="async" /> : null}</span>
               <span class="ovtt"><b>{book.title}</b><span>{book.author || ''} · {countText(book)}</span></span>
               <span class="ovwhen">{dateVN(book.updated)}</span>

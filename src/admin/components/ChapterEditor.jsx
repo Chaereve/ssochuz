@@ -73,20 +73,26 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef(null);
   const imageRef = useRef(null);
+  const initRef = useRef({ title: '', html: '' }); // nội dung gốc của chương đang mở (chưa gõ)
 
   useEffect(() => { setLocalBook(book || null); setIndex(0); }, [book && book.slug, slug]);
   const chapters = (localBook && Array.isArray(localBook.chapters) ? localBook.chapters : []);
   const current = chapters[index] || { t: '', html: '' };
 
   useEffect(() => {
-    setTitle(current.t || ('Chương ' + (index + 1)));
-    setHtml(htmlForEditor(current.html || '<p></p>', apiBase));
+    const baseTitle = current.t || ('Chương ' + (index + 1));
+    const baseHtml = htmlForEditor(current.html || '<p></p>', apiBase);
+    initRef.current = { title: baseTitle, html: baseHtml };
+    setTitle(baseTitle);
+    setHtml(baseHtml);
     setDraft(localBook ? readDraft(localBook.slug || slug, index) : null);
   }, [localBook && localBook.slug, index, apiBase]);
 
   useEffect(() => {
     if (!host) return;
-    const ed = createRichTextEditor({ element: host, content: html || '<p></p>', onUpdate: setHtml, onImageFile: uploadImageFile });
+    /* dựng editor từ nội dung gốc của chương đang mở (initRef) — không dùng state
+       html vì lúc đổi chương nó còn là html của chương cũ (flash nội dung sai) */
+    const ed = createRichTextEditor({ element: host, content: initRef.current.html || '<p></p>', onUpdate: setHtml, onImageFile: uploadImageFile });
     setEditor(ed);
     return () => { try { ed.destroy(); } catch (e) {} setEditor(null); };
   }, [host, localBook && localBook.slug, index]);
@@ -99,6 +105,8 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
 
   useEffect(() => {
     if (!localBook || !chapters.length) return;
+    const init = initRef.current;
+    if (title === init.title && html === init.html) return; /* chưa sửa gì — đừng ghi nháp ảo */
     const t = setTimeout(() => {
       writeDraft(localBook.slug || slug, index, { title, html });
       setDraft(readDraft(localBook.slug || slug, index));
@@ -113,10 +121,13 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
     next.chapters = Array.isArray(next.chapters) ? next.chapters : [];
     if (!next.chapters[index]) next.chapters[index] = { t: title || ('Chương ' + (index + 1)), html: '' };
     next.chapters[index] = { t: title || ('Chương ' + (index + 1)), html: htmlForStorage(html || '', apiBase) };
-    await onSaveBook(next);
-    setLocalBook(next);
-    dropDraft(next.slug || slug, index);
-    setDraft(null);
+    try {
+      await onSaveBook(next);
+      setLocalBook(next);
+      dropDraft(next.slug || slug, index);
+      setDraft(null);
+      initRef.current = { title, html };
+    } catch (e) { /* onSaveBook đã toast lỗi; giữ nháp để không mất chữ */ }
   };
   const addChapter = () => {
     const next = clone(localBook || { title: slug, slug, chapters: [] });
@@ -131,8 +142,10 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
     if (typed !== 'XOÁ') return;
     const next = clone(localBook);
     next.chapters.splice(index, 1);
-    await onSaveBook(next);
-    setLocalBook(next); setIndex(Math.max(0, index - 1));
+    try {
+      await onSaveBook(next);
+      setLocalBook(next); setIndex(Math.max(0, Math.min(index - 1, next.chapters.length - 1)));
+    } catch (e) { /* đã toast lỗi */ }
   };
   const moveChapter = async (delta) => {
     const to = index + delta;
@@ -140,8 +153,10 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
     const next = clone(localBook);
     const [item] = next.chapters.splice(index, 1);
     next.chapters.splice(to, 0, item);
-    await onSaveBook(next);
-    setLocalBook(next); setIndex(to);
+    try {
+      await onSaveBook(next);
+      setLocalBook(next); setIndex(to);
+    } catch (e) { /* đã toast lỗi */ }
   };
   const restoreDraft = () => {
     if (!draft) return;

@@ -40,7 +40,7 @@ export function createRichTextEditor({ element, content = '', onUpdate, onImageF
         event.preventDefault();
         files.forEach((file) => onImageFile(file).then((url) => {
           if (url && instance) instance.chain().focus().setImage({ src: url }).run();
-        }).catch(() => {}));
+        }).catch((e) => { if (window.CZ && window.CZ.toast) window.CZ.toast('Upload ảnh lỗi: ' + (e.message || e), 'err'); }));
         return true;
       },
       handleDrop(view, event) {
@@ -50,7 +50,7 @@ export function createRichTextEditor({ element, content = '', onUpdate, onImageF
         event.preventDefault();
         files.forEach((file) => onImageFile(file).then((url) => {
           if (url && instance) instance.chain().focus().setImage({ src: url }).run();
-        }).catch(() => {}));
+        }).catch((e) => { if (window.CZ && window.CZ.toast) window.CZ.toast('Upload ảnh lỗi: ' + (e.message || e), 'err'); }));
         return true;
       },
     },

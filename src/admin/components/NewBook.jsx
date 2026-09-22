@@ -19,9 +19,13 @@ export function NewBook({ registry, onCreate, onUploadImage }) {
   };
   const slug = useMemo(() => slugify(form.slug || form.title), [form.slug, form.title]);
   const exists = !!((registry && registry.lib) || []).find((book) => book.slug === slug);
-  const submit = (event) => {
+  const submit = async (event) => {
     event.preventDefault();
-    onCreate(Object.assign({}, form, { slug }));
+    const ok = onCreate ? await onCreate(Object.assign({}, form, { slug })) : false;
+    if (ok) {
+      setForm({ title: '', slug: '', author: '', couple: '', year: '', status: 'Đang cập nhật', is18: '0', thumb: '', synopsis: '', chapter: '' });
+      if (coverRef.current) coverRef.current.value = '';
+    }
   };
   return (
     <div id="pane-new" class="v2pane">

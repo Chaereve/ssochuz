@@ -4,7 +4,7 @@ export const num = (value) => (cz().num ? cz().num(value) : (Number(value) || 0)
 export const icon = (name, cls = 'i-s') => (cz().icon ? cz().icon(name, cls) : '');
 export const dateVN = (value) => (cz().dateVN ? cz().dateVN(value) : String(value || '—'));
 export const countText = (book) => (cz().countText ? cz().countText(book) : `${Number(book && book.chapters) || 0} chương`);
-export const statusCls = (status) => (cz().statusCls ? cz().statusCls(status) : (/sắp/i.test(String(status || '')) ? 'soon' : /hoàn/i.test(String(status || '')) ? 'done' : 'updating'));
+export const statusCls = (status) => (cz().statusCls ? cz().statusCls(status) : (/sắp|chưa|tạm dừng/i.test(String(status || '')) ? 'soon' : /hoàn thành|full/i.test(String(status || '')) ? 'done' : 'run'));
 
 export function daysSince(dateLike) {
   if (!dateLike) return 9999;

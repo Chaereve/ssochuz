@@ -135,7 +135,7 @@ function App() {
     return (/^\/api\//.test(res.url) && api.apiBase) ? api.apiBase + res.url : res.url;
   }
   async function getBook(slug) {
-    if (bookCache[slug] !== undefined) return bookCache[slug];
+    if (bookCache[slug]) return bookCache[slug];
     const book = state.online ? await api.book(slug).catch(() => null) : await staticBook(slug);
     setBookCache((prev) => Object.assign({}, prev, { [slug]: book }));
     return book;
@@ -227,7 +227,8 @@ function App() {
       await writeRegistry(registry, 'Đã tạo truyện “' + meta.title + '”');
       setBookCache((prev) => Object.assign({}, prev, { [meta.slug]: book }));
       setCurrentSlug(meta.slug); setActiveTab('edit');
-    } catch (error) { toast('Tạo truyện lỗi: ' + (error.message || error), 'err'); }
+      return true;
+    } catch (error) { toast('Tạo truyện lỗi: ' + (error.message || error), 'err'); return false; }
   }
 
   async function saveMeta(oldSlug, values) {
