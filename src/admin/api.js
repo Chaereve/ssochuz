@@ -105,7 +105,7 @@ export class AdminApi {
   putBook(slug, book) { return this.request('/api/book/' + encodeURIComponent(slug), { method: 'PUT', body: book }); }
   deleteBook(slug) { return this.request('/api/book/' + encodeURIComponent(slug), { method: 'DELETE' }); }
   deleteComment(slug, id) { return this.request('/api/comments/' + encodeURIComponent(slug) + '/' + encodeURIComponent(id), { method: 'DELETE' }); }
-  postImage(image) { return this.request('/api/img', { method: 'POST', body: { data: image.data, type: image.type } }); }
+  postImage(image) { return this.request('/api/img', { method: 'POST', body: { data: image.data, type: image.type, kind: image.kind || '' } }); }
   lockSet(slug, password) { return this.request('/api/lock/set', { method: 'POST', body: { slug, password } }); }
   recount() { return this.request('/api/recount', { method: 'POST' }); }
   importPost(slug, url = '', importMode = 'append') { return this.request('/api/import', { method: 'POST', body: { slug, url }, importMode }); }

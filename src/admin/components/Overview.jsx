@@ -84,7 +84,7 @@ export function Overview({ state, onReload, onTodo }) {
             const r2 = !!ovf.r2;
             return (
               <SystemRow kind={sb || r2 ? 'good' : 'warn'} icon={sb || r2 ? 'check' : 'info'} title="Overflow KV (tuỳ chọn)">
-                Supabase: {sb ? 'connected' : 'unavailable'}. R2: {r2 ? 'connected' : 'unavailable'}. KV fallback: active. Overflow không bắt buộc — admin vẫn chạy full JSON trên KV.
+                Supabase: {sb ? 'connected' : 'unavailable'}. R2: {r2 ? 'connected' : 'unavailable'}. Bìa: {ovf.covers ? 'Supabase Storage (bucket covers, 1 GB free)' : 'KV'}. Ảnh chương: KV. Overflow không bắt buộc — admin vẫn chạy full JSON trên KV.
               </SystemRow>
             );
           })()}

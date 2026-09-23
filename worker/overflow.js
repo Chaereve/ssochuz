@@ -1,4 +1,5 @@
 /* Overflow: đẩy book/img ra khỏi KV sang hai nền tảng free.
+   0) Bìa truyện (kind=cover) → Supabase Storage bucket `covers` (1 GB free)
    1) Supabase Postgres (bảng ssochuz_blobs) — secret SUPABASE_SERVICE_ROLE trên Worker
    2) Cloudflare R2 (binding CZ_R2) — 10 GB free
    Không cấu hình thì mọi thứ vẫn nằm full trong KV như cũ. Secret không bao giờ
@@ -8,8 +9,10 @@ function sbUrl(env) { return String((env && env.SUPABASE_URL) || '').replace(/\/
 function sbKey(env) { return String((env && env.SUPABASE_SERVICE_ROLE) || '').trim(); }
 
 export function overflowStatus(env) {
+  const supabase = !!(sbUrl(env) && sbKey(env));
   return {
-    supabase: !!(sbUrl(env) && sbKey(env)),
+    supabase,
+    covers: supabase, /* bìa → Supabase Storage bucket `covers` (1 GB free, không unlimited) */
     r2: !!(env && env.CZ_R2 && typeof env.CZ_R2.put === 'function'),
   };
 }
@@ -135,6 +138,84 @@ export async function persistBook(env, slug, parsed) {
   return { bytes, saved, overflow: '', stub: false, errors: ov.errors || [] };
 }
 
+function coverExt(type) {
+  const t = String(type || '').toLowerCase();
+  if (t === 'image/jpeg') return 'jpg';
+  if (t === 'image/png') return 'png';
+  return 'webp';
+}
+
+function bytesFromB64(s) {
+  let t = String(s || '').replace(/-/g, '+').replace(/_/g, '/');
+  while (t.length % 4) t += '=';
+  const bin = atob(t);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+function coverPublicUrl(env, pathName) {
+  return sbUrl(env) + '/storage/v1/object/public/covers/' + pathName;
+}
+
+async function ensureCoverBucket(env) {
+  const res = await fetch(sbUrl(env) + '/storage/v1/bucket', {
+    method: 'POST',
+    headers: {
+      apikey: sbKey(env),
+      Authorization: 'Bearer ' + sbKey(env),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      id: 'covers', name: 'covers', public: true,
+      file_size_limit: 8 * 1024 * 1024,
+    }),
+  });
+  if (res.ok || res.status === 409) return true;
+  const t = String(await res.text());
+  if (/exist|duplicate|already/i.test(t)) return true;
+  throw new Error('Không tạo được bucket covers: HTTP ' + res.status + ' ' + t.slice(0, 140));
+}
+
+async function putCoverObject(env, pathName, bin, type) {
+  return fetch(sbUrl(env) + '/storage/v1/object/covers/' + pathName, {
+    method: 'POST',
+    headers: {
+      apikey: sbKey(env),
+      Authorization: 'Bearer ' + sbKey(env),
+      'Content-Type': type || 'image/webp',
+      'x-upsert': 'true',
+    },
+    body: bin,
+  });
+}
+
+/* Bìa truyện: ưu tiên Supabase Storage (CDN, không ăn KV). Chưa gắn
+   SUPABASE_SERVICE_ROLE thì rơi về persistImage (KV) như cũ. Gắn rồi mà
+   Storage từ chối → ném lỗi, không báo đã lưu. */
+export async function persistCover(env, id, data, type) {
+  const bytes = Math.floor(String(data).replace(/=+$/, '').length * 3 / 4);
+  if (!sbUrl(env) || !sbKey(env)) return persistImage(env, id, data, type);
+  const pathName = id + '.' + coverExt(type);
+  const bin = bytesFromB64(data);
+  let res = await putCoverObject(env, pathName, bin, type);
+  if (res.status === 404 || res.status === 400) {
+    await ensureCoverBucket(env);
+    res = await putCoverObject(env, pathName, bin, type);
+  }
+  if (!res.ok) {
+    const msg = String(await res.text()).slice(0, 180);
+    throw new Error('Supabase Storage từ chối bìa (HTTP ' + res.status + '): ' + msg);
+  }
+  const url = coverPublicUrl(env, pathName);
+  const at = new Date().toISOString();
+  const stub = { overflow: 'supabase-storage', url, type, bytes };
+  await env.CZ_KV.put('img:' + id, JSON.stringify(stub), {
+    metadata: { type, bytes, at, overflow: 'supabase-storage', url },
+  });
+  return { bytes, overflow: 'supabase-storage', url };
+}
+
 export async function persistImage(env, id, data, type, extraMeta) {
   const bytes = Math.floor(String(data).replace(/=+$/, '').length * 3 / 4);
   const at = new Date().toISOString();
@@ -156,6 +237,9 @@ export async function readImage(env, id) {
   if (value.charAt(0) === '{') {
     try {
       const stub = JSON.parse(value);
+      if (stub && stub.overflow === 'supabase-storage' && stub.url) {
+        return { data: null, url: stub.url, type: stub.type || (metadata && metadata.type) || 'image/webp', metadata };
+      }
       if (stub && stub.overflow) {
         const got = await getOverflow(env, 'img:' + id);
         if (!got) return null;

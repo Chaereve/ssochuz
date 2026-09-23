@@ -199,7 +199,7 @@ function App() {
     if (!state.online) throw new Error('Upload ảnh cần nối Worker bằng ADMIN_KEY.');
     const packed = await compressImage(file, options);
     ensureQuota(1, 'upload ảnh');
-    const res = await api.postImage(packed);
+    const res = await api.postImage(Object.assign({}, packed, { kind: options.kind || '' }));
     trackQuotaWrite(1, 'upload ảnh');
     if (!res || !res.url) throw new Error('Worker không trả URL ảnh.');
     toast('Đã lên ảnh ' + Math.max(1, Math.round((res.bytes || packed.bytes || 0) / 1024)) + ' KB', 'ok');

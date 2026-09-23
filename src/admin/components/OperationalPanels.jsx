@@ -88,7 +88,7 @@ export function DoctorPanel({ state, onKvAudit, onScanBooks, onRecount, onReload
       <div class="v2ops-grid">
         <div class="v2mini"><b>Registry quick check</b><p class="hint">Slug trùng: {issues.dup.slice(0, 6).join(', ') || 'không thấy'}</p><p class="hint">Thiếu tên: {issues.missingTitle.slice(0, 6).join(', ') || 'không thấy'}</p></div>
         <div class="v2mini"><b>KV write quota</b><p class="hint">Đang tính: {num(state.quota && state.quota.writesToday)}/{num(state.quota && state.quota.limit || 1000)} lượt ghi hôm nay ({state.quota && state.quota.source}).</p><span class="kvbar"><span style={{ width: pct(state.quota && state.quota.writesToday, state.quota && state.quota.limit || 1000) + '%' }}></span></span></div>
-        <div class="v2mini"><b>Overflow KV</b><p class="hint">Supabase: {ov.supabase ? 'connected' : 'unavailable'}. R2: {ov.r2 ? 'connected' : 'unavailable'}. KV fallback: active. Chưa gắn thì book/img vẫn nằm full trong KV — không giả lưu.</p></div>
+        <div class="v2mini"><b>Overflow KV</b><p class="hint">Supabase: {ov.supabase ? 'connected' : 'unavailable'}. R2: {ov.r2 ? 'connected' : 'unavailable'}. Bìa: {ov.covers ? 'Supabase Storage (1 GB free)' : 'KV'}. Ảnh chương: KV. Chưa gắn thì book/img vẫn nằm full trong KV — không giả lưu.</p></div>
       </div>
       {scan ? <div class="v2doctor-scan">
         <div class="tiles v2tiles4"><div class="tile"><b>{num(scan.scanned)}</b><span>book đã quét ({scan.source})</span></div><div class="tile"><b>{num(scan.missing)}</b><span>thiếu book</span></div><div class="tile"><b>{num(scan.mismatch)}</b><span>lệch số chương</span></div><div class="tile"><b>{num(scan.empty)}</b><span>chương rỗng</span></div></div>
@@ -317,7 +317,7 @@ export function SettingsPanel({ state, onReload, onRecount, onStatsRefresh, onIm
     <div class="v2ops-grid">
       <div class="v2mini v2overflow-card">
         <b>Overflow KV (free)</b>
-        <p class="hint">Supabase: {(state.worker && state.worker.overflow && state.worker.overflow.supabase) ? 'connected' : 'unavailable'}. R2: {(state.worker && state.worker.overflow && state.worker.overflow.r2) ? 'connected' : 'unavailable'}. KV fallback: active.</p>
+        <p class="hint">Supabase: {(state.worker && state.worker.overflow && state.worker.overflow.supabase) ? 'connected' : 'unavailable'}. R2: {(state.worker && state.worker.overflow && state.worker.overflow.r2) ? 'connected' : 'unavailable'}. Bìa: {(state.worker && state.worker.overflow && state.worker.overflow.covers) ? 'Supabase Storage (bucket covers, 1 GB free — không unlimited)' : 'KV (chưa gắn SUPABASE_SERVICE_ROLE)'}. Ảnh chương vẫn KV. KV fallback: active.</p>
         <p class="hint">Chưa gắn thì book/img vẫn nằm full trong KV. Secret <code>SUPABASE_SERVICE_ROLE</code> chỉ đặt trên Worker, không vào bundle.</p>
         <p class="hint">SQL một lần (Supabase SQL Editor, bảng ~500 MB free):</p>
         <pre class="v2result">{'create table if not exists public.ssochuz_blobs (\n  key text primary key,\n  value text not null,\n  mime text,\n  updated_at timestamptz default now()\n);\nalter table public.ssochuz_blobs enable row level security;'}</pre>

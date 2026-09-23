@@ -36,6 +36,9 @@ crons = ["*/10 * * * *"]
 
 # TUỲ CHỌN — overflow book/img ra khỏi KV (free, không bắt buộc).
 # Không cấu hình thì Worker vẫn ghi full JSON vào KV như cũ.
+# 0) Bìa truyện (POST /api/img kind=cover): Worker PUT lên Storage bucket public
+#    `covers` (cùng SUPABASE_URL + SUPABASE_SERVICE_ROLE). Free 1 GB, không
+#    unlimited. Bucket tự tạo lần upload đầu nếu chưa có. Ảnh chương vẫn KV.
 # 1) Supabase Postgres (bảng ssochuz_blobs). Secret KHÔNG đưa ra trình duyệt:
 #      npx wrangler secret put SUPABASE_SERVICE_ROLE
 #    SQL một lần (SQL Editor):

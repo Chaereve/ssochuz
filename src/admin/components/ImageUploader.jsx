@@ -10,7 +10,7 @@ export function ImageUploader({
   onUpload,
   apiBase = '',
   label = 'Ảnh bìa',
-  hint = 'JPG, PNG hoặc WebP · tối đa 12 MB · nén WebP rồi lưu lên Worker (URL bền, không dùng blob:).',
+  hint = 'JPG, PNG hoặc WebP · tối đa 12 MB · nén WebP rồi Worker lưu bìa lên Supabase Storage khi đã gắn secret (1 GB free, không unlimited; URL bền, không dùng blob:).',
   inputId,
 }) {
   const [busy, setBusy] = useState(false);
@@ -42,7 +42,7 @@ export function ImageUploader({
     setBusy(true); setProgress(18);
     const tick = setInterval(() => setProgress((p) => Math.min(88, p + 9)), 180);
     try {
-      const url = await onUpload(file);
+      const url = await onUpload(file, { kind: 'cover' });
       const saved = persistableCover(url);
       if (!saved) throw new Error('Worker không trả URL bền — không lưu blob.');
       if (onChange) onChange(saved);

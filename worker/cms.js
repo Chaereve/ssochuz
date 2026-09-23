@@ -1,7 +1,7 @@
 import { profileId } from './member-spaces.js';
 export { MemberSpaces } from './member-spaces.js';
 export { PrivateBooks } from './private-books.js';
-import { dropOverflow, overflowStatus, persistBook, persistImage, readBook, readImage, materializeBook } from './overflow.js';
+import { dropOverflow, overflowStatus, persistBook, persistCover, persistImage, readBook, readImage, materializeBook } from './overflow.js';
 /* ============================================================================
    ssochuz — Worker đọc/ghi dữ liệu truyện + số liệu xếp hạng trên Cloudflare KV
    ----------------------------------------------------------------------------
@@ -20,7 +20,9 @@ import { dropOverflow, overflowStatus, persistBook, persistImage, readBook, read
      POST   /api/lock                   → nhập mật mã {slug, password} → token 6h (mở)
      GET    /api/img/<id>               → ảnh trong chương / ảnh bìa (mở, cache 1 năm)
      POST   /api/lock/set               → khóa/bỏ khóa/đổi mật mã {slug, password} (cần X-Admin-Key)
-     POST   /api/img                    → upload ảnh {data: base64, type} (cần X-Admin-Key)
+     POST   /api/img                    → upload ảnh {data, type, kind?} (cần X-Admin-Key)
+                                           · kind=cover + SUPABASE_SERVICE_ROLE → Storage bucket `covers`
+                                           · không kind / ảnh chương / báo lỗi → KV `img:<id>` như cũ
      GET    /api/admin/kv               → kiểm kho KV: số khoá + byte theo tiền tố (cần X-Admin-Key)
      GET    /api/schedule               → lịch ra chương (mở)
      GET    /api/stats                  → lượt đọc/bình chọn + ĐÁNH GIÁ SAO TỪ KV (mở)
@@ -87,6 +89,7 @@ import { dropOverflow, overflowStatus, persistBook, persistImage, readBook, read
      SUPABASE_URL      (bắt buộc nếu đăng nhập Supabase) = https://<ref>.supabase.co
      SUPABASE_JWT_SECRET (chỉ project cũ ký HS256) — Auth → Settings → JWT Secret
      SUPABASE_SERVICE_ROLE (secret, tuỳ chọn) — overflow book/img sang bảng ssochuz_blobs
+                                            + bìa truyện (kind=cover) lên Storage bucket `covers`
                                             (KHÔNG BAO GIỜ đưa ra trình duyệt / registry)
      CZ_R2             (R2 binding, tuỳ chọn) — overflow song song, 10 GB free tier
      ADMIN_EMAILS      (secret/tuỳ chọn) — email được vào /admin; không đặt trong frontend/registry
@@ -1340,15 +1343,34 @@ async function postImage(req, env, cors) {
     : 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
   /* base64: 4 ký tự → 3 byte (bỏ ký tự đệm '=' — chính nó làm cách tính
      naob 0.75 bị thừa 1–2 byte với ảnh thật) */
-  const stored = await persistImage(env, id, data, type);
-  await logAct(env, 'lên ảnh ' + id.slice(0, 8) + '… (' + Math.max(1, Math.round(stored.bytes / 1024)) + ' KB)', req);
-  return json({ ok: true, id: id, url: '/api/img/' + id, bytes: stored.bytes, overflow: stored.overflow || '' }, { cors });
+  const kind = String(body.kind || '').trim().toLowerCase();
+  let stored;
+  try {
+    stored = kind === 'cover' ? await persistCover(env, id, data, type) : await persistImage(env, id, data, type);
+  } catch (e) {
+    return json({ ok: false, error: String((e && e.message) || e) }, { status: 502, cors });
+  }
+  await logAct(env, 'lên ảnh ' + (kind === 'cover' ? 'bìa ' : '') + id.slice(0, 8) + '… (' + Math.max(1, Math.round(stored.bytes / 1024)) + ' KB)', req);
+  const url = stored.url || ('/api/img/' + id);
+  return json({ ok: true, id: id, url, bytes: stored.bytes, overflow: stored.overflow || '' }, { cors });
 }
 async function getImage(req, env, cors, id) {
   if (!env.CZ_KV) return noKV(cors);
   return await edgeCached(req, cors, 31536000, async () => {
     const img = await readImage(env, id);
-    if (!img || img.data == null) return json({ ok: false, error: 'không tìm thấy ảnh' }, { status: 404, cors });
+    if (!img) return json({ ok: false, error: 'không tìm thấy ảnh' }, { status: 404, cors });
+    if (img.url && /^https:\/\//i.test(img.url)) {
+      return new Response(null, {
+        status: 302,
+        headers: {
+          ...cors,
+          location: img.url,
+          'cache-control': 'public, max-age=86400',
+          'x-kv-key': 'img:' + id,
+        },
+      });
+    }
+    if (img.data == null) return json({ ok: false, error: 'không tìm thấy ảnh' }, { status: 404, cors });
     const h = {
       ...cors,
       'content-type': img.type || 'image/webp',
