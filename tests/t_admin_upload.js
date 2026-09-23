@@ -40,9 +40,9 @@ function click(win, el) {
     return response({ ok: false, error: 'missing mock ' + u.pathname }, false, 404);
   };
 
-  const p = page('admin-v2.html', {
+  const p = page('admin.html', {
     fetch: apiFetch,
-    url: 'https://ssochuz.pages.dev/admin-v2.html',
+    url: 'https://ssochuz.pages.dev/admin.html',
     config: { CZ_API: 'https://cms.test' },
     setup(w) {
       w.FileReader = class {

@@ -148,7 +148,7 @@ function App() {
       trackQuotaWrite(1, okMsg);
     }
     store.setState({ registry: next, pendingRegistry: null, partialError: '' });
-    toast(state.online ? okMsg : okMsg + ' (bản nháp trong phiên admin v2)', 'ok');
+    toast(state.online ? okMsg : okMsg + ' (bản nháp trong phiên admin)', 'ok');
     pushAudit({ action: 'registry', text: okMsg, result: state.online ? 'ok' : 'draft' });
     return next;
   }
@@ -224,7 +224,7 @@ function App() {
       api.setConnection({ apiBase: '', adminKey: '' });
       store.setState({ mode, role: mode === 'login' ? 'admin' : 'local', online: false, worker: null, apiBase: '', quota: quota.snapshot(), connecting: false, connError: '' });
       await loadRegistryFromCurrent(false);
-      if (!quiet) setNotice('Đang xem dữ liệu tĩnh trong repo. Admin v2 chỉ ghi khi bạn nối Worker bằng ADMIN_KEY.');
+      if (!quiet) setNotice('Đang xem dữ liệu tĩnh trong repo. Admin chỉ ghi khi bạn nối Worker bằng ADMIN_KEY.');
     } catch (error) { setGateMessage(error.message || String(error)); }
     finally { setBusy(false); }
   }
@@ -246,7 +246,7 @@ function App() {
       await loadRegistryFromCurrent(true);
       quota.init(api).then((snap) => store.setState({ quota: snap })).catch(() => {});
       loadOperationalCounts().catch(() => {});
-      if (!quiet) toast('Kết nối Admin v2 OK', 'ok');
+      if (!quiet) toast('Kết nối quản trị OK', 'ok');
     } catch (error) {
       api.setConnection({ apiBase: '', adminKey: '' });
       const kind = classifyConnError(error);
@@ -630,8 +630,8 @@ function App() {
       } catch (e) { fail++; }
     }
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-    const payload = { at: new Date().toISOString(), note: 'Admin v2 backup: registry + book JSON; lock hash and staff email stripped by default.', registry: stripRegistryForBackup(registry), books, failedBooks: fail };
-    const file = 'ssochuz-admin-v2-backup-' + stamp + '.json';
+    const payload = { at: new Date().toISOString(), note: 'Admin backup: registry + book JSON; lock hash and staff email stripped by default.', registry: stripRegistryForBackup(registry), books, failedBooks: fail };
+    const file = 'ssochuz-admin-backup-' + stamp + '.json';
     downloadJSON(file, payload);
     toast('Đã tạo backup: ' + Object.keys(books).length + ' book' + (fail ? ', lỗi ' + fail : ''), fail ? 'err' : 'ok');
     return { ok: true, file, books: Object.keys(books).length, failedBooks: fail };
@@ -734,7 +734,7 @@ function App() {
   async function deleteBook(slug) {
     const book = ((state.registry && state.registry.lib) || []).find((item) => item.slug === slug);
     if (!book) return;
-    const ok = await confirmBox('Xoá bộ “' + book.title + '” khỏi thư viện' + (state.online ? ' và xoá book trên KV' : ' trong phiên admin v2') + '?', 'Xoá');
+    const ok = await confirmBox('Xoá bộ “' + book.title + '” khỏi thư viện' + (state.online ? ' và xoá book trên KV' : ' trong phiên admin') + '?', 'Xoá');
     if (!ok) return;
     const typed = window.prompt('Gõ đúng slug để xác nhận xoá lần cuối:', '');
     if (typed !== slug) { toast('Đã huỷ xoá: slug xác nhận không khớp.', 'err'); return; }
@@ -835,7 +835,7 @@ function App() {
 }
 
 function mount() {
-  const root = document.getElementById('adminV2Root');
+  const root = document.getElementById('adminRoot');
   if (root) render(<App />, root);
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount);

@@ -1,6 +1,7 @@
 import { h } from 'preact';
 import { useMemo, useState } from 'preact/hooks';
 import { LockedBadge } from './Badges.jsx';
+import { genreNameOf } from '../utils/books.js';
 
 export function UsersPanel({ registry, onEdit, onFilterAuthor }) {
   const lib = (registry && registry.lib) || [];
@@ -35,7 +36,7 @@ export function UsersPanel({ registry, onEdit, onFilterAuthor }) {
               <tbody>
                 {shown.map((a) => (
                   <tr key={a.name}>
-                    <td><b>{a.name}</b><div class="sm muted">{[...new Set(a.books.map((b) => genreNameOf(b, registry)).filter(Boolean))].slice(0, 3).join(', ') || '—'}</div></td>
+                    <td><b>{a.name}</b><div class="sm muted">{[...new Set(a.books.map((b) => genreNameOf(b)).filter(Boolean))].slice(0, 3).join(', ') || '—'}</div></td>
                     <td>{a.books.length}</td>
                     <td>{a.published}</td>
                     <td>{a.draft}</td>

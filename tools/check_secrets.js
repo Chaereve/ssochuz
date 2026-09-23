@@ -8,7 +8,7 @@ const ROOT = path.join(__dirname, '..');
 const files = [
   'cz-config.js', 'index.html', 'truyen.html', 'admin.html', 'guide.html', '404.html',
   'cz-app.js', 'cz-auth.js', 'cz-home.js', 'cz-story.js', 'admin.js',
-  'src/cz-app.js', 'src/cz-auth.js', 'src/cz-home.js', 'src/cz-story.js', 'src/admin.js',
+  'src/cz-app.js', 'src/cz-auth.js', 'src/cz-home.js', 'src/cz-story.js',
   'data/registry.json', 'blogger-theme/chuseoz-theme.xml'
 ];
 const errors = [];

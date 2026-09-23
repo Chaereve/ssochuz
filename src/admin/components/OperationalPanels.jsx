@@ -88,7 +88,7 @@ export function DoctorPanel({ state, onKvAudit, onScanBooks, onRecount, onReload
       <div class="v2ops-grid">
         <div class="v2mini"><b>Registry quick check</b><p class="hint">Slug trùng: {issues.dup.slice(0, 6).join(', ') || 'không thấy'}</p><p class="hint">Thiếu tên: {issues.missingTitle.slice(0, 6).join(', ') || 'không thấy'}</p></div>
         <div class="v2mini"><b>KV write quota</b><p class="hint">Đang tính: {num(state.quota && state.quota.writesToday)}/{num(state.quota && state.quota.limit || 1000)} lượt ghi hôm nay ({state.quota && state.quota.source}).</p><span class="kvbar"><span style={{ width: pct(state.quota && state.quota.writesToday, state.quota && state.quota.limit || 1000) + '%' }}></span></span></div>
-        <div class="v2mini"><b>Overflow KV</b><p class="hint">Supabase: {ov.supabase ? 'connected' : 'unavailable'}. R2: {ov.r2 ? 'connected' : 'unavailable'}. Bìa: {ov.covers ? 'Supabase Storage (1 GB free)' : 'KV'}. Ảnh chương: KV. Chưa gắn thì book/img vẫn nằm full trong KV — không giả lưu.</p></div>
+        <div class="v2mini"><b>Overflow KV</b><p class="hint">Supabase: {ov.supabase ? 'connected' : 'unavailable'}. R2: {ov.r2 ? 'connected' : 'unavailable'}. Bìa: {ov.covers ? 'Supabase Storage (1 GB free)' : 'KV'}. Ảnh chương: {(ov.supabase || ov.r2) ? 'overflow sang Supabase/R2, ghi lỗi thì rớt về KV' : 'KV'}. Chưa gắn thì book/img vẫn nằm full trong KV — không giả lưu.</p></div>
       </div>
       {scan ? <div class="v2doctor-scan">
         <div class="tiles v2tiles4"><div class="tile"><b>{num(scan.scanned)}</b><span>book đã quét ({scan.source})</span></div><div class="tile"><b>{num(scan.missing)}</b><span>thiếu book</span></div><div class="tile"><b>{num(scan.mismatch)}</b><span>lệch số chương</span></div><div class="tile"><b>{num(scan.empty)}</b><span>chương rỗng</span></div></div>
@@ -122,7 +122,7 @@ export function CommentsPanel({ state, onLoad, onDelete }) {
   useEffect(() => { if (state.online && !data.loaded && !busy) load(); }, [state.online]);
   return <div id="pane-cmts" class="v2pane"><section class="card2">
     <div class="row"><h3>Bình luận</h3><span class="grow"></span><LoaderButton busy={busy} onClick={load}>Đọc bình luận</LoaderButton></div>
-    <NeedOnline state={state}><p class="hint">Đang có {num(data.count != null ? data.count : (data.items || []).length)} bình luận trong bộ nhớ admin v2.{data.fallback ? ' Worker cũ nên đang gom từng bộ.' : ''}</p></NeedOnline>
+    <NeedOnline state={state}><p class="hint">Đang có {num(data.count != null ? data.count : (data.items || []).length)} bình luận trong bộ nhớ admin.{data.fallback ? ' Worker cũ nên đang gom từng bộ.' : ''}</p></NeedOnline>
     {error ? <div class="msgbar show err">{error}</div> : null}
     <div class="row v2filters"><input class="inp" placeholder="Tìm nội dung/người gửi/slug" value={q} onInput={(e) => setQ(e.currentTarget.value)} /><select class="inp" value={slug} onChange={(e) => setSlug(e.currentTarget.value)}><option value="">Mọi bộ</option>{((state.registry && state.registry.lib) || []).map((b) => <option key={b.slug} value={b.slug}>{b.title}</option>)}</select><button type="button" class={`btn ghost sm ${onlySpam ? 'v2tab-on' : ''}`} onClick={() => setOnlySpam(!onlySpam)}>Chỉ nghi spam ({spamSuspects(data).length})</button></div>
     <div class="v2listcards">{rows.length ? rows.slice(0, 400).map((c) => <article class="v2itemrow" key={c.slug + ':' + c.id}>
@@ -242,7 +242,7 @@ export function VotesPanel({ state, onLoadVoters, onRemoveVotes, onResetVotes })
   const remove = async () => { setError(''); try { await onRemoveVotes(slug, keys); await load(slug); } catch (e) { setError(e.message || String(e)); } };
   return <div id="pane-votes" class="v2pane"><section class="card2">
     <div class="row"><h3>Phiếu bầu</h3><span class="grow"></span><LoaderButton busy={busy} onClick={() => load()}>Đọc phiếu</LoaderButton></div>
-    <NeedOnline state={state}><p class="hint">Gỡ/reset phiếu là thao tác ghi KV, admin v2 tính quota ước lượng và hỏi xác nhận mạnh.</p></NeedOnline>
+    <NeedOnline state={state}><p class="hint">Gỡ/reset phiếu là thao tác ghi KV, admin tính quota ước lượng và hỏi xác nhận mạnh.</p></NeedOnline>
     {error ? <div class="msgbar show err">{error}</div> : null}
     <div class="row v2filters"><select class="inp" value={slug} onChange={(e) => { setSlug(e.currentTarget.value); setData(null); }}><option value="">Chọn bộ</option>{lib.map((b) => <option key={b.slug} value={b.slug}>{b.title}</option>)}</select><button class="btn ghost sm" type="button" onClick={() => load()}>Xem</button></div>
     {data ? <div class="tiles v2tiles4"><div class="tile"><b>{num(data.total)}</b><span>phiếu đang hiện</span></div><div class="tile"><b>{num(data.voters)}</b><span>khóa người bầu</span></div><div class="tile"><b>{num(data.counted)}</b><span>đếm mới</span></div><div class="tile"><b>{num(data.base)}</b><span>số cũ import</span></div></div> : null}
@@ -287,7 +287,7 @@ export function SettingsPanel({ state, onReload, onRecount, onStatsRefresh, onIm
   };
   return <div id="pane-settings" class="v2pane"><section class="card2">
     <h3>Cài đặt & thao tác hệ thống</h3>
-    <p class="hint">Admin v2 giữ static Cloudflare Pages, không thêm dịch vụ trả phí và không đưa secret vào bundle. Các nút ghi KV đều đi qua endpoint Worker có sẵn.</p>
+    <p class="hint">Admin giữ static Cloudflare Pages, không thêm dịch vụ trả phí và không đưa secret vào bundle. Các nút ghi KV đều đi qua endpoint Worker có sẵn.</p>
     <div class="v2ops-grid"><div class="v2mini"><b>Kết nối</b><p class="hint">Chế độ: {state.online ? 'Worker + ADMIN_KEY' : 'dữ liệu tĩnh/login frontend'}</p><p class="hint">API: <code>{state.apiBase || (window.CZ && window.CZ.API) || '—'}</code></p></div><div class="v2mini"><b>Quota ghi KV</b><p class="hint">Counter hiện tại: {num(state.quota && state.quota.writesToday)}/{num(state.quota && state.quota.limit || 1000)} · nguồn {state.quota && state.quota.source}</p></div></div>
     <div class="v2ops-grid">
       <div class="v2mini">
@@ -317,14 +317,15 @@ export function SettingsPanel({ state, onReload, onRecount, onStatsRefresh, onIm
     <div class="v2ops-grid">
       <div class="v2mini v2overflow-card">
         <b>Overflow KV (free)</b>
-        <p class="hint">Supabase: {(state.worker && state.worker.overflow && state.worker.overflow.supabase) ? 'connected' : 'unavailable'}. R2: {(state.worker && state.worker.overflow && state.worker.overflow.r2) ? 'connected' : 'unavailable'}. Bìa: {(state.worker && state.worker.overflow && state.worker.overflow.covers) ? 'Supabase Storage (bucket covers, 1 GB free — không unlimited)' : 'KV (chưa gắn SUPABASE_SERVICE_ROLE)'}. Ảnh chương vẫn KV. KV fallback: active.</p>
+        <p class="hint">Supabase: {(state.worker && state.worker.overflow && state.worker.overflow.supabase) ? 'connected' : 'unavailable'}. R2: {(state.worker && state.worker.overflow && state.worker.overflow.r2) ? 'connected' : 'unavailable'}. Bìa: {(state.worker && state.worker.overflow && state.worker.overflow.covers) ? 'Supabase Storage (bucket covers, 1 GB free — không unlimited)' : 'KV (chưa gắn SUPABASE_SERVICE_ROLE)'}. Ảnh chương: {(state.worker && state.worker.overflow && (state.worker.overflow.supabase || state.worker.overflow.r2)) ? 'overflow sang Supabase/R2 (bảng ssochuz_blobs)' : 'KV'}.</p>
+        <p class="hint">“connected” nghĩa là Worker ĐÃ GẮN secret (SUPABASE_URL + SUPABASE_SERVICE_ROLE) — chưa chắc bảng đã có. Chưa chạy SQL dưới đây thì mọi ghi overflow sẽ lỗi và bản đầy đủ TỰ RỚT VỀ KV (fallback) — không mất dữ liệu, chỉ chưa đỡ được KV.</p>
         <p class="hint">Chưa gắn thì book/img vẫn nằm full trong KV. Secret <code>SUPABASE_SERVICE_ROLE</code> chỉ đặt trên Worker, không vào bundle.</p>
         <p class="hint">SQL một lần (Supabase SQL Editor, bảng ~500 MB free):</p>
         <pre class="v2result">{'create table if not exists public.ssochuz_blobs (\n  key text primary key,\n  value text not null,\n  mime text,\n  updated_at timestamptz default now()\n);\nalter table public.ssochuz_blobs enable row level security;'}</pre>
-        <p class="hint">R2 10 GB free: tạo bucket rồi binding <code>CZ_R2</code> trong wrangler.toml (đã ghi chú sẵn).</p>
+        <p class="hint">R2 10 GB free (tuỳ chọn): tạo bucket rồi binding <code>CZ_R2</code> trong wrangler.toml (đã ghi chú sẵn). Ghi xong KV chỉ còn “stub” nhỏ, bản đầy đủ nằm ở Supabase/R2.</p>
       </div>
     </div>
     {result ? <pre class="v2result">{result}</pre> : null}
-    <div class="savebar"><button class="btn ghost" type="button" onClick={onReload}>Đọc lại dữ liệu</button><button class="btn ghost" type="button" disabled={!state.online || writeBlocked || !!busy} onClick={() => run('stats', onStatsRefresh)}>Flush stats cache</button><button class="btn pri" type="button" disabled={!state.online || writeBlocked || !!busy} onClick={() => run('recount', onRecount)}>Đếm lại số chương</button><a class="btn ghost" href="/admin-legacy">Mở admin cũ</a></div>
+    <div class="savebar"><button class="btn ghost" type="button" onClick={onReload}>Đọc lại dữ liệu</button><button class="btn ghost" type="button" disabled={!state.online || writeBlocked || !!busy} onClick={() => run('stats', onStatsRefresh)}>Flush stats cache</button><button class="btn pri" type="button" disabled={!state.online || writeBlocked || !!busy} onClick={() => run('recount', onRecount)}>Đếm lại số chương</button></div>
   </section></div>;
 }

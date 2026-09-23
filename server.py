@@ -29,12 +29,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self.serve_file("guide.html")
         if dec_path.startswith("/guide/"):
             return self.serve_file("guide.html")
-        if dec_path == "/admin" or dec_path == "/admin/" or path == "/admin" or path == "/admin/":
-            return self.serve_file("admin-v2.html")
-        if dec_path in ("/admin-v2", "/admin-v2/") or path in ("/admin-v2", "/admin-v2/"):
-            return self.serve_file("admin-v2.html")
-        if dec_path in ("/admin-legacy", "/admin-legacy/") or path in ("/admin-legacy", "/admin-legacy/"):
-            return self.serve_file("admin-legacy.html")
+        if dec_path in ("/admin", "/admin/", "/admin-v2", "/admin-v2/", "/admin-legacy", "/admin-legacy/") or path in ("/admin", "/admin/", "/admin-v2", "/admin-v2/", "/admin-legacy", "/admin-legacy/"):
+            # Một trang quản trị duy nhất (admin.html); URL đời v2/legacy vẫn vào đúng trang này.
+            return self.serve_file("admin.html")
         if dec_path.rstrip('/') in ('/my-space', '/profile'):
             return self.serve_file(dec_path.strip('/') + '.html')
         # For /data, /css, /js etc, serve as static

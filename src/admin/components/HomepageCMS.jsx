@@ -38,12 +38,20 @@ export function HomepageCMS({ registry, apiBase, onSave, writeBlocked = false, o
 
   async function save(e) {
     e.preventDefault();
-    await onSave({
-      slides: slides.filter((s) => s.slug).slice(0, 8),
-      editorChoice: choice.filter(Boolean).slice(0, 12),
-      schedule: { items: sched.filter((it) => it && (it.slug || it.title)), note },
-      announcement: announce,
-    });
+    try {
+      await onSave({
+        slides: slides.filter((s) => s.slug).slice(0, 8),
+        editorChoice: choice.filter(Boolean).slice(0, 12),
+        schedule: { items: sched.filter((it) => it && (it.slug || it.title)), note },
+        announcement: announce,
+      });
+    }
+    catch (err) {
+      /* onSave (writeRegistry) toast khi thành công nhưng vẫn ném lỗi lên — phải
+         bắt để hiện lỗi (quota hết, Worker từ chối…) thay vì rejection bỏ hoang. */
+      const m = (err && err.message) || String(err);
+      window.CZ && window.CZ.toast ? window.CZ.toast('Lưu trang chủ lỗi: ' + m, 'err') : alert(m);
+    }
   }
 
   return (

@@ -1,6 +1,7 @@
-/* ssochuz admin v2 — source CSS (copy to /admin-v2.css for static preview)
-   Nguyên tắc: chỉ bổ sung lớp riêng của v2; khung sườn (.abar/.ashell/.snav/.smain/
-   .tile/.pill/.msgbar…) dùng lại đúng class cz.css của admin cũ để không lệch giao diện. */
+/* ssochuz admin — source CSS (copy thành /admin.css khi build:admin)
+   Nguyên tắc: chỉ bổ sung lớp riêng của trang quản trị; khung sườn (.abar/.ashell/
+   .snav/.smain/.tile/.pill/.msgbar…) dùng lại đúng class cz.css của web để không lệch
+   giao diện. (Lớp .v2* là tên lớp nội bộ giữ nguyên để khỏi vỡ test/giao diện.) */
 
 /* ===== Cổng vào (auth gate) ===== */
 .v2gate{min-height:100vh;display:grid;place-items:center;padding:32px 16px}
@@ -186,8 +187,21 @@
 .v2aside{display:flex;flex-direction:column;padding:0 8px;gap:2px}
 .v2nav-group{display:flex;flex-direction:column;gap:2px;margin-bottom:10px}
 .v2app .snav button{width:100%;justify-content:flex-start;border-radius:10px;padding:8px 10px}
-.v2app.v2collapsed .v2aside span,.v2app.v2collapsed .admin-nav-label,.v2app.v2collapsed .v2side-note,.v2app.v2collapsed .ct{display:none}
-.v2app.v2collapsed .v2brand .logo i{display:none}
+/* Thu gọn menu: chỉ được ẩn CHỮ (nhãn nút, nhãn nhóm, badge .ct, ghi chú, chữ
+   logo) — icon (span.admin-nav-icon) phải còn hiển thị để thanh 72px vẫn bấm
+   được. Nguyên nhân lỗi "sidebar trắng trống": luật cũ `.v2aside span` ẩn cả
+   icon lẫn chữ, trạng thái collapsed còn nằm trong localStorage nên F5 vẫn
+   hỏng, người dùng không bấm được mục nào. Toàn khối nằm trong
+   @media(min-width:901px) để drawer ≤900px luôn hiện đủ chữ, không bao giờ
+   bị ảnh hưởng bởi trạng thái thu gọn. */
+@media(min-width:901px){
+  .v2app.v2collapsed .v2aside span:not(.admin-nav-icon),.v2app.v2collapsed .admin-nav-label,.v2app.v2collapsed .v2side-note,.v2app.v2collapsed .ct{display:none}
+  .v2app.v2collapsed .v2brand .logo i{display:none}
+  .v2app.v2collapsed .v2brand{justify-content:center;gap:0;padding:4px 8px 12px}
+  .v2app.v2collapsed .v2brand .logo{font-size:0}
+  .v2app.v2collapsed .v2brand .logo .dot{margin-right:0}
+  .v2app.v2collapsed .snav button{justify-content:center;padding:8px 0}
+}
 .v2frame{min-width:0;display:flex;flex-direction:column}
 .v2top.in,.v2top .in{display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid var(--bd);background:var(--surf);position:sticky;top:0;z-index:20}
 .v2search{display:flex;align-items:center;gap:8px;flex:1;max-width:420px;border:1px solid var(--bd);border-radius:999px;padding:0 12px;background:var(--bg)}

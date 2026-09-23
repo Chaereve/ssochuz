@@ -11,7 +11,7 @@ const chapCount = (reg.lib || []).reduce((sum, b) => sum + (Number(b.chapters) |
 
 (async () => {
   const out = {};
-  const p = page('admin-v2.html', { fetch: dataFetch(), url: 'https://ssochuz.pages.dev/admin-v2.html' });
+  const p = page('admin.html', { fetch: dataFetch(), url: 'https://ssochuz.pages.dev/admin.html' });
   const { doc, win } = p;
   const click = (sel) => {
     const el = typeof sel === 'string' ? doc.querySelector(sel) : sel;

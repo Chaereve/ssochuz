@@ -11,8 +11,8 @@ còn thấy ghi chú nội bộ (tên khoá KV, luồng quản trị, danh sách
 | `src/cz-auth.js` | `/cz-auth.js` |
 | `src/cz-home.js` | `/cz-home.js` |
 | `src/cz-story.js` | `/cz-story.js` |
-| `src/admin.js` | `/admin.js` |
 | `src/cz.css` | `/cz.css` |
+| `src/admin/` (Preact, entry `main.jsx`) | `/admin.js` + `/admin.css` + `/admin.js.map` — sinh bởi `npm run build:admin` |
 
 `cz-config.js` **không** rút gọn: đó là tệp cấu hình chủ web tự sửa (URL Worker,
 Supabase…), nội dung vốn công khai.

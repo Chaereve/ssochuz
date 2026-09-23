@@ -64,13 +64,14 @@
 /profile/     /profile     200
 /guide.html    /guide    200
 /guide/        /guide    200
-# Admin cutover: /admin mở admin v2; legacy giữ ở /admin-legacy ít nhất 30 ngày.
-/admin         /admin-v2       200
-/admin/        /admin-v2       200
-/admin-v2.html  /admin-v2       200
-/admin-v2/     /admin-v2       200
-/admin-legacy.html  /admin-legacy  200
-/admin-legacy/     /admin-legacy  200
+# Admin gộp MỘT trang duy nhất: /admin mở thẳng admin.html. URL thời hai bản
+# (admin-v2 / admin-legacy) vẫn đưa về đúng một admin này, không chết link.
+/admin-v2       /admin       200
+/admin-v2/      /admin       200
+/admin-v2.html  /admin       200
+/admin-legacy       /admin   200
+/admin-legacy/      /admin   200
+/admin-legacy.html  /admin   200
 # --- d) luật TĨNH từng truyện (sinh bởi tools/build_og.mjs, 2 luật mỗi bộ) ---
 # Nhiệm vụ: giữ URL của từng bộ trúng luật này (đứng TRƯỚC luật chung /truyen/*
 # ở cuối tệp) để trang bộ truyện được phục vụ từ tệp tĩnh truyen/<slug>/index.html

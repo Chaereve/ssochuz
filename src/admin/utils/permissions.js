@@ -1,4 +1,4 @@
-/* RBAC phía admin v2. Worker vẫn là nguồn sự thật: ADMIN_KEY = Super Admin.
+/* RBAC phía admin. Worker vẫn là nguồn sự thật: ADMIN_KEY = Super Admin.
    Vai trò client chỉ dùng để ẩn/hiện UI — mọi ghi KV vẫn cần khoá quản trị. */
 
 export const ROLES = {

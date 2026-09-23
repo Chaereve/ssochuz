@@ -145,7 +145,11 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   key('Escape'); await wait(200);
 
   /* =====================================================================
-     2. QUẢN TRỊ — xoá chương, đổi thứ tự, xoá bộ, ngắt kết nối
+     2. QUẢN TRỊ (một admin duy nhất — trang Preact tại /admin): boot tự nối
+        bằng phiên đã lưu, thư viện render từ worker giả, và trang KHÔNG đăng
+        ký phím tắt toàn cục nào (Ctrl+S/K, số/chữ đơn lẻ phải bị bỏ qua).
+        Luồng xoá chương/đổi thứ tự/xoá bộ của admin mới nằm ở tests/t_admin_core.js
+        và tests/t_admin_writes.js — không lặp lại ở đây.
      ===================================================================== */
   const FAKE_KEY = 'khoa-test';
   function workerFetch(url, opt = {}) {
@@ -163,78 +167,34 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
       REG = JSON.parse(opt.body).registry || JSON.parse(opt.body); return ret({ ok: true, rev: 'r2' });
     }
     if (method === 'DELETE') { delete BOOKS[path.replace('/api/book/', '')]; return ret({ ok: true }); }
+    if (path.startsWith('/api/book/')) return ret({ ok: true });
     if (path === '/api/book/third-person') {
       if (method === 'GET') return ret(BOOK);
       BOOK = JSON.parse(opt.body).book || JSON.parse(opt.body); return ret({ ok: true });
     }
-    if (path.startsWith('/api/book/')) return ret({ ok: true });
     return ret({ ok: false, error: 'không có ' + path }, false, 404);
   }
-  const BOOKS = {};
-  let REG = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'data/registry.json'), 'utf8'));
-  REG = JSON.parse(JSON.stringify(REG));
-  let BOOK = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'data/book/third-person.json'), 'utf8'));
-  BOOK = JSON.parse(JSON.stringify(BOOK));
 
   const a = page('admin.html', { url: 'https://ssochuz.pages.dev/admin', fetch: workerFetch });
   const W = a.win, D = a.doc;
   const $a = s => D.querySelector(s), $$a = s => [...D.querySelectorAll(s)];
-  const clk = s => { const e = typeof s === 'string' ? $a(s) : s; if (!e) return 'MISSING ' + s; e.dispatchEvent(new W.MouseEvent('click', { bubbles: true })); return 'ok'; };
-  const txtA = s => { const e = $a(s); return e ? e.textContent.trim().replace(/\s+/g, ' ') : '<null>'; };
-  await wait(500);
+  await wait(400);
   W.localStorage.setItem('cz_kv_api', 'https://cms.test');
   W.localStorage.setItem('cz_kv_key', FAKE_KEY);
-  clk('#inApi'); $a('#inApi').value = 'https://cms.test';
-  clk('#inKey'); $a('#inKey').value = FAKE_KEY;
-  clk('#btnConnect'); await wait(700);
-  out.adminConnected = { appShown: !$a('#scApp').classList.contains('hide'), rows: $$a('#tb tbody tr').length };
+  await wait(1000); /* boot đọc phiên đã lưu rồi tự nối Worker */
+  out.adminConnected = { vaoDuoc: !!$a('.v2app'), navTabs: $$a('.v2side nav button').length };
 
-  /* mở “Sửa bộ & chương” của third-person */
-  const row = $$a('#tb tbody tr').find(r => /Third Person/i.test(r.textContent));
-  out.adminFoundRow = !!row;
-  if (row) { clk([...row.querySelectorAll('button')].find(b => /sửa/i.test(b.textContent)) || row); await wait(600); }
-  out.adminEditOpen = { pane: !$a('#pane-edit').classList.contains('hide'), head: txtA('#edHead'), chaps: $$a('#chList .row2').length };
-  const before = BOOK.chapters.length;
-
-  /* đổi thứ tự: đưa chương cuối xuống? (đưa lên) */
-  const rows = $$a('#chList .row2');
-  out.adminReorder = { hasBtn: !!rows[2] && !!rows[2].querySelector('[data-up]'), beforeList: rows.slice(0, 3).map(r => txtA.call ? r.querySelector('.nm').textContent.trim() : '') };
-  clk(rows[2].querySelector('[data-up]')); await wait(250);
-  out.adminReorderAfter = $$a('#chList .row2').slice(0, 3).map(r => r.querySelector('.nm').textContent.trim());
-  out.adminReorderUnchanged = JSON.stringify(out.adminReorder.beforeList) === JSON.stringify(out.adminReorderAfter);
-  clk('#btnSaveCh'); await wait(600);
-  out.adminReorderSaved = { msg: txtA('#msg').slice(0, 70), n: BOOK.chapters.length, firstNow: BOOK.chapters[0].t };
-
-  /* xoá 1 chương (qua hộp thoại xác nhận) */
-  clk($$a('#chList .row2')[0]); await wait(200);
-  const titleBefore = $a('#chTitle').value;
-  clk('#chDel'); await wait(300);
-  out.confirmOpen = !!$a('#czConfirm');
-  clk('#czOk'); await wait(300);
-  out.adminChDel = {
-    before: before, after: $$a('#chList .row2').length,
-    chon: titleBefore, deleted: !BOOK.chapters.some(c => c.t === titleBefore),
-    firstRow: txtA('#chList .row2 .nm'), lastBadge: txtA('#chList .row2:last-child .pill')
-  };
-  clk('#chNew'); await wait(200);
-  $a('#chTitle').value = 'Chương thử'; $a('#edBody').innerHTML = '<p>nội dung</p>';
-  out.adminChNew = { n: $$a('#chList .row2').length };
-
-  /* xoá bộ — xác nhận 2 bước trên chính nút (arm2): lần 1 "vũ trang", lần 2 chạy */
-  const libBefore = REG.lib.length;
-  clk('#btnDelBook'); await wait(150);
-  clk('#btnDelBook'); await wait(700);
-  out.adminDelBook = { before: libBefore, after: REG.lib.length, gone: !REG.lib.some(x => x.slug === 'third-person'), msg: txtA('#msg').slice(0, 60) };
-
-  /* ngắt kết nối không được làm treo trang */
-  clk('#btnOut'); await wait(300);
-  out.adminDisconnect = { key: W.localStorage.getItem('cz_kv_key') };
+  /* mở tab Thư viện → bảng sách render từ registry của worker giả */
+  const btnList = $a('button[data-tab="list"]');
+  if (btnList) btnList.dispatchEvent(new W.MouseEvent('click', { bubbles: true }));
+  await wait(400);
+  out.adminLibrary = { rows: $$a('.v2book-table tbody tr').length };
+  if (!out.adminLibrary.rows) console.log('THƯ VIỆN ADMIN KHÔNG RENDER DÒNG NÀO');
 
   /* quản trị KHÔNG có phím tắt (yêu cầu của chủ trang): Ctrl+S, Ctrl+K, số/chữ
-     đơn lẻ đều phải bị bỏ qua — không lưu, không đổi tab, không gây lỗi JS */
-  const visiblePanes = () => $$a('#ashell [id^="pane-"]:not(.hide)').map(e => e.id).join(',');
-  const panesBefore = visiblePanes();
-  const msgBefore = txtA('#msg');
+     đơn lẻ đều phải bị bỏ qua — không đổi tab, không gây lỗi JS */
+  const tabNow = () => { const b = $a('button[data-tab].on'); return b ? b.dataset.tab : ''; };
+  const tabBefore = tabNow();
   for (const k of [
     { key: 's', ctrlKey: true }, { key: 's', metaKey: true }, { key: 'k', ctrlKey: true },
     { key: '1' }, { key: '5' }, { key: '0' }, { key: 'v' }, { key: 'r' }
@@ -243,11 +203,8 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     await wait(60);
   }
   await wait(200);
-  const noShot = { panesStay: visiblePanes() === panesBefore, msgStay: txtA('#msg') === msgBefore };
-  out.noAdminShortcuts = noShot;
-  const shortcutFail = [];
-  if (!noShot.panesStay) shortcutFail.push('bấm số/chữ ngoài ô nhập vẫn đổi tab quản trị');
-  if (!noShot.msgStay) shortcutFail.push('Ctrl+S vẫn tự lưu/hiện thông báo ở trang quản trị');
+  out.noAdminShortcuts = { tabStay: tabNow() === tabBefore };
+  const shortcutFail = out.noAdminShortcuts.tabStay ? [] : ['phím tắt vẫn đổi tab quản trị'];
   if (shortcutFail.length) console.log('PHÍM TẮT VẪN CÒN: ' + shortcutFail.join('; '));
   out.shortcutFail = shortcutFail;
   out.errAdmin = a.errors.slice(0, 6);

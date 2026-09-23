@@ -12,7 +12,8 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
-const JS = ['cz-app.js', 'cz-auth.js', 'cz-home.js', 'cz-story.js', 'cz-space.js', 'cz-people.js', 'admin.js'];
+/* admin.js là bundle do tools/build_admin.mjs sinh — bài có bài riêng (t_admin_budget.js) kiểm parity. */
+const JS = ['cz-app.js', 'cz-auth.js', 'cz-home.js', 'cz-story.js', 'cz-space.js', 'cz-people.js'];
 const CSS = ['cz.css'];
 
 async function main() {
