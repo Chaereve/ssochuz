@@ -13,8 +13,6 @@ import { PlaceholderTab } from './components/PlaceholderTab.jsx';
 import { DoctorPanel, CommentsPanel, ReportsPanel, StatsPanel, VotesPanel, LogPanel, SettingsPanel } from './components/OperationalPanels.jsx';
 import { cloneRegistry, metaFromForm, newBookRecord, removeBookReferences, renameReferences, slugify, touchRegistry } from './utils/books.js';
 import { compressImage } from './utils/images.js';
-import { GenreManager } from './components/GenreManager.jsx';
-import { GenreBrowse } from './components/GenreBrowse.jsx';
 import { HomepageCMS } from './components/HomepageCMS.jsx';
 import { UsersPanel } from './components/UsersPanel.jsx';
 import { RolesPanel } from './components/RolesPanel.jsx';
@@ -86,7 +84,6 @@ function App() {
   const [bookCache, setBookCache] = useState({});
   const [bookLoading, setBookLoading] = useState(false);
   const [listQuery, setListQuery] = useState('');
-  const [listGenre, setListGenre] = useState('');
 
   useEffect(() => store.subscribe(setState), []);
   useEffect(() => quota.subscribe((snap) => store.setState({ quota: snap })), []);
@@ -755,19 +752,7 @@ function App() {
     setActiveTab(tab);
   }
   function editSlug(slug) { setCurrentSlug(slug); setActiveTab('edit'); loadBookForEdit(slug).catch(() => {}); }
-  function handleSearch(q) { setListQuery(q || ''); setListGenre(''); setActiveTab('list'); }
-
-  async function saveGenres(next, msg, extra) {
-    const registry = cloneRegistry(state.registry);
-    registry.settings = registry.settings || {};
-    registry.settings.genres = next;
-    if (extra && extra.remap) {
-      (registry.lib || []).forEach((book) => {
-        if (book && (book.genre === extra.remap.from || book.genre === extra.remap.from)) book.genre = extra.remap.to;
-      });
-    }
-    await writeRegistry(registry, msg || 'Đã lưu thể loại');
-  }
+  function handleSearch(q) { setListQuery(q || ''); setActiveTab('list'); }
 
   async function saveHomepage(payload) {
     const registry = cloneRegistry(state.registry);
@@ -818,12 +803,10 @@ function App() {
 
   let pane;
   if (activeTab === 'overview') pane = <Overview state={state} onReload={reload} onTodo={handleTodo} />;
-  else if (activeTab === 'list') pane = <BookList registry={state.registry} selected={selected} onSelected={setSelected} onEdit={editSlug} onNew={() => setActiveTab('new')} onBulkUpdate={bulkUpdate} onDelete={deleteBook} apiBase={state.apiBase} initialQuery={listQuery} initialGenre={listGenre} writeBlocked={writeBlocked} />;
-  else if (activeTab === 'classify') pane = <GenreBrowse registry={state.registry} apiBase={state.apiBase} onEdit={editSlug} onManage={() => setActiveTab('genres')} onOpenLibrary={(slug) => { setListGenre(slug || ''); setListQuery(''); setActiveTab('list'); }} />;
+  else if (activeTab === 'list') pane = <BookList registry={state.registry} selected={selected} onSelected={setSelected} onEdit={editSlug} onNew={() => setActiveTab('new')} onBulkUpdate={bulkUpdate} onDelete={deleteBook} apiBase={state.apiBase} initialQuery={listQuery} writeBlocked={writeBlocked} />;
   else if (activeTab === 'new') pane = <NewBook registry={state.registry} onCreate={createBook} onUploadImage={uploadImage} apiBase={state.apiBase} writeBlocked={writeBlocked} online={state.online} />;
   else if (activeTab === 'edit') pane = <BookEditor registry={state.registry} slug={currentSlug} bookData={bookCache[currentSlug]} bookLoading={bookLoading} apiBase={state.apiBase} onLoadBook={loadBookForEdit} onSave={saveMeta} onSaveBook={saveBookChapters} onUploadImage={uploadImage} onLock={setBookLock} onUnlock={unlockBook} onDuplicate={duplicateBook} onBack={() => setActiveTab('list')} onDelete={deleteBook} writeBlocked={writeBlocked} online={state.online} />;
   else if (activeTab === 'chapters') pane = <ChaptersHub registry={state.registry} apiBase={state.apiBase} onEdit={editSlug} />;
-  else if (activeTab === 'genres') pane = <GenreManager registry={state.registry} onSave={saveGenres} />;
   else if (activeTab === 'homepage') pane = <HomepageCMS registry={state.registry} apiBase={state.apiBase} onSave={saveHomepage} writeBlocked={writeBlocked} online={state.online} />;
   else if (activeTab === 'users') pane = <UsersPanel registry={state.registry} onEdit={editSlug} onFilterAuthor={(name) => { setListQuery(name); setActiveTab('list'); }} />;
   else if (activeTab === 'roles') pane = <RolesPanel registry={state.registry} role={state.role} onSave={saveStaff} />;

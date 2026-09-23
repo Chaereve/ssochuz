@@ -59,14 +59,9 @@ const chapCount = (reg.lib || []).reduce((sum, b) => sum + (Number(b.chapters) |
   assert.ok(out.chapterEditor.lockPanel, 'thiếu panel khóa mật mã');
   assert.ok(out.chapterEditor.duplicate, 'thiếu nút nhân bản bộ');
 
-  click('button[data-tab="classify"]');
-  await wait(150);
-  out.classify = !!doc.querySelector('#pane-classify');
-  assert.ok(out.classify, 'tab Phân loại chưa render');
-  assert.ok(/Phân loại theo thể loại/.test(doc.querySelector('#pane-classify').textContent), 'thiếu tiêu đề Phân loại');
-  assert.ok(!!doc.querySelector('button[data-tab="genres"]'), 'thiếu menu Thể loại (CRUD)');
-  assert.ok([...doc.querySelectorAll('#tabs button')].some((el) => /Phân loại/.test(el.textContent)), 'thiếu menu Phân loại');
-  assert.ok(doc.querySelectorAll('#pane-classify .v2gchip').length >= 3, 'Phân loại chưa có dải chip thể loại');
+  assert.ok(!doc.querySelector('button[data-tab="classify"]'), 'menu Phân loại còn lại');
+  assert.ok(!doc.querySelector('button[data-tab="genres"]'), 'menu Thể loại còn lại');
+  assert.ok(!doc.querySelector('#pane-classify'), 'pane Phân loại còn lại');
 
   click('button[data-tab="doctor"]');
   await wait(100);

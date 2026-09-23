@@ -8,11 +8,11 @@ export const ROLES = {
   },
   admin: {
     label: 'Admin',
-    perms: ['books', 'chapters', 'covers', 'users', 'genres', 'comments', 'reports', 'homepage', 'analytics', 'settings', 'audit'],
+    perms: ['books', 'chapters', 'covers', 'users', 'comments', 'reports', 'homepage', 'analytics', 'settings', 'audit'],
   },
   editor: {
     label: 'Editor',
-    perms: ['books', 'chapters', 'covers', 'genres', 'homepage', 'analytics'],
+    perms: ['books', 'chapters', 'covers', 'homepage', 'analytics'],
   },
   moderator: {
     label: 'Moderator',
@@ -52,8 +52,8 @@ export function roleLabel(role) {
 
 export function visibleTabs(role) {
   const id = normalizeRole(role);
-  if (id === 'author') return ['overview', 'list', 'classify', 'new', 'edit', 'settings'];
+  if (id === 'author') return ['overview', 'list', 'new', 'edit', 'settings'];
   if (id === 'moderator') return ['overview', 'cmts', 'reports', 'users', 'log'];
-  if (id === 'editor') return ['overview', 'list', 'classify', 'new', 'edit', 'chapters', 'genres', 'homepage', 'stats'];
+  if (id === 'editor') return ['overview', 'list', 'new', 'edit', 'chapters', 'homepage', 'stats'];
   return null; /* null = tất cả */
 }

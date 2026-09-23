@@ -2,40 +2,36 @@ import { h } from 'preact';
 import { useMemo, useState } from 'preact/hooks';
 import { countText } from '../utils/format.js';
 import { BookCover } from './BookCover.jsx';
-import { BookBadges, GenreBadge, CompletionBadge, PublishStatusBadge, LockedBadge } from './Badges.jsx';
-import { bookUsesGenre, genreNameOf, listGenres } from '../utils/genres.js';
+import { BookBadges, CompletionBadge, PublishStatusBadge, LockedBadge } from './Badges.jsx';
 import { COMPLETION_STATUSES, VISIBILITIES } from '../utils/books.js';
 
 const PAGE = 24;
 
-export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulkUpdate, onDelete, apiBase, initialQuery = '', initialGenre = '', writeBlocked = false }) {
+export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulkUpdate, onDelete, apiBase, initialQuery = '', writeBlocked = false }) {
   const lib = (registry && registry.lib) || [];
   const [q, setQ] = useState(initialQuery);
   const [status, setStatus] = useState('');
   const [adult, setAdult] = useState('');
-  const [genre, setGenre] = useState(initialGenre);
   const [pub, setPub] = useState('');
   const [vis, setVis] = useState('');
   const [locked, setLocked] = useState('');
   const [page, setPage] = useState(1);
   const [view, setView] = useState('table');
-  const genres = listGenres(registry);
 
   const filtered = useMemo(() => {
     return lib.filter((book) => {
       if (status && book.status !== status) return false;
       if ((adult === '1' || adult === '18') && !book.is18) return false;
       if (adult === '0' && book.is18) return false;
-      if (genre && !bookUsesGenre(book, genre, registry)) return false;
       if (pub && String(book.pubStatus || 'published') !== pub) return false;
       if (vis && String(book.visibility || 'public') !== vis) return false;
       if (locked === '1' && !book.lock) return false;
       if (locked === '0' && book.lock) return false;
       if (!q) return true;
-      const hay = [book.title, book.author, book.couple, book.slug, book.genre, genreNameOf(book, registry)].join(' ').toLowerCase();
+      const hay = [book.title, book.author, book.couple, book.slug].join(' ').toLowerCase();
       return hay.indexOf(q.toLowerCase()) >= 0;
     }).sort((a, b) => String(b.updated || '').localeCompare(String(a.updated || '')));
-  }, [lib, q, status, adult, genre, pub, vis, locked, registry]);
+  }, [lib, q, status, adult, pub, vis, locked]);
 
   const total = Math.max(1, Math.ceil(filtered.length / PAGE));
   const safePage = Math.min(page, total);
@@ -52,7 +48,7 @@ export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulk
   return (
     <div id="pane-list">
       <div class="row v2toolbar">
-        <input class="inp" placeholder="Tìm tên, tác giả, couple, thể loại…" value={q} onInput={(e) => { setQ(e.target.value); setPage(1); }} />
+        <input class="inp" placeholder="Tìm tên, tác giả, couple…" value={q} onInput={(e) => { setQ(e.target.value); setPage(1); }} />
         <span class="v2filters">
           <select class="inp" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
             <option value="">Mọi tình trạng</option>
@@ -62,10 +58,6 @@ export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulk
             <option value="">Mọi độ tuổi</option>
             <option value="0">Mọi lứa tuổi</option>
             <option value="18">18+</option>
-          </select>
-          <select class="inp" value={genre} onChange={(e) => { setGenre(e.target.value); setPage(1); }}>
-            <option value="">Mọi thể loại</option>
-            {genres.map((g) => <option key={g.slug} value={g.slug}>{g.name}</option>)}
           </select>
           <select class="inp" value={pub} onChange={(e) => { setPub(e.target.value); setPage(1); }}>
             <option value="">Mọi xuất bản</option>
@@ -113,7 +105,7 @@ export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulk
               <BookCover book={book} apiBase={apiBase} className="v2thumb" width={160} height={240} />
               <b>{book.title}</b>
               <span class="sm muted">{book.author || '—'}</span>
-              <BookBadges book={book} registry={registry} compact />
+              <BookBadges book={book} compact />
               <span class="v2gcard-meta"><span>{countText(book)}</span><span>{book.updated || '—'}</span></span>
               <span class="v2gcard-acts">
                 <button class="btn ghost sm" type="button" onClick={() => onEdit(book.slug)}>Sửa</button>
@@ -128,7 +120,7 @@ export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulk
             <thead>
               <tr>
                 <th><input type="checkbox" checked={allOnPage} onChange={(e) => toggleAll(e.target.checked)} aria-label="Chọn cả trang" /></th>
-                <th>Bìa</th><th>Truyện</th><th>Tác giả</th><th>Thể loại</th><th>Hoàn thành</th><th>Xuất bản</th><th>Chương</th><th></th>
+                <th>Bìa</th><th>Truyện</th><th>Tác giả</th><th>Hoàn thành</th><th>Xuất bản</th><th>Chương</th><th></th>
               </tr>
             </thead>
             <tbody>
@@ -141,11 +133,9 @@ export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulk
                       <b>{book.title}</b>
                       <LockedBadge book={book} />
                       <span class="sm muted">{book.slug}{book.updated ? ' · ' + book.updated : ''}</span>
-                      <span class="v2rowtags"><GenreBadge book={book} registry={registry} /></span>
                     </span>
                   </td>
                   <td data-lb="Tác giả">{book.author || '—'}</td>
-                  <td data-lb="Thể loại"><GenreBadge book={book} registry={registry} /></td>
                   <td data-lb="Hoàn thành"><CompletionBadge book={book} /></td>
                   <td data-lb="Xuất bản"><PublishStatusBadge book={book} /></td>
                   <td data-lb="Chương">{countText(book)}</td>

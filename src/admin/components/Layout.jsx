@@ -10,11 +10,9 @@ const NAV = [
   ]},
   { group: 'Nội dung', items: [
     ['list', 'Thư viện', 'library'],
-    ['classify', 'Phân loại', 'filter'],
     ['new', 'Thêm bộ', 'plus'],
     ['edit', 'Sửa bộ', 'edit'],
     ['chapters', 'Chương', 'list'],
-    ['genres', 'Thể loại', 'sparkle'],
   ]},
   { group: 'Cộng đồng', items: [
     ['cmts', 'Bình luận', 'chat'],
@@ -37,8 +35,8 @@ const NAV = [
 ];
 
 const CRUMBS = {
-  overview: 'Dashboard', list: 'Thư viện', classify: 'Phân loại', new: 'Thêm bộ', edit: 'Sửa bộ',
-  chapters: 'Chương', genres: 'Thể loại', cmts: 'Bình luận', reports: 'Báo lỗi',
+  overview: 'Dashboard', list: 'Thư viện', new: 'Thêm bộ', edit: 'Sửa bộ',
+  chapters: 'Chương', cmts: 'Bình luận', reports: 'Báo lỗi',
   votes: 'Phiếu bầu', homepage: 'Homepage CMS', users: 'Tác giả', roles: 'Vai trò',
   stats: 'Thống kê', doctor: 'Kiểm tra dữ liệu', log: 'Nhật ký', settings: 'Cài đặt',
 };

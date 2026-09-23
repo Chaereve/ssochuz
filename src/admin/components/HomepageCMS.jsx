@@ -2,7 +2,7 @@ import { h } from 'preact';
 import { useState } from 'preact/hooks';
 import { BookCover } from './BookCover.jsx';
 import { slideSlug } from '../utils/books.js';
-import { LockedBadge, GenreBadge } from './Badges.jsx';
+import { LockedBadge } from './Badges.jsx';
 
 function bySlug(registry) {
   const map = {};
@@ -58,7 +58,7 @@ export function HomepageCMS({ registry, apiBase, onSave, writeBlocked = false, o
           <div class={'v2home-preview ' + preview}>
             {slides.map((s) => {
               const b = books[s.slug];
-              return <div class="v2hp-card" key={s.slug}><BookCover book={b} apiBase={apiBase} /><b>{b ? b.title : s.slug}</b><LockedBadge book={b} /><GenreBadge book={b} registry={registry} /></div>;
+              return <div class="v2hp-card" key={s.slug}><BookCover book={b} apiBase={apiBase} /><b>{b ? b.title : s.slug}</b><LockedBadge book={b} /></div>;
             })}
             {!slides.length ? <div class="empty sm">Chưa chọn slide — trang chủ sẽ lấy 5 bộ mới nhất.</div> : null}
           </div>

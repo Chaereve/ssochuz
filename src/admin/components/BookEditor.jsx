@@ -2,7 +2,6 @@ import { h } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { slugify, COMPLETION_STATUSES, PUB_STATUSES, VISIBILITIES } from '../utils/books.js';
 import { ChapterEditor } from './ChapterEditor.jsx';
-import { GenreSelect } from './GenreSelect.jsx';
 import { ImageUploader } from './ImageUploader.jsx';
 import { persistableCover } from '../utils/cover.js';
 import { BookBadges } from './Badges.jsx';
@@ -53,7 +52,7 @@ export function BookEditor({ registry, slug, bookData, bookLoading, apiBase, onL
       <div class="row"><button class="btn ghost sm" type="button" onClick={onBack}>← Thư viện</button></div>
       <div class="v2edit-head">
         <h3 style={{ margin: 0 }}>Sửa metadata: {book.title}</h3>
-        <BookBadges book={book} registry={registry} />
+        <BookBadges book={book} />
       </div>
       <form class="v2form" onSubmit={(e) => { e.preventDefault(); onSave(book.slug, Object.assign({}, form, { slug: slugify(form.slug || form.title), is18: form.is18 ? '1' : '0', thumb: persistableCover(form.thumb) })); }}>
         <label class="fl">Tên<input class="inp" value={form.title} onInput={(e) => update('title', e.target.value)} /></label>
@@ -61,9 +60,6 @@ export function BookEditor({ registry, slug, bookData, bookLoading, apiBase, onL
         <label class="fl">Tác giả<input class="inp" value={form.author} onInput={(e) => update('author', e.target.value)} /></label>
         <label class="fl">Couple<input class="inp" value={form.couple} onInput={(e) => update('couple', e.target.value)} /></label>
         <label class="fl">Năm<input class="inp" value={form.year} onInput={(e) => update('year', e.target.value)} /></label>
-        <label class="fl">Thể loại
-          <GenreSelect registry={registry} value={form.genre} onChange={(v) => update('genre', v)} hint={[form.title, form.synopsis, form.couple, form.author].join(' ')} />
-        </label>
         <div class="row">
           <label class="fl">Tình trạng hoàn thành
             <select class="inp" value={form.status} onChange={(e) => update('status', e.target.value)}>

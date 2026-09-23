@@ -1,6 +1,6 @@
 import { h } from 'preact';
 import { BookCover } from './BookCover.jsx';
-import { GenreBadge, LockedBadge, PublishStatusBadge } from './Badges.jsx';
+import { LockedBadge, PublishStatusBadge } from './Badges.jsx';
 
 export function ChaptersHub({ registry, apiBase, onEdit }) {
   const lib = ((registry && registry.lib) || []).slice().sort((a, b) => String(b.updated || '').localeCompare(String(a.updated || '')));
@@ -14,7 +14,7 @@ export function ChaptersHub({ registry, apiBase, onEdit }) {
         <span class="grow">
           <b>{b.title}</b>
           <span class="sm muted">{b.updated || '—'} · {b.chapters || 0} chương</span>
-          <span class="v2badges compact"><GenreBadge book={b} registry={registry} /><PublishStatusBadge book={b} /><LockedBadge book={b} /></span>
+          <span class="v2badges compact"><PublishStatusBadge book={b} /><LockedBadge book={b} /></span>
         </span>
         <button class="btn sm" type="button" onClick={() => onEdit(b.slug)}>{action || 'Sửa'}</button>
       </li>

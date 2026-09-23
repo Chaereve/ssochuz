@@ -1,6 +1,5 @@
 import { h } from 'preact';
 import { useMemo, useState } from 'preact/hooks';
-import { genreNameOf } from '../utils/genres.js';
 import { LockedBadge } from './Badges.jsx';
 
 export function UsersPanel({ registry, onEdit, onFilterAuthor }) {
