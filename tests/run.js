@@ -40,6 +40,11 @@
                        link javascript:, ảnh đại diện lạ, HTML nhập từ Blogger)
      t_registry_guard.mjs  CHẶN GHI ĐÈ MẤT DỮ LIỆU: PUT registry rỗng đè lên kho
                        đang có sách → 400; kèm force:true (xoá bộ cuối) → ok
+     t_kv_quota.mjs    HẠN MỨC KV (thư cảnh báo 90% của Cloudflare): nhịp ghi khoá
+                       `stats` tự giãn theo ngân sách ngày (bản cũ ghi mỗi 10 giây
+                       = 8.640 lượt/ngày > 1.000 lượt miễn phí), 500 lượt xem /
+                       60 lần gửi bình luận không đốt lượt ghi, tổng đánh giá gộp
+                       về 1 khoá `rateagg` (hết LIST mỗi lần /api/stats trượt cache)
      check_src.js      bản phát hành ở gốc (đã rút gọn) có khớp src/ không
      check_secrets.js  không dán nhầm secret/email riêng vào tệp public
      check_headers.js  _headers áp theo THỨ TỰ trong tệp: /sw.js phải được gọi mạng
@@ -67,7 +72,7 @@ const path = require('path'), { spawnSync } = require('child_process');
 const cands = (process.env.CZ_TEST_MODULES || '').split(path.delimiter).filter(Boolean)
   .concat([path.join(__dirname, 'node_modules'), path.join(__dirname, '..', 'node_modules')]);
 const env = Object.assign({}, process.env, { NODE_PATH: cands.join(path.delimiter) });
-const files = [path.join('..', 'tools', 'check_src.js'), path.join('..', 'tools', 'check_secrets.js'), path.join('..', 'tools', 'check_headers.js'), 't_worker.mjs', 't_schedule.mjs', 't_registry_guard.mjs', 't_private.mjs', 't_member_spaces.mjs', 't_space.js', 't_space_hero.js', 't_auth_flow.js', 't_rating_withdraw.js', 't_private_ui.js', 't_config.js', 't_html.js', 't_follow.js', 't_feed.js', 't_push.js', 't_people.js', 't_people_data.js', 't_notif.js', 't_pwa.js', 't_sw_img.js', 't_devserver.js', 't_preload.js', 't_view.js', 't_chapter_url.js',
+const files = [path.join('..', 'tools', 'check_src.js'), path.join('..', 'tools', 'check_secrets.js'), path.join('..', 'tools', 'check_headers.js'), 't_worker.mjs', 't_kv_quota.mjs', 't_schedule.mjs', 't_registry_guard.mjs', 't_private.mjs', 't_member_spaces.mjs', 't_space.js', 't_space_hero.js', 't_auth_flow.js', 't_rating_withdraw.js', 't_private_ui.js', 't_config.js', 't_html.js', 't_follow.js', 't_feed.js', 't_push.js', 't_people.js', 't_people_data.js', 't_notif.js', 't_pwa.js', 't_sw_img.js', 't_devserver.js', 't_preload.js', 't_view.js', 't_chapter_url.js',
   't_chapters.js', 't_home.js', 't_mobile.js', 't_stats.js', 't_ranking.js', 't_quiet_home.js', 't_ranking_worker.mjs', 't_synopsis.js', 't_story.js', 't_reader.js', 't_flows.js', 't_sweep.js', 't_mystats.js', 't_rating.js', 't_adult.js', 't_fallback.js', 't_lock.mjs', 't_lock_ui.js', 't_admin_core.js', 't_admin_online.js', 't_admin_writes.js', 't_admin_chapter.js', 't_admin_upload.js', 't_admin_budget.js', 't_admin_features.js', 't_admin_sidebar.js'];
 let bad = 0;
 for (const f of files) {

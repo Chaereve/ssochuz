@@ -4,6 +4,7 @@ export { PrivateBooks } from './private-books.js';
 import { dropOverflow, overflowStatus, persistBook, persistCover, persistChapterImage, persistImage, readBook, readImage, materializeBook, migrateOverflow } from './overflow.js';
 import { parseChapterTitle, nextMainChapterNo, chapterTextOf, chapterHasMedia } from '../src/shared/chapters.js';
 import { isChapterPending, countVisibleChapters, countPendingChapters, nextScheduleMs, atMs, chapterAtMs, scheduleLabelOf } from '../src/shared/schedule.js';
+import { KV_FLUSH, statsBudget, forcedFlushMs, budgetCredits, flushOnTimer } from '../src/shared/kv-budget.js';
 /* ============================================================================
    ssochuz — Worker đọc/ghi dữ liệu truyện + số liệu xếp hạng trên Cloudflare KV
    ----------------------------------------------------------------------------
@@ -101,7 +102,10 @@ import { isChapterPending, countVisibleChapters, countPendingChapters, nextSched
      GOOGLE_CLIENT_ID  (secret/tuỳ chọn)    — Client ID của OAuth Web app (Google Identity Services)
      SESSION_SECRET    (secret, bắt buộc*)  — chuỗi ngẫu nhiên ≥ 32 ký tự, ký session bình luận/đăng nhập
                                             (*) bắt buộc nếu bật bình luận/đăng nhập người dùng
-     STATS_FLUSH_MS    (tuỳ chọn) = 10000  — gom lượt đọc bao nhiêu mili-giây thì ghi KV
+     STATS_FLUSH_MS    (tuỳ chọn)  — ép nhịp ghi số liệu (mili-giây), dùng khi thử nghiệm
+                                       và cho bài kiểm thử; bản chạy thật tự giãn nhịp
+     STATS_WRITE_BUDGET (tuỳ chọn) = 240 — trần lượt GHI khoá `stats` mỗi ngày (giữ chỗ
+                                       cho các khoá khác trong hạn mức 1.000 ghi/ngày)
      FIREBASE_PROJECT  (KHÔNG cần nữa)      — chỉ dùng cho /api/stats/import-firebase
                                               khi muốn kéo số liệu cũ về KV một lần
      MAIL_TO           (tuỳ chọn)  — BẬT GỬI EMAIL báo lỗi chữ bằng FormSubmit, chỉ cần điền email nhận
@@ -112,7 +116,7 @@ import { isChapterPending, countVisibleChapters, countPendingChapters, nextSched
      VAPID_PRIVATE     (secret, bắt buộc nếu bật push) — khoá riêng VAPID base64url (`wrangler secret put VAPID_PRIVATE`)
    ============================================================================ */
 
-const VERSION = '1.14.0';
+const VERSION = '1.15.0';
 const JSONH = {
   'content-type': 'application/json; charset=utf-8',
   'x-content-type-options': 'nosniff',
@@ -491,7 +495,6 @@ async function importPost(req, env, cors) {
     reg.source = { synced: new Date().toISOString(), note: 'nhập từ bài viết Blogger qua trang quản trị' };
     await env.CZ_KV.put('registry', registryJSON(reg), { metadata: { saved: new Date().toISOString(), rev: reg.rev } });
   }
-  await env.CZ_KV.put('_last', new Date().toISOString());
   await logAct(env, 'nhập chương từ Blogger: ' + slug + ' → ' + chapTitle, req);
   const iorg = new URL(req.url).origin;
   await edgePurge(iorg + '/api/book/' + encodeURIComponent(slug), iorg + '/api/registry');
@@ -1058,8 +1061,12 @@ async function edgeCached(req, cors, secs, load, keyFn) {
     }
   }
   const res = await load();
-  /* chỉ lưu đáp ứng thành công — lỗi (404/503/…) luôn đọc lại từ KV */
-  if (box && res && res.status === 200) {
+  /* Lưu cả 200 (nội dung tải từ KV) LẪN 302 (ảnh nằm trên Supabase Storage —
+     Worker chỉ chuyển hướng). Bản cũ chỉ lưu 200 nên mỗi lượt xem một tấm bìa
+     là một lượt ĐỌC KV: trang chủ 60 bìa × mỗi lần mở trang = vài chục nghìn
+     lượt/ngày. URL ảnh là bất biến (id theo nội dung) nên chuyển hướng an toàn.
+     Lỗi (404/503/…) vẫn luôn đọc lại từ KV. */
+  if (box && res && (res.status === 200 || res.status === 302)) {
     try {
       const h = new Headers(res.headers);
       ['access-control-allow-origin', 'access-control-allow-methods', 'access-control-allow-headers',
@@ -1382,7 +1389,6 @@ async function setLockFlag(env, slug, on) {
   if (now) n.lock = 1; else delete n.lock;
   reg.rev = new Date().toISOString().slice(0, 16).replace('T', ' ');
   await env.CZ_KV.put('registry', registryJSON(reg), { metadata: { saved: new Date().toISOString(), rev: reg.rev } });
-  await env.CZ_KV.put('_last', new Date().toISOString());
 }
 /* POST /api/lock/set { slug, password } (quản trị) — password rỗng = bỏ khóa */
 async function setLock(req, env, cors, org) {
@@ -1398,7 +1404,6 @@ async function setLock(req, env, cors, org) {
     if (book.lock) {
       delete book.lock;
       await persistBook(env, slug, book);
-      await env.CZ_KV.put('_last', new Date().toISOString());
     }
     await setLockFlag(env, slug, 0);
     await logAct(env, 'bỏ khóa ' + slug, req);
@@ -1413,7 +1418,6 @@ async function setLock(req, env, cors, org) {
   const hashb = await pbkdf2Bits(pw, salt);
   book.lock = { salt: Array.from(salt), hash: Array.from(hashb), set: new Date().toISOString() };
   await persistBook(env, slug, book);
-  await env.CZ_KV.put('_last', new Date().toISOString());
   await setLockFlag(env, slug, 1);
   await logAct(env, 'khóa/đổi mật mã ' + slug, req);
   await edgePurge(org + '/api/book/' + encodeURIComponent(slug), org + '/api/registry');
@@ -1590,7 +1594,6 @@ async function putKV(req, env, key, cors, label) {
   const bytes = new TextEncoder().encode(body).length;
   const saved = new Date().toISOString();
   await env.CZ_KV.put(key, body, { metadata: { saved, rev: parsed.rev || '', bytes } });
-  await env.CZ_KV.put('_last', saved);           // mốc thời gian ghi gần nhất
   if (key === 'registry') sbPinReset(env);       // ghim Supabase (nếu đổi) có hiệu lực ngay
   if (label) await logAct(env, label, req);
   return json({ ok: true, key, bytes, saved }, { cors });
@@ -1731,7 +1734,6 @@ async function putBook(req, env, slug, cors) {
     last.notified = true;
     await enqueuePush(env, slug, parsed.chapters.length, last.t || '');
   }
-  await env.CZ_KV.put('_last', stored.saved);
   await logAct(env, 'lưu bộ ' + slug + ' (' + parsed.chapters.length + ' chương)', req);
   return json({ ok: true, key: 'book:' + slug, bytes: stored.bytes, saved: stored.saved, chapters: parsed.chapters.length, dropped, registry: sync, overflow: stored.overflow || '' }, { cors });
 }
@@ -1813,7 +1815,6 @@ async function putChapter(req, env, slug, cors) {
     push = await enqueuePush(env, slug, book.chapters.length, last.t || '');
     if (push && push.queued) await persistBook(env, slug, book);
   }
-  await env.CZ_KV.put('_last', stored.saved);
   await logAct(env, 'lưu chương ' + slug + ' #' + (idx + 1) + ' (' + action + ')', req);
   const pending = countPendingChapters(book.chapters);
   const nextMs = nextScheduleMs(book.chapters);
@@ -1899,7 +1900,6 @@ async function recount(req, env, cors) {
   if (res.fixed.length) {
     reg.source = { synced: new Date().toISOString(), note: 'đếm lại số chương từ kho chương trên KV (/api/recount)' };
     await env.CZ_KV.put('registry', registryJSON(reg), { metadata: { saved: new Date().toISOString(), rev: reg.rev } });
-    await env.CZ_KV.put('_last', new Date().toISOString());
     await logAct(env, 'đếm lại số chương: sửa ' + res.fixed.length + ' bộ', req);
   }
   return json({ ok: true, books: res.books, novels: reg.lib.length, fixed: res.fixed, missing: res.missing, orphan: res.orphan, rev: reg.rev || '' }, { cors });
@@ -2347,8 +2347,11 @@ async function adminVotesReset(req, env, cors) {
    fetch ném "Failed to fetch" và admin báo nhầm là Worker chưa deploy. */
 async function health(env, cors) {
   if (!env.CZ_KV) return json({ ok: true, version: VERSION, kv: false, books: 0, novels: 0, regRev: '', lastWrite: '', now: new Date().toISOString(), adminConfigured: !!adminKey(env), hint: 'chưa bind CZ_KV' }, { cors });
-  const last = (await env.CZ_KV.get('_last')) || '';
-  const reg = await env.CZ_KV.get('registry', { type: 'json' });
+  /* Mốc ghi gần nhất nay nằm trong metadata của chính `registry` — bỏ hẳn khoá
+     `_last` (mỗi thao tác lưu trước đây tốn thêm 1 lượt GHI chỉ để ghi mốc). */
+  const regMeta = await env.CZ_KV.getWithMetadata('registry', { type: 'json' }).catch(() => ({ value: null, metadata: null }));
+  const last = (regMeta && regMeta.metadata && regMeta.metadata.saved) || '';
+  const reg = regMeta && regMeta.value;
   let books = 0;
   let cursor;
   do {
@@ -2366,7 +2369,12 @@ async function health(env, cors) {
   return json({
     ok: true, version: VERSION, kv: true, books, adminConfigured: !!adminKey(env), regRev: (reg && reg.rev) || '',
     novels: reg ? (reg.lib || []).length : 0, lastWrite: last, now: new Date().toISOString(),
-    stats: { items: Object.keys(st.items).length, views, votes },
+    stats: {
+      items: Object.keys(st.items).length, views, votes,
+      /* theo dõi hạn mức: số lượt ghi khoá `stats` trong ngày + trần đang đặt */
+      writesToday: Number(st.swd === dayStr() ? st.sw : 0) || 0,
+      writeBudget: statsBudget(env), buffered: _buf.size,
+    },
     overflow: overflowStatus(env),
     /* để trang quản trị biết kênh đăng nhập đã sẵn sàng chưa, thiếu biến nào.
        supabaseUrl = GHIM đang có hiệu lực (biến trên Worker hoặc URL quản trị
@@ -2430,7 +2438,6 @@ async function seed(req, env, cors) {
     }
     catch (e) { out.failed.push(slug); }
   }
-  await env.CZ_KV.put('_last', new Date().toISOString());
   /* nạp xong: đếm lại số chương để registry không treo con số cũ (bệnh "30 chương") */
   let counts = { fixed: [], missing: [], orphan: [], books: 0 };
   if (d.registry) {
@@ -2461,27 +2468,69 @@ async function seed(req, env, cors) {
    quy mô web này KV là đủ và rẻ hơn nhiều.
    ============================================================================ */
 const STATS_KEY = 'stats';
-const FLUSH_MS = 10000;      /* gom lượt đọc trong RAM bao lâu thì ghi (đổi bằng biến STATS_FLUSH_MS) */
+/* ---------------------------------------------------------------------------
+   NHỊP GHI KV — TIẾT KIỆM HẠN MỨC MIỄN PHÍ (bản 1.11.0)
+   ---------------------------------------------------------------------------
+   Gói miễn phí của Cloudflare chỉ cho ~1.000 lượt GHI mỗi ngày. Bản cũ ghi
+   khoá `stats` mỗi 10 giây bất kể có ai xem hay không → riêng một khoá đã tốn
+   8.640 lượt/ngày, vượt hạn mức, KV trả 429 và mọi thứ ghi được (số liệu,
+   phiếu, lưu chương) bắt đầu lỗi.
+   Nay số liệu gom trong RAM rồi chỉ ghi khi THẬT SỰ đáng ghi:
+     · đệm đủ KV_FLUSH.events thay đổi → ghi ngay (web đông, không mất số);
+     · hết giờ hẹn KV_FLUSH.timerMs    → ghi nếu có ≥3 thay đổi, hoặc nếu bản
+       trong RAM đã giữ quá KV_FLUSH.holdMs, hoặc nếu còn “tem” hạn mức của
+       ngày (xem budgetCredits — ngân sách chia đều theo thời gian trong ngày);
+     · hết ngân sách thì nằm chờ trong RAM, vẫn hiện đủ trên /api/stats.
+   Số lượt ghi đã dùng của ngày nằm ngay trong khoá `stats` (`sw`/`swd`) nên
+   nhiều isolate vẫn nhìn chung một ngân sách. Ghi hỏng thì nhét lại vào đệm,
+   không mất số. Người đọc không thấy chậm: /api/stats luôn cộng phần đang đệm
+   trong RAM, còn bảng xếp hạng vốn đã lưu ở biên 60 giây.
+   Đổi trần ghi bằng biến STATS_WRITE_BUDGET (mặc định 240 lượt/ngày).
+   --------------------------------------------------------------------------- */
+/* Các con số nhịp ghi nằm ở src/shared/kv-budget.js (Worker + bài kiểm thử dùng
+   chung một nguồn): FLUSH_EVENTS, FLUSH_EVENTS_TIMER, FLUSH_TIMER_MS,
+   FLUSH_HOLD_MAX, STATS_WRITE_BUDGET… */
 const DAY_KEEP = 45;         /* giữ bao nhiêu ngày để xếp hạng ngày/tuần/tháng */
 const VOTER_CAP = 20000;     /* tối đa bao nhiêu người bầu/bộ (chống phình khoá) */
 let _buf = new Map();        /* slug -> { v: lượt đọc, o: phiếu } đang đệm */
-let _bufAt = 0;
-let _flushing = null;
+let _bufAt = 0;              /* lúc ghi xong lần gần nhất */
+let _bufOps = 0;             /* bao nhiêu thay đổi đang nằm trong đệm */
+let _bufStart = 0;           /* lúc thay đổi ĐẦU TIÊN còn đang đệm */
+let _chain = Promise.resolve();  /* hàng đợi đọc–sửa–ghi khoá `stats` */
+let _swUsed = 0;             /* đã ghi khoá `stats` bao nhiêu lượt trong ngày */
+let _swDay = '';
 let _seen = new Set();       /* khử trùng lặp lượt đọc trong cùng isolate */
 let _seenQ = [];
 let _timer = null;           /* hẹn giờ ghi phần đang đệm, phòng khi không còn request nào nữa */
 
-function flushMs(env) {
-  const n = parseInt((env && env.STATS_FLUSH_MS) || '', 10);
-  return n > 0 ? Math.min(n, 30000) : FLUSH_MS;
+/* Tới giờ hẹn thì có nên ghi không? (web đông / giữ lâu / còn “tem” hạn mức) */
+function shouldFlushOnTimer(env) {
+  if (!_buf.size) return false;
+  return flushOnTimer({
+    ops: _bufOps,
+    heldMs: Date.now() - (_bufStart || Date.now()),
+    used: _swUsed,
+    credits: budgetCredits(env),
+  });
 }
-/* Không ai gọi tiếp thì vẫn ghi sau ~FLUSH_MS (waitUntil giữ tiến trình sống tối đa 30s) */
+/** Mọi thao tác đọc–sửa–ghi khoá `stats` đi qua hàng đợi này: hai lượt ghi
+   chồng nhau (ghi số liệu + ghi phiếu bầu) không còn xoá số của nhau.
+   @template T
+   @param {() => Promise<T>} fn
+   @returns {Promise<T>} */
+function statsLock(fn) {
+  const run = _chain.then(fn, fn);
+  _chain = run.then(() => {}, () => {});
+  return run;
+}
+/* Không ai gọi tiếp thì vẫn ghi sau ít lâu (waitUntil giữ tiến trình sống ≤30s) */
 function scheduleFlush(env, ctx) {
   if (_timer || !_buf.size || !ctx || !ctx.waitUntil) return;
-  const ms = flushMs(env);
+  const forced = forcedFlushMs(env);
+  const ms = forced || KV_FLUSH.timerMs;
   _timer = setTimeout(() => { _timer = null; }, ms + 500);
   ctx.waitUntil(new Promise((r) => setTimeout(r, ms))
-    .then(() => flushStats(env))
+    .then(() => ((forced || shouldFlushOnTimer(env)) ? flushStats(env) : 0))
     .catch(() => {})
     .then(() => { if (_timer) { clearTimeout(_timer); _timer = null; } }));
 }
@@ -2498,10 +2547,17 @@ async function readStats(env) {
   try { s = await env.CZ_KV.get(STATS_KEY, { type: 'json' }); } catch (e) { s = null; }
   if (!s || typeof s !== 'object') return { updatedAt: '', items: {} };
   if (!s.items || typeof s.items !== 'object') s.items = {};
+  /* học số lượt ghi của ngày từ chính khoá `stats` (nhiều isolate chung ngân sách) */
+  if (s.swd === dayStr() && Number(s.sw) > _swUsed) _swUsed = Number(s.sw) || 0;
   return s;
 }
 async function writeStats(env, st) {
+  const day = dayStr();
+  /* đếm lượt ghi của khoá `stats` theo ngày — dùng cho ngân sách ở trên */
+  st.sw = (st.swd === day ? (Number(st.sw) || 0) : 0) + 1;
+  st.swd = day;
   st.updatedAt = new Date().toISOString();
+  _swUsed = st.sw; _swDay = day;
   await env.CZ_KV.put(STATS_KEY, JSON.stringify(st), { metadata: { saved: st.updatedAt, items: Object.keys(st.items).length } });
 }
 function statOf(st, slug) {
@@ -2519,12 +2575,16 @@ function addDay(it, day, v, o) {
   const ks = Object.keys(it.days).sort();
   while (ks.length > DAY_KEEP) { delete it.days[ks.shift()]; }
 }
-/* ghi phần đang đệm xuống KV; lỗi thì nhét lại vào đệm để khỏi mất số */
+/* ghi phần đang đệm xuống KV; lỗi thì nhét lại vào đệm để khỏi mất số.
+   KHÔNG ném lỗi ra ngoài: hết hạn mức KV (429) thì lượt đọc chỉ chậm lại,
+   không được làm trang đọc báo lỗi. */
 async function flushStats(env) {
   if (!env.CZ_KV || !_buf.size) return 0;
-  if (_flushing) { await _flushing; return 0; }
-  const take = _buf; _buf = new Map(); _bufAt = Date.now();
-  _flushing = (async () => {
+  const count = _buf.size;
+  await statsLock(async () => {
+    if (!_buf.size) return;
+    const take = _buf, ops = _bufOps, startAt = _bufStart;
+    _buf = new Map(); _bufOps = 0; _bufStart = 0; _bufAt = Date.now();
     try {
       const st = await readStats(env);
       const day = dayStr();
@@ -2540,11 +2600,11 @@ async function flushStats(env) {
         const c = _buf.get(slug) || { v: 0, o: 0 };
         c.v += d.v; c.o += d.o; _buf.set(slug, c);
       }
-      throw e;
-    } finally { _flushing = null; }
-  })();
-  await _flushing;
-  return take.size;
+      _bufOps += ops;
+      if (!_bufStart) _bufStart = startAt || Date.now();
+    }
+  });
+  return count;
 }
 function seenView(key) {
   if (_seen.has(key)) return true;
@@ -2642,15 +2702,21 @@ async function postView(req, env, ctx, cors) {
   const day = dayStr();
   if (who && seenView(slug + '|' + who + '|' + day)) return json({ ok: true, counted: false }, { cors, headers: { 'cache-control': 'no-store' } });
   /* Mã máy (vid) do web gửi nên có thể bị đổi liên tục để thổi số. Chặn theo IP
-     làm lớp thứ hai: quá 600 lượt/giờ từ một IP thì thôi không đếm nữa —
-     KHÔNG báo lỗi, người đọc bình thường (kể cả sau NAT) không thấy gì khác. */
-  if (!await rateLimit(env, 'rl:view-ip:' + hash(clientIp(req) || 'x'), 600, 3600)) {
+     làm lớp thứ hai: quá 1.800 lượt trong 6 giờ từ một IP thì thôi không đếm
+     nữa — KHÔNG báo lỗi, người đọc bình thường (kể cả sau NAT) không thấy gì
+     khác. Cửa sổ 6 giờ (thay vì 1 giờ) giữ nguyên tốc độ chặn nhưng mỗi IP chỉ
+     tốn 1 lượt GHI KV cho cả buổi thay vì 1 lượt mỗi giờ. */
+  if (!await rateLimit(env, 'rl:view-ip:' + hash(clientIp(req) || 'x'), 1800, 21600, 200)) {
     return json({ ok: true, counted: false }, { cors, headers: { 'cache-control': 'no-store' } });
   }
   const c = _buf.get(slug) || { v: 0, o: 0 };
   c.v += 1; _buf.set(slug, c);
+  if (!_bufStart) _bufStart = Date.now();
   if (!_bufAt) _bufAt = Date.now();
-  if (Date.now() - _bufAt >= flushMs(env)) await flushStats(env);
+  _bufOps++;
+  /* web đông: đệm đủ 25 thay đổi là ghi ngay; thưa thì hẹn giờ (xem đầu mục
+     SỐ LIỆU XẾP HẠNG — nhịp ghi tự giãn theo ngân sách trong ngày) */
+  if (_bufOps >= KV_FLUSH.events) await flushStats(env);
   else scheduleFlush(env, ctx);
   return json({ ok: true, counted: true, day }, { cors, headers: { 'cache-control': 'no-store' } });
 }
@@ -2683,36 +2749,44 @@ async function postVote(req, env, cors) {
     return json({ ok: false, error: 'thao tác hơi nhanh, thử lại sau ít phút' }, { status: 429, cors });
   }
   /* Lớp theo IP: đổi vid liên tục cũng không bơm phiếu vô hạn được */
-  if (!await rateLimit(env, 'rl:vote-ip:' + hash(clientIp(req) || 'x'), 150, 3600)) {
+  if (!await rateLimit(env, 'rl:vote-ip:' + hash(clientIp(req) || 'x'), 150, 3600, 30)) {
     return json({ ok: false, error: 'thao tác hơi nhanh, thử lại sau ít phút' }, { status: 429, cors });
   }
-  await flushStats(env);
-  const st = await readStats(env);
-  const it = statOf(st, slug);
-  const vkeys = ids.map((x) => (ch > 0 ? x + '#' + ch : x));
-  const vkey = vkeys[0];
-  const existing = vkeys.filter((k) => !!it.voters[k]);
-  let changed = false;
-  if (want && !existing.length) {
-    if (Object.keys(it.voters).length < VOTER_CAP) it.voters[vkey] = { t: new Date().toISOString() };
-    it.got.votes += 1; addDay(it, dayStr(), 0, 1);
-    if (ch > 0) it.chap[ch] = (Number(it.chap[ch]) || 0) + 1;
-    changed = true;
-  } else if (!want && existing.length) {
-    existing.forEach((k) => {
-      // Remove from the original voting day, not today's unrelated votes.
-      const originalDay = String(it.voters[k].t || '').slice(0, 10);
-      if (it.days[originalDay]) it.days[originalDay].o = Math.max(0, (Number(it.days[originalDay].o) || 0) - 1);
-      delete it.voters[k];
-    });
-    it.got.votes = Math.max(0, it.got.votes - existing.length);
-    if (ch > 0) {
-      it.chap[ch] = Math.max(0, (Number(it.chap[ch]) || 0) - existing.length);
-      if (!it.chap[ch]) delete it.chap[ch];
+  /* đọc–sửa–ghi nằm trong hàng đợi chung (statsLock): lượt ghi số liệu và lượt
+     ghi phiếu không còn đè lên nhau, và KHÔNG phải flushStats trước mỗi phiếu
+     nữa (bản cũ tốn thêm 1 đọc + 1 ghi cho mỗi phiếu). Phần lượt đọc đang đệm
+     trong RAM vẫn nguyên vẹn vì bầu và đọc khác trường — đợt ghi sau cộng vào. */
+  const voted = await statsLock(async () => {
+    const st = await readStats(env);
+    const it = statOf(st, slug);
+    const vkeys = ids.map((x) => (ch > 0 ? x + '#' + ch : x));
+    const vkey = vkeys[0];
+    const existing = vkeys.filter((k) => !!it.voters[k]);
+    let changed = false;
+    if (want && !existing.length) {
+      if (Object.keys(it.voters).length < VOTER_CAP) it.voters[vkey] = { t: new Date().toISOString() };
+      it.got.votes += 1; addDay(it, dayStr(), 0, 1);
+      if (ch > 0) it.chap[ch] = (Number(it.chap[ch]) || 0) + 1;
+      changed = true;
+    } else if (!want && existing.length) {
+      existing.forEach((k) => {
+        // Remove from the original voting day, not today's unrelated votes.
+        const originalDay = String(it.voters[k].t || '').slice(0, 10);
+        if (it.days[originalDay]) it.days[originalDay].o = Math.max(0, (Number(it.days[originalDay].o) || 0) - 1);
+        delete it.voters[k];
+      });
+      it.got.votes = Math.max(0, it.got.votes - existing.length);
+      if (ch > 0) {
+        it.chap[ch] = Math.max(0, (Number(it.chap[ch]) || 0) - existing.length);
+        if (!it.chap[ch]) delete it.chap[ch];
+      }
+      changed = true;
     }
-    changed = true;
-  }
-  if (changed) { it.updatedAt = new Date().toISOString(); await writeStats(env, st); }
+    if (changed) { it.updatedAt = new Date().toISOString(); await writeStats(env, st); }
+    return { it, changed };
+  });
+  const it = voted.it;
+  const changed = voted.changed;
   const pub = publicStat(it, dayStr());
   return json({
     ok: true, slug, ch, changed, voted: want === 1,
@@ -2730,33 +2804,79 @@ async function postVote(req, env, cors) {
    = gỡ điểm. Khoá người dùng theo đăng nhập (`g:` băm uid) nếu có, nếu không
    mới về vid máy/IP (`a:…`) — tránh thay vid là bùng điểm. */
 function ratingWho(ids) { return ids && ids[0] ? ids[0] : ''; }
-async function rateBook(env, key) {
-  try { return await env.CZ_KV.get(key, { type: 'json' }); } catch (e) { return null; }
+/* ---- TỔNG ĐÁNH GIÁ GOM VỀ MỘT KHOÁ (bản 1.15.0) ---------------------------
+   Bản cũ: mỗi bộ một khoá `rateagg:<slug>` → mỗi lần /api/stats trượt cache
+   biên (mỗi 60 giây) là 1 lượt LIST + N lượt ĐỌC, mà LIST chỉ có 1.000
+   lượt/ngày ở gói miễn phí — hết hạn mức chỉ vì bảng xếp hạng.
+   Nay: một khoá `rateagg` = { v:1, m:1, a: { <slug>: { sum, n } } }
+     · `m:1` = đã gộp các khoá `rateagg:<slug>` cũ (chạy đúng một lần);
+     · bản trong RAM dùng lại trong 60 giây → /api/stats thường KHÔNG chạm KV;
+     · lúc chấm điểm mới ghi (ghi cả kho = 1 lượt ghi, thay vì 1 đọc + 1 ghi).
+   Khoá `rate:<slug>:<who>` (điểm của riêng từng người) giữ nguyên như cũ. */
+const RATEAGG_KEY = 'rateagg';
+const RATEAGG_TTL = 60000;
+let _rateAgg = null;          /* { at, data } — bản trong RAM của khoá `rateagg` */
+let _rateaggAt = 0;           /* lúc ghi khoá này (KV: tối đa 1 ghi/giây/khoá) */
+function rateAggData(blob) { return (blob && blob.a && typeof blob.a === 'object') ? blob.a : {}; }
+/* gom các khoá `rateagg:<slug>` của bản cũ về 1 khoá; trả null khi đọc lỗi
+   (để KHÔNG ghi bản rỗng đè mất điểm đang có) */
+async function legacyRateAgg(env) {
+  const out = {};
+  let cursor;
+  try {
+    do {
+      const l = await env.CZ_KV.list({ prefix: 'rateagg:', limit: 1000, cursor });
+      for (const k of l.keys) {
+        const r = await env.CZ_KV.get(k.name, { type: 'json' }).catch(() => null);
+        const n = Math.max(0, Math.round((r && r.n) || 0));
+        const sum = Math.max(0, Math.round((r && r.sum) || 0));
+        if (n > 0) out[k.name.slice('rateagg:'.length)] = { sum, n };
+      }
+      cursor = l.list_complete ? undefined : l.cursor;
+    } while (cursor);
+  } catch (e) { return null; }
+  return out;
 }
-/* + trung bình/số lượt vào danh sách items của /api/stats (đọc KV bớt vì chỉ
-   1 lần list + batch get — không phát sinh truy cập từng key riêng lẻ). */
+async function rateAggOf(env, force) {
+  const now = Date.now();
+  if (!force && _rateAgg && now - _rateAgg.at < RATEAGG_TTL) return _rateAgg.data;
+  let blob = null;
+  try { blob = await env.CZ_KV.get(RATEAGG_KEY, { type: 'json' }); } catch (e) { blob = null; }
+  if (!blob || !blob.v || !blob.m) {
+    const legacy = await legacyRateAgg(env);
+    if (legacy) {
+      blob = { v: 1, m: 1, a: Object.assign({}, legacy, rateAggData(blob)) };
+      try { await env.CZ_KV.put(RATEAGG_KEY, JSON.stringify(blob)); _rateaggAt = Date.now(); } catch (e) {}
+    } else {
+      blob = { v: 1, m: 0, a: rateAggData(blob) };
+    }
+  }
+  _rateAgg = { at: now, data: rateAggData(blob) };
+  return _rateAgg.data;
+}
+async function saveRateAgg(env, data) {
+  const wait = _rateaggAt + 1100 - Date.now();     /* KV tối đa 1 ghi/giây/khoá */
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+  _rateaggAt = Date.now();
+  const blob = { v: 1, m: 1, a: data };
+  await env.CZ_KV.put(RATEAGG_KEY, JSON.stringify(blob));
+  _rateAgg = { at: Date.now(), data };
+}
+/* + trung bình/số lượt vào danh sách items của /api/stats — bản trong RAM dùng
+   lại 60 giây nên đa số lần gọi KHÔNG tốn lượt đọc/list nào. */
 async function insertRatings(env, items) {
   if (!env.CZ_KV) return;
   try {
-    const seen = new Set(); const aggs = [];
-    let cursor;
-    do {
-      const l = await env.CZ_KV.list({ prefix: 'rateagg:', limit: 1000, cursor });
-      for (const k of l.keys) { if (seen.has(k.name)) continue; seen.add(k.name); aggs.push(k.name); }
-      cursor = l.list_complete ? undefined : l.cursor;
-    } while (cursor);
-    if (!aggs.length) return;
-    const rows = await Promise.all(aggs.map((k) => rateBook(env, k).then((r) => ({ k, r })).catch(() => null)));
-    for (const row of rows) {
-      if (!row || !row.r) continue;
-      const slug = row.k.slice('rateagg:'.length);
-      const n = Math.max(0, Math.round(row.r && row.r.n) || 0);
-      const sum = Math.max(0, Math.round(row.r && row.r.sum) || 0);
-      if (n <= 0) continue;
+    const a = await rateAggOf(env, false);
+    Object.keys(a).forEach((slug) => {
+      const box = a[slug] || {};
+      const n = Math.max(0, Math.round(box.n) || 0);
+      const sum = Math.max(0, Math.round(box.sum) || 0);
+      if (n <= 0) return;
       const it = items[slug] || (items[slug] = { views: 0, votes: 0 });
       it.rating = Math.round((sum / n) * 10) / 10;
       it.ratingCount = n;
-    }
+    });
   } catch (e) { /* lỗi đọc KV không được chặn /api/stats — bỏ phần sao đi */ }
 }
 let ratingWrites = new Map();   /* chặn 2 lần ghi cùng key trong <1s (KV tối đa 1 ghi/giây/key) */
@@ -2800,22 +2920,23 @@ async function postRate(req, env, cors) {
     return json({ ok: false, error: 'thao tác hơi nhanh, thử lại sau ít phút' }, { status: 429, cors });
   }
   const KEY = 'rate:' + slug + ':' + who;
-  const AGG = 'rateagg:' + slug;
   const hold = ratingLastKey(KEY);
   const wait = hold + 1100 - Date.now();
   if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-  let prev = null; let agg = null; let error = null;
+  let prev = null; let mine = { sum: 0, n: 0 }; let error = null;
   try {
     prev = await env.CZ_KV.get(KEY, { type: 'json' }) || { s: 0, t: '' };
     for (let attempt = 0; attempt < 2; attempt++) {
       ratingSetLast(KEY, Date.now());
       try {
-        agg = await env.CZ_KV.get(AGG, { type: 'json' }) || { sum: 0, n: 0 };
+        const all = await rateAggOf(env, true);        /* tổng của MỌI bộ: 1 khoá duy nhất */
+        const agg = all[slug] || (all[slug] = { sum: 0, n: 0 });
         const prevStar = Math.max(1, Math.min(5, parseInt(prev.s, 10) || 5));
         if (prev.s) { agg.sum = Math.max(0, (agg.sum || 0) - prevStar); agg.n = Math.max(0, (agg.n || 0) - 1); }
         if (want > 0) { agg.sum = (agg.sum || 0) + want; agg.n = (agg.n || 0) + 1; }
-        if (agg.n <= 0) { await env.CZ_KV.delete(AGG); agg = { sum: 0, n: 0 }; }
-        else { await env.CZ_KV.put(AGG, JSON.stringify(agg)); }
+        mine = { sum: Math.max(0, agg.sum || 0), n: Math.max(0, agg.n || 0) };
+        if (mine.n <= 0) delete all[slug];
+        await saveRateAgg(env, all);
         if (want > 0) await env.CZ_KV.put(KEY, JSON.stringify({ s: want, t: new Date().toISOString() }));
         else await env.CZ_KV.delete(KEY);
         prev = { s: want, t: new Date().toISOString() };
@@ -2827,8 +2948,8 @@ async function postRate(req, env, cors) {
   } catch (e) {
     return json({ ok: false, error: 'đọc KV lỗi: ' + String((e && e.message) || e) }, { status: 502, cors });
   }
-  const n = Math.max(0, (agg && agg.n) || 0);
-  const avg = n > 0 ? Math.round(((agg && agg.sum) || 0) / n * 10) / 10 : 0;
+  const n = mine.n;
+  const avg = n > 0 ? Math.round(mine.sum / n * 10) / 10 : 0;
   return json({ ok: true, slug, rating: want, ratingCount: n, ratingAvg: avg, source: 'kv' },
     { cors, headers: { 'cache-control': 'no-store' } });
 }
@@ -2909,12 +3030,58 @@ function fbVal(v) {
   return null;
 }
 
-/* chống spam đơn giản bằng KV: khoá rl:* tự hết hạn */
-async function rateLimit(env, key, limit, ttlSec) {
+/* ============================================================================
+   CHỐNG SPAM KHÔNG ĐỐT HẠN MỨC KV (bản 1.15.0)
+   ----------------------------------------------------------------------------
+   Bản cũ: mỗi lượt xem/bình chọn/bình luận = 1 lượt ĐỌC + 1 lượt GHI khoá
+   `rl:*`. Một người đọc lướt web 100 lượt là 200 lượt KV, còn gói miễn phí chỉ
+   cho 1.000 lượt ghi/ngày cho TOÀN BỘ hệ thống → đọc báo buổi tối là hết.
+   Nay bộ đếm nằm trong RAM của isolate (khoá, số đếm, hạn dùng):
+     · lượt đầu của mỗi cửa sổ: đọc KV 1 lần rồi ghi 1 lần (mốc để máy khác
+       và lần khởi động sau vẫn biết đã có người dùng);
+     · các lượt sau trong cùng cửa sổ: chỉ cộng trong RAM, KHÔNG chạm KV;
+     · chạm trần: ghi 1 lần cho các isolate khác biết là đã chặn, rồi từ chối
+       luôn mà không đọc/ghi thêm (kẻ spam càng nhiều càng ít tốn).
+   Đổi lại: hạn mức chính xác theo từng isolate thay vì toàn cầu — với quy mô
+   web này là đánh đổi đúng (KV vốn đã "eventual" 60 giây). Muốn siết tuyệt đối
+   thì phải dùng Durable Object.
+   Tham số thứ 5 `persistAt`: khoá theo IP (lượng người qua lại rất lớn) đặt mốc
+   ghi cao (200 lượt) nên người đọc bình thường tốn 0 lượt ghi, chỉ IP có dấu
+   hiệu bất thường mới bắt đầu ghi xuống KV.
+   KV lỗi (hết hạn mức trả 429) → cho qua, KHÔNG chặn người đọc bình thường.
+   ========================================================================== */
+let _rl = new Map();         /* key -> { n, exp } — bộ đếm trong RAM của isolate */
+async function putRL(env, key, n, ttl) {
+  try { await env.CZ_KV.put(key, String(n), { expirationTtl: ttl }); } catch (e) {}
+}
+/* persistAt = chỉ ghi KV từ lượt thứ mấy của cửa sổ (mặc định 1 = ghi ngay lượt
+   đầu). Với khoá đông người qua lại (theo IP) đặt 200: người đọc bình thường
+   KHÔNG tốn lượt ghi nào, chỉ những IP có dấu hiệu bất thường mới bắt đầu ghi —
+   mà lúc đó ghi là đúng việc cần làm. */
+async function rateLimit(env, key, limit, ttlSec, persistAt) {
   if (!env.CZ_KV) return true;
-  const cur = parseInt((await env.CZ_KV.get(key)) || '0', 10) || 0;
-  if (cur >= limit) return false;
-  await env.CZ_KV.put(key, String(cur + 1), { expirationTtl: ttlSec });
+  const now = Date.now();
+  const ttl = Math.max(60, parseInt(ttlSec, 10) || 60);   /* KV: expirationTtl ≥ 60 */
+  const at = Math.max(1, parseInt(persistAt, 10) || 1);
+  if (_rl.size > 4000) _rl = new Map();                   /* isolate sống lâu: dọn bộ đếm */
+  const mem = _rl.get(key);
+  if (mem && mem.exp > now) {
+    if (mem.n >= limit) return false;
+    mem.n += 1;
+    /* chạm mốc cần ghi hoặc chạm trần → 1 lượt ghi để máy khác cũng biết */
+    if (mem.n >= limit || mem.n === at) await putRL(env, key, mem.n, ttl);
+    return true;
+  }
+  let cur = 0;
+  try { cur = parseInt((await env.CZ_KV.get(key)) || '0', 10) || 0; } catch (e) { return true; }
+  if (cur >= limit) {
+    _rl.set(key, { n: limit, exp: now + ttl * 1000 });    /* nhớ luôn: khỏi đọc lại KV */
+    return false;
+  }
+  const n = cur + 1;
+  _rl.set(key, { n, exp: now + ttl * 1000 });
+  /* lượt đầu cửa sổ (hoặc mốc đã hẹn, hoặc chạm trần) — KHÔNG ghi mỗi request */
+  if (n >= limit || n === at) await putRL(env, key, n, ttl);
   return true;
 }
 
@@ -2965,7 +3132,6 @@ async function syncBlogger(req, env, cors) {
   reg.rev = new Date().toISOString().slice(0, 16).replace('T', ' ');
   reg.source = { synced: new Date().toISOString(), note: 'đồng bộ từ blogspot (list-novel + lịch ra chương)' };
   await env.CZ_KV.put('registry', registryJSON(reg), { metadata: { saved: new Date().toISOString(), rev: reg.rev } });
-  await env.CZ_KV.put('_last', new Date().toISOString());
   return json({ ok: true, cards: cards.length, changed, rev: reg.rev, schedule: !!sched, log: log.slice(0, 20), recount: rc.fixed }, { cors });
 }
 /* thẻ truyện trên Blogger là <div class="truyen-card" ...> (có <div> lồng bên

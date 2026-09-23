@@ -40,6 +40,23 @@ Admin (admin.html)  ──PUT──▶  Worker (worker/cms.js)  ──▶  Cloud
 
 GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới cần build); dữ liệu thì không đi qua GitHub nữa.
 
+## Có gì mới ở bản 1.15.0 — tiết kiệm hạn mức KV (Cloudflare gửi thư 90% quota)
+
+| | |
+|---|---|
+| **Bệnh** | Gói miễn phí của Workers KV chỉ cho **1.000 lượt GHI + 1.000 lượt LIST/ngày**. Bản ≤ 1.14.0 ghi khoá `stats` **mỗi 10 giây bất kể có ai xem hay không** = 8.640 lượt/ngày → tiêu hết hạn mức trong 1–2 giờ đầu ngày, sau đó mọi thao tác ghi (số liệu, phiếu bầu, lưu chương) lỗi 429. Cộng thêm: mỗi lượt xem = 1 đọc + 1 ghi khoá `rl:*`; mỗi lần `/api/stats` trượt cache biên = **1 lượt LIST** (`rateagg:*`); mỗi lần lưu = thêm 1 ghi khoá `_last` |
+| **Chữa 1 — nhịp ghi thông minh** | `src/shared/kv-budget.js` là nguồn duy nhất cho các con số: ghi khi đệm đủ **25 thay đổi**, hoặc hết hẹn **30 giây** mà có ≥3 thay đổi / giữ quá **10 phút** / còn “tem” hạn mức. Ngân sách mặc định **240 lượt ghi khoá `stats`/ngày** (`STATS_WRITE_BUDGET`), chia đều theo giờ UTC; số đã dùng lưu trong chính khoá `stats` (`sw`/`swd`) để nhiều isolate nhìn chung một ngân sách. Hết ngân sách thì số **nằm chờ trong RAM** — `/api/stats` vẫn cộng phần đang đệm nên người đọc thấy đủ, còn ghi hỏng thì nhét lại đệm (không mất số, không làm trang đọc lỗi) |
+| **Chữa 2 — chống spam không đốt quota** | Bộ đếm `rateLimit` nằm trong RAM isolate: khoá theo IP chỉ ghi KV khi IP vượt **200 lượt** (người đọc bình thường tốn 0 lượt ghi), các khoá khác 1 lượt ghi/cửa sổ, chạm trần thì từ chối luôn trong RAM. Hạn mức lượt xem theo IP nay 1.800/6 giờ (cùng tốc độ chặn, ít lượt ghi hơn) |
+| **Chữa 3 — gộp tổng đánh giá** | Mọi bộ nằm trong **một khoá `rateagg`** `{v:1, m:1, a:{slug:{sum,n}}}` thay vì mỗi bộ một khoá; dữ liệu cũ tự gộp trong lần đọc đầu (1 lượt LIST, đánh dấu `m:1`); bản trong RAM dùng lại 60 giây nên `/api/stats` thường **không chạm KV** cho phần sao |
+| **Chữa 4 — bỏ `_last`** | `/api/health` lấy mốc ghi từ `metadata.saved` của chính `registry` → mỗi lần lưu bớt 1 lượt ghi |
+| **Chữa 5 — cache cả 302** | Ảnh bìa/ảnh chương trên Supabase Storage: Worker trả 302 và **302 nay được lưu ở cache biên** (URL ảnh bất biến) → mỗi lượt xem bìa trước đây là 1 lượt đọc KV, nay gần như 0 |
+| **Chữa 6 — bầu nhanh hơn** | `postVote` không còn `flushStats()` trước mỗi phiếu (đọc số liệu đệm khác trường với phiếu); mọi lượt đọc–sửa–ghi khoá `stats` đi qua **một hàng đợi chung** nên hai lượt ghi chồng nhau không nuốt số của nhau |
+| **Theo dõi** | `/api/health` → `stats.writesToday`, `stats.writeBudget`, `stats.buffered` |
+| **Đo được** | `node tools/bench_kv.mjs .` chạy thật `worker/cms.js` trên KV giả có đếm thao tác. Cùng kịch bản 250 lượt xem + 40 phiếu + 15 đánh giá + 20 bình luận + 100 lần đọc bình luận + 60 lần đọc `/api/stats`: **bản cũ 484 ghi / 674 đọc / 60 list → bản mới 137 ghi / 361 đọc / 1 list** (lượt xem: 1,18 → 0,04 lượt ghi mỗi lượt xem) |
+| **Đổi lại** | Số lượt đọc trên bảng xếp hạng có thể trễ vài phút lúc web vắng (phiếu bầu và đánh giá sao **vẫn ghi ngay**); hạn mức chống spam chính xác theo từng isolate (muốn tuyệt đối thì phải dùng Durable Object) |
+| **Test** | `tests/t_kv_quota.mjs` (34 kiểm tra: công thức chia nhịp, 500 lượt xem/60 lần bình luận không đốt lượt ghi, gộp `rateagg` chỉ 1 lượt LIST, `/api/health`) |
+| **Quan trọng** | Nằm TRONG Worker → phải **`npx wrangler deploy`**. Kiểm tra: `curl <worker>/api/health` thấy `"version": "1.15.0"` |
+
 ## Có gì mới ở bản 1.14.0 — overflow cho book/ảnh (kể cả bìa cũ) + parser chương dùng chung
 
 | | |
@@ -248,7 +265,8 @@ Trang quản trị đã có tab **Phiếu bầu** (phím `V`): chọn bộ → d
 | `MAIL_TO` (Secret) | không | email nhận báo lỗi chữ phía Worker; không đặt trong registry/frontend |
 | `RESEND_API_KEY` | không | đường chuyên nghiệp: khoá API resend.com (miễn phí 100 mail/ngày) |
 | `MAIL_FROM` | không | địa chỉ gửi của Resend, vd `ssochuz library <bao-loi@ten-mien-cua-ban>` |
-| `STATS_FLUSH_MS` | không | thời gian gom số liệu trước khi ghi KV (mặc định 10000) |
+| `STATS_FLUSH_MS` | không | **chỉ để thử nghiệm**: ép ghi số liệu sau từng này mili-giây (bài kiểm thử dùng). Bản chạy thật tự giãn nhịp theo ngân sách ngày |
+| `STATS_WRITE_BUDGET` | không | trần lượt GHI khoá `stats` mỗi ngày (mặc định 240, trong hạn mức 1.000 ghi/ngày của gói miễn phí) |
 
 ## Danh sách API bản 1.6.0 (bổ sung cho bảng ở dưới)
 

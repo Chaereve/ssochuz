@@ -667,8 +667,15 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     /* gỡ điểm → số lượt giảm, trung bình còn lại của khách */
     const r4 = await call('POST', '/api/rate', { headers: auth, body: { slug: 'lunar-secret', rating: 0 } });
     eq('rating/gỡ điểm ok', [r4.body && r4.body.rating, r4.body && r4.body.ratingCount], [0, 1]);
-    /* dữ liệu nằm trong key riêng rate:/rateagg: — không đụng key vote cũ */
-    eq('rating/có rateagg:<slug>', [...kv.m.keys()].some((k) => k === 'rateagg:lunar-secret'), true);
+    /* dữ liệu nằm trong key riêng rate:/rateagg — không đụng key vote cũ.
+       Tổng đánh giá của MỌI bộ nằm trong MỘT khoá `rateagg` (bản 1.15.0): nhờ
+       vậy /api/stats không phải LIST + đọc từng bộ mỗi lần trượt cache biên
+       (LIST chỉ có 1.000 lượt/ngày ở gói miễn phí). */
+    const aggRaw = kv.m.get('rateagg');
+    const aggBlob = aggRaw ? JSON.parse(aggRaw.value) : null;
+    eq('rating/gộp tổng vào 1 khoá rateagg',
+      !!(aggBlob && aggBlob.a && aggBlob.a['lunar-secret'] && aggBlob.a['lunar-secret'].n === 1), true);
+    eq('rating/không còn khoá rateagg:<slug> riêng lẻ', [...kv.m.keys()].some((k) => k.startsWith('rateagg:')), false);
     eq('rating/có key rate:<slug>:<uid>', [...kv.m.keys()].filter((k) => k.startsWith('rate:')).length >= 1, true);
     /* điểm lạ → 400 */
     eq('rating/6 sao → 400', (await call('POST', '/api/rate', { body: { slug: 'lunar-secret', rating: 6, vid: 'x' } })).status, 400);
@@ -855,14 +862,16 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
       c.picture, 'rỗng hoặc link http(s) khác');
   }
 
-  /* ---------- 9j. chặn thổi lượt đọc: đổi mã máy liên tục vẫn bị chặn theo IP ---------- */
+  /* ---------- 9j. chặn thổi lượt đọc: đổi mã máy liên tục vẫn bị chặn theo IP ----------
+     Trần là 1.800 lượt/6 giờ cho mỗi IP (bản cũ 600 lượt/giờ) — cùng tốc độ chặn
+     nhưng mỗi IP chỉ tốn 1 lượt GHI KV cho cả buổi, tiết kiệm hạn mức. */
   {
     let counted = 0, refused = 0;
-    for (let i = 0; i < 620; i++) {
+    for (let i = 0; i < 1850; i++) {
       const r = await call('POST', '/api/view', { body: { slug: 'third-person', vid: 'may-' + i } });
       if ((r.body || {}).counted) counted++; else refused++;
     }
-    ck('lượt đọc/có trần theo IP', counted <= 601 && refused > 0, { counted, refused }, 'counted ≤ 601 và có lần bị từ chối');
+    ck('lượt đọc/có trần theo IP', counted <= 1801 && refused > 0, { counted, refused }, 'counted ≤ 1801 và có lần bị từ chối');
   }
 
   /* ---------- 10. lặt vặt ---------- */
