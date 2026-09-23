@@ -325,7 +325,26 @@
    gỡ trên mobile (luật cũ treo theo .admin-bar-state không tồn tại trong v2).
    ≤900px: wrap 2 hàng, search xuống hàng riêng; ≤760px: ẩn chip kết nối (thông
    tin vẫn còn trong user menu + staticbar); ≤480px: quota chỉ còn số. ===== */
+/* .abar của cz.css mang z-index:50 (thanh admin CŨ) — ngang bằng z của drawer
+   mobile và đứng SAU trong DOM nên đè mất hàng brand + nút đóng của drawer,
+   scrim cũng không phủ được header. Hạ về 20: vẫn nổi trên nội dung nhưng nằm
+   dưới scrim (55) và drawer (60). */
+.v2top.abar{z-index:20}
+/* Logo nhỏ trên header mobile — hàng 1 không còn trống trải chỉ mỗi burger */
+.v2mlogo{display:none}
 @media(max-width:900px){
+  .v2mlogo{display:inline-flex;font-size:19px}
+  .v2side{z-index:60}
+  .v2app.v2drawer-on .v2scrim{z-index:55}
+  /* Nút thu gọn chỉ có nghĩa ở desktop; trong drawer mobile nó gây nhầm */
+  .v2side-toggle{display:none}
+  /* Khối ≤900px của cz.css viết cho admin CŨ (.ashell, snav ngang): nó rò vào
+     drawer v2 — ẩn mất nhãn nhóm, bóp badge .ct còn 44px ("đan…"), biến nav
+     thành thanh ngang sticky. Đè lại riêng cho phạm vi .v2app. */
+  .v2app .snav{position:static;top:auto;z-index:auto;overflow:visible;max-height:none}
+  .v2app .admin-nav-label{display:block}
+  .v2app .snav button{flex:initial;padding:11px 12px}
+  .v2app .snav button .ct{margin-left:auto;max-width:90px}
   .v2top .in{flex-wrap:wrap;row-gap:8px;padding:8px 14px;gap:8px}
   .v2search{order:3;flex:1 1 100%;max-width:none}
   .v2top .v2quota{min-width:0}
@@ -396,3 +415,7 @@
 .v2edit-head h3{max-width:100%}
 
 .v2quota em.v2est{position:static;height:auto;background:none;font-size:10px;color:var(--mut);font-style:normal}
+@media (prefers-reduced-motion: reduce){
+  .v2todo:hover,.v2gcard:hover{transform:none}
+  .v2side{transition:none}
+}

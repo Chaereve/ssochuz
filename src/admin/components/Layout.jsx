@@ -206,6 +206,7 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
         <header class="v2top abar">
           <div class="in">
             <button class="hbtn icon v2burger" type="button" aria-label="Mở menu" onClick={() => setDrawer(true)}><Icon name="menu" /></button>
+            <a class="logo v2mlogo" href="/" aria-label="Trang chủ ssochuz"><span class="dot"></span>ssochuz</a>
             <form class="v2search" onSubmit={submitSearch}>
               <Icon name="search" />
               <input class="inp" value={q} placeholder="Tìm truyện, tác giả…" onInput={(e) => setQ(e.target.value)} aria-label="Tìm trong quản trị" />
