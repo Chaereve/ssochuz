@@ -1,8 +1,9 @@
 import { profileId } from './member-spaces.js';
 export { MemberSpaces } from './member-spaces.js';
 export { PrivateBooks } from './private-books.js';
-import { dropOverflow, overflowStatus, persistBook, persistCover, persistImage, readBook, readImage, materializeBook, migrateOverflow } from './overflow.js';
+import { dropOverflow, overflowStatus, persistBook, persistCover, persistChapterImage, persistImage, readBook, readImage, materializeBook, migrateOverflow } from './overflow.js';
 import { parseChapterTitle, nextMainChapterNo, chapterTextOf, chapterHasMedia } from '../src/shared/chapters.js';
+import { isChapterPending, countVisibleChapters, countPendingChapters, nextScheduleMs, atMs, chapterAtMs, scheduleLabelOf } from '../src/shared/schedule.js';
 /* ============================================================================
    ssochuz — Worker đọc/ghi dữ liệu truyện + số liệu xếp hạng trên Cloudflare KV
    ----------------------------------------------------------------------------
@@ -257,6 +258,18 @@ const handler = {
       let m = p.match(/^\/api\/book\/(.+)$/);
       if (m && req.method === 'GET') return await getBookPublic(req, env, cors);
 
+      /* Sửa MỘT chương trong bộ: PUT /api/book/<slug>/chapter
+         { index, chapter } | { index, remove:true } | { from, to }
+         Lý do có đường riêng: bản cũ bấm “Lưu chương” là gửi lại NGUYÊN bộ
+         (mọi chương, có bộ vài MB) + ghi lại registry nên phản hồi rất lâu.
+         Đường này chỉ gửi 1 chương, Worker tự ghép vào bản cũ trên KV. */
+      let mch = p.match(/^\/api\/book\/(.+)\/chapter$/);
+      if (mch && (req.method === 'PUT' || req.method === 'POST')) {
+        const r = await putChapter(req, env, decodeURIComponent(mch[1]), cors);
+        if (r.ok) { await edgePurge(org + '/api/book/' + mch[1], org + '/api/registry'); await purgeFeed(org); }
+        return r;
+      }
+
       /* nhập mật mã truyện bị khóa → token 6 giờ (stateless, ký HMAC).
          Rate limit theo IP+slug chống dò mật mã. */
       if (p === '/api/lock' && req.method === 'POST') return await postLock(req, env, cors);
@@ -362,7 +375,10 @@ const handler = {
   /* Cron Trigger (10 phút/lần, cấu hình trong wrangler.toml) rút dần hàng đợi
      thông báo đẩy — mỗi invocation gửi tối đa 45 tin (free giới hạn 50 subrequest) */
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(drainPushQueue(env).catch(() => {}));
+    /* 1) chương hẹn giờ tới mốc → cập nhật lại số chương trong registry + báo
+          đẩy “chương mới” cho người theo dõi
+       2) rút hàng đợi thông báo đẩy (tối đa 45 tin mỗi lần) */
+    ctx.waitUntil(publishDueChapters(env).then(() => drainPushQueue(env)).catch(() => {}));
   },
 };
 
@@ -724,6 +740,57 @@ async function enqueuePush(env, slug, ch, chapTitle) {
 function pushChapName(chapTitle) {
   const m = /^(?:chương|chuong|chap|chapter)\s*\d+\s*[:.\-–—]?\s*(.*)$/i.exec(String(chapTitle || '').trim());
   return m ? m[1].trim() : String(chapTitle || '').trim();
+}
+/* ============================================================================
+   CRON · CHƯƠNG HẸN GIỜ TỚI MỐC → LÊN SÓNG
+   ----------------------------------------------------------------------------
+   Nội dung chương hẹn giờ nằm sẵn trong book JSON; trang đọc tự lọc theo giờ
+   (getBookPublic) nên chương hiện ra đúng lúc. Việc của Cron là hai thứ mà
+   chỉ nó làm được khi không ai mở trang quản trị:
+     · sửa lại số chương trong registry (thẻ truyện ngoài web hiện “N chương”)
+     · báo đẩy “chương mới” ĐÚNG lúc lên sóng (chứ không phải lúc bấm hẹn giờ)
+   Chỉ đụng tới những bộ có ghi chú hẹn giờ trong registry nên rất nhẹ. */
+async function publishDueChapters(env) {
+  const stat = { books: 0, published: 0, pushed: 0 };
+  if (!env.CZ_KV) return stat;
+  let reg = null;
+  try { reg = await env.CZ_KV.get('registry', { type: 'json' }); } catch (e) { return stat; }
+  if (!reg || !Array.isArray(reg.lib)) return stat;
+  const due = reg.lib.filter((n) => n && n.slug && (n.schedNext || n.pending));
+  stat.books = due.length;
+  if (!due.length) return stat;
+  const now = Date.now();
+  let writeReg = false;
+  for (const n of due) {
+    const book = await readBook(env, n.slug).catch(() => null);
+    if (!book || !Array.isArray(book.chapters)) continue;
+    /* chương hẹn giờ ĐÃ tới mốc: báo đẩy một lần rồi đánh dấu */
+    const last = book.chapters[book.chapters.length - 1];
+    if (last && String(last.status || '').toLowerCase() === 'scheduled' && !last.notified && !isChapterPending(last, now)) {
+      last.notified = true;
+      await enqueuePush(env, n.slug, book.chapters.length, last.t || '');
+      await persistBook(env, n.slug, book);
+      stat.pushed++;
+      await edgePurge(new URL(env.SITE_BASE || 'https://ssochuz.pages.dev').origin + '/api/book/' + encodeURIComponent(n.slug), new URL(env.SITE_BASE || 'https://ssochuz.pages.dev').origin + '/api/registry');
+    }
+    const meta = scheduleMetaOf(book);
+    if (meta.pending) { n.pending = meta.pending; if (meta.schedNext) n.schedNext = meta.schedNext; else delete n.schedNext; }
+    else {
+      if (n.pending || n.schedNext) stat.published++;
+      delete n.pending; delete n.schedNext;
+    }
+    const live = countVisibleChapters(book.chapters, now);
+    const labelNow = countLabelOf(n, live, meta.pending);
+    if (Number(n.chapters) !== live || String(n.countLabel || '') !== labelNow) {
+      n.chapters = live; n.countLabel = labelNow;
+    }
+    writeReg = true;
+  }
+  if (writeReg) {
+    reg.rev = new Date().toISOString().slice(0, 16).replace('T', ' ');
+    await env.CZ_KV.put('registry', registryJSON(reg), { metadata: { saved: new Date().toISOString(), rev: reg.rev } });
+  }
+  return stat;
 }
 /* Cron drain: gửi tối đa PUSH_BATCH tin, sub chết thì xoá, job xong thì gỡ */
 async function drainPushQueue(env) {
@@ -1087,11 +1154,14 @@ async function getFeed(req, env, cors) {
       desc: (nov && nov.syn) || (book && book.syn) || ('Đọc truyện ' + title + ' trên ssochuz library.'),
     };
     const pub = rfc822((nov && nov.updated) || (reg && reg.rev));
-    items = chs.map((c, i) => ({
-      t: feedChapTitle(c, i),
-      link: base + '/truyen/' + slug + '/chuong-' + (i + 1) + '/',
-      pub, desc: chapSnippet(c.html, 300),
-    })).reverse().slice(0, 50);
+    /* chương hẹn giờ chưa tới mốc / đang Ẩn KHÔNG được lọt vào RSS (giữ đúng
+       số thứ tự chương: vị trí tính theo mảng gốc) */
+    items = chs.map((c, i) => ({ c, i })).filter((x) => !isChapterPending(x.c))
+      .map(({ c, i }) => ({
+        t: feedChapTitle(c, i),
+        link: base + '/truyen/' + slug + '/chuong-' + (i + 1) + '/',
+        pub, desc: chapSnippet(c.html, 300),
+      })).reverse().slice(0, 50);
   } else {
     /* bỏ luôn truyện khóa mật mã — feed chỉ dành cho nội dung công khai */
     const cands = lib.filter((n) => n && n.slug && !n.lock && (parseInt(n.chapters, 10) || 0) > 0)
@@ -1100,9 +1170,10 @@ async function getFeed(req, env, cors) {
     cands.forEach((n, k) => {
       const book = books[k];
       const chs = (book && Array.isArray(book.chapters)) ? book.chapters : [];
-      const take = chs.slice(-5);
-      take.forEach((c, j) => {
-        const pos = chs.length - take.length + j + 1;
+      /* 5 chương ĐANG HIỆN mới nhất (bỏ chương hẹn giờ chưa tới mốc / đang Ẩn) */
+      const take = chs.map((c, i) => ({ c, i })).filter((x) => !isChapterPending(x.c)).slice(-5);
+      take.forEach(({ c, i }) => {
+        const pos = i + 1;
         items.push({
           t: (n.title || n.slug) + ' — ' + feedChapTitle(c, pos - 1),
           link: base + '/truyen/' + n.slug + '/chuong-' + pos + '/',
@@ -1247,19 +1318,33 @@ async function getBookPublic(req, env, cors) {
       ...JSONH, ...cors, 'cache-control': 'public, max-age=0, s-maxage=' + EDGE_TTL.book, 'x-kv-key': 'book:' + slug,
     };
     if (metadata && metadata.etag) h.etag = metadata.etag;
+    const pub = publicBookShape(book);
     if (book && book.lock) {
       const exp = await verifyLockToken(env, slug, u.searchParams.get('token'));
       if (!exp) {
         /* chỉ trả vỏ: KHÔNG có chương, không synFull, không salt/hash */
         return new Response(JSON.stringify({ title: book.title || slug, slug: slug, locked: true, chapters: [] }), { headers: h });
       }
-      const out = Object.assign({}, book, { locked: true, lockUntil: exp });
+      const out = Object.assign({}, pub, { locked: true, lockUntil: exp });
       delete out.lock;
       return new Response(JSON.stringify(out), { headers: h });
     }
-    return new Response(JSON.stringify(book), { headers: h });
+    return new Response(JSON.stringify(pub), { headers: h });
   });
 }
+/* Bản công khai của 1 bộ: BỎ chương chưa tới giờ hẹn và chương đang Ẩn.
+   Vì sao lọc ở Worker chứ không ở trang đọc: giấu nội dung ở phía trình duyệt
+   là giấu bằng niềm tin — ai mở DevTools cũng đọc được chương chưa tới giờ. */
+function publicBookShape(book) {
+  if (!book || typeof book !== 'object') return book;
+  const out = Object.assign({}, book);
+  if (!Array.isArray(book.chapters)) return out;
+  const pending = countPendingChapters(book.chapters);
+  out.chapters = book.chapters.filter((c) => !isChapterPending(c));
+  if (pending) out.pendingChapters = pending;   /* số chương đang chờ — web đọc bỏ qua */
+  return out;
+}
+
 /* POST /api/lock { slug, password } — nhập mật mã → token 6 giờ */
 async function postLock(req, env, cors) {
   if (!env.CZ_KV) return noKV(cors);
@@ -1362,20 +1447,36 @@ async function postImage(req, env, cors) {
   if (data.length > 11 * 1024 * 1024) {
     return json({ ok: false, error: 'Ảnh quá lớn — giảm kích thước rồi thử lại (giới hạn ~8 MB).' }, { status: 413, cors });
   }
-  const id = (typeof crypto.randomUUID === 'function') ? crypto.randomUUID()
-    : 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  const kind = String(body.kind || '').trim().toLowerCase();
   /* base64: 4 ký tự → 3 byte (bỏ ký tự đệm '=' — chính nó làm cách tính
      naob 0.75 bị thừa 1–2 byte với ảnh thật) */
-  const kind = String(body.kind || '').trim().toLowerCase();
+  const bytesIn = Math.floor(data.replace(/=+$/, '').length * 3 / 4);
+  /* ID do trình duyệt đặt theo NỘI DUNG ảnh (hash) → dán lại cùng một ảnh
+     không tốn thêm chỗ: thấy khoá `img:<id>` đã có thì trả luôn URL cũ.
+     Bản cũ dùng UUID ngẫu nhiên nên mỗi lần upload là một bản sao mới. */
+  const wantId = String(body.id || '').trim().toLowerCase();
+  const hashedId = /^[a-z0-9][a-z0-9-]{9,63}$/.test(wantId) ? wantId : '';
+  if (hashedId) {
+    const existed = await readImage(env, hashedId).catch(() => null);
+    if (existed) {
+      return json({
+        ok: true, id: hashedId, url: existed.url || ('/api/img/' + hashedId),
+        bytes: bytesIn, overflow: existed.url ? 'supabase-storage' : '', dedupe: true,
+      }, { cors });
+    }
+  }
+  const id = hashedId || ((typeof crypto.randomUUID === 'function') ? crypto.randomUUID()
+    : 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
   let stored;
   try {
-    stored = kind === 'cover' ? await persistCover(env, id, data, type) : await persistImage(env, id, data, type);
+    if (kind === 'cover') stored = await persistCover(env, id, data, type);
+    else stored = await persistChapterImage(env, id, data, type);
   } catch (e) {
     return json({ ok: false, error: String((e && e.message) || e) }, { status: 502, cors });
   }
   await logAct(env, 'lên ảnh ' + (kind === 'cover' ? 'bìa ' : '') + id.slice(0, 8) + '… (' + Math.max(1, Math.round(stored.bytes / 1024)) + ' KB)', req);
   const url = stored.url || ('/api/img/' + id);
-  return json({ ok: true, id: id, url, bytes: stored.bytes, overflow: stored.overflow || '' }, { cors });
+  return json({ ok: true, id: id, url, bytes: stored.bytes, overflow: stored.overflow || '', dedupe: false }, { cors });
 }
 async function getImage(req, env, cors, id) {
   if (!env.CZ_KV) return noKV(cors);
@@ -1507,18 +1608,46 @@ async function putKV(req, env, key, cors, label) {
    ============================================================================ */
 function chapLen(book) {
   if (!book) return null;
-  if (Array.isArray(book.chapters)) return book.chapters.length;
+  /* đếm theo chương ĐANG HIỆN: chương hẹn giờ chưa tới mốc hoặc đang Ẩn không
+     được tính vào “N chương” mà độc giả thấy (trước đây đếm hết nên web hiện
+     31 chương trong khi chỉ đọc được 30). */
+  if (Array.isArray(book.chapters)) return countVisibleChapters(book.chapters);
   if (typeof book.chapters === 'number') return book.chapters; /* stub overflow */
   return null;
+}
+/* Thông tin hàng đợi hẹn giờ của 1 bộ — ghi vào registry để tab Chương và
+   danh sách bộ biết đang có chương chờ lên sóng mà KHÔNG phải tải full HTML. */
+function scheduleMetaOf(book) {
+  const chapters = book && Array.isArray(book.chapters) ? book.chapters : [];
+  const next = nextScheduleMs(chapters);
+  return {
+    pending: countPendingChapters(chapters),
+    schedNext: next ? new Date(next).toISOString() : '',
+  };
+}
+function applyScheduleMeta(n, book) {
+  const meta = scheduleMetaOf(book);
+  if (meta.pending) {
+    n.pending = meta.pending;
+    if (meta.schedNext) n.schedNext = meta.schedNext; else delete n.schedNext;
+  } else {
+    delete n.pending;
+    delete n.schedNext;
+  }
+  return meta;
 }
 /* Nhãn số chương: "<đã đăng>/<dự kiến>". Dự kiến lấy từ trường `planned` (nếu
    biên tập viên khai) — KHÔNG moi lại con số cũ trong nhãn, vì chính con số cũ
    đó là thứ làm web hiện "30 chương" sau khi đã xoá chương và sửa nhãn thành 29/29. */
-function countLabelOf(n, real) {
+function countLabelOf(n, real, pending) {
   real = Math.max(0, parseInt(real, 10) || 0);
+  pending = Math.max(0, parseInt(pending, 10) || 0);
   const plannedRaw = parseInt((n && (n.planned || n.declared)) || 0, 10) || 0;
-  if (real === 0 && plannedRaw === 0) return '0/—';
-  const planned = Math.max(real, plannedRaw);
+  /* chương đang hẹn giờ/đang Ẩn vẫn là chương SẼ đọc được: cộng vào phần “dự
+     kiến” để thẻ truyện hiện “12/13 chương” (còn nữa) thay vì “12/12” như đã
+     xong — độc giả khỏi tưởng bộ đã hoàn thành. */
+  const planned = Math.max(real + pending, plannedRaw);
+  if (real === 0 && planned === 0) return '0/—';
   if (planned === 0) return real + '/—';
   return real + '/' + planned;
 }
@@ -1533,16 +1662,29 @@ async function syncCountToRegistry(env, slug, book) {
   if (real == null) return { changed: false };          /* không có sách → không đoán */
   const was = Number(n.chapters) || 0;
   const labelWas = String(n.countLabel || '');
-  const labelNow = countLabelOf(n, real);
-  const changed = was !== real || labelWas !== labelNow;
+  const schedMeta = book ? scheduleMetaOf(book) : { pending: 0, schedNext: '' };
+  const labelNow = countLabelOf(n, real, schedMeta.pending);
+  const wasPending = Number(n.pending) || 0;
+  const wasNext = String(n.schedNext || '');
+  const changed = was !== real || labelWas !== labelNow || wasPending !== schedMeta.pending || wasNext !== String(schedMeta.schedNext || '');
   if (!changed) return { changed: false, was, now: real };
   n.chapters = real;
   n.countLabel = labelNow;   /* KHÔNG ghi lại `count`/`canRead`: web tự tính (CZ.norm),
                                registry chỉ giữ một nguồn sự thật cho nhãn */
+  if (book) applyScheduleMeta(n, book);
   reg.rev = new Date().toISOString().slice(0, 16).replace('T', ' ');
   await env.CZ_KV.put('registry', registryJSON(reg), { metadata: { saved: new Date().toISOString(), rev: reg.rev } });
-  await env.CZ_KV.put('_last', new Date().toISOString());
-  return { changed: true, was, now: real, labelWas, labelNow, rev: reg.rev };
+  return { changed: true, was, now: real, labelWas, labelNow, rev: reg.rev, pending: schedMeta.pending, schedNext: schedMeta.schedNext };
+}
+/* Chương có nội dung thật không? Chuỗi '<p></p>' hay '<p>&nbsp;</p>' KHÔNG phải
+   nội dung — trước đây chỉ so chuỗi thô nên chương rỗng vẫn lọt vào bộ và làm
+   lệch số chương. Ảnh (kể cả ảnh không chữ) vẫn tính là có nội dung. */
+function chapterHasContent(c) {
+  if (!c || typeof c !== 'object') return false;
+  if (String(c.t || '').trim()) return true;
+  const h = String(c.html || '');
+  if (/<img\b/i.test(h)) return true;
+  return h.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/&[a-z#0-9]+;/gi, ' ').trim().length > 0;
 }
 function sanitizeChapterHtml(html) {
   let h = String(html || '');
@@ -1572,21 +1714,117 @@ async function putBook(req, env, slug, cors) {
   parsed.chapters.forEach((c) => { if (c) c.html = sanitizeChapterHtml(c.html); });
   /* bỏ chương rỗng cả tiêu đề lẫn nội dung — chính chúng là thủ phạm làm lệch số chương */
   const before = parsed.chapters.length;
-  parsed.chapters = parsed.chapters.filter((c) => c && (String(c.t || '').trim() || String(c.html || '').trim()));
+  parsed.chapters = parsed.chapters.filter(chapterHasContent);
   const dropped = before - parsed.chapters.length;
   parsed.slug = slug;
   /* khóa mật mã do /api/lock/set quản lý — web KHÔNG gửi trường `lock` lên
      (không thấy được nó), nên giữ nguyên bản cũ để tránh lưu chương là tự mở khóa */
   if (oldBook && oldBook.lock && !parsed.lock) parsed.lock = oldBook.lock;
-  const stored = await persistBook(env, slug, parsed);
-  await env.CZ_KV.put('_last', stored.saved);
-  const sync = await syncCountToRegistry(env, slug, parsed);
-  await logAct(env, 'lưu bộ ' + slug + ' (' + parsed.chapters.length + ' chương)', req);
-  if (parsed.chapters.length > oldLen) {
-    const last = parsed.chapters[parsed.chapters.length - 1] || {};
+  /* ghi book + cập nhật registry SONG SONG: hai việc độc lập nhau, chạy nối
+     tiếp chỉ làm phản hồi chậm thêm một vòng KV (~100–200ms). */
+  const [stored, sync] = await Promise.all([
+    persistBook(env, slug, parsed),
+    syncCountToRegistry(env, slug, parsed),
+  ]);
+  const last = parsed.chapters[parsed.chapters.length - 1] || {};
+  if (parsed.chapters.length > oldLen && !isChapterPending(last)) {
+    last.notified = true;
     await enqueuePush(env, slug, parsed.chapters.length, last.t || '');
   }
+  await env.CZ_KV.put('_last', stored.saved);
+  await logAct(env, 'lưu bộ ' + slug + ' (' + parsed.chapters.length + ' chương)', req);
   return json({ ok: true, key: 'book:' + slug, bytes: stored.bytes, saved: stored.saved, chapters: parsed.chapters.length, dropped, registry: sync, overflow: stored.overflow || '' }, { cors });
+}
+
+/* ============================================================================
+   PUT /api/book/<slug>/chapter — ghi MỘT chương (nút “Lưu chương”)
+   ----------------------------------------------------------------------------
+   Bản cũ: sửa 1 chương = gửi lại cả bộ (mọi chương, có bộ vài MB) → phản hồi
+   vài giây; mỗi lần lưu còn ghi lại cả registry. Đường này chỉ nhận 1 chương:
+     { index, chapter }        → thay/thêm chương ở vị trí index (index = số
+                                 chương hiện có nghĩa là thêm vào cuối)
+     { index, remove: true }   → xoá chương
+     { from, to }              → đổi thứ tự (kéo-thả / nút Lên-Xuống)
+   Worker tự ghép vào bản cũ trên KV nên giữ nguyên các trường lạ của chương
+   (notified, ghi chú…), tự đếm lại số chương ĐANG HIỆN + hàng đợi hẹn giờ.
+   ========================================================================== */
+async function putChapter(req, env, slug, cors) {
+  if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
+  if (!env.CZ_KV) return noKV(cors);
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body !== 'object') return json({ ok: false, error: 'JSON lỗi hoặc rỗng.' }, { status: 400, cors });
+  const book = await readBook(env, slug).catch(() => null);
+  if (!book || typeof book !== 'object') return json({ ok: false, error: 'Bộ chưa có trên KV — nạp dữ liệu bộ trước khi lưu chương.' }, { status: 404, cors });
+  book.chapters = Array.isArray(book.chapters) ? book.chapters : [];
+  const oldLen = book.chapters.length;
+  let action = '';
+  let idx = -1;
+
+  if (body.from !== undefined && body.to !== undefined) {
+    /* đổi thứ tự: kéo-thả hoặc nút Lên/Xuống */
+    const from = parseInt(body.from, 10), to = parseInt(body.to, 10);
+    if (!(from >= 0 && from < oldLen) || !(to >= 0 && to < oldLen) || from === to) {
+      return json({ ok: false, error: 'Vị trí đổi thứ tự không hợp lệ.' }, { status: 400, cors });
+    }
+    const [item] = book.chapters.splice(from, 1);
+    book.chapters.splice(to, 0, item);
+    idx = to;
+    action = 'move';
+  } else {
+    const index = parseInt(body.index, 10);
+    if (!(index >= 0) || index > oldLen) return json({ ok: false, error: 'Vị trí chương không hợp lệ.' }, { status: 400, cors });
+    if (body.remove) {
+      if (!book.chapters[index]) return json({ ok: false, error: 'Không thấy chương cần xoá.' }, { status: 404, cors });
+      book.chapters.splice(index, 1);
+      action = 'delete';
+    } else {
+      const incoming = body.chapter && typeof body.chapter === 'object' ? body.chapter : {};
+      const prev = book.chapters[index] || {};
+      const next = Object.assign({}, prev, {
+        t: String(incoming.t == null ? prev.t || '' : incoming.t).slice(0, 300),
+        html: sanitizeChapterHtml(incoming.html == null ? prev.html || '' : incoming.html),
+        status: String(incoming.status || prev.status || 'published').toLowerCase(),
+      });
+      /* mốc hẹn giờ: nhận ISO (admin gửi lên) hoặc bản cũ 'YYYY-MM-DD HH:mm'
+         — dùng atMs() cho CHUỖI, chapterAtMs() chỉ dành cho object chương */
+      const at = atMs(incoming.at !== undefined ? incoming.at : prev.at);
+      if (next.status === 'scheduled' && at) next.at = new Date(at).toISOString();
+      else if (incoming.at === '' || incoming.at === null || next.status !== 'scheduled') delete next.at;
+      if (!chapterHasContent(next)) {
+        return json({ ok: false, error: 'Chương rỗng cả tiêu đề lẫn nội dung — không ghi để khỏi lệch số chương.' }, { status: 400, cors });
+      }
+      /* có nội dung/giờ mới → cho phép báo đẩy lần sau (chương hẹn giờ báo lúc lên sóng) */
+      const contentChanged = String(prev.html || '') !== String(next.html || '') || String(prev.t || '') !== String(next.t || '');
+      if (contentChanged) delete next.notified;
+      book.chapters[index] = next;
+      idx = index;
+      action = oldLen === index ? 'append' : 'update';
+    }
+  }
+
+  const stored = await persistBook(env, slug, book);
+  const sync = await syncCountToRegistry(env, slug, book);
+  /* push: chỉ báo khi có CHƯƠNG MỚI đã lên sóng ở cuối bộ; chương hẹn giờ để
+     Cron báo đúng lúc tới giờ (publishDueChapters). */
+  const last = book.chapters[book.chapters.length - 1];
+  let push = null;
+  if (action === 'append' && last && !isChapterPending(last) && !last.notified) {
+    last.notified = true;
+    push = await enqueuePush(env, slug, book.chapters.length, last.t || '');
+    if (push && push.queued) await persistBook(env, slug, book);
+  }
+  await env.CZ_KV.put('_last', stored.saved);
+  await logAct(env, 'lưu chương ' + slug + ' #' + (idx + 1) + ' (' + action + ')', req);
+  const pending = countPendingChapters(book.chapters);
+  const nextMs = nextScheduleMs(book.chapters);
+  return json({
+    ok: true, slug, index: idx, action,
+    chapters: book.chapters.length, live: chapLen(book), pending,
+    schedNext: nextMs ? new Date(nextMs).toISOString() : '',
+    schedLabel: nextMs ? scheduleLabelOf(book.chapters.find((c) => chapterAtMs(c) === nextMs) || {}) : '',
+    bytes: stored.bytes, saved: stored.saved, overflow: stored.overflow || '',
+    registry: sync, push: push && push.queued ? 'queued' : '',
+  }, { cors });
 }
 /* POST /api/recount — quét mọi bộ trên KV, đếm lại chương, sửa registry một lượt.
    Đây là nút "chữa cháy" cho những bộ đang hiện sai số chương ngoài web. */
@@ -1616,10 +1854,14 @@ async function applyRealCounts(env, reg) {
     if (!n) { out.orphan.push({ slug, chapters: real }); continue; }
     const was = Number(n.chapters) || 0;
     const labelWas = String(n.countLabel || '');
-    const labelNow = countLabelOf(n, real);
-    if (was !== real || labelWas !== labelNow) {
+    const schedMeta = book ? scheduleMetaOf(book) : { pending: 0, schedNext: '' };
+    const labelNow = countLabelOf(n, real, schedMeta.pending);
+    const wasPending = Number(n.pending) || 0, wasNext = String(n.schedNext || '');
+    const pendingChanged = wasPending !== schedMeta.pending || wasNext !== String(schedMeta.schedNext || '');
+    if (was !== real || labelWas !== labelNow || pendingChanged) {
       n.chapters = real; n.countLabel = labelNow;
-      out.fixed.push({ slug, title: n.title || '', was, now: real, labelWas, labelNow });
+      if (book) applyScheduleMeta(n, book);
+      out.fixed.push({ slug, title: n.title || '', was, now: real, labelWas, labelNow, pending: schedMeta.pending });
     }
   }
   reg.lib.forEach((n) => {

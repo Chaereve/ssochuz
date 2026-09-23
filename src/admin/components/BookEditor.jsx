@@ -6,7 +6,7 @@ import { ImageUploader } from './ImageUploader.jsx';
 import { persistableCover } from '../utils/cover.js';
 import { BookBadges } from './Badges.jsx';
 
-export function BookEditor({ registry, slug, bookData, bookLoading, apiBase, onLoadBook, onSave, onSaveBook, onUploadImage, onLock, onUnlock, onDuplicate, onBack, onDelete, writeBlocked = false, online = false }) {
+export function BookEditor({ registry, slug, bookData, bookLoading, apiBase, onLoadBook, onSave, onSaveBook, onSaveChapter, onDeleteChapter, onMoveChapter, onUploadImage, onLock, onUnlock, onDuplicate, onBack, onDelete, writeBlocked = false, online = false }) {
   const book = ((registry && registry.lib) || []).find((item) => item.slug === slug);
   const [form, setForm] = useState({
     title: '', slug: '', author: '', couple: '', year: '', status: 'Đang cập nhật',
@@ -129,7 +129,7 @@ export function BookEditor({ registry, slug, bookData, bookLoading, apiBase, onL
           {book.lock ? <button class="btn ghost" type="button" disabled={lockBusy || blocked} onClick={() => onUnlock(book.slug)}>Bỏ khóa</button> : null}
         </div>
       </form>
-      <ChapterEditor slug={slug} book={bookData} loading={bookLoading} apiBase={apiBase} onSaveBook={onSaveBook} onUploadImage={onUploadImage} writeBlocked={writeBlocked} online={online} />
+      <ChapterEditor slug={slug} book={bookData} loading={bookLoading} apiBase={apiBase} onSaveBook={onSaveBook} onSaveChapter={onSaveChapter} onDeleteChapter={onDeleteChapter} onMoveChapter={onMoveChapter} onUploadImage={onUploadImage} writeBlocked={writeBlocked} online={online} />
       <section class="v2danger">
         <h3>Khu vực nguy hiểm</h3>
         <p class="hint">Nhân bản tạo slug mới và tự bỏ khóa trên bản sao. Xoá bộ cần gõ đúng slug; book key và registry đều bị ảnh hưởng.</p>

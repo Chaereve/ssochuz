@@ -4,21 +4,41 @@ import { createRichTextEditor, fileToChapterHtml, htmlStats, splitChaptersTxt } 
 import { readTime } from '../utils/format.js';
 import { tempMediaInHtml } from '../utils/htmlSafety.js';
 import { suggestChapterTitle, chapterKind } from '../../shared/chapters.js';
+import { CHAPTER_STATUSES, chapterStatusOf, chapterAtMs, isChapterPending, isoToLocalInput, localInputToIso, scheduleLabelOf, scheduleWarning, hoursUntil } from '../../shared/schedule.js';
 
 function clone(value) { return JSON.parse(JSON.stringify(value || {})); }
 function quickWords(html) {
   const text = String(html || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/\s+/g, ' ').trim();
   return text ? text.split(/\s+/).length : 0;
 }
+/* Nháp cục bộ: khoá theo từng chương để mở lại đúng chương là thấy đúng nháp */
 function draftKey(slug, index) { return 'ssochuz_admin_v2_chdraft:' + slug + ':' + index; }
 function readDraft(slug, index) {
   try { return JSON.parse(localStorage.getItem(draftKey(slug, index)) || 'null'); } catch (e) { return null; }
 }
 function writeDraft(slug, index, data) {
-  try { localStorage.setItem(draftKey(slug, index), JSON.stringify(Object.assign({ at: Date.now() }, data))); } catch (e) {}
+  const rec = Object.assign({ at: Date.now() }, data);
+  try { localStorage.setItem(draftKey(slug, index), JSON.stringify(rec)); } catch (e) {}
+  return rec;
 }
 function dropDraft(slug, index) {
   try { localStorage.removeItem(draftKey(slug, index)); } catch (e) {}
+}
+/* Quét nháp có sẵn của cả bộ MỘT lần (đọc localStorage trong lúc render cho
+   từng chương sẽ chậm dần khi bộ dài). */
+function scanDrafts(slug) {
+  const out = {};
+  try {
+    const pre = 'ssochuz_admin_v2_chdraft:' + slug + ':';
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k || k.indexOf(pre) !== 0) continue;
+      const idx = Number(k.slice(pre.length));
+      const rec = JSON.parse(localStorage.getItem(k) || 'null');
+      if (rec && Number.isFinite(idx)) out[idx] = rec;
+    }
+  } catch (e) {}
+  return out;
 }
 function toast(message, kind) {
   if (window.CZ && window.CZ.toast) window.CZ.toast(message, kind);
@@ -39,6 +59,14 @@ function htmlForStorage(html, apiBase) {
 function fmtTime(ts) {
   try { return new Date(ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
   catch (e) { return ''; }
+}
+function fmtMs(ms) {
+  const n = Math.max(0, Number(ms) || 0);
+  return n >= 1000 ? (n / 1000).toFixed(1).replace('.', ',') + ' giây' : Math.round(n) + ' ms';
+}
+function localInputPlus(hours) {
+  const d = new Date(Date.now() + hours * 3600000);
+  return isoToLocalInput(d.toISOString());
 }
 
 function Toolbar({ editor }) {
@@ -84,41 +112,126 @@ function Toolbar({ editor }) {
   );
 }
 
-export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook, onUploadImage, writeBlocked = false, online = false }) {
+export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook, onSaveChapter, onDeleteChapter, onMoveChapter, onUploadImage, writeBlocked = false, online = false }) {
   const [localBook, setLocalBook] = useState(book || null);
   const [index, setIndex] = useState(0);
   const [title, setTitle] = useState('');
   const [html, setHtml] = useState('');
+  const [status, setStatus] = useState('published');
+  const [atLocal, setAtLocal] = useState('');
   const [editor, setEditor] = useState(null);
   const [host, setHost] = useState(null);
   const [preview, setPreview] = useState(false);
   const [draft, setDraft] = useState(null);
+  const [draftMap, setDraftMap] = useState({});
   const [draftPhase, setDraftPhase] = useState('');
+  /* Tăng lên khi dữ liệu chương đổi mà vị trí đang mở không đổi (nhập file
+     thay thế toàn bộ) — effect nạp chương theo dõi số này để vẽ lại đúng bản. */
+  const [reloadTick, setReloadTick] = useState(0);
+  const [restored, setRestored] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [savedMs, setSavedMs] = useState(0);
   const [dragFrom, setDragFrom] = useState(-1);
   const [importPreview, setImportPreview] = useState(null);
   const fileRef = useRef(null);
   const multiRef = useRef(null);
   const imageRef = useRef(null);
-  const initRef = useRef({ title: '', html: '' });
+  /* Bản đang có trên Worker của chương mở hiện tại (đối chiếu để biết “chưa lưu”) */
+  const baseRef = useRef({ title: '', html: '', status: 'published', atLocal: '' });
+  /* Dữ liệu đang gõ, cập nhật NGAY trong lúc render — nhờ vậy hàm làm sạch
+     (đổi chương / đóng tab) luôn đọc được bản mới nhất, không bị “quên” chữ */
+  const liveRef = useRef(null);
+  /* Chương đã nạp xong (khoá slug#index) — chỉ ghi nháp khi dữ liệu đang gõ
+     thuộc đúng chương này, tránh ghi nhầm nội dung chương cũ sang chương mới */
+  const bootRef = useRef('');
 
   useEffect(() => { setLocalBook(book || null); setIndex(0); }, [book && book.slug, slug]);
   const chapters = (localBook && Array.isArray(localBook.chapters) ? localBook.chapters : []);
   const current = chapters[index] || { t: '', html: '' };
+  const key = (localBook ? (localBook.slug || slug) : slug) + '#' + index;
+  liveRef.current = localBook ? { key, slug: localBook.slug || slug, index, title, html, status, atLocal } : null;
+
+  /* Cập nhật NGAY giá trị đang gõ vào liveRef. Vì sao cần: liveRef được gán lại
+     mỗi lần render, mà render của Preact lại xếp hàng sau sự kiện — gõ chữ rồi
+     bấm đổi chương trong cùng một nhịp (dán ảnh/xong bấm ngay) thì bản render
+     chưa kịp có chữ mới, flushDraft sẽ đọc phải giá trị cũ và ghi nháp thiếu
+     chữ. Gọi patchLive trong chính handler là chỗ duy nhất không bị nhịp đó. */
+  function patchLive(patch) {
+    if (liveRef.current) Object.assign(liveRef.current, patch);
+  }
+  function noteDraft(i, rec) { setDraftMap((m) => Object.assign({}, m, { [i]: rec })); }
+  function clearDraftNote(i) {
+    setDraftMap((m) => { const n = Object.assign({}, m); delete n[i]; return n; });
+  }
+  /* Ghi nháp ngay (không debounce) — dùng khi đổi chương/đóng tab. */
+  function flushDraft() {
+    const live = liveRef.current;
+    if (!live || live.key !== bootRef.current) return false;
+    const base = baseRef.current;
+    const dirty = live.title !== base.title || live.html !== base.html || live.status !== base.status || live.atLocal !== base.atLocal;
+    if (!dirty) { dropDraft(live.slug, live.index); clearDraftNote(live.index); setDraft(null); return false; }
+    const rec = writeDraft(live.slug, live.index, { title: live.title, html: live.html, status: live.status, atLocal: live.atLocal });
+    setDraft(rec);
+    noteDraft(live.index, rec);
+    return true;
+  }
+  /* Đổi chương: LƯU NHÁP TRƯỚC rồi mới nhảy — đây đúng là chỗ trước đây làm mất
+     chữ đang gõ dở (đổi chương là state bị thay, nháp debounce 900ms chưa kịp ghi). */
+  function gotoIndex(next) {
+    const n = Math.max(0, Math.min(chapters.length - 1, next));
+    if (n === index) return;
+    flushDraft();
+    setRestored(false);
+    setIndex(n);
+  }
 
   useEffect(() => {
     const baseTitle = current.t || ('Chương ' + (index + 1));
     const baseHtml = htmlForEditor(current.html || '<p></p>', apiBase);
-    initRef.current = { title: baseTitle, html: baseHtml };
+    const baseStatus = chapterStatusOf(current) || 'published';
+    const baseAtLocal = isoToLocalInput(chapterAtMs(current) || '');
+    baseRef.current = { title: baseTitle, html: baseHtml, status: baseStatus, atLocal: baseAtLocal };
+    bootRef.current = key;
     setTitle(baseTitle);
     setHtml(baseHtml);
-    setDraft(localBook ? readDraft(localBook.slug || slug, index) : null);
-    setDraftPhase('');
-  }, [localBook && localBook.slug, index, apiBase]);
+    setStatus(baseStatus);
+    setAtLocal(baseAtLocal);
+    /* Nháp có sẵn của chương này thì khôi phục LUÔN (trước đây phải bấm nút
+       “Khôi phục nháp” mới thấy, nên rất dễ tưởng là mất chữ) */
+    setDraftMap(scanDrafts(localBook ? (localBook.slug || slug) : slug));
+    const saved = localBook ? readDraft(localBook.slug || slug, index) : null;
+    const different = saved && (saved.title !== baseTitle || saved.html !== baseHtml
+      || (saved.status || 'published') !== baseStatus || (saved.atLocal || '') !== baseAtLocal);
+    if (different) {
+      const t2 = saved.title == null ? baseTitle : saved.title;
+      const h2 = saved.html == null ? baseHtml : saved.html;
+      const s2 = saved.status || baseStatus;
+      const a2 = saved.atLocal || '';
+      patchLive({ title: t2, html: h2, status: s2, atLocal: a2 });
+      setTitle(t2);
+      setHtml(h2);
+      setStatus(s2);
+      setAtLocal(a2);
+      setDraft(saved);
+      setRestored(true);
+      setDraftPhase('');
+    } else {
+      if (saved) dropDraft(localBook.slug || slug, index);
+      setDraft(null);
+      setRestored(false);
+      setDraftPhase('');
+    }
+  }, [localBook && localBook.slug, index, apiBase, reloadTick]);
 
   useEffect(() => {
     if (!host) return;
-    const ed = createRichTextEditor({ element: host, content: initRef.current.html || '<p></p>', onUpdate: setHtml, onImageFile: uploadImageFile });
+    const ed = createRichTextEditor({
+      element: host,
+      content: baseRef.current.html || '<p></p>',
+      onUpdate: (content) => { patchLive({ html: content }); setHtml(content); },
+      onImageFile: uploadImageFile,
+    });
     setEditor(ed);
     return () => { try { ed.destroy(); } catch (e) {} setEditor(null); };
   }, [host, localBook && localBook.slug, index]);
@@ -129,22 +242,44 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
     if (html !== cur) editor.commands.setContent(html || '<p></p>', false);
   }, [editor]);
 
+  /* Autosave nháp cục bộ: 700ms sau khi ngừng gõ. Trước đây 900ms nhưng đổi
+     chương ngay sau khi gõ là mất; giờ đổi chương luôn gọi flushDraft() trước. */
   useEffect(() => {
     if (!localBook || !chapters.length) return;
-    const init = initRef.current;
-    if (title === init.title && html === init.html) return;
+    const base = baseRef.current;
+    if (title === base.title && html === base.html && status === base.status && atLocal === base.atLocal) {
+      setDraftPhase('');
+      return;
+    }
     setDraftPhase('saving');
     const t = setTimeout(() => {
-      writeDraft(localBook.slug || slug, index, { title, html });
-      setDraft(readDraft(localBook.slug || slug, index));
+      const rec = writeDraft(localBook.slug || slug, index, { title, html, status, atLocal });
+      setDraft(rec);
+      noteDraft(index, rec);
       setDraftPhase('saved');
-    }, 900);
+    }, 700);
     return () => clearTimeout(t);
-  }, [title, html, localBook && localBook.slug, index]);
+  }, [title, html, status, atLocal, localBook && localBook.slug, index]);
+
+  /* Đóng tab / ẩn trang / rời trang quản trị: ghi nốt nháp rồi mới đi */
+  useEffect(() => {
+    const flush = () => flushDraft();
+    window.addEventListener('beforeunload', flush);
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', flush);
+    return () => {
+      window.removeEventListener('beforeunload', flush);
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', flush);
+      flush();
+    };
+  }, []);
 
   const stat = useMemo(() => htmlStats(html), [html]);
   const temps = useMemo(() => tempMediaInHtml(htmlForStorage(html || '', apiBase)), [html, apiBase]);
-  const dirty = title !== initRef.current.title || html !== initRef.current.html;
+  const dirty = title !== baseRef.current.title || html !== baseRef.current.html || status !== baseRef.current.status || atLocal !== baseRef.current.atLocal;
+  const scheduleNote = scheduleWarning({ status, at: localInputToIso(atLocal) });
+  const pendingNow = isChapterPending({ status, at: localInputToIso(atLocal) });
 
   const saveChapter = async () => {
     if (!localBook) return;
@@ -156,58 +291,115 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
       toast('Quota KV hôm nay đã hết — giữ nháp cục bộ, không gọi API ghi.', 'err');
       return;
     }
+    if (status === 'scheduled' && !localInputToIso(atLocal)) {
+      toast('Chọn ngày giờ cho chương hẹn giờ trước khi lưu.', 'err');
+      return;
+    }
+    const chapterPayload = {
+      t: title || ('Chương ' + (index + 1)),
+      html: htmlForStorage(html || '', apiBase),
+      status,
+      at: status === 'scheduled' ? localInputToIso(atLocal) : '',
+    };
+    const started = Date.now();
+    setSaving(true);
+    /* bản cục bộ sau khi lưu: phải cập nhật NGAY, kẻo rời chương rồi quay lại
+       lại đọc bản cũ trong localBook mà tưởng chương vừa lưu bị mất chữ */
     const next = clone(localBook);
     next.chapters = Array.isArray(next.chapters) ? next.chapters : [];
-    if (!next.chapters[index]) next.chapters[index] = { t: title || ('Chương ' + (index + 1)), html: '' };
-    next.chapters[index] = Object.assign({}, next.chapters[index], { t: title || ('Chương ' + (index + 1)), html: htmlForStorage(html || '', apiBase), status: next.chapters[index].status || 'published' });
+    if (!next.chapters[index]) next.chapters[index] = { t: chapterPayload.t, html: '' };
+    next.chapters[index] = Object.assign({}, next.chapters[index], chapterPayload);
+    if (chapterPayload.status !== 'scheduled') delete next.chapters[index].at;
     try {
-      await onSaveBook(next);
+      if (onSaveChapter && online) {
+        /* đường NHANH: chỉ gửi 1 chương (trước đây gửi nguyên bộ + cả registry) */
+        await onSaveChapter(localBook.slug || slug, index, chapterPayload);
+      } else {
+        await onSaveBook(next);
+      }
       setLocalBook(next);
-      dropDraft(next.slug || slug, index);
+      baseRef.current = { title, html, status, atLocal };
+      dropDraft(localBook.slug || slug, index);
+      clearDraftNote(index);
       setDraft(null);
-      initRef.current = { title, html };
+      setRestored(false);
       setDraftPhase('');
-    } catch (e) { /* onSaveBook đã toast lỗi; giữ nháp để không mất chữ */ }
+      setSavedMs(Date.now() - started);
+    } catch (e) { /* onSaveChapter/onSaveBook đã toast lỗi; giữ nháp để không mất chữ */ }
+    finally { setSaving(false); }
   };
   const addChapter = () => {
+    flushDraft();
     const next = clone(localBook || { title: slug, slug, chapters: [] });
     next.chapters = Array.isArray(next.chapters) ? next.chapters : [];
-    /* gợi ý số chương CHÍNH kế tiếp (bỏ qua Lờí mở đầu / giới thiệu ngưới vật /
+    /* gợi ý số chương CHÍNH kế tiếp (bỏ qua Lời mở đầu / giới thiệu nhân vật /
        ngoại truyện) — trước đây cứ length+1 nên bộ có mở đầu bị gọi sai số */
-    next.chapters.push({ t: suggestChapterTitle(next.chapters), html: '<p></p>', status: 'draft' });
-    setLocalBook(next); setIndex(next.chapters.length - 1);
+    /* chương mới mặc định XUẤT BẢN: đây vẫn là hành vi cũ trên thực tế (trạng
+       thái chương chưa từng chặn hiển thị), nay ghi thẳng ra cho khỏi hiểu nhầm;
+       muốn giữ riêng thì chọn “Hẹn giờ” hoặc “Ẩn” ngay trên ô trạng thái */
+    next.chapters.push({ t: suggestChapterTitle(next.chapters), html: '<p></p>', status: 'published' });
+    setLocalBook(next); setRestored(false); setIndex(next.chapters.length - 1);
   };
   const deleteChapter = async () => {
     if (!localBook || !chapters[index]) return;
     if (!window.confirm('Xoá chương ' + (index + 1) + ' — ' + (chapters[index].t || '') + '?')) return;
     const typed = window.prompt('Gõ XOÁ để xác nhận xoá chương:', '');
     if (typed !== 'XOÁ') return;
-    const next = clone(localBook);
-    next.chapters.splice(index, 1);
+    const slugNow = localBook.slug || slug;
     try {
-      await onSaveBook(next);
-      setLocalBook(next); setIndex(Math.max(0, Math.min(index - 1, next.chapters.length - 1)));
+      if (onDeleteChapter && online) await onDeleteChapter(slugNow, index);
+      else {
+        const next = clone(localBook);
+        next.chapters.splice(index, 1);
+        await onSaveBook(next);
+        setLocalBook(next);
+      }
+      dropDraft(slugNow, index);
+      clearDraftNote(index);
+      setRestored(false);
+      setIndex(Math.max(0, Math.min(index - 1, chapters.length - 2)));
     } catch (e) { /* đã toast lỗi */ }
   };
-  const moveChapter = async (delta) => {
-    await reorderChapter(index, index + delta);
-  };
+  const moveChapter = async (delta) => { await reorderChapter(index, index + delta); };
   const reorderChapter = async (from, to) => {
     if (!localBook || from === to || from < 0 || to < 0 || to >= chapters.length) return;
-    const next = clone(localBook);
-    const [item] = next.chapters.splice(from, 1);
-    next.chapters.splice(to, 0, item);
+    flushDraft();
     try {
-      await onSaveBook(next);
-      setLocalBook(next); setIndex(to);
+      if (onMoveChapter && online) await onMoveChapter(localBook.slug || slug, from, to);
+      else {
+        const next = clone(localBook);
+        const [item] = next.chapters.splice(from, 1);
+        next.chapters.splice(to, 0, item);
+        await onSaveBook(next);
+        setLocalBook(next);
+      }
+      setIndex(to);
     } catch (e) { /* đã toast lỗi */ }
   };
   const restoreDraft = () => {
     if (!draft) return;
     const draftHtml = htmlForEditor(draft.html || html, apiBase);
+    patchLive({ title: draft.title || title, html: draftHtml, status: draft.status || status, atLocal: draft.atLocal || '' });
     setTitle(draft.title || title);
     setHtml(draftHtml);
+    setStatus(draft.status || status);
+    setAtLocal(draft.atLocal || '');
+    setRestored(true);
     if (editor) editor.commands.setContent(draftHtml || '<p></p>', false);
+  };
+  /* Bỏ thay đổi chưa lưu: quay về đúng bản đang có trên Worker */
+  const discardChanges = () => {
+    const base = baseRef.current;
+    patchLive({ title: base.title, html: base.html, status: base.status, atLocal: base.atLocal });
+    setTitle(base.title);
+    setHtml(base.html);
+    setStatus(base.status);
+    setAtLocal(base.atLocal);
+    if (editor) editor.commands.setContent(base.html || '<p></p>', false);
+    dropDraft(localBook.slug || slug, index);
+    clearDraftNote(index);
+    setDraft(null); setRestored(false); setDraftPhase('');
+    toast('Đã bỏ thay đổi chưa lưu (về bản trên Worker).', 'info');
   };
   const importFile = (file) => {
     if (!file || !editor) return;
@@ -231,6 +423,7 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
   };
   const confirmImport = async () => {
     if (!importPreview || !localBook) return;
+    flushDraft();
     const parts = importPreview.parts;
     const next = clone(localBook);
     next.chapters = Array.isArray(next.chapters) ? next.chapters : [];
@@ -244,6 +437,7 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
     try {
       await onSaveBook(next);
       setLocalBook(next);
+      setReloadTick((n) => n + 1);
       setIndex(importPreview.mode === 'replace' ? 0 : Math.max(0, next.chapters.length - parts.length));
       toast('Đã nhập ' + parts.length + ' chương từ file.', 'ok');
       setImportPreview(null);
@@ -254,7 +448,7 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
     if (!onUploadImage) throw new Error('Chưa nối chức năng upload ảnh.');
     setUploading(true);
     try {
-      const url = await onUploadImage(file);
+      const url = await onUploadImage(file, { kind: 'chapter' });
       return url;
     } finally {
       setUploading(false);
@@ -270,57 +464,93 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
     }
   };
 
-  const statusLabel = { draft: 'Nháp', scheduled: 'Hẹn giờ', published: 'Xuất bản', hidden: 'Ẩn' };
-
   if (!localBook && !loading) {
     return <section class="card2"><div class="row"><h3>Chương</h3><span class="grow"></span><button class="btn ghost sm" type="button" onClick={() => onLoad && onLoad()}>Đọc dữ liệu chương</button></div><p class="hint">Chưa có dữ liệu chương trong cache.</p></section>;
   }
   return (
     <section class="card2 v2chapter-card">
       <div class="row"><h3>Chương</h3><span class="grow"></span><button class="btn ghost sm" type="button" onClick={addChapter}>Thêm chương</button><button class="btn ghost sm" type="button" disabled={!chapters.length} onClick={() => moveChapter(-1)}>Lên</button><button class="btn ghost sm" type="button" disabled={!chapters.length} onClick={() => moveChapter(1)}>Xuống</button></div>
-      <p class="hint">Editor dùng TipTap; output vẫn là HTML lưu trong <code>chapters[].html</code>. Autosave chỉ localStorage — không ghi KV khi đang gõ.</p>
+      <p class="hint">Editor dùng TipTap; output vẫn là HTML lưu trong <code>chapters[].html</code>. Nháp tự lưu vào máy này (localStorage) sau 0,7 giây ngừng gõ — đổi chương hay đóng tab đều ghi nháp trước, không mất chữ.</p>
       {loading ? <div class="empty sm">Đang đọc chương…</div> : null}
       <div class="v2chapter-grid">
         <aside class="v2chapter-list">
           {chapters.length ? chapters.map((chapter, i) => {
             const kind = chapterKind(chapter.t || '');
             const kindTag = kind === 'open' ? 'Mở đầu' : (kind === 'extra' ? 'Ngoại truyện' : '');
+            const sched = scheduleLabelOf(chapter);
+            const local = draftMap[i] || null;
             return (
               <button type="button" class={i === index ? 'on' : ''} key={i} draggable="true"
                 onDragStart={() => setDragFrom(i)}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => { e.preventDefault(); reorderChapter(dragFrom, i); setDragFrom(-1); }}
-                onClick={() => setIndex(i)}>
+                onClick={() => gotoIndex(i)}>
                 <b>{i + 1}</b><span>{chapter.t || ('Chương ' + (i + 1))}</span>
-                <em>{kindTag ? kindTag + ' · ' : ''}{quickWords(chapter.html)} từ{chapter.status && chapter.status !== 'published' ? ' · ' + (statusLabel[chapter.status] || chapter.status) : ''}</em>
+                <em>{kindTag ? kindTag + ' · ' : ''}{quickWords(chapter.html)} từ{chapter.status && chapter.status !== 'published' ? ' · ' + (sched || (chapterStatusOf(chapter) === 'hidden' ? 'Đang ẩn' : 'Nháp')) : ''}{local ? ' · có nháp' : ''}</em>
               </button>
             );
           }) : <div class="empty sm">Chưa có chương.</div>}
         </aside>
         <div class="v2chapter-editor">
           <label class="fl">Tên chương</label>
-          <input class="inp" value={title} onInput={(e) => setTitle(e.currentTarget.value)} placeholder={'Chương ' + (index + 1)} />
+          <input class="inp" value={title} onInput={(e) => { const v = e.currentTarget.value; patchLive({ title: v }); setTitle(v); }} placeholder={'Chương ' + (index + 1)} />
           <label class="fl">Trạng thái chương
-            <select class="inp" value={(chapters[index] && chapters[index].status) || 'published'} onChange={(e) => {
-              if (!localBook) return;
-              const next = clone(localBook);
-              if (next.chapters[index]) next.chapters[index].status = e.target.value;
-              setLocalBook(next);
+            <select class="inp" value={status} onChange={(e) => {
+              const value = e.target.value;
+              patchLive({ status: value });
+              setStatus(value);
+              /* chọn Hẹn giờ mà chưa có mốc → gợi ý sẵn 20:00 hôm nay (hoặc +1 giờ
+                 nếu đã qua 20:00) để không lưu ra chương “hẹn giờ không có giờ” */
+              if (value === 'scheduled' && !atLocal) {
+                const today20 = new Date();
+                today20.setHours(20, 0, 0, 0);
+                const auto = isoToLocalInput((today20.getTime() > Date.now() ? today20 : new Date(Date.now() + 3600000)).toISOString());
+                patchLive({ atLocal: auto });
+                setAtLocal(auto);
+              }
             }}>
-              <option value="draft">Nháp</option>
-              <option value="scheduled">Hẹn giờ</option>
-              <option value="published">Xuất bản</option>
-              <option value="hidden">Ẩn</option>
+              {CHAPTER_STATUSES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
             </select>
           </label>
+          <p class="hint">{(CHAPTER_STATUSES.find((s) => s.id === status) || {}).hint || ''}</p>
+          {status === 'scheduled' ? (
+            <div class="v2sched">
+              <label class="fl">Chương lên sóng lúc
+                <input class="inp" type="datetime-local" value={atLocal} onInput={(e) => { const v = e.currentTarget.value; patchLive({ atLocal: v }); setAtLocal(v); }} />
+              </label>
+              <div class="row">
+                <button class="btn ghost sm" type="button" onClick={() => { const v = localInputPlus(1); patchLive({ atLocal: v }); setAtLocal(v); toast('Đã đặt +1 giờ — bấm Lưu chương để áp dụng.', 'info'); }}>+1 giờ</button>
+                <button class="btn ghost sm" type="button" onClick={() => { const v = localInputPlus(24); patchLive({ atLocal: v }); setAtLocal(v); toast('Đã đặt +1 ngày — bấm Lưu chương để áp dụng.', 'info'); }}>+1 ngày</button>
+                <button class="btn ghost sm" type="button" onClick={() => { const v = localInputPlus(168); patchLive({ atLocal: v }); setAtLocal(v); toast('Đã đặt +1 tuần — bấm Lưu chương để áp dụng.', 'info'); }}>+1 tuần</button>
+              </div>
+              <p class="hint">
+                {pendingNow
+                  ? 'Đang chờ: độc giả chưa thấy chương này' + (hoursUntil(chapterAtMs({ at: localInputToIso(atLocal) })) ? ' — còn khoảng ' + hoursUntil(chapterAtMs({ at: localInputToIso(atLocal) })) + ' giờ nữa.' : '.')
+                  : 'Mốc giờ đã qua — chương sẽ hiện ngay sau khi lưu.'}
+              </p>
+            </div>
+          ) : null}
+          {scheduleNote ? <p class="hint v2sched-warn">{scheduleNote}</p> : null}
+          {(status === 'scheduled' || status === 'hidden') && index < chapters.length - 1 ? (
+            <p class="hint v2sched-warn">Chương này KHÔNG nằm cuối bộ: lúc chưa lên sóng, số thứ tự các chương sau tạm dịch với truyện không ghi số trong tên chương. Chỉ hẹn giờ/ẩn chương cuối là an toàn nhất.</p>
+          ) : null}
           <Toolbar editor={editor} />
           <div class="v2tiphost" ref={setHost}></div>
           <p class="v2draft-status">
-            {draftPhase === 'saving' ? <span>Đang lưu nháp cục bộ…</span> : null}
-            {draftPhase === 'saved' && draft ? <span>Đã lưu nháp cục bộ lúc {fmtTime(draft.at)}</span> : null}
-            {dirty ? <span> · <b>Chưa ghi vào Cloudflare KV</b></span> : null}
+            {saving ? <span>Đang gửi lên Worker…</span> : null}
+            {!saving && draftPhase === 'saving' ? <span>Đang lưu nháp cục bộ…</span> : null}
+            {!saving && draftPhase === 'saved' && draft && !restored ? <span>Đã lưu nháp cục bộ lúc {fmtTime(draft.at)}</span> : null}
+            {!saving && savedMs ? <span>Đã lưu lên Worker trong {fmtMs(savedMs)}</span> : null}
+            {dirty && !saving ? <span> · <b>Chưa ghi vào Cloudflare KV</b></span> : null}
             {!online ? <span> · Nháp phiên (dữ liệu tĩnh)</span> : null}
           </p>
+          {restored && draft ? (
+            <div class="msgbar show info">
+              Đã tự khôi phục bản nháp lúc {fmtTime(draft.at)} (chưa ghi lên Worker).
+              <span class="grow"></span>
+              <button class="btn ghost sm" type="button" onClick={discardChanges}>Bỏ thay đổi chưa lưu</button>
+            </div>
+          ) : null}
           {temps.length ? (
             <div class="msgbar show err">
               Còn ảnh tạm chưa upload: {temps.slice(0, 3).join(', ')}. Hãy bấm Upload ảnh / Thử lại — không ghi KV khi còn blob:/data:.
@@ -353,9 +583,9 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
             <button class="btn ghost sm" type="button" onClick={() => fileRef.current && fileRef.current.click()}>Import .txt/.html</button>
             <button class="btn ghost sm" type="button" disabled={!localBook} title="1 file .txt nhiều chương — tách theo dòng “Chương X”, xem trước rồi mới ghi" onClick={() => multiRef.current && multiRef.current.click()}>Nhập nhiều chương</button>
             <button class="btn ghost sm" type="button" disabled={uploading} onClick={() => imageRef.current && imageRef.current.click()}>{uploading ? 'Đang nén ảnh…' : 'Upload ảnh'}</button>
-            {draft ? <button class="btn ghost sm" type="button" onClick={restoreDraft}>Khôi phục nháp</button> : null}
+            {draft && !restored ? <button class="btn ghost sm" type="button" onClick={restoreDraft}>Khôi phục nháp</button> : null}
             <button class="btn ghost sm" type="button" onClick={() => setPreview(!preview)}>{preview ? 'Ẩn preview' : 'Preview độc giả'}</button>
-            <button class="btn pri sm" type="button" disabled={writeBlocked || !!temps.length} title={writeBlocked ? 'Quota KV hôm nay đã hết — nháp cục bộ vẫn được giữ' : (online ? 'Ghi chương vào Cloudflare KV (book + registry)' : 'Chỉ lưu nháp phiên — chưa ghi Cloudflare KV')} onClick={saveChapter}>{writeBlocked ? 'Hết quota KV' : (online ? 'Lưu chương' : 'Lưu nháp phiên')}</button>
+            <button class="btn pri sm" type="button" disabled={writeBlocked || !!temps.length || saving} title={writeBlocked ? 'Quota KV hôm nay đã hết — nháp cục bộ vẫn được giữ' : (online ? 'Ghi chương vào Cloudflare KV (chỉ gửi 1 chương)' : 'Chỉ lưu nháp phiên — chưa ghi Cloudflare KV')} onClick={saveChapter}>{saving ? 'Đang lưu…' : (writeBlocked ? 'Hết quota KV' : (online ? 'Lưu chương' : 'Lưu nháp phiên'))}</button>
           </div>
           <div class="v2chap-danger">
             <span class="sm">Xoá chương đang chọn khỏi bộ — cần gõ XOÁ để xác nhận, không khôi phục được.</span>

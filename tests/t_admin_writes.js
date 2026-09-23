@@ -94,7 +94,12 @@ function input(win, el, value) {
 
   click(win, doc.querySelector('button[data-tab="list"]'));
   await wait(150);
-  click(win, doc.querySelector('.v2book-table tbody tr .v2actions button'));
+  /* mở ĐÚNG bộ third-person (danh sách sắp theo ngày cập nhật nên dòng đầu
+     có thể là bộ khác — trước đây bài test cứ bấm dòng đầu rồi so slug) */
+  const targetRow = [...doc.querySelectorAll('.v2book-table tbody tr')]
+    .find((tr) => tr.textContent.includes(targetSlug));
+  assert.ok(targetRow, 'không thấy dòng ' + targetSlug + ' ở trang 1');
+  click(win, targetRow.querySelector('.v2actions button'));
   await wait(1200);
   const pwInputs = [...doc.querySelectorAll('#pane-edit input[type="password"]')];
   input(win, pwInputs[0], 'matma-test-123');

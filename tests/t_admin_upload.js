@@ -1,4 +1,7 @@
-/* Admin v2 upload smoke: nén ảnh phía client rồi POST /api/img, tự điền URL bìa. */
+/* Admin v2 upload smoke: nén ảnh phía client (có HẠN MỨC dung lượng) rồi POST
+   /api/img kèm ID theo nội dung (Worker thấy ID cũ thì không ghi thêm bản sao),
+   sau đó tự điền URL bìa. Supabase free chỉ 500 MB database nên hạn mức nén là
+   thứ phải giữ bằng kiểm thử, không chỉ bằng lời hứa trong ghi chú. */
 const assert = require('assert');
 const { page, read } = require('./mk');
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -59,8 +62,13 @@ function click(win, el) {
       w.HTMLCanvasElement.prototype.getContext = function () {
         return { fillStyle: '', fillRect() {}, drawImage() {} };
       };
-      w.HTMLCanvasElement.prototype.toDataURL = function (type) {
-        return 'data:' + (type || 'image/webp') + ';base64,QUJDREVGR0hJSktMTU5PUA==';
+      /* Ảnh giả “nặng” đúng theo chất lượng: 190 KB ở q=0.82 — hạ tới q=0.5 thì
+         còn ~116 KB, vừa hạn mức bìa 120 KB. Nếu mã nén ngừng hạ chất lượng,
+         phép kiểm bên dưới sẽ bắt được ngay (ảnh gửi lên vượt hạn mức). */
+      w.HTMLCanvasElement.prototype.toDataURL = function (type, quality) {
+        const q = Math.min(0.92, Number(quality) || 0.82);
+        const want = Math.round(190 * 1024 * (q / 0.82));
+        return 'data:' + (type || 'image/webp') + ';base64,QUJD' + 'A'.repeat(Math.max(0, Math.ceil((want - 6) / 3) * 4));
       };
     },
   });
@@ -85,9 +93,24 @@ function click(win, el) {
   assert.strictEqual(imgCall.body.type, 'image/webp');
   assert.strictEqual(imgCall.body.kind, 'cover');
   assert.ok(/QUJD/.test(imgCall.body.data), 'body ảnh không phải base64 đã nén');
+  /* 1) ID = băm NỘI DUNG: dán lại cùng ảnh thì Worker trả URL cũ, khỏi tốn chỗ */
+  assert.ok(/^h[0-9a-f]{32}$/.test(imgCall.body.id || ''), 'không gửi ID nội dung ảnh: ' + imgCall.body.id);
+  /* 2) hạn mức dung lượng bìa 120 KB phải được tôn trọng (nén hạ chất lượng dần) */
+  const sentBytes = Math.floor(String(imgCall.body.data).replace(/=+$/, '').length * 3 / 4);
+  assert.ok(sentBytes <= 120 * 1024 + 8, 'ảnh bìa gửi lên vượt hạn mức 120 KB: ' + Math.round(sentBytes / 1024) + ' KB');
   const filled = [...doc.querySelectorAll('#pane-new input.inp')].some((el) => el.value === 'https://cms.test/api/img/mock-img-123');
   assert.ok(filled, 'URL ảnh chưa tự điền vào ô bìa');
-  const out = { imagePost: imgCall.body.type, filled, errors: p.errors };
+  /* 3) hàm băm + hạn mức dùng chung: ổn định, đúng định dạng, không phình */
+  const images = await import('../src/admin/utils/images.js');
+  const idA = await images.contentId('QUJDREVG');
+  const idB = await images.contentId('QUJDREVG');
+  assert.strictEqual(idA, idB, 'contentId không ổn định');
+  assert.ok(/^h[0-9a-f]{32}$/.test(idA), 'contentId sai định dạng: ' + idA);
+  assert.ok(images.IMAGE_BUDGET.cover.maxBytes <= 160 * 1024, 'hạn mức bìa quá rộng');
+  assert.ok(images.IMAGE_BUDGET.chapter.maxBytes <= 320 * 1024, 'hạn mức ảnh chương quá rộng');
+  assert.strictEqual(images.formatBytes(2048), '2 KB');
+
+  const out = { imagePost: imgCall.body.type, filled, idHash: /^h[0-9a-f]{32}$/.test(imgCall.body.id || ''), sentKB: Math.round(sentBytes / 1024), errors: p.errors };
   console.log(JSON.stringify(out, null, 1));
   assert.deepStrictEqual(p.errors, []);
   console.log('Đen: admin v2 upload ảnh bìa đi qua /api/img và điền URL.');

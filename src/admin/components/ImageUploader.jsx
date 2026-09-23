@@ -10,7 +10,7 @@ export function ImageUploader({
   onUpload,
   apiBase = '',
   label = 'Ảnh bìa',
-  hint = 'JPG, PNG hoặc WebP · tối đa 12 MB · nén WebP rồi Worker lưu bìa lên Supabase Storage khi đã gắn secret (1 GB free, không unlimited; URL bền, không dùng blob:).',
+  hint = 'JPG, PNG hoặc WebP · tối đa 12 MB · tự nén WebP về cạnh dài ~1000px, ≤ ~120 KB trước khi gửi (tiết kiệm dung lượng kho). Ảnh trùng nội dung được dùng lại, không ghi thêm bản sao.',
   inputId,
 }) {
   const [busy, setBusy] = useState(false);

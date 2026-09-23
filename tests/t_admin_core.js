@@ -41,7 +41,13 @@ const chapCount = (reg.lib || []).reduce((sum, b) => sum + (Number(b.chapters) |
   assert.ok(out.list.rows === Math.min(PAGE, libCount), 'số dòng trang 1 sai: ' + out.list.rows);
   assert.ok(!!doc.querySelector('.v2pager'), 'thiếu phân trang khi bộ > 24');
 
-  click(doc.querySelector('.v2book-table tbody tr .v2actions button'));
+  /* Bấm vào bộ CÓ CHƯƠNG, không phải dòng đầu tiên: danh sách sắp theo ngày
+     cập nhật nên dòng đầu có thể là bộ 0 chương (PLS LOVE) — bấm vào đó thì
+     editor đúng là rỗng, không phải lỗi render. */
+  const rowWithChapters = [...doc.querySelectorAll('.v2book-table tbody tr')]
+    .find((tr) => /[1-9]\d*\s*chương/.test(tr.textContent.replace(/\s+/g, ' ')));
+  assert.ok(rowWithChapters, 'không có dòng nào còn chương để mở');
+  click(rowWithChapters.querySelector('.v2actions button'));
   await wait(1200);
   out.edit = doc.querySelector('#pane-edit h3').textContent.trim();
   out.chapterEditor = {
