@@ -58,6 +58,32 @@ for (const file of files) {
   }
 }
 
+/* ---------------------------------------------------------------------------
+   RÀ RÒ RỈ TỆP NỘI BỘ QUA Cloudflare Pages (bổ sung 23/09 sau khi rà bằng skill
+   web-app-scanner — thấy /admin.js.map và 8 tệp BAO-CAO-*.md tải thẳng được).
+
+   Mọi tệp .map / .md ở THƯ MỤC GỐC đều nằm trong vùng Pages phát hành. Luật
+   redirect của Pages luôn áp TRƯỚC khi phục vụ tệp tĩnh, nên chặn bằng _redirects
+   là đủ — nhưng phải có luật. Thêm tệp nội bộ mới ở gốc mà quên thêm luật là
+   kiểm tra này đỏ ngay, không đợi tới lúc người lạ tải được.
+   Ngoại lệ duy nhất: THIRD-PARTY-NOTICES.md (ghi công giấy phép, cố ý công khai).
+   ------------------------------------------------------------------------ */
+const PUBLIC_MD = new Set(['THIRD-PARTY-NOTICES.md']);
+const redirectRules = new Set(
+  fs.readFileSync(path.join(ROOT, '_redirects'), 'utf8')
+    .split('\n')
+    .filter((l) => l.trim() && !l.trim().startsWith('#'))
+    .map((l) => l.trim().split(/\s+/)[0])
+);
+for (const name of fs.readdirSync(ROOT)) {
+  if (!fs.statSync(path.join(ROOT, name)).isFile()) continue;
+  const internal = name.endsWith('.map') || (name.endsWith('.md') && !PUBLIC_MD.has(name));
+  if (internal && !redirectRules.has('/' + name)) {
+    fail('/' + name, 'tệp nội bộ ở thư mục gốc chưa bị _redirects chặn — đang tải công khai được');
+  }
+}
+checked.push('_redirects (chặn tệp nội bộ ở gốc)');
+
 console.log(JSON.stringify({ checked: checked.length, errors0: errors }, null, 1));
 if (errors.length) {
   console.log('CÒN ' + errors.length + ' LỖI RÒ RỈ CẤU HÌNH');
