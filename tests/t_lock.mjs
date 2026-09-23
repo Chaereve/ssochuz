@@ -89,6 +89,43 @@ await t('seed dữ liệu nền (2 chương + registry)', async () => {
   assert.ok(r.body.ok);
 });
 
+await t('seed không có registry vẫn trả recount là mảng', async () => {
+  const r = await call('POST', '/api/seed', { admin: true, body: { books: {} } });
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body.recount, []);
+});
+
+await t('khóa / đổi / bỏ khóa xóa đúng cache slug, không dùng Response.slug', async () => {
+  const previous = globalThis.caches;
+  const deleted = [];
+  // Cloudflare Cache has no keys(); successful writes must still purge known URLs.
+  globalThis.caches = { default: { async delete(url) { deleted.push(url); return true; } } };
+  try {
+    for (const password of ['matma-cache-123', 'matma-cache-456', '']) {
+      deleted.length = 0;
+      const r = await call('POST', '/api/lock/set', {
+        admin: true, body: { slug: 'ma-duong-bi-khoa', password },
+      });
+      assert.equal(r.status, 200);
+      assert.equal(r.body.locked, !!password);
+      assert.deepEqual(deleted, [
+        'https://cms.test/api/book/ma-duong-bi-khoa',
+        'https://cms.test/api/registry',
+        'https://cms.test/feed.xml',
+      ]);
+    }
+    deleted.length = 0;
+    const invalid = await call('POST', '/api/lock/set', {
+      admin: true, body: { slug: 'ma-duong-bi-khoa', password: 'short' },
+    });
+    assert.equal(invalid.status, 400);
+    assert.deepEqual(deleted, []);
+  } finally {
+    globalThis.caches = previous;
+  }
+});
+
+
 await t('khóa cần quyền quản trị (401 khi không có khoá)', async () => {
   const r = await call('POST', '/api/lock/set', { body: { slug: 'ma-duong-bi-khoa', password: 'matma-choi-123' } });
   assert.equal(r.status, 401);
