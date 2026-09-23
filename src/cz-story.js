@@ -241,24 +241,19 @@
      sách lệch với số ghi trên tiêu đề (“Chương 1”, “Chương 2”…). Chỗ nào
      người đọc thấy thì dùng số trong tiêu đề; chương không ghi số thì gọi
      bằng đúng tên của nó. */
-  function chapKindOf(title) {
-    var t = String(title || '').toLowerCase();
-    if (/ngoại\s*truyện|phụ\s*chương|side\s*story|\bextra\b|hậu\s*truyện|\bepilogue\b|đặc\s*biệt/.test(t)) return 'extra';
-    if (/lời\s*mở\s*đầu|mở\s*đầu|\bprologue\b|đôi\s*lời|lời\s*tác\s*giả|lời\s*ngỏ|author\s*note/.test(t)) return 'open';
-    return 'main';
-  }
   function chapSplit(c) {
+    /* bóc tên chương tập trung ở CZ.chapInfo (src/shared/chapters.js): một bộ
+       quy tắc duy nhất cho trang đọc, mục lục, trang quản trị và Worker nhập
+       chương: “Lời mở đầu”, “Giới thiệu nhân vật”, “Chương 0” tính là
+       phần MỞ ĐẦU chứ không phải Chương 1; “Ngoại truyện 2” mang
+       ký hiệu S2. Chương không ghi số thì gọi bằng đúng tên của nó. */
     var t = String((c && c.t) || '').trim();
-    var m = /^(?:chương|chap|chapter)\s*(\d+)\s*[:.\-–—]?\s*(.*)$/i.exec(t);
-    if (m) {
-      var no = parseInt(m[1], 10);
-      var kind = no === 0 ? 'open' : chapKindOf(t);
-      return { no: no, name: m[2] || t, full: t, kind: kind };
-    }
-    var e = /^(?:ngoại\s*truyện|phụ\s*chương|side\s*story|extra)\s*(\d+)?\s*[:.\-–—]?\s*(.*)$/i.exec(t);
-    if (e) return { no: e[1] ? parseInt(e[1], 10) : 0, name: e[2] || t, full: t, kind: 'extra' };
-    var kind = chapKindOf(t);
-    return { no: 0, name: t || 'Chương', full: t, kind: kind };
+    var p = CZ.chapInfo ? CZ.chapInfo(t) : { no: 0, has: false, kind: 'main', name: t, full: t };
+    if (!p.name) p.name = 'Chương';
+    if (p.no == null) p.no = 0;
+    if (!p.kind) p.kind = 'main';
+    if (!p.full) p.full = t;
+    return p;
   }
   function chapLabel(i) {                     /* i: vị trí 1-based trong sách */
     var c = CHS[i - 1];
@@ -620,7 +615,7 @@
     var marks = CZ.marks(N);
     var q = chState.q.toLowerCase();
     var list = CHS.map(function (c, i) { return { c: c, i: i + 1 }; })
-      .filter(function (x) { return !q || x.c.t.toLowerCase().indexOf(q) >= 0 || String(x.i) === q; });
+      .filter(function (x) { return !q || x.c.t.toLowerCase().indexOf(q) >= 0 || String(x.i) === q || String(chapSplit(x.c).no) === q; });
     if (chState.sort === 'new') list.reverse();
     var gopen = chState.gopen || (chState.gopen = {});
     function bindVols() {
@@ -931,8 +926,8 @@
     var prog = CZ.progress(N), marks = CZ.marks(N);
     $('#tocList').innerHTML = CHS.map(function (c, i) {
       var n = i + 1;
-      if (q && c.t.toLowerCase().indexOf(q) < 0 && String(n) !== q) return '';
       var sp = chapSplit(c);
+      if (q && c.t.toLowerCase().indexOf(q) < 0 && String(n) !== q && String(sp.no) !== q) return '';
       var k = sp.kind || 'main';
       /* cùng ký hiệu với danh sách chương (S1, S2… / Mở) — bản cũ chỉ hiện số nên
          ngoại truyện 1 và chương 1 nhìn giống hệt nhau trong mục lục */

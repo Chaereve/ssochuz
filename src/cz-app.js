@@ -9,6 +9,8 @@
      4. TIỆN ÍCH  : esc, định dạng ngày/số, đường dẫn truyện/đọc
    Mọi trang chỉ cần nạp 2 file:  cz-config.js  →  cz-app.js
    ========================================================================== */
+import { parseChapterTitle, nextMainChapterNo, chapterIsEmpty, chapterHasMedia } from './shared/chapters.js';
+
 (function (w, d) {
   'use strict';
 
@@ -166,7 +168,12 @@
         /* Worker trả vỏ {locked:true, chapters:[]} = token hết hạn/sai —
            KHÔNG được rớt về file tĩnh, phải về chốt nhập mật mã */
         if (b && b.locked) { clearFallback(); return b; }
-        if (b && b.chapters && b.chapters.length) { clearFallback(); return b; }
+        /* Worker có book hợp lệ (mảng chapters, KỂ CẢ 0 chương — bộ tác giả mới
+           tạo chưa đăng chương) thì dùng luôn: đừng rớt về file tĩnh, vì file
+           tĩnh /data/book/<slug>.json không tồn tại cho bộ mới → trang truyện
+           báo lỗi oan “chưa tải được nội dung”. Chỉ rớt tĩnh khi Worker THẬT
+           SỰ không trả được (mất mạng, lỗi 5xx, chưa nối). */
+        if (b && Array.isArray(b.chapters)) { clearFallback(); return b; }
         /* N13: chương lấy không được từ Worker → rớt về file tĩnh vẫn đọc được */
         return jget('/data/book/' + encodeURIComponent(slug) + '.json', 20000);
       })
@@ -2494,7 +2501,7 @@
     var vis = String(n.visibility || 'public').toLowerCase();
     if (vis === 'private' || vis === 'unlisted') return false;
     var pub = String(n.pubStatus || n.pub || 'published').toLowerCase();
-    if (pub === 'draft' || pub === 'pending_review' || pub === 'archived') return false;
+    if (pub === 'draft' || pub === 'pending_review' || pub === 'archived' || pub === 'rejected') return false;
     if (pub === 'scheduled') {
       var at = Date.parse(n.publishedAt || n.published_at || '');
       if (!at || at > Date.now()) return false;
@@ -2608,6 +2615,12 @@
     rdGet: rdGet, rdSet: rdSet, themeInit: themeInit, themeToggle: themeToggle, themeMeta: themeMeta,
     icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo, teaser: teaser,
     statusCls: statusCls, statusLabel: statusLabel, statusIcon: statusIcon, words: words, norm: norm, countText: countText, listHead: listHead,
+    /* bóc tên chương dùng chung (src/shared/chapters.js): trang truyện, mục
+       lục, nhảy chương — và trang quản trị đều qua đây, khỏi lệch nhau */
+    chapInfo: function (t) { return parseChapterTitle(t); },
+    chapNextNo: nextMainChapterNo,
+    chapEmpty: chapterIsEmpty,
+    chapHasMedia: chapterHasMedia,
     storyURL: storyURL, readURL: readURL, slugify: slugify, qs: qs, copy: copy, download: download,
     card: card, coverFB: coverFB, coverSrc: coverSrc, bookCover: bookCover, mountRail: mountRail, reveal: reveal, countUp: countUp, scaleFacts: scaleFacts,
     scrollUI: scrollUI, slide: slide, pageFx: pageFx, pop: pop, setIcon: setIcon, shake: shake,

@@ -12,6 +12,7 @@ import { BookEditor } from './components/BookEditor.jsx';
 import { PlaceholderTab } from './components/PlaceholderTab.jsx';
 import { DoctorPanel, CommentsPanel, ReportsPanel, StatsPanel, VotesPanel, LogPanel, SettingsPanel } from './components/OperationalPanels.jsx';
 import { cloneRegistry, metaFromForm, newBookRecord, removeBookReferences, renameReferences, slugify, touchRegistry } from './utils/books.js';
+import { chapterIsEmpty } from '../shared/chapters.js';
 import { compressImage } from './utils/images.js';
 import { HomepageCMS } from './components/HomepageCMS.jsx';
 import { UsersPanel } from './components/UsersPanel.jsx';
@@ -511,14 +512,24 @@ function App() {
       const chapters = Array.isArray(book.chapters) ? book.chapters : [];
       const actual = chapters.length;
       const registryCount = Number(meta.chapters) || parseInt(String(meta.countLabel || '').split('/')[0], 10) || 0;
-      const emptyChapters = chapters.filter((chapter) => !String((chapter && (chapter.html || chapter.text || chapter.body)) || '').replace(/<[^>]*>/g, '').trim()).length;
+      /* chương CHỈ CÓ HÌNH (truyện tranh) vẫn là chương có nội dung — bản cũ
+         đếm bằng chữ nên trang truyện chỉ có ảnh bị báo oan là “chương rỗng” */
+      const emptyIdx = chapters.reduce((acc, chapter, idx) => {
+        const raw = String((chapter && (chapter.html || chapter.text || chapter.body)) || '');
+        if (chapterIsEmpty(raw)) acc.push(idx + 1);
+        return acc;
+      }, []);
       if (actual !== registryCount) {
         mismatch++;
         rows.push({ slug: meta.slug, title: meta.title || meta.slug, issue: 'Lệch số chương', registry: registryCount, actual });
       }
-      if (emptyChapters) {
-        empty += emptyChapters;
-        rows.push({ slug: meta.slug, title: meta.title || meta.slug, issue: emptyChapters + ' chương rỗng', registry: registryCount, actual });
+      if (emptyIdx.length) {
+        empty += emptyIdx.length;
+        rows.push({
+          slug: meta.slug, title: meta.title || meta.slug,
+          issue: emptyIdx.length + ' chương rỗng (' + emptyIdx.slice(0, 4).map((n) => '#' + n).join(', ') + (emptyIdx.length > 4 ? '…' : '') + ')',
+          registry: registryCount, actual,
+        });
       }
     }
     return { ok: true, scanned: lib.length, missing, mismatch, empty, locked, rows: rows.slice(0, 120), source: state.online ? 'worker-kv' : 'static-files' };
@@ -565,6 +576,30 @@ function App() {
       await loadRegistryFromCurrent(true);
       return res;
     } catch (error) { toast('Đếm lại lỗi: ' + (error.message || error), 'err'); }
+  }
+
+  /* chuyển book/ảnh CŨ trong KV sang overflow (Supabase/R2). Worker xử lý theo
+     lô nhỏ (giới hạn subrequest) nên gọi lặp tới khi done — trả thống kê gộp. */
+  async function runMigrateOverflow(options = {}) {
+    if (!state.online) throw new Error('Cần nối Worker bằng ADMIN_KEY để chuyển data sang Supabase.');
+    const only = options.only || '';
+    const maxRounds = Math.max(1, Math.min(60, options.maxRounds || 25));
+    const totals = { books: 0, covers: 0, images: 0, already: 0, failed: [], rounds: 0, done: false };
+    for (let round = 0; round < maxRounds; round++) {
+      const res = await api.migrateOverflow({ limit: options.limit || 6, only });
+      totals.rounds++;
+      const m = res.moved || {};
+      totals.books += m.books | 0;
+      totals.covers += m.covers | 0;
+      totals.images += m.images | 0;
+      totals.already += res.already | 0;
+      if ((res.failed || []).length) totals.failed = totals.failed.concat(res.failed);
+      if (options.onProgress) options.onProgress(Object.assign({}, totals), res);
+      const movedThisRound = (m.books | 0) + (m.covers | 0) + (m.images | 0);
+      if (res.done || movedThisRound === 0) { totals.done = true; break; }
+    }
+    trackQuotaWrite(totals.books + totals.covers + totals.images, 'chuyển overflow sang Supabase/R2');
+    return totals;
   }
 
   async function runStatsRefresh() {
@@ -810,7 +845,7 @@ function App() {
   else if (activeTab === 'homepage') pane = <HomepageCMS registry={state.registry} apiBase={state.apiBase} onSave={saveHomepage} writeBlocked={writeBlocked} online={state.online} />;
   else if (activeTab === 'users') pane = <UsersPanel registry={state.registry} onEdit={editSlug} onFilterAuthor={(name) => { setListQuery(name); setActiveTab('list'); }} />;
   else if (activeTab === 'roles') pane = <RolesPanel registry={state.registry} role={state.role} onSave={saveStaff} />;
-  else if (activeTab === 'doctor') pane = <DoctorPanel state={state} onKvAudit={loadKvAudit} onScanBooks={scanBooks} onRecount={runRecount} onReload={reload} onFix={fixScanIssue} />;
+  else if (activeTab === 'doctor') pane = <DoctorPanel state={state} onKvAudit={loadKvAudit} onScanBooks={scanBooks} onRecount={runRecount} onReload={reload} onFix={fixScanIssue} onMigrate={runMigrateOverflow} />;
   else if (activeTab === 'cmts') pane = <CommentsPanel state={state} onLoad={refreshComments} onDelete={deleteComment} />;
   else if (activeTab === 'reports') pane = <ReportsPanel state={state} onLoad={refreshReports} onMark={markReport} />;
   else if (activeTab === 'stats') pane = <StatsPanel state={state} onLoad={loadAdminStats} />;

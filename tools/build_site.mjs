@@ -38,11 +38,16 @@ async function minify(file) {
   const from = path.join(ROOT, 'src', file);
   const to = path.join(ROOT, file);
   const before = statSync(from).size;
+  /* cz-app.js import src/shared/chapters.js (bóc tên chương dùng chung) nên
+     phải bundle để xuất script thuần không-import; các tệp còn lại gọi nhau
+     qua biến toàn cục (window.CZ…) — giữ bundle:false như cũ. */
+  const needBundle = file === 'cz-app.js';
   const out = await build({
     entryPoints: [from],
     write: false,
     minify: true,
-    bundle: false,          /* các tệp gọi nhau qua biến toàn cục (window.CZ…) */
+    bundle: needBundle,
+    format: needBundle ? 'iife' : undefined,
     legalComments: 'none',
     target: ['es2019'],
     charset: 'utf8',

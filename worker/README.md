@@ -21,6 +21,12 @@ JWKS. Đổi ghim **không cần deploy lại**. My Space/bình luận/đánh gi
 Trước đó, bản **1.9.7**: có **thông báo đẩy "ra chương mới"** (Web Push + VAPID) —
 bấm "Theo dõi" thì web hỏi bật thông báo, admin lưu chương mới là subscriber nhận tin
 trong ≤10 phút qua Cron Trigger, bấm vào mở thẳng URL chương.
+Từ bản **1.14.0**: dữ liệu lớn đi qua **overflow** (bảng Supabase `ssochuz_blobs` / R2 / Supabase Storage
+`covers`) thay vì nhét hết trong KV, và có **`POST /api/admin/migrate-overflow`** để chuyển cả book/ảnh
+CŨ đang nằm trong KV sang overflow (kể cả **bìa truyện** → Storage `covers`). Trang admin tab **Bác sĩ**
+có nút chuyển kèm tiến độ. Cùng bản: import Blogger chấp nhận **chương chỉ có ảnh** (truyện tranh) và
+đặt tên chương theo **parser chung** (`src/shared/chapters.js`) — “Lờí mở đầu”, “Giới thiệu nhân vật”,
+“Ngoại truyện”, “Chương 0” **không còn bị tính nhầm là Chương 1**.
 Trước đó, bản **1.6.0**: đăng nhập qua **Supabase** (hết lỗi `origin_mismatch` của Google), thích **theo từng chương**, bình luận **ngay trong trang đọc** (khách chưa đăng nhập vẫn gửi được), và có `/api/recount` để **chữa dứt điểm số chương sai**.
 
 ```
@@ -33,6 +39,19 @@ Admin (admin.html)  ──PUT──▶  Worker (worker/cms.js)  ──▶  Cloud
 ```
 
 GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới cần build); dữ liệu thì không đi qua GitHub nữa.
+
+## Có gì mới ở bản 1.14.0 — overflow cho book/ảnh (kể cả bìa cũ) + parser chương dùng chung
+
+| | |
+|---|---|
+| **Bệnh 1** | KV Cloudflare tính theo số lượt đọc/ghi — nhét book JSON lớn + ảnh base64 trong KV nhanh phá quota gói miễn phí. Riêng **bìa truyện đã lỡ lưu base64 trong KV** thì tới giờ KHÔNG có cách nào đưa lên Supabase Storage |
+| **Chữa 1** | Worker ghi dữ liệu lớn qua `worker/overflow.js`: book JSON → bảng **`ssochuz_blobs`** (Supabase) / R2; ảnh thường → `ssochuz_blobs`; **bìa → Supabase Storage bucket `covers`** (URL public CDN). Trong KV chỉ còn **stub** nhỏ `{overflow:…}` — đọc vẫn ra đủ nội dung nhờ `readBook/readImage` tự materialize. Endpoint mới **`POST /api/admin/migrate-overflow`** (cần `x-admin-key`) quét KV theo lô (`limit` ≤ 25, tuỳ chọn `only: books/covers/images`) và chuyển toàn bộ dữ liệu CŨ — bìa được nhận diện qua `registry.thumb/slide/cover` trỏ tới `/api/img/<id>` nên đi đúng về Storage `covers`. Lỗi từng mục (vd Supabase chết) KHÔNG xoá bản base64 gốc trong KV, và trả `failed[]` kể tên |
+| **Admin** | `/admin` → tab **Bác sĩ** → ô *Overflow KV* hiện có nút **Chuyển tất cả / Chỉ bìa / Chỉ book** (hiện khi `/api/health` báo overflow.supabase/r2) chạy nhiều vòng tới khi `done`, có hiển thị tiến độ + tổng kết số mục đã chuyển |
+| **Bệnh 2** | Nhập chương từ Blogger: bài **toàn ảnh** (webtoon) bị từ chối “không có nội dung đọc được” vì quy tắc ≥40 chữ; tiêu đề kỳ lạ cũng bị ép thành “Chương N: …” |
+| **Chữa 2** | `importPost` dùng `chapterTextOf/chapterHasMedia` — bài có ảnh/figure/table/… được nhận dù không có chữ. Đặt tên chương dùng chung parser `src/shared/chapters.js`: tiêu đề đã có số → giữ nguyên; “Lờí mở đầu / Giới thiệu nhân vật / Thông báo / Ngoại truyện” → giữ nguyên tên (không ép “Chương N:”); còn lại → “Chương \<số chính kế tiếp\>: \<tiêu đề\>” — **mở đầu và Chương 0 không được đếm là Chương 1** |
+| **Quan trọng** | Những thay đổi này nằm TRONG Worker → phải **`npx wrangler deploy`** (hoặc dán `worker/cms.js` + `worker/overflow.js`) trước khi dùng. Kiểm tra: `curl <worker>/api/health` phải thấy `"version": "1.14.0"` và `overflow.{supabase,covers}` |
+| **Bảo mật** | `SUPABASE_SERVICE_ROLE` chỉ nằm phía Worker (không bao giờ gửi xuống trình duyệt) — đã có test khóa (`check_secrets`) |
+| **Test** | `tests/t_worker.mjs` mục 15: fake Supabase (postgrest + storage) → migrate chuyển book + bìa + ảnh, idempotent (chạy lại `moved 0`), `only=books`, Storage chết → `failed[]` + giữ nguyên base64; mục 6: import “Lờí mở đầu/GTNV/Ngoại truyện” giữ tên, chương chỉ-ảnh được nhận |
 
 ## Có gì mới ở bản 1.10.1 — sửa dứt điểm tab **Báo lỗi** báo "Failed to fetch"
 
