@@ -41,6 +41,25 @@ const CRUMBS = {
   stats: 'Thống kê', doctor: 'Kiểm tra dữ liệu', log: 'Nhật ký', settings: 'Cài đặt',
 };
 
+/* Page header chuẩn hoá cho mọi tab: title + mô tả ngắn đúng theo dữ liệu
+   thật của từng module (không hứa tính năng không tồn tại). */
+const PAGE_HEAD = {
+  overview: ['Dashboard', 'Tình trạng thư viện, việc cần làm hôm nay và sức khỏe hệ thống.'],
+  list: ['Thư viện', 'Quản lý toàn bộ bộ truyện — lọc theo trạng thái, thao tác hàng loạt, sửa hoặc xoá từng bộ.'],
+  new: ['Thêm bộ', 'Tạo bộ truyện mới. Khi đã nối Worker, book JSON và registry được ghi ngay.'],
+  chapters: ['Chương', 'Hàng đợi nháp, chờ duyệt, hẹn giờ và các bộ mới cập nhật — chỉ dùng metadata registry.'],
+  cmts: ['Bình luận', 'Kiểm duyệt bình luận độc giả đang lưu trong KV.'],
+  reports: ['Báo lỗi', 'Báo lỗi từ người đọc — xem chi tiết và đánh dấu đã xử lý.'],
+  votes: ['Phiếu bầu', 'Xem phiếu bầu khóa theo người; gỡ/reset là thao tác ghi có xác nhận mạnh.'],
+  homepage: ['Homepage CMS', 'Slide trang chủ, lựa chọn biên tập, lịch ra chương và thông báo.'],
+  users: ['Tác giả', 'Tác giả gắn trên bộ truyện và số liệu xuất bản theo từng người.'],
+  roles: ['Vai trò', 'Nhân sự quản trị và phạm vi giao diện theo vai trò.'],
+  stats: ['Thống kê', 'Lượt đọc và phiếu thích đọc từ KV — tab này chỉ đọc, không ghi.'],
+  doctor: ['Kiểm tra dữ liệu', 'Audit KV, quét lệch số chương/chương rỗng và công cụ đếm lại.'],
+  log: ['Nhật ký', 'Tối đa 200 thao tác quản trị gần nhất từ khóa log.'],
+  settings: ['Cài đặt', 'Backup, khôi phục, nhập Blogger, stats cache và overflow KV.'],
+};
+
 function Icon({ name }) {
   const html = window.CZ && window.CZ.icon ? window.CZ.icon(name, 'i-s') : '';
   return <span class="admin-nav-icon" dangerouslySetInnerHTML={{ __html: html }} />;
@@ -191,7 +210,7 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
               <Icon name="search" />
               <input class="inp" value={q} placeholder="Tìm truyện, tác giả…" onInput={(e) => setQ(e.target.value)} aria-label="Tìm trong quản trị" />
               {suggest.length ? (
-                <div class="v2search-suggest" role="listbox">
+                <div class="v2search-suggest" role="listbox" aria-label="Gợi ý tìm kiếm">
                   {suggest.map((b) => (
                     <button type="button" key={b.slug} onClick={() => { setQ(b.title || b.slug); setSuggest([]); if (onSearch) onSearch(b.title || b.slug); }}>
                       <b>{b.title}</b> <span class="sm muted">{b.author || b.slug}</span>
@@ -207,38 +226,40 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
               {!quota.supported ? <em class="v2est">ước tính</em> : null}
               <i style={{ width: `${pct(used, limit)}%` }}></i>
             </button>
-            <div class="v2user">
-              <button class="hbtn admin-tool" type="button" title="Thông báo" aria-label="Thông báo" onClick={() => { setBellOpen(!bellOpen); setMenu(false); }}>
-                <Icon name="bell" />
-                {openReports + spam > 0 ? <span class="v2ndot">{openReports + spam > 9 ? '9+' : openReports + spam}</span> : null}
-              </button>
-              {bellOpen ? (
-                <div class="v2usermenu" role="menu">
-                  {bellItems.length
-                    ? bellItems.map((it) => <button type="button" key={it.tab} role="menuitem" onClick={() => go(it.tab)}>{it.text}</button>)
-                    : <div class="amtop"><span><b>Không có thông báo mới</b><span>Chưa có báo lỗi chưa xử lý hay bình luận nghi spam từ Worker.</span></span></div>}
-                </div>
-              ) : null}
-            </div>
-            <a class="hbtn admin-tool" href="/" target="_blank" rel="noopener" title="Mở trang web" aria-label="Mở trang web"><Icon name="right" /><span class="admin-tool-label">Web</span></a>
-            <ThemeButton />
-            <div class="v2user">
-              <button class="hbtn admin-tool" type="button" onClick={() => { setMenu(!menu); setBellOpen(false); }} aria-haspopup="menu" aria-expanded={menu}>
-                <Icon name="user" /><span class="admin-tool-label">{roleLabel(role)}</span>
-              </button>
-              {menu ? (
-                <div class="v2usermenu" role="menu">
-                  <div class="amtop"><span><b>{roleLabel(role)}</b><span>{chip.text}</span><span>{state.online ? state.apiBase : 'phiên tĩnh'}</span></span></div>
-                  <button type="button" role="menuitem" onClick={() => { setMenu(false); go('settings'); }}>Cài đặt</button>
-                  <button type="button" role="menuitem" onClick={() => { setMenu(false); go('doctor'); }}>Trạng thái kết nối</button>
-                  <button type="button" role="menuitem" class="out" onClick={() => { setMenu(false); onDisconnect(); }}>{state.online ? 'Ngắt kết nối Worker' : 'Đóng phiên'}</button>
-                </div>
-              ) : null}
+            <div class="v2tools">
+              <div class="v2user">
+                <button class="hbtn admin-tool" type="button" title="Thông báo" aria-label="Thông báo" onClick={() => { setBellOpen(!bellOpen); setMenu(false); }}>
+                  <Icon name="bell" />
+                  {openReports + spam > 0 ? <span class="v2ndot">{openReports + spam > 9 ? '9+' : openReports + spam}</span> : null}
+                </button>
+                {bellOpen ? (
+                  <div class="v2usermenu" role="menu" aria-label="Thông báo">
+                    {bellItems.length
+                      ? bellItems.map((it) => <button type="button" key={it.tab} role="menuitem" onClick={() => go(it.tab)}>{it.text}</button>)
+                      : <div class="amtop"><span><b>Không có thông báo mới</b><span>Chưa có báo lỗi chưa xử lý hay bình luận nghi spam từ Worker.</span></span></div>}
+                  </div>
+                ) : null}
+              </div>
+              <a class="hbtn admin-tool" href="/" target="_blank" rel="noopener" title="Mở trang web" aria-label="Mở trang web"><Icon name="right" /><span class="admin-tool-label">Web</span></a>
+              <ThemeButton />
+              <div class="v2user">
+                <button class="hbtn admin-tool" type="button" onClick={() => { setMenu(!menu); setBellOpen(false); }} aria-haspopup="menu" aria-expanded={menu} aria-label="Menu tài khoản">
+                  <Icon name="user" /><span class="admin-tool-label">{roleLabel(role)}</span>
+                </button>
+                {menu ? (
+                  <div class="v2usermenu" role="menu" aria-label="Tài khoản quản trị">
+                    <div class="amtop"><span><b>{roleLabel(role)}</b><span>{chip.text}</span><span>{state.online ? state.apiBase : 'phiên tĩnh'}</span></span></div>
+                    <button type="button" role="menuitem" onClick={() => { setMenu(false); go('settings'); }}>Cài đặt</button>
+                    <button type="button" role="menuitem" onClick={() => { setMenu(false); go('doctor'); }}>Trạng thái kết nối</button>
+                    <button type="button" role="menuitem" class="out" onClick={() => { setMenu(false); onDisconnect(); }}>{state.online ? 'Ngắt kết nối Worker' : 'Đóng phiên'}</button>
+                  </div>
+                ) : null}
+              </div>
             </div>
           </div>
         </header>
         <main class="amain v2main">
-          <nav class="crumb v2crumbs">
+          <nav class="crumb v2crumbs" aria-label="Breadcrumb">
             <a href="/">Trang chủ</a><span>›</span>
             <button type="button" class="lk" onClick={() => go('overview')}>Admin</button><span>›</span>
             {activeTab === 'edit' ? (
@@ -248,6 +269,17 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
               </span>
             ) : <b>{CRUMBS[activeTab] || activeTab}</b>}
           </nav>
+          {(() => {
+            const head = activeTab === 'edit'
+              ? [currentTitle || currentSlug || 'Sửa bộ', 'Metadata, ảnh bìa, khóa mật mã và soạn chương. Thay đổi chỉ ghi Cloudflare KV khi đã nối ADMIN_KEY.']
+              : (PAGE_HEAD[activeTab] || [CRUMBS[activeTab] || activeTab, '']);
+            return (
+              <header class="v2pagehead">
+                <h2>{head[0]}</h2>
+                {head[1] ? <p class="hint">{head[1]}</p> : null}
+              </header>
+            );
+          })()}
           {!state.online ? (
             <div class="v2staticbar" role="status">
               <b>Chế độ dữ liệu tĩnh</b>

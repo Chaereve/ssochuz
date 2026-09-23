@@ -81,14 +81,15 @@ export function ImageUploader({
       <input id={inputId} ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" hidden={false}
         onChange={(e) => handleFile(e.target.files && e.target.files[0])} />
       <div class="v2up-row">
-        <input class="inp" value={value} placeholder="URL bìa bền (/api/img/… hoặc https://…)"
+        <input class="inp" aria-label="URL ảnh bìa" value={value} placeholder="URL bìa bền (/api/img/… hoặc https://…)"
           onInput={(e) => onChange && onChange(persistableCover(e.target.value) || e.target.value.replace(/^blob:.*/i, ''))} />
-        <button class="btn ghost sm" type="button" onClick={() => fileRef.current && fileRef.current.click()}>Upload bìa</button>
-        {value ? <button class="btn ghost sm" type="button" onClick={() => onChange && onChange('')}>Gỡ bìa</button> : null}
-        {value ? <button class="btn ghost sm" type="button" onClick={() => fileRef.current && fileRef.current.click()}>Thay ảnh</button> : null}
+        {/* một nút mở file duy nhất — trước đây “Upload bìa” và “Thay ảnh” làm
+            cùng một việc, đứng cạnh nhau gây rối */}
+        <button class="btn ghost sm" type="button" onClick={() => fileRef.current && fileRef.current.click()}>{value ? 'Upload bìa mới' : 'Upload bìa'}</button>
+        {value ? <button class="btn ghost sm v2sort-x" type="button" onClick={() => onChange && onChange('')}>Gỡ bìa</button> : null}
       </div>
       {onAltChange
-        ? <input class="inp" value={altValue} placeholder="Alt text bìa (mô tả ngắn cho trình đọc màn hình)"
+        ? <input class="inp" aria-label="Alt text ảnh bìa" value={altValue} placeholder="Alt text bìa (mô tả ngắn cho trình đọc màn hình)"
             onInput={(e) => onAltChange(e.target.value)} />
         : null}
       {error ? <p class="v2up-err">{error} {onUpload ? <button class="btn ghost sm" type="button" onClick={() => fileRef.current && fileRef.current.click()}>Thử lại</button> : null}</p> : null}
