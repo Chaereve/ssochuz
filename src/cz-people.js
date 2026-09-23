@@ -130,12 +130,36 @@
     setHead('Tất cả ' + kindLabel().toLowerCase(), 'Danh sách ' + kindLabel().toLowerCase() + ' trên ssochuz library.');
     if (CZ.reveal) CZ.reveal();
   }
+  /* Registry về mà thư viện vẫn TRẮNG: đừng báo lỗi ngay, cũng đừng để trang đứng
+     ở “Đang tải…”. Máy từng dính lỗi còn giữ bản {lib: []} ở ba chỗ (localStorage,
+     cờ cấm Worker 10 phút, cache của service worker) nên đọc lại suông vẫn ra
+     trắng — phải DỌN cả ba rồi đọc lại. Tự làm đúng 1 lần; vẫn trắng mới báo lỗi,
+     và báo kèm nút “Thử lại” chạy thật. */
+  var healed = false;
+  function reloadData() {
+    var sub = document.querySelector('#ppSub');
+    if (sub) sub.textContent = 'Đang đọc lại dữ liệu…';
+    var grid = document.querySelector('#ppGrid');
+    if (grid) grid.innerHTML = '';
+    var go = CZ.purgeRegistry ? CZ.purgeRegistry() : Promise.resolve();
+    return go.then(function () { return CZ.registry(true); }, function () { return CZ.registry(true); })
+      .then(paint, paint);
+  }
+  function paintFail() {
+    if (!healed) { healed = true; return reloadData(); }
+    var sub = document.querySelector('#ppSub');
+    if (sub) sub.textContent = 'Chưa đọc được thư viện (nguồn dữ liệu: ' + (window.CZ_SRC || 'không rõ') + ').';
+    var grid = document.querySelector('#ppGrid');
+    if (grid) grid.innerHTML = '<div class="empty" style="grid-column:1/-1">' +
+      'Chưa tải được dữ liệu — kiểm tra kết nối rồi bấm Thử lại.' +
+      '<div style="margin-top:14px"><button class="btn pri" id="ppRetry" type="button">Thử lại</button></div></div>';
+    var b = document.querySelector('#ppRetry');
+    if (b) b.onclick = function () { b.disabled = true; return reloadData(); };
+  }
   function paint() {
     var lib = CZ.lib(), q = readQ();
-    if (!lib.length) {
-      document.querySelector('#ppGrid').innerHTML = '<div class="empty">Chưa tải được dữ liệu — thử tải lại trang.</div>';
-      return;
-    }
+    if (!lib.length) { paintFail(); return; }
+    healed = false;
     if (!q) { renderAll(''); return; }
     var name = findName(lib, q);
     if (name) renderOne(name);
