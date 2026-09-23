@@ -52,8 +52,8 @@ export function roleLabel(role) {
 
 export function visibleTabs(role) {
   const id = normalizeRole(role);
-  if (id === 'author') return ['overview', 'list', 'new', 'edit', 'settings'];
+  if (id === 'author') return ['overview', 'list', 'classify', 'new', 'edit', 'settings'];
   if (id === 'moderator') return ['overview', 'cmts', 'reports', 'users', 'log'];
-  if (id === 'editor') return ['overview', 'list', 'new', 'edit', 'chapters', 'genres', 'homepage', 'stats'];
+  if (id === 'editor') return ['overview', 'list', 'classify', 'new', 'edit', 'chapters', 'genres', 'homepage', 'stats'];
   return null; /* null = tất cả */
 }

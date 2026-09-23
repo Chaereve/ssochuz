@@ -10,10 +10,11 @@ const NAV = [
   ]},
   { group: 'Nội dung', items: [
     ['list', 'Thư viện', 'library'],
+    ['classify', 'Phân loại', 'filter'],
     ['new', 'Thêm bộ', 'plus'],
     ['edit', 'Sửa bộ', 'edit'],
     ['chapters', 'Chương', 'list'],
-    ['genres', 'Thể loại', 'filter'],
+    ['genres', 'Thể loại', 'sparkle'],
   ]},
   { group: 'Cộng đồng', items: [
     ['cmts', 'Bình luận', 'chat'],
@@ -36,7 +37,7 @@ const NAV = [
 ];
 
 const CRUMBS = {
-  overview: 'Dashboard', list: 'Thư viện', new: 'Thêm bộ', edit: 'Sửa bộ',
+  overview: 'Dashboard', list: 'Thư viện', classify: 'Phân loại', new: 'Thêm bộ', edit: 'Sửa bộ',
   chapters: 'Chương', genres: 'Thể loại', cmts: 'Bình luận', reports: 'Báo lỗi',
   votes: 'Phiếu bầu', homepage: 'Homepage CMS', users: 'Tác giả', roles: 'Vai trò',
   stats: 'Thống kê', doctor: 'Kiểm tra dữ liệu', log: 'Nhật ký', settings: 'Cài đặt',
@@ -205,7 +206,7 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
             <span class={`chip ${chip.cls}`} title={chip.text}><span class="d"></span><b>{chip.text}</b></span>
             <button type="button" class={`v2quota ${qLevel}`} title={quotaTitle} onClick={() => go('doctor')}>
               <span>KV write</span><b>{used}/{limit}</b>
-              {!quota.supported ? <i class="v2est">ước tính</i> : null}
+              {!quota.supported ? <em class="v2est">ước tính</em> : null}
               <i style={{ width: `${pct(used, limit)}%` }}></i>
             </button>
             <div class="v2user">

@@ -38,12 +38,21 @@ export function genreNameOf(book, registry) {
   return (hit && hit.name) || raw;
 }
 
-export function booksUsingGenre(registry, slugOrName) {
+export function bookUsesGenre(book, slugOrName, registry) {
   const key = String(slugOrName || '').toLowerCase();
-  return ((registry && registry.lib) || []).filter((b) => {
-    const g = String((b && (b.genre || b.genreName)) || '').toLowerCase();
-    return g && (g === key);
-  });
+  if (!key || !book) return false;
+  const raw = String((book.genre || book.genreName) || '').toLowerCase();
+  if (!raw) return false;
+  if (raw === key) return true;
+  const named = String(genreNameOf(book, registry) || '').toLowerCase();
+  if (named === key) return true;
+  const hit = listGenres(registry).find((g) => String(g.slug).toLowerCase() === key || String(g.name).toLowerCase() === key);
+  if (!hit) return false;
+  return raw === String(hit.slug).toLowerCase() || raw === String(hit.name).toLowerCase() || named === String(hit.name).toLowerCase();
+}
+
+export function booksUsingGenre(registry, slugOrName) {
+  return ((registry && registry.lib) || []).filter((b) => bookUsesGenre(b, slugOrName, registry));
 }
 
 function foldVi(s) {

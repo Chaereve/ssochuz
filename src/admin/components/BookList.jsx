@@ -3,17 +3,17 @@ import { useMemo, useState } from 'preact/hooks';
 import { countText } from '../utils/format.js';
 import { BookCover } from './BookCover.jsx';
 import { BookBadges, GenreBadge, CompletionBadge, PublishStatusBadge, LockedBadge } from './Badges.jsx';
-import { genreNameOf, listGenres } from '../utils/genres.js';
+import { bookUsesGenre, genreNameOf, listGenres } from '../utils/genres.js';
 import { COMPLETION_STATUSES, VISIBILITIES } from '../utils/books.js';
 
 const PAGE = 24;
 
-export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulkUpdate, onDelete, apiBase, initialQuery = '', writeBlocked = false }) {
+export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulkUpdate, onDelete, apiBase, initialQuery = '', initialGenre = '', writeBlocked = false }) {
   const lib = (registry && registry.lib) || [];
   const [q, setQ] = useState(initialQuery);
   const [status, setStatus] = useState('');
   const [adult, setAdult] = useState('');
-  const [genre, setGenre] = useState('');
+  const [genre, setGenre] = useState(initialGenre);
   const [pub, setPub] = useState('');
   const [vis, setVis] = useState('');
   const [locked, setLocked] = useState('');
@@ -26,7 +26,7 @@ export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulk
       if (status && book.status !== status) return false;
       if ((adult === '1' || adult === '18') && !book.is18) return false;
       if (adult === '0' && book.is18) return false;
-      if (genre && String(book.genre || '') !== genre && genreNameOf(book, registry) !== genre) return false;
+      if (genre && !bookUsesGenre(book, genre, registry)) return false;
       if (pub && String(book.pubStatus || 'published') !== pub) return false;
       if (vis && String(book.visibility || 'public') !== vis) return false;
       if (locked === '1' && !book.lock) return false;

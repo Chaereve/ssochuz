@@ -160,6 +160,28 @@ const STATS = {
   check('Thư viện/có GenreBadge (không tags)', !!$('.v2badge-genre') && !$('.v2tag'), $('.v2badge-genre') && $('.v2badge-genre').textContent);
   check('Thư viện/CompletionBadge tách khỏi xuất bản', $$('.v2badge-completion').length > 0 && $$('.v2badge-pub').length > 0);
 
+  /* 4b. Phân loại: nhóm theo thể loại, không tags */
+  click($('button[data-tab="classify"]'));
+  await wait(200);
+  check('Phân loại/render pane', !!$('#pane-classify'));
+  check('Phân loại/không có UI tags', !$('#pane-classify .v2tags') && !$$('#pane-classify .v2tag').length);
+  check('Phân loại/có mẫu badge', $$('#pane-classify .v2badge-legend .v2badge-genre').length >= 1);
+  const tilesG = $$('#pane-classify .v2genre-tile');
+  check('Phân loại/có ô Tất cả + thể loại + Chưa gán', tilesG.length >= 5, tilesG.length);
+  const coTrangTile = tilesG.find((b) => /Cổ Trang/.test(b.textContent));
+  check('Phân loại/ô Cổ Trang đếm 1 bộ', !!coTrangTile && /1 bộ/.test(coTrangTile.textContent), coTrangTile && coTrangTile.textContent);
+  click(coTrangTile);
+  await wait(120);
+  check('Phân loại/lọc Cổ Trang hiện 1 dòng', $$('#pane-classify .v2sort li').length === 1, $$('#pane-classify .v2sort li').length);
+  const openLib = $$('#pane-classify button').find((b) => /Mở trong Thư viện/.test(b.textContent));
+  check('Phân loại/có nút mở Thư viện', !!openLib);
+  click(openLib);
+  await wait(200);
+  check('Phân loại→Thư viện lọc Cổ Trang', $$('.v2book-table tbody tr').length === 1 && /Truyện Thử 02/.test(($('.v2book-table') || {}).textContent || ''), $$('.v2book-table tbody tr').length);
+  inputEv($('.v2search .inp'), '');
+  $('.v2search').dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true }));
+  await wait(150);
+
   /* 5. Thêm bộ: thể loại lưu vào registry (không tags) */
   click($('button[data-tab="new"]'));
   await wait(150);

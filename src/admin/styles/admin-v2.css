@@ -306,3 +306,14 @@ button.v2genre-pill:hover{border-color:color-mix(in srgb,var(--acc) 45%,var(--bd
 .v2lock-warn{color:#8a5a2a;margin:6px 0 0}
 .v2role-warn{border:1px solid color-mix(in srgb,#d69b00 40%,var(--bd));background:color-mix(in srgb,#d69b00 10%,var(--surf));border-radius:12px;padding:10px 14px;margin:10px 0}
 .v2edit-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+
+/* Phân loại theo thể loại (không phải tags) */
+.v2badge-legend{display:grid;gap:8px;margin-top:12px;padding:12px;border:1px dashed var(--bd);border-radius:12px;background:var(--surf2)}
+.v2badge-legend b{font-size:13px}
+.v2genre-board{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:10px}
+.v2genre-tile{display:grid;gap:4px;text-align:left;border:1px solid var(--bd);border-radius:12px;background:var(--surf);padding:12px;cursor:pointer;color:var(--txt);font:inherit}
+.v2genre-tile:hover{border-color:color-mix(in srgb,var(--acc) 45%,var(--bd))}
+.v2genre-tile.on{border-color:color-mix(in srgb,var(--acc) 55%,var(--bd));background:var(--acc-soft,color-mix(in srgb,var(--acc) 12%,var(--surf)))}
+.v2genre-tile b{font-size:14px}
+.v2genre-tile span{font-size:12px;color:var(--mut)}
+.v2quota em.v2est{position:static;height:auto;background:none;font-size:10px;color:var(--mut);font-style:normal}
