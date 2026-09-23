@@ -1,5 +1,5 @@
 {
-  "rev": "2026-09-22 16:31",
+  "rev": "2026-09-23 09:52",
   "lib": [
     {
       "title": "HOMETOWN ROMANCE - SPECIAL",
@@ -792,10 +792,10 @@
       "couple": "Garn x Mimie",
       "year": "2022",
       "status": "Đang cập nhật",
-      "chapters": 18,
+      "chapters": 23,
       "is18": false,
       "thumb": "https://pbs.twimg.com/media/HQuHMUUbYAAx7RG?format=jpg&name=4096x4096",
-      "countLabel": "18/18",
+      "countLabel": "23/23",
       "updated": "2026-09-22",
       "slide": "https://pbs.twimg.com/media/HQuHMUUbYAAx7RG?format=jpg&name=4096x4096",
       "syn": "Khi quá khứ... là một ẩn số Những manh mối... khiến lòng bối rối Tình yêu... đẩy ta vào cạm bẫy Lòng người... dối lừa làm ta lạc bước Chris, một cô gái bị mất trí nhớ, đang tĩnh dưỡng và…",
@@ -947,14 +947,19 @@
       "year": "2025",
       "status": "Đang cập nhật",
       "is18": true,
-      "thumb": "https://chuseoz-cms.kimtong1906.workers.dev/api/img/47522d68-8284-45df-bd57-acd816bed9c0",
-      "slide": "https://chuseoz-cms.kimtong1906.workers.dev/api/img/47522d68-8284-45df-bd57-acd816bed9c0",
+      "thumb": "https://hnyzrkdlmvelbgcowztk.supabase.co/storage/v1/object/public/covers/b883aa8f-d546-4616-a25c-0fc085f22090.webp",
+      "slide": "https://hnyzrkdlmvelbgcowztk.supabase.co/storage/v1/object/public/covers/b883aa8f-d546-4616-a25c-0fc085f22090.webp",
       "syn": "Khi át chủ bài của quán lounge, cô gái với danh xưng 'Thiên thần', phải làm một công việc quan trọng cho nữ doanh nhân luôn coi thường và căm ghét cô đến tột cùng, thế nhưng lại có cớ sự khiến cả hai kết thúc trên…",
       "synFull": "Khi át chủ bài của quán lounge, cô gái với danh xưng 'Thiên thần', phải làm một công việc quan trọng cho nữ doanh nhân luôn coi thường và căm ghét cô đến tột cùng, thế nhưng lại có cớ sự khiến cả hai kết thúc trên giường cùng nhau.\nMối quan hệ ngày càng lún sâu, sau cùng sẽ kết thúc ra sao?\nYêu Em được không?\nDù nghe thế nào cũng là cùng một câu hỏi, thế nhưng người cất lời lại dùng trong hai ngữ cảnh hoàn toàn khác nhau.\nPhakinee hỏi vì không chắc liệu một người phụ nữ như Panapsorn có chịu dừng chân bên mình hay không.\nTrong khi đó, Panapsorn hỏi vì chẳng biết một kẻ thấp hèn như cô có quyền yêu đối phương hay không.",
       "chapters": 0,
-      "countLabel": "0/71",
-      "updated": "2026-09-21",
-      "_oldSlug": "pls-love"
+      "countLabel": "0/—",
+      "updated": "2026-09-23",
+      "_oldSlug": "pls-love",
+      "coverAlt": "",
+      "genre": "",
+      "pubStatus": "published",
+      "visibility": "public",
+      "publishedAt": "2026-09-23"
     }
   ],
   "slides": [],
@@ -990,36 +995,41 @@
       "the-fire",
       "chain",
       "ghost-house",
-      "like-puzzle",
-      "snake2-fish2",
-      "in-love-forever",
-      "ngot-ngao-la-may-bay-ang-cay-moi-la-tinh"
-    ]
+      "like-puzzle"
+    ],
+    "announcement": {
+      "enabled": false,
+      "text": "",
+      "href": ""
+    }
   },
   "schedule": {
     "items": [
       {
         "days": "Thứ 2, 3",
         "title": "Third Person",
-        "detail": ""
+        "detail": "",
+        "slug": "third-person"
       },
       {
         "days": "Thứ 4, 5",
         "title": "Cô Vợ Hờ Đanh Đá Của Tôi",
-        "detail": ""
+        "detail": "",
+        "slug": "co-vo-ho-anh-cua-toi"
       },
       {
         "days": "Thứ 6, 7",
         "title": "Vượt Khỏi Đường Chân Trời - endless blue beyond (Special)",
-        "detail": ""
+        "detail": "",
+        "slug": "vuot-khoi-uong-chan-troi-endless-blue-01775777241"
       }
     ],
     "note": "Lịch có thể thay đổi nếu có việc đột xuất.",
     "updated": "2026-09-17"
   },
   "source": {
-    "synced": "2026-09-22T16:31:47.134Z",
-    "note": "sửa từ trang quản trị ssochuz"
+    "synced": "2026-09-23T09:52:20.897Z",
+    "note": "sửa từ trang quản trị ssochuz v2"
   },
   "editorChoice": [
     "lunar-secret",
@@ -1033,9 +1043,6 @@
     "the-fire",
     "chain",
     "ghost-house",
-    "like-puzzle",
-    "snake2-fish2",
-    "in-love-forever",
-    "ngot-ngao-la-may-bay-ang-cay-moi-la-tinh"
+    "like-puzzle"
   ]
 }
