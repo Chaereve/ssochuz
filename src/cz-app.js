@@ -105,17 +105,65 @@ import { parseChapterTitle, nextMainChapterNo, chapterIsEmpty, chapterHasMedia }
      KV có sách; bản rỗng rớt về tĩnh/cache tốt và không bao giờ ghi đè cache
      tốt bằng bản rỗng. */
   function hasLib(r) { return !!(r && Array.isArray(r.lib) && r.lib.length); }
-  function registry() {
-    if (memo.reg) return Promise.resolve({ reg: memo.reg, src: memo.src });
-    var cached = lsGet('ssochuz-reg', TTL_REG);
-    var useApiNow = useApi();
+  /* Gán registry MỚI: phải xoá luôn libCache.
+     VÁ (23/09, lượt 2): `libCache` trước đây chỉ bị xoá khi số chương đổi, KHÔNG
+     bị xoá khi registry về. Nên bất kỳ ai gọi CZ.lib() TRƯỚC lúc registry về
+     (chuông thông báo, ô tìm kiếm ⌘K, sự kiện pageshow khi quay lại từ bfcache…)
+     là danh sách ĐÓNG BĂNG ở [] — registry sau đó có đủ 63 bộ thì trang tác
+     giả/couple vẫn báo “Chưa tải được dữ liệu” cho tới khi tải lại trang. */
+  function setReg(reg, src) {
+    memo.reg = reg; memo.src = src; w.CZ_SRC = src;
+    libCache = null;
+  }
+  /* VÁ (23/09, lượt 2) — ba “kho” khiến lỗi rỗng DÍNH CỨNG trên máy người đọc,
+     bản vá trước chưa dọn kho nào:
+       1) `memo.reg` nhớ luôn bản rỗng ⇒ trong cùng một phiên, gọi lại bao nhiêu
+          lần cũng ra bản rỗng;
+       2) `ssochuz-reg` trong localStorage + cờ cấm Worker 10 phút
+          (`ssochuz-fallback`) do bản cũ ghi lại;
+       3) service worker phục vụ /api/registry theo kiểu stale-while-revalidate
+          ⇒ bản {lib: []} cũ được trả về ngay, và CÒN NẰM TRONG CACHE.
+     purgeRegistry() dọn cả ba; registry(true) đọc lại từ đầu, bỏ qua memo,
+     bỏ qua cache localStorage và bỏ qua luôn cờ cấm Worker. */
+  function purgeRegistry() {
+    try { localStorage.removeItem('ssochuz-reg'); } catch (e) {}
+    clearFallback();
+    var gone = function (u) {
+      u = String(u || '');
+      return u.indexOf('/api/registry') !== -1 || u.indexOf('/data/registry.json') !== -1;
+    };
+    var p = Promise.resolve();
+    try {
+      if (w.caches && w.caches.keys) {
+        p = w.caches.keys().then(function (names) {
+          return Promise.all(names.map(function (n) {
+            return w.caches.open(n).then(function (c) {
+              return c.keys().then(function (ks) {
+                return Promise.all(ks.filter(function (k) { return gone(k && k.url); })
+                  .map(function (k) { return c.delete(k); }));
+              });
+            }).catch(function () {});
+          }));
+        }).catch(function () {});
+      }
+    } catch (e) {}
+    return p.then(function () { memo.reg = null; libCache = null; return true; });
+  }
+  function registry(force) {
+    /* Bản RỖNG không được memo cứng: force (nút “Thử lại”) là đọc lại từ đầu.
+       Bản có sách thì vẫn memo như cũ để không gọi Worker thừa. */
+    if (memo.reg && (!force || hasLib(memo.reg))) return Promise.resolve({ reg: memo.reg, src: memo.src });
+    var cached = force ? null : lsGet('ssochuz-reg', TTL_REG);
+    /* force cũng dỡ cờ cấm Worker 10 phút — người đọc đã bấm “Thử lại” nghĩa là
+       muốn thử thật, không phải để web lặng lẽ quay về bản tĩnh cũ. */
+    var useApiNow = force ? !!API : useApi();
     /* URL ổn định (không ?_=…) để trúng cache biên của Worker — dữ liệu vẫn mới
        nhờ hạn dùng 60 giây + Worker tự xoá cache mỗi lần ghi. */
     var p = useApiNow ? jgetApi(API + '/api/registry', 9000) : Promise.resolve(null);
     return p.then(function (api) {
       if (hasLib(api)) {
         clearFallback();
-        memo.reg = api; memo.src = 'kv'; w.CZ_SRC = 'kv';
+        setReg(api, 'kv');
         paintNotif();   /* số chương từ KV về là chuông cập nhật */
         lsSet('ssochuz-reg', { t: Date.now(), v: api });
         paintFallback();
@@ -124,14 +172,14 @@ import { parseChapterTitle, nextMainChapterNo, chapterIsEmpty, chapterHasMedia }
       /* Worker trả mảng rỗng (KV trống) KHÔNG tính là “trượt” để cấm 10 phút —
          lần mở trang sau thử lại ngay, KV vừa khôi phục là thấy liền. Chỉ cấm
          khi Worker không trả lời / trả rác. */
-      if (useApiNow && !(api && Array.isArray(api.lib))) markFallback();    /* N13: nhớ 10 phút khỏi đập cửa Worker */
+      if (useApiNow && !force && !(api && Array.isArray(api.lib))) markFallback();    /* N13: nhớ 10 phút khỏi đập cửa Worker */
       return jget('/data/registry.json?_=' + Date.now(), 9000).then(function (stat) {
         var reg;
         if (hasLib(stat) && !hasLib(cached)) reg = stat;
         else if (hasLib(cached) && !hasLib(stat)) reg = cached;
         else reg = newer(stat, cached) || { lib: [] };
         if (hasLib(reg)) lsSet('ssochuz-reg', { t: Date.now(), v: reg });
-        memo.reg = reg; memo.src = 'static'; w.CZ_SRC = 'static';
+        setReg(reg, 'static');
         paintNotif();
         paintFallback();
         return { reg: reg, src: 'static' };
@@ -2612,7 +2660,7 @@ import { parseChapterTitle, nextMainChapterNo, chapterIsEmpty, chapterHasMedia }
 
   w.CZ = {
     API: API, normalizeApi: normalizeApi,
-    registry: registry, book: book, forgetBook: forgetBook, stats: stats, refreshStats: refreshStats, schedule: schedule,
+    registry: registry, purgeRegistry: purgeRegistry, book: book, forgetBook: forgetBook, stats: stats, refreshStats: refreshStats, schedule: schedule,
     lockToken: lockToken, setLockToken: setLockToken, clearLockToken: clearLockToken,
     vid: vid, reportView: reportView, sendReport: sendReport, uploadReportImage: uploadReportImage, vote: vote, rate: rate, myRating: function (slug) { return jpost('/api/rate/me', { slug: slug, vid: vid() }, authToken()); },
     lib: libList, slides: slides, editorChoice: editorChoice, donationCfg: donationCfg, reportCfg: reportCfg, findLib: findLib, statsOf: statsOf, onStats: onStats,

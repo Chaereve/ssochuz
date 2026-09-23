@@ -41,6 +41,25 @@
 /BAO-CAO-SUA-LOI-DANG-NHAP-VA-GIAO-DIEN.md / 301
 /HUONG-DAN-DANG-NHAP-BINH-LUAN.md /  301
 /BAO-CAO-SUA-LOI-LINK-VA-PHIM-TAT.md /  301
+/BAO-CAO-SUA-LOI-TRANG-TAC-GIA-VA-COUPLE.md /  301
+# --- a2) VÁ RÒ RỈ (23/09, rà bằng skill web-app-scanner) ---
+# source map của bundle admin: tải thẳng được ⇒ lộ NGUYÊN VĂN src/admin/*
+# (api.js, permissions.js, quota.js, mọi component). Chính sách của repo là bản
+# phát hành chỉ để lại mã đã rút gọn — tệp này phá đúng chính sách đó.
+/admin.js.map     /  301
+# 8 báo cáo nội bộ còn sót ngoài danh sách chặn: mô tả chi tiết cơ chế khoá truyện
+# (PBKDF2, token HMAC 6 giờ ký bằng SESSION_SECRET/ADMIN_KEY), tên endpoint quản trị
+# (/api/lock/set, /api/admin/kv, /api/private/*), cách phân quyền ADMIN_EMAILS —
+# tức bản đồ cho kẻ tấn công. Chặn nốt cho khớp các báo cáo khác.
+/BAO-CAO-ADMIN-V2-TINH-CHINH.md                /  301
+/BAO-CAO-ADMIN-V2.md                           /  301
+/BAO-CAO-CAI-TAO-ADMIN-V2.md                   /  301
+/BAO-CAO-CAN-CHINH-HERO-VA-HOP-THOAI-MY-SPACE.md /  301
+/BAO-CAO-GOP-ADMIN-MOT-TRANG.md                /  301
+/BAO-CAO-KHOA-TRUYEN-VA-TRANG-QUAN-TRI.md      /  301
+/BAO-CAO-OVERFLOW-VA-NHAN-DIEN-CHUONG.md       /  301
+/BAO-CAO-SUA-LOI-TAB-BAO-LOI.md                /  301
+/BAO-CAO-RA-SOAT-BAO-MAT.md                     /  301
 # --- b) slug cũ → slug mới (bộ Special từng có dấu gạch dưới trong slug ở repo,
 #        trong khi KV dùng dấu gạch ngang — 17/09/2026). Giữ 301 để link cũ
 #        (tìm kiếm, bài chia sẻ) không 404. Khi không còn ai dùng thì xoá.
