@@ -230,6 +230,103 @@ export async function persistImage(env, id, data, type, extraMeta) {
   return { bytes, overflow: '' };
 }
 
+/* ============================================================================
+   CHUYỂN DATA CŨ SANG OVERFLOW (Supabase/R2)
+   ----------------------------------------------------------------------------
+   Trước đây chỉ dữ liệu MỚI (ghi sau khi gắn SUPABASE_SERVICE_ROLE/CZ_R2) mới
+   được đẩy khỏi KV; bìa/book đã lưu base64 trong KV từ trước nằm yên → tạo
+   bảng ssochuz_blobs rồi vẫn "chưa chuyển được". Hàm này quét KV theo lô nhỏ
+   (mỗi lần gọi Worker chỉ chịu được ít chục subrequest) và ghi lại qua đúng
+   persistBook / persistCover / persistImage để KV chỉ còn stub:
+     · book: JSON đầy đủ → bảng ssochuz_blobs/R2 (KV còn stub nhỏ)
+     · img: bìa (được registry.thumb/slide trỏ tới) → Supabase Storage `covers`
+     · img: còn lại (ảnh trong chương) → ssochuz_blobs/R2
+   Lỗi từng mục không làm hỏng lô (giữ nguyên base64 trong KV, liệt kê lỗi).
+   ========================================================================== */
+export function coverIdSet(reg) {
+  const ids = {};
+  ((reg && reg.lib) || []).forEach((n) => {
+    if (!n) return;
+    [n.thumb, n.slide, n.cover].forEach((u) => {
+      const m = /\/api\/img\/([A-Za-z0-9_-]+)\b/.exec(String(u || ''));
+      if (m) ids[m[1]] = 1;
+    });
+  });
+  return ids;
+}
+
+export async function migrateOverflow(env, opts) {
+  opts = opts || {};
+  const st = overflowStatus(env);
+  const limit = Math.max(1, Math.min(25, parseInt(opts.limit, 10) || 8));
+  const only = String(opts.only || '').toLowerCase();
+  const out = {
+    ok: true, status: st, limit,
+    moved: { books: 0, covers: 0, images: 0 }, already: 0, scanned: 0,
+    failed: [], done: false, writes: 0,
+  };
+  if (!st.supabase && !st.r2) {
+    out.ok = false;
+    out.error = 'Chưa cấu hình overflow: đặt secret SUPABASE_SERVICE_ROLE (+ SUPABASE_URL) cho Supabase, hoặc binding CZ_R2, rồi deploy Worker trước khi chuyển.';
+    return out;
+  }
+  let coverIds = {};
+  try { coverIds = coverIdSet(await env.CZ_KV.get('registry', { type: 'json' })); } catch (e) {}
+  const work = () => out.moved.books + out.moved.covers + out.moved.images + out.failed.length;
+  const budget = () => work() >= limit;
+
+  /* 1) BOOK: full JSON → stub (persistBook tự chọn overflow hay rơi về KV) */
+  if (only !== 'covers' && only !== 'images') {
+    let cursor;
+    do {
+      const l = await env.CZ_KV.list({ prefix: 'book:', limit: 1000, cursor });
+      for (const k of (l.keys || [])) {
+        if (budget()) break;
+        out.scanned++;
+        const raw = await env.CZ_KV.get(k.name, { type: 'text' });
+        if (raw == null) continue;
+        let parsed;
+        try { parsed = JSON.parse(raw); } catch (e) { continue; }
+        if (isStub(parsed)) { out.already++; continue; }
+        const slug = (() => { try { return decodeURIComponent(k.name.slice('book:'.length)); } catch (e) { return k.name.slice('book:'.length); } })();
+        try {
+          const r = await persistBook(env, slug, parsed);
+          out.writes++;
+          if (r && r.stub) out.moved.books++;
+          else if (r && (r.errors || []).length) out.failed.push({ key: k.name, error: String((r.errors || [])[0]).slice(0, 160) });
+          else out.already++;
+        } catch (e) { out.failed.push({ key: k.name, error: String((e && e.message) || e).slice(0, 160) }); }
+      }
+      cursor = budget() ? null : (l.list_complete ? null : l.cursor);
+    } while (cursor && !budget());
+  }
+
+  /* 2) IMG: bìa → Storage `covers`; ảnh chương → ssochuz_blobs/R2 */
+  if (only !== 'books') {
+    let cursor;
+    do {
+      const l = await env.CZ_KV.list({ prefix: 'img:', limit: 1000, cursor });
+      for (const k of (l.keys || [])) {
+        if (budget()) break;
+        out.scanned++;
+        const value = await env.CZ_KV.get(k.name, { type: 'text' });
+        if (value == null) continue;
+        if (value.charAt(0) === '{') { out.already++; continue; }   /* stub rồi */
+        const id = (() => { try { return decodeURIComponent(k.name.slice('img:'.length)); } catch (e) { return k.name.slice('img:'.length); } })();
+        const type = (k.metadata && k.metadata.type) || 'image/webp';
+        try {
+          if (coverIds[id] && st.supabase) { await persistCover(env, id, value, type); out.moved.covers++; }
+          else { await persistImage(env, id, value, type); out.moved.images++; }
+          out.writes++;
+        } catch (e) { out.failed.push({ key: k.name, error: String((e && e.message) || e).slice(0, 160) }); }
+      }
+      cursor = budget() ? null : (l.list_complete ? null : l.cursor);
+    } while (cursor && !budget());
+  }
+  out.done = !budget();
+  return out;
+}
+
 export async function readImage(env, id) {
   if (!env || !env.CZ_KV) return null;
   const { value, metadata } = await env.CZ_KV.getWithMetadata('img:' + id, { type: 'text' });

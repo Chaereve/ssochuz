@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { createRichTextEditor, fileToChapterHtml, htmlStats, splitChaptersTxt } from '../utils/richTextEditor.js';
 import { readTime } from '../utils/format.js';
 import { tempMediaInHtml } from '../utils/htmlSafety.js';
+import { suggestChapterTitle, chapterKind } from '../../shared/chapters.js';
 
 function clone(value) { return JSON.parse(JSON.stringify(value || {})); }
 function quickWords(html) {
@@ -171,7 +172,9 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
   const addChapter = () => {
     const next = clone(localBook || { title: slug, slug, chapters: [] });
     next.chapters = Array.isArray(next.chapters) ? next.chapters : [];
-    next.chapters.push({ t: 'Chương ' + (next.chapters.length + 1), html: '<p></p>', status: 'draft' });
+    /* gợi ý số chương CHÍNH kế tiếp (bỏ qua Lờí mở đầu / giới thiệu ngưới vật /
+       ngoại truyện) — trước đây cứ length+1 nên bộ có mở đầu bị gọi sai số */
+    next.chapters.push({ t: suggestChapterTitle(next.chapters), html: '<p></p>', status: 'draft' });
     setLocalBook(next); setIndex(next.chapters.length - 1);
   };
   const deleteChapter = async () => {
@@ -279,16 +282,20 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
       {loading ? <div class="empty sm">Đang đọc chương…</div> : null}
       <div class="v2chapter-grid">
         <aside class="v2chapter-list">
-          {chapters.length ? chapters.map((chapter, i) => (
-            <button type="button" class={i === index ? 'on' : ''} key={i} draggable="true"
-              onDragStart={() => setDragFrom(i)}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => { e.preventDefault(); reorderChapter(dragFrom, i); setDragFrom(-1); }}
-              onClick={() => setIndex(i)}>
-              <b>{i + 1}</b><span>{chapter.t || ('Chương ' + (i + 1))}</span>
-              <em>{quickWords(chapter.html)} từ{chapter.status && chapter.status !== 'published' ? ' · ' + (statusLabel[chapter.status] || chapter.status) : ''}</em>
-            </button>
-          )) : <div class="empty sm">Chưa có chương.</div>}
+          {chapters.length ? chapters.map((chapter, i) => {
+            const kind = chapterKind(chapter.t || '');
+            const kindTag = kind === 'open' ? 'Mở đầu' : (kind === 'extra' ? 'Ngoại truyện' : '');
+            return (
+              <button type="button" class={i === index ? 'on' : ''} key={i} draggable="true"
+                onDragStart={() => setDragFrom(i)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => { e.preventDefault(); reorderChapter(dragFrom, i); setDragFrom(-1); }}
+                onClick={() => setIndex(i)}>
+                <b>{i + 1}</b><span>{chapter.t || ('Chương ' + (i + 1))}</span>
+                <em>{kindTag ? kindTag + ' · ' : ''}{quickWords(chapter.html)} từ{chapter.status && chapter.status !== 'published' ? ' · ' + (statusLabel[chapter.status] || chapter.status) : ''}</em>
+              </button>
+            );
+          }) : <div class="empty sm">Chưa có chương.</div>}
         </aside>
         <div class="v2chapter-editor">
           <label class="fl">Tên chương</label>

@@ -29,13 +29,16 @@ function LoaderButton({ busy, onClick, children }) {
   return <button class="btn ghost sm" type="button" disabled={busy} onClick={onClick}>{busy ? 'Đang đọc…' : children}</button>;
 }
 
-export function DoctorPanel({ state, onKvAudit, onScanBooks, onRecount, onReload, onFix }) {
+export function DoctorPanel({ state, onKvAudit, onScanBooks, onRecount, onReload, onFix, onMigrate }) {
   const [busy, setBusy] = useState(false);
   const [scanBusy, setScanBusy] = useState(false);
   const [fixBusy, setFixBusy] = useState('');
   const [audit, setAudit] = useState(null);
   const [scan, setScan] = useState(null);
   const [error, setError] = useState('');
+  const [migBusy, setMigBusy] = useState('');
+  const [migrate, setMigrate] = useState(null);
+  const [migError, setMigError] = useState('');
   const lib = (state.registry && state.registry.lib) || [];
   const issues = useMemo(() => {
     const seen = {}, dup = [], missingTitle = [], missingCover = [], missingSynopsis = [];
@@ -72,6 +75,24 @@ export function DoctorPanel({ state, onKvAudit, onScanBooks, onRecount, onReload
     } catch (e) { setError(e.message || String(e)); }
     finally { setFixBusy(''); }
   };
+  /* chuyển data cũ (book đầy đủ + ảnh base64) sang overflow: bìa → Supabase
+     Storage `covers`, book/ảnh chương → bảng ssochuz_blobs/R2. Worker xử lý
+     theo lô, panel gọi lặp và vẽ tiến độ từng vòng. */
+  const runMigrate = async (only) => {
+    if (!onMigrate || migBusy) return;
+    const label = only === 'books' ? 'chỉ book' : (only === 'covers' ? 'chỉ bìa' : 'book + bìa + ảnh chương');
+    const ok = window.confirm('Chuyển ' + label + ' trong KV sang Supabase/R2?\n\nKV chỉ còn stub nhỏ; dữ liệu đầy đủ nằm ở Supabase/R2. Có thể mất vài phút nếu kho lớn.');
+    if (!ok) return;
+    setMigBusy(only || 'all'); setMigError(''); setMigrate(null);
+    try {
+      const totals = await onMigrate({
+        only,
+        onProgress: (t) => setMigrate(Object.assign({ running: true }, t)),
+      });
+      setMigrate(totals);
+    } catch (e) { setMigError(e.message || String(e)); }
+    finally { setMigBusy(''); }
+  };
   const ov = (state.worker && state.worker.overflow) || {};
   useEffect(() => { if (state.online && !audit && !busy) load(); }, [state.online]);
   return <div id="pane-doctor" class="v2pane">
@@ -85,10 +106,35 @@ export function DoctorPanel({ state, onKvAudit, onScanBooks, onRecount, onReload
         <div class="tile"><b>{num(issues.missingSynopsis.length)}</b><span>thiếu mô tả</span></div>
       </div>
       {error ? <div class="msgbar show err">{error}<div class="v2err-actions"><button class="btn ghost sm" type="button" onClick={runScan}>Thử quét lại</button></div></div> : null}
+      {(migrate || migError) ? (
+        <div class={'msgbar show ' + (migError ? 'err' : (migrate && migrate.done && !(migrate.failed || []).length ? 'ok' : 'info'))} role="status">
+          {migError ? ('Chuyển overflow lỗi: ' + migError) : null}
+          {!migError && migrate ? (
+            <span>
+              Đã chuyển: {num(migrate.books)} book · {num(migrate.covers)} bìa · {num(migrate.images)} ảnh chương
+              {migrate.already ? ' · bỏ qua ' + num(migrate.already) + ' mục đã ở overflow' : ''}
+              {migrate.running ? (' — đang chạy vòng ' + num(migrate.rounds) + '…')
+                : (migrate.done ? ' — xong, KV chỉ còn stub. Tải lại trang truyện là thấy bìa mới từ Supabase.' : ' — tạm dừng giữa chừng (giới hạn vòng), bấm chạy lại để tiếp tục.')}
+              {migrate.failed && migrate.failed.length ? (' · ' + migrate.failed.length + ' mục lỗi (giữ nguyên trong KV): ' + migrate.failed.slice(0, 3).map((f) => f.key).join(', ') + (migrate.failed.length > 3 ? '…' : '')) : ''}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
       <div class="v2ops-grid">
         <div class="v2mini"><b>Registry quick check</b><p class="hint">Slug trùng: {issues.dup.slice(0, 6).join(', ') || 'không thấy'}</p><p class="hint">Thiếu tên: {issues.missingTitle.slice(0, 6).join(', ') || 'không thấy'}</p></div>
         <div class="v2mini"><b>KV write quota</b><p class="hint">Đang tính: {num(state.quota && state.quota.writesToday)}/{num(state.quota && state.quota.limit || 1000)} lượt ghi hôm nay ({state.quota && state.quota.source}).</p><span class="kvbar"><span style={{ width: pct(state.quota && state.quota.writesToday, state.quota && state.quota.limit || 1000) + '%' }}></span></span></div>
-        <div class="v2mini"><b>Overflow KV</b><p class="hint">Supabase: {ov.supabase ? 'connected' : 'unavailable'}. R2: {ov.r2 ? 'connected' : 'unavailable'}. Bìa: {ov.covers ? 'Supabase Storage (1 GB free)' : 'KV'}. Ảnh chương: {(ov.supabase || ov.r2) ? 'overflow sang Supabase/R2, ghi lỗi thì rớt về KV' : 'KV'}. Chưa gắn thì book/img vẫn nằm full trong KV — không giả lưu.</p></div>
+        <div class="v2mini"><b>Overflow KV</b><p class="hint">Supabase: {ov.supabase ? 'connected' : 'unavailable'}. R2: {ov.r2 ? 'connected' : 'unavailable'}. Bìa: {ov.covers ? 'Supabase Storage (1 GB free)' : 'KV'}. Ảnh chương: {(ov.supabase || ov.r2) ? 'overflow sang Supabase/R2, ghi lỗi thì rớt về KV' : 'KV'}. Chưa gắn thì book/img vẫn nằm full trong KV — không giả lưu.</p>
+          {(ov.supabase || ov.r2) && onMigrate ? (
+            <div class="v2mig">
+              <p class="hint"><b>Data cũ còn trong KV?</b> Chuyển 1 lần sang Supabase/R2 ngay tại đây (bìa → Storage <code>covers</code>, book/ảnh chương → <code>ssochuz_blobs</code>/R2, KV chỉ còn stub):</p>
+              <div class="row">
+                <button class="btn ghost sm" type="button" disabled={!state.online || !!migBusy} onClick={() => runMigrate('')}>{migBusy ? 'Đang chuyển…' : 'Chuyển tất cả'}</button>
+                <button class="btn ghost sm" type="button" disabled={!state.online || !!migBusy} onClick={() => runMigrate('covers')}>Chỉ bìa</button>
+                <button class="btn ghost sm" type="button" disabled={!state.online || !!migBusy} onClick={() => runMigrate('books')}>Chỉ book</button>
+              </div>
+            </div>
+          ) : null}
+        </div>
       </div>
       {scan ? <div class="v2doctor-scan">
         <div class="tiles v2tiles4"><div class="tile"><b>{num(scan.scanned)}</b><span>book đã quét ({scan.source})</span></div><div class="tile"><b>{num(scan.missing)}</b><span>thiếu book</span></div><div class="tile"><b>{num(scan.mismatch)}</b><span>lệch số chương</span></div><div class="tile"><b>{num(scan.empty)}</b><span>chương rỗng</span></div></div>

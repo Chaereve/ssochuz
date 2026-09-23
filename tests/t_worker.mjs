@@ -289,6 +289,34 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     eq('import/replace-last không thêm chương', r2.body && r2.body.chapters, 1);
     eq('import/link không phải blogspot → 400',
       (await call('POST', '/api/import', { headers: { 'x-admin-key': ADMIN }, body: { slug: 'lunar-secret', url: 'https://evil.test/x' } })).status, 400);
+
+    /* đặt tên theo parser dùng chung + chương chỉ-ảnh không bị từ chối */
+    const page = (title, inner) => '<html><head><title>' + title + ' | chuseoz</title></head><body><div class="post-body entry-content">' + inner + '</div></body></html>';
+    const LONG_TXT = '<p>Nội dung chương đủ dài để worker nhận là nội dung đọc được, không bị coi là trống trơn.</p>';
+    /* 1. “Lờí mở đầu” (dài chữ) → giữ nguyên tên, KHÔNG ép “Chương N:” */
+    routes = (u) => u.includes('bai-prologue.html') ? { status: 200, body: page('Lờ' + 'i mở đầu', LONG_TXT) } : null;
+    const rp = await call('POST', '/api/import', { headers: ADMH, body: { slug: 'lunar-secret', url: 'https://chuseoz.blogspot.com/p/bai-prologue.html' } });
+    ck('import/Lờí mở đầu giữ nguyên tên', rp.body && rp.body.ok === true && /^Lờ/.test(rp.body.added || '') && !/^Chương/.test(rp.body.added || ''), rp.body && rp.body.added, 'Lờí mở đầu');
+    /* 2. “Giới thiệu nhân vật” → giữ nguyên tên */
+    routes = (u) => u.includes('bai-gtnv.html') ? { status: 200, body: page('Giới thiệu nhân vật', LONG_TXT) } : null;
+    const rg = await call('POST', '/api/import', { headers: ADMH, body: { slug: 'lunar-secret', url: 'https://chuseoz.blogspot.com/p/bai-gtnv.html' } });
+    ck('import/GTNV giữ nguyên tên', rg.body && rg.body.ok === true && /^Giới thiệu/.test(rg.body.added || ''), rg.body && rg.body.added, 'Giới thiệu nhân vật');
+    /* 3. bài chỉ có ẢNH (truyện tranh) → NHẬN được, không còn 422 */
+    routes = (u) => u.includes('bai-comic.html') ? { status: 200, body: page('Chương 1: Khởi đầu', '<p><img src="https://img.test/1.jpg"><img src="https://img.test/2.jpg"></p>') } : null;
+    const rc = await call('POST', '/api/import', { headers: ADMH, body: { slug: 'lunar-secret', url: 'https://chuseoz.blogspot.com/p/bai-comic.html' } });
+    ck('import/chương chỉ-ảnh được nhận', rc.body && rc.body.ok === true, (rc.status + ' ' + ((rc.body && rc.body.error) || '')).slice(0, 120), 'ok 200');
+    ck('import/chỉ-ảnh KHÔNG 422', rc.status !== 422, rc.status, '≠ 422');
+    /* 4. bài thường chữ → gắn “Chương <số chính kế tiếp>:” (đếm qua các chương chính, bỏ mở đầu) */
+    routes = (u) => u.includes('bai-normal.html') ? { status: 200, body: page('Bí mật đêm khuya', LONG_TXT) } : null;
+    const rn = await call('POST', '/api/import', { headers: ADMH, body: { slug: 'lunar-secret', url: 'https://chuseoz.blogspot.com/p/bai-normal.html' } });
+    const bm = await kv.get('book:lunar-secret', { type: 'json' });
+    const mains = bm.chapters.filter((c) => /^Chương \d+/.test(c.t || ''));
+    ck('import/bài thường → “Chương N:”', rn.body && rn.body.ok === true && /^Chương \d+: Bí mật/.test(rn.body.added || ''), rn.body && rn.body.added, 'Chương N: Bí mật…');
+    /* 5. “Ngoại truyện” → giữ nguyên (không ép Chương N) */
+    routes = (u) => u.includes('bai-ngoaitruyen.html') ? { status: 200, body: page('Ngoại truyện: Ngày tết', LONG_TXT) } : null;
+    const rx = await call('POST', '/api/import', { headers: ADMH, body: { slug: 'lunar-secret', url: 'https://chuseoz.blogspot.com/p/bai-ngoaitruyen.html' } });
+    ck('import/ngoại truyện giữ nguyên tên', rx.body && rx.body.ok === true && /^Ngoại truyện/.test(rx.body.added || ''), rx.body && rx.body.added, 'Ngoại truyện: Ngày tết');
+    routes = () => null;
   }
 
   /* ---------- 7. đăng nhập Google (idToken ký thật bằng khoá RSA) ---------- */
@@ -1244,6 +1272,114 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     ck('cover/502 không ok', fail.body && fail.body.ok === false, fail.body, 'ok:false');
     ck('cover/không giả ghi KV khi Storage fail', [...kv.m.keys()].filter((k) => k.startsWith('img:') && !keysBefore.has(k)).length === 0,
       [...kv.m.keys()].filter((k) => k.startsWith('img:') && !keysBefore.has(k)), []);
+    routes = () => null;
+  }
+
+  /* ---------- 15. MIGRATE OVERFLOW: book/ảnh CŨ trong KV → Supabase ----------
+     KV lúc này còn dữ liệu rác của các bài trước → so TƯƠNG ĐỐI trên các key cố
+     định, lặp nhiều vòng (giới hạn mỗi lô) cho tới khi key fixture xong. */
+  {
+    const bin = Buffer.from('524946462400000057454250565038201c000000080000003001000024000000ff00000000', 'hex');
+    const b64 = bin.toString('base64');
+    const envMig = Object.assign({}, env, {
+      SUPABASE_URL: 'https://sbmig.test',
+      SUPABASE_SERVICE_ROLE: 'service-role-test',
+    });
+    const sbCalls = [];
+    const blobRows = {};   /* Supabase PostgREST giả: key → row json */
+    routes = (u, init) => {
+      const url = String(u);
+      const method = (init && init.method) || 'GET';
+      sbCalls.push({ url, method, body: (init && init.body) || '' });
+      if (url.includes('/rest/v1/ssochuz_blobs')) {
+        if (method === 'POST') {
+          try { const row = JSON.parse(String((init && init.body) || '{}')); if (row && row.key) blobRows[row.key] = row; } catch (e) {}
+          return { status: 201, body: '' };
+        }
+        const m = /key=eq\.([^&]+)/.exec(url);
+        const row = m && blobRows[decodeURIComponent(m[1])];
+        return { status: 200, body: row ? [row] : [] };
+      }
+      if (url.includes('/storage/v1/object/covers/')) return { status: 200, body: { Key: 'covers/x' } };
+      if (url.includes('/storage/v1/bucket')) return { status: 200, body: { name: 'covers' } };
+      return { status: 404, body: '' };
+    };
+    /* gieo dữ liệu cũ trong KV */
+    await kv.put('registry', JSON.stringify({
+      rev: 'mig', lib: [
+        { slug: 'mig-book', title: 'Bộ Migration', chapters: 1, countLabel: '1/?', thumb: '/api/img/covmigfix0001' },
+        { slug: 'other-book', title: 'Bộ Khác', chapters: 0, thumb: 'https://lh3.googleusercontent.com/x' },
+      ],
+    }));
+    await kv.put('book:mig-book', JSON.stringify({ title: 'Bộ Migration', slug: 'mig-book', chapters: [{ t: 'Chương 1', html: '<p>nội dung đủ dài để không chửi</p>' }] }));
+    await kv.put('img:covmigfix0001', b64);
+    await kv.put('img:chap-mig', b64);
+    await kv.put('img:stub-mig', JSON.stringify({ overflow: 'supabase', type: 'image/webp', bytes: 1 }));
+
+    const isStubKV = (key) => { const v = kv.m.get(key); return !!(v && v.value.charAt(0) === '{' && /overflow/.test(v.value)); };
+    const runUntilDone = async (body, max) => {
+      let r, rounds = 0;
+      do { r = await call('POST', '/api/admin/migrate-overflow', { e: envMig, headers: ADMH, body: body || {} }); rounds++; }
+      while (r.body && r.body.done === false && rounds < (max || 40));
+      return r;
+    };
+
+    eq('mig/không khoá → 401', (await call('POST', '/api/admin/migrate-overflow', { e: envMig, body: {} })).status, 401);
+    const noCfg = await call('POST', '/api/admin/migrate-overflow', { headers: ADMH, body: {} });
+    ck('mig/env thường (không supabase/r2) → báo thiếu cấu hình', noCfg.body && noCfg.body.ok === false && /Chưa cấu hình overflow/i.test(noCfg.body.error || ''), noCfg.body && noCfg.body.error, 'lỗi CONFIG liệt kê SUPABASE_SERVICE_ROLE');
+
+    const r = await runUntilDone({ limit: 25 });
+    ck('mig/chạy đến done thì dừng sạch', !!(r.body && r.body.ok === true && r.body.done === true), r.body && r.body.done, true);
+
+    /* KV sau migration: 3 key fixture đều thành stub */
+    ck('mig/book KV còn stub nhỏ', isStubKV('book:mig-book'), (kv.m.get('book:mig-book') || {}).value && (kv.m.get('book:mig-book') || {}).value.slice(0, 120), 'JSON stub');
+    const cStub = (kv.m.get('img:covmigfix0001') || {}).value || '';
+    ck('mig/bìa KV → stub supabase-storage (URL public covers)', /supabase-storage/.test(cStub) && /\/storage\/v1\/object\/public\/covers\/covmigfix0001\./.test(cStub), cStub.slice(0, 200), 'supabase-storage stub');
+    const iStub = (kv.m.get('img:chap-mig') || {}).value || '';
+    ck('mig/ảnh chương KV → stub blobs', /"overflow"\s*:\s*"supabase"/.test(iStub), iStub.slice(0, 120), 'blobs stub');
+    ck('mig/stub có sẵn giữ nguyên', (kv.m.get('img:stub-mig') || {}).value === JSON.stringify({ overflow: 'supabase', type: 'image/webp', bytes: 1 }), (kv.m.get('img:stub-mig') || {}).value, 'stub nguyên bản');
+
+    /* request ra Supabase đúng chỗ */
+    const blobPosts = sbCalls.filter((c) => c.method === 'POST' && /\/rest\/v1\/ssochuz_blobs/.test(c.url));
+    ck('mig/POST blobs cho book + ảnh', blobPosts.some((c) => /book:mig-book/.test(c.body)) && blobPosts.some((c) => /img:chap-mig/.test(c.body)),
+      blobPosts.map((c) => (c.body || '').slice(0, 60)), 'book:mig-book + img:chap-mig');
+    ck('mig/bìa POST lên Storage covers', sbCalls.some((c) => c.method === 'POST' && /\/storage\/v1\/object\/covers\/covmigfix0001\./.test(c.url)),
+      sbCalls.filter((c) => /object\/covers/.test(c.url)).map((c) => c.method + ' ' + c.url.slice(-40)), '…/object/covers/covmigfix0001.webp');
+
+    /* GET /api/book sau stub: blob store trả lại đủ chương */
+    const bg = await call('GET', '/api/book/mig-book', { e: envMig });
+    ck('mig/GET book sau stub vẫn đủ chương', !!(bg.body && Array.isArray(bg.body.chapters) && bg.body.chapters.length === 1), bg.body && bg.body.chapters && bg.body.chapters.length, 1);
+    ck('mig/GET ảnh stub → 302 ra URL public covers', await (async () => {
+      const g = await call('GET', '/api/img/covmigfix0001', { e: envMig });
+      return g.status === 302 && /\/storage\/v1\/object\/public\/covers\/covmigfix0001\./.test(g.headers.get('location') || '');
+    })(), (await call('GET', '/api/img/covmigfix0001', { e: envMig })).status, '302');
+
+    /* only=books không chạm ảnh */
+    await kv.put('img:mig-i2', b64);
+    await kv.put('book:mig-b2', JSON.stringify({ title: 'B2', slug: 'mig-b2', chapters: [{ t: 'C1', html: '<p>x</p>' }] }));
+    await runUntilDone({ limit: 25, only: 'books' });
+    ck('mig/only=books: b2 thành stub', isStubKV('book:mig-b2'), (kv.m.get('book:mig-b2') || {}).value && (kv.m.get('book:mig-b2') || {}).value.slice(0, 80), 'stub');
+    ck('mig/only=books: giữ nguyên ảnh base64', (kv.m.get('img:mig-i2') || {}).value === b64, ((kv.m.get('img:mig-i2') || {}).value || '').slice(0, 30), b64.slice(0, 30));
+
+    /* Supabase Storage chết → failed kể tên key, KHÔNG mất base64 trong KV */
+    await kv.put('img:covmigfix0001fix-002', b64);
+    await kv.put('registry', JSON.stringify({ rev: 'mig3', lib: [{ slug: 'mig-book', title: 'Bộ Migration', chapters: 1, thumb: '/api/img/covmigfix0001fix-002' }] }));
+    routes = (u, init) => {
+      const url = String(u);
+      if (url.includes('/storage/v1/')) return { status: 500, body: 'boom' };
+      if (url.includes('/rest/v1/ssochuz_blobs')) {
+        const m = /key=eq\.([^&]+)/.exec(url);
+        const row = m && blobRows[decodeURIComponent(m[1])];
+        return { status: 200, body: row ? [row] : [] };
+      }
+      return { status: 404, body: '' };
+    };
+    /* Storage chỉ dùng cho bìa; ảnh chương ivẫn post blobs (storage fail nhưng supabase ok). */
+    let rf = null, guard2 = 0;
+    do { rf = await call('POST', '/api/admin/migrate-overflow', { e: envMig, headers: ADMH, body: { limit: 10 } }); guard2++; }
+    while (rf.body && rf.body.done === false && guard2 < 40 && !(rf.body.failed || []).some((f) => String(f.key).includes('covmigfix0001fix-002')));
+    ck('mig/Storage chết → failed có tên key', (rf.body.failed || []).some((f) => String(f.key).includes('covmigfix0001fix-002')), rf.body && rf.body.failed, 'img:covmigfix0001fix-002 fail');
+    ck('mig/Storage chết → giữ nguyên base64 (không mất data)', (kv.m.get('img:covmigfix0001fix-002') || {}).value === b64, ((kv.m.get('img:covmigfix0001fix-002') || {}).value || '').slice(0, 30), b64.slice(0, 30));
     routes = () => null;
   }
 

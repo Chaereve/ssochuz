@@ -35,13 +35,13 @@ export function touchRegistry(registry, note = 'sửa từ trang quản trị ss
 
 export const COMPLETION_STATUSES = ['Đang cập nhật', 'Hoàn thành', 'Sắp ra mắt'];
 export const PUB_STATUSES = [
-  { id: 'draft', label: 'Nháp' },
-  { id: 'pending_review', label: 'Chờ duyệt' },
+  { id: 'draft', label: 'Nháp (ẩn khỏi trang chủ)' },
+  { id: 'pending_review', label: 'Chờ duyệt (ẩn khỏi trang chủ)' },
   { id: 'approved', label: 'Đã duyệt' },
-  { id: 'scheduled', label: 'Hẹn giờ' },
+  { id: 'scheduled', label: 'Hẹn giờ (tới giờ mới hiện)' },
   { id: 'published', label: 'Xuất bản' },
-  { id: 'rejected', label: 'Từ chối' },
-  { id: 'archived', label: 'Lưu trữ' },
+  { id: 'rejected', label: 'Từ chối (ẩn khỏi trang chủ)' },
+  { id: 'archived', label: 'Lưu trữ (ẩn khỏi trang chủ)' },
 ];
 export const VISIBILITIES = [
   { id: 'public', label: 'Công khai' },

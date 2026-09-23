@@ -30,10 +30,14 @@ async function main() {
     const outPath = path.join(ROOT, f);
     if (!fs.existsSync(srcPath)) { errors.push('thiếu src/' + f); continue; }
     if (!fs.existsSync(outPath)) { errors.push('thiếu bản phát hành ' + f + ' — chạy: npm run build'); continue; }
+    /* cz-app.js có import src/shared/chapters.js → bundle:true (iife); phải
+       khớp y hệt tuỳ chọn trong tools/build_site.mjs kẻo báo lệch giả. */
+    const needBundle = f === 'cz-app.js';
     const opts = f.endsWith('.css')
       ? { entryPoints: [srcPath], write: false, minify: true, loader: { '.css': 'css' } }
       : {
-        entryPoints: [srcPath], write: false, minify: true, bundle: false, legalComments: 'none',
+        entryPoints: [srcPath], write: false, minify: true, bundle: needBundle,
+        format: needBundle ? 'iife' : undefined, legalComments: 'none',
         target: ['es2019'], charset: 'utf8',
         banner: { js: '/* ssochuz · bản rút gọn — sửa ở src/ rồi chạy npm run build */' },
       };

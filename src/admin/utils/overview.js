@@ -15,7 +15,21 @@ export function computeOverview(registry, statsItems = {}) {
     list.forEach((book) => { if (book && book.slug) picked[book.slug] = 1; });
     return { key, title, hint, count: list.length, items: list.slice(0, 6) };
   };
+  const HIDDEN_PUB = { draft: 1, pending_review: 1, archived: 1, rejected: 1 };
+  const hiddenOf = (book) => {
+    const vis = String(book.visibility || 'public').toLowerCase();
+    if (vis === 'private' || vis === 'unlisted') return vis === 'private' ? 'riêng tư' : 'không liệt kê';
+    const pub = String(book.pubStatus || book.pub || 'published').toLowerCase();
+    if (HIDDEN_PUB[pub]) return pub;
+    if (pub === 'scheduled') {
+      const at = Date.parse(book.publishedAt || book.published_at || '');
+      if (!at || at > Date.now()) return 'hẹn giờ';
+    }
+    return '';
+  };
   const tasks = [
+    task('hidden', 'Đang ẩn khỏi trang chủ', 'Bộ đã tạo nhưng bị Nháp/chờ duyệt/lưu trữ/riêng tư chặn — đây là lý do phổ biến nhất khiến truyện “tạo rồi mà không thấy trên trang chủ”. Vào Sửa bộ → Trạng thái xuất bản = Xuất bản.',
+      lib.filter((book) => hiddenOf(book))),
     task('nosyn', 'Thiếu mô tả', 'Trang truyện và thẻ ở thư viện sẽ trống phần giới thiệu', lib.filter((book) => !String(book.syn || '').trim())),
     task('nothumb', 'Thiếu ảnh bìa', 'Thẻ truyện chỉ còn khung giấy có chữ mờ', lib.filter((book) => !String(book.thumb || '').trim())),
     task('noslug', 'Thiếu slug / tác giả', 'Slug là đường dẫn của bộ, thiếu là không mở được trang truyện', lib.filter((book) => !String(book.slug || '').trim() || !String(book.author || '').trim())),

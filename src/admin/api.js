@@ -108,6 +108,9 @@ export class AdminApi {
   postImage(image) { return this.request('/api/img', { method: 'POST', body: { data: image.data, type: image.type, kind: image.kind || '' } }); }
   lockSet(slug, password) { return this.request('/api/lock/set', { method: 'POST', body: { slug, password } }); }
   recount() { return this.request('/api/recount', { method: 'POST' }); }
+  /* chuyển book/ảnh cũ trong KV sang overflow (Supabase/R2) — Worker xử theo lô,
+     gọi lặp tới khi done:true. body: {limit?, only?: 'books'|'covers'|'images'} */
+  migrateOverflow(body = {}) { return this.request('/api/admin/migrate-overflow', { method: 'POST', body, timeout: 29000 }); }
   importPost(slug, url = '', importMode = 'append') { return this.request('/api/import', { method: 'POST', body: { slug, url }, importMode }); }
   syncBlogger() { return this.request('/api/sync', { method: 'POST' }); }
   voteRemove(slug, ch, keys) { return this.request('/api/admin/vote-remove', { method: 'POST', body: { slug, ch, keys } }); }

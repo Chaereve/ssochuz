@@ -1,7 +1,8 @@
 import { profileId } from './member-spaces.js';
 export { MemberSpaces } from './member-spaces.js';
 export { PrivateBooks } from './private-books.js';
-import { dropOverflow, overflowStatus, persistBook, persistCover, persistImage, readBook, readImage, materializeBook } from './overflow.js';
+import { dropOverflow, overflowStatus, persistBook, persistCover, persistImage, readBook, readImage, materializeBook, migrateOverflow } from './overflow.js';
+import { parseChapterTitle, nextMainChapterNo, chapterTextOf, chapterHasMedia } from '../src/shared/chapters.js';
 /* ============================================================================
    ssochuz — Worker đọc/ghi dữ liệu truyện + số liệu xếp hạng trên Cloudflare KV
    ----------------------------------------------------------------------------
@@ -45,6 +46,9 @@ import { dropOverflow, overflowStatus, persistBook, persistCover, persistImage, 
      DELETE /api/book/<slug>            → xoá 1 bộ                  (cần X-Admin-Key)
      POST   /api/recount                → đếm lại số chương của MỌI bộ, sửa registry
                                            (chữa bệnh "hiện 30 mà chỉ có 29") (cần X-Admin-Key)
+     POST   /api/admin/migrate-overflow → chuyển book/ảnh CŨ trong KV sang overflow
+                                           {limit?, only?} — bìa → Storage `covers`,
+                                           book/ảnh chương → ssochuz_blobs/R2 (cần X-Admin-Key)
      POST   /api/seed                   → nạp nhiều bộ một lần      (cần X-Admin-Key)
      POST   /api/sync                   → đồng bộ lại từ Blogger    (cần X-Admin-Key)
      POST   /api/import                 → 1 bài Blogger → 1 chương  (cần X-Admin-Key)
@@ -107,7 +111,7 @@ import { dropOverflow, overflowStatus, persistBook, persistCover, persistImage, 
      VAPID_PRIVATE     (secret, bắt buộc nếu bật push) — khoá riêng VAPID base64url (`wrangler secret put VAPID_PRIVATE`)
    ============================================================================ */
 
-const VERSION = '1.13.0';
+const VERSION = '1.14.0';
 const JSONH = {
   'content-type': 'application/json; charset=utf-8',
   'x-content-type-options': 'nosniff',
@@ -293,6 +297,10 @@ const handler = {
         if (r.ok) { await edgePurge(org + '/api/book/' + encodeURIComponent(r.slug), org + '/api/registry'); await purgeFeed(org); }
         return r;
       }
+      if (p === '/api/admin/migrate-overflow' && req.method === 'POST') {
+        /* từng GET book/img vẫn materialize đúng nên không cần purge cache biên */
+        return await migrateOverflowRun(req, env, cors);
+      }
       if (p === '/api/recount' && req.method === 'POST') {
         const r = await recount(req, env, cors);
         if (r.ok) await edgePurge(org + '/api/registry', org + '/api/stats');
@@ -438,14 +446,24 @@ async function importPost(req, env, cors) {
   }
 
   const html = cleanPost(raw);
-  if (!html || html.replace(/<[^>]+>/g, '').trim().length < 40) {
+  /* bài chỉ có HÌNH (truyện tranh/webtoon) vẫn là chương hợp lệ:
+     trước đây yêu cầu ≥40 chữ nên bài toàn ảnh bị từ chối “không có nội dung” */
+  const tooShort = chapterTextOf(html).length < 40;
+  if (!html || (tooShort && !chapterHasMedia(html))) {
     return json({ ok: false, error: 'bài này không có nội dung đọc được', url }, { status: 422, cors });
   }
 
   const book = (await readBook(env, slug)) || { title: (nov && nov.title) || slug, slug, chapters: [] };
   book.chapters = book.chapters || [];
-  const n = book.chapters.length + 1;
-  const chapTitle = /^\s*ch[ưu][ơo]ng\s*\d+/i.test(title) ? title : ('Chương ' + n + (title ? ': ' + title : ''));
+  /* đặt tên chương theo parser dùng chung (src/shared/chapters.js):
+     · tiêu đề đã có số (“Chương 5”, “Chap 3”, “Chương 0”) → giữ nguyên
+     · lời mở đầu / giới thiệu nhân vật / thông báo → giữ nguyên, KHÔNG ép thành “Chương N”
+     · ngoại truyện / phụ chương (và số của nó) → giữ nguyên
+     · còn lại → “Chương <số chính kế tiếp>: <tiêu đề>” (mở đầu không đếm là Chương 1) */
+  const info = parseChapterTitle(title);
+  const chapTitle = (info.has || info.kind !== 'main')
+    ? (title || info.name || title)
+    : ('Chương ' + nextMainChapterNo(book.chapters) + (title ? ': ' + title : ''));
   const key = (req.headers.get('x-import-mode') || 'append').toLowerCase();   /* append | replace-last */
   if (key === 'replace-last' && book.chapters.length) book.chapters[book.chapters.length - 1] = { t: chapTitle, html };
   else book.chapters.push({ t: chapTitle, html });
@@ -1593,6 +1611,23 @@ async function applyRealCounts(env, reg) {
   if (out.fixed.length) reg.rev = new Date().toISOString().slice(0, 16).replace('T', ' ');
   return out;
 }
+/* POST /api/admin/migrate-overflow — nút "chuyển data sang Supabase/R2" trong
+   tab Kiểm tra dữ liệu. Chuyển book/ảnh CŨ khỏi KV theo lô nhỏ (mỗi lần gọi
+   Worker chỉ nên làm vài chục subrequest); admin gọi lặp tới khi done:true. */
+async function migrateOverflowRun(req, env, cors) {
+  if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
+  if (!env.CZ_KV) return noKV(cors);
+  const body = await req.json().catch(() => ({}));
+  const res = await migrateOverflow(env, body || {});
+  if (!res.ok) return json(res, { status: 409, cors });
+  const m = res.moved || {};
+  if ((m.books | 0) || (m.covers | 0) || (m.images | 0)) {
+    await logAct(env, 'chuyển overflow (' + (res.status && res.status.supabase ? 'supabase' : 'r2') + '): ' +
+      (m.books | 0) + ' book, ' + (m.covers | 0) + ' bìa, ' + (m.images | 0) + ' ảnh' + (res.done ? ' · xong' : ''), req);
+  }
+  return json(res, { cors });
+}
+
 /* POST /api/recount — nút "đếm lại số chương" trong trang quản trị.
    Chữa đúng bệnh: web hiện 30 chương dù bộ chỉ có 29 (registry treo số cũ). */
 async function recount(req, env, cors) {

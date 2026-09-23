@@ -4,6 +4,7 @@ import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
+import { isChapterHeading, suggestChapterTitle } from '../../shared/chapters.js';
 
 export function createRichTextEditor({ element, content = '', onUpdate, onImageFile } = {}) {
   if (!element) throw new Error('Thiếu vùng gắn editor');
@@ -76,17 +77,14 @@ export function fileToChapterHtml(text, name = '') {
 }
 
 /* Tách 1 file .txt thành nhiều chương (thay cho nhập .docx):
-   dòng "Chương X …" (có/không dấu # ở đầu) đánh dấu chương mới; đoạn thường
-   thành <p>; 1 khối giữa hai tiêu đề = nội dung chương đó. */
+   dòng "Chương X …" (có/không dấu # ở đầu; nhận cả Hồi/Quyển/Tập, số La Mã,
+   số thập phân) đánh dấu chương mới — cùng "Lờí mở đầu", "Giới thiệu nhân
+   vật", "Ngoại truyện"… (src/shared/chapters.js). Đoạn thường thành <p>;
+   1 khối giữa hai tiêu đề = nội dung chương đó. Phần không có tiêu đề được
+   đánh số THEO chương chính kế tiếp (không tính mở đầu là Chương 1). */
 export function splitChaptersTxt(text) {
   const raw = String(text || '').replace(/\r\n/g, '\n');
   const lines = raw.split('\n');
-  const isHeading = (line) => {
-    const t = line.trim();
-    if (!t || t.length > 90) return false;
-    return /^(#{1,3}\s*)?(chương|chapter|quyển|khổ|hồi)\s+[0-9ivxlcdm]+/i.test(t)
-      || /^#{1,3}\s+\S/.test(t) && t.length <= 60;
-  };
   const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const paras = (body) => body.join('\n').split(/\n{2,}/)
     .map((p) => p.replace(/\n/g, ' ').trim()).filter(Boolean)
@@ -95,7 +93,7 @@ export function splitChaptersTxt(text) {
   let cur = null;
   const flush = () => { if (cur) out.push(cur); };
   lines.forEach((line) => {
-    if (isHeading(line)) {
+    if (isChapterHeading(line)) {
       flush();
       cur = { t: line.trim().replace(/^#{1,3}\s*/, ''), html: '' };
     } else {
@@ -105,6 +103,6 @@ export function splitChaptersTxt(text) {
   });
   flush();
   return out
-    .map((c, i) => ({ t: c.t || ('Chương ' + (i + 1)), html: paras(c.html.split('\n')) }))
+    .map((c, i) => ({ t: c.t || suggestChapterTitle(out.slice(0, i)), html: paras(c.html.split('\n')) }))
     .filter((c) => c.html);
 }
