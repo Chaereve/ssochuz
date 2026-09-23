@@ -47,19 +47,19 @@ export function RolesPanel({ registry, role, onSave }) {
             <tbody>
               {rows.length ? rows.map((r, i) => (
                 <tr key={r.email}>
-                  <td>{r.email}</td>
-                  <td>
+                  <td data-lb="Email">{r.email}</td>
+                  <td data-lb="Vai trò">
                     <select class="inp" value={r.role} onChange={(e) => setRows(rows.map((x, k) => k === i ? Object.assign({}, x, { role: e.target.value }) : x))}>
                       {ROLE_ORDER.map((id) => <option key={id} value={id}>{ROLES[id].label}</option>)}
                     </select>
                   </td>
-                  <td><button class="btn ghost sm" type="button" onClick={() => setRows(rows.filter((_, k) => k !== i))}>Gỡ</button></td>
+                  <td data-lb="Thao tác"><button class="btn ghost sm" type="button" onClick={() => setRows(rows.filter((_, k) => k !== i))}>Gỡ</button></td>
                 </tr>
               )) : <tr><td colspan="3"><div class="empty sm">Chưa có nhân sự — Super Admin dùng ADMIN_KEY.</div></td></tr>}
             </tbody>
           </table>
         </div>
-        <button class="btn pri" type="button" onClick={() => onSave(rows)}>Lưu nhân sự</button>
+        <div class="row mt"><button class="btn pri" type="button" onClick={() => onSave(rows)}>Lưu nhân sự</button><span class="sm muted">Ghi registry.settings.staff lên KV.</span></div>
       </section>
     </div>
   );

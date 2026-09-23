@@ -348,8 +348,12 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
             <button class="btn ghost sm" type="button" disabled={uploading} onClick={() => imageRef.current && imageRef.current.click()}>{uploading ? 'Đang nén ảnh…' : 'Upload ảnh'}</button>
             {draft ? <button class="btn ghost sm" type="button" onClick={restoreDraft}>Khôi phục nháp</button> : null}
             <button class="btn ghost sm" type="button" onClick={() => setPreview(!preview)}>{preview ? 'Ẩn preview' : 'Preview độc giả'}</button>
-            <button class="btn pri sm" type="button" disabled={writeBlocked || !!temps.length} onClick={saveChapter}>{writeBlocked ? 'Hết quota KV' : 'Lưu chương'}</button>
-            <button class="btn ghost sm danger" type="button" disabled={writeBlocked} onClick={deleteChapter}>Xoá chương</button>
+            <button class="btn pri sm" type="button" disabled={writeBlocked || !!temps.length} title={writeBlocked ? 'Quota KV hôm nay đã hết — nháp cục bộ vẫn được giữ' : (online ? 'Ghi chương vào Cloudflare KV (book + registry)' : 'Chỉ lưu nháp phiên — chưa ghi Cloudflare KV')} onClick={saveChapter}>{writeBlocked ? 'Hết quota KV' : (online ? 'Lưu chương' : 'Lưu nháp phiên')}</button>
+          </div>
+          <div class="v2chap-danger">
+            <span class="sm">Xoá chương đang chọn khỏi bộ — cần gõ XOÁ để xác nhận, không khôi phục được.</span>
+            <span class="grow"></span>
+            <button class="btn ghost sm danger" type="button" disabled={writeBlocked || !chapters.length} onClick={deleteChapter}>Xoá chương</button>
           </div>
           {preview ? <div class="v2reader-preview"><div class="reading"><h2>{title}</h2><div class="rte" dangerouslySetInnerHTML={{ __html: html }} /></div></div> : null}
         </div>

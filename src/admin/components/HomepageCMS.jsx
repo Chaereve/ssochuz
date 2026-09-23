@@ -79,18 +79,18 @@ export function HomepageCMS({ registry, apiBase, onSave, writeBlocked = false, o
                   <span class="grow"><b>{b ? b.title : s.slug}</b>
                     <LockedBadge book={b} />
                     {b && b.lock ? <p class="v2lock-warn">Truyện này đang khóa. Người đọc có thể thấy thẻ truyện nhưng không thể đọc chương nếu không có token hợp lệ.</p> : null}
-                    <input class="inp" value={s.reason} placeholder="Lý do đề xuất (tuỳ chọn)"
+                    <input class="inp" aria-label={'Lý do đề xuất cho ' + (b ? b.title : s.slug)} value={s.reason} placeholder="Lý do đề xuất (tuỳ chọn)"
                       onInput={(e) => setSlides(slides.map((x, k) => k === i ? Object.assign({}, x, { reason: e.target.value }) : x))} />
                   </span>
-                  <button class="btn ghost sm" type="button" onClick={() => setSlides(move(slides, i, -1))}>↑</button>
-                  <button class="btn ghost sm" type="button" onClick={() => setSlides(move(slides, i, 1))}>↓</button>
-                  <button class="btn ghost sm" type="button" onClick={() => setSlides(slides.filter((_, k) => k !== i))}>Gỡ</button>
+                  <button class="btn ghost sm" type="button" title="Lên trước" aria-label="Đưa slide lên trước" onClick={() => setSlides(move(slides, i, -1))}>↑</button>
+                  <button class="btn ghost sm" type="button" title="Xuống sau" aria-label="Đưa slide xuống sau" onClick={() => setSlides(move(slides, i, 1))}>↓</button>
+                  <button class="btn ghost sm v2sort-x" type="button" onClick={() => setSlides(slides.filter((_, k) => k !== i))}>Gỡ</button>
                 </li>
               );
             })}
           </ul>
           <div class="row">
-            <select class="inp" value={addSlide} onChange={(e) => setAddSlide(e.target.value)}>
+            <select class="inp" aria-label="Chọn bộ thêm vào hero" value={addSlide} onChange={(e) => setAddSlide(e.target.value)}>
               <option value="">Thêm bộ vào hero…</option>
               {lib.filter((b) => !slides.some((s) => s.slug === b.slug)).map((b) => <option key={b.slug} value={b.slug}>{b.title}</option>)}
             </select>
@@ -107,15 +107,15 @@ export function HomepageCMS({ registry, apiBase, onSave, writeBlocked = false, o
                 <li key={slug}>
                   <BookCover book={b} apiBase={apiBase} width={40} height={60} />
                   <span class="grow"><b>{b ? b.title : slug}</b></span>
-                  <button class="btn ghost sm" type="button" onClick={() => setChoice(move(choice, i, -1))}>↑</button>
-                  <button class="btn ghost sm" type="button" onClick={() => setChoice(move(choice, i, 1))}>↓</button>
-                  <button class="btn ghost sm" type="button" onClick={() => setChoice(choice.filter((_, k) => k !== i))}>Gỡ</button>
+                  <button class="btn ghost sm" type="button" title="Lên trước" aria-label="Đưa lên trước" onClick={() => setChoice(move(choice, i, -1))}>↑</button>
+                  <button class="btn ghost sm" type="button" title="Xuống sau" aria-label="Đưa xuống sau" onClick={() => setChoice(move(choice, i, 1))}>↓</button>
+                  <button class="btn ghost sm v2sort-x" type="button" onClick={() => setChoice(choice.filter((_, k) => k !== i))}>Gỡ</button>
                 </li>
               );
             })}
           </ul>
           <div class="row">
-            <select class="inp" value={addChoice} onChange={(e) => setAddChoice(e.target.value)}>
+            <select class="inp" aria-label="Chọn bộ thêm vào lựa chọn biên tập" value={addChoice} onChange={(e) => setAddChoice(e.target.value)}>
               <option value="">Thêm bộ vào lựa chọn biên tập…</option>
               {lib.filter((b) => choice.indexOf(b.slug) < 0).map((b) => <option key={b.slug} value={b.slug}>{b.title}</option>)}
             </select>
@@ -127,13 +127,13 @@ export function HomepageCMS({ registry, apiBase, onSave, writeBlocked = false, o
           <h3>Lịch ra chương</h3>
           {sched.map((it, i) => (
             <div class="v2form row" key={i}>
-              <input class="inp" value={it.days || ''} placeholder="Thứ 2, Thứ 5" onInput={(e) => setSched(sched.map((x, k) => k === i ? Object.assign({}, x, { days: e.target.value }) : x))} />
-              <select class="inp" value={it.slug || ''} onChange={(e) => setSched(sched.map((x, k) => k === i ? Object.assign({}, x, { slug: e.target.value, title: (books[e.target.value] && books[e.target.value].title) || x.title }) : x))}>
+              <input class="inp" aria-label="Ngày trong tuần" value={it.days || ''} placeholder="Thứ 2, Thứ 5" onInput={(e) => setSched(sched.map((x, k) => k === i ? Object.assign({}, x, { days: e.target.value }) : x))} />
+              <select class="inp" aria-label="Bộ truyện trong lịch" value={it.slug || ''} onChange={(e) => setSched(sched.map((x, k) => k === i ? Object.assign({}, x, { slug: e.target.value, title: (books[e.target.value] && books[e.target.value].title) || x.title }) : x))}>
                 <option value="">Chọn bộ…</option>
                 {lib.map((b) => <option key={b.slug} value={b.slug}>{b.title}</option>)}
               </select>
-              <input class="inp" value={it.detail || ''} placeholder="Ghi chú" onInput={(e) => setSched(sched.map((x, k) => k === i ? Object.assign({}, x, { detail: e.target.value }) : x))} />
-              <button class="btn ghost sm" type="button" onClick={() => setSched(sched.filter((_, k) => k !== i))}>Xoá</button>
+              <input class="inp" aria-label="Ghi chú lịch" value={it.detail || ''} placeholder="Ghi chú" onInput={(e) => setSched(sched.map((x, k) => k === i ? Object.assign({}, x, { detail: e.target.value }) : x))} />
+              <button class="btn ghost sm v2sort-x" type="button" onClick={() => setSched(sched.filter((_, k) => k !== i))}>Xoá</button>
             </div>
           ))}
           <button class="btn ghost sm" type="button" onClick={() => setSched(sched.concat([{ days: '', slug: '', title: '', detail: '' }]))}>Thêm dòng lịch</button>
@@ -145,8 +145,8 @@ export function HomepageCMS({ registry, apiBase, onSave, writeBlocked = false, o
         <section class="card2">
           <h3>Thông báo trang chủ</h3>
           <label class="chk"><input type="checkbox" checked={!!announce.enabled} onChange={(e) => setAnnounce(Object.assign({}, announce, { enabled: e.target.checked }))} /> Bật banner</label>
-          <input class="inp" value={announce.text} placeholder="Nội dung thông báo" onInput={(e) => setAnnounce(Object.assign({}, announce, { text: e.target.value }))} />
-          <input class="inp" value={announce.href} placeholder="Link (tuỳ chọn)" onInput={(e) => setAnnounce(Object.assign({}, announce, { href: e.target.value }))} />
+          <input class="inp" aria-label="Nội dung thông báo" value={announce.text} placeholder="Nội dung thông báo" onInput={(e) => setAnnounce(Object.assign({}, announce, { text: e.target.value }))} />
+          <input class="inp" aria-label="Link thông báo (tuỳ chọn)" value={announce.href} placeholder="Link (tuỳ chọn)" onInput={(e) => setAnnounce(Object.assign({}, announce, { href: e.target.value }))} />
         </section>
 
         <div class="row sticky-actions">

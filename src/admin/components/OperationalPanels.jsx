@@ -84,7 +84,7 @@ export function DoctorPanel({ state, onKvAudit, onScanBooks, onRecount, onReload
         <div class="tile"><b>{num(issues.missingCover.length)}</b><span>thiếu bìa</span></div>
         <div class="tile"><b>{num(issues.missingSynopsis.length)}</b><span>thiếu mô tả</span></div>
       </div>
-      {error ? <div class="msgbar show err">{error}</div> : null}
+      {error ? <div class="msgbar show err">{error}<div class="v2err-actions"><button class="btn ghost sm" type="button" onClick={runScan}>Thử quét lại</button></div></div> : null}
       <div class="v2ops-grid">
         <div class="v2mini"><b>Registry quick check</b><p class="hint">Slug trùng: {issues.dup.slice(0, 6).join(', ') || 'không thấy'}</p><p class="hint">Thiếu tên: {issues.missingTitle.slice(0, 6).join(', ') || 'không thấy'}</p></div>
         <div class="v2mini"><b>KV write quota</b><p class="hint">Đang tính: {num(state.quota && state.quota.writesToday)}/{num(state.quota && state.quota.limit || 1000)} lượt ghi hôm nay ({state.quota && state.quota.source}).</p><span class="kvbar"><span style={{ width: pct(state.quota && state.quota.writesToday, state.quota && state.quota.limit || 1000) + '%' }}></span></span></div>
@@ -92,9 +92,9 @@ export function DoctorPanel({ state, onKvAudit, onScanBooks, onRecount, onReload
       </div>
       {scan ? <div class="v2doctor-scan">
         <div class="tiles v2tiles4"><div class="tile"><b>{num(scan.scanned)}</b><span>book đã quét ({scan.source})</span></div><div class="tile"><b>{num(scan.missing)}</b><span>thiếu book</span></div><div class="tile"><b>{num(scan.mismatch)}</b><span>lệch số chương</span></div><div class="tile"><b>{num(scan.empty)}</b><span>chương rỗng</span></div></div>
-        {scan.rows && scan.rows.length ? <div class="v2table-wrap"><table class="tbl v2book-table"><thead><tr><th>Bộ</th><th>Vấn đề</th><th>Registry</th><th>Book</th><th></th></tr></thead><tbody>{scan.rows.map((row) => <tr key={row.slug + row.issue}><td><StoryLink registry={state.registry} slug={row.slug} /></td><td>{row.issue}</td><td>{row.registry == null ? '—' : num(row.registry)}</td><td>{row.actual == null ? '—' : num(row.actual)}</td><td>{onFix ? <button class="btn ghost sm" type="button" disabled={!!fixBusy} onClick={() => runFix(row)}>{fixBusy === row.slug + row.issue ? 'Đang sửa…' : 'Sửa'}</button> : null}</td></tr>)}</tbody></table></div> : <div class="msgbar show ok">Quét xong, chưa thấy lệch lớn trong book.</div>}
+        {scan.rows && scan.rows.length ? <div class="v2table-wrap"><table class="tbl v2book-table"><thead><tr><th>Bộ</th><th>Vấn đề</th><th>Registry</th><th>Book</th><th></th></tr></thead><tbody>{scan.rows.map((row) => <tr key={row.slug + row.issue}><td data-lb="Bộ"><StoryLink registry={state.registry} slug={row.slug} /></td><td data-lb="Vấn đề">{row.issue}</td><td data-lb="Registry">{row.registry == null ? '—' : num(row.registry)}</td><td data-lb="Book">{row.actual == null ? '—' : num(row.actual)}</td><td data-lb="Thao tác">{onFix ? <button class="btn ghost sm" type="button" disabled={!!fixBusy} onClick={() => runFix(row)}>{fixBusy === row.slug + row.issue ? 'Đang sửa…' : 'Sửa'}</button> : null}</td></tr>)}</tbody></table></div> : <div class="msgbar show ok">Quét xong, chưa thấy lệch lớn trong book.</div>}
       </div> : null}
-      {audit ? <div class="v2table-wrap"><table class="tbl v2book-table"><thead><tr><th>Prefix</th><th>Keys</th><th>Bytes biết được</th><th>Không metadata</th></tr></thead><tbody>{(audit.groups || []).map((g) => <tr key={g.prefix}><td><b>{g.prefix}</b></td><td>{num(g.keys)}</td><td>{num(g.bytes)}</td><td>{num(g.unknownBytes)}</td></tr>)}</tbody></table></div> : <NeedOnline state={state}><p class="hint">Bấm Audit KV để xem phân bổ key/byte theo prefix.</p></NeedOnline>}
+      {audit ? <div class="v2table-wrap"><table class="tbl v2book-table"><thead><tr><th>Prefix</th><th>Keys</th><th>Bytes biết được</th><th>Không metadata</th></tr></thead><tbody>{(audit.groups || []).map((g) => <tr key={g.prefix}><td data-lb="Prefix"><b>{g.prefix}</b></td><td data-lb="Keys">{num(g.keys)}</td><td data-lb="Bytes">{num(g.bytes)}</td><td data-lb="Không metadata">{num(g.unknownBytes)}</td></tr>)}</tbody></table></div> : <NeedOnline state={state}><p class="hint">Bấm Audit KV để xem phân bổ key/byte theo prefix.</p></NeedOnline>}
       <div class="savebar"><button class="btn pri" type="button" disabled={!state.online || (state.quota && state.quota.writesToday >= (state.quota.limit || 1000))} onClick={onRecount}>Đếm lại số chương từ KV</button></div>
     </section>
   </div>;
@@ -123,8 +123,8 @@ export function CommentsPanel({ state, onLoad, onDelete }) {
   return <div id="pane-cmts" class="v2pane"><section class="card2">
     <div class="row"><h3>Bình luận</h3><span class="grow"></span><LoaderButton busy={busy} onClick={load}>Đọc bình luận</LoaderButton></div>
     <NeedOnline state={state}><p class="hint">Đang có {num(data.count != null ? data.count : (data.items || []).length)} bình luận trong bộ nhớ admin.{data.fallback ? ' Worker cũ nên đang gom từng bộ.' : ''}</p></NeedOnline>
-    {error ? <div class="msgbar show err">{error}</div> : null}
-    <div class="row v2filters"><input class="inp" placeholder="Tìm nội dung/người gửi/slug" value={q} onInput={(e) => setQ(e.currentTarget.value)} /><select class="inp" value={slug} onChange={(e) => setSlug(e.currentTarget.value)}><option value="">Mọi bộ</option>{((state.registry && state.registry.lib) || []).map((b) => <option key={b.slug} value={b.slug}>{b.title}</option>)}</select><button type="button" class={`btn ghost sm ${onlySpam ? 'v2tab-on' : ''}`} onClick={() => setOnlySpam(!onlySpam)}>Chỉ nghi spam ({spamSuspects(data).length})</button></div>
+    {error ? <div class="msgbar show err">{error}<div class="v2err-actions"><button class="btn ghost sm" type="button" onClick={load}>Thử lại</button></div></div> : null}
+    <div class="row v2filters"><input class="inp" aria-label="Tìm bình luận" placeholder="Tìm nội dung/người gửi/slug" value={q} onInput={(e) => setQ(e.currentTarget.value)} /><select class="inp" value={slug} onChange={(e) => setSlug(e.currentTarget.value)}><option value="">Mọi bộ</option>{((state.registry && state.registry.lib) || []).map((b) => <option key={b.slug} value={b.slug}>{b.title}</option>)}</select><button type="button" class={`btn ghost sm ${onlySpam ? 'v2tab-on' : ''}`} onClick={() => setOnlySpam(!onlySpam)}>Chỉ nghi spam ({spamSuspects(data).length})</button></div>
     <div class="v2listcards">{rows.length ? rows.slice(0, 400).map((c) => <article class="v2itemrow" key={c.slug + ':' + c.id}>
       <div><b>{c.name || 'Bạn đọc'}</b><span class="sm muted"> · {dateText(c.createdAt)} · <StoryLink registry={state.registry} slug={c.slug} /> {c.ch ? <span class="pill acc">chương {c.ch}</span> : null}</span><p>{c.text}</p></div>
       <button class="btn ghost sm danger" type="button" onClick={() => onDelete(c.slug, c.id)}>Xoá</button>
@@ -153,9 +153,9 @@ export function ReportsPanel({ state, onLoad, onMark }) {
   return <div id="pane-reports" class="v2pane"><section class="card2">
     <div class="row"><h3>Báo lỗi</h3><span class="grow"></span><LoaderButton busy={busy} onClick={load}>Đọc báo lỗi</LoaderButton></div>
     <NeedOnline state={state}><p class="hint">Bấm “Xử lý xong” để ghi trạng thái vào KV (PATCH /api/admin/reports); Tổng quan đếm “Báo lỗi chưa xử lý” theo số chưa xử lý.</p></NeedOnline>
-    {error ? <div class="msgbar show err">{error}</div> : null}
+    {error ? <div class="msgbar show err">{error}<div class="v2err-actions"><button class="btn ghost sm" type="button" onClick={load}>Thử lại</button></div></div> : null}
     <div class="row v2filters">
-      <input class="inp" placeholder="Tìm báo lỗi" value={q} onInput={(e) => setQ(e.currentTarget.value)} />
+      <input class="inp" aria-label="Tìm báo lỗi" placeholder="Tìm báo lỗi" value={q} onInput={(e) => setQ(e.currentTarget.value)} />
       <button class="btn ghost sm" type="button" onClick={load}>Tìm</button>
       <span class="v2reptabs">
         <button type="button" class={scope === 'all' ? 'v2tab-on' : ''} onClick={() => setScope('all')}>Tất cả ({num(data.count)})</button>
@@ -213,14 +213,14 @@ export function StatsPanel({ state, onLoad }) {
   return <div id="pane-stats" class="v2pane"><section class="card2">
     <div class="row"><h3>Thống kê</h3><span class="grow"></span><LoaderButton busy={busy} onClick={load}>Đọc thống kê KV</LoaderButton></div>
     <NeedOnline state={state}><p class="hint">Thống kê chi tiết nằm trong KV; tab này không ghi dữ liệu.</p></NeedOnline>
-    {error ? <div class="msgbar show err">{error}</div> : null}
+    {error ? <div class="msgbar show err">{error}<div class="v2err-actions"><button class="btn ghost sm" type="button" onClick={load}>Thử lại</button></div></div> : null}
     <div class="tiles v2tiles4"><div class="tile"><b>{num(top.length)}</b><span>bộ có số liệu</span></div><div class="tile"><b>{num(totalViews)}</b><span>lượt đọc trong top</span></div><div class="tile"><b>{num(totalVotes)}</b><span>phiếu trong top</span></div><div class="tile"><b>{num((stats && stats.days && stats.days.length) || 0)}</b><span>ngày có chuỗi</span></div></div>
     <div class="row"><h3>Lượt đọc 30 ngày</h3></div>
     <BarsChart days={(stats && stats.days) || []} />
-    <div class="v2table-wrap"><table class="tbl v2book-table"><thead><tr><th>Bộ</th><th>Views</th><th>Votes</th><th>Voters</th><th>Hôm nay</th></tr></thead><tbody>{top.map((it) => <tr key={it.slug}><td><StoryLink registry={state.registry} slug={it.slug} /></td><td>{num(it.views)}</td><td>{num(it.votes)}</td><td>{num(it.voters)}</td><td>{num(it.viewsToday)} đọc · {num(it.votesToday)} phiếu</td></tr>)}</tbody></table>{!top.length ? <div class="empty sm">Chưa có dữ liệu thống kê trong phiên này.</div> : null}</div>
+    <div class="v2table-wrap"><table class="tbl v2book-table"><thead><tr><th>Bộ</th><th>Views</th><th>Votes</th><th>Voters</th><th>Hôm nay</th></tr></thead><tbody>{top.map((it) => <tr key={it.slug}><td data-lb="Bộ"><StoryLink registry={state.registry} slug={it.slug} /></td><td data-lb="Views">{num(it.views)}</td><td data-lb="Votes">{num(it.votes)}</td><td data-lb="Voters">{num(it.voters)}</td><td data-lb="Hôm nay">{num(it.viewsToday)} đọc · {num(it.votesToday)} phiếu</td></tr>)}</tbody></table>{!top.length ? <div class="empty sm">Chưa có dữ liệu thống kê trong phiên này.</div> : null}</div>
     {top.length ? <div>
       <div class="row"><h3>Phiếu theo chương</h3><span class="grow"></span><select class="sel" value={pick} onChange={(e) => setChapSlug(e.currentTarget.value)}>{top.map((it) => <option key={it.slug} value={it.slug}>{titleOf(it.slug)}</option>)}</select></div>
-      {chapRows.length ? <div class="v2table-wrap"><table class="tbl v2book-table"><thead><tr><th>Chương</th><th>Phiếu</th></tr></thead><tbody>{chapRows.map((x) => <tr key={x.ch}><td>Chương {num(x.ch)}</td><td>{num(x.count)}</td></tr>)}</tbody></table></div> : <p class="hint">Bộ này chưa có phiếu khóa theo chương nào.</p>}
+      {chapRows.length ? <div class="v2table-wrap"><table class="tbl v2book-table"><thead><tr><th>Chương</th><th>Phiếu</th></tr></thead><tbody>{chapRows.map((x) => <tr key={x.ch}><td data-lb="Chương">Chương {num(x.ch)}</td><td data-lb="Phiếu">{num(x.count)}</td></tr>)}</tbody></table></div> : <p class="hint">Bộ này chưa có phiếu khóa theo chương nào.</p>}
     </div> : null}
   </section></div>;
 }
@@ -243,8 +243,8 @@ export function VotesPanel({ state, onLoadVoters, onRemoveVotes, onResetVotes })
   return <div id="pane-votes" class="v2pane"><section class="card2">
     <div class="row"><h3>Phiếu bầu</h3><span class="grow"></span><LoaderButton busy={busy} onClick={() => load()}>Đọc phiếu</LoaderButton></div>
     <NeedOnline state={state}><p class="hint">Gỡ/reset phiếu là thao tác ghi KV, admin tính quota ước lượng và hỏi xác nhận mạnh.</p></NeedOnline>
-    {error ? <div class="msgbar show err">{error}</div> : null}
-    <div class="row v2filters"><select class="inp" value={slug} onChange={(e) => { setSlug(e.currentTarget.value); setData(null); }}><option value="">Chọn bộ</option>{lib.map((b) => <option key={b.slug} value={b.slug}>{b.title}</option>)}</select><button class="btn ghost sm" type="button" onClick={() => load()}>Xem</button></div>
+    {error ? <div class="msgbar show err">{error}<div class="v2err-actions"><button class="btn ghost sm" type="button" onClick={() => load()}>Thử lại</button></div></div> : null}
+    <div class="row v2filters"><select class="inp" aria-label="Chọn bộ truyện" value={slug} onChange={(e) => { setSlug(e.currentTarget.value); setData(null); }}><option value="">Chọn bộ</option>{lib.map((b) => <option key={b.slug} value={b.slug}>{b.title}</option>)}</select><button class="btn ghost sm" type="button" onClick={() => load()}>Xem</button></div>
     {data ? <div class="tiles v2tiles4"><div class="tile"><b>{num(data.total)}</b><span>phiếu đang hiện</span></div><div class="tile"><b>{num(data.voters)}</b><span>khóa người bầu</span></div><div class="tile"><b>{num(data.counted)}</b><span>đếm mới</span></div><div class="tile"><b>{num(data.base)}</b><span>số cũ import</span></div></div> : null}
     <div class="v2listcards">{voters.length ? voters.slice(0, 600).map((v) => <label class="v2itemrow v2checkrow" key={v.key}><input type="checkbox" checked={!!selected[v.key]} onChange={() => toggle(v.key)} /><div><b>{v.kindLabel || v.kind || 'người bầu'}</b><span class="sm muted"> · {v.ch ? 'chương ' + v.ch : 'cả bộ'} · {dateText(v.at)}</span><code>{v.id || v.key}</code></div></label>) : <div class="empty sm">Chưa đọc hoặc bộ này chưa có phiếu khóa người bầu.</div>}</div>
     <div class="savebar"><span class="sm muted">{num(keys.length)} phiếu được chọn</span><button class="btn ghost danger" type="button" disabled={!keys.length} onClick={remove}>Gỡ phiếu đã chọn</button><span class="grow"></span><input class="inp sm" style="max-width:130px" placeholder="chương?" value={resetCh} onInput={(e) => setResetCh(e.currentTarget.value)} /><button class="btn ghost danger" type="button" disabled={!slug} onClick={() => onResetVotes({ slug, ch: /^\d+$/.test(resetCh.trim()) ? Number(resetCh.trim()) : undefined })}>Reset phiếu bộ này</button></div>
@@ -260,7 +260,7 @@ export function LogPanel({ state, onLoad }) {
   return <div id="pane-log" class="v2pane"><section class="card2">
     <div class="row"><h3>Nhật ký</h3><span class="grow"></span><LoaderButton busy={busy} onClick={load}>Đọc log</LoaderButton></div>
     <NeedOnline state={state}><p class="hint">Hiển thị tối đa 200 thao tác gần nhất từ key <code>log</code>.</p></NeedOnline>
-    {error ? <div class="msgbar show err">{error}</div> : null}
+    {error ? <div class="msgbar show err">{error}<div class="v2err-actions"><button class="btn ghost sm" type="button" onClick={load}>Thử lại</button></div></div> : null}
     {(() => {
       const session = (state.audit || []).slice(0, 200);
       const merged = items.length ? items.slice(0, 200) : session;
