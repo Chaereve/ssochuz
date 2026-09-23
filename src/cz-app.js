@@ -97,7 +97,14 @@ import { parseChapterTitle, nextMainChapterNo, chapterIsEmpty, chapterHasMedia }
   function revNum(r) { return r && r.rev ? String(r.rev).replace(/[^0-9]/g, '') : '0'; }
   function newer(a, b) { if (!a) return b; if (!b) return a; return revNum(a) >= revNum(b) ? a : b; }
 
-  /* -- thư viện: ưu tiên KV → cache → file tĩnh ------------------------- */
+  /* -- thư viện: ưu tiên KV → cache → file tĩnh -------------------------
+     VÁ (23/09): KV có thể trả `{lib: []}` khi kho trống hoặc admin vô tình ghi
+     đè bản đã lọc — bản cũ coi mảng rỗng là “hợp lệ” nên nhận luôn, bỏ qua file
+     tĩnh còn đủ bộ, rồi cache luôn bản rỗng vào localStorage (lần sau đọc cache
+     rỗng → trang tác giả/couple báo “Chưa tải được dữ liệu”). Nay: chỉ nhận bản
+     KV có sách; bản rỗng rớt về tĩnh/cache tốt và không bao giờ ghi đè cache
+     tốt bằng bản rỗng. */
+  function hasLib(r) { return !!(r && Array.isArray(r.lib) && r.lib.length); }
   function registry() {
     if (memo.reg) return Promise.resolve({ reg: memo.reg, src: memo.src });
     var cached = lsGet('ssochuz-reg', TTL_REG);
@@ -106,7 +113,7 @@ import { parseChapterTitle, nextMainChapterNo, chapterIsEmpty, chapterHasMedia }
        nhờ hạn dùng 60 giây + Worker tự xoá cache mỗi lần ghi. */
     var p = useApiNow ? jgetApi(API + '/api/registry', 9000) : Promise.resolve(null);
     return p.then(function (api) {
-      if (api && api.lib) {
+      if (hasLib(api)) {
         clearFallback();
         memo.reg = api; memo.src = 'kv'; w.CZ_SRC = 'kv';
         paintNotif();   /* số chương từ KV về là chuông cập nhật */
@@ -114,10 +121,16 @@ import { parseChapterTitle, nextMainChapterNo, chapterIsEmpty, chapterHasMedia }
         paintFallback();
         return { reg: api, src: 'kv' };
       }
-      if (useApiNow) markFallback();    /* N13: nhớ 10 phút khỏi đập cửa Worker */
+      /* Worker trả mảng rỗng (KV trống) KHÔNG tính là “trượt” để cấm 10 phút —
+         lần mở trang sau thử lại ngay, KV vừa khôi phục là thấy liền. Chỉ cấm
+         khi Worker không trả lời / trả rác. */
+      if (useApiNow && !(api && Array.isArray(api.lib))) markFallback();    /* N13: nhớ 10 phút khỏi đập cửa Worker */
       return jget('/data/registry.json?_=' + Date.now(), 9000).then(function (stat) {
-        var reg = newer(stat, cached) || { lib: [] };
-        if (stat) lsSet('ssochuz-reg', { t: Date.now(), v: stat });
+        var reg;
+        if (hasLib(stat) && !hasLib(cached)) reg = stat;
+        else if (hasLib(cached) && !hasLib(stat)) reg = cached;
+        else reg = newer(stat, cached) || { lib: [] };
+        if (hasLib(reg)) lsSet('ssochuz-reg', { t: Date.now(), v: reg });
         memo.reg = reg; memo.src = 'static'; w.CZ_SRC = 'static';
         paintNotif();
         paintFallback();

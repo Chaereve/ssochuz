@@ -1472,6 +1472,19 @@ async function putKV(req, env, key, cors, label) {
       if (n && typeof n === 'object') { delete n.postId; delete n.count; delete n.canRead; }
     });
   }
+  /* CHẶN GHI ĐÈ MẤT DỮ LIỆU (23/09): admin cũ đọc registry bản public đã lọc
+     rồi PUT lại → mỗi lần lưu là một lần xoá sách khỏi KV, rỗng dần tới
+     {lib: []} khiến trang tác giả/couple báo “Chưa tải được dữ liệu”. Nay từ
+     chối ghi bản rỗng đè lên kho đang có sách, trừ khi client gửi kèm
+     force:true (chỉ luồng “xoá bộ” đã gõ slug xác nhận mới gửi). */
+  if (key === 'registry' && parsed && Array.isArray(parsed.lib) && parsed.lib.length === 0 && parsed.force !== true) {
+    let cur = null;
+    try { cur = await env.CZ_KV.get('registry', { type: 'json' }); } catch (e) { cur = null; }
+    if (cur && Array.isArray(cur.lib) && cur.lib.length) {
+      return json({ ok: false, error: 'từ chối ghi registry rỗng đè lên ' + cur.lib.length + ' bộ đang có — hãy đọc lại registry đầy đủ (kèm ADMIN_KEY) rồi lưu lại, hoặc dùng Khôi phục backup' }, { status: 400, cors });
+    }
+  }
+  if (parsed && typeof parsed === 'object') delete parsed.force;
   if (key === 'registry') body = registryJSON(parsed);
   const bytes = new TextEncoder().encode(body).length;
   const saved = new Date().toISOString();

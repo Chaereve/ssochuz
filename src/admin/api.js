@@ -92,7 +92,12 @@ export class AdminApi {
 
   health() { return this.request('/api/health', { auth: false }); }
   whoami() { return this.request('/api/whoami'); }
-  registry() { return this.request('/api/registry', { auth: false }); }
+  /* VÁ (23/09): admin PHẢI đọc registry kèm ADMIN_KEY để nhận bản ĐẦY ĐỦ
+     (kể cả nháp/chờ duyệt/hẹn giờ/lưu trữ). Bản cũ dùng auth:false nên chỉ nhận
+     bản public đã lọc — rồi mọi lần lưu PUT cả bản lọc đó đè lên KV, sách
+     non-public mất dần khỏi kho, trang tác giả/couple báo “Chưa tải được
+     dữ liệu”. Chế độ tĩnh không gọi hàm này (dùng staticRegistry). */
+  registry() { return this.request('/api/registry'); }
   kvStats() { return this.request('/api/admin/kv'); }
   adminReports(query = '') { return this.request('/api/admin/reports' + (query ? '?q=' + encodeURIComponent(query) : '')); }
   patchReport(id, done) { return this.request('/api/admin/reports', { method: 'PATCH', body: { id, done: !!done } }); }

@@ -419,3 +419,43 @@
   .v2todo:hover,.v2gcard:hover{transform:none}
   .v2side{transition:none}
 }
+
+/* ===== Vá tràn ngang admin (23/09) =====
+   Triệu chứng: “1 phần bên phải không hiện đủ” — nội dung dài/không-ngắt-dòng
+   (URL trong báo lỗi, blob:/data:, slug, tên file…) đẩy rộng khung trang. Vá
+   từng chỗ + lưới an toàn .v2frame (mọi bảng/biểu đồ rộng đều đã có hộp cuộn
+   riêng nên lưới này chỉ cắt phần tràn bệnh lý, không giấu nội dung thật). */
+/* Lưới an toàn: cắt tràn ở mép khung. Dùng clip (không phải hidden) nên thanh
+   top/sidebar dính (sticky) và menu thả xuống vẫn chạy bình thường. */
+.v2frame{overflow:clip}
+/* Biểu đồ 30 cột (tab Thống kê): khung hẹp thì cuộn trong hộp, không tràn thẻ */
+.v2chart{overflow-x:auto;scrollbar-width:thin}
+/* Hàng bình luận/báo lỗi/log/phiếu: cột chữ co lại được, chữ dài tự ngắt */
+.v2itemrow>*{min-width:0}
+.v2itemrow .btn{flex:none}
+.v2itemrow p{overflow-wrap:anywhere}
+/* Banner/thông báo chứa key KV, URL, blob: dài — chỉ ngắt khi sắp tràn */
+.admin .msgbar,.admin .hint,.admin .v2partial,.admin .v2staticbar,.admin .v2role-warn,.admin .v2lock-warn,.admin .v2up-err{overflow-wrap:anywhere}
+.admin code{overflow-wrap:anywhere}
+/* Thẻ mini (tab Kiểm tra dữ liệu/Cài đặt): slug dài, ô chọn file không đẩy lưới */
+.v2mini{min-width:0;overflow-wrap:anywhere}
+.v2mini .inp,.v2mini input{max-width:100%}
+/* Danh sách kéo-thả (tab Chương/Homepage): tiêu đề co được; máy hẹp xếp 2 hàng */
+.v2sort li>.grow{min-width:0}
+.v2sort li input.inp{max-width:100%}
+@media(max-width:560px){
+  .v2sort li{flex-wrap:wrap}
+  .v2sort li>.grow{flex:1 1 100%}
+}
+/* Dòng lịch ra chương: .v2form (grid) từng thắng .row (flex) khiến 4 ô xếp dọc */
+.v2form.row{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+.v2form.row>.inp{flex:1 1 150px}
+/* Hàng URL bìa (Sửa bộ/Thêm bộ): ô nhập co giãn + xuống dòng trên máy hẹp */
+.v2up-row{flex-wrap:wrap}
+.v2up-row>.inp{flex:1 1 200px}
+.v2up input[type=file]{max-width:100%}
+/* Thẻ xem trước slide: slug dài không chòi khỏi thẻ 120px */
+.v2hp-card b{overflow-wrap:anywhere}
+/* Ô tìm kiếm trên topbar được co dưới cỡ chữ mặc định — top mượt hơn */
+.v2top .v2search{min-width:0}
+.v2search .inp{min-width:0}

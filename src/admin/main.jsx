@@ -141,11 +141,14 @@ function App() {
     const audit = [row].concat(store.getState().audit || []).slice(0, 200);
     store.setState({ audit });
   }
-  async function writeRegistry(registry, okMsg = 'Đã lưu thư viện') {
+  /* force: chỉ luồng “xoá bộ” (đã gõ slug xác nhận) được gửi kèm force:true
+     khi xoá tới bộ cuối cùng — Worker mặc định từ chối ghi registry rỗng đè
+     lên kho đang có sách để chống mất dữ liệu. */
+  async function writeRegistry(registry, okMsg = 'Đã lưu thư viện', force = false) {
     const next = touchRegistry(registry);
     if (state.online) {
       ensureQuota(1, okMsg);
-      await api.putRegistry(next);
+      await api.putRegistry(force ? Object.assign({}, next, { force: true }) : next);
       trackQuotaWrite(1, okMsg);
     }
     store.setState({ registry: next, pendingRegistry: null, partialError: '' });
@@ -776,7 +779,7 @@ function App() {
     try {
       const registry = removeBookReferences(cloneRegistry(state.registry), slug);
       await deleteBookKv(slug).catch(() => null);
-      await writeRegistry(registry, 'Đã xoá “' + book.title + '”');
+      await writeRegistry(registry, 'Đã xoá “' + book.title + '”', !((registry.lib || []).length));
       setSelected((prev) => Object.fromEntries(Object.entries(prev).filter(([key]) => key !== slug)));
       if (currentSlug === slug) { setCurrentSlug(''); setActiveTab('list'); }
     } catch (error) { toast('Xoá lỗi: ' + (error.message || error), 'err'); }

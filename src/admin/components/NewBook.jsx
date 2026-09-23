@@ -43,7 +43,7 @@ export function NewBook({ registry, onCreate, onUploadImage, apiBase = '', write
         </div>
       </section>
       <section class="v2fsec" aria-label="Phân loại và hiển thị">
-        <div class="v2fsec-head"><b>Phân loại &amp; hiển thị</b><span class="hint">Tình trạng hoàn thành khác trạng thái xuất bản; mặc đá»nh Xuáº¥t báº£n â chá»n NhÃ¡p thÃ¬ truyá»n CHá» tháº¥y trong admin, khÃ´ng lÃªn trang chá»§.</span></div>
+        <div class="v2fsec-head"><b>Phân loại &amp; hiển thị</b><span class="hint">Tình trạng hoàn thành khác trạng thái xuất bản; mặc định Xuất bản — chọn Nháp thì truyện CHỈ thấy trong admin, không lên trang chủ.</span></div>
         <div class="row">
           <label class="fl">Tình trạng hoàn thành
             <select class="inp" value={form.status} onChange={(e) => update('status', e.target.value)}>
