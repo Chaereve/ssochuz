@@ -66,7 +66,7 @@ const chapCount = (reg.lib || []).reduce((sum, b) => sum + (Number(b.chapters) |
   assert.ok(/Phân loại theo thể loại/.test(doc.querySelector('#pane-classify').textContent), 'thiếu tiêu đề Phân loại');
   assert.ok(!!doc.querySelector('button[data-tab="genres"]'), 'thiếu menu Thể loại (CRUD)');
   assert.ok([...doc.querySelectorAll('#tabs button')].some((el) => /Phân loại/.test(el.textContent)), 'thiếu menu Phân loại');
-  assert.ok(!doc.querySelector('#pane-classify .v2tags'), 'Phân loại không được dùng tags');
+  assert.ok(doc.querySelectorAll('#pane-classify .v2gchip').length >= 3, 'Phân loại chưa có dải chip thể loại');
 
   click('button[data-tab="doctor"]');
   await wait(100);

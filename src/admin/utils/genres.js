@@ -72,7 +72,7 @@ const GENRE_HINTS = {
   'hai-huoc': ['hai huoc', 'hai', 'comedy', 'vui', 'tre'],
 };
 
-/* Gợi ý thể loại từ tên/tóm tắt/couple + thể loại các bộ cùng tác giả. Không phải tags. */
+/* Gợi ý thể loại từ tên/tóm tắt/couple + thể loại các bộ cùng tác giả. */
 export function suggestGenres(hint, registry, current) {
   const hay = foldVi([hint, current].filter(Boolean).join(' '));
   const genres = listGenres(registry).filter((g) => g.is_visible);

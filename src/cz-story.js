@@ -446,7 +446,6 @@
             '<span>' + ic('refresh', 'i-s') + ' ' + esc(CZ.timeAgo(n.updated)) + '</span>' +
             statChip() +
           '</div>' +
-          /* thể loại (không dùng tags) — nhãn dưới dòng metadata của hero */
           (CZ.genreLabel(n)
             ? '<div class="stags"><span class="stag">' + esc(String(CZ.genreLabel(n)).slice(0, 30)) + '</span></div>'
             : '') +
@@ -570,6 +569,7 @@
     var rows = [
       ['Tác giả', n.author || '—'],
       ['Couple', n.couple || '—'],
+      ['Thể loại', CZ.genreLabel(n) || '—'],
       ['Năm', n.year || '—'],
       ['Tình trạng', CZ.statusLabel(n.statusCls || n.status)],
       /* bộ chưa đăng chương: ghi “0 chương”, không lặp lại câu mô tả trạng thái */

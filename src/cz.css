@@ -825,6 +825,8 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .card:hover h3 { color: var(--acc); }
 .card .cb { font-size: 12px; line-height: 1.5; letter-spacing: .004em; color: var(--mut);
   display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.card .cgenre { font-size: 11.5px; line-height: 1.4; font-weight: 650; color: var(--acc); margin-top: 2px;
+  display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
 /* --- xem dạng danh sách: một hàng một bộ, có đủ thông tin để chọn ------- */
 .grid.list-view { grid-template-columns: 1fr; gap: 0; }
 .grid.list-view .list-head { display: grid; grid-template-columns: minmax(0, 1fr) 132px 112px; gap: 16px;
@@ -1778,6 +1780,14 @@ body.page-in main { animation: pageIn var(--t-slow) var(--ease-out) both; }
 .fgroup { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .flab { flex: 0 0 auto; min-width: 108px; white-space: nowrap; font-size: 10.5px; line-height: 1.4;
   font-weight: 800; letter-spacing: .13em; text-transform: uppercase; color: var(--dim); font-family: var(--font); }
+.gchips { display: flex; flex-wrap: wrap; gap: 8px; flex: 1; min-width: 0; }
+.gchips > button { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px;
+  border: 1px solid var(--bd); border-radius: 999px; background: var(--surf); color: var(--mut);
+  font-size: 13px; font-weight: 650; }
+.gchips > button:hover { border-color: var(--bd2); color: var(--txt); }
+.gchips > button.on { background: var(--acc-soft); border-color: color-mix(in srgb, var(--acc) 45%, transparent); color: var(--acc); }
+.gchips > button em { font-style: normal; font-size: 11px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.gchips > button.on em { color: var(--acc); }
 @media (max-width: 620px) {
   .fgroup { gap: 6px; }
   .flab { flex: 0 0 100%; }
@@ -3466,7 +3476,7 @@ body.rd-focus .rdcmts { display: none; }
    ========================================================================== */
 [hidden] { display: none !important; }
 
-/* tags chất truyện ở hero trang truyện (admin v2 ghi trường tags vào registry) */
+/* thể loại trên hero trang truyện */
 .stags{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px}
 .stag{display:inline-flex;align-items:center;font-size:12px;font-weight:600;color:var(--mut);background:var(--surf2);border:1px solid var(--bd);border-radius:999px;padding:3px 10px;line-height:1.4}
 [data-theme=dark] .stag{color:var(--mut)}

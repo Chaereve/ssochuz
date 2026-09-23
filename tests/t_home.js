@@ -39,6 +39,12 @@ const LIB = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data/registry
   out.facts = { n: $$('#facts .f').length, labels: $$('#facts .f span').map(e => e.textContent.trim()) };
   out.cards = { n: $$('#grid .card').length, pager: txt('#pager'), firstHref: ($('#grid .card') || {}).getAttribute('href') };
   out.cardsAreRealLinks = /^\/truyen\/[^/]+\/$/.test(out.cards.firstHref || '');
+  out.genre = {
+    group: !!$('#genreGroup'),
+    hidden: $('#genreGroup') ? $('#genreGroup').hidden : null,
+    chips: $$('#genreTabs [data-genre]').length
+  };
+  if (!out.genre.group) errors.push('thiếu nhóm Thể loại #genreGroup');
 
   /* ---------- tìm kiếm + lọc ---------- */
   const q = $('#q');
@@ -113,6 +119,31 @@ const LIB = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data/registry
     click($('#hdr') || doc.body); await wait(60);
     out.menuBamNgoai = st();
     out.menuCo = { ariaControls: burger.getAttribute('aria-controls'), soLink: $$('#czMnav a').length, nhan: $$('#czNav a .nav-lbl').map(e => e.textContent.trim()) };
+  }
+
+  /* Thể loại: danh mục registry hiện chip kể cả khi 0 bộ dùng */
+  {
+    const reg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data/registry.json'), 'utf8'));
+    reg.settings = Object.assign({}, reg.settings || {}, { genres: [
+      { slug: 'co-trang', name: 'Cổ Trang', is_visible: true },
+      { slug: 'hoc-duong', name: 'Học Đường', is_visible: true }
+    ]});
+    const J = (b) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(b), text: () => Promise.resolve(JSON.stringify(b)) });
+    const p2 = page('index.html', {
+      fetch: (url, opt) => {
+        if (String(url).includes('/data/registry.json')) return J(reg);
+        return dataFetch()(url, opt);
+      }
+    });
+    await wait(900);
+    const g2 = p2.doc.querySelector('#genreGroup');
+    const chips = [...p2.doc.querySelectorAll('#genreTabs [data-genre]')].map((b) => b.textContent.replace(/\s+/g, ' ').trim());
+    out.genreCatalog = { hidden: !!(g2 && g2.hidden), chips, errors: p2.errors.slice(0, 2) };
+    if (!g2 || g2.hidden) errors.push('có danh mục thể loại mà #genreGroup vẫn ẩn');
+    if (!chips.some((t) => /Cổ Trang/.test(t))) errors.push('thiếu chip Cổ Trang từ danh mục');
+    if (!chips.some((t) => /Học Đường/.test(t))) errors.push('thiếu chip Học Đường (0 bộ)');
+    const hoc = [...p2.doc.querySelectorAll('#genreTabs [data-genre]')].find((b) => /Học Đường/.test(b.textContent));
+    if (hoc && !/0/.test(hoc.textContent)) errors.push('chip Học Đường phải hiện số 0');
   }
 
   out.errors1 = errors.slice(0, 6);

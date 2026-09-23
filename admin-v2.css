@@ -174,12 +174,6 @@ button.v2genre-pill:hover{border-color:color-mix(in srgb,var(--acc) 45%,var(--bd
 .v2itemrow.v2done b{opacity:.8}
 .v2donepill{background:color-mix(in srgb,var(--ok) 14%,var(--surf2));color:var(--ok);border:1px solid color-mix(in srgb,var(--ok) 30%,transparent);font-weight:650}
 .v2okbtn{color:var(--ok)}
-/* Ô nhập tags */
-.v2tags .inp{max-width:420px}
-.v2tags-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center}
-.v2tag{display:inline-flex;align-items:center;font-size:12px;font-weight:600;border:1px solid var(--bd);border-radius:999px;background:var(--surf);color:var(--mut);padding:4px 11px;cursor:pointer}
-.v2tag:hover{border-color:var(--bd2);color:var(--txt)}
-.v2tag.on{background:var(--acc-soft);border-color:color-mix(in srgb,var(--acc) 38%,transparent);color:var(--acc)}
 /* Đếm từ trong danh sách chương */
 .v2chapter-list em{grid-column:2;font-style:normal;font-size:10.5px;color:var(--dim);font-variant-numeric:tabular-nums}
 .v2chapter-list button{grid-template-rows:auto auto}
@@ -307,13 +301,17 @@ button.v2genre-pill:hover{border-color:color-mix(in srgb,var(--acc) 45%,var(--bd
 .v2role-warn{border:1px solid color-mix(in srgb,#d69b00 40%,var(--bd));background:color-mix(in srgb,#d69b00 10%,var(--surf));border-radius:12px;padding:10px 14px;margin:10px 0}
 .v2edit-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
 
-/* Phân loại theo thể loại (không phải tags) */
-.v2badge-legend{display:grid;gap:8px;margin-top:12px;padding:12px;border:1px dashed var(--bd);border-radius:12px;background:var(--surf2)}
-.v2badge-legend b{font-size:13px}
-.v2genre-board{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:10px}
-.v2genre-tile{display:grid;gap:4px;text-align:left;border:1px solid var(--bd);border-radius:12px;background:var(--surf);padding:12px;cursor:pointer;color:var(--txt);font:inherit}
-.v2genre-tile:hover{border-color:color-mix(in srgb,var(--acc) 45%,var(--bd))}
-.v2genre-tile.on{border-color:color-mix(in srgb,var(--acc) 55%,var(--bd));background:var(--acc-soft,color-mix(in srgb,var(--acc) 12%,var(--surf)))}
-.v2genre-tile b{font-size:14px}
-.v2genre-tile span{font-size:12px;color:var(--mut)}
+/* Phân loại: dải chip thể loại + thẻ chủ đề */
+.v2genre-cloud{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.v2gchip{display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 13px;border:1px solid var(--bd);border-radius:999px;background:var(--surf);color:var(--mut);font:inherit;font-size:13px;font-weight:650;cursor:pointer}
+.v2gchip:hover{border-color:var(--bd2);color:var(--txt)}
+.v2gchip.on{background:var(--acc-soft,color-mix(in srgb,var(--acc) 12%,var(--surf)));border-color:color-mix(in srgb,var(--acc) 45%,transparent);color:var(--acc)}
+.v2gchip em{font-style:normal;font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
+.v2gchip.on em{color:var(--acc)}
+.v2topic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:10px}
+.v2topic{display:grid;gap:4px;text-align:left;border:1px solid var(--bd);border-radius:14px;background:var(--surf);padding:14px;cursor:pointer;color:var(--txt);font:inherit}
+.v2topic:hover{border-color:color-mix(in srgb,var(--acc) 45%,var(--bd));transform:translateY(-1px)}
+.v2topic.on{border-color:color-mix(in srgb,var(--acc) 55%,var(--bd));background:var(--acc-soft,color-mix(in srgb,var(--acc) 12%,var(--surf)))}
+.v2topic b{font-size:15px}
+.v2topic span{font-size:12px;color:var(--mut)}
 .v2quota em.v2est{position:static;height:auto;background:none;font-size:10px;color:var(--mut);font-style:normal}

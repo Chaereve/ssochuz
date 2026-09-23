@@ -67,8 +67,8 @@ export function GenreManager({ registry, onSave }) {
   return (
     <div id="pane-genres" class="v2pane">
       <section class="card2">
-        <div class="row"><h3>Thể loại</h3><span class="grow"></span><span class="sm muted">{genres.length} thể loại · không dùng tags</span></div>
-        <p class="hint">Thể loại là cách duy nhất phân loại truyện. Không có tags, từ đồng nghĩa hay gợi ý thẻ. Xoá thể loại đang được dùng sẽ bị chặn.</p>
+        <div class="row"><h3>Thể loại</h3><span class="grow"></span><span class="sm muted">{genres.length} thể loại</span></div>
+        <p class="hint">Danh mục thể loại dùng khi gán cho từng bộ. Xoá thể loại đang được dùng sẽ bị chặn.</p>
         <form class="v2form" onSubmit={addOrUpdate}>
           <label class="fl">{editing ? 'Sửa thể loại' : 'Thể loại mới'}
             <input class="inp" value={form.name} placeholder="Tên hiển thị" onInput={(e) => update('name', e.target.value)} required />

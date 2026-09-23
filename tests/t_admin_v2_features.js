@@ -3,7 +3,7 @@
    · Overview: tiles số liệu KV thật + biểu đồ 14 ngày + quota từ Worker
    · Báo lỗi: lọc đã/chưa xử lý + PATCH đánh dấu xử lý
    · Thư viện: bìa thu nhỏ + phân trang + lọc 18+/khóa
-   · Thêm bộ: thể loại (không tags) lưu vào registry
+   · Thêm bộ: thể loại lưu vào registry
    · Soạn chương: thời gian đọc ước tính
    · Cài đặt: khôi phục từ file backup JSON
    · Tách .txt nhiều chương (splitChaptersTxt)
@@ -157,19 +157,17 @@ const STATS = {
   check('Thư viện/lọc 18+ ra đúng số bộ', $$('.v2book-table tbody tr').length === 10, $$('.v2book-table tbody tr').length);
   check('Thư viện/lọc 18+ có bìa ảnh của bộ 01', !!$('.v2thumb img'), '');
   check('Thư viện/hết pager khi lọc hẹp', !$('.v2pager'), '');
-  check('Thư viện/có GenreBadge (không tags)', !!$('.v2badge-genre') && !$('.v2tag'), $('.v2badge-genre') && $('.v2badge-genre').textContent);
+  check('Thư viện/có GenreBadge', !!$('.v2badge-genre'), $('.v2badge-genre') && $('.v2badge-genre').textContent);
   check('Thư viện/CompletionBadge tách khỏi xuất bản', $$('.v2badge-completion').length > 0 && $$('.v2badge-pub').length > 0);
 
-  /* 4b. Phân loại: nhóm theo thể loại, không tags */
+  /* 4b. Phân loại: dải chip thể loại */
   click($('button[data-tab="classify"]'));
   await wait(200);
   check('Phân loại/render pane', !!$('#pane-classify'));
-  check('Phân loại/không có UI tags', !$('#pane-classify .v2tags') && !$$('#pane-classify .v2tag').length);
-  check('Phân loại/có mẫu badge', $$('#pane-classify .v2badge-legend .v2badge-genre').length >= 1);
-  const tilesG = $$('#pane-classify .v2genre-tile');
-  check('Phân loại/có ô Tất cả + thể loại + Chưa gán', tilesG.length >= 5, tilesG.length);
-  const coTrangTile = tilesG.find((b) => /Cổ Trang/.test(b.textContent));
-  check('Phân loại/ô Cổ Trang đếm 1 bộ', !!coTrangTile && /1 bộ/.test(coTrangTile.textContent), coTrangTile && coTrangTile.textContent);
+  check('Phân loại/có dải chip', $$('#pane-classify .v2gchip').length >= 5, $$('#pane-classify .v2gchip').length);
+  const chipsG = $$('#pane-classify .v2gchip');
+  const coTrangTile = chipsG.find((b) => /Cổ Trang/.test(b.textContent));
+  check('Phân loại/chip Cổ Trang đếm 1', !!coTrangTile && /1/.test(coTrangTile.textContent), coTrangTile && coTrangTile.textContent);
   click(coTrangTile);
   await wait(120);
   check('Phân loại/lọc Cổ Trang hiện 1 dòng', $$('#pane-classify .v2sort li').length === 1, $$('#pane-classify .v2sort li').length);
@@ -182,23 +180,22 @@ const STATS = {
   $('.v2search').dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true }));
   await wait(150);
 
-  /* 5. Thêm bộ: thể loại lưu vào registry (không tags) */
+  /* 5. Thêm bộ: thể loại lưu vào registry */
   click($('button[data-tab="new"]'));
   await wait(150);
   const genreSel = $('#pane-new select.inp');
   check('Thêm bộ/có ô thể loại', !!genreSel);
-  check('Thêm bộ/không có UI tags', !$('#pane-new .v2tags') && !$$('#pane-new .v2tag').length);
   inputEv(genreSel, 'co-trang'); change(genreSel);
   await wait(120);
   check('Thêm bộ/chọn thể loại Cổ Trang', genreSel.value === 'co-trang', genreSel.value);
-  inputEv($('#pane-new input.inp'), 'Bộ Mới Tags');
+  inputEv($('#pane-new input.inp'), 'Bộ Mới Cổ Trang');
   await wait(150);
   $('.v2pane form').dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true }));
   await wait(500);
   const regPut = putBodies.find((x) => x.p === '/api/registry');
   check('Thêm bộ/PUT registry', !!regPut);
-  const newMeta = regPut && (regPut.body.lib || []).find((b) => b.slug === 'bo-moi-tags');
-  check('Thêm bộ/registry chứa genre, không tags', !!newMeta && newMeta.genre === 'co-trang' && newMeta.tags == null, newMeta && { genre: newMeta.genre, tags: newMeta.tags });
+  const newMeta = regPut && (regPut.body.lib || []).find((b) => b.slug === 'bo-moi-co-trang');
+  check('Thêm bộ/registry chứa genre', !!newMeta && newMeta.genre === 'co-trang', newMeta && { genre: newMeta.genre });
 
   /* 6. Soạn chương: thời gian đọc + nhập .txt nhiều chương */
   click($('button[data-tab="list"]'));
@@ -244,7 +241,7 @@ const STATS = {
     console.log('     (splitChaptersTxt chạy bằng import động ở bài riêng — bỏ qua trong jsdom)');
   }
 
-  /* 9. Trang truyện công khai hiện tags (cz-story đọc registry) */
+  /* 9. Trang truyện công khai hiện thể loại */
   const sp = page('truyen.html', {
     url: 'https://ssochuz.pages.dev/truyen/thu-01/',
     config: { CZ_API: BASE },

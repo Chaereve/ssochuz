@@ -22,7 +22,7 @@
   }
   paintIcons();
 
-  var state = { tab: 'all', adult: false, year: '', author: '', couple: '', q: '', sort: 'new', view: 'grid', page: 1, per: 24 };
+  var state = { tab: 'all', adult: false, year: '', author: '', couple: '', genre: '', q: '', sort: 'new', view: 'grid', page: 1, per: 24 };
 
   /* ======================= HERO ======================================== */
   var hero = { list: [], i: 0, timer: null, auto: 8000, bg: 0 };
@@ -405,6 +405,7 @@
     fill($('#fYear'), 'Mọi năm', years);
     fill($('#fAuthor'), 'Mọi tác giả', authors);
     fill($('#fCouple'), 'Mọi couple', couples);
+    paintGenreChips();
     var sorts = [['new', 'Mới cập nhật'], ['year-desc', 'Năm mới nhất'], ['year-asc', 'Năm cũ nhất'],
       ['chap-desc', 'Nhiều chương nhất'], ['az', 'Tên A → Z']];
     if (statsOn()) sorts.push(['views', 'Đọc nhiều nhất']);   /* chỉ khi có số thật */
@@ -416,6 +417,25 @@
         (t.k === state.tab) + '">' + t.l + '<span class="ct">' + t.c + '</span></button>';
     }).join('');
     retab();
+  }
+  function paintGenreChips() {
+    var box = $('#genreTabs'), group = $('#genreGroup');
+    if (!box) return;
+    var genres = CZ.genreList ? CZ.genreList() : [];
+    var lib = CZ.lib();
+    if (!genres.length) {
+      if (group) group.hidden = true;
+      box.innerHTML = '';
+      return;
+    }
+    if (group) group.hidden = false;
+    var html = '<button class="tab' + (!state.genre ? ' on' : '') + '" data-genre="" aria-pressed="' + (!state.genre) + '">Tất cả</button>';
+    genres.forEach(function (g) {
+      var n = lib.filter(function (b) { return CZ.bookUsesGenre ? CZ.bookUsesGenre(b, g.slug) : false; }).length;
+      html += '<button class="tab' + (state.genre === g.slug ? ' on' : '') + '" data-genre="' + esc(g.slug) + '" aria-pressed="' + (state.genre === g.slug) + '">' +
+        esc(g.name) + '<em>' + n + '</em></button>';
+    });
+    box.innerHTML = html;
   }
   function retab() { if (CZ.inkAll) CZ.inkAll(); }
   /* dãy tab chỉ còn TÌNH TRẠNG; nhãn 18+ tách ra nhóm riêng bên cạnh */
@@ -441,11 +461,13 @@
     if (state.year) lib = lib.filter(function (n) { return String(n.year) === state.year; });
     if (state.author) lib = lib.filter(function (n) { return n.author === state.author; });
     if (state.couple) lib = lib.filter(function (n) { return n.couple === state.couple; });
+    if (state.genre) lib = lib.filter(function (n) { return CZ.bookUsesGenre ? CZ.bookUsesGenre(n, state.genre) : false; });
     if (state.q) {
       var q = state.q.toLowerCase();
       lib = lib.filter(function (n) {
         return n.title.toLowerCase().indexOf(q) >= 0 || String(n.author || '').toLowerCase().indexOf(q) >= 0 ||
-          String(n.couple || '').toLowerCase().indexOf(q) >= 0 || String(n.year || '').indexOf(q) >= 0;
+          String(n.couple || '').toLowerCase().indexOf(q) >= 0 || String(n.year || '').indexOf(q) >= 0 ||
+          String(CZ.genreLabel(n) || '').toLowerCase().indexOf(q) >= 0;
       });
     }
     var so = state.sort;
@@ -495,6 +517,10 @@
     var picked = [];
     if (state.tab !== 'all') picked.push(['tab', tabLabel(state.tab)]);
     if (state.adult) picked.push(['adult', '18+']);
+    if (state.genre) {
+      var gHit = (CZ.genreList ? CZ.genreList() : []).find(function (g) { return g.slug === state.genre; });
+      picked.push(['genre', (gHit && gHit.name) || state.genre]);
+    }
     ['year', 'author', 'couple'].forEach(function (k) { if (state[k]) picked.push([k, state[k]]); });
     if (state.q) picked.push(['q', '“' + state.q + '”']);
     $('#fpick').innerHTML = picked.length
@@ -538,7 +564,7 @@
     });
   }
   function clearAll() {
-    state.tab = 'all'; state.adult = false; state.year = state.author = state.couple = state.q = '';
+    state.tab = 'all'; state.adult = false; state.year = state.author = state.couple = state.genre = state.q = '';
     $('#q').value = ''; syncFilterUI(); state.page = 1; render();
   }
   function syncFilterUI() {
@@ -552,6 +578,11 @@
       t.setAttribute('aria-pressed', state.adult ? 'true' : 'false');
     });
     $('#fYear').value = state.year; $('#fAuthor').value = state.author; $('#fCouple').value = state.couple;
+    $$('#genreTabs [data-genre]').forEach(function (t) {
+      var on = (t.dataset.genre || '') === (state.genre || '');
+      t.classList.toggle('on', on);
+      t.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
   }
   var qTimer = null;
   $('#q').addEventListener('input', function (e) {
@@ -572,6 +603,12 @@
     var b = e.target.closest('.tab'); if (!b) return;
     state.adult = !state.adult; state.page = 1; render();
     if (CZ.inkAll) CZ.inkAll();          /* nhãn 18+ cũng có viên nền trượt */
+  });
+  var genreTabs = $('#genreTabs');
+  if (genreTabs) genreTabs.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-genre]'); if (!b) return;
+    state.genre = b.dataset.genre || '';
+    state.page = 1; render();
   });
   $('#qClr').addEventListener('click', function () {
     $('#q').value = ''; state.q = ''; state.page = 1; render();

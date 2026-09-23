@@ -181,7 +181,7 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
             </div>
           ))}
         </nav>
-        <p class="hint v2side-note">Ghi KV chỉ khi đã nối ADMIN_KEY. Thể loại thay tags.</p>
+        <p class="hint v2side-note">Ghi KV chỉ khi đã nối ADMIN_KEY.</p>
       </aside>
       {drawer ? <div class="v2scrim" onClick={() => setDrawer(false)} /> : null}
 

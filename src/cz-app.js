@@ -1294,16 +1294,49 @@
     if (API && /^\/api\/img\//i.test(img)) return String(API).replace(/\/+$/, '') + img;
     return img;
   }
+  function genreList() {
+    var raw = ((memo.reg && memo.reg.settings && memo.reg.settings.genres) || []);
+    var out = [], seen = {};
+    raw.forEach(function (g) {
+      if (!g || g.is_visible === false) return;
+      var name = String(g.name || g.title || '').trim();
+      var slug = String(g.slug || '').trim();
+      if (!name && !slug) return;
+      var key = slug || name;
+      if (seen[key]) return;
+      seen[key] = 1;
+      out.push({ slug: slug || name, name: name || slug });
+    });
+    if (!out.length && memo.reg && memo.reg.lib) {
+      memo.reg.lib.forEach(function (n) {
+        var g = String((n && (n.genre || n.genreName)) || '').trim();
+        if (!g || seen[g]) return;
+        seen[g] = 1;
+        out.push({ slug: g, name: g });
+      });
+    }
+    return out;
+  }
   function genreLabel(n) {
     var g = String((n && (n.genreName || n.genre)) || '').trim();
     if (!g) return '';
-    var list = ((memo.reg && memo.reg.settings && memo.reg.settings.genres) || []);
-    var i, hit;
+    var list = genreList(), i, hit;
     for (i = 0; i < list.length; i++) {
       hit = list[i];
       if (hit && (hit.slug === g || hit.name === g)) return hit.name || g;
     }
     return g;
+  }
+  function bookUsesGenre(n, slug) {
+    var g = String((n && (n.genre || n.genreName)) || '').trim();
+    if (!g || !slug) return false;
+    if (g === slug) return true;
+    var list = genreList(), i, hit;
+    for (i = 0; i < list.length; i++) {
+      hit = list[i];
+      if ((hit.slug === slug || hit.name === slug) && (g === hit.slug || g === hit.name)) return true;
+    }
+    return false;
   }
   function bookCover(n, opts) {
     opts = opts || {};
@@ -1357,13 +1390,14 @@
          couple bị đề tên cặp đôi thay vì người viết — couple vẫn còn chỗ riêng của
          nó ở bộ lọc, ở hero và trong trang truyện. */
       '<div class="cb">' + esc(n.author || n.couple || '') + '</div>' +
+      (genreLabel(n) ? '<div class="cgenre">' + esc(genreLabel(n)) + '</div>' : '') +
       '</a></div>';
   }
   /* xem dạng danh sách: mỗi bộ một hàng, đủ thông tin để quyết định mở hay không */
   function cardList(n, img, pg, pct) {
     if (!n || !n.slug) return '<div class="card list off"><span class="cl-main"><span class="cl-top"><b class="cl-t">' + esc((n&&n.title)||'—') + '</b></span><span class="cl-meta">thiếu slug — sửa trong trang quản trị</span></span></div>';
     /* tác giả trước, couple sau — cùng thứ tự với thẻ lưới và với trang truyện */
-    var bits = [n.author, n.couple, n.year].filter(Boolean);
+    var bits = [n.author, n.couple, genreLabel(n), n.year].filter(Boolean);
     var read = pg > 0;
     return '<div class="cardwrap listwrap"><a class="card list st-' + esc(n.statusCls || 'soon') + '" href="' + esc(storyURL(n.slug)) + '" data-t="' + esc(n.title) + '" title="' + esc(n.title) + '">' +
       '<span class="cl-th' + (img ? ' skel' : '') + '">' +
@@ -2620,7 +2654,7 @@
     icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo, teaser: teaser,
     statusCls: statusCls, statusLabel: statusLabel, statusIcon: statusIcon, words: words, norm: norm, countText: countText, listHead: listHead,
     storyURL: storyURL, readURL: readURL, slugify: slugify, qs: qs, copy: copy, download: download,
-    card: card, coverFB: coverFB, coverSrc: coverSrc, bookCover: bookCover, genreLabel: genreLabel, mountRail: mountRail, reveal: reveal, countUp: countUp, scaleFacts: scaleFacts,
+    card: card, coverFB: coverFB, coverSrc: coverSrc, bookCover: bookCover, genreLabel: genreLabel, genreList: genreList, bookUsesGenre: bookUsesGenre, mountRail: mountRail, reveal: reveal, countUp: countUp, scaleFacts: scaleFacts,
     scrollUI: scrollUI, slide: slide, pageFx: pageFx, pop: pop, setIcon: setIcon, shake: shake,
     msWait: function () { return ms('--t-close', 150); }, ink: ink, inkAll: inkAll,
     mountShell: mountShell, mountHeader: mountHeader, mountFooter: mountFooter,
