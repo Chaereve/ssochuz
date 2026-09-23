@@ -47,7 +47,7 @@ function Toolbar({ editor }) {
     if (!editor) return;
     const old = editor.getAttributes('link').href || '';
     const url = window.prompt('Dán liên kết (để trống để bỏ link):', old);
-    if (url === null) return;
+    if (url == null) return; /* Cancel trả null; jsdom không cài prompt trả undefined */
     if (!url.trim()) editor.chain().focus().unsetLink().run();
     else editor.chain().focus().extendMarkRange('link').setLink({ href: url.trim() }).run();
   };

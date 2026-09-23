@@ -72,7 +72,7 @@ function input(win, el, value) {
     return response({ ok: false, error: 'missing mock ' + method + ' ' + u.pathname }, false, 404);
   };
 
-  const p = page('admin-v2.html', { fetch: apiFetch, url: 'https://ssochuz.pages.dev/admin-v2.html', config: { CZ_API: 'https://cms.test' } });
+  const p = page('admin.html', { fetch: apiFetch, url: 'https://ssochuz.pages.dev/admin.html', config: { CZ_API: 'https://cms.test' } });
   const { doc, win } = p;
   await wait(500);
   win.CZ.confirm = () => Promise.resolve(true);

@@ -146,3 +146,19 @@ export function newBookRecord(values) {
   const book = { title: meta.title, slug, author: meta.author, couple: meta.couple, chapters };
   return { meta, book };
 }
+
+/* Nhãn thể loại hiển thị trong tab Tác giả: lấy trường thật đầu tiên có dữ liệu
+   (genre → category → tag đầu → couple). Registry hiện nay hầu hết chỉ có
+   “couple”, nên fallback đó là dữ liệu thật, không bịa thể loại. Hàm này từng
+   bị gọi mà KHÔNG TỒN TẠI trong UsersPanel — bấm tab “Tác giả” là cả app sập
+   trắng (ReferenceError) — hồi quy bởi tests/t_sweep.js. */
+export function genreNameOf(book) {
+  if (!book || typeof book !== 'object') return '';
+  const tagList = Array.isArray(book.tags) ? book.tags : [];
+  const candidates = [book.genre, book.category, tagList[0], book.couple];
+  for (const c of candidates) {
+    const s = String(c == null ? '' : c).replace(/\s+/g, ' ').trim();
+    if (s) return s;
+  }
+  return '';
+}

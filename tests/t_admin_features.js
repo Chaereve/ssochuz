@@ -89,7 +89,7 @@ const STATS = {
     },
   });
 
-  const p = page('admin-v2.html', { fetch: fetcher, url: 'https://ssochuz.pages.dev/admin', config: { CZ_API: BASE } });
+  const p = page('admin.html', { fetch: fetcher, url: 'https://ssochuz.pages.dev/admin', config: { CZ_API: BASE } });
   const { doc, win } = p;
   const click = (el) => el.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
   const change = (el) => el.dispatchEvent(new win.Event('change', { bubbles: true }));

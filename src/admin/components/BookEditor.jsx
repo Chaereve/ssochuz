@@ -43,6 +43,12 @@ export function BookEditor({ registry, slug, bookData, bookLoading, apiBase, onL
       await onLock(book.slug, lockPw);
       setLockPw(''); setLockPw2('');
     }
+    catch (err) {
+      /* onLock (main) tự toast lỗi của nó; lỗi cục bộ (chưa khớp) phải tự báo —
+         không để rejection bỏ hoang làm crash trang (hồi quy bởi t_sweep). */
+      const m = (err && err.message) || String(err);
+      if (/chưa khớp/i.test(m)) (window.CZ && window.CZ.toast ? window.CZ.toast(m, 'err') : alert(m));
+    }
     finally { setLockBusy(false); }
   }
   const blocked = writeBlocked || (!online);

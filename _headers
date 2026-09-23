@@ -19,10 +19,7 @@
 /admin.js
   Cache-Control: no-cache
 
-/admin-v2.js
-  Cache-Control: no-cache
-
-/admin-v2.css
+/admin.css
   Cache-Control: no-cache
 
 /admin

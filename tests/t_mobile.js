@@ -116,23 +116,26 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     netONgoai: /stroke-width="\d+(\.\d+)?" transform="translate\(/.test(bodies)
   };
 
-  /* ---------- công tắc ở trang quản trị: hồi quy HTML bị xoá nhầm ----------
-     admin.html có công tắc tĩnh, còn hai SVG được admin.js chèn vào. Trước đây
-     init() gán innerHTML cho cả label sau khi khởi động, làm mất checkbox và
-     khiến trang quản trị không đổi nền được. */
+  /* ---------- đổi nền ở trang quản trị (admin gộp một trang) ----------
+     Admin giờ là trang Preact (admin.html + admin.js bundle): nút đổi nền nằm
+     trên thanh đầu sau khi vào quản trị. Hồi quy cũ "công tắc tĩnh bị init()
+     xoá nhầm" hết thời vì công tắc tĩnh không còn — thay bằng: trang boot không
+     lỗi JS và nút đổi nền (ThemeButton) really đổi data-theme. */
   const ap = page('admin.html', {
     fetch: dataFetch(),
     files: ['cz-config.js', 'cz-app.js', 'cz-auth.js', 'admin.js']
   });
   await wait(420);
-  const asw = ap.doc.querySelector('#btnTheme');
-  const ain = ap.doc.querySelector('#btnThemeIn');
+  const gate = ap.doc.querySelector('.v2gate');
+  if (gate) gate.querySelector('.btn.ghost').dispatchEvent(new ap.win.MouseEvent('click', { bubbles: true }));
+  await wait(500);
+  const aThemeBtn = [...ap.doc.querySelectorAll('button.admin-tool')].find((b) => /Đổi nền/.test(b.getAttribute('title') || ''));
   const a0 = ap.doc.documentElement.getAttribute('data-theme');
-  if (ain) ain.click();
+  if (aThemeBtn) aThemeBtn.dispatchEvent(new ap.win.MouseEvent('click', { bubbles: true }));
   await wait(120);
   out.adminTheme = {
-    input: !!ain,
-    icons: asw ? asw.querySelectorAll('.tsw-icon').length : 0,
+    booted: !!gate,
+    coNutDoiNen: !!aThemeBtn,
     changed: a0 !== ap.doc.documentElement.getAttribute('data-theme'),
     errors: ap.errors.slice(0, 5)
   };
@@ -164,8 +167,8 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   if (!out.icon.netONgoai) loi.push('nét vẽ icon chưa gom ra lớp bọc chuẩn hoá');
   if (!out.icon.coTabler) loi.push('bản phát hành chưa đánh dấu bộ Tabler local');
   if (out.icon.soIconTabler < 60) loi.push('quá ít icon Tabler được chuẩn hoá: ' + out.icon.soIconTabler);
-  if (!out.adminTheme || !out.adminTheme.input || out.adminTheme.icons !== 2 || !out.adminTheme.changed) {
-    loi.push('công tắc trang quản trị mất checkbox/icon hoặc không đổi nền');
+  if (!out.adminTheme || !out.adminTheme.booted || !out.adminTheme.coNutDoiNen || !out.adminTheme.changed) {
+    loi.push('trang quản trị không boot được hoặc nút đổi nền mất/không đổi nền');
   }
   if (!out.icon.coGoogle || !out.icon.coMomo) loi.push('mất icon thương hiệu Google/MoMo');
   out.loi = loi;

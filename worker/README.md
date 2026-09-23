@@ -359,7 +359,7 @@ kèm máy chủ tĩnh — nên thử ở đây y hệt bản deploy:
 ```bash
 node tests/mock_worker.mjs 8787          # cần Node.js, không cần cài gì thêm
 # rồi mở http://127.0.0.1:8787/admin  → URL Worker: http://127.0.0.1:8787 → khoá: MOCK
-# admin cũ vẫn ở http://127.0.0.1:8787/admin-legacy
+# /admin-v2, /admin-legacy cũng vào cùng trang /admin (đã gộp một admin)
 ```
 
 Muốn thử cả đăng nhập Google ở máy: `GOOGLE_CLIENT_ID=... node tests/mock_worker.mjs 8787`

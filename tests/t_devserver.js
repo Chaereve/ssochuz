@@ -98,12 +98,11 @@ async function boot(root) {
       ['/guide/', 200, 'trang hướng dẫn (dấu /)'],
       ['/couple/', 200, 'trang couple (thư mục có index.html)'],
       ['/tac-gia/', 200, 'trang tác giả'],
-      ['/admin', 200, 'trang quản trị v2 sau cutover'],
-      ['/admin/', 200, 'trang quản trị v2 sau cutover (dấu /)'],
-      ['/admin-v2', 200, 'alias trang quản trị v2'],
-      ['/admin-v2/', 200, 'alias trang quản trị v2 với dấu /'],
-      ['/admin-legacy', 200, 'admin cũ giữ lại trong giai đoạn theo dõi'],
-      ['/admin-legacy/', 200, 'admin cũ với dấu /'],
+      ['/admin', 200, 'trang quản trị (một admin duy nhất)'],
+      ['/admin-v2', 200, 'URL đời hai bản vẫn vào đúng một admin'],
+      ['/admin-v2/', 200, 'URL đời hai bản với dấu /'],
+      ['/admin-legacy', 200, 'URL legacy cũng merge về một admin'],
+      ['/admin-legacy/', 200, 'URL legacy với dấu /'],
       ['/data/registry.json', 200, 'dữ liệu tĩnh'],
       ['/sw.js', 200, 'service worker'],
       ['/khong-ton-tai', 404, 'đường dẫn không có thật'],
@@ -119,6 +118,11 @@ async function boot(root) {
     const adm = await get(port, '/admin.html');
     ok(adm.code === 308 && adm.loc === '/admin', '/admin.html phải 308 về /admin (đang ' + adm.code + ' → ' + adm.loc + ')');
     out.adminHtml = { code: adm.code, location: adm.loc };
+    /* /admin/ không còn luật _redirects nào che → Pages tự bỏ dấu / (308), đúng
+       hành vi auto-trailing-slash khi "admin" là TỆP chứ không phải thư mục */
+    const admSlash = await get(port, '/admin/');
+    ok(admSlash.code === 308 && admSlash.loc === '/admin', '/admin/ phải 308 về /admin (đang ' + admSlash.code + ' → ' + admSlash.loc + ')');
+    out.adminSlash = { code: admSlash.code, location: admSlash.loc };
 
     /* nội dung phải là TRANG CỦA ĐÚNG BỘ, không phải trang thư viện */
     const story = await get(port, '/truyen/third-person/');
@@ -126,11 +130,11 @@ async function boot(root) {
     const lib = await get(port, '/truyen');
     ok(/<html/i.test(lib.body) && lib.body.length > 3000, '/truyen phải trả về trang thật (không phải trang lỗi)');
     const adminNow = await get(port, '/admin');
-    ok(/adminV2Root/.test(adminNow.body) && /admin-v2\.js/.test(adminNow.body), '/admin phải trả về admin-v2.html sau cutover');
+    ok(/adminRoot/.test(adminNow.body) && /admin\.js/.test(adminNow.body), '/admin phải trả về admin.html (một admin duy nhất)');
     const adminV2 = await get(port, '/admin-v2');
-    ok(/adminV2Root/.test(adminV2.body) && /admin-v2\.js/.test(adminV2.body), '/admin-v2 phải trả về admin-v2.html');
+    ok(/adminRoot/.test(adminV2.body) && /admin\.js/.test(adminV2.body), '/admin-v2 phải merge về admin.html');
     const legacy = await get(port, '/admin-legacy');
-    ok(/trang quản trị/i.test(legacy.body) && /id="gate"/.test(legacy.body), '/admin-legacy phải trả về admin cũ');
+    ok(/adminRoot/.test(legacy.body) && /admin\.js/.test(legacy.body) && !/id="gate"/.test(legacy.body), '/admin-legacy phải merge về admin.html (không còn cổng admin cũ)');
   } finally {
     try { proc.kill('SIGKILL'); } catch (e) {}
   }

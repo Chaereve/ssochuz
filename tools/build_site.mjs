@@ -27,7 +27,8 @@ for (const dir of ['data/book', 'truyen']) {
 }
 
 /* src → thư mục gốc (đúng đường dẫn mà các trang HTML đang gọi) */
-const JS = ['cz-app.js', 'cz-auth.js', 'cz-home.js', 'cz-story.js', 'cz-people.js', 'cz-space.js', 'admin.js'];
+/* admin.js KHÔNG nằm ở đây: bundle Preact/TipTap do tools/build_admin.mjs sinh riêng. */
+const JS = ['cz-app.js', 'cz-auth.js', 'cz-home.js', 'cz-story.js', 'cz-people.js', 'cz-space.js'];
 const CSS = ['cz.css'];
 
 const kb = (n) => (n / 1024).toFixed(1) + ' kB';

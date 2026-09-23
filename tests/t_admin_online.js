@@ -32,7 +32,7 @@ function json(body, ok = true, status = 200) {
     return json({ ok: false, error: 'missing mock ' + u.pathname }, false, 404);
   };
 
-  const p = page('admin-v2.html', { fetch: apiFetch, url: 'https://ssochuz.pages.dev/admin-v2.html', config: { CZ_API: 'https://cms.test' } });
+  const p = page('admin.html', { fetch: apiFetch, url: 'https://ssochuz.pages.dev/admin.html', config: { CZ_API: 'https://cms.test' } });
   const { doc, win } = p;
   const click = (sel) => {
     const el = typeof sel === 'string' ? doc.querySelector(sel) : sel;

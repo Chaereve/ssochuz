@@ -1,7 +1,15 @@
-# Admin v2 — parity audit và cutover checklist
+# Admin — parity audit và cutover checklist
 
 Ngày lập: 2026-09-22  
 Phạm vi: chỉ đổi frontend/static routing; không đổi Worker, KV schema, registry/book JSON schema.
+
+## KẾT THÚC 2026-09-23: GỘP XONG MỘT ADMIN
+
+Admin cũ (admin.html/admin.js bản legacy) đã XOÁ. Một trang quản trị duy nhất:
+`/admin` mở thẳng bản Preact; `/admin-v2`, `/admin-legacy` là alias 200 về `/admin`
+(_redirects). Bundle phát hành là `admin.js` + `admin.css` (build bởi
+`tools/build_admin.mjs`, script `npm run build:admin`). Checklist "giai đoạn theo
+dõi" dưới đây chỉ còn giá trị lịch sử.
 
 ## Bổ sung 2026-09-23 (cải tạo theo Novelist/FICTBASE — xem BAO-CAO-CAI-TAO-ADMIN-V2.md)
 

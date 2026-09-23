@@ -20,11 +20,11 @@ export function AuthGate({ defaultApi = '', defaultKey = '', busy = false, messa
   return (
     <section class="v2gate" aria-label="Cổng quản trị">
       <div class="gate v2gate-card">
-        <span class="pill acc">admin v2</span>
+        <span class="pill acc">admin</span>
         <h1>Trang quản trị ssochuz library</h1>
         <p class="gsub">
-          Admin v2 đang nhận route /admin; admin cũ giữ ở /admin-legacy để theo dõi sau cutover:
-          editor chương và các module vận hành cơ bản để đối chiếu trước cutover.
+          Một trang quản trị duy nhất tại /admin — thư viện, soạn chương, bình luận,
+          báo lỗi, homepage CMS, vai trò và cài đặt. Bản cũ đã gộp xong, không còn admin riêng.
         </p>
         <div class="v2gate-actions">
           <button class="btn pri" type="button" disabled={busy} onClick={onLogin}>Đăng nhập bằng Google / Supabase</button>
