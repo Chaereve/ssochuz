@@ -5,8 +5,9 @@ import { ChapterEditor } from './ChapterEditor.jsx';
 import { GenreSelect } from './GenreSelect.jsx';
 import { ImageUploader } from './ImageUploader.jsx';
 import { persistableCover } from '../utils/cover.js';
+import { BookBadges } from './Badges.jsx';
 
-export function BookEditor({ registry, slug, bookData, bookLoading, apiBase, onLoadBook, onSave, onSaveBook, onUploadImage, onLock, onUnlock, onDuplicate, onBack, onDelete }) {
+export function BookEditor({ registry, slug, bookData, bookLoading, apiBase, onLoadBook, onSave, onSaveBook, onUploadImage, onLock, onUnlock, onDuplicate, onBack, onDelete, writeBlocked = false, online = false }) {
   const book = ((registry && registry.lib) || []).find((item) => item.slug === slug);
   const [form, setForm] = useState({
     title: '', slug: '', author: '', couple: '', year: '', status: 'Đang cập nhật',
@@ -45,20 +46,23 @@ export function BookEditor({ registry, slug, bookData, bookLoading, apiBase, onL
     }
     finally { setLockBusy(false); }
   }
+  const blocked = writeBlocked || (!online);
 
   return (
     <div id="pane-edit">
-      <div class="row"><button class="btn ghost sm" type="button" onClick={onBack}>← Thư viện</button><span class="grow"></span>
-        <button class="btn ghost sm" type="button" onClick={() => onDuplicate && onDuplicate(book.slug)}>Nhân bản bộ</button>
-        <button class="btn ghost sm" type="button" onClick={() => onDelete(book.slug)}>Xoá bộ</button></div>
+      <div class="row"><button class="btn ghost sm" type="button" onClick={onBack}>← Thư viện</button></div>
+      <div class="v2edit-head">
+        <h3 style={{ margin: 0 }}>Sửa metadata: {book.title}</h3>
+        <BookBadges book={book} registry={registry} />
+      </div>
       <form class="v2form" onSubmit={(e) => { e.preventDefault(); onSave(book.slug, Object.assign({}, form, { slug: slugify(form.slug || form.title), is18: form.is18 ? '1' : '0', thumb: persistableCover(form.thumb) })); }}>
-        <h3>Sửa metadata: {book.title}</h3>
         <label class="fl">Tên<input class="inp" value={form.title} onInput={(e) => update('title', e.target.value)} /></label>
         <label class="fl">Slug<input class="inp" value={form.slug} onInput={(e) => update('slug', e.target.value)} /></label>
         <label class="fl">Tác giả<input class="inp" value={form.author} onInput={(e) => update('author', e.target.value)} /></label>
         <label class="fl">Couple<input class="inp" value={form.couple} onInput={(e) => update('couple', e.target.value)} /></label>
+        <label class="fl">Năm<input class="inp" value={form.year} onInput={(e) => update('year', e.target.value)} /></label>
         <label class="fl">Thể loại
-          <GenreSelect registry={registry} value={form.genre} onChange={(v) => update('genre', v)} />
+          <GenreSelect registry={registry} value={form.genre} onChange={(v) => update('genre', v)} hint={[form.title, form.synopsis, form.couple, form.author].join(' ')} />
         </label>
         <div class="row">
           <label class="fl">Tình trạng hoàn thành
@@ -94,19 +98,31 @@ export function BookEditor({ registry, slug, bookData, bookLoading, apiBase, onL
           label="Ảnh bìa"
         />
         <label class="fl">Tóm tắt<textarea class="inp ta" value={form.synopsis} onInput={(e) => update('synopsis', e.target.value)} /></label>
-        <button class="btn pri" type="submit">Lưu metadata</button>
+        <div class="row sticky-actions">
+          <button class="btn pri" type="submit" disabled={writeBlocked}>{writeBlocked ? 'Hết quota KV' : (online ? 'Lưu metadata' : 'Lưu nháp phiên')}</button>
+          {!online ? <span class="sm muted">Chế độ tĩnh — chưa ghi Cloudflare KV.</span> : null}
+        </div>
       </form>
       <form class="v2form v2lock-panel" onSubmit={saveLock}>
         <h3>Khóa mật mã</h3>
         <p class="hint">{book.lock ? 'Bộ này đang khóa. Nhập mật mã mới để đổi, hoặc bỏ khóa.' : 'Đặt mật mã thì thẻ vẫn công khai, chương chỉ mở khi nhập đúng.'}</p>
+        {!online ? <p class="hint">Khóa mật mã cần nối Worker bằng ADMIN_KEY. Ở chế độ tĩnh không ghi KV.</p> : null}
         <label class="fl">Mật mã (tối thiểu 8 ký tự)<input class="inp" type="password" value={lockPw} onInput={(e) => setLockPw(e.target.value)} autocomplete="new-password" /></label>
         <label class="fl">Nhập lại mật mã<input class="inp" type="password" value={lockPw2} onInput={(e) => setLockPw2(e.target.value)} autocomplete="new-password" /></label>
         <div class="row">
-          <button class="btn" disabled={lockBusy || lockPw.length < 8} type="button" onClick={saveLock}>Đặt / đổi mật mã</button>
-          {book.lock ? <button class="btn ghost" type="button" disabled={lockBusy} onClick={() => onUnlock(book.slug)}>Bỏ khóa</button> : null}
+          <button class="btn" disabled={lockBusy || lockPw.length < 8 || blocked} type="button" onClick={saveLock}>Đặt / đổi mật mã</button>
+          {book.lock ? <button class="btn ghost" type="button" disabled={lockBusy || blocked} onClick={() => onUnlock(book.slug)}>Bỏ khóa</button> : null}
         </div>
       </form>
-      <ChapterEditor slug={slug} book={bookData} loading={bookLoading} apiBase={apiBase} onSaveBook={onSaveBook} onUploadImage={onUploadImage} />
+      <ChapterEditor slug={slug} book={bookData} loading={bookLoading} apiBase={apiBase} onSaveBook={onSaveBook} onUploadImage={onUploadImage} writeBlocked={writeBlocked} online={online} />
+      <section class="v2danger">
+        <h3>Khu vực nguy hiểm</h3>
+        <p class="hint">Nhân bản tạo slug mới và tự bỏ khóa trên bản sao. Xoá bộ cần gõ đúng slug; book key và registry đều bị ảnh hưởng.</p>
+        <div class="row">
+          <button class="btn ghost sm" type="button" disabled={writeBlocked} onClick={() => onDuplicate && onDuplicate(book.slug)}>Nhân bản bộ</button>
+          <button class="btn ghost sm danger" type="button" disabled={writeBlocked} onClick={() => onDelete(book.slug)}>Xoá bộ</button>
+        </div>
+      </section>
     </div>
   );
 }

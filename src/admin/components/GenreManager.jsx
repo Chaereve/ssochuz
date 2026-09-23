@@ -57,7 +57,8 @@ export function GenreManager({ registry, onSave }) {
     const src = genres.find((g) => g.slug === mergeFrom);
     const dst = genres.find((g) => g.slug === mergeTo);
     if (!src || !dst) return;
-    if (!window.confirm('Gộp “' + src.name + '” vào “' + dst.name + '”? Các bộ sẽ chuyển thể loại, rồi xoá thể loại nguồn.')) return;
+    const n = (used[src.slug] || 0);
+    if (!window.confirm('Gộp “' + src.name + '” vào “' + dst.name + '”? ' + n + ' truyện sẽ đổi thể loại, rồi xoá thể loại nguồn.')) return;
     const next = genres.filter((g) => g.slug !== mergeFrom);
     await onSave(next, 'Đã gộp thể loại “' + src.name + '” → “' + dst.name + '”', { remap: { from: mergeFrom, to: mergeTo } });
     setMergeFrom(''); setMergeTo('');

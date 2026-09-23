@@ -45,3 +45,51 @@ export function booksUsingGenre(registry, slugOrName) {
     return g && (g === key);
   });
 }
+
+function foldVi(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
+}
+
+const GENRE_HINTS = {
+  'ngon-tinh': ['ngon tinh', 'lang man', 'tinh cam', 'sung', 'romance', 'yeu', 'tinh yeu', 'he', 'nu chinh'],
+  'dam-my': ['dam my', 'bl', 'boys love', 'dan nam', 'omega', 'alpha'],
+  'bach-hop': ['bach hop', 'gl', 'girls love', 'nu nu', 'sapphic'],
+  'hien-dai': ['hien dai', 'do thi', 'thanh thi', 'cong so', 'ceo', 'showbiz'],
+  'co-trang': ['co trang', 'cung dinh', 'hau cung', 'trieu dinh', 'kiem hiep', 'co dai', 'vuong gia', 'phi tan'],
+  'hoc-duong': ['hoc duong', 'hoc sinh', 'truong', 'lop', 'campus', 'sinh vien'],
+  'fantasy': ['fantasy', 'phep', 'ma phap', 'than thoai', 'tien hiep', 'di gioi', 'rong'],
+  'hanh-dong': ['hanh dong', 'chien dau', 'vo thuat', 'trinh sat', 'pha an'],
+  'kinh-di': ['kinh di', 'ma', 'horror', 'giet', 'rung ron', 'linh'],
+  'hai-huoc': ['hai huoc', 'hai', 'comedy', 'vui', 'tre'],
+};
+
+/* Gợi ý thể loại từ tên/tóm tắt/couple + thể loại các bộ cùng tác giả. Không phải tags. */
+export function suggestGenres(hint, registry, current) {
+  const hay = foldVi([hint, current].filter(Boolean).join(' '));
+  const genres = listGenres(registry).filter((g) => g.is_visible);
+  const scores = {};
+  genres.forEach((g) => {
+    let score = 0;
+    const foldedName = foldVi(g.name + ' ' + g.slug + ' ' + (g.description || ''));
+    if (hay && foldedName && hay.indexOf(foldVi(g.name)) >= 0) score += 6;
+    if (hay && hay.indexOf(foldVi(g.slug.replace(/-/g, ' '))) >= 0) score += 5;
+    (GENRE_HINTS[g.slug] || []).forEach((kw) => { if (hay.indexOf(kw) >= 0) score += 3; });
+    scores[g.slug] = score;
+  });
+  const lib = (registry && registry.lib) || [];
+  const author = foldVi(String(hint || '').split(/\s+/).slice(0, 8).join(' '));
+  lib.forEach((book) => {
+    const gslug = String(book.genre || '').trim();
+    if (!gslug || scores[gslug] == null) return;
+    const sameAuthor = foldVi(book.author || '') && hay.indexOf(foldVi(book.author)) >= 0;
+    const sameCouple = foldVi(book.couple || '') && hay.indexOf(foldVi(book.couple)) >= 0;
+    if (sameAuthor) scores[gslug] += 2;
+    if (sameCouple) scores[gslug] += 1;
+    if (author && sameAuthor) scores[gslug] += 1;
+  });
+  return genres
+    .map((g) => ({ slug: g.slug, name: g.name, score: scores[g.slug] || 0 }))
+    .filter((g) => g.score > 0 && g.slug !== current)
+    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, 'vi'))
+    .slice(0, 3);
+}

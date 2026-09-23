@@ -157,6 +157,8 @@ const STATS = {
   check('Thư viện/lọc 18+ ra đúng số bộ', $$('.v2book-table tbody tr').length === 10, $$('.v2book-table tbody tr').length);
   check('Thư viện/lọc 18+ có bìa ảnh của bộ 01', !!$('.v2thumb img'), '');
   check('Thư viện/hết pager khi lọc hẹp', !$('.v2pager'), '');
+  check('Thư viện/có GenreBadge (không tags)', !!$('.v2badge-genre') && !$('.v2tag'), $('.v2badge-genre') && $('.v2badge-genre').textContent);
+  check('Thư viện/CompletionBadge tách khỏi xuất bản', $$('.v2badge-completion').length > 0 && $$('.v2badge-pub').length > 0);
 
   /* 5. Thêm bộ: thể loại lưu vào registry (không tags) */
   click($('button[data-tab="new"]'));
@@ -201,7 +203,15 @@ const STATS = {
   const restored = putBodies.filter((x) => x.p === '/api/registry').pop();
   check('Khôi phục/registry backup có 30 bộ', restored && (restored.body.lib || []).length === 30, restored && (restored.body.lib || []).length);
 
-  /* 8. splitChaptersTxt: tách file .txt nhiều chương */
+  /* 8. htmlSafety: chặn blob/data trong HTML chương */
+  {
+    const { tempMediaInHtml, hasTempMedia } = await import('../src/admin/utils/htmlSafety.js');
+    check('htmlSafety/phát hiện blob', hasTempMedia('<p><img src="blob:https://x/1"></p>'));
+    check('htmlSafety/phát hiện data', tempMediaInHtml('<img src="data:image/png;base64,aaa">').length === 1);
+    check('htmlSafety/URL bền sạch', !hasTempMedia('<img src="/api/img/abc">'));
+  }
+
+  /* 8b. splitChaptersTxt: tách file .txt nhiều chương */
   const { splitChaptersTxt } = await import('./' + 'helpers_txt.mjs').catch(() => ({}));
   if (splitChaptersTxt) {
     const parts = splitChaptersTxt('Chương 1\nKhởi đầu\n\nVào buổi sáng…\nChương 2: Bất ngờ\n\nMột ngày nọ.');

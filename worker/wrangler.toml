@@ -33,6 +33,24 @@ VAPID_PUBLIC = "BDzU2yh_uWzhaTZ6HZe3s-aLk6w5BnKCv5gTzUZYNjTyObcAlJa5GnZGrbfwHeOd
 # Cron rút dần hàng đợi push "ra chương mới" — mỗi 10 phút, mỗi lần tối đa 45 tin.
 [triggers]
 crons = ["*/10 * * * *"]
+
+# TUỲ CHỌN — overflow book/img ra khỏi KV (free, không bắt buộc).
+# Không cấu hình thì Worker vẫn ghi full JSON vào KV như cũ.
+# 1) Supabase Postgres (bảng ssochuz_blobs). Secret KHÔNG đưa ra trình duyệt:
+#      npx wrangler secret put SUPABASE_SERVICE_ROLE
+#    SQL một lần (SQL Editor):
+#      create table if not exists public.ssochuz_blobs (
+#        key text primary key,
+#        value text not null,
+#        mime text,
+#        updated_at timestamptz default now()
+#      );
+#      alter table public.ssochuz_blobs enable row level security;
+#    (Worker dùng service role, RLS vẫn chặn anon.)
+# 2) Cloudflare R2 — 10 GB free. Bỏ comment sau khi tạo bucket:
+# [[r2_buckets]]
+# binding = "CZ_R2"
+# bucket_name = "ssochuz-blobs"
 # TUỲ CHỌN — chỉ dùng cho POST /api/stats/import-firebase (kéo số liệu CŨ về KV 1 lần).
 # Lượt đọc/bình chọn mới do Worker tự đếm trên KV, không gọi tới Firebase.
 FIREBASE_PROJECT = "chuseoz-library"

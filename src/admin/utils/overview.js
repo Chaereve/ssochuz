@@ -46,7 +46,7 @@ export function computeOverview(registry, statsItems = {}) {
       { value: sum('views'), label: 'Lượt đọc (KV)' },
       { value: sum('votes'), label: 'Phiếu thích (KV)' },
     ],
-    recent: lib.slice().sort((a, b) => String(b.updated || '').localeCompare(String(a.updated || ''))).slice(0, 6),
+    recent: lib.slice().sort((a, b) => String(b.updated || '').localeCompare(String(a.updated || ''))).slice(0, 12),
   };
 }
 

@@ -2,6 +2,7 @@ import { h } from 'preact';
 import { useState } from 'preact/hooks';
 import { BookCover } from './BookCover.jsx';
 import { slideSlug } from '../utils/books.js';
+import { LockedBadge, GenreBadge } from './Badges.jsx';
 
 function bySlug(registry) {
   const map = {};
@@ -9,7 +10,7 @@ function bySlug(registry) {
   return map;
 }
 
-export function HomepageCMS({ registry, apiBase, onSave }) {
+export function HomepageCMS({ registry, apiBase, onSave, writeBlocked = false, online = false }) {
   const lib = (registry && registry.lib) || [];
   const books = bySlug(registry);
   const [slides, setSlides] = useState(() => (registry.slides || []).map((x) => {
@@ -57,7 +58,7 @@ export function HomepageCMS({ registry, apiBase, onSave }) {
           <div class={'v2home-preview ' + preview}>
             {slides.map((s) => {
               const b = books[s.slug];
-              return <div class="v2hp-card" key={s.slug}><BookCover book={b} apiBase={apiBase} /><b>{b ? b.title : s.slug}</b></div>;
+              return <div class="v2hp-card" key={s.slug}><BookCover book={b} apiBase={apiBase} /><b>{b ? b.title : s.slug}</b><LockedBadge book={b} /><GenreBadge book={b} registry={registry} /></div>;
             })}
             {!slides.length ? <div class="empty sm">Chưa chọn slide — trang chủ sẽ lấy 5 bộ mới nhất.</div> : null}
           </div>
@@ -68,6 +69,8 @@ export function HomepageCMS({ registry, apiBase, onSave }) {
                 <li key={s.slug}>
                   <BookCover book={b} apiBase={apiBase} width={40} height={60} />
                   <span class="grow"><b>{b ? b.title : s.slug}</b>
+                    <LockedBadge book={b} />
+                    {b && b.lock ? <p class="v2lock-warn">Truyện này đang khóa. Người đọc có thể thấy thẻ truyện nhưng không thể đọc chương nếu không có token hợp lệ.</p> : null}
                     <input class="inp" value={s.reason} placeholder="Lý do đề xuất (tuỳ chọn)"
                       onInput={(e) => setSlides(slides.map((x, k) => k === i ? Object.assign({}, x, { reason: e.target.value }) : x))} />
                   </span>
@@ -138,7 +141,9 @@ export function HomepageCMS({ registry, apiBase, onSave }) {
           <input class="inp" value={announce.href} placeholder="Link (tuỳ chọn)" onInput={(e) => setAnnounce(Object.assign({}, announce, { href: e.target.value }))} />
         </section>
 
-        <div class="row sticky-actions"><button class="btn pri" type="submit">Lưu trang chủ</button></div>
+        <div class="row sticky-actions">
+          <button class="btn pri" type="submit" disabled={writeBlocked || !online}>{writeBlocked ? 'Hết quota KV' : (!online ? 'Chế độ tĩnh — không ghi KV' : 'Lưu trang chủ')}</button>
+        </div>
       </form>
     </div>
   );

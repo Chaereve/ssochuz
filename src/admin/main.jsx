@@ -53,6 +53,26 @@ function stripLockForBackup(book) {
   delete copy.lock;
   return copy;
 }
+function stripRegistryForBackup(registry) {
+  const copy = JSON.parse(JSON.stringify(registry || { lib: [] }));
+  if (copy.settings) {
+    if (Array.isArray(copy.settings.staff)) {
+      copy.settings.staff = copy.settings.staff.map((s) => ({ role: s.role, name: s.name || 'staff' }));
+    }
+    if (copy.settings.auth) {
+      const auth = Object.assign({}, copy.settings.auth);
+      delete auth.supabaseAnonKey; delete auth.serviceRole; delete auth.adminKey;
+      copy.settings.auth = auth;
+    }
+  }
+  return copy;
+}
+function classifyConnError(error) {
+  const status = error && error.httpStatus;
+  const msg = String((error && error.message) || error || '');
+  if (status === 401 || status === 403 || /unauthor|forbidden|sai.*(key|khoá|khoa)|ADMIN_KEY|invalid key/i.test(msg)) return 'badkey';
+  return 'network';
+}
 
 function App() {
   const [state, setState] = useState(store.getState());
@@ -107,42 +127,81 @@ function App() {
   function trackQuotaWrite(cost, label) {
     const before = quota.snapshot();
     const snap = quota.trackWrite(cost);
-    if (snap.writesToday >= snap.criticalThreshold) {
+    if (snap.writesToday >= snap.limit) {
+      toast(`Quota KV đã hết: ${snap.writesToday}/${snap.limit} sau “${label}”. Đã chặn ghi tiếp.`, 'err');
+    } else if (snap.writesToday >= snap.criticalThreshold) {
       toast(`Cảnh báo KV write: ${snap.writesToday}/${snap.limit} sau “${label}”. Gần chạm trần free tier, nên dừng các thao tác ghi lớn.`, 'err');
     } else if (before.writesToday < snap.warningThreshold && snap.writesToday >= snap.warningThreshold) {
       toast(`Cảnh báo KV write: ${snap.writesToday}/${snap.limit}. Hôm nay đã qua ngưỡng an toàn, cân nhắc backup rồi dừng ghi lớn.`, 'err');
     }
     return snap;
   }
+  function pushAudit(entry) {
+    const row = Object.assign({ at: new Date().toISOString(), who: state.online ? 'admin-key' : 'session' }, entry);
+    const audit = [row].concat(store.getState().audit || []).slice(0, 200);
+    store.setState({ audit });
+  }
   async function writeRegistry(registry, okMsg = 'Đã lưu thư viện') {
     const next = touchRegistry(registry);
     if (state.online) {
       ensureQuota(1, okMsg);
-      trackQuotaWrite(1, okMsg);
       await api.putRegistry(next);
+      trackQuotaWrite(1, okMsg);
     }
-    store.setState({ registry: next });
+    store.setState({ registry: next, pendingRegistry: null, partialError: '' });
     toast(state.online ? okMsg : okMsg + ' (bản nháp trong phiên admin v2)', 'ok');
+    pushAudit({ action: 'registry', text: okMsg, result: state.online ? 'ok' : 'draft' });
     return next;
   }
   async function putBook(slug, book, label = 'ghi bộ') {
     if (!state.online) return null;
     ensureQuota(1, label);
+    const res = await api.putBook(slug, book);
     trackQuotaWrite(1, label);
-    return api.putBook(slug, book);
+    return res;
   }
   async function deleteBookKv(slug) {
     if (!state.online) return null;
     ensureQuota(1, 'xoá bộ trên KV');
+    const res = await api.deleteBook(slug);
     trackQuotaWrite(1, 'xoá bộ trên KV');
-    return api.deleteBook(slug);
+    return res;
+  }
+  async function persistBookAndRegistry(slug, book, registry, okMsg) {
+    const next = touchRegistry(registry);
+    if (state.online) {
+      ensureQuota(2, okMsg || 'ghi book + registry');
+      await putBook(slug, book, 'ghi book');
+      try {
+        await api.putRegistry(next);
+        trackQuotaWrite(1, 'ghi registry');
+      } catch (error) {
+        store.setState({ registry: next, pendingRegistry: next, partialError: (error && error.message) || String(error) });
+        pushAudit({ action: 'partial', text: 'book:' + slug, result: 'book-ok', error: (error && error.message) || String(error) });
+        toast('Book đã ghi nhưng registry thất bại — không báo lưu hoàn tất. Bấm Thử lại registry.', 'err');
+        throw error;
+      }
+    }
+    store.setState({ registry: next, pendingRegistry: null, partialError: '' });
+    toast(state.online ? 'Đã ghi book + registry' : (okMsg || 'Đã lưu') + ' (nháp phiên)', 'ok');
+    pushAudit({ action: 'book+registry', text: okMsg || slug, result: state.online ? 'ok' : 'draft' });
+    return next;
+  }
+  async function retryPendingRegistry() {
+    const pending = store.getState().pendingRegistry;
+    if (!pending) return;
+    try {
+      await writeRegistry(pending, 'Đã ghi book + registry');
+    } catch (error) {
+      toast('Thử lại registry lỗi: ' + (error.message || error), 'err');
+    }
   }
   async function uploadImage(file, options = {}) {
     if (!state.online) throw new Error('Upload ảnh cần nối Worker bằng ADMIN_KEY.');
     const packed = await compressImage(file, options);
     ensureQuota(1, 'upload ảnh');
-    trackQuotaWrite(1, 'upload ảnh');
     const res = await api.postImage(packed);
+    trackQuotaWrite(1, 'upload ảnh');
     if (!res || !res.url) throw new Error('Worker không trả URL ảnh.');
     toast('Đã lên ảnh ' + Math.max(1, Math.round((res.bytes || packed.bytes || 0) / 1024)) + ' KB', 'ok');
     return (/^\/api\//.test(res.url) && api.apiBase) ? api.apiBase + res.url : res.url;
@@ -164,7 +223,7 @@ function App() {
     setBusy(true); setGateMessage('');
     try {
       api.setConnection({ apiBase: '', adminKey: '' });
-      store.setState({ mode, role: mode === 'login' ? 'admin' : 'local', online: false, worker: null, apiBase: '', quota: quota.snapshot() });
+      store.setState({ mode, role: mode === 'login' ? 'admin' : 'local', online: false, worker: null, apiBase: '', quota: quota.snapshot(), connecting: false, connError: '' });
       await loadRegistryFromCurrent(false);
       if (!quiet) setNotice('Đang xem dữ liệu tĩnh trong repo. Admin v2 chỉ ghi khi bạn nối Worker bằng ADMIN_KEY.');
     } catch (error) { setGateMessage(error.message || String(error)); }
@@ -177,21 +236,23 @@ function App() {
     if (!apiBase) { setGateMessage('Nhập URL Worker đã.'); return; }
     if (!adminKey) { setGateMessage('Nhập ADMIN_KEY đã.'); return; }
     setBusy(true); setGateMessage('');
+    store.setState({ connecting: true, connError: '' });
     try {
       api.setConnection({ apiBase, adminKey });
       const health = await api.health();
       if (health.adminConfigured === false) throw new Error('Worker chưa nhận secret ADMIN_KEY.');
       const who = await api.whoami();
       saveConnection(apiBase, adminKey);
-      store.setState({ mode: 'key', role: who.role || 'admin', permissions: who.permissions || ['*'], online: true, apiBase, worker: health, error: '' });
+      store.setState({ mode: 'key', role: who.role || 'admin', permissions: who.permissions || ['*'], online: true, apiBase, worker: health, error: '', connecting: false, connError: '' });
       await loadRegistryFromCurrent(true);
       quota.init(api).then((snap) => store.setState({ quota: snap })).catch(() => {});
       loadOperationalCounts().catch(() => {});
       if (!quiet) toast('Kết nối Admin v2 OK', 'ok');
     } catch (error) {
       api.setConnection({ apiBase: '', adminKey: '' });
+      const kind = classifyConnError(error);
       setGateMessage(error.message || String(error));
-      store.setState({ online: false, mode: '', worker: null });
+      store.setState({ online: false, mode: '', worker: null, connecting: false, connError: kind });
     } finally { setBusy(false); }
   }
 
@@ -236,8 +297,7 @@ function App() {
       if ((registry.lib || []).some((item) => item.slug === meta.slug)) throw new Error('Slug đã tồn tại: ' + meta.slug);
       registry.lib = registry.lib || [];
       registry.lib.push(meta);
-      if (book.chapters.length) await putBook(meta.slug, book, 'tạo book mới');
-      await writeRegistry(registry, 'Đã tạo truyện “' + meta.title + '”');
+      await persistBookAndRegistry(meta.slug, book, registry, 'Đã tạo truyện “' + meta.title + '”');
       setBookCache((prev) => Object.assign({}, prev, { [meta.slug]: book }));
       setCurrentSlug(meta.slug); setActiveTab('edit');
       return true;
@@ -261,17 +321,23 @@ function App() {
         if (book) {
           const moved = Object.assign({}, book, { slug: nextSlug, title: nextMeta.title, author: nextMeta.author, couple: nextMeta.couple });
           await putBook(nextSlug, moved, 'đổi slug: ghi book mới');
-          await deleteBookKv(oldSlug).catch(() => null);
+          try {
+            await writeRegistry(registry, 'Đã ghi book + registry');
+          } catch (error) {
+            toast('Đã ghi book:' + nextSlug + ' nhưng registry chưa đổi. Chưa xoá book cũ. Thử lại registry.', 'err');
+            throw error;
+          }
+          await deleteBookKv(oldSlug).catch((e) => { toast('Registry đã đổi nhưng chưa xoá book cũ: ' + (e.message || e), 'err'); });
           setBookCache((prev) => {
             const next = Object.assign({}, prev, { [nextSlug]: moved });
             delete next[oldSlug];
             return next;
           });
-        } else {
-          await deleteBookKv(oldSlug).catch(() => null);
+          setCurrentSlug(nextSlug); setActiveTab('edit');
+          return;
         }
       }
-      await writeRegistry(registry, 'Đã lưu thông tin “' + nextMeta.title + '”');
+      await writeRegistry(registry, state.online ? 'Đã lưu registry' : 'Đã lưu thông tin “' + nextMeta.title + '” (nháp phiên)');
       setCurrentSlug(nextSlug); setActiveTab('edit');
     } catch (error) { toast('Lưu metadata lỗi: ' + (error.message || error), 'err'); }
   }
@@ -290,8 +356,7 @@ function App() {
         meta.countLabel = nextBook.chapters.length ? (nextBook.chapters.length + '/' + Math.max(planned, nextBook.chapters.length)) : (planned > 0 ? '0/' + planned : '0/—');
         meta.updated = new Date().toISOString().slice(0, 10);
       }
-      await putBook(nextBook.slug, nextBook, 'lưu chương');
-      await writeRegistry(registry, 'Đã lưu chương “' + (meta && meta.title || nextBook.title || nextBook.slug) + '”');
+      await persistBookAndRegistry(nextBook.slug, nextBook, registry, 'Đã lưu chương “' + (meta && meta.title || nextBook.title || nextBook.slug) + '”');
       setBookCache((prev) => Object.assign({}, prev, { [nextBook.slug]: nextBook }));
     } catch (error) { toast('Lưu chương lỗi: ' + (error.message || error), 'err'); throw error; }
   }
@@ -300,8 +365,8 @@ function App() {
     try {
       if (!state.online) throw new Error('Khóa mật mã cần nối Worker bằng ADMIN_KEY.');
       ensureQuota(4, password ? 'khóa/đổi mật mã' : 'bỏ khóa mật mã');
-      trackQuotaWrite(4, password ? 'khóa/đổi mật mã' : 'bỏ khóa mật mã');
       const res = await api.lockSet(slug, password || '');
+      trackQuotaWrite(4, password ? 'khóa/đổi mật mã' : 'bỏ khóa mật mã');
       const registry = cloneRegistry(store.getState().registry || state.registry);
       const item = (registry.lib || []).find((book) => book.slug === slug);
       if (item) { if (res && res.locked) item.lock = 1; else delete item.lock; }
@@ -346,8 +411,7 @@ function App() {
       nextBook.slug = nextSlug;
       nextBook.title = nextMeta.title;
       if (nextBook.lock) delete nextBook.lock;
-      await putBook(nextSlug, nextBook, 'nhân bản book');
-      await writeRegistry(registry, 'Đã nhân bản “' + src.title + '”');
+      await persistBookAndRegistry(nextSlug, nextBook, registry, 'Đã nhân bản “' + src.title + '”');
       setBookCache((prev) => Object.assign({}, prev, { [nextSlug]: nextBook }));
       setCurrentSlug(nextSlug); setActiveTab('edit');
     } catch (error) { toast('Nhân bản lỗi: ' + (error.message || error), 'err'); }
@@ -384,8 +448,8 @@ function App() {
     if (typed !== 'XOÁ') { toast('Đã huỷ xoá bình luận.', 'err'); return; }
     try {
       ensureQuota(2, 'xoá bình luận');
-      trackQuotaWrite(2, 'xoá bình luận');
       await api.deleteComment(slug, id);
+      trackQuotaWrite(2, 'xoá bình luận');
       const cur = store.getState().comments || {};
       const items = (cur.items || []).filter((c) => !(c.slug === slug && c.id === id));
       store.setState({ comments: Object.assign({}, cur, { items, count: items.length, loaded: true }) });
@@ -405,8 +469,8 @@ function App() {
   async function markReport(id, done) {
     if (!state.online) throw new Error('Cần nối Worker để đổi trạng thái báo lỗi.');
     ensureQuota(2, done ? 'đánh dấu đã xử lý' : 'mở lại báo lỗi');
-    trackQuotaWrite(2, done ? 'đánh dấu đã xử lý' : 'mở lại báo lỗi');
     const res = await api.patchReport(id, done);
+    trackQuotaWrite(2, done ? 'đánh dấu đã xử lý' : 'mở lại báo lỗi');
     const cur = store.getState().reports || {};
     const items = (cur.items || []).map((x) => (x.id === id ? Object.assign({}, x, { done, doneAt: res && res.doneAt }) : x));
     const open = Number(res && res.open != null ? res.open : items.filter((x) => !x.done).length) || 0;
@@ -461,6 +525,34 @@ function App() {
     return { ok: true, scanned: lib.length, missing, mismatch, empty, locked, rows: rows.slice(0, 120), source: state.online ? 'worker-kv' : 'static-files' };
   }
 
+  async function fixScanIssue(row) {
+    if (!row || !row.slug) throw new Error('Thiếu dòng lỗi.');
+    if (!state.online) throw new Error('Sửa dữ liệu cần nối Worker bằng ADMIN_KEY.');
+    const registry = cloneRegistry(store.getState().registry || state.registry);
+    const meta = (registry.lib || []).find((item) => item.slug === row.slug);
+    if (row.issue === 'Thiếu book JSON/KV') {
+      if (!meta) throw new Error('Registry không còn bộ này.');
+      const book = { title: meta.title || row.slug, slug: row.slug, author: meta.author || '', couple: meta.couple || '', chapters: [] };
+      await putBook(row.slug, book, 'tạo book thiếu');
+      setBookCache((prev) => Object.assign({}, prev, { [row.slug]: book }));
+      toast('Đã tạo book trống cho “' + (meta.title || row.slug) + '”.', 'ok');
+      return { ok: true, fixed: 'missing' };
+    }
+    if (row.issue === 'Lệch số chương') {
+      if (!meta) throw new Error('Registry không còn bộ này.');
+      const actual = Number(row.actual);
+      if (!Number.isFinite(actual) || actual < 0) throw new Error('Không có số chương thật để khớp.');
+      meta.chapters = actual;
+      const plannedRaw = String(meta.countLabel || '').split('/')[1] || '';
+      const planned = plannedRaw.trim() === '—' ? 0 : (parseInt(plannedRaw, 10) || 0);
+      meta.countLabel = actual ? (actual + '/' + Math.max(planned, actual)) : (planned > 0 ? '0/' + planned : '0/—');
+      await writeRegistry(registry, 'Đã khớp số chương “' + (meta.title || row.slug) + '”');
+      return { ok: true, fixed: 'mismatch' };
+    }
+    toast('Chương rỗng cần mở bộ và sửa tay — không tự xoá nội dung.', 'info');
+    return { ok: false, skipped: true };
+  }
+
   async function runRecount() {
     const ok = await confirmBox('Đếm lại số chương từ toàn bộ book trong KV? Thao tác có thể ghi registry nếu phát hiện lệch.', 'Đếm lại');
     if (!ok) return;
@@ -468,8 +560,8 @@ function App() {
     if (typed !== 'ĐẾM LẠI') { toast('Đã huỷ đếm lại.', 'err'); return; }
     try {
       ensureQuota(3, 'đếm lại số chương');
-      trackQuotaWrite(3, 'đếm lại số chương');
       const res = await api.recount();
+      trackQuotaWrite(3, 'đếm lại số chương');
       toast('Đếm lại xong: sửa ' + ((res.fixed || []).length) + ' bộ, thiếu ' + ((res.missing || []).length) + ' book.', 'ok');
       await loadRegistryFromCurrent(true);
       return res;
@@ -481,8 +573,8 @@ function App() {
     if (!ok) return;
     try {
       ensureQuota(2, 'flush stats');
-      trackQuotaWrite(2, 'flush stats');
       const res = await api.statsRefresh();
+      trackQuotaWrite(2, 'flush stats');
       toast('Đã flush stats cache.', 'ok');
       return res;
     } catch (error) { toast('Flush stats lỗi: ' + (error.message || error), 'err'); }
@@ -495,8 +587,8 @@ function App() {
     if (!ok) return null;
     try {
       ensureQuota(6, 'nhập chương Blogger');
-      trackQuotaWrite(6, 'nhập chương Blogger');
       const res = await api.importPost(slug, values.url || '', values.mode || 'append');
+      trackQuotaWrite(6, 'nhập chương Blogger');
       toast('Đã nhập: ' + (res.added || res.title || slug), 'ok');
       setBookCache((prev) => {
         const next = Object.assign({}, prev);
@@ -516,8 +608,8 @@ function App() {
     if (typed !== 'ĐỒNG BỘ') { toast('Đã huỷ đồng bộ.', 'err'); return null; }
     try {
       ensureQuota(4, 'đồng bộ Blogger');
-      trackQuotaWrite(4, 'đồng bộ Blogger');
       const res = await api.syncBlogger();
+      trackQuotaWrite(4, 'đồng bộ Blogger');
       toast('Đồng bộ xong: ' + (res.changed || 0) + ' thay đổi từ ' + (res.cards || 0) + ' thẻ.', 'ok');
       await loadRegistryFromCurrent(true);
       return res;
@@ -539,7 +631,7 @@ function App() {
       } catch (e) { fail++; }
     }
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-    const payload = { at: new Date().toISOString(), note: 'Admin v2 backup: registry + book JSON; lock hash stripped by default.', registry, books, failedBooks: fail };
+    const payload = { at: new Date().toISOString(), note: 'Admin v2 backup: registry + book JSON; lock hash and staff email stripped by default.', registry: stripRegistryForBackup(registry), books, failedBooks: fail };
     const file = 'ssochuz-admin-v2-backup-' + stamp + '.json';
     downloadJSON(file, payload);
     toast('Đã tạo backup: ' + Object.keys(books).length + ' book' + (fail ? ', lỗi ' + fail : ''), fail ? 'err' : 'ok');
@@ -560,17 +652,18 @@ function App() {
       throw new Error('File backup sai dạng — thiếu registry.lib hoặc books.');
     }
     const slugs = Object.keys(books).filter((k) => books[k] && books[k].slug);
-    const ok = await confirmBox('Khôi phục registry (' + reg.lib.length + ' bộ) + ' + slugs.length + ' book đè lên dữ liệu KV hiện tại? Thao tác ghi hàng loạt, chỉ dùng khi đang khôi phục sau sự cố.', 'Khôi phục');
+    const writes = 1 + slugs.length;
+    const ok = await confirmBox('Khôi phục registry (' + reg.lib.length + ' bộ) + ' + slugs.length + ' book đè lên dữ liệu KV hiện tại? Ước lượng ' + writes + ' lượt ghi KV. Thao tác ghi hàng loạt, chỉ dùng khi đang khôi phục sau sự cố.', 'Khôi phục');
     if (!ok) return null;
     const typed = window.prompt('Gõ KHÔI PHỤC để xác nhận ghi đè KV:', '');
     if (typed !== 'KHÔI PHỤC') { toast('Đã huỷ khôi phục.', 'err'); return null; }
     const cost = 1 + slugs.length;
     ensureQuota(cost, 'khôi phục backup');
-    trackQuotaWrite(cost, 'khôi phục backup');
     await api.putRegistry(reg);
+    trackQuotaWrite(1, 'khôi phục registry');
     let done = 0, fail = 0;
     for (const slug of slugs) {
-      try { await api.putBook(slug, books[slug]); done++; }
+      try { await api.putBook(slug, books[slug]); trackQuotaWrite(1, 'khôi phục ' + slug); done++; }
       catch (e) { fail++; toast('Lỗi ghi bộ “' + slug + '”: ' + (e.message || e), 'err'); }
     }
     setBookCache({});
@@ -615,8 +708,8 @@ function App() {
     if (typed !== 'RESET') { toast('Đã huỷ reset phiếu.', 'err'); return; }
     try {
       ensureQuota(2, 'reset phiếu');
-      trackQuotaWrite(2, 'reset phiếu');
       const res = await api.votesReset(body || {});
+      trackQuotaWrite(2, 'reset phiếu');
       toast('Đã reset ' + (res.cleared || 0) + ' phiếu ở ' + (res.stories || 0) + ' bộ', 'ok');
       return res;
     } catch (error) { toast('Reset phiếu lỗi: ' + (error.message || error), 'err'); throw error; }
@@ -717,19 +810,21 @@ function App() {
 
   const defaultConn = useMemo(() => loadSavedConnection(), [state.mode]);
   const authed = !!state.mode && !!state.registry;
+  const writeBlocked = !!(state.online && state.quota && state.quota.writesToday >= (state.quota.limit || 1000));
+  const currentTitle = ((((state.registry && state.registry.lib) || []).find((b) => b.slug === currentSlug) || {}).title) || currentSlug;
   if (!authed) return <AuthGate defaultApi={defaultConn.apiBase} defaultKey={defaultConn.adminKey} busy={busy} message={gateMessage} onConnect={connect} onStatic={() => enterStatic('local')} onLogin={login} />;
 
   let pane;
   if (activeTab === 'overview') pane = <Overview state={state} onReload={reload} onTodo={handleTodo} />;
-  else if (activeTab === 'list') pane = <BookList registry={state.registry} selected={selected} onSelected={setSelected} onEdit={editSlug} onNew={() => setActiveTab('new')} onBulkUpdate={bulkUpdate} onDelete={deleteBook} apiBase={state.apiBase} initialQuery={listQuery} />;
-  else if (activeTab === 'new') pane = <NewBook registry={state.registry} onCreate={createBook} onUploadImage={uploadImage} />;
-  else if (activeTab === 'edit') pane = <BookEditor registry={state.registry} slug={currentSlug} bookData={bookCache[currentSlug]} bookLoading={bookLoading} apiBase={state.apiBase} onLoadBook={loadBookForEdit} onSave={saveMeta} onSaveBook={saveBookChapters} onUploadImage={uploadImage} onLock={setBookLock} onUnlock={unlockBook} onDuplicate={duplicateBook} onBack={() => setActiveTab('list')} onDelete={deleteBook} />;
+  else if (activeTab === 'list') pane = <BookList registry={state.registry} selected={selected} onSelected={setSelected} onEdit={editSlug} onNew={() => setActiveTab('new')} onBulkUpdate={bulkUpdate} onDelete={deleteBook} apiBase={state.apiBase} initialQuery={listQuery} writeBlocked={writeBlocked} />;
+  else if (activeTab === 'new') pane = <NewBook registry={state.registry} onCreate={createBook} onUploadImage={uploadImage} apiBase={state.apiBase} writeBlocked={writeBlocked} online={state.online} />;
+  else if (activeTab === 'edit') pane = <BookEditor registry={state.registry} slug={currentSlug} bookData={bookCache[currentSlug]} bookLoading={bookLoading} apiBase={state.apiBase} onLoadBook={loadBookForEdit} onSave={saveMeta} onSaveBook={saveBookChapters} onUploadImage={uploadImage} onLock={setBookLock} onUnlock={unlockBook} onDuplicate={duplicateBook} onBack={() => setActiveTab('list')} onDelete={deleteBook} writeBlocked={writeBlocked} online={state.online} />;
   else if (activeTab === 'chapters') pane = <ChaptersHub registry={state.registry} apiBase={state.apiBase} onEdit={editSlug} />;
   else if (activeTab === 'genres') pane = <GenreManager registry={state.registry} onSave={saveGenres} />;
-  else if (activeTab === 'homepage') pane = <HomepageCMS registry={state.registry} apiBase={state.apiBase} onSave={saveHomepage} />;
-  else if (activeTab === 'users') pane = <UsersPanel registry={state.registry} onEdit={editSlug} />;
+  else if (activeTab === 'homepage') pane = <HomepageCMS registry={state.registry} apiBase={state.apiBase} onSave={saveHomepage} writeBlocked={writeBlocked} online={state.online} />;
+  else if (activeTab === 'users') pane = <UsersPanel registry={state.registry} onEdit={editSlug} onFilterAuthor={(name) => { setListQuery(name); setActiveTab('list'); }} />;
   else if (activeTab === 'roles') pane = <RolesPanel registry={state.registry} role={state.role} onSave={saveStaff} />;
-  else if (activeTab === 'doctor') pane = <DoctorPanel state={state} onKvAudit={loadKvAudit} onScanBooks={scanBooks} onRecount={runRecount} onReload={reload} />;
+  else if (activeTab === 'doctor') pane = <DoctorPanel state={state} onKvAudit={loadKvAudit} onScanBooks={scanBooks} onRecount={runRecount} onReload={reload} onFix={fixScanIssue} />;
   else if (activeTab === 'cmts') pane = <CommentsPanel state={state} onLoad={refreshComments} onDelete={deleteComment} />;
   else if (activeTab === 'reports') pane = <ReportsPanel state={state} onLoad={refreshReports} onMark={markReport} />;
   else if (activeTab === 'stats') pane = <StatsPanel state={state} onLoad={loadAdminStats} />;
@@ -739,9 +834,15 @@ function App() {
   else pane = <PlaceholderTab tab={activeTab} />;
 
   return (
-    <Layout state={state} activeTab={activeTab} currentSlug={currentSlug} onTab={handleTab} onDisconnect={disconnect} onSearch={handleSearch}>
+    <Layout state={state} activeTab={activeTab} currentSlug={currentSlug} currentTitle={currentTitle} onTab={handleTab} onDisconnect={disconnect} onSearch={handleSearch}>
       {notice ? <div class="msgbar show info v2notice">{notice}</div> : null}
       {state.error ? <div class="msgbar show err v2notice">{state.error}</div> : null}
+      {state.partialError ? (
+        <div class="v2partial" role="alert">
+          <span>Book đã ghi nhưng registry thất bại: {state.partialError}. Không báo lưu hoàn tất.</span>
+          <button class="btn pri sm" type="button" onClick={retryPendingRegistry}>Thử lại registry</button>
+        </div>
+      ) : null}
       {pane}
     </Layout>
   );

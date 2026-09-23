@@ -22,6 +22,7 @@ export function RolesPanel({ registry, role, onSave }) {
       <section class="card2">
         <div class="row"><h3>Vai trò &amp; quyền</h3><span class="grow"></span><span class="pill acc">{roleLabel(role)}</span></div>
         <p class="hint">Danh sách này lưu trên KV (registry.settings.staff) và bị lọc khỏi API công khai. Ghi dữ liệu vẫn đòi ADMIN_KEY — Worker không tin role gửi từ trình duyệt. ADMIN_KEY luôn là Super Admin.</p>
+        <div class="v2role-warn" role="note">Vai trò hiện chỉ điều khiển phạm vi giao diện. Quyền ghi Cloudflare KV vẫn yêu cầu ADMIN_KEY hoặc Worker RBAC thực tế.</div>
         <div class="v2role-grid">
           {ROLE_ORDER.map((id) => (
             <div class="v2role-card" key={id}>

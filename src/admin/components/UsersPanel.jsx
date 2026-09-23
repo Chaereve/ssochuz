@@ -1,16 +1,22 @@
 import { h } from 'preact';
 import { useMemo, useState } from 'preact/hooks';
 import { genreNameOf } from '../utils/genres.js';
+import { LockedBadge } from './Badges.jsx';
 
-export function UsersPanel({ registry, onEdit }) {
+export function UsersPanel({ registry, onEdit, onFilterAuthor }) {
   const lib = (registry && registry.lib) || [];
   const authors = useMemo(() => {
     const map = {};
     lib.forEach((b) => {
       const name = String(b.author || '').trim() || 'Chưa rõ tác giả';
-      const row = map[name] || (map[name] = { name, books: [], chapters: 0 });
+      const row = map[name] || (map[name] = { name, books: [], chapters: 0, published: 0, draft: 0, locked: 0, updated: '' });
       row.books.push(b);
       row.chapters += Number(b.chapters) || 0;
+      const pub = String(b.pubStatus || 'published');
+      if (pub === 'published') row.published++;
+      if (pub === 'draft') row.draft++;
+      if (b.lock) row.locked++;
+      if (String(b.updated || '') > row.updated) row.updated = b.updated || '';
     });
     return Object.keys(map).map((k) => map[k]).sort((a, b) => b.books.length - a.books.length || a.name.localeCompare(b.name, 'vi'));
   }, [lib]);
@@ -26,15 +32,19 @@ export function UsersPanel({ registry, onEdit }) {
         {shown.length ? (
           <div class="v2tablewrap">
             <table class="v2book-table">
-              <thead><tr><th>Tác giả</th><th>Số bộ</th><th>Chương</th><th>Thể loại</th><th></th></tr></thead>
+              <thead><tr><th>Tác giả</th><th>Số bộ</th><th>Xuất bản</th><th>Nháp</th><th>Khóa</th><th>Cập nhật</th><th></th></tr></thead>
               <tbody>
                 {shown.map((a) => (
                   <tr key={a.name}>
-                    <td><b>{a.name}</b></td>
+                    <td><b>{a.name}</b><div class="sm muted">{[...new Set(a.books.map((b) => genreNameOf(b, registry)).filter(Boolean))].slice(0, 3).join(', ') || '—'}</div></td>
                     <td>{a.books.length}</td>
-                    <td>{a.chapters}</td>
-                    <td>{[...new Set(a.books.map((b) => genreNameOf(b, registry)).filter(Boolean))].slice(0, 3).join(', ') || '—'}</td>
-                    <td><button class="btn ghost sm" type="button" onClick={() => onEdit && onEdit(a.books[0].slug)}>Mở bộ đầu</button></td>
+                    <td>{a.published}</td>
+                    <td>{a.draft}</td>
+                    <td>{a.locked ? <LockedBadge isLocked /> : '0'}</td>
+                    <td>{a.updated || '—'}</td>
+                    <td>
+                      <button class="btn ghost sm" type="button" onClick={() => onFilterAuthor ? onFilterAuthor(a.name) : onEdit && onEdit(a.books[0].slug)}>Lọc thư viện</button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

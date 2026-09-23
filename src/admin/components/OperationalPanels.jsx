@@ -29,9 +29,10 @@ function LoaderButton({ busy, onClick, children }) {
   return <button class="btn ghost sm" type="button" disabled={busy} onClick={onClick}>{busy ? 'Đang đọc…' : children}</button>;
 }
 
-export function DoctorPanel({ state, onKvAudit, onScanBooks, onRecount, onReload }) {
+export function DoctorPanel({ state, onKvAudit, onScanBooks, onRecount, onReload, onFix }) {
   const [busy, setBusy] = useState(false);
   const [scanBusy, setScanBusy] = useState(false);
+  const [fixBusy, setFixBusy] = useState('');
   const [audit, setAudit] = useState(null);
   const [scan, setScan] = useState(null);
   const [error, setError] = useState('');
@@ -62,11 +63,21 @@ export function DoctorPanel({ state, onKvAudit, onScanBooks, onRecount, onReload
     catch (e) { setError(e.message || String(e)); }
     finally { setScanBusy(false); }
   };
+  const runFix = async (row) => {
+    if (!onFix || !row) return;
+    setFixBusy(row.slug + row.issue); setError('');
+    try {
+      await onFix(row);
+      setScan(await onScanBooks());
+    } catch (e) { setError(e.message || String(e)); }
+    finally { setFixBusy(''); }
+  };
+  const ov = (state.worker && state.worker.overflow) || {};
   useEffect(() => { if (state.online && !audit && !busy) load(); }, [state.online]);
   return <div id="pane-doctor" class="v2pane">
     <section class="card2">
       <div class="row"><h3>Kiểm tra dữ liệu</h3><span class="grow"></span><button class="btn ghost sm" type="button" onClick={onReload}>Đọc lại registry</button><button class="btn ghost sm" type="button" disabled={scanBusy} onClick={runScan}>{scanBusy ? 'Đang quét…' : 'Quét book'}</button><LoaderButton busy={busy} onClick={load}>Audit KV</LoaderButton></div>
-      <p class="hint">Chạy hoàn toàn trên dữ liệu hiện có; không đổi schema. “Quét book” chỉ đọc từng book để tìm lệch số chương/rỗng; “Đếm lại” mới là thao tác ghi.</p>
+      <p class="hint">Chạy hoàn toàn trên dữ liệu hiện có; không đổi schema. “Quét book” liệt kê lỗi; bấm Sửa trên từng dòng để ghi (tạo book thiếu / khớp số chương). “Đếm lại” quét cả kho.</p>
       <div class="tiles v2tiles4">
         <div class="tile"><b>{num(lib.length)}</b><span>bộ trong registry</span></div>
         <div class="tile"><b>{num(issues.dup.length)}</b><span>slug trùng/thiếu</span></div>
@@ -77,13 +88,14 @@ export function DoctorPanel({ state, onKvAudit, onScanBooks, onRecount, onReload
       <div class="v2ops-grid">
         <div class="v2mini"><b>Registry quick check</b><p class="hint">Slug trùng: {issues.dup.slice(0, 6).join(', ') || 'không thấy'}</p><p class="hint">Thiếu tên: {issues.missingTitle.slice(0, 6).join(', ') || 'không thấy'}</p></div>
         <div class="v2mini"><b>KV write quota</b><p class="hint">Đang tính: {num(state.quota && state.quota.writesToday)}/{num(state.quota && state.quota.limit || 1000)} lượt ghi hôm nay ({state.quota && state.quota.source}).</p><span class="kvbar"><span style={{ width: pct(state.quota && state.quota.writesToday, state.quota && state.quota.limit || 1000) + '%' }}></span></span></div>
+        <div class="v2mini"><b>Overflow KV</b><p class="hint">Supabase: {ov.supabase ? 'connected' : 'unavailable'}. R2: {ov.r2 ? 'connected' : 'unavailable'}. KV fallback: active. Chưa gắn thì book/img vẫn nằm full trong KV — không giả lưu.</p></div>
       </div>
       {scan ? <div class="v2doctor-scan">
         <div class="tiles v2tiles4"><div class="tile"><b>{num(scan.scanned)}</b><span>book đã quét ({scan.source})</span></div><div class="tile"><b>{num(scan.missing)}</b><span>thiếu book</span></div><div class="tile"><b>{num(scan.mismatch)}</b><span>lệch số chương</span></div><div class="tile"><b>{num(scan.empty)}</b><span>chương rỗng</span></div></div>
-        {scan.rows && scan.rows.length ? <div class="v2table-wrap"><table class="tbl v2book-table"><thead><tr><th>Bộ</th><th>Vấn đề</th><th>Registry</th><th>Book</th></tr></thead><tbody>{scan.rows.map((row) => <tr key={row.slug + row.issue}><td><StoryLink registry={state.registry} slug={row.slug} /></td><td>{row.issue}</td><td>{row.registry == null ? '—' : num(row.registry)}</td><td>{row.actual == null ? '—' : num(row.actual)}</td></tr>)}</tbody></table></div> : <div class="msgbar show ok">Quét xong, chưa thấy lệch lớn trong book.</div>}
+        {scan.rows && scan.rows.length ? <div class="v2table-wrap"><table class="tbl v2book-table"><thead><tr><th>Bộ</th><th>Vấn đề</th><th>Registry</th><th>Book</th><th></th></tr></thead><tbody>{scan.rows.map((row) => <tr key={row.slug + row.issue}><td><StoryLink registry={state.registry} slug={row.slug} /></td><td>{row.issue}</td><td>{row.registry == null ? '—' : num(row.registry)}</td><td>{row.actual == null ? '—' : num(row.actual)}</td><td>{onFix ? <button class="btn ghost sm" type="button" disabled={!!fixBusy} onClick={() => runFix(row)}>{fixBusy === row.slug + row.issue ? 'Đang sửa…' : 'Sửa'}</button> : null}</td></tr>)}</tbody></table></div> : <div class="msgbar show ok">Quét xong, chưa thấy lệch lớn trong book.</div>}
       </div> : null}
       {audit ? <div class="v2table-wrap"><table class="tbl v2book-table"><thead><tr><th>Prefix</th><th>Keys</th><th>Bytes biết được</th><th>Không metadata</th></tr></thead><tbody>{(audit.groups || []).map((g) => <tr key={g.prefix}><td><b>{g.prefix}</b></td><td>{num(g.keys)}</td><td>{num(g.bytes)}</td><td>{num(g.unknownBytes)}</td></tr>)}</tbody></table></div> : <NeedOnline state={state}><p class="hint">Bấm Audit KV để xem phân bổ key/byte theo prefix.</p></NeedOnline>}
-      <div class="savebar"><button class="btn pri" type="button" disabled={!state.online} onClick={onRecount}>Đếm lại số chương từ KV</button></div>
+      <div class="savebar"><button class="btn pri" type="button" disabled={!state.online || (state.quota && state.quota.writesToday >= (state.quota.limit || 1000))} onClick={onRecount}>Đếm lại số chương từ KV</button></div>
     </section>
   </div>;
 }
@@ -249,11 +261,16 @@ export function LogPanel({ state, onLoad }) {
     <div class="row"><h3>Nhật ký</h3><span class="grow"></span><LoaderButton busy={busy} onClick={load}>Đọc log</LoaderButton></div>
     <NeedOnline state={state}><p class="hint">Hiển thị tối đa 200 thao tác gần nhất từ key <code>log</code>.</p></NeedOnline>
     {error ? <div class="msgbar show err">{error}</div> : null}
-    <div class="v2listcards">{items.length ? items.map((it) => <article class="v2itemrow"><div><b>{it.text}</b><span class="sm muted"> · {dateText(it.at)} · {it.who || 'admin-key'}</span></div></article>) : <div class="empty sm">Chưa có log trong phiên này.</div>}</div>
+    {(() => {
+      const session = (state.audit || []).slice(0, 200);
+      const merged = items.length ? items.slice(0, 200) : session;
+      return <div class="v2listcards">{merged.length ? merged.map((it, i) => <article class="v2itemrow" key={(it.at || '') + i}><div><b>{it.text || it.action}</b><span class="sm muted"> · {dateText(it.at)} · {it.who || 'admin-key'}{it.result ? ' · ' + it.result : ''}{it.error ? ' · lỗi: ' + it.error : ''}</span></div></article>) : <div class="empty sm">Chưa có log trong phiên này.</div>}</div>;
+    })()}
   </section></div>;
 }
 
 export function SettingsPanel({ state, onReload, onRecount, onStatsRefresh, onImportBlogger, onSyncBlogger, onDownloadBackup, onRestoreBackup }) {
+  const writeBlocked = !!(state.online && state.quota && state.quota.writesToday >= (state.quota.limit || 1000));
   const lib = (state.registry && state.registry.lib) || [];
   const [slug, setSlug] = useState((lib[0] && lib[0].slug) || '');
   const [url, setUrl] = useState('');
@@ -289,15 +306,25 @@ export function SettingsPanel({ state, onReload, onRecount, onStatsRefresh, onIm
         <label class="fl">Bộ truyện</label><select class="inp" value={slug} onChange={(e) => setSlug(e.currentTarget.value)}>{lib.map((book) => <option value={book.slug}>{book.title}</option>)}</select>
         <label class="fl">URL bài viết Blogspot (không bắt buộc)</label><input class="inp" value={url} onInput={(e) => setUrl(e.currentTarget.value)} placeholder="https://chuseoz.blogspot.com/..." />
         <label class="fl">Cách nhập</label><select class="inp" value={mode} onChange={(e) => setMode(e.currentTarget.value)}><option value="append">Thêm vào cuối</option><option value="replace-last">Thay chương cuối</option></select>
-        <button class="btn pri sm mt" type="button" disabled={!state.online || !!busy || !slug} onClick={() => run('import', () => onImportBlogger({ slug, url, mode }))}>{busy === 'import' ? 'Đang nhập…' : 'Nhập chương'}</button>
+        <button class="btn pri sm mt" type="button" disabled={!state.online || writeBlocked || !!busy || !slug} onClick={() => run('import', () => onImportBlogger({ slug, url, mode }))}>{busy === 'import' ? 'Đang nhập…' : 'Nhập chương'}</button>
       </div>
       <div class="v2mini">
         <b>Đồng bộ metadata Blogger</b>
         <p class="hint">Đọc list-novel + lịch ra chương rồi cập nhật registry KV; số chương thật trong KV vẫn là nguồn thắng.</p>
-        <button class="btn ghost sm" type="button" disabled={!state.online || !!busy} onClick={() => run('sync', onSyncBlogger)}>{busy === 'sync' ? 'Đang đồng bộ…' : 'Đồng bộ Blogger'}</button>
+        <button class="btn ghost sm" type="button" disabled={!state.online || writeBlocked || !!busy} onClick={() => run('sync', onSyncBlogger)}>{busy === 'sync' ? 'Đang đồng bộ…' : 'Đồng bộ Blogger'}</button>
+      </div>
+    </div>
+    <div class="v2ops-grid">
+      <div class="v2mini v2overflow-card">
+        <b>Overflow KV (free)</b>
+        <p class="hint">Supabase: {(state.worker && state.worker.overflow && state.worker.overflow.supabase) ? 'connected' : 'unavailable'}. R2: {(state.worker && state.worker.overflow && state.worker.overflow.r2) ? 'connected' : 'unavailable'}. KV fallback: active.</p>
+        <p class="hint">Chưa gắn thì book/img vẫn nằm full trong KV. Secret <code>SUPABASE_SERVICE_ROLE</code> chỉ đặt trên Worker, không vào bundle.</p>
+        <p class="hint">SQL một lần (Supabase SQL Editor, bảng ~500 MB free):</p>
+        <pre class="v2result">{'create table if not exists public.ssochuz_blobs (\n  key text primary key,\n  value text not null,\n  mime text,\n  updated_at timestamptz default now()\n);\nalter table public.ssochuz_blobs enable row level security;'}</pre>
+        <p class="hint">R2 10 GB free: tạo bucket rồi binding <code>CZ_R2</code> trong wrangler.toml (đã ghi chú sẵn).</p>
       </div>
     </div>
     {result ? <pre class="v2result">{result}</pre> : null}
-    <div class="savebar"><button class="btn ghost" type="button" onClick={onReload}>Đọc lại dữ liệu</button><button class="btn ghost" type="button" disabled={!state.online || !!busy} onClick={() => run('stats', onStatsRefresh)}>Flush stats cache</button><button class="btn pri" type="button" disabled={!state.online || !!busy} onClick={() => run('recount', onRecount)}>Đếm lại số chương</button><a class="btn ghost" href="/admin-legacy">Mở admin cũ</a></div>
+    <div class="savebar"><button class="btn ghost" type="button" onClick={onReload}>Đọc lại dữ liệu</button><button class="btn ghost" type="button" disabled={!state.online || writeBlocked || !!busy} onClick={() => run('stats', onStatsRefresh)}>Flush stats cache</button><button class="btn pri" type="button" disabled={!state.online || writeBlocked || !!busy} onClick={() => run('recount', onRecount)}>Đếm lại số chương</button><a class="btn ghost" href="/admin-legacy">Mở admin cũ</a></div>
   </section></div>;
 }

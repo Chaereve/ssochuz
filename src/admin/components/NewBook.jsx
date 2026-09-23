@@ -4,8 +4,9 @@ import { slugify, COMPLETION_STATUSES, PUB_STATUSES, VISIBILITIES } from '../uti
 import { GenreSelect } from './GenreSelect.jsx';
 import { ImageUploader } from './ImageUploader.jsx';
 import { persistableCover } from '../utils/cover.js';
+import { GenreBadge } from './Badges.jsx';
 
-export function NewBook({ registry, onCreate, onUploadImage }) {
+export function NewBook({ registry, onCreate, onUploadImage, apiBase = '', writeBlocked = false, online = false }) {
   const [form, setForm] = useState({
     title: '', slug: '', author: '', couple: '', year: '', status: 'Đang cập nhật',
     is18: '0', thumb: '', coverAlt: '', synopsis: '', chapter: '', genre: '',
@@ -17,6 +18,7 @@ export function NewBook({ registry, onCreate, onUploadImage }) {
 
   async function submit(e) {
     e.preventDefault();
+    if (writeBlocked) return;
     setBusy(true);
     try {
       const ok = await onCreate(Object.assign({}, form, { thumb: persistableCover(form.thumb) }));
@@ -36,8 +38,10 @@ export function NewBook({ registry, onCreate, onUploadImage }) {
       <label class="fl">Slug (tuỳ chọn)<input class="inp" value={form.slug} onInput={(e) => update('slug', e.target.value)} /></label>
       <label class="fl">Tác giả<input class="inp" value={form.author} onInput={(e) => update('author', e.target.value)} /></label>
       <label class="fl">Couple<input class="inp" value={form.couple} onInput={(e) => update('couple', e.target.value)} /></label>
+      <label class="fl">Năm<input class="inp" value={form.year} onInput={(e) => update('year', e.target.value)} /></label>
       <label class="fl">Thể loại
-        <GenreSelect registry={registry} value={form.genre} onChange={(v) => update('genre', v)} />
+        <GenreSelect registry={registry} value={form.genre} onChange={(v) => update('genre', v)} hint={[form.title, form.synopsis, form.couple, form.author].join(' ')} />
+        {form.genre ? <span class="v2badges"><GenreBadge genre={form.genre} registry={registry} /></span> : null}
       </label>
       <div class="row">
         <label class="fl">Tình trạng hoàn thành
@@ -68,11 +72,17 @@ export function NewBook({ registry, onCreate, onUploadImage }) {
         onChange={(url) => update('thumb', persistableCover(url))}
         onAltChange={(v) => update('coverAlt', v)}
         onUpload={onUploadImage}
+        apiBase={apiBase}
         label="Ảnh bìa"
       />
       <label class="fl">Tóm tắt<textarea class="inp ta" value={form.synopsis} onInput={(e) => update('synopsis', e.target.value)} /></label>
       <label class="fl">Chương 1 (tuỳ chọn)<textarea class="inp ta" value={form.chapter} onInput={(e) => update('chapter', e.target.value)} /></label>
-      <button class="btn pri" disabled={busy}>{busy ? 'Đang tạo…' : 'Tạo truyện'}</button>
+      <p class="hint">{online
+        ? 'Khi đang nối Worker, Tạo truyện ghi ngay book JSON + registry — tab Kiểm tra dữ liệu sẽ thấy bộ mới, không chờ thêm bước nào.'
+        : 'Chế độ dữ liệu tĩnh: chỉ tạo nháp phiên, chưa ghi Cloudflare KV.'}</p>
+      <div class="row sticky-actions">
+        <button class="btn pri" disabled={busy || writeBlocked}>{writeBlocked ? 'Hết quota KV' : (busy ? 'Đang tạo…' : 'Tạo truyện')}</button>
+      </div>
     </form>
     </div>
   );
