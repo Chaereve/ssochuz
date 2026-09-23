@@ -1,60 +1,83 @@
 import { h } from 'preact';
-import { useMemo, useRef, useState } from 'preact/hooks';
-import { slugify, allTags } from '../utils/books.js';
-import { TagsField } from './TagsField.jsx';
+import { useState } from 'preact/hooks';
+import { slugify, COMPLETION_STATUSES, PUB_STATUSES, VISIBILITIES } from '../utils/books.js';
+import { ImageUploader } from './ImageUploader.jsx';
+import { persistableCover } from '../utils/cover.js';
 
-export function NewBook({ registry, onCreate, onUploadImage }) {
-  const [form, setForm] = useState({ title: '', slug: '', author: '', couple: '', year: '', status: 'Đang cập nhật', is18: '0', thumb: '', synopsis: '', chapter: '', tags: '' });
-  const [coverBusy, setCoverBusy] = useState(false);
-  const coverRef = useRef(null);
-  const update = (key, value) => setForm((prev) => Object.assign({}, prev, { [key]: value }));
-  const uploadCover = async (file) => {
-    if (!file || !onUploadImage) return;
-    setCoverBusy(true);
+export function NewBook({ registry, onCreate, onUploadImage, apiBase = '', writeBlocked = false, online = false }) {
+  const [form, setForm] = useState({
+    title: '', slug: '', author: '', couple: '', year: '', status: 'Đang cập nhật',
+    is18: '0', thumb: '', coverAlt: '', synopsis: '', chapter: '', genre: '',
+    pubStatus: 'draft', visibility: 'public', publishedAt: '',
+  });
+  const [busy, setBusy] = useState(false);
+  const preview = slugify(form.slug || form.title);
+  function update(key, value) { setForm((cur) => Object.assign({}, cur, { [key]: value })); }
+
+  async function submit(e) {
+    e.preventDefault();
+    if (writeBlocked) return;
+    setBusy(true);
     try {
-      const url = await onUploadImage(file, { max: 900, quality: 0.84 });
-      if (url) update('thumb', url);
-    } catch (error) {
-      if (window.CZ && window.CZ.toast) window.CZ.toast('Upload bìa lỗi: ' + (error.message || error), 'err');
-    } finally { setCoverBusy(false); }
-  };
-  const slug = useMemo(() => slugify(form.slug || form.title), [form.slug, form.title]);
-  const exists = !!((registry && registry.lib) || []).find((book) => book.slug === slug);
-  const submit = async (event) => {
-    event.preventDefault();
-    const ok = onCreate ? await onCreate(Object.assign({}, form, { slug })) : false;
-    if (ok) {
-      setForm({ title: '', slug: '', author: '', couple: '', year: '', status: 'Đang cập nhật', is18: '0', thumb: '', synopsis: '', chapter: '', tags: '' });
-      if (coverRef.current) coverRef.current.value = '';
-    }
-  };
+      const ok = await onCreate(Object.assign({}, form, { thumb: persistableCover(form.thumb) }));
+      if (ok) setForm({
+        title: '', slug: '', author: '', couple: '', year: '', status: 'Đang cập nhật',
+        is18: '0', thumb: '', coverAlt: '', synopsis: '', chapter: '', genre: '',
+        pubStatus: 'draft', visibility: 'public', publishedAt: '',
+      });
+    } finally { setBusy(false); }
+  }
+
   return (
-    <div id="pane-new" class="v2pane">
-      <section class="card2">
-        <h3>Thêm bộ mới</h3>
-        <p class="hint">Tạo thẻ truyện mới. Slug được xem trước realtime; nếu nhập chương đầu tiên, admin v2 sẽ tạo luôn bản ghi book trên KV.</p>
-        <form onSubmit={submit}>
-          <div class="grid2">
-            <div><label class="fl">Tên truyện *</label><input class="inp" value={form.title} onInput={(e) => update('title', e.currentTarget.value)} required /></div>
-            <div><label class="fl">Slug</label><input class="inp" value={form.slug} onInput={(e) => update('slug', e.currentTarget.value)} placeholder="tu-dong-tao-tu-ten" /><p class={`hint ${exists ? 'errtxt' : ''}`}>URL: <code>/truyen/{slug || '...'}/</code>{exists ? ' — slug đã tồn tại' : ''}</p></div>
-            <div><label class="fl">Tác giả</label><input class="inp" value={form.author} onInput={(e) => update('author', e.currentTarget.value)} /></div>
-            <div><label class="fl">Couple</label><input class="inp" value={form.couple} onInput={(e) => update('couple', e.currentTarget.value)} /></div>
-            <div><label class="fl">Năm</label><input class="inp" value={form.year} onInput={(e) => update('year', e.currentTarget.value)} /></div>
-            <div><label class="fl">Tình trạng</label><select class="inp" value={form.status} onChange={(e) => update('status', e.currentTarget.value)}><option>Đang cập nhật</option><option>Hoàn thành</option><option>Sắp ra mắt</option></select></div>
-            <div><label class="fl">18+</label><select class="inp" value={form.is18} onChange={(e) => update('is18', e.currentTarget.value)}><option value="0">Không</option><option value="1">Có</option></select></div>
-            <div><label class="fl">Ảnh bìa (URL)</label><input class="inp" value={form.thumb} onInput={(e) => update('thumb', e.currentTarget.value)} placeholder="https://…" /></div>
-          </div>
-          <div class="v2cover-inline">
-            <div class={`coverbox ${form.thumb ? '' : 'empty'}`}>{form.thumb ? <img src={form.thumb} alt="" /> : <span>Chưa có ảnh bìa</span>}</div>
-            <div><input ref={coverRef} class="hide" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => uploadCover(e.currentTarget.files && e.currentTarget.files[0])} /><button class="btn ghost sm" type="button" disabled={coverBusy} onClick={() => coverRef.current && coverRef.current.click()}>{coverBusy ? 'Đang nén bìa…' : 'Upload bìa'}</button><p class="hint">Dùng cùng endpoint <code>/api/img</code>; không tạo backend mới.</p></div>
-          </div>
-          <label class="fl">Tags (thể loại/chất truyện)</label>
-          <TagsField value={form.tags} suggestions={allTags(registry)} onChange={(tags) => update('tags', tags)} />
-          <label class="fl">Mô tả</label><textarea class="inp" value={form.synopsis} onInput={(e) => update('synopsis', e.currentTarget.value)} style="min-height:88px" />
-          <label class="fl">Chương 1 (không bắt buộc)</label><textarea class="inp" value={form.chapter} onInput={(e) => update('chapter', e.currentTarget.value)} />
-          <div class="savebar"><button class="btn pri" type="submit" disabled={!form.title.trim() || !slug || exists}>Tạo bộ</button></div>
-        </form>
-      </section>
+    <div class="v2pane">
+    <form id="pane-new" class="v2form" onSubmit={submit}>
+      <label class="fl">Tên truyện<input class="inp" value={form.title} required onInput={(e) => update('title', e.target.value)} /></label>
+      <p class="hint">slug: <code>{preview ? '/truyen/' + preview + '/' : '—'}</code></p>
+      <label class="fl">Slug (tuỳ chọn)<input class="inp" value={form.slug} onInput={(e) => update('slug', e.target.value)} /></label>
+      <label class="fl">Tác giả<input class="inp" value={form.author} onInput={(e) => update('author', e.target.value)} /></label>
+      <label class="fl">Couple<input class="inp" value={form.couple} onInput={(e) => update('couple', e.target.value)} /></label>
+      <label class="fl">Năm<input class="inp" value={form.year} onInput={(e) => update('year', e.target.value)} /></label>
+      <div class="row">
+        <label class="fl">Tình trạng hoàn thành
+          <select class="inp" value={form.status} onChange={(e) => update('status', e.target.value)}>
+            {COMPLETION_STATUSES.map((s) => <option key={s}>{s}</option>)}
+          </select>
+        </label>
+        <label class="fl">Trạng thái xuất bản
+          <select class="inp" value={form.pubStatus} onChange={(e) => update('pubStatus', e.target.value)}>
+            {PUB_STATUSES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+          </select>
+        </label>
+        <label class="fl">Hiển thị
+          <select class="inp" value={form.visibility} onChange={(e) => update('visibility', e.target.value)}>
+            {VISIBILITIES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+          </select>
+        </label>
+      </div>
+      {form.pubStatus === 'scheduled' ? (
+        <label class="fl">Ngày giờ xuất bản
+          <input class="inp" type="datetime-local" value={form.publishedAt} onInput={(e) => update('publishedAt', e.target.value)} />
+        </label>
+      ) : null}
+      <label class="chk"><input type="checkbox" checked={form.is18 === '1'} onChange={(e) => update('is18', e.target.checked ? '1' : '0')} /> 18+</label>
+      <ImageUploader
+        value={form.thumb}
+        altValue={form.coverAlt}
+        onChange={(url) => update('thumb', persistableCover(url))}
+        onAltChange={(v) => update('coverAlt', v)}
+        onUpload={onUploadImage}
+        apiBase={apiBase}
+        label="Ảnh bìa"
+      />
+      <label class="fl">Tóm tắt<textarea class="inp ta" value={form.synopsis} onInput={(e) => update('synopsis', e.target.value)} /></label>
+      <label class="fl">Chương 1 (tuỳ chọn)<textarea class="inp ta" value={form.chapter} onInput={(e) => update('chapter', e.target.value)} /></label>
+      <p class="hint">{online
+        ? 'Khi đang nối Worker, Tạo truyện ghi ngay book JSON + registry — tab Kiểm tra dữ liệu sẽ thấy bộ mới, không chờ thêm bước nào.'
+        : 'Chế độ dữ liệu tĩnh: chỉ tạo nháp phiên, chưa ghi Cloudflare KV.'}</p>
+      <div class="row sticky-actions">
+        <button class="btn pri" disabled={busy || writeBlocked}>{writeBlocked ? 'Hết quota KV' : (busy ? 'Đang tạo…' : 'Tạo truyện')}</button>
+      </div>
+    </form>
     </div>
   );
 }

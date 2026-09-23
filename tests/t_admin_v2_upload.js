@@ -83,6 +83,7 @@ function click(win, el) {
   const imgCall = calls.find((c) => c.path === '/api/img');
   assert.ok(imgCall && imgCall.method === 'POST', 'chưa POST /api/img');
   assert.strictEqual(imgCall.body.type, 'image/webp');
+  assert.strictEqual(imgCall.body.kind, 'cover');
   assert.ok(/QUJD/.test(imgCall.body.data), 'body ảnh không phải base64 đã nén');
   const filled = [...doc.querySelectorAll('#pane-new input.inp')].some((el) => el.value === 'https://cms.test/api/img/mock-img-123');
   assert.ok(filled, 'URL ảnh chưa tự điền vào ô bìa');

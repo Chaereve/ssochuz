@@ -59,6 +59,10 @@ const chapCount = (reg.lib || []).reduce((sum, b) => sum + (Number(b.chapters) |
   assert.ok(out.chapterEditor.lockPanel, 'thiếu panel khóa mật mã');
   assert.ok(out.chapterEditor.duplicate, 'thiếu nút nhân bản bộ');
 
+  assert.ok(!doc.querySelector('button[data-tab="classify"]'), 'menu Phân loại còn lại');
+  assert.ok(!doc.querySelector('button[data-tab="genres"]'), 'menu Thể loại còn lại');
+  assert.ok(!doc.querySelector('#pane-classify'), 'pane Phân loại còn lại');
+
   click('button[data-tab="doctor"]');
   await wait(100);
   out.doctor = !!doc.querySelector('#pane-doctor');

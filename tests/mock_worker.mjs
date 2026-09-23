@@ -19,6 +19,12 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp',
   '.xml': 'application/xml; charset=utf-8', '.txt': 'text/plain; charset=utf-8', '.md': 'text/markdown; charset=utf-8' };
 
+function publicOriginOf(req) {
+  const host = String(req.headers['x-forwarded-host'] || req.headers.host || ('127.0.0.1:' + PORT)).split(',')[0].trim();
+  const proto = /^(localhost|127\.|0\.0\.0\.0|\[::1\])/.test(host) ? 'http' : 'https';
+  return proto + '://' + host;
+}
+
 /* phục vụ file tĩnh trong repo (giống Cloudflare Pages, đủ dùng cho việc thử) */
 function serveStatic(req, res) {
   let rel = decodeURIComponent(new URL(req.url, 'http://x').pathname);
@@ -34,16 +40,23 @@ function serveStatic(req, res) {
     res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
     return res.end('Không thấy ' + rel);
   }
-  /* cz-config.js: bản xem thử tự trỏ về CHÍNH máy chủ này (theo host trình duyệt
-     đang mở) để web đọc KV giả + trang quản trị kết nối được ngay, không phải
-     sửa file rồi nhớ đổi lại. Chạy sau proxy https cũng đúng (host công khai). */
+  /* Trình duyệt người xem KHÔNG phải máy chủ: luôn lấy location.origin
+     (host xem trước https://…e2b.app), không bao giờ nhét localhost/127.0.0.1. */
+  const sameOrigin = "(self.location&&self.location.origin&&!/^(https?:\\/\\/)?(localhost|127\\.|0\\.0\\.0\\.0|\\[::1\\])/i.test(self.location.origin)?self.location.origin:" + JSON.stringify(publicOriginOf(req)) + ")";
   if (rel === '/cz-config.js') {
-    const host = String(req.headers['x-forwarded-host'] || req.headers.host || ('127.0.0.1:' + PORT)).split(',')[0].trim();
-    const proto = /^(localhost|127\.|0\.0\.0\.0|\[::1\])/.test(host) ? 'http' : 'https';
     const js = fs.readFileSync(file, 'utf8')
-      .replace(/window\.CZ_API\s*=\s*'[^']*';/, "window.CZ_API = '" + proto + '://' + host + "';");
+      .replace(/window\.CZ_API\s*=\s*'[^']*';/, 'window.CZ_API = ' + sameOrigin + ';');
     res.writeHead(200, { 'content-type': MIME['.js'], 'cache-control': 'no-store' });
     return res.end(js);
+  }
+  if (rel === '/admin-v2.html' || rel === '/admin.html') {
+    let html = fs.readFileSync(file, 'utf8');
+    const inject = '<script>window.CZ_API=' + sameOrigin + ';'
+      + 'try{var o=window.CZ_API;sessionStorage.setItem("cz_kv_key","MOCK");if(o)localStorage.setItem("cz_kv_api",o);}catch(e){}</script>';
+    html = html.indexOf('</head>') >= 0 ? html.replace('</head>', inject + '</head>') : inject + html;
+    const buf = Buffer.from(html);
+    res.writeHead(200, { 'content-type': MIME['.html'], 'content-length': buf.length, 'cache-control': 'no-store' });
+    return res.end(buf);
   }
   const d = fs.readFileSync(file);
   res.writeHead(200, { 'content-type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream',
@@ -154,6 +167,20 @@ async function seedDemoReports() {
   await env.CZ_KV.put('report', JSON.stringify(items));
 }
 
+async function seedDemoComments() {
+  if (process.env.NO_SEED) return;
+  const now = Date.now();
+  await env.CZ_KV.put('cmt:third-person', JSON.stringify([
+    { id: 'c1', uid: 'g:demo-a', name: 'Lan', text: 'Chương 1 hay quá, mong ra tiếp sớm.', ch: 1, createdAt: new Date(now - 7200e3).toISOString() },
+    { id: 'c2', uid: 'g:demo-b', name: 'Minh', text: 'Couple này ngọt thật, đọc một mạch.', ch: 2, createdAt: new Date(now - 3600e3).toISOString() },
+    { id: 'c3', uid: 'g:promo', name: 'Promo88', text: 'Click http://spam.example.com mua thuốc giảm cân ngay!!!', ch: 0, createdAt: new Date(now - 900e3).toISOString() }
+  ]));
+  await env.CZ_KV.put('log', JSON.stringify([
+    { at: new Date(now - 120e3).toISOString(), text: 'nạp dữ liệu demo vào KV RAM', who: 'mock-worker' },
+    { at: new Date(now - 60e3).toISOString(), text: 'seed báo lỗi + phiếu + bình luận', who: 'mock-worker' }
+  ]));
+}
+
 http.createServer(async (req, res) => {
   const p = new URL(req.url, 'http://x').pathname;
   /* '/' phục vụ luôn trang chủ (trước đây '/' trả JSON health của Worker khiến
@@ -180,7 +207,9 @@ http.createServer(async (req, res) => {
   const seeded = await seedFromRepo();
   await seedDemoVotes();
   await seedDemoReports();
-  console.log('Worker giả lập (code thật, KV trong RAM): http://127.0.0.1:' + PORT);
+  await seedDemoComments();
+  console.log('Worker giả lập (code thật, KV trong RAM): http://' + HOST + ':' + PORT);
   console.log('  ADMIN_KEY=' + env.ADMIN_KEY + ' · đã nạp ' + seeded + ' bộ từ repo vào KV');
+  console.log('  Mở /admin — tự điền khoá MOCK, KV RAM (tắt là hết)');
   console.log('  ADMIN_EMAILS=' + env.ADMIN_EMAILS + (env.SUPABASE_URL ? ' · SUPABASE_URL=' + env.SUPABASE_URL : ' · (chưa đặt SUPABASE_URL → /api/auth/supabase sẽ báo thiếu)'));
 });

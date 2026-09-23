@@ -3,7 +3,7 @@
    · Overview: tiles số liệu KV thật + biểu đồ 14 ngày + quota từ Worker
    · Báo lỗi: lọc đã/chưa xử lý + PATCH đánh dấu xử lý
    · Thư viện: bìa thu nhỏ + phân trang + lọc 18+/khóa
-   · Thêm bộ: tags (gợi ý chip) lưu vào registry
+   · Thêm bộ: ghi registry
    · Soạn chương: thời gian đọc ước tính
    · Cài đặt: khôi phục từ file backup JSON
    · Tách .txt nhiều chương (splitChaptersTxt)
@@ -18,7 +18,7 @@ const BASE = 'https://cms.test';
 /* headers.get cần có vì AdminApi.request đọc content-type để chọn json/text */
 const J = (b, ok, st) => Promise.resolve({ ok: ok !== false, status: st || 200, headers: { get: () => 'application/json' }, json: () => Promise.resolve(b), text: () => Promise.resolve(JSON.stringify(b)) });
 
-/* registry giả 30 bộ: 10 bộ 18+, bộ đầu có tags + thumb để test bìa/tags */
+/* registry giả 30 bộ: 10 bộ 18+, bộ đầu có thumb để test bìa */
 function mkReg() {
   const lib = [];
   for (let i = 1; i <= 30; i++) {
@@ -27,11 +27,15 @@ function mkReg() {
       title: 'Truyện Thử ' + n, slug: 'thu-' + n, author: 'Tác Giả ' + n, couple: '', year: '2026',
       status: i % 3 === 0 ? 'Hoàn thành' : 'Đang cập nhật', chapters: i, countLabel: i + '/' + i,
       is18: i <= 10, updated: '2026-09-2' + (i % 10), thumb: i === 1 ? 'https://img.test/bia-01.webp' : '',
-      tags: i === 1 ? ['Ngôn Sủng', 'Học Đường'] : (i === 2 ? ['Cổ Trang'] : []),
+      genre: i === 1 ? 'Ngôn Sủng' : (i === 2 ? 'co-trang' : ''),
       syn: 'Mô tả bộ thử ' + n,
     });
   }
-  return { rev: 'test', lib, slides: [], editorChoice: [], settings: {} };
+  return { rev: 'test', lib, slides: [], editorChoice: [], settings: { genres: [
+    { slug: 'ngon-sung', name: 'Ngôn Sủng', is_visible: true, display_order: 1 },
+    { slug: 'hoc-duong', name: 'Học Đường', is_visible: true, display_order: 2 },
+    { slug: 'co-trang', name: 'Cổ Trang', is_visible: true, display_order: 3 },
+  ] } };
 }
 const BOOK1 = { title: 'Truyện Thử 01', slug: 'thu-01', author: 'Tác Giả 01', chapters: [
   { t: 'Chương 1', html: '<p>' + 'từ '.repeat(440) + '</p>' },
@@ -153,28 +157,23 @@ const STATS = {
   check('Thư viện/lọc 18+ ra đúng số bộ', $$('.v2book-table tbody tr').length === 10, $$('.v2book-table tbody tr').length);
   check('Thư viện/lọc 18+ có bìa ảnh của bộ 01', !!$('.v2thumb img'), '');
   check('Thư viện/hết pager khi lọc hẹp', !$('.v2pager'), '');
+  check('Thư viện/không còn badge thể loại', !$('.v2badge-genre'));
+  check('Thư viện/CompletionBadge tách khỏi xuất bản', $$('.v2badge-completion').length > 0 && $$('.v2badge-pub').length > 0);
+  check('Thư viện/không còn menu Phân loại', !$('button[data-tab="classify"]') && !$('button[data-tab="genres"]'));
 
-  /* 5. Thêm bộ: tags lưu vào registry */
+  /* 5. Thêm bộ: ghi registry */
   click($('button[data-tab="new"]'));
   await wait(150);
-  const tagInput = $('#pane-new .v2tags input.inp');
-  check('Thêm bộ/có ô tags', !!tagInput);
-  inputEv(tagInput, 'Ngôn Sủng, Học Đường, he');
-  await wait(120);
-  const chipsOn = $$('#pane-new .v2tag.on').map((b) => b.textContent);
-  check('Thêm bộ/chip đã có hiện 3 thẻ', chipsOn.length === 3, chipsOn);
-  const sugBtn = $$('#pane-new .v2tag').find((b) => /\+ Cổ Trang/.test(b.textContent));
-  check('Thêm bộ/có gợi ý chip từ thẻ đã dùng', !!sugBtn, $$('#pane-new .v2tag').map((b) => b.textContent));
-  if (sugBtn) { click(sugBtn); await wait(120); }
-  check('Thêm bộ/chip gợi ý nối vào chuỗi', /Cổ Trang/.test(($('#pane-new .v2tags input.inp') || {}).value || ''), ($('#pane-new .v2tags input.inp') || {}).value);
-  inputEv($('#pane-new input.inp'), 'Bộ Mới Tags');
+  const statusSel = $('#pane-new select.inp');
+  check('Thêm bộ/có ô tình trạng', !!statusSel);
+  inputEv($('#pane-new input.inp'), 'Bộ Mới Test');
   await wait(150);
   $('.v2pane form').dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true }));
   await wait(500);
   const regPut = putBodies.find((x) => x.p === '/api/registry');
   check('Thêm bộ/PUT registry', !!regPut);
-  const newMeta = regPut && (regPut.body.lib || []).find((b) => b.slug === 'bo-moi-tags');
-  check('Thêm bộ/registry chứa tags mảng (gồm chip gợi ý)', !!newMeta && Array.isArray(newMeta.tags) && newMeta.tags.join('|') === 'Ngôn Sủng|Học Đường|he|Cổ Trang', newMeta && newMeta.tags);
+  const newMeta = regPut && (regPut.body.lib || []).find((b) => b.slug === 'bo-moi-test');
+  check('Thêm bộ/registry chứa bộ mới', !!newMeta && newMeta.title === 'Bộ Mới Test', newMeta && { title: newMeta.title });
 
   /* 6. Soạn chương: thời gian đọc + nhập .txt nhiều chương */
   click($('button[data-tab="list"]'));
@@ -201,7 +200,15 @@ const STATS = {
   const restored = putBodies.filter((x) => x.p === '/api/registry').pop();
   check('Khôi phục/registry backup có 30 bộ', restored && (restored.body.lib || []).length === 30, restored && (restored.body.lib || []).length);
 
-  /* 8. splitChaptersTxt: tách file .txt nhiều chương */
+  /* 8. htmlSafety: chặn blob/data trong HTML chương */
+  {
+    const { tempMediaInHtml, hasTempMedia } = await import('../src/admin/utils/htmlSafety.js');
+    check('htmlSafety/phát hiện blob', hasTempMedia('<p><img src="blob:https://x/1"></p>'));
+    check('htmlSafety/phát hiện data', tempMediaInHtml('<img src="data:image/png;base64,aaa">').length === 1);
+    check('htmlSafety/URL bền sạch', !hasTempMedia('<img src="/api/img/abc">'));
+  }
+
+  /* 8b. splitChaptersTxt: tách file .txt nhiều chương */
   const { splitChaptersTxt } = await import('./' + 'helpers_txt.mjs').catch(() => ({}));
   if (splitChaptersTxt) {
     const parts = splitChaptersTxt('Chương 1\nKhởi đầu\n\nVào buổi sáng…\nChương 2: Bất ngờ\n\nMột ngày nọ.');
@@ -212,7 +219,7 @@ const STATS = {
     console.log('     (splitChaptersTxt chạy bằng import động ở bài riêng — bỏ qua trong jsdom)');
   }
 
-  /* 9. Trang truyện công khai hiện tags (cz-story đọc registry) */
+  /* 9. Trang truyện công khai không hiện dải thể loại */
   const sp = page('truyen.html', {
     url: 'https://ssochuz.pages.dev/truyen/thu-01/',
     config: { CZ_API: BASE },
@@ -230,7 +237,7 @@ const STATS = {
   });
   await wait(1600);
   const stags = [...sp.doc.querySelectorAll('#shero .stags .stag')].map((x) => x.textContent.trim());
-  check('Trang truyện/hero hiện tags', stags.join('|') === 'Ngôn Sủng|Học Đường', stags);
+  check('Trang truyện/không hiện dải thể loại', stags.length === 0, stags);
   check('Trang truyện/không lỗi JS', sp.errors.length === 0, sp.errors.slice(0, 2));
 
   check('không lỗi JS: ' + JSON.stringify(p.errors.slice(0, 2)), p.errors.length === 0);

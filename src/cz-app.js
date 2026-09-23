@@ -686,7 +686,7 @@
     menu.innerHTML = '<div class="nhead">' + icon('bell', 'i-s') + '<b>Chương mới</b>' +
       (total ? '<span>' + total + ' chưa đọc</span>' : '') + '</div>' +
       (items.length ? items.map(function (it) {
-        var n = it.n, im = n.thumb || n.slide || '';
+        var n = it.n, im = coverSrc(n);
         return '<a href="' + esc(storyURL(n.slug)) + '" role="menuitem">' +
           '<span class="nth' + (im ? '' : ' noimg') + '">' +
             (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</span>' +
@@ -1278,11 +1278,39 @@
     });
   }
 
+  /* URL bìa bền: không dùng blob:/data:. Ảnh Worker dạng /api/img/… được
+     ghép với CZ_API để homepage/thẻ truyện vẫn hiện sau khi refresh. */
+  function coverSrc(n, preferred) {
+    var img = '';
+    if (typeof n === 'string') img = n;
+    else if (n) img = preferred || n.thumb || n.slide || n.cover_image_url || n.cover || '';
+    img = String(img || '').trim();
+    if (!img || /^blob:/i.test(img) || /^data:/i.test(img)) {
+      if (n && typeof n === 'object' && n.slide && n.slide !== preferred && n.slide !== n.thumb) {
+        img = String(n.slide || '').trim();
+      } else img = '';
+    }
+    if (!img || /^blob:/i.test(img) || /^data:/i.test(img)) return '';
+    if (API && /^\/api\/img\//i.test(img)) return String(API).replace(/\/+$/, '') + img;
+    return img;
+  }
+  function bookCover(n, opts) {
+    opts = opts || {};
+    var img = coverSrc(n, opts.src);
+    var alt = opts.alt || (n && n.coverAlt) || ('Bìa ' + ((n && n.title) || ''));
+    var w = opts.width || 300, h = opts.height || 450;
+    if (!img) return '';
+    return '<img src="' + esc(img) + '"' + coverFB(n, img) + ' alt="' + esc(alt) + '"' +
+      (opts.eager ? ' fetchpriority="high"' : ' loading="lazy"') +
+      ' decoding="async" referrerpolicy="no-referrer" width="' + w + '" height="' + h + '">';
+  }
   /* thuộc tính ảnh bìa dự phòng: đang dùng thumb thì dự phòng là slide
      (chỉ khi hai ảnh khác nhau) — imgSettle đọc data-fb này khi ảnh lỗi */
   function coverFB(n, img) {
-    if (!n || !img || img !== n.thumb || !n.slide || n.slide === n.thumb) return '';
-    return ' data-fb="' + esc(n.slide) + '"';
+    if (!n) return '';
+    var fb = coverSrc(n, n.slide);
+    if (!fb || fb === img) return '';
+    return ' data-fb="' + esc(fb) + '"';
   }
   /* ======================= 6. THẺ TRUYỆN & DẢI ========================= */
   function card(n, opts) {
@@ -1291,7 +1319,7 @@
       '<div class="th noimg"><span class="pill soon"><span class="d"></span>thiếu slug</span></div>' +
       '<h3>' + esc((n&&n.title)||'—') + '</h3><div class="cb">' + esc((n&&n.author)||'') + '</div></div>';
     var pg = progress(n), pct = n.chapters ? Math.min(100, Math.round(pg / n.chapters * 100)) : 0;
-    var img = n.thumb || n.slide || '';
+    var img = coverSrc(n);
     if (opts.view === 'list') return cardList(n, img, pg, pct);
     /* thẻ lưới: tình trạng là KÝ HIỆU TRÒN ở góc trái bìa; “Mới” là BOOKMARK thả
        từ cạnh trên-phải (đuôi cắt chữ V, chữ xếp dọc); 18+ nằm ở hàng chân bìa
@@ -2087,7 +2115,7 @@
     jumpCur = 0;
     res.innerHTML = jumpList.length ? jumpList.map(function (n, i) {
       return '<a href="' + esc(storyURL(n.slug)) + '" class="' + (i === 0 ? 'on' : '') + '">' +
-        (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '<img alt="">') +
+        (coverSrc(n) ? '<img src="' + esc(coverSrc(n)) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '<img alt="">') +
         '<span><b>' + esc(n.title) + '</b><span>' + esc(n.author || '') +
         (n.couple ? ' · ' + esc(n.couple) : '') + ' · ' + esc(countText(n)) + '</span></span></a>';
     }).join('') : '<div class="empty" style="border:0;background:none">Không tìm thấy truyện nào khớp “' + esc(q) + '”.</div>';
@@ -2461,10 +2489,22 @@
 
   /* ======================= 8. XUẤT RA NGOÀI ============================= */
   var libCache = null;
+  function listedPublicly(n) {
+    if (!n) return false;
+    var vis = String(n.visibility || 'public').toLowerCase();
+    if (vis === 'private' || vis === 'unlisted') return false;
+    var pub = String(n.pubStatus || n.pub || 'published').toLowerCase();
+    if (pub === 'draft' || pub === 'pending_review' || pub === 'archived') return false;
+    if (pub === 'scheduled') {
+      var at = Date.parse(n.publishedAt || n.published_at || '');
+      if (!at || at > Date.now()) return false;
+    }
+    return true;
+  }
   function libList() {
     if (libCache) return libCache;
     var reg = memo.reg || {};
-    var list = (reg.lib || []).map(norm);
+    var list = (reg.lib || []).filter(listedPublicly).map(norm);
     /* bộ nào lên chương trong 10 ngày gần nhất (so với bộ mới nhất) thì gắn nhãn “Mới” */
     var dates = list.map(function (n) { return String(n.updated || ''); }).sort();
     var top = Date.parse(dates[dates.length - 1] || '');
@@ -2516,7 +2556,16 @@
   }
   function findLib(id) {
     var lib = libList();
-    for (var i = 0; i < lib.length; i++) if (lib[i].slug === id || lib[i].title === id) return lib[i];
+    var i;
+    for (i = 0; i < lib.length; i++) if (lib[i].slug === id || lib[i].title === id) return lib[i];
+    var raw = ((memo.reg && memo.reg.lib) || []);
+    for (i = 0; i < raw.length; i++) {
+      if (raw[i] && (raw[i].slug === id || raw[i].title === id)) {
+        var vis = String(raw[i].visibility || 'public').toLowerCase();
+        if (vis === 'private') return null;
+        return norm(raw[i]);
+      }
+    }
     return null;
   }
   function statsOf(n) {
@@ -2560,7 +2609,7 @@
     icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo, teaser: teaser,
     statusCls: statusCls, statusLabel: statusLabel, statusIcon: statusIcon, words: words, norm: norm, countText: countText, listHead: listHead,
     storyURL: storyURL, readURL: readURL, slugify: slugify, qs: qs, copy: copy, download: download,
-    card: card, coverFB: coverFB, mountRail: mountRail, reveal: reveal, countUp: countUp, scaleFacts: scaleFacts,
+    card: card, coverFB: coverFB, coverSrc: coverSrc, bookCover: bookCover, mountRail: mountRail, reveal: reveal, countUp: countUp, scaleFacts: scaleFacts,
     scrollUI: scrollUI, slide: slide, pageFx: pageFx, pop: pop, setIcon: setIcon, shake: shake,
     msWait: function () { return ms('--t-close', 150); }, ink: ink, inkAll: inkAll,
     mountShell: mountShell, mountHeader: mountHeader, mountFooter: mountFooter,

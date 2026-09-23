@@ -39,6 +39,8 @@ const LIB = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data/registry
   out.facts = { n: $$('#facts .f').length, labels: $$('#facts .f span').map(e => e.textContent.trim()) };
   out.cards = { n: $$('#grid .card').length, pager: txt('#pager'), firstHref: ($('#grid .card') || {}).getAttribute('href') };
   out.cardsAreRealLinks = /^\/truyen\/[^/]+\/$/.test(out.cards.firstHref || '');
+  out.genreGone = !$('#genreGroup') && !$$('#genreTabs [data-genre]').length;
+  if ($('#genreGroup')) errors.push('#genreGroup phải được gỡ');
 
   /* ---------- tìm kiếm + lọc ---------- */
   const q = $('#q');

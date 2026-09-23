@@ -2,6 +2,7 @@ import { h, Fragment } from 'preact';
 import { computeOverview, spamSuspects } from '../utils/overview.js';
 import { BarsChart } from './OperationalPanels.jsx';
 import { countText, dateVN, num } from '../utils/format.js';
+import { BookBadges } from './Badges.jsx';
 
 function Tile({ value, label, hint }) {
   return <div class="tile"><b>{num(value)}</b><span>{label}</span>{hint ? <small>{hint}</small> : null}</div>;
@@ -77,12 +78,22 @@ export function Overview({ state, onReload, onTodo }) {
           <SystemRow kind={quota.supported ? 'good' : 'warn'} icon={quota.supported ? 'check' : 'alert'} title={`Quota KV: ${quota.writesToday || 0}/${quota.limit || 1000} write hôm nay`}>
             {quota.supported ? 'Worker trả writesToday/lastReset.' : 'Endpoint /api/admin/kv hiện chưa trả writesToday; quota v2 đang ở chế độ ước tính phía client.'}
           </SystemRow>
+          {(() => {
+            const ovf = (state.worker && state.worker.overflow) || {};
+            const sb = !!ovf.supabase;
+            const r2 = !!ovf.r2;
+            return (
+              <SystemRow kind={sb || r2 ? 'good' : 'warn'} icon={sb || r2 ? 'check' : 'info'} title="Overflow KV (tuỳ chọn)">
+                Supabase: {sb ? 'connected' : 'unavailable'}. R2: {r2 ? 'connected' : 'unavailable'}. Bìa: {ovf.covers ? 'Supabase Storage (bucket covers, 1 GB free)' : 'KV'}. Ảnh chương: KV. Overflow không bắt buộc — admin vẫn chạy full JSON trên KV.
+              </SystemRow>
+            );
+          })()}
         </div>
       </section>
 
       <section class="card2">
         <div class="row"><h3>Lượt đọc 14 ngày</h3><span class="grow"></span><span class="sm muted">{statsDays.length ? 'cập nhật ' + (state.stats.updatedAt || '').slice(0, 16).replace('T', ' ') : 'chưa có số liệu'}</span></div>
-        {statsDays.length ? <BarsChart days={statsDays} take={14} /> : <p class="hint">Nối Worker để xem biểu đồ lượt đọc/phiếu theo ngày từ số liệu KV.</p>}
+        {statsDays.length ? <BarsChart days={statsDays} take={14} /> : <p class="hint">Chưa có dữ liệu lượt đọc từ Worker</p>}
       </section>
 
       <section class="card2">
@@ -91,7 +102,7 @@ export function Overview({ state, onReload, onTodo }) {
           {ov.recent.length ? ov.recent.map((book) => (
             <button class="ovrec" type="button" key={book.slug} onClick={() => onTodo && onTodo('edit', book)}>
               <span class={`ovth ${book.thumb ? 'skel' : ''}`}>{book.thumb ? <img src={book.thumb} alt="" loading="lazy" decoding="async" /> : null}</span>
-              <span class="ovtt"><b>{book.title}</b><span>{book.author || ''} · {countText(book)}</span></span>
+              <span class="ovtt"><b>{book.title}</b><span>{book.author || ''} · {countText(book)}</span><BookBadges book={book} registry={registry} compact /></span>
               <span class="ovwhen">{dateVN(book.updated)}</span>
             </button>
           )) : <div class="empty sm">Chưa có bộ nào.</div>}

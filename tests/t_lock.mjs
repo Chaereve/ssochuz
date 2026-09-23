@@ -271,6 +271,14 @@ await t('base64 dính data: prefix vẫn nhận (trình duyệt hay gửi dạng
   assert.equal(r.status, 200, JSON.stringify(r.body));
 });
 
+await t('kind=cover chưa gắn Storage → vẫn KV /api/img (không giả URL Storage)', async () => {
+  const bin = Buffer.from('52 49 46 46 24 00 00 00 57 45 42 50 56 50 38 20 1c 00 00 00 08 00 00 00 30 01 00 00 24 00 00 00 ff 00 00 00 00'.replace(/ /g, ''), 'hex');
+  const r = await call('POST', '/api/img', { admin: true, body: { data: bin.toString('base64'), type: 'image/webp', kind: 'cover' } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.match(r.body.url, /^\/api\/img\/[A-Za-z0-9-]{12,64}$/);
+  assert.equal(kv.m.get('img:' + r.body.id).value, bin.toString('base64'));
+});
+
 /* ============================ 3. KIỂM KHO KV ================================ */
 await t('GET /api/admin/kv nhóm đúng tiền tố + cần admin', async () => {
   const noAuth = await call('GET', '/api/admin/kv');

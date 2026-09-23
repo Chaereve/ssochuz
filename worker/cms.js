@@ -1,6 +1,7 @@
 import { profileId } from './member-spaces.js';
 export { MemberSpaces } from './member-spaces.js';
 export { PrivateBooks } from './private-books.js';
+import { dropOverflow, overflowStatus, persistBook, persistCover, persistImage, readBook, readImage, materializeBook } from './overflow.js';
 /* ============================================================================
    ssochuz — Worker đọc/ghi dữ liệu truyện + số liệu xếp hạng trên Cloudflare KV
    ----------------------------------------------------------------------------
@@ -19,7 +20,9 @@ export { PrivateBooks } from './private-books.js';
      POST   /api/lock                   → nhập mật mã {slug, password} → token 6h (mở)
      GET    /api/img/<id>               → ảnh trong chương / ảnh bìa (mở, cache 1 năm)
      POST   /api/lock/set               → khóa/bỏ khóa/đổi mật mã {slug, password} (cần X-Admin-Key)
-     POST   /api/img                    → upload ảnh {data: base64, type} (cần X-Admin-Key)
+     POST   /api/img                    → upload ảnh {data, type, kind?} (cần X-Admin-Key)
+                                           · kind=cover + SUPABASE_SERVICE_ROLE → Storage bucket `covers`
+                                           · không kind / ảnh chương / báo lỗi → KV `img:<id>` như cũ
      GET    /api/admin/kv               → kiểm kho KV: số khoá + byte theo tiền tố (cần X-Admin-Key)
      GET    /api/schedule               → lịch ra chương (mở)
      GET    /api/stats                  → lượt đọc/bình chọn + ĐÁNH GIÁ SAO TỪ KV (mở)
@@ -85,6 +88,10 @@ export { PrivateBooks } from './private-books.js';
      SITE_BASE         (tuỳ chọn) = https://ssochuz.pages.dev  (gốc dựng link trong /feed.xml; để trống = domain này)
      SUPABASE_URL      (bắt buộc nếu đăng nhập Supabase) = https://<ref>.supabase.co
      SUPABASE_JWT_SECRET (chỉ project cũ ký HS256) — Auth → Settings → JWT Secret
+     SUPABASE_SERVICE_ROLE (secret, tuỳ chọn) — overflow book/img sang bảng ssochuz_blobs
+                                            + bìa truyện (kind=cover) lên Storage bucket `covers`
+                                            (KHÔNG BAO GIỜ đưa ra trình duyệt / registry)
+     CZ_R2             (R2 binding, tuỳ chọn) — overflow song song, 10 GB free tier
      ADMIN_EMAILS      (secret/tuỳ chọn) — email được vào /admin; không đặt trong frontend/registry
      GOOGLE_CLIENT_ID  (secret/tuỳ chọn)    — Client ID của OAuth Web app (Google Identity Services)
      SESSION_SECRET    (secret, bắt buộc*)  — chuỗi ngẫu nhiên ≥ 32 ký tự, ký session bình luận/đăng nhập
@@ -100,7 +107,7 @@ export { PrivateBooks } from './private-books.js';
      VAPID_PRIVATE     (secret, bắt buộc nếu bật push) — khoá riêng VAPID base64url (`wrangler secret put VAPID_PRIVATE`)
    ============================================================================ */
 
-const VERSION = '1.11.0';
+const VERSION = '1.13.0';
 const JSONH = {
   'content-type': 'application/json; charset=utf-8',
   'x-content-type-options': 'nosniff',
@@ -199,9 +206,12 @@ const handler = {
       if (p === '/' || p === '/api/health') return await health(env, cors);
       if (p === '/api/whoami' || p === '/api/auth') {
         if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
-        return json({ ok: true, role: 'admin', via: 'key', version: VERSION }, { cors });
+        return json({ ok: true, role: 'super_admin', permissions: ['*'], via: 'key', version: VERSION }, { cors });
       }
-      if (p === '/api/registry' && req.method === 'GET') return await edgeCached(req, cors, EDGE_TTL.registry, () => getKV(env, 'registry', cors, 60));
+      if (p === '/api/registry' && req.method === 'GET') {
+        if (authed(req, env)) return await getKV(env, 'registry', cors, 0, { admin: true });
+        return await edgeCached(req, cors, EDGE_TTL.registry, () => getKV(env, 'registry', cors, 60, { public: true }));
+      }
       if (p === '/api/schedule' && req.method === 'GET') return await getSchedule(env, ctx, cors);
       if (p === '/api/stats' && req.method === 'GET') return await edgeCached(req, cors, EDGE_TTL.stats, () => getStats(env, cors));
       if (p === '/feed.xml' && req.method === 'GET') return await edgeCached(req, cors, EDGE_TTL.feed, () => getFeed(req, env, cors), feedKeyOf);
@@ -270,6 +280,7 @@ const handler = {
         if (!env.CZ_KV) return noKV(cors);
         const slug = decodeURIComponent(m[1]);
         await env.CZ_KV.delete('book:' + slug);
+        await dropOverflow(env, 'book:' + slug);
         await syncCountToRegistry(env, slug, null);       /* registry không còn treo số chương của bộ đã xoá */
         await logAct(env, 'xoá bộ ' + slug, req);
         await edgePurge(org + '/api/book/' + m[1], org + '/api/registry');
@@ -431,15 +442,14 @@ async function importPost(req, env, cors) {
     return json({ ok: false, error: 'bài này không có nội dung đọc được', url }, { status: 422, cors });
   }
 
-  const bkey = 'book:' + slug;
-  const book = (await env.CZ_KV.get(bkey, { type: 'json' })) || { title: (nov && nov.title) || slug, slug, chapters: [] };
+  const book = (await readBook(env, slug)) || { title: (nov && nov.title) || slug, slug, chapters: [] };
   book.chapters = book.chapters || [];
   const n = book.chapters.length + 1;
   const chapTitle = /^\s*ch[ưu][ơo]ng\s*\d+/i.test(title) ? title : ('Chương ' + n + (title ? ': ' + title : ''));
   const key = (req.headers.get('x-import-mode') || 'append').toLowerCase();   /* append | replace-last */
   if (key === 'replace-last' && book.chapters.length) book.chapters[book.chapters.length - 1] = { t: chapTitle, html };
   else book.chapters.push({ t: chapTitle, html });
-  await env.CZ_KV.put(bkey, JSON.stringify(book), { metadata: { saved: new Date().toISOString() } });
+  await persistBook(env, slug, book);
 
   if (nov) {
     nov.updated = new Date().toISOString().slice(0, 10);
@@ -868,6 +878,28 @@ function isSafePublishableKey(value) {
   }
   return true;
 }
+function isPubliclyListed(n) {
+  if (!n || typeof n !== 'object') return false;
+  const vis = String(n.visibility || 'public').toLowerCase();
+  if (vis === 'private') return false;
+  const pub = String(n.pubStatus || 'published').toLowerCase();
+  if (pub === 'draft' || pub === 'pending_review' || pub === 'pending' || pub === 'rejected' || pub === 'archived') return false;
+  if (pub === 'scheduled') {
+    const at = Date.parse(n.publishedAt || n.published_at || '');
+    if (!at || at > Date.now()) return false;
+  }
+  return true;
+}
+function publicRegistryJSON(reg) {
+  let copy;
+  try { copy = JSON.parse(JSON.stringify(reg || {})); } catch (e) { copy = reg || {}; }
+  if (copy.settings && typeof copy.settings === 'object') {
+    delete copy.settings.staff;
+    delete copy.settings.roles;
+  }
+  if (Array.isArray(copy.lib)) copy.lib = copy.lib.filter(isPubliclyListed);
+  return JSON.stringify(stripPrivateRegistrySettings(copy));
+}
 function stripPrivateRegistrySettings(reg) {
   if (!reg || typeof reg !== 'object') return reg;
   const settings = reg.settings;
@@ -1026,7 +1058,7 @@ async function getFeed(req, env, cors) {
     const nov = bySlug[slug];
     /* chương của truyện khóa mật mã KHÔNG được lọt ra feed RSS */
     if (nov && nov.lock) return json({ ok: false, error: 'bộ này đã được khóa mật mã — không có feed công khai' }, { status: 404, cors });
-    const book = await env.CZ_KV.get('book:' + slug, { type: 'json' });
+    const book = await readBook(env, slug);
     const chs = (book && Array.isArray(book.chapters)) ? book.chapters : [];
     if (!chs.length) return json({ ok: false, error: 'bộ này chưa có chương nào' }, { status: 404, cors });
     const title = (nov && nov.title) || (book && book.title) || slug;
@@ -1045,7 +1077,7 @@ async function getFeed(req, env, cors) {
     /* bỏ luôn truyện khóa mật mã — feed chỉ dành cho nội dung công khai */
     const cands = lib.filter((n) => n && n.slug && !n.lock && (parseInt(n.chapters, 10) || 0) > 0)
       .sort((a, b) => String(b.updated || '').localeCompare(String(a.updated || ''))).slice(0, 12);
-    const books = await Promise.all(cands.map((n) => env.CZ_KV.get('book:' + n.slug, { type: 'json' }).catch(() => null)));
+    const books = await Promise.all(cands.map((n) => readBook(env, n.slug).catch(() => null)));
     cands.forEach((n, k) => {
       const book = books[k];
       const chs = (book && Array.isArray(book.chapters)) ? book.chapters : [];
@@ -1091,17 +1123,20 @@ async function getFeed(req, env, cors) {
     },
   });
 }
-async function getKV(env, key, cors, cacheSec) {
+async function getKV(env, key, cors, cacheSec, mode) {
   if (!env.CZ_KV) return noKV(cors);
   const { value, metadata } = await env.CZ_KV.getWithMetadata(key, { type: 'text' });
   if (value == null) return json({ ok: false, error: 'chưa có dữ liệu cho khoá ' + key }, { status: 404, cors });
   let publicValue = value;
   if (key === 'registry') {
-    try { publicValue = registryJSON(JSON.parse(value)); } catch (e) { publicValue = value; }
+    try {
+      const parsed = JSON.parse(value);
+      publicValue = (mode && mode.admin) ? registryJSON(parsed) : publicRegistryJSON(parsed);
+    } catch (e) { publicValue = value; }
   }
   /* max-age=0: trình duyệt luôn hỏi lại → trúng cache biên (nhanh mà không tốn
      lượt đọc KV); s-maxage: bản lưu ở biên dùng được từng này giây. */
-  const h = { ...JSONH, ...cors, 'cache-control': 'public, max-age=0, s-maxage=' + (cacheSec || 60), 'x-kv-key': key };
+  const h = { ...JSONH, ...cors, 'cache-control': (mode && mode.admin ? 'private, no-store' : 'public, max-age=0, s-maxage=' + (cacheSec || 60)), 'x-kv-key': key };
   /* ETag cũ mô tả bản chưa lọc nên không gửi cho registry đã được làm sạch. */
   if (key !== 'registry' && metadata && metadata.etag) h.etag = metadata.etag;
   return new Response(publicValue, { headers: h });
@@ -1176,17 +1211,19 @@ async function getBookPublic(req, env, cors) {
      khi cùng URL trúng cache. */
   if (authed(req, env)) {
     if (!env.CZ_KV) return noKV(cors);
-    const av = await env.CZ_KV.get('book:' + slug, { type: 'text' });
-    if (av == null) return json({ ok: false, error: 'chưa có dữ liệu cho khoá book:' + slug }, { status: 404, cors });
+    const raw = await env.CZ_KV.get('book:' + slug, { type: 'text' });
+    if (raw == null) return json({ ok: false, error: 'chưa có dữ liệu cho khoá book:' + slug }, { status: 404, cors });
+    const book = await materializeBook(env, raw, slug);
+    if (!book) return json({ ok: false, error: 'không đọc được dữ liệu bộ (overflow?)' }, { status: 502, cors });
     const ah = { ...JSONH, ...cors, 'cache-control': 'private, no-store', 'x-kv-key': 'book:' + slug };
-    return new Response(av, { headers: ah });
+    return new Response(JSON.stringify(book), { headers: ah });
   }
   return await edgeCached(req, cors, EDGE_TTL.book, async () => {
     if (!env.CZ_KV) return noKV(cors);
     const { value, metadata } = await env.CZ_KV.getWithMetadata('book:' + slug, { type: 'text' });
     if (value == null) return json({ ok: false, error: 'chưa có dữ liệu cho khoá book:' + slug }, { status: 404, cors });
-    let book;
-    try { book = JSON.parse(value); } catch (e) { return json({ ok: false, error: 'bản ghi bộ hỏng' }, { status: 500, cors }); }
+    const book = await materializeBook(env, value, slug);
+    if (!book) return json({ ok: false, error: 'không đọc được dữ liệu bộ (overflow?)' }, { status: 502, cors });
     const h = {
       ...JSONH, ...cors, 'cache-control': 'public, max-age=0, s-maxage=' + EDGE_TTL.book, 'x-kv-key': 'book:' + slug,
     };
@@ -1201,7 +1238,7 @@ async function getBookPublic(req, env, cors) {
       delete out.lock;
       return new Response(JSON.stringify(out), { headers: h });
     }
-    return new Response(value, { headers: h });
+    return new Response(JSON.stringify(book), { headers: h });
   });
 }
 /* POST /api/lock { slug, password } — nhập mật mã → token 6 giờ */
@@ -1214,7 +1251,7 @@ async function postLock(req, env, cors) {
   if (!await rateLimit(env, 'rl:lock:' + hash(clientIp(req) || 'x') + ':' + slug, 20, 900)) {
     return json({ ok: false, error: 'Quá nhiều lần thử. Vui lòng quay lại sau 15 phút.' }, { status: 429, cors, headers: { 'cache-control': 'private, no-store' } });
   }
-  const book = await env.CZ_KV.get('book:' + slug, { type: 'json' });
+  const book = await readBook(env, slug);
   const rec = book && book.lock;
   if (!rec || !Array.isArray(rec.salt) || !Array.isArray(rec.hash)) {
     return json({ ok: false, error: 'Truyện này không yêu cầu mật mã.' }, { status: 400, cors, headers: { 'cache-control': 'private, no-store' } });
@@ -1250,14 +1287,13 @@ async function setLock(req, env, cors, org) {
   const body = await req.json().catch(() => ({}));
   const slug = cleanSlug(body.slug);
   if (!slug) return json({ ok: false, error: 'thiếu slug hợp lệ' }, { status: 400, cors });
-  const book = await env.CZ_KV.get('book:' + slug, { type: 'json' });
+  const book = await readBook(env, slug);
   if (!book) return json({ ok: false, error: 'Bộ chưa có trên KV — nạp dữ liệu lên KV trước khi khóa.' }, { status: 404, cors });
   const pw = String(body.password == null ? '' : body.password).trim();
   if (!pw) {
     if (book.lock) {
       delete book.lock;
-      const meta = { saved: new Date().toISOString(), chapters: Array.isArray(book.chapters) ? book.chapters.length : 0 };
-      await env.CZ_KV.put('book:' + slug, JSON.stringify(book), { metadata: meta });
+      await persistBook(env, slug, book);
       await env.CZ_KV.put('_last', new Date().toISOString());
     }
     await setLockFlag(env, slug, 0);
@@ -1270,8 +1306,7 @@ async function setLock(req, env, cors, org) {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const hashb = await pbkdf2Bits(pw, salt);
   book.lock = { salt: Array.from(salt), hash: Array.from(hashb), set: new Date().toISOString() };
-  const meta = { saved: new Date().toISOString(), chapters: Array.isArray(book.chapters) ? book.chapters.length : 0, bytes: new TextEncoder().encode(JSON.stringify(book)).length };
-  await env.CZ_KV.put('book:' + slug, JSON.stringify(book), { metadata: meta });
+  await persistBook(env, slug, book);
   await env.CZ_KV.put('_last', new Date().toISOString());
   await setLockFlag(env, slug, 1);
   await logAct(env, 'khóa/đổi mật mã ' + slug, req);
@@ -1308,23 +1343,41 @@ async function postImage(req, env, cors) {
     : 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
   /* base64: 4 ký tự → 3 byte (bỏ ký tự đệm '=' — chính nó làm cách tính
      naob 0.75 bị thừa 1–2 byte với ảnh thật) */
-  const bytes = Math.floor(data.replace(/=+$/, '').length * 3 / 4);
-  await env.CZ_KV.put('img:' + id, data, { metadata: { type: type, bytes: bytes, at: new Date().toISOString() } });
-  await logAct(env, 'lên ảnh ' + id.slice(0, 8) + '… (' + Math.max(1, Math.round(bytes / 1024)) + ' KB)', req);
-  return json({ ok: true, id: id, url: '/api/img/' + id, bytes: bytes }, { cors });
+  const kind = String(body.kind || '').trim().toLowerCase();
+  let stored;
+  try {
+    stored = kind === 'cover' ? await persistCover(env, id, data, type) : await persistImage(env, id, data, type);
+  } catch (e) {
+    return json({ ok: false, error: String((e && e.message) || e) }, { status: 502, cors });
+  }
+  await logAct(env, 'lên ảnh ' + (kind === 'cover' ? 'bìa ' : '') + id.slice(0, 8) + '… (' + Math.max(1, Math.round(stored.bytes / 1024)) + ' KB)', req);
+  const url = stored.url || ('/api/img/' + id);
+  return json({ ok: true, id: id, url, bytes: stored.bytes, overflow: stored.overflow || '' }, { cors });
 }
 async function getImage(req, env, cors, id) {
   if (!env.CZ_KV) return noKV(cors);
   return await edgeCached(req, cors, 31536000, async () => {
-    const { value, metadata } = await env.CZ_KV.getWithMetadata('img:' + id, { type: 'text' });
-    if (value == null) return json({ ok: false, error: 'không tìm thấy ảnh' }, { status: 404, cors });
+    const img = await readImage(env, id);
+    if (!img) return json({ ok: false, error: 'không tìm thấy ảnh' }, { status: 404, cors });
+    if (img.url && /^https:\/\//i.test(img.url)) {
+      return new Response(null, {
+        status: 302,
+        headers: {
+          ...cors,
+          location: img.url,
+          'cache-control': 'public, max-age=86400',
+          'x-kv-key': 'img:' + id,
+        },
+      });
+    }
+    if (img.data == null) return json({ ok: false, error: 'không tìm thấy ảnh' }, { status: 404, cors });
     const h = {
       ...cors,
-      'content-type': (metadata && metadata.type) || 'image/webp',
+      'content-type': img.type || 'image/webp',
       'cache-control': 'public, max-age=31536000, immutable',
       'x-kv-key': 'img:' + id,
     };
-    return new Response(bytesFromB64(value), { headers: h });
+    return new Response(bytesFromB64(img.data), { headers: h });
   });
 }
 
@@ -1417,8 +1470,10 @@ async function putKV(req, env, key, cors, label) {
    (3) web tự đối chiếu số chương thật khi mở bộ truyện (cz-app.js → reconcile).
    ============================================================================ */
 function chapLen(book) {
-  const c = book && Array.isArray(book.chapters) ? book.chapters : null;
-  return c ? c.length : null;
+  if (!book) return null;
+  if (Array.isArray(book.chapters)) return book.chapters.length;
+  if (typeof book.chapters === 'number') return book.chapters; /* stub overflow */
+  return null;
 }
 /* Nhãn số chương: "<đã đăng>/<dự kiến>". Dự kiến lấy từ trường `planned` (nếu
    biên tập viên khai) — KHÔNG moi lại con số cũ trong nhãn, vì chính con số cũ
@@ -1453,12 +1508,24 @@ async function syncCountToRegistry(env, slug, book) {
   await env.CZ_KV.put('_last', new Date().toISOString());
   return { changed: true, was, now: real, labelWas, labelNow, rev: reg.rev };
 }
+function sanitizeChapterHtml(html) {
+  let h = String(html || '');
+  h = h.replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+    .replace(/<object[\s\S]*?<\/object>/gi, '')
+    .replace(/<embed\b[^>]*>/gi, '')
+    .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/\s(href|src)\s*=\s*(['"])\s*(javascript|data):[^'"]*\2/gi, ' $1=$2$2')
+    .replace(/<img([^>]*?)src=(['"])blob:[^'"]+\2[^>]*>/gi, '');
+  return h;
+}
 /* PUT /api/book/<slug> — ghi 1 bộ RỒI tự sửa số chương trong registry */
 async function putBook(req, env, slug, cors) {
   if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
   if (!env.CZ_KV) return noKV(cors);
   /* đọc bản cũ để biết có THÊM chương mới không (push chỉ báo chương mới, không báo sửa chữ) */
-  const oldBook = await env.CZ_KV.get('book:' + slug, { type: 'json' }).catch(() => null);
+  const oldBook = await readBook(env, slug).catch(() => null);
   const oldLen = oldBook && Array.isArray(oldBook.chapters) ? oldBook.chapters.length : 0;
   const body = await req.text();
   const bytes = new TextEncoder().encode(body).length;
@@ -1466,6 +1533,7 @@ async function putBook(req, env, slug, cors) {
   let parsed;
   try { parsed = JSON.parse(body); } catch (e) { return json({ ok: false, error: 'JSON lỗi: ' + e.message }, { status: 400, cors }); }
   if (!Array.isArray(parsed.chapters)) parsed.chapters = [];
+  parsed.chapters.forEach((c) => { if (c) c.html = sanitizeChapterHtml(c.html); });
   /* bỏ chương rỗng cả tiêu đề lẫn nội dung — chính chúng là thủ phạm làm lệch số chương */
   const before = parsed.chapters.length;
   parsed.chapters = parsed.chapters.filter((c) => c && (String(c.t || '').trim() || String(c.html || '').trim()));
@@ -1474,16 +1542,15 @@ async function putBook(req, env, slug, cors) {
   /* khóa mật mã do /api/lock/set quản lý — web KHÔNG gửi trường `lock` lên
      (không thấy được nó), nên giữ nguyên bản cũ để tránh lưu chương là tự mở khóa */
   if (oldBook && oldBook.lock && !parsed.lock) parsed.lock = oldBook.lock;
-  const saved = new Date().toISOString();
-  await env.CZ_KV.put('book:' + slug, JSON.stringify(parsed), { metadata: { saved, chapters: parsed.chapters.length, bytes } });
-  await env.CZ_KV.put('_last', saved);
+  const stored = await persistBook(env, slug, parsed);
+  await env.CZ_KV.put('_last', stored.saved);
   const sync = await syncCountToRegistry(env, slug, parsed);
   await logAct(env, 'lưu bộ ' + slug + ' (' + parsed.chapters.length + ' chương)', req);
   if (parsed.chapters.length > oldLen) {
     const last = parsed.chapters[parsed.chapters.length - 1] || {};
     await enqueuePush(env, slug, parsed.chapters.length, last.t || '');
   }
-  return json({ ok: true, key: 'book:' + slug, bytes, saved, chapters: parsed.chapters.length, dropped, registry: sync }, { cors });
+  return json({ ok: true, key: 'book:' + slug, bytes: stored.bytes, saved: stored.saved, chapters: parsed.chapters.length, dropped, registry: sync, overflow: stored.overflow || '' }, { cors });
 }
 /* POST /api/recount — quét mọi bộ trên KV, đếm lại chương, sửa registry một lượt.
    Đây là nút "chữa cháy" cho những bộ đang hiện sai số chương ngoài web. */
@@ -1696,9 +1763,8 @@ async function postReportImage(req, env, cors) {
   }
   const id = (typeof crypto.randomUUID === 'function') ? crypto.randomUUID()
     : 'ri' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
-  const bytes = Math.floor(data.replace(/=+$/, '').length * 3 / 4);
-  await env.CZ_KV.put('img:' + id, data, { metadata: { type: type, bytes: bytes, report: true, at: new Date().toISOString() } });
-  return json({ ok: true, url: '/api/img/' + id, bytes: bytes }, { cors });
+  const stored = await persistImage(env, id, data, type, { report: true });
+  return json({ ok: true, url: '/api/img/' + id, bytes: stored.bytes, overflow: stored.overflow || '' }, { cors });
 }
 async function postReport(req, env, ctx, cors) {
   if (!env.CZ_KV) return noKV(cors);
@@ -2006,6 +2072,7 @@ async function health(env, cors) {
     ok: true, version: VERSION, kv: true, books, adminConfigured: !!adminKey(env), regRev: (reg && reg.rev) || '',
     novels: reg ? (reg.lib || []).length : 0, lastWrite: last, now: new Date().toISOString(),
     stats: { items: Object.keys(st.items).length, views, votes },
+    overflow: overflowStatus(env),
     /* để trang quản trị biết kênh đăng nhập đã sẵn sàng chưa, thiếu biến nào.
        supabaseUrl = GHIM đang có hiệu lực (biến trên Worker hoặc URL quản trị
        lưu trong KV); supabaseKv = ghim đang lấy từ KV (không cần deploy lại). */

@@ -190,8 +190,8 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
   /* ---------- 3. khoá quản trị ---------- */
   eq('whoami/thiếu khoá → 401', (await call('GET', '/api/whoami')).status, 401);
   eq('whoami/sai khoá → 401', (await call('GET', '/api/whoami', { headers: { 'x-admin-key': 'sai' } })).status, 401);
-  ck('whoami/đúng khoá → admin', ((await call('GET', '/api/whoami', { headers: { 'x-admin-key': ADMIN } })).body || {}).role === 'admin',
-    ((await call('GET', '/api/whoami', { headers: { 'x-admin-key': ADMIN } })).body || {}).role, 'admin');
+  ck('whoami/đúng khoá → super_admin', ((await call('GET', '/api/whoami', { headers: { 'x-admin-key': ADMIN } })).body || {}).role === 'super_admin',
+    ((await call('GET', '/api/whoami', { headers: { 'x-admin-key': ADMIN } })).body || {}).role, 'super_admin');
   eq('whoami/khoá dính khoảng trắng đầu-cuối vẫn dùng được', (await call('GET', '/api/whoami', { headers: { 'x-admin-key': '  ' + ADMIN + '  ' } })).status, 200);
 
   /* ---------- 4. registry / book / seed ---------- */
@@ -1186,6 +1186,65 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     kv.m.delete('pushq');
     await scheduled();
     eq('push/hàng đợi rỗng → cron êm', true, true);
+  }
+
+  /* ---------- 14. BÌA TRUYỆN → Supabase Storage (kind=cover) ---------- */
+  {
+    const bin = Buffer.from('524946462400000057454250565038201c000000080000003001000024000000ff00000000', 'hex');
+    const b64 = bin.toString('base64');
+    const envCover = Object.assign({}, env, {
+      SUPABASE_URL: 'https://sbcover.test',
+      SUPABASE_SERVICE_ROLE: 'service-role-test',
+    });
+    const h = await call('GET', '/api/health', { e: envCover });
+    eq('cover/health.overflow.covers khi đã gắn secret', h.body && h.body.overflow && h.body.overflow.covers, true);
+    eq('cover/health.overflow.supabase', h.body && h.body.overflow && h.body.overflow.supabase, true);
+
+    const noSecret = await call('POST', '/api/img', {
+      headers: ADMH, body: { data: b64, type: 'image/webp', kind: 'cover' },
+    });
+    ck('cover/chưa secret → KV /api/img', !!(noSecret.body && noSecret.body.ok && /^\/api\/img\//.test(noSecret.body.url)), noSecret.body && noSecret.body.url, '/api/img/…');
+
+    const storageCalls = [];
+    routes = (u, init) => {
+      const url = String(u);
+      storageCalls.push({ url, method: (init && init.method) || 'GET' });
+      if (url.includes('/storage/v1/object/covers/')) return { status: 200, body: { Key: 'covers/x' } };
+      if (url.includes('/storage/v1/bucket')) return { status: 200, body: { name: 'covers' } };
+      return { status: 404, body: '' };
+    };
+    const up = await call('POST', '/api/img', {
+      e: envCover, headers: ADMH, body: { data: b64, type: 'image/webp', kind: 'cover' },
+    });
+    ck('cover/Storage → URL public', !!(up.body && up.body.ok && /\/storage\/v1\/object\/public\/covers\//.test(up.body.url)), up.body, 'https://sbcover.test/storage/v1/object/public/covers/…');
+    eq('cover/overflow supabase-storage', up.body && up.body.overflow, 'supabase-storage');
+    ck('cover/POST object lên Storage', storageCalls.some((c) => c.method === 'POST' && /\/storage\/v1\/object\/covers\//.test(c.url)), storageCalls, 'POST /storage/v1/object/covers/');
+    const stub = kv.m.get('img:' + up.body.id);
+    ck('cover/KV chỉ stub (không base64 lớn)', !!(stub && stub.value && stub.value.charAt(0) === '{' && /supabase-storage/.test(stub.value) && stub.value.length < 800), stub && stub.value && stub.value.slice(0, 160), 'JSON stub');
+    const g = await call('GET', '/api/img/' + up.body.id, { e: envCover });
+    eq('cover/GET /api/img → 302 Location public', [g.status, g.headers.get('location')], [302, up.body.url]);
+    eq('cover/302 có CORS', g.headers.get('access-control-allow-origin'), 'https://web.test');
+
+    /* ảnh chương (không kind) không đi Storage */
+    storageCalls.length = 0;
+    const chap = await call('POST', '/api/img', {
+      e: envCover, headers: ADMH, body: { data: b64, type: 'image/webp' },
+    });
+    ck('ảnh chương/không POST Storage', !storageCalls.some((c) => /\/storage\/v1\/object\/covers\//.test(c.url)), storageCalls, 'không covers');
+    ck('ảnh chương/vẫn /api/img', !!(chap.body && /^\/api\/img\//.test(chap.body.url)), chap.body && chap.body.url, '/api/img/…');
+    eq('ảnh chương/KV raw base64', kv.m.get('img:' + chap.body.id) && kv.m.get('img:' + chap.body.id).value, b64);
+
+    /* Storage từ chối → 502, không giả lưu KV */
+    routes = (u) => String(u).includes('/storage/v1/') ? { status: 500, body: 'nope' } : { status: 404, body: '' };
+    const keysBefore = new Set(kv.m.keys());
+    const fail = await call('POST', '/api/img', {
+      e: envCover, headers: ADMH, body: { data: b64, type: 'image/webp', kind: 'cover' },
+    });
+    eq('cover/Storage lỗi → 502', fail.status, 502);
+    ck('cover/502 không ok', fail.body && fail.body.ok === false, fail.body, 'ok:false');
+    ck('cover/không giả ghi KV khi Storage fail', [...kv.m.keys()].filter((k) => k.startsWith('img:') && !keysBefore.has(k)).length === 0,
+      [...kv.m.keys()].filter((k) => k.startsWith('img:') && !keysBefore.has(k)), []);
+    routes = () => null;
   }
 
   fs.rmSync(tmp, { recursive: true, force: true });

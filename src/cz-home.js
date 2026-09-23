@@ -39,7 +39,7 @@
   }
   function heroSlide(n, i) {
     var p = CZ.progress(n), resume = p || 1, tot = n.chapters || 0;
-    var inShelf = CZ.inShelf(n), im = n.thumb || n.slide || '';
+    var inShelf = CZ.inShelf(n), im = CZ.coverSrc(n);
     var pct = tot && p ? Math.min(100, Math.round(p / tot * 100)) : 0;
     var eyebrow = (n._reason && n._reason.trim()) || (i === 0 ? 'Nổi bật hôm nay' : 'Đề xuất cho bạn');
     return '<article class="slide' + (i === 0 ? ' on' : '') + '" data-i="' + i + '" aria-label="' + esc(n.title) + '">' +
@@ -107,7 +107,7 @@
     var c = $('#hCount');
     if (c) c.textContent = (i + 1) + '/' + hero.list.length;
     var n = hero.list[i] || {};
-    heroBg(n.thumb || n.slide || '');
+    heroBg(CZ.coverSrc(n));
   }
   function heroPaint(animate) {
     var stage = $('#stage');
@@ -117,7 +117,7 @@
       return '<button data-go="' + k + '" class="' + (k === hero.i ? 'on' : '') + '" role="tab" aria-label="' + esc(n.title) + '"></button>';
     }).join('');
     $('#hStrip').innerHTML = hero.list.map(function (n, k) {
-      var im = n.thumb || n.slide;
+      var im = CZ.coverSrc(n);
       return '<button data-go="' + k + '" class="' + (k === hero.i ? 'on' : '') + '" title="' + esc(n.title) + '">' +
         (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</button>';
     }).join('');
@@ -286,8 +286,8 @@
       var n = row.n, ratio = peak ? Math.max(.12, row.score / peak) : 0;
       return '<a class="rank" href="' + esc(CZ.storyURL(n.slug)) + '" style="--d:' + (i * 55) + 'ms;--w:' + ratio.toFixed(3) + '">' +
         '<span class="n' + (i < 3 ? ' top t' + (i + 1) : '') + '">' + (i + 1) + '</span>' +
-        '<span class="rk-th' + (n.thumb ? '' : ' noimg') + '">' +
-        (n.thumb ? '<img src="' + esc(n.thumb) + '"' + CZ.coverFB(n, n.thumb) + ' alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</span>' +
+        '<span class="rk-th' + (CZ.coverSrc(n) ? '' : ' noimg') + '">' +
+        (CZ.coverSrc(n) ? '<img src="' + esc(CZ.coverSrc(n)) + '"' + CZ.coverFB(n, CZ.coverSrc(n)) + ' alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</span>' +
         '<span class="tt"><b>' + esc(n.title) + '</b><span>' + esc(n.author || n.couple || '') + '</span></span>' +
         '<span class="v"><b>' + num(row.score) + '</b>' + (rankMode === 'views' ? ' lượt đọc' : ' lượt thích') + '</span><i class="bar" aria-hidden="true"></i></a>';
     }).join('') || (on ? '<p class="empty">Chưa có hoạt động trong khoảng thời gian này.</p>' : '');
@@ -355,7 +355,7 @@
       var n = schedFind(it);
       var days = parseDays(it.days).map(function (d) { return '<i>' + esc(d) + '</i>'; }).join('');
       var title = (n && n.title) || it.title || '';
-      var im = n && (n.thumb || n.slide);
+      var im = n && CZ.coverSrc(n);
       var href = n ? 'href="' + esc(CZ.storyURL(n.slug)) + '"' : '';
       var meta = n
         ? (n.canRead ? esc(CZ.countText(n)) : CZ.statusLabel(n.statusCls))
