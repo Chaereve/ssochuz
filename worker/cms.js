@@ -293,9 +293,7 @@ const handler = {
       }
       /* khóa / bỏ khóa / đổi mật mã truyện (card vẫn công khai, chương thì khóa) */
       if (p === '/api/lock/set' && req.method === 'POST') {
-        const r = await setLock(req, env, cors, org);
-        if (r.ok) { await edgePurge(org + '/api/book/' + encodeURIComponent(r.slug), org + '/api/registry'); await purgeFeed(org); }
-        return r;
+        return await setLock(req, env, cors, org);
       }
       if (p === '/api/admin/migrate-overflow' && req.method === 'POST') {
         /* từng GET book/img vẫn materialize đúng nên không cần purge cache biên */
@@ -612,10 +610,13 @@ async function encryptPush(sub, payloadBytes) {
   const cliPub = b64uToBytes(sub.keys.p256dh);
   const auth = b64uToBytes(sub.keys.auth);
   if (cliPub.length !== 65 || auth.length !== 16) throw new Error('subscription keys sai');
-  const srv = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
-  const srvPubRaw = new Uint8Array(await crypto.subtle.exportKey('raw', srv.publicKey));
+  // ECDH always generates a key pair; Workers types also include symmetric keys.
+  const srv = /** @type {CryptoKeyPair} */ (await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']));
+  const srvPubRaw = new Uint8Array(/** @type {ArrayBuffer} */ (await crypto.subtle.exportKey('raw', srv.publicKey)));
   const cliKey = await crypto.subtle.importKey('raw', cliPub, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
-  const shared = new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: cliKey }, srv.privateKey, 256));
+  // Web Crypto uses `public`, not `$public` from the generated Workers typings.
+  const algorithm = { name: 'ECDH', public: cliKey };
+  const shared = new Uint8Array(await crypto.subtle.deriveBits(algorithm, srv.privateKey, 256));
   const prk = await hmacSha256(auth, shared);   /* HKDF-Extract(salt=auth, ikm=shared) */
   const cek = await hkdfExpand(prk, 'Content-Encoding: aes128gcm\0', 16);
   const nonce = await hkdfExpand(prk, 'Content-Encoding: nonce\0', 12);
@@ -1011,7 +1012,7 @@ async function edgePurge(...urls) {
 /* xoá cả chùm /api/book/* (khi seed chạm nhiều bộ một lúc) */
 async function edgePurgePrefix(origin, prefix) {
   const box = edgeCache();
-  if (!box || typeof box.keys !== 'function') return;
+  if (!box || !('keys' in box) || typeof box.keys !== 'function') return;
   let keys = [];
   try { keys = await box.keys(); } catch (e) { return; }
   for (const k of keys) {
@@ -1316,6 +1317,8 @@ async function setLock(req, env, cors, org) {
     }
     await setLockFlag(env, slug, 0);
     await logAct(env, 'bỏ khóa ' + slug, req);
+    await edgePurge(org + '/api/book/' + encodeURIComponent(slug), org + '/api/registry');
+    await purgeFeed(org);
     return json({ ok: true, slug: slug, locked: false }, { cors });
   }
   if (pw.length < 8 || pw.length > 256) {
@@ -1328,6 +1331,8 @@ async function setLock(req, env, cors, org) {
   await env.CZ_KV.put('_last', new Date().toISOString());
   await setLockFlag(env, slug, 1);
   await logAct(env, 'khóa/đổi mật mã ' + slug, req);
+  await edgePurge(org + '/api/book/' + encodeURIComponent(slug), org + '/api/registry');
+  await purgeFeed(org);
   return json({ ok: true, slug: slug, locked: true }, { cors });
 }
 
@@ -1620,7 +1625,7 @@ async function migrateOverflowRun(req, env, cors) {
   const body = await req.json().catch(() => ({}));
   const res = await migrateOverflow(env, body || {});
   if (!res.ok) return json(res, { status: 409, cors });
-  const m = res.moved || {};
+  const m = res.moved || { books: 0, covers: 0, images: 0 };
   if ((m.books | 0) || (m.covers | 0) || (m.images | 0)) {
     await logAct(env, 'chuyển overflow (' + (res.status && res.status.supabase ? 'supabase' : 'r2') + '): ' +
       (m.books | 0) + ' book, ' + (m.covers | 0) + ' bìa, ' + (m.images | 0) + ' ảnh' + (res.done ? ' · xong' : ''), req);
@@ -2172,7 +2177,7 @@ async function seed(req, env, cors) {
   }
   await env.CZ_KV.put('_last', new Date().toISOString());
   /* nạp xong: đếm lại số chương để registry không treo con số cũ (bệnh "30 chương") */
-  let counts = { fixed: 0 };
+  let counts = { fixed: [], missing: [], orphan: [], books: 0 };
   if (d.registry) {
     const reg2 = await env.CZ_KV.get('registry', { type: 'json' });
     counts = await applyRealCounts(env, reg2);

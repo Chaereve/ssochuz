@@ -7,11 +7,14 @@
     "build": "node tools/build_site.mjs && npm run build:admin",
     "og": "node tools/build_og.mjs",
     "test": "node tests/run.js",
-    "build:admin": "node tools/build_admin.mjs"
+    "build:admin": "node tools/build_admin.mjs",
+    "check:worker": "tsc -p worker/jsconfig.json"
   },
   "devDependencies": {
     "@tabler/icons": "^3.46.0",
-    "esbuild": "0.25.0"
+    "esbuild": "0.25.0",
+    "typescript": "5.9.3",
+    "@cloudflare/workers-types": "5.20260923.1"
   },
   "dependencies": {
     "@tiptap/core": "^2.27.3",

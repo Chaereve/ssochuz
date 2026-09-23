@@ -729,3 +729,19 @@ kia chết, dòng đỏ sẽ nói thẳng là do Worker bản cũ.)
 **4. Check nhanh cấu hình Worker:** `GET /api/health` → khối `auth`:
 `supabase: true` (đã đặt SUPABASE_URL), `session: true` (đã đặt SESSION_SECRET),
 `supabaseHs256: true` (đã đặt SUPABASE_JWT_SECRET — chỉ cần với project cũ).
+
+### Kiểm tra kiểu JavaScript trong trình soạn thảo
+
+Mở **toàn bộ repository**, không chỉ sao chép riêng `worker/`: `cms.js` còn
+import `../src/shared/chapters.js`. Từ thư mục gốc chạy:
+
+```sh
+npm install
+npm run check:worker
+```
+
+`worker/jsconfig.json` bật kiểm tra cho các module Worker và file chương dùng
+chung, dùng module resolution `Bundler` và kiểu Cloudflare Workers (không trộn
+DOM của trình duyệt). Nếu VS Code vẫn giữ lỗi cũ sau khi cài dependencies,
+chọn **TypeScript: Select TypeScript Version → Use Workspace Version**, rồi
+**TypeScript: Restart TS Server**. Không cần tắt kiểm tra JS hay thêm `@ts-nocheck`.
