@@ -101,7 +101,7 @@ Bài mới `tests/t_people_data.js` (đã đăng ký vào `tests/run.js`), 6 tì
 Trên code chưa vá bài này in ra 13 dòng lỗi (đúng triệu chứng người dùng báo);
 trên bản đã vá `errors* = []`.
 
-`node tests/run.js`: **50/52 bài đạt**, trong đó có `t_people_data.js`,
+`node tests/run.js`: **49/51 bài đạt** (2 bài lỗi là 2 bài admin nói ở dưới), trong đó có `t_people_data.js`,
 `t_people.js`, `t_pwa.js` (precache khớp `?v=` mới), `check_src.js` (bản rút gọn
 ở gốc khớp `src/`).
 
