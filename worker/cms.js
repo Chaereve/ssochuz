@@ -1,7 +1,7 @@
 import { profileId } from './member-spaces.js';
 export { MemberSpaces } from './member-spaces.js';
 export { PrivateBooks } from './private-books.js';
-import { dropOverflow, overflowStatus, persistBook, persistCover, persistChapterImage, persistImage, readBook, readImage, materializeBook, migrateOverflow } from './overflow.js';
+import { dropOverflow, overflowStatusResolved, missingOverflowVars, persistBook, persistCover, persistChapterImage, persistImage, readBook, readBookChecked, readImage, materializeBookChecked, migrateOverflow, mirrorImages, sbPinUrl, sbPinReset as sbPinResetCache } from './overflow.js';
 import { parseChapterTitle, nextMainChapterNo, chapterTextOf, chapterHasMedia } from '../src/shared/chapters.js';
 import { isChapterPending, countVisibleChapters, countPendingChapters, nextScheduleMs, atMs, chapterAtMs, scheduleLabelOf } from '../src/shared/schedule.js';
 import { KV_FLUSH, statsBudget, forcedFlushMs, budgetCredits, flushOnTimer } from '../src/shared/kv-budget.js';
@@ -31,6 +31,9 @@ import { sanitizeChapterHtml } from '../src/shared/sanitize.js';
                                              sách đang hiện) + mục lục (1.16.0)
                                              · trang đọc dùng 2 đường này để mở
                                                chương ~18 KB thay vì cả bộ 334 KB
+     Cả 3 đường đọc bộ (1.16.1): 404 = KV KHÔNG có bộ; 502 = CÓ bộ mà Worker
+     không đọc được nội dung (thiếu biến overflow) — body nêu tên biến thiếu
+     (`missing`) + cách chữa (`hint`), không còn "(overflow?)" mù mờ.
      POST   /api/lock                   → nhập mật mã {slug, password} → token 6h (mở)
      GET    /api/img/<id>               → ảnh trong chương / ảnh bìa (mở, cache 1 năm)
      POST   /api/lock/set               → khóa/bỏ khóa/đổi mật mã {slug, password} (cần X-Admin-Key)
@@ -59,6 +62,15 @@ import { sanitizeChapterHtml } from '../src/shared/sanitize.js';
      DELETE /api/book/<slug>            → xoá 1 bộ                  (cần X-Admin-Key)
      POST   /api/recount                → đếm lại số chương của MỌI bộ, sửa registry
                                            (chữa bệnh "hiện 30 mà chỉ có 29") (cần X-Admin-Key)
+     POST   /api/admin/mirror-images    → SAO LƯU ảnh NGOÀI về kho của mình (1.17.0)
+                                           {limit?, only?: 'covers'|'chapters', edge?, dryRun?}
+                                           · 63/63 bìa đang là link justwatch/amazon/twimg/
+                                             blogger: host gỡ ảnh là mất bìa, repo không giữ byte nào
+                                           · hỏi CHÍNH CDN đó bản nhỏ hơn (sửa URL theo luật host —
+                                             src/shared/image-url.js) nên ảnh vẫn rõ mà nhẹ hơn
+                                           · ghi Supabase Storage covers/images (không có thì KV),
+                                             viết lại link trong registry + HTML chương
+                                           · id theo BĂM URL → chạy lại không tạo bản sao
      POST   /api/admin/migrate-overflow → chuyển book/ảnh CŨ trong KV sang overflow
                                            {limit?, only?} — bìa → Storage `covers`,
                                            book/ảnh chương → ssochuz_blobs/R2 (cần X-Admin-Key)
@@ -103,7 +115,12 @@ import { sanitizeChapterHtml } from '../src/shared/sanitize.js';
      BLOG              (tuỳ chọn) = https://chuseoz.blogspot.com
      ALLOW_ORIGIN      (tuỳ chọn) = https://chuseoz.pages.dev  (nhiều domain: phẩy)
      SITE_BASE         (tuỳ chọn) = https://ssochuz.pages.dev  (gốc dựng link trong /feed.xml; để trống = domain này)
-     SUPABASE_URL      (bắt buộc nếu đăng nhập Supabase) = https://<ref>.supabase.co
+     SUPABASE_URL      (bắt buộc nếu đăng nhập Supabase HOẶC dùng overflow) = https://<ref>.supabase.co
+                       ⚠ Đặt TRONG worker/wrangler.toml [vars] (đã làm sẵn từ 1.16.1), KHÔNG đặt tay
+                         trên dashboard: `npx wrangler deploy` thay TOÀN BỘ biến thường bằng nội dung
+                         wrangler.toml nên biến đặt tay BỊ XOÁ — sự cố 23/09 làm cả 63 bộ không đọc
+                         được (xem BAO-CAO-SU-CO-DEPLOY-MAT-BIEN-SUPABASE.md). Secret thì wrangler giữ.
+                       Nếu vẫn thiếu, Worker tự lấy Project URL quản trị lưu ở /admin → Cài đặt & đồng bộ.
      SUPABASE_JWT_SECRET (chỉ project cũ ký HS256) — Auth → Settings → JWT Secret
      SUPABASE_SERVICE_ROLE (secret, tuỳ chọn) — overflow book/img sang bảng ssochuz_blobs
                                             + bìa truyện (kind=cover) lên Storage bucket `covers`
@@ -127,7 +144,7 @@ import { sanitizeChapterHtml } from '../src/shared/sanitize.js';
      VAPID_PRIVATE     (secret, bắt buộc nếu bật push) — khoá riêng VAPID base64url (`wrangler secret put VAPID_PRIVATE`)
    ============================================================================ */
 
-const VERSION = '1.16.0';
+const VERSION = '1.17.0';
 const JSONH = {
   'content-type': 'application/json; charset=utf-8',
   'x-content-type-options': 'nosniff',
@@ -367,6 +384,11 @@ const handler = {
         /* từng GET book/img vẫn materialize đúng nên không cần purge cache biên */
         return await migrateOverflowRun(req, env, cors);
       }
+      if (p === '/api/admin/mirror-images' && req.method === 'POST') {
+        /* sao lưu ảnh NGOÀI về kho của mình (1.17.0). Đổi link bìa trong
+           registry nên phải purge cache biên của registry. */
+        return await mirrorImagesRun(req, env, cors, org);
+      }
       if (p === '/api/recount' && req.method === 'POST') {
         const r = await recount(req, env, cors);
         if (r.ok) await edgePurge(org + '/api/registry', org + '/api/stats');
@@ -522,7 +544,11 @@ async function importPost(req, env, cors) {
     return json({ ok: false, error: 'bài này không có nội dung đọc được', url }, { status: 422, cors });
   }
 
-  const book = (await readBook(env, slug)) || { title: (nov && nov.title) || slug, slug, chapters: [] };
+  /* 1.16.1: bộ có trên KV mà KHÔNG đọc được (mất biến overflow) thì DỪNG,
+     không dựng bộ mới 1 chương rồi ghi đè — đúng thứ đã suýt mất 63 bộ. */
+  const prev = await readBookChecked(env, slug);
+  if (prev.status === 'unreadable') return overflowFailResponse(cors, slug, prev);
+  const book = prev.book || { title: (nov && nov.title) || slug, slug, chapters: [] };
   book.chapters = book.chapters || [];
   /* đặt tên chương theo parser dùng chung (src/shared/chapters.js):
      · tiêu đề đã có số (“Chương 5”, “Chap 3”, “Chương 0”) → giữ nguyên
@@ -1400,6 +1426,27 @@ async function verifyLockToken(env, slug, token) {
   for (let k = 0; k < want.length; k++) diff |= want.charCodeAt(k) ^ cand.charCodeAt(k);
   return diff === 0 ? exp : 0;
 }
+/* HTTP 502 khi KV chỉ còn STUB mà Worker không lấy được bản đầy đủ (1.16.1).
+   Vì sao phải nói rõ: sự cố 23/09 (`wrangler deploy` xoá biến SUPABASE_URL) làm
+   cả 63 bộ unreadable mà lỗi chỉ ghi "không đọc được dữ liệu bộ (overflow?)" —
+   không ai đoán được là thiếu biến nào, và /toc còn báo 404 "chưa có dữ liệu"
+   khiến tưởng bộ bị xoá. Nay lỗi nêu TÊN biến thiếu + 2 cách chữa. */
+function overflowFailResponse(cors, slug, detail) {
+  const miss = (detail && detail.missing) || [];
+  const tried = ((detail && detail.why) || []).slice(0, 3).map((s) => String(s).slice(0, 200));
+  return json({
+    ok: false,
+    error: 'Không đọc được nội dung bộ "' + slug + '": dữ liệu nằm NGOÀI KV (overflow) mà Worker không lấy được'
+      + (miss.length ? ' — thiếu biến ' + miss.join(', ') : '') + '.',
+    slug: slug,
+    missing: miss,
+    tried: tried,
+    hint: 'Chữa 1 trong 2 cách: (A) Workers & Pages → Settings → Variables and Secrets → thêm SUPABASE_URL = https://<ref>.supabase.co (Text) → Save;'
+      + ' (B) SUPABASE_URL đã nằm trong worker/wrangler.toml nên `cd worker && npx wrangler deploy` là đủ.'
+      + ' Thiếu secret thì `cd worker && npx wrangler secret put SUPABASE_SERVICE_ROLE`.'
+      + ' Không deploy lại cũng được nếu Project URL đã lưu ở /admin → Cài đặt & đồng bộ.',
+  }, { status: 502, cors });
+}
 /* GET /api/book/<slug> — bản công khai: tự bóc khóa, che chương khi chưa mở */
 async function getBookPublic(req, env, cors) {
   const u = new URL(req.url);
@@ -1413,8 +1460,9 @@ async function getBookPublic(req, env, cors) {
     if (!env.CZ_KV) return noKV(cors);
     const raw = await env.CZ_KV.get('book:' + slug, { type: 'text' });
     if (raw == null) return json({ ok: false, error: 'chưa có dữ liệu cho khoá book:' + slug }, { status: 404, cors });
-    const book = await materializeBook(env, raw, slug);
-    if (!book) return json({ ok: false, error: 'không đọc được dữ liệu bộ (overflow?)' }, { status: 502, cors });
+    const got = await materializeBookChecked(env, raw, slug);
+    if (!got.book) return overflowFailResponse(cors, slug, got);
+    const book = got.book;
     const ah = { ...JSONH, ...cors, 'cache-control': 'private, no-store', 'x-kv-key': 'book:' + slug };
     return new Response(JSON.stringify(book), { headers: ah });
   }
@@ -1422,8 +1470,11 @@ async function getBookPublic(req, env, cors) {
     if (!env.CZ_KV) return noKV(cors);
     const { value, metadata } = await env.CZ_KV.getWithMetadata('book:' + slug, { type: 'text' });
     if (value == null) return json({ ok: false, error: 'chưa có dữ liệu cho khoá book:' + slug }, { status: 404, cors });
-    const book = await materializeBook(env, value, slug);
-    if (!book) return json({ ok: false, error: 'không đọc được dữ liệu bộ (overflow?)' }, { status: 502, cors });
+    const got = await materializeBookChecked(env, value, slug);
+    /* KV có khoá mà không đọc được ⇒ 502 kèm tên biến thiếu (KHÔNG phải 404:
+       bộ vẫn còn, chỉ là Worker mất đường lấy nội dung) */
+    if (!got.book) return overflowFailResponse(cors, slug, got);
+    const book = got.book;
     /* bộ còn chương hẹn giờ: bản lưu chỉ sống 60 giây, đủ để chương lên sóng
        gần đúng mốc giờ (bản cũ: 300 giây; nếu để 1.800 giây như bộ thường thì
        chương hẹn giờ hiện trễ tới nửa tiếng — đúng thứ người viết cần nhất). */
@@ -1494,8 +1545,15 @@ async function getBookChapterPublic(req, env, cors, slug, n, tocOnly) {
   const ttl = tocOnly ? EDGE_TTL.toc : EDGE_TTL.chapter;
   const load = async () => {
     if (!env.CZ_KV) return noKV(cors);
-    const book = await readBook(env, slug).catch(() => null);
-    if (!book) return json({ ok: false, error: 'chưa có dữ liệu cho khoá book:' + slug }, { status: 404, cors });
+    /* 1.16.1: phân biệt "chưa có bộ" (404) với "có mà không đọc được" (502).
+       Bản 1.16.0 trả 404 cho CẢ HAI vì readBook trả null chung — đúng lúc mất
+       biến SUPABASE_URL, 63 bộ đang có bỗng báo "chưa có dữ liệu". */
+    const got = await readBookChecked(env, slug).catch((e) => ({ status: 'unreadable', book: null, missing: missingOverflowVars(env), why: [String((e && e.message) || e)] }));
+    const book = got.book;
+    if (!book) {
+      if (got.status === 'unreadable') return overflowFailResponse(cors, slug, got);
+      return json({ ok: false, error: 'chưa có dữ liệu cho khoá book:' + slug }, { status: 404, cors });
+    }
     /* bộ khoá mật mã: chỉ trả khi token hợp lệ, và KHÔNG qua cache chung */
     if (book.lock) {
       const exp = await verifyLockToken(env, slug, u.searchParams.get('token'));
@@ -1566,7 +1624,9 @@ async function postLock(req, env, cors) {
   if (!await rateLimit(env, 'rl:lock:' + hash(clientIp(req) || 'x') + ':' + slug, 20, 900)) {
     return json({ ok: false, error: 'Quá nhiều lần thử. Vui lòng quay lại sau 15 phút.' }, { status: 429, cors, headers: { 'cache-control': 'private, no-store' } });
   }
-  const book = await readBook(env, slug);
+  const gotBook = await readBookChecked(env, slug);
+  if (!gotBook.book && gotBook.status === 'unreadable') return overflowFailResponse(cors, slug, gotBook);
+  const book = gotBook.book;
   const rec = book && book.lock;
   if (!rec || !Array.isArray(rec.salt) || !Array.isArray(rec.hash)) {
     return json({ ok: false, error: 'Truyện này không yêu cầu mật mã.' }, { status: 400, cors, headers: { 'cache-control': 'private, no-store' } });
@@ -1601,8 +1661,14 @@ async function setLock(req, env, cors, org) {
   const body = await req.json().catch(() => ({}));
   const slug = cleanSlug(body.slug);
   if (!slug) return json({ ok: false, error: 'thiếu slug hợp lệ' }, { status: 400, cors });
-  const book = await readBook(env, slug);
-  if (!book) return json({ ok: false, error: 'Bộ chưa có trên KV — nạp dữ liệu lên KV trước khi khóa.' }, { status: 404, cors });
+  const gotLock = await readBookChecked(env, slug);
+  /* không đọc được bộ thì KHÔNG khoá: khoá là ghi lại book, ghi trên vỏ rỗng
+     là xoá sạch chương (1.16.1) */
+  if (!gotLock.book) {
+    if (gotLock.status === 'unreadable') return overflowFailResponse(cors, slug, gotLock);
+    return json({ ok: false, error: 'Bộ chưa có trên KV — nạp dữ liệu lên KV trước khi khóa.' }, { status: 404, cors });
+  }
+  const book = gotLock.book;
   const pw = String(body.password == null ? '' : body.password).trim();
   if (!pw) {
     if (book.lock) {
@@ -1949,8 +2015,14 @@ async function putChapter(req, env, slug, cors) {
   if (!env.CZ_KV) return noKV(cors);
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== 'object') return json({ ok: false, error: 'JSON lỗi hoặc rỗng.' }, { status: 400, cors });
-  const book = await readBook(env, slug).catch(() => null);
-  if (!book || typeof book !== 'object') return json({ ok: false, error: 'Bộ chưa có trên KV — nạp dữ liệu bộ trước khi lưu chương.' }, { status: 404, cors });
+  const gotCh = await readBookChecked(env, slug).catch((e) => ({ status: 'unreadable', book: null, missing: missingOverflowVars(env), why: [String((e && e.message) || e)] }));
+  if (!gotCh.book || typeof gotCh.book !== 'object') {
+    /* 1.16.1: "có bộ mà không đọc được" ≠ "chưa có bộ". Lưu chương là ghi lại
+       CẢ bộ — ghi trên vỏ rỗng sẽ xoá sạch chương, nên phải chặn kèm lý do. */
+    if (gotCh.status === 'unreadable') return overflowFailResponse(cors, slug, gotCh);
+    return json({ ok: false, error: 'Bộ chưa có trên KV — nạp dữ liệu bộ trước khi lưu chương.' }, { status: 404, cors });
+  }
+  const book = gotCh.book;
   book.chapters = Array.isArray(book.chapters) ? book.chapters : [];
   const oldLen = book.chapters.length;
   let action = '';
@@ -2079,6 +2151,28 @@ async function migrateOverflowRun(req, env, cors) {
   if ((m.books | 0) || (m.covers | 0) || (m.images | 0)) {
     await logAct(env, 'chuyển overflow (' + (res.status && res.status.supabase ? 'supabase' : 'r2') + '): ' +
       (m.books | 0) + ' book, ' + (m.covers | 0) + ' bìa, ' + (m.images | 0) + ' ảnh' + (res.done ? ' · xong' : ''), req);
+  }
+  return json(res, { cors });
+}
+
+/* POST /api/admin/mirror-images — SAO LƯU ẢNH NGOÀI VỀ KHO (bản 1.17.0)
+   body: { limit?, only?: 'covers'|'chapters', edge?, dryRun? }
+   Vì sao: 63/63 bìa trong registry là link justwatch/amazon/twimg/blogger —
+   host kia gỡ ảnh là mất bìa, repo không giữ byte nào để khôi phục. Endpoint
+   này tải về (lấy bản nhỏ hơn từ chính CDN khi host có luật), ghi vào
+   Supabase Storage/KV rồi viết lại link. Xem worker/overflow.js → mirrorImages. */
+async function mirrorImagesRun(req, env, cors, org) {
+  if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
+  if (!env.CZ_KV) return noKV(cors);
+  const body = await req.json().catch(() => ({}));
+  const res = await mirrorImages(env, body || {});
+  if (!res.ok) return json(res, { status: 409, cors });
+  /* bìa vừa đổi link → bản lưu registry ở biên phải bỏ, không thì thẻ truyện
+     còn trỏ link cũ tới hết TTL */
+  if (!res.dryRun && res.rewrites) await edgePurge(String(org || '') + '/api/registry');
+  if (!res.dryRun && (res.mirrored || res.rewrites)) {
+    await logAct(env, 'sao lưu ảnh ngoài: ' + res.mirrored + ' ảnh, ' + res.rewrites + ' link viết lại'
+      + (res.failed.length ? ', ' + res.failed.length + ' lỗi' : '') + (res.done ? ' · xong' : ' · còn'), req);
   }
   return json(res, { cors });
 }
@@ -2569,7 +2663,7 @@ async function health(env, cors) {
       writesToday: Number(st.swd === dayStr() ? st.sw : 0) || 0,
       writeBudget: statsBudget(env), buffered: _buf.size,
     },
-    overflow: overflowStatus(env),
+    overflow: await overflowStatusResolved(env),
     /* để trang quản trị biết kênh đăng nhập đã sẵn sàng chưa, thiếu biến nào.
        supabaseUrl = GHIM đang có hiệu lực (biến trên Worker hoặc URL quản trị
        lưu trong KV); supabaseKv = ghim đang lấy từ KV (không cần deploy lại). */
@@ -3515,26 +3609,15 @@ const _sbKeys = new Map();          /* '<base>|kid|alg' -> CryptoKey (JWKS của
    Ghim lấy theo thứ tự: biến SUPABASE_URL trên Worker → URL quản trị lưu trong
    KV (registry.settings.auth.supabaseUrl, dán ở /admin → Cài đặt & đồng bộ →
    Đăng nhập rồi Lưu). Nhờ đường KV mà sửa ghim KHÔNG cần deploy lại Worker. */
-const SUPABASE_HOST_RE = /^https:\/\/[a-z0-9][a-z0-9-]*\.supabase\.(co|in|net)$/i;
-const _sbPinCache = new WeakMap();   /* CZ_KV -> {t, url} — mỗi KV một ghim */
 async function supabasePin(env) {
   const envUrl = supabaseURL(env);
   if (envUrl) return envUrl;
-  const kv = env && env.CZ_KV;
-  if (!kv) return '';
-  let c = _sbPinCache.get(kv);
-  if (c && c.t > Date.now()) return c.url;
-  c = { t: Date.now() + 60000, url: '' };
-  _sbPinCache.set(kv, c);
-  try {
-    const reg = await kv.get('registry', { type: 'json' });
-    const u = String((reg && reg.settings && reg.settings.auth && reg.settings.auth.supabaseUrl) || '').trim().replace(/\/+$/, '');
-    if (u && SUPABASE_HOST_RE.test(u)) c.url = u;
-  } catch (e) { /* KV lỗi → coi như chưa ghim, verify sẽ báo lỗi rõ ràng */ }
-  return c.url;
+  /* từ 1.16.1 logic ghim nằm trong overflow.js để PHẦN ĐỌC TRUYỆN dùng chung
+     một ghim (đường cứu hộ khi wrangler deploy xoá mất biến SUPABASE_URL) */
+  return sbPinUrl(env);
 }
 /* quản trị vừa Lưu registry (đổi ghim?) → bỏ cache để hiệu lực ngay */
-function sbPinReset(env) { try { if (env && env.CZ_KV) _sbPinCache.delete(env.CZ_KV); } catch (e) {} }
+function sbPinReset(env) { sbPinResetCache(env); }
 async function supabaseJWKS(env, base) {
   if (!base) throw new Error('Worker chưa ghim project Supabase — đặt biến SUPABASE_URL trên Worker, hoặc /admin → Cài đặt & đồng bộ → Đăng nhập rồi Lưu');
   const r = await fetch(base + '/auth/v1/.well-known/jwks.json', { cf: { cacheTtl: 3600, cacheEverything: true } });

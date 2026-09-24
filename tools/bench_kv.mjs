@@ -16,8 +16,15 @@
      bản CŨ: 484 ghi / 674 đọc / 60 list
      bản mới: 137 ghi / 361 đọc /  1 list
    ========================================================================== */
-const ROOT = (process.argv[2] || new URL('..', import.meta.url).pathname).replace(/\/$/, '');
-const worker = (await import(ROOT + '/worker/cms.js')).default;
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+
+/* LỖI ĐÃ SỬA: trước đây `node tools/bench_kv.mjs .` (đúng cú pháp ghi trong
+   README) cho ROOT='.' rồi import './worker/cms.js' TƯƠNG ĐỐI VỚI TỆP NÀY
+   → tools/worker/cms.js → ERR_MODULE_NOT_FOUND, công cụ đo không chạy được.
+   Nay đối số luôn được giải về đường dẫn tuyệt đối theo thư mục đang đứng. */
+const ROOT = path.resolve(process.argv[2] || new URL('..', import.meta.url).pathname);
+const worker = (await import(pathToFileURL(path.join(ROOT, 'worker', 'cms.js')).href)).default;
 /* bản CŨ ghi `stats` mỗi 10 giây; muốn mô phỏng trọn một ngày thì phải tua
    đồng hồ — ở đây đo số thao tác cho 1.800 lượt xem thật, rồi suy ra cả ngày. */
 
@@ -103,6 +110,48 @@ stages['20 bình luận + 100 lần đọc'] = diff(s, snap());
 s = snap();
 for (let i = 0; i < 6; i++) { await worker.scheduled({}, env, ctx); await Promise.all(waits.splice(0)); }
 stages['Cron 1 giờ (6 lần)'] = diff(s, snap());
+
+/* 6) TẢI CHƯƠNG (bản 1.16.0): 100 lượt mở chương, so ĐƯỜNG NHẸ (/toc + đúng 1
+   chương) với ĐƯỜNG CŨ (tải cả bộ cho mỗi lượt mở). Đo cả số byte trả về — đây
+   là phần người đọc đụng nhiều nhất và cũng là phần tốn CPU Worker nhất
+   (JSON.parse cả bộ 1,4 MB mỗi lượt). Bench không có `caches` nên mỗi lần gọi
+   là một lần chạm KV thật: đúng bằng chi phí mỗi lần TRƯỢT cache biên. */
+{
+  const N = 100;
+  const big = 'bo-7';
+  /* bộ thật cỡ lớn: 200 chương, mỗi chương ~18 KB chữ (bằng chương trung bình
+     trong kho 1.216 chương thật) — bộ ~3,6 MB, sát bộ lớn nhất đang có */
+  kv.m.set('book:' + big, {
+    value: JSON.stringify({
+      title: 'Bộ lớn', slug: big,
+      chapters: Array.from({ length: 200 }, (_, k) => ({ t: 'Chương ' + (k + 1), html: '<p>' + ('chữ '.repeat(4500)) + '</p>' })),
+    }), metadata: {},
+  });
+  const bytesOf = async (res) => (await res.clone().text()).length;
+
+  s = snap();
+  let lightBytes = 0;
+  for (let i = 0; i < N; i++) {
+    if (i === 0) lightBytes += await bytesOf(await call('GET', '/api/book/' + big + '/toc'));
+    lightBytes += await bytesOf(await call('GET', '/api/book/' + big + '/chapter/' + ((i % 200) + 1)));
+  }
+  const light = diff(s, snap());
+  light.byteTraVe = lightBytes;
+
+  s = snap();
+  let heavyBytes = 0;
+  for (let i = 0; i < N; i++) heavyBytes += await bytesOf(await call('GET', '/api/book/' + big));
+  const heavy = diff(s, snap());
+  heavy.byteTraVe = heavyBytes;
+
+  stages['100 lượt mở chương — ĐƯỜNG NHẸ /toc + /chapter/<n> (1.16.x)'] = light;
+  stages['100 lượt mở chương — ĐƯỜNG CŨ tải cả bộ'] = heavy;
+  stages['→ tiết kiệm được'] = {
+    ghi: heavy.ghi - light.ghi, doc: heavy.doc - light.doc, list: heavy.list - light.list, xoa: 0,
+    byteTraVe: heavyBytes - lightBytes,
+    ghiChu: 'byte giảm ' + (100 - Math.round(lightBytes / heavyBytes * 100)) + '% cho cùng 100 lượt mở chương',
+  };
+}
 
 console.log(JSON.stringify(stages, null, 1));
 console.log('TỔNG KV trong "ngày" giả lập:', JSON.stringify({ ghi: kv.w, doc: kv.r, list: kv.l, xoa: kv.d }));

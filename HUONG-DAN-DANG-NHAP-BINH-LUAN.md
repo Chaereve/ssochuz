@@ -87,10 +87,17 @@ Cloudflare → **Workers & Pages → `chuseoz-cms` → Settings → Variables an
 | `ALLOW_ORIGIN` | không | mặc định `*` |
 
 ```bash
-npx wrangler secret put SUPABASE_URL
 npx wrangler secret put SUPABASE_JWT_SECRET
 npx wrangler secret put ADMIN_EMAILS
 ```
+
+> **`SUPABASE_URL` KHÔNG đặt bằng lệnh trên và cũng không đặt tay trên dashboard.**
+> Từ bản 1.16.1 nó nằm sẵn trong `worker/wrangler.toml` (`[vars]`) vì
+> `npx wrangler deploy` **thay toàn bộ biến thường** bằng nội dung tệp đó — biến đặt tay
+> trên dashboard bị xoá sau mỗi lần deploy (sự cố 23/09 làm cả 63 bộ không đọc được,
+> xem `BAO-CAO-SU-CO-DEPLOY-MAT-BIEN-SUPABASE.md`). Đây là URL công khai nên ghi vào
+> repo là đúng. Đổi project thì sửa tệp đó rồi `cd worker && npx wrangler deploy`;
+> hoặc lưu **Project URL** ở `/admin` → Cài đặt & đồng bộ (không cần deploy lại).
 
 Rồi **dán toàn bộ `worker/cms.js` (v1.6.0) vào Worker → Deploy** (code đã đổi nhiều, không deploy là web gọi
 các endpoint mới sẽ nhận `404 không có endpoint`).

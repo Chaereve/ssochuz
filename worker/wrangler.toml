@@ -18,6 +18,17 @@ binding = "CZ_KV"
 id = "c1e0e450c37f4a0abf804bf354c412d9"
 
 [vars]
+# ⚠ ĐỪNG XOÁ DÒNG SUPABASE_URL BÊN DƯỚI.
+# `npx wrangler deploy` thay TOÀN BỘ biến THƯỜNG của Worker bằng đúng nội dung
+# [vars] của tệp này: biến đặt tay trên dashboard (Settings → Variables and
+# Secrets) sẽ BỊ XOÁ sau mỗi lần deploy. Secret (ADMIN_KEY, SESSION_SECRET,
+# SUPABASE_SERVICE_ROLE…) thì wrangler GIỮ, còn biến thường thì không.
+# Sự cố 23/09: SUPABASE_URL đặt tay → deploy 1.16.0 xoá mất → Worker mất chỗ đọc
+# dữ liệu lớn (overflow) → cả 63 bộ không đọc được (502/404) dù /api/health vẫn
+# báo version mới. Chi tiết: BAO-CAO-SU-CO-DEPLOY-MAT-BIEN-SUPABASE.md
+# Đây là URL CÔNG KHAI của project (web cũng nhúng nó trong cz-config.js), không
+# phải secret — ghi vào đây là đúng chỗ.
+SUPABASE_URL = "https://hnyzrkdlmvelbgcowztk.supabase.co"
 BLOG = "https://chuseoz.blogspot.com"
 # Chỉ cho các web thật gọi Worker; preview *.ssochuz.pages.dev cũng được nhận diện.
 # Nếu có custom domain, thêm nó vào danh sách này rồi deploy lại.

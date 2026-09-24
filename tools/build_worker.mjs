@@ -14,7 +14,7 @@
      · gộp cho Cloudflare Workers (không phải trình duyệt).
 
    Chạy:  npm run build:worker
-   Xong:  mở https://<worker>/api/health thấy "version": "1.16.0" là đã lên bản mới.
+   Xong:  mở https://<worker>/api/health thấy đúng "version" của worker/cms.js là đã lên bản mới.
    ========================================================================== */
 import { readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
 import path from 'node:path';
