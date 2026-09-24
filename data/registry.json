@@ -1,5 +1,5 @@
 {
-  "rev": "2026-09-23 09:52",
+  "rev": "2026-09-24 10:55",
   "lib": [
     {
       "title": "HOMETOWN ROMANCE - SPECIAL",
@@ -721,9 +721,15 @@
       "is18": true,
       "thumb": "https://cdn-local.mebmarket.com/meb/server1/430310/Thumbnail/book_detail_large.gif?14",
       "countLabel": "7/7",
-      "updated": "2026-08-28",
+      "updated": "2026-09-23",
       "slide": "https://cdn-local.mebmarket.com/meb/server1/430310/Thumbnail/book_detail_large.gif?14",
-      "syn": "\"Dẫu có xinh đẹp nhưng lại tàn nhẫn, dẫu có chết... tôi cũng không thèm mê đắm một kẻ xảo quyệt như cô đâu.\" Công xinh đẹp nhưng tàn nhẫn (cờ dưa hấu) đối đầu cùng Thụ xinh đẹp bướng bỉnh…"
+      "syn": "\"Dẫu có xinh đẹp nhưng lại tàn nhẫn, dẫu có chết... tôi cũng không thèm mê đắm một kẻ xảo quyệt như cô đâu.\" Công xinh đẹp nhưng tàn nhẫn (cờ dưa hấu) đối đầu cùng Thụ xinh đẹp bướng bỉnh nhưng lại có tài nấu nướng đỉnh…",
+      "coverAlt": "",
+      "synFull": "\"Dẫu có xinh đẹp nhưng lại tàn nhẫn, dẫu có chết... tôi cũng không thèm mê đắm một kẻ xảo quyệt như cô đâu.\"\nCông xinh đẹp nhưng tàn nhẫn (cờ dưa hấu) đối đầu cùng Thụ xinh đẹp bướng bỉnh nhưng lại có tài nấu nướng đỉnh cao đến khó tin.\nCâu chuyện về Charinchita, một nàng tiểu thư xinh đẹp nổi tiếng, du học sinh và cũng là người thừa kế của Chaichana Foods. Đây vốn là một tập đoàn kinh doanh chuỗi nhà hàng thương hiệu danh tiếng, nhưng cô nàng lại chỉ biết rong chơi qua ngày mà chẳng hề đoái hoài gì đến sản nghiệp của gia đình.\nCho đến một đêm nọ tại một hộp đêm sang trọng ở London, cô đã gặp gỡ Chermawee. Chermawee là một nữ CEO xinh đẹp đầy sức hút, người đã thách thức cô chơi một trò chơi phân định thắng thua, nếu ai thua thì phải làm theo một yêu cầu của người thắng. Cuối cùng, Charinchita thua thảm hại. Thế nhưng có ai mà ngờ được yêu cầu đó lại chính là tình một đêm.\nMọi chuyện bắt đầu trở nên rắc rối khi Charinchita bất ngờ nhận được tin bố mình sắp kết hôn lần nữa vì mục đích lợi ích kinh doanh. Điều đó khiến cô phải vội vàng bay về Thái Lan với hy vọng sẽ phá nát đám cưới này. Tuy nhiên, sự thật lại còn gây sốc hơn... khi cô dâu đó lại chính là Chermawee, và bất ngờ tột đỉnh nhất là người phải bước vào lễ đường lại chính là bản thân cô.\nSự hỗn loạn lên đến đỉnh điểm khi hai con người phải về sống chung dưới một mái nhà theo luật lệ của chủ nợ mang tên Chermawee. Lối thoát duy nhất của Charinchita là phải cố gắng vực dậy công việc kinh doanh để kiếm đủ năm trăm triệu trả nợ và ly hôn cho bằng được với con người tàn nhẫn kia.",
+      "genre": "",
+      "pubStatus": "published",
+      "visibility": "public",
+      "publishedAt": "2026-09-23"
     },
     {
       "title": "Dưới Bóng Tình Thủy Chung",
@@ -1028,7 +1034,7 @@
     "updated": "2026-09-17"
   },
   "source": {
-    "synced": "2026-09-23T09:52:20.897Z",
+    "synced": "2026-09-23T15:35:41.365Z",
     "note": "sửa từ trang quản trị ssochuz v2"
   },
   "editorChoice": [
