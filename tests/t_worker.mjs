@@ -1760,6 +1760,22 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     ck('502-biến-đủ/hint bảo chạy SQL count để phân biệt 2 bệnh', /select count\(\*\) from ssochuz_blobs/.test(r1.body.hint || ''), r1.body.hint, 'hint có câu SQL quyết định');
     ck('502-biến-đủ/hint vẫn nêu cả 2 lối chữa', /push_to_kv\.py/.test(r1.body.hint || '') && /secret put SUPABASE_SERVICE_ROLE/.test(r1.body.hint || ''), r1.body.hint, 'đủ 2 nhánh: khôi phục / đặt lại khoá');
 
+    /* thứ tự + độ dài câu chẩn đoán: overflowFailResponse cắt mỗi dòng `tried` ở
+       220 ký tự. Bản nháp đầu của 1.17.1 dài ~290 ký tự nên mất đúng đoạn "hoặc
+       bảng chưa có dữ liệu" — nguyên nhân thật của sự cố 24/09 — chỉ còn giả
+       thuyết khoá sai. Nay "bảng trống thật" phải đứng TRƯỚC, và câu phải còn
+       nguyên kể cả khi slug dài (slug thật dài nhất trong data/book hiện là 49
+       ký tự; thử hẳn 60). */
+    const t1 = (r1.body.tried || []).join(' ');
+    ck('502-biến-đủ/tried nêu "bảng trống thật" TRƯỚC "khoá không phải SECRET"',
+      t1.indexOf('trống thật') >= 0 && t1.indexOf('SECRET') > t1.indexOf('trống thật'), r1.body.tried, 'đủ 2 khả năng, không đổ ngay cho khoá');
+    const longSlug = 'bo-ten-rat-dai-'.padEnd(60, 'z');
+    await kv.put('book:' + longSlug, JSON.stringify({ overflow: 'supabase', slug: longSlug, title: 'Bộ Tên Dài', chapters: 1 }));
+    const r1b = await call('GET', '/api/book/' + longSlug + '/toc', { e: envOk });
+    const t1b = (r1b.body && r1b.body.tried || []).join(' ');
+    ck('502-biến-đủ/slug 60 ký tự: tried còn nguyên, không bị cắt mất ý', r1b.status === 502 && /trống thật/.test(t1b) && /SECRET/.test(t1b) && /RLS che hết/.test(t1b),
+      r1b.body && r1b.body.tried, 'đủ "trống thật" + "SECRET" + "RLS che hết"');
+
     /* (2) bảng đọc được và CÓ dữ liệu → mất đúng dòng này, khôi phục từ repo */
     routes = (u) => {
       const url = String(u);

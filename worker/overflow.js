@@ -175,10 +175,14 @@ async function probeSupabaseTable(env) {
         code: 'sb-row-missing',
       };
     }
+    /* Nêu "bảng trống thật" TRƯỚC "khoá sai", và giữ câu NGẮN: overflowFailResponse
+       cắt mỗi dòng `tried` ở 220 ký tự. Câu cũ dài 216 ký tự (cộng tiền tố là ~290)
+       nên luôn bị cắt mất đúng đoạn cuối "hoặc bảng chưa có dữ liệu" — nguyên nhân
+       THẬT của sự cố 24/09 — chỉ còn lại giả thuyết khoá sai. Câu này còn nguyên với
+       slug tới 60 ký tự; phần giải thích chi tiết (sb_publishable_/anon, câu SQL
+       phân biệt 2 bệnh) nằm ở hint của overflowHintFor('sb-table-empty'). */
     return {
-      text: 'bảng trả về RỖNG hoàn toàn ⇒ nhiều khả năng SUPABASE_SERVICE_ROLE KHÔNG phải khoá SECRET '
-        + '(dán nhầm sb_publishable_…/anon thì Row Level Security che hết mọi dòng, PostgREST vẫn trả 200 + []), '
-        + 'hoặc bảng chưa có dữ liệu',
+      text: 'bảng RỖNG hoàn toàn ⇒ bảng trống thật, HOẶC SUPABASE_SERVICE_ROLE không phải khoá SECRET (RLS che hết)',
       code: 'sb-table-empty',
     };
   } catch (e) {
