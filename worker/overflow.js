@@ -7,6 +7,7 @@
 
 function sbUrl(env) { return String((env && env.SUPABASE_URL) || '').replace(/\/+$/, ''); }
 function sbKey(env) { return String((env && env.SUPABASE_SERVICE_ROLE) || '').trim(); }
+function hasR2(env) { return !!(env && env.CZ_R2 && typeof env.CZ_R2.put === 'function'); }
 
 export function overflowStatus(env) {
   const supabase = !!(sbUrl(env) && sbKey(env));
@@ -14,13 +15,86 @@ export function overflowStatus(env) {
     supabase,
     covers: supabase, /* bìa → Supabase Storage bucket `covers` (1 GB free, không unlimited) */
     images: supabase, /* ảnh chương → bucket `images` (để dành 500 MB Postgres cho book/nội dung) */
-    r2: !!(env && env.CZ_R2 && typeof env.CZ_R2.put === 'function'),
+    r2: hasR2(env),
   };
 }
 
 export function hasOverflow(env) {
   const s = overflowStatus(env);
   return s.supabase || s.r2;
+}
+
+/* ============================================================================
+   GHIM PROJECT SUPABASE — ĐƯỜNG CỨU HỘ KHI MẤT BIẾN `SUPABASE_URL` (1.16.1)
+   ----------------------------------------------------------------------------
+   Sự cố thật ngày 23/09: `npx wrangler deploy` thay TOÀN BỘ biến thường của
+   Worker bằng đúng nội dung worker/wrangler.toml. `SUPABASE_URL` khi đó chỉ đặt
+   tay trên dashboard ⇒ bị xoá ⇒ overflow mất chỗ đọc (bảng ssochuz_blobs nằm ở
+   <SUPABASE_URL>/rest/v1/…) ⇒ CẢ 63 bộ chỉ còn stub trong KV, mọi đường đọc bộ
+   chết (502/404) dù Worker vẫn báo version mới. Secret (ADMIN_KEY,
+   SUPABASE_SERVICE_ROLE…) thì wrangler GIỮ nên nhìn bên ngoài rất khó đoán bệnh.
+
+   Từ 1.16.1: `SUPABASE_URL` được ghi thẳng vào worker/wrangler.toml (hết bị xoá),
+   và NẾU vẫn thiếu biến thì Worker tự lấy Project URL mà quản trị đã lưu ở
+   /admin → Cài đặt & đồng bộ → Đăng nhập (KV `registry.settings.auth.supabaseUrl`)
+   — đúng ghim mà phần đăng nhập vẫn dùng. Nhờ vậy đọc truyện sống lại mà KHÔNG
+   cần deploy lại. Ghim cache 60 giây trong isolate để không tốn lượt đọc KV.
+   ========================================================================== */
+export const SUPABASE_HOST_RE = /^https:\/\/[a-z0-9][a-z0-9-]*\.supabase\.(co|in|net)$/i;
+const _pinCache = new WeakMap();   /* CZ_KV -> {t, url} — mỗi KV một ghim */
+
+/* quản trị vừa Lưu registry (đổi ghim?) → bỏ cache để hiệu lực ngay */
+export function sbPinReset(env) { try { if (env && env.CZ_KV) _pinCache.delete(env.CZ_KV); } catch (e) {} }
+
+/* Project URL quản trị lưu trong KV (KHÔNG xét biến môi trường). */
+export async function sbPinUrl(env) {
+  const kv = env && env.CZ_KV;
+  if (!kv) return '';
+  const cached = _pinCache.get(kv);
+  if (cached && cached.t > Date.now()) return cached.url;
+  const slot = { t: Date.now() + 60000, url: '' };
+  _pinCache.set(kv, slot);
+  try {
+    const reg = await kv.get('registry', { type: 'json' });
+    const u = String((reg && reg.settings && reg.settings.auth && reg.settings.auth.supabaseUrl) || '').trim().replace(/\/+$/, '');
+    /* chỉ nhận đúng host *.supabase.co|in|net — URL lạ trong registry không được
+       biến thành nơi Worker gửi service-role key tới */
+    if (u && SUPABASE_HOST_RE.test(u)) slot.url = u;
+  } catch (e) { /* KV lỗi → coi như chưa ghim; tầng trên sẽ báo thiếu biến */ }
+  return slot.url;
+}
+
+/* env có SUPABASE_URL "thật" (biến môi trường) → trả nguyên; thiếu thì trả bản
+   sao có SUPABASE_URL lấy từ ghim KV. KHÔNG đổi env gốc (Worker dùng chung). */
+export async function resolveEnv(env) {
+  if (!env || sbUrl(env)) return env;
+  const pin = await sbPinUrl(env);
+  if (!pin) return env;
+  const e = Object.assign({}, env);
+  e.SUPABASE_URL = pin;
+  e.SUPABASE_URL_VIA = 'kv';
+  return e;
+}
+
+/* Biến còn thiếu để overflow đọc/ghi được — dùng cho thông báo lỗi nói rõ
+   "thiếu biến nào" thay vì "không đọc được dữ liệu bộ (overflow?)". */
+export function missingOverflowVars(env) {
+  const out = [];
+  if (!sbUrl(env)) out.push('SUPABASE_URL');
+  if (!sbKey(env)) out.push('SUPABASE_SERVICE_ROLE');
+  return out;
+}
+
+/* Trạng thái overflow CÓ kể ghim KV + nói rõ URL lấy từ đâu và còn thiếu gì.
+   /api/health dùng bản này để người vận hành nhìn một cái là biết bệnh. */
+export async function overflowStatusResolved(env) {
+  const fromEnv = sbUrl(env);
+  const e = fromEnv ? env : await resolveEnv(env);
+  const st = overflowStatus(e);
+  st.supabaseUrl = sbUrl(e);
+  st.urlVia = sbUrl(e) ? (fromEnv ? 'env' : 'kv') : '';
+  st.missing = missingOverflowVars(e);
+  return st;
 }
 
 function isStub(obj) {
@@ -51,17 +125,29 @@ async function putSupabase(env, key, text, mime) {
   if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + String(await res.text()).slice(0, 180));
 }
 
-async function getSupabase(env, key) {
-  const res = await fetch(sbUrl(env) + '/rest/v1/ssochuz_blobs?key=eq.' + encodeURIComponent(key) + '&select=value,mime', {
-    headers: { apikey: sbKey(env), Authorization: 'Bearer ' + sbKey(env) },
-  });
-  if (!res.ok) return null;
-  const rows = await res.json();
-  if (!rows || !rows[0] || rows[0].value == null) return null;
-  return { value: rows[0].value, mime: rows[0].mime || '', via: 'supabase' };
+/* Đọc 1 khoá ở Supabase, KÈM lý do khi không lấy được (1.16.1: thông báo lỗi
+   phải nói được "thiếu biến" hay "Supabase từ chối HTTP 401"). */
+async function getSupabaseChecked(env, key) {
+  let res;
+  try {
+    res = await fetch(sbUrl(env) + '/rest/v1/ssochuz_blobs?key=eq.' + encodeURIComponent(key) + '&select=value,mime', {
+      headers: { apikey: sbKey(env), Authorization: 'Bearer ' + sbKey(env) },
+    });
+  } catch (e) {
+    return { hit: null, why: 'supabase: không gọi được ' + sbUrl(env) + ' (' + ((e && e.message) || e) + ')' };
+  }
+  if (!res.ok) {
+    const t = String(await res.text()).slice(0, 140);
+    return { hit: null, why: 'supabase: HTTP ' + res.status + (res.status === 401 || res.status === 403 ? ' (SUPABASE_SERVICE_ROLE sai/hết hạn?)' : '') + (t ? ' ' + t : '') };
+  }
+  let rows;
+  try { rows = await res.json(); } catch (e) { return { hit: null, why: 'supabase: trả về không phải JSON' }; }
+  if (!rows || !rows[0] || rows[0].value == null) return { hit: null, why: 'supabase: không có khoá ' + key + ' trong bảng ssochuz_blobs' };
+  return { hit: { value: rows[0].value, mime: rows[0].mime || '', via: 'supabase' }, why: '' };
 }
 
 export async function putOverflow(env, key, value, mime) {
+  env = await resolveEnv(env);
   const st = overflowStatus(env);
   const text = typeof value === 'string' ? value : JSON.stringify(value);
   const out = { ok: false, via: '', errors: [] };
@@ -76,18 +162,39 @@ export async function putOverflow(env, key, value, mime) {
   return out;
 }
 
-export async function getOverflow(env, key) {
+/* Đọc overflow KÈM chẩn đoán: { hit, tried, status } — tried là lý do từng
+   đường thất bại, để 502 nói đúng bệnh thay vì "(overflow?)". */
+export async function getOverflowChecked(env, key) {
+  env = await resolveEnv(env);
   const st = overflowStatus(env);
+  const tried = [];
+  let hit = null;
   if (st.r2) {
-    try { const hit = await getR2(env, key); if (hit) return hit; } catch (e) {}
+    try {
+      const h = await getR2(env, key);
+      if (h) hit = h; else tried.push('r2: không có khoá ' + key);
+    } catch (e) { tried.push('r2: ' + ((e && e.message) || e)); }
   }
-  if (st.supabase) {
-    try { const hit = await getSupabase(env, key); if (hit) return hit; } catch (e) {}
+  if (!hit && st.supabase) {
+    try {
+      const r = await getSupabaseChecked(env, key);
+      if (r.hit) hit = r.hit; else tried.push(r.why);
+    } catch (e) { tried.push('supabase: ' + ((e && e.message) || e)); }
   }
-  return null;
+  if (!hit && !st.r2 && !st.supabase) {
+    const miss = missingOverflowVars(env);
+    tried.push('chưa cấu hình overflow nào — thiếu ' + (miss.join(' + ') || 'biến') + (hasR2(env) ? '' : ' (hoặc chưa binding CZ_R2)'));
+  }
+  return { hit, tried, status: st };
+}
+
+export async function getOverflow(env, key) {
+  const r = await getOverflowChecked(env, key);
+  return r.hit;
 }
 
 export async function dropOverflow(env, key) {
+  env = await resolveEnv(env);
   const st = overflowStatus(env);
   if (st.r2) { try { await env.CZ_R2.delete(key); } catch (e) {} }
   if (st.supabase) {
@@ -101,25 +208,49 @@ export async function dropOverflow(env, key) {
 }
 
 export async function materializeBook(env, raw, slug) {
-  if (raw == null) return null;
+  const r = await materializeBookChecked(env, raw, slug);
+  return r.book;
+}
+
+/* Như materializeBook nhưng PHÂN BIỆT ba trạng thái (1.16.1):
+     'ok'         có book đầy đủ
+     'not-stub'   KV đang giữ trọn bộ (không cần overflow)
+     'unreadable' KV chỉ còn stub mà không lấy được bản đầy đủ
+   Kèm `missing` (tên biến thiếu) và `why` (lý do từng đường đọc thất bại) để
+   trang đọc/admin báo đúng bệnh. */
+export async function materializeBookChecked(env, raw, slug) {
+  if (raw == null) return { status: 'missing', book: null, stub: null, missing: missingOverflowVars(env), why: ['KV không có khoá book:' + (slug || '')] };
   let book;
   try { book = typeof raw === 'string' ? JSON.parse(raw) : raw; }
-  catch (e) { return null; }
-  if (!isStub(book)) return book;
-  const got = await getOverflow(env, 'book:' + (book.slug || slug || ''));
-  if (!got) return null;
-  try { return JSON.parse(got.value); } catch (e) { return null; }
+  catch (e) { return { status: 'unreadable', book: null, stub: null, missing: [], why: ['giá trị khoá book:' + (slug || '') + ' không phải JSON hợp lệ'] }; }
+  if (!isStub(book)) return { status: 'not-stub', book: book, stub: null, missing: [], why: [] };
+  const key = 'book:' + (book.slug || slug || '');
+  const got = await getOverflowChecked(env, key);
+  if (!got.hit) {
+    return { status: 'unreadable', book: null, stub: book, missing: missingOverflowVars(env), why: got.tried };
+  }
+  try { return { status: 'ok', book: JSON.parse(got.hit.value), stub: book, missing: [], why: [] }; }
+  catch (e) { return { status: 'unreadable', book: null, stub: book, missing: [], why: ['bản overflow của ' + key + ' không phải JSON hợp lệ'] }; }
 }
 
 export async function readBook(env, slug) {
-  if (!env || !env.CZ_KV || !slug) return null;
+  const r = await readBookChecked(env, slug);
+  return r.book;
+}
+
+/* readBook có chẩn đoán — /api/book, /toc, /chapter dùng bản này để phân biệt
+   "chưa có bộ" (404) với "có mà không đọc được" (502). */
+export async function readBookChecked(env, slug) {
+  if (!env || !env.CZ_KV || !slug) return { status: 'missing', book: null, stub: null, missing: missingOverflowVars(env), why: ['chưa bind CZ_KV hoặc thiếu slug'] };
   const raw = await env.CZ_KV.get('book:' + slug, { type: 'text' });
-  if (raw == null) return null;
-  return materializeBook(env, raw, slug);
+  if (raw == null) return { status: 'missing', book: null, stub: null, missing: missingOverflowVars(env), why: ['KV không có khoá book:' + slug] };
+  const r = await materializeBookChecked(env, raw, slug);
+  return r;
 }
 
 /* Ghi book: overflow thành công → KV chỉ giữ stub nhỏ. Overflow lỗi → full JSON ở KV. */
 export async function persistBook(env, slug, parsed) {
+  env = await resolveEnv(env);
   const full = JSON.stringify(parsed);
   const bytes = new TextEncoder().encode(full).length;
   const saved = new Date().toISOString();
@@ -215,6 +346,7 @@ async function putStorageImage(env, bucket, id, data, type) {
    SUPABASE_SERVICE_ROLE thì rơi về persistImage (KV) như cũ. Gắn rồi mà
    Storage từ chối → ném lỗi, không báo đã lưu. */
 export async function persistCover(env, id, data, type) {
+  env = await resolveEnv(env);
   if (!sbUrl(env) || !sbKey(env)) return persistImage(env, id, data, type);
   return putStorageImage(env, 'covers', id, data, type);
 }
@@ -225,6 +357,7 @@ export async function persistCover(env, id, data, type) {
    (1 chương truyện tranh có thể vài chục ảnh). Storage từ chối thì RƠI VỀ
    đường cũ (blobs/KV) chứ không làm hỏng thao tác upload của người dùng. */
 export async function persistChapterImage(env, id, data, type) {
+  env = await resolveEnv(env);
   if (!sbUrl(env) || !sbKey(env)) return persistImage(env, id, data, type);
   try {
     return await putStorageImage(env, 'images', id, data, type);
@@ -236,6 +369,7 @@ export async function persistChapterImage(env, id, data, type) {
 }
 
 export async function persistImage(env, id, data, type, extraMeta) {
+  env = await resolveEnv(env);
   const bytes = Math.floor(String(data).replace(/=+$/, '').length * 3 / 4);
   const at = new Date().toISOString();
   const meta = Object.assign({ type, bytes, at }, extraMeta || {});
@@ -276,6 +410,7 @@ export function coverIdSet(reg) {
 
 export async function migrateOverflow(env, opts) {
   opts = opts || {};
+  env = await resolveEnv(env);
   const st = overflowStatus(env);
   const limit = Math.max(1, Math.min(25, parseInt(opts.limit, 10) || 8));
   const only = String(opts.only || '').toLowerCase();
@@ -286,7 +421,12 @@ export async function migrateOverflow(env, opts) {
   };
   if (!st.supabase && !st.r2) {
     out.ok = false;
-    out.error = 'Chưa cấu hình overflow: đặt secret SUPABASE_SERVICE_ROLE (+ SUPABASE_URL) cho Supabase, hoặc binding CZ_R2, rồi deploy Worker trước khi chuyển.';
+    const miss = missingOverflowVars(env);
+    out.error = 'Chưa cấu hình overflow: còn thiếu ' + (miss.join(' + ') || 'biến')
+      + ' (SUPABASE_URL nằm trong worker/wrangler.toml — sửa rồi `npx wrangler deploy`;'
+      + ' SUPABASE_SERVICE_ROLE là secret: `npx wrangler secret put SUPABASE_SERVICE_ROLE`),'
+      + ' hoặc binding CZ_R2, rồi deploy Worker trước khi chuyển.';
+    out.missing = miss;
     return out;
   }
   let coverIds = {};
@@ -353,6 +493,7 @@ export async function migrateOverflow(env, opts) {
 
 export async function readImage(env, id) {
   if (!env || !env.CZ_KV) return null;
+  env = await resolveEnv(env);
   const { value, metadata } = await env.CZ_KV.getWithMetadata('img:' + id, { type: 'text' });
   if (value == null) return null;
   if (value.charAt(0) === '{') {

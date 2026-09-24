@@ -66,6 +66,9 @@
 /BAO-CAO-P1-DOC-NHE-VA-CACHE.md                /  301
 /BAO-CAO-SUA-LOI-TAB-BAO-LOI.md                /  301
 /BAO-CAO-RA-SOAT-BAO-MAT.md                     /  301
+# Báo cáo sự cố 24/09: deploy làm mất biến SUPABASE_URL — kể rõ endpoint + cách
+# Worker đọc overflow, cùng loại tài liệu nội bộ nên chặn như các báo cáo trên.
+/BAO-CAO-SU-CO-DEPLOY-MAT-BIEN-SUPABASE.md      /  301
 # --- b) slug cũ → slug mới (bộ Special từng có dấu gạch dưới trong slug ở repo,
 #        trong khi KV dùng dấu gạch ngang — 17/09/2026). Giữ 301 để link cũ
 #        (tìm kiếm, bài chia sẻ) không 404. Khi không còn ai dùng thì xoá.

@@ -27,6 +27,13 @@ CŨ đang nằm trong KV sang overflow (kể cả **bìa truyện** → Storage 
 có nút chuyển kèm tiến độ. Cùng bản: import Blogger chấp nhận **chương chỉ có ảnh** (truyện tranh) và
 đặt tên chương theo **parser chung** (`src/shared/chapters.js`) — “Lờí mở đầu”, “Giới thiệu nhân vật”,
 “Ngoại truyện”, “Chương 0” **không còn bị tính nhầm là Chương 1**.
+Từ bản **1.16.1**: **deploy không còn làm mất `SUPABASE_URL`** — biến này nằm trong
+`worker/wrangler.toml` (wrangler deploy thay toàn bộ biến thường bằng nội dung tệp đó, nên
+biến đặt tay trên dashboard bị xoá — sự cố 23/09 làm cả 63 bộ không đọc được); thiếu biến thì
+Worker tự dùng Project URL đã lưu ở `/admin`; lỗi đọc bộ **nêu tên biến thiếu** thay vì
+“không đọc được dữ liệu bộ (overflow?)”; `/toc` phân biệt **404 chưa có bộ** với **502 có mà
+không đọc được**; và admin **không ghi đè được** bộ đang unreadable.
+Chi tiết: `BAO-CAO-SU-CO-DEPLOY-MAT-BIEN-SUPABASE.md`.
 Từ bản **1.16.0**: **đọc nhẹ + cache lâu** — thêm `GET /api/book/<slug>/toc` (mục lục vài KB)
 và `GET /api/book/<slug>/chapter/<n>` (đúng 1 chương), trang đọc dùng 2 đường này thay cho việc
 tải **cả bộ cho mỗi lượt mở chương** (trung bình 334 KB, bộ lớn 1,4 MB); **khoá cache biên bỏ
@@ -49,6 +56,20 @@ Admin (admin.html)  ──PUT──▶  Worker (worker/cms.js)  ──▶  Cloud
 
 GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới cần build); dữ liệu thì không đi qua GitHub nữa.
 
+## Có gì mới ở bản 1.16.1 — deploy không còn làm mất `SUPABASE_URL`
+
+| | |
+|---|---|
+| **Bệnh** | Deploy 1.16.0 xong, `/api/health` vẫn báo version mới nhưng `overflow.supabase:false` và `auth.supabase:false` — **cả 63 bộ không đọc được**: `/api/book/<slug>` → 502, `/api/book/<slug>/toc` → 404. Nguyên nhân: `wrangler deploy` thay toàn bộ biến thường bằng nội dung `wrangler.toml`, mà `SUPABASE_URL` khi đó chỉ đặt tay trên dashboard ⇒ bị xoá. Người đọc chỉ còn đường tĩnh `/data/book/*.json` (nội dung đứng yên, bình luận/đăng nhập tắt) |
+| **Chữa 1 — hết bị xoá** | `SUPABASE_URL = "https://hnyzrkdlmvelbgcowztk.supabase.co"` nằm trong `[vars]` của `worker/wrangler.toml` (URL công khai, không phải secret) kèm cảnh báo ngay phía trên. Deploy bao nhiêu lần cũng còn |
+| **Chữa 2 — đường cứu hộ, không cần deploy** | Thiếu biến mà quản trị đã lưu **Project URL** ở `/admin` → Cài đặt & đồng bộ → Đăng nhập thì Worker tự dùng ghim đó (`registry.settings.auth.supabaseUrl`) cho **cả phần đọc/ghi overflow**, dùng chung một ghim với phần đăng nhập (`sbPinUrl` trong `worker/overflow.js`, cache 60 giây). Chỉ nhận đúng host `*.supabase.co|in|net` nên URL lạ trong registry không trở thành nơi gửi service-role key |
+| **Chữa 3 — lỗi nói rõ bệnh** | Lỗi đọc bộ hết cảnh `"không đọc được dữ liệu bộ (overflow?)"`. Nay 502 kèm `missing` (tên biến thiếu), `tried` (lý do từng đường: `supabase: HTTP 401 …`, `r2: không có khoá …`, `chưa cấu hình overflow nào — thiếu SUPABASE_URL + SUPABASE_SERVICE_ROLE`) và `hint` (2 cách chữa). `/api/health` có thêm `overflow.supabaseUrl`, `overflow.urlVia` (`env`/`kv`), `overflow.missing` |
+| **Chữa 4 — 404 ≠ 502** | `/toc` và `/chapter/<n>` phân biệt **“chưa có bộ” (404)** với **“có mà không đọc được” (502)**. Bản 1.16.0 trả 404 cho cả hai nên 63 bộ đang có trông như bị xoá |
+| **Chữa 5 — không cho ghi đè khi chưa đọc được** | `PUT /api/book/<slug>/chapter`, `POST /api/lock/set`, `POST /api/import` (import Blogger) **từ chối 502** khi bộ có trên KV mà Worker không đọc được. Trước đó chúng thấy `null` là coi như “bộ chưa có” rồi **ghi lại bộ rỗng/1 chương** — đúng cách mất trắng kho truyện khi đang mất biến |
+| **Vá phụ** | `npm run check:worker` hết đỏ khi `worker/cms.bundle.js` đang tồn tại (tệp gộp do `npm run build:worker` sinh ra, tsc soi nhầm): `worker/jsconfig.json` nay `exclude` nó |
+| **Test** | `tests/t_worker.mjs` thêm 21 kiểm tra mục **16. MẤT BIẾN SUPABASE_URL** (tổng 394). Chạy trên code CHƯA vá thì 16 kiểm tra đỏ đúng như sự cố thật (`/toc` → 404, `/api/book` → `"(overflow?)"`), vá xong thì xanh hết |
+| **Chi tiết** | `BAO-CAO-SU-CO-DEPLOY-MAT-BIEN-SUPABASE.md` |
+
 ## Có gì mới ở bản 1.15.0 — tiết kiệm hạn mức KV (Cloudflare gửi thư 90% quota)
 
 | | |
@@ -64,16 +85,32 @@ GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới c�
 | **Đo được** | `node tools/bench_kv.mjs .` chạy thật `worker/cms.js` trên KV giả có đếm thao tác. Cùng kịch bản 250 lượt xem + 40 phiếu + 15 đánh giá + 20 bình luận + 100 lần đọc bình luận + 60 lần đọc `/api/stats`: **bản cũ 484 ghi / 674 đọc / 60 list → bản mới 137 ghi / 361 đọc / 1 list** (lượt xem: 1,18 → 0,04 lượt ghi mỗi lượt xem) |
 | **Đổi lại** | Số lượt đọc trên bảng xếp hạng có thể trễ vài phút lúc web vắng (phiếu bầu và đánh giá sao **vẫn ghi ngay**); hạn mức chống spam chính xác theo từng isolate (muốn tuyệt đối thì phải dùng Durable Object) |
 | **Test** | `tests/t_kv_quota.mjs` (34 kiểm tra: công thức chia nhịp, 500 lượt xem/60 lần bình luận không đốt lượt ghi, gộp `rateagg` chỉ 1 lượt LIST, `/api/health`) |
-| **Quan trọng** | Nằm TRONG Worker → phải **`npx wrangler deploy`** (xem mục 0). Kiểm tra: `curl <worker>/api/health` thấy `"version": "1.16.0"` |
+| **Quan trọng** | Nằm TRONG Worker → phải **`npx wrangler deploy`** (xem mục 0). Kiểm tra: `curl <worker>/api/health` thấy `"version": "1.16.1"` |
 
-## 0. Deploy bản 1.16.0 — 2 cách, chọn 1 (ai cũng làm được trong 2 phút)
+## 0. Deploy bản 1.16.1 — 2 cách, chọn 1 (ai cũng làm được trong 2 phút)
+
+> ### ⚠ TRƯỚC KHI DEPLOY: đọc 3 dòng này (sự cố thật ngày 23/09)
+>
+> `npx wrangler deploy` **thay TOÀN BỘ biến thường** của Worker bằng đúng nội dung `[vars]`
+> trong `worker/wrangler.toml`. Biến nào đặt tay trên dashboard (Settings → **Variables and
+> Secrets**) mà **không có trong `wrangler.toml`** thì **BỊ XOÁ** sau mỗi lần deploy.
+> Secret (`ADMIN_KEY`, `SESSION_SECRET`, `SUPABASE_SERVICE_ROLE`…) thì wrangler **giữ**.
+> Đó chính xác là điều đã làm cả 63 bộ truyện không đọc được sau khi deploy 1.16.0:
+> `SUPABASE_URL` đặt tay bị xoá ⇒ Worker mất chỗ đọc overflow. Toàn bộ sự cố + cách phòng:
+> **`BAO-CAO-SU-CO-DEPLOY-MAT-BIEN-SUPABASE.md`**. Từ 1.16.1 `SUPABASE_URL` nằm sẵn trong
+> `wrangler.toml` nên deploy không làm mất nữa; nếu vẫn thiếu, Worker tự dùng Project URL
+> đã lưu ở `/admin` → Cài đặt & đồng bộ (không cần deploy lại).
+> **Thêm biến mới cho Worker? Ghi vào `wrangler.toml` (biến thường) hoặc dùng
+> `npx wrangler secret put` (secret) — đừng chỉ bấm trên dashboard.**
 
 **Cách A — dòng lệnh (khuyên dùng, cần Node):**
 
 ```bash
 cd worker && npx wrangler deploy          # wrangler tự gộp 9 tệp con
 ```
-Kiểm tra: mở `https://<worker>/api/health` phải thấy `"version": "1.16.0"`.
+Kiểm tra: mở `https://<worker>/api/health` phải thấy `"version": "1.16.1"`,
+và **`overflow.supabase` phải `true`** (nếu `false` thì xem `overflow.missing` — nó kể
+tên biến đang thiếu; `overflow.urlVia` cho biết URL lấy từ `env` hay từ ghim `kv`).
 
 **Cách B — dán trong bảng điều khiển Cloudflare (không cần cài gì):**
 
@@ -81,7 +118,7 @@ Kiểm tra: mở `https://<worker>/api/health` phải thấy `"version": "1.16.0
    190 KB, đã gộp sẵn 9 tệp con; tệp này không commit, ai cần thì chạy lại lệnh).
 2. Cloudflare → **Workers & Pages** → chọn Worker `chuseoz-cms` → **Edit code**.
 3. Xoá hết code cũ, **dán toàn bộ** `worker/cms.bundle.js`, bấm **Deploy**.
-4. Mở `/api/health` xem `"version"` (bản này: `1.16.0`).
+4. Mở `/api/health` xem `"version"` (bản này: `1.16.1`).
 
 > **Đừng dán `worker/cms.js`.** Tệp đó có 9 dòng `import` (overflow, Durable Object, mã dùng chung
 > `src/shared/…`) — bảng điều khiển không tự gộp, dán vào là Worker báo lỗi và **mất cả My Space

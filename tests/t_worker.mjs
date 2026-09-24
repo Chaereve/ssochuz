@@ -1532,6 +1532,97 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     routes = () => null;
   }
 
+  /* ---------- 16. MẤT BIẾN SUPABASE_URL (sự cố 23/09, vá ở bản 1.16.1) ------
+     `npx wrangler deploy` thay TOÀN BỘ biến thường của Worker bằng nội dung
+     worker/wrangler.toml: SUPABASE_URL đặt tay trên dashboard bị XOÁ ⇒ Worker
+     mất chỗ đọc overflow ⇒ cả 63 bộ (KV chỉ còn stub) không đọc được, trong khi
+     /api/health vẫn báo version mới. Bài này khoá 4 hành vi:
+       (a) wrangler.toml PHẢI có SUPABASE_URL trong [vars] — không để tái diễn
+       (b) thiếu biến mà /admin đã lưu Project URL → ĐỌC TRUYỆN vẫn chạy (cứu hộ)
+       (c) thiếu hẳn → 502 nêu TÊN biến thiếu, không còn "(overflow?)" mù mờ
+       (d) "chưa có bộ" vẫn 404, và admin KHÔNG ghi đè được bộ đang unreadable */
+  {
+    const wr = fs.readFileSync(path.join(ROOT, 'worker', 'wrangler.toml'), 'utf8');
+    const varsBlock = (wr.split(/^\[vars\]\s*$/m)[1] || '').split(/^\[/m)[0];
+    ck('mất biến/wrangler.toml [vars] có SUPABASE_URL', /^SUPABASE_URL\s*=\s*"https:\/\/[a-z0-9][a-z0-9-]*\.supabase\.(co|in|net)"\s*$/m.test(varsBlock),
+      varsBlock.slice(0, 140).replace(/\s+/g, ' '), 'SUPABASE_URL = "https://<ref>.supabase.co"');
+
+    /* PostgREST giả giữ bản ĐẦY ĐỦ của 2 bộ — KV chỉ còn stub, y như thật */
+    const fullBook = (slug, title) => JSON.stringify({
+      title, slug,
+      chapters: [
+        { t: 'Chương 1', html: '<p>nội dung chương một đủ dài để hợp lệ</p>' },
+        { t: 'Chương 2', html: '<p>chương hai</p>' },
+      ],
+    });
+    const rows = {};
+    ['ovl-pin', 'ovl-dead'].forEach((s) => { rows['book:' + s] = { key: 'book:' + s, value: fullBook(s, 'Bộ ' + s), mime: 'application/json' }; });
+    await kv.put('book:ovl-pin', JSON.stringify({ overflow: 'supabase', slug: 'ovl-pin', title: 'Bộ ovl-pin', chapters: 2 }));
+    await kv.put('book:ovl-dead', JSON.stringify({ overflow: 'supabase', slug: 'ovl-dead', title: 'Bộ ovl-dead', chapters: 2 }));
+    routes = (u) => {
+      const url = String(u);
+      if (url.includes('/rest/v1/ssochuz_blobs')) {
+        const m = /key=eq\.([^&]+)/.exec(url);
+        const row = m && rows[decodeURIComponent(m[1])];
+        return { status: 200, body: row ? [row] : [] };
+      }
+      return { status: 404, body: '' };
+    };
+
+    /* (b) Worker KHÔNG có biến SUPABASE_URL, nhưng /admin đã lưu Project URL */
+    const setPin = async (supabaseUrl) => {
+      const cur = JSON.parse(JSON.stringify((await call('GET', '/api/registry')).body || {}));
+      cur.settings = cur.settings || {};
+      cur.settings.auth = supabaseUrl ? { provider: 'supabase', supabaseUrl, supabaseAnonKey: 'sb_publishable_test' } : { provider: 'supabase' };
+      /* PUT qua Worker (không kv.put thẳng) để Worker tự xoá cache ghim */
+      return call('PUT', '/api/registry', { headers: ADMH, body: cur });
+    };
+    await setPin('https://sbpin.supabase.co');
+    const envNoVar = Object.assign({}, env, { SUPABASE_URL: '', SUPABASE_SERVICE_ROLE: 'service-role-test' });
+    const hp = await call('GET', '/api/health', { e: envNoVar });
+    eq('mất biến/health.overflow.supabase nhờ ghim KV', hp.body && hp.body.overflow && hp.body.overflow.supabase, true);
+    eq('mất biến/health.overflow.urlVia = kv', hp.body && hp.body.overflow && hp.body.overflow.urlVia, 'kv');
+    eq('mất biến/health.overflow.supabaseUrl = ghim của /admin', hp.body && hp.body.overflow && hp.body.overflow.supabaseUrl, 'https://sbpin.supabase.co');
+    const tocPin = await call('GET', '/api/book/ovl-pin/toc', { e: envNoVar });
+    eq('mất biến/toc vẫn 200 nhờ ghim KV', tocPin.status, 200);
+    eq('mất biến/toc đủ 2 chương', tocPin.body && tocPin.body.total, 2);
+    const chPin = await call('GET', '/api/book/ovl-pin/chapter/1', { e: envNoVar });
+    ck('mất biến/chapter/1 trả nội dung thật', !!(chPin.body && chPin.body.chapter && /nội dung chương một/.test(chPin.body.chapter.html)),
+      chPin.body && chPin.body.chapter && String(chPin.body.chapter.html).slice(0, 60), 'html chương 1');
+    const bookPin = await call('GET', '/api/book/ovl-pin', { e: envNoVar });
+    eq('mất biến//api/book vẫn 200', bookPin.status, 200);
+    eq('mất biến//api/book đủ 2 chương', bookPin.body && (bookPin.body.chapters || []).length, 2);
+
+    /* (c) + (d) mất CẢ biến lẫn ghim → 502 nói rõ; bộ không có vẫn 404 */
+    await setPin('');
+    const envDead = Object.assign({}, env, { SUPABASE_URL: '' });   /* không secret, không ghim */
+    const hd = await call('GET', '/api/health', { e: envDead });
+    eq('mất biến/health.overflow.supabase = false', hd.body && hd.body.overflow && hd.body.overflow.supabase, false);
+    eq('mất biến/health.overflow.missing kể đủ 2 biến', ((hd.body && hd.body.overflow && hd.body.overflow.missing) || []).join(','), 'SUPABASE_URL,SUPABASE_SERVICE_ROLE');
+    const tocDead = await call('GET', '/api/book/ovl-dead/toc', { e: envDead });
+    eq('mất biến/toc: có bộ mà không đọc được → 502 (không phải 404)', tocDead.status, 502);
+    ck('mất biến/502 nêu TÊN biến thiếu', /SUPABASE_URL/.test((tocDead.body && tocDead.body.error) || '') && ((tocDead.body && tocDead.body.missing) || []).indexOf('SUPABASE_URL') >= 0,
+      tocDead.body && tocDead.body.error, 'error nêu SUPABASE_URL');
+    ck('mất biến/502 kèm cách chữa', /wrangler|Variables and Secrets/.test((tocDead.body && tocDead.body.hint) || ''),
+      tocDead.body && tocDead.body.hint, 'hint nói wrangler deploy / dashboard');
+    const bookDead = await call('GET', '/api/book/ovl-dead', { e: envDead });
+    eq('mất biến//api/book → 502', bookDead.status, 502);
+    ck('mất biến/hết cảnh "(overflow?)" mù mờ', !/overflow\?\)/.test((bookDead.body && bookDead.body.error) || ''),
+      bookDead.body && bookDead.body.error, 'nói rõ thiếu biến nào');
+    const nope = await call('GET', '/api/book/khong-co-bo-nay/toc', { e: envDead });
+    eq('mất biến/bộ không tồn tại vẫn 404', nope.status, 404);
+
+    /* (d) admin KHÔNG được ghi đè bộ đang unreadable (ghi trên vỏ = mất chương) */
+    const stubBefore = (kv.m.get('book:ovl-dead') || {}).value;
+    const putCh = await call('PUT', '/api/book/ovl-dead/chapter', { e: envDead, headers: ADMH, body: { index: 0, title: 'Chương 1', html: '<p>ghi đè</p>' } });
+    eq('mất biến/lưu chương khi không đọc được → 502', putCh.status, 502);
+    eq('mất biến/KV vẫn nguyên stub (không mất 2 chương)', (kv.m.get('book:ovl-dead') || {}).value, stubBefore);
+    const lockSet = await call('POST', '/api/lock/set', { e: envDead, headers: ADMH, body: { slug: 'ovl-dead', password: 'mat-ma-dai-8-ky-tu' } });
+    eq('mất biến/khoá bộ khi không đọc được → 502', lockSet.status, 502);
+    eq('mất biến/khoá hụt cũng không đụng KV', (kv.m.get('book:ovl-dead') || {}).value, stubBefore);
+    routes = () => null;
+  }
+
   fs.rmSync(tmp, { recursive: true, force: true });
 
   const bad = checks.filter((c) => !c.ok);

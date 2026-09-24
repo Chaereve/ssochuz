@@ -9,5 +9,6 @@
     "lib": ["ES2022"],
     "types": ["@cloudflare/workers-types"]
   },
-  "include": ["./*.js", "../src/shared/chapters.js"]
+  "include": ["./*.js", "../src/shared/chapters.js"],
+  "exclude": ["./cms.bundle.js"]
 }
