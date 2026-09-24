@@ -28,7 +28,11 @@ Kết quả đo trên bản 1.17.0 (kịch bản: 600 lượt xem của 120 ngư
 | 40 phiếu bầu + 15 đánh giá | 106 | 106 | 0 |
 | 20 bình luận + 100 lần đọc | 20 | 128 | 0 |
 | Cron 1 giờ (6 lần) | 0 | 6 | 0 |
-| **Tổng "ngày" giả lập** | **151** | **445** | **1** |
+| **Cộng 5 nhóm trên** | **151** | **445** | **1** |
+
+Dòng `TỔNG KV trong "ngày" giả lập` mà công cụ in ra cuối bảng nay là
+**151 ghi / 646 đọc / 1 list** — vì nó cộng luôn **201 lượt đọc** của phép đo tải
+chương ở mục ngay dưới (101 + 100). Trừ phần đó ra thì đúng 445 đọc như bảng.
 
 So với hạn mức free của Cloudflare (1.000 ghi + 100.000 đọc/ngày) và so với bản cũ
 (484 ghi / 674 đọc / 60 list cho kịch bản nhỏ hơn — ghi ở `worker/README.md` mục 1.15.0),
