@@ -144,7 +144,7 @@ import { sanitizeChapterHtml } from '../src/shared/sanitize.js';
      VAPID_PRIVATE     (secret, bắt buộc nếu bật push) — khoá riêng VAPID base64url (`wrangler secret put VAPID_PRIVATE`)
    ============================================================================ */
 
-const VERSION = '1.17.0';
+const VERSION = '1.17.1';
 const JSONH = {
   'content-type': 'application/json; charset=utf-8',
   'x-content-type-options': 'nosniff',
@@ -1426,6 +1426,44 @@ async function verifyLockToken(env, slug, token) {
   for (let k = 0; k < want.length; k++) diff |= want.charCodeAt(k) ^ cand.charCodeAt(k);
   return diff === 0 ? exp : 0;
 }
+/* BẢNG TRA "mã bệnh → cách chữa". Mỗi mã là MỘT nguyên nhân Worker tự xác định
+   được, nên 502 chỉ bảo đúng một việc cần làm. Sự cố 24/09: `missing:[]` (biến
+   đủ cả) mà hint vẫn bảo "thêm SUPABASE_URL" → người dùng sửa mãi chỗ không
+   hỏng. Từ đó lời khuyên phải theo mã bệnh, kèm luôn slug để lệnh chạy được. */
+function overflowHintFor(code, slug) {
+  const restore = 'python3 tools/push_to_kv.py --api https://<worker> --key <ADMIN_KEY> --only ' + slug;
+  const secret = 'cd worker && npx wrangler secret put SUPABASE_SERVICE_ROLE';
+  if (code === 'sb-table-empty') {
+    /* sự cố 24/09: bảng TRỐNG THẬT (SQL Editor `select count(*)` = 0), không phải
+       do RLS — nên phải bảo người dùng phân biệt bằng đúng câu đó trước, đừng
+       đổ ngay cho khoá. */
+    return 'Worker gọi được Supabase nhưng bảng ssochuz_blobs RỖNG. Phân biệt 2 bệnh bằng Supabase Dashboard '
+      + '→ SQL Editor: `select count(*) from ssochuz_blobs;` (câu này bỏ qua Row Level Security). '
+      + '(1) = 0 → bảng trống thật, khôi phục từ bản sao lưu trong repo: `' + restore + '` '
+      + '(hoặc bỏ `--only` để đẩy cả 63 bộ). '
+      + '(2) > 0 → dữ liệu còn đó nhưng API key bị RLS che: `' + secret + '` rồi dán khoá `sb_secret_…` '
+      + '(Project Settings → API Keys → tab SECRET keys) — KHÔNG dùng `sb_publishable_…`/anon, '
+      + 'rồi `cd worker && npx wrangler deploy`.';
+  }
+  if (code === 'sb-row-missing') {
+    return 'Bảng ssochuz_blobs ĐỌC ĐƯỢC và đang có dữ liệu — chỉ đúng khoá này bị mất. Khôi phục từ bản sao '
+      + 'lưu trong repo: `' + restore + '` (đẩy lại data/book/' + slug + '.json, Worker tự ghi lại overflow). '
+      + 'Đối chiếu trước/sau bằng `--verify` (chỉ so sánh, không ghi). Biến môi trường KHÔNG có lỗi.';
+  }
+  if (code === 'sb-http') {
+    return 'Supabase trả HTTP 401/403 hoặc lỗi: đặt lại `' + secret + '` bằng khoá SECRET của đúng project '
+      + 'đang trỏ trong SUPABASE_URL.';
+  }
+  if (code === 'sb-unreachable' || code === 'sb-probe-error') {
+    return 'Worker không gọi được SUPABASE_URL (DNS/sai URL/Outbound Fetch). Kiểm tra `SUPABASE_URL` trong '
+      + 'worker/wrangler.toml hoặc Dashboard → Variables and Secrets.';
+  }
+  if (code === 'no-overflow') {
+    return 'Chưa cấu hình overflow nào. Thêm `SUPABASE_URL` (Text) trong Dashboard → Settings → Variables and '
+      + 'Secrets, hoặc `cd worker && npx wrangler deploy` (biến đã nằm trong wrangler.toml); rồi `' + secret + '`.';
+  }
+  return '';
+}
 /* HTTP 502 khi KV chỉ còn STUB mà Worker không lấy được bản đầy đủ (1.16.1).
    Vì sao phải nói rõ: sự cố 23/09 (`wrangler deploy` xoá biến SUPABASE_URL) làm
    cả 63 bộ unreadable mà lỗi chỉ ghi "không đọc được dữ liệu bộ (overflow?)" —
@@ -1433,18 +1471,22 @@ async function verifyLockToken(env, slug, token) {
    khiến tưởng bộ bị xoá. Nay lỗi nêu TÊN biến thiếu + 2 cách chữa. */
 function overflowFailResponse(cors, slug, detail) {
   const miss = (detail && detail.missing) || [];
-  const tried = ((detail && detail.why) || []).slice(0, 3).map((s) => String(s).slice(0, 200));
+  const codes = ((detail && detail.codes) || []).map(String);
+  const tried = ((detail && detail.why) || []).slice(0, 3).map((s) => String(s).slice(0, 220));
+  /* thiếu biến môi trường luôn thắng: không có biến thì chẩn đoán khác vô nghĩa */
+  const pick = miss.length ? overflowHintFor('no-overflow', slug)
+    : overflowHintFor(codes.find((c) => overflowHintFor(c, slug)) || '', slug);
   return json({
     ok: false,
     error: 'Không đọc được nội dung bộ "' + slug + '": dữ liệu nằm NGOÀI KV (overflow) mà Worker không lấy được'
-      + (miss.length ? ' — thiếu biến ' + miss.join(', ') : '') + '.',
+      + (miss.length ? ' — thiếu biến ' + miss.join(', ') : ' — biến môi trường đã đủ, không thấy dữ liệu trong overflow') + '.',
     slug: slug,
     missing: miss,
+    codes: codes,
     tried: tried,
-    hint: 'Chữa 1 trong 2 cách: (A) Workers & Pages → Settings → Variables and Secrets → thêm SUPABASE_URL = https://<ref>.supabase.co (Text) → Save;'
-      + ' (B) SUPABASE_URL đã nằm trong worker/wrangler.toml nên `cd worker && npx wrangler deploy` là đủ.'
-      + ' Thiếu secret thì `cd worker && npx wrangler secret put SUPABASE_SERVICE_ROLE`.'
-      + ' Không deploy lại cũng được nếu Project URL đã lưu ở /admin → Cài đặt & đồng bộ.',
+    hint: pick || 'Đọc mục `tried` ở trên để biết nguyên nhân. Supabase báo RỖNG thì nghi '
+      + 'SUPABASE_SERVICE_ROLE không phải khoá SECRET; bảng vẫn có dữ liệu thì khôi phục bằng `'
+      + 'python3 tools/push_to_kv.py --api https://<worker> --key <ADMIN_KEY> --only ' + slug + '`.',
   }, { status: 502, cors });
 }
 /* GET /api/book/<slug> — bản công khai: tự bóc khóa, che chương khi chưa mở */

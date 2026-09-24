@@ -136,16 +136,58 @@ async function getSupabaseChecked(env, key) {
       headers: { apikey: sbKey(env), Authorization: 'Bearer ' + sbKey(env) },
     });
   } catch (e) {
-    return { hit: null, why: 'supabase: không gọi được ' + sbUrl(env) + ' (' + ((e && e.message) || e) + ')' };
+    return { hit: null, why: 'supabase: không gọi được ' + sbUrl(env) + ' (' + ((e && e.message) || e) + ')', code: 'sb-unreachable' };
   }
   if (!res.ok) {
     const t = String(await res.text()).slice(0, 140);
-    return { hit: null, why: 'supabase: HTTP ' + res.status + (res.status === 401 || res.status === 403 ? ' (SUPABASE_SERVICE_ROLE sai/hết hạn?)' : '') + (t ? ' ' + t : '') };
+    return {
+      hit: null, code: 'sb-http',
+      why: 'supabase: HTTP ' + res.status + (res.status === 401 || res.status === 403 ? ' (SUPABASE_SERVICE_ROLE sai/hết hạn?)' : '') + (t ? ' ' + t : ''),
+    };
   }
   let rows;
-  try { rows = await res.json(); } catch (e) { return { hit: null, why: 'supabase: trả về không phải JSON' }; }
-  if (!rows || !rows[0] || rows[0].value == null) return { hit: null, why: 'supabase: không có khoá ' + key + ' trong bảng ssochuz_blobs' };
-  return { hit: { value: rows[0].value, mime: rows[0].mime || '', via: 'supabase' }, why: '' };
+  try { rows = await res.json(); } catch (e) { return { hit: null, why: 'supabase: trả về không phải JSON', code: 'sb-bad-json' }; }
+  if (!rows || !rows[0] || rows[0].value == null) {
+    /* HTTP 200 mà RỖNG — đây là chỗ dễ chẩn đoán sai nhất (sự cố 24/09):
+       Supabase trả 200 + [] cho CẢ HAI trường hợp "không có dòng này" và
+       "RLS che hết mọi dòng vì apikey không phải khoá SECRET". Phải DÒ thêm
+       một câu rẻ tiền (1 dòng) để phân biệt, nếu không thông báo sẽ đổ lỗi
+       cho biến môi trường trong khi biến đã đủ (`missing:[]`). */
+    const probe = await probeSupabaseTable(env);
+    return { hit: null, code: probe.code, why: 'supabase: không có khoá ' + key + ' trong bảng ssochuz_blobs (' + probe.text + ')' };
+  }
+  return { hit: { value: rows[0].value, mime: rows[0].mime || '', via: 'supabase' }, why: '', code: '' };
+}
+
+/* DÒ bảng ssochuz_blobs: chỉ đọc 1 khoá để biết bảng có đọc được và CÓ dữ liệu
+   không. Chạy ĐÚNG lúc đọc thất bại nên không tốn gì ở đường lành. */
+async function probeSupabaseTable(env) {
+  try {
+    const r = await fetch(sbUrl(env) + '/rest/v1/ssochuz_blobs?select=key&limit=1', {
+      headers: { apikey: sbKey(env), Authorization: 'Bearer ' + sbKey(env) },
+    });
+    if (!r.ok) return { text: 'bảng không đọc được — HTTP ' + r.status, code: 'sb-probe-http' };
+    const rows = await r.json();
+    if (rows && rows.length) {
+      return {
+        text: 'bảng ĐỌC ĐƯỢC và đang có dữ liệu, vd khoá "' + String(rows[0].key || '').slice(0, 60)
+          + '" ⇒ đúng khoá này bị thiếu/mất, không phải lỗi biến môi trường',
+        code: 'sb-row-missing',
+      };
+    }
+    /* Nêu "bảng trống thật" TRƯỚC "khoá sai", và giữ câu NGẮN: overflowFailResponse
+       cắt mỗi dòng `tried` ở 220 ký tự. Câu cũ dài 216 ký tự (cộng tiền tố là ~290)
+       nên luôn bị cắt mất đúng đoạn cuối "hoặc bảng chưa có dữ liệu" — nguyên nhân
+       THẬT của sự cố 24/09 — chỉ còn lại giả thuyết khoá sai. Câu này còn nguyên với
+       slug tới 60 ký tự; phần giải thích chi tiết (sb_publishable_/anon, câu SQL
+       phân biệt 2 bệnh) nằm ở hint của overflowHintFor('sb-table-empty'). */
+    return {
+      text: 'bảng RỖNG hoàn toàn ⇒ bảng trống thật, HOẶC SUPABASE_SERVICE_ROLE không phải khoá SECRET (RLS che hết)',
+      code: 'sb-table-empty',
+    };
+  } catch (e) {
+    return { text: 'không dò được bảng: ' + ((e && e.message) || e), code: 'sb-probe-error' };
+  }
 }
 
 export async function putOverflow(env, key, value, mime) {
@@ -164,30 +206,32 @@ export async function putOverflow(env, key, value, mime) {
   return out;
 }
 
-/* Đọc overflow KÈM chẩn đoán: { hit, tried, status } — tried là lý do từng
+/* Đọc overflow KÈM chẩn đoán: { hit, tried, codes, status } — tried là lý do từng
    đường thất bại, để 502 nói đúng bệnh thay vì "(overflow?)". */
 export async function getOverflowChecked(env, key) {
   env = await resolveEnv(env);
   const st = overflowStatus(env);
   const tried = [];
+  const codes = [];
   let hit = null;
   if (st.r2) {
     try {
       const h = await getR2(env, key);
-      if (h) hit = h; else tried.push('r2: không có khoá ' + key);
-    } catch (e) { tried.push('r2: ' + ((e && e.message) || e)); }
+      if (h) hit = h; else { tried.push('r2: không có khoá ' + key); codes.push('r2-missing'); }
+    } catch (e) { tried.push('r2: ' + ((e && e.message) || e)); codes.push('r2-error'); }
   }
   if (!hit && st.supabase) {
     try {
       const r = await getSupabaseChecked(env, key);
-      if (r.hit) hit = r.hit; else tried.push(r.why);
-    } catch (e) { tried.push('supabase: ' + ((e && e.message) || e)); }
+      if (r.hit) hit = r.hit; else { tried.push(r.why); if (r.code) codes.push(r.code); }
+    } catch (e) { tried.push('supabase: ' + ((e && e.message) || e)); codes.push('sb-error'); }
   }
   if (!hit && !st.r2 && !st.supabase) {
     const miss = missingOverflowVars(env);
     tried.push('chưa cấu hình overflow nào — thiếu ' + (miss.join(' + ') || 'biến') + (hasR2(env) ? '' : ' (hoặc chưa binding CZ_R2)'));
+    codes.push('no-overflow');
   }
-  return { hit, tried, status: st };
+  return { hit, tried, codes, status: st };
 }
 
 export async function getOverflow(env, key) {
@@ -221,18 +265,18 @@ export async function materializeBook(env, raw, slug) {
    Kèm `missing` (tên biến thiếu) và `why` (lý do từng đường đọc thất bại) để
    trang đọc/admin báo đúng bệnh. */
 export async function materializeBookChecked(env, raw, slug) {
-  if (raw == null) return { status: 'missing', book: null, stub: null, missing: missingOverflowVars(env), why: ['KV không có khoá book:' + (slug || '')] };
+  if (raw == null) return { status: 'missing', book: null, stub: null, missing: missingOverflowVars(env), codes: [], why: ['KV không có khoá book:' + (slug || '')] };
   let book;
   try { book = typeof raw === 'string' ? JSON.parse(raw) : raw; }
-  catch (e) { return { status: 'unreadable', book: null, stub: null, missing: [], why: ['giá trị khoá book:' + (slug || '') + ' không phải JSON hợp lệ'] }; }
-  if (!isStub(book)) return { status: 'not-stub', book: book, stub: null, missing: [], why: [] };
+  catch (e) { return { status: 'unreadable', book: null, stub: null, missing: [], codes: ['kv-bad-json'], why: ['giá trị khoá book:' + (slug || '') + ' không phải JSON hợp lệ'] }; }
+  if (!isStub(book)) return { status: 'not-stub', book: book, stub: null, missing: [], codes: [], why: [] };
   const key = 'book:' + (book.slug || slug || '');
   const got = await getOverflowChecked(env, key);
   if (!got.hit) {
-    return { status: 'unreadable', book: null, stub: book, missing: missingOverflowVars(env), why: got.tried };
+    return { status: 'unreadable', book: null, stub: book, missing: missingOverflowVars(env), codes: got.codes || [], why: got.tried };
   }
-  try { return { status: 'ok', book: JSON.parse(got.hit.value), stub: book, missing: [], why: [] }; }
-  catch (e) { return { status: 'unreadable', book: null, stub: book, missing: [], why: ['bản overflow của ' + key + ' không phải JSON hợp lệ'] }; }
+  try { return { status: 'ok', book: JSON.parse(got.hit.value), stub: book, missing: [], codes: [], why: [] }; }
+  catch (e) { return { status: 'unreadable', book: null, stub: book, missing: [], codes: ['overflow-bad-json'], why: ['bản overflow của ' + key + ' không phải JSON hợp lệ'] }; }
 }
 
 export async function readBook(env, slug) {
@@ -243,9 +287,9 @@ export async function readBook(env, slug) {
 /* readBook có chẩn đoán — /api/book, /toc, /chapter dùng bản này để phân biệt
    "chưa có bộ" (404) với "có mà không đọc được" (502). */
 export async function readBookChecked(env, slug) {
-  if (!env || !env.CZ_KV || !slug) return { status: 'missing', book: null, stub: null, missing: missingOverflowVars(env), why: ['chưa bind CZ_KV hoặc thiếu slug'] };
+  if (!env || !env.CZ_KV || !slug) return { status: 'missing', book: null, stub: null, missing: missingOverflowVars(env), codes: [], why: ['chưa bind CZ_KV hoặc thiếu slug'] };
   const raw = await env.CZ_KV.get('book:' + slug, { type: 'text' });
-  if (raw == null) return { status: 'missing', book: null, stub: null, missing: missingOverflowVars(env), why: ['KV không có khoá book:' + slug] };
+  if (raw == null) return { status: 'missing', book: null, stub: null, missing: missingOverflowVars(env), codes: [], why: ['KV không có khoá book:' + slug] };
   const r = await materializeBookChecked(env, raw, slug);
   return r;
 }
