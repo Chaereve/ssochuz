@@ -108,9 +108,13 @@ await t('khóa / đổi / bỏ khóa xóa đúng cache slug, không dùng Respon
       });
       assert.equal(r.status, 200);
       assert.equal(r.body.locked, !!password);
+      /* Khoá/bỏ khoá phải xoá CẢ mục lục nhẹ + từng chương đã lưu ở cache biên
+         (bản lưu 24 giờ, khoá rồi mà không xoá là còn đọc được chương cũ theo
+         đúng URL không token). Thứ tự: book → registry → toc/chương → feed. */
       assert.deepEqual(deleted, [
         'https://cms.test/api/book/ma-duong-bi-khoa',
         'https://cms.test/api/registry',
+        'https://cms.test/api/book/ma-duong-bi-khoa/toc',
         'https://cms.test/feed.xml',
       ]);
     }

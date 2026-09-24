@@ -5,6 +5,11 @@ import { dropOverflow, overflowStatus, persistBook, persistCover, persistChapter
 import { parseChapterTitle, nextMainChapterNo, chapterTextOf, chapterHasMedia } from '../src/shared/chapters.js';
 import { isChapterPending, countVisibleChapters, countPendingChapters, nextScheduleMs, atMs, chapterAtMs, scheduleLabelOf } from '../src/shared/schedule.js';
 import { KV_FLUSH, statsBudget, forcedFlushMs, budgetCredits, flushOnTimer } from '../src/shared/kv-budget.js';
+import { cacheKeyOf, isJunkParam } from '../src/shared/cache-key.js';
+/* Làm sạch HTML chương theo DANH SÁCH CHO PHÉP — bản dùng chung với bài kiểm
+   tra trên 1.216 chương thật (tools/check_chapter_html.mjs). Bản cũ chặn theo
+   danh sách cấm nên lọt <link>/<meta>/<base>/<svg onload>/<form>… */
+import { sanitizeChapterHtml } from '../src/shared/sanitize.js';
 /* ============================================================================
    ssochuz — Worker đọc/ghi dữ liệu truyện + số liệu xếp hạng trên Cloudflare KV
    ----------------------------------------------------------------------------
@@ -20,6 +25,12 @@ import { KV_FLUSH, statsBudget, forcedFlushMs, budgetCredits, flushOnTimer } fro
      GET    /api/book/<slug>            → 1 bộ: tiêu đề + các chương (mở)
                                            · bộ khóa mật mã: chỉ trả chương khi
                                              ?token=… đúng (do POST /api/lock cấp)
+     GET    /api/book/<slug>/toc        → MỤC LỤC NHẸ: đầu sách + tên các chương
+                                             đang hiện, KHÔNG kèm nội dung (1.16.0)
+     GET    /api/book/<slug>/chapter/<n>→ ĐÚNG 1 chương (n = vị trí trong danh
+                                             sách đang hiện) + mục lục (1.16.0)
+                                             · trang đọc dùng 2 đường này để mở
+                                               chương ~18 KB thay vì cả bộ 334 KB
      POST   /api/lock                   → nhập mật mã {slug, password} → token 6h (mở)
      GET    /api/img/<id>               → ảnh trong chương / ảnh bìa (mở, cache 1 năm)
      POST   /api/lock/set               → khóa/bỏ khóa/đổi mật mã {slug, password} (cần X-Admin-Key)
@@ -116,7 +127,7 @@ import { KV_FLUSH, statsBudget, forcedFlushMs, budgetCredits, flushOnTimer } fro
      VAPID_PRIVATE     (secret, bắt buộc nếu bật push) — khoá riêng VAPID base64url (`wrangler secret put VAPID_PRIVATE`)
    ============================================================================ */
 
-const VERSION = '1.15.0';
+const VERSION = '1.16.0';
 const JSONH = {
   'content-type': 'application/json; charset=utf-8',
   'x-content-type-options': 'nosniff',
@@ -219,7 +230,7 @@ const handler = {
       }
       if (p === '/api/registry' && req.method === 'GET') {
         if (authed(req, env)) return await getKV(env, 'registry', cors, 0, { admin: true });
-        return await edgeCached(req, cors, EDGE_TTL.registry, () => getKV(env, 'registry', cors, 60, { public: true }));
+        return await edgeCached(req, cors, EDGE_TTL.registry, () => getKV(env, 'registry', cors, EDGE_TTL.registry, { public: true }));
       }
       if (p === '/api/schedule' && req.method === 'GET') return await getSchedule(env, ctx, cors);
       if (p === '/api/stats' && req.method === 'GET') return await edgeCached(req, cors, EDGE_TTL.stats, () => getStats(env, cors));
@@ -252,10 +263,35 @@ const handler = {
       if (p === '/api/auth/me' && req.method === 'GET') return await authMe(req, env, cors);
       if (p === '/api/auth/config' && req.method === 'GET') return await authConfig(env, cors);
       let mc = p.match(/^\/api\/comments\/([^/]+)\/([^/]+)$/);
-      if (mc && req.method === 'DELETE') return await deleteComment(decodeURIComponent(mc[1]), mc[2], req, env, cors);
+      if (mc && req.method === 'DELETE') {
+        const r = await deleteComment(decodeURIComponent(mc[1]), mc[2], req, env, cors);
+        if (r.ok) await edgePurgePrefix(org, '/api/comments/' + mc[1]);
+        return r;
+      }
       let mc2 = p.match(/^\/api\/comments\/([^/]+)$/);
-      if (mc2 && req.method === 'GET') return await getComments(decodeURIComponent(mc2[1]), req, env, cors);
-      if (mc2 && req.method === 'POST') return await postComment(decodeURIComponent(mc2[1]), req, env, cors);
+      /* Danh sách bình luận (ai cũng đọc được) lưu 15 giây ở biên: chương hot
+         có 200 bình luận mà mỗi lượt mở là một lượt đọc KV. Bình luận mới →
+         purge ngay nên người đọc vẫn thấy bình luận của mình tức thì. */
+      if (mc2 && req.method === 'GET') {
+        return await edgeCached(req, cors, EDGE_TTL.comments,
+          () => getComments(decodeURIComponent(mc2[1]), req, env, cors), commentsKeyOf);
+      }
+      if (mc2 && req.method === 'POST') {
+        const r = await postComment(decodeURIComponent(mc2[1]), req, env, cors);
+        if (r.ok) await edgePurgePrefix(org, '/api/comments/' + mc2[1]);
+        return r;
+      }
+
+      /* mục lục nhẹ + đọc 1 chương (1.16.0): xem getBookChapterPublic.
+         Đặt TRƯỚC route /api/book/<slug> vì regex đó nuốt cả hai đường này. */
+      let mtoc = p.match(/^\/api\/book\/(.+)\/toc$/);
+      if (mtoc && req.method === 'GET') {
+        return await getBookChapterPublic(req, env, cors, decodeURIComponent(mtoc[1]), 0, true);
+      }
+      let mchp = p.match(/^\/api\/book\/(.+)\/chapter\/(\d+)$/);
+      if (mchp && req.method === 'GET') {
+        return await getBookChapterPublic(req, env, cors, decodeURIComponent(mchp[1]), parseInt(mchp[2], 10) || 0, false);
+      }
 
       /* chương của bộ ĐANG KHÓA MẬT MÃ chỉ trả khi token hợp lệ (xem
          getBookPublic) — không cho rớt về file tĩnh /data/book/*.json. */
@@ -270,7 +306,17 @@ const handler = {
       let mch = p.match(/^\/api\/book\/(.+)\/chapter$/);
       if (mch && (req.method === 'PUT' || req.method === 'POST')) {
         const r = await putChapter(req, env, decodeURIComponent(mch[1]), cors);
-        if (r.ok) { await edgePurge(org + '/api/book/' + mch[1], org + '/api/registry'); await purgeFeed(org); }
+        if (r.ok) {
+          await edgePurge(org + '/api/book/' + mch[1], org + '/api/registry');
+          /* biết chương nào vừa đổi để xoá đúng mục cache (đổi thứ tự/xoá thì xoá cả chùm) */
+          const info = await r.clone().json().catch(() => null);
+          if (info && info.ok) {
+            await purgeChapterCache(org, mch[1], (parseInt(info.index, 10) || 0) + 1, info.action === 'move' || info.action === 'delete');
+          } else {
+            await purgeChapterCache(org, mch[1], 0, true);
+          }
+          await purgeFeed(org);
+        }
         return r;
       }
 
@@ -293,7 +339,11 @@ const handler = {
       }
       if (m && req.method === 'PUT') {
         const r = await putBook(req, env, decodeURIComponent(m[1]), cors);
-        if (r.ok) { await edgePurge(org + '/api/book/' + m[1], org + '/api/registry'); await purgeFeed(org); }   /* m[1] còn nguyên mã hoá — đúng khoá cache lúc GET */
+        if (r.ok) {
+          await edgePurge(org + '/api/book/' + m[1], org + '/api/registry');
+          await purgeChapterCache(org, m[1], 0, true);
+          await purgeFeed(org);
+        }   /* m[1] còn nguyên mã hoá — đúng khoá cache lúc GET */
         return r;
       }
       if (m && req.method === 'DELETE') {
@@ -305,6 +355,7 @@ const handler = {
         await syncCountToRegistry(env, slug, null);       /* registry không còn treo số chương của bộ đã xoá */
         await logAct(env, 'xoá bộ ' + slug, req);
         await edgePurge(org + '/api/book/' + m[1], org + '/api/registry');
+        await purgeChapterCache(org, m[1], 0, true);
         await purgeFeed(org);
         return json({ ok: true, deleted: slug }, { cors });
       }
@@ -498,6 +549,7 @@ async function importPost(req, env, cors) {
   await logAct(env, 'nhập chương từ Blogger: ' + slug + ' → ' + chapTitle, req);
   const iorg = new URL(req.url).origin;
   await edgePurge(iorg + '/api/book/' + encodeURIComponent(slug), iorg + '/api/registry');
+  await purgeChapterCache(iorg, encodeURIComponent(slug), 0, true);
   await purgeFeed(iorg);
   await enqueuePush(env, slug, book.chapters.length, chapTitle);   /* nhập từ Blogger cũng là chương mới */
   return json({ ok: true, added: chapTitle, chapters: book.chapters.length, url, title }, { cors });
@@ -774,7 +826,12 @@ async function publishDueChapters(env) {
       await enqueuePush(env, n.slug, book.chapters.length, last.t || '');
       await persistBook(env, n.slug, book);
       stat.pushed++;
-      await edgePurge(new URL(env.SITE_BASE || 'https://ssochuz.pages.dev').origin + '/api/book/' + encodeURIComponent(n.slug), new URL(env.SITE_BASE || 'https://ssochuz.pages.dev').origin + '/api/registry');
+      {
+        const sorg = new URL(env.SITE_BASE || 'https://ssochuz.pages.dev').origin;
+        await edgePurge(sorg + '/api/book/' + encodeURIComponent(n.slug), sorg + '/api/registry');
+        /* chương hẹn giờ lên sóng → mục lục đổi (vị trí mới) nên xoá cả chùm */
+        await purgeChapterCache(sorg, encodeURIComponent(n.slug), 0, true);
+      }
     }
     const meta = scheduleMetaOf(book);
     if (meta.pending) { n.pending = meta.pending; if (meta.schedNext) n.schedNext = meta.schedNext; else delete n.schedNext; }
@@ -1020,22 +1077,46 @@ function registryJSON(reg) { return JSON.stringify(stripPrivateRegistrySettings(
    · CORS theo từng origin nên PHẢI lột sạch trước khi ghi — khi đọc trúng thì
      đắp CORS mới đúng origin người đang hỏi (nếu không người sau nhận nhầm
      origin của người trước, trình duyệt chặn oan).
-   · URL có query (dạng phá cache `?_=…` của bản web cũ) đi thẳng KV, không
-     ghi/đọc bản lưu — vừa luôn mới vừa tránh bị bơm đầy cache bằng khoá rác.
+   · URL có query: KHOÁ CACHE bỏ hết tham số rác (`?fbclid=…`, `?utm_source=…`,
+     `?_=…`) — xem src/shared/cache-key.js. Link chia sẻ qua Facebook/Zalo vì
+     thế dùng CHUNG bản lưu với URL sạch (bản cũ: mọi link có `fbclid` đều đi
+     thẳng KV, mỗi lượt mở là một lần đọc + phân tích cả bộ JSON).
+     Tham số THẬT (vd `token=` của truyện khoá) vẫn đi thẳng KV, không cache.
+   · Mỗi mục lưu có thể tự khai hạn dùng riêng bằng header nội bộ `x-cz-ttl`
+     (giây): bộ còn chương hẹn giờ thì để 60 giây cho chương tự lên sóng đúng
+     giờ, bộ thường thì dài (xem EDGE_TTL).
    · Mỗi lần GHI thành công (PUT/DELETE/vote/seed/…) đều xoá đúng mục cache
      liên quan nên “sửa thấy ngay” vẫn giữ nguyên. Header `x-cz-cache`
      (HIT/MISS/BYPASS) để ngoài trình duyệt kiểm chứng được bằng DevTools. */
 function edgeCache() {
   try { return (typeof caches !== 'undefined' && caches.default) || null; } catch (e) { return null; }
 }
-const EDGE_TTL = { registry: 60, book: 300, stats: 60, feed: 600 };   /* giây, theo URL */
+const EDGE_TTL = {
+  /* giây, theo URL. Registry đổi khi thêm/sửa bộ, chương đổi khi sửa chữ —
+     mọi đường ghi đều purge đúng URL nên để dài là an toàn (mỗi lần trượt
+     cache là 1 lượt đọc KV + một lần JSON.parse cả bộ 334 KB trong Worker).
+     Bộ CÒN chương hẹn giờ tự hạ xuống EDGE_TTL.pending cho chương lên sóng
+     đúng giờ (xem `ttlOf`). */
+  registry: 300, book: 1800, pending: 60, stats: 60, feed: 600,
+  toc: 1800, chapter: 86400, comments: 15,
+};
+/* Trần cho `s-maxage` gửi RA NGOÀI. Bản lưu trong Worker (Cache API) là thứ mình
+   XOÁ ĐƯỢC mỗi lần ghi, nên để dài (x-cz-ttl tới 24 giờ). Còn `s-maxage` nói với
+   các tầng cache KHÁC (proxy/CDN trung gian) — mình không xoá được chúng, nên
+   giữ tối đa 10 phút: sửa xong, cùng lắm 10 phút là mọi nơi thấy bản mới. */
+const EDGE_SMAXAGE_MAX = 600;
+const outerTTL = (secs) => Math.min(Number(secs) > 0 ? Number(secs) : 60, EDGE_SMAXAGE_MAX);
+/* hạn dùng riêng của một mục cache: header nội bộ `x-cz-ttl` thắng `secs` mặc
+   định của caller (dùng cho bộ có chương hẹn giờ). */
+function ttlOfKey(req, secs) {
+  return Number(secs) > 0 ? Number(secs) : EDGE_TTL.book;
+}
 async function edgeCached(req, cors, secs, load, keyFn) {
   let key = req.url;
   if (key.indexOf('?') >= 0) {
-    /* URL có query: chỉ cache khi caller đưa hàm chuẩn hoá khoá (như feed dùng
-       feedKeyOf) — nếu không vẫn đi thẳng KV để tránh bị bơm đầy cache bằng
-       khoá rác (?_=123, ?_=124…). */
-    key = (typeof keyFn === 'function' && keyFn(req)) || '';
+    /* URL có query: caller có hàm chuẩn hoá riêng (feed, bình luận) thì dùng;
+       không thì bỏ tham số rác (fbclid/utm…). Còn tham số THẬT → BYPASS. */
+    key = (typeof keyFn === 'function' && keyFn(req)) || cacheKeyOf(req.url) || '';
     if (!key) {
       const raw = await load();
       try { raw.headers.set('x-cz-cache', 'BYPASS'); } catch (e) {}
@@ -1047,12 +1128,17 @@ async function edgeCached(req, cors, secs, load, keyFn) {
     let hit = null;
     try { hit = await box.match(key); } catch (e) { hit = null; }
     if (hit) {
-      let fresh = false;
-      try { fresh = (Date.now() - (parseInt(hit.headers.get('x-cz-cached-at') || '0', 10) || 0)) < secs * 1000; } catch (e) { fresh = false; }
+      let fresh = false, ttl = ttlOfKey(req, secs);
+      try {
+        const own = parseFloat(hit.headers.get('x-cz-ttl') || '');
+        if (own > 0) ttl = own;
+        fresh = (Date.now() - (parseInt(hit.headers.get('x-cz-cached-at') || '0', 10) || 0)) < ttl * 1000;
+      } catch (e) { fresh = false; }
       if (fresh) {
         try {
           const h = new Headers(hit.headers);
           h.delete('x-cz-cached-at');
+          h.delete('x-cz-ttl');
           Object.keys(cors).forEach((k) => h.set(k, cors[k]));
           h.set('x-cz-cache', 'HIT');
           return new Response(hit.body, { status: hit.status, statusText: hit.statusText, headers: h });
@@ -1100,6 +1186,23 @@ async function edgePurgePrefix(origin, prefix) {
 async function purgeFeed(org) {
   await edgePurge(org + '/feed.xml');
   await edgePurgePrefix(org, '/feed.xml?');
+}
+/* Xoá bản lưu MỤC LỤC NHẸ + CHƯƠNG vừa đổi (bản 1.16.0).
+   all = true khi vị trí các chương có thể đã đổi (xoá chương, đổi thứ tự, nạp
+   lại cả bộ, chương hẹn giờ vừa lên sóng…) → xoá cả chùm /chapter/*. */
+async function purgeChapterCache(org, rawSlug, idx, all) {
+  const bases = [String(rawSlug || '')];
+  let enc = '';
+  try { enc = encodeURIComponent(decodeURIComponent(bases[0])); } catch (e) { enc = ''; }
+  if (enc && bases.indexOf(enc) < 0) bases.push(enc);
+  const urls = [];
+  bases.forEach((b) => {
+    if (!b) return;
+    urls.push(org + '/api/book/' + b + '/toc');
+    if (!all && idx > 0) urls.push(org + '/api/book/' + b + '/chapter/' + idx);
+  });
+  await edgePurge(...urls);
+  if (all) for (const b of bases) if (b) await edgePurgePrefix(org, '/api/book/' + b + '/chapter/');
 }
 /* ==================== RSS 2.0: /feed.xml và /feed.xml?slug= ====================
    Feed reader (Feedly/Inoreader/…) poll nhiều lần mỗi ngày nên Worker TỰ cache
@@ -1233,7 +1336,7 @@ async function getKV(env, key, cors, cacheSec, mode) {
   }
   /* max-age=0: trình duyệt luôn hỏi lại → trúng cache biên (nhanh mà không tốn
      lượt đọc KV); s-maxage: bản lưu ở biên dùng được từng này giây. */
-  const h = { ...JSONH, ...cors, 'cache-control': (mode && mode.admin ? 'private, no-store' : 'public, max-age=0, s-maxage=' + (cacheSec || 60)), 'x-kv-key': key };
+  const h = { ...JSONH, ...cors, 'cache-control': (mode && mode.admin ? 'private, no-store' : 'public, max-age=0, s-maxage=' + outerTTL(cacheSec || 60)), 'x-kv-key': key };
   /* ETag cũ mô tả bản chưa lọc nên không gửi cho registry đã được làm sạch. */
   if (key !== 'registry' && metadata && metadata.etag) h.etag = metadata.etag;
   return new Response(publicValue, { headers: h });
@@ -1321,8 +1424,13 @@ async function getBookPublic(req, env, cors) {
     if (value == null) return json({ ok: false, error: 'chưa có dữ liệu cho khoá book:' + slug }, { status: 404, cors });
     const book = await materializeBook(env, value, slug);
     if (!book) return json({ ok: false, error: 'không đọc được dữ liệu bộ (overflow?)' }, { status: 502, cors });
+    /* bộ còn chương hẹn giờ: bản lưu chỉ sống 60 giây, đủ để chương lên sóng
+       gần đúng mốc giờ (bản cũ: 300 giây; nếu để 1.800 giây như bộ thường thì
+       chương hẹn giờ hiện trễ tới nửa tiếng — đúng thứ người viết cần nhất). */
+    const ttl = bookPending(book) ? EDGE_TTL.pending : EDGE_TTL.book;
     const h = {
-      ...JSONH, ...cors, 'cache-control': 'public, max-age=0, s-maxage=' + EDGE_TTL.book, 'x-kv-key': 'book:' + slug,
+      ...JSONH, ...cors, 'cache-control': 'public, max-age=0, s-maxage=' + outerTTL(ttl), 'x-kv-key': 'book:' + slug,
+      'x-cz-ttl': String(ttl),
     };
     if (metadata && metadata.etag) h.etag = metadata.etag;
     const pub = publicBookShape(book);
@@ -1338,6 +1446,102 @@ async function getBookPublic(req, env, cors) {
     }
     return new Response(JSON.stringify(pub), { headers: h });
   });
+}
+/* số chương đang bị giữ (hẹn giờ chưa tới / ẩn) — dùng để chọn hạn cache */
+function bookPending(book) {
+  return (book && Array.isArray(book.chapters)) ? countPendingChapters(book.chapters) : 0;
+}
+/* ============================================================================
+   ĐỌC 1 CHƯƠNG + MỤC LỤC NHẸ  (bản 1.16.0)
+     GET /api/book/<slug>/toc            → đầu sách + DANH SÁCH TÊN chương
+     GET /api/book/<slug>/chapter/<n>    → đầu sách + đúng 1 chương (n = vị trí
+                                           1-based trong danh sách ĐANG HIỆN)
+   ----------------------------------------------------------------------------
+   Vì sao có: trang đọc cũ tải CẢ bộ cho mỗi lần mở chương — trung bình 334 KB,
+   bộ lớn 1,4 MB (1.216 chương thật trong repo). Mỗi lượt mở chương = 1 lượt đọc
+   KV + một lần JSON.parse cả bộ trong Worker (tốn CPU 10 ms/request của free
+   tier). Hai đường này chỉ trả phần cần dùng (chương trung bình 18 KB) và lưu ở
+   biên rất lâu (EDGE_TTL.chapter = 24 giờ) vì mọi lần ghi chương/đổi thứ tự/xoá
+   đều purge đúng URL.
+   · /api/book/<slug> GIỮ NGUYÊN — trang đọc vẫn có đường lùi khi Worker cũ chưa
+     deploy, và RSS/admin vẫn dùng.
+   · Truyện khoá mật mã: chưa có token hợp lệ → chỉ trả vỏ {locked:true}; có
+     `?token=…` thì đi thẳng KV (BYPASS cache) — không để nội dung riêng của
+     người này lọt vào bản lưu chung.
+   · Chương đang bị giữ (hẹn giờ chưa tới / ẩn) KHÔNG trả nội dung, trả 404
+     kèm lý do; mục lục cũng không liệt kê chúng.
+   ========================================================================== */
+function bookHead(book, pub, slug) {
+  const list = (pub && Array.isArray(pub.chapters) ? pub.chapters : []).map((c, i) => ({
+    t: String((c && c.t) || '').trim() || ('Chương ' + (i + 1)),
+  }));
+  return {
+    ok: true, slug: slug,
+    title: String((book && book.title) || slug),
+    author: String((book && book.author) || ''),
+    couple: String((book && book.couple) || ''),
+    syn: String((book && book.syn) || '').slice(0, 600),
+    synFull: String((book && book.synFull) || ''),
+    pending: bookPending(book),
+    total: list.length,
+    chapters: list,
+  };
+}
+/* HTTP 404 cho chương đang bị giữ — nói rõ vì sao để trang đọc báo đúng */
+async function getBookChapterPublic(req, env, cors, slug, n, tocOnly) {
+  const u = new URL(req.url);
+  const admin = authed(req, env);
+  const ttl = tocOnly ? EDGE_TTL.toc : EDGE_TTL.chapter;
+  const load = async () => {
+    if (!env.CZ_KV) return noKV(cors);
+    const book = await readBook(env, slug).catch(() => null);
+    if (!book) return json({ ok: false, error: 'chưa có dữ liệu cho khoá book:' + slug }, { status: 404, cors });
+    /* bộ khoá mật mã: chỉ trả khi token hợp lệ, và KHÔNG qua cache chung */
+    if (book.lock) {
+      const exp = await verifyLockToken(env, slug, u.searchParams.get('token'));
+      if (!exp) {
+        return json({ ok: false, locked: true, error: 'Truyện đang khoá mật mã.', slug: slug },
+          { status: 403, cors, headers: { 'cache-control': 'private, no-store' } });
+      }
+    }
+    const pub = publicBookShape(book);
+    const head = bookHead(book, pub, slug);
+    const pending = bookPending(book);
+    /* chương đang hẹn giờ/ẩn: bản lưu chỉ sống 60 giây để chương tự lên sóng */
+    const useTtl = pending ? EDGE_TTL.pending : ttl;
+    const h = {
+      ...JSONH, ...cors, 'x-kv-key': 'book:' + slug, 'x-cz-ttl': String(useTtl),
+      'cache-control': 'public, max-age=0, s-maxage=' + outerTTL(useTtl),
+    };
+    if (tocOnly) return new Response(JSON.stringify(head), { headers: h });
+    const total = head.total;
+    if (!(n >= 1) || n > total) {
+      return json({ ok: false, error: 'Bộ này chỉ có ' + total + ' chương đang hiện.', slug: slug, total: total }, { status: 404, cors });
+    }
+    /* chương gốc bị giữ (ẩn/hẹn giờ) nằm TRƯỚC vị trí n đang hỏi → khi chương
+       đó lên sóng, đánh số vị trí đổi. Muốn biết vị trí n ứng với chương nào
+       thì phải bỏ đúng những chương đang bị giữ, giống publicBookShape. */
+    const vis = [];
+    book.chapters.forEach((c, i) => { if (!isChapterPending(c)) vis.push({ c: c, i: i }); });
+    if (!vis.length) return json({ ok: false, error: 'Bộ này chưa có chương nào đang hiện.' }, { status: 404, cors });
+    const hit = vis[Math.min(n, vis.length) - 1];
+    const ch = hit.c;
+    const out = Object.assign({}, head, {
+      index: Math.min(n, vis.length),
+      sourceIndex: hit.i,
+      at: chapterAtMs(ch) ? new Date(chapterAtMs(ch)).toISOString() : '',
+      chapter: { t: String((ch && ch.t) || '').trim(), html: String((ch && ch.html) || '') },
+      nextAt: nextScheduleMs(book.chapters) ? new Date(nextScheduleMs(book.chapters)).toISOString() : '',
+    });
+    return new Response(JSON.stringify(out), { headers: h });
+  };
+  if (admin || slug.indexOf('private-') === 0) {
+    /* quản trị / truyện riêng tư: đi thẳng KV, không cache biên */
+    const raw = await load();
+    try { raw.headers.set('x-cz-cache', 'BYPASS'); } catch (e) {}
+    return raw;
+  }
+  return await edgeCached(req, cors, ttl, load);
 }
 /* Bản công khai của 1 bộ: BỎ chương chưa tới giờ hẹn và chương đang Ẩn.
    Vì sao lọc ở Worker chứ không ở trang đọc: giấu nội dung ở phía trình duyệt
@@ -1408,6 +1612,7 @@ async function setLock(req, env, cors, org) {
     await setLockFlag(env, slug, 0);
     await logAct(env, 'bỏ khóa ' + slug, req);
     await edgePurge(org + '/api/book/' + encodeURIComponent(slug), org + '/api/registry');
+    await purgeChapterCache(org, encodeURIComponent(slug), 0, true);
     await purgeFeed(org);
     return json({ ok: true, slug: slug, locked: false }, { cors });
   }
@@ -1421,6 +1626,7 @@ async function setLock(req, env, cors, org) {
   await setLockFlag(env, slug, 1);
   await logAct(env, 'khóa/đổi mật mã ' + slug, req);
   await edgePurge(org + '/api/book/' + encodeURIComponent(slug), org + '/api/registry');
+  await purgeChapterCache(org, encodeURIComponent(slug), 0, true);
   await purgeFeed(org);
   return json({ ok: true, slug: slug, locked: true }, { cors });
 }
@@ -1688,18 +1894,6 @@ function chapterHasContent(c) {
   const h = String(c.html || '');
   if (/<img\b/i.test(h)) return true;
   return h.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/&[a-z#0-9]+;/gi, ' ').trim().length > 0;
-}
-function sanitizeChapterHtml(html) {
-  let h = String(html || '');
-  h = h.replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
-    .replace(/<object[\s\S]*?<\/object>/gi, '')
-    .replace(/<embed\b[^>]*>/gi, '')
-    .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-    .replace(/\s(href|src)\s*=\s*(['"])\s*(javascript|data):[^'"]*\2/gi, ' $1=$2$2')
-    .replace(/<img([^>]*?)src=(['"])blob:[^'"]+\2[^>]*>/gi, '');
-  return h;
 }
 /* PUT /api/book/<slug> — ghi 1 bộ RỒI tự sửa số chương trong registry */
 async function putBook(req, env, slug, cors) {
@@ -2518,6 +2712,11 @@ function shouldFlushOnTimer(env) {
    @template T
    @param {() => Promise<T>} fn
    @returns {Promise<T>} */
+/**
+ * @template T
+ * @param {() => Promise<T>} fn
+ * @returns {Promise<T>}
+ */
 function statsLock(fn) {
   const run = _chain.then(fn, fn);
   _chain = run.then(() => {}, () => {});
@@ -3541,6 +3740,27 @@ async function authMe(req, env, cors) {
   if (!u) return json({ ok: false, error: err ? ('token không hợp lệ: ' + err) : 'chưa đăng nhập' }, { status: 401, cors });
   return json({ ok: true, user: publicUser(u, env), admin: isAdminUser(u, env) }, { cors });
 }
+/* Khoá cache của danh sách bình luận: giữ `ch` (lọc theo chương) + `limit`
+   (số lượng) vì chúng đổi nội dung trả về; bỏ tham số rác; còn tham số lạ thì
+   KHÔNG cache (trả '') để không trả nhầm bản của người khác. */
+function commentsKeyOf(req) {
+  try {
+    const u = new URL(req.url);
+    const ch = u.searchParams.get('ch');
+    const limit = u.searchParams.get('limit');
+    let other = 0;
+    u.searchParams.forEach((v, k) => {
+      if (k === 'ch' || k === 'limit') return;
+      if (!isJunkParam(k)) other++;
+    });
+    if (other) return '';
+    const hasCh = ch != null && ch !== '';
+    let key = u.origin + u.pathname;
+    if (hasCh) key += '?ch=' + encodeURIComponent(ch);
+    if (limit) key += (hasCh ? '&' : '?') + 'limit=' + encodeURIComponent(limit);
+    return key;
+  } catch (e) { return ''; }
+}
 async function getComments(slug, req, env, cors) {
   if (!env.CZ_KV) return noKV(cors);
   const arr = (await env.CZ_KV.get('cmt:' + slug, { type: 'json' })) || [];
@@ -3555,8 +3775,10 @@ async function getComments(slug, req, env, cors) {
   const comments = await Promise.all(pool.slice(0, limit).map(async c => ({ ...publicComment(c), profileId: !c.guest && c.uid ? await profileId(c.uid) : '' })));
   const byChap = {};
   arr.forEach((c) => { const k = String(Number(c.ch) || 0); byChap[k] = (byChap[k] || 0) + 1; });
+  /* max-age=0 để trình duyệt luôn hỏi lại (trúng bản lưu 15 giây ở biên) —
+     người vừa đăng bình luận không bị dính bản cũ trong tab của mình. */
   return json({ ok: true, comments, count: arr.length, shown: comments.length, slug, ch: ch, byChapter: byChap },
-    { cors, headers: { 'cache-control': 'public, max-age=15' } });
+    { cors, headers: { 'cache-control': 'public, max-age=0, s-maxage=' + EDGE_TTL.comments } });
 }
 async function postComment(slug, req, env, cors) {
   const authHeader = req.headers.get('authorization') || '';

@@ -94,6 +94,7 @@ export function DoctorPanel({ state, onKvAudit, onScanBooks, onRecount, onReload
     finally { setMigBusy(''); }
   };
   const ov = (state.worker && state.worker.overflow) || {};
+  const wst = (state.worker && state.worker.stats) || {};
   useEffect(() => { if (state.online && !audit && !busy) load(); }, [state.online]);
   return <div id="pane-doctor" class="v2pane">
     <section class="card2">
@@ -122,7 +123,15 @@ export function DoctorPanel({ state, onKvAudit, onScanBooks, onRecount, onReload
       ) : null}
       <div class="v2ops-grid">
         <div class="v2mini"><b>Registry quick check</b><p class="hint">Slug trùng: {issues.dup.slice(0, 6).join(', ') || 'không thấy'}</p><p class="hint">Thiếu tên: {issues.missingTitle.slice(0, 6).join(', ') || 'không thấy'}</p></div>
-        <div class="v2mini"><b>KV write quota</b><p class="hint">Đang tính: {num(state.quota && state.quota.writesToday)}/{num(state.quota && state.quota.limit || 1000)} lượt ghi hôm nay ({state.quota && state.quota.source}).</p><span class="kvbar"><span style={{ width: pct(state.quota && state.quota.writesToday, state.quota && state.quota.limit || 1000) + '%' }}></span></span></div>
+        <div class="v2mini"><b>KV write quota</b>
+          {/* Số THẬT của Worker (từ /api/health, bản 1.16.0): khoá `stats` là chỗ
+              tiêu hạn mức ghi nhiều nhất — trước đây ghi mỗi 10 giây = 8.640
+              lượt/ngày, nay theo ngân sách ngày. Không polling: chỉ đọc lúc nối/
+              đọc lại, đúng lúc mở tab. */}
+          <p class="hint">Khoá số liệu (stats) hôm nay: <b>{num(wst.writesToday)}/{num(wst.writeBudget || 240)}</b> lượt ghi{typeof wst.buffered === 'number' ? ' · đang đệm ' + num(wst.buffered) + ' thay đổi' : ''}.</p>
+          <span class="kvbar"><span style={{ width: pct(wst.writesToday, wst.writeBudget || 240) + '%' }}></span></span>
+          <p class="hint">Thao tác quản trị hôm nay (theo nhật ký KV): {num(state.quota && state.quota.writesToday)}/{num(state.quota && state.quota.limit || 1000)} lượt ({state.quota && state.quota.source}).</p>
+        </div>
         <div class="v2mini"><b>Overflow KV</b><p class="hint">Supabase: {ov.supabase ? 'connected' : 'unavailable'}. R2: {ov.r2 ? 'connected' : 'unavailable'}. Bìa: {ov.covers ? 'Supabase Storage (1 GB free)' : 'KV'}. Ảnh chương: {(ov.supabase || ov.r2) ? 'overflow sang Supabase/R2, ghi lỗi thì rớt về KV' : 'KV'}. Chưa gắn thì book/img vẫn nằm full trong KV — không giả lưu.</p>
           {(ov.supabase || ov.r2) && onMigrate ? (
             <div class="v2mig">

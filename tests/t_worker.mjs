@@ -891,7 +891,8 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
       let r0 = rd();
       const g1 = await call('GET', '/api/registry');
       eq('cache/registry lần 1 MISS + đọc KV 1 lần', [g1.headers.get('x-cz-cache'), rd() - r0], ['MISS', 1]);
-      eq('cache/registry header s-maxage=60', (g1.headers.get('cache-control') || '').includes('s-maxage=60'), true);
+      /* 1.16.0: registry để 300 giây (mọi lần ghi đều purge đúng URL) */
+      eq('cache/registry header s-maxage=300 (khớp EDGE_TTL.registry)', (g1.headers.get('cache-control') || '').includes('s-maxage=300'), true);
       r0 = rd();
       const g2 = await call('GET', '/api/registry');
       eq('cache/registry lần 2 HIT + không đọc KV', [g2.headers.get('x-cz-cache'), rd() - r0, ((g2.body && g2.body.lib) || []).length], ['HIT', 0, 1]);
@@ -902,24 +903,41 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
       const gk = 'https://cms.test/api/registry';
       const stored = await fake.match(gk);
       const gh = new Headers(stored.headers);
-      gh.set('x-cz-cached-at', String(Date.now() - 120000));
+      gh.set('x-cz-cached-at', String(Date.now() - 400000));
       fake.store.set(gk, new Response(await stored.text(), { status: 200, headers: gh }));
       r0 = rd();
       const g4 = await call('GET', '/api/registry');
       eq('cache/registry quá hạn → MISS + đọc lại KV', [g4.headers.get('x-cz-cache'), rd() - r0], ['MISS', 1]);
-      /* URL có query đi thẳng KV, không lưu rác vào cache */
+      /* 1.16.0 — CHUẨN HOÁ KHOÁ CACHE (src/shared/cache-key.js):
+         link chia sẻ kèm ?fbclid=/?utm_source=/?_=… nay dùng CHUNG bản lưu với
+         URL sạch. Bản cũ mỗi lượt mở từ Facebook là một lượt đọc KV cả bộ. */
       r0 = rd();
-      const g5 = await call('GET', '/api/registry?_=' + Date.now());
-      eq('cache/URL có query → BYPASS + đọc KV', [g5.headers.get('x-cz-cache'), rd() - r0 >= 1], ['BYPASS', true]);
-      ck('cache/không lưu khoá có query', ![...fake.store.keys()].some((u) => u.includes('?_=')), [...fake.store.keys()], 'không key nào chứa ?_=');
+      const g5 = await call('GET', '/api/registry?_=' + Date.now() + '&fbclid=xyz&utm_source=facebook');
+      eq('cache/query rác → HIT chung bản lưu, KHÔNG đọc KV', [g5.headers.get('x-cz-cache'), rd() - r0], ['HIT', 0]);
+      ck('cache/không lưu khoá rác riêng', ![...fake.store.keys()].some((u) => u.includes('fbclid')), [...fake.store.keys()], 'không key nào chứa fbclid');
+      /* tham số THẬT (token truyện khoá) vẫn phải đi thẳng KV, không cache */
+      r0 = rd();
+      const g5b = await call('GET', '/api/book/cache-truyen?token=abc');
+      eq('cache/tham số thật (token) → BYPASS + đọc KV', [g5b.headers.get('x-cz-cache'), rd() - r0 >= 1], ['BYPASS', true]);
+
       /* book: MISS rồi HIT, hạn 300 giây */
       r0 = rd();
       const b1 = await call('GET', '/api/book/cache-truyen');
       eq('cache/book lần 1 MISS + đọc KV 1 lần', [b1.headers.get('x-cz-cache'), rd() - r0], ['MISS', 1]);
-      eq('cache/book header s-maxage=300', (b1.headers.get('cache-control') || '').includes('s-maxage=300'), true);
+      /* 1.16.0: bộ thường để 1.800 giây; bộ có chương hẹn giờ hạ còn 60
+         (header nội bộ x-cz-ttl) để chương vẫn lên sóng đúng mốc giờ. */
+      /* Bản lưu TRONG Worker để 1.800 giây (x-cz-ttl, mình xoá được khi ghi);
+         s-maxage gửi ra ngoài bị chặn trần 600 giây vì tầng cache khác thì
+         mình không xoá được — sửa xong cùng lắm 10 phút là nơi khác thấy. */
+      eq('cache/book s-maxage=600 (trần ngoài)', (b1.headers.get('cache-control') || '').includes('s-maxage=600'), true);
+      eq('cache/book x-cz-ttl=1800 (bộ thường)', b1.headers.get('x-cz-ttl'), '1800');
       r0 = rd();
       const b2 = await call('GET', '/api/book/cache-truyen');
       eq('cache/book lần 2 HIT + không đọc KV', [b2.headers.get('x-cz-cache'), rd() - r0], ['HIT', 0]);
+      /* link chia sẻ kèm tham số rác dùng CHUNG bản lưu của bộ (1.16.0) */
+      r0 = rd();
+      const b2b = await call('GET', '/api/book/cache-truyen?fbclid=xyz&utm_source=facebook&_=' + Date.now());
+      eq('cache/book từ link Facebook → HIT chung bản lưu', [b2b.headers.get('x-cz-cache'), rd() - r0], ['HIT', 0]);
       /* lỗi không lưu: GET bộ không có → 404 và lần sau vẫn đọc lại KV */
       await call('GET', '/api/book/khong-co-bo-nay');
       r0 = rd();
@@ -950,6 +968,128 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
       /* nút làm mới số liệu của admin cũng xoá cache biên */
       await call('POST', '/api/stats/refresh', { headers: ADMH });
       eq('cache/stats/refresh → stats MISS', (await call('GET', '/api/stats')).headers.get('x-cz-cache'), 'MISS');
+    } finally {
+      globalThis.caches = realCaches;
+    }
+  }
+
+  /* ---- 11b. MỤC LỤC NHẸ + ĐỌC 1 CHƯƠNG (1.16.0): /toc và /chapter/<n> ----
+     Vì sao: mở 1 chương mà phải tải cả bộ (trung bình 334 KB) là tốn nhất cả
+     trang — mỗi lượt mở là 1 lượt đọc KV + JSON.parse cả bộ trong Worker. */
+  {
+    const realCaches = globalThis.caches;
+    const fake = new FakeCache();
+    globalThis.caches = { default: fake };
+    try {
+      await call('PUT', '/api/book/lite-truyen', {
+        headers: ADMH,
+        body: {
+          title: 'Lite Truyện', slug: 'lite-truyen', author: 'TG Lite', synFull: 'Mô tả đầy đủ.',
+          chapters: [
+            { t: 'Lời mở đầu', html: '<p>Mở đầu.</p>' },
+            { t: 'Chương 1', html: '<p>Nội dung một.</p>' },
+            { t: 'Chương 2', html: '<p>Nội dung hai.</p>', status: 'scheduled', at: new Date(Date.now() + 86400000).toISOString() },
+            { t: 'Chương 3 ẩn', html: '<p>Đang ẩn.</p>', status: 'hidden' },
+            { t: 'Ngoại truyện 1', html: '<p>Ngoại truyện.</p>' },
+          ],
+        },
+      });
+      const rd = () => kv.reads;
+      /* mục lục: chỉ TÊN chương đang hiện, không kèm nội dung */
+      let r0 = rd();
+      const t1 = await call('GET', '/api/book/lite-truyen/toc');
+      eq('toc/lần 1 MISS + đọc KV 1 lần', [t1.headers.get('x-cz-cache'), rd() - r0], ['MISS', 1]);
+      eq('toc/đủ 3 chương đang hiện (bỏ hẹn giờ + ẩn)', (t1.body.chapters || []).map((c) => c.t), ['Lời mở đầu', 'Chương 1', 'Ngoại truyện 1']);
+      eq('toc/total = số chương đang hiện', t1.body.total, 3);
+      eq('toc/pending = số chương đang bị giữ', t1.body.pending, 2);
+      ck('toc/KHÔNG kèm nội dung chương (nhẹ)', !JSON.stringify(t1.body).includes('Nội dung một'), JSON.stringify(t1.body).slice(0, 80), 'không có html');
+      ck('toc/kèm đầu sách cho trang truyện', t1.body.title === 'Lite Truyện' && t1.body.author === 'TG Lite' && t1.body.synFull === 'Mô tả đầy đủ.', [t1.body.title, t1.body.author, t1.body.synFull], 'đủ title/author/synFull');
+      eq('toc/bộ còn chương hẹn giờ → x-cz-ttl=60 (chương tự lên sóng)', t1.headers.get('x-cz-ttl'), '60');
+      eq('toc/lần 2 HIT, không đọc KV', [(await call('GET', '/api/book/lite-truyen/toc')).headers.get('x-cz-cache'), rd() - r0], ['HIT', 1]);
+      /* đọc 1 chương: vị trí 1-based trong danh sách ĐANG HIỆN */
+      r0 = rd();
+      const c1 = await call('GET', '/api/book/lite-truyen/chapter/2');
+      eq('chapter/lần 1 MISS + đọc KV 1 lần', [c1.headers.get('x-cz-cache'), rd() - r0], ['MISS', 1]);
+      eq('chapter/vị trí 2 = “Chương 1” (Lời mở đầu chiếm vị trí 1)', [c1.body.index, c1.body.chapter.t], [2, 'Chương 1']);
+      eq('chapter/có nội dung + KHÔNG kèm chương khác', [c1.body.chapter.html, JSON.stringify(c1.body).includes('Ngoại truyện.')], ['<p>Nội dung một.</p>', false]);
+      eq('chapter/kèm mục lục cho trang đọc dựng danh sách', (c1.body.chapters || []).length, 3);
+      eq('chapter/sourceIndex = vị trí trong bản gốc trên KV', c1.body.sourceIndex, 1);
+      eq('chapter/lần 2 HIT, không đọc KV', [(await call('GET', '/api/book/lite-truyen/chapter/2')).headers.get('x-cz-cache'), rd() - r0], ['HIT', 1]);
+      /* chương đang hẹn giờ/ẩn KHÔNG có vị trí để gọi: vị trí đếm theo danh
+         sách đang hiện, nên không có URL nào trả về nội dung chưa lên sóng. */
+      const c3 = await call('GET', '/api/book/lite-truyen/chapter/3');
+      eq('chapter/vị trí 3 = chương đang hiện thứ 3 (bỏ qua hẹn giờ + ẩn)', [c3.status, c3.body.chapter.t], [200, 'Ngoại truyện 1']);
+      const c4 = await call('GET', '/api/book/lite-truyen/chapter/4');
+      eq('chapter/vị trí ngoài danh sách đang hiện → 404', c4.status, 404);
+      const bodies = [t1.text, c1.text, c3.text].join(' ');
+      ck('chapter/không lộ chương hẹn giờ (Chương 2)', !bodies.includes('Nội dung hai'), bodies.length, 'không có “Nội dung hai”');
+      ck('chapter/không lộ chương ẩn', !bodies.includes('Đang ẩn'), bodies.length, 'không có “Đang ẩn”');
+      eq('chapter/vị trí ngoài danh sách → 404', (await call('GET', '/api/book/lite-truyen/chapter/99')).status, 404);
+      eq('chapter/bộ không tồn tại → 404', (await call('GET', '/api/book/khong-co-bo-lite/chapter/1')).status, 404);
+      eq('toc/bộ không tồn tại → 404', (await call('GET', '/api/book/khong-co-bo-lite/toc')).status, 404);
+      /* link chia sẻ kèm tham số rác vẫn dùng chung bản lưu */
+      r0 = rd();
+      const junk = await call('GET', '/api/book/lite-truyen/chapter/2?fbclid=abc&utm_source=facebook');
+      eq('chapter/link Facebook → HIT chung bản lưu, không đọc KV', [junk.headers.get('x-cz-cache'), rd() - r0], ['HIT', 0]);
+      /* SỬA CHƯƠNG → xoá đúng mục cache của chương đó + mục lục */
+      await call('PUT', '/api/book/lite-truyen/chapter', {
+        headers: ADMH, body: { index: 1, chapter: { t: 'Chương 1', html: '<p>Nội dung một (đã sửa).</p>' } },
+      });
+      const c2 = await call('GET', '/api/book/lite-truyen/chapter/2');
+      eq('chapter/sửa chương → MISS + thấy chữ mới ngay', [c2.headers.get('x-cz-cache'), c2.body.chapter.html], ['MISS', '<p>Nội dung một (đã sửa).</p>']);
+      eq('chapter/sửa chương → mục lục cũng MISS', (await call('GET', '/api/book/lite-truyen/toc')).headers.get('x-cz-cache'), 'MISS');
+      /* ĐỔI THỨ TỰ → vị trí mọi chương có thể đổi: xoá cả chùm */
+      await call('PUT', '/api/book/lite-truyen/chapter', { headers: ADMH, body: { from: 0, to: 2 } });
+      const c3b = await call('GET', '/api/book/lite-truyen/chapter/1');
+      eq('chapter/đổi thứ tự → MISS (vị trí đã đổi)', [c3b.headers.get('x-cz-cache'), c3b.body.chapter.t], ['MISS', 'Chương 1']);
+      /* XOÁ chương → mục lục và các vị trí sau đổi hết */
+      await call('PUT', '/api/book/lite-truyen/chapter', { headers: ADMH, body: { index: 0, remove: true } });
+      const t2 = await call('GET', '/api/book/lite-truyen/toc');
+      eq('toc/xoá chương → MISS + còn 2 chương', [t2.headers.get('x-cz-cache'), t2.body.total], ['MISS', 2]);
+      /* bộ KHÔNG còn chương hẹn giờ → hạn dài (1.800 giây) cho mục lục */
+      const t3 = await call('GET', '/api/book/cache-truyen/toc');
+      eq('toc/bộ không hẹn giờ → x-cz-ttl=1800', t3.headers.get('x-cz-ttl'), '1800');
+      /* bộ khoá mật mã: chưa có token → 403 vỏ, có token → trả nội dung (BYPASS) */
+      await call('PUT', '/api/book/lite-khoa', { headers: ADMH, body: { title: 'Lite Khoá', slug: 'lite-khoa', chapters: [{ t: 'Chương 1', html: '<p>Bí mật.</p>' }] } });
+      await call('POST', '/api/lock/set', { headers: ADMH, body: { slug: 'lite-khoa', password: 'mat-ma-du-dai-123' } });
+      const lk = await call('GET', '/api/book/lite-khoa/chapter/1');
+      eq('chapter/bộ khoá, chưa mở → 403 không kèm nội dung', [lk.status, lk.body && lk.body.locked, JSON.stringify(lk.body || {}).includes('Bí mật')], [403, true, false]);
+      const lktoc = await call('GET', '/api/book/lite-khoa/toc');
+      eq('toc/bộ khoá, chưa mở → 403', lktoc.status, 403);
+      const unlock = await call('POST', '/api/lock', { body: { slug: 'lite-khoa', password: 'mat-ma-du-dai-123' } });
+      const tok = (unlock.body || {}).token || '';
+      ck('lock/mở được khoá để thử tiếp', !!tok, unlock.body, 'có token');
+      const lk2 = await call('GET', '/api/book/lite-khoa/chapter/1?token=' + encodeURIComponent(tok));
+      eq('chapter/bộ khoá + token → trả nội dung, không cache', [lk2.status, lk2.headers.get('x-cz-cache'), lk2.body.chapter.html], [200, 'BYPASS', '<p>Bí mật.</p>']);
+      ck('chapter/bộ khoá + token KHÔNG lưu vào cache chung', ![...fake.store.keys()].some((u) => u.includes('token=')), [...fake.store.keys()].slice(0, 5), 'không key nào chứa token');
+    } finally {
+      globalThis.caches = realCaches;
+    }
+  }
+
+  /* ---------- 11c. BÌNH LUẬN: cache biên 15 giây + purge khi có bình luận mới --- */
+  {
+    const realCaches = globalThis.caches;
+    const fake = new FakeCache();
+    globalThis.caches = { default: fake };
+    try {
+      const rd = () => kv.reads;
+      let r0 = rd();
+      const k1 = await call('GET', '/api/comments/lite-truyen?limit=200');
+      ck('comments/có bản lưu ở biên', k1.headers.get('x-cz-cache') === 'MISS', k1.headers.get('x-cz-cache'), 'MISS');
+      eq('comments/lần 1 MISS + đọc KV', [k1.headers.get('x-cz-cache'), rd() - r0 >= 1], ['MISS', true]);
+      r0 = rd();
+      const k2 = await call('GET', '/api/comments/lite-truyen?limit=200');
+      eq('comments/lần 2 HIT + không đọc KV', [k2.headers.get('x-cz-cache'), rd() - r0], ['HIT', 0]);
+      const k3 = await call('GET', '/api/comments/lite-truyen?limit=200&fbclid=x');
+      eq('comments/link Facebook → HIT chung bản lưu', [k3.headers.get('x-cz-cache'), k2.headers.get('x-cz-cache')], ['HIT', 'HIT']);
+      const k4 = await call('GET', '/api/comments/lite-truyen?limit=50');
+      ck('comments/limit khác → khoá riêng (không lẫn bản 200)', rd() - r0 >= 1, rd() - r0, 'đọc KV lại');
+      const post = await call('POST', '/api/comments/lite-truyen', { body: { vid: 'may-cmt-1', name: 'Khách', text: 'Bình luận thử.' } });
+      ck('comments/đăng được bình luận', post.status === 200 && post.body && post.body.ok !== false, post.body, 'ok');
+      const k5 = await call('GET', '/api/comments/lite-truyen?limit=200');
+      eq('comments/bình luận mới → MISS, thấy ngay', [k5.headers.get('x-cz-cache'), (k5.body.comments || []).length >= 1], ['MISS', true]);
+      ck('comments/không lưu khoá có tham số lạ', ![...fake.store.keys()].some((u) => u.includes('limit=50') && u.includes('&x=')), [...fake.store.keys()].length, 'không khoá rác');
     } finally {
       globalThis.caches = realCaches;
     }

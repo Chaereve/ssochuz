@@ -54,13 +54,13 @@ function fakeSW(w, deleted) {
   const entries = [
     { url: APIB + '/api/registry' },
     { url: 'https://ssochuz.pages.dev/data/registry.json?_=1758000000000' },
-    { url: 'https://ssochuz.pages.dev/cz-app.js?v=20260923a' },
+    { url: 'https://ssochuz.pages.dev/cz-app.js?v=20260924a' },
   ];
   const cache = {
     keys: () => Promise.resolve(entries.slice()),
     delete: (k) => { deleted.push(String(k && k.url)); const i = entries.indexOf(k); if (i >= 0) entries.splice(i, 1); return Promise.resolve(true); },
   };
-  w.caches = { keys: () => Promise.resolve(['ssochuz-api', 'ssochuz-shell-20260923a']), open: () => Promise.resolve(cache) };
+  w.caches = { keys: () => Promise.resolve(['ssochuz-api', 'ssochuz-shell-20260924a']), open: () => Promise.resolve(cache) };
 }
 /* Người đọc có theo dõi 2 bộ — điều kiện kích hoạt lỗi đóng băng libCache. */
 const follower = (w) => w.localStorage.setItem('ssochuz-follow', JSON.stringify({ chain: 12, 'lunar-secret': 30 }));

@@ -8,6 +8,7 @@
     "og": "node tools/build_og.mjs",
     "test": "node tests/run.js",
     "build:admin": "node tools/build_admin.mjs",
+    "build:worker": "node tools/build_worker.mjs",
     "check:worker": "tsc -p worker/jsconfig.json"
   },
   "devDependencies": {

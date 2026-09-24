@@ -1090,6 +1090,58 @@
     var cur = parseInt(String(lab ? lab.textContent : '').replace(/[^0-9]/g, '') || '0', 10);
     if (lab) lab.textContent = num(cur + d) + ' lượt đọc';
   }
+  /* ---- CHƯƠNG CHƯA CÓ CHỮ TRONG MÁY (đường nhẹ 1.16.0) ------------------
+     Trang đọc không còn giữ sẵn cả bộ trong RAM: mở tới chương nào thì tải
+     đúng chương đó (trung bình 18 KB thay vì 334 KB cả bộ), chương kế bên được
+     tải trước nên bấm “Tiếp” vẫn hiện ngay. Đã tải rồi thì nằm lại trong phiên. */
+  function ensureChapter(pos, cb) {
+    var c = CHS[pos - 1];
+    if (!c) { if (typeof cb === 'function') cb(); return; }
+    if (typeof cb === 'function') {
+      if (c.html != null || c.fail) { cb(); return; }
+      c.waiters.push(cb);
+      if (c.loading) return;
+    } else if (c.html != null || c.fail || c.loading) { return; }
+    c.loading = true; c.fail = false;
+    CZ.chapter(SLUG, pos).then(function (r) {
+      c.loading = false;
+      if (r && r.chapter && typeof r.chapter.html === 'string') {
+        c.html = r.chapter.html;
+        if (r.chapter.t) c.t = String(r.chapter.t);
+      } else {
+        /* mất mạng, hoặc Worker cũ chưa có đường này → đánh dấu để hiện nút
+           thử lại, KHÔNG coi như chương rỗng */
+        c.fail = true;
+      }
+      var ws = c.waiters.splice(0);
+      ws.forEach(function (f) { try { f(); } catch (e) {} });
+    });
+  }
+  /* khung chờ khi chương đang tải (giữ nguyên đầu chương + thanh điều hướng) */
+  function paintChapterWait(c) {
+    $('#rdTitle').textContent = N.title;
+    $('#rdSub').textContent = chapLabel(cur) + (chapTotal() ? ' / ' + chapTotal() : '');
+    $('#rdHead').textContent = c.t;
+    var box = $('#rdText');
+    if (box) box.innerHTML = '<p class="muted" role="status">Đang tải ' + esc(chapLabel(cur)) + '…</p>';
+    var bar = $('#rdBar');
+    if (bar) bar.classList.add('loading');
+    renderNav(false);
+  }
+  /* chương tải hỏng: nói rõ và cho bấm thử lại (không im lặng trắng trang) */
+  function paintChapterFail(c) {
+    var box = $('#rdText');
+    if (!box) return;
+    box.innerHTML = '<p class="muted">Không tải được ' + esc(chapLabel(cur)) + '. Có thể mạng đang chập hoặc máy chủ bận.</p>' +
+      '<p><button class="btn ghost" id="rdRetry" type="button">Thử lại</button></p>';
+    var b = $('#rdRetry');
+    if (b) b.addEventListener('click', function () {
+      c.fail = false;
+      CZ.forgetChapter(SLUG, cur);
+      paintChapter(true);
+    });
+  }
+
   /* ---- PRELOAD chương kế: chữ cả bộ đã nằm sẵn trong máy (CHS), chỉ còn ẢNH
      trong chương là phải chờ mạng. Cuộn quá nửa chương (hoặc sau 5 giây) thì
      tải trước ảnh + dựng sẵn HTML sạch của ĐÚNG 1 chương kế (N+1) — SW tự giữ
@@ -1120,8 +1172,18 @@
     /* CHỈ đúng 1 chương kế — không preload xa hơn */
     if (nx < 1 || nx > CHS.length || !CHS[nx - 1]) return;
     PRE.ch = nx;
-    try { PRE.html = cleanHTML(CHS[nx - 1].html || ''); } catch (e) { PRE.html = ''; }
-    preNextImgs(CHS[nx - 1].html || '');
+    var next = CHS[nx - 1];
+    if (next.html == null) {
+      /* đường nhẹ: chữ chương kế chưa nằm trong máy → tải trước đúng nó */
+      ensureChapter(nx, function () {
+        if (next.html == null) { PRE.ch = 0; return; }
+        try { PRE.html = cleanHTML(next.html); } catch (e) { PRE.html = ''; }
+        preNextImgs(next.html);
+      });
+      return;
+    }
+    try { PRE.html = cleanHTML(next.html || ''); } catch (e) { PRE.html = ''; }
+    preNextImgs(next.html || '');
   }
   function preNextArm() {
     preNextReset();
@@ -1130,6 +1192,20 @@
   function paintChapter(keepScroll) {
     var c = CHS[cur - 1];
     if (!c) return;
+    if (c.html == null) {
+      /* chưa có chữ trong máy (đường nhẹ 1.16.0): hiện khung chờ rồi tải đúng
+         chương này. Callback chỉ vẽ lại nếu người đọc CÒN đang ở chương đó. */
+      if (c.fail) { paintChapterFail(c); return; }
+      paintChapterWait(c);
+      var want = cur;
+      ensureChapter(cur, function () {
+        if (cur !== want) return;
+        var bar = $('#rdBar');
+        if (bar) bar.classList.remove('loading');
+        paintChapter(keepScroll);
+      });
+      return;
+    }
     var s = CZ.rdGet();
     var txt = $('#rdText');
     $('#rdTitle').textContent = N.title;
@@ -1150,6 +1226,11 @@
     if (cur >= N.chapters && CZ.markFollowSeen) CZ.markFollowSeen(N);
     PAGES = []; PI = 0;
     if (s.mode === 'paged') { PAGES = measure(txt); paintPage(); } else renderNav(false);
+    /* tải trước 2 chương kề (nhỏ, ~18 KB mỗi chương) để bấm Tiếp/Trước là hiện
+       ngay — đúng thứ bản cũ có sẵn vì nó tải cả bộ từ đầu */
+    if (CHS[cur]) ensureChapter(cur + 1);
+    if (cur > 1) ensureChapter(cur - 1);
+    try { paintChapterMeta(); } catch (e) {}
     /* ---- dải nút cuối chương: THÍCH tính riêng cho TỪNG CHƯƠNG -------------
        Trước đây nút Thích lưu theo bộ nên thích một lần là sang chương sau không
        thích được nữa (bấm lại thành bỏ thích). Giờ mỗi chương một phiếu, số phiếu
@@ -1736,7 +1817,28 @@
   function loadBook() {
     var meta = CZ.findLib(SLUG);
     var isLocked = !!(meta && meta.locked);
-    (window.czPrivateBook ? Promise.resolve(window.czPrivateBook) : CZ.book(SLUG)).then(function (bk) {
+    /* Kho truyện riêng tư đời cũ (Durable Object) — luồng riêng, giữ nguyên.
+       Bộ khoá mật mã chưa mở khoá: không gọi API, vẽ chốt nhập mật mã luôn. */
+    if (window.czPrivateBook || (isLocked && !CZ.lockToken(SLUG))) return loadFull(meta, isLocked, window.czPrivateBook || null);
+    /* ĐƯỜNG NHẸ (1.16.0): mục lục vài KB + đúng 1 chương cho mỗi lượt mở, thay
+       vì tải cả bộ 334 KB. Worker cũ chưa có /toc → rớt về đường cũ y như trước. */
+    CZ.toc(SLUG).then(function (head) {
+      if (head && head.locked) { renderLockGate(meta); return; }
+      if (!head || !head.ok || !Array.isArray(head.chapters)) return loadFull(meta, isLocked, null);
+      BOOK = null;
+      CHS = head.chapters.map(function (c, i) {
+        return {
+          t: String((c && c.t) || '').trim() || ('Chương ' + (i + 1)),
+          html: null,          /* chưa tải — tải khi mở tới chương đó */
+          loading: false, fail: false, waiters: [],
+        };
+      });
+      mountStory(meta, head);
+    }).catch(function () { loadFull(meta, isLocked, null); });
+  }
+  /* Đường cũ: tải CẢ bộ (vẫn dùng khi Worker cũ, mất mạng, hoặc khoá mật mã) */
+  function loadFull(meta, isLocked, privateBook) {
+    (privateBook ? Promise.resolve(privateBook) : CZ.book(SLUG)).then(function (bk) {
       if (bk && bk.locked && !bk.chapters && !isLocked && SLUG.indexOf('private-') === 0) {
         /* kho truyện riêng tư đời cũ (Durable Object) — luồng riêng, giữ nguyên */
         showError('Truyện riêng tư', '<p>Nội dung chỉ được tải sau khi xác minh mật khẩu. Không hỗ trợ đọc ngoại tuyến.</p><form id="unlockBook"><label for="bookPassword">Mật khẩu truyện</label><input class="inp" id="bookPassword" type="password" autocomplete="off" required maxlength="256"><button class="btn pri" type="submit">Mở truyện</button><p id="unlockMessage" role="status"></p></form>');
@@ -1771,7 +1873,16 @@
         return;
       }
       BOOK = bk;
-      CHS = bk.chapters.map(function (c) { return { t: String(c.t || '').trim() || 'Chương', html: c.html || '' }; });
+      CHS = bk.chapters.map(function (c) { return { t: String(c.t || '').trim() || 'Chương', html: c.html || '', loading: false, fail: false, waiters: [] }; });
+      mountStory(meta, bk);
+    }).catch(function (e) {
+      showError('Lỗi tải truyện', '<p class="muted">' + esc(e && e.message || e) + '</p>', true);
+    });
+  }
+  /* Phần DÙNG CHUNG của cả 2 đường đọc: dựng N từ registry + đầu sách, vẽ trang
+     truyện / danh sách chương / tab, rồi mở đúng chương trên URL. */
+  function mountStory(meta, bk) {
+    {
       /* mở khóa xong (hoặc bộ thường): gỡ chốt mật mã khỏi phần chương */
       var secUn = $('#chapSec');
       if (secUn) secUn.classList.remove('lockon');
@@ -1843,9 +1954,7 @@
       var ch = chapterWanted();
       if (ch && CHS.length) setTimeout(function () { toast('Mở thẳng ' + chapLabel(ch) + '.'); }, 400);
       CZ.onStats(function () { renderStory(); if (reading) renderCur(true); });
-    }).catch(function (e) {
-      showError('Lỗi tải truyện', '<p class="muted">' + esc(e && e.message || e) + '</p>', true);
-    });
+    }
   }
   function syncShelfButtons(isSaved) {
     var sh = $('#shelfBtn');
