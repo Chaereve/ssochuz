@@ -8,3 +8,6 @@ __pycache__/
 *.pyc
 # bản Worker gộp để dán vào bảng điều khiển Cloudflare (sinh bằng npm run build:worker)
 worker/cms.bundle.js
+# bản sao lưu ẢNH kéo từ KV/Supabase về máy (tools/pull_from_kv.py --images).
+# Để ngoài git cho repo nhẹ; muốn giữ trong git thì bỏ dòng này rồi commit thư mục.
+_backup/

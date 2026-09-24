@@ -95,6 +95,102 @@ def write_if_changed(path, text, dry):
     return True
 
 
+def fetch_bytes(api, path, key=None, timeout=120):
+    """Tải NHỊ PHÂN (ảnh) — theo redirect 302 nên ảnh đang nằm trên Supabase
+    Storage cũng tải được y như ảnh còn trong KV."""
+    req = urllib.request.Request(api.rstrip('/') + path, method='GET')
+    req.add_header('User-Agent', 'Mozilla/5.0 (compatible; ssochuz-sync/1.0)')
+    if key:
+        req.add_header('x-admin-key', key)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return r.status, r.read(), (r.headers.get('Content-Type') or '')
+    except urllib.error.HTTPError as e:
+        return e.code, b'', ''
+    except (urllib.error.URLError, OSError) as e:
+        return 0, b'', str(getattr(e, 'reason', e))
+
+
+def sniff_ext(data, ctype=''):
+    """Đuôi tệp theo magic bytes — không tin Content-Type (vài CDN trả
+    application/octet-stream). Trả '' nếu không phải ảnh ta giữ."""
+    if data[:3] == b'\xff\xd8\xff':
+        return 'jpg'
+    if data[:4] == b'\x89PNG':
+        return 'png'
+    if data[:4] == b'RIFF' and data[8:12] == b'WEBP':
+        return 'webp'
+    if data[:6] in (b'GIF87a', b'GIF89a'):
+        return 'gif'
+    ct = (ctype or '').lower()
+    for k, v in (('jpeg', 'jpg'), ('png', 'png'), ('webp', 'webp'), ('gif', 'gif')):
+        if k in ct:
+            return v
+    return ''
+
+
+IMG_REF_RE = re.compile(r'/api/img/([A-Za-z0-9_-]{8,64})')
+
+
+def collect_img_ids(reg, books):
+    """Mọi /api/img/<id> mà web thật đang dùng: bìa trong registry (thumb/slide/
+    cover) + ảnh trong HTML chương. Sao lưu đúng tập này là đủ — ảnh không ai
+    trỏ tới thì không tốn chỗ trong bản sao lưu."""
+    ids = []
+
+    def add(u):
+        m = IMG_REF_RE.search(str(u or ''))
+        if m and m.group(1) not in ids:
+            ids.append(m.group(1))
+
+    for n in (reg.get('lib') or []):
+        if not n:
+            continue
+        for f in ('thumb', 'slide', 'cover'):
+            add(n.get(f))
+    for b in books:
+        for c in (b.get('chapters') or []):
+            for m in IMG_REF_RE.finditer(str((c or {}).get('html') or '')):
+                if m.group(1) not in ids:
+                    ids.append(m.group(1))
+    return ids
+
+
+def backup_images(api, key, ids, out_dir, dry):
+    """Tải từng ảnh về máy (mặc định _backup/img/). Có sẵn và ĐÚNG BẰNG byte thì
+    bỏ qua — chạy lại mỗi ngày không ghi lại cả kho."""
+    if not ids:
+        print('ảnh: không thấy /api/img/<id> nào trong registry/HTML chương — không có gì để sao lưu.')
+        return 0, 0, 0
+    if not dry:
+        os.makedirs(out_dir, exist_ok=True)
+    n_new = n_same = n_err = 0
+    for i, img_id in enumerate(ids, 1):
+        st, data, ctype = fetch_bytes(api, '/api/img/' + img_id, key)
+        if st != 200 or not data:
+            print('  ✗ %s HTTP %s %s' % (img_id, st, ctype[:60])); n_err += 1; continue
+        ext = sniff_ext(data, ctype)
+        if not ext:
+            print('  ✗ %s không phải JPEG/PNG/WebP/GIF — bỏ qua' % img_id); n_err += 1; continue
+        path = os.path.join(out_dir, img_id + '.' + ext)
+        try:
+            with open(path, 'rb') as f:
+                if f.read() == data:
+                    n_same += 1; continue
+        except OSError:
+            pass
+        if not dry:
+            with open(path, 'wb') as f:
+                f.write(data)
+        n_new += 1
+        print('  ✓ %s.%s  %.1f KB' % (img_id, ext, len(data) / 1024))
+        if i % 25 == 0:
+            print('  … %d/%d ảnh' % (i, len(ids)))
+    print('ảnh: %s%d mới/đổi · %d không đổi · %d lỗi  → %s' %
+          ('(NHÁP) ' if dry else '', n_new, n_same, n_err, out_dir))
+    return n_new, n_same, n_err
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--api', default=api_from_config(),
@@ -104,6 +200,12 @@ def main():
     ap.add_argument('--books', default=os.path.join(ROOT, 'data', 'book'))
     ap.add_argument('--only', help='chỉ kéo 1 slug (registry vẫn được khớp theo KV)')
     ap.add_argument('--dry', action='store_true', help='chỉ in ra, không ghi file')
+    ap.add_argument('--images', action='store_true',
+                    help='sao lưu MỌI ảnh /api/img/<id> mà web đang dùng về máy (mặc định _backup/img/)')
+    ap.add_argument('--images-into', default=os.path.join(ROOT, '_backup', 'img'),
+                    help='thư mục chứa bản sao lưu ảnh (mặc định _backup/img — không commit)')
+    ap.add_argument('--images-only', action='store_true',
+                    help='chỉ sao lưu ảnh, không kéo registry/book (nhanh, chạy hằng ngày)')
     ap.add_argument('--derived', action='store_true',
                     help='kéo xong sinh lại sitemap.xml/robots.txt + thẻ OG (truyen/*/, _redirects)')
     a = ap.parse_args()
@@ -140,7 +242,9 @@ def main():
 
     n_write = n_same = n_skip = n_err = 0
     skips = []
-    for i, n in enumerate(lib, 1):
+    # --images-only: bỏ qua bước kéo book (chỉ muốn sao lưu ảnh cho nhanh) —
+    # danh sách ảnh sẽ lấy từ data/book/*.json đang có sẵn trên đĩa.
+    for i, n in enumerate([] if a.images_only else lib, 1):
         slug = n['slug']
         st, book = call(a.api, '/api/book/' + urllib.request.quote(slug, safe=''), a.key)
         path = os.path.join(a.books, slug + '.json')
@@ -172,14 +276,31 @@ def main():
         if i % 20 == 0:
             print('  … %d/%d bộ' % (i, len(lib)))
 
-    print('xong: %s%d ghi · %d không đổi · %d bỏ qua · %d lỗi' %
-          ('(NHÁP) ' if a.dry else '', n_write, n_same, n_skip, n_err))
-    if skips:
+    if a.images_only:
+        print('--images-only: bỏ qua kéo book, dùng data/book/*.json đang có trên đĩa.')
+    else:
+        print('xong: %s%d ghi · %d không đổi · %d bỏ qua · %d lỗi' %
+              ('(NHÁP) ' if a.dry else '', n_write, n_same, n_skip, n_err))
+    if skips and not a.images_only:
         print('bỏ qua vì KV ÍT chương hơn repo (chữa bằng: python3 tools/push_to_kv.py --api %s --key … --only <slug>):' % a.api)
         for s in skips:
             print('  - ' + s)
-    if n_err:
+    if n_err and not a.images_only:
         sys.exit(1)
+
+    if a.images:
+        # Đọc lại book TỪ FILE VỪA KÉO (không gọi Worker lần nữa) để gom danh
+        # sách ảnh; --images-only thì đọc bản đang có sẵn trên đĩa.
+        books_for_imgs = []
+        for n in lib:
+            try:
+                with open(os.path.join(a.books, n['slug'] + '.json'), encoding='utf-8') as f:
+                    books_for_imgs.append(json.load(f))
+            except (OSError, ValueError):
+                pass
+        ids = collect_img_ids(reg, books_for_imgs)
+        print('sao lưu ảnh: thấy %d ảnh /api/img/<id> đang được dùng' % len(ids))
+        backup_images(a.api, a.key, ids, a.images_into, a.dry)
 
     if a.derived and (reg_changed or n_write):
         if a.dry:

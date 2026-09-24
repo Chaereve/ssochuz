@@ -1,7 +1,7 @@
 import { profileId } from './member-spaces.js';
 export { MemberSpaces } from './member-spaces.js';
 export { PrivateBooks } from './private-books.js';
-import { dropOverflow, overflowStatusResolved, missingOverflowVars, persistBook, persistCover, persistChapterImage, persistImage, readBook, readBookChecked, readImage, materializeBookChecked, migrateOverflow, sbPinUrl, sbPinReset as sbPinResetCache } from './overflow.js';
+import { dropOverflow, overflowStatusResolved, missingOverflowVars, persistBook, persistCover, persistChapterImage, persistImage, readBook, readBookChecked, readImage, materializeBookChecked, migrateOverflow, mirrorImages, sbPinUrl, sbPinReset as sbPinResetCache } from './overflow.js';
 import { parseChapterTitle, nextMainChapterNo, chapterTextOf, chapterHasMedia } from '../src/shared/chapters.js';
 import { isChapterPending, countVisibleChapters, countPendingChapters, nextScheduleMs, atMs, chapterAtMs, scheduleLabelOf } from '../src/shared/schedule.js';
 import { KV_FLUSH, statsBudget, forcedFlushMs, budgetCredits, flushOnTimer } from '../src/shared/kv-budget.js';
@@ -62,6 +62,15 @@ import { sanitizeChapterHtml } from '../src/shared/sanitize.js';
      DELETE /api/book/<slug>            → xoá 1 bộ                  (cần X-Admin-Key)
      POST   /api/recount                → đếm lại số chương của MỌI bộ, sửa registry
                                            (chữa bệnh "hiện 30 mà chỉ có 29") (cần X-Admin-Key)
+     POST   /api/admin/mirror-images    → SAO LƯU ảnh NGOÀI về kho của mình (1.17.0)
+                                           {limit?, only?: 'covers'|'chapters', edge?, dryRun?}
+                                           · 63/63 bìa đang là link justwatch/amazon/twimg/
+                                             blogger: host gỡ ảnh là mất bìa, repo không giữ byte nào
+                                           · hỏi CHÍNH CDN đó bản nhỏ hơn (sửa URL theo luật host —
+                                             src/shared/image-url.js) nên ảnh vẫn rõ mà nhẹ hơn
+                                           · ghi Supabase Storage covers/images (không có thì KV),
+                                             viết lại link trong registry + HTML chương
+                                           · id theo BĂM URL → chạy lại không tạo bản sao
      POST   /api/admin/migrate-overflow → chuyển book/ảnh CŨ trong KV sang overflow
                                            {limit?, only?} — bìa → Storage `covers`,
                                            book/ảnh chương → ssochuz_blobs/R2 (cần X-Admin-Key)
@@ -135,7 +144,7 @@ import { sanitizeChapterHtml } from '../src/shared/sanitize.js';
      VAPID_PRIVATE     (secret, bắt buộc nếu bật push) — khoá riêng VAPID base64url (`wrangler secret put VAPID_PRIVATE`)
    ============================================================================ */
 
-const VERSION = '1.16.1';
+const VERSION = '1.17.0';
 const JSONH = {
   'content-type': 'application/json; charset=utf-8',
   'x-content-type-options': 'nosniff',
@@ -374,6 +383,11 @@ const handler = {
       if (p === '/api/admin/migrate-overflow' && req.method === 'POST') {
         /* từng GET book/img vẫn materialize đúng nên không cần purge cache biên */
         return await migrateOverflowRun(req, env, cors);
+      }
+      if (p === '/api/admin/mirror-images' && req.method === 'POST') {
+        /* sao lưu ảnh NGOÀI về kho của mình (1.17.0). Đổi link bìa trong
+           registry nên phải purge cache biên của registry. */
+        return await mirrorImagesRun(req, env, cors, org);
       }
       if (p === '/api/recount' && req.method === 'POST') {
         const r = await recount(req, env, cors);
@@ -2137,6 +2151,28 @@ async function migrateOverflowRun(req, env, cors) {
   if ((m.books | 0) || (m.covers | 0) || (m.images | 0)) {
     await logAct(env, 'chuyển overflow (' + (res.status && res.status.supabase ? 'supabase' : 'r2') + '): ' +
       (m.books | 0) + ' book, ' + (m.covers | 0) + ' bìa, ' + (m.images | 0) + ' ảnh' + (res.done ? ' · xong' : ''), req);
+  }
+  return json(res, { cors });
+}
+
+/* POST /api/admin/mirror-images — SAO LƯU ẢNH NGOÀI VỀ KHO (bản 1.17.0)
+   body: { limit?, only?: 'covers'|'chapters', edge?, dryRun? }
+   Vì sao: 63/63 bìa trong registry là link justwatch/amazon/twimg/blogger —
+   host kia gỡ ảnh là mất bìa, repo không giữ byte nào để khôi phục. Endpoint
+   này tải về (lấy bản nhỏ hơn từ chính CDN khi host có luật), ghi vào
+   Supabase Storage/KV rồi viết lại link. Xem worker/overflow.js → mirrorImages. */
+async function mirrorImagesRun(req, env, cors, org) {
+  if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
+  if (!env.CZ_KV) return noKV(cors);
+  const body = await req.json().catch(() => ({}));
+  const res = await mirrorImages(env, body || {});
+  if (!res.ok) return json(res, { status: 409, cors });
+  /* bìa vừa đổi link → bản lưu registry ở biên phải bỏ, không thì thẻ truyện
+     còn trỏ link cũ tới hết TTL */
+  if (!res.dryRun && res.rewrites) await edgePurge(String(org || '') + '/api/registry');
+  if (!res.dryRun && (res.mirrored || res.rewrites)) {
+    await logAct(env, 'sao lưu ảnh ngoài: ' + res.mirrored + ' ảnh, ' + res.rewrites + ' link viết lại'
+      + (res.failed.length ? ', ' + res.failed.length + ' lỗi' : '') + (res.done ? ' · xong' : ' · còn'), req);
   }
   return json(res, { cors });
 }

@@ -56,6 +56,20 @@ Admin (admin.html)  ──PUT──▶  Worker (worker/cms.js)  ──▶  Cloud
 
 GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới cần build); dữ liệu thì không đi qua GitHub nữa.
 
+## Có gì mới ở bản 1.17.0 — sao lưu ảnh ngoài về kho + đo được mức tốn Worker
+
+| | |
+|---|---|
+| **Bệnh** | 63/63 bìa trong `data/registry.json` là **link ngoài** (justwatch/amazon/twimg/blogger): host kia gỡ ảnh là **mất bìa**, repo chỉ giữ link chết; và mình không kiểm soát dung lượng ảnh của họ |
+| **Chữa 1 — sao lưu** | `POST /api/admin/mirror-images` (cần `x-admin-key`): tải ảnh ngoài về, ghi **Supabase Storage `covers`/`images`** (không có Supabase thì KV), rồi **viết lại link** trong `registry.thumb/slide/cover` + HTML chương. `body: {limit? (≤25, mặc định 8), only?: 'covers'\|'chapters', edge?, dryRun?}` |
+| **Chữa 2 — nhẹ mà vẫn rõ** | Hỏi **chính CDN đó** bản nhỏ hơn bằng cách sửa URL theo luật host (`src/shared/image-url.js`): googleusercontent `/s1600/`→`/s800-rw/`, justwatch `/s718/`→`/s800/`, amazon `_UX600_`→`_UX800_QL80_`, twimg `?format=webp&name=medium`, wikimedia `/600px-`. Mốc mặc định **800 px bìa / 1200 px ảnh chương**. Không chắc luật của host thì **giữ URL gốc** |
+| **An toàn** | id theo **băm của URL** → chạy lại không tải lại, không tạo bản sao; ngửi **magic bytes** (không tin `Content-Type`); > 8 MB thì bỏ qua; `dryRun:true` chỉ báo cáo; lỗi từng ảnh nằm trong `failed[]`, không đụng ảnh còn lại |
+| **Sao lưu về máy** | `python3 tools/pull_from_kv.py --images` — gom mọi `/api/img/<id>` web đang dùng, tải về `_backup/img/` (theo cả 302 nên ảnh trên Supabase cũng tải được), ảnh đã đúng bằng byte thì bỏ qua. `--images-only` cho nhanh, `--images-into <thư mục>` để đổi chỗ |
+| **Đo được** | `tools/bench_kv.mjs` **đã sửa** (trước đây chạy đúng cú pháp README là văng `ERR_MODULE_NOT_FOUND`). Nay đo thêm **100 lượt mở chương** của bộ 200 chương: đường nhẹ 2,19 MB vs đường cũ 360,7 MB (**giảm 99 %** byte; số lượt đọc KV giảm là nhờ cache biên 24 giờ của `/chapter/<n>`) |
+| **Ảnh upload vẫn nén ở trình duyệt** | bìa ≤ 120 KB/1000 px, ảnh chương ≤ 260 KB/1440 px, đại diện 256², ảnh báo lỗi 1800 px (`src/admin/utils/images.js`, `src/cz-space.js`, `src/cz-app.js`). Worker không nén lại — Workers không có canvas, Cloudflare Images thì trả phí |
+| **Test** | `tests/t_worker.mjs` **+23 kiểm tra** (mục 17) — tổng **417**. `npm run check:worker` bắt được 1 bug thật (route đọc `.rewrites` trên `Response`) |
+| **Chi tiết** | `BAO-CAO-TIET-KIEM-WORKER-VA-SAO-LUU-ANH.md` |
+
 ## Có gì mới ở bản 1.16.1 — deploy không còn làm mất `SUPABASE_URL`
 
 | | |

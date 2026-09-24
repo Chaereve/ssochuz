@@ -64,15 +64,23 @@ class FakeCache {
 /* ============================ fetch giả ==================================== */
 let net = [];                                   /* nhật ký mọi request ra ngoài */
 let routes = () => null;
+/* body nhị phân: route trả `bytes: Uint8Array` thì phục vụ như ảnh thật —
+   cần cho bài sao lưu ảnh ngoài (1.17.0) vì Worker đọc ảnh bằng arrayBuffer(). */
+const asBuf = (r) => {
+  if (r && r.bytes) return r.bytes instanceof Uint8Array ? r.bytes : new Uint8Array(r.bytes);
+  const t = typeof r.body === 'string' ? r.body : JSON.stringify(r.body);
+  return new TextEncoder().encode(t || '');
+};
 globalThis.fetch = async (url, init = {}) => {
   const u = String(url);
   net.push(u);
   const r = routes(u, init);
-  if (!r) return { ok: false, status: 404, text: async () => '', json: async () => ({}) };
+  if (!r) return { ok: false, status: 404, text: async () => '', json: async () => ({}), arrayBuffer: async () => new ArrayBuffer(0) };
   return {
     ok: (r.status || 200) < 400, status: r.status || 200,
     text: async () => (typeof r.body === 'string' ? r.body : JSON.stringify(r.body)),
     json: async () => (typeof r.body === 'string' ? JSON.parse(r.body) : r.body),
+    arrayBuffer: async () => { const b = asBuf(r); return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength); },
   };
 };
 
@@ -1620,6 +1628,112 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     const lockSet = await call('POST', '/api/lock/set', { e: envDead, headers: ADMH, body: { slug: 'ovl-dead', password: 'mat-ma-dai-8-ky-tu' } });
     eq('mất biến/khoá bộ khi không đọc được → 502', lockSet.status, 502);
     eq('mất biến/khoá hụt cũng không đụng KV', (kv.m.get('book:ovl-dead') || {}).value, stubBefore);
+    routes = () => null;
+  }
+
+  /* ---------- 17. SAO LƯU ẢNH NGOÀI VỀ KHO (bản 1.17.0) --------------------
+     63/63 bìa trong registry là link justwatch/amazon/twimg/blogger: host kia
+     gỡ ảnh là mất bìa, repo không giữ byte nào. POST /api/admin/mirror-images
+     phải: hỏi CDN bản NHỎ HƠN (sửa URL theo luật host), ghi vào kho, viết lại
+     link, chạy lại không tạo bản sao, dryRun không ghi gì, thiếu quyền → 401. */
+  {
+    /* WebP THẬT: 'RIFF' + cỡ + 'WEBP'. (Mấy bài test cũ trong tệp này dùng
+       chuỗi hex '…57454850…' = "WEHP" — sai 1 ký tự; trước giờ không sao vì
+       không có chỗ nào ngửi magic bytes, còn mirror thì ngửi nên phải dùng
+       header đúng.) */
+    const WEBP = Buffer.from('524946462400000057454250565038201c000000080000003001000024000000ff00000000', 'hex');
+    const PNG = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489', 'hex');
+    const hit = [];
+    const envSb = Object.assign({}, env, { SUPABASE_URL: 'https://sbmirror.test', SUPABASE_SERVICE_ROLE: 'service-role-test' });
+
+    /* registry: 1 bìa ngoài + 1 bìa đã ở trong kho (phải BỎ QUA) */
+    await kv.put('registry', JSON.stringify({
+      rev: 'mirror1', lib: [
+        { slug: 'mir-a', title: 'Bộ Mirror A', chapters: 1, thumb: 'https://images.justwatch.com/poster/344507943/s718/mir-a.jpg' },
+        { slug: 'mir-b', title: 'Bộ Mirror B', chapters: 0, thumb: '/api/img/hda-co-san-trong-kho-0001' },
+      ],
+    }));
+    routes = (u, init) => {
+      const url = String(u);
+      hit.push(url);
+      if (url.includes('images.justwatch.com')) return { status: 200, bytes: WEBP };
+      if (url.includes('/storage/v1/object/covers/')) return { status: 200, body: { Key: 'covers/x' } };
+      if (url.includes('/storage/v1/object/images/')) return { status: 200, body: { Key: 'images/x' } };
+      if (url.includes('/storage/v1/bucket')) return { status: 200, body: { name: 'covers' } };
+      return { status: 404, body: '' };
+    };
+
+    /* thiếu quyền quản trị → 401 */
+    const noAuth = await call('POST', '/api/admin/mirror-images', { body: { limit: 5 } });
+    eq('mirror/không có ADMIN_KEY → 401', noAuth.status, 401);
+
+    /* dryRun: báo cáo nhưng KHÔNG ghi gì */
+    const dry = await call('POST', '/api/admin/mirror-images', { e: envSb, headers: ADMH, body: { limit: 5, dryRun: true } });
+    eq('mirror/dryRun ok', dry.body && dry.body.ok, true);
+    eq('mirror/dryRun thấy 1 bìa ngoài (bỏ qua bìa đã trong kho)', dry.body && dry.body.scanned, 1);
+    eq('mirror/dryRun đếm 1 ảnh sẽ lưu', dry.body && dry.body.mirrored, 1);
+    ck('mirror/dryRun không đổi registry', /justwatch\.com/.test((await call('GET', '/api/registry')).body.lib[0].thumb),
+      (await call('GET', '/api/registry')).body.lib[0].thumb, 'link cũ còn nguyên');
+
+    /* hỏi CDN BẢN NHỎ TRƯỚC: justwatch /s718/ → /s800/ (mốc bìa 800px) */
+    hit.length = 0;
+    const run1 = await call('POST', '/api/admin/mirror-images', { e: envSb, headers: ADMH, body: { limit: 5 } });
+    eq('mirror/lần 1: 1 ảnh được lưu', run1.body && run1.body.mirrored, 1);
+    eq('mirror/lần 1: không lỗi', (run1.body && run1.body.failed || []).length, 0);
+    ck('mirror/hỏi CDN bản nhỏ (/s800/) trước bản gốc', hit.some((u) => /images\.justwatch\.com\/poster\/344507943\/s800\//.test(u)), hit, '…/s800/…');
+    ck('mirror/đánh dấu đã nén qua CDN', !!(run1.body.items || [])[0] && (run1.body.items[0].shrunk === true), (run1.body.items || [])[0], 'shrunk:true');
+    ck('mirror/link mới trỏ Storage của mình', /^https:\/\/sbmirror\.test\/storage\/v1\/object\/public\/covers\//.test(String(((run1.body.items || [])[0] || {}).to || '')),
+      ((run1.body.items || [])[0] || {}).to, 'https://sbmirror.test/storage/v1/object/public/covers/…');
+    const reg1 = (await call('GET', '/api/registry')).body;
+    ck('mirror/registry đã viết lại link bìa', /^https:\/\/sbmirror\.test\/storage/.test(String(reg1.lib[0].thumb)), reg1.lib[0].thumb, 'link Storage');
+    eq('mirror/không đụng bìa đã ở trong kho', reg1.lib[1].thumb, '/api/img/hda-co-san-trong-kho-0001');
+    eq('mirror/đếm 1 link viết lại', run1.body && run1.body.rewrites, 1);
+
+    /* chạy lại: KHÔNG tải lại, KHÔNG tạo bản sao */
+    hit.length = 0;
+    const run2 = await call('POST', '/api/admin/mirror-images', { e: envSb, headers: ADMH, body: { limit: 5 } });
+    eq('mirror/chạy lại: 0 ảnh mới', run2.body && run2.body.mirrored, 0);
+    eq('mirror/chạy lại: không gọi mạng', hit.filter((u) => /justwatch\.com/.test(u)).length, 0);
+    ck('mirror/chạy lại: registry giữ link Storage', /sbmirror\.test/.test(String(((await call('GET', '/api/registry')).body.lib[0] || {}).thumb)),
+      ((await call('GET', '/api/registry')).body.lib[0] || {}).thumb, 'không đổi nữa');
+
+    /* ảnh TRONG CHƯƠNG: lưu + viết lại HTML; không có Supabase thì rơi về KV */
+    await kv.put('book:mir-c', JSON.stringify({
+      title: 'Bộ Mirror C', slug: 'mir-c',
+      chapters: [{ t: 'Chương 1', html: '<p>chữ</p><p><img src="https://cdn.chuong.test/a.png"></p>' }],
+    }));
+    const reg2b = (await call('GET', '/api/registry')).body;
+    reg2b.lib.push({ slug: 'mir-c', title: 'Bộ Mirror C', chapters: 1 });
+    await kv.put('registry', JSON.stringify(reg2b));
+    routes = (u) => {
+      const url = String(u);
+      if (url.includes('cdn.chuong.test')) return { status: 200, bytes: PNG };
+      return { status: 404, body: '' };
+    };
+    const run3 = await call('POST', '/api/admin/mirror-images', { headers: ADMH, body: { limit: 5, only: 'chapters' } });
+    eq('mirror/ảnh chương: 1 ảnh (không Supabase → KV)', run3.body && run3.body.mirrored, 1);
+    ck('mirror/ảnh chương: link /api/img/<id>', /^\/api\/img\/m[0-9a-f]{32}$/.test(String(((run3.body.items || [])[0] || {}).to || '')),
+      ((run3.body.items || [])[0] || {}).to, '/api/img/m…');
+    const bookC = await call('GET', '/api/book/mir-c');
+    ck('mirror/HTML chương đã viết lại link', /<img src="\/api\/img\/m[0-9a-f]{32}">/.test(String((bookC.body.chapters || [])[0].html)),
+      (bookC.body.chapters || [])[0].html, 'src="/api/img/m…"');
+    ck('mirror/ảnh đã nằm trong KV', [...kv.m.keys()].some((k) => /^img:m[0-9a-f]{32}$/.test(k)), [...kv.m.keys()].filter((k) => k.startsWith('img:m')), 'img:m…');
+
+    /* host chết → kể tên trong failed, KHÔNG viết lại link */
+    await kv.put('book:mir-d', JSON.stringify({
+      title: 'Bộ Mirror D', slug: 'mir-d',
+      chapters: [{ t: 'Chương 1', html: '<p><img src="https://cdn.chet.test/x.png"></p>' }],
+    }));
+    const reg3 = (await call('GET', '/api/registry')).body;
+    reg3.lib.push({ slug: 'mir-d', title: 'Bộ Mirror D', chapters: 1 });
+    await kv.put('registry', JSON.stringify(reg3));
+    routes = (u) => String(u).includes('cdn.chet.test') ? { status: 503, body: 'chết' } : { status: 404, body: '' };
+    const run4 = await call('POST', '/api/admin/mirror-images', { headers: ADMH, body: { limit: 5, only: 'chapters' } });
+    eq('mirror/host chết: 0 ảnh', run4.body && run4.body.mirrored, 0);
+    ck('mirror/host chết: failed kể tên URL', (run4.body.failed || []).some((f) => /cdn\.chet\.test/.test(String(f.url))), run4.body && run4.body.failed, 'cdn.chet.test');
+    const bookD = await call('GET', '/api/book/mir-d');
+    ck('mirror/host chết: KHÔNG đụng HTML gốc', /cdn\.chet\.test\/x\.png/.test(String((bookD.body.chapters || [])[0].html)),
+      (bookD.body.chapters || [])[0].html, 'link cũ còn nguyên');
     routes = () => null;
   }
 

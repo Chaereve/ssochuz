@@ -5,6 +5,8 @@
    Không cấu hình thì mọi thứ vẫn nằm full trong KV như cũ. Secret không bao giờ
    được gửi ra trình duyệt. */
 
+import { isOwnStorageUrl, shrinkRemoteImageUrl, remoteImgSrcs as _remoteImgSrcs, remoteCoverRefs as _remoteCoverRefs, MIRROR_EDGE } from '../src/shared/image-url.js';
+
 function sbUrl(env) { return String((env && env.SUPABASE_URL) || '').replace(/\/+$/, ''); }
 function sbKey(env) { return String((env && env.SUPABASE_SERVICE_ROLE) || '').trim(); }
 function hasR2(env) { return !!(env && env.CZ_R2 && typeof env.CZ_R2.put === 'function'); }
@@ -510,4 +512,194 @@ export async function readImage(env, id) {
     } catch (e) { /* không phải stub — rơi xuống base64 thường */ }
   }
   return { data: value, type: (metadata && metadata.type) || 'image/webp', metadata };
+}
+
+/* ============================================================================
+   SAO LƯU ẢNH NGOÀI VỀ KHO CỦA MÌNH  (bản 1.17.0)
+   ----------------------------------------------------------------------------
+   Vì sao cần: 63/63 bìa trong registry đang là link NGOÀI (justwatch, amazon,
+   twimg, blogger). Host kia gỡ ảnh là mất bìa vĩnh viễn — repo cũng không giữ
+   byte nào để khôi phục. Endpoint này (POST /api/admin/mirror-images) tải ảnh
+   về, LẤY BẢN NHỎ HƠN TỪ CHÍNH CDN đó khi host có luật (src/shared/image-url.js
+   — Worker không có canvas, còn Cloudflare Images thì phải trả phí), rồi ghi
+   vào Supabase Storage `covers`/`images` (không có Supabase thì KV như đường
+   persistCover/persistChapterImage vẫn làm) và viết lại link trong registry /
+   HTML chương.
+   An toàn:
+     · chạy theo LÔ nhỏ (`limit`, mặc định 8) — mỗi lần gọi Worker chỉ chịu được
+       ít chục subrequest;
+     · `dryRun:true` chỉ báo cáo, không ghi gì;
+     · không đụng ảnh đã nằm trong kho (`/api/img/…`, Storage của mình);
+     · id theo BĂM CỦA URL nên chạy lại không tạo bản sao;
+     · chỉ nhận đúng JPEG/PNG/WebP (ngửi magic bytes, không tin Content-Type),
+       quá 8 MB thì bỏ qua (trần của bucket);
+     · lỗi từng ảnh không làm hỏng lô (liệt kê trong `failed`).
+   ========================================================================== */
+const MIRROR_MAX_BYTES = 8 * 1024 * 1024;
+
+/* magic bytes → kiểu ảnh. Không tin Content-Type: vài CDN trả
+   application/octet-stream, mà persistCover thì cần kiểu đúng để đặt đuôi tệp. */
+export function sniffImageType(bytes) {
+  const b = bytes;
+  if (!b || b.length < 12) return '';
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg';
+  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return 'image/png';
+  if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46
+    && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return 'image/webp';
+  return '';
+}
+
+function bytesToB64(bytes) {
+  let s = '';
+  const CH = 0x8000;
+  for (let i = 0; i < bytes.length; i += CH) {
+    s += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+  }
+  return btoa(s);
+}
+
+export async function sha256Hex(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(text || '')));
+  return Array.from(new Uint8Array(buf)).map((x) => x.toString(16).padStart(2, '0')).join('');
+}
+
+/* hai hàm quét link nằm trong src/shared/image-url.js (dùng chung với bài kiểm
+   thử và công cụ sao lưu) — export lại để worker/cms.js khỏi import hai nơi */
+export function remoteImgSrcs(html) { return _remoteImgSrcs(html); }
+export function remoteCoverRefs(reg) { return _remoteCoverRefs(reg); }
+
+/* tải 1 ảnh: thử bản nhỏ trước, hỏng thì thử URL gốc */
+async function fetchRemoteImage(url, small) {
+  const tries = [];
+  const cand = (small && small !== url) ? [small, url] : [url];
+  for (const u of cand) {
+    try {
+      const r = await fetch(u, { headers: { 'user-agent': 'ssochuz-mirror/1.0' }, cf: { cacheTtl: 3600, cacheEverything: true } });
+      if (!r || !r.ok) { tries.push(u + ' → HTTP ' + (r ? r.status : '?')); continue; }
+      const ab = await r.arrayBuffer();
+      const bytes = new Uint8Array(ab);
+      if (!bytes.length) { tries.push(u + ' → rỗng'); continue; }
+      const type = sniffImageType(bytes);
+      if (!type) { tries.push(u + ' → không phải JPEG/PNG/WebP'); continue; }
+      if (bytes.length > MIRROR_MAX_BYTES) { tries.push(u + ' → ' + Math.round(bytes.length / 1024) + ' KB vượt trần 8 MB'); continue; }
+      return { bytes, type, via: u === url ? 'gốc' : 'bản nhỏ', tried: tries };
+    } catch (e) { tries.push(u + ' → ' + ((e && e.message) || e)); }
+  }
+  return { bytes: null, type: '', via: '', tried: tries };
+}
+
+export async function mirrorImages(env, opts) {
+  opts = opts || {};
+  env = await resolveEnv(env);
+  const dryRun = !!opts.dryRun;
+  const only = String(opts.only || 'covers').toLowerCase();   /* covers | chapters */
+  const limit = Math.max(1, Math.min(25, parseInt(opts.limit, 10) || 8));
+  const edge = Math.max(160, parseInt(opts.edge, 10) || MIRROR_EDGE.cover);
+  const out = {
+    ok: true, dryRun, only, limit, edge,
+    scanned: 0, mirrored: 0, already: 0, failed: [], items: [],
+    bytesIn: 0, bytesOut: 0, done: false, rewrites: 0,
+  };
+  if (!env || !env.CZ_KV) { out.ok = false; out.error = 'chưa bind CZ_KV'; return out; }
+  const reg = await env.CZ_KV.get('registry', { type: 'json' });
+  if (!reg) { out.ok = false; out.error = 'chưa có registry trong KV'; return out; }
+
+  /* id theo băm URL → chạy lại không tạo bản sao */
+  const idOf = async (u) => 'm' + (await sha256Hex(u)).slice(0, 32);
+  const plan = [];   /* { url, kind, slug? } */
+  if (only !== 'chapters') remoteCoverRefs(reg).forEach((u) => { if (!isOwnStorageUrl(u, sbUrl(env))) plan.push({ url: u, kind: 'cover' }); });
+  if (only !== 'covers') {
+    /* quét HTML chương theo lô: đọc book là tốn, nên dừng khi đủ `limit` ảnh */
+    const slugs = ((reg.lib) || []).map((n) => n && n.slug).filter(Boolean).slice(0, Math.max(limit, 10));
+    for (const slug of slugs) {
+      if (plan.length >= limit) break;
+      const book = await readBook(env, slug).catch(() => null);
+      if (!book || !Array.isArray(book.chapters)) continue;
+      book.chapters.forEach((c, i) => {
+        remoteImgSrcs(c && c.html).forEach((u) => {
+          if (!isOwnStorageUrl(u, sbUrl(env)) && plan.length < limit * 4) plan.push({ url: u, kind: 'chapter', slug, index: i });
+        });
+      });
+    }
+  }
+  out.scanned = plan.length;
+  const map = {};    /* url gốc → url mới (để viết lại) */
+
+  for (const t of plan) {
+    if (out.mirrored + out.failed.length >= limit) break;
+    const id = await idOf(t.url);
+    const exists = await env.CZ_KV.get('img:' + id, { type: 'text' }).catch(() => null);
+    if (exists != null) {
+      out.already++;
+      try {
+        const stub = JSON.parse(exists);
+        if (stub && stub.url) { map[t.url] = stub.url; continue; }
+      } catch (e) { /* stub của blobs/R2: URL sẽ là /api/img/<id> */ }
+      map[t.url] = '/api/img/' + id;
+      continue;
+    }
+    const small = shrinkRemoteImageUrl(t.url, edge);
+    const got = await fetchRemoteImage(t.url, small);
+    if (!got.bytes) { out.failed.push({ url: t.url, error: (got.tried || []).join(' · ').slice(0, 220) }); continue; }
+    out.bytesIn += got.bytes.length;
+    if (dryRun) {
+      out.mirrored++;
+      out.items.push({ from: t.url, to: '/api/img/' + id, kind: t.kind, slug: t.slug, bytes: got.bytes.length, type: got.type, via: got.via, shrunk: !!small, dryRun: true });
+      map[t.url] = '/api/img/' + id;
+      continue;
+    }
+    try {
+      const b64 = bytesToB64(got.bytes);
+      const stored = t.kind === 'cover'
+        ? await persistCover(env, id, b64, got.type)
+        : await persistChapterImage(env, id, b64, got.type);
+      out.bytesOut += (stored && stored.bytes) || got.bytes.length;
+      out.mirrored++;
+      const to = (stored && stored.url) || '/api/img/' + id;
+      map[t.url] = to;
+      out.items.push({ from: t.url, to, kind: t.kind, slug: t.slug, bytes: got.bytes.length, type: got.type, via: got.via, shrunk: !!small, storage: (stored && (stored.overflow || 'kv')) || 'kv' });
+    } catch (e) {
+      out.failed.push({ url: t.url, error: String((e && e.message) || e).slice(0, 220) });
+    }
+  }
+  out.done = (out.mirrored + out.failed.length + out.already) >= plan.length;
+
+  /* ---- viết lại link: registry (bìa) rồi HTML chương ---- */
+  if (!dryRun && out.mirrored && Object.keys(map).length) {
+    if (only !== 'chapters') {
+      let changed = false;
+      (reg.lib || []).forEach((n) => {
+        if (!n) return;
+        ['thumb', 'slide', 'cover'].forEach((f) => {
+          const u = String(n[f] || '');
+          if (u && map[u]) { n[f] = map[u]; changed = true; out.rewrites++; }
+        });
+      });
+      if (changed) {
+        await env.CZ_KV.put('registry', JSON.stringify(reg), {
+          metadata: { saved: new Date().toISOString(), rev: reg.rev || '' },
+        });
+      }
+    }
+    if (only !== 'covers') {
+      const touched = {};
+      out.items.forEach((it) => { if (it.slug !== undefined && map[it.from]) touched[it.slug] = 1; });
+      for (const slug of Object.keys(touched)) {
+        const book = await readBook(env, slug).catch(() => null);
+        if (!book || !Array.isArray(book.chapters)) continue;
+        let n = 0;
+        book.chapters.forEach((c) => {
+          if (!c || typeof c.html !== 'string') return;
+          let html = c.html;
+          Object.keys(map).forEach((from) => {
+            if (html.indexOf(from) < 0) return;
+            html = html.split(from).join(map[from]);
+          });
+          if (html !== c.html) { c.html = html; n++; }
+        });
+        if (n) { await persistBook(env, slug, book); out.rewrites += n; }
+      }
+    }
+  }
+  return out;
 }
