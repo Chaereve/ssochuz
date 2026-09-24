@@ -247,6 +247,58 @@ import { parseChapterTitle, nextMainChapterNo, chapterIsEmpty, chapterHasMedia }
     memo.books[slug] = p;
     return p;
   }
+  /* -- ĐỌC NHẸ (bản 1.16.0): mục lục + đúng 1 chương ----------------------
+     Vì sao: đường cũ `book(slug)` tải CẢ bộ cho mỗi lần mở chương — trung bình
+     334 KB, bộ lớn 1,4 MB trong repo thật. Trang đọc giờ lấy:
+       · toc(slug)          → đầu sách + tên chương (vài KB)
+       · chapter(slug, n)   → đúng 1 chương (n = vị trí trong danh sách đang hiện)
+     Worker cũ (chưa deploy bản mới) hoặc mất mạng thì 2 hàm này trả về
+     null/`ok:false` → trang đọc tự rớt về đường cũ, hành vi y như trước.
+     KHÔNG thử lại ở đây: đường cũ đã có sẵn cơ chế thử lại + rớt về file tĩnh.
+     Không nhớ kết quả vào localStorage (chương sửa xong phải thấy ngay). */
+  function lightFetch(url, ms) {
+    var opt = {}, ctl = null, to = null;
+    if (w.AbortController && ms !== -1) { ctl = new w.AbortController(); opt.signal = ctl.signal; to = setTimeout(function () { ctl.abort(); }, ms || 12000); }
+    return fetch(url, opt).then(function (r) {
+      if (to) clearTimeout(to);
+      if (!r) return null;
+      return r.json().catch(function () { return null; }).then(function (body) {
+        return { status: r.status, ok: !!r.ok, body: body || null };
+      });
+    }).catch(function () { if (to) clearTimeout(to); return null; });
+  }
+  var lightChaps = {};        /* slug#n → promise, chỉ sống trong phiên */
+  function lightURL(slug, tail) {
+    var tok = lockToken(slug);
+    return API + '/api/book/' + encodeURIComponent(slug) + tail + (tok ? (tail.indexOf('?') >= 0 ? '&' : '?') + 'token=' + encodeURIComponent(tok) : '');
+  }
+  function toc(slug) {
+    slug = String(slug || '');
+    if (!slug || slug.indexOf('private-') === 0 || !useApi()) return Promise.resolve(null);
+    var m = memo.tocs || (memo.tocs = {});
+    if (m[slug]) return m[slug];
+    var p = lightFetch(lightURL(slug, '/toc')).then(function (r) {
+      if (!r || !r.body || !r.body.ok || !Array.isArray(r.body.chapters)) { delete m[slug]; return null; }
+      return r.body;
+    });
+    m[slug] = p;
+    return p;
+  }
+  function chapter(slug, n) {
+    slug = String(slug || '');
+    n = parseInt(n, 10) || 0;
+    if (!slug || !(n >= 1) || slug.indexOf('private-') === 0 || !useApi()) return Promise.resolve(null);
+    var k = slug + '#' + n;
+    if (lightChaps[k]) return lightChaps[k];
+    var p = lightFetch(lightURL(slug, '/chapter/' + n)).then(function (r) {
+      if (!r || !r.ok || !r.body || !r.body.chapter) { delete lightChaps[k]; return null; }
+      return r.body;
+    });
+    lightChaps[k] = p;
+    return p;
+  }
+  function forgetChapter(slug, n) { try { delete lightChaps[String(slug) + '#' + n]; } catch (e) {} }
+
   /* -- số liệu xếp hạng: đọc từ Worker KV (không cần Firebase) ------------
      Worker đếm lượt đọc/bình chọn rồi trả về qua /api/stats. Không đọc được
      thì KHÔNG bịa số — bảng xếp hạng tự xếp theo số chương + ngày cập nhật.
@@ -2660,7 +2712,7 @@ import { parseChapterTitle, nextMainChapterNo, chapterIsEmpty, chapterHasMedia }
 
   w.CZ = {
     API: API, normalizeApi: normalizeApi,
-    registry: registry, purgeRegistry: purgeRegistry, book: book, forgetBook: forgetBook, stats: stats, refreshStats: refreshStats, schedule: schedule,
+    registry: registry, purgeRegistry: purgeRegistry, book: book, forgetBook: forgetBook, toc: toc, chapter: chapter, forgetChapter: forgetChapter, stats: stats, refreshStats: refreshStats, schedule: schedule,
     lockToken: lockToken, setLockToken: setLockToken, clearLockToken: clearLockToken,
     vid: vid, reportView: reportView, sendReport: sendReport, uploadReportImage: uploadReportImage, vote: vote, rate: rate, myRating: function (slug) { return jpost('/api/rate/me', { slug: slug, vid: vid() }, authToken()); },
     lib: libList, slides: slides, editorChoice: editorChoice, donationCfg: donationCfg, reportCfg: reportCfg, findLib: findLib, statsOf: statsOf, onStats: onStats,

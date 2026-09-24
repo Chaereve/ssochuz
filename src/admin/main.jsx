@@ -13,7 +13,7 @@ import { PlaceholderTab } from './components/PlaceholderTab.jsx';
 import { DoctorPanel, CommentsPanel, ReportsPanel, StatsPanel, VotesPanel, LogPanel, SettingsPanel } from './components/OperationalPanels.jsx';
 import { cloneRegistry, metaFromForm, newBookRecord, removeBookReferences, renameReferences, slugify, touchRegistry } from './utils/books.js';
 import { chapterIsEmpty } from '../shared/chapters.js';
-import { compressImage } from './utils/images.js';
+import { compressImage, withContentId, formatBytes } from './utils/images.js';
 import { HomepageCMS } from './components/HomepageCMS.jsx';
 import { UsersPanel } from './components/UsersPanel.jsx';
 import { RolesPanel } from './components/RolesPanel.jsx';
@@ -201,12 +201,18 @@ function App() {
   }
   async function uploadImage(file, options = {}) {
     if (!state.online) throw new Error('Upload ảnh cần nối Worker bằng ADMIN_KEY.');
-    const packed = await compressImage(file, options);
+    /* nén trước (bìa ≤ ~120 KB, ảnh chương ≤ ~260 KB) rồi băm nội dung làm ID:
+       dán lại đúng tấm ảnh cũ thì Worker trả URL cũ, không ghi thêm bản sao —
+       đây là chỗ tiết kiệm dung lượng Supabase nhiều nhất. */
+    const packed = await withContentId(await compressImage(file, options));
     ensureQuota(1, 'upload ảnh');
-    const res = await api.postImage(Object.assign({}, packed, { kind: options.kind || '' }));
+    const res = await api.postImage({ data: packed.data, type: packed.type, kind: options.kind || '', id: packed.id });
     trackQuotaWrite(1, 'upload ảnh');
     if (!res || !res.url) throw new Error('Worker không trả URL ảnh.');
-    toast('Đã lên ảnh ' + Math.max(1, Math.round((res.bytes || packed.bytes || 0) / 1024)) + ' KB', 'ok');
+    const saved = packed.savedBytes > 0 ? ' · gốc ' + formatBytes(packed.originalBytes) : '';
+    toast(res.dedupe
+      ? 'Ảnh này đã có trong kho — dùng lại, không tốn thêm chỗ'
+      : 'Đã lên ảnh ' + formatBytes(res.bytes || packed.bytes) + saved, res.dedupe ? 'info' : 'ok');
     return (/^\/api\//.test(res.url) && api.apiBase) ? api.apiBase + res.url : res.url;
   }
   async function getBook(slug) {
@@ -362,6 +368,82 @@ function App() {
       await persistBookAndRegistry(nextBook.slug, nextBook, registry, 'Đã lưu chương “' + (meta && meta.title || nextBook.title || nextBook.slug) + '”');
       setBookCache((prev) => Object.assign({}, prev, { [nextBook.slug]: nextBook }));
     } catch (error) { toast('Lưu chương lỗi: ' + (error.message || error), 'err'); throw error; }
+  }
+
+  /* ĐƯỜNG NHANH khi bấm “Lưu chương”: chỉ gửi 1 chương, Worker tự ghép vào bộ
+     trên KV rồi trả về số chương mới. Bản cũ gửi nguyên bộ (mọi chương) + ghi
+     lại registry nên phản hồi rất lâu với bộ dài. 1 lượt ghi KV thay vì 2, và
+     không phải tải lại registry từ đầu — chỉ vá con số vừa đổi. */
+  function applyChapterResult(slug, res) {
+    if (!res || !res.ok) return;
+    const registry = cloneRegistry(store.getState().registry || state.registry);
+    const meta = (registry.lib || []).find((item) => item.slug === slug);
+    if (meta) {
+      if (typeof res.live === 'number') meta.chapters = res.live;
+      if (res.registry && res.registry.labelNow) meta.countLabel = res.registry.labelNow;
+      else if (typeof res.live === 'number') {
+        const raw = String(meta.countLabel || '');
+        const plannedRaw = raw.split('/')[1] || '';
+        const planned = plannedRaw.trim() === '—' ? 0 : (parseInt(plannedRaw, 10) || 0);
+        meta.countLabel = res.live ? (res.live + '/' + Math.max(planned, res.live)) : (planned > 0 ? '0/' + planned : '0/—');
+      }
+      if (res.pending) { meta.pending = res.pending; if (res.schedNext) meta.schedNext = res.schedNext; else delete meta.schedNext; }
+      else { delete meta.pending; delete meta.schedNext; }
+      meta.updated = new Date().toISOString().slice(0, 10);
+    }
+    store.setState({ registry });
+  }
+  async function saveChapterKv(slug, index, chapter) {
+    if (!state.online) return null;
+    ensureQuota(1, 'lưu chương');
+    const res = await api.saveChapter(slug, index, chapter);
+    trackQuotaWrite(1, 'lưu chương');
+    applyChapterResult(slug, res);
+    /* cập nhật cache bộ đang mở để lần sau mở lại thấy đúng bản vừa lưu */
+    setBookCache((prev) => {
+      const book = prev[slug];
+      if (!book || !Array.isArray(book.chapters)) return prev;
+      const next = JSON.parse(JSON.stringify(book));
+      const keep = next.chapters[index] || {};
+      next.chapters[index] = Object.assign({}, keep, chapter);
+      if (chapter.at === '' || chapter.at == null) delete next.chapters[index].at;
+      next.chapters = next.chapters.filter((c) => c && (String(c.t || '').trim() || String(c.html || '').trim()));
+      return Object.assign({}, prev, { [slug]: next });
+    });
+    pushAudit({ action: 'chapter', text: 'lưu chương ' + slug + ' #' + (index + 1), result: 'ok' });
+    return res;
+  }
+  async function deleteChapterKv(slug, index) {
+    if (!state.online) return null;
+    ensureQuota(1, 'xoá chương');
+    const res = await api.deleteChapter(slug, index);
+    trackQuotaWrite(1, 'xoá chương');
+    applyChapterResult(slug, res);
+    setBookCache((prev) => {
+      const book = prev[slug];
+      if (!book || !Array.isArray(book.chapters)) return prev;
+      const next = JSON.parse(JSON.stringify(book));
+      next.chapters.splice(index, 1);
+      return Object.assign({}, prev, { [slug]: next });
+    });
+    toast('Đã xoá chương khỏi bộ.', 'ok');
+    return res;
+  }
+  async function moveChapterKv(slug, from, to) {
+    if (!state.online) return null;
+    ensureQuota(1, 'đổi thứ tự chương');
+    const res = await api.moveChapter(slug, from, to);
+    trackQuotaWrite(1, 'đổi thứ tự chương');
+    applyChapterResult(slug, res);
+    setBookCache((prev) => {
+      const book = prev[slug];
+      if (!book || !Array.isArray(book.chapters)) return prev;
+      const next = JSON.parse(JSON.stringify(book));
+      const [item] = next.chapters.splice(from, 1);
+      next.chapters.splice(to, 0, item);
+      return Object.assign({}, prev, { [slug]: next });
+    });
+    return res;
   }
 
   async function setBookLock(slug, password) {
@@ -843,7 +925,7 @@ function App() {
   if (activeTab === 'overview') pane = <Overview state={state} onReload={reload} onTodo={handleTodo} />;
   else if (activeTab === 'list') pane = <BookList registry={state.registry} selected={selected} onSelected={setSelected} onEdit={editSlug} onNew={() => setActiveTab('new')} onBulkUpdate={bulkUpdate} onDelete={deleteBook} apiBase={state.apiBase} initialQuery={listQuery} writeBlocked={writeBlocked} />;
   else if (activeTab === 'new') pane = <NewBook registry={state.registry} onCreate={createBook} onUploadImage={uploadImage} apiBase={state.apiBase} writeBlocked={writeBlocked} online={state.online} />;
-  else if (activeTab === 'edit') pane = <BookEditor registry={state.registry} slug={currentSlug} bookData={bookCache[currentSlug]} bookLoading={bookLoading} apiBase={state.apiBase} onLoadBook={loadBookForEdit} onSave={saveMeta} onSaveBook={saveBookChapters} onUploadImage={uploadImage} onLock={setBookLock} onUnlock={unlockBook} onDuplicate={duplicateBook} onBack={() => setActiveTab('list')} onDelete={deleteBook} writeBlocked={writeBlocked} online={state.online} />;
+  else if (activeTab === 'edit') pane = <BookEditor registry={state.registry} slug={currentSlug} bookData={bookCache[currentSlug]} bookLoading={bookLoading} apiBase={state.apiBase} onLoadBook={loadBookForEdit} onSave={saveMeta} onSaveBook={saveBookChapters} onSaveChapter={saveChapterKv} onDeleteChapter={deleteChapterKv} onMoveChapter={moveChapterKv} onUploadImage={uploadImage} onLock={setBookLock} onUnlock={unlockBook} onDuplicate={duplicateBook} onBack={() => setActiveTab('list')} onDelete={deleteBook} writeBlocked={writeBlocked} online={state.online} />;
   else if (activeTab === 'chapters') pane = <ChaptersHub registry={state.registry} apiBase={state.apiBase} onEdit={editSlug} />;
   else if (activeTab === 'homepage') pane = <HomepageCMS registry={state.registry} apiBase={state.apiBase} onSave={saveHomepage} writeBlocked={writeBlocked} online={state.online} />;
   else if (activeTab === 'users') pane = <UsersPanel registry={state.registry} onEdit={editSlug} onFilterAuthor={(name) => { setListQuery(name); setActiveTab('list'); }} />;

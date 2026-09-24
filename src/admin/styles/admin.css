@@ -403,6 +403,11 @@
 .v2draft-status{font-size:12.5px;color:var(--mut);margin-top:10px}
 /* “Chưa ghi vào Cloudflare KV” là cảnh báo thật — dùng màu warn cho dễ thấy */
 .v2draft-status b{color:var(--warn);font-weight:700}
+/* Hẹn giờ đăng chương: ô nhập mốc giờ nằm riêng cho dễ thấy, kèm nút đặt nhanh */
+.v2sched{border:1px dashed var(--bd);border-radius:12px;padding:10px 12px;margin:8px 0;background:var(--surf2)}
+.v2sched .row{gap:6px;margin-top:6px;flex-wrap:wrap}
+.v2sched input[type="datetime-local"]{max-width:260px}
+.v2sched-warn{color:var(--warn)}
 .v2import-preview{border:1px solid var(--bd);border-radius:12px;padding:12px;margin:10px 0;background:var(--surf)}
 .v2search-suggest{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surf);border:1px solid var(--bd);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.12);z-index:30;max-height:280px;overflow:auto}
 .v2search{position:relative}

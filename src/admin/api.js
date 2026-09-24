@@ -108,9 +108,18 @@ export class AdminApi {
   book(slug) { return this.request('/api/book/' + encodeURIComponent(slug)); }
   putRegistry(registry) { return this.request('/api/registry', { method: 'PUT', body: registry }); }
   putBook(slug, book) { return this.request('/api/book/' + encodeURIComponent(slug), { method: 'PUT', body: book }); }
+  /* sửa MỘT chương (nút “Lưu chương”): chỉ gửi 1 chương thay vì cả bộ —
+     nhanh hơn hẳn với bộ dài, và Worker tự cập nhật số chương trong registry */
+  putChapter(slug, body) { return this.request('/api/book/' + encodeURIComponent(slug) + '/chapter', { method: 'PUT', body }); }
+  saveChapter(slug, index, chapter) { return this.putChapter(slug, { index, chapter }); }
+  deleteChapter(slug, index) { return this.putChapter(slug, { index, remove: true }); }
+  moveChapter(slug, from, to) { return this.putChapter(slug, { from, to }); }
   deleteBook(slug) { return this.request('/api/book/' + encodeURIComponent(slug), { method: 'DELETE' }); }
   deleteComment(slug, id) { return this.request('/api/comments/' + encodeURIComponent(slug) + '/' + encodeURIComponent(id), { method: 'DELETE' }); }
-  postImage(image) { return this.request('/api/img', { method: 'POST', body: { data: image.data, type: image.type, kind: image.kind || '' } }); }
+  /* `id` là mã băm NỘI DUNG ảnh do trình duyệt tính (xem utils/images.js): Worker
+     thấy id đã có trong kho thì trả URL cũ, không ghi thêm bản sao — chỗ tiết
+     kiệm dung lượng nhiều nhất khi dán lại cùng một tấm ảnh. */
+  postImage(image) { return this.request('/api/img', { method: 'POST', body: { data: image.data, type: image.type, kind: image.kind || '', id: image.id || '' } }); }
   lockSet(slug, password) { return this.request('/api/lock/set', { method: 'POST', body: { slug, password } }); }
   recount() { return this.request('/api/recount', { method: 'POST' }); }
   /* chuyển book/ảnh cũ trong KV sang overflow (Supabase/R2) — Worker xử theo lô,

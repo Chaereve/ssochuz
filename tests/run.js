@@ -29,12 +29,22 @@
                        nhiễm bản rỗng vẫn tự lành; mất sạch nguồn thì báo lỗi kèm
                        nút “Thử lại” chạy thật chứ không đứng ở “Đang tải…”
      t_sweep.js        bấm hết mọi nút trong trang xem có lỗi JS nào không
+     t_schedule.mjs    HẸN GIỜ CHƯƠNG + LƯU 1 CHƯƠNG + DUNG LƯỢNG ẢNH: chương hẹn
+                       giờ tương lai KHÔNG lọt ra /api/book công khai, RSS, số chương;
+                       cron tới mốc tự cập nhật registry + báo đẩy; PUT /api/book/<slug>/chapter
+                       (lưu/xoá/đổi thứ tự 1 chương — nút Lưu chương); ảnh có ID theo
+                       nội dung không ghi thêm bản sao, ảnh chương đi Supabase Storage
      t_worker.mjs      CHẠY THẬT worker/cms.js (KV giả trong RAM): kênh đăng, sync
                        Blogger, đăng nhập Google, bình luận, đếm lượt đọc/bình chọn
                        + nhóm BẢO MẬT (CORS đúng ranh giới tên miền, chặn dò khoá,
                        link javascript:, ảnh đại diện lạ, HTML nhập từ Blogger)
      t_registry_guard.mjs  CHẶN GHI ĐÈ MẤT DỮ LIỆU: PUT registry rỗng đè lên kho
                        đang có sách → 400; kèm force:true (xoá bộ cuối) → ok
+     t_kv_quota.mjs    HẠN MỨC KV (thư cảnh báo 90% của Cloudflare): nhịp ghi khoá
+                       `stats` tự giãn theo ngân sách ngày (bản cũ ghi mỗi 10 giây
+                       = 8.640 lượt/ngày > 1.000 lượt miễn phí), 500 lượt xem /
+                       60 lần gửi bình luận không đốt lượt ghi, tổng đánh giá gộp
+                       về 1 khoá `rateagg` (hết LIST mỗi lần /api/stats trượt cache)
      check_src.js      bản phát hành ở gốc (đã rút gọn) có khớp src/ không
      check_secrets.js  không dán nhầm secret/email riêng vào tệp public
      check_headers.js  _headers áp theo THỨ TỰ trong tệp: /sw.js phải được gọi mạng
@@ -48,6 +58,12 @@
                        /admin-legacy, /admin.html (308)… phải giống Cloudflare Pages
                        (không 404/508), và bộ bắt vòng lặp _redirects vẫn phải trả 508
                        khi luật sai
+     t_admin_chapter.js  khung sửa chương: nháp localStorage ghi NGAY khi đổi chương
+                       (không mất chữ đang gõ), ô ngày/giờ cho “Hẹn giờ” + nút
+                       +1 ngày, và “Lưu chương” chỉ PUT 1 chương (không gửi lại
+                       cả bộ, không ghi lại registry từ admin)
+     t_admin_upload.js  nén ảnh theo hạn mức dung lượng (bìa ≤ 120 KB) + ID theo
+                       nội dung để KHÔNG lưu thêm bản sao ảnh trùng
      t_admin_sidebar.js  sidebar admin: thu gọn menu phải là rail CHỈ-ICON vẫn bấm
                        được (luật cũ ẩn cả span.admin-nav-icon ⇒ cột trắng trống, mà
                        trạng thái dính localStorage nên F5 vẫn hỏng); drawer ≤900px
@@ -56,8 +72,8 @@ const path = require('path'), { spawnSync } = require('child_process');
 const cands = (process.env.CZ_TEST_MODULES || '').split(path.delimiter).filter(Boolean)
   .concat([path.join(__dirname, 'node_modules'), path.join(__dirname, '..', 'node_modules')]);
 const env = Object.assign({}, process.env, { NODE_PATH: cands.join(path.delimiter) });
-const files = [path.join('..', 'tools', 'check_src.js'), path.join('..', 'tools', 'check_secrets.js'), path.join('..', 'tools', 'check_headers.js'), 't_worker.mjs', 't_registry_guard.mjs', 't_private.mjs', 't_member_spaces.mjs', 't_space.js', 't_space_hero.js', 't_auth_flow.js', 't_rating_withdraw.js', 't_private_ui.js', 't_config.js', 't_html.js', 't_follow.js', 't_feed.js', 't_push.js', 't_people.js', 't_people_data.js', 't_notif.js', 't_pwa.js', 't_sw_img.js', 't_devserver.js', 't_preload.js', 't_view.js', 't_chapter_url.js',
-  't_chapters.js', 't_home.js', 't_mobile.js', 't_stats.js', 't_ranking.js', 't_quiet_home.js', 't_ranking_worker.mjs', 't_synopsis.js', 't_story.js', 't_reader.js', 't_flows.js', 't_sweep.js', 't_mystats.js', 't_rating.js', 't_adult.js', 't_fallback.js', 't_lock.mjs', 't_lock_ui.js', 't_admin_core.js', 't_admin_online.js', 't_admin_writes.js', 't_admin_upload.js', 't_admin_budget.js', 't_admin_features.js', 't_admin_sidebar.js'];
+const files = [path.join('..', 'tools', 'check_src.js'), path.join('..', 'tools', 'check_secrets.js'), path.join('..', 'tools', 'check_headers.js'), path.join('..', 'tools', 'check_chapter_html.mjs'), path.join('..', 'tools', 'check_chapter_routes.mjs'), 't_worker.mjs', 't_kv_quota.mjs', 't_sanitize.mjs', 't_schedule.mjs', 't_registry_guard.mjs', 't_private.mjs', 't_member_spaces.mjs', 't_space.js', 't_space_hero.js', 't_auth_flow.js', 't_rating_withdraw.js', 't_private_ui.js', 't_config.js', 't_html.js', 't_follow.js', 't_feed.js', 't_push.js', 't_people.js', 't_people_data.js', 't_notif.js', 't_pwa.js', 't_sw_img.js', 't_devserver.js', 't_preload.js', 't_chapter_light.mjs', 't_view.js', 't_chapter_url.js',
+  't_chapters.js', 't_home.js', 't_mobile.js', 't_stats.js', 't_ranking.js', 't_quiet_home.js', 't_ranking_worker.mjs', 't_synopsis.js', 't_story.js', 't_reader.js', 't_flows.js', 't_sweep.js', 't_mystats.js', 't_rating.js', 't_adult.js', 't_fallback.js', 't_lock.mjs', 't_lock_ui.js', 't_admin_core.js', 't_admin_online.js', 't_admin_writes.js', 't_admin_chapter.js', 't_admin_upload.js', 't_admin_budget.js', 't_admin_features.js', 't_admin_sidebar.js'];
 let bad = 0;
 for (const f of files) {
   const r = spawnSync(process.execPath, [path.join(__dirname, f)], { encoding: 'utf8', timeout: 180000, env });

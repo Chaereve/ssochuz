@@ -27,6 +27,15 @@ CŨ đang nằm trong KV sang overflow (kể cả **bìa truyện** → Storage 
 có nút chuyển kèm tiến độ. Cùng bản: import Blogger chấp nhận **chương chỉ có ảnh** (truyện tranh) và
 đặt tên chương theo **parser chung** (`src/shared/chapters.js`) — “Lờí mở đầu”, “Giới thiệu nhân vật”,
 “Ngoại truyện”, “Chương 0” **không còn bị tính nhầm là Chương 1**.
+Từ bản **1.16.0**: **đọc nhẹ + cache lâu** — thêm `GET /api/book/<slug>/toc` (mục lục vài KB)
+và `GET /api/book/<slug>/chapter/<n>` (đúng 1 chương), trang đọc dùng 2 đường này thay cho việc
+tải **cả bộ cho mỗi lượt mở chương** (trung bình 334 KB, bộ lớn 1,4 MB); **khoá cache biên bỏ
+tham số rác** (`?fbclid=`, `?utm_source=`, `?_=`) nên link chia sẻ qua Facebook/Zalo dùng chung
+một bản lưu thay vì mỗi lượt là một lần đọc KV; hạn cache nâng lên (registry 300 giây, bộ 1.800
+giây, chương 24 giờ — bộ còn **chương hẹn giờ** tự hạ còn 60 giây để chương lên sóng đúng mốc);
+bình luận có cache biên 15 giây; và **HTML chương được làm sạch theo danh sách cho phép**
+(`src/shared/sanitize.js`, đã chạy thử trên toàn bộ 1.216 chương thật — không mất chữ, không mất
+ảnh, bỏ 1.198 `onclick` chết của Blogger).
 Trước đó, bản **1.6.0**: đăng nhập qua **Supabase** (hết lỗi `origin_mismatch` của Google), thích **theo từng chương**, bình luận **ngay trong trang đọc** (khách chưa đăng nhập vẫn gửi được), và có `/api/recount` để **chữa dứt điểm số chương sai**.
 
 ```
@@ -39,6 +48,48 @@ Admin (admin.html)  ──PUT──▶  Worker (worker/cms.js)  ──▶  Cloud
 ```
 
 GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới cần build); dữ liệu thì không đi qua GitHub nữa.
+
+## Có gì mới ở bản 1.15.0 — tiết kiệm hạn mức KV (Cloudflare gửi thư 90% quota)
+
+| | |
+|---|---|
+| **Bệnh** | Gói miễn phí của Workers KV chỉ cho **1.000 lượt GHI + 1.000 lượt LIST/ngày**. Bản ≤ 1.14.0 ghi khoá `stats` **mỗi 10 giây bất kể có ai xem hay không** = 8.640 lượt/ngày → tiêu hết hạn mức trong 1–2 giờ đầu ngày, sau đó mọi thao tác ghi (số liệu, phiếu bầu, lưu chương) lỗi 429. Cộng thêm: mỗi lượt xem = 1 đọc + 1 ghi khoá `rl:*`; mỗi lần `/api/stats` trượt cache biên = **1 lượt LIST** (`rateagg:*`); mỗi lần lưu = thêm 1 ghi khoá `_last` |
+| **Chữa 1 — nhịp ghi thông minh** | `src/shared/kv-budget.js` là nguồn duy nhất cho các con số: ghi khi đệm đủ **25 thay đổi**, hoặc hết hẹn **30 giây** mà có ≥3 thay đổi / giữ quá **10 phút** / còn “tem” hạn mức. Ngân sách mặc định **240 lượt ghi khoá `stats`/ngày** (`STATS_WRITE_BUDGET`), chia đều theo giờ UTC; số đã dùng lưu trong chính khoá `stats` (`sw`/`swd`) để nhiều isolate nhìn chung một ngân sách. Hết ngân sách thì số **nằm chờ trong RAM** — `/api/stats` vẫn cộng phần đang đệm nên người đọc thấy đủ, còn ghi hỏng thì nhét lại đệm (không mất số, không làm trang đọc lỗi) |
+| **Chữa 2 — chống spam không đốt quota** | Bộ đếm `rateLimit` nằm trong RAM isolate: khoá theo IP chỉ ghi KV khi IP vượt **200 lượt** (người đọc bình thường tốn 0 lượt ghi), các khoá khác 1 lượt ghi/cửa sổ, chạm trần thì từ chối luôn trong RAM. Hạn mức lượt xem theo IP nay 1.800/6 giờ (cùng tốc độ chặn, ít lượt ghi hơn) |
+| **Chữa 3 — gộp tổng đánh giá** | Mọi bộ nằm trong **một khoá `rateagg`** `{v:1, m:1, a:{slug:{sum,n}}}` thay vì mỗi bộ một khoá; dữ liệu cũ tự gộp trong lần đọc đầu (1 lượt LIST, đánh dấu `m:1`); bản trong RAM dùng lại 60 giây nên `/api/stats` thường **không chạm KV** cho phần sao |
+| **Chữa 4 — bỏ `_last`** | `/api/health` lấy mốc ghi từ `metadata.saved` của chính `registry` → mỗi lần lưu bớt 1 lượt ghi |
+| **Chữa 5 — cache cả 302** | Ảnh bìa/ảnh chương trên Supabase Storage: Worker trả 302 và **302 nay được lưu ở cache biên** (URL ảnh bất biến) → mỗi lượt xem bìa trước đây là 1 lượt đọc KV, nay gần như 0 |
+| **Chữa 6 — bầu nhanh hơn** | `postVote` không còn `flushStats()` trước mỗi phiếu (đọc số liệu đệm khác trường với phiếu); mọi lượt đọc–sửa–ghi khoá `stats` đi qua **một hàng đợi chung** nên hai lượt ghi chồng nhau không nuốt số của nhau |
+| **Theo dõi** | `/api/health` → `stats.writesToday`, `stats.writeBudget`, `stats.buffered` |
+| **Đo được** | `node tools/bench_kv.mjs .` chạy thật `worker/cms.js` trên KV giả có đếm thao tác. Cùng kịch bản 250 lượt xem + 40 phiếu + 15 đánh giá + 20 bình luận + 100 lần đọc bình luận + 60 lần đọc `/api/stats`: **bản cũ 484 ghi / 674 đọc / 60 list → bản mới 137 ghi / 361 đọc / 1 list** (lượt xem: 1,18 → 0,04 lượt ghi mỗi lượt xem) |
+| **Đổi lại** | Số lượt đọc trên bảng xếp hạng có thể trễ vài phút lúc web vắng (phiếu bầu và đánh giá sao **vẫn ghi ngay**); hạn mức chống spam chính xác theo từng isolate (muốn tuyệt đối thì phải dùng Durable Object) |
+| **Test** | `tests/t_kv_quota.mjs` (34 kiểm tra: công thức chia nhịp, 500 lượt xem/60 lần bình luận không đốt lượt ghi, gộp `rateagg` chỉ 1 lượt LIST, `/api/health`) |
+| **Quan trọng** | Nằm TRONG Worker → phải **`npx wrangler deploy`** (xem mục 0). Kiểm tra: `curl <worker>/api/health` thấy `"version": "1.16.0"` |
+
+## 0. Deploy bản 1.16.0 — 2 cách, chọn 1 (ai cũng làm được trong 2 phút)
+
+**Cách A — dòng lệnh (khuyên dùng, cần Node):**
+
+```bash
+cd worker && npx wrangler deploy          # wrangler tự gộp 9 tệp con
+```
+Kiểm tra: mở `https://<worker>/api/health` phải thấy `"version": "1.16.0"`.
+
+**Cách B — dán trong bảng điều khiển Cloudflare (không cần cài gì):**
+
+1. Trên máy, chạy `npm run build:worker` → sinh **`worker/cms.bundle.js`** (một tệp duy nhất
+   190 KB, đã gộp sẵn 9 tệp con; tệp này không commit, ai cần thì chạy lại lệnh).
+2. Cloudflare → **Workers & Pages** → chọn Worker `chuseoz-cms` → **Edit code**.
+3. Xoá hết code cũ, **dán toàn bộ** `worker/cms.bundle.js`, bấm **Deploy**.
+4. Mở `/api/health` xem `"version"` (bản này: `1.16.0`).
+
+> **Đừng dán `worker/cms.js`.** Tệp đó có 9 dòng `import` (overflow, Durable Object, mã dùng chung
+> `src/shared/…`) — bảng điều khiển không tự gộp, dán vào là Worker báo lỗi và **mất cả My Space
+> lẫn truyện riêng tư**. `npm run build:worker` đã kiểm tra hộ: tệp gộp không còn `import`, còn đủ
+> `MemberSpaces`, `PrivateBooks`, `export default`.
+>
+> Chưa deploy cũng KHÔNG sao: web tự rớt về đường cũ (tải cả bộ) — chỉ là chưa được phần nhẹ/nhanh
+> và KV vẫn tốn như trước.
 
 ## Có gì mới ở bản 1.14.0 — overflow cho book/ảnh (kể cả bìa cũ) + parser chương dùng chung
 
@@ -248,7 +299,8 @@ Trang quản trị đã có tab **Phiếu bầu** (phím `V`): chọn bộ → d
 | `MAIL_TO` (Secret) | không | email nhận báo lỗi chữ phía Worker; không đặt trong registry/frontend |
 | `RESEND_API_KEY` | không | đường chuyên nghiệp: khoá API resend.com (miễn phí 100 mail/ngày) |
 | `MAIL_FROM` | không | địa chỉ gửi của Resend, vd `ssochuz library <bao-loi@ten-mien-cua-ban>` |
-| `STATS_FLUSH_MS` | không | thời gian gom số liệu trước khi ghi KV (mặc định 10000) |
+| `STATS_FLUSH_MS` | không | **chỉ để thử nghiệm**: ép ghi số liệu sau từng này mili-giây (bài kiểm thử dùng). Bản chạy thật tự giãn nhịp theo ngân sách ngày |
+| `STATS_WRITE_BUDGET` | không | trần lượt GHI khoá `stats` mỗi ngày (mặc định 240, trong hạn mức 1.000 ghi/ngày của gói miễn phí) |
 
 ## Danh sách API bản 1.6.0 (bổ sung cho bảng ở dưới)
 
@@ -289,8 +341,11 @@ Trang quản trị đã có tab **Phiếu bầu** (phím `V`): chọn bộ → d
 | GET | `/api/health` | mở | phiên bản, KV có sẵn không, số bộ, rev, lần ghi cuối, tổng số liệu |
 | GET | `/api/whoami` | cần khoá | kiểm tra `ADMIN_KEY` đúng hay sai |
 | GET | `/api/registry` | mở | toàn bộ thư viện (62 bộ + slides + lịch + series) |
-| GET | `/api/book/<slug>` | mở | tiêu đề + các chương của 1 bộ |
+| GET | `/api/book/<slug>` | mở | tiêu đề + các chương của 1 bộ (bản đầy đủ — trang đọc cũ, admin, RSS) |
+| GET | `/api/book/<slug>/toc` | mở | **mục lục nhẹ**: đầu sách + tên các chương ĐANG HIỆN (không kèm nội dung) |
+| GET | `/api/book/<slug>/chapter/<n>` | mở | **đúng 1 chương** (n = vị trí trong danh sách đang hiện) + mục lục; chương ẩn/hẹn giờ trả 404 |
 | GET | `/api/schedule` | mở | lịch ra chương |
+| GET | `/api/comments/<slug>` | mở | bình luận của 1 bộ (`?ch=` lọc theo chương, `?limit=`), cache biên 15 giây |
 | GET | `/api/stats` | mở | **lượt đọc/bình chọn + đánh giá sao từ KV** (tổng + hôm nay/tuần/tháng + `rating`/`ratingCount`) |
 | GET | `/feed.xml` | mở | RSS 2.0: 30 chương mới nhất toàn web (cache biên 10 phút) |
 | GET | `/feed.xml?slug=<slug>` | mở | RSS 2.0: chương mới của 1 bộ (tối đa 50, mới trước) |

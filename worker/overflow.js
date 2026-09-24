@@ -13,6 +13,7 @@ export function overflowStatus(env) {
   return {
     supabase,
     covers: supabase, /* bìa → Supabase Storage bucket `covers` (1 GB free, không unlimited) */
+    images: supabase, /* ảnh chương → bucket `images` (để dành 500 MB Postgres cho book/nội dung) */
     r2: !!(env && env.CZ_R2 && typeof env.CZ_R2.put === 'function'),
   };
 }
@@ -154,11 +155,7 @@ function bytesFromB64(s) {
   return out;
 }
 
-function coverPublicUrl(env, pathName) {
-  return sbUrl(env) + '/storage/v1/object/public/covers/' + pathName;
-}
-
-async function ensureCoverBucket(env) {
+async function ensureBucket(env, name) {
   const res = await fetch(sbUrl(env) + '/storage/v1/bucket', {
     method: 'POST',
     headers: {
@@ -167,18 +164,20 @@ async function ensureCoverBucket(env) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      id: 'covers', name: 'covers', public: true,
+      id: name, name: name, public: true,
+      /* trần cứng mỗi tệp — trình duyệt đã nén xuống ~100–250 KB, đặt 8 MB để
+         ảnh lớn dán từ nơi khác vẫn không phá bucket */
       file_size_limit: 8 * 1024 * 1024,
     }),
   });
   if (res.ok || res.status === 409) return true;
   const t = String(await res.text());
   if (/exist|duplicate|already/i.test(t)) return true;
-  throw new Error('Không tạo được bucket covers: HTTP ' + res.status + ' ' + t.slice(0, 140));
+  throw new Error('Không tạo được bucket ' + name + ': HTTP ' + res.status + ' ' + t.slice(0, 140));
 }
 
-async function putCoverObject(env, pathName, bin, type) {
-  return fetch(sbUrl(env) + '/storage/v1/object/covers/' + pathName, {
+function putBucketObject(env, bucket, pathName, bin, type) {
+  return fetch(sbUrl(env) + '/storage/v1/object/' + bucket + '/' + pathName, {
     method: 'POST',
     headers: {
       apikey: sbKey(env),
@@ -190,30 +189,50 @@ async function putCoverObject(env, pathName, bin, type) {
   });
 }
 
+async function putStorageImage(env, bucket, id, data, type) {
+  const bytes = Math.floor(String(data).replace(/=+$/, '').length * 3 / 4);
+  const pathName = id + '.' + coverExt(type);
+  const bin = bytesFromB64(data);
+  let res = await putBucketObject(env, bucket, pathName, bin, type);
+  if (res.status === 404 || res.status === 400) {
+    await ensureBucket(env, bucket);
+    res = await putBucketObject(env, bucket, pathName, bin, type);
+  }
+  if (!res.ok) {
+    const msg = String(await res.text()).slice(0, 180);
+    /* kèm mã HTTP để tầng trên biết 400/404 (chưa có bucket) mà thử lại */
+    throw Object.assign(new Error('Supabase Storage từ chối (HTTP ' + res.status + '): ' + msg), { status: res.status });
+  }
+  const url = sbUrl(env) + '/storage/v1/object/public/' + bucket + '/' + pathName;
+  const at = new Date().toISOString();
+  await env.CZ_KV.put('img:' + id, JSON.stringify({ overflow: 'supabase-storage', url, type, bytes }), {
+    metadata: { type, bytes, at, overflow: 'supabase-storage', url, bucket },
+  });
+  return { bytes, overflow: 'supabase-storage', url, bucket };
+}
+
 /* Bìa truyện: ưu tiên Supabase Storage (CDN, không ăn KV). Chưa gắn
    SUPABASE_SERVICE_ROLE thì rơi về persistImage (KV) như cũ. Gắn rồi mà
    Storage từ chối → ném lỗi, không báo đã lưu. */
 export async function persistCover(env, id, data, type) {
-  const bytes = Math.floor(String(data).replace(/=+$/, '').length * 3 / 4);
   if (!sbUrl(env) || !sbKey(env)) return persistImage(env, id, data, type);
-  const pathName = id + '.' + coverExt(type);
-  const bin = bytesFromB64(data);
-  let res = await putCoverObject(env, pathName, bin, type);
-  if (res.status === 404 || res.status === 400) {
-    await ensureCoverBucket(env);
-    res = await putCoverObject(env, pathName, bin, type);
+  return putStorageImage(env, 'covers', id, data, type);
+}
+
+/* Ảnh TRONG CHƯƠNG (truyện tranh, ảnh minh hoạ): cũng đẩy lên Storage bucket
+   `images`. Vì sao: bảng ssochuz_blobs nằm trong Postgres — gói free chỉ 500 MB
+   *database* (Storage 1 GB tính riêng), mà ảnh chương lại là thứ nặng nhất
+   (1 chương truyện tranh có thể vài chục ảnh). Storage từ chối thì RƠI VỀ
+   đường cũ (blobs/KV) chứ không làm hỏng thao tác upload của người dùng. */
+export async function persistChapterImage(env, id, data, type) {
+  if (!sbUrl(env) || !sbKey(env)) return persistImage(env, id, data, type);
+  try {
+    return await putStorageImage(env, 'images', id, data, type);
+  } catch (e) {
+    const fallback = await persistImage(env, id, data, type);
+    fallback.fallbackFrom = String((e && e.message) || e).slice(0, 160);
+    return fallback;
   }
-  if (!res.ok) {
-    const msg = String(await res.text()).slice(0, 180);
-    throw new Error('Supabase Storage từ chối bìa (HTTP ' + res.status + '): ' + msg);
-  }
-  const url = coverPublicUrl(env, pathName);
-  const at = new Date().toISOString();
-  const stub = { overflow: 'supabase-storage', url, type, bytes };
-  await env.CZ_KV.put('img:' + id, JSON.stringify(stub), {
-    metadata: { type, bytes, at, overflow: 'supabase-storage', url },
-  });
-  return { bytes, overflow: 'supabase-storage', url };
 }
 
 export async function persistImage(env, id, data, type, extraMeta) {
@@ -316,7 +335,12 @@ export async function migrateOverflow(env, opts) {
         const type = (k.metadata && k.metadata.type) || 'image/webp';
         try {
           if (coverIds[id] && st.supabase) { await persistCover(env, id, value, type); out.moved.covers++; }
-          else { await persistImage(env, id, value, type); out.moved.images++; }
+          else if (st.supabase) {
+            /* ảnh chương → Storage bucket `images` (rơi về blobs nếu Storage chối) */
+            const r = await persistChapterImage(env, id, value, type);
+            if (r && r.fallbackFrom) out.failed.push({ key: k.name, error: 'Storage chối, giữ ở blobs: ' + r.fallbackFrom });
+            out.moved.images++;
+          } else { await persistImage(env, id, value, type); out.moved.images++; }
           out.writes++;
         } catch (e) { out.failed.push({ key: k.name, error: String((e && e.message) || e).slice(0, 160) }); }
       }

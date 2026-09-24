@@ -6,3 +6,5 @@ package-lock.json
 .DS_Store
 __pycache__/
 *.pyc
+# bản Worker gộp để dán vào bảng điều khiển Cloudflare (sinh bằng npm run build:worker)
+worker/cms.bundle.js
