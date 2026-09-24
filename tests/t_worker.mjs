@@ -1737,6 +1737,46 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     routes = () => null;
   }
 
+  /* ---------- 18. 502 KHI BIẾN ĐÃ ĐỦ MÀ DỮ LIỆU KHÔNG THẤY (sự cố 24/09) ----
+     Production trả 502 với `missing:[]` + `tried:["supabase: không có khoá …"]`
+     trong khi hint vẫn bảo "thêm SUPABASE_URL" → chỉ sai chỗ cần sửa. Nay 502
+     phải DÒ bảng để phân biệt "khoá sai (RLS che hết)" với "mất đúng dòng này",
+     và hint phải đổi theo. */
+  {
+    const envOk = Object.assign({}, env, {
+      SUPABASE_URL: 'https://sbempty.test', SUPABASE_SERVICE_ROLE: 'service-role-test',
+    });
+    await kv.put('book:ovl-empty', JSON.stringify({ overflow: 'supabase', slug: 'ovl-empty', title: 'Bộ Rỗng', chapters: 2 }));
+
+    /* (1) bảng RỖNG hoàn toàn → nghi khoá không phải SECRET */
+    routes = (u) => String(u).includes('/rest/v1/ssochuz_blobs') ? { status: 200, body: [] } : { status: 404, body: '' };
+    const r1 = await call('GET', '/api/book/ovl-empty/toc', { e: envOk });
+    eq('502-biến-đủ/vẫn 502', r1.status, 502);
+    eq('502-biến-đủ/missing rỗng (biến đủ cả)', (r1.body.missing || []).length, 0);
+    ck('502-biến-đủ/tried nói bảng RỖNG', /RỖNG hoàn toàn/.test((r1.body.tried || []).join(' ')), r1.body.tried, 'có chữ "RỖNG hoàn toàn"');
+    ck('502-biến-đủ/codes có sb-table-empty', (r1.body.codes || []).indexOf('sb-table-empty') >= 0, r1.body.codes, 'mã bệnh để tra cách chữa');
+    ck('502-biến-đủ/hint chỉ vào SUPABASE_SERVICE_ROLE (khoá SECRET)', /SUPABASE_SERVICE_ROLE/.test(r1.body.hint || '') && /sb_secret_/.test(r1.body.hint || ''), r1.body.hint, 'hint nói đặt lại khoá secret');
+    ck('502-biến-đủ/hint KHÔNG xui đi thêm SUPABASE_URL', !/thêm SUPABASE_URL/.test(r1.body.hint || ''), r1.body.hint, 'không đổ lỗi cho biến đã đủ');
+    ck('502-biến-đủ/hint bảo chạy SQL count để phân biệt 2 bệnh', /select count\(\*\) from ssochuz_blobs/.test(r1.body.hint || ''), r1.body.hint, 'hint có câu SQL quyết định');
+    ck('502-biến-đủ/hint vẫn nêu cả 2 lối chữa', /push_to_kv\.py/.test(r1.body.hint || '') && /secret put SUPABASE_SERVICE_ROLE/.test(r1.body.hint || ''), r1.body.hint, 'đủ 2 nhánh: khôi phục / đặt lại khoá');
+
+    /* (2) bảng đọc được và CÓ dữ liệu → mất đúng dòng này, khôi phục từ repo */
+    routes = (u) => {
+      const url = String(u);
+      if (!url.includes('/rest/v1/ssochuz_blobs')) return { status: 404, body: '' };
+      if (/select=key(&|$)/.test(url) || /select=key&limit/.test(url)) return { status: 200, body: [{ key: 'book:bo-khac' }] };
+      return { status: 200, body: [] };
+    };
+    const r2 = await call('GET', '/api/book/ovl-empty/toc', { e: envOk });
+    eq('502-mất-dòng/vẫn 502', r2.status, 502);
+    ck('502-mất-dòng/tried nói bảng ĐỌC ĐƯỢC', /bảng ĐỌC ĐƯỢC và đang có dữ liệu/.test((r2.body.tried || []).join(' ')), r2.body.tried, 'kèm khoá mẫu');
+    ck('502-mất-dòng/hint chỉ vào push_to_kv.py', /push_to_kv\.py/.test(r2.body.hint || ''), r2.body.hint, 'hint có lệnh khôi phục từ repo');
+    ck('502-mất-dòng/codes có sb-row-missing', (r2.body.codes || []).indexOf('sb-row-missing') >= 0, r2.body.codes, 'mã bệnh đúng nhánh');
+    ck('502-mất-dòng/hint KHÔNG xui đặt lại secret', !/secret put SUPABASE_SERVICE_ROLE/.test(r2.body.hint || ''), r2.body.hint, 'không bắt đặt lại khoá khi bảng vẫn đọc được');
+    ck('502-mất-dòng/hint nêu đúng slug cần khôi phục', /--only ovl-empty/.test(r2.body.hint || ''), r2.body.hint, 'lệnh chạy được ngay');
+    routes = () => null;
+  }
+
   fs.rmSync(tmp, { recursive: true, force: true });
 
   const bad = checks.filter((c) => !c.ok);
