@@ -43,8 +43,19 @@ chết của Blogger. Trang quản trị (tab Bác sĩ) hiện **số lượt gh
 “mở trang truyện → KHÔNG tải cả bộ”, “KHÔNG cần tải chương nào”, “bấm Tiếp → không tải lại
 chương đang xem”.
 
-**Đo tại chỗ:** bộ lớn nhất trong repo là `by-your-side.json` (1,43 MB, 32 chương). Mở 1 chương
-= 1 file JSON ~18 KB thay cho 1,43 MB — **giảm ~98 %** dữ liệu cho mỗi lượt mở.
+**Đo trên 5 bộ THẬT trong repo** (`node tools/check_chapter_routes.mjs` — công cụ mới, chạy luôn
+trong bộ kiểm thử), so từng chữ với file gốc:
+
+| Bộ | Số chương | Cả bộ | Mục lục `/toc` | 1 chương `/chapter/<n>` | Tỉ lệ |
+|---|---|---|---|---|---|
+| by-your-side | 32 | 1.827 KB | 1,9 KB | 85,5 KB | **4,7 %** |
+| villain-star | 32 | 900 KB | 2,0 KB | 37,8 KB | **4,2 %** |
+| love-fribe | 33 | 538 KB | 0,8 KB | 23,6 KB | **4,4 %** |
+| in-arms-of-control | 35 | 335 KB | 2,1 KB | 18,0 KB | **5,4 %** |
+| bake-love-feelings | 38 | 791 KB | 1,6 KB | 24,9 KB | **3,1 %** |
+
+Mở một chương vì thế tốn **~4–5 %** dữ liệu so với trước (chương nặng nhất cả repo 85 KB). Mở liên
+tiếp 5 chương cũng chỉ 93–222 KB. Nội dung và tên chương khớp **từng ký tự** với file gốc.
 
 ---
 
@@ -143,6 +154,8 @@ luận vẫn thấy bình luận của mình tức thì (có bài kiểm chứng
   chỉ tải chương cần, tải trước chương kề, Worker cũ thì tự rớt về đường cũ, chương lỗi có nút thử lại.
 - `tests/t_sanitize.mjs` (**mới**, 51 kiểm tra): 27 mẫu tấn công + 10 mẫu giữ nguyên định dạng.
 - `tools/check_chapter_html.mjs` (**mới**): chạy trên 1.216 chương thật (mục 4).
+- `tools/check_chapter_routes.mjs` (**mới**): mở `/toc` + `/chapter/<n>` trên 5 bộ thật, so nội dung
+  từng ký tự, chặn trường hợp chương trả về nặng quá 15 % cả bộ (mục 1).
 - `tests/t_worker.mjs`: **373 kiểm tra** (thêm 43 cho 2 route mới, khoá cache, purge, bình luận).
 - `tests/t_kv_quota.mjs` 34 · `tests/t_lock.mjs` 26 (khoá/bỏ khoá xoá đúng cache mục lục) ·
   `t_pwa.js` (phiên bản `?v=` khớp `sw.js`) · `npm run check:worker` (TypeScript) ·
