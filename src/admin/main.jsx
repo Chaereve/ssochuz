@@ -1,5 +1,5 @@
 import { h, render } from 'preact';
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { AdminApi, clearConnection, loadSavedConnection, normalizeApi, saveConnection, staticRegistry } from './api.js';
 import { createAdminStore, initialState } from './store.js';
 import { QuotaTracker } from './quota.js';
@@ -74,6 +74,14 @@ function classifyConnError(error) {
   return 'network';
 }
 
+/* Phím tắt quản trị — đăng ký/toả bởi component qua API dưới:
+   • Ctrl/Cmd+K  → focus ô tìm kiếm (hoạt động ở mọi màn hình)
+   • Ctrl/Cmd+S  → gọi hàm “lưu” ở màn hình gần nhất (chương đang mở / form
+     metadata bộ truyện); nếu không có gì để lưu thì hiện toast thông báo.
+   • Ctrl/Cmd+N  → thêm chương mới (chỉ hoạt động khi đang ở trình sửa bộ).
+   Không can thiệp vào các native binding của trình duyệt (Ctrl+T, Ctrl+L,
+   Ctrl+W…) và không chặn các phím đơn như hồi ký xấu cũ (1-9, 0, v, r).
+   TipTap trong trình soạn vẫn dùng được Ctrl+B/I/Z/Y như trước. */
 function App() {
   const [state, setState] = useState(store.getState());
   const [activeTab, setActiveTab] = useState('overview');
@@ -85,6 +93,59 @@ function App() {
   const [bookCache, setBookCache] = useState({});
   const [bookLoading, setBookLoading] = useState(false);
   const [listQuery, setListQuery] = useState('');
+
+  /* shortcut handlers — stack để component ở “trong cùng” (ChapterEditor trong
+     BookEditor) bắt sự kiện trước; nếu không xử lý thì đẩy ra component ngoài. */
+  const searchInputRef = useRef(null);
+  const saveHandlersRef = useRef([]);
+  const newChapterHandlersRef = useRef([]);
+  const shortcutsApi = useMemo(() => ({
+    searchInputRef,
+    registerSave: (fn) => { saveHandlersRef.current.push(fn); },
+    unregisterSave: (fn) => { saveHandlersRef.current = saveHandlersRef.current.filter((f) => f !== fn); },
+    registerNewChapter: (fn) => { newChapterHandlersRef.current.push(fn); },
+    unregisterNewChapter: (fn) => { newChapterHandlersRef.current = newChapterHandlersRef.current.filter((f) => f !== fn); },
+  }), []);
+
+  useEffect(() => {
+    function onKey(e) {
+      const mod = e.ctrlKey || e.metaKey;
+      if (!mod) return;
+      const key = String(e.key || '').toLowerCase();
+      if (key === 'k') {
+        const el = searchInputRef.current;
+        if (el && typeof el.focus === 'function') {
+          e.preventDefault();
+          el.focus();
+          try { el.select && el.select(); } catch (err) {}
+        }
+        return;
+      }
+      if (key === 's') {
+        e.preventDefault();
+        const stack = saveHandlersRef.current.slice().reverse();
+        for (const fn of stack) {
+          try { if (fn() === true) return; } catch (err) { console.error('shortcut save handler error', err); }
+        }
+        toast('Không có gì để lưu ở màn hình này.', 'info');
+        return;
+      }
+      if (key === 'n') {
+        /* cho phép Ctrl+N native (mở cửa sổ mới) nếu không đăng ký handler —
+           vậy ta chỉ preventDefault khi thực sự sẽ gọi thêm chương. */
+        const stack = newChapterHandlersRef.current.slice().reverse();
+        if (stack.length) {
+          e.preventDefault();
+          for (const fn of stack) {
+            try { if (fn() === true) return; } catch (err) { console.error('shortcut new-chapter handler error', err); }
+          }
+        }
+        return;
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   useEffect(() => store.subscribe(setState), []);
   useEffect(() => quota.subscribe((snap) => store.setState({ quota: snap })), []);
@@ -925,7 +986,7 @@ function App() {
   if (activeTab === 'overview') pane = <Overview state={state} onReload={reload} onTodo={handleTodo} />;
   else if (activeTab === 'list') pane = <BookList registry={state.registry} selected={selected} onSelected={setSelected} onEdit={editSlug} onNew={() => setActiveTab('new')} onBulkUpdate={bulkUpdate} onDelete={deleteBook} apiBase={state.apiBase} initialQuery={listQuery} writeBlocked={writeBlocked} />;
   else if (activeTab === 'new') pane = <NewBook registry={state.registry} onCreate={createBook} onUploadImage={uploadImage} apiBase={state.apiBase} writeBlocked={writeBlocked} online={state.online} />;
-  else if (activeTab === 'edit') pane = <BookEditor registry={state.registry} slug={currentSlug} bookData={bookCache[currentSlug]} bookLoading={bookLoading} apiBase={state.apiBase} onLoadBook={loadBookForEdit} onSave={saveMeta} onSaveBook={saveBookChapters} onSaveChapter={saveChapterKv} onDeleteChapter={deleteChapterKv} onMoveChapter={moveChapterKv} onUploadImage={uploadImage} onLock={setBookLock} onUnlock={unlockBook} onDuplicate={duplicateBook} onBack={() => setActiveTab('list')} onDelete={deleteBook} writeBlocked={writeBlocked} online={state.online} />;
+  else if (activeTab === 'edit') pane = <BookEditor registry={state.registry} slug={currentSlug} bookData={bookCache[currentSlug]} bookLoading={bookLoading} apiBase={state.apiBase} onLoadBook={loadBookForEdit} onSave={saveMeta} onSaveBook={saveBookChapters} onSaveChapter={saveChapterKv} onDeleteChapter={deleteChapterKv} onMoveChapter={moveChapterKv} onUploadImage={uploadImage} onLock={setBookLock} onUnlock={unlockBook} onDuplicate={duplicateBook} onBack={() => setActiveTab('list')} onDelete={deleteBook} writeBlocked={writeBlocked} online={state.online} shortcuts={shortcutsApi} />;
   else if (activeTab === 'chapters') pane = <ChaptersHub registry={state.registry} apiBase={state.apiBase} onEdit={editSlug} />;
   else if (activeTab === 'homepage') pane = <HomepageCMS registry={state.registry} apiBase={state.apiBase} onSave={saveHomepage} writeBlocked={writeBlocked} online={state.online} />;
   else if (activeTab === 'users') pane = <UsersPanel registry={state.registry} onEdit={editSlug} onFilterAuthor={(name) => { setListQuery(name); setActiveTab('list'); }} />;
@@ -940,7 +1001,7 @@ function App() {
   else pane = <PlaceholderTab tab={activeTab} />;
 
   return (
-    <Layout state={state} activeTab={activeTab} currentSlug={currentSlug} currentTitle={currentTitle} onTab={handleTab} onDisconnect={disconnect} onSearch={handleSearch}>
+    <Layout state={state} activeTab={activeTab} currentSlug={currentSlug} currentTitle={currentTitle} onTab={handleTab} onDisconnect={disconnect} onSearch={handleSearch} shortcuts={shortcutsApi}>
       {notice ? <div class="msgbar show info v2notice">{notice}</div> : null}
       {state.error ? <div class="msgbar show err v2notice">{state.error}</div> : null}
       {state.partialError ? (

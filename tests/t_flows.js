@@ -4,7 +4,8 @@
    - trang đọc: thích – lưu – đánh dấu – bình luận – chia sẻ (lưu thật vào máy)
    - danh sách chương: nhảy số chương, tìm chương (tô sáng), đổi thứ tự, phân trang
    - quản trị: xoá chương, đổi thứ tự chương, xoá bộ (đều phải qua hộp thoại xác nhận)
-   - quản trị: ngắt kết nối; quản trị KHÔNG được có phím tắt (yêu cầu của chủ trang)
+   - quản trị: ngắt kết nối; phím tắt Ctrl+S/K/N hoạt động đúng mục đích; các phím
+     đơn (số, chữ cái) không đổi tab.
    Chạy:  cd tests && node t_flows.js
    ========================================================================== */
 const { page, dataFetch } = require('./mk');
@@ -146,8 +147,10 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 
   /* =====================================================================
      2. QUẢN TRỊ (một admin duy nhất — trang Preact tại /admin): boot tự nối
-        bằng phiên đã lưu, thư viện render từ worker giả, và trang KHÔNG đăng
-        ký phím tắt toàn cục nào (Ctrl+S/K, số/chữ đơn lẻ phải bị bỏ qua).
+        bằng phiên đã lưu, thư viện render từ worker giả. Phím tắt được hỗ trợ:
+        Ctrl/Cmd+K (focus ô tìm kiếm), Ctrl/Cmd+S (lưu — không đổi tab), Ctrl/
+        Cmd+N (thêm chương khi đang ở bộ). Phím đơn (1-9, 0, v, r) vẫn phải bị
+        bỏ qua — không đổi tab, không gây lỗi JS.
         Luồng xoá chương/đổi thứ tự/xoá bộ của admin mới nằm ở tests/t_admin_core.js
         và tests/t_admin_writes.js — không lặp lại ở đây.
      ===================================================================== */
@@ -191,21 +194,33 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   out.adminLibrary = { rows: $$a('.v2book-table tbody tr').length };
   if (!out.adminLibrary.rows) console.log('THƯ VIỆN ADMIN KHÔNG RENDER DÒNG NÀO');
 
-  /* quản trị KHÔNG có phím tắt (yêu cầu của chủ trang): Ctrl+S, Ctrl+K, số/chữ
-     đơn lẻ đều phải bị bỏ qua — không đổi tab, không gây lỗi JS */
+  /* Phím tắt quản trị: Ctrl+K focus ô tìm kiếm, Ctrl+S không đổi tab (toast
+     “không có gì để lưu” vì chưa vào trình sửa bộ), các phím đơn không đổi tab */
   const tabNow = () => { const b = $a('button[data-tab].on'); return b ? b.dataset.tab : ''; };
   const tabBefore = tabNow();
+  const activeBefore = D.activeElement;
+  /* Ctrl+K: focus ô tìm kiếm (input trong .v2search) */
+  D.dispatchEvent(new W.KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
+  await wait(80);
+  const searchFocused = !!($a('.v2search input') && $a('.v2search input') === D.activeElement);
+  /* bỏ focus lại cho sạch */
+  if (D.activeElement && D.activeElement.blur) D.activeElement.blur();
+  /* Ctrl+S: không đổi tab; không ném lỗi */
+  D.dispatchEvent(new W.KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true }));
+  await wait(60);
+  /* phím đơn: không đổi tab */
   for (const k of [
-    { key: 's', ctrlKey: true }, { key: 's', metaKey: true }, { key: 'k', ctrlKey: true },
     { key: '1' }, { key: '5' }, { key: '0' }, { key: 'v' }, { key: 'r' }
   ]) {
     D.dispatchEvent(new W.KeyboardEvent('keydown', Object.assign({ bubbles: true }, k)));
     await wait(60);
   }
   await wait(200);
-  out.noAdminShortcuts = { tabStay: tabNow() === tabBefore };
-  const shortcutFail = out.noAdminShortcuts.tabStay ? [] : ['phím tắt vẫn đổi tab quản trị'];
-  if (shortcutFail.length) console.log('PHÍM TẮT VẪN CÒN: ' + shortcutFail.join('; '));
+  out.noAdminShortcuts = { tabStay: tabNow() === tabBefore, ctrlKFocus: searchFocused };
+  const shortcutFail = [];
+  if (tabNow() !== tabBefore) shortcutFail.push('phím tắt vẫn đổi tab quản trị');
+  if (!searchFocused) shortcutFail.push('Ctrl+K chưa focus ô tìm kiếm');
+  if (shortcutFail.length) console.log('PHÍM TẮT LỖI: ' + shortcutFail.join('; '));
   out.shortcutFail = shortcutFail;
   out.errAdmin = a.errors.slice(0, 6);
 
