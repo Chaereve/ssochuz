@@ -75,6 +75,8 @@
 /HUONG-DAN-SAU-MERGE-1.17.md                    /  301
 # Hướng dẫn làm tay sau bản 1.17.1 (sự cố bảng ssochuz_blobs trống 24/09) — tài liệu nội bộ.
 /HUONG-DAN-SAU-MERGE-1.17.1.md                  /  301
+# Báo cáo 25/09: phím tắt “tạo chương mới” (Ctrl+N bị trình duyệt giữ) — tài liệu nội bộ.
+/BAO-CAO-PHIM-TAT-CTRL-N.md                     /  301
 # --- b) slug cũ → slug mới (bộ Special từng có dấu gạch dưới trong slug ở repo,
 #        trong khi KV dùng dấu gạch ngang — 17/09/2026). Giữ 301 để link cũ
 #        (tìm kiếm, bài chia sẻ) không 404. Khi không còn ai dùng thì xoá.

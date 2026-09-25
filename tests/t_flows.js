@@ -155,10 +155,25 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
         và tests/t_admin_writes.js — không lặp lại ở đây.
      ===================================================================== */
   const FAKE_KEY = 'khoa-test';
+  /* FIX (25/09): REG/BOOK/BOOKS được workerFetch dùng mà KHÔNG BAO GIỜ khai báo
+     — gọi /api/registry (đường tự nối của boot) ném ReferenceError nên admin
+     đứng cổng mãi, phần test phím tắt quản trị đỏ dù web thật chạy đúng.
+     Khai báo fixture thật để boot tự nối + bảng thư viện render được. */
+  let REG = { rev: 'r1', lib: [
+    { title: 'Bộ Thử A', slug: 'bo-thu-a', author: 'TG A', chapters: 5, pubStatus: 'public' },
+    { title: 'Bộ Thử B', slug: 'bo-thu-b', author: 'TG B', chapters: 3, pubStatus: 'public' }
+  ] };
+  let BOOK = { slug: 'third-person', title: 'Bộ Thử B', author: 'TG B',
+    chapters: [{ t: 'Chương 1', html: '<p>1</p>' }, { t: 'Chương 2', html: '<p>2</p>' }] };
+  const BOOKS = { 'bo-thu-a': true, 'bo-thu-b': true, 'third-person': true };
   function workerFetch(url, opt = {}) {
     url = String(url); const method = (opt.method || 'GET').toUpperCase();
+    /* headers bắt buộc phải có: api.js đọc content-type để chọn json()/text() —
+       thiếu nó mọi response về dạng STRING và bảng thư viện render 0 dòng
+       (mà app vẫn “vào được” → test tưởng admin hỏng, thực ra do mock). */
     const ret = (b, ok, st) => Promise.resolve({ ok: ok !== false, status: st || 200,
-      json: () => Promise.resolve(b), text: () => Promise.resolve(JSON.stringify(b)) });
+      json: () => Promise.resolve(b), text: () => Promise.resolve(JSON.stringify(b)),
+      headers: { get: (n) => (String(n).toLowerCase() === 'content-type' ? 'application/json' : '') } });
     const H = (opt.headers || {});
     const auth = H['x-admin-key'] === FAKE_KEY;
     const path = url.replace(/^https:\/\/cms\.test/, '').split('?')[0];
@@ -182,10 +197,17 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   const W = a.win, D = a.doc;
   const $a = s => D.querySelector(s), $$a = s => [...D.querySelectorAll(s)];
   await wait(400);
+  /* Phiên lưu đúng cách app ĐỌC (vá bảo mật 23/09): URL Worker ở localStorage,
+     khoá admin ở SESSIONstorage — loadSavedConnection() xoá khoá khỏi localStorage
+     khi mở trang. Viết khoá vào localStorage thì boot không tự nối được. */
   W.localStorage.setItem('cz_kv_api', 'https://cms.test');
-  W.localStorage.setItem('cz_kv_key', FAKE_KEY);
-  await wait(1000); /* boot đọc phiên đã lưu rồi tự nối Worker */
-  out.adminConnected = { vaoDuoc: !!$a('.v2app'), navTabs: $$a('.v2side nav button').length };
+  W.sessionStorage.setItem('cz_kv_key', FAKE_KEY);
+  /* boot chờ CZ_AUTH.whenSettled(); trong jsdom không tải được script Supabase
+     từ CDN nên settle chỉ tới qua lưới an toàn 8 giây — CHỜ TÍCH CỰC nút .v2app
+     (trước đây chờ cố định 1 giây nên phần này đỏ dù web thật chạy đúng). */
+  let waited = 0;
+  while (!a.doc.querySelector('.v2app') && waited < 11000) { await wait(250); waited += 250; }
+  out.adminConnected = { vaoDuoc: !!$a('.v2app'), navTabs: $$a('.v2side nav button').length, waitedMs: waited };
 
   /* mở tab Thư viện → bảng sách render từ registry của worker giả */
   const btnList = $a('button[data-tab="list"]');

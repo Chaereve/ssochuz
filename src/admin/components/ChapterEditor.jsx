@@ -465,9 +465,11 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
     }
   };
 
-  /* Đăng ký phím tắt: Ctrl/Cmd+S lưu chương đang mở; Ctrl/Cmd+N thêm chương
-     mới. Đăng ký trong ChapterEditor (chứ không phải BookEditor) vì đây là
-     thành phần biết rõ chương hiện tại và đang có dữ liệu thật hay không. */
+  /* Đăng ký phím tắt: Ctrl/Cmd+S lưu chương đang mở; Ctrl/Cmd+N HOẶC
+     Ctrl/Cmd+Alt+N thêm chương mới (Ctrl+Alt là bản chắc chắn — xem chú thích
+     phím tắt trong main.jsx: Chrome/Edge không gửi Ctrl+N cho trang). Đăng ký
+     trong ChapterEditor (chứ không phải BookEditor) vì đây là thành phần biết
+     rõ chương hiện tại và đang có dữ liệu thật hay không. */
   useEffect(() => {
     if (!shortcuts) return;
     const saveHandler = () => {
@@ -500,8 +502,9 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
   }
   return (
     <section class="card2 v2chapter-card" ref={cardRef}>
-      <div class="row"><h3>Chương</h3><span class="grow"></span><button class="btn ghost sm" type="button" onClick={addChapter} title="Thêm chương mới · Ctrl/Cmd+N">Thêm chương</button><button class="btn ghost sm" type="button" disabled={!chapters.length} onClick={() => moveChapter(-1)}>Lên</button><button class="btn ghost sm" type="button" disabled={!chapters.length} onClick={() => moveChapter(1)}>Xuống</button></div>
+      <div class="row"><h3>Chương</h3><span class="grow"></span><button class="btn ghost sm" type="button" onClick={addChapter} title="Thêm chương mới · Ctrl/Cmd+Alt+N">Thêm chương</button><button class="btn ghost sm" type="button" disabled={!chapters.length} onClick={() => moveChapter(-1)}>Lên</button><button class="btn ghost sm" type="button" disabled={!chapters.length} onClick={() => moveChapter(1)}>Xuống</button></div>
       <p class="hint">Editor dùng TipTap; output vẫn là HTML lưu trong <code>chapters[].html</code>. Nháp tự lưu vào máy này (localStorage) sau 0,7 giây ngừng gõ — đổi chương hay đóng tab đều ghi nháp trước, không mất chữ.</p>
+      <p class="hint">Phím tắt thêm chương mới: <b>Ctrl/Cmd+Alt+N</b> (hoặc nút “Thêm chương” bên phải). Không dùng Ctrl/Cmd+N thường — trình duyệt GIỮ phím đó để mở cửa sổ mới, trên Chrome/Edge trang không nhận được phím nên không tạo chương được.</p>
       {loading ? <div class="empty sm">Đang đọc chương…</div> : null}
       <div class="v2chapter-grid">
         <aside class="v2chapter-list">

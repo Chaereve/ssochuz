@@ -79,6 +79,11 @@ function classifyConnError(error) {
    • Ctrl/Cmd+S  → gọi hàm “lưu” ở màn hình gần nhất (chương đang mở / form
      metadata bộ truyện); nếu không có gì để lưu thì hiện toast thông báo.
    • Ctrl/Cmd+N  → thêm chương mới (chỉ hoạt động khi đang ở trình sửa bộ).
+     ⚠ Chrome/Edge GIỮ Ctrl+N cho “mở cửa sổ mới”: trình duyệt không gửi
+     keydown cho trang nên phím đó KHÔNG BAO GIỜ vào được tay JS. Vì vậy cùng
+     một tay “thêm chương” còn bắt Ctrl/Cmd+Alt+N (không bị giữ) — trên
+     Chrome/Edge phải dùng Ctrl/Cmd+Alt+N; Ctrl/Cmd+N vẫn giữ cho trình duyệt
+     nào có gửi sự kiện (Firefox/Safari).
    Không can thiệp vào các native binding của trình duyệt (Ctrl+T, Ctrl+L,
    Ctrl+W…) và không chặn các phím đơn như hồi ký xấu cũ (1-9, 0, v, r).
    TipTap trong trình soạn vẫn dùng được Ctrl+B/I/Z/Y như trước. */
@@ -130,9 +135,14 @@ function App() {
         toast('Không có gì để lưu ở màn hình này.', 'info');
         return;
       }
-      if (key === 'n') {
-        /* cho phép Ctrl+N native (mở cửa sổ mới) nếu không đăng ký handler —
-           vậy ta chỉ preventDefault khi thực sự sẽ gọi thêm chương. */
+      /* “Thêm chương”: bắt CẢ Ctrl/Cmd+N lẫn Ctrl/Cmd+Alt+N.
+         Lý do phải có bản Ctrl+Alt: Ctrl+N là phím trình duyệt GIỮ cho việc
+         “mở cửa sổ mới” — trên Chrome/Edge keydown không được gửi cho trang,
+         handler bên dưới không bao giờ chạy (đây chính là lỗi “Ctrl+N không
+         tạo chương mới”). Ctrl+Alt+N không bị giữ nên chạy chắc chắn.
+         (e.code 'KeyN' để ăn luôn bàn phím mà Ctrl+Alt+N in ra ký tự khác.)
+         Chưa đăng ký handler (không ở trình sửa bộ) → để nguyên hành vi native. */
+      if (key === 'n' || e.code === 'KeyN') {
         const stack = newChapterHandlersRef.current.slice().reverse();
         if (stack.length) {
           e.preventDefault();
