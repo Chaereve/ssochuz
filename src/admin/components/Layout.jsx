@@ -101,7 +101,7 @@ function ThemeButton() {
   );
 }
 
-export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', onTab, onDisconnect, onSearch, children }) {
+export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', onTab, onDisconnect, onSearch, shortcuts, children }) {
   const quota = state.quota || {};
   const used = Number(quota.writesToday) || 0;
   const limit = Number(quota.limit) || 1000;
@@ -120,6 +120,7 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
   const openReports = Number(state.reports && state.reports.open) || 0;
   const spam = spamSuspects(state.comments).length;
   const lib = ((state.registry && state.registry.lib) || []);
+  const searchRef = shortcuts && shortcuts.searchInputRef ? shortcuts.searchInputRef : null;
 
   useEffect(() => {
     try { localStorage.setItem('ssochuz-admin-side', collapsed ? '1' : '0'); } catch (e) {}
@@ -209,7 +210,7 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
             <a class="logo v2mlogo" href="/" aria-label="Trang chủ ssochuz"><span class="dot"></span>ssochuz</a>
             <form class="v2search" onSubmit={submitSearch}>
               <Icon name="search" />
-              <input class="inp" value={q} placeholder="Tìm truyện, tác giả…" onInput={(e) => setQ(e.target.value)} aria-label="Tìm trong quản trị" />
+              <input class="inp" ref={searchRef} value={q} placeholder="Tìm truyện, tác giả… (Ctrl+K)" onInput={(e) => setQ(e.target.value)} aria-label="Tìm trong quản trị" />
               {suggest.length ? (
                 <div class="v2search-suggest" role="listbox" aria-label="Gợi ý tìm kiếm">
                   {suggest.map((b) => (

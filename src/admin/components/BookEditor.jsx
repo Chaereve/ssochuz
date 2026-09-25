@@ -1,13 +1,14 @@
 import { h } from 'preact';
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { slugify, COMPLETION_STATUSES, PUB_STATUSES, VISIBILITIES } from '../utils/books.js';
 import { ChapterEditor } from './ChapterEditor.jsx';
 import { ImageUploader } from './ImageUploader.jsx';
 import { persistableCover } from '../utils/cover.js';
 import { BookBadges } from './Badges.jsx';
 
-export function BookEditor({ registry, slug, bookData, bookLoading, apiBase, onLoadBook, onSave, onSaveBook, onSaveChapter, onDeleteChapter, onMoveChapter, onUploadImage, onLock, onUnlock, onDuplicate, onBack, onDelete, writeBlocked = false, online = false }) {
+export function BookEditor({ registry, slug, bookData, bookLoading, apiBase, onLoadBook, onSave, onSaveBook, onSaveChapter, onDeleteChapter, onMoveChapter, onUploadImage, onLock, onUnlock, onDuplicate, onBack, onDelete, writeBlocked = false, online = false, shortcuts }) {
   const book = ((registry && registry.lib) || []).find((item) => item.slug === slug);
+  const metaFormRef = useRef(null);
   const [form, setForm] = useState({
     title: '', slug: '', author: '', couple: '', year: '', status: 'Đang cập nhật',
     is18: false, thumb: '', coverAlt: '', synopsis: '', genre: '',
@@ -33,6 +34,33 @@ export function BookEditor({ registry, slug, bookData, bookLoading, apiBase, onL
     setLockPw2('');
   }, [slug]);
   useEffect(() => { if (slug && onLoadBook) onLoadBook(slug); }, [slug]);
+
+  /* Ctrl+S: lưu metadata khi focus nằm trong form metadata (không phải ở khóa
+     mật mã / trình soạn chương / các nơi khác). ChapterEditor đăng ký sau
+     nên được gọi trước; nếu focus ngoài khối chương thì handler này chạy. */
+  useEffect(() => {
+    if (!shortcuts || !shortcuts.registerSave) return;
+    const handler = () => {
+      const formEl = metaFormRef.current;
+      if (!formEl) return false;
+      const ae = document.activeElement;
+      /* không ăn phím khi đang ở trong khóa mật mã hay chapter editor */
+      if (ae) {
+        const lock = formEl.parentElement && formEl.parentElement.querySelector('.v2lock-panel');
+        if (lock && lock.contains(ae)) return false;
+        const chapter = formEl.parentElement && formEl.parentElement.querySelector('.v2chapter-editor');
+        if (chapter && chapter.contains(ae)) return false;
+        /* ngoài form metadata thì không tự submit (vd. focus trên sidebar/topbar) */
+        if (!formEl.contains(ae)) return false;
+      }
+      const btn = formEl.querySelector('button[type="submit"]');
+      if (btn && !btn.disabled) { btn.click(); return true; }
+      return false;
+    };
+    shortcuts.registerSave(handler);
+    return () => shortcuts.unregisterSave && shortcuts.unregisterSave(handler);
+  }, [shortcuts, slug]);
+
   if (!book) return <div id="pane-edit" class="empty">Chưa chọn bộ. Vào tab Thư viện rồi bấm Sửa.</div>;
   function update(key, value) { setForm((cur) => Object.assign({}, cur, { [key]: value })); }
   async function saveLock(e) {
@@ -60,7 +88,7 @@ export function BookEditor({ registry, slug, bookData, bookLoading, apiBase, onL
         <h3 style={{ margin: 0 }}>Sửa metadata: {book.title}</h3>
         <BookBadges book={book} />
       </div>
-      <form class="v2form" onSubmit={(e) => { e.preventDefault(); onSave(book.slug, Object.assign({}, form, { slug: slugify(form.slug || form.title), is18: form.is18 ? '1' : '0', thumb: persistableCover(form.thumb) })); }}>
+      <form class="v2form" ref={metaFormRef} onSubmit={(e) => { e.preventDefault(); onSave(book.slug, Object.assign({}, form, { slug: slugify(form.slug || form.title), is18: form.is18 ? '1' : '0', thumb: persistableCover(form.thumb) })); }}>
         <section class="v2fsec" aria-label="Thông tin cơ bản">
           <div class="v2fsec-head"><b>Thông tin cơ bản</b><span class="hint">Tên, slug và thông tin tác giả hiển thị trên thẻ truyện.</span></div>
           <label class="fl">Tên<input class="inp" value={form.title} onInput={(e) => update('title', e.target.value)} /></label>
@@ -114,8 +142,9 @@ export function BookEditor({ registry, slug, bookData, bookLoading, apiBase, onL
           <label class="fl">Tóm tắt<textarea class="inp ta" value={form.synopsis} onInput={(e) => update('synopsis', e.target.value)} /></label>
         </section>
         <div class="row sticky-actions">
-          <button class="btn pri" type="submit" disabled={writeBlocked}>{writeBlocked ? 'Hết quota KV' : (online ? 'Lưu metadata' : 'Lưu nháp phiên')}</button>
+          <button class="btn pri" type="submit" disabled={writeBlocked} title="Lưu metadata · Ctrl/Cmd+S">{writeBlocked ? 'Hết quota KV' : (online ? 'Lưu metadata' : 'Lưu nháp phiên')}</button>
           {!online ? <span class="sm muted">Chế độ tĩnh — chưa ghi Cloudflare KV.</span> : null}
+          <span class="sm muted">Phím tắt: Ctrl/Cmd+S lưu · Ctrl/Cmd+K tìm · Ctrl/Cmd+N thêm chương</span>
         </div>
       </form>
       <form class="v2form v2lock-panel" onSubmit={saveLock}>
@@ -129,7 +158,7 @@ export function BookEditor({ registry, slug, bookData, bookLoading, apiBase, onL
           {book.lock ? <button class="btn ghost" type="button" disabled={lockBusy || blocked} onClick={() => onUnlock(book.slug)}>Bỏ khóa</button> : null}
         </div>
       </form>
-      <ChapterEditor slug={slug} book={bookData} loading={bookLoading} apiBase={apiBase} onSaveBook={onSaveBook} onSaveChapter={onSaveChapter} onDeleteChapter={onDeleteChapter} onMoveChapter={onMoveChapter} onUploadImage={onUploadImage} writeBlocked={writeBlocked} online={online} />
+      <ChapterEditor slug={slug} book={bookData} loading={bookLoading} apiBase={apiBase} onSaveBook={onSaveBook} onSaveChapter={onSaveChapter} onDeleteChapter={onDeleteChapter} onMoveChapter={onMoveChapter} onUploadImage={onUploadImage} writeBlocked={writeBlocked} online={online} shortcuts={shortcuts} />
       <section class="v2danger">
         <h3>Khu vực nguy hiểm</h3>
         <p class="hint">Nhân bản tạo slug mới và tự bỏ khóa trên bản sao. Xoá bộ cần gõ đúng slug; book key và registry đều bị ảnh hưởng.</p>

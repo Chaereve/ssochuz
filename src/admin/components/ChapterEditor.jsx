@@ -112,7 +112,7 @@ function Toolbar({ editor }) {
   );
 }
 
-export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook, onSaveChapter, onDeleteChapter, onMoveChapter, onUploadImage, writeBlocked = false, online = false }) {
+export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook, onSaveChapter, onDeleteChapter, onMoveChapter, onUploadImage, writeBlocked = false, online = false, shortcuts }) {
   const [localBook, setLocalBook] = useState(book || null);
   const [index, setIndex] = useState(0);
   const [title, setTitle] = useState('');
@@ -137,6 +137,7 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
   const fileRef = useRef(null);
   const multiRef = useRef(null);
   const imageRef = useRef(null);
+  const cardRef = useRef(null);
   /* Bản đang có trên Worker của chương mở hiện tại (đối chiếu để biết “chưa lưu”) */
   const baseRef = useRef({ title: '', html: '', status: 'published', atLocal: '' });
   /* Dữ liệu đang gõ, cập nhật NGAY trong lúc render — nhờ vậy hàm làm sạch
@@ -464,12 +465,42 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
     }
   };
 
+  /* Đăng ký phím tắt: Ctrl/Cmd+S lưu chương đang mở; Ctrl/Cmd+N thêm chương
+     mới. Đăng ký trong ChapterEditor (chứ không phải BookEditor) vì đây là
+     thành phần biết rõ chương hiện tại và đang có dữ liệu thật hay không. */
+  useEffect(() => {
+    if (!shortcuts) return;
+    const saveHandler = () => {
+      /* chỉ xử lý khi người dùng đang làm việc trong khối chương (tiêu đề
+         chương / editor / các select chương), không ăn của form metadata. */
+      const ae = document.activeElement;
+      const card = cardRef.current;
+      if (card && ae && !card.contains(ae)) return false;
+      if (!localBook) return false;
+      if (saving) return true; /* đang lưu rồi, chặn double-submit */
+      if (writeBlocked) { toast('Quota KV hôm nay đã hết — không ghi.', 'err'); return true; }
+      saveChapter();
+      return true;
+    };
+    const newHandler = () => {
+      if (!localBook) return false;
+      addChapter();
+      return true;
+    };
+    shortcuts.registerSave(saveHandler);
+    if (shortcuts.registerNewChapter) shortcuts.registerNewChapter(newHandler);
+    return () => {
+      shortcuts.unregisterSave && shortcuts.unregisterSave(saveHandler);
+      shortcuts.unregisterNewChapter && shortcuts.unregisterNewChapter(newHandler);
+    };
+  }, [shortcuts, localBook && localBook.slug, index, saving, writeBlocked, title, html, status, atLocal, temps.length, online]);
+
   if (!localBook && !loading) {
-    return <section class="card2"><div class="row"><h3>Chương</h3><span class="grow"></span><button class="btn ghost sm" type="button" onClick={() => onLoad && onLoad()}>Đọc dữ liệu chương</button></div><p class="hint">Chưa có dữ liệu chương trong cache.</p></section>;
+    return <section class="card2" ref={cardRef}><div class="row"><h3>Chương</h3><span class="grow"></span><button class="btn ghost sm" type="button" onClick={() => onLoad && onLoad()}>Đọc dữ liệu chương</button></div><p class="hint">Chưa có dữ liệu chương trong cache.</p></section>;
   }
   return (
-    <section class="card2 v2chapter-card">
-      <div class="row"><h3>Chương</h3><span class="grow"></span><button class="btn ghost sm" type="button" onClick={addChapter}>Thêm chương</button><button class="btn ghost sm" type="button" disabled={!chapters.length} onClick={() => moveChapter(-1)}>Lên</button><button class="btn ghost sm" type="button" disabled={!chapters.length} onClick={() => moveChapter(1)}>Xuống</button></div>
+    <section class="card2 v2chapter-card" ref={cardRef}>
+      <div class="row"><h3>Chương</h3><span class="grow"></span><button class="btn ghost sm" type="button" onClick={addChapter} title="Thêm chương mới · Ctrl/Cmd+N">Thêm chương</button><button class="btn ghost sm" type="button" disabled={!chapters.length} onClick={() => moveChapter(-1)}>Lên</button><button class="btn ghost sm" type="button" disabled={!chapters.length} onClick={() => moveChapter(1)}>Xuống</button></div>
       <p class="hint">Editor dùng TipTap; output vẫn là HTML lưu trong <code>chapters[].html</code>. Nháp tự lưu vào máy này (localStorage) sau 0,7 giây ngừng gõ — đổi chương hay đóng tab đều ghi nháp trước, không mất chữ.</p>
       {loading ? <div class="empty sm">Đang đọc chương…</div> : null}
       <div class="v2chapter-grid">
@@ -585,7 +616,7 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
             <button class="btn ghost sm" type="button" disabled={uploading} onClick={() => imageRef.current && imageRef.current.click()}>{uploading ? 'Đang nén ảnh…' : 'Upload ảnh'}</button>
             {draft && !restored ? <button class="btn ghost sm" type="button" onClick={restoreDraft}>Khôi phục nháp</button> : null}
             <button class="btn ghost sm" type="button" onClick={() => setPreview(!preview)}>{preview ? 'Ẩn preview' : 'Preview độc giả'}</button>
-            <button class="btn pri sm" type="button" disabled={writeBlocked || !!temps.length || saving} title={writeBlocked ? 'Quota KV hôm nay đã hết — nháp cục bộ vẫn được giữ' : (online ? 'Ghi chương vào Cloudflare KV (chỉ gửi 1 chương)' : 'Chỉ lưu nháp phiên — chưa ghi Cloudflare KV')} onClick={saveChapter}>{saving ? 'Đang lưu…' : (writeBlocked ? 'Hết quota KV' : (online ? 'Lưu chương' : 'Lưu nháp phiên'))}</button>
+            <button class="btn pri sm" type="button" disabled={writeBlocked || !!temps.length || saving} title={(writeBlocked ? 'Quota KV hôm nay đã hết — nháp cục bộ vẫn được giữ' : (online ? 'Ghi chương vào Cloudflare KV (chỉ gửi 1 chương)' : 'Chỉ lưu nháp phiên — chưa ghi Cloudflare KV')) + ' · Ctrl/Cmd+S'} onClick={saveChapter}>{saving ? 'Đang lưu…' : (writeBlocked ? 'Hết quota KV' : (online ? 'Lưu chương' : 'Lưu nháp phiên'))}</button>
           </div>
           <div class="v2chap-danger">
             <span class="sm">Xoá chương đang chọn khỏi bộ — cần gõ XOÁ để xác nhận, không khôi phục được.</span>
