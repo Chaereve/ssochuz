@@ -144,7 +144,7 @@ export function BookEditor({ registry, slug, bookData, bookLoading, apiBase, onL
         <div class="row sticky-actions">
           <button class="btn pri" type="submit" disabled={writeBlocked} title="Lưu metadata · Ctrl/Cmd+S">{writeBlocked ? 'Hết quota KV' : (online ? 'Lưu metadata' : 'Lưu nháp phiên')}</button>
           {!online ? <span class="sm muted">Chế độ tĩnh — chưa ghi Cloudflare KV.</span> : null}
-          <span class="sm muted">Phím tắt: Ctrl/Cmd+S lưu · Ctrl/Cmd+K tìm · Ctrl/Cmd+N thêm chương</span>
+          <span class="sm muted">Phím tắt: Ctrl/Cmd+S lưu · Ctrl/Cmd+K tìm · Ctrl/Cmd+Alt+N thêm chương (Ctrl/Cmd+N bị trình duyệt giữ cho “mở cửa sổ mới”)</span>
         </div>
       </form>
       <form class="v2form v2lock-panel" onSubmit={saveLock}>

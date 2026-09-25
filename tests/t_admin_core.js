@@ -65,6 +65,26 @@ const chapCount = (reg.lib || []).reduce((sum, b) => sum + (Number(b.chapters) |
   assert.ok(out.chapterEditor.lockPanel, 'thiếu panel khóa mật mã');
   assert.ok(out.chapterEditor.duplicate, 'thiếu nút nhân bản bộ');
 
+  /* Phím tắt “thêm chương mới”: Ctrl+N VÀ bản chắc chắn Ctrl+Alt+N
+     (Chrome/Edge giữ Ctrl+N cho “mở cửa sổ mới” nên keydown không tới được
+     trang — Ctrl+Alt+N là phím phải dùng trên đó; xem main.jsx). Trong jsdom
+     cả hai phím đều tới listener → test giữ dây chuyền handler không đứt. */
+  const pressN = (opt) => { doc.dispatchEvent(new win.KeyboardEvent('keydown', Object.assign({ key: 'n', bubbles: true }, opt))); };
+  const chapListCount = () => doc.querySelectorAll('.v2chapter-list button').length;
+  const chapsBefore = chapListCount();
+  pressN({ ctrlKey: true });
+  await wait(300);
+  const chapsAfterCtrlN = chapListCount();
+  pressN({ ctrlKey: true, altKey: true });
+  await wait(300);
+  const chapsAfterCtrlAltN = chapListCount();
+  out.addChapterShortcut = { chapsBefore, chapsAfterCtrlN, chapsAfterCtrlAltN };
+  assert.strictEqual(chapsAfterCtrlN, chapsBefore + 1, 'Ctrl+N chưa thêm chương mới');
+  assert.strictEqual(chapsAfterCtrlAltN, chapsAfterCtrlN + 1, 'Ctrl+Alt+N chưa thêm chương mới');
+  /* chương mới phải đang được mở (hàng cuối tô sáng) */
+  const newChapterBtns = [...doc.querySelectorAll('.v2chapter-list button')];
+  assert.ok(newChapterBtns[newChapterBtns.length - 1].classList.contains('on'), 'chương mới chưa được mở');
+
   assert.ok(!doc.querySelector('button[data-tab="classify"]'), 'menu Phân loại còn lại');
   assert.ok(!doc.querySelector('button[data-tab="genres"]'), 'menu Thể loại còn lại');
   assert.ok(!doc.querySelector('#pane-classify'), 'pane Phân loại còn lại');
