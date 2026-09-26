@@ -351,7 +351,9 @@ const handler = {
       /* ---------- cần khoá quản trị ---------- */
       if (p === '/api/registry' && req.method === 'PUT') {
         const r = await putKV(req, env, 'registry', cors, 'cập nhật thư viện (registry)');
-        if (r.ok) { await edgePurge(org + '/api/registry'); await purgeFeed(org); }
+        /* registry mang trạng thái xuất bản (visibility/pubStatus/cờ lock) —
+           đổi ở đây phải hết bản lưu NỘI DUNG ở biên, không chỉ registry/feed */
+        if (r.ok) { await edgePurge(org + '/api/registry'); await edgePurgePrefix(org, '/api/book/'); await purgeFeed(org); }
         return r;
       }
       if (m && req.method === 'PUT') {
@@ -1062,6 +1064,28 @@ function isPubliclyListed(n) {
   }
   return true;
 }
+/* entry của 1 slug trong registry — các đường đọc NỘI DUNG cần biết trạng thái
+   xuất bản (riêng tư / bản nháp) vốn chỉ có ở danh sách, không nằm trong book.
+   Cache trong isolate 60 giây + invalidate khi ghi registry: mỗi lượt mở chương
+   vẫn chỉ tốn ĐÚNG 1 lượt đọc KV (giữ invariant test t_worker), đổi trạng thái
+   xuất bản được tôn trọng tối đa trễ 60 giây ở isolate khác (isolate ghi thì
+   invalidate ngay). */
+const REG_ENTRY_TTL = 60 * 1000;   /* giây → ms */
+let regEntryCache = { at: 0, lib: null };
+function regEntryCachePut(lib) { regEntryCache = { at: Date.now(), lib: Array.isArray(lib) ? lib : [] }; }
+function regEntryCacheDrop() { regEntryCache = { at: 0, lib: null }; }
+async function readRegistryEntry(env, slug) {
+  if (!env.CZ_KV || !slug) return null;
+  if (!regEntryCache.lib || (Date.now() - regEntryCache.at) > REG_ENTRY_TTL) {
+    try {
+      const reg = await env.CZ_KV.get('registry', { type: 'json' });
+      regEntryCachePut(reg && reg.lib);
+    } catch (e) { return null; }
+  }
+  const lib = regEntryCache.lib;
+  if (!lib) return null;
+  return lib.find((x) => x && x.slug === slug) || null;
+}
 function publicRegistryJSON(reg) {
   let copy;
   try { copy = JSON.parse(JSON.stringify(reg || {})); } catch (e) { copy = reg || {}; }
@@ -1280,7 +1304,12 @@ async function getFeed(req, env, cors) {
     const nov = bySlug[slug];
     /* chương của truyện khóa mật mã KHÔNG được lọt ra feed RSS */
     if (nov && nov.lock) return json({ ok: false, error: 'bộ này đã được khóa mật mã — không có feed công khai' }, { status: 404, cors });
+    /* riêng tư / bản nháp / chưa tới giờ ra: không có feed công khai (F-002) */
+    if (nov && !isPubliclyListed(nov)) return json({ ok: false, error: 'bộ này chưa có chương nào' }, { status: 404, cors });
     const book = await readBook(env, slug);
+    /* cờ registry có thể lệch (hai lần ghi không nguyên tử) — book.lock là sự
+       thật: kể cả khi cờ lock mất, feed vẫn chặn nội dung (F-001/F-002). */
+    if (book && book.lock) return json({ ok: false, error: 'bộ này đã được khóa mật mã — không có feed công khai' }, { status: 404, cors });
     const chs = (book && Array.isArray(book.chapters)) ? book.chapters : [];
     if (!chs.length) return json({ ok: false, error: 'bộ này chưa có chương nào' }, { status: 404, cors });
     const title = (nov && nov.title) || (book && book.title) || slug;
@@ -1300,11 +1329,12 @@ async function getFeed(req, env, cors) {
       })).reverse().slice(0, 50);
   } else {
     /* bỏ luôn truyện khóa mật mã — feed chỉ dành cho nội dung công khai */
-    const cands = lib.filter((n) => n && n.slug && !n.lock && (parseInt(n.chapters, 10) || 0) > 0)
+    const cands = lib.filter((n) => n && n.slug && !n.lock && isPubliclyListed(n) && (parseInt(n.chapters, 10) || 0) > 0)
       .sort((a, b) => String(b.updated || '').localeCompare(String(a.updated || ''))).slice(0, 12);
     const books = await Promise.all(cands.map((n) => readBook(env, n.slug).catch(() => null)));
     cands.forEach((n, k) => {
       const book = books[k];
+      if (!book || book.lock) return;   /* book.lock là sự thật khi cờ registry lệch */
       const chs = (book && Array.isArray(book.chapters)) ? book.chapters : [];
       /* 5 chương ĐANG HIỆN mới nhất (bỏ chương hẹn giờ chưa tới mốc / đang Ẩn) */
       const take = chs.map((c, i) => ({ c, i })).filter((x) => !isChapterPending(x.c)).slice(-5);
@@ -1357,6 +1387,7 @@ async function getKV(env, key, cors, cacheSec, mode) {
   if (key === 'registry') {
     try {
       const parsed = JSON.parse(value);
+      regEntryCachePut(parsed && parsed.lib);   /* vừa đọc xong — làm mới cache entry */
       publicValue = (mode && mode.admin) ? registryJSON(parsed) : publicRegistryJSON(parsed);
     } catch (e) { publicValue = value; }
   }
@@ -1400,19 +1431,22 @@ function bytesFromB64(s) {
   for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
   return out;
 }
-async function lockSig(env, slug, exp) {
+/* `ver` = dấu vết THẾ HỆ mật mã (book.lock.set): đổi mật mã là đổi ver → mọi
+   token cấp trước đó tự mất hiệu lực (F-004: token cũ từng sống sót qua
+   rotation ≤6h vì chỉ ký slug|exp, không gắn thế hệ mật mã). */
+async function lockSig(env, slug, exp, ver) {
   const secret = lockSecret(env);
   if (!secret) return '';
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(slug + '|' + exp)));
+  const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(slug + '|' + exp + '|' + String(ver || ''))));
   return b64uFromBytes(sig);
 }
-async function makeLockToken(env, slug) {
+async function makeLockToken(env, slug, ver) {
   const exp = Math.floor(Date.now() / 1000) + LOCK_TTL;
-  const sig = await lockSig(env, slug, exp);
+  const sig = await lockSig(env, slug, exp, ver);
   return sig ? sig + '.' + exp : '';
 }
-async function verifyLockToken(env, slug, token) {
+async function verifyLockToken(env, slug, token, ver) {
   token = String(token || '');
   const i = token.lastIndexOf('.');
   if (i < 8) return 0;
@@ -1420,7 +1454,7 @@ async function verifyLockToken(env, slug, token) {
   const now = Math.floor(Date.now() / 1000);
   if (exp <= now || exp - now > 30 * 86400) return 0;   /* hết hạn hoặc xa vô lý */
   const cand = token.slice(0, i);
-  const want = await lockSig(env, slug, exp);
+  const want = await lockSig(env, slug, exp, ver);
   if (!want || want.length !== cand.length) return 0;
   let diff = 0;
   for (let k = 0; k < want.length; k++) diff |= want.charCodeAt(k) ^ cand.charCodeAt(k);
@@ -1517,6 +1551,12 @@ async function getBookPublic(req, env, cors) {
        bộ vẫn còn, chỉ là Worker mất đường lấy nội dung) */
     if (!got.book) return overflowFailResponse(cors, slug, got);
     const book = got.book;
+    /* riêng tư / chưa xuất bản (F-002): ẩn ở MỌI đường đọc nội dung, không chỉ
+       ở danh sách public. Admin đã đi nhánh riêng phía trên nên vẫn đọc được. */
+    const entryPub = await readRegistryEntry(env, slug);
+    if (entryPub && !isPubliclyListed(entryPub)) {
+      return json({ ok: false, error: 'chưa có dữ liệu cho khoá book:' + slug }, { status: 404, cors });
+    }
     /* bộ còn chương hẹn giờ: bản lưu chỉ sống 60 giây, đủ để chương lên sóng
        gần đúng mốc giờ (bản cũ: 300 giây; nếu để 1.800 giây như bộ thường thì
        chương hẹn giờ hiện trễ tới nửa tiếng — đúng thứ người viết cần nhất). */
@@ -1528,7 +1568,7 @@ async function getBookPublic(req, env, cors) {
     if (metadata && metadata.etag) h.etag = metadata.etag;
     const pub = publicBookShape(book);
     if (book && book.lock) {
-      const exp = await verifyLockToken(env, slug, u.searchParams.get('token'));
+      const exp = await verifyLockToken(env, slug, u.searchParams.get('token'), String((book.lock && book.lock.set) || ''));
       if (!exp) {
         /* chỉ trả vỏ: KHÔNG có chương, không synFull, không salt/hash */
         return new Response(JSON.stringify({ title: book.title || slug, slug: slug, locked: true, chapters: [] }), { headers: h });
@@ -1596,9 +1636,17 @@ async function getBookChapterPublic(req, env, cors, slug, n, tocOnly) {
       if (got.status === 'unreadable') return overflowFailResponse(cors, slug, got);
       return json({ ok: false, error: 'chưa có dữ liệu cho khoá book:' + slug }, { status: 404, cors });
     }
+    /* riêng tư / chưa xuất bản (F-002): ẩn cả mục lục lẫn chương — trả 404 giống
+       "chưa có dữ liệu" để không lộ sự tồn tại. Admin vẫn đọc được. */
+    if (!admin) {
+      const entryPub = await readRegistryEntry(env, slug);
+      if (entryPub && !isPubliclyListed(entryPub)) {
+        return json({ ok: false, error: 'chưa có dữ liệu cho khoá book:' + slug }, { status: 404, cors });
+      }
+    }
     /* bộ khoá mật mã: chỉ trả khi token hợp lệ, và KHÔNG qua cache chung */
     if (book.lock) {
-      const exp = await verifyLockToken(env, slug, u.searchParams.get('token'));
+      const exp = await verifyLockToken(env, slug, u.searchParams.get('token'), String((book.lock && book.lock.set) || ''));
       if (!exp) {
         return json({ ok: false, locked: true, error: 'Truyện đang khoá mật mã.', slug: slug },
           { status: 403, cors, headers: { 'cache-control': 'private, no-store' } });
@@ -1678,7 +1726,7 @@ async function postLock(req, env, cors) {
   const got = await pbkdf2Bits(pw.slice(0, 256), new Uint8Array(rec.salt));
   for (let i = 0; i < got.length; i++) diff |= got[i] ^ rec.hash[i];
   if (diff) return json({ ok: false, error: 'Mật mã không đúng.' }, { status: 403, cors, headers: { 'cache-control': 'private, no-store' } });
-  const token = await makeLockToken(env, slug);
+  const token = await makeLockToken(env, slug, String(rec.set || ''));
   return json({ ok: true, token: token, exp: Math.floor(Date.now() / 1000) + LOCK_TTL },
     { cors, headers: { 'cache-control': 'private, no-store' } });
 }
@@ -1695,6 +1743,7 @@ async function setLockFlag(env, slug, on) {
   if (now) n.lock = 1; else delete n.lock;
   reg.rev = new Date().toISOString().slice(0, 16).replace('T', ' ');
   await env.CZ_KV.put('registry', registryJSON(reg), { metadata: { saved: new Date().toISOString(), rev: reg.rev } });
+  regEntryCacheDrop();
 }
 /* POST /api/lock/set { slug, password } (quản trị) — password rỗng = bỏ khóa */
 async function setLock(req, env, cors, org) {
@@ -1717,7 +1766,9 @@ async function setLock(req, env, cors, org) {
       delete book.lock;
       await persistBook(env, slug, book);
     }
-    await setLockFlag(env, slug, 0);
+    /* lỗi ghi cờ KHÔNG được chặn purge: nội dung đã đổi, cache biên phải xoá
+       (cờ hỏng chỉ mất huy hiệu trên thẻ — không làm lộ nội dung) */
+    try { await setLockFlag(env, slug, 0); } catch (e) {}
     await logAct(env, 'bỏ khóa ' + slug, req);
     await edgePurge(org + '/api/book/' + encodeURIComponent(slug), org + '/api/registry');
     await purgeChapterCache(org, encodeURIComponent(slug), 0, true);
@@ -1731,7 +1782,9 @@ async function setLock(req, env, cors, org) {
   const hashb = await pbkdf2Bits(pw, salt);
   book.lock = { salt: Array.from(salt), hash: Array.from(hashb), set: new Date().toISOString() };
   await persistBook(env, slug, book);
-  await setLockFlag(env, slug, 1);
+  /* như trên: book.lock đã ghi là nội dung ĐÃ khóa — dù ghi cờ registry lỗi
+     cũng vẫn purge cache biên ngay (lần lưu sau sẽ tự ghi lại cờ) */
+  try { await setLockFlag(env, slug, 1); } catch (e) {}
   await logAct(env, 'khóa/đổi mật mã ' + slug, req);
   await edgePurge(org + '/api/book/' + encodeURIComponent(slug), org + '/api/registry');
   await purgeChapterCache(org, encodeURIComponent(slug), 0, true);
@@ -1909,6 +1962,7 @@ async function putKV(req, env, key, cors, label) {
   const saved = new Date().toISOString();
   await env.CZ_KV.put(key, body, { metadata: { saved, rev: parsed.rev || '', bytes } });
   if (key === 'registry') sbPinReset(env);       // ghim Supabase (nếu đổi) có hiệu lực ngay
+  if (key === 'registry') regEntryCacheDrop();   // trạng thái xuất bản đổi → hạ cache entry
   if (label) await logAct(env, label, req);
   return json({ ok: true, key, bytes, saved }, { cors });
 }
@@ -3888,6 +3942,25 @@ function commentsKeyOf(req) {
 }
 async function getComments(slug, req, env, cors) {
   if (!env.CZ_KV) return noKV(cors);
+  /* Bình luận đi theo chính sách của CHƯƠNG (F-003): riêng tư/bản nháp → 404;
+     truyện khóa mật mã → cần token hợp lệ (?token= — commentsKeyOf trả '' nên
+     bản có token không bao giờ bị lưu chung). Quản trị bỏ qua. */
+  if (!authed(req, env)) {
+    const entryC = await readRegistryEntry(env, slug);
+    if (entryC && !isPubliclyListed(entryC)) {
+      return json({ ok: false, error: 'Không tìm thấy.' }, { status: 404, cors, headers: { 'cache-control': 'private, no-store' } });
+    }
+    if (entryC && entryC.lock) {
+      const gotC = await readBookChecked(env, slug).catch(() => ({ book: null }));
+      const recC = gotC.book && gotC.book.lock;
+      let tokC = null;
+      try { tokC = new URL(req.url).searchParams.get('token'); } catch (e) { tokC = null; }
+      const expC = await verifyLockToken(env, slug, tokC, String((recC && recC.set) || ''));
+      if (!expC) {
+        return json({ ok: false, locked: true, error: 'Truyện đang khóa mật mã.' }, { status: 403, cors, headers: { 'cache-control': 'private, no-store' } });
+      }
+    }
+  }
   const arr = (await env.CZ_KV.get('cmt:' + slug, { type: 'json' })) || [];
   let limit = 200, ch = null;
   try {

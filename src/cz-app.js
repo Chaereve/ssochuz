@@ -2570,6 +2570,11 @@ import { parseChapterTitle, nextMainChapterNo, chapterIsEmpty, chapterHasMedia }
            luôn trả hết, và thiếu giá trị khi chap>0. */
         var q = '?limit=200';
         if (chap === 0 && opt.chapterFilter === false) q += '&ch=0';
+        /* truyện khóa mật mã: đính kèm token để GET comments qua được chốt
+           F-003 (Worker trả 403 khi thiếu token); không có token thì bỏ qua
+           — UI vẽ rỗng, đúng nghĩa "chưa mở khóa". */
+        var lkTok = (w.CZ && w.CZ.lockToken && w.CZ.lockToken(slug)) || '';
+        if (lkTok) q += '&token=' + encodeURIComponent(lkTok);
         return fetch(base() + '/api/comments/' + encodeURIComponent(slug) + q)
           .then(function (r) { return r.json().catch(function () { return {}; }); })
           .then(function (j) {

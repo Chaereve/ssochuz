@@ -22,12 +22,15 @@ Ba chốt an toàn (đừng bỏ):
      bản đọc/admin có kèm nó, script gỡ ra trước khi ghi file.
   3. Bỏ qua bộ mà KV ÍT chương hơn repo (chiều lệch ngược — chữa bằng
      push_to_kv.py, không phải script này).
+  4. (F-001/F-002) KHÔNG xuất bản sao tĩnh cho bộ ĐANG KHÓA mật mã hoặc riêng
+     tư/bản nháp — nếu file tĩnh cũ còn thì XOÁ đi: Pages phục vụ /data không
+     có lớp xác thực, bản sao là đường vòng đọc nội dung khóa/riêng tư.
 
 Khuôn file giữ đúng y hệt hiện trạng repo nên bộ nào không đổi thì không sinh
 diff: data/book/<slug>.json = JSON nén 1 dòng, KHÔNG xuống dòng cuối;
 data/registry.json = thụt 2 khoảng, có xuống dòng cuối.
 """
-import argparse, json, os, re, subprocess, sys, urllib.request, urllib.error
+import argparse, datetime, json, os, re, subprocess, sys, urllib.request, urllib.error
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -79,6 +82,37 @@ def book_text(book):
 def registry_text(reg):
     """Khuôn file data/registry.json: thụt 2 khoảng + xuống dòng cuối."""
     return json.dumps(reg, ensure_ascii=False, indent=2) + '\n'
+
+
+def publicly_listed(n):
+    """Đúng luật isPubliclyListed của Worker (worker/cms.js): riêng tư / bản
+    nháp / chưa tới giờ ra KHÔNG được xuất ra bản sao tĩnh (F-002)."""
+    if not isinstance(n, dict):
+        return False
+    vis = str(n.get('visibility') or 'public').lower()
+    if vis == 'private':
+        return False
+    pub = str(n.get('pubStatus') or 'published').lower()
+    if pub in ('draft', 'pending_review', 'pending', 'rejected', 'archived'):
+        return False
+    if pub == 'scheduled':
+        at = str(n.get('publishedAt') or n.get('published_at') or '')
+        if not at or at > datetime.date.today().isoformat():
+            return False
+    return True
+
+
+def drop_stale_book(path, dry, why):
+    """Xoá bản sao tĩnh không còn được phép công khai (bộ khóa / riêng tư).
+    Trả True nếu có file bị (sẽ bị) xoá — đường vòng đọc nội dung bị đóng."""
+    if not os.path.exists(path):
+        return False
+    if dry:
+        print('  (nháp) sẽ xoá %s — %s' % (os.path.basename(path), why))
+        return True
+    os.remove(path)
+    print('  ✗ xoá bản sao cũ %s — %s' % (os.path.basename(path), why))
+    return True
 
 
 def write_if_changed(path, text, dry):
@@ -237,8 +271,15 @@ def main():
         if not lib:
             sys.exit('registry trên KV không có slug ' + a.only)
 
-    reg_changed = write_if_changed(a.registry, registry_text(reg), a.dry)
-    print('registry: %s (rev %s, %d bộ)' % ('ĐỔI — ghi lại' if reg_changed else 'không đổi', reg.get('rev'), len(reg['lib'])))
+    # (F-002) bản static KHÔNG được mang entry riêng tư/bản nháp — đúng như
+    # /api/registry công khai đã lọc; entry quản trị vẫn còn nguyên trên KV.
+    lib_all = reg.get('lib') if isinstance(reg.get('lib'), list) else []
+    reg_pub = dict(reg)
+    reg_pub['lib'] = [n for n in lib_all if n and n.get('slug') and publicly_listed(n)]
+    hidden_n = len(lib_all) - len(reg_pub['lib'])
+    reg_changed = write_if_changed(a.registry, registry_text(reg_pub), a.dry)
+    print('registry: %s (rev %s, %d bộ%s)' % ('ĐỔI — ghi lại' if reg_changed else 'không đổi', reg.get('rev'), len(reg_pub['lib']),
+          ', ẩn %d entry riêng tư/bản nháp' % hidden_n if hidden_n else ''))
 
     n_write = n_same = n_skip = n_err = 0
     skips = []
@@ -246,14 +287,25 @@ def main():
     # danh sách ảnh sẽ lấy từ data/book/*.json đang có sẵn trên đĩa.
     for i, n in enumerate([] if a.images_only else lib, 1):
         slug = n['slug']
-        st, book = call(a.api, '/api/book/' + urllib.request.quote(slug, safe=''), a.key)
         path = os.path.join(a.books, slug + '.json')
+        # (F-002) riêng tư/bản nháp: không kéo nội dung, xoá bản sao tĩnh cũ nếu có
+        if not publicly_listed(n):
+            if drop_stale_book(path, a.dry, 'bộ riêng tư/bản nháp — không xuất bản sao tĩnh'):
+                n_skip += 1
+            continue
+        st, book = call(a.api, '/api/book/' + urllib.request.quote(slug, safe=''), a.key)
         if st != 200 or not isinstance(book.get('chapters'), list):
             print('  ✗ %-40s HTTP %s — bỏ qua, file repo giữ nguyên' % (slug, st)); n_err += 1; continue
         if book.get('locked') and not book['chapters']:
             # Vỏ rỗng của bộ khóa — khoá đã qua whoami nên gần như không thể gặp;
             # gặp thì tuyệt đối không ghi đè.
             print('  ✗ %-40s KV trả vỏ RỖNG kiểu khách (locked) — bỏ qua, KHÔNG ghi' % slug); n_err += 1; continue
+        # (F-001) bộ ĐANG khóa mật mã: không ghi chương ra repo — và xoá file tĩnh
+        # cũ nếu có, kẻo Pages vẫn phục vụ bản sao qua /data (đường vòng khóa).
+        if book.get('lock') or n.get('lock'):
+            if drop_stale_book(path, a.dry, 'đang khóa mật mã — không xuất chương ra repo'):
+                n_skip += 1
+            continue
         kv_ch = len(book['chapters'])
         try:
             with open(path, encoding='utf-8') as f:
