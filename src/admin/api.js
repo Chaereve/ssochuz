@@ -53,7 +53,8 @@ export class AdminApi {
     if (options.importMode) headers['x-import-mode'] = options.importMode;
 
     const controller = typeof AbortController === 'function' ? new AbortController() : null;
-    const timer = controller ? setTimeout(() => controller.abort(), options.timeout || 12000) : null;
+    const timeoutMs = options.timeout || 12000;
+    const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
     try {
       const response = await fetch(base + path, {
         method: options.method || 'GET',
@@ -79,7 +80,7 @@ export class AdminApi {
     } catch (error) {
       const msg = String((error && error.message) || error || '');
       if (error && error.name === 'AbortError') {
-        throw new Error(`Hết thời gian chờ Worker (12 giây) tại ${base}. Mở ${base}/api/health để kiểm tra.`);
+        throw new Error(`Hết thời gian chờ Worker (${Math.round(timeoutMs / 1000)} giây) tại ${base}. Mở ${base}/api/health để kiểm tra.`);
       }
       if (/Failed to fetch|NetworkError|Load failed/i.test(msg)) {
         throw new Error(`Failed to fetch — không nối được Worker tại ${base}. Có thể do CORS, URL sai hoặc Worker chưa deploy.`);
@@ -107,7 +108,7 @@ export class AdminApi {
   adminVoters(slug) { return this.request('/api/admin/voters?slug=' + encodeURIComponent(slug)); }
   book(slug) { return this.request('/api/book/' + encodeURIComponent(slug)); }
   putRegistry(registry) { return this.request('/api/registry', { method: 'PUT', body: registry }); }
-  putBook(slug, book) { return this.request('/api/book/' + encodeURIComponent(slug), { method: 'PUT', body: book }); }
+  putBook(slug, book) { return this.request('/api/book/' + encodeURIComponent(slug), { method: 'PUT', body: book, timeout: 120000 }); }
   /* sửa MỘT chương (nút “Lưu chương”): chỉ gửi 1 chương thay vì cả bộ —
      nhanh hơn hẳn với bộ dài, và Worker tự cập nhật số chương trong registry */
   putChapter(slug, body) { return this.request('/api/book/' + encodeURIComponent(slug) + '/chapter', { method: 'PUT', body }); }
