@@ -12,6 +12,7 @@ còn thấy ghi chú nội bộ (tên khoá KV, luồng quản trị, danh sách
 | `src/cz-home.js` | `/cz-home.js` |
 | `src/cz-story.js` | `/cz-story.js` |
 | `src/cz.css` | `/cz.css` |
+| `src/admin/docx.js` (Mammoth, chỉ tải khi nhập Word) | `/admin-docx.js` — sinh bởi `npm run build:admin` |
 | `src/admin/` (Preact, entry `main.jsx`) | `/admin.js` + `/admin.css` + `/admin.js.map` — sinh bởi `npm run build:admin` |
 
 `cz-config.js` **không** rút gọn: đó là tệp cấu hình chủ web tự sửa (URL Worker,
@@ -75,3 +76,41 @@ Không làm được (và không nên tin là làm được):
 
 Muốn kín hơn nữa thì chuyển logic cần giấu xuống Worker (chạy trên máy chủ), chứ không
 phải giấu mã ở trình duyệt.
+
+## Nhập nhiều chương từ Word
+
+Trong khung sửa chương, bấm **Nhập nhiều chương** rồi chọn một file `.txt`
+hoặc `.docx` (tối đa **20 MiB**, nhận được file **12 MB**). Đặt mỗi tiêu đề
+`Chương 1`, `Chương 2: Tên chương`, `Lời mở đầu`, `Ngoại truyện`… trên một dòng
+riêng trong Word. Kiểm tra danh sách chương và nội dung mẫu ở phần xem trước,
+chọn nối cuối hoặc thay thế rồi xác nhận. Chưa xác nhận thì chưa ghi dữ liệu.
+File `.doc` cũ phải được lưu lại thành `.docx` trước.
+
+DOCX được đọc trong **Web Worker trên máy người dùng**, không gửi tài liệu sang
+dịch vụ chuyển đổi và không tải nguyên file lên API. Giữ chữ **đậm**, *nghiêng*,
+kết hợp đậm + nghiêng, gạch chân và ngắt đoạn/xuống dòng. HTML được dựng lại bằng
+allowlist, gộp các run liền nhau cùng định dạng; loại thuộc tính Word, font/màu,
+link và ảnh nhúng (không tạo base64). Bảng/danh sách được đọc theo thứ tự thành
+đoạn văn, không giữ bố cục Word. Thêm ảnh riêng bằng **Upload ảnh** nếu cần.
+
+Preview hiển thị dung lượng file gốc và JSON chương sau tối ưu. File nhiều ảnh
+thường nhỏ đi rất nhiều; file chủ yếu là văn bản có thể không nhỏ hơn file DOCX
+đã nén. Không cắt chữ để ép dung lượng. Giới hạn giải nén là **64 MiB** để bảo vệ
+RAM; cả bộ sau nối/thay thế tối đa **24 MiB JSON UTF-8**, khớp giới hạn Worker/KV.
+Nếu vượt giới hạn sẽ báo trước, không gửi dữ liệu thiếu. Lưu cả bộ có timeout
+120 giây; request khác vẫn 12 giây. Có thể huỷ đọc file; rời editor sẽ dừng worker.
+
+Nếu không có tiêu đề nhận diện được, toàn bộ văn bản thành một chương. Tiêu đề
+không có nội dung được bỏ qua kèm cảnh báo. Thay thế toàn bộ yêu cầu xác nhận cả
+việc xoá nháp cũ; nháp chỉ xoá sau khi lưu thành công để không tự khôi phục đè
+chương mới.
+
+`admin-docx.js` chỉ tải khi chọn DOCX, cần phát hành cùng `admin.js`/`admin.html`.
+Chạy `npm run build:admin` sau khi sửa. Kiểm thử:
+
+- `node tests/t_admin_docx.js`: preview, ghi nối/thay thế, lỗi/retry, nháp cũ.
+- `node tests/t_docx_content.js`: worker_threads chạy bundle thật; định dạng,
+  an toàn HTML, file >12 MiB có ảnh, file văn bản ~14 MiB/100 chương, huỷ, giới hạn.
+- `node tests/t_docx_browser.js`: Chromium thật, CSP và Web Worker thật, lưu rồi
+  đọc lại định dạng; chạy riêng sau khi cài Chromium của Playwright hoặc đặt
+  `CHROMIUM_EXECUTABLE_PATH`. Hai bài đầu nằm trong `npm test`.

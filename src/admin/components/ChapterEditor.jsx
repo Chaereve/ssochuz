@@ -1,6 +1,7 @@
 import { h } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { createRichTextEditor, fileToChapterHtml, htmlStats, splitChaptersTxt } from '../utils/richTextEditor.js';
+import { createRichTextEditor, fileToChapterHtml, htmlStats } from '../utils/richTextEditor.js';
+import { importChapterFile, importSizeLabel, jsonBytes, MAX_BOOK_BYTES } from '../utils/chapterImport.js';
 import { readTime } from '../utils/format.js';
 import { tempMediaInHtml } from '../utils/htmlSafety.js';
 import { suggestChapterTitle, chapterKind } from '../../shared/chapters.js';
@@ -134,6 +135,12 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
   const [savedMs, setSavedMs] = useState(0);
   const [dragFrom, setDragFrom] = useState(-1);
   const [importPreview, setImportPreview] = useState(null);
+  const [importing, setImporting] = useState(false);
+  const [importSaving, setImportSaving] = useState(false);
+  const importTask = useRef(0);
+  const importBusy = useRef(false);
+  const importController = useRef(null);
+  const importSaveBusy = useRef(false);
   const fileRef = useRef(null);
   const multiRef = useRef(null);
   const imageRef = useRef(null);
@@ -146,6 +153,16 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
   /* Chương đã nạp xong (khoá slug#index) — chỉ ghi nháp khi dữ liệu đang gõ
      thuộc đúng chương này, tránh ghi nhầm nội dung chương cũ sang chương mới */
   const bootRef = useRef('');
+
+  useEffect(() => {
+    importTask.current++;
+    importBusy.current = false;
+    importSaveBusy.current = false;
+    setImportSaving(false);
+    setImportPreview(null);
+    setImporting(false);
+    return () => { importTask.current++; if (importController.current) importController.current.abort(); };
+  }, [book && book.slug, slug]);
 
   useEffect(() => { setLocalBook(book || null); setIndex(0); }, [book && book.slug, slug]);
   const chapters = (localBook && Array.isArray(localBook.chapters) ? localBook.chapters : []);
@@ -180,6 +197,7 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
   /* Đổi chương: LƯU NHÁP TRƯỚC rồi mới nhảy — đây đúng là chỗ trước đây làm mất
      chữ đang gõ dở (đổi chương là state bị thay, nháp debounce 900ms chưa kịp ghi). */
   function gotoIndex(next) {
+    if (importSaveBusy.current) return;
     const n = Math.max(0, Math.min(chapters.length - 1, next));
     if (n === index) return;
     flushDraft();
@@ -235,13 +253,15 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
     });
     setEditor(ed);
     return () => { try { ed.destroy(); } catch (e) {} setEditor(null); };
-  }, [host, localBook && localBook.slug, index]);
+  }, [host, localBook && localBook.slug, index, reloadTick]);
 
   useEffect(() => {
     if (!editor) return;
     const cur = editor.getHTML();
     if (html !== cur) editor.commands.setContent(html || '<p></p>', false);
   }, [editor]);
+
+  useEffect(() => { if (editor) editor.setEditable(!importSaving); }, [editor, importSaving]);
 
   /* Autosave nháp cục bộ: 700ms sau khi ngừng gõ. Trước đây 900ms nhưng đổi
      chương ngay sau khi gõ là mất; giờ đổi chương luôn gọi flushDraft() trước. */
@@ -283,7 +303,7 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
   const pendingNow = isChapterPending({ status, at: localInputToIso(atLocal) });
 
   const saveChapter = async () => {
-    if (!localBook) return;
+    if (!localBook || importSaveBusy.current || saving) return;
     if (temps.length) {
       toast('Chưa upload hết ảnh tạm (blob/data). Không ghi KV.', 'err');
       return;
@@ -330,6 +350,7 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
     finally { setSaving(false); }
   };
   const addChapter = () => {
+    if (importSaveBusy.current) return;
     flushDraft();
     const next = clone(localBook || { title: slug, slug, chapters: [] });
     next.chapters = Array.isArray(next.chapters) ? next.chapters : [];
@@ -342,7 +363,7 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
     setLocalBook(next); setRestored(false); setIndex(next.chapters.length - 1);
   };
   const deleteChapter = async () => {
-    if (!localBook || !chapters[index]) return;
+    if (!localBook || !chapters[index] || importSaveBusy.current) return;
     if (!window.confirm('Xoá chương ' + (index + 1) + ' — ' + (chapters[index].t || '') + '?')) return;
     const typed = window.prompt('Gõ XOÁ để xác nhận xoá chương:', '');
     if (typed !== 'XOÁ') return;
@@ -363,7 +384,7 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
   };
   const moveChapter = async (delta) => { await reorderChapter(index, index + delta); };
   const reorderChapter = async (from, to) => {
-    if (!localBook || from === to || from < 0 || to < 0 || to >= chapters.length) return;
+    if (!localBook || importSaveBusy.current || from === to || from < 0 || to < 0 || to >= chapters.length) return;
     flushDraft();
     try {
       if (onMoveChapter && online) await onMoveChapter(localBook.slug || slug, from, to);
@@ -412,37 +433,62 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
     };
     reader.readAsText(file);
   };
-  const importMultiTxt = (file) => {
-    if (!file || !localBook) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const parts = splitChaptersTxt(reader.result || '');
-      if (!parts.length) { toast('Không tách được chương nào từ file này.', 'err'); return; }
-      setImportPreview({ file: file.name, parts, mode: 'append' });
-    };
-    reader.readAsText(file);
+  const importMultiFile = async (file) => {
+    if (!file || !localBook || importBusy.current || importSaveBusy.current) return;
+    const task = ++importTask.current;
+    importBusy.current = true;
+    const controller = new AbortController();
+    importController.current = controller;
+    setImporting(true);
+    setImportPreview(null);
+    try {
+      const result = await importChapterFile(file, { signal: controller.signal });
+      if (task === importTask.current) setImportPreview(result);
+    } catch (e) {
+      if (task === importTask.current && e.name !== 'AbortError') toast(e.message || 'Không đọc được file.', 'err');
+    } finally {
+      if (task === importTask.current) {
+        importBusy.current = false;
+        importController.current = null;
+        setImporting(false);
+      }
+    }
   };
   const confirmImport = async () => {
-    if (!importPreview || !localBook) return;
+    if (!importPreview || !localBook || importSaveBusy.current || saving || writeBlocked) return;
     flushDraft();
     const parts = importPreview.parts;
-    const next = clone(localBook);
-    next.chapters = Array.isArray(next.chapters) ? next.chapters : [];
+    // Chỉ sao chép mảng, không stringify/parse cả bộ lớn thêm một lần.
+    const next = { ...localBook, chapters: Array.isArray(localBook.chapters) ? localBook.chapters : [] };
     if (importPreview.mode === 'replace') {
-      const ok = window.confirm('Thay thế TOÀN BỘ ' + next.chapters.length + ' chương hiện có bằng ' + parts.length + ' chương từ file?');
+      const ok = window.confirm('Thay thế TOÀN BỘ ' + next.chapters.length + ' chương hiện có bằng ' + parts.length + ' chương từ file? Nháp cục bộ của các chương cũ cũng sẽ bị xoá sau khi lưu thành công.');
       if (!ok) return;
       next.chapters = parts;
     } else {
       next.chapters = next.chapters.concat(parts);
     }
+    if (jsonBytes(next) > MAX_BOOK_BYTES) {
+      toast('Cả bộ sau khi nhập vượt 24 MB (giới hạn lưu trữ). Hãy tách thành bộ khác hoặc giảm nội dung trước khi lưu.', 'err');
+      return;
+    }
+    const task = importTask.current;
+    importSaveBusy.current = true;
+    setImportSaving(true);
     try {
       await onSaveBook(next);
+      if (importPreview.mode === 'replace') {
+        Object.keys(scanDrafts(next.slug || slug)).forEach((i) => dropDraft(next.slug || slug, i));
+      }
+      if (task !== importTask.current) return;
       setLocalBook(next);
       setReloadTick((n) => n + 1);
       setIndex(importPreview.mode === 'replace' ? 0 : Math.max(0, next.chapters.length - parts.length));
       toast('Đã nhập ' + parts.length + ' chương từ file.', 'ok');
       setImportPreview(null);
-    } catch (e) { /* onSaveBook đã toast lỗi */ }
+    } catch (e) { /* onSaveBook đã toast lỗi; giữ preview để thử lại */ }
+    finally {
+      if (task === importTask.current) { importSaveBusy.current = false; setImportSaving(false); }
+    }
   };
   const uploadImageFile = async (file) => {
     if (!file) return '';
@@ -527,7 +573,7 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
         </aside>
         <div class="v2chapter-editor">
           <label class="fl">Tên chương</label>
-          <input class="inp" value={title} onInput={(e) => { const v = e.currentTarget.value; patchLive({ title: v }); setTitle(v); }} placeholder={'Chương ' + (index + 1)} />
+          <input class="inp" disabled={importSaving} value={title} onInput={(e) => { const v = e.currentTarget.value; patchLive({ title: v }); setTitle(v); }} placeholder={'Chương ' + (index + 1)} />
           <label class="fl">Trạng thái chương
             <select class="inp" value={status} onChange={(e) => {
               const value = e.target.value;
@@ -590,21 +636,27 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
               Còn ảnh tạm chưa upload: {temps.slice(0, 3).join(', ')}. Hãy bấm Upload ảnh / Thử lại — không ghi KV khi còn blob:/data:.
             </div>
           ) : null}
+          <p class="hint">Nhập nhiều chương: chọn 1 file .txt hoặc .docx (tối đa 20 MB, hỗ trợ file 12 MB). Mỗi tiêu đề “Chương X” nằm trên một dòng riêng. DOCX giữ đậm/nghiêng và ngắt đoạn; bỏ ảnh, font, màu và bố cục Word để giảm dung lượng. File được xử lý trên máy, chỉ gửi nội dung chương khi xác nhận.</p>
+          {importing ? <div class="row" role="status"><span class="hint">Đang đọc file và tối ưu nội dung chương…</span><button class="btn ghost sm" type="button" onClick={() => importController.current && importController.current.abort()}>Huỷ đọc file</button></div> : null}
           {importPreview ? (
             <div class="v2import-preview">
               <b>Xem trước nhập file</b>
               <p class="hint">Phát hiện {importPreview.parts.length} chương từ “{importPreview.file}”. Chưa ghi KV.</p>
+              <p class="hint">File gốc: {importSizeLabel(importPreview.inputBytes)} → Nội dung chương: {importSizeLabel(importPreview.contentBytes)}. Không tải nguyên file lên; cả bộ sau khi nhập tối đa 24 MB.</p>
+              {importPreview.imagesSkipped ? <p class="hint">Đã bỏ {importPreview.imagesSkipped} ảnh trong Word để tránh lưu base64 nặng. Có thể thêm ảnh riêng bằng Upload ảnh.</p> : null}
+              {importPreview.skippedEmpty ? <p class="hint">Bỏ qua {importPreview.skippedEmpty} tiêu đề không có nội dung. Hãy kiểm tra lại danh sách chương.</p> : null}
+              <details><summary>Xem thử nội dung chương đầu</summary><div class="rte" dangerouslySetInnerHTML={{ __html: importPreview.parts[0].html.length <= 20000 ? importPreview.parts[0].html : '<p>Chương dài — xem đầy đủ trong editor sau khi nhập.</p>' }} /></details>
               <ul>{importPreview.parts.slice(0, 12).map((p, i) => <li key={i}>{p.t}</li>)}</ul>
               {importPreview.parts.length > 12 ? <p class="hint">… và {importPreview.parts.length - 12} chương nữa</p> : null}
               <label class="fl">Cách nhập
-                <select class="inp" value={importPreview.mode} onChange={(e) => setImportPreview(Object.assign({}, importPreview, { mode: e.target.value }))}>
+                <select class="inp" disabled={importSaving} value={importPreview.mode} onChange={(e) => setImportPreview(Object.assign({}, importPreview, { mode: e.target.value }))}>
                   <option value="append">Nối vào cuối (append)</option>
                   <option value="replace">Thay thế toàn bộ chương</option>
                 </select>
               </label>
               <div class="row">
-                <button class="btn pri sm" type="button" disabled={writeBlocked} onClick={confirmImport}>Xác nhận nhập</button>
-                <button class="btn ghost sm" type="button" onClick={() => setImportPreview(null)}>Huỷ</button>
+                <button class="btn pri sm" type="button" disabled={writeBlocked || importSaving || saving} onClick={confirmImport}>{importSaving ? 'Đang nhập…' : 'Xác nhận nhập'}</button>
+                <button class="btn ghost sm" type="button" disabled={importSaving} onClick={() => setImportPreview(null)}>Huỷ</button>
               </div>
             </div>
           ) : null}
@@ -612,14 +664,14 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
             <span class="sm muted">{stat.words} từ · {stat.chars} ký tự · ~{readTime(stat.words)} phút đọc{draft ? ' · có nháp autosave' : ''}</span>
             <span class="grow"></span>
             <input ref={fileRef} class="hide" type="file" accept=".txt,.html,.htm,text/plain,text/html" onChange={(e) => importFile(e.currentTarget.files && e.currentTarget.files[0])} />
-            <input ref={multiRef} class="hide" type="file" accept=".txt,text/plain" onChange={(e) => { importMultiTxt(e.currentTarget.files && e.currentTarget.files[0]); e.currentTarget.value = ''; }} />
+            <input ref={multiRef} class="hide" type="file" accept=".txt,.docx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(e) => { importMultiFile(e.currentTarget.files && e.currentTarget.files[0]); e.currentTarget.value = ''; }} />
             <input ref={imageRef} class="hide" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => chooseImage(e.currentTarget.files && e.currentTarget.files[0])} />
             <button class="btn ghost sm" type="button" onClick={() => fileRef.current && fileRef.current.click()}>Import .txt/.html</button>
-            <button class="btn ghost sm" type="button" disabled={!localBook} title="1 file .txt nhiều chương — tách theo dòng “Chương X”, xem trước rồi mới ghi" onClick={() => multiRef.current && multiRef.current.click()}>Nhập nhiều chương</button>
+            <button class="btn ghost sm" type="button" disabled={!localBook || importing || importSaving} title="1 file .txt hoặc .docx nhiều chương — tách theo dòng “Chương X”, xem trước rồi mới ghi" onClick={() => multiRef.current && multiRef.current.click()}>Nhập nhiều chương</button>
             <button class="btn ghost sm" type="button" disabled={uploading} onClick={() => imageRef.current && imageRef.current.click()}>{uploading ? 'Đang nén ảnh…' : 'Upload ảnh'}</button>
             {draft && !restored ? <button class="btn ghost sm" type="button" onClick={restoreDraft}>Khôi phục nháp</button> : null}
             <button class="btn ghost sm" type="button" onClick={() => setPreview(!preview)}>{preview ? 'Ẩn preview' : 'Preview độc giả'}</button>
-            <button class="btn pri sm" type="button" disabled={writeBlocked || !!temps.length || saving} title={(writeBlocked ? 'Quota KV hôm nay đã hết — nháp cục bộ vẫn được giữ' : (online ? 'Ghi chương vào Cloudflare KV (chỉ gửi 1 chương)' : 'Chỉ lưu nháp phiên — chưa ghi Cloudflare KV')) + ' · Ctrl/Cmd+S'} onClick={saveChapter}>{saving ? 'Đang lưu…' : (writeBlocked ? 'Hết quota KV' : (online ? 'Lưu chương' : 'Lưu nháp phiên'))}</button>
+            <button class="btn pri sm" type="button" disabled={writeBlocked || !!temps.length || saving || importSaving} title={(writeBlocked ? 'Quota KV hôm nay đã hết — nháp cục bộ vẫn được giữ' : (online ? 'Ghi chương vào Cloudflare KV (chỉ gửi 1 chương)' : 'Chỉ lưu nháp phiên — chưa ghi Cloudflare KV')) + ' · Ctrl/Cmd+S'} onClick={saveChapter}>{saving ? 'Đang lưu…' : (writeBlocked ? 'Hết quota KV' : (online ? 'Lưu chương' : 'Lưu nháp phiên'))}</button>
           </div>
           <div class="v2chap-danger">
             <span class="sm">Xoá chương đang chọn khỏi bộ — cần gõ XOÁ để xác nhận, không khôi phục được.</span>

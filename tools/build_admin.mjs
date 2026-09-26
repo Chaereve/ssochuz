@@ -27,3 +27,15 @@ await build({
 console.log('  admin.css      ' + kb(statSync(path.join(ROOT, 'admin.css')).size));
 console.log('  admin.js       ' + kb(statSync(path.join(ROOT, 'admin.js')).size));
 console.log('  admin.js.map   ' + kb(statSync(path.join(ROOT, 'admin.js.map')).size));
+
+// Bộ đọc DOCX tải riêng khi cần, giữ nguyên budget của admin.js.
+await build({
+  entryPoints: [path.join(ROOT, 'src/admin/docx.js')],
+  bundle: true,
+  minify: true,
+  outfile: path.join(ROOT, 'admin-docx.js'),
+  format: 'iife',
+  target: ['es2019'],
+  legalComments: 'inline',
+});
+console.log('  admin-docx.js  ' + kb(statSync(path.join(ROOT, 'admin-docx.js')).size));

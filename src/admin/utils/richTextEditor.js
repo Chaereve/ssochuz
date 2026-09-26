@@ -76,7 +76,7 @@ export function fileToChapterHtml(text, name = '') {
   return raw.split(/\n{2,}/).map((part) => '<p>' + part.trim().replace(/\n/g, ' ').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p>').join('\n');
 }
 
-/* Tách 1 file .txt thành nhiều chương (thay cho nhập .docx):
+/* Tách văn bản thuần (.txt hoặc trích từ .docx) thành nhiều chương:
    dòng "Chương X …" (có/không dấu # ở đầu; nhận cả Hồi/Quyển/Tập, số La Mã,
    số thập phân) đánh dấu chương mới — cùng "Lờí mở đầu", "Giới thiệu nhân
    vật", "Ngoại truyện"… (src/shared/chapters.js). Đoạn thường thành <p>;

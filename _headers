@@ -19,6 +19,9 @@
 /admin.js
   Cache-Control: no-cache
 
+/admin-docx.js
+  Cache-Control: no-cache
+
 /admin.css
   Cache-Control: no-cache
 
