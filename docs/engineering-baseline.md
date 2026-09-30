@@ -120,6 +120,14 @@ FAIL Soạn chương/danh sách chương có số từ     → "Chưa có chươ
 
 Không phải lỗi chức năng, nhưng gây nhiễu khi đối chiếu bản deploy (bài học từ sự cố `BAO-CAO-SU-CO-DEPLOY-MAT-BIEN-SUPABASE.md`). **P3:** một nguồn version duy nhất + script đồng bộ.
 
+## 6b. Cache tĩnh `?v=` + service worker — bước bắt buộc mỗi lần đổi `cz-*`/`admin.js`
+
+Phát hiện khi chuẩn bị release Milestone A: đổi `src/cz-story.js`/`src/cz.css` mà **không** đổi `?v=` thì người đã từng mở web vẫn nhận bản JS cũ từ kho shell của service worker (chiến lược stale-while-revalidate: lần mở đó trả bản cũ, lần sau mới có bản mới) ⇒ tính năng mới tới tay người đọc **chậm một nhịp tải trang** và không có tín hiệu "đã có bản cập nhật".
+
+Quy ước ghi ngay trong đầu `sw.js`: *mỗi lần đổi `?v=` tĩnh (`cz.css`/`cz-*.js`) thì sửa cả `PRECACHE` + tăng `CZ_SW_VER`*. Milestone A đã bump: `20260924a` → **`20260930a`** cho `cz.css` + `cz-*.js` (72 tệp HTML, gồm cả 63 thẻ OG trong `truyen/<slug>/index.html`) và `admin.js` `20260926b` → `20260930a`. `admin-docx.js` giữ `20260926b` vì tệp đó không đổi.
+
+`tests/t_pwa.js` canh việc này: nó đối chiếu `PRECACHE` trong `sw.js` với `?v=` trong 5 trang chính ⇒ bump lệch là test đỏ ngay.
+
 ## 7. Rủi ro hạ tầng đã nhận diện (chi tiết ở `docs/product-discovery.md` §5)
 
 1. **KV free tier: 100.000 lượt đọc + 1.000 lượt ghi/ngày** (đã xác minh 2026-09-30). Ghi đã được ngân sách hoá (`src/shared/kv-budget.js`, `STATS_WRITE_BUDGET`); **lượt đọc đã có bộ đếm + cảnh báo 70%/90% trong Milestone A (A2)** nhưng **chưa deploy Worker** — cho tới khi deploy, `/admin` vẫn hiện `—` ở ô lượt đọc (Worker cũ không trả trường).
