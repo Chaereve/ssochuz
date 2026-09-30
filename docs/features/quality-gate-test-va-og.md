@@ -1,6 +1,7 @@
 # Feature blueprint — Quality gate: test xanh, check OG, CI chạy test
 
-- Trạng thái: **G4 ĐÃ XONG** (Milestone A) — **G6 + G9a vẫn đề xuất, chờ owner duyệt** (Milestone B)
+- Trạng thái: **G4 ĐÃ XONG** (Milestone A) · **G9a ĐÃ XONG** (`.github/workflows/ci.yml`, 2026-09-30) · **G6 ĐÃ XONG** (`tools/check_og.mjs`, 2026-09-30)
+- Khác với thiết kế dưới đây: (1) check là `check_og.mjs`, không tự viết lại luật mà **chạy chính `build_og.mjs` trên bản sao trong thư mục tạm rồi so byte** ⇒ tự bao cả description/og:image/JSON-LD/shell, không lệch logic theo thời gian; (2) CI chưa chạy `check:worker` và không lọc `paths` (AC6) — chạy mọi push/PR, ~8 phút, vẫn $0.
 - Gap: G4, G6, G9a · Ưu tiên: P1 (G4) / P2 (G6, G9a) · Size: S
 - Tệp liên quan: `tests/t_admin_features.js`, `tests/run.js`, `tools/check_*.js`, `.github/workflows/`
 

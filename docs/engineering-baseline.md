@@ -152,4 +152,4 @@ Hậu kiểm 2026-09-30: chính `tests/t_admin_chapter.js` và `tests/t_devserve
 
 1. **KV free tier: 100.000 lượt đọc + 1.000 lượt ghi/ngày** (đã xác minh 2026-09-30). Ghi đã được ngân sách hoá (`src/shared/kv-budget.js`, `STATS_WRITE_BUDGET`); **lượt đọc đã có bộ đếm + cảnh báo 70%/90% trong Milestone A (A2)** nhưng **chưa deploy Worker** — cho tới khi deploy, `/admin` vẫn hiện `—` ở ô lượt đọc (Worker cũ không trả trường).
 2. Khi vượt hạn mức đọc, KV trả lỗi ⇒ **Milestone A (A1) đã thêm dự phòng tĩnh trong trình đọc** (nhãn "đang đọc bản lưu" + nút nối lại), **chưa deploy** (cần `npm run build` + deploy Pages; Worker deploy riêng cho A2).
-3. Trang quản trị là điểm yếu duy nhất về phụ thuộc mạng: bản `local` không ghi được (đúng thiết kế), nhưng trạng thái "chưa tải được chương" gộp với "chưa có chương" → dễ gây hiểu nhầm cho biên tập viên.
+3. Trang quản trị là điểm yếu duy nhất về phụ thuộc mạng: bản `local` không ghi được (đúng thiết kế). ~~Trạng thái "chưa tải được chương" gộp với "chưa có chương"~~ → **đã tách ở G3** (2026-09-30).
