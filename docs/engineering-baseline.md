@@ -15,7 +15,7 @@
 | Test trong trình duyệt thật | **Chưa chạy** | 3 bài cần Chromium; `npx playwright install chromium` bị mạng chặn (`ECONNRESET` tới `cdn.playwright.dev`) |
 | Lint | **Không có** | Repo không cấu hình ESLint/Prettier cho frontend (`package.json` không có script) |
 | Lockfile | **Đã commit (G9b, 2026-09-30)** | `package-lock.json` + `tests/package-lock.json` (lockfileVersion 3); trước đó `.gitignore` bỏ qua |
-| CI | **Chỉ 1 workflow** | `.github/workflows/sync-kv-to-repo.yml` (chạy tay, đồng bộ KV → repo). Không có workflow chạy `npm test`/build |
+| CI | **2 workflow** | `sync-kv-to-repo.yml` (chạy tay, đồng bộ KV → repo) + `ci.yml` (G9a, 2026-09-30): push/PR vào `main` ⇒ `npm ci` (gốc + `tests/`) → `npm run build` → `npm test`, Node 22, trần 15 phút. Chưa có bước `git diff --exit-code` (owner chưa chọn) |
 | Chạy local | **Có script** | `python3 tools/dev_server.py` (cổng 8080, mô phỏng Cloudflare Pages) hoặc `python3 server.py` (cổng 8000) |
 
 ## 1. Workspace audit
