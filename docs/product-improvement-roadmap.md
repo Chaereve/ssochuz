@@ -49,6 +49,7 @@ Thứ tự điểm không thay thế phán đoán: A1/A2 là P1 dù điểm th�
 - **Scope:** G3 · G6 · G7 (mirror bìa) · G9a (CI) · G9b (lockfile) · quyết định G8.
 - **Non-goals:** không đổi cấu trúc dữ liệu; không thêm analytics.
 - **Size:** S–M. **Owner approval:** có (G7 đổi nguồn ảnh, G8 là quyết định nội dung/pháp lý).
+- **Tiến độ (2026-09-30):** G9b xong (lockfile đã commit) · G9a xong (`.github/workflows/ci.yml`) · **G8 đã quyết: GIỮ `/data/book/*.json` công khai như hiện tại** (owner chọn; đây cũng là bản lưu tĩnh mà A1 dùng khi Worker/KV lỗi) — đừng mở lại · G7: đã có kế hoạch, chờ owner duyệt rủi ro egress (`docs/features/g7-mirror-bia-ke-hoach.md`) · G3, G6: chưa làm.
 
 ### Milestone C — "Chất lượng và khả năng truy cập đo được"
 
