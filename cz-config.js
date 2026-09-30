@@ -19,7 +19,7 @@
    Supabase làm phần đó thay mình: chỉ cần thêm domain web vào
    Supabase Dashboard → Authentication → URL Configuration → Redirect URLs.
 
-   3 bước để bật đăng nhập (xem HUONG-DAN-DANG-NHAP-BINH-LUAN.md):
+   3 bước để bật đăng nhập (xem docs/reports/HUONG-DAN-DANG-NHAP-BINH-LUAN.md):
      1. Tạo project ở https://supabase.com → Authentication → Providers → Google
         (dán Client ID/Secret của Google; Supabase tự lo redirect URI).
      2. Authentication → URL Configuration:

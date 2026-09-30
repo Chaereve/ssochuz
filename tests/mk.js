@@ -61,6 +61,10 @@ function page(file, { url = 'https://ssochuz.pages.dev/', fetch, config = {}, fi
       w.matchMedia = w.matchMedia || (() => ({ matches: false, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {} }));
       w.Element.prototype.scrollIntoView = function () {};
       w.scrollTo = () => {};
+      if (w.Range && w.Range.prototype) {
+        w.Range.prototype.getClientRects = w.Range.prototype.getClientRects || (() => []);
+        w.Range.prototype.getBoundingClientRect = w.Range.prototype.getBoundingClientRect || (() => ({ left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 }));
+      }
       w.IntersectionObserver = w.IntersectionObserver || class { observe() {} unobserve() {} disconnect() {} };
       w.ResizeObserver = w.ResizeObserver || class { observe() {} unobserve() {} disconnect() {} };
       if (fetch) w.fetch = fetch;

@@ -16,6 +16,7 @@ import { readdirSync, readFileSync, writeFileSync, statSync, existsSync } from '
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
+import { evaluateBundleFile } from './bundle_budget.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -78,7 +79,14 @@ for (const f of CSS) await minifyCss(f);
 
 const srcTotal = rows.reduce((a, r) => a + r[1], 0);
 const outTotal = rows.reduce((a, r) => a + r[2], 0);
-rows.forEach(([f, a, b]) => console.log('  ' + f.padEnd(14) + kb(a).padStart(9) + '  →  ' + kb(b).padStart(9) +
-  '  (' + Math.round(100 - (b / a) * 100) + '% nhỏ hơn)'));
+const warnings = [];
+rows.forEach(([f, a, b]) => {
+  const ev = evaluateBundleFile(f, b);
+  const bTag = ev.maxKb ? (' · ' + ev.pct + '% trần ' + ev.maxKb + ' kB') : '';
+  console.log('  ' + f.padEnd(14) + kb(a).padStart(9) + '  →  ' + kb(b).padStart(9) +
+    '  (' + Math.round(100 - (b / a) * 100) + '% nhỏ hơn' + bTag + ')');
+  if (ev.status === 'warn' || ev.status === 'exceeded') warnings.push(ev.message);
+});
 console.log('Tổng: ' + kb(srcTotal) + '  →  ' + kb(outTotal) + ' · đã ghi ra thư mục gốc.');
+warnings.forEach((w) => console.warn('  ⚠ CẢNH BÁO DUNG LƯỢNG: ' + w));
 console.log('Nhớ chạy: node tests/run.js  (bài kiểm thử nạp đúng bản đã rút gọn)');

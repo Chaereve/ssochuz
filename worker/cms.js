@@ -6,6 +6,7 @@ import { parseChapterTitle, nextMainChapterNo, chapterTextOf, chapterHasMedia } 
 import { isChapterPending, countVisibleChapters, countPendingChapters, nextScheduleMs, atMs, chapterAtMs, scheduleLabelOf } from '../src/shared/schedule.js';
 import { KV_FLUSH, statsBudget, forcedFlushMs, budgetCredits, flushOnTimer, noteKvRead, kvReadSnapshot } from '../src/shared/kv-budget.js';
 import { cacheKeyOf, isJunkParam } from '../src/shared/cache-key.js';
+import { VERSION } from '../src/shared/version.js';
 /* Làm sạch HTML chương theo DANH SÁCH CHO PHÉP — bản dùng chung với bài kiểm
    tra trên 1.216 chương thật (tools/check_chapter_html.mjs). Bản cũ chặn theo
    danh sách cấm nên lọt <link>/<meta>/<base>/<svg onload>/<form>… */
@@ -144,7 +145,7 @@ import { sanitizeChapterHtml } from '../src/shared/sanitize.js';
      VAPID_PRIVATE     (secret, bắt buộc nếu bật push) — khoá riêng VAPID base64url (`wrangler secret put VAPID_PRIVATE`)
    ============================================================================ */
 
-const VERSION = '1.18.0';
+/* VERSION nhập từ ../src/shared/version.js (nguồn duy nhất G10) */
 const JSONH = {
   'content-type': 'application/json; charset=utf-8',
   'x-content-type-options': 'nosniff',

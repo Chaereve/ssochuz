@@ -1,7 +1,7 @@
 {
   "name": "ssochuz-library",
   "private": true,
-  "version": "1.10.0",
+  "version": "1.18.0",
   "description": "ssochuz library — web tĩnh. Mã nguồn đọc được nằm trong src/, bản phát hành (đã rút gọn, không chứa secret/email quản trị) nằm ở thư mục gốc.",
   "scripts": {
     "build": "node tools/build_site.mjs && npm run build:admin",
@@ -9,22 +9,23 @@
     "test": "node tests/run.js",
     "build:admin": "node tools/build_admin.mjs",
     "build:worker": "node tools/build_worker.mjs",
-    "check:worker": "tsc -p worker/jsconfig.json"
+    "check:worker": "tsc -p worker/jsconfig.json",
+    "check:version": "node tools/check_version.mjs",
+    "audit:a11y": "node tools/audit_a11y.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260923.1",
     "@tabler/icons": "^3.46.0",
+    "axe-core": "^4.13.0",
     "esbuild": "0.25.0",
     "jsdom": "^30.1.1",
     "typescript": "5.9.3"
   },
   "dependencies": {
-    "@tiptap/core": "^2.27.3",
-    "@tiptap/extension-image": "^2.27.3",
-    "@tiptap/extension-link": "^2.27.3",
-    "@tiptap/extension-text-align": "^2.27.3",
-    "@tiptap/extension-underline": "^2.27.3",
-    "@tiptap/starter-kit": "^2.27.3",
+    "@tiptap/core": "^3.31.4",
+    "@tiptap/extension-image": "^3.31.4",
+    "@tiptap/extension-text-align": "^3.31.4",
+    "@tiptap/starter-kit": "^3.31.4",
     "mammoth": "1.11.0",
     "preact": "^10.24.3"
   }

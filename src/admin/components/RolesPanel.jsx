@@ -35,21 +35,21 @@ export function RolesPanel({ registry, role, onSave }) {
       <section class="card2">
         <h3>Nhân sự</h3>
         <form class="row" onSubmit={add}>
-          <input class="inp" type="email" value={email} placeholder="email@…" onInput={(e) => setEmail(e.target.value)} />
-          <select class="inp" value={pick} onChange={(e) => setPick(e.target.value)}>
+          <input class="inp" type="email" aria-label="Email nhân sự" value={email} placeholder="email@…" onInput={(e) => setEmail(e.target.value)} />
+          <select class="inp" aria-label="Chọn vai trò nhân sự" value={pick} onChange={(e) => setPick(e.target.value)}>
             {ROLE_ORDER.map((id) => <option key={id} value={id}>{ROLES[id].label}</option>)}
           </select>
           <button class="btn" type="submit">Thêm</button>
         </form>
         <div class="v2tablewrap">
           <table class="v2book-table">
-            <thead><tr><th>Email</th><th>Vai trò</th><th></th></tr></thead>
+            <thead><tr><th>Email</th><th>Vai trò</th><th aria-label="Thao tác">Thao tác</th></tr></thead>
             <tbody>
               {rows.length ? rows.map((r, i) => (
                 <tr key={r.email}>
                   <td data-lb="Email">{r.email}</td>
                   <td data-lb="Vai trò">
-                    <select class="inp" value={r.role} onChange={(e) => setRows(rows.map((x, k) => k === i ? Object.assign({}, x, { role: e.target.value }) : x))}>
+                    <select class="inp" aria-label={'Vai trò của ' + r.email} value={r.role} onChange={(e) => setRows(rows.map((x, k) => k === i ? Object.assign({}, x, { role: e.target.value }) : x))}>
                       {ROLE_ORDER.map((id) => <option key={id} value={id}>{ROLES[id].label}</option>)}
                     </select>
                   </td>

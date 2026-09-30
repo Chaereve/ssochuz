@@ -41,13 +41,15 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Cài công cụ (esbuild để build, ImageMagick để đổi WebP)
+      - name: Cài công cụ (esbuild để build, ImageMagick gọn nhẹ để đổi WebP)
         run: |
           set -euo pipefail
-          npm ci
-          # ubuntu-24.04 không còn cài sẵn ImageMagick
+          npm ci --ignore-scripts
+          # ubuntu-24.04 không cài sẵn ImageMagick; tắt man-db trigger + bỏ gói phụ
+          # (--no-install-recommends) giúp cài trong ~15 giây thay vì ~4 phút.
+          sudo rm -f /var/lib/man-db/auto-update
           sudo apt-get update -qq
-          sudo apt-get install -y -qq imagemagick
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends imagemagick
 
       - name: Tải + đổi bìa (chỉ ĐỌC registry công khai của Worker)
         run: |

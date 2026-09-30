@@ -78,7 +78,7 @@ export function ImageUploader({
           : <div class="v2up-empty"><b>Kéo thả ảnh vào đây</b><span>hoặc bấm để chọn file</span></div>}
         {busy ? <div class="v2up-bar" aria-hidden="true"><i style={{ width: progress + '%' }}></i></div> : null}
       </div>
-      <input id={inputId} ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" hidden={false}
+      <input id={inputId} ref={fileRef} type="file" aria-label={'Chọn tệp ' + (label || 'ảnh bìa')} accept="image/jpeg,image/png,image/webp" hidden={false}
         onChange={(e) => handleFile(e.target.files && e.target.files[0])} />
       <div class="v2up-row">
         <input class="inp" aria-label="URL ảnh bìa" value={value} placeholder="URL bìa bền (/api/img/… hoặc https://…)"
