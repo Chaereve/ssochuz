@@ -38,14 +38,14 @@ function click(win, el) {
   assert.ok(el, 'không thấy nút cần bấm');
   el.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
 }
-const TEXT = /tự khôi phục/i;
-/* Chờ theo ĐIỀU KIỆN thay vì chờ cứng: nhập file (FileReader) rồi khôi phục
-   nháp là chuỗi nhịp bất đồng bộ (insertContent → effect Preact → dựng lại
-   tiptap → setContent). Máy chậm (Windows) cần hơn 200ms nên chờ cứng hay đỏ
-   oan, trong khi chữ vẫn về đủ. Chờ tối đa ~4 giây rồi mới báo lỗi. */
-async function until(fn, msg, tries = 140) {
-  for (let i = 0; i < tries; i++) { if (fn()) return; await wait(30); }
-  assert.fail(msg);
+const TEXT = /tự khôi phục/i;
+/* Chờ theo ĐIỀU KIỆN thay vì chờ cứng: nhập file (FileReader) rồi khôi phục
+   nháp là chuỗi nhịp bất đồng bộ (insertContent → effect Preact → dựng lại
+   tiptap → setContent). Máy chậm (Windows) cần hơn 200ms nên chờ cứng hay đỏ
+   oan, trong khi chữ vẫn về đủ. Chờ tối đa ~4 giây rồi mới báo lỗi. */
+async function until(fn, msg, tries = 140) {
+  for (let i = 0; i < tries; i++) { if (fn()) return; await wait(30); }
+  assert.fail(msg);
 }
 
 (async () => {
