@@ -321,7 +321,8 @@ function App() {
         const missing = !!error && error.httpStatus === 404;
         bookFailed.current[slug] = true;
         setBookErrors((prev) => Object.assign({}, prev, { [slug]: { missing, message: missing ? '' : String((error && error.message) || error) } }));
-        if (missing) setBookCache((prev) => Object.assign({}, prev, { [slug]: null }));
+        if (!missing) throw error;   /* G3b: lỗi tải ≠ không có book — nơi gọi phải dừng, không ghi */
+        setBookCache((prev) => Object.assign({}, prev, { [slug]: null }));
         return null;
       } finally {
         delete bookInflight.current[slug];
@@ -334,6 +335,7 @@ function App() {
     if (!slug) return null;
     setBookLoading(true);
     try { return await getBook(slug, auto); }
+    catch (error) { return null; /* lỗi đã nằm trong bookErrors → khung soạn chương hiện + Thử lại */ }
     finally { setBookLoading(false); }
   }
 
@@ -692,11 +694,17 @@ function App() {
     const registry = store.getState().registry || state.registry;
     const lib = (registry && registry.lib) || [];
     const rows = [];
-    let missing = 0, mismatch = 0, empty = 0, locked = 0;
+    let missing = 0, mismatch = 0, empty = 0, locked = 0, unreadable = 0;
     for (const meta of lib) {
       if (!meta || !meta.slug) continue;
       let book = null;
-      try { book = await getBook(meta.slug); } catch (e) { book = null; }
+      try { book = await getBook(meta.slug); }
+      catch (e) {
+        /* G3b: lỗi tải KHÔNG phải thiếu book — dòng "Thiếu book" có nút Sửa ghi book rỗng */
+        unreadable++;
+        rows.push({ slug: meta.slug, title: meta.title || meta.slug, issue: 'Không đọc được book (lỗi tải) — quét lại sau', registry: Number(meta.chapters) || 0, actual: null, unreadable: true });
+        continue;
+      }
       if (!book) {
         missing++;
         rows.push({ slug: meta.slug, title: meta.title || meta.slug, issue: 'Thiếu book JSON/KV', registry: Number(meta.chapters) || 0, actual: null });
@@ -726,7 +734,7 @@ function App() {
         });
       }
     }
-    return { ok: true, scanned: lib.length, missing, mismatch, empty, locked, rows: rows.slice(0, 120), source: state.online ? 'worker-kv' : 'static-files' };
+    return { ok: true, scanned: lib.length, missing, mismatch, empty, locked, unreadable, rows: rows.slice(0, 120), source: state.online ? 'worker-kv' : 'static-files' };
   }
 
   async function fixScanIssue(row) {
@@ -734,8 +742,16 @@ function App() {
     if (!state.online) throw new Error('Sửa dữ liệu cần nối Worker bằng ADMIN_KEY.');
     const registry = cloneRegistry(store.getState().registry || state.registry);
     const meta = (registry.lib || []).find((item) => item.slug === row.slug);
+    if (row.unreadable) throw new Error('Không đọc được book “' + row.slug + '” lúc quét — quét lại khi Worker ổn định. Không tự ghi để tránh đè mất chương.');
     if (row.issue === 'Thiếu book JSON/KV') {
       if (!meta) throw new Error('Registry không còn bộ này.');
+      /* G3b: dòng quét có thể đã cũ — đọc lại thẳng Worker (bỏ qua cache), chỉ
+         tạo book trống khi Worker trả ĐÚNG 404; có book hay lỗi khác thì dừng. */
+      const fresh = await api.book(row.slug).then((b) => b, (e) => { if (e && e.httpStatus === 404) return null; throw e; });
+      if (fresh) {
+        setBookCache((prev) => Object.assign({}, prev, { [row.slug]: fresh }));
+        throw new Error('Book “' + row.slug + '” đã có trên Worker — không ghi đè. Bấm Quét book lại.');
+      }
       const book = { title: meta.title || row.slug, slug: row.slug, author: meta.author || '', couple: meta.couple || '', chapters: [] };
       await putBook(row.slug, book, 'tạo book thiếu');
       setBookCache((prev) => Object.assign({}, prev, { [row.slug]: book }));
