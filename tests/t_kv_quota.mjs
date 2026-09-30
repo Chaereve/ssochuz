@@ -192,6 +192,60 @@ const errors = [];
     ck('health/mốc ghi lấy từ metadata registry', typeof (h.body || {}).lastWrite === 'string', (h.body || {}).lastWrite, 'string');
   }
 
+  /* ---------- E. BỘ ĐẾM LƯỢT ĐỌC KV (A2) ----------------------------------
+     Gói Free cho 100.000 lượt ĐỌC/ngày; vượt là mọi lối đọc trả lỗi. Phần ghi đã
+     có ngân sách (mục A–D ở trên), phần đọc thì chưa ai đếm — mục này khoá lại:
+       E1. bộ đếm trong RAM: cộng dồn, sang ngày UTC tự về 0, ngưỡng 70%/90%;
+       E2. Worker đếm THẬT khi chạm KV, số ra tới /api/health + /api/admin/kv;
+       E3. đếm lượt đọc KHÔNG sinh lượt ghi KV nào (không đốt đúng thứ đang thiếu). */
+  {
+    const b = budgetMod;
+    const t1 = Date.UTC(2026, 8, 30, 10, 0, 0);
+    b.resetReadMeter();
+    b.noteKvRead(1, t1); b.noteKvRead(1, t1); b.noteKvRead(1, t1);
+    eq('đọc/đếm 3 lượt trong ngày', b.kvReadSnapshot({}, t1).readsToday, 3);
+    b.noteKvRead(1, Date.UTC(2026, 9, 1, 0, 5, 0));
+    eq('đọc/sang ngày UTC mới → bộ đếm về 0 rồi cộng lại',
+      b.kvReadSnapshot({}, Date.UTC(2026, 9, 1, 0, 5, 0)).readsToday, 1);
+
+    b.resetReadMeter();
+    const envSmall = { KV_READ_BUDGET: '100' };
+    for (let i = 0; i < 69; i++) b.noteKvRead(1, t1);
+    eq('đọc/69% chưa cảnh báo', [b.kvReadSnapshot(envSmall, t1).readWarn, b.kvReadSnapshot(envSmall, t1).readBudget], [false, 100]);
+    b.noteKvRead(1, t1);
+    eq('đọc/70% → cảnh báo', b.kvReadSnapshot(envSmall, t1).readWarn, true);
+    for (let i = 0; i < 20; i++) b.noteKvRead(1, t1);
+    eq('đọc/90% → mức nghiêm trọng', b.kvReadSnapshot(envSmall, t1).readCritical, true);
+    eq('đọc/trần mặc định đúng gói Free', b.readBudget({}), 100000);
+    eq('đọc/trần cấu hình sai bị chặn', b.readBudget({ KV_READ_BUDGET: '999999999' }), b.KV_READ.budgetMax);
+
+    /* E2. Worker đếm thật */
+    b.resetReadMeter();
+    const h1 = await call('GET', '/api/health');
+    const st1 = (h1.body || {}).stats || {};
+    ck('health/có readsToday (A2)', typeof st1.readsToday === 'number', st1.readsToday, 'number');
+    eq('health/có trần đọc 100.000', st1.readBudget, 100000);
+    await call('GET', '/api/registry');
+    await call('GET', '/api/registry');
+    await call('GET', '/api/stats');
+    const h2 = await call('GET', '/api/health');
+    const st2 = (h2.body || {}).stats || {};
+    ck('đọc/3 lượt gọi thật làm bộ đếm tăng ≥ 3', st2.readsToday - st1.readsToday >= 3, st2.readsToday - st1.readsToday, '≥ 3');
+
+    const adm = await call('GET', '/api/admin/kv', { headers: { 'x-admin-key': ADMIN } });
+    const ab = adm.body || {};
+    ck('admin/kv trả readsToday + trần đọc', typeof ab.readsToday === 'number' && ab.readBudget === 100000,
+      { readsToday: ab.readsToday, readBudget: ab.readBudget }, 'number + 100000');
+    eq('admin/kv nói rõ đây là ước lượng trong RAM', ab.readSource, 'worker-estimate');
+    const noKey = await call('GET', '/api/admin/kv');
+    ck('admin/kv vẫn cần khoá quản trị', noKey.status === 401, noKey.status, 401);
+
+    /* E3. đếm lượt đọc không được sinh lượt ghi KV nào */
+    const writesBefore = kv.writes;
+    for (let i = 0; i < 5; i++) await call('GET', '/api/registry');
+    eq('đọc/đếm lượt đọc không sinh lượt ghi KV', kv.writes, writesBefore);
+  }
+
   const out = {
     tongSo: checks.length,
     dat: checks.filter((c) => c.ok).length,

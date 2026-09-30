@@ -54,6 +54,14 @@ function json(body, ok = true, status = 200) {
   assert.ok(!doc.querySelector('.v2gate'), 'chưa qua auth gate');
   assert.ok(/Cloudflare KV/.test(doc.body.textContent), 'chưa vào mode online');
 
+  /* A2: Worker cũ KHÔNG trả readsToday → tile "Lượt đọc KV hôm nay" phải ghi rõ
+     lý do, KHÔNG được hiện số 0 giả (0 nghĩa là "hôm nay chưa đọc lượt nào"). */
+  const ovTiles = [...doc.querySelectorAll('.tile')].map((el) => el.textContent.replace(/\s+/g, ' ').trim());
+  assert.ok(ovTiles.some((t) => /Lượt đọc KV hôm nay/.test(t)), 'thiếu tile "Lượt đọc KV hôm nay"');
+  assert.ok(
+    ovTiles.some((t) => /—\s*Lượt đọc KV hôm nay\s*Worker chưa trả readsToday/.test(t)),
+    'tile lượt đọc phải hiện “—” kèm lý do khi Worker cũ, không hiện 0 giả: ' + JSON.stringify(ovTiles));
+
   click('button[data-tab="cmts"]');
   await wait(250);
   assert.ok(/Một bình luận test/.test(doc.querySelector('#pane-cmts').textContent), 'chưa render bình luận online');
