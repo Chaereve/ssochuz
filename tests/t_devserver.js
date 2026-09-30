@@ -51,7 +51,7 @@ function start(root, port, py, log) {
   p.stderr.on('data', (b) => { if (log) log.push(String(b).trim()); });
   p.on('error', (e) => { if (log) log.push('spawn ' + py + ' failed: ' + (e && e.message)); });
   return p;
-}
+}
 async function ready(root, port, tries = 40, proc) {
   for (let i = 0; i < tries; i++) {
     if (proc && proc.exitCode !== null) return false;
@@ -77,7 +77,7 @@ async function boot(root, pys) {
   }
   console.error('dev_server.py did not start -- ' + (why.join(' | ').slice(0, 300) || 'no response on ports 8791-8794'));
   return null;
-}
+}
 
 (async () => {
   const out = {};
@@ -89,7 +89,7 @@ async function boot(root, pys) {
     } catch (e) { return false; }
   });
   return globalThis.__PYS.length > 0;
-})();
+})();
   if (!hasPy) {
     console.log(JSON.stringify({ errors0: [], ghiChu: 'không có python3 — bỏ qua bài kiểm thử máy chủ xem thử' }, null, 1));
     process.exit(0);

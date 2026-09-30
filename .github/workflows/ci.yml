@@ -1,0 +1,53 @@
+# Kiểm thử tự động (G9a) — chạy mỗi lần push/PR vào main.
+#
+# Làm đúng các bước như trên máy: npm ci (gốc + tests/) → npm run build → npm test.
+# Cài cả tests/ vì tests/run.js ưu tiên tests/node_modules (jsdom 24) trước
+# node_modules gốc (jsdom 30) — chỉ cài gốc thì CI chạy trên bản jsdom khác máy.
+# 3 bài playwright (t_*_browser.js) KHÔNG nằm trong tests/run.js nên không cần
+# tải trình duyệt. t_devserver cần python3 — runner ubuntu có sẵn.
+#
+# Chi phí: repo public ⇒ GitHub Actions miễn phí. Không dùng secret nào.
+name: Kiểm thử
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            tests/package-lock.json
+
+      - name: Cài phụ thuộc (gốc)
+        run: npm ci
+
+      - name: Cài phụ thuộc (tests/)
+        run: npm ci
+        working-directory: tests
+
+      - name: Build
+        run: npm run build
+
+      - name: Chạy bộ kiểm thử
+        run: npm test

@@ -21,8 +21,18 @@ function inline(html, files) {
 }
 /* setup(w): chạy TRƯỚC khi script của trang chạy — dùng để giả lập phiên đăng nhập
    (localStorage) hoặc cấu hình (window.CZ_*) mà không phải sửa mã nguồn. */
-function page(file, { url = 'https://ssochuz.pages.dev/', fetch, config = {}, files = ['cz-config.js', 'cz-app.js'], setup = null, css = false } = {}) {
+/* preload: tệp nạp ĐỘNG lúc chạy (thẻ <script> chèn bằng JS) — jsdom không tự tải,
+   nên mặc định nhúng sẵn vào trang. admin.html: trình soạn thảo chương tách thành
+   admin-editor.js (tải khi mở khung soạn) ⇒ nhúng sẵn để các bài admin cũ chạy như
+   trước. Bài kiểm việc tải thật (t_admin_editor_lazy.js) truyền preload: [] kèm
+   resources: một jsdom ResourceLoader phục vụ tệp từ repo. */
+const PRELOAD = { 'admin.html': ['admin-editor.js'] };
+function page(file, { url = 'https://ssochuz.pages.dev/', fetch, config = {}, files = ['cz-config.js', 'cz-app.js'], setup = null, css = false, preload = PRELOAD[file] || [], resources = undefined } = {}) {
   let html = read(file);
+  if (preload.length) {
+    const pre = preload.map((f) => '<script>' + read(f) + '</script>').join('');
+    html = html.replace('</head>', () => pre + '</head>');
+  }
   html = inline(html, files);
   html = inlineAll(html);
   /* css: true → nhúng luôn cz.css vào trang để jsdom tính được getComputedStyle.
@@ -44,7 +54,7 @@ function page(file, { url = 'https://ssochuz.pages.dev/', fetch, config = {}, fi
   const vc = new VirtualConsole();
   vc.on('jsdomError', () => {});
   const dom = new JSDOM(html, {
-    runScripts: 'dangerously', pretendToBeVisual: true, url, virtualConsole: vc,
+    runScripts: 'dangerously', pretendToBeVisual: true, url, virtualConsole: vc, resources,
     beforeParse(w) {
       w.addEventListener('error', e => errors.push('win: ' + ((e.error && e.error.stack) || e.message)));
       w.console.error = (...a) => errors.push('cerr: ' + a.join(' '));

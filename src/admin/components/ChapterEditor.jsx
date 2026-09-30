@@ -1,6 +1,7 @@
 import { h } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { createRichTextEditor, fileToChapterHtml, htmlStats } from '../utils/richTextEditor.js';
+import { fileToChapterHtml, htmlStats } from '../utils/chapterText.js';
+import { loadEditorLib } from '../utils/editorLoader.js';
 import { importChapterFile, importSizeLabel, jsonBytes, MAX_BOOK_BYTES } from '../utils/chapterImport.js';
 import { readTime } from '../utils/format.js';
 import { tempMediaInHtml } from '../utils/htmlSafety.js';
@@ -113,7 +114,7 @@ function Toolbar({ editor }) {
   );
 }
 
-export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook, onSaveChapter, onDeleteChapter, onMoveChapter, onUploadImage, writeBlocked = false, online = false, shortcuts }) {
+export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad, onSaveBook, onSaveChapter, onDeleteChapter, onMoveChapter, onUploadImage, writeBlocked = false, online = false, shortcuts }) {
   const [localBook, setLocalBook] = useState(book || null);
   const [index, setIndex] = useState(0);
   const [title, setTitle] = useState('');
@@ -122,6 +123,9 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
   const [atLocal, setAtLocal] = useState('');
   const [editor, setEditor] = useState(null);
   const [host, setHost] = useState(null);
+  /* trình soạn thảo tải riêng (admin-editor.js): lỗi tải + số lần bấm "Thử lại" */
+  const [editorErr, setEditorErr] = useState('');
+  const [editorTry, setEditorTry] = useState(0);
   const [preview, setPreview] = useState(false);
   const [draft, setDraft] = useState(null);
   const [draftMap, setDraftMap] = useState({});
@@ -164,7 +168,7 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
     return () => { importTask.current++; if (importController.current) importController.current.abort(); };
   }, [book && book.slug, slug]);
 
-  useEffect(() => { setLocalBook(book || null); setIndex(0); }, [book && book.slug, slug]);
+  useEffect(() => { setLocalBook(book || null); setIndex(0); }, [book && book.slug, !!book, slug]);
   const chapters = (localBook && Array.isArray(localBook.chapters) ? localBook.chapters : []);
   const current = chapters[index] || { t: '', html: '' };
   const key = (localBook ? (localBook.slug || slug) : slug) + '#' + index;
@@ -245,15 +249,27 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
 
   useEffect(() => {
     if (!host) return;
-    const ed = createRichTextEditor({
-      element: host,
-      content: baseRef.current.html || '<p></p>',
-      onUpdate: (content) => { patchLive({ html: content }); setHtml(content); },
-      onImageFile: uploadImageFile,
-    });
-    setEditor(ed);
-    return () => { try { ed.destroy(); } catch (e) {} setEditor(null); };
-  }, [host, localBook && localBook.slug, index, reloadTick]);
+    /* alive: đổi chương/bộ hoặc đóng khung trong lúc đang tải thì bỏ kết quả —
+       không tạo trình soạn thảo thừa gắn vào vùng đã có chủ khác */
+    let alive = true;
+    let ed = null;
+    setEditorErr('');
+    loadEditorLib().then((lib) => {
+      if (!alive) return;
+      ed = lib.createRichTextEditor({
+        element: host,
+        content: baseRef.current.html || '<p></p>',
+        onUpdate: (content) => { patchLive({ html: content }); setHtml(content); },
+        onImageFile: uploadImageFile,
+      });
+      setEditor(ed);
+    }, (e) => { if (alive) setEditorErr((e && e.message) || String(e)); });
+    return () => {
+      alive = false;
+      if (ed) { try { ed.destroy(); } catch (e) { console.warn('Huỷ trình soạn thảo lỗi:', e); } }
+      setEditor(null);
+    };
+  }, [host, localBook && localBook.slug, index, reloadTick, editorTry]);
 
   useEffect(() => {
     if (!editor) return;
@@ -544,7 +560,13 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
   }, [shortcuts, localBook && localBook.slug, index, saving, writeBlocked, title, html, status, atLocal, temps.length, online]);
 
   if (!localBook && !loading) {
-    return <section class="card2" ref={cardRef}><div class="row"><h3>Chương</h3><span class="grow"></span><button class="btn ghost sm" type="button" onClick={() => onLoad && onLoad()}>Đọc dữ liệu chương</button></div><p class="hint">Chưa có dữ liệu chương trong cache.</p></section>;
+    /* G3: 3 trạng thái khác nhau — tải lỗi (thử lại) · bộ chưa có dữ liệu (404) · chưa tải */
+    const failed = !!loadError && !loadError.missing;
+    return <section class="card2" ref={cardRef}><div class="row"><h3>Chương</h3><span class="grow"></span><button class="btn ghost sm" type="button" onClick={() => onLoad && onLoad()}>{failed ? 'Thử lại' : (loadError ? 'Đọc lại' : 'Đọc dữ liệu chương')}</button></div>
+      {failed ? <div class="v2partial" role="alert"><span><b>Không tải được dữ liệu chương.</b> {loadError.message} — đây là lỗi kết nối, không có nghĩa bộ này trống. Bấm “Thử lại”.</span></div>
+        : loadError ? <p class="hint">Bộ này chưa có dữ liệu chương — chưa có chương nào được lưu.</p>
+        : <p class="hint">Chưa có dữ liệu chương trong cache.</p>}
+    </section>;
   }
   return (
     <section class="card2 v2chapter-card" ref={cardRef}>
@@ -615,6 +637,8 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
             <p class="hint v2sched-warn">Chương này KHÔNG nằm cuối bộ: lúc chưa lên sóng, số thứ tự các chương sau tạm dịch với truyện không ghi số trong tên chương. Chỉ hẹn giờ/ẩn chương cuối là an toàn nhất.</p>
           ) : null}
           <Toolbar editor={editor} />
+          {!editor && !editorErr ? <p class="hint" role="status">Đang tải trình soạn thảo…</p> : null}
+          {editorErr ? <div class="v2partial" role="alert"><span><b>Không tải được trình soạn thảo.</b> {editorErr} — nội dung chương chưa bị thay đổi gì. Bấm “Thử lại”.</span><button class="btn ghost sm" type="button" onClick={() => setEditorTry((n) => n + 1)}>Thử lại</button></div> : null}
           <div class="v2tiphost" ref={setHost}></div>
           <p class="v2draft-status">
             {saving ? <span>Đang gửi lên Worker…</span> : null}
