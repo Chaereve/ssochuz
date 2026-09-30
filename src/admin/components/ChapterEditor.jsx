@@ -72,8 +72,29 @@ function localInputPlus(hours) {
 }
 
 function Toolbar({ editor }) {
-  const ready = !!editor;
-  const cmd = (fn) => () => editor && fn(editor.chain().focus()).run();
+  const ready = !!(editor && !editor.isDestroyed);
+  const active = (name, attrs) => ready ? String(!!editor.isActive(name, attrs)) : undefined;
+  const cmd = (fn) => () => {
+    if (!ready) return;
+    fn(editor.chain().focus()).run();
+    if (!editor.isDestroyed && editor.editorView && editor.editorView.dom && editor.editorView.dom.focus) {
+      editor.editorView.dom.focus();
+    }
+  };
+  const onToolbarKeyDown = (e) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft' && e.key !== 'Home' && e.key !== 'End') return;
+    const bar = e.currentTarget;
+    const btns = Array.from(bar.querySelectorAll('button:not([disabled])'));
+    if (!btns.length) return;
+    const cur = e.target && e.target.closest ? e.target.closest('button') : document.activeElement;
+    const idx = Math.max(0, btns.indexOf(cur));
+    const next = e.key === 'Home' ? 0
+      : e.key === 'End' ? btns.length - 1
+      : e.key === 'ArrowRight' ? (idx + 1) % btns.length
+      : (idx - 1 + btns.length) % btns.length;
+    e.preventDefault();
+    if (btns[next] && btns[next].focus) btns[next].focus();
+  };
   const promptLink = () => {
     if (!editor) return;
     const old = editor.getAttributes('link').href || '';
@@ -91,25 +112,25 @@ function Toolbar({ editor }) {
     if (/^https?:\/\//i.test(t) || /^\/api\/img\//i.test(t)) editor.chain().focus().setImage({ src: t }).run();
   };
   return (
-    <div class="rte-tools v2tipbar" role="toolbar" aria-label="Định dạng chương">
-      <button type="button" disabled={!ready} title="Đậm · Ctrl/Cmd+B" onClick={cmd((c) => c.toggleBold())}><b>B</b></button>
-      <button type="button" disabled={!ready} title="Nghiêng · Ctrl/Cmd+I" onClick={cmd((c) => c.toggleItalic())}><i>I</i></button>
-      <button type="button" disabled={!ready} title="Gạch chân · Ctrl/Cmd+U" onClick={cmd((c) => c.toggleUnderline())}><u>U</u></button>
+    <div class="rte-tools v2tipbar" role="toolbar" aria-label="Định dạng chương" onKeyDown={onToolbarKeyDown}>
+      <button type="button" disabled={!ready} aria-label="In đậm" aria-pressed={active('bold')} title="Đậm · Ctrl/Cmd+B" onClick={cmd((c) => c.toggleBold())}><b>B</b></button>
+      <button type="button" disabled={!ready} aria-label="In nghiêng" aria-pressed={active('italic')} title="Nghiêng · Ctrl/Cmd+I" onClick={cmd((c) => c.toggleItalic())}><i>I</i></button>
+      <button type="button" disabled={!ready} aria-label="Gạch chân" aria-pressed={active('underline')} title="Gạch chân · Ctrl/Cmd+U" onClick={cmd((c) => c.toggleUnderline())}><u>U</u></button>
       <span class="v2sep" aria-hidden="true"></span>
-      <button type="button" disabled={!ready} title="Tiêu đề 2" onClick={cmd((c) => c.toggleHeading({ level: 2 }))}>H2</button>
-      <button type="button" disabled={!ready} title="Tiêu đề 3" onClick={cmd((c) => c.toggleHeading({ level: 3 }))}>H3</button>
-      <button type="button" disabled={!ready} title="Trích dẫn" onClick={cmd((c) => c.toggleBlockquote())}>❝</button>
-      <button type="button" disabled={!ready} title="Đường ngang" onClick={cmd((c) => c.setHorizontalRule())}>━━</button>
+      <button type="button" disabled={!ready} aria-label="Tiêu đề 2" aria-pressed={active('heading', { level: 2 })} title="Tiêu đề 2" onClick={cmd((c) => c.toggleHeading({ level: 2 }))}>H2</button>
+      <button type="button" disabled={!ready} aria-label="Tiêu đề 3" aria-pressed={active('heading', { level: 3 })} title="Tiêu đề 3" onClick={cmd((c) => c.toggleHeading({ level: 3 }))}>H3</button>
+      <button type="button" disabled={!ready} aria-label="Trích dẫn" aria-pressed={active('blockquote')} title="Trích dẫn" onClick={cmd((c) => c.toggleBlockquote())}>❝</button>
+      <button type="button" disabled={!ready} aria-label="Đường ngang" title="Đường ngang" onClick={cmd((c) => c.setHorizontalRule())}>━━</button>
       <span class="v2sep" aria-hidden="true"></span>
-      <button type="button" disabled={!ready} title="Danh sách" onClick={cmd((c) => c.toggleBulletList())}>• list</button>
-      <button type="button" disabled={!ready} title="Danh sách số" onClick={cmd((c) => c.toggleOrderedList())}>1. list</button>
-      <button type="button" disabled={!ready} title="Căn trái" onClick={cmd((c) => c.setTextAlign('left'))}>↤</button>
-      <button type="button" disabled={!ready} title="Căn giữa" onClick={cmd((c) => c.setTextAlign('center'))}>↔</button>
+      <button type="button" disabled={!ready} aria-label="Danh sách chấm" aria-pressed={active('bulletList')} title="Danh sách" onClick={cmd((c) => c.toggleBulletList())}>• list</button>
+      <button type="button" disabled={!ready} aria-label="Danh sách đánh số" aria-pressed={active('orderedList')} title="Danh sách số" onClick={cmd((c) => c.toggleOrderedList())}>1. list</button>
+      <button type="button" disabled={!ready} aria-label="Căn trái" aria-pressed={active({ textAlign: 'left' })} title="Căn trái" onClick={cmd((c) => c.setTextAlign('left'))}>↤</button>
+      <button type="button" disabled={!ready} aria-label="Căn giữa" aria-pressed={active({ textAlign: 'center' })} title="Căn giữa" onClick={cmd((c) => c.setTextAlign('center'))}>↔</button>
       <span class="v2sep" aria-hidden="true"></span>
-      <button type="button" disabled={!ready} title="Liên kết" onClick={promptLink}>link</button>
-      <button type="button" disabled={!ready} title="Ảnh URL bền" onClick={promptImage}>ảnh</button>
-      <button type="button" disabled={!ready} title="Hoàn tác · Ctrl/Cmd+Z" onClick={cmd((c) => c.undo())}>↶</button>
-      <button type="button" disabled={!ready} title="Làm lại · Ctrl/Cmd+Shift+Z" onClick={cmd((c) => c.redo())}>↷</button>
+      <button type="button" disabled={!ready} aria-label="Chèn liên kết" aria-pressed={active('link')} title="Liên kết" onClick={promptLink}>link</button>
+      <button type="button" disabled={!ready} aria-label="Chèn ảnh từ URL" title="Ảnh URL bền" onClick={promptImage}>ảnh</button>
+      <button type="button" disabled={!ready} aria-label="Hoàn tác" title="Hoàn tác · Ctrl/Cmd+Z" onClick={cmd((c) => c.undo())}>↶</button>
+      <button type="button" disabled={!ready} aria-label="Làm lại" title="Làm lại · Ctrl/Cmd+Shift+Z" onClick={cmd((c) => c.redo())}>↷</button>
     </div>
   );
 }
@@ -126,6 +147,7 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
   /* trình soạn thảo tải riêng (admin-editor.js): lỗi tải + số lần bấm "Thử lại" */
   const [editorErr, setEditorErr] = useState('');
   const [editorTry, setEditorTry] = useState(0);
+  const [, setSelTick] = useState(0);
   const [preview, setPreview] = useState(false);
   const [draft, setDraft] = useState(null);
   const [draftMap, setDraftMap] = useState({});
@@ -241,6 +263,7 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
       setDraftPhase('');
     } else {
       if (saved) dropDraft(localBook.slug || slug, index);
+      patchLive({ title: baseTitle, html: baseHtml, status: baseStatus, atLocal: baseAtLocal });
       setDraft(null);
       setRestored(false);
       setDraftPhase('');
@@ -256,10 +279,12 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
     setEditorErr('');
     loadEditorLib().then((lib) => {
       if (!alive) return;
+      const initHtml = (liveRef.current && liveRef.current.html) || baseRef.current.html || '<p></p>';
       ed = lib.createRichTextEditor({
         element: host,
-        content: baseRef.current.html || '<p></p>',
+        content: initHtml,
         onUpdate: (content) => { patchLive({ html: content }); setHtml(content); },
+        onSelectionUpdate: () => setSelTick((n) => n + 1),
         onImageFile: uploadImageFile,
       });
       setEditor(ed);
@@ -272,12 +297,13 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
   }, [host, localBook && localBook.slug, index, reloadTick, editorTry]);
 
   useEffect(() => {
-    if (!editor) return;
+    if (!editor || editor.isDestroyed) return;
+    if (html === baseRef.current.html) return;
     const cur = editor.getHTML();
-    if (html !== cur) editor.commands.setContent(html || '<p></p>', false);
+    if (html !== cur) editor.commands.setContent(html || '<p></p>', { emitUpdate: false });
   }, [editor]);
 
-  useEffect(() => { if (editor) editor.setEditable(!importSaving); }, [editor, importSaving]);
+  useEffect(() => { if (editor && !editor.isDestroyed) editor.setEditable(!importSaving, false); }, [editor, importSaving]);
 
   /* Autosave nháp cục bộ: 700ms sau khi ngừng gõ. Trước đây 900ms nhưng đổi
      chương ngay sau khi gõ là mất; giờ đổi chương luôn gọi flushDraft() trước. */
@@ -423,7 +449,7 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
     setStatus(draft.status || status);
     setAtLocal(draft.atLocal || '');
     setRestored(true);
-    if (editor) editor.commands.setContent(draftHtml || '<p></p>', false);
+    if (editor && !editor.isDestroyed) editor.commands.setContent(draftHtml || '<p></p>', { emitUpdate: false });
   };
   /* Bỏ thay đổi chưa lưu: quay về đúng bản đang có trên Worker */
   const discardChanges = () => {
@@ -433,7 +459,7 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
     setHtml(base.html);
     setStatus(base.status);
     setAtLocal(base.atLocal);
-    if (editor) editor.commands.setContent(base.html || '<p></p>', false);
+    if (editor && !editor.isDestroyed) editor.commands.setContent(base.html || '<p></p>', { emitUpdate: false });
     dropDraft(localBook.slug || slug, index);
     clearDraftNote(index);
     setDraft(null); setRestored(false); setDraftPhase('');
@@ -575,17 +601,43 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
       <p class="hint">Phím tắt thêm chương mới: <b>Ctrl/Cmd+Alt+N</b> (hoặc nút “Thêm chương” bên phải). Không dùng Ctrl/Cmd+N thường — trình duyệt GIỮ phím đó để mở cửa sổ mới, trên Chrome/Edge trang không nhận được phím nên không tạo chương được.</p>
       {loading ? <div class="empty sm">Đang đọc chương…</div> : null}
       <div class="v2chapter-grid">
-        <aside class="v2chapter-list">
+        <aside class="v2chapter-list" aria-label="Danh sách chương">
           {chapters.length ? chapters.map((chapter, i) => {
             const kind = chapterKind(chapter.t || '');
             const kindTag = kind === 'open' ? 'Mở đầu' : (kind === 'extra' ? 'Ngoại truyện' : '');
             const sched = scheduleLabelOf(chapter);
             const local = draftMap[i] || null;
             return (
-              <button type="button" class={i === index ? 'on' : ''} key={i} draggable="true"
+              <button type="button" class={i === index ? 'on' : ''} aria-current={i === index ? 'true' : undefined} key={i} draggable="true"
                 onDragStart={() => setDragFrom(i)}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => { e.preventDefault(); reorderChapter(dragFrom, i); setDragFrom(-1); }}
+                onKeyDown={(e) => {
+                  if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+                    e.preventDefault();
+                    const delta = e.key === 'ArrowUp' ? -1 : 1;
+                    const target = Math.max(0, Math.min(chapters.length - 1, i + delta));
+                    if (target !== i) {
+                      reorderChapter(i, target).then(() => {
+                        const listEl = cardRef.current && cardRef.current.querySelector('.v2chapter-list');
+                        const btn = listEl && listEl.querySelectorAll('button')[target];
+                        if (btn && btn.focus) btn.focus();
+                      });
+                    }
+                    return;
+                  }
+                  if (!e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Home' || e.key === 'End')) {
+                    e.preventDefault();
+                    const nextIdx = e.key === 'Home' ? 0
+                      : e.key === 'End' ? chapters.length - 1
+                      : e.key === 'ArrowDown' ? Math.min(chapters.length - 1, i + 1)
+                      : Math.max(0, i - 1);
+                    gotoIndex(nextIdx);
+                    const listEl = cardRef.current && cardRef.current.querySelector('.v2chapter-list');
+                    const btn = listEl && listEl.querySelectorAll('button')[nextIdx];
+                    if (btn && btn.focus) btn.focus();
+                  }
+                }}
                 onClick={() => gotoIndex(i)}>
                 <b>{i + 1}</b><span>{chapter.t || ('Chương ' + (i + 1))}</span>
                 <em>{kindTag ? kindTag + ' · ' : ''}{quickWords(chapter.html)} từ{chapter.status && chapter.status !== 'published' ? ' · ' + (sched || (chapterStatusOf(chapter) === 'hidden' ? 'Đang ẩn' : 'Nháp')) : ''}{local ? ' · có nháp' : ''}</em>
@@ -594,8 +646,17 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
           }) : <div class="empty sm">Chưa có chương.</div>}
         </aside>
         <div class="v2chapter-editor">
-          <label class="fl">Tên chương</label>
-          <input class="inp" disabled={importSaving} value={title} onInput={(e) => { const v = e.currentTarget.value; patchLive({ title: v }); setTitle(v); }} placeholder={'Chương ' + (index + 1)} />
+          <label class="fl" for="v2ChapTitle">Tên chương</label>
+          <input id="v2ChapTitle" class="inp" disabled={importSaving} value={title}
+            onInput={(e) => { const v = e.currentTarget.value; patchLive({ title: v }); setTitle(v); }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.altKey && editor && !editor.isDestroyed) {
+                e.preventDefault();
+                editor.commands.focus();
+                if (editor.editorView && editor.editorView.dom && editor.editorView.dom.focus) editor.editorView.dom.focus();
+              }
+            }}
+            placeholder={'Chương ' + (index + 1)} />
           <label class="fl">Trạng thái chương
             <select class="inp" value={status} onChange={(e) => {
               const value = e.target.value;
@@ -687,9 +748,9 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
           <div class="row mt v2chap-actions">
             <span class="sm muted">{stat.words} từ · {stat.chars} ký tự · ~{readTime(stat.words)} phút đọc{draft ? ' · có nháp autosave' : ''}</span>
             <span class="grow"></span>
-            <input ref={fileRef} class="hide" type="file" accept=".txt,.html,.htm,text/plain,text/html" onChange={(e) => importFile(e.currentTarget.files && e.currentTarget.files[0])} />
-            <input ref={multiRef} class="hide" type="file" accept=".txt,.docx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(e) => { importMultiFile(e.currentTarget.files && e.currentTarget.files[0]); e.currentTarget.value = ''; }} />
-            <input ref={imageRef} class="hide" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => chooseImage(e.currentTarget.files && e.currentTarget.files[0])} />
+            <input ref={fileRef} class="hide" type="file" aria-label="Nhập tệp chương .txt hoặc .html" accept=".txt,.html,.htm,text/plain,text/html" onChange={(e) => importFile(e.currentTarget.files && e.currentTarget.files[0])} />
+            <input ref={multiRef} class="hide" type="file" aria-label="Nhập tệp nhiều chương .txt hoặc .docx" accept=".txt,.docx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(e) => { importMultiFile(e.currentTarget.files && e.currentTarget.files[0]); e.currentTarget.value = ''; }} />
+            <input ref={imageRef} class="hide" type="file" aria-label="Tải ảnh chèn vào chương" accept="image/jpeg,image/png,image/webp" onChange={(e) => chooseImage(e.currentTarget.files && e.currentTarget.files[0])} />
             <button class="btn ghost sm" type="button" onClick={() => fileRef.current && fileRef.current.click()}>Import .txt/.html</button>
             <button class="btn ghost sm" type="button" disabled={!localBook || importing || importSaving} title="1 file .txt hoặc .docx nhiều chương — tách theo dòng “Chương X”, xem trước rồi mới ghi" onClick={() => multiRef.current && multiRef.current.click()}>Nhập nhiều chương</button>
             <button class="btn ghost sm" type="button" disabled={uploading} onClick={() => imageRef.current && imageRef.current.click()}>{uploading ? 'Đang nén ảnh…' : 'Upload ảnh'}</button>

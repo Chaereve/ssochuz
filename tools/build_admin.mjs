@@ -5,6 +5,7 @@ import { copyFileSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
+import { evaluateBundleFile } from './bundle_budget.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const kb = (n) => (n / 1024).toFixed(1) + 'kb';
@@ -40,10 +41,16 @@ await build({
   define: { __ADMIN_EDITOR_VER__: JSON.stringify(editorVer) },
 });
 
-console.log('  admin.css      ' + kb(statSync(path.join(ROOT, 'admin.css')).size));
-console.log('  admin.js       ' + kb(statSync(path.join(ROOT, 'admin.js')).size));
-console.log('  admin.js.map   ' + kb(statSync(path.join(ROOT, 'admin.js.map')).size));
-console.log('  admin-editor.js ' + kb(statSync(path.join(ROOT, 'admin-editor.js')).size) + '  (?v=' + editorVer + ')');
+const fmtAdmin = (f, extra = '') => {
+  const bytes = statSync(path.join(ROOT, f)).size;
+  const ev = evaluateBundleFile(f, bytes);
+  const tag = ev.maxKb ? ('  (' + ev.pct + '% trần ' + ev.maxKb + ' kB' + (extra ? ' · ' + extra : '') + ')') : (extra ? '  (' + extra + ')' : '');
+  return '  ' + f.padEnd(16) + kb(bytes).padStart(8) + tag;
+};
+console.log(fmtAdmin('admin.css'));
+console.log(fmtAdmin('admin.js'));
+console.log(fmtAdmin('admin.js.map'));
+console.log(fmtAdmin('admin-editor.js', '?v=' + editorVer));
 
 // Bộ đọc DOCX tải riêng khi cần, giữ nguyên budget của admin.js.
 await build({
@@ -55,4 +62,11 @@ await build({
   target: ['es2019'],
   legalComments: 'inline',
 });
-console.log('  admin-docx.js  ' + kb(statSync(path.join(ROOT, 'admin-docx.js')).size));
+console.log(fmtAdmin('admin-docx.js'));
+
+for (const f of ['admin.css', 'admin.js', 'admin-editor.js', 'admin-docx.js']) {
+  const ev = evaluateBundleFile(f, statSync(path.join(ROOT, f)).size);
+  if (ev.status === 'warn' || ev.status === 'exceeded') {
+    console.warn('  ⚠ CẢNH BÁO DUNG LƯỢNG: ' + ev.message);
+  }
+}

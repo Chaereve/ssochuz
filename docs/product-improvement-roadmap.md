@@ -51,17 +51,17 @@ Thứ tự điểm không thay thế phán đoán: A1/A2 là P1 dù điểm th�
 - **Size:** S–M. **Owner approval:** có (G7 đổi nguồn ảnh, G8 là quyết định nội dung/pháp lý).
 - **Tiến độ (2026-09-30):** G9b xong (lockfile đã commit) · G9a xong (`.github/workflows/ci.yml`) · **G8 đã quyết: GIỮ `/data/book/*.json` công khai như hiện tại** (owner chọn; đây cũng là bản lưu tĩnh mà A1 dùng khi Worker/KV lỗi) — đừng mở lại · G7: đã có kế hoạch, chờ owner duyệt rủi ro egress (`docs/features/g7-mirror-bia-ke-hoach.md`) · **G3 xong**: khung soạn chương tách tải lỗi (role=alert + Thử lại) khỏi bộ chưa có dữ liệu (404); sửa kèm nút "Đọc dữ liệu chương" không làm gì (thiếu `onLoad`) và mở 1 bộ bắn 3 GET `/api/book` (nay 1) — `tests/t_admin_chapter_state.js` · **G6 xong**: `tools/check_og.mjs` trong `npm test` (sinh lại OG vào thư mục tạm rồi so byte); lần chạy đầu bắt được `co-vo-ho-anh-cua-toi` lệch mô tả ⇒ đã `npm run og`. · **G3b xong** (phát hiện khi làm G3, lỗi có từ trước): `getBook` nuốt mọi lỗi tải thành `null` ⇒ (1) **quét toàn vẹn → Sửa "Thiếu book" ghi đè bộ RỖNG lên bộ đang có chương** (mất dữ liệu, không hỏi lại); (2) đổi slug ⇒ registry sang slug mới, chương mồ côi dưới `book:<cũ>`; (3) nhân bản ⇒ bản sao rỗng. Nay `getBook` ném lỗi khi tải hỏng (404 vẫn `null`), quét ghi dòng "Không đọc được book (lỗi tải)" không tự sửa, và Sửa "Thiếu book" đọc lại Worker, chỉ ghi khi đúng 404 — `tests/t_admin_book_integrity.js` (mutation test 3/3 đỏ đúng chỗ). · **G7 xong phần code, bản $0** (owner hỏi cách làm không vượt hạn mức): bìa sao lưu thành tệp tĩnh `assets/covers/*.webp` trên Pages (băng thông tĩnh không giới hạn) thay vì Supabase (5 GB egress) — không sửa registry/KV, fallback link gốc; owner chỉ cần bấm workflow "Sao lưu bìa về repo" (`docs/features/g7-mirror-bia-ke-hoach.md` §A) — `tests/t_cover_mirror.mjs`. **Milestone B: xong code; còn owner bấm workflow G7.** ~~Lưu ý ngân sách: `admin.js` 509,6/520 KB~~ → **đã xử lý (owner duyệt 2026-09-30)**: tách Tiptap/ProseMirror sang `admin-editor.js` (≈ 317 KB, tải khi mở khung soạn chương, `?v=` = sha1 tự sinh lúc build) ⇒ `admin.js` còn ≈ 193 KB; tải lỗi có "Thử lại", không ghi gì — `tests/t_admin_editor_lazy.js` (mutation 3/3 đỏ đúng chỗ).
 
-### Milestone C — "Chất lượng và khả năng truy cập đo được"
+### Milestone C — "Chất lượng và khả năng truy cập đo được" — **ĐÃ XONG (2026-09-30)**
 
-- **Outcome:** có số liệu Lighthouse/a11y cho các trang chính và admin; bàn phím đi hết được luồng soạn chương; test trình duyệt thật trở thành tuỳ chọn chạy được ở máy dev.
+- **Outcome:** có số liệu Lighthouse/a11y cho các trang chính và admin (`tools/audit_a11y.mjs`, 24 màn giao diện đạt 0 lỗi `axe-core`); bàn phím đi hết được luồng soạn chương (`tests/t_admin_editor_keyboard.js`); script đo bundle size (`tools/bundle_budget.mjs` + `npm run build` in ra `% trần` và cảnh báo mềm).
 - **Scope:** D3 · bổ sung kiểm tra bàn phím cho editor · script đo bundle size (`npm run build` in ra bảng đã có — thêm ngưỡng cảnh báo).
 - **Non-goals:** không thêm dịch vụ đo từ xa.
 - **Size:** M.
 
-### Milestone D — "Nền móng dài hạn"
+### Milestone D — "Nền móng dài hạn" — **ĐÃ XONG (2026-09-30)**
 
-- **Outcome:** giảm nợ kỹ thuật: version thống nhất (G10), tài liệu gom về `docs/` (D1), quyết định nâng Tiptap 3 (D2) có kế hoạch rollback.
-- **Size:** M. **Owner approval:** có với D2 (breaking).
+- **Outcome:** giảm nợ kỹ thuật: version thống nhất (`src/shared/version.js` = `1.18.0` + `tools/check_version.mjs` — G10), tài liệu gom về `docs/reports/` (D1 — 32 file `.md`), nâng Tiptap 3 (`@tiptap/*@^3.31.4`, `npm audit` = `0 vulnerabilities` — D2), tối ưu `.github/workflows/mirror-covers.yml` (~15s cài ImageMagick) và dọn 9 workflow `tmp-*` cũ.
+- **Size:** M. **Owner approval:** đã duyệt và hoàn tất.
 
 ## 3. Deferred / requires budget or owner decision
 
@@ -69,7 +69,7 @@ Thứ tự điểm không thay thế phán đoán: A1/A2 là P1 dù điểm th�
 | --- | --- | --- | --- |
 | Analytics hành vi (funnel, drop-off) bằng Cloudflare Web Analytics | `Unknown — verification needed` (phải xác minh điều khoản + không thẻ + không auto-upgrade) | Chạm dữ liệu người dùng; cần owner quyết định | Owner duyệt; khi đó viết báo cáo xác minh free tier riêng và phương án thay thế (đếm phía Worker) |
 | Tìm kiếm toàn văn | `Not feasible at $0` nếu dùng hosted search | 63 bộ, duyệt client đủ nhanh | Chỉ làm nếu owner muốn; phương án $0: thêm trường từ khoá vào registry |
-| Nâng cấp Tiptap lên v3 | `No external service required` nhưng là breaking major | Rủi ro hồi quy editor | Owner duyệt + kế hoạch test thủ công admin |
+| ~~Nâng cấp Tiptap lên v3~~ | **ĐÃ XONG (D2 — 2026-09-30)** | Đã nâng lên `@tiptap/*@^3.31.4`, vá 25 cảnh báo moderate (`0 vulnerabilities`) | Đã kiểm thử tự động toàn bộ luồng soạn chương + bàn phím |
 | Nâng cấp Cloudflare Workers Paid ($5/tháng) để tăng hạn mức | `Paid / approval required` | Vi phạm ngân sách $0 | Chỉ khi vượt trần thật và owner chấp thuận chi phí |
 | Chuyển sang R2 (10 GB free) cho overflow ảnh/chương | `Confirmed free and suitable` (đã ghi trong `wrangler.toml`, đang comment) | Không cần khi Supabase còn dư | Owner bật khi Supabase gần 1 GB |
 | Email thông báo thành kênh bắt buộc | `Unknown — verification needed` (Resend free/FormSubmit chưa xác minh SLA) | Hiện đang là tuỳ chọn, không chặn luồng | Giữ tuỳ chọn; chỉ nâng cấp nếu owner muốn |

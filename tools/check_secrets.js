@@ -59,14 +59,12 @@ for (const file of files) {
 }
 
 /* ---------------------------------------------------------------------------
-   RÀ RÒ RỈ TỆP NỘI BỘ QUA Cloudflare Pages (bổ sung 23/09 sau khi rà bằng skill
-   web-app-scanner — thấy /admin.js.map và 8 tệp BAO-CAO-*.md tải thẳng được).
+   RÀ RÒ RỈ TỆP NỘI BỘ QUA Cloudflare Pages (bổ sung 23/09 + D1 30/09).
 
-   Mọi tệp .map / .md ở THƯ MỤC GỐC đều nằm trong vùng Pages phát hành. Luật
-   redirect của Pages luôn áp TRƯỚC khi phục vụ tệp tĩnh, nên chặn bằng _redirects
-   là đủ — nhưng phải có luật. Thêm tệp nội bộ mới ở gốc mà quên thêm luật là
-   kiểm tra này đỏ ngay, không đợi tới lúc người lạ tải được.
-   Ngoại lệ duy nhất: THIRD-PARTY-NOTICES.md (ghi công giấy phép, cố ý công khai).
+   Mọi tệp .map / .md ở THƯ MỤC GỐC đều nằm trong vùng Pages phát hành; các báo
+   cáo BAO-CAO-*.md / HUONG-DAN-*.md phải nằm trong docs/reports/ và bị chặn
+   bởi luật /docs/* trong _redirects.
+   Ngoại lệ duy nhất ở gốc: THIRD-PARTY-NOTICES.md (ghi công giấy phép, cố ý công khai).
    ------------------------------------------------------------------------ */
 const PUBLIC_MD = new Set(['THIRD-PARTY-NOTICES.md']);
 const redirectRules = new Set(
@@ -75,14 +73,20 @@ const redirectRules = new Set(
     .filter((l) => l.trim() && !l.trim().startsWith('#'))
     .map((l) => l.trim().split(/\s+/)[0])
 );
+if (!redirectRules.has('/docs/*')) {
+  fail('/docs/*', '_redirects thiếu luật chặn /docs/* (chứa tài liệu & báo cáo nội bộ D1)');
+}
 for (const name of fs.readdirSync(ROOT)) {
   if (!fs.statSync(path.join(ROOT, name)).isFile()) continue;
+  if (/^(BAO-CAO|HUONG-DAN)-.*\.md$/i.test(name)) {
+    fail('/' + name, 'báo cáo/hướng dẫn nội bộ phải đặt trong docs/reports/ (D1), không để ở thư mục gốc');
+  }
   const internal = name.endsWith('.map') || (name.endsWith('.md') && !PUBLIC_MD.has(name));
   if (internal && !redirectRules.has('/' + name)) {
     fail('/' + name, 'tệp nội bộ ở thư mục gốc chưa bị _redirects chặn — đang tải công khai được');
   }
 }
-checked.push('_redirects (chặn tệp nội bộ ở gốc)');
+checked.push('_redirects (chặn tệp nội bộ ở gốc + /docs/*)');
 
 console.log(JSON.stringify({ checked: checked.length, errors0: errors }, null, 1));
 if (errors.length) {

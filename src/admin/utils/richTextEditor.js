@@ -1,26 +1,26 @@
-/* Trình soạn thảo chương (Tiptap/ProseMirror ≈ 315 KB) — CHỈ file này import Tiptap.
+/* Trình soạn thảo chương (Tiptap 3 / ProseMirror ≈ 325 KB) — CHỈ file này import Tiptap.
    Không import thẳng từ component: build thành admin-editor.js riêng
    (src/admin/editor-entry.js) và tải khi cần qua utils/editorLoader.js, để
    admin.js không phải mang theo. Hàm xử lý văn bản thuần ở utils/chapterText.js. */
 import { Editor } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
-import Link from '@tiptap/extension-link';
-import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 
-export function createRichTextEditor({ element, content = '', onUpdate, onImageFile } = {}) {
+export function createRichTextEditor({ element, content = '', onUpdate, onSelectionUpdate, onImageFile } = {}) {
   if (!element) throw new Error('Thiếu vùng gắn editor');
   let instance = null;
   const editor = new Editor({
     element,
     content: content || '<p></p>',
     extensions: [
+      /* Tiptap 3: StarterKit đã gồm sẵn Link + Underline; tắt trailingNode để
+         mở chương kết thúc bằng blockquote/h2/hr không tự chèn thêm <p></p>. */
       StarterKit.configure({
         heading: { levels: [2, 3] },
+        link: { openOnClick: false, autolink: true, linkOnPaste: true },
+        trailingNode: false,
       }),
-      Underline,
-      Link.configure({ openOnClick: false, autolink: true, linkOnPaste: true }),
       Image.configure({ inline: false, allowBase64: false }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
     ],
@@ -28,6 +28,8 @@ export function createRichTextEditor({ element, content = '', onUpdate, onImageF
       attributes: {
         class: 'rte v2tiptap-prose',
         spellcheck: 'false',
+        role: 'textbox',
+        'aria-multiline': 'true',
         'aria-label': 'Nội dung chương',
       },
       transformPastedHTML(html) {
@@ -59,7 +61,13 @@ export function createRichTextEditor({ element, content = '', onUpdate, onImageF
       },
     },
     onUpdate({ editor: ed }) {
+      if (ed.isDestroyed) return;
       if (onUpdate) onUpdate(ed.getHTML());
+      if (onSelectionUpdate) onSelectionUpdate(ed);
+    },
+    onSelectionUpdate({ editor: ed }) {
+      if (ed.isDestroyed) return;
+      if (onSelectionUpdate) onSelectionUpdate(ed);
     },
   });
   instance = editor;

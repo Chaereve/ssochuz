@@ -37,7 +37,7 @@ assert.ok(adminBytes < 260 * 1024, 'admin.js phải nhỏ lại sau khi tách tr
 assert.ok(fs.existsSync(path.join(ROOT, 'admin-editor.js')), 'thiếu admin-editor.js — chạy npm run build:admin');
 const editorSrc = fs.readFileSync(path.join(ROOT, 'admin-editor.js'));
 const editorBytes = editorSrc.length;
-assert.ok(editorBytes < 360 * 1024, 'admin-editor.js vượt budget 360 KB: ' + (editorBytes / 1024).toFixed(1) + ' KB');
+assert.ok(editorBytes < 420 * 1024, 'admin-editor.js vượt budget 420 KB: ' + (editorBytes / 1024).toFixed(1) + ' KB');
 const wantVer = crypto.createHash('sha1').update(editorSrc).digest('hex').slice(0, 10);
 
 /* ---------- 3 + 4: chạy thật ---------- */

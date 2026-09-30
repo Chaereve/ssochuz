@@ -97,9 +97,8 @@ FAIL Soạn chương/danh sách chương có số từ     → "Chưa có chươ
 
 ## 4. Phụ thuộc và cảnh báo bảo mật
 
-- `npm audit`: **25 moderate**, toàn bộ đến từ chuỗi `@tiptap/*` (đang dùng `^2.27.3`, bản vá nằm ở `3.31.3` — **nâng cấp breaking**). Tiptap chỉ chạy trong trang quản trị (từ 2026-09-30 nằm riêng trong `admin-editor.js`, chỉ tải khi mở khung soạn chương), không nằm trong luồng đọc.
-  - Khuyến nghị: **Deferred** — cần owner duyệt vì là major bump; trước khi làm phải có test admin hiện có (đang khá đầy đủ) + kiểm tra tay luồng soạn chương.
-- ~~`package-lock.json` bị `.gitignore` → cài đặt không tái lập~~ → **đã xử lý ở G9b**: 2 lockfile đã commit, cài bằng `npm ci`. `preact`, `@tiptap/*`, `jsdom` vẫn khai `^` trong `package.json` nhưng bản thực cài bị khoá. Sau `npm ci && npm run build`, `admin.js` đã commit trùng khớp bản build (`git status` sạch) ⇒ bước `git diff --exit-code` trong CI (G9a) đã dùng được. `npm audit` báo 25 lỗ hổng mức moderate (chưa xử lý — ngoài phạm vi G9b).
+- ~~`npm audit`: **25 moderate**, toàn bộ đến từ chuỗi `@tiptap/*`~~ → **đã xử lý ở D2 (2026-09-30)**: nâng `@tiptap/core`, `@tiptap/starter-kit`, `@tiptap/extension-image`, `@tiptap/extension-text-align` lên `^3.31.4` (gỡ `@tiptap/extension-link` và `@tiptap/extension-underline` vì đã tích hợp sẵn trong `starter-kit` v3). `npm audit` đạt **`0 vulnerabilities`**.
+- ~~`package-lock.json` bị `.gitignore` → cài đặt không tái lập~~ → **đã xử lý ở G9b**: 2 lockfile đã commit, cài bằng `npm ci`. Sau `npm ci && npm run build`, bản build trùng khớp (`git status` sạch) ⇒ bước `git diff --exit-code` trong CI (G9a) đã dùng được.
 - Phụ thuộc runtime **không** có dịch vụ trả phí: toàn bộ hạ tầng chạy trên free tier (xem `docs/free-tier-verification.md`).
 
 ## 5. Chất lượng mã (quan sát, chưa hành động)
@@ -109,16 +108,16 @@ FAIL Soạn chương/danh sách chương có số từ     → "Chưa có chươ
 - Không có `any`/`@ts-ignore` trong Worker (tsc `checkJs` bật và sạch).
 - Frontend không có lint/format tự động. Trước khi thêm, ưu tiên CI chạy test (rẻ hơn và đang thiếu).
 
-## 6. Lệch phiên bản giữa các nguồn
+## 6. Lệch phiên bản giữa các nguồn — ĐÃ XỬ LÝ (G10)
 
-| Nguồn | Giá trị | Ghi chú |
+| Nguồn | Giá trị đồng bộ | Ghi chú |
 | --- | --- | --- |
-| `package.json` | `1.10.0` | dùng cho mọi thông báo npm |
-| `worker/cms.js` | `VERSION = '1.17.1'` | trả về `/api/health` |
-| `worker/README.md` | còn nhiều mục "1.16.1", "1.16.0" | hướng dẫn deploy |
-| `tests/_stats.json` | số kiểm tra cũ | số lượng kiểm tra theo từng bài |
+| `src/shared/version.js` | `VERSION = '1.18.0'` | Nguồn phiên bản duy nhất (single source of truth) |
+| `package.json` / `package-lock.json` | `1.18.0` | Đồng bộ tự động & kiểm tra bằng `tools/check_version.mjs` |
+| `worker/cms.js` | nhập `VERSION` từ `../src/shared/version.js` | trả về `/api/health` (`1.18.0`) |
+| `worker/README.md` | `1.18.0` | hướng dẫn deploy |
 
-Không phải lỗi chức năng, nhưng gây nhiễu khi đối chiếu bản deploy (bài học từ sự cố `BAO-CAO-SU-CO-DEPLOY-MAT-BIEN-SUPABASE.md`). **P3:** một nguồn version duy nhất + script đồng bộ.
+Đã hoàn tất ở **G10**: `tools/check_version.mjs` chạy trong `npm test` đảm bảo mọi nguồn khớp đúng `src/shared/version.js` (tránh lặp lại sự cố kiểu `docs/reports/BAO-CAO-SU-CO-DEPLOY-MAT-BIEN-SUPABASE.md`).
 
 ## 6b. Cache tĩnh `?v=` + service worker — bước bắt buộc mỗi lần đổi `cz-*`/`admin.js`
 

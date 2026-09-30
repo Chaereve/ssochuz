@@ -28,55 +28,13 @@
 /package-lock.json / 301
 /wrangler.toml    /  301
 /.gitignore       /  301
-/BAO-CAO-CAI-TO-GIAO-DIEN.md      /  301
-/BAO-CAO-BAO-MAT-VA-GIAO-DIEN.md  /  301
-/BAO-CAO-DU-LIEU.md               /  301
-/BAO-CAO-NANG-CAP.md              /  301
-/BAO-CAO-NANG-CAP-1.5.md          /  301
-/BAO-CAO-SUA-LOI-TRANG-TRUYEN.md  /  301
-/BAO-CAO-RANKING-VA-TOM-TAT.md    /  301
-/BAO-CAO-SUA-LOI-BIA-TRUYEN.md    /  301
-/BAO-CAO-DONG-BO-PHIEN-MY-SPACE.md / 301
-/BAO-CAO-UNSLOP-HEADER-VA-THE-TRUYEN.md / 301
-/BAO-CAO-SUA-LOI-DANG-NHAP-VA-GIAO-DIEN.md / 301
-/HUONG-DAN-DANG-NHAP-BINH-LUAN.md /  301
-/BAO-CAO-SUA-LOI-LINK-VA-PHIM-TAT.md /  301
-/BAO-CAO-SUA-LOI-TRANG-TAC-GIA-VA-COUPLE.md /  301
-# --- a2) VÁ RÒ RỈ (23/09, rà bằng skill web-app-scanner) ---
+# --- a2) VÁ RÒ RỈ (23/09, rà bằng skill web-app-scanner; D1 30/09) ---
 # source map của bundle admin: tải thẳng được ⇒ lộ NGUYÊN VĂN src/admin/*
 # (api.js, permissions.js, quota.js, mọi component). Chính sách của repo là bản
 # phát hành chỉ để lại mã đã rút gọn — tệp này phá đúng chính sách đó.
+# Các báo cáo BAO-CAO-*.md và HUONG-DAN-*.md đã dời về /docs/reports/ (D1) và
+# được chặn bằng luật /docs/* ở cuối tệp.
 /admin.js.map     /  301
-# 8 báo cáo nội bộ còn sót ngoài danh sách chặn: mô tả chi tiết cơ chế khoá truyện
-# (PBKDF2, token HMAC 6 giờ ký bằng SESSION_SECRET/ADMIN_KEY), tên endpoint quản trị
-# (/api/lock/set, /api/admin/kv, /api/private/*), cách phân quyền ADMIN_EMAILS —
-# tức bản đồ cho kẻ tấn công. Chặn nốt cho khớp các báo cáo khác.
-/BAO-CAO-ADMIN-V2-TINH-CHINH.md                /  301
-/BAO-CAO-ADMIN-V2.md                           /  301
-/BAO-CAO-CAI-TAO-ADMIN-V2.md                   /  301
-/BAO-CAO-CAN-CHINH-HERO-VA-HOP-THOAI-MY-SPACE.md /  301
-/BAO-CAO-GOP-ADMIN-MOT-TRANG.md                /  301
-/BAO-CAO-KHOA-TRUYEN-VA-TRANG-QUAN-TRI.md      /  301
-/BAO-CAO-OVERFLOW-VA-NHAN-DIEN-CHUONG.md       /  301
-# Báo cáo mới (23/09): hẹn giờ đăng chương + nén ảnh, và tiết kiệm hạn mức KV —
-# cùng loại tài liệu nội bộ, chặn như các báo cáo trên.
-/BAO-CAO-HEN-GIO-VA-ANH.md                     /  301
-/BAO-CAO-TIET-KIEM-KV.md                       /  301
-/BAO-CAO-AUDIT-VA-KE-HOACH.md                  /  301
-/BAO-CAO-P1-DOC-NHE-VA-CACHE.md                /  301
-/BAO-CAO-SUA-LOI-TAB-BAO-LOI.md                /  301
-/BAO-CAO-RA-SOAT-BAO-MAT.md                     /  301
-# Báo cáo sự cố 24/09: deploy làm mất biến SUPABASE_URL — kể rõ endpoint + cách
-# Worker đọc overflow, cùng loại tài liệu nội bộ nên chặn như các báo cáo trên.
-/BAO-CAO-SU-CO-DEPLOY-MAT-BIEN-SUPABASE.md      /  301
-# Báo cáo 24/09: đo mức tốn Worker + nén/sao lưu ảnh — tài liệu nội bộ như các báo cáo trên.
-/BAO-CAO-TIET-KIEM-WORKER-VA-SAO-LUU-ANH.md     /  301
-# Hướng dẫn làm tay sau merge 1.17.0 — tài liệu nội bộ.
-/HUONG-DAN-SAU-MERGE-1.17.md                    /  301
-# Hướng dẫn làm tay sau bản 1.17.1 (sự cố bảng ssochuz_blobs trống 24/09) — tài liệu nội bộ.
-/HUONG-DAN-SAU-MERGE-1.17.1.md                  /  301
-# Báo cáo 25/09: phím tắt “tạo chương mới” (Ctrl+N bị trình duyệt giữ) — tài liệu nội bộ.
-/BAO-CAO-PHIM-TAT-CTRL-N.md                     /  301
 # --- b) slug cũ → slug mới (bộ Special từng có dấu gạch dưới trong slug ở repo,
 #        trong khi KV dùng dấu gạch ngang — 17/09/2026). Giữ 301 để link cũ
 #        (tìm kiếm, bài chia sẻ) không 404. Khi không còn ai dùng thì xoá.
@@ -245,6 +203,7 @@
 /worker/*         /  301
 /tests/*          /  301
 /tools/*          /  301
+/docs/*           /  301
 /_inbox/*         /  301
 /blogger-theme/*  /  301
 /guide/*       /guide    200

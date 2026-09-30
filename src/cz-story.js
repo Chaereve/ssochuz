@@ -955,6 +955,11 @@
   }
   $$('[data-shut]').forEach(function (el) { el.addEventListener('click', function () { sheet('#tocSheet', false); sheet('#setSheet', false); }); });
   $$('#tocSheet .ibo, #setSheet .ibo').forEach(function (b) { b.innerHTML = ic('x', 'i-s'); });
+  $$('#tocSheet .pan, #setSheet .pan').forEach(function (p) { p.removeAttribute('role'); });
+  $$('#tocSheet .ph h4, #setSheet .ph h4').forEach(function (h) { h.setAttribute('role', 'heading'); h.setAttribute('aria-level', '2'); });
+  if ($('#rdCrumb')) $('#rdCrumb').setAttribute('aria-label', 'Đường dẫn chương');
+  if ($('#rdNav')) $('#rdNav').setAttribute('aria-label', 'Chuyển chương');
+  if ($('#lightbox')) { $('#lightbox').setAttribute('role', 'dialog'); $('#lightbox').setAttribute('aria-label', 'Xem ảnh chương'); }
   /* hai nút chuyển chương nhanh ngay trên thanh đọc (khỏi cuộn xuống cuối) */
   (function topNav() {
     var pv = $('#rdPrev'), nx = $('#rdNext');

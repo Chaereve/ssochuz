@@ -194,7 +194,7 @@
     document.querySelectorAll('[data-space-tab]').forEach(function (b) {
       var active = b.dataset.spaceTab === key;
       b.classList.toggle('on', active);
-      b.setAttribute('aria-pressed', String(active));
+      b.removeAttribute('aria-pressed');
       b.setAttribute('aria-selected', String(active));
       b.tabIndex = active ? 0 : -1;
     });

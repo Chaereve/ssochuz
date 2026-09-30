@@ -56,6 +56,13 @@ Admin (admin.html)  ──PUT──▶  Worker (worker/cms.js)  ──▶  Cloud
 
 GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới cần build); dữ liệu thì không đi qua GitHub nữa.
 
+## Có gì mới ở bản 1.18.0 — đếm lượt đọc KV (A2) + đồng bộ số phiên bản (G10)
+
+| | |
+|---|---|
+| **Đếm lượt đọc KV (A2)** | Bọc `env.CZ_KV` bằng Proxy trong RAM isolate để đếm mọi lượt `get`/`getWithMetadata` thật sự chạm KV (request trúng cache biên không tính), hợp nhất vào khoá `stats` (`sr`/`srd`) khi sẵn có đợt ghi nên **phát sinh 0 lượt ghi KV mới**. `/api/health` và `/api/admin/kv` trả thêm `readsToday`, `readBudget` (100.000/ngày), `readsBuffered`; trang `/admin` hiện cảnh báo khi vượt 70%/90% |
+| **Một nguồn version (G10)** | Hằng số `VERSION` nằm tại `src/shared/version.js` và được kiểm tự động với `package.json`, `worker/cms.js`, `worker/README.md` qua `tools/check_version.mjs` |
+
 ## Có gì mới ở bản 1.17.0 — sao lưu ảnh ngoài về kho + đo được mức tốn Worker
 
 | | |
@@ -99,9 +106,9 @@ GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới c�
 | **Đo được** | `node tools/bench_kv.mjs .` chạy thật `worker/cms.js` trên KV giả có đếm thao tác. Cùng kịch bản 250 lượt xem + 40 phiếu + 15 đánh giá + 20 bình luận + 100 lần đọc bình luận + 60 lần đọc `/api/stats`: **bản cũ 484 ghi / 674 đọc / 60 list → bản mới 137 ghi / 361 đọc / 1 list** (lượt xem: 1,18 → 0,04 lượt ghi mỗi lượt xem) |
 | **Đổi lại** | Số lượt đọc trên bảng xếp hạng có thể trễ vài phút lúc web vắng (phiếu bầu và đánh giá sao **vẫn ghi ngay**); hạn mức chống spam chính xác theo từng isolate (muốn tuyệt đối thì phải dùng Durable Object) |
 | **Test** | `tests/t_kv_quota.mjs` (34 kiểm tra: công thức chia nhịp, 500 lượt xem/60 lần bình luận không đốt lượt ghi, gộp `rateagg` chỉ 1 lượt LIST, `/api/health`) |
-| **Quan trọng** | Nằm TRONG Worker → phải **`npx wrangler deploy`** (xem mục 0). Kiểm tra: `curl <worker>/api/health` thấy `"version": "1.16.1"` |
+| **Quan trọng** | Nằm TRONG Worker → phải **`npx wrangler deploy`** (xem mục 0). Kiểm tra: `curl <worker>/api/health` thấy `"version": "1.18.0"` |
 
-## 0. Deploy bản 1.16.1 — 2 cách, chọn 1 (ai cũng làm được trong 2 phút)
+## 0. Deploy bản 1.18.0 — 2 cách, chọn 1 (ai cũng làm được trong 2 phút)
 
 > ### ⚠ TRƯỚC KHI DEPLOY: đọc 3 dòng này (sự cố thật ngày 23/09)
 >
@@ -111,7 +118,7 @@ GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới c�
 > Secret (`ADMIN_KEY`, `SESSION_SECRET`, `SUPABASE_SERVICE_ROLE`…) thì wrangler **giữ**.
 > Đó chính xác là điều đã làm cả 63 bộ truyện không đọc được sau khi deploy 1.16.0:
 > `SUPABASE_URL` đặt tay bị xoá ⇒ Worker mất chỗ đọc overflow. Toàn bộ sự cố + cách phòng:
-> **`BAO-CAO-SU-CO-DEPLOY-MAT-BIEN-SUPABASE.md`**. Từ 1.16.1 `SUPABASE_URL` nằm sẵn trong
+> **`docs/reports/BAO-CAO-SU-CO-DEPLOY-MAT-BIEN-SUPABASE.md`**. Từ 1.16.1 `SUPABASE_URL` nằm sẵn trong
 > `wrangler.toml` nên deploy không làm mất nữa; nếu vẫn thiếu, Worker tự dùng Project URL
 > đã lưu ở `/admin` → Cài đặt & đồng bộ (không cần deploy lại).
 > **Thêm biến mới cho Worker? Ghi vào `wrangler.toml` (biến thường) hoặc dùng
@@ -120,19 +127,19 @@ GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới c�
 **Cách A — dòng lệnh (khuyên dùng, cần Node):**
 
 ```bash
-cd worker && npx wrangler deploy          # wrangler tự gộp 9 tệp con
+cd worker && npx wrangler deploy          # wrangler tự gộp các tệp con
 ```
-Kiểm tra: mở `https://<worker>/api/health` phải thấy `"version": "1.16.1"`,
+Kiểm tra: mở `https://<worker>/api/health` phải thấy `"version": "1.18.0"`,
 và **`overflow.supabase` phải `true`** (nếu `false` thì xem `overflow.missing` — nó kể
 tên biến đang thiếu; `overflow.urlVia` cho biết URL lấy từ `env` hay từ ghim `kv`).
 
 **Cách B — dán trong bảng điều khiển Cloudflare (không cần cài gì):**
 
 1. Trên máy, chạy `npm run build:worker` → sinh **`worker/cms.bundle.js`** (một tệp duy nhất
-   190 KB, đã gộp sẵn 9 tệp con; tệp này không commit, ai cần thì chạy lại lệnh).
+   190 KB, đã gộp sẵn các tệp con; tệp này không commit, ai cần thì chạy lại lệnh).
 2. Cloudflare → **Workers & Pages** → chọn Worker `chuseoz-cms` → **Edit code**.
 3. Xoá hết code cũ, **dán toàn bộ** `worker/cms.bundle.js`, bấm **Deploy**.
-4. Mở `/api/health` xem `"version"` (bản này: `1.16.1`).
+4. Mở `/api/health` xem `"version"` (bản này: `1.18.0`).
 
 > **Đừng dán `worker/cms.js`.** Tệp đó có 9 dòng `import` (overflow, Durable Object, mã dùng chung
 > `src/shared/…`) — bảng điều khiển không tự gộp, dán vào là Worker báo lỗi và **mất cả My Space

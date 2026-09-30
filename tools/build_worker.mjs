@@ -23,11 +23,13 @@ import { build } from 'esbuild';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ENTRY = path.join(ROOT, 'worker', 'cms.js');
+const VER_FILE = path.join(ROOT, 'src', 'shared', 'version.js');
 const OUTDIR = path.join(ROOT, 'worker');
 const OUT = path.join(OUTDIR, 'cms.bundle.js');
 
 const src = readFileSync(ENTRY, 'utf8');
-const ver = (src.match(/const VERSION = '([^']+)'/) || [])[1] || '?';
+const verSrc = readFileSync(VER_FILE, 'utf8');
+const ver = (verSrc.match(/export const VERSION = '([^']+)'/) || [])[1] || '?';
 const date = (src.match(/const BUILD = '([^']+)'/) || [])[1] || '';
 
 const out = await build({

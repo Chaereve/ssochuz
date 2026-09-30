@@ -18,7 +18,7 @@ export function AuthGate({ defaultApi = '', defaultKey = '', busy = false, messa
   };
 
   return (
-    <section class="v2gate" aria-label="Cổng quản trị">
+    <main class="v2gate" aria-label="Cổng quản trị">
       <div class="gate v2gate-card">
         <span class="pill acc">admin</span>
         <h1>Trang quản trị ssochuz library</h1>
@@ -46,6 +46,6 @@ export function AuthGate({ defaultApi = '', defaultKey = '', busy = false, messa
         </form>
         {message ? <div class="msgbar show err">{message}</div> : null}
       </div>
-    </section>
+    </main>
   );
 }

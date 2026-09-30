@@ -138,7 +138,7 @@ export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulk
             <thead>
               <tr>
                 <th><input type="checkbox" checked={allOnPage} onChange={(e) => toggleAll(e.target.checked)} aria-label="Chọn cả trang" /></th>
-                <th>Bìa</th><th>Truyện</th><th>Tác giả</th><th>Hoàn thành</th><th>Xuất bản</th><th>Chương</th><th></th>
+                <th>Bìa</th><th>Truyện</th><th>Tác giả</th><th>Hoàn thành</th><th>Xuất bản</th><th>Chương</th><th aria-label="Thao tác">Thao tác</th>
               </tr>
             </thead>
             <tbody>

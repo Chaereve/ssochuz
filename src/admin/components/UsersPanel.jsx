@@ -32,7 +32,7 @@ export function UsersPanel({ registry, onEdit, onFilterAuthor }) {
         {shown.length ? (
           <div class="v2tablewrap">
             <table class="v2book-table">
-              <thead><tr><th>Tác giả</th><th>Số bộ</th><th>Xuất bản</th><th>Nháp</th><th>Khóa</th><th>Cập nhật</th><th></th></tr></thead>
+              <thead><tr><th>Tác giả</th><th>Số bộ</th><th>Xuất bản</th><th>Nháp</th><th>Khóa</th><th>Cập nhật</th><th aria-label="Thao tác">Thao tác</th></tr></thead>
               <tbody>
                 {shown.map((a) => (
                   <tr key={a.name}>

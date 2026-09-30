@@ -806,7 +806,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     }
     btn.classList.toggle('hasnew', total > 0);
     btn.setAttribute('aria-label', total > 0 ? ('Thông báo chương mới (' + total + ' chương chưa đọc)') : 'Thông báo chương mới');
-    menu.innerHTML = '<div class="nhead">' + icon('bell', 'i-s') + '<b>Chương mới</b>' +
+    menu.innerHTML = '<div class="nhead" role="presentation">' + icon('bell', 'i-s') + '<b>Chương mới</b>' +
       (total ? '<span>' + total + ' chưa đọc</span>' : '') + '</div>' +
       (items.length ? items.map(function (it) {
         var n = it.n, im = coverSrc(n);
@@ -816,7 +816,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
           '<span class="ntx"><b>' + esc(n.title) + '</b>' +
           '<span class="nsub"><i class="nnum">' + it.c + ' chương mới</i> · ' + esc(timeAgo(n.updated)) + '</span></span>' +
           icon('right', 'i-s') + '</a>';
-      }).join('') : '<div class="nempty">Chưa có chương mới.<br>Truyện bạn theo dõi ra chương là báo ở đây.</div>');
+      }).join('') : '<div class="nempty" role="menuitem" aria-disabled="true">Chưa có chương mới.<br>Truyện bạn theo dõi ra chương là báo ở đây.</div>');
   }
   function closeNotif() {
     var m = d.getElementById('czNotifMenu'), b = d.getElementById('czNotifBtn');
@@ -1789,9 +1789,12 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         icon(n.i, 'i-s') + ' ' + esc(n.label) + '</a>';
     }).join('');
     host.className = 'hdr';
-    host.innerHTML = '<div class="in">' +
+    var mn = d.querySelector('main');
+    if (mn && !mn.id) mn.id = 'main';
+    d.querySelectorAll('nav.crumb:not([aria-label])').forEach(function (el) { el.setAttribute('aria-label', 'Đường dẫn trang'); });
+    host.innerHTML = '<a class="skip" href="#main" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden">Chuyển tới nội dung chính</a><div class="in">' +
       '<a class="logo" href="/" title="ssochuz library"><span class="dot"></span>ssochuz<i> library</i></a>' +
-      '<nav class="nav" id="czNav"><span class="ink" id="czInk" aria-hidden="true"></span>' + links + '</nav>' +
+      '<nav class="nav" id="czNav" aria-label="Điều hướng chính"><span class="ink" id="czInk" aria-hidden="true"></span>' + links + '</nav>' +
       '<span class="grow"></span>' +
       '<button class="hbtn" id="czInstall" hidden title="Cài app ssochuz library" aria-label="Cài app ssochuz library">' + icon('download', 'i-s') +
         '<span class="nav-lbl">Cài app</span></button>' +

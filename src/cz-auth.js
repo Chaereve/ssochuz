@@ -732,7 +732,7 @@
     var why = sbReady() ? '' :
       '<div class="mb"><div class="note warn"><b>Chưa bật đăng nhập.</b> Dán <code>Project URL</code> và ' +
       '<code>anon key</code> của Supabase vào <code>cz-config.js</code> (hoặc lưu trong trang quản trị → ' +
-      'Cài đặt &amp; đồng bộ → mục Đăng nhập). Hướng dẫn 3 bước: <code>HUONG-DAN-DANG-NHAP-BINH-LUAN.md</code>.</div></div>';
+      'Cài đặt &amp; đồng bộ → mục Đăng nhập). Hướng dẫn 3 bước: <code>docs/reports/HUONG-DAN-DANG-NHAP-BINH-LUAN.md</code>.</div></div>';
     var m = w.CZ.modal('czLogin',
       '<div class="mh"><h4>Đăng nhập</h4></div>' + why +
       '<div class="mb">' +
@@ -767,7 +767,7 @@
     else if (sbReady()) p = loginSupabase(how === 'email' ? 'email' : 'oauth');
     else if (gisReadyCfg()) p = loginGoogleDirect();
     else {
-      toast('Chưa cấu hình đăng nhập — xem HUONG-DAN-DANG-NHAP-BINH-LUAN.md', 'err');
+      toast('Chưa cấu hình đăng nhập — xem docs/reports/HUONG-DAN-DANG-NHAP-BINH-LUAN.md', 'err');
       return loginDialog().then(function () { return null; }).catch(function () { return null; });
     }
     return p.then(function (u) {

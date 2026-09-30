@@ -72,7 +72,7 @@ còn `.space-hero-orbit`/`.space-hero-rule`/`.space-hero-action`; hộp thoại 
 được đặt `display` ngoài `[open]` (nếu không hộp thoại hiện ra dù chưa mở), `--space-radius`/`--space-line`
 phải có ở `:root` vì hộp chọn tủ nằm trên trang truyện; kèm chạy thật luồng mở hộp → chọn truyện → bộ đếm
 `1/200` → lưu → hộp đóng. Chạy ngược trên bản cũ nó bắt được 6/7 lỗi đã liệt kê trong
-`BAO-CAO-CAN-CHINH-HERO-VA-HOP-THOAI-MY-SPACE.md`.
+`docs/reports/BAO-CAO-CAN-CHINH-HERO-VA-HOP-THOAI-MY-SPACE.md`.
 `t_auth_flow.js`: **luồng đăng nhập Supabase sau bản vá 1.9.8** — link email (`?token_hash=`) phải gọi
 `verifyOtp` rồi dọn URL; Worker từ chối đổi token thì web giữ phiên dự phòng + ghi lý do vào
 `CZ_AUTH._verify`; My Space gặp 401 từ `/api/me/space` thì hiện nút "Thử lại" và
