@@ -1,6 +1,7 @@
 import { h } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { createRichTextEditor, fileToChapterHtml, htmlStats } from '../utils/richTextEditor.js';
+import { fileToChapterHtml, htmlStats } from '../utils/chapterText.js';
+import { loadEditorLib } from '../utils/editorLoader.js';
 import { importChapterFile, importSizeLabel, jsonBytes, MAX_BOOK_BYTES } from '../utils/chapterImport.js';
 import { readTime } from '../utils/format.js';
 import { tempMediaInHtml } from '../utils/htmlSafety.js';
@@ -122,6 +123,9 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
   const [atLocal, setAtLocal] = useState('');
   const [editor, setEditor] = useState(null);
   const [host, setHost] = useState(null);
+  /* trình soạn thảo tải riêng (admin-editor.js): lỗi tải + số lần bấm "Thử lại" */
+  const [editorErr, setEditorErr] = useState('');
+  const [editorTry, setEditorTry] = useState(0);
   const [preview, setPreview] = useState(false);
   const [draft, setDraft] = useState(null);
   const [draftMap, setDraftMap] = useState({});
@@ -245,15 +249,27 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
 
   useEffect(() => {
     if (!host) return;
-    const ed = createRichTextEditor({
-      element: host,
-      content: baseRef.current.html || '<p></p>',
-      onUpdate: (content) => { patchLive({ html: content }); setHtml(content); },
-      onImageFile: uploadImageFile,
-    });
-    setEditor(ed);
-    return () => { try { ed.destroy(); } catch (e) {} setEditor(null); };
-  }, [host, localBook && localBook.slug, index, reloadTick]);
+    /* alive: đổi chương/bộ hoặc đóng khung trong lúc đang tải thì bỏ kết quả —
+       không tạo trình soạn thảo thừa gắn vào vùng đã có chủ khác */
+    let alive = true;
+    let ed = null;
+    setEditorErr('');
+    loadEditorLib().then((lib) => {
+      if (!alive) return;
+      ed = lib.createRichTextEditor({
+        element: host,
+        content: baseRef.current.html || '<p></p>',
+        onUpdate: (content) => { patchLive({ html: content }); setHtml(content); },
+        onImageFile: uploadImageFile,
+      });
+      setEditor(ed);
+    }, (e) => { if (alive) setEditorErr((e && e.message) || String(e)); });
+    return () => {
+      alive = false;
+      if (ed) { try { ed.destroy(); } catch (e) { console.warn('Huỷ trình soạn thảo lỗi:', e); } }
+      setEditor(null);
+    };
+  }, [host, localBook && localBook.slug, index, reloadTick, editorTry]);
 
   useEffect(() => {
     if (!editor) return;
@@ -621,6 +637,8 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
             <p class="hint v2sched-warn">Chương này KHÔNG nằm cuối bộ: lúc chưa lên sóng, số thứ tự các chương sau tạm dịch với truyện không ghi số trong tên chương. Chỉ hẹn giờ/ẩn chương cuối là an toàn nhất.</p>
           ) : null}
           <Toolbar editor={editor} />
+          {!editor && !editorErr ? <p class="hint" role="status">Đang tải trình soạn thảo…</p> : null}
+          {editorErr ? <div class="v2partial" role="alert"><span><b>Không tải được trình soạn thảo.</b> {editorErr} — nội dung chương chưa bị thay đổi gì. Bấm “Thử lại”.</span><button class="btn ghost sm" type="button" onClick={() => setEditorTry((n) => n + 1)}>Thử lại</button></div> : null}
           <div class="v2tiphost" ref={setHost}></div>
           <p class="v2draft-status">
             {saving ? <span>Đang gửi lên Worker…</span> : null}

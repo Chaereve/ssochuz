@@ -22,6 +22,10 @@
 /admin-docx.js
   Cache-Control: no-cache
 
+# trình soạn thảo chương, tải khi mở khung soạn (URL có ?v= = sha1 nội dung)
+/admin-editor.js
+  Cache-Control: no-cache
+
 /admin.css
   Cache-Control: no-cache
 

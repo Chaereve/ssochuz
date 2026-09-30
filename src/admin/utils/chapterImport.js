@@ -1,4 +1,4 @@
-import { splitChaptersTxt } from './richTextEditor.js';
+import { splitChaptersTxt } from './chapterText.js';
 import { splitChaptersHtml, abortImport } from './docxChapters.js';
 
 export const MAX_CHAPTER_FILE_BYTES = 20 * 1024 * 1024;

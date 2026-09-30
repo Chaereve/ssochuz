@@ -18,6 +18,10 @@ const out = {
 };
 console.log(JSON.stringify(out, null, 1));
 assert.ok(js < 520 * 1024, 'admin.js vượt budget 520KB');
+/* Tiptap/ProseMirror tách sang admin-editor.js (tải khi mở khung soạn chương) —
+   xem tests/t_admin_editor_lazy.js. Trần riêng để trình soạn thảo không phình âm thầm. */
+const editorJs = fs.statSync(path.join(ROOT, 'admin-editor.js')).size;
+assert.ok(editorJs < 360 * 1024, 'admin-editor.js vượt budget 360KB');
 assert.strictEqual(!!map.sourcesContent, false, 'sourcemap không được chứa sourcesContent');
 assert.strictEqual(cssRoot, cssSrc, 'admin.css phải khớp src/admin/styles/admin.css (chạy npm run build:admin)');
 assert.ok((map.sources || []).some((s) => /src\/admin\/main\.jsx$/.test(s)), 'sourcemap thiếu source admin v2');
