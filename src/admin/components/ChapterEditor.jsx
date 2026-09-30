@@ -113,7 +113,7 @@ function Toolbar({ editor }) {
   );
 }
 
-export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook, onSaveChapter, onDeleteChapter, onMoveChapter, onUploadImage, writeBlocked = false, online = false, shortcuts }) {
+export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad, onSaveBook, onSaveChapter, onDeleteChapter, onMoveChapter, onUploadImage, writeBlocked = false, online = false, shortcuts }) {
   const [localBook, setLocalBook] = useState(book || null);
   const [index, setIndex] = useState(0);
   const [title, setTitle] = useState('');
@@ -164,7 +164,7 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
     return () => { importTask.current++; if (importController.current) importController.current.abort(); };
   }, [book && book.slug, slug]);
 
-  useEffect(() => { setLocalBook(book || null); setIndex(0); }, [book && book.slug, slug]);
+  useEffect(() => { setLocalBook(book || null); setIndex(0); }, [book && book.slug, !!book, slug]);
   const chapters = (localBook && Array.isArray(localBook.chapters) ? localBook.chapters : []);
   const current = chapters[index] || { t: '', html: '' };
   const key = (localBook ? (localBook.slug || slug) : slug) + '#' + index;
@@ -544,7 +544,13 @@ export function ChapterEditor({ slug, book, loading, apiBase, onLoad, onSaveBook
   }, [shortcuts, localBook && localBook.slug, index, saving, writeBlocked, title, html, status, atLocal, temps.length, online]);
 
   if (!localBook && !loading) {
-    return <section class="card2" ref={cardRef}><div class="row"><h3>Chương</h3><span class="grow"></span><button class="btn ghost sm" type="button" onClick={() => onLoad && onLoad()}>Đọc dữ liệu chương</button></div><p class="hint">Chưa có dữ liệu chương trong cache.</p></section>;
+    /* G3: 3 trạng thái khác nhau — tải lỗi (thử lại) · bộ chưa có dữ liệu (404) · chưa tải */
+    const failed = !!loadError && !loadError.missing;
+    return <section class="card2" ref={cardRef}><div class="row"><h3>Chương</h3><span class="grow"></span><button class="btn ghost sm" type="button" onClick={() => onLoad && onLoad()}>{failed ? 'Thử lại' : (loadError ? 'Đọc lại' : 'Đọc dữ liệu chương')}</button></div>
+      {failed ? <div class="v2partial" role="alert"><span><b>Không tải được dữ liệu chương.</b> {loadError.message} — đây là lỗi kết nối, không có nghĩa bộ này trống. Bấm “Thử lại”.</span></div>
+        : loadError ? <p class="hint">Bộ này chưa có dữ liệu chương — chưa có chương nào được lưu.</p>
+        : <p class="hint">Chưa có dữ liệu chương trong cache.</p>}
+    </section>;
   }
   return (
     <section class="card2 v2chapter-card" ref={cardRef}>

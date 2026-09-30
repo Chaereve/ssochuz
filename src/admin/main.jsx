@@ -33,9 +33,16 @@ function confirmBox(text, okLabel) {
   if (window.CZ && window.CZ.confirm) return window.CZ.confirm(text, okLabel);
   return Promise.resolve(window.confirm(text));
 }
+/* G3: ném lỗi kèm httpStatus (404 = bộ chưa có dữ liệu) thay vì nuốt thành
+   null — khung soạn chương cần phân biệt "chưa có" với "tải lỗi". */
 function staticBook(slug) {
   return fetch('/data/book/' + encodeURIComponent(slug) + '.json', { cache: 'no-store' })
-    .then((res) => res.ok ? res.json() : null).catch(() => null);
+    .then((res) => {
+      if (res.ok) return res.json();
+      const error = new Error('HTTP ' + res.status + ' khi đọc /data/book/' + slug + '.json');
+      error.httpStatus = res.status;
+      throw error;
+    });
 }
 function downloadJSON(filename, data) {
   const text = JSON.stringify(data, null, 2) + '\n';
@@ -97,6 +104,9 @@ function App() {
   const [currentSlug, setCurrentSlug] = useState('');
   const [bookCache, setBookCache] = useState({});
   const [bookLoading, setBookLoading] = useState(false);
+  const [bookErrors, setBookErrors] = useState({});
+  const bookInflight = useRef({});
+  const bookFailed = useRef({});
   const [listQuery, setListQuery] = useState('');
 
   /* shortcut handlers — stack để component ở “trong cùng” (ChapterEditor trong
@@ -286,16 +296,44 @@ function App() {
       : 'Đã lên ảnh ' + formatBytes(res.bytes || packed.bytes) + saved, res.dedupe ? 'info' : 'ok');
     return (/^\/api\//.test(res.url) && api.apiBase) ? api.apiBase + res.url : res.url;
   }
-  async function getBook(slug) {
+  /* G3: mở 1 bộ có 3 nơi cùng gọi tải (editSlug, effect ở đây, effect trong
+     BookEditor) ⇒ trước đây bắn 3 GET /api/book song song (gấp 3 lượt đọc KV)
+     và lần lỗi bị lần sau che mất. Gộp request đang bay theo slug.
+     Lỗi tải KHÔNG cache (để "Thử lại" gọi lại thật); 404 = bộ chưa có dữ liệu
+     thì cache null như cũ để effect không tải lại mãi. Slug vừa lỗi được nhớ
+     trong ref (effect giữ closure cũ nên không đọc state được): CHỈ lần tải TỰ
+     ĐỘNG từ effect (`auto`) bỏ qua slug đó — không thì thông báo lỗi chớp rồi
+     mất và tốn thêm 1 lượt đọc KV. Mọi lời gọi chủ động (Thử lại, bấm Sửa, đổi
+     slug, nhân bản, sao lưu, kiểm toàn vẹn) vẫn tải lại như trước G3 — nếu bỏ
+     qua ở đó thì nhân bản sẽ ra bộ rỗng. */
+  async function getBook(slug, auto = false) {
     if (bookCache[slug]) return bookCache[slug];
-    const book = state.online ? await api.book(slug).catch(() => null) : await staticBook(slug);
-    setBookCache((prev) => Object.assign({}, prev, { [slug]: book }));
-    return book;
+    if (bookInflight.current[slug]) return bookInflight.current[slug];
+    if (auto && bookFailed.current[slug]) return null;
+    delete bookFailed.current[slug];
+    const run = (async () => {
+      try {
+        const book = state.online ? await api.book(slug) : await staticBook(slug);
+        setBookErrors((prev) => { const next = Object.assign({}, prev); delete next[slug]; return next; });
+        setBookCache((prev) => Object.assign({}, prev, { [slug]: book }));
+        return book;
+      } catch (error) {
+        const missing = !!error && error.httpStatus === 404;
+        bookFailed.current[slug] = true;
+        setBookErrors((prev) => Object.assign({}, prev, { [slug]: { missing, message: missing ? '' : String((error && error.message) || error) } }));
+        if (missing) setBookCache((prev) => Object.assign({}, prev, { [slug]: null }));
+        return null;
+      } finally {
+        delete bookInflight.current[slug];
+      }
+    })();
+    bookInflight.current[slug] = run;
+    return run;
   }
-  async function loadBookForEdit(slug) {
+  async function loadBookForEdit(slug, auto = false) {
     if (!slug) return null;
     setBookLoading(true);
-    try { return await getBook(slug); }
+    try { return await getBook(slug, auto); }
     finally { setBookLoading(false); }
   }
 
@@ -969,7 +1007,7 @@ function App() {
   }
 
   useEffect(() => {
-    if (currentSlug && bookCache[currentSlug] === undefined) loadBookForEdit(currentSlug).catch(() => {});
+    if (currentSlug && bookCache[currentSlug] === undefined) loadBookForEdit(currentSlug, true).catch(() => {});
   }, [currentSlug, state.online]);
 
   useEffect(() => {
@@ -996,7 +1034,7 @@ function App() {
   if (activeTab === 'overview') pane = <Overview state={state} onReload={reload} onTodo={handleTodo} />;
   else if (activeTab === 'list') pane = <BookList registry={state.registry} selected={selected} onSelected={setSelected} onEdit={editSlug} onNew={() => setActiveTab('new')} onBulkUpdate={bulkUpdate} onDelete={deleteBook} apiBase={state.apiBase} initialQuery={listQuery} writeBlocked={writeBlocked} />;
   else if (activeTab === 'new') pane = <NewBook registry={state.registry} onCreate={createBook} onUploadImage={uploadImage} apiBase={state.apiBase} writeBlocked={writeBlocked} online={state.online} />;
-  else if (activeTab === 'edit') pane = <BookEditor registry={state.registry} slug={currentSlug} bookData={bookCache[currentSlug]} bookLoading={bookLoading} apiBase={state.apiBase} onLoadBook={loadBookForEdit} onSave={saveMeta} onSaveBook={saveBookChapters} onSaveChapter={saveChapterKv} onDeleteChapter={deleteChapterKv} onMoveChapter={moveChapterKv} onUploadImage={uploadImage} onLock={setBookLock} onUnlock={unlockBook} onDuplicate={duplicateBook} onBack={() => setActiveTab('list')} onDelete={deleteBook} writeBlocked={writeBlocked} online={state.online} shortcuts={shortcutsApi} />;
+  else if (activeTab === 'edit') pane = <BookEditor registry={state.registry} slug={currentSlug} bookData={bookCache[currentSlug]} bookLoading={bookLoading} bookError={bookErrors[currentSlug]} apiBase={state.apiBase} onLoadBook={loadBookForEdit} onSave={saveMeta} onSaveBook={saveBookChapters} onSaveChapter={saveChapterKv} onDeleteChapter={deleteChapterKv} onMoveChapter={moveChapterKv} onUploadImage={uploadImage} onLock={setBookLock} onUnlock={unlockBook} onDuplicate={duplicateBook} onBack={() => setActiveTab('list')} onDelete={deleteBook} writeBlocked={writeBlocked} online={state.online} shortcuts={shortcutsApi} />;
   else if (activeTab === 'chapters') pane = <ChaptersHub registry={state.registry} apiBase={state.apiBase} onEdit={editSlug} />;
   else if (activeTab === 'homepage') pane = <HomepageCMS registry={state.registry} apiBase={state.apiBase} onSave={saveHomepage} writeBlocked={writeBlocked} online={state.online} />;
   else if (activeTab === 'users') pane = <UsersPanel registry={state.registry} onEdit={editSlug} onFilterAuthor={(name) => { setListQuery(name); setActiveTab('list'); }} />;
