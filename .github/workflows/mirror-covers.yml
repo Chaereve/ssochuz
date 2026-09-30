@@ -1,0 +1,87 @@
+# Sao lưu bìa về repo (G7, $0) — nút bấm trong tab Actions.
+#
+# VÌ SAO: 61/63 bìa đang hotlink host ngoài (mebmarket, twimg, mydramalist…).
+# Host đổi/xoá ảnh hay chặn hotlink là bìa chết. Workflow tải bìa, thu về WebP
+# ≤ 480×720 rồi COMMIT thành tệp tĩnh assets/covers/<khoá>.webp. Cloudflare
+# Pages phục vụ tệp tĩnh KHÔNG giới hạn băng thông/request ⇒ không đụng 5 GB
+# egress Supabase, không ghi KV, không cần secret nào.
+#
+# DÙNG: tab Actions → "Sao lưu bìa về repo" → Run workflow. Chạy lại khi có bộ
+# mới/đổi bìa (ảnh đã có không tải lại; bìa không còn dùng tự bị xoá). Bìa chưa
+# sao lưu vẫn hiện bằng link gốc như cũ; tệp tĩnh lỗi cũng tự rơi về link gốc.
+# Người đã cài PWA thấy bìa tĩnh sau lần nâng ?v= kế tiếp (trước đó vẫn link gốc).
+#
+# Muốn tự chạy mỗi tuần thì bỏ comment 2 dòng `schedule` dưới đây:
+name: Sao lưu bìa về repo
+
+on:
+  workflow_dispatch:
+  # schedule:
+  #   - cron: '37 18 * * 0'   # 18:37 UTC Chủ nhật = 01:37 giờ VN thứ Hai
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mirror-covers
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Cài công cụ (esbuild để build, ImageMagick để đổi WebP)
+        run: |
+          set -euo pipefail
+          npm ci
+          # ubuntu-24.04 không còn cài sẵn ImageMagick
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq imagemagick
+
+      - name: Tải + đổi bìa (chỉ ĐỌC registry công khai của Worker)
+        run: |
+          set -euo pipefail
+          node tools/mirror_covers.mjs | tee mirror-summary.json
+
+      - name: Build cz-app.js với manifest mới + tự kiểm
+        run: |
+          set -euo pipefail
+          npm run build
+          node tests/t_cover_mirror.mjs
+
+      - name: Commit nếu có thay đổi
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/covers src/shared/covers-manifest.json cz-app.js
+          if git diff --cached --quiet; then
+            echo "Bìa đã sao lưu đầy đủ — không có gì để commit."
+          else
+            N=$(node -e "console.log(require('./src/shared/covers-manifest.json').keys.length)")
+            git commit -m "sao lưu bìa về repo ($N bìa)"
+            git push
+          fi
+
+      - name: Tóm tắt
+        if: always()
+        run: |
+          if [ -f mirror-summary.json ]; then
+            {
+              echo '### Sao lưu bìa'
+              echo '```json'
+              cat mirror-summary.json
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi

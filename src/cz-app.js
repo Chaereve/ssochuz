@@ -10,6 +10,9 @@
    Mọi trang chỉ cần nạp 2 file:  cz-config.js  →  cz-app.js
    ========================================================================== */
 import { parseChapterTitle, nextMainChapterNo, chapterIsEmpty, chapterHasMedia } from './shared/chapters.js';
+import { mirrorPath, MIRROR_DIR } from './shared/cover-mirror.js';
+import COVER_MANIFEST from './shared/covers-manifest.json';
+var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
 
 (function (w, d) {
   'use strict';
@@ -1400,7 +1403,14 @@ import { parseChapterTitle, nextMainChapterNo, chapterIsEmpty, chapterHasMedia }
 
   /* URL bìa bền: không dùng blob:/data:. Ảnh Worker dạng /api/img/… được
      ghép với CZ_API để homepage/thẻ truyện vẫn hiện sau khi refresh. */
+  /* G7: bìa đã sao lưu thành tệp tĩnh (/assets/covers/, Pages không tính băng
+     thông) thì dùng tệp đó; data-fb vẫn là LINK GỐC nên tệp lỗi còn rơi về được.
+     Danh sách khoá nằm sẵn trong bundle — không tốn thêm request nào. */
   function coverSrc(n, preferred) {
+    var raw = coverRaw(n, preferred);
+    return mirrorPath(raw, COVER_KEYS) || raw;
+  }
+  function coverRaw(n, preferred) {
     var img = '';
     if (typeof n === 'string') img = n;
     else if (n) img = preferred || n.thumb || n.slide || n.cover_image_url || n.cover || '';
@@ -1428,7 +1438,11 @@ import { parseChapterTitle, nextMainChapterNo, chapterIsEmpty, chapterHasMedia }
      (chỉ khi hai ảnh khác nhau) — imgSettle đọc data-fb này khi ảnh lỗi */
   function coverFB(n, img) {
     if (!n) return '';
-    var fb = coverSrc(n, n.slide);
+    var fb;
+    if (img && img.indexOf(MIRROR_DIR) === 0) {
+      /* dự phòng của tệp sao lưu = đúng link gốc đã sinh ra nó (thumb hoặc slide) */
+      fb = [coverRaw(n), coverRaw(n, n.slide)].filter(function (u) { return mirrorPath(u, COVER_KEYS) === img; })[0] || '';
+    } else fb = coverSrc(n, n.slide);
     if (!fb || fb === img) return '';
     return ' data-fb="' + esc(fb) + '"';
   }
