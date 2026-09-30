@@ -6,9 +6,9 @@
    Chạy:  node tests/t_registry_guard.mjs
    ========================================================================== */
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const worker = (await import(path.join(ROOT, 'worker', 'cms.js'))).default;
+const worker = (await import(pathToFileURL(path.join(ROOT, 'worker', 'cms.js')).href)).default;
 
 class FakeKV {
   constructor() { this.m = new Map(); }

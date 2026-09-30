@@ -38,7 +38,15 @@ function click(win, el) {
   assert.ok(el, 'không thấy nút cần bấm');
   el.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
 }
-const TEXT = /tự khôi phục/i;
+const TEXT = /tự khôi phục/i;
+/* Chờ theo ĐIỀU KIỆN thay vì chờ cứng: nhập file (FileReader) rồi khôi phục
+   nháp là chuỗi nhịp bất đồng bộ (insertContent → effect Preact → dựng lại
+   tiptap → setContent). Máy chậm (Windows) cần hơn 200ms nên chờ cứng hay đỏ
+   oan, trong khi chữ vẫn về đủ. Chờ tối đa ~4 giây rồi mới báo lỗi. */
+async function until(fn, msg, tries = 140) {
+  for (let i = 0; i < tries; i++) { if (fn()) return; await wait(30); }
+  assert.fail(msg);
+}
 
 (async () => {
   const registry = JSON.parse(read('data/registry.json'));
@@ -117,15 +125,29 @@ const TEXT = /tự khôi phục/i;
   const file = new win.File(['x'], 'chuong.txt', { type: 'text/plain' });
   Object.defineProperty(txtInput, 'files', { configurable: true, value: [file] });
   txtInput.dispatchEvent(new win.Event('change', { bubbles: true }));
-  await wait(400);
+  const editorText = () => {
+    const el = doc.querySelector('#pane-edit .ProseMirror');
+    return (el && el.textContent) || '';
+  };
+  await until(() => /Nháp từ file/.test(editorText()), 'nhập file xong mà khung soạn chưa có nội dung');
   input(win, titleInput, 'Chương 1 — bản đang gõ dở');
   const draftKey = 'ssochuz_admin_v2_chdraft:' + slug + ':0';
-  /* bấm sang chương khác rồi quay lại NGAY, trước khi debounce 0,7s kịp chạy */
-  click(win, list[1]);
-  await wait(120);
-  const back = [...doc.querySelectorAll('#pane-edit .v2chapter-list button')][0];
-  click(win, back);
-  await wait(200);
+  /* Xoá nháp rồi bấm sang chương khác NGAY (trước khi debounce 0,7s kịp chạy):
+     nháp phải được ghi NGAY trong chính cú bấm — đọc lại thấy có chữ tức là
+     đường “ghi nháp lúc đổi chương” còn sống, không nhờ hẹn giờ 0,7 giây. */
+  win.localStorage.removeItem(draftKey);
+  const chapterButtons = () => [...doc.querySelectorAll('#pane-edit .v2chapter-list button')];
+  click(win, chapterButtons()[1]);
+  const flushed = JSON.parse(win.localStorage.getItem(draftKey) || 'null');
+  assert.ok(flushed && /Nháp từ file/.test(flushed.html || ''),
+    'đổi chương mà KHÔNG ghi nháp ngay: ' + win.localStorage.getItem(draftKey));
+  await until(() => {
+    const el = doc.querySelector('#pane-edit .v2chapter-editor input.inp');
+    return !!el && el.value !== 'Chương 1 — bản đang gõ dở';
+  }, 'bấm sang chương khác mà khung sửa vẫn ở chương cũ');
+  /* quay lại chương cũ: chữ phải hiện lại (chờ tối đa ~4s cho máy chậm) */
+  click(win, chapterButtons()[0]);
+  await until(() => /Nháp từ file/.test(editorText()), 'nội dung vừa nhập bị mất khi đổi chương');
   const titleBack = doc.querySelector('#pane-edit .v2chapter-editor input.inp');
   assert.strictEqual(titleBack.value, 'Chương 1 — bản đang gõ dở', 'đổi chương xong quay lại bị mất tên đang gõ');
   const prose = doc.querySelector('#pane-edit .ProseMirror');

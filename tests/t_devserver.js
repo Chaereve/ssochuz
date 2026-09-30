@@ -40,15 +40,21 @@ function get(port, urlPath) {
   });
 }
 
-function start(root, port) {
-  const p = spawn('python3', [path.join(root, 'tools', 'dev_server.py'), '--port', String(port), '--quiet'],
-    { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
+function start(root, port, py, log) {
+  const p = spawn(py, [path.join(root, 'tools', 'dev_server.py'), '--port', String(port), '--quiet'],
+    { cwd: root, stdio: ['ignore', 'pipe', 'pipe'],
+  /* Windows: Python prints with the legacy code page (cp1258/cp437),
+     so one Vietnamese character in a log line can kill the process
+     with UnicodeEncodeError. Force UTF-8 for the child process. */
+  env: Object.assign({}, process.env, { PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' }) });
   p.stdout.on('data', () => {});
-  p.stderr.on('data', () => {});
+  p.stderr.on('data', (b) => { if (log) log.push(String(b).trim()); });
+  p.on('error', (e) => { if (log) log.push('spawn ' + py + ' failed: ' + (e && e.message)); });
   return p;
-}
-async function ready(root, port, tries = 40) {
+}
+async function ready(root, port, tries = 40, proc) {
   for (let i = 0; i < tries; i++) {
+    if (proc && proc.exitCode !== null) return false;
     const r = await get(port, '/');
     if (r.code) return true;
     await wait(150);
@@ -57,28 +63,40 @@ async function ready(root, port, tries = 40) {
 }
 
 /* cổng trống: thử vài cổng cao, cổng nào máy chủ bật lên được thì dùng */
-async function boot(root) {
-  for (const port of [8791, 8792, 8793, 8794]) {
-    const proc = start(root, port);
-    if (await ready(root, port)) return { proc, port };
-    try { proc.kill('SIGKILL'); } catch (e) {}
+async function boot(root, pys) {
+  const why = [];
+  for (const py of pys) {
+    for (const port of [8791, 8792, 8793, 8794]) {
+      const log = [];
+      const proc = start(root, port, py, log);
+      if (await ready(root, port, 40, proc)) return { proc, port, py };
+      try { proc.kill('SIGKILL'); } catch (e) {}
+      await wait(80);   /* cho stderr kip ve truoc khi doc ly do */
+      if (log.length) why.push(py + ':' + port + ': ' + log.join(' '));
+    }
   }
+  console.error('dev_server.py did not start -- ' + (why.join(' | ').slice(0, 300) || 'no response on ports 8791-8794'));
   return null;
-}
+}
 
 (async () => {
   const out = {};
   const hasPy = (() => {
-    try { require('child_process').execSync('python3 --version', { stdio: 'ignore' }); return true; }
-    catch (e) { return false; }
-  })();
+  globalThis.__PYS = ['python3', 'python', 'py'].filter((c) => {
+    try {
+      const o = require('child_process').execFileSync(c, ['-c', 'print(1)'], { stdio: ['ignore', 'pipe', 'ignore'] });
+      return String(o).trim() === '1';
+    } catch (e) { return false; }
+  });
+  return globalThis.__PYS.length > 0;
+})();
   if (!hasPy) {
     console.log(JSON.stringify({ errors0: [], ghiChu: 'không có python3 — bỏ qua bài kiểm thử máy chủ xem thử' }, null, 1));
     process.exit(0);
   }
 
   /* ============ 1. phục vụ đúng như Cloudflare Pages ====================== */
-  const srv = await boot(ROOT);
+  const srv = await boot(ROOT, globalThis.__PYS);
   if (!srv) { console.log(JSON.stringify({ errors0: ['không bật được tools/dev_server.py'] }, null, 1)); process.exit(1); }
   const { port, proc } = srv;
   try {
@@ -149,7 +167,7 @@ async function boot(root) {
     /* đúng kiểu _redirects từng làm chết trang truyện: đích là tệp .html */
     fs.writeFileSync(path.join(tmp, '_redirects'),
       '/truyen/*   /truyen.html  200\n/truyen     /truyen.html  200\n');
-    const bad_srv = await boot(tmp);
+    const bad_srv = await boot(tmp, globalThis.__PYS);
     if (!bad_srv) ok(false, 'không bật được máy chủ xem thử ở thư mục tạm');
     else {
       try {

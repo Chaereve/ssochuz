@@ -32,6 +32,28 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+
+def make_output_safe():
+    """Dung de may chu xem thu chet vi mot ky tu tieng Viet.
+
+    Tren Windows, stdout/stderr dung bang ma cu cua he thong (cp1258 cho
+    tieng Viet, cp437/cp1252 cho ban khac) chu khong phai UTF-8. Bang ma do
+    thieu ky tu co trong cac dong thong bao duoi day (dau cham giua, mui
+    ten, hoac chu co dau) nen print() nem UnicodeEncodeError va may chu tat
+    ngay khi khoi dong, kem traceback kho hieu -- trong khi loi that chi la
+    "man hinh khong in duoc ky tu nay".
+
+    Ham nay KHONG doi bang ma (chu Viet van hien dung neu bang ma co), chi
+    doi cach xu ly ky tu khong bieu dien duoc tu "nem loi" thanh "thay bang
+    ?". Python < 3.7 khong co reconfigure thi bo qua -- ban cu van chay nhu
+    truoc.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(errors='replace')
+        except (AttributeError, ValueError, OSError):
+            pass
+
 MIME = {
     '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
     '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8',
@@ -300,6 +322,7 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 def main():
+    make_output_safe()
     ap = argparse.ArgumentParser(description='ssochuz · xem thử trên máy (giống Cloudflare Pages)')
     ap.add_argument('--port', type=int, default=8080)
     ap.add_argument('--host', default='0.0.0.0')

@@ -14,11 +14,11 @@
    Điều kiện đạt: mọi khoá "errors*" là [] và thoát mã 0.
    ========================================================================== */
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const worker = (await import(path.join(ROOT, 'worker', 'cms.js'))).default;
-const budgetMod = await import(path.join(ROOT, 'src', 'shared', 'kv-budget.js'));
+const worker = (await import(pathToFileURL(path.join(ROOT, 'worker', 'cms.js')).href)).default;
+const budgetMod = await import(pathToFileURL(path.join(ROOT, 'src', 'shared', 'kv-budget.js')).href);
 
 /* ---------------------------- KV giả (đếm thao tác) ------------------------ */
 const DAY_SECONDS = 86400;
