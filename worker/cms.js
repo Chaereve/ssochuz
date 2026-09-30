@@ -4,7 +4,7 @@ export { PrivateBooks } from './private-books.js';
 import { dropOverflow, overflowStatusResolved, missingOverflowVars, persistBook, persistCover, persistChapterImage, persistImage, readBook, readBookChecked, readImage, materializeBookChecked, migrateOverflow, mirrorImages, sbPinUrl, sbPinReset as sbPinResetCache } from './overflow.js';
 import { parseChapterTitle, nextMainChapterNo, chapterTextOf, chapterHasMedia } from '../src/shared/chapters.js';
 import { isChapterPending, countVisibleChapters, countPendingChapters, nextScheduleMs, atMs, chapterAtMs, scheduleLabelOf } from '../src/shared/schedule.js';
-import { KV_FLUSH, statsBudget, forcedFlushMs, budgetCredits, flushOnTimer } from '../src/shared/kv-budget.js';
+import { KV_FLUSH, statsBudget, forcedFlushMs, budgetCredits, flushOnTimer, noteKvRead, kvReadSnapshot } from '../src/shared/kv-budget.js';
 import { cacheKeyOf, isJunkParam } from '../src/shared/cache-key.js';
 /* Làm sạch HTML chương theo DANH SÁCH CHO PHÉP — bản dùng chung với bài kiểm
    tra trên 1.216 chương thật (tools/check_chapter_html.mjs). Bản cũ chặn theo
@@ -144,7 +144,7 @@ import { sanitizeChapterHtml } from '../src/shared/sanitize.js';
      VAPID_PRIVATE     (secret, bắt buộc nếu bật push) — khoá riêng VAPID base64url (`wrangler secret put VAPID_PRIVATE`)
    ============================================================================ */
 
-const VERSION = '1.17.1';
+const VERSION = '1.18.0';
 const JSONH = {
   'content-type': 'application/json; charset=utf-8',
   'x-content-type-options': 'nosniff',
@@ -161,8 +161,43 @@ const JSONH = {
    key đúng, nhưng không có `access-control-allow-origin` → TRÌNH DUYỆT chặn
    response, fetch() ném "Failed to fetch" và trang quản trị báo nhầm là
    "CORS, URL sai, Worker chưa deploy". Kiểm tra bằng mắt thường không ra. */
+/* ============================================================================
+   ĐẾM LƯỢT ĐỌC KV (A2 — xem src/shared/kv-budget.js)
+   ----------------------------------------------------------------------------
+   Gói miễn phí cho 100.000 lượt ĐỌC/ngày; vượt là mọi lối đọc trả lỗi. Phần GHI
+   đã có ngân sách, phần ĐỌC thì chưa ai đếm. Cách đếm ở đây: bọc binding
+   `env.CZ_KV` bằng một Proxy cho MỘT request — chỉ `get`/`getWithMetadata` (hai
+   hàm chạm KV thật) mới tính, còn `put`/`delete`/`list` đi thẳng. Nhờ bọc ở đúng
+   một chỗ nên mọi đường đọc hiện có (registry, book, toc, chapter, stats,
+   comments, feed, health, overflow) đều được tính mà không phải sửa từng hàm —
+   và đường phục vụ từ cache biên KHÔNG tính, vì nó không chạm KV.
+   Bộ đếm nằm trong RAM isolate (không ghi KV: ghi thêm là đốt đúng thứ đang
+   thiếu) nên đây là ƯỚC LƯỢNG — luôn ≤ số thật trên dashboard Cloudflare.
+   ============================================================================ */
+function meteredEnv(env) {
+  if (!env || !env.CZ_KV || typeof env.CZ_KV.get !== 'function' || env.__czMetered) return env;
+  const kv = env.CZ_KV;
+  const out = Object.assign({}, env);
+  out.__czMetered = true;
+  out.CZ_KV = new Proxy(kv, {
+    get(target, prop) {
+      if (prop === 'get' || prop === 'getWithMetadata') {
+        return function () {
+          noteKvRead();
+          return target[prop].apply(target, arguments);
+        };
+      }
+      const v = target[prop];
+      if (typeof v === 'function') return v.bind(target);
+      return v;
+    },
+  });
+  return out;
+}
+
 const handler = {
   async fetch(req, env, ctx) {
+    env = meteredEnv(env);
     const url = new URL(req.url);
     const cors = corsHeaders(req, env);
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
@@ -454,6 +489,7 @@ const handler = {
   /* Cron Trigger (10 phút/lần, cấu hình trong wrangler.toml) rút dần hàng đợi
      thông báo đẩy — mỗi invocation gửi tối đa 45 tin (free giới hạn 50 subrequest) */
   async scheduled(event, env, ctx) {
+    env = meteredEnv(env);
     /* 1) chương hẹn giờ tới mốc → cập nhật lại số chương trong registry + báo
           đẩy “chương mới” cho người theo dõi
        2) rút hàng đợi thông báo đẩy (tối đa 45 tin mỗi lần) */
@@ -1922,9 +1958,14 @@ async function kvAudit(req, env, cors) {
   const push = (p) => { const g = groups[p]; if (g) { out.push(Object.assign({ prefix: p }, g)); delete groups[p]; } };
   order.forEach(push);
   Object.keys(groups).forEach(push);
+  const reads = kvReadSnapshot(env);
   return json({
     ok: true, keys: totalKeys, bytes: totalBytes, unknownBytes: unknown, groups: out,
     writesToday: Math.min(writesToday, 5000), lastReset: today + 'T00:00:00.000Z', quotaSupported: true,
+    /* A2: lượt ĐỌC KV ước lượng trong ngày — cùng chỗ với số ghi để trang quản
+       trị hiện một dòng "đang dùng bao nhiêu" thay vì chỉ nhìn phần ghi. */
+    readsToday: reads.readsToday, readBudget: reads.readBudget,
+    readWarn: reads.readWarn, readCritical: reads.readCritical, readSource: reads.readSource,
   }, { cors });
 }
 
@@ -2744,6 +2785,7 @@ async function health(env, cors) {
     cursor = l.list_complete ? null : l.cursor;
   } while (cursor);
   const st = await readStats(env);
+  const reads = kvReadSnapshot(env);
   let views = 0, votes = 0;
   Object.keys(st.items).forEach((k) => {
     const it = st.items[k] || {};
@@ -2758,6 +2800,10 @@ async function health(env, cors) {
       /* theo dõi hạn mức: số lượt ghi khoá `stats` trong ngày + trần đang đặt */
       writesToday: Number(st.swd === dayStr() ? st.sw : 0) || 0,
       writeBudget: statsBudget(env), buffered: _buf.size,
+      /* A2: lượt ĐỌC KV ước lượng (bộ đếm trong RAM, xem meteredEnv) */
+      readsToday: reads.readsToday,
+      readBudget: reads.readBudget,
+      readWarn: reads.readWarn,
     },
     overflow: await overflowStatusResolved(env),
     /* để trang quản trị biết kênh đăng nhập đã sẵn sàng chưa, thiếu biến nào.

@@ -74,6 +74,17 @@ function quotaLevel(quota) {
   return 'ok';
 }
 
+/* A2: mức dùng LƯỢT ĐỌC KV (trần free 100.000/ngày) — pill quota phải phản ánh
+   mức xấu hơn trong hai mức, vì vượt trần đọc cũng làm trang đọc lỗi. */
+function quotaReadLevel(quota) {
+  if (!quota || !quota.readSupported) return 'ok';
+  if (quota.readCritical) return 'critical';
+  if (quota.readWarn) return 'warning';
+  return 'ok';
+}
+const LEVEL_RANK = { ok: 0, warning: 1, critical: 2, blocked: 3 };
+function worseLevel(a, b) { return (LEVEL_RANK[b] || 0) > (LEVEL_RANK[a] || 0) ? b : a; }
+
 function connChip(state) {
   if (state.connecting) return { cls: 'warn', text: 'Đang kiểm tra kết nối' };
   if (state.online) return { cls: 'ok', text: 'Cloudflare KV · Online' };
@@ -105,7 +116,7 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
   const quota = state.quota || {};
   const used = Number(quota.writesToday) || 0;
   const limit = Number(quota.limit) || 1000;
-  const qLevel = quotaLevel(quota);
+  const qLevel = worseLevel(quotaLevel(quota), quotaReadLevel(quota));
   const chip = connChip(state);
   const role = state.role || (state.mode === 'local' ? 'local' : state.mode === 'login' ? 'admin' : '—');
   const allowed = visibleTabs(role);
@@ -161,7 +172,11 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
   const quotaTitle = (quota.supported
     ? 'Số ghi KV hôm nay từ Worker /api/admin/kv. Trần free-tier sản phẩm: 1000 lượt/ngày.'
     : 'Worker chưa trả writesToday; số này là ước tính phía client. Bấm để mở Kiểm tra dữ liệu.')
-    + (used >= limit ? ' Đã chặn mọi thao tác ghi.' : used >= 950 ? ' Sắp chạm trần.' : used >= 800 ? ' Đã qua ngưỡng cảnh báo.' : '');
+    + (used >= limit ? ' Đã chặn mọi thao tác ghi.' : used >= 950 ? ' Sắp chạm trần.' : used >= 800 ? ' Đã qua ngưỡng cảnh báo.' : '')
+    + (quota.readSupported
+      ? ` Lượt ĐỌC KV hôm nay (ước lượng, trần 100.000): ${Number(quota.readsToday) || 0}.`
+      + (quota.readCritical ? ' Sắp chạm trần đọc.' : quota.readWarn ? ' Đã qua 70% trần đọc.' : '')
+      : ' Worker chưa trả readsToday.');
 
   const bellItems = [];
   if (openReports) bellItems.push({ tab: 'reports', text: openReports + ' báo lỗi chưa xử lý' });
@@ -226,6 +241,11 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
             <button type="button" class={`v2quota ${qLevel}`} title={quotaTitle} onClick={() => go('doctor')}>
               <span>KV write</span><b>{used}/{limit}</b>
               {!quota.supported ? <em class="v2est">ước tính</em> : null}
+              {quota.readSupported && quota.readWarn
+                ? <em class="v2est" title={`Lượt đọc KV hôm nay (ước lượng): ${Number(quota.readsToday) || 0}/${Number(quota.readBudget) || 100000}`}>
+                    đọc {Math.round((Number(quota.readsToday) || 0) / 1000)}k
+                  </em>
+                : null}
               <i style={{ width: `${pct(used, limit)}%` }}></i>
             </button>
             <div class="v2tools">

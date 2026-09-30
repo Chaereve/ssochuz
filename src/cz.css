@@ -1240,6 +1240,11 @@ body.rd-hide .rdbar { transform: translateY(-100%); }
 .rdhead h1 { font-size: clamp(24px, 3.2vw, 36px); line-height: 1.16; margin-bottom: 12px; }
 .rdhead .rdmeta { display: flex; gap: 16px; flex-wrap: wrap; color: var(--rd-mut); font-size: 12.5px; }
 .rdhead .rdmeta > span { display: inline-flex; align-items: center; gap: 6px; }
+/* A1: nhãn "đang đọc bản lưu" — chương lấy từ /data/book/<slug>.json vì máy chủ
+   lỗi/hết hạn mức đọc. Nằm cùng hàng metadata để không xô lệch bố cục chữ. */
+.rdhead .rdmeta > .rd-snap { flex-wrap: wrap; gap: 8px; border: 1px solid var(--rd-bd); border-radius: 999px;
+  padding: 4px 6px 4px 12px; background: var(--rd-surf2); color: var(--rd-tx); }
+.rdhead .rdmeta > .rd-snap .btn { padding: 2px 10px; font-size: 12px; }
 .rtext { max-width: var(--rd-w, 720px); margin: 0 auto; padding: 26px 24px 20px; font-family: var(--rd-font, var(--font-head));
   font-size: var(--rd-size, 18px); line-height: var(--rd-line, 1.8); overflow-wrap: break-word; }
 .rtext > *:first-child { margin-top: 0; }

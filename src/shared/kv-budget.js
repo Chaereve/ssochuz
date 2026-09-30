@@ -59,3 +59,66 @@ export function flushOnTimer({ ops, heldMs, used, credits }) {
 export function dayFlushCeiling(env) {
   return statsBudget(env) + KV_FLUSH.slack;
 }
+
+/* ============================================================================
+   ĐẾM LƯỢT ĐỌC KV (A2)
+   ----------------------------------------------------------------------------
+   Gói miễn phí cho 100.000 lượt ĐỌC mỗi ngày (xem docs/free-tier-verification.md).
+   Phần GHI đã có ngân sách ở trên, phần ĐỌC trước đây không ai đếm: chạm trần là
+   mọi lối đọc trả lỗi mà quản trị chỉ biết khi người đọc báo. Tệp này giữ bộ đếm
+   trong RAM isolate (KHÔNG ghi KV — ghi thêm là đốt đúng thứ đang thiếu), và
+   Worker gọi `noteKvRead()` mỗi lần THẬT SỰ đọc KV (lượt phục vụ từ cache biên
+   không tính, vì không chạm KV).
+   Con số này là ƯỚC LƯỢNG: nhiều isolate thì mỗi isolate đếm riêng, nên nó luôn
+   ≤ số thật trên dashboard Cloudflare. Dùng để biết mình đang ở đâu, không dùng
+   để chặn cứng.
+   ============================================================================ */
+export const KV_READ = {
+  budget: 100000,      /* trần lượt ĐỌC mỗi ngày của gói Free */
+  warnRatio: 0.7,      /* 70% → cảnh báo */
+  criticalRatio: 0.9,  /* 90% → coi như sắp chạm trần */
+  budgetMax: 10000000, /* trần của trần, chặn giá trị cấu hình sai */
+};
+
+/* Trần lượt đọc: biến KV_READ_BUDGET ghi đè khi cần (ví dụ tài khoản khác gói) */
+export function readBudget(env) {
+  const n = parseInt((env && env.KV_READ_BUDGET) || '', 10);
+  return n > 0 ? Math.min(n, KV_READ.budgetMax) : KV_READ.budget;
+}
+
+/* Khoá ngày theo UTC — đúng mốc Cloudflare reset hạn mức (00:00 UTC) */
+export function utcDayKey(now) {
+  return new Date(now == null ? Date.now() : now).toISOString().slice(0, 10);
+}
+
+let _readDay = '';
+let _readCount = 0;
+
+/* Ghi nhận 1 lượt đọc KV. Tự sang ngày mới thì đếm lại từ 0. */
+export function noteKvRead(count = 1, now) {
+  const d = utcDayKey(now);
+  if (_readDay !== d) { _readDay = d; _readCount = 0; }
+  _readCount += Math.max(1, Math.round(Number(count) || 1));
+  return _readCount;
+}
+
+/* Ảnh chụp bộ đếm để trả về /api/admin/kv + /api/health */
+export function kvReadSnapshot(env, now) {
+  const d = utcDayKey(now);
+  const readsToday = _readDay === d ? _readCount : 0;
+  const budget = readBudget(env);
+  return {
+    readsToday: readsToday,
+    readBudget: budget,
+    readWarn: readsToday >= budget * KV_READ.warnRatio,
+    readCritical: readsToday >= budget * KV_READ.criticalRatio,
+    readDay: d,
+    readSource: 'worker-estimate',
+  };
+}
+
+/* Dùng cho bài kiểm thử: xoá bộ đếm để đo lại từ đầu */
+export function resetReadMeter() {
+  _readDay = '';
+  _readCount = 0;
+}

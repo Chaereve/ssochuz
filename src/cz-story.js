@@ -104,6 +104,7 @@
   var BOOK = null;         /* {title, slug, author, couple, chapters:[{t,html}]} */
   var N = null;            /* mục trong registry (đã chuẩn hoá) */
   var CHS = [];            /* danh sách chương */
+  var PEND = 0;            /* số chương ĐANG HẸN GIỜ/ẨN của bộ (chặn bản lưu — A1) */
   var cur = 0;             /* chương đang đọc (1-based) */
   var reading = false;
   var storyScroll = 0;
@@ -1094,6 +1095,51 @@
      Trang đọc không còn giữ sẵn cả bộ trong RAM: mở tới chương nào thì tải
      đúng chương đó (trung bình 18 KB thay vì 334 KB cả bộ), chương kế bên được
      tải trước nên bấm “Tiếp” vẫn hiện ngay. Đã tải rồi thì nằm lại trong phiên. */
+  /* ---- A1: BẢN LƯU TĨNH — đường lui khi Worker/KV lỗi ---------------------
+     Worker lỗi hoặc KV hết hạn mức đọc (100.000 lượt/ngày) thì đường nhẹ chỉ
+     trả `null`, người đọc thấy "Không tải được… Thử lại" mãi — dù repo luôn có
+     /data/book/<slug>.json (bản sao lưu do workflow KV → repo sinh ra). Đọc tạm
+     từ đó khi máy chủ chập.
+     BA LUẬT KHÔNG ĐƯỢC PHÁ:
+       1. truyện riêng tư (`private-*`) và truyện KHOÁ MẬT MÃ: không bao giờ đọc
+          bản lưu — bản lưu có đủ chữ, đọc là lộ nội dung;
+       2. bộ đang có chương HẸN GIỜ/ẨN (PEND > 0): bản lưu không mang trường
+          `status`/`at` nên không biết chương nào chưa tới mốc → bỏ, thà báo lỗi
+          còn hơn lộ chương chưa ra;
+       3. bản lưu phải khớp SỐ CHƯƠNG đang hiện; lệch số là vị trí chương sai → bỏ.
+     Chỉ tải 1 lần cho cả bộ trong phiên (nhớ trong RAM, KHÔNG ghi localStorage —
+     bộ lớn 1,9 MB, ghi vào máy người đọc là vô trách nhiệm). */
+  var SNAP = { slug: '', p: null };
+  function snapshotBook() {
+    if (SNAP.slug === SLUG) return SNAP.p;
+    SNAP = { slug: SLUG, p: null };
+    var meta = CZ.findLib(SLUG) || {};
+    if (String(SLUG).indexOf('private-') === 0 || meta.locked) { SNAP.p = Promise.resolve(null); return SNAP.p; }
+    SNAP.p = fetch('/data/book/' + encodeURIComponent(SLUG) + '.json', { credentials: 'omit' })
+      .then(function (r) { return (r && r.ok) ? r.json().catch(function () { return null; }) : null; })
+      .catch(function () { return null; });
+    return SNAP.p;
+  }
+  function snapshotChapter(pos) {
+    if (PEND > 0) return Promise.resolve(null);
+    return snapshotBook().then(function (bk) {
+      if (!bk || !Array.isArray(bk.chapters) || bk.chapters.length !== CHS.length) return null;
+      var c = bk.chapters[pos - 1];
+      if (!c || typeof c.html !== 'string') return null;
+      return { t: String(c.t || ''), html: c.html };
+    }).catch(function () { return null; });
+  }
+  /* dải nhãn "đang đọc bản lưu" + nút thử nối lại — nằm ngay dưới tiêu đề chương */
+  function snapNoteHTML() {
+    return '<span class="rd-snap" role="status">' + ic('database', 'i-s') +
+      '<span>Đang đọc bản lưu — nội dung có thể chậm hơn bản mới nhất</span>' +
+      '<button class="btn ghost sm" id="rdSnapRetry" type="button">' + ic('refresh', 'i-s') + 'Thử kết nối lại</button></span>';
+  }
+  function retryFromKv(c) {
+    if (c) { c.html = null; c.src = ''; c.loading = false; c.fail = false; }
+    CZ.forgetChapter(SLUG, cur);
+    paintChapter(true);
+  }
   function ensureChapter(pos, cb) {
     var c = CHS[pos - 1];
     if (!c) { if (typeof cb === 'function') cb(); return; }
@@ -1104,15 +1150,26 @@
     } else if (c.html != null || c.fail || c.loading) { return; }
     c.loading = true; c.fail = false;
     CZ.chapter(SLUG, pos).then(function (r) {
-      c.loading = false;
       if (r && r.chapter && typeof r.chapter.html === 'string') {
         c.html = r.chapter.html;
         if (r.chapter.t) c.t = String(r.chapter.t);
-      } else {
-        /* mất mạng, hoặc Worker cũ chưa có đường này → đánh dấu để hiện nút
-           thử lại, KHÔNG coi như chương rỗng */
-        c.fail = true;
+        c.src = 'kv';
+        return null;
       }
+      /* A1: máy chủ lỗi/hết hạn mức đọc → thử bản lưu tĩnh trước khi bỏ cuộc */
+      return snapshotChapter(pos).then(function (hit) {
+        if (hit) {
+          c.html = hit.html;
+          if (hit.t) c.t = hit.t;
+          c.src = 'snapshot';
+        } else {
+          /* mất mạng, Worker cũ chưa có đường này, hoặc bản lưu không dùng được
+             → đánh dấu để hiện nút thử lại, KHÔNG coi như chương rỗng */
+          c.fail = true;
+        }
+      });
+    }).catch(function () { c.fail = true; }).then(function () {
+      c.loading = false;
       var ws = c.waiters.splice(0);
       ws.forEach(function (f) { try { f(); } catch (e) {} });
     });
@@ -1216,8 +1273,12 @@
     $('#rdHead').textContent = c.t;
     // reading time & word count removed per request
     $('#rdMeta').innerHTML = [
-      N.author ? '<span>' + ic('pen', 'i-s') + ' ' + esc(N.author) + '</span>' : ''
+      N.author ? '<span>' + ic('pen', 'i-s') + ' ' + esc(N.author) + '</span>' : '',
+      /* A1: chương này lấy từ bản lưu tĩnh (máy chủ lỗi) — nói rõ, kèm nút thử lại */
+      c.src === 'snapshot' ? snapNoteHTML() : ''
     ].filter(Boolean).join('');
+    var snapBtn = $('#rdSnapRetry');
+    if (snapBtn) snapBtn.addEventListener('click', function () { retryFromKv(c); });
     /* chương kế đã preload thì dùng luôn HTML dựng sẵn — lật trang tức thì */
     txt.innerHTML = (PRE.ch === cur && PRE.html) ? PRE.html : cleanHTML(c.html);
     preNextArm();
@@ -1911,6 +1972,11 @@
         labelNow = CHS.length + '/' + planned;
       }
       CZ.reconcileCount(SLUG, CHS.length);       /* ghi nhớ số thật để mọi trang dùng chung */
+      /* A1: PEND > 0 ⇒ bộ có chương đang hẹn giờ/ẩn, mà bản lưu tĩnh KHÔNG mang
+         trường status/at nên không thể biết chương nào chưa tới mốc → cấm dùng
+         bản lưu cho bộ này (xem snapshotChapter). */
+      PEND = Math.max(0, parseInt(String(
+        (bk && (bk.pending != null ? bk.pending : bk.pendingChapters)) || 0), 10) || 0);
       N = CZ.norm(Object.assign({}, meta || {}, {
         title: (meta && meta.title) || bk.title || SLUG, slug: SLUG,
         author: (meta && meta.author) || bk.author || '', couple: (meta && meta.couple) || bk.couple || '',

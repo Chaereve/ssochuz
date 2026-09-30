@@ -83,7 +83,9 @@ const STATS = {
         { id: 'c2', slug: 'thu-02', name: 'Spam Bot', createdAt: '2026-09-22T07:30:00Z', text: 'MUA BACKLINK RẺ https://spam.example XEM NGAY WWW.spam.example' },
       ], count: 2, slugs: 2 });
       if (p === '/api/admin/stats') return J(STATS);
-      if (p === '/api/admin/kv') return J({ ok: true, keys: 90, bytes: 123456, groups: [], writesToday: 12, lastReset: '2026-09-22T00:00:00.000Z', quotaSupported: true });
+      if (p === '/api/admin/kv') return J({ ok: true, keys: 90, bytes: 123456, groups: [], writesToday: 12, lastReset: '2026-09-22T00:00:00.000Z', quotaSupported: true,
+        /* A2: Worker 1.18.0 trả thêm lượt ĐỌC (ước lượng) — 71.234/100.000 = 71% ⇒ mức cảnh báo */
+        readsToday: 71234, readBudget: 100000, readWarn: true, readCritical: false, readSource: 'worker-estimate' });
       if (p === '/api/admin/log') return J({ ok: true, items: [{ at: '2026-09-22T09:00:00Z', text: 'log test', who: 'admin-key' }], count: 1 });
       return undefined;
     },
@@ -112,6 +114,14 @@ const STATS = {
   check('Overview/phiếu từ KV', tiles.some((t) => /^24Phiếu thích \(KV\)/.test(t)), tiles);
   check('Overview/biểu đồ 14 ngày vẽ 14 cột', $$('.v2chart-col').length === 14, $$('.v2chart-col').length);
   check('Overview/quota pill lấy số Worker (12)', /\.v2quota|KV write/.test($('.v2quota').textContent) && /12\/1000/.test($('.v2quota').textContent), $('.v2quota').textContent);
+  /* A2: lượt ĐỌC KV (A2) — tile + dòng hệ thống + badge cảnh báo trên pill */
+  check('Overview/có tile “Lượt đọc KV hôm nay”', tiles.some((t) => /Lượt đọc KV hôm nay/.test(t)), tiles);
+  check('Overview/tile lượt đọc hiện số Worker trả (71.234)', tiles.some((t) => /71\.?234/.test(t)), tiles);
+  const qPill = $('.v2quota').textContent;
+  check('Overview/pill quota có badge “đọc 71k” khi ≥70%', /đọc 71k/.test(qPill), qPill);
+  check('Overview/pill quota mang mức cảnh báo (class warning)', $('.v2quota').classList.contains('warning'), $('.v2quota').className);
+  check('Overview/title pill nói rõ mức đọc + trần 100.000', /Lượt ĐỌC KV hôm nay/.test($('.v2quota').getAttribute('title') || '') && /100\.000/.test($('.v2quota').getAttribute('title') || ''), $('.v2quota').getAttribute('title'));
+  check('Overview/dòng hệ thống nói rõ số đọc là ước lượng', /Lượt đọc KV: 71\.234\/100\.000/.test(doc.body.textContent), '');
   check('Overview/việc cần làm: báo lỗi chưa xử lý = 1', /Báo lỗi chưa xử lý/.test(doc.body.textContent), '');
 
   /* 2. Báo lỗi: tab lọc + PATCH */
@@ -175,10 +185,17 @@ const STATS = {
   const newMeta = regPut && (regPut.body.lib || []).find((b) => b.slug === 'bo-moi-test');
   check('Thêm bộ/registry chứa bộ mới', !!newMeta && newMeta.title === 'Bộ Mới Test', newMeta && { title: newMeta.title });
 
-  /* 6. Soạn chương: thời gian đọc + nhập .txt nhiều chương */
+  /* 6. Soạn chương: thời gian đọc + nhập .txt nhiều chương
+     Lọc đúng bộ "Truyện Thử 01" thay vì bấm hàng đầu bảng: bảng xếp theo
+     `updated` giảm dần nên bộ vừa tạo ở bước 5 ("Bộ Mới Test", 0 chương) luôn
+     đứng đầu — bấm hàng đầu là mở nhầm bộ rỗng rồi báo lỗi oan. */
   click($('button[data-tab="list"]'));
   await wait(150);
-  click($('.v2book-table tbody tr .v2actions button'));
+  inputEv($('#pane-list .v2toolbar input.inp'), 'Truyện Thử 01');
+  await wait(300);
+  const editRow = $$('.v2book-table tbody tr').find((r) => r.textContent.indexOf('thu-01') >= 0);
+  check('Soạn chương/tìm thấy đúng bộ cần sửa', !!editRow);
+  click(editRow.querySelector('.v2actions button'));
   await wait(1200);
   check('Soạn chương/hiện thời gian đọc ước tính', /~2 phút đọc/.test(($('.v2chap-actions .sm.muted') || {}).textContent || ''), $('.v2chap-actions') && $('.v2chap-actions').textContent);
   check('Soạn chương/danh sách chương có số từ', /440 từ/.test(($('.v2chapter-list') || {}).textContent || ''), $('.v2chapter-list') && $('.v2chapter-list').textContent);
