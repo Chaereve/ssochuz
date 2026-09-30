@@ -53,7 +53,7 @@ python3 tools/dev_server.py   # xem thử đúng luật Cloudflare Pages
 | Lệnh | Kết quả | Ghi chú |
 | --- | --- | --- |
 | `npm install --ignore-scripts` | ĐẠT (~19 s) | `node_modules/` bị `.gitignore` |
-| `npm run build` | ĐẠT | sinh `cz-*.js`, `cz.css`, `admin.js`, `admin.js.map`, `admin-docx.js` |
+| `npm run build` | ĐẠT | sinh `cz-*.js`, `cz.css`, `admin.js`, `admin.js.map`, `admin-editor.js` (Tiptap, tải khi mở khung soạn chương), `admin-docx.js` |
 | `npm run check:worker` | ĐẠT | tsc im lặng |
 | `npm test` | **60/60 ĐẠT** (sau Milestone A) | baseline trước khi sửa: 59/60 — chi tiết §3 |
 | `npm audit --json` | 25 moderate | §4 |
@@ -97,7 +97,7 @@ FAIL Soạn chương/danh sách chương có số từ     → "Chưa có chươ
 
 ## 4. Phụ thuộc và cảnh báo bảo mật
 
-- `npm audit`: **25 moderate**, toàn bộ đến từ chuỗi `@tiptap/*` (đang dùng `^2.27.3`, bản vá nằm ở `3.31.3` — **nâng cấp breaking**). Tiptap chỉ chạy trong trang quản trị (`admin.js`), không nằm trong luồng đọc.
+- `npm audit`: **25 moderate**, toàn bộ đến từ chuỗi `@tiptap/*` (đang dùng `^2.27.3`, bản vá nằm ở `3.31.3` — **nâng cấp breaking**). Tiptap chỉ chạy trong trang quản trị (từ 2026-09-30 nằm riêng trong `admin-editor.js`, chỉ tải khi mở khung soạn chương), không nằm trong luồng đọc.
   - Khuyến nghị: **Deferred** — cần owner duyệt vì là major bump; trước khi làm phải có test admin hiện có (đang khá đầy đủ) + kiểm tra tay luồng soạn chương.
 - ~~`package-lock.json` bị `.gitignore` → cài đặt không tái lập~~ → **đã xử lý ở G9b**: 2 lockfile đã commit, cài bằng `npm ci`. `preact`, `@tiptap/*`, `jsdom` vẫn khai `^` trong `package.json` nhưng bản thực cài bị khoá. Sau `npm ci && npm run build`, `admin.js` đã commit trùng khớp bản build (`git status` sạch) ⇒ bước `git diff --exit-code` trong CI (G9a) đã dùng được. `npm audit` báo 25 lỗ hổng mức moderate (chưa xử lý — ngoài phạm vi G9b).
 - Phụ thuộc runtime **không** có dịch vụ trả phí: toàn bộ hạ tầng chạy trên free tier (xem `docs/free-tier-verification.md`).

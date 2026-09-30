@@ -7,7 +7,7 @@ Phạm vi: chỉ đổi frontend/static routing; không đổi Worker, KV schema
 
 Admin cũ (admin.html/admin.js bản legacy) đã XOÁ. Một trang quản trị duy nhất:
 `/admin` mở thẳng bản Preact; `/admin-v2`, `/admin-legacy` là alias 200 về `/admin`
-(_redirects). Bundle phát hành là `admin.js` + `admin.css` (build bởi
+(_redirects). Bundle phát hành là `admin.js` + `admin.css` + `admin-editor.js` (trình soạn thảo, tải khi mở khung soạn chương) + `admin-docx.js` (build bởi
 `tools/build_admin.mjs`, script `npm run build:admin`). Checklist "giai đoạn theo
 dõi" dưới đây chỉ còn giá trị lịch sử.
 
