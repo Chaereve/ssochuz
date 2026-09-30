@@ -15,11 +15,11 @@
    ========================================================================== */
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import assert from 'node:assert/strict';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const worker = (await import(path.join(ROOT, 'worker', 'cms.js'))).default;
+const worker = (await import(pathToFileURL(path.join(ROOT, 'worker', 'cms.js')).href)).default;
 
 /* KV giả (Map) — như Cloudflare KV (trừ expirationTtl) */
 class FakeKV {
