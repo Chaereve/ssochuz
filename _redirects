@@ -165,8 +165,8 @@
 /truyen/cang-them-oan-han/  /truyen/cang-them-oan-han/   200
 /truyen/boi-chang-ngan-con-tim-rung-ong   /truyen/boi-chang-ngan-con-tim-rung-ong/   200
 /truyen/boi-chang-ngan-con-tim-rung-ong/  /truyen/boi-chang-ngan-con-tim-rung-ong/   200
-/truyen/co-vo-ho-anh-cua-toi   /truyen/co-vo-ho-anh-cua-toi/   200
-/truyen/co-vo-ho-anh-cua-toi/  /truyen/co-vo-ho-anh-cua-toi/   200
+/truyen/co-vo-ho-danh-da-cua-toi   /truyen/co-vo-ho-danh-da-cua-toi/   200
+/truyen/co-vo-ho-danh-da-cua-toi/  /truyen/co-vo-ho-danh-da-cua-toi/   200
 /truyen/duoi-bong-tinh-thuy-chung   /truyen/duoi-bong-tinh-thuy-chung/   200
 /truyen/duoi-bong-tinh-thuy-chung/  /truyen/duoi-bong-tinh-thuy-chung/   200
 /truyen/pgrace-khong-nhan-loi-yeu-au   /truyen/pgrace-khong-nhan-loi-yeu-au/   200
@@ -197,6 +197,14 @@
 /truyen/beside-dragon/  /truyen/beside-dragon/   200
 /truyen/pls-love   /truyen/pls-love/   200
 /truyen/pls-love/  /truyen/pls-love/   200
+/truyen/juliet-n-juliet   /truyen/juliet-n-juliet/   200
+/truyen/juliet-n-juliet/  /truyen/juliet-n-juliet/   200
+/truyen/nguoi-chong-lanh-lung-cua-co-vo-beo   /truyen/nguoi-chong-lanh-lung-cua-co-vo-beo/   200
+/truyen/nguoi-chong-lanh-lung-cua-co-vo-beo/  /truyen/nguoi-chong-lanh-lung-cua-co-vo-beo/   200
+/truyen/nakira-la-mot-ke-nhan-tam   /truyen/nakira-la-mot-ke-nhan-tam/   200
+/truyen/nakira-la-mot-ke-nhan-tam/  /truyen/nakira-la-mot-ke-nhan-tam/   200
+/truyen/love-in-the-fast-lane   /truyen/love-in-the-fast-lane/   200
+/truyen/love-in-the-fast-lane/  /truyen/love-in-the-fast-lane/   200
 # -- OG-END --
 # ===== 2) LUẬT ĐỘNG (có dấu *) — PHẢI nằm cuối tệp, TỔNG SỐ ≤ ~20 ==========
 /src/*            /  301

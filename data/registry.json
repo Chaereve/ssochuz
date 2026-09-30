@@ -1,5 +1,5 @@
 {
-  "rev": "2026-09-24 10:55",
+  "rev": "2026-09-30 16:33",
   "lib": [
     {
       "title": "HOMETOWN ROMANCE - SPECIAL",
@@ -254,11 +254,17 @@
       "status": "Hoàn thành",
       "chapters": 15,
       "is18": true,
-      "thumb": "https://cdn-local.mebmarket.com/meb/server1/343259/Thumbnail/book_detail_large.gif?5",
+      "thumb": "https://hnyzrkdlmvelbgcowztk.supabase.co/storage/v1/object/public/covers/h9d813fa52c8ca6686d5ae4f585254051.webp",
       "countLabel": "15/15",
-      "updated": "2026-06-02",
-      "slide": "https://cdn-local.mebmarket.com/meb/server1/343259/Thumbnail/book_detail_large.gif?5",
-      "syn": "Mặc dù ở nơi làm việc tôi là cấp dưới của cô ấy, nhưng khi ở trên giường tôi mới là người chiếm thế thượng phong. Ai mà ngờ được chuyện trớ trêu này lại xảy ra với tôi cơ chứ? 'Araya'…"
+      "updated": "2026-09-24",
+      "slide": "https://hnyzrkdlmvelbgcowztk.supabase.co/storage/v1/object/public/covers/h9d813fa52c8ca6686d5ae4f585254051.webp",
+      "syn": "Mặc dù ở nơi làm việc tôi là cấp dưới của cô ấy, nhưng khi ở trên giường tôi mới là người chiếm thế thượng phong. Ai mà ngờ được chuyện trớ trêu này lại xảy ra với tôi cơ chứ? 'Araya'…",
+      "coverAlt": "",
+      "synFull": "Mặc dù ở nơi làm việc tôi là cấp dưới của cô ấy, nhưng khi ở trên giường tôi mới là người chiếm thế thượng phong. Ai mà ngờ được chuyện trớ trêu này lại xảy ra với tôi cơ chứ? 'Araya'…",
+      "genre": "",
+      "pubStatus": "published",
+      "visibility": "public",
+      "publishedAt": "2026-09-24"
     },
     {
       "title": "Người Chồng Xấu Xa Của Cô Vợ Béo",
@@ -712,16 +718,16 @@
     },
     {
       "title": "Cô Vợ Hờ Đanh Đá Của Tôi",
-      "slug": "co-vo-ho-anh-cua-toi",
+      "slug": "co-vo-ho-danh-da-cua-toi",
       "author": "Takling Kaemjai",
       "couple": "",
       "year": "2026",
       "status": "Đang cập nhật",
-      "chapters": 7,
+      "chapters": 25,
       "is18": true,
       "thumb": "https://cdn-local.mebmarket.com/meb/server1/430310/Thumbnail/book_detail_large.gif?14",
-      "countLabel": "7/7",
-      "updated": "2026-09-23",
+      "countLabel": "25/25",
+      "updated": "2026-09-26",
       "slide": "https://cdn-local.mebmarket.com/meb/server1/430310/Thumbnail/book_detail_large.gif?14",
       "syn": "\"Dẫu có xinh đẹp nhưng lại tàn nhẫn, dẫu có chết... tôi cũng không thèm mê đắm một kẻ xảo quyệt như cô đâu.\" Công xinh đẹp nhưng tàn nhẫn (cờ dưa hấu) đối đầu cùng Thụ xinh đẹp bướng bỉnh nhưng lại có tài nấu nướng đỉnh…",
       "coverAlt": "",
@@ -797,16 +803,21 @@
       "author": "SIIX",
       "couple": "Garn x Mimie",
       "year": "2022",
-      "status": "Đang cập nhật",
-      "chapters": 23,
+      "status": "Hoàn thành",
+      "chapters": 42,
       "is18": false,
       "thumb": "https://pbs.twimg.com/media/HQuHMUUbYAAx7RG?format=jpg&name=4096x4096",
-      "countLabel": "23/23",
-      "updated": "2026-09-22",
+      "countLabel": "42/42",
+      "updated": "2026-09-29",
       "slide": "https://pbs.twimg.com/media/HQuHMUUbYAAx7RG?format=jpg&name=4096x4096",
       "syn": "Khi quá khứ... là một ẩn số Những manh mối... khiến lòng bối rối Tình yêu... đẩy ta vào cạm bẫy Lòng người... dối lừa làm ta lạc bước Chris, một cô gái bị mất trí nhớ, đang tĩnh dưỡng và…",
       "_oldSlug": "third-person",
-      "synFull": "Khi quá khứ... là một ẩn số Những manh mối... khiến lòng bối rối Tình yêu... đẩy ta vào cạm bẫy Lòng người... dối lừa làm ta lạc bước Chris, một cô gái bị mất trí nhớ, đang tĩnh dưỡng và…"
+      "synFull": "Khi quá khứ... là một ẩn số Những manh mối... khiến lòng bối rối Tình yêu... đẩy ta vào cạm bẫy Lòng người... dối lừa làm ta lạc bước Chris, một cô gái bị mất trí nhớ, đang tĩnh dưỡng và…",
+      "coverAlt": "",
+      "genre": "",
+      "pubStatus": "published",
+      "visibility": "public",
+      "publishedAt": "2026-09-29"
     },
     {
       "title": "Did You Know",
@@ -829,16 +840,21 @@
       "author": "Kratai Duean Kao",
       "couple": "",
       "year": "2026",
-      "status": "Đang cập nhật",
-      "chapters": 4,
+      "status": "Hoàn thành",
+      "chapters": 18,
       "is18": false,
       "thumb": "https://pbs.twimg.com/media/HGwHDzHagAEhA-H?format=jpg&name=4096x4096",
-      "countLabel": "4/4",
-      "updated": "2026-09-19",
+      "countLabel": "18/18",
+      "updated": "2026-09-25",
       "slide": "https://pbs.twimg.com/media/HGwHDzHagAEhA-H?format=jpg&name=4096x4096",
       "syn": "Vào cái ngày mảnh đất quê hương chìm trong biển lửa dưới gót giày của quân xâm lược... Khi những khát khao cá nhân phải nhường bước cho lý tưởng cứu quốc, câu chuyện tình yêu của hai cô gái giữa năm Phật lịch 2485 đã…",
       "_oldSlug": "vuot-khoi-uong-chan-troi-endless-blue-01775777241",
-      "synFull": "Vào cái ngày mảnh đất quê hương chìm trong biển lửa dưới gót giày của quân xâm lược... Khi những khát khao cá nhân phải nhường bước cho lý tưởng cứu quốc, câu chuyện tình yêu của hai cô gái giữa năm Phật lịch 2485 đã bắt đầu trên lằn ranh sinh tử mỏng manh.\n\nMột người là ‘Yongyan’, nữ bang chủ Hắc Long, người nắm giữ bánh lái của công ty vận tải biển vốn được ví như huyết mạch của Phra Nakhon... Người kia là ‘Pimpilai’, một nữ điệp viên kiên cường sẵn sàng đánh đổi mạng sống vì tự do. Cả hai chấp nhận vứt bỏ sự an toàn cùng cuộc sống yên bình vốn có để dấn thân vào thế giới ngầm của ‘Phong trào Seri Thai’, chiến đấu chống lại thế lực đen tối đang xâm phạm chủ quyền đất nước.\n\nGiữa tiếng bom rền và mùi thuốc súng mịt mù che phủ bầu trời Phra Nakhon, tình yêu của họ phải đối mặt với thử thách từ những nhiệm vụ đánh cược bằng cả hơi thở. Khi vận mệnh quốc gia phải đặt lên trên tình cảm lứa đôi và chính nghĩa còn quan trọng hơn cả sinh mệnh... Liệu họ sẽ làm thế nào để chở che cho niềm tin cùng trái tim đầy thương tổn, bước qua cơn bão táp của Chiến tranh thế giới thứ hai để tiến về phía rạng đông của nền hòa bình?\n\nHãy cùng sát cánh chiến đấu với họ trong một hành trình được đánh đổi bằng những giọt nước mắt, sự mất mát và những trái tim vĩ đại."
+      "synFull": "Vào cái ngày mảnh đất quê hương chìm trong biển lửa dưới gót giày của quân xâm lược... Khi những khát khao cá nhân phải nhường bước cho lý tưởng cứu quốc, câu chuyện tình yêu của hai cô gái giữa năm Phật lịch 2485 đã bắt đầu trên lằn ranh sinh tử mỏng manh.\n\nMột người là ‘Yongyan’, nữ bang chủ Hắc Long, người nắm giữ bánh lái của công ty vận tải biển vốn được ví như huyết mạch của Phra Nakhon... Người kia là ‘Pimpilai’, một nữ điệp viên kiên cường sẵn sàng đánh đổi mạng sống vì tự do. Cả hai chấp nhận vứt bỏ sự an toàn cùng cuộc sống yên bình vốn có để dấn thân vào thế giới ngầm của ‘Phong trào Seri Thai’, chiến đấu chống lại thế lực đen tối đang xâm phạm chủ quyền đất nước.\n\nGiữa tiếng bom rền và mùi thuốc súng mịt mù che phủ bầu trời Phra Nakhon, tình yêu của họ phải đối mặt với thử thách từ những nhiệm vụ đánh cược bằng cả hơi thở. Khi vận mệnh quốc gia phải đặt lên trên tình cảm lứa đôi và chính nghĩa còn quan trọng hơn cả sinh mệnh... Liệu họ sẽ làm thế nào để chở che cho niềm tin cùng trái tim đầy thương tổn, bước qua cơn bão táp của Chiến tranh thế giới thứ hai để tiến về phía rạng đông của nền hòa bình?\n\nHãy cùng sát cánh chiến đấu với họ trong một hành trình được đánh đổi bằng những giọt nước mắt, sự mất mát và những trái tim vĩ đại.",
+      "coverAlt": "",
+      "genre": "",
+      "pubStatus": "published",
+      "visibility": "public",
+      "publishedAt": "2026-09-25"
     },
     {
       "title": "Love Above The Clouds: Bẫy Tình Trên Mây",
@@ -951,21 +967,106 @@
       "author": "REVERSE",
       "couple": "Lena x Miu",
       "year": "2025",
-      "status": "Đang cập nhật",
+      "status": "Hoàn thành",
       "is18": true,
       "thumb": "https://hnyzrkdlmvelbgcowztk.supabase.co/storage/v1/object/public/covers/b883aa8f-d546-4616-a25c-0fc085f22090.webp",
       "slide": "https://hnyzrkdlmvelbgcowztk.supabase.co/storage/v1/object/public/covers/b883aa8f-d546-4616-a25c-0fc085f22090.webp",
       "syn": "Khi át chủ bài của quán lounge, cô gái với danh xưng 'Thiên thần', phải làm một công việc quan trọng cho nữ doanh nhân luôn coi thường và căm ghét cô đến tột cùng, thế nhưng lại có cớ sự khiến cả hai kết thúc trên…",
       "synFull": "Khi át chủ bài của quán lounge, cô gái với danh xưng 'Thiên thần', phải làm một công việc quan trọng cho nữ doanh nhân luôn coi thường và căm ghét cô đến tột cùng, thế nhưng lại có cớ sự khiến cả hai kết thúc trên giường cùng nhau.\nMối quan hệ ngày càng lún sâu, sau cùng sẽ kết thúc ra sao?\nYêu Em được không?\nDù nghe thế nào cũng là cùng một câu hỏi, thế nhưng người cất lời lại dùng trong hai ngữ cảnh hoàn toàn khác nhau.\nPhakinee hỏi vì không chắc liệu một người phụ nữ như Panapsorn có chịu dừng chân bên mình hay không.\nTrong khi đó, Panapsorn hỏi vì chẳng biết một kẻ thấp hèn như cô có quyền yêu đối phương hay không.",
-      "chapters": 0,
-      "countLabel": "0/—",
-      "updated": "2026-09-23",
+      "chapters": 71,
+      "countLabel": "71/71",
+      "updated": "2026-09-27",
       "_oldSlug": "pls-love",
       "coverAlt": "",
       "genre": "",
       "pubStatus": "published",
       "visibility": "public",
-      "publishedAt": "2026-09-23"
+      "publishedAt": "2026-09-23",
+      "lock": 1
+    },
+    {
+      "title": "Juliet & Juliet",
+      "slug": "juliet-n-juliet",
+      "author": "Freaky",
+      "couple": "Mingming x Nepjune",
+      "year": "2026",
+      "status": "Đang cập nhật",
+      "countLabel": "16/16",
+      "is18": true,
+      "updated": "2026-09-26",
+      "thumb": "https://hnyzrkdlmvelbgcowztk.supabase.co/storage/v1/object/public/covers/ha6d786201ab98c75686a5cb2da16a32f.webp",
+      "slide": "https://hnyzrkdlmvelbgcowztk.supabase.co/storage/v1/object/public/covers/ha6d786201ab98c75686a5cb2da16a32f.webp",
+      "coverAlt": "",
+      "synFull": "Blue ước mơ được theo học ngành hội họa tại trường đại học nghệ thuật danh tiếng nhất Thái Lan và trở thành một họa sĩ được cả thế giới biết đến.\nGiấc mơ ấy đưa lối cho cô gặp gỡ Tokyo, con gái của một trong những người đàn ông có thế lực nhất tỉnh, một cô gái luôn thu mình vào thế giới cổ tích êm đềm để trốn chạy hiện thực đầy bạo lực.\nTình yêu bí mật giữa họ dần đơm hoa kết trái, ngọt ngào tựa trái cấm. Như hai chú chim nhỏ, họ khao khát dang rộng đôi cánh để thoát khỏi chiếc lồng son đang giam cầm mình.\nNhưng nếu cái giá của tình yêu và tự do là cái chết, có lẽ chỉ vầng trăng và Thượng đế mới thấu tỏ. Liệu hai nàng Juliet này có phải chịu chung số phận với Romeo và Juliet, đôi tình nhân mà họ từng đem ra chế giễu?",
+      "syn": "Blue ước mơ được theo học ngành hội họa tại trường đại học nghệ thuật danh tiếng nhất Thái Lan và trở thành một họa sĩ được cả thế giới biết đến.",
+      "genre": "",
+      "pubStatus": "published",
+      "visibility": "public",
+      "publishedAt": "2026-09-24",
+      "chapters": 16
+    },
+    {
+      "title": "Người Chồng Lạnh Lùng Của Cô Vợ Béo",
+      "slug": "nguoi-chong-lanh-lung-cua-co-vo-beo",
+      "author": "Sawitchaya",
+      "couple": "",
+      "year": "2026",
+      "status": "Đang cập nhật",
+      "countLabel": "0/—",
+      "is18": true,
+      "updated": "2026-09-30",
+      "thumb": "https://hnyzrkdlmvelbgcowztk.supabase.co/storage/v1/object/public/covers/h01e1774efe62bb519890a1d249939c73.webp",
+      "slide": "https://hnyzrkdlmvelbgcowztk.supabase.co/storage/v1/object/public/covers/h01e1774efe62bb519890a1d249939c73.webp",
+      "coverAlt": "",
+      "synFull": "\"Phraphai\" chỉ là người vợ có nhiệm vụ sinh người nối dõi cho gia tộc Butsaya mà thôi... Người chồng như \"Phima\" chưa từng nghĩ sẽ yêu cô. Đứa con trai vừa chào đời cũng vậy, đối phương thậm chí chưa từng chạm vào con dù chỉ một lần.\n‘Cô không muốn kết hôn đúng không?’ Phraphai chậm rãi gật đầu.\n‘Tôi cũng vậy.’ Đôi mày nhíu lại khi nhìn người vừa nói. Đã không muốn kết hôn, vậy Phima còn đeo bám cô làm gì chứ?\n‘Nhưng ông ngoại muốn có cháu nối dõi.’ Nghe vậy, Phraphai chỉ biết chớp mắt. Có nghĩa là…\n‘Cô sinh con cho tôi đi.’\n‘Dạ?!’ Đòi có con dễ dàng như thế này luôn sao? Phraphai rơi vào trạng thái sững sờ, đầu óc trống rỗng trong thoáng chốc.\n‘Sinh con cho tôi, sinh chắt cho ông ngoại, rồi tôi sẽ cho cô thứ cô muốn.’",
+      "syn": "\"Phraphai\" chỉ là người vợ có nhiệm vụ sinh người nối dõi cho gia tộc Butsaya mà thôi... Người chồng như \"Phima\" chưa từng nghĩ sẽ yêu cô.",
+      "genre": "",
+      "pubStatus": "published",
+      "visibility": "public",
+      "publishedAt": "2026-09-30",
+      "chapters": 0
+    },
+    {
+      "title": "Nakira Là Một Kẻ Nhẫn Tâm",
+      "slug": "nakira-la-mot-ke-nhan-tam",
+      "author": "Sawitchaya",
+      "couple": "",
+      "year": "2026",
+      "status": "Đang cập nhật",
+      "countLabel": "0/—",
+      "is18": true,
+      "updated": "2026-09-30",
+      "thumb": "https://hnyzrkdlmvelbgcowztk.supabase.co/storage/v1/object/public/covers/h180a970bd1e47c654e03304781430f2a.webp",
+      "slide": "https://hnyzrkdlmvelbgcowztk.supabase.co/storage/v1/object/public/covers/h180a970bd1e47c654e03304781430f2a.webp",
+      "coverAlt": "",
+      "synFull": "Nuchanart lỡ mang thai. Khi cô ướm hỏi Nakira rằng nếu mình có thai thì tính sao, đối phương cạn tình đáp lại rằng: \"Ở Thái Lan phá thai được công nhận hợp pháp rồi.\" Và đó chính là lý do cô quyết định mang bụng bầu biến mất khỏi cuộc đời kẻ tàn nhẫn ấy.\n.\n.\n.\n\"Cô định chia rẽ tôi với con như thế sao?\"\n\"Không phải chia rẽ đâu ạ. Nhưng Nuch chỉ không giao con cho Khun Kira thôi. Bé Nid phải ở với Nuch.\"\n\"Không được!\" Bản thân Nakira cũng ngang bướng chẳng kém, cô không đời nào chịu nhượng bộ. Thế nhưng chỉ vài giây sau, ánh mắt đang bừng bừng lửa giận bỗng dịu đi, rồi chuyển thành vẻ giảo hoạt mà Nuchanart từng cảm nhận trong quá khứ. Sự im lặng đè nặng lên trái tim trong thoáng chốc, nhưng lại khiến Nuchanart nghẹt thở. Gương mặt sắc sảo xinh đẹp của Nakira điểm một nụ cười, đáng sợ đến mức khiến người ta phải sởn gai ốc.\n\"Nếu vậy thì cô cũng về ở cùng tôi luôn đi.\"\n\"Dạ?!\"\n\"Con thì tôi phải lấy!\" Đầu ngón tay ấm áp khẽ chạm lên cổ tay nhỏ nhắn. Nuchanart rùng mình, giật tay né tránh.\n\"Còn cô, tôi cũng phải có được!\"",
+      "syn": "Nuchanart lỡ mang thai. Khi cô ướm hỏi Nakira rằng nếu mình có thai thì tính sao, đối phương cạn tình đáp lại rằng: \"Ở Thái Lan phá thai được công nhận hợp pháp rồi.",
+      "genre": "",
+      "pubStatus": "published",
+      "visibility": "public",
+      "publishedAt": "2026-09-30",
+      "chapters": 0
+    },
+    {
+      "title": "Love in the Fast Lane",
+      "slug": "love-in-the-fast-lane",
+      "author": "Kawee Seerung",
+      "couple": "Faye x Atom",
+      "year": "2026",
+      "status": "Sắp ra mắt",
+      "countLabel": "0/—",
+      "is18": false,
+      "updated": "2026-09-30",
+      "thumb": "https://hnyzrkdlmvelbgcowztk.supabase.co/storage/v1/object/public/covers/ha299ccfa3ed0fd2c918eae5e4fff2ac7.webp",
+      "slide": "https://hnyzrkdlmvelbgcowztk.supabase.co/storage/v1/object/public/covers/ha299ccfa3ed0fd2c918eae5e4fff2ac7.webp",
+      "coverAlt": "",
+      "synFull": "Câu chuyện xoay quanh mối quan hệ vừa hài hước vừa lãng mạn giữa hai cô gái, Pakhwan và Mintra (P’Gale).\n\nPakhwan, một cô gái miền Bắc Thái Lan say mê tâm linh và phong thủy, bắt đầu kỳ thực tập tại một gara sửa xe sang. Ngay ngày đầu tiên, cô vô tình làm dầu đổ lem luốc khắp áo, dẫn đến màn đụng độ nảy lửa với Mintra (P’Gale) - một nữ thợ máy có vẻ ngoài gai góc, phong trần.\n\nThế nhưng Pakhwan đâu biết rằng, cô thợ máy cực ngầu ấy thực chất lại là tiểu thư kiêm người thừa kế của một gia đình giàu có, người sẽ tiếp quản cơ ngơi gara này, và cũng chính là người đang nắm trọn số phận kỳ thực tập của cô trong tay.",
+      "syn": "Câu chuyện xoay quanh mối quan hệ vừa hài hước vừa lãng mạn giữa hai cô gái, Pakhwan và Mintra (P’Gale). Pakhwan, một cô gái miền Bắc Thái Lan say mê tâm linh và phong thủy, bắt đầu kỳ thực tập tại một gara sửa xe sang.",
+      "genre": "",
+      "pubStatus": "published",
+      "visibility": "public",
+      "publishedAt": "2026-09-30",
+      "chapters": 0
     }
   ],
   "slides": [],
@@ -1001,7 +1102,7 @@
       "the-fire",
       "chain",
       "ghost-house",
-      "like-puzzle"
+      "pls-love"
     ],
     "announcement": {
       "enabled": false,
@@ -1012,29 +1113,47 @@
   "schedule": {
     "items": [
       {
-        "days": "Thứ 2, 3",
-        "title": "Third Person",
+        "days": "Thứ 2",
+        "title": "Người Chồng Lạnh Lùng Của Cô Vợ Béo",
         "detail": "",
-        "slug": "third-person"
+        "slug": "nguoi-chong-lanh-lung-cua-co-vo-beo"
       },
       {
-        "days": "Thứ 4, 5",
+        "days": "Thứ 3",
+        "title": "Nakira Là Một Kẻ Nhẫn Tâm",
+        "detail": "",
+        "slug": "nakira-la-mot-ke-nhan-tam"
+      },
+      {
+        "days": "Thứ 4",
         "title": "Cô Vợ Hờ Đanh Đá Của Tôi",
         "detail": "",
-        "slug": "co-vo-ho-anh-cua-toi"
+        "slug": "co-vo-ho-danh-da-cua-toi"
       },
       {
-        "days": "Thứ 6, 7",
-        "title": "Vượt Khỏi Đường Chân Trời - endless blue beyond (Special)",
-        "detail": "",
-        "slug": "vuot-khoi-uong-chan-troi-endless-blue-01775777241"
+        "days": "Thứ 5",
+        "slug": "boi-chang-ngan-con-tim-rung-ong",
+        "title": "Bởi Chẳng Thể Ngăn Con Tim Rung Động",
+        "detail": ""
+      },
+      {
+        "days": "Thứ 6",
+        "slug": "cang-them-oan-han",
+        "title": "Càng Thêm Oán Hận",
+        "detail": ""
+      },
+      {
+        "days": "Thứ 7, CN",
+        "slug": "juliet-n-juliet",
+        "title": "Juliet & Juliet",
+        "detail": ""
       }
     ],
     "note": "Lịch có thể thay đổi nếu có việc đột xuất.",
     "updated": "2026-09-17"
   },
   "source": {
-    "synced": "2026-09-23T15:35:41.365Z",
+    "synced": "2026-09-30T16:33:58.634Z",
     "note": "sửa từ trang quản trị ssochuz v2"
   },
   "editorChoice": [
@@ -1049,6 +1168,6 @@
     "the-fire",
     "chain",
     "ghost-house",
-    "like-puzzle"
+    "pls-love"
   ]
 }
