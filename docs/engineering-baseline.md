@@ -14,7 +14,7 @@
 | Test (mặc định) | **1 lỗi** | `npm test`: 60 mục (5 script công cụ + 55 bài test), **59 đạt / 1 lỗi** — xem §3 |
 | Test trong trình duyệt thật | **Chưa chạy** | 3 bài cần Chromium; `npx playwright install chromium` bị mạng chặn (`ECONNRESET` tới `cdn.playwright.dev`) |
 | Lint | **Không có** | Repo không cấu hình ESLint/Prettier cho frontend (`package.json` không có script) |
-| Lockfile | **Không có trong git** | `.gitignore` bỏ qua `package-lock.json` |
+| Lockfile | **Đã commit (G9b, 2026-09-30)** | `package-lock.json` + `tests/package-lock.json` (lockfileVersion 3); trước đó `.gitignore` bỏ qua |
 | CI | **Chỉ 1 workflow** | `.github/workflows/sync-kv-to-repo.yml` (chạy tay, đồng bộ KV → repo). Không có workflow chạy `npm test`/build |
 | Chạy local | **Có script** | `python3 tools/dev_server.py` (cổng 8080, mô phỏng Cloudflare Pages) hoặc `python3 server.py` (cổng 8000) |
 
@@ -99,7 +99,7 @@ FAIL Soạn chương/danh sách chương có số từ     → "Chưa có chươ
 
 - `npm audit`: **25 moderate**, toàn bộ đến từ chuỗi `@tiptap/*` (đang dùng `^2.27.3`, bản vá nằm ở `3.31.3` — **nâng cấp breaking**). Tiptap chỉ chạy trong trang quản trị (`admin.js`), không nằm trong luồng đọc.
   - Khuyến nghị: **Deferred** — cần owner duyệt vì là major bump; trước khi làm phải có test admin hiện có (đang khá đầy đủ) + kiểm tra tay luồng soạn chương.
-- `package-lock.json` bị `.gitignore` → cài đặt không tái lập; `preact`, `@tiptap/*`, `jsdom` dùng `^`.
+- ~~`package-lock.json` bị `.gitignore` → cài đặt không tái lập~~ → **đã xử lý ở G9b**: 2 lockfile đã commit, cài bằng `npm ci`. `preact`, `@tiptap/*`, `jsdom` vẫn khai `^` trong `package.json` nhưng bản thực cài bị khoá. Sau `npm ci && npm run build`, `admin.js` đã commit trùng khớp bản build (`git status` sạch) ⇒ bước `git diff --exit-code` trong CI (G9a) đã dùng được. `npm audit` báo 25 lỗ hổng mức moderate (chưa xử lý — ngoài phạm vi G9b).
 - Phụ thuộc runtime **không** có dịch vụ trả phí: toàn bộ hạ tầng chạy trên free tier (xem `docs/free-tier-verification.md`).
 
 ## 5. Chất lượng mã (quan sát, chưa hành động)
@@ -127,6 +127,26 @@ Phát hiện khi chuẩn bị release Milestone A: đổi `src/cz-story.js`/`src
 Quy ước ghi ngay trong đầu `sw.js`: *mỗi lần đổi `?v=` tĩnh (`cz.css`/`cz-*.js`) thì sửa cả `PRECACHE` + tăng `CZ_SW_VER`*. Milestone A đã bump: `20260924a` → **`20260930a`** cho `cz.css` + `cz-*.js` (72 tệp HTML, gồm cả 63 thẻ OG trong `truyen/<slug>/index.html`) và `admin.js` `20260926b` → `20260930a`. `admin-docx.js` giữ `20260926b` vì tệp đó không đổi.
 
 `tests/t_pwa.js` canh việc này: nó đối chiếu `PRECACHE` trong `sw.js` với `?v=` trong 5 trang chính ⇒ bump lệch là test đỏ ngay.
+
+## 6c. Chạy npm test trên Windows (Git Bash) — 5 lỗi môi trường
+
+Owner chạy `npm test` trên Windows (Git Bash) thấy đỏ trong khi trên Linux xanh 60/60. Cả 5 nguyên nhân đều là **môi trường**, không phải lỗi sản phẩm; đã vá và merge ở PR #66 (**CONFIRMED** bằng `grep` trên `main`).
+
+| # | Triệu chứng trên Windows | Nguyên nhân | Bản vá |
+| --- | --- | --- | --- |
+| 1 | Bài so khớp nội dung đỏ hàng loạt | Git for Windows (`core.autocrlf=true`) checkout ra CRLF, test so chuỗi theo `\n` | `.gitattributes`: `* text=auto eol=lf` (+ đánh dấu `binary` cho ảnh/font/docx) |
+| 2 | `ERR_UNSUPPORTED_ESM_URL_SCHEME` khi `import()` | Truyền đường dẫn `C:\...` thẳng vào `import()` | `pathToFileURL(...).href` trong 6 bài (`tests/mock_worker.mjs`, `t_kv_quota.mjs`, `t_lock.mjs`, `t_registry_guard.mjs`, `t_schedule.mjs`, `t_worker.mjs`) + `tools/check_chapter_routes.mjs` |
+| 3 | `t_devserver` treo/đỏ không rõ lý do | Windows thường không có lệnh `python3`; stderr bị nuốt; chờ hết số lượt kể cả khi tiến trình đã chết | `tests/t_devserver.js` dò lần lượt `python3`/`python`/`py`, ép `PYTHONIOENCODING=utf-8` + `PYTHONUTF8=1`, giữ stderr để in khi lỗi, `ready()` thoát sớm khi tiến trình đã thoát |
+| 4 | Máy chủ xem thử chết ngay khi khởi động | Console Windows dùng bảng mã cũ (cp1258/cp1252/cp437), `print()` dòng có dấu/ký tự `·` ⇒ `UnicodeEncodeError` | `tools/dev_server.py`: `make_output_safe()` — `reconfigure(errors='replace')` cho stdout/stderr, **không** đổi bảng mã; gọi đầu `main()` |
+| 5 | `t_admin_chapter` lúc xanh lúc đỏ | Kiểm tra ngay sau một chuỗi nhịp bất đồng bộ (nhập file → `insertContent` → effect Preact → ghi nháp localStorage), máy chậm thì chưa kịp | `tests/t_admin_chapter.js`: `until(fn, msg)` chờ có hạn điều kiện thay cho kiểm tra tức thì |
+
+Bằng chứng khi vá (tái hiện trên Linux):
+
+- (a) Ép checkout CRLF (`git -c core.autocrlf=true` + checkout lại) ⇒ đúng **7** lỗi như owner báo; có `.gitattributes` ⇒ hết.
+- (b) `PYTHONIOENCODING=ascii python3 tools/dev_server.py --port 8899` trước khi vá ⇒ `UnicodeEncodeError` (traceback trỏ vào dòng `print` thông báo khởi động); sau khi vá ⇒ khởi động bình thường, `curl` trả **HTTP 200**.
+- (c) `t_admin_chapter` chạy lặp **20/20** lượt xanh; cố ý phá hàm ghi nháp ⇒ đỏ đúng ở kiểm tra tương ứng (không phải test luôn xanh).
+
+Hậu kiểm 2026-09-30: chính `tests/t_admin_chapter.js` và `tests/t_devserver.js` trong PR #66 lại được commit bằng CRLF kèm CR lẻ (`\r\r\n`), nên git coi là nhị phân (`git ls-files --eol` ⇒ `i/-text`) và `.gitattributes` **không** chuẩn hoá được. Đã đổi về LF (diff bỏ qua khoảng trắng rỗng — không đổi logic) và bỏ track `tools/__pycache__/*.pyc` lọt vào cùng PR. Kiểm lại: `git ls-files --eol | grep -v -E '\.(png|jpe?g|webp|gif|ico|woff2?|docx)$' | grep 'i/-text'` phải rỗng.
 
 ## 7. Rủi ro hạ tầng đã nhận diện (chi tiết ở `docs/product-discovery.md` §5)
 
