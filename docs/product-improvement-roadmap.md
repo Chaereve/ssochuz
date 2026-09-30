@@ -28,8 +28,10 @@ Thứ tự điểm không thay thế phán đoán: A1/A2 là P1 dù điểm th�
 
 ### Milestone A — "Đọc không gãy khi hạ tầng chập" ✅ **ĐÃ THỰC HIỆN (code + test xanh; chưa commit/deploy)**
 
-> Trạng thái 2026-09-30: A1, A2, G4 và test hồi quy **đã xong trong workspace**. `npm run check:worker`, `npm run build`, `node tools/check_src.js`, `npm test` (60/60) đều xanh. **Chưa commit, chưa push, chưa deploy** — chờ owner duyệt.
-> Việc còn lại trước khi coi là "xong ngoài đời": (a) deploy Worker mới (`npx wrangler deploy`) để A2 có số thật; (b) deploy Pages bản build mới để A1 có hiệu lực; (c) kiểm tay 390px/1440px + bàn phím cho nhãn "đang đọc bản lưu" (môi trường làm việc không có Chromium).
+> Trạng thái 2026-09-30: A1, A2, G4 và test hồi quy **đã xong, đã commit + push** lên nhánh `arena/01a0f122-ssochuz` và mở PR [#65](https://github.com/Chaereve/ssochuz/pull/65). `npm run check:worker`, `npm run build`, `node tools/check_src.js`, `npm test` (60/60) đều xanh.
+>
+> **Đã deploy thử (frontend):** Cloudflare Pages tự dựng bản xem trước từ nhánh — Deploy successful, xem ở https://76a7131b.ssochuz.pages.dev (hoặc link theo nhánh https://arena-01a0f122-ssochuz.ssochuz.pages.dev). Bản xem trước gọi Worker **production (1.17.x)**, mà CORS của Worker cho phép mọi tên miền con của `ssochuz.pages.dev` nên vẫn nối được; ô "Lượt đọc KV" trên bản xem trước sẽ hiện `—` cho tới khi deploy Worker 1.18.0.
+> Việc còn lại trước khi coi là "xong ngoài đời": (a) **merge PR #65** để bản build A1 lên production; (b) **deploy Worker 1.18.0** (`cd worker && npx wrangler deploy`, hoặc dán `worker/cms.js` vào Cloudflare → Deploy) — việc này **phải làm từ tài khoản Cloudflare của owner**, sandbox không có credential nên không deploy hộ được; (c) kiểm tay 390px/1440px + bàn phím cho nhãn "đang đọc bản lưu" (sandbox không cài được Chromium).
 
 - **Outcome người dùng:** trong mọi tình huống Worker/KV lỗi hoặc quá hạn mức, người đọc vẫn mở được chương đang đọc (từ bản lưu) và hiểu rõ vì sao nội dung có thể chậm hơn KV; chủ trang nhìn thấy mức dùng **đọc** trước khi chạm trần.
 - **Scope:** A1 (dự phòng tĩnh trong trình đọc) · A2 (đếm + hiển thị lượt đọc, cảnh báo 70%) · G4 (harness xanh) · test hồi quy cho A1/A2.
