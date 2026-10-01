@@ -45,6 +45,14 @@ CSS chỉ còn con trỏ trỏ sang tài liệu — nhờ vậy bù được dun
 `admin.css` từ đợt này phủ đủ 15 màn chứ không còn là sheet phụ trợ; chính sách cảnh báo ở ~88%
 trần vẫn giữ.
 
+## Bộ kiểm thử (chạy chốt trên bản đã dựng)
+
+`node tests/run.js`: **65 bài đạt, 3 bài đỏ** — cả ba đỏ đều có sẵn ở bản gốc
+`cd92062` (đã kiểm lại bằng worktree sạch): `tools/check_og.mjs`,
+`t_admin_editor_lazy.js` (jsdom không có `ResourceLoader`), `t_admin_editor_keyboard.js`
+(4/4 lần đỏ ở cả hai bản, lỗi mô phỏng bàn phím trong jsdom).
+`tools/audit_a11y.mjs`: 23 màn, 0 lỗi axe-core.
+
 ## Còn thấy (chưa làm)
 
 - `t_admin_editor_keyboard.js`, `t_admin_editor_lazy.js`, `tools/check_og.mjs` đỏ cả ở bản gốc
