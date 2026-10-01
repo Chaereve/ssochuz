@@ -1,8 +1,5 @@
-/* ssochuz admin — lớp giao diện quản trị. Hợp đồng nguyên tố (nút, badge, ô nhập,
-   card, dòng, lớp nổi, trạng thái rỗng) nằm ở docs/admin-giao-dien.md; mọi màn phải
-   dùng đúng bộ đó thay vì đẻ biến thể mới. Dáng lấy từ skill ui-ux (evondevKit),
-   màu lấy từ token của dự án ở src/cz.css.
-*/
+/* ssochuz admin — lớp giao diện quản trị: hợp đồng nguyên tố ở docs/admin-giao-dien.md,
+   dáng lấy từ skill ui-ux (evondevKit), màu lấy từ token dự án ở src/cz.css. */
 
 /* 1. TOKEN CỦA LỚP QUẢN TRỊ */
 .admin {
@@ -144,11 +141,10 @@ html { scrollbar-gutter: stable; }
 .admin .tone-amber, .admin .tone-soon, .admin .tone-warn {
   background: var(--a-warn-bg); color: var(--warn); }
 .admin .pill.soon { color: var(--mut); }
-.admin .tone-info, .admin .tone-blue, .admin .tone-gray,
-.admin .tone-slate { background: var(--a-neutral-bg); color: var(--mut); }
+.admin .tone-info { background: var(--a-neutral-bg); color: var(--mut); }
 .admin .tone-bad, .admin .chip.bad, .admin .pill.bad { background: var(--a-danger-bg); color: var(--a-danger); }
 /* "hẹn giờ" = việc đang chờ lên sóng → tông nhấn nhạt, không phải tông dừng */
-.admin .tone-violet, .admin .tone-purple { background: var(--a-accent-bg); color: var(--acc); }
+.admin .tone-violet, .admin .tone-warn { background: var(--a-accent-bg); color: var(--acc); }
 .admin .pill.acc { background: var(--a-accent-bg); color: var(--acc); }
 .admin .v2badge-18 { background: var(--a-danger-bg); color: var(--a-danger); font-weight: 700; }
 .admin .v2badge-lock { background: var(--a-warn-bg); color: var(--warn); }
@@ -169,8 +165,7 @@ html { scrollbar-gutter: stable; }
   box-shadow: none; padding: 20px;
 }
 .admin .v2pane { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
-/* Mọi lưới một cột phải khoá track bằng minmax(0,1fr): track `auto` phình theo
-   max-content của con (chuỗi/đường dẫn dài) và đẩy cả trang tràn ngang. */
+/* Mọi lưới một cột khoá track bằng minmax(0,1fr), nếu không sẽ tràn ngang */
 .admin :where(.v2pane, .v2overview, .v2form, .v2listcards, .v2sort, .v2up, .v2mig,
   .v2import-preview, .doc, .ovrecent, .v2todo-grid, .v2ops-grid, .v2connect,
   .v2mini, .v2fsec, .v2gate-card) { grid-template-columns: minmax(0, 1fr); }
@@ -220,10 +215,6 @@ html { scrollbar-gutter: stable; }
 /* 7. BẢNG — dòng hover nền nhạt, đầu bảng chữ nhỏ xám, số tabular */
 .admin .v2tablewrap { margin-top: 14px; border: 1px solid var(--bd); border-radius: var(--a-r-lg);
   background: var(--surf); overflow: auto; max-height: 68vh; }
-.admin .v2table-wrap {
-  margin-top: 14px; border: 1px solid var(--bd); border-radius: var(--a-r-lg);
-  background: var(--surf); overflow: auto; max-height: 68vh;
-}
 .admin table, .admin .v2book-table { width: 100%; border-collapse: collapse;
   font-size: 13.5px; margin: 0; }
 .admin .v2book-table th, .admin table.tbl th {
@@ -239,8 +230,7 @@ html { scrollbar-gutter: stable; }
 .admin .v2book-table td b { display: block; font-weight: 600; }
 .admin .v2book-table td .sm { display: block; color: var(--dim); }
 .admin .v2book-table input[type="checkbox"] { width: 17px; height: 17px; }
-/* Bảng thư viện: khoá cột để không tràn ngang. Các bảng khác (Tác giả, Vai trò,
-   Thống kê, Kiểm tra dữ liệu…) để tự co giãn — khoá cứng sẽ bóp nát cột chữ. */
+/* Chỉ bảng Thư viện khoá cột; bảng khác tự co giãn */
 .admin .v2lib .v2book-table { table-layout: fixed; }
 .admin .v2lib .v2book-table th:nth-child(1) { width: 40px; }
 .admin .v2lib .v2book-table th:nth-child(2) { width: 36%; }
@@ -311,8 +301,7 @@ html { scrollbar-gutter: stable; }
 .admin .msgbar.info { border-left-color: var(--acc); }
 .admin .msgbar.err .v2err-actions .btn { color: var(--a-danger); }
 /* khung chờ đúng hình dòng thật */
-/* Khung chờ dùng nguyên cơ chế .skel của cz.css (nền --surf2 + vệt sáng chạy,
-   cz-app tự gỡ khi ảnh tải xong) — ở đây chỉ giữ đúng hình dạng phần tử. */
+/* Khung chờ: giữ hình dạng phần tử, hiệu ứng .skel do cz.css lo */
 .admin .ovth, .admin .v2thumb { overflow: hidden; }
 
 /* 10. LỚP NỔI — dropdown, menu, tìm kiếm gợi ý (chỉ nơi đây có bóng) */
@@ -411,11 +400,13 @@ html { scrollbar-gutter: stable; }
 .admin .v2crumbs { display: flex; align-items: center; gap: 6px; min-width: 0;
   color: var(--dim); font-size: 12.5px; overflow: hidden; }
 .admin .v2crumbs .here { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.admin .v2crumbs a, .admin .v2crumbs .lk { color: var(--mut); border: 0; background: none;
-  padding: 0; font-size: 13px; cursor: pointer; }
 .admin .v2crumbs a:hover, .admin .v2crumbs .lk:hover { color: var(--acc); }
 .admin .v2crumbs a, .admin .v2crumbs .lk { color: var(--mut); border: 0; background: none;
   padding: 0; font-size: 12.5px; white-space: nowrap; flex: none; cursor: pointer; }
+@media (max-width: 900px) {
+  .admin .v2crumbs a, .admin .v2crumbs .lk { display: inline-flex; align-items: center;
+    min-height: 32px; }
+}
 .admin .v2crumbs a:hover, .admin .v2crumbs .lk:hover { color: var(--acc); }
 .admin .v2search { position: relative; display: flex; align-items: center; gap: 8px;
   flex: 0 1 300px; max-width: 300px; height: 36px; padding: 0 12px;
@@ -657,8 +648,6 @@ html { scrollbar-gutter: stable; }
 .admin .kvbar { display: block; height: 4px; border-radius: 999px; background: var(--surf2);
   overflow: hidden; }
 .admin .kvbar > span { display: block; height: 100%; background: var(--acc); }
-.admin .savebar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 16px;
-  padding-top: 14px; border-top: 1px solid var(--bd); }
 .admin .v2actionrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
 .admin .v2role-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 10px; margin-top: 14px; }
@@ -689,7 +678,40 @@ html { scrollbar-gutter: stable; }
   box-shadow: var(--a-pop-shadow); }
 
 /* 16b. CHI TIẾT DÙNG CHUNG — form nhiều khối, khối nguy hiểm, tải ảnh, danh sách */
+/* 8. SỬA BỘ — hàng tiêu đề gọn; màn rộng chia hai cột cho dễ đọc */
 .admin .v2edit-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.admin .v2edit-head h3 { font-size: 16px; font-weight: 700; line-height: 1.35; min-width: 0;
+  margin: 0; }
+@media (min-width: 1280px) {
+  .admin #pane-edit { display: grid; gap: 18px; align-items: start; max-width: 1180px;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+    grid-template-areas: "head head" "meta lock" "chap chap" "danger danger"; }
+  .admin #pane-edit > * { margin-top: 0; }
+  .admin .v2edit-head { grid-area: head; }
+  .admin #pane-edit > form.v2form:not(.v2lock-panel) { grid-area: meta; }
+  .admin #pane-edit > .v2lock-panel { grid-area: lock; }
+  .admin #pane-edit > .v2chapter-card { grid-area: chap; }
+  .admin #pane-edit > .v2danger { grid-area: danger; }
+}
+/* Nhật ký: mỗi dòng có cột giờ riêng, dòng lỗi nhuộm nền nhạt */
+.admin .v2loglist { margin-top: 12px; }
+.admin .v2logrow { display: grid; grid-template-columns: 148px minmax(0, 1fr); gap: 12px;
+  align-items: baseline; padding: 10px 4px; border-bottom: 1px solid var(--bd); }
+.admin .v2logrow:last-child { border-bottom: 0; }
+.admin .v2logrow .grow { display: grid; gap: 2px; }
+.admin .v2logrow b { font-size: 13.5px; font-weight: 600; }
+.admin .v2logtime { color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums;
+  white-space: nowrap; }
+.admin .v2logrow.bad { background: color-mix(in srgb, var(--bad) 5%, transparent); }
+@media (max-width: 620px) {
+  .admin .v2logrow { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+}
+/* Cài đặt: tựa mục một dòng, mô tả xuống dòng riêng; thẻ không bị kéo cao bằng nhau */
+.admin #pane-settings .v2fsec-head { display: grid; gap: 2px; align-items: start; }
+.admin #pane-settings .v2ops-grid { align-items: start; }
+/* Cài đặt: mục đầu đứng ngay dưới dòng mô tả nên bỏ đường kẻ trên */
+.admin #pane-settings .v2fsec:first-of-type { border-top: 0; padding-top: 0; margin-top: 16px; }
+.admin #pane-settings .v2fsec > .v2toolbar { margin-top: 10px; }
 .admin .v2fsec { display: grid; gap: 12px; padding-top: 16px; margin-top: 16px;
   border-top: 1px solid var(--bd); }
 .admin .v2fsec:first-child { padding-top: 0; margin-top: 0; border-top: 0; }
@@ -698,7 +720,7 @@ html { scrollbar-gutter: stable; }
 .admin .v2danger { border: 1px solid color-mix(in srgb, var(--bad) 30%, var(--bd));
   border-radius: var(--a-r-lg); background: var(--surf); padding: 20px; display: grid; gap: 10px; }
 .admin .sticky-actions { position: sticky; bottom: 0; z-index: 3; margin-top: 18px;
-  padding: 12px 0; background: linear-gradient(180deg, transparent, var(--bg) 40%); }
+  padding: 12px 0; background: var(--bg); border-top: 1px solid var(--bd); }
 .admin .v2doctor-scan { display: grid; gap: 6px; margin-top: 12px; }
 .admin .v2draft-status { margin: 8px 0 0; color: var(--warn); font-size: 12.5px; font-weight: 600; }
 .admin .v2sched-warn, .admin .v2lock-warn { margin: 8px 0 0; color: var(--warn); font-size: 12.5px; }
@@ -719,8 +741,7 @@ html { scrollbar-gutter: stable; }
 /* hàng thêm mới (chọn bộ + nút) */
 .admin .v2sort-x { margin-left: auto; flex: none; }
 .admin .v2addrow { display: flex; gap: 8px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
-/* ≤620px: hàng sắp thứ tự xuống hai tầng — bìa + chữ một tầng, ba nút một tầng
-   rộng bằng cả hàng (ngón tay dễ bấm hơn là ba nút chen ở lề phải). */
+/* ≤620px: hàng sắp thứ tự xuống hai tầng, ba nút rộng bằng cả hàng */
 @media (max-width: 620px) {
   .admin .v2sort > li { display: grid; align-items: start;
     grid-template-columns: 20px 40px minmax(0, 1fr); column-gap: 10px; row-gap: 8px; }
@@ -775,12 +796,9 @@ html { scrollbar-gutter: stable; }
 .admin .v2hp-card .v2cover { width: 100%; }
 
 /* 17. MÀN HẸP */
-/* 901–1100px: nội dung hẹp hơn (rail vẫn mở) nên nhường bề ngang cho cột Chương
-   để "42 chương" không bị cắt; cột Truyện ngắn lại là chấp nhận được vì tiêu đề
-   đã có tooltip. */
+/* 901–1100px: nhường bề ngang cho cột Chương để "42 chương" không bị cắt */
 .admin .v2namerow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-/* 901–1100px: bảng Tác giả bớt cột "Cập nhật" (ngày cập nhật còn xem được ở Thư
-   viện và ở màn rộng) và nới lề ô, để bảng vừa khung thay vì phải cuộn ngang. */
+/* 901–1100px: bảng Tác giả bớt cột "Cập nhật" + nới lề ô để vừa khung */
 @media (min-width: 901px) and (max-width: 1100px) {
   .admin #pane-users .v2book-table th, .admin #pane-users .v2book-table td {
     padding-left: 8px; padding-right: 8px; }
@@ -817,8 +835,7 @@ html { scrollbar-gutter: stable; }
 }
 @media(max-width:900px){
   .admin .v2top .in { padding: 0 12px; gap: 6px; }
-  /* Thanh trên màn hẹp: chỉ giữ việc chính — trạng thái kết nối và lối ra web
-     đã có ở tab Kiểm tra dữ liệu và menu tài khoản. */
+  /* Màn hẹp: thanh trên chỉ giữ việc chính */
   .admin .v2top .chip, .admin .v2top .v2web { display: none; }
   .admin .v2quota { padding: 0 10px; gap: 6px; }
   .admin .v2quota > span { display: none; }
@@ -832,10 +849,9 @@ html { scrollbar-gutter: stable; }
   .admin .v2sort > li { flex-wrap: wrap; }
   .admin .seg button, .admin .v2reptabs button { height: 36px; }
   .admin .v2pager .btn { min-height: 36px; }
-  /* Bảng quản trị thành danh sách dòng: một khối chia đường kẻ, không mỗi dòng một card */
+  /* Danh sách dòng: chia bằng đường kẻ, không mỗi dòng một card */
   .admin .v2tablewrap { margin-top: 14px; border: 1px solid var(--bd); border-radius: var(--a-r-lg);
   background: var(--surf); overflow: auto; max-height: 68vh; }
-.admin .v2table-wrap { max-height: none; border-radius: var(--a-r-lg); }
   .admin .v2book-table thead { display: none; }
   .admin .v2book-table, .admin .v2book-table tbody, .admin .v2book-table tr,
   .admin .v2book-table td { display: block; width: 100%; }
@@ -872,8 +888,7 @@ html { scrollbar-gutter: stable; }
   .admin .v2top.v2search-on .in > *:not(.v2search) { display: none; }
   .admin .v2top.v2search-on .v2search { display: flex; flex: 1 1 auto; max-width: none; }
   .admin .v2top .v2search-close { display: inline-flex; }
-  /* Thanh trên chỉ còn 4 chỗ: ngăn kéo · tựa trang · tìm · tài khoản (nền và
-     quota đã có trong menu tài khoản và Dashboard). */
+  /* Thanh trên còn 4 chỗ: ngăn kéo · tựa · tìm · tài khoản */
   .admin .v2top .v2theme, .admin .v2top .v2quota { display: none; }
   .admin .v2quota em { display: none; }
   .admin .v2pager { justify-content: center; }

@@ -329,79 +329,36 @@ export function LogPanel({ state, onLoad }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [items, setItems] = useState([]);
+  const [q, setQ] = useState('');
+  const [only, setOnly] = useState('');
   const load = async () => { setBusy(true); setError(''); try { const r = await onLoad(); setItems((r && r.items) || []); } catch (e) { setError(e.message || String(e)); } finally { setBusy(false); } };
   useEffect(() => { if (state.online && !items.length && !busy) load(); }, [state.online]);
+  const source = (items.length ? items : (state.audit || [])).slice(0, 200);
+  const needle = q.trim().toLowerCase();
+  const errCount = source.filter((it) => it.error).length;
+  const rows = source.filter((it) => {
+    if (only === 'err' && !it.error) return false;
+    if (!needle) return true;
+    return ((it.text || it.action || '') + ' ' + (it.who || '') + ' ' + (it.result || '')).toLowerCase().indexOf(needle) >= 0;
+  });
   return <div id="pane-log" class="v2pane"><section class="card2">
-    <div class="row"><h3>Nhật ký</h3><span class="grow"></span><LoaderButton busy={busy} onClick={load}>Đọc log</LoaderButton></div>
-    <NeedOnline state={state}><p class="hint">Hiển thị tối đa 200 thao tác gần nhất từ key <code>log</code>.</p></NeedOnline>
+    <div class="v2toolbar">
+      <input class="inp" aria-label="Tìm trong nhật ký" placeholder="Tìm theo việc, người, kết quả…" value={q} onInput={(e) => setQ(e.currentTarget.value)} />
+      <span class="seg" role="group" aria-label="Lọc nhật ký">
+        <button type="button" aria-pressed={only === ''} class={only === '' ? 'on' : ''} onClick={() => setOnly('')}>Tất cả ({num(source.length)})</button>
+        <button type="button" aria-pressed={only === 'err'} class={only === 'err' ? 'on' : ''} onClick={() => setOnly('err')}>Có lỗi ({num(errCount)})</button>
+      </span>
+      <span class="grow"></span>
+      <span class="sm muted">{num(rows.length)} dòng</span>
+      <LoaderButton busy={busy} onClick={load}>Đọc log</LoaderButton>
+    </div>
+    <NeedOnline state={state}><p class="hint">Tối đa 200 thao tác gần nhất từ key <code>log</code>. Nguồn đang hiện: {items.length ? 'Worker KV' : 'nhật ký phiên quản trị này'}.</p></NeedOnline>
     {error ? <div class="msgbar show err">{error}<div class="v2err-actions"><button class="btn ghost sm" type="button" onClick={load}>Thử lại</button></div></div> : null}
-    {(() => {
-      const session = (state.audit || []).slice(0, 200);
-      const merged = items.length ? items.slice(0, 200) : session;
-      return <div class="v2listcards">{merged.length ? merged.map((it, i) => <article class="v2itemrow" key={(it.at || '') + i}><div><b>{it.text || it.action}</b><span class="sm muted"> · {dateText(it.at)} · {it.who || 'admin-key'}{it.result ? ' · ' + it.result : ''}{it.error ? ' · lỗi: ' + it.error : ''}</span></div></article>) : <div class="empty">Chưa có log trong phiên này.</div>}</div>;
-    })()}
-  </section></div>;
-}
-
-export function SettingsPanel({ state, onReload, onRecount, onStatsRefresh, onImportBlogger, onSyncBlogger, onDownloadBackup, onRestoreBackup }) {
-  const writeBlocked = !!(state.online && state.quota && state.quota.writesToday >= (state.quota.limit || 1000));
-  const lib = (state.registry && state.registry.lib) || [];
-  const [slug, setSlug] = useState((lib[0] && lib[0].slug) || '');
-  const [url, setUrl] = useState('');
-  const [mode, setMode] = useState('append');
-  const [busy, setBusy] = useState('');
-  const [result, setResult] = useState('');
-  const run = async (name, fn) => {
-    setBusy(name); setResult('');
-    try {
-      const res = await fn();
-      if (res) setResult(JSON.stringify(res, null, 2));
-    } catch (e) { setResult('Lỗi: ' + (e.message || e)); }
-    finally { setBusy(''); }
-  };
-  return <div id="pane-settings" class="v2pane"><section class="card2">
-    <h3>Cài đặt & thao tác hệ thống</h3>
-    <p class="hint">Admin giữ static Cloudflare Pages, không thêm dịch vụ trả phí và không đưa secret vào bundle. Các nút ghi KV đều đi qua endpoint Worker có sẵn.</p>
-    <div class="v2ops-grid"><div class="v2mini"><b>Kết nối</b><p class="hint">Chế độ: {state.online ? 'Worker + ADMIN_KEY' : 'dữ liệu tĩnh/login frontend'}</p><p class="hint">API: <code>{state.apiBase || (window.CZ && window.CZ.API) || '—'}</code></p></div><div class="v2mini"><b>Quota ghi KV</b><p class="hint">Counter hiện tại: {num(state.quota && state.quota.writesToday)}/{num(state.quota && state.quota.limit || 1000)} · nguồn {state.quota && state.quota.source}</p></div></div>
-    <div class="v2ops-grid">
-      <div class="v2mini">
-        <b>Backup một file</b>
-        <p class="hint">Tải registry + book JSON hiện có. Mặc định strip lock hash để file backup an toàn hơn khi dùng cho repo.</p>
-        <button class="btn ghost sm" type="button" disabled={!!busy} onClick={() => run('backup', onDownloadBackup)}>Tải backup JSON</button>
-      </div>
-      <div class="v2mini">
-        <b>Khôi phục từ backup</b>
-        <p class="hint">Chọn file backup JSON (do nút “Tải backup JSON” tạo) để ghi đè registry + book lên KV. Hỏi xác nhận mạnh và tính quota từng lượt ghi.</p>
-        <label class="btn sm filepick">Chọn tệp backup JSON
-          <input type="file" aria-label="Chọn file backup JSON để khôi phục" accept=".json,application/json" onChange={(e) => { const f = e.currentTarget.files && e.currentTarget.files[0]; if (f && onRestoreBackup) onRestoreBackup(f).catch((er) => setResult('Lỗi: ' + (er.message || er))); e.currentTarget.value = ''; }} />
-        </label>
-      </div>
-      <div class="v2mini">
-        <b>Nhập chương từ Blogger</b>
-        <p class="hint">Tự tìm bài khớp tên truyện, hoặc dán link blogspot cụ thể. Ghi book + registry, không đổi schema.</p>
-        <label class="fl">Bộ truyện</label><select class="inp" aria-label="Bộ truyện nhận chương" value={slug} onChange={(e) => setSlug(e.currentTarget.value)}>{lib.map((book) => <option value={book.slug}>{book.title}</option>)}</select>
-        <label class="fl">URL bài viết Blogspot (không bắt buộc)</label><input class="inp" aria-label="URL bài viết Blogspot" value={url} onInput={(e) => setUrl(e.currentTarget.value)} placeholder="https://chuseoz.blogspot.com/..." />
-        <label class="fl">Cách nhập</label><select class="inp" aria-label="Cách nhập chương từ Blogger" value={mode} onChange={(e) => setMode(e.currentTarget.value)}><option value="append">Thêm vào cuối</option><option value="replace-last">Thay chương cuối</option></select>
-        <button class="btn pri sm mt" type="button" disabled={!state.online || writeBlocked || !!busy || !slug} onClick={() => run('import', () => onImportBlogger({ slug, url, mode }))}>{busy === 'import' ? 'Đang nhập…' : 'Nhập chương'}</button>
-      </div>
-      <div class="v2mini">
-        <b>Đồng bộ metadata Blogger</b>
-        <p class="hint">Đọc list-novel + lịch ra chương rồi cập nhật registry KV; số chương thật trong KV vẫn là nguồn thắng.</p>
-        <button class="btn ghost sm" type="button" disabled={!state.online || writeBlocked || !!busy} onClick={() => run('sync', onSyncBlogger)}>{busy === 'sync' ? 'Đang đồng bộ…' : 'Đồng bộ Blogger'}</button>
-      </div>
-    </div>
-    <div class="v2ops-grid">
-      <div class="v2mini v2overflow-card">
-        <b>Overflow KV (free)</b>
-        <p class="hint">Supabase: {(state.worker && state.worker.overflow && state.worker.overflow.supabase) ? 'connected' : 'unavailable'}. R2: {(state.worker && state.worker.overflow && state.worker.overflow.r2) ? 'connected' : 'unavailable'}. Bìa: {(state.worker && state.worker.overflow && state.worker.overflow.covers) ? 'Supabase Storage (bucket covers, 1 GB free — không unlimited)' : 'KV (chưa gắn SUPABASE_SERVICE_ROLE)'}. Ảnh chương: {(state.worker && state.worker.overflow && (state.worker.overflow.supabase || state.worker.overflow.r2)) ? 'overflow sang Supabase/R2 (bảng ssochuz_blobs)' : 'KV'}.</p>
-        <p class="hint">“connected” nghĩa là Worker ĐÃ GẮN secret (SUPABASE_URL + SUPABASE_SERVICE_ROLE) — chưa chắc bảng đã có. Chưa chạy SQL dưới đây thì mọi ghi overflow sẽ lỗi và bản đầy đủ TỰ RỚT VỀ KV (fallback) — không mất dữ liệu, chỉ chưa đỡ được KV.</p>
-        <p class="hint">Chưa gắn thì book/img vẫn nằm full trong KV. Secret <code>SUPABASE_SERVICE_ROLE</code> chỉ đặt trên Worker, không vào bundle.</p>
-        <p class="hint">SQL một lần (Supabase SQL Editor, bảng ~500 MB free):</p>
-        <pre class="v2result">{'create table if not exists public.ssochuz_blobs (\n  key text primary key,\n  value text not null,\n  mime text,\n  updated_at timestamptz default now()\n);\nalter table public.ssochuz_blobs enable row level security;'}</pre>
-        <p class="hint">R2 10 GB free (tuỳ chọn): tạo bucket rồi binding <code>CZ_R2</code> trong wrangler.toml (đã ghi chú sẵn). Ghi xong KV chỉ còn “stub” nhỏ, bản đầy đủ nằm ở Supabase/R2.</p>
-      </div>
-    </div>
-    {result ? <pre class="v2result">{result}</pre> : null}
-    <div class="savebar"><button class="btn ghost" type="button" onClick={onReload}>Đọc lại dữ liệu</button><button class="btn ghost" type="button" disabled={!state.online || writeBlocked || !!busy} onClick={() => run('stats', onStatsRefresh)}>Flush stats cache</button><button class="btn pri" type="button" disabled={!state.online || writeBlocked || !!busy} onClick={() => run('recount', onRecount)}>Đếm lại số chương</button></div>
+    {rows.length ? <div class="v2loglist">{rows.map((it, i) => (
+      <article class={'v2logrow' + (it.error ? ' bad' : '')} key={(it.at || '') + i}>
+        <span class="v2logtime">{dateText(it.at)}</span>
+        <span class="grow"><b>{it.text || it.action}</b><span class="sm muted">{it.who || 'admin-key'}{it.result ? ' · ' + it.result : ''}{it.error ? ' · lỗi: ' + it.error : ''}</span></span>
+      </article>
+    ))}</div> : <div class="empty">{source.length ? 'Không có dòng nào khớp bộ lọc.' : 'Chưa có log trong phiên này.'}</div>}
   </section></div>;
 }

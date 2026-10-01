@@ -10,7 +10,8 @@ import { BookList } from './components/BookList.jsx';
 import { NewBook } from './components/NewBook.jsx';
 import { BookEditor } from './components/BookEditor.jsx';
 import { PlaceholderTab } from './components/PlaceholderTab.jsx';
-import { DoctorPanel, CommentsPanel, ReportsPanel, StatsPanel, VotesPanel, LogPanel, SettingsPanel } from './components/OperationalPanels.jsx';
+import { DoctorPanel, CommentsPanel, ReportsPanel, StatsPanel, VotesPanel, LogPanel } from './components/OperationalPanels.jsx';
+import { SettingsPanel } from './components/SettingsPanel.jsx';
 import { cloneRegistry, metaFromForm, newBookRecord, removeBookReferences, renameReferences, slugify, touchRegistry } from './utils/books.js';
 import { chapterIsEmpty } from '../shared/chapters.js';
 import { compressImage, withContentId, formatBytes } from './utils/images.js';
@@ -345,7 +346,8 @@ function App() {
       api.setConnection({ apiBase: '', adminKey: '' });
       store.setState({ mode, role: mode === 'login' ? 'admin' : 'local', online: false, worker: null, apiBase: '', quota: quota.snapshot(), connecting: false, connError: '' });
       await loadRegistryFromCurrent(false);
-      if (!quiet) setNotice('Đang xem dữ liệu tĩnh trong repo. Admin chỉ ghi khi bạn nối Worker bằng ADMIN_KEY.');
+      /* Không đặt notice ở đây: Layout đã có thanh "Chế độ dữ liệu tĩnh" ngay
+         trên đầu mọi màn — hai thanh cùng nói một ý là nhiễu. */
     } catch (error) { setGateMessage(error.message || String(error)); }
     finally { setBusy(false); }
   }

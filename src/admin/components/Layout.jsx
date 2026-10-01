@@ -217,8 +217,12 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
   if (openReports) bellItems.push({ tab: 'reports', text: openReports + ' báo lỗi chưa xử lý' });
   if (spam) bellItems.push({ tab: 'cmts', text: spam + ' bình luận nghi spam' });
 
+  /* Màn Sửa bộ: tựa lấy đúng nhãn điều hướng ("Sửa bộ"), tên bộ xuống dòng mô tả
+     — tránh việc h2 và tiêu đề trong card cùng in một tên bộ hai lần. */
   const head = activeTab === 'edit'
-    ? [currentTitle || currentSlug || 'Sửa bộ', 'Metadata, ảnh bìa, khóa mật mã và soạn chương. Thay đổi chỉ ghi Cloudflare KV khi đã nối ADMIN_KEY.']
+    ? ['Sửa bộ', 'Metadata, ảnh bìa, khóa mật mã và soạn chương'
+      + (currentTitle ? ' — đang sửa “' + currentTitle + '”' : currentSlug ? ' — ' + currentSlug : '')
+      + '. Thay đổi chỉ ghi Cloudflare KV khi đã nối ADMIN_KEY.']
     : (PAGE_HEAD[activeTab] || [CRUMBS[activeTab] || activeTab, '']);
 
   return (
@@ -336,7 +340,7 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
           {!state.online ? (
             <div class="v2staticbar" role="status" style="margin-top:14px">
               <b>Chế độ dữ liệu tĩnh</b>
-              Thay đổi chỉ là nháp phiên và sẽ mất khi đóng tab.
+              Thay đổi chỉ là nháp phiên, mất khi đóng tab — admin chỉ ghi khi bạn nối Worker bằng ADMIN_KEY.
             </div>
           ) : null}
           {used >= limit && state.online ? (

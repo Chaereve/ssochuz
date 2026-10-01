@@ -83,9 +83,10 @@ export function BookEditor({ registry, slug, bookData, bookLoading, bookError, a
 
   return (
     <div id="pane-edit">
-      <div class="row"><button class="btn ghost sm" type="button" onClick={onBack}>← Thư viện</button></div>
       <div class="v2edit-head">
-        <h3 style={{ margin: 0 }}>Sửa metadata: {book.title}</h3>
+        <button class="btn ghost sm" type="button" onClick={onBack}>← Thư viện</button>
+        <h3>Sửa metadata: {book.title}</h3>
+        <span class="grow"></span>
         <BookBadges book={book} />
       </div>
       <form class="v2form" ref={metaFormRef} onSubmit={(e) => { e.preventDefault(); onSave(book.slug, Object.assign({}, form, { slug: slugify(form.slug || form.title), is18: form.is18 ? '1' : '0', thumb: persistableCover(form.thumb) })); }}>

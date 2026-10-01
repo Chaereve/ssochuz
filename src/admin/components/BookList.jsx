@@ -1,11 +1,13 @@
 import { h } from 'preact';
-import { useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useState } from 'preact/hooks';
 import { countText } from '../utils/format.js';
 import { BookCover } from './BookCover.jsx';
 import { BookBadges, CompletionBadge, PublishStatusBadge, LockedBadge } from './Badges.jsx';
 import { COMPLETION_STATUSES, VISIBILITIES } from '../utils/books.js';
 
 const PAGE = 24;
+
+const VIEW_KEY = 'ssochuz-admin-view';
 
 export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulkUpdate, onDelete, apiBase, initialQuery = '', writeBlocked = false }) {
   const lib = (registry && registry.lib) || [];
@@ -16,7 +18,11 @@ export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulk
   const [vis, setVis] = useState('');
   const [locked, setLocked] = useState('');
   const [page, setPage] = useState(1);
-  const [view, setView] = useState('table');
+  /* Nhớ chế độ xem giữa các lần mở: người dùng đã chọn Lưới thì lần sau vẫn Lưới. */
+  const [view, setView] = useState(() => {
+    try { return localStorage.getItem(VIEW_KEY) === 'grid' ? 'grid' : 'table'; } catch (e) { return 'table'; }
+  });
+  useEffect(() => { try { localStorage.setItem(VIEW_KEY, view); } catch (e) {} }, [view]);
 
   const filtered = useMemo(() => {
     return lib.filter((book) => {
