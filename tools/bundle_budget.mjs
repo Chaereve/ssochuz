@@ -14,10 +14,11 @@ export const BUNDLE_BUDGETS = {
   'cz-people.js':    { warnKb: 10,  maxKb: 15 },
   'cz-space.js':     { warnKb: 34,  maxKb: 42 },
   'cz.css':          { warnKb: 190, maxKb: 210 },
-  /* admin.css KHÔNG còn là sheet phụ trợ: từ đợt tái cấu trúc giao diện quản trị
-     (2026-10) nó phủ đủ 15 màn — khung app, bảng, form, khối vận hành, lớp nổi.
-     Nâng trần 52 → 57 kB để chính sách cũ (warn ở ~88% trần) vẫn còn hiệu lực. */
-  'admin.css':       { warnKb: 50,  maxKb: 57 },
+  /* admin.css là tệp nguồn kiêm bản phát hành (tests/t_admin_budget.js bắt khớp
+     byte), nên đợt tái cấu trúc giao diện quản trị đã nén khoảng trắng trong
+     nguồn: 57,7 → 51,4 kB, không đổi một pixel nào. Trần giữ 57 kB như đợt trước,
+     ngưỡng cảnh báo đặt ở 53 kB (~93% trần). */
+  'admin.css':       { warnKb: 53,  maxKb: 57 },
   'admin.js':        { warnKb: 230, maxKb: 260 },
   'admin-editor.js': { warnKb: 400, maxKb: 420 },
   'admin-docx.js':   { warnKb: 430, maxKb: 460 },

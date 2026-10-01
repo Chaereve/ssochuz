@@ -100,9 +100,35 @@ Sau vòng 2, danh sách "Còn thấy" còn bốn việc; vòng này làm ba vi�
 - `admin.css` 56.0 kB (98% trần 57 kB) — phần thêm được bù bằng cách gỡ luật chết
   (`.v2table-wrap`, `.savebar`, sáu tông `.tone-*` không ai dùng) và rút gọn chú thích.
 
+## Vòng 4 — kiểm bằng Chromium thật + nén nguồn CSS
+
+Ba bộ đo trước chạy bằng jsdom nên bỏ sót lỗi chỉ trình duyệt thật mới thấy. Vòng này
+chạy `axe-core` ngay trong Chromium (Playwright) trên đủ 15 tab, cả hai chế độ màu.
+
+1. **Nút `.btn.sm` trong ô bảng bị luật "dòng phụ" đè**: `.v2book-table td .sm` (viết cho
+   dòng thể loại/slug) cũng khớp nút `Xoá` có class `btn ghost sm danger`, nên nút bị đổi
+   màu sang `--dim` xám (tương phản 4,29:1 — dưới ngưỡng 4,5) và bị ép `display:block`.
+   axe bắt ở *Thư viện*; jsdom không dựng được `color-mix()` nên ba vòng trước không thấy.
+   Nay luật dòng phụ loại trừ `.btn` và `.empty` ⇒ nút đỏ trở lại (`#a83232`, 6,8:1).
+2. **Tiêu đề bộ trong bảng bị cắt cụt** ở 1280 → nay tối đa 2 dòng rồi mới cắt
+   (`-webkit-line-clamp`), bỏ hai ghi đè cũ theo bề ngang.
+3. **Dòng phụ trong bảng Tác giả** ở màn hẹp còn bị nhốt vào cột nhãn 76px (chữ dài
+   "nguoi-chong-xau-xa-cua-co-vo-beo" nằm chung cột với tên) ⇒ hết bị cắt.
+4. **Nén khoảng trắng trong chính tệp nguồn CSS**: 57,7 → 51,4 kB, giữ nguyên chú thích
+   và ngữ nghĩa. Đã chứng minh không đổi một pixel: chụp lại 7 khung (1280 tổng quan ·
+   thư viện · tác giả · thống kê · 375 thư viện · 375 tác giả · 1280 chế độ tối) trước và
+   sau khi nén — `md5` ảnh giống nhau từng cặp.
+   Trần `admin.css` giữ 57 kB, ngưỡng cảnh báo đặt 53 kB (~93% trần).
+
+Kết quả sau vòng 4: **0 ô lỗi** trên 15 tab × 5 bề ngang; `axe-core` 0 vi phạm ở cả chế
+độ sáng và tối; `tools/audit_a11y.mjs` 23 màn 0 lỗi; `node tests/run.js` 65 đạt / 3 đỏ
+có sẵn từ bản gốc.
+
 ## Còn thấy (sau vòng 3)
 
 - `t_admin_editor_keyboard.js`, `t_admin_editor_lazy.js`, `tools/check_og.mjs` vẫn đỏ
   ở cả bản gốc (môi trường jsdom / OG build có sẵn) — không do các đợt này.
 - Chưa có bảng chọn nhiều dòng ở chế độ Lưới (chọn nhiều chỉ có ở chế độ Bảng).
-- Trần `admin.css` 57 kB đã dùng 98%: lần thêm luật tiếp theo nên đi kèm việc gỡ luật cũ.
+- `admin.css` còn 51,4 kB / 57 kB (90%) — thêm luật mới không cần gỡ luật cũ nữa.
+- Luật `.v2book-table td .sm` là bài học về bộ chọn quá rộng trong ô bảng: luật mới cho
+  ô bảng nên loại trừ `.btn`, `.empty`, `.v2badges`.

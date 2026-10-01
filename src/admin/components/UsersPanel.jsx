@@ -40,8 +40,8 @@ export function UsersPanel({ registry, onEdit, onFilterAuthor }) {
               <tbody>
                 {shown.map((a) => (
                   <tr key={a.name}>
-                    <td data-lb="Tác giả"><span class="v2namerow"><b>{a.name}</b>{a.locked ? <LockedBadge isLocked /> : null}</span><span class="sm muted">{[...new Set(a.books.map((b) => genreNameOf(b)).filter(Boolean))].slice(0, 3).join(', ') || (a.books[0] && a.books[0].slug) || '—'}</span></td>
-                    <td data-lb="Bộ">{a.books.length}<span class="sm muted">{a.chapters} chương</span></td>
+                    <td data-lb="Tác giả"><span class="v2namerow"><b>{a.name}</b>{a.locked ? <LockedBadge isLocked /> : null}<span class="sm muted">{[...new Set(a.books.map((b) => genreNameOf(b)).filter(Boolean))].slice(0, 3).join(', ') || (a.books[0] && a.books[0].slug) || '—'}</span></span></td>
+                    <td data-lb="Bộ"><span class="v2cellnum">{a.books.length}<span class="sm muted">{a.chapters} chương</span></span></td>
                     <td data-lb="Xuất bản">{a.published}</td>
                     <td data-lb="Nháp">{a.draft}</td>
                     <td data-lb="Cập nhật">{a.updated || '—'}</td>
