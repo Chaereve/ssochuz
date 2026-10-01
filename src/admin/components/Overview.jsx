@@ -26,6 +26,19 @@ export function Overview({ state, onReload, onTodo }) {
   const lockedCount = ov.lib.filter((book) => book.lock).length;
   const quota = state.quota || {};
   const statsDays = (state.stats && state.stats.days) || [];
+  /* Chia số liệu thành hai lớp: lớp chính (nội dung) 8 ô = 2 hàng đủ ở 4 cột,
+     lớp vận hành 4 ô = đúng 1 hàng ⇒ không bao giờ còn ô trống cuối lưới. */
+  const byLabel = (name) => (ov.tiles.find((t) => t.label === name) || {}).value || 0;
+  const mainTiles = [
+    { value: byLabel('Bộ truyện'), label: 'Bộ truyện' },
+    { value: byLabel('Chương đã đăng'), label: 'Chương đã đăng' },
+    { value: byLabel('Đã có chương'), label: 'Bộ đã có chương' },
+    { value: byLabel('Sắp ra mắt'), label: 'Sắp ra mắt' },
+    { value: byLabel('Gắn 18+'), label: 'Gắn 18+' },
+    { value: byLabel('Thiếu thông tin'), label: 'Thiếu thông tin' },
+    { value: byLabel('Lượt đọc (KV)'), label: 'Lượt đọc (KV)' },
+    { value: byLabel('Phiếu thích (KV)'), label: 'Phiếu thích (KV)' },
+  ];
 
   return (
     <div id="pane-overview" class="v2overview">
@@ -33,8 +46,12 @@ export function Overview({ state, onReload, onTodo }) {
         <div class="row"><h3>Tình trạng dữ liệu</h3><span class="grow"></span><button class="btn ghost sm" type="button" onClick={onReload}>{state.loading ? 'Đang đọc…' : 'Đọc lại dữ liệu'}</button></div>
         <p class="hint">Tính từ dữ liệu đang mở ({state.online ? 'KV qua Worker' : 'file /data/*.json trong repo'}). Các công thức giữ theo admin cũ để đối chiếu.</p>
         <div class="tiles">
-          {ov.tiles.map((tile) => <Tile key={tile.label} value={tile.value} label={tile.label} />)}
-          <Tile value={quota.writesToday || 0} label="Quota KV hôm nay" hint={quota.supported ? 'nguồn Worker' : 'Worker chưa có counter'} />
+          {mainTiles.map((tile) => <Tile key={tile.label} value={tile.value} label={tile.label} />)}
+        </div>
+        <div class="tiles sm">
+          <Tile value={byLabel('Bộ có số liệu')} label="Bộ có số liệu đọc" />
+          <Tile value={lockedCount} label="Bộ đang khóa mật mã" />
+          <Tile value={quota.writesToday || 0} label="Quota ghi KV hôm nay" hint={quota.supported ? 'nguồn Worker' : 'Worker chưa có counter'} />
           {quota.readSupported
             ? <Tile value={quota.readsToday || 0} label="Lượt đọc KV hôm nay" hint={quota.readCritical ? 'ước lượng · sắp chạm trần 100k' : quota.readWarn ? 'ước lượng · đã qua 70%' : 'ước lượng · trần 100k'} />
             : <div class="tile"><b>—</b><span>Lượt đọc KV hôm nay</span><small>Worker chưa trả readsToday</small></div>}
@@ -44,7 +61,7 @@ export function Overview({ state, onReload, onTodo }) {
           <div class="v2todo-grid">
             <button type="button" class="v2todo" onClick={() => onTodo && onTodo('reports')}><b>{num(reportCount)}</b><span>Báo lỗi chưa xử lý</span></button>
             <button type="button" class="v2todo" onClick={() => onTodo && onTodo('cmts')}><b>{num(spamCount)}</b><span>Bình luận nghi spam</span></button>
-            <button type="button" class="v2todo" onClick={() => onTodo && onTodo('list')}><b>{num(lockedCount)}</b><span>Bộ đang khóa mật mã</span></button>
+            <button type="button" class="v2todo" onClick={() => onTodo && onTodo('list')}><b>{num(byLabel('Thiếu thông tin'))}</b><span>Bộ thiếu thông tin</span></button>
           </div>
         </div>
         <div class="ovtasks">

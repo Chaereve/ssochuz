@@ -51,8 +51,16 @@ export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulk
 
   return (
     <div id="pane-list">
-      <div class="row v2toolbar">
+      <div class="v2toolbar">
         <input class="inp" placeholder="Tìm tên, tác giả, couple…" aria-label="Tìm trong thư viện" value={q} onInput={(e) => { setQ(e.target.value); setPage(1); }} />
+        <span class="seg" role="group" aria-label="Kiểu hiển thị">
+          <button type="button" class={view === 'table' ? 'on' : ''} aria-pressed={view === 'table'} onClick={() => setView('table')}>Bảng</button>
+          <button type="button" class={view === 'grid' ? 'on' : ''} aria-pressed={view === 'grid'} onClick={() => setView('grid')}>Lưới</button>
+        </span>
+        <span class="grow"></span>
+        <button class="btn pri" type="button" onClick={onNew}>Thêm bộ</button>
+      </div>
+      <div class="v2filterrow">
         <span class="v2filters">
           <select class="inp" aria-label="Lọc tình trạng hoàn thành" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
             <option value="">Mọi tình trạng</option>
@@ -80,14 +88,10 @@ export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulk
             <option value="1">Đã khóa</option>
             <option value="0">Không khóa</option>
           </select>
-          {filtersOn ? <button class="btn ghost sm" type="button" onClick={clearFilters}>Xoá lọc</button> : null}
         </span>
-        <span class="seg" role="group" aria-label="Kiểu hiển thị">
-          <button type="button" class={view === 'table' ? 'on' : ''} aria-pressed={view === 'table'} onClick={() => setView('table')}>Bảng</button>
-          <button type="button" class={view === 'grid' ? 'on' : ''} aria-pressed={view === 'grid'} onClick={() => setView('grid')}>Lưới</button>
-        </span>
+        {filtersOn ? <button class="btn ghost sm" type="button" onClick={clearFilters}>Xoá lọc</button> : null}
         <span class="grow"></span>
-        <button class="btn pri" type="button" onClick={onNew}>Thêm bộ</button>
+        <span class="sm muted">{filtered.length} bộ</span>
       </div>
       {selectedSlugs.length ? (
         <div class="row v2bulk" role="status">
@@ -138,24 +142,25 @@ export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulk
             <thead>
               <tr>
                 <th><input type="checkbox" checked={allOnPage} onChange={(e) => toggleAll(e.target.checked)} aria-label="Chọn cả trang" /></th>
-                <th>Bìa</th><th>Truyện</th><th>Tác giả</th><th>Hoàn thành</th><th>Xuất bản</th><th>Chương</th><th aria-label="Thao tác">Thao tác</th>
+                <th>Truyện</th><th>Tác giả</th><th>Trạng thái</th><th>Chương</th><th aria-label="Thao tác">Thao tác</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((book) => (
                 <tr key={book.slug}>
                   <td data-lb="Chọn"><input type="checkbox" checked={!!selected[book.slug]} aria-label={'Chọn ' + (book.title || book.slug)} onChange={(e) => onSelected(Object.assign({}, selected, { [book.slug]: e.target.checked }))} /></td>
-                  <td data-lb="Bìa"><BookCover book={book} apiBase={apiBase} className="v2thumb" width={44} height={66} /></td>
                   <td data-lb="Truyện">
-                    <span class="v2rowtext">
-                      <b title={book.title}>{book.title}</b>
-                      <LockedBadge book={book} />
-                      <span class="sm muted">{book.slug}{book.updated ? ' · ' + book.updated : ''}</span>
+                    <span class="v2rowmain">
+                      <BookCover book={book} apiBase={apiBase} className="v2thumb" width={44} height={66} />
+                      <span class="v2rowtext">
+                        <b title={book.title}>{book.title}</b>
+                        <LockedBadge book={book} />
+                        <span class="sm muted">{book.slug}{book.updated ? ' · ' + book.updated : ''}</span>
+                      </span>
                     </span>
                   </td>
                   <td data-lb="Tác giả">{book.author || '—'}</td>
-                  <td data-lb="Hoàn thành"><CompletionBadge book={book} /></td>
-                  <td data-lb="Xuất bản"><PublishStatusBadge book={book} /></td>
+                  <td data-lb="Trạng thái"><span class="v2badges"><CompletionBadge book={book} /><PublishStatusBadge book={book} /></span></td>
                   <td data-lb="Chương">{countText(book)}</td>
                   <td class="v2acts v2actions" data-lb="Thao tác">
                     <button class="btn ghost sm" type="button" onClick={() => onEdit(book.slug)}>Sửa</button>
