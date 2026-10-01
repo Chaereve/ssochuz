@@ -57,7 +57,7 @@ export function ChaptersHub({ registry, apiBase, onEdit }) {
                   <b>{b.title}</b>
                   <span class="sm muted">{Number(b.pending) || 0} chương chờ{b.schedNext ? ' · gần nhất ' + fmtNext(b.schedNext) + (hoursUntil(chapterAtMs({ at: b.schedNext })) ? ' (còn ~' + hoursUntil(chapterAtMs({ at: b.schedNext })) + ' giờ)' : '') : ''}</span>
                 </span>
-                <button class="btn sm" type="button" onClick={() => onEdit(b.slug)}>Sửa chương</button>
+                <span class="v2itemacts"><button class="btn sm" type="button" onClick={() => onEdit(b.slug)}>Sửa chương</button></span>
               </li>
             ))}
           </ul>

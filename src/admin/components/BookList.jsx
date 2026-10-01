@@ -137,7 +137,7 @@ export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulk
           ))}
         </div>
       ) : (
-        <div class="v2tablewrap">
+        <div class="v2tablewrap v2lib">
           <table class="v2book-table">
             <thead>
               <tr>

@@ -28,19 +28,22 @@ export function UsersPanel({ registry, onEdit, onFilterAuthor }) {
       <section class="card2">
         <div class="row"><h3>Tác giả</h3><span class="grow"></span><span class="sm muted">{authors.length} người · lấy từ metadata bộ truyện</span></div>
         <p class="hint">Worker KV không có bảng độc giả. Danh sách dưới đây là tác giả đã gắn vào sách. Hồ sơ độc giả (My Space) nằm trên Durable Object riêng, không giả số liệu.</p>
-        <input class="inp" aria-label="Tìm tác giả" value={q} placeholder="Tìm tác giả…" onInput={(e) => setQ(e.target.value)} />
+        <div class="v2toolbar">
+          <input class="inp" aria-label="Tìm tác giả" value={q} placeholder="Tìm tác giả…" onInput={(e) => setQ(e.target.value)} />
+          <span class="grow"></span>
+          <span class="sm muted">{shown.length} người khớp</span>
+        </div>
         {shown.length ? (
           <div class="v2tablewrap">
             <table class="v2book-table">
-              <thead><tr><th>Tác giả</th><th>Số bộ</th><th>Xuất bản</th><th>Nháp</th><th>Khóa</th><th>Cập nhật</th><th aria-label="Thao tác">Thao tác</th></tr></thead>
+              <thead><tr><th>Tác giả</th><th>Bộ</th><th>Xuất bản</th><th>Nháp</th><th>Cập nhật</th><th aria-label="Thao tác">Thao tác</th></tr></thead>
               <tbody>
                 {shown.map((a) => (
                   <tr key={a.name}>
-                    <td data-lb="Tác giả"><b>{a.name}</b><div class="sm muted">{[...new Set(a.books.map((b) => genreNameOf(b)).filter(Boolean))].slice(0, 3).join(', ') || '—'}</div></td>
-                    <td data-lb="Số bộ">{a.books.length}</td>
+                    <td data-lb="Tác giả"><span class="v2namerow"><b>{a.name}</b>{a.locked ? <LockedBadge isLocked /> : null}</span><span class="sm muted">{[...new Set(a.books.map((b) => genreNameOf(b)).filter(Boolean))].slice(0, 3).join(', ') || (a.books[0] && a.books[0].slug) || '—'}</span></td>
+                    <td data-lb="Bộ">{a.books.length}<span class="sm muted">{a.chapters} chương</span></td>
                     <td data-lb="Xuất bản">{a.published}</td>
                     <td data-lb="Nháp">{a.draft}</td>
-                    <td data-lb="Khóa">{a.locked ? <LockedBadge isLocked /> : '0'}</td>
                     <td data-lb="Cập nhật">{a.updated || '—'}</td>
                     <td data-lb="Thao tác">
                       <button class="btn ghost sm" type="button" onClick={() => onFilterAuthor ? onFilterAuthor(a.name) : onEdit && onEdit(a.books[0].slug)}>Lọc thư viện</button>

@@ -28,18 +28,19 @@ export function RolesPanel({ registry, role, onSave }) {
             <div class="v2role-card" key={id}>
               <b>{ROLES[id].label}</b>
               <span class="sm muted">{ROLES[id].perms.indexOf('*') >= 0 ? 'Toàn quyền' : ROLES[id].perms.join(', ')}</span>
+              {id === role ? <span class="pill acc">vai của bạn</span> : null}
             </div>
           ))}
         </div>
       </section>
       <section class="card2">
         <h3>Nhân sự</h3>
-        <form class="row" onSubmit={add}>
+        <form class="v2toolbar" onSubmit={add}>
           <input class="inp" type="email" aria-label="Email nhân sự" value={email} placeholder="email@…" onInput={(e) => setEmail(e.target.value)} />
           <select class="inp" aria-label="Chọn vai trò nhân sự" value={pick} onChange={(e) => setPick(e.target.value)}>
             {ROLE_ORDER.map((id) => <option key={id} value={id}>{ROLES[id].label}</option>)}
           </select>
-          <button class="btn" type="submit">Thêm</button>
+          <button class="btn" type="submit" disabled={!email}>Thêm người</button>
         </form>
         <div class="v2tablewrap">
           <table class="v2book-table">
@@ -59,7 +60,7 @@ export function RolesPanel({ registry, role, onSave }) {
             </tbody>
           </table>
         </div>
-        <div class="row mt"><button class="btn pri" type="button" onClick={() => onSave(rows)}>Lưu nhân sự</button><span class="sm muted">Ghi registry.settings.staff lên KV.</span></div>
+        <div class="v2actionrow"><button class="btn pri" type="button" onClick={() => onSave(rows)}>Lưu nhân sự</button><span class="sm muted">Ghi registry.settings.staff lên KV.</span></div>
       </section>
     </div>
   );

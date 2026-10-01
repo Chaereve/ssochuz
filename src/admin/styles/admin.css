@@ -1,13 +1,7 @@
-/* ssochuz admin — lớp giao diện quản trị. Dáng lấy từ skill ui-ux (evondevKit),
-   màu lấy từ token của dự án ở src/cz.css. HỢP ĐỒNG NGUYÊN TỐ (D1), mọi màn dùng
-   đúng bộ này: nút viền mặc định / .pri nền mực / .ghost phụ / .danger nền đỏ mờ
-   12% + chữ đỏ (40-44px bo 12px, nút nhỏ 32px bo 8px); badge pill nền nhạt + chấm
-   cùng tông (M7); ô nhập 44px mobile - 40px từ 640px, focus viền --acc + quầng;
-   card viền tóc --bd bo 16px không bóng; dòng 40px sidebar / 44-52px bảng, đang
-   chọn dùng --surf2; lớp nổi bo 16px có bóng, vào 500ms ra 350ms; trạng thái rỗng
-   là một dòng chữ mờ, khung chờ giữ đúng hình dòng thật. Quy ước: một màu nhấn,
-   mục nav đang chọn dùng nền, --bd viền trang trí / --bd2 viền chức năng, không
-   vòng focus trên nút/link/tab, chuyển động chỉ trên transform/opacity.
+/* ssochuz admin — lớp giao diện quản trị. Hợp đồng nguyên tố (nút, badge, ô nhập,
+   card, dòng, lớp nổi, trạng thái rỗng) nằm ở docs/admin-giao-dien.md; mọi màn phải
+   dùng đúng bộ đó thay vì đẻ biến thể mới. Dáng lấy từ skill ui-ux (evondevKit),
+   màu lấy từ token của dự án ở src/cz.css.
 */
 
 /* 1. TOKEN CỦA LỚP QUẢN TRỊ */
@@ -55,12 +49,12 @@
   input[type="checkbox"], input[type="radio"]):focus-visible { outline: none; }
 
 /* Thanh cuộn tự ẩn 4px, rê vào mới hiện (I18) */
-.admin * { --scrollbar-thumb: transparent; }
-.admin :hover { --scrollbar-thumb: color-mix(in srgb, var(--txt) 18%, transparent); }
-.admin::-webkit-scrollbar,
+/* Thanh cuộn mảnh 4px; khe cuộn cố định để đổi tab không nhảy chữ (I18) */
+html { scrollbar-gutter: stable; }
 .admin ::-webkit-scrollbar { width: 4px; height: 4px; }
 .admin ::-webkit-scrollbar-track { background: transparent; }
-.admin ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 999px; }
+.admin ::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--txt) 20%, transparent);
+  border-radius: 999px; }
 
 /* 3. NÚT — bốn dạng (I1), không nhấc lên, không bóng */
 .admin .btn {
@@ -101,7 +95,7 @@
 /* 4. Ô NHẬP, CHỌN, NHÃN */
 .admin .inp, .admin .sel, .admin select.inp, .admin input.inp,
 .admin textarea.inp, .admin input[type="file"].inp {
-  height: var(--a-ctl); padding: 0 14px; width: auto; max-width: 100%;
+  height: var(--a-ctl); padding: 0 14px; width: auto; max-width: 100%; min-width: 0;
   border: 1px solid var(--bd2); border-radius: var(--a-r);
   background: var(--surf); color: var(--txt); font-size: 14px;
   transition: border-color .15s ease, box-shadow .15s ease;
@@ -117,6 +111,7 @@
     linear-gradient(135deg, currentColor 50%, transparent 50%);
   background-position: right 18px center, right 13px center;
   background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; }
+.admin select.inp { min-width: 0; text-overflow: ellipsis; }
 .admin select.inp[multiple] { height: auto; padding: 8px; background-image: none; }
 .admin input[type="checkbox"], .admin input[type="radio"] {
   width: 18px; height: 18px; flex: none; accent-color: var(--acc); cursor: pointer;
@@ -138,8 +133,6 @@
   font-size: 11.5px; font-weight: 600; line-height: 1.5; white-space: nowrap;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--txt) 6%, transparent);
 }
-.admin .pill .d, .admin .v2badge .d { width: 6px; height: 6px; border-radius: 50%;
-  background: currentColor; flex: none; }
 .admin .v2badge { gap: 6px; }
 .admin .v2badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%;
   background: currentColor; flex: none; }
@@ -150,17 +143,13 @@
 .admin .pill.run, .admin .pill.warn, .admin .chip.warn,
 .admin .tone-amber, .admin .tone-soon, .admin .tone-warn {
   background: var(--a-warn-bg); color: var(--warn); }
-.admin .pill.soon, .admin .tone-gray, .admin .tone-slate { color: var(--mut); }
-.admin .tone-info, .admin .tone-blue { background: var(--a-neutral-bg); color: var(--mut); }
-.admin .tone-bad, .admin .chip.bad, .admin .pill.bad,
-.admin .tone-purple { background: var(--a-danger-bg); color: var(--a-danger); }
+.admin .pill.soon { color: var(--mut); }
+.admin .tone-info, .admin .tone-blue, .admin .tone-gray,
+.admin .tone-slate { background: var(--a-neutral-bg); color: var(--mut); }
+.admin .tone-bad, .admin .chip.bad, .admin .pill.bad { background: var(--a-danger-bg); color: var(--a-danger); }
 /* "hẹn giờ" = việc đang chờ lên sóng → tông nhấn nhạt, không phải tông dừng */
-.admin .tone-violet { background: var(--a-accent-bg); color: var(--acc); }
+.admin .tone-violet, .admin .tone-purple { background: var(--a-accent-bg); color: var(--acc); }
 .admin .pill.acc { background: var(--a-accent-bg); color: var(--acc); }
-.admin .v2badge-completion.tone-ok { background: var(--a-ok-bg); color: var(--ok); }
-.admin .v2badge-completion.tone-info { background: var(--a-neutral-bg); color: var(--mut); }
-.admin .v2badge-completion.tone-soon { background: var(--a-warn-bg); color: var(--warn); }
-.admin .v2badge-completion.tone-gray { background: var(--a-neutral-bg); color: var(--mut); }
 .admin .v2badge-18 { background: var(--a-danger-bg); color: var(--a-danger); font-weight: 700; }
 .admin .v2badge-lock { background: var(--a-warn-bg); color: var(--warn); }
 .admin .chip { background: transparent; box-shadow: none; padding: 0; font-size: 12.5px;
@@ -170,12 +159,12 @@
 .admin .chip.warn .d { background: var(--warn); }
 .admin .chip.bad .d { background: var(--bad); }
 .admin .chip b { font-weight: 550; color: var(--txt); }
-.admin .v2badges { display: inline-flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.admin .v2badges { display: inline-flex; flex-wrap: wrap; gap: 5px; align-items: center;
+  width: auto; max-width: 100%; }
 
 /* 6. CARD, KHỐI, LƯỚI, KHỐI SỐ LIỆU */
-.admin .card, .admin .card2, .admin .v2mini, .admin .v2lock-panel,
-.admin .v2chapter-list, .admin .v2tiphost, .admin .v2reader-preview,
-.admin .gate, .admin .v2itemrow, .admin .v2role-card {
+.admin .card, .admin .card2, .admin .v2mini, .admin .v2lock-panel, .admin .v2chapter-list,
+.admin .v2tiphost, .admin .v2reader-preview, .admin .gate, .admin .v2role-card {
   background: var(--surf); border: 1px solid var(--bd); border-radius: var(--a-r-lg);
   box-shadow: none; padding: 20px;
 }
@@ -215,6 +204,8 @@
 .admin .tiles.sm .tile { padding: 12px 14px; }
 .admin .tiles.sm .tile b { font-size: 17px; }
 .admin .tiles.sm .tile > span { margin-top: 3px; font-size: 12px; }
+/* Khối số liệu đứng ngay trên một tiêu đề khác thì phải có khe thở */
+.admin .tiles + .row, .admin .tiles + h3 { margin-top: 18px; }
 
 .admin .v2ops-grid { display: grid; gap: 14px; margin: 16px 0 0;
   grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); }
@@ -248,43 +239,49 @@
 .admin .v2book-table td b { display: block; font-weight: 600; }
 .admin .v2book-table td .sm { display: block; color: var(--dim); }
 .admin .v2book-table input[type="checkbox"] { width: 17px; height: 17px; }
-/* cột khoá cứng để bảng không rộng hơn khung (không có cột nào bị cắt ở mép) */
-.admin .v2book-table { table-layout: fixed; }
-.admin .v2book-table th:nth-child(1), .admin .v2book-table td:nth-child(1) { width: 40px; padding-right: 0; }
-.admin .v2book-table th:nth-child(2) { width: 36%; }
-.admin .v2book-table th:nth-child(3) { width: 15%; }
-.admin .v2book-table th:nth-child(4) { width: 20%; }
-.admin .v2book-table th:nth-child(5) { width: 10%; }
-.admin .v2book-table th:nth-child(6) { width: 19%; }
-.admin .v2book-table td:nth-child(3) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Bảng thư viện: khoá cột để không tràn ngang. Các bảng khác (Tác giả, Vai trò,
+   Thống kê, Kiểm tra dữ liệu…) để tự co giãn — khoá cứng sẽ bóp nát cột chữ. */
+.admin .v2lib .v2book-table { table-layout: fixed; }
+.admin .v2lib .v2book-table th:nth-child(1) { width: 40px; }
+.admin .v2lib .v2book-table th:nth-child(2) { width: 36%; }
+.admin .v2lib .v2book-table th:nth-child(3) { width: 15%; }
+.admin .v2lib .v2book-table th:nth-child(4) { width: 17%; }
+.admin .v2lib .v2book-table th:nth-child(5) { width: 12%; }
+.admin .v2lib .v2book-table th:nth-child(6) { width: 19%; }
+.admin .v2book-table td { min-width: 0; }
+.admin .v2book-table td > b, .admin .v2book-table td > span:not(.v2badges) { min-width: 0; }
+/* Ô phụ trong bảng (thể loại, slug · ngày, ghi chú) luôn một dòng, cắt bằng … */
+.admin .v2book-table td .sm { display: block; max-width: 40ch; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
+.admin .v2book-table td .v2badges { white-space: normal; }
 .admin .v2book-table td:nth-child(5) { white-space: nowrap; font-variant-numeric: tabular-nums; }
-.admin .v2table-wrap thead th { position: sticky; top: 0; }
 .admin .v2rowmain { display: flex; gap: 14px; align-items: center; min-width: 0; }
 .admin .v2rowtext { min-width: 0; display: block; }
 .admin .v2rowtext b { display: block; max-width: 46ch; overflow: hidden;
   text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; }
-.admin .v2thumb, .admin .v2rowmain > .coverbox {
+.admin .v2thumb, .admin .v2rowmain .v2thumb {
   flex: none; width: 40px; height: 56px; border-radius: var(--a-r-sm); overflow: hidden;
   background: var(--surf2); display: grid; place-items: center; }
-.admin .v2thumb img, .admin .v2rowmain > .coverbox img { width: 100%; height: 100%;
-  object-fit: cover; display: block; }
+.admin .v2thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .admin .v2actions { display: flex; gap: 6px; justify-content: flex-end; white-space: nowrap; }
 .admin .v2actions .btn { white-space: nowrap; }
 
 /* 8. TAB, SEG, CHIP LỌC, PHÂN TRANG */
-.admin .v2reptabs { display: inline-flex; gap: 4px; margin-left: 8px; padding: 2px; }
+.admin .v2reptabs { display: inline-flex; gap: 2px; padding: 2px; border-radius: var(--a-r-sm);
+  background: color-mix(in srgb, var(--txt) 7%, var(--surf)); }
 .admin .v2reptabs button {
-  display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px;
+  display: inline-flex; align-items: center; gap: 6px; height: 32px; min-width: 0; padding: 0 12px;
   border: 1px solid transparent; border-radius: var(--a-r-sm); background: transparent;
   color: color-mix(in srgb, var(--txt) 70%, transparent); font-size: 13px; font-weight: 550;
   cursor: pointer; transition: background-color .15s ease, color .15s ease; }
 .admin .v2reptabs button:hover { background: var(--a-hover); color: var(--txt);
   border-color: transparent; }
+.admin .v2reptabs button.v2tab-on { background: var(--surf); font-weight: 600; }
 .admin .v2reptabs button.v2tab-on, .admin .btn.v2tab-on {
   background: var(--a-selected); border-color: transparent; color: var(--txt); font-weight: 600; }
 .admin .seg { display: inline-flex; gap: 2px; padding: 2px; border: 0; border-radius: var(--a-r-sm);
   background: color-mix(in srgb, var(--txt) 7%, var(--surf)); overflow: visible; }
-.admin .seg button { height: 28px; padding: 0 12px; border: 0; border-radius: 6px;
+.admin .seg button { height: 32px; padding: 0 12px; min-width: 0; border: 0; border-radius: 6px;
   background: transparent; color: var(--mut); font-size: 12.5px; font-weight: 550; }
 .admin .seg button:hover { color: var(--txt); }
 .admin .seg button.on { background: var(--surf); color: var(--txt); font-weight: 600;
@@ -298,11 +295,12 @@
 /* 9. RỖNG · ĐANG TẢI · LỖI */
 .admin .empty {
   border: 0; border-radius: 0; background: none; box-shadow: none;
-  padding: 28px 16px; text-align: center; color: var(--mut); font-size: 13.5px;
-}
+  padding: 26px 16px; text-align: center; color: var(--mut); font-size: 13.5px;
+  line-height: 1.6; }
+.admin .v2listcards > .empty, .admin .v2tablewrap > .empty { padding: 22px 16px; }
 .admin .empty .big { font-family: var(--font); font-size: 14px; font-weight: 600;
   color: var(--txt); margin: 0 0 4px; }
-.admin .empty.sm { padding: 16px 12px; font-size: 12.5px; text-align: left; }
+.admin .empty.sm { padding: 16px 12px; font-size: 12.5px; }
 .admin .v2empty-actions {
   display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
 .admin .v2err-actions { margin-top: 10px; }
@@ -313,10 +311,9 @@
 .admin .msgbar.info { border-left-color: var(--acc); }
 .admin .msgbar.err .v2err-actions .btn { color: var(--a-danger); }
 /* khung chờ đúng hình dòng thật */
-/* khung chờ: giữ nguyên hình dạng của phần tử (bìa, dòng, ô) — chỉ đổi nền + nhịp thở */
-.admin .skel { background: var(--surf2); animation: a-pulse 1.6s ease-in-out infinite; }
-@keyframes a-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
-@media (prefers-reduced-motion: reduce) { .admin .skel { animation: none; } }
+/* Khung chờ dùng nguyên cơ chế .skel của cz.css (nền --surf2 + vệt sáng chạy,
+   cz-app tự gỡ khi ảnh tải xong) — ở đây chỉ giữ đúng hình dạng phần tử. */
+.admin .ovth, .admin .v2thumb { overflow: hidden; }
 
 /* 10. LỚP NỔI — dropdown, menu, tìm kiếm gợi ý (chỉ nơi đây có bóng) */
 .admin .v2usermenu, .admin .v2search-suggest {
@@ -329,8 +326,6 @@
 /* tấm chắn chỉ tồn tại ở màn hẹp (nơi sidebar thành ngăn kéo) */
 .admin .v2scrim { display: none; }
 @keyframes a-pop-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .admin .v2usermenu,
-  .admin .v2search-suggest { animation: none; } }
 .admin .v2usermenu button, .admin .v2usermenu a, .admin .v2search-suggest button {
   display: flex; align-items: center; gap: 8px; width: 100%; min-height: 40px; padding: 8px 12px;
   border: 0; border-radius: var(--a-r); background: transparent; color: var(--txt);
@@ -349,10 +344,10 @@
 /* 11. KHUNG APP — sidebar (rail icon) + header + vùng nội dung */
 .admin .v2app {
   display: grid; grid-template-columns: var(--a-side) minmax(0, 1fr);
-  min-height: 100vh; background: var(--bg); }
+  align-items: start; min-height: 100vh; background: var(--bg); }
 .admin .v2app.v2collapsed { grid-template-columns: var(--a-rail) minmax(0, 1fr); }
 .admin .v2side {
-  position: sticky; top: 0; align-self: start; height: 100vh; overflow: hidden auto;
+  position: sticky; top: 0; z-index: 45; height: 100vh; overflow: hidden auto;
   display: flex; flex-direction: column; padding: 0 0 12px;
   background: var(--surf); border-right: 0;   /* nội dung nền xám đã là ranh giới */
 }
@@ -405,8 +400,9 @@
   border: 0; }
 
 .admin .v2frame { min-width: 0; display: flex; flex-direction: column; }
-.admin .v2top.in, .admin .v2top .in {
-  position: sticky; top: 0; z-index: 40; display: flex; align-items: center; gap: 12px;
+.admin .v2top { position: sticky; top: 0; z-index: 40; }
+.admin .v2top .in {
+  display: flex; align-items: center; gap: 12px;
   height: var(--a-top); min-height: var(--a-top); padding: 0 24px;
   background: var(--surf); border-bottom: 1px solid var(--bd2); box-shadow: none; }
 .admin .v2mlogo, .admin .v2burger { display: none; }
@@ -473,19 +469,20 @@
 .admin .v2notice { margin-bottom: 0; }
 .admin .crumb { display: none; }
 
-/* Rail thu gọn (chỉ desktop): nhãn ẩn, icon giữ nguyên trong span.admin-nav-icon.
-   Bốn luật dưới đây là HỢP ĐỒNG với tests/t_admin_sidebar.js — đừng đổi chữ. */
+/* Rail thu gọn (chỉ desktop): ẩn nhãn chữ, giữ icon trong span.admin-nav-icon.
+   Luật đầu tiên là HỢP ĐỒNG với tests/t_admin_sidebar.js — đừng đổi chữ. */
 @media(min-width:901px){
   .v2app.v2collapsed .v2aside span:not(.admin-nav-icon){display:none}
-  .v2app.v2collapsed .snav button{justify-content:center;padding:8px 0}
-  .v2app.v2collapsed .v2brand .logo{font-size:0}
-  .v2app.v2collapsed .v2brand .logo .dot{margin:0}
-  .v2app.v2collapsed .v2brand{padding:0 0 0 24px}
-  .v2app.v2collapsed .v2brand .hbtn{position:absolute;right:6px}
-  .v2app.v2collapsed .v2aside{padding:12px 12px 4px;overflow:hidden auto}
-  .v2app.v2collapsed .v2nav-group > summary{justify-content:center;padding:0}
-  .v2app.v2collapsed .v2nav-group{margin-bottom:10px}
-  .v2app.v2collapsed .v2side-note{display:none}
+  .admin .v2app.v2collapsed .snav button{justify-content:center;padding:8px 0}
+  .admin .v2app.v2collapsed .v2brand .logo{font-size:0}
+  .admin .v2app.v2collapsed .v2brand .logo .dot{margin:0}
+  .admin .v2app.v2collapsed .v2brand{padding:0 0 0 22px}
+  .admin .v2app.v2collapsed .v2brand .hbtn{position:absolute;right:6px}
+  .admin .v2app.v2collapsed .v2aside{padding:12px 12px 4px;overflow:hidden auto}
+  .admin .v2app.v2collapsed .v2nav-group > summary{justify-content:flex-start;padding:0 12px;font-size:0}
+  .admin .v2app.v2collapsed .v2nav-group > summary .admin-nav-chevron{display:none}
+  .admin .v2app.v2collapsed .v2nav-group{margin-bottom:6px}
+  .admin .v2app.v2collapsed .v2side-note{display:none}
 }
 
 /* 12. TỔNG QUAN */
@@ -512,7 +509,8 @@
   text-align: center; font-variant-numeric: tabular-nums; }
 .admin .ovtt { min-width: 0; display: block; }
 .admin .ovtt b { display: block; font-size: 13.5px; font-weight: 600; }
-.admin .ovtt span { display: block; color: var(--mut); font-size: 12.5px; line-height: 1.5; }
+.admin .ovtt > span:not(.v2badges) { display: block; color: var(--mut); font-size: 12.5px; line-height: 1.5; }
+.admin .ovtt > .v2badges { display: inline-flex; }
 .admin .ovchips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .admin .ovchip { max-width: 32ch; padding: 3px 10px; border: 1px solid var(--bd);
   border-radius: 999px; background: var(--surf); color: var(--mut); font-size: 12px;
@@ -552,7 +550,6 @@
 .admin .v2chart-col:hover .v2chart-bar { background: var(--acc); }
 .admin .v2chart-col i { font-style: normal; font-size: 10.5px; color: var(--dim);
   font-variant-numeric: tabular-nums; white-space: nowrap; }
-@media (prefers-reduced-motion: reduce) { .admin .v2chart-bar { transition: none; } }
 
 /* 13. THƯ VIỆN — thanh công cụ, hàng loạt, lưới bìa */
 .admin .v2toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; }
@@ -602,8 +599,9 @@
 .admin .v2chapter-list em { grid-column: 2; font-style: normal; color: var(--dim); font-size: 11px;
   font-variant-numeric: tabular-nums; }
 .admin .v2chapter-editor { min-width: 0; }
-.admin .v2chapter-editor > .inp { display: block; width: 100%; }
-.admin .v2chapter-editor > .fl + .inp { margin-top: -6px; }
+.admin .v2chapter-editor > .inp, .admin .v2chapter-editor > .sel { display: block; width: 100%; }
+.admin .v2chapter-editor > .fl { margin-bottom: 6px; }
+.admin .v2chapter-editor > .fl + .inp, .admin .v2chapter-editor > .fl + .sel { margin-bottom: 14px; }
 .admin .v2tipbar { position: sticky; top: calc(var(--a-top) + 8px); z-index: 2; display: flex;
   flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 12px; padding: 4px;
   border: 1px solid var(--bd); border-radius: var(--a-r); background: var(--surf); }
@@ -639,7 +637,12 @@
   padding: 12px 14px; border: 0; border-bottom: 1px solid var(--bd); border-radius: 0; background: transparent; }
 .admin .v2itemrow:last-child { border-bottom: 0; }
 .admin .v2itemrow:hover { background: var(--a-row-hover); }
-.admin .v2itemrow > div { min-width: 0; }
+.admin .v2itemrow > div { min-width: 0; flex: 1 1 auto; }
+.admin .v2itemacts { display: flex; gap: 6px; flex: none; align-items: flex-start; }
+.admin .v2itemlinks { margin-top: 8px; }
+/* ô chọn tệp: khoác nút của dự án thay cho nút mặc định của trình duyệt */
+.admin .filepick { position: relative; overflow: hidden; }
+.admin .filepick input[type="file"] { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
 .admin .v2itemrow b { font-size: 13.5px; font-weight: 600; }
 .admin .v2itemrow p { margin: 6px 0 0; white-space: pre-wrap; font-size: 13px; }
 .admin .v2itemrow code, .admin .v2itemrow .code { display: block; margin-top: 5px;
@@ -656,9 +659,12 @@
 .admin .kvbar > span { display: block; height: 100%; background: var(--acc); }
 .admin .savebar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 16px;
   padding-top: 14px; border-top: 1px solid var(--bd); }
+.admin .v2actionrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
 .admin .v2role-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 10px; margin-top: 14px; }
-.admin .v2role-card { padding: 12px 14px; border-radius: var(--a-r); display: grid; gap: 4px; }
+.admin .v2role-card { padding: 14px 16px; border-radius: var(--a-r); display: grid; gap: 6px;
+  align-content: start; }
+.admin .v2role-card .pill { justify-self: start; }
 .admin .v2role-card b { font-size: 13.5px; font-weight: 600; }
 .admin .v2role-warn { margin-top: 12px; padding: 10px 14px; border-radius: var(--a-r);
   background: var(--a-warn-bg); color: var(--warn); font-size: 13px; }
@@ -707,7 +713,36 @@
 .admin .v2sort .grow { display: grid; gap: 4px; }
 .admin .v2sort .grow b { font-size: 13.5px; font-weight: 600; }
 .admin .v2sort .inp { max-width: 340px; }
+.admin .v2sortnum { flex: none; min-width: 20px; color: var(--dim); font-size: 12px;
+  font-variant-numeric: tabular-nums; }
+.admin .v2sort .grow > .sm { display: block; }
+/* hàng thêm mới (chọn bộ + nút) */
 .admin .v2sort-x { margin-left: auto; flex: none; }
+.admin .v2addrow { display: flex; gap: 8px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+/* ≤620px: hàng sắp thứ tự xuống hai tầng — bìa + chữ một tầng, ba nút một tầng
+   rộng bằng cả hàng (ngón tay dễ bấm hơn là ba nút chen ở lề phải). */
+@media (max-width: 620px) {
+  .admin .v2sort > li { display: grid; align-items: start;
+    grid-template-columns: 20px 40px minmax(0, 1fr); column-gap: 10px; row-gap: 8px; }
+  .admin .v2sort > li > .v2cover, .admin .v2sort > li > .v2thumb { grid-area: 1 / 2; width: 40px; }
+  .admin .v2sortnum { grid-area: 1 / 1; }
+  .admin .v2sort .grow { grid-area: 1 / 3; }
+  .admin .v2sort .v2itemacts { grid-area: 2 / 2 / 3 / -1; margin-top: 0; }
+  /* con lạ (nút lẻ, badge…) xuống hẳn một hàng, không chen vào khe 20px */
+  .admin .v2sort > li > :not(.v2sortnum):not(.v2cover):not(.v2thumb):not(.grow):not(.v2itemacts) {
+    grid-column: 1 / -1; }
+}
+.admin .v2addrow .inp { flex: 1 1 240px; max-width: 420px; }
+/* lịch ra chương: mỗi dòng ba ô có nhãn trên đầu, nút xoá nằm cuối hàng */
+.admin .v2schedlist { display: grid; gap: 4px; }
+.admin .v2schedrow { display: grid; grid-template-columns: 170px minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 10px; align-items: end; padding: 12px 0; border-bottom: 1px solid var(--bd); }
+.admin .v2schedrow:last-child { border-bottom: 0; }
+.admin .v2schedrow .fl { margin: 0; }
+.admin .v2schedx { margin-bottom: 0; }
+@media (max-width: 900px) {
+  .admin .v2schedrow { grid-template-columns: minmax(0, 1fr); align-items: start; }
+}
 /* bìa mặc định của BookCover (không truyền className) */
 .admin .v2cover { display: inline-grid; place-items: center; flex: none; width: 80px;
   aspect-ratio: 3 / 4; overflow: hidden; border-radius: var(--a-r-sm); background: var(--surf2); }
@@ -740,6 +775,25 @@
 .admin .v2hp-card .v2cover { width: 100%; }
 
 /* 17. MÀN HẸP */
+/* 901–1100px: nội dung hẹp hơn (rail vẫn mở) nên nhường bề ngang cho cột Chương
+   để "42 chương" không bị cắt; cột Truyện ngắn lại là chấp nhận được vì tiêu đề
+   đã có tooltip. */
+.admin .v2namerow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* 901–1100px: bảng Tác giả bớt cột "Cập nhật" (ngày cập nhật còn xem được ở Thư
+   viện và ở màn rộng) và nới lề ô, để bảng vừa khung thay vì phải cuộn ngang. */
+@media (min-width: 901px) and (max-width: 1100px) {
+  .admin #pane-users .v2book-table th, .admin #pane-users .v2book-table td {
+    padding-left: 8px; padding-right: 8px; }
+  .admin #pane-users .v2book-table th:nth-child(5),
+  .admin #pane-users .v2book-table td:nth-child(5) { display: none; }
+}
+@media (min-width: 901px) and (max-width: 1100px) {
+  .admin .v2lib .v2book-table th:nth-child(2) { width: 30%; }
+  .admin .v2lib .v2book-table th:nth-child(3) { width: 14%; }
+  .admin .v2lib .v2book-table th:nth-child(4) { width: 16%; }
+  .admin .v2lib .v2book-table th:nth-child(5) { width: 15%; }
+  .admin .v2lib .v2book-table th:nth-child(6) { width: 21%; }
+}
 @media (max-width: 1100px) {
   .admin .v2chapter-grid { grid-template-columns: minmax(0, 1fr); }
   .admin .v2chapter-list { max-height: 260px; }
@@ -773,8 +827,11 @@
   .admin .amain, .admin .v2main { padding: 16px 16px 40px; }
   .admin .v2connect { grid-template-columns: minmax(0, 1fr); }
   .admin .v2itemrow { display: block; }
-  .admin .v2itemrow .btn { margin-top: 8px; }
+  .admin .v2itemacts { margin-top: 10px; }
+  .admin .v2itemacts .btn { flex: 1 1 auto; }
   .admin .v2sort > li { flex-wrap: wrap; }
+  .admin .seg button, .admin .v2reptabs button { height: 36px; }
+  .admin .v2pager .btn { min-height: 36px; }
   /* Bảng quản trị thành danh sách dòng: một khối chia đường kẻ, không mỗi dòng một card */
   .admin .v2tablewrap { margin-top: 14px; border: 1px solid var(--bd); border-radius: var(--a-r-lg);
   background: var(--surf); overflow: auto; max-height: 68vh; }
@@ -785,8 +842,8 @@
   .admin .v2book-table tr { border-bottom: 1px solid var(--bd); padding: 12px 14px; margin: 0; }
   .admin .v2book-table tr:last-child { border-bottom: 0; }
   .admin .v2book-table td { border: 0 !important; padding: 3px 0; }
-  .admin .v2book-table td[data-lb] { display: grid; grid-template-columns: 88px minmax(0, 1fr);
-    gap: 10px; align-items: center; }
+  .admin .v2book-table td[data-lb] { display: grid; grid-template-columns: 76px minmax(0, 1fr);
+    gap: 10px; align-items: start; }
   .admin .v2book-table td[data-lb]::before { content: attr(data-lb); color: var(--dim);
     font-size: 12px; }
   .admin .v2book-table td[data-lb="Chọn"],
@@ -798,7 +855,8 @@
   .admin .v2actions { justify-content: flex-start; white-space: normal; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .admin .v2side, .admin .v2scrim { transition: none; }
+  .admin .v2side, .admin .v2scrim, .admin .v2chart-bar { transition: none; }
+  .admin .v2usermenu, .admin .v2search-suggest { animation: none; }
 }
 @media (max-width: 760px) {
   .admin .admin-tool-label { display: none; }

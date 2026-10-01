@@ -75,6 +75,7 @@ export function HomepageCMS({ registry, apiBase, onSave, writeBlocked = false, o
               const b = books[s.slug];
               return (
                 <li key={s.slug}>
+                  <span class="v2sortnum">{i + 1}</span>
                   <BookCover book={b} apiBase={apiBase} width={40} height={60} />
                   <span class="grow"><b>{b ? b.title : s.slug}</b>
                     <LockedBadge book={b} />
@@ -82,19 +83,21 @@ export function HomepageCMS({ registry, apiBase, onSave, writeBlocked = false, o
                     <input class="inp" aria-label={'Lý do đề xuất cho ' + (b ? b.title : s.slug)} value={s.reason} placeholder="Lý do đề xuất (tuỳ chọn)"
                       onInput={(e) => setSlides(slides.map((x, k) => k === i ? Object.assign({}, x, { reason: e.target.value }) : x))} />
                   </span>
-                  <button class="btn ghost sm" type="button" title="Lên trước" aria-label="Đưa slide lên trước" onClick={() => setSlides(move(slides, i, -1))}>↑</button>
-                  <button class="btn ghost sm" type="button" title="Xuống sau" aria-label="Đưa slide xuống sau" onClick={() => setSlides(move(slides, i, 1))}>↓</button>
-                  <button class="btn ghost sm v2sort-x" type="button" onClick={() => setSlides(slides.filter((_, k) => k !== i))}>Gỡ</button>
+                  <span class="v2itemacts">
+                    <button class="btn ghost sm" type="button" title="Lên trước" aria-label="Đưa slide lên trước" disabled={i === 0} onClick={() => setSlides(move(slides, i, -1))}>↑</button>
+                    <button class="btn ghost sm" type="button" title="Xuống sau" aria-label="Đưa slide xuống sau" disabled={i === slides.length - 1} onClick={() => setSlides(move(slides, i, 1))}>↓</button>
+                    <button class="btn ghost sm danger" type="button" onClick={() => setSlides(slides.filter((_, k) => k !== i))}>Gỡ</button>
+                  </span>
                 </li>
               );
             })}
           </ul>
-          <div class="row">
+          <div class="v2addrow">
             <select class="inp" aria-label="Chọn bộ thêm vào hero" value={addSlide} onChange={(e) => setAddSlide(e.target.value)}>
               <option value="">Thêm bộ vào hero…</option>
               {lib.filter((b) => !slides.some((s) => s.slug === b.slug)).map((b) => <option key={b.slug} value={b.slug}>{b.title}</option>)}
             </select>
-            <button class="btn" type="button" onClick={() => { if (addSlide) { setSlides(slides.concat([{ slug: addSlide, reason: '' }])); setAddSlide(''); } }}>Thêm slide</button>
+            <button class="btn" type="button" disabled={!addSlide} onClick={() => { if (addSlide) { setSlides(slides.concat([{ slug: addSlide, reason: '' }])); setAddSlide(''); } }}>Thêm slide</button>
           </div>
         </section>
 
@@ -105,38 +108,50 @@ export function HomepageCMS({ registry, apiBase, onSave, writeBlocked = false, o
               const b = books[slug];
               return (
                 <li key={slug}>
+                  <span class="v2sortnum">{i + 1}</span>
                   <BookCover book={b} apiBase={apiBase} width={40} height={60} />
-                  <span class="grow"><b>{b ? b.title : slug}</b></span>
-                  <button class="btn ghost sm" type="button" title="Lên trước" aria-label="Đưa lên trước" onClick={() => setChoice(move(choice, i, -1))}>↑</button>
-                  <button class="btn ghost sm" type="button" title="Xuống sau" aria-label="Đưa xuống sau" onClick={() => setChoice(move(choice, i, 1))}>↓</button>
-                  <button class="btn ghost sm v2sort-x" type="button" onClick={() => setChoice(choice.filter((_, k) => k !== i))}>Gỡ</button>
+                  <span class="grow"><b>{b ? b.title : slug}</b><span class="sm muted">{b ? (b.author || b.slug) : 'Không có trong thư viện'}</span></span>
+                  <span class="v2itemacts">
+                    <button class="btn ghost sm" type="button" title="Lên trước" aria-label="Đưa lên trước" disabled={i === 0} onClick={() => setChoice(move(choice, i, -1))}>↑</button>
+                    <button class="btn ghost sm" type="button" title="Xuống sau" aria-label="Đưa xuống sau" disabled={i === choice.length - 1} onClick={() => setChoice(move(choice, i, 1))}>↓</button>
+                    <button class="btn ghost sm danger" type="button" onClick={() => setChoice(choice.filter((_, k) => k !== i))}>Gỡ</button>
+                  </span>
                 </li>
               );
             })}
           </ul>
-          <div class="row">
+          <div class="v2addrow">
             <select class="inp" aria-label="Chọn bộ thêm vào lựa chọn biên tập" value={addChoice} onChange={(e) => setAddChoice(e.target.value)}>
               <option value="">Thêm bộ vào lựa chọn biên tập…</option>
               {lib.filter((b) => choice.indexOf(b.slug) < 0).map((b) => <option key={b.slug} value={b.slug}>{b.title}</option>)}
             </select>
-            <button class="btn" type="button" onClick={() => { if (addChoice) { setChoice(choice.concat([addChoice])); setAddChoice(''); } }}>Thêm</button>
+            <button class="btn" type="button" disabled={!addChoice} onClick={() => { if (addChoice) { setChoice(choice.concat([addChoice])); setAddChoice(''); } }}>Thêm</button>
           </div>
         </section>
 
         <section class="card2">
           <h3>Lịch ra chương</h3>
-          {sched.map((it, i) => (
-            <div class="v2form row" key={i}>
-              <input class="inp" aria-label="Ngày trong tuần" value={it.days || ''} placeholder="Thứ 2, Thứ 5" onInput={(e) => setSched(sched.map((x, k) => k === i ? Object.assign({}, x, { days: e.target.value }) : x))} />
-              <select class="inp" aria-label="Bộ truyện trong lịch" value={it.slug || ''} onChange={(e) => setSched(sched.map((x, k) => k === i ? Object.assign({}, x, { slug: e.target.value, title: (books[e.target.value] && books[e.target.value].title) || x.title }) : x))}>
-                <option value="">Chọn bộ…</option>
-                {lib.map((b) => <option key={b.slug} value={b.slug}>{b.title}</option>)}
-              </select>
-              <input class="inp" aria-label="Ghi chú lịch" value={it.detail || ''} placeholder="Ghi chú" onInput={(e) => setSched(sched.map((x, k) => k === i ? Object.assign({}, x, { detail: e.target.value }) : x))} />
-              <button class="btn ghost sm v2sort-x" type="button" onClick={() => setSched(sched.filter((_, k) => k !== i))}>Xoá</button>
-            </div>
-          ))}
-          <button class="btn ghost sm" type="button" onClick={() => setSched(sched.concat([{ days: '', slug: '', title: '', detail: '' }]))}>Thêm dòng lịch</button>
+          <div class="v2schedlist">
+            {sched.map((it, i) => (
+              <div class="v2schedrow" key={i}>
+                <label class="fl v2schedday">Ngày trong tuần
+                  <input class="inp" aria-label="Ngày trong tuần" value={it.days || ''} placeholder="Thứ 2, Thứ 5" onInput={(e) => setSched(sched.map((x, k) => k === i ? Object.assign({}, x, { days: e.target.value }) : x))} />
+                </label>
+                <label class="fl">Bộ truyện
+                  <select class="inp" aria-label="Bộ truyện trong lịch" value={it.slug || ''} onChange={(e) => setSched(sched.map((x, k) => k === i ? Object.assign({}, x, { slug: e.target.value, title: (books[e.target.value] && books[e.target.value].title) || x.title }) : x))}>
+                    <option value="">Chọn bộ…</option>
+                    {lib.map((b) => <option key={b.slug} value={b.slug}>{b.title}</option>)}
+                  </select>
+                </label>
+                <label class="fl">Ghi chú
+                  <input class="inp" aria-label="Ghi chú lịch" value={it.detail || ''} placeholder="Ví dụ: nghỉ lễ" onInput={(e) => setSched(sched.map((x, k) => k === i ? Object.assign({}, x, { detail: e.target.value }) : x))} />
+                </label>
+                <button class="btn sm v2schedx" type="button" aria-label="Xoá dòng lịch" onClick={() => setSched(sched.filter((_, k) => k !== i))}>Xoá</button>
+              </div>
+            ))}
+          </div>
+          {!sched.length ? <div class="empty">Chưa có dòng lịch nào.</div> : null}
+          <div class="v2actionrow"><button class="btn" type="button" onClick={() => setSched(sched.concat([{ days: '', slug: '', title: '', detail: '' }]))}>Thêm dòng lịch</button></div>
           <label class="fl">Ghi chú lịch
             <input class="inp" value={note} onInput={(e) => setNote(e.target.value)} />
           </label>
