@@ -15,7 +15,7 @@ export function BookCover({ book, src, alt, apiBase, title, className = 'v2cover
               if (fallback && fallback !== url) { setFailed(false); }
               else setFailed(true);
             }} />
-        : <span class="v2cover-ph" aria-hidden="true">📖</span>}
+        : <span class="v2cover-ph" aria-hidden="true" dangerouslySetInnerHTML={{ __html: window.CZ && window.CZ.icon ? window.CZ.icon('book', 'i-s') : '' }} />}
     </span>
   );
 }

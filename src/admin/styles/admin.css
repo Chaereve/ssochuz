@@ -464,3 +464,156 @@
 /* Ô tìm kiếm trên topbar được co dưới cỡ chữ mặc định — top mượt hơn */
 .v2top .v2search{min-width:0}
 .v2search .inp{min-width:0}
+
+/* =====================================================================
+   BẢN CẢI TIẾN GIAO DIỆN (v3) — ghi đè có chủ đích các luật cũ ở trên và
+   ở cz.css. Mục tiêu: không cắt menu, một lề nội dung thống nhất giữa mọi
+   tab, bảng có khung cuộn riêng, cổng đăng nhập gọn và thẳng hàng.
+   ===================================================================== */
+
+/* ----- Sidebar: bỏ kiểu “thẻ” của .snav (cz.css) làm cắt menu ----- */
+body.admin .v2app .v2side{
+  position:sticky;top:0;height:100vh;max-height:100vh;overflow-y:auto;overflow-x:hidden;
+  align-self:start;padding:14px 0 16px;border-right:1px solid var(--bd);background:var(--surf);
+  scrollbar-width:thin;
+}
+body.admin .v2app nav#tabs.v2aside{
+  position:static;top:auto;max-height:none;overflow:visible;flex:1 1 auto;
+  border:0;border-radius:0;background:transparent;box-shadow:none;padding:0 10px;gap:0;
+}
+body.admin .v2app .v2brand{padding:2px 14px 14px}
+body.admin .v2app .v2nav-group{margin-bottom:12px}
+body.admin .v2app .v2nav-group > .admin-nav-label{padding:6px 12px 6px}
+body.admin .v2app .snav button{min-height:38px;font-size:13.5px;border:1px solid transparent}
+body.admin .v2app .snav button.on{border-color:color-mix(in srgb,var(--acc) 22%,transparent)}
+body.admin .v2app .v2side-note{
+  margin:14px 14px 0;padding:10px 12px;border-radius:10px;background:var(--surf2);
+  font-size:11.5px;line-height:1.5;color:var(--mut);
+}
+@media(min-width:901px){
+  body.admin .v2app.v2collapsed .v2side-note{display:none}
+  body.admin .v2app.v2collapsed .v2aside{padding:0 8px}
+}
+
+/* ----- Khung nội dung: một lề trái/phải cho mọi tab ----- */
+body.admin .v2top.in,body.admin .v2top .in{padding:10px 32px;min-height:64px}
+body.admin .v2main.amain{
+  max-width:1240px;width:100%;margin:0 auto;box-sizing:border-box;
+  padding:22px 32px 72px;
+}
+body.admin .v2crumbs{padding:0 0 10px;font-size:12.5px}
+body.admin .v2pagehead{margin:0 0 18px}
+body.admin .v2pagehead h2{margin:0 0 4px;font-size:clamp(22px,2.4vw,28px);line-height:1.2}
+body.admin .v2pagehead .hint{margin:0;max-width:72ch;font-size:13.5px}
+body.admin .v2frame{min-width:0}
+
+/* ----- Thanh công cụ + bảng thư viện ----- */
+body.admin .v2toolbar{gap:10px;margin-bottom:14px}
+body.admin .v2toolbar>.inp{flex:1 1 260px;max-width:360px}
+body.admin .v2tablewrap{
+  overflow:auto;margin-top:12px;border:1px solid var(--bd);border-radius:14px;
+  background:var(--surf);max-height:none;
+}
+body.admin .v2tablewrap thead th{position:sticky;top:0;z-index:1;background:var(--surf2)}
+body.admin .v2book-table th,body.admin .v2book-table td{box-sizing:border-box}
+@media(min-width:761px){
+  body.admin .v2book-table{min-width:880px}
+}
+body.admin .v2book-table th:first-child,body.admin .v2book-table td:first-child{width:44px}
+body.admin .v2book-table th:nth-child(2),body.admin .v2book-table td:nth-child(2){width:62px}
+body.admin .v2book-table td[data-lb="Chương"],body.admin .v2book-table th:nth-last-child(2){white-space:nowrap;font-variant-numeric:tabular-nums}
+body.admin .v2book-table td[data-lb="Thao tác"],body.admin .v2book-table th:last-child{white-space:nowrap;width:1%}
+body.admin .v2actions{flex-wrap:nowrap;justify-content:flex-end}
+body.admin .v2book-table tbody tr{transition:background-color .15s ease}
+body.admin .v2book-table .v2thumb{width:36px;height:50px}
+body.admin .v2rowtext b{max-width:none}
+body.admin .v2rowtext .sm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:44ch}
+
+/* icon thay emoji (không phụ thuộc font hệ thống) */
+body.admin .v2badge-ic{display:inline-flex;align-items:center;vertical-align:-2px;margin-right:2px}
+body.admin .v2badge-ic .i{width:12px;height:12px}
+body.admin .v2cover-ph{display:grid;place-items:center;width:100%;height:100%;color:var(--dim)}
+body.admin .v2cover-ph .i{width:18px;height:18px}
+
+/* ----- Cổng đăng nhập (AuthGate) ----- */
+body.admin .v2gate{min-height:100vh;display:grid;place-items:center;padding:40px 16px;box-sizing:border-box;background:var(--bg)}
+body.admin .v2gate-card{
+  width:min(440px,100%);max-width:440px;box-sizing:border-box;padding:32px;
+  border:1px solid var(--bd);border-radius:18px;background:var(--surf);
+  box-shadow:0 18px 50px rgba(0,0,0,.08);
+}
+body.admin .v2gate-brand{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+body.admin .v2gate-logo{display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:17px;color:var(--txt)}
+body.admin .v2gate-logo i{font-style:normal;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);border:1px solid color-mix(in srgb,var(--acc) 35%,transparent);border-radius:999px;padding:2px 7px}
+body.admin .v2gate-logo .dot{width:8px;height:8px;border-radius:50%;background:var(--acc)}
+body.admin .v2gate h1{margin:0 0 8px;font-size:24px;line-height:1.25}
+body.admin .v2gate .gsub{margin:0;font-size:13.5px;line-height:1.6;color:var(--mut)}
+body.admin .v2gate-actions{display:grid;grid-template-columns:1fr;gap:10px;margin:22px 0 0}
+body.admin .v2gate-actions .btn{width:100%;height:44px;justify-content:center;gap:8px;font-size:14px}
+body.admin .v2gate-actions .btn .i{width:16px;height:16px}
+body.admin .v2gate-provider{margin:12px 0 0;font-size:12.5px;line-height:1.55}
+body.admin .v2gate-sep{display:flex;align-items:center;gap:12px;margin:24px 0 16px;color:var(--dim);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+body.admin .v2gate-sep::before,body.admin .v2gate-sep::after{content:"";flex:1 1 auto;height:1px;background:var(--bd)}
+body.admin .v2connect{display:grid;grid-template-columns:1fr;gap:14px;margin:0}
+body.admin .v2field{display:grid;gap:6px;min-width:0}
+body.admin .v2field .fl{margin:0}
+body.admin .v2field .hint{margin:0;font-size:12px}
+body.admin .v2field .inp{width:100%;box-sizing:border-box;height:42px}
+body.admin .v2keywrap{position:relative;display:flex;min-width:0}
+body.admin .v2keywrap .inp{padding-right:46px}
+body.admin .v2keytoggle{
+  position:absolute;right:5px;top:50%;transform:translateY(-50%);width:32px;height:32px;
+  display:grid;place-items:center;border:0;border-radius:8px;background:transparent;color:var(--mut);cursor:pointer;padding:0;
+}
+body.admin .v2keytoggle:hover{background:var(--surf2);color:var(--txt)}
+body.admin .v2keytoggle[aria-pressed="true"]{color:var(--acc)}
+body.admin .v2keytoggle .i{width:16px;height:16px}
+body.admin .v2connect-submit{width:100%;height:44px;justify-content:center;margin-top:2px}
+body.admin .v2gate .msgbar{margin:16px 0 0}
+@media(max-width:480px){
+  body.admin .v2gate{padding:20px 12px}
+  body.admin .v2gate-card{padding:24px 20px;border-radius:16px}
+  body.admin .v2gate h1{font-size:21px}
+}
+
+/* ----- v3.1: thanh công cụ thư viện — hàng 1: tìm kiếm · kiểu xem · Thêm bộ;
+   hàng 2: bộ lọc dạng lưới đều nhau (không còn xuống dòng lộn xộn) ----- */
+body.admin .v2toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 10px}
+body.admin .v2toolbar>.inp{order:1;flex:1 1 260px;max-width:none;min-width:0}
+body.admin .v2toolbar .seg{order:2;margin-left:auto}
+body.admin .v2toolbar>.btn.pri{order:3}
+body.admin .v2toolbar .grow{display:none}
+body.admin .v2toolbar .v2filters{order:4;flex:1 0 100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;align-items:center}
+body.admin .v2filters .inp{min-width:0;max-width:none;width:100%;box-sizing:border-box}
+body.admin .v2filters .btn{justify-self:start}
+/* tên truyện: cắt bằng … thay vì đẩy rộng cả bảng */
+body.admin .v2rowtext b{max-width:38ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.admin .v2rowtext .sm{max-width:44ch}
+
+/* ----- v3.2: ô “Thao tác” phải giữ là table-cell (không display:flex trên <td>,
+   nếu không cột bị tính sai và nút bị đẩy ra ngoài khung) ----- */
+body.admin .v2book-table td.v2actions{display:table-cell;text-align:right;white-space:nowrap}
+body.admin .v2book-table td.v2actions .btn{margin-left:6px;vertical-align:middle}
+body.admin .v2book-table td.v2actions .btn:first-child{margin-left:0}
+@media(max-width:760px){
+  body.admin .v2book-table td.v2actions{display:block;text-align:left}
+}
+/* ----- v3.3: cột Thao tác có bề rộng tối thiểu để “Sửa” và “Xoá” nằm một hàng */
+body.admin .v2book-table td.v2actions,body.admin .v2book-table th:last-child{min-width:158px;width:158px}
+
+/* ----- v3.4: khôi phục ngăn kéo menu trên máy ≤900px (khối v3 ở trên ghi đè
+   position:sticky làm sidebar chiếm chỗ trong luồng → trống ~400px phía trên) ----- */
+@media(max-width:900px){
+  body.admin .v2app .v2side{
+    position:fixed;left:0;top:0;bottom:0;z-index:60;width:min(288px,86vw);height:100dvh;max-height:none;
+    transform:translateX(-110%);transition:transform .2s ease;box-shadow:0 0 40px rgba(0,0,0,.18);
+  }
+  body.admin .v2app.v2drawer-on .v2side{transform:none}
+  body.admin .v2app.v2drawer-on .v2scrim{display:block;position:fixed;inset:0;background:rgba(20,16,12,.28);z-index:55}
+}
+@media(max-width:480px){
+  body.admin .v2gate-actions .btn{font-size:13px;padding-left:12px;padding-right:12px}
+}
+@media (prefers-reduced-motion: reduce){
+  body.admin .v2app .v2side{transition:none}
+}
