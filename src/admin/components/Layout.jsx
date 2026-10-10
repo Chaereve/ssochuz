@@ -225,7 +225,7 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
             <a class="logo v2mlogo" href="/" aria-label="Trang chủ ssochuz"><span class="dot"></span>ssochuz</a>
             <form class="v2search" onSubmit={submitSearch}>
               <Icon name="search" />
-              <input class="inp" ref={searchRef} value={q} placeholder="Tìm truyện, tác giả… (Ctrl+K)" onInput={(e) => setQ(e.target.value)} aria-label="Tìm trong quản trị" />
+              <input class="inp" ref={searchRef} value={q} placeholder="Tìm truyện, tác giả…" title="Tìm nhanh (Ctrl+K)" onInput={(e) => setQ(e.target.value)} aria-label="Tìm trong quản trị" />
               {suggest.length ? (
                 <div class="v2search-suggest" role="listbox" aria-label="Gợi ý tìm kiếm">
                   {suggest.map((b) => (

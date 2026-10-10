@@ -464,3 +464,171 @@
 /* Ô tìm kiếm trên topbar được co dưới cỡ chữ mặc định — top mượt hơn */
 .v2top .v2search{min-width:0}
 .v2search .inp{min-width:0}
+
+/* =====================================================================
+   v3 — đợt đánh bóng giao diện quản trị (tinh chỉnh, không đổi cấu trúc)
+   Mục tiêu: bố cục sạch, không tràn/cắt chữ, control đồng nhất, chuyển động
+   ngắn có chủ đích (ease-out, ≤300ms), tôn trọng prefers-reduced-motion.
+   ===================================================================== */
+
+/* Cổng đăng nhập: nhãn + ô nhập thẳng hàng, nút chạy hết hàng */
+.v2gate{padding:40px 20px}
+.v2gate-card{padding:36px 36px 30px;border-radius:var(--r-xl);box-shadow:var(--sh-lg)}
+.v2gate h1{font-size:clamp(26px,3.6vw,36px);letter-spacing:-.02em}
+.v2gate .gsub{max-width:62ch;margin-bottom:0}
+.v2gate-actions{margin:20px 0 6px}
+.v2gate-actions .btn{min-height:42px;padding:0 18px}
+.v2gate .hint{margin-top:10px;font-size:13px}
+.v2gate .sep{margin:24px 0 16px}
+.v2connect{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px 14px;align-items:start}
+.v2connect>div{min-width:0}
+.v2connect .fl{display:block;margin:0 0 6px}
+.v2connect .inp{width:100%;min-width:0;height:42px}
+.v2connect .hint{margin:6px 0 0;font-size:12.5px;line-height:1.5}
+.v2connect>button{grid-column:1/-1;justify-self:start;min-height:42px;padding:0 20px}
+@media(max-width:640px){
+  .v2gate-card{padding:26px 20px 22px}
+  .v2connect{grid-template-columns:1fr}
+  .v2connect>button{grid-column:auto;justify-self:stretch}
+}
+
+/* Sidebar: khung cố định, menu cuộn bên trong, ghi chú dính đáy — không tràn */
+.v2side{height:100vh;display:flex;flex-direction:column;overflow:hidden;padding:14px 0 0;background:var(--surf)}
+.v2brand{padding:2px 16px 14px;min-height:44px}
+.v2aside{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;border:0;border-radius:0;background:transparent;box-shadow:none;position:static;max-height:none;padding:0 10px 12px;scrollbar-width:thin}
+.v2nav-group{margin-bottom:12px}
+.v2nav-group .admin-nav-label{padding:10px 10px 6px}
+.v2app .snav button{transition:background-color var(--t-fast) var(--ease),color var(--t-fast) var(--ease),transform var(--t-fast) var(--ease)}
+.v2app .snav button:active:not(:disabled){transform:scale(.98)}
+.v2side-note{margin:0;padding:12px 18px;border-top:1px solid var(--bd);font-size:12px;line-height:1.5;color:var(--dim)}
+.v2side-note{display:block}
+@media(max-width:900px){.v2side-note{display:block}}
+.v2app.v2collapsed .v2side-note{display:none}
+
+/* Topbar: một cụm rõ ràng, chiều cao đều */
+.v2top.in,.v2top .in{gap:12px;padding:10px 24px;min-height:60px}
+.v2search{height:40px;border-radius:var(--r);padding:0 12px;transition:border-color var(--t-fast) var(--ease),box-shadow var(--t-fast) var(--ease)}
+.v2search:focus-within{border-color:var(--acc);box-shadow:0 0 0 3px var(--ring)}
+.v2search .inp{height:100%;font-size:14px}
+.v2search>svg,.v2search>.i{color:var(--dim);flex:none}
+.v2quota{height:34px;min-width:150px;border-radius:var(--r);padding:0 10px;transition:border-color var(--t-fast) var(--ease)}
+.v2quota:hover{border-color:var(--bd2)}
+.v2tools{gap:6px}
+.v2tools .hbtn,.v2tools .admin-tool{height:36px}
+.v2tools .v2user .admin-tool{padding:0 10px}
+.v2usermenu{min-width:240px;border-radius:var(--r-lg);padding:6px;box-shadow:0 18px 40px -18px rgba(30,20,10,.45);transform-origin:top right;animation:v3pop .18s var(--ease-out) both}
+.v2usermenu button{transition:background-color var(--t-fast) var(--ease)}
+.v2usermenu .amtop{padding:8px 10px 10px}
+.v2usermenu .amtop b,.v2usermenu .amtop span{display:block;overflow-wrap:anywhere}
+.v2search-suggest{animation:v3pop .16s var(--ease-out) both;transform-origin:top left}
+@keyframes v3pop{from{opacity:0;transform:translateY(-4px) scale(.98)}to{opacity:1;transform:none}}
+
+/* Breadcrumb thẳng hàng với tiêu đề trang */
+.v2crumbs{padding:0;margin:0 0 6px;font-size:12.5px}
+.v2main{padding:22px 28px 64px}
+.v2pagehead{margin:4px 0 20px}
+.v2pagehead h2{font-size:24px;letter-spacing:-.015em}
+.v2pagehead .hint{font-size:14px;line-height:1.55}
+@media(max-width:900px){.v2main{padding:16px 16px 56px}.v2crumbs{padding:0;margin-bottom:4px}}
+
+/* Select gốc của trình duyệt → select đồng bộ theme */
+.v2app select.inp,.v2filters select.inp,.v2toolbar select.inp{
+  appearance:none;-webkit-appearance:none;height:38px;padding:0 34px 0 12px;
+  background-color:var(--surf);color:var(--txt);border:1px solid var(--bd);border-radius:var(--r);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23857a6c' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;background-size:12px;
+  text-overflow:ellipsis;white-space:nowrap;cursor:pointer;
+  transition:border-color var(--t-fast) var(--ease),box-shadow var(--t-fast) var(--ease);
+}
+.v2app select.inp:hover{border-color:var(--bd2)}
+.v2app select.inp:focus-visible{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--ring)}
+.v2app select.inp option{background:var(--surf);color:var(--txt)}
+.v2filters{gap:8px 8px;align-items:center}
+.v2filters .inp{height:38px}
+.v2filters select.inp{min-width:150px;max-width:220px}
+.v2app .inp{transition:border-color var(--t-fast) var(--ease),box-shadow var(--t-fast) var(--ease)}
+.v2app .inp:focus-visible{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--ring)}
+
+/* Thanh lọc thư viện: hàng 1 tìm kiếm + nút, hàng 2 bộ lọc, không đè nhau */
+.v2toolbar{gap:10px;flex-wrap:wrap}
+.v2toolbar>.inp{height:38px;max-width:360px}
+.v2toolbar .btn{height:38px}
+
+/* Bảng thư viện: cột không bị bóp, số chương/nút không xuống dòng lạ */
+.v2table-wrap{border-radius:var(--r-lg);background:var(--surf);scrollbar-width:thin}
+.v2book-table{min-width:880px}
+.v2book-table th,.v2book-table td{white-space:nowrap}
+.v2book-table td:nth-child(2){white-space:normal}
+.v2book-table th:last-child,.v2book-table td:last-child{text-align:right}
+.v2book-table td:first-child,.v2book-table th:first-child{width:44px;padding-right:4px}
+.v2book-table tbody tr{transition:background-color var(--t-fast) var(--ease)}
+.v2rowtext b{max-width:100%}
+.v2badge{max-width:100%}
+.v2actions{justify-content:flex-end}
+.v2actions .btn{height:32px;padding:0 12px;font-size:13px}
+.v2thumb{width:36px;height:50px;border-radius:6px;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.v2cover-ph{display:grid;place-items:center;width:100%;height:100%;color:var(--dim)}
+.v2cover-ph .i{width:16px;height:16px}
+.v2badge-ic{display:inline-flex;margin-right:3px;vertical-align:-2px}
+.v2badge-ic .i{width:12px;height:12px}
+
+/* Nút: phản hồi nhấn + chuyển đổi đúng thuộc tính (không dùng transition:all) */
+.btn{transition:background-color var(--t-fast) var(--ease),border-color var(--t-fast) var(--ease),color var(--t-fast) var(--ease),box-shadow var(--t-fast) var(--ease),transform var(--t-fast) var(--ease)}
+.btn:active:not(:disabled){transform:scale(.98)}
+.btn:disabled{cursor:not-allowed;opacity:.55}
+
+/* Trang chuyển tab: một chuyển động vào nhẹ, chỉ opacity + transform */
+.v2main>*{animation:v3in .28s var(--ease-out) both}
+.v2main>.v2crumbs{animation-delay:0s}
+.v2main>.v2pagehead{animation-delay:.03s}
+@keyframes v3in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* Thanh nền sáng/tối & menu trên mobile: chuyển động drawer tự nhiên */
+.v2side{transition:transform .26s var(--ease-drawer,cubic-bezier(.32,.72,0,1))}
+.v2scrim{animation:v3fade .2s ease both}
+@keyframes v3fade{from{opacity:0}to{opacity:1}}
+
+@media (prefers-reduced-motion: reduce){
+  .v2main>*,.v2usermenu,.v2search-suggest,.v2scrim{animation:none!important}
+  .v2side,.btn,.v2app .snav button,.v2quota i{transition:none!important}
+  .btn:active:not(:disabled),.v2app .snav button:active:not(:disabled){transform:none}
+}
+/* Khung nội dung: lưới 1 cột co được — con không thể rộng hơn phần còn lại
+   của cửa sổ (trước đây .v2main bị đẩy rộng ~130px làm cắt nút bên phải). */
+.v2frame{display:grid;grid-template-columns:minmax(0,1fr);min-width:0}
+.v2main,.v2top{min-width:0;width:100%;box-sizing:border-box}
+.v2main>*{min-width:0;max-width:100%}
+/* Cột tên truyện/tác giả được xuống dòng; cột số liệu/nút giữ một dòng */
+.v2book-table td:nth-child(3),.v2book-table td:nth-child(4){white-space:normal;min-width:140px}
+.v2book-table td{padding:10px 10px}
+/* Bảng thư viện vừa khít khung 1200px: padding gọn, cột tác giả co được,
+   nút Sửa/Xoá nhỏ hơn — không còn cột thao tác bị cắt bên phải. */
+.v2book-table{min-width:0}
+.v2book-table td{padding:10px 8px}
+.v2book-table th{padding:10px 8px}
+.v2book-table td:first-child,.v2book-table th:first-child{padding:0 4px 0 12px}
+.v2book-table td:nth-child(4){min-width:96px}
+.v2book-table th:last-child,.v2book-table td:last-child{padding-right:12px}
+.v2actions{gap:4px}
+.v2actions .btn{padding:0 10px}
+.v2book-table td:nth-child(4){min-width:0}
+.v2book-table td:nth-child(5),.v2book-table td:nth-child(6){white-space:normal}
+.v2book-table td:nth-child(5) .v2badge,.v2book-table td:nth-child(6) .v2badge{white-space:normal}
+.v2main{padding-left:24px;padding-right:24px}
+.v2book-table td:nth-child(2),.v2book-table th:nth-child(2){padding-left:6px;padding-right:6px}
+.v2book-table td:nth-child(3){min-width:0}
+.v2book-table .v2rowmain{min-width:0}
+/* Bố cục bảng cố định: cột tên nhận phần còn lại và xuống dòng; các cột nhỏ
+   có độ rộng định sẵn → không còn cột thao tác bị đẩy ra ngoài khung. */
+.v2book-table{table-layout:fixed;width:100%}
+.v2book-table th:nth-child(1),.v2book-table td:nth-child(1){width:40px}
+.v2book-table th:nth-child(2),.v2book-table td:nth-child(2){width:58px}
+.v2book-table th:nth-child(4),.v2book-table td:nth-child(4){width:120px}
+.v2book-table th:nth-child(5),.v2book-table td:nth-child(5){width:124px}
+.v2book-table th:nth-child(6),.v2book-table td:nth-child(6){width:96px}
+.v2book-table th:nth-child(7),.v2book-table td:nth-child(7){width:92px}
+.v2book-table th:nth-child(8),.v2book-table td:nth-child(8){width:132px}
+.v2book-table td:nth-child(3){overflow-wrap:anywhere}
+.v2book-table td:nth-child(5) .v2badge,.v2book-table td:nth-child(6) .v2badge{white-space:nowrap}
+.v2book-table th:nth-child(5),.v2book-table td:nth-child(5){width:148px}
+.v2book-table th:nth-child(4),.v2book-table td:nth-child(4){width:112px}
