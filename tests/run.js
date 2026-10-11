@@ -99,7 +99,7 @@ const files = [path.join('..', 'tools', 'check_src.js'), path.join('..', 'tools'
   't_chapters.js', 't_home.js', 't_mobile.js', 't_stats.js', 't_ranking.js', 't_quiet_home.js', 't_ranking_worker.mjs', 't_synopsis.js', 't_story.js', 't_reader.js', 't_flows.js', 't_sweep.js', 't_mystats.js', 't_rating.js', 't_adult.js', 't_fallback.js', 't_lock.mjs', 't_lock_ui.js', 't_admin_core.js', 't_admin_online.js', 't_admin_writes.js', 't_admin_chapter.js', 't_admin_chapter_state.js', 't_admin_book_integrity.js', 't_admin_editor_lazy.js', 't_admin_editor_keyboard.js', 't_cover_mirror.mjs', 't_admin_upload.js', 't_admin_budget.js', 't_admin_features.js', 't_admin_docx.js', 't_docx_content.js', 't_admin_sidebar.js'];
 let bad = 0;
 for (const f of files) {
-  const r = spawnSync(process.execPath, [path.join(__dirname, f)], { encoding: 'utf8', timeout: 180000, env });
+  const r = spawnSync(process.execPath, ['--disable-warning=MODULE_TYPELESS_PACKAGE_JSON', path.join(__dirname, f)], { encoding: 'utf8', timeout: 180000, env });
   const out = (r.stdout || '').trim();
   const err = (r.stderr || '').trim().split('\n').slice(0, 3).join(' | ');
   const badErr = (out.match(/"errors\d*":\s*\[[^\]]/g) || []).length;

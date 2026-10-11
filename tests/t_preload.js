@@ -4,7 +4,7 @@
    - cuộn quá nửa chương → preload ngay, khỏi đợi 5 giây
    - chương 6 (cách 4 chương) KHÔNG được tải → chứng minh chỉ preload N+1
    - đang ở chương cuối → không preload gì, không lỗi
-   (Dữ liệu thật: co-vo-ho-anh-cua-toi có ảnh ở chương 2 và 6.)
+   (Dữ liệu thật: co-vo-ho-danh-da-cua-toi có ảnh ở chương 2, 6, 8 và 16.)
    ========================================================================== */
 const { page, dataFetch } = require('./mk');
 const fs = require('fs'), path = require('path');
@@ -12,7 +12,7 @@ const ROOT = path.join(__dirname, '..');
 const bad = [];
 const ok = (cond, msg) => { if (!cond) bad.push(msg); };
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BOOK = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/book/co-vo-ho-anh-cua-toi.json'), 'utf8'));
+const BOOK = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/book/co-vo-ho-danh-da-cua-toi.json'), 'utf8'));
 const imgsOf = i => ((BOOK.chapters[i - 1] || {}).html || '').match(/<img[^>]+src="([^"]+)"/gi) || [];
 const srcOf = tag => (tag.match(/src="([^"]+)"/i) || [])[1] || '';
 const IMG2 = imgsOf(2).map(srcOf), IMG6 = imgsOf(6).map(srcOf);
@@ -24,7 +24,7 @@ const IMG2 = imgsOf(2).map(srcOf), IMG6 = imgsOf(6).map(srcOf);
   /* ---------- A. hen gio 5 giay ---------- */
   const logA = [];
   const a = page('truyen.html', {
-    url: 'https://ssochuz.pages.dev/truyen/co-vo-ho-anh-cua-toi/',
+    url: 'https://ssochuz.pages.dev/truyen/co-vo-ho-danh-da-cua-toi/',
     fetch: dataFetch({ log: logA }),
     setup(w) { try { w.localStorage.setItem('ssochuz-confirmed18', String(Date.now())); } catch (e) {} }
   });
@@ -42,7 +42,7 @@ const IMG2 = imgsOf(2).map(srcOf), IMG6 = imgsOf(6).map(srcOf);
   /* ---------- B. cuon qua nua chuong → preload ngay ---------- */
   const logB = [];
   const b = page('truyen.html', {
-    url: 'https://ssochuz.pages.dev/truyen/co-vo-ho-anh-cua-toi/',
+    url: 'https://ssochuz.pages.dev/truyen/co-vo-ho-danh-da-cua-toi/',
     fetch: dataFetch({ log: logB }),
     setup(w) { try { w.localStorage.setItem('ssochuz-confirmed18', String(Date.now())); } catch (e) {} }
   });
@@ -58,7 +58,7 @@ const IMG2 = imgsOf(2).map(srcOf), IMG6 = imgsOf(6).map(srcOf);
   /* ---------- C. chuong cuoi: khong preload, khong loi ---------- */
   const logC = [];
   const c = page('truyen.html', {
-    url: 'https://ssochuz.pages.dev/truyen/co-vo-ho-anh-cua-toi/',
+    url: 'https://ssochuz.pages.dev/truyen/co-vo-ho-danh-da-cua-toi/',
     fetch: dataFetch({ log: logC }),
     setup(w) { try { w.localStorage.setItem('ssochuz-confirmed18', String(Date.now())); } catch (e) {} }
   });

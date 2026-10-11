@@ -1113,3 +1113,12 @@ body.admin .v2sort li>.btn{flex:0 0 auto}
 body.admin .v2nb .v2up{align-items:stretch;text-align:left}
 body.admin .v2nb .v2up-label{text-align:left}
 body.admin .v2nb .v2up-row .btn{justify-self:start}
+
+/* v41: nút Upload/Gỡ bìa là nút thật (viền + nền), không trông như chữ thường */
+body.admin .v2up-row .btn.ghost{border:1px solid var(--a-bd2);background:var(--a-surf);color:var(--a-txt);border-radius:var(--a-r);padding:0 12px;min-height:34px;font-weight:600}
+body.admin .v2up-row .btn.ghost:hover{border-color:var(--a-acc);color:var(--a-acc);background:var(--a-acc-soft)}
+
+/* v42: khối bìa trong Sửa bộ căn trái như các trường bên cạnh */
+body.admin .v2form>section[aria-label="Ảnh bìa"] .v2up{align-items:stretch;text-align:left}
+body.admin .v2form>section[aria-label="Ảnh bìa"] .v2up-label{text-align:left}
+body.admin .v2form>section[aria-label="Ảnh bìa"] .v2up-row .btn{justify-self:stretch}
