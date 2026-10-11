@@ -1094,3 +1094,10 @@ body.admin .v2switch-text{display:grid;gap:2px;min-width:0}
 body.admin .v2switch-text b{font-size:14px}
 body.admin .v2switch-text .hint{margin:0;font-size:12.5px}
 body.admin .v2up-preview{min-height:200px;background:var(--a-surf2)}
+
+/* v38: khung bìa (Sửa bộ / Thêm bộ) — tỉ lệ bìa 2:3 cố định, ảnh lỗi thì hiện trạng thái rỗng có thông báo */
+body.admin .v2up-drop{min-height:170px}
+body.admin .v2up-drop.has-img{min-height:0;aspect-ratio:2/3;max-height:340px;width:100%;overflow:hidden}
+body.admin .v2up-drop.has-img .v2up-preview{width:100%;height:100%;max-height:none;aspect-ratio:auto;object-fit:cover;border-radius:0}
+body.admin .v2up-preview{min-height:0}
+body.admin .v2up-empty b{overflow-wrap:anywhere;text-align:center}

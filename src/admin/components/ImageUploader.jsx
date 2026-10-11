@@ -17,11 +17,14 @@ export function ImageUploader({
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
   const [drag, setDrag] = useState(false);
+  const [imgFailed, setImgFailed] = useState(false);
   const fileRef = useRef(null);
   const preview = persistableCover(value) ? resolveCover(value, apiBase) : '';
+  const showPreview = !!preview && !imgFailed;
 
   useEffect(() => {
     setError('');
+    setImgFailed(false);
   }, [value]);
 
   async function handleFile(file) {
@@ -68,7 +71,7 @@ export function ImageUploader({
     <div class="v2up">
       <span class="v2up-label">{label}</span>
       <div
-        class={'v2up-drop' + (drag ? ' on' : '') + (busy ? ' busy' : '') + (preview ? ' has-img' : '')}
+        class={'v2up-drop' + (drag ? ' on' : '') + (busy ? ' busy' : '') + (showPreview ? ' has-img' : '')}
         role="button"
         tabIndex={0}
         aria-label={'Chọn hoặc kéo thả ' + (label || 'ảnh bìa') + ' vào đây'}
@@ -78,8 +81,8 @@ export function ImageUploader({
         onClick={openPicker}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPicker(); } }}
       >
-        {preview
-          ? <img class="v2up-preview" src={preview} alt={altValue || 'Xem trước bìa'} />
+        {showPreview
+          ? <img class="v2up-preview" src={preview} alt={altValue || 'Xem trước bìa'} onError={() => setImgFailed(true)} />
           : (
             <div class="v2up-empty">
               <span class="v2up-ico" aria-hidden="true">
@@ -87,8 +90,8 @@ export function ImageUploader({
                   <path d="M12 15V4" /><path d="m7.5 8.5 4.5-4.5 4.5 4.5" /><path d="M4 15v3.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V15" />
                 </svg>
               </span>
-              <b>Kéo thả ảnh vào đây</b>
-              <span>hoặc bấm để chọn file</span>
+              <b>{imgFailed ? 'Không tải được ảnh từ URL' : 'Kéo thả ảnh vào đây'}</b>
+              <span>{imgFailed ? 'Kiểm tra lại đường dẫn hoặc tải file mới' : 'hoặc bấm để chọn file'}</span>
             </div>
           )}
         {busy ? <div class="v2up-bar" aria-hidden="true"><i style={{ width: progress + '%' }}></i></div> : null}
