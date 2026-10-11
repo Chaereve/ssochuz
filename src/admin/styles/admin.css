@@ -770,3 +770,12 @@ body.admin .v2gcard-meta{margin:auto 10px 0;padding-top:8px}
 body.admin .v2gcard-acts{margin:8px 10px 0}
 /* Slug trong bảng: một dòng, cắt bằng dấu ... thay vì ngắt giữa ngày */
 body.admin .v2book-table td:nth-child(3) .sm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+
+/* ===== v11 — bìa truyện không méo: ảnh lấp đầy khung, cắt theo tỉ lệ (object-fit) ===== */
+/* <img> có width/height thuộc tính HTML (160×240, 44×66…) làm ảnh bị kéo; ép lấp đầy khung bìa */
+body.admin .v2thumb{display:block;position:relative;overflow:hidden;flex:none}
+body.admin .v2thumb img{display:block;width:100%;height:100%;max-width:none;object-fit:cover;object-position:center}
+body.admin .v2book-table .v2thumb{width:48px;height:68px}
+body.admin .v2gcard .v2thumb{width:100%;height:auto;aspect-ratio:2/3}
+body.admin .v2gcard .v2thumb img{position:absolute;inset:0}
+body.admin .v2thumb .v2cover-ph{width:100%;height:100%}

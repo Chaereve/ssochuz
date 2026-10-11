@@ -154,6 +154,10 @@ const STATS = {
   /* 4. Thư viện: bìa + phân trang + lọc 18+ */
   click($('button[data-tab="list"]'));
   await wait(250);
+  check('Thư viện/mặc định hiển thị LƯỚI', !!$('.v2grid'), '');
+  /* Thư viện mặc định là LƯỚI; các check đếm dòng bảng cần chế độ Bảng */
+  $$('button').find((b) => b.textContent.trim() === 'Bảng').click();
+  await wait(150);
   check('Thư viện/phân trang 24/trang', $$('.v2book-table tbody tr').length === 24, $$('.v2book-table tbody tr').length);
   check('Thư viện/có pager "Trang 1/2"', /Trang 1\/2/.test(($('.v2pager') || {}).textContent || ''), $('.v2pager') && $('.v2pager').textContent);
   check('Thư viện/trang 1 có 24 ô bìa thu nhỏ', $$('.v2thumb').length === 24, $$('.v2thumb').length);
@@ -190,6 +194,9 @@ const STATS = {
      `updated` giảm dần nên bộ vừa tạo ở bước 5 ("Bộ Mới Test", 0 chương) luôn
      đứng đầu — bấm hàng đầu là mở nhầm bộ rỗng rồi báo lỗi oan. */
   click($('button[data-tab="list"]'));
+  await wait(150);
+  /* Thư viện mặc định là LƯỚI; test đếm dòng bảng nên bật chế độ Bảng trước */
+  $$('button').find((b) => b.textContent.trim() === 'Bảng').click();
   await wait(150);
   inputEv($('#pane-list .v2toolbar input.inp'), 'Truyện Thử 01');
   await wait(300);

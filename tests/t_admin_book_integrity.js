@@ -82,6 +82,10 @@ const MISSING = 'bake-love-feelings'; /* GET luôn 404: thiếu book thật */
   async function openBook(slug) {
     const title = registry.lib.find((b) => b.slug === slug).title;
     click($('button[data-tab="list"]'), 'tab Thư viện');
+  await new Promise((r) => setTimeout(r, 250));
+  /* Thư viện mặc định là LƯỚI; các bước tìm dòng bảng cần bật Bảng */
+  [...doc.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Bảng')?.click();
+  await wait(150);
     await wait(150);
     inputEv($('#pane-list .v2toolbar input.inp'), title, 'tìm');
     await wait(150);

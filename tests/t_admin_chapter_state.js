@@ -72,6 +72,10 @@ function json(body, ok = true, status = 200) {
   const cardText = () => ((chapterCard() || {}).textContent || '').replace(/\s+/g, ' ');
   async function openBook(title, slug) {
     click($('button[data-tab="list"]'), 'tab Thư viện');
+  await new Promise((r) => setTimeout(r, 250));
+  /* Thư viện mặc định là LƯỚI; các bước tìm dòng bảng cần bật Bảng */
+  [...doc.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Bảng')?.click();
+  await wait(150);
     await wait(150);
     inputEv($('#pane-list .v2toolbar input.inp'), title);
     await wait(150);
