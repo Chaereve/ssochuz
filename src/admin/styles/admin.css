@@ -943,3 +943,10 @@ body.admin .v2tablewrap:has(.v2authors){overflow:visible;max-height:none}
   body.admin .v2authors td:last-child{justify-content:flex-start;padding-top:4px}
   body.admin .v2authors td:last-child .btn{width:100%}
 }
+
+/* v28 — wrapper bảng Tác giả: không cuộn lồng (màn hẹp hiện thẻ đầy đủ); desktop chỉ cuộn ngang khi thật sự cần */
+body.admin .v2authors-wrap{overflow-x:auto;overflow-y:visible;border:0;border-radius:0;background:none;margin-top:12px}
+@media (max-width:720px){body.admin .v2authors-wrap{overflow:visible}}
+body.admin .v2authors th{text-align:left}
+body.admin .v2authors th:nth-child(n+2):nth-child(-n+6){text-align:right}
+body.admin .v2authors th:last-child{text-align:right}

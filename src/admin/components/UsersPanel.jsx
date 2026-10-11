@@ -29,8 +29,8 @@ export function UsersPanel({ registry, onEdit, onFilterAuthor }) {
         <p class="hint">Tổng hợp từ thông tin các bộ truyện.</p>
         <input class="inp" aria-label="Tìm tác giả" value={q} placeholder="Tìm tác giả…" onInput={(e) => setQ(e.target.value)} />
         {shown.length ? (
-          <div class="v2table-wrap">
-            <table class="v2book-table v2authors">
+          <div class="v2tablewrap v2authors-wrap">
+            <table class="v2authors">
               <thead><tr><th>Tác giả</th><th>Số bộ</th><th>Xuất bản</th><th>Nháp</th><th>Khóa</th><th>Cập nhật</th><th aria-label="Thao tác">Thao tác</th></tr></thead>
               <tbody>
                 {shown.map((a) => (
