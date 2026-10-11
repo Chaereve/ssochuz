@@ -42,7 +42,7 @@ export function NewBook({ registry, onCreate, onUploadImage, apiBase = '', write
         </div>
       </section>
       <section class="v2fsec" aria-label="Phân loại và hiển thị">
-        <div class="v2fsec-head"><b>Phân loại &amp; hiển thị</b><span class="hint">Nháp chỉ hiện trong admin, không lên trang chủ.</span></div>
+        <div class="v2fsec-head"><b>Xuất bản</b><span class="hint">Nháp chỉ hiện trong admin, không lên trang chủ.</span></div>
         <div class="row">
           <label class="fl">Tình trạng hoàn thành
             <select class="inp" value={form.status} onChange={(e) => update('status', e.target.value)}>
@@ -74,10 +74,6 @@ export function NewBook({ registry, onCreate, onUploadImage, apiBase = '', write
           <div class="v2preview-body">
             <b title={form.title}>{form.title || 'Tên truyện'}</b>
             <span class="v2preview-author">{form.author || 'Tác giả'}</span>
-            <span class="v2preview-tags">
-              <span class="v2badge">{form.status}</span>
-              {form.is18 === '1' ? <span class="v2badge v2badge-18">18+</span> : null}
-            </span>
           </div>
         </div>
         <ImageUploader
