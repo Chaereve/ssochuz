@@ -10,7 +10,7 @@ export function ImageUploader({
   onUpload,
   apiBase = '',
   label = 'Ảnh bìa',
-  hint = 'JPG, PNG hoặc WebP · tối đa 12 MB · tự nén WebP về cạnh dài ~1000px, ≤ ~120 KB trước khi gửi (tiết kiệm dung lượng kho). Ảnh trùng nội dung được dùng lại, không ghi thêm bản sao.',
+  hint = 'JPG, PNG, WebP · tối đa 12 MB · tự nén về ~1000px trước khi gửi. Ảnh trùng nội dung được dùng lại, không ghi thêm bản sao.',
   inputId,
 }) {
   const [busy, setBusy] = useState(false);
@@ -63,37 +63,50 @@ export function ImageUploader({
     handleFile(file);
   }
 
+  const openPicker = () => fileRef.current && fileRef.current.click();
   return (
     <div class="v2up">
-      <label class="fl">{label}</label>
+      <span class="v2up-label">{label}</span>
       <div
-        class={'v2up-drop' + (drag ? ' on' : '') + (busy ? ' busy' : '')}
+        class={'v2up-drop' + (drag ? ' on' : '') + (busy ? ' busy' : '') + (preview ? ' has-img' : '')}
+        role="button"
+        tabIndex={0}
+        aria-label={'Chọn hoặc kéo thả ' + (label || 'ảnh bìa') + ' vào đây'}
         onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
         onDragLeave={() => setDrag(false)}
         onDrop={onDrop}
-        onClick={() => fileRef.current && fileRef.current.click()}
+        onClick={openPicker}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPicker(); } }}
       >
         {preview
           ? <img class="v2up-preview" src={preview} alt={altValue || 'Xem trước bìa'} />
-          : <div class="v2up-empty"><b>Kéo thả ảnh vào đây</b><span>hoặc bấm để chọn file</span></div>}
+          : (
+            <div class="v2up-empty">
+              <span class="v2up-ico" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 15V4" /><path d="m7.5 8.5 4.5-4.5 4.5 4.5" /><path d="M4 15v3.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V15" />
+                </svg>
+              </span>
+              <b>Kéo thả ảnh vào đây</b>
+              <span>hoặc bấm để chọn file</span>
+            </div>
+          )}
         {busy ? <div class="v2up-bar" aria-hidden="true"><i style={{ width: progress + '%' }}></i></div> : null}
       </div>
-      <input id={inputId} ref={fileRef} type="file" aria-label={'Chọn tệp ' + (label || 'ảnh bìa')} accept="image/jpeg,image/png,image/webp" hidden={false}
+      <input id={inputId} ref={fileRef} class="v2up-file" type="file" tabIndex={-1} aria-hidden="true" accept="image/jpeg,image/png,image/webp"
         onChange={(e) => handleFile(e.target.files && e.target.files[0])} />
       <div class="v2up-row">
-        <input class="inp" aria-label="URL ảnh bìa" value={value} placeholder="URL bìa bền (/api/img/… hoặc https://…)"
+        <input class="inp" aria-label="URL ảnh bìa" value={value} placeholder="Dán URL ảnh (https://… hoặc /api/img/…)"
           onInput={(e) => onChange && onChange(persistableCover(e.target.value) || e.target.value.replace(/^blob:.*/i, ''))} />
-        {/* một nút mở file duy nhất — trước đây “Upload bìa” và “Thay ảnh” làm
-            cùng một việc, đứng cạnh nhau gây rối */}
-        <button class="btn ghost sm" type="button" onClick={() => fileRef.current && fileRef.current.click()}>{value ? 'Upload bìa mới' : 'Upload bìa'}</button>
-        {value ? <button class="btn ghost sm v2sort-x" type="button" onClick={() => onChange && onChange('')}>Gỡ bìa</button> : null}
+        <button class="btn ghost sm" type="button" onClick={openPicker}>{value ? 'Upload bìa mới' : 'Upload bìa'}</button>
+        {value ? <button class="btn ghost sm" type="button" onClick={() => onChange && onChange('')}>Gỡ bìa</button> : null}
       </div>
       {onAltChange
-        ? <input class="inp" aria-label="Alt text ảnh bìa" value={altValue} placeholder="Alt text bìa (mô tả ngắn cho trình đọc màn hình)"
+        ? <input class="inp" aria-label="Alt text ảnh bìa" value={altValue} placeholder="Mô tả ngắn cho trình đọc màn hình (tuỳ chọn)"
             onInput={(e) => onAltChange(e.target.value)} />
         : null}
-      {error ? <p class="v2up-err">{error} {onUpload ? <button class="btn ghost sm" type="button" onClick={() => fileRef.current && fileRef.current.click()}>Thử lại</button> : null}</p> : null}
-      <p class="hint">{hint}</p>
+      {error ? <p class="v2up-err" role="alert">{error} {onUpload ? <button class="btn ghost sm" type="button" onClick={openPicker}>Thử lại</button> : null}</p> : null}
+      <p class="hint v2up-hint">{hint}</p>
     </div>
   );
 }
