@@ -6,6 +6,12 @@ function authDiagnose() {
   catch (e) { return null; }
 }
 
+const FEATURES = [
+  ['Thư viện', 'Lọc, sửa và xuất bản bộ truyện hàng loạt'],
+  ['Soạn chương', 'Trình soạn thảo, nháp tự lưu, nhập .txt/.docx'],
+  ['Kiểm duyệt', 'Bình luận, báo lỗi và phiếu bầu'],
+];
+
 export function AuthGate({ defaultApi = '', defaultKey = '', busy = false, message = '', onConnect, onStatic, onLogin }) {
   const [apiBase, setApiBase] = useState(defaultApi || '');
   const [adminKey, setAdminKey] = useState(defaultKey || '');
@@ -18,33 +24,51 @@ export function AuthGate({ defaultApi = '', defaultKey = '', busy = false, messa
   };
 
   return (
-    <main class="v2gate" aria-label="Cổng quản trị">
-      <div class="gate v2gate-card">
-        <span class="pill acc">admin</span>
-        <h1>Trang quản trị ssochuz library</h1>
-        <p class="gsub">
-          Một trang quản trị duy nhất tại /admin — thư viện, soạn chương, bình luận,
-          báo lỗi, homepage CMS, vai trò và cài đặt. Bản cũ đã gộp xong, không còn admin riêng.
-        </p>
-        <div class="v2gate-actions">
-          <button class="btn pri" type="button" disabled={busy} onClick={onLogin}>Đăng nhập bằng Google / Supabase</button>
-          <button class="btn ghost" type="button" disabled={busy} onClick={onStatic}>Xem dữ liệu tĩnh trong repo</button>
+    <main class="v2gate" aria-label="Đăng nhập quản trị">
+      <section class="v2gate-brand" aria-hidden="false">
+        <a class="logo v2gate-logo" href="/"><span class="dot"></span>ssochuz<i>admin</i></a>
+        <div class="v2gate-copy">
+          <h2>Quản lý thư viện<br />từ một chỗ.</h2>
+          <p>Mọi thao tác ghi đều cần đăng nhập và được lưu vào Cloudflare KV.</p>
         </div>
-        <p class="hint">Nhà cung cấp đăng nhập hiện tại: <code>{provider || 'chưa cấu hình'}</code>. Danh sách email quản trị vẫn chỉ nằm trên Worker.</p>
-        <div class="sep">hoặc dùng ADMIN_KEY để nối KV</div>
-        <form class="v2connect" onSubmit={submit}>
-          <div>
-            <label class="fl" for="v2Api">URL Worker</label>
-            <input class="inp" id="v2Api" value={apiBase} onInput={(e) => setApiBase(e.currentTarget.value)} placeholder="https://chuseoz-cms.xxx.workers.dev" autocomplete="off" />
+        <ul class="v2gate-list">
+          {FEATURES.map(([t, d]) => (
+            <li key={t}><b>{t}</b><span>{d}</span></li>
+          ))}
+        </ul>
+      </section>
+
+      <div class="v2gate-panel">
+        <div class="gate v2gate-card">
+          <h1>Đăng nhập</h1>
+          <p class="gsub">Dùng tài khoản quản trị để tiếp tục.</p>
+
+          <div class="v2gate-actions">
+            <button class="btn pri v2gate-primary" type="button" disabled={busy} onClick={onLogin}>
+              Đăng nhập với {provider === 'google' ? 'Google' : 'Supabase'}
+            </button>
+            <button class="btn ghost" type="button" disabled={busy} onClick={onStatic}>
+              Xem dữ liệu tĩnh (chỉ đọc)
+            </button>
           </div>
-          <div>
-            <label class="fl" for="v2Key">ADMIN_KEY</label>
-            <input class="inp" id="v2Key" value={adminKey} onInput={(e) => setAdminKey(e.currentTarget.value)} type="password" placeholder="khoá quản trị" autocomplete="off" />
-            <p class="hint">Khoá chỉ lưu trong <code>sessionStorage</code>; đóng tab là mất.</p>
-          </div>
-          <button class="btn pri" type="submit" disabled={busy}>{busy ? 'Đang kiểm tra…' : 'Kiểm tra & kết nối'}</button>
-        </form>
-        {message ? <div class="msgbar show err">{message}</div> : null}
+
+          <div class="sep">hoặc kết nối bằng ADMIN_KEY</div>
+
+          <form class="v2connect" onSubmit={submit}>
+            <div class="v2field">
+              <label class="fl" for="v2Api">URL Worker</label>
+              <input class="inp" id="v2Api" value={apiBase} onInput={(e) => setApiBase(e.currentTarget.value)} placeholder="https://ten-worker.workers.dev" autocomplete="off" spellCheck={false} />
+            </div>
+            <div class="v2field">
+              <label class="fl" for="v2Key">ADMIN_KEY</label>
+              <input class="inp" id="v2Key" value={adminKey} onInput={(e) => setAdminKey(e.currentTarget.value)} type="password" placeholder="Khoá quản trị" autocomplete="off" />
+              <p class="hint">Chỉ lưu trong phiên trình duyệt; đóng tab là mất.</p>
+            </div>
+            <button class="btn pri" type="submit" disabled={busy}>{busy ? 'Đang kiểm tra…' : 'Kết nối'}</button>
+          </form>
+
+          {message ? <div class="msgbar show err" role="alert">{message}</div> : null}
+        </div>
       </div>
     </main>
   );

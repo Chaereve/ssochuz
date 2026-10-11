@@ -1,7 +1,7 @@
 /* Build admin static bundle (một trang quản trị duy nhất): Preact + TipTap,
    rồi copy source CSS ra thư mục gốc. Sửa src/admin/ rồi chạy npm run build:admin. */
 import { createHash } from 'node:crypto';
-import { copyFileSync, readFileSync, statSync } from 'node:fs';
+import { readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
@@ -10,7 +10,13 @@ import { evaluateBundleFile } from './bundle_budget.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const kb = (n) => (n / 1024).toFixed(1) + 'kb';
 
-copyFileSync(path.join(ROOT, 'src/admin/styles/admin.css'), path.join(ROOT, 'admin.css'));
+/* CSS nguồn được minify bằng esbuild khi build (nội dung không đổi, chỉ bỏ khoảng trắng/chú thích). */
+{
+  const { transform } = await import('esbuild');
+  const src = readFileSync(path.join(ROOT, 'src/admin/styles/admin.css'), 'utf8');
+  const min = await transform(src, { loader: 'css', minify: true, legalComments: 'none' });
+  writeFileSync(path.join(ROOT, 'admin.css'), min.code);
+}
 
 /* Trình soạn thảo chương (Tiptap/ProseMirror) build TRƯỚC thành tệp riêng, tải khi
    mở khung soạn chương (src/admin/utils/editorLoader.js). ?v= của nó = sha1 nội
