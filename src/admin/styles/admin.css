@@ -835,3 +835,38 @@ body.admin .v2form .row>label{min-width:0}
 body.admin .v2edit-head{margin:6px 0 16px;gap:10px}
 body.admin .v2edit-head h3{font-size:21px}
 body.admin .v2form .btn.pri{height:40px}
+
+/* =====================================================================
+   v6 — kiểu Wattpad/app chuyên nghiệp: bìa là trung tâm, form hai cột
+   (Thêm bộ & Sửa bộ dùng chung: bìa + trạng thái bên phải, thông tin bên trái)
+   ===================================================================== */
+body.admin .v2main{max-width:1280px}
+body.admin .v2form{max-width:none;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
+body.admin .v2form>section{grid-column:1;min-width:0}
+body.admin .v2form>section[aria-label="Ảnh bìa"]{grid-column:2;grid-row:1 / span 3;position:sticky;top:86px}
+body.admin .v2form>section[aria-label="Ảnh bìa"] .v2up-drop{min-height:300px;border-radius:14px;background:linear-gradient(160deg,var(--surf2),var(--surf3))}
+body.admin .v2form>section[aria-label="Ảnh bìa"] .v2up-preview{height:330px;border-radius:12px;box-shadow:0 14px 30px -18px rgba(0,0,0,.45)}
+body.admin .v2form>section[aria-label="Ảnh bìa"] .v2fsec-head b{font-size:14.5px}
+body.admin .v2form>.row,body.admin .v2form>.sticky-actions,body.admin .v2form>.savebar{grid-column:1 / -1}
+body.admin .v2form>.sticky-actions{position:sticky;bottom:0;z-index:5;margin:0 -2px;padding:12px 14px;border:1px solid var(--bd);border-radius:14px;background:color-mix(in srgb,var(--surf) 92%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+@media(max-width:1080px){
+  body.admin .v2form{grid-template-columns:minmax(0,1fr)}
+  body.admin .v2form>section[aria-label="Ảnh bìa"]{grid-column:1;grid-row:auto;position:static}
+  body.admin .v2form>section[aria-label="Ảnh bìa"] .v2up-preview{height:260px}
+}
+
+/* Thư viện: bìa lớn hơn, tên truyện đậm, tác giả là dòng phụ — giống danh sách truyện của Wattpad */
+body.admin .v2thumb{width:46px;height:64px;border-radius:8px;box-shadow:0 2px 6px -2px rgba(0,0,0,.25)}
+body.admin .v2book-table td:nth-child(3) b{font-size:14.5px;font-weight:650;line-height:1.35}
+body.admin .v2book-table td:nth-child(3) .sm{margin-top:2px}
+body.admin .v2book-table td:nth-child(4){color:var(--mut);font-size:13.5px}
+body.admin .v2book-table tbody tr{transition:background-color .15s var(--ease-out)}
+body.admin .v2book-table tbody td{height:84px}
+body.admin .v2book-table .v2actions .btn{height:32px}
+/* Cột ảnh bìa: mọi con co được trong 300px (ô file/URL không còn đẩy tràn mép phải) */
+body.admin .v2form>section[aria-label="Ảnh bìa"]{min-width:0;max-width:100%;overflow:hidden}
+body.admin .v2form>section[aria-label="Ảnh bìa"] *{max-width:100%;min-width:0;box-sizing:border-box}
+body.admin .v2form>section[aria-label="Ảnh bìa"] .v2up-row{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+body.admin .v2form>section[aria-label="Ảnh bìa"] .v2up-row>.btn{width:100%}
+body.admin .v2form>section[aria-label="Ảnh bìa"] input[type=file]{width:100%;font-size:12.5px}
+body.admin .v2form>section[aria-label="Ảnh bìa"] .inp{width:100%}
