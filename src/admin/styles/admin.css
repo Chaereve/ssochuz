@@ -850,3 +850,17 @@ body.admin .v2gcard-author{white-space:normal;overflow:visible;text-overflow:cli
 body.admin .v2gcard b{-webkit-line-clamp:3;overflow-wrap:anywhere}
 body.admin .v2rowtext b{max-width:none;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
 body.admin .v2roles th:first-child,body.admin .v2roles td:first-child{width:45%;min-width:200px}
+
+/* ===== v21 — Trình soạn chương: thanh hành động chia 2 tầng — (1) trạng thái + nhóm công cụ (nhập/xuất, ảnh, preview) xuống dòng gọn; (2) nút lưu nháp tách riêng ===== */
+body.admin .v2chap-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;margin-top:14px;padding-bottom:12px;border-bottom:1px solid var(--a-bd)}
+body.admin .v2chap-stat{flex:1 1 260px;min-width:0}
+body.admin .v2chap-tools{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;flex:1 1 auto;min-width:0}
+body.admin .v2chap-tools .btn{white-space:nowrap}
+body.admin .v2chap-savebar{display:flex;align-items:center;gap:10px;margin-top:12px}
+body.admin .v2chap-savebar .btn{white-space:nowrap}
+body.admin .v2chap-danger{margin-top:16px}
+@media (max-width:640px){
+  body.admin .v2chap-tools{justify-content:flex-start}
+  body.admin .v2chap-tools .btn{flex:1 1 calc(50% - 6px)}
+  body.admin .v2chap-savebar .btn{width:100%;justify-content:center}
+}

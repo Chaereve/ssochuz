@@ -745,9 +745,9 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
               </div>
             </div>
           ) : null}
-          <div class="row mt v2chap-actions">
-            <span class="sm muted">{stat.words} từ · {stat.chars} ký tự · ~{readTime(stat.words)} phút đọc{draft ? ' · có nháp autosave' : ''}</span>
-            <span class="grow"></span>
+          <div class="v2chap-bar">
+            <span class="sm muted v2chap-stat">{stat.words} từ · {stat.chars} ký tự · ~{readTime(stat.words)} phút đọc{draft ? ' · có nháp autosave' : ''}</span>
+            <div class="v2chap-tools" role="group" aria-label="Công cụ chương">
             <input ref={fileRef} class="hide" type="file" aria-label="Nhập tệp chương .txt hoặc .html" accept=".txt,.html,.htm,text/plain,text/html" onChange={(e) => importFile(e.currentTarget.files && e.currentTarget.files[0])} />
             <input ref={multiRef} class="hide" type="file" aria-label="Nhập tệp nhiều chương .txt hoặc .docx" accept=".txt,.docx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(e) => { importMultiFile(e.currentTarget.files && e.currentTarget.files[0]); e.currentTarget.value = ''; }} />
             <input ref={imageRef} class="hide" type="file" aria-label="Tải ảnh chèn vào chương" accept="image/jpeg,image/png,image/webp" onChange={(e) => chooseImage(e.currentTarget.files && e.currentTarget.files[0])} />
@@ -756,7 +756,10 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
             <button class="btn ghost sm" type="button" disabled={uploading} onClick={() => imageRef.current && imageRef.current.click()}>{uploading ? 'Đang nén ảnh…' : 'Upload ảnh'}</button>
             {draft && !restored ? <button class="btn ghost sm" type="button" onClick={restoreDraft}>Khôi phục nháp</button> : null}
             <button class="btn ghost sm" type="button" onClick={() => setPreview(!preview)}>{preview ? 'Ẩn preview' : 'Preview độc giả'}</button>
-            <button class="btn pri sm" type="button" disabled={writeBlocked || !!temps.length || saving || importSaving} title={(writeBlocked ? 'Quota KV hôm nay đã hết — nháp cục bộ vẫn được giữ' : (online ? 'Ghi chương vào Cloudflare KV (chỉ gửi 1 chương)' : 'Chỉ lưu nháp phiên — chưa ghi Cloudflare KV')) + ' · Ctrl/Cmd+S'} onClick={saveChapter}>{saving ? 'Đang lưu…' : (writeBlocked ? 'Hết quota KV' : (online ? 'Lưu chương' : 'Lưu nháp phiên'))}</button>
+            </div>
+          </div>
+          <div class="v2chap-savebar">
+                        <button class="btn pri sm" type="button" disabled={writeBlocked || !!temps.length || saving || importSaving} title={(writeBlocked ? 'Quota KV hôm nay đã hết — nháp cục bộ vẫn được giữ' : (online ? 'Ghi chương vào Cloudflare KV (chỉ gửi 1 chương)' : 'Chỉ lưu nháp phiên — chưa ghi Cloudflare KV')) + ' · Ctrl/Cmd+S'} onClick={saveChapter}>{saving ? 'Đang lưu…' : (writeBlocked ? 'Hết quota KV' : (online ? 'Lưu chương' : 'Lưu nháp phiên'))}</button>
           </div>
           <div class="v2chap-danger">
             <span class="sm">Xoá chương đang chọn khỏi bộ — cần gõ XOÁ để xác nhận, không khôi phục được.</span>
