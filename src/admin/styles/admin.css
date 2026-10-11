@@ -736,3 +736,13 @@ body.admin .v2form>section>p.hint{margin-bottom:4px}
 /* Nút lưu: một hàng căn phải, không kéo full-width */
 body.admin .v2form .sticky-actions,body.admin .v2form>.row.sticky-actions{display:flex;justify-content:flex-end;grid-column:1 / -1}
 body.admin .v2form .sticky-actions .btn{width:auto}
+
+/* ===== v9 — thẻ xem trước truyện (Thêm bộ), kiểu thẻ truyện Wattpad ===== */
+body.admin .v2preview{display:grid;grid-template-columns:96px minmax(0,1fr);gap:14px;align-items:start;padding:12px;margin:0 0 14px;border:1px solid var(--a-bd);border-radius:var(--a-r);background:var(--a-surf2)}
+body.admin .v2preview-cover{width:96px;aspect-ratio:2/3;border-radius:var(--a-r-sm);overflow:hidden;background:var(--a-surf3);display:grid;place-items:center;box-shadow:0 6px 14px -8px rgba(0,0,0,.5)}
+body.admin .v2preview-cover img{width:100%;height:100%;object-fit:cover;display:block}
+body.admin .v2preview-cover span{font-size:11.5px;color:var(--a-dim);text-align:center;padding:6px}
+body.admin .v2preview-body{display:flex;flex-direction:column;gap:4px;min-width:0;padding-top:2px}
+body.admin .v2preview-body b{font-size:15px;font-weight:700;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
+body.admin .v2preview-author{font-size:13px;color:var(--a-mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.admin .v2preview-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}

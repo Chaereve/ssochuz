@@ -4,14 +4,17 @@ import { slugify, COMPLETION_STATUSES, PUB_STATUSES, VISIBILITIES } from '../uti
 import { ImageUploader } from './ImageUploader.jsx';
 import { persistableCover } from '../utils/cover.js';
 
+const EMPTY_FORM = {
+  title: '', slug: '', author: '', couple: '', year: '', status: 'Đang cập nhật',
+  is18: '0', thumb: '', coverAlt: '', synopsis: '', chapter: '', genre: '',
+  pubStatus: 'published', visibility: 'public', publishedAt: '',
+};
+
 export function NewBook({ registry, onCreate, onUploadImage, apiBase = '', writeBlocked = false, online = false }) {
-  const [form, setForm] = useState({
-    title: '', slug: '', author: '', couple: '', year: '', status: 'Đang cập nhật',
-    is18: '0', thumb: '', coverAlt: '', synopsis: '', chapter: '', genre: '',
-    pubStatus: 'published', visibility: 'public', publishedAt: '',
-  });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [busy, setBusy] = useState(false);
   const preview = slugify(form.slug || form.title);
+  function reset() { setForm(EMPTY_FORM); }
   function update(key, value) { setForm((cur) => Object.assign({}, cur, { [key]: value })); }
 
   async function submit(e) {
@@ -20,11 +23,7 @@ export function NewBook({ registry, onCreate, onUploadImage, apiBase = '', write
     setBusy(true);
     try {
       const ok = await onCreate(Object.assign({}, form, { thumb: persistableCover(form.thumb) }));
-      if (ok) setForm({
-        title: '', slug: '', author: '', couple: '', year: '', status: 'Đang cập nhật',
-        is18: '0', thumb: '', coverAlt: '', synopsis: '', chapter: '', genre: '',
-        pubStatus: 'published', visibility: 'public', publishedAt: '',
-      });
+      if (ok) setForm(EMPTY_FORM);
     } finally { setBusy(false); }
   }
 
@@ -70,6 +69,17 @@ export function NewBook({ registry, onCreate, onUploadImage, apiBase = '', write
       </section>
       <section class="v2fsec" aria-label="Ảnh bìa">
         <div class="v2fsec-head"><b>Ảnh bìa</b><span class="hint">Có thể bỏ qua rồi thêm sau trong tab Sửa bộ.</span></div>
+        <div class="v2preview" aria-label="Xem trước thẻ truyện">
+          <div class="v2preview-cover">{form.thumb ? <img src={form.thumb} alt="" /> : <span>Chưa có bìa</span>}</div>
+          <div class="v2preview-body">
+            <b title={form.title}>{form.title || 'Tên truyện'}</b>
+            <span class="v2preview-author">{form.author || 'Tác giả'}</span>
+            <span class="v2preview-tags">
+              <span class="v2badge">{form.status}</span>
+              {form.is18 === '1' ? <span class="v2badge v2badge-18">18+</span> : null}
+            </span>
+          </div>
+        </div>
         <ImageUploader
           value={form.thumb}
           altValue={form.coverAlt}
@@ -89,6 +99,7 @@ export function NewBook({ registry, onCreate, onUploadImage, apiBase = '', write
         ? 'Khi đang nối Worker, Tạo truyện ghi ngay book JSON + registry — tab Kiểm tra dữ liệu sẽ thấy bộ mới, không chờ thêm bước nào.'
         : 'Chế độ dữ liệu tĩnh: chỉ tạo nháp phiên, chưa ghi Cloudflare KV.'}</p>
       <div class="row sticky-actions">
+        <button type="button" class="btn ghost" onClick={reset} disabled={busy}>Xoá nháp</button>
         <button class="btn pri" disabled={busy || writeBlocked}>{writeBlocked ? 'Hết quota KV' : (busy ? 'Đang tạo…' : 'Tạo truyện')}</button>
       </div>
     </form>
