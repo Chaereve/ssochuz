@@ -162,6 +162,10 @@ function gzipSize(relPath) {
   }
 
   click(pAdmin.doc.querySelector('button[data-tab="list"]'));
+  await new Promise((r) => setTimeout(r, 250));
+  /* Thư viện mặc định là LƯỚI; các bước tìm dòng bảng cần bật Bảng */
+  [...pAdmin.doc.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Bảng')?.click();
+  await wait(120);
   await wait(120);
   const row = [...pAdmin.doc.querySelectorAll('.v2book-table tbody tr')].find((tr) => tr.textContent.includes(slug));
   click(row.querySelector('.v2actions button'));

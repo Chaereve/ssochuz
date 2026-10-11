@@ -44,20 +44,20 @@ const CRUMBS = {
 /* Page header chuẩn hoá cho mọi tab: title + mô tả ngắn đúng theo dữ liệu
    thật của từng module (không hứa tính năng không tồn tại). */
 const PAGE_HEAD = {
-  overview: ['Dashboard', 'Tình trạng thư viện, việc cần làm hôm nay và sức khỏe hệ thống.'],
-  list: ['Thư viện', 'Quản lý toàn bộ bộ truyện — lọc theo trạng thái, thao tác hàng loạt, sửa hoặc xoá từng bộ.'],
-  new: ['Thêm bộ', 'Tạo bộ truyện mới. Khi đã nối Worker, book JSON và registry được ghi ngay.'],
-  chapters: ['Chương', 'Hàng đợi nháp, chờ duyệt, hẹn giờ và các bộ mới cập nhật — chỉ dùng metadata registry.'],
-  cmts: ['Bình luận', 'Kiểm duyệt bình luận độc giả đang lưu trong KV.'],
-  reports: ['Báo lỗi', 'Báo lỗi từ người đọc — xem chi tiết và đánh dấu đã xử lý.'],
-  votes: ['Phiếu bầu', 'Xem phiếu bầu khóa theo người; gỡ/reset là thao tác ghi có xác nhận mạnh.'],
-  homepage: ['Homepage CMS', 'Slide trang chủ, lựa chọn biên tập, lịch ra chương và thông báo.'],
-  users: ['Tác giả', 'Tác giả gắn trên bộ truyện và số liệu xuất bản theo từng người.'],
-  roles: ['Vai trò', 'Nhân sự quản trị và phạm vi giao diện theo vai trò.'],
-  stats: ['Thống kê', 'Lượt đọc và phiếu thích đọc từ KV — tab này chỉ đọc, không ghi.'],
-  doctor: ['Kiểm tra dữ liệu', 'Audit KV, quét lệch số chương/chương rỗng và công cụ đếm lại.'],
-  log: ['Nhật ký', 'Tối đa 200 thao tác quản trị gần nhất từ khóa log.'],
-  settings: ['Cài đặt', 'Backup, khôi phục, nhập Blogger, stats cache và overflow KV.'],
+  overview: ['Tổng quan', 'Số liệu thư viện và việc cần làm hôm nay.'],
+  list: ['Thư viện', 'Lọc, sửa và xuất bản hàng loạt.'],
+  new: ['Thêm bộ', 'Tạo bộ truyện mới, kèm chương đầu nếu có.'],
+  chapters: ['Chương', 'Nháp, chờ duyệt và lịch đăng.'],
+  cmts: ['Bình luận', 'Kiểm duyệt bình luận của độc giả.'],
+  reports: ['Báo lỗi', 'Lỗi do độc giả gửi. Đánh dấu khi đã xử lý.'],
+  votes: ['Phiếu bầu', 'Phiếu theo người đọc. Gỡ phiếu cần xác nhận.'],
+  homepage: ['Trang chủ', 'Slide, bộ được chọn và lịch ra chương.'],
+  users: ['Tác giả', 'Tác giả và số bộ đã xuất bản.'],
+  roles: ['Vai trò', 'Nhân sự quản trị và quyền truy cập.'],
+  stats: ['Thống kê', 'Lượt đọc và lượt thích.'],
+  doctor: ['Kiểm tra dữ liệu', 'Đối chiếu KV, số chương và bộ thiếu dữ liệu.'],
+  log: ['Nhật ký', '200 thao tác quản trị gần nhất.'],
+  settings: ['Cài đặt', 'Sao lưu, khôi phục và nhập từ Blogger.'],
 };
 
 function Icon({ name }) {
@@ -90,7 +90,7 @@ function connChip(state) {
   if (state.online) return { cls: 'ok', text: 'Cloudflare KV · Online' };
   if (state.connError === 'badkey') return { cls: 'bad', text: 'Sai ADMIN_KEY' };
   if (state.connError === 'network') return { cls: 'bad', text: 'Lỗi kết nối Worker' };
-  return { cls: 'warn', text: 'Dữ liệu tĩnh · Chỉ đọc' };
+  return { cls: 'warn', text: 'Dữ liệu tĩnh · Chỉ đọc', hint: 'Thay đổi chỉ lưu tạm trong phiên. Cần nối Worker bằng ADMIN_KEY để ghi KV.' };
 }
 
 function ThemeButton() {
@@ -225,7 +225,7 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
             <a class="logo v2mlogo" href="/" aria-label="Trang chủ ssochuz"><span class="dot"></span>ssochuz</a>
             <form class="v2search" onSubmit={submitSearch}>
               <Icon name="search" />
-              <input class="inp" ref={searchRef} value={q} placeholder="Tìm truyện, tác giả… (Ctrl+K)" onInput={(e) => setQ(e.target.value)} aria-label="Tìm trong quản trị" />
+              <input class="inp" ref={searchRef} value={q} placeholder="Tìm bộ truyện…" title="Tìm nhanh (Ctrl+K)" onInput={(e) => setQ(e.target.value)} aria-label="Tìm trong quản trị" />
               {suggest.length ? (
                 <div class="v2search-suggest" role="listbox" aria-label="Gợi ý tìm kiếm">
                   {suggest.map((b) => (
@@ -237,9 +237,9 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
               ) : null}
             </form>
             <span class="grow"></span>
-            <span class={`chip ${chip.cls}`} title={chip.text}><span class="d"></span><b>{chip.text}</b></span>
+            <span class={`chip ${chip.cls}`} title={chip.hint || chip.text}><span class="d"></span><b>{chip.text}</b></span>
             <button type="button" class={`v2quota ${qLevel}`} title={quotaTitle} onClick={() => go('doctor')}>
-              <span>KV write</span><b>{used}/{limit}</b>
+              <span>KV write</span>{' '}<b>{used}/{limit}</b>
               {!quota.supported ? <em class="v2est">ước tính</em> : null}
               {quota.readSupported && quota.readWarn
                 ? <em class="v2est" title={`Lượt đọc KV hôm nay (ước lượng): ${Number(quota.readsToday) || 0}/${Number(quota.readBudget) || 100000}`}>
@@ -262,7 +262,7 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
                   </div>
                 ) : null}
               </div>
-              <a class="hbtn admin-tool" href="/" target="_blank" rel="noopener" title="Mở trang web" aria-label="Mở trang web"><Icon name="right" /><span class="admin-tool-label">Web</span></a>
+              <a class="hbtn admin-tool" href="/" target="_blank" rel="noopener" title="Mở trang web ở tab mới" aria-label="Mở trang web ở tab mới"><Icon name="link" /><span class="admin-tool-label">Xem web</span></a>
               <ThemeButton />
               <div class="v2user">
                 <button class="hbtn admin-tool" type="button" onClick={() => { setMenu(!menu); setBellOpen(false); }} aria-haspopup="menu" aria-expanded={menu} aria-label="Menu tài khoản">
@@ -293,7 +293,7 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
           </nav>
           {(() => {
             const head = activeTab === 'edit'
-              ? [currentTitle || currentSlug || 'Sửa bộ', 'Metadata, ảnh bìa, khóa mật mã và soạn chương. Thay đổi chỉ ghi Cloudflare KV khi đã nối ADMIN_KEY.']
+              ? ['Sửa bộ', '']
               : (PAGE_HEAD[activeTab] || [CRUMBS[activeTab] || activeTab, '']);
             return (
               <header class="v2pagehead">
@@ -302,12 +302,6 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
               </header>
             );
           })()}
-          {!state.online ? (
-            <div class="v2staticbar" role="status">
-              <b>Chế độ dữ liệu tĩnh</b>
-              Thay đổi chỉ là nháp phiên và sẽ mất khi đóng tab.
-            </div>
-          ) : null}
           {used >= limit && state.online ? (
             <div class="v2partial" role="alert">
               <span>Quota KV hôm nay đã hết ({used}/{limit}). Đã chặn mọi thao tác ghi. Vẫn đọc được dữ liệu; nháp editor còn trong trình duyệt.</span>

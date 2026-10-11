@@ -13,7 +13,7 @@
 const { page, dataFetch, read, ROOT } = require('./mk');
 const fs = require('fs'), path = require('path');
 const BASE = 'https://cms.test';
-const SLUG = 'co-vo-ho-anh-cua-toi';
+const SLUG = 'co-vo-ho-danh-da-cua-toi';
 const REG = JSON.parse(read('data/registry.json'));
 const BOOK = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/book', SLUG + '.json'), 'utf8'));
 const wait = ms => new Promise(r => setTimeout(r, ms));

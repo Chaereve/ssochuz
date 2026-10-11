@@ -99,7 +99,7 @@ export function Overview({ state, onReload, onTodo }) {
             const sb = !!ovf.supabase;
             const r2 = !!ovf.r2;
             return (
-              <SystemRow kind={sb || r2 ? 'good' : 'warn'} icon={sb || r2 ? 'check' : 'info'} title="Overflow KV (tuỳ chọn)">
+              <SystemRow kind={sb || r2 ? 'good' : 'warn'} icon={sb || r2 ? 'check' : 'info'} title="Lưu trữ tràn (tuỳ chọn)">
                 Supabase: {sb ? 'connected' : 'unavailable'}. R2: {r2 ? 'connected' : 'unavailable'}. Bìa: {ovf.covers ? 'Supabase Storage (bucket covers, 1 GB free)' : 'KV'}. Ảnh chương: KV. Overflow không bắt buộc — admin vẫn chạy full JSON trên KV.
               </SystemRow>
             );
@@ -109,7 +109,7 @@ export function Overview({ state, onReload, onTodo }) {
 
       <section class="card2">
         <div class="row"><h3>Lượt đọc 14 ngày</h3><span class="grow"></span><span class="sm muted">{statsDays.length ? 'cập nhật ' + (state.stats.updatedAt || '').slice(0, 16).replace('T', ' ') : 'chưa có số liệu'}</span></div>
-        {statsDays.length ? <BarsChart days={statsDays} take={14} /> : <p class="hint">Chưa có dữ liệu lượt đọc từ Worker</p>}
+        {statsDays.length ? <BarsChart days={statsDays} take={14} /> : <p class="hint">Chưa có số liệu từ Worker.</p>}
       </section>
 
       <section class="card2">

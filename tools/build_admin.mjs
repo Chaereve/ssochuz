@@ -1,16 +1,27 @@
 /* Build admin static bundle (một trang quản trị duy nhất): Preact + TipTap,
    rồi copy source CSS ra thư mục gốc. Sửa src/admin/ rồi chạy npm run build:admin. */
 import { createHash } from 'node:crypto';
-import { copyFileSync, readFileSync, statSync } from 'node:fs';
+import { copyFileSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { build } from 'esbuild';
+import { build, transform } from 'esbuild';
 import { evaluateBundleFile } from './bundle_budget.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const kb = (n) => (n / 1024).toFixed(1) + 'kb';
 
-copyFileSync(path.join(ROOT, 'src/admin/styles/admin.css'), path.join(ROOT, 'admin.css'));
+/* CSS được minify (esbuild, không đổi nội dung) để giữ trong ngân sách dung lượng; nguồn vẫn đọc được trong src/. */
+const adminCssSrc = readFileSync(path.join(ROOT, 'src/admin/styles/admin.css'), 'utf8');
+const adminCss = (await transform(adminCssSrc, { loader: 'css', minify: true, legalComments: 'none' })).code;
+writeFileSync(path.join(ROOT, 'admin.css'), adminCss);
+/* ?v= của admin.css trong admin.html = sha1 nội dung ⇒ mỗi lần đổi CSS là đổi URL,
+   trình duyệt không dùng bản cache cũ (trước đây chuỗi v cố định khiến thay đổi không hiện). */
+{
+  const cssHash = createHash('sha1').update(readFileSync(path.join(ROOT, 'admin.css'))).digest('hex').slice(0, 10);
+  const htmlPath = path.join(ROOT, 'admin.html');
+  const html = readFileSync(htmlPath, 'utf8');
+  writeFileSync(htmlPath, html.replace(/\/admin\.css\?v=[^"]*/, '/admin.css?v=' + cssHash));
+}
 
 /* Trình soạn thảo chương (Tiptap/ProseMirror) build TRƯỚC thành tệp riêng, tải khi
    mở khung soạn chương (src/admin/utils/editorLoader.js). ?v= của nó = sha1 nội
@@ -69,4 +80,13 @@ for (const f of ['admin.css', 'admin.js', 'admin-editor.js', 'admin-docx.js']) {
   if (ev.status === 'warn' || ev.status === 'exceeded') {
     console.warn('  ⚠ CẢNH BÁO DUNG LƯỢNG: ' + ev.message);
   }
+}
+
+/* ?v= của admin.js trong admin.html = sha1 nội dung (cùng lý do với admin.css ở trên). */
+{
+  const jsHash = createHash('sha1').update(readFileSync(path.join(ROOT, 'admin.js'))).digest('hex').slice(0, 10);
+  const htmlPath = path.join(ROOT, 'admin.html');
+  const html = readFileSync(htmlPath, 'utf8');
+  writeFileSync(htmlPath, html.replace(/\/admin\.js\?v=[^"']*/, '/admin.js?v=' + jsHash));
+  console.log('  admin.html: ?v= admin.js = ' + jsHash);
 }

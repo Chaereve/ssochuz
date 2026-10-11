@@ -28,7 +28,7 @@ export function LockedBadge({ isLocked, book, locked }) {
   if (!on) return null;
   return (
     <span class="v2badge v2badge-lock" title="Truyện hiện đang bị khóa đối với người đọc.">
-      <span aria-hidden="true">🔒</span> Đã khóa
+      <span class="v2badge-ic" aria-hidden="true" dangerouslySetInnerHTML={{ __html: (window.CZ && window.CZ.icon ? window.CZ.icon('lock', 'i-s') : '') }} /> Đã khóa
     </span>
   );
 }

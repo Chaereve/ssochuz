@@ -35,6 +35,9 @@ const chapCount = (reg.lib || []).reduce((sum, b) => sum + (Number(b.chapters) |
 
   click('button[data-tab="list"]');
   await wait(200);
+  /* Thư viện mặc định là LƯỚI; test đếm dòng bảng nên bật chế độ Bảng trước */
+  [...doc.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Bảng').click();
+  await wait(200);
   out.list = { rows: doc.querySelectorAll('.v2book-table tbody tr').length };
   /* danh sách có phân trang 24 bộ/trang → trang 1 nhiều nhất 24 dòng */
   const PAGE = 24;

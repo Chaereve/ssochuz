@@ -126,7 +126,7 @@ export function HomepageCMS({ registry, apiBase, onSave, writeBlocked = false, o
         <section class="card2">
           <h3>Lịch ra chương</h3>
           {sched.map((it, i) => (
-            <div class="v2form row" key={i}>
+            <div class="v2schedrow" key={i}>
               <input class="inp" aria-label="Ngày trong tuần" value={it.days || ''} placeholder="Thứ 2, Thứ 5" onInput={(e) => setSched(sched.map((x, k) => k === i ? Object.assign({}, x, { days: e.target.value }) : x))} />
               <select class="inp" aria-label="Bộ truyện trong lịch" value={it.slug || ''} onChange={(e) => setSched(sched.map((x, k) => k === i ? Object.assign({}, x, { slug: e.target.value, title: (books[e.target.value] && books[e.target.value].title) || x.title }) : x))}>
                 <option value="">Chọn bộ…</option>

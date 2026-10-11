@@ -100,6 +100,10 @@ async function until(fn, msg, tries = 100) {
   await until(() => !doc.querySelector('.v2gate'), 'chưa qua được cổng đăng nhập admin');
 
   click(win, doc.querySelector('button[data-tab="list"]'));
+  await new Promise((r) => setTimeout(r, 250));
+  /* Thư viện mặc định là LƯỚI; các bước tìm dòng bảng cần bật Bảng */
+  [...doc.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Bảng')?.click();
+  await wait(150);
   await wait(150);
   const row = [...doc.querySelectorAll('.v2book-table tbody tr')].find((tr) => tr.textContent.includes(slug));
   assert.ok(row, 'không thấy bộ ' + slug);

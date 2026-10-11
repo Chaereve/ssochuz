@@ -72,6 +72,9 @@ async function until(fn, label) {
   await until(() => !$('.v2gate'), 'đăng nhập');
   win.CZ.toast = (message) => notices.push(message);
   click($('button[data-tab="list"]'));
+  /* Thư viện mặc định là LƯỚI: bật Bảng để có nút Sửa trong bảng */
+  await wait(200);
+  [...doc.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Bảng')?.click();
   await until(() => $('.v2book-table .v2actions button'), 'thư viện');
   click($('.v2book-table .v2actions button'));
   await until(() => $('input[accept*=".docx"]'), 'editor');
@@ -170,6 +173,8 @@ async function until(fn, label) {
   };
   choose(file); await wait(40);
   click($('button[data-tab="list"]')); await wait(300);
+  [...doc.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Bảng')?.click();
+  await wait(150);
   click($('.v2book-table .v2actions button'));
   await until(multi, 'mở lại editor'); await wait(100);
   assert.ok(!preview(), 'bỏ kết quả import sau khi rời editor');

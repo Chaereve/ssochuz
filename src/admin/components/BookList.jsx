@@ -7,6 +7,11 @@ import { COMPLETION_STATUSES, VISIBILITIES } from '../utils/books.js';
 
 const PAGE = 24;
 
+function chapterLabel(book) {
+  const n = Number(book && book.chapters) || 0;
+  return n ? n + ' chương' : 'Chưa có chương';
+}
+
 export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulkUpdate, onDelete, apiBase, initialQuery = '', writeBlocked = false }) {
   const lib = (registry && registry.lib) || [];
   const [q, setQ] = useState(initialQuery);
@@ -16,7 +21,7 @@ export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulk
   const [vis, setVis] = useState('');
   const [locked, setLocked] = useState('');
   const [page, setPage] = useState(1);
-  const [view, setView] = useState('table');
+  const [view, setView] = useState('grid');
 
   const filtered = useMemo(() => {
     return lib.filter((book) => {
@@ -122,13 +127,15 @@ export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulk
           {rows.map((book) => (
             <div class="v2gcard" key={book.slug}>
               <BookCover book={book} apiBase={apiBase} className="v2thumb" width={160} height={240} />
-              <b title={book.title}>{book.title}</b>
-              <span class="sm muted v2gcard-author" title={book.author || ''}>{book.author || '—'}</span>
-              <BookBadges book={book} compact />
-              <span class="v2gcard-meta"><span>{countText(book)}</span><span>{book.updated || '—'}</span></span>
-              <span class="v2gcard-acts">
+              <div class="v2gcard-body">
+                <b class="v2gcard-title" title={book.title}>{book.title}</b>
+                <span class="v2gcard-author">{book.author || 'Chưa có tác giả'}</span>
+                <BookBadges book={book} compact />
+              </div>
+              <div class="v2gcard-foot">
+                <span class="v2gcard-meta"><span>{chapterLabel(book)}</span><span>{book.updated || '—'}</span></span>
                 <button class="btn ghost sm" type="button" onClick={() => onEdit(book.slug)}>Sửa</button>
-              </span>
+              </div>
             </div>
           ))}
         </div>

@@ -1,7 +1,6 @@
 import { h } from 'preact';
 import { useMemo, useState } from 'preact/hooks';
 import { LockedBadge } from './Badges.jsx';
-import { genreNameOf } from '../utils/books.js';
 
 export function UsersPanel({ registry, onEdit, onFilterAuthor }) {
   const lib = (registry && registry.lib) || [];
@@ -26,17 +25,17 @@ export function UsersPanel({ registry, onEdit, onFilterAuthor }) {
   return (
     <div id="pane-users" class="v2pane">
       <section class="card2">
-        <div class="row"><h3>Tác giả</h3><span class="grow"></span><span class="sm muted">{authors.length} người · lấy từ metadata bộ truyện</span></div>
-        <p class="hint">Worker KV không có bảng độc giả. Danh sách dưới đây là tác giả đã gắn vào sách. Hồ sơ độc giả (My Space) nằm trên Durable Object riêng, không giả số liệu.</p>
+        <div class="row"><h3>Tác giả</h3><span class="grow"></span><span class="sm muted">{authors.length} người</span></div>
+        <p class="hint">Tổng hợp từ thông tin các bộ truyện.</p>
         <input class="inp" aria-label="Tìm tác giả" value={q} placeholder="Tìm tác giả…" onInput={(e) => setQ(e.target.value)} />
         {shown.length ? (
-          <div class="v2tablewrap">
-            <table class="v2book-table">
+          <div class="v2tablewrap v2authors-wrap">
+            <table class="v2authors">
               <thead><tr><th>Tác giả</th><th>Số bộ</th><th>Xuất bản</th><th>Nháp</th><th>Khóa</th><th>Cập nhật</th><th aria-label="Thao tác">Thao tác</th></tr></thead>
               <tbody>
                 {shown.map((a) => (
                   <tr key={a.name}>
-                    <td data-lb="Tác giả"><b>{a.name}</b><div class="sm muted">{[...new Set(a.books.map((b) => genreNameOf(b)).filter(Boolean))].slice(0, 3).join(', ') || '—'}</div></td>
+                    <td data-lb="Tác giả"><b class="v2au-name">{a.name}</b></td>
                     <td data-lb="Số bộ">{a.books.length}</td>
                     <td data-lb="Xuất bản">{a.published}</td>
                     <td data-lb="Nháp">{a.draft}</td>
@@ -51,10 +50,6 @@ export function UsersPanel({ registry, onEdit, onFilterAuthor }) {
             </table>
           </div>
         ) : <div class="empty">Không có tác giả khớp.</div>}
-      </section>
-      <section class="card2">
-        <h3>Độc giả</h3>
-        <div class="empty">Chưa có API danh sách độc giả trên KV. Đăng nhập người đọc dùng Supabase Auth; không bịa số liệu.</div>
       </section>
     </div>
   );

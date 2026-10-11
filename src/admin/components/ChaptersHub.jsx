@@ -1,4 +1,5 @@
 import { h } from 'preact';
+import { useState } from 'preact/hooks';
 import { BookCover } from './BookCover.jsx';
 import { LockedBadge, PublishStatusBadge } from './Badges.jsx';
 import { chapterAtMs, hoursUntil } from '../../shared/schedule.js';
@@ -19,6 +20,8 @@ export function ChaptersHub({ registry, apiBase, onEdit }) {
      lần lưu chương/cron, nên hub vẫn chỉ đọc metadata, không tải full HTML */
   const waiting = lib.filter((b) => Number(b.pending) > 0)
     .sort((a, b) => String(a.schedNext || 'z').localeCompare(String(b.schedNext || 'z')));
+  const [pick, setPick] = useState('');
+  const current = pick || (lib[0] && lib[0].slug) || '';
   function Row({ b, action }) {
     return (
       <li>
@@ -36,7 +39,15 @@ export function ChaptersHub({ registry, apiBase, onEdit }) {
     <div id="pane-chapters" class="v2pane">
       <section class="card2">
         <div class="row"><h3>Chương &amp; xuất bản</h3><span class="grow"></span><span class="sm muted">{lib.length} bộ</span></div>
-        <p class="hint">Mở một bộ để sửa chương, kéo thả thứ tự, chèn ảnh trong nội dung, hẹn giờ hoặc lưu trữ. Không trộn tình trạng hoàn thành với trạng thái xuất bản. Hub chỉ dùng metadata registry — không tải full HTML chương.</p>
+        <p class="hint">Chọn một bộ để quản lý chương, thứ tự và lịch đăng.</p>
+        {lib.length ? (
+          <div class="v2picker-row">
+            <select class="inp" value={current} onChange={(e) => setPick(e.currentTarget.value)} aria-label="Chọn bộ">
+              {lib.map((b) => <option key={b.slug} value={b.slug}>{b.title}</option>)}
+            </select>
+            <button class="btn pri" type="button" disabled={!current} onClick={() => onEdit(current)}>Quản lý chương</button>
+          </div>
+        ) : null}
       </section>
       <section class="card2">
         <h3>Hàng đợi nháp</h3>

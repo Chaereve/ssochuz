@@ -94,6 +94,9 @@ function input(win, el, value) {
 
   click(win, doc.querySelector('button[data-tab="list"]'));
   await wait(150);
+  /* Thư viện mặc định là LƯỚI; test đếm dòng bảng nên bật chế độ Bảng trước */
+  [...doc.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Bảng').click();
+  await wait(150);
   /* mở ĐÚNG bộ third-person (danh sách sắp theo ngày cập nhật nên dòng đầu
      có thể là bộ khác — trước đây bài test cứ bấm dòng đầu rồi so slug) */
   const targetRow = [...doc.querySelectorAll('.v2book-table tbody tr')]

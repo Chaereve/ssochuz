@@ -21,8 +21,8 @@ export function RolesPanel({ registry, role, onSave }) {
     <div id="pane-roles" class="v2pane">
       <section class="card2">
         <div class="row"><h3>Vai trò &amp; quyền</h3><span class="grow"></span><span class="pill acc">{roleLabel(role)}</span></div>
-        <p class="hint">Danh sách này lưu trên KV (registry.settings.staff) và bị lọc khỏi API công khai. Ghi dữ liệu vẫn đòi ADMIN_KEY — Worker không tin role gửi từ trình duyệt. ADMIN_KEY luôn là Super Admin.</p>
-        <div class="v2role-warn" role="note">Vai trò hiện chỉ điều khiển phạm vi giao diện. Quyền ghi Cloudflare KV vẫn yêu cầu ADMIN_KEY hoặc Worker RBAC thực tế.</div>
+        <p class="hint">Lưu trên KV và không lộ ra API công khai. Ghi dữ liệu vẫn cần ADMIN_KEY; ADMIN_KEY luôn là Super Admin.</p>
+        <div class="v2role-warn" role="note">Vai trò hiện chỉ ẩn/hiện giao diện. Quyền ghi KV vẫn cần ADMIN_KEY.</div>
         <div class="v2role-grid">
           {ROLE_ORDER.map((id) => (
             <div class="v2role-card" key={id}>
@@ -41,24 +41,28 @@ export function RolesPanel({ registry, role, onSave }) {
           </select>
           <button class="btn" type="submit">Thêm</button>
         </form>
-        <div class="v2tablewrap">
-          <table class="v2book-table">
-            <thead><tr><th>Email</th><th>Vai trò</th><th aria-label="Thao tác">Thao tác</th></tr></thead>
-            <tbody>
-              {rows.length ? rows.map((r, i) => (
-                <tr key={r.email}>
-                  <td data-lb="Email">{r.email}</td>
-                  <td data-lb="Vai trò">
-                    <select class="inp" aria-label={'Vai trò của ' + r.email} value={r.role} onChange={(e) => setRows(rows.map((x, k) => k === i ? Object.assign({}, x, { role: e.target.value }) : x))}>
-                      {ROLE_ORDER.map((id) => <option key={id} value={id}>{ROLES[id].label}</option>)}
-                    </select>
-                  </td>
-                  <td data-lb="Thao tác"><button class="btn ghost sm" type="button" onClick={() => setRows(rows.filter((_, k) => k !== i))}>Gỡ</button></td>
-                </tr>
-              )) : <tr><td colspan="3"><div class="empty sm">Chưa có nhân sự — Super Admin dùng ADMIN_KEY.</div></td></tr>}
-            </tbody>
-          </table>
-        </div>
+        {rows.length ? (
+          <div class="v2tablewrap">
+            <table class="v2book-table v2roles">
+              <thead><tr><th>Email</th><th>Vai trò</th><th aria-label="Thao tác">Thao tác</th></tr></thead>
+              <tbody>
+                {rows.length ? rows.map((r, i) => (
+                  <tr key={r.email}>
+                    <td data-lb="Email">{r.email}</td>
+                    <td data-lb="Vai trò">
+                      <select class="inp" aria-label={'Vai trò của ' + r.email} value={r.role} onChange={(e) => setRows(rows.map((x, k) => k === i ? Object.assign({}, x, { role: e.target.value }) : x))}>
+                        {ROLE_ORDER.map((id) => <option key={id} value={id}>{ROLES[id].label}</option>)}
+                      </select>
+                    </td>
+                    <td data-lb="Thao tác"><button class="btn ghost sm" type="button" onClick={() => setRows(rows.filter((_, k) => k !== i))}>Gỡ</button></td>
+                  </tr>
+                )) : null}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div class="empty sm">Chưa có nhân sự — Super Admin dùng ADMIN_KEY.</div>
+        )}
         <div class="row mt"><button class="btn pri" type="button" onClick={() => onSave(rows)}>Lưu nhân sự</button><span class="sm muted">Ghi registry.settings.staff lên KV.</span></div>
       </section>
     </div>

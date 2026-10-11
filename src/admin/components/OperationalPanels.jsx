@@ -23,7 +23,7 @@ function apiAsset(state, url) {
 }
 function NeedOnline({ state, children }) {
   if (state.online) return children;
-  return <div class="msgbar show info">Module này đọc dữ liệu trong KV nên cần nối Worker bằng ADMIN_KEY. Dữ liệu tĩnh vẫn xem được ở tab Tổng quan/Thư viện.</div>;
+  return <div class="msgbar show info">Cần nối Worker bằng ADMIN_KEY để đọc dữ liệu KV. Chế độ tĩnh vẫn xem được Tổng quan và Thư viện.</div>;
 }
 function LoaderButton({ busy, onClick, children }) {
   return <button class="btn ghost sm" type="button" disabled={busy} onClick={onClick}>{busy ? 'Đang đọc…' : children}</button>;
@@ -99,7 +99,7 @@ export function DoctorPanel({ state, onKvAudit, onScanBooks, onRecount, onReload
   return <div id="pane-doctor" class="v2pane">
     <section class="card2">
       <div class="row"><h3>Kiểm tra dữ liệu</h3><span class="grow"></span><button class="btn ghost sm" type="button" onClick={onReload}>Đọc lại registry</button><button class="btn ghost sm" type="button" disabled={scanBusy} onClick={runScan}>{scanBusy ? 'Đang quét…' : 'Quét book'}</button><LoaderButton busy={busy} onClick={load}>Audit KV</LoaderButton></div>
-      <p class="hint">Chạy hoàn toàn trên dữ liệu hiện có; không đổi schema. “Quét book” liệt kê lỗi; bấm Sửa trên từng dòng để ghi (tạo book thiếu / khớp số chương). “Đếm lại” quét cả kho.</p>
+      <p class="hint">Chỉ đọc dữ liệu hiện có. “Quét book” liệt kê lỗi; “Sửa” trên từng dòng mới ghi KV.</p>
       <div class="tiles v2tiles4">
         <div class="tile"><b>{num(lib.length)}</b><span>bộ trong registry</span></div>
         <div class="tile"><b>{num(issues.dup.length)}</b><span>slug trùng/thiếu</span></div>
@@ -122,7 +122,7 @@ export function DoctorPanel({ state, onKvAudit, onScanBooks, onRecount, onReload
         </div>
       ) : null}
       <div class="v2ops-grid">
-        <div class="v2mini"><b>Registry quick check</b><p class="hint">Slug trùng: {issues.dup.slice(0, 6).join(', ') || 'không thấy'}</p><p class="hint">Thiếu tên: {issues.missingTitle.slice(0, 6).join(', ') || 'không thấy'}</p></div>
+        <div class="v2mini"><b>Kiểm tra registry</b><p class="hint">Slug trùng: {issues.dup.slice(0, 6).join(', ') || 'không thấy'}</p><p class="hint">Thiếu tên: {issues.missingTitle.slice(0, 6).join(', ') || 'không thấy'}</p></div>
         <div class="v2mini"><b>KV write quota</b>
           {/* Số THẬT của Worker (từ /api/health, bản 1.16.0): khoá `stats` là chỗ
               tiêu hạn mức ghi nhiều nhất — trước đây ghi mỗi 10 giây = 8.640
@@ -132,7 +132,7 @@ export function DoctorPanel({ state, onKvAudit, onScanBooks, onRecount, onReload
           <span class="kvbar"><span style={{ width: pct(wst.writesToday, wst.writeBudget || 240) + '%' }}></span></span>
           <p class="hint">Thao tác quản trị hôm nay (theo nhật ký KV): {num(state.quota && state.quota.writesToday)}/{num(state.quota && state.quota.limit || 1000)} lượt ({state.quota && state.quota.source}).</p>
         </div>
-        <div class="v2mini"><b>Overflow KV</b><p class="hint">Supabase: {ov.supabase ? 'connected' : 'unavailable'}. R2: {ov.r2 ? 'connected' : 'unavailable'}. Bìa: {ov.covers ? 'Supabase Storage (1 GB free)' : 'KV'}. Ảnh chương: {(ov.supabase || ov.r2) ? 'overflow sang Supabase/R2, ghi lỗi thì rớt về KV' : 'KV'}. Chưa gắn thì book/img vẫn nằm full trong KV — không giả lưu.</p>
+        <div class="v2mini"><b>Lưu trữ tràn</b><p class="hint">Supabase: {ov.supabase ? 'connected' : 'unavailable'}. R2: {ov.r2 ? 'connected' : 'unavailable'}. Bìa: {ov.covers ? 'Supabase Storage (1 GB free)' : 'KV'}. Ảnh chương: {(ov.supabase || ov.r2) ? 'overflow sang Supabase/R2, ghi lỗi thì rớt về KV' : 'KV'}. Chưa gắn thì book/img vẫn nằm full trong KV — không giả lưu.</p>
           {(ov.supabase || ov.r2) && onMigrate ? (
             <div class="v2mig">
               <p class="hint"><b>Data cũ còn trong KV?</b> Chuyển 1 lần sang Supabase/R2 ngay tại đây (bìa → Storage <code>covers</code>, book/ảnh chương → <code>ssochuz_blobs</code>/R2, KV chỉ còn stub):</p>
@@ -266,7 +266,7 @@ export function StatsPanel({ state, onLoad }) {
   }, [stats, pick]);
   const titleOf = (slug) => { const b = lib.find((x) => x.slug === slug); return (b && b.title) || slug; };
   return <div id="pane-stats" class="v2pane"><section class="card2">
-    <div class="row"><h3>Thống kê</h3><span class="grow"></span><LoaderButton busy={busy} onClick={load}>Đọc thống kê KV</LoaderButton></div>
+    <div class="row"><h3>Số liệu KV</h3><span class="grow"></span><LoaderButton busy={busy} onClick={load}>Đọc thống kê KV</LoaderButton></div>
     <NeedOnline state={state}><p class="hint">Thống kê chi tiết nằm trong KV; tab này không ghi dữ liệu.</p></NeedOnline>
     {error ? <div class="msgbar show err">{error}<div class="v2err-actions"><button class="btn ghost sm" type="button" onClick={load}>Thử lại</button></div></div> : null}
     <div class="tiles v2tiles4"><div class="tile"><b>{num(top.length)}</b><span>bộ có số liệu</span></div><div class="tile"><b>{num(totalViews)}</b><span>lượt đọc trong top</span></div><div class="tile"><b>{num(totalVotes)}</b><span>phiếu trong top</span></div><div class="tile"><b>{num((stats && stats.days && stats.days.length) || 0)}</b><span>ngày có chuỗi</span></div></div>

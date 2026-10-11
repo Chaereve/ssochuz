@@ -179,6 +179,11 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
   /* Chương đã nạp xong (khoá slug#index) — chỉ ghi nháp khi dữ liệu đang gõ
      thuộc đúng chương này, tránh ghi nhầm nội dung chương cũ sang chương mới */
   const bootRef = useRef('');
+  /* reloadTick lúc đã nạp chương (để effect nạp lại khi có import, nhưng KHÔNG ghi đè khi
+     chương vừa được thêm và người dùng đã bắt đầu gõ) */
+  const bootTickRef = useRef(-1);
+  /* đối tượng chương đã nạp (so theo tham chiếu: chương tải thật khác object placeholder khi sách chưa có) */
+  const bootChapterRef = useRef(null);
 
   useEffect(() => {
     importTask.current++;
@@ -232,12 +237,15 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
   }
 
   useEffect(() => {
+    if (bootRef.current === key && bootTickRef.current === reloadTick && bootChapterRef.current === current) return;
     const baseTitle = current.t || ('Chương ' + (index + 1));
     const baseHtml = htmlForEditor(current.html || '<p></p>', apiBase);
     const baseStatus = chapterStatusOf(current) || 'published';
     const baseAtLocal = isoToLocalInput(chapterAtMs(current) || '');
     baseRef.current = { title: baseTitle, html: baseHtml, status: baseStatus, atLocal: baseAtLocal };
     bootRef.current = key;
+    bootTickRef.current = reloadTick;
+    bootChapterRef.current = current;
     setTitle(baseTitle);
     setHtml(baseHtml);
     setStatus(baseStatus);
@@ -359,7 +367,8 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
       return;
     }
     const chapterPayload = {
-      t: title || ('Chương ' + (index + 1)),
+      /* đọc từ liveRef (cập nhật đồng bộ khi gõ) — state có thể chưa kịp render khi bấm Ctrl+S */
+      t: ((liveRef.current && liveRef.current.title != null ? liveRef.current.title : title)) || ('Chương ' + (index + 1)),
       html: htmlForStorage(html || '', apiBase),
       status,
       at: status === 'scheduled' ? localInputToIso(atLocal) : '',
@@ -402,7 +411,14 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
        thái chương chưa từng chặn hiển thị), nay ghi thẳng ra cho khỏi hiểu nhầm;
        muốn giữ riêng thì chọn “Hẹn giờ” hoặc “Ẩn” ngay trên ô trạng thái */
     next.chapters.push({ t: suggestChapterTitle(next.chapters), html: '<p></p>', status: 'published' });
-    setLocalBook(next); setRestored(false); setIndex(next.chapters.length - 1);
+    const newIdx = next.chapters.length - 1;
+    const added = next.chapters[newIdx];
+    baseRef.current = { title: added.t, html: '<p></p>', status: 'published', atLocal: '' };
+    bootRef.current = (next.slug || slug) + '#' + newIdx;
+    bootTickRef.current = reloadTick;
+    bootChapterRef.current = added;
+    setTitle(added.t); setHtml('<p></p>'); setStatus('published'); setAtLocal('');
+    setLocalBook(next); setRestored(false); setIndex(newIdx);
   };
   const deleteChapter = async () => {
     if (!localBook || !chapters[index] || importSaveBusy.current) return;
@@ -558,6 +574,10 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
      phím tắt trong main.jsx: Chrome/Edge không gửi Ctrl+N cho trang). Đăng ký
      trong ChapterEditor (chứ không phải BookEditor) vì đây là thành phần biết
      rõ chương hiện tại và đang có dữ liệu thật hay không. */
+  /* Luôn trỏ tới saveChapter của lần render mới nhất: handler phím tắt đăng ký trong useEffect
+     (chạy sau khung hình) nên nếu giữ closure cũ, Ctrl+S ngay sau khi gõ sẽ lưu tiêu đề cũ. */
+  const saveFnRef = useRef(null);
+  saveFnRef.current = saveChapter;
   useEffect(() => {
     if (!shortcuts) return;
     const saveHandler = () => {
@@ -569,7 +589,7 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
       if (!localBook) return false;
       if (saving) return true; /* đang lưu rồi, chặn double-submit */
       if (writeBlocked) { toast('Quota KV hôm nay đã hết — không ghi.', 'err'); return true; }
-      saveChapter();
+      if (saveFnRef.current) saveFnRef.current();
       return true;
     };
     const newHandler = () => {
@@ -597,8 +617,7 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
   return (
     <section class="card2 v2chapter-card" ref={cardRef}>
       <div class="row"><h3>Chương</h3><span class="grow"></span><button class="btn ghost sm" type="button" onClick={addChapter} title="Thêm chương mới · Ctrl/Cmd+Alt+N">Thêm chương</button><button class="btn ghost sm" type="button" disabled={!chapters.length} onClick={() => moveChapter(-1)}>Lên</button><button class="btn ghost sm" type="button" disabled={!chapters.length} onClick={() => moveChapter(1)}>Xuống</button></div>
-      <p class="hint">Editor dùng TipTap; output vẫn là HTML lưu trong <code>chapters[].html</code>. Nháp tự lưu vào máy này (localStorage) sau 0,7 giây ngừng gõ — đổi chương hay đóng tab đều ghi nháp trước, không mất chữ.</p>
-      <p class="hint">Phím tắt thêm chương mới: <b>Ctrl/Cmd+Alt+N</b> (hoặc nút “Thêm chương” bên phải). Không dùng Ctrl/Cmd+N thường — trình duyệt GIỮ phím đó để mở cửa sổ mới, trên Chrome/Edge trang không nhận được phím nên không tạo chương được.</p>
+      <p class="hint v2chap-hint">Nháp tự lưu trên máy này khi ngừng gõ. Thêm chương: <b>Ctrl/Cmd+Alt+N</b>.</p>
       {loading ? <div class="empty sm">Đang đọc chương…</div> : null}
       <div class="v2chapter-grid">
         <aside class="v2chapter-list" aria-label="Danh sách chương">
@@ -721,7 +740,7 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
               Còn ảnh tạm chưa upload: {temps.slice(0, 3).join(', ')}. Hãy bấm Upload ảnh / Thử lại — không ghi KV khi còn blob:/data:.
             </div>
           ) : null}
-          <p class="hint">Nhập nhiều chương: chọn 1 file .txt hoặc .docx (tối đa 20 MB, hỗ trợ file 12 MB). Mỗi tiêu đề “Chương X” nằm trên một dòng riêng. DOCX giữ đậm/nghiêng và ngắt đoạn; bỏ ảnh, font, màu và bố cục Word để giảm dung lượng. File được xử lý trên máy, chỉ gửi nội dung chương khi xác nhận.</p>
+          <p class="hint">Nhập nhiều chương: .txt hoặc .docx (tối đa 20 MB; DOCX giữ đậm/nghiêng). Mỗi chương bắt đầu bằng một dòng “Chương X”.</p>
           {importing ? <div class="row" role="status"><span class="hint">Đang đọc file và tối ưu nội dung chương…</span><button class="btn ghost sm" type="button" onClick={() => importController.current && importController.current.abort()}>Huỷ đọc file</button></div> : null}
           {importPreview ? (
             <div class="v2import-preview">
@@ -745,9 +764,9 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
               </div>
             </div>
           ) : null}
-          <div class="row mt v2chap-actions">
-            <span class="sm muted">{stat.words} từ · {stat.chars} ký tự · ~{readTime(stat.words)} phút đọc{draft ? ' · có nháp autosave' : ''}</span>
-            <span class="grow"></span>
+          <div class="v2chap-bar v2chap-actions">
+            <span class="sm muted v2chap-stat">{stat.words} từ · {stat.chars} ký tự · ~{readTime(stat.words)} phút đọc{draft ? ' · có nháp autosave' : ''}</span>
+            <div class="v2chap-tools" role="group" aria-label="Công cụ chương">
             <input ref={fileRef} class="hide" type="file" aria-label="Nhập tệp chương .txt hoặc .html" accept=".txt,.html,.htm,text/plain,text/html" onChange={(e) => importFile(e.currentTarget.files && e.currentTarget.files[0])} />
             <input ref={multiRef} class="hide" type="file" aria-label="Nhập tệp nhiều chương .txt hoặc .docx" accept=".txt,.docx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(e) => { importMultiFile(e.currentTarget.files && e.currentTarget.files[0]); e.currentTarget.value = ''; }} />
             <input ref={imageRef} class="hide" type="file" aria-label="Tải ảnh chèn vào chương" accept="image/jpeg,image/png,image/webp" onChange={(e) => chooseImage(e.currentTarget.files && e.currentTarget.files[0])} />
@@ -756,7 +775,10 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
             <button class="btn ghost sm" type="button" disabled={uploading} onClick={() => imageRef.current && imageRef.current.click()}>{uploading ? 'Đang nén ảnh…' : 'Upload ảnh'}</button>
             {draft && !restored ? <button class="btn ghost sm" type="button" onClick={restoreDraft}>Khôi phục nháp</button> : null}
             <button class="btn ghost sm" type="button" onClick={() => setPreview(!preview)}>{preview ? 'Ẩn preview' : 'Preview độc giả'}</button>
-            <button class="btn pri sm" type="button" disabled={writeBlocked || !!temps.length || saving || importSaving} title={(writeBlocked ? 'Quota KV hôm nay đã hết — nháp cục bộ vẫn được giữ' : (online ? 'Ghi chương vào Cloudflare KV (chỉ gửi 1 chương)' : 'Chỉ lưu nháp phiên — chưa ghi Cloudflare KV')) + ' · Ctrl/Cmd+S'} onClick={saveChapter}>{saving ? 'Đang lưu…' : (writeBlocked ? 'Hết quota KV' : (online ? 'Lưu chương' : 'Lưu nháp phiên'))}</button>
+            </div>
+          </div>
+          <div class="v2chap-savebar">
+                        <button class="btn pri sm" type="button" disabled={writeBlocked || !!temps.length || saving || importSaving} title={(writeBlocked ? 'Quota KV hôm nay đã hết — nháp cục bộ vẫn được giữ' : (online ? 'Ghi chương vào Cloudflare KV (chỉ gửi 1 chương)' : 'Chỉ lưu nháp phiên — chưa ghi Cloudflare KV')) + ' · Ctrl/Cmd+S'} onClick={saveChapter}>{saving ? 'Đang lưu…' : (writeBlocked ? 'Hết quota KV' : (online ? 'Lưu chương' : 'Lưu nháp phiên'))}</button>
           </div>
           <div class="v2chap-danger">
             <span class="sm">Xoá chương đang chọn khỏi bộ — cần gõ XOÁ để xác nhận, không khôi phục được.</span>

@@ -4,14 +4,18 @@ import { slugify, COMPLETION_STATUSES, PUB_STATUSES, VISIBILITIES } from '../uti
 import { ImageUploader } from './ImageUploader.jsx';
 import { persistableCover } from '../utils/cover.js';
 
+// Thêm bộ kiểu Wattpad: không có thể loại/tag. Bìa + xem trước ở cột trái, thông tin ở cột phải.
+const EMPTY_FORM = {
+  title: '', slug: '', author: '', couple: '', year: '', status: 'Đang cập nhật',
+  is18: '0', thumb: '', coverAlt: '', synopsis: '', chapter: '',
+  pubStatus: 'published', visibility: 'public', publishedAt: '',
+};
+
 export function NewBook({ registry, onCreate, onUploadImage, apiBase = '', writeBlocked = false, online = false }) {
-  const [form, setForm] = useState({
-    title: '', slug: '', author: '', couple: '', year: '', status: 'Đang cập nhật',
-    is18: '0', thumb: '', coverAlt: '', synopsis: '', chapter: '', genre: '',
-    pubStatus: 'published', visibility: 'public', publishedAt: '',
-  });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [busy, setBusy] = useState(false);
   const preview = slugify(form.slug || form.title);
+  function reset() { setForm(EMPTY_FORM); }
   function update(key, value) { setForm((cur) => Object.assign({}, cur, { [key]: value })); }
 
   async function submit(e) {
@@ -20,78 +24,114 @@ export function NewBook({ registry, onCreate, onUploadImage, apiBase = '', write
     setBusy(true);
     try {
       const ok = await onCreate(Object.assign({}, form, { thumb: persistableCover(form.thumb) }));
-      if (ok) setForm({
-        title: '', slug: '', author: '', couple: '', year: '', status: 'Đang cập nhật',
-        is18: '0', thumb: '', coverAlt: '', synopsis: '', chapter: '', genre: '',
-        pubStatus: 'published', visibility: 'public', publishedAt: '',
-      });
+      if (ok) setForm(EMPTY_FORM);
     } finally { setBusy(false); }
   }
 
   return (
     <div class="v2pane">
-    <form id="pane-new" class="v2form" onSubmit={submit}>
-      <section class="v2fsec" aria-label="Thông tin cơ bản">
-        <div class="v2fsec-head"><b>Thông tin cơ bản</b><span class="hint">Tên truyện là bắt buộc; slug để trống sẽ tự sinh từ tên.</span></div>
-        <label class="fl">Tên truyện<input class="inp" value={form.title} required onInput={(e) => update('title', e.target.value)} /></label>
-        <p class="hint">slug: <code>{preview ? '/truyen/' + preview + '/' : '—'}</code></p>
-        <label class="fl">Slug (tuỳ chọn)<input class="inp" value={form.slug} onInput={(e) => update('slug', e.target.value)} /></label>
-        <div class="row">
-          <label class="fl">Tác giả<input class="inp" value={form.author} onInput={(e) => update('author', e.target.value)} /></label>
-          <label class="fl">Couple<input class="inp" value={form.couple} onInput={(e) => update('couple', e.target.value)} /></label>
-          <label class="fl">Năm<input class="inp" value={form.year} onInput={(e) => update('year', e.target.value)} /></label>
+      <form id="pane-new" class="v2nb" onSubmit={submit}>
+        <div class="v2nb-main">
+          <section class="v2fsec" aria-labelledby="nb-info-h">
+            <h3 id="nb-info-h">Thông tin truyện</h3>
+            <label class="fl">Tên truyện <span class="req" aria-hidden="true">*</span>
+              <input class="inp v2nb-title" value={form.title} required placeholder="Nhập tên truyện" onInput={(e) => update('title', e.target.value)} />
+            </label>
+            <p class="v2nb-slug">Đường dẫn: <code>{preview ? '/truyen/' + preview + '/' : '—'}</code></p>
+            <div class="v2nb-grid3">
+              <label class="fl">Tác giả<input class="inp" value={form.author} onInput={(e) => update('author', e.target.value)} /></label>
+              <label class="fl">Couple<input class="inp" value={form.couple} onInput={(e) => update('couple', e.target.value)} /></label>
+              <label class="fl">Năm<input class="inp" value={form.year} inputMode="numeric" onInput={(e) => update('year', e.target.value)} /></label>
+            </div>
+            <label class="fl">Slug (tuỳ chọn)
+              <input class="inp" value={form.slug} placeholder="Để trống sẽ tự tạo từ tên truyện" onInput={(e) => update('slug', e.target.value)} />
+            </label>
+          </section>
+
+          <section class="v2fsec" aria-labelledby="nb-desc-h">
+            <div class="v2fsec-head">
+              <h3 id="nb-desc-h">Giới thiệu</h3>
+              <span class="hint">{form.synopsis.length} ký tự</span>
+            </div>
+            <label class="fl">
+              <textarea class="inp ta v2nb-desc" value={form.synopsis} placeholder="Tóm tắt nội dung để độc giả quyết định có đọc hay không" onInput={(e) => update('synopsis', e.target.value)} />
+            </label>
+          </section>
+
+          <section class="v2fsec" aria-labelledby="nb-pub-h">
+            <h3 id="nb-pub-h">Xuất bản</h3>
+            <div class="v2nb-grid3">
+              <label class="fl">Tình trạng
+                <select class="inp" value={form.status} onChange={(e) => update('status', e.target.value)}>
+                  {COMPLETION_STATUSES.map((s) => <option key={s}>{s}</option>)}
+                </select>
+              </label>
+              <label class="fl">Trạng thái
+                <select class="inp" value={form.pubStatus} onChange={(e) => update('pubStatus', e.target.value)}>
+                  {PUB_STATUSES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+                </select>
+              </label>
+              <label class="fl">Hiển thị
+                <select class="inp" value={form.visibility} onChange={(e) => update('visibility', e.target.value)}>
+                  {VISIBILITIES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+                </select>
+              </label>
+            </div>
+            {form.pubStatus === 'scheduled' ? (
+              <label class="fl">Ngày giờ xuất bản
+                <input class="inp" type="datetime-local" value={form.publishedAt} onInput={(e) => update('publishedAt', e.target.value)} />
+              </label>
+            ) : null}
+            <label class="v2switch">
+              <input type="checkbox" role="switch" checked={form.is18 === '1'} onChange={(e) => update('is18', e.target.checked ? '1' : '0')} />
+              <span class="v2switch-track" aria-hidden="true"></span>
+              <span class="v2switch-text"><b>Nội dung 18+</b><span class="hint">Chỉ hiện với độc giả đã xác nhận tuổi.</span></span>
+            </label>
+          </section>
+
+          <section class="v2fsec" aria-labelledby="nb-ch-h">
+            <div class="v2fsec-head">
+              <h3 id="nb-ch-h">Chương 1</h3>
+              <span class="hint">Tuỳ chọn. Có thể thêm sau trong tab Chương.</span>
+            </div>
+            <label class="fl">
+              <textarea class="inp ta v2nb-chapter" aria-label="Nội dung chương đầu tiên (tuỳ chọn)" value={form.chapter} onInput={(e) => update('chapter', e.target.value)} />
+            </label>
+          </section>
         </div>
-      </section>
-      <section class="v2fsec" aria-label="Phân loại và hiển thị">
-        <div class="v2fsec-head"><b>Phân loại &amp; hiển thị</b><span class="hint">Tình trạng hoàn thành khác trạng thái xuất bản; mặc định Xuất bản — chọn Nháp thì truyện CHỈ thấy trong admin, không lên trang chủ.</span></div>
-        <div class="row">
-          <label class="fl">Tình trạng hoàn thành
-            <select class="inp" value={form.status} onChange={(e) => update('status', e.target.value)}>
-              {COMPLETION_STATUSES.map((s) => <option key={s}>{s}</option>)}
-            </select>
-          </label>
-          <label class="fl">Trạng thái xuất bản
-            <select class="inp" value={form.pubStatus} onChange={(e) => update('pubStatus', e.target.value)}>
-              {PUB_STATUSES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-            </select>
-          </label>
-          <label class="fl">Hiển thị
-            <select class="inp" value={form.visibility} onChange={(e) => update('visibility', e.target.value)}>
-              {VISIBILITIES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-            </select>
-          </label>
+
+        <aside class="v2nb-side" aria-label="Bìa truyện">
+          <section class="v2fsec v2nb-cover" aria-labelledby="nb-cover-h">
+            <h3 id="nb-cover-h">Ảnh bìa</h3>
+            <div class="v2preview" aria-label="Xem trước thẻ truyện">
+              <div class="v2preview-cover">{form.thumb ? <img src={form.thumb} alt="" /> : <span>Chưa có bìa</span>}</div>
+              <div class="v2preview-body">
+                <b title={form.title}>{form.title || 'Tên truyện'}</b>
+                <span class="v2preview-author">{form.author || 'Tác giả'}</span>
+              </div>
+            </div>
+            <ImageUploader
+              value={form.thumb}
+              altValue={form.coverAlt}
+              onChange={(url) => update('thumb', persistableCover(url))}
+              onAltChange={(v) => update('coverAlt', v)}
+              onUpload={onUploadImage}
+              apiBase={apiBase}
+              label="Chọn ảnh"
+            />
+          </section>
+        </aside>
+
+        <div class="v2nb-bar">
+          <p class="hint">{online
+            ? 'Đang nối Worker: tạo truyện sẽ ghi ngay vào kho và registry.'
+            : 'Chưa nối Worker: bộ truyện chỉ lưu trong phiên này.'}</p>
+          <div class="v2nb-actions">
+            <button type="button" class="btn ghost" onClick={reset} disabled={busy}>Xoá nháp</button>
+            <button class="btn pri" disabled={busy || writeBlocked}>{writeBlocked ? 'Hết quota KV' : (busy ? 'Đang tạo…' : 'Tạo truyện')}</button>
+          </div>
         </div>
-        {form.pubStatus === 'scheduled' ? (
-          <label class="fl">Ngày giờ xuất bản
-            <input class="inp" type="datetime-local" value={form.publishedAt} onInput={(e) => update('publishedAt', e.target.value)} />
-          </label>
-        ) : null}
-        <label class="chk"><input type="checkbox" checked={form.is18 === '1'} onChange={(e) => update('is18', e.target.checked ? '1' : '0')} /> 18+</label>
-      </section>
-      <section class="v2fsec" aria-label="Ảnh bìa">
-        <div class="v2fsec-head"><b>Ảnh bìa</b><span class="hint">Có thể bỏ qua rồi thêm sau trong tab Sửa bộ.</span></div>
-        <ImageUploader
-          value={form.thumb}
-          altValue={form.coverAlt}
-          onChange={(url) => update('thumb', persistableCover(url))}
-          onAltChange={(v) => update('coverAlt', v)}
-          onUpload={onUploadImage}
-          apiBase={apiBase}
-          label="Ảnh bìa"
-        />
-      </section>
-      <section class="v2fsec" aria-label="Giới thiệu và chương đầu">
-        <div class="v2fsec-head"><b>Giới thiệu &amp; chương đầu</b><span class="hint">Chương 1 là tuỳ chọn — văn bản thường sẽ tự chuyển thành đoạn HTML.</span></div>
-        <label class="fl">Tóm tắt<textarea class="inp ta" value={form.synopsis} onInput={(e) => update('synopsis', e.target.value)} /></label>
-        <label class="fl">Chương 1 (tuỳ chọn)<textarea class="inp ta" value={form.chapter} onInput={(e) => update('chapter', e.target.value)} /></label>
-      </section>
-      <p class="hint">{online
-        ? 'Khi đang nối Worker, Tạo truyện ghi ngay book JSON + registry — tab Kiểm tra dữ liệu sẽ thấy bộ mới, không chờ thêm bước nào.'
-        : 'Chế độ dữ liệu tĩnh: chỉ tạo nháp phiên, chưa ghi Cloudflare KV.'}</p>
-      <div class="row sticky-actions">
-        <button class="btn pri" disabled={busy || writeBlocked}>{writeBlocked ? 'Hết quota KV' : (busy ? 'Đang tạo…' : 'Tạo truyện')}</button>
-      </div>
-    </form>
+      </form>
     </div>
   );
 }
