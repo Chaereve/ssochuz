@@ -754,3 +754,19 @@ body.admin .v2preview-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
   body.admin .v2tools{flex-wrap:nowrap;flex:none;margin-left:auto}
   body.admin .v2top .v2search{order:3;flex:1 1 100%;width:100%}
 }
+
+/* ===== v10 — Chương: ô chọn bộ; Thư viện: lưới bìa vừa phải, nhãn gọn, slug không gãy ===== */
+body.admin .v2picker-row{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
+body.admin .v2picker-row select.inp{flex:1 1 280px;max-width:560px;width:auto}
+body.admin .v2picker-row .btn{flex:none}
+/* Lưới: thẻ nhỏ hơn, tối đa 7 cột rộng màn lớn; bìa tỉ lệ 2:3 nhưng không quá cao */
+body.admin .v2grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+body.admin .v2gcard .v2thumb{max-height:none}
+body.admin .v2gcard .v2badges{display:flex;flex-wrap:wrap;gap:4px;margin:8px 10px 0}
+body.admin .v2gcard .v2badges .v2badge{height:20px;padding:0 6px;font-size:11px}
+body.admin .v2gcard b{margin:10px 10px 2px}
+body.admin .v2gcard-author{margin:0 10px}
+body.admin .v2gcard-meta{margin:auto 10px 0;padding-top:8px}
+body.admin .v2gcard-acts{margin:8px 10px 0}
+/* Slug trong bảng: một dòng, cắt bằng dấu ... thay vì ngắt giữa ngày */
+body.admin .v2book-table td:nth-child(3) .sm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
