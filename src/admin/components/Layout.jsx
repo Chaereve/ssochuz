@@ -52,9 +52,9 @@ const PAGE_HEAD = {
   reports: ['Báo lỗi', 'Lỗi do độc giả gửi. Đánh dấu khi đã xử lý.'],
   votes: ['Phiếu bầu', 'Phiếu theo người đọc. Gỡ phiếu cần xác nhận.'],
   homepage: ['Trang chủ', 'Slide, bộ được chọn và lịch ra chương.'],
-  users: ['Tác giả', 'Tác giả và số bộ đã xuất bản của từng người.'],
-  roles: ['Vai trò', 'Nhân sự quản trị và quyền truy cập từng mục.'],
-  stats: ['Thống kê', 'Lượt đọc và lượt thích. Chỉ đọc.'],
+  users: ['Tác giả', 'Tác giả và số bộ đã xuất bản.'],
+  roles: ['Vai trò', 'Nhân sự quản trị và quyền truy cập.'],
+  stats: ['Thống kê', 'Lượt đọc và lượt thích.'],
   doctor: ['Kiểm tra dữ liệu', 'Đối chiếu KV, số chương và bộ thiếu dữ liệu.'],
   log: ['Nhật ký', '200 thao tác quản trị gần nhất.'],
   settings: ['Cài đặt', 'Sao lưu, khôi phục và nhập từ Blogger.'],
@@ -262,7 +262,7 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
                   </div>
                 ) : null}
               </div>
-              <a class="hbtn admin-tool" href="/" target="_blank" rel="noopener" title="Mở trang web" aria-label="Mở trang web"><Icon name="right" /><span class="admin-tool-label">Web</span></a>
+              <a class="hbtn admin-tool" href="/" target="_blank" rel="noopener" title="Mở trang web ở tab mới" aria-label="Mở trang web ở tab mới"><Icon name="link" /><span class="admin-tool-label">Xem web</span></a>
               <ThemeButton />
               <div class="v2user">
                 <button class="hbtn admin-tool" type="button" onClick={() => { setMenu(!menu); setBellOpen(false); }} aria-haspopup="menu" aria-expanded={menu} aria-label="Menu tài khoản">
@@ -305,7 +305,7 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
           {!state.online ? (
             <div class="v2staticbar" role="status">
               <b>Chỉ đọc</b>
-              Thay đổi chỉ lưu tạm trong phiên và mất khi đóng tab.
+              Thay đổi chỉ lưu tạm trong phiên.
             </div>
           ) : null}
           {used >= limit && state.online ? (

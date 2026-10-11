@@ -23,7 +23,7 @@ function apiAsset(state, url) {
 }
 function NeedOnline({ state, children }) {
   if (state.online) return children;
-  return <div class="msgbar show info">Module này đọc dữ liệu trong KV nên cần nối Worker bằng ADMIN_KEY. Dữ liệu tĩnh vẫn xem được ở tab Tổng quan/Thư viện.</div>;
+  return <div class="msgbar show info">Cần nối Worker bằng ADMIN_KEY để đọc dữ liệu KV. Chế độ tĩnh vẫn xem được Tổng quan và Thư viện.</div>;
 }
 function LoaderButton({ busy, onClick, children }) {
   return <button class="btn ghost sm" type="button" disabled={busy} onClick={onClick}>{busy ? 'Đang đọc…' : children}</button>;
@@ -99,7 +99,7 @@ export function DoctorPanel({ state, onKvAudit, onScanBooks, onRecount, onReload
   return <div id="pane-doctor" class="v2pane">
     <section class="card2">
       <div class="row"><h3>Kiểm tra dữ liệu</h3><span class="grow"></span><button class="btn ghost sm" type="button" onClick={onReload}>Đọc lại registry</button><button class="btn ghost sm" type="button" disabled={scanBusy} onClick={runScan}>{scanBusy ? 'Đang quét…' : 'Quét book'}</button><LoaderButton busy={busy} onClick={load}>Audit KV</LoaderButton></div>
-      <p class="hint">Chạy hoàn toàn trên dữ liệu hiện có; không đổi schema. “Quét book” liệt kê lỗi; bấm Sửa trên từng dòng để ghi (tạo book thiếu / khớp số chương). “Đếm lại” quét cả kho.</p>
+      <p class="hint">Chỉ đọc dữ liệu hiện có. “Quét book” liệt kê lỗi; “Sửa” trên từng dòng mới ghi KV.</p>
       <div class="tiles v2tiles4">
         <div class="tile"><b>{num(lib.length)}</b><span>bộ trong registry</span></div>
         <div class="tile"><b>{num(issues.dup.length)}</b><span>slug trùng/thiếu</span></div>

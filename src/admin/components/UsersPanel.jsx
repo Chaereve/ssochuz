@@ -26,7 +26,7 @@ export function UsersPanel({ registry, onEdit, onFilterAuthor }) {
     <div id="pane-users" class="v2pane">
       <section class="card2">
         <div class="row"><h3>Tác giả</h3><span class="grow"></span><span class="sm muted">{authors.length} người · lấy từ metadata bộ truyện</span></div>
-        <p class="hint">Worker KV không có bảng độc giả. Danh sách dưới đây là tác giả đã gắn vào sách. Hồ sơ độc giả (My Space) nằm trên Durable Object riêng, không giả số liệu.</p>
+        <p class="hint">Danh sách lấy từ metadata của các bộ. KV chưa có bảng độc giả nên không có số liệu độc giả.</p>
         <input class="inp" aria-label="Tìm tác giả" value={q} placeholder="Tìm tác giả…" onInput={(e) => setQ(e.target.value)} />
         {shown.length ? (
           <div class="v2table-wrap">
@@ -53,7 +53,7 @@ export function UsersPanel({ registry, onEdit, onFilterAuthor }) {
       </section>
       <section class="card2">
         <h3>Độc giả</h3>
-        <div class="empty">Chưa có API danh sách độc giả trên KV. Đăng nhập người đọc dùng Supabase Auth; không bịa số liệu.</div>
+        <div class="empty">Chưa có API danh sách độc giả.</div>
       </section>
     </div>
   );

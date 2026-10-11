@@ -143,14 +143,14 @@ export function BookEditor({ registry, slug, bookData, bookLoading, bookError, a
         </section>
         <div class="row sticky-actions">
           <button class="btn pri" type="submit" disabled={writeBlocked} title="Lưu metadata · Ctrl/Cmd+S">{writeBlocked ? 'Hết quota KV' : (online ? 'Lưu metadata' : 'Lưu nháp phiên')}</button>
-          {!online ? <span class="sm muted">Chế độ tĩnh — chưa ghi Cloudflare KV.</span> : null}
-          <span class="sm muted">Phím tắt: Ctrl/Cmd+S lưu · Ctrl/Cmd+K tìm · Ctrl/Cmd+Alt+N thêm chương (Ctrl/Cmd+N bị trình duyệt giữ cho “mở cửa sổ mới”)</span>
+          {!online ? <span class="sm muted">Chế độ tĩnh: chưa ghi KV.</span> : null}
+          <span class="sm muted">Phím tắt: Ctrl/Cmd+S lưu · Ctrl/Cmd+K tìm · Ctrl/Cmd+Alt+N thêm chương</span>
         </div>
       </form>
       <form class="v2form v2lock-panel" onSubmit={saveLock}>
         <h3>Khóa mật mã</h3>
-        <p class="hint">{book.lock ? 'Bộ này đang khóa. Nhập mật mã mới để đổi, hoặc bỏ khóa.' : 'Đặt mật mã thì thẻ vẫn công khai, chương chỉ mở khi nhập đúng.'}</p>
-        {!online ? <p class="hint">Khóa mật mã cần nối Worker bằng ADMIN_KEY. Ở chế độ tĩnh không ghi KV.</p> : null}
+        <p class="hint">{book.lock ? 'Bộ này đang khóa. Nhập mật mã mới để đổi, hoặc bỏ khóa.' : 'Thẻ vẫn công khai; chương chỉ mở khi nhập đúng mật mã.'}</p>
+        {!online ? <p class="hint">Cần nối Worker bằng ADMIN_KEY để đặt mật mã.</p> : null}
         <label class="fl">Mật mã (tối thiểu 8 ký tự)<input class="inp" type="password" value={lockPw} onInput={(e) => setLockPw(e.target.value)} autocomplete="new-password" /></label>
         <label class="fl">Nhập lại mật mã<input class="inp" type="password" value={lockPw2} onInput={(e) => setLockPw2(e.target.value)} autocomplete="new-password" /></label>
         <div class="row">
