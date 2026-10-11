@@ -41,24 +41,28 @@ export function RolesPanel({ registry, role, onSave }) {
           </select>
           <button class="btn" type="submit">Thêm</button>
         </form>
-        <div class="v2tablewrap">
-          <table class="v2book-table v2roles">
-            <thead><tr><th>Email</th><th>Vai trò</th><th aria-label="Thao tác">Thao tác</th></tr></thead>
-            <tbody>
-              {rows.length ? rows.map((r, i) => (
-                <tr key={r.email}>
-                  <td data-lb="Email">{r.email}</td>
-                  <td data-lb="Vai trò">
-                    <select class="inp" aria-label={'Vai trò của ' + r.email} value={r.role} onChange={(e) => setRows(rows.map((x, k) => k === i ? Object.assign({}, x, { role: e.target.value }) : x))}>
-                      {ROLE_ORDER.map((id) => <option key={id} value={id}>{ROLES[id].label}</option>)}
-                    </select>
-                  </td>
-                  <td data-lb="Thao tác"><button class="btn ghost sm" type="button" onClick={() => setRows(rows.filter((_, k) => k !== i))}>Gỡ</button></td>
-                </tr>
-              )) : <tr><td colspan="3"><div class="empty sm">Chưa có nhân sự — Super Admin dùng ADMIN_KEY.</div></td></tr>}
-            </tbody>
-          </table>
-        </div>
+        {rows.length ? (
+          <div class="v2tablewrap">
+            <table class="v2book-table v2roles">
+              <thead><tr><th>Email</th><th>Vai trò</th><th aria-label="Thao tác">Thao tác</th></tr></thead>
+              <tbody>
+                {rows.length ? rows.map((r, i) => (
+                  <tr key={r.email}>
+                    <td data-lb="Email">{r.email}</td>
+                    <td data-lb="Vai trò">
+                      <select class="inp" aria-label={'Vai trò của ' + r.email} value={r.role} onChange={(e) => setRows(rows.map((x, k) => k === i ? Object.assign({}, x, { role: e.target.value }) : x))}>
+                        {ROLE_ORDER.map((id) => <option key={id} value={id}>{ROLES[id].label}</option>)}
+                      </select>
+                    </td>
+                    <td data-lb="Thao tác"><button class="btn ghost sm" type="button" onClick={() => setRows(rows.filter((_, k) => k !== i))}>Gỡ</button></td>
+                  </tr>
+                )) : null}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div class="empty sm">Chưa có nhân sự — Super Admin dùng ADMIN_KEY.</div>
+        )}
         <div class="row mt"><button class="btn pri" type="button" onClick={() => onSave(rows)}>Lưu nhân sự</button><span class="sm muted">Ghi registry.settings.staff lên KV.</span></div>
       </section>
     </div>

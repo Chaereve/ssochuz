@@ -912,3 +912,6 @@ body.admin .v2schedrow .v2sort-x{margin:0;white-space:nowrap}
   body.admin .v2schedrow{grid-template-columns:minmax(0,1fr) auto}
   body.admin .v2schedrow>select{grid-column:1 / -1}
 }
+
+/* ===== v25 — Vai trò: nội dung thẻ quyền bám đầu thẻ, không giãn khoảng trống giữa tiêu đề và mô tả ===== */
+body.admin .v2role-card{align-content:start;align-items:start;min-height:0}
