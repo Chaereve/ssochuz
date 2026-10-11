@@ -1056,3 +1056,11 @@ body.admin .v2up-row .inp{flex:1 1 auto;min-width:0}
 body.admin .v2up-row .btn{flex:0 0 auto}
 body.admin .v2up-hint{margin:0;font-size:12px;line-height:1.5}
 body.admin .v2up-err{margin:0;font-size:12.5px;color:var(--a-bad)}
+
+/* ===== v33 — chặn bảng rộng kéo giãn cả thẻ/khung (lỗi số tràn ra ngoài ở Tác giả 768–1080px) ===== */
+body.admin .v2pane,body.admin .v2main section.card2,body.admin .v2main .card2{min-width:0;max-width:100%}
+body.admin .v2tablewrap,body.admin .v2authors-wrap{max-width:100%;min-width:0}
+body.admin .v2tablewrap:has(.v2authors){overflow-x:auto;overflow-y:visible;max-height:none}
+@media (max-width:720px){body.admin .v2tablewrap:has(.v2authors){overflow:visible}}
+body.admin .v2authors{width:100%}
+@media (min-width:721px) and (max-width:1080px){body.admin .v2authors{min-width:720px}}
