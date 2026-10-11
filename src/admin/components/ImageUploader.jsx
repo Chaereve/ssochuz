@@ -82,13 +82,10 @@ export function ImageUploader({
           ? <img class="v2up-preview" src={preview} alt={altValue || 'Xem trước bìa'} />
           : (
             <div class="v2up-empty">
-              <span class="v2up-ico" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 15V4" /><path d="m7.5 8.5 4.5-4.5 4.5 4.5" /><path d="M4 15v3.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V15" />
-                </svg>
-              </span>
               <b>Kéo thả ảnh vào đây</b>
-              <span>hoặc bấm để chọn file</span>
+              <span class="v2up-or">hoặc</span>
+              <span class="v2up-pick">Chọn file</span>
+              <span class="v2up-note">JPG, PNG, WebP · tối đa 12 MB</span>
             </div>
           )}
         {busy ? <div class="v2up-bar" aria-hidden="true"><i style={{ width: progress + '%' }}></i></div> : null}
