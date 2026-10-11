@@ -266,7 +266,7 @@ export function StatsPanel({ state, onLoad }) {
   }, [stats, pick]);
   const titleOf = (slug) => { const b = lib.find((x) => x.slug === slug); return (b && b.title) || slug; };
   return <div id="pane-stats" class="v2pane"><section class="card2">
-    <div class="row"><h3>Thống kê</h3><span class="grow"></span><LoaderButton busy={busy} onClick={load}>Đọc thống kê KV</LoaderButton></div>
+    <div class="row"><h3>Số liệu KV</h3><span class="grow"></span><LoaderButton busy={busy} onClick={load}>Đọc thống kê KV</LoaderButton></div>
     <NeedOnline state={state}><p class="hint">Thống kê chi tiết nằm trong KV; tab này không ghi dữ liệu.</p></NeedOnline>
     {error ? <div class="msgbar show err">{error}<div class="v2err-actions"><button class="btn ghost sm" type="button" onClick={load}>Thử lại</button></div></div> : null}
     <div class="tiles v2tiles4"><div class="tile"><b>{num(top.length)}</b><span>bộ có số liệu</span></div><div class="tile"><b>{num(totalViews)}</b><span>lượt đọc trong top</span></div><div class="tile"><b>{num(totalVotes)}</b><span>phiếu trong top</span></div><div class="tile"><b>{num((stats && stats.days && stats.days.length) || 0)}</b><span>ngày có chuỗi</span></div></div>
