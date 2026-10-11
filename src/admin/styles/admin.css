@@ -704,3 +704,35 @@ body.admin #tabs button:hover{color:#F2F4F6;background-color:rgba(255,255,255,.0
 body.admin #tabs button.on{color:#7BE0C3;background-color:rgba(79,203,174,.14)}
 body.admin #tabs button .admin-nav-icon .i,body.admin #tabs button .i{color:currentColor}
 body.admin #tabs button .ct{background:rgba(255,255,255,.08);color:#AEB6BF}
+
+/* ===== v9 — Thêm bộ kiểu Wattpad/Novel Toon; bìa vừa phải; nhóm nút thẳng hàng ===== */
+/* Bìa: tối đa 200px, căn giữa khung — không còn chiếm cả cột 320px */
+body.admin .v2form .coverprev{max-width:200px;margin:0 auto}
+body.admin .v2form>section[aria-label="Ảnh bìa"] .v2up{min-height:0}
+body.admin .v2form>section[aria-label="Ảnh bìa"] .v2up-empty{padding:8px 0}
+body.admin .v2form>section[aria-label="Ảnh bìa"] .v2up-empty b{font-size:14px}
+/* Các ảnh bìa trong bảng/lưới/tab khác: kích thước cố định, không phình */
+body.admin img.v2thumb,body.admin .v2thumb img{max-width:100%}
+body.admin .v2book-table .v2thumb{width:48px;height:68px}
+body.admin .v2gcard .v2thumb{max-width:none}
+
+/* Tiêu đề truyện: ô lớn, nổi bật ở đầu form (như trang tạo truyện Wattpad) */
+body.admin .v2form>section[aria-label="Thông tin cơ bản"] input.inp:first-of-type{height:44px;font-size:16px;font-weight:600}
+body.admin .v2form>section[aria-label="Thông tin cơ bản"]{padding-top:22px}
+/* Giới thiệu: khung soạn thảo cao, dễ viết */
+body.admin textarea.inp.ta{min-height:120px;line-height:1.6;resize:vertical}
+
+/* Các nút dưới cùng: căn phải, một hàng, không xuống dòng lộn xộn */
+body.admin .sticky-actions,body.admin .savebar .v2actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:nowrap;gap:8px}
+body.admin .sticky-actions .btn{min-width:132px;height:38px}
+body.admin .sticky-actions .btn.pri{padding:0 22px}
+/* Nhóm nút trong các thanh công cụ: không tự xuống dòng, khoảng cách đều */
+body.admin .v2toolbar,body.admin .v2tools,body.admin .v2actions,body.admin .v2chap-actions,body.admin .v2edit-head,body.admin .v2err-actions,body.admin .v2empty-actions{flex-wrap:wrap;gap:8px;align-items:center}
+body.admin .v2actions .btn,body.admin .v2chap-actions .btn,body.admin .v2err-actions .btn,body.admin .v2empty-actions .btn{white-space:nowrap}
+/* Nhịp dọc đều trong các thẻ form: nhãn có khoảng trên, không sát tiêu đề */
+body.admin .v2form>section .fl{margin-top:14px}
+body.admin .v2form>section .fl:first-of-type,body.admin .v2form>section>.v2sechead+.fl,body.admin .v2form>section>p.hint+.fl{margin-top:16px}
+body.admin .v2form>section>p.hint{margin-bottom:4px}
+/* Nút lưu: một hàng căn phải, không kéo full-width */
+body.admin .v2form .sticky-actions,body.admin .v2form>.row.sticky-actions{display:flex;justify-content:flex-end;grid-column:1 / -1}
+body.admin .v2form .sticky-actions .btn{width:auto}
