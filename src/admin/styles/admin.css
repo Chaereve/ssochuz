@@ -397,13 +397,31 @@ body.admin .v2app .v2frame{margin-left:var(--a-side);width:calc(100% - var(--a-s
 body.admin .v2app .v2side{width:var(--a-side)}
 /* Desktop: thu gọn còn rail 72px, chỉ giữ icon */
 @media(min-width:901px){
+/* Nút đóng (×) chỉ dành cho drawer điện thoại — desktop không hiện (trước đây
+   lọt sang desktop, thêm 1 nút 34px nữa khiến hàng logo tràn qua rail 72px) */
+body.admin .v2side-close{display:none}
 body.admin .v2app.v2collapsed{--a-side:72px}
 body.admin .v2app.v2collapsed .v2aside span:not(.admin-nav-icon){display:none}
-body.admin .v2app.v2collapsed .snav button{justify-content:center;padding:0}
+body.admin .v2app.v2collapsed .snav button{justify-content:center;padding:0;position:relative}
 body.admin .v2app.v2collapsed .v2brand .logo{font-size:0}
-body.admin .v2app.v2collapsed .v2brand{padding:0;justify-content:center}
+/* cz.css đặt font-size riêng cho .logo i (10.5px) nên font-size:0 ở trên không
+   ẩn được chữ "admin" — phải ẩn hẳn phần tử; dấu chấm logo co lại làm dấu hiệu */
+body.admin .v2app.v2collapsed .v2brand .logo i{display:none}
+body.admin .v2app.v2collapsed .v2brand .logo .dot{margin-right:0}
+body.admin .v2app.v2collapsed .v2brand{padding:0;justify-content:center;gap:6px}
+/* margin-left:auto (luật desktop phía trên) thắng justify-content:center,
+   đẩy nút toggle sát mép phải còn logo sát mép trái — rail hẹp nhìn như vỡ */
+body.admin .v2app.v2collapsed .v2side-toggle{margin-left:0}
 body.admin .v2app.v2collapsed .admin-nav-label{display:none}
 body.admin .v2app.v2collapsed .v2nav-group+.v2nav-group{margin-top:10px;border-top:1px solid rgba(255,255,255,.06);padding-top:10px}
+/* Ghi chú chân sidebar là <p> nên luật ẩn span phía trên không chạm tới —
+   để nguyên sẽ bị ép thành cột chữ rộng ~36px, chữ chồng chữ */
+body.admin .v2app.v2collapsed .v2side-note{display:none}
+/* Huy hiệu đếm (số báo lỗi / "đang sửa"): khi thu gọn thành chấm nhỏ ở góc
+   nút. Selector phải mang #tabs để thắng luật body.admin #tabs button .ct
+   ở cuối file, và phải đứng sau luật ẩn span ở trên. */
+body.admin .v2app.v2collapsed #tabs span.ct{display:block;position:absolute;top:4px;right:9px;width:7px;height:7px;min-width:0;margin:0;padding:0;line-height:7px;font-size:0;color:transparent;background:var(--a-acc);border-radius:99px;text-align:center;overflow:hidden}
+body.admin .v2app.v2collapsed #tabs button.on span.ct{background:#7BE0C3}
 }
 /* Điện thoại: drawer luôn hiện đủ nhãn, không ẩn theo collapsed */
 @media(max-width:900px){
