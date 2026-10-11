@@ -122,13 +122,15 @@ export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulk
           {rows.map((book) => (
             <div class="v2gcard" key={book.slug}>
               <BookCover book={book} apiBase={apiBase} className="v2thumb" width={160} height={240} />
-              <b title={book.title}>{book.title}</b>
-              <span class="sm muted v2gcard-author" title={book.author || ''}>{book.author || '—'}</span>
-              <BookBadges book={book} compact />
-              <span class="v2gcard-meta"><span>{countText(book)}</span><span>{book.updated || '—'}</span></span>
-              <span class="v2gcard-acts">
+              <div class="v2gcard-body">
+                <b class="v2gcard-title" title={book.title}>{book.title}</b>
+                <span class="v2gcard-author">{book.author || 'Chưa có tác giả'}</span>
+                <BookBadges book={book} compact />
+              </div>
+              <div class="v2gcard-foot">
+                <span class="v2gcard-meta"><span>{countText(book)}</span><span>{book.updated || '—'}</span></span>
                 <button class="btn ghost sm" type="button" onClick={() => onEdit(book.slug)}>Sửa</button>
-              </span>
+              </div>
             </div>
           ))}
         </div>

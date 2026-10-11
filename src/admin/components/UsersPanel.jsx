@@ -25,8 +25,8 @@ export function UsersPanel({ registry, onEdit, onFilterAuthor }) {
   return (
     <div id="pane-users" class="v2pane">
       <section class="card2">
-        <div class="row"><h3>Tác giả</h3><span class="grow"></span><span class="sm muted">{authors.length} người · lấy từ metadata bộ truyện</span></div>
-        <p class="hint">Danh sách lấy từ metadata của các bộ. KV chưa có bảng độc giả nên không có số liệu độc giả.</p>
+        <div class="row"><h3>Tác giả</h3><span class="grow"></span><span class="sm muted">{authors.length} người</span></div>
+        <p class="hint">Tổng hợp từ thông tin các bộ truyện.</p>
         <input class="inp" aria-label="Tìm tác giả" value={q} placeholder="Tìm tác giả…" onInput={(e) => setQ(e.target.value)} />
         {shown.length ? (
           <div class="v2table-wrap">
@@ -50,10 +50,6 @@ export function UsersPanel({ registry, onEdit, onFilterAuthor }) {
             </table>
           </div>
         ) : <div class="empty">Không có tác giả khớp.</div>}
-      </section>
-      <section class="card2">
-        <h3>Độc giả</h3>
-        <div class="empty">Chưa có API danh sách độc giả.</div>
       </section>
     </div>
   );

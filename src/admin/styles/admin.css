@@ -130,15 +130,6 @@ body.admin .tile span{font-size:12px;color:var(--a-dim)}
 /* Huy hiệu & pill */
 body.admin .pill,body.admin .v2badge{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:99px;border:1px solid var(--a-bd);background:var(--a-surf2);color:var(--a-mut);font-size:12px;font-weight:600;white-space:nowrap;line-height:1}
 body.admin .v2badge .i,body.admin .pill .i{width:12px;height:12px}
-body.admin .v2badge-completion.tone-ok,body.admin .v2badge-pub.tone-ok{color:var(--a-ok);background:color-mix(in srgb,var(--a-ok) 10%,var(--a-surf));border-color:color-mix(in srgb,var(--a-ok) 28%,transparent)}
-body.admin .v2badge-completion.tone-info,body.admin .v2badge-pub.tone-blue{color:#2F6FB0;background:color-mix(in srgb,#2F6FB0 9%,var(--a-surf));border-color:color-mix(in srgb,#2F6FB0 26%,transparent)}
-body.admin .v2badge-completion.tone-soon,body.admin .v2badge-pub.tone-gray{color:var(--a-mut)}
-body.admin .v2badge-pub.tone-amber{color:var(--a-warn);background:color-mix(in srgb,var(--a-warn) 10%,var(--a-surf));border-color:color-mix(in srgb,var(--a-warn) 28%,transparent)}
-body.admin .v2badge-pub.tone-bad,body.admin .v2badge-18{color:var(--a-bad);background:color-mix(in srgb,var(--a-bad) 8%,var(--a-surf));border-color:color-mix(in srgb,var(--a-bad) 26%,transparent)}
-body.admin .v2badge-pub.tone-violet{color:#7257B8;background:color-mix(in srgb,#7257B8 9%,var(--a-surf))}
-body.admin .v2badge-pub.tone-slate{color:#55657A;background:color-mix(in srgb,#55657A 9%,var(--a-surf))}
-body.admin .v2badge-lock{color:var(--a-warn);background:color-mix(in srgb,var(--a-warn) 10%,var(--a-surf));border-color:color-mix(in srgb,var(--a-warn) 28%,transparent)}
-body.admin .v2badge-lock .i{width:11px;height:11px}
 
 /* ========== 4. Màn hình ========== */
 
@@ -198,16 +189,6 @@ body.admin .v2book-table input[type=checkbox]{width:16px;height:16px;accent-colo
 body.admin .v2book-table .v2chap-actions{display:flex;gap:4px;justify-content:flex-end}
 
 /* Lưới bìa */
-body.admin .v2grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:18px}
-body.admin .v2gcard{position:relative;display:flex;flex-direction:column;padding:0 0 12px;border:1px solid var(--a-bd);border-radius:var(--a-r-lg);background:var(--a-surf);overflow:hidden;transition:transform .2s var(--a-ease),box-shadow .2s var(--a-ease),border-color .2s var(--a-ease)}
-body.admin .v2gcard:hover{transform:translateY(-3px);box-shadow:var(--a-shadow-lg);border-color:var(--a-bd2)}
-body.admin .v2gcard .v2thumb{width:100%;height:auto;aspect-ratio:2/3;border-radius:0;box-shadow:none}
-body.admin .v2gcard b{margin:12px 12px 2px;font-size:14px;font-weight:650;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-body.admin .v2gcard-author{margin:0 12px;font-size:12.5px;color:var(--a-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-body.admin .v2gcard .v2badges{margin:8px 12px 0;display:flex;flex-wrap:wrap;gap:4px}
-body.admin .v2gcard-meta{margin:auto 12px 0;padding-top:8px;display:flex;justify-content:space-between;gap:4px 8px;flex-wrap:wrap;font-size:12px;color:var(--a-dim)}
-body.admin .v2gcard-acts{margin:10px 12px 0}
-body.admin .v2gcard-acts .btn{width:100%}
 
 /* Phân trang & bulk */
 body.admin .v2pager{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin:14px 0 0;font-size:13px;color:var(--a-mut)}
@@ -347,7 +328,6 @@ body.admin .v2ndot{display:inline-block;width:7px;height:7px;border-radius:50%;b
   body.admin .v2book-table td:last-child{grid-column:1 / -1;padding-top:6px}
   body.admin .v2book-table .v2actions{justify-content:flex-start}
   body.admin .v2book-table .v2actions .btn{flex:1}
-  body.admin .v2grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
   body.admin .v2form .row{grid-template-columns:minmax(0,1fr)}
   body.admin .edgrid{gap:12px}
   body.admin .rte{min-height:300px;padding:16px}
@@ -356,13 +336,11 @@ body.admin .v2ndot{display:inline-block;width:7px;height:7px;border-radius:50%;b
 @media (max-width:480px){
   body.admin .v2pagehead h1{font-size:21px}
   body.admin .v2form>section{padding:16px}
-  body.admin .v2grid{gap:10px}
   body.admin .v2gate-panel{padding:24px 16px}
   body.admin .v2gate-actions{flex-direction:column}
 }
 @media (prefers-reduced-motion:reduce){
   body.admin *,body.admin *:before,body.admin *:after{transition-duration:.001ms!important;animation-duration:.001ms!important;animation-iteration-count:1!important}
-  body.admin .v2gcard:hover{transform:none}
 }
 [hidden]{display:none!important}
 
@@ -714,7 +692,6 @@ body.admin .v2form>section[aria-label="Ảnh bìa"] .v2up-empty b{font-size:14px
 /* Các ảnh bìa trong bảng/lưới/tab khác: kích thước cố định, không phình */
 body.admin img.v2thumb,body.admin .v2thumb img{max-width:100%}
 body.admin .v2book-table .v2thumb{width:48px;height:68px}
-body.admin .v2gcard .v2thumb{max-width:none}
 
 /* Tiêu đề truyện: ô lớn, nổi bật ở đầu form (như trang tạo truyện Wattpad) */
 body.admin .v2form>section[aria-label="Thông tin cơ bản"] input.inp:first-of-type{height:44px;font-size:16px;font-weight:600}
@@ -760,14 +737,6 @@ body.admin .v2picker-row{display:flex;gap:8px;align-items:center;margin-top:12px
 body.admin .v2picker-row select.inp{flex:1 1 280px;max-width:560px;width:auto}
 body.admin .v2picker-row .btn{flex:none}
 /* Lưới: thẻ nhỏ hơn, tối đa 7 cột rộng màn lớn; bìa tỉ lệ 2:3 nhưng không quá cao */
-body.admin .v2grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
-body.admin .v2gcard .v2thumb{max-height:none}
-body.admin .v2gcard .v2badges{display:flex;flex-wrap:wrap;gap:4px;margin:8px 10px 0}
-body.admin .v2gcard .v2badges .v2badge{height:20px;padding:0 6px;font-size:11px}
-body.admin .v2gcard b{margin:10px 10px 2px}
-body.admin .v2gcard-author{margin:0 10px}
-body.admin .v2gcard-meta{margin:auto 10px 0;padding-top:8px}
-body.admin .v2gcard-acts{margin:8px 10px 0}
 /* Slug trong bảng: một dòng, cắt bằng dấu ... thay vì ngắt giữa ngày */
 body.admin .v2book-table td:nth-child(3) .sm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 
@@ -776,8 +745,6 @@ body.admin .v2book-table td:nth-child(3) .sm{white-space:nowrap;overflow:hidden;
 body.admin .v2thumb{display:block;position:relative;overflow:hidden;flex:none}
 body.admin .v2thumb img{display:block;width:100%;height:100%;max-width:none;object-fit:cover;object-position:center}
 body.admin .v2book-table .v2thumb{width:48px;height:68px}
-body.admin .v2gcard .v2thumb{width:100%;height:auto;aspect-ratio:2/3}
-body.admin .v2gcard .v2thumb img{position:absolute;inset:0}
 body.admin .v2thumb .v2cover-ph{width:100%;height:100%}
 
 /* ===== v12 — thanh tìm kiếm trên cùng: icon căn giữa trong ô, không lệch ra ngoài viền ===== */
@@ -793,12 +760,6 @@ body.admin .v2top .v2search>.admin-nav-icon svg{width:15px;height:15px;display:b
 body.admin .v2top .v2search .inp{padding-left:38px!important;padding-right:12px!important}
 
 /* ===== v13 — Tác giả: cột tên có độ rộng tối thiểu, số liệu không xuống dòng, không còn thể loại ===== */
-body.admin .v2authors{table-layout:auto;width:100%}
-body.admin .v2authors th:first-child,body.admin .v2authors td:first-child{min-width:240px;width:40%}
-body.admin .v2authors td:first-child .v2au-name{display:block;white-space:normal;overflow-wrap:anywhere;font-weight:650}
-body.admin .v2authors th,body.admin .v2authors td{white-space:nowrap;vertical-align:middle}
-body.admin .v2authors td:last-child{padding-right:16px}
-body.admin .v2authors td:last-child .btn{white-space:nowrap}
 
 /* ===== v14 — lọc & thanh lưu trong thẻ: ô lọc đủ rộng (không cắt placeholder), thanh lưu khớp padding thẻ, tiêu đề bảng có đệm ===== */
 body.admin .v2filters>input.inp{flex:1 1 300px;min-width:220px;max-width:420px;width:auto}
@@ -821,7 +782,6 @@ body.admin .v2picker-row select.inp{min-width:0;max-width:100%;flex:1 1 auto;wid
 /* ===== v17 — Sửa bộ/Chương: trên màn hẹp danh sách chương và trình soạn xếp một cột (trước đây 260px + 1fr làm chữ dọc từng ký tự) ===== */
 @media (max-width:900px){
   body.admin .v2chapter-grid{grid-template-columns:minmax(0,1fr)}
-  body.admin .v2chapter-list{max-height:260px;overflow:auto}
 }
 body.admin .v2chapter-editor .v2chap-actions .btn,body.admin .v2chapter-editor .btn{white-space:nowrap;flex:none}
 body.admin .rte-tools button{white-space:nowrap;min-width:max-content}
@@ -846,8 +806,6 @@ body.admin .v2book-table td:nth-child(3) .sm{white-space:normal;overflow:visible
 body.admin .v2roles{width:100%}
 body.admin .v2roles th:first-child,body.admin .v2roles td:first-child{min-width:200px}
 /* ===== v20 — không cắt chữ: tác giả/tiêu đề thẻ lưới và tên trong bảng được xuống dòng, không còn "…" làm mất chữ ===== */
-body.admin .v2gcard-author{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.35}
-body.admin .v2gcard b{-webkit-line-clamp:3;overflow-wrap:anywhere}
 body.admin .v2rowtext b{max-width:none;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
 body.admin .v2roles th:first-child,body.admin .v2roles td:first-child{width:45%;min-width:200px}
 
@@ -884,3 +842,64 @@ body.admin .v2edit-foot .v2danger{border-radius:14px}
   body.admin .v2tabs{display:flex;width:100%}
   body.admin .v2tab{flex:1 1 0;padding:0 8px}
 }
+
+/* ===== v23 — Tinh chỉnh toàn bộ: badge dạng chữ + chấm màu (không viền, không nền); thẻ thư viện có cấu trúc cố định (bìa / thân / chân); danh sách chương dạng mục đánh số; bảng tác giả. Khối này ghi đè các luật cũ cùng phạm vi. ===== */
+
+/* Badge: chữ gọn, chấm màu làm trạng thái */
+body.admin .v2badges{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;min-width:0}
+body.admin .v2badge{display:inline-flex;align-items:center;gap:6px;height:auto;padding:0;margin:0;border:0;border-radius:0;background:none;box-shadow:none;font-size:12px;font-weight:600;line-height:1.3;letter-spacing:0;text-transform:none;color:var(--a-mut);white-space:nowrap}
+body.admin .v2badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+body.admin .v2badge-18{font-weight:700;color:var(--a-bad)}
+body.admin .v2badge-18::before,body.admin .v2badge-lock::before{display:none}
+body.admin .v2badge-lock{color:var(--a-warn)}
+body.admin .v2badge-lock .v2badge-ic{margin:0}
+body.admin .v2badge-completion.tone-ok,body.admin .v2badge-pub.tone-ok{color:var(--a-ok)}
+body.admin .v2badge-completion.tone-info,body.admin .v2badge-pub.tone-blue{color:#2F6FB0}
+body.admin .v2badge-completion.tone-soon,body.admin .v2badge-pub.tone-gray{color:var(--a-mut)}
+body.admin .v2badge-pub.tone-amber{color:var(--a-warn)}
+body.admin .v2badge-pub.tone-bad{color:var(--a-bad)}
+body.admin .v2badge-pub.tone-violet{color:#7257B8}
+body.admin .v2badge-pub.tone-slate{color:#55657A}
+body.admin .v2gcard .v2badges .v2badge{height:auto;padding:0;font-size:12px}
+
+/* Thẻ thư viện: bìa cố định tỉ lệ 2:3, thân co giãn, chân luôn nằm đáy */
+body.admin .v2grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(176px,1fr));gap:16px;align-items:stretch}
+body.admin .v2gcard{display:flex;flex-direction:column;min-width:0;padding:0;border:1px solid var(--a-bd);border-radius:12px;background:var(--a-surf);box-shadow:none;transform:none;overflow:hidden;transition:border-color .15s ease,box-shadow .15s ease}
+body.admin .v2gcard:hover{transform:none;border-color:var(--a-bd2);box-shadow:var(--a-shadow)}
+body.admin .v2gcard .v2thumb{display:block;width:100%;height:auto;aspect-ratio:2/3;border-radius:0;box-shadow:none;max-height:none}
+body.admin .v2gcard-body{display:flex;flex-direction:column;gap:6px;flex:1 1 auto;min-width:0;padding:12px 14px 14px}
+body.admin .v2gcard-title{display:block;margin:0;font-size:14px;font-weight:650;line-height:1.35;color:var(--a-tx);overflow-wrap:anywhere;word-break:normal}
+body.admin .v2gcard-author{display:block;font-size:12.5px;line-height:1.4;color:var(--a-dim);overflow-wrap:anywhere}
+body.admin .v2gcard .v2badges{margin-top:6px}
+body.admin .v2gcard-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;border-top:1px solid var(--a-bd);min-width:0}
+body.admin .v2gcard-meta{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:12px;line-height:1.35;color:var(--a-dim);font-variant-numeric:tabular-nums}
+body.admin .v2gcard-acts{margin:0}
+body.admin .v2gcard-foot .btn{flex:none}
+@media (max-width:640px){
+  body.admin .v2grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  body.admin .v2gcard-body{padding:10px 12px 12px}
+  body.admin .v2gcard-foot{padding:8px 12px}
+}
+
+/* Danh sách chương: mục đánh số, trạng thái chọn bằng vạch màu */
+body.admin .v2chapter-list{display:flex;flex-direction:column;gap:2px;align-self:start;min-width:0;padding:6px;border:1px solid var(--a-bd);border-radius:12px;background:var(--a-surf)}
+body.admin .v2chapter-list>button{display:grid;grid-template-columns:30px minmax(0,1fr);column-gap:6px;row-gap:2px;align-items:start;width:100%;min-height:44px;margin:0;padding:8px 10px;border:0;border-radius:8px;background:transparent;color:var(--a-tx);font:inherit;text-align:left;cursor:pointer;box-shadow:inset 3px 0 0 transparent;transition:background-color .12s ease}
+body.admin .v2chapter-list>button:hover{background:var(--a-surf2)}
+body.admin .v2chapter-list>button:focus-visible{outline:2px solid var(--a-pri,#0f766e);outline-offset:-2px}
+body.admin .v2chapter-list>button.on{background:var(--a-surf2);box-shadow:inset 3px 0 0 var(--a-pri,#0f766e)}
+body.admin .v2chapter-list>button>b{grid-row:1 / span 2;padding-top:1px;font-size:12px;font-weight:650;color:var(--a-dim);font-variant-numeric:tabular-nums}
+body.admin .v2chapter-list>button>span{min-width:0;font-size:13.5px;font-weight:600;line-height:1.35;overflow-wrap:anywhere}
+body.admin .v2chapter-list>button>em{grid-column:2;min-width:0;font-style:normal;font-size:12px;line-height:1.4;color:var(--a-dim);overflow-wrap:anywhere}
+body.admin .v2chap-hint{margin:10px 0 14px}
+
+/* Bảng tác giả: nhịp dòng đều, không cột nào tự co */
+body.admin .v2authors th,body.admin .v2authors td{padding:12px 14px;white-space:nowrap;vertical-align:middle}
+body.admin .v2authors th:first-child,body.admin .v2authors td:first-child{width:auto;min-width:200px}
+body.admin .v2authors td:first-child .v2au-name{white-space:normal;overflow-wrap:anywhere}
+body.admin .v2authors td:last-child{text-align:right}
+/* v23b — bảng tác giả: đủ rộng, cột tên nhận phần còn lại, ô số gọn, nút thao tác không bị cắt */
+body.admin .v2authors{width:100%;table-layout:auto}
+body.admin .v2authors th,body.admin .v2authors td{padding:12px 12px}
+body.admin .v2authors th:first-child,body.admin .v2authors td:first-child{padding-left:16px}
+body.admin .v2authors td:last-child{padding-right:16px}
+body.admin .v2authors td:last-child .btn{margin-left:auto}
