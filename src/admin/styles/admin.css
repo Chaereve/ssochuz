@@ -1132,11 +1132,11 @@ body.admin .v2up-drop.has-img .v2up-preview{width:100%;height:100%;max-height:no
 body.admin .v2up-preview{min-height:0}
 body.admin .v2up-empty b{overflow-wrap:anywhere;text-align:center}
 
-/* v39: danh sách "Mới cập nhật" (Chương/Tổng quan) — tên và meta xếp dọc, không dính nhau; tên dài ngắt dòng */
+/* v39: danh sách "Mới cập nhật" (Chương/Tổng quan) — tên một dòng có dấu …, meta xếp riêng */
 body.admin .v2sort li{display:flex;align-items:center;gap:12px;min-width:0}
 body.admin .v2sort li>.grow{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0;flex:1 1 auto}
-body.admin .v2sort li>.grow>b{display:block;overflow-wrap:anywhere;color:var(--a-txt)}
-body.admin .v2sort li>.grow>.muted{display:block}
+body.admin .v2sort li>.grow>b{display:block;width:100%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;overflow-wrap:normal;color:var(--a-txt)}
+body.admin .v2sort li>.grow>.muted{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 body.admin .v2sort li>.btn{flex:0 0 auto}
 
 /* v40: khối bìa trong Thêm bộ căn trái như các trường khác (nhãn, URL, alt, gợi ý) */
@@ -1152,3 +1152,27 @@ body.admin .v2up-row .btn.ghost:hover{border-color:var(--a-acc);color:var(--a-ac
 body.admin .v2form>section[aria-label="Ảnh bìa"] .v2up{align-items:stretch;text-align:left}
 body.admin .v2form>section[aria-label="Ảnh bìa"] .v2up-label{text-align:left}
 body.admin .v2form>section[aria-label="Ảnh bìa"] .v2up-row .btn{justify-self:stretch}
+
+/* v43: nhãn điều hướng và nút lọc không bị bẻ đôi; nhóm tab tự xuống hàng khi thiếu chỗ */
+body.admin .v2aside button{white-space:nowrap}
+body.admin .v2aside button>span:not(.admin-nav-icon):not(.ct){flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.admin .v2reptabs{display:flex;flex:0 1 auto;flex-wrap:wrap;gap:6px;min-width:0;max-width:100%;margin-left:8px}
+body.admin .v2reptabs button{flex:0 0 auto;white-space:nowrap}
+@media(max-width:760px){body.admin .v2reptabs{margin-left:0}}
+
+/* Báo lỗi: trạng thái là nút thao tác rõ ràng; chỉ nội dung báo cáo được làm mờ khi đã xử lý. */
+body.admin .v2itemrow>div{flex:1 1 auto;min-width:0}
+body.admin .v2itemrow>.v2okbtn,body.admin .v2itemrow>.v2reopenbtn{flex:0 0 auto;align-self:flex-start;white-space:nowrap;font-weight:650}
+body.admin .v2itemrow>.v2okbtn{border-color:color-mix(in srgb,var(--a-ok) 38%,var(--a-bd));background:color-mix(in srgb,var(--a-ok) 10%,var(--a-surf));color:var(--a-ok)}
+body.admin .v2itemrow>.v2okbtn:hover:not(:disabled){border-color:var(--a-ok);background:color-mix(in srgb,var(--a-ok) 17%,var(--a-surf));color:var(--a-ok)}
+body.admin .v2itemrow>.v2reopenbtn{border-color:var(--a-bd2);background:var(--a-surf2);color:var(--a-mut)}
+body.admin .v2itemrow>.v2reopenbtn:hover:not(:disabled){border-color:var(--a-bd2);background:var(--a-surf3);color:var(--a-txt)}
+body.admin .v2itemrow.v2done{opacity:1}
+body.admin .v2itemrow.v2done>div{opacity:.68}
+
+/* Tên truyện/tác giả trong các danh sách dày giữ một dòng; title cho phép xem đủ khi rê chuột. */
+body.admin .v2book-table .v2rowtext>b{display:block;width:100%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;overflow-wrap:normal}
+body.admin .v2book-table td:nth-child(4){overflow:hidden;text-overflow:ellipsis;white-space:nowrap;overflow-wrap:normal}
+body.admin .v2overview .ovrec .ovtt>b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;overflow-wrap:normal}
+body.admin .v2overview .ovchip,body.admin .v2todo span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.admin .v2overview .ovchip{max-width:100%}

@@ -160,7 +160,7 @@ export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulk
                       <span class="sm muted">{book.slug}{book.updated ? ' · ' + book.updated : ''}</span>
                     </span>
                   </td>
-                  <td data-lb="Tác giả">{book.author || '—'}</td>
+                  <td data-lb="Tác giả" title={book.author || ''}>{book.author || '—'}</td>
                   <td data-lb="Hoàn thành"><CompletionBadge book={book} /></td>
                   <td data-lb="Xuất bản"><PublishStatusBadge book={book} /></td>
                   <td data-lb="Chương">{countText(book)}</td>
