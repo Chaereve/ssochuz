@@ -804,3 +804,16 @@ body.admin .v2authors td:last-child .btn{white-space:nowrap}
 body.admin .v2filters>input.inp{flex:1 1 300px;min-width:220px;max-width:420px;width:auto}
 body.admin .card2 .savebar{margin:16px -24px -24px;padding:12px 24px;border-radius:0 0 var(--a-r-lg) var(--a-r-lg)}
 body.admin .v2book-table th{padding-left:12px;padding-right:12px;white-space:nowrap}
+
+/* ===== v15 — Khóa mật mã (Sửa bộ): một thẻ một cột, cùng kiểu thẻ với các mục khác (form dùng .v2form nên trước đây bị chia lưới 2 cột) ===== */
+body.admin .v2form.v2lock-panel{display:block;margin-top:16px;padding:20px 22px;border:1px solid var(--a-bd);border-radius:var(--a-r-lg);background:var(--a-surf);box-shadow:var(--a-shadow)}
+body.admin .v2form.v2lock-panel>h3{margin:0 0 4px;font-size:15px;font-weight:650}
+body.admin .v2form.v2lock-panel>.hint{margin:0 0 12px}
+body.admin .v2form.v2lock-panel>label.fl{display:block;margin-top:12px}
+body.admin .v2form.v2lock-panel>.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+body.admin .v2form.v2lock-panel>.row .btn{min-height:var(--a-h,36px)}
+
+/* ===== v16 — Chương (mobile): ô chọn bộ co theo thẻ, không tràn ngang ===== */
+body.admin .v2picker-row{min-width:0}
+body.admin .v2picker-row select.inp{min-width:0;max-width:100%;flex:1 1 auto;width:100%}
+@media (max-width:640px){body.admin .v2picker-row{flex-direction:column;align-items:stretch}body.admin .v2picker-row .btn{width:100%;justify-content:center}}
