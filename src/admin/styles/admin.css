@@ -1075,3 +1075,9 @@ body.admin .v2authors td:last-child .btn{white-space:nowrap}
   body.admin .v2authors th:nth-child(6),body.admin .v2authors td:nth-child(6){display:none}
   body.admin .v2authors th,body.admin .v2authors td{padding-left:10px;padding-right:10px}
 }
+
+/* ===== v36 — Tác giả: cột số căn phải đúng với tiêu đề, số dùng chữ cố định độ rộng, bảng không dính mép thẻ ===== */
+body.admin .v2tablewrap:has(.v2authors){padding:0 4px 4px}
+body.admin .v2authors th:nth-child(n+2):nth-child(-n+7),body.admin .v2authors td:nth-child(n+2):nth-child(-n+7){text-align:right}
+body.admin .v2authors td:nth-child(n+2):nth-child(-n+6){font-variant-numeric:tabular-nums}
+body.admin .v2authors td:nth-child(5){white-space:nowrap}
