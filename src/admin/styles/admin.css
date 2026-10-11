@@ -950,3 +950,14 @@ body.admin .v2authors-wrap{overflow-x:auto;overflow-y:visible;border:0;border-ra
 body.admin .v2authors th{text-align:left}
 body.admin .v2authors th:nth-child(n+2):nth-child(-n+6){text-align:right}
 body.admin .v2authors th:last-child{text-align:right}
+
+/* ===== v29 — khung lưới: thanh bên (cột 1) + khung nội dung (cột 2), không dùng margin cố định ===== */
+body.admin .v2app{display:grid;grid-template-columns:var(--a-side) minmax(0,1fr);align-items:start;min-height:100vh;transition:grid-template-columns .2s var(--a-ease)}
+body.admin .v2app>.v2side{position:sticky;top:0;bottom:auto;inset:auto;grid-column:1;grid-row:1;width:auto;height:100vh;align-self:start}
+body.admin .v2app>.v2frame{grid-column:2;grid-row:1;min-width:0;margin-left:0;width:auto}
+body.admin .v2app .v2main{margin-left:0}
+@media (max-width:900px){
+  body.admin .v2app{grid-template-columns:minmax(0,1fr)}
+  body.admin .v2app>.v2side{position:fixed;inset:0 auto 0 0;grid-column:auto;width:236px;height:100vh}
+  body.admin .v2app>.v2frame{grid-column:auto}
+}
