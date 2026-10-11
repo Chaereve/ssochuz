@@ -817,3 +817,36 @@ body.admin .v2form.v2lock-panel>.row .btn{min-height:var(--a-h,36px)}
 body.admin .v2picker-row{min-width:0}
 body.admin .v2picker-row select.inp{min-width:0;max-width:100%;flex:1 1 auto;width:100%}
 @media (max-width:640px){body.admin .v2picker-row{flex-direction:column;align-items:stretch}body.admin .v2picker-row .btn{width:100%;justify-content:center}}
+
+/* ===== v17 — Sửa bộ/Chương: trên màn hẹp danh sách chương và trình soạn xếp một cột (trước đây 260px + 1fr làm chữ dọc từng ký tự) ===== */
+@media (max-width:900px){
+  body.admin .v2chapter-grid{grid-template-columns:minmax(0,1fr)}
+  body.admin .v2chapter-list{max-height:260px;overflow:auto}
+}
+body.admin .v2chapter-editor .v2chap-actions .btn,body.admin .v2chapter-editor .btn{white-space:nowrap;flex:none}
+body.admin .rte-tools button{white-space:nowrap;min-width:max-content}
+body.admin .savebar .btn{white-space:nowrap;flex:none}
+body.admin .savebar .sm{min-width:0;overflow-wrap:anywhere}
+@media (max-width:640px){
+  body.admin .savebar{flex-direction:column;align-items:stretch;gap:8px}
+  body.admin .savebar .grow{display:none}
+  body.admin .savebar .btn{width:100%;justify-content:center}
+  body.admin .savebar .sm{text-align:left}
+}
+/* ===== v18 — hàng hành động (Lưu metadata / Lưu nháp phiên) không bị co trong lưới 170px ===== */
+body.admin .v2form .row.sticky-actions,body.admin .row.sticky-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+body.admin .sticky-actions .btn{white-space:nowrap;flex:none}
+body.admin .sticky-actions .sm{flex:1 1 220px;min-width:0;overflow-wrap:anywhere}
+@media (max-width:640px){
+  body.admin .sticky-actions .btn{width:100%;justify-content:center}
+  body.admin .sticky-actions .sm{flex-basis:100%}
+}
+/* ===== v19 — không cắt tên dài trong bảng Thư viện (cho xuống dòng thay vì mất chữ); bảng Vai trò có cột Email đủ rộng ===== */
+body.admin .v2book-table td:nth-child(3) .sm{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;max-width:100%}
+body.admin .v2roles{width:100%}
+body.admin .v2roles th:first-child,body.admin .v2roles td:first-child{min-width:200px}
+/* ===== v20 — không cắt chữ: tác giả/tiêu đề thẻ lưới và tên trong bảng được xuống dòng, không còn "…" làm mất chữ ===== */
+body.admin .v2gcard-author{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.35}
+body.admin .v2gcard b{-webkit-line-clamp:3;overflow-wrap:anywhere}
+body.admin .v2rowtext b{max-width:none;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+body.admin .v2roles th:first-child,body.admin .v2roles td:first-child{width:45%;min-width:200px}

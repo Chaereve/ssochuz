@@ -42,7 +42,7 @@ export function RolesPanel({ registry, role, onSave }) {
           <button class="btn" type="submit">Thêm</button>
         </form>
         <div class="v2tablewrap">
-          <table class="v2book-table">
+          <table class="v2book-table v2roles">
             <thead><tr><th>Email</th><th>Vai trò</th><th aria-label="Thao tác">Thao tác</th></tr></thead>
             <tbody>
               {rows.length ? rows.map((r, i) => (
