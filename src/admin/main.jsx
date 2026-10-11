@@ -345,7 +345,7 @@ function App() {
       api.setConnection({ apiBase: '', adminKey: '' });
       store.setState({ mode, role: mode === 'login' ? 'admin' : 'local', online: false, worker: null, apiBase: '', quota: quota.snapshot(), connecting: false, connError: '' });
       await loadRegistryFromCurrent(false);
-      if (!quiet) setNotice('Đang xem dữ liệu tĩnh trong repo. Admin chỉ ghi khi bạn nối Worker bằng ADMIN_KEY.');
+      /* Banner "Chỉ đọc" của Layout đã nói đủ; không lặp thêm thông báo ở đây. */
     } catch (error) { setGateMessage(error.message || String(error)); }
     finally { setBusy(false); }
   }

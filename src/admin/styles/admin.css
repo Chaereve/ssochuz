@@ -792,3 +792,46 @@ body.admin .v2search .inp:focus-visible{box-shadow:none}
 /* Select: giữ mũi tên chevron (dùng background-color, không shorthand) */
 body.admin .v2app select.inp,body.admin .v2filters select.inp{background-color:var(--surf);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23838b95' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;background-size:12px}
 body.admin .v2filters select.inp{min-width:150px}
+
+/* =====================================================================
+   v5 — bố cục gọn cho mọi tab (kiểu trang biên tập novel)
+   · Số liệu dùng chữ sans, nhãn sentence case, không tràn
+   · Nhãn nhóm nội dung sentence case thay cho chữ hoa giãn cách
+   · Khoảng cách dọc đều, mô tả trang ngắn, một banner trạng thái duy nhất
+   ===================================================================== */
+body.admin .tile{border-radius:14px;padding:16px 18px;border-color:var(--bd);background:var(--surf);box-shadow:none}
+body.admin .tile b{font-family:var(--font);font-weight:700;font-size:24px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1}
+body.admin .tile span{display:block;margin-top:6px;font-size:12.5px;font-weight:550;color:var(--mut);letter-spacing:0;text-transform:none;line-height:1.35}
+body.admin .tile small{margin-top:4px;font-size:11.5px;color:var(--dim);line-height:1.4}
+body.admin .tiles{gap:12px}
+body.admin .ovhead,body.admin .v2overview .ovhead{font-size:13px;font-weight:650;letter-spacing:0;text-transform:none;color:var(--txt);margin:0 0 12px}
+body.admin .v2todo{border-radius:12px;background:var(--surf)}
+body.admin .v2todo b{font-family:var(--font);font-weight:700}
+
+/* Khối/thẻ: một lớp viền, không đổ bóng chồng */
+body.admin .card,body.admin .panel,body.admin .v2mini,body.admin .v2lock-panel,body.admin .v2danger{border-radius:14px;box-shadow:none}
+body.admin .v2mini{padding:16px 18px;gap:10px}
+body.admin .v2mini h3,body.admin .v2lock-panel h3{font-size:15px}
+body.admin .empty{border-radius:12px;padding:22px;font-size:13.5px;background:var(--surf2);border-style:dashed}
+
+/* Ghi chú trạng thái: một banner duy nhất (đã gộp với Layout) */
+body.admin .v2staticbar{border-radius:12px;padding:10px 14px;font-size:13.5px}
+body.admin .v2staticbar b{font-size:13.5px}
+
+/* Khoảng cách dọc giữa các khối trong trang */
+body.admin .v2main>.v2pagehead{margin-bottom:18px}
+body.admin .v2main>section,body.admin .v2main>.card{margin-top:0}
+body.admin .hint{font-size:13px;line-height:1.55}
+body.admin .sm{font-size:12.5px}
+/* Form sửa bộ: mỗi nhóm là một thẻ, nhãn xếp trên ô nhập, các hàng thẳng cột */
+body.admin .v2form{max-width:960px;gap:18px}
+body.admin .v2fsec{gap:14px;padding:18px 20px;border:1px solid var(--bd);border-radius:14px;background:var(--surf)}
+body.admin .v2fsec-head{gap:3px}
+body.admin .v2fsec-head b{font-size:14.5px}
+body.admin label.fl{display:grid;gap:6px;margin:0;font-size:12.5px;font-weight:600;color:var(--mut)}
+body.admin label.fl>.inp,body.admin label.fl>select{width:100%;min-width:0}
+body.admin .v2form .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;align-items:end}
+body.admin .v2form .row>label{min-width:0}
+body.admin .v2edit-head{margin:6px 0 16px;gap:10px}
+body.admin .v2edit-head h3{font-size:21px}
+body.admin .v2form .btn.pri{height:40px}

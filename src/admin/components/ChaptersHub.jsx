@@ -36,7 +36,7 @@ export function ChaptersHub({ registry, apiBase, onEdit }) {
     <div id="pane-chapters" class="v2pane">
       <section class="card2">
         <div class="row"><h3>Chương &amp; xuất bản</h3><span class="grow"></span><span class="sm muted">{lib.length} bộ</span></div>
-        <p class="hint">Mở một bộ để sửa chương, kéo thả thứ tự, chèn ảnh trong nội dung, hẹn giờ hoặc lưu trữ. Không trộn tình trạng hoàn thành với trạng thái xuất bản. Hub chỉ dùng metadata registry — không tải full HTML chương.</p>
+        <p class="hint">Chọn một bộ để quản lý chương, thứ tự và lịch đăng.</p>
       </section>
       <section class="card2">
         <h3>Hàng đợi nháp</h3>

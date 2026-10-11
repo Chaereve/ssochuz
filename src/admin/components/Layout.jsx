@@ -293,7 +293,7 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
           </nav>
           {(() => {
             const head = activeTab === 'edit'
-              ? [currentTitle || currentSlug || 'Sửa bộ', 'Metadata, ảnh bìa, khóa mật mã và soạn chương. Thay đổi chỉ ghi Cloudflare KV khi đã nối ADMIN_KEY.']
+              ? [currentTitle || currentSlug || 'Sửa bộ', 'Thông tin, bìa, khoá mật mã và nội dung chương.']
               : (PAGE_HEAD[activeTab] || [CRUMBS[activeTab] || activeTab, '']);
             return (
               <header class="v2pagehead">
