@@ -692,3 +692,15 @@ body.admin .v2gate-copy h1{margin:0 0 12px;line-height:1.25}
 body.admin .v2gate-copy p{margin:0;line-height:1.6}
 /* Thanh tiến trình đọc bài công khai không hiện trong admin */
 body.admin #sprog{display:none}
+
+/* ===== v8 — nút sidebar luôn đọc được (chữ không bị màu nền của cz.css ghi đè) ===== */
+body.admin .v2side button{color:#B6BDC6;background-color:transparent}
+body.admin .v2side button:hover{color:#F2F4F6;background-color:rgba(255,255,255,.06)}
+body.admin .v2side button.on{color:#7BE0C3;background-color:rgba(79,203,174,.14)}
+body.admin .v2side button .admin-nav-icon .i{color:currentColor}
+/* cz.css có ".admin #tabs button" (độ ưu tiên cao, do id="tabs" của nav) — ghi đè bằng selector cùng cấp */
+body.admin #tabs button{color:#B6BDC6;background-color:transparent}
+body.admin #tabs button:hover{color:#F2F4F6;background-color:rgba(255,255,255,.06)}
+body.admin #tabs button.on{color:#7BE0C3;background-color:rgba(79,203,174,.14)}
+body.admin #tabs button .admin-nav-icon .i,body.admin #tabs button .i{color:currentColor}
+body.admin #tabs button .ct{background:rgba(255,255,255,.08);color:#AEB6BF}
