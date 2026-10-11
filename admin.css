@@ -870,3 +870,19 @@ body.admin .v2form>section[aria-label="Ảnh bìa"] .v2up-row{display:grid;grid-
 body.admin .v2form>section[aria-label="Ảnh bìa"] .v2up-row>.btn{width:100%}
 body.admin .v2form>section[aria-label="Ảnh bìa"] input[type=file]{width:100%;font-size:12.5px}
 body.admin .v2form>section[aria-label="Ảnh bìa"] .inp{width:100%}
+
+/* ---- v7: hoàn thiện Thêm bộ / ô tải bìa ---- */
+/* Khung kéo-thả: mỗi dòng một khối, không dính chữ đậm với chữ thường */
+body.admin .v2up-empty{display:grid;gap:4px;justify-items:center}
+body.admin .v2up-empty b{font-size:14px;font-weight:650;color:var(--txt)}
+body.admin .v2up-empty span,body.admin .v2up-empty small{font-size:12.5px;color:var(--mut)}
+/* Ô chọn file: nút gọn theo theme thay cho giao diện gốc của trình duyệt */
+body.admin input[type=file]{font-size:12.5px;color:var(--mut)}
+body.admin input[type=file]::file-selector-button{margin-right:10px;height:32px;padding:0 12px;border:1px solid var(--bd2);border-radius:9px;background:var(--surf);color:var(--txt);font:600 12.5px var(--font);cursor:pointer;transition:background-color .15s var(--ease-out)}
+body.admin input[type=file]::file-selector-button:hover{background:var(--surf2)}
+/* Bộ lọc thư viện trên mobile: lưới 2 cột, ô tìm kiếm chiếm cả hàng */
+@media(max-width:640px){
+  body.admin .v2filters{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+  body.admin .v2filters .inp,body.admin .v2filters select.inp{min-width:0;max-width:none;width:100%}
+  body.admin .v2filters>.inp{grid-column:1 / -1}
+}
