@@ -103,6 +103,9 @@ function json(body, ok = true, status = 200) {
     await wait(150);
     inputEv($('#pane-list .v2toolbar input.inp'), title);
     await wait(150);
+    /* Thư viện mặc định mở ở chế độ Lưới; test này thao tác nút Sửa trong bảng nên chuyển sang Bảng. */
+    const tableBtn = $$('#pane-list button').find((b) => b.textContent.trim() === 'Bảng');
+    if (tableBtn) { click(tableBtn, 'nút Bảng'); await wait(150); }
     const row = $$('.v2book-table tbody tr').find((r) => r.textContent.indexOf(slug) >= 0);
     click(row && [...row.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Sửa'), 'nút Sửa của ' + slug);
   }
