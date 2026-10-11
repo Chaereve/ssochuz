@@ -78,3 +78,12 @@ for (const f of ['admin.css', 'admin.js', 'admin-editor.js', 'admin-docx.js']) {
     console.warn('  ⚠ CẢNH BÁO DUNG LƯỢNG: ' + ev.message);
   }
 }
+
+/* ?v= của admin.js trong admin.html = sha1 nội dung (cùng lý do với admin.css ở trên). */
+{
+  const jsHash = createHash('sha1').update(readFileSync(path.join(ROOT, 'admin.js'))).digest('hex').slice(0, 10);
+  const htmlPath = path.join(ROOT, 'admin.html');
+  const html = readFileSync(htmlPath, 'utf8');
+  writeFileSync(htmlPath, html.replace(/\/admin\.js\?v=[^"']*/, '/admin.js?v=' + jsHash));
+  console.log('  admin.html: ?v= admin.js = ' + jsHash);
+}
