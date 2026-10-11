@@ -864,3 +864,23 @@ body.admin .v2chap-danger{margin-top:16px}
   body.admin .v2chap-tools .btn{flex:1 1 calc(50% - 6px)}
   body.admin .v2chap-savebar .btn{width:100%;justify-content:center}
 }
+
+/* ===== v22 — Sửa bộ: hai tab (Thông tin / Chương). Chương dùng toàn bộ chiều ngang; khoá mật mã và khu vực nguy hiểm đứng cạnh nhau ở cuối tab Thông tin. ===== */
+body.admin [hidden]{display:none!important}
+body.admin .v2edit{display:flex;flex-direction:column;gap:14px;min-width:0}
+body.admin .v2edit-top{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;min-width:0}
+body.admin .v2edit-title{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;min-width:0;flex:1 1 280px}
+body.admin .v2edit-title h3{margin:0;font-size:20px;line-height:1.3;overflow-wrap:anywhere;min-width:0}
+body.admin .v2tabs{display:inline-flex;gap:4px;padding:4px;border:1px solid var(--a-bd);border-radius:12px;background:var(--a-surf2);align-self:flex-start;max-width:100%}
+body.admin .v2tab{appearance:none;border:0;background:transparent;color:var(--a-mut);font:inherit;font-size:14px;font-weight:600;min-height:38px;padding:0 16px;border-radius:9px;cursor:pointer;white-space:nowrap}
+body.admin .v2tab:hover{color:var(--a-tx)}
+body.admin .v2tab:focus-visible{outline:2px solid var(--a-pri,#0f766e);outline-offset:2px}
+body.admin .v2tab.on{background:var(--a-surf);color:var(--a-tx);box-shadow:0 1px 2px rgba(0,0,0,.08),0 0 0 1px var(--a-bd)}
+body.admin .v2tabpane{min-width:0}
+body.admin .v2edit-foot{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:16px;margin-top:16px;align-items:start;min-width:0}
+body.admin .v2edit-foot>.v2lock-panel,body.admin .v2edit-foot>.v2danger{margin:0;max-width:none;min-width:0}
+body.admin .v2edit-foot .v2danger{border-radius:14px}
+@media (max-width:640px){
+  body.admin .v2tabs{display:flex;width:100%}
+  body.admin .v2tab{flex:1 1 0;padding:0 8px}
+}

@@ -745,7 +745,7 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
               </div>
             </div>
           ) : null}
-          <div class="v2chap-bar">
+          <div class="v2chap-bar v2chap-actions">
             <span class="sm muted v2chap-stat">{stat.words} từ · {stat.chars} ký tự · ~{readTime(stat.words)} phút đọc{draft ? ' · có nháp autosave' : ''}</span>
             <div class="v2chap-tools" role="group" aria-label="Công cụ chương">
             <input ref={fileRef} class="hide" type="file" aria-label="Nhập tệp chương .txt hoặc .html" accept=".txt,.html,.htm,text/plain,text/html" onChange={(e) => importFile(e.currentTarget.files && e.currentTarget.files[0])} />
