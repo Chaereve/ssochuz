@@ -1108,3 +1108,8 @@ body.admin .v2sort li>.grow{display:flex;flex-direction:column;align-items:flex-
 body.admin .v2sort li>.grow>b{display:block;overflow-wrap:anywhere;color:var(--a-txt)}
 body.admin .v2sort li>.grow>.muted{display:block}
 body.admin .v2sort li>.btn{flex:0 0 auto}
+
+/* v40: khối bìa trong Thêm bộ căn trái như các trường khác (nhãn, URL, alt, gợi ý) */
+body.admin .v2nb .v2up{align-items:stretch;text-align:left}
+body.admin .v2nb .v2up-label{text-align:left}
+body.admin .v2nb .v2up-row .btn{justify-self:start}

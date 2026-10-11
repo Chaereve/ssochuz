@@ -95,7 +95,7 @@ export function NewBook({ registry, onCreate, onUploadImage, apiBase = '', write
               <span class="hint">Tuỳ chọn. Có thể thêm sau trong tab Chương.</span>
             </div>
             <label class="fl">
-              <textarea class="inp ta v2nb-chapter" value={form.chapter} onInput={(e) => update('chapter', e.target.value)} />
+              <textarea class="inp ta v2nb-chapter" aria-label="Nội dung chương đầu tiên (tuỳ chọn)" value={form.chapter} onInput={(e) => update('chapter', e.target.value)} />
             </label>
           </section>
         </div>
