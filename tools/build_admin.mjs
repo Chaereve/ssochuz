@@ -1,7 +1,7 @@
 /* Build admin static bundle (một trang quản trị duy nhất): Preact + TipTap,
    rồi copy source CSS ra thư mục gốc. Sửa src/admin/ rồi chạy npm run build:admin. */
 import { createHash } from 'node:crypto';
-import { copyFileSync, readFileSync, statSync } from 'node:fs';
+import { copyFileSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
@@ -11,6 +11,14 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const kb = (n) => (n / 1024).toFixed(1) + 'kb';
 
 copyFileSync(path.join(ROOT, 'src/admin/styles/admin.css'), path.join(ROOT, 'admin.css'));
+/* ?v= của admin.css trong admin.html = sha1 nội dung ⇒ mỗi lần đổi CSS là đổi URL,
+   trình duyệt không dùng bản cache cũ (trước đây chuỗi v cố định khiến thay đổi không hiện). */
+{
+  const cssHash = createHash('sha1').update(readFileSync(path.join(ROOT, 'admin.css'))).digest('hex').slice(0, 10);
+  const htmlPath = path.join(ROOT, 'admin.html');
+  const html = readFileSync(htmlPath, 'utf8');
+  writeFileSync(htmlPath, html.replace(/\/admin\.css\?v=[^"]*/, '/admin.css?v=' + cssHash));
+}
 
 /* Trình soạn thảo chương (Tiptap/ProseMirror) build TRƯỚC thành tệp riêng, tải khi
    mở khung soạn chương (src/admin/utils/editorLoader.js). ?v= của nó = sha1 nội
