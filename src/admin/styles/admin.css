@@ -791,3 +791,16 @@ body.admin .v2top .v2search:focus-within .inp{border-color:var(--a-acc,#0F7B5F);
 body.admin .v2top .v2search>.admin-nav-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);display:inline-flex;width:15px;height:15px;color:var(--a-dim);pointer-events:none;z-index:1}
 body.admin .v2top .v2search>.admin-nav-icon svg{width:15px;height:15px;display:block}
 body.admin .v2top .v2search .inp{padding-left:38px!important;padding-right:12px!important}
+
+/* ===== v13 — Tác giả: cột tên có độ rộng tối thiểu, số liệu không xuống dòng, không còn thể loại ===== */
+body.admin .v2authors{table-layout:auto;width:100%}
+body.admin .v2authors th:first-child,body.admin .v2authors td:first-child{min-width:240px;width:40%}
+body.admin .v2authors td:first-child .v2au-name{display:block;white-space:normal;overflow-wrap:anywhere;font-weight:650}
+body.admin .v2authors th,body.admin .v2authors td{white-space:nowrap;vertical-align:middle}
+body.admin .v2authors td:last-child{padding-right:16px}
+body.admin .v2authors td:last-child .btn{white-space:nowrap}
+
+/* ===== v14 — lọc & thanh lưu trong thẻ: ô lọc đủ rộng (không cắt placeholder), thanh lưu khớp padding thẻ, tiêu đề bảng có đệm ===== */
+body.admin .v2filters>input.inp{flex:1 1 300px;min-width:220px;max-width:420px;width:auto}
+body.admin .card2 .savebar{margin:16px -24px -24px;padding:12px 24px;border-radius:0 0 var(--a-r-lg) var(--a-r-lg)}
+body.admin .v2book-table th{padding-left:12px;padding-right:12px;white-space:nowrap}
