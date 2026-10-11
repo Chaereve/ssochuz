@@ -236,6 +236,18 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
     setIndex(n);
   }
 
+  /* Danh sách chương nay cuộn riêng bên trong (CSS giới hạn chiều cao khung)
+     nên chương đang chọn phải tự cuộn tới: đổi chương bằng nút Lên/Xuống,
+     kéo-thả sắp xếp hay sau khi nhập file — khỏi phải cuộn tay tìm hàng mở. */
+  const listRef = useRef(null);
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+    const btn = list.querySelectorAll('button')[index];
+    /* jsdom không cài scrollIntoView — bỏ qua khi thiếu (chỉ là cuộn hiển thị) */
+    if (btn && typeof btn.scrollIntoView === 'function') btn.scrollIntoView({ block: 'nearest' });
+  }, [index, chapters.length]);
+
   useEffect(() => {
     if (bootRef.current === key && bootTickRef.current === reloadTick && bootChapterRef.current === current) return;
     const baseTitle = current.t || ('Chương ' + (index + 1));
@@ -620,7 +632,7 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
       <p class="hint v2chap-hint">Nháp tự lưu trên máy này khi ngừng gõ. Thêm chương: <b>Ctrl/Cmd+Alt+N</b>.</p>
       {loading ? <div class="empty sm">Đang đọc chương…</div> : null}
       <div class="v2chapter-grid">
-        <aside class="v2chapter-list" aria-label="Danh sách chương">
+        <aside class="v2chapter-list" aria-label="Danh sách chương" ref={listRef}>
           {chapters.length ? chapters.map((chapter, i) => {
             const kind = chapterKind(chapter.t || '');
             const kindTag = kind === 'open' ? 'Mở đầu' : (kind === 'extra' ? 'Ngoại truyện' : '');
@@ -628,6 +640,7 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
             const local = draftMap[i] || null;
             return (
               <button type="button" class={i === index ? 'on' : ''} aria-current={i === index ? 'true' : undefined} key={i} draggable="true"
+                title={chapter.t || ('Chương ' + (i + 1))}
                 onDragStart={() => setDragFrom(i)}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => { e.preventDefault(); reorderChapter(dragFrom, i); setDragFrom(-1); }}
