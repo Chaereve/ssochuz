@@ -45,8 +45,8 @@ const CRUMBS = {
    thật của từng module (không hứa tính năng không tồn tại). */
 const PAGE_HEAD = {
   overview: ['Tổng quan', 'Số liệu thư viện và việc cần làm hôm nay.'],
-  list: ['Thư viện', 'Tất cả bộ truyện. Lọc, sửa hoặc xuất bản hàng loạt.'],
-  new: ['Thêm bộ', 'Tạo bộ truyện mới cùng chương đầu tiên.'],
+  list: ['Thư viện', 'Lọc, sửa và xuất bản hàng loạt.'],
+  new: ['Thêm bộ', 'Tạo bộ truyện mới, kèm chương đầu nếu có.'],
   chapters: ['Chương', 'Nháp, chờ duyệt và lịch đăng.'],
   cmts: ['Bình luận', 'Kiểm duyệt bình luận của độc giả.'],
   reports: ['Báo lỗi', 'Lỗi do độc giả gửi. Đánh dấu khi đã xử lý.'],

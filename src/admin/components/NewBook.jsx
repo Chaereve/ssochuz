@@ -31,7 +31,7 @@ export function NewBook({ registry, onCreate, onUploadImage, apiBase = '', write
     <div class="v2pane">
     <form id="pane-new" class="v2form" onSubmit={submit}>
       <section class="v2fsec" aria-label="Thông tin cơ bản">
-        <div class="v2fsec-head"><b>Thông tin cơ bản</b><span class="hint">Tên truyện là bắt buộc; slug để trống sẽ tự sinh từ tên.</span></div>
+        <div class="v2fsec-head"><b>Thông tin cơ bản</b><span class="hint">Bắt buộc nhập tên. Slug để trống sẽ tự tạo.</span></div>
         <label class="fl">Tên truyện<input class="inp" value={form.title} required onInput={(e) => update('title', e.target.value)} /></label>
         <p class="hint">slug: <code>{preview ? '/truyen/' + preview + '/' : '—'}</code></p>
         <label class="fl">Slug (tuỳ chọn)<input class="inp" value={form.slug} onInput={(e) => update('slug', e.target.value)} /></label>
@@ -42,7 +42,7 @@ export function NewBook({ registry, onCreate, onUploadImage, apiBase = '', write
         </div>
       </section>
       <section class="v2fsec" aria-label="Phân loại và hiển thị">
-        <div class="v2fsec-head"><b>Phân loại &amp; hiển thị</b><span class="hint">Tình trạng hoàn thành khác trạng thái xuất bản; mặc định Xuất bản — chọn Nháp thì truyện CHỈ thấy trong admin, không lên trang chủ.</span></div>
+        <div class="v2fsec-head"><b>Phân loại &amp; hiển thị</b><span class="hint">Nháp chỉ hiện trong admin, không lên trang chủ.</span></div>
         <div class="row">
           <label class="fl">Tình trạng hoàn thành
             <select class="inp" value={form.status} onChange={(e) => update('status', e.target.value)}>
@@ -91,13 +91,13 @@ export function NewBook({ registry, onCreate, onUploadImage, apiBase = '', write
         />
       </section>
       <section class="v2fsec" aria-label="Giới thiệu và chương đầu">
-        <div class="v2fsec-head"><b>Giới thiệu &amp; chương đầu</b><span class="hint">Chương 1 là tuỳ chọn — văn bản thường sẽ tự chuyển thành đoạn HTML.</span></div>
+        <div class="v2fsec-head"><b>Giới thiệu &amp; chương đầu</b><span class="hint">Chương 1 không bắt buộc.</span></div>
         <label class="fl">Tóm tắt<textarea class="inp ta" value={form.synopsis} onInput={(e) => update('synopsis', e.target.value)} /></label>
         <label class="fl">Chương 1 (tuỳ chọn)<textarea class="inp ta" value={form.chapter} onInput={(e) => update('chapter', e.target.value)} /></label>
       </section>
       <p class="hint">{online
         ? 'Khi đang nối Worker, Tạo truyện ghi ngay book JSON + registry — tab Kiểm tra dữ liệu sẽ thấy bộ mới, không chờ thêm bước nào.'
-        : 'Chế độ dữ liệu tĩnh: chỉ tạo nháp phiên, chưa ghi Cloudflare KV.'}</p>
+        : 'Chưa ghi KV: bộ truyện chỉ được lưu trong phiên này.'}</p>
       <div class="row sticky-actions">
         <button type="button" class="btn ghost" onClick={reset} disabled={busy}>Xoá nháp</button>
         <button class="btn pri" disabled={busy || writeBlocked}>{writeBlocked ? 'Hết quota KV' : (busy ? 'Đang tạo…' : 'Tạo truyện')}</button>

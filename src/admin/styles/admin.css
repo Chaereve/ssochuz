@@ -915,3 +915,12 @@ body.admin .v2schedrow .v2sort-x{margin:0;white-space:nowrap}
 
 /* ===== v25 — Vai trò: nội dung thẻ quyền bám đầu thẻ, không giãn khoảng trống giữa tiêu đề và mô tả ===== */
 body.admin .v2role-card{align-content:start;align-items:start;min-height:0}
+
+/* ===== v26 — Theo hướng Untitled UI (đã chuyển thành CSS thuần, không thêm thư viện): trạng thái rỗng có tiêu đề + mô tả căn giữa; hàng bảng có hover nhẹ; chữ tiêu đề bảng 12px. ===== */
+body.admin .empty{display:grid;justify-items:center;gap:4px;padding:32px 24px;border:1px dashed var(--a-bd2);border-radius:var(--a-r-lg);background:var(--a-surf);color:var(--a-mut);font-size:13.5px;line-height:1.5}
+body.admin .empty.sm{padding:20px 16px}
+body.admin .empty .big{margin:0 0 2px;font-size:15px;font-weight:650;color:var(--a-txt)}
+body.admin .empty .v2empty-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:10px}
+body.admin .v2book-table tbody tr{transition:background-color .12s ease}
+body.admin .v2book-table tbody tr:hover td{background:color-mix(in srgb,var(--a-surf2) 70%,transparent)}
+body.admin .v2book-table th{letter-spacing:0;text-transform:none}
