@@ -7,6 +7,11 @@ import { COMPLETION_STATUSES, VISIBILITIES } from '../utils/books.js';
 
 const PAGE = 24;
 
+function chapterLabel(book) {
+  const n = Number(book && book.chapters) || 0;
+  return n ? n + ' chương' : 'Chưa có chương';
+}
+
 export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulkUpdate, onDelete, apiBase, initialQuery = '', writeBlocked = false }) {
   const lib = (registry && registry.lib) || [];
   const [q, setQ] = useState(initialQuery);
@@ -128,7 +133,7 @@ export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulk
                 <BookBadges book={book} compact />
               </div>
               <div class="v2gcard-foot">
-                <span class="v2gcard-meta"><span>{countText(book)}</span><span>{book.updated || '—'}</span></span>
+                <span class="v2gcard-meta"><span>{chapterLabel(book)}</span><span>{book.updated || '—'}</span></span>
                 <button class="btn ghost sm" type="button" onClick={() => onEdit(book.slug)}>Sửa</button>
               </div>
             </div>

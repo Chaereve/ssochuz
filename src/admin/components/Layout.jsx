@@ -90,7 +90,7 @@ function connChip(state) {
   if (state.online) return { cls: 'ok', text: 'Cloudflare KV · Online' };
   if (state.connError === 'badkey') return { cls: 'bad', text: 'Sai ADMIN_KEY' };
   if (state.connError === 'network') return { cls: 'bad', text: 'Lỗi kết nối Worker' };
-  return { cls: 'warn', text: 'Dữ liệu tĩnh · Chỉ đọc' };
+  return { cls: 'warn', text: 'Dữ liệu tĩnh · Chỉ đọc', hint: 'Thay đổi chỉ lưu tạm trong phiên. Cần nối Worker bằng ADMIN_KEY để ghi KV.' };
 }
 
 function ThemeButton() {
@@ -237,7 +237,7 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
               ) : null}
             </form>
             <span class="grow"></span>
-            <span class={`chip ${chip.cls}`} title={chip.text}><span class="d"></span><b>{chip.text}</b></span>
+            <span class={`chip ${chip.cls}`} title={chip.hint || chip.text}><span class="d"></span><b>{chip.text}</b></span>
             <button type="button" class={`v2quota ${qLevel}`} title={quotaTitle} onClick={() => go('doctor')}>
               <span>KV write</span><b>{used}/{limit}</b>
               {!quota.supported ? <em class="v2est">ước tính</em> : null}
@@ -293,7 +293,7 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
           </nav>
           {(() => {
             const head = activeTab === 'edit'
-              ? [currentTitle || currentSlug || 'Sửa bộ', 'Thông tin, bìa, khoá mật mã và nội dung chương.']
+              ? ['Sửa bộ', '']
               : (PAGE_HEAD[activeTab] || [CRUMBS[activeTab] || activeTab, '']);
             return (
               <header class="v2pagehead">
@@ -302,12 +302,6 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
               </header>
             );
           })()}
-          {!state.online ? (
-            <div class="v2staticbar" role="status">
-              <b>Chỉ đọc</b>
-              Thay đổi chỉ lưu tạm trong phiên.
-            </div>
-          ) : null}
           {used >= limit && state.online ? (
             <div class="v2partial" role="alert">
               <span>Quota KV hôm nay đã hết ({used}/{limit}). Đã chặn mọi thao tác ghi. Vẫn đọc được dữ liệu; nháp editor còn trong trình duyệt.</span>

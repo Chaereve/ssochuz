@@ -903,3 +903,12 @@ body.admin .v2authors th,body.admin .v2authors td{padding:12px 12px}
 body.admin .v2authors th:first-child,body.admin .v2authors td:first-child{padding-left:16px}
 body.admin .v2authors td:last-child{padding-right:16px}
 body.admin .v2authors td:last-child .btn{margin-left:auto}
+
+/* ===== v24 — Lịch ra chương (Homepage CMS): một dòng = ngày | bộ | ghi chú | xoá; không dùng lưới form ===== */
+body.admin .v2schedrow{display:grid;grid-template-columns:minmax(120px,160px) minmax(0,1.4fr) minmax(0,1fr) auto;gap:8px;align-items:center;margin:0 0 8px;min-width:0}
+body.admin .v2schedrow>*{min-width:0;margin:0}
+body.admin .v2schedrow .v2sort-x{margin:0;white-space:nowrap}
+@media (max-width:720px){
+  body.admin .v2schedrow{grid-template-columns:minmax(0,1fr) auto}
+  body.admin .v2schedrow>select{grid-column:1 / -1}
+}

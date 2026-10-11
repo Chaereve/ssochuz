@@ -152,7 +152,7 @@ export function BookEditor({ registry, slug, bookData, bookLoading, bookError, a
           <div class="row sticky-actions">
             <button class="btn pri" type="submit" disabled={writeBlocked} title="Lưu metadata · Ctrl/Cmd+S">{writeBlocked ? 'Hết quota KV' : (online ? 'Lưu metadata' : 'Lưu nháp phiên')}</button>
             {!online ? <span class="sm muted">Chế độ tĩnh: chưa ghi KV.</span> : null}
-            <span class="sm muted">Phím tắt: Ctrl/Cmd+S lưu · Ctrl/Cmd+K tìm · Ctrl/Cmd+Alt+N thêm chương</span>
+            <span class="sm muted">Ctrl/Cmd+S để lưu</span>
           </div>
         </form>
         <div class="v2edit-foot">

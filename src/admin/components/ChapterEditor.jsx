@@ -720,7 +720,7 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
               Còn ảnh tạm chưa upload: {temps.slice(0, 3).join(', ')}. Hãy bấm Upload ảnh / Thử lại — không ghi KV khi còn blob:/data:.
             </div>
           ) : null}
-          <p class="hint">Nhập nhiều chương: chọn 1 file .txt hoặc .docx (tối đa 20 MB, hỗ trợ file 12 MB). Mỗi tiêu đề “Chương X” nằm trên một dòng riêng. DOCX giữ đậm/nghiêng và ngắt đoạn; bỏ ảnh, font, màu và bố cục Word để giảm dung lượng. File được xử lý trên máy, chỉ gửi nội dung chương khi xác nhận.</p>
+          <p class="hint">Nhập nhiều chương từ .txt hoặc .docx (tối đa 20 MB). Mỗi chương bắt đầu bằng một dòng “Chương X”.</p>
           {importing ? <div class="row" role="status"><span class="hint">Đang đọc file và tối ưu nội dung chương…</span><button class="btn ghost sm" type="button" onClick={() => importController.current && importController.current.abort()}>Huỷ đọc file</button></div> : null}
           {importPreview ? (
             <div class="v2import-preview">
