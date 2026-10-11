@@ -131,7 +131,11 @@ export function BookEditor({ registry, slug, bookData, bookLoading, bookError, a
                 <input class="inp" type="datetime-local" value={form.publishedAt} onInput={(e) => update('publishedAt', e.target.value)} />
               </label>
             ) : null}
-            <label class="chk"><input type="checkbox" checked={form.is18} onChange={(e) => update('is18', e.target.checked)} /> 18+</label>
+            <label class="v2switch">
+              <input type="checkbox" role="switch" checked={form.is18} onChange={(e) => update('is18', e.target.checked)} />
+              <span class="v2switch-track" aria-hidden="true"></span>
+              <span class="v2switch-text"><b>Nội dung 18+</b><span class="hint">Chỉ hiện với độc giả đã xác nhận tuổi.</span></span>
+            </label>
           </section>
           <section class="v2fsec" aria-label="Ảnh bìa">
             <div class="v2fsec-head"><b>Ảnh bìa</b><span class="hint">Bìa dùng chung cho thẻ truyện, slide trang chủ và trang chi tiết.</span></div>
@@ -142,7 +146,7 @@ export function BookEditor({ registry, slug, bookData, bookLoading, bookError, a
               onAltChange={(v) => update('coverAlt', v)}
               onUpload={onUploadImage}
               apiBase={apiBase}
-              label="Ảnh bìa"
+              label="Chọn ảnh"
             />
           </section>
           <section class="v2fsec" aria-label="Giới thiệu">

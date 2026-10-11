@@ -179,6 +179,11 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
   /* Chương đã nạp xong (khoá slug#index) — chỉ ghi nháp khi dữ liệu đang gõ
      thuộc đúng chương này, tránh ghi nhầm nội dung chương cũ sang chương mới */
   const bootRef = useRef('');
+  /* reloadTick lúc đã nạp chương (để effect nạp lại khi có import, nhưng KHÔNG ghi đè khi
+     chương vừa được thêm và người dùng đã bắt đầu gõ) */
+  const bootTickRef = useRef(-1);
+  /* đối tượng chương đã nạp (so theo tham chiếu: chương tải thật khác object placeholder khi sách chưa có) */
+  const bootChapterRef = useRef(null);
 
   useEffect(() => {
     importTask.current++;
@@ -232,12 +237,15 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
   }
 
   useEffect(() => {
+    if (bootRef.current === key && bootTickRef.current === reloadTick && bootChapterRef.current === current) return;
     const baseTitle = current.t || ('Chương ' + (index + 1));
     const baseHtml = htmlForEditor(current.html || '<p></p>', apiBase);
     const baseStatus = chapterStatusOf(current) || 'published';
     const baseAtLocal = isoToLocalInput(chapterAtMs(current) || '');
     baseRef.current = { title: baseTitle, html: baseHtml, status: baseStatus, atLocal: baseAtLocal };
     bootRef.current = key;
+    bootTickRef.current = reloadTick;
+    bootChapterRef.current = current;
     setTitle(baseTitle);
     setHtml(baseHtml);
     setStatus(baseStatus);
@@ -403,7 +411,14 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
        thái chương chưa từng chặn hiển thị), nay ghi thẳng ra cho khỏi hiểu nhầm;
        muốn giữ riêng thì chọn “Hẹn giờ” hoặc “Ẩn” ngay trên ô trạng thái */
     next.chapters.push({ t: suggestChapterTitle(next.chapters), html: '<p></p>', status: 'published' });
-    setLocalBook(next); setRestored(false); setIndex(next.chapters.length - 1);
+    const newIdx = next.chapters.length - 1;
+    const added = next.chapters[newIdx];
+    baseRef.current = { title: added.t, html: '<p></p>', status: 'published', atLocal: '' };
+    bootRef.current = (next.slug || slug) + '#' + newIdx;
+    bootTickRef.current = reloadTick;
+    bootChapterRef.current = added;
+    setTitle(added.t); setHtml('<p></p>'); setStatus('published'); setAtLocal('');
+    setLocalBook(next); setRestored(false); setIndex(newIdx);
   };
   const deleteChapter = async () => {
     if (!localBook || !chapters[index] || importSaveBusy.current) return;

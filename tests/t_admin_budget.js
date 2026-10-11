@@ -13,7 +13,9 @@ const ROOT = path.join(__dirname, '..');
   const js = fs.statSync(path.join(ROOT, 'admin.js')).size;
   const map = JSON.parse(fs.readFileSync(path.join(ROOT, 'admin.js.map'), 'utf8'));
   const cssRoot = fs.readFileSync(path.join(ROOT, 'admin.css'), 'utf8');
-  const cssSrc = fs.readFileSync(path.join(ROOT, 'src/admin/styles/admin.css'), 'utf8');
+  /* build minify CSS (esbuild) nên so với bản đã minify của nguồn */
+  const { transform } = require(require.resolve('esbuild', { paths: [ROOT] }));
+  const cssSrc = (await transform(fs.readFileSync(path.join(ROOT, 'src/admin/styles/admin.css'), 'utf8'), { loader: 'css', minify: true, legalComments: 'none' })).code;
 
   const report = {};
   const errors0 = [];

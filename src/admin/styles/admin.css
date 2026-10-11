@@ -1081,3 +1081,16 @@ body.admin .v2tablewrap:has(.v2authors){padding:0 4px 4px}
 body.admin .v2authors th:nth-child(n+2):nth-child(-n+7),body.admin .v2authors td:nth-child(n+2):nth-child(-n+7){text-align:right}
 body.admin .v2authors td:nth-child(n+2):nth-child(-n+6){font-variant-numeric:tabular-nums}
 body.admin .v2authors td:nth-child(5){white-space:nowrap}
+
+/* ===== v37 — rà Sửa bộ: công tắc 18+ dùng chung (không chỉ trong Thêm bộ); khung xem trước bìa không co thành chấm khi ảnh lỗi ===== */
+body.admin .v2switch{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center;cursor:pointer;padding:12px 14px;border:1px solid var(--a-bd);border-radius:var(--a-r);background:var(--a-surf2);margin:0}
+body.admin .v2switch input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+body.admin .v2switch-track{position:relative;width:40px;height:22px;border-radius:999px;background:var(--a-bd2);transition:background .15s}
+body.admin .v2switch-track::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+body.admin .v2switch input:checked+.v2switch-track{background:var(--a-acc)}
+body.admin .v2switch input:checked+.v2switch-track::after{transform:translateX(18px)}
+body.admin .v2switch input:focus-visible+.v2switch-track{outline:2px solid var(--a-acc);outline-offset:2px}
+body.admin .v2switch-text{display:grid;gap:2px;min-width:0}
+body.admin .v2switch-text b{font-size:14px}
+body.admin .v2switch-text .hint{margin:0;font-size:12.5px}
+body.admin .v2up-preview{min-height:200px;background:var(--a-surf2)}

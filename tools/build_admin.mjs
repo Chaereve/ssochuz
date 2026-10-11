@@ -4,13 +4,16 @@ import { createHash } from 'node:crypto';
 import { copyFileSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { build } from 'esbuild';
+import { build, transform } from 'esbuild';
 import { evaluateBundleFile } from './bundle_budget.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const kb = (n) => (n / 1024).toFixed(1) + 'kb';
 
-copyFileSync(path.join(ROOT, 'src/admin/styles/admin.css'), path.join(ROOT, 'admin.css'));
+/* CSS được minify (esbuild, không đổi nội dung) để giữ trong ngân sách dung lượng; nguồn vẫn đọc được trong src/. */
+const adminCssSrc = readFileSync(path.join(ROOT, 'src/admin/styles/admin.css'), 'utf8');
+const adminCss = (await transform(adminCssSrc, { loader: 'css', minify: true, legalComments: 'none' })).code;
+writeFileSync(path.join(ROOT, 'admin.css'), adminCss);
 /* ?v= của admin.css trong admin.html = sha1 nội dung ⇒ mỗi lần đổi CSS là đổi URL,
    trình duyệt không dùng bản cache cũ (trước đây chuỗi v cố định khiến thay đổi không hiện). */
 {
