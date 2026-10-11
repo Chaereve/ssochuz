@@ -129,8 +129,8 @@ const STATS = {
   await wait(250);
   const rows = $$('#pane-reports .v2itemrow');
   check('Báo lỗi/hiện 2 báo lỗi', rows.length === 2, rows.length);
-  const openBtn = $$('#pane-reports .v2itemrow button').find((b) => /Xử lý xong/.test(b.textContent));
-  check('Báo lỗi/có nút Xử lý xong', !!openBtn);
+  const openBtn = $$('#pane-reports .v2itemrow button').find((b) => /Đánh dấu đã xử lý/.test(b.textContent));
+  check('Báo lỗi/có nút đánh dấu đã xử lý nhìn rõ và có nhãn trợ năng', !!openBtn && openBtn.classList.contains('v2okbtn') && /Đánh dấu báo lỗi đã xử lý/.test(openBtn.getAttribute('aria-label') || ''));
   click(openBtn);
   await wait(350);
   check('Báo lỗi/đã gọi PATCH /api/admin/reports', calls.some((c) => c === 'PATCH /api/admin/reports'), calls.slice(-6));
@@ -140,6 +140,11 @@ const STATS = {
   click($$('#pane-reports .v2reptabs button').find((b) => /Đã xử lý/.test(b.textContent)));
   await wait(120);
   check('Báo lỗi/lọc "Đã xử lý" còn 2 dòng', $$('#pane-reports .v2itemrow').length === 2, $$('#pane-reports .v2itemrow').length);
+  const reopenBtn = $$('#pane-reports .v2itemrow button').find((b) => /Mở lại/.test(b.textContent));
+  check('Báo lỗi/có thể mở lại báo lỗi đã xử lý', !!reopenBtn);
+  click(reopenBtn);
+  await wait(350);
+  check('Báo lỗi/mở lại cập nhật trạng thái ngay', $$('#pane-reports .v2donepill').length === 1, $$('#pane-reports .v2donepill').length);
 
   /* 3. Bình luận: lọc nghi spam */
   click($('button[data-tab="cmts"]'));

@@ -27,7 +27,7 @@ export function ChaptersHub({ registry, apiBase, onEdit }) {
       <li>
         <BookCover book={b} apiBase={apiBase} width={40} height={60} />
         <span class="grow">
-          <b>{b.title}</b>
+          <b title={b.title}>{b.title}</b>
           <span class="sm muted">{b.updated || '—'} · {b.chapters || 0} chương</span>
           <span class="v2badges compact"><PublishStatusBadge book={b} /><LockedBadge book={b} /></span>
         </span>
@@ -65,7 +65,7 @@ export function ChaptersHub({ registry, apiBase, onEdit }) {
               <li key={b.slug}>
                 <BookCover book={b} apiBase={apiBase} width={40} height={60} />
                 <span class="grow">
-                  <b>{b.title}</b>
+                  <b title={b.title}>{b.title}</b>
                   <span class="sm muted">{Number(b.pending) || 0} chương chờ{b.schedNext ? ' · gần nhất ' + fmtNext(b.schedNext) + (hoursUntil(chapterAtMs({ at: b.schedNext })) ? ' (còn ~' + hoursUntil(chapterAtMs({ at: b.schedNext })) + ' giờ)' : '') : ''}</span>
                 </span>
                 <button class="btn sm" type="button" onClick={() => onEdit(b.slug)}>Sửa chương</button>

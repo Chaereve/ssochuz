@@ -192,6 +192,7 @@ export function ReportsPanel({ state, onLoad, onMark }) {
   const [error, setError] = useState('');
   const [q, setQ] = useState('');
   const [scope, setScope] = useState('all');
+  const [marking, setMarking] = useState('');
   const data = state.reports || {};
   const rows = useMemo(() => {
     const query = q.toLowerCase();
@@ -200,14 +201,17 @@ export function ReportsPanel({ state, onLoad, onMark }) {
   }, [data.items, q, scope]);
   const openCount = (data.items || []).filter((x) => !x.done).length;
   const mark = async (r) => {
+    if (!r || !r.id || !onMark || marking) return;
     setError('');
+    setMarking(r.id);
     try { await onMark(r.id, !r.done); } catch (e) { setError(e.message || String(e)); }
+    finally { setMarking(''); }
   };
   const load = async () => { setBusy(true); setError(''); try { await onLoad(q); } catch (e) { setError(e.message || String(e)); } finally { setBusy(false); } };
   useEffect(() => { if (state.online && !data.loaded && !busy) load(); }, [state.online]);
   return <div id="pane-reports" class="v2pane"><section class="card2">
     <div class="row"><h3>Báo lỗi</h3><span class="grow"></span><LoaderButton busy={busy} onClick={load}>Đọc báo lỗi</LoaderButton></div>
-    <NeedOnline state={state}><p class="hint">Bấm “Xử lý xong” để ghi trạng thái vào KV (PATCH /api/admin/reports); Tổng quan đếm “Báo lỗi chưa xử lý” theo số chưa xử lý.</p></NeedOnline>
+    <NeedOnline state={state}><p class="hint">Bấm “Đánh dấu đã xử lý” để lưu trạng thái vào KV. Có thể mở lại báo lỗi khi cần.</p></NeedOnline>
     {error ? <div class="msgbar show err">{error}<div class="v2err-actions"><button class="btn ghost sm" type="button" onClick={load}>Thử lại</button></div></div> : null}
     <div class="row v2filters">
       <input class="inp" aria-label="Tìm báo lỗi" placeholder="Tìm báo lỗi" value={q} onInput={(e) => setQ(e.currentTarget.value)} />
@@ -220,7 +224,13 @@ export function ReportsPanel({ state, onLoad, onMark }) {
     </div>
     <div class="v2listcards">{rows.length ? rows.slice(0, 300).map((r) => <article class={`v2itemrow ${r.done ? 'v2done' : ''}`} key={(r.id || '') + ':' + r.slug + ':' + String(r.at)}>
       <div><b>{r.kind || 'Báo lỗi'}</b>{r.done ? <span class="pill v2donepill">đã xử lý</span> : null}<span class="sm muted"> · {dateText(r.at)} · <StoryLink registry={state.registry} slug={r.slug} /> {r.ch ? <span class="pill acc">chương {r.ch}</span> : null}</span><p>{r.text}</p>{r.url ? <a class="btn ghost sm" href={r.url} target="_blank" rel="noreferrer">Mở vị trí ↗</a> : null}{r.image ? <a class="btn ghost sm" href={apiAsset(state, r.image)} target="_blank" rel="noreferrer">Ảnh đính kèm ↗</a> : null}</div>
-      <button class={`btn ghost sm ${r.done ? '' : 'v2okbtn'}`} type="button" disabled={!r.id || !onMark} onClick={() => mark(r)}>{r.done ? 'Mở lại' : 'Xử lý xong'}</button>
+      <button class={`btn sm ${r.done ? 'v2reopenbtn' : 'v2okbtn'}`} type="button"
+        aria-label={r.done ? 'Mở lại báo lỗi' : 'Đánh dấu báo lỗi đã xử lý'}
+        title={r.done ? 'Mở lại báo lỗi' : 'Đánh dấu báo lỗi đã xử lý'}
+        disabled={!state.online || !r.id || !onMark || !!marking}
+        onClick={() => mark(r)}>
+        {marking === r.id ? 'Đang lưu…' : r.done ? 'Mở lại' : 'Đánh dấu đã xử lý'}
+      </button>
     </article>) : <div class="empty sm">Chưa có báo lỗi nào khớp.</div>}</div>
   </section></div>;
 }

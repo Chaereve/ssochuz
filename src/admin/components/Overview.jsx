@@ -58,7 +58,7 @@ export function Overview({ state, onReload, onTodo }) {
                 <button class="btn ghost sm" type="button" onClick={() => onTodo && onTodo(task.key)}>Xem danh sách</button>
               </div>
               <div class="ovchips">
-                {task.items.map((book) => <button class="ovchip" type="button" key={book.slug} onClick={() => onTodo && onTodo('edit', book)}>{book.title}</button>)}
+                {task.items.map((book) => <button class="ovchip" type="button" key={book.slug} title={book.title} onClick={() => onTodo && onTodo('edit', book)}>{book.title}</button>)}
                 {task.count > task.items.length ? <span class="sm muted">… và {num(task.count - task.items.length)} bộ nữa</span> : null}
               </div>
             </div>
@@ -118,7 +118,7 @@ export function Overview({ state, onReload, onTodo }) {
           {ov.recent.length ? ov.recent.map((book) => (
             <button class="ovrec" type="button" key={book.slug} onClick={() => onTodo && onTodo('edit', book)}>
               <span class={`ovth ${book.thumb ? 'skel' : ''}`}>{book.thumb ? <img src={book.thumb} alt="" loading="lazy" decoding="async" /> : null}</span>
-              <span class="ovtt"><b>{book.title}</b><span>{book.author || ''} · {countText(book)}</span><BookBadges book={book} registry={registry} compact /></span>
+              <span class="ovtt"><b title={book.title}>{book.title}</b><span>{book.author || ''} · {countText(book)}</span><BookBadges book={book} registry={registry} compact /></span>
               <span class="ovwhen">{dateVN(book.updated)}</span>
             </button>
           )) : <div class="empty sm">Chưa có bộ nào.</div>}

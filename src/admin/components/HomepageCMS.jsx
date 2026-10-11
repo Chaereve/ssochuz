@@ -76,7 +76,7 @@ export function HomepageCMS({ registry, apiBase, onSave, writeBlocked = false, o
               return (
                 <li key={s.slug}>
                   <BookCover book={b} apiBase={apiBase} width={40} height={60} />
-                  <span class="grow"><b>{b ? b.title : s.slug}</b>
+                  <span class="grow"><b title={b ? b.title : s.slug}>{b ? b.title : s.slug}</b>
                     <LockedBadge book={b} />
                     {b && b.lock ? <p class="v2lock-warn">Truyện này đang khóa. Người đọc có thể thấy thẻ truyện nhưng không thể đọc chương nếu không có token hợp lệ.</p> : null}
                     <input class="inp" aria-label={'Lý do đề xuất cho ' + (b ? b.title : s.slug)} value={s.reason} placeholder="Lý do đề xuất (tuỳ chọn)"
@@ -106,7 +106,7 @@ export function HomepageCMS({ registry, apiBase, onSave, writeBlocked = false, o
               return (
                 <li key={slug}>
                   <BookCover book={b} apiBase={apiBase} width={40} height={60} />
-                  <span class="grow"><b>{b ? b.title : slug}</b></span>
+                  <span class="grow"><b title={b ? b.title : slug}>{b ? b.title : slug}</b></span>
                   <button class="btn ghost sm" type="button" title="Lên trước" aria-label="Đưa lên trước" onClick={() => setChoice(move(choice, i, -1))}>↑</button>
                   <button class="btn ghost sm" type="button" title="Xuống sau" aria-label="Đưa xuống sau" onClick={() => setChoice(move(choice, i, 1))}>↓</button>
                   <button class="btn ghost sm v2sort-x" type="button" onClick={() => setChoice(choice.filter((_, k) => k !== i))}>Gỡ</button>
