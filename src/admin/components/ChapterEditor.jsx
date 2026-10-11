@@ -359,7 +359,8 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
       return;
     }
     const chapterPayload = {
-      t: title || ('Chương ' + (index + 1)),
+      /* đọc từ liveRef (cập nhật đồng bộ khi gõ) — state có thể chưa kịp render khi bấm Ctrl+S */
+      t: ((liveRef.current && liveRef.current.title != null ? liveRef.current.title : title)) || ('Chương ' + (index + 1)),
       html: htmlForStorage(html || '', apiBase),
       status,
       at: status === 'scheduled' ? localInputToIso(atLocal) : '',
@@ -558,6 +559,10 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
      phím tắt trong main.jsx: Chrome/Edge không gửi Ctrl+N cho trang). Đăng ký
      trong ChapterEditor (chứ không phải BookEditor) vì đây là thành phần biết
      rõ chương hiện tại và đang có dữ liệu thật hay không. */
+  /* Luôn trỏ tới saveChapter của lần render mới nhất: handler phím tắt đăng ký trong useEffect
+     (chạy sau khung hình) nên nếu giữ closure cũ, Ctrl+S ngay sau khi gõ sẽ lưu tiêu đề cũ. */
+  const saveFnRef = useRef(null);
+  saveFnRef.current = saveChapter;
   useEffect(() => {
     if (!shortcuts) return;
     const saveHandler = () => {
@@ -569,7 +574,7 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
       if (!localBook) return false;
       if (saving) return true; /* đang lưu rồi, chặn double-submit */
       if (writeBlocked) { toast('Quota KV hôm nay đã hết — không ghi.', 'err'); return true; }
-      saveChapter();
+      if (saveFnRef.current) saveFnRef.current();
       return true;
     };
     const newHandler = () => {
