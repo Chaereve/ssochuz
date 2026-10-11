@@ -746,3 +746,11 @@ body.admin .v2preview-body{display:flex;flex-direction:column;gap:4px;min-width:
 body.admin .v2preview-body b{font-size:15px;font-weight:700;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
 body.admin .v2preview-author{font-size:13px;color:var(--a-mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 body.admin .v2preview-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+
+/* ===== v10 — topbar mobile: logo + công cụ cùng một hàng, tìm kiếm xuống hàng riêng ===== */
+@media(max-width:640px){
+  body.admin .v2top .v2quota,body.admin .v2top .v2est{display:none}
+  body.admin .v2top .in{flex-wrap:wrap}
+  body.admin .v2tools{flex-wrap:nowrap;flex:none;margin-left:auto}
+  body.admin .v2top .v2search{order:3;flex:1 1 100%;width:100%}
+}
