@@ -1063,4 +1063,15 @@ body.admin .v2tablewrap,body.admin .v2authors-wrap{max-width:100%;min-width:0}
 body.admin .v2tablewrap:has(.v2authors){overflow-x:auto;overflow-y:visible;max-height:none}
 @media (max-width:720px){body.admin .v2tablewrap:has(.v2authors){overflow:visible}}
 body.admin .v2authors{width:100%}
-@media (min-width:721px) and (max-width:1080px){body.admin .v2authors{min-width:720px}}
+
+
+/* ===== v35 — cột Thao tác của bảng Tác giả không bị co (nút "Lọc thư viện" luôn đủ chữ) ===== */
+body.admin .v2authors th:last-child,body.admin .v2authors td:last-child{white-space:nowrap;width:1%;min-width:max-content}
+body.admin .v2authors td:last-child .btn{white-space:nowrap}
+@media (max-width:720px){body.admin .v2authors td:last-child{width:auto}}
+/* v35b — 721–1180px: bảng Tác giả vừa vùng chứa; ẩn cột "Cập nhật" (thứ yếu) để nút Thao tác hiện đủ */
+@media (min-width:721px) and (max-width:1180px){
+  body.admin .v2authors{min-width:0}
+  body.admin .v2authors th:nth-child(6),body.admin .v2authors td:nth-child(6){display:none}
+  body.admin .v2authors th,body.admin .v2authors td{padding-left:10px;padding-right:10px}
+}
