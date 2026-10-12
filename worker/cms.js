@@ -1,5 +1,5 @@
 import { profileId } from './member-spaces.js';
-import { handleCommunity } from './community.js';
+import { handleCommunityTocs } from '../community-worker/community.js';
 import { STICKER_BY_ID } from '../src/shared/stickers.js';
 export { MemberSpaces } from './member-spaces.js';
 export { PrivateBooks } from './private-books.js';
@@ -216,12 +216,11 @@ const handler = {
     /* Mọi handler đều `await`: không await thì lỗi bên trong lọt ra ngoài try/catch
        và Cloudflare trả trang lỗi 1101 thay vì JSON — rất khó đoán bệnh. */
     try {
-      const community = await handleCommunity(req, env, cors, {
+      const communityTocs = await handleCommunityTocs(req, env, cors, {
         json,
-        userFromReq,
         lookupStory: (slug) => lookupCommunityStory(env, slug),
       });
-      if (community) return community;
+      if (communityTocs) return communityTocs;
       if (p === '/api/me/space' || /^\/api\/profiles\/[a-f0-9]{64}$/.test(p)) {
         const owner = p === '/api/me/space';
         let id, seedName = '', seedPic = '';
@@ -2792,7 +2791,7 @@ async function adminVotesReset(req, env, cors) {
    Access-Control-Allow-Origin thì trình duyệt CHẶN kết quả (dù status 200),
    fetch ném "Failed to fetch" và admin báo nhầm là Worker chưa deploy. */
 async function health(env, cors) {
-  if (!env.CZ_KV) return json({ ok: true, version: VERSION, kv: false, community: { d1: !!(env.CZ_DB && typeof env.CZ_DB.prepare === 'function') }, books: 0, novels: 0, regRev: '', lastWrite: '', now: new Date().toISOString(), adminConfigured: !!adminKey(env), hint: 'chưa bind CZ_KV' }, { cors });
+  if (!env.CZ_KV) return json({ ok: true, version: VERSION, kv: false, books: 0, novels: 0, regRev: '', lastWrite: '', now: new Date().toISOString(), adminConfigured: !!adminKey(env), hint: 'chưa bind CZ_KV' }, { cors });
   /* Mốc ghi gần nhất nay nằm trong metadata của chính `registry` — bỏ hẳn khoá
      `_last` (mỗi thao tác lưu trước đây tốn thêm 1 lượt GHI chỉ để ghi mốc). */
   const regMeta = await env.CZ_KV.getWithMetadata('registry', { type: 'json' }).catch(() => ({ value: null, metadata: null }));
@@ -2827,7 +2826,6 @@ async function health(env, cors) {
       readWarn: reads.readWarn,
     },
     overflow: await overflowStatusResolved(env),
-    community: { d1: !!(env.CZ_DB && typeof env.CZ_DB.prepare === 'function') },
     /* để trang quản trị biết kênh đăng nhập đã sẵn sàng chưa, thiếu biến nào.
        supabaseUrl = GHIM đang có hiệu lực (biến trên Worker hoặc URL quản trị
        lưu trong KV); supabaseKv = ghim đang lấy từ KV (không cần deploy lại). */

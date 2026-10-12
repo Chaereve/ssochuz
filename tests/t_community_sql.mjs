@@ -41,7 +41,7 @@ assert db.execute("SELECT total FROM community_brick_totals WHERE story_id='stor
 assert all(value >= 0 for (value,) in db.execute('SELECT total FROM community_reaction_totals UNION ALL SELECT total FROM community_brick_totals'))
 print('SQLite migration/triggers/constraints OK')
 `;
-const result = spawnSync('python3', ['-c', py, path.join(root, 'worker/migrations/0001_community.sql')], { encoding: 'utf8' });
+const result = spawnSync('python3', ['-c', py, path.join(root, 'community-worker/migrations/0001_community.sql')], { encoding: 'utf8' });
 if (result.status !== 0) {
   console.error(result.stdout || '');
   console.error(result.stderr || 'python3/sqlite3 failed');

@@ -235,6 +235,12 @@ async function postTocs(req, env, cors, deps) {
   return deps.json({ ok: true, items: items.filter(Boolean) }, { cors, headers: { 'cache-control': 'public, max-age=0, s-maxage=30' } });
 }
 
+export async function handleCommunityTocs(req, env, cors, deps) {
+  const path = new URL(req.url).pathname.replace(/\/+$/, '') || '/';
+  if (path === '/api/community/tocs' && req.method === 'POST') return postTocs(req, env, cors, deps);
+  return null;
+}
+
 export async function handleCommunity(req, env, cors, deps) {
   const path = new URL(req.url).pathname.replace(/\/+$/, '') || '/';
   if (path === '/api/community/tocs' && req.method === 'POST') return postTocs(req, env, cors, deps);

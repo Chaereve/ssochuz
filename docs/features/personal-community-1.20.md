@@ -1,21 +1,22 @@
 # Ssochuz 1.20 — dữ liệu cá nhân và tương tác cộng đồng
 
-Tài liệu triển khai cho phần theo dõi/tiến độ, hai khối cá nhân trang chủ, random picker, reaction chương, góp gạch ảo và sticker picker trong comments hiện có. Web vẫn là site tĩnh; không thêm framework, backend hay database độc lập.
+Tài liệu triển khai cho phần theo dõi/tiến độ, hai khối cá nhân trang chủ, random picker, reaction chương, góp gạch ảo và sticker picker trong comments hiện có. Web vẫn là site tĩnh; Worker `ssochuz-community` là entrypoint Cloudflare riêng cho D1 actions nhưng dùng service binding tới CMS hiện có, không tạo project/backend bên thứ ba hay Supabase project/database mới.
 
 ## 1. Nguồn dữ liệu và luồng
 
 ```text
 Reader browser
   ├─ Supabase Auth access token ── RLS/Postgres: story_follows, reading_progress
-  ├─ Bearer Supabase JWT (claim sub) ── Cloudflare Worker ── D1: reactions + bricks + totals
-  ├─ POST /api/community/tocs ── Worker/KV-or-overflow: TOC public, batches ≤20
-  └─ comments/stickers ── CZ.comments + Worker/KV comments đang có
+  ├─ Bearer Supabase JWT (claim sub) ── Worker ssochuz-community ── D1: reactions + bricks + totals
+  │                                      └─ service binding CMS → chuseoz-cms (verify auth + story/chapter)
+  ├─ POST /api/community/tocs ── CMS chuseoz-cms / existing KV-or-overflow, batches ≤20
+  └─ comments/stickers ── CZ.comments + CMS chuseoz-cms / existing KV comments
 
 Guest/offline: localStorage có version ── merge khi đăng nhập, không dùng service_role.
 ```
 
 - **Supabase Postgres** là source of truth của follow và reading progress khi đã đăng nhập. Browser dùng client publishable/anon key + phiên người dùng; mọi bảng bật RLS theo `auth.uid()`. Không dùng hoặc phát hành `service_role` ở frontend.
-- **Cloudflare D1** là source of truth của reaction action rows, brick action rows và aggregate totals. Writes là prepared statements trong `D1.batch()`; D1 unique keys/transaction bảo vệ toggle/one-per-day khi đồng thời.
+- **Cloudflare D1** là source of truth của reaction action rows, brick action rows và aggregate totals. Worker độc lập `ssochuz-community` (thư mục `community-worker/`) dùng prepared statements trong `D1.batch()`; D1 unique keys/transaction bảo vệ toggle/one-per-day khi đồng thời. Worker gọi CMS hiện có qua service binding `CMS`, không thêm D1 binding vào cấu hình CMS.
 - **KV** hiện hữu vẫn phục vụ registry/book/comments và cache/metadata của site; không dùng KV làm kho action mới. **KV không bắt buộc cho community aggregate.** Endpoint TOC đọc dữ liệu sách công khai qua đường đọc Worker hiện có, tối đa 20 slug/request.
 - **localStorage** chỉ phục vụ guest/offline và cache cá nhân có UID, prefix `ssochuz:` + version `:v1`. Dữ liệu reaction/gạch không được lưu tại đây. Dữ liệu legacy được đọc để migrate nhưng không ghi lại bằng key cũ.
 - Random picker giữ tùy chọn/kết quả gần nhất ở `ssochuz:dice:options:v1` và `ssochuz:dice:last:v1`.
@@ -51,24 +52,26 @@ Migration cấp quyền cho `authenticated`, revoke `anon`; không chứa projec
 
 ## 3. Schema D1 community
 
-Migration: `worker/migrations/0001_community.sql`. Binding: `CZ_DB` (Cloudflare D1), tên database `ssochuz-community`.
+Migration: `community-worker/migrations/0001_community.sql`. Binding `CZ_DB` và D1 tên `ssochuz-community` được khai báo **chỉ** trong `community-worker/wrangler.toml`; `worker/wrangler.toml` của `chuseoz-cms` không cần sửa.
 
 - `community_reactions`: một row/user/story/chapter/sticker; PK ngăn bản ghi trùng; `active` là 0/1; sticker ID có CHECK allowlist; chapter 1–100000.
 - `community_reaction_totals`: aggregate `(story_id, chapter_index, sticker_id)`, CHECK `total >= 0`. SQLite triggers insert/toggle/delete action để điều chỉnh aggregate nguyên tử.
 - `community_bricks`: UNIQUE `(story_id, user_id, day_utc)`, sticker cố định `sso-brick`.
 - `community_brick_totals`: một aggregate/story; trigger insert/delete giữ tổng không âm.
 - Request dùng `prepare(...).bind(...)`; endpoint chỉ SELECT aggregate/by-current-user, không scan toàn action history và không dùng KV làm source of truth.
-- Request body/query **không nhận user ID**. Worker decode claim `sub`, rồi `userFromReq()` xác minh chữ ký, audience, expiry và issuer Supabase project đã ghim. D1 ghi đúng `sub` đã xác minh.
+- Request body/query **không nhận user ID**. Community Worker đọc claim `sub`, gửi nguyên access token qua service binding tới `GET /api/auth/me` của CMS hiện có (CMS kiểm chữ ký, audience, expiry, issuer), rồi chỉ chấp nhận khi UID CMS xác nhận trùng `sub`. D1 ghi UID đã xác minh; JWT session riêng của Worker không có claim `sub` nên không được chấp nhận.
 
 ## 4. Worker endpoints
 
-Mọi endpoint là `POST`, dùng CORS theo `ALLOW_ORIGIN` trong `worker/wrangler.toml` (không wildcard + credentials; `Authorization` được cho phép). `CZ_API` trong `cz-config.js` trỏ cùng Worker hiện tại.
+Các endpoint community dùng CORS theo `ALLOW_ORIGIN` trong `community-worker/wrangler.toml` (không wildcard + credentials; `Authorization` được cho phép). `CZ_COMMUNITY_API` trỏ `ssochuz-community`; `CZ_API` vẫn trỏ CMS production hiện có `chuseoz-cms`. Riêng `/api/community/tocs` tiếp tục được phục vụ bởi CMS hiện có để cập nhật khối trang chủ theo lô.
 
 ### `POST /api/community/tocs`
 
-Public read, không cần D1/Auth. Body `{ "storyIds": ["slug-a", "slug-b"] }`; tối đa 20 ID hợp lệ. Trả `items` chỉ cho truyện public, gồm `storyId`, `chapterCount`, `updatedAt`, và tối đa 10 chapter gần nhất (`index`, `title`). Dùng một POST theo lô cho khối theo dõi trang chủ; response cache client 5 phút.
+Public read tại CMS hiện có `chuseoz-cms`, không cần D1/Auth. Body `{ "storyIds": ["slug-a", "slug-b"] }`; tối đa 20 ID hợp lệ. Trả `items` chỉ cho truyện public, gồm `storyId`, `chapterCount`, `updatedAt`, và tối đa 10 chapter gần nhất (`index`, `title`). Dùng một POST theo lô cho khối theo dõi trang chủ; response cache client 5 phút.
 
 ### `POST /api/community/reactions`
+
+Được phục vụ bởi Worker mới `ssochuz-community`.
 
 Body tối đa 4096 byte:
 
@@ -78,6 +81,8 @@ Body tối đa 4096 byte:
 Response summary/toggle gồm `totals` theo sticker và `mine`; toggle thêm `stickerId`, `active`. Cùng một user có thể bật/tắt từng sticker ở từng chapter. Worker rate limit best-effort 60 toggle/phút/user; UI có cooldown ngắn. Animation/audio chỉ chạy sau khi server xác nhận; reduced-motion tắt animation.
 
 ### `POST /api/community/brick`
+
+Được phục vụ bởi Worker mới `ssochuz-community`.
 
 - Summary: `{ "storyId": "slug" }`; Bearer tùy chọn; trả `{ total, givenToday }`.
 - Góp: `{ "action": "give", "storyId": "slug" }`; cần Supabase JWT. D1 UNIQUE cho phép đúng một viên ảo mỗi UTC ngày/user/story; request lặp trả 409 và không tăng tổng. Worker best-effort rate limit 30 lần/giờ/user.
@@ -97,11 +102,12 @@ Registry duy nhất: `src/shared/stickers.js`, bundled sang browser bridge `cz-s
 
 ### Một lần cho mỗi môi trường
 
-1. Chạy Supabase migration trên project hiện tại theo §2. Không tạo project/database thứ hai.
-2. Từ repo root: `cd worker && npx wrangler d1 create ssochuz-community`.
-3. Chép `database_id` Cloudflare trả về vào `worker/wrangler.toml`, thay `REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID` ở binding `CZ_DB`. Không deploy với placeholder.
-4. Áp migration: `cd worker && npx wrangler d1 migrations apply ssochuz-community --remote`.
-5. Xác nhận `SUPABASE_URL` trỏ đúng project Supabase. Project dùng khóa JWT HS256 cần Worker secret `SUPABASE_JWT_SECRET`; RS256/ES256 dùng JWKS. Giữ `ALLOW_ORIGIN` tối thiểu chỉ gồm web thật và preview cần dùng; `Authorization` đã có trong CORS headers.
+1. Chạy Supabase migration trên project hiện tại theo §2. Không tạo Supabase project mới.
+2. D1 thuộc **Worker mới**. Config là `community-worker/wrangler.toml`; Worker name `ssochuz-community`; migration `community-worker/migrations/0001_community.sql`.
+3. Từ repo root: `cd community-worker && npx wrangler d1 create ssochuz-community`.
+4. Thay đúng dòng `database_id = "REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID"` trong `community-worker/wrangler.toml` bằng `database_id` Wrangler vừa trả về. **Không đụng `worker/wrangler.toml` của `chuseoz-cms`; không deploy khi placeholder còn nguyên.**
+5. Trong `community-worker/`, chạy `npx wrangler d1 migrations apply ssochuz-community --remote`.
+6. `community-worker/wrangler.toml` có sẵn service binding `CMS` tới service `chuseoz-cms`. CMS hiện có xác thực token `/api/auth/me`, cung cấp registry và TOC; config CMS không cần thêm D1 hay service binding.
 
 ### Build/verify/deploy
 
@@ -115,22 +121,27 @@ npm run check:worker
 npm run og
 npm test
 
-# Worker (sau khi D1 binding/migration đã sẵn sàng)
+# cập nhật source CMS hiện có (giữ nguyên worker/wrangler.toml)
 cd worker && npx wrangler deploy
+
+# Worker community độc lập
+cd ../community-worker
+npx wrangler d1 migrations apply ssochuz-community --remote
+npx wrangler deploy
 ```
 
-Deploy static Pages từ repo root theo quy trình hiện tại. `npm run build` sinh `cz-stickers.js`/`cz-personal.js` và bundles khác; `npm run og` đồng bộ `truyen/<slug>/index.html` + vùng OG trong `_redirects` với `truyen.html`. Service worker/version query phải cùng bộ phát hành.
+Nếu D1 đã áp migration thì không cần chạy lại ở mỗi lần deploy; lệnh migration an toàn để xác nhận trạng thái. Deploy static Pages từ repo root theo quy trình hiện tại. `cz-config.js` giữ `CZ_API` cho CMS cũ và đặt `CZ_COMMUNITY_API` cho Worker mới. `npm run build` sinh `cz-stickers.js`/`cz-personal.js` và bundles khác; `npm run og` đồng bộ trang OG.
 
 Kiểm tra sau deploy:
 
 ```bash
-curl -s https://<worker>/api/health
-curl -i -X POST https://<worker>/api/community/reactions \
+curl -s https://ssochuz-community.<account-subdomain>.workers.dev/api/health
+curl -i -X POST https://ssochuz-community.<account-subdomain>.workers.dev/api/community/reactions \
   -H 'Origin: https://ssochuz.pages.dev' -H 'Content-Type: application/json' \
   --data '{"storyId":"third-person","chapterIndex":1}'
 ```
 
-Health phải có `version: 1.20.0`, `community.d1: true`; summary reaction phải HTTP 200 và có CORS origin chính xác. Action cần JWT Supabase hợp lệ. Kiểm tra asset: `curl -I https://<site>/stickers/sso/full/sso-love-it.webp` và `curl -I https://<site>/stickers/sso/thumb/sso-love-it.webp` đều phải HTTP 200 (`image/webp`). Supabase migration, D1 migration và Worker deploy không tự chạy trong `npm test`.
+Health Community Worker phải có `worker: ssochuz-community`, `d1: true`, `cmsBinding: true`; summary reaction phải HTTP 200 và CORS đúng origin. Action cần Supabase JWT hợp lệ; CMS hiện có xác minh chữ ký qua service binding. Kiểm tra asset: `curl -I https://<site>/stickers/sso/full/sso-love-it.webp` và `curl -I https://<site>/stickers/sso/thumb/sso-love-it.webp` đều phải HTTP 200 (`image/webp`). Supabase/D1 migrations và deploy không tự chạy trong `npm test`.
 
 ## 7. Giới hạn/chưa triển khai
 

@@ -44,6 +44,10 @@ function page(file, { url = 'https://ssochuz.pages.dev/', fetch, config = {}, fi
     html = html.replace(/window\.CZ_API\s*=\s*(window\.CZ_API\s*\|\|\s*)?'[^']*';/,
       "window.CZ_API=" + JSON.stringify(config.CZ_API) + ";");
   }
+  if (config.CZ_COMMUNITY_API !== undefined) {
+    html = html.replace(/window\.CZ_COMMUNITY_API\s*=\s*'[^']*';/,
+      "window.CZ_COMMUNITY_API=" + JSON.stringify(config.CZ_COMMUNITY_API) + ";");
+  }
   if (config.CZ_STATS_DIRECT !== undefined) {
     html = html.replace(/window\.CZ_STATS_DIRECT\s*=\s*(true|false);/,
       "window.CZ_STATS_DIRECT=" + (config.CZ_STATS_DIRECT ? 'true' : 'false') + ";");

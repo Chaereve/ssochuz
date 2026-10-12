@@ -3136,7 +3136,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   }
 
   w.CZ = {
-    API: API, normalizeApi: normalizeApi,
+    API: API, COMMUNITY_API: normalizeApi(w.CZ_COMMUNITY_API) || API, normalizeApi: normalizeApi,
     registry: registry, purgeRegistry: purgeRegistry, book: book, forgetBook: forgetBook, toc: toc, chapter: chapter, forgetChapter: forgetChapter, stats: stats, refreshStats: refreshStats, schedule: schedule,
     lockToken: lockToken, setLockToken: setLockToken, clearLockToken: clearLockToken,
     vid: vid, reportView: reportView, sendReport: sendReport, uploadReportImage: uploadReportImage, vote: vote, rate: rate, myRating: function (slug) { return jpost('/api/rate/me', { slug: slug, vid: vid() }, authToken()); },

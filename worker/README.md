@@ -68,7 +68,7 @@ GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới c�
 | **Sticker bình luận** | Chỉ bổ sung picker thumbnail vào `CZ.comments` và endpoint comments KV đang có; hỗ trợ sticker-only/reply, server allowlist lấy từ registry dùng chung. Không tạo comment service mới. |
 | **Random picker** | Nút “Hôm nay đọc gì?” tiếp tục ưu tiên truyện đang theo dõi; tuỳ chọn gần đây của vòng quay dùng khoá versioned `ssochuz:dice:*:v1`. |
 
-Schema, data flow, response/error codes và quy trình setup nằm tại [`docs/features/personal-community-1.20.md`](../docs/features/personal-community-1.20.md). Migration Supabase: `supabase/migrations/202610120001_personal_reading_data.sql`; migration D1: `worker/migrations/0001_community.sql`. Không có `service_role` trong trình duyệt.
+Schema, data flow, response/error codes và quy trình setup nằm tại [`docs/features/personal-community-1.20.md`](../docs/features/personal-community-1.20.md). Migration Supabase: `supabase/migrations/202610120001_personal_reading_data.sql`; migration D1 của Worker riêng: `community-worker/migrations/0001_community.sql`. `worker/wrangler.toml` vẫn chỉ dành cho CMS production `chuseoz-cms`; không thêm D1 vào file đó.
 
 ## Có gì mới ở bản 1.18.0 — đếm lượt đọc KV (A2) + đồng bộ số phiên bản (G10)
 
@@ -122,59 +122,51 @@ Schema, data flow, response/error codes và quy trình setup nằm tại [`docs/
 | **Test** | `tests/t_kv_quota.mjs` (34 kiểm tra: công thức chia nhịp, 500 lượt xem/60 lần bình luận không đốt lượt ghi, gộp `rateagg` chỉ 1 lượt LIST, `/api/health`) |
 | **Quan trọng** | Nằm TRONG Worker → phải **`npx wrangler deploy`** (xem mục 0). Kiểm tra: `curl <worker>/api/health` thấy `"version": "1.18.0"` |
 
-## Chuẩn bị 1.20.0: migration Supabase + Cloudflare D1
+## Chuẩn bị 1.20.0: Supabase + Worker community độc lập
 
-Các bước chi tiết/data flow ở [`docs/features/personal-community-1.20.md`](../docs/features/personal-community-1.20.md). Trước khi deploy Worker:
+Các bước chi tiết/data flow ở [`docs/features/personal-community-1.20.md`](../docs/features/personal-community-1.20.md). **CMS production `chuseoz-cms` tiếp tục dùng nguyên `worker/wrangler.toml`; không thêm D1 và không cần sửa file đó.**
 
-1. Supabase Dashboard → **SQL Editor** → chạy `supabase/migrations/202610120001_personal_reading_data.sql` trên project hiện có. Hai bảng bật RLS; `anon` không được cấp quyền. Không đưa `service_role` ra frontend.
-2. Tạo D1 nếu chưa có: `cd worker && npx wrangler d1 create ssochuz-community`.
-3. Chép `database_id` Cloudflare trả về vào `worker/wrangler.toml`, thay giá trị placeholder tại binding `CZ_DB`. **Không deploy với `REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID`.**
-4. Áp schema D1 một lần: `cd worker && npx wrangler d1 migrations apply ssochuz-community --remote` (migration `worker/migrations/0001_community.sql`).
-5. Giữ `CZ_KV` đang dùng cho book/comments/stats; `CZ_DB` chỉ là kho action/aggregate reaction + gạch. `SUPABASE_URL` đã là biến thường trong TOML; project ký JWT HS256 thì đặt secret `SUPABASE_JWT_SECRET`, ES256/RS256 dùng JWKS của project.
+1. Supabase Dashboard → **SQL Editor** → chạy `supabase/migrations/202610120001_personal_reading_data.sql` trên project hiện có. Hai bảng bật RLS theo `auth.uid()`; không đưa `service_role` ra frontend.
+2. Worker mới có config riêng tại `community-worker/wrangler.toml`, tên `ssochuz-community`; D1 binding `CZ_DB` và migration đều thuộc thư mục `community-worker/`.
+3. Từ `community-worker/`, tạo D1: `npx wrangler d1 create ssochuz-community`. Thay **dòng 11** `database_id = "REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID"` bằng ID Cloudflare vừa trả về. Không deploy khi còn placeholder.
+4. Từ cùng thư mục, áp schema D1: `npx wrangler d1 migrations apply ssochuz-community --remote` (file `community-worker/migrations/0001_community.sql`).
+5. `community-worker/wrangler.toml` đã có service binding `CMS → chuseoz-cms`. Binding này gọi CMS hiện có để xác minh Supabase JWT và đọc registry/TOC public; không yêu cầu đổi config CMS.
 
-## 0. Deploy bản 1.20.0 — 2 cách, chọn 1
+## 0. Deploy bản 1.20.0 — CMS cũ + Worker community riêng
 
-> ### ⚠ TRƯỚC KHI DEPLOY: đọc 3 dòng này (sự cố thật ngày 23/09)
->
-> `npx wrangler deploy` **thay TOÀN BỘ biến thường** của Worker bằng đúng nội dung `[vars]`
-> trong `worker/wrangler.toml`. Biến nào đặt tay trên dashboard (Settings → **Variables and
-> Secrets**) mà **không có trong `wrangler.toml`** thì **BỊ XOÁ** sau mỗi lần deploy.
-> Secret (`ADMIN_KEY`, `SESSION_SECRET`, `SUPABASE_SERVICE_ROLE`…) thì wrangler **giữ**.
-> Đó chính xác là điều đã làm cả 63 bộ truyện không đọc được sau khi deploy 1.16.0:
-> `SUPABASE_URL` đặt tay bị xoá ⇒ Worker mất chỗ đọc overflow. Toàn bộ sự cố + cách phòng:
-> **`docs/reports/BAO-CAO-SU-CO-DEPLOY-MAT-BIEN-SUPABASE.md`**. Từ 1.16.1 `SUPABASE_URL` nằm sẵn trong
-> `wrangler.toml` nên deploy không làm mất nữa; nếu vẫn thiếu, Worker tự dùng Project URL
-> đã lưu ở `/admin` → Cài đặt & đồng bộ (không cần deploy lại).
-> **Thêm biến mới cho Worker? Ghi vào `wrangler.toml` (biến thường) hoặc dùng
-> `npx wrangler secret put` (secret) — đừng chỉ bấm trên dashboard.**
+### A. Cập nhật code CMS hiện có (giữ nguyên config)
 
-**Cách A — dòng lệnh (khuyên dùng, cần Node):**
+Sticker comment/reply và TOC theo lô dùng API của CMS hiện có. Khi phát hành các thay đổi source này, dùng đúng config hiện tại của `chuseoz-cms` — **không sửa `worker/wrangler.toml` để thêm D1**:
 
 ```bash
-cd worker && npx wrangler deploy          # wrangler tự gộp các tệp con
+# tại repo root
+npm run build:worker
+cd worker
+npx wrangler deploy
 ```
-Kiểm tra: mở `https://<worker>/api/health` phải thấy `"version": "1.20.0"`,
-`community.d1: true` và **`overflow.supabase: true`** (nếu `overflow.supabase` là `false` thì xem
-`overflow.missing` — nó kể tên biến đang thiếu; `overflow.urlVia` cho biết URL lấy từ `env` hay từ ghim KV).
-Kiểm tra thêm public reaction summary bằng một slug/chapter đã phát hành:
-`curl -X POST https://<worker>/api/community/reactions -H 'content-type: application/json' -d '{"storyId":"third-person","chapterIndex":1}'` — phải trả HTTP 200.
 
-**Cách B — dán trong bảng điều khiển Cloudflare (không cần cài gì):**
+### B. Deploy Worker mới cho reaction/góp gạch
 
-1. Trên máy, chạy `npm run build:worker` → sinh **`worker/cms.bundle.js`** (một tệp duy nhất
-   khoảng 233 KB, đã gộp sẵn các tệp con; tệp này không commit, ai cần thì chạy lại lệnh).
-2. Cloudflare → **Workers & Pages** → chọn Worker `chuseoz-cms` → **Edit code**.
-3. Xoá hết code cũ, **dán toàn bộ** `worker/cms.bundle.js`, bấm **Deploy**.
-4. Mở `/api/health` xem `"version"` (bản này: `1.20.0`).
+```bash
+# tại repo root
+cd community-worker
+npx wrangler d1 create ssochuz-community
+# Thay database_id ở community-worker/wrangler.toml dòng 11 bằng ID lệnh vừa trả về.
+npx wrangler d1 migrations apply ssochuz-community --remote
+npx wrangler deploy
+```
 
-> **Đừng dán `worker/cms.js`.** Tệp đó có 9 dòng `import` (overflow, Durable Object, mã dùng chung
-> `src/shared/…`) — bảng điều khiển không tự gộp, dán vào là Worker báo lỗi và **mất cả My Space
-> lẫn truyện riêng tư**. `npm run build:worker` đã kiểm tra hộ: tệp gộp không còn `import`, còn đủ
-> `MemberSpaces`, `PrivateBooks`, `export default`.
->
-> Thiếu `CZ_DB` không làm hỏng reader/comments hiện có, nhưng reaction/gạch sẽ trả 503 và chưa dùng được;
-> thiếu migration Supabase thì follow/progress cá nhân sẽ ở guest cache hoặc báo lỗi RLS. Chỉ bật tính năng
-> cho người đọc sau khi bind D1, áp cả hai migration và xác minh các endpoint.
+CMS `/api/health` vẫn trả `"version": "1.20.0"` (bản này: `1.20.0`); Community Worker `https://ssochuz-community.<account-subdomain>.workers.dev/api/health` phải có `worker: "ssochuz-community"`, `d1: true`, `cmsBinding: true`. Reaction summary kiểm tra qua Worker mới:
+
+```bash
+curl -i -X POST https://ssochuz-community.<account-subdomain>.workers.dev/api/community/reactions \
+  -H 'Origin: https://ssochuz.pages.dev' -H 'Content-Type: application/json' \
+  --data '{"storyId":"third-person","chapterIndex":1}'
+```
+
+Response phải là HTTP 200 với CORS đúng origin. `cz-config.js` có `CZ_COMMUNITY_API` riêng; nếu account subdomain khác `kimtong1906`, cập nhật **chỉ URL community** ở biến đó. `CZ_API` vẫn trỏ CMS cũ.
+
+> Worker mới dùng service binding `CMS`, D1 riêng, không đụng database/KV config của CMS. CMS `/api/health` tiếp tục dùng để kiểm tra `overflow.supabase`; health của Community Worker kiểm tra `d1` và `cmsBinding`. Nếu Supabase migration chưa chạy, follow/progress sẽ báo lỗi RLS hoặc ở guest cache; nếu D1 migration chưa chạy, không bật reaction/gạch production.
 
 ## Có gì mới ở bản 1.14.0 — overflow cho book/ảnh (kể cả bìa cũ) + parser chương dùng chung
 

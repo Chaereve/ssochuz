@@ -587,11 +587,12 @@
   }
   function communityRequest(path, body, options) {
     options = options || {};
-    if (!CZ.API) return Promise.reject(new Error('Chưa kết nối Worker'));
+    var communityAPI = CZ.COMMUNITY_API || CZ.API;
+    if (!communityAPI) return Promise.reject(new Error('Chưa kết nối Worker community'));
     function send(token) {
       var headers = { 'content-type': 'application/json' };
       if (token) headers.authorization = 'Bearer ' + token;
-      return w.fetch(CZ.API + path, {
+      return w.fetch(communityAPI + path, {
         method: 'POST', headers: headers, cache: 'no-store', body: JSON.stringify(body || {})
       }).then(function (response) {
         return response.json().catch(function () { return {}; }).then(function (data) {

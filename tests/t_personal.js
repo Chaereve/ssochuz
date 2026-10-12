@@ -83,6 +83,7 @@ class Query {
   const listeners = [];
   w.CZ = {
     API: 'https://worker.test',
+    COMMUNITY_API: 'https://community.test',
     findLib: slug => ({ slug, chapters: 50 }),
     toast() {},
   };
@@ -158,8 +159,10 @@ class Query {
 
   /* Client giữ Supabase JWT riêng cho endpoint community, không gửi worker session. */
   await personal.communityRequest('/api/community/reactions', { storyId: 'third-person', chapterIndex: 1 });
-  const authHeader = fetchLog.find(item => item.url.endsWith('/api/community/reactions'))?.options.headers.authorization;
+  const communityCall = fetchLog.find(item => item.url.endsWith('/api/community/reactions'));
+  const authHeader = communityCall?.options.headers.authorization;
   ok(authHeader === 'Bearer header.payload.signature', 'community endpoint phải nhận Supabase access_token, không phải Worker session token');
+  ok(communityCall?.url === 'https://community.test/api/community/reactions', 'reaction phải gọi Worker community riêng, không gọi CMS cũ');
 
   const ids = Array.from({ length: 23 }, (_, i) => 'story-' + i);
   await personal.fetchTocs(ids);

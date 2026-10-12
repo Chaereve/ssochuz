@@ -1,0 +1,24 @@
+name = "ssochuz-community"
+main = "index.js"
+compatibility_date = "2025-01-01"
+workers_dev = true
+
+# D1 riêng cho action/aggregate reaction và gạch ảo.
+# Tạo database, thay placeholder bên dưới, rồi áp migrations/ trước khi deploy.
+[[d1_databases]]
+binding = "CZ_DB"
+database_name = "ssochuz-community"
+database_id = "REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+# Gọi nội bộ CMS production hiện có để xác thực Supabase access token và
+# kiểm tra truyện/chương công khai. Không cần sửa wrangler.toml của chuseoz-cms.
+[[services]]
+binding = "CMS"
+service = "chuseoz-cms"
+
+[vars]
+ALLOW_ORIGIN = "https://ssochuz.pages.dev,https://chuseoz.pages.dev,https://chuseoz.blogspot.com"
+
+[observability]
+enabled = true

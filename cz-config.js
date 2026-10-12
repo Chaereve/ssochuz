@@ -32,16 +32,16 @@
    Có thể dán trong file này HOẶC mở trang /admin → tab "Cài đặt & đồng bộ" →
    mục "Đăng nhập (Supabase)" rồi lưu: cấu hình nằm trên KV, không cần deploy lại.
    ========================================================================== */
-window.CZ_API = 'chuseoz-cms.kimtong1906.workers.dev';   // để '' nếu chưa dùng Worker
+window.CZ_API = 'chuseoz-cms.kimtong1906.workers.dev';   // CMS hiện có: dữ liệu truyện/comments/quản trị
+window.CZ_COMMUNITY_API = 'ssochuz-community.kimtong1906.workers.dev'; // Worker mới, riêng reaction/góp gạch D1
 window.CZ_STATS_DIRECT = false;                           // số xếp hạng lấy từ KV; true = đọc thẳng Firebase cũ
 
 /* --- COMMUNITY (1.20.0) -----------------------------------------------
-   Reaction sticker và hộp góp gạch dùng chung CZ_API:
-     · /api/community/reactions → Cloudflare D1, toggle theo user/chapter/sticker
-     · /api/community/brick     → Cloudflare D1, tối đa một viên ảo/ngày/user/truyện
-     · /api/community/tocs      → đọc mục lục công khai để cập nhật khối theo dõi
-   Không có coin/thanh toán. Cần bind D1 tên CZ_DB cho Worker; xem
-   worker/README.md và worker/migrations/0001_community.sql. */
+   · /api/community/tocs      → CMS hiện có (đọc mục lục công khai theo lô)
+   · /api/community/reactions → Worker mới ssochuz-community (Cloudflare D1)
+   · /api/community/brick     → Worker mới ssochuz-community (tối đa 1 viên/ngày)
+   Community Worker gọi CMS nội bộ qua service binding CMS; không sửa
+   worker/wrangler.toml của chuseoz-cms. Không có coin/thanh toán. */
                            // số xếp hạng lấy từ KV; true = đọc thẳng Firebase cũ
 window.CZ_VAPID_PUBLIC_KEY = 'BDzU2yh_uWzhaTZ6HZe3s-aLk6w5BnKCv5gTzUZYNjTyObcAlJa5GnZGrbfwHeOdUpDistwMgMaKvnmqLiXzobs';   // khoá CÔNG KHAI VAPID cho Web Push (DevTools thấy là bình thường; khoá RIÊNG nằm trong secret Worker)
 
@@ -76,5 +76,6 @@ window.CZ_FIREBASE_PROJECT = window.CZ_FIREBASE_PROJECT || "chuseoz-library";
     return (u && !/^https?:\/\//i.test(u)) ? 'https://' + u : u;
   }
   window.CZ_API = fix(window.CZ_API);
+  window.CZ_COMMUNITY_API = fix(window.CZ_COMMUNITY_API);
   window.CZ_SUPABASE_URL = fix(window.CZ_SUPABASE_URL);
 })();

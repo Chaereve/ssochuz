@@ -164,9 +164,6 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
   {
     const r = await call('GET', '/api/health');
     ck('health/có KV → ok:true', !!(r.body && r.body.ok === true), r.body && r.body.ok, true);
-    eq('health/community.d1 false khi chưa bind', r.body && r.body.community && r.body.community.d1, false);
-    const hD1 = await call('GET', '/api/health', { e: Object.assign({}, env, { CZ_DB: { prepare: function () {} } }) });
-    eq('health/community.d1 true khi đã bind', hD1.body && hD1.body.community && hD1.body.community.d1, true);
     ck('health/có version', !!(r.body && r.body.version), r.body && r.body.version, 'chuỗi');
     eq('health/chỉ báo đã cấu hình admin', r.body && r.body.auth && r.body.auth.adminConfigured, true);
     ck('health/không lộ danh sách email quản trị', !JSON.stringify(r.body || {}).includes('admin@example.com') &&

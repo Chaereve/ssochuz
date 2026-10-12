@@ -59,6 +59,7 @@ if (!/export\s*\{[^}]*MemberSpaces/.test(code)) problems.push('thiếu export Me
 if (!/export\s*\{[^}]*PrivateBooks/.test(code)) problems.push('thiếu export PrivateBooks');
 /* esbuild đổi tên thành `export { cms_default as default }` — nhận cả hai kiểu */
 if (!/export\s+default|as\s+default\b/.test(code)) problems.push('thiếu export default (fetch/scheduled)');
+if (/community_reaction_totals|community_brick_totals|CZ_DB/.test(code)) problems.push('CMS bundle không được chứa D1 actions/binding của Worker community riêng');
 if (!code.includes(ver)) problems.push('không thấy số phiên bản ' + ver);
 
 const kb = (n) => (n / 1024).toFixed(1) + ' kB';

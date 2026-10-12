@@ -1,6 +1,7 @@
 /* ============================================================================
-   Worker community API + D1 contract, chạy trên worker/cms.js thật.
-   D1 giả hiểu đúng prepared statements của endpoint và tuần tự hoá batch để mô
+   Worker community độc lập + D1 contract, chạy trên community-worker/index.js thật.
+   CMS service binding được giả lập cho xác thực Supabase/public story lookup; D1 giả
+   hiểu đúng prepared statements của endpoint và tuần tự hoá batch để mô
    phỏng transaction: kiểm JWT sub, toggle nguyên tử, aggregate trigger, unique
    gạch/ngày, allowlist sticker, validation story/chapter, CORS/rate errors.
    Migration SQL được kiểm chạy riêng bằng SQLite trong tools/check_community_sql.py.
@@ -11,7 +12,7 @@ import { createHmac } from 'node:crypto';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const worker = (await import(pathToFileURL(path.join(ROOT, 'worker', 'cms.js')).href)).default;
+const worker = (await import(pathToFileURL(path.join(ROOT, 'community-worker', 'index.js')).href)).default;
 const errors = [];
 let checks = 0;
 const check = (condition, label, got = null) => { checks += 1; if (!condition) errors.push({ label, got }); };
@@ -108,6 +109,49 @@ class FakeD1 {
   }
 }
 
+class FakeCMS {
+  constructor(kv) { this.kv = kv; }
+  response(data, status = 200) {
+    return new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json' } });
+  }
+  async fetch(request) {
+    const url = new URL(request.url);
+    if (url.pathname === '/api/auth/me' && request.method === 'GET') {
+      const match = String(request.headers.get('authorization') || '').match(/^Bearer\s+([^\s]+)$/i);
+      const parts = match ? match[1].split('.') : [];
+      if (parts.length !== 3) return this.response({ ok: false, error: 'invalid token' }, 401);
+      let claims;
+      try { claims = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8')); } catch (_) { claims = null; }
+      const signed = parts[0] + '.' + parts[1];
+      const expected = createHmac('sha256', HMAC).update(signed).digest('base64url');
+      if (!claims || parts[2] !== expected || Number(claims.exp) <= Math.floor(Date.now() / 1000) ||
+          claims.iss !== 'https://project.test/auth/v1') {
+        return this.response({ ok: false, error: 'invalid token' }, 401);
+      }
+      return this.response({ ok: true, user: { uid: claims.sub, exp: claims.exp } });
+    }
+    if (url.pathname === '/api/registry' && request.method === 'GET') {
+      const registry = await this.kv.get('registry', { type: 'json' });
+      const lib = (registry && Array.isArray(registry.lib) ? registry.lib : []).filter(entry =>
+        entry && entry.visibility !== 'private' && entry.pubStatus !== 'draft');
+      return this.response({ lib });
+    }
+    const bookMatch = url.pathname.match(/^\/api\/book\/([^/]+)\/toc$/);
+    if (bookMatch && request.method === 'GET') {
+      const slug = decodeURIComponent(bookMatch[1]);
+      const registry = await this.kv.get('registry', { type: 'json' });
+      const entry = (registry && registry.lib || []).find(row => row && row.slug === slug);
+      if (!entry || entry.visibility === 'private' || entry.pubStatus === 'draft') return this.response({ ok: false }, 404);
+      const book = await this.kv.get('book:' + slug, { type: 'json' });
+      if (!book) return this.response({ ok: false }, 404);
+      if (book.lock) return this.response({ ok: false, locked: true }, 403);
+      const chapters = (Array.isArray(book.chapters) ? book.chapters : []).filter(chapter => !chapter.hidden && !chapter.scheduledAt);
+      return this.response({ ok: true, slug, total: chapters.length, chapters: chapters.map(chapter => ({ t: chapter.t })) });
+    }
+    return this.response({ ok: false, error: 'not found' }, 404);
+  }
+}
+
 const kv = new FakeKV();
 const db = new FakeD1();
 const chapters = Array.from({ length: 3 }, (_, i) => ({ t: 'Chương ' + (i + 1), c: '<p>Nội dung.</p>' }));
@@ -127,9 +171,8 @@ for (const slug of ['test-story', 'private-story', 'draft-story', 'done-story', 
   }));
 }
 const env = {
-  CZ_KV: kv, CZ_DB: db,
-  SUPABASE_URL: 'https://project.test', SUPABASE_JWT_SECRET: HMAC,
-  SESSION_SECRET: 'worker-session-secret-long-enough-to-ignore-test-supabase-token',
+  CZ_DB: db,
+  CMS: new FakeCMS(kv),
   ALLOW_ORIGIN: 'https://web.test',
 };
 const ctx = { waitUntil: promise => Promise.resolve(promise) };
@@ -144,6 +187,18 @@ async function call(url, { body = {}, token = '', origin = 'https://web.test', e
   return { status: response.status, data, headers: response.headers };
 }
 
+const healthResponse = await worker.fetch(new Request('https://community.test/api/health', {
+  headers: { origin: 'https://web.test' },
+}), env, ctx);
+const healthData = await healthResponse.json();
+check(healthResponse.status === 200 && healthData.worker === 'ssochuz-community' && healthData.d1 && healthData.cmsBinding,
+  'standalone community Worker health reports D1 + existing CMS service binding', healthData);
+const preflight = await worker.fetch(new Request('https://community.test/api/community/brick', {
+  method: 'OPTIONS', headers: { origin: 'https://web.test', 'access-control-request-method': 'POST' },
+}), env, ctx);
+check(preflight.status === 204 && preflight.headers.get('access-control-allow-origin') === 'https://web.test' &&
+  preflight.headers.get('access-control-allow-credentials') === null,
+  'community Worker preflight allows configured origin without credentials');
 const userA = jwt('supabase-user-a');
 const userB = jwt('supabase-user-b');
 const storyId = 'test-story';
