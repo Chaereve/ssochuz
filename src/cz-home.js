@@ -258,13 +258,13 @@
     var mode = service.mode();
     var resumeRail = $('#resumeRail'), followRail = $('#followUpdatesRail');
     if (mode === 'loading') {
-      resumeRail.innerHTML = '<p class="personal-empty">Đang đồng bộ dữ liệu đọc…</p>';
-      followRail.innerHTML = '<p class="personal-empty">Đang kiểm tra truyện theo dõi…</p>';
+      resumeRail.innerHTML = '<p class="personal-empty">Đang đồng bộ…</p>';
+      followRail.innerHTML = '<p class="personal-empty">Đang kiểm tra…</p>';
       return;
     }
     if (mode === 'error') {
-      resumeRail.innerHTML = '<p class="personal-empty">Chưa thể tải dữ liệu cá nhân. Kiểm tra kết nối rồi thử tải lại trang.</p>';
-      followRail.innerHTML = '<p class="personal-empty">Danh sách theo dõi chưa được đồng bộ.</p>';
+      resumeRail.innerHTML = '<p class="personal-empty">Chưa tải được dữ liệu cá nhân.</p>';
+      followRail.innerHTML = '<p class="personal-empty">Chưa đồng bộ được danh sách theo dõi.</p>';
       return;
     }
     var library = CZ.lib();
@@ -282,14 +282,14 @@
         return personalCard(story, chapterLabel, url, progress, chapterLabel);
       }).join('');
     } else {
-      resumeRail.innerHTML = '<p class="personal-empty">Chưa có truyện đọc dở. Mở một bộ truyện bất kỳ để lưu tiến độ.</p>';
+      resumeRail.innerHTML = '<p class="personal-empty">Chưa có truyện đọc dở.</p>';
     }
     var follows = service.followRows().filter(function (row) { return row && known[row.storyId]; });
     if (!follows.length) {
-      followRail.innerHTML = '<p class="personal-empty">Chưa theo dõi truyện nào. Bấm biểu tượng chuông trên một truyện để nhận diện chương mới ở đây.</p>';
+      followRail.innerHTML = '<p class="personal-empty">Chưa theo dõi truyện nào.</p>';
       return;
     }
-    followRail.innerHTML = '<p class="personal-empty">Đang tải danh sách chương mới…</p>';
+    followRail.innerHTML = '<p class="personal-empty">Đang tải chương mới…</p>';
     service.fetchTocs(follows.map(function (row) { return row.storyId; })).then(function (tocRows) {
       if (requestId !== personalRenderId) return;
       var bySlug = Object.create(null);
@@ -307,7 +307,7 @@
       }).filter(function (item) { return item.unseen > 0; })
         .sort(function (a, b) { return b.unseen - a.unseen || String(b.toc.updatedAt || '').localeCompare(String(a.toc.updatedAt || '')); });
       if (!updates.length) {
-        followRail.innerHTML = '<p class="personal-empty">Bạn đã đọc hết chương hiện có của các truyện đang theo dõi.</p>';
+        followRail.innerHTML = '<p class="personal-empty">Chưa có chương mới.</p>';
         return;
       }
       followRail.innerHTML = updates.slice(0, 12).map(function (item) {
@@ -318,7 +318,7 @@
         return personalCard(item.story, title, url, null, item.unseen + ' chương mới');
       }).join('');
     }).catch(function () {
-      if (requestId === personalRenderId) followRail.innerHTML = '<p class="personal-empty">Chưa tải được mục lục truyện theo dõi. Tiến độ của bạn vẫn được giữ nguyên.</p>';
+      if (requestId === personalRenderId) followRail.innerHTML = '<p class="personal-empty">Chưa tải được mục lục.</p>';
     });
   }
   var personalRenderTimer = 0;

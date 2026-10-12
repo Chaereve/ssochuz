@@ -356,22 +356,18 @@
 
   function barHTML(ctx, hostId) {
     var c = counts(ctx.slug, ctx.ch), mineArr = mine(ctx.slug, ctx.ch);
-    var st = (ctx.story && (ctx.story.statusCls || '')) || '';   /* 'run' = đang cập nhật */
     var isStoryPage = hostId === 'storyReact';
     return '<div class="rx-head">' +
-        '<div class="rx-title"><b>' + (isStoryPage ? 'Cảm xúc về truyện' : 'Chương này làm bạn thấy sao?') + '</b>' +
-        '<span class="rx-sub">' + (apiOn()
-          ? 'Chạm vào cảm xúc để thả hoặc bỏ reaction cộng đồng.'
-          : 'Dữ liệu reaction cộng đồng hiện chưa kết nối được máy chủ.') + '</span></div>' +
+        '<div class="rx-title"><b>' + (isStoryPage ? 'Cảm xúc' : 'Cảm xúc chương') + '</b>' +
+        '<span class="rx-sub">' + (apiOn() ? 'Chạm để thả cảm xúc' : 'Chưa kết nối máy chủ') + '</span></div>' +
         '<div class="rx-head-act">' +
-          '<span class="rx-total">' + num(total(ctx.slug, ctx.ch)) + ' lượt thả</span>' +
+          '<span class="rx-total">' + num(total(ctx.slug, ctx.ch)) + ' lượt</span>' +
           '<button type="button" class="btn ghost sm rx-all-btn" id="rxAll">Chi tiết</button>' +
         '</div>' +
       '</div>' +
       '<div class="rx-row" role="group" aria-label="Cảm xúc cho ' + esc(ctx.label || 'chương này') + '">' +
         REACTIONS.map(function (r) { return stickerHTML(r, c[r.id], mineArr.indexOf(r.id) >= 0); }).join('') +
-      '</div>' +
-      (st === 'run' && !isStoryPage ? '<p class="rx-foot">Đang chờ chương mới? Góp gạch cổ vũ tác giả nhé 👇</p>' : '');
+      '</div>';
   }
 
   function mount(host, ctx) {
@@ -417,7 +413,7 @@
       }
     });
     var tot = host.querySelector('.rx-total');
-    if (tot) tot.textContent = num(total(ctx.slug, ctx.ch)) + ' lượt thả';
+    if (tot) tot.textContent = num(total(ctx.slug, ctx.ch)) + ' lượt';
   }
 
   /* Animation/audio chỉ chạy sau khi server xác nhận thao tác; không ghi

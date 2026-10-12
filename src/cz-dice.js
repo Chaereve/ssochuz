@@ -154,14 +154,14 @@
             wheelInnerHTML(list) +
           '</div>' +
         '</div>' +
-        '<p class="dc-live" role="status" aria-live="polite" id="dcLive">Sẵn sàng quay · ' + num(list.length) + ' truyện trong vòng</p>' +
+        '<p class="dc-live" role="status" aria-live="polite" id="dcLive">Sẵn sàng · ' + num(list.length) + ' truyện</p>' +
       '</div>';
   }
 
   function rosterHTML(list, pickedSlug) {
     return '<div class="dc-roster" id="dcRoster">' +
       '<div class="dc-roster-head">' +
-        '<span>Truyện trên vòng quay (' + num(list.length) + ')</span>' +
+        '<span>Trong vòng (' + num(list.length) + ')</span>' +
       '</div>' +
       '<div class="dc-roster-list">' +
         list.map(function (n, idx) {
@@ -185,7 +185,7 @@
     var gk = Object.keys(genres).sort();
     return '<div class="dc-filters">' +
       '<div class="dc-fgroup">' +
-        '<span class="dc-fl">Bộ lọc</span>' +
+        '<span class="dc-fl">Lọc</span>' +
         '<button type="button" class="dc-chip' + (o.run ? ' on' : '') + '" data-opt="run" aria-pressed="' + o.run + '">Đang ra</button>' +
         '<button type="button" class="dc-chip' + (o.done ? ' on' : '') + '" data-opt="done" aria-pressed="' + o.done + '">Hoàn thành</button>' +
         '<button type="button" class="dc-chip' + (o.adult ? ' on' : '') + '" data-opt="adult" aria-pressed="' + o.adult + '">Gồm 18+</button>' +
@@ -197,8 +197,8 @@
   }
 
   function emptyHTML() {
-    return '<div class="dc-empty"><b>Chưa có truyện nào khớp bộ lọc.</b>' +
-      '<p class="sm muted">Thử bật thêm tình trạng hoặc chọn “Gồm 18+”.</p></div>';
+    return '<div class="dc-empty"><b>Chưa có truyện khớp bộ lọc.</b>' +
+      '<p class="sm muted">Thử bật thêm tình trạng hoặc “Gồm 18+”.</p></div>';
   }
 
   function renderBox(m, first) {
@@ -217,18 +217,18 @@
               '<div class="dc-act-btns">' +
                 '<button class="btn pri dc-spin" id="dcSpin" type="button">Quay ngay</button>' +
                 '<button class="btn pri dc-spin" id="dcAgain" type="button" hidden>Quay lại</button>' +
-                '<button class="btn ghost dc-shuf" id="dcShuffle" type="button" title="Trộn danh sách truyện khác lên vòng quay">' +
+                '<button class="btn ghost dc-shuf" id="dcShuffle" type="button" title="Trộn danh sách truyện khác">' +
                   (CZ.icon ? CZ.icon('spark', 'i-s') : '') + '<span>Trộn truyện</span></button>' +
               '</div>' +
               '<span class="sm muted dc-note" id="dcNote">' + (list.length !== S.cands.length
-                ? ('Chọn ngẫu nhiên ' + num(S.cands.length) + '/' + num(list.length) + ' bộ phù hợp')
-                : 'Ưu tiên truyện đang theo dõi & mới cập nhật') + '</span>' +
+                ? (num(S.cands.length) + '/' + num(list.length) + ' truyện phù hợp')
+                : 'Ưu tiên truyện đang theo dõi') + '</span>' +
             '</div>' +
           '</div>' +
           '<div class="dc-side-col">' +
             '<div class="dc-standby" id="dcStandby">' +
               '<div class="dc-standby-ic" aria-hidden="true">🎲</div>' +
-              '<div><b>Chưa quay lượt nào</b><p class="sm muted">Bấm <b>Quay ngay</b> hoặc chạm vào tâm vòng quay để chọn ngẫu nhiên một bộ truyện cho hôm nay. Bạn cũng có thể bấm <b>Trộn truyện</b> để đổi danh sách trên vòng quay.</p></div>' +
+              '<div><b>Chạm để quay</b><p class="sm muted">Bấm <b>Quay ngay</b> hoặc chạm tâm vòng quay để chọn truyện.</p></div>' +
             '</div>' +
             '<div class="dc-result" id="dcResult" hidden></div>' +
             rosterHTML(S.cands, '') +
@@ -317,11 +317,11 @@
       wheel.classList.add('shuffling');
       bindHub(m);
     }
-    if (live) live.textContent = 'Đã trộn vòng quay · ' + num(S.cands.length) + ' truyện trong vòng';
+    if (live) live.textContent = 'Đã trộn · ' + num(S.cands.length) + ' truyện';
     if (note) {
       note.textContent = list.length !== S.cands.length
-        ? ('Đã trộn ngẫu nhiên ' + num(S.cands.length) + '/' + num(list.length) + ' bộ phù hợp')
-        : ('Đã trộn ' + num(S.cands.length) + ' bộ truyện trên vòng quay');
+        ? ('Đã trộn ' + num(S.cands.length) + '/' + num(list.length) + ' truyện')
+        : ('Đã trộn ' + num(S.cands.length) + ' truyện');
     }
     if (CZ.sfx && !reduce()) {
       CZ.sfx('tick');
@@ -431,11 +431,11 @@
       '<div class="dc-card">' +
         '<div class="dc-cv">' + coverTag(n, false) + '</div>' +
         '<div class="dc-info">' +
-          '<div class="dc-card-kicker"><span class="pill ' + esc(n.statusCls || 'run') + '"><span class="d"></span>' + esc(n.status || '') + '</span><span class="dc-win-badge">✨ Gợi ý hôm nay</span></div>' +
+          '<span class="pill ' + esc(n.statusCls || 'run') + '"><span class="d"></span>' + esc(n.status || '') + '</span>' +
           '<h4>' + esc(n.title) + '</h4>' +
           '<p class="sm muted">' + [n.author ? esc(n.author) : '', n.couple ? esc(n.couple) : '', esc(CZ.countText ? CZ.countText(n) : '')]
             .filter(Boolean).join(' · ') + '</p>' +
-          '<p class="dc-latest sm" data-latest>' + (ch ? ('Bạn đang đọc tới chương ' + ch + '.') : 'Chưa đọc chương nào.') + '</p>' +
+          '<p class="dc-latest sm" data-latest>' + (ch ? ('Đang đọc chương ' + ch) : 'Chưa đọc') + '</p>' +
           '<div class="dc-cardbtn">' +
             '<a class="btn pri" href="' + esc(CZ.readURL ? CZ.readURL(n.slug, Math.max(1, ch || 1)) : n.url) + '" data-dice-read>' +
               (CZ.icon ? CZ.icon('play', 'i-s') : '') + 'Đọc ngay</a>' +
@@ -449,8 +449,8 @@
         if (!slot || !head || !head.ok || !head.chapters || !head.chapters.length) return;
         var last = head.chapters[head.chapters.length - 1];
         var t = String((last && last.t) || '').trim();
-        slot.textContent = 'Chương mới nhất: ' + (t || ('chương ' + head.chapters.length)) +
-          (ch ? ' · bạn đang ở chương ' + ch : '');
+        slot.textContent = 'Mới nhất: ' + (t || ('chương ' + head.chapters.length)) +
+          (ch ? ' · đang đọc chương ' + ch : '');
       }).catch(function () {});
     }
   }
