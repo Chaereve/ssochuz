@@ -12,7 +12,7 @@
    ⚠ MỖI LẦN ĐỔI ?v= TĨNH (cz.css/cz-*.js): sửa cả PRECACHE dưới đây + tăng
    CZ_SW_VER → trình duyệt tự tải SW mới, hiện “Đã có bản cập nhật — tải lại”.
    ========================================================================== */
-var CZ_SW_VER = '20260930c';
+var CZ_SW_VER = '20261012d';
 
 /* kho shell theo version (update là thay kho mới, xoá kho cũ);
    kho trang/API/ảnh KHÔNG theo version để dữ liệu offline còn lại sau update */
@@ -37,15 +37,20 @@ var PRECACHE = [
   '/couple/',
   '/my-space',
   '/profile',
-  '/cz-space.js?v=20260930a',
+  '/cz-space.js?v=20261012d',
   '/manifest.webmanifest',
-  '/cz.css?v=20260930a',
-  '/cz-app.js?v=20260930b',
-  '/cz-home.js?v=20260930a',
-  '/cz-story.js?v=20260930a',
-  '/cz-people.js?v=20260930a',
-  '/cz-config.js?v=20260930a',
-  '/cz-auth.js?v=20260930a',
+  '/cz.css?v=20261012d',
+  '/cz-app.js?v=20261012d',
+  '/cz-home.js?v=20261012d',
+  '/cz-story.js?v=20261012d',
+  '/cz-people.js?v=20261012d',
+  '/cz-config.js?v=20261012d',
+  '/cz-auth.js?v=20261012d',
+  /* bộ tính năng tương tác 1.19.0 — giữ trong shell để đọc offline vẫn có
+     hàng reaction và hộp gạch */
+  '/cz-react.js?v=20261012d',
+  '/cz-brick.js?v=20261012d',
+  '/cz-dice.js?v=20261012d',
   '/ssochuz.png?v=1'
 ];
 

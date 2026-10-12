@@ -29,6 +29,16 @@
                        nhiễm bản rỗng vẫn tự lành; mất sạch nguồn thì báo lỗi kèm
                        nút “Thử lại” chạy thật chứ không đứng ở “Đang tải…”
      t_sweep.js        bấm hết mọi nút trong trang xem có lỗi JS nào không
+     t_react.js        (1.19.0) hàng reaction sticker cuối chương: 6 sticker là
+                       <button> thật có ảnh WebP + emoji dự phòng, sticker bay,
+                       thả/bỏ được, chống spam, nhớ theo từng chương
+     t_readtools.js    (1.19.0) ẩn nhanh (Esc×2 / Ctrl+Shift+H, đổi tiêu đề tab,
+                       không ghi tiến độ đọc), Zen, Bionic (không đổi chữ gốc,
+                       đúng dấu tiếng Việt), Terminal (chỉ là giao diện)
+     t_brick.js        (1.19.0) hộp góp gạch: chỉ truyện đang cập nhật, cooldown
+                       + trần/ngày, đủ mốc đổi câu, tiếng kêu chỉ sau cú bấm
+     t_dice.js         (1.19.0) vòng quay “Hôm nay đọc gì?”: ưu tiên đang theo dõi,
+                       lọc 18+/tình trạng/thể loại, bỏ truyện vừa đọc, không lặp
      t_schedule.mjs    HẸN GIỜ CHƯƠNG + LƯU 1 CHƯƠNG + DUNG LƯỢNG ẢNH: chương hẹn
                        giờ tương lai KHÔNG lọt ra /api/book công khai, RSS, số chương;
                        cron tới mốc tự cập nhật registry + báo đẩy; PUT /api/book/<slug>/chapter
@@ -96,7 +106,8 @@ const cands = (process.env.CZ_TEST_MODULES || '').split(path.delimiter).filter(B
   .concat([path.join(__dirname, 'node_modules'), path.join(__dirname, '..', 'node_modules')]);
 const env = Object.assign({}, process.env, { NODE_PATH: cands.join(path.delimiter) });
 const files = [path.join('..', 'tools', 'check_src.js'), path.join('..', 'tools', 'check_version.mjs'), path.join('..', 'tools', 'check_secrets.js'), path.join('..', 'tools', 'check_headers.js'), path.join('..', 'tools', 'check_chapter_html.mjs'), path.join('..', 'tools', 'check_chapter_routes.mjs'), path.join('..', 'tools', 'check_og.mjs'), path.join('..', 'tools', 'audit_a11y.mjs'), 't_worker.mjs', 't_kv_quota.mjs', 't_sanitize.mjs', 't_schedule.mjs', 't_registry_guard.mjs', 't_private.mjs', 't_member_spaces.mjs', 't_space.js', 't_space_hero.js', 't_auth_flow.js', 't_rating_withdraw.js', 't_private_ui.js', 't_config.js', 't_html.js', 't_follow.js', 't_feed.js', 't_push.js', 't_people.js', 't_people_data.js', 't_notif.js', 't_pwa.js', 't_sw_img.js', 't_devserver.js', 't_preload.js', 't_chapter_light.mjs', 't_view.js', 't_chapter_url.js',
-  't_chapters.js', 't_home.js', 't_mobile.js', 't_stats.js', 't_ranking.js', 't_quiet_home.js', 't_ranking_worker.mjs', 't_synopsis.js', 't_story.js', 't_reader.js', 't_flows.js', 't_sweep.js', 't_mystats.js', 't_rating.js', 't_adult.js', 't_fallback.js', 't_lock.mjs', 't_lock_ui.js', 't_admin_core.js', 't_admin_online.js', 't_admin_writes.js', 't_admin_chapter.js', 't_admin_chapter_state.js', 't_admin_book_integrity.js', 't_admin_editor_lazy.js', 't_admin_editor_keyboard.js', 't_cover_mirror.mjs', 't_admin_upload.js', 't_admin_budget.js', 't_admin_features.js', 't_admin_docx.js', 't_docx_content.js', 't_admin_sidebar.js'];
+  't_chapters.js', 't_home.js', 't_mobile.js', 't_stats.js', 't_ranking.js', 't_quiet_home.js', 't_ranking_worker.mjs', 't_synopsis.js', 't_story.js', 't_reader.js', 't_flows.js', 't_sweep.js', 't_mystats.js', 't_rating.js', 't_adult.js', 't_fallback.js', 't_lock.mjs', 't_lock_ui.js', 't_admin_core.js', 't_admin_online.js', 't_admin_writes.js', 't_admin_chapter.js', 't_admin_chapter_state.js', 't_admin_book_integrity.js', 't_admin_editor_lazy.js', 't_admin_editor_keyboard.js', 't_cover_mirror.mjs', 't_admin_upload.js', 't_admin_budget.js', 't_admin_features.js', 't_admin_docx.js', 't_docx_content.js', 't_admin_sidebar.js',
+  't_react.js', 't_readtools.js', 't_brick.js', 't_dice.js'];
 let bad = 0;
 for (const f of files) {
   const r = spawnSync(process.execPath, ['--disable-warning=MODULE_TYPELESS_PACKAGE_JSON', path.join(__dirname, f)], { encoding: 'utf8', timeout: 180000, env });

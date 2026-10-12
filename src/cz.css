@@ -3464,6 +3464,308 @@ body.rd-focus .rdcmts { display: none; }
 }
 
 /* ============================================================================
+   1.19.0 · TĂNG TƯƠNG TÁC & TRẢI NGHIỆM ĐỌC
+   ----------------------------------------------------------------------------
+   Gồm: reaction sticker cuối chương · chế độ Zen · Bionic · Terminal ·
+   Hộp góp gạch · Vòng quay “Hôm nay đọc gì?” · nút ẩn nhanh (panic).
+   Nguyên tắc chung của khối này:
+     · mọi chuyển động chỉ chạy trên transform / opacity (không layout lại);
+     · màu lấy từ token --rd-* khi đang đọc, không có thì rơi về --surf/--txt
+       nên cùng một hàng sticker dùng được ở cả trang truyện lẫn trang đọc;
+     · tắt hết khi máy bật “giảm chuyển động” (luật @media ở đầu tệp + vài
+       luật riêng dưới đây).
+   ========================================================================== */
+
+/* ===================== 1. REACTION STICKER CUỐI CHƯƠNG =================== */
+.rreact { max-width: min(720px, var(--rd-w, 720px)); margin: 0 auto; padding: 6px 24px 14px;
+  color: var(--rd-tx, var(--txt)); }
+.rreact .rx-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px;
+  flex-wrap: wrap; margin-bottom: 12px; }
+.rreact .rx-title { min-width: 0; }
+.rreact .rx-title b { display: block; font-family: var(--font-head); font-size: 16.5px; font-weight: 700; }
+.rreact .rx-sub { display: block; font-size: 12.5px; color: var(--rd-mut, var(--mut)); margin-top: 3px; max-width: 46ch; }
+.rreact .rx-head-act { display: flex; align-items: center; gap: 10px; flex: none; }
+.rreact .rx-total { font-size: 12px; font-weight: 700; color: var(--rd-mut, var(--mut));
+  border: 1px solid var(--rd-bd, var(--bd)); border-radius: 99px; padding: 4px 11px; white-space: nowrap; }
+.rreact .rx-row { display: flex; gap: 10px; flex-wrap: nowrap; overflow-x: auto; padding: 6px 2px 8px;
+  scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+.rreact .rx-foot { font-size: 12.5px; color: var(--rd-mut, var(--mut)); margin-top: 4px; }
+
+/* --- một sticker: ảnh thật (WebP) trên nền “giấy dán”, huy hiệu + số đếm --- */
+.rx { position: relative; flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  width: 76px; min-height: 44px; padding: 8px 6px 10px; border: 0; background: none;
+  color: inherit; cursor: pointer; scroll-snap-align: center; border-radius: var(--r-lg, 10px);
+  transition: transform 260ms var(--ease, cubic-bezier(.2,.7,.3,1)); }
+.rx-art { position: relative; display: grid; place-items: center; width: 52px; height: 52px;
+  border-radius: 50%; background: var(--rd-surf, var(--surf)); border: 1px solid var(--rd-bd, var(--bd));
+  box-shadow: 0 6px 14px -8px rgba(30, 20, 10, .55), 0 1px 0 rgba(255, 255, 255, .5) inset;
+  transition: transform 260ms var(--ease, cubic-bezier(.2,.7,.3,1)), box-shadow 260ms var(--ease, cubic-bezier(.2,.7,.3,1)),
+    border-color 200ms var(--ease, cubic-bezier(.2,.7,.3,1)); }
+.rx-img { width: 40px; height: 40px; display: block; object-fit: contain; pointer-events: none;
+  filter: drop-shadow(0 1px 1px rgba(30, 20, 10, .18)); }
+.rx-emo { display: none; font-size: 30px; line-height: 1; }
+.rx-art.noimg .rx-img { display: none; }
+.rx-art.noimg .rx-emo { display: block; }
+.rx-tick { position: absolute; right: -3px; bottom: -3px; width: 19px; height: 19px; border-radius: 50%;
+  background: var(--rd-acc, var(--acc)); color: #fff; font-size: 11.5px; font-weight: 800;
+  display: grid; place-items: center; border: 2px solid var(--rd-bg, var(--bg)); }
+.rx-ct { font-size: 12.5px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--rd-tx, var(--txt));
+  transition: transform 200ms var(--ease, cubic-bezier(.2,.7,.3,1)), color 200ms var(--ease, cubic-bezier(.2,.7,.3,1)); }
+.rx-lbl { position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%) translateY(5px);
+  opacity: 0; pointer-events: none; white-space: nowrap; font-size: 11.5px; font-weight: 700;
+  padding: 4px 9px; border-radius: 5px; background: var(--rd-tx, var(--txt)); color: var(--rd-bg, var(--bg));
+  box-shadow: 0 6px 16px -8px rgba(0, 0, 0, .6); z-index: 3;
+  transition: opacity 160ms var(--ease, ease), transform 160ms var(--ease, ease); }
+.rx:hover { transform: translateY(-4px); }
+.rx:hover .rx-art { transform: scale(1.08) rotate(-3deg); box-shadow: 0 12px 20px -10px color-mix(in srgb, var(--rx) 60%, transparent),
+  0 1px 0 rgba(255, 255, 255, .55) inset; }
+.rx:hover .rx-lbl, .rx:focus-visible .rx-lbl, .pop-rx:hover .rx-lbl { opacity: 1; transform: translateX(-50%) translateY(0); }
+.rx:focus-visible { outline: none; }
+.rx:focus-visible .rx-art { outline: 3px solid var(--ring, rgba(166, 58, 82, .45)); outline-offset: 2px; }
+.rx.on .rx-art { border-color: var(--rx); box-shadow: 0 0 0 3px color-mix(in srgb, var(--rx) 28%, transparent),
+  0 8px 16px -10px rgba(30, 20, 10, .5); }
+.rx.on .rx-ct { color: var(--rx); }
+.rx:active .rx-art { transform: scale(.92); }
+/* hết cooldown / bị chặn: mờ đi nhưng KHÔNG ẩn khỏi bàn phím */
+.rx.cool { opacity: .55; }
+.rx-bump { animation: rxPop 320ms var(--ease-out, ease-out); }
+.rx-down { animation: rxDown 320ms var(--ease-out, ease-out); }
+@keyframes rxPop { 0% { transform: scale(1); } 45% { transform: scale(1.45); } 100% { transform: scale(1); } }
+@keyframes rxDown { 0% { transform: scale(1.3); } 100% { transform: scale(1); } }
+.rx-alarm .rx-art { animation: rxAlarm 620ms var(--ease-out, ease-out); }
+@keyframes rxAlarm {
+  0% { box-shadow: 0 0 0 0 rgba(217, 154, 36, .55); }
+  70% { box-shadow: 0 0 0 14px rgba(217, 154, 36, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(217, 154, 36, 0); }
+}
+/* --- lớp sticker bay: một lớp cố định duy nhất, hạt tự dọn sau khi bay ----- */
+.czfx { position: fixed; inset: 0; pointer-events: none; z-index: 90; overflow: hidden; }
+.czfx-p { position: fixed; display: grid; place-items: center; will-change: transform, opacity; }
+.czfx-p img { width: 30px; height: 30px; object-fit: contain; display: block; }
+.czfx-p svg { width: 20px; height: 20px; }
+
+/* --- bảng đầy đủ (nút “Xem tất cả reaction”) ------------------------------ */
+.pop-it { display: grid; gap: 8px; }
+.pop-rx { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; cursor: pointer;
+  padding: 9px 12px; border-radius: var(--r-lg, 10px); border: 1px solid var(--bd); background: var(--surf);
+  transition: border-color 180ms var(--ease, ease), transform 180ms var(--ease, ease), background 180ms var(--ease, ease); }
+.pop-rx:hover { transform: translateX(3px); border-color: var(--rx); }
+.pop-rx.on { border-color: var(--rx); background: color-mix(in srgb, var(--rx) 9%, var(--surf)); }
+.pop-rx .rx-art { width: 44px; height: 44px; }
+.pop-rx .rx-img { width: 34px; height: 34px; }
+.pop-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pop-txt b { font-size: 13.5px; }
+.pop-ct { font-size: 12px; color: var(--mut); font-variant-numeric: tabular-nums; }
+.pop-note { margin-top: 2px; }
+
+/* chú thích nhỏ nằm dưới nhãn trong bảng cài đặt đọc */
+.srow2 > span small.s-note { display: block; font-size: 11.5px; font-weight: 500; color: var(--rd-mut, var(--mut));
+  margin-top: 3px; line-height: 1.5; }
+
+/* ===================== 2. CHẾ ĐỘ ZEN ====================================== */
+/* Chỉ còn nội dung chương + thanh công cụ tự ẩn. Không dùng display:none cho
+   #rdText; chỉ ẩn những khối “không cần thiết khi đọc”. */
+body.rd-zen .hdr, body.rd-zen .ftr, body.rd-zen #toTop, body.rd-zen .rdhead .rdcrumb,
+body.rd-zen .rdhead .rdmeta, body.rd-zen .rend, body.rd-zen .rnav, body.rd-zen .ract,
+body.rd-zen .rdcmts, body.rd-zen .rdpct, body.rd-zen #rdPrev, body.rd-zen #rdNext { display: none !important; }
+body.rd-zen .rdhead { padding-top: 22px; }
+body.rd-zen .rdhead h1 { font-size: clamp(20px, 2.4vw, 27px); margin-bottom: 0; }
+body.rd-zen .rtext { padding-top: 12px; padding-bottom: 40px; }
+/* gợi ý nhỏ khi thanh công cụ đang ẩn — chỉ hiện khi người đọc vừa chạm vào */
+body.rd-zen.rd-hide::after { content: "Chạm để hiện thanh công cụ"; position: fixed; left: 50%; bottom: 18px;
+  transform: translateX(-50%); z-index: 40; padding: 7px 14px; border-radius: 99px; font-size: 12px;
+  background: var(--rd-surf2, var(--surf2)); color: var(--rd-mut, var(--mut)); border: 1px solid var(--rd-bd, var(--bd));
+  opacity: 0; animation: zenHint 3200ms var(--ease-out, ease-out) 1 forwards; pointer-events: none; }
+@keyframes zenHint { 0%, 12% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { body.rd-zen.rd-hide::after { animation: none; opacity: 1; } }
+/* Zen trên điện thoại: giữ nút thoát và mục lục trong tầm tay */
+@media (max-width: 700px) {
+  #rdZen { display: grid !important; }
+  body.rd-zen .rdbar .tools .ibo { display: none; }
+  body.rd-zen .rdbar .tools #rdZen, body.rd-zen .rdbar .tools #rdToc, body.rd-zen .rdbar .tools #rdSet { display: grid; }
+  body.rd-zen .rdbar .in { justify-content: center; }
+}
+
+/* ===================== 3. BIONIC READING ================================== */
+/* Chỉ đổi độ đậm của vài ký tự đầu từ — KHÔNG đổi chữ, không tăng chiều cao
+   dòng. Dùng <b> nên trình đọc màn hình vẫn đọc liền mạch cả từ. */
+.rtext .bio { font-weight: 700; }
+body[data-rd-font] .rtext .bio { font-weight: 750; color: inherit; }
+
+/* ===================== 4. TERMINAL / HACKER CLI =========================== */
+/* Đổi token nền đọc ngay trên <body>: thanh đọc, ngăn kéo, nút đều theo luôn,
+   không phải tô lại từng thành phần. Chữ xanh trên nền gần đen, tương phản
+   > 7:1, cỡ chữ lấy từ cài đặt đọc (không nhỏ hơn 15px). */
+body.rd-term { --rd-bg: #0a0f0c; --rd-tx: #d8f5e0; --rd-mut: #7ea98b; --rd-bd: rgba(120, 255, 180, .16);
+  --rd-surf: #0f1712; --rd-surf2: #16211a; --rd-acc: #4ade80; background: #060906; }
+body.rd-term .rtext { font-family: var(--font-mono); font-size: max(15px, calc(var(--rd-size, 18px) - 1px));
+  line-height: 1.72; }
+body.rd-term .rdhead h1 { font-family: var(--font-mono); font-size: clamp(16px, 2vw, 21px); color: #d8f5e0; }
+body.rd-term .rdhead h1::before { content: "$ "; color: #4ade80; }
+body.rd-term .rtext { counter-reset: terml; }
+body.rd-term .rtext > * { counter-increment: terml; }
+body.rd-term .rtext > p, body.rd-term .rtext > div { color: #a8cdb4; }
+body.rd-term .rtext > *::before { content: "[" counter(terml, decimal-leading-zero) "] "; color: #3f6b4f;
+  font-size: .85em; user-select: none; }
+body.rd-term .rtext > .t-out { color: #eafff0; }
+body.rd-term .rtext > .t-out::before { content: "> "; color: #4ade80; }
+body.rd-term .rtext a { color: #6ee7a5; }
+body.rd-term .rtext img { border: 1px solid var(--rd-bd); border-radius: 4px; }
+.termtop { max-width: min(720px, var(--rd-w, 720px)); margin: 6px auto 0; padding: 14px 18px 10px;
+  border: 1px solid var(--rd-bd, var(--bd)); border-bottom: 0; border-radius: 10px 10px 0 0;
+  background: linear-gradient(#0f1712, #0c120e); font-family: var(--font-mono); font-size: 12.5px; color: #a8cdb4; }
+.termtop .tt-line { display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+.termtop .tt-prompt { color: #4ade80; font-weight: 700; }
+.termtop .tt-path { color: #6f9c7d; }
+.termtop .tt-cmd { color: #eafff0; }
+.termtop .tt-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px;
+  padding-top: 8px; border-top: 1px solid rgba(120, 255, 180, .12); color: #6f9c7d; }
+.termtop .tt-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 0 3px rgba(74, 222, 128, .18); }
+.termtop .btn { margin-left: auto; }
+.termexit { max-width: min(720px, var(--rd-w, 720px)); margin: 0 auto; padding: 8px 18px 0;
+  font-family: var(--font-mono); font-size: 12.5px; color: #6f9c7d; }
+.termexit::after { content: "▌"; color: #4ade80; animation: termBlink 1.1s steps(1, end) infinite; }
+@keyframes termBlink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .termexit::after { animation: none; } }
+
+/* ===================== 5. HỘP GÓP GẠCH ==================================== */
+.brickbox { max-width: min(720px, var(--rd-w, 720px)); margin: 18px auto 0; padding: 18px 20px;
+  border: 1px solid var(--bd); border-radius: var(--r-xl); background: var(--surf); }
+.bk-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.bk-ttl b { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-head); font-size: 17px; }
+.bk-sub { display: block; font-size: 12.5px; color: var(--mut); margin-top: 4px; }
+.bk-num { text-align: right; flex: none; }
+.bk-num b { font-size: 22px; font-variant-numeric: tabular-nums; }
+.bk-num span { display: block; font-size: 12px; color: var(--mut); }
+.bk-stage { display: flex; align-items: flex-end; gap: 18px; margin: 16px 0 14px; }
+.bk-bucket { position: relative; flex: none; width: 78px; height: 74px; border-radius: 4px 4px 12px 12px;
+  border: 2px solid var(--bd2); border-top: 0; background: linear-gradient(var(--surf2), var(--surf));
+  overflow: hidden; }
+.bk-bucket::after { content: ""; position: absolute; inset: 0 0 auto; height: 8px; background: var(--bd); }
+.bk-pile { position: absolute; left: 6px; right: 6px; bottom: 6px; height: 52px; transform-origin: 50% 100%;
+  background: repeating-linear-gradient(0deg, #b4562c 0 10px, #8d4222 10px 12px),
+    repeating-linear-gradient(90deg, transparent 0 22px, rgba(0, 0, 0, .22) 22px 24px);
+  border-radius: 3px; transition: transform 420ms var(--ease-out, ease-out); }
+.bk-pile.bump { animation: bkPile 460ms var(--ease-out, ease-out); }
+@keyframes bkPile { 0% { transform: scaleY(1) scaleX(1); } 40% { transform: scaleY(1.06) scaleX(1.05); } 100% { transform: scaleY(1) scaleX(1); } }
+.bk-drop { position: absolute; left: 50%; top: -30px; width: 34px; height: 16px; margin-left: -17px; opacity: 0;
+  border-radius: 3px; background: linear-gradient(#c2612f, #8d4222); border: 1px solid rgba(0, 0, 0, .25); }
+.bk-drop.go { animation: bkDrop 820ms cubic-bezier(.5,0,.7,1) 1; }
+@keyframes bkDrop {
+  0% { transform: translateY(0) rotate(-16deg); opacity: 0; }
+  12% { transform: translateY(6px) rotate(-14deg); opacity: 1; }
+  78% { transform: translateY(80px) rotate(6deg); opacity: 1; }
+  84% { transform: translateY(78px) rotate(4deg) scale(1.06); opacity: 1; }
+  100% { transform: translateY(78px) rotate(4deg) scale(.92); opacity: 0; }
+}
+.bk-barwrap { flex: 1; min-width: 0; }
+.bk-bar { height: 10px; border-radius: 99px; background: var(--surf2); border: 1px solid var(--bd); overflow: hidden; }
+.bk-bar i { display: block; height: 100%; transform-origin: 0 50%; background: linear-gradient(90deg, #b4562c, #d98a4a);
+  transition: transform 520ms var(--ease-out, ease-out); }
+.bk-motto { font-size: 12.5px; color: var(--mut); margin-top: 8px; }
+.bk-foot { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.bk-mine { font-size: 12.5px; color: var(--mut); }
+.bk-mine b { color: var(--txt); }
+.bk-tip { display: inline-grid; place-items: center; width: 16px; height: 16px; margin-left: 6px; border-radius: 50%;
+  border: 1px solid var(--bd2); font-size: 10px; font-style: normal; cursor: help; }
+.bk-send { position: relative; }
+.bk-send:active { transform: translateY(1px) scale(.99); }
+@media (max-width: 560px) {
+  .bk-stage { flex-direction: column; align-items: stretch; gap: 12px; }
+  .bk-bucket { align-self: center; }
+}
+
+/* ===================== 6. VÒNG QUAY “HÔM NAY ĐỌC GÌ?” ===================== */
+.dicehost { display: inline-flex; }
+.dicebtn .i { margin-right: 4px; }
+.dicebox .box { max-width: 560px; }
+.dc-body { display: grid; gap: 14px; }
+.dc-filters { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.dc-fl { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); margin-right: 2px; }
+.dc-chip { font-size: 12px; font-weight: 650; padding: 5px 11px; border-radius: 99px; border: 1px solid var(--bd);
+  background: var(--surf); color: var(--mut); cursor: pointer;
+  transition: color 160ms var(--ease, ease), border-color 160ms var(--ease, ease), background 160ms var(--ease, ease); }
+.dc-chip:hover { color: var(--txt); border-color: var(--bd2); }
+.dc-chip.on { color: #fff; background: var(--acc); border-color: var(--acc); }
+.dc-stage { display: flex; justify-content: center; }
+.dc-wheelwrap { position: relative; width: min(78vw, 296px); aspect-ratio: 1; }
+.dc-wheel { position: absolute; inset: 0; border-radius: 50%; will-change: transform;
+  box-shadow: 0 22px 44px -26px rgba(0, 0, 0, .6), 0 0 0 6px var(--surf), 0 0 0 7px var(--bd); }
+.dc-slot { position: absolute; left: 50%; top: 50%; margin: -34px 0 0 -21px; width: 42px; height: 62px;
+  border-radius: 5px; overflow: hidden; background: var(--surf2); border: 1px solid rgba(0, 0, 0, .18);
+  box-shadow: 0 4px 10px -6px rgba(0, 0, 0, .7); }
+.dc-slot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dc-ph { display: grid; place-items: center; width: 100%; height: 100%; font-weight: 800; color: var(--mut); }
+.dc-hub { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%;
+  display: grid; place-items: center; font-family: var(--font-head); font-size: 24px; font-weight: 700;
+  background: var(--surf); border: 2px solid var(--bd2); box-shadow: var(--sh); }
+.dc-pointer { position: absolute; left: 50%; top: -8px; margin-left: -9px; width: 0; height: 0; z-index: 2;
+  border-left: 9px solid transparent; border-right: 9px solid transparent; border-top: 16px solid var(--acc);
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .35)); }
+.dc-live { text-align: center; font-size: 12.5px; color: var(--mut); margin-top: 12px; }
+.dc-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.dc-actions .btn { min-width: 108px; justify-content: center; }
+.dc-note { margin-left: auto; max-width: 30ch; text-align: right; }
+.dc-result .dc-card { display: flex; gap: 14px; padding: 14px; border: 1px solid var(--bd); border-radius: var(--r-lg);
+  background: var(--surf2); animation: dcIn 380ms var(--ease-out, ease-out) both; }
+@keyframes dcIn { from { opacity: 0; transform: translateY(10px) scale(.98); } }
+.dc-cv img, .dc-cv .dc-ph { width: 84px; height: 126px; border-radius: var(--r); object-fit: cover; display: block; }
+.dc-info { min-width: 0; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.dc-info h4 { font-family: var(--font-head); font-size: 17.5px; line-height: 1.25; }
+.dc-latest { color: var(--txt); }
+.dc-cardbtn { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; }
+.dc-empty { text-align: center; padding: 22px 8px; }
+@media (max-width: 520px) {
+  .dc-note { margin-left: 0; text-align: left; max-width: none; }
+  .dc-slot { width: 34px; height: 50px; margin: -27px 0 0 -17px; }
+}
+@media (prefers-reduced-motion: reduce) { .dc-result .dc-card { animation: none; } }
+
+/* ===================== 7. NÚT ẨN NHANH (PANIC) ============================ */
+.panic { position: fixed; inset: 0; z-index: 9999; overflow: auto; background: #f8f9fa; color: #202124;
+  font-family: Roboto, Arial, var(--font); }
+.panic[hidden] { display: none !important; }
+.pn-top { display: flex; align-items: center; gap: 14px; padding: 8px 14px; background: #fff;
+  border-bottom: 1px solid #dadce0; position: sticky; top: 0; z-index: 2; flex-wrap: wrap; }
+.pn-doc { width: 26px; height: 34px; flex: none; border-radius: 3px; background: #1a73e8;
+  box-shadow: inset -6px -6px 0 #0b57d0; }
+.pn-name b { display: block; font-size: 15px; font-weight: 500; }
+.pn-name span { font-size: 11.5px; color: #5f6368; }
+.pn-name i { font-style: normal; color: #9aa0a6; }
+.pn-menu { display: flex; gap: 14px; font-size: 13px; color: #444746; margin-left: 8px; }
+.pn-out { margin-left: auto; font-size: 12.5px; padding: 6px 12px; border-radius: 4px; border: 1px solid #dadce0;
+  background: #fff; color: #1a73e8; cursor: pointer; }
+.pn-out:hover { background: #f1f3f4; }
+.pn-out kbd { font-family: inherit; border: 1px solid #dadce0; border-radius: 3px; padding: 0 4px; margin-left: 4px; font-size: 11px; }
+.pn-tools { display: flex; align-items: center; gap: 12px; padding: 6px 16px; background: #edf2fa; color: #444746;
+  font-size: 12.5px; border-bottom: 1px solid #dadce0; overflow: hidden; }
+.pn-tools .pn-sep { width: 1px; height: 14px; background: #dadce0; }
+.pn-page { max-width: 760px; margin: 0 auto; padding: 46px 40px 90px; background: #fff; min-height: 100vh;
+  box-shadow: 0 1px 3px rgba(60, 64, 67, .18); }
+.pn-page:focus { outline: none; }
+.pn-page h1 { font-size: 26px; font-weight: 500; margin-bottom: 10px; }
+.pn-page h2 { font-size: 17px; font-weight: 600; margin: 26px 0 8px; }
+.pn-page p, .pn-page li { font-size: 14px; line-height: 1.75; }
+.pn-lead { color: #5f6368; }
+.pn-page ul { margin: 0 0 10px 20px; }
+.pn-page table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13.5px; }
+.pn-page th, .pn-page td { border: 1px solid #dadce0; padding: 7px 9px; text-align: left; vertical-align: top; }
+.pn-page th { background: #f8f9fa; font-weight: 600; }
+.pn-foot { color: #5f6368; font-style: italic; }
+@media (max-width: 640px) {
+  .pn-menu, .pn-tools { display: none; }
+  .pn-page { padding: 26px 18px 60px; }
+}
+
+/* ===================== 8. GIẢM CHUYỂN ĐỘNG (riêng khối này) =============== */
+@media (prefers-reduced-motion: reduce) {
+  .rx, .rx-art, .rx-ct, .bk-pile, .bk-bar i, .dc-wheel { transition: none !important; }
+  .rx:hover { transform: none; }
+  .rx:hover .rx-art { transform: none; }
+  .czfx { display: none; }        /* lớp sticker bay: tắt hẳn, chỉ còn đổi số */
+}
+
+/* ============================================================================
    CUỐI TỆP · LUẬT NỀN TẢNG — [hidden] phải THẮNG mọi `display:` của class.
    ----------------------------------------------------------------------------
    Vì sao cần !important: luật `[hidden]{display:none}` của trình duyệt là kiểu
