@@ -1796,7 +1796,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   function sfx(kind) {
     if (reduce) return;
     var st = rdGet();
-    if (String(st.sfx === 0 || st.sfx === '0')) return;
+    if (st && (st.sfx === 0 || st.sfx === '0')) return;
     var a = audio();
     if (!a) return;
     try {
@@ -1820,6 +1820,31 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         og.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16);
         osc.connect(og); og.connect(a.destination);
         osc.start(t0); osc.stop(t0 + 0.18);
+      } else if (kind === 'tick') {
+        /* tiếng kim gạt qua chốt vòng quay: ngắn, đanh và ấm */
+        var ot = a.createOscillator(), gt = a.createGain();
+        ot.type = 'triangle';
+        ot.frequency.setValueAtTime(980, t0);
+        ot.frequency.exponentialRampToValueAtTime(340, t0 + 0.028);
+        gt.gain.setValueAtTime(0.0001, t0);
+        gt.gain.linearRampToValueAtTime(0.11, t0 + 0.003);
+        gt.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.032);
+        ot.connect(gt); gt.connect(a.destination);
+        ot.start(t0); ot.stop(t0 + 0.036);
+      } else if (kind === 'win') {
+        /* hợp âm báo chốt kết quả vòng quay (C5 - E5 - G5 - C6) */
+        var notes = [523.25, 659.25, 783.99, 1046.5];
+        for (i = 0; i < notes.length; i++) {
+          var ow = a.createOscillator(), gw = a.createGain();
+          var stAt = t0 + i * 0.055;
+          ow.type = 'sine';
+          ow.frequency.setValueAtTime(notes[i], stAt);
+          gw.gain.setValueAtTime(0.0001, stAt);
+          gw.gain.linearRampToValueAtTime(0.1, stAt + 0.015);
+          gw.gain.exponentialRampToValueAtTime(0.0001, stAt + 0.32);
+          ow.connect(gw); gw.connect(a.destination);
+          ow.start(stAt); ow.stop(stAt + 0.34);
+        }
       } else {
         var o2 = a.createOscillator(), g2 = a.createGain();
         o2.type = 'sine'; o2.frequency.setValueAtTime(660, t0);

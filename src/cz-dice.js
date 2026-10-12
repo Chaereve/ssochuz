@@ -90,7 +90,7 @@
     return '<img src="' + esc(src) + '"' + (CZ.coverFB ? CZ.coverFB(n, src) : '') + ' alt="" width="60" height="90" loading="lazy" decoding="async" referrerpolicy="no-referrer">';
   }
   function palette(i) {
-    var c = ['#a63a52', '#2f6b4f', '#8a5f18', '#4a7fc1', '#8a5fb8', '#b4562c', '#3f7d7a', '#c2954a', '#7a5c9e', '#5f7a3f'];
+    var c = ['#b23a56', '#2b6e56', '#c68426', '#3d70b8', '#7d52b0', '#bf5730', '#317b7d', '#b88635', '#6b4e96', '#567a38'];
     return c[i % c.length];
   }
 
@@ -99,16 +99,26 @@
     var stops = list.map(function (n, i) {
       return palette(i) + ' ' + (i * step).toFixed(2) + 'deg ' + ((i + 1) * step).toFixed(2) + 'deg';
     }).join(', ');
+    var pegs = [];
+    for (var p = 0; p < 12; p++) {
+      pegs.push('<i class="dc-peg" style="--peg-a:' + (p * 30) + 'deg"></i>');
+    }
+    var divs = list.length > 1 ? list.map(function (_, i) {
+      return '<i class="dc-div" style="transform:rotate(' + (i * step).toFixed(2) + 'deg)"></i>';
+    }).join('') : '';
     return '<div class="dc-wheelbox">' +
         '<div class="dc-wheelwrap">' +
-          '<div class="dc-pointer" aria-hidden="true"></div>' +
+          '<span class="dc-pegs" aria-hidden="true">' + pegs.join('') + '</span>' +
+          '<div class="dc-pointer" id="dcPointer" aria-hidden="true"><span class="dc-pin"></span></div>' +
           '<div class="dc-wheel" id="dcWheel" style="background:conic-gradient(' + stops + ')">' +
+            divs +
+            '<span class="dc-sheen" aria-hidden="true"></span>' +
             list.map(function (n, i) {
               var a = i * step + step / 2;
-              return '<span class="dc-slot" style="transform:rotate(' + a.toFixed(2) + 'deg) translateY(calc(-1 * var(--dc-r, 76px))) rotate(' + (-a).toFixed(2) + 'deg)">' +
+              return '<span class="dc-slot" title="' + esc(n.title) + '" style="transform:rotate(' + a.toFixed(2) + 'deg) translateY(calc(-1 * var(--dc-r, 76px))) rotate(' + (-a).toFixed(2) + 'deg)">' +
                 coverTag(n) + '</span>';
             }).join('') +
-            '<span class="dc-hub" aria-hidden="true">🎲</span>' +
+            '<span class="dc-hub" id="dcHub" aria-hidden="true"><span class="dc-hub-in">🎲</span></span>' +
           '</div>' +
         '</div>' +
         '<p class="dc-live" role="status" aria-live="polite" id="dcLive">Sẵn sàng quay · ' + num(list.length) + ' truyện trong vòng</p>' +
@@ -189,6 +199,29 @@
     if (spin) spin.addEventListener('click', function () { spinWheel(m); });
     var again = m.querySelector('#dcAgain');
     if (again) again.addEventListener('click', function () { spinWheel(m); });
+    var hub = m.querySelector('#dcHub');
+    if (hub) hub.addEventListener('click', function () { spinWheel(m); });
+  }
+
+  function scheduleTicks(m, spinId) {
+    if (reduce() || !CZ.sfx) return;
+    var ptr = m.querySelector('#dcPointer');
+    var totalTicks = 15;
+    for (var ti = 0; ti < totalTicks; ti++) {
+      (function (idx) {
+        var progress = idx / (totalTicks - 1);
+        var delay = Math.round(Math.pow(progress, 2.15) * (SPIN_MS - 130));
+        setTimeout(function () {
+          if (!S.spinning || S.spin !== spinId) return;
+          CZ.sfx('tick');
+          if (ptr) {
+            ptr.classList.remove('tick');
+            void ptr.offsetWidth;
+            ptr.classList.add('tick');
+          }
+        }, delay);
+      })(ti);
+    }
   }
 
   function spinWheel(m) {
@@ -199,6 +232,7 @@
     var list = S.cands.slice();
     var spinId = S.spin = (S.spin || 0) + 1;
     var wheel = m.querySelector('#dcWheel'), live = m.querySelector('#dcLive');
+    var wrap = m.querySelector('.dc-wheelwrap');
     /* KHÔNG lặp lại kết quả vừa ra khi vẫn còn lát khác: kết quả vừa quay trong
        lượt này (S.pick) hoặc bộ vừa đọc ở lần mở bảng trước (LS.last) đều bị
        loại khỏi lần bốc, nên “Quay lại” luôn đổi bộ. Chỉ khi vòng quay có đúng
@@ -218,6 +252,7 @@
     var spin = m.querySelector('#dcSpin'), again = m.querySelector('#dcAgain');
     var stage = m.querySelector('.dc-stage');
     if (stage) stage.classList.remove('has-result');
+    if (wrap) { wrap.classList.remove('won'); wrap.classList.add('spinning'); }
     if (spin) { spin.disabled = true; spin.textContent = 'Đang quay…'; }
     if (again) again.hidden = true;
     m.querySelector('#dcResult').hidden = true;
@@ -227,6 +262,7 @@
       if (wheel) wheel.style.transform = 'rotate(' + S.rot + 'deg)';
       finish(0);
     } else {
+      scheduleTicks(m, spinId);
       if (wheel) {
         wheel.style.transition = 'transform ' + SPIN_MS + 'ms cubic-bezier(.16,.86,.22,1)';
         wheel.style.transform = 'rotate(' + S.rot + 'deg)';
@@ -236,16 +272,18 @@
 
     function finish() {
       S.spinning = false;
+      if (wrap) wrap.classList.remove('spinning');
       if (spinId !== S.spin) return;            /* bộ lọc đã đổi — bỏ lượt quay này */
       S.pick = list[pick] || null;
       if (!S.pick) return;
       if (spin) { spin.disabled = false; spin.textContent = 'Quay ngay'; }
       if (again) again.hidden = false;
       if (stage) stage.classList.add('has-result');
+      if (wrap) wrap.classList.add('won');
       jset(LS.last, S.pick.slug);
       if (live) live.textContent = 'Đã chọn: ' + S.pick.title;
       paintResult(m, S.pick);
-      if (CZ.sfx) CZ.sfx('pop');
+      if (CZ.sfx) { CZ.sfx('pop'); CZ.sfx('win'); }
     }
   }
 
