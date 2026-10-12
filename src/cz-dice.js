@@ -99,17 +99,19 @@
     var stops = list.map(function (n, i) {
       return palette(i) + ' ' + (i * step).toFixed(2) + 'deg ' + ((i + 1) * step).toFixed(2) + 'deg';
     }).join(', ');
-    return '<div class="dc-wheelwrap">' +
-        '<div class="dc-pointer" aria-hidden="true"></div>' +
-        '<div class="dc-wheel" id="dcWheel" style="background:conic-gradient(' + stops + ')">' +
-          list.map(function (n, i) {
-            var a = i * step + step / 2;
-            return '<span class="dc-slot" style="transform:rotate(' + a.toFixed(2) + 'deg) translateY(-38%) rotate(' + (-a).toFixed(2) + 'deg)">' +
-              coverTag(n) + '</span>';
-          }).join('') +
-          '<span class="dc-hub" aria-hidden="true">?</span>' +
+    return '<div class="dc-wheelbox">' +
+        '<div class="dc-wheelwrap">' +
+          '<div class="dc-pointer" aria-hidden="true"></div>' +
+          '<div class="dc-wheel" id="dcWheel" style="background:conic-gradient(' + stops + ')">' +
+            list.map(function (n, i) {
+              var a = i * step + step / 2;
+              return '<span class="dc-slot" style="transform:rotate(' + a.toFixed(2) + 'deg) translateY(calc(-1 * var(--dc-r, 76px))) rotate(' + (-a).toFixed(2) + 'deg)">' +
+                coverTag(n) + '</span>';
+            }).join('') +
+            '<span class="dc-hub" aria-hidden="true">🎲</span>' +
+          '</div>' +
         '</div>' +
-        '<p class="dc-live" role="status" aria-live="polite" id="dcLive">Sẵn sàng quay — ' + num(list.length) + ' truyện trong vòng.</p>' +
+        '<p class="dc-live" role="status" aria-live="polite" id="dcLive">Sẵn sàng quay · ' + num(list.length) + ' truyện trong vòng</p>' +
       '</div>';
   }
 
@@ -119,14 +121,15 @@
     lib().forEach(function (n) { String(n.genre || '').split(/[,;/|]/).forEach(function (g) { g = g.trim(); if (g) genres[g] = (genres[g] || 0) + 1; }); });
     var gk = Object.keys(genres).sort();
     return '<div class="dc-filters">' +
-      '<span class="dc-fl">Tình trạng</span>' +
-      '<button type="button" class="dc-chip' + (o.run ? ' on' : '') + '" data-opt="run" aria-pressed="' + o.run + '">Đang cập nhật</button>' +
-      '<button type="button" class="dc-chip' + (o.done ? ' on' : '') + '" data-opt="done" aria-pressed="' + o.done + '">Hoàn thành</button>' +
-      '<span class="dc-fl">Nhãn</span>' +
-      '<button type="button" class="dc-chip' + (o.adult ? ' on' : '') + '" data-opt="adult" aria-pressed="' + o.adult + '">Gồm 18+</button>' +
-      (gk.length ? '<span class="dc-fl">Thể loại</span>' + gk.map(function (g) {
+      '<div class="dc-fgroup">' +
+        '<span class="dc-fl">Lọc</span>' +
+        '<button type="button" class="dc-chip' + (o.run ? ' on' : '') + '" data-opt="run" aria-pressed="' + o.run + '">Đang ra</button>' +
+        '<button type="button" class="dc-chip' + (o.done ? ' on' : '') + '" data-opt="done" aria-pressed="' + o.done + '">Hoàn thành</button>' +
+        '<button type="button" class="dc-chip' + (o.adult ? ' on' : '') + '" data-opt="adult" aria-pressed="' + o.adult + '">Gồm 18+</button>' +
+      '</div>' +
+      (gk.length ? '<div class="dc-fgroup dc-fgenres"><span class="dc-fl">Thể loại</span>' + gk.map(function (g) {
         return '<button type="button" class="dc-chip' + (o.genre === g ? ' on' : '') + '" data-genre="' + esc(g) + '">' + esc(g) + '</button>';
-      }).join('') : '') +
+      }).join('') + '</div>' : '') +
       '</div>';
   }
 
@@ -146,11 +149,14 @@
         '<div class="dc-stage">' + wheelHTML(S.cands) +
           '<div class="dc-result" id="dcResult" hidden></div>' +
         '</div>' +
-        '<div class="dc-actions"><button class="btn pri dc-spin" id="dcSpin">Quay</button>' +
-          '<button class="btn ghost" id="dcAgain" hidden>Quay lại</button>' +
+        '<div class="dc-actions">' +
+          '<div class="dc-act-btns">' +
+            '<button class="btn pri dc-spin" id="dcSpin">Quay ngay</button>' +
+            '<button class="btn ghost" id="dcAgain" hidden>Quay lại</button>' +
+          '</div>' +
           '<span class="sm muted dc-note">' + (list.length !== S.cands.length
-            ? ('Cả thư viện có ' + num(list.length) + ' truyện — vòng quay lấy ngẫu nhiên ' + num(S.cands.length) + ' bộ mỗi lượt.')
-            : 'Nguồn: truyện bạn theo dõi, rồi truyện mới cập nhật.') + '</span>' +
+            ? ('Chọn ngẫu nhiên ' + num(S.cands.length) + '/' + num(list.length) + ' bộ phù hợp')
+            : 'Ưu tiên truyện đang theo dõi & mới cập nhật') + '</span>' +
         '</div>';
     }
     bindBody(m);
@@ -210,6 +216,8 @@
     S.rot = Math.floor(S.rot / 360) * 360 + target;
     S.spinning = true;
     var spin = m.querySelector('#dcSpin'), again = m.querySelector('#dcAgain');
+    var stage = m.querySelector('.dc-stage');
+    if (stage) stage.classList.remove('has-result');
     if (spin) { spin.disabled = true; spin.textContent = 'Đang quay…'; }
     if (again) again.hidden = true;
     m.querySelector('#dcResult').hidden = true;
@@ -231,10 +239,11 @@
       if (spinId !== S.spin) return;            /* bộ lọc đã đổi — bỏ lượt quay này */
       S.pick = list[pick] || null;
       if (!S.pick) return;
-      if (spin) { spin.disabled = false; spin.textContent = 'Quay'; }
+      if (spin) { spin.disabled = false; spin.textContent = 'Quay ngay'; }
       if (again) again.hidden = false;
+      if (stage) stage.classList.add('has-result');
       jset(LS.last, S.pick.slug);
-      if (live) live.textContent = 'Kết quả: ' + S.pick.title;
+      if (live) live.textContent = 'Đã chọn: ' + S.pick.title;
       paintResult(m, S.pick);
       if (CZ.sfx) CZ.sfx('pop');
     }

@@ -354,23 +354,24 @@
   /* ======================= 5. ReactionBar + Popover ===================== */
   var ctxNow = null;
 
-  function barHTML(ctx) {
+  function barHTML(ctx, hostId) {
     var c = counts(ctx.slug, ctx.ch), mineArr = mine(ctx.slug, ctx.ch);
     var st = (ctx.story && (ctx.story.statusCls || '')) || '';   /* 'run' = đang cập nhật */
+    var isStoryPage = hostId === 'storyReact';
     return '<div class="rx-head">' +
-        '<div class="rx-title"><b>Chương này thế nào?</b>' +
+        '<div class="rx-title"><b>' + (isStoryPage ? 'Cảm xúc về truyện' : 'Chương này làm bạn thấy sao?') + '</b>' +
         '<span class="rx-sub">' + (apiOn()
-          ? 'Reaction cộng đồng đồng bộ trên mọi thiết bị. Cần đăng nhập; có thể bật hoặc bỏ từng sticker.'
+          ? 'Chạm vào cảm xúc để thả hoặc bỏ reaction cộng đồng.'
           : 'Dữ liệu reaction cộng đồng hiện chưa kết nối được máy chủ.') + '</span></div>' +
         '<div class="rx-head-act">' +
           '<span class="rx-total">' + num(total(ctx.slug, ctx.ch)) + ' lượt thả</span>' +
-          '<button type="button" class="btn ghost sm" id="rxAll">Xem tất cả reaction</button>' +
+          '<button type="button" class="btn ghost sm rx-all-btn" id="rxAll">Chi tiết</button>' +
         '</div>' +
       '</div>' +
-      '<div class="rx-row" role="group" aria-label="Reaction nhanh cho ' + esc(ctx.label || 'chương này') + '">' +
-        QUICK_REACTIONS.map(function (r) { return stickerHTML(r, c[r.id], mineArr.indexOf(r.id) >= 0); }).join('') +
+      '<div class="rx-row" role="group" aria-label="Cảm xúc cho ' + esc(ctx.label || 'chương này') + '">' +
+        REACTIONS.map(function (r) { return stickerHTML(r, c[r.id], mineArr.indexOf(r.id) >= 0); }).join('') +
       '</div>' +
-      (st === 'run' ? '<p class="rx-foot">Bực vì chưa có chương mới? Kéo xuống dưới góp gạch cho tác giả 👇</p>' : '');
+      (st === 'run' && !isStoryPage ? '<p class="rx-foot">Đang chờ chương mới? Góp gạch cổ vũ tác giả nhé 👇</p>' : '');
   }
 
   function mount(host, ctx) {
@@ -381,7 +382,7 @@
       return;
     }
     host.__rxCtx = ctx;
-    host.innerHTML = barHTML(ctx);
+    host.innerHTML = barHTML(ctx, host.id || '');
     host.classList.add('on');
     var all = host.querySelector('#rxAll');
     if (all) all.addEventListener('click', function () { popover(ctx); });
