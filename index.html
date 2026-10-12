@@ -15,7 +15,7 @@
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://ssochuz.pages.dev/ssochuz.png">
   <!-- N13: bỏ preconnect Firestore — không còn đọc thẳng Firestore từ máy khách -->
-<link rel="stylesheet" href="/cz.css?v=20260930a">
+<link rel="stylesheet" href="/cz.css?v=20261012d">
 <script>/* chống nháy nền: áp tông màu đã lưu trước khi vẽ */try{var t=localStorage.getItem('ssochuz-theme')||localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
 <body class="hpage">
@@ -47,7 +47,11 @@
     <section class="sec fade" id="moi-cap-nhat">
       <div class="sechead">
         <h2>Mới cập nhật</h2>
-        <span class="right"><a class="btn ghost sm" href="/#thu-vien" title="Xem cả thư viện">Xem tất cả</a></span>
+        <span class="right">
+          <!-- VÒNG QUAY “HÔM NAY ĐỌC GÌ?” — src/cz-dice.js dựng nút vào đây -->
+          <span class="dicehost" data-dice></span>
+          <a class="btn ghost sm" href="/#thu-vien" title="Xem cả thư viện">Xem tất cả</a>
+        </span>
       </div>
       <div class="rail" id="newRail"></div>
     </section>
@@ -133,9 +137,10 @@
 <footer id="ftr"></footer>
 <button id="toTop" aria-label="Lên đầu trang" title="Lên đầu trang"></button>
 
-<script src="/cz-config.js?v=20260930a"></script>
-<script src="/cz-app.js?v=20260930b"></script>
-<script src="/cz-auth.js?v=20260930a"></script>
-<script src="/cz-home.js?v=20260930a"></script>
+<script src="/cz-config.js?v=20261012d"></script>
+<script src="/cz-app.js?v=20261012d"></script>
+<script src="/cz-auth.js?v=20261012d"></script>
+<script src="/cz-dice.js?v=20261012d"></script>
+<script src="/cz-home.js?v=20261012d"></script>
 </body>
 </html>

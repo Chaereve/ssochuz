@@ -573,6 +573,9 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     return 0;
   }
   function setProgress(n, ch) {
+    /* Đang bật “ẩn nhanh” (panic) thì KHÔNG ghi tiến độ đọc: bật lên để che
+       chuyện đang đọc mà lại âm thầm lưu chương vừa mở là ngược ý người dùng. */
+    if (PANIC.on) return;
     keysOf(n).forEach(function (k) { safeSet(LS.prog + k, String(ch)); });
     keysOf(n).forEach(function (k) { safeSet(LS.when + k, String(Date.now())); });
   }
@@ -947,8 +950,21 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     return { total: total, today: today, streak: streak, week: week, last: last };
   }
 
-  /* cài đặt đọc — 2 font (serif / sans) · 3 nền (sang / kem / toi) */
-  var RD_DEF = { mode: 'scroll', size: 18, font: 'serif', line: 1.85, para: 1.05, theme: 'kem', width: 720, justify: 0 };
+  /* cài đặt đọc — 2 font (serif / sans) · 3 nền (sang / kem / toi)
+     Năm khoá cuối (react / bionic / zen / term / brick / sfx) là của bộ tính
+     năng tương tác 1.19.0: hàng reaction sticker cuối chương, đọc kiểu Bionic,
+     chế độ Zen, skin Terminal, hộp góp gạch và tiếng hiệu ứng. Đều TẮT/MỞ được
+     ở đây và đều nhớ trong localStorage `ssochuz-reader` như các cài đặt cũ —
+     mọi thứ ảnh hưởng tới trải nghiệm đọc đều tắt được từ một chỗ. */
+  var RD_DEF = {
+    mode: 'scroll', size: 18, font: 'serif', line: 1.85, para: 1.05, theme: 'kem', width: 720, justify: 0,
+    react: 1,      /* hàng reaction sticker cuối chương */
+    bionic: 0,     /* in đậm 2–3 ký tự đầu mỗi từ */
+    zen: 0,        /* chế độ Zen (nút trên thanh đọc) — mặc định TẮT như mọi skin khác */
+    term: 0,       /* skin Terminal / Hacker CLI */
+    brick: 1,      /* hộp góp gạch ở trang truyện đang cập nhật */
+    sfx: 1         /* tiếng “cạch” khi góp gạch + tiếng pop khi thả sticker */
+  };
   var RD_FONTS = { serif: 1, sans: 1 };
   var RD_THEMES = { sang: 1, kem: 1, toi: 1 };
   function rdGet() {
@@ -961,7 +977,19 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     }
     return Object.assign({}, RD_DEF, cur);
   }
-  function rdSet(o) { var v = Object.assign(rdGet(), o || {}); jsonSet(LS.read, v); return v; }
+  function rdSet(o) {
+    var v = Object.assign(rdGet(), o || {});
+    jsonSet(LS.read, v);
+    /* Ai đang nghe cấu hình đọc (hàng reaction, Bionic, Terminal, Zen…) thì biết
+       ngay trong lượt này — khỏi phải tải lại trang mới thấy thay đổi. Sự kiện
+       chỉ mang ĐÚNG khoá vừa đổi nên nơi nghe không phải so sánh cả object. */
+    try {
+      Object.keys(o || {}).forEach(function (k) {
+        d.dispatchEvent(new CustomEvent('cz:setting', { detail: { key: k, value: v[k], settings: v } }));
+      });
+    } catch (e) {}
+    return v;
+  }
 
   /* sáng / tối (mặc định: nền giấy sáng) */
   function themeInit() {
@@ -1080,8 +1108,14 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     shield_off: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M17.67 17.667a12 12 0 0 1 -5.67 3.333a12 12 0 0 1 -8.5 -15c.794 .036 1.583 -.006 2.357 -.124m3.128 -.926a11.997 11.997 0 0 0 3.015 -1.95a12 12 0 0 0 8.5 3a12 12 0 0 1 -1.116 9.376" /> <path d="M3 3l18 18" /></g>',
     google: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M20.945 11a9 9 0 1 1 -3.284 -5.997l-2.655 2.392a5.5 5.5 0 1 0 2.119 6.605h-4.125v-3h7.945" /></g>',
     bell: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /> <path d="M9 17v1a3 3 0 0 0 6 0v-1" /></g>',
-    database: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><ellipse cx="12" cy="5" rx="9" ry="3" /> <path d="M3 5v14a9 3 0 0 0 18 0v-14" /> <path d="M3 12a9 3 0 0 0 18 0" /></g>',
-    rss: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M4 19a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /> <path d="M4 4a16 16 0 0 1 16 16" /> <path d="M4 11a9 9 0 0 1 9 9" /></g>',
+    briefcase: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M3 9a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2l0 -9" /> <path d="M8 7v-2a2 2 0 0 1 2 -2h4a2 2 0 0 1 2 2v2" /> <path d="M12 12l0 .01" /> <path d="M3 13a20 20 0 0 0 18 0" /></g>',
+    yoga: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M4 20h4l1.5 -3" /> <path d="M17 20l-1 -5h-5l1 -7" /> <path d="M4 10l4 -1l4 -1l4 1.5l4 1.5" /> <path d="M10.007 5a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /></g>',
+    terminal: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M8 9l3 3l-3 3" /> <path d="M13 15l3 0" /> <path d="M3 6a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2l0 -12" /></g>',
+    brain: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M15.5 13a3.5 3.5 0 0 0 -3.5 3.5v1a3.5 3.5 0 0 0 7 0v-1.8" /> <path d="M8.5 13a3.5 3.5 0 0 1 3.5 3.5v1a3.5 3.5 0 0 1 -7 0v-1.8" /> <path d="M17.5 16a3.5 3.5 0 0 0 0 -7h-.5" /> <path d="M19 9.3v-2.8a3.5 3.5 0 0 0 -7 0" /> <path d="M6.5 16a3.5 3.5 0 0 1 0 -7h.5" /> <path d="M5 9.3v-2.8a3.5 3.5 0 0 1 7 0v10" /></g>',
+    dice: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M3 5a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14" /> <path d="M8 8.5a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0" /> <path d="M15 8.5a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0" /> <path d="M15 15.5a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0" /> <path d="M8 15.5a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0" /></g>',
+    wall: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M4 6a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2l0 -12" /> <path d="M4 8h16" /> <path d="M20 12h-16" /> <path d="M4 16h16" /> <path d="M9 4v4" /> <path d="M14 8v4" /> <path d="M8 12v4" /> <path d="M16 12v4" /> <path d="M11 16v4" /></g>',
+    volume: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M15 8a5 5 0 0 1 0 8" /> <path d="M17.7 5a9 9 0 0 1 0 14" /> <path d="M6 15h-2a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 1 -1h2l3.5 -4.5a.8 .8 0 0 1 1.5 .5v14a.8 .8 0 0 1 -1.5 .5l-3.5 -4.5" /></g>',
+    sparkles: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M16 18a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m0 -12a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m-7 12a6 6 0 0 1 6 -6a6 6 0 0 1 -6 -6a6 6 0 0 1 -6 6a6 6 0 0 1 6 6" /></g>',
     momo: '<rect x="4" y="4" width="16" height="16" rx="4.5"/><path d="M8.4 12c0-2 1.6-3.6 3.6-3.6s3.6 1.6 3.6 3.6-1.6 3.6-3.6 3.6S8.4 14 8.4 12z"/><circle cx="12" cy="12" r="1.2"/>'
   };
 
@@ -1401,6 +1435,161 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     });
   }
 
+  /* ======================================================================
+     PANIC BUTTON — “Sếp tới / Bố mẹ gõ cửa” (bản 1.19.0)
+     ----------------------------------------------------------------------
+     Một cú bấm (hoặc Esc hai lần trong 500ms, hoặc Ctrl+Shift+H) là toàn bộ
+     trang truyện biến mất sau một giao diện GIẢ Google Docs: tiêu đề tab đổi,
+     favicon đổi, thanh địa chỉ về “/”. Đây thuần tuý là lớp che phía giao diện,
+     KHÔNG thực thi gì, không gửi gì lên máy chủ.
+
+     Ba luật đã cân nhắc:
+       1. Không ghi tiến độ đọc khi đang panic (setProgress thoát sớm) — bật
+          “Sếp tới” mà lại âm thầm lưu chương đang đọc là phản tác dụng.
+       2. Esc trong lúc panic chỉ THOÁT panic: listener bắt ở pha capture và
+          chặn sự kiện, nên các phím tắt của trang đọc (Esc về trang truyện,
+          ←/→ chuyển chương) không chạy sau lưng lớp che.
+       3. Đổi URL bằng history.pushState (không tải lại trang) rồi trả lại
+          đúng URL cũ khi thoát — bấm Back trong lúc panic cũng thoát panic,
+          không làm văng khỏi chương đang đọc.
+     ====================================================================== */
+  var PANIC = { on: false, ready: false, title: '', favicons: [], url: '' };
+  var PANIC_TITLE = 'Ghi chú ôn tập HK2 — Google Tài liệu';
+  var PANIC_FAVICON = 'data:image/svg+xml,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">' +
+    '<path fill="#1a73e8" d="M7 2h12l7 7v21H7z"/><path fill="#cfe0ff" d="M19 2l7 7h-7z"/>' +
+    '<path stroke="#fff" stroke-width="2" stroke-linecap="round" d="M11 16h11M11 21h11M11 26h7"/></svg>');
+  var PANIC_HTML =
+    '<div class="pn-docs">' +
+      '<header class="pn-top">' +
+        '<span class="pn-doc" aria-hidden="true"></span>' +
+        '<div class="pn-name"><b>Ghi chú ôn tập HK2</b>' +
+          '<span>Tệp &gt; Bản sao <i>·</i> Đã lưu vào Drive · vừa xong</span></div>' +
+        '<nav class="pn-menu" aria-hidden="true"><span>Tệp</span><span>Sửa</span><span>Xem</span>' +
+          '<span>Chèn</span><span>Định dạng</span><span>Công cụ</span><span>Trợ giúp</span></nav>' +
+        '<button class="pn-out" type="button" id="czPanicOff">Thoát nhanh <kbd>Esc</kbd></button>' +
+      '</header>' +
+      '<div class="pn-tools" aria-hidden="true">' +
+        '<span>100%</span><span class="pn-sep"></span><span>Thường</span><span>Be Vietnam Pro</span>' +
+        '<span>11</span><span class="pn-sep"></span><span>B</span><span><i>I</i></span><span><u>U</u></span>' +
+        '<span class="pn-sep"></span><span>⛓</span><span>💬</span><span>🖼</span>' +
+      '</div>' +
+      '<main class="pn-page" tabindex="-1">' +
+        '<h1>Ghi chú ôn tập — Quản trị dự án</h1>' +
+        '<p class="pn-lead">Buổi 7 · Tổng hợp lại trước khi làm bài kiểm tra giữa kỳ. ' +
+          'Ghi theo cách hiểu của mình, đọc lại là nhớ, không chép nguyên giáo trình.</p>' +
+        '<h2>1. Ba chân của một dự án</h2>' +
+        '<ul>' +
+          '<li><b>Phạm vi</b> — làm cái gì, và quan trọng không kém: <i>không</i> làm cái gì.</li>' +
+          '<li><b>Thời gian</b> — mốc nào phải xong, ai phụ thuộc vào mốc đó.</li>' +
+          '<li><b>Chi phí</b> — ngân sách, người, và thời gian chờ nhau.</li>' +
+        '</ul>' +
+        '<p>Ba cái này kéo nhau: kéo một cái là hai cái kia phải nhả. Nhóm nào cũng muốn nhanh — rẻ — đủ, ' +
+          'nên việc của người quản lý là <b>chọn cái nào nhả</b> và nói rõ với cả nhóm.</p>' +
+        '<h2>2. Rủi ro — cái gì có thể làm vỡ kế hoạch?</h2>' +
+        '<table><thead><tr><th>Rủi ro</th><th>Dấu hiệu sớm</th><th>Xử lý</th></tr></thead><tbody>' +
+          '<tr><td>Thiếu người</td><td>Việc dồn về 1–2 bạn</td><td>Chia lại việc, bỏ bớt phần không bắt buộc</td></tr>' +
+          '<tr><td>Yêu cầu đổi giữa kỳ</td><td>Trao đổi ngoài kênh chung</td><td>Ghi lại thành văn bản, chốt lại phạm vi</td></tr>' +
+          '<tr><td>Ước lượng lạc quan</td><td>Task nào cũng “xong trong 1 buổi”</td><td>Nhân đôi thời gian, kiểm lại sau 3 ngày</td></tr>' +
+        '</tbody></table>' +
+        '<h2>3. Nhật ký học tập tuần này</h2>' +
+        '<ul class="pn-list">' +
+          '<li>Thứ 2 — đọc chương 4, chưa hiểu phần WBS, đánh dấu lại.</li>' +
+          '<li>Thứ 3 — làm bài tập nhóm, thống nhất dùng bảng Kanban.</li>' +
+          '<li>Thứ 4 — họp nhóm 20 phút, chốt mốc nộp bản nháp.</li>' +
+        '</ul>' +
+        '<p class="pn-foot">Ghi chú cá nhân — đừng quên nộp bản nháp trước 21 giờ Chủ nhật.</p>' +
+      '</main>' +
+    '</div>';
+
+  function panicLayer() {
+    var l = d.getElementById('czPanicLayer');
+    if (!l) {
+      l = d.createElement('div');
+      l.id = 'czPanicLayer'; l.className = 'panic';
+      l.hidden = true;
+      l.setAttribute('role', 'dialog'); l.setAttribute('aria-modal', 'true');
+      l.setAttribute('aria-label', 'Chế độ ẩn nhanh — ghi chú ôn tập');
+      l.innerHTML = PANIC_HTML;
+      d.body.appendChild(l);
+      var off = l.querySelector('#czPanicOff');
+      if (off) off.addEventListener('click', function () { panicOff(); });
+    }
+    return l;
+  }
+  function panicOn() {
+    if (PANIC.on) return;
+    var l = panicLayer();
+    PANIC.title = d.title;
+    PANIC.url = location.href;
+    PANIC.favicons = Array.prototype.map.call(d.querySelectorAll('link[rel~="icon"],link[rel="apple-touch-icon"]'), function (n) {
+      return { node: n, href: n.getAttribute('href') };
+    });
+    PANIC.on = true;
+    PANIC.scrollY = w.scrollY || 0;
+    d.body.classList.add('panic-on');
+    l.hidden = false;
+    l.classList.add('on');
+    /* tiêu đề tab + favicon + thanh địa chỉ: ba chỗ lộ chuyện nhanh nhất */
+    try { d.title = PANIC_TITLE; } catch (e) {}
+    PANIC.favicons.forEach(function (f) { try { f.node.setAttribute('href', PANIC_FAVICON); } catch (e) {} });
+    try { history.pushState({ czPanic: 1 }, '', '/'); } catch (e) {}
+    w.scrollTo({ top: 0, behavior: 'auto' });
+    var box = l.querySelector('.pn-page');
+    if (box) { try { box.focus({ preventScroll: true }); } catch (e) {} }
+  }
+  function panicOff(fromPop) {
+    if (!PANIC.on) return;
+    var l = d.getElementById('czPanicLayer');
+    PANIC.on = false;
+    d.body.classList.remove('panic-on');
+    if (l) { l.hidden = true; l.classList.remove('on'); }
+    try { if (PANIC.title) d.title = PANIC.title; } catch (e) {}
+    PANIC.favicons.forEach(function (f) { try { if (f.href) f.node.setAttribute('href', f.href); } catch (e) {} });
+    /* Trả thanh địa chỉ về đúng URL cũ. Bấm Back trong lúc panic cũng đi qua
+       đây (`fromPop`) — khi đó entry đã bị đẩy ra khỏi lịch sử rồi nên chỉ cần
+       gán lại URL cho entry hiện tại, không đẩy thêm gì. */
+    try { history.replaceState(null, '', PANIC.url || location.href); } catch (e) {}
+    try { w.scrollTo({ top: PANIC.scrollY || 0, behavior: 'auto' }); } catch (e) {}
+    if (fromPop) PANIC.on = false;
+  }
+  function panicToggle() { if (PANIC.on) panicOff(); else panicOn(); }
+
+  /* bấm Back trong lúc panic = thoát panic (không để lộ lại trang truyện giữa chừng) */
+  w.addEventListener('popstate', function () { if (PANIC.on) panicOff(true); });
+  var escAt = 0;
+  d.addEventListener('keydown', function (e) {
+    if (PANIC.on) {
+      /* Đang panic: chặn hết phím tắt của trang (Esc về trang truyện, ←/→ chuyển
+         chương…). Pha capture nên listener ở bubble của trang không thấy gì. */
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); panicOff(); return; }
+      if ((e.ctrlKey) && e.shiftKey && (e.key === 'H' || e.key === 'h')) {
+        e.preventDefault(); e.stopPropagation(); panicOff(); return;
+      }
+      if (e.key !== 'Tab' && e.key !== 'Enter' && e.key !== ' ') e.stopPropagation();
+      return;
+    }
+    if (e.key === 'Escape') {
+      var now = Date.now();
+      if (now - escAt < 500) { escAt = 0; panicOn(); }
+      else escAt = now;
+      return;
+    }
+    if (e.ctrlKey && !e.metaKey && e.shiftKey && (e.key === 'H' || e.key === 'h')) {
+      e.preventDefault();
+      panicOn();
+    }
+  }, true);
+  /* Nút trên thanh đầu trang: gắn lại mỗi lần header được dựng (đổi trang/đổi
+     trạng thái đăng nhập đều dựng lại). Gắn trùng thì bỏ qua nhờ cờ trên nút. */
+  function panicMount() {
+    var b = d.getElementById('czPanic');
+    if (!b || b.__czPanic) return;
+    b.__czPanic = 1;
+    b.addEventListener('click', function (e) { e.preventDefault(); panicToggle(); });
+    PANIC.ready = true;
+  }
+
   /* URL bìa bền: không dùng blob:/data:. Ảnh Worker dạng /api/img/… được
      ghép với CZ_API để homepage/thẻ truyện vẫn hiện sau khi refresh. */
   /* G7: bìa đã sao lưu thành tệp tĩnh (/assets/covers/, Pages không tính băng
@@ -1650,6 +1839,58 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     }
     return open;
   }
+  /* ---- tiếng hiệu ứng (chỉ kêu SAU cú bấm của người dùng) ----------------
+     “Cạch” của viên gạch và “pop” của sticker được TỔNG HỢP bằng WebAudio:
+     không thêm tệp .mp3, không tải gì thêm. AudioContext chỉ được tạo ở lần
+     gọi đầu tiên — tức là sau một cú bấm thật, đúng luật “không tự phát tiếng”.
+     Ai không thích thì tắt ở Cài đặt đọc → Âm thanh hiệu ứng (khoá sfx). */
+  var audioCtx = null;
+  function audio() {
+    if (audioCtx) return audioCtx;
+    var AC = w.AudioContext || w.webkitAudioContext;
+    if (!AC) return null;
+    try { audioCtx = new AC(); } catch (e) { audioCtx = null; }
+    return audioCtx;
+  }
+  function sfx(kind) {
+    if (reduce) return;
+    var st = rdGet();
+    if (String(st.sfx === 0 || st.sfx === '0')) return;
+    var a = audio();
+    if (!a) return;
+    try {
+      if (a.state === 'suspended' && a.resume) a.resume();
+      var t0 = a.currentTime, i;
+      if (kind === 'brick') {
+        /* gạch: một nhúm nhiễu qua bandpass (tiếng “cạch”) + một nhịp trầm */
+        var len = Math.floor(a.sampleRate * 0.09);
+        var buf = a.createBuffer(1, len, a.sampleRate);
+        var ch = buf.getChannelData(0);
+        for (i = 0; i < len; i++) ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6);
+        var src = a.createBufferSource(); src.buffer = buf;
+        var bp = a.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1500; bp.Q.value = 1.2;
+        var g = a.createGain(); g.gain.value = 0.28;
+        src.connect(bp); bp.connect(g); g.connect(a.destination);
+        src.start(t0);
+        var osc = a.createOscillator(), og = a.createGain();
+        osc.type = 'triangle'; osc.frequency.setValueAtTime(190, t0);
+        osc.frequency.exponentialRampToValueAtTime(90, t0 + 0.12);
+        og.gain.setValueAtTime(0.16, t0);
+        og.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16);
+        osc.connect(og); og.connect(a.destination);
+        osc.start(t0); osc.stop(t0 + 0.18);
+      } else {
+        var o2 = a.createOscillator(), g2 = a.createGain();
+        o2.type = 'sine'; o2.frequency.setValueAtTime(660, t0);
+        o2.frequency.exponentialRampToValueAtTime(1180, t0 + 0.07);
+        g2.gain.setValueAtTime(0.0001, t0);
+        g2.gain.exponentialRampToValueAtTime(0.13, t0 + 0.02);
+        g2.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16);
+        o2.connect(g2); g2.connect(a.destination);
+        o2.start(t0); o2.stop(t0 + 0.18);
+      }
+    } catch (e) {}
+  }
   /* gợn sóng nhẹ ngay chỗ con trỏ khi bấm nút */
   function ripple(el, e) {
     if (reduce || !el || !d.createElement) return;
@@ -1800,6 +2041,9 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         '<span class="nav-lbl">Cài app</span></button>' +
       '<button class="hbtn" id="czJump" title="Tìm truyện, tác giả, couple (⌘K)" aria-label="Tìm kiếm">' + icon('search', 'i-s') +
         '<span class="searchbtn-txt">Tìm</span><span class="k">⌘K</span></button>' +
+      /* ẩn nhanh: bấm là che cả trang bằng giao diện giả (Esc Esc hoặc Ctrl+Shift+H) */
+      '<button class="hbtn icon" id="czPanic" title="Ẩn nhanh — che trang bằng ghi chú giả (Esc Esc hoặc Ctrl+Shift+H)" aria-label="Bật chế độ ẩn nhanh">' +
+        icon('briefcase', 'i-s') + '</button>' +
       /* chuông trung tâm thông báo: truyện đã theo dõi có chương mới thì hiện số */
       '<div class="hnotif" id="czNotif">' +
         '<button class="hbtn icon" id="czNotifBtn" aria-haspopup="menu" aria-expanded="false" aria-label="Thông báo chương mới" title="Thông báo chương mới">' +
@@ -2181,6 +2425,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     opt = opt || {};
     if (d.getElementById('hdr')) mountHeader(d.getElementById('hdr'), opt.active);
     if (d.getElementById('ftr')) mountFooter(d.getElementById('ftr'));
+    panicMount();               /* nút ẩn nhanh vừa có trong header → gắn sự kiện */
   }
 
   /* -- tìm kiếm nổi (Ctrl+K) ------------------------------------------- */
@@ -2748,6 +2993,9 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     myReadAdd: myReadAdd, myReadSummary: myReadSummary,
     realCount: realCount, reconcileCount: reconcileCount, onStatsChange: onStatsChange, notifyStats: notifyStats,
     rdGet: rdGet, rdSet: rdSet, themeInit: themeInit, themeToggle: themeToggle, themeMeta: themeMeta,
+    /* chế độ ẩn nhanh — xem khối PANIC ở trên; trang đọc đọc CZ.panic.on để
+       biết có nên ghi tiến độ / đổi tiêu đề tab hay không */
+    panic: PANIC, panicOn: panicOn, panicOff: panicOff, panicToggle: panicToggle,
     icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo, teaser: teaser,
     statusCls: statusCls, statusLabel: statusLabel, statusIcon: statusIcon, words: words, norm: norm, countText: countText, listHead: listHead,
     /* bóc tên chương dùng chung (src/shared/chapters.js): trang truyện, mục
@@ -2758,7 +3006,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     chapHasMedia: chapterHasMedia,
     storyURL: storyURL, readURL: readURL, slugify: slugify, qs: qs, copy: copy, download: download,
     card: card, coverFB: coverFB, coverSrc: coverSrc, bookCover: bookCover, mountRail: mountRail, reveal: reveal, countUp: countUp, scaleFacts: scaleFacts,
-    scrollUI: scrollUI, slide: slide, pageFx: pageFx, pop: pop, setIcon: setIcon, shake: shake,
+    scrollUI: scrollUI, slide: slide, pageFx: pageFx, pop: pop, setIcon: setIcon, shake: shake, sfx: sfx,
     msWait: function () { return ms('--t-close', 150); }, ink: ink, inkAll: inkAll,
     mountShell: mountShell, mountHeader: mountHeader, mountFooter: mountFooter,
     openJump: openJump, toast: toast, modal: modal, confirm: confirmBox,

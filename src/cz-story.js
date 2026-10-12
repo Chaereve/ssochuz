@@ -554,6 +554,12 @@
         : 'Đang có ' + n.chapters + ' chương');
     /* mở truyện là đã biết hết chương hiện có → huy hiệu “N chương mới” tắt */
     if (CZ.markFollowSeen) CZ.markFollowSeen(n);
+    /* 1.19.0 — góc tương tác của trang truyện: reaction sticker + hộp góp gạch.
+       Cả hai đều chịu cùng luật với trang đọc (tắt reaction trong cài đặt đọc
+       thì ở đây cũng ẩn theo; hộp gạch chỉ hiện với truyện đang cập nhật). */
+    try { renderStoryReact(); } catch (e) {}
+    try { syncBrickBox(); } catch (e) {}
+    try { if (window.CZDice) window.CZDice.buttons(); } catch (e) {}
   }
 
   /* Tab Thông tin chỉ chứa metadata; tóm tắt nằm ở đầu trang. */
@@ -828,17 +834,238 @@
     { k: 'sans', l: 'Sans' }
   ];
   var WIDTHS = [{ k: 640, l: 'Hẹp' }, { k: 720, l: 'Vừa' }, { k: 900, l: 'Rộng' }];
+
+  /* ======================= 4b. BỘ TÍNH NĂNG ĐỌC 1.19.0 ==================
+     Bốn thứ dưới đây đều dựng trên cùng một nguyên tắc: KHÔNG sửa dữ liệu
+     chương, chỉ đổi cách hiển thị, và tắt được ở Cài đặt đọc.
+       · applyBionic()  — in đậm 2–3 ký tự đầu mỗi từ (Bionic Reading)
+       · paintTerminal()— skin Terminal/Hacker CLI (chỉ là lớp CSS + nhãn giả)
+       · paintZenBtn()  — chế độ Zen (ẩn hết thứ không cần)
+       · syncReactBox() — hàng reaction sticker cuối chương (xem src/cz-react.js)
+     ====================================================================== */
+
+  /* ---- BIONIC READING --------------------------------------------------
+     Vì sao không cắt chuỗi bằng slice(): tiếng Việt có dấu. Chuỗi ở dạng NFD
+     (e + dấu sắc + dấu mũ) mà cắt ở giữa là dấu rời khỏi nguyên âm. Nên:
+     từ được nhận diện gồm cả dấu kết hợp (\p{M}), đếm theo điểm mã (Array.from,
+     emoji không bị chặt đôi) và KHÔNG tính dấu là ký tự; cắt xong thì đẩy luôn
+     cụm dấu còn lại vào phần đầu. Chuỗi gốc KHÔNG bị chuẩn hoá/đổi điểm mã —
+     đây chỉ là lớp trình bày, chữ trong dữ liệu vẫn nguyên xi.
+     Từ ≤3 ký tự in đậm 1, ≤8 in đậm 2, còn lại 3 — đúng nhịp mắt chạy. Bỏ qua
+     <pre>/<code>/tiêu đề: những chỗ đó in đậm nửa từ chỉ làm chữ xấu đi. */
+  var BIO_COMB = /[\u0300-\u036f\u1ab0-\u1aff\u1dc0-\u1dff\u20d0-\u20f0]/;
+  function bioCut(chars, want) {
+    var n = 0, i = 0;
+    for (; i < chars.length; i++) {
+      if (BIO_COMB.test(chars[i])) continue;      /* dấu không phải ký tự */
+      if (n >= want) break;
+      n++;
+    }
+    while (i < chars.length && BIO_COMB.test(chars[i])) i++;   /* ăn nốt dấu của ký tự cuối */
+    return i;
+  }
+  function bioWord(w) {
+    var chars = Array.from(w);
+    var letters = chars.filter(function (c) { return !BIO_COMB.test(c); }).length;
+    var want = letters <= 3 ? 1 : (letters <= 8 ? 2 : 3);
+    return bioCut(chars, want);
+  }
+  function bioNode(node) {
+    var s = String(node.nodeValue || '');
+    if (s.length < 2) return;
+    var fixed = s;                       /* KHÔNG chuẩn hoá lại chuỗi */
+    var re = /\p{L}[\p{L}\p{N}\p{M}'-]*/gu;   /* \p{M}: dấu đi liền nguyên âm (NFD) */
+    var frag = document.createDocumentFragment(), last = 0, m;
+    while ((m = re.exec(fixed))) {
+      var word = m[0], cut = bioWord(word);
+      if (cut <= 0 || cut >= Array.from(word).length) continue;
+      var head = Array.from(word).slice(0, cut).join('');
+      if (last < m.index) frag.appendChild(document.createTextNode(fixed.slice(last, m.index)));
+      var b = document.createElement('b');
+      b.className = 'bio';
+      b.textContent = head;
+      frag.appendChild(b);
+      frag.appendChild(document.createTextNode(Array.from(word).slice(cut).join('')));
+      last = m.index + word.length;
+    }
+    if (!frag.childNodes.length) return;
+    if (last < fixed.length) frag.appendChild(document.createTextNode(fixed.slice(last)));
+    node.parentNode.replaceChild(frag, node);
+  }
+  function bionicClear(root) {
+    var marks = $$('.bio', root);
+    marks.forEach(function (b) {
+      var p = b.parentNode;
+      if (!p) return;
+      p.replaceChild(document.createTextNode(b.textContent || ''), b);
+      if (p.normalize) p.normalize();
+    });
+  }
+  var BIO_SKIP = { PRE: 1, CODE: 1, H1: 1, H2: 1, H3: 1, H4: 1, SCRIPT: 1, STYLE: 1, TEXTAREA: 1 };
+  function applyBionic() {
+    var box = $('#rdText');
+    if (!box) return;
+    if (box.__bio) { bionicClear(box); box.__bio = 0; }
+    if (!Number(CZ.rdGet().bionic)) return;
+    var walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (n) {
+        if (!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+        for (var p = n.parentNode; p && p !== box; p = p.parentNode) {
+          if (BIO_SKIP[p.nodeName]) return NodeFilter.FILTER_REJECT;
+          if (p.classList && (p.classList.contains('bio') || p.classList.contains('no-bio'))) return NodeFilter.FILTER_REJECT;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var nodes = [], n;
+    while ((n = walker.nextNode())) nodes.push(n);      /* gom trước rồi mới sửa */
+    nodes.forEach(bioNode);
+    box.__bio = 1;
+  }
+
+  /* ---- TERMINAL / HACKER CLI ------------------------------------------
+     Chương hiện trong khung giả terminal. TUYỆT ĐỐI không có ô nhập lệnh và
+     không thực thi gì: khung đầu chỉ in ra một câu “lệnh” mô phỏng, các dòng
+     lời dẫn được đánh số bằng CSS counter, câu thoại (bắt đầu bằng dấu ngoặc
+     kép hoặc gạch đầu dòng) được tô sáng như output của chương trình. Không
+     dùng hiệu ứng gõ từng ký tự — chỉ một con trỏ nhấp nháy ở dòng kết. */
+  function termDialogue(el) {
+    var t = String(el.textContent || '').trim().slice(0, 40);
+    return /^[“"']/.test(t) || /^[-–—]\s/.test(t);
+  }
+  function termCommand(ch) {
+    /* Chỉ là CHUỖI để in ra. Không fetch, không chạy lệnh, không chạm localStorage. */
+    return 'curl -s ' + location.origin + '/truyen/' + encodeURIComponent(SLUG) + '/chuong-' + ch;
+  }
+  function paintTerminal() {
+    var on = !!Number(CZ.rdGet().term);
+    var top = $('#rdTermTop'), end = $('#rdTermEnd'), txt = $('#rdText');
+    if (end) {
+      end.hidden = !on;
+      /* Chữ nằm trong DOM (trình đọc màn hình đọc được), không nhét vào CSS ::before */
+      end.textContent = on ? 'process exited with code 0 — chapter complete' : '';
+      end.setAttribute('aria-hidden', on ? 'false' : 'true');
+    }
+    if (top) top.hidden = !on;
+    if (txt) {
+      txt.classList.toggle('term', on);
+      if (on) {
+        $$(':scope > *', txt).forEach(function (el) {
+          el.classList.toggle('t-out', termDialogue(el));
+        });
+      } else {
+        $$('.t-out', txt).forEach(function (el) { el.classList.remove('t-out'); });
+      }
+    }
+    if (top && on && N) {
+      var now = new Date();
+      function p2(x) { return ('0' + x).slice(-2); }
+      /* Dòng “lệnh” chỉ để TRÔNG giống terminal: in ra rồi thôi, không chạy gì.
+         Không có ô nhập lệnh, không đọc/ghi ngoài trang này. */
+      var cmd = termCommand(cur);
+      top.innerHTML =
+        '<div class="tt-line"><b class="tt-prompt">user@ssochuz</b><span class="tt-path">:~/truyen/' + esc(SLUG) + '</span><span class="tt-cmd">$ ' + esc(cmd) + '</span></div>' +
+        '<div class="tt-meta"><span class="tt-dot" aria-hidden="true"></span>wifi ok · ' +
+          esc(chapLabel(cur)) + (chapTotal() ? '/' + chapTotal() : '') + ' · ' + CZ.num(CHS.length) + ' chương trong kho · ' +
+          p2(now.getHours()) + ':' + p2(now.getMinutes()) + ':' + p2(now.getSeconds()) + ' UTC' + (now.getTimezoneOffset() ? '' : '') + '</span>' +
+        '<button type="button" class="btn ghost sm" id="rdTermOff">Thoát terminal</button></div>';
+      var off = $('#rdTermOff');
+      if (off) off.addEventListener('click', function () {
+        CZ.rdSet({ term: 0 });
+        applyRD();
+        paintSettings();
+        toast('Đã thoát terminal — về giao diện đọc thường');
+      });
+    }
+  }
+
+  /* ---- ZEN ------------------------------------------------------------- */
+  function paintZenBtn() {
+    var b = $('#rdZen');
+    if (!b) return;
+    var on = !!Number(CZ.rdGet().zen);
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    var lab = on ? 'Thoát chế độ Zen (chỉ còn nội dung chương)' : 'Chế độ Zen — ẩn hết thứ không cần thiết';
+    b.setAttribute('title', lab);
+    b.setAttribute('aria-label', lab);
+  }
+  function paintTermBtn() {
+    var b = $('#rdTerm');
+    if (!b) return;
+    var on = !!Number(CZ.rdGet().term);
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    var lab = on ? 'Thoát chế độ Terminal' : 'Chế độ Terminal — đọc như log hệ thống (chỉ là giao diện)';
+    b.setAttribute('title', lab);
+    b.setAttribute('aria-label', lab);
+  }
+
+  /* ---- REACTION: hàng sticker cuối chương ------------------------------- */
+  function syncReactBox() {
+    var host = $('#rdReact');
+    if (!host) return;
+    var off = String(CZ.rdGet().react) === '0';
+    host.hidden = off;
+    if (off) { host.innerHTML = ''; host.__rxCtx = null; return; }
+    /* Vừa bật lại trong Cài đặt đọc: dựng lại ngay, không đợi sang chương sau
+       (nếu chưa có ngữ cảnh chương thì thôi — lúc đó cũng chưa có gì để thả). */
+    if (!host.__rxCtx) paintReact();
+  }
+  /* Hộp góp gạch: chỉ có ở trang chi tiết truyện đang cập nhật, và tắt được ở
+     Cài đặt đọc như mọi thứ khác của bộ 1.19.0. CZBrick.mount tự bỏ qua khi
+     truyện không đủ điều kiện (đã hoàn thành / khoá mật mã). */
+  function syncBrickBox() {
+    var host = $('#storyBrick');
+    if (!host) return;
+    if (String(CZ.rdGet().brick) === '0') { host.hidden = true; host.innerHTML = ''; host.__bkCtx = null; return; }
+    if (N && window.CZBrick) window.CZBrick.mount(host, N);
+  }
+  function paintReact() {
+    if (!window.CZReact || !N || !CHS[cur - 1]) return;
+    var host = $('#rdReact');
+    if (!host) return;
+    if (String(CZ.rdGet().react) === '0') { syncReactBox(); return; }
+    host.hidden = false;
+    window.CZReact.afterChapterPaint($('#rdText'), {
+      slug: SLUG, ch: cur, title: chapLabel(cur), story: N
+    });
+  }
+  /* trang chi tiết truyện: cùng hàng sticker đó, gắn với chương đang đọc dở
+     (chưa đọc thì chương 1) — người đọc thấy ngay là bộ này có tương tác */
+  function renderStoryReact() {
+    var host = $('#storyReact');
+    if (!host || !window.CZReact || !N) return;
+    if (String(CZ.rdGet().react) === '0') { host.hidden = true; host.innerHTML = ''; host.__rxCtx = null; return; }
+    host.hidden = false;
+    var ch = Math.max(1, Math.min(CHS.length || 1, CZ.progress(N) || 1));
+    window.CZReact.mount(host, {
+      slug: SLUG, ch: ch, story: N,
+      label: N.title + (CHS.length ? ' · ' + chapLabel(ch) : '')
+    });
+  }
+
   function applyRD() {
     var s = CZ.rdGet();
     document.body.dataset.rd = s.theme;
     document.body.dataset.rdFont = s.font || 'serif';
     document.body.classList.toggle('rd-paged', s.mode === 'paged');
     document.body.classList.toggle('rd-scroll', s.mode !== 'paged');
+    /* 1.19.0 — bốn skin/công tắc đọc mới. Đều là lớp CSS trên <body> nên đổi
+       lúc nào cũng ăn ngay, không phải dựng lại trang. */
+    document.body.classList.toggle('rd-zen', !!Number(s.zen));
+    document.body.classList.toggle('rd-term', !!Number(s.term));
+    document.body.classList.toggle('rd-bionic', !!Number(s.bionic));
     var el = $('#rdText');
     if (el) {
       el.classList.remove('nofont');
       el.classList.toggle('just', !!Number(s.justify));
     }
+    syncReactBox();
+    paintTerminal();
+    applyBionic();
+    paintZenBtn();
+    paintTermBtn();
     document.documentElement.style.setProperty('--rd-size', (s.size||18) + 'px');
     document.documentElement.style.setProperty('--rd-line', s.line || 1.85);
     document.documentElement.style.setProperty('--rd-para', (s.para||1.05) + 'em');
@@ -884,6 +1111,28 @@
         sliderRow('Giãn đoạn', 'para', 0.6, 1.8, 0.05, 'em') +
         row('Căn đều hai bên', 'justify', [{ k: 0, l: 'Tắt' }, { k: 1, l: 'Bật' }])) +
       grp('Nền đọc', row('Nền đọc', 'theme', RD_THEMES)) +
+      /* 1.19.0 — nhóm Tương tác: mọi thứ ảnh hưởng trải nghiệm đọc đều tắt được */
+      grp('Tương tác &amp; kiểu đọc',
+        '<div class="srow2"><span>Reaction sticker cuối chương<small class="s-note">6 sticker vui ở cuối mỗi chương, có đếm lượt</small></span>' +
+          '<div class="opts"><button data-set="react" data-v="1" class="' + (String(s.react) !== '0' ? 'on' : '') + '">Bật</button>' +
+          '<button data-set="react" data-v="0" class="' + (String(s.react) === '0' ? 'on' : '') + '">Tắt</button></div></div>' +
+        '<div class="srow2"><span>Chữ đậm dẫn mắt (Bionic)<small class="s-note">In đậm 2–3 ký tự đầu mỗi từ, không đổi nội dung</small></span>' +
+          '<div class="opts"><button data-set="bionic" data-v="1" class="' + (String(s.bionic) === '1' ? 'on' : '') + '">Bật</button>' +
+          '<button data-set="bionic" data-v="0" class="' + (String(s.bionic) !== '1' ? 'on' : '') + '">Tắt</button></div></div>' +
+        '<div class="srow2"><span>Giao diện Terminal<small class="s-note">Đọc như log hệ thống — chỉ là lớp giao diện, không chạy lệnh</small></span>' +
+          '<div class="opts"><button data-set="term" data-v="1" class="' + (String(s.term) === '1' ? 'on' : '') + '">Bật</button>' +
+          '<button data-set="term" data-v="0" class="' + (String(s.term) !== '1' ? 'on' : '') + '">Tắt</button></div></div>' +
+        '<div class="srow2"><span>Chế độ Zen<small class="s-note">Ẩn đầu trang, mục lục và mọi thứ không cần thiết</small></span>' +
+          '<div class="opts"><button data-set="zen" data-v="1" class="' + (String(s.zen) === '1' ? 'on' : '') + '">Bật</button>' +
+          '<button data-set="zen" data-v="0" class="' + (String(s.zen) !== '1' ? 'on' : '') + '">Tắt</button></div></div>' +
+        '<div class="srow2"><span>Âm thanh hiệu ứng<small class="s-note">Tiếng “cạch” khi góp gạch, tiếng pop khi thả sticker — chỉ kêu sau khi bạn bấm</small></span>' +
+          '<div class="opts"><button data-set="sfx" data-v="1" class="' + (String(s.sfx) !== '0' ? 'on' : '') + '">Bật</button>' +
+          '<button data-set="sfx" data-v="0" class="' + (String(s.sfx) === '0' ? 'on' : '') + '">Tắt</button></div></div>' +
+        '<div class="srow2"><span>Hộp góp gạch<small class="s-note">Chỉ ở truyện đang cập nhật — góp gạch giục chương mới</small></span>' +
+          '<div class="opts"><button data-set="brick" data-v="1" class="' + (String(s.brick) !== '0' ? 'on' : '') + '">Bật</button>' +
+          '<button data-set="brick" data-v="0" class="' + (String(s.brick) === '0' ? 'on' : '') + '">Tắt</button></div></div>' +
+        '<div class="srow2"><span>Hôm nay đọc gì?<small class="s-note">Quay vòng chọn truyện ngẫu nhiên</small></span>' +
+          '<div class="opts small"><button id="setDice">' + ic('dice', 'i-s') + ' Mở vòng quay</button></div></div>') +
       '<div class="srow2" style="border:0"><span></span>' +
       '<button class="btn ghost sm" id="setReset">Về mặc định</button></div>';
     $$('#setBody [data-set]').forEach(function (b) {
@@ -893,6 +1142,10 @@
         patch[key] = (key === 'size' || key === 'width' || key === 'line' || key === 'para') ? Number(v) : (key === 'justify' ? Number(v) : v);
         CZ.rdSet(patch);
         applyRD(); paintSettings(); relayout();
+        /* Công tắc 1.19.0 phải ăn NGAY: hộp gạch nằm ngoài #rdText nên
+           relayout() không đụng tới, phải đồng bộ riêng (hàm tự bỏ qua khi
+           trang không có hộp gạch). */
+        syncBrickBox();
       });
     });
     $$('#setBody [data-range]').forEach(function (r) {
@@ -915,8 +1168,14 @@
       } catch(e) { toast('Trình duyệt không hỗ trợ fullscreen'); }
     });
     $('#setReset').addEventListener('click', function () {
-      CZ.rdSet({ mode: 'scroll', size: 18, font: 'serif', line: 1.85, para: 1.05, theme: 'kem', width: 720, justify: 0 });
-      applyRD(); paintSettings(); relayout(); CZ.toast('Đã về mặc định');
+      CZ.rdSet({ mode: 'scroll', size: 18, font: 'serif', line: 1.85, para: 1.05, theme: 'kem', width: 720, justify: 0,
+        react: 1, bionic: 0, zen: 0, term: 0, brick: 1, sfx: 1 });
+      applyRD(); paintSettings(); relayout(); syncBrickBox(); CZ.toast('Đã về mặc định');
+    });
+    var diceBtn = $('#setDice');
+    if (diceBtn) diceBtn.addEventListener('click', function () {
+      if (window.CZDice) { sheet('#setSheet', false); window.CZDice.open(this); }
+      else CZ.toast('Vòng quay chưa tải xong — thử lại sau một nhịp nhé.');
     });
   }
   function paintTOC() {
@@ -1480,6 +1739,12 @@
     CZ.setProgress(N, cur);
     try { document.title = c.t + ' · ' + N.title + ' — ssochuz library'; } catch (e) {}
     paintTOC(); paintTopNav();
+    /* 1.19.0: skin đọc (Terminal/Bionic) + hàng reaction sticker cuối chương.
+       Chạy SAU khi nội dung chương đã nằm trong #rdText — cả hai đều thao tác
+       trên chính đoạn chữ vừa vẽ, không đụng tới dữ liệu chương. */
+    paintTerminal();
+    applyBionic();
+    paintReact();
     mountReaderComments();          /* bình luận theo chương, nằm cuối trang đọc */
     var cr = $('#crumbStory');
     if (cr) cr.addEventListener('click', function (e) { e.preventDefault(); exitReader(); });
@@ -1569,6 +1834,9 @@
     $('#rdMark').innerHTML = ic('bookmark', 'i-s');
     $('#rdSet').innerHTML = ic('gear', 'i-s');
     $('#rdFocus').innerHTML = ic('expand', 'i-s');
+    if ($('#rdZen')) $('#rdZen').innerHTML = ic('yoga', 'i-s');
+    if ($('#rdTerm')) $('#rdTerm').innerHTML = ic('terminal', 'i-s');
+    if ($('#rdDice')) $('#rdDice').innerHTML = ic('dice', 'i-s');
     $('#rdShare').innerHTML = ic('share', 'i-s');
     applyRD();
     renderCur(false, dir);
@@ -1687,6 +1955,26 @@
     this.classList.toggle('on', on);
     toast(on ? 'Chế độ tập trung: chỉ còn nội dung truyện' : 'Đã tắt chế độ tập trung');
   });
+  /* 1.19.0 — nút Zen và Terminal trên thanh đọc. Cả hai đều là cài đặt đọc
+     thật (nhớ trong localStorage) nên F5 vẫn còn nguyên lựa chọn. */
+  var zenBtn = $('#rdZen');
+  if (zenBtn) zenBtn.addEventListener('click', function () {
+    var on = String(CZ.rdGet().zen) === '1';
+    CZ.rdSet({ zen: on ? 0 : 1 });
+    applyRD(); paintSettings(); relayout();
+    toast(on ? 'Đã tắt chế độ Zen' : 'Chế độ Zen: chỉ còn nội dung chương — chạm để hiện thanh công cụ');
+  });
+  var termBtn = $('#rdTerm');
+  if (termBtn) termBtn.addEventListener('click', function () {
+    var on = String(CZ.rdGet().term) === '1';
+    CZ.rdSet({ term: on ? 0 : 1 });
+    applyRD(); paintSettings(); relayout();
+    toast(on ? 'Đã tắt Terminal — về giao diện đọc thường' : 'Terminal: chương hiện như log hệ thống (chỉ là giao diện)');
+  });
+  var diceInSheet = $('#rdDice');
+  if (diceInSheet) diceInSheet.addEventListener('click', function () {
+    if (window.CZDice) window.CZDice.open(this);
+  });
   $('#rdShare').addEventListener('click', shareChapter);
   document.addEventListener('click', function (e) {
     var a = e.target.closest('#tocList a[data-ch]');
@@ -1712,7 +2000,9 @@
     else if (e.key === 'b' || e.key === 'B') $('#rdMark').click();
     else if (e.key === 'f' || e.key === 'F') $('#rdFocus').click();
     else if (e.key === 'l' || e.key === 'L') $('#rdToc').click();
-    else if (e.key === '?') toast('← → chuyển chương · Space xuống trang · B đánh dấu · F tập trung · L mục lục · Esc về trang thông tin');
+    else if ((e.key === 'z' || e.key === 'Z') && $('#rdZen')) $('#rdZen').click();
+    else if ((e.key === 't' || e.key === 'T') && $('#rdTerm')) $('#rdTerm').click();
+    else if (e.key === '?') toast('← → chuyển chương · Space xuống trang · B đánh dấu · F tập trung · Z Zen · T Terminal · L mục lục · Esc về trang thông tin');
   });
   /* vuốt ngang để chuyển chương */
   (function () {

@@ -48,11 +48,28 @@ function page(file, { url = 'https://ssochuz.pages.dev/', fetch, config = {}, fi
     html = html.replace(/window\.CZ_STATS_DIRECT\s*=\s*(true|false);/,
       "window.CZ_STATS_DIRECT=" + (config.CZ_STATS_DIRECT ? 'true' : 'false') + ";");
   }
+  /* 1.19.0: hai cổng API tương tác (reaction / góp gạch). Trang thật để trống
+     trong cz-config.js; bài kiểm cần cắm URL giả để xem mã có gọi đúng lúc. */
+  if (config.CZ_REACT_API !== undefined) {
+    html = html.replace(/window\.CZ_REACT_API\s*=\s*'[^']*';/,
+      "window.CZ_REACT_API=" + JSON.stringify(config.CZ_REACT_API) + ";");
+  }
+  if (config.CZ_BRICK_API !== undefined) {
+    html = html.replace(/window\.CZ_BRICK_API\s*=\s*'[^']*';/,
+      "window.CZ_BRICK_API=" + JSON.stringify(config.CZ_BRICK_API) + ";");
+  }
   const errors = [];
   /* jsdom không cài đặt việc chuyển trang thật (location.href = …) — đó là giới hạn của
      môi trường chạy thử, không phải lỗi của web, nên không tính vào errors */
   const vc = new VirtualConsole();
-  vc.on('jsdomError', () => {});
+  /* jsdom giấu lỗi xảy ra BÊN TRONG listener (không thoát ra ngoài như trình
+     duyệt thật). Khi cần soi, chạy bài kiểm với MK_DEBUG=1 để in chúng ra. */
+  vc.on('jsdomError', (e) => {
+    if (process.env.MK_DEBUG) {
+      const d = (e && e.detail) || e || {};
+      errors.push('jsdom: ' + ((d.error && d.error.stack) || d.stack || d.message || String(e)));
+    }
+  });
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', pretendToBeVisual: true, url, virtualConsole: vc, resources,
     beforeParse(w) {

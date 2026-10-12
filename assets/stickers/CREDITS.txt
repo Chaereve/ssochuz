@@ -1,0 +1,12 @@
+Sticker trong thư mục này lấy từ Microsoft Fluent Emoji (bản 3D):
+  https://github.com/microsoft/fluentui-emoji
+Giấy phép MIT — Copyright (c) Microsoft Corporation.
+Nguồn từng tệp (đã thu nhỏ về 128px, xuất WebP quality 82):
+  · mu-bao-hiem    Military helmet/3D/military_helmet_3d.png → mu-bao-hiem.webp   3708 B (nguồn  31563 B)
+  · ngot-lim       Cupcake/3D/cupcake_3d.png                → ngot-lim.webp      3678 B (nguồn  41614 B)
+  · gach-da        Brick/3D/brick_3d.png                    → gach-da.webp       2934 B (nguồn  48535 B)
+  · cham-kem       Loudly crying face/3D/loudly_crying_face_3d.png → cham-kem.webp      4198 B (nguồn  38405 B)
+  · cay-nhu-trau   Ox/3D/ox_3d.png                          → cay-nhu-trau.webp   4178 B (nguồn  32678 B)
+  · xin-chuong     Folded hands/Default/3D/folded_hands_3d_default.png → xin-chuong.webp    2772 B (nguồn  23407 B)
+Tạo lại bằng: python3 tools/make_stickers.py --size 128 --quality 82
+Xem đầy đủ nội dung giấy phép ở THIRD-PARTY-NOTICES.md (mục "Microsoft Fluent Emoji").

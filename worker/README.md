@@ -56,6 +56,25 @@ Admin (admin.html)  ──PUT──▶  Worker (worker/cms.js)  ──▶  Cloud
 
 GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới cần build); dữ liệu thì không đi qua GitHub nữa.
 
+## Có gì mới ở bản 1.19.0 — bộ tương tác & trải nghiệm đọc (phía web)
+
+| | |
+|---|---|
+| **Reaction sticker cuối chương** | `src/cz-react.js`: 6 sticker Fluent Emoji (WebP 128 px) bay lên như reaction livestream, thả/bỏ được, chống spam theo thiết bị, nhớ theo từng chương trong `localStorage` |
+| **Ẩn nhanh “Sếp tới”** | `#czPanic` trên mọi trang + Esc×2 (< 500 ms) + Ctrl+Shift+H: lớp giả Google Docs, đổi tiêu đề tab/favicon/đường dẫn, không ghi tiến độ đọc |
+| **Zen · Bionic · Terminal** | Ba skin đọc mới, đều là công tắc trong Cài đặt đọc (`ssochuz-reader`), đều tắt được, `prefers-reduced-motion` được tôn trọng |
+| **Vòng quay “Hôm nay đọc gì?”** | `src/cz-dice.js`: ưu tiên truyện đang theo dõi → mới cập nhật → cả kho, lọc 18+/tình trạng/thể loại, bỏ truyện vừa đọc |
+| **Hộp góp gạch “Đòi nợ tác giả”** | `src/cz-brick.js`: chỉ truyện đang cập nhật, mốc 5.000 viên, cooldown 6 s + 20 viên/ngày/máy |
+
+**Phần máy chủ của 1.19.0 CHƯA làm** — hai tính năng có dữ liệu chung (reaction, gạch) đang chạy hoàn toàn trong máy người đọc. Client đã sẵn hợp đồng và cổng cấu hình trong `cz-config.js`:
+
+```js
+window.CZ_REACT_API = '';   // điền 'https://<worker>/api/react' khi Worker có endpoint
+window.CZ_BRICK_API = '';   // điền 'https://<worker>/api/brick'
+```
+
+Lược đồ dữ liệu, hợp đồng endpoint và lý do chưa mở ghi KV (ngân sách ghi đang bị siết — xem `docs/features/do-luong-luot-doc-kv.md`) nằm ở `docs/features/tang-tuong-tac-doc-gia.md` §8.
+
 ## Có gì mới ở bản 1.18.0 — đếm lượt đọc KV (A2) + đồng bộ số phiên bản (G10)
 
 | | |
@@ -108,7 +127,7 @@ GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới c�
 | **Test** | `tests/t_kv_quota.mjs` (34 kiểm tra: công thức chia nhịp, 500 lượt xem/60 lần bình luận không đốt lượt ghi, gộp `rateagg` chỉ 1 lượt LIST, `/api/health`) |
 | **Quan trọng** | Nằm TRONG Worker → phải **`npx wrangler deploy`** (xem mục 0). Kiểm tra: `curl <worker>/api/health` thấy `"version": "1.18.0"` |
 
-## 0. Deploy bản 1.18.0 — 2 cách, chọn 1 (ai cũng làm được trong 2 phút)
+## 0. Deploy bản 1.19.0 — 2 cách, chọn 1 (ai cũng làm được trong 2 phút)
 
 > ### ⚠ TRƯỚC KHI DEPLOY: đọc 3 dòng này (sự cố thật ngày 23/09)
 >
@@ -129,7 +148,7 @@ GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới c�
 ```bash
 cd worker && npx wrangler deploy          # wrangler tự gộp các tệp con
 ```
-Kiểm tra: mở `https://<worker>/api/health` phải thấy `"version": "1.18.0"`,
+Kiểm tra: mở `https://<worker>/api/health` phải thấy `"version": "1.19.0"`,
 và **`overflow.supabase` phải `true`** (nếu `false` thì xem `overflow.missing` — nó kể
 tên biến đang thiếu; `overflow.urlVia` cho biết URL lấy từ `env` hay từ ghim `kv`).
 
@@ -139,7 +158,7 @@ tên biến đang thiếu; `overflow.urlVia` cho biết URL lấy từ `env` hay
    190 KB, đã gộp sẵn các tệp con; tệp này không commit, ai cần thì chạy lại lệnh).
 2. Cloudflare → **Workers & Pages** → chọn Worker `chuseoz-cms` → **Edit code**.
 3. Xoá hết code cũ, **dán toàn bộ** `worker/cms.bundle.js`, bấm **Deploy**.
-4. Mở `/api/health` xem `"version"` (bản này: `1.18.0`).
+4. Mở `/api/health` xem `"version"` (bản này: `1.19.0`).
 
 > **Đừng dán `worker/cms.js`.** Tệp đó có 9 dòng `import` (overflow, Durable Object, mã dùng chung
 > `src/shared/…`) — bảng điều khiển không tự gộp, dán vào là Worker báo lỗi và **mất cả My Space

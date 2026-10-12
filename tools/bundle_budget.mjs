@@ -13,7 +13,12 @@ export const BUNDLE_BUDGETS = {
   'cz-story.js':     { warnKb: 78,  maxKb: 90 },
   'cz-people.js':    { warnKb: 10,  maxKb: 15 },
   'cz-space.js':     { warnKb: 34,  maxKb: 42 },
-  'cz.css':          { warnKb: 190, maxKb: 210 },
+  /* 1.19.0 — bộ tương tác (reaction sticker, hộp gạch, vòng quay). Ba tệp này
+     chỉ nạp ở trang thật sự dùng nên vẫn có trần riêng, khá chặt. */
+  'cz-react.js':     { warnKb: 19,  maxKb: 22 },   /* âm thanh đã gộp sang cz-app.js (1.19.0) */
+  'cz-brick.js':     { warnKb: 8,   maxKb: 12 },
+  'cz-dice.js':      { warnKb: 13,  maxKb: 18 },
+  'cz.css':          { warnKb: 195, maxKb: 215 },
   /* v6: nâng có chủ đích (giao diện admin kiểu Wattpad: bố cục hai cột, bìa lớn,
      trạng thái đầy đủ). Vẫn có trần — tăng thêm phải ghi lý do ở đây. */
   'admin.css':       { warnKb: 70,  maxKb: 84 },

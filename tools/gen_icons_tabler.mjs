@@ -98,6 +98,16 @@ const MAP = {
   hourglass: 'hourglass',
   shield_off: 'shield-off',
   google: 'brand-google',
+  /* bộ tính năng tương tác (1.19.0): nút ẩn nhanh, Zen, terminal, bionic,
+     vòng quay, hộp gạch, âm thanh hiệu ứng */
+  briefcase: 'briefcase',
+  yoga: 'yoga',
+  terminal: 'terminal-2',
+  brain: 'brain',
+  dice: 'dice',
+  wall: 'wall',
+  volume: 'volume',
+  sparkles: 'sparkles',
 };
 
 /* MoMo chưa có trong bộ Tabler — giữ đúng hình thương hiệu riêng, không phải
