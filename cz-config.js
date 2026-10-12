@@ -35,17 +35,13 @@
 window.CZ_API = 'chuseoz-cms.kimtong1906.workers.dev';   // để '' nếu chưa dùng Worker
 window.CZ_STATS_DIRECT = false;                           // số xếp hạng lấy từ KV; true = đọc thẳng Firebase cũ
 
-/* --- TƯƠNG TÁC 1.19.0: chỗ để cắm máy chủ sau này -----------------------
-   Hiện tại hai tính năng dưới đây chạy HOÀN TOÀN trong máy người đọc:
-     · hàng reaction sticker cuối chương  → localStorage `ssochuz-react-*`
-     · hộp góp gạch (đòi nợ tác giả)      → localStorage `ssochuz-brick-*`
-   Số trên máy nào chỉ máy đó thấy (cộng thêm phần “đã có sẵn” giả lập theo
-   tên truyện cho vui mắt). Khi Worker có endpoint thật thì điền URL vào đây,
-   KHÔNG cần sửa gì trong cz-react.js / cz-brick.js — hai tệp tự kiểm tra:
-     · cần các trường: count, đã thả hay chưa, thời gian chờ còn lại
-   Để trống '' = chạy chế độ chỉ-trong-máy (mặc định, an toàn). */
-window.CZ_REACT_API = '';   // ví dụ: 'https://<worker>/api/react'
-window.CZ_BRICK_API = '';   // ví dụ: 'https://<worker>/api/brick'
+/* --- COMMUNITY (1.20.0) -----------------------------------------------
+   Reaction sticker và hộp góp gạch dùng chung CZ_API:
+     · /api/community/reactions → Cloudflare D1, toggle theo user/chapter/sticker
+     · /api/community/brick     → Cloudflare D1, tối đa một viên ảo/ngày/user/truyện
+     · /api/community/tocs      → đọc mục lục công khai để cập nhật khối theo dõi
+   Không có coin/thanh toán. Cần bind D1 tên CZ_DB cho Worker; xem
+   worker/README.md và worker/migrations/0001_community.sql. */
                            // số xếp hạng lấy từ KV; true = đọc thẳng Firebase cũ
 window.CZ_VAPID_PUBLIC_KEY = 'BDzU2yh_uWzhaTZ6HZe3s-aLk6w5BnKCv5gTzUZYNjTyObcAlJa5GnZGrbfwHeOdUpDistwMgMaKvnmqLiXzobs';   // khoá CÔNG KHAI VAPID cho Web Push (DevTools thấy là bình thường; khoá RIÊNG nằm trong secret Worker)
 

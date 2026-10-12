@@ -33,7 +33,7 @@ function get(port, urlPath) {
       let body = '';
       res.setEncoding('utf8');
       res.on('data', c => { body += c; if (body.length > 20000) body = body.slice(0, 20000); });
-      res.on('end', () => resolve({ code: res.statusCode, loc: res.headers.location || '', body }));
+      res.on('end', () => resolve({ code: res.statusCode, loc: res.headers.location || '', type: res.headers['content-type'] || '', body }));
     });
     req.on('error', e => resolve({ code: 0, loc: '', body: '', err: e.message }));
     req.on('timeout', () => { req.destroy(); resolve({ code: 0, loc: '', body: '', err: 'timeout' }); });
@@ -123,6 +123,8 @@ async function boot(root, pys) {
       ['/admin-legacy/', 200, 'URL legacy với dấu /'],
       ['/data/registry.json', 200, 'dữ liệu tĩnh'],
       ['/sw.js', 200, 'service worker'],
+      ['/stickers/sso/full/sso-love-it.webp', 200, 'alias sticker full giữ nguyên asset gốc dưới public/'],
+      ['/stickers/sso/thumb/sso-love-it.webp', 200, 'alias sticker thumbnail giữ nguyên asset gốc dưới public/'],
       ['/khong-ton-tai', 404, 'đường dẫn không có thật'],
     ];
     out.duongDan = {};
@@ -136,6 +138,11 @@ async function boot(root, pys) {
     const adm = await get(port, '/admin.html');
     ok(adm.code === 308 && adm.loc === '/admin', '/admin.html phải 308 về /admin (đang ' + adm.code + ' → ' + adm.loc + ')');
     out.adminHtml = { code: adm.code, location: adm.loc };
+    const fullSticker = await get(port, '/stickers/sso/full/sso-love-it.webp');
+    const thumbSticker = await get(port, '/stickers/sso/thumb/sso-love-it.webp');
+    ok(fullSticker.code === 200 && /image\/webp/i.test(fullSticker.type), 'alias full sticker phải trả HTTP 200 + image/webp');
+    ok(thumbSticker.code === 200 && /image\/webp/i.test(thumbSticker.type), 'alias thumb sticker phải trả HTTP 200 + image/webp');
+    out.stickers = { full: [fullSticker.code, fullSticker.type], thumb: [thumbSticker.code, thumbSticker.type] };
     /* /admin/ không còn luật _redirects nào che → Pages tự bỏ dấu / (308), đúng
        hành vi auto-trailing-slash khi "admin" là TỆP chứ không phải thư mục */
     const admSlash = await get(port, '/admin/');

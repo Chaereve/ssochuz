@@ -32,7 +32,7 @@ for (const dir of ['data/book', 'truyen']) {
 /* cz-react / cz-brick / cz-dice: bộ tính năng tương tác 1.19.0. Chỉ nạp ở
    trang nào thật sự dùng (truyen.html + OG, index.html) nên vẫn là file
    riêng, KHÔNG gộp vào cz-app.js — trang khác khỏi tải thêm. */
-const JS = ['cz-app.js', 'cz-auth.js', 'cz-home.js', 'cz-story.js', 'cz-people.js', 'cz-space.js',
+const JS = ['cz-app.js', 'cz-auth.js', 'cz-stickers.js', 'cz-personal.js', 'cz-home.js', 'cz-story.js', 'cz-people.js', 'cz-space.js',
   'cz-react.js', 'cz-brick.js', 'cz-dice.js'];
 const CSS = ['cz.css'];
 
@@ -46,7 +46,7 @@ async function minify(file) {
   /* cz-app.js import src/shared/chapters.js (bóc tên chương dùng chung) nên
      phải bundle để xuất script thuần không-import; các tệp còn lại gọi nhau
      qua biến toàn cục (window.CZ…) — giữ bundle:false như cũ. */
-  const needBundle = file === 'cz-app.js';
+  const needBundle = file === 'cz-app.js' || file === 'cz-stickers.js';
   const out = await build({
     entryPoints: [from],
     write: false,

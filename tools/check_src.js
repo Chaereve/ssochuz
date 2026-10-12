@@ -13,7 +13,7 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
 /* admin.js là bundle do tools/build_admin.mjs sinh — bài có bài riêng (t_admin_budget.js) kiểm parity. */
-const JS = ['cz-app.js', 'cz-auth.js', 'cz-home.js', 'cz-story.js', 'cz-space.js', 'cz-people.js',
+const JS = ['cz-app.js', 'cz-auth.js', 'cz-stickers.js', 'cz-personal.js', 'cz-home.js', 'cz-story.js', 'cz-space.js', 'cz-people.js',
   'cz-react.js', 'cz-brick.js', 'cz-dice.js'];
 const CSS = ['cz.css'];
 
@@ -33,7 +33,7 @@ async function main() {
     if (!fs.existsSync(outPath)) { errors.push('thiếu bản phát hành ' + f + ' — chạy: npm run build'); continue; }
     /* cz-app.js có import src/shared/chapters.js → bundle:true (iife); phải
        khớp y hệt tuỳ chọn trong tools/build_site.mjs kẻo báo lệch giả. */
-    const needBundle = f === 'cz-app.js';
+    const needBundle = f === 'cz-app.js' || f === 'cz-stickers.js';
     const opts = f.endsWith('.css')
       ? { entryPoints: [srcPath], write: false, minify: true, loader: { '.css': 'css' } }
       : {

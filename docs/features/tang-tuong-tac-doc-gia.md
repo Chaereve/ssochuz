@@ -1,8 +1,10 @@
-# Feature blueprint — 1.19.0: Bộ tương tác & trải nghiệm đọc
+# Lịch sử blueprint — 1.19.0: Bộ tương tác & trải nghiệm đọc
 
-- Trạng thái: **ĐÃ THỰC HIỆN (client)** — code + CSS + test xanh; **phần máy chủ CHƯA làm** (mới ở mức hợp đồng API, xem §7)
-- Nhánh: `arena/1c3011be-ssochuz` · Phiên bản: **1.19.0** (`src/shared/version.js`)
-- Tệp liên quan: `src/cz-react.js`, `src/cz-brick.js`, `src/cz-dice.js`, `src/cz-app.js`, `src/cz-story.js`, `src/cz.css`, `truyen.html`, `index.html`, `assets/stickers/`, `cz-config.js`, `sw.js`, `tests/t_react.js`, `tests/t_readtools.js`, `tests/t_brick.js`, `tests/t_dice.js`
+> **Cập nhật 1.20.0 (2026-10-12):** blueprint dưới đây ghi trạng thái thiết kế/client-only ở bản 1.19.0, không còn là mô tả trạng thái hiện tại. Repo đã chuyển reaction/gạch sang Cloudflare D1, dữ liệu follow/progress sang Supabase RLS, và picker sticker gắn vào comments hiện có. Hướng dẫn/schema/endpoints hiện hành: [`personal-community-1.20.md`](personal-community-1.20.md) và [`worker/README.md`](../../worker/README.md). Migration cloud chưa được áp dụng/deploy trong workspace này.
+
+- Trạng thái lịch sử tại bản 1.19.0: client-only; endpoint máy chủ mới ở mức đề xuất trong §7.
+- Phiên bản của blueprint: **1.19.0** (không phải phiên bản app hiện hành).
+- Tệp khi thiết kế: `src/cz-react.js`, `src/cz-brick.js`, `src/cz-dice.js`, `src/cz-app.js`, `src/cz-story.js`, `src/cz.css`, `truyen.html`, `index.html`, sticker assets, `cz-config.js`, `sw.js`, tests.
 
 ## 0. Sáu tính năng trong một bản
 

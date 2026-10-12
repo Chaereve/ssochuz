@@ -1,4 +1,6 @@
 import { profileId } from './member-spaces.js';
+import { handleCommunity } from './community.js';
+import { STICKER_BY_ID } from '../src/shared/stickers.js';
 export { MemberSpaces } from './member-spaces.js';
 export { PrivateBooks } from './private-books.js';
 import { dropOverflow, overflowStatusResolved, missingOverflowVars, persistBook, persistCover, persistChapterImage, persistImage, readBook, readBookChecked, readImage, materializeBookChecked, migrateOverflow, mirrorImages, sbPinUrl, sbPinReset as sbPinResetCache } from './overflow.js';
@@ -214,6 +216,12 @@ const handler = {
     /* Mọi handler đều `await`: không await thì lỗi bên trong lọt ra ngoài try/catch
        và Cloudflare trả trang lỗi 1101 thay vì JSON — rất khó đoán bệnh. */
     try {
+      const community = await handleCommunity(req, env, cors, {
+        json,
+        userFromReq,
+        lookupStory: (slug) => lookupCommunityStory(env, slug),
+      });
+      if (community) return community;
       if (p === '/api/me/space' || /^\/api\/profiles\/[a-f0-9]{64}$/.test(p)) {
         const owner = p === '/api/me/space';
         let id, seedName = '', seedPic = '';
@@ -1122,6 +1130,18 @@ async function readRegistryEntry(env, slug) {
   const lib = regEntryCache.lib;
   if (!lib) return null;
   return lib.find((x) => x && x.slug === slug) || null;
+}
+async function lookupCommunityStory(env, slug) {
+  const entry = await readRegistryEntry(env, slug);
+  if (!entry || !isPubliclyListed(entry)) return null;
+  const result = await readBookChecked(env, slug).catch(() => null);
+  if (!result || !result.book || !Array.isArray(result.book.chapters)) return null;
+  return {
+    public: true,
+    entry: entry,
+    book: result.book,
+    visibleChapters: result.book.chapters.filter((chapter) => !isChapterPending(chapter)),
+  };
 }
 function publicRegistryJSON(reg) {
   let copy;
@@ -2772,7 +2792,7 @@ async function adminVotesReset(req, env, cors) {
    Access-Control-Allow-Origin thì trình duyệt CHẶN kết quả (dù status 200),
    fetch ném "Failed to fetch" và admin báo nhầm là Worker chưa deploy. */
 async function health(env, cors) {
-  if (!env.CZ_KV) return json({ ok: true, version: VERSION, kv: false, books: 0, novels: 0, regRev: '', lastWrite: '', now: new Date().toISOString(), adminConfigured: !!adminKey(env), hint: 'chưa bind CZ_KV' }, { cors });
+  if (!env.CZ_KV) return json({ ok: true, version: VERSION, kv: false, community: { d1: !!(env.CZ_DB && typeof env.CZ_DB.prepare === 'function') }, books: 0, novels: 0, regRev: '', lastWrite: '', now: new Date().toISOString(), adminConfigured: !!adminKey(env), hint: 'chưa bind CZ_KV' }, { cors });
   /* Mốc ghi gần nhất nay nằm trong metadata của chính `registry` — bỏ hẳn khoá
      `_last` (mỗi thao tác lưu trước đây tốn thêm 1 lượt GHI chỉ để ghi mốc). */
   const regMeta = await env.CZ_KV.getWithMetadata('registry', { type: 'json' }).catch(() => ({ value: null, metadata: null }));
@@ -2807,6 +2827,7 @@ async function health(env, cors) {
       readWarn: reads.readWarn,
     },
     overflow: await overflowStatusResolved(env),
+    community: { d1: !!(env.CZ_DB && typeof env.CZ_DB.prepare === 'function') },
     /* để trang quản trị biết kênh đăng nhập đã sẵn sàng chưa, thiếu biến nào.
        supabaseUrl = GHIM đang có hiệu lực (biến trên Worker hoặc URL quản trị
        lưu trong KV); supabaseKv = ghim đang lấy từ KV (không cần deploy lại). */
@@ -3836,6 +3857,9 @@ function userFromSupabase(p) {
     name: md.full_name || md.name || md.user_name || email || 'Bạn đọc',
     picture: md.avatar_url || md.picture || '',
     provider: am.provider || p.provider || 'supabase',
+    role: String(p.role || ''),
+    aud: p.aud,
+    iss: String(p.iss || ''),
     exp: Number(p.exp) || 0,
   };
 }
@@ -3850,8 +3874,9 @@ function isAdminUser(u, env) {
   const e = String(u.email || '').trim().toLowerCase();
   return !!e && adminEmails(env).indexOf(e) >= 0;
 }
-/* Trả { user, err }: err là LÝ DO token bị từ chối (hết hạn, sai chữ ký, sai
-   issuer, Worker thiếu biến …) để endpoint trả 401 kèm nguyên nhân thật —
+/* Trả { user, err, source }: nguồn `session` (token riêng của Worker) hay
+   `supabase` (access JWT Supabase đã xác minh). Community chỉ nhận source=supabase.
+   err là LÝ DO token bị từ chối (hết hạn, sai chữ ký, sai issuer, thiếu biến) —
    người dùng không còn bị báo nhầm "phiên hết hạn" khi bệnh là cấu hình Worker. */
 async function userFromReq(req, env) {
   const h = req.headers.get('authorization') || '';
@@ -3861,13 +3886,13 @@ async function userFromReq(req, env) {
   const secret = env.SESSION_SECRET || '';
   if (secret) {
     const s = await verifySession(tok, secret);
-    if (s) return { user: s, err: '' };
+    if (s) return { user: s, err: '', source: 'session' };
   }
   /* chưa phải session của Worker → thử luôn access_token Supabase
      (để bình luận chạy được kể cả khi web chưa đổi token kịp) */
   if (supabaseURL(env) || env.SUPABASE_JWT_SECRET || (await supabasePin(env))) {
-    try { return { user: userFromSupabase(await verifySupabaseToken(tok, env)), err: '' }; }
-    catch (e) { return { user: null, err: String((e && e.message) || e) }; }
+    try { return { user: userFromSupabase(await verifySupabaseToken(tok, env)), err: '', source: 'supabase' }; }
+    catch (e) { return { user: null, err: String((e && e.message) || e), source: '' }; }
   }
   return { user: null, err: 'Worker chưa đặt SUPABASE_URL (hoặc SUPABASE_JWT_SECRET) nên không xác thực được token Supabase' };
 }
@@ -3883,6 +3908,7 @@ function publicUser(u, env) {
 function publicComment(c) {
   return {
     id: c.id, uid: c.uid, name: c.name || 'Bạn đọc', picture: c.picture || '', text: c.text,
+    stickerId: Object.prototype.hasOwnProperty.call(STICKER_BY_ID, String(c.stickerId || '')) ? String(c.stickerId) : '',
     ch: Number(c.ch) || 0, parentId: c.parentId ? String(c.parentId) : '',
     guest: !!c.guest, createdAt: c.createdAt,
   };
@@ -4040,7 +4066,11 @@ async function postComment(slug, req, env, cors) {
   }
   const body = await req.json().catch(() => ({}));
   const text = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 2000);
-  if (text.length < 1) return json({ ok: false, error: 'bình luận không được trống' }, { status: 400, cors });
+  const stickerId = String(body.stickerId || '').trim();
+  if (stickerId && !Object.prototype.hasOwnProperty.call(STICKER_BY_ID, stickerId)) {
+    return json({ ok: false, error: 'Sticker không nằm trong danh sách cho phép.' }, { status: 400, cors });
+  }
+  if (text.length < 1 && !stickerId) return json({ ok: false, error: 'Bình luận cần có chữ hoặc một sticker Sso.' }, { status: 400, cors });
   if (!env.CZ_KV) return noKV(cors);
   /* Khách chưa đăng nhập vẫn bình luận được — gắn với mã máy ẩn danh. */
   const vid = String(body.vid || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
@@ -4083,7 +4113,7 @@ async function postComment(slug, req, env, cors) {
   }
   const c = {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-    uid, name, picture, text, ch: finalCh, parentId: parent ? String(parent.id) : '', guest: !u,
+    uid, name, picture, text, stickerId, ch: finalCh, parentId: parent ? String(parent.id) : '', guest: !u,
     createdAt: new Date().toISOString(),
   };
   arr.unshift(c);

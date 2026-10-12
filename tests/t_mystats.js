@@ -77,7 +77,7 @@ function makeApi(log) {
   out.sauNext = { total: s2.total, curUrl: st.win.location.pathname };
 
   /* ---------- 3. mystats không phát sinh POST nào ngoài /api/view có sẵn ---------- */
-  out.khongPostMoi = !log.some(u => /POST/.test(u) && !/\/api\/(view|rate\/me)/.test(u));
+  out.khongPostMoi = !log.some(u => /POST/.test(u) && !/\/api\/(view|rate\/me|community\/(reactions|brick|tocs))/.test(u));
 
   /* ---------- 4. khoá đúng ngày + không ghi trùng ngày hôm sau ---------- */
   const raw = JSON.parse(st.win.localStorage.getItem('ssochuz-mystats') || '{"days":{}}');

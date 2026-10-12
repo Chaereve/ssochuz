@@ -12,7 +12,7 @@
    ⚠ MỖI LẦN ĐỔI ?v= TĨNH (cz.css/cz-*.js): sửa cả PRECACHE dưới đây + tăng
    CZ_SW_VER → trình duyệt tự tải SW mới, hiện “Đã có bản cập nhật — tải lại”.
    ========================================================================== */
-var CZ_SW_VER = '20261012d';
+var CZ_SW_VER = '20261012e';
 
 /* kho shell theo version (update là thay kho mới, xoá kho cũ);
    kho trang/API/ảnh KHÔNG theo version để dữ liệu offline còn lại sau update */
@@ -37,20 +37,34 @@ var PRECACHE = [
   '/couple/',
   '/my-space',
   '/profile',
-  '/cz-space.js?v=20261012d',
+  '/cz-space.js?v=20261012e',
   '/manifest.webmanifest',
-  '/cz.css?v=20261012d',
-  '/cz-app.js?v=20261012d',
-  '/cz-home.js?v=20261012d',
-  '/cz-story.js?v=20261012d',
-  '/cz-people.js?v=20261012d',
-  '/cz-config.js?v=20261012d',
-  '/cz-auth.js?v=20261012d',
+  '/cz.css?v=20261012e',
+  '/cz-app.js?v=20261012e',
+  '/cz-home.js?v=20261012e',
+  '/cz-story.js?v=20261012e',
+  '/cz-people.js?v=20261012e',
+  '/cz-config.js?v=20261012e',
+  '/cz-stickers.js?v=20261012e',
+  '/cz-auth.js?v=20261012e',
+  '/cz-personal.js?v=20261012e',
   /* bộ tính năng tương tác 1.19.0 — giữ trong shell để đọc offline vẫn có
      hàng reaction và hộp gạch */
-  '/cz-react.js?v=20261012d',
-  '/cz-brick.js?v=20261012d',
-  '/cz-dice.js?v=20261012d',
+  '/cz-react.js?v=20261012e',
+  '/cz-brick.js?v=20261012e',
+  '/cz-dice.js?v=20261012e',
+  '/stickers/sso/full/sso-brick.webp',
+  '/stickers/sso/full/sso-love-it.webp',
+  '/stickers/sso/full/sso-cry-flood.webp',
+  '/stickers/sso/full/sso-plot-twist.webp',
+  '/stickers/sso/full/sso-popcorn-spy.webp',
+  '/stickers/sso/full/sso-more.webp',
+  '/stickers/sso/thumb/sso-brick.webp',
+  '/stickers/sso/thumb/sso-love-it.webp',
+  '/stickers/sso/thumb/sso-cry-flood.webp',
+  '/stickers/sso/thumb/sso-plot-twist.webp',
+  '/stickers/sso/thumb/sso-popcorn-spy.webp',
+  '/stickers/sso/thumb/sso-more.webp',
   '/ssochuz.png?v=1'
 ];
 
@@ -64,7 +78,8 @@ function isApiWrite(path) {
     path.indexOf('/api/comments') === 0 || path === '/api/book' || path.indexOf('/api/book/') === 0 ||
     path === '/api/registry' || path === '/api/stats' || path === '/api/schedule' ||
     path.indexOf('/api/stats/') === 0 || path.indexOf('/api/admin/') === 0 || path.indexOf('/api/auth/') === 0 ||
-    path === '/api/seed' || path === '/api/sync' || path === '/api/import' || path === '/api/recount';
+    path === '/api/seed' || path === '/api/sync' || path === '/api/import' || path === '/api/recount' ||
+    path === '/api/community/reactions' || path === '/api/community/brick';
 }
 
 self.addEventListener('install', function (e) {

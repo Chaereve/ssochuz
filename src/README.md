@@ -9,6 +9,9 @@ còn thấy ghi chú nội bộ (tên khoá KV, luồng quản trị, danh sách
 | --- | --- |
 | `src/cz-app.js` | `/cz-app.js` |
 | `src/cz-auth.js` | `/cz-auth.js` |
+| `src/cz-stickers.js` + `src/shared/stickers.js` (registry sticker dùng chung UI/Worker) | `/cz-stickers.js` + bundle Worker |
+| `src/cz-personal.js` (theo dõi + tiến độ đọc qua Supabase RLS) | `/cz-personal.js` |
+| `worker/community.js` + `worker/migrations/0001_community.sql` (D1 reaction/gạch) | bundle vào Worker; migration áp riêng lên D1 |
 | `src/cz-home.js` | `/cz-home.js` |
 | `src/cz-story.js` | `/cz-story.js` |
 | `src/cz-react.js` (reaction sticker cuối chương — 1.19.0) | `/cz-react.js` |

@@ -17,6 +17,10 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 /* trình duyệt giả có Web Push */
 function pushSetup(w, o) {
   o = o || {};
+  w.supabase = { createClient() { return { auth: {
+    getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+    onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
+  } }; } };
   const st = { subscribed: null, unsubscribed: 0, asked: 0 };
   w.Notification = {
     permission: o.permission || 'default',
@@ -53,7 +57,7 @@ function pushSetup(w, o) {
 (async () => {
   const out = {};
   /* ---------- A. VAPID key ---------- */
-  const p0 = page('index.html', { fetch: dataFetch() });
+  const p0 = page('index.html', { fetch: dataFetch(), setup: (w) => pushSetup(w) });
   await wait(700);
   out.errors0 = p0.errors.slice(0, 5);
   const vk = String(p0.win.CZ_VAPID_PUBLIC_KEY || '');

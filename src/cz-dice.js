@@ -1,5 +1,5 @@
 /* ============================================================================
-   ssochuz · VÒNG QUAY “HÔM NAY ĐỌC GÌ?” (bản 1.19.0)
+   ssochuz · VÒNG QUAY “HÔM NAY ĐỌC GÌ?” (bản 1.20.0)
    ----------------------------------------------------------------------------
    Đôi khi mở web mà không biết đọc gì. Nút này quay một vòng 2,6 giây rồi chốt
    một bộ truyện, kèm nút Đọc ngay.
@@ -24,14 +24,22 @@
 
   var MAX_SLICES = 10;          /* quá 10 lát thì vòng quay rối mắt */
   var SPIN_MS = 2600;
-  var LS = { last: 'ssochuz-dice-last', opt: 'ssochuz-dice-opt' };
+  var LS = { last: 'ssochuz:dice:last:v1', opt: 'ssochuz:dice:options:v1' };
+  var LEGACY_LS = { last: 'ssochuz-dice-last', opt: 'ssochuz-dice-opt' };
   var S = { rot: 0, spinning: false, cands: [], pick: null };
   var CZDice = { _S: S };       /* API công khai, gán tiếp ở cuối tệp */
 
   function jget(k, dv) { try { var v = JSON.parse(localStorage.getItem(k) || 'null'); return v == null ? dv : v; } catch (e) { return dv; } }
   function jset(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  function readVersioned(key, legacyKey, fallback) {
+    var current = jget(key, null);
+    if (current != null) return current;
+    var legacy = jget(legacyKey, null);
+    if (legacy != null) jset(key, legacy); /* import old option once; future writes are versioned */
+    return legacy == null ? fallback : legacy;
+  }
   function opts() {
-    var o = jget(LS.opt, {}) || {};
+    var o = readVersioned(LS.opt, LEGACY_LS.opt, {}) || {};
     return { run: o.run !== false, done: o.done !== false, adult: !!o.adult, genre: o.genre || '' };
   }
   function saveOpts(o) { jset(LS.opt, o); }
@@ -61,7 +69,7 @@
     var recent = tier.filter(function (n) { return (Date.now() - (CZ.lastReadAt ? CZ.lastReadAt(n) : 0)) < 14 * 86400000; });
     if (tier.length - recent.length >= 4) tier = tier.filter(function (n) { return recent.indexOf(n) < 0; });
     /* không lặp kết quả vừa quay nếu còn lựa chọn */
-    var last = jget(LS.last, '');
+    var last = readVersioned(LS.last, LEGACY_LS.last, '');
     if (last && tier.length > 1) {
       var trimmed = tier.filter(function (n) { return n.slug !== last; });
       if (trimmed.length) tier = trimmed;
@@ -189,7 +197,7 @@
        lượt này (S.pick) hoặc bộ vừa đọc ở lần mở bảng trước (LS.last) đều bị
        loại khỏi lần bốc, nên “Quay lại” luôn đổi bộ. Chỉ khi vòng quay có đúng
        một lát thì đành chịu — lúc đó không còn phương án nào khác. */
-    var avoid = (S.pick && S.pick.slug) || jget(LS.last, '');
+    var avoid = (S.pick && S.pick.slug) || readVersioned(LS.last, LEGACY_LS.last, '');
     var pool = [];
     for (var pi = 0; pi < list.length; pi++) {
       if (!avoid || list[pi].slug !== avoid) pool.push(pi);

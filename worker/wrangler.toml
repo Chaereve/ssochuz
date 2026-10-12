@@ -17,6 +17,15 @@ compatibility_date = "2025-01-01"
 binding = "CZ_KV"
 id = "c1e0e450c37f4a0abf804bf354c412d9"
 
+# Community counters/actions. Create once with `npx wrangler d1 create ssochuz-community`,
+# replace the placeholder with the returned database_id, then apply migrations:
+# `npx wrangler d1 migrations apply ssochuz-community --remote`.
+[[d1_databases]]
+binding = "CZ_DB"
+database_name = "ssochuz-community"
+database_id = "REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
 [vars]
 # ⚠ ĐỪNG XOÁ DÒNG SUPABASE_URL BÊN DƯỚI.
 # `npx wrangler deploy` thay TOÀN BỘ biến THƯỜNG của Worker bằng đúng nội dung

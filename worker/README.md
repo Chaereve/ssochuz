@@ -56,24 +56,19 @@ Admin (admin.html)  ──PUT──▶  Worker (worker/cms.js)  ──▶  Cloud
 
 GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới cần build); dữ liệu thì không đi qua GitHub nữa.
 
-## Có gì mới ở bản 1.19.0 — bộ tương tác & trải nghiệm đọc (phía web)
+## Có gì mới ở bản 1.20.0 — dữ liệu cá nhân + community D1
 
-| | |
+| Tính năng | Nguồn dữ liệu / nguyên tắc |
 |---|---|
-| **Reaction sticker cuối chương** | `src/cz-react.js`: 6 sticker Fluent Emoji (WebP 128 px) bay lên như reaction livestream, thả/bỏ được, chống spam theo thiết bị, nhớ theo từng chương trong `localStorage` |
-| **Ẩn nhanh “Sếp tới”** | `#czPanic` trên mọi trang + Esc×2 (< 500 ms) + Ctrl+Shift+H: lớp giả Google Docs, đổi tiêu đề tab/favicon/đường dẫn, không ghi tiến độ đọc |
-| **Zen · Bionic · Terminal** | Ba skin đọc mới, đều là công tắc trong Cài đặt đọc (`ssochuz-reader`), đều tắt được, `prefers-reduced-motion` được tôn trọng |
-| **Vòng quay “Hôm nay đọc gì?”** | `src/cz-dice.js`: ưu tiên truyện đang theo dõi → mới cập nhật → cả kho, lọc 18+/tình trạng/thể loại, bỏ truyện vừa đọc |
-| **Hộp góp gạch “Đòi nợ tác giả”** | `src/cz-brick.js`: chỉ truyện đang cập nhật, mốc 5.000 viên, cooldown 6 s + 20 viên/ngày/máy |
+| **Theo dõi truyện + mốc chương đã xem** | Khách dùng `ssochuz:follows:v1`; tài khoản lưu ở Supabase `public.story_follows`, RLS `auth.uid()` chỉ cho chủ row đọc/ghi. Theo dõi từ hero và reader dùng cùng luồng async, lỗi lưu sẽ hoàn tác trạng thái optimistic. |
+| **Đọc tiếp + truyện theo dõi có chương mới** | Trang chủ hiển thị hai khối từ tiến độ/follow hiện có; TOC công khai lấy theo lô tối đa 20 truyện qua `POST /api/community/tocs`, không polling/N+1 từ trình duyệt. |
+| **Tiến độ đọc / khôi phục vị trí** | `public.reading_progress` (Supabase + RLS) là nguồn thật khi đăng nhập; khách dùng `ssochuz:progress:v1`. Worker chỉ nhận upsert sau debounce/điểm thay đổi có ý nghĩa, không ghi từng scroll event. Cache theo UID và guest merge chỉ upsert local row mới hơn server. |
+| **Reaction chương** | 6 quick reaction dùng WebP full, toggle theo `sub` Supabase JWT và chương. Cloudflare D1 giữ action rows + bảng totals cập nhật bằng trigger; client chỉ giữ view trong RAM, không lưu action vào localStorage/KV. |
+| **Góp gạch ảo miễn phí** | Chỉ hiện với truyện đang ra chương; D1 unique `(story_id,user_id,day_utc)` giới hạn một viên/ngày/tài khoản/truyện. Không coin, thanh toán hay quà quy đổi. |
+| **Sticker bình luận** | Chỉ bổ sung picker thumbnail vào `CZ.comments` và endpoint comments KV đang có; hỗ trợ sticker-only/reply, server allowlist lấy từ registry dùng chung. Không tạo comment service mới. |
+| **Random picker** | Nút “Hôm nay đọc gì?” tiếp tục ưu tiên truyện đang theo dõi; tuỳ chọn gần đây của vòng quay dùng khoá versioned `ssochuz:dice:*:v1`. |
 
-**Phần máy chủ của 1.19.0 CHƯA làm** — hai tính năng có dữ liệu chung (reaction, gạch) đang chạy hoàn toàn trong máy người đọc. Client đã sẵn hợp đồng và cổng cấu hình trong `cz-config.js`:
-
-```js
-window.CZ_REACT_API = '';   // điền 'https://<worker>/api/react' khi Worker có endpoint
-window.CZ_BRICK_API = '';   // điền 'https://<worker>/api/brick'
-```
-
-Lược đồ dữ liệu, hợp đồng endpoint và lý do chưa mở ghi KV (ngân sách ghi đang bị siết — xem `docs/features/do-luong-luot-doc-kv.md`) nằm ở `docs/features/tang-tuong-tac-doc-gia.md` §8.
+Schema, data flow, response/error codes và quy trình setup nằm tại [`docs/features/personal-community-1.20.md`](../docs/features/personal-community-1.20.md). Migration Supabase: `supabase/migrations/202610120001_personal_reading_data.sql`; migration D1: `worker/migrations/0001_community.sql`. Không có `service_role` trong trình duyệt.
 
 ## Có gì mới ở bản 1.18.0 — đếm lượt đọc KV (A2) + đồng bộ số phiên bản (G10)
 
@@ -127,7 +122,17 @@ Lược đồ dữ liệu, hợp đồng endpoint và lý do chưa mở ghi KV (
 | **Test** | `tests/t_kv_quota.mjs` (34 kiểm tra: công thức chia nhịp, 500 lượt xem/60 lần bình luận không đốt lượt ghi, gộp `rateagg` chỉ 1 lượt LIST, `/api/health`) |
 | **Quan trọng** | Nằm TRONG Worker → phải **`npx wrangler deploy`** (xem mục 0). Kiểm tra: `curl <worker>/api/health` thấy `"version": "1.18.0"` |
 
-## 0. Deploy bản 1.19.0 — 2 cách, chọn 1 (ai cũng làm được trong 2 phút)
+## Chuẩn bị 1.20.0: migration Supabase + Cloudflare D1
+
+Các bước chi tiết/data flow ở [`docs/features/personal-community-1.20.md`](../docs/features/personal-community-1.20.md). Trước khi deploy Worker:
+
+1. Supabase Dashboard → **SQL Editor** → chạy `supabase/migrations/202610120001_personal_reading_data.sql` trên project hiện có. Hai bảng bật RLS; `anon` không được cấp quyền. Không đưa `service_role` ra frontend.
+2. Tạo D1 nếu chưa có: `cd worker && npx wrangler d1 create ssochuz-community`.
+3. Chép `database_id` Cloudflare trả về vào `worker/wrangler.toml`, thay giá trị placeholder tại binding `CZ_DB`. **Không deploy với `REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID`.**
+4. Áp schema D1 một lần: `cd worker && npx wrangler d1 migrations apply ssochuz-community --remote` (migration `worker/migrations/0001_community.sql`).
+5. Giữ `CZ_KV` đang dùng cho book/comments/stats; `CZ_DB` chỉ là kho action/aggregate reaction + gạch. `SUPABASE_URL` đã là biến thường trong TOML; project ký JWT HS256 thì đặt secret `SUPABASE_JWT_SECRET`, ES256/RS256 dùng JWKS của project.
+
+## 0. Deploy bản 1.20.0 — 2 cách, chọn 1
 
 > ### ⚠ TRƯỚC KHI DEPLOY: đọc 3 dòng này (sự cố thật ngày 23/09)
 >
@@ -148,25 +153,28 @@ Lược đồ dữ liệu, hợp đồng endpoint và lý do chưa mở ghi KV (
 ```bash
 cd worker && npx wrangler deploy          # wrangler tự gộp các tệp con
 ```
-Kiểm tra: mở `https://<worker>/api/health` phải thấy `"version": "1.19.0"`,
-và **`overflow.supabase` phải `true`** (nếu `false` thì xem `overflow.missing` — nó kể
-tên biến đang thiếu; `overflow.urlVia` cho biết URL lấy từ `env` hay từ ghim `kv`).
+Kiểm tra: mở `https://<worker>/api/health` phải thấy `"version": "1.20.0"`,
+`community.d1: true` và **`overflow.supabase: true`** (nếu `overflow.supabase` là `false` thì xem
+`overflow.missing` — nó kể tên biến đang thiếu; `overflow.urlVia` cho biết URL lấy từ `env` hay từ ghim KV).
+Kiểm tra thêm public reaction summary bằng một slug/chapter đã phát hành:
+`curl -X POST https://<worker>/api/community/reactions -H 'content-type: application/json' -d '{"storyId":"third-person","chapterIndex":1}'` — phải trả HTTP 200.
 
 **Cách B — dán trong bảng điều khiển Cloudflare (không cần cài gì):**
 
 1. Trên máy, chạy `npm run build:worker` → sinh **`worker/cms.bundle.js`** (một tệp duy nhất
-   190 KB, đã gộp sẵn các tệp con; tệp này không commit, ai cần thì chạy lại lệnh).
+   khoảng 233 KB, đã gộp sẵn các tệp con; tệp này không commit, ai cần thì chạy lại lệnh).
 2. Cloudflare → **Workers & Pages** → chọn Worker `chuseoz-cms` → **Edit code**.
 3. Xoá hết code cũ, **dán toàn bộ** `worker/cms.bundle.js`, bấm **Deploy**.
-4. Mở `/api/health` xem `"version"` (bản này: `1.19.0`).
+4. Mở `/api/health` xem `"version"` (bản này: `1.20.0`).
 
 > **Đừng dán `worker/cms.js`.** Tệp đó có 9 dòng `import` (overflow, Durable Object, mã dùng chung
 > `src/shared/…`) — bảng điều khiển không tự gộp, dán vào là Worker báo lỗi và **mất cả My Space
 > lẫn truyện riêng tư**. `npm run build:worker` đã kiểm tra hộ: tệp gộp không còn `import`, còn đủ
 > `MemberSpaces`, `PrivateBooks`, `export default`.
 >
-> Chưa deploy cũng KHÔNG sao: web tự rớt về đường cũ (tải cả bộ) — chỉ là chưa được phần nhẹ/nhanh
-> và KV vẫn tốn như trước.
+> Thiếu `CZ_DB` không làm hỏng reader/comments hiện có, nhưng reaction/gạch sẽ trả 503 và chưa dùng được;
+> thiếu migration Supabase thì follow/progress cá nhân sẽ ở guest cache hoặc báo lỗi RLS. Chỉ bật tính năng
+> cho người đọc sau khi bind D1, áp cả hai migration và xác minh các endpoint.
 
 ## Có gì mới ở bản 1.14.0 — overflow cho book/ảnh (kể cả bìa cũ) + parser chương dùng chung
 

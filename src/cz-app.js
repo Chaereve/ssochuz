@@ -565,6 +565,18 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   function keysOf(n) { return [n && n.postId, n && n.slug].filter(Boolean); }
 
   function progress(n) {                       /* chương đang đọc dở, 0 = chưa đọc */
+    var personal = w.CZPersonal;
+    var slug = (n && n.slug) || (typeof n === 'string' ? n : '');
+    if (personal) {
+      var mode = personal.mode();
+      if (mode === 'server' || mode === 'guest') {
+        var row = personal.progressFor(slug);
+        return row ? (parseInt(row.chapterIndex, 10) || 0) : 0;
+      }
+      /* Khi đổi tài khoản/đang đồng bộ hoặc RLS lỗi, tuyệt đối không rơi về
+         kho local không gắn UID của một tài khoản trước đó. */
+      return 0;
+    }
     var ks = keysOf(typeof n === 'string' ? { slug: n } : n);
     for (var i = 0; i < ks.length; i++) {
       var v = parseInt(safeGet(LS.prog + ks[i]) || '0', 10);
@@ -572,14 +584,26 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     }
     return 0;
   }
-  function setProgress(n, ch) {
+  function setProgress(n, ch, scrollPercent, completed) {
     /* Đang bật “ẩn nhanh” (panic) thì KHÔNG ghi tiến độ đọc: bật lên để che
        chuyện đang đọc mà lại âm thầm lưu chương vừa mở là ngược ý người dùng. */
     if (PANIC.on) return;
+    if (w.CZPersonal && w.CZPersonal.setProgress) {
+      var slug = (n && n.slug) || (typeof n === 'string' ? n : '');
+      w.CZPersonal.setProgress(slug, ch, scrollPercent, completed);
+      return;
+    }
     keysOf(n).forEach(function (k) { safeSet(LS.prog + k, String(ch)); });
     keysOf(n).forEach(function (k) { safeSet(LS.when + k, String(Date.now())); });
   }
   function lastReadAt(n) {
+    var personal = w.CZPersonal;
+    var slug = (n && n.slug) || (typeof n === 'string' ? n : '');
+    if (personal) {
+      if (personal.mode() !== 'server' && personal.mode() !== 'guest') return 0;
+      var row = personal.progressFor(slug);
+      return row ? (Date.parse(row.updatedAt || '') || 0) : 0;
+    }
     var ks = keysOf(typeof n === 'string' ? { slug: n } : n), best = 0;
     ks.forEach(function (k) { var v = parseInt(safeGet(LS.when + k) || '0', 10); if (v > best) best = v; });
     return best;
@@ -606,6 +630,11 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
      theo dõi bộ này có mấy chương” rồi trừ là ra số chương mới, không gọi thêm
      API, không ghi KV. Khoá ssochuz-follow: { <slug>: <số chương lúc theo dõi> } */
   function followMap() {
+    var personal = w.CZPersonal;
+    if (personal) {
+      var mode = personal.mode();
+      return (mode === 'guest' || mode === 'server') ? personal.followMap() : {};
+    }
     var m = jsonGet(LS.follow, {});
     return (m && typeof m === 'object' && !Array.isArray(m)) ? m : {};
   }
@@ -622,11 +651,18 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   }
   function isFollowed(n) {
     var slug = (n && n.slug) || (typeof n === 'string' ? n : '');
+    var personal = w.CZPersonal;
+    if (personal) return !!slug && personal.isFollowing(slug);
     return !!slug && Object.prototype.hasOwnProperty.call(followMap(), slug);
   }
   function toggleFollow(n) {
     var slug = (n && n.slug) || (typeof n === 'string' ? n : '');
     if (!slug) return false;
+    if (w.CZPersonal && w.CZPersonal.toggleFollowAsync) {
+      var on = !isFollowed(slug);
+      w.CZPersonal.toggleFollowAsync(slug).catch(function (e) { toast(e.message || 'Không lưu được theo dõi', 'err'); });
+      return on;
+    }
     var m = followMap();
     var on = !Object.prototype.hasOwnProperty.call(m, slug);
     if (on) m[slug] = chaptersOf(n); else delete m[slug];
@@ -636,19 +672,32 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   /* số chương ra thêm kể từ lúc bấm theo dõi (0 = chưa có gì mới / chưa theo dõi) */
   function newChapters(n) {
     var slug = (n && n.slug) || (typeof n === 'string' ? n : '');
-    if (!slug || !Object.prototype.hasOwnProperty.call(followMap(), slug)) return 0;
+    if (!slug || !isFollowed(slug)) return 0;
+    var personal = w.CZPersonal;
+    if (personal) {
+      if (personal.mode() !== 'server' && personal.mode() !== 'guest') return 0;
+      return personal.newChapters(slug, chaptersOf(n));
+    }
     var m = followMap();
     return Math.max(0, chaptersOf(n) - (parseInt(m[slug], 10) || 0));
   }
-  /* mở truyện (hoặc đọc tới chương mới nhất) là coi như đã biết hết chương hiện có */
+  /* mở truyện là coi như đã xem hết các chương đang có. Việc ghi mốc chỉ diễn
+     ra một lần khi số chương đổi, không phát sinh thao tác khi cuộn. */
   function markFollowSeen(n) {
     var slug = (n && n.slug) || (typeof n === 'string' ? n : '');
-    if (!slug) return;
+    if (!slug || !isFollowed(slug)) return;
+    var personal = w.CZPersonal;
+    if (personal) {
+      if (personal.mode() === 'server' || personal.mode() === 'guest') {
+        personal.markFollowSeen(slug, chaptersOf(n));
+        paintNotif();
+      }
+      return;
+    }
     var m = followMap();
-    if (!Object.prototype.hasOwnProperty.call(m, slug)) return;
     var now = chaptersOf(n);
     if (now !== (parseInt(m[slug], 10) || 0)) { m[slug] = now; jsonSet(LS.follow, m); }
-    paintNotif();   /* mở truyện là chuông đầu trang tắt số ngay */
+    paintNotif();
   }
   /* huy hiệu đỏ “N chương mới” — luôn dựng sẵn rồi ẩn/hiện để khỏi vá lại DOM */
   function followBadge(n) {
@@ -1721,6 +1770,9 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   function imgSettle(e) {
     var el = e.target;
     if (!el || String(el.tagName || '').toUpperCase() !== 'IMG') return;
+    /* Sticker cards own their emoji fallback; do not remove their image before
+       the picker/comment handler can expose the accessible fallback. */
+    if (el.classList && el.classList.contains('cmt-sticker-img')) return;
     if (el.closest && el.closest('.rtext')) { if (e.type === 'error') el.classList.add('badimg'); return; }
     var box = el.closest && el.closest('.skel');
     if (box) box.classList.remove('skel');
@@ -1744,12 +1796,45 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     if (!b) return;
     e.preventDefault(); e.stopPropagation();
     var slug = b.getAttribute('data-followbtn');
-    var on = toggleFollow(findLib(slug) || { slug: slug });
-    refreshFollowUI(slug);
+    var on = !isFollowed(slug);
     pop(b);
-    toast(on ? 'Đã theo dõi — có chương mới sẽ hiện huy hiệu đỏ' : 'Đã bỏ theo dõi');
-    followPushHook(on);   /* hỏi bật thông báo đẩy (chỉ khi đủ điều kiện push) */
+    if (w.CZPersonal && w.CZPersonal.toggleFollowAsync) {
+      if (b.disabled) return;
+      b.disabled = true;
+      var task = w.CZPersonal.toggleFollowAsync(slug);
+      refreshFollowUI(slug);
+      task.then(function (saved) {
+        b.disabled = false;
+        refreshFollowUI(slug);
+        toast(saved ? 'Đã theo dõi — có chương mới sẽ hiện ở trang chủ' : 'Đã bỏ theo dõi');
+        followPushHook(saved);   /* chỉ hỏi bật Push sau khi lưu thành công */
+      }).catch(function (error) {
+        b.disabled = false;
+        refreshFollowUI(slug);  /* service đã hoàn tác optimistic update */
+        toast(error.message || 'Không lưu được trạng thái theo dõi', 'err');
+      });
+      return;
+    }
+    on = toggleFollow(findLib(slug) || { slug: slug });
+    refreshFollowUI(slug);
+    toast(on ? 'Đã theo dõi — có chương mới sẽ hiện ở trang chủ' : 'Đã bỏ theo dõi');
+    followPushHook(on);
   }, true);
+  w.addEventListener('cz:personal', function (event) {
+    var info = (event && event.detail) || {};
+    if (info.type === 'follow' || info.type === 'follow-seen') {
+      if (info.storyId) refreshFollowUI(info.storyId);
+      return;
+    }
+    if (info.type === 'ready' || info.type === 'error') {
+      var seen = Object.create(null);
+      Array.prototype.forEach.call(d.querySelectorAll('[data-followbtn]'), function (button) {
+        var slug = button.getAttribute('data-followbtn');
+        if (slug && !seen[slug]) { seen[slug] = true; refreshFollowUI(slug); }
+      });
+      paintNotif();
+    }
+  });
 
   /* hiệu ứng hiện dần khi cuộn tới (tôn trọng giảm chuyển động) */
   var reduce = !!(w.matchMedia && w.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -2526,7 +2611,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
          vị trí trong kho chương nên không phải lúc nào cũng trùng tên chương thật. */
       var chLabel = String(opt.chLabel || '').trim();
       function chWord() { return chLabel || (chap ? 'chương ' + chap : ''); }
-      var state = { all: [], byChap: {}, filter: chap > 0 && opt.chapterFilter !== false ? 'chap' : 'all', busy: false, count: 0, replyTo: '' };
+      var state = { all: [], byChap: {}, filter: chap > 0 && opt.chapterFilter !== false ? 'chap' : 'all', busy: false, count: 0, replyTo: '', stickerId: '', replyStickers: Object.create(null) };
 
       function u() { return (w.CZ_AUTH && w.CZ_AUTH.current && w.CZ_AUTH.current()) || null; }
       function tk() { return (w.CZ_AUTH && w.CZ_AUTH.token && w.CZ_AUTH.token()) || ''; }
@@ -2535,6 +2620,37 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         return '<div class="cmt-head2"><b>' + esc(txt) + '</b>' +
           (n ? '<span class="cmt-n">' + num(n) + '</span>' : '') +
           (opt.hint ? '<span class="cmt-hint">' + esc(opt.hint) + '</span>' : '') + '</div>';
+      }
+      function stickerOf(stickerId) {
+        var list = Array.isArray(w.CZStickers) ? w.CZStickers : [];
+        for (var i = 0; i < list.length; i++) if (list[i].id === stickerId) return list[i];
+        return null;
+      }
+      function stickerCard(sticker, compact) {
+        return '<span class="cmt-sticker-card' + (compact ? ' compact' : '') + '"><img class="cmt-sticker-img" src="' + esc(sticker.thumb) + '" alt="' + esc(sticker.alt) + '" width="64" height="64" loading="lazy" decoding="async" data-emo="' + esc(sticker.fallback) + '"><span class="cmt-sticker-emoji" aria-hidden="true">' + esc(sticker.fallback) + '</span><span>' + esc(sticker.label) + '</span></span>';
+      }
+      function stickerWidget(scope, stickerId) {
+        var selected = stickerOf(stickerId);
+        var list = Array.isArray(w.CZStickers) ? w.CZStickers : [];
+        return '<div class="cmt-sticker-tools" data-sticker-tools="' + esc(scope) + '">' +
+          '<button type="button" class="cmt-sticker-open" data-sticker-open="' + esc(scope) + '" aria-expanded="false" aria-controls="' + esc(id + '-stickers-' + scope) + '">＋ Sticker Sso</button>' +
+          (selected ? '<span class="cmt-sticker-selected">' + stickerCard(selected, true) + '<button type="button" data-sticker-clear="' + esc(scope) + '" aria-label="Bỏ sticker ' + esc(selected.label) + '">×</button></span>' : '') +
+          '<div class="cmt-sticker-picker" id="' + esc(id + '-stickers-' + scope) + '" data-sticker-picker="' + esc(scope) + '" hidden role="group" aria-label="Chọn sticker Sso">' +
+          list.map(function (sticker) {
+            return '<button type="button" class="cmt-sticker-option" data-sticker-scope="' + esc(scope) + '" data-sticker-id="' + esc(sticker.id) + '" aria-label="' + esc(sticker.label + '. ' + sticker.alt) + '" title="' + esc(sticker.label) + '">' +
+              '<img class="cmt-sticker-img" src="' + esc(sticker.thumb) + '" alt="" width="64" height="64" loading="lazy" decoding="async" data-emo="' + esc(sticker.fallback) + '"><span class="cmt-sticker-emoji" aria-hidden="true">' + esc(sticker.fallback) + '</span><span>' + esc(sticker.label) + '</span></button>';
+          }).join('') + '</div></div>';
+      }
+      function bindStickerImages() {
+        Array.prototype.forEach.call(host.querySelectorAll('.cmt-sticker-img'), function (image) {
+          if (image.__cmtFallback) return;
+          image.__cmtFallback = true;
+          image.addEventListener('error', function () {
+            image.hidden = true;
+            var emoji = image.parentNode && image.parentNode.querySelector('.cmt-sticker-emoji');
+            if (emoji) emoji.classList.add('show');
+          });
+        });
       }
       function filters() {
         if (opt.chapterFilter === false || !chap) return '';
@@ -2557,6 +2673,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
           '<div class="cmt-reply-label">Trả lời <b>' + esc(target) + '</b></div>' +
           (!me ? '<input class="cmt-name" data-reply-name maxlength="40" placeholder="Tên của bạn (không bắt buộc)" value="' + esc(guestName()) + '">' : '') +
           '<div class="cmt-reply-row"><textarea data-reply-text="' + esc(c.id) + '" maxlength="2000" rows="2" placeholder="Viết câu trả lời…"></textarea>' +
+          stickerWidget(c.id, state.replyStickers[c.id] || '') +
           '<div class="cmt-reply-actions"><span class="cmt-count" data-reply-count="' + esc(c.id) + '">0/2000</span>' +
           '<button class="btn ghost sm" data-reply-cancel="' + esc(c.id) + '" type="button">Huỷ</button>' +
           '<button class="btn pri sm" data-reply-send="' + esc(c.id) + '" type="button">Gửi trả lời</button></div></div>' +
@@ -2573,7 +2690,8 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
             '<span class="cmt-time">' + esc(timeAgo(c.createdAt)) + '</span>' +
             '<button class="cmt-reply" data-reply="' + esc(c.id) + '" type="button">Trả lời</button>' +
             ((me || admin) ? '<button class="cmt-del" data-del="' + esc(c.id) + '" title="Xoá bình luận" aria-label="Xoá bình luận">✕</button>' : '') +
-          '</div><div class="cmt-text">' + esc(c.text) + '</div>' +
+          '</div>' + (c.text ? '<div class="cmt-text">' + esc(c.text) + '</div>' : '') +
+          (stickerOf(c.stickerId) ? '<div class="cmt-sticker-posted" aria-label="Sticker Sso: ' + esc(stickerOf(c.stickerId).label) + '">' + stickerCard(stickerOf(c.stickerId), false) + '</div>' : '') +
           (state.replyTo === c.id ? replyForm(c) : '') + '</div></div>';
       }
       function list() {
@@ -2614,6 +2732,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
               '<input class="cmt-name" data-name maxlength="40" placeholder="Tên của bạn (không bắt buộc)" value="' + esc(guestName()) + '">' +
               '<textarea data-text maxlength="2000" rows="' + (opt.compact ? 2 : 3) + '" placeholder="' +
                 (chap ? 'Nghĩ gì về ' + chWord() + '…' : 'Viết bình luận…') + ' (tối đa 2000 ký tự)"></textarea>' +
+              stickerWidget('main', state.stickerId) +
               '<div class="cmt-actions">' +
                 '<span class="cmt-meta">Gửi với tên khách · <button class="lk" data-login type="button">đăng nhập để có ảnh đại diện</button></span>' +
                 '<span class="cmt-count" data-count>0/2000</span>' +
@@ -2625,6 +2744,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
           '<div class="cmt-field">' +
             '<textarea data-text maxlength="2000" rows="' + (opt.compact ? 2 : 3) + '" placeholder="' +
               (chap ? 'Nghĩ gì về ' + chWord() + '…' : 'Viết bình luận…') + ' (tối đa 2000 ký tự)"></textarea>' +
+            stickerWidget('main', state.stickerId) +
             '<div class="cmt-actions">' +
               '<span class="cmt-meta"><b>' + esc(me.name || me.email || 'Bạn đọc') + '</b> · ' +
                 '<button class="lk" data-editpf type="button">đổi tên/avatar</button> · ' +
@@ -2697,11 +2817,46 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
           host._czAuthBound = true;
           w.CZ_AUTH.onAuth(function () { try { paint(); } catch (e) {} });
         }
+        host.querySelectorAll('[data-sticker-open]').forEach(function (button) {
+          button.addEventListener('click', function () {
+            var scope = button.getAttribute('data-sticker-open');
+            var picker = host.querySelector('[data-sticker-picker="' + scope + '"]');
+            if (!picker) return;
+            var opening = picker.hidden;
+            picker.hidden = !opening;
+            button.setAttribute('aria-expanded', opening ? 'true' : 'false');
+            if (opening) { var first = picker.querySelector('.cmt-sticker-option'); if (first) first.focus(); }
+          });
+        });
+        host.querySelectorAll('[data-sticker-id]').forEach(function (button) {
+          button.addEventListener('click', function () {
+            var scope = button.getAttribute('data-sticker-scope');
+            var value = button.getAttribute('data-sticker-id');
+            if (!stickerOf(value)) return;
+            if (scope === 'main') state.stickerId = value;
+            else state.replyStickers[scope] = value;
+            paint();
+            var opener = host.querySelector('[data-sticker-open="' + scope + '"]');
+            if (opener) opener.focus();
+          });
+        });
+        host.querySelectorAll('[data-sticker-clear]').forEach(function (button) {
+          button.addEventListener('click', function () {
+            var scope = button.getAttribute('data-sticker-clear');
+            if (scope === 'main') state.stickerId = '';
+            else state.replyStickers[scope] = '';
+            paint();
+            var opener = host.querySelector('[data-sticker-open="' + scope + '"]');
+            if (opener) opener.focus();
+          });
+        });
+        bindStickerImages();
       }
-      function makePayload(text, nameInput, parentId) {
+      function makePayload(text, nameInput, parentId, stickerId) {
         var me = u();
         var payload = { text: text, ch: chap, vid: vid() };
         if (parentId) payload.parentId = String(parentId);
+        if (stickerOf(stickerId)) payload.stickerId = String(stickerId);
         if (me) {
           payload.name = String(me.name || '').trim().slice(0, 40) || guestName();
           var pic = String(me.picture || '').trim();
@@ -2727,14 +2882,15 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         var sd = host.querySelector('[data-reply-send="' + safeId + '"]');
         var nm = host.querySelector('[data-reply-form="' + safeId + '"] [data-reply-name]');
         var text = ta ? String(ta.value || '').replace(/[\r\n\t]+/g, ' ').trim() : '';
-        if (!text) { toast('Viết câu trả lời đã rồi hãy gửi', 'err'); if (ta) ta.focus(); return; }
+        var selectedSticker = state.replyStickers[safeId] || '';
+        if (!text && !stickerOf(selectedSticker)) { toast('Viết câu trả lời hoặc chọn sticker trước khi gửi', 'err'); if (ta) ta.focus(); return; }
         if (!base()) { toast('Chưa nối Worker (cz-config.js) nên không gửi được trả lời', 'err'); return; }
         if (state.busy) return;
         state.busy = true;
         if (sd) { sd.disabled = true; sd.textContent = 'Đang gửi…'; }
         if (nm && String(nm.value || '').trim()) safeSet('ssochuz-cmtname', String(nm.value).trim().slice(0, 40));
         var token = tk();
-        var payload = makePayload(text, nm, safeId);
+        var payload = makePayload(text, nm, safeId, selectedSticker);
         fetch(base() + '/api/comments/' + encodeURIComponent(slug), {
           method: 'POST',
           headers: token ? { 'content-type': 'application/json', authorization: 'Bearer ' + token }
@@ -2749,6 +2905,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
           state.busy = false;
           addSent(j);
           state.replyTo = '';
+          state.replyStickers[safeId] = '';
           paint();
           toast('Đã gửi trả lời', 'ok');
           if (opt.onChanged) opt.onChanged(state.count);
@@ -2762,7 +2919,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         var ta = host.querySelector('[data-text]');
         var sd = host.querySelector('[data-send]');
         var text = ta ? String(ta.value || '').replace(/\s+/g, ' ').trim() : '';
-        if (!text) { toast('Viết gì đó đã rồi hãy gửi', 'err'); if (ta) ta.focus(); return; }
+        if (!text && !stickerOf(state.stickerId)) { toast('Viết bình luận hoặc chọn sticker trước khi gửi', 'err'); if (ta) ta.focus(); return; }
         if (!base()) { toast('Chưa nối Worker (cz-config.js) nên không gửi được bình luận', 'err'); return; }
         if (state.busy) return;
         state.busy = true;
@@ -2770,7 +2927,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         var nm = host.querySelector('[data-name]');
         if (nm && String(nm.value || '').trim()) safeSet('ssochuz-cmtname', String(nm.value).trim().slice(0, 40));
         var token = tk();
-        var payload = makePayload(text, nm, '');
+        var payload = makePayload(text, nm, '', state.stickerId);
         fetch(base() + '/api/comments/' + encodeURIComponent(slug), {
           method: 'POST',
           headers: token ? { 'content-type': 'application/json', authorization: 'Bearer ' + token }
@@ -2792,6 +2949,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         }).then(function (j) {
           state.busy = false;
           addSent(j);
+          state.stickerId = '';
           paint();
           toast('Đã gửi bình luận', 'ok');
           if (opt.onChanged) opt.onChanged(state.count);
