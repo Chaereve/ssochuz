@@ -209,17 +209,13 @@ const key = (w, k, opt) => w.document.dispatchEvent(new w.KeyboardEvent('keydown
   if (out.terminal.sauKhiThoat.trenBody) err('bấm “Thoát terminal” phải trả về giao diện đọc thường');
 
   /* =====================================================================
-     4. nút vòng quay trên thanh đọc (#rdDice) — dẫn sang trang riêng /vong-quay/
+     4. nút vòng quay KHÔNG hiện trên thanh đọc (chỉ hiện ở trang chủ)
      ===================================================================== */
   const diceBtn = $('#rdDice');
   out.nutVongQuay = {
-    co: !!diceBtn,
-    coIcon: !!(diceBtn && diceBtn.querySelector('svg')),
-    nhan: diceBtn ? (diceBtn.getAttribute('aria-label') || '') : '',
-    url: win.CZDice ? win.CZDice.url : ''
+    coTrenThanhDoc: !!diceBtn
   };
-  if (!diceBtn) err('thanh đọc thiếu nút “Hôm nay đọc gì?”');
-  if (out.nutVongQuay.url !== '/vong-quay/') err('nút vòng quay trên thanh đọc phải dẫn sang trang riêng /vong-quay/');
+  if (diceBtn) err('thanh đọc không được hiện nút “Hôm nay đọc gì?” (chỉ hiện ở trang chủ)');
 
   /* =====================================================================
      5. Không phá trang khác: các trang không có #rdReact/#czDiceHost vẫn chạy

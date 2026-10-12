@@ -561,7 +561,6 @@
        thì ở đây cũng ẩn theo; hộp gạch chỉ hiện với truyện đang cập nhật). */
     try { renderStoryReact(); } catch (e) {}
     try { syncBrickBox(); } catch (e) {}
-    try { if (window.CZDice) window.CZDice.buttons(); } catch (e) {}
   }
 
   /* Tab Thông tin chỉ chứa metadata; tóm tắt nằm ở đầu trang. */
@@ -1140,9 +1139,7 @@
           '<button data-set="sfx" data-v="0" class="' + (String(s.sfx) === '0' ? 'on' : '') + '">Tắt</button></div></div>' +
         '<div class="srow2"><span>Hộp góp gạch<small class="s-note">Chỉ ở truyện đang cập nhật — góp gạch giục chương mới</small></span>' +
           '<div class="opts"><button data-set="brick" data-v="1" class="' + (String(s.brick) !== '0' ? 'on' : '') + '">Bật</button>' +
-          '<button data-set="brick" data-v="0" class="' + (String(s.brick) === '0' ? 'on' : '') + '">Tắt</button></div></div>' +
-        '<div class="srow2"><span>Hôm nay đọc gì?<small class="s-note">Quay vòng chọn truyện ngẫu nhiên</small></span>' +
-          '<div class="opts small"><button id="setDice">' + ic('dice', 'i-s') + ' Mở vòng quay</button></div></div>') +
+          '<button data-set="brick" data-v="0" class="' + (String(s.brick) === '0' ? 'on' : '') + '">Tắt</button></div></div>') +
       '<div class="srow2" style="border:0"><span></span>' +
       '<button class="btn ghost sm" id="setReset">Về mặc định</button></div>';
     $$('#setBody [data-set]').forEach(function (b) {
@@ -1181,11 +1178,6 @@
       CZ.rdSet({ mode: 'scroll', size: 18, font: 'serif', line: 1.85, para: 1.05, theme: 'kem', width: 720, justify: 0,
         react: 1, bionic: 0, zen: 0, term: 0, brick: 1, sfx: 1 });
       applyRD(); paintSettings(); relayout(); syncBrickBox(); CZ.toast('Đã về mặc định');
-    });
-    var diceBtn = $('#setDice');
-    if (diceBtn) diceBtn.addEventListener('click', function () {
-      if (window.CZDice) { sheet('#setSheet', false); window.CZDice.open(this); }
-      else CZ.toast('Vòng quay chưa tải xong — thử lại sau một nhịp nhé.');
     });
   }
   function paintTOC() {
@@ -1890,7 +1882,6 @@
     $('#rdFocus').innerHTML = ic('expand', 'i-s');
     if ($('#rdZen')) $('#rdZen').innerHTML = ic('yoga', 'i-s');
     if ($('#rdTerm')) $('#rdTerm').innerHTML = ic('terminal', 'i-s');
-    if ($('#rdDice')) $('#rdDice').innerHTML = ic('dice', 'i-s');
     $('#rdShare').innerHTML = ic('share', 'i-s');
     applyRD();
     renderCur(false, dir);
@@ -2038,10 +2029,6 @@
     CZ.rdSet({ term: on ? 0 : 1 });
     applyRD(); paintSettings(); relayout();
     toast(on ? 'Đã tắt Terminal — về giao diện đọc thường' : 'Terminal: chương hiện như log hệ thống (chỉ là giao diện)');
-  });
-  var diceInSheet = $('#rdDice');
-  if (diceInSheet) diceInSheet.addEventListener('click', function () {
-    if (window.CZDice) window.CZDice.open(this);
   });
   $('#rdShare').addEventListener('click', shareChapter);
   document.addEventListener('click', function (e) {

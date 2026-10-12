@@ -269,7 +269,8 @@ const REG = JSON.parse(read('data/registry.json'));
   pm.win.close();
 
   /* =====================================================================
-     1b. trang chi tiết truyện cũng có nút dẫn tới /vong-quay/
+     1b. trang chi tiết truyện / trang đọc KHÔNG hiện nút vòng quay
+         (chỉ hiện ở trang chủ theo yêu cầu)
      ===================================================================== */
   const sp = page('truyen.html', {
     url: 'https://ssochuz.pages.dev/truyen/third-person/',
@@ -279,14 +280,11 @@ const REG = JSON.parse(read('data/registry.json'));
   });
   await wait(1500);
   const sh = sp.doc.querySelector('[data-dice]');
-  const sb = sh && sh.querySelector('.dicebtn');
+  const rdDice = sp.doc.querySelector('#rdDice');
   out.trangTruyen = {
-    coNut: !!sb,
-    nhan: sb ? sb.textContent.trim() : '',
-    href: sb ? sb.getAttribute('href') : ''
+    coNut: !!(sh || rdDice)
   };
-  if (!sb) err('trang chi tiết truyện phải có nút vòng quay “Hôm nay đọc gì?”');
-  if (out.trangTruyen.href !== '/vong-quay/') err('nút ở trang truyện phải dẫn sang /vong-quay/');
+  if (out.trangTruyen.coNut) err('nút “Hôm nay đọc gì?” chỉ được hiện ở trang chủ, không hiện ở trang truyện/trang đọc');
   sp.win.close();
 
   console.log(JSON.stringify(out, null, 1));
