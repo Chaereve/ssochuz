@@ -84,7 +84,7 @@ function supabaseStub(w) {
 
   const stickers = $$('#rdReact .rx');
   out.soSticker = stickers.length;
-  if (stickers.length !== 6 || win.CZReact.QUICK_REACTIONS.length !== 6) out.errors0.push('quick set phải có đúng 6 sticker trong registry');
+  if (stickers.length !== win.CZReact.REACTIONS.length || win.CZReact.QUICK_REACTIONS.length !== 6) out.errors0.push('khung cảm xúc phải hiện đầy đủ ' + win.CZReact.REACTIONS.length + ' sticker trong registry');
   const first = stickers[0];
   const id = first && first.getAttribute('data-rx');
   const image = first && first.querySelector('img.rx-img');
@@ -157,7 +157,7 @@ function supabaseStub(w) {
   const on = $('#setBody [data-set="react"][data-v="1"]');
   on && on.click();
   await wait(50);
-  if (bar.hidden || bar.querySelectorAll('.rx').length !== 6) out.errors0.push('bật lại phải dựng đủ 6 quick reaction');
+  if (bar.hidden || bar.querySelectorAll('.rx').length !== win.CZReact.REACTIONS.length) out.errors0.push('bật lại phải dựng đủ ' + win.CZReact.REACTIONS.length + ' reaction');
 
   const reduced = page('truyen.html', {
     url: 'https://ssochuz.pages.dev/truyen/third-person/chuong-1/',

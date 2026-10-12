@@ -209,19 +209,13 @@ const key = (w, k, opt) => w.document.dispatchEvent(new w.KeyboardEvent('keydown
   if (out.terminal.sauKhiThoat.trenBody) err('bấm “Thoát terminal” phải trả về giao diện đọc thường');
 
   /* =====================================================================
-     4. nút vòng quay trên thanh đọc (#rdDice) — thêm ở 1.19.0
+     4. nút vòng quay KHÔNG hiện trên thanh đọc (chỉ hiện ở trang chủ)
      ===================================================================== */
   const diceBtn = $('#rdDice');
-  out.nutVongQuay = { co: !!diceBtn, coIcon: !!(diceBtn && diceBtn.querySelector('svg')), nhan: diceBtn ? (diceBtn.getAttribute('aria-label') || '') : '' };
-  if (!diceBtn) err('thanh đọc thiếu nút “Hôm nay đọc gì?”');
-  else {
-    click(win, diceBtn);
-    await wait(80);
-    out.nutVongQuay.moBang = !!$('#czDiceBox');
-    if (!out.nutVongQuay.moBang) err('bấm nút vòng quay trên thanh đọc phải mở được bảng');
-    const dc = $('#czDiceBox');
-    if (dc && dc.querySelector('[data-close]')) { click(win, dc.querySelector('[data-close]')); await wait(200); }
-  }
+  out.nutVongQuay = {
+    coTrenThanhDoc: !!diceBtn
+  };
+  if (diceBtn) err('thanh đọc không được hiện nút “Hôm nay đọc gì?” (chỉ hiện ở trang chủ)');
 
   /* =====================================================================
      5. Không phá trang khác: các trang không có #rdReact/#czDiceHost vẫn chạy

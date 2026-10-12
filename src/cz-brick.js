@@ -88,11 +88,11 @@
   function boxHTML(slug, story) {
     var current = state(slug), count = total(slug), goal = goalOf(slug);
     var pct = percent(slug);
-    var buttonText = current.givenToday ? 'Đã góp hôm nay' : (loggedIn() ? 'Góp gạch ảo miễn phí' : 'Đăng nhập để góp gạch ảo miễn phí');
+    var buttonText = current.givenToday ? 'Đã góp hôm nay' : (loggedIn() ? 'Góp gạch miễn phí' : 'Đăng nhập góp gạch miễn phí');
     return '<div class="bk-head">' +
-        '<div class="bk-ttl"><b>' + (CZ.icon ? CZ.icon('wall', 'i-s') : '') + 'Hộp góp gạch</b>' +
-        '<span class="bk-sub">' + esc(story && story.title ? story.title : slug) + ' đang ra chương — gửi một lời cổ vũ miễn phí.</span></div>' +
-        '<div class="bk-num"><b data-bk-total>' + num(count) + '</b><span data-bk-goal>viên gạch cộng đồng · mốc ' + num(goal) + '</span></div>' +
+        '<div class="bk-ttl"><b>' + (CZ.icon ? CZ.icon('wall', 'i-s') : '') + 'Góp gạch</b>' +
+        '<span class="bk-sub">Cổ vũ truyện ra chương mới</span></div>' +
+        '<div class="bk-num"><b data-bk-total>' + num(count) + '</b><span data-bk-goal>viên · mốc ' + num(goal) + '</span></div>' +
       '</div>' +
       '<div class="bk-stage">' +
         '<div class="bk-bucket" aria-hidden="true"><span class="bk-pile" data-bk-pile style="transform:scaleY(' + (0.12 + pct / 130).toFixed(3) + ')"></span>' +
@@ -100,14 +100,14 @@
         '<div class="bk-barwrap"><div class="bk-bar" role="progressbar" aria-valuemin="0" aria-valuemax="' + goal + '" aria-valuenow="' + count + '" ' +
           'aria-label="Số gạch ảo miễn phí đã góp cho truyện này" data-bk-bar><i style="transform:scaleX(' + (pct / 100).toFixed(3) + ')"></i></div>' +
           '<p class="bk-motto" data-bk-motto>' + (count >= GOAL
-            ? 'Cộng đồng đã chạm mốc ' + num(Math.floor(count / GOAL) * GOAL) + ' viên — cảm ơn lời cổ vũ!'
-            : 'Mỗi tài khoản góp tối đa một viên mỗi ngày cho truyện này.') + '</p></div>' +
+            ? 'Đã đạt mốc ' + num(Math.floor(count / GOAL) * GOAL) + ' viên!'
+            : 'Mỗi ngày 1 viên / tài khoản.') + '</p></div>' +
       '</div>' +
       '<div class="bk-foot">' +
         '<button type="button" class="btn pri bk-send" id="bkSend" aria-label="' + esc(sticker.label) + ' — ' + esc(buttonText) + '"' + (current.givenToday ? ' disabled' : '') + '>' +
           '<span class="bk-sticker"><img src="' + esc(sticker.full) + '" alt="" width="40" height="40" loading="eager" decoding="async"><span aria-hidden="true">' + esc(sticker.fallback) + '</span></span>' +
           '<span data-bk-label>' + esc(buttonText) + '</span></button>' +
-        '<span class="bk-mine" data-bk-hint>Gạch ảo miễn phí, không thanh toán/coin, không quà quy đổi.</span>' +
+        '<span class="bk-mine" data-bk-hint>Miễn phí · không thanh toán hay quà quy đổi.</span>' +
       '</div>';
   }
   function paint(host, slug) {
@@ -115,7 +115,7 @@
     var totalNode = host.querySelector('[data-bk-total]');
     if (totalNode) totalNode.textContent = num(count);
     var goalNode = host.querySelector('[data-bk-goal]');
-    if (goalNode) goalNode.textContent = 'viên gạch cộng đồng · mốc ' + num(goal);
+    if (goalNode) goalNode.textContent = 'viên · mốc ' + num(goal);
     var bar = host.querySelector('[data-bk-bar]');
     if (bar) {
       var fill = bar.querySelector('i');
@@ -127,11 +127,11 @@
     if (pile) pile.style.transform = 'scaleY(' + (0.12 + pct / 130).toFixed(3) + ')';
     var motto = host.querySelector('[data-bk-motto]');
     if (motto) motto.textContent = count >= GOAL
-      ? 'Cộng đồng đã chạm mốc ' + num(Math.floor(count / GOAL) * GOAL) + ' viên — cảm ơn lời cổ vũ!'
-      : 'Mỗi tài khoản góp tối đa một viên mỗi ngày cho truyện này.';
+      ? 'Đã đạt mốc ' + num(Math.floor(count / GOAL) * GOAL) + ' viên!'
+      : 'Mỗi ngày 1 viên / tài khoản.';
     var button = host.querySelector('#bkSend');
     if (button) {
-      var label = current.givenToday ? 'Đã góp hôm nay' : (loggedIn() ? 'Góp gạch ảo miễn phí' : 'Đăng nhập để góp gạch ảo miễn phí');
+      var label = current.givenToday ? 'Đã góp hôm nay' : (loggedIn() ? 'Góp gạch miễn phí' : 'Đăng nhập góp gạch miễn phí');
       button.disabled = !!current.givenToday || !!pendingBySlug[slug];
       button.setAttribute('aria-label', sticker.alt + ' — ' + label);
       var buttonLabel = button.querySelector('[data-bk-label]');

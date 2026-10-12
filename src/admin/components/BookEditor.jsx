@@ -1,6 +1,6 @@
 import { h } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { slugify, COMPLETION_STATUSES, PUB_STATUSES, VISIBILITIES } from '../utils/books.js';
+import { slugify, COMPLETION_STATUSES, PUB_STATUSES, VISIBILITIES, parseCouples, formatCouples, allCouplesFromRegistry } from '../utils/books.js';
 import { ChapterEditor } from './ChapterEditor.jsx';
 import { ImageUploader } from './ImageUploader.jsx';
 import { persistableCover } from '../utils/cover.js';
@@ -8,9 +8,10 @@ import { BookBadges } from './Badges.jsx';
 
 export function BookEditor({ registry, slug, bookData, bookLoading, bookError, apiBase, onLoadBook, onSave, onSaveBook, onSaveChapter, onDeleteChapter, onMoveChapter, onUploadImage, onLock, onUnlock, onDuplicate, onBack, onDelete, writeBlocked = false, online = false, shortcuts }) {
   const book = ((registry && registry.lib) || []).find((item) => item.slug === slug);
+  const knownCouples = allCouplesFromRegistry(registry);
   const metaFormRef = useRef(null);
   const [form, setForm] = useState({
-    title: '', slug: '', author: '', couple: '', year: '', status: 'Đang cập nhật',
+    title: '', slug: '', author: '', couple: '', couples: [''], year: '', status: 'Đang cập nhật',
     is18: false, thumb: '', coverAlt: '', synopsis: '', genre: '',
     pubStatus: 'published', visibility: 'public', publishedAt: '',
   });
@@ -20,8 +21,11 @@ export function BookEditor({ registry, slug, bookData, bookLoading, bookError, a
   const [tab, setTab] = useState('info');
   useEffect(() => {
     if (!book) return;
+    const parsedCouples = parseCouples(book);
     setForm({
-      title: book.title || '', slug: book.slug || '', author: book.author || '', couple: book.couple || '',
+      title: book.title || '', slug: book.slug || '', author: book.author || '',
+      couple: formatCouples(parsedCouples),
+      couples: parsedCouples.length ? parsedCouples : [''],
       year: book.year || '', status: book.status || 'Đang cập nhật', is18: !!book.is18,
       thumb: persistableCover(book.thumb || book.slide || ''),
       coverAlt: book.coverAlt || '',
@@ -64,6 +68,14 @@ export function BookEditor({ registry, slug, bookData, bookLoading, bookError, a
 
   if (!book) return <div id="pane-edit" class="empty">Chưa chọn bộ. Vào tab Thư viện rồi bấm Sửa.</div>;
   function update(key, value) { setForm((cur) => Object.assign({}, cur, { [key]: value })); }
+  function updateCouples(nextList) {
+    const arr = Array.isArray(nextList) && nextList.length ? nextList : [''];
+    setForm((cur) => Object.assign({}, cur, {
+      couples: arr,
+      couple: formatCouples(arr),
+    }));
+  }
+  const coupleRows = Array.isArray(form.couples) && form.couples.length ? form.couples : [''];
   async function saveLock(e) {
     e.preventDefault();
     setLockBusy(true);
@@ -101,9 +113,63 @@ export function BookEditor({ registry, slug, bookData, bookLoading, bookError, a
             <div class="v2fsec-head"><b>Thông tin cơ bản</b><span class="hint">Tên, slug và thông tin tác giả hiển thị trên thẻ truyện.</span></div>
             <label class="fl">Tên<input class="inp" value={form.title} onInput={(e) => update('title', e.target.value)} /></label>
             <label class="fl">Slug<input class="inp" value={form.slug} onInput={(e) => update('slug', e.target.value)} /></label>
-            <div class="row">
+            <div class="row v2meta-row">
               <label class="fl">Tác giả<input class="inp" value={form.author} onInput={(e) => update('author', e.target.value)} /></label>
-              <label class="fl">Couple<input class="inp" value={form.couple} onInput={(e) => update('couple', e.target.value)} /></label>
+              <div class="fl v2couple-field">
+                <div class="v2couple-head">
+                  <span>Couple</span>
+                  <button
+                    type="button"
+                    class="btn ghost sm v2couple-add"
+                    onClick={() => updateCouples(coupleRows.concat(['']))}
+                  >
+                    + Thêm couple
+                  </button>
+                </div>
+                <div class="v2couple-list">
+                  {coupleRows.map((cp, idx) => (
+                    <div class="v2couple-row" key={idx}>
+                      <input
+                        class="inp v2couple-inp"
+                        list="v2-edit-couples"
+                        aria-label={coupleRows.length > 1 ? ('Couple ' + (idx + 1)) : 'Couple'}
+                        value={cp}
+                        placeholder={idx === 0 ? 'VD: Lingling x Orm' : 'Couple tiếp theo…'}
+                        onInput={(e) => {
+                          const next = coupleRows.slice();
+                          next[idx] = e.target.value;
+                          updateCouples(next);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            updateCouples(coupleRows.concat(['']));
+                          }
+                        }}
+                      />
+                      {(coupleRows.length > 1 || cp) ? (
+                        <button
+                          type="button"
+                          class="btn ghost sm v2couple-rm"
+                          aria-label={'Xoá couple ' + (idx + 1)}
+                          title="Xoá couple này"
+                          onClick={() => {
+                            const next = coupleRows.filter((_, i) => i !== idx);
+                            updateCouples(next.length ? next : ['']);
+                          }}
+                        >
+                          ×
+                        </button>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+                {knownCouples.length ? (
+                  <datalist id="v2-edit-couples">
+                    {knownCouples.map((c) => <option key={c} value={c} />)}
+                  </datalist>
+                ) : null}
+              </div>
               <label class="fl">Năm<input class="inp" value={form.year} onInput={(e) => update('year', e.target.value)} /></label>
             </div>
           </section>

@@ -81,9 +81,15 @@ function supabaseStub(w) {
   const candidates = win.CZDice.candidates();
   ok(candidates.length > 0 && candidates.some(item => item.slug === story.slug), 'random picker ưu tiên truyện được theo dõi');
   const diceButton = doc.querySelector('[data-dice] .dicebtn');
-  diceButton && diceButton.click();
+  ok(diceButton && diceButton.getAttribute('href') === '/vong-quay/', 'random picker dẫn tới trang riêng /vong-quay/');
+  const diceHost = doc.createElement('section');
+  diceHost.id = 'czDiceBox';
+  diceHost.className = 'dicepage-box';
+  diceHost.innerHTML = '<div id="dcBody"></div>';
+  doc.body.appendChild(diceHost);
+  win.CZDice.mount(diceHost, true);
   await wait(50);
-  ok(!!doc.querySelector('#czDiceBox #dcSpin'), 'random picker mở vòng quay');
+  ok(!!doc.querySelector('#czDiceBox #dcSpin'), 'trang vòng quay có nút Quay ngay');
   const spin = doc.querySelector('#czDiceBox #dcSpin');
   spin && spin.click();
   await wait(70);

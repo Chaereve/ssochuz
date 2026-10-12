@@ -53,7 +53,7 @@ function api(route, opt = {}) {
   if (!nonQuickImg || nonQuickImg.getAttribute('loading') !== 'lazy' || !/\/stickers\/sso\/thumb\//.test(nonQuickImg.src)) {
     err('sticker ngoài quick set phải dùng thumbnail lazy-load');
   }
-  if (nonQuick && nonQuick.getAttribute('aria-label') !== 'Tôi không thấy gì. Sso giả vờ không nhìn thấy chuyện vừa xảy ra') {
+  if (nonQuick && nonQuick.getAttribute('aria-label') !== 'Hong thấy gì hết nha. Sso giả vờ không nhìn thấy chuyện vừa xảy ra') {
     err('option phải có accessible name/alt rõ ràng');
   }
   const launch = open('main');
@@ -72,7 +72,7 @@ function api(route, opt = {}) {
     err('comment sticker-only phải gửi qua endpoint comments hiện có với stickerId allowlist');
   }
   const posted = host.querySelector('.cmt-item .cmt-sticker-posted');
-  if (!posted || !posted.getAttribute('aria-label').includes('Yêu thích')) err('sticker bình luận đã gửi phải render trong luồng comments hiện có');
+  if (!posted || !posted.getAttribute('aria-label').includes('Toẹt')) err('sticker bình luận đã gửi phải render trong luồng comments hiện có');
   const postedImg = posted && posted.querySelector('img');
   if (!postedImg || !postedImg.src.includes('/stickers/sso/thumb/sso-love-it.webp') || postedImg.getAttribute('loading') !== 'lazy') {
     err('sticker trong comment phải dùng thumbnail lazy-load');

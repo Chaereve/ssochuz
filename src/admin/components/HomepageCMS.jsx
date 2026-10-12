@@ -99,7 +99,7 @@ export function HomepageCMS({ registry, apiBase, onSave, writeBlocked = false, o
         </section>
 
         <section class="card2">
-          <h3>Editor’s choice</h3>
+          <h3>Chuyển thể Series</h3>
           <ul class="v2sort">
             {choice.map((slug, i) => {
               const b = books[slug];
@@ -115,8 +115,8 @@ export function HomepageCMS({ registry, apiBase, onSave, writeBlocked = false, o
             })}
           </ul>
           <div class="row">
-            <select class="inp" aria-label="Chọn bộ thêm vào lựa chọn biên tập" value={addChoice} onChange={(e) => setAddChoice(e.target.value)}>
-              <option value="">Thêm bộ vào lựa chọn biên tập…</option>
+            <select class="inp" aria-label="Chọn bộ thêm vào Chuyển thể Series" value={addChoice} onChange={(e) => setAddChoice(e.target.value)}>
+              <option value="">Thêm bộ vào Chuyển thể Series…</option>
               {lib.filter((b) => choice.indexOf(b.slug) < 0).map((b) => <option key={b.slug} value={b.slug}>{b.title}</option>)}
             </select>
             <button class="btn" type="button" onClick={() => { if (addChoice) { setChoice(choice.concat([addChoice])); setAddChoice(''); } }}>Thêm</button>

@@ -54,6 +54,52 @@ export function pubLabel(id) {
   return (hit && hit.label) || 'Xuất bản';
 }
 
+export function parseCouples(value) {
+  let raw = [];
+  if (Array.isArray(value)) {
+    raw = value;
+  } else if (value && typeof value === 'object') {
+    raw = Array.isArray(value.couples) && value.couples.length
+      ? value.couples
+      : [value.couple || ''];
+  } else {
+    raw = [value || ''];
+  }
+  const out = [];
+  const seen = new Set();
+  for (const item of raw) {
+    const parts = String(item == null ? '' : item).split(/\s*[,;\n]+\s*/);
+    for (const part of parts) {
+      const clean = part.replace(/\s+/g, ' ').trim();
+      if (!clean) continue;
+      const key = clean.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(clean);
+    }
+  }
+  return out;
+}
+
+export function formatCouples(value) {
+  return parseCouples(value).join(', ');
+}
+
+export function allCouplesFromRegistry(registry) {
+  const list = (registry && Array.isArray(registry.lib)) ? registry.lib : [];
+  const out = [];
+  const seen = new Set();
+  for (const book of list) {
+    for (const cp of parseCouples(book)) {
+      const key = cp.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(cp);
+    }
+  }
+  return out.sort((a, b) => a.localeCompare(b, 'vi'));
+}
+
 export function renameReferences(registry, oldSlug, newSlug) {
   if (!registry || oldSlug === newSlug) return registry;
   if (Array.isArray(registry.slides)) {
@@ -99,10 +145,17 @@ export function removeBookReferences(registry, slug) {
 
 export function metaFromForm(book, values) {
   const out = Object.assign({}, book);
+  const couples = parseCouples(
+    Array.isArray(values.couples)
+      ? values.couples
+      : (values.couple !== undefined ? values.couple : '')
+  );
   out.title = values.title || out.title || '';
   out.slug = values.slug || out.slug || '';
   out.author = values.author || '';
-  out.couple = values.couple || '';
+  out.couple = couples.join(', ');
+  if (couples.length > 1) out.couples = couples;
+  else delete out.couples;
   out.year = values.year || '';
   out.status = values.status || 'Đang cập nhật';
   out.countLabel = values.countLabel || out.countLabel || '0/—';
@@ -131,7 +184,9 @@ export function newBookRecord(values) {
   const chapters = firstChapter ? [{ t: 'Chương 1', html: textToHtml(firstChapter), status: 'published' }] : [];
   const meta = metaFromForm({}, {
     title: String(values.title || '').trim(), slug,
-    author: String(values.author || '').trim(), couple: String(values.couple || '').trim(),
+    author: String(values.author || '').trim(),
+    couple: String(values.couple || '').trim(),
+    couples: Array.isArray(values.couples) ? values.couples : undefined,
     year: String(values.year || '').trim() || String(new Date().getFullYear()),
     status: values.status || (chapters.length ? 'Đang cập nhật' : 'Sắp ra mắt'),
     countLabel: chapters.length ? '1/1' : '0/—',
@@ -144,6 +199,7 @@ export function newBookRecord(values) {
   });
   meta.chapters = chapters.length;
   const book = { title: meta.title, slug, author: meta.author, couple: meta.couple, chapters };
+  if (Array.isArray(meta.couples) && meta.couples.length > 1) book.couples = meta.couples.slice();
   return { meta, book };
 }
 

@@ -1,12 +1,12 @@
 import { h } from 'preact';
 import { useState } from 'preact/hooks';
-import { slugify, COMPLETION_STATUSES, PUB_STATUSES, VISIBILITIES } from '../utils/books.js';
+import { slugify, COMPLETION_STATUSES, PUB_STATUSES, VISIBILITIES, formatCouples, allCouplesFromRegistry } from '../utils/books.js';
 import { ImageUploader } from './ImageUploader.jsx';
 import { persistableCover } from '../utils/cover.js';
 
 // Thêm bộ kiểu Wattpad: không có thể loại/tag. Bìa + xem trước ở cột trái, thông tin ở cột phải.
 const EMPTY_FORM = {
-  title: '', slug: '', author: '', couple: '', year: '', status: 'Đang cập nhật',
+  title: '', slug: '', author: '', couple: '', couples: [''], year: '', status: 'Đang cập nhật',
   is18: '0', thumb: '', coverAlt: '', synopsis: '', chapter: '',
   pubStatus: 'published', visibility: 'public', publishedAt: '',
 };
@@ -14,9 +14,18 @@ const EMPTY_FORM = {
 export function NewBook({ registry, onCreate, onUploadImage, apiBase = '', writeBlocked = false, online = false }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [busy, setBusy] = useState(false);
+  const knownCouples = allCouplesFromRegistry(registry);
   const preview = slugify(form.slug || form.title);
   function reset() { setForm(EMPTY_FORM); }
   function update(key, value) { setForm((cur) => Object.assign({}, cur, { [key]: value })); }
+  function updateCouples(nextList) {
+    const arr = Array.isArray(nextList) && nextList.length ? nextList : [''];
+    setForm((cur) => Object.assign({}, cur, {
+      couples: arr,
+      couple: formatCouples(arr),
+    }));
+  }
+  const coupleRows = Array.isArray(form.couples) && form.couples.length ? form.couples : [''];
 
   async function submit(e) {
     e.preventDefault();
@@ -40,7 +49,61 @@ export function NewBook({ registry, onCreate, onUploadImage, apiBase = '', write
             <p class="v2nb-slug">Đường dẫn: <code>{preview ? '/truyen/' + preview + '/' : '—'}</code></p>
             <div class="v2nb-grid3">
               <label class="fl">Tác giả<input class="inp" value={form.author} onInput={(e) => update('author', e.target.value)} /></label>
-              <label class="fl">Couple<input class="inp" value={form.couple} onInput={(e) => update('couple', e.target.value)} /></label>
+              <div class="fl v2couple-field">
+                <div class="v2couple-head">
+                  <span>Couple</span>
+                  <button
+                    type="button"
+                    class="btn ghost sm v2couple-add"
+                    onClick={() => updateCouples(coupleRows.concat(['']))}
+                  >
+                    + Thêm couple
+                  </button>
+                </div>
+                <div class="v2couple-list">
+                  {coupleRows.map((cp, idx) => (
+                    <div class="v2couple-row" key={idx}>
+                      <input
+                        class="inp v2couple-inp"
+                        list="v2-new-couples"
+                        aria-label={coupleRows.length > 1 ? ('Couple ' + (idx + 1)) : 'Couple'}
+                        value={cp}
+                        placeholder={idx === 0 ? 'VD: Lingling x Orm' : 'Couple tiếp theo…'}
+                        onInput={(e) => {
+                          const next = coupleRows.slice();
+                          next[idx] = e.target.value;
+                          updateCouples(next);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            updateCouples(coupleRows.concat(['']));
+                          }
+                        }}
+                      />
+                      {(coupleRows.length > 1 || cp) ? (
+                        <button
+                          type="button"
+                          class="btn ghost sm v2couple-rm"
+                          aria-label={'Xoá couple ' + (idx + 1)}
+                          title="Xoá couple này"
+                          onClick={() => {
+                            const next = coupleRows.filter((_, i) => i !== idx);
+                            updateCouples(next.length ? next : ['']);
+                          }}
+                        >
+                          ×
+                        </button>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+                {knownCouples.length ? (
+                  <datalist id="v2-new-couples">
+                    {knownCouples.map((c) => <option key={c} value={c} />)}
+                  </datalist>
+                ) : null}
+              </div>
               <label class="fl">Năm<input class="inp" value={form.year} inputMode="numeric" onInput={(e) => update('year', e.target.value)} /></label>
             </div>
             <label class="fl">Slug (tuỳ chọn)

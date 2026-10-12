@@ -6,7 +6,7 @@
 - Phiên bản của blueprint: **1.19.0** (không phải phiên bản app hiện hành).
 - Tệp khi thiết kế: `src/cz-react.js`, `src/cz-brick.js`, `src/cz-dice.js`, `src/cz-app.js`, `src/cz-story.js`, `src/cz.css`, `truyen.html`, `index.html`, sticker assets, `cz-config.js`, `sw.js`, tests.
 
-## 0. Sáu tính năng trong một bản
+## 0. Năm tính năng trong một bản
 
 | # | Tính năng | Chỗ dùng | Nhớ ở đâu |
 | --- | --- | --- | --- |

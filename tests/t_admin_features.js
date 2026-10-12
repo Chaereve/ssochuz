@@ -212,6 +212,31 @@ const STATS = {
   check('Soạn chương/hiện thời gian đọc ước tính', /~2 phút đọc/.test(($('.v2chap-actions .sm.muted') || {}).textContent || ''), $('.v2chap-actions') && $('.v2chap-actions').textContent);
   check('Soạn chương/danh sách chương có số từ', /440 từ/.test(($('.v2chapter-list') || {}).textContent || ''), $('.v2chapter-list') && $('.v2chapter-list').textContent);
 
+  /* 6b. Sửa metadata: thêm nhiều couple cho bộ truyện */
+  click($('#tab-info'));
+  await wait(120);
+  const addCoupleBtn = $('#pane-edit .v2couple-add');
+  check('Sửa bộ/có nút + Thêm couple', !!addCoupleBtn);
+  inputEv($('#pane-edit .v2couple-inp'), 'Couple 1');
+  await wait(50);
+  click(addCoupleBtn);
+  await wait(80);
+  const coupleInps = $$('#pane-edit .v2couple-inp');
+  check('Sửa bộ/bấm + Thêm couple tạo ô couple thứ 2', coupleInps.length === 2, coupleInps.length);
+  inputEv(coupleInps[1], 'Couple Mới 2');
+  await wait(80);
+  $('#pane-edit form.v2form').dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true }));
+  await wait(250);
+  const regMultiCouple = putBodies.filter((x) => x.p === '/api/registry').pop();
+  const editedMeta = regMultiCouple && (regMultiCouple.body.lib || []).find((b) => b.slug === 'thu-01');
+  check('Sửa bộ/lưu nhiều couple gộp vào couple', !!editedMeta && editedMeta.couple === 'Couple 1, Couple Mới 2', editedMeta && editedMeta.couple);
+  check('Sửa bộ/lưu mảng couples khi có nhiều couple', !!editedMeta && Array.isArray(editedMeta.couples) && editedMeta.couples.length === 2 && editedMeta.couples[0] === 'Couple 1' && editedMeta.couples[1] === 'Couple Mới 2', editedMeta && editedMeta.couples);
+
+  /* 6c. Trang chủ CMS & index.html: mục Chuyển thể Series */
+  click($('button[data-tab="homepage"]'));
+  await wait(150);
+  check('Homepage CMS/mục Chuyển thể Series', /Chuyển thể Series/.test(($('#pane-homepage') || {}).textContent || ''));
+
   /* 7. Cài đặt: khôi phục backup */
   win.CZ.confirm = () => Promise.resolve(true);
   win.prompt = () => 'KHÔI PHỤC';

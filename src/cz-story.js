@@ -273,10 +273,10 @@
   }
 
   /* ======================= 3. TRANG TRUYỆN ============================== */
-  /* Ba khối: Thông tin · Danh sách chương · Đánh giá.
-     Gạch chân trượt sang tab đang mở; nội dung hiện lên bằng fade + trượt nhẹ. */
+  /* Hai tab: Thông tin · Danh sách chương. Phần Đánh giá & bình luận (#pane-cmt)
+     nằm cố định phía dưới khung thả cảm xúc (#storyLab), tương tự bình luận chương. */
   var TAB = { cur: 'chap', loaded: {} };
-  function tabPane(k) { return k === 'info' ? $('#pane-info') : k === 'cmt' ? $('#pane-cmt') : $('#chapSec'); }
+  function tabPane(k) { return k === 'info' ? $('#pane-info') : $('#chapSec'); }
   function paintInk() {
     var bar = $('#storyTabs'), ink = $('#stInk');
     if (!bar || !ink) return;
@@ -287,26 +287,27 @@
     ink.style.opacity = '1';
   }
   function showTab(k, scroll) {
-    if (!tabPane(k)) k = 'chap';
-    TAB.cur = k;
-    ['info', 'chap', 'cmt'].forEach(function (x) {
+    var goCmt = k === 'cmt';
+    var nextTab = k === 'info' ? 'info' : 'chap';
+    TAB.cur = nextTab;
+    ['info', 'chap'].forEach(function (x) {
       var p = tabPane(x);
-      if (p) p.hidden = x !== k;
+      if (p) p.hidden = x !== nextTab;
     });
     $$('#storyTabs .stab').forEach(function (b) {
-      var on = b.dataset.tab === k;
+      var on = b.dataset.tab === nextTab;
       b.classList.toggle('on', on);
       b.setAttribute('aria-selected', on ? 'true' : 'false');
     });
-    var pane = tabPane(k);
-    if (pane && !CZ.reduce) {
+    var pane = goCmt ? $('#pane-cmt') : tabPane(nextTab);
+    if (!goCmt && pane && !CZ.reduce) {
       pane.classList.remove('pin');
       void pane.offsetWidth;
       pane.classList.add('pin');
     }
-    if (k === 'cmt' && !TAB.loaded.cmt) { TAB.loaded.cmt = true; mountComments(); }
+    if (!TAB.loaded.cmt) { TAB.loaded.cmt = true; mountComments(); }
     paintInk();
-    if (scroll && pane) {
+    if ((scroll || goCmt) && pane) {
       var y = pane.getBoundingClientRect().top + window.scrollY - 76;
       window.scrollTo({ top: y, behavior: CZ.reduce ? 'auto' : 'smooth' });
     }
@@ -560,7 +561,6 @@
        thì ở đây cũng ẩn theo; hộp gạch chỉ hiện với truyện đang cập nhật). */
     try { renderStoryReact(); } catch (e) {}
     try { syncBrickBox(); } catch (e) {}
-    try { if (window.CZDice) window.CZDice.buttons(); } catch (e) {}
   }
 
   /* Tab Thông tin chỉ chứa metadata; tóm tắt nằm ở đầu trang. */
@@ -588,7 +588,10 @@
     if (info && (n.author || n.couple)) {
       var more = [];
       if (n.author) more.push('<a href="/tac-gia/?q=' + encodeURIComponent(CZ.slugify(n.author)) + '">Xem tất cả truyện của ' + esc(n.author) + '</a>');
-      if (n.couple) more.push('<a href="/couple/?q=' + encodeURIComponent(CZ.slugify(n.couple)) + '">Xem tất cả truyện của ' + esc(n.couple) + '</a>');
+      var cps = CZ.couplesOf ? CZ.couplesOf(n) : (n.couple ? [n.couple] : []);
+      cps.forEach(function (cp) {
+        more.push('<a href="/couple/?q=' + encodeURIComponent(CZ.slugify(cp)) + '">Xem tất cả truyện của ' + esc(cp) + '</a>');
+      });
       info.innerHTML += '<div class="r"><span>Khám phá</span><b>' + more.join('<br>') + '</b></div>';
     }
   }
@@ -756,7 +759,12 @@
   function renderRelated() {
     var n = N;
     var lib = CZ.lib();
-    var sameCouple = n.couple ? lib.filter(function (x) { return x.couple === n.couple && x.slug !== n.slug; }).slice(0, 6) : [];
+    var myCouples = CZ.couplesOf ? CZ.couplesOf(n) : (n.couple ? [n.couple] : []);
+    var sameCouple = myCouples.length ? lib.filter(function (x) {
+      if (x.slug === n.slug) return false;
+      var xCouples = CZ.couplesOf ? CZ.couplesOf(x) : (x.couple ? [x.couple] : []);
+      return xCouples.some(function (c) { return myCouples.indexOf(c) >= 0; });
+    }).slice(0, 6) : [];
     var sameAuthor = n.author ? lib.filter(function (x) { return x.author === n.author && x.slug !== n.slug; }).slice(0, 6) : [];
     var shown = 0;
     function put(sel, rows) {
@@ -1131,9 +1139,7 @@
           '<button data-set="sfx" data-v="0" class="' + (String(s.sfx) === '0' ? 'on' : '') + '">Tắt</button></div></div>' +
         '<div class="srow2"><span>Hộp góp gạch<small class="s-note">Chỉ ở truyện đang cập nhật — góp gạch giục chương mới</small></span>' +
           '<div class="opts"><button data-set="brick" data-v="1" class="' + (String(s.brick) !== '0' ? 'on' : '') + '">Bật</button>' +
-          '<button data-set="brick" data-v="0" class="' + (String(s.brick) === '0' ? 'on' : '') + '">Tắt</button></div></div>' +
-        '<div class="srow2"><span>Hôm nay đọc gì?<small class="s-note">Quay vòng chọn truyện ngẫu nhiên</small></span>' +
-          '<div class="opts small"><button id="setDice">' + ic('dice', 'i-s') + ' Mở vòng quay</button></div></div>') +
+          '<button data-set="brick" data-v="0" class="' + (String(s.brick) === '0' ? 'on' : '') + '">Tắt</button></div></div>') +
       '<div class="srow2" style="border:0"><span></span>' +
       '<button class="btn ghost sm" id="setReset">Về mặc định</button></div>';
     $$('#setBody [data-set]').forEach(function (b) {
@@ -1172,11 +1178,6 @@
       CZ.rdSet({ mode: 'scroll', size: 18, font: 'serif', line: 1.85, para: 1.05, theme: 'kem', width: 720, justify: 0,
         react: 1, bionic: 0, zen: 0, term: 0, brick: 1, sfx: 1 });
       applyRD(); paintSettings(); relayout(); syncBrickBox(); CZ.toast('Đã về mặc định');
-    });
-    var diceBtn = $('#setDice');
-    if (diceBtn) diceBtn.addEventListener('click', function () {
-      if (window.CZDice) { sheet('#setSheet', false); window.CZDice.open(this); }
-      else CZ.toast('Vòng quay chưa tải xong — thử lại sau một nhịp nhé.');
     });
   }
   function paintTOC() {
@@ -1881,7 +1882,6 @@
     $('#rdFocus').innerHTML = ic('expand', 'i-s');
     if ($('#rdZen')) $('#rdZen').innerHTML = ic('yoga', 'i-s');
     if ($('#rdTerm')) $('#rdTerm').innerHTML = ic('terminal', 'i-s');
-    if ($('#rdDice')) $('#rdDice').innerHTML = ic('dice', 'i-s');
     $('#rdShare').innerHTML = ic('share', 'i-s');
     applyRD();
     renderCur(false, dir);
@@ -2029,10 +2029,6 @@
     CZ.rdSet({ term: on ? 0 : 1 });
     applyRD(); paintSettings(); relayout();
     toast(on ? 'Đã tắt Terminal — về giao diện đọc thường' : 'Terminal: chương hiện như log hệ thống (chỉ là giao diện)');
-  });
-  var diceInSheet = $('#rdDice');
-  if (diceInSheet) diceInSheet.addEventListener('click', function () {
-    if (window.CZDice) window.CZDice.open(this);
   });
   $('#rdShare').addEventListener('click', shareChapter);
   document.addEventListener('click', function (e) {
@@ -2182,6 +2178,8 @@
     var cmtTab = $('#storyTabs [data-tab="cmt"]');
     if (cmtTab) cmtTab.style.display = 'none';
     showTab('chap');
+    var cmtPane = $('#pane-cmt');
+    if (cmtPane) cmtPane.hidden = true;
     CZ.reveal();
     try { document.querySelector('meta[name="description"]').setAttribute('content', (N.syn || N.title).slice(0, 180)); } catch (e) {}
   }
@@ -2303,9 +2301,11 @@
       if (secUn) secUn.classList.remove('lockon');
       var gateOut = $('#lockGate');
       if (gateOut) gateOut.remove();
-      /* trả lại tab bình luận bị ẩn lúc đang khóa */
+      /* trả lại phần bình luận bị ẩn lúc đang khóa */
       var cmtBack = $('#storyTabs [data-tab="cmt"]');
       if (cmtBack) cmtBack.style.display = '';
+      var cmtPane = $('#pane-cmt');
+      if (cmtPane) cmtPane.hidden = false;
       /* Nhãn "x/y" chỉ được tin khi registry KHỚP số chương thật của kho chương.
          Registry treo "30/30" trong khi bộ chỉ còn 29 chương thì bỏ nhãn cũ đi,
          không để con số 30 hiện ra ở trang chủ / trang truyện / mục lục nữa.

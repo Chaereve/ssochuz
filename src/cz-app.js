@@ -1330,12 +1330,27 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     }
     return changed;
   }
+  function couplesOf(n) {
+    if (!n) return [];
+    var raw = Array.isArray(n)
+      ? n
+      : (Array.isArray(n.couples) && n.couples.length ? n.couples : String(typeof n === 'string' ? n : (n.couple || '')).split(/\s*[,;\n]+\s*/));
+    var out = [], seen = {};
+    raw.forEach(function (c) {
+      var s = String(c == null ? '' : c).replace(/\s+/g, ' ').trim();
+      if (!s) return;
+      var k = s.toLowerCase();
+      if (!seen[k]) { seen[k] = 1; out.push(s); }
+    });
+    return out;
+  }
   /* chuẩn hoá 1 bộ trong registry thành dạng dùng chung cho mọi trang */
   function norm(n) {
     var o = Object.assign({}, n || {});
     o.title = String(o.title || '').trim();
     o.author = authorFix(o.author);
-    o.couple = String(o.couple || '').trim();
+    o.couples = couplesOf(o);
+    o.couple = o.couples.join(', ');
     o.chapters = parseInt(o.chapters, 10) || 0;
     /* số chương đã đối chiếu từ kho chương thật luôn thắng nhãn cũ trong registry */
     var rc = realCount(o.slug);
@@ -1781,7 +1796,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   function sfx(kind) {
     if (reduce) return;
     var st = rdGet();
-    if (String(st.sfx === 0 || st.sfx === '0')) return;
+    if (st && (st.sfx === 0 || st.sfx === '0')) return;
     var a = audio();
     if (!a) return;
     try {
@@ -1805,6 +1820,31 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         og.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16);
         osc.connect(og); og.connect(a.destination);
         osc.start(t0); osc.stop(t0 + 0.18);
+      } else if (kind === 'tick') {
+        /* tiếng kim gạt qua chốt vòng quay: ngắn, đanh và ấm */
+        var ot = a.createOscillator(), gt = a.createGain();
+        ot.type = 'triangle';
+        ot.frequency.setValueAtTime(980, t0);
+        ot.frequency.exponentialRampToValueAtTime(340, t0 + 0.028);
+        gt.gain.setValueAtTime(0.0001, t0);
+        gt.gain.linearRampToValueAtTime(0.11, t0 + 0.003);
+        gt.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.032);
+        ot.connect(gt); gt.connect(a.destination);
+        ot.start(t0); ot.stop(t0 + 0.036);
+      } else if (kind === 'win') {
+        /* hợp âm báo chốt kết quả vòng quay (C5 - E5 - G5 - C6) */
+        var notes = [523.25, 659.25, 783.99, 1046.5];
+        for (i = 0; i < notes.length; i++) {
+          var ow = a.createOscillator(), gw = a.createGain();
+          var stAt = t0 + i * 0.055;
+          ow.type = 'sine';
+          ow.frequency.setValueAtTime(notes[i], stAt);
+          gw.gain.setValueAtTime(0.0001, stAt);
+          gw.gain.linearRampToValueAtTime(0.1, stAt + 0.015);
+          gw.gain.exponentialRampToValueAtTime(0.0001, stAt + 0.32);
+          ow.connect(gw); gw.connect(a.destination);
+          ow.start(stAt); ow.stop(stAt + 0.34);
+        }
       } else {
         var o2 = a.createOscillator(), g2 = a.createGain();
         o2.type = 'sine'; o2.frequency.setValueAtTime(660, t0);
@@ -2989,7 +3029,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     realCount: realCount, reconcileCount: reconcileCount, onStatsChange: onStatsChange, notifyStats: notifyStats,
     rdGet: rdGet, rdSet: rdSet, themeInit: themeInit, themeToggle: themeToggle, themeMeta: themeMeta,
     icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo, teaser: teaser,
-    statusCls: statusCls, statusLabel: statusLabel, statusIcon: statusIcon, words: words, norm: norm, countText: countText, listHead: listHead,
+    statusCls: statusCls, statusLabel: statusLabel, statusIcon: statusIcon, words: words, norm: norm, couplesOf: couplesOf, countText: countText, listHead: listHead,
     /* bóc tên chương dùng chung (src/shared/chapters.js): trang truyện, mục
        lục, nhảy chương — và trang quản trị đều qua đây, khỏi lệch nhau */
     chapInfo: function (t) { return parseChapterTitle(t); },
