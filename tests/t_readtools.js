@@ -53,6 +53,15 @@ const key = (w, k, opt) => w.document.dispatchEvent(new w.KeyboardEvent('keydown
   const $$ = s => [...doc.querySelectorAll(s)];
   await wait(1800);
 
+  /* Removing the retired hide behavior must not block the normal reading-progress write. */
+  const readingProgress = win.CZPersonal && win.CZPersonal.progressFor('third-person');
+  out.readingProgress = readingProgress ? {
+    mode: win.CZPersonal.mode(),
+    chapterIndex: readingProgress.chapterIndex,
+    scrollPercent: readingProgress.scrollPercent
+  } : null;
+  if (!readingProgress || Number(readingProgress.chapterIndex) !== 1) err('mở chương phải lưu tiến độ để tính năng đọc tiếp hoạt động');
+
   /* =====================================================================
      UI regression: retired quick-hide controls/shortcut/state stay absent.
      ===================================================================== */
