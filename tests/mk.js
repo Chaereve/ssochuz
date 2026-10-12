@@ -44,19 +44,13 @@ function page(file, { url = 'https://ssochuz.pages.dev/', fetch, config = {}, fi
     html = html.replace(/window\.CZ_API\s*=\s*(window\.CZ_API\s*\|\|\s*)?'[^']*';/,
       "window.CZ_API=" + JSON.stringify(config.CZ_API) + ";");
   }
+  if (config.CZ_COMMUNITY_API !== undefined) {
+    html = html.replace(/window\.CZ_COMMUNITY_API\s*=\s*'[^']*';/,
+      "window.CZ_COMMUNITY_API=" + JSON.stringify(config.CZ_COMMUNITY_API) + ";");
+  }
   if (config.CZ_STATS_DIRECT !== undefined) {
     html = html.replace(/window\.CZ_STATS_DIRECT\s*=\s*(true|false);/,
       "window.CZ_STATS_DIRECT=" + (config.CZ_STATS_DIRECT ? 'true' : 'false') + ";");
-  }
-  /* 1.19.0: hai cổng API tương tác (reaction / góp gạch). Trang thật để trống
-     trong cz-config.js; bài kiểm cần cắm URL giả để xem mã có gọi đúng lúc. */
-  if (config.CZ_REACT_API !== undefined) {
-    html = html.replace(/window\.CZ_REACT_API\s*=\s*'[^']*';/,
-      "window.CZ_REACT_API=" + JSON.stringify(config.CZ_REACT_API) + ";");
-  }
-  if (config.CZ_BRICK_API !== undefined) {
-    html = html.replace(/window\.CZ_BRICK_API\s*=\s*'[^']*';/,
-      "window.CZ_BRICK_API=" + JSON.stringify(config.CZ_BRICK_API) + ";");
   }
   const errors = [];
   /* jsdom không cài đặt việc chuyển trang thật (location.href = …) — đó là giới hạn của

@@ -135,7 +135,10 @@ const clickSel = (p, sel) => { const e = p.doc.querySelector(sel); if (e) e.disp
   eq('mở trang truyện → KHÔNG tải cả bộ', fullCalls, 0);
   eq('trang truyện KHÔNG cần tải chương nào', chapCalls.length, 0);
   eq('trang truyện dựng đủ danh sách chương', p.doc.querySelectorAll('#chapGrid .cha').length, CH.length);
-  ck('số request để mở trang truyện rất ít (≤ 5)', log.length <= 5, log, '≤ 5 request');
+  const actualRequests = log.filter((line) => !line.startsWith('MISS '));
+  const communitySummaryCalls = actualRequests.filter((line) => line.includes('/api/community/reactions') || line.includes('/api/community/brick')).length;
+  ck('trang truyện tải đúng 2 summary cộng đồng, không lặp request', communitySummaryCalls <= 2, communitySummaryCalls, '≤ 2 summary');
+  ck('số request để mở trang truyện vẫn gọn (≤ 6, gồm 2 summary community)', actualRequests.length <= 6, actualRequests, '≤ 6 request');
   eq('không có lỗi JS', p.errors.length, 0);
 }
 

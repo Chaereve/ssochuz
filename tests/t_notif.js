@@ -9,11 +9,17 @@ const { page, dataFetch } = require('./mk');
 const bad = [];
 const ok = (cond, msg) => { if (!cond) bad.push(msg); };
 const wait = ms => new Promise(r => setTimeout(r, ms));
+function supabaseStub(w) {
+  w.supabase = { createClient() { return { auth: {
+    getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+    onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
+  } }; } };
+}
 
 (async () => {
   const out = {};
   /* ---------- chuông + badge + panel ---------- */
-  const p = page('index.html', { fetch: dataFetch() });
+  const p = page('index.html', { fetch: dataFetch(), setup: supabaseStub });
   const { win, doc, errors } = p;
   const CZ = win.CZ;
   await wait(900);
@@ -26,7 +32,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   /* giả đã follow 1 truyện từ trước, mốc cũ, registry tăng 2 chương */
   const slug = doc.querySelector('#grid .cardwrap [data-t]').getAttribute('href').split('/').filter(Boolean).pop();
   const n = CZ.findLib(slug);
-  win.localStorage.setItem('ssochuz-follow', JSON.stringify({ [slug]: n.chapters }));
+  await win.CZPersonal.toggleFollow(slug); // creates a versioned guest follow row at the current chapter baseline
   n.chapters += 2;
   CZ.refreshFollowUI(slug);
   await wait(60);
@@ -61,6 +67,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   const r = page('index.html', {
     fetch: dataFetch(),
     setup: (w) => {
+      supabaseStub(w);
       w.Notification = { permission: 'default', requestPermission: () => Promise.resolve('granted') };
       w.PushManager = function () {};
       const pm = { getSubscription: () => Promise.resolve(null), subscribe: () => Promise.reject(new Error('x')) };

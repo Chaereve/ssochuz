@@ -40,6 +40,12 @@ function makeApi(log) {
   };
 }
 const click = (w, el) => el && el.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+function supabaseStub(w) {
+  w.supabase = { createClient() { return { auth: {
+    getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+    onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
+  } }; } };
+}
 const REG = JSON.parse(read('data/registry.json'));
 const slugOf = t => { const m = REG.lib.filter(n => n.title === t)[0]; return m && m.slug; };
 
@@ -58,7 +64,8 @@ const slugOf = t => { const m = REG.lib.filter(n => n.title === t)[0]; return m 
     config: { CZ_API: BASE },
     fetch: dataFetch({ apiBase: BASE, api: makeApi(null), log: [] }),
     setup(w) {
-      w.localStorage.setItem('ssochuz-follow', JSON.stringify({ [FOLLOW]: 1 }));
+      supabaseStub(w);
+      w.localStorage.setItem('ssochuz-follow', JSON.stringify({ [FOLLOW]: 1 })); // legacy key read-only migration fixture
       w.localStorage.setItem('ssochuz-prog-' + FOLLOW, '3');
     }
   });
@@ -117,7 +124,7 @@ const slugOf = t => { const m = REG.lib.filter(n => n.title === t)[0]; return m 
   out.bat18 = {
     chipOn: !!box2.querySelector('[data-opt="adult"].on'),
     coTruyen18: cands18.some(is18Of),
-    nhoTrongMay: win.localStorage.getItem('ssochuz-dice-opt')
+    nhoTrongMay: win.localStorage.getItem('ssochuz:dice:options:v1')
   };
   if (!out.bat18.chipOn) err('bấm chip “Gồm 18+” phải sáng lên');
   if (!out.bat18.nhoTrongMay || out.bat18.nhoTrongMay.indexOf('"adult":true') < 0) err('lựa chọn bộ lọc phải nhớ trong localStorage');
@@ -142,8 +149,8 @@ const slugOf = t => { const m = REG.lib.filter(n => n.title === t)[0]; return m 
   const res = $('#dcResult');
   const link = res.querySelector('[data-dice-read]');
   let pick = null;
-  try { pick = JSON.parse(win.localStorage.getItem('ssochuz-dice-last') || 'null'); } catch (e) { pick = null; }
-  const pickRaw = win.localStorage.getItem('ssochuz-dice-last');
+  try { pick = JSON.parse(win.localStorage.getItem('ssochuz:dice:last:v1') || 'null'); } catch (e) { pick = null; }
+  const pickRaw = win.localStorage.getItem('ssochuz:dice:last:v1');
   out.ketQua = {
     hien: res && !res.hidden,
     slug: pick,
@@ -168,8 +175,8 @@ const slugOf = t => { const m = REG.lib.filter(n => n.title === t)[0]; return m 
   /* =====================================================================
      7. truyện vừa đọc bị loại khi vẫn còn đủ lựa chọn khác
      ===================================================================== */
-  win.localStorage.removeItem('ssochuz-follow');
-  win.localStorage.setItem('ssochuz-when-' + pick, String(Date.now()));
+  await win.CZPersonal.toggleFollow(FOLLOW); // bỏ theo dõi qua service versioned, không xoá key legacy để giả lập data
+  win.CZPersonal.setProgress(pick, 1, 25, false);
   const cands3 = win.CZDice.candidates().map(n => n.slug);
   out.boVuaDoc = { soLuong: cands3.length, conTruyenVuaDoc: cands3.indexOf(pick) >= 0 };
   if (out.boVuaDoc.conTruyenVuaDoc) err('truyện vừa đọc hôm nay phải bị loại khỏi vòng quay khi còn nhiều lựa chọn khác');
@@ -193,10 +200,10 @@ const slugOf = t => { const m = REG.lib.filter(n => n.title === t)[0]; return m 
   click(win, $('#dcSpin'));
   await wait(2900);
   let pickA = null, pickB = null;
-  try { pickA = JSON.parse(win.localStorage.getItem('ssochuz-dice-last') || 'null'); } catch (e) {}
+  try { pickA = JSON.parse(win.localStorage.getItem('ssochuz:dice:last:v1') || 'null'); } catch (e) {}
   click(win, $('#dcAgain'));
   await wait(2900);
-  try { pickB = JSON.parse(win.localStorage.getItem('ssochuz-dice-last') || 'null'); } catch (e) {}
+  try { pickB = JSON.parse(win.localStorage.getItem('ssochuz:dice:last:v1') || 'null'); } catch (e) {}
   out.khongLapLai = { truoc: pickA, sau: pickB, khac: pickA !== pickB, khacKetQuaCu: pickB !== pick };
   if (pickB === pickA) err('“Quay lại” không được trả về đúng bộ vừa quay khi còn lựa chọn khác');
   if (pickB === pick) err('kết quả vừa đọc hôm nay không được quay lại trúng ngay');
@@ -228,6 +235,7 @@ const slugOf = t => { const m = REG.lib.filter(n => n.title === t)[0]; return m 
     config: { CZ_API: BASE },
     fetch: dataFetch({ apiBase: BASE, api: makeApi(null), log: [] }),
     setup(w) {
+      supabaseStub(w);
       w.matchMedia = q => ({ matches: /reduced-motion/.test(q), addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {} });
     }
   });
@@ -250,7 +258,8 @@ const slugOf = t => { const m = REG.lib.filter(n => n.title === t)[0]; return m 
   const sp = page('truyen.html', {
     url: 'https://ssochuz.pages.dev/truyen/third-person/',
     config: { CZ_API: BASE },
-    fetch: dataFetch({ apiBase: BASE, api: makeApi(null), log: [] })
+    fetch: dataFetch({ apiBase: BASE, api: makeApi(null), log: [] }),
+    setup: supabaseStub,
   });
   await wait(1500);
   const sh = sp.doc.querySelector('[data-dice]');

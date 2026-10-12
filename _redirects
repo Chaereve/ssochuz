@@ -207,6 +207,10 @@
 /truyen/love-in-the-fast-lane/  /truyen/love-in-the-fast-lane/   200
 # -- OG-END --
 # ===== 2) LUẬT ĐỘNG (có dấu *) — PHẢI nằm cuối tệp, TỔNG SỐ ≤ ~20 ==========
+# Sticker assets được giữ nguyên dưới public/; các alias dưới đây phục vụ đúng
+# URL khai trong registry mà không đổi tên/chỉnh sửa WebP gốc.
+/stickers/sso/full/*  /public/stickers/sso/full/:splat  200
+/stickers/sso/thumb/* /public/stickers/sso/thumb/:splat 200
 /src/*            /  301
 /worker/*         /  301
 /tests/*          /  301

@@ -80,6 +80,14 @@ function auditRedirects() {
   const asset = u => {                       // có trang/tệp thật để phục vụ không?
     const rel = String(u).replace(/^\//, '').split('?')[0];
     if (!rel) return true;
+    /* Pages substitutes :splat from a wildcard source at request time. For a
+       static asset alias, verify that the destination directory contains a
+       real file instead of trying to stat the literal `:splat` path. */
+    if (rel.includes(':splat')) {
+      const dir = path.join(ROOT, rel.slice(0, rel.indexOf(':splat')).replace(/\/$/, ''));
+      try { return fs.readdirSync(dir).some(name => fs.statSync(path.join(dir, name)).isFile()); }
+      catch (e) { return false; }
+    }
     return fs.existsSync(path.join(ROOT, rel))
       || fs.existsSync(path.join(ROOT, rel + '.html'))
       || fs.existsSync(path.join(ROOT, rel, 'index.html'));

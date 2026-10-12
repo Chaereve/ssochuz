@@ -1,102 +1,127 @@
-/* ============================================================================
-   Kiểm thử THEO DÕI + huy hiệu “N chương mới” (chi phí 0 request)
-   - nút chuông NẰM Ở hero trang truyện (không còn trên card/hàng trang chủ cho gọn)
-   - bấm chuông → lưu ssochuz-follow {slug: số chương lúc theo dõi}
-   - registry tăng 2 chương → huy hiệu đỏ “2 chương mới” trên card, không request
-   - hero và nút reader #actFollow đổi trạng thái theo nhau
-   - mở truyện (markFollowSeen) → mốc cập nhật, huy hiệu tắt
-   - bỏ theo dõi → xoá mốc, huy hiệu tắt
-   ========================================================================== */
-const { page, dataFetch } = require('./mk');
+/* Personal home blocks + versioned guest follow/progress + async reader follow.
+   Public TOCs are batched through one Worker endpoint; no per-story polling. */
+const { page, dataFetch, ROOT } = require('./mk');
 const fs = require('fs'), path = require('path');
-const ROOT = path.join(__dirname, '..');
-const REG = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/registry.json'), 'utf8')).lib;
+const REG = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/registry.json'), 'utf8'));
+const readBook = slug => JSON.parse(fs.readFileSync(path.join(ROOT, 'data/book', slug + '.json'), 'utf8'));
+const BASE = 'https://cms.test';
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+const J = (body, ok = true, status = 200) => Promise.resolve({ ok, status, json: () => Promise.resolve(body), text: () => Promise.resolve(JSON.stringify(body)) });
 const bad = [];
-const ok = (cond, msg) => { if (!cond) bad.push(msg); };
-const wait = ms => new Promise(r => setTimeout(r, ms));
+const ok = (condition, label) => { if (!condition) bad.push(label); };
+
+function makeApi(log) {
+  return (route, options = {}) => {
+    if (log) log.push({ route, options });
+    if (route === '/api/registry') return J(REG);
+    const bookMatch = route.match(/^\/api\/book\/([^/?]+)/);
+    if (bookMatch) {
+      try { return J(readBook(decodeURIComponent(bookMatch[1]))); }
+      catch (_) { return J({ ok: false }, false, 404); }
+    }
+    if (route === '/api/schedule') return J({ items: [] });
+    if (route === '/api/stats') return J({ ok: true, source: 'kv', fetchedAt: new Date().toISOString(), items: {} });
+    if (route === '/api/community/tocs' && options.method === 'POST') {
+      const ids = JSON.parse(options.body || '{}').storyIds || [];
+      const items = ids.map(storyId => {
+        const found = REG.lib.find(item => item.slug === storyId);
+        let chapters = [];
+        try { chapters = readBook(storyId).chapters || []; } catch (_) {}
+        return found ? { storyId, chapterCount: chapters.length, updatedAt: found.updated || '',
+          chapters: chapters.slice(-10).map((chapter, offset) => ({ index: chapters.length - Math.min(10, chapters.length) + offset + 1, title: chapter.t || '' })) } : null;
+      }).filter(Boolean);
+      return J({ ok: true, items });
+    }
+    return undefined;
+  };
+}
+function supabaseStub(w) {
+  w.supabase = { createClient() {
+    return { auth: {
+      getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
+    } };
+  } };
+}
 
 (async () => {
-  const out = {};
-  /* ---------- trang chủ: KHÔNG chuông, VẪN huy hiệu ---------- */
   const log = [];
-  const p = page('index.html', { fetch: dataFetch({ log }) });
-  const { win, doc, errors } = p;
-  const CZ = win.CZ;
-  const LS = win.localStorage;
-  const $ = s => doc.querySelector(s), $$ = s => [...doc.querySelectorAll(s)];
-  const click = el => { el.dispatchEvent(new win.MouseEvent('click', { bubbles: true, cancelable: true })); };
-  await wait(900);
-  out.errors0 = errors.slice(0, 5);
-
-  ok(!doc.querySelector('#grid [data-followbtn]'), 'card trang chu phai BO nut chuong cho gon');
-  ok(!doc.querySelector('#contRow [data-followbtn]'), 'hang dang-doc-do phai BO nut chuong');
-  /* huy hiệu vẫn hiện khi có chương mới (giả đã theo dõi từ trước, mốc cũ) */
-  const firstCard = $('#grid .cardwrap [data-t]');
-  const slug = firstCard ? firstCard.getAttribute('href').split('/').filter(Boolean).pop() : '';
-  const n = CZ.findLib(slug);
-  const ch0 = n ? n.chapters : 0;
-  LS.setItem('ssochuz-follow', JSON.stringify({ [slug]: ch0 }));
-  n.chapters = ch0 + 2;
-  click($('[data-view="list"]')); await wait(200);
-  let badge = doc.querySelector('#grid [data-newbadge="' + slug + '"]');
-  ok(badge && !badge.hasAttribute('hidden') && /2 chương mới/.test(badge.textContent),
-    'registry +2 chuong phai hien “2 chương mới” (thay: ' + (badge ? badge.textContent : '<thieu>') + ')');
-  const posts = log.filter(u => /^POST/.test(u));
-  ok(posts.length === 0, 'huy hieu khong duoc phat sinh request (thay POST: ' + posts.join(',') + ')');
-  /* Tủ moved to My Space; the saved-card badge still appears without a bell. */
-  const sp = page('my-space.html', { fetch: dataFetch(), setup(w) {
-    w.localStorage.setItem('ssochuz-shelf', JSON.stringify([slug]));
-    w.localStorage.setItem('ssochuz-follow', JSON.stringify({ [slug]: Math.max(0, ch0 - 2) }));
-  }});
-  await wait(400);
-  const sbadge = sp.doc.querySelector('[data-newbadge="' + slug + '"]');
-  if (sp.doc.querySelector('#localShelf')) {
-    ok(!sp.doc.querySelector('#localShelf [data-followbtn]'), 'tu truyen khong co nut chuong');
-    ok(sbadge && !sbadge.hasAttribute('hidden') && /chương mới/.test(sbadge.textContent), 'My Space must retain new chapter badge');
-  } else {
-    ok(true, 'localShelf removed');
-  }
-  sp.dom.window.close();
-
-  /* ---------- trang truyện: hero CÓ chuông, đồng bộ với reader ---------- */
-  const RS = 'third-person';
-  const bookLen = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/book/' + RS + '.json'), 'utf8')).chapters.length;
-  const regLen = (REG.find(x => x.slug === RS) || {}).chapters || 0;
-  const r = page('truyen.html', {
-    url: 'https://ssochuz.pages.dev/truyen/' + RS + '/',
-    fetch: dataFetch()
+  const story = REG.lib.find(item => item && item.slug && item.status === 'Đang cập nhật' && fs.existsSync(path.join(ROOT, 'data/book', item.slug + '.json')));
+  if (!story) throw new Error('fixture cần ít nhất một truyện đang cập nhật có book tĩnh');
+  const chapterCount = readBook(story.slug).chapters.length;
+  const stamp = new Date(Date.now() - 60_000).toISOString();
+  const home = page('index.html', {
+    url: 'https://ssochuz.pages.dev/', config: { CZ_API: BASE },
+    fetch: dataFetch({ apiBase: BASE, api: makeApi(log), log: [] }),
+    setup(w) {
+      supabaseStub(w);
+      w.matchMedia = query => ({ matches: /reduced-motion/.test(query), addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {} });
+      w.localStorage.setItem('ssochuz:progress:v1', JSON.stringify([{
+        storyId: story.slug, chapterId: 'ch-1', chapterIndex: Math.min(1, chapterCount || 1), scrollPercent: 42, updatedAt: stamp,
+      }]));
+      w.localStorage.setItem('ssochuz:follows:v1', JSON.stringify([{
+        storyId: story.slug, lastSeenChapterIndex: 0, createdAt: stamp, lastSeenAt: stamp,
+      }]));
+      w.localStorage.setItem('ssochuz:dice:options:v1', JSON.stringify({ run: true, done: true, adult: true, genre: '' }));
+    },
   });
   await wait(1300);
-  const rdoc = r.doc, rwin = r.win;
-  const heroBtn = rdoc.querySelector('#shero [data-followbtn="' + RS + '"]');
-  ok(heroBtn, 'hero trang truyen thieu nut chuong [data-followbtn]');
-  ok(heroBtn && heroBtn.getAttribute('aria-pressed') === 'false', 'chuong hero ban dau phai aria-pressed=false');
-  ok(heroBtn && heroBtn.querySelector('svg') && /theo dõi/i.test(heroBtn.textContent), 'nut hero phai co icon + nhan Theo doi');
-  if (heroBtn) {
-    heroBtn.dispatchEvent(new rwin.MouseEvent('click', { bubbles: true, cancelable: true })); await wait(60);
-    const fm = JSON.parse(rwin.localStorage.getItem('ssochuz-follow') || '{}');
-    ok(fm[RS] === Math.max(bookLen, regLen), 'bam chuong hero phai luu moc ' + Math.max(bookLen, regLen) + ' (thay: ' + JSON.stringify(fm) + ')');
-    ok(heroBtn.classList.contains('on') && heroBtn.getAttribute('aria-pressed') === 'true' && /đang theo dõi/i.test(heroBtn.textContent),
-      'nut hero khong doi trang thai sau khi bam');
+  const { win, doc } = home;
+  const resume = doc.querySelector('#resumeSec'), updates = doc.querySelector('#followUpdatesSec');
+  ok(resume && !resume.hidden, 'trang chủ phải có khối Đọc tiếp');
+  ok(updates && !updates.hidden, 'trang chủ phải có khối truyện theo dõi có chương mới');
+  ok(doc.querySelector('#resumeRail .personal-card a[href*="chuong-"]'), 'tiến độ phải hiện link Đọc tiếp tới chương đã lưu');
+  ok(doc.querySelector('#resumeRail .personal-progress'), 'Đọc tiếp hiển thị % tiến độ scroll');
+  const fresh = doc.querySelector('#followUpdatesRail .personal-card');
+  ok(fresh && /chương mới/i.test(fresh.textContent), 'follow baseline cũ phải hiện số chương mới');
+  const tocRequests = log.filter(row => row.route === '/api/community/tocs');
+  ok(tocRequests.length <= 1 && tocRequests.every(row => JSON.parse(row.options.body).storyIds.length <= 20),
+    'homepage gọi TOC theo batch, không phát sinh N+1 request');
+  ok(!!doc.querySelector('[data-dice] .dicebtn'), 'random picker có nút trên trang chủ');
+  const candidates = win.CZDice.candidates();
+  ok(candidates.length > 0 && candidates.some(item => item.slug === story.slug), 'random picker ưu tiên truyện được theo dõi');
+  const diceButton = doc.querySelector('[data-dice] .dicebtn');
+  diceButton && diceButton.click();
+  await wait(50);
+  ok(!!doc.querySelector('#czDiceBox #dcSpin'), 'random picker mở vòng quay');
+  const spin = doc.querySelector('#czDiceBox #dcSpin');
+  spin && spin.click();
+  await wait(70);
+  ok(doc.querySelector('#czDiceBox #dcResult h4')?.textContent === story.title, 'vòng quay chốt truyện theo dõi khi chỉ còn một ứng viên ưu tiên');
+
+  // Follow click in the story hero and in-reader control runs the shared async service.
+  const reader = page('truyen.html', {
+    url: 'https://ssochuz.pages.dev/truyen/third-person/',
+    config: { CZ_API: BASE },
+    fetch: dataFetch({ apiBase: BASE, api: makeApi([]), log: [] }),
+    setup: supabaseStub,
+  });
+  await wait(1300);
+  const rwin = reader.win, rdoc = reader.doc;
+  const storySlug = 'third-person';
+  const hero = rdoc.querySelector('#shero [data-followbtn="' + storySlug + '"]');
+  ok(hero && hero.getAttribute('aria-pressed') === 'false', 'story hero follow button exposes aria-pressed');
+  hero && hero.dispatchEvent(new rwin.MouseEvent('click', { bubbles: true, cancelable: true }));
+  await wait(80);
+  let saved = JSON.parse(rwin.localStorage.getItem('ssochuz:follows:v1') || '[]');
+  ok(saved.some(row => row.storyId === storySlug), 'follow action persists only into versioned guest data');
+  ok(!rwin.localStorage.getItem('ssochuz-follow'), 'new follows are not written to legacy unversioned keys');
+  ok(hero && hero.getAttribute('aria-pressed') === 'true', 'hero button updates after guest save succeeds');
+  rwin.location.hash = '#chuong-1';
+  await wait(350);
+  const readerFollow = rdoc.querySelector('#actFollow');
+  ok(readerFollow && readerFollow.getAttribute('aria-pressed') === 'true', 'reader button reflects the same follow state');
+  if (readerFollow) {
+    readerFollow.dispatchEvent(new rwin.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await wait(70);
   }
-  /* reader đồng bộ theo hero */
-  rwin.location.hash = '#chuong-1'; await wait(400);
-  const ab = rdoc.querySelector('#actFollow');
-  ok(ab && ab.classList.contains('on') && /đang theo dõi/i.test(ab.textContent), 'reader #actFollow phai hien Đang theo doi theo hero');
-  if (ab) {
-    ab.dispatchEvent(new rwin.MouseEvent('click', { bubbles: true, cancelable: true })); await wait(60);
-    const fm2 = JSON.parse(rwin.localStorage.getItem('ssochuz-follow') || '{}');
-    ok(!(RS in fm2), 'bam chuong trong reader phai bo theo doi (thay: ' + JSON.stringify(fm2) + ')');
-    const heroBtn2 = rdoc.querySelector('#shero [data-followbtn="' + RS + '"]');
-    ok(heroBtn2 && !heroBtn2.classList.contains('on') && heroBtn2.getAttribute('aria-pressed') === 'false',
-      'bo theo doi trong reader thi nut hero phai tat theo');
-  }
-  /* mở truyện cập nhật mốc (theo dõi lại với mốc cũ rồi mở) */
-  rwin.localStorage.setItem('ssochuz-follow', JSON.stringify({ [RS]: bookLen - 2 }));
-  rwin.CZ.markFollowSeen(RS);
-  ok(rwin.CZ.newChapters(RS) === 0, 'mo truyen phai cap nhat moc (newChapters=' + rwin.CZ.newChapters(RS) + ')');
-  out.errors1 = r.errors.slice(0, 6);
-  out.errors2 = bad;
-  console.log(JSON.stringify(out, null, 1));
-  process.exit(0);
-})();
+  saved = JSON.parse(rwin.localStorage.getItem('ssochuz:follows:v1') || '[]');
+  ok(!saved.some(row => row.storyId === storySlug), 'reader follow control removes the same guest row');
+  ok(reader.errors.length === 0, 'story follow test has no JavaScript errors: ' + reader.errors.slice(0, 3).join(' | '));
+  ok(home.errors.length === 0, 'home personal UI has no JavaScript errors: ' + home.errors.slice(0, 3).join(' | '));
+
+  console.log(JSON.stringify({ errors0: bad, story: story.slug, chapters: chapterCount, tocBatches: tocRequests.length,
+    personalKeys: ['ssochuz:progress:v1', 'ssochuz:follows:v1'] }, null, 1));
+  home.dom.window.close(); reader.dom.window.close();
+  process.exit(bad.length ? 1 : 0);
+})().catch(error => { console.error(error && error.stack || error); process.exit(1); });

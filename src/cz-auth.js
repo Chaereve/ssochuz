@@ -831,6 +831,9 @@
     login: login, loginEmail: loginEmail, loginDialog: loginDialog,
     provider: provider, configured: configured, isAdmin: isAdmin,
     applySettings: applySettings, settingsApplied: isSettingsApplied, supabase: function () { return sb; },
+    /* Client hiện hành dùng anon/publishable key. Personal-data service vẫn đi
+       qua RLS; không expose hay nhúng service_role vào trình duyệt. */
+    getClient: client,
     applyServerProfile: applyServerProfile, updateProfile: updateProfile, editProfileDialog: editProfileDialog, cropAvatar: cropDialog,
     getCustomProfile: getCustomProfile,
     /* trạng thái phiên (1.9.9) — xem khối chú thích đầu tệp */

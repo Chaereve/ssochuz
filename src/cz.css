@@ -1290,7 +1290,7 @@ body.rd-scroll .rnav { padding-bottom: 4px; }
 .ract { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; max-width: var(--rd-w, 720px);
   margin: 8px auto 0; padding: 18px 24px 48px; }
 .ract > * { position: relative; display: inline-flex; align-items: center; justify-content: center;
-  width: 40px; height: 40px; padding: 0; border-radius: var(--r);
+  width: 44px; height: 44px; padding: 0; border-radius: var(--r);
   border: 1px solid var(--rd-bd); background: var(--rd-surf); color: var(--rd-mut);
   transition: color var(--t) var(--ease), border-color var(--t) var(--ease), background var(--t) var(--ease),
     transform var(--t) var(--ease); }
@@ -1843,7 +1843,7 @@ body.page-in main { animation: pageIn var(--t-slow) var(--ease-out) both; }
 .cardwrap { position: relative; }
 .cardwrap > .card.list { padding-right: 54px; }   /* chừa chỗ cho chuông */
 .followbtn { position: absolute; z-index: 3; display: grid; place-items: center; padding: 0;
-  width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+  width: 44px; height: 44px; border-radius: 50%; cursor: pointer;
   border: 1px solid rgba(255, 255, 255, .55); background: rgba(12, 8, 6, .55); color: #fff; }
 .cardwrap > .followbtn { top: 44px; left: 8px; }   /* dưới ký hiệu tình trạng, không đụng bookmark NEW */
 .cardwrap.listwrap > .followbtn { top: 50%; right: 10px; left: auto; transform: translateY(-50%); }
@@ -3467,7 +3467,7 @@ body.rd-focus .rdcmts { display: none; }
    1.19.0 · TĂNG TƯƠNG TÁC & TRẢI NGHIỆM ĐỌC
    ----------------------------------------------------------------------------
    Gồm: reaction sticker cuối chương · chế độ Zen · Bionic · Terminal ·
-   Hộp góp gạch · Vòng quay “Hôm nay đọc gì?” · nút ẩn nhanh (panic).
+   Hộp góp gạch · Vòng quay “Hôm nay đọc gì?”.
    Nguyên tắc chung của khối này:
      · mọi chuyển động chỉ chạy trên transform / opacity (không layout lại);
      · màu lấy từ token --rd-* khi đang đọc, không có thì rơi về --surf/--txt
@@ -3721,43 +3721,7 @@ body.rd-term .rtext img { border: 1px solid var(--rd-bd); border-radius: 4px; }
 }
 @media (prefers-reduced-motion: reduce) { .dc-result .dc-card { animation: none; } }
 
-/* ===================== 7. NÚT ẨN NHANH (PANIC) ============================ */
-.panic { position: fixed; inset: 0; z-index: 9999; overflow: auto; background: #f8f9fa; color: #202124;
-  font-family: Roboto, Arial, var(--font); }
-.panic[hidden] { display: none !important; }
-.pn-top { display: flex; align-items: center; gap: 14px; padding: 8px 14px; background: #fff;
-  border-bottom: 1px solid #dadce0; position: sticky; top: 0; z-index: 2; flex-wrap: wrap; }
-.pn-doc { width: 26px; height: 34px; flex: none; border-radius: 3px; background: #1a73e8;
-  box-shadow: inset -6px -6px 0 #0b57d0; }
-.pn-name b { display: block; font-size: 15px; font-weight: 500; }
-.pn-name span { font-size: 11.5px; color: #5f6368; }
-.pn-name i { font-style: normal; color: #9aa0a6; }
-.pn-menu { display: flex; gap: 14px; font-size: 13px; color: #444746; margin-left: 8px; }
-.pn-out { margin-left: auto; font-size: 12.5px; padding: 6px 12px; border-radius: 4px; border: 1px solid #dadce0;
-  background: #fff; color: #1a73e8; cursor: pointer; }
-.pn-out:hover { background: #f1f3f4; }
-.pn-out kbd { font-family: inherit; border: 1px solid #dadce0; border-radius: 3px; padding: 0 4px; margin-left: 4px; font-size: 11px; }
-.pn-tools { display: flex; align-items: center; gap: 12px; padding: 6px 16px; background: #edf2fa; color: #444746;
-  font-size: 12.5px; border-bottom: 1px solid #dadce0; overflow: hidden; }
-.pn-tools .pn-sep { width: 1px; height: 14px; background: #dadce0; }
-.pn-page { max-width: 760px; margin: 0 auto; padding: 46px 40px 90px; background: #fff; min-height: 100vh;
-  box-shadow: 0 1px 3px rgba(60, 64, 67, .18); }
-.pn-page:focus { outline: none; }
-.pn-page h1 { font-size: 26px; font-weight: 500; margin-bottom: 10px; }
-.pn-page h2 { font-size: 17px; font-weight: 600; margin: 26px 0 8px; }
-.pn-page p, .pn-page li { font-size: 14px; line-height: 1.75; }
-.pn-lead { color: #5f6368; }
-.pn-page ul { margin: 0 0 10px 20px; }
-.pn-page table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13.5px; }
-.pn-page th, .pn-page td { border: 1px solid #dadce0; padding: 7px 9px; text-align: left; vertical-align: top; }
-.pn-page th { background: #f8f9fa; font-weight: 600; }
-.pn-foot { color: #5f6368; font-style: italic; }
-@media (max-width: 640px) {
-  .pn-menu, .pn-tools { display: none; }
-  .pn-page { padding: 26px 18px 60px; }
-}
-
-/* ===================== 8. GIẢM CHUYỂN ĐỘNG (riêng khối này) =============== */
+/* ===================== 7. GIẢM CHUYỂN ĐỘNG (riêng khối này) =============== */
 @media (prefers-reduced-motion: reduce) {
   .rx, .rx-art, .rx-ct, .bk-pile, .bk-bar i, .dc-wheel { transition: none !important; }
   .rx:hover { transform: none; }
@@ -3779,4 +3743,59 @@ body.rd-term .rtext img { border: 1px solid var(--rd-bd); border-radius: 4px; }
    nằm sau mọi luật đặt `display:` — đổi chỗ là bài kiểm tra "đã đăng nhập thì
    không còn lời mời đăng nhập" đỏ ngay, và đó chính là điều ta muốn.
    ========================================================================== */
+/* ===================== KHÔNG GIAN CÁ NHÂN TRANG CHỦ ===================== */
+.personal-rail { display: flex; gap: 14px; overflow-x: auto; padding: 2px 2px 12px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+.personal-card { display: flex; flex: 0 0 min(310px, 86vw); min-width: 0; gap: 12px; padding: 10px; border: 1px solid var(--bd); border-radius: var(--r-lg); background: var(--surf); scroll-snap-align: start; }
+.personal-cover { display: grid; place-items: center; width: 80px; height: 112px; flex: 0 0 auto; overflow: hidden; border-radius: var(--r); background: var(--surf2); }
+.personal-cover img { width: 100%; height: 100%; object-fit: cover; }
+.personal-cover-fallback { font-size: 28px; }
+.personal-card-body { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; flex: 1; gap: 6px; }
+.personal-card-title { display: -webkit-box; overflow: hidden; color: var(--txt); font-weight: 750; line-height: 1.35; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.personal-card-title:hover { color: var(--acc); }
+.personal-card-badge { max-width: 100%; overflow: hidden; color: var(--mut); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.personal-progress { display: block; width: 100%; height: 5px; overflow: hidden; border-radius: 99px; background: var(--surf2); }
+.personal-progress i { display: block; height: 100%; border-radius: inherit; background: var(--acc); }
+.personal-card-actions { display: flex; align-items: center; gap: 8px; margin-top: auto; }
+.personal-follow { display: inline-grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--bd); border-radius: 50%; color: var(--mut); background: var(--surf2); cursor: pointer; }
+.personal-follow.on { color: var(--acc); border-color: color-mix(in srgb, var(--acc) 40%, var(--bd)); }
+.personal-follow .i { width: 18px; height: 18px; }
+.personal-empty { width: 100%; margin: 0; padding: 18px; border: 1px dashed var(--bd); border-radius: var(--r); color: var(--mut); font-size: 13px; }
+
+/* ===== Sticker picker Sso tích hợp comment/reply hiện có ================= */
+.cmt-sticker-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.cmt-sticker-open, .cmt-sticker-clear { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 7px 12px; border: 1px solid var(--bd); border-radius: 10px; background: var(--surf); color: var(--txt); font: inherit; font-size: 12.5px; font-weight: 650; cursor: pointer; }
+.cmt-sticker-open:hover, .cmt-sticker-clear:hover { border-color: var(--acc); color: var(--acc); }
+.cmt-sticker-selected { display: inline-flex; align-items: center; gap: 5px; padding: 3px 5px 3px 8px; border: 1px solid var(--bd); border-radius: 12px; background: var(--surf2); }
+.cmt-sticker-selected .cmt-sticker-card { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+.cmt-sticker-selected .cmt-sticker-card img { width: 36px; height: 36px; }
+.cmt-sticker-selected .cmt-sticker-clear { min-width: 44px; min-height: 44px; padding: 0; border: 0; background: transparent; font-size: 20px; }
+.cmt-sticker-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 7px; width: 100%; max-height: 260px; overflow: auto; padding: 8px; border: 1px solid var(--bd); border-radius: var(--r); background: var(--surf2); overscroll-behavior: contain; }
+.cmt-sticker-option { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; min-height: 96px; padding: 8px 5px; border: 1px solid transparent; border-radius: 10px; background: var(--surf); color: var(--txt); font: inherit; font-size: 11px; line-height: 1.25; text-align: center; cursor: pointer; }
+.cmt-sticker-option:hover { border-color: var(--acc); }
+.cmt-sticker-option:focus-visible { border-color: var(--acc); outline: 2px solid var(--acc); outline-offset: 2px; }
+.cmt-sticker-option img { width: 56px; height: 56px; object-fit: contain; }
+.cmt-sticker-card { position: relative; display: inline-flex; align-items: center; gap: 8px; max-width: 100%; color: var(--mut); font-size: 12px; }
+.cmt-sticker-card img { width: 64px; height: 64px; object-fit: contain; }
+.cmt-sticker-card .cmt-sticker-emoji, .cmt-sticker-option .cmt-sticker-emoji { display: none; font-size: 30px; }
+.cmt-sticker-card .cmt-sticker-emoji.show, .cmt-sticker-option .cmt-sticker-emoji.show { display: inline-block; }
+.cmt-sticker-posted { margin-top: 5px; }
+.cmt-sticker-posted .cmt-sticker-card { padding: 5px 8px; border-radius: 10px; background: var(--surf2); }
+.cmt-sticker-posted .cmt-sticker-card img { width: 56px; height: 56px; }
+.cmt-reply-row .cmt-sticker-picker { grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); }
+@media (max-width: 540px) {
+  .personal-card { flex-basis: min(290px, 86vw); }
+  .cmt-sticker-picker { grid-template-columns: repeat(3, minmax(0, 1fr)); max-height: 230px; }
+  .cmt-actions { flex-wrap: wrap; }
+}
+
+.bk-sticker { position: relative; display: inline-grid; place-items: center; width: 40px; height: 40px; margin-right: 6px; vertical-align: middle; }
+.bk-sticker img, .bk-sticker > span { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.bk-sticker > span { display: grid; place-items: center; font-size: 24px; }
+.bk-send { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; }
+.bk-send:disabled { cursor: not-allowed; opacity: .68; }
+.rreact .rx { min-width: 58px; min-height: 58px; }
+@media (prefers-reduced-motion: reduce) {
+  .bk-drop.go, .bk-pile.bump { animation: none !important; }
+}
+
 [hidden] { display: none !important; }

@@ -108,6 +108,7 @@
   var cur = 0;             /* chương đang đọc (1-based) */
   var reading = false;
   var storyScroll = 0;
+  var progressSavedAt = 0, progressSavedPct = 0, progressSavedCh = 0;
   var chState = { q: '', sort: 'old', page: 1, per: 24 };
   var PAGES = [], PI = 0;  /* chế độ phân trang */
 
@@ -1309,7 +1310,11 @@
     var s = CZ.rdGet();
     if (s.mode === 'paged' && PAGES.length) {
       var target = PI + dir;
-      if (target >= 0 && target < PAGES.length) { PI = target; paintPage(); return; }
+      if (target >= 0 && target < PAGES.length) {
+        PI = target; paintPage();
+        recordReadPosition(PAGES.length > 1 ? ((PI + 1) / PAGES.length) * 100 : 0, false);
+        return;
+      }
       return go(cur + (dir > 0 ? 1 : -1), dir < 0 ? 'last' : 0);
     }
     return go(cur + dir);
@@ -1317,8 +1322,13 @@
   function go(ch, pageHint) {
     if (ch < 1) return toast('Đây là chương đầu tiên.');
     if (ch > CHS.length) return toast('Bạn đã ở chương cuối.');
-    /* N10: bấm Chương tiếp theo đồng nghĩa đã đọc xong chương hiện tại */
-    if (ch === cur + 1 && N && CZ.myReadAdd) CZ.myReadAdd(N.slug, cur);
+    /* Bấm Chương tiếp theo đồng nghĩa đã đọc xong chương hiện tại. Chỉ ghi
+       một lần theo thao tác chương, không phụ thuộc số lần scroll event. */
+    if (ch === cur + 1 && N) {
+      if (CZ.myReadAdd) CZ.myReadAdd(N.slug, cur);
+      CZ.setProgress(N, cur, 100, true);
+      progressSavedCh = cur; progressSavedPct = 100; progressSavedAt = Date.now();
+    }
     openChapterURL(ch);
     if (pageHint === 'last') setTimeout(function () { PI = Math.max(0, PAGES.length - 1); paintPage(); }, 30);
   }
@@ -1513,6 +1523,10 @@
   function paintChapter(keepScroll) {
     var c = CHS[cur - 1];
     if (!c) return;
+    var savedRead = window.CZPersonal && window.CZPersonal.progressFor
+      ? window.CZPersonal.progressFor(N && N.slug) : null;
+    var sameSavedChapter = !!(savedRead && Number(savedRead.chapterIndex) === cur);
+    var restorePercent = sameSavedChapter ? Math.max(0, Math.min(100, Number(savedRead.scrollPercent) || 0)) : 0;
     if (c.html == null) {
       /* chưa có chữ trong máy (đường nhẹ 1.16.0): hiện khung chờ rồi tải đúng
          chương này. Callback chỉ vẽ lại nếu người đọc CÒN đang ở chương đó. */
@@ -1550,7 +1564,13 @@
     CZ.reportView(N.slug, cur).then(function (r) { if (r && r.counted) bumpViews(1); });
     if (cur >= N.chapters && CZ.markFollowSeen) CZ.markFollowSeen(N);
     PAGES = []; PI = 0;
-    if (s.mode === 'paged') { PAGES = measure(txt); paintPage(); } else renderNav(false);
+    if (s.mode === 'paged') {
+      PAGES = measure(txt);
+      if (sameSavedChapter && restorePercent > 0 && PAGES.length > 1) {
+        PI = Math.min(PAGES.length - 1, Math.round((restorePercent / 100) * (PAGES.length - 1)));
+      }
+      paintPage();
+    } else renderNav(false);
     /* tải trước 2 chương kề (nhỏ, ~18 KB mỗi chương) để bấm Tiếp/Trước là hiện
        ngay — đúng thứ bản cũ có sẵn vì nó tải cả bộ từ đầu */
     if (CHS[cur]) ensureChapter(cur + 1);
@@ -1562,7 +1582,8 @@
        của chương hiện ngay trên nút, và tổng phiếu của bộ vẫn cộng lên bảng xếp hạng. */
     var st = CZ.statsOf(N);
     function actBtn(id, ico, label, on) {
-      return '<button id="' + id + '" class="' + (on ? 'on' : '') + '" title="' + esc(label) + '" aria-label="' + esc(label) + '">' +
+      var followAttr = id === 'actFollow' ? ' data-followbtn="' + esc(N.slug) + '" aria-pressed="' + (!!on) + '"' : '';
+      return '<button id="' + id + '" class="' + (on ? 'on' : '') + '"' + followAttr + ' title="' + esc(label) + '" aria-label="' + esc(label) + '">' +
         ic(ico, 'i-s') + '<span class="lbl">' + esc(label) + '</span></button>';
     }
     var liked = CZ.isLiked(N, cur);
@@ -1732,11 +1753,35 @@
     $('#rdEnd').innerHTML = last
       ? '<div class="endrule" aria-hidden="true"></div><div class="endline"><span class="endsub">Bộ này đang cập nhật — lưu vào tủ truyện để quay lại khi có chương mới.</span></div><a class="btn ghost sm mt" href="' + esc(CZ.storyURL(N.slug)) + '" id="endInfo">' + ic('info', 'i-s') + 'Thông tin truyện</a>'
       : '<div class="endrule" aria-hidden="true"></div>';
-    if (!keepScroll) window.scrollTo({ top: 0, behavior: 'auto' });
+    var currentScrollPercent = 0;
+    if (s.mode !== 'paged') {
+      var scrollMax = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      currentScrollPercent = keepScroll && scrollMax > 0
+        ? Math.max(0, Math.min(100, ((window.scrollY || 0) / scrollMax) * 100))
+        : restorePercent;
+    }
+    var savedPosition = s.mode === 'paged'
+      ? (PAGES.length > 1 ? ((PI + 1) / PAGES.length) * 100 : 0)
+      : currentScrollPercent;
+    if (!keepScroll) {
+      window.scrollTo({ top: 0, behavior: 'auto' });
+      if (s.mode !== 'paged' && restorePercent > 0) {
+        /* Nội dung đã được dựng trước khi đo; chờ hai frame để bố cục ổn định,
+           rồi khôi phục vị trí mà không tạo animation khi người đọc quay lại. */
+        requestAnimationFrame(function () { requestAnimationFrame(function () {
+          if (!reading || cur !== Number((savedRead && savedRead.chapterIndex) || cur)) return;
+          var max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+          window.scrollTo({ top: Math.round(max * restorePercent / 100), behavior: 'auto' });
+        }); });
+      }
+    }
     $('#rdProgFill').style.transform = 'scaleX(' + (CHS.length ? cur / CHS.length : 0) + ')';
     var pct = $('#rdPct');
-    if (pct) pct.textContent = Math.round((CZ.rdGet().mode === 'paged' && PAGES.length ? (PI + 1) / PAGES.length : 1 / Math.max(1, CHS.length)) * 100) + '%';
-    CZ.setProgress(N, cur);
+    if (pct) pct.textContent = Math.round((s.mode === 'paged' && PAGES.length ? (PI + 1) / PAGES.length : 1 / Math.max(1, CHS.length)) * 100) + '%';
+    CZ.setProgress(N, cur, savedPosition, sameSavedChapter ? undefined : false);
+    progressSavedCh = cur;
+    progressSavedPct = savedPosition;
+    progressSavedAt = Date.now();
     try { document.title = c.t + ' · ' + N.title + ' — ssochuz library'; } catch (e) {}
     paintTOC(); paintTopNav();
     /* 1.19.0: skin đọc (Terminal/Bionic) + hàng reaction sticker cuối chương.
@@ -1878,6 +1923,19 @@
       wake();
     }, { passive: true });
   });
+  function recordReadPosition(percent, completed) {
+    if (!reading || !N) return;
+    var now = Date.now();
+    var value = Math.max(0, Math.min(100, Number(percent) || 0));
+    var newChapter = progressSavedCh !== cur;
+    var completedNow = completed === true && (newChapter || progressSavedPct < 90);
+    var meaningful = now - progressSavedAt >= 15000 && Math.abs(value - progressSavedPct) >= 8;
+    if (!newChapter && !completedNow && !meaningful) return;
+    CZ.setProgress(N, cur, value, completedNow ? true : undefined);
+    progressSavedCh = cur;
+    progressSavedPct = value;
+    progressSavedAt = now;
+  }
   var rdLastY = 0, rdTick = false;
   window.addEventListener('scroll', function () {
     /* sự kiện cuộn có thể bắn nhiều lần trong một khung hình; dồn về một lần
@@ -1908,9 +1966,10 @@
         var pc = $('#rdPct');
         if (pc) pc.textContent = Math.round(f * 100) + '%';
         if (f >= 0.5) preNextFire();
-        /* N10: cuộn tới ~cuối chương (≥90%) là tính 1 chương đọc vào
-           thống kê cá nhân — chỉ lưu trong máy, không gửi request nào */
+        /* Thống kê local khi tới ≥90%; tiến độ Supabase chỉ flush theo ngưỡng
+           15 giây + thay đổi ≥8%, không ghi ở mỗi scroll event. */
         if (f >= 0.9 && N && CZ.myReadAdd) CZ.myReadAdd(N.slug, cur);
+        recordReadPosition(f * 100, f >= 0.9);
       }
     });
   }, { passive: true });
@@ -2479,6 +2538,31 @@
     }
   }
 
+  window.addEventListener('cz:personal', function (event) {
+    var info = (event && event.detail) || {};
+    if (info.type !== 'ready' || !N) return;
+    if (!reading) {
+      try { renderStory(); renderInfo(); renderChapters(); syncBrickBox(); } catch (e) {}
+      return;
+    }
+    var saved = window.CZPersonal && window.CZPersonal.progressFor(N.slug);
+    if (!saved || Number(saved.chapterIndex) !== cur) return;
+    var pos = Math.max(0, Math.min(100, Number(saved.scrollPercent) || 0));
+    if (CZ.rdGet().mode === 'paged' && PAGES.length > 1) {
+      PI = Math.min(PAGES.length - 1, Math.round((pos / 100) * (PAGES.length - 1)));
+      paintPage();
+    } else if (pos > 0) {
+      requestAnimationFrame(function () { requestAnimationFrame(function () {
+        if (!reading || Number(saved.chapterIndex) !== cur) return;
+        var max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+        window.scrollTo({ top: Math.round(max * pos / 100), behavior: 'auto' });
+      }); });
+    }
+    progressSavedCh = cur; progressSavedPct = pos; progressSavedAt = Date.now();
+  });
   if (window.CZ_AUTH) CZ_AUTH.onAuth(function () { loadMyRating(false); });
-  CZ.registry().then(function (r) { boot(r.reg); }).catch(function () { boot(null); });
+  CZ.registry().then(function (r) {
+    var ready = window.CZPersonal && window.CZPersonal.whenReady ? window.CZPersonal.whenReady(1200) : Promise.resolve();
+    return ready.then(function () { boot(r.reg); });
+  }).catch(function () { boot(null); });
 })();

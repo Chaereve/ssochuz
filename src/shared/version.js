@@ -6,6 +6,6 @@
    `tools/check_version.mjs` (chạy tự động trong `npm test`).
 
    Muốn nâng phiên bản:
-     node tools/check_version.mjs --write 1.19.0
+     node tools/check_version.mjs --write <phiên-bản-mới>
    ========================================================================== */
-export const VERSION = '1.19.0';
+export const VERSION = '1.20.0';

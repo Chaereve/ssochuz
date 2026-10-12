@@ -234,6 +234,99 @@
     CZ.mountRail($('#newRail'), rows.slice(0, 12));
   }
 
+  /* ===================== KHÔNG GIAN CÁ NHÂN ============================ */
+  var personalRenderId = 0;
+  function personalCard(n, title, href, progressPct, badge) {
+    var image = CZ.coverSrc(n);
+    var percent = Math.max(0, Math.min(100, Number(progressPct) || 0));
+    return '<article class="personal-card">' +
+      '<a class="personal-cover" href="' + esc(href) + '" aria-label="' + esc(title) + '">' +
+      (image ? '<img src="' + esc(image) + '"' + CZ.coverFB(n, image) + ' alt="' + esc(n.title) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '<span class="personal-cover-fallback" aria-hidden="true">📖</span>') +
+      '</a><div class="personal-card-body"><a class="personal-card-title" href="' + esc(href) + '">' + esc(n.title) + '</a>' +
+      (badge ? '<span class="personal-card-badge">' + esc(badge) + '</span>' : '') +
+      (progressPct == null ? '' : '<span class="personal-progress"><i style="width:' + percent.toFixed(0) + '%"></i></span>') +
+      '<div class="personal-card-actions"><a class="btn primary sm" href="' + esc(href) + '">' + esc(badge && badge.indexOf('mới') >= 0 ? 'Đọc chương mới' : 'Đọc tiếp') + '</a>' +
+      CZ.followBtn(n, 'personal-follow') + '</div></div></article>';
+  }
+  function renderPersonalBlocks() {
+    var service = window.CZPersonal;
+    var resumeSection = $('#resumeSec'), followSection = $('#followUpdatesSec');
+    if (!resumeSection || !followSection) return;
+    if (!service) { resumeSection.hidden = true; followSection.hidden = true; return; }
+    resumeSection.hidden = false; followSection.hidden = false;
+    var requestId = ++personalRenderId;
+    var mode = service.mode();
+    var resumeRail = $('#resumeRail'), followRail = $('#followUpdatesRail');
+    if (mode === 'loading') {
+      resumeRail.innerHTML = '<p class="personal-empty">Đang đồng bộ dữ liệu đọc…</p>';
+      followRail.innerHTML = '<p class="personal-empty">Đang kiểm tra truyện theo dõi…</p>';
+      return;
+    }
+    if (mode === 'error') {
+      resumeRail.innerHTML = '<p class="personal-empty">Chưa thể tải dữ liệu cá nhân. Kiểm tra kết nối rồi thử tải lại trang.</p>';
+      followRail.innerHTML = '<p class="personal-empty">Danh sách theo dõi chưa được đồng bộ.</p>';
+      return;
+    }
+    var library = CZ.lib();
+    var known = Object.create(null);
+    library.forEach(function (story) { known[story.slug] = story; });
+    var progressRows = service.progressRows().filter(function (row) {
+      return row && row.chapterIndex > 0 && known[row.storyId];
+    }).sort(function (a, b) { return String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')); }).slice(0, 8);
+    if (progressRows.length) {
+      resumeRail.innerHTML = progressRows.map(function (row) {
+        var story = known[row.storyId];
+        var url = CZ.readURL(story.slug, row.chapterIndex);
+        var progress = Number(row.scrollPercent) || 0;
+        var chapterLabel = 'Chương ' + row.chapterIndex + (row.completedAt ? ' · đã đọc' : '');
+        return personalCard(story, chapterLabel, url, progress, chapterLabel);
+      }).join('');
+    } else {
+      resumeRail.innerHTML = '<p class="personal-empty">Chưa có truyện đọc dở. Mở một bộ truyện bất kỳ để lưu tiến độ.</p>';
+    }
+    var follows = service.followRows().filter(function (row) { return row && known[row.storyId]; });
+    if (!follows.length) {
+      followRail.innerHTML = '<p class="personal-empty">Chưa theo dõi truyện nào. Bấm biểu tượng chuông trên một truyện để nhận diện chương mới ở đây.</p>';
+      return;
+    }
+    followRail.innerHTML = '<p class="personal-empty">Đang tải danh sách chương mới…</p>';
+    service.fetchTocs(follows.map(function (row) { return row.storyId; })).then(function (tocRows) {
+      if (requestId !== personalRenderId) return;
+      var bySlug = Object.create(null);
+      var tocList = Array.isArray(tocRows) ? tocRows : Object.keys(tocRows || {}).map(function (key) { return tocRows[key]; });
+      tocList.forEach(function (toc) {
+        if (toc && (toc.slug || toc.storyId)) bySlug[toc.slug || toc.storyId] = toc;
+      });
+      var updates = follows.map(function (row) {
+        var story = known[row.storyId], toc = bySlug[row.storyId] || {};
+        var count = Number(toc.chapterCount);
+        if (!Number.isFinite(count) || count < 0) count = CZ.realCount(story.slug);
+        if (!Number.isFinite(count) || count < 0) count = story.chapters;
+        var unseen = service.newChapters(story.slug, count);
+        return { story: story, toc: toc, count: count, unseen: unseen };
+      }).filter(function (item) { return item.unseen > 0; })
+        .sort(function (a, b) { return b.unseen - a.unseen || String(b.toc.updatedAt || '').localeCompare(String(a.toc.updatedAt || '')); });
+      if (!updates.length) {
+        followRail.innerHTML = '<p class="personal-empty">Bạn đã đọc hết chương hiện có của các truyện đang theo dõi.</p>';
+        return;
+      }
+      followRail.innerHTML = updates.slice(0, 12).map(function (item) {
+        var last = item.toc.chapters && item.toc.chapters.length ? item.toc.chapters[item.toc.chapters.length - 1] : null;
+        var index = Math.max(1, Number(last && last.index) || item.count);
+        var title = last && last.title ? last.title : 'Chương ' + index;
+        var url = item.story.locked ? CZ.storyURL(item.story.slug) : CZ.readURL(item.story.slug, index);
+        return personalCard(item.story, title, url, null, item.unseen + ' chương mới');
+      }).join('');
+    }).catch(function () {
+      if (requestId === personalRenderId) followRail.innerHTML = '<p class="personal-empty">Chưa tải được mục lục truyện theo dõi. Tiến độ của bạn vẫn được giữ nguyên.</p>';
+    });
+  }
+  var personalRenderTimer = 0;
+  window.addEventListener('cz:personal', function () {
+    clearTimeout(personalRenderTimer);
+    personalRenderTimer = setTimeout(renderPersonalBlocks, 60);
+  });
+
   /* navCounts removed per request - badges caused overlap and clutter */
   function navCounts() {
     // intentionally empty - no count badges in header
@@ -622,6 +715,7 @@
       renderFacts(lib);
 
       renderNew();
+      renderPersonalBlocks();
       renderRank();
       renderEditorChoice();
       CZ.schedule().then(renderSched).catch(function () { renderSched(null); });
@@ -636,7 +730,7 @@
       /* một bộ vừa được đối chiếu số chương thật → vẽ lại thẻ cho đúng */
       window.addEventListener('cz:count', function () {
         try { CZ._setLib(); } catch (e) {}
-        renderFacts(CZ.lib()); renderNew(); renderRank(); render();
+        renderFacts(CZ.lib()); renderNew(); renderPersonalBlocks(); renderRank(); render();
       });
     } catch (e) { fail('lỗi dựng trang chủ', e); }
   }

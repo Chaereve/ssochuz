@@ -1,5 +1,5 @@
 /* ============================================================================
-   ssochuz · HỆ THỐNG REACTION STICKER CUỐI CHƯƠNG (bản 1.19.0)
+   ssochuz · HỆ THỐNG REACTION STICKER CUỐI CHƯƠNG (bản 1.20.0)
    ----------------------------------------------------------------------------
    VÌ SAO CÓ TỆP NÀY: nút Thích cũ chỉ là một icon tim — bấm rồi chẳng có gì vui,
    cũng chẳng nói được người đọc đang nghĩ gì. Hàng reaction dưới đây thay cảm
@@ -15,16 +15,9 @@
      5. ReactionPopover — bảng đầy đủ (mở bằng CZ.modal nên có sẵn Esc/scrim)
      …cộng thêm ReactionAnimationLayer (lớp sticker bay) và sfx() (tiếng “cạch”).
 
-   DỮ LIỆU ĐANG NẰM Ở localStorage — ĐỌC KỸ PHẦN 2 TRƯỚC KHI NỐI MÁY CHỦ:
-     · ssochuz-react-me-<slug>__u<uid> (đã đăng nhập) hoặc __d<mã máy>
-                                 → { "<chương>": ["gach-da", …] }  (tôi đã thả gì)
-     · ssochuz-react-ct-<slug>   → { "<chương>": { "gach-da": 5, … } }  (số đếm)
-     · ssochuz-react-q           → hàng chờ gửi máy chủ khi mất mạng
-   Mọi chỗ cần thay bằng API đều đánh dấu  TODO(API)  — kèm hợp đồng endpoint
-   trong docs/features/tang-tuong-tac-doc-gia.md.
-
-   GIẤY PHÉP ẢNH: sticker lấy từ Microsoft Fluent Emoji (MIT) — xem
-   THIRD-PARTY-NOTICES.md và assets/stickers/CREDITS.txt.
+   Reaction cộng đồng được đọc/ghi qua Cloudflare Worker + D1; trình duyệt chỉ
+   giữ trạng thái chương hiện tại trong RAM. Sticker dùng registry và WebP Sso
+   có sẵn trong public/stickers/sso/ (thumb/full). Không có coin hay thanh toán.
    ========================================================================== */
 (function (w, d) {
   'use strict';
@@ -36,108 +29,38 @@
   function esc(s) { return CZ.esc ? CZ.esc(s) : String(s == null ? '' : s); }
   function num(n) { return CZ.num ? CZ.num(n) : String(n); }
   function vid() { try { return CZ.vid ? CZ.vid() : ''; } catch (e) { return ''; } }
-  function uid() { try { return (w.CZ_AUTH && w.CZ_AUTH.user && w.CZ_AUTH.user()) ? (w.CZ_AUTH.user().uid || '') : ''; } catch (e) { return ''; } }
 
-  /* ======================= 1. reactionConfig ============================
-     MỘT sticker = một mục trong mảng này. Muốn thêm sticker mới:
-       1. thả ảnh WebP vào assets/stickers/<id>.webp (128px là đủ, xem
-          tools/make_stickers.py để tải lại từ Fluent Emoji),
-       2. thêm một mục vào REACTIONS bên dưới,
-       3. xong — không phải sửa component nào khác.
-     Các trường bắt buộc: id, label, short_label, asset_light, asset_dark,
-     fallback_emoji, animation_type, color, max_particles. */
-  var REACTIONS = [
-    {
-      id: 'mu-bao-hiem',
-      label: 'Đội mũ bảo hiểm gấp',
-      short_label: 'Bảo hiểm',
-      asset_light: '/assets/stickers/mu-bao-hiem.webp',
-      asset_dark: '/assets/stickers/mu-bao-hiem.webp',   /* ảnh 3D đọc tốt trên cả hai nền */
-      fallback_emoji: '🪖',
-      animation_type: 'alarm',
-      color: '#d99a24',
-      color2: '#ffd76e',
-      max_particles: 9,
-      accent: 'warn',
-      toast: 'Áo vào quần đây — đội mũ bảo hiểm gấp cho tác giả!',
-      unToast: 'Đã bỏ mũ bảo hiểm'
-    },
-    {
-      id: 'ngot-lim',
-      label: 'Tiểu đường rồi',
-      short_label: 'Ngọt lịm',
-      asset_light: '/assets/stickers/ngot-lim.webp',
-      asset_dark: '/assets/stickers/ngot-lim.webp',
-      fallback_emoji: '🧁',
-      animation_type: 'sweet',
-      color: '#d2547f',
-      color2: '#ffb3d1',
-      max_particles: 12,
-      accent: 'heart',
-      toast: 'Ngọt lịm tim — nhớ đánh răng sau khi đọc nhé!',
-      unToast: 'Đã bỏ vị ngọt'
-    },
-    {
-      id: 'gach-da',
-      label: 'Gửi gạch đá cho tác giả',
-      short_label: 'Gạch đá',
-      asset_light: '/assets/stickers/gach-da.webp',
-      asset_dark: '/assets/stickers/gach-da.webp',
-      fallback_emoji: '🧱',
-      animation_type: 'thud',
-      color: '#b4562c',
-      color2: '#e39a6a',
-      max_particles: 8,
-      accent: 'smoke',
-      toast: 'Đã ném gạch — nhưng nhớ góp gạch xây nhà cho tác giả nữa nhé!',
-      unToast: 'Đã nhặt gạch về'
-    },
-    {
-      id: 'cham-kem',
-      label: 'Chầm kẽm',
-      short_label: 'Chầm kẽm',
-      asset_light: '/assets/stickers/cham-kem.webp',
-      asset_dark: '/assets/stickers/cham-kem.webp',
-      fallback_emoji: '😭',
-      animation_type: 'tears',
-      color: '#4a7fc1',
-      color2: '#a8cdf5',
-      max_particles: 12,
-      accent: 'tear',
-      toast: 'Chấm khăn đi bạn — chương sau sẽ khác mà…',
-      unToast: 'Đã lau nước mắt'
-    },
-    {
-      id: 'cay-nhu-trau',
-      label: 'Cày như trâu',
-      short_label: 'Cày',
-      asset_light: '/assets/stickers/cay-nhu-trau.webp',
-      asset_dark: '/assets/stickers/cay-nhu-trau.webp',
-      fallback_emoji: '🐂',
-      animation_type: 'grind',
-      color: '#5f7a3f',
-      color2: '#b9d18a',
-      max_particles: 10,
-      accent: 'zzz',
-      toast: 'Cày như trâu — nhóm dịch ghi nhận công sức của bạn!',
-      unToast: 'Đã cho trâu nghỉ'
-    },
-    {
-      id: 'xin-chuong',
-      label: 'Cho xin chương nữa',
-      short_label: 'Mỏi tay',
-      asset_light: '/assets/stickers/xin-chuong.webp',
-      asset_dark: '/assets/stickers/xin-chuong.webp',
-      fallback_emoji: '🙏',
-      animation_type: 'plead',
-      color: '#8a5fb8',
-      color2: '#d3bcef',
-      max_particles: 11,
-      accent: 'spark',
-      toast: 'Đã xin chương nữa — mỏi tay thì tác giả cũng mỏi tay!',
-      unToast: 'Đã thôi xin chương'
-    }
-  ];
+  /* ======================= 1. sticker registry =========================
+     Registry duy nhất nằm ở src/shared/stickers.js; cz-stickers.js nạp cùng
+     registry cho trình duyệt. Quick reactions và animation dùng ảnh full; bộ
+     sưu tập dùng thumbnail, còn nhãn/alt/path/quick đều lấy từ registry. */
+  var STICKER_REGISTRY = Array.isArray(w.CZStickers) ? w.CZStickers : [];
+  var STYLE = {
+    'sso-brick': { animation_type: 'thud', color: '#b4562c', color2: '#e39a6a', max_particles: 8, accent: 'smoke', toast: 'Đã thả sticker Góp gạch!' },
+    'sso-love-it': { animation_type: 'sweet', color: '#d2547f', color2: '#ffb3d1', max_particles: 12, accent: 'heart', toast: 'Yêu thích quá trời!' },
+    'sso-cry-flood': { animation_type: 'tears', color: '#4a7fc1', color2: '#a8cdf5', max_particles: 12, accent: 'tear', toast: 'Chương cảm động quá…' },
+    'sso-plot-twist': { animation_type: 'alarm', color: '#d99a24', color2: '#ffd76e', max_particles: 9, accent: 'warn', toast: 'Plot twist làm bạn bất ngờ!' },
+    'sso-popcorn-spy': { animation_type: 'pop', color: '#8a5fb8', color2: '#d3bcef', max_particles: 11, accent: 'spark', toast: 'Cùng hóng diễn biến tiếp theo!' },
+    'sso-more': { animation_type: 'plead', color: '#8a5fb8', color2: '#d3bcef', max_particles: 11, accent: 'spark', toast: 'Đã xin thêm chương!' },
+    'sso-crown-chaos': { animation_type: 'alarm', color: '#d99a24', color2: '#ffd76e', max_particles: 9, accent: 'warn' },
+    'sso-fighting': { animation_type: 'grind', color: '#5f7a3f', color2: '#b9d18a', max_particles: 10, accent: 'zzz' },
+    'sso-flattened': { animation_type: 'pop', color: '#4a7fc1', color2: '#a8cdf5', max_particles: 9, accent: 'tear' },
+    'sso-no-sleep': { animation_type: 'grind', color: '#5f7a3f', color2: '#b9d18a', max_particles: 10, accent: 'zzz' },
+    'sso-rage-roomba': { animation_type: 'alarm', color: '#b4562c', color2: '#e39a6a', max_particles: 9, accent: 'smoke' },
+    'sso-secondhand-shame': { animation_type: 'pop', color: '#8a5fb8', color2: '#d3bcef', max_particles: 9, accent: 'spark' },
+    'sso-sugar-overload': { animation_type: 'sweet', color: '#d2547f', color2: '#ffb3d1', max_particles: 12, accent: 'heart' },
+    'sso-witness-protection': { animation_type: 'pop', color: '#5f7a3f', color2: '#b9d18a', max_particles: 9, accent: 'zzz' }
+  };
+  var REACTIONS = STICKER_REGISTRY.map(function (sticker) {
+    var style = STYLE[sticker.id] || {};
+    return Object.assign({}, sticker, style, {
+      short_label: sticker.label,
+      asset_light: sticker.full,
+      asset_dark: sticker.full,
+      fallback_emoji: sticker.fallback
+    });
+  });
+  var QUICK_REACTIONS = REACTIONS.filter(function (reaction) { return reaction.quick; });
   var RX = {};
   REACTIONS.forEach(function (r) { RX[r.id] = r; });
   function reactionOf(id) { return RX[id] || null; }
@@ -152,173 +75,141 @@
     spark: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9L12 2Z" fill="currentColor"/><path d="M19 15.5l.8 2.4 2.4.8-2.4.8-.8 2.4-.8-2.4-2.4-.8 2.4-.8.8-2.4Z" fill="currentColor" opacity=".8"/></svg>'
   };
 
-  /* ======================= 2. useReactions (kho dữ liệu) ================
-     Một “hook” dạng hàm thuần cho môi trường không có framework: mọi thao tác
-     đọc/ghi đều đi qua đây để chỗ nối máy chủ sau này chỉ phải sửa một nơi. */
-  var K = {
-    mine: 'ssochuz-react-me-',      /* tôi đã thả gì ở chương nào */
-    count: 'ssochuz-react-ct-',     /* số đếm theo chương */
-    queue: 'ssochuz-react-q',       /* hàng chờ đồng bộ */
-    rate: 'ssochuz-react-rate'      /* mốc chống spam theo thiết bị */
-  };
-  var COOLDOWN_MS = 420;            /* cùng một sticker: 420ms mới ăn lần nữa */
-  var RATE_MAX = 30, RATE_WINDOW = 60000;   /* cả hàng: 30 lượt/phút/thiết bị */
+  /* ======================= 2. D1-backed community state =================
+     D1 is authoritative. This module keeps only an in-memory view for the
+     current chapter; it never writes aggregate/action rows to localStorage/KV. */
+  var COOLDOWN_MS = 420;
+  var RATE_MAX = 30, RATE_WINDOW = 60000;
+  var chapterState = Object.create(null);
+  var pending = Object.create(null);
+  var pullPending = Object.create(null);
+  var PULL_CACHE_MS = 15000;
+  var lastTap = Object.create(null);
+  var rateTimes = Object.create(null);
 
-  function jget(k, dv) { try { var v = JSON.parse(localStorage.getItem(k) || 'null'); return v == null ? dv : v; } catch (e) { return dv; } }
-  function jset(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
-  function storeOK() { try { localStorage.setItem('ssochuz-react-probe', '1'); localStorage.removeItem('ssochuz-react-probe'); return true; } catch (e) { return false; } }
-
-  var mem = {};                      /* bản dùng khi localStorage bị chặn (chế độ riêng tư) */
-
-  /* Phiếu “tôi đã thả gì” thuộc về NGƯỜI, không thuộc về máy: đã đăng nhập (có
-     CZ_AUTH) thì khoá theo uid — đổi máy vẫn còn phiếu của mình, hai người
-     dùng chung một máy không thấy phiếu của nhau. Chưa đăng nhập thì theo mã
-     máy. Số đếm vẫn theo máy, vì đó là phần đóng góp của chính máy này.
-     Khi nối CZ_REACT_API thì máy chủ mới là nguồn thật (kèm user_id/device_id) */
-  function owner() { return uid() ? ('u' + uid()) : ('d' + (vid() || 'x')); }
-  function keyOf(slug, kind) {
-    return K[kind] + slug + (kind === 'mine' ? '__' + owner() : '');
+  function stateKey(slug, ch) { return String(slug || '') + '#' + String(ch || ''); }
+  function currentUid() {
+    try {
+      if (w.CZPersonal) {
+        if (!w.CZPersonal.mode || w.CZPersonal.mode() !== 'server') return '';
+        return String(w.CZPersonal.uid && w.CZPersonal.uid() || '');
+      }
+      var user = w.CZ_AUTH && w.CZ_AUTH.current && w.CZ_AUTH.current();
+      return String(user && (user.uid || user.id) || '');
+    } catch (e) { return ''; }
   }
-  function read(slug, kind) {
-    var key = keyOf(slug, kind);
-    if (!storeOK()) return mem[key] || (mem[key] = {});
-    var v = jget(key, {});
-    return (v && typeof v === 'object') ? v : {};
+  function stateFor(slug, ch) {
+    var key = stateKey(slug, ch), state = chapterState[key];
+    if (!state) state = chapterState[key] = { totals: Object.create(null), mine: [], owner: '', at: 0 };
+    if (state.owner !== currentUid()) state.mine = [];
+    return state;
   }
-  function write(slug, kind, val) {
-    var key = keyOf(slug, kind);
-    mem[key] = val;
-    jset(key, val);
+  function apiOn() { return !!(CZ.API && w.CZPersonal && w.CZPersonal.communityRequest && w.fetch); }
+  function normalizeTotals(input) {
+    var out = Object.create(null);
+    REACTIONS.forEach(function (reaction) {
+      var value = Number(input && input[reaction.id]);
+      out[reaction.id] = Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+    });
+    return out;
   }
-
-  /* Số nền minh hoạ khi CHƯA nối máy chủ.
-     Vì sao không hiện 0 lung tung: một hàng sticker toàn số 0 trông như web
-     lỗi. Số nền được băm từ slug + chương + id nên mỗi chương một khác, ổn
-     định giữa các lần tải, và KHÔNG phải dữ liệu cộng đồng thật. Khi bật
-     CZ_REACT_API thì bỏ hẳn phần này (server trả số thật). TODO(API). */
-  function seed(slug, ch, id) {
-    if (apiOn()) return 0;
-    var s = String(slug) + '#' + ch + '#' + id, h = 2166136261;
-    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
-    return 3 + (h % 40);
+  function applyServer(slug, ch, data, ownerAtRequest) {
+    if (!data || !data.totals) return null;
+    var state = stateFor(slug, ch);
+    state.totals = normalizeTotals(data.totals);
+    state.at = Date.now();
+    if (ownerAtRequest === currentUid()) {
+      state.owner = ownerAtRequest;
+      state.mine = Array.isArray(data.mine) ? data.mine.filter(function (id) { return !!RX[id]; }) : [];
+    }
+    return state;
   }
-
-  /* đếm thật của máy này (không tính số nền) */
-  function localCount(slug, ch, id) {
-    var all = read(slug, 'count');
-    var per = all[String(ch)] || {};
-    return Math.max(0, parseInt(per[id] || 0, 10) || 0);
-  }
-  function count(slug, ch, id) { return seed(slug, ch, id) + localCount(slug, ch, id); }
+  function count(slug, ch, id) { return stateFor(slug, ch).totals[id] || 0; }
   function counts(slug, ch) {
-    var out = {};
-    REACTIONS.forEach(function (r) { out[r.id] = count(slug, ch, r.id); });
+    var state = stateFor(slug, ch), out = Object.create(null);
+    REACTIONS.forEach(function (reaction) { out[reaction.id] = state.totals[reaction.id] || 0; });
     return out;
   }
   function total(slug, ch) {
-    var c = counts(slug, ch), n = 0;
-    REACTIONS.forEach(function (r) { n += c[r.id] || 0; });
-    return n;
+    var all = counts(slug, ch), sum = 0;
+    REACTIONS.forEach(function (reaction) { sum += all[reaction.id] || 0; });
+    return sum;
   }
-  function mine(slug, ch) {
-    var all = read(slug, 'mine');
-    var arr = all[String(ch)];
-    return Array.isArray(arr) ? arr.filter(function (x) { return !!RX[x]; }) : [];
-  }
+  function mine(slug, ch) { return stateFor(slug, ch).mine.slice(); }
   function isMine(slug, ch, id) { return mine(slug, ch).indexOf(id) >= 0; }
-
-  /* chống spam theo THIẾT BỊ (chưa có tài khoản thì đây là thứ duy nhất chặn
-     được một người bấm 500 lượt). Một sticker một lượt cho mỗi chương — muốn
-     giảm thì bấm lại để bỏ. */
-  var lastTap = {};
-  function rateOK() {
-    var now = Date.now(), arr = (jget(K.rate, []) || []).filter(function (t) { return now - t < RATE_WINDOW; });
-    if (arr.length >= RATE_MAX) return false;
-    arr.push(now);
-    jset(K.rate, arr);
-    return true;
-  }
   function cooled(slug, ch, id) {
-    var key = slug + '#' + ch + '#' + id, now = Date.now();
+    var key = currentUid() + '#' + slug + '#' + ch + '#' + id, now = Date.now();
     if (lastTap[key] && now - lastTap[key] < COOLDOWN_MS) return false;
     lastTap[key] = now;
     return true;
   }
-
-  /* --- hàng chờ đồng bộ: mất mạng thì giữ thao tác lại, lần sau gửi bù ------ */
-  function apiOn() { return !!(w.CZ_REACT_API && CZ.hasAPI && w.fetch); }
-  function qPush(op) {
-    var q = jget(K.queue, []) || [];
-    if (!Array.isArray(q)) q = [];
-    q.push(op);
-    jset(K.queue, q.slice(-80));       /* đủ để không phình localStorage */
+  function rateOK() {
+    var owner = currentUid() || 'guest', now = Date.now();
+    var rows = (rateTimes[owner] || []).filter(function (time) { return now - time < RATE_WINDOW; });
+    if (rows.length >= RATE_MAX) return false;
+    rows.push(now); rateTimes[owner] = rows;
+    return true;
   }
-  function qFlush() {
-    var q = jget(K.queue, []) || [];
-    if (!apiOn() || !Array.isArray(q) || !q.length) return;
-    var keep = q.slice();
-    (function next() {
-      var op = keep.shift();
-      if (!op) { jset(K.queue, []); return; }
-      post(op).then(function (ok) { if (!ok) jset(K.queue, keep.concat([op])); next(); });
-    })();
-  }
-  /* TODO(API): hai endpoint dưới đây là hợp đồng với Worker — xem
-     docs/features/tang-tuong-tac-doc-gia.md §“Hợp đồng API”. */
-  function post(op) {
-    return w.fetch(CZ.API + '/api/react', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(op)
-    }).then(function (r) { return !!(r && r.ok); }).catch(function () { return false; });
-  }
-  function pull(ctx) {
-    if (!apiOn()) { ctx.done(null); return; }
-    var url = CZ.API + '/api/react?slug=' + encodeURIComponent(ctx.slug) + '&ch=' + encodeURIComponent(ctx.ch) +
-      '&vid=' + encodeURIComponent(vid()) + (uid() ? '&uid=' + encodeURIComponent(uid()) : '');
-    w.fetch(url, { headers: { accept: 'application/json' } })
-      .then(function (r) { return r && r.ok ? r.json() : null; })
-      .then(function (j) { ctx.done(j && j.ok ? j : null); })
-      .catch(function () { ctx.done(null); });
-  }
-
-  /* thả / bỏ một sticker — trả về trạng thái mới để UI vẽ ngay (optimistic) */
-  function toggle(slug, ch, id) {
-    var rx = reactionOf(id);
-    if (!rx || !slug || !ch) return null;
-    if (!cooled(slug, ch, id)) return { blocked: 'cooldown' };
-    if (!rateOK()) return { blocked: 'rate' };
-
-    var had = isMine(slug, ch, id);
-    var allMine = read(slug, 'mine');
-    var arr = (allMine[String(ch)] || []).filter(function (x) { return !!RX[x]; });
-    var allCt = read(slug, 'count');
-    var per = allCt[String(ch)] || {};
-
-    if (had) {
-      arr = arr.filter(function (x) { return x !== id; });
-      per[id] = Math.max(0, (parseInt(per[id], 10) || 0) - 1);
-    } else {
-      arr.push(id);
-      per[id] = (parseInt(per[id], 10) || 0) + 1;
+  function pull(ctx, force) {
+    if (!apiOn()) { if (ctx && ctx.done) ctx.done(null); return Promise.resolve(null); }
+    var ownerAtRequest = currentUid();
+    var key = ownerAtRequest + '#' + stateKey(ctx.slug, ctx.ch);
+    var current = stateFor(ctx.slug, ctx.ch);
+    if (!force && current.owner === ownerAtRequest && current.at && Date.now() - current.at < PULL_CACHE_MS) {
+      var cached = { ok: true, totals: current.totals, mine: current.mine.slice() };
+      if (ctx.done) ctx.done(cached);
+      return Promise.resolve(cached);
     }
-    allMine[String(ch)] = arr;
-    allCt[String(ch)] = per;
-    write(slug, 'mine', allMine);
-    write(slug, 'count', allCt);
-
-    /* TODO(API): thao tác này phải gửi lên máy chủ. Mất mạng thì giữ trong
-       hàng chờ và nói thật với người đọc — không im lặng rồi mất dữ liệu. */
-    var op = {
-      reaction_id: id, reaction_type: id, story_id: slug, chapter_id: ch,
-      on: had ? 0 : 1, count: 1, user_id: uid(), device_id: vid(), created_at: new Date().toISOString()
-    };
-    if (apiOn()) {
-      post(op).then(function (ok) {
-        if (!ok) { qPush(op); CZtoast('Chưa đồng bộ được lượt thả — đã lưu trên máy bạn.', 'err'); }
+    var request = pullPending[key];
+    if (!request) {
+      request = w.CZPersonal.communityRequest('/api/community/reactions', {
+        storyId: ctx.slug, chapterIndex: Number(ctx.ch)
+      }).then(function (data) {
+        var state = applyServer(ctx.slug, ctx.ch, data, ownerAtRequest);
+        return state ? data : null;
+      }).catch(function () {
+        if (ownerAtRequest === currentUid()) {
+          current.owner = ownerAtRequest;
+          current.at = Date.now();
+          current.mine = [];
+        }
+        return null;
+      }).then(function (data) {
+        delete pullPending[key];
+        return data;
+      }, function (error) {
+        delete pullPending[key];
+        throw error;
       });
+      pullPending[key] = request;
     }
-    return { id: id, on: !had, count: count(slug, ch, id), mine: arr.slice() };
+    return request.then(function (data) {
+      if (ctx.done) ctx.done(data);
+      return data;
+    });
+  }
+  function toggle(slug, ch, id) {
+    var reaction = reactionOf(id);
+    if (!reaction || !slug || !Number(ch)) return Promise.resolve(null);
+    if (!apiOn()) return Promise.reject(new Error('Máy chủ community chưa được cấu hình.'));
+    if (!currentUid()) {
+      var loginError = new Error('Đăng nhập Supabase để thả reaction sticker.');
+      loginError.status = 401;
+      return Promise.reject(loginError);
+    }
+    if (!cooled(slug, ch, id)) return Promise.resolve({ blocked: 'cooldown' });
+    if (!rateOK()) return Promise.resolve({ blocked: 'rate' });
+    var ownerAtRequest = currentUid();
+    var key = ownerAtRequest + '#' + stateKey(slug, ch) + '#' + id;
+    if (pending[key]) return pending[key];
+    pending[key] = w.CZPersonal.communityRequest('/api/community/reactions', {
+      action: 'toggle', storyId: slug, chapterIndex: Number(ch), stickerId: id
+    }, { requireAuth: true }).then(function (data) {
+      var state = applyServer(slug, ch, data, ownerAtRequest);
+      if (!state) throw new Error('Máy chủ trả dữ liệu reaction không hợp lệ.');
+      return { id: id, on: data.active === true, count: state.totals[id] || 0, mine: state.mine.slice(), data: data };
+    }).finally(function () { delete pending[key]; });
+    return pending[key];
   }
 
   /* ======================= 3. ReactionAnimationLayer ====================
@@ -359,10 +250,12 @@
       setTimeout(done, 60);
     }
   }
-  function stickerIcon(rx, cls) {
-    /* ảnh WebP là chính; hỏng thì tự rơi về emoji (đúng yêu cầu fallback) */
-    return '<img class="' + (cls || '') + '" src="' + esc(rx.asset_light) + '" alt="" width="48" height="48" ' +
-      'decoding="async" loading="lazy" data-emo="' + esc(rx.fallback_emoji) + '">';
+  function stickerIcon(rx, cls, useThumb) {
+    /* Full: hàng reaction và animation; thumbnail: bộ sưu tập để giảm tải. */
+    var src = useThumb ? rx.thumb : rx.full;
+    var loading = useThumb || !rx.quick ? 'lazy' : 'eager';
+    return '<img class="' + (cls || '') + '" src="' + esc(src || rx.full || '') + '" alt="" width="48" height="48" ' +
+      'decoding="async" loading="' + loading + '" data-emo="' + esc(rx.fallback_emoji) + '">';
   }
   function burst(btn, rx, rect) {
     if (reduce()) return;
@@ -425,7 +318,7 @@
   function stickerHTML(rx, c, mineOn) {
     return '<button type="button" class="rx' + (mineOn ? ' on' : '') + '" data-rx="' + esc(rx.id) + '"' +
       ' aria-pressed="' + (mineOn ? 'true' : 'false') + '"' +
-      ' aria-label="' + esc(rx.label + ' — ' + num(c) + ' lượt' + (mineOn ? ', bạn đã thả' : '')) + '"' +
+      ' aria-label="' + esc(rx.alt + ' — ' + num(c) + ' lượt' + (mineOn ? ', bạn đã thả' : '')) + '"' +
       ' title="' + esc(rx.label) + '" style="--rx:' + esc(rx.color) + ';--rx2:' + esc(rx.color2 || rx.color) + '">' +
       '<span class="rx-art">' + stickerIcon(rx, 'rx-img') +
         '<span class="rx-emo" aria-hidden="true">' + esc(rx.fallback_emoji) + '</span>' +
@@ -467,15 +360,15 @@
     return '<div class="rx-head">' +
         '<div class="rx-title"><b>Chương này thế nào?</b>' +
         '<span class="rx-sub">' + (apiOn()
-          ? 'Số trên sticker là lượt thả của cả nhà — mỗi máy/nick một lượt cho mỗi loại.'
-          : 'Bấm sticker để thả — mỗi máy một lượt cho mỗi loại, lưu trên máy bạn.') + '</span></div>' +
+          ? 'Reaction cộng đồng đồng bộ trên mọi thiết bị. Cần đăng nhập; có thể bật hoặc bỏ từng sticker.'
+          : 'Dữ liệu reaction cộng đồng hiện chưa kết nối được máy chủ.') + '</span></div>' +
         '<div class="rx-head-act">' +
           '<span class="rx-total">' + num(total(ctx.slug, ctx.ch)) + ' lượt thả</span>' +
           '<button type="button" class="btn ghost sm" id="rxAll">Xem tất cả reaction</button>' +
         '</div>' +
       '</div>' +
-      '<div class="rx-row" role="group" aria-label="Reaction cho ' + esc(ctx.label || 'chương này') + '">' +
-        REACTIONS.map(function (r) { return stickerHTML(r, c[r.id], mineArr.indexOf(r.id) >= 0); }).join('') +
+      '<div class="rx-row" role="group" aria-label="Reaction nhanh cho ' + esc(ctx.label || 'chương này') + '">' +
+        QUICK_REACTIONS.map(function (r) { return stickerHTML(r, c[r.id], mineArr.indexOf(r.id) >= 0); }).join('') +
       '</div>' +
       (st === 'run' ? '<p class="rx-foot">Bực vì chưa có chương mới? Kéo xuống dưới góp gạch cho tác giả 👇</p>' : '');
   }
@@ -493,18 +386,11 @@
     var all = host.querySelector('#rxAll');
     if (all) all.addEventListener('click', function () { popover(ctx); });
     bindImgFallback(host);
-    /* giành lại hàng chờ còn kẹt từ lần trước (mất mạng lúc bấm) */
-    qFlush();
-    /* TODO(API): có máy chủ thì lấy số thật rồi vẽ đè lên số minh hoạ */
     pull({
       slug: ctx.slug, ch: ctx.ch,
-      done: function (j) {
-        if (!j || !j.counts || !ctxNow || ctxNow.slug !== ctx.slug || ctxNow.ch !== ctx.ch) return;
-        var node = host;
-        REACTIONS.forEach(function (r) {
-          var ct = node.querySelector('[data-rx-ct="' + r.id + '"]');
-          if (ct && j.counts[r.id] != null) ct.textContent = num(j.counts[r.id]);
-        });
+      done: function () {
+        if (!ctxNow || ctxNow.slug !== ctx.slug || ctxNow.ch !== ctx.ch) return;
+        refresh(host);
       }
     });
   }
@@ -533,40 +419,40 @@
     if (tot) tot.textContent = num(total(ctx.slug, ctx.ch)) + ' lượt thả';
   }
 
-  /* bấm sticker: nảy nhẹ → thả hạt → cộng số → nói một câu cho vui */
+  /* Animation/audio chỉ chạy sau khi server xác nhận thao tác; không ghi
+     action ở localStorage và lỗi community không tác động phần đọc chương. */
   function onTap(btn) {
     var host = btn.closest('.rreact');
     var ctx = host && host.__rxCtx;
-    if (!ctx) return;
+    if (!ctx || btn.disabled) return;
     var id = btn.getAttribute('data-rx');
     var rx = reactionOf(id);
-    var res = toggle(ctx.slug, ctx.ch, id);
-    if (!res) return;
-    if (res.blocked) {
-      if (res.blocked === 'rate') CZtoast('Từ từ thôi bạn — thả chậm lại một chút nhé!', 'err');
-      return;
-    }
-    var on = res.on;
-    refresh(host);
-    bump(btn);
-    if (on) {
-      var r = btn.getBoundingClientRect ? btn.getBoundingClientRect() : null;
-      burst(btn, rx, r);
-      sfx(rx.animation_type === 'thud' ? 'brick' : 'pop');
-      CZtoast(rx.toast || ('Đã thả ' + rx.label + '!'), 'ok');
-    } else {
-      CZtoast(rx.unToast || ('Đã bỏ ' + rx.label), '');
-    }
-    if (apiOn()) {
-      /* số hiển thị là optimistic; lần sau mở chương sẽ lấy số chuẩn từ máy chủ */
-      pull({ slug: ctx.slug, ch: ctx.ch, done: function (j) {
-        if (!j || !j.counts) return;
-        REACTIONS.forEach(function (x) {
-          var ct = host.querySelector('[data-rx-ct="' + x.id + '"]');
-          if (ct && j.counts[x.id] != null) ct.textContent = num(j.counts[x.id]);
-        });
-      } });
-    }
+    if (!rx) return;
+    btn.disabled = true;
+    btn.setAttribute('aria-busy', 'true');
+    toggle(ctx.slug, ctx.ch, id).then(function (res) {
+      btn.disabled = false; btn.removeAttribute('aria-busy');
+      if (!res) return;
+      if (res.blocked) {
+        if (res.blocked === 'rate') CZtoast('Từ từ thôi bạn — thả chậm lại một chút nhé!', 'err');
+        return;
+      }
+      refresh(host);
+      bump(btn);
+      if (res.on) {
+        var rect = btn.getBoundingClientRect ? btn.getBoundingClientRect() : null;
+        burst(btn, rx, rect);
+        sfx(rx.animation_type === 'thud' ? 'brick' : 'pop');
+        CZtoast(rx.toast || ('Đã thả ' + rx.label + '!'), 'ok');
+      } else {
+        CZtoast('Đã bỏ ' + rx.label, '');
+      }
+    }).catch(function (error) {
+      btn.disabled = false; btn.removeAttribute('aria-busy');
+      if (error && error.status === 401) CZtoast('Đăng nhập Supabase để thả reaction sticker.', 'err');
+      else if (error && error.status === 429) CZtoast('Bạn thao tác hơi nhanh — thử lại sau.', 'err');
+      else CZtoast((error && error.message) || 'Reaction chưa đồng bộ được; thử lại sau.', 'err');
+    });
   }
 
   /* ReactionPopover — bảng đầy đủ, dùng lại CZ.modal để có sẵn scrim/Esc/focus */
@@ -580,7 +466,7 @@
           var on = isMine(ctx.slug, ctx.ch, r.id);
           return '<button type="button" class="pop-rx' + (on ? ' on' : '') + '" data-rx="' + esc(r.id) + '"' +
             ' aria-pressed="' + (on ? 'true' : 'false') + '" style="--rx:' + esc(r.color) + '">' +
-            '<span class="rx-art">' + stickerIcon(r, 'rx-img') +
+            '<span class="rx-art">' + stickerIcon(r, 'rx-img', true) +
               '<span class="rx-emo" aria-hidden="true">' + esc(r.fallback_emoji) + '</span>' +
               (on ? '<span class="rx-tick" aria-hidden="true">✓</span>' : '') + '</span>' +
             '<span class="pop-txt"><b>' + esc(r.label) + '</b>' +
@@ -588,29 +474,42 @@
           '</button>';
         }).join('') +
         '<p class="sm muted pop-note">' + (apiOn()
-          ? 'Số liệu lấy từ máy chủ; một nick/máy chỉ tính một lượt cho mỗi loại ở mỗi chương.'
-          : 'Chưa nối máy chủ nên số hiện tại gồm lượt trên máy bạn và phần minh hoạ. Bấm lại sticker để bỏ lượt.') + '</p>' +
+          ? 'Số liệu được tổng hợp trên máy chủ; cần đăng nhập để thêm hoặc bỏ reaction.'
+          : 'Máy chủ reaction chưa kết nối nên hiện chưa tải được số liệu.') + '</p>' +
       '</div>' +
       '<div class="mf"><button class="btn ghost" data-close>Đóng</button></div>');
     bindImgFallback(m);
     m.addEventListener('click', function (e) {
       var b = e.target.closest ? e.target.closest('.pop-rx') : null;
-      if (!b) return;
-      var host = d.getElementById('rdReact');
-      var res = toggle(ctx.slug, ctx.ch, b.getAttribute('data-rx'));
-      if (!res || res.blocked) return;
-      var on = res.on, rx = reactionOf(res.id);
-      b.classList.toggle('on', on);
-      b.setAttribute('aria-pressed', on ? 'true' : 'false');
-      var ct = b.querySelector('[data-rx-ct]');
-      if (ct) ct.textContent = num(res.count) + ' lượt';
-      var tick = b.querySelector('.rx-tick');
-      var art = b.querySelector('.rx-art');
-      if (on && !tick && art) { var t = d.createElement('span'); t.className = 'rx-tick'; t.setAttribute('aria-hidden', 'true'); t.textContent = '✓'; art.appendChild(t); }
-      if (!on && tick) tick.remove();
-      if (on) { burst(b, rx, b.getBoundingClientRect()); sfx('pop'); CZtoast(rx.toast || 'Đã thả sticker!', 'ok'); }
-      else CZtoast(rx.unToast || 'Đã bỏ sticker', '');
-      if (host) refresh(host);
+      if (!b || b.disabled) return;
+      var id = b.getAttribute('data-rx'), rx = reactionOf(id);
+      if (!rx) return;
+      b.disabled = true;
+      toggle(ctx.slug, ctx.ch, id).then(function (res) {
+        b.disabled = false;
+        if (!res || res.blocked) return;
+        var host = d.getElementById('rdReact');
+        REACTIONS.forEach(function (item) {
+          var button = m.querySelector('.pop-rx[data-rx="' + item.id + '"]');
+          if (!button) return;
+          var active = isMine(ctx.slug, ctx.ch, item.id);
+          button.classList.toggle('on', active);
+          button.setAttribute('aria-pressed', active ? 'true' : 'false');
+          var ct = button.querySelector('[data-rx-ct]');
+          if (ct) ct.textContent = num(count(ctx.slug, ctx.ch, item.id)) + ' lượt';
+          var tick = button.querySelector('.rx-tick'), art = button.querySelector('.rx-art');
+          if (active && !tick && art) { var mark = d.createElement('span'); mark.className = 'rx-tick'; mark.setAttribute('aria-hidden', 'true'); mark.textContent = '✓'; art.appendChild(mark); }
+          if (!active && tick) tick.remove();
+        });
+        if (host) refresh(host);
+        if (res.on) { burst(b, rx, b.getBoundingClientRect()); sfx('pop'); CZtoast(rx.toast || 'Đã thả sticker!', 'ok'); }
+        else CZtoast('Đã bỏ ' + rx.label, '');
+      }).catch(function (error) {
+        b.disabled = false;
+        if (error && error.status === 401) CZtoast('Đăng nhập Supabase để thả reaction sticker.', 'err');
+        else if (error && error.status === 429) CZtoast('Bạn thao tác hơi nhanh — thử lại sau.', 'err');
+        else CZtoast((error && error.message) || 'Reaction chưa đồng bộ được; thử lại sau.', 'err');
+      });
     });
   }
 
@@ -642,27 +541,27 @@
       var b = e.target && e.target.closest ? e.target.closest('.rreact .rx[data-rx]') : null;
       if (b) { e.preventDefault(); onTap(b); }
     });
-    d.addEventListener('keydown', function (e) {
-      if (e.key !== 'Enter' && e.key !== ' ') return;
-      var b = e.target && e.target.closest ? e.target.closest('.rreact .rx[data-rx]') : null;
-      if (!b) return;
-      e.preventDefault();
-      onTap(b);
-    });
   }
 
+  w.addEventListener('cz:personal', function (event) {
+    var type = event && event.detail && event.detail.type;
+    if (!ctxNow || (type !== 'loading' && type !== 'ready')) return;
+    var host = d.getElementById('rdReact');
+    if (host) refresh(host);
+    if (type === 'ready') pull({ slug: ctxNow.slug, ch: ctxNow.ch, done: function () { if (host) refresh(host); } });
+  });
+
   w.CZReact = {
-    VERSION: '1.19.0',
+    VERSION: '2.0.0',
     REACTIONS: REACTIONS,
+    QUICK_REACTIONS: QUICK_REACTIONS,
     reactionOf: reactionOf,
     counts: counts, count: count, total: total, mine: mine, isMine: isMine,
-    toggle: toggle, pull: pull, flush: qFlush,
+    toggle: toggle, pull: pull, flush: function () { return ctxNow ? pull({ slug: ctxNow.slug, ch: ctxNow.ch }, true) : Promise.resolve(null); },
     mount: mount, afterChapterPaint: afterChapterPaint,
     popover: popover, burst: burst, sfx: sfx, layer: layer,
     apiOn: apiOn,
-    /* để bài kiểm thử đọc được cấu hình chống spam mà không phải đoán */
-    _cfg: { cooldownMs: COOLDOWN_MS, rateMax: RATE_MAX, rateWindowMs: RATE_WINDOW, liveMax: LIVE_MAX },
-    _keys: K
+    _cfg: { cooldownMs: COOLDOWN_MS, rateMax: RATE_MAX, rateWindowMs: RATE_WINDOW, liveMax: LIVE_MAX }
   };
 
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', bind);
