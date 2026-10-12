@@ -36,20 +36,20 @@
      sưu tập dùng thumbnail, còn nhãn/alt/path/quick đều lấy từ registry. */
   var STICKER_REGISTRY = Array.isArray(w.CZStickers) ? w.CZStickers : [];
   var STYLE = {
-    'sso-brick': { animation_type: 'thud', color: '#b4562c', color2: '#e39a6a', max_particles: 8, accent: 'smoke', toast: 'Đã thả sticker Góp gạch!' },
-    'sso-love-it': { animation_type: 'sweet', color: '#d2547f', color2: '#ffb3d1', max_particles: 12, accent: 'heart', toast: 'Yêu thích quá trời!' },
-    'sso-cry-flood': { animation_type: 'tears', color: '#4a7fc1', color2: '#a8cdf5', max_particles: 12, accent: 'tear', toast: 'Chương cảm động quá…' },
+    'sso-brick': { animation_type: 'thud', color: '#b4562c', color2: '#e39a6a', max_particles: 8, accent: 'smoke', toast: 'Đã thả Lẹ lẹ ik!' },
+    'sso-love-it': { animation_type: 'sweet', color: '#d2547f', color2: '#ffb3d1', max_particles: 12, accent: 'heart', toast: 'Toẹt vời luôn!' },
+    'sso-cry-flood': { animation_type: 'tears', color: '#4a7fc1', color2: '#a8cdf5', max_particles: 12, accent: 'tear', toast: 'Ulatr cảm động quá…' },
     'sso-plot-twist': { animation_type: 'alarm', color: '#d99a24', color2: '#ffd76e', max_particles: 9, accent: 'warn', toast: 'Plot twist làm bạn bất ngờ!' },
-    'sso-popcorn-spy': { animation_type: 'pop', color: '#8a5fb8', color2: '#d3bcef', max_particles: 11, accent: 'spark', toast: 'Cùng hóng diễn biến tiếp theo!' },
+    'sso-popcorn-spy': { animation_type: 'pop', color: '#8a5fb8', color2: '#d3bcef', max_particles: 11, accent: 'spark', toast: 'Hả?! Hóng tiếp liền!' },
     'sso-more': { animation_type: 'plead', color: '#8a5fb8', color2: '#d3bcef', max_particles: 11, accent: 'spark', toast: 'Đã xin thêm chương!' },
-    'sso-crown-chaos': { animation_type: 'alarm', color: '#d99a24', color2: '#ffd76e', max_particles: 9, accent: 'warn' },
-    'sso-fighting': { animation_type: 'grind', color: '#5f7a3f', color2: '#b9d18a', max_particles: 10, accent: 'zzz' },
-    'sso-flattened': { animation_type: 'pop', color: '#4a7fc1', color2: '#a8cdf5', max_particles: 9, accent: 'tear' },
-    'sso-no-sleep': { animation_type: 'grind', color: '#5f7a3f', color2: '#b9d18a', max_particles: 10, accent: 'zzz' },
-    'sso-rage-roomba': { animation_type: 'alarm', color: '#b4562c', color2: '#e39a6a', max_particles: 9, accent: 'smoke' },
-    'sso-secondhand-shame': { animation_type: 'pop', color: '#8a5fb8', color2: '#d3bcef', max_particles: 9, accent: 'spark' },
-    'sso-sugar-overload': { animation_type: 'sweet', color: '#d2547f', color2: '#ffb3d1', max_particles: 12, accent: 'heart' },
-    'sso-witness-protection': { animation_type: 'pop', color: '#5f7a3f', color2: '#b9d18a', max_particles: 9, accent: 'zzz' }
+    'sso-crown-chaos': { animation_type: 'alarm', color: '#d99a24', color2: '#ffd76e', max_particles: 9, accent: 'warn', toast: 'Yasss!!!' },
+    'sso-fighting': { animation_type: 'grind', color: '#5f7a3f', color2: '#b9d18a', max_particles: 10, accent: 'zzz', toast: 'Cố lên!' },
+    'sso-flattened': { animation_type: 'pop', color: '#4a7fc1', color2: '#a8cdf5', max_particles: 9, accent: 'tear', toast: 'Xỉu tại chỗ...' },
+    'sso-no-sleep': { animation_type: 'grind', color: '#5f7a3f', color2: '#b9d18a', max_particles: 10, accent: 'zzz', toast: 'Nốt chương nữa hoi!' },
+    'sso-rage-roomba': { animation_type: 'alarm', color: '#b4562c', color2: '#e39a6a', max_particles: 9, accent: 'smoke', toast: 'Cưng vô lây!' },
+    'sso-secondhand-shame': { animation_type: 'pop', color: '#8a5fb8', color2: '#d3bcef', max_particles: 9, accent: 'spark', toast: 'Ngại giùm luôn!' },
+    'sso-sugar-overload': { animation_type: 'sweet', color: '#d2547f', color2: '#ffb3d1', max_particles: 12, accent: 'heart', toast: 'Ngọt quá trời!' },
+    'sso-witness-protection': { animation_type: 'pop', color: '#5f7a3f', color2: '#b9d18a', max_particles: 9, accent: 'zzz', toast: 'Hong thấy gì hết nha!' }
   };
   var REACTIONS = STICKER_REGISTRY.map(function (sticker) {
     var style = STYLE[sticker.id] || {};
