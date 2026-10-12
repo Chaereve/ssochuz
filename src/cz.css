@@ -3477,15 +3477,16 @@ body.rd-focus .rdcmts { display: none; }
    ========================================================================== */
 
 /* ===================== 1. REACTION STICKER CUỐI CHƯƠNG =================== */
-.storylab { display: grid; gap: 10px; margin: 14px auto 6px; max-width: min(640px, 100%); }
-.storylab .rreact, .storylab .brickbox { max-width: none; width: 100%; margin: 0; }
+.storylab { display: grid; gap: 10px; margin: 16px auto 10px; max-width: 100%; }
+.storylab .rreact { max-width: none; width: 100%; margin: 0; }
+.storylab .brickbox { max-width: min(720px, 100%); width: 100%; margin: 0 auto; }
 .storylab .dicehost { justify-self: center; margin-top: 2px; }
 
-.rreact { max-width: min(640px, var(--rd-w, 640px)); margin: 10px auto; padding: 10px 12px;
+.rreact { max-width: min(1120px, calc(100% - 32px)); margin: 12px auto; padding: 10px 12px;
   border: 1px solid var(--rd-bd, var(--bd)); border-radius: 14px;
   background: var(--rd-surf, var(--surf)); color: var(--rd-tx, var(--txt)); }
 .rreact .rx-head { display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  flex-wrap: wrap; margin-bottom: 7px; }
+  flex-wrap: wrap; margin-bottom: 8px; }
 .rreact .rx-title { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; min-width: 0; }
 .rreact .rx-title b { font-family: var(--font-head); font-size: 14px; font-weight: 700; line-height: 1.2; }
 .rreact .rx-sub { font-size: 11.5px; color: var(--rd-mut, var(--mut)); }
@@ -3494,11 +3495,11 @@ body.rd-focus .rdcmts { display: none; }
   border: 1px solid var(--rd-bd, var(--bd)); background: var(--rd-surf2, var(--surf2));
   border-radius: 99px; padding: 2px 8px; white-space: nowrap; }
 .rreact .rx-all-btn { padding: 2px 9px; min-height: 24px; font-size: 11px; border-radius: 99px; }
-.rreact .rx-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; padding: 0; }
+.rreact .rx-row { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 5px; padding: 2px 0; }
 
 /* --- một sticker: hiển thị gọn gàng ảnh WebP + tên cảm xúc + số lượt ----- */
 .rx { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px;
-  width: 100%; min-width: 0; min-height: 54px; padding: 5px 3px 4px;
+  width: 100%; min-width: 0; min-height: 56px; padding: 5px 3px 4px;
   border: 1px solid var(--rd-bd, var(--bd)); border-radius: 9px;
   background: color-mix(in srgb, var(--rd-surf2, var(--surf2)) 50%, var(--rd-surf, var(--surf)));
   color: inherit; cursor: pointer;
@@ -3533,19 +3534,21 @@ body.rd-focus .rdcmts { display: none; }
 .rx.on .rx-ct { color: #fff; background: var(--rx); border-color: var(--rx); }
 .rx.on .rx-lbl { color: var(--rx); font-weight: 700; }
 .rx:active .rx-art { transform: scale(.92); }
-@media (max-width: 720px) {
-  .rreact .rx-row { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+@media (max-width: 960px) {
+  .rreact .rx-row {
+    display: flex; flex-wrap: nowrap; gap: 6px;
+    overflow-x: auto; overflow-y: hidden; padding: 2px 2px 6px;
+    scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; scrollbar-width: thin;
+  }
+  .rreact .rx-row .rx { flex: 0 0 68px; width: 68px; min-width: 68px; scroll-snap-align: start; }
 }
 @media (max-width: 480px) {
-  .rreact { padding: 9px 10px; }
-  .rreact .rx-row { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4.5px; }
-  .rx { min-height: 50px; padding: 4px 2px 3.5px; }
-  .rx-art { width: 25px; height: 25px; }
-  .rx-img { width: 23px; height: 23px; }
+  .rreact { max-width: calc(100% - 20px); padding: 9px 10px; }
+  .rreact .rx-row { gap: 5px; }
+  .rreact .rx-row .rx { flex: 0 0 64px; width: 64px; min-width: 64px; min-height: 54px; padding: 4px 2px 3.5px; }
+  .rx-art { width: 26px; height: 26px; }
+  .rx-img { width: 24px; height: 24px; }
   .rx-lbl { font-size: 9.5px; }
-}
-@media (max-width: 370px) {
-  .rreact .rx-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 /* hết cooldown / bị chặn: mờ đi nhưng KHÔNG ẩn khỏi bàn phím */
 .rx.cool { opacity: .55; }

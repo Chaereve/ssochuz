@@ -12,7 +12,7 @@
    ⚠ MỖI LẦN ĐỔI ?v= TĨNH (cz.css/cz-*.js): sửa cả PRECACHE dưới đây + tăng
    CZ_SW_VER → trình duyệt tự tải SW mới, hiện “Đã có bản cập nhật — tải lại”.
    ========================================================================== */
-var CZ_SW_VER = '20261012k';
+var CZ_SW_VER = '20261012m';
 
 /* kho shell theo version (update là thay kho mới, xoá kho cũ);
    kho trang/API/ảnh KHÔNG theo version để dữ liệu offline còn lại sau update */
@@ -38,22 +38,22 @@ var PRECACHE = [
   '/vong-quay/',
   '/my-space',
   '/profile',
-  '/cz-space.js?v=20261012k',
+  '/cz-space.js?v=20261012m',
   '/manifest.webmanifest',
-  '/cz.css?v=20261012k',
-  '/cz-app.js?v=20261012k',
-  '/cz-home.js?v=20261012k',
-  '/cz-story.js?v=20261012k',
-  '/cz-people.js?v=20261012k',
-  '/cz-config.js?v=20261012k',
-  '/cz-stickers.js?v=20261012k',
-  '/cz-auth.js?v=20261012k',
-  '/cz-personal.js?v=20261012k',
+  '/cz.css?v=20261012m',
+  '/cz-app.js?v=20261012m',
+  '/cz-home.js?v=20261012m',
+  '/cz-story.js?v=20261012m',
+  '/cz-people.js?v=20261012m',
+  '/cz-config.js?v=20261012m',
+  '/cz-stickers.js?v=20261012m',
+  '/cz-auth.js?v=20261012m',
+  '/cz-personal.js?v=20261012m',
   /* bộ tính năng tương tác 1.19.0 — giữ trong shell để đọc offline vẫn có
      hàng reaction và hộp gạch */
-  '/cz-react.js?v=20261012k',
-  '/cz-brick.js?v=20261012k',
-  '/cz-dice.js?v=20261012k',
+  '/cz-react.js?v=20261012m',
+  '/cz-brick.js?v=20261012m',
+  '/cz-dice.js?v=20261012m',
   '/stickers/sso/full/sso-brick.webp',
   '/stickers/sso/full/sso-love-it.webp',
   '/stickers/sso/full/sso-cry-flood.webp',

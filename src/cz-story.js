@@ -273,10 +273,10 @@
   }
 
   /* ======================= 3. TRANG TRUYỆN ============================== */
-  /* Ba khối: Thông tin · Danh sách chương · Đánh giá.
-     Gạch chân trượt sang tab đang mở; nội dung hiện lên bằng fade + trượt nhẹ. */
+  /* Hai tab: Thông tin · Danh sách chương. Phần Đánh giá & bình luận (#pane-cmt)
+     nằm cố định phía dưới khung thả cảm xúc (#storyLab), tương tự bình luận chương. */
   var TAB = { cur: 'chap', loaded: {} };
-  function tabPane(k) { return k === 'info' ? $('#pane-info') : k === 'cmt' ? $('#pane-cmt') : $('#chapSec'); }
+  function tabPane(k) { return k === 'info' ? $('#pane-info') : $('#chapSec'); }
   function paintInk() {
     var bar = $('#storyTabs'), ink = $('#stInk');
     if (!bar || !ink) return;
@@ -287,26 +287,27 @@
     ink.style.opacity = '1';
   }
   function showTab(k, scroll) {
-    if (!tabPane(k)) k = 'chap';
-    TAB.cur = k;
-    ['info', 'chap', 'cmt'].forEach(function (x) {
+    var goCmt = k === 'cmt';
+    var nextTab = k === 'info' ? 'info' : 'chap';
+    TAB.cur = nextTab;
+    ['info', 'chap'].forEach(function (x) {
       var p = tabPane(x);
-      if (p) p.hidden = x !== k;
+      if (p) p.hidden = x !== nextTab;
     });
     $$('#storyTabs .stab').forEach(function (b) {
-      var on = b.dataset.tab === k;
+      var on = b.dataset.tab === nextTab;
       b.classList.toggle('on', on);
       b.setAttribute('aria-selected', on ? 'true' : 'false');
     });
-    var pane = tabPane(k);
-    if (pane && !CZ.reduce) {
+    var pane = goCmt ? $('#pane-cmt') : tabPane(nextTab);
+    if (!goCmt && pane && !CZ.reduce) {
       pane.classList.remove('pin');
       void pane.offsetWidth;
       pane.classList.add('pin');
     }
-    if (k === 'cmt' && !TAB.loaded.cmt) { TAB.loaded.cmt = true; mountComments(); }
+    if (!TAB.loaded.cmt) { TAB.loaded.cmt = true; mountComments(); }
     paintInk();
-    if (scroll && pane) {
+    if ((scroll || goCmt) && pane) {
       var y = pane.getBoundingClientRect().top + window.scrollY - 76;
       window.scrollTo({ top: y, behavior: CZ.reduce ? 'auto' : 'smooth' });
     }
@@ -2190,6 +2191,8 @@
     var cmtTab = $('#storyTabs [data-tab="cmt"]');
     if (cmtTab) cmtTab.style.display = 'none';
     showTab('chap');
+    var cmtPane = $('#pane-cmt');
+    if (cmtPane) cmtPane.hidden = true;
     CZ.reveal();
     try { document.querySelector('meta[name="description"]').setAttribute('content', (N.syn || N.title).slice(0, 180)); } catch (e) {}
   }
@@ -2311,9 +2314,11 @@
       if (secUn) secUn.classList.remove('lockon');
       var gateOut = $('#lockGate');
       if (gateOut) gateOut.remove();
-      /* trả lại tab bình luận bị ẩn lúc đang khóa */
+      /* trả lại phần bình luận bị ẩn lúc đang khóa */
       var cmtBack = $('#storyTabs [data-tab="cmt"]');
       if (cmtBack) cmtBack.style.display = '';
+      var cmtPane = $('#pane-cmt');
+      if (cmtPane) cmtPane.hidden = false;
       /* Nhãn "x/y" chỉ được tin khi registry KHỚP số chương thật của kho chương.
          Registry treo "30/30" trong khi bộ chỉ còn 29 chương thì bỏ nhãn cũ đi,
          không để con số 30 hiện ra ở trang chủ / trang truyện / mục lục nữa.

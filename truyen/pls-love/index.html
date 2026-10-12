@@ -26,7 +26,7 @@
 <link rel="apple-touch-icon" href="/ssochuz.png?v=1">
 <link rel="manifest" href="/manifest.webmanifest">
   <!-- N13: bỏ preconnect Firestore — không còn đọc thẳng Firestore từ máy khách -->
-<link rel="stylesheet" href="/cz.css?v=20261012k">
+<link rel="stylesheet" href="/cz.css?v=20261012m">
 <script>/* chống nháy nền */try{var t=localStorage.getItem('ssochuz-theme')||localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
 <body class="spage">
@@ -38,12 +38,11 @@
   <nav class="crumb" id="crumb"><a href="/">Trang chủ</a></nav>
   <section class="shero" id="shero"></section>
 
-  <!-- ba khối nội dung, chuyển bằng thanh tab có gạch chân trượt -->
+  <!-- hai khối nội dung, chuyển bằng thanh tab có gạch chân trượt -->
   <div class="storytabs" id="storyTabs" role="tablist" aria-label="Nội dung truyện">
     <span class="ink" id="stInk" aria-hidden="true"></span>
     <button class="stab" data-tab="info" role="tab" aria-selected="false">Thông tin</button>
     <button class="stab on" data-tab="chap" role="tab" aria-selected="true">Danh sách chương<span class="ct" id="tabChapCt"></span></button>
-    <button class="stab" data-tab="cmt" role="tab" aria-selected="false">Đánh giá</button>
   </div>
 
   <section class="sec" id="chapSec">
@@ -73,20 +72,20 @@
     <div class="info" id="storyInfo"></div>
   </section>
 
-  <section class="cmts" id="pane-cmt" hidden>
-    <div class="sechead"><h2>Đánh giá &amp; bình luận</h2></div>
-    <div id="giscus"></div>
-  </section>
-
   <!-- ============ GÓC TƯƠNG TÁC: vòng quay · reaction · hộp góp gạch ============
        Ba khối dưới đây đều là lớp cộng đồng phía giao diện. Reaction và hộp gạch
-       hiện theo tình trạng truyện; vòng quay mở hộp thoại chọn truyện ngẫu nhiên.
+       hiện theo tình trạng truyện; vòng quay mở trang chọn truyện ngẫu nhiên.
        Nội dung do src/cz-react.js, src/cz-brick.js, src/cz-dice.js dựng. -->
   <div class="storylab" id="storyLab">
     <section class="rreact" id="storyReact" hidden aria-label="Reaction cho truyện này"></section>
     <section class="brickbox" id="storyBrick" hidden aria-label="Hộp góp gạch cho tác giả"></section>
     <div class="dicehost" id="czDiceHost" data-dice></div>
   </div>
+
+  <!-- ĐÁNH GIÁ & BÌNH LUẬN TRUYỆN — nằm ngay dưới phần thả cảm xúc giống bình luận chương -->
+  <section class="cmts" id="pane-cmt" aria-label="Đánh giá &amp; bình luận">
+    <div id="giscus"></div>
+  </section>
 
   <section class="sec" id="relSec">
     <div class="relcols">
@@ -160,14 +159,14 @@
 </div>
 <div class="lightbox" id="lightbox"><img alt="Ảnh trong chương"></div>
 
-<script src="/cz-config.js?v=20261012k"></script>
-<script src="/cz-stickers.js?v=20261012k"></script>
-<script src="/cz-app.js?v=20261012k"></script>
-<script src="/cz-auth.js?v=20261012k"></script>
-<script src="/cz-personal.js?v=20261012k"></script>
-<script src="/cz-react.js?v=20261012k"></script>
-<script src="/cz-brick.js?v=20261012k"></script>
-<script src="/cz-dice.js?v=20261012k"></script>
-<script src="/cz-story.js?v=20261012k"></script>
+<script src="/cz-config.js?v=20261012m"></script>
+<script src="/cz-stickers.js?v=20261012m"></script>
+<script src="/cz-app.js?v=20261012m"></script>
+<script src="/cz-auth.js?v=20261012m"></script>
+<script src="/cz-personal.js?v=20261012m"></script>
+<script src="/cz-react.js?v=20261012m"></script>
+<script src="/cz-brick.js?v=20261012m"></script>
+<script src="/cz-dice.js?v=20261012m"></script>
+<script src="/cz-story.js?v=20261012m"></script>
 </body>
 </html>
