@@ -32,8 +32,8 @@
      t_sweep.js        bấm hết mọi nút trong trang xem có lỗi JS nào không
      t_react.js        (1.20.0) reaction D1 theo tài khoản/chương/sticker, dùng
                        registry chung, không lưu action localStorage, tôn trọng reduce motion
-     t_readtools.js    bộ công cụ đọc: ẩn nhanh (Esc×2 / Ctrl+Shift+H), Zen,
-                       Bionic, Terminal; regression kiểm bionic và chế độ riêng tư
+     t_readtools.js    bộ công cụ đọc: Zen, Bionic, Terminal; kiểm tra các công cụ
+                       đọc và xác nhận UI/phím tắt ẩn trang không còn được đăng ký
      t_brick.js        (1.20.0) D1 aggregate, chỉ truyện đang ra, một viên ảo miễn
                        phí/tài khoản/ngày/truyện, không coin/thanh toán/quà quy đổi
      t_dice.js         vòng quay: ưu tiên follow, lọc 18+/tình trạng/thể loại,
