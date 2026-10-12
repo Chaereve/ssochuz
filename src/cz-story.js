@@ -588,7 +588,10 @@
     if (info && (n.author || n.couple)) {
       var more = [];
       if (n.author) more.push('<a href="/tac-gia/?q=' + encodeURIComponent(CZ.slugify(n.author)) + '">Xem tất cả truyện của ' + esc(n.author) + '</a>');
-      if (n.couple) more.push('<a href="/couple/?q=' + encodeURIComponent(CZ.slugify(n.couple)) + '">Xem tất cả truyện của ' + esc(n.couple) + '</a>');
+      var cps = CZ.couplesOf ? CZ.couplesOf(n) : (n.couple ? [n.couple] : []);
+      cps.forEach(function (cp) {
+        more.push('<a href="/couple/?q=' + encodeURIComponent(CZ.slugify(cp)) + '">Xem tất cả truyện của ' + esc(cp) + '</a>');
+      });
       info.innerHTML += '<div class="r"><span>Khám phá</span><b>' + more.join('<br>') + '</b></div>';
     }
   }
@@ -756,7 +759,12 @@
   function renderRelated() {
     var n = N;
     var lib = CZ.lib();
-    var sameCouple = n.couple ? lib.filter(function (x) { return x.couple === n.couple && x.slug !== n.slug; }).slice(0, 6) : [];
+    var myCouples = CZ.couplesOf ? CZ.couplesOf(n) : (n.couple ? [n.couple] : []);
+    var sameCouple = myCouples.length ? lib.filter(function (x) {
+      if (x.slug === n.slug) return false;
+      var xCouples = CZ.couplesOf ? CZ.couplesOf(x) : (x.couple ? [x.couple] : []);
+      return xCouples.some(function (c) { return myCouples.indexOf(c) >= 0; });
+    }).slice(0, 6) : [];
     var sameAuthor = n.author ? lib.filter(function (x) { return x.author === n.author && x.slug !== n.slug; }).slice(0, 6) : [];
     var shown = 0;
     function put(sel, rows) {

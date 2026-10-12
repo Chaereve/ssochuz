@@ -1330,12 +1330,27 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     }
     return changed;
   }
+  function couplesOf(n) {
+    if (!n) return [];
+    var raw = Array.isArray(n)
+      ? n
+      : (Array.isArray(n.couples) && n.couples.length ? n.couples : String(typeof n === 'string' ? n : (n.couple || '')).split(/\s*[,;\n]+\s*/));
+    var out = [], seen = {};
+    raw.forEach(function (c) {
+      var s = String(c == null ? '' : c).replace(/\s+/g, ' ').trim();
+      if (!s) return;
+      var k = s.toLowerCase();
+      if (!seen[k]) { seen[k] = 1; out.push(s); }
+    });
+    return out;
+  }
   /* chuẩn hoá 1 bộ trong registry thành dạng dùng chung cho mọi trang */
   function norm(n) {
     var o = Object.assign({}, n || {});
     o.title = String(o.title || '').trim();
     o.author = authorFix(o.author);
-    o.couple = String(o.couple || '').trim();
+    o.couples = couplesOf(o);
+    o.couple = o.couples.join(', ');
     o.chapters = parseInt(o.chapters, 10) || 0;
     /* số chương đã đối chiếu từ kho chương thật luôn thắng nhãn cũ trong registry */
     var rc = realCount(o.slug);
@@ -2989,7 +3004,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     realCount: realCount, reconcileCount: reconcileCount, onStatsChange: onStatsChange, notifyStats: notifyStats,
     rdGet: rdGet, rdSet: rdSet, themeInit: themeInit, themeToggle: themeToggle, themeMeta: themeMeta,
     icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo, teaser: teaser,
-    statusCls: statusCls, statusLabel: statusLabel, statusIcon: statusIcon, words: words, norm: norm, countText: countText, listHead: listHead,
+    statusCls: statusCls, statusLabel: statusLabel, statusIcon: statusIcon, words: words, norm: norm, couplesOf: couplesOf, countText: countText, listHead: listHead,
     /* bóc tên chương dùng chung (src/shared/chapters.js): trang truyện, mục
        lục, nhảy chương — và trang quản trị đều qua đây, khỏi lệch nhau */
     chapInfo: function (t) { return parseChapterTitle(t); },

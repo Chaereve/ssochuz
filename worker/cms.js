@@ -1664,17 +1664,22 @@ function bookHead(book, pub, slug) {
   const list = (pub && Array.isArray(pub.chapters) ? pub.chapters : []).map((c, i) => ({
     t: String((c && c.t) || '').trim() || ('Chương ' + (i + 1)),
   }));
-  return {
+  const rawCouples = Array.isArray(book && book.couples) && book.couples.length
+    ? book.couples.map((c) => String(c || '').trim()).filter(Boolean)
+    : [];
+  const res = {
     ok: true, slug: slug,
     title: String((book && book.title) || slug),
     author: String((book && book.author) || ''),
-    couple: String((book && book.couple) || ''),
+    couple: String((book && book.couple) || rawCouples.join(', ') || ''),
     syn: String((book && book.syn) || '').slice(0, 600),
     synFull: String((book && book.synFull) || ''),
     pending: bookPending(book),
     total: list.length,
     chapters: list,
   };
+  if (rawCouples.length > 1) res.couples = rawCouples;
+  return res;
 }
 /* HTTP 404 cho chương đang bị giữ — nói rõ vì sao để trang đọc báo đúng */
 async function getBookChapterPublic(req, env, cors, slug, n, tocOnly) {

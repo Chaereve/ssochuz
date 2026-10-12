@@ -138,6 +138,10 @@ const byCount = (lib, f) => {
     const fl = h.doc.querySelector('#fcount a[href^="/tac-gia/?q="]');
     ok(fl && fl.textContent.includes(AU), 'loc theo tac gia phai co link Xem tat ca (thay: ' + (h.doc.querySelector('#fcount') || {}).textContent + ')');
   }
+  const bienTapH2 = h.doc.querySelector('#bien-tap h2');
+  ok(bienTapH2 && bienTapH2.textContent.trim() === 'Chuyển thể Series', '#bien-tap h2 phai la Chuyển thể Series');
+  const normMulti = h.win.CZ.norm({ title: 'Multi Couple', slug: 'multi-cp', couple: 'Lingling x Orm, Lookmhee x Sonya' });
+  ok(Array.isArray(normMulti.couples) && normMulti.couples.length === 2 && normMulti.couples[0] === 'Lingling x Orm' && normMulti.couples[1] === 'Lookmhee x Sonya', 'CZ.norm phai tach nhieu couple');
   out.errors2 = bad;
   console.log(JSON.stringify(out, null, 1));
   process.exit(0);

@@ -12,6 +12,16 @@
   var KIND = 'author';   /* 'author' | 'couple' */
   function esc(s) { return CZ.esc(s); }
   function field(n) { return KIND === 'author' ? (n.author || '') : (n.couple || ''); }
+  function fields(n) {
+    if (!n) return [];
+    if (KIND === 'author') {
+      var a = String(n.author || '').trim();
+      return a ? [a] : [];
+    }
+    if (CZ.couplesOf) return CZ.couplesOf(n);
+    var c = String(n.couple || '').trim();
+    return c ? [c] : [];
+  }
   function kindLabel() { return KIND === 'author' ? 'Tác giả' : 'Couple'; }
   function kindPath() { return KIND === 'author' ? '/tac-gia/' : '/couple/'; }
   /* slug đọc từ ?q= (tên hoặc slug), ?slug=, hoặc #hash */
@@ -25,8 +35,9 @@
   function allNames(lib) {
     var seen = {}, out = [];
     lib.forEach(function (n) {
-      var v = field(n);
-      if (v && !seen[v]) { seen[v] = 1; out.push(v); }
+      fields(n).forEach(function (v) {
+        if (v && !seen[v]) { seen[v] = 1; out.push(v); }
+      });
     });
     return out.sort(function (a, b) { return a.localeCompare(b, 'vi'); });
   }
@@ -87,7 +98,7 @@
   function renderOne(name) {
     var w = document.querySelector('#ppQWrap');
     if (w) w.setAttribute('hidden', '');
-    var lib = CZ.lib().filter(function (n) { return field(n) === name; });
+    var lib = CZ.lib().filter(function (n) { return fields(n).indexOf(name) >= 0 || field(n) === name; });
     lib.sort(function (a, b) { return String(b.updated || '').localeCompare(String(a.updated || '')); });
     document.querySelector('#crumb').innerHTML = '<a href="/">Trang chủ</a> <span>›</span> ' +
       '<a href="/#thu-vien">Thư viện</a> <span>›</span> ' +
@@ -104,8 +115,9 @@
     var lib = CZ.lib(), names = allNames(lib);
     var by = {};
     lib.forEach(function (n) {
-      var v = field(n);
-      if (v) (by[v] = by[v] || []).push(n);
+      fields(n).forEach(function (v) {
+        if (v) (by[v] = by[v] || []).push(n);
+      });
     });
     document.querySelector('#crumb').innerHTML = '<a href="/">Trang chủ</a> <span>›</span> ' +
       '<a href="/#thu-vien">Thư viện</a> <span>›</span> <b>Tất cả ' + kindLabel().toLowerCase() + '</b>';

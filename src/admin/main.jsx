@@ -440,6 +440,8 @@ function App() {
         const book = await getBook(oldSlug);
         if (book) {
           const moved = Object.assign({}, book, { slug: nextSlug, title: nextMeta.title, author: nextMeta.author, couple: nextMeta.couple });
+          if (Array.isArray(nextMeta.couples) && nextMeta.couples.length > 1) moved.couples = nextMeta.couples.slice();
+          else delete moved.couples;
           await putBook(nextSlug, moved, 'đổi slug: ghi book mới');
           try {
             await writeRegistry(registry, 'Đã ghi book + registry');

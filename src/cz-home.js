@@ -489,7 +489,12 @@
     var uniq = function (a) { var seen = {}; return a.filter(function (v) { if (!v || seen[v]) return false; seen[v] = 1; return true; }); };
     var years = uniq(lib.map(function (n) { return n.year; })).sort(function (a, b) { return b - a; });
     var authors = uniq(lib.map(function (n) { return n.author; })).sort(function (a, b) { return a.localeCompare(b, 'vi'); });
-    var couples = uniq(lib.map(function (n) { return n.couple; })).sort(function (a, b) { return a.localeCompare(b, 'vi'); });
+    var allCouples = [];
+    lib.forEach(function (n) {
+      var cs = CZ.couplesOf ? CZ.couplesOf(n) : (n.couple ? [n.couple] : []);
+      cs.forEach(function (c) { allCouples.push(c); });
+    });
+    var couples = uniq(allCouples).sort(function (a, b) { return a.localeCompare(b, 'vi'); });
     var fill = function (sel, label, list) {
       sel.innerHTML = '<option value="">' + label + '</option>' + list.map(function (v) {
         return '<option value="' + esc(v) + '">' + esc(v) + '</option>';
@@ -533,7 +538,11 @@
     if (state.adult) lib = lib.filter(function (n) { return n.is18; });
     if (state.year) lib = lib.filter(function (n) { return String(n.year) === state.year; });
     if (state.author) lib = lib.filter(function (n) { return n.author === state.author; });
-    if (state.couple) lib = lib.filter(function (n) { return n.couple === state.couple; });
+    if (state.couple) lib = lib.filter(function (n) {
+      if (n.couple === state.couple) return true;
+      var cs = CZ.couplesOf ? CZ.couplesOf(n) : [];
+      return cs.indexOf(state.couple) >= 0;
+    });
     if (state.q) {
       var q = state.q.toLowerCase();
       lib = lib.filter(function (n) {
