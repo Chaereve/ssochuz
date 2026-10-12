@@ -1,16 +1,12 @@
 /* ============================================================================
-   Kiểm thử 1.19.0 — BỘ CÔNG CỤ ĐỌC: ẩn nhanh · Zen · Bionic · Terminal
+   Kiểm thử 1.19.0 — BỘ CÔNG CỤ ĐỌC: Zen · Bionic · Terminal
    ----------------------------------------------------------------------------
-   1. ẨN NHANH (panic): bấm nút / Esc hai lần / Ctrl+Shift+H → che trang bằng
-      giao diện GIẢ, đổi tiêu đề tab + favicon + thanh địa chỉ; tắt lại thì trả
-      về đúng như cũ; KHÔNG ghi tiến độ đọc trong lúc đang ẩn; Esc lúc đang ẩn
-      chỉ thoát lớp che, không làm văng khỏi chương.
-   2. ZEN: ẩn đầu trang/chân trang/mục lục/nút phụ, nhớ trong localStorage,
+   1. ZEN: ẩn đầu trang/chân trang/mục lục/nút phụ, nhớ trong localStorage,
       tắt được bằng nút hoặc phím Z.
-   3. BIONIC: in đậm đầu từ nhưng KHÔNG đổi một ký tự nào của chương (đây là
+   2. BIONIC: in đậm đầu từ nhưng KHÔNG đổi một ký tự nào của chương (đây là
       ràng buộc quan trọng nhất — dựng lại đúng chữ tiếng Việt có dấu), bỏ qua
       <pre>/<code>/tiêu đề, tắt thì trả chữ về nguyên trạng.
-   4. TERMINAL: đổi sang khung giả terminal (nền tối, chữ mono), có dòng lệnh
+   3. TERMINAL: đổi sang khung giả terminal (nền tối, chữ mono), có dòng lệnh
       mô phỏng theo slug/chương, thoại nhân vật thành output, KHÔNG có ô nhập
       lệnh, không có hiệu ứng gõ từng ký tự, thoát được bằng nút.
    Chạy:  node tests/t_readtools.js
@@ -58,73 +54,31 @@ const key = (w, k, opt) => w.document.dispatchEvent(new w.KeyboardEvent('keydown
   await wait(1800);
 
   /* =====================================================================
-     1. ẨN NHANH
+     UI regression: retired quick-hide controls/shortcut/state stay absent.
      ===================================================================== */
-  const panicBtn = $('#czPanic');
-  if (!panicBtn) err('thanh đầu trang thiếu nút ẩn nhanh #czPanic');
-  const title0 = doc.title;
-  const icon0 = ($('link[rel~="icon"]') || {}).getAttribute ? $('link[rel~="icon"]').getAttribute('href') : '';
-  click(win, panicBtn);
-  await wait(30);
-  const layer = $('#czPanicLayer');
-  out.panicBat = {
-    trenBody: doc.body.classList.contains('panic-on'),
-    lopHien: !!(layer && !layer.hidden && layer.classList.contains('on')),
-    tieuDe: doc.title,
-    tieuDeDoi: doc.title !== title0,
-    favicon: ($('link[rel~="icon"]') || {}).getAttribute ? $('link[rel~="icon"]').getAttribute('href').slice(0, 22) : '',
-    duongDan: win.location.pathname,
-    coNutThoat: !!(layer && layer.querySelector('#czPanicOff')),
-    khongLoChuyen: !/third person|third-person/i.test((layer && layer.textContent) || '')
+  const removedEntryPoints = {
+    button: !$('#czPanic'),
+    layer: !$('#czPanicLayer'),
+    state: !Object.prototype.hasOwnProperty.call(win.CZ, 'panic')
+      && !Object.prototype.hasOwnProperty.call(win.CZ, 'panicOn')
+      && !Object.prototype.hasOwnProperty.call(win.CZ, 'panicOff')
+      && !Object.prototype.hasOwnProperty.call(win.CZ, 'panicToggle'),
+    bodyClass: !doc.body.classList.contains('panic-on')
   };
-  if (!out.panicBat.trenBody || !out.panicBat.lopHien) err('bấm nút ẩn nhanh phải che toàn màn hình ngay');
-  if (!out.panicBat.tieuDeDoi || !/Tài liệu/.test(doc.title)) err('phải đổi tiêu đề tab thành tiêu đề vô hại (đang: ' + doc.title + ')');
-  if (!/^data:image\/svg\+xml/.test(out.panicBat.favicon)) err('phải đổi favicon sang biểu tượng vô hại');
-  if (out.panicBat.duongDan !== '/') err('thanh địa chỉ phải rời khỏi URL truyện (đang ' + win.location.pathname + ')');
-  if (!out.panicBat.khongLoChuyen) err('lớp che còn lộ tên/đường dẫn truyện đang đọc');
-
-  /* đang ẩn: KHÔNG ghi tiến độ đọc */
-  try { win.localStorage.removeItem('ssochuz-prog-third-person'); } catch (e) {}
-  win.CZ.setProgress({ slug: 'third-person' }, 9);
-  out.khongGhiTienDo = win.localStorage.getItem('ssochuz-prog-third-person');
-  if (out.khongGhiTienDo) err('đang bật ẩn nhanh mà vẫn ghi tiến độ đọc vào localStorage');
-
-  /* Esc trong lúc đang ẩn: chỉ thoát lớp che, không thoát chương */
-  key(win, 'Escape');
+  out.removedEntryPoints = removedEntryPoints;
+  if (Object.values(removedEntryPoints).some(value => !value)) err('giao diện hoặc state ẩn trang vẫn còn được đăng ký');
+  const titleBeforeShortcut = doc.title;
+  const pathBeforeShortcut = win.location.pathname;
+  key(win, 'H', { ctrlKey: true, shiftKey: true });
   await wait(30);
-  out.panicTat = {
-    tat: !win.CZ.panic.on,
-    tieuDeTraVe: doc.title === title0,
-    lopAn: !!($('#czPanicLayer') || {}).hidden,
-    faviconTraVe: (($('link[rel~="icon"]') || {}).getAttribute ? $('link[rel~="icon"]').getAttribute('href') : '') === icon0,
-    vanDangDoc: win.CZ.rdGet() && true
-  };
-  if (!out.panicTat.tat) err('Esc trong lúc đang ẩn phải tắt lớp che');
-  if (!out.panicTat.tieuDeTraVe) err('tắt lớp che phải trả lại tiêu đề tab cũ');
-  if (!out.panicTat.faviconTraVe) err('tắt lớp che phải trả lại favicon cũ');
-
-  /* Esc HAI LẦN trong 500ms → bật */
-  key(win, 'Escape'); await wait(40); key(win, 'Escape'); await wait(40);
-  out.panicEscHaiLan = win.CZ.panic.on;
-  if (!out.panicEscHaiLan) err('Esc hai lần trong 500ms phải bật được chế độ ẩn nhanh');
-  key(win, 'Escape'); await wait(30);
-
-  /* Ctrl+Shift+H → bật/tắt */
-  key(win, 'H', { ctrlKey: true, shiftKey: true }); await wait(30);
-  out.panicPhimTat = win.CZ.panic.on;
-  if (!out.panicPhimTat) err('Ctrl+Shift+H phải bật được chế độ ẩn nhanh');
-  key(win, 'H', { ctrlKey: true, shiftKey: true }); await wait(30);
-  if (win.CZ.panic.on) err('Ctrl+Shift+H lần hai phải tắt được chế độ ẩn nhanh');
-
-  /* Esc ở trên = thoát khỏi trang đọc (đúng thiết kế), nên vào lại trang đọc
-     trước khi kiểm Zen / Bionic / Terminal. */
-  const reentry = $('#chapGrid a[data-ch]') || $('[data-ch]');
-  if (reentry) { click(win, reentry); await wait(900); }
-  out.vaoLaiTrangDoc = doc.body.classList.contains('reading');
-  if (!out.vaoLaiTrangDoc) err('không vào lại được trang đọc để kiểm tiếp');
+  out.shortcutRemoved = doc.title === titleBeforeShortcut
+    && win.location.pathname === pathBeforeShortcut
+    && !doc.body.classList.contains('panic-on')
+    && !$('#czPanicLayer');
+  if (!out.shortcutRemoved) err('Ctrl+Shift+H vẫn kích hoạt hành vi ẩn trang');
 
   /* =====================================================================
-     2. ZEN
+     1. ZEN
      ===================================================================== */
   const zenBtn = $('#rdZen');
   if (!zenBtn) err('thanh đọc thiếu nút Zen');
@@ -155,7 +109,7 @@ const key = (w, k, opt) => w.document.dispatchEvent(new w.KeyboardEvent('keydown
   key(win, 'z'); await wait(40);
 
   /* =====================================================================
-     3. BIONIC
+     2. BIONIC
      ===================================================================== */
   const txtEl = $('#rdText');
   const textTruoc = txtEl.textContent;
@@ -194,7 +148,7 @@ const key = (w, k, opt) => w.document.dispatchEvent(new w.KeyboardEvent('keydown
   if (!out.bionic.sauKhiTat.chuNguyen) err('tắt Bionic phải trả lại đúng chữ ban đầu');
 
   /* =====================================================================
-     4. TERMINAL
+     3. TERMINAL
      ===================================================================== */
   const termBtn = $('#rdTerm');
   if (!termBtn) err('thanh đọc thiếu nút Terminal');
@@ -246,7 +200,7 @@ const key = (w, k, opt) => w.document.dispatchEvent(new w.KeyboardEvent('keydown
   if (out.terminal.sauKhiThoat.trenBody) err('bấm “Thoát terminal” phải trả về giao diện đọc thường');
 
   /* =====================================================================
-     4b. nút vòng quay trên thanh đọc (#rdDice) — thêm ở 1.19.0
+     4. nút vòng quay trên thanh đọc (#rdDice) — thêm ở 1.19.0
      ===================================================================== */
   const diceBtn = $('#rdDice');
   out.nutVongQuay = { co: !!diceBtn, coIcon: !!(diceBtn && diceBtn.querySelector('svg')), nhan: diceBtn ? (diceBtn.getAttribute('aria-label') || '') : '' };
@@ -265,11 +219,18 @@ const key = (w, k, opt) => w.document.dispatchEvent(new w.KeyboardEvent('keydown
      ===================================================================== */
   const home = page('index.html', { url: 'https://ssochuz.pages.dev/', fetch: dataFetch({ apiBase: BASE, api: makeApi([]), log: [] }) });
   await wait(1200);
+  const homeTitle = home.doc.title, homePath = home.win.location.pathname;
+  key(home.win, 'Escape'); await wait(30); key(home.win, 'Escape'); await wait(30);
+  key(home.win, 'H', { ctrlKey: true, shiftKey: true }); await wait(30);
   out.trangChu = {
-    coNutPanic: !!home.doc.querySelector('#czPanic'),
+    khongCoNut: !home.doc.querySelector('#czPanic'),
+    khongCoLayer: !home.doc.querySelector('#czPanicLayer'),
+    khongCoState: !Object.prototype.hasOwnProperty.call(home.win.CZ, 'panic'),
+    phimTatKhongCheTrang: home.doc.title === homeTitle && home.win.location.pathname === homePath
+      && !home.doc.body.classList.contains('panic-on'),
     loi: home.errors.slice(0, 2)
   };
-  if (!out.trangChu.coNutPanic) err('trang chủ cũng phải có nút ẩn nhanh');
+  if (!out.trangChu.khongCoNut || !out.trangChu.khongCoLayer || !out.trangChu.khongCoState || !out.trangChu.phimTatKhongCheTrang) err('trang chủ còn entry point/state/phím tắt ẩn trang');
   if (home.errors.length) err('trang chủ phát sinh lỗi JS: ' + home.errors[0]);
 
   console.log(JSON.stringify(out, null, 1));

@@ -1924,7 +1924,7 @@
     }, { passive: true });
   });
   function recordReadPosition(percent, completed) {
-    if (!reading || !N || (CZ.panic && CZ.panic.on)) return;
+    if (!reading || !N) return;
     var now = Date.now();
     var value = Math.max(0, Math.min(100, Number(percent) || 0));
     var newChapter = progressSavedCh !== cur;

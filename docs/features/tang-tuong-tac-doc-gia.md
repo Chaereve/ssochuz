@@ -11,11 +11,10 @@
 | # | Tính năng | Chỗ dùng | Nhớ ở đâu |
 | --- | --- | --- | --- |
 | 1 | Reaction sticker cuối chương | cuối chương đọc (`#rdReact`) + trang truyện (`#storyReact`) | `ssochuz-react-*` (localStorage) |
-| 2 | Ẩn nhanh “Sếp tới” | nút trên thanh đầu trang (mọi trang) | không nhớ (chủ ý) |
-| 3 | Zen | nút `#rdZen` / phím `Z` | `ssochuz-reader.zen` |
-| 4 | Bionic | Cài đặt đọc | `ssochuz-reader.bionic` |
-| 5 | Vòng quay “Hôm nay đọc gì?” | `[data-dice]` ở trang chủ, trang truyện, thanh đọc, Cài đặt đọc | `ssochuz-dice-opt`, `ssochuz-dice-last` |
-| 6 | Hộp góp gạch “Đòi nợ tác giả” | trang chi tiết truyện đang cập nhật (`#storyBrick`) | `ssochuz-brick-<slug>` |
+| 2 | Zen | nút `#rdZen` / phím `Z` | `ssochuz-reader.zen` |
+| 3 | Bionic | Cài đặt đọc | `ssochuz-reader.bionic` |
+| 4 | Vòng quay “Hôm nay đọc gì?” | `[data-dice]` ở trang chủ, trang truyện, thanh đọc, Cài đặt đọc | `ssochuz-dice-opt`, `ssochuz-dice-last` |
+| 5 | Hộp góp gạch “Đòi nợ tác giả” | trang chi tiết truyện đang cập nhật (`#storyBrick`) | `ssochuz-brick-<slug>` |
 | (tắt được từng thứ) | công tắc `react · bionic · term · zen · brick · sfx` trong Cài đặt đọc | `ssochuz-reader` |
 | + | Terminal / Hacker CLI | nút `#rdTerm` / phím `T` | `ssochuz-reader.term` |
 | + | Âm thanh hiệu ứng | dùng chung cho sticker / gạch / vòng quay | `ssochuz-reader.sfx` |
@@ -55,28 +54,20 @@ Mọi công tắc đọc đều nằm trong **Cài đặt đọc** (`#setSheet`,
 
 **Không đổi:** bình luận, đánh giá sao, nút lưu tủ truyện… vẫn nguyên.
 
-## 2. Ẩn nhanh “Sếp tới / Bố mẹ gõ cửa”
-
-- Nút `#czPanic` trên thanh đầu trang (mọi trang, kể cả trang chủ) + **Esc hai lần trong 500 ms** + **Ctrl+Shift+H**.
-- Lớp `#czPanicLayer` giả Google Docs: tiêu đề tab “Ghi chú ôn tập HK2 — Google Tài liệu”, favicon SVG inline, thanh địa chỉ đổi về `/` (`history.replaceState`), nút “Thoát” + kbd Esc.
-- Trong lúc ẩn: `document.title`/favicon đổi, thanh đọc ẩn, `CZ.setProgress` không ghi gì, phím tắt đọc (←/→/Space…) bị nuốt.
-- Thoát: Esc, nút “Thoát”, Ctrl+Shift+H, hoặc Back (`popstate`) — trả lại tiêu đề, favicon, đường dẫn, vị trí cuộn.
-- Chủ ý **không** ghi trạng thái ẩn vào localStorage (F5 là về bình thường).
-
-## 3. Zen
+## 2. Zen
 
 - Nút `#rdZen` (icon `yoga`) trên thanh đọc, phím `Z`.
 - `<body class="rd-zen">` → CSS ẩn thanh đọc, breadcrumb, điều hướng chương, chân trang; chỉ còn nội dung + vài nút thiết yếu; thanh công cụ tự hiện khi di chuột/chạm rồi tự ẩn tiếp (không nhảy bố cục trên mobile vì dùng chồng lớp cố định).
 - Nhớ trong `ssochuz-reader.zen`; nút có `aria-pressed`.
 
-## 4. Bionic
+## 3. Bionic
 
 - Công tắc trong Cài đặt đọc; phần bọc chữ chạy **sau khi** chương đã vẽ (`applyBionic()` gọi từ `paintChapter`).
 - In đậm 1–3 ký tự đầu mỗi từ bằng `<b class="bio">`: từ ≤ 3 ký tự đậm 1, ≤ 8 đậm 2, còn lại 3.
 - **Không đổi chữ gốc:** không chuẩn hoá NFC, không `slice()` giữa cụm dấu; từ được nhận diện gồm cả dấu kết hợp (`\p{M}`) nên tiếng Việt ở dạng NFD vẫn nguyên điểm mã (`tests/t_readtools.js` khoá điều này).
 - Bỏ qua `<pre>`, `<code>`, `h1`–`h4`, `script`, `textarea` (in đậm nửa từ ở đó chỉ làm chữ xấu đi). Tắt là gỡ sạch thẻ đã bọc, trả lại đúng chuỗi cũ.
 
-## 5. Vòng quay “Hôm nay đọc gì?”
+## 4. Vòng quay “Hôm nay đọc gì?”
 
 - Nút sinh tự động cho **mọi** phần tử `[data-dice]`: thanh đầu trang chủ, trang chi tiết truyện, thanh đọc (`#rdDice`), và mục trong Cài đặt đọc (`#setDice`).
 - Nguồn truyện theo thứ tự ưu tiên: **đang theo dõi** → **mới cập nhật** → **cả thư viện**; chỉ lấy truyện đọc được (`canRead`, không khoá mật mã) từ `CZ.lib()` — không có dữ liệu truyện nào viết cứng trong tệp này.
@@ -86,7 +77,7 @@ Mọi công tắc đọc đều nằm trong **Cài đặt đọc** (`#setSheet`,
 - Kết quả: bìa + tên + tác giả/couple + tình trạng + “Đọc ngay” (đúng chương đang đọc dở nếu có) + “Trang truyện” + “Quay lại”; chương mới nhất lấy từ `CZ.toc()` **sau** khi có kết quả (1 request, không tải trước).
 - Trạng thái “Đang quay…” nằm ở vùng `role="status"`; đang quay thì nút bị khoá.
 
-## 6. Hộp góp gạch “Đòi nợ tác giả”
+## 5. Hộp góp gạch “Đòi nợ tác giả”
 
 - Chỉ hiện với truyện **đang cập nhật** (`statusCls === 'run'`, chưa khoá mật mã); truyện đã hoàn thành thì khối bị ẩn và để trống.
 - Tắt được bằng công tắc **Hộp góp gạch** trong Cài đặt đọc (khoá `brick`, mặc định bật).
@@ -96,14 +87,14 @@ Mọi công tắc đọc đều nằm trong **Cài đặt đọc** (`#setSheet`,
 - Chống spam: 6 s giữa hai viên, tối đa 20 viên/ngày/máy; chạm trần thì chặn kèm lời nhắn.
 - Số tổng khi **chưa** có máy chủ là con số minh hoạ ổn định theo slug (900–3.900) + phần của máy này — nói thật với người đọc bằng câu “lưu trên máy bạn”. Cắm `CZ_BRICK_API` là phần minh hoạ biến mất, số lấy từ máy chủ.
 
-## 7. Terminal / Hacker CLI
+## 6. Terminal / Hacker CLI
 
 - Công tắc trong Cài đặt đọc / nút `#rdTerm` / phím `T`. `<body class="rd-term">` + `#rdText.term`, nền tối, chữ monospace, dòng đầu `user@ssochuz:~/truyen/<slug>$ curl -s https://<host>/truyen/<slug>/chuong-<n>`, dòng meta có giờ và số chương, dòng kết `process exited with code 0 — chapter complete` + con trỏ nhấp nháy.
 - Lời dẫn là log hệ thống, câu thoại (mở đầu bằng `“`, `"`, `'` hoặc gạch đầu dòng) được tô như output (`.t-out`).
 - **Chỉ là giao diện:** không có ô nhập lệnh, không `eval`, không `child_process`, không gõ từng ký tự cho cả chương — `tests/t_readtools.js` khoá cả ba điều này.
 - Nút “Thoát terminal” rõ ràng; nhớ trong `ssochuz-reader.term`.
 
-## 8. Nối máy chủ sau này (TODO(API))
+## 7. Nối máy chủ sau này (TODO(API))
 
 Hai cổng đã có sẵn trong `cz-config.js` (mặc định **rỗng** = chạy hoàn toàn trong máy):
 
@@ -190,20 +181,20 @@ Client đã gửi kèm `user_id` (khi đăng nhập) **và** `device_id` trong m
 
 Vì sao **chưa** làm ở Worker: (1) mỗi lượt thả/góp là một lượt **ghi** KV — thứ đang bị ngân sách hoá chặt (`src/shared/kv-budget.js`, xem `docs/features/do-luong-luot-doc-kv.md`); (2) chống spam theo thiết bị/ngày ở KV cần thêm khoá phụ và TTL, tức thêm lượt đọc; (3) chưa có cơ chế chống lạm dụng phía máy chủ (rate limit theo IP) nên mở công khai sẽ thành kênh ghi rác. Client đã sẵn hợp đồng + hàng chờ để khi Worker có endpoint thì chỉ việc điền URL trong `cz-config.js`.
 
-## 9. Giấy phép asset
+## 8. Giấy phép asset
 
 Sticker: Microsoft Fluent Emoji 3D (**MIT**, Copyright (c) Microsoft Corporation) — nhúng lại thành WebP 128 px trong `assets/stickers/`, nguồn từng tệp ở `assets/stickers/CREDITS.txt`, nội dung giấy phép ở `THIRD-PARTY-NOTICES.md`. Không hotlink (CSP `img-src` chặn) — ảnh nằm trong kho.
 
-## 10. Kiểm thử
+## 9. Kiểm thử
 
 | Bài | Khoá điều gì |
 | --- | --- |
 | `tests/t_react.js` | đúng 6 sticker là `<button>` thật có ảnh WebP + emoji dự phòng, vị trí dưới nội dung trên thanh chuyển chương, thả/bỏ, chống spam, phiếu theo chương, `localStorage` theo máy **và theo tài khoản khi đã đăng nhập**, bảng đầy đủ, tắt/mở trong Cài đặt đọc, giảm chuyển động |
-| `tests/t_readtools.js` | ẩn nhanh (tiêu đề/favicon/đường dẫn, không ghi tiến độ đọc, Esc×2, Ctrl+Shift+H), Zen, Bionic (không đổi chữ, NFD, `<pre>`), Terminal (lệnh giả, không ô nhập, không eval, thoát được) |
+| `tests/t_readtools.js` | Zen, Bionic (không đổi chữ, NFD, `<pre>`), Terminal (lệnh giả, không ô nhập, không eval, thoát được); xác nhận UI/phím tắt ẩn trang không còn |
 | `tests/t_brick.js` | chỉ truyện đang ra, nội dung hộp, cooldown + trần/ngày, mốc 5.000 → 10.000, tiếng chỉ sau cú bấm, **tắt/mở bằng công tắc trong Cài đặt đọc**, không gọi `/api/brick` khi chưa cắm, gọi đúng khi cắm |
 | `tests/t_dice.js` | nút ở trang chủ + trang truyện, ưu tiên theo dõi, lọc 18+/tình trạng/thể loại, quay 2,6 s, “Đọc ngay” đúng chương, bỏ truyện vừa đọc, “Quay lại” không trùng, giảm chuyển động |
 
-## 11. Rủi ro đã biết
+## 10. Rủi ro đã biết
 
 - Số liệu reaction/gạch **chỉ đúng trên máy người đọc** cho tới khi có máy chủ — câu chữ trong toast nói rõ điều này.
 - Vòng quay lấy tối đa 10 lát ngẫu nhiên mỗi lượt mở; bộ lọc thể loại gần như luôn ẩn vì registry thiếu `genre`.
