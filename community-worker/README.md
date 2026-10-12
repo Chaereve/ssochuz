@@ -32,3 +32,9 @@ curl -s https://ssochuz-community.<account-subdomain>.workers.dev/api/health
 ```
 
 Health cần có `worker: "ssochuz-community"`, `d1: true`, `cmsBinding: true`. Endpoint actions là `POST /api/community/reactions` và `POST /api/community/brick`.
+
+## Cloudflare Pages preview và ranh giới deploy
+
+Pages của site này phục vụ các asset tĩnh đã build/commit ở repo root; không có thư mục `/functions` hoặc Wrangler config ở root. Vì vậy log Pages báo “No build command specified” / “No functions dir” là đúng với cách deploy hiện tại. Pages preview không deploy `chuseoz-cms` hoặc `ssochuz-community`; mỗi Worker được deploy riêng từ thư mục và config của chính nó.
+
+Trong log PR #73, Pages đã validate `_redirects`/`_headers` và upload assets thành công, rồi lỗi ở bước cuối “Failed to publish your Function. Got error: Unknown internal error occurred.” Đây là lỗi của bước publish/finalize Pages sau khi static assets đã lên; không phải lỗi D1 migration hay bundle của hai Worker. Không sửa Wrangler config của CMS hoặc community để xử lý lỗi Pages này; nếu lặp lại, xem/download toàn bộ Pages deployment log để có error ID/chi tiết cho Cloudflare.
