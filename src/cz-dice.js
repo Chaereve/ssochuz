@@ -47,8 +47,8 @@
   function lib() { try { return (CZ.lib && CZ.lib()) || []; } catch (e) { return []; } }
   function readable(n) { return n && n.canRead && !n.locked; }
 
-  /* thứ tự ưu tiên: đang theo dõi → mới cập nhật → cả thư viện */
-  function candidates() {
+  /* thứ tự ưu tiên: đang theo dõi → mới cập nhật → cả kho */
+  function candidates(allPool) {
     var o = opts();
     var all = lib().filter(function (n) {
       if (!readable(n)) return false;
@@ -61,7 +61,7 @@
     });
     if (!all.length) return [];
     var follow = CZ.followMap ? CZ.followMap() : {};
-    var followed = all.filter(function (n) { return Object.prototype.hasOwnProperty.call(follow, n.slug); });
+    var followed = allPool ? [] : all.filter(function (n) { return Object.prototype.hasOwnProperty.call(follow, n.slug); });
     var tier = followed.length ? followed : all.slice().sort(function (a, b) {
       return String(b.updated || '').localeCompare(String(a.updated || ''));
     });
@@ -76,49 +76,79 @@
     }
     return tier;
   }
+  function shuffleArr(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
   /* chọn ngẫu nhiên tối đa MAX_SLICES lát cho vòng quay */
-  function wheelSet(list) {
-    if (list.length <= MAX_SLICES) return list.slice();
+  function wheelSet(list, shuffleOrder) {
+    if (list.length <= MAX_SLICES) return shuffleOrder ? shuffleArr(list) : list.slice();
     var pool = list.slice(), out = [];
     while (out.length < MAX_SLICES && pool.length) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
     return out;
   }
 
-  function coverTag(n) {
+  function coverTag(n, onWheel) {
     var src = CZ.coverSrc ? CZ.coverSrc(n) : (n.thumb || '');
-    if (!src) return '<span class="dc-ph" aria-hidden="true">' + esc(n.title.slice(0, 1)) + '</span>';
-    return '<img src="' + esc(src) + '"' + (CZ.coverFB ? CZ.coverFB(n, src) : '') + ' alt="" width="60" height="90" loading="lazy" decoding="async" referrerpolicy="no-referrer">';
+    var ch = esc((n && n.title ? n.title : '?').slice(0, 1));
+    if (!src) return '<span class="dc-ph" aria-hidden="true">' + ch + '</span>';
+    return (onWheel ? '<span class="dc-ph" aria-hidden="true">' + ch + '</span>' : '') +
+      '<img src="' + esc(src) + '"' + (CZ.coverFB ? CZ.coverFB(n, src) : '') +
+      ' alt="" width="120" height="180"' + (onWheel ? '' : ' loading="lazy"') +
+      ' decoding="async" referrerpolicy="no-referrer">';
   }
   function palette(i) {
-    var c = ['#b23a56', '#2b6e56', '#c68426', '#3d70b8', '#7d52b0', '#bf5730', '#317b7d', '#b88635', '#6b4e96', '#567a38'];
+    var c = ['#7a2e38', '#284b52', '#875829', '#3d3856', '#2f5241', '#6e3b2c', '#36495e', '#785230', '#543852', '#3d5235'];
     return c[i % c.length];
   }
 
-  function wheelHTML(list) {
+  function wheelSlotsHTML(list) {
+    var step = 360 / list.length;
+    return list.map(function (n, i) {
+      var a = i * step + step / 2;
+      return '<span class="dc-slot" data-slot="' + i + '" title="' + esc(n.title) + '" style="--slot-i:' + i + ';transform:rotate(' + a.toFixed(2) + 'deg) translateY(calc(-1 * var(--dc-r, 78px)))">' +
+        '<span class="dc-slot-in">' + coverTag(n, true) + '</span>' +
+      '</span>';
+    }).join('');
+  }
+
+  function wheelBg(list) {
     var step = 360 / list.length;
     var stops = list.map(function (n, i) {
       return palette(i) + ' ' + (i * step).toFixed(2) + 'deg ' + ((i + 1) * step).toFixed(2) + 'deg';
     }).join(', ');
+    return 'conic-gradient(' + stops + ')';
+  }
+
+  function wheelDivsHTML(list) {
+    var step = 360 / list.length;
+    return list.length > 1 ? list.map(function (_, i) {
+      return '<i class="dc-div" style="transform:rotate(' + (i * step).toFixed(2) + 'deg)"></i>';
+    }).join('') : '';
+  }
+
+  function wheelInnerHTML(list) {
+    return wheelDivsHTML(list) +
+      '<span class="dc-sheen" aria-hidden="true"></span>' +
+      wheelSlotsHTML(list) +
+      '<span class="dc-hub" id="dcHub" aria-hidden="true"><span class="dc-hub-in">🎲</span></span>';
+  }
+
+  function wheelHTML(list) {
     var pegs = [];
     for (var p = 0; p < 12; p++) {
       pegs.push('<i class="dc-peg" style="--peg-a:' + (p * 30) + 'deg"></i>');
     }
-    var divs = list.length > 1 ? list.map(function (_, i) {
-      return '<i class="dc-div" style="transform:rotate(' + (i * step).toFixed(2) + 'deg)"></i>';
-    }).join('') : '';
     return '<div class="dc-wheelbox">' +
-        '<div class="dc-wheelwrap">' +
+        '<div class="dc-wheelwrap"' + (list.length <= 6 ? ' data-few="1"' : '') + '>' +
           '<span class="dc-pegs" aria-hidden="true">' + pegs.join('') + '</span>' +
           '<div class="dc-pointer" id="dcPointer" aria-hidden="true"><span class="dc-pin"></span></div>' +
-          '<div class="dc-wheel" id="dcWheel" style="background:conic-gradient(' + stops + ')">' +
-            divs +
-            '<span class="dc-sheen" aria-hidden="true"></span>' +
-            list.map(function (n, i) {
-              var a = i * step + step / 2;
-              return '<span class="dc-slot" title="' + esc(n.title) + '" style="transform:rotate(' + a.toFixed(2) + 'deg) translateY(calc(-1 * var(--dc-r, 76px))) rotate(' + (-a).toFixed(2) + 'deg)">' +
-                coverTag(n) + '</span>';
-            }).join('') +
-            '<span class="dc-hub" id="dcHub" aria-hidden="true"><span class="dc-hub-in">🎲</span></span>' +
+          '<div class="dc-wheel" id="dcWheel" style="background:' + wheelBg(list) + '">' +
+            wheelInnerHTML(list) +
           '</div>' +
         '</div>' +
         '<p class="dc-live" role="status" aria-live="polite" id="dcLive">Sẵn sàng quay · ' + num(list.length) + ' truyện trong vòng</p>' +
@@ -162,9 +192,11 @@
         '<div class="dc-actions">' +
           '<div class="dc-act-btns">' +
             '<button class="btn pri dc-spin" id="dcSpin">Quay ngay</button>' +
-            '<button class="btn ghost" id="dcAgain" hidden>Quay lại</button>' +
+            '<button class="btn pri dc-spin" id="dcAgain" hidden>Quay lại</button>' +
+            '<button class="btn ghost dc-shuf" id="dcShuffle" hidden title="Trộn danh sách truyện khác lên vòng quay">' +
+              (CZ.icon ? CZ.icon('spark', 'i-s') : '') + '<span>Trộn truyện</span></button>' +
           '</div>' +
-          '<span class="sm muted dc-note">' + (list.length !== S.cands.length
+          '<span class="sm muted dc-note" id="dcNote">' + (list.length !== S.cands.length
             ? ('Chọn ngẫu nhiên ' + num(S.cands.length) + '/' + num(list.length) + ' bộ phù hợp')
             : 'Ưu tiên truyện đang theo dõi & mới cập nhật') + '</span>' +
         '</div>';
@@ -174,6 +206,11 @@
       var sp = m.querySelector('#dcSpin');
       if (sp) { try { sp.focus({ preventScroll: true }); } catch (e) {} }
     }
+  }
+
+  function bindHub(m) {
+    var hub = m.querySelector('#dcHub');
+    if (hub) hub.addEventListener('click', function () { spinWheel(m); });
   }
 
   function bindBody(m) {
@@ -199,8 +236,59 @@
     if (spin) spin.addEventListener('click', function () { spinWheel(m); });
     var again = m.querySelector('#dcAgain');
     if (again) again.addEventListener('click', function () { spinWheel(m); });
-    var hub = m.querySelector('#dcHub');
-    if (hub) hub.addEventListener('click', function () { spinWheel(m); });
+    var shuf = m.querySelector('#dcShuffle');
+    if (shuf) shuf.addEventListener('click', function () { shuffleWheel(m); });
+    bindHub(m);
+  }
+
+  function shuffleWheel(m) {
+    if (S.spinning) return;
+    var list = candidates();
+    var full = candidates(true);
+    if (full.length > list.length && list.length < MAX_SLICES) list = full;
+    if (!list.length) return;
+    var prevKey = S.cands.map(function (n) { return n.slug; }).join(',');
+    var next = wheelSet(list, true);
+    for (var tries = 0; tries < 5 && list.length > 1; tries++) {
+      if (next.map(function (n) { return n.slug; }).join(',') !== prevKey) break;
+      next = wheelSet(list, true);
+    }
+    S.cands = next;
+    S.pick = null;
+    var wheel = m.querySelector('#dcWheel');
+    var wrap = m.querySelector('.dc-wheelwrap');
+    var stage = m.querySelector('.dc-stage');
+    var res = m.querySelector('#dcResult');
+    var live = m.querySelector('#dcLive');
+    var note = m.querySelector('#dcNote');
+    if (stage) stage.classList.remove('has-result');
+    if (wrap) {
+      wrap.classList.remove('won', 'spinning');
+      if (S.cands.length <= 6) wrap.setAttribute('data-few', '1');
+      else wrap.removeAttribute('data-few');
+    }
+    if (res) res.hidden = true;
+    if (wheel) {
+      wheel.style.transition = 'none';
+      S.rot = 0;
+      wheel.style.transform = 'rotate(0deg)';
+      wheel.style.background = wheelBg(S.cands);
+      wheel.innerHTML = wheelInnerHTML(S.cands);
+      wheel.classList.remove('shuffling');
+      void wheel.offsetWidth;
+      wheel.classList.add('shuffling');
+      bindHub(m);
+    }
+    if (live) live.textContent = 'Đã trộn vòng quay · ' + num(S.cands.length) + ' truyện trong vòng';
+    if (note) {
+      note.textContent = list.length !== S.cands.length
+        ? ('Đã trộn ngẫu nhiên ' + num(S.cands.length) + '/' + num(list.length) + ' bộ phù hợp')
+        : ('Đã trộn ' + num(S.cands.length) + ' bộ truyện trên vòng quay');
+    }
+    if (CZ.sfx && !reduce()) {
+      CZ.sfx('tick');
+      setTimeout(function () { if (CZ.sfx) CZ.sfx('pop'); }, 65);
+    }
   }
 
   function scheduleTicks(m, spinId) {
@@ -233,6 +321,12 @@
     var spinId = S.spin = (S.spin || 0) + 1;
     var wheel = m.querySelector('#dcWheel'), live = m.querySelector('#dcLive');
     var wrap = m.querySelector('.dc-wheelwrap');
+    if (wheel) {
+      wheel.classList.remove('shuffling');
+      Array.prototype.forEach.call(wheel.querySelectorAll('.dc-slot.is-pick'), function (el) {
+        el.classList.remove('is-pick');
+      });
+    }
     /* KHÔNG lặp lại kết quả vừa ra khi vẫn còn lát khác: kết quả vừa quay trong
        lượt này (S.pick) hoặc bộ vừa đọc ở lần mở bảng trước (LS.last) đều bị
        loại khỏi lần bốc, nên “Quay lại” luôn đổi bộ. Chỉ khi vòng quay có đúng
@@ -249,12 +343,13 @@
     var target = 360 * 4 + (360 - (pick * step + step / 2));
     S.rot = Math.floor(S.rot / 360) * 360 + target;
     S.spinning = true;
-    var spin = m.querySelector('#dcSpin'), again = m.querySelector('#dcAgain');
+    var spin = m.querySelector('#dcSpin'), again = m.querySelector('#dcAgain'), shuf = m.querySelector('#dcShuffle');
     var stage = m.querySelector('.dc-stage');
     if (stage) stage.classList.remove('has-result');
     if (wrap) { wrap.classList.remove('won'); wrap.classList.add('spinning'); }
-    if (spin) { spin.disabled = true; spin.textContent = 'Đang quay…'; }
+    if (spin) { spin.hidden = false; spin.disabled = true; spin.textContent = 'Đang quay…'; }
     if (again) again.hidden = true;
+    if (shuf) shuf.hidden = true;
     m.querySelector('#dcResult').hidden = true;
     if (live) live.textContent = 'Đang quay…';
     if (reduce()) {
@@ -276,10 +371,15 @@
       if (spinId !== S.spin) return;            /* bộ lọc đã đổi — bỏ lượt quay này */
       S.pick = list[pick] || null;
       if (!S.pick) return;
-      if (spin) { spin.disabled = false; spin.textContent = 'Quay ngay'; }
+      if (spin) { spin.disabled = false; spin.textContent = 'Quay ngay'; spin.hidden = true; }
       if (again) again.hidden = false;
+      if (shuf) shuf.hidden = false;
       if (stage) stage.classList.add('has-result');
       if (wrap) wrap.classList.add('won');
+      if (wheel) {
+        var chosenSlot = wheel.querySelector('[data-slot="' + pick + '"]');
+        if (chosenSlot) chosenSlot.classList.add('is-pick');
+      }
       jset(LS.last, S.pick.slug);
       if (live) live.textContent = 'Đã chọn: ' + S.pick.title;
       paintResult(m, S.pick);

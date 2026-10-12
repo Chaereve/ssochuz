@@ -161,6 +161,8 @@ const slugOf = t => { const m = REG.lib.filter(n => n.title === t)[0]; return m 
     // chương mới nhất: có hỏi mục lục (1 request) rồi mới điền
     chuongMoiNhat: (res.querySelector('[data-latest]') || {}).textContent,
     nutQuayLai: !!$('#dcAgain') && !$('#dcAgain').hidden,
+    nutTronTruyen: !!$('#dcShuffle') && !$('#dcShuffle').hidden,
+    latDuocChon: !!$('#czDiceBox').querySelector('.dc-slot.is-pick'),
     tieng: sfxLog.slice()
   };
   if (!out.ketQua.hien) err('quay xong phải hiện thẻ kết quả');
@@ -170,7 +172,19 @@ const slugOf = t => { const m = REG.lib.filter(n => n.title === t)[0]; return m 
   if (!/\/(chuong|chapter)-?\d+\/?$/.test(out.ketQua.link)) err('nút “Đọc ngay” phải trỏ tới một chương cụ thể (thấy: ' + out.ketQua.link + ')');
   if (pick === FOLLOW && out.ketQua.link.indexOf('chuong-3') < 0) err('truyện đang đọc dở phải mở đúng chương đang đọc (chuong-3)');
   if (!out.ketQua.nutQuayLai) err('quay xong phải hiện nút “Quay lại”');
+  if (!out.ketQua.nutTronTruyen) err('quay xong phải hiện nút “Trộn truyện”');
+  if (!out.ketQua.latDuocChon) err('quay xong phải đánh dấu nổi bật bìa trúng trên vòng quay');
   if (!out.ketQua.tieng.includes('pop')) err('quay xong (do người dùng bấm) nên có tiếng pop nhẹ');
+
+  /* bấm “Trộn truyện” sau khi quay: phải trộn sang danh sách truyện mới trên vòng quay */
+  click(win, $('#dcShuffle'));
+  await wait(80);
+  out.tronTruyen = {
+    soLatSauKhiTron: $('#czDiceBox').querySelectorAll('.dc-slot').length,
+    live: $('#dcLive').textContent
+  };
+  if (out.tronTruyen.soLatSauKhiTron < 2) err('bấm “Trộn truyện” phải nạp danh sách truyện mới lên vòng quay');
+  if (!/Đã trộn/.test(out.tronTruyen.live)) err('bấm “Trộn truyện” phải cập nhật trạng thái đã trộn vòng quay');
 
   /* =====================================================================
      7. truyện vừa đọc bị loại khi vẫn còn đủ lựa chọn khác
