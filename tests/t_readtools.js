@@ -209,19 +209,17 @@ const key = (w, k, opt) => w.document.dispatchEvent(new w.KeyboardEvent('keydown
   if (out.terminal.sauKhiThoat.trenBody) err('bấm “Thoát terminal” phải trả về giao diện đọc thường');
 
   /* =====================================================================
-     4. nút vòng quay trên thanh đọc (#rdDice) — thêm ở 1.19.0
+     4. nút vòng quay trên thanh đọc (#rdDice) — dẫn sang trang riêng /vong-quay/
      ===================================================================== */
   const diceBtn = $('#rdDice');
-  out.nutVongQuay = { co: !!diceBtn, coIcon: !!(diceBtn && diceBtn.querySelector('svg')), nhan: diceBtn ? (diceBtn.getAttribute('aria-label') || '') : '' };
+  out.nutVongQuay = {
+    co: !!diceBtn,
+    coIcon: !!(diceBtn && diceBtn.querySelector('svg')),
+    nhan: diceBtn ? (diceBtn.getAttribute('aria-label') || '') : '',
+    url: win.CZDice ? win.CZDice.url : ''
+  };
   if (!diceBtn) err('thanh đọc thiếu nút “Hôm nay đọc gì?”');
-  else {
-    click(win, diceBtn);
-    await wait(80);
-    out.nutVongQuay.moBang = !!$('#czDiceBox');
-    if (!out.nutVongQuay.moBang) err('bấm nút vòng quay trên thanh đọc phải mở được bảng');
-    const dc = $('#czDiceBox');
-    if (dc && dc.querySelector('[data-close]')) { click(win, dc.querySelector('[data-close]')); await wait(200); }
-  }
+  if (out.nutVongQuay.url !== '/vong-quay/') err('nút vòng quay trên thanh đọc phải dẫn sang trang riêng /vong-quay/');
 
   /* =====================================================================
      5. Không phá trang khác: các trang không có #rdReact/#czDiceHost vẫn chạy

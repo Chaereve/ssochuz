@@ -1,8 +1,8 @@
 /* ============================================================================
-   ssochuz · VÒNG QUAY “HÔM NAY ĐỌC GÌ?” (bản 1.20.0)
+   ssochuz · TRANG VÒNG QUAY “HÔM NAY ĐỌC GÌ?” (/vong-quay/ · bản 1.20.0)
    ----------------------------------------------------------------------------
-   Đôi khi mở web mà không biết đọc gì. Nút này quay một vòng 2,6 giây rồi chốt
-   một bộ truyện, kèm nút Đọc ngay.
+   Trang riêng cho vòng quay chọn truyện ngẫu nhiên: quay một vòng 2,6 giây rồi
+   chốt một bộ truyện, kèm nút Đọc ngay và nút Trộn truyện.
 
    NGUỒN TRUYỆN — theo đúng thứ tự ưu tiên, không bịa dữ liệu:
      1. truyện bạn ĐANG THEO DÕI (CZ.followMap) mà đang ra chương;
@@ -19,15 +19,15 @@
   var CZ = w.CZ || {};
   function esc(s) { return CZ.esc ? CZ.esc(s) : String(s == null ? '' : s); }
   function num(n) { return CZ.num ? CZ.num(n) : String(n); }
-  function toast(m, k) { if (CZ.toast) CZ.toast(m, k); }
   function reduce() { return !!CZ.reduce; }
 
+  var DICE_URL = '/vong-quay/';
   var MAX_SLICES = 10;          /* quá 10 lát thì vòng quay rối mắt */
   var SPIN_MS = 2600;
   var LS = { last: 'ssochuz:dice:last:v1', opt: 'ssochuz:dice:options:v1' };
   var LEGACY_LS = { last: 'ssochuz-dice-last', opt: 'ssochuz-dice-opt' };
   var S = { rot: 0, spinning: false, cands: [], pick: null };
-  var CZDice = { _S: S };       /* API công khai, gán tiếp ở cuối tệp */
+  var CZDice = { _S: S, url: DICE_URL };
 
   function jget(k, dv) { try { var v = JSON.parse(localStorage.getItem(k) || 'null'); return v == null ? dv : v; } catch (e) { return dv; } }
   function jset(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
@@ -35,7 +35,7 @@
     var current = jget(key, null);
     if (current != null) return current;
     var legacy = jget(legacyKey, null);
-    if (legacy != null) jset(key, legacy); /* import old option once; future writes are versioned */
+    if (legacy != null) jset(key, legacy);
     return legacy == null ? fallback : legacy;
   }
   function opts() {
@@ -76,6 +76,7 @@
     }
     return tier;
   }
+
   function shuffleArr(arr) {
     var a = arr.slice();
     for (var i = a.length - 1; i > 0; i--) {
@@ -84,6 +85,7 @@
     }
     return a;
   }
+
   /* chọn ngẫu nhiên tối đa MAX_SLICES lát cho vòng quay */
   function wheelSet(list, shuffleOrder) {
     if (list.length <= MAX_SLICES) return shuffleOrder ? shuffleArr(list) : list.slice();
@@ -101,6 +103,7 @@
       ' alt="" width="120" height="180"' + (onWheel ? '' : ' loading="lazy"') +
       ' decoding="async" referrerpolicy="no-referrer">';
   }
+
   function palette(i) {
     var c = ['#7a2e38', '#284b52', '#875829', '#3d3856', '#2f5241', '#6e3b2c', '#36495e', '#785230', '#543852', '#3d5235'];
     return c[i % c.length];
@@ -110,7 +113,7 @@
     var step = 360 / list.length;
     return list.map(function (n, i) {
       var a = i * step + step / 2;
-      return '<span class="dc-slot" data-slot="' + i + '" title="' + esc(n.title) + '" style="--slot-i:' + i + ';transform:rotate(' + a.toFixed(2) + 'deg) translateY(calc(-1 * var(--dc-r, 78px)))">' +
+      return '<span class="dc-slot" data-slot="' + i + '" title="' + esc(n.title) + '" style="--slot-i:' + i + ';transform:rotate(' + a.toFixed(2) + 'deg) translateY(calc(-1 * var(--dc-r, 104px)))">' +
         '<span class="dc-slot-in">' + coverTag(n, true) + '</span>' +
       '</span>';
     }).join('');
@@ -155,6 +158,26 @@
       '</div>';
   }
 
+  function rosterHTML(list, pickedSlug) {
+    return '<div class="dc-roster" id="dcRoster">' +
+      '<div class="dc-roster-head">' +
+        '<span>Truyện trên vòng quay (' + num(list.length) + ')</span>' +
+      '</div>' +
+      '<div class="dc-roster-list">' +
+        list.map(function (n, idx) {
+          var isPick = pickedSlug && n.slug === pickedSlug;
+          return '<a class="dc-ritem' + (isPick ? ' on' : '') + '" href="' + esc(n.url || (CZ.storyURL ? CZ.storyURL(n.slug) : '/truyen/')) + '" data-rslug="' + esc(n.slug) + '">' +
+            '<span class="dc-rnum">' + (idx + 1) + '</span>' +
+            '<span class="dc-rth">' + coverTag(n, false) + '</span>' +
+            '<span class="dc-rtxt"><b>' + esc(n.title) + '</b>' +
+              '<span>' + [n.author ? esc(n.author) : '', esc(CZ.countText ? CZ.countText(n) : '')].filter(Boolean).join(' · ') + '</span>' +
+            '</span>' +
+          '</a>';
+        }).join('') +
+      '</div>' +
+    '</div>';
+  }
+
   function filtersHTML() {
     var o = opts();
     var genres = {};
@@ -162,7 +185,7 @@
     var gk = Object.keys(genres).sort();
     return '<div class="dc-filters">' +
       '<div class="dc-fgroup">' +
-        '<span class="dc-fl">Lọc</span>' +
+        '<span class="dc-fl">Bộ lọc</span>' +
         '<button type="button" class="dc-chip' + (o.run ? ' on' : '') + '" data-opt="run" aria-pressed="' + o.run + '">Đang ra</button>' +
         '<button type="button" class="dc-chip' + (o.done ? ' on' : '') + '" data-opt="done" aria-pressed="' + o.done + '">Hoàn thành</button>' +
         '<button type="button" class="dc-chip' + (o.adult ? ' on' : '') + '" data-opt="adult" aria-pressed="' + o.adult + '">Gồm 18+</button>' +
@@ -179,26 +202,37 @@
   }
 
   function renderBox(m, first) {
+    if (!m) return;
     var list = candidates();
     S.cands = wheelSet(list);
     S.pick = null;
-    var body = m.querySelector('#dcBody');
+    var body = m.querySelector('#dcBody') || m;
     if (!S.cands.length) { body.innerHTML = filtersHTML() + emptyHTML(); }
     else {
       body.innerHTML = filtersHTML() +
-        '<div class="dc-stage">' + wheelHTML(S.cands) +
-          '<div class="dc-result" id="dcResult" hidden></div>' +
-        '</div>' +
-        '<div class="dc-actions">' +
-          '<div class="dc-act-btns">' +
-            '<button class="btn pri dc-spin" id="dcSpin">Quay ngay</button>' +
-            '<button class="btn pri dc-spin" id="dcAgain" hidden>Quay lại</button>' +
-            '<button class="btn ghost dc-shuf" id="dcShuffle" hidden title="Trộn danh sách truyện khác lên vòng quay">' +
-              (CZ.icon ? CZ.icon('spark', 'i-s') : '') + '<span>Trộn truyện</span></button>' +
+        '<div class="dc-stage">' +
+          '<div class="dc-wheel-col">' +
+            wheelHTML(S.cands) +
+            '<div class="dc-actions">' +
+              '<div class="dc-act-btns">' +
+                '<button class="btn pri dc-spin" id="dcSpin" type="button">Quay ngay</button>' +
+                '<button class="btn pri dc-spin" id="dcAgain" type="button" hidden>Quay lại</button>' +
+                '<button class="btn ghost dc-shuf" id="dcShuffle" type="button" title="Trộn danh sách truyện khác lên vòng quay">' +
+                  (CZ.icon ? CZ.icon('spark', 'i-s') : '') + '<span>Trộn truyện</span></button>' +
+              '</div>' +
+              '<span class="sm muted dc-note" id="dcNote">' + (list.length !== S.cands.length
+                ? ('Chọn ngẫu nhiên ' + num(S.cands.length) + '/' + num(list.length) + ' bộ phù hợp')
+                : 'Ưu tiên truyện đang theo dõi & mới cập nhật') + '</span>' +
+            '</div>' +
           '</div>' +
-          '<span class="sm muted dc-note" id="dcNote">' + (list.length !== S.cands.length
-            ? ('Chọn ngẫu nhiên ' + num(S.cands.length) + '/' + num(list.length) + ' bộ phù hợp')
-            : 'Ưu tiên truyện đang theo dõi & mới cập nhật') + '</span>' +
+          '<div class="dc-side-col">' +
+            '<div class="dc-standby" id="dcStandby">' +
+              '<div class="dc-standby-ic" aria-hidden="true">🎲</div>' +
+              '<div><b>Chưa quay lượt nào</b><p class="sm muted">Bấm <b>Quay ngay</b> hoặc chạm vào tâm vòng quay để chọn ngẫu nhiên một bộ truyện cho hôm nay. Bạn cũng có thể bấm <b>Trộn truyện</b> để đổi danh sách trên vòng quay.</p></div>' +
+            '</div>' +
+            '<div class="dc-result" id="dcResult" hidden></div>' +
+            rosterHTML(S.cands, '') +
+          '</div>' +
         '</div>';
     }
     bindBody(m);
@@ -214,12 +248,12 @@
   }
 
   function bindBody(m) {
-    var body = m.querySelector('#dcBody');
+    var body = m.querySelector('#dcBody') || m;
     Array.prototype.forEach.call(body.querySelectorAll('[data-opt]'), function (b) {
       b.addEventListener('click', function () {
         var o = opts(), k = b.dataset.opt;
         o[k] = !o[k];
-        if (!o.run && !o.done) o[k] = true;      /* luôn còn ít nhất một tình trạng */
+        if (!o.run && !o.done) o[k] = true;
         saveOpts(o);
         renderBox(m, false);
       });
@@ -259,6 +293,8 @@
     var wrap = m.querySelector('.dc-wheelwrap');
     var stage = m.querySelector('.dc-stage');
     var res = m.querySelector('#dcResult');
+    var standby = m.querySelector('#dcStandby');
+    var roster = m.querySelector('#dcRoster');
     var live = m.querySelector('#dcLive');
     var note = m.querySelector('#dcNote');
     if (stage) stage.classList.remove('has-result');
@@ -268,6 +304,8 @@
       else wrap.removeAttribute('data-few');
     }
     if (res) res.hidden = true;
+    if (standby) standby.hidden = false;
+    if (roster) roster.outerHTML = rosterHTML(S.cands, '');
     if (wheel) {
       wheel.style.transition = 'none';
       S.rot = 0;
@@ -314,9 +352,6 @@
 
   function spinWheel(m) {
     if (S.spinning || !S.cands.length) return;
-    /* CHỐT danh sách cho lượt quay này. Người dùng có thể bấm đổi bộ lọc giữa
-       lúc vòng đang quay (renderBox dựng lại S.cands) — đọc S.cands lúc kết
-       thúc là lấy phần tử của danh sách khác, hoặc undefined, rồi đổ vỡ. */
     var list = S.cands.slice();
     var spinId = S.spin = (S.spin || 0) + 1;
     var wheel = m.querySelector('#dcWheel'), live = m.querySelector('#dcLive');
@@ -327,10 +362,6 @@
         el.classList.remove('is-pick');
       });
     }
-    /* KHÔNG lặp lại kết quả vừa ra khi vẫn còn lát khác: kết quả vừa quay trong
-       lượt này (S.pick) hoặc bộ vừa đọc ở lần mở bảng trước (LS.last) đều bị
-       loại khỏi lần bốc, nên “Quay lại” luôn đổi bộ. Chỉ khi vòng quay có đúng
-       một lát thì đành chịu — lúc đó không còn phương án nào khác. */
     var avoid = (S.pick && S.pick.slug) || readVersioned(LS.last, LEGACY_LS.last, '');
     var pool = [];
     for (var pi = 0; pi < list.length; pi++) {
@@ -339,18 +370,19 @@
     if (!pool.length) { for (pi = 0; pi < list.length; pi++) pool.push(pi); }
     var pick = pool[Math.floor(Math.random() * pool.length)];
     var step = 360 / list.length;
-    /* con trỏ ở đỉnh (12 giờ): xoay sao cho tâm lát `pick` dừng ngay dưới nó */
     var target = 360 * 4 + (360 - (pick * step + step / 2));
     S.rot = Math.floor(S.rot / 360) * 360 + target;
     S.spinning = true;
     var spin = m.querySelector('#dcSpin'), again = m.querySelector('#dcAgain'), shuf = m.querySelector('#dcShuffle');
     var stage = m.querySelector('.dc-stage');
+    var standby = m.querySelector('#dcStandby');
     if (stage) stage.classList.remove('has-result');
     if (wrap) { wrap.classList.remove('won'); wrap.classList.add('spinning'); }
     if (spin) { spin.hidden = false; spin.disabled = true; spin.textContent = 'Đang quay…'; }
     if (again) again.hidden = true;
-    if (shuf) shuf.hidden = true;
+    if (shuf) shuf.disabled = true;
     m.querySelector('#dcResult').hidden = true;
+    if (standby) standby.hidden = false;
     if (live) live.textContent = 'Đang quay…';
     if (reduce()) {
       if (wheel) wheel.style.transition = 'none';
@@ -368,18 +400,21 @@
     function finish() {
       S.spinning = false;
       if (wrap) wrap.classList.remove('spinning');
-      if (spinId !== S.spin) return;            /* bộ lọc đã đổi — bỏ lượt quay này */
+      if (spinId !== S.spin) return;
       S.pick = list[pick] || null;
       if (!S.pick) return;
       if (spin) { spin.disabled = false; spin.textContent = 'Quay ngay'; spin.hidden = true; }
       if (again) again.hidden = false;
-      if (shuf) shuf.hidden = false;
+      if (shuf) { shuf.hidden = false; shuf.disabled = false; }
       if (stage) stage.classList.add('has-result');
       if (wrap) wrap.classList.add('won');
+      if (standby) standby.hidden = true;
       if (wheel) {
         var chosenSlot = wheel.querySelector('[data-slot="' + pick + '"]');
         if (chosenSlot) chosenSlot.classList.add('is-pick');
       }
+      var roster = m.querySelector('#dcRoster');
+      if (roster) roster.outerHTML = rosterHTML(list, S.pick.slug);
       jset(LS.last, S.pick.slug);
       if (live) live.textContent = 'Đã chọn: ' + S.pick.title;
       paintResult(m, S.pick);
@@ -394,9 +429,9 @@
     box.hidden = false;
     box.innerHTML =
       '<div class="dc-card">' +
-        '<div class="dc-cv">' + coverTag(n) + '</div>' +
+        '<div class="dc-cv">' + coverTag(n, false) + '</div>' +
         '<div class="dc-info">' +
-          '<span class="pill ' + esc(n.statusCls || 'run') + '"><span class="d"></span>' + esc(n.status || '') + '</span>' +
+          '<div class="dc-card-kicker"><span class="pill ' + esc(n.statusCls || 'run') + '"><span class="d"></span>' + esc(n.status || '') + '</span><span class="dc-win-badge">✨ Gợi ý hôm nay</span></div>' +
           '<h4>' + esc(n.title) + '</h4>' +
           '<p class="sm muted">' + [n.author ? esc(n.author) : '', n.couple ? esc(n.couple) : '', esc(CZ.countText ? CZ.countText(n) : '')]
             .filter(Boolean).join(' · ') + '</p>' +
@@ -408,9 +443,6 @@
           '</div>' +
         '</div>' +
       '</div>';
-    var rd = box.querySelector('[data-dice-read]');
-    if (rd) rd.addEventListener('click', function () { if (CZDice.close) CZDice.close(); });
-    /* chương mới nhất: chỉ hỏi mục lục khi đã có kết quả (1 request, không tải trước) */
     if (CZ.toc) {
       CZ.toc(n.slug).then(function (head) {
         var slot = box.querySelector('[data-latest]');
@@ -423,41 +455,63 @@
     }
   }
 
-  /* ---- nút: gắn vào mọi chỗ có [data-dice] (trang chủ, trang truyện, menu) ---- */
+  /* ---- nút dẫn sang trang riêng /vong-quay/ ở trang chủ, trang truyện, menu ---- */
   function buttons() {
     var hosts = Array.prototype.slice.call(d.querySelectorAll('[data-dice]'));
     hosts.forEach(function (h) {
       if (h.__dice) return;
       h.__dice = 1;
-      var b = d.createElement('button');
-      b.type = 'button';
-      b.className = 'btn ghost sm dicebtn';
-      b.innerHTML = (CZ.icon ? CZ.icon('dice', 'i-s') : '') + '<span>Hôm nay đọc gì?</span>';
-      b.setAttribute('title', 'Quay vòng chọn truyện ngẫu nhiên — ưu tiên truyện bạn theo dõi');
-      b.addEventListener('click', function () { open(b); });
-      h.appendChild(b);
+      var a = d.createElement('a');
+      a.href = DICE_URL;
+      a.className = 'btn ghost sm dicebtn';
+      a.innerHTML = (CZ.icon ? CZ.icon('dice', 'i-s') : '') + '<span>Hôm nay đọc gì?</span>';
+      a.setAttribute('title', 'Mở trang vòng quay chọn truyện ngẫu nhiên — ưu tiên truyện bạn theo dõi');
+      h.appendChild(a);
     });
   }
 
-  function open(from) {
-    if (!CZ.modal) return;
-    var m = CZ.modal('czDiceBox',
-      '<div class="mh"><h4>Hôm nay đọc gì?</h4><span class="sm muted">Quay một vòng rồi chốt.</span></div>' +
-      '<div class="mb dc-body" id="dcBody"></div>' +
-      '<div class="mf"><button class="btn ghost" data-close>Đóng</button></div>');
-    m.classList.add('dicebox');
-    renderBox(m, true);
-    CZDice._back = from || null;
-    CZDice._modal = m;
+  /* Khi gọi CZDice.open() từ thanh đọc / cài đặt đọc: nếu đang ở trang vòng quay
+     thì dựng ngay trên trang, còn ở trang khác thì chuyển hướng sang /vong-quay/ */
+  function open() {
+    var pageBox = d.querySelector('#czDiceBox.dicepage-box');
+    if (pageBox) {
+      renderBox(pageBox, true);
+      return pageBox;
+    }
+    try { w.location.assign(DICE_URL); } catch (e) { w.location.href = DICE_URL; }
+    return null;
   }
-  function close() { if (CZDice._modal && CZDice._modal._close) CZDice._modal._close(); }
 
-  CZDice.open = open; CZDice.close = close; CZDice.buttons = buttons; CZDice.candidates = candidates;
+  function close() {}
+
+  function initPage() {
+    var pageBox = d.querySelector('#czDiceBox.dicepage-box');
+    if (!pageBox) return;
+    if (CZ.mountShell) CZ.mountShell('dice');
+    var ready = (CZ.registry ? CZ.registry() : Promise.resolve()).then(function () {
+      if (w.CZPersonal && w.CZPersonal.whenReady) return w.CZPersonal.whenReady(1200);
+    }).catch(function () {});
+    ready.then(function () {
+      renderBox(pageBox, true);
+      if (CZ.reveal) CZ.reveal();
+    });
+    w.addEventListener('cz:personal', function (e) {
+      var dt = e && e.detail || {};
+      if (dt.type === 'ready' && !S.spinning && !S.pick) renderBox(pageBox, false);
+    });
+  }
+
+  function boot() {
+    buttons();
+    initPage();
+  }
+
+  CZDice.open = open; CZDice.close = close; CZDice.buttons = buttons;
+  CZDice.candidates = candidates; CZDice.mount = renderBox;
   w.CZDice = CZDice;
 
-  if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', buttons);
-  else buttons();
-  /* trang chủ dựng lại nội dung theo dữ liệu → nút có thể sinh sau lần gắn đầu */
+  if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', boot);
+  else boot();
   d.addEventListener('cz:stats', function () { setTimeout(buttons, 30); });
   w.addEventListener('load', function () { setTimeout(buttons, 60); });
 })(window, document);

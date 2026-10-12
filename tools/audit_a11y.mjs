@@ -92,6 +92,7 @@ function gzipSize(relPath) {
     { file: 'truyen.html', url: 'https://ssochuz.pages.dev/truyen.html?s=third-person', label: 'truyen.html (Chi tiết truyện)', requireDesc: true, requireSkip: true },
     { file: 'truyen.html', url: 'https://ssochuz.pages.dev/truyen.html?s=third-person&c=1', label: 'truyen.html (Đọc chương 1)', requireDesc: true, requireSkip: true },
     { file: 'my-space.html', url: 'https://ssochuz.pages.dev/my-space.html', label: 'my-space.html (Tủ sách cá nhân)', requireDesc: true, requireSkip: true },
+    { file: 'vong-quay/index.html', url: 'https://ssochuz.pages.dev/vong-quay/', label: 'vong-quay/index.html (Vòng quay chọn truyện)', requireDesc: true, requireSkip: true },
     { file: 'profile.html', url: 'https://ssochuz.pages.dev/profile.html?u=admin', label: 'profile.html (Hồ sơ dịch giả)', requireDesc: true, requireSkip: true },
     { file: 'guide.html', url: 'https://ssochuz.pages.dev/guide.html', label: 'guide.html (Hướng dẫn)', requireDesc: true, requireSkip: true },
     { file: '404.html', url: 'https://ssochuz.pages.dev/404.html', label: '404.html (Trang không tìm thấy)', requireDesc: false, requireSkip: false },

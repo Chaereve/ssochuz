@@ -1,8 +1,10 @@
 /* ============================================================================
-   Kiểm thử 1.19.0 — VÒNG QUAY “HÔM NAY ĐỌC GÌ?”
+   Kiểm thử 1.20.0 — TRANG RIÊNG VÒNG QUAY “HÔM NAY ĐỌC GÌ?” (/vong-quay/)
    ----------------------------------------------------------------------------
-     1. nút có mặt ở thanh đầu trang chủ và ở trang chi tiết truyện;
-     2. mở ra là có vòng quay + nút Quay + bộ lọc tình trạng/18+/thể loại;
+     1. nút ở thanh đầu trang chủ và trang chi tiết truyện dẫn sang trang riêng
+        /vong-quay/ (không mở popup);
+     2. trang /vong-quay/ có sẵn vòng quay + nút Quay + nút Trộn truyện + bộ lọc
+        tình trạng/18+/thể loại ngay trên trang;
      3. nguồn truyện theo thứ tự ưu tiên: đang theo dõi → mới cập nhật → cả kho,
         KHÔNG bịa truyện nào ngoài dữ liệu (mọi kết quả đều có trong registry);
      4. máy chưa xác nhận 18+ thì không bao giờ quay trúng truyện 18+;
@@ -11,7 +13,7 @@
      6. “Quay lại” không trả về đúng bộ vừa quay khi còn lựa chọn khác;
      7. truyện vừa đọc trong 14 ngày bị loại khỏi vòng khi vẫn còn đủ lựa chọn;
      8. máy bật “giảm chuyển động” thì ra kết quả ngay (không quay 2,6 giây);
-     9. không tự phát tiếng khi mới mở; bấm Quay mới có tiếng.
+     9. không tự phát tiếng khi mới mở; bấm Quay / Trộn mới có tiếng.
    Chạy:  node tests/t_dice.js
    ========================================================================== */
 const fs = require('fs'), path = require('path');
@@ -47,25 +49,47 @@ function supabaseStub(w) {
   } }; } };
 }
 const REG = JSON.parse(read('data/registry.json'));
-const slugOf = t => { const m = REG.lib.filter(n => n.title === t)[0]; return m && m.slug; };
 
 (async () => {
   const out = { errors0: [] };
   const err = m => out.errors0.push(m);
 
   /* =====================================================================
-     1 + 2 + 3: trang chủ, máy có theo dõi 1 truyện đang ra chương
+     1. Trang chủ có nút dẫn tới trang riêng /vong-quay/ (không mở popup)
      ===================================================================== */
-  /* Truyện ĐANG THEO DÕI để thử thứ tự ưu tiên. Chọn một bộ KHÔNG 18+ vì máy
-     này chưa xác nhận 18+ — bộ 18+ sẽ bị lọc trước cả khi xét thứ tự ưu tiên. */
   const FOLLOW = 'third-person';
-  const p = page('index.html', {
+  const hp = page('index.html', {
     url: 'https://ssochuz.pages.dev/',
+    config: { CZ_API: BASE },
+    fetch: dataFetch({ apiBase: BASE, api: makeApi(null), log: [] }),
+    setup: supabaseStub
+  });
+  await wait(1200);
+  const host = hp.doc.querySelector('[data-dice]');
+  const btn = host && host.querySelector('.dicebtn');
+  out.nut = {
+    coHost: !!host,
+    coNut: !!btn,
+    href: btn ? btn.getAttribute('href') : '',
+    nhan: btn ? btn.textContent.trim() : '',
+    khongCoPopup: !hp.doc.querySelector('.modal.dicebox')
+  };
+  if (!btn) { console.log(JSON.stringify(out, null, 1)); process.exit(1); }
+  if (!/Hôm nay đọc gì\?/.test(out.nut.nhan)) err('nút vòng quay phải có nhãn “Hôm nay đọc gì?”');
+  if (out.nut.href !== '/vong-quay/') err('nút vòng quay phải dẫn sang trang riêng /vong-quay/');
+  hp.win.close();
+
+  /* =====================================================================
+     2 + 3: Trang riêng /vong-quay/, máy có theo dõi 1 truyện đang ra chương
+     ===================================================================== */
+  const sfxLog = [];
+  const p = page('vong-quay/index.html', {
+    url: 'https://ssochuz.pages.dev/vong-quay/',
     config: { CZ_API: BASE },
     fetch: dataFetch({ apiBase: BASE, api: makeApi(null), log: [] }),
     setup(w) {
       supabaseStub(w);
-      w.localStorage.setItem('ssochuz-follow', JSON.stringify({ [FOLLOW]: 1 })); // legacy key read-only migration fixture
+      w.localStorage.setItem('ssochuz-follow', JSON.stringify({ [FOLLOW]: 1 }));
       w.localStorage.setItem('ssochuz-prog-' + FOLLOW, '3');
     }
   });
@@ -73,35 +97,29 @@ const slugOf = t => { const m = REG.lib.filter(n => n.title === t)[0]; return m 
   const $ = s => doc.querySelector(s);
   await wait(1500);
 
-  const host = $('[data-dice]');
-  const btn = host && host.querySelector('button');
-  out.nut = { coHost: !!host, coNut: !!btn, nhan: btn ? btn.textContent.trim() : '' };
-  if (!btn) { console.log(JSON.stringify(out, null, 1)); process.exit(1); }
-  if (!/Hôm nay đọc gì\?/.test(out.nut.nhan)) err('nút vòng quay phải có nhãn “Hôm nay đọc gì?”');
-
-  const sfxLog = [];
   const realSfx = win.CZ.sfx;
   win.CZ.sfx = function (id) { sfxLog.push(id); };
 
-  click(win, btn);
-  await wait(80);
-  const box = $('#czDiceBox');
-  out.modal = {
-    mo: !!box,
+  const box = $('#czDiceBox.dicepage-box');
+  out.trangRieng = {
+    coKhungTrang: !!box,
+    khongPhaiModal: !doc.querySelector('.modal.dicebox'),
     coVongQuay: !!(box && box.querySelector('.dc-wheel')),
     coNutQuay: !!(box && box.querySelector('#dcSpin')),
+    coNutTron: !!(box && box.querySelector('#dcShuffle')),
     soLat: box ? box.querySelectorAll('.dc-slot').length : 0,
     chipTinhTrang: box ? box.querySelectorAll('[data-opt="run"],[data-opt="done"]').length : 0,
     chip18: !!(box && box.querySelector('[data-opt="adult"]')),
     live: (box && box.querySelector('#dcLive') ? box.querySelector('#dcLive').textContent : ''),
     tiengKhiMo: sfxLog.slice()
   };
-  if (!out.modal.mo || !out.modal.coVongQuay || !out.modal.coNutQuay) err('bấm nút phải mở bảng có vòng quay và nút Quay');
-  if (!out.modal.soLat) err('vòng quay phải có lát truyện (bìa/tên)');
-  if (out.modal.soLat > 10) err('vòng quay chỉ nên có tối đa 10 lát cho dễ nhìn');
-  if (out.modal.chipTinhTrang !== 2) err('bộ lọc phải có hai lựa chọn tình trạng: đang cập nhật / hoàn thành');
-  if (!out.modal.chip18) err('bộ lọc phải có lựa chọn “Gồm 18+”');
-  if (out.modal.tiengKhiMo.length) err('mở bảng chưa bấm gì thì không được phát tiếng');
+  if (!out.trangRieng.coKhungTrang || !out.trangRieng.coVongQuay || !out.trangRieng.coNutQuay) err('trang /vong-quay/ phải có vòng quay và nút Quay ngay trên trang');
+  if (!out.trangRieng.khongPhaiModal) err('vòng quay phải là trang riêng chứ không phải popup modal');
+  if (!out.trangRieng.soLat) err('vòng quay phải có lát truyện (bìa/tên)');
+  if (out.trangRieng.soLat > 10) err('vòng quay chỉ nên có tối đa 10 lát cho dễ nhìn');
+  if (out.trangRieng.chipTinhTrang !== 2) err('bộ lọc phải có hai lựa chọn tình trạng: đang cập nhật / hoàn thành');
+  if (!out.trangRieng.chip18) err('bộ lọc phải có lựa chọn “Gồm 18+”');
+  if (out.trangRieng.tiengKhiMo.length) err('mở trang chưa bấm gì thì không được phát tiếng');
 
   /* ưu tiên truyện đang theo dõi */
   const cands = win.CZDice.candidates().map(n => n.slug);
@@ -119,16 +137,15 @@ const slugOf = t => { const m = REG.lib.filter(n => n.title === t)[0]; return m 
   /* bật “Gồm 18+” bằng đúng nút trên giao diện */
   click(win, box.querySelector('[data-opt="adult"]'));
   await wait(60);
-  const box2 = $('#czDiceBox');
   const cands18 = win.CZDice.candidates().map(n => n.slug);
   out.bat18 = {
-    chipOn: !!box2.querySelector('[data-opt="adult"].on'),
+    chipOn: !!box.querySelector('[data-opt="adult"].on'),
     coTruyen18: cands18.some(is18Of),
     nhoTrongMay: win.localStorage.getItem('ssochuz:dice:options:v1')
   };
   if (!out.bat18.chipOn) err('bấm chip “Gồm 18+” phải sáng lên');
   if (!out.bat18.nhoTrongMay || out.bat18.nhoTrongMay.indexOf('"adult":true') < 0) err('lựa chọn bộ lọc phải nhớ trong localStorage');
-  click(win, box2.querySelector('[data-opt="adult"]'));    /* tắt lại cho phần sau */
+  click(win, box.querySelector('[data-opt="adult"]'));
   await wait(60);
 
   /* =====================================================================
@@ -158,11 +175,10 @@ const slugOf = t => { const m = REG.lib.filter(n => n.title === t)[0]; return m 
     tieuDe: (res.querySelector('h4') || {}).textContent,
     coBia: !!res.querySelector('.dc-cv img, .dc-cv .dc-ph'),
     link: link ? link.getAttribute('href') : '',
-    // chương mới nhất: có hỏi mục lục (1 request) rồi mới điền
     chuongMoiNhat: (res.querySelector('[data-latest]') || {}).textContent,
     nutQuayLai: !!$('#dcAgain') && !$('#dcAgain').hidden,
     nutTronTruyen: !!$('#dcShuffle') && !$('#dcShuffle').hidden,
-    latDuocChon: !!$('#czDiceBox').querySelector('.dc-slot.is-pick'),
+    latDuocChon: !!box.querySelector('.dc-slot.is-pick'),
     tieng: sfxLog.slice()
   };
   if (!out.ketQua.hien) err('quay xong phải hiện thẻ kết quả');
@@ -180,7 +196,7 @@ const slugOf = t => { const m = REG.lib.filter(n => n.title === t)[0]; return m 
   click(win, $('#dcShuffle'));
   await wait(80);
   out.tronTruyen = {
-    soLatSauKhiTron: $('#czDiceBox').querySelectorAll('.dc-slot').length,
+    soLatSauKhiTron: box.querySelectorAll('.dc-slot').length,
     live: $('#dcLive').textContent
   };
   if (out.tronTruyen.soLatSauKhiTron < 2) err('bấm “Trộn truyện” phải nạp danh sách truyện mới lên vòng quay');
@@ -189,7 +205,7 @@ const slugOf = t => { const m = REG.lib.filter(n => n.title === t)[0]; return m 
   /* =====================================================================
      7. truyện vừa đọc bị loại khi vẫn còn đủ lựa chọn khác
      ===================================================================== */
-  await win.CZPersonal.toggleFollow(FOLLOW); // bỏ theo dõi qua service versioned, không xoá key legacy để giả lập data
+  await win.CZPersonal.toggleFollow(FOLLOW);
   win.CZPersonal.setProgress(pick, 1, 25, false);
   const cands3 = win.CZDice.candidates().map(n => n.slug);
   out.boVuaDoc = { soLuong: cands3.length, conTruyenVuaDoc: cands3.indexOf(pick) >= 0 };
@@ -198,19 +214,14 @@ const slugOf = t => { const m = REG.lib.filter(n => n.title === t)[0]; return m 
 
   /* =====================================================================
      6. “Quay lại” không trả về đúng bộ vừa quay (khi còn lựa chọn khác)
-     =====================================================================
-     Vòng quay giữ nguyên danh sách lát trong suốt một lượt mở bảng, nên phải
-     mở lại bảng (bộ lọc Theo dõi vừa bỏ) để vòng quay lấy danh sách mới. */
-  const closeBtn = $('#czDiceBox').querySelector('[data-close]');
-  if (closeBtn) click(win, closeBtn);
-  await wait(240);
-  click(win, host.querySelector('button'));
-  await wait(100);
+     ===================================================================== */
+  win.CZDice.mount(box, false);
+  await wait(80);
   out.vongMoi = {
-    soLat: $('#czDiceBox').querySelectorAll('.dc-slot').length,
+    soLat: box.querySelectorAll('.dc-slot').length,
     coKetQuaCu: !$('#dcResult').hidden
   };
-  if (out.vongMoi.soLat < 2) err('bỏ theo dõi rồi mở lại phải có nhiều lát để quay (đang ' + out.vongMoi.soLat + ')');
+  if (out.vongMoi.soLat < 2) err('bỏ theo dõi rồi dựng lại phải có nhiều lát để quay (đang ' + out.vongMoi.soLat + ')');
   click(win, $('#dcSpin'));
   await wait(2900);
   let pickA = null, pickB = null;
@@ -223,29 +234,22 @@ const slugOf = t => { const m = REG.lib.filter(n => n.title === t)[0]; return m 
   if (pickB === pick) err('kết quả vừa đọc hôm nay không được quay lại trúng ngay');
 
   win.CZ.sfx = realSfx;
-  const closer = box.querySelector('[data-close]');
-  if (closer) click(win, closer);
-  await wait(200);
 
   /* =====================================================================
-     4b. thể loại: chỉ hiện khi kho có dữ liệu thể loại (58/67 bộ đang trống)
+     4b. thể loại: chỉ hiện khi kho có dữ liệu thể loại
      ===================================================================== */
   const withGenre = REG.lib.filter(n => n.genre && String(n.genre).trim());
-  click(win, host.querySelector('button'));
-  await wait(80);
-  const chips = [...$('#czDiceBox').querySelectorAll('[data-genre]')];
+  const chips = [...box.querySelectorAll('[data-genre]')];
   out.theLoai = { soTruyenCoTheLoai: withGenre.length, soChip: chips.length, khop: (chips.length > 0) === (withGenre.length > 0) };
   if (out.theLoai.soChip && !withGenre.length) err('kho không có thể loại mà vẫn hiện chip thể loại');
   if (!out.theLoai.khop) err('chip thể loại phải ẩn khi registry chưa có dữ liệu thể loại');
-  const cl = $('#czDiceBox').querySelector('[data-close]');
-  if (cl) click(win, cl);
-  await wait(150);
+  win.close();
 
   /* =====================================================================
-     8. giảm chuyển động: ra kết quả ngay
+     8. giảm chuyển động: ra kết quả ngay trên trang /vong-quay/
      ===================================================================== */
-  const pm = page('index.html', {
-    url: 'https://ssochuz.pages.dev/',
+  const pm = page('vong-quay/index.html', {
+    url: 'https://ssochuz.pages.dev/vong-quay/',
     config: { CZ_API: BASE },
     fetch: dataFetch({ apiBase: BASE, api: makeApi(null), log: [] }),
     setup(w) {
@@ -254,9 +258,6 @@ const slugOf = t => { const m = REG.lib.filter(n => n.title === t)[0]; return m 
     }
   });
   await wait(1500);
-  const pb = pm.doc.querySelector('[data-dice] button');
-  click(pm.win, pb);
-  await wait(80);
   click(pm.win, pm.doc.querySelector('#dcSpin'));
   await wait(80);
   out.giamChuyenDong = {
@@ -265,9 +266,10 @@ const slugOf = t => { const m = REG.lib.filter(n => n.title === t)[0]; return m 
   };
   if (!out.giamChuyenDong.reduce) err('bài kiểm chưa giả lập được prefers-reduced-motion');
   if (!out.giamChuyenDong.coKetQua) err('máy bật giảm chuyển động phải ra kết quả ngay, không quay 2,6 giây');
+  pm.win.close();
 
   /* =====================================================================
-     1b. trang chi tiết truyện cũng có nút vòng quay
+     1b. trang chi tiết truyện cũng có nút dẫn tới /vong-quay/
      ===================================================================== */
   const sp = page('truyen.html', {
     url: 'https://ssochuz.pages.dev/truyen/third-person/',
@@ -277,15 +279,15 @@ const slugOf = t => { const m = REG.lib.filter(n => n.title === t)[0]; return m 
   });
   await wait(1500);
   const sh = sp.doc.querySelector('[data-dice]');
-  const sb = sh && sh.querySelector('button');
-  out.trangTruyen = { coNut: !!sb, nhan: sb ? sb.textContent.trim() : '' };
+  const sb = sh && sh.querySelector('.dicebtn');
+  out.trangTruyen = {
+    coNut: !!sb,
+    nhan: sb ? sb.textContent.trim() : '',
+    href: sb ? sb.getAttribute('href') : ''
+  };
   if (!sb) err('trang chi tiết truyện phải có nút vòng quay “Hôm nay đọc gì?”');
-  if (sb) {
-    click(sp.win, sb);
-    await wait(80);
-    out.trangTruyen.mo = !!sp.doc.querySelector('#czDiceBox');
-    if (!out.trangTruyen.mo) err('bấm nút vòng quay ở trang truyện phải mở được bảng');
-  }
+  if (out.trangTruyen.href !== '/vong-quay/') err('nút ở trang truyện phải dẫn sang /vong-quay/');
+  sp.win.close();
 
   console.log(JSON.stringify(out, null, 1));
   process.exit(0);
