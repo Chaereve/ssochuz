@@ -1205,7 +1205,7 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     cli.generateKeys();
     const cliPub = b64u(cli.getPublicKey());
     const cliAuth = b64u(crypto.randomBytes(16));
-    const subBody = (ep) => ({ endpoint: ep, keys: { p256dh: cliPub, auth: cliAuth } });
+    const subBody = (ep) => ({ endpoint: ep, scopeVersion: 2, topics: ['truyen-push'], keys: { p256dh: cliPub, auth: cliAuth } });
     /* giải mã bản tin aes128gcm (RFC 8291) để đối chiếu với payload gốc */
     const decryptPush = (bodyBytes, ecdh, authB64) => {
       const b = Buffer.from(bodyBytes);
@@ -1248,6 +1248,11 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     const un = await call('POST', '/api/push-sub', { e: envPush, body: { endpoint: 'https://push.test/sub1', remove: true } });
     eq('push/huỷ đăng ký', [(un.body && un.body.removed), pushKeys().length], [true, 0]);
 
+    await call('POST', '/api/push-sub', { e: envPush, body: subBody('https://push.test/unchanged') });
+    const writesAfterSync = kv.writes;
+    const duplicateSub = await call('POST', '/api/push-sub', { e: envPush, body: subBody('https://push.test/unchanged') });
+    eq('push/same scope does not write KV', [duplicateSub.body.unchanged, kv.writes], [true, writesAfterSync]);
+    await call('POST', '/api/push-sub', { e: envPush, body: { endpoint: 'https://push.test/unchanged', remove: true } });
     /* --- admin lưu chương mới → vào hàng đợi --- */
     await call('POST', '/api/push-sub', { e: envPush, body: subBody('https://push.test/may-1') });
     await call('PUT', '/api/registry', {
@@ -1266,6 +1271,11 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     eq('push/sửa chữ không tăng chương → không thêm job', (await getQ()).length, 1);
     kv.m.delete('pushq');
 
+    // Guest B and legacy registrations must NEVER receive A's job.
+    await kv.put('push:legacy', JSON.stringify({ endpoint: 'https://push.test/legacy', keys: { p256dh: cliPub, auth: cliAuth } }));
+    await call('POST', '/api/push-sub', { e: envPush, body: { ...subBody('https://push.test/only-b'), topics: ['other-story'] } });
+    eq('push/old client rejected', (await call('POST', '/api/push-sub', { e: envPush, body: { endpoint: 'https://push.test/old', keys: { p256dh: cliPub, auth: cliAuth } } })).status, 400);
+    eq('push/account without auth rejected', (await call('POST', '/api/push-sub', { e: envPush, body: { ...subBody('https://push.test/no-auth'), account: true } })).status, 401);
     /* --- cron drain: gửi thật, giải mã được, VAPID verify được --- */
     await call('PUT', '/api/book/truyen-push', {
       headers: ADMH, e: envPush,
@@ -1315,6 +1325,9 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
       [2, '📖 Truyện Push', 'Chương 3: Tin vui đã ra mắt!', 'https://web.test/truyen/truyen-push/chuong-3/']);
     eq('push/job xong → hàng đợi rỗng', (await getQ()).length, 0);
 
+    eq('push/A sent only to A; B and legacy excluded', caps.map(x => x.u), ['https://push.test/may-1']);
+    kv.m.delete('push:legacy');
+    await call('POST', '/api/push-sub', { e: envPush, body: { endpoint: 'https://push.test/only-b', remove: true } });
     /* --- sub chết (404/410) thì xoá --- */
     await call('POST', '/api/push-sub', { e: envPush, body: subBody('https://push.test/chet404') });
     await call('POST', '/api/push-sub', { e: envPush, body: subBody('https://push.test/chet410') });
@@ -1339,7 +1352,7 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
 
     /* --- tối đa 45 tin/invocation --- */
     for (let i = 0; i < 50; i++) {
-      await kv.put('push:t' + i, JSON.stringify({ endpoint: 'https://push.test/b' + i, keys: { p256dh: cliPub, auth: cliAuth } }));
+      await kv.put('push:t' + i, JSON.stringify({ endpoint: 'https://push.test/b' + i, scopeVersion: 2, topics: ['truyen-push'], keys: { p256dh: cliPub, auth: cliAuth } }));
     }
     await kv.put('pushq', JSON.stringify([{
       id: 'batch1', slug: 'truyen-push', ch: 5, chapTitle: 'Chương 5', title: 'Truyện Push',
@@ -1362,6 +1375,32 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     kv.m.delete('pushq');
 
     /* --- chưa cấu hình VAPID / hàng đợi rỗng → cron không làm gì --- */
+    // Authenticated registration + cron: source of truth is Supabase, not topics sent by the device.
+    const accountEnv = {...envPush, SUPABASE_URL: 'https://pushscope.supabase.co', SUPABASE_JWT_SECRET: 'test-only-signing-key', SUPABASE_SERVICE_ROLE: 'test-only-service-key'};
+    const jwtHead = b64u(JSON.stringify({alg: 'HS256', typ: 'JWT'}));
+    const jwtBody = b64u(JSON.stringify({sub: 'account-push', aud: 'authenticated', iss: accountEnv.SUPABASE_URL + '/auth/v1', exp: Math.floor(Date.now()/1000)+3600}));
+    const signing = jwtHead + '.' + jwtBody;
+    const token = signing + '.' + crypto.createHmac('sha256', accountEnv.SUPABASE_JWT_SECRET).update(signing).digest('base64url');
+    const registered = await call('POST', '/api/push-sub', {e: accountEnv, headers: {authorization: 'Bearer ' + token}, body: {...subBody('https://push.test/account'), account: true, topics: ['wrong-snapshot']} });
+    eq('push/account registered with verified JWT', registered.status, 200);
+    let accountPosts = [], backendDown = false;
+    routes = (u) => {
+      if (String(u).includes('/rest/v1/story_follows?')) return backendDown ? {status: 503, body: {}} : {status: 200, body: String(u).includes('story_id=eq.truyen-push') ? [{story_id: 'truyen-push'}] : []};
+      if (String(u).startsWith('https://push.test/')) {accountPosts.push(String(u)); return {status: 201, body: ''};}
+      return null;
+    };
+    const jobFor = slug => ({id: slug, slug, ch: 1, title: slug, chapTitle: 'C1', url: 'https://web.test/', sent: {}});
+    await kv.put('pushq', JSON.stringify([jobFor('truyen-push'), jobFor('other-story')]));
+    await scheduled(accountEnv);
+    eq('push/account receives A only, never B', accountPosts, ['https://push.test/account']);
+    backendDown = true; accountPosts = [];
+    await kv.put('pushq', JSON.stringify([jobFor('truyen-push')]));
+    await scheduled(accountEnv);
+    eq('push/backend failure sends nothing and retains job', [accountPosts.length, (await getQ()).length], [0, 1]);
+    routes = () => null;
+    pushKeys().forEach(k => kv.m.delete(k));
+    kv.m.delete('pushq');
+
     await kv.put('pushq', JSON.stringify([{ id: 'x', slug: 's', ch: 1, chapTitle: 'C1', title: 'T', url: 'https://web.test/', sent: {} }]));
     let n3 = 0;
     routes = (u) => (String(u).startsWith('https://push.test/') ? (n3++, { status: 201, body: '' }) : null);

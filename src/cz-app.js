@@ -627,7 +627,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
      theo dõi bộ này có mấy chương” rồi trừ là ra số chương mới, không gọi thêm
      API, không ghi KV. Khoá ssochuz-follow: { <slug>: <số chương lúc theo dõi> } */
   function followMap() {
-    var personal = w.CZPersonal;
+    var personal = (w.CZPersonal || w.CZFollowPersonal);
     if (personal) {
       var mode = personal.mode();
       return (mode === 'guest' || mode === 'server') ? personal.followMap() : {};
@@ -648,16 +648,16 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   }
   function isFollowed(n) {
     var slug = (n && n.slug) || (typeof n === 'string' ? n : '');
-    var personal = w.CZPersonal;
+    var personal = (w.CZPersonal || w.CZFollowPersonal);
     if (personal) return !!slug && personal.isFollowing(slug);
     return !!slug && Object.prototype.hasOwnProperty.call(followMap(), slug);
   }
   function toggleFollow(n) {
     var slug = (n && n.slug) || (typeof n === 'string' ? n : '');
     if (!slug) return false;
-    if (w.CZPersonal && w.CZPersonal.toggleFollowAsync) {
+    if ((w.CZPersonal || w.CZFollowPersonal) && (w.CZPersonal || w.CZFollowPersonal).toggleFollowAsync) {
       var on = !isFollowed(slug);
-      w.CZPersonal.toggleFollowAsync(slug).catch(function (e) { toast(e.message || 'Không lưu được theo dõi', 'err'); });
+      (w.CZPersonal || w.CZFollowPersonal).toggleFollowAsync(slug).catch(function (e) { toast(e.message || 'Không lưu được theo dõi', 'err'); });
       return on;
     }
     var m = followMap();
@@ -670,7 +670,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   function newChapters(n) {
     var slug = (n && n.slug) || (typeof n === 'string' ? n : '');
     if (!slug || !isFollowed(slug)) return 0;
-    var personal = w.CZPersonal;
+    var personal = (w.CZPersonal || w.CZFollowPersonal);
     if (personal) {
       if (personal.mode() !== 'server' && personal.mode() !== 'guest') return 0;
       return personal.newChapters(slug, chaptersOf(n));
@@ -683,7 +683,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   function markFollowSeen(n) {
     var slug = (n && n.slug) || (typeof n === 'string' ? n : '');
     if (!slug || !isFollowed(slug)) return;
-    var personal = w.CZPersonal;
+    var personal = (w.CZPersonal || w.CZFollowPersonal);
     if (personal) {
       if (personal.mode() === 'server' || personal.mode() === 'guest') {
         personal.markFollowSeen(slug, chaptersOf(n));
@@ -745,14 +745,55 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
     return out;
   }
+  // Serialize updates: login/logout/follow changes must not arrive out of order.
+  var pushSyncChain = Promise.resolve(), pushSyncTimer = null, pushLastScope = '';
+  function syncExistingPush() {
+    if (!pushReady()) return;
+    clearTimeout(pushSyncTimer);
+    pushSyncTimer = setTimeout(function () {
+      navigator.serviceWorker.ready.then(function (reg) {
+          return reg.pushManager.getSubscription();
+        }).then(function (sub) { if (sub) return pushSend(sub, false); }).catch(function () {});
+    }, 200);
+  }
   function pushSend(sub, remove) {
+    pushSyncChain = pushSyncChain.catch(function () {}).then(function () { return pushSendNow(sub, remove); });
+    return pushSyncChain;
+  }
+  function pushSendNow(sub, remove) {
     var j = sub && sub.toJSON ? sub.toJSON() : null;
     var endpoint = (j && j.endpoint) || (sub && sub.endpoint) || '';
     if (!endpoint) return Promise.resolve(null);
-    var body = remove ? { endpoint: endpoint, remove: true }
-      : { endpoint: endpoint, keys: (j && j.keys) || {} };
-    return jpost('/api/push-sub', body);
+    if (remove) {
+      pushLastScope = '';
+      return jpost('/api/push-sub', { endpoint: endpoint, remove: true });
+    }
+    var personal = (w.CZPersonal || w.CZFollowPersonal);
+    var mode = personal ? personal.mode() : 'guest';
+    // During auth hydration/error, clear the previous account's scope, never reuse it.
+    var topics = (mode === 'guest' || mode === 'server') ? Object.keys(followMap()).sort() : [];
+    var account = mode === 'server';
+    var body = { endpoint: endpoint, keys: (j && j.keys) || {}, scopeVersion: 2, topics: topics, account: account };
+    var getToken = account && w.CZ_AUTH && w.CZ_AUTH.getClient
+      ? Promise.resolve(w.CZ_AUTH.getClient()).then(function (client) { return client.auth.getSession(); }).then(function (r) {
+          var session = r && r.data && r.data.session;
+          if (!session || !session.access_token) throw Error('Phiên đăng nhập chưa sẵn sàng');
+          return session.access_token;
+        }) : Promise.resolve('');
+    return getToken.then(function (token) {
+      if (account && !token) throw Error('Thiếu phiên tài khoản');
+      var identity = account && w.CZ_AUTH.current ? w.CZ_AUTH.current() : null;
+      var scope = endpoint + ':' + (identity && (identity.uid || identity.id) || mode) + ':' + topics.join(',');
+      // One registration per scope per page; no write on every bell click.
+      if (scope === pushLastScope) return { ok: true };
+      return jpost('/api/push-sub', body, token).then(function (result) {
+        if (!result || !result.ok) throw Error('Chưa đồng bộ được thông báo đẩy');
+        pushLastScope = scope;
+        return result;
+      });
+    });
   }
+
   function pushSubscribe() {
     return navigator.serviceWorker.ready.then(function (reg) {
       return reg.pushManager.getSubscription().then(function (sub) {
@@ -794,7 +835,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     navigator.serviceWorker.ready.then(function (reg) {
       return reg.pushManager.getSubscription();
     }).then(function (sub) {
-      if (sub) { pushSend(sub, false); markPushAsked(); return; }
+      if (sub) { syncExistingPush(); markPushAsked(); return; }
       if (Notification.permission === 'granted') {
         pushSubscribe().then(function () { markPushAsked(); });
         return;
@@ -817,6 +858,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         m._close();
         pushSubscribe().then(function (r) {
           if (r === 'new' || r === 'old') toast('Đã bật thông báo chương mới');
+          else if (r === 'err') toast('Chưa bật được thông báo đẩy — hãy thử lại khi có mạng', 'err');
           else if (r === 'denied' || r === 'no') toast('Chưa bật được — kiểm tra quyền thông báo của trình duyệt');
         });
       });
@@ -824,6 +866,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   }
   /* hook gọi sau mỗi lần bấm chuông theo dõi (hero + reader dùng chung) */
   function followPushHook(on) {
+    syncExistingPush();
     if (on) { maybeAskPush(); return; }
     try {
       if (!Object.keys(followMap()).length) pushUnsubscribe();
@@ -831,8 +874,43 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   }
 
   /* ---- TRUNG TÂM THÔNG BÁO (chuông ở đầu trang) ----------------------------
-     Liệt kê truyện đã theo dõi mà có chương mới — đọc từ localStorage +
-     registry đã fetch (chi phí 0 request, như huy hiệu đỏ NV2). */
+     Theo dõi theo tài khoản/khách + registry. Kiểm tra chủ động khi mở
+     hoặc quay lại tab, giới hạn 1 request/60 giây, không polling nền. */
+  var notifState = 'idle', notifLastCheck = 0, notifPending = null;
+  var NOTIF_INTERVAL = 60000;
+  function refreshNotifications() {
+    if (notifPending) return notifPending;
+    if (notifLastCheck && Date.now() - notifLastCheck < NOTIF_INTERVAL) return Promise.resolve();
+    notifLastCheck = Date.now();
+    notifState = 'loading'; paintNotif();
+    var ctl = w.AbortController ? new w.AbortController() : null;
+    var timer = ctl ? setTimeout(function () { ctl.abort(); }, 9000) : null;
+    // No fallback: an old snapshot must not masquerade as "no new chapters".
+    var request = navigator.onLine === false ? Promise.reject(Error('offline')) :
+      fetch(API ? API + '/api/registry' : '/data/registry.json', {
+        cache: 'no-store', signal: ctl ? ctl.signal : undefined
+      });
+    notifPending = request.then(function (response) {
+      if (!response || !response.ok) throw Error('load');
+      return response.json();
+    }).then(function (reg) {
+      if (!reg || !Array.isArray(reg.lib)) throw Error('data');
+      setReg(reg, API ? 'kv' : 'static');
+      lsSet('ssochuz-reg', { t: Date.now(), v: reg });
+      notifState = 'ready';
+      // If already looking at a story, its update has been seen (not read).
+      var match = location.pathname.match(/^\/truyen\/([^/]+)\/?$/);
+      if (match) markFollowSeen(match[1]);
+    }).catch(function () { notifState = 'error'; }).then(function () {
+      if (timer) clearTimeout(timer);
+      notifPending = null; paintNotif();
+    });
+    return notifPending;
+  }
+  d.addEventListener('visibilitychange', function () {
+    if (!d.hidden) { refreshNotifications(); syncExistingPush(); }
+  });
+  w.addEventListener('online', function () { refreshNotifications(); syncExistingPush(); });
   function notifItems() {
     var fm = followMap(), out = [];
     Object.keys(fm).forEach(function (slug) {
@@ -846,6 +924,8 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   function paintNotif() {
     var btn = d.getElementById('czNotifBtn'), menu = d.getElementById('czNotifMenu');
     if (!btn || !menu) return;
+    var personalMode = (w.CZPersonal || w.CZFollowPersonal) && (w.CZPersonal || w.CZFollowPersonal).mode();
+    var state = personalMode === 'loading' ? 'loading' : personalMode === 'error' ? 'error' : notifState;
     var items = notifItems(), total = 0, i;
     for (i = 0; i < items.length; i++) total += items[i].c;
     var dot = d.getElementById('czNotifCount');
@@ -854,9 +934,11 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       else { dot.setAttribute('hidden', ''); dot.textContent = ''; }
     }
     btn.classList.toggle('hasnew', total > 0);
-    btn.setAttribute('aria-label', total > 0 ? ('Thông báo chương mới (' + total + ' chương chưa đọc)') : 'Thông báo chương mới');
+    btn.setAttribute('aria-label', total > 0 ? ('Thông báo chương mới (' + total + ' chương mới)') : 'Thông báo chương mới');
     menu.innerHTML = '<div class="nhead" role="presentation">' + icon('bell', 'i-s') + '<b>Chương mới</b>' +
-      (total ? '<span>' + total + ' chưa đọc</span>' : '') + '</div>' +
+      (total ? '<span>' + total + ' chương mới</span>' : '') + '</div>' +
+      (state === 'loading' ? '<div class="nempty" role="menuitem" aria-disabled="true"><span role="status">Đang tải chương mới…</span></div>' :
+        state === 'error' ? '<div class="nempty" role="menuitem" aria-disabled="true"><span role="alert">Không tải được cập nhật. Kiểm tra kết nối và mở lại chuông sau một phút.</span></div>' : '') +
       (items.length ? items.map(function (it) {
         var n = it.n, im = coverSrc(n);
         return '<a href="' + esc(storyURL(n.slug)) + '" role="menuitem">' +
@@ -865,7 +947,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
           '<span class="ntx"><b>' + esc(n.title) + '</b>' +
           '<span class="nsub"><i class="nnum">' + it.c + ' chương mới</i> · ' + esc(timeAgo(n.updated)) + '</span></span>' +
           icon('right', 'i-s') + '</a>';
-      }).join('') : '<div class="nempty" role="menuitem" aria-disabled="true">Chưa có chương mới.<br>Truyện bạn theo dõi ra chương là báo ở đây.</div>');
+      }).join('') : (state === 'loading' || state === 'error') ? '' : '<div class="nempty" role="menuitem" aria-disabled="true">Chưa có chương mới.<br>Truyện bạn theo dõi ra chương là báo ở đây.</div>');
   }
   function closeNotif() {
     var m = d.getElementById('czNotifMenu'), b = d.getElementById('czNotifBtn');
@@ -1654,10 +1736,10 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     var slug = b.getAttribute('data-followbtn');
     var on = !isFollowed(slug);
     pop(b);
-    if (w.CZPersonal && w.CZPersonal.toggleFollowAsync) {
+    if ((w.CZPersonal || w.CZFollowPersonal) && (w.CZPersonal || w.CZFollowPersonal).toggleFollowAsync) {
       if (b.disabled) return;
       b.disabled = true;
-      var task = w.CZPersonal.toggleFollowAsync(slug);
+      var task = (w.CZPersonal || w.CZFollowPersonal).toggleFollowAsync(slug);
       refreshFollowUI(slug);
       task.then(function (saved) {
         b.disabled = false;
@@ -1678,6 +1760,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   }, true);
   w.addEventListener('cz:personal', function (event) {
     var info = (event && event.detail) || {};
+    if (info.type === 'ready' || info.type === 'loading' || info.type === 'error' || info.type === 'follow') syncExistingPush();
     if (info.type === 'follow' || info.type === 'follow-seen') {
       if (info.storyId) refreshFollowUI(info.storyId);
       return;
@@ -2164,6 +2247,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       var on = menu && menu.classList.contains('on');
       if (on) { closeNotif(); return; }
       paintNotif();
+      refreshNotifications();
       if (menu) menu.classList.add('on');
       this.setAttribute('aria-expanded', 'true');
     });

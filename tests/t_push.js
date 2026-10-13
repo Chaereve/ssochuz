@@ -69,7 +69,7 @@ function pushSetup(w, o) {
   const log = [];
   const r = page('truyen.html', {
     url: 'https://ssochuz.pages.dev/truyen/third-person/',
-    fetch: dataFetch({ log }),
+    fetch: (url, opts) => { if (String(url).endsWith('/api/push-sub')) { log.push('POST ' + url); return Promise.resolve({ ok: true, json: async () => ({ok: true}) }); } return dataFetch({ log })(url, opts); },
     setup: (w) => pushSetup(w),
   });
   await wait(1300);

@@ -1,3 +1,4 @@
+import { pushTopics, pushAudience } from './push-audience.js';
 import { profileId } from './member-spaces.js';
 import { handleCommunityTocs } from '../community-worker/community.js';
 import { STICKER_BY_ID } from '../src/shared/stickers.js';
@@ -807,17 +808,35 @@ async function pushSub(req, env, cors) {
     await env.CZ_KV.delete(key);
     return json({ ok: true, removed: true }, { cors });
   }
+  // Old clients cannot reactivate a legacy broadcast subscription.
+  const topics = body.scopeVersion === 2 ? pushTopics(body.topics) : null;
+  if (!topics) return json({ ok: false, error: 'Cần cập nhật web để đăng ký theo truyện' }, { status: 400, cors });
+  let ownerId = '';
+  if (body.account === true) {
+    const auth = await userFromReq(req, env);
+    if (!auth.user || !auth.user.uid || auth.source !== 'supabase') return json({ ok: false, error: 'Cần phiên Supabase hợp lệ' }, { status: 401, cors });
+    ownerId = auth.user.uid;
+  }
   const keys = body.keys || {};
   let p, a;
   try { p = b64uToBytes(keys.p256dh); a = b64uToBytes(keys.auth); }
   catch (e) { return json({ ok: false, error: 'khoá push sai định dạng' }, { status: 400, cors }); }
   if (p.length !== 65 || a.length !== 16) return json({ ok: false, error: 'khoá push sai độ dài' }, { status: 400, cors });
+  // Page navigation may re-sync the same device: don't spend a KV write or
+  // the per-IP write quota unless the scope/keys actually changed.
+  const previous = await env.CZ_KV.get(key, { type: 'json' });
+  if (previous && previous.scopeVersion === 2 && previous.ownerId === ownerId &&
+      JSON.stringify(previous.topics) === JSON.stringify(topics) &&
+      previous.keys?.p256dh === String(keys.p256dh) && previous.keys?.auth === String(keys.auth)) {
+    return json({ ok: true, unchanged: true }, { cors });
+  }
   /* chống spam ghi KV: mỗi IP 30 lần/giờ */
   if (!await rateLimit(env, 'rl:push:' + hash(clientIp(req) || 'x'), 30, 3600)) {
     return json({ ok: false, error: 'thao tác hơi nhanh, thử lại sau ít phút' }, { status: 429, cors });
   }
   await env.CZ_KV.put(key, JSON.stringify({
     endpoint, keys: { p256dh: String(keys.p256dh), auth: String(keys.auth) },
+    scopeVersion: 2, topics, ownerId,
     ua: String(req.headers.get('user-agent') || '').slice(0, 120), at: new Date().toISOString(),
   }));
   return json({ ok: true, hash: key.slice('push:'.length) }, { cors });
@@ -937,13 +956,32 @@ async function drainPushQueue(env) {
     await env.CZ_KV.put('pushq', '[]');
     return stat;
   }
+  const eligible = pushAudience(env);
   let budget = PUSH_BATCH;
+  let checked = 0; // Bound Supabase reads as well as push sends per cron.
   const deadKeys = [];
   for (const job of q) {
     if (budget <= 0) break;
     job.sent = job.sent || {};
-    const todo = subs.filter((s) => !job.sent[s.key] && deadKeys.indexOf(s.key) < 0).slice(0, budget);
-    if (!todo.length) { job.done = true; continue; }
+    const todo = [];
+    for (const s of subs) {
+      if (job.sent[s.key] || deadKeys.includes(s.key)) continue;
+      if (checked >= PUSH_BATCH) break;
+      if (s.sub.ownerId && s.sub.scopeVersion === 2) {
+        if (budget - todo.length < 2) break;
+        budget--; // account lookup shares the outbound budget with push delivery
+      }
+      checked++;
+      const allowed = await eligible(s.sub, job.slug);
+      if (allowed === null) continue; // fail closed; leave pending for next cron
+      if (!allowed) { job.sent[s.key] = 1; continue; }
+      todo.push(s);
+      if (todo.length >= budget) break;
+    }
+    if (!todo.length) {
+      if (subs.every(s => job.sent[s.key] || deadKeys.includes(s.key))) job.done = true;
+      continue;
+    }
     const nm = pushChapName(job.chapTitle);
     const payload = {
       title: '📖 ' + job.title,
