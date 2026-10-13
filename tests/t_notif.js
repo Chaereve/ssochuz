@@ -19,7 +19,8 @@ function supabaseStub(w) {
 (async () => {
   const out = {};
   /* ---------- chuông + badge + panel ---------- */
-  const p = page('index.html', { fetch: dataFetch(), setup: supabaseStub });
+  const baseFetch = dataFetch();
+  const p = page('index.html', { fetch: (url, opts) => String(url).endsWith('/api/registry') && opts && opts.cache === 'no-store' ? Promise.resolve({ ok: true, json: async () => JSON.parse(JSON.stringify({lib: p.win.CZ.lib()})) }) : baseFetch(url, opts), setup: supabaseStub });
   const { win, doc, errors } = p;
   const CZ = win.CZ;
   await wait(900);
@@ -38,7 +39,7 @@ function supabaseStub(w) {
   await wait(60);
   ok(dot && !dot.hasAttribute('hidden') && dot.textContent === '2', 'co 2 chuong moi thi badge phai hien "2" (thay: ' + (dot && dot.textContent) + ')');
   ok(btn.classList.contains('hasnew'), 'nut chuong phai co class hasnew khi co tin');
-  ok(btn.getAttribute('aria-label').includes('2 chương chưa đọc'), 'aria-label phai doc so tin (thay: ' + btn.getAttribute('aria-label') + ')');
+  ok(btn.getAttribute('aria-label').includes('2 chương mới'), 'aria-label phai doc so tin (thay: ' + btn.getAttribute('aria-label') + ')');
   btn.dispatchEvent(new win.MouseEvent('click', { bubbles: true, cancelable: true }));
   await wait(60);
   ok(menu.classList.contains('on') && btn.getAttribute('aria-expanded') === 'true', 'bam chuong phai mo panel');

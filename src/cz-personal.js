@@ -10,6 +10,8 @@
 (function (w) {
   'use strict';
 
+  // Header-only pages retain their existing device history; hydrate follows only.
+  var followOnly = !!(w.document && w.document.body && w.document.body.hasAttribute('data-personal-follow-only'));
   var CZ = w.CZ || {};
   var AUTH = w.CZ_AUTH || {};
   var KEY_PROGRESS = 'ssochuz:progress:v1';
@@ -185,14 +187,14 @@
   }
   function saveUserCache(uid, progress, follows) {
     if (!uid) return;
-    safeSet(cacheKey(CACHE_PROGRESS_PREFIX, uid), JSON.stringify(Object.keys(progress || {}).map(function (slug) { return progress[slug]; })));
+    if (!followOnly) safeSet(cacheKey(CACHE_PROGRESS_PREFIX, uid), JSON.stringify(Object.keys(progress || {}).map(function (slug) { return progress[slug]; })));
     safeSet(cacheKey(CACHE_FOLLOWS_PREFIX, uid), JSON.stringify(Object.keys(follows || {}).map(function (slug) { return follows[slug]; })));
   }
   function saveGuest(forceDuringAuthLoading) {
     if (active.mode !== 'guest' && !(forceDuringAuthLoading && active.mode === 'loading' && !active.uid)) return;
     /* New personal data is always namespaced and versioned. Legacy unversioned
        keys are read once for migration, never written again. */
-    safeSet(KEY_PROGRESS, JSON.stringify(Object.keys(active.progress).map(function (slug) { return active.progress[slug]; })));
+    if (!followOnly) safeSet(KEY_PROGRESS, JSON.stringify(Object.keys(active.progress).map(function (slug) { return active.progress[slug]; })));
     safeSet(KEY_FOLLOWS, JSON.stringify(Object.keys(active.follows).map(function (slug) { return active.follows[slug]; })));
   }
   function clearGuestAfterMerge() {
@@ -258,7 +260,32 @@
       return (result && result.data) || [];
     });
   }
+  function hydrateFollows(uid, gen) {
+    return supabaseSession(uid).then(function (ctx) {
+      var client = ctx.client;
+      return tableRows(client, 'story_follows', '*').then(function (rows) {
+        var server = serverFollows(rows), guest = guestData().follows;
+        var added = Object.keys(guest).filter(function (slug) { return !server[slug]; }).map(function (slug) {
+          var row = guest[slug];
+          return { user_id: uid, story_id: slug, last_seen_chapter_index: row.lastSeenChapterIndex,
+            created_at: row.createdAt, last_seen_at: row.lastSeenAt };
+        });
+        return (added.length ? client.from('story_follows').upsert(added, { onConflict: 'user_id,story_id', ignoreDuplicates: true }) : Promise.resolve({}));
+      }).then(function (result) {
+        checkResult(result, 'Gộp theo dõi');
+        return tableRows(client, 'story_follows', '*');
+      }).then(function (rows) {
+        if (gen !== generation || authUid !== uid) return active;
+        active = {mode: 'server', uid: uid, progress: Object.create(null), follows: serverFollows(rows)};
+        saveUserCache(uid, active.progress, active.follows);
+        safeRemove(KEY_FOLLOWS); safeRemove(LEGACY_FOLLOWS);
+        emit('ready');
+        return active;
+      });
+    });
+  }
   function hydrate(uid, gen) {
+    if (followOnly) return hydrateFollows(uid, gen);
     return supabaseSession(uid).then(function (ctx) {
       var cached = readUserCache(uid);
       var guest = guestData();
@@ -267,7 +294,7 @@
       mergeMap(progressMerge, cached.progress, true);
       var followMerge = Object.create(null);
       mergeMap(followMerge, guest.follows, false);
-      mergeMap(followMerge, cached.follows, false);
+      // Server owns account follows: cached rows must not resurrect an unfollow.
       var client = ctx.client;
       return Promise.all([
         tableRows(client, 'story_follows', 'story_id,last_seen_chapter_index,created_at,last_seen_at'),
@@ -650,7 +677,7 @@
     }).catch(function () { return Object.create(null); });
   }
 
-  w.CZPersonal = {
+  w[followOnly ? 'CZFollowPersonal' : 'CZPersonal'] = {
     mode: mode,
     isServer: isServer,
     uid: function () { return active.uid || ''; },

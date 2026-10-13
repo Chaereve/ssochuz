@@ -12,7 +12,7 @@
    ⚠ MỖI LẦN ĐỔI ?v= TĨNH (cz.css/cz-*.js): sửa cả PRECACHE dưới đây + tăng
    CZ_SW_VER → trình duyệt tự tải SW mới, hiện “Đã có bản cập nhật — tải lại”.
    ========================================================================== */
-var CZ_SW_VER = '20261012n';
+var CZ_SW_VER = '20261013notif1';
 
 /* kho shell theo version (update là thay kho mới, xoá kho cũ);
    kho trang/API/ảnh KHÔNG theo version để dữ liệu offline còn lại sau update */
@@ -41,14 +41,14 @@ var PRECACHE = [
   '/cz-space.js?v=20261012n',
   '/manifest.webmanifest',
   '/cz.css?v=20261012n',
-  '/cz-app.js?v=20261012n',
+  '/cz-app.js?v=20261013notif1',
   '/cz-home.js?v=20261012n',
   '/cz-story.js?v=20261012n',
   '/cz-people.js?v=20261012n',
   '/cz-config.js?v=20261012n',
   '/cz-stickers.js?v=20261012n',
   '/cz-auth.js?v=20261012n',
-  '/cz-personal.js?v=20261012n',
+  '/cz-personal.js?v=20261013notif1',
   /* bộ tính năng tương tác 1.19.0 — giữ trong shell để đọc offline vẫn có
      hàng reaction và hộp gạch */
   '/cz-react.js?v=20261012n',
@@ -289,6 +289,9 @@ self.addEventListener('fetch', function (e) {
     }
     return;   /* POST/PUT khác: để trình duyệt tự xử, SW không động vào */
   }
+
+  // Explicit notification refresh must not be answered from stale/offline cache.
+  if (req.cache === 'no-store') { e.respondWith(fetch(req)); return; }
 
   if (req.mode === 'navigate') { e.respondWith(navFallback(req)); return; }
   if (isApiRead(url.pathname)) { e.respondWith(swr(req, C_API)); return; }
