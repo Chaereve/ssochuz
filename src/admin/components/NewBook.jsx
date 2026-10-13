@@ -6,7 +6,7 @@ import { persistableCover } from '../utils/cover.js';
 
 // Thêm bộ kiểu Wattpad: không có thể loại/tag. Bìa + xem trước ở cột trái, thông tin ở cột phải.
 const EMPTY_FORM = {
-  title: '', slug: '', author: '', couple: '', couples: [''], year: '', status: 'Đang cập nhật',
+  aliases: '', title: '', slug: '', author: '', couple: '', couples: [''], year: '', status: 'Đang cập nhật',
   is18: '0', thumb: '', coverAlt: '', synopsis: '', chapter: '',
   pubStatus: 'published', visibility: 'public', publishedAt: '',
 };
@@ -48,6 +48,8 @@ export function NewBook({ registry, onCreate, onUploadImage, apiBase = '', write
             </label>
             <p class="v2nb-slug">Đường dẫn: <code>{preview ? '/truyen/' + preview + '/' : '—'}</code></p>
             <div class="v2nb-grid3">
+              <label class="fl">Tên khác (mỗi dòng một tên)<textarea class="inp ta" aria-label="Tên khác" value={form.aliases} onInput={e => update('aliases', e.target.value)} /></label>
+              <p class="hint">Sau khi tạo truyện, vào Sửa metadata để liên kết các phần và xếp thứ tự đọc.</p>
               <label class="fl">Tác giả<input class="inp" value={form.author} onInput={(e) => update('author', e.target.value)} /></label>
               <div class="fl v2couple-field">
                 <div class="v2couple-head">

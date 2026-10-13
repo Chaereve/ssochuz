@@ -218,6 +218,21 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     eq('registry/GET có 2 bộ', r.body && (r.body.lib || []).length, 2);
     ck('registry/GET etag không phải chữ "undefined"', r.headers.get('etag') !== 'undefined', r.headers.get('etag'), 'etag hợp lệ hoặc trống');
   }
+  // Optional catalog metadata round-trips through the existing Worker unchanged.
+  {
+    const catalog = structuredClone(REG);
+    Object.assign(catalog.lib[0], {aliases: ['Original Film', 'Tên khác'], readingGroup: 'reading-group-1', readingOrder: 1, partType: 'main'});
+    Object.assign(catalog.lib[1], {readingGroup: 'reading-group-1', readingOrder: 2, partType: 'extra'});
+    catalog.lib.push({slug:'hidden-catalog',title:'Hidden part',pubStatus:'draft',readingGroup:'reading-group-1',readingOrder:3,partType:'special'});
+    const pushBefore = await kv.get('pushq');
+    await call('PUT','/api/registry',{body:catalog,headers:ADMH});
+    const pub = (await call('GET','/api/registry')).body;
+    eq('catalog/aliases roundtrip', pub.lib[0].aliases, ['Original Film','Tên khác']);
+    eq('catalog/part metadata roundtrip', [pub.lib[1].readingGroup,pub.lib[1].readingOrder,pub.lib[1].partType], ['reading-group-1',2,'extra']);
+    eq('catalog/draft part not public', pub.lib.some(n=>n.slug==='hidden-catalog'), false);
+    eq('catalog/metadata does not enqueue push', await kv.get('pushq'), pushBefore);
+    await call('PUT','/api/registry',{body:REG,headers:ADMH});
+  }
   eq('book/GET chưa có → 404', (await call('GET', '/api/book/lunar-secret')).status, 404);
   {
     await call('PUT', '/api/book/lunar-secret', { body: { title: 'Lunar Secret', slug: 'lunar-secret', chapters: [{ t: 'Chương 1', html: '<p>a</p>' }] }, headers: { 'x-admin-key': ADMIN } });

@@ -33,7 +33,7 @@ export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulk
       if (locked === '1' && !book.lock) return false;
       if (locked === '0' && book.lock) return false;
       if (!q) return true;
-      const hay = [book.title, book.author, book.couple, book.slug].join(' ').toLowerCase();
+      const hay = [book.title, book.author, book.couple, book.slug].concat(Array.isArray(book.aliases) ? book.aliases : []).join(' ').toLowerCase();
       return hay.indexOf(q.toLowerCase()) >= 0;
     }).sort((a, b) => String(b.updated || '').localeCompare(String(a.updated || '')));
   }, [lib, q, status, adult, pub, vis, locked]);

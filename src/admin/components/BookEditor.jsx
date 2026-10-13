@@ -1,3 +1,5 @@
+import { ReadingGroupEditor } from './ReadingGroupEditor.jsx';
+import { aliasesOf, readingParts } from '../../shared/reading-groups.js';
 import { h } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { slugify, COMPLETION_STATUSES, PUB_STATUSES, VISIBILITIES, parseCouples, formatCouples, allCouplesFromRegistry } from '../utils/books.js';
@@ -11,7 +13,7 @@ export function BookEditor({ registry, slug, bookData, bookLoading, bookError, a
   const knownCouples = allCouplesFromRegistry(registry);
   const metaFormRef = useRef(null);
   const [form, setForm] = useState({
-    title: '', slug: '', author: '', couple: '', couples: [''], year: '', status: 'Đang cập nhật',
+    aliases: '', relatedParts: [], title: '', slug: '', author: '', couple: '', couples: [''], year: '', status: 'Đang cập nhật',
     is18: false, thumb: '', coverAlt: '', synopsis: '', genre: '',
     pubStatus: 'published', visibility: 'public', publishedAt: '',
   });
@@ -23,6 +25,8 @@ export function BookEditor({ registry, slug, bookData, bookLoading, bookError, a
     if (!book) return;
     const parsedCouples = parseCouples(book);
     setForm({
+      aliases: aliasesOf(book).join('\n'),
+      relatedParts: readingParts(registry.lib, book).map(n => ({slug: n.slug, type: n.partType || 'main'})),
       title: book.title || '', slug: book.slug || '', author: book.author || '',
       couple: formatCouples(parsedCouples),
       couples: parsedCouples.length ? parsedCouples : [''],
@@ -112,6 +116,7 @@ export function BookEditor({ registry, slug, bookData, bookLoading, bookError, a
           <section class="v2fsec" aria-label="Thông tin cơ bản">
             <div class="v2fsec-head"><b>Thông tin cơ bản</b><span class="hint">Tên, slug và thông tin tác giả hiển thị trên thẻ truyện.</span></div>
             <label class="fl">Tên<input class="inp" value={form.title} onInput={(e) => update('title', e.target.value)} /></label>
+            <label class="fl">Tên khác (mỗi dòng một tên)<textarea class="inp ta" aria-label="Tên khác" value={form.aliases} onInput={e => update('aliases', e.target.value)} placeholder="Tên gốc, tên phim, tên Việt khác…" /></label>
             <label class="fl">Slug<input class="inp" value={form.slug} onInput={(e) => update('slug', e.target.value)} /></label>
             <div class="row v2meta-row">
               <label class="fl">Tác giả<input class="inp" value={form.author} onInput={(e) => update('author', e.target.value)} /></label>
@@ -219,6 +224,7 @@ export function BookEditor({ registry, slug, bookData, bookLoading, bookError, a
             <div class="v2fsec-head"><b>Giới thiệu</b><span class="hint">Tóm tắt hiển thị ở trang truyện; bản ngắn tự cắt cho thẻ ở thư viện.</span></div>
             <label class="fl">Tóm tắt<textarea class="inp ta" value={form.synopsis} onInput={(e) => update('synopsis', e.target.value)} /></label>
           </section>
+          <ReadingGroupEditor lib={registry.lib || []} current={book} parts={form.relatedParts} onChange={parts => update('relatedParts', parts)} />
           <div class="row sticky-actions">
             <button class="btn pri" type="submit" disabled={writeBlocked} title="Lưu metadata · Ctrl/Cmd+S">{writeBlocked ? 'Hết quota KV' : (online ? 'Lưu metadata' : 'Lưu nháp phiên')}</button>
             {!online ? <span class="sm muted">Chế độ tĩnh: chưa ghi KV.</span> : null}

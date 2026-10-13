@@ -1,3 +1,4 @@
+import { applyReadingGroup, clearReadingGroup } from '../shared/reading-groups.js';
 import { h, render } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { AdminApi, clearConnection, loadSavedConnection, normalizeApi, saveConnection, staticRegistry } from './api.js';
@@ -435,6 +436,7 @@ function App() {
       if (nextSlug !== oldSlug && list.some((item) => item.slug === nextSlug)) throw new Error('Slug đã tồn tại: ' + nextSlug);
       const nextMeta = metaFromForm(list[index], values);
       list[index] = nextMeta;
+      applyReadingGroup(registry, nextSlug, values.relatedParts && values.relatedParts.map(part => ({...part, slug: part.slug === oldSlug ? nextSlug : part.slug})));
       if (nextSlug !== oldSlug) renameReferences(registry, oldSlug, nextSlug);
       if (state.online && nextSlug !== oldSlug) {
         const book = await getBook(oldSlug);
@@ -602,6 +604,7 @@ function App() {
         updated: new Date().toISOString().slice(0, 10),
       });
       delete nextMeta.lock;
+      clearReadingGroup(nextMeta);
       registry.lib = registry.lib || [];
       registry.lib.push(nextMeta);
       const srcBook = await getBook(slug);

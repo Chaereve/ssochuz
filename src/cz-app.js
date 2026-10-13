@@ -1,3 +1,4 @@
+import { aliasesOf, matchedAlias, readingParts, PART_TYPES, searchText } from './shared/reading-groups.js';
 /* ============================================================================
    ssochuz · lõi dùng chung cho MỌI trang (chủ / truyện / đọc / quản trị)
    ----------------------------------------------------------------------------
@@ -1630,7 +1631,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       '<h3>' + esc((n&&n.title)||'—') + '</h3><div class="cb">' + esc((n&&n.author)||'') + '</div></div>';
     var pg = progress(n), pct = n.chapters ? Math.min(100, Math.round(pg / n.chapters * 100)) : 0;
     var img = coverSrc(n);
-    if (opts.view === 'list') return cardList(n, img, pg, pct);
+    if (opts.view === 'list') return cardList(n, img, pg, pct, opts.alias);
     /* thẻ lưới: tình trạng là KÝ HIỆU TRÒN ở góc trái bìa; “Mới” là BOOKMARK thả
        từ cạnh trên-phải (đuôi cắt chữ V, chữ xếp dọc); 18+ nằm ở hàng chân bìa
        cạnh số chương. Ba thứ ba góc nên không bao giờ chồng nhau.
@@ -1656,10 +1657,11 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
          couple bị đề tên cặp đôi thay vì người viết — couple vẫn còn chỗ riêng của
          nó ở bộ lọc, ở hero và trong trang truyện. */
       '<div class="cb">' + esc(n.author || n.couple || '') + '</div>' +
+      (opts.alias ? '<small class="alias-match">Tên khác khớp: ' + esc(opts.alias) + '</small>' : '') +
       '</a></div>';
   }
   /* xem dạng danh sách: mỗi bộ một hàng, đủ thông tin để quyết định mở hay không */
-  function cardList(n, img, pg, pct) {
+  function cardList(n, img, pg, pct, alias) {
     if (!n || !n.slug) return '<div class="card list off"><span class="cl-main"><span class="cl-top"><b class="cl-t">' + esc((n&&n.title)||'—') + '</b></span><span class="cl-meta">thiếu slug — sửa trong trang quản trị</span></span></div>';
     /* tác giả trước, couple sau — cùng thứ tự với thẻ lưới và với trang truyện */
     var bits = [n.author, n.couple, n.year].filter(Boolean);
@@ -1676,6 +1678,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
           followBadge(n) +
         '</span>' +
         '<span class="cl-meta">' + esc(bits.join(' · ') || '—') + '</span>' +
+        (alias ? '<small class="alias-match">Tên khác khớp: ' + esc(alias) + '</small>' : '') +
         '<span class="cl-syn">' + esc(n.syn || 'Chưa có mô tả cho bộ này.') + '</span>' +
         (pct ? '<span class="cl-prog" title="đã đọc ' + pct + '%"><i style="width:' + pct + '%"></i></span>' : '') +
       '</span>' +
@@ -2529,6 +2532,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     function score(n) {
       var t = n.title.toLowerCase(), s = 0;
       if (!ql) return 1;
+      if (matchedAlias(n, ql)) s += 3;
       if (t.indexOf(ql) === 0) s += 6;
       else if (t.indexOf(ql) >= 0) s += 4;
       if (String(n.author || '').toLowerCase().indexOf(ql) >= 0) s += 2;
@@ -2545,7 +2549,8 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       return '<a href="' + esc(storyURL(n.slug)) + '" class="' + (i === 0 ? 'on' : '') + '">' +
         (coverSrc(n) ? '<img src="' + esc(coverSrc(n)) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '<img alt="">') +
         '<span><b>' + esc(n.title) + '</b><span>' + esc(n.author || '') +
-        (n.couple ? ' · ' + esc(n.couple) : '') + ' · ' + esc(countText(n)) + '</span></span></a>';
+        (n.couple ? ' · ' + esc(n.couple) : '') + ' · ' + esc(countText(n)) + '</span>' +
+        (matchedAlias(n, ql) ? '<small class="alias-match">Tên khác khớp: ' + esc(matchedAlias(n, ql)) + '</small>' : '') + '</span></a>';
     }).join('') : '<div class="empty" style="border:0;background:none">Không tìm thấy truyện nào khớp “' + esc(q) + '”.</div>';
   }
   function paintLast() {
@@ -3097,6 +3102,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   }
 
   w.CZ = {
+    aliasesOf: aliasesOf, matchedAlias: matchedAlias, readingParts: readingParts, partTypes: PART_TYPES, searchText: searchText,
     API: API, COMMUNITY_API: normalizeApi(w.CZ_COMMUNITY_API) || API, normalizeApi: normalizeApi,
     registry: registry, purgeRegistry: purgeRegistry, book: book, forgetBook: forgetBook, toc: toc, chapter: chapter, forgetChapter: forgetChapter, stats: stats, refreshStats: refreshStats, schedule: schedule,
     lockToken: lockToken, setLockToken: setLockToken, clearLockToken: clearLockToken,
