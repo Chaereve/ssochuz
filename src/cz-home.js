@@ -547,7 +547,7 @@
       var q = state.q.toLowerCase();
       lib = lib.filter(function (n) {
         return n.title.toLowerCase().indexOf(q) >= 0 || String(n.author || '').toLowerCase().indexOf(q) >= 0 ||
-          String(n.couple || '').toLowerCase().indexOf(q) >= 0 || String(n.year || '').indexOf(q) >= 0;
+          String(n.couple || '').toLowerCase().indexOf(q) >= 0 || String(n.year || '').indexOf(q) >= 0 || !!CZ.matchedAlias(n, q);
       });
     }
     var so = state.sort;
@@ -582,7 +582,7 @@
     var grid = $('#grid');
     grid.className = 'grid' + (state.view === 'list' ? ' list-view' : '');
     grid.innerHTML = (slice.length && state.view === 'list' ? CZ.listHead() : '') +
-      (slice.length ? slice.map(function (n) { return CZ.card(n, { view: state.view }); }).join('')
+      (slice.length ? slice.map(function (n) { return CZ.card(n, { view: state.view, alias: CZ.matchedAlias(n, state.q) }); }).join('')
       : '<div class="empty" style="grid-column:1/-1"><div class="big">Không có truyện nào khớp</div>Thử bỏ một vài tiêu chí lọc.' +
         '<div class="mt"><button class="btn ghost" id="clrAll">Xoá tất cả lọc</button></div></div>');
     stagger(grid);

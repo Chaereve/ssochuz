@@ -418,6 +418,19 @@
     if (synopsisOpen) inner.style.setProperty('max-height', 'none');
     else inner.style.removeProperty('max-height');
   }
+  function readingGroupHTML(n) {
+    var parts = CZ.readingParts(CZ.lib(), n);
+    if (parts.length < 2) return '';
+    return '<section class="reading-group" aria-label="Các phần và thứ tự đọc"><h2>Các phần &amp; thứ tự đọc</h2><ol>' + parts.map(function (part) {
+      return '<li><a href="' + esc(CZ.storyURL(part.slug)) + '"' + (part.slug === n.slug ? ' aria-current="page"' : '') + '>' + esc(part.title) + '</a> <small>' + esc(CZ.partTypes[part.partType] || 'Phần truyện') + '</small></li>';
+    }).join('') + '</ol></section>';
+  }
+  function nextPartHTML(n) {
+    var parts = CZ.readingParts(CZ.lib(), n), index = parts.findIndex(function (part) { return part.slug === n.slug; });
+    var next = index >= 0 ? parts[index + 1] : null;
+    if (!next) return '';
+    return '<div class="next-reading-part"><a class="btn ghost mt" href="' + esc(CZ.storyURL(next.slug)) + '">Phần tiếp theo: ' + esc(next.title) + '</a><small>' + esc(CZ.partTypes[next.partType] || 'Phần truyện') + '</small></div>';
+  }
   function renderStory() {
     var n = N, ch = CZ.progress(n);
     var im = CZ.coverSrc(n);
@@ -434,6 +447,7 @@
           (n.fresh ? '<span class="nw-bookmark"><span>NEW</span></span>' : '') + '</div>' +
         '<div>' +
           '<h1>' + esc(n.title) + '</h1>' +
+          (CZ.aliasesOf(n).length ? '<p class="story-aliases">Tên khác: ' + CZ.aliasesOf(n).map(esc).join(' · ') + '</p>' : '') +
           '<div class="meta">' +
             '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(CZ.statusLabel(n.statusCls || n.status)) + '</span>' +
             (n.locked ? '<span class="pill lock" title="Truyện được bảo vệ bằng mật mã — thẻ và giới thiệu công khai, chương cần mật mã">' + ic('lock', 'i-s') + 'Có mật mã</span>' : '') +
@@ -444,6 +458,7 @@
             '<span>' + ic('refresh', 'i-s') + ' ' + esc(CZ.timeAgo(n.updated)) + '</span>' +
             statChip() +
           '</div>' +
+          readingGroupHTML(n) +
           ratingTag() +
           '<div class="synwrap' + (syn ? ' clamp' : '') + (synopsisOpen ? ' open' : '') + '" id="synWrap">' +
             '<div class="synin" id="synIn">' +
@@ -1754,6 +1769,7 @@
     $('#rdEnd').innerHTML = last
       ? '<div class="endrule" aria-hidden="true"></div><div class="endline"><span class="endsub">Bộ này đang cập nhật — lưu vào tủ truyện để quay lại khi có chương mới.</span></div><a class="btn ghost sm mt" href="' + esc(CZ.storyURL(N.slug)) + '" id="endInfo">' + ic('info', 'i-s') + 'Thông tin truyện</a>'
       : '<div class="endrule" aria-hidden="true"></div>';
+    if (last) $('#rdEnd').innerHTML += nextPartHTML(N);
     var currentScrollPercent = 0;
     if (s.mode !== 'paged') {
       var scrollMax = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);

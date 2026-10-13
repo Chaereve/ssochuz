@@ -1190,3 +1190,8 @@ body.admin .v2couple-row .v2couple-inp{flex:1 1 auto;min-width:0}
 body.admin .v2couple-rm{flex:0 0 auto;width:34px;min-width:34px;height:36px;min-height:36px;padding:0;font-size:16px;line-height:1;border-radius:var(--a-r);border:1px solid var(--a-bd);color:var(--a-mut)}
 body.admin .v2couple-rm:hover{border-color:var(--a-err);color:var(--a-err);background:color-mix(in srgb,var(--a-err) 10%,var(--a-surf))}
 
+
+.reading-group-editor{padding-left:24px}
+.reading-group-editor li{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+.reading-group-editor li>span{flex:1 1 180px;overflow-wrap:anywhere}
+.reading-group-editor .inp{width:auto;max-width:100%}

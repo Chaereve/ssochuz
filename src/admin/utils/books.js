@@ -1,3 +1,4 @@
+import { parseAliases, pruneReadingGroups } from '../../shared/reading-groups.js';
 import { cz } from './format.js';
 import { persistableCover } from './cover.js';
 
@@ -140,6 +141,7 @@ export function removeBookReferences(registry, slug) {
   if (registry.schedule && Array.isArray(registry.schedule.items)) {
     registry.schedule.items = registry.schedule.items.filter((item) => (item && item.slug) !== slug);
   }
+  pruneReadingGroups(registry);
   return registry;
 }
 
@@ -152,6 +154,7 @@ export function metaFromForm(book, values) {
   );
   out.title = values.title || out.title || '';
   out.slug = values.slug || out.slug || '';
+  if (values.aliases !== undefined) out.aliases = parseAliases(values.aliases, out.title);
   out.author = values.author || '';
   out.couple = couples.join(', ');
   if (couples.length > 1) out.couples = couples;
@@ -183,7 +186,7 @@ export function newBookRecord(values) {
   const firstChapter = String(values.chapter || '').trim();
   const chapters = firstChapter ? [{ t: 'Chương 1', html: textToHtml(firstChapter), status: 'published' }] : [];
   const meta = metaFromForm({}, {
-    title: String(values.title || '').trim(), slug,
+    title: String(values.title || '').trim(), slug, aliases: values.aliases,
     author: String(values.author || '').trim(),
     couple: String(values.couple || '').trim(),
     couples: Array.isArray(values.couples) ? values.couples : undefined,
