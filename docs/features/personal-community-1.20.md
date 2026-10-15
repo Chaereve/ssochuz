@@ -1,5 +1,7 @@
 # Ssochuz 1.20 — dữ liệu cá nhân và tương tác cộng đồng
 
+> **Thay đổi frontend 2026-10-14:** Hộp góp gạch đã được bỏ khỏi trang truyện cùng với Bionic, Terminal, Zen và âm thanh hiệu ứng. Reaction sticker vẫn hoạt động và luôn hiện, không còn công tắc bật/tắt trong Cài đặt đọc. Sticker picker trong bình luận và vòng quay được giữ lại. Phần tài liệu về giao diện góp gạch phía dưới ghi lại thiết kế trước khi bỏ; endpoint cộng đồng chưa thay đổi.
+
 Tài liệu triển khai cho phần theo dõi/tiến độ, hai khối cá nhân trang chủ, random picker, reaction chương, góp gạch ảo và sticker picker trong comments hiện có. Web vẫn là site tĩnh; Worker `ssochuz-community` là entrypoint Cloudflare riêng cho D1 actions nhưng dùng service binding tới CMS hiện có, không tạo project/backend bên thứ ba hay Supabase project/database mới.
 
 ## 1. Nguồn dữ liệu và luồng

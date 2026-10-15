@@ -1,7 +1,8 @@
 /* ============================================================================
    Reaction sticker community client contract (Cloudflare Worker + D1).
    Verifies quick set/assets/accessibility, server-backed toggle, no local action
-   storage, account scoping, chapter scoping, popover, reduced-motion and setting.
+   storage, account scoping, chapter scoping, popover, reduced-motion — and that
+   the sticker has NO on/off switch in Cài đặt đọc (always on).
    ========================================================================== */
 const fs = require('fs'), path = require('path');
 const { page, dataFetch, ROOT } = require('./mk');
@@ -68,7 +69,12 @@ function supabaseStub(w) {
     url: 'https://ssochuz.pages.dev/truyen/third-person/chuong-1/',
     config: { CZ_API: BASE },
     fetch: dataFetch({ apiBase: BASE, api: makeApi([]), log: [] }),
-    setup: supabaseStub,
+    setup(w) {
+      supabaseStub(w);
+      // Người đọc phiên bản trước: kể cả khi reaction đã tắt và các skin còn bật,
+      // bản mới phải hiện sticker nhưng không hồi sinh tính năng đã bỏ.
+      w.localStorage.setItem('ssochuz-reader', JSON.stringify({ react: 0, bionic: 1, term: 1, zen: 1, brick: 1, sfx: 1 }));
+    },
   });
   const { win, doc } = p;
   const $ = selector => doc.querySelector(selector);
@@ -78,6 +84,13 @@ function supabaseStub(w) {
   win.CZPersonal = store.service;
   const bar = $('#rdReact');
   if (!bar) { out.errors0.push('không thấy #rdReact ở cuối chương'); console.log(JSON.stringify(out, null, 1)); process.exit(1); }
+  if (bar.hidden || !bar.querySelector('.rx')) out.errors0.push('sticker phải hiện ngay khi còn cấu hình cũ react:0');
+  if ($('#rdZen, #rdTerm, #rdTermTop, #rdTermEnd, #storyBrick') || doc.body.classList.contains('rd-zen') || doc.body.classList.contains('rd-term') || $('#rdText .bio')) {
+    out.errors0.push('không được dựng lại Bionic, Terminal, Zen hay hộp góp gạch khi còn cấu hình cũ');
+  }
+  if (['react', 'bionic', 'term', 'zen', 'brick', 'sfx'].some(key => Object.hasOwn(win.CZ.rdGet(), key))) {
+    out.errors0.push('rdGet không được trả về các công tắc đã bỏ');
+  }
   const ctx = bar.__rxCtx || { slug: 'third-person', ch: 1, label: 'Chương 1' };
   await win.CZReact.pull({ slug: 'third-person', ch: 1 });
   win.CZReact.mount(bar, ctx);
@@ -138,7 +151,9 @@ function supabaseStub(w) {
   await win.CZReact.pull({ slug: 'third-person', ch: 2 });
   if (win.CZReact.isMine('third-person', 2, id)) out.errors0.push('reaction phải được tách theo chapter');
 
-  // Full reaction popover and setting toggle remain keyboard-capable.
+  // Full reaction popover remains keyboard-capable. Sticker stays always-on:
+  // there is no Bật/Tắt switch in Cài đặt đọc anymore, and even a leftover
+  // react:0 in localStorage must not hide the bar.
   const allButton = $('#rxAll');
   allButton && allButton.click();
   await wait(50);
@@ -148,16 +163,27 @@ function supabaseStub(w) {
   if (popImage && !popImage.src.includes('/stickers/sso/thumb/')) out.errors0.push('popover phải dùng thumbnail');
   const close = pop && pop.querySelector('[data-close]'); close && close.click();
 
+  win.localStorage.setItem('ssochuz-reader', JSON.stringify({ react: 0 }));
   $('#rdSet') && $('#rdSet').click();
   await wait(80);
-  const off = $('#setBody [data-set="react"][data-v="0"]');
-  off && off.click();
+  if ($('#setBody [data-set="react"]') || /Reaction sticker cuối chương/.test($('#setBody').textContent)) {
+    out.errors0.push('Cài đặt đọc không được còn công tắc bật/tắt reaction sticker');
+  }
+  if (/Tương tác & kiểu đọc|Bionic|Terminal|Chế độ Zen|Âm thanh hiệu ứng|Hộp góp gạch/.test($('#setBody').textContent)) {
+    out.errors0.push('Cài đặt đọc không được còn nhóm tính năng đã bỏ');
+  }
+  $('#setReset').click();
+  const saved = JSON.parse(win.localStorage.getItem('ssochuz-reader') || '{}');
+  if (['react', 'bionic', 'term', 'zen', 'brick', 'sfx'].some(key => Object.hasOwn(saved, key))) {
+    out.errors0.push('đổi cài đặt đọc phải xoá các công tắc cũ khỏi localStorage');
+  }
+  const closeSet = $('#setSheet .ph .ibo'); closeSet && closeSet.click();
   await wait(50);
-  if (!bar.hidden || bar.querySelectorAll('.rx').length) out.errors0.push('Cài đặt phải có thể tắt reaction');
-  const on = $('#setBody [data-set="react"][data-v="1"]');
-  on && on.click();
+  win.CZReact.afterChapterPaint($('#rdText'), { slug: 'third-person', ch: 1, title: 'Chương 1' });
   await wait(50);
-  if (bar.hidden || bar.querySelectorAll('.rx').length !== win.CZReact.REACTIONS.length) out.errors0.push('bật lại phải dựng đủ ' + win.CZReact.REACTIONS.length + ' reaction');
+  if (bar.hidden || bar.querySelectorAll('.rx').length !== win.CZReact.REACTIONS.length) {
+    out.errors0.push('sticker phải LUÔN hiện — không được đọc công tắc react trong Cài đặt đọc');
+  }
 
   const reduced = page('truyen.html', {
     url: 'https://ssochuz.pages.dev/truyen/third-person/chuong-1/',

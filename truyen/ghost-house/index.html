@@ -26,7 +26,7 @@
 <link rel="apple-touch-icon" href="/ssochuz.png?v=1">
 <link rel="manifest" href="/manifest.webmanifest">
   <!-- N13: bỏ preconnect Firestore — không còn đọc thẳng Firestore từ máy khách -->
-<link rel="stylesheet" href="/cz.css?v=20261012n">
+<link rel="stylesheet" href="/cz.css?v=20261014feat1">
 <script>/* chống nháy nền */try{var t=localStorage.getItem('ssochuz-theme')||localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
 </head>
 <body class="spage">
@@ -72,12 +72,10 @@
     <div class="info" id="storyInfo"></div>
   </section>
 
-  <!-- ============ GÓC TƯƠNG TÁC: reaction · hộp góp gạch ============
-       Reaction và hộp gạch hiện theo tình trạng truyện.
-       Nội dung do src/cz-react.js, src/cz-brick.js dựng. -->
+  <!-- ============ GÓC TƯƠNG TÁC: reaction sticker ============
+       Nội dung do src/cz-react.js dựng — luôn hiện, không còn công tắc. -->
   <div class="storylab" id="storyLab">
     <section class="rreact" id="storyReact" hidden aria-label="Reaction cho truyện này"></section>
-    <section class="brickbox" id="storyBrick" hidden aria-label="Hộp góp gạch cho tác giả"></section>
   </div>
 
   <!-- ĐÁNH GIÁ & BÌNH LUẬN TRUYỆN — nằm ngay dưới phần thả cảm xúc giống bình luận chương -->
@@ -108,8 +106,6 @@
         <button class="ibo" id="rdMark" title="Đánh dấu chương (B)"></button>
         <button class="ibo" id="rdSet" title="Cài đặt đọc"></button>
         <button class="ibo" id="rdFocus" title="Chế độ tập trung (F)"></button>
-        <button class="ibo" id="rdZen" title="Chế độ Zen (Z)" aria-pressed="false"></button>
-        <button class="ibo" id="rdTerm" title="Chế độ Terminal (T)" aria-pressed="false"></button>
         <button class="ibo" id="rdShare" title="Chia sẻ chương"></button>
       </div>
     </div>
@@ -120,13 +116,10 @@
     <h1 id="rdHead">—</h1>
     <div class="rdmeta" id="rdMeta"></div>
   </div>
-  <!-- chế độ Terminal: đầu khung giả + dòng kết, chỉ là giao diện (không có ô nhập lệnh) -->
-  <div class="termtop" id="rdTermTop" hidden aria-hidden="true"></div>
   <article class="rtext" id="rdText"></article>
-  <div class="termexit" id="rdTermEnd" hidden aria-hidden="true"></div>
   <div class="rend" id="rdEnd"></div>
   <!-- REACTION STICKER CUỐI CHƯƠNG — ngay dưới nội dung, trên nút chuyển chương.
-       Nội dung do src/cz-react.js dựng; bật/tắt ở Cài đặt đọc → Tương tác. -->
+       Nội dung do src/cz-react.js dựng; luôn hiện (không còn công tắc bật/tắt). -->
   <section class="rreact" id="rdReact" hidden aria-label="Reaction cho chương này"></section>
   <nav class="rnav" id="rdNav"></nav>
   <div class="ract" id="rdActs"></div>
@@ -158,11 +151,10 @@
 
 <script src="/cz-config.js?v=20261012n"></script>
 <script src="/cz-stickers.js?v=20261012n"></script>
-<script src="/cz-app.js?v=20261013notif1"></script>
+<script src="/cz-app.js?v=20261014feat1"></script>
 <script src="/cz-auth.js?v=20261012n"></script>
 <script src="/cz-personal.js?v=20261013notif1"></script>
-<script src="/cz-react.js?v=20261012n"></script>
-<script src="/cz-brick.js?v=20261012n"></script>
-<script src="/cz-story.js?v=20261012n"></script>
+<script src="/cz-react.js?v=20261014feat1"></script>
+<script src="/cz-story.js?v=20261014feat1"></script>
 </body>
 </html>

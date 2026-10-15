@@ -1079,24 +1079,21 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   }
 
   /* cài đặt đọc — 2 font (serif / sans) · 3 nền (sang / kem / toi)
-     Năm khoá cuối (react / bionic / zen / term / brick / sfx) là của bộ tính
-     năng tương tác 1.19.0: hàng reaction sticker cuối chương, đọc kiểu Bionic,
-     chế độ Zen, skin Terminal, hộp góp gạch và tiếng hiệu ứng. Đều TẮT/MỞ được
-     ở đây và đều nhớ trong localStorage `ssochuz-reader` như các cài đặt cũ —
-     mọi thứ ảnh hưởng tới trải nghiệm đọc đều tắt được từ một chỗ. */
+     Chỉ còn các tuỳ chọn hiển thị đọc. Bộ tương tác 1.19.0 (Bionic, Terminal,
+     Zen, hộp góp gạch, tiếng hiệu ứng) đã bỏ khỏi trang; riêng hàng reaction
+     sticker cuối chương được GIỮ LẠI và luôn bật — không có công tắc trong
+     Cài đặt đọc nữa. Chỉ lưu các tuỳ chọn đọc còn dùng trong `ssochuz-reader`. */
   var RD_DEF = {
-    mode: 'scroll', size: 18, font: 'serif', line: 1.85, para: 1.05, theme: 'kem', width: 720, justify: 0,
-    react: 1,      /* hàng reaction sticker cuối chương */
-    bionic: 0,     /* in đậm 2–3 ký tự đầu mỗi từ */
-    zen: 0,        /* chế độ Zen (nút trên thanh đọc) — mặc định TẮT như mọi skin khác */
-    term: 0,       /* skin Terminal / Hacker CLI */
-    brick: 1,      /* hộp góp gạch ở trang truyện đang cập nhật */
-    sfx: 1         /* tiếng “cạch” khi góp gạch + tiếng pop khi thả sticker */
+    mode: 'scroll', size: 18, font: 'serif', line: 1.85, para: 1.05, theme: 'kem', width: 720, justify: 0
   };
   var RD_FONTS = { serif: 1, sans: 1 };
   var RD_THEMES = { sang: 1, kem: 1, toi: 1 };
   function rdGet() {
     var cur = jsonGet(LS.read, {}) || {};
+    if (typeof cur !== 'object' || Array.isArray(cur)) cur = {};
+    /* Bỏ các công tắc 1.19.0 đã ngừng dùng khỏi cấu hình cũ. Đặc biệt
+       react:0 của người đọc phiên bản trước không được ẩn sticker nữa. */
+    ['react', 'bionic', 'term', 'zen', 'brick', 'sfx'].forEach(function (key) { delete cur[key]; });
     if (cur.font && !RD_FONTS[cur.font]) {
       cur.font = (cur.font === 'sans' || cur.font === 'bevn' || cur.font === 'roboto' || cur.font === 'inter' || cur.font === 'arial') ? 'sans' : 'serif';
     }
@@ -1108,9 +1105,9 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   function rdSet(o) {
     var v = Object.assign(rdGet(), o || {});
     jsonSet(LS.read, v);
-    /* Ai đang nghe cấu hình đọc (hàng reaction, Bionic, Terminal, Zen…) thì biết
-       ngay trong lượt này — khỏi phải tải lại trang mới thấy thay đổi. Sự kiện
-       chỉ mang ĐÚNG khoá vừa đổi nên nơi nghe không phải so sánh cả object. */
+    /* Ai đang nghe cấu hình đọc thì biết ngay trong lượt này — khỏi phải tải
+       lại trang mới thấy thay đổi. Sự kiện chỉ mang ĐÚNG khoá vừa đổi nên nơi
+       nghe không phải so sánh cả object. */
     try {
       Object.keys(o || {}).forEach(function (k) {
         d.dispatchEvent(new CustomEvent('cz:setting', { detail: { key: k, value: v[k], settings: v } }));
@@ -1862,83 +1859,6 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       el.classList.remove('on');
     }
     return open;
-  }
-  /* ---- tiếng hiệu ứng (chỉ kêu SAU cú bấm của người dùng) ----------------
-     “Cạch” của viên gạch và “pop” của sticker được TỔNG HỢP bằng WebAudio:
-     không thêm tệp .mp3, không tải gì thêm. AudioContext chỉ được tạo ở lần
-     gọi đầu tiên — tức là sau một cú bấm thật, đúng luật “không tự phát tiếng”.
-     Ai không thích thì tắt ở Cài đặt đọc → Âm thanh hiệu ứng (khoá sfx). */
-  var audioCtx = null;
-  function audio() {
-    if (audioCtx) return audioCtx;
-    var AC = w.AudioContext || w.webkitAudioContext;
-    if (!AC) return null;
-    try { audioCtx = new AC(); } catch (e) { audioCtx = null; }
-    return audioCtx;
-  }
-  function sfx(kind) {
-    if (reduce) return;
-    var st = rdGet();
-    if (st && (st.sfx === 0 || st.sfx === '0')) return;
-    var a = audio();
-    if (!a) return;
-    try {
-      if (a.state === 'suspended' && a.resume) a.resume();
-      var t0 = a.currentTime, i;
-      if (kind === 'brick') {
-        /* gạch: một nhúm nhiễu qua bandpass (tiếng “cạch”) + một nhịp trầm */
-        var len = Math.floor(a.sampleRate * 0.09);
-        var buf = a.createBuffer(1, len, a.sampleRate);
-        var ch = buf.getChannelData(0);
-        for (i = 0; i < len; i++) ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6);
-        var src = a.createBufferSource(); src.buffer = buf;
-        var bp = a.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1500; bp.Q.value = 1.2;
-        var g = a.createGain(); g.gain.value = 0.28;
-        src.connect(bp); bp.connect(g); g.connect(a.destination);
-        src.start(t0);
-        var osc = a.createOscillator(), og = a.createGain();
-        osc.type = 'triangle'; osc.frequency.setValueAtTime(190, t0);
-        osc.frequency.exponentialRampToValueAtTime(90, t0 + 0.12);
-        og.gain.setValueAtTime(0.16, t0);
-        og.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16);
-        osc.connect(og); og.connect(a.destination);
-        osc.start(t0); osc.stop(t0 + 0.18);
-      } else if (kind === 'tick') {
-        /* tiếng kim gạt qua chốt vòng quay: ngắn, đanh và ấm */
-        var ot = a.createOscillator(), gt = a.createGain();
-        ot.type = 'triangle';
-        ot.frequency.setValueAtTime(980, t0);
-        ot.frequency.exponentialRampToValueAtTime(340, t0 + 0.028);
-        gt.gain.setValueAtTime(0.0001, t0);
-        gt.gain.linearRampToValueAtTime(0.11, t0 + 0.003);
-        gt.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.032);
-        ot.connect(gt); gt.connect(a.destination);
-        ot.start(t0); ot.stop(t0 + 0.036);
-      } else if (kind === 'win') {
-        /* hợp âm báo chốt kết quả vòng quay (C5 - E5 - G5 - C6) */
-        var notes = [523.25, 659.25, 783.99, 1046.5];
-        for (i = 0; i < notes.length; i++) {
-          var ow = a.createOscillator(), gw = a.createGain();
-          var stAt = t0 + i * 0.055;
-          ow.type = 'sine';
-          ow.frequency.setValueAtTime(notes[i], stAt);
-          gw.gain.setValueAtTime(0.0001, stAt);
-          gw.gain.linearRampToValueAtTime(0.1, stAt + 0.015);
-          gw.gain.exponentialRampToValueAtTime(0.0001, stAt + 0.32);
-          ow.connect(gw); gw.connect(a.destination);
-          ow.start(stAt); ow.stop(stAt + 0.34);
-        }
-      } else {
-        var o2 = a.createOscillator(), g2 = a.createGain();
-        o2.type = 'sine'; o2.frequency.setValueAtTime(660, t0);
-        o2.frequency.exponentialRampToValueAtTime(1180, t0 + 0.07);
-        g2.gain.setValueAtTime(0.0001, t0);
-        g2.gain.exponentialRampToValueAtTime(0.13, t0 + 0.02);
-        g2.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16);
-        o2.connect(g2); g2.connect(a.destination);
-        o2.start(t0); o2.stop(t0 + 0.18);
-      }
-    } catch (e) {}
   }
   /* gợn sóng nhẹ ngay chỗ con trỏ khi bấm nút */
   function ripple(el, e) {
@@ -3122,7 +3042,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     chapHasMedia: chapterHasMedia,
     storyURL: storyURL, readURL: readURL, slugify: slugify, qs: qs, copy: copy, download: download,
     card: card, coverFB: coverFB, coverSrc: coverSrc, bookCover: bookCover, mountRail: mountRail, reveal: reveal, countUp: countUp, scaleFacts: scaleFacts,
-    scrollUI: scrollUI, slide: slide, pageFx: pageFx, pop: pop, setIcon: setIcon, shake: shake, sfx: sfx,
+    scrollUI: scrollUI, slide: slide, pageFx: pageFx, pop: pop, setIcon: setIcon, shake: shake,
     msWait: function () { return ms('--t-close', 150); }, ink: ink, inkAll: inkAll,
     mountShell: mountShell, mountHeader: mountHeader, mountFooter: mountFooter,
     openJump: openJump, toast: toast, modal: modal, confirm: confirmBox,

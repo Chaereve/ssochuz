@@ -29,11 +29,11 @@ for (const dir of ['data/book', 'truyen']) {
 
 /* src → thư mục gốc (đúng đường dẫn mà các trang HTML đang gọi) */
 /* admin.js KHÔNG nằm ở đây: bundle Preact/TipTap do tools/build_admin.mjs sinh riêng. */
-/* cz-react / cz-brick / cz-dice: bộ tính năng tương tác 1.19.0. Chỉ nạp ở
+/* cz-react / cz-dice: bộ tính năng tương tác. Chỉ nạp ở
    trang nào thật sự dùng (truyen.html + OG, index.html) nên vẫn là file
    riêng, KHÔNG gộp vào cz-app.js — trang khác khỏi tải thêm. */
 const JS = ['cz-app.js', 'cz-auth.js', 'cz-stickers.js', 'cz-personal.js', 'cz-home.js', 'cz-story.js', 'cz-people.js', 'cz-space.js',
-  'cz-react.js', 'cz-brick.js', 'cz-dice.js'];
+  'cz-react.js', 'cz-dice.js'];
 const CSS = ['cz.css'];
 
 const kb = (n) => (n / 1024).toFixed(1) + ' kB';
