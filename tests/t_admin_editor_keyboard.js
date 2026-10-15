@@ -146,7 +146,7 @@ async function until(fn, msg, tries = 100) {
   keydown(win, chapBtns()[lastIdx], 'Home');
   await until(() => chapBtns()[0].getAttribute('aria-current') === 'true', 'Home phải quay về chương đầu');
   assert.strictEqual(doc.activeElement, chapBtns()[0], 'Home phải focus nút chương đầu');
-  assert.strictEqual(doc.querySelector('#v2ChapTitle').value, 'Chương 1 — sửa bằng bàn phím', 'quay về chương 1 phải khôi phục nháp tên chương');
+  await until(() => doc.querySelector('#v2ChapTitle').value === 'Chương 1 — sửa bằng bàn phím', 'quay về chương 1 phải khôi phục nháp tên chương');
 
   /* Alt+ArrowDown đổi thứ tự chương 1 xuống vị trí 2 */
   keydown(win, chapBtns()[0], 'ArrowDown', { altKey: true });

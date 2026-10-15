@@ -1,5 +1,7 @@
 # Lịch sử blueprint — 1.19.0: Bộ tương tác & trải nghiệm đọc
 
+> **Thay đổi 2026-10-14:** Giao diện hiện tại đã bỏ Bionic, Terminal, Zen, âm thanh hiệu ứng và Hộp góp gạch; bỏ cả nhóm công tắc “Tương tác & kiểu đọc”. **Reaction sticker vẫn hoạt động và luôn hiện** (không có công tắc Bật/Tắt). Vòng quay “Hôm nay đọc gì?” và sticker trong bình luận không nằm trong nhóm bị bỏ nên được giữ lại. Các mục bên dưới chỉ còn giá trị tham khảo lịch sử, không dùng làm yêu cầu kiểm thử cho frontend hiện tại; endpoint cộng đồng về gạch chưa bị thay đổi.
+
 > **Cập nhật 1.20.0 (2026-10-12):** blueprint dưới đây ghi trạng thái thiết kế/client-only ở bản 1.19.0, không còn là mô tả trạng thái hiện tại. Repo đã chuyển reaction/gạch sang Cloudflare D1, dữ liệu follow/progress sang Supabase RLS, và picker sticker gắn vào comments hiện có. Hướng dẫn/schema/endpoints hiện hành: [`personal-community-1.20.md`](personal-community-1.20.md) và [`worker/README.md`](../../worker/README.md). Migration cloud chưa được áp dụng/deploy trong workspace này.
 
 - Trạng thái lịch sử tại bản 1.19.0: client-only; endpoint máy chủ mới ở mức đề xuất trong §7.

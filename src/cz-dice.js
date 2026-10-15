@@ -323,14 +323,10 @@
         ? ('Đã trộn ' + num(S.cands.length) + '/' + num(list.length) + ' truyện')
         : ('Đã trộn ' + num(S.cands.length) + ' truyện');
     }
-    if (CZ.sfx && !reduce()) {
-      CZ.sfx('tick');
-      setTimeout(function () { if (CZ.sfx) CZ.sfx('pop'); }, 65);
-    }
   }
 
   function scheduleTicks(m, spinId) {
-    if (reduce() || !CZ.sfx) return;
+    if (reduce()) return;
     var ptr = m.querySelector('#dcPointer');
     var totalTicks = 15;
     for (var ti = 0; ti < totalTicks; ti++) {
@@ -339,7 +335,6 @@
         var delay = Math.round(Math.pow(progress, 2.15) * (SPIN_MS - 130));
         setTimeout(function () {
           if (!S.spinning || S.spin !== spinId) return;
-          CZ.sfx('tick');
           if (ptr) {
             ptr.classList.remove('tick');
             void ptr.offsetWidth;
@@ -418,7 +413,6 @@
       jset(LS.last, S.pick.slug);
       if (live) live.textContent = 'Đã chọn: ' + S.pick.title;
       paintResult(m, S.pick);
-      if (CZ.sfx) { CZ.sfx('pop'); CZ.sfx('win'); }
     }
   }
 

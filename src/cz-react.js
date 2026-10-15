@@ -5,7 +5,7 @@
    cũng chẳng nói được người đọc đang nghĩ gì. Hàng reaction dưới đây thay cảm
    giác đó bằng 6 sticker dễ thương (đội mũ bảo hiểm gấp, tiểu đường rồi, gửi
    gạch đá, chầm kẽm, cày như trâu, cho xin chương nữa): bấm là sticker bay lên
-   như reaction livestream, có tiếng, có số đếm.
+   như reaction livestream, có số đếm.
 
    NĂM MẢNH, TÁCH RỜI ĐỂ DỄ SỬA:
      1. reactionConfig  — danh sách sticker (thêm/bớt/đổi ảnh chỉ ở đây)
@@ -13,7 +13,7 @@
      3. ReactionSticker — một nút sticker (ảnh + số + tooltip + trạng thái)
      4. ReactionBar     — hàng sticker cuối chương + nút “Xem tất cả reaction”
      5. ReactionPopover — bảng đầy đủ (mở bằng CZ.modal nên có sẵn Esc/scrim)
-     …cộng thêm ReactionAnimationLayer (lớp sticker bay) và sfx() (tiếng “cạch”).
+     …cộng thêm ReactionAnimationLayer (lớp sticker bay).
 
    Reaction cộng đồng được đọc/ghi qua Cloudflare Worker + D1; trình duyệt chỉ
    giữ trạng thái chương hiện tại trong RAM. Sticker dùng registry và WebP Sso
@@ -24,7 +24,6 @@
 
   var CZ = w.CZ || {};
   function CZtoast(msg, kind) { if (CZ.toast) CZ.toast(msg, kind); }
-  function rd() { return CZ.rdGet ? CZ.rdGet() : {}; }
   function reduce() { return !!CZ.reduce; }
   function esc(s) { return CZ.esc ? CZ.esc(s) : String(s == null ? '' : s); }
   function num(n) { return CZ.num ? CZ.num(n) : String(n); }
@@ -439,7 +438,6 @@
       if (res.on) {
         var rect = btn.getBoundingClientRect ? btn.getBoundingClientRect() : null;
         burst(btn, rx, rect);
-        sfx(rx.animation_type === 'thud' ? 'brick' : 'pop');
         CZtoast(rx.toast || ('Đã thả ' + rx.label + '!'), 'ok');
       } else {
         CZtoast('Đã bỏ ' + rx.label, '');
@@ -499,7 +497,7 @@
           if (!active && tick) tick.remove();
         });
         if (host) refresh(host);
-        if (res.on) { burst(b, rx, b.getBoundingClientRect()); sfx('pop'); CZtoast(rx.toast || 'Đã thả sticker!', 'ok'); }
+        if (res.on) { burst(b, rx, b.getBoundingClientRect()); CZtoast(rx.toast || 'Đã thả sticker!', 'ok'); }
         else CZtoast('Đã bỏ ' + rx.label, '');
       }).catch(function (error) {
         b.disabled = false;
@@ -510,21 +508,15 @@
     });
   }
 
-  /* ======================= 6. Âm thanh (chỉ sau cú bấm) =================
-     Tiếng “pop” dùng chung một chỗ với tiếng “cạch” của hộp gạch: CZ.sfx() trong
-     cz-app.js (tệp nào cũng có). Ở đây chỉ còn phần gọi cho gọn — bản tổng hợp
-     WebAudio nằm một nơi, không nhân đôi mã. */
-  function sfx(kind) { if (CZ.sfx) CZ.sfx(kind || 'pop'); }
-
-  /* ======================= 7. GẮN VÀO TRANG ============================= */
+  /* ======================= 6. GẮN VÀO TRANG ============================= */
   /* Trang đọc gọi hook này mỗi lần vẽ xong một chương (xem
      paintChapter() trong src/cz-story.js) — một điểm nối duy nhất, không rải
      sự kiện khắp nơi. */
   function afterChapterPaint(txt, info) {
     var host = d.getElementById('rdReact');
     if (!host || !info) return;
-    var s = rd();
-    if (String(s.react) === '0') { host.hidden = true; host.innerHTML = ''; host.__rxCtx = null; return; }
+    /* Sticker là tính năng được giữ lại của bộ tương tác: luôn hiện, không còn
+       công tắc bật/tắt trong Cài đặt đọc. */
     host.hidden = false;
     mount(host, {
       slug: info.slug, ch: info.ch,
@@ -556,7 +548,7 @@
     counts: counts, count: count, total: total, mine: mine, isMine: isMine,
     toggle: toggle, pull: pull, flush: function () { return ctxNow ? pull({ slug: ctxNow.slug, ch: ctxNow.ch }, true) : Promise.resolve(null); },
     mount: mount, afterChapterPaint: afterChapterPaint,
-    popover: popover, burst: burst, sfx: sfx, layer: layer,
+    popover: popover, burst: burst, layer: layer,
     apiOn: apiOn,
     _cfg: { cooldownMs: COOLDOWN_MS, rateMax: RATE_MAX, rateWindowMs: RATE_WINDOW, liveMax: LIVE_MAX }
   };

@@ -190,7 +190,7 @@ const REG = JSON.parse(read('data/registry.json'));
   if (!out.ketQua.nutQuayLai) err('quay xong phải hiện nút “Quay lại”');
   if (!out.ketQua.nutTronTruyen) err('quay xong phải hiện nút “Trộn truyện”');
   if (!out.ketQua.latDuocChon) err('quay xong phải đánh dấu nổi bật bìa trúng trên vòng quay');
-  if (!out.ketQua.tieng.includes('pop')) err('quay xong (do người dùng bấm) nên có tiếng pop nhẹ');
+  if (out.ketQua.tieng.length) err('tính năng âm thanh hiệu ứng đã bỏ — vòng quay không được phát tiếng');
 
   /* bấm “Trộn truyện” sau khi quay: phải trộn sang danh sách truyện mới trên vòng quay */
   click(win, $('#dcShuffle'));

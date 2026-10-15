@@ -10,9 +10,6 @@
 /cz-react.js
   Cache-Control: no-cache
 
-/cz-brick.js
-  Cache-Control: no-cache
-
 /cz-config.js
   Cache-Control: no-store, max-age=0
 

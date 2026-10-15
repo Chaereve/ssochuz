@@ -15,7 +15,6 @@ còn thấy ghi chú nội bộ (tên khoá KV, luồng quản trị, danh sách
 | `src/cz-home.js` | `/cz-home.js` |
 | `src/cz-story.js` | `/cz-story.js` |
 | `src/cz-react.js` (reaction sticker cuối chương — 1.19.0) | `/cz-react.js` |
-| `src/cz-brick.js` (hộp góp gạch “đòi nợ tác giả” — 1.19.0) | `/cz-brick.js` |
 | `src/cz-dice.js` (vòng quay “Hôm nay đọc gì?” — 1.19.0) | `/cz-dice.js` |
 | `src/cz.css` | `/cz.css` |
 | `src/admin/docx.js` (Mammoth, chỉ tải khi nhập Word) | `/admin-docx.js` — sinh bởi `npm run build:admin` |

@@ -3466,8 +3466,7 @@ body.rd-focus .rdcmts { display: none; }
 /* ============================================================================
    1.19.0 · TĂNG TƯƠNG TÁC & TRẢI NGHIỆM ĐỌC
    ----------------------------------------------------------------------------
-   Gồm: reaction sticker cuối chương · chế độ Zen · Bionic · Terminal ·
-   Hộp góp gạch · Vòng quay “Hôm nay đọc gì?”.
+   Gồm: reaction sticker cuối chương · Vòng quay “Hôm nay đọc gì?”.
    Nguyên tắc chung của khối này:
      · mọi chuyển động chỉ chạy trên transform / opacity (không layout lại);
      · màu lấy từ token --rd-* khi đang đọc, không có thì rơi về --surf/--txt
@@ -3479,7 +3478,6 @@ body.rd-focus .rdcmts { display: none; }
 /* ===================== 1. REACTION STICKER CUỐI CHƯƠNG =================== */
 .storylab { display: grid; gap: 10px; margin: 16px auto 10px; max-width: 100%; }
 .storylab .rreact { max-width: none; width: 100%; margin: 0; }
-.storylab .brickbox { max-width: min(720px, 100%); width: 100%; margin: 0 auto; }
 .storylab .dicehost { justify-self: center; margin-top: 2px; }
 
 .rreact { max-width: min(1120px, calc(100% - 32px)); margin: 12px auto; padding: 10px 12px;
@@ -3586,120 +3584,7 @@ body.rd-focus .rdcmts { display: none; }
 .srow2 > span small.s-note { display: block; font-size: 11.5px; font-weight: 500; color: var(--rd-mut, var(--mut));
   margin-top: 3px; line-height: 1.5; }
 
-/* ===================== 2. CHẾ ĐỘ ZEN ====================================== */
-/* Chỉ còn nội dung chương + thanh công cụ tự ẩn. Không dùng display:none cho
-   #rdText; chỉ ẩn những khối “không cần thiết khi đọc”. */
-body.rd-zen .hdr, body.rd-zen .ftr, body.rd-zen #toTop, body.rd-zen .rdhead .rdcrumb,
-body.rd-zen .rdhead .rdmeta, body.rd-zen .rend, body.rd-zen .rnav, body.rd-zen .ract,
-body.rd-zen .rdcmts, body.rd-zen .rdpct, body.rd-zen #rdPrev, body.rd-zen #rdNext { display: none !important; }
-body.rd-zen .rdhead { padding-top: 22px; }
-body.rd-zen .rdhead h1 { font-size: clamp(20px, 2.4vw, 27px); margin-bottom: 0; }
-body.rd-zen .rtext { padding-top: 12px; padding-bottom: 40px; }
-/* gợi ý nhỏ khi thanh công cụ đang ẩn — chỉ hiện khi người đọc vừa chạm vào */
-body.rd-zen.rd-hide::after { content: "Chạm để hiện thanh công cụ"; position: fixed; left: 50%; bottom: 18px;
-  transform: translateX(-50%); z-index: 40; padding: 7px 14px; border-radius: 99px; font-size: 12px;
-  background: var(--rd-surf2, var(--surf2)); color: var(--rd-mut, var(--mut)); border: 1px solid var(--rd-bd, var(--bd));
-  opacity: 0; animation: zenHint 3200ms var(--ease-out, ease-out) 1 forwards; pointer-events: none; }
-@keyframes zenHint { 0%, 12% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { body.rd-zen.rd-hide::after { animation: none; opacity: 1; } }
-/* Zen trên điện thoại: giữ nút thoát và mục lục trong tầm tay */
-@media (max-width: 700px) {
-  #rdZen { display: grid !important; }
-  body.rd-zen .rdbar .tools .ibo { display: none; }
-  body.rd-zen .rdbar .tools #rdZen, body.rd-zen .rdbar .tools #rdToc, body.rd-zen .rdbar .tools #rdSet { display: grid; }
-  body.rd-zen .rdbar .in { justify-content: center; }
-}
-
-/* ===================== 3. BIONIC READING ================================== */
-/* Chỉ đổi độ đậm của vài ký tự đầu từ — KHÔNG đổi chữ, không tăng chiều cao
-   dòng. Dùng <b> nên trình đọc màn hình vẫn đọc liền mạch cả từ. */
-.rtext .bio { font-weight: 700; }
-body[data-rd-font] .rtext .bio { font-weight: 750; color: inherit; }
-
-/* ===================== 4. TERMINAL / HACKER CLI =========================== */
-/* Đổi token nền đọc ngay trên <body>: thanh đọc, ngăn kéo, nút đều theo luôn,
-   không phải tô lại từng thành phần. Chữ xanh trên nền gần đen, tương phản
-   > 7:1, cỡ chữ lấy từ cài đặt đọc (không nhỏ hơn 15px). */
-body.rd-term { --rd-bg: #0a0f0c; --rd-tx: #d8f5e0; --rd-mut: #7ea98b; --rd-bd: rgba(120, 255, 180, .16);
-  --rd-surf: #0f1712; --rd-surf2: #16211a; --rd-acc: #4ade80; background: #060906; }
-body.rd-term .rtext { font-family: var(--font-mono); font-size: max(15px, calc(var(--rd-size, 18px) - 1px));
-  line-height: 1.72; }
-body.rd-term .rdhead h1 { font-family: var(--font-mono); font-size: clamp(16px, 2vw, 21px); color: #d8f5e0; }
-body.rd-term .rdhead h1::before { content: "$ "; color: #4ade80; }
-body.rd-term .rtext { counter-reset: terml; }
-body.rd-term .rtext > * { counter-increment: terml; }
-body.rd-term .rtext > p, body.rd-term .rtext > div { color: #a8cdb4; }
-body.rd-term .rtext > *::before { content: "[" counter(terml, decimal-leading-zero) "] "; color: #3f6b4f;
-  font-size: .85em; user-select: none; }
-body.rd-term .rtext > .t-out { color: #eafff0; }
-body.rd-term .rtext > .t-out::before { content: "> "; color: #4ade80; }
-body.rd-term .rtext a { color: #6ee7a5; }
-body.rd-term .rtext img { border: 1px solid var(--rd-bd); border-radius: 4px; }
-.termtop { max-width: min(720px, var(--rd-w, 720px)); margin: 6px auto 0; padding: 14px 18px 10px;
-  border: 1px solid var(--rd-bd, var(--bd)); border-bottom: 0; border-radius: 10px 10px 0 0;
-  background: linear-gradient(#0f1712, #0c120e); font-family: var(--font-mono); font-size: 12.5px; color: #a8cdb4; }
-.termtop .tt-line { display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
-.termtop .tt-prompt { color: #4ade80; font-weight: 700; }
-.termtop .tt-path { color: #6f9c7d; }
-.termtop .tt-cmd { color: #eafff0; }
-.termtop .tt-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px;
-  padding-top: 8px; border-top: 1px solid rgba(120, 255, 180, .12); color: #6f9c7d; }
-.termtop .tt-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 0 3px rgba(74, 222, 128, .18); }
-.termtop .btn { margin-left: auto; }
-.termexit { max-width: min(720px, var(--rd-w, 720px)); margin: 0 auto; padding: 8px 18px 0;
-  font-family: var(--font-mono); font-size: 12.5px; color: #6f9c7d; }
-.termexit::after { content: "▌"; color: #4ade80; animation: termBlink 1.1s steps(1, end) infinite; }
-@keyframes termBlink { 50% { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .termexit::after { animation: none; } }
-
-/* ===================== 5. HỘP GÓP GẠCH ==================================== */
-.brickbox { max-width: min(720px, var(--rd-w, 720px)); margin: 18px auto 0; padding: 18px 20px;
-  border: 1px solid var(--bd); border-radius: var(--r-xl); background: var(--surf); }
-.bk-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.bk-ttl b { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-head); font-size: 17px; }
-.bk-sub { display: block; font-size: 12.5px; color: var(--mut); margin-top: 4px; }
-.bk-num { text-align: right; flex: none; }
-.bk-num b { font-size: 22px; font-variant-numeric: tabular-nums; }
-.bk-num span { display: block; font-size: 12px; color: var(--mut); }
-.bk-stage { display: flex; align-items: flex-end; gap: 18px; margin: 16px 0 14px; }
-.bk-bucket { position: relative; flex: none; width: 78px; height: 74px; border-radius: 4px 4px 12px 12px;
-  border: 2px solid var(--bd2); border-top: 0; background: linear-gradient(var(--surf2), var(--surf));
-  overflow: hidden; }
-.bk-bucket::after { content: ""; position: absolute; inset: 0 0 auto; height: 8px; background: var(--bd); }
-.bk-pile { position: absolute; left: 6px; right: 6px; bottom: 6px; height: 52px; transform-origin: 50% 100%;
-  background: repeating-linear-gradient(0deg, #b4562c 0 10px, #8d4222 10px 12px),
-    repeating-linear-gradient(90deg, transparent 0 22px, rgba(0, 0, 0, .22) 22px 24px);
-  border-radius: 3px; transition: transform 420ms var(--ease-out, ease-out); }
-.bk-pile.bump { animation: bkPile 460ms var(--ease-out, ease-out); }
-@keyframes bkPile { 0% { transform: scaleY(1) scaleX(1); } 40% { transform: scaleY(1.06) scaleX(1.05); } 100% { transform: scaleY(1) scaleX(1); } }
-.bk-drop { position: absolute; left: 50%; top: -30px; width: 34px; height: 16px; margin-left: -17px; opacity: 0;
-  border-radius: 3px; background: linear-gradient(#c2612f, #8d4222); border: 1px solid rgba(0, 0, 0, .25); }
-.bk-drop.go { animation: bkDrop 820ms cubic-bezier(.5,0,.7,1) 1; }
-@keyframes bkDrop {
-  0% { transform: translateY(0) rotate(-16deg); opacity: 0; }
-  12% { transform: translateY(6px) rotate(-14deg); opacity: 1; }
-  78% { transform: translateY(80px) rotate(6deg); opacity: 1; }
-  84% { transform: translateY(78px) rotate(4deg) scale(1.06); opacity: 1; }
-  100% { transform: translateY(78px) rotate(4deg) scale(.92); opacity: 0; }
-}
-.bk-barwrap { flex: 1; min-width: 0; }
-.bk-bar { height: 10px; border-radius: 99px; background: var(--surf2); border: 1px solid var(--bd); overflow: hidden; }
-.bk-bar i { display: block; height: 100%; transform-origin: 0 50%; background: linear-gradient(90deg, #b4562c, #d98a4a);
-  transition: transform 520ms var(--ease-out, ease-out); }
-.bk-motto { font-size: 12.5px; color: var(--mut); margin-top: 8px; }
-.bk-foot { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-.bk-mine { font-size: 12.5px; color: var(--mut); }
-.bk-mine b { color: var(--txt); }
-.bk-tip { display: inline-grid; place-items: center; width: 16px; height: 16px; margin-left: 6px; border-radius: 50%;
-  border: 1px solid var(--bd2); font-size: 10px; font-style: normal; cursor: help; }
-.bk-send { position: relative; }
-.bk-send:active { transform: translateY(1px) scale(.99); }
-@media (max-width: 560px) {
-  .bk-stage { flex-direction: column; align-items: stretch; gap: 12px; }
-  .bk-bucket { align-self: center; }
-}
-
-/* ===================== 6. TRANG VÒNG QUAY “HÔM NAY ĐỌC GÌ?” ===================== */
+/* ===================== 2. TRANG VÒNG QUAY “HÔM NAY ĐỌC GÌ?” ===================== */
 .dicehost { display: inline-flex; }
 .dicebtn { border-radius: 99px; gap: 5px; padding: 6px 13px; font-weight: 650;
   border-color: color-mix(in srgb, var(--acc) 32%, var(--bd));
@@ -3862,9 +3747,9 @@ body.rd-term .rtext img { border: 1px solid var(--rd-bd); border-radius: 4px; }
   .dc-result .dc-card, .dc-wheel.shuffling .dc-slot-in { animation: none; }
 }
 
-/* ===================== 7. GIẢM CHUYỂN ĐỘNG (riêng khối này) =============== */
+/* ===================== 3. GIẢM CHUYỂN ĐỘNG (riêng khối này) =============== */
 @media (prefers-reduced-motion: reduce) {
-  .rx, .rx-art, .rx-ct, .bk-pile, .bk-bar i, .dc-wheel { transition: none !important; }
+  .rx, .rx-art, .rx-ct, .dc-wheel { transition: none !important; }
   .rx:hover { transform: none; }
   .rx:hover .rx-art { transform: none; }
   .czfx { display: none; }        /* lớp sticker bay: tắt hẳn, chỉ còn đổi số */
@@ -3927,15 +3812,6 @@ body.rd-term .rtext img { border: 1px solid var(--rd-bd); border-radius: 4px; }
   .personal-card { flex-basis: min(290px, 86vw); }
   .cmt-sticker-picker { grid-template-columns: repeat(3, minmax(0, 1fr)); max-height: 230px; }
   .cmt-actions { flex-wrap: wrap; }
-}
-
-.bk-sticker { position: relative; display: inline-grid; place-items: center; width: 40px; height: 40px; margin-right: 6px; vertical-align: middle; }
-.bk-sticker img, .bk-sticker > span { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
-.bk-sticker > span { display: grid; place-items: center; font-size: 24px; }
-.bk-send { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; }
-.bk-send:disabled { cursor: not-allowed; opacity: .68; }
-@media (prefers-reduced-motion: reduce) {
-  .bk-drop.go, .bk-pile.bump { animation: none !important; }
 }
 
 [hidden] { display: none !important; }
