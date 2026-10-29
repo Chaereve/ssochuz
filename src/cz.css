@@ -827,6 +827,13 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .hero .fan {
   --cover-w: clamp(196px, 22.5vw, 292px);   /* bìa TO thêm ~15% nữa */
   --fan-unit: calc(var(--cover-w) * .42);   /* khoảng xoè suy ra từ bề rộng bìa */
+  /* Tâm dọc của quạt, tính theo chiều cao khung quạt. Trước đây là 52%: đo ở
+     1440px thì đáy bìa chỉ cách đáy banner 40px trong khi đỉnh bìa cách đỉnh
+     67px, nên cả "sạp bìa" trông dồn xuống dưới. 49,5% nhấc quạt lên ~13px và
+     hai khoảng thở gần bằng nhau (≈53px cả trên lẫn dưới). Đây là biến DUY NHẤT
+     dùng cho cả bìa lẫn bóng đổ, nên quạt và "nền đất" không bao giờ lệch nhau;
+     muốn nhấc cao/thấp thêm chỉ cần đổi đúng tỉ lệ này. */
+  --fan-cy: 49.5%;
   position: relative;
   justify-self: stretch;
   /* bìa cao đúng 1.5× bề rộng (tỉ lệ 2:3); +50px đệm dưới cho bìa hai bên
@@ -837,14 +844,14 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 }
 .hero .fan::after {            /* bóng đổ mềm dưới chân quạt — “kệ” có nền đất */
   content: ""; position: absolute; left: 50%; z-index: 0; pointer-events: none;
-  top: calc(52% + var(--cover-w) * .75 - 8px);
+  top: calc(var(--fan-cy) + var(--cover-w) * .75 - 8px);
   width: calc(var(--cover-w) * 1.95); height: 24px;
   transform: translateX(-50%); border-radius: 50%;
   background: radial-gradient(50% 50% at 50% 50%, rgba(var(--hb-shade), .62), transparent 72%);
   filter: blur(10px); opacity: .8;
 }
 .hero .coverbtn {
-  position: absolute; left: 50%; top: 52%;
+  position: absolute; left: 50%; top: var(--fan-cy);
   width: var(--cover-w); aspect-ratio: 2 / 3;
   border-radius: 4px 8px 8px 4px; overflow: hidden;
   background: var(--hb-card);

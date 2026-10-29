@@ -973,3 +973,34 @@ không còn nút đổi nền) · `t_flows` · `t_home` · `t_hero` · `t_lock_u
 · `audit:a11y` 25 màn 0 lỗi axe · `check_src` khớp · `check:version` 1.20.0.
 
 `sw.js` + 76 HTML: `?v=20261029hero16`.
+
+## 26. Nhấc "sạp bìa" lên cho cân (29/10/2026)
+
+Yêu cầu: *"sạp bìa đang bị sát xuống dưới quá, lên 1 chút"*.
+
+**Nguyên nhân.** Khung quạt `.hero .fan` cao `calc(var(--cover-w) * 1.64 + 50px)`
+và bìa đặt ở `top: 52%`. Đo ở khổ 1440px (bìa 292px): đáy bìa chỉ cách đáy
+banner **40px**, trong khi đỉnh bìa cách đỉnh banner **67px** — quạt dồn xuống
+thấp hơn tâm thị giác của banner, đúng cảm giác "sát xuống dưới".
+
+**Cách sửa.** Tách tâm quạt thành biến `--fan-cy` trong `.hero .fan` và cho nó
+ăn cả hai chỗ: `top` của `.coverbtn` **và** `top` của `.fan::after` (bóng đổ
+"nền đất"). Nhờ vậy đổi một số là cả bìa lẫn bóng đi cùng nhau, không bao giờ
+lệch. Giá trị: `52% → 49.5%`.
+
+| Khổ | Nhấc lên | Cách đỉnh / cách đáy banner (trước → sau) |
+| --- | --- | --- |
+| 1440px | 13px | 67 / 40 → **54 / 53** |
+| 1024px | 11px | 63 / 40 → 52 / 51 |
+| 820px (tablet) | 8px | 64 / 50 → 57 / 58 |
+| 390px (điện thoại) | 6px | 54 / 44 → 48 / 50 |
+
+Tỉ lệ phần trăm (không phải px) nên mọi khổ tự cân theo cùng một luật; không
+đổi chiều cao banner, không đổi vị trí cụm điều khiển `01 / 05 ⏸` (vẫn neo
+`top: 0` góc phải), không có CLS.
+
+**Nếu cần nhấc thêm** chỉ sửa đúng `--fan-cy` trong `src/cz.css` (ví dụ `48%`),
+rồi `npm run build` + bump `?v=`.
+
+`sw.js` + 76 HTML: `?v=20261029hero18`. Kiểm: `t_hero` "Hero banner đạt hết",
+`check_src` khớp.
