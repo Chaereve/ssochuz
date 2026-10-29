@@ -257,3 +257,32 @@ mono cho nhãn) và ba mốc nhịp dọc 24 / 38 / 44 px.
 
 Trạng thái: **chờ chọn P1 / P2 / P3** rồi mới sửa `src/cz.css` (§5 và §6 `.facts`) và
 `src/cz-home.js` (`renderFacts`) theo phương án đó.
+
+## 13. Cột chữ kế bên quạt bìa — 4 cách làm gọn (2026-10-29)
+
+Người dùng chỉ đúng phạm vi: **cột chữ nằm cạnh quạt bìa**, không phải phần dưới banner
+(§12 để riêng, chưa chọn phương án). Đo trên trang thật:
+
+| # | Vấn đề | Số đo |
+| --- | --- | --- |
+| 1 | Nhịp dọc phẳng | `.hero .info{gap:15px}` cho cả 5 tầng ⇒ 15/15/15/15 |
+| 2 | Meta là “câu văn” 5–7 mục | PLS LOVE có 7 mục, tự xuống 2 dòng ở 1280–1440px, dấu chấm rơi đầu dòng |
+| 3 | Nút chính cao hơn nút lưu | `13+13+14.5×1.62+2 ≈ 51,5px` vs vòng tròn `44px` ⇒ lệch tâm ~3,7px |
+| 4 | Ngày cập nhật ở cuối câu 7 mục | thông tin phụ nhất lại xa nhất; hàng điều khiển không có ngày |
+| 5 | Không có đường phân tầng | content ↔ controls cách nhau 22px, không kẻ |
+| 6 | Cột chữ 520px trong cột lưới ~533px | mép phải chữ so le mép trái bìa |
+
+Mockup (chỉ đổi cột chữ, giữ nguyên quạt/nền/cỡ bìa): `docs/mockups/hero/col-options.html`
+
+| | Cách làm | Đổi gì |
+| --- | --- | --- |
+| **C0** | hiện tại | mốc so sánh |
+| **C1** ⭐ | **“Một cột, hai tầng”** — tầng 1 = trạng thái · 18+ · số chương; tầng 2 = tác giả · couple (nhạt hơn); “Có mật mã” chuyển vào nhãn nút; ngày về hàng điều khiển; nút cùng `height:44px`; kẻ tóc trước hàng điều khiển; nhịp 12/16/7/15/22/24 | ~28 dòng CSS + sửa dựng meta/foot trong `cz-hero.js` |
+| **C2** | “Kệ nhãn” — trạng thái lên cùng hàng eyebrow; thông tin thành lưới 4 ô có nhãn mono (CHƯƠNG/TÁC GIẢ/COUPLE/CẬP NHẬT) | +1 khối lưới, cao hơn C1 ~26px |
+| **C3** | “Gộp một hàng” — CTA + lưu + │ + ticks + `01 / 05` + ‹ › ⏸ trên một trục, bỏ hàng điều khiển thứ hai | thấp hơn ~54px, nhưng ở 390px phải xuống 2 dòng |
+
+Đã kiểm bằng jsdom: 87/87 (4 khung mount, 5 truyện × mỗi khung, `data-pos` xoay đúng,
+`aria-current` chỉ ở mục đang chọn, `01 / 05` + `.fancap` + `Cập nhật <ngày>` đổi theo,
+nút lưu `aria-pressed`, live region, 5 bìa thật trong `assets/covers`).
+
+Trạng thái: **chờ chọn C1/C2/C3** rồi mới sửa `src/cz-hero.js` + `src/cz.css` §5.

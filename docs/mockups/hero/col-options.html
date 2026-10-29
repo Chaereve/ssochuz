@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ssochuz · cột chữ bên quạt bìa — 4 cách làm gọn</title>
+<!--
+  MOCKUP — không phải trang thật, không nạp cz-*.js.
+  Mở: python3 -m http.server 8090 -d <repo>  →  /docs/mockups/hero/col-options.html
+  Phạm vi: CHỈ cột chữ nằm kế bên quạt bìa trong banner “bộ bài”. Quạt bìa,
+  màu nền, cỡ bìa giữ nguyên như src/cz.css §5 để so sánh là công bằng.
+  Dữ liệu: đúng 5 truyện đang lên hero thật (đọc từ trang chủ qua jsdom).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,900&family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+/* ============================== 0. TOKEN ================================== */
+:root{
+  --bg:#faf8f4; --bg2:#f3efe8; --surf:#fffefb; --surf2:#f2ede5;
+  --txt:#191410; --mut:#6c6357; --dim:#756b61;
+  --acc:#a63a52; --ok:#2f6b4f; --warn:#8a5f18; --bad:#a83232;
+  --bd:rgba(46,34,22,.14); --bd2:rgba(46,34,22,.3);
+  --r:6px; --r-xl:14px;
+  --font:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --font-head:"Fraunces","Iowan Old Style",Palatino,Georgia,serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --ease:cubic-bezier(.22,1,.36,1); --ease-soft:cubic-bezier(.4,0,.2,1);
+  --t-fast:.15s; --t:.25s; --t-mid:.34s;
+  /* bảng màu trên nền tối của banner — khớp src/cz.css §5 */
+  --hv-void:#0a090b; --hv-fg:#fff;
+  --hv-mut:rgba(255,255,255,.72); --hv-dim:rgba(255,255,255,.55);
+  --hv-line:rgba(255,255,255,.16); --hv-line2:rgba(255,255,255,.26);
+  --hv-acc:#d98ea0; --hv-ok:#7fd6a6; --hv-warn:#ffc46b; --hv-gold:#e8c07a;
+}
+[data-theme="dark"]{
+  --bg:#14110e; --bg2:#1a1613; --surf:#1e1915; --surf2:#262019;
+  --txt:#f2ebe0; --mut:#a89d8d; --dim:#8a8174;
+  --acc:#e0859b; --ok:#74c69b; --warn:#dcae6a; --bad:#e58b8b;
+  --bd:rgba(255,240,220,.13); --bd2:rgba(255,240,220,.3);
+  --hv-acc:#f0a7b8;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg2);color:var(--txt);font:400 15px/1.6 var(--font);-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;font-family:var(--font-head);line-height:1.14;letter-spacing:-.012em}
+p{margin:0}a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+img{display:block;max-width:100%}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.sr{position:absolute!important;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.wrap{max-width:1560px;margin:0 auto;padding:0 20px 100px}
+
+/* ====================== 1. KHUNG TRANG MOCKUP ============================= */
+.intro{padding:34px 0 8px;border-bottom:1px solid var(--bd);margin-bottom:16px}
+.intro .kick{font:800 10.5px/1 var(--font-mono);letter-spacing:.16em;text-transform:uppercase;color:var(--acc)}
+.intro h1{font-size:clamp(26px,3.2vw,40px);margin:12px 0 10px;font-weight:900}
+.intro p{max-width:86ch;color:var(--mut);font-size:15px}
+.meas{display:grid;gap:0;margin:20px 0 8px;border:1px solid var(--bd);border-radius:var(--r);overflow:hidden;background:var(--surf)}
+.meas div{display:grid;grid-template-columns:24px 1fr;gap:12px;padding:10px 14px;font-size:13.5px;color:var(--mut);border-bottom:1px solid var(--bd)}
+.meas div:last-child{border-bottom:0}
+.meas div b{grid-column:2;color:var(--txt);font-weight:650;display:block;margin-bottom:1px;font-size:13.5px}
+.meas .n{font:800 11px/1.5 var(--font-mono);color:var(--acc);letter-spacing:.06em;grid-row:1/span 2}
+.meas code{font-family:var(--font-mono);font-size:12px;background:var(--surf2);padding:1px 5px;border-radius:3px;color:var(--txt)}
+
+.toolbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 0;margin-bottom:18px;
+  background:color-mix(in srgb,var(--bg2) 92%,transparent);border-bottom:1px solid var(--bd);backdrop-filter:blur(6px)}
+.toolbar .lbl{font:700 10.5px/1 var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button{border:1px solid var(--bd);border-radius:99px;background:var(--surf);padding:6px 13px;font-size:12.5px;font-weight:650;color:var(--mut);transition:all var(--t-fast) var(--ease)}
+.chips button:hover{border-color:var(--bd2);color:var(--txt)}
+.chips button.on{background:var(--txt);border-color:var(--txt);color:var(--bg)}
+.toolbar .jump{margin-left:auto;display:flex;gap:4px;flex-wrap:wrap}
+.toolbar .jump a{font-size:12.5px;font-weight:650;color:var(--mut);padding:6px 10px;border-radius:99px;border:1px solid transparent}
+.toolbar .jump a:hover{color:var(--txt);border-color:var(--bd)}
+
+article.demo{margin:0 0 34px;border:1px solid var(--bd);border-radius:var(--r-xl);background:var(--bg);overflow:hidden;
+  box-shadow:0 24px 50px -40px rgba(30,20,10,.55)}
+.dhead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid var(--bd);background:var(--surf)}
+.dhead .v{font:800 10.5px/1 var(--font-mono);letter-spacing:.14em;color:var(--acc)}
+.dhead h2{font-size:19px}
+.dhead em{font-style:normal;color:var(--mut);font-size:13px}
+.dhead .tag{margin-left:auto;font:700 10.5px/1 var(--font-mono);letter-spacing:.1em;text-transform:uppercase;padding:5px 9px;border-radius:99px;border:1px solid}
+.tag.best{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,transparent);background:color-mix(in srgb,var(--ok) 9%,transparent)}
+.tag.mid{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 40%,transparent);background:color-mix(in srgb,var(--warn) 8%,transparent)}
+.tag.base{color:var(--dim);border-color:var(--bd2);background:var(--surf2)}
+
+.frame{overflow-x:auto;overflow-y:hidden;background:var(--bg2)}
+body[data-vp="desktop"] .vpage{width:1440px}
+body[data-vp="tablet"] .vpage{width:820px}
+body[data-vp="mobile"] .vpage{width:390px}
+.vpage{background:var(--bg);color:var(--txt);font-size:15px;margin:0 auto}
+body.zoomfit .frame{zoom:.68}
+body.zoomfit[data-vp="mobile"] .frame{zoom:1}
+
+/* header giả — chỉ để thấy nhịp, không phải phần cần duyệt */
+.mhdr{display:flex;align-items:center;gap:18px;padding:0 28px;height:58px;border-bottom:1px solid var(--bd);background:var(--bg);font-size:13px;color:var(--mut)}
+.mhdr .logo{font-family:var(--font-head);font-size:21px;color:var(--txt);letter-spacing:-.02em}
+.mhdr nav{display:flex;gap:2px}
+.mhdr nav a{padding:0 9px;height:58px;display:inline-flex;align-items:center;border-bottom:2px solid transparent;font-weight:600}
+.mhdr nav a.on{color:var(--txt);border-bottom-color:var(--acc)}
+.mhdr .acts{margin-left:auto;display:flex;gap:8px}
+.mhdr .acts span{border:1px solid var(--bd);border-radius:var(--r);padding:6px 10px;font-size:12.5px;white-space:nowrap}
+body[data-vp="tablet"] .mhdr nav a:nth-child(n+4){display:none}
+body[data-vp="mobile"] .mhdr{padding:0 16px}
+body[data-vp="mobile"] .mhdr nav,body[data-vp="mobile"] .mhdr .acts span:nth-child(-n+2){display:none}
+
+/* ====================== 2. BANNER (khung dùng chung) ====================== */
+.hero{position:relative;isolation:isolate;overflow:hidden;background:var(--hv-void);color:var(--hv-fg);
+  --cover-w:208px; --fan-unit:116px; --title:50px; --colR:520px}
+body[data-vp="tablet"] .hero{--cover-w:138px;--fan-unit:78px;--title:34px;--colR:340px}
+body[data-vp="mobile"] .hero{--cover-w:100px;--fan-unit:62px;--title:28px;--colR:none}
+.hero::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background:
+  radial-gradient(70% 86% at 76% 46%,rgba(166,58,82,.34),transparent 64%),
+  radial-gradient(52% 60% at 10% 6%,rgba(255,196,107,.07),transparent 62%)}
+.hero .hb-grid{position:relative;z-index:2;max-width:1220px;margin:0 auto;padding:52px 24px 44px;
+  display:grid;grid-template-columns:.94fr 1.06fr;gap:44px;align-items:center}
+body[data-vp="tablet"] .hero .hb-grid{padding:36px 24px 32px;gap:26px}
+body[data-vp="mobile"] .hero .hb-grid{grid-template-columns:1fr;padding:28px 18px 30px;gap:20px}
+.hero .hb-col{display:flex;flex-direction:column;gap:22px;min-width:0}
+.hero .stage{display:grid;min-width:0}
+.hero .slide{grid-area:1/1;min-width:0;visibility:hidden;opacity:0;
+  transition:opacity .3s var(--ease-soft),visibility 0s linear .3s}
+.hero .slide.on{visibility:visible;opacity:1;transition:opacity .3s var(--ease-soft)}
+.hero .info{display:flex;flex-direction:column;align-items:flex-start;min-width:0;max-width:var(--colR)}
+
+/* --- mảnh dùng chung --- */
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:800;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--hv-acc);white-space:nowrap}
+.eyebrow::before{content:"";width:22px;height:1px;background:currentColor;flex:none}
+.hero h1{font-size:var(--title);line-height:1.04;letter-spacing:-.028em;font-weight:800;color:var(--hv-fg);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hero h1 a{color:inherit}
+.hero h1 a:hover{color:var(--hv-acc)}
+.st{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:650;color:var(--hv-mut);white-space:nowrap}
+.st .d{width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+.st.done{color:var(--hv-ok)} .st.run{color:var(--hv-warn)} .st.soon{color:var(--hv-dim)}
+.st.done .d{animation:none}
+.b18{font:800 9.5px/1 var(--font);letter-spacing:.06em;padding:3px 5px;border-radius:3px;background:var(--bad);color:#fff}
+.ch b{color:var(--hv-fg);font-weight:700;font-variant-numeric:tabular-nums}
+.syn{font-size:15px;line-height:1.62;color:var(--hv-mut);max-width:52ch;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+body[data-vp="mobile"] .syn{display:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:99px;height:44px;padding:0 20px;
+  font-size:13.5px;font-weight:700;line-height:1;white-space:nowrap;border:1px solid var(--hv-line2);
+  background:rgba(255,255,255,.07);color:#fff;
+  transition:background var(--t-fast) var(--ease),border-color var(--t-fast) var(--ease),transform var(--t-fast) var(--ease)}
+.btn:hover{background:rgba(255,255,255,.14);border-color:#fff;transform:translateY(-1px)}
+.btn .i{width:15px;height:15px;flex:none;stroke:currentColor;stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.btn.solid{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn.solid:hover{background:var(--acc);filter:brightness(1.07)}
+.btn.icon{width:44px;padding:0;border-radius:50%;background:transparent}
+.btn-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.ticks{display:flex;align-items:center;gap:7px}
+.ticks button{position:relative;width:26px;height:3px;border-radius:2px;background:#fff;opacity:.26;
+  transition:width var(--t) var(--ease),opacity var(--t) var(--ease),background var(--t) var(--ease)}
+.ticks button::after{content:"";position:absolute;inset:-12px -4px}
+.ticks button:hover{opacity:.5}
+.ticks button.on{width:38px;opacity:1;background:var(--hv-acc)}
+.ticks button:focus-visible{outline:2px solid var(--hv-acc);outline-offset:5px}
+.count{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;color:var(--hv-dim);font-variant-numeric:tabular-nums}
+.nav{display:flex;gap:6px}
+.arrow{width:34px;height:34px;flex:none;border-radius:50%;border:1px solid var(--hv-line2);background:rgba(255,255,255,.07);
+  display:grid;place-items:center;color:#fff;transition:all var(--t-fast) var(--ease)}
+.arrow:hover{background:rgba(255,255,255,.16);border-color:#fff}
+.arrow .i{width:15px;height:15px;stroke:currentColor;stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.foot{display:flex;align-items:center;gap:16px;flex-wrap:wrap;max-width:var(--colR)}
+
+/* --- quạt bìa (không đổi giữa các phương án) --- */
+.fan{position:relative;justify-self:stretch;height:calc(var(--cover-w) * 1.59 + 118px)}
+body[data-vp="mobile"] .fan{height:calc(var(--cover-w) * 1.59 + 96px)}
+.coverbtn{position:absolute;left:50%;top:48%;width:var(--cover-w);aspect-ratio:2/3;border-radius:8px;overflow:hidden;
+  background:#1a1416;border:1px solid var(--hv-line);box-shadow:0 26px 44px -26px rgba(0,0,0,.95);
+  --x:0px;--y:0px;--r:0deg;--s:1;
+  transform:translate(-50%,-50%) translate3d(var(--x),var(--y),0) rotate(var(--r)) scale(var(--s));
+  filter:brightness(.5) saturate(.92);
+  transition:transform var(--t-mid) var(--ease),filter var(--t-mid) var(--ease),box-shadow var(--t-mid) var(--ease)}
+.coverbtn img{width:100%;height:100%;object-fit:cover}
+.coverbtn:hover{filter:brightness(.78) saturate(1)}
+.coverbtn.on{filter:none;border-color:rgba(255,255,255,.5);z-index:6;
+  box-shadow:0 34px 60px -26px rgba(0,0,0,.98),0 0 0 2px var(--hv-acc),0 0 40px -8px rgba(217,142,160,.45)}
+.fan [data-pos="0"]{--x:0px;--y:-10px;--r:0deg;--s:1.06;z-index:5}
+.fan [data-pos="1"]{--x:var(--fan-unit);--y:12px;--r:6deg;--s:.9;z-index:2}
+.fan [data-pos="2"]{--x:calc(var(--fan-unit) * 1.835);--y:30px;--r:11deg;--s:.76;z-index:1}
+.fan [data-pos="3"]{--x:calc(var(--fan-unit) * -1.835);--y:30px;--r:-11deg;--s:.76;z-index:1}
+.fan [data-pos="4"]{--x:calc(var(--fan-unit) * -1);--y:12px;--r:-6deg;--s:.9;z-index:2}
+.fancap{position:absolute;left:50%;transform:translateX(-50%);top:calc(48% + var(--cover-w) * .795 + 12px);z-index:7;
+  display:flex;align-items:center;gap:8px;white-space:nowrap;font-family:var(--font-mono);font-size:10.5px;line-height:1;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--hv-mut)}
+.fancap b{color:var(--hv-acc);font-weight:600}
+.fancap .dot{width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.5}
+
+/* ====================== 3. C0 — HIỆN TẠI ================================= */
+.c0 .info{gap:15px}
+.c0 .meta{display:flex;align-items:center;gap:6px 14px;flex-wrap:wrap;font-size:13px;line-height:1.5;color:var(--hv-mut)}
+.c0 .meta > span{display:inline-flex;align-items:center;gap:6px;min-width:0}
+.c0 .meta > span + span::before{content:"";width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.4;margin-right:2px;flex:none}
+.c0 .meta b{color:var(--hv-fg);font-weight:700}
+.c0 .lk{display:inline-flex;align-items:center;gap:5px;color:var(--hv-gold);font-size:12.5px}
+.c0 .lk .i{width:13px;height:13px;stroke:currentColor;stroke-width:1.8;fill:none}
+.c0 .btn-row{margin-top:2px}
+.c0 .btn{padding:13px 22px;height:auto}     /* đúng như cz.css: cao ~51px */
+.c0 h1{max-width:15ch}
+
+/* ====================== 4. C1 — MỘT CỘT, HAI TẦNG ======================== */
+.c1 h1{max-width:12ch;margin-top:12px}
+.c1 .m1{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px;font-size:13px;color:var(--hv-mut)}
+.c1 .m1 > * + *{position:relative;padding-left:13px}
+.c1 .m1 > * + *::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.4}
+.c1 .m1 .ch{font-size:13px;color:var(--hv-mut)}
+.c1 .m1b{margin-top:7px;font-size:12.5px;line-height:1.5;color:var(--hv-dim);
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.c1 .m1b .dot{width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.45;flex:none}
+.c1 .syn{margin-top:15px;font-size:14.5px;max-width:46ch;color:var(--hv-dim)}
+.c1 .btn-row{margin-top:22px}
+.c1 .foot{margin-top:24px;padding-top:15px;border-top:1px solid var(--hv-line);gap:14px}
+.c1 .foot .upd{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--hv-dim);margin-left:auto}
+.c1 .foot .nav{margin-left:0}
+
+/* ====================== 5. C2 — KỆ NHÃN ================================== */
+.c2 .head{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.c2 h1{max-width:12ch;margin-top:14px}
+.c2 .spec{display:grid;grid-template-columns:repeat(4,auto);gap:0 30px;margin-top:18px;padding-top:14px;
+  border-top:1px solid var(--hv-line);width:100%}
+.c2 .spec dt{font:600 9.5px/1 var(--font-mono);letter-spacing:.15em;text-transform:uppercase;color:var(--hv-dim)}
+.c2 .spec dd{margin:6px 0 0;font-size:13.5px;font-weight:650;color:var(--hv-fg);line-height:1.35;
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.c2 .spec dd.soft{font-weight:500;color:var(--hv-mut)}
+.c2 .syn{margin-top:16px;font-size:14.5px;max-width:48ch;color:var(--hv-dim)}
+.c2 .btn-row{margin-top:20px}
+.c2 .foot{margin-top:24px;padding-top:15px;border-top:1px solid var(--hv-line)}
+
+/* ====================== 6. C3 — GỘP MỘT HÀNG ============================= */
+.c3 .head{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.c3 h1{max-width:14ch;margin-top:12px}
+.c3 .m1b{margin-top:12px;font-size:12.5px;line-height:1.5;color:var(--hv-dim);
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.c3 .m1b .dot{width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.45;flex:none}
+.c3 .syn{margin-top:13px;font-size:14.5px;max-width:48ch;color:var(--hv-dim)}
+.c3 .row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:20px}
+.c3 .row .sep{width:1px;height:22px;background:var(--hv-line2);flex:none}
+.c3 .row .count{margin-right:2px}
+
+/* lưới nhãn ở khổ hẹp: 2 cột, không để tràn cột chữ */
+body[data-vp="tablet"] .c2 .spec{grid-template-columns:repeat(2,auto);gap:10px 28px}
+body[data-vp="mobile"] .c2 .spec{grid-template-columns:repeat(2,auto);gap:10px 22px}
+/* khổ hẹp: nhãn “Cập nhật” xuống cùng hàng điều khiển thay vì đẩy sang phải */
+body[data-vp="mobile"] .c1 .foot{gap:12px}
+body[data-vp="mobile"] .c1 .foot .upd{margin-left:0;width:100%;order:3}
+body[data-vp="mobile"] .c3 .row .sep{display:none}
+body[data-vp="mobile"] .c3 .row{gap:10px 12px}
+
+/* ====================== 7. THƯỚC ĐO ===================================== */
+body.ruler .info > *,body.ruler .foot{outline:1px dashed rgba(217,142,160,.6);outline-offset:4px}
+body.ruler .stage{outline:1px dashed rgba(255,255,255,.16);outline-offset:10px}
+
+/* ====================== 8. GHI CHÚ DƯỚI MỖI KHUNG ======================== */
+.dnotes{display:grid;gap:0;border-top:1px solid var(--bd);background:var(--surf)}
+.dnotes div{display:grid;grid-template-columns:150px 1fr;gap:14px;padding:10px 18px;border-bottom:1px solid var(--bd);font-size:13.5px;color:var(--mut)}
+.dnotes div:last-child{border-bottom:0}
+.dnotes b{color:var(--txt);font-weight:650;grid-column:1}
+.dnotes .k{font:700 10px/1.6 var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--acc);display:block}
+.dnotes code{font-family:var(--font-mono);font-size:12px;background:var(--surf2);padding:1px 5px;border-radius:3px;color:var(--txt)}
+
+/* ====================== 9. KẾT LUẬN ====================================== */
+.verdict{margin:10px 0 0;padding:20px 22px;border:1px solid var(--bd);border-left:3px solid var(--acc);
+  border-radius:0 var(--r) var(--r) 0;background:var(--surf)}
+.verdict h2{font-size:22px;margin-bottom:8px}
+.verdict p{color:var(--mut);font-size:14.5px;max-width:82ch}
+.verdict b{color:var(--txt)}
+table.cmp{width:100%;border-collapse:collapse;margin:18px 0 6px;font-size:13.5px;background:var(--surf)}
+table.cmp th,table.cmp td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--bd);vertical-align:top}
+table.cmp th{font:700 10.5px/1.3 var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+table.cmp td b{font-weight:700}
+</style>
+</head>
+<body class="hpage zoomfit" data-vp="desktop">
+<header class="mhdr"><span class="logo">ssochuz</span><nav><a class="on" href="#">Trang chủ</a><a href="#">Thư viện</a><a href="#">Ranking</a><a href="#">My Space</a></nav><span class="acts"><span>Tìm truyện</span><span>Đăng nhập</span></span></header>
+<div class="wrap">
+
+  <section class="intro">
+    <div class="kick">Mockup · 2026-10-29 · cột chữ trong banner</div>
+    <h1>Cột chữ kế bên quạt bìa — 4 cách làm gọn</h1>
+    <p>Quạt bìa, nền tối, cỡ bìa, khoảng cách hai cột đều <b>giữ nguyên</b> như đang chạy
+      (<code>src/cz.css</code> §5). Chỉ đổi phần chữ: nhãn trên, tiêu đề, hàng thông tin, mô tả, nút và hàng điều khiển.
+      Bấm 5 vạch để đổi truyện — mỗi truyện có lượng thông tin khác nhau, đó mới là lúc cột chữ lộ chỗ lệch.</p>
+
+    <div class="meas">
+      <div><span class="n">01</span><b>Nhịp dọc phẳng: mọi tầng cách nhau đúng <code>15px</code></b>
+        Nhãn–tiêu đề, tiêu đề–thông tin, thông tin–mô tả, mô tả–nút đều 15px ⇒ mắt không biết chỗ nào là một khối, chỗ nào là khối mới.</div>
+      <div><span class="n">02</span><b>Hàng thông tin là một câu văn dài 5–7 mục</b>
+        PLS LOVE có 7 mục (<code>● Hoàn thành · 🔒 Có mật mã · 18+ · 71 chương · REVERSE · Lena x Miu · 27-09</code>) ⇒ ở 1280–1440px tự xuống 2 dòng, dấu chấm phân cách rơi vào <i>đầu</i> dòng thứ hai. Độ đậm cũng lệch: “71 chương” in đậm, tác giả/couple/ngày thì không.</div>
+      <div><span class="n">03</span><b>Nút chính cao ~<code>51px</code>, nút lưu là hình tròn <code>44px</code></b>
+        <code>.hero .btn.hb-cta{padding:13px 22px}</code> + <code>line-height:1.62</code> ⇒ 51,5px, đứng cạnh vòng tròn 44px nên hai tâm lệch nhau ~3,7px: hàng nút trông “trục trặc”.</div>
+      <div><span class="n">04</span><b>Ngày cập nhật nằm cuối câu 7 mục</b>
+        Thông tin ít quan trọng nhất lại ở vị trí xa nhất; trong khi hàng điều khiển (<code>01 / 05</code>, ‹ ›) không có gì nói “bản tin này cập nhật khi nào”.</div>
+      <div><span class="n">05</span><b>Không có đường phân cách giữa nội dung và điều khiển</b>
+        Ticks/‹ › ⏸ trôi lơ lửng dưới hàng nút, cách 22px — ngang với mô tả chứ không ngang với “điều khiển”.</div>
+      <div><span class="n">06</span><b>Cột chữ rộng <code>520px</code> trong cột lưới ~533px</b>
+        Mép phải của chữ so le với mép trái bìa ở mọi khổ màn hình, không có trục canh chung.</div>
+    </div>
+  </section>
+
+  <div class="toolbar">
+    <span class="lbl">Khổ</span>
+    <div class="chips" id="vpChips">
+      <button data-vp="desktop" class="on" aria-pressed="true">1440</button>
+      <button data-vp="tablet" aria-pressed="false">820</button>
+      <button data-vp="mobile" aria-pressed="false">390</button>
+    </div>
+    <span class="lbl" style="margin-left:8px">Nền</span>
+    <div class="chips" id="themeChips">
+      <button data-theme="light" class="on" aria-pressed="true">Sáng</button>
+      <button data-theme="dark" aria-pressed="false">Tối</button>
+    </div>
+    <span class="lbl" style="margin-left:8px">Phụ</span>
+    <div class="chips">
+      <button id="rulerBtn" aria-pressed="false">Thước đo</button>
+      <button id="zoomBtn" aria-pressed="true">Vừa khung</button>
+    </div>
+    <div class="jump"><a href="#c0">C0</a><a href="#c1">C1</a><a href="#c2">C2</a><a href="#c3">C3</a><a href="#ket">Kết luận</a></div>
+  </div>
+
+  <article class="demo c0" id="c0">
+    <div class="dhead"><span class="v">C0</span><h2>Cột chữ hiện tại</h2><em>mốc so sánh</em><span class="tag base">đang chạy</span></div>
+    <div class="frame"><div class="vpage"><section class="hero" data-hero="c0" aria-label="Truyện nổi bật"></section></div></div>
+    <div class="dnotes">
+      <div><span class="k">giữ</span><b>Nhãn + tiêu đề</b>Đúng như đang chạy: <code>gap:15px</code> đều, meta một hàng 5–7 mục, nút 51px cạnh vòng tròn 44px, ticks cách 22px.</div>
+      <div><span class="k">xem</span><b>Thử 5 truyện</b>Chuyển sang PLS LOVE (mục 2) rồi về Third Person (mục 1) — hàng meta đổi từ 5 mục sang 7 mục, cột chữ cao thấp khác nhau.</div>
+    </div>
+  </article>
+
+  <article class="demo c1" id="c1">
+    <div class="dhead"><span class="v">C1</span><h2>“Một cột, hai tầng”</h2><em>tách thông tin chính / phụ, dời ngày xuống hàng điều khiển</em><span class="tag best">đề xuất</span></div>
+    <div class="frame"><div class="vpage"><section class="hero" data-hero="c1" aria-label="Truyện nổi bật"></section></div></div>
+    <div class="dnotes">
+      <div><span class="k">tầng 1</span><b>Trạng thái · 18+ · số chương</b>Ba thứ quyết định “có đọc hay không”. “Có mật mã” không còn là chip thứ ba — nó nằm trong nhãn nút: <i>“Nhập mật mã để đọc”</i>.</div>
+      <div><span class="k">tầng 2</span><b>Tác giả · couple</b>Nhỏ hơn, nhạt hơn, cùng một dòng — đọc khi đã quan tâm.</div>
+      <div><span class="k">nhịp</span><b>12 / 16 / 7 / 15 / 22 / 24</b>Nhãn–tiêu đề 12 · tiêu đề–tầng 1 16 · tầng 1–tầng 2 7 · –mô tả 15 · –nút 22 · –hàng điều khiển 24 (kèm đường kẻ tóc).</div>
+      <div><span class="k">nút</span><b>Cùng cao 44px</b>Nút chính bỏ <code>line-height</code> thừa, đặt <code>height:44px</code> ⇒ tâm nút và tâm vòng tròn lưu trùng nhau.</div>
+      <div><span class="k">ngày</span><b>“Cập nhật 29-09” ở hàng điều khiển</b>Dạt phải, cùng cỡ mono với <code>01 / 05</code> — đúng chỗ của một dòng tin.</div>
+    </div>
+  </article>
+
+  <article class="demo c2" id="c2">
+    <div class="dhead"><span class="v">C2</span><h2>“Kệ nhãn”</h2><em>thông tin thành lưới 4 ô có nhãn mono</em><span class="tag mid">gọn nhất về trục</span></div>
+    <div class="frame"><div class="vpage"><section class="hero" data-hero="c2" aria-label="Truyện nổi bật"></section></div></div>
+    <div class="dnotes">
+      <div><span class="k">đầu</span><b>Trạng thái lên cùng hàng nhãn</b><code>Nổi bật hôm nay ─ ● Hoàn thành</code> ⇒ bỏ hẳn hàng meta đầu tiên, tiêu đề to hơn được.</div>
+      <div><span class="k">lưới</span><b>CHƯƠNG · TÁC GIẢ · COUPLE · CẬP NHẬT</b>Bốn cột canh trái, nhãn mono 9,5px, giá trị 13,5px. Cùng ngôn ngữ với dải số liệu bên dưới nếu sau này làm P1.</div>
+      <div><span class="k">lưu ý</span><b>Cao hơn C1 ~26px</b>Có nhãn nên đọc nhanh, nhưng “COUPLE”/“CẬP NHẬT” là thông tin phụ lại chiếm chỗ bằng “CHƯƠNG”.</div>
+    </div>
+  </article>
+
+  <article class="demo c3" id="c3">
+    <div class="dhead"><span class="v">C3</span><h2>“Gộp một hàng”</h2><em>nút + lưu + ticks + số + mũi tên trên một trục</em><span class="tag mid">thấp nhất</span></div>
+    <div class="frame"><div class="vpage"><section class="hero" data-hero="c3" aria-label="Truyện nổi bật"></section></div></div>
+    <div class="dnotes">
+      <div><span class="k">gộp</span><b>Bỏ hàng điều khiển thứ hai</b><code>[Đọc từ đầu] [🔖] │ ─── 01 / 05 ‹ › ⏸</code> — tất cả trên một trục, cao đúng 44px.</div>
+      <div><span class="k">được</span><b>Bớt ~54px chiều cao</b>Cột chữ thấp gần bằng quạt bìa ⇒ hai cột cân hơn ở 1440px.</div>
+      <div><span class="k">mất</span><b>Mỗi bên ít “không gian thở”</b>Ở 390px hàng này phải xuống 2 dòng; và điều khiển nằm lẫn với nút hành động nên dễ bấm nhầm hơn.</div>
+    </div>
+  </article>
+
+  <section class="verdict" id="ket">
+    <h2>Chọn cái nào</h2>
+    <p><b>C1 “Một cột, hai tầng”.</b> Nó sửa đúng 6 chỗ đã đo ở trên mà không đụng vào quạt bìa, không thêm markup mới
+      (vẫn là <code>.eyebrow → h1 → meta → syn → nút → foot</code>), không đổi dữ liệu. Hàng meta không bao giờ quá 3 mục nên
+      không còn cảnh xuống 2 dòng; nút và vòng tròn lưu cùng 44px; ngày về đúng hàng điều khiển; có đường kẻ tóc phân tầng.
+      Giá: ~28 dòng CSS trong §5 + sửa <code>renderFacts</code>… không, chỉ <code>src/cz-hero.js</code> phần dựng meta/foot và CSS.</p>
+    <p style="margin-top:12px"><b>C2</b> nếu bạn thích kiểu “kệ có nhãn” và định làm luôn dải số P1 để cả trang dùng một hệ nhãn.
+      <b>C3</b> nếu ưu tiên chiều cao: banner thấp hơn ~54px, lên nội dung nhanh hơn.</p>
+
+    <table class="cmp">
+      <thead><tr><th>Tiêu chí</th><th>C0</th><th>C1</th><th>C2</th><th>C3</th></tr></thead>
+      <tbody>
+        <tr><td>Hàng thông tin tối đa</td><td>7 mục, 2 dòng</td><td><b>3 mục, 1 dòng</b></td><td>4 ô lưới</td><td>4 mục, 1 dòng</td></tr>
+        <tr><td>Nhịp dọc</td><td>15 đều</td><td><b>12 / 16 / 15 / 22</b></td><td>14 / 18 / 16 / 20</td><td>12 / 13 / 20</td></tr>
+        <tr><td>Cao hàng chữ (1440)</td><td>~318px</td><td>~330px</td><td>~356px</td><td><b>~264px</b></td></tr>
+        <tr><td>Nút cùng trục 44px</td><td>✗</td><td>✓</td><td>✓</td><td>✓</td></tr>
+        <tr><td>Đường phân tầng nội dung / điều khiển</td><td>—</td><td>✓ kẻ tóc</td><td>✓ kẻ tóc</td><td>✓ dấu │</td></tr>
+        <tr><td>Ngày cập nhật</td><td>cuối meta</td><td>hàng điều khiển</td><td>ô lưới</td><td>dòng phụ</td></tr>
+        <tr><td>Đụng markup <code>cz-hero.js</code></td><td>—</td><td>nhẹ</td><td>vừa</td><td>vừa</td></tr>
+      </tbody>
+    </table>
+  </section>
+</div>
+
+<script>
+/* ========================= DỮ LIỆU THẬT (5 truyện đang lên hero) ================= */
+var S = [
+  {eb:'Nổi bật hôm nay', t:'Third Person', href:'/truyen/third-person/', st:'done', ad:false, lock:false,
+   ch:42, au:'SIIX', cp:'Garn x Mimie', d:'29-09', cta:'Đọc từ đầu', ctaIcon:'play',
+   syn:'Khi quá khứ… là một ẩn số Những manh mối… khiến lòng bối rối Tình yêu… đẩy ta vào cạm bẫy Lòng người… dối lừa làm ta lạc bước Chris, một cô gái bị mất trí nhớ, đang tĩnh dưỡng và…',
+   img:'/assets/covers/6a6f3cd4.webp'},
+  {eb:'Đề xuất cho bạn', t:'PLS LOVE', href:'/truyen/pls-love/', st:'done', ad:true, lock:true,
+   ch:71, au:'REVERSE', cp:'Lena x Miu', d:'27-09', cta:'Nhập mật mã để đọc', ctaIcon:'lock',
+   syn:"Khi át chủ bài của quán lounge, cô gái với danh xưng 'Thiên thần', phải làm một công việc quan trọng cho nữ doanh nhân luôn coi thường và căm ghét cô đến tột cùng, thế nhưng lại có cớ sự khiến cả hai kết thúc trên…",
+   img:'/assets/covers/d0d80952.webp'},
+  {eb:'Đề xuất cho bạn', t:'Cô Vợ Hờ Đanh Đá Của Tôi', href:'/truyen/co-vo-ho-danh-da-cua-toi/', st:'run', ad:true, lock:false,
+   ch:25, au:'Takling Kaemjai', cp:'', d:'26-09', cta:'Đọc từ đầu', ctaIcon:'play',
+   syn:'"Dẫu có xinh đẹp nhưng lại tàn nhẫn, dẫu có chết… tôi cũng không thèm mê đắm một kẻ xảo quyệt như cô đâu." Công xinh đẹp nhưng tàn nhẫn (cờ dưa hấu) đối đầu cùng Thụ xinh đẹp bướng bỉnh nhưng lại có tài nấu nướng đỉnh…',
+   img:'/assets/covers/20124c95.webp'},
+  {eb:'Đề xuất cho bạn', t:'Juliet &amp; Juliet', href:'/truyen/juliet-n-juliet/', st:'run', ad:true, lock:false,
+   ch:16, au:'Freaky', cp:'Mingming x Nepjune', d:'26-09', cta:'Đọc từ đầu', ctaIcon:'play',
+   syn:'Blue ước mơ được theo học ngành hội họa tại trường đại học nghệ thuật danh tiếng nhất Thái Lan và trở thành một họa sĩ được cả thế giới biết đến.',
+   img:'/assets/covers/7c33de96.webp'},
+  {eb:'Đề xuất cho bạn', t:'Vượt Khỏi Đường Chân Trời (Special)', href:'/truyen/vuot-khoi-duong-chan-troi/', st:'done', ad:false, lock:false,
+   ch:18, au:'Kratai Duean Kao', cp:'', d:'25-09', cta:'Đọc từ đầu', ctaIcon:'play',
+   syn:'Vào cái ngày mảnh đất quê hương chìm trong biển lửa dưới gót giày của quân xâm lược… Khi những khát khao cá nhân phải nhường bước cho lý tưởng cứu quốc, câu chuyện tình yêu của hai cô gái giữa năm Phật lịch 2485 đã…',
+   img:'/assets/covers/3573b736.webp'}
+];
+var N = S.length;
+var ST = {done:'Hoàn thành', run:'Đang cập nhật', soon:'Sắp ra mắt'};
+var PLAY = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg>';
+var LOCK = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>';
+var SAVE = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 10v11l-5-3-5 3V10a3 3 0 013-3h4a3 3 0 013 3"/><path d="M11 3h5a3 3 0 013 3v11"/></svg>';
+var L = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>';
+var R = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+var PAUSE = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5v14M15 5v14"/></svg>';
+function pad(n){ return (n < 10 ? '0' : '') + n; }
+function navHTML(){ return '<div class="nav"><button class="arrow" data-prev aria-label="Xem mục trước">' + L +
+  '</button><button class="arrow" data-next aria-label="Xem mục tiếp theo">' + R +
+  '</button><button class="arrow" data-play aria-label="Tạm dừng tự chuyển truyện">' + PAUSE + '</button></div>'; }
+function ticks(i){ var o = ''; for (var k = 0; k < N; k++) o += '<button type="button" data-go="' + k + '"' +
+  (k === i ? ' class="on" aria-current="true"' : '') + ' aria-label="Xem: mục ' + (k + 1) + '"></button>'; return o; }
+function cta(s){ return '<a class="btn solid" href="' + s.href + '">' + (s.ctaIcon === 'lock' ? LOCK : PLAY) +
+  s.cta + '</a><button class="btn icon" type="button" aria-label="Lưu vào tủ" aria-pressed="false">' + SAVE + '</button>'; }
+function stHTML(s){ return '<span class="st ' + s.st + '"><span class="d"></span>' + ST[s.st] + '</span>'; }
+function b18(s){ return s.ad ? '<span class="b18">18+</span>' : ''; }
+function syn(s){ return '<p class="syn">' + s.syn + '</p>'; }
+
+/* ---------------------------- 4 kiểu dựng cột chữ ------------------------- */
+function infoC0(s, i){
+  var m = [stHTML(s)];
+  if (s.lock) m.push('<span class="lk">' + LOCK + 'Có mật mã</span>');
+  if (s.ad) m.push('<span class="b18">18+</span>');
+  m.push('<span title="Số chương"><b>' + s.ch + ' chương</b></span>');
+  m.push('<span>' + s.au + '</span>');
+  if (s.cp) m.push('<span>' + s.cp + '</span>');
+  m.push('<span>' + s.d + '</span>');
+  return '<span class="eyebrow">' + s.eb + '</span>' +
+    '<h1>' + w(s) + '</h1>' +
+    '<div class="meta">' + m.join('') + '</div>' + syn(s) +
+    '<div class="btn-row">' + cta(s) + '</div>';
+}
+function infoC1(s){
+  return '<span class="eyebrow">' + s.eb + '</span>' +
+    '<h1>' + w(s) + '</h1>' +
+    '<div class="m1">' + stHTML(s) + b18(s) + '<span class="ch"><b>' + s.ch + '</b> chương</span></div>' +
+    '<div class="m1b"><span>' + s.au + '</span>' + (s.cp ? '<span class="dot"></span><span>' + s.cp + '</span>' : '') + '</div>' +
+    syn(s) + '<div class="btn-row">' + cta(s) + '</div>';
+}
+function infoC2(s){
+  return '<div class="head"><span class="eyebrow">' + s.eb + '</span>' + stHTML(s) + b18(s) + '</div>' +
+    '<h1>' + w(s) + '</h1>' +
+    '<dl class="spec">' +
+      '<div><dt>Chương</dt><dd>' + s.ch + '</dd></div>' +
+      '<div><dt>Tác giả</dt><dd class="soft">' + s.au + '</dd></div>' +
+      '<div><dt>Couple</dt><dd class="soft">' + (s.cp || '—') + '</dd></div>' +
+      '<div><dt>Cập nhật</dt><dd>' + s.d + '</dd></div>' +
+    '</dl>' + syn(s) + '<div class="btn-row">' + cta(s) + '</div>';
+}
+function infoC3(s){
+  return '<div class="head"><span class="eyebrow">' + s.eb + '</span>' + stHTML(s) + b18(s) + '</div>' +
+    '<h1>' + w(s) + '</h1>' +
+    '<div class="m1b"><span>' + s.au + '</span><span class="dot"></span><span class="ch"><b>' + s.ch + '</b> chương</span>' +
+      '<span class="dot"></span><span>' + s.d + '</span></div>' +
+    syn(s) +
+    '<div class="row">' + cta(s) + '<span class="sep"></span>' +
+      '<div class="ticks">' + ticks(0) + '</div><span class="count"></span>' + navHTML().replace('<div class="nav">','<div class="nav">') + '</div>';
+}
+function w(s){ return '<a href="' + s.href + '">' + s.t + '</a>'; }
+
+/* foot riêng cho C0 / C1 / C2 */
+function footC0(i){ return '<div class="foot"><div class="ticks">' + ticks(i) + '</div><span class="count"></span>' + navHTML() + '</div>'; }
+function footC1(i){ return '<div class="foot"><div class="ticks">' + ticks(i) + '</div><span class="count"></span>' +
+  '<span class="upd"></span>' + navHTML() + '</div>'; }
+function footC2(i){ return '<div class="foot"><div class="ticks">' + ticks(i) + '</div><span class="count"></span>' + navHTML() + '</div>'; }
+
+/* --------------------------- dựng + điều khiển ---------------------------- */
+function mount(hero){
+  var v = hero.getAttribute('data-hero');
+  var foot = v === 'c0' ? footC0 : v === 'c1' ? footC1 : v === 'c2' ? footC2 : null;
+  hero.innerHTML = '<div class="hb-grid"><div class="hb-col"><div class="stage">' +
+    S.map(function (s, i) {
+      var body = v === 'c0' ? infoC0(s, i) : v === 'c1' ? infoC1(s) : v === 'c2' ? infoC2(s) : infoC3(s);
+      return '<div class="slide' + (i === 0 ? ' on' : '') + '" data-i="' + i + '"' + (i ? ' aria-hidden="true"' : '') +
+        ' role="group" aria-label="' + (i + 1) + ' / ' + N + '"><div class="info">' + body + '</div></div>';
+    }).join('') + '</div>' + (foot ? foot(0) : '') + '</div><div class="fan">' +
+    S.map(function (s, k) {
+      return '<button type="button" class="coverbtn' + (k === 0 ? ' on' : '') + '" data-go="' + k + '" data-pos="' + k +
+        '"' + (k === 0 ? ' aria-current="true"' : '') + ' aria-label="Xem: ' + s.t + '" title="' + s.t + '">' +
+        '<img src="' + s.img + '" alt="" loading="' + (k ? 'lazy' : 'eager') + '" decoding="async">' +
+        (k === 0 ? '' : '') + '</button>';
+    }).join('') + '<span class="fancap" aria-hidden="true"><b>' + pad(1) + '</b><i class="dot"></i><span class="who">' + S[0].au + '</span></span></div></div>' +
+    '<p class="sr" aria-live="polite"></p>';
+
+  var idx = 0, slides = [].slice.call(hero.querySelectorAll('.slide'));
+  var covers = [].slice.call(hero.querySelectorAll('.coverbtn'));
+  var cap = hero.querySelector('.fancap b'), who = hero.querySelector('.fancap .who');
+  var live = hero.querySelector('[aria-live]');
+
+  function paint(i){
+    idx = (i + N) % N;
+    slides.forEach(function (sl, k) {
+      sl.classList.toggle('on', k === idx);
+      if (k === idx) sl.removeAttribute('aria-hidden'); else sl.setAttribute('aria-hidden', 'true');
+    });
+    covers.forEach(function (c, k) {
+      c.setAttribute('data-pos', String((k - idx + N) % N));
+      c.classList.toggle('on', k === idx);
+      if (k === idx) c.setAttribute('aria-current', 'true'); else c.removeAttribute('aria-current');
+    });
+    hero.querySelectorAll('.foot .ticks button, .row .ticks button').forEach(function (b) {
+      var on = b.getAttribute('data-go') === String(idx);
+      b.classList.toggle('on', on);
+      if (on) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
+    });
+    var cnt = pad(idx + 1) + ' / ' + pad(N);
+    hero.querySelectorAll('.count').forEach(function (c) { c.textContent = cnt; });
+    hero.querySelectorAll('.upd').forEach(function (u) { u.textContent = 'Cập nhật ' + S[idx].d; });
+    cap.textContent = pad(idx + 1); who.textContent = S[idx].au;
+    live.textContent = 'Truyện ' + (idx + 1) + ' / ' + N + ': ' + S[idx].t.replace('&amp;', '&') + ', ' + ST[S[idx].st] + ', ' + S[idx].ch + ' chương';
+  }
+  hero.addEventListener('click', function (e) {
+    var go = e.target.closest('[data-go]');
+    if (go) { paint(parseInt(go.getAttribute('data-go'), 10)); return; }
+    if (e.target.closest('[data-prev]')) { paint(idx - 1); return; }
+    if (e.target.closest('[data-next]')) { paint(idx + 1); return; }
+    var sv = e.target.closest('[aria-label="Lưu vào tủ"]');
+    if (sv) { var on = sv.getAttribute('aria-pressed') !== 'true'; sv.setAttribute('aria-pressed', String(on)); sv.classList.toggle('solid', on); }
+  });
+  hero.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowLeft') { paint(idx - 1); e.preventDefault(); }
+    if (e.key === 'ArrowRight') { paint(idx + 1); e.preventDefault(); }
+  });
+  paint(0);
+}
+
+document.querySelectorAll('[data-hero]').forEach(mount);
+
+/* ------------------------------ toolbar ---------------------------------- */
+function chipGroup(id, fn){
+  var g = document.getElementById(id);
+  g.addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    g.querySelectorAll('button').forEach(function (x) { x.classList.remove('on'); x.setAttribute('aria-pressed', 'false'); });
+    b.classList.add('on'); b.setAttribute('aria-pressed', 'true'); fn(b);
+  });
+}
+chipGroup('vpChips', function (b) { document.body.setAttribute('data-vp', b.getAttribute('data-vp')); });
+chipGroup('themeChips', function (b) { document.documentElement.setAttribute('data-theme', b.getAttribute('data-theme')); });
+
+var rb = document.getElementById('rulerBtn');
+rb.addEventListener('click', function () {
+  var on = rb.getAttribute('aria-pressed') !== 'true';
+  rb.setAttribute('aria-pressed', String(on));
+  rb.classList.toggle('on', on);
+  document.body.classList.toggle('ruler', on);
+});
+var zb = document.getElementById('zoomBtn');
+zb.addEventListener('click', function () {
+  var on = zb.getAttribute('aria-pressed') !== 'true';
+  zb.setAttribute('aria-pressed', String(on));
+  zb.classList.toggle('on', on);
+  zb.textContent = on ? 'Vừa khung' : '100%';
+  document.body.classList.toggle('zoomfit', on);
+});
+</script>
+</body>
+</html>
