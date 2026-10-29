@@ -26,9 +26,17 @@ Lịch ra chương **tạm gác** (theo yêu cầu) — không có trong bản n
   thanh cuộn mảnh, hai nút `‹ ›` tự khoá khi tới đầu/cuối (mỗi lần nhảy 2 bìa).
 - **Hai cột**: đường kẻ dọc 1px giữa hai cột; dòng đầu tiên có số màu son. Ở khung ≤620px
   hai cột xếp dọc và chuyển đường kẻ dọc thành kẻ ngang.
-- **Thư viện**: ô tìm kiếm 40px có trạng thái focus, chip lọc chỉ hiện viền khi đang chọn,
-  đường kẻ mảnh dưới hàng lọc, lưới 3 hàng × 6 bìa mỗi trang, phân trang + “Trang 1 / 4”,
-  và nút **“Đọc ngay ›”** hiện khi rê chuột lên bìa.
+- **Số thứ tự (vị trí)**: huy hiệu tròn 38px, số serif 16px; hạng 1 nền son nhạt + viền son
+  + quầng sáng, hạng 2 màu hồng phấn, hạng 3 sáng hơn phần còn lại; rê chuột vào hàng thì
+  huy hiệu sáng lên.
+- **Số liệu bên phải**: `▲3` màu xanh lá, `▼1` màu đỏ, `★4.8` màu vàng — mỗi loại một viên
+  nền màu nhạt, dấu nhỏ (10px) và số đậm (13px) để đọc được ngay.
+- **Thanh lọc thư viện**: ô tìm 42px bo 12, viền son + quầng sáng khi focus, nút ✕ xoá nhanh
+  (chỉ hiện khi có chữ); hai dropdown cùng chiều cao, nhãn mờ “Năm / Sắp xếp” đứng trước giá
+  trị; chip lọc 32px, chip đang chọn có viền son + quầng.
+- **Rê chuột lên bìa**: ảnh tối đi (`brightness .58`) và phóng nhẹ 3%, nút **“Đọc ngay ›”**
+  nền son nổi lên giữa bìa; tên truyện đổi màu son.
+- **Lưới thư viện**: 3 hàng × 6 bìa mỗi trang (18 bộ), phân trang kèm “Trang 1 / 4”.
 
 ## Dữ liệu
 

@@ -214,27 +214,29 @@ const recentCards = () =>
   ).join('');
 
 /* hai cột: cùng cấu trúc hàng, chỉ khác cột số bên phải */
-function prow(i, b, meta, value, vcls) {
+function prow(i, b, meta, vhtml) {
   return (
     `<li><a class="prow" href="#">` +
       `<span class="n">${i + 1}</span>` +
       `<img src="${esc(b.img)}" alt="" loading="lazy">` +
       `<span class="tt"><b>${esc(b.t)}</b><span class="m">${esc(meta)}</span></span>` +
-      `<span class="v${vcls ? ' ' + vcls : ''}">${esc(value)}</span>` +
+      vhtml +
     `</a></li>`
   );
 }
 
 const rankList = () =>
-  RANK.map((r, i) =>
-    prow(i, r.b, `${vn(r.week)} lượt tuần`,
-      r.tr === 'up' ? `▲${r.d}` : r.tr === 'dn' ? `▼${r.d}` : '—',
-      r.tr === 'up' ? 'up' : r.tr === 'dn' ? 'dn' : '')
-  ).join('');
+  RANK.map((r, i) => {
+    const v = r.tr === 'up' ? `<span class="v up">▲<b>${r.d}</b></span>`
+      : r.tr === 'dn' ? `<span class="v dn">▼<b>${r.d}</b></span>`
+      : '<span class="v eq">—</span>';
+    return prow(i, r.b, `${vn(r.week)} lượt tuần`, v);
+  }).join('');
 
 const worthList = () =>
   WORTH.map((w, i) =>
-    prow(i, w.b, `${w.votes} đánh giá`, `★${w.star.toFixed(1)}`, 'star')
+    prow(i, w.b, `${w.votes} đánh giá`,
+      `<span class="v star">★<b>${w.star.toFixed(1)}</b></span>`)
   ).join('');
 
 function library() {
@@ -248,11 +250,11 @@ function library() {
   ];
   return (
     `<div class="libtop filters">` +
-      `<label class="srch">${ICON.search}` +
+      `<label class="srch" id="srch">${ICON.search}` +
         `<input id="q" type="search" placeholder="Tìm truyện, tác giả…" aria-label="Tìm trong thư viện">` +
-        `<kbd>⌘K</kbd></label>` +
-      `<span class="dd"><b>Năm</b><span class="v">Tất cả</span>${ICON.caret}</span>` +
-      `<span class="dd"><b>Sắp xếp</b><span class="v">Đề xuất</span>${ICON.caret}</span>` +
+        `<button type="button" class="clear" id="qclear" aria-label="Xoá từ khoá">✕</button></label>` +
+      `<span class="dd"><span class="lbl">Năm</span><span class="v">Tất cả</span>${ICON.caret}</span>` +
+      `<span class="dd"><span class="lbl">Sắp xếp</span><span class="v">Đề xuất</span>${ICON.caret}</span>` +
     `</div>` +
     `<div class="frow"><div class="chips">` +
       chips.map(([f, label, n], i) =>
@@ -472,10 +474,25 @@ const HTML = `<!doctype html>
     }
   });
 
+  var srchEl = document.getElementById('srch');
+  var qClear = document.getElementById('qclear');
+  function syncQ() {
+    if (srchEl) srchEl.classList.toggle('hasq', !!qEl.value);
+  }
   if (qEl) qEl.addEventListener('input', function () {
     state.q = plain(qEl.value.trim());
     state.page = 1;
+    syncQ();
     paint();
+  });
+  if (qClear) qClear.addEventListener('click', function (e) {
+    e.preventDefault();
+    qEl.value = '';
+    state.q = '';
+    state.page = 1;
+    syncQ();
+    paint();
+    qEl.focus();
   });
   if (prev) prev.addEventListener('click', function () { if (state.page > 1) pageTo(state.page - 1); });
   if (next) next.addEventListener('click', function () {
