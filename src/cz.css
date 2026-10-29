@@ -1050,7 +1050,25 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .card .th { position: relative; aspect-ratio: 2/3; border-radius: var(--r-sm); overflow: hidden;
   background: var(--surf2); border: 1px solid var(--bd);
   transition: transform var(--t) var(--ease), border-color var(--t) var(--ease), box-shadow var(--t) var(--ease); }
-.card:hover .th { border-color: var(--bd2); transform: translateY(-2px); box-shadow: var(--sh-card); }
+.card:hover .th { border-color: var(--bd2); transform: translateY(-2px);
+  box-shadow: inset 0 0 0 2px var(--acc), var(--sh-card); }
+/* Rê chuột: bìa tối xuống trước, rồi chữ “Đọc ngay” hiện ra cùng gạch son chạy —
+   đúng kiểu B đã chốt ở mockup (docs/mockups/home-v2/hover.html). */
+.card .th::after { content: ""; position: absolute; inset: 0; z-index: 1; opacity: 0;
+  background: linear-gradient(180deg, rgba(10, 7, 5, .2), rgba(10, 7, 5, .72));
+  transition: opacity var(--t) var(--ease); pointer-events: none; }
+.card:hover .th::after, .card:focus-visible .th::after { opacity: 1; }
+.card .th::before { content: "Đọc ngay"; position: absolute; left: 6px; right: 6px; top: 50%;
+  z-index: 4; transform: translateY(-44%); text-align: center; pointer-events: none;
+  font-family: var(--font-head); font-size: 19px; font-weight: 700; line-height: 1.2;
+  color: #fff; padding-bottom: 13px; text-shadow: 0 2px 14px rgba(0, 0, 0, .75);
+  background: linear-gradient(var(--acc), var(--acc)) no-repeat center bottom / 0 2px;
+  opacity: 0; transition: opacity var(--t) var(--ease), transform var(--t) var(--ease),
+    background-size .3s var(--ease) .04s; }
+.card:hover .th::before, .card:focus-visible .th::before {
+  opacity: 1; transform: translateY(-50%); background-size: 44px 2px; }
+.mini .card .th::before, .mini3 .card .th::before { font-size: 13px; padding-bottom: 9px; }
+.mini .card:hover .th::before, .mini3 .card:hover .th::before { background-size: 30px 2px; }
 .card .th img { width: 100%; height: 100%; object-fit: cover; }
 /* lớp tối chân bìa: chỉ đủ để chữ trắng đọc được, không phủ bùn lên ảnh */
 .card .th .scrim { position: absolute; inset: auto 0 0; height: 40%;
@@ -1276,6 +1294,7 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
    Chip GHÉP được với nhau và với Năm/từ khoá; số trên chip luôn tính trên toàn
    thư viện nên không nhảy loạn khi bật bộ lọc khác. */
 .libd { min-width: 0; }
+.libbar .dd, .libbar .end { flex: 0 0 auto; }
 .libbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
   padding-bottom: 12px; border-bottom: 1px solid var(--bd); margin-bottom: 14px; }
 .libbar .end, .srch { flex: 1 1 250px; min-width: 190px; display: flex; align-items: center; gap: 8px;
@@ -2836,7 +2855,7 @@ body.rd-focus .rdcmts { display: none; }
 #bxh .rank { grid-template-columns: 28px 46px minmax(0,1fr) auto; }
 #bxh .rank .tt b { overflow: visible; white-space: normal; -webkit-line-clamp: unset; display: block; overflow-wrap: anywhere; line-height: 1.55; }
 #bxh .rank:hover, #bxh .rank:hover .n.top, #bxh .rank:hover .rk-th { transform: none; box-shadow: none; }
-.worth-section { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--bd); }
+.worth-section { min-width: 0; }
 .worth-score { display: block; color: var(--acc); font-size: 12px; line-height: 1.6; padding: 10px 12px 14px; }
 #worthRail > .empty { width: 100%; }
 .synwrap.clamp.open > .synin { max-height: none; overflow: visible; mask-image: none; -webkit-mask-image: none; }
@@ -4188,19 +4207,12 @@ body.rd-focus .rdcmts { display: none; }
    · Ô nào cũng min-width:0, bìa khoá 2/3, huy hiệu dán TRONG bìa → không cắt.
    ================================================================ */
 #tong-quan { margin: 40px 0 10px; }
-.bento { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; align-items: stretch; }
-.btile { display: flex; flex-direction: column; min-width: 0; gap: 14px;
-  padding: 20px 20px 18px; border: 1px solid var(--bd); border-radius: 18px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surf) 92%, transparent), var(--bg2)); }
-.b-new { grid-column: span 12; }
-.b-resume { grid-column: span 7; }
-.b-rank { grid-column: span 5; }
+.fsec { display: flex; flex-direction: column; min-width: 0; gap: 14px; padding-top: 34px; }
+.fsec:first-child { padding-top: 0; }
 
 /* --- đầu ô: tiêu đề · phụ đề · liên kết phụ -------------------------- */
 .bth { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
 .bth.lt { align-items: center; }
-.btl { min-width: 0; margin: 0; font-family: var(--font-head); font-size: 20px; font-weight: 650;
-  line-height: 1.2; letter-spacing: -.015em; color: var(--txt); }
 .bts { min-width: 0; overflow: hidden; font-size: 12.5px; line-height: 1.4; color: var(--dim);
   text-overflow: ellipsis; white-space: nowrap; }
 .bts:empty { display: none; }
@@ -4292,7 +4304,7 @@ body.rd-focus .rdcmts { display: none; }
 #bxh .rank .v { font-size: 11px; color: var(--dim); }
 #bxh .rank .v b { font-weight: 700; color: var(--mut); }
 #bxh .rank:hover { transform: none; }
-#bxh .worth-section { margin: 0; padding-top: 15px; border-top: 1px solid var(--bd); }
+
 .mini3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); gap: 12px 10px; }
 .mini3 > .empty { grid-column: 1 / -1; }
 .mini3 .card h3 { display: block; overflow: visible; min-height: 0; margin: 9px 0 2px; font-family: var(--font);
@@ -4330,15 +4342,9 @@ body.rd-focus .rdcmts { display: none; }
 #sched .schnote { margin: 12px 0 0; font-size: 12px; color: var(--dim); }
 
 /* --- thu nhỏ theo bề ngang (giữ nguyên cấu trúc, đổi số cột) --------- */
-@media (max-width: 1100px) {
-  .b-resume { grid-column: span 6; }
-  .b-rank { grid-column: span 6; }
-}
+
 @media (max-width: 880px) {
-  .bento { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .b-new, .b-resume, .b-rank { grid-column: span 6; }
-  .btile { padding: 16px; gap: 12px; border-radius: 16px; }
-  .btl, #bxh .tilehead h2 { font-size: 18px; }
+  #bxh .tilehead h2 { font-size: 18px; }
   .mini { gap: 16px 12px; }
   /* tuần: cuộn ngang theo ngày, mỗi ngày thành thẻ riêng cho dễ đọc */
   .week { grid-auto-flow: column; grid-auto-columns: 154px; grid-template-columns: none;
@@ -4349,9 +4355,7 @@ body.rd-focus .rdcmts { display: none; }
 }
 @media (max-width: 620px) {
   #tong-quan { margin-top: 28px; }
-  .bento { grid-template-columns: minmax(0, 1fr); gap: 13px; }
-  .b-new, .b-resume, .b-rank { grid-column: 1 / -1; }
-  .btile { padding: 15px; border-radius: 14px; }
+
   .mini { grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 16px 11px; }
   .mini3 { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
   #bxh .rank { grid-template-columns: 20px 36px minmax(0, 1fr); }

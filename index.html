@@ -30,70 +30,64 @@
   <section class="hero" id="hero" aria-label="Truyện nổi bật"></section>
 
   <div class="wrap">
-    <!-- ============== TỔNG QUAN · dải bento (30/10/2026) ==================
-         Ba khối đầu (Đọc tiếp · Mới cập nhật · Ranking) gộp vào một dải 12 cột:
-         mở trang là thấy đang đọc gì, có gì mới, ai đang dẫn đầu. Ô nào cũng
-         `min-width:0`, bìa khoá tỉ lệ 2/3, huy hiệu dán BÊN TRONG bìa (inset)
-         nên không gì bị cắt; chữ trong ô thì xuống dòng, không đẩy ô bên cạnh. -->
+    <!-- ============== TỔNG QUAN · các dải phẳng (30/10/2026) ==============
+         Không còn khung bento: bốn mục xếp thẳng hàng, mỗi mục là một dải
+         (Đọc tiếp · Mới cập nhật · Ranking · Đáng xem) ngăn bằng một đường tóc.
+         Đầu mục dùng chung `.sechead` như Lịch và Thư viện nên cả trang chỉ còn
+         MỘT kiểu đầu mục. Bìa khoá tỉ lệ 2/3, huy hiệu dán BÊN TRONG bìa. -->
     <section class="sec fade" id="tong-quan" aria-label="Tổng quan hôm nay">
-      <div class="bento">
-
-        <!-- 1 · Mới cập nhật — cả hàng bìa choáng hết bề ngang, đúng cỡ bìa
-             của trang (không nhồi 6 bìa vào ô 1/3 rồi bóp chúng lại) -->
-        <article class="btile b-new" id="moi-cap-nhat">
-          <div class="bth">
-            <h2 class="btl">Mới cập nhật</h2>
-            <span class="bts" id="newSub"></span>
-            <a class="btm" href="#thu-vien">Cả thư viện ›</a>
-          </div>
-          <div class="mini" id="newRail"></div>
-          <!-- “Hôm nay đọc gì?” — src/cz-dice.js gắn nút vào đây -->
-          <span class="dicehost bdice" data-dice></span>
-        </article>
-
-        <!-- 2 · Đọc tiếp (+ theo dõi có chương mới) -->
-        <article class="btile b-resume">
-          <div class="bth">
-            <h2 class="btl" id="resumeTitle">Đọc tiếp</h2>
-            <span class="bts" id="resumeSub"></span>
-            <a class="btm" href="/my-space">My Space ›</a>
-          </div>
-          <section id="resumeSec" class="home-personal" hidden aria-labelledby="resumeTitle">
-            <div id="resumeRail" class="personal-rail" aria-live="polite"></div>
-          </section>
-          <section id="followUpdatesSec" class="home-personal" hidden aria-labelledby="followUpdatesTitle">
-            <div class="bth lt"><h3 class="blb" id="followUpdatesTitle">Theo dõi có chương mới</h3></div>
-            <div id="followUpdatesRail" class="personal-rail" aria-live="polite"></div>
-          </section>
-          <!-- chưa đọc gì: ô này thành “bắt đầu từ đâu” (src/cz-home.js dựng) -->
-          <div id="starterBox" class="starter" hidden></div>
-        </article>
-
-        <!-- 3 · Ranking + Đáng xem -->
-        <article class="btile b-rank" id="bxh">
-          <div class="sechead tilehead">
-            <h2>Ranking</h2>
-            <span class="bts" id="rankSub"></span>
-            <span class="right">
-              <div class="tabs sm ranking-modes" id="rankModes" role="group" aria-label="Hạng mục Ranking">
-                <button class="on" data-mode="views" aria-pressed="true">Lượt đọc</button>
-                <button data-mode="votes" aria-pressed="false">Lượt thích</button>
-              </div>
-              <h3 id="rankSummary" class="sr-only">Lượt đọc · Tuần</h3>
-              <div class="tabs sm" id="rankTabs" role="group" aria-label="Khoảng thời gian"></div>
-            </span>
-          </div>
-          <div class="rbody">
-            <div id="rank" aria-live="polite" aria-atomic="true"></div>
-            <section class="worth-section" aria-labelledby="worthTitle">
-              <div class="bth lt"><h3 class="blb" id="worthTitle">Đáng xem</h3></div>
-              <div class="mini3" id="worthRail"></div>
-            </section>
-          </div>
-        </article>
-
+      <div class="fsec" id="doc-tiep">
+        <div class="sechead">
+          <h2 id="resumeTitle">Đọc tiếp</h2>
+          <span class="bts" id="resumeSub"></span>
+          <a class="btm" href="/my-space">My Space ›</a>
+        </div>
+        <section id="resumeSec" class="home-personal" hidden aria-labelledby="resumeTitle">
+          <div id="resumeRail" class="personal-rail" aria-live="polite"></div>
+        </section>
+        <section id="followUpdatesSec" class="home-personal" hidden aria-labelledby="followUpdatesTitle">
+          <div class="bth lt"><h3 class="blb" id="followUpdatesTitle">Theo dõi có chương mới</h3></div>
+          <div id="followUpdatesRail" class="personal-rail" aria-live="polite"></div>
+        </section>
+        <!-- chưa đọc gì: chỗ này thành “bắt đầu từ đâu” (src/cz-home.js dựng) -->
+        <div id="starterBox" class="starter" hidden></div>
       </div>
-    </section>
+
+      <div class="fsec" id="moi-cap-nhat">
+        <div class="sechead">
+          <h2>Mới cập nhật</h2>
+          <span class="bts" id="newSub"></span>
+          <a class="btm" href="#thu-vien">Cả thư viện ›</a>
+        </div>
+        <div class="mini" id="newRail"></div>
+        <!-- “Hôm nay đọc gì?” — src/cz-dice.js gắn nút vào đây -->
+        <span class="dicehost" data-dice></span>
+      </div>
+
+      <div class="fsec" id="bxh">
+        <div class="sechead tilehead">
+          <h2>Ranking</h2>
+          <span class="bts" id="rankSub"></span>
+          <span class="right">
+            <div class="tabs sm ranking-modes" id="rankModes" role="group" aria-label="Hạng mục Ranking">
+              <button class="on" data-mode="views" aria-pressed="true">Lượt đọc</button>
+              <button data-mode="votes" aria-pressed="false">Lượt thích</button>
+            </div>
+            <h3 id="rankSummary" class="sr-only">Lượt đọc · Tuần</h3>
+            <div class="tabs sm" id="rankTabs" role="group" aria-label="Khoảng thời gian"></div>
+          </span>
+        </div>
+        <div class="rbody">
+          <div id="rank" aria-live="polite" aria-atomic="true"></div>
+        </div>
+      </div>
+
+      <div class="fsec worth-section" id="dang-xem">
+        <div class="sechead">
+          <h3 class="blb" id="worthTitle">Đáng xem</h3>
+        </div>
+        <div class="mini3" id="worthRail"></div>
+      </div>
 
     <!-- ============ CHUYỂN THỂ SERIES ============ -->
     <section class="sec fade" id="bien-tap" hidden>
