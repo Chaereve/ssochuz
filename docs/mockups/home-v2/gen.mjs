@@ -565,6 +565,7 @@ const VARIANTS = `<!doctype html>
   .vsec { border-top: 1px solid var(--bd); padding-top: 22px; margin-top: 26px; }
   .vsec h2 { font-size: 16px; margin-bottom: 14px; }
   .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .stack { display: grid; gap: 14px; }
   .box { container-type: inline-size; border: 1px solid var(--bd); border-radius: 14px;
     padding: 16px 14px; background: var(--bg); }
   .tag { display: inline-block; margin-bottom: 10px; font: 800 10px/1 var(--font-mono);
@@ -627,8 +628,8 @@ const VARIANTS = `<!doctype html>
 
   <section class="vsec">
     <h2>3 · Thanh lọc thư viện</h2>
-    <div class="pair">
-      <div class="box"><span class="tag">A · có viền</span>${vToolbar('')}</div>
+    <div class="stack">
+      <div class="box"><span class="tag">A · có viền (đang dùng)</span>${vToolbar('')}</div>
       <div class="box b3"><span class="tag">B · không viền</span>${vToolbar('')}</div>
     </div>
   </section>
