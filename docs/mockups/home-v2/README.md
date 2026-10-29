@@ -1,51 +1,45 @@
-# Nửa dưới trang chủ · bản 3 “dải bìa” (theo glvietsubz.net)
+# Nửa dưới trang chủ · bản 4
 
 **Mockup:** `docs/mockups/home-v2/index.html` → `http://127.0.0.1:8081/docs/mockups/home-v2/index.html`
-Hai bản trước còn ở `index-r27.html` (ba phương án) — bản này thay hẳn cách bố cục.
 
-## Nguyên tắc
+## Trang có gì
 
-Bám đúng cách glvietsubz.net xếp trang: **một cột, chỉ có các dải bìa**, không cột phụ,
-không hộp, không thẻ. Ba thứ dùng lại y nguyên cho mọi mục:
+| Khối | Kiểu | Nội dung |
+|---|---|---|
+| **Đọc tiếp** | dải **cuộn ngang** 10 bìa | nhãn `Ch. 44/71`, thanh tiến độ trong bìa, dòng phụ “Còn 27 chương” |
+| **Mới cập nhật** | dải **cuộn ngang** 18 bìa | nhãn `Ch. N` / `Trọn bộ N`, tác giả · ngày |
+| **Xếp hạng tuần** ⎪ **Đáng xem** | **hai cột song song**, mỗi cột 5 dòng | số thứ tự · bìa 42px · tên · dòng phụ; cột phải là `▲3` / `▼1` và `★4.8` |
+| **Thư viện** | thanh lọc + lưới 6 cột + phân trang 18 bộ/trang | đếm `1–18 / 67`, “Trang 1 / 4” |
 
-1. **Đầu mục**: tiêu đề bên trái · số lượng nhỏ bên cạnh · “Xem thêm ›” bên phải.
-2. **Lưới bìa**: `repeat(6, 1fr)` — **cùng một cỡ bìa trên toàn trang**, kể cả lưới thư viện.
-3. **Một bìa**: nhãn duy nhất ở góc trái (trạng thái / số chương / số sao / số hạng),
-   `18+` ở góc phải, dưới bìa là **tên 2 dòng + một dòng phụ**.
+Lịch ra chương **tạm gác** (theo yêu cầu) — không có trong bản này, sẽ làm lại sau.
 
-Mỗi mục cách nhau bằng **đường kẻ 1px + 36px khoảng trắng**. Không có gì khác.
+## Ba thứ dùng chung
 
-## Các dải
+1. **Đầu mục**: tiêu đề · số lượng · (nút `‹ ›` nếu là dải cuộn) · “Xem thêm ›”.
+2. **Bìa**: cùng một cỡ trên toàn trang (6 cột, ≤900px còn 4, ≤620px còn 3). Một nhãn
+   ở góc trái, `18+` góc phải, tên 2 dòng, một dòng phụ.
+3. **Danh sách hàng** (hai cột phải): `26px số · 42px bìa · tên + phụ · số liệu`.
 
-| Dải | Số bìa | Nhãn trên bìa | Dòng phụ |
-|---|---|---|---|
-| Đọc tiếp | 6 | `Ch. 44/71` + thanh tiến độ trong bìa | Còn 27 chương |
-| Mới cập nhật | 12 | `Ch. N` / `Trọn bộ N` | Tác giả · ngày |
-| Xếp hạng tuần | 6 | số thứ tự lớn ở góc bìa (1–2 màu son) | 12.480 lượt tuần này |
-| Đáng xem | 6 | `★ 4.8` | 31 đánh giá |
-| Lịch ra chương | — | 7 cột theo thứ, cột “hôm nay” tô son | 7 mục thật trong registry |
-| Thư viện | 12/trang | `Ch. N` / `Trọn bộ N` | tác giả · ngày |
+## Chi tiết đã làm
 
-**30 bộ khác nhau** ở bốn dải bìa phía trên — không bìa nào lặp lại. Lưới thư viện mặc định
-sắp theo `editorChoice` thật rồi tới mới cập nhật, nên trang 1 cũng không trùng dải trên.
-
-## Co giãn
-
-Bố cục tính theo **bề rộng khung** (`@container`): 6 cột → 4 cột (≤900) → 3 cột (≤620);
-lịch 7 cột → thẻ vuốt ngang ở ≤620. Khung hẹp cỡ nào cũng không vỡ. Nút
-Desktop/Tablet/Mobile đổi `--fw`; thanh trên hiện **“khung Npx”** để biết đang xem cỡ thật.
-
-## Lên bản thật
-
-1. `index.html`: bỏ `.bento` 12 cột, thay bằng sáu `<section class="rail">` xếp dọc.
-2. Giữ hợp đồng id: `#resumeSec/#resumeRail` (6), `#newRail` (12), `#bxh` + `#rank .rank` (5–6),
-   `#worthRail` (6), `#sched` (7 cột), `#thu-vien` (12/trang + `#libSub`).
-3. Một component bìa dùng chung cho cả sáu mục — chỉ khác nhãn và dòng phụ.
-4. CSS: `cz.css` thêm ~4,5 kB (rail + card + week + filters), xoá ~5 kB CSS v3 cũ
-   (`.btile`, `.bhead`, `.ranklist`, `.week…`) ⇒ gần như hoà; đang 206,0 / 215 kB.
-5. Media query thật: 900 / 620px.
+- **Dải cuộn**: kéo chuột / vuốt / shift+lăn đều được, `scroll-snap` để bìa dừng ngay mép,
+  thanh cuộn mảnh, hai nút `‹ ›` tự khoá khi tới đầu/cuối (mỗi lần nhảy 2 bìa).
+- **Hai cột**: đường kẻ dọc 1px giữa hai cột; dòng đầu tiên có số màu son. Ở khung ≤620px
+  hai cột xếp dọc và chuyển đường kẻ dọc thành kẻ ngang.
+- **Thư viện**: ô tìm kiếm 40px có trạng thái focus, chip lọc chỉ hiện viền khi đang chọn,
+  đường kẻ mảnh dưới hàng lọc, lưới 3 hàng × 6 bìa mỗi trang, phân trang + “Trang 1 / 4”,
+  và nút **“Đọc ngay ›”** hiện khi rê chuột lên bìa.
 
 ## Dữ liệu
 
-Bìa, tên, tác giả, số chương, trạng thái, ngày cập nhật, `editorChoice`, 7 mục lịch: **thật**.
-Lượt đọc, điểm sao, chương đang đọc dở: **số minh hoạ** (registry không có ba loại này).
+Bìa, tên, tác giả, số chương, trạng thái, ngày cập nhật, `editorChoice`: **thật** (67 bộ).
+Lượt đọc, thứ hạng tăng/giảm, điểm sao, chương đang đọc dở: **số minh hoạ**.
+
+## Lên bản thật
+
+1. `#resumeSec` và `#newRail` → hai `<div class="track">` cuộn ngang (giữ nguyên hợp đồng id).
+2. `#bxh` và `#worthRail` đặt trong một `.twoside` hai cột; mỗi cái render 5 hàng theo mẫu
+   `.prow` ở trên (vẫn giữ `#rank .rank`, `#rankSummary`, `.worth-score` cho test).
+3. `#thu-vien` giữ D1, đổi sang 18 bộ/trang + `#libSub` hiện `1–18 / 67`.
+4. `#sched` tách ra khỏi trang chủ ở bản này, làm lại sau rồi gắn lại.
+5. CSS: thêm ~4 kB (track/arrows/prow/library), xoá ~4,5 kB CSS v3 cũ ⇒ gần như hoà.
