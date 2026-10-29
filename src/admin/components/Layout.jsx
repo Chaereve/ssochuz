@@ -93,24 +93,8 @@ function connChip(state) {
   return { cls: 'warn', text: 'Dữ liệu tĩnh · Chỉ đọc', hint: 'Thay đổi chỉ lưu tạm trong phiên. Cần nối Worker bằng ADMIN_KEY để ghi KV.' };
 }
 
-function ThemeButton() {
-  const [dark, setDark] = useState(() => document.documentElement.getAttribute('data-theme') === 'dark');
-  const toggle = () => {
-    let next = dark ? 'light' : 'dark';
-    if (window.CZ && window.CZ.themeToggle) next = window.CZ.themeToggle() || next;
-    else {
-      document.documentElement.setAttribute('data-theme', next);
-      try { localStorage.setItem('ssochuz-theme', next); } catch (e) {}
-    }
-    setDark(next === 'dark');
-  };
-  const html = window.CZ && window.CZ.icon ? window.CZ.icon(dark ? 'sun' : 'moon', 'i-s') : '';
-  return (
-    <button class="hbtn admin-tool" type="button" onClick={toggle} title="Đổi nền sáng/tối" aria-label="Đổi nền sáng/tối">
-      <span dangerouslySetInnerHTML={{ __html: html }} />
-    </button>
-  );
-}
+/* Nút “Đổi nền sáng/tối” đã bỏ (2026-10-29): web chỉ còn nền tối — không còn
+   gì để lật, nên không dựng nút thừa trên thanh công cụ. */
 
 export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', onTab, onDisconnect, onSearch, shortcuts, children }) {
   const quota = state.quota || {};
@@ -263,7 +247,6 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
                 ) : null}
               </div>
               <a class="hbtn admin-tool" href="/" target="_blank" rel="noopener" title="Mở trang web ở tab mới" aria-label="Mở trang web ở tab mới"><Icon name="link" /><span class="admin-tool-label">Xem web</span></a>
-              <ThemeButton />
               <div class="v2user">
                 <button class="hbtn admin-tool" type="button" onClick={() => { setMenu(!menu); setBellOpen(false); }} aria-haspopup="menu" aria-expanded={menu} aria-label="Menu tài khoản">
                   <Icon name="user" /><span class="admin-tool-label">{roleLabel(role)}</span>

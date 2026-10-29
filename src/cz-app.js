@@ -1116,13 +1116,14 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     return v;
   }
 
-  /* sáng / tối (mặc định: nền giấy sáng) */
+  /* NỀN TỐI LÀ DUY NHẤT (2026-10-29): web bỏ hẳn chế độ sáng.
+     Giữ nguyên tên hàm vì nhiều nơi gọi (và để bản cũ không vỡ), nhưng việc của
+     nó giờ chỉ là khoá <html> ở data-theme="dark" — không đọc localStorage nữa,
+     nhờ vậy máy nào từng lưu “light” cũng vào thẳng nền tối. */
   function themeInit() {
-    var t = safeGet(LS.theme);
-    if (!t) { var old = safeGet(LS.dir); t = old === 'ctoi' ? 'dark' : old ? 'light' : 'light'; }
-    d.documentElement.setAttribute('data-theme', t);
+    d.documentElement.setAttribute('data-theme', 'dark');
     themeMeta();
-    return t;
+    return 'dark';
   }
   /* Thanh trình duyệt điện thoại tô theo <meta name="theme-color">. Không cập nhật
      nó thì lật sang nền tối mà thanh địa chỉ vẫn trắng — đúng cái cảm giác “lệch
@@ -1137,21 +1138,14 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     try {
       c = (w.getComputedStyle(rd ? d.body : d.documentElement).getPropertyValue(rd ? '--rd-bg' : '--bg') || '').trim();
     } catch (e) {}
-    if (!/^(#|rgb|hsl)/i.test(c)) c = d.documentElement.getAttribute('data-theme') === 'dark' ? '#14110e' : '#faf8f4';
+    if (!/^(#|rgb|hsl)/i.test(c)) c = '#14110e';
     if (m.getAttribute('content') !== c) m.setAttribute('content', c);
   }
-  /* Sáng ⇄ tối: đổi token trên html ngay trong cùng một frame.
-     Không dùng View Transitions hoặc transition hàng nghìn phần tử: trình duyệt
-     phải chụp lại toàn trang rồi blend, gây trễ rõ trên điện thoại và trang đọc.
-     Các thành phần cần chuyển động riêng (nút, menu, switch) vẫn có transition
-     cục bộ trong CSS; đổi theme nền tảng thì ưu tiên phản hồi tức thì. */
+  /* Không còn gì để lật. Giữ hàm rỗng (trả 'dark') cho nơi còn gọi tới. */
   function themeToggle() {
-    var root = d.documentElement;
-    var now = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-    root.setAttribute('data-theme', now);
-    safeSet(LS.theme, now);
+    d.documentElement.setAttribute('data-theme', 'dark');
     themeMeta();
-    return now;
+    return 'dark';
   }
 
   /* ======================= 3. BỘ ICON ================================== */
@@ -2018,14 +2012,6 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         '</button>' +
         '<div class="nmenu" id="czNotifMenu" role="menu" aria-label="Truyện có chương mới"></div>' +
       '</div>' +
-      /* công tắc sáng/tối — lấy cấu trúc của uiverse.io/catraco/brown-termite-67:
-         rãnh bo tròn, biểu tượng trượt + xoay và đổi tông trời. Giữ id #czTheme
-         / #czThemeIn để trạng thái cũ, bàn phím và các bài kiểm thử không vỡ. */
-      '<label class="tsw switch-name" id="czTheme" title="Đổi nền sáng/tối">' +
-        '<input type="checkbox" class="tsw-in checkbox" id="czThemeIn" role="switch" aria-label="Nền tối">' +
-        '<span class="tsw-sl back" aria-hidden="true"></span>' +
-        icon('moon', 'tsw-icon moon') + icon('sun', 'tsw-icon sun') +
-      '</label>' +
       /* ---- ĐĂNG NHẬP: nút luôn có trên mọi trang (kể cả trang chủ) ---- */
       '<div class="hauth" id="czAuth">' +
         '<button class="hbtn authbtn" id="czAuthBtn" aria-haspopup="menu" aria-expanded="false">' +
@@ -2039,29 +2025,6 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       '<a href="/guide">' + icon('info', 'i-s') + ' Hướng dẫn</a>' +
       /* mục Quản trị được vẽ trong paintAuth(): người thường KHÔNG thấy */
       '<span id="czAuthMWrap"></span></div>';
-
-    var tb = host.querySelector('#czTheme');
-    var tin = host.querySelector('#czThemeIn');
-    /* công tắc chỉ có 2 trạng thái (sáng ⇄ tối) nên chỉ cần đồng bộ lại ô chọn
-       và nhãn đọc máy sau mỗi lần đổi — nhãn nói rõ đang ở nền nào */
-    function paintTheme() {
-      var dark = d.documentElement.getAttribute('data-theme') === 'dark';
-      var lbl = dark ? 'Đang bật nền tối — bấm để về nền sáng' : 'Đang ở nền sáng — bấm để bật nền tối';
-      if (tin) { tin.checked = dark; tin.setAttribute('aria-label', lbl); }
-      tb.setAttribute('title', lbl);
-      tb.setAttribute('aria-label', lbl);
-    }
-    paintTheme();
-    /* KHÔNG gắn handler cho cú bấm: <label> đã bọc sẵn ô chọn nên trình duyệt tự
-       chuyển cú bấm vào ô, ô lật checked rồi phát 'change' — dựng thêm handler
-       bấm nữa là mỗi cú bấm đổi 2 lần thành ra… không đổi gì. Việc duy nhất cần
-       làm ở đây là lật nền cho khớp với ô, và chỉ lật khi hai bên đang LỆCH nhau
-       (nhờ vậy dù 'change' có bị phát thừa cũng không đổi hai lần). */
-    if (tin) tin.addEventListener('change', function () {
-      var dark = d.documentElement.getAttribute('data-theme') === 'dark';
-      if (tin.checked !== dark) themeToggle();
-      paintTheme();
-    });
 
     /* ---- nút đăng nhập + menu tài khoản ----
        · Chưa đăng nhập: bấm là mở đăng nhập (Supabase → Google, hoặc link email).

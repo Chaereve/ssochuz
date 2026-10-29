@@ -5,7 +5,8 @@
    ----------------------------------------------------------------------------
    Phong cách: tạp chí in — nền giấy, chữ có chân ở tiêu đề, đường kẻ mảnh 1px,
    màu mực làm điểm nhấn. KHÔNG dùng gradient, kính mờ, đổ bóng loè loẹt.
-   Mọi màu nằm trong biến CSS: đổi [data-theme] là toàn web đổi theo.
+   Mọi màu nằm trong biến CSS ở :root (một bảng màu TỐI duy nhất — web không
+   còn chế độ sáng).
    Thứ tự:  1 nền tảng · 2 khung trang · 3 nút & nhập liệu · 4 khối & tiêu đề
              5 hero · 6 dải số · 7 thẻ truyện · 8 bàn đọc · 9 BXH/lịch/chuyển thể
             10 thư viện · 11 trang truyện · 12 trang đọc · 13 lớp nổi · 14 quản trị
@@ -17,30 +18,34 @@ a { transition: color var(--t-fast) var(--ease), border-color var(--t-fast) var(
 html { scroll-behavior: smooth; }
 section[id], [id^="pane-"] { scroll-margin-top: 16px; }
 :root {
-  --bg: #faf8f4;
-  --bg2: #f3efe8;
-  --surf: #fffefb;
-  --surf2: #f2ede5;
-  --surf3: #e7e0d5;
-  --txt: #191410;
-  --mut: #6c6357;
-  --dim: #756b61;   /* 4,5:1 trên nền giấy — chữ gợi ý vẫn nhạt nhưng đọc được (cũ #9a9086 chỉ 2,7:1) */
-  --acc: #a63a52;
-  --acc-soft: rgba(166, 58, 82, .09);
-  --ok: #2f6b4f;
-  --warn: #8a5f18;
-  --bad: #a83232;
-  --bd: rgba(46, 34, 22, .14);
-  --bd2: rgba(46, 34, 22, .3);
+  /* BẢNG MÀU DUY NHẤT — NỀN TỐI. Web đã bỏ hẳn chế độ sáng (2026-10-29): không
+     còn [data-theme] để lật, nên mọi token nằm thẳng ở :root. Thêm màu mới thì
+     thêm ở đây, đừng viết mã màu rời trong quy tắc con. */
+  --bg: #14110e;
+  --bg2: #1a1613;
+  --surf: #1e1915;
+  --surf2: #262019;
+  --surf3: #322a20;
+  --txt: #f2ebe0;
+  --mut: #a89d8d;
+  --dim: #8a8174;   /* 4,5:1 trên nền tối (bản cũ #837a6d chỉ 3,8–4,1:1) */
+  --acc: #e0859b;
+  --acc-soft: rgba(224, 133, 155, .12);
+  --ok: #74c69b;
+  --warn: #dcae6a;
+  --bad: #e58b8b;
+  --bd: rgba(255, 240, 220, .13);
+  --bd2: rgba(255, 240, 220, .3);
+  color-scheme: dark;
   --r-sm: 4px;
   --r: 6px;
   --r-lg: 10px;
   --r-xl: 14px;
-  --sh: 0 1px 2px rgba(40, 28, 16, .05);
-  --sheen: rgba(255, 255, 255, .62);   /* dải sáng của hiệu ứng shimmer (khối chờ) */
-  --sh-lg: 0 20px 40px -28px rgba(30, 20, 10, .5);
-  --sh-card: 0 10px 22px -16px rgba(30, 20, 10, .55);   /* bìa khi trỏ: bóng sát chân, không loang xám */
-  --ring: rgba(166, 58, 82, .35);
+  --sh: 0 1px 2px rgba(0, 0, 0, .4);
+  --sheen: rgba(255, 255, 255, .1);    /* nền tối chỉ cần dải sáng rất nhẹ */
+  --sh-lg: 0 22px 44px -28px rgba(0, 0, 0, .75);
+  --sh-card: 0 10px 22px -16px rgba(0, 0, 0, .8);   /* bìa khi trỏ: bóng sát chân, không loang xám */
+  --ring: rgba(224, 133, 155, .4);
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-head: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, "Times New Roman", serif;
   --font-logo: "Fraunces", "Iowan Old Style", Palatino, Georgia, serif;
@@ -84,29 +89,6 @@ section[id], [id^="pane-"] { scroll-margin-top: 16px; }
   --sh-hover: 0 14px 30px -18px rgba(30, 20, 10, .5);
   --rd-size: 18px; --rd-line: 1.8; --rd-w: 720px; --rd-para: 1.05em; --rd-font: var(--font-head);
 }
-[data-theme="dark"] {
-  --bg: #14110e;
-  --bg2: #1a1613;
-  --surf: #1e1915;
-  --surf2: #262019;
-  --surf3: #322a20;
-  --txt: #f2ebe0;
-  --mut: #a89d8d;
-  --dim: #8a8174;   /* 4,5:1 trên nền tối (cũ #837a6d chỉ 3,8–4,1:1) */
-  --acc: #e0859b;
-  --sheen: rgba(255, 255, 255, .10);   /* nền tối chỉ cần dải sáng rất nhẹ */
-  --acc-soft: rgba(224, 133, 155, .12);
-  --ok: #74c69b;
-  --warn: #dcae6a;
-  --bad: #e58b8b;
-  --bd: rgba(255, 240, 220, .13);
-  --bd2: rgba(255, 240, 220, .3);
-  --sh: 0 1px 2px rgba(0, 0, 0, .4);
-  --sh-lg: 0 22px 44px -28px rgba(0, 0, 0, .75);
-  --sh-card: 0 10px 22px -16px rgba(0, 0, 0, .8);
-  color-scheme: dark;
-}
-[data-theme="light"] { color-scheme: light; }
 html { scroll-behavior: smooth; scroll-padding-top: 16px; }
 body {
   margin: 0; background: var(--bg); color: var(--txt);
@@ -303,62 +285,8 @@ body, .hdr, .hero, .facts, .ftr, .fbox, .sechead, .authcard {
 .mnav a.on .i { color: var(--acc); }
 .mnav a:last-child { border-bottom: 0; }
 
-/* ---- công tắc nền sáng / tối --------------------------------------------
-   Giữ nguyên bộ khung của uiverse.io/catraco/brown-termite-67 (rãnh + hai biểu
-   tượng trượt/xoay, ô chọn thật nằm trên cùng để chuột · chạm · Space đều ăn),
-   nhưng phối lại theo đúng hệ “giấy — mực” của ssochuz:
-     · rãnh = khe lõm màu surf3, viền tóc 1px, không còn bầu trời xanh/tím
-     · núm  = đĩa giấy tròn có viền, biểu tượng Tabler nét đơn sắc (không tô đặc)
-   Cỡ khoá theo lưới 4px: 48×26 trên desktop, 44×24 trên điện thoại — nhỏ hơn
-   bản cũ 64×32 nên thanh đầu trang không còn bị một khối màu chen ngang.
-   Quãng trượt vẫn tính bằng translateX(100%) = đúng một đường kính núm, nên
-   núm luôn cách mép rãnh 1px ở cả hai đầu. */
-.tsw {
-  position: relative; display: inline-block; width: 48px; height: 26px; flex: 0 0 auto;
-  overflow: hidden; border-radius: 999px; cursor: pointer; vertical-align: middle;
-  border: 1px solid var(--bd); isolation: isolate; will-change: transform;
-  transition: transform var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
-}
-.tsw:hover { border-color: var(--bd2); }
-.tsw:active { transform: scale(.96); }
-/* Tên lớp gốc của Uiverse giữ lại để dễ đối chiếu; hành vi vẫn do các lớp
-   .tsw-* ở trên kiểm soát, nên không ảnh hưởng phần còn lại của giao diện. */
-.tsw.switch-name { display: inline-block; }
-.tsw .back { border-radius: inherit; }
-.tsw .checkbox { cursor: pointer; }
-.tsw-in {
-  position: absolute; inset: 0; z-index: 4; width: 100%; height: 100%; margin: 0;
-  opacity: 0; cursor: pointer;
-}
-.tsw-sl {
-  position: absolute; inset: 0; z-index: 0; border-radius: inherit; background: var(--surf3);
-  box-shadow: inset 0 1px 2px rgba(30, 20, 10, .07);
-  transition: background-color var(--t-theme) var(--ease-out), box-shadow .2s var(--ease);
-  will-change: background-color;
-}
-.tsw-in:checked ~ .tsw-sl { background: var(--surf2); }
-.tsw-in:focus-visible ~ .tsw-sl { box-shadow: inset 0 1px 2px rgba(30, 20, 10, .07), inset 0 0 0 2px var(--ring); }
-/* Núm: chính là hai biểu tượng, cho nền tròn + viền để đọc thành một khối trượt.
-   Cỡ khoá theo chiều cao rãnh (không phụ thuộc font của trang). */
-.tsw-icon {
-  position: absolute; left: 1px; top: 1px; z-index: 1; width: 22px; height: 22px; padding: 3px;
-  box-sizing: border-box; border-radius: 50%; background: var(--surf); border: 1px solid var(--bd2);
-  pointer-events: none; color: var(--mut); fill: none; stroke: currentColor; stroke-width: 1.7;
-  transform-origin: 50% 50%; will-change: transform, opacity;
-  transition: transform .22s var(--ease), opacity .12s var(--ease-out),
-    background-color var(--t-theme) var(--ease-out), border-color var(--t-theme) var(--ease-out),
-    color var(--t-theme) var(--ease-out);
-}
-.tsw-icon.moon { opacity: 0; transform: translateX(-100%) rotate(-180deg); }
-.tsw-icon.sun { opacity: 1; transform: none; }
-/* checked = nền tối trong hệ thống ssochuz: mặt trời trượt ra, mặt trăng trượt vào.
-   Núm bên tối đổi sang đĩa mực nhạt + biểu tượng sáng để khỏi lẫn vào rãnh. */
-.tsw-in:checked ~ .tsw-icon.moon { opacity: 1; transform: translateX(100%) rotate(180deg);
-  background: var(--surf3); color: var(--txt); border-color: var(--bd2); }
-.tsw-in:checked ~ .tsw-icon.sun { opacity: 0; transform: translateX(100%) rotate(180deg); }
-@media (prefers-reduced-motion: reduce) {
-  .tsw, .tsw-sl, .tsw-icon { transition: none; }
-}
+/* Công tắc nền sáng/tối đã bị BỎ (2026-10-29): web chỉ còn nền tối, nên cả
+   khối .tsw* (rãnh, núm, icon trượt) cùng các luật responsive của nó đã dọn. */
 
 /* ---- chân trang: dải nền tối chữ ký ------------------------------------------
    Một cột dồn trái: logo (hình thoi hồng + “ssochuz” trắng + “library” hồng
@@ -614,35 +542,33 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
    vẫn là token theme (--acc qua color-mix) nên đổi theme là đổi theo.
    Chuyển động: chỉ `transform`/`opacity`; `prefers-reduced-motion` tắt sạch. */
 .hero {
-  /* BẢNG MÀU CỦA HERO — ĐI THEO THEME CỦA TRANG.
-     Bản trước khoá cứng nền than (#0a090b) nên bật nền sáng thì cả trang đổi
-     mà riêng màn đầu vẫn tối ⇒ “trang chỉ còn dạng tối”. Nay hero là một bàn
-     giấy: nền sáng là mặc định, theme tối ghi đè ngay bên dưới. Mọi màu (chữ,
-     đường kẻ, màn che, bóng đổ) đều suy ra từ token — ĐỪNG viết màu trực tiếp
-     trong các quy tắc con, thêm thành phần mới thì thêm token ở đây. */
-  --hb-void: #f7f2ea;                        /* nền giấy ấm */
-  --hb-fg: #1b1512;
-  --hb-mut: rgba(27, 21, 18, .74);
-  --hb-dim: rgba(27, 21, 18, .56);
-  --hb-w: 520px;                             /* bề rộng cột chữ (info + hàng điều khiển) */
-  --hb-line: rgba(27, 21, 18, .16);
-  --hb-line2: rgba(27, 21, 18, .26);
-  --hb-card: #e7dfd3;                        /* nền ô bìa khi ảnh chưa tải */
-  --hb-glass: rgba(27, 21, 18, .05);
-  --hb-hover: rgba(27, 21, 18, .09);
-  --hb-track: rgba(27, 21, 18, .08);         /* rãnh thanh tiến trình tự chuyển */
-  --hb-shade: 96, 74, 48;                    /* rgb của mọi bóng đổ */
-  --hb-veil: 247, 242, 234;                  /* rgb của màn che nền */
-  --hb-pic: saturate(1.04) brightness(1.08); /* lọc ảnh bìa ngang phóng lớn */
-  --hb-ghost: .38;                           /* độ đậm của bìa mờ sau quạt */
-  --hb-blend: multiply;                      /* quầng accent trên nền sáng */
-  --hb-glow: .55;
-  --hb-acc: var(--acc);
-  --hb-ok: #10643c;
-  --hb-warn: #8a5511;
-  --hb-gold: #7c5c14;
+  /* BẢNG MÀU CỦA HERO — nền tối là bảng màu DUY NHẤT của web (đã bỏ chế độ
+     sáng). Mọi màu của hero (chữ, đường kẻ, màn che, bóng đổ) suy ra từ token
+     dưới đây — ĐỪNG viết màu trực tiếp trong các quy tắc con. */
+  --hb-void: #0a090b;
+  --hb-fg: #ffffff;
+  --hb-mut: rgba(255, 255, 255, .72);
+  --hb-dim: rgba(255, 255, 255, .55);
+  --hb-w: 520px;                             /* bề rộng cột chữ */
+  --hb-line: rgba(255, 255, 255, .16);
+  --hb-line2: rgba(255, 255, 255, .26);
+  --hb-card: #1a1416;                        /* nền ô bìa khi ảnh chưa tải */
+  --hb-glass: rgba(255, 255, 255, .07);
+  --hb-hover: rgba(255, 255, 255, .14);
+  --hb-track: rgba(255, 255, 255, .08);      /* rãnh thanh tiến trình tự chuyển */
+  --hb-shade: 0, 0, 0;                       /* rgb của mọi bóng đổ */
+  --hb-veil: 10, 9, 11;                      /* rgb của màn che nền */
+  --hb-pic: saturate(1.15) brightness(.74);   /* lọc ảnh bìa ngang phóng lớn */
+  --hb-ghost: .82;                           /* độ đậm của bìa mờ sau quạt */
+  --hb-blend: screen;
+  --hb-glow: .9;
+  /* accent trên nền tối = accent pha trắng (bản gốc quá tối để đọc) */
+  --hb-acc: color-mix(in srgb, var(--acc) 52%, #fff);
+  --hb-ok: #7fd6a6;
+  --hb-warn: #ffc46b;
+  --hb-gold: #f0d78a;
   --hb-cta-bg: var(--acc);
-  --hb-cta-fg: #fff;
+  --hb-cta-fg: #1a1113;                      /* chữ đậm trên viên accent sáng */
   position: relative;
   isolation: isolate;
   overflow: hidden;
@@ -652,31 +578,6 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   /* chừa sẵn chiều cao trước khi JS dựng hero ⇒ nội dung bên dưới không nhảy.
      Chỉ là chiều cao DỰ PHÒNG: nội dung thật quyết định, nên để thấp. */
   min-height: clamp(380px, 42vh, 480px);
-}
-/* NỀN TỐI: chỉ ghi đè TOKEN, không lặp lại bố cục. */
-[data-theme="dark"] .hero {
-  --hb-void: #0a090b;
-  --hb-fg: #ffffff;
-  --hb-mut: rgba(255, 255, 255, .72);
-  --hb-dim: rgba(255, 255, 255, .55);
-  --hb-line: rgba(255, 255, 255, .16);
-  --hb-line2: rgba(255, 255, 255, .26);
-  --hb-card: #1a1416;
-  --hb-glass: rgba(255, 255, 255, .07);
-  --hb-hover: rgba(255, 255, 255, .14);
-  --hb-track: rgba(255, 255, 255, .08);
-  --hb-shade: 0, 0, 0;
-  --hb-veil: 10, 9, 11;
-  --hb-pic: saturate(1.15) brightness(.74);
-  --hb-ghost: .82;
-  --hb-blend: screen;
-  --hb-glow: .9;
-  /* accent trên nền tối = accent pha trắng (bản gốc quá tối để đọc) */
-  --hb-acc: color-mix(in srgb, var(--acc) 52%, #fff);
-  --hb-ok: #7fd6a6;
-  --hb-warn: #ffc46b;
-  --hb-gold: #f0d78a;
-  --hb-cta-fg: #1a1113;                      /* chữ đậm trên viên accent sáng */
 }
 /* `hidden` phải thắng `background/display` của class (thuộc tính hidden của
    trình duyệt yếu hơn class) — component ẩn cả section khi không có mục nào. */
@@ -1103,7 +1004,7 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .nw-bookmark > span { writing-mode: vertical-rl; text-orientation: upright;
   font-family: var(--font-head); font-size: 8px; font-weight: 700; line-height: 1;
   letter-spacing: .14em; translate: 0 -1px; text-shadow: 0 1px 1px rgba(0, 0, 0, .25); }
-[data-theme="dark"] .nw-bookmark { background: #b23a52; }
+.nw-bookmark { background: #b23a52; }
 @media (max-width: 560px) {
   .nw-bookmark { width: 18px; height: 46px; right: 8px; padding: 4px 0 11px;
     clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 8px), 0 100%); }
@@ -2135,7 +2036,7 @@ body.page-in main { animation: pageIn var(--t-slow) var(--ease-out) both; }
   font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; line-height: 1.4;
   border: 1px solid rgba(255, 255, 255, .28); box-shadow: 0 1px 4px rgba(10, 6, 4, .3); }
 .b18 { background: var(--bad); color: #fff; }
-[data-theme="dark"] .b18 { background: #c2475a; }
+.b18 { background: #c2475a; }
 /* Huy hiệu Mới dạng pill (dùng ở hàng danh sách + dòng meta hero, nơi không có bìa
    để gắn bookmark): cùng khuôn với 18+ nhưng thêm chấm trắng “thở” (pulse) và
    quầng sáng mực son. Trên bìa thì “Mới” là bookmark thả (.nw-bookmark). */
@@ -2148,13 +2049,13 @@ body.page-in main { animation: pageIn var(--t-slow) var(--ease-out) both; }
   50% { opacity: .45; transform: scale(.72); } }
 @media (prefers-reduced-motion: reduce) { .badge-new::before { animation: none; } }
 /* nền tối: hồng son gốc quá nhạt, chữ trắng khó đọc — dùng hồng đậm chung với ruy băng */
-[data-theme="dark"] .badge-new { background: #b23a52; }
+.badge-new { background: #b23a52; }
 /* ---- THEO DÕI: nút chuông + huy hiệu đỏ “N chương mới” ----------------------
    Huy hiệu đỏ chữ trắng đọc được cả hai tông nền; nút chuông phủ trên bìa nên
    thẻ lưới/danh sách được bọc thêm .cardwrap (link giữ nguyên bên trong). */
 .badge-newchap { background: #c8102e; color: #fff; text-transform: none; letter-spacing: .02em;
   box-shadow: 0 1px 6px rgba(200, 16, 46, .55), 0 1px 2px rgba(10, 6, 4, .35); }
-[data-theme="dark"] .badge-newchap { background: #d7263d; }
+.badge-newchap { background: #d7263d; }
 .badge-newchap[hidden] { display: none !important; }
 .cardwrap { position: relative; }
 .cardwrap > .card.list { padding-right: 54px; }   /* chừa chỗ cho chuông */
@@ -2674,8 +2575,6 @@ body.rd-focus .rdcmts { display: none; }
    (bỏ chữ “library” màu đỏ): trước đây chữ đó tự xuống dòng thứ hai làm đầu
    trang cao bất thường. */
 @media (max-width: 560px) {
-  .hdr .tsw, .abar .tsw { width: 44px; height: 24px; }
-  .hdr .tsw-icon, .abar .tsw-icon { width: 20px; height: 20px; padding: 3px; }
   #czJump, .hbtn.icon, .authbtn { width: 40px; padding: 0; }
 }
 @media (max-width: 400px) {
@@ -3023,7 +2922,7 @@ body.rd-focus .rdcmts { display: none; }
 }
 /* Editable star rating + showValue. Solid icons, no decorative loop/bounce. */
 .editable-rating { display: block; margin: 18px 0; --rating-empty: #d4cfc7; --rating-fill: #e8a923; }
-[data-theme="dark"] .editable-rating { --rating-empty: #55514c; --rating-fill: #f6bd4f; }
+.editable-rating { --rating-empty: #55514c; --rating-fill: #f6bd4f; }
 .rating-main { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; }
 .rating-main .rl { order: 2; flex-basis: 100%; }
 .rating-control { display: inline-flex; align-items: center; gap: 12px; min-width: 0; }
@@ -3515,7 +3414,6 @@ body.rd-focus .rdcmts { display: none; }
 .admin-tool-label { white-space: nowrap; }
 .admin .abar .whoami { max-width: 190px; }
 .admin .abar .rolebadge { white-space: nowrap; }
-.admin .abar .tsw { flex: none; }
 .admin .abar .hbtn:hover { transform: translateY(-1px); }
 
 /* Sidebar: chỉ nhóm việc thường dùng luôn mở; tác vụ hiếm nằm trong một nhóm

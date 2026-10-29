@@ -62,23 +62,17 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await wait(40);
   out.menuEscDong = !mnav.classList.contains('on');
 
-  /* ---------- công tắc sáng/tối ---------- */
+  /* ---------- nền tối là DUY NHẤT: không còn công tắc sáng/tối ---------- */
   const sw = $('#czTheme'), tin = $('#czThemeIn');
-  out.tsw = { co: !!sw && !!tin, the: tin && tin.getAttribute('type'), vaiTro: tin && tin.getAttribute('role') };
-  const t0 = doc.documentElement.getAttribute('data-theme');
-  click(sw); await wait(120);
-  const t1 = doc.documentElement.getAttribute('data-theme');
-  out.themeMotLan = { truoc: t0, sau: t1, doiDungMotLan: t0 !== t1, checkbox: tin.checked, nho: win.localStorage.getItem('ssochuz-theme') };
-  /* bấm thẳng vào ô chọn (chuột hoặc phím Space) */
-  tin.checked = !tin.checked;
-  tin.dispatchEvent(new win.Event('change', { bubbles: true })); await wait(120);
-  out.themeMotLanNua = { sau: doc.documentElement.getAttribute('data-theme'), khacLanTruoc: doc.documentElement.getAttribute('data-theme') === t0, checkbox: tin.checked };
-  /* 'change' phát thừa (ô đã khớp nền) KHÔNG được đổi nền lần nữa */
-  tin.dispatchEvent(new win.Event('change', { bubbles: true })); await wait(80);
-  out.themeChangeThua = doc.documentElement.getAttribute('data-theme') === t0;
-  /* nhãn đọc máy phải nói đúng trạng thái đang có */
-  const dark = doc.documentElement.getAttribute('data-theme') === 'dark';
-  out.themeNhan = { dark: dark, aria: tin.getAttribute('aria-label'), title: sw.getAttribute('title'), khop: tin.checked === dark };
+  /* gọi thẳng API của lõi cũng không đổi được nền (bản cũ vẫn có thể gọi) */
+  if (win.CZ && win.CZ.themeToggle) win.CZ.themeToggle();
+  await wait(60);
+  out.tsw = {
+    conCongTac: !!sw || !!tin,
+    attr: doc.documentElement.getAttribute('data-theme'),
+    ls: win.localStorage.getItem('ssochuz-theme'),
+    sauKhiGoiToggle: doc.documentElement.getAttribute('data-theme')
+  };
 
   out.errors0 = errors.slice(0, 5);
 
@@ -94,9 +88,9 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
       shimmer: /translateX?\(-100%\)/.test(shim) && /translateX?\(100%\)/.test(shim),
       shimmerCoBefore: /\.skel:{1,2}before|\.rskel:{1,2}before|\.skcard \.skth:{1,2}before/.test(t),
       shimmerNenDungTransform: /@keyframes shimmer/.test(t) && !/@keyframes shimmer[\s\S]{0,200}background-position/.test(t),
-      tsw: /\.tsw-sl\s*\{/.test(t) && /\.tsw-in:checked\s*(?:\+|~)\s*\.tsw-sl/.test(t) &&
-        /\.tsw-in:checked\s*~\s*\.tsw-icon\.moon/.test(t) && /\.tsw-icon\.sun/.test(t),
-      tswUiverseLayout: /\.tsw-icon\s*\{/.test(t) && /translate(?:X)?\(-100%\) rotate\(-180deg\)/.test(t)
+      /* công tắc đã bỏ hẳn — CSS không được còn sót .tsw* */
+      khongConTsw: !/\.tsw[-\s{,]/.test(t),
+      khongConBangSang: !/\[data-theme="light"\]/.test(t)
     };
   }
   /* icon Tabler trong bản phát hành có được chuẩn hoá (mỗi icon một hệ số) không */
@@ -130,13 +124,10 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   if (gate) gate.querySelector('.btn.ghost').dispatchEvent(new ap.win.MouseEvent('click', { bubbles: true }));
   await wait(500);
   const aThemeBtn = [...ap.doc.querySelectorAll('button.admin-tool')].find((b) => /Đổi nền/.test(b.getAttribute('title') || ''));
-  const a0 = ap.doc.documentElement.getAttribute('data-theme');
-  if (aThemeBtn) aThemeBtn.dispatchEvent(new ap.win.MouseEvent('click', { bubbles: true }));
-  await wait(120);
   out.adminTheme = {
     booted: !!gate,
     coNutDoiNen: !!aThemeBtn,
-    changed: a0 !== ap.doc.documentElement.getAttribute('data-theme'),
+    attr: ap.doc.documentElement.getAttribute('data-theme'),
     errors: ap.errors.slice(0, 5)
   };
   out.errors1 = ap.errors.slice(0, 5);
@@ -151,25 +142,23 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   if (out.menuSauKhiBam.aria !== 'true') loi.push('aria-expanded không đổi');
   if (!out.menuDongLai) loi.push('bấm lần hai không đóng menu');
   if (!out.menuEscDong) loi.push('Esc không đóng menu');
-  if (!out.tsw.co || out.tsw.the !== 'checkbox') loi.push('công tắc sáng/tối không phải ô chọn');
-  if (!out.themeMotLan.doiDungMotLan) loi.push('công tắc không đổi nền');
-  if (!out.themeMotLanNua.khacLanTruoc) loi.push('bấm vào ô chọn làm đổi 2 lần');
-  if (out.themeNhan.aria !== out.themeNhan.title) loi.push('nhãn công tắc lệch nhau');
-  if (/Đang bật nền tối/.test(out.themeNhan.aria) !== out.themeNhan.dark) loi.push('nhãn công tắc nói sai trạng thái');
+  if (out.tsw.conCongTac) loi.push('vẫn còn công tắc sáng/tối trên header');
+  if (out.tsw.attr !== 'dark' || out.tsw.sauKhiGoiToggle !== 'dark') loi.push('nền không khoá ở chế độ tối');
+  if (out.tsw.ls) loi.push('vẫn ghi khoá ssochuz-theme vào localStorage');
   for (const k of ['src', 'root']) {
     const c = out.css[k];
     if (!c.mnavMoBangSlid || !c.mnavMoBangOn) loi.push('cz.css(' + k + '): .mnav chưa mở bằng cả .slid lẫn .on');
     if (!c.shimmer || !c.shimmerCoBefore || !c.shimmerNenDungTransform) loi.push('cz.css(' + k + '): shimmer chưa theo mẫu (dải trượt bằng transform)');
-    if (!c.tsw || !c.tswUiverseLayout) loi.push('cz.css(' + k + '): công tắc chưa theo cấu trúc brown-termite-67');
+    if (!c.khongConBangSang) loi.push('cz.css(' + k + '): còn bảng màu sáng ([data-theme="light"])');
+    if (!c.khongConTsw) loi.push('cz.css(' + k + '): còn sót CSS của công tắc sáng/tối (.tsw*)');
   }
-  if (!out.themeChangeThua) loi.push("'change' phát thừa làm đổi nền lần nữa");
   if (!out.icon.khongConFillNone) loi.push('thân icon còn fill="none" (trạng thái .on không tô được)');
   if (!out.icon.netONgoai) loi.push('nét vẽ icon chưa gom ra lớp bọc chuẩn hoá');
   if (!out.icon.coTabler) loi.push('bản phát hành chưa đánh dấu bộ Tabler local');
   if (out.icon.soIconTabler < 60) loi.push('quá ít icon Tabler được chuẩn hoá: ' + out.icon.soIconTabler);
-  if (!out.adminTheme || !out.adminTheme.booted || !out.adminTheme.coNutDoiNen || !out.adminTheme.changed) {
-    loi.push('trang quản trị không boot được hoặc nút đổi nền mất/không đổi nền');
-  }
+  if (!out.adminTheme || !out.adminTheme.booted) loi.push('trang quản trị không boot được');
+  if (out.adminTheme && out.adminTheme.coNutDoiNen) loi.push('trang quản trị còn nút đổi nền');
+  if (out.adminTheme && out.adminTheme.attr !== 'dark') loi.push('trang quản trị không ở nền tối');
   if (!out.icon.coGoogle || !out.icon.coMomo) loi.push('mất icon thương hiệu Google/MoMo');
   out.loi = loi;
 

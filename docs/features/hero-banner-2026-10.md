@@ -937,3 +937,39 @@ Góc trên-phải vẫn giữ `01 / 05` + `⏸` (định vị + dừng tự chuy
 
 `t_hero` đạt hết · `t_home` · `t_adult` N12 · `t_pwa` · `audit:a11y` 25 màn 0
 lỗi axe · `check_src` khớp.
+
+---
+
+## 25. Vòng 10 — BỎ HẲN CHẾ ĐỘ SÁNG (web chỉ còn nền tối) — 2026-10-29
+
+Yêu cầu: “bỏ hoàn toàn light mode”. Đây không phải chỉnh hero mà là đổi mô hình
+màu của cả web — hero chỉ là chỗ lộ ra rõ nhất.
+
+### Đã làm
+
+- **CSS**: bảng màu tối chuyển từ `[data-theme="dark"]` vào thẳng `:root`
+  (`--bg:#14110e`, `--txt:#f2ebe0`, `--acc:#e0859b`…, `color-scheme: dark`);
+  xoá `[data-theme="dark"]`, `[data-theme="light"]` và 6 luật phụ thuộc theme
+  (`.nw-bookmark`, `.b18`, `.badge-new`, `.badge-newchap`, `.editable-rating`,
+  `.hero`) — các giá trị tối của chúng gộp về quy tắc gốc.
+- **Hero**: một bộ token tối duy nhất; không còn nhánh sáng.
+- **Header**: bỏ công tắc sáng/tối (`#czTheme/#czThemeIn`) khỏi markup và toàn
+  bộ handler (`paintTheme`, `change`); xoá luôn khối CSS `.tsw*` (rãnh, núm,
+  icon trượt) cùng 3 luật responsive của nó.
+- **Trang quản trị**: bỏ `ThemeButton` khỏi `src/admin/components/Layout.jsx`.
+- **Lõi**: `themeInit()` khoá `<html>` ở `data-theme="dark"` và **không đọc
+  localStorage** nữa ⇒ máy nào từng lưu “light” cũng vào thẳng nền tối;
+  `themeToggle()` giữ làm hàm rỗng (trả `'dark'`) cho nơi còn gọi;
+  `themeMeta()` luôn đặt `theme-color = #14110e`.
+- **HTML (85 tệp)**: `data-theme="dark"`, `theme-color` → `#14110e`, bỏ script
+  “chống nháy nền” (không còn gì để nháy). `manifest.webmanifest`:
+  `theme_color`/`background_color` → `#14110e`.
+
+### Kiểm
+
+`t_mobile` (khoá: không còn `#czTheme`, `data-theme` luôn `dark`, không ghi
+`ssochuz-theme`, CSS không còn `.tsw*` và `[data-theme="light"]`, trang quản trị
+không còn nút đổi nền) · `t_flows` · `t_home` · `t_hero` · `t_lock_ui` · `t_pwa`
+· `audit:a11y` 25 màn 0 lỗi axe · `check_src` khớp · `check:version` 1.20.0.
+
+`sw.js` + 76 HTML: `?v=20261029hero16`.

@@ -269,12 +269,11 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     await wait(120);
     out.lightboxClosed = !q2('#lightbox').classList.contains('on');
   }
-  /* đổi sáng/tối ở đầu trang: có nhớ không */
-  const tb = D2.querySelector('#czTheme');
-  tb.dispatchEvent(new img.win.MouseEvent('click', { bubbles: true })); await wait(120);
-  out.theme = { attr: D2.documentElement.getAttribute('data-theme'), ls: img.win.localStorage.getItem('ssochuz-theme') };
-  tb.dispatchEvent(new img.win.MouseEvent('click', { bubbles: true })); await wait(120);
-  out.themeBack = D2.documentElement.getAttribute('data-theme');
+  /* nền tối là duy nhất: không còn công tắc để đổi */
+  out.theme = {
+    conCongTac: !!D2.querySelector('#czTheme'),
+    attr: D2.documentElement.getAttribute('data-theme')
+  };
   /* menu điện thoại */
   const bg = D2.querySelector('#czBurger');
   bg.dispatchEvent(new img.win.MouseEvent('click', { bubbles: true })); await wait(120);
