@@ -1,20 +1,17 @@
 #!/usr/bin/env node
 /* ============================================================================
-   gen.mjs · mockup TĨNH cho nửa dưới trang chủ (từ “Đọc tiếp” tới Thư viện)
+   gen.mjs · mockup TĨNH nửa dưới trang chủ — PHƯƠNG ÁN 2 “TẠP CHÍ” (bản 2)
    ----------------------------------------------------------------------------
-   Sinh index.html bằng dữ liệu THẬT của web (67 bộ + bìa thật trong
-   assets/covers) để bản xem trước không phải “bản vẽ tay”.
-
-   Ba phương án trong một trang, cùng một bề rộng khung (nút Desktop/Tablet/
-   Mobile ở thanh trên), nên so được từng phương án ở cùng một cỡ màn hình:
-     E1 · KỆ BÌA   — nhịp của glvietsubz: mỗi mục là một hàng bìa, đầu mục có
-                     “Xem thêm ›”, bìa chỉ một nhãn.
-     E2 · TẠP CHÍ  — hàng bìa ở trên, rồi hai cột: thư viện là chính, cột phụ
-                     dính bên phải giữ “Đọc tiếp · Lịch tuần · Đáng xem”.
-     E3 · BẢNG     — bản đang chạy nhưng bỏ khung hộp: hai cột trên (Đọc tiếp |
-                     Bảng xếp hạng), rồi hàng bìa choáng ngang, lịch, thư viện.
-
-   Chạy:  node docs/mockups/home-v2/gen.mjs
+   Dựng index.html từ data/registry.json + bìa thật trong assets/covers.
+   Cấu trúc:
+     Đọc tiếp        3 thẻ ngang (toàn chiều rộng)
+     Mới cập nhật    6 bìa, một hàng
+     ─ Thư viện ──────────────────────────────┬── cột phụ dính ──
+       tìm kiếm · lọc · lưới 4 cột · phân trang │ xếp hạng tuần
+                                                │ lịch ra chương
+                                                │ đáng xem
+                                                │ vừa hoàn thành
+   Chạy: node docs/mockups/home-v2/gen.mjs
    ========================================================================== */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -28,7 +25,7 @@ const coverFiles = new Set(
   fs.readdirSync(path.join(ROOT, 'assets/covers')).map((f) => f.replace(/\.webp$/, ''))
 );
 
-/* FNV-1a 32-bit — CÙNG hàm với src/shared/cover-mirror.js */
+/* FNV-1a 32-bit — cùng hàm với src/shared/cover-mirror.js */
 function coverKey(s) {
   const bytes = Buffer.from(String(s == null ? '' : s), 'utf8');
   let h = 0x811c9dc5;
@@ -47,399 +44,297 @@ function coverOf(b) {
   return '';
 }
 
+const norm = (s) =>
+  String(s || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/gi, 'd')
+    .toLowerCase();
+
 const BOOKS = reg.lib.map((b) => ({
   t: b.title,
   s: b.slug,
   a: b.author || '',
-  c: b.couple || '',
   y: b.year || '',
   st: b.status || '',
   n: b.chapters || 0,
   e: !!b.is18,
-  u: b.updated || '',
-  img: coverOf(b)
+  u: String(b.updated || ''),
+  img: coverOf(b),
+  k: norm(b.title + ' ' + (b.author || ''))
 }));
+const bySlug = (s) => BOOKS.find((b) => b.s === s) || null;
+
+/* Thứ tự mặc định của lưới = “Đề xuất”: danh sách editorChoice thật trong
+   registry (12 bộ) rồi mới tới những bộ cập nhật gần nhất. Nhờ vậy trang 1 của
+   lưới KHÔNG trùng 6 bìa “Mới cập nhật” ngay phía trên. */
+const PICK = Array.isArray(reg.settings && reg.settings.editorChoice)
+  ? reg.settings.editorChoice
+  : Array.isArray(reg.editorChoice) ? reg.editorChoice : [];
+const pickIdx = (b) => {
+  const i = PICK.indexOf(b.s);
+  return i < 0 ? 999 : i;
+};
+BOOKS.sort((a, b) =>
+  pickIdx(a) - pickIdx(b) || (pickIdx(a) === 999 && pickIdx(b) === 999 ? b.u.localeCompare(a.u) : 0)
+);
 
 const esc = (s) =>
   String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
   );
 const vn = (n) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-const bySlug = (s) => BOOKS.find((b) => b.s === s) || null;
+const dmy = (iso) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
+  return m ? m[3] + '/' + m[2] : '';
+};
 
 const ICON = {
+  chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
   play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
-  chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
-  up: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>',
-  dn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6-6-6"/></svg>',
   search: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>',
   caret: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
   grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg>',
-  rows: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"><rect x="4" y="5" width="16" height="5"/><rect x="4" y="14" width="16" height="5"/></svg>',
-  dice: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.2" fill="currentColor"/><circle cx="15" cy="15" r="1.2" fill="currentColor"/><circle cx="15" cy="9" r="1.2" fill="currentColor"/></svg>'
+  rows: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"><rect x="4" y="5" width="16" height="5"/><rect x="4" y="14" width="16" height="5"/></svg>'
 };
 
-/* --------------------------- chọn dữ liệu -------------------------------- */
-const recent = BOOKS.slice()
-  .sort((a, b) => String(b.u).localeCompare(String(a.u)))
-  .slice(0, 6);
+/* ------------------------------- DỮ LIỆU -------------------------------- */
+const stCls = (b) => (b.st === 'Hoàn thành' ? 'done' : b.st === 'Sắp ra mắt' ? 'soon' : 'run');
 
+/* Một bộ chỉ xuất hiện ở MỘT khối phía trên lưới, để cả trang không lặp bìa. */
+const USED = new Set();
+const pick = (slug) => {
+  const b = bySlug(slug);
+  if (!b || USED.has(slug)) return null;
+  USED.add(slug);
+  return b;
+};
+
+/* Đọc tiếp: chương đang đọc suy ra từ số chương thật của bộ */
 const RESUME = [
-  ['pls-love', 34],
-  ['love-on-hire', 18],
-  ['yours-ever', 41]
-].map(([s, at]) => { const b = bySlug(s); return b ? { b, at } : null; }).filter(Boolean);
+  ['pls-love', 0.62],
+  ['love-on-hire', 0.38],
+  ['yours-ever', 0.75]
+]
+  .map(([s, p]) => {
+    const b = pick(s);
+    if (!b) return null;
+    const at = Math.max(3, Math.min(b.n || 99, Math.round((b.n || 12) * p)));
+    return { b, at, left: (b.n || at) - at };
+  })
+  .filter(Boolean);
 
+/* Mới cập nhật: bỏ “Sắp ra mắt” (chưa có chương), lấy 6 bộ cập nhật gần nhất */
+const RECENT = BOOKS.filter((b) => b.st !== 'Sắp ra mắt' && !USED.has(b.s))
+  .slice()
+  .sort((a, b) => b.u.localeCompare(a.u))
+  .slice(0, 6)
+  .map((b) => { USED.add(b.s); return b; });
+
+/* Xếp hạng: số lượt là số MINH HOẠ cho phần trình bày (registry không có lượt đọc) */
 const RANK = [
-  ['pls-love', 12480, 41220, 'up', 3],
-  ['love-on-hire', 9240, 30110, 'up', 1],
-  ['juliet-n-juliet', 7815, 26042, 'dn', 1],
-  ['third-person', 6402, 21870, 'up', 2],
-  ['yours-ever', 5190, 18440, 'eq', 0]
-].map(([s, week, month, tr, d]) => { const b = bySlug(s); return b ? { b, week, month, tr, d } : null; }).filter(Boolean);
+  ['lunar-secret', 12480, 'up', 3],
+  ['bake-love-feelings', 9240, 'up', 1],
+  ['hidden-heart', 7815, 'dn', 1],
+  ['the-fire', 6402, 'up', 2],
+  ['chain', 5190, 'eq', 0]
+]
+  .map(([s, week, tr, d]) => {
+    const b = pick(s);
+    return b ? { b, week, tr, d } : null;
+  })
+  .filter(Boolean);
 
-const STARS = { 'lunar-secret': [4.8, 31], 'bake-love-feelings': [4.6, 24], 'love-design': [4.4, 18] };
-const WORTH = Object.keys(STARS).map(bySlug).filter(Boolean);
+/* Đáng xem: điểm sao minh hoạ, mỗi bộ một điểm */
+const STARS = new Map();
+const WORTH = [
+  ['enemies-with-benefits', 4.8],
+  ['my-only-sunshine', 4.6],
+  ['ghost-house', 4.4]
+]
+  .map(([s, star]) => {
+    const b = pick(s);
+    if (!b) return null;
+    STARS.set(s, star);
+    return b;
+  })
+  .filter(Boolean);
 
-const STARTER = [
-  { b: bySlug('pls-love') || recent[0], k: 'Đọc trọn một mạch' },
-  { b: bySlug('pgrace-khong-nhan-loi-yeu-au') || recent[1], k: 'Ngắn, đọc một tối' },
-  { b: bySlug('nguoi-chong-lanh-lung-cua-co-vo-beo') || recent[2], k: 'Mới lên kệ' }
-].filter((x) => x.b);
+/* Vừa hoàn thành: thật — lọc status, sắp theo ngày cập nhật */
+const DONE = BOOKS.filter((b) => b.st === 'Hoàn thành' && !USED.has(b.s))
+  .slice()
+  .sort((a, b) => b.u.localeCompare(a.u))
+  .slice(0, 3);
 
-/* Lịch: lấy đúng items trong registry.schedule, chia theo thứ; tuần minh hoạ
-   bắt đầu 02/11/2026 (thứ Hai) — thứ 4 là “hôm nay”. */
+/* Lịch: đúng items trong registry.schedule; tuần minh hoạ 02/11/2026, “hôm nay” = thứ 4 */
 const WD = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-const WD_FULL = { 'T2': 'Thứ 2', 'T3': 'Thứ 3', 'T4': 'Thứ 4', 'T5': 'Thứ 5', 'T6': 'Thứ 6', 'T7': 'Thứ 7', 'CN': 'Chủ nhật' };
-const MONDAY = new Date(2026, 10, 2);   /* 02/11/2026 */
-const TODAY = 2;                          /* 0 = T2 → thứ Tư là “hôm nay” */
-const SCHED_ITEMS = ((reg.schedule && reg.schedule.items) || []).map((it) => ({
-  days: String(it.days || '').split(/[,;·/]+/).map((x) => x.trim()).filter(Boolean),
-  title: it.title || '',
-  detail: it.detail || '',
-  b: bySlug(it.slug) || null
-}));
-const dt = (i) => {
+const MONDAY = new Date(2026, 10, 2);
+const TODAY = 2;
+const dayOf = (i) => {
   const d = new Date(MONDAY.getFullYear(), MONDAY.getMonth(), MONDAY.getDate() + i);
   return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
 };
-const dayName = (s) => (s.indexOf('CN') >= 0 ? 'CN' : s);
+/* “Thứ 2” … “Thứ 7”, “Chủ nhật”/“CN” → T2 … CN */
+const WD_MAP = {
+  'thu 2': 'T2', 'thu 3': 'T3', 'thu 4': 'T4', 'thu 5': 'T5', 'thu 6': 'T6', 'thu 7': 'T7',
+  'cn': 'CN', 'chu nhat': 'CN', 't2': 'T2', 't3': 'T3', 't4': 'T4', 't5': 'T5', 't6': 'T6',
+  't7': 'T7', '2': 'T2', '3': 'T3', '4': 'T4', '5': 'T5', '6': 'T6', '7': 'T7'
+};
+const dayKey = (s) => {
+  const k = norm(s).replace(/[^a-z0-9 ]/g, '').trim();
+  return WD_MAP[k] || WD_MAP[k.replace(/^thu\s*/, 'thu ')] || 'T2';
+};
+const SCHED = ((reg.schedule && reg.schedule.items) || [])
+  .reduce((acc, it, idx) => {
+    const days = [...new Set(String(it.days || '').split(/[,;·/]+/).map(dayKey))];
+    days.forEach((wd) => acc.push({ wd, idx, title: it.title || '', b: bySlug(it.slug) || null }));
+    return acc;
+  }, [])
+  .sort((a, b) => WD.indexOf(a.wd) - WD.indexOf(b.wd) || a.idx - b.idx);
 
-/* --------------------------- thành phần ---------------------------------- */
-const stCls = (b) => (b.st === 'Hoàn thành' ? 'done' : b.st === 'Sắp ra mắt' ? 'soon' : 'run');
-const stLabel = (b) => (b.st === 'Hoàn thành' ? 'Hoàn thành' : b.st === 'Sắp ra mắt' ? 'Sắp ra mắt' : 'Đang cập nhật');
-
-function poster(b, opt = {}) {
-  const pill = opt.pill || stLabel(b);
-  const cls = opt.pill ? (opt.pillCls || 'run') : stCls(b);
+/* ------------------------------ THÀNH PHẦN ------------------------------- */
+function poster(b, p) {
   return (
-    `<a class="poster" href="#" data-st="${esc(b.st)}" data-18="${b.e ? 1 : 0}" data-y="${esc(b.y)}">` +
+    `<a class="poster" href="#" data-st="${esc(b.st)}" data-18="${b.e ? 1 : 0}" data-k="${esc(b.k)}">` +
       `<div class="cv">` +
         `<img src="${esc(b.img)}" alt="${esc(b.t)}" loading="lazy">` +
         `<span class="scrim"></span>` +
-        `<span class="pill ${cls}"><i></i>${esc(pill)}</span>` +
-        (b.e ? `<span class="badge18">18+</span>` : '') +
+        `<span class="pill ${stCls(b)}"><i></i>${esc(p)}</span>` +
+        (b.e ? '<span class="badge18">18+</span>' : '') +
       `</div>` +
       `<h3>${esc(b.t)}</h3>` +
-      `<div class="mt">${esc(b.a || '—')}</div>` +
+      `<div class="mt">${esc(b.a || '—')}${b.u ? ' · ' + dmy(b.u) : ''}</div>` +
     `</a>`
   );
 }
 
-function resumeCard(r) {
+function rcard(r) {
   const b = r.b;
   const pct = b.n ? Math.round((r.at / b.n) * 100) : 0;
-  const left = b.n ? b.n - r.at : 0;
   return (
-    `<a class="resume" href="#">` +
+    `<a class="rcard" href="#">` +
       `<span class="cv"><img src="${esc(b.img)}" alt="" loading="lazy"></span>` +
       `<div>` +
         `<h3>${esc(b.t)}</h3>` +
-        `<div class="sub"><b>Ch. ${r.at}</b> / ${b.n}${left ? ` · còn ${left} chương` : ''}</div>` +
+        `<div class="meta">Ch. <b>${r.at}</b> / ${b.n}</div>` +
         `<span class="bar"><i style="width:${pct}%"></i></span>` +
-        `<span class="cta">${ICON.play}Đọc tiếp</span>` +
+        `<div class="row">` +
+          `<span class="cta">Đọc tiếp ${ICON.play}</span>` +
+          `<span class="pct">${pct}%${r.left ? ` · còn ${r.left}` : ''}</span>` +
+        `</div>` +
       `</div>` +
     `</a>`
   );
 }
 
-/* một dòng “đọc tiếp” kiểu danh sách (E2/E3) */
-function resumeRow(r) {
-  const b = r.b;
-  const pct = b.n ? Math.round((r.at / b.n) * 100) : 0;
-  return (
-    `<a class="resume" href="#">` +
-      `<span class="cv"><img src="${esc(b.img)}" alt="" loading="lazy"></span>` +
-      `<div>` +
-        `<h3>${esc(b.t)}</h3>` +
-        `<div class="sub"><b>Ch. ${r.at}</b> / ${b.n}</div>` +
-        `<span class="bar"><i style="width:${pct}%"></i></span>` +
-        `<span class="cta">Đọc tiếp ${ICON.chev}</span>` +
-      `</div>` +
+function rankRows() {
+  return RANK.map((r, i) => {
+    const tr = r.tr === 'up' ? `<span class="up">▲${r.d}</span>`
+      : r.tr === 'dn' ? `<span class="dn">▼${r.d}</span>` : `<span>—</span>`;
+    return (
+      `<a class="rr" href="#">` +
+        `<span class="n">${i + 1}</span>` +
+        `<img src="${esc(r.b.img)}" alt="" loading="lazy">` +
+        `<span class="tt"><b>${esc(r.b.t)}</b>` +
+          `<span class="m">${vn(r.week)} lượt ${tr}</span></span>` +
+      `</a>`
+    );
+  }).join('');
+}
+
+function schedRows() {
+  return SCHED.map((it) => {
+    const i = WD.indexOf(it.wd);
+    const img = it.b && it.b.img;
+    return (
+      `<a class="sch${i === TODAY ? ' today' : ''}" href="#">` +
+        `<span class="d"><b>${it.wd}</b>${dayOf(i)}</span>` +
+        (img ? `<img src="${esc(img)}" alt="" loading="lazy">` : `<span></span>`) +
+        `<span class="tt"><b>${esc(it.title || '—')}</b>` +
+          `<span class="m">${it.b ? it.b.n + ' chương' : ''}</span></span>` +
+      `</a>`
+    );
+  }).join('');
+}
+
+function worthRows() {
+  return WORTH.map((b) =>
+    `<a class="mini" href="#">` +
+      `<img src="${esc(b.img)}" alt="" loading="lazy">` +
+      `<span class="tt"><b>${esc(b.t)}</b><span class="m">${esc(b.a || '—')}</span></span>` +
+      `<span class="v">★ ${STARS.get(b.s).toFixed(1)}</span>` +
     `</a>`
-  );
+  ).join('');
 }
 
-function starterBlock() {
-  return (
-    `<div class="starters">` +
-      STARTER.map((x, i) =>
-        `<a href="#"><img src="${esc(x.b.img)}" alt="" loading="lazy">` +
-          `<div><span class="n">0${i + 1} · ${esc(x.k)}</span>` +
-          `<b>${esc(x.b.t)}</b><span class="m">${x.b.n} chương</span></div></a>`
-      ).join('') +
-    `</div>`
-  );
+function doneRows() {
+  return DONE.map((b) =>
+    `<a class="mini" href="#">` +
+      `<img src="${esc(b.img)}" alt="" loading="lazy">` +
+      `<span class="tt"><b>${esc(b.t)}</b><span class="m">${esc(b.a || '—')}</span></span>` +
+      `<span class="v green">${b.n}/${b.n}</span>` +
+    `</a>`
+  ).join('');
 }
 
-function chart(rows, opt = {}) {
-  return (
-    `<div class="chart">` +
-      rows.map((r, i) => {
-        const tr = r.tr === 'up' ? ICON.up + r.d : r.tr === 'dn' ? ICON.dn + r.d : '—';
-        return (
-          `<a href="#">` +
-            `<span class="rk">${i + 1}</span>` +
-            `<span class="cv"><img src="${esc(r.b.img)}" alt="" loading="lazy"></span>` +
-            `<span class="tt"><h3>${esc(r.b.t)}</h3>` +
-              `<span class="mt">${esc(r.b.y)} · ${esc(r.b.a || '—')}</span></span>` +
-            `<span class="vv"><span class="n" data-week>${vn(r.week)}</span>` +
-              `<span class="tr ${r.tr}">${tr}${opt.unit || ''}</span></span>` +
-          `</a>`
-        );
-      }).join('') +
-    `</div>`
-  );
-}
+const PAGE_SIZE = 12;
+const PAGES = Math.ceil(BOOKS.length / PAGE_SIZE);
 
-function worthCards(list) {
-  return (
-    `<div class="grid3">` +
-      list.map((b) => {
-        const st = STARS[b.s] || [0, 0];
-        return (
-          `<a class="poster" href="#">` +
-            `<div class="cv"><img src="${esc(b.img)}" alt="${esc(b.t)}" loading="lazy"><span class="scrim"></span></div>` +
-            `<h3>${esc(b.t)}</h3>` +
-            `<div class="score">★ ${st[0].toFixed(1)} · ${st[1]} đánh giá</div>` +
-          `</a>`
-        );
-      }).join('') +
-    `</div>`
-  );
-}
-
-function worthRows(list) {
-  return (
-    `<div class="worthRows">` +
-      list.map((b) => {
-        const st = STARS[b.s] || [0, 0];
-        return (
-          `<a href="#">` +
-            `<img src="${esc(b.img)}" alt="" loading="lazy">` +
-            `<span><b>${esc(b.t)}</b><span class="m">${esc(b.a || '—')}</span></span>` +
-            `<span class="st">★ ${st[0].toFixed(1)}</span>` +
-          `</a>`
-        );
-      }).join('') +
-    `</div>`
-  );
-}
-
-function weekStrip() {
-  return (
-    `<div class="week">` +
-      WD.map((wd, i) => {
-        const rows = SCHED_ITEMS.filter((it) => it.days.some((d) => dayName(d) === wd));
-        const today = i === TODAY;
-        return (
-          `<div class="day${today ? ' today' : ''}">` +
-            `<div class="wd">${wd}${today ? '<em>· hôm nay</em>' : ''}</div>` +
-            `<div class="dt">${dt(i)}</div>` +
-            (rows.length
-              ? rows.map((it) => {
-                  const img = it.b && it.b.img;
-                  return (
-                    `<a class="it" href="#">` +
-                      (img ? `<img src="${esc(img)}" alt="" loading="lazy">` : `<span></span>`) +
-                      `<span><b>${esc(it.title || (it.b && it.b.t) || '—')}</b>` +
-                      `<span>${esc(it.detail || (it.b ? it.b.n + ' chương' : ''))}</span></span>` +
-                    `</a>`
-                  );
-                }).join('')
-              : '<div class="off">nghỉ</div>') +
-          `</div>`
-        );
-      }).join('') +
-    `</div>`
-  );
-}
-
-function weekList() {
-  const rows = [];
-  WD.forEach((wd, i) => {
-    SCHED_ITEMS.filter((it) => it.days.some((d) => dayName(d) === wd)).forEach((it) => {
-      rows.push({ wd, i, it });
-    });
-  });
-  return (
-    `<div class="weekList">` +
-      rows.map(({ wd, i, it }) => {
-        const img = it.b && it.b.img;
-        return (
-          `<a class="row${i === TODAY ? ' today' : ''}" href="#">` +
-            `<span class="d">${wd} ${dt(i)}</span>` +
-            (img ? `<img src="${esc(img)}" alt="" loading="lazy">` : `<span></span>`) +
-            `<span><b>${esc(it.title || '—')}</b>` +
-            `<span class="m">${esc(it.detail || (it.b ? it.b.n + ' chương' : ''))}</span></span>` +
-          `</a>`
-        );
-      }).join('') +
-    `</div>`
-  );
-}
-
-function top5() {
-  return (
-    `<div class="top5">` +
-      RANK.map((r, i) =>
-        `<a href="#">` +
-          `<span class="rk">${i + 1}</span>` +
-          `<img src="${esc(r.b.img)}" alt="" loading="lazy">` +
-          `<span class="tt"><b>${esc(r.b.t)}</b><span>${vn(r.week)} lượt tuần này</span></span>` +
-        `</a>`
-      ).join('') +
-    `</div>`
-  );
-}
-
-/* thanh lọc + lưới + pager: dùng chung cho cả ba phương án */
-function library(scope) {
-  const done = BOOKS.filter((b) => b.st === 'Hoàn thành').length;
-  const run = BOOKS.filter((b) => b.st === 'Đang cập nhật').length;
-  const soon = BOOKS.filter((b) => b.st === 'Sắp ra mắt').length;
-  const adult = BOOKS.filter((b) => b.e).length;
+function library() {
+  const cnt = (f) => BOOKS.filter(f).length;
+  const chips = [
+    ['all', 'Tất cả', BOOKS.length],
+    ['done', 'Hoàn thành', cnt((b) => b.st === 'Hoàn thành')],
+    ['run', 'Đang cập nhật', cnt((b) => b.st === 'Đang cập nhật')],
+    ['soon', 'Sắp ra mắt', cnt((b) => b.st === 'Sắp ra mắt')],
+    ['18', '18+', cnt((b) => b.e)]
+  ];
   return (
     `<div class="libbar">` +
-      `<div class="srch">${ICON.search}<input placeholder="Tìm truyện, tác giả, couple…" aria-label="Tìm trong thư viện"><kbd>⌘K</kbd></div>` +
-      `<span class="dd"><b>Năm</b><span class="v">Tất cả</span><span class="cv">${ICON.caret}</span></span>` +
-      `<span class="dd"><b>Sắp xếp</b><span class="v">Mới cập nhật</span><span class="cv">${ICON.caret}</span></span>` +
-      `<div class="vseg"><button class="on" aria-label="Lưới">${ICON.grid}</button><button aria-label="Danh sách">${ICON.rows}</button></div>` +
+      `<label class="srch">${ICON.search}` +
+        `<input id="q" type="search" placeholder="Tìm truyện, tác giả…" aria-label="Tìm trong thư viện">` +
+        `<kbd>⌘K</kbd></label>` +
+      `<span class="dd"><b>Năm</b><span class="v">Tất cả</span>${ICON.caret}</span>` +
+      `<span class="dd"><b>Sắp xếp</b><span class="v">Đề xuất</span>${ICON.caret}</span>` +
+      `<div class="vseg"><button class="on" aria-label="Xem lưới">${ICON.grid}</button>` +
+        `<button aria-label="Xem danh sách">${ICON.rows}</button></div>` +
     `</div>` +
     `<div class="librow"><div class="chips">` +
-      `<button class="chip on" data-scope="${scope}" data-f="all">Tất cả<b>${BOOKS.length}</b></button>` +
-      `<button class="chip" data-scope="${scope}" data-f="done">Hoàn thành<b>${done}</b></button>` +
-      `<button class="chip" data-scope="${scope}" data-f="run">Đang cập nhật<b>${run}</b></button>` +
-      `<button class="chip" data-scope="${scope}" data-f="soon">Sắp ra mắt<b>${soon}</b></button>` +
-      `<button class="chip" data-scope="${scope}" data-f="18">18+<b>${adult}</b></button>` +
-    `</div><span class="libcount" data-libcount="${scope}">1–18 / ${BOOKS.length}</span></div>` +
-    `<div class="gridlib" data-grid="${scope}">` +
-      BOOKS.map((b) => poster(b)).join('') +
+      chips.map(([f, label, n], i) =>
+        `<button class="chip${i === 0 ? ' on' : ''}" data-f="${f}">${label}<b>${n}</b></button>`
+      ).join('') +
+    `</div><span class="libcount" id="libcount">1–${PAGE_SIZE} / ${BOOKS.length}</span></div>` +
+    `<div class="gridlib" id="grid">` +
+      BOOKS.map((b) =>
+        poster(b, b.st === 'Hoàn thành' ? `Trọn bộ ${b.n}` : `Ch. ${b.n}`)
+      ).join('') +
     `</div>` +
-    `<div class="pager">` +
-      `<button class="off">Trước</button><button class="on">1</button><button>2</button>` +
-      `<button>3</button><button class="dots">…</button><button>Sau</button>` +
+    `<div class="pager" id="pager">` +
+      `<button class="nav off">‹ Trước</button>` +
+      `<span id="pnums">` +
+        Array.from({ length: PAGES }, (_, i) =>
+          `<button class="${i === 0 ? 'on' : ''}">${i + 1}</button>`
+        ).join('') +
+      `</span>` +
+      `<button class="nav">Sau ›</button>` +
     `</div>`
   );
 }
 
-function secHead(title, cnt, more) {
-  return (
-    `<div class="shead"><h2>${title}</h2>` +
-      (cnt ? `<span class="cnt">${cnt}</span>` : '') +
-      (more ? `<a class="more" href="#">${more} ›</a>` : '') +
-    `</div>`
-  );
-}
-
-function periodSeg() {
-  return `<div class="seg"><button class="on">Tuần</button><button>Tháng</button><button>Mọi lúc</button></div>`;
-}
-
-/* --------------------------- ba phương án -------------------------------- */
-const NEW = secHead('Mới cập nhật', `${recent.length} bộ vừa lên chương`, 'Xem tất cả');
-const RESUME_SEC = secHead('Đọc tiếp', `${RESUME.length} bộ đang đọc`, 'My Space');
-const RANK_SEC = `<div class="shead"><h2>Bảng xếp hạng</h2><span class="cnt">tuần này · theo lượt đọc</span>${periodSeg()}</div>`;
-
-const OPT_E1 = `
-<div class="pg">
-  <section class="sec">${RESUME_SEC}<div class="resumeRow">${RESUME.map(resumeCard).join('')}</div></section>
-  <section class="sec">${NEW}<div class="grid6">${recent.map((b) => poster(b, { pill: b.n + ' chương', pillCls: stCls(b) })).join('')}</div></section>
-  <section class="sec">${RANK_SEC}
-    <div class="rankWrap">
-      <div>${chart(RANK)}</div>
-      <div><div class="worthHead"><h3>Đáng xem</h3><a class="more" href="#">Xem tất cả ›</a></div>${worthCards(WORTH)}</div>
-    </div>
-  </section>
-  <section class="sec">${secHead('Lịch ra chương', '7 bộ · tuần này', 'Cả lịch')}${weekStrip()}</section>
-  <section class="sec">${secHead('Thư viện', BOOKS.length + ' bộ chọn lọc')}${library('E1')}</section>
-</div>`;
-
-const OPT_E2 = `
-<div class="pg">
-  <section class="sec">${NEW}<div class="grid6">${recent.map((b) => poster(b, { pill: b.n + ' chương', pillCls: stCls(b) })).join('')}</div></section>
-  <section class="sec">${secHead('Top tuần', 'theo lượt đọc', 'Toàn bảng')}${top5()}</section>
-  <section class="sec">
-    <div class="side">
-      <div class="pane">${secHead('Thư viện', BOOKS.length + ' bộ chọn lọc')}${library('E2')}</div>
-      <aside class="blk pin">${secHead('Đọc tiếp', '', 'My Space')}<div class="rlist">${RESUME.map(resumeRow).join('')}</div></aside>
-      <aside class="blk rest">
-        <div>${secHead('Lịch tuần', '', 'Cả lịch')}${weekList()}</div>
-        <div><div class="worthHead"><h3>Đáng xem</h3><a class="more" href="#">Xem cả ›</a></div>${worthRows(WORTH)}</div>
-      </aside>
-    </div>
-  </section>
-</div>`;
-
-const OPT_E3 = `
-<div class="pg">
-  <section class="sec">
-    <div class="two">
-      <div class="pane">${RESUME_SEC}<div class="rlist">${RESUME.map(resumeRow).join('')}</div>
-        <div class="blk"><div class="worthHead"><h3>Chưa biết đọc gì?</h3><a class="more" href="#">Thư viện ›</a></div>${starterBlock()}</div></div>
-      <div class="pane">${secHead('Bảng xếp hạng', 'tuần này', 'Toàn bảng')}${chart(RANK)}
-        <div class="worthHead" style="margin-top:18px"><h3>Đáng xem</h3></div>${worthCards(WORTH)}
-      </div>
-    </div>
-  </section>
-  <section class="sec">${NEW}<div class="grid6">${recent.map((b) => poster(b, { pill: b.n + ' chương', pillCls: stCls(b) })).join('')}</div></section>
-  <section class="sec">${secHead('Lịch ra chương', '7 bộ · tuần này', 'Cả lịch')}${weekStrip()}</section>
-  <section class="sec">${secHead('Thư viện', BOOKS.length + ' bộ chọn lọc')}${library('E3')}</section>
-</div>`;
-
-const NOTE_E1 = 'Hàng bìa là chính, mỗi mục một hàng đúng nhịp glvietsubz: dễ quét, không khung, không hộp lồng hộp. Bìa 176px bằng cỡ bìa thư viện.';
-const NOTE_E2 = 'Thư viện là nhân vật chính; cột phụ dính bên phải giữ “Đọc tiếp · Lịch tuần · Đáng xem” luôn thấy khi cuộn lưới. Hợp với người đọc vào để đọc tiếp.';
-const NOTE_E3 = 'Bản đang chạy nhưng bỏ khung hộp: hai cột trên, hàng bìa choáng ngang ở giữa, rồi lịch và thư viện. Ít thay đổi cấu trúc nhất.';
-
-function frame(id, title, note, body) {
-  return `
-<section class="opt" id="${id}">
-  <div class="optHead"><span class="k">Phương án ${id.slice(1)}</span><h2>${title}</h2><p>${note}</p></div>
-  <div class="mkframe"><div class="frame">
-    <div class="hdr">
-      <span class="logo">ssochuz<i>.</i></span>
-      <nav><a>Trang chủ</a><a>Thư viện</a><a>My Space</a><a>Vòng quay</a></nav>
-      <span class="tail"><span class="k">${ICON.search} Tìm</span><span>67 bộ</span></span>
-    </div>
-    <div class="heroStub"><span><b>Hero banner</b> — giữ nguyên (đã chốt ở vòng 19)</span><span>↓ phần dưới đây là thứ cần chọn</span></div>
-    ${body}
-  </div></div>
-</section>`;
-}
-
+/* -------------------------------- TRANG --------------------------------- */
 const HTML = `<!doctype html>
 <html lang="vi">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ssochuz · mockup nửa dưới trang chủ (E1 · E2 · E3)</title>
-<link rel="stylesheet" href="mock.css">
+<title>ssochuz · mockup phương án 2 (tạp chí) · nửa dưới trang chủ</title>
+<link rel="stylesheet" href="mock2.css">
 </head>
 <body data-w="desktop">
 
 <div class="mkbar">
-  <b>ssochuz · nửa dưới trang chủ</b>
-  <span class="hint">ba phương án · dữ liệu thật 67 bộ · bìa thật</span>
+  <span class="ttl">ssochuz · nửa dưới trang chủ</span>
+  <span class="hint">phương án 2 “tạp chí” · bản 2 · bìa và tên thật (67 bộ)</span>
   <div class="wsw">
     <button data-w="desktop" class="on">Desktop</button>
     <button data-w="tablet">Tablet</button>
@@ -447,80 +342,148 @@ const HTML = `<!doctype html>
   </div>
 </div>
 
-${frame('o1', 'Kệ bìa', NOTE_E1, OPT_E1)}
-${frame('o2', 'Tạp chí', NOTE_E2, OPT_E2)}
-${frame('o3', 'Bảng', NOTE_E3, OPT_E3)}
+<div class="mkframe"><div class="frame">
 
-<div class="cmpWrap">
-  <h2>So sánh nhanh</h2>
-  <p>Ba phương án dùng cùng một bộ thành phần (đầu mục · bìa · bảng đánh số · lịch · thanh lọc D1), khác nhau ở <b>thứ tự và chỗ đặt khối</b>.</p>
-  <div class="cmpScroll"><table class="cmp">
-    <thead><tr><th>Tiêu chí</th><th>E1 · Kệ bìa</th><th>E2 · Tạp chí</th><th>E3 · Bảng</th></tr></thead>
-    <tbody>
-      <tr><th>Thứ tự mắt đọc</th><td class="good">Đọc tiếp → Mới → Bảng → Lịch → Thư viện</td><td>Mới → Top tuần → Thư viện (+ cột phụ)</td><td>Đọc tiếp/Bảng → Mới → Lịch → Thư viện</td></tr>
-      <tr><th>“Mới cập nhật”</th><td class="good">6 bìa 176px, cả hàng</td><td class="good">6 bìa 176px, cả hàng</td><td class="good">6 bìa 176px, cả hàng</td></tr>
-      <tr><th>Đọc tiếp</th><td>3 thẻ ngang, trên cùng</td><td class="good">3 dòng trong cột phụ dính</td><td>3 dòng, cột trái</td></tr>
-      <tr><th>Lưới thư viện</th><td class="good">6–7 cột, rộng nhất</td><td class="warn">4–5 cột (nhường chỗ cột phụ)</td><td class="good">6–7 cột</td></tr>
-      <tr><th>Cá nhân hoá</th><td>Chỉ thấy khi ở đầu trang</td><td class="good">Luôn thấy khi cuộn</td><td>Chỉ thấy khi ở đầu trang</td></tr>
-      <tr><th>Khác bản đang chạy</th><td class="warn">Nhiều (bỏ khung, đổi thứ tự)</td><td class="warn">Nhiều nhất (thêm cột phụ)</td><td class="good">Ít nhất</td></tr>
-      <tr><th>Hợp với</th><td>Người mới, quét nhanh “có gì”</td><td>Người đọc quay lại hằng ngày</td><td>Bản nâng cấp an toàn của hiện tại</td></tr>
-    </tbody>
-  </table></div>
-</div>
+  <header class="hdr">
+    <span class="logo">ssochuz<i>.</i></span>
+    <nav><a class="on" href="#">Trang chủ</a><a href="#">Thư viện</a><a href="#">My Space</a><a href="#">Vòng quay</a></nav>
+    <span class="tail"><span class="sbtn">${ICON.search} Tìm</span><span>67 bộ</span></span>
+  </header>
+
+  <div class="hero"><span><b>Hero banner</b> — giữ nguyên, đã chốt ở vòng 19</span><span>↓ phần dưới là phần đang sửa</span></div>
+
+  <main class="pg">
+
+    <section class="band">
+      <div class="shead"><h2>Đọc tiếp</h2><span class="cnt">${RESUME.length} bộ đang đọc dở</span>
+        <span class="rule"></span><a class="more" href="#">My Space ${ICON.chev}</a></div>
+      <div class="resumeRow">${RESUME.map(rcard).join('')}</div>
+    </section>
+
+    <section class="band">
+      <div class="shead"><h2>Mới cập nhật</h2><span class="cnt">6 bộ vừa lên chương</span>
+        <span class="rule"></span><a class="more" href="#">Xem tất cả ${ICON.chev}</a></div>
+      <div class="grid6">${RECENT.map((b) =>
+        poster(b, b.st === 'Hoàn thành' ? `Trọn bộ ${b.n}` : `Ch. ${b.n}`)).join('')}</div>
+    </section>
+
+    <section class="band">
+      <div class="zoneHead"><h2>Thư viện</h2><span class="cnt">67 bộ chọn lọc</span>
+        <span class="right">Cập nhật <b>hôm nay</b> · 4 bộ đang ra</span></div>
+      <div class="side">
+        <div class="pane">${library()}</div>
+        <div class="railCol"><aside class="rail">
+          <div class="rblk">
+            <div class="rhead"><h3>Xếp hạng tuần</h3><a class="more" href="#">Toàn bảng ›</a></div>
+            ${rankRows()}
+          </div>
+          <div class="rblk">
+            <div class="rhead"><h3>Lịch ra chương</h3><a class="more" href="#">Cả lịch ›</a></div>
+            ${schedRows()}
+          </div>
+          <div class="rblk">
+            <div class="rhead"><h3>Đáng xem</h3><a class="more" href="#">Xem cả ›</a></div>
+            ${worthRows()}
+          </div>
+          <div class="rblk">
+            <div class="rhead"><h3>Vừa hoàn thành</h3><a class="more" href="#">Trọn bộ ›</a></div>
+            ${doneRows()}
+          </div>
+        </aside></div>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <span class="lg">ssochuz<i>.</i></span>
+      <nav><a href="#">Giới thiệu</a><a href="#">Nội quy</a><a href="#">Liên hệ</a><a href="#">RSS</a></nav>
+      <span class="r">67 bộ · cập nhật 30/10/2026</span>
+    </footer>
+
+  </main>
+</div></div>
 
 <script>
 (function () {
-  var body = document.body;
-  var PAGE = 18;
-  var SNAP = {};
-  ['E1', 'E2', 'E3'].forEach(function (sc) {
-    var g = document.querySelector('[data-grid="' + sc + '"]');
-    if (g) SNAP[sc] = Array.prototype.slice.call(g.querySelectorAll('.poster'));
-  });
+  var PAGE = ${PAGE_SIZE};
+  var cards = Array.prototype.slice.call(document.querySelectorAll('#grid .poster'));
+  var countEl = document.getElementById('libcount');
+  var numsEl = document.getElementById('pnums');
+  var q = document.getElementById('q');
+  var prev = document.querySelector('.pager .nav');
+  var state = { f: 'all', q: '', page: 1 };
 
-  function match(p, f) {
-    var ds = p.dataset;
-    if (!f || f === 'all') return true;
-    if (f === '18') return ds['18'] === '1';
-    if (f === 'done') return ds.st === 'Hoàn thành';
-    if (f === 'run') return ds.st === 'Đang cập nhật';
-    if (f === 'soon') return ds.st === 'Sắp ra mắt';
+  function match(p) {
+    if (state.f === 'all') return true;
+    if (state.f === '18') return p.dataset['18'] === '1';
+    if (state.f === 'done') return p.dataset.st === 'Hoàn thành';
+    if (state.f === 'run') return p.dataset.st === 'Đang cập nhật';
+    if (state.f === 'soon') return p.dataset.st === 'Sắp ra mắt';
     return true;
   }
-  function paint(sc, f) {
-    var shown = 0, total = 0;
-    (SNAP[sc] || []).forEach(function (p) {
-      var ok = match(p, f);
-      if (ok) total++;
-      var vis = ok && shown < PAGE;
-      if (vis) shown++;
-      p.style.display = vis ? 'block' : 'none';
+  function selected() {
+    return cards.filter(function (p) {
+      return match(p) && (!state.q || (p.dataset.k || '').indexOf(state.q) >= 0);
     });
-    var c = document.querySelector('[data-libcount="' + sc + '"]');
-    if (c) c.textContent = (shown ? '1–' + shown : '0') + ' / ' + total;
   }
+  function paint() {
+    var list = selected();
+    var pages = Math.max(1, Math.ceil(list.length / PAGE));
+    if (state.page > pages) state.page = 1;
+    var from = (state.page - 1) * PAGE;
+    var visible = list.slice(from, from + PAGE);
+    var set = visible.indexOf ? visible : Array.prototype.slice.call(visible);
+    cards.forEach(function (p) { p.style.display = set.indexOf(p) >= 0 ? 'block' : 'none'; });
+    countEl.textContent = (list.length ? from + 1 : 0) + '–' + (from + visible.length) +
+      ' / ' + list.length;
+    numsEl.innerHTML = '';
+    for (var i = 1; i <= pages; i++) {
+      var b = document.createElement('button');
+      b.textContent = i;
+      if (i === state.page) b.className = 'on';
+      b.addEventListener('click', pageTo.bind(null, i));
+      numsEl.appendChild(b);
+    }
+    prev.classList.toggle('off', state.page === 1);
+  }
+  function pageTo(n) { state.page = n; paint(); }
 
   document.addEventListener('click', function (e) {
     var w = e.target.closest('.mkbar .wsw button');
     if (w) {
-      body.setAttribute('data-w', w.getAttribute('data-w'));
-      document.querySelectorAll('.mkbar .wsw button').forEach(function (b) { b.classList.toggle('on', b === w); });
-      return;
-    }
-    var seg = e.target.closest('.seg button');
-    if (seg) {
-      seg.parentNode.querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', b === seg); });
+      document.body.setAttribute('data-w', w.getAttribute('data-w'));
+      Array.prototype.forEach.call(document.querySelectorAll('.mkbar .wsw button'),
+        function (b) { b.classList.toggle('on', b === w); });
       return;
     }
     var chip = e.target.closest('.chip[data-f]');
     if (chip) {
-      var sc = chip.getAttribute('data-scope');
-      chip.parentNode.querySelectorAll('.chip').forEach(function (c) { c.classList.toggle('on', c === chip); });
-      paint(sc, chip.getAttribute('data-f'));
+      state.f = chip.getAttribute('data-f');
+      state.page = 1;
+      Array.prototype.forEach.call(chip.parentNode.children,
+        function (c) { c.classList.toggle('on', c === chip); });
+      paint();
     }
   });
 
-  Object.keys(SNAP).forEach(function (sc) { paint(sc, 'all'); });
+  function plain(s) {
+    return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase();
+  }
+  if (q) q.addEventListener('input', function () {
+    state.q = plain(q.value.trim());
+    state.page = 1;
+    paint();
+  });
+  if (prev) prev.addEventListener('click', function () {
+    if (state.page > 1) pageTo(state.page - 1);
+  });
+  document.querySelectorAll('.pager .nav').forEach(function (b, i) {
+    if (i === 1) b.addEventListener('click', function () {
+      var pages = Math.max(1, Math.ceil(selected().length / PAGE));
+      if (state.page < pages) pageTo(state.page + 1);
+    });
+  });
+
+  paint();
 })();
 </script>
 </body>
@@ -528,5 +491,6 @@ ${frame('o3', 'Bảng', NOTE_E3, OPT_E3)}
 `;
 
 fs.writeFileSync(path.join(HERE, 'index.html'), HTML);
-console.log('đã ghi index.html ·', Math.round(HTML.length / 1024), 'kB ·', BOOKS.length, 'bộ ·',
-  'bìa thiếu:', BOOKS.filter((b) => !b.img).length, '· lịch:', SCHED_ITEMS.length, 'mục');
+console.log('đã ghi index.html ·', Math.round(HTML.length / 1024), 'kB ·',
+  BOOKS.length, 'bộ · bìa thiếu:', BOOKS.filter((b) => !b.img).length,
+  '· lịch:', SCHED.length, '· đọc tiếp:', RESUME.map((r) => r.b.s + ' ' + r.at + '/' + r.b.n).join(', '));

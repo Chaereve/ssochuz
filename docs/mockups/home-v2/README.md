@@ -1,99 +1,104 @@
-# Phương án nửa dưới trang chủ · vòng 27
+# Phương án 2 · “Tạp chí” — bản 2
 
-**Mockup (tĩnh, mở trực tiếp):** `docs/mockups/home-v2/index.html`
-→ local: `http://127.0.0.1:8081/docs/mockups/home-v2/index.html`
-Ba phương án nằm **trong cùng một trang**, dùng nút **Desktop / Tablet / Mobile** ở thanh trên
-để xem cùng một phương án ở ba bề rộng. Dữ liệu là **67 bộ thật** trong `data/registry.json`,
-bìa là **ảnh thật** trong `assets/covers/` (không có bìa vẽ tay, không có số liệu bịa).
+**Mockup:** `docs/mockups/home-v2/index.html` → `http://127.0.0.1:8081/docs/mockups/home-v2/index.html`
+Nút **Desktop / Tablet / Mobile** ở thanh trên đổi bề rộng khung (1180 / 834 / 390).
+Bản 1 (ba phương án E1/E2/E3) vẫn còn ở `index-r27.html` để đối chiếu.
 
-Tham khảo: **glvietsubz.net** (mỗi mục là một hàng bìa, đầu mục có “Xem thêm ›”, trên bìa chỉ
-một nhãn) và **glvietsub.org** (“Xem nhiều nhất” là bảng đánh số 1…5, mục nào cũng có
-“Xem toàn bộ ›”, bìa mang nhãn tiến độ).
+Dữ liệu: 67 bộ thật trong `data/registry.json`, bìa thật trong `assets/covers/`.
+Con số **minh hoạ cho phần trình bày**: lượt đọc tuần, điểm ★, chương đang đọc dở
+(registry không có ba loại này). Ngày cập nhật, số chương, trạng thái, danh sách
+`editorChoice`, lịch ra chương là **dữ liệu thật**.
 
 ---
 
-## 1. Đang có gì chưa ổn (bản đang chạy, sau vòng 26)
+## 1. Bản 1 sai ở đâu
 
-| # | Chỗ | Vấn đề |
+| # | Chỗ | Lỗi |
 |---|---|---|
-| 1 | Đầu mục | Mỗi mục một kiểu: chỗ có `.tab`, chỗ có `.seg`, chỗ chỉ có chữ nhỏ. Nhãn 9–11px nằm cạnh tiêu đề 21px nên hàng đầu mục bị “vụn”. |
-| 2 | Đọc tiếp (7/12) | Danh sách 3 dòng nằm trong ô 7 cột ⇒ nửa phải của ô trống, mắt bị hụt. |
-| 3 | Ranking (5/12) | Cột hẹp phải chứa cả bảng top-5 **và** 3 bìa “Đáng xem” ⇒ bìa nhỏ nhất trang (~104px), chữ 12px. |
-| 4 | Lịch tuần | 7 cột kẻ chỉ, ngày nào không có truyện thì để trống ⇒ 2–3 cột trống liền nhau, trang bị “thủng”. |
-| 5 | Khung | `.btile` + viền + nền lồng nhau ⇒ cảm giác hộp trong hộp, đúng lỗi “bớt hộp” từ vòng 25 chưa dứt. |
-| 6 | Thứ tự | Mới cập nhật → Đọc tiếp → Ranking: người quay lại phải đi qua cả một dải bìa mới tới chỗ đang đọc. |
+| 1 | “Top tuần” | Đặt **toàn chiều rộng** thành 5 dòng ⇒ mỗi dòng dài 1100px, chữ lọt thỏm, trang bị “thủng” ở giữa. |
+| 2 | Hai dải trên | `Đọc tiếp` và `Mới cập nhật` chạy hết chiều ngang, tới `Thư viện` mới tách hai cột ⇒ trục dọc gãy khúc, không có lý do bố cục. |
+| 3 | Cột phụ | Chỉ có 3 khối ngắn (~780px) đứng cạnh lưới thư viện cao ~1600px ⇒ **trống gần 800px** bên phải. |
+| 4 | Lặp bìa | Lưới thư viện sắp theo “Mới cập nhật” nên 6 bìa đầu lưới **trùng đúng 6 bìa** ngay phía trên; thêm 3 bộ nữa trùng với `Đọc tiếp` và `Xếp hạng` ⇒ 5 bộ lặp lại 2–3 lần trong một màn hình. |
+| 5 | Cỡ bìa | `Mới cập nhật` 176px nhưng lưới 181px, cột phụ 104px ⇒ ba thang bìa lệch nhau. |
+| 6 | Đầu mục | Mục toàn trang 21px, đầu mục cột phụ 16px nhưng dùng **cùng** kiểu; hàng đầu mục không có đường dẫn nhịp. |
+| 7 | Sơ sài | Cột phụ 3 khối × 3–6 dòng, không có gì để mắt bám: thiếu số liệu, thiếu “hôm nay”, thiếu chân trang. |
 
-## 2. Ba phương án
+## 2. Bản 2 làm gì
 
-### E1 · KỆ BÌA — *khuyến nghị*
-Mỗi mục là **một dải ngang**, đầu mục dùng chung một mẫu duy nhất: tiêu đề serif + dòng đếm
-+ “Xem thêm ›”. Không viền, không nền, chỉ khoảng trắng phân khối.
+### Nhịp trang: 2 dải → 1 vùng hai cột
 
 ```
-Đọc tiếp        3 thẻ ngang 72px bìa, có thanh tiến độ + “Đọc tiếp ►”
-Mới cập nhật    6 bìa 176px, mỗi bìa MỘT nhãn “N chương”, dưới bìa: tên + tác giả
-Bảng xếp hạng   bảng đánh số 1…5 (số serif, lượt/tuần, ±)  |  Đáng xem: 3 bìa 146px
-Lịch ra chương  7 cột mảnh, cột “hôm nay” có nền son nhạt
-Thư viện        thanh lọc D1 + lưới 6 cột 177px + phân trang
+Đọc tiếp        3 thẻ ngang · 84px bìa · thanh tiến độ · %  · còn N chương
+Mới cập nhật    6 bìa 174px · mỗi bìa MỘT nhãn (Ch. N / Trọn bộ N) · tác giả · ngày
+───────────────────────────────────┬──────────────────────────────
+THƯ VIỆN (788px)                   │ cột phụ 300px (dính khi cuộn)
+ tìm · Năm · Sắp xếp · lưới/danh sách│  Xếp hạng tuần   5 dòng + ▲▼
+ chip trạng thái kèm số             │  Lịch ra chương  7 dòng, “hôm nay” son
+ lưới 4 cột bìa 185px               │  Đáng xem        3 dòng + ★
+ 12 bộ/trang · phân trang 6 trang   │  Vừa hoàn thành  3 dòng + x/y
+───────────────────────────────────┴──────────────────────────────
+chân trang
 ```
-- Đúng nhịp glvietsubz: **hàng bìa là nhân vật chính**, quét rất nhanh “hôm nay có gì”.
-- Bìa đồng cỡ 176px với lưới thư viện ⇒ mắt không phải đổi thang.
-- Mobile: giữ **nguyên thứ tự 5 mục**, chỉ đổi số cột (6→4→3, lưới 6→4→2, lịch thành thẻ
-  vuốt ngang 152px). Đây là điều kiện “mobile cùng cấu trúc, chỉ thu nhỏ”.
 
-### E2 · TẠP CHÍ — *phương án dự phòng*
-Hàng bìa ở trên, rồi **hai cột**: thư viện là chính (4 cột bìa ~181px), **cột phụ 306px dính**
-giữ Đọc tiếp · Lịch tuần · Đáng xem luôn nhìn thấy khi cuộn lưới.
-- Học glvietsub.org: cột tiện ích luôn hiện.
-- Ưu: người đọc quay lại hằng ngày thấy ngay “đang đọc tới đâu”.
-- Nhược: lưới thư viện hẹp còn 4 cột (mất 1/3 số bìa mỗi màn), nhiều thay đổi cấu trúc nhất;
-  ở 834px cột phụ tụt xuống dưới ⇒ phải đổi thứ tự bằng `order`, dễ sinh lỗi.
+- **Đường kẻ dọc** ở mép trái cột phụ chạy hết chiều cao vùng thư viện: cột phụ
+  ngắn hơn lưới vẫn đọc là “cột báo”, không phải chỗ trống.
+- **Đường kẻ mảnh** nối tiêu đề mục với “Xem tất cả ›” ở cả hai dải trên — nhịp
+  tạp chí, không thêm hộp.
+- Ba thang bìa duy nhất: 185 (lưới) · 174 (dải mới) · 84 (đọc tiếp) + 30–36 (dòng phụ).
 
-### E3 · BẢNG — *bản nâng cấp an toàn của hiện tại*
-Giữ thứ tự Đọc tiếp/Ranking trước, nhưng **bỏ khung hộp**: hai pane 7fr/5fr ngăn bằng khoảng trắng,
-ranking là bảng đánh số có cột số liệu, rồi dải bìa choáng ngang, lịch, thư viện.
-- Ít rủi ro nhất khi lên bản thật (gần như chỉ sửa CSS), nhưng **chưa giải quyết** ô Đọc tiếp
-  7 cột bị trống và vẫn để người quay lại đi qua dải bìa mới.
+### Chống lặp bìa: mỗi bộ chỉ xuất hiện ở MỘT khối phía trên lưới
 
-## 3. So sánh
+`Đọc tiếp` 3 bộ → `Mới cập nhật` 6 bộ → `Xếp hạng` 5 bộ → `Đáng xem` 3 → `Vừa hoàn thành` 3:
+**27 bộ khác nhau**, không bộ nào lặp. Lưới mặc định sắp theo **`editorChoice` thật**
+(12 bộ biên tập chọn) nên trang 1 của lưới cũng không trùng dải phía trên.
 
-| Tiêu chí | E1 · Kệ bìa | E2 · Tạp chí | E3 · Bảng |
-|---|---|---|---|
-| Thứ tự mắt đọc | Đọc tiếp → Mới → Bảng → Lịch → Thư viện | Mới → Top tuần → Thư viện (+ cột phụ) | Đọc tiếp/Bảng → Mới → Lịch → Thư viện |
-| “Mới cập nhật” | 6 bìa 176px, cả hàng | 6 bìa 176px, cả hàng | 6 bìa 176px, cả hàng |
-| Đọc tiếp | 3 thẻ ngang, trên cùng | 3 dòng, cột phụ dính | 3 dòng, cột trái |
-| Lưới thư viện | **6–7 cột (rộng nhất)** | 4–5 cột | 6–7 cột |
-| Cá nhân hoá | chỉ ở đầu trang | **luôn thấy khi cuộn** | chỉ ở đầu trang |
-| Ô trống / cột thủng | hết | hết | còn (Đọc tiếp 7 cột) |
-| Khác bản đang chạy | nhiều (đổi thứ tự, bỏ khung) | nhiều nhất | ít nhất |
-| Hợp với | người mới, quét “có gì mới” | người đọc quay lại hằng ngày | bản vá nhanh |
+### Cân lại phân bổ
 
-## 4. Nếu chọn E1 — các bước lên bản thật
+| | Bản 1 | Bản 2 |
+|---|---|---|
+| Cột phụ | 780px cạnh 1600px lưới | 1150px cạnh 1260px |
+| Khoảng trống cuối cột phụ | ~800px | ~110px, có đường kẻ dọc đỡ |
+| Bìa lặp trên màn hình đầu | 5 bộ | 0 |
+| Thang bìa | 3 thang lệch | 3 thang có chủ đích |
 
-1. **Đầu mục dùng chung**: một hàm `secHead(title, count, more)` sinh `.shead`; xoá `.tab`
-   riêng của `#rankTabs` khỏi hàng tiêu đề (giữ `#rankTabs` làm hàng lọc riêng dưới tiêu đề,
-   vẫn giữ `[data-mode]` + `aria-pressed` cho `t_ranking`).
-2. **Đổi thứ tự**: `#resumeSec` lên trước `#newRail`; `.bento` bỏ `grid-column` của các ô,
-   chuyển sang các dải `.sec` xếp dọc (`display:block` + `padding` thay vì lưới 12 cột).
-3. **Bảng xếp hạng**: `.rankWrap` 2 cột 1.35fr/1fr ở ≥1000px, dưới đó 1 cột; “Đáng xem”
-   3 bìa `minmax(146px,1fr)` thay vì 104px.
-4. **Lịch**: giữ 7 cột ở ≥900px nhưng **ngày trống chỉ còn dấu “–” 11px**, không còn khung;
-   ≤900px chuyển thành thẻ vuốt ngang 152px.
-5. **Bỏ hộp**: `#bxh`, `#resumeSec`, `#sched` không dùng `.btile` nữa — chỉ khoảng trắng 40px
-   giữa các mục; giữ `.btile` cho phần khác nếu còn dùng.
-6. **Ngân sách CSS**: phần này thay thế ~5,5 kB CSS v3 hiện có, ước tính **+2,5 kB**;
-   `cz.css` đang 206,0 / 215 kB ⇒ còn ~6,5 kB dư. Không thêm thư viện, không thêm font.
+### Nội dung cột phụ (đủ để không sơ sài)
 
-## 5. Kiểm tra trước khi lên bản thật
+1. **Xếp hạng tuần** — số thứ tự serif (1 son), bìa 36, tên 2 dòng, `12.480 lượt ▲3`.
+   ▲ xanh / ▼ đỏ như bảng xếp hạng của WEBTOON.
+2. **Lịch ra chương** — 7 dòng theo thứ, ngày thật của tuần minh hoạ (02–08/11/2026),
+   dòng “hôm nay” tô son; bộ nào ra nhiều thứ thì hiện ở từng thứ.
+3. **Đáng xem** — 3 dòng, điểm ★ bên phải.
+4. **Vừa hoàn thành** — 3 dòng, `10/10` màu xanh.
 
-- Không cắt chữ: bìa luôn `aspect-ratio 2/3`; tiêu đề bìa cao cố định 2 dòng để dòng tác giả
+### Lưới thư viện
+
+Giữ nguyên thanh lọc D1 đã chốt (vòng 23): tìm kiếm + Năm + Sắp xếp + lưới/danh sách,
+hàng chip trạng thái **kèm số lượng thật** (67 / 46 / 4 / 17 / 29), đếm `1–12 / 67`,
+phân trang 6 trang. Lọc và tìm chạy thật trong mockup (gõ “nguoi” ra 2 bộ, gõ “Lunar” ra 1).
+
+## 3. Lên bản thật — 7 bước
+
+1. `index.html`: bỏ `.bento` 12 cột; thay bằng hai `<section class="band">` (Đọc tiếp,
+   Mới cập nhật) rồi `<section class="band">` chứa `.side` = `.pane` + `.railCol`.
+2. `#resumeSec` lên trước, `#newRail` giữ 6 bìa; `#bxh` chuyển vào cột phụ thành danh
+   sách 5 dòng (`#rank .rank` vẫn đủ 5, `#rankSummary` giữ nguyên, `sr-only`).
+3. `#sched` chuyển vào cột phụ (7 dòng), `#worthRail` 3 dòng, thêm khối “Vừa hoàn thành”.
+4. `#thu-vien` giữ D1, đổi `grid-template-columns` sang `auto-fill minmax(170px, 1fr)`,
+   phân trang 12 bộ/trang, thêm `#libSub` hiện “1–12 / 67”.
+5. Sắp xếp mặc định của lưới = `editorChoice` rồi tới `updated`; nhãn select = “Đề xuất”.
+6. CSS: thay ba nhóm `body[data-w=…]` của mockup bằng media query **1100 / 900 / 620px**;
+   xoá CSS v3 cũ không dùng (`.btile`, `.bhead`, `.ranklist`, `.week…`).
+7. Ngân sách: phần mới ~6 kB, phần xoá ~5,5 kB ⇒ **gần như hoà**; `cz.css` đang
+   206,0/215 kB. Không thêm thư viện, không thêm font, không ảnh mới.
+
+## 4. Điểm phải kiểm lại khi lên bản thật
+
+- Không cắt chữ: bìa `aspect-ratio 2/3`; tên bìa cao cố định 2 dòng để dòng tác giả
   thẳng hàng; nhãn trên bìa `max-width: calc(100% - 16px)` + ellipsis.
-- Mobile = cùng thứ tự, chỉ đổi số cột (6→4→3), không có mục nào biến mất.
-- Giữ hợp đồng id đang test: `#resumeSec/#resumeRail`, `#newRail`, `#bxh h2`, `#rankModes`,
+- Mobile (390): cùng thứ tự, chỉ đổi số cột (6→4→3; lưới 4→2), cột phụ xuống dưới
+  thành 1 cột, thanh lọc tự xuống dòng.
+- Tablet (834): cột phụ xuống dưới thành **lưới 2 cột** (4 khối), lưới thư viện 4 cột bìa 150.
+- Hợp đồng id đang test: `#resumeSec/#resumeRail`, `#newRail`, `#bxh h2`, `#rankModes`,
   `#rankTabs .tab ×3`, `#rank .rank ×5`, `#rankSummary`, `#worthRail`, `#sched`, `#libSub`.
-- Chạy lại `t_home t_ranking t_stats t_adult t_quiet_home t_follow t_mobile t_pwa`,
+- Chạy `t_home t_ranking t_stats t_adult t_quiet_home t_follow t_mobile t_pwa`,
   `audit:a11y`, `check_html.js`, `bundle_budget.mjs` trước khi commit.
-
----
-
-*Chưa đụng vào `src/cz.css` / `index.html` ở vòng này: đây là bản để chọn hướng, chọn xong mới sửa thật.*
