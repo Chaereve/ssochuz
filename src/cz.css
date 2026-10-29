@@ -894,8 +894,8 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 /* vị trí trong quạt: 0 = tâm, 1..4 xoay vòng hai bên, y/r/s theo bậc */
 .hero .fan [data-pos="0"] { --x: 0px; --y: -6px; --r: 0deg; --s: 1.05; z-index: 5; }
 .hero .fan [data-pos="1"] { --x: var(--fan-unit); --y: 10px; --r: 7deg; --s: .9; z-index: 2; }
-.hero .fan [data-pos="2"] { --x: calc(var(--fan-unit) * 1.5); --y: 26px; --r: 13deg; --s: .78; z-index: 1; }
-.hero .fan [data-pos="3"] { --x: calc(var(--fan-unit) * -1.5); --y: 26px; --r: -13deg; --s: .78; z-index: 1; }
+.hero .fan [data-pos="2"] { --x: calc(var(--fan-unit) * 1.45); --y: 26px; --r: 12deg; --s: .78; z-index: 1; }
+.hero .fan [data-pos="3"] { --x: calc(var(--fan-unit) * -1.45); --y: 26px; --r: -12deg; --s: .78; z-index: 1; }
 .hero .fan [data-pos="4"] { --x: calc(var(--fan-unit) * -1); --y: 10px; --r: -7deg; --s: .9; z-index: 2; }
 /* nhãn dưới bìa đang chọn: “01 · tác giả”. Nằm ngoài <button> (nút có
    overflow:hidden) và luôn ở tâm vì bìa đang chọn luôn ở data-pos="0". */
