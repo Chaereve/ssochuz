@@ -2002,11 +2002,9 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
        liệt kê đủ bảy mục) khớp từng nhãn một. */
     function navA(n) {
       return '<a href="' + n.h + '" data-k="' + n.k + '"' + (n.k === active ? ' class="on" aria-current="page"' : '') +
-        ' role="menuitem" title="' + esc(n.label) + '" aria-label="' + esc(n.label) + '">' +
+        ' title="' + esc(n.label) + '" aria-label="' + esc(n.label) + '">' +
         icon(n.i, 'i-s') + '<span class="nav-lbl">' + esc(n.label) + '</span></a>';
     }
-    var menuLinks = NAV.map(navA).join('');
-    var menuOn = NAV.some(function (n) { return n.k === active; });
     var mLinks = NAV.map(function (n) {
       return '<a href="' + n.h + '" data-k="' + n.k + '"' + (n.k === active ? ' class="on"' : '') + ' aria-label="' + esc(n.label) + '">' +
         icon(n.i, 'i-s') + ' ' + esc(n.label) + '</a>';
@@ -2017,11 +2015,6 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     d.querySelectorAll('nav.crumb:not([aria-label])').forEach(function (el) { el.setAttribute('aria-label', 'Đường dẫn trang'); });
     host.innerHTML = '<a class="skip" href="#main" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden">Chuyển tới nội dung chính</a><div class="in">' +
       '<a class="logo" href="/" title="ssochuz library">' + MARK() + '</a>' +
-      '<nav class="nav" id="czNav" aria-label="Điều hướng chính"><span class="nav-more">' +
-        '<button class="nb' + (menuOn ? ' on' : '') + '" id="czNavMore" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="czNavMenu">' +
-          icon('grid', 'i-s') + '<span class="nav-lbl">Danh mục</span>' + icon('down', 'cv') + '</button>' +
-        '<div class="nav-menu" id="czNavMenu" role="menu" aria-label="Điều hướng chính">' + menuLinks + '</div>' +
-      '</span></nav>' +
       '<span class="grow"></span>' +
       /* ô tìm kiếm rộng: bấm (hoặc ⌘K) là mở bảng tìm nhanh — cùng một đường vào
          với phím tắt, không dựng thêm một ô nhập thứ hai để khỏi lệch kết quả */
@@ -2045,10 +2038,22 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         '<span class="nav-lbl">Cài app</span></button>' +
       '<button class="hbtn icon burger" id="czBurger" aria-label="Mở menu" aria-expanded="false" aria-controls="czMnav">' + icon('menu', 'i-s') + '</button>' +
       '</div>' +
-      '<div class="mnav" id="czMnav">' + mLinks +
-      '<a href="/guide">' + icon('info', 'i-s') + ' Hướng dẫn</a>' +
-      /* mục Quản trị được vẽ trong paintAuth(): người thường KHÔNG thấy */
-      '<span id="czAuthMWrap"></span></div>';
+      /* ---- SIDEBAR: một cột mục dọc dùng cho MỌI khổ ----
+         Trước đây chỉ điện thoại/tablet có menu này, còn desktop phải nhồi bảy
+         mục lên thanh trên (rồi dưới 1200px thu về icon trơ). Nay chỉ còn MỘT
+         cách điều hướng: nút menu mở sidebar trượt từ trái, nội dung y như bản
+         di động cũ, nên ba khổ không còn lệch nhau về cấu trúc. */
+      '<div class="mscrim" id="czMscrim" aria-hidden="true"></div>' +
+      '<aside class="mnav" id="czMnav" aria-label="Menu điều hướng">' +
+        '<div class="mnav-hd">' +
+          '<span class="logo mnav-brand">' + MARK() + '</span>' +
+          '<button class="mnav-x" id="czMnavX" type="button" aria-label="Đóng menu">' + icon('x', 'i-s') + '</button>' +
+        '</div>' +
+        '<nav id="czNav" aria-label="Điều hướng chính">' + mLinks + '</nav>' +
+        '<a href="/guide">' + icon('info', 'i-s') + ' Hướng dẫn</a>' +
+        /* mục Quản trị được vẽ trong paintAuth(): người thường KHÔNG thấy */
+        '<span id="czAuthMWrap"></span>' +
+      '</aside>';
 
     /* ---- nút đăng nhập + menu tài khoản ----
        · Chưa đăng nhập: bấm là mở đăng nhập (Supabase → Google, hoặc link email).
@@ -2169,73 +2174,49 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     navInk(host);
     var mnav = host.querySelector('#czMnav');
     var burger = host.querySelector('#czBurger');
-    /* Nút menu (chỉ hiện trên điện thoại): phải báo rõ đang mở/đóng cho trình đọc
-       màn hình, đóng được bằng phím Esc và bằng cú bấm ra ngoài — trước đây chỉ
-       bấm lại đúng nút mới đóng. */
+    var mscrim = host.querySelector('#czMscrim');
+    var mclose = host.querySelector('#czMnavX');
+    /* SIDEBAR (mọi khổ): mở bằng nút menu, đóng bằng nút X, phím Esc, bấm ra
+       scrim hoặc chọn một mục. Trạng thái báo cho trình đọc màn hình qua
+       aria-expanded/aria-label của nút menu; nền khoá cuộn khi sidebar mở để
+       bánh xe không cuộn trang phía sau. */
     burger.setAttribute('aria-controls', 'czMnav');
     function paintMenu() {
       var on = mnav.classList.contains('on');
       burger.setAttribute('aria-expanded', on ? 'true' : 'false');
       burger.setAttribute('aria-label', on ? 'Đóng menu' : 'Mở menu');
+      if (mscrim) mscrim.classList.toggle('on', on);
+      d.body.classList.toggle('nav-open', on);
+    }
+    function openMenu() {
+      mnav.classList.add('slid', 'on');
+      paintMenu();
+      var first = mnav.querySelector('a, button');
+      if (first && first.focus && !reduce) { try { first.focus({ preventScroll: true }); } catch (err) {} }
+    }
+    function closeMenuNav(back) {
+      if (!mnav.classList.contains('on')) return;
+      mnav.classList.remove('on');
+      paintMenu();
+      if (back) { try { burger.focus(); } catch (err) {} }
     }
     paintMenu();
     burger.addEventListener('click', function (e) {
       e.stopPropagation();                       /* để không bị chính handler "bấm ra ngoài" đóng ngay */
-      slide(mnav);
+      mnav.classList.contains('on') ? closeMenuNav() : openMenu();
       d.body.classList.remove('nav-up');
-      paintMenu();
     });
-    mnav.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('a')) { slide(mnav, false); paintMenu(); } });
+    if (mclose) mclose.addEventListener('click', function () { closeMenuNav(true); });
+    if (mscrim) mscrim.addEventListener('click', function () { closeMenuNav(true); });
+    mnav.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('a')) closeMenuNav(); });
     d.addEventListener('click', function (e) {
       if (!mnav.classList.contains('on')) return;
       if (e.target.closest && (e.target.closest('#czMnav') || e.target.closest('#czBurger'))) return;
-      slide(mnav, false); paintMenu();
+      closeMenuNav();
     });
     d.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && mnav.classList.contains('on')) { slide(mnav, false); paintMenu(); try { burger.focus(); } catch (err) {} }
+      if (e.key === 'Escape' && mnav.classList.contains('on')) { closeMenuNav(true); }
     });
-    /* ---- menu “Khám phá”: mở/đóng bằng chuột, phím mũi tên, Home/End, Esc;
-       bấm ra ngoài hoặc chuyển tiêu điểm ra khỏi khối thì đóng. ---- */
-    var moreBtn = host.querySelector('#czNavMore'), moreMenu = host.querySelector('#czNavMenu');
-    if (moreBtn && moreMenu) {
-      function moreItems() { return Array.prototype.slice.call(moreMenu.querySelectorAll('a')); }
-      function openMore() { moreMenu.classList.add('on'); moreBtn.setAttribute('aria-expanded', 'true'); }
-      function closeMore(back) {
-        if (moreMenu.classList.contains('on')) {
-          moreMenu.classList.remove('on');
-          moreBtn.setAttribute('aria-expanded', 'false');
-        }
-        if (back) { try { moreBtn.focus(); } catch (err) {} }
-      }
-      moreBtn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        if (moreMenu.classList.contains('on')) closeMore(); else openMore();
-      });
-      moreBtn.addEventListener('keydown', function (e) {
-        if (e.key === 'ArrowDown') {
-          e.preventDefault(); openMore();
-          var f = moreItems()[0]; if (f) f.focus();
-        }
-      });
-      moreMenu.addEventListener('keydown', function (e) {
-        var list = moreItems(), i = list.indexOf(d.activeElement);
-        if (e.key === 'Escape') { e.preventDefault(); closeMore(true); }
-        else if (e.key === 'ArrowDown') { e.preventDefault(); var nx = list[Math.min(list.length - 1, i + 1)]; if (nx) nx.focus(); }
-        else if (e.key === 'ArrowUp') { e.preventDefault(); if (i <= 0) closeMore(true); else list[i - 1].focus(); }
-        else if (e.key === 'Home') { e.preventDefault(); if (list[0]) list[0].focus(); }
-        else if (e.key === 'End') { e.preventDefault(); if (list[list.length - 1]) list[list.length - 1].focus(); }
-      });
-      moreMenu.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('a')) closeMore(); });
-      d.addEventListener('click', function (e) {
-        if (e.target.closest && e.target.closest('.nav-more')) return;
-        closeMore();
-      });
-      d.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMore(); });
-      d.addEventListener('focusin', function (e) {
-        if (e.target.closest && e.target.closest('.nav-more')) return;
-        closeMore();
-      });
-    }
     host.querySelector('#czJump').addEventListener('click', function () { openJump(); });
     var insBtn = host.querySelector('#czInstall');
     if (insBtn) insBtn.addEventListener('click', function () { installApp(); });
@@ -2377,18 +2358,15 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     if (!links.length) return;
     var ids = links.map(function (a) { return (a.getAttribute('href') || '').split('#')[1] || ''; });
     var have = ids.filter(function (id) { return !!(id && d.getElementById(id)); }).length;
-    var nb = nav.querySelector('#czNavMore');
-    /* Đánh dấu mục đang xem: .on + aria-current nằm trên chính liên kết trong
-       menu; nút "Danh mục" chỉ sáng lên (không đổi nhãn) để người đọc biết
-       trang hiện tại nằm trong menu. Không còn gạch chân trượt: gạch chỉ có
-       nghĩa khi các mục nằm cạnh nhau trên một hàng. */
+    /* Đánh dấu mục đang xem trong sidebar: .on + aria-current trên chính liên
+       kết. Không còn gạch chân trượt — gạch đó chỉ có nghĩa khi các mục nằm
+       cạnh nhau trên một hàng ngang. */
     function mark(el) {
       links.forEach(function (a) {
         var on = a === el;
         a.classList.toggle('on', on);
         if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
       });
-      if (nb) nb.classList.toggle('on', !!el);
     }
     var here = links.filter(function (a) { return a.classList.contains('on'); })[0];
     /* Không có mục nào là “trang hiện tại” thì để trống — trước đây rơi về mục

@@ -80,7 +80,8 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   const css = { src: SRC_CSS, root: ROOT_CSS };
   out.css = {};
   for (const [k, t] of Object.entries(css)) {
-    const mnavOpen = (t.match(/\.mnav[^{]*\{[^}]*display:\s*block/g) || []).join(' ');
+    /* sidebar dùng chung mọi khổ: panel là flex column, không còn display:block */
+    const mnavOpen = (t.match(/\.mnav[^{]*\{[^}]*display:\s*(?:block|flex)/g) || []).join(' ');
     const shim = (t.match(/@keyframes shimmer\s*\{[^}]*\}[^}]*\}/) || [''])[0].replace(/\s+/g, ' ');
     out.css[k] = {
       mnavMoBangSlid: /\.mnav\.slid/.test(mnavOpen),
