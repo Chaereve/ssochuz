@@ -1777,37 +1777,6 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     }, { rootMargin: '0px 0px -50px 0px' });
     Array.prototype.forEach.call(els, function (e) { io.observe(e); });
   }
-  function countUp(el, to) {
-    if (reduce) { el.textContent = num(to); return; }
-    el.classList.add('numrun');
-    setTimeout(function () { el.classList.remove('numrun'); }, 420);
-    var t0 = (w.performance && performance.now) ? performance.now() : Date.now(), dur = 750;
-    (function step(t) {
-      var k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
-      el.textContent = num(Math.round(to * e));
-      if (k < 1) requestAnimationFrame(step); else el.textContent = num(to);
-    })(t0);
-  }
-  function scaleFacts(root) {
-    var nums = (root || d).querySelectorAll('[data-count]');
-    if (!nums.length) return;
-    if (reduce || !w.IntersectionObserver) { Array.prototype.forEach.call(nums, function (b) { b.textContent = num(+b.dataset.count || 0); }); return; }
-    var fired = 0;
-    var io = new IntersectionObserver(function (es) {
-      es.forEach(function (e) {
-        fired++;
-        if (!e.isIntersecting) return;
-        countUp(e.target, +e.target.dataset.count || 0);
-        io.unobserve(e.target);
-      });
-    }, { threshold: .4 });
-    Array.prototype.forEach.call(nums, function (b) { b.textContent = '0'; io.observe(b); });
-    /* lưới an toàn: nếu máy không gọi lại observer (bị chặn, khung ẩn…) thì điền số luôn */
-    setTimeout(function () {
-      if (fired) return;
-      Array.prototype.forEach.call(nums, function (b) { b.textContent = num(+b.dataset.count || 0); });
-    }, 2500);
-  }
   /* nút "lên đầu" (vạch tiến độ cuộn ở đỉnh trang đã bỏ — xem cz.css)
      Chỉ còn MỘT việc theo cuộn: bật/tắt nút lên đầu, và chỉ ghi khi trạng thái
      thật sự đổi. Lớp .scrolled trên <body> đã bỏ: không luật CSS nào dùng nó,
@@ -3059,7 +3028,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     chapEmpty: chapterIsEmpty,
     chapHasMedia: chapterHasMedia,
     storyURL: storyURL, readURL: readURL, slugify: slugify, qs: qs, copy: copy, download: download,
-    card: card, coverFB: coverFB, coverSrc: coverSrc, bookCover: bookCover, mountRail: mountRail, reveal: reveal, countUp: countUp, scaleFacts: scaleFacts,
+    card: card, coverFB: coverFB, coverSrc: coverSrc, bookCover: bookCover, mountRail: mountRail, reveal: reveal,
     scrollUI: scrollUI, slide: slide, pageFx: pageFx, pop: pop, setIcon: setIcon, shake: shake,
     msWait: function () { return ms('--t-close', 150); }, ink: ink, inkAll: inkAll,
     mountShell: mountShell, mountHeader: mountHeader, mountFooter: mountFooter,

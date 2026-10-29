@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mockup · nửa dưới trang chủ (3 phương án)</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="mock.css">
+</head>
+<body>
+
+<div class="mk-top">
+  <h1><span>ssochuz · mockup</span>Từ “Đọc tiếp” tới cuối “Thư viện”</h1>
+  <div class="grow"></div>
+  <div class="seg" data-width role="group" aria-label="Bề rộng khung xem">
+    <span class="lbl">Khung</span>
+    <button data-w="d" class="on">Desktop 1240</button>
+    <button data-w="t">Tablet 834</button>
+    <button data-w="m">Mobile 390</button>
+  </div>
+  <label class="chk"><input type="checkbox" id="histChk" checked>Đã có lịch sử đọc</label>
+</div>
+
+<div class="mk-main">
+
+  <!-- ============================== PHƯƠNG ÁN A ============================ -->
+  <section class="var">
+    <div class="vhead">
+      <div class="txt">
+        <h2><span class="tag">A</span>Kệ sách — giữ nguyên thứ tự mục, làm lại từng khối</h2>
+        <p>Thứ tự mục như hiện tại (Đọc tiếp → Mới cập nhật → Ranking → Lịch → Thư viện) nhưng mỗi
+          khối được làm lại theo cách các web cùng loại đang làm: bìa có nhãn tình trạng <b>và</b> số
+          chương nằm ngay trên ảnh, đầu mục có số lượng + “Xem tất cả”, bảng xếp hạng dùng số thứ tự
+          lớn, lịch ra chương thành dải 7 ngày. Ít rủi ro nhất, dễ duyệt nhất.</p>
+        <ul class="vpts">
+          <li><b>Bìa:</b> nhãn tình trạng + “39 chương” trên ảnh, tên 2 dòng, tác giả dòng mono</li>
+          <li><b>Kệ:</b> 6 cột cố định trên desktop — hết cảnh 12 bộ mà 5 bộ bị giấu sau thanh cuộn ngang</li>
+          <li><b>Ranking:</b> 5 dòng có số thứ tự lớn + mũi tên tăng/giảm (glvietsub.org “Xem nhiều nhất”)</li>
+          <li><b>Đọc tiếp:</b> thẻ rộng có thanh tiến độ + “Ch. 34/71 · còn 37”</li>
+        </ul>
+      </div>
+      <div class="vref">Tham khảo<br><b>glvietsubz.net</b><br>bìa + nhãn trên ảnh, “Xem thêm”<br><b>glvietsub.org</b><br>BXH số lớn, dải lịch</div>
+    </div>
+    <div class="frame"><div class="dev" data-render="A"></div>
+      <div class="jump"><button data-go="resume">Đọc tiếp</button><button data-go="new">Mới</button>
+        <button data-go="rank">Ranking</button><button data-go="lib">Thư viện</button></div>
+    </div>
+  </section>
+
+  <!-- ============================== PHƯƠNG ÁN B ============================ -->
+  <section class="var">
+    <div class="vhead">
+      <div class="txt">
+        <h2><span class="tag">B</span>Bảng tin — hai cột, cột phụ dính bên phải</h2>
+        <p>Toàn bộ phần “của riêng bạn” (Đọc tiếp, Theo dõi, Lịch tuần, Đáng xem) gom vào một cột
+          phụ <b>dính</b> bên phải, luôn nhìn thấy kể cả khi đã cuộn sâu trong lưới thư viện. Cột
+          chính chỉ còn nội dung để lướt: Mới cập nhật → Ranking → Thư viện. Trên máy hẹp, cột phụ
+          tự nhảy lên trên nên “Đọc tiếp” vẫn là thứ đầu tiên gặp được.</p>
+        <ul class="vpts">
+          <li><b>Đọc tiếp</b> thành chồng 3 thẻ dọc, có tiến độ — không cần cuộn ngang</li>
+          <li><b>Lịch tuần</b> dạng danh sách dọc, hôm nay tô nền hồng nhạt</li>
+          <li><b>Thư viện</b> chiếm trọn cột chính: lưới rộng hơn, ít mắt phải nhảy hơn</li>
+          <li>Cột phụ dính = trả lời “đang đọc gì” ở bất kỳ độ sâu cuộn nào</li>
+        </ul>
+      </div>
+      <div class="vref">Tham khảo<br><b>glvietsubz.net</b><br>bố cục cột chính + cột phụ<br><b>glvietsub.org</b><br>khối “Xem nhiều nhất” dạng danh sách</div>
+    </div>
+    <div class="frame"><div class="dev" data-render="B"></div>
+      <div class="jump"><button data-go="resume">Đọc tiếp</button><button data-go="new">Mới</button>
+        <button data-go="rank">Ranking</button><button data-go="lib">Thư viện</button></div>
+    </div>
+  </section>
+
+  <!-- ============================== PHƯƠNG ÁN C ============================ -->
+  <section class="var">
+    <div class="vhead">
+      <div class="txt">
+        <h2><span class="tag">C</span>Bento — gom 3 khối đầu thành một dải, thư viện có cột lọc</h2>
+        <p>Ba khối đầu (Đọc tiếp · Mới cập nhật · Ranking) gộp thành một dải bento 12 cột nên vùng
+          đầu trang gọn còn một màn hình. Thư viện được nâng thành trang con thực thụ: cột lọc bên
+          trái (tình trạng, nhãn, năm, couple, có số lượng) + chip lọc nhanh phía trên lưới.</p>
+        <ul class="vpts">
+          <li><b>Một màn hình</b> là thấy đủ: đang đọc gì, có gì mới, ai đang dẫn đầu</li>
+          <li><b>Lọc dạng cột</b> thay vì 4 ô chọn ngang — nhìn được số lượng từng lựa chọn</li>
+          <li><b>Thư viện</b> 5 cột, lưới dày, đầu trang ít khoảng trống</li>
+          <li>Nhiều thay đổi nhất — cần duyệt kỹ phần lọc</li>
+        </ul>
+      </div>
+      <div class="vref">Tham khảo<br><b>glvietsubz.net</b><br>khối tổng hợp + lọc cột<br><b>glvietsub.org</b><br>bento chủ đề, số đếm</div>
+    </div>
+    <div class="frame"><div class="dev" data-render="C"></div>
+      <div class="jump"><button data-go="resume">Đọc tiếp</button><button data-go="new">Mới</button>
+        <button data-go="rank">Ranking</button><button data-go="lib">Thư viện</button></div>
+    </div>
+  </section>
+
+  <p style="max-width:80ch;color:#8a8174;font-size:13px;line-height:1.7;margin:0 auto 40px">
+    Ghi chú: bìa và tên truyện là dữ liệu thật trong <code>data/registry.json</code>; số lượt xem và
+    tiến độ đọc là số giả để bạn thấy hình dạng thông tin. Bấm <b>Desktop / Tablet / Mobile</b> để
+    xem cùng một phương án ở ba bề rộng; bỏ tick <b>Đã có lịch sử đọc</b> để xem trạng thái người mới
+    (khi “Đọc tiếp” chưa có gì).</p>
+</div>
+
+<script src="books.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

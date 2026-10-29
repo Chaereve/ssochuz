@@ -191,7 +191,7 @@ body.admin { --maxw: 1400px; }              /* bảng dữ liệu cần chỗ */
         phần tử là thêm việc cho máy yếu.
    KHÔNG dùng View Transitions: phải chụp lại toàn trang rồi blend — trễ rõ trên
    điện thoại và trong trang đọc (xem ghi chú themeToggle trong src/cz-app.js). */
-body, .hdr, .hero, .facts, .ftr, .fbox, .sechead, .authcard {
+body, .hdr, .hero, .ftr, .fbox, .sechead, .authcard {
   transition: background-color var(--t-theme) var(--ease-out),
               border-color var(--t-theme) var(--ease-out);
 }
@@ -1021,20 +1021,6 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   .hero .slide, .hero .coverbtn { transition: none; }
 }
 /* ============================ 6. DẢI SỐ ================================== */
-.facts { border-bottom: 1px solid var(--bd); }
-.facts .in { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; display: grid; grid-template-columns: repeat(4, 1fr); }
-.facts .f { padding: 24px 20px; border-right: 1px solid var(--bd); }
-.facts .f:first-child { padding-left: 0; }
-.facts .f:last-child { border-right: 0; }
-.facts b { display: block; font-family: var(--font-head); font-size: clamp(24px, 2.6vw, 32px); line-height: 1;
-  font-variant-numeric: tabular-nums; }
-.facts span { display: block; margin-top: 8px; font-size: 11px; font-weight: 800; letter-spacing: .13em;
-  text-transform: uppercase; color: var(--dim); }
-/* N12: khung xương số liệu (chờ số thật đối chiếu realcounts) */
-.facts .fsk .ln { display: block; margin: 0; }
-.facts .fsk .ln.rskel { width: 64px; height: 26px; border-radius: 6px; }
-.facts .fsk .ln.sm { width: 96px; height: 10px; margin-top: 10px; border-radius: 4px; }
-
 /* ========================= 7. THẺ TRUYỆN ================================= */
 /* Dải trượt ngang: ô 152/168px (bội của 8), khoảng cách 16px ngang · 20px dọc,
    đệm đáy 16px để thanh cuộn không đè lên chữ của thẻ. */
@@ -2010,7 +1996,7 @@ kbd { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; b
   .shero .cover { width: min(42vw, 180px); }
   .rnav { grid-template-columns: 1fr 1fr; }
   .rnav .mid { grid-column: 1 / -1; order: -1; }
-  .wrap, .facts .in, .ftr .in { padding-left: 16px; padding-right: 16px; }
+  .wrap, .ftr .in { padding-left: 16px; padding-right: 16px; }
   .rdhead, .rtext, .ract, .rend, .rnav { padding-left: 18px; padding-right: 18px; }
 }
 @media (max-width: 620px) {
@@ -2026,11 +2012,6 @@ kbd { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; b
   .sechead { flex-wrap: wrap; gap: 12px; padding-bottom: 10px; margin-bottom: 16px; }
   .sechead h2 { font-size: 20px; }
   .sechead .right { padding-bottom: 0; }
-  .facts .in { grid-template-columns: 1fr 1fr; }
-  .facts .f { padding: 16px 0; border-right: 0; }
-  .facts .f:nth-child(odd) { border-right: 1px solid var(--bd); padding-right: 14px; }
-  .facts .f:nth-child(even) { padding-left: 14px; }
-  .facts .f:nth-child(-n+2) { border-bottom: 1px solid var(--bd); }
   .chapgrid { grid-template-columns: 1fr; }
   .card2 { padding: 16px; }
   .savebar { margin: 16px -16px -16px; padding: 12px 16px; }
@@ -2718,7 +2699,6 @@ body.rd-focus .rdcmts { display: none; }
   .rail { margin-right: -16px; padding-right: 16px; }
   .card .body { padding: 10px; }
   .card .ctitle { font-size: 14px; }
-  .facts .in { grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .toast { max-width: calc(100vw - 32px); }
   .nmenu { position: fixed; top: 62px; right: 12px; width: min( calc(100vw - 24px), 360px); max-height: 68vh; }
 }
@@ -2728,7 +2708,6 @@ body.rd-focus .rdcmts { display: none; }
   .seg { grid-column: auto; }
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .card .th { aspect-ratio: 2 / 3; }
-  .facts .in { grid-template-columns: repeat(2, 1fr); }
 }
 /* Người dùng có thể đọc trọn tên tác giả/couple; chỉ cắt ảnh, không cắt chữ. */
 .people .pcard .pbody b { display: block; overflow-wrap: anywhere; white-space: normal; }

@@ -1073,3 +1073,22 @@ Yêu cầu: *"đổi chỗ nút nhập mật mã thành mở khóa thôi, ghi d�
 **Kiểm:** `t_hero` "Hero banner đạt hết" (`ctaMatMa: true`, `ctaMatMaDai: false`)
 · `t_home`, `t_mobile` (`loi: []`), `t_reader`, `t_flows` không lỗi JS ·
 `audit:a11y` 25 màn 0 lỗi axe · `check_src` khớp.
+
+## 29. Bỏ dải số liệu dưới hero (30/10/2026)
+
+Yêu cầu: *"bỏ phần trong ảnh"* — dải `67 BỘ TRUYỆN · 1.354 CHƯƠNG ĐÃ ĐĂNG ·
+46 HOÀN THÀNH · 17 SẮP RA MẮT` ngay dưới hero.
+
+- `index.html`: xoá `<section class="facts">`.
+- `src/cz-home.js`: xoá `renderFacts()` + `skeletonNumbers()` và hai chỗ gọi.
+- `src/cz-app.js`: xoá `countUp()` + `scaleFacts()` — chỉ phục vụ dải này, không
+  nơi nào khác gọi, nên bỏ luôn thay vì để lại mã chết.
+- `src/cz.css`: xoá toàn bộ luật `.facts` (kể cả 4 chỗ trong media query và tên
+  trong danh sách chuyển màu chung).
+- Con số tổng vẫn còn nguyên chỗ khác: đầu mục **Thư viện** (“Toàn bộ 67 bộ”),
+  `#fcount` khi lọc, và trang My Space.
+
+Byte: `cz.css` 195,7 → **194,7 kB**; `cz-app.js` 104,5 → **103,6 kB**;
+`cz-home.js` 19,6 kB. Tổng 500,2 → **497,6 kB** (bỏ được 2,6 kB).
+
+`tests/t_home.js`: bỏ phép dò `#facts .f` (phần tử không còn tồn tại).

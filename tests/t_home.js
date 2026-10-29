@@ -38,8 +38,7 @@ const LIB = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data/registry
   click($$('#hDots button')[1]); await wait(120);
   out.heroAfterDot = (($('#stage .slide.on h1') || {}).textContent || '').trim() === (LIB.find(n => n.slug === p.win.CZ.slides(p.win.CZ._memo.reg)[1].slug) || {}).title;
 
-  /* ---------- số liệu + thư viện ---------- */
-  out.facts = { n: $$('#facts .f').length, labels: $$('#facts .f span').map(e => e.textContent.trim()) };
+  /* ---------- thư viện (dải số liệu đã bỏ 30/10/2026 — xem docs §29) ---------- */
   out.cards = { n: $$('#grid .card').length, pager: txt('#pager'), firstHref: ($('#grid .card') || {}).getAttribute('href') };
   out.cardsAreRealLinks = /^\/truyen\/[^/]+\/$/.test(out.cards.firstHref || '');
   out.genreGone = !$('#genreGroup') && !$$('#genreTabs [data-genre]').length;

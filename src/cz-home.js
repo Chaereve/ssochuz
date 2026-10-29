@@ -111,23 +111,6 @@
     heroApi = CZ.heroBanner(root, { items: (list || []).map(heroItem), autoPlay: true, initialIndex: keep });
   }
 
-  /* ======================= DẢI SỐ LIỆU ================================= */
-  function renderFacts(lib) {
-    var chap = lib.reduce(function (a, n) { return a + n.chapters; }, 0);
-    var done = lib.filter(function (n) { return n.statusCls === 'done'; }).length;
-    var soon = lib.filter(function (n) { return n.statusCls === 'soon'; }).length;
-    var facts = [
-      { n: lib.length, l: 'Bộ truyện' },
-      { n: chap, l: 'Chương đã đăng' },
-      { n: done, l: 'Hoàn thành' },
-      { n: soon, l: 'Sắp ra mắt' }
-    ];
-    $('#facts').innerHTML = facts.map(function (f) {
-      return '<div class="f"><b data-count="' + f.n + '">0</b><span>' + f.l + '</span></div>';
-    }).join('');
-    CZ.scaleFacts($('#facts'));
-  }
-
   /* ======================= MỚI CẬP NHẬT ================================ */
   function renderNew() {
     var rows = CZ.lib().slice().sort(function (a, b) {
@@ -598,14 +581,6 @@
     grid.innerHTML = new Array(n + 1).join(one);
     $('#pager').innerHTML = '';
     $('#fcount').textContent = 'đang tải dữ liệu…';
-    skeletonNumbers();    /* N12: dải số liệu cũng có khung xám chờ thay vì trống trơn */
-  }
-  /* N12: khối số liệu hiện khung xương trước, số thật (đã đối chiếu realcounts)
-     về là thế chỗ ngay — không nhấp nháy như bản cũ. */
-  function skeletonNumbers() {
-    var box = $('#facts');
-    if (!box) return;
-    box.innerHTML = new Array(5).join('<div class="f fsk"><span class="ln rskel"></span><span class="ln sm rskel"></span></div>');
   }
   function fail(msg, err) {
     if (window.console && console.warn) console.warn('[ssochuz]', msg, err || '');
@@ -622,8 +597,6 @@
       try { var v = localStorage.getItem('ssochuz-view'); if (v === 'list') state.view = 'list'; } catch (e) {}
       $$('#viewSeg button').forEach(function (x) { x.classList.toggle('on', x.dataset.view === state.view); });
       mountHero(CZ.slides(reg).slice(0, 5));
-      renderFacts(lib);
-
       renderNew();
       renderPersonalBlocks();
       renderRank();
@@ -640,7 +613,7 @@
       /* một bộ vừa được đối chiếu số chương thật → vẽ lại thẻ cho đúng */
       window.addEventListener('cz:count', function () {
         try { CZ._setLib(); } catch (e) {}
-        renderFacts(CZ.lib()); renderNew(); renderPersonalBlocks(); renderRank(); render();
+        renderNew(); renderPersonalBlocks(); renderRank(); render();
       });
     } catch (e) { fail('lỗi dựng trang chủ', e); }
   }
