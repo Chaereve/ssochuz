@@ -509,3 +509,75 @@ Cột chữ có ba mép phải khác nhau: kệ nhãn 100 % (≈511px), mô tả
 
 `t_hero` “Hero banner đạt hết” · `t_home` · `t_pwa` · `check_src` khớp ·
 `cz.css` 195,3 kB (91 % trần 215 kB) · `cz-hero.js` 13,1 kB (82 % trần 16 kB).
+
+---
+
+## 18. Vòng 4 — sạp báo to hơn, nền có chiều sâu, banner thấp lại (2026-10-29)
+
+Ba yêu cầu từ ảnh chụp thật: (1) quạt bìa to và đẹp hơn, (2) nền sau vẫn tối và
+“phẳng”, (3) bố cục gọn lại, hạ chiều cao banner.
+
+### 1. Quạt bìa: to hơn, xoè từ GỐC, có “đất” dưới chân
+
+| Thông số | Trước | Sau |
+| --- | --- | --- |
+| Bề rộng bìa `--cover-w` | `clamp(150px, 14vw, 208px)` | `clamp(168px, **16.4vw**, 242px)` |
+| Khoảng cách bìa `--fan-unit` | `clamp(84px, 7.4vw, 116px)` | `clamp(90px, 7.6vw, 112px)` |
+| Độ xoè của bìa ngoài (× unit) | `1.835` | **`1.5`** |
+| Góc xoay / hạ bậc | 6° / 11°, y 12 / 30 | 7° / 13°, y 10 / 26 |
+| Gốc xoay | tâm bìa | **`transform-origin: 50% 92%`** — xoay quanh chân như bìa cắm trên kệ |
+
+Bìa to hơn 16 % nhưng xoè hẹp hơn ⇒ cả quạt vẫn gọn trong cột (≈578×477 px ở
+1440, trước ≈523×449). Thêm ba thứ để “đẹp”:
+
+- **viền + ánh giấy**: `border-radius: 10px`, viền trắng 16 %, inner highlight 1px
+  trên đỉnh, một vệt chéo `::after` mô phỏng ánh bóng giấy in;
+- **bóng đổ theo tầng**: bìa giữa `0 40px 70px -28px`, bìa bên cạnh nhẹ hơn;
+- **bóng “đất”**: `.fan::after` — ellipse mờ 26px dưới chân quạt, quạt có điểm tựa
+  thay vì lơ lửng;
+- bìa không chọn sáng hơn (brightness .5 → **.62**), bìa đang chọn có quầng accent
+  lớn hơn (56px thay 40px).
+
+### 2. Nền: sáng hơn + có hình khối, không còn một tảng gradient
+
+- **Màu lấy từ bìa sáng hơn**: hệ số hạ sáng `×.46 / ×.62` → **`×.62 / ×.84`**
+  (vẫn tối hơn bìa thật để chữ trắng còn đọc được).
+- **`.ghost`** (mới): chính bìa dọc của truyện, phóng `height: 136%`, `blur(46px)`,
+  opacity .6, mask radial cho mép tan vào nền ⇒ nền có **hình khối và màu của bộ
+  truyện**. Dùng lại đúng URL bìa trong quạt nên **không thêm byte nào**.
+- **`.glow`** (mới): quầng sáng màu accent ngay sau quạt, `mix-blend-mode: screen`
+  — như đèn rọi vào sạp báo.
+- **`.veil` nhẹ lại**: mép trái .97 → **.88**, mép phải .30 → **.10**, sọc dọc
+  trên/dưới .55/.60 → **.34/.42**. Nền sáng rõ mà chữ vẫn đủ tương phản (axe 0 lỗi).
+- **`.hb-scene` ẩn hẳn khi không phải lớp đang xem** (`visibility` + delay) để 5 ảnh
+  mờ không cùng được vẽ.
+
+### 3. Bố cục: chiều cao do QUẠT quyết định
+
+Lỗ hổng lớn giữa nút và hàng ticks trong ảnh chụp là do **slide cao nhất trong 5
+truyện** kéo `.stage` lên; cột chữ ngắn hơn thì phần dư nằm lại giữa nút và pager.
+
+- `.hb-col { align-self: stretch }` + `.stage { flex: 1; align-content: center }`:
+  chữ canh giữa phần còn lại, **pager dính đáy cột**, phần dư dồn ra hai đầu;
+- `h1` giữ chỗ 2 dòng (`min-height: 2.08em`), `.syn` giữ 2 dòng (`3.24em`) ⇒ đổi
+  truyện chữ không nhảy;
+- `.hb-grid`: đệm `52/44` → **`34/30`**, `min-height` `clamp(500,62vh,600)` →
+  **`clamp(420px,50vh,486px)`**, khe `44` → **`36`**, tỉ lệ cột `.94/1.06` → **`.9/1.1`**;
+- kệ nhãn: cột theo **tỉ lệ** `.62 / 1 / 1.24 / .86` + khe 16 ⇒ tên couple
+  (“Mingming x Nepjune”) không còn xuống dòng, mà vị trí nhãn vẫn đứng yên.
+
+Ở 1440 px, banner từ **≈668 px xuống ≈541 px** trong khi bìa vẫn to hơn.
+
+### Tệp đã sửa
+
+| Tệp | Vì sao |
+| --- | --- |
+| `src/cz-hero.js` | `bgHTML()` thêm `.ghost` + `.glow`; hệ số hạ sáng màu bìa .62/.84 |
+| `src/cz.css` | §5.1 nền (ghost/glow/veil nhẹ, scene ẩn khi mờ); §5.2 khung gọn + cột bìa rộng; §5.3 kệ nhãn theo tỉ lệ; §5.5 pager dính đáy; §5.6 quạt to hơn, xoay từ gốc, bóng đất; responsive |
+| `sw.js` + 76 HTML | `?v=20261029hero8` |
+
+### Kiểm
+
+`t_hero` “Hero banner đạt hết” · `t_home` · `t_pwa` · `check_src` khớp ·
+`audit:a11y` 25 màn 0 lỗi axe · `cz.css` 196,7 kB (92 % trần 215 kB) ·
+`cz-hero.js` 13,2 kB (83 % trần 16 kB).

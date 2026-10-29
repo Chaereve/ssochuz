@@ -188,10 +188,19 @@
 
   function bgHTML(item, i) {
     var src = (item.backdrop && item.backdrop.src) || '';
+    var cov = coverOf(item);
+    /* Ba lớp ảnh, CÙNG một tệp bìa nên không thêm byte nào:
+         .pic   bìa ngang (nếu có) — nền chính
+         .ghost bìa DỌC phóng to, mờ đục — cho nền có hình khối, không phải
+                một tảng gradient phẳng (đây là thứ làm nền “đặc sắc” hơn)
+         .glow  quầng sáng màu accent ngay sau quạt bìa
+       `loading` chỉ đặt cho lớp đầu: ảnh sau dùng lại đúng URL đã tải. */
     return '<div class="hb-scene">' +
       (src ? '<img class="pic" src="' + esc(src) + '" alt="" aria-hidden="true" decoding="async"' +
         (i === 0 ? '' : ' loading="lazy"') + '>' : '') +
-      '<i class="wash"></i><i class="veil"></i></div>';
+      (cov ? '<img class="ghost" src="' + esc(cov) + '" alt="" aria-hidden="true" decoding="async"' +
+        (i === 0 ? '' : ' loading="lazy"') + '>' : '') +
+      '<i class="wash"></i><i class="glow"></i><i class="veil"></i></div>';
   }
 
   function shade(rgb, k) {
@@ -226,8 +235,10 @@
             t[0] += d[i]; t[1] += d[i + 1]; t[2] += d[i + 2];
           }
           if (!nt || !nb) return;
-          var a = shade([top[0] / nt, top[1] / nt, top[2] / nt], 0.46);
-          var b = shade([bot[0] / nb, bot[1] / nb, bot[2] / nb], 0.62);
+          /* 0.46/0.62 → 0.62/0.84: nền cũ gần như đen, bìa màu mấy cũng ra
+             một tảng xám. Vẫn tối hơn bìa thật để chữ trắng còn đọc được. */
+          var a = shade([top[0] / nt, top[1] / nt, top[2] / nt], 0.62);
+          var b = shade([bot[0] / nb, bot[1] / nb, bot[2] / nb], 0.84);
           PAL[src] = [a, b];
           applyPalette(el, PAL[src]);
         } catch (e) { /* canvas bị “bẩn” vì ảnh khác nguồn — bỏ qua */ }
