@@ -1971,6 +1971,15 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', inkAll); else inkAll();
 
   /* ======================= 8. ĐẦU TRANG / CHÂN TRANG =================== */
+  /* Thương hiệu: chữ "ssochuz" vẽ tay (PNG trắng, nền trong suốt) đặt đúng
+     đường chân chữ với nhãn "library" nhỏ bên cạnh. Ảnh khai báo width/height
+     theo tỉ lệ gốc 359×98 để trình duyệt giữ chỗ trước khi tải xong (không CLS);
+     alt="ssochuz" + nhãn "library" ⇒ tên đọc của liên kết vẫn là "ssochuz
+     library" mà không cần aria-label, và trình đọc màn hình không đọc hai lần. */
+  var BRAND_IMG = '/assets/brand/ssochuz-wordmark.png';
+  function MARK() {
+    return '<img class="mark" src="' + BRAND_IMG + '" width="359" height="98" alt="ssochuz" decoding="async">';
+  }
   function mountHeader(host, active) {
     if (!host) return;
     /* Một nhãn dùng chung cho header desktop, menu mobile và tiêu đề các khối
@@ -2007,7 +2016,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     if (mn && !mn.id) mn.id = 'main';
     d.querySelectorAll('nav.crumb:not([aria-label])').forEach(function (el) { el.setAttribute('aria-label', 'Đường dẫn trang'); });
     host.innerHTML = '<a class="skip" href="#main" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden">Chuyển tới nội dung chính</a><div class="in">' +
-      '<a class="logo" href="/" title="ssochuz library"><span class="dot"></span>ssochuz<i> library</i></a>' +
+      '<a class="logo" href="/" title="ssochuz library">' + MARK() + '<i> library</i></a>' +
       '<nav class="nav" id="czNav" aria-label="Điều hướng chính"><span class="ink" id="czInk" aria-hidden="true"></span>' + links +
         (moreLinks ? '<span class="nav-more">' +
           '<button class="nb' + (moreOn ? ' on' : '') + '" id="czNavMore" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="czNavMenu" title="Khám phá thêm">' +
@@ -2417,7 +2426,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     var fb = 'https://www.facebook.com/profile.php?id=61592803761987';
     var survey = cfg.form || 'https://forms.gle/YW3PvtrNVQ7xt8nCA';
     host.innerHTML = '<div class="in">' +
-      '<a class="logo" href="/" title="ssochuz library"><span class="dot"></span>ssochuz<i>library</i></a>' +
+      '<a class="logo" href="/" title="ssochuz library">' + MARK() + '<i>library</i></a>' +
       '<p class="fthanks">Cảm ơn bạn đã ủng hộ và đồng hành cùng ssochuz library!</p>' +
       '<nav class="flinks" aria-label="Trợ giúp và kênh liên lạc">' +
         '<a href="/guide">Hướng dẫn</a>' +
