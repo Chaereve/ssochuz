@@ -317,3 +317,63 @@ kệ 2 cột `12px / 18px`, `dt 9px` `dd 13px`; mô tả ẩn; nút 42px; hàng 
 
 Kiểm bằng jsdom: 27/27. Trạng thái: **chờ chọn S1/S2/S3** rồi vào `src/cz-hero.js` +
 `src/cz.css` §5.
+
+## 15. Đã làm thật: C2 “kệ nhãn” + badge S1 (2026-10-29)
+
+Chốt theo yêu cầu: **phương án C2 + badge kiểu S1 “con dấu”**. Đã vào mã nguồn, không
+còn là mockup (`docs/mockups/hero/c2-refine.html` giữ làm tham chiếu).
+
+### Cấu trúc mới của cột chữ (một slide)
+
+```
+.head   ●  HOÀN THÀNH      18+
+h1      Third Person
+.spec   CHƯƠNG 42 · TÁC GIẢ SIIX · COUPLE Garn x Mimie · CẬP NHẬT 29-09
+.syn    mô tả 2 dòng
+.btns   [Đọc từ đầu] [⌐ lưu]
+.foot   ─── (kẻ tóc)  ticks · 01 / 05 · ‹ › ⏸
+```
+
+Ba thay đổi so với bản “một hàng meta”:
+
+1. **Badge thành “con dấu”** — mono 10px, giãn chữ `.18em`, gạch đầu 3px, màu theo
+   trạng thái, **đứng một dòng riêng** trên tiêu đề. 18+ vẫn là chip đỏ (`.hb-b18`).
+   “Có mật mã” bị bỏ khỏi hàng badge: nó đã nằm trong nhãn nút “Nhập mật mã để đọc”.
+2. **Thông tin thành lưới `<dl>`** — `.spec` 4 ô `dt/dd`; ô nào không có dữ liệu thì
+   **không dựng** (không còn “—”): truyện không có couple chỉ còn 3 ô. Số chương in
+   “42” (đơn vị ở nhãn), số dùng `font-variant-numeric: tabular-nums`.
+3. **Nhịp dọc bằng margin, không bằng `gap`** — 10 · 14 · 18 · 16 · 20 · 22px; nút chính
+   `height:44px` bằng đúng vòng tròn “Lưu vào tủ” (trước lệch ~7,5px vì `line-height:1.62`);
+   hàng điều khiển có kẻ tóc `1px` phía trên, `‹ › ⏸` dạt phải bằng `margin-left:auto`.
+
+### Mobile 390 (và 640–1023 giữ 2 cột như desktop)
+
+- `.head` một hàng (badge + 18+), h1 25–31px `max-width:100%`;
+- `.spec` 2 cột `12px / 18px`, `dt 9px` / `dd 13px`, **ẩn ô COUPLE** (`.sm-hide`);
+- ẩn mô tả; nút padding `0 16px`, vẫn cao 44px; ticks `20/30px`, vùng bấm nới `-14px`;
+- `.info` và `.foot` dùng chung `--hb-w` (520px → 400px tablet → `none` mobile) nên mép
+  phải của chữ và của hàng điều khiển trùng nhau.
+
+### Bỏ gì
+
+`item.eyebrow` và nhãn mục “Nổi bật hôm nay / Đề xuất cho bạn” **đã bỏ khỏi hero**
+(kể cả trường `_reason` của ban biên tập). Muốn giữ “Lựa chọn của ban biên tập” thì nên
+đưa nó thành một dòng nhỏ RIÊNG dưới tiêu đề, đừng ghép lại vào hàng badge.
+
+### Tệp đã sửa
+
+| Tệp | Vì sao |
+| --- | --- |
+| `src/cz-hero.js` | bỏ `eyebrow`/`meta`, thêm `statusHTML` · `extraBadgesHTML` · `factsOf` · `factsHTML`; slide mới |
+| `src/cz-home.js` | `heroItem()` bỏ `eyebrow`, thêm `facts` (Chương/Tác giả/Couple ẩn mobile/Cập nhật) |
+| `src/cz.css` | §5.3 thay “một hàng meta” bằng “kệ nhãn”; nhịp bằng margin; nút 44px; kẻ tóc + mũi tên dạt phải; `--hb-w`; media 2 cột/1 cột + spec 2 cột |
+| `tests/t_hero.js` | khoá cấu trúc mới: badge trong `.head`, 3–4 ô, không lặp “chương”, không chip mật mã, bỏ ô couple khi trống |
+| `tests/t_adult.js` | thay kiểm “nhãn reason” bằng “có badge trạng thái + không còn eyebrow” |
+| `*.html` (76) + `sw.js` | `cz.css?v=20261029hero4`, `CZ_SW_VER='20261029hero4'` |
+
+### Kiểm
+
+`t_hero` “Hero banner đạt hết” · `t_home` · `t_adult` N12 · `t_lock_ui` · `t_pwa` ·
+`tests/run.js` 1 bài lỗi (chỉ `t_admin_editor_lazy.js`, hỏng từ trước) ·
+`audit:a11y` 25 màn 0 lỗi axe · `check_src` khớp · `check_css` không lỗi cú pháp ·
+`cz.css` 193,6 kB (90 % trần 215 kB).

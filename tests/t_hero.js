@@ -63,6 +63,38 @@ const ok = (cond, msg, extra) => { if (!cond) bad.push(msg + (extra ? ' → ' + 
   ok(out.cauTruc.nhanDuoiBia, 'thiếu nhãn “số · tác giả” dưới bìa đang chọn');
   ok(!out.cauTruc.conAnhNenFullBleed, 'vẫn còn lớp ảnh nền full-bleed của bản cũ trong hero');
 
+  /* ---------- 1b. “KỆ NHÃN”: badge trạng thái + lưới thông tin -------------
+     C2 đã chốt: bỏ nhãn mục, trạng thái thành badge “con dấu” đứng một dòng,
+     thông tin thành lưới dt/dd (CHƯƠNG · TÁC GIẢ · [COUPLE] · CẬP NHẬT), ô nào
+     không có dữ liệu thì không dựng, “Có mật mã” nằm trong nhãn nút. */
+  const active = $('#stage .slide.on');
+  const cells = $$('#stage .slide.on .spec .c');
+  out.keNhan = {
+    badge: (active.querySelector('.head .hb-st') || {}).textContent || '',
+    coHead: !!active.querySelector('.head .hb-st'),
+    soOTreSlideDau: cells.length,
+    nhanO: cells.map(c => (c.querySelector('dt') || {}).textContent),
+    giaTriO: cells.map(c => (c.querySelector('dd') || {}).textContent),
+    eyebrowConLai: $$('#hero .eyebrow').length,
+    chuongLapDonVi: $$('#hero .spec dd').some(d => /chương/i.test(d.textContent || '')),
+    b18: $$('#hero .hb-b18').length,
+    chipMatMa: /Có mật mã/.test(hero.innerHTML),
+    ctaMatMa: /Nhập mật mã để đọc/.test(hero.innerHTML),
+    soOTreSlide3: $$('#stage .slide')[2].querySelectorAll('.spec .c').length
+  };
+  ok(out.keNhan.coHead && out.keNhan.badge.length > 0,
+    'slide phải có badge trạng thái trong .head', JSON.stringify(out.keNhan.badge));
+  ok(out.keNhan.eyebrowConLai === 0, 'hero không còn nhãn mục (eyebrow)', out.keNhan.eyebrowConLai);
+  ok(out.keNhan.soOTreSlideDau >= 3 && out.keNhan.soOTreSlideDau <= 4,
+    'kệ nhãn phải có 3–4 ô', out.keNhan.soOTreSlideDau);
+  ok(out.keNhan.nhanO[0] === 'Chương' && /^\d+$/.test(out.keNhan.giaTriO[0] || ''),
+    'ô đầu là CHƯƠNG + con số thuần', out.keNhan.nhanO.join(',') + ' / ' + out.keNhan.giaTriO.join(','));
+  ok(!out.keNhan.chuongLapDonVi, 'ô chương không được lặp lại chữ “chương” (nhãn đã nói đơn vị)');
+  ok(out.keNhan.soOTreSlide3 === 3, 'truyện không có couple phải bỏ ô COUPLE', out.keNhan.soOTreSlide3);
+  ok(out.keNhan.b18 >= 1, 'truyện 18+ phải có chip 18+ (.hb-b18)');
+  ok(!out.keNhan.chipMatMa && out.keNhan.ctaMatMa,
+    '“Có mật mã” phải nằm trong NHÃN NÚT, không phải chip riêng');
+
   /* bìa đang chọn ở tâm, 4 bìa còn lại xếp quanh theo khoảng cách 1..4 */
   const posOf = b => b.getAttribute('data-pos');
   out.quat = {

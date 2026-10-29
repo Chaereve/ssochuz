@@ -38,7 +38,6 @@
     var pct = tot && pg ? Math.min(100, Math.round(pg / tot * 100)) : 0;
     var inShelf = CZ.inShelf(n);
     var img = CZ.coverSrc(n) || '';
-    var eyebrow = (n._reason && n._reason.trim()) || (i === 0 ? 'Nổi bật hôm nay' : 'Đề xuất cho bạn');
     var badges = [{ label: CZ.statusLabel(n.statusCls || n.status), tone: n.statusCls || 'run', dot: true }];
     if (n.locked) badges.push({ label: 'Có mật mã', tone: 'lock', icon: 'lock' });
     if (n.is18) badges.push({ label: '18+', tone: 'bad' });
@@ -50,6 +49,13 @@
     if (n.author) meta.push({ label: n.author, title: 'Tác giả' });
     if (n.couple) meta.push({ label: n.couple, title: 'Couple' });
     if (n.updated) meta.push({ label: CZ.timeAgo(n.updated), title: 'Cập nhật gần nhất' });
+    /* “KỆ NHÃN” của hero: 4 ô, ô nào không có dữ liệu thì KHÔNG dựng.
+       Couple ẩn ở điện thoại (hideSm) — đó là thông tin phụ nhất trong bốn ô. */
+    var facts = [{ label: 'Chương', value: tot > 0 ? String(tot) : '—', num: true }];
+    if (n.author) facts.push({ label: 'Tác giả', value: n.author, soft: true });
+    if (n.couple) facts.push({ label: 'Couple', value: n.couple, soft: true, hideSm: true });
+    if (n.updated) facts.push({ label: 'Cập nhật', value: CZ.timeAgo(n.updated), num: true });
+
     var primary = n.canRead
       ? (n.locked
         /* truyện khoá mật mã: dẫn về trang truyện (có chốt nhập mật mã),
@@ -63,11 +69,11 @@
       id: n.slug,
       title: n.title,
       href: CZ.storyURL(n.slug),
-      eyebrow: eyebrow,
       description: n.syn || n.synFull || '',
       thumbnail: { src: img, alt: n.title },    /* bìa cho quạt — có alt để dự phòng */
       caption: n.author || '',                  /* dòng mono dưới bìa đang chọn */
       badges: badges,
+      facts: facts,
       meta: meta,
       progress: pg ? {
         current: pg, total: tot, percent: pct,

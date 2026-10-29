@@ -18,11 +18,12 @@
 
    HỢP ĐỒNG DỮ LIỆU (mọi trường tuỳ chọn trừ id/title):
      HeroBannerItem = {
-       id, title, href?, eyebrow?, description?, caption?,
+       id, title, href?, description?, caption?, facts?,
        thumbnail: { src, alt? },            // bìa dùng cho quạt
        backgroundImage: { src, alt? },      // dự phòng khi thiếu thumbnail
-       badges: [{ label, tone?, dot?, icon? }],
-       meta:   [{ icon?, label, strong?, title? }],
+       facts:  [{ label, value, num?, soft?, hideSm? }],   // “kệ nhãn”: CHƯƠNG · TÁC GIẢ · …
+       badges: [{ label, tone?, dot?, icon? }],            // done/run/soon → con dấu; bad → 18+; lock → bỏ
+       meta:   [{ icon?, label, strong?, title? }],         // dự phòng: tự đổi thành facts
        progress?: { current, total?, percent?, label? },
        primaryCta: { label, href?, icon?, title?, disabled? },
        secondaryCtas: [{ label, href?, onClick?, icon?, variant?, pressed?, title? }]
@@ -58,21 +59,55 @@
   /* ---------- 1. MẢNH MARKUP -------------------------------------------------
      Tách nhỏ để mỗi quy tắc fallback nằm ngay chỗ quyết định. */
 
-  /* Nhãn trạng thái: markup vẫn là “pill” (một <span> có chấm), nhưng trong
-     hero CSS bỏ viền/nền để nó đọc như “● Hoàn thành” thay vì một viên chip
-     thứ năm cạnh bốn viên khác. */
-  function badgeHTML(b) {
-    if (!b || !b.label) return '';
-    return '<span class="pill ' + esc(b.tone || '') + '">' +
-      (b.dot ? '<span class="d"></span>' : (b.icon ? ic(b.icon, 'i-s') : '')) +
-      esc(b.label) + '</span>';
-  }
+  /* ---------- “KỆ NHÃN”: dòng badge + lưới 4 ô thông tin -------------------
+     Bản cũ nhét trạng thái + 5 mục thông tin vào MỘT hàng chữ, cách nhau bằng
+     dấu chấm: truyện khoá mật mã có 7 mục ⇒ tự xuống 2 dòng, dấu chấm rơi vào
+     đầu dòng, và trạng thái đứng ngang hàng với tác giả nên không ai đọc ra
+     “đây là tình trạng bộ truyện”. Nay tách làm hai tầng:
+       · .head  = badge trạng thái (kiểu con dấu) + 18+ + nhãn phụ hiếm
+       · .spec  = lưới dt/dd: CHƯƠNG · TÁC GIẢ · [COUPLE] · CẬP NHẬT
+     “Có mật mã” KHÔNG còn là chip: nó nằm trong nhãn nút (“Nhập mật mã để
+     đọc”) nên hành động nói thay trạng thái. */
+  var ST_TONES = { done: 1, run: 1, soon: 1 };
 
-  function metaHTML(m) {
-    if (!m || !m.label) return '';
-    return '<span' + (m.title ? ' title="' + esc(m.title) + '"' : '') + '>' +
-      (m.icon ? ic(m.icon, 'i-s') + ' ' : '') +
-      (m.strong ? '<b>' + esc(m.label) + '</b>' : esc(m.label)) + '</span>';
+  function statusHTML(badges) {
+    for (var i = 0; i < badges.length; i++) {
+      var b = badges[i];
+      if (b && b.label && ST_TONES[b.tone || 'run']) {
+        return '<span class="hb-st ' + esc(b.tone || 'run') + '">' + esc(b.label) + '</span>';
+      }
+    }
+    return '';
+  }
+  function extraBadgesHTML(badges) {
+    var out = '';
+    for (var i = 0; i < badges.length; i++) {
+      var b = badges[i];
+      if (!b || !b.label) continue;
+      if (ST_TONES[b.tone || 'run'] || b.tone === 'lock') continue;  /* lock → trong CTA */
+      if (b.tone === 'bad') out += '<span class="hb-b18">' + esc(b.label) + '</span>';
+      else out += '<span class="hb-st acc">' + esc(b.label) + '</span>';
+    }
+    return out;
+  }
+  /* `facts` là hợp đồng mới; `meta` cũ vẫn dựng được để component không phụ
+     thuộc một trường duy nhất (title của meta thành nhãn ô). */
+  function factsOf(item) {
+    if (item.facts && item.facts.length) return item.facts;
+    return (item.meta || []).map(function (m) {
+      if (!m || !m.label) return null;
+      return { label: m.title || '', value: m.label, num: !!m.strong, soft: !m.strong };
+    }).filter(Boolean);
+  }
+  function factsHTML(item) {
+    var f = factsOf(item).filter(function (x) { return x && x.label && x.value != null && x.value !== ''; });
+    if (!f.length) return '';
+    return '<dl class="spec">' + f.map(function (x) {
+      var cls = x.num ? 'num' : (x.soft ? 'soft' : '');
+      return '<div class="c' + (x.hideSm ? ' sm-hide' : '') + '">' +
+        '<dt>' + esc(x.label) + '</dt>' +
+        '<dd' + (cls ? ' class="' + cls + '"' : '') + '>' + esc(String(x.value)) + '</dd></div>';
+    }).join('') + '</dl>';
   }
 
   function progressHTML(p) {
@@ -113,10 +148,10 @@
   }
 
   function slideHTML(item, i, total) {
-    var badges = (item.badges || []).map(badgeHTML).join('');
-    var meta = (item.meta || []).map(metaHTML).join('');
+    var badges = item.badges || [];
+    var head = statusHTML(badges) + extraBadgesHTML(badges);
     var secondary = (item.secondaryCtas || []).map(secondaryHTML).join('');
-    var head = item.title
+    var titleHTML = item.title
       ? (item.href ? '<a href="' + esc(item.href) + '">' + esc(item.title) + '</a>' : esc(item.title))
       : '—';
     /* Các slide xếp chồng trong MỘT ô lưới (grid-area: 1/1) nên khung không đổi
@@ -126,9 +161,9 @@
       ' role="group" aria-roledescription="slide" aria-label="' + (i + 1) + ' / ' + total + '"' +
       (i === 0 ? '' : ' aria-hidden="true"') + '>' +
         '<div class="info">' +
-          (item.eyebrow ? '<span class="eyebrow">' + esc(item.eyebrow) + '</span>' : '') +
-          '<h1 id="hbTitle-' + i + '">' + head + '</h1>' +
-          ((badges || meta) ? '<div class="meta">' + badges + meta + '</div>' : '') +
+          (head ? '<div class="head">' + head + '</div>' : '') +
+          '<h1 id="hbTitle-' + i + '">' + titleHTML + '</h1>' +
+          factsHTML(item) +
           (item.description ? '<p class="syn">' + esc(item.description) + '</p>' : '') +
           progressHTML(item.progress) +
           '<div class="btn-row">' + primaryHTML(item.primaryCta) + secondary + '</div>' +

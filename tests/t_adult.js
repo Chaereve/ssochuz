@@ -80,7 +80,10 @@ function api(p, opt, statsItems) {
     })
   });
   await wait(1300);
-  out.heroReason = $$(home.doc, '#stage .slide.on .eyebrow').map(e => e.textContent.trim());
+  /* Hero đã bỏ nhãn mục (eyebrow): trạng thái nay là badge “con dấu” trong .head.
+     Bài kiểm khoá lại đúng luật mới — không còn nhãn mục, có badge trạng thái. */
+  out.heroBadge = $$(home.doc, '#stage .slide.on .hb-st').map(e => e.textContent.trim());
+  out.heroEyebrow = $$(home.doc, '#stage .slide .eyebrow').length;
   out.rankTitle = ($(home.doc, '#bxh .sechead h2') || {}).textContent || '';
   out.rankTabs = $$(home.doc, '#rankTabs .tab').length;
   out.rankRows = $$(home.doc, '#rank .rank').length;
@@ -111,7 +114,8 @@ function api(p, opt, statsItems) {
   eq('18+/ghi nhớ khoác ssochuz-confirmed18', !!out.local, true);
   eq('18+/có nút Đặt lại xác nhận', out.nutDatLai, true);
   eq('18+/đặt lại xoá ghi nhớ', out.datLaiXoaLocal, true);
-  eq('hero/slide dùng nhãn reason', out.heroReason.join('|'), 'Lựa chọn của ban biên tập');
+  eq('hero/slide có badge trạng thái', out.heroBadge.length >= 1, true);
+  eq('hero/không còn nhãn mục (eyebrow)', out.heroEyebrow, 0);
   eq('Ranking giữ đúng tên dù không có phiếu', out.rankTitle, 'Ranking');
   eq('Ranking luôn có ba kỳ', out.rankTabs, 3);
   eq('Không lấy tổng view thay view kỳ còn thiếu', out.rankRows, 0);
