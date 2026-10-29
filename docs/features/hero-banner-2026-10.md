@@ -228,3 +228,32 @@ node tests/t_hero.js          # “Hero banner đạt hết”
 ```
 
 Xem thử: `python3 tools/dev_server.py` → http://localhost:8080
+
+## 12. Ghép banner với phần ngay dưới — mockup 4 phương án (2026-10-29)
+
+Sau khi banner “bộ bài” lên trang thật, chỗ nối giữa banner và phần dưới lộ ra vấn đề:
+banner (nền tối, mono 11px) → dải số nền giấy (serif 30px, 4 ô kẻ dọc) → tiêu đề mục
+(serif 22px) là **ba hệ chữ và ba nhịp dọc khác nhau** (44 / 22 / 38 px).
+
+Mockup: `docs/mockups/hero/area-options.html` (dữ liệu + bìa thật, không ảnh minh hoạ):
+
+```
+python3 -m http.server 8090 -d .    # → /docs/mockups/hero/area-options.html
+```
+
+| Phương án | Cách ghép | Đổi gì |
+| --- | --- | --- |
+| **P0** hiện tại | banner → dải số giấy 4 ô → tiêu đề mục | mốc so sánh |
+| **P1** “Một khối” ⭐ | dải số **nằm trong banner** (cùng nền tối, kẻ tóc trắng 10%), trang giấy bắt đầu ở tiêu đề mục | ~25 dòng CSS, **không** đổi markup |
+| **P2** “Thẻ nổi” | banner bo 20px thành tấm thẻ trên nền giấy; dải số thành thẻ giấy đè mép dưới 34px | thêm wrapper + ~35 dòng CSS |
+| **P3** “Masthead” | số liệu thu về **một hàng chữ** (21px + nhãn 10px, phân cách dấu chấm, “cập nhật 29-09”) | nhẹ nhất, bớt ~60px chiều cao |
+
+**Đã đồng bộ ở cả 4 phương án** (phần “các element khác” trong banner):
+trạng thái chỉ còn **chấm + chữ** (bỏ pill viền); tối đa **một** nhãn phụ (18+);
+“Có mật mã” chuyển vào **CTA** (“Nhập mật mã để đọc”) thay vì nhãn thứ ba; tiêu đề
+**cắt 2 dòng** nên banner cao cố định; nhãn dưới bìa luôn `01 · tác giả`;
+ticks + `01 / 05` + ‹ › ⏸ luôn **một hàng**; chỉ dùng hai cỡ chữ số (serif cho số,
+mono cho nhãn) và ba mốc nhịp dọc 24 / 38 / 44 px.
+
+Trạng thái: **chờ chọn P1 / P2 / P3** rồi mới sửa `src/cz.css` (§5 và §6 `.facts`) và
+`src/cz-home.js` (`renderFacts`) theo phương án đó.

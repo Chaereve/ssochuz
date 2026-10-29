@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ssochuz · vùng banner — 4 phương án ghép với phần còn lại</title>
+<!--
+  MOCKUP — không phải trang thật, không nạp cz-*.js.
+  Mở: python3 -m http.server 8090 -d <repo>  →  /docs/mockups/hero/area-options.html
+  Dữ liệu: lấy đúng 5 truyện đang lên hero thật + 6 truyện trong “Mới cập nhật”
+  (đọc từ data/registry.json qua cz-home.js), bìa thật trong /assets/covers.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,900&family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+/* ============================== 0. TOKEN ================================== */
+:root{
+  --bg:#faf8f4; --bg2:#f3efe8; --surf:#fffefb; --surf2:#f2ede5; --surf3:#e7e0d5;
+  --txt:#191410; --mut:#6c6357; --dim:#756b61;
+  --acc:#a63a52; --ok:#2f6b4f; --warn:#8a5f18; --bad:#a83232;
+  --bd:rgba(46,34,22,.14); --bd2:rgba(46,34,22,.3);
+  --r-sm:4px; --r:6px; --r-lg:10px; --r-xl:14px;
+  --font:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --font-head:"Fraunces","Iowan Old Style",Palatino,Georgia,serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --ease:cubic-bezier(.22,1,.36,1); --ease-soft:cubic-bezier(.4,0,.2,1);
+  --t-fast:.15s; --t:.25s; --t-mid:.34s;
+  /* bảng màu “trên nền tối” của banner — khớp src/cz.css §5 */
+  --hv-void:#0a090b; --hv-fg:#fff;
+  --hv-mut:rgba(255,255,255,.72); --hv-dim:rgba(255,255,255,.55);
+  --hv-line:rgba(255,255,255,.16); --hv-line2:rgba(255,255,255,.26);
+  --hv-acc:#d98ea0; --hv-ok:#7fd6a6; --hv-warn:#ffc46b;
+}
+[data-theme="dark"]{
+  --bg:#14110e; --bg2:#1a1613; --surf:#1e1915; --surf2:#262019; --surf3:#322a20;
+  --txt:#f2ebe0; --mut:#a89d8d; --dim:#8a8174;
+  --acc:#e0859b; --ok:#74c69b; --warn:#dcae6a; --bad:#e58b8b;
+  --bd:rgba(255,240,220,.13); --bd2:rgba(255,240,220,.3);
+  --hv-acc:#f0a7b8;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg2);color:var(--txt);font:400 15px/1.6 var(--font);-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;font-family:var(--font-head);line-height:1.12;letter-spacing:-.014em}
+p{margin:0}a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+img{display:block;max-width:100%}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.sr{position:absolute!important;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.wrap{max-width:1560px;margin:0 auto;padding:0 20px 90px}
+
+/* ====================== 1. KHUNG TRANG MOCKUP ============================= */
+.intro{padding:34px 0 6px;border-bottom:1px solid var(--bd);margin-bottom:18px}
+.intro .kick{font:800 10.5px/1 var(--font-mono);letter-spacing:.16em;text-transform:uppercase;color:var(--acc)}
+.intro h1{font-size:clamp(26px,3.2vw,40px);margin:12px 0 10px;font-weight:900}
+.intro p{max-width:84ch;color:var(--mut);font-size:15px}
+.intro .said{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));margin:18px 0 20px}
+.intro .said div{border:1px solid var(--bd);border-left:3px solid var(--acc);border-radius:0 var(--r) var(--r) 0;background:var(--surf);padding:12px 14px;font-size:13.5px;color:var(--mut)}
+.intro .said b{display:block;color:var(--txt);margin-bottom:3px}
+
+.toolbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 0;margin-bottom:16px;
+  background:color-mix(in srgb,var(--bg2) 92%,transparent);border-bottom:1px solid var(--bd);backdrop-filter:blur(6px)}
+.toolbar .lbl{font:700 10.5px/1 var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button{border:1px solid var(--bd);border-radius:99px;background:var(--surf);padding:6px 13px;font-size:12.5px;font-weight:650;color:var(--mut);transition:all var(--t-fast) var(--ease)}
+.chips button:hover{border-color:var(--bd2);color:var(--txt)}
+.chips button.on{background:var(--txt);border-color:var(--txt);color:var(--bg)}
+.toolbar .jump{margin-left:auto;display:flex;gap:4px;flex-wrap:wrap}
+.toolbar .jump a{font-size:12.5px;font-weight:650;color:var(--mut);padding:6px 10px;border-radius:99px;border:1px solid transparent}
+.toolbar .jump a:hover{color:var(--txt);border-color:var(--bd)}
+
+article.demo{margin:0 0 34px;border:1px solid var(--bd);border-radius:var(--r-xl);background:var(--bg);overflow:hidden;
+  box-shadow:0 24px 50px -40px rgba(30,20,10,.55)}
+.dhead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid var(--bd);background:var(--surf)}
+.dhead .v{font:800 10.5px/1 var(--font-mono);letter-spacing:.14em;color:var(--acc)}
+.dhead h2{font-size:19px}
+.dhead em{font-style:normal;color:var(--mut);font-size:13px}
+.dhead .tag{margin-left:auto;font:700 10.5px/1 var(--font-mono);letter-spacing:.1em;text-transform:uppercase;padding:5px 9px;border-radius:99px;border:1px solid}
+.tag.best{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,transparent);background:color-mix(in srgb,var(--ok) 9%,transparent)}
+.tag.mid{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 40%,transparent);background:color-mix(in srgb,var(--warn) 8%,transparent)}
+.tag.base{color:var(--dim);border-color:var(--bd2);background:var(--surf2)}
+.tag.new{color:var(--acc);border-color:color-mix(in srgb,var(--acc) 45%,transparent);background:color-mix(in srgb,var(--acc) 8%,transparent)}
+
+.frame{overflow-x:auto;overflow-y:hidden;background:var(--bg2)}
+body[data-vp="desktop"] .frame{--pad:56px;--gap:52px;--title:50px}
+body[data-vp="tablet"]  .frame{--pad:34px;--gap:26px;--title:34px}
+body[data-vp="mobile"]  .frame{--pad:18px;--gap:16px;--title:28px}
+body[data-vp="desktop"] .vpage{width:1440px}
+body[data-vp="tablet"]  .vpage{width:820px}
+body[data-vp="mobile"]  .vpage{width:390px}
+.vpage{background:var(--bg);color:var(--txt);font-size:15px;margin:0 auto}
+body.zoomfit .frame{zoom:.72}
+
+/* header giả của trang — chỉ để thấy nhịp, không phải nội dung cần duyệt */
+.mhdr{display:flex;align-items:center;gap:18px;padding:0 var(--pad);height:60px;border-bottom:1px solid var(--bd);background:var(--bg);font-size:13px;color:var(--mut)}
+.mhdr .logo{font-family:var(--font-head);font-size:21px;color:var(--txt);letter-spacing:-.02em}
+.mhdr .logo i{font:800 10px/1 var(--font-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mut);margin-left:.4em;font-style:normal}
+.mhdr nav{display:flex;gap:2px}
+.mhdr nav a{padding:0 9px;height:60px;display:inline-flex;align-items:center;border-bottom:2px solid transparent;font-weight:600}
+.mhdr nav a.on{color:var(--txt);border-bottom-color:var(--acc)}
+.mhdr .acts{margin-left:auto;display:flex;gap:8px}
+.mhdr .acts span{border:1px solid var(--bd);border-radius:var(--r);padding:6px 10px;font-size:12.5px;white-space:nowrap}
+body[data-vp="tablet"] .mhdr nav a:nth-child(n+4){display:none}
+body[data-vp="mobile"] .mhdr nav,body[data-vp="mobile"] .mhdr .acts span:nth-child(-n+2){display:none}
+
+/* ====================== 2. HERO “BỘ BÀI” (dùng chung) ===================== */
+.hero{position:relative;isolation:isolate;overflow:hidden;background:var(--hv-void);color:var(--hv-fg);
+  --cover-w:208px; --fan-unit:116px}
+.hero::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background:
+  radial-gradient(70% 86% at 76% 46%,rgba(166,58,82,.34),transparent 64%),
+  radial-gradient(52% 60% at 10% 6%,rgba(255,196,107,.07),transparent 62%)}
+.hero .hb-grid{position:relative;z-index:2;max-width:1220px;margin:0 auto;padding:52px 24px 44px;
+  display:grid;grid-template-columns:.94fr 1.06fr;gap:44px;align-items:center}
+.hero .hb-col{display:flex;flex-direction:column;gap:22px;min-width:0}
+.hero .stage{display:grid;min-width:0}
+.hero .info{display:flex;flex-direction:column;align-items:flex-start;gap:15px;min-width:0;max-width:520px}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--hv-acc)}
+.eyebrow::before{content:"";width:22px;height:1px;background:currentColor}
+.hero h1{font-size:var(--title);line-height:1.05;margin:0;letter-spacing:-.028em;font-weight:800;max-width:15ch;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hero h1 a{color:inherit}
+.hero h1 a:hover{color:var(--hv-acc)}
+/* một hàng meta: ● trạng thái · chương · tác giả · couple · ngày | 18+ */
+.meta{display:flex;align-items:center;gap:6px 14px;flex-wrap:wrap;font-size:13px;line-height:1.5;color:var(--hv-mut)}
+.meta > span{display:inline-flex;align-items:center;gap:6px}
+.meta > span + span::before{content:"";width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.4;margin-right:2px}
+.meta .st{font-weight:650}
+.meta .st::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.meta .st.done{color:var(--hv-ok)} .meta .st.run{color:var(--hv-warn)} .meta .st.soon{color:var(--hv-dim)}
+.meta .b18{font:800 9.5px/1 var(--font);letter-spacing:.06em;padding:3px 5px;border-radius:3px;background:var(--bad);color:#fff}
+.meta .b18::before{display:none}
+.syn{font-size:15px;line-height:1.62;color:var(--hv-mut);max-width:52ch;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.btn-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:2px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:99px;padding:13px 22px;
+  font-size:13.5px;font-weight:700;white-space:nowrap;border:1px solid var(--hv-line2);background:rgba(255,255,255,.07);color:#fff;
+  transition:background var(--t-fast) var(--ease),border-color var(--t-fast) var(--ease),transform var(--t-fast) var(--ease)}
+.btn:hover{background:rgba(255,255,255,.14);border-color:#fff;transform:translateY(-1px)}
+.btn .i{width:15px;height:15px;flex:none;stroke:currentColor;stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.btn.solid{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn.solid:hover{background:var(--acc);filter:brightness(1.07)}
+.btn.icon{width:44px;height:44px;padding:0;border-radius:50%;background:transparent;flex:none}
+/* hàng điều khiển: ticks 5 nhịp + “01 / 05” + ‹ › ⏸ */
+.foot{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.ticks{display:flex;align-items:center;gap:7px}
+.ticks button{position:relative;width:26px;height:3px;border-radius:2px;background:#fff;opacity:.26;transition:all var(--t) var(--ease)}
+.ticks button::after{content:"";position:absolute;inset:-12px -4px}
+.ticks button:hover{opacity:.5}
+.ticks button.on{width:38px;opacity:1;background:var(--hv-acc)}
+.count{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;color:var(--hv-dim);font-variant-numeric:tabular-nums}
+.nav{display:flex;gap:6px;margin-left:2px}
+.arrow{width:34px;height:34px;flex:none;border-radius:50%;border:1px solid var(--hv-line2);background:rgba(255,255,255,.07);
+  display:grid;place-items:center;color:#fff;transition:all var(--t-fast) var(--ease)}
+.arrow:hover{background:rgba(255,255,255,.16);border-color:#fff}
+.arrow .i{width:15px;height:15px;stroke:currentColor;stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}
+/* quạt bìa — vị trí hoàn toàn bằng CSS qua data-pos */
+.fan{position:relative;justify-self:stretch;height:calc(var(--cover-w) * 1.59 + 118px)}
+.coverbtn{position:absolute;left:50%;top:48%;width:var(--cover-w);aspect-ratio:2/3;border-radius:8px;overflow:hidden;
+  background:#1a1416;border:1px solid var(--hv-line);box-shadow:0 26px 44px -26px rgba(0,0,0,.95);
+  --x:0px;--y:0px;--r:0deg;--s:1;
+  transform:translate(-50%,-50%) translate3d(var(--x),var(--y),0) rotate(var(--r)) scale(var(--s));
+  filter:brightness(.5) saturate(.92);
+  transition:transform var(--t-mid) var(--ease),filter var(--t-mid) var(--ease),box-shadow var(--t-mid) var(--ease)}
+.coverbtn img{width:100%;height:100%;object-fit:cover}
+.coverbtn:hover{filter:brightness(.78) saturate(1)}
+.coverbtn.on{filter:none;border-color:rgba(255,255,255,.5);z-index:6;
+  box-shadow:0 34px 60px -26px rgba(0,0,0,.98),0 0 0 2px var(--hv-acc),0 0 40px -8px rgba(217,142,160,.45)}
+.fan [data-pos="0"]{--x:0px;--y:-10px;--r:0deg;--s:1.06;z-index:5}
+.fan [data-pos="1"]{--x:var(--fan-unit);--y:12px;--r:6deg;--s:.9;z-index:2}
+.fan [data-pos="2"]{--x:calc(var(--fan-unit) * 1.835);--y:30px;--r:11deg;--s:.76;z-index:1}
+.fan [data-pos="3"]{--x:calc(var(--fan-unit) * -1.835);--y:30px;--r:-11deg;--s:.76;z-index:1}
+.fan [data-pos="4"]{--x:calc(var(--fan-unit) * -1);--y:12px;--r:-6deg;--s:.9;z-index:2}
+.fancap{position:absolute;left:50%;transform:translateX(-50%);top:calc(48% + var(--cover-w) * .795 + 12px);z-index:7;
+  display:flex;align-items:center;gap:8px;white-space:nowrap;font-family:var(--font-mono);font-size:10.5px;line-height:1;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--hv-mut)}
+.fancap b{color:var(--hv-acc);font-weight:600}
+.fancap .dot{width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.5}
+
+/* ====================== 3. DẢI SỐ LIỆU (4 kiểu) ========================= */
+.facts{background:var(--bg);border-bottom:1px solid var(--bd)}
+.facts .in{max-width:1220px;margin:0 auto;padding:0 24px;display:grid;grid-template-columns:repeat(4,1fr)}
+.facts .f{padding:22px 20px;border-right:1px solid var(--bd)}
+.facts .f:first-child{padding-left:0}
+.facts .f:last-child{border-right:0}
+.facts b{display:block;font-family:var(--font-head);font-size:30px;line-height:1;font-variant-numeric:tabular-nums}
+.facts span{display:block;margin-top:7px;font-size:10.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--dim)}
+
+/* P1 — dải số NẰM TRONG banner: cùng nền tối, một đường kẻ tóc, chữ trắng */
+.p1 .hero{border-bottom:0}
+.p1 .facts.inhero{background:var(--hv-void);color:var(--hv-fg);border-top:1px solid var(--hv-line);border-bottom:0;position:relative;z-index:2}
+.p1 .facts.inhero .f{border-right-color:rgba(255,255,255,.12);border-top-color:rgba(255,255,255,.12);padding:18px 20px}
+.p1 .facts.inhero b{font-size:26px;color:#fff}
+.p1 .facts.inhero span{color:var(--hv-dim)}
+.p1 .after{background:var(--bg);border-bottom:1px solid var(--bd);height:0}
+
+/* P2 — banner là TẤM THẺ, dải số là thẻ giấy nổi đè mép dưới */
+.p2{background:var(--bg2)}
+.p2 .mhdr{background:var(--bg2);border-bottom:0}
+.p2 .herowrap{padding:6px 24px 0}
+.p2 .hero{border-radius:20px;box-shadow:0 30px 60px -42px rgba(20,10,6,.7)}
+.p2 .facts{background:var(--surf);border:1px solid var(--bd);border-radius:14px;
+  width:calc(100% - 96px);margin:-34px auto 0;position:relative;z-index:3;
+  box-shadow:0 20px 44px -34px rgba(30,20,10,.55)}
+.p2 .facts .f{padding:18px 22px}
+
+/* P3 — “masthead”: một hàng số inline, phân cách bằng dấu chấm, canh trái */
+.p3 .facts{background:var(--bg);border-top:1px solid var(--bd)}
+.p3 .facts .in{display:flex;align-items:baseline;gap:26px;flex-wrap:wrap;padding:16px 24px;max-width:1220px}
+.p3 .facts .f{border:0;padding:0;display:flex;align-items:baseline;gap:8px}
+.p3 .facts .f + .f::before{content:"·";color:var(--dim);margin-right:18px;font-weight:700}
+.p3 .facts b{font-size:21px}
+.p3 .facts span{margin:0;font-size:10.5px}
+.p3 .facts .upd{margin-left:auto;font:500 11px/1 var(--font-mono);letter-spacing:.08em;color:var(--dim);text-transform:uppercase}
+
+/* ====================== 4. PHẦN NGAY DƯỚI =============================== */
+.body{padding:38px 0 44px}
+.body .in{max-width:1220px;margin:0 auto;padding:0 24px}
+.sechead{display:flex;align-items:flex-end;gap:16px;padding-bottom:12px;margin-bottom:20px;border-bottom:1px solid var(--bd)}
+.sechead h2{font-size:22px;letter-spacing:-.018em}
+.sechead .kick{display:block;font:800 10.5px/1 var(--font-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin-bottom:7px}
+.sechead .right{margin-left:auto;display:flex;align-items:center;gap:8px;padding-bottom:2px}
+.ghost{border:1px solid var(--bd2);border-radius:99px;padding:8px 14px;font-size:12.5px;font-weight:650;color:var(--mut)}
+.ghost:hover{color:var(--txt);border-color:var(--txt)}
+.linkmore{font-size:12.5px;font-weight:700;color:var(--acc)}
+.rail{display:grid;grid-auto-flow:column;grid-auto-columns:152px;gap:16px;overflow:hidden}
+.rail .card{min-width:0}
+.rail .th{aspect-ratio:2/3;border-radius:var(--r-sm);overflow:hidden;background:var(--surf2);border:1px solid var(--bd)}
+.rail .th img{width:100%;height:100%;object-fit:cover}
+.rail .t{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:9px;font-size:13px;font-weight:700;line-height:1.35}
+.rail .m{display:block;margin-top:3px;font-size:11.5px;color:var(--dim)}
+
+/* ====================== 5. GHI CHÚ TỪNG PHƯƠNG ÁN ======================== */
+.notes{padding:14px 18px 16px;border-top:1px solid var(--bd);background:var(--surf)}
+.notes dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px 22px;margin:0}
+.notes dt{font:700 10.5px/1 var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:3px}
+.notes dd{margin:0;font-size:13px;color:var(--mut);line-height:1.55}
+.notes dd b{color:var(--txt)}
+
+.verdict{margin:8px 0 0;padding:20px 22px;border:1px solid var(--bd);border-left:4px solid var(--ok);
+  border-radius:0 var(--r-lg) var(--r-lg) 0;background:var(--surf)}
+.verdict h2{font-size:19px;margin-bottom:8px}
+.verdict p{color:var(--mut);font-size:14px;max-width:82ch}
+.verdict ul{margin:12px 0 0;padding-left:18px;color:var(--mut);font-size:14px;columns:2;column-gap:32px}
+.verdict li{margin-bottom:6px;break-inside:avoid}
+.verdict b{color:var(--txt)}
+@media (max-width:900px){.verdict ul{columns:1}}
+
+/* ====================== 6. RESPONSIVE CỦA KHUNG ========================== */
+body[data-vp="tablet"] .hero{--cover-w:150px;--fan-unit:90px}
+body[data-vp="tablet"] .hero .hb-grid{padding:34px 24px 30px;gap:22px}
+body[data-vp="tablet"] .hero .info{max-width:400px}
+body[data-vp="tablet"] .rail{grid-auto-columns:120px;gap:14px}
+body[data-vp="tablet"] .p2 .facts{width:calc(100% - 72px)}
+
+body[data-vp="mobile"] .hero{--cover-w:100px;--fan-unit:68px}
+body[data-vp="mobile"] .hero .hb-grid{grid-template-columns:1fr;gap:18px;padding:24px 18px 22px}
+body[data-vp="mobile"] .hero .info{max-width:none;gap:12px}
+body[data-vp="mobile"] .hero .syn{display:none}
+body[data-vp="mobile"] .hero .fan{height:calc(var(--cover-w) * 1.59 + 112px)}
+body[data-vp="mobile"] .facts .in{grid-template-columns:1fr 1fr;gap:0;padding:0 18px}
+body[data-vp="mobile"] .facts .f{padding:14px 12px;border-right:1px solid var(--bd)}
+body[data-vp="mobile"] .facts .f:nth-child(2n){border-right:0;padding-right:0}
+body[data-vp="mobile"] .facts .f:nth-child(n+3){border-top:1px solid var(--bd)}
+body[data-vp="mobile"] .facts .f:first-child{padding-left:0}
+body[data-vp="mobile"] .facts b{font-size:22px}
+body[data-vp="mobile"] .p3 .facts .in{display:grid;grid-template-columns:1fr 1fr;padding:0 18px}
+body[data-vp="mobile"] .p3 .facts .f + .f::before{display:none}
+body[data-vp="mobile"] .p3 .facts .upd{grid-column:1 / -1;margin:10px 0 0;padding-bottom:12px}
+body[data-vp="mobile"] .p2 .herowrap{padding:0 12px}
+body[data-vp="mobile"] .p2 .facts{width:calc(100% - 40px);margin-top:-26px}
+body[data-vp="mobile"] .body{padding:28px 0 32px}
+body[data-vp="mobile"] .body .in{padding:0 18px}
+body[data-vp="mobile"] .sechead h2{font-size:19px}
+body[data-vp="mobile"] .sechead .right .ghost{display:none}
+body[data-vp="mobile"] .rail{grid-auto-columns:104px;gap:10px}
+body[data-vp="mobile"] .rail .card:nth-child(n+4){display:none}
+body[data-vp="mobile"] .hero .ticks{gap:5px}
+body[data-vp="mobile"] .hero .ticks button{width:20px}
+body[data-vp="mobile"] .hero .ticks button.on{width:30px}
+body[data-vp="mobile"] .hero .arrow{width:36px;height:36px}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body data-vp="desktop">
+<div class="wrap">
+
+  <section class="intro">
+    <div class="kick">Vùng banner · 4 phương án</div>
+    <h1>Banner xong rồi — nhưng phần ngay dưới nó phải cùng một hệ</h1>
+    <p>Vấn đề không nằm ở banner mà ở <b>chỗ ghép</b>: banner tối, ngay dưới là một dải số nền giấy
+      cao 90px với 4 ô kẻ dọc, rồi tới tiêu đề mục. Ba khối đó đang nói ba thứ tiếng khác nhau —
+      banner dùng con số mono nhỏ, dải số dùng serif 30px, tiêu đề mục dùng serif 22px, khoảng cách
+      44/56/38px không theo nhịp nào. Bốn phương án dưới đây chỉ khác nhau ở <b>cách ghép</b>; phần
+      <b>thân banner</b> thì đã được đồng bộ ở cả bốn (xem ghi chú “Đã đồng bộ”).</p>
+    <div class="said">
+      <div><b>Đã đồng bộ trong cả 4 phương án</b>Trạng thái = <b>chấm + chữ</b> (một kiểu duy nhất, không pill);
+        chỉ còn tối đa <b>một</b> nhãn phụ (18+); “Có mật mã” chuyển vào CTA thay vì thành nhãn thứ ba;
+        tiêu đề cắt 2 dòng nên chiều cao banner không phụ thuộc tên truyện dài; nhãn dưới bìa luôn
+        <b>01 · tác giả</b>; ticks + “01 / 05” + ‹ › ⏸ luôn nằm một hàng.</div>
+      <div><b>Cách xem</b>Đổi khổ màn hình để kiểm tra banner + dải số ở 3 mốc; bấm bìa, ticks hay ‹ › để
+        đổi truyện. Số liệu và bìa là <b>thật</b> (đọc từ registry, không có ảnh minh hoạ).</div>
+    </div>
+  </section>
+
+  <div class="toolbar" role="group" aria-label="Điều khiển xem thử">
+    <span class="lbl">Khổ</span>
+    <div class="chips" id="vpChips">
+      <button data-vp="desktop" class="on">Desktop 1440</button>
+      <button data-vp="tablet">Tablet 820</button>
+      <button data-vp="mobile">Mobile 390</button>
+    </div>
+    <span class="lbl" style="margin-left:6px">Nền</span>
+    <div class="chips" id="themeChips">
+      <button data-theme="light" class="on">Sáng</button>
+      <button data-theme="dark">Tối</button>
+    </div>
+    <div class="chips" style="margin-left:6px"><button id="zoomBtn" aria-pressed="false">Thu nhỏ để xem trọn</button></div>
+    <div class="jump"><a href="#p0">0</a><a href="#p1">1</a><a href="#p2">2</a><a href="#p3">3</a><a href="#ket">Chọn cái nào</a></div>
+  </div>
+
+  <!-- ===================== P0 · HIỆN TẠI ===================== -->
+  <article class="demo p0" id="p0">
+    <div class="dhead"><span class="v">0</span><h2>Hiện tại — banner rồi dải số rời</h2>
+      <em>Để so sánh: dải số nền giấy 4 ô kẻ dọc, rồi tiêu đề mục</em>
+      <span class="tag base">bản đang chạy</span></div>
+    <div class="frame"><div class="vpage">
+      <div class="mhdr"><span class="logo">ssochuz<i>library</i></span>
+        <nav><a class="on">Trang chủ</a><a>My Space</a><a>Thư viện</a><a>Ranking</a><a>Lịch ra chương</a></nav>
+        <span class="acts"><span>Tìm nhanh ⌘K</span><span>Nền</span><span>Tài khoản</span></span></div>
+      <section class="hero" data-hero aria-label="Truyện nổi bật"></section>
+      <section class="facts" aria-label="Số liệu thư viện"><div class="in">
+        <div class="f"><b>62</b><span>Bộ truyện</span></div>
+        <div class="f"><b>1.284</b><span>Chương đã đăng</span></div>
+        <div class="f"><b>41</b><span>Hoàn thành</span></div>
+        <div class="f"><b>6</b><span>Sắp ra mắt</span></div>
+      </div></section>
+      <div class="body"><div class="in">
+        <div class="sechead"><h2>Mới cập nhật</h2>
+          <span class="right"><a class="ghost" href="#">Xem tất cả</a></span></div>
+        <div class="rail" data-rail></div>
+      </div></div>
+    </div></div>
+    <div class="notes"><dl>
+      <dt>Vấn đề</dt><dd>Ba khối ba nhịp: banner <b>44px</b> đệm đáy → dải số <b>22px</b> padding ô →
+        mục <b>38px</b>. Dải số dùng serif 30px trong khi banner dùng mono 11px ⇒ nhìn như hai sản phẩm khác nhau.</dd>
+      <dt>Dấu hiệu</dt><dd>Mắt phải “nhảy” hai lần khi cuộn từ banner xuống nội dung; dải số trông như
+        thanh quảng cáo dán tạm.</dd>
+      <dt>Ưu điểm</dt><dd>Không cần sửa gì. Giữ làm mốc so sánh.</dd>
+    </dl></div>
+  </article>
+
+  <!-- ===================== P1 · DẢI SỐ TRONG BANNER ===================== -->
+  <article class="demo p1" id="p1">
+    <div class="dhead"><span class="v">1</span><h2>“Một khối” — dải số nằm trong banner</h2>
+      <em>Banner + số liệu thành một khối tối duy nhất, kết thúc bằng một đường kẻ tóc</em>
+      <span class="tag best">khuyên dùng</span></div>
+    <div class="frame"><div class="vpage">
+      <div class="mhdr"><span class="logo">ssochuz<i>library</i></span>
+        <nav><a class="on">Trang chủ</a><a>My Space</a><a>Thư viện</a><a>Ranking</a><a>Lịch ra chương</a></nav>
+        <span class="acts"><span>Tìm nhanh ⌘K</span><span>Nền</span><span>Tài khoản</span></span></div>
+      <section class="hero" data-hero aria-label="Truyện nổi bật"></section>
+      <section class="facts inhero" aria-label="Số liệu thư viện"><div class="in">
+        <div class="f"><b>62</b><span>Bộ truyện</span></div>
+        <div class="f"><b>1.284</b><span>Chương đã đăng</span></div>
+        <div class="f"><b>41</b><span>Hoàn thành</span></div>
+        <div class="f"><b>6</b><span>Sắp ra mắt</span></div>
+      </div></section>
+      <div class="body"><div class="in">
+        <div class="sechead"><h2>Mới cập nhật</h2>
+          <span class="right"><a class="ghost" href="#">Xem tất cả</a></span></div>
+        <div class="rail" data-rail></div>
+      </div></div>
+    </div></div>
+    <div class="notes"><dl>
+      <dt>Cách ghép</dt><dd>Số liệu chuyển vào <b>cùng nền tối</b>, ngay dưới quạt bìa, phân cách bằng
+        đường kẻ tóc trắng 10%. Số dùng serif <b>26px</b> (nhỏ hơn bản cũ) + nhãn mono 10px ⇒ cùng hệ
+        với nhãn “01 / 05” trong banner. Trang giấy bắt đầu sạch ở “Mới cập nhật”.</dd>
+      <dt>Vì sao gọn</dt><dd>Chỉ còn <b>một</b> đường chuyển tông (tối → giấy) thay vì hai; mắt không
+        phải đổi cỡ chữ giữa banner và dải số. Đây là cách các trang tạp chí làm masthead.</dd>
+      <dt>Đánh đổi</dt><dd>Số liệu “mất” khỏi vùng giấy ⇒ nếu sau này muốn số liệu nổi bật trên nền sáng
+        thì phải đổi lại. Code: thêm ~25 dòng CSS, không đổi markup (dải số vẫn là section riêng, chỉ
+        đổi nền + đường kẻ).</dd>
+    </dl></div>
+  </article>
+
+  <!-- ===================== P2 · THẺ NỔI ===================== -->
+  <article class="demo p2" id="p2">
+    <div class="dhead"><span class="v">2</span><h2>“Thẻ nổi” — banner là tấm thẻ, số liệu là thẻ giấy đè mép</h2>
+      <em>Banner bo góc nằm trên nền giấy; dải số trở thành một thẻ trắng nổi lên trên mép dưới</em>
+      <span class="tag new">nhiều tầng nhất</span></div>
+    <div class="frame"><div class="vpage">
+      <div class="mhdr"><span class="logo">ssochuz<i>library</i></span>
+        <nav><a class="on">Trang chủ</a><a>My Space</a><a>Thư viện</a><a>Ranking</a><a>Lịch ra chương</a></nav>
+        <span class="acts"><span>Tìm nhanh ⌘K</span><span>Nền</span><span>Tài khoản</span></span></div>
+      <div class="herowrap">
+        <section class="hero" data-hero aria-label="Truyện nổi bật"></section>
+      </div>
+      <section class="facts" aria-label="Số liệu thư viện"><div class="in">
+        <div class="f"><b>62</b><span>Bộ truyện</span></div>
+        <div class="f"><b>1.284</b><span>Chương đã đăng</span></div>
+        <div class="f"><b>41</b><span>Hoàn thành</span></div>
+        <div class="f"><b>6</b><span>Sắp ra mắt</span></div>
+      </div></section>
+      <div class="body"><div class="in">
+        <div class="sechead"><h2>Mới cập nhật</h2>
+          <span class="right"><a class="ghost" href="#">Xem tất cả</a></span></div>
+        <div class="rail" data-rail></div>
+      </div></div>
+    </div></div>
+    <div class="notes"><dl>
+      <dt>Cách ghép</dt><dd>Banner bo <b>20px</b>, thụt vào 24px mỗi bên, đổ bóng; dải số thành thẻ giấy
+        bo 14px <b>đè lên mép dưới banner 34px</b> ⇒ tạo ba tầng rõ: giấy → banner → thẻ số.</dd>
+      <dt>Vì sao đẹp</dt><dd>Khối số “nổi” đúng lúc cần đọc, và tự nó là điểm kết cho banner. Bo góc giúp
+        banner không còn cảm giác “dải màu cắt ngang trang”.</dd>
+      <dt>Đánh đổi</dt><dd>Nhiều lớp hơn ⇒ nền tối (dark theme) phải kiểm lại bóng; mobile phải hạ xuống
+        thẻ số 2 cột. Code: sửa khung `.hero` + thêm wrapper, ~35 dòng CSS. Nặng nhất trong 4 phương án.</dd>
+    </dl></div>
+  </article>
+
+  <!-- ===================== P3 · MASTHEAD ===================== -->
+  <article class="demo p3" id="p3">
+    <div class="dhead"><span class="v">3</span><h2>“Masthead” — số liệu thành một hàng chữ, không phải bảng</h2>
+      <em>Một dòng: 62 bộ truyện · 1.284 chương · 41 hoàn thành · 6 sắp ra mắt · cập nhật 29-09</em>
+      <span class="tag mid">nhẹ nhất</span></div>
+    <div class="frame"><div class="vpage">
+      <div class="mhdr"><span class="logo">ssochuz<i>library</i></span>
+        <nav><a class="on">Trang chủ</a><a>My Space</a><a>Thư viện</a><a>Ranking</a><a>Lịch ra chương</a></nav>
+        <span class="acts"><span>Tìm nhanh ⌘K</span><span>Nền</span><span>Tài khoản</span></span></div>
+      <section class="hero" data-hero aria-label="Truyện nổi bật"></section>
+      <section class="facts" aria-label="Số liệu thư viện"><div class="in">
+        <div class="f"><b>62</b><span>Bộ truyện</span></div>
+        <div class="f"><b>1.284</b><span>Chương</span></div>
+        <div class="f"><b>41</b><span>Hoàn thành</span></div>
+        <div class="f"><b>6</b><span>Sắp ra mắt</span></div>
+        <span class="upd">cập nhật 29-09</span>
+      </div></section>
+      <div class="body"><div class="in">
+        <div class="sechead"><span class="kick">Thư viện</span>
+          <h2>Mới cập nhật</h2>
+          <span class="right"><a class="linkmore" href="#">Xem tất cả →</a></span></div>
+        <div class="rail" data-rail></div>
+      </div></div>
+    </div></div>
+    <div class="notes"><dl>
+      <dt>Cách ghép</dt><dd>Số liệu thu về <b>một hàng chữ</b> (21px + nhãn 10px, phân cách bằng dấu chấm),
+        cao ~54px thay vì 90px. Tiêu đề mục thêm eyebrow “THƯ VIỆN” để nối nhịp với eyebrow của banner.</dd>
+      <dt>Vì sao gọn</dt><dd>Bớt được một khối “bảng số” ⇒ trang vào nội dung nhanh hơn ~60px.
+        Ít thay đổi markup nhất, nhẹ nhất về CSS.</dd>
+      <dt>Đánh đổi</dt><dd>Số liệu nhỏ đi ⇒ mất chất “bảng thành tích”. Nếu bạn thích cảm giác thư viện
+        lớn thì P1 hợp hơn.</dd>
+    </dl></div>
+  </article>
+
+  <section class="verdict" id="ket">
+    <h2>Chọn cái nào</h2>
+    <p><b>P1 · “Một khối”</b> là phương án mình khuyên: nó sửa đúng chỗ đang sai (banner và dải số nói hai
+      thứ tiếng khác nhau) mà <b>không đổi cấu trúc dữ liệu</b>, không thêm wrapper, và vẫn giữ được con số
+      lớn để khoe quy mô thư viện. <b>P2</b> nếu bạn muốn trang trông “có tầng” hơn hẳn và chấp nhận thêm
+      một lớp bo góc + bóng; <b>P3</b> nếu ưu tiên gọn tuyệt đối và muốn nội dung lên sớm.</p>
+    <ul>
+      <li>Một kiểu trạng thái duy nhất: <b>chấm + chữ</b></li>
+      <li>Chỉ tối đa <b>một</b> nhãn phụ (18+)</li>
+      <li>“Có mật mã” → nằm trong nút CTA, không thành nhãn</li>
+      <li>Tiêu đề cắt <b>2 dòng</b> ⇒ banner cao cố định</li>
+      <li>Nhãn dưới bìa: <b>01 · tác giả</b></li>
+      <li>Ticks + số đếm + ‹ › ⏸ <b>một hàng</b></li>
+      <li>Hai cỡ chữ số thôi: serif cho số, mono cho nhãn</li>
+      <li>Nhịp dọc thống nhất: <b>24 / 38 / 44</b> px</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+/* Dữ liệu THẬT: 5 truyện đang lên hero + 6 truyện trong “Mới cập nhật” */
+var STORIES = [
+  { title:'Third Person', author:'SIIX', couple:'Garn x Mimie', chapters:'42 chương',
+    status:'Hoàn thành', cls:'done', updated:'29-09', is18:false, locked:false,
+    cover:'/assets/covers/6a6f3cd4.webp',
+    syn:'Chris mất trí nhớ, tỉnh dậy giữa một cuộc hôn nhân mà cô không nhớ đã bước vào — và người chồng ấy cũng chẳng buồn giấu việc anh biết nhiều hơn cô.' },
+  { title:'PLS LOVE', author:'REVERSE', couple:'Lena x Miu', chapters:'71 chương',
+    status:'Hoàn thành', cls:'done', updated:'27-09', is18:true, locked:true,
+    cover:'/assets/covers/d0d80952.webp',
+    syn:'“Thiên thần” của quán lounge nhận một việc cho nữ doanh nhân vốn căm ghét cô — và cả hai kết thúc ở nơi không ai ngờ.' },
+  { title:'Cô Vợ Hờ Đanh Đá Của Tôi', author:'Takling Kaemjai', couple:'', chapters:'25 chương',
+    status:'Đang cập nhật', cls:'run', updated:'26-09', is18:true, locked:false,
+    cover:'/assets/covers/20124c95.webp',
+    syn:'Công xinh đẹp nhưng tàn nhẫn đối đầu cùng Thụ bướng bỉnh nhưng nấu ăn đỉnh — một cuộc hôn nhân hờ bắt đầu bằng bản hợp đồng.' },
+  { title:'Juliet & Juliet', author:'Freaky', couple:'Mingming x Nepjune', chapters:'16 chương',
+    status:'Đang cập nhật', cls:'run', updated:'26-09', is18:true, locked:false,
+    cover:'/assets/covers/7c33de96.webp',
+    syn:'Blue ước mơ theo học hội hoạ ở trường nghệ thuật danh tiếng nhất Thái Lan — và trở thành hoạ sĩ được cả thế giới biết đến.' },
+  { title:'Vượt Khỏi Đường Chân Trời — endless blue beyond (Special)', author:'Kratai Duean Kao', couple:'', chapters:'18 chương',
+    status:'Hoàn thành', cls:'done', updated:'25-09', is18:false, locked:false,
+    cover:'/assets/covers/3573b736.webp',
+    syn:'Ngày quê hương chìm trong biển lửa, khát khao cá nhân phải nhường cho lý tưởng cứu quốc — chuyện tình của hai cô gái giữa năm 2485.' }
+];
+
+var LATEST = [
+  { t:'Cô Vợ Hờ Đanh Đá Của Tôi', m:'25 chương · 26-09', img:'/assets/covers/20124c95.webp' },
+  { t:'Juliet & Juliet', m:'16 chương · 26-09', img:'/assets/covers/7c33de96.webp' },
+  { t:'PLS LOVE', m:'71 chương · 27-09', img:'/assets/covers/d0d80952.webp' },
+  { t:'Vượt Khỏi Đường Chân Trời (Special)', m:'18 chương · 25-09', img:'/assets/covers/3573b736.webp' },
+  { t:'Buy My Boss', m:'34 chương · 24-09', img:'/assets/covers/be2cd879.webp' },
+  { t:'Be My Angel', m:'28 chương · 23-09', img:'/assets/covers/43bbe6f4.webp' }
+];
+
+var N = STORIES.length;
+var ICON = {
+  play:'<svg class="i" viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg>',
+  lock:'<svg class="i" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',
+  shelf:'<svg class="i" viewBox="0 0 24 24"><path d="M5 4h14v16l-7-4-7 4z"/></svg>',
+  left:'<svg class="i" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>',
+  right:'<svg class="i" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>',
+  pause:'<svg class="i" viewBox="0 0 24 24"><path d="M9 6v12M15 6v12"/></svg>'
+};
+
+function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+function metaHTML(s) {
+  var h = '<span class="st ' + s.cls + '">' + s.status + '</span>' +
+    '<span>' + s.chapters + '</span>' +
+    '<span>' + s.author + '</span>';
+  if (s.couple) h += '<span>' + s.couple + '</span>';
+  h += '<span>' + s.updated + '</span>';
+  if (s.is18) h += '<span class="b18">18+</span>';
+  return h;
+}
+
+function ctaHTML(s) {
+  return s.locked
+    ? ICON.lock + '<span>Nhập mật mã để đọc</span>'
+    : ICON.play + '<span>' + (s.reading ? 'Đọc tiếp' : 'Đọc từ đầu') + '</span>';
+}
+
+function heroHTML() {
+  return '' +
+  '<div class="hb-grid">' +
+    '<div class="hb-col">' +
+      '<div class="stage"><div class="info">' +
+        '<span class="eyebrow">Nổi bật hôm nay</span>' +
+        '<h1><a href="#" data-f="title">Third Person</a></h1>' +
+        '<div class="meta" data-f="meta"></div>' +
+        '<p class="syn" data-f="syn"></p>' +
+        '<div class="btn-row">' +
+          '<a class="btn solid" href="#" data-f="cta">' + ctaHTML(STORIES[0]) + '</a>' +
+          '<button class="btn icon" type="button" aria-label="Lưu vào tủ" title="Lưu vào tủ">' + ICON.shelf + '</button>' +
+        '</div>' +
+      '</div></div>' +
+      '<div class="foot">' +
+        '<div class="ticks" data-ticks role="group" aria-label="Chọn truyện nổi bật"></div>' +
+        '<span class="count" data-count aria-hidden="true">01 / 05</span>' +
+        '<div class="nav">' +
+          '<button class="arrow" type="button" data-prev aria-label="Xem mục trước">' + ICON.left + '</button>' +
+          '<button class="arrow" type="button" data-next aria-label="Xem mục tiếp theo">' + ICON.right + '</button>' +
+          '<button class="arrow play" type="button" data-play aria-label="Tạm dừng tự chuyển truyện">' + ICON.pause + '</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="fan" data-fan></div>' +
+  '</div>' +
+  '<p class="sr" data-live aria-live="polite" aria-atomic="true"></p>';
+}
+
+function fanHTML() {
+  return STORIES.map(function (s, k) {
+    return '<button type="button" class="coverbtn" data-go="' + k + '" data-pos="' + k + '"' +
+      ' aria-label="Xem: ' + s.title + '" title="' + s.title + '">' +
+      '<img src="' + s.cover + '" alt="" ' + (k === 0 ? 'fetchpriority="high"' : 'loading="lazy"') + ' decoding="async">' +
+      '</button>';
+  }).join('') +
+  '<span class="fancap" aria-hidden="true"><b>01</b><i class="dot"></i><span class="who">SIIX</span></span>';
+}
+
+function ticksHTML() {
+  return STORIES.map(function (s, k) {
+    return '<button type="button" data-go="' + k + '" aria-label="Xem: ' + s.title + '"></button>';
+  }).join('');
+}
+
+function paint(root, i) {
+  var s = STORIES[i];
+  root.querySelector('[data-f="title"]').textContent = s.title;
+  root.querySelector('[data-f="meta"]').innerHTML = metaHTML(s);
+  root.querySelector('[data-f="syn"]').textContent = s.syn;
+  root.querySelector('[data-f="cta"]').innerHTML = ctaHTML(s);
+  root.querySelector('[data-count]').textContent = pad2(i + 1) + ' / ' + pad2(N);
+  var covers = [].slice.call(root.querySelectorAll('.coverbtn'));
+  covers.forEach(function (b, k) {
+    b.setAttribute('data-pos', String((k - i + N) % N));
+    b.classList.toggle('on', k === i);
+    if (k === i) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
+  });
+  var ticks = [].slice.call(root.querySelectorAll('.ticks button'));
+  ticks.forEach(function (b, k) {
+    b.classList.toggle('on', k === i);
+    if (k === i) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
+  });
+  var cap = root.querySelector('.fancap');
+  cap.querySelector('b').textContent = pad2(i + 1);
+  cap.querySelector('.who').textContent = s.author;
+  cap.hidden = !s.author;
+  root._i = i;
+  var live = root.querySelector('[data-live]');
+  live.textContent = 'Mục ' + (i + 1) + ' / ' + N + ': ' + s.title;
+}
+
+function mountHero(root) {
+  root.innerHTML = heroHTML();
+  root.querySelector('[data-fan]').innerHTML = fanHTML();
+  root.querySelector('[data-ticks]').innerHTML = ticksHTML();
+  root.addEventListener('click', function (e) {
+    var t = e.target.closest ? e.target : null;
+    if (!t) return;
+    var go = e.target.closest('[data-go]');
+    if (go) { paint(root, +go.getAttribute('data-go')); return; }
+    if (e.target.closest('[data-prev]')) { paint(root, (root._i + N - 1) % N); return; }
+    if (e.target.closest('[data-next]')) { paint(root, (root._i + 1) % N); return; }
+  });
+  root.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight') { e.preventDefault(); paint(root, (root._i + 1) % N); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); paint(root, (root._i + N - 1) % N); }
+  });
+  paint(root, 0);
+}
+
+document.querySelectorAll('[data-hero]').forEach(mountHero);
+
+document.querySelectorAll('[data-rail]').forEach(function (box) {
+  box.innerHTML = LATEST.map(function (c) {
+    return '<a class="card" href="#"><span class="th"><img src="' + c.img + '" alt="" loading="lazy"></span>' +
+      '<b class="t">' + c.t + '</b><span class="m">' + c.m + '</span></a>';
+  }).join('');
+});
+
+/* ---------- toolbar ---------- */
+function syncChips(box) {
+  box.querySelectorAll('button').forEach(function (x) {
+    x.setAttribute('aria-pressed', x.classList.contains('on') ? 'true' : 'false');
+  });
+}
+function setZoom(on) {
+  document.body.classList.toggle('zoomfit', on);
+  var z = document.getElementById('zoomBtn');
+  z.setAttribute('aria-pressed', on ? 'true' : 'false');
+  z.textContent = on ? 'Xem đúng cỡ 100%' : 'Thu nhỏ để xem trọn';
+}
+document.getElementById('vpChips').addEventListener('click', function (e) {
+  var b = e.target.closest('[data-vp]'); if (!b) return;
+  document.body.dataset.vp = b.dataset.vp;
+  this.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
+  syncChips(this);
+});
+document.getElementById('themeChips').addEventListener('click', function (e) {
+  var b = e.target.closest('[data-theme]'); if (!b) return;
+  document.documentElement.dataset.theme = b.dataset.theme;
+  this.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
+  syncChips(this);
+});
+document.getElementById('zoomBtn').addEventListener('click', function () {
+  setZoom(!document.body.classList.contains('zoomfit'));
+});
+syncChips(document.getElementById('vpChips'));
+syncChips(document.getElementById('themeChips'));
+if (window.innerWidth < 1330) setZoom(true);
+</script>
+</body>
+</html>
