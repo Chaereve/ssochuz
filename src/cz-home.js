@@ -538,6 +538,8 @@
     return out;
   }
   function render() {
+    var libSub = $('#libSub');
+    if (libSub) libSub.textContent = CZ.lib().length + ' bộ · ' + state.per + ' bộ mỗi trang';
     syncFilterUI();                      /* dãy tab phải chạy theo trạng thái lọc */
     var list = filtered();
     var total = Math.max(1, Math.ceil(list.length / state.per));

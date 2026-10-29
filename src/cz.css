@@ -4361,3 +4361,12 @@ body.rd-focus .rdcmts { display: none; }
   #bxh .tilehead .right { width: 100%; justify-content: flex-start; }
   .week { grid-auto-columns: 142px; }
 }
+
+/* --- Thư viện: nhịp và cỡ bìa khớp hàng bìa phía trên ------------------ */
+/* Bìa thư viện 168px ≈ bìa “Mới cập nhật” (176px): cả trang chỉ còn hai cỡ
+   bìa (hero và 168–176), mắt không phải đổi thước giữa các khối. */
+.grid { grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); }
+.fpick:empty { display: none; }
+#lich { margin-top: 64px; }
+#thu-vien { margin-top: 64px; }
+@media (max-width: 560px) { .grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); } }
