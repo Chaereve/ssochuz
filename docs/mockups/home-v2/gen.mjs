@@ -158,7 +158,8 @@ const ICON = {
   search: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>',
   grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg>',
   rows: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"><rect x="4" y="5" width="16" height="5"/><rect x="4" y="14" width="16" height="5"/></svg>',
-  caret: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'
+  caret: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+  play: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.2v13.6a1 1 0 0 0 1.53.85l10.4-6.8a1 1 0 0 0 0-1.7L9.53 4.35A1 1 0 0 0 8 5.2z"/></svg>'
 };
 
 /* ------------------------------ THÀNH PHẦN ------------------------------- */
@@ -173,7 +174,12 @@ function card(b, o = {}) {
         (o.sc ? `<span class="sc">★ ${o.sc}</span>` : '') +
         (b.e ? '<span class="badge18">18+</span>' : '') +
         (o.pct ? `<span class="pbar"><i style="width:${o.pct}%"></i></span>` : '') +
-        (o.lib ? `<span class="go">Đọc ngay ›</span>` : '') +
+        (o.lib
+          ? `<span class="hov"><span class="hovIn">` +
+              `<span class="goIc">${ICON.play}</span>` +
+              `<span class="goTx">Đọc ngay</span>` +
+            `</span></span>`
+          : '') +
       `</div>` +
       `<h3>${esc(b.t)}</h3>` +
       `<div class="sub">${o.subHtml || esc(o.sub || b.a || '—')}</div>` +
@@ -252,11 +258,13 @@ function library() {
       `<div class="srch" id="srch">${ICON.search}` +
         `<input id="q" type="search" placeholder="Tìm truyện, tác giả…" aria-label="Tìm trong thư viện">` +
         `<button type="button" class="clear" id="qclear" aria-label="Xoá từ khoá">✕</button></div>` +
-      `<span class="dd"><span class="lbl">Năm</span><span class="v">Tất cả</span>${ICON.caret}</span>` +
-      `<span class="dd"><span class="lbl">Sắp xếp</span><span class="v">Đề xuất</span>${ICON.caret}</span>` +
-      `<div class="vseg" role="group" aria-label="Kiểu hiển thị">` +
-        `<button class="on" aria-label="Xem dạng lưới">${ICON.grid}</button>` +
-        `<button aria-label="Xem dạng danh sách">${ICON.rows}</button>` +
+      `<div class="lrow">` +
+        `<span class="dd"><span class="lbl">Năm</span><span class="v">Tất cả</span>${ICON.caret}</span>` +
+        `<span class="dd"><span class="lbl">Sắp xếp</span><span class="v">Đề xuất</span>${ICON.caret}</span>` +
+        `<div class="vseg" role="group" aria-label="Kiểu hiển thị">` +
+          `<button class="on" aria-label="Xem dạng lưới">${ICON.grid}</button>` +
+          `<button aria-label="Xem dạng danh sách">${ICON.rows}</button>` +
+        `</div>` +
       `</div>` +
     `</div>` +
     `<div class="frow"><div class="chips">` +
@@ -291,13 +299,14 @@ const HTML = `<!doctype html>
 <title>ssochuz · mockup nửa dưới trang chủ (dải bìa cuộn ngang)</title>
 <link rel="stylesheet" href="mock2.css?v=b6">
 </head>
-<body data-w="desktop">
+<body data-w="desktop" class="hvA">
 
 <div class="mkbar">
   <span class="ttl">ssochuz · nửa dưới trang chủ</span>
   <span>bản 6 · dải bìa kiểu glvietsubz · bìa và tên thật 67 bộ</span>
   <span class="fwv" id="fwv">khung —</span>
   <a href="variants.html" style="color:var(--mut);text-decoration:underline;text-underline-offset:3px">biến thể A/B</a>
+  <a href="hover.html" style="color:var(--mut);text-decoration:underline;text-underline-offset:3px">nút rê chuột</a>
   <div class="wsw">
     <button data-w="desktop" class="on">Desktop</button>
     <button data-w="tablet">Tablet</button>
@@ -529,6 +538,13 @@ const vStrip = (o = {}) =>
     return card(r.b, { num: i + 1, subHtml: sub, sc: o.sc ? '4.8' : null });
   }).join('');
 
+const demoCards = (n = 5) => RECENT.slice(0, n).map((b) =>
+  card(b, {
+    lib: true,
+    pill: b.st === 'Hoàn thành' ? `Trọn bộ ${b.n}` : `Ch. ${b.n}`,
+    sub: `${b.a || '—'} · ${dmy(b.u)}`
+  })).join('');
+
 const vToolbar = (cls) => library().split('<div class="frow">')[0]
   .replace('<div class="libtop filters">', `<div class="libtop ${cls}">`)
   .replace(/ id="[^"]*"/g, '');
@@ -549,7 +565,8 @@ const VARIANTS = `<!doctype html>
   .vsec { border-top: 1px solid var(--bd); padding-top: 22px; margin-top: 26px; }
   .vsec h2 { font-size: 16px; margin-bottom: 14px; }
   .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-  .box { border: 1px solid var(--bd); border-radius: 14px; padding: 16px 14px; background: var(--bg); }
+  .box { container-type: inline-size; border: 1px solid var(--bd); border-radius: 14px;
+    padding: 16px 14px; background: var(--bg); }
   .tag { display: inline-block; margin-bottom: 10px; font: 800 10px/1 var(--font-mono);
     letter-spacing: .12em; text-transform: uppercase; color: var(--acc); }
   .plist { margin: 0; padding: 0; list-style: none; }
@@ -567,10 +584,16 @@ const VARIANTS = `<!doctype html>
   /* ---- B4: hover kiểu nút son đặc ---- */
   .force .cv::after { opacity: 1; }
   .force .go { opacity: 1; transform: translate(-50%, -50%); }
-  .b4 .go { background: var(--acc); border-color: transparent; color: #20100f;
-    font-weight: 750; box-shadow: 0 10px 24px -12px rgba(0,0,0,.8); }
   .b4 .cv::after { background: linear-gradient(180deg, rgba(10,7,5,.1), rgba(10,7,5,.62)); }
-  .pair .card { max-width: 170px; }
+  .pair .card, .trio .card { max-width: 170px; }
+  .trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+  @media (max-width: 720px) { .trio { grid-template-columns: 1fr; } }
+  /* hiện sẵn trạng thái rê chuột */
+  .force .hov { opacity: 1; }
+  .force .hovIn { transform: none; }
+  .force .goIc { transform: none; }
+  .force .goTx::after { width: 46px; }
+  .force .cv::before { opacity: 1; }
   .track.mini { --n: 3; --g: 10px; overflow: visible; padding: 0; margin: 0; cursor: default; }
 </style>
 </head>
@@ -611,10 +634,13 @@ const VARIANTS = `<!doctype html>
   </section>
 
   <section class="vsec">
-    <h2>4 · Rê chuột lên bìa (hiện sẵn để so)</h2>
-    <div class="pair">
-      <div class="box force"><span class="tag">A · nút viền mảnh</span>${card(RECENT[0], { lib: true, pill: 'Ch. ' + RECENT[0].n, sub: RECENT[0].a })}</div>
-      <div class="box force b4"><span class="tag">B · nút son đặc</span>${card(RECENT[1], { lib: true, pill: 'Ch. ' + RECENT[1].n, sub: RECENT[1].a })}</div>
+    <h2>4 · Nút khi rê chuột — ba kiểu mới</h2>
+    <p class="lead" style="margin:-8px 0 14px">Ô dưới đây hiện sẵn cho bạn nhìn; muốn thử rê chuột thật thì mở
+      <a href="hover.html" style="color:var(--acc)">hover.html</a>.</p>
+    <div class="trio">
+      <div class="box force hvA"><span class="tag">A · nút tròn son</span>${card(RECENT[0], { lib: true, pill: 'Ch. ' + RECENT[0].n, sub: RECENT[0].a })}</div>
+      <div class="box force hvB"><span class="tag">B · chữ lớn + gạch son</span>${card(RECENT[1], { lib: true, pill: 'Ch. ' + RECENT[1].n, sub: RECENT[1].a })}</div>
+      <div class="box force hvC"><span class="tag">C · thanh son từ đáy</span>${card(RECENT[2], { lib: true, pill: 'Ch. ' + RECENT[2].n, sub: RECENT[2].a })}</div>
     </div>
   </section>
 </div>
@@ -623,6 +649,66 @@ const VARIANTS = `<!doctype html>
 `;
 
 fs.writeFileSync(path.join(HERE, 'variants.html'), VARIANTS);
+
+/* ------------------------------ TRANG RÊ CHUỘT --------------------------- */
+const HOVER = `<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ssochuz · ba kiểu nút khi rê chuột lên bìa</title>
+<link rel="stylesheet" href="mock2.css?v=b6">
+<style>
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 24px 22px 70px; }
+  h1 { font-family: var(--font-head); font-size: 22px; margin-bottom: 8px; }
+  .lead { color: var(--dim); font-size: 12.5px; margin: 0 0 4px; }
+  .vsec { border-top: 1px solid var(--bd); padding-top: 24px; margin-top: 30px; }
+  .vsec h2 { font-size: 17px; margin-bottom: 4px; }
+  .vsec .lead { margin-bottom: 18px; }
+  .tag { display: inline-block; margin-bottom: 9px; font: 800 10px/1 var(--font-mono);
+    letter-spacing: .12em; text-transform: uppercase; color: var(--acc); }
+  .track.demo { --n: 5; --g: 16px; overflow: visible; cursor: default; padding-bottom: 0; }
+</style>
+</head>
+<body>
+
+<div class="mkbar">
+  <span class="ttl">ssochuz · nút khi rê chuột</span>
+  <span>rê chuột lên từng bìa để xem</span>
+  <a href="index.html" style="margin-left:auto;color:var(--mut);text-decoration:underline;text-underline-offset:3px">← trang chính</a>
+  <a href="variants.html" style="color:var(--mut);text-decoration:underline;text-underline-offset:3px">biến thể khác</a>
+</div>
+
+<div class="wrap">
+  <h1>Ba kiểu nút khi rê chuột lên bìa</h1>
+  <p class="lead">Cả ba đều làm tối bìa trước, rồi mới bật nút lên — kiểu A đang dùng trong trang chính.</p>
+
+  <section class="vsec hvA">
+    <span class="tag">Kiểu A · nút tròn son</span>
+    <h2>Một vòng son bật lên giữa bìa</h2>
+    <p class="lead">Nút tròn 46px, phóng ra bằng nhịp nảy nhẹ; dưới là chữ “Đọc ngay” 10px giãn chữ, in hoa.</p>
+    <div class="track demo">${demoCards()}</div>
+  </section>
+
+  <section class="vsec hvB">
+    <span class="tag">Kiểu B · chữ lớn + gạch son</span>
+    <h2>Chữ serif lớn, gạch son chạy ra dưới chân chữ</h2>
+    <p class="lead">Không nút, không viên nền: chữ “Đọc ngay” 20px trên bìa tối, một gạch son 46px trượt ra; viền son 2px ôm lấy bìa.</p>
+    <div class="track demo">${demoCards()}</div>
+  </section>
+
+  <section class="vsec hvC">
+    <span class="tag">Kiểu C · thanh son từ đáy</span>
+    <h2>Thanh son trượt lên từ đáy bìa</h2>
+    <p class="lead">Một dải son đặc cao 34px trượt lên, chữ đậm màu nền — tương phản mạnh nhất trong ba kiểu.</p>
+    <div class="track demo">${demoCards()}</div>
+  </section>
+</div>
+</body>
+</html>
+`;
+
+fs.writeFileSync(path.join(HERE, 'hover.html'), HOVER);
 console.log('đã ghi index.html ·', Math.round(HTML.length / 1024), 'kB · bìa thiếu:',
   BOOKS.filter((b) => !b.img).length, '· đọc tiếp', RESUME.length, '· mới', RECENT.length,
   '· hạng', RANK.length, '· đáng xem', WORTH.length, '· trang', PAGES);

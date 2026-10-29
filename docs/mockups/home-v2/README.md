@@ -53,9 +53,26 @@ cùng một ngôn ngữ với các mục khác: đầu mục = tên + “Xem th�
 
 Không còn đường kẻ giữa các mục (chỉ còn khoảng thở 44px), không khung lồng khung.
 
-**Trang biến thể:** `variants.html` — bốn chỗ, mỗi chỗ A/B: số hạng, ▲▼, thanh lọc, nút khi rê chuột.
+## Chốt kiểu (vòng này)
 
-## Dữ liệu
+| Chỗ | Chốt |
+|---|---|
+| Số hạng | **A** — số serif lớn đè góc dưới-trái bìa, hạng 1 màu son |
+| ▲▼ | **A** — dấu trước số (`▲3`) |
+| Thanh lọc | **A** — có viền; đã sửa lệch: dropdown + nút lưới/danh sách gói trong một hàng `.lrow`, mọi thứ cao đúng 38px |
+| Nút rê chuột | làm lại — ba kiểu ở `hover.html` |
+
+### Ba kiểu nút khi rê chuột (`hover.html`)
+
+| Kiểu | Mô tả |
+|---|---|
+| A · nút tròn son | bìa tối đi, nút tròn 46px màu son bật lên (nhịp nảy nhẹ), dưới là “Đọc ngay” 10px in hoa giãn chữ — **đang dùng trong trang chính** |
+| B · chữ lớn + gạch son | không nút: chữ “Đọc ngay” serif 20px trên bìa tối, gạch son 46px trượt ra, viền son 2px ôm bìa |
+| C · thanh son từ đáy | dải son đặc cao 34px trượt lên từ đáy, chữ đậm màu nền |
+
+Đánh dấu bằng class trên khung chứa: `.hvA` / `.hvB` / `.hvC`; trong trang chính đặt ở `<body>`.
+
+**Trang biến thể:**## Dữ liệu
 
 Bìa, tên, tác giả, số chương, trạng thái, ngày cập nhật, `editorChoice`: **thật** (67 bộ).
 Lượt đọc, thứ hạng tăng/giảm, điểm sao, chương đang đọc dở: **số minh hoạ**.
