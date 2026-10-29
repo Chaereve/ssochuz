@@ -662,3 +662,64 @@ còn **≈519 px** (đỉnh trước đó ≈541 px, bản gốc ≈668 px), bì
 `t_hero` “Hero banner đạt hết” · `t_home` · `t_adult` N12 · `t_lock_ui` · `t_pwa` ·
 `audit:a11y` 25 màn 0 lỗi axe · `check_src` khớp · `cz.css` 196,6 kB (91 % trần) ·
 `cz-hero.js` 12,5 kB (78 % trần).
+
+---
+
+## 20. Vòng 6 — banner thấp lại thật, player thành “mép kệ”, bìa to hơn nữa (2026-10-29)
+
+### 1. Chỗ trống dưới banner: tìm ra thủ phạm
+
+Không phải `.hb-grid` (banner vẫn còn ~150px trống dưới nút) mà là **`.hero`**:
+section có `min-height: clamp(500px, 62vh, 600px)` từ bản dựng đầu, trong khi nội
+dung thật chỉ ~460px — phần dư nằm lại giữa `.hb-grid` và mép dưới section.
+
+- `.hero min-height`: `clamp(500px, 62vh, 600px)` → **`clamp(380px, 42vh, 480px)`**
+  (chỉ còn là chiều cao **dự phòng** trước khi JS dựng, để nội dung bên dưới
+  không nhảy);
+- `.hb-grid`: đệm `26/20` → **`22/16`**, `min-height` `clamp(400,46vh,452)` →
+  **`clamp(360px, 38vh, 420px)`**, khe `36` → **`32`**, tỉ lệ cột `.9/1.1` → **`.84/1.16`**
+  (nhường bề ngang cho quạt).
+
+Ở 1271 px: banner **≈650 px → ≈554 px**, và quạt thì **to hơn 31 %** thay vì nhỏ đi.
+
+### 2. Player: viên kính lơ lửng → dải ngang kiểu “mép kệ”
+
+Bản trước là một viên pill nằm chồng lên đáy quạt, trông như dán lên ảnh; ‹ › ⏸
+dồn cục một chỗ nên không rõ chiều.
+
+Nay là **dải ngang hết bề rộng cột bìa**, có đường kẻ mảnh phía trên đóng vai
+**mép kệ** cho bìa đứng lên, và bố trí đúng chiều đọc:
+
+```
+‹            01 / 05 · SIIX            ›      ⏸
+└ mép trái   └ canh giữa              mép phải  └ điều khiển phụ
+```
+
+- `‹` sát mép trái, `›` sát mép phải (mắt đọc trái → phải), cụm `số đếm · tác giả`
+  canh giữa bằng `margin: 0 auto`;
+- bỏ nền tròn đặc của mũi tên — chỉ hiện nền khi hover/focus, nên dải nhẹ và đều;
+- ⏸ nhỏ hơn (26px), nép cuối dải vì là điều khiển phụ;
+- quạt cao `1.5 × bề rộng bìa + 78px`: 78px đó là làn cho dải điều khiển, bìa
+  không còn chồng lên thanh.
+
+### 3. Bìa to thêm một nhịp
+
+`--cover-w`: `clamp(176px, 17.5vw, 262px)` → **`clamp(196px, 22.5vw, 292px)`**;
+`--fan-unit` không khai báo rời nữa mà **suy ra** `calc(var(--cover-w) * .42)` để
+mọi mốc responsive tự co theo bìa; độ xoè bìa ngoài `1.28` → **`1.22`** (bìa to
+hơn nhưng quạt vẫn không chạm cột chữ). Mốc tablet `clamp(140px, 19vw, 200px)`,
+điện thoại `118px`, ≤380 `102px`.
+
+### Tệp đã sửa
+
+| Tệp | Vì sao |
+| --- | --- |
+| `src/cz-hero.js` | thanh điều khiển có thêm cụm giữa `.fanbar-mid` (số đếm · tác giả) để canh giữa dải |
+| `src/cz.css` | `.hero`/`.hb-grid` thấp lại; dải điều khiển ngang + mép kệ; bìa `clamp(196–292px)`, `--fan-unit` suy ra, xoè 1.22; quạt `1.5w + 78px`; bìa đặt ở 47% |
+| `tests/t_hero.js` | cấu trúc dải mới: `‹ → (.fanbar-mid: số đếm · chấm · tác giả) → › → ⏸` |
+| `sw.js` + 76 HTML | `?v=20261029hero10` |
+
+### Kiểm
+
+`t_hero` “Hero banner đạt hết” · `t_home` · `t_adult` N12 · `t_lock_ui` · `t_pwa` ·
+`audit:a11y` 25 màn 0 lỗi axe · `check_src` khớp · `cz.css` 196,3 kB · `cz-hero.js` 12,6 kB.

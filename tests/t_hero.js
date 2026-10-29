@@ -238,10 +238,16 @@ const ok = (cond, msg, extra) => { if (!cond) bad.push(msg + (extra ? ' → ' + 
     soDemHtml: ($('#hCount') || {}).innerHTML,
     soNut: $$('#hero .fanbar .arrow').length,
     trongQuat: !!(bar && bar.closest('.fan')),
+    giuaDai: (function () {
+      const mid = bar && bar.querySelector('.fanbar-mid');
+      return mid ? [...mid.children].map(n => n.className.split(' ')[0]).join(',') : '';
+    })(),
     cotChuSach: !!$('#hero .hb-col .foot')
   };
-  ok(out.dieuKhien.thuTu.join(',') === 'arrow,count,fanbar-dot,who,arrow,arrow',
-    'thanh gộp phải theo thứ tự ‹ → số đếm → · → tác giả → › → ⏸', out.dieuKhien.thuTu.join(','));
+  ok(out.dieuKhien.thuTu.join(',') === 'arrow,fanbar-mid,arrow,arrow',
+    'dải điều khiển phải là ‹ → (số đếm · tác giả) → › → ⏸', out.dieuKhien.thuTu.join(','));
+  ok(out.dieuKhien.giuaDai === 'count,fanbar-dot,who',
+    'cụm giữa dải phải là số đếm · tác giả', out.dieuKhien.giuaDai);
   ok(out.dieuKhien.soNut === 3, 'phải có đúng 3 nút ‹ › ⏸', out.dieuKhien.soNut);
   ok(out.dieuKhien.trongQuat, 'thanh điều khiển phải nằm trong quạt (dưới bìa đang chọn)');
   ok(!out.dieuKhien.cotChuSach, 'cột chữ không còn hàng điều khiển riêng');

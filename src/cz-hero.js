@@ -289,9 +289,11 @@
     return '<div class="fanbar" role="group" aria-label="' + PICK_LABEL + '">' +
       '<button class="arrow" id="hPrev" type="button" data-hb-prev aria-label="Xem mục trước">' +
         ic('left', 'i-s') + '</button>' +
-      '<span class="count" id="hCount" aria-hidden="true"></span>' +
-      '<i class="fanbar-dot" aria-hidden="true"></i>' +
-      '<span class="who" id="hWho" aria-hidden="true"></span>' +
+      '<span class="fanbar-mid">' +
+        '<span class="count" id="hCount" aria-hidden="true"></span>' +
+        '<i class="fanbar-dot" aria-hidden="true"></i>' +
+        '<span class="who" id="hWho" aria-hidden="true"></span>' +
+      '</span>' +
       '<button class="arrow" id="hNext" type="button" data-hb-next aria-label="Xem mục tiếp theo">' +
         ic('right', 'i-s') + '</button>' +
       '<button class="arrow play" id="hPlay" type="button" data-hb-play aria-label="Tạm dừng tự chuyển truyện"></button>' +

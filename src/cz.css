@@ -640,8 +640,9 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   background: var(--hb-void);
   color: var(--hb-fg);
   border-bottom: 1px solid var(--bd);
-  /* chừa sẵn chiều cao trước khi JS dựng hero ⇒ nội dung bên dưới không nhảy */
-  min-height: clamp(500px, 62vh, 600px);
+  /* chừa sẵn chiều cao trước khi JS dựng hero ⇒ nội dung bên dưới không nhảy.
+     Chỉ là chiều cao DỰ PHÒNG: nội dung thật quyết định, nên để thấp. */
+  min-height: clamp(380px, 42vh, 480px);
 }
 [data-theme="dark"] .hero {
   --hb-cta-bg: var(--acc);
@@ -703,15 +704,15 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .hero .hb-grid {
   position: relative; z-index: 2;
   max-width: var(--maxw); margin: 0 auto;
-  padding: 26px 24px 20px;
+  padding: 22px 24px 16px;
   display: grid;
   /* cột bìa rộng hơn cột chữ — quạt là nhân vật chính, chữ đứng bên */
-  grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
-  gap: 36px;
+  grid-template-columns: minmax(0, .84fr) minmax(0, 1.16fr);
+  gap: 32px;
   align-items: center;
   /* chiều cao do QUẠT quyết định (chữ tự canh giữa), nên banner thấp và ổn định
      giữa các truyện: trước đây slide cao nhất trong 5 truyện kéo cả banner lên */
-  min-height: clamp(400px, 46vh, 452px);
+  min-height: clamp(360px, 38vh, 420px);
 }
 .hero .hb-col { display: flex; flex-direction: column; gap: 0; min-width: 0; align-self: stretch; }
 /* .stage giãn hết chỗ còn lại và canh GIỮA: khoảng trống dư dồn ra hai đầu thay vì
@@ -814,39 +815,39 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .hero .btn.hb-cta:not(.pri) .hb-cta-lbl { position: absolute; width: 1px; height: 1px;
   overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
-/* ---- 5.5 thanh điều khiển GỘP dưới quạt -----------------------------------
-   Một viên duy nhất:  ‹  02 / 05 · KRATAI DUEAN  ›  ⏸
-   Trước đây là ba cụm rời (5 vạch ticks + số đếm + ‹ › ⏸ ở cột chữ) cộng thêm
-   dòng “02 · tác giả” dưới bìa — ticks trùng với quạt, số đếm trùng với nhãn
-   dưới bìa, nên hàng điều khiển vừa rối vừa dư. Nay một thanh, đặt ngay dưới
-   bìa đang chọn, kính mờ, chữ mono cùng thang với kệ nhãn. */
-.hero .fanbar { position: absolute; left: 50%; bottom: 0; z-index: 8;
-  transform: translateX(-50%);
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 5px 6px 5px 8px; border-radius: 99px; white-space: nowrap;
-  background: rgba(16, 12, 15, .55); border: 1px solid rgba(255, 255, 255, .14);
-  -webkit-backdrop-filter: blur(14px) saturate(1.2); backdrop-filter: blur(14px) saturate(1.2);
-  box-shadow: 0 18px 40px -24px rgba(0, 0, 0, .95), inset 0 1px 0 rgba(255, 255, 255, .08); }
+/* ---- 5.5 thanh điều khiển: MỘT dải dưới chân quạt --------------------------
+        ‹         01 / 05 · SIIX         ›      ⏸
+   Bản trước là một viên kính mờ lơ lửng giữa quạt, trông như được dán lên ảnh.
+   Nay là DẢI NGANG hết bề rộng cột bìa, có đường kẻ mảnh phía trên đóng vai
+   “mép kệ” cho quạt đứng lên; ‹ › nằm hai đầu (đúng chiều mắt đọc), số đếm +
+   tác giả canh giữa, ⏸ nép vào cuối dải vì nó là điều khiển phụ. Mũi tên không
+   còn nền tròn đặc — chỉ hiện nền khi trỏ/ focus, nên dải nhẹ và đều. */
+.hero .fanbar { position: absolute; left: 0; right: 0; bottom: 0; z-index: 8;
+  display: flex; align-items: center; gap: 8px;
+  padding-top: 10px; border-top: 1px solid var(--hb-line); }
+.hero .fanbar-mid { display: flex; align-items: center; gap: 8px; margin: 0 auto; }
 .hero .fanbar .count { font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em;
-  color: var(--hb-dim); font-variant-numeric: tabular-nums; padding-left: 2px; }
+  color: var(--hb-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .hero .fanbar .count b { font-weight: 600; color: var(--hb-fg); }
-.hero .fanbar-dot { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: .45; }
+.hero .fanbar-dot { width: 3px; height: 3px; border-radius: 50%; background: currentColor;
+  color: var(--hb-dim); opacity: .55; flex: none; }
 .hero .fanbar .who { font-family: var(--font-mono); font-size: 10px; letter-spacing: .12em;
-  text-transform: uppercase; color: var(--hb-dim); max-width: 20ch; overflow: hidden;
+  text-transform: uppercase; color: var(--hb-dim); max-width: 22ch; overflow: hidden;
   text-overflow: ellipsis; }
 .hero .fanbar.no-who .fanbar-dot, .hero .fanbar.no-who .who { display: none; }
-.hero .fanbar .arrow { width: 28px; height: 28px; flex: none; border-radius: 50%;
-  border: 1px solid transparent; color: var(--hb-fg); background: rgba(255, 255, 255, .07);
+.hero .fanbar .arrow { width: 30px; height: 30px; flex: none; border-radius: 50%;
+  border: 0; color: var(--hb-dim); background: transparent;
   display: grid; place-items: center;
   transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease),
     transform var(--t-fast) var(--ease); }
-.hero .fanbar .arrow .i { width: 14px; height: 14px; }
-.hero .fanbar .arrow:hover { background: rgba(255, 255, 255, .18); color: #fff; }
+.hero .fanbar .arrow .i { width: 15px; height: 15px; }
+.hero .fanbar .arrow:hover { background: rgba(255, 255, 255, .12); color: var(--hb-fg); }
 .hero .fanbar .arrow:active { transform: scale(.92); }
 .hero .fanbar .arrow:focus-visible { outline: 2px solid var(--hb-acc); outline-offset: 2px; }
-.hero .fanbar .arrow.play { width: 26px; height: 26px; background: transparent; color: var(--hb-dim); }
+/* ⏸ là điều khiển phụ: nhỏ hơn, không nền, chỉ sáng lên khi trỏ */
+.hero .fanbar .arrow.play { width: 26px; height: 26px; color: var(--hb-dim); }
 .hero .fanbar .arrow.play .i { width: 13px; height: 13px; }
-.hero .fanbar .arrow.play:hover { color: var(--hb-fg); background: rgba(255, 255, 255, .12); }
+.hero .fanbar .arrow.play:hover { color: var(--hb-fg); background: rgba(255, 255, 255, .1); }
 .hero .fanbar .arrow.play.on { color: var(--hb-acc); }
 
 /* ---- 5.6 quạt bìa ---------------------------------------------------------
@@ -854,23 +855,24 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
    --fan-unit: khoảng cách giữa hai bìa kề nhau trong quạt
    Bìa đang chọn luôn ở data-pos="0" (tâm). */
 .hero .fan {
-  --cover-w: clamp(176px, 17.5vw, 262px);   /* bìa TO thêm ~8% nữa */
-  --fan-unit: clamp(92px, 7.8vw, 118px);
+  --cover-w: clamp(196px, 22.5vw, 292px);   /* bìa TO thêm ~15% nữa */
+  --fan-unit: calc(var(--cover-w) * .42);   /* khoảng xoè suy ra từ bề rộng bìa */
   position: relative;
   justify-self: stretch;
-  height: calc(var(--cover-w) * 1.59 + 84px);
+  /* bìa cao đúng 1.5× bề rộng (tỉ lệ 2:3) + 64px cho thanh điều khiển dưới chân */
+  height: calc(var(--cover-w) * 1.5 + 78px);
   perspective: 1400px;                      /* cho bìa bên cạnh nghiêng vào trong */
 }
 .hero .fan::after {            /* bóng đổ mềm dưới chân quạt — “kệ” có nền đất */
   content: ""; position: absolute; left: 50%; z-index: 0; pointer-events: none;
-  top: calc(48% + var(--cover-w) * .795 - 10px);
+  top: calc(47% + var(--cover-w) * .75 - 8px);
   width: calc(var(--cover-w) * 1.95); height: 24px;
   transform: translateX(-50%); border-radius: 50%;
   background: radial-gradient(50% 50% at 50% 50%, rgba(0, 0, 0, .62), transparent 72%);
   filter: blur(10px); opacity: .8;
 }
 .hero .coverbtn {
-  position: absolute; left: 50%; top: 48%;
+  position: absolute; left: 50%; top: 47%;
   width: var(--cover-w); aspect-ratio: 2 / 3;
   border-radius: 5px 9px 9px 5px; overflow: hidden;
   background: var(--hb-card); border: 1px solid rgba(255, 255, 255, .18);
@@ -908,8 +910,8 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 /* vị trí trong quạt: 0 = tâm, 1..4 xoay vòng hai bên, y/r/s theo bậc */
 .hero .fan [data-pos="0"] { --x: 0px; --y: -4px; --r: 0deg; --ry: 0deg; --s: 1.05; z-index: 5; }
 .hero .fan [data-pos="1"] { --x: var(--fan-unit); --y: 10px; --r: 7deg; --ry: -9deg; --s: .9; z-index: 2; }
-.hero .fan [data-pos="2"] { --x: calc(var(--fan-unit) * 1.34); --y: 24px; --r: 11deg; --ry: -15deg; --s: .8; z-index: 1; }
-.hero .fan [data-pos="3"] { --x: calc(var(--fan-unit) * -1.34); --y: 24px; --r: -11deg; --ry: 15deg; --s: .8; z-index: 1; }
+.hero .fan [data-pos="2"] { --x: calc(var(--fan-unit) * 1.22); --y: 24px; --r: 11deg; --ry: -15deg; --s: .8; z-index: 1; }
+.hero .fan [data-pos="3"] { --x: calc(var(--fan-unit) * -1.22); --y: 24px; --r: -11deg; --ry: 15deg; --s: .8; z-index: 1; }
 .hero .fan [data-pos="4"] { --x: calc(var(--fan-unit) * -1); --y: 10px; --r: -7deg; --ry: 9deg; --s: .9; z-index: 2; }
 /* nhãn dưới bìa đang chọn: “01 · tác giả”. Nằm ngoài <button> (nút có
    overflow:hidden) và luôn ở tâm vì bìa đang chọn luôn ở data-pos="0". */
@@ -933,8 +935,8 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   .hero .spec dt { font-size: 9px; letter-spacing: .1em; }
   .hero .spec dd { font-size: 12.5px; }
   .hero .syn { font-size: 14px; }
-  .hero .fan { --cover-w: clamp(112px, 16vw, 162px); --fan-unit: clamp(60px, 8.6vw, 94px); }
-  .hero .fanbar { gap: 6px; padding: 4px 5px 4px 7px; }
+  .hero .fan { --cover-w: clamp(140px, 19vw, 200px); }
+  .hero .fanbar { gap: 6px; padding-top: 8px; }
 }
 @media (max-width: 639px) {
   .hero { min-height: max(420px, 52vh); }
@@ -962,15 +964,15 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   .hero .btn-row { margin-top: 16px; gap: 8px; }
   .hero .syn { display: none; }               /* điện thoại: ưu tiên tiêu đề + CTA */
   .hero .prog .pb { flex-basis: 130px; }
-  .hero .fan { --cover-w: 114px; --fan-unit: 58px; height: calc(var(--cover-w) * 1.59 + 84px); }
+  .hero .fan { --cover-w: 118px; }
   .hero .hb-scene .ghost { opacity: .45; }
   .hero .btn.hb-cta { padding: 0 16px; }
-  .hero .fanbar { gap: 6px; padding: 4px 4px 4px 7px; }
+  .hero .fanbar { gap: 4px; padding-top: 8px; }
   .hero .fanbar .who { max-width: 12ch; }
 }
 /* máy rất hẹp (≤380): thu quạt để 2 bìa ngoài cùng không bị cắt ở mép section */
 @media (max-width: 380px) {
-  .hero .fan { --cover-w: 96px; --fan-unit: 52px; }
+  .hero .fan { --cover-w: 102px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .hero .slide, .hero .coverbtn { transition: none; }
