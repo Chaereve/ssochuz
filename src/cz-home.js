@@ -43,10 +43,13 @@
     if (n.locked) badges.push({ label: 'Có mật mã', tone: 'lock', icon: 'lock' });
     if (n.is18) badges.push({ label: '18+', tone: 'bad' });
     if (n.fresh) badges.push({ label: 'MỚI', tone: 'acc' });
-    var meta = [{ icon: 'book', label: CZ.countText(n), strong: true, title: 'Số chương' }];
-    if (n.author) meta.push({ icon: 'pen', label: n.author, title: 'Tác giả' });
-    if (n.couple) meta.push({ icon: 'users', label: n.couple, title: 'Couple' });
-    if (n.updated) meta.push({ icon: 'refresh', label: CZ.timeAgo(n.updated), title: 'Cập nhật gần nhất' });
+    /* Một hàng meta KHÔNG icon: bản trước nhét 5 “pill” có viền + 4 icon vào
+       cùng một hàng, nhìn như một dãy nút bấm được. Nay chỉ còn chữ, cách nhau
+       bằng dấu chấm mảnh (CSS lo phần dấu chấm). */
+    var meta = [{ label: CZ.countText(n), strong: true, title: 'Số chương' }];
+    if (n.author) meta.push({ label: n.author, title: 'Tác giả' });
+    if (n.couple) meta.push({ label: n.couple, title: 'Couple' });
+    if (n.updated) meta.push({ label: CZ.timeAgo(n.updated), title: 'Cập nhật gần nhất' });
     var primary = n.canRead
       ? (n.locked
         /* truyện khoá mật mã: dẫn về trang truyện (có chốt nhập mật mã),
@@ -62,8 +65,8 @@
       href: CZ.storyURL(n.slug),
       eyebrow: eyebrow,
       description: n.syn || n.synFull || '',
-      backgroundImage: { src: img, alt: '' },   /* ảnh trang trí — tiêu đề đã nói nội dung */
-      thumbnail: { src: img, alt: n.title },
+      thumbnail: { src: img, alt: n.title },    /* bìa cho quạt — có alt để dự phòng */
+      caption: n.author || '',                  /* dòng mono dưới bìa đang chọn */
       badges: badges,
       meta: meta,
       progress: pg ? {
@@ -71,9 +74,9 @@
         label: 'đang đọc <b>chương ' + pg + '</b>' + (tot ? ' / ' + tot : '') + ' · ' + pct + '%'
       } : null,
       primaryCta: primary,
+      /* CTA phụ chỉ còn MỘT nút (Lưu vào tủ) dạng icon tròn 44px cho gọn; lối
+         vào trang truyện đã có ở tiêu đề + nút chính. */
       secondaryCtas: [
-        { label: 'Thông tin', href: CZ.storyURL(n.slug), icon: 'info', variant: 'ghost',
-          title: 'Thông tin bộ truyện, mục lục, bình luận' },
         { label: inShelf ? 'Đã lưu' : 'Lưu vào tủ', icon: 'shelf', variant: 'outline', pressed: inShelf,
           title: 'Lưu vào tủ truyện (icon tủ sách)',
           onClick: function (btn, item, api) {

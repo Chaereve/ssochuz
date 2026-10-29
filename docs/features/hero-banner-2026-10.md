@@ -182,3 +182,43 @@ vùng `aria-live`, nút Tạm dừng, bìa hai bên bấm/kbd, chip khổ & giao
 **Chốt 2026-10-29:** người duyệt chọn **A · “Sạp báo”**, kèm yêu cầu mobile phải cùng bố cục với desktop
 (đã sửa: bỏ dải cuộn ngang, quạt 3 bìa + ticks + prev/next + nhãn số–tác giả giữ nguyên).
 Bước tiếp theo: port A vào `src/cz-hero.js` (hiện vẫn là bản full-bleed V0).
+
+## 11. ĐÃ PORT A VÀO COMPONENT THẬT (2026-10-29)
+
+Hero chạy thật giờ là hướng **A · “Sạp báo”**. Bản full-bleed (V0) đã bị gỡ khỏi
+`src/cz-hero.js` và `src/cz.css` §5 — không còn `.hb-media/.hb-bg/.hb-scrim` phủ
+ảnh bìa dọc lên khung ngang.
+
+**Bố cục** — ≥1024 hai cột (chữ | quạt 5 bìa). **<1024 MỘT cột nhưng cùng thứ tự
+và cùng kiểu điều hướng**: chữ → quạt → ticks/‹ ›/⏸. Không có kiểu điều hướng
+thứ hai cho điện thoại (bản mockup trước dùng “dải cuộn ngang” — đã bỏ theo yêu
+cầu “mobile cùng một layout”).
+
+**Vị trí quạt nằm trong CSS**: mỗi bìa mang `data-pos` (0 = đang chọn, 1..4 xoay
+vòng hai bên) và đọc `--x/--y/--r/--s`; JS chỉ đổi `data-pos`. Đổi breakpoint chỉ
+sửa `--cover-w` / `--fan-unit` — không có toạ độ px nào trong JS.
+
+### Tệp đã thay đổi + lý do
+
+| Tệp | Vì sao |
+| --- | --- |
+| `src/cz-hero.js` | Viết lại theo A: quạt bìa là điều hướng, chữ 1 cột, ticks thay dot/thumbnail. Thêm `caption` vào hợp đồng dữ liệu; giữ nguyên API `CZ.heroBanner(root, props)` và `HeroBanner.destroy()`. **Sửa lỗi cộng dồn listener**: `bind()` ghi nhớ listener và `destroy()` gỡ sạch (trước đây mount lại cùng `<section>` là mỗi lần bấm tiến 2 mục). Bỏ `hydrate()` vì bìa nằm sẵn trong DOM: bìa đầu `fetchpriority=high`, còn lại `loading=lazy`. |
+| `src/cz.css` (§5) | Viết lại khối HERO: bảng màu `--hb-*` khai báo một lần, accent dẫn xuất từ `--acc` bằng `color-mix` (không hardcode), layout grid 2→1 cột, quạt `data-pos`, ticks, nhãn `fancap`. Gỡ toàn bộ CSS của ảnh nền full-bleed / dải thumbnail / dot. |
+| `src/cz-home.js` | `heroItem()`: bỏ 4 icon trong hàng meta (nay là chữ + dấu chấm, đúng bản đã duyệt), bỏ nút phụ “Thông tin” (còn **một** nút phụ: Lưu vào tủ), thêm `caption: author`, bỏ `backgroundImage` (ảnh bìa lấy từ `thumbnail`). |
+| `index.html` | Cập nhật chú thích khối hero + đổi `?v=` của `cz-hero.js`/`cz-home.js`. |
+| `sw.js` | `CZ_SW_VER` + precache khớp `?v=` mới (bài `t_pwa.js` khoá điều này). |
+| `tests/t_hero.js` | Viết lại theo cấu trúc mới: 5 slide + 5 bìa + 5 ticks, `data-pos` của bìa đang chọn = 0, đổi truyện bằng bìa/ticks/nút sau, aria + live region, bàn phím, Lưu vào tủ, fallback props (1 mục / 0 mục / thiếu thumbnail), và **mount lại không cộng dồn listener**. |
+| `tests/README.md` | Mô tả lại bài `t_hero.js`. |
+| `docs/mockups/hero/v4-options.html` | A trên mobile nay 5 bìa/`--fan-unit:68px` cho khớp bản đã port. |
+
+### Kiểm chứng
+
+```
+npm run build                 # cz-hero.js 11,3 kB (trần 16) · cz.css 193 kB (trần 215)
+node tests/run.js             # 46/47 ĐẠT — chỉ t_admin_editor_lazy.js lỗi (có từ trước)
+npm run audit:a11y            # 25 màn, 0 lỗi axe-core
+node tools/check_src.js       # bản phát hành khớp src/
+node tests/t_hero.js          # “Hero banner đạt hết”
+```
+
+Xem thử: `python3 tools/dev_server.py` → http://localhost:8080

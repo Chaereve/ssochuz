@@ -1,57 +1,66 @@
 /* ============================================================================
-   ssochuz · FEATURE HERO BANNER — khối “nổi bật” dạng banner full-bleed
+   ssochuz · HERO DÙNG CHUNG — “BỘ BÀI” (hướng A · “Sạp báo”)
    ----------------------------------------------------------------------------
-   VÁ (2026-10-29): trước đây trang chủ tự dựng hero trong `cz-home.js` theo
-   kiểu THẺ DỌC — áp phích 2:3 bên phải, số thứ tự “01” mờ phía sau, nền phẳng.
-   Kiểu đó chỉ hợp một khối, không dùng lại được, và mỗi lần cần một banner nữa
-   là một lần chép markup + chép logic chuyển slide.
+   LỊCH SỬ: trang chủ từng tự dựng hero trong `cz-home.js` (áp phích 2:3 + số
+   thứ tự mờ), rồi chuyển sang banner full-bleed dùng ảnh bìa phóng to. Bản
+   full-bleed KHÔNG ĐẠT vì kho chỉ có bìa DỌC 480×600 / 480×681 — phủ lên banner
+   2,3:1 là phóng ~3 lần, nhoè và mất chủ thể. Hướng được duyệt (2026-10-29) là
+   “BỘ BÀI”: **bìa chính là điều hướng**, 5 bìa xoè thành một quạt có tâm, bìa
+   đang chọn sáng nhất; chữ đọc ở cột trái.
 
-   Nay tách thành MỘT component dùng chung `CZ.heroBanner(root, props)`:
-     · nhận dữ liệu qua props (`items` theo đúng hợp đồng HeroBannerItem bên
-       dưới), KHÔNG đọc registry/localStorage — nhờ vậy dùng được cho cả hero
-       trang chủ, hero “Nổi bật hôm nay”, hay bất kỳ khối nổi bật nào khác;
-     · lo phần khó: ảnh nền full-bleed, hai lớp gradient, chuyển slide mờ dần,
-       autoplay có nút Tạm dừng/Tiếp tục, bàn phím, vuốt, live region, fallback.
-   Màu/khoảng cách vẫn lấy từ token trong `cz.css` (khối “5. HERO”), không có
-   mã màu nào nằm trong tệp này.
+   MỘT component dùng chung `CZ.heroBanner(root, props)`:
+     · nhận dữ liệu qua props (hợp đồng bên dưới), KHÔNG đọc registry hay
+       localStorage — dùng được cho hero trang chủ và mọi khối “nổi bật” khác;
+     · lo phần khó: quạt bìa (bìa nào cũng bấm được), chữ đổi theo bìa, tự
+       chuyển 8 s + nút Tạm dừng, phím ← →, vuốt ngang, live region, fallback;
+     · vị trí quạt nằm trong CSS (`data-pos` + `--fan-unit`), JS không đo đạc,
+       không đặt toạ độ px — đổi breakpoint chỉ cần sửa CSS.
 
-   HỢP ĐỒNG DỮ LIỆU (mọi trường đều tuỳ chọn trừ id/title):
+   HỢP ĐỒNG DỮ LIỆU (mọi trường tuỳ chọn trừ id/title):
      HeroBannerItem = {
-       id, title, href?, eyebrow?, description?,
-       backgroundImage: { src, srcSet?, sizes?, alt?, width?, height? },
-       thumbnail: { src, alt? },
+       id, title, href?, eyebrow?, description?, caption?,
+       thumbnail: { src, alt? },            // bìa dùng cho quạt
+       backgroundImage: { src, alt? },      // dự phòng khi thiếu thumbnail
        badges: [{ label, tone?, dot?, icon? }],
-       meta:   [{ icon?, label, strong? }],
+       meta:   [{ icon?, label, strong?, title? }],
        progress?: { current, total?, percent?, label? },
-       primaryCta: { label, href?, icon?, disabled? },
-       secondaryCtas: [{ label, href?, onClick?, icon?, variant?, pressed? }]
+       primaryCta: { label, href?, icon?, title?, disabled? },
+       secondaryCtas: [{ label, href?, onClick?, icon?, variant?, pressed?, title? }]
      }
-   Nhiều trường là phần MỞ RỘNG so với bản gốc (tone/dot/href/progress/pressed/…)
-   để giữ đủ dữ liệu cũ (tình trạng, số chương, tác giả, couple, ngày cập nhật,
-   tiến độ đang đọc, “Lưu vào tủ”) mà không phải nhét HTML vào props.
+   `caption` là dòng mono dưới bìa đang chọn (thường là tác giả); thiếu thì nhãn
+   tự ẩn thay vì để lại dấu “·” trống.
 
    FALLBACK (đều có thật, không cần dữ liệu mới):
-     · items rỗng  → ẩn cả section (không để khối trắng);
-     · 1 item      → không dựng nút trước/sau, dải thumbnail hay dot;
-     · thiếu thumbnail → dùng chính ảnh nền;
-     · ảnh lỗi     → nền tối của `.hb-media` giữ nguyên, chữ vẫn đọc được
-                     (`imgSettle` trong cz-app.js gỡ <img> hỏng, không đụng chữ);
-     · mô tả rỗng/quá dài → bỏ hẳn hoặc cắt 3 dòng bằng CSS (line-clamp).
+     · items rỗng   → ẩn cả section (không để khối trắng);
+     · 1 item       → không dựng quạt, ticks, nút trước/sau hay nút tạm dừng;
+     · thiếu bìa    → ô nền tối giữ chỗ, chữ vẫn đọc được, không nhảy bố cục;
+     · ảnh lỗi      → `CZ.imgSettle` gỡ <img> hỏng, ô bìa vẫn giữ khung;
+     · mô tả dài    → cắt 2 dòng bằng line-clamp; điện thoại ẩn hẳn.
 
-   HIỆU NĂNG: ảnh đầu tải ưu tiên (`fetchpriority="high"`), ảnh còn lại để
-   `data-src` rồi nạp khi rảnh hoặc đúng lúc chuyển tới — không tải sẵn 5 ảnh
-   lớn cho một khung hình đầu. Khung ảnh có width/height nên không nhảy bố cục.
+   HIỆU NĂNG: ảnh đầu `fetchpriority="high"`, các bìa còn lại `loading="lazy"`
+   (đều nằm trong khung nhìn nên trình duyệt tự quyết định) — khung bìa khoá
+   bằng `aspect-ratio` nên không CLS. Chỉ animate `transform`/`opacity`.
+
+   A11Y: mỗi bìa là <button> có nhãn “Xem: <tên truyện>” + `aria-current` cho bìa
+   đang chọn; ticks cũng là <button> và cũng mang `aria-current`; section có
+   `aria-roledescription="carousel"` + `aria-labelledby` trỏ <h1> của mục đang
+   hiện; live region chỉ đọc khi NGƯỜI DÙNG đổi truyện (máy tự chuyển thì im
+   lặng, không làm ồn trình đọc màn hình); tôn trọng `prefers-reduced-motion`.
    ========================================================================== */
 (function (w) {
   'use strict';
   var CZ = w.CZ || (w.CZ = {});
   function esc(s) { return CZ.esc ? CZ.esc(s) : String(s == null ? '' : s); }
   function ic(name, cls) { return CZ.icon ? CZ.icon(name, cls) : ''; }
-  var DOTS_LABEL = 'Chọn truyện nổi bật';
+  function pad2(n) { n = parseInt(n, 10) || 0; return (n < 10 ? '0' : '') + n; }
+  var PICK_LABEL = 'Chọn truyện nổi bật';
 
   /* ---------- 1. MẢNH MARKUP -------------------------------------------------
-     Tách nhỏ để đọc được và để mỗi quy tắc fallback nằm ngay chỗ quyết định. */
+     Tách nhỏ để mỗi quy tắc fallback nằm ngay chỗ quyết định. */
 
+  /* Nhãn trạng thái: markup vẫn là “pill” (một <span> có chấm), nhưng trong
+     hero CSS bỏ viền/nền để nó đọc như “● Hoàn thành” thay vì một viên chip
+     thứ năm cạnh bốn viên khác. */
   function badgeHTML(b) {
     if (!b || !b.label) return '';
     return '<span class="pill ' + esc(b.tone || '') + '">' +
@@ -86,9 +95,8 @@
       (cta.title ? ' title="' + esc(cta.title) + '"' : '') + '>' + inner + '</a>';
   }
 
-  /* Nút phụ: có onClick thì là <button> (hành động tại chỗ, ví dụ “Lưu vào tủ”),
-     còn lại là <a>. `aria-label` luôn đặt để bản chỉ-có-icon trên điện thoại
-     vẫn đọc được tên nút. */
+  /* Nút phụ trong hero chỉ còn ICON tròn 44px (CSS ẩn .hb-cta-lbl), nhưng nhãn
+     vẫn nằm ở aria-label/title nên trình đọc màn hình và tooltip không mất gì. */
   function secondaryHTML(cta, k) {
     if (!cta || !cta.label) return '';
     var cls = 'btn lg hb-cta' + (cta.variant === 'ghost' ? ' ghost' : '') + (cta.pressed ? ' on' : '');
@@ -111,61 +119,70 @@
     var head = item.title
       ? (item.href ? '<a href="' + esc(item.href) + '">' + esc(item.title) + '</a>' : esc(item.title))
       : '—';
-    /* slide là <div role="group"> (không phải <article>): axe-core chỉ cho
-       aria-roledescription đi cùng role group ở đây, và mỗi slide đã có <h1>
-       riêng nên không cần thêm vai trò article. */
+    /* Các slide xếp chồng trong MỘT ô lưới (grid-area: 1/1) nên khung không đổi
+       chiều cao khi đổi truyện ⇒ không layout shift. Slide không hiện dùng
+       visibility:hidden (không tab được vào link bên trong) + aria-hidden. */
     return '<div class="slide' + (i === 0 ? ' on' : '') + '" data-i="' + i + '"' +
       ' role="group" aria-roledescription="slide" aria-label="' + (i + 1) + ' / ' + total + '"' +
       (i === 0 ? '' : ' aria-hidden="true"') + '>' +
-        '<div class="hb-inner"><div class="col"><div class="info">' +
+        '<div class="info">' +
           (item.eyebrow ? '<span class="eyebrow">' + esc(item.eyebrow) + '</span>' : '') +
           '<h1 id="hbTitle-' + i + '">' + head + '</h1>' +
           ((badges || meta) ? '<div class="meta">' + badges + meta + '</div>' : '') +
           (item.description ? '<p class="syn">' + esc(item.description) + '</p>' : '') +
           progressHTML(item.progress) +
           '<div class="btn-row">' + primaryHTML(item.primaryCta) + secondary + '</div>' +
-          '<div class="keys">' +
-            '<span><kbd>←</kbd><kbd>→</kbd> đổi truyện</span>' +
-            '<span><kbd>⌘</kbd><kbd>K</kbd> tìm nhanh</span>' +
-          '</div>' +
-        '</div></div></div>' +
+        '</div>' +
       '</div>';
   }
 
-  /* Ảnh nền: <img> thật (không background-image) để đặt được fetchpriority/
-     loading/width/height. Ảnh đầu có src ngay; ảnh sau để `data-src` — xem
-     hydrate() — vì cả 5 ảnh đều “nằm trong khung nhìn” nên loading="lazy"
-     một mình sẽ bị tải hết ngay lượt đầu. */
-  function mediaHTML(item, i) {
-    var bg = item.backgroundImage || {};
-    var src = bg.src ? String(bg.src) : '';
-    if (!src) return '';
-    var eager = i === 0;
-    return '<img class="hb-bg' + (eager ? ' on' : '') + '" data-i="' + i + '"' +
-      (eager ? ' src="' + esc(src) + '"' : ' data-src="' + esc(src) + '"') +
-      (bg.srcSet ? (eager ? ' srcset' : ' data-srcset') + '="' + esc(bg.srcSet) + '"' : '') +
-      (bg.sizes ? ' sizes="' + esc(bg.sizes) + '"' : '') +
-      ' alt="' + esc(bg.alt || '') + '"' +
-      ' width="' + (parseInt(bg.width, 10) || 1600) + '" height="' + (parseInt(bg.height, 10) || 900) + '"' +
-      ' decoding="async" referrerpolicy="no-referrer"' +
-      (eager ? ' fetchpriority="high"' : ' loading="lazy"') + '>';
+  /* Bìa dùng cho quạt: ưu tiên `thumbnail`, thiếu thì rơi về `backgroundImage`
+     (hợp đồng cũ) để component không phụ thuộc một trường duy nhất. */
+  function coverOf(item) {
+    return (item.thumbnail && item.thumbnail.src) ||
+      (item.backgroundImage && item.backgroundImage.src) || '';
   }
 
-  function thumbSrc(item) {
-    return (item.thumbnail && item.thumbnail.src) || (item.backgroundImage && item.backgroundImage.src) || '';
+  function fanHTML(items, index) {
+    var n = items.length;
+    var btns = items.map(function (it, k) {
+      var src = coverOf(it), on = k === index;
+      /* thứ tự tab = thứ tự DOM (đúng thứ tự truyện), vị trí trong quạt = data-pos */
+      return '<button type="button" class="coverbtn' + (on ? ' on' : '') + '"' +
+        ' data-hb-go="' + k + '" data-pos="' + ((k - index + n) % n) + '"' +
+        (on ? ' aria-current="true"' : '') +
+        ' aria-label="Xem: ' + esc(it.title || ('mục ' + (k + 1))) + '"' +
+        ' title="' + esc(it.title || '') + '">' +
+        (src
+          ? '<img src="' + esc(src) + '" alt="" decoding="async" referrerpolicy="no-referrer"' +
+            (k === 0 ? ' fetchpriority="high"' : ' loading="lazy"') + '>'
+          : '<span class="noimg" aria-hidden="true"></span>') +
+        '</button>';
+    }).join('');
+    /* Nhãn “01 · tác giả” nằm NGOÀI các <button> (nút có overflow:hidden) và
+       luôn ở đúng tâm vì bìa đang chọn luôn ở data-pos="0". */
+    return btns + '<span class="fancap" aria-hidden="true"><b></b><i class="dot"></i><span class="who"></span></span>';
   }
 
-  function controlsHTML(dots) {
+  function ticksHTML(items, index) {
+    return items.map(function (it, k) {
+      return '<button type="button" data-hb-go="' + k + '" class="' + (k === index ? 'on' : '') + '"' +
+        (k === index ? ' aria-current="true"' : '') +
+        ' aria-label="Xem: ' + esc(it.title || ('mục ' + (k + 1))) + '"></button>';
+    }).join('');
+  }
+
+  function controlsHTML(items, index) {
     return '<div class="foot">' +
-      '<div class="footin">' +
-        '<button class="arrow" id="hPrev" type="button" data-hb-prev aria-label="Xem mục trước">' + ic('left', 'i-s') + '</button>' +
-        '<div class="dots" id="hDots" role="tablist" aria-label="' + DOTS_LABEL + '">' + dots + '</div>' +
-        '<span class="count" id="hCount" aria-hidden="true"></span>' +
-        '<div class="strip" id="hStrip"></div>' +
-        '<button class="arrow play" id="hPlay" type="button" data-hb-play aria-label="Tạm dừng tự chuyển truyện"></button>' +
-        '<button class="arrow" id="hNext" type="button" data-hb-next aria-label="Xem mục tiếp theo">' + ic('right', 'i-s') + '</button>' +
+      '<div class="ticks" id="hTicks" role="group" aria-label="' + PICK_LABEL + '">' +
+        ticksHTML(items, index) +
       '</div>' +
-      '<div class="bar" aria-hidden="true"><i id="heroBar"></i></div>' +
+      '<span class="count" id="hCount" aria-hidden="true"></span>' +
+      '<div class="nav">' +
+        '<button class="arrow" id="hPrev" type="button" data-hb-prev aria-label="Xem mục trước">' + ic('left', 'i-s') + '</button>' +
+        '<button class="arrow" id="hNext" type="button" data-hb-next aria-label="Xem mục tiếp theo">' + ic('right', 'i-s') + '</button>' +
+        '<button class="arrow play" id="hPlay" type="button" data-hb-play aria-label="Tạm dừng tự chuyển truyện"></button>' +
+      '</div>' +
     '</div>';
   }
 
@@ -186,6 +203,8 @@
     this.index = 0;
     this._onDocKey = null;
     this._onVis = null;
+    this._bound = [];
+    this._idleTimer = null;
     if (!this.total) { root.hidden = true; root.innerHTML = ''; return; }
     var start = parseInt(this.props.initialIndex, 10) || 0;
     this.index = Math.max(0, Math.min(this.total - 1, start));
@@ -196,112 +215,82 @@
 
   HeroBanner.prototype.render = function () {
     var root = this.root, self = this;
-    var thumbs = this.items.map(function (it, k) {
-      var im = thumbSrc(it);
-      return '<button type="button" data-hb-go="' + k + '" class="' + (k === self.index ? 'on' : '') + '"' +
-        (k === self.index ? ' aria-current="true"' : '') +
-        ' aria-label="Xem: ' + esc(it.title || ('mục ' + (k + 1))) + '" title="' + esc(it.title || '') + '">' +
-        (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') +
-        '</button>';
-    }).join('');
-    var dots = this.items.map(function (it, k) {
-      return '<button type="button" role="tab" data-hb-go="' + k + '" class="' + (k === self.index ? 'on' : '') + '"' +
-        ' aria-selected="' + (k === self.index ? 'true' : 'false') + '"' +
-        ' aria-label="' + esc(it.title || ('mục ' + (k + 1))) + '"></button>';
-    }).join('');
     root.hidden = false;
-    root.classList.add('hero');
+    root.classList.add('hero', 'hb-deck');
     root.setAttribute('aria-roledescription', 'carousel');
     root.setAttribute('aria-labelledby', 'hbTitle-' + this.index);
     root.innerHTML =
-      '<div class="hb-media" aria-hidden="true">' +
-        this.items.map(mediaHTML).join('') +
+      '<div class="hb-grid">' +
+        '<div class="hb-col">' +
+          '<div class="stage" id="stage">' +
+            this.items.map(function (it, i) { return slideHTML(it, i, self.total); }).join('') +
+          '</div>' +
+          controlsHTML(this.items, this.index) +
+        '</div>' +
+        '<div class="fan" id="hFan">' + fanHTML(this.items, this.index) + '</div>' +
       '</div>' +
-      '<div class="hb-scrim" aria-hidden="true"></div>' +
-      '<div class="stage" id="stage">' + this.items.map(function (it, i) { return slideHTML(it, i, self.total); }).join('') + '</div>' +
-      controlsHTML(dots) +
+      '<div class="bar" aria-hidden="true"><i id="heroBar"></i></div>' +
       '<p class="sr-only" id="hbLive" aria-live="polite" aria-atomic="true"></p>';
 
-    this.strip = root.querySelector('.strip');
-    this.strip.innerHTML = thumbs;
-    this.dotBox = root.querySelector('.dots');
-    this.media = Array.prototype.slice.call(root.querySelectorAll('.hb-bg'));
     this.slides = Array.prototype.slice.call(root.querySelectorAll('.slide'));
-    this.dots = Array.prototype.slice.call(root.querySelectorAll('.dots button'));
-    this.thumbs = Array.prototype.slice.call(root.querySelectorAll('.strip button'));
-    this.foot = root.querySelector('.foot');
+    this.covers = Array.prototype.slice.call(root.querySelectorAll('.coverbtn'));
+    this.fan = root.querySelector('.fan');
+    this.fanCap = root.querySelector('.fancap');
+    this.capNum = root.querySelector('.fancap b');
+    this.capWho = root.querySelector('.fancap .who');
+    this.ticks = Array.prototype.slice.call(root.querySelectorAll('.ticks button'));
+    this.count = root.querySelector('.count');
     this.live = root.querySelector('#hbLive');
     this.playBtn = root.querySelector('[data-hb-play]');
 
-    /* Chỉ một mục ⇒ không có gì để chuyển: bỏ hết điều khiển (đúng yêu cầu
-       “1 item thì ẩn prev/next, thumbnail và dot”). */
+    /* Chỉ một mục ⇒ không có gì để chuyển: ẩn quạt + ticks + nút trước/sau. */
     var many = this.total > 1;
-    if (this.props.showThumbnails === false || !many) this.strip.hidden = true;
-    if (this.props.showDots === false || !many) this.dotBox.hidden = true;
     if (!many) {
+      this.fan.hidden = true;
+      root.querySelector('.ticks').hidden = true;
       root.querySelector('[data-hb-prev]').hidden = true;
       root.querySelector('[data-hb-next]').hidden = true;
+      this.count.hidden = true;
     }
+    /* `showThumbnails: false` / `showDots: false` giữ nguyên tên cũ nhưng nay
+       tắt quạt / ticks — hai thứ đóng cùng vai trò “chọn mục”. */
+    if (this.props.showThumbnails === false) this.fan.hidden = true;
+    if (this.props.showDots === false) root.querySelector('.ticks').hidden = true;
     /* không có gì để tạm dừng khi: chưa bật autoplay, chỉ 1 mục, hoặc máy đang
-       bật “giảm chuyển động” (khi đó component cố ý KHÔNG tự chuyển slide) */
+       bật “giảm chuyển động” (khi đó component cố ý KHÔNG tự chuyển truyện) */
     if (!this.autoPlay || !many || CZ.reduce) this.playBtn.hidden = true;
-    this.count = root.querySelector('.count');
-    this.count.textContent = (this.index + 1) + '/' + this.total;
+
     this.paint(this.index, false);
-    this.scheduleIdleLoad();
-  };
-
-  /* ảnh của các mục còn lại: nạp khi máy rảnh (2,5 s) để không tranh băng thông
-     với ảnh đầu, và nạp ngay khi người dùng chuyển tới trước giờ đó. */
-  HeroBanner.prototype.scheduleIdleLoad = function () {
-    var self = this;
-    if (this._idleTimer) clearTimeout(this._idleTimer);
-    this._idleTimer = setTimeout(function () {
-      for (var i = 0; i < self.items.length; i++) self.hydrate(i);
-    }, 2500);
-  };
-
-  HeroBanner.prototype.hydrate = function (i) {
-    var img = this.media[i];
-    if (!img || !img.getAttribute('data-src')) return;
-    var src = img.getAttribute('data-src'), srcset = img.getAttribute('data-srcset');
-    img.removeAttribute('data-src'); img.removeAttribute('data-srcset');
-    if (srcset) img.setAttribute('srcset', srcset);
-    img.setAttribute('src', src);
   };
 
   HeroBanner.prototype.paint = function (i, announce) {
-    var self = this;
+    var n = this.total, item = this.items[i] || {};
     this.index = i;
     this.slides.forEach(function (s, k) {
       s.classList.toggle('on', k === i);
       if (k === i) s.removeAttribute('aria-hidden'); else s.setAttribute('aria-hidden', 'true');
     });
-    this.media.forEach(function (m, k) { m.classList.toggle('on', k === i); });
-    this.dots.forEach(function (b, k) {
-      b.classList.toggle('on', k === i);
-      b.setAttribute('aria-selected', k === i ? 'true' : 'false');
+    /* Bìa: đang chọn luôn ở data-pos="0" (tâm); các bìa khác xếp vòng quanh theo
+       khoảng cách tới nó — nhờ vậy đổi truyện nào quạt cũng xếp lại đúng nhịp. */
+    this.covers.forEach(function (b, k) {
+      var on = k === i;
+      b.setAttribute('data-pos', String((k - i + n) % n));
+      b.classList.toggle('on', on);
+      if (on) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
     });
-    this.thumbs.forEach(function (b, k) {
-      b.classList.toggle('on', k === i);
-      if (k === i) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
+    this.ticks.forEach(function (b, k) {
+      var on = k === i;
+      b.classList.toggle('on', on);
+      if (on) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
     });
-    if (this.count) this.count.textContent = (i + 1) + '/' + this.total;
+    if (this.count) this.count.textContent = pad2(i + 1) + ' / ' + pad2(n);
     this.root.setAttribute('aria-labelledby', 'hbTitle-' + i);
-    /* cuộn dải thumbnail để mục đang chọn luôn lọt vào khung (dải hẹp ở tablet) */
-    var active = this.thumbs[i];
-    if (active && this.strip && this.strip.scrollWidth > this.strip.clientWidth) {
-      if (active.offsetLeft < this.strip.scrollLeft) this.strip.scrollLeft = Math.max(0, active.offsetLeft - 8);
-      else if (active.offsetLeft + active.offsetWidth > this.strip.scrollLeft + this.strip.clientWidth) {
-        this.strip.scrollLeft = active.offsetLeft + active.offsetWidth - this.strip.clientWidth + 8;
-      }
-    }
+    if (this.capNum) this.capNum.textContent = pad2(i + 1);
+    if (this.capWho) this.capWho.textContent = item.caption || '';
+    if (this.fanCap) this.fanCap.hidden = !item.caption;
     if (announce && this.live) {
-      var item = this.items[i] || {};
-      this.live.textContent = 'Mục ' + (i + 1) + ' / ' + this.total + ': ' + (item.title || '');
+      this.live.textContent = 'Mục ' + (i + 1) + ' / ' + n + ': ' + (item.title || '');
     }
-    this.hydrate(i);
-    if (this.media[i + 1]) this.hydrate(i + 1);
   };
 
   HeroBanner.prototype.goTo = function (i) {
@@ -364,12 +353,20 @@
     this.playBtn.innerHTML = paused ? ic('play', 'i-s') : ic('pause', 'i-s');
     this.playBtn.setAttribute('aria-label', paused ? 'Tiếp tục tự chuyển truyện' : 'Tạm dừng tự chuyển truyện');
     this.playBtn.setAttribute('title', paused ? 'Tiếp tục tự chuyển truyện' : 'Tạm dừng tự chuyển truyện');
+    this.playBtn.setAttribute('aria-pressed', paused ? 'true' : 'false');
+  };
+
+  /* gắn listener và NHỚ chúng: destroy() gỡ sạch, nên mount lại (ví dụ quay lại
+     tab) không bị cộng dồn listener cũ trên cùng một <section>. */
+  HeroBanner.prototype.on = function (el, type, fn, opts) {
+    el.addEventListener(type, fn, opts);
+    this._bound.push([el, type, fn, opts]);
   };
 
   HeroBanner.prototype.bind = function () {
     var self = this, root = this.root;
 
-    root.addEventListener('click', function (e) {
+    this.on(root, 'click', function (e) {
       var t = e.target;
       if (!t || !t.closest) return;
       var go = t.closest('[data-hb-go]');
@@ -393,15 +390,15 @@
     });
 
     /* bàn phím: chỉ khi focus đang ở trong khối (theo đúng phạm vi carousel) */
-    root.addEventListener('keydown', function (e) {
+    this.on(root, 'keydown', function (e) {
       if (e.altKey || e.ctrlKey || e.metaKey) return;
       if (e.key === 'ArrowRight') { e.preventDefault(); self.next(); }
       else if (e.key === 'ArrowLeft') { e.preventDefault(); self.prev(); }
       else if (e.key === 'Home') { e.preventDefault(); self.goTo(0); }
       else if (e.key === 'End') { e.preventDefault(); self.goTo(self.total - 1); }
     });
-    /* giữ phím tắt toàn trang như bản cũ (“← → đổi truyện” ghi trong khối),
-       nhưng nhường phím khi người dùng đang gõ ở ô nhập. */
+    /* giữ phím tắt toàn trang như bản cũ, nhưng nhường phím khi người dùng đang
+       gõ ở ô nhập. */
     this._onDocKey = function (e) {
       if (e.altKey || e.ctrlKey || e.metaKey || e.defaultPrevented) return;
       var tag = String((e.target && e.target.tagName) || '').toUpperCase();
@@ -412,10 +409,10 @@
     };
     w.document.addEventListener('keydown', this._onDocKey);
 
-    root.addEventListener('mouseenter', function () { self.hovered = true; self.stop(); });
-    root.addEventListener('mouseleave', function () { self.hovered = false; self.restart(); });
-    root.addEventListener('focusin', function () { self.focused = true; self.stop(); });
-    root.addEventListener('focusout', function (e) {
+    this.on(root, 'mouseenter', function () { self.hovered = true; self.stop(); });
+    this.on(root, 'mouseleave', function () { self.hovered = false; self.restart(); });
+    this.on(root, 'focusin', function () { self.focused = true; self.stop(); });
+    this.on(root, 'focusout', function (e) {
       if (root.contains(e.relatedTarget)) return;
       self.focused = false;
       self.restart();
@@ -425,11 +422,11 @@
 
     /* vuốt ngang trên điện thoại: chỉ tính khi quãng ngang > 44px và lớn hơn dọc */
     var x0 = null, y0 = null;
-    root.addEventListener('touchstart', function (e) {
+    this.on(root, 'touchstart', function (e) {
       if (!e.touches || !e.touches.length) return;
       x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
     }, { passive: true });
-    root.addEventListener('touchend', function (e) {
+    this.on(root, 'touchend', function (e) {
       if (x0 == null || !e.changedTouches || !e.changedTouches.length) { x0 = y0 = null; return; }
       var t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
       if (Math.abs(dx) > 44 && Math.abs(dx) > Math.abs(dy)) {
@@ -456,7 +453,11 @@
     if (this._idleTimer) clearTimeout(this._idleTimer);
     if (this._onDocKey) w.document.removeEventListener('keydown', this._onDocKey);
     if (this._onVis) w.document.removeEventListener('visibilitychange', this._onVis);
+    (this._bound || []).forEach(function (b) { b[0].removeEventListener(b[1], b[2], b[3]); });
+    this._bound = [];
     this.root.innerHTML = '';
+    this.root.removeAttribute('aria-roledescription');
+    this.root.removeAttribute('aria-labelledby');
   };
 
   CZ.heroBanner = function (root, props) {
