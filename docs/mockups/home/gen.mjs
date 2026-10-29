@@ -601,7 +601,7 @@ ${CMP}
       if (ok) total++;
       var vis = ok && shown < PAGE;
       if (vis) shown++;
-      p.style.display = vis ? '' : 'none';
+      p.style.display = vis ? 'block' : 'none';   /* inline thắng luật :nth-child */
     });
     var c = document.querySelector('[data-libcount]');
     if (c) c.textContent = (shown ? '1–' + shown : '0') + ' / ' + total;

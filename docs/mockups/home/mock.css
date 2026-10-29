@@ -195,6 +195,10 @@ body[data-w="m"] .stage{max-width:390px}
 .ltool{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
 .ltool .end{margin-left:auto;display:flex;gap:8px;align-items:center}
 .lgrid{display:grid;gap:20px 14px;grid-template-columns:repeat(auto-fill,minmax(144px,1fr));margin-top:18px}
+/* HTML dựng đủ cả thư viện (để lọc tính từ toàn bộ), nhưng MẶC ĐỊNH chỉ bày 18
+   bộ như một trang của pager. JS ghi style inline để mở/đóng — inline thắng luật
+   này — nên tắt JS vẫn ra đúng một trang gọn gàng thay vì 67 bìa. */
+.lgrid > .poster:nth-child(n+19){display:none}
 .lbar{font:650 11px/1 var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--dim)}
 .pager{display:flex;gap:6px;justify-content:center;margin:26px 0 4px;align-items:center}
 .pager button{min-width:30px;height:30px;border-radius:8px;border:1px solid var(--bd);background:var(--surf);
