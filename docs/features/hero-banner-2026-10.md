@@ -482,16 +482,30 @@ Nay:
 dòng 2 và chừa một ô trống bên phải. Nay `data-slot="up"` chiếm `grid-column: 1 / -1`
 ⇒ kệ nhãn thành 2 tầng gọn: hai ô trên, một ô rộng dưới.
 
+### 4. Ba mép phải thẳng hàng + nhịp dọc có thang
+
+Cột chữ có ba mép phải khác nhau: kệ nhãn 100 % (≈511px), mô tả bị chặn `46ch`
+(≈350px), hàng nút co theo nút. Mắt đọc thấy “lởm chởm” dù từng dòng đều đúng.
+
+- `.syn` bỏ `max-width: 46ch` ⇒ mép phải của mô tả, kệ nhãn và hàng nút **thẳng nhau**;
+- nhịp dọc đổi sang thang bội số 2px, mỗi tầng một khoảng: con dấu → tiêu đề **12**,
+  tiêu đề → kệ nhãn **20** (+14 đệm sau đường kẻ), kệ nhãn → mô tả **14**,
+  mô tả → hàng nút **22** (trước là 14/18/16/20, không theo thang nào);
+- nút chính `min-width: 168px` + căn giữa nhãn ⇒ dưới tiêu đề 50px nút không còn
+  “lọt thỏm”;
+- điện thoại: tiêu đề cho **3 dòng** (tên truyện Việt hay dài, trước bị cắt ở 2 dòng),
+  nhãn ô 9 → 9,5px.
+
 ### Tệp đã sửa
 
 | Tệp | Vì sao |
 | --- | --- |
 | `src/cz-home.js` | `facts` mang thêm `slot: ch/au/cp/up` |
 | `src/cz-hero.js` | `factsHTML()` ghi `data-slot`; tài liệu hoá hợp đồng `facts` |
-| `src/cz.css` | §5.3 lưới 4 cột chia đều + ghim cột; `.hb-st` .14em; `.hb-b18` mono 10px; `.prog` 13px; mobile `up` trải dòng |
-| `sw.js` + 76 HTML | `?v=20261029hero6` (cz.css, cz-hero, cz-home, PRECACHE) |
+| `src/cz.css` | §5.3 lưới 4 cột chia đều + ghim cột; `.hb-st` .14em; `.hb-b18` mono 10px; `.prog` 13px; mobile `up` trải dòng; `.syn` hết chặn 46ch; nhịp 12/20/14/22; nút chính ≥168px; mobile tiêu đề 3 dòng |
+| `sw.js` + 76 HTML | `?v=20261029hero7` (cz.css, cz-hero, cz-home, PRECACHE) |
 
 ### Kiểm
 
 `t_hero` “Hero banner đạt hết” · `t_home` · `t_pwa` · `check_src` khớp ·
-`cz.css` 195,2 kB (91 % trần 215 kB) · `cz-hero.js` 13,1 kB (82 % trần 16 kB).
+`cz.css` 195,3 kB (91 % trần 215 kB) · `cz-hero.js` 13,1 kB (82 % trần 16 kB).
