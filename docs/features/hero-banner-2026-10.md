@@ -823,3 +823,68 @@ Nay: không kẻ, không nền, không khung; chỉ một cụm canh giữa dư�
 
 `t_hero` đạt hết · `t_home` · `t_adult` N12 · `t_pwa` · `audit:a11y` 25 màn 0 lỗi axe ·
 `check_src` khớp.
+
+---
+
+## 23. Vòng 8 — hero theo theme, điều khiển quạt làm lại, bỏ đường kẻ thừa (2026-10-29)
+
+Ba điểm người dùng nêu từ ảnh chụp (khổ ~1000 CSS px, tức bố cục tablet):
+
+### 1. “Trang chỉ còn dạng tối” — hero khoá cứng nền than
+
+Hero cũ đặt `--hb-void: #0a090b` và mọi màu chữ/đường kẻ/màn che bằng hằng số
+tối, nên bật nền sáng thì cả trang đổi mà riêng màn đầu vẫn tối ⇒ cảm giác mất
+chế độ sáng. Nay:
+
+- `.hero` khai báo **bộ token nền SÁNG** (`--hb-void: #f7f2ea`, chữ `#1b1512`,
+  `--hb-veil: 247, 242, 234`, `--hb-shade: 96, 74, 48`, `--hb-pic`, `--hb-ghost`,
+  `--hb-blend`, `--hb-track`, `--hb-hover`…);
+- `[data-theme="dark"] .hero` chỉ **ghi đè token** — không lặp lại bố cục;
+- mọi chỗ từng hardcode màu đã chuyển sang token: màn che `.veil` (12 chỗ),
+  `.pic` filter, `.ghost` opacity, `.glow` blend/opacity, `.bar` track, hover nút,
+  bóng `.fan::after`, bóng bìa, gradient `.noimg`, dừng cuối của `.hb-scene`.
+
+Thêm thành phần mới trong hero: dùng token, **đừng viết màu trực tiếp**.
+
+### 2. Điều khiển chuyển truyện: bỏ dải chữ, tách theo chức năng
+
+Gốc của cảm giác “dư thừa/kì”: quạt bìa **đã là bộ chọn** (bấm bìa nào mở truyện
+đó) nên 5 vạch ticks chỉ là bản sao; tên tác giả đã có trong kệ nhãn; và cả dải
+chữ nằm dưới chân quạt mà không cùng hàng với thứ gì.
+
+Nay:
+
+```
+‹  [ bìa … bìa ]  ›               ← hai mép quạt, ngang tầm bìa
+                     01 / 05  ⏸    ← góc trên-phải, cao ngang nhãn trạng thái
+```
+
+- `#hPrev/#hNext` thành nút kính tròn 44px (tablet 40, mobile 38) ở **hai mép
+  quạt**, luôn hiện (cảm ứng không có hover), sáng lên khi trỏ/focus;
+- `#hCount` + `#hPlay` gom vào `.fanbar` ở góc trên-phải (mono 10px, `⏸` 28px);
+- **bỏ** `.ticks`, `.fanbar-mid`, `.fanbar-dot`, `.who` (tên tác giả) — không
+  còn vạch đếm trùng và không còn dòng chữ dưới chân quạt;
+- làn chân quạt 70px → 0: `.fan` cao `calc(--cover-w * 1.64 + 50px)`, bìa đặt
+  `top: 52%` ⇒ chừa ~40px phía trên cho cụm góc, đáy bìa vẫn nằm trong khung;
+- cột chữ bỏ luôn hàng điều khiển dưới cùng ⇒ banner thấp hơn ~50px, hết khoảng
+  trống dưới hàng nút.
+
+### 3. Đường kẻ ngang phía trên nhãn trạng thái
+
+Đường kẻ 1px `--hb-line` duy nhất trong cột chữ là `border-top` của `.spec`.
+Trên nền có ảnh bìa mờ, một sợi trắng nằm lơ lửng ngay dưới tên truyện đọc ra
+như vết gạch thừa (nhất là khi cột chữ dồn đáy theo bố cục poster — nó tách
+khỏi cụm chữ). Đã **bỏ hẳn đường kẻ**: `.spec` chỉ còn `margin-top: 24px`,
+tách tầng bằng khoảng thở. Cột chữ giờ không có đường kẻ nào.
+
+### Tệp đã sửa
+
+`src/cz.css` (token sáng/tối, khối 5.5 mới, `.spec` bỏ viền, kích thước `.fan`) ·
+`src/cz-hero.js` (`fanHTML`/`fanBarHTML` mới, bỏ `.who`) ·
+`tests/t_hero.js` (khoá cấu trúc mới) · `sw.js` + 76 HTML: `?v=20261029hero14`.
+
+### Kiểm
+
+`t_hero` đạt hết (gồm: ‹ › ở hai mép quạt, cụm góc chỉ còn `count + ⏸`, không
+ticks, không lặp tên tác giả) · `t_home` · `t_adult` N12 · `t_lock_ui` · `t_pwa`
+· `audit:a11y` 25 màn 0 lỗi axe · `check_src` khớp · `cz.css` 196.6 kB (91 % trần).

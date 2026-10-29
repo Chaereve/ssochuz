@@ -259,34 +259,37 @@
           : '<span class="noimg" aria-hidden="true"></span>') +
         '</button>';
     }).join('');
-    /* Thanh điều khiển gộp nằm ngoài các <button> bìa (nút có overflow:hidden)
-       và luôn ở tâm quạt. */
-    return btns + fanBarHTML();
+    return '<button class="arrow edge prev" id="hPrev" type="button" data-hb-prev aria-label="Xem mục trước">' +
+        ic('left', 'i-s') + '</button>' +
+      btns +
+      '<button class="arrow edge next" id="hNext" type="button" data-hb-next aria-label="Xem mục tiếp theo">' +
+        ic('right', 'i-s') + '</button>' +
+      fanBarHTML();
   }
 
-  /* ---------- THANH ĐIỀU KHIỂN GỘP (dưới quạt) ------------------------------
-     Bản trước có BA thứ đứng cùng một chỗ: 5 vạch ticks + “02 / 05” + cụm ‹ › ⏸
-     ở cột chữ, rồi thêm dòng “02 · tác giả” dưới bìa — ticks trùng với chính quạt
-     (bấm bìa là chọn được), số đếm trùng với nhãn dưới bìa. Nay gộp làm MỘT viên
-     duy nhất nằm ngay dưới quạt, đúng chỗ mắt đang nhìn:
+  /* ---------- ĐIỀU KHIỂN: hai mũi tên ở MÉP QUẠT + bộ đếm ở góc ----------
+     Ba đời trước của khối này:
 
-         ‹   02 / 05 · KRATAI DUEAN   ›    ⏸
+       5 vạch ticks + “02 / 05” + tên tác giả + ‹ › ⏸   ← một hàng nhiều thứ
+       5 vạch ticks · “02 / 05 · tác giả” · ‹ › ⏸       ← vẫn thừa
+       ‹ 02 / 05 · TÁC GIẢ › ⏸                          ← bỏ ticks nhưng còn dải
 
-     Quạt vẫn là cách chọn chính (bấm bìa), ‹ › để lướt, số đếm cho biết đang ở
-     đâu, ⏸ để dừng tự chuyển. Không còn vạch ticks nào để đếm trùng. */
+     Gốc của cảm giác “dư thừa”: quạt bìa ĐÃ là bộ chọn (bấm bìa nào mở truyện
+     đó), nên 5 vạch ticks chỉ là bản sao của nó; tên tác giả đã nằm trong kệ
+     nhãn; và cả dải chữ nằm dưới chân quạt mà không cùng hàng với thứ gì, nên
+     đọc ra như dòng chú thích lạc chỗ.
+
+     Nay tách theo ĐÚNG chức năng:
+       · ‹ ›  = chuyển mục, đặt ở HAI MÉP QUẠT (ngang tầm bìa, đúng chiều tay);
+       · 01 / 05 + ⏸ = “đang ở đâu / dừng tự chuyển”, gom một cụm nhỏ ở góc
+         trên-phải — cao ngang hàng nhãn trạng thái bên trái.
+     Không còn vạch ticks, không còn tên tác giả lặp, không còn dòng chữ dưới
+     chân quạt. */
   function fanBarHTML() {
     return '<div class="fanbar" role="group" aria-label="' + PICK_LABEL + '">' +
-      '<button class="arrow" id="hPrev" type="button" data-hb-prev aria-label="Xem mục trước">' +
-        ic('left', 'i-s') + '</button>' +
-      '<span class="fanbar-mid">' +
-        '<span class="count" id="hCount" aria-hidden="true"></span>' +
-        '<i class="fanbar-dot" aria-hidden="true"></i>' +
-        '<span class="who" id="hWho" aria-hidden="true"></span>' +
-      '</span>' +
-      '<button class="arrow" id="hNext" type="button" data-hb-next aria-label="Xem mục tiếp theo">' +
-        ic('right', 'i-s') + '</button>' +
+      '<span class="count" id="hCount" aria-hidden="true"></span>' +
       '<button class="arrow play" id="hPlay" type="button" data-hb-play aria-label="Tạm dừng tự chuyển truyện"></button>' +
-    '</div>';
+      '</div>';
   }
 
   /* ---------- 2. COMPONENT ------------------------------------------------- */
@@ -342,7 +345,6 @@
     this.covers = Array.prototype.slice.call(root.querySelectorAll('.coverbtn'));
     this.fan = root.querySelector('.fan');
     this.barEl = root.querySelector('.fanbar');
-    this.who = root.querySelector('.fanbar .who');
     this.count = root.querySelector('.count');
     this.live = root.querySelector('#hbLive');
     this.playBtn = root.querySelector('[data-hb-play]');
@@ -351,6 +353,7 @@
     var many = this.total > 1;
     if (!many) {
       this.fan.hidden = true;
+      if (this.barEl) this.barEl.hidden = true;
       root.querySelector('[data-hb-prev]').hidden = true;
       root.querySelector('[data-hb-next]').hidden = true;
     }
@@ -387,9 +390,6 @@
       this.count.innerHTML = '<b>' + pad2(i + 1) + '</b> / ' + pad2(n);
     }
     this.root.setAttribute('aria-labelledby', 'hbTitle-' + i);
-    if (this.who) this.who.textContent = item.caption || '';
-    /* không có tác giả thì bỏ luôn dấu chấm + khoảng trống, thanh gọn lại */
-    if (this.barEl) this.barEl.classList.toggle('no-who', !item.caption);
     if (announce && this.live) {
       this.live.textContent = 'Mục ' + (i + 1) + ' / ' + n + ': ' + (item.title || '');
     }

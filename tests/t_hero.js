@@ -54,7 +54,12 @@ const ok = (cond, msg, extra) => { if (!cond) bad.push(msg + (extra ? ' → ' + 
     nutTruocSau: !!$('#hPrev') && !!$('#hNext'),
     nutTamDung: !!$('#hPlay'),
     dem: ($('#hCount') || {}).textContent,
-    nhanDuoiBia: !!$('#hero .fanbar .who'),
+    /* vòng 8: bỏ vạch ticks + bỏ tên tác giả (đã có trong kệ nhãn); ‹ › tách ra
+       hai MÉP quạt, số đếm + ⏸ gom vào góc trên-phải */
+    mepTrai: !!$('#hero .fan .arrow.edge.prev'),
+    mepPhai: !!$('#hero .fan .arrow.edge.next'),
+    conTicks: !!$('#hTicks') || !!$('#hero .ticks'),
+    conTenTacGia: !!$('#hero .fanbar .who'),
     conAnhNenFullBleed: !!$('#hero .hb-media') || !!$('#hero .hb-scrim') || !!$('#hero .hb-bg')
   };
   ok(out.cauTruc.slides === 5, 'hero phải có 5 slide chữ', out.cauTruc.slides);
@@ -64,7 +69,9 @@ const ok = (cond, msg, extra) => { if (!cond) bad.push(msg + (extra ? ' → ' + 
   ok(!$('#hTicks') && !$('#hero .ticks'), 'không còn 5 vạch ticks rời (đã gộp vào .fanbar)');
   ok(out.cauTruc.nutTruocSau && out.cauTruc.nutTamDung, 'thiếu nút trước/sau hoặc nút tạm dừng');
   ok(/^01 \/ 05$/.test(out.cauTruc.dem || ''), 'số đếm phải là “01 / 05”', out.cauTruc.dem);
-  ok(out.cauTruc.nhanDuoiBia, 'thiếu tên tác giả trong thanh điều khiển dưới quạt');
+  ok(out.cauTruc.mepTrai && out.cauTruc.mepPhai, '‹ › phải nằm ở hai mép quạt');
+  ok(!out.cauTruc.conTicks, 'không được quay lại 5 vạch ticks');
+  ok(!out.cauTruc.conTenTacGia, 'tên tác giả không lặp lại ở cụm điều khiển (đã có trong kệ nhãn)');
   ok(!out.cauTruc.conAnhNenFullBleed, 'vẫn còn lớp ảnh nền full-bleed của bản cũ trong hero');
 
   /* ---------- 1b. “KỆ NHÃN”: badge trạng thái + lưới thông tin -------------
@@ -143,7 +150,7 @@ const ok = (cond, msg, extra) => { if (!cond) bad.push(msg + (extra ? ' → ' + 
     currentBia: covers.filter(b => b.getAttribute('aria-current') === 'true').length,
     thanhDem: ($('#hCount') || {}).textContent,
     dem: ($('#hCount') || {}).textContent,
-    nhan: ($('#hero .fanbar .who') || {}).textContent,
+    soO: ($('#hCount') || {}).textContent,
     tam: posOf(covers.find(b => b.classList.contains('on')) || covers[0])
   };
   ok(out.doiSlide.on === 1 && out.doiSlide.tieuDe === sau && sau !== truoc, 'bấm “sau” phải đổi đúng slide');
@@ -236,20 +243,16 @@ const ok = (cond, msg, extra) => { if (!cond) bad.push(msg + (extra ? ' → ' + 
   out.dieuKhien = {
     thuTu: kids,
     soDemHtml: ($('#hCount') || {}).innerHTML,
-    soNut: $$('#hero .fanbar .arrow').length,
+    soNut: $$('#hero .arrow').length,
+    nutMep: $$('#hero .fan .arrow.edge').length,
     trongQuat: !!(bar && bar.closest('.fan')),
-    giuaDai: (function () {
-      const mid = bar && bar.querySelector('.fanbar-mid');
-      return mid ? [...mid.children].map(n => n.className.split(' ')[0]).join(',') : '';
-    })(),
     cotChuSach: !!$('#hero .hb-col .foot')
   };
-  ok(out.dieuKhien.thuTu.join(',') === 'arrow,fanbar-mid,arrow,arrow',
-    'dải điều khiển phải là ‹ → (số đếm · tác giả) → › → ⏸', out.dieuKhien.thuTu.join(','));
-  ok(out.dieuKhien.giuaDai === 'count,fanbar-dot,who',
-    'cụm giữa dải phải là số đếm · tác giả', out.dieuKhien.giuaDai);
+  ok(out.dieuKhien.thuTu.join(',') === 'count,arrow',
+    'cụm góc chỉ còn số đếm + ⏸ (không ticks, không tên tác giả)', out.dieuKhien.thuTu.join(','));
+  ok(out.dieuKhien.nutMep === 2, 'phải có đúng 2 nút chuyển ở hai mép quạt', out.dieuKhien.nutMep);
   ok(out.dieuKhien.soNut === 3, 'phải có đúng 3 nút ‹ › ⏸', out.dieuKhien.soNut);
-  ok(out.dieuKhien.trongQuat, 'thanh điều khiển phải nằm trong quạt (dưới bìa đang chọn)');
+  ok(out.dieuKhien.trongQuat, 'cụm điều khiển phải nằm trong quạt');
   ok(!out.dieuKhien.cotChuSach, 'cột chữ không còn hàng điều khiển riêng');
   ok(/<b>01<\/b>/.test(out.dieuKhien.soDemHtml || ''),
     'số đếm phải tách phần đang xem (<b>01</b> / 05) để in đậm như các số khác', out.dieuKhien.soDemHtml);
