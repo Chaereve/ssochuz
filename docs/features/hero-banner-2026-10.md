@@ -788,3 +788,38 @@ Nay: không kẻ, không nền, không khung; chỉ một cụm canh giữa dư�
 
 `t_hero` “Hero banner đạt hết” · `t_home` · `t_adult` N12 · `t_lock_ui` · `t_pwa` ·
 `audit:a11y` 25 màn 0 lỗi axe · `check_src` khớp · `cz.css` 195,5 kB · `cz-hero.js` 12,2 kB.
+
+---
+
+## 22. Vòng 8 — bố cục POSTER: chữ dồn đáy, quạt giữ phần trên (2026-10-29)
+
+Ảnh chụp cho thấy hai lỗi rõ:
+
+1. **Lỗ hổng giữa nhãn trạng thái và tên truyện** — do vòng trước ép `h1` thành hộp
+   cao 3 dòng và dồn chữ xuống đáy hộp: tên 1 dòng thì 2 dòng trống nằm ngay dưới nhãn;
+2. **“Garn x Mi…”** — kệ nhãn bị khoá một dòng + `text-overflow: ellipsis`, mà ở bố
+   cục tablet (4 cột trong 400px) cột COUPLE chỉ ~89px nên tên bị cắt.
+
+### Đã sửa
+
+- `h1`: bỏ hộp cứng 3 dòng, chỉ giữ **chỗ 2 dòng** (`min-height: 2.12em`), chữ nằm ở
+  ĐẦU hộp ⇒ hết lỗ hổng; tên dài hiếm khi quá 3 dòng và chỉ đẩy mọi thứ xuống 1 dòng;
+- tiêu đề to hơn: `clamp(34px, 3.6vw, 54px)` (tablet `clamp(28px, 4vw, 42px)`);
+- kệ nhãn: bỏ `nowrap`/`ellipsis`, cho **xuống dòng** và chừa sẵn 2 dòng
+  (`min-height: 2.7em`) ⇒ không cắt tên, chiều cao hàng vẫn bằng nhau;
+- **tablet chuyển kệ nhãn sang 2×2** (`CHƯƠNG | TÁC GIẢ` / `COUPLE | CẬP NHẬT`) —
+  4 cột trong 400px là quá chật;
+- **bố cục poster (phương án đã chọn)**: `.hb-col { justify-content: flex-end }` +
+  `.stage { flex: 0 0 auto }` ⇒ cả khối chữ dồn xuống ĐÁY cột, đáy hàng nút trùng
+  đáy dải điều khiển bên quạt; khoảng trống dồn lên trên cho nền “thở”;
+- quạt: làn chân `84px → 70px` (dải điều khiển sát bìa hơn), mũi tên 30 → **32px**,
+  icon ⏸ 14px.
+
+### Tệp đã sửa
+
+`src/cz.css` (các mục trên) · `sw.js` + 76 HTML: `?v=20261029hero13`.
+
+### Kiểm
+
+`t_hero` đạt hết · `t_home` · `t_adult` N12 · `t_pwa` · `audit:a11y` 25 màn 0 lỗi axe ·
+`check_src` khớp.

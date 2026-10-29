@@ -714,10 +714,12 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
      giữa các truyện: trước đây slide cao nhất trong 5 truyện kéo cả banner lên */
   min-height: clamp(360px, 38vh, 420px);
 }
-.hero .hb-col { display: flex; flex-direction: column; gap: 0; min-width: 0; align-self: stretch; }
-/* .stage giãn hết chỗ còn lại và canh GIỮA: khoảng trống dư dồn ra hai đầu thay vì
-   thành một lỗ hổng giữa nút và hàng điều khiển */
-.hero .stage { display: grid; flex: 1 1 auto; align-content: center; min-width: 0; }
+.hero .hb-col { display: flex; flex-direction: column; justify-content: flex-end; gap: 0;
+  min-width: 0; align-self: stretch; }
+/* BỐ CỤC POSTER: cả khối chữ (nhãn → tên → kệ nhãn → nút) DỒN XUỐNG ĐÁY cột, nên
+   đáy hàng nút trùng đáy dải điều khiển bên quạt; khoảng trống dồn hết lên trên,
+   chỗ nền/ảnh bìa có thể “thở” thay vì thành lỗ hổng giữa các tầng chữ */
+.hero .stage { display: grid; flex: 0 0 auto; align-content: start; min-width: 0; }
 /* các slide xếp chồng trong MỘT ô lưới ⇒ khung cao bằng slide cao nhất, đổi
    truyện không đổi chiều cao (không CLS) */
 .hero .slide { grid-area: 1 / 1; min-width: 0;
