@@ -377,3 +377,70 @@ Ba thay đổi so với bản “một hàng meta”:
 `tests/run.js` 1 bài lỗi (chỉ `t_admin_editor_lazy.js`, hỏng từ trước) ·
 `audit:a11y` 25 màn 0 lỗi axe · `check_src` khớp · `check_css` không lỗi cú pháp ·
 `cz.css` 193,6 kB (90 % trần 215 kB).
+
+## 16. Vòng chỉnh 3: điều khiển, nút, hệ chữ, nền bìa (2026-10-29)
+
+Năm điểm người dùng nêu sau khi xem bản thật trên dev server.
+
+### 1. Hàng điều khiển (`‹ › ⏸`) không còn nhảy xuống dòng riêng
+
+Trước: `.foot` cho `flex-wrap: wrap` + `.nav{margin-left:auto}` ⇒ ở ~860px nút ›⏸ bị
+đẩy xuống **hàng thứ hai**, canh lệch. Nay `.foot{flex-wrap:nowrap}` và thứ tự cố định
+`ticks → số đếm → ‹ › ⏸`, số đếm ở giữa, cụm nút dạt phải. Ở 390px vẫn vừa một hàng
+(ticks 110 + số 45 + nút 106 + 3 khoảng 10 ≈ 281 < 354).
+
+### 2. Nút đẹp hơn, phân cấp rõ
+
+| Nút | Trước | Nay |
+| --- | --- | --- |
+| ‹ › | 34px, viền mảnh, nền `--hb-glass` | 36px, nền trắng 5%, viền trắng 26%; hover nền 14% + viền 55%; nhấn `scale(.94)` |
+| ⏸ | 34px, **giống hệt** nút ‹ › | 32px, **không viền**, nền 7%, màu `--hb-dim` ⇒ đọc là điều khiển phụ |
+
+### 3. Nút “Lưu vào tủ” → nút **“i”** (thông tin truyện)
+
+`secondaryCtas` trong `cz-home.js` đổi thành link 44px tròn, icon `info`, `aria-label`
+“Thông tin truyện”, dẫn về `/truyen/<slug>/`. Lưu vào tủ vẫn còn nguyên ở trang truyện
+và ở thẻ truyện; ở banner thì người đọc cần lối tắt sang trang thông tin hơn.
+(`tests/t_hero.js` đổi mục 4 từ “Lưu vào tủ” sang “nút i”.)
+
+### 4. Một hệ chữ duy nhất trong banner
+
+| Vai trò | Cỡ / giãn | Màu |
+| --- | --- | --- |
+| Nhãn ô (`CHƯƠNG`, `TÁC GIẢ`…) | mono **10px** / .14em, in hoa | `--hb-dim` |
+| Giá trị ô (`42`, `SIIX`, `29-09`) | 13.5px / **600**, số `tabular-nums` | `--hb-fg` |
+| Số đếm (`01 / 05`) | mono **10px** / .14em, phần đang xem `<b>` | số `--hb-fg`, `/05` dim |
+| Nhãn dưới bìa (`01 · SIIX`) | mono **10px** / .14em | số `--hb-fg`, tác giả dim |
+
+Trước đây là 10.5 / 11 / 13.5 với ba độ đậm khác nhau, và `.spec dd.soft{font-weight:500}`
+làm tác giả nhạt hơn số chương ⇒ “format chữ không thống nhất”. Nay số và chữ cùng 600,
+chỉ số là `tabular-nums`. Kệ nhãn ở tablet cũng **giữ 4 cột** (trước bị 2×2 nên trông lệch).
+
+### 5. Nền: bìa NGANG mờ + nửa gradient
+
+`.hb-bgs` chứa 5 lớp `.hb-scene`, mỗi truyện một lớp, mờ dần khi đổi (`.55s`):
+
+- **Có bìa ngang** (`item.backdrop`, lấy từ `n.slide` khi khác `n.thumb` — hiện 3/67 bộ):
+  `<img class="pic">` phóng 120 %, `blur(30px) saturate(1.05) brightness(.6)`.
+- **Không có**: `washFromCover()` vẽ bìa dọc vào canvas 12×18, lấy màu trung bình nửa
+  trên/nửa dưới rồi hạ sáng (×.46 / ×.62) ⇒ gán `--hb-bg-a/--hb-bg-b`, nền thành gradient
+  **lấy từ chính bìa**. Kết quả cache theo `src`; canvas “bẩn” (ảnh khác nguồn) thì bỏ qua.
+- `.veil` phủ lên: nửa **trái** gần đặc (chữ trắng đọc được trên mọi bìa), nửa **phải**
+  để ảnh lộ ra sau quạt; mobile đổi sang gradient dọc (chữ ở trên, quạt ở dưới).
+- Bỏ hai quầng sáng `.hero::before`; giữ hạt phim `.hero::after` (opacity .04).
+
+### Tệp đã sửa
+
+| Tệp | Vì sao |
+| --- | --- |
+| `src/cz-hero.js` | dựng `.hb-bgs`/`.hb-scene` + `bgHTML`, `washFromCover` (canvas lấy màu bìa, có cache), đổi nền theo slide; số đếm tách `<b>` |
+| `src/cz-home.js` | `secondaryCtas` → nút “i” thông tin truyện; thêm `backdrop` (bìa ngang từ `slide`); bỏ `inShelf` không dùng |
+| `src/cz.css` | §5.1 nền mới; nút ‹ › ⏸ phân cấp; `.foot` một hàng; hệ chữ 10/13.5 + 600; kệ nhãn 4 cột ở tablet; veil dọc ở mobile |
+| `tests/t_hero.js` | mục 4 đổi sang nút “i”; thêm kiểm lớp nền (5 lớp, 1 hiện, có `.veil`/`.wash`) và kiểm hàng điều khiển (thứ tự ticks→count→nav, 3 nút, `<b>01</b>`) |
+| `sw.js` + 76 HTML | `?v=20261029hero5` (cz.css, cz-hero, cz-home, PRECACHE) |
+
+### Kiểm
+
+`t_hero` “Hero banner đạt hết” · `t_home` · `t_adult` N12 · `t_lock_ui` · `t_pwa` ·
+`tests/run.js` 1 bài lỗi (`t_admin_editor_lazy.js`, hỏng từ trước) · `audit:a11y` 25 màn
+0 lỗi axe · `check_src` khớp · `cz.css` 194,9 kB (91 % trần 215 kB).

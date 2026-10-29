@@ -171,6 +171,66 @@
       '</div>';
   }
 
+  /* ---------- NỀN: bìa ngang mờ + “nửa gradient” --------------------------
+     Mỗi mục có một lớp nền riêng, xếp chồng và mờ dần khi đổi truyện:
+       · có `backdrop` (bìa ngang)  → ảnh phóng to, làm mờ 30px
+       · không có                   → gradient 2 màu LẤY TỪ CHÍNH BÌA (canvas
+                                      12×18, chia nửa trên/dưới) ⇒ bộ nào cũng
+                                      có nền ăn màu bìa, không cần thêm tệp.
+     Luôn phủ thêm `.veil`: nửa trái gần đặc để chữ trắng đọc được, nửa phải để
+     ảnh lộ ra sau quạt bìa. */
+  var PAL = {};                       /* cache màu theo src — đổi qua lại không vẽ lại */
+
+  function bgHTML(item, i) {
+    var src = (item.backdrop && item.backdrop.src) || '';
+    return '<div class="hb-scene">' +
+      (src ? '<img class="pic" src="' + esc(src) + '" alt="" aria-hidden="true" decoding="async"' +
+        (i === 0 ? '' : ' loading="lazy"') + '>' : '') +
+      '<i class="wash"></i><i class="veil"></i></div>';
+  }
+
+  function shade(rgb, k) {
+    return 'rgb(' + rgb.map(function (v) { return Math.max(0, Math.min(255, Math.round(v * k))); }).join(',') + ')';
+  }
+  function applyPalette(el, pair) {
+    if (!el || !pair) return;
+    el.style.setProperty('--hb-bg-a', pair[0]);
+    el.style.setProperty('--hb-bg-b', pair[1]);
+  }
+  /* Lấy 2 màu đại diện của bìa. Không đọc được (CORS / không có canvas) thì thôi:
+     CSS đã có gradient mặc định nên nền vẫn đúng tông tối. */
+  function washFromCover(el, src) {
+    if (!src) return;
+    if (PAL[src]) { applyPalette(el, PAL[src]); return; }
+    try {
+      var im = new Image();
+      im.crossOrigin = 'anonymous';
+      im.onload = function () {
+        try {
+          var c = document.createElement('canvas'), W = 12, H = 18;
+          c.width = W; c.height = H;
+          var x = c.getContext('2d');
+          if (!x) return;
+          x.drawImage(im, 0, 0, W, H);
+          var d = x.getImageData(0, 0, W, H).data;
+          var top = [0, 0, 0], bot = [0, 0, 0], nt = 0, nb = 0;
+          for (var i = 0; i < d.length; i += 4) {
+            var row = Math.floor((i / 4) / W);
+            var t = row < H / 2 ? top : bot;
+            if (row < H / 2) nt++; else nb++;
+            t[0] += d[i]; t[1] += d[i + 1]; t[2] += d[i + 2];
+          }
+          if (!nt || !nb) return;
+          var a = shade([top[0] / nt, top[1] / nt, top[2] / nt], 0.46);
+          var b = shade([bot[0] / nb, bot[1] / nb, bot[2] / nb], 0.62);
+          PAL[src] = [a, b];
+          applyPalette(el, PAL[src]);
+        } catch (e) { /* canvas bị “bẩn” vì ảnh khác nguồn — bỏ qua */ }
+      };
+      im.src = src;
+    } catch (e) { /* không tạo được Image — bỏ qua */ }
+  }
+
   /* Bìa dùng cho quạt: ưu tiên `thumbnail`, thiếu thì rơi về `backgroundImage`
      (hợp đồng cũ) để component không phụ thuộc một trường duy nhất. */
   function coverOf(item) {
@@ -255,6 +315,9 @@
     root.setAttribute('aria-roledescription', 'carousel');
     root.setAttribute('aria-labelledby', 'hbTitle-' + this.index);
     root.innerHTML =
+      '<div class="hb-bgs" aria-hidden="true">' +
+        this.items.map(function (it, i) { return bgHTML(it, i); }).join('') +
+      '</div>' +
       '<div class="hb-grid">' +
         '<div class="hb-col">' +
           '<div class="stage" id="stage">' +
@@ -267,6 +330,7 @@
       '<div class="bar" aria-hidden="true"><i id="heroBar"></i></div>' +
       '<p class="sr-only" id="hbLive" aria-live="polite" aria-atomic="true"></p>';
 
+    this.bgs = Array.prototype.slice.call(root.querySelectorAll('.hb-scene'));
     this.slides = Array.prototype.slice.call(root.querySelectorAll('.slide'));
     this.covers = Array.prototype.slice.call(root.querySelectorAll('.coverbtn'));
     this.fan = root.querySelector('.fan');
@@ -318,7 +382,12 @@
       b.classList.toggle('on', on);
       if (on) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
     });
-    if (this.count) this.count.textContent = pad2(i + 1) + ' / ' + pad2(n);
+    var hasWide = !!(item.backdrop && item.backdrop.src);
+    this.bgs.forEach(function (b, k) { b.classList.toggle('on', k === i); });
+    if (this.bgs[i] && !hasWide) washFromCover(this.bgs[i], coverOf(item));
+    if (this.count) {
+      this.count.innerHTML = '<b>' + pad2(i + 1) + '</b> / ' + pad2(n);
+    }
     this.root.setAttribute('aria-labelledby', 'hbTitle-' + i);
     if (this.capNum) this.capNum.textContent = pad2(i + 1);
     if (this.capWho) this.capWho.textContent = item.caption || '';

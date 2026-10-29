@@ -14,9 +14,12 @@
         quạt phải xếp lại (bìa vừa chọn về giữa).
      3. BÀN PHÍM: ← → chỉ đổi khi focus ở trong khối, không dời focus, đang gõ ở
         ô tìm kiếm thì không cướp phím.
-     4. “LƯU VÀO TỦ” vẫn chạy: aria-pressed + nhãn + localStorage.
+     4. NÚT “i”: thay nút lưu bằng link icon 44px sang trang thông tin truyện
+        (chữ nằm trong aria-label, không phải nút chữ).
      5. ẢNH: bìa đầu tải ưu tiên, các bìa sau để lazy ⇒ không tải 5 ảnh cùng lúc
         ngay lượt đầu; mọi ảnh bìa là ảnh trang trí (alt rỗng, tên nằm ở nhãn nút).
+     5. NỀN: mỗi truyện một lớp .hb-bg (bìa ngang mờ hoặc gradient lấy từ bìa)
+        + .veil nửa gradient; và hàng điều khiển ticks → số đếm → ‹ › ⏸ trên MỘT hàng.
      6. FALLBACK của component: 1 mục ⇒ không quạt/ticks/nút; 0 mục ⇒ ẩn cả
         section; thiếu thumbnail ⇒ lấy backgroundImage; destroy() gỡ sạch
         listener (mount lại không bị cộng dồn).
@@ -190,25 +193,56 @@ const ok = (cond, msg, extra) => { if (!cond) bad.push(msg + (extra ? ' → ' + 
   out.phimKhiDangGo = (($('#stage .slide.on h1') || {}).textContent || '').trim() === beforeTyping;
   ok(out.phimKhiDangGo, 'phím ← → trong ô nhập không được cướp để đổi slide');
 
-  /* ---------- 4. “LƯU VÀO TỦ” VẪN CHẠY ---------------------------------- */
-  const shelfBtn = $('#stage .slide.on [data-hb-act="0"]');
+  /* ---------- 4. NÚT “i” THÔNG TIN TRUYỆN (thay nút lưu) ----------------- */
+  const infoBtn = $('#stage .slide.on .btn-row a[aria-label="Thông tin truyện"]');
   const slug = (function () {
     const href = ($('#stage .slide.on h1 a') || {}).getAttribute ? $('#stage .slide.on h1 a').getAttribute('href') : '';
     return String(href || '').replace(/^\/truyen\//, '').replace(/\/$/, '');
   })();
-  out.truocKhiLuu = { coNut: !!shelfBtn, pressed: shelfBtn && shelfBtn.getAttribute('aria-pressed') };
-  if (shelfBtn) click(shelfBtn);
-  await wait(60);
-  out.sauKhiLuu = {
-    pressed: shelfBtn && shelfBtn.getAttribute('aria-pressed'),
-    nhan: shelfBtn && shelfBtn.textContent.trim(),
-    ariaNhan: shelfBtn && shelfBtn.getAttribute('aria-label'),
-    trongMay: (function () { try { return (win.localStorage.getItem('ssochuz-shelf') || '') + (win.localStorage.getItem('ssochuz-shelves') || ''); } catch (e) { return ''; } })()
+  out.nutInfo = {
+    co: !!infoBtn,
+    nhan: infoBtn && infoBtn.getAttribute('aria-label'),
+    href: infoBtn && infoBtn.getAttribute('href'),
+    coIcon: !!(infoBtn && infoBtn.querySelector('svg.i')),
+    chuTrongNut: infoBtn && infoBtn.textContent.trim(),
+    conNutLuu: !!$('#hero [aria-label="Lưu vào tủ"]')
   };
-  ok(out.truocKhiLuu.coNut, 'hero phải còn nút “Lưu vào tủ”');
-  ok(out.sauKhiLuu.pressed === 'true' && out.sauKhiLuu.nhan === 'Đã lưu', 'bấm Lưu phải đổi aria-pressed + nhãn', JSON.stringify(out.sauKhiLuu));
-  ok(out.sauKhiLuu.ariaNhan === 'Đã lưu', 'aria-label của nút lưu phải đổi theo trạng thái', out.sauKhiLuu.ariaNhan);
-  ok(out.sauKhiLuu.trongMay.indexOf(slug) >= 0, 'tủ truyện trong máy phải có slug vừa lưu', slug);
+  ok(out.nutInfo.co, 'hero phải có nút “i” thông tin truyện');
+  ok(out.nutInfo.nhan === 'Thông tin truyện', 'nút “i” phải có nhãn cho trình đọc màn hình', out.nutInfo.nhan);
+  ok(out.nutInfo.href === '/truyen/' + slug + '/', 'nút “i” phải dẫn về trang truyện', out.nutInfo.href);
+  ok(out.nutInfo.coIcon && !!$('#stage .slide.on .btn-row a[aria-label="Thông tin truyện"] .hb-cta-lbl'),
+    'nút “i” là icon tròn; chữ nằm trong .hb-cta-lbl (CSS ẩn) + aria-label cho trình đọc màn hình');
+  ok(!out.nutInfo.conNutLuu, 'nút “Lưu vào tủ” đã được thay bằng nút “i”');
+
+  /* ---------- 4b. NỀN: bìa ngang mờ / gradient lấy từ bìa ---------------- */
+  const bgs = $$('#hero .hb-bgs .hb-scene');
+  out.nen = {
+    soLop: bgs.length,
+    dangHien: bgs.filter(b => b.classList.contains('on')).length,
+    coVeil: bgs.every(b => !!b.querySelector('.veil')),
+    coWash: bgs.every(b => !!b.querySelector('.wash')),
+    anhNgang: bgs.filter(b => !!b.querySelector('img.pic')).length,
+    khongAnhNen: $$('#hero .hb-media').length
+  };
+  ok(out.nen.soLop === 5, 'mỗi truyện phải có một lớp nền riêng', out.nen.soLop);
+  ok(out.nen.dangHien === 1, 'chỉ đúng một lớp nền hiện tại một lúc', out.nen.dangHien);
+  ok(out.nen.coVeil && out.nen.coWash, 'lớp nền phải có .veil (nửa gradient) và .wash (màu bìa)');
+  ok(!out.nen.khongAnhNen, 'không được quay lại lớp ảnh nền full-bleed cũ');
+
+  /* ---------- 4c. ĐIỀU KHIỂN: một hàng, số đếm có phần “đang xem” -------- */
+  const foot = $('#hero .foot');
+  const kids = foot ? [...foot.children].map(n => n.className.split(' ')[0]) : [];
+  out.dieuKhien = {
+    thuTu: kids,
+    soDemHtml: ($('#hCount') || {}).innerHTML,
+    soNut: $$('#hero .nav .arrow').length,
+    dung1: (function () { try { return win.getComputedStyle(foot).flexWrap; } catch (e) { return ''; } })()
+  };
+  ok(out.dieuKhien.thuTu.join(',') === 'ticks,count,nav',
+    'hàng điều khiển phải theo thứ tự ticks → số đếm → ‹ › ⏸', out.dieuKhien.thuTu.join(','));
+  ok(out.dieuKhien.soNut === 3, 'phải có đúng 3 nút ‹ › ⏸', out.dieuKhien.soNut);
+  ok(/<b>01<\/b>/.test(out.dieuKhien.soDemHtml || ''),
+    'số đếm phải tách phần đang xem (<b>01</b> / 05) để in đậm như các số khác', out.dieuKhien.soDemHtml);
 
   /* ---------- 5. COMPONENT NHẬN PROPS: fallback ------------------------- */
   const CZ = win.CZ;

@@ -36,8 +36,10 @@
   function heroItem(n, i) {
     var pg = CZ.progress(n), tot = n.chapters || 0;
     var pct = tot && pg ? Math.min(100, Math.round(pg / tot * 100)) : 0;
-    var inShelf = CZ.inShelf(n);
     var img = CZ.coverSrc(n) || '';
+    /* bìa NGANG cho lớp nền: chỉ dùng khi registry có ảnh khác bìa dọc; thiếu thì
+       component tự lấy gradient từ chính bìa dọc (canvas) — xem cz-hero.js */
+    var wide = (n.slide && n.slide !== n.thumb) ? (CZ.coverSrc(n, n.slide) || '') : '';
     var badges = [{ label: CZ.statusLabel(n.statusCls || n.status), tone: n.statusCls || 'run', dot: true }];
     if (n.locked) badges.push({ label: 'Có mật mã', tone: 'lock', icon: 'lock' });
     if (n.is18) badges.push({ label: '18+', tone: 'bad' });
@@ -72,6 +74,7 @@
       description: n.syn || n.synFull || '',
       thumbnail: { src: img, alt: n.title },    /* bìa cho quạt — có alt để dự phòng */
       caption: n.author || '',                  /* dòng mono dưới bìa đang chọn */
+      backdrop: wide ? { src: wide } : null,     /* bìa ngang cho nền (nếu có) */
       badges: badges,
       facts: facts,
       meta: meta,
@@ -80,19 +83,12 @@
         label: 'đang đọc <b>chương ' + pg + '</b>' + (tot ? ' / ' + tot : '') + ' · ' + pct + '%'
       } : null,
       primaryCta: primary,
-      /* CTA phụ chỉ còn MỘT nút (Lưu vào tủ) dạng icon tròn 44px cho gọn; lối
-         vào trang truyện đã có ở tiêu đề + nút chính. */
+      /* CTA phụ là nút ICON TRÒN 44px “i” (thông tin truyện) thay cho nút lưu:
+         lưu vào tủ đã có ở trang truyện + thẻ truyện, còn ở đây người đọc cần
+         một lối tắt sang trang thông tin (tác giả, thể loại, mục lục). */
       secondaryCtas: [
-        { label: inShelf ? 'Đã lưu' : 'Lưu vào tủ', icon: 'shelf', variant: 'outline', pressed: inShelf,
-          title: 'Lưu vào tủ truyện (icon tủ sách)',
-          onClick: function (btn, item, api) {
-            var story = CZ.findLib(item.id);
-            if (!story) return;
-            var on = CZ.toggleShelf(story);
-            api.actionLabel(btn, on ? 'Đã lưu' : 'Lưu vào tủ', on);
-            if (CZ.pop) CZ.pop(btn);
-            if (CZ.toast) CZ.toast(on ? 'Đã thêm vào tủ truyện' : 'Đã bỏ khỏi tủ truyện');
-          } }
+        { label: 'Thông tin truyện', href: CZ.storyURL(n.slug), icon: 'info', variant: 'outline',
+          title: 'Thông tin truyện — tác giả, thể loại, danh sách chương' }
       ]
     };
   }
