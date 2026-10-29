@@ -65,8 +65,11 @@
       ? (n.locked
         /* truyện khoá mật mã: dẫn về trang truyện (có chốt nhập mật mã),
            không dẫn thẳng vào chương — mở chương là lộ nội dung */
-        ? { label: 'Nhập mật mã để đọc', href: CZ.storyURL(n.slug), icon: 'lock',
-            title: 'Truyện này có mật mã — vào trang truyện để nhập mật mã' }
+        /* nhãn ngắn "Mở khóa": mật mã là chuyện của trang truyện, nhồi cả câu
+           giải thích vào nút chỉ làm nút dài và nặng hơn hành động. Lời giải
+           thích đầy đủ nằm ở title (rê chuột) chứ không chiếm mặt nút. */
+        ? { label: 'Mở khóa', href: CZ.storyURL(n.slug), icon: 'lock',
+            title: 'Truyện có mật mã — mở trang truyện để nhập mật mã' }
         : { label: pg ? 'Đọc tiếp' : 'Đọc từ đầu', href: CZ.readURL(n.slug, pg || 1), icon: 'play',
             title: pg ? 'Mở đúng chỗ bạn đang đọc dở' : 'Bắt đầu từ chương đầu' })
       : { label: 'Sắp ra mắt', icon: 'clock', disabled: true };

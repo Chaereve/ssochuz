@@ -1052,3 +1052,24 @@ cao banner, không có CLS — mỗi tầng dịch trong chính ô của nó.
 `t_people`, `t_reader`, `t_flows`, `t_lock_ui`, `t_pwa` không lỗi JS ·
 `audit:a11y` 25 màn 0 lỗi axe · `check_src` khớp · `grep #sprog|#nprog|heroBar`
 = 0.
+
+## 28. Nhãn nút khoá về "Mở khóa" (30/10/2026)
+
+Yêu cầu: *"đổi chỗ nút nhập mật mã thành mở khóa thôi, ghi dài dòng quá"*.
+
+- Hero (`.btn-row` của slide khoá): `Nhập mật mã để đọc` → **`Mở khóa`**, vẫn là
+  nút chính + icon ổ khoá + dẫn về trang truyện (không dẫn thẳng vào chương).
+- Trang truyện (`#lockBtn`, cùng một hành động): `Mở khóa để đọc` → **`Mở khóa`**
+  để hai chỗ không nói hai kiểu.
+- Phần giải thích **không mất**: chuyển hết vào `title` của nút
+  ("Truyện có mật mã — mở trang truyện để nhập mật mã" / "Cần mật mã để đọc truyện
+  này"), nên rê chuột vẫn đọc được lý do, còn mặt nút thì gọn.
+- `tests/t_hero.js` canh thêm điều mới: nhãn phải chứa `Mở khóa` **và** không
+  được chứa lại câu dài (`Nhập mật mã để đọc`, `Mở khóa để đọc`) — lần sau ai
+  viết dài lại thì test báo ngay.
+
+`cz-home.js` / `cz-story.js`: `?v=…unlock1`.
+
+**Kiểm:** `t_hero` "Hero banner đạt hết" (`ctaMatMa: true`, `ctaMatMaDai: false`)
+· `t_home`, `t_mobile` (`loi: []`), `t_reader`, `t_flows` không lỗi JS ·
+`audit:a11y` 25 màn 0 lỗi axe · `check_src` khớp.

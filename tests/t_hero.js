@@ -91,7 +91,10 @@ const ok = (cond, msg, extra) => { if (!cond) bad.push(msg + (extra ? ' → ' + 
     chuongLapDonVi: $$('#hero .spec dd').some(d => /chương/i.test(d.textContent || '')),
     b18: $$('#hero .hb-b18').length,
     chipMatMa: /Có mật mã/.test(hero.innerHTML),
-    ctaMatMa: /Nhập mật mã để đọc/.test(hero.innerHTML),
+    /* nhãn nút khoá phải NGẮN (đúng chữ "Mở khóa"); câu giải thích dài chỉ được
+       nằm ở title, không chiếm mặt nút */
+    ctaMatMa: /Mở khóa/.test(hero.innerHTML),
+    ctaMatMaDai: /Nhập mật mã để đọc|Mở khóa để đọc/.test(hero.innerHTML),
     soOTreSlide3: $$('#stage .slide')[2].querySelectorAll('.spec .c').length
   };
   ok(out.keNhan.coHead && out.keNhan.badge.length > 0,
@@ -106,6 +109,7 @@ const ok = (cond, msg, extra) => { if (!cond) bad.push(msg + (extra ? ' → ' + 
   ok(out.keNhan.b18 >= 1, 'truyện 18+ phải có chip 18+ (.hb-b18)');
   ok(!out.keNhan.chipMatMa && out.keNhan.ctaMatMa,
     '“Có mật mã” phải nằm trong NHÃN NÚT, không phải chip riêng');
+  ok(!out.keNhan.ctaMatMaDai, 'nhãn nút khoá phải ngắn (“Mở khóa”), không phải một câu dài');
 
   /* bìa đang chọn ở tâm, 4 bìa còn lại xếp quanh theo khoảng cách 1..4 */
   const posOf = b => b.getAttribute('data-pos');

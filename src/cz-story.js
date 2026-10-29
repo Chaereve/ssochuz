@@ -320,7 +320,7 @@
   function readBtn(n, ch) {
     /* truyện khóa mật mã chưa mở: nút Đọc thành chốt dẫn tới hộp nhập mật mã */
     if (n.locked && !CHS.length) {
-      return '<button class="btn pri lg" id="lockBtn" type="button" title="Cần mật mã để đọc truyện này">' + ic('lock', 'i-s') + 'Mở khóa để đọc</button>';
+      return '<button class="btn pri lg" id="lockBtn" type="button" title="Cần mật mã để đọc truyện này">' + ic('lock', 'i-s') + 'Mở khóa</button>';
     }
     if (!n.canRead) return '<button class="btn pri lg off" disabled>' + ic('clock', 'i-s') + 'Chưa có chương — sắp ra mắt</button>';
     /* truyện 18+ chưa xác nhận: nút thành chốt chặn, không đi thẳng vào chương */

@@ -767,7 +767,7 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
      .spec  = <dl> lưới dt/dd: CHƯƠNG · TÁC GIẢ · [COUPLE] · CẬP NHẬT.
               Ô nào không có dữ liệu thì component KHÔNG dựng (không hiện “—”).
 
-   “Có mật mã” không còn là nhãn: nó nằm trong nhãn nút (“Nhập mật mã để đọc”)
+   “Có mật mã” không còn là nhãn: nó nằm trong nhãn nút (“Mở khóa”)
    ⇒ hành động nói thay trạng thái, hàng badge chỉ còn 1–2 mục. */
 .hero .head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .hero .hb-st { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;

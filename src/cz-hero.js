@@ -66,8 +66,8 @@
      “đây là tình trạng bộ truyện”. Nay tách làm hai tầng:
        · .head  = badge trạng thái (kiểu con dấu) + 18+ + nhãn phụ hiếm
        · .spec  = lưới dt/dd: CHƯƠNG · TÁC GIẢ · [COUPLE] · CẬP NHẬT
-     “Có mật mã” KHÔNG còn là chip: nó nằm trong nhãn nút (“Nhập mật mã để
-     đọc”) nên hành động nói thay trạng thái. */
+     “Có mật mã” KHÔNG còn là chip: nó nằm trong nhãn nút (“Mở khóa”) nên hành
+     động nói thay trạng thái — nhãn ngắn, phần giải thích để ở title. */
   var ST_TONES = { done: 1, run: 1, soon: 1 };
 
   function statusHTML(badges) {
