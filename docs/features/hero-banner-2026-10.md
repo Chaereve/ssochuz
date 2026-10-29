@@ -286,3 +286,34 @@ Mockup (chỉ đổi cột chữ, giữ nguyên quạt/nền/cỡ bìa): `docs/m
 nút lưu `aria-pressed`, live region, 5 bìa thật trong `assets/covers`).
 
 Trạng thái: **chờ chọn C1/C2/C3** rồi mới sửa `src/cz-hero.js` + `src/cz.css` §5.
+
+## 14. C2 “kệ nhãn” — bản đã chỉnh (2026-10-29)
+
+Người dùng chọn **C2** nhưng nêu 3 lỗi: badge trạng thái, vài thông tin dư, mobile chưa ổn.
+Bản chỉnh: `docs/mockups/hero/c2-refine.html` (badge S1/S2/S3 đổi được, khổ 1440/820/390,
+so sánh mobile cũ ↔ mới cạnh nhau).
+
+**Badge trạng thái** — bỏ cặp “● Đang cập nhật” đứng cùng hàng với nhãn mục; badge đứng
+**một dòng riêng**, ba kiểu để chọn:
+
+| | Kiểu | Dáng |
+| --- | --- | --- |
+| **S1** ⭐ | Con dấu | mono 10px, giãn chữ `.18em`, gạch đầu 3px, không nền/viền |
+| **S2** | Viên mảnh | pill bo tròn, viền theo màu trạng thái, nền 11% |
+| **S3** | Chấm + chữ | chấm 7px + chữ 12,5px, đứng riêng dòng |
+
+**Bỏ thông tin dư**
+
+| Thành phần | Xử lý |
+| --- | --- |
+| Nhãn “Nổi bật hôm nay” / “Đề xuất cho bạn” | bỏ (cả khu vực đã tên đó; nhãn dài ngắn theo truyện ⇒ mép trái so le) |
+| Ô COUPLE | chỉ hiện khi truyện có couple; ẩn hẳn ở mobile |
+| “42 chương” | còn `42`, đơn vị nằm ở nhãn `CHƯƠNG` |
+| Chip “Có mật mã” | chuyển vào nhãn nút “Nhập mật mã để đọc” |
+
+**Mobile 390** — badge + 18+ một hàng; h1 29px, `max-width:100%` (không cắt giữa từ);
+kệ 2 cột `12px / 18px`, `dt 9px` `dd 13px`; mô tả ẩn; nút 42px; hàng điều khiển một hàng
+(ticks trái `20/30px`, `‹ › ⏸` dồn phải bằng `margin-left:auto`).
+
+Kiểm bằng jsdom: 27/27. Trạng thái: **chờ chọn S1/S2/S3** rồi vào `src/cz-hero.js` +
+`src/cz.css` §5.
