@@ -1,16 +1,18 @@
 #!/usr/bin/env node
 /* ============================================================================
-   gen.mjs · mockup TĨNH nửa dưới trang chủ — PHƯƠNG ÁN 2 “TẠP CHÍ” (bản 2)
+   gen.mjs · mockup TĨNH nửa dưới trang chủ — bản 3 “dải bìa” (glvietsubz.net)
    ----------------------------------------------------------------------------
-   Dựng index.html từ data/registry.json + bìa thật trong assets/covers.
-   Cấu trúc:
-     Đọc tiếp        3 thẻ ngang (toàn chiều rộng)
-     Mới cập nhật    6 bìa, một hàng
-     ─ Thư viện ──────────────────────────────┬── cột phụ dính ──
-       tìm kiếm · lọc · lưới 4 cột · phân trang │ xếp hạng tuần
-                                                │ lịch ra chương
-                                                │ đáng xem
-                                                │ vừa hoàn thành
+   MỘT CỘT. Mỗi mục là một dải bìa, đầu mục giống nhau: tiêu đề · số lượng ·
+   “Xem thêm ›”, đường kẻ mảnh phía trên, bìa cùng một cỡ trên toàn trang.
+
+     Đọc tiếp        6 bìa · nhãn “Ch. 44/71” · thanh tiến độ trong bìa
+     Mới cập nhật    12 bìa · nhãn “Ch. N” / “Trọn bộ N”
+     Xếp hạng tuần   6 bìa · số thứ tự lớn ở góc bìa
+     Đáng xem        6 bìa · nhãn “★ 4.8”
+     Lịch ra chương  7 cột theo thứ, không hộp
+     Thư viện        thanh lọc + lưới cùng cỡ bìa + phân trang
+
+   Dữ liệu: 67 bộ thật (data/registry.json) + bìa thật (assets/covers/).
    Chạy: node docs/mockups/home-v2/gen.mjs
    ========================================================================== */
 import fs from 'node:fs';
@@ -65,9 +67,7 @@ const BOOKS = reg.lib.map((b) => ({
 }));
 const bySlug = (s) => BOOKS.find((b) => b.s === s) || null;
 
-/* Thứ tự mặc định của lưới = “Đề xuất”: danh sách editorChoice thật trong
-   registry (12 bộ) rồi mới tới những bộ cập nhật gần nhất. Nhờ vậy trang 1 của
-   lưới KHÔNG trùng 6 bìa “Mới cập nhật” ngay phía trên. */
+/* thứ tự mặc định của lưới = “Đề xuất”: editorChoice thật rồi tới mới cập nhật */
 const PICK = Array.isArray(reg.settings && reg.settings.editorChoice)
   ? reg.settings.editorChoice
   : Array.isArray(reg.editorChoice) ? reg.editorChoice : [];
@@ -76,7 +76,7 @@ const pickIdx = (b) => {
   return i < 0 ? 999 : i;
 };
 BOOKS.sort((a, b) =>
-  pickIdx(a) - pickIdx(b) || (pickIdx(a) === 999 && pickIdx(b) === 999 ? b.u.localeCompare(a.u) : 0)
+  pickIdx(a) - pickIdx(b) || (pickIdx(a) === 999 ? b.u.localeCompare(a.u) : 0)
 );
 
 const esc = (s) =>
@@ -88,20 +88,9 @@ const dmy = (iso) => {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
   return m ? m[3] + '/' + m[2] : '';
 };
-
-const ICON = {
-  chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
-  play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
-  search: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>',
-  caret: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
-  grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg>',
-  rows: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"><rect x="4" y="5" width="16" height="5"/><rect x="4" y="14" width="16" height="5"/></svg>'
-};
-
-/* ------------------------------- DỮ LIỆU -------------------------------- */
 const stCls = (b) => (b.st === 'Hoàn thành' ? 'done' : b.st === 'Sắp ra mắt' ? 'soon' : 'run');
 
-/* Một bộ chỉ xuất hiện ở MỘT khối phía trên lưới, để cả trang không lặp bìa. */
+/* một bộ chỉ đứng ở MỘT dải phía trên thư viện */
 const USED = new Set();
 const pick = (slug) => {
   const b = bySlug(slug);
@@ -110,11 +99,13 @@ const pick = (slug) => {
   return b;
 };
 
-/* Đọc tiếp: chương đang đọc suy ra từ số chương thật của bộ */
 const RESUME = [
   ['pls-love', 0.62],
   ['love-on-hire', 0.38],
-  ['yours-ever', 0.75]
+  ['yours-ever', 0.75],
+  ['third-person', 0.52],
+  ['hidden-heart', 0.44],
+  ['love-design', 0.3]
 ]
   .map(([s, p]) => {
     const b = pick(s);
@@ -124,49 +115,42 @@ const RESUME = [
   })
   .filter(Boolean);
 
-/* Mới cập nhật: bỏ “Sắp ra mắt” (chưa có chương), lấy 6 bộ cập nhật gần nhất */
 const RECENT = BOOKS.filter((b) => b.st !== 'Sắp ra mắt' && !USED.has(b.s))
   .slice()
   .sort((a, b) => b.u.localeCompare(a.u))
-  .slice(0, 6)
+  .slice(0, 12)
   .map((b) => { USED.add(b.s); return b; });
 
-/* Xếp hạng: số lượt là số MINH HOẠ cho phần trình bày (registry không có lượt đọc) */
-const RANK = [
-  ['lunar-secret', 12480, 'up', 3],
-  ['bake-love-feelings', 9240, 'up', 1],
-  ['hidden-heart', 7815, 'dn', 1],
-  ['the-fire', 6402, 'up', 2],
-  ['chain', 5190, 'eq', 0]
-]
-  .map(([s, week, tr, d]) => {
-    const b = pick(s);
-    return b ? { b, week, tr, d } : null;
-  })
-  .filter(Boolean);
+/* lấy đúng N bộ chưa dùng ở dải nào khác: ưu tiên danh sách gợi ý, thiếu thì
+   lấy tiếp theo thứ tự lưới — để mọi dải luôn đủ một hàng 6 bìa */
+function take(n, prefer) {
+  const out = [];
+  for (const slug of prefer) {
+    if (out.length >= n) break;
+    const b = pick(slug);
+    if (b) out.push(b);
+  }
+  for (const b of BOOKS) {
+    if (out.length >= n) break;
+    if (USED.has(b.s)) continue;
+    USED.add(b.s);
+    out.push(b);
+  }
+  return out;
+}
 
-/* Đáng xem: điểm sao minh hoạ, mỗi bộ một điểm */
-const STARS = new Map();
-const WORTH = [
-  ['enemies-with-benefits', 4.8],
-  ['my-only-sunshine', 4.6],
-  ['ghost-house', 4.4]
-]
-  .map(([s, star]) => {
-    const b = pick(s);
-    if (!b) return null;
-    STARS.set(s, star);
-    return b;
-  })
-  .filter(Boolean);
+/* lượt đọc là số minh hoạ (registry không có lượt) */
+const READS = [12480, 9240, 7815, 6402, 5190, 4310];
+const RANK = take(6, ['lunar-secret', 'bake-love-feelings', 'the-fire', 'chain', 'ghost-house'])
+  .map((b, i) => ({ b, week: READS[i] }));
 
-/* Vừa hoàn thành: thật — lọc status, sắp theo ngày cập nhật */
-const DONE = BOOKS.filter((b) => b.st === 'Hoàn thành' && !USED.has(b.s))
-  .slice()
-  .sort((a, b) => b.u.localeCompare(a.u))
-  .slice(0, 3);
+/* điểm sao minh hoạ */
+const STARS = [4.8, 4.6, 4.5, 4.4, 4.3, 4.2];
+const VOTES = [31, 24, 19, 17, 12, 9];
+const WORTH = take(6, ['enemies-with-benefits', 'my-only-sunshine', 'by-your-side', 'santy-nextdoor'])
+  .map((b, i) => ({ b, star: STARS[i], votes: VOTES[i] }));
 
-/* Lịch: đúng items trong registry.schedule; tuần minh hoạ 02/11/2026, “hôm nay” = thứ 4 */
+/* Lịch: đúng items trong registry.schedule, tuần minh hoạ 02–08/11/2026 */
 const WD = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 const MONDAY = new Date(2026, 10, 2);
 const TODAY = 2;
@@ -174,107 +158,100 @@ const dayOf = (i) => {
   const d = new Date(MONDAY.getFullYear(), MONDAY.getMonth(), MONDAY.getDate() + i);
   return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
 };
-/* “Thứ 2” … “Thứ 7”, “Chủ nhật”/“CN” → T2 … CN */
 const WD_MAP = {
   'thu 2': 'T2', 'thu 3': 'T3', 'thu 4': 'T4', 'thu 5': 'T5', 'thu 6': 'T6', 'thu 7': 'T7',
   'cn': 'CN', 'chu nhat': 'CN', 't2': 'T2', 't3': 'T3', 't4': 'T4', 't5': 'T5', 't6': 'T6',
   't7': 'T7', '2': 'T2', '3': 'T3', '4': 'T4', '5': 'T5', '6': 'T6', '7': 'T7'
 };
-const dayKey = (s) => {
-  const k = norm(s).replace(/[^a-z0-9 ]/g, '').trim();
-  return WD_MAP[k] || WD_MAP[k.replace(/^thu\s*/, 'thu ')] || 'T2';
-};
+const dayKey = (s) => WD_MAP[norm(s).replace(/[^a-z0-9 ]/g, '').trim()] || 'T2';
 const SCHED = ((reg.schedule && reg.schedule.items) || [])
   .reduce((acc, it, idx) => {
-    const days = [...new Set(String(it.days || '').split(/[,;·/]+/).map(dayKey))];
-    days.forEach((wd) => acc.push({ wd, idx, title: it.title || '', b: bySlug(it.slug) || null }));
+    [...new Set(String(it.days || '').split(/[,;·/]+/).map(dayKey))]
+      .forEach((wd) => acc.push({ wd, idx, title: it.title || '', b: bySlug(it.slug) || null }));
     return acc;
   }, [])
   .sort((a, b) => WD.indexOf(a.wd) - WD.indexOf(b.wd) || a.idx - b.idx);
 
+const ICON = {
+  chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
+  search: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>',
+  caret: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'
+};
+
 /* ------------------------------ THÀNH PHẦN ------------------------------- */
-function poster(b, p) {
+function card(b, o = {}) {
   return (
-    `<a class="poster" href="#" data-st="${esc(b.st)}" data-18="${b.e ? 1 : 0}" data-k="${esc(b.k)}">` +
+    `<a class="card" href="#"${o.lib ? ` data-st="${esc(b.st)}" data-18="${b.e ? 1 : 0}" data-k="${esc(b.k)}"` : ''}>` +
       `<div class="cv">` +
         `<img src="${esc(b.img)}" alt="${esc(b.t)}" loading="lazy">` +
         `<span class="scrim"></span>` +
-        `<span class="pill ${stCls(b)}"><i></i>${esc(p)}</span>` +
+        (o.pill ? `<span class="pill ${o.cls || stCls(b)}"><i></i>${esc(o.pill)}</span>` : '') +
         (b.e ? '<span class="badge18">18+</span>' : '') +
+        (o.rank ? `<span class="rankno${o.rank <= 2 ? ' top' : ''}">${o.rank}</span>` : '') +
+        (o.pct ? `<span class="pbar"><i style="width:${o.pct}%"></i></span>` : '') +
       `</div>` +
       `<h3>${esc(b.t)}</h3>` +
-      `<div class="mt">${esc(b.a || '—')}${b.u ? ' · ' + dmy(b.u) : ''}</div>` +
+      `<div class="sub">${esc(o.sub || b.a || '—')}</div>` +
     `</a>`
   );
 }
 
-function rcard(r) {
-  const b = r.b;
-  const pct = b.n ? Math.round((r.at / b.n) * 100) : 0;
-  return (
-    `<a class="rcard" href="#">` +
-      `<span class="cv"><img src="${esc(b.img)}" alt="" loading="lazy"></span>` +
-      `<div>` +
-        `<h3>${esc(b.t)}</h3>` +
-        `<div class="meta">Ch. <b>${r.at}</b> / ${b.n}</div>` +
-        `<span class="bar"><i style="width:${pct}%"></i></span>` +
-        `<div class="row">` +
-          `<span class="cta">Đọc tiếp ${ICON.play}</span>` +
-          `<span class="pct">${pct}%${r.left ? ` · còn ${r.left}` : ''}</span>` +
-        `</div>` +
-      `</div>` +
-    `</a>`
-  );
-}
+const th = (title, cnt, more) =>
+  `<div class="rhead"><h2>${title}</h2>` +
+    (cnt ? `<span class="cnt">${cnt}</span>` : '') +
+    `<a class="more" href="#">${more} ${ICON.chev}</a></div>`;
 
-function rankRows() {
-  return RANK.map((r, i) => {
-    const tr = r.tr === 'up' ? `<span class="up">▲${r.d}</span>`
-      : r.tr === 'dn' ? `<span class="dn">▼${r.d}</span>` : `<span>—</span>`;
-    return (
-      `<a class="rr" href="#">` +
-        `<span class="n">${i + 1}</span>` +
-        `<img src="${esc(r.b.img)}" alt="" loading="lazy">` +
-        `<span class="tt"><b>${esc(r.b.t)}</b>` +
-          `<span class="m">${vn(r.week)} lượt ${tr}</span></span>` +
-      `</a>`
-    );
+const resumeCards = () =>
+  RESUME.map((r) => {
+    const pct = r.b.n ? Math.round((r.at / r.b.n) * 100) : 0;
+    return card(r.b, {
+      pill: `Ch. ${r.at}/${r.b.n}`,
+      cls: 'read',
+      pct,
+      sub: r.left ? `Còn ${r.left} chương` : 'Chương cuối'
+    });
   }).join('');
-}
 
-function schedRows() {
-  return SCHED.map((it) => {
-    const i = WD.indexOf(it.wd);
-    const img = it.b && it.b.img;
+const recentCards = () =>
+  RECENT.map((b) =>
+    card(b, {
+      pill: b.st === 'Hoàn thành' ? `Trọn bộ ${b.n}` : `Ch. ${b.n}`,
+      sub: `${b.a || '—'} · ${dmy(b.u)}`
+    })
+  ).join('');
+
+const rankCards = () =>
+  RANK.map((r, i) =>
+    card(r.b, { rank: i + 1, sub: `${vn(r.week)} lượt tuần này` })
+  ).join('');
+
+const worthCards = () =>
+  WORTH.map((w) =>
+    card(w.b, {
+      pill: `★ ${w.star.toFixed(1)}`,
+      cls: 'star',
+      sub: `${w.votes} đánh giá`
+    })
+  ).join('');
+
+function weekStrip() {
+  return `<div class="week">` + WD.map((wd, i) => {
+    const rows = SCHED.filter((it) => it.wd === wd);
     return (
-      `<a class="sch${i === TODAY ? ' today' : ''}" href="#">` +
-        `<span class="d"><b>${it.wd}</b>${dayOf(i)}</span>` +
-        (img ? `<img src="${esc(img)}" alt="" loading="lazy">` : `<span></span>`) +
-        `<span class="tt"><b>${esc(it.title || '—')}</b>` +
-          `<span class="m">${it.b ? it.b.n + ' chương' : ''}</span></span>` +
-      `</a>`
+      `<div class="day${i === TODAY ? ' today' : ''}">` +
+        `<div class="wd">${wd}${i === TODAY ? '<em>· hôm nay</em>' : ''}</div>` +
+        `<div class="dt">${dayOf(i)}</div>` +
+        (rows.length
+          ? rows.map((it) => (
+              `<a class="it" href="#">` +
+                (it.b && it.b.img ? `<img src="${esc(it.b.img)}" alt="" loading="lazy">` : '') +
+                `<b>${esc(it.title || '—')}</b>` +
+              `</a>`
+            )).join('')
+          : '<div class="off">nghỉ</div>') +
+      `</div>`
     );
-  }).join('');
-}
-
-function worthRows() {
-  return WORTH.map((b) =>
-    `<a class="mini" href="#">` +
-      `<img src="${esc(b.img)}" alt="" loading="lazy">` +
-      `<span class="tt"><b>${esc(b.t)}</b><span class="m">${esc(b.a || '—')}</span></span>` +
-      `<span class="v">★ ${STARS.get(b.s).toFixed(1)}</span>` +
-    `</a>`
-  ).join('');
-}
-
-function doneRows() {
-  return DONE.map((b) =>
-    `<a class="mini" href="#">` +
-      `<img src="${esc(b.img)}" alt="" loading="lazy">` +
-      `<span class="tt"><b>${esc(b.t)}</b><span class="m">${esc(b.a || '—')}</span></span>` +
-      `<span class="v green">${b.n}/${b.n}</span>` +
-    `</a>`
-  ).join('');
+  }).join('') + `</div>`;
 }
 
 const PAGE_SIZE = 12;
@@ -290,31 +267,29 @@ function library() {
     ['18', '18+', cnt((b) => b.e)]
   ];
   return (
-    `<div class="libbar">` +
+    `<div class="filters">` +
       `<label class="srch">${ICON.search}` +
         `<input id="q" type="search" placeholder="Tìm truyện, tác giả…" aria-label="Tìm trong thư viện">` +
         `<kbd>⌘K</kbd></label>` +
       `<span class="dd"><b>Năm</b><span class="v">Tất cả</span>${ICON.caret}</span>` +
       `<span class="dd"><b>Sắp xếp</b><span class="v">Đề xuất</span>${ICON.caret}</span>` +
-      `<div class="vseg"><button class="on" aria-label="Xem lưới">${ICON.grid}</button>` +
-        `<button aria-label="Xem danh sách">${ICON.rows}</button></div>` +
     `</div>` +
-    `<div class="librow"><div class="chips">` +
+    `<div class="frow"><div class="chips">` +
       chips.map(([f, label, n], i) =>
         `<button class="chip${i === 0 ? ' on' : ''}" data-f="${f}">${label}<b>${n}</b></button>`
       ).join('') +
-    `</div><span class="libcount" id="libcount">1–${PAGE_SIZE} / ${BOOKS.length}</span></div>` +
-    `<div class="gridlib" id="grid">` +
-      BOOKS.map((b) =>
-        poster(b, b.st === 'Hoàn thành' ? `Trọn bộ ${b.n}` : `Ch. ${b.n}`)
-      ).join('') +
+    `</div><span class="count" id="libcount">1–${PAGE_SIZE} / ${BOOKS.length}</span></div>` +
+    `<div class="grid" id="grid">` +
+      BOOKS.map((b) => card(b, {
+        lib: true,
+        pill: b.st === 'Hoàn thành' ? `Trọn bộ ${b.n}` : `Ch. ${b.n}`,
+        sub: `${b.a || '—'} · ${dmy(b.u)}`
+      })).join('') +
     `</div>` +
-    `<div class="pager" id="pager">` +
+    `<div class="pager">` +
       `<button class="nav off">‹ Trước</button>` +
       `<span id="pnums">` +
-        Array.from({ length: PAGES }, (_, i) =>
-          `<button class="${i === 0 ? 'on' : ''}">${i + 1}</button>`
-        ).join('') +
+        Array.from({ length: PAGES }, (_, i) => `<button class="${i === 0 ? 'on' : ''}">${i + 1}</button>`).join('') +
       `</span>` +
       `<button class="nav">Sau ›</button>` +
     `</div>`
@@ -327,14 +302,15 @@ const HTML = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ssochuz · mockup phương án 2 (tạp chí) · nửa dưới trang chủ</title>
+<title>ssochuz · mockup nửa dưới trang chủ (dải bìa)</title>
 <link rel="stylesheet" href="mock2.css">
 </head>
 <body data-w="desktop">
 
 <div class="mkbar">
   <span class="ttl">ssochuz · nửa dưới trang chủ</span>
-  <span class="hint">phương án 2 “tạp chí” · bìa và tên thật (67 bộ) · <b id="fwv">khung</b></span>
+  <span>dải bìa · bìa và tên thật 67 bộ</span>
+  <span class="fwv" id="fwv">khung —</span>
   <div class="wsw">
     <button data-w="desktop" class="on">Desktop</button>
     <button data-w="tablet">Tablet</button>
@@ -354,43 +330,34 @@ const HTML = `<!doctype html>
 
   <main class="pg">
 
-    <section class="band">
-      <div class="shead"><h2>Đọc tiếp</h2><span class="cnt">${RESUME.length} bộ đang đọc dở</span>
-        <span class="rule"></span><a class="more" href="#">My Space ${ICON.chev}</a></div>
-      <div class="resumeRow">${RESUME.map(rcard).join('')}</div>
+    <section class="rail">
+      ${th('Đọc tiếp', `${RESUME.length} bộ đang đọc dở`, 'My Space')}
+      <div class="grid">${resumeCards()}</div>
     </section>
 
-    <section class="band">
-      <div class="shead"><h2>Mới cập nhật</h2><span class="cnt">6 bộ vừa lên chương</span>
-        <span class="rule"></span><a class="more" href="#">Xem tất cả ${ICON.chev}</a></div>
-      <div class="grid6">${RECENT.map((b) =>
-        poster(b, b.st === 'Hoàn thành' ? `Trọn bộ ${b.n}` : `Ch. ${b.n}`)).join('')}</div>
+    <section class="rail">
+      ${th('Mới cập nhật', `${RECENT.length} bộ vừa lên chương`, 'Xem thêm')}
+      <div class="grid">${recentCards()}</div>
     </section>
 
-    <section class="band">
-      <div class="zoneHead"><h2>Thư viện</h2><span class="cnt">67 bộ chọn lọc</span>
-        <span class="right">Cập nhật <b>hôm nay</b> · 4 bộ đang ra</span></div>
-      <div class="side">
-        <div class="pane">${library()}</div>
-        <div class="railCol"><aside class="rail">
-          <div class="rblk">
-            <div class="rhead"><h3>Xếp hạng tuần</h3><a class="more" href="#">Toàn bảng ›</a></div>
-            ${rankRows()}
-          </div>
-          <div class="rblk">
-            <div class="rhead"><h3>Lịch ra chương</h3><a class="more" href="#">Cả lịch ›</a></div>
-            ${schedRows()}
-          </div>
-          <div class="rblk">
-            <div class="rhead"><h3>Đáng xem</h3><a class="more" href="#">Xem cả ›</a></div>
-            ${worthRows()}
-          </div>
-          <div class="rblk">
-            <div class="rhead"><h3>Vừa hoàn thành</h3><a class="more" href="#">Trọn bộ ›</a></div>
-            ${doneRows()}
-          </div>
-        </aside></div>
-      </div>
+    <section class="rail">
+      ${th('Xếp hạng tuần', 'theo lượt đọc', 'Toàn bảng')}
+      <div class="grid">${rankCards()}</div>
+    </section>
+
+    <section class="rail">
+      ${th('Đáng xem', 'điểm từ người đọc', 'Xem thêm')}
+      <div class="grid">${worthCards()}</div>
+    </section>
+
+    <section class="rail">
+      ${th('Lịch ra chương', 'tuần này', 'Cả lịch')}
+      ${weekStrip()}
+    </section>
+
+    <section class="rail">
+      ${th('Thư viện', `${BOOKS.length} bộ chọn lọc`, 'Xem đầy đủ')}
+      ${library()}
     </section>
 
     <footer class="foot">
@@ -405,13 +372,17 @@ const HTML = `<!doctype html>
 <script>
 (function () {
   var PAGE = ${PAGE_SIZE};
-  var cards = Array.prototype.slice.call(document.querySelectorAll('#grid .poster'));
+  var cards = Array.prototype.slice.call(document.querySelectorAll('#grid .card'));
   var countEl = document.getElementById('libcount');
   var numsEl = document.getElementById('pnums');
-  var q = document.getElementById('q');
+  var qEl = document.getElementById('q');
   var prev = document.querySelector('.pager .nav');
+  var next = document.querySelectorAll('.pager .nav')[1];
   var state = { f: 'all', q: '', page: 1 };
 
+  function plain(s) {
+    return s.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase();
+  }
   function match(p) {
     if (state.f === 'all') return true;
     if (state.f === '18') return p.dataset['18'] === '1';
@@ -431,19 +402,21 @@ const HTML = `<!doctype html>
     if (state.page > pages) state.page = 1;
     var from = (state.page - 1) * PAGE;
     var visible = list.slice(from, from + PAGE);
-    var set = visible.indexOf ? visible : Array.prototype.slice.call(visible);
-    cards.forEach(function (p) { p.style.display = set.indexOf(p) >= 0 ? 'block' : 'none'; });
-    countEl.textContent = (list.length ? from + 1 : 0) + '–' + (from + visible.length) +
-      ' / ' + list.length;
-    numsEl.innerHTML = '';
-    for (var i = 1; i <= pages; i++) {
-      var b = document.createElement('button');
-      b.textContent = i;
-      if (i === state.page) b.className = 'on';
-      b.addEventListener('click', pageTo.bind(null, i));
-      numsEl.appendChild(b);
+    cards.forEach(function (p) { p.style.display = visible.indexOf(p) >= 0 ? 'block' : 'none'; });
+    if (countEl) countEl.textContent = (list.length ? from + 1 : 0) + '–' +
+      (from + visible.length) + ' / ' + list.length;
+    if (numsEl) {
+      numsEl.innerHTML = '';
+      for (var i = 1; i <= pages; i++) {
+        var b = document.createElement('button');
+        b.textContent = i;
+        if (i === state.page) b.className = 'on';
+        b.addEventListener('click', pageTo.bind(null, i));
+        numsEl.appendChild(b);
+      }
     }
-    prev.classList.toggle('off', state.page === 1);
+    if (prev) prev.classList.toggle('off', state.page === 1);
+    if (next) next.classList.toggle('off', state.page === pages);
   }
   function pageTo(n) { state.page = n; paint(); }
 
@@ -465,24 +438,17 @@ const HTML = `<!doctype html>
     }
   });
 
-  function plain(s) {
-    return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase();
-  }
-  if (q) q.addEventListener('input', function () {
-    state.q = plain(q.value.trim());
+  if (qEl) qEl.addEventListener('input', function () {
+    state.q = plain(qEl.value.trim());
     state.page = 1;
     paint();
   });
-  if (prev) prev.addEventListener('click', function () {
-    if (state.page > 1) pageTo(state.page - 1);
-  });
-  document.querySelectorAll('.pager .nav').forEach(function (b, i) {
-    if (i === 1) b.addEventListener('click', function () {
-      var pages = Math.max(1, Math.ceil(selected().length / PAGE));
-      if (state.page < pages) pageTo(state.page + 1);
-    });
+  if (prev) prev.addEventListener('click', function () { if (state.page > 1) pageTo(state.page - 1); });
+  if (next) next.addEventListener('click', function () {
+    if (state.page < Math.ceil(selected().length / PAGE)) pageTo(state.page + 1);
   });
 
+  /* bề rộng khung thật, để biết đang xem ở cỡ nào */
   var frame = document.querySelector('.frame');
   var fwv = document.getElementById('fwv');
   function showW() {
@@ -502,6 +468,7 @@ const HTML = `<!doctype html>
 `;
 
 fs.writeFileSync(path.join(HERE, 'index.html'), HTML);
-console.log('đã ghi index.html ·', Math.round(HTML.length / 1024), 'kB ·',
-  BOOKS.length, 'bộ · bìa thiếu:', BOOKS.filter((b) => !b.img).length,
-  '· lịch:', SCHED.length, '· đọc tiếp:', RESUME.map((r) => r.b.s + ' ' + r.at + '/' + r.b.n).join(', '));
+console.log('đã ghi index.html ·', Math.round(HTML.length / 1024), 'kB · bìa thiếu:',
+  BOOKS.filter((b) => !b.img).length, '· đọc tiếp', RESUME.length,
+  '· mới', RECENT.length, '· hạng', RANK.length, '· đáng xem', WORTH.length,
+  '· lịch', SCHED.length);
