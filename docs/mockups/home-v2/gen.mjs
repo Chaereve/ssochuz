@@ -138,14 +138,14 @@ function take(n, prefer) {
 }
 
 /* lượt đọc / hạng / điểm sao: số minh hoạ cho phần trình bày */
-const READS = [12480, 9240, 7815, 6402, 5190];
-const DELTA = [[3, 'up'], [1, 'up'], [1, 'dn'], [2, 'up'], [0, 'eq']];
-const RANK = take(5, ['lunar-secret', 'bake-love-feelings', 'the-fire', 'chain'])
+const READS = [12480, 9240, 7815, 6402, 5190, 4480];
+const DELTA = [[3, 'up'], [1, 'up'], [1, 'dn'], [2, 'up'], [0, 'eq'], [4, 'up']];
+const RANK = take(6, ['lunar-secret', 'bake-love-feelings', 'the-fire', 'chain'])
   .map((b, i) => ({ b, week: READS[i], d: DELTA[i][0], tr: DELTA[i][1] }));
 
-const STARS = [4.8, 4.6, 4.5, 4.4, 4.3];
-const VOTES = [31, 24, 19, 17, 12];
-const WORTH = take(5, ['enemies-with-benefits', 'my-only-sunshine', 'by-your-side'])
+const STARS = [4.8, 4.6, 4.5, 4.4, 4.3, 4.2];
+const VOTES = [31, 24, 19, 17, 12, 9];
+const WORTH = take(6, ['enemies-with-benefits', 'my-only-sunshine', 'by-your-side'])
   .map((b, i) => ({ b, star: STARS[i], votes: VOTES[i] }));
 
 const PAGE_SIZE = 18;
@@ -169,12 +169,14 @@ function card(b, o = {}) {
         `<img src="${esc(b.img)}" alt="${esc(b.t)}" loading="lazy">` +
         `<span class="scrim"></span>` +
         (o.pill ? `<span class="pill ${o.cls || stCls(b)}"><i></i>${esc(o.pill)}</span>` : '') +
+        (o.num ? `<span class="rankn${o.num === 1 ? ' one' : ''}">${o.num}</span>` : '') +
+        (o.sc ? `<span class="sc">★ ${o.sc}</span>` : '') +
         (b.e ? '<span class="badge18">18+</span>' : '') +
         (o.pct ? `<span class="pbar"><i style="width:${o.pct}%"></i></span>` : '') +
         (o.lib ? `<span class="go">Đọc ngay ›</span>` : '') +
       `</div>` +
       `<h3>${esc(b.t)}</h3>` +
-      `<div class="sub">${esc(o.sub || b.a || '—')}</div>` +
+      `<div class="sub">${o.subHtml || esc(o.sub || b.a || '—')}</div>` +
     `</a>`
   );
 }
@@ -215,30 +217,25 @@ const recentCards = () =>
     })
   ).join('');
 
-/* hai cột: cùng cấu trúc hàng, chỉ khác cột số bên phải */
-function prow(i, b, meta, vhtml) {
-  return (
-    `<li><a class="prow" href="#">` +
-      `<span class="n">${i + 1}</span>` +
-      `<img src="${esc(b.img)}" alt="" loading="lazy">` +
-      `<span class="tt"><b>${esc(b.t)}</b><span class="m">${esc(meta)}</span></span>` +
-      vhtml +
-    `</a></li>`
-  );
-}
-
-const rankList = () =>
+/* hai dải bìa: số hạng đè trên bìa, ▲▼ nằm cùng dòng với lượt đọc */
+const rankCards = () =>
   RANK.map((r, i) => {
-    const v = r.tr === 'up' ? `<span class="v up">▲<b>${r.d}</b></span>`
-      : r.tr === 'dn' ? `<span class="v dn">▼<b>${r.d}</b></span>`
-      : '<span class="v eq">—</span>';
-    return prow(i, r.b, `${vn(r.week)} lượt tuần`, v);
+    const v = r.tr === 'up' ? `<span class="dv up">▲${r.d}</span>`
+      : r.tr === 'dn' ? `<span class="dv dn">▼${r.d}</span>`
+      : '<span class="dv eq">—</span>';
+    return card(r.b, {
+      num: i + 1,
+      pill: r.b.st === 'Hoàn thành' ? `Trọn bộ ${r.b.n}` : `Ch. ${r.b.n}`,
+      subHtml: `${vn(r.week)} lượt tuần ${v}`
+    });
   }).join('');
 
-const worthList = () =>
-  WORTH.map((w, i) =>
-    prow(i, w.b, `${w.votes} đánh giá`,
-      `<span class="v star">★<b>${w.star.toFixed(1)}</b></span>`)
+const worthCards = () =>
+  WORTH.map((w) =>
+    card(w.b, {
+      sc: w.star.toFixed(1),
+      sub: `${w.votes} đánh giá · ${w.b.k || 'Truyện tranh'}`
+    })
   ).join('');
 
 function library() {
@@ -292,13 +289,13 @@ const HTML = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ssochuz · mockup nửa dưới trang chủ (dải bìa cuộn ngang)</title>
-<link rel="stylesheet" href="mock2.css">
+<link rel="stylesheet" href="mock2.css?v=b6">
 </head>
 <body data-w="desktop">
 
 <div class="mkbar">
   <span class="ttl">ssochuz · nửa dưới trang chủ</span>
-  <span>dải bìa cuộn ngang · bìa và tên thật 67 bộ</span>
+  <span>bản 6 · dải bìa kiểu glvietsubz · bìa và tên thật 67 bộ</span>
   <span class="fwv" id="fwv">khung —</span>
   <a href="variants.html" style="color:var(--mut);text-decoration:underline;text-underline-offset:3px">biến thể A/B</a>
   <div class="wsw">
@@ -331,18 +328,13 @@ const HTML = `<!doctype html>
     </section>
 
     <section class="rail">
-      <div class="twoside">
-        <div class="panel">
-          <div class="phead"><h3>Xếp hạng tuần</h3><span class="cnt">theo lượt đọc</span>
-            <a class="more" href="#">Toàn bảng ›</a></div>
-          <ol class="plist">${rankList()}</ol>
-        </div>
-        <div class="panel">
-          <div class="phead"><h3>Đáng xem</h3><span class="cnt">điểm từ người đọc</span>
-            <a class="more" href="#">Xem thêm ›</a></div>
-          <ol class="plist">${worthList()}</ol>
-        </div>
-      </div>
+      ${railHead('Xếp hạng tuần', 'theo lượt đọc', 'Toàn bảng', false)}
+      <div class="track six" id="rankTrack">${rankCards()}</div>
+    </section>
+
+    <section class="rail">
+      ${railHead('Đáng xem', 'điểm từ người đọc', 'Xem thêm', false)}
+      <div class="track six" id="worthTrack">${worthCards()}</div>
     </section>
 
     <section class="rail">
@@ -527,12 +519,15 @@ const HTML = `<!doctype html>
 fs.writeFileSync(path.join(HERE, 'index.html'), HTML);
 
 /* ------------------------------ TRANG BIẾN THỂ --------------------------- */
-const vRows = () => RANK.slice(0, 3).map((r, i) => {
-  const v = r.tr === 'up' ? `<span class="v up">▲<b>${r.d}</b></span>`
-    : r.tr === 'dn' ? `<span class="v dn">▼<b>${r.d}</b></span>`
-    : '<span class="v eq">—</span>';
-  return prow(i, r.b, `${vn(r.week)} lượt tuần`, v);
-}).join('');
+const vStrip = (o = {}) =>
+  RANK.slice(0, 3).map((r, i) => {
+    const arrow = r.tr === 'dn' ? '▼' : '▲';
+    const dv = `<span class="dv ${r.tr}">${arrow}${r.d}</span>`;
+    const sub = o.numFirst
+      ? `<span class="dv ${r.tr}">${r.d}${arrow}</span> ${vn(r.week)} lượt`
+      : `${vn(r.week)} lượt ${dv}`;
+    return card(r.b, { num: i + 1, subHtml: sub, sc: o.sc ? '4.8' : null });
+  }).join('');
 
 const vToolbar = (cls) => library().split('<div class="frow">')[0]
   .replace('<div class="libtop filters">', `<div class="libtop ${cls}">`)
@@ -544,7 +539,7 @@ const VARIANTS = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ssochuz · biến thể cho 4 chỗ vừa sửa</title>
-<link rel="stylesheet" href="mock2.css">
+<link rel="stylesheet" href="mock2.css?v=b6">
 <style>
   body { background: #0d0b09; }
   .wrap { max-width: 1000px; margin: 0 auto; padding: 26px 22px 60px; }
@@ -560,15 +555,12 @@ const VARIANTS = `<!doctype html>
   .plist { margin: 0; padding: 0; list-style: none; }
   @media (max-width: 720px) { .pair { grid-template-columns: 1fr; } }
 
-  /* ---- B1: số trong ô vuông mờ ---- */
-  .b1 .prow .n { width: 26px; height: 26px; display: grid; place-items: center;
-    border-radius: 7px; background: rgba(255,240,220,.07); font-size: 14px;
-    color: var(--txt); text-align: center; }
-  .b1 .prow:nth-child(1) .n { background: var(--acc-soft); color: var(--acc); font-size: 15px; }
-  .b1 .prow:nth-child(2) .n { color: #e6bcc7; }
+  /* ---- B1: số nhỏ, nằm góc trên bìa ---- */
+  .b1 .rankn { top: 7px; bottom: auto; left: 8px; font-size: 13px; font-weight: 700;
+    color: var(--txt); text-shadow: 0 1px 6px rgba(0,0,0,.8); }
+  .b1 .rankn.one { color: var(--acc); }
   /* ---- B2: số đứng trước, mũi tên sau ---- */
-  .b2 .prow .v { flex-direction: row-reverse; justify-content: flex-start; }
-  .b2 .prow .v b { font-size: 13px; }
+  .b2 .dv { margin-right: 4px; }
   /* ---- B3: dropdown không viền ---- */
   .b3 .dd { border-color: transparent; background: none; padding: 0 6px; gap: 5px; }
   .b3 .dd:hover { background: var(--surf2); border-color: transparent; }
@@ -579,6 +571,7 @@ const VARIANTS = `<!doctype html>
     font-weight: 750; box-shadow: 0 10px 24px -12px rgba(0,0,0,.8); }
   .b4 .cv::after { background: linear-gradient(180deg, rgba(10,7,5,.1), rgba(10,7,5,.62)); }
   .pair .card { max-width: 170px; }
+  .track.mini { --n: 3; --g: 10px; overflow: visible; padding: 0; margin: 0; cursor: default; }
 </style>
 </head>
 <body>
@@ -596,16 +589,16 @@ const VARIANTS = `<!doctype html>
   <section class="vsec">
     <h2>1 · Vị trí truyện (Xếp hạng / Đáng xem)</h2>
     <div class="pair">
-      <div class="box"><span class="tag">A · chữ số lớn</span><ol class="plist">${vRows()}</ol></div>
-      <div class="box b1"><span class="tag">B · số trong ô mờ</span><ol class="plist">${vRows()}</ol></div>
+      <div class="box"><span class="tag">A · số lớn trên bìa</span><div class="track mini">${vStrip()}</div></div>
+      <div class="box b1"><span class="tag">B · số nhỏ góc trên</span><div class="track mini">${vStrip()}</div></div>
     </div>
   </section>
 
   <section class="vsec">
     <h2>2 · Số tăng/giảm và số sao</h2>
     <div class="pair">
-      <div class="box"><span class="tag">A · ▲3 (dấu trước)</span><ol class="plist">${vRows()}</ol></div>
-      <div class="box b2"><span class="tag">B · 3▲ (số trước)</span><ol class="plist">${vRows()}</ol></div>
+      <div class="box"><span class="tag">A · ▲3 (dấu trước)</span><div class="track mini">${vStrip()}</div></div>
+      <div class="box b2"><span class="tag">B · 3▲ (số trước)</span><div class="track mini">${vStrip({ numFirst: 1 })}</div></div>
     </div>
   </section>
 

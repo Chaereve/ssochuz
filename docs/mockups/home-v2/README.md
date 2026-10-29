@@ -38,17 +38,22 @@ Lịch ra chương **tạm gác** (theo yêu cầu) — không có trong bản n
   nền son nổi lên giữa bìa; tên truyện đổi màu son.
 - **Lưới thư viện**: 3 hàng × 6 bìa mỗi trang (18 bộ), phân trang kèm “Trang 1 / 4”.
 
-## Làm lại bốn chỗ (bản mới nhất)
+## Bản 6 · dải bìa kiểu glvietsubz
 
-| Chỗ | Trước | Bây giờ |
-|---|---|---|
-| Vị trí truyện | huy hiệu tròn 38px, viền + quầng | **chữ số serif** 20px (hạng 1: 24px son, 2: 22px hồng phấn, 3: 21px), không khung — chỉ chữ |
-| ▲▼ ★ | viên nền màu | **chữ màu** canh phải, số 12,5px đậm, dấu 11px; xanh / đỏ / vàng |
-| Thanh lọc | ô 42px bo 12 + quầng | đúng cỡ của web thật: ô tìm **38px bo 9**, dropdown 38px có nhãn mờ, chip 30px, thêm **nút lưới/danh sách** như trang thật |
-| Rê chuột lên bìa | ảnh tối bằng filter + nút son | lớp **gradient tối** phủ bìa, nút **viền trắng mảnh** nền tối mờ, không phóng ảnh |
+Bỏ hẳn khối hai cột (Xếp hạng + Đáng xem nằm cạnh nhau) — **Đáng xem giờ là một mục riêng**,
+cùng một ngôn ngữ với các mục khác: đầu mục = tên + “Xem thêm ›”, dưới là **dải 6 bìa**.
 
-**Trang biến thể:** `variants.html` — bốn chỗ, mỗi chỗ hai kiểu (A là kiểu đang dùng, B là kiểu khác)
-đặt cạnh nhau để chọn.
+| Mục | Cách làm |
+|---|---|
+| Đọc tiếp | dải bìa cuộn ngang, 10 bộ, nhãn “Ch. x/y” + thanh tiến độ mảnh |
+| Mới cập nhật | dải 18 bìa, một nhãn trạng thái mỗi bìa, dòng dưới = tên gốc · ngày |
+| Xếp hạng tuần | dải 6 bìa, **số hạng serif 34px đè góc dưới-trái bìa** (hạng 1 màu son), dưới: `12.480 lượt tuần ▲3` |
+| Đáng xem | dải 6 bìa, **nhãn ★ 4.8 trên bìa**, dưới: `31 đánh giá · Truyện tranh` |
+| Thư viện | ô tìm 38px bo 9 · dropdown có nhãn mờ · chip 30px · nút lưới/danh sách · lưới 6 cột |
+
+Không còn đường kẻ giữa các mục (chỉ còn khoảng thở 44px), không khung lồng khung.
+
+**Trang biến thể:** `variants.html` — bốn chỗ, mỗi chỗ A/B: số hạng, ▲▼, thanh lọc, nút khi rê chuột.
 
 ## Dữ liệu
 
