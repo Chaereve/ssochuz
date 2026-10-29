@@ -270,30 +270,31 @@
           : '<span class="noimg" aria-hidden="true"></span>') +
         '</button>';
     }).join('');
-    /* Nhãn “01 · tác giả” nằm NGOÀI các <button> (nút có overflow:hidden) và
-       luôn ở đúng tâm vì bìa đang chọn luôn ở data-pos="0". */
-    return btns + '<span class="fancap" aria-hidden="true"><b></b><i class="dot"></i><span class="who"></span></span>';
+    /* Thanh điều khiển gộp nằm ngoài các <button> bìa (nút có overflow:hidden)
+       và luôn ở tâm quạt. */
+    return btns + fanBarHTML();
   }
 
-  function ticksHTML(items, index) {
-    return items.map(function (it, k) {
-      return '<button type="button" data-hb-go="' + k + '" class="' + (k === index ? 'on' : '') + '"' +
-        (k === index ? ' aria-current="true"' : '') +
-        ' aria-label="Xem: ' + esc(it.title || ('mục ' + (k + 1))) + '"></button>';
-    }).join('');
-  }
+  /* ---------- THANH ĐIỀU KHIỂN GỘP (dưới quạt) ------------------------------
+     Bản trước có BA thứ đứng cùng một chỗ: 5 vạch ticks + “02 / 05” + cụm ‹ › ⏸
+     ở cột chữ, rồi thêm dòng “02 · tác giả” dưới bìa — ticks trùng với chính quạt
+     (bấm bìa là chọn được), số đếm trùng với nhãn dưới bìa. Nay gộp làm MỘT viên
+     duy nhất nằm ngay dưới quạt, đúng chỗ mắt đang nhìn:
 
-  function controlsHTML(items, index) {
-    return '<div class="foot">' +
-      '<div class="ticks" id="hTicks" role="group" aria-label="' + PICK_LABEL + '">' +
-        ticksHTML(items, index) +
-      '</div>' +
+         ‹   02 / 05 · KRATAI DUEAN   ›    ⏸
+
+     Quạt vẫn là cách chọn chính (bấm bìa), ‹ › để lướt, số đếm cho biết đang ở
+     đâu, ⏸ để dừng tự chuyển. Không còn vạch ticks nào để đếm trùng. */
+  function fanBarHTML() {
+    return '<div class="fanbar" role="group" aria-label="' + PICK_LABEL + '">' +
+      '<button class="arrow" id="hPrev" type="button" data-hb-prev aria-label="Xem mục trước">' +
+        ic('left', 'i-s') + '</button>' +
       '<span class="count" id="hCount" aria-hidden="true"></span>' +
-      '<div class="nav">' +
-        '<button class="arrow" id="hPrev" type="button" data-hb-prev aria-label="Xem mục trước">' + ic('left', 'i-s') + '</button>' +
-        '<button class="arrow" id="hNext" type="button" data-hb-next aria-label="Xem mục tiếp theo">' + ic('right', 'i-s') + '</button>' +
-        '<button class="arrow play" id="hPlay" type="button" data-hb-play aria-label="Tạm dừng tự chuyển truyện"></button>' +
-      '</div>' +
+      '<i class="fanbar-dot" aria-hidden="true"></i>' +
+      '<span class="who" id="hWho" aria-hidden="true"></span>' +
+      '<button class="arrow" id="hNext" type="button" data-hb-next aria-label="Xem mục tiếp theo">' +
+        ic('right', 'i-s') + '</button>' +
+      '<button class="arrow play" id="hPlay" type="button" data-hb-play aria-label="Tạm dừng tự chuyển truyện"></button>' +
     '</div>';
   }
 
@@ -339,7 +340,6 @@
           '<div class="stage" id="stage">' +
             this.items.map(function (it, i) { return slideHTML(it, i, self.total); }).join('') +
           '</div>' +
-          controlsHTML(this.items, this.index) +
         '</div>' +
         '<div class="fan" id="hFan">' + fanHTML(this.items, this.index) + '</div>' +
       '</div>' +
@@ -350,10 +350,8 @@
     this.slides = Array.prototype.slice.call(root.querySelectorAll('.slide'));
     this.covers = Array.prototype.slice.call(root.querySelectorAll('.coverbtn'));
     this.fan = root.querySelector('.fan');
-    this.fanCap = root.querySelector('.fancap');
-    this.capNum = root.querySelector('.fancap b');
-    this.capWho = root.querySelector('.fancap .who');
-    this.ticks = Array.prototype.slice.call(root.querySelectorAll('.ticks button'));
+    this.barEl = root.querySelector('.fanbar');
+    this.who = root.querySelector('.fanbar .who');
     this.count = root.querySelector('.count');
     this.live = root.querySelector('#hbLive');
     this.playBtn = root.querySelector('[data-hb-play]');
@@ -362,15 +360,13 @@
     var many = this.total > 1;
     if (!many) {
       this.fan.hidden = true;
-      root.querySelector('.ticks').hidden = true;
       root.querySelector('[data-hb-prev]').hidden = true;
       root.querySelector('[data-hb-next]').hidden = true;
-      this.count.hidden = true;
     }
-    /* `showThumbnails: false` / `showDots: false` giữ nguyên tên cũ nhưng nay
-       tắt quạt / ticks — hai thứ đóng cùng vai trò “chọn mục”. */
+    /* `showThumbnails: false` / `showDots: false` giữ nguyên tên cũ: tắt quạt /
+       tắt thanh điều khiển — hai thứ đóng cùng vai trò “chọn mục”. */
     if (this.props.showThumbnails === false) this.fan.hidden = true;
-    if (this.props.showDots === false) root.querySelector('.ticks').hidden = true;
+    if (this.props.showDots === false && this.barEl) this.barEl.hidden = true;
     /* không có gì để tạm dừng khi: chưa bật autoplay, chỉ 1 mục, hoặc máy đang
        bật “giảm chuyển động” (khi đó component cố ý KHÔNG tự chuyển truyện) */
     if (!this.autoPlay || !many || CZ.reduce) this.playBtn.hidden = true;
@@ -393,11 +389,6 @@
       b.classList.toggle('on', on);
       if (on) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
     });
-    this.ticks.forEach(function (b, k) {
-      var on = k === i;
-      b.classList.toggle('on', on);
-      if (on) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
-    });
     var hasWide = !!(item.backdrop && item.backdrop.src);
     this.bgs.forEach(function (b, k) { b.classList.toggle('on', k === i); });
     if (this.bgs[i] && !hasWide) washFromCover(this.bgs[i], coverOf(item));
@@ -405,9 +396,9 @@
       this.count.innerHTML = '<b>' + pad2(i + 1) + '</b> / ' + pad2(n);
     }
     this.root.setAttribute('aria-labelledby', 'hbTitle-' + i);
-    if (this.capNum) this.capNum.textContent = pad2(i + 1);
-    if (this.capWho) this.capWho.textContent = item.caption || '';
-    if (this.fanCap) this.fanCap.hidden = !item.caption;
+    if (this.who) this.who.textContent = item.caption || '';
+    /* không có tác giả thì bỏ luôn dấu chấm + khoảng trống, thanh gọn lại */
+    if (this.barEl) this.barEl.classList.toggle('no-who', !item.caption);
     if (announce && this.live) {
       this.live.textContent = 'Mục ' + (i + 1) + ' / ' + n + ': ' + (item.title || '');
     }

@@ -213,7 +213,7 @@ body.reading #sprog { display: none !important; }
         phần tử là thêm việc cho máy yếu.
    KHÔNG dùng View Transitions: phải chụp lại toàn trang rồi blend — trễ rõ trên
    điện thoại và trong trang đọc (xem ghi chú themeToggle trong src/cz-app.js). */
-body, .hdr, .hero, .hero .foot, .facts, .ftr, .fbox, .sechead, .authcard {
+body, .hdr, .hero, .facts, .ftr, .fbox, .sechead, .authcard {
   transition: background-color var(--t-theme) var(--ease-out),
               border-color var(--t-theme) var(--ease-out);
 }
@@ -672,15 +672,15 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   filter: blur(34px) saturate(1.15) brightness(.74); transform: scale(1.04); }
 /* BÌA DỌC phóng lớn, mờ đục: nền có hình khối của chính bộ truyện thay vì một
    tảng gradient phẳng. Cùng URL với bìa trong quạt ⇒ không tải thêm byte nào. */
-.hero .hb-scene .ghost { position: absolute; top: 50%; right: 2%;
-  height: 136%; width: auto; transform: translateY(-50%);
-  opacity: .6; filter: blur(46px) saturate(1.3) brightness(.9);
-  -webkit-mask-image: radial-gradient(44% 52% at 52% 50%, #000 0%, rgba(0, 0, 0, .55) 46%, transparent 76%);
-  mask-image: radial-gradient(44% 52% at 52% 50%, #000 0%, rgba(0, 0, 0, .55) 46%, transparent 76%); }
+.hero .hb-scene .ghost { position: absolute; top: 50%; right: 1%;
+  height: 152%; width: auto; transform: translateY(-50%);
+  opacity: .82; filter: blur(26px) saturate(1.35) brightness(1.02);
+  -webkit-mask-image: radial-gradient(48% 56% at 52% 50%, #000 0%, rgba(0, 0, 0, .7) 52%, transparent 82%);
+  mask-image: radial-gradient(48% 56% at 52% 50%, #000 0%, rgba(0, 0, 0, .7) 52%, transparent 82%); }
 /* quầng sáng màu accent ngay sau quạt bìa — “đèn rọi” của sạp báo */
-.hero .hb-scene .glow { position: absolute; inset: 0; mix-blend-mode: screen; opacity: .75;
-  background: radial-gradient(38% 54% at 70% 46%,
-    color-mix(in srgb, var(--hb-acc) 34%, transparent) 0%, transparent 68%); }
+.hero .hb-scene .glow { position: absolute; inset: 0; mix-blend-mode: screen; opacity: .9;
+  background: radial-gradient(42% 58% at 70% 46%,
+    color-mix(in srgb, var(--hb-acc) 42%, transparent) 0%, transparent 70%); }
 .hero .hb-scene .wash { position: absolute; inset: 0;
   background: radial-gradient(64% 82% at 78% 48%,
     color-mix(in srgb, var(--hb-bg-b, #5a2436) 52%, transparent), transparent 74%); }
@@ -703,7 +703,7 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .hero .hb-grid {
   position: relative; z-index: 2;
   max-width: var(--maxw); margin: 0 auto;
-  padding: 34px 24px 30px;
+  padding: 26px 24px 20px;
   display: grid;
   /* cột bìa rộng hơn cột chữ — quạt là nhân vật chính, chữ đứng bên */
   grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
@@ -711,11 +711,11 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   align-items: center;
   /* chiều cao do QUẠT quyết định (chữ tự canh giữa), nên banner thấp và ổn định
      giữa các truyện: trước đây slide cao nhất trong 5 truyện kéo cả banner lên */
-  min-height: clamp(420px, 50vh, 486px);
+  min-height: clamp(400px, 46vh, 452px);
 }
 .hero .hb-col { display: flex; flex-direction: column; gap: 0; min-width: 0; align-self: stretch; }
 /* .stage giãn hết chỗ còn lại và canh GIỮA: khoảng trống dư dồn ra hai đầu thay vì
-   thành một lỗ hổng giữa nút và hàng ticks */
+   thành một lỗ hổng giữa nút và hàng điều khiển */
 .hero .stage { display: grid; flex: 1 1 auto; align-content: center; min-width: 0; }
 /* các slide xếp chồng trong MỘT ô lưới ⇒ khung cao bằng slide cao nhất, đổi
    truyện không đổi chiều cao (không CLS) */
@@ -732,10 +732,10 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   letter-spacing: .16em; text-transform: uppercase; color: var(--acc); }
 .eyebrow::before { content: ""; width: 22px; height: 1px; background: var(--acc); }
 
-.hero h1 { font-size: clamp(34px, 3.4vw, 50px); line-height: 1.04; margin: 12px 0 0;
-  letter-spacing: -.028em; color: var(--hb-fg); font-weight: 800; max-width: 13ch;
-  min-height: 2.08em;   /* luôn giữ 2 dòng ⇒ đổi truyện chữ không nhảy lên xuống */
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.hero h1 { font-size: clamp(32px, 3.1vw, 46px); line-height: 1.06; margin: 12px 0 0;
+  letter-spacing: -.026em; color: var(--hb-fg); font-weight: 800; max-width: 100%;
+  min-height: 2.12em;   /* giữ chỗ 2 dòng; tên dài được 3 dòng, KHÔNG cắt cụt */
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .hero h1 a { color: inherit; }
 .hero h1 a:hover { color: var(--hb-acc); }
 
@@ -814,53 +814,57 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .hero .btn.hb-cta:not(.pri) .hb-cta-lbl { position: absolute; width: 1px; height: 1px;
   overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
-/* ---- 5.5 hàng điều khiển: ticks 5 nhịp + “01 / 05” + ‹ › ⏸ --------------- */
-.hero .foot { display: flex; align-items: center; gap: 12px; flex-wrap: nowrap;
-  max-width: var(--hb-w); margin-top: 18px; padding-top: 14px;
-  border-top: 1px solid var(--hb-line); }
-.hero .ticks { display: flex; align-items: center; gap: 7px; }
-.hero .ticks button { position: relative; width: 26px; height: 3px; border-radius: 2px;
-  background: currentColor; opacity: .26;
-  transition: opacity var(--t) var(--ease), width var(--t) var(--ease), background var(--t) var(--ease); }
-.hero .ticks button::after { content: ""; position: absolute; inset: -12px -4px; }  /* vùng bấm ~27px */
-.hero .ticks button:hover { opacity: .5; }
-.hero .ticks button.on { width: 38px; opacity: 1; background: var(--hb-acc); }
-.hero .ticks button:focus-visible { outline: 2px solid var(--hb-acc); outline-offset: 5px; }
-.hero .count { font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em;
-  color: var(--hb-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.hero .count b { font-weight: 600; color: var(--hb-fg); }
-.hero .nav { display: flex; align-items: center; gap: 6px; margin-left: auto; }
-.hero .arrow { width: 36px; height: 36px; flex: none; border-radius: 50%;
-  border: 1px solid var(--hb-line2); color: var(--hb-fg); background: rgba(255, 255, 255, .05);
+/* ---- 5.5 thanh điều khiển GỘP dưới quạt -----------------------------------
+   Một viên duy nhất:  ‹  02 / 05 · KRATAI DUEAN  ›  ⏸
+   Trước đây là ba cụm rời (5 vạch ticks + số đếm + ‹ › ⏸ ở cột chữ) cộng thêm
+   dòng “02 · tác giả” dưới bìa — ticks trùng với quạt, số đếm trùng với nhãn
+   dưới bìa, nên hàng điều khiển vừa rối vừa dư. Nay một thanh, đặt ngay dưới
+   bìa đang chọn, kính mờ, chữ mono cùng thang với kệ nhãn. */
+.hero .fanbar { position: absolute; left: 50%; bottom: 0; z-index: 8;
+  transform: translateX(-50%);
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 6px 5px 8px; border-radius: 99px; white-space: nowrap;
+  background: rgba(16, 12, 15, .55); border: 1px solid rgba(255, 255, 255, .14);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2); backdrop-filter: blur(14px) saturate(1.2);
+  box-shadow: 0 18px 40px -24px rgba(0, 0, 0, .95), inset 0 1px 0 rgba(255, 255, 255, .08); }
+.hero .fanbar .count { font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em;
+  color: var(--hb-dim); font-variant-numeric: tabular-nums; padding-left: 2px; }
+.hero .fanbar .count b { font-weight: 600; color: var(--hb-fg); }
+.hero .fanbar-dot { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: .45; }
+.hero .fanbar .who { font-family: var(--font-mono); font-size: 10px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--hb-dim); max-width: 20ch; overflow: hidden;
+  text-overflow: ellipsis; }
+.hero .fanbar.no-who .fanbar-dot, .hero .fanbar.no-who .who { display: none; }
+.hero .fanbar .arrow { width: 28px; height: 28px; flex: none; border-radius: 50%;
+  border: 1px solid transparent; color: var(--hb-fg); background: rgba(255, 255, 255, .07);
   display: grid; place-items: center;
-  transition: background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease),
-    transform var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
-.hero .arrow .i { width: 16px; height: 16px; }
-.hero .arrow:hover { background: rgba(255, 255, 255, .14); border-color: rgba(255, 255, 255, .55); }
-.hero .arrow:active { transform: scale(.94); }
-.hero .arrow:focus-visible { outline: 2px solid var(--hb-acc); outline-offset: 2px; }
-/* nút tạm dừng là điều khiển PHỤ: nhỏ hơn, không viền, chỉ sáng lên khi trỏ */
-.hero .arrow.play { width: 32px; height: 32px; border-color: transparent;
-  background: rgba(255, 255, 255, .07); color: var(--hb-dim); }
-.hero .arrow.play .i { width: 14px; height: 14px; }
-.hero .arrow.play:hover { color: var(--hb-fg); background: rgba(255, 255, 255, .14); }
-.hero .arrow.play.on { color: var(--hb-acc); }
+  transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease),
+    transform var(--t-fast) var(--ease); }
+.hero .fanbar .arrow .i { width: 14px; height: 14px; }
+.hero .fanbar .arrow:hover { background: rgba(255, 255, 255, .18); color: #fff; }
+.hero .fanbar .arrow:active { transform: scale(.92); }
+.hero .fanbar .arrow:focus-visible { outline: 2px solid var(--hb-acc); outline-offset: 2px; }
+.hero .fanbar .arrow.play { width: 26px; height: 26px; background: transparent; color: var(--hb-dim); }
+.hero .fanbar .arrow.play .i { width: 13px; height: 13px; }
+.hero .fanbar .arrow.play:hover { color: var(--hb-fg); background: rgba(255, 255, 255, .12); }
+.hero .fanbar .arrow.play.on { color: var(--hb-acc); }
 
 /* ---- 5.6 quạt bìa ---------------------------------------------------------
    --cover-w : bề rộng bìa (khoá tỉ lệ 2:3 bằng aspect-ratio ⇒ không CLS)
    --fan-unit: khoảng cách giữa hai bìa kề nhau trong quạt
    Bìa đang chọn luôn ở data-pos="0" (tâm). */
 .hero .fan {
-  --cover-w: clamp(168px, 16.4vw, 242px);   /* bìa TO hơn ~16% */
-  --fan-unit: clamp(90px, 7.6vw, 112px);
+  --cover-w: clamp(176px, 17.5vw, 262px);   /* bìa TO thêm ~8% nữa */
+  --fan-unit: clamp(92px, 7.8vw, 118px);
   position: relative;
   justify-self: stretch;
-  height: calc(var(--cover-w) * 1.59 + 92px);
+  height: calc(var(--cover-w) * 1.59 + 84px);
+  perspective: 1400px;                      /* cho bìa bên cạnh nghiêng vào trong */
 }
 .hero .fan::after {            /* bóng đổ mềm dưới chân quạt — “kệ” có nền đất */
   content: ""; position: absolute; left: 50%; z-index: 0; pointer-events: none;
   top: calc(48% + var(--cover-w) * .795 - 10px);
-  width: calc(var(--cover-w) * 2.05); height: 26px;
+  width: calc(var(--cover-w) * 1.95); height: 24px;
   transform: translateX(-50%); border-radius: 50%;
   background: radial-gradient(50% 50% at 50% 50%, rgba(0, 0, 0, .62), transparent 72%);
   filter: blur(10px); opacity: .8;
@@ -868,22 +872,32 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .hero .coverbtn {
   position: absolute; left: 50%; top: 48%;
   width: var(--cover-w); aspect-ratio: 2 / 3;
-  border-radius: 10px; overflow: hidden;
-  background: var(--hb-card); border: 1px solid rgba(255, 255, 255, .16);
-  box-shadow: 0 30px 52px -30px rgba(0, 0, 0, .96), inset 0 1px 0 rgba(255, 255, 255, .12);
-  --x: 0px; --y: 0px; --r: 0deg; --s: 1;
+  border-radius: 5px 9px 9px 5px; overflow: hidden;
+  background: var(--hb-card); border: 1px solid rgba(255, 255, 255, .18);
+  /* viền ngoài kiểu BÌA SÁCH: gáy bên trái, mép giấy bên phải, bóng đổ sâu */
+  box-shadow: 0 34px 58px -32px rgba(0, 0, 0, .97), inset 0 1px 0 rgba(255, 255, 255, .16),
+    inset -2px 0 3px -1px rgba(255, 255, 255, .22);
+  --x: 0px; --y: 0px; --r: 0deg; --ry: 0deg; --s: 1;
   /* xoay quanh GỐC bìa (92%) chứ không quanh tâm: quạt xoè ra như bìa cắm trên kệ */
   transform-origin: 50% 92%;
-  transform: translate(-50%, -50%) translate3d(var(--x), var(--y), 0) rotate(var(--r)) scale(var(--s));
+  transform: translate(-50%, -50%) translate3d(var(--x), var(--y), 0)
+    rotateY(var(--ry)) rotate(var(--r)) scale(var(--s));
   /* bìa không chọn hạ sáng ĐỒNG LOẠT (một quy tắc, không phải 5 kiểu) */
   filter: brightness(.62) saturate(.95);
   transition: transform var(--t-mid) var(--ease), filter var(--t-mid) var(--ease),
     box-shadow var(--t-mid) var(--ease), border-color var(--t-mid) var(--ease); }
 .hero .coverbtn img { width: 100%; height: 100%; object-fit: cover; display: block; }
-/* ánh giấy bóng: một vệt chéo rất nhẹ ở mặt bìa, làm bìa “dày” hơn */
-.hero .coverbtn::after { content: ""; position: absolute; inset: 0; pointer-events: none;
-  background: linear-gradient(148deg, rgba(255, 255, 255, .16) 0%, rgba(255, 255, 255, .04) 26%,
-    transparent 46%); }
+/* GÁY SÁCH: dải tối bên trái + đường gấp sáng — bìa trông dày và thật hơn */
+.hero .coverbtn::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 13%;
+  pointer-events: none; z-index: 2;
+  background: linear-gradient(90deg, rgba(0, 0, 0, .55) 0%, rgba(0, 0, 0, .16) 62%, transparent 100%);
+  border-right: 1px solid rgba(255, 255, 255, .14); }
+/* ánh giấy bóng + mép giấy bên phải */
+.hero .coverbtn::after { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 2;
+  background:
+    linear-gradient(90deg, transparent 96%, rgba(0, 0, 0, .38) 100%),
+    linear-gradient(148deg, rgba(255, 255, 255, .2) 0%, rgba(255, 255, 255, .05) 24%,
+      transparent 44%); }
 .hero .coverbtn .noimg { display: block; width: 100%; height: 100%;
   background: linear-gradient(160deg, var(--hb-card), #121011); }
 .hero .coverbtn:hover { filter: brightness(.86) saturate(1.02); }
@@ -892,20 +906,13 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   box-shadow: 0 40px 70px -28px rgba(0, 0, 0, .98), 0 0 0 2px var(--hb-acc),
     0 0 56px -6px color-mix(in srgb, var(--hb-acc) 52%, transparent); }
 /* vị trí trong quạt: 0 = tâm, 1..4 xoay vòng hai bên, y/r/s theo bậc */
-.hero .fan [data-pos="0"] { --x: 0px; --y: -6px; --r: 0deg; --s: 1.05; z-index: 5; }
-.hero .fan [data-pos="1"] { --x: var(--fan-unit); --y: 10px; --r: 7deg; --s: .9; z-index: 2; }
-.hero .fan [data-pos="2"] { --x: calc(var(--fan-unit) * 1.45); --y: 26px; --r: 12deg; --s: .78; z-index: 1; }
-.hero .fan [data-pos="3"] { --x: calc(var(--fan-unit) * -1.45); --y: 26px; --r: -12deg; --s: .78; z-index: 1; }
-.hero .fan [data-pos="4"] { --x: calc(var(--fan-unit) * -1); --y: 10px; --r: -7deg; --s: .9; z-index: 2; }
+.hero .fan [data-pos="0"] { --x: 0px; --y: -4px; --r: 0deg; --ry: 0deg; --s: 1.05; z-index: 5; }
+.hero .fan [data-pos="1"] { --x: var(--fan-unit); --y: 10px; --r: 7deg; --ry: -9deg; --s: .9; z-index: 2; }
+.hero .fan [data-pos="2"] { --x: calc(var(--fan-unit) * 1.34); --y: 24px; --r: 11deg; --ry: -15deg; --s: .8; z-index: 1; }
+.hero .fan [data-pos="3"] { --x: calc(var(--fan-unit) * -1.34); --y: 24px; --r: -11deg; --ry: 15deg; --s: .8; z-index: 1; }
+.hero .fan [data-pos="4"] { --x: calc(var(--fan-unit) * -1); --y: 10px; --r: -7deg; --ry: 9deg; --s: .9; z-index: 2; }
 /* nhãn dưới bìa đang chọn: “01 · tác giả”. Nằm ngoài <button> (nút có
    overflow:hidden) và luôn ở tâm vì bìa đang chọn luôn ở data-pos="0". */
-.hero .fancap { position: absolute; left: 50%; transform: translateX(-50%);
-  top: calc(48% + var(--cover-w) * .795 + 12px); z-index: 7;
-  display: flex; align-items: center; gap: 8px; white-space: nowrap;
-  font-family: var(--font-mono); font-size: 10px; line-height: 1;
-  letter-spacing: .14em; text-transform: uppercase; color: var(--hb-dim); }
-.hero .fancap b { color: var(--hb-fg); font-weight: 600; }
-.hero .fancap .dot { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: .5; }
 
 /* vạch tiến trình tự chuyển: scaleX trên compositor (không layout lại) */
 .hero .bar { position: absolute; inset: auto 0 0; height: 2px; z-index: 3; background: rgba(255, 255, 255, .08); }
@@ -915,20 +922,19 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 /* ---- 5.7 responsive -------------------------------------------------------
    ≥640 : HAI CỘT như mockup — bìa nằm MỘT BÊN, chữ một bên. Mốc tablet chỉ thu
           quạt + bớt đệm, KHÔNG đổi bố cục (đúng mockup ở 820).
-   <640 : một cột (điện thoại), vẫn cùng thứ tự và cùng kiểu điều hướng
-          (chữ → quạt → ticks), chỉ thu nhỏ. */
+   <640 : một cột (điện thoại), vẫn cùng thứ tự và cùng kiểu điều khiển
+          (chữ → quạt → thanh gộp), chỉ thu nhỏ. */
 @media (min-width: 640px) and (max-width: 1023px) {
   .hero .hb-grid { gap: 24px; padding: 28px 20px 26px; min-height: 0; }
   .hero { --hb-w: 400px; }
   .hero .hb-col { gap: 0; }
-  .hero .foot { margin-top: 14px; }
-  .hero h1 { font-size: clamp(26px, 3.6vw, 38px); max-width: 12ch; }
+  .hero h1 { font-size: clamp(26px, 3.6vw, 38px); max-width: 20ch; }
   .hero .spec { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 14px; }
   .hero .spec dt { font-size: 9px; letter-spacing: .1em; }
   .hero .spec dd { font-size: 12.5px; }
   .hero .syn { font-size: 14px; }
   .hero .fan { --cover-w: clamp(112px, 16vw, 162px); --fan-unit: clamp(60px, 8.6vw, 94px); }
-  .hero .fancap { font-size: 9.5px; }
+  .hero .fanbar { gap: 6px; padding: 4px 5px 4px 7px; }
 }
 @media (max-width: 639px) {
   .hero { min-height: max(420px, 52vh); }
@@ -936,7 +942,7 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
     padding: 20px 18px 20px; min-height: 0; }
   .hero { --hb-w: none; }
   .hero .hb-col { gap: 0; }
-  .hero .foot { margin-top: 14px; }
+
   .hero .head { gap: 10px; }
   .hero h1 { font-size: clamp(25px, 6.6vw, 31px); max-width: 100%; margin-top: 10px;
     -webkit-line-clamp: 3; }
@@ -956,20 +962,15 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   .hero .btn-row { margin-top: 16px; gap: 8px; }
   .hero .syn { display: none; }               /* điện thoại: ưu tiên tiêu đề + CTA */
   .hero .prog .pb { flex-basis: 130px; }
-  .hero .fan { --cover-w: 108px; --fan-unit: 62px; height: calc(var(--cover-w) * 1.59 + 92px); }
+  .hero .fan { --cover-w: 114px; --fan-unit: 58px; height: calc(var(--cover-w) * 1.59 + 84px); }
   .hero .hb-scene .ghost { opacity: .45; }
   .hero .btn.hb-cta { padding: 0 16px; }
-  .hero .foot { gap: 10px; padding-top: 12px; }
-  .hero .nav { gap: 4px; }
-  .hero .ticks { gap: 5px; }
-  .hero .ticks button { width: 20px; }
-  .hero .ticks button.on { width: 30px; }
-  .hero .arrow { width: 34px; height: 34px; }
-  .hero .arrow.play { width: 30px; height: 30px; }
+  .hero .fanbar { gap: 6px; padding: 4px 4px 4px 7px; }
+  .hero .fanbar .who { max-width: 12ch; }
 }
 /* máy rất hẹp (≤380): thu quạt để 2 bìa ngoài cùng không bị cắt ở mép section */
 @media (max-width: 380px) {
-  .hero .fan { --cover-w: 88px; --fan-unit: 58px; }
+  .hero .fan { --cover-w: 96px; --fan-unit: 52px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .hero .slide, .hero .coverbtn { transition: none; }

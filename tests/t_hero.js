@@ -6,10 +6,10 @@
    Bài này khoá lại đúng những thứ dễ hỏng lặng lẽ (không có lỗi JS, chỉ là
    hành vi/aria/bố cục sai):
 
-     1. CẤU TRÚC: 5 slide chữ + 1 quạt 5 bìa + 5 ticks; chỉ 1 slide hiện; bìa
+     1. CẤU TRÚC: 5 slide chữ + 1 quạt 5 bìa; chỉ 1 slide hiện; bìa
         đang chọn mang aria-current và nằm đúng tâm (data-pos="0"); các bìa khác
         xếp quanh nó theo khoảng cách 1..4; KHÔNG còn lớp ảnh nền full-bleed cũ.
-     2. ĐỔI TRUYỆN: bấm bìa / ticks / nút sau đều đổi tiêu đề, aria-labelledby,
+     2. ĐỔI TRUYỆN: bấm bìa / nút sau đều đổi tiêu đề, aria-labelledby,
         aria-current, số “02 / 05”, nhãn “số · tác giả” và live region — kể cả
         quạt phải xếp lại (bìa vừa chọn về giữa).
      3. BÀN PHÍM: ← → chỉ đổi khi focus ở trong khối, không dời focus, đang gõ ở
@@ -19,8 +19,8 @@
      5. ẢNH: bìa đầu tải ưu tiên, các bìa sau để lazy ⇒ không tải 5 ảnh cùng lúc
         ngay lượt đầu; mọi ảnh bìa là ảnh trang trí (alt rỗng, tên nằm ở nhãn nút).
      5. NỀN: mỗi truyện một lớp .hb-bg (bìa ngang mờ hoặc gradient lấy từ bìa)
-        + .veil nửa gradient; và hàng điều khiển ticks → số đếm → ‹ › ⏸ trên MỘT hàng.
-     6. FALLBACK của component: 1 mục ⇒ không quạt/ticks/nút; 0 mục ⇒ ẩn cả
+        + .veil nửa gradient; và thanh điều khiển GỘP dưới quạt: ‹ · số đếm · tác giả · › · ⏸.
+     6. FALLBACK của component: 1 mục ⇒ không quạt/thanh điều khiển/nút; 0 mục ⇒ ẩn cả
         section; thiếu thumbnail ⇒ lấy backgroundImage; destroy() gỡ sạch
         listener (mount lại không bị cộng dồn).
    ========================================================================== */
@@ -42,7 +42,7 @@ const ok = (cond, msg, extra) => { if (!cond) bad.push(msg + (extra ? ' → ' + 
   const hero = $('#hero');
   const slides = $$('#stage .slide');
   const covers = $$('#hero .coverbtn');
-  const ticks = $$('#hTicks button');
+  const fanbar = $('#hero .fanbar');
 
   /* ---------- 1. CẤU TRÚC “BỘ BÀI” -------------------------------------- */
   out.cauTruc = {
@@ -50,20 +50,21 @@ const ok = (cond, msg, extra) => { if (!cond) bad.push(msg + (extra ? ' → ' + 
     slides: slides.length,
     dangHien: $$('#stage .slide.on').length,
     bia: covers.length,
-    ticks: ticks.length,
+    thanhGop: !!fanbar,
     nutTruocSau: !!$('#hPrev') && !!$('#hNext'),
     nutTamDung: !!$('#hPlay'),
     dem: ($('#hCount') || {}).textContent,
-    nhanDuoiBia: !!$('#hero .fancap'),
+    nhanDuoiBia: !!$('#hero .fanbar .who'),
     conAnhNenFullBleed: !!$('#hero .hb-media') || !!$('#hero .hb-scrim') || !!$('#hero .hb-bg')
   };
   ok(out.cauTruc.slides === 5, 'hero phải có 5 slide chữ', out.cauTruc.slides);
   ok(out.cauTruc.dangHien === 1, 'chỉ đúng 1 slide hiện tại một lúc', out.cauTruc.dangHien);
   ok(out.cauTruc.bia === 5, 'quạt phải có đủ 5 bìa', out.cauTruc.bia);
-  ok(out.cauTruc.ticks === 5, 'phải có 5 ticks', out.cauTruc.ticks);
+  ok(out.cauTruc.thanhGop, 'phải có thanh điều khiển gộp (.fanbar) dưới quạt');
+  ok(!$('#hTicks') && !$('#hero .ticks'), 'không còn 5 vạch ticks rời (đã gộp vào .fanbar)');
   ok(out.cauTruc.nutTruocSau && out.cauTruc.nutTamDung, 'thiếu nút trước/sau hoặc nút tạm dừng');
   ok(/^01 \/ 05$/.test(out.cauTruc.dem || ''), 'số đếm phải là “01 / 05”', out.cauTruc.dem);
-  ok(out.cauTruc.nhanDuoiBia, 'thiếu nhãn “số · tác giả” dưới bìa đang chọn');
+  ok(out.cauTruc.nhanDuoiBia, 'thiếu tên tác giả trong thanh điều khiển dưới quạt');
   ok(!out.cauTruc.conAnhNenFullBleed, 'vẫn còn lớp ảnh nền full-bleed của bản cũ trong hero');
 
   /* ---------- 1b. “KỆ NHÃN”: badge trạng thái + lưới thông tin -------------
@@ -140,20 +141,19 @@ const ok = (cond, msg, extra) => { if (!cond) bad.push(msg + (extra ? ' → ' + 
     live: ($('#hbLive') || {}).textContent,
     ariaAnSlideKhac: slides.filter(s => s.getAttribute('aria-hidden') === 'true').length,
     currentBia: covers.filter(b => b.getAttribute('aria-current') === 'true').length,
-    currentTick: ticks.filter(b => b.getAttribute('aria-current') === 'true').length,
+    thanhDem: ($('#hCount') || {}).textContent,
     dem: ($('#hCount') || {}).textContent,
-    nhan: ($('#hero .fancap') || {}).textContent,
+    nhan: ($('#hero .fanbar .who') || {}).textContent,
     tam: posOf(covers.find(b => b.classList.contains('on')) || covers[0])
   };
   ok(out.doiSlide.on === 1 && out.doiSlide.tieuDe === sau && sau !== truoc, 'bấm “sau” phải đổi đúng slide');
   ok(out.doiSlide.labelledby === out.doiSlide.h1ActiveId, 'aria-labelledby phải trỏ tiêu đề slide đang hiện');
   ok(/^Mục 2 \/ 5/.test(out.doiSlide.live), 'live region phải đọc “Mục 2 / 5 …”', out.doiSlide.live);
   ok(out.doiSlide.ariaAnSlideKhac === 4, '4 slide không hiện phải aria-hidden');
-  ok(out.doiSlide.currentBia === 1 && out.doiSlide.currentTick === 1,
-    'aria-current phải đúng một bìa và một tick');
+  ok(out.doiSlide.currentBia === 1, 'aria-current phải đúng một bìa');
   ok(/^02 \/ 05$/.test(out.doiSlide.dem || ''), 'số đếm phải cập nhật “02 / 05”', out.doiSlide.dem);
   ok(out.doiSlide.tam === '0', 'sau khi đổi, bìa vừa chọn phải về tâm quạt', out.doiSlide.tam);
-  ok((out.doiSlide.nhan || '').indexOf('02') === 0, 'nhãn dưới bìa phải bắt đầu bằng số mục mới', out.doiSlide.nhan);
+  ok(/^02 \/ 05$/.test(out.doiSlide.thanhDem || ''), 'thanh gộp phải cập nhật số đếm “02 / 05”', out.doiSlide.thanhDem);
 
   /* bấm bìa thứ 3 (quạt) */
   click(covers[2]);
@@ -165,10 +165,11 @@ const ok = (cond, msg, extra) => { if (!cond) bad.push(msg + (extra ? ' → ' + 
   };
   ok(out.bamBia.dung, 'bấm bìa trong quạt phải mở đúng truyện', out.bamBia.tieuDe);
 
-  /* bấm tick thứ 5 */
-  click(ticks[4]);
+  /* bấm bìa thứ 5 (quạt là cách chọn chính, không còn ticks) */
+  click(covers[4]);
   await wait(80);
-  ok((($('#stage .slide.on h1') || {}).textContent || '').trim() === titleOf(4), 'bấm tick phải mở đúng truyện');
+  ok((($('#stage .slide.on h1') || {}).textContent || '').trim() === titleOf(4),
+    'bấm bìa ngoài cùng phải mở đúng truyện');
 
   /* ---------- 3. BÀN PHÍM ------------------------------------------------- */
   const nut = $('#hNext');
@@ -230,17 +231,20 @@ const ok = (cond, msg, extra) => { if (!cond) bad.push(msg + (extra ? ' → ' + 
   ok(!out.nen.khongAnhNen, 'không được quay lại lớp ảnh nền full-bleed cũ');
 
   /* ---------- 4c. ĐIỀU KHIỂN: một hàng, số đếm có phần “đang xem” -------- */
-  const foot = $('#hero .foot');
-  const kids = foot ? [...foot.children].map(n => n.className.split(' ')[0]) : [];
+  const bar = $('#hero .fanbar');
+  const kids = bar ? [...bar.children].map(n => n.className.split(' ')[0]) : [];
   out.dieuKhien = {
     thuTu: kids,
     soDemHtml: ($('#hCount') || {}).innerHTML,
-    soNut: $$('#hero .nav .arrow').length,
-    dung1: (function () { try { return win.getComputedStyle(foot).flexWrap; } catch (e) { return ''; } })()
+    soNut: $$('#hero .fanbar .arrow').length,
+    trongQuat: !!(bar && bar.closest('.fan')),
+    cotChuSach: !!$('#hero .hb-col .foot')
   };
-  ok(out.dieuKhien.thuTu.join(',') === 'ticks,count,nav',
-    'hàng điều khiển phải theo thứ tự ticks → số đếm → ‹ › ⏸', out.dieuKhien.thuTu.join(','));
+  ok(out.dieuKhien.thuTu.join(',') === 'arrow,count,fanbar-dot,who,arrow,arrow',
+    'thanh gộp phải theo thứ tự ‹ → số đếm → · → tác giả → › → ⏸', out.dieuKhien.thuTu.join(','));
   ok(out.dieuKhien.soNut === 3, 'phải có đúng 3 nút ‹ › ⏸', out.dieuKhien.soNut);
+  ok(out.dieuKhien.trongQuat, 'thanh điều khiển phải nằm trong quạt (dưới bìa đang chọn)');
+  ok(!out.dieuKhien.cotChuSach, 'cột chữ không còn hàng điều khiển riêng');
   ok(/<b>01<\/b>/.test(out.dieuKhien.soDemHtml || ''),
     'số đếm phải tách phần đang xem (<b>01</b> / 05) để in đậm như các số khác', out.dieuKhien.soDemHtml);
 
@@ -271,7 +275,7 @@ const ok = (cond, msg, extra) => { if (!cond) bad.push(msg + (extra ? ' → ' + 
     slides: mot.root.querySelectorAll('.slide').length,
     bia: mot.root.querySelectorAll('.coverbtn').length,
     quatAn: !!mot.root.querySelector('.fan').hidden,
-    ticksAn: !!mot.root.querySelector('.ticks').hidden,
+    thanhAn: !mot.root.querySelector('.fan') || !!mot.root.querySelector('.fan').hidden,
     coNutTruoc: !mot.root.querySelector('[data-hb-prev]').hidden,
     coNutSau: !mot.root.querySelector('[data-hb-next]').hidden,
     playAn: !!mot.root.querySelector('[data-hb-play]').hidden,
@@ -282,7 +286,7 @@ const ok = (cond, msg, extra) => { if (!cond) bad.push(msg + (extra ? ' → ' + 
   };
   ok(out.motMuc.slides === 1, 'props 1 mục phải dựng đúng 1 slide');
   ok(!out.motMuc.coNutTruoc && !out.motMuc.coNutSau, '1 mục thì KHÔNG được có nút trước/sau', JSON.stringify(out.motMuc));
-  ok(out.motMuc.quatAn && out.motMuc.ticksAn, '1 mục thì ẩn cả quạt lẫn ticks');
+  ok(out.motMuc.quatAn && out.motMuc.thanhAn, '1 mục thì ẩn cả quạt lẫn thanh điều khiển');
   ok(out.motMuc.biaLayAnhNen, 'thiếu thumbnail thì quạt phải lấy backgroundImage làm bìa');
 
   const rong = mount({ items: [] });
@@ -290,8 +294,11 @@ const ok = (cond, msg, extra) => { if (!cond) bad.push(msg + (extra ? ' → ' + 
   ok(out.rong.an && out.rong.rongRuot, 'props rỗng thì ẩn cả section, không để khối trắng');
 
   const nhieu = mount({ items: [makeItem(1), makeItem(2), makeItem(3)] });
-  const tick3 = nhieu.root.querySelectorAll('.ticks button')[2];
-  if (tick3) tick3.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+  const next2 = nhieu.root.querySelector('[data-hb-next]');
+  if (next2) {
+    next2.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+    next2.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+  }
   await wait(50);
   out.nhieuMuc = {
     slides: nhieu.root.querySelectorAll('.slide').length,

@@ -581,3 +581,84 @@ truyện** kéo `.stage` lên; cột chữ ngắn hơn thì phần dư nằm l�
 `t_hero` “Hero banner đạt hết” · `t_home` · `t_pwa` · `check_src` khớp ·
 `audit:a11y` 25 màn 0 lỗi axe · `cz.css` 196,7 kB (92 % trần 215 kB) ·
 `cz-hero.js` 13,2 kB (83 % trần 16 kB).
+
+---
+
+## 19. Vòng 5 — gộp thanh điều khiển, tên truyện hết bị cắt, quạt & nền “xịn” hơn (2026-10-29)
+
+Năm góp ý từ ảnh chụp: dòng dưới quạt rối và dư; nền chưa ấn tượng, bìa chưa rõ;
+tên truyện bị cắt cụt; còn khoảng trống thừa dưới banner; quạt cần to và “thật” hơn.
+
+### 1. Dòng điều khiển: ba cụm rời → MỘT thanh gộp dưới quạt
+
+Trước: `5 vạch ticks` + `02 / 05` + `‹ › ⏸` nằm ở cột chữ, **cộng thêm** dòng
+`02 · KRATAI DUEAN` dưới bìa. Ticks trùng với chính quạt (bấm bìa là chọn được),
+số đếm trùng với nhãn dưới bìa ⇒ hàng vừa rối vừa dư.
+
+Nay một viên kính mờ nằm ngay dưới bìa đang chọn:
+
+```
+‹    02 / 05 · KRATAI DUEAN    ›    ⏸
+```
+
+- bỏ hẳn `.ticks` (5 vạch) và `.fancap` rời; `.fanbar` thay cả hai;
+- `.count` vẫn tách `<b>02</b>` để in đậm phần đang xem;
+- tác giả `#hWho` lấy từ `item.caption`, không có thì thêm lớp `no-who` để bỏ luôn
+  dấu chấm và khoảng trống;
+- cột chữ **không còn hàng điều khiển** ⇒ banner thấp đi và không còn dòng trơ trọi
+  bên dưới nút “Đọc từ đầu”.
+
+### 2. Tên truyện: hết cắt cụt
+
+`h1` bị `max-width: 13ch` + `line-clamp: 2` nên “Vượt Khỏi Đường Chân Trời…”
+thành “Vượt Khỏi / Đường Ch…”. Nay `max-width: 100%`, **3 dòng**, cỡ
+`clamp(32px, 3.1vw, 46px)` (nhỏ hơn 50px một nhịp để 3 dòng vẫn gọn), giữ
+`min-height: 2.12em` để đổi truyện chữ không nhảy.
+
+### 3. Nền: bìa hiện rõ hơn
+
+| Lớp | Trước | Sau |
+| --- | --- | --- |
+| `.ghost` (bìa dọc phóng lớn) | blur 46px, opacity .60, cao 136 % | **blur 26px, opacity .82, cao 152 %** |
+| mask của `.ghost` | dừng ở 46 % | rộng hơn (52 %), mép tan ở 82 % |
+| `.glow` (quầng accent) | opacity .75, 34 % accent | **opacity .90, 42 % accent** |
+
+Bìa sau quạt giờ đọc ra được hình khối/màu của truyện thay vì một tảng tối.
+
+### 4. Quạt: to hơn + “bìa sách thật”
+
+| Thông số | Trước | Sau |
+| --- | --- | --- |
+| `--cover-w` | `clamp(168px, 16.4vw, 242px)` | **`clamp(176px, 17.5vw, 262px)`** |
+| `--fan-unit` | `clamp(90px, 7.6vw, 112px)` | `clamp(92px, 7.8vw, 118px)` |
+| Độ xoè bìa ngoài | `1.45 × unit` | **`1.34 × unit`** (dày hơn, sát nhau hơn) |
+| Nghiêng 3D | không | **`perspective: 1400px` + `rotateY(±9°/±15°)`** |
+
+Chi tiết làm bìa “thật”:
+
+- **gáy sách** `::before`: dải tối 13 % bên trái + đường gấp sáng 1px;
+- **mép giấy** `::after`: tối 4 % sát mép phải + inner shadow sáng, cộng vệt ánh
+  giấy chéo 20 %;
+- `border-radius: 5px 9px 9px 5px` (gáy vuông, mép ngoài bo) thay vì bo đều 10px;
+- bóng đổ sâu hơn (`0 34px 58px -32px`), bìa đang chọn giữ vòng accent + quầng 56px.
+
+### 5. Chiều cao banner
+
+`.hb-grid`: đệm `34/30` → **`26/20`**, `min-height` `clamp(420,50vh,486)` →
+**`clamp(400px,46vh,452px)`**; hàng điều khiển rời khỏi cột chữ. Ở 1440 px banner
+còn **≈519 px** (đỉnh trước đó ≈541 px, bản gốc ≈668 px), bìa vẫn to hơn.
+
+### Tệp đã sửa
+
+| Tệp | Vì sao |
+| --- | --- |
+| `src/cz-hero.js` | `fanBarHTML()` thay `controlsHTML()` + `ticksHTML()`; bỏ `.fancap`; `paint()` cập nhật `#hWho`, `no-who`; ẩn nút khi chỉ 1 mục |
+| `src/cz.css` | §5.5 thanh gộp (kính mờ, arrow 28px); bỏ `.foot`/`.ticks`/`.fancap`; `h1` 3 dòng; `.ghost`/`.glow` rõ hơn; quạt to + gáy/mép giấy/`rotateY`; khung gọn |
+| `tests/t_hero.js` | cấu trúc mới: `.fanbar` (thứ tự ‹ → số đếm → · → tác giả → › → ⏸), không còn ticks, thanh nằm trong quạt, cột chữ không còn hàng điều khiển; đổi mục bằng bìa thay ticks |
+| `sw.js` + 76 HTML | `?v=20261029hero9` |
+
+### Kiểm
+
+`t_hero` “Hero banner đạt hết” · `t_home` · `t_adult` N12 · `t_lock_ui` · `t_pwa` ·
+`audit:a11y` 25 màn 0 lỗi axe · `check_src` khớp · `cz.css` 196,6 kB (91 % trần) ·
+`cz-hero.js` 12,5 kB (78 % trần).
