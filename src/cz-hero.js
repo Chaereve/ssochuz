@@ -332,7 +332,6 @@
         '</div>' +
         '<div class="fan" id="hFan">' + fanHTML(this.items, this.index) + '</div>' +
       '</div>' +
-      '<div class="bar" aria-hidden="true"><i id="heroBar"></i></div>' +
       '<p class="sr-only" id="hbLive" aria-live="polite" aria-atomic="true"></p>';
 
     this.bgs = Array.prototype.slice.call(root.querySelectorAll('.hb-scene'));
@@ -404,31 +403,15 @@
     this.goTo(this.index - 1);
   };
 
-  HeroBanner.prototype.bar = function (running) {
-    var bar = this.root.querySelector('.bar i');
-    if (!bar) return;
-    bar.style.transition = 'none';
-    bar.style.transform = 'scaleX(0)';
-    if (!running) return;
-    var self = this;
-    var raf = w.requestAnimationFrame || function (fn) { setTimeout(fn, 16); };
-    raf(function () {
-      bar.style.transition = 'transform ' + self.interval + 'ms linear';
-      bar.style.transform = 'scaleX(1)';
-    });
-  };
-
   HeroBanner.prototype.start = function () {
     var self = this;
     this.stop();
     if (this.userPaused || CZ.reduce || this.total < 2) return;
     this.timer = setInterval(function () { self.next(); }, this.interval);
-    this.bar(true);
   };
 
   HeroBanner.prototype.stop = function () {
     if (this.timer) { clearInterval(this.timer); this.timer = null; }
-    this.bar(false);
   };
 
   /* autoplay chỉ chạy khi: bật autoplay + người dùng chưa bấm Tạm dừng + chuột

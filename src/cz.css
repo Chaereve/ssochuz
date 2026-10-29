@@ -66,7 +66,7 @@ section[id], [id^="pane-"] { scroll-margin-top: 16px; }
      BA ĐIỀU CẤM (đã dọn sạch ngày 2026-09-15, đừng thêm lại):
        1. KHÔNG animate width/height/left/top/right/bottom/grid-template-rows cho
           thứ chạy lặp lại theo khung hình (vạch tiến độ, con chạy tab). Thanh nào
-          cần lớn dần thì cho width cố định rồi scale theo trục X — xem #sprog i.
+          cần lớn dần thì cho width cố định rồi scale theo trục X.
        2. KHÔNG animate filter: blur(). Blur bắt trình duyệt dựng buffer ngoài cỡ
           phần tử rồi lọc lại từng khung; trên slide hero hay cột chữ trang đọc
           (to bằng cả màn hình) thì đó là chỗ giật thấy rõ nhất. Chỉ filter tĩnh
@@ -160,13 +160,9 @@ kbd { background: var(--surf2); border: 1px solid var(--bd); border-bottom-width
 body.hpage { --maxw: 1220px; }              /* trang chủ rộng hơn cho hero + dải số */
 body.spage .wrap { max-width: 1080px; }     /* trang truyện/đọc hẹp hơn, mắt đỡ quét ngang */
 body.admin { --maxw: 1400px; }              /* bảng dữ liệu cần chỗ */
-#sprog { position: fixed; inset: 0 0 auto; height: 2px; z-index: 60; pointer-events: none; }
-/* Vạch này được JS ghi lại MỖI khung hình khi cuộn, nên nó phải là thuộc tính
-   compositor: width cố định 100% rồi scaleX. Ghi width từng khung vừa bắt layout
-   lại vừa làm lần đọc scrollHeight kế tiếp thành đọc-cưỡng-bức (layout thrash). */
-#sprog i { display: block; height: 100%; width: 100%; background: var(--acc);
-  transform: scaleX(0); transform-origin: 0 50%; }
-body.reading #sprog { display: none !important; }
+/* Vạch tiến độ cuộn ở đỉnh trang đã BỊ BỎ (30/10/2026): một sợi chỉ màu chạy
+   theo mép trên suốt lúc đọc là thứ thu hút mắt đúng vào chỗ không có thông tin,
+   và nó chỉ lặp lại điều thanh cuộn bên phải đã nói. Nút "lên đầu" vẫn còn. */
 
 /* ---- THANH ĐẦU TRANG (masthead) -----------------------------------------
    Nguyên tắc: một đường kẻ tóc duy nhất ở đáy, chữ là chính, hộp viền chỉ dành
@@ -564,7 +560,6 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   --hb-card: #1a1416;                        /* nền ô bìa khi ảnh chưa tải */
   --hb-glass: rgba(255, 255, 255, .07);
   --hb-hover: rgba(255, 255, 255, .14);
-  --hb-track: rgba(255, 255, 255, .08);      /* rãnh thanh tiến trình tự chuyển */
   --hb-shade: 0, 0, 0;                       /* rgb của mọi bóng đổ */
   --hb-veil: 10, 9, 11;                      /* rgb của màn che nền */
   --hb-pic: saturate(1.15) brightness(.74);   /* lọc ảnh bìa ngang phóng lớn */
@@ -605,12 +600,18 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .hero .hb-bgs { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
 .hero .hb-scene { position: absolute; inset: 0; opacity: 0; visibility: hidden;
   background: linear-gradient(116deg, var(--hb-bg-a, #2a141b) 0%, var(--hb-bg-b, #4a1f2e) 58%, var(--hb-void) 100%);
-  /* lớp KHÔNG hiện thì không vẽ (5 ảnh mờ cùng lúc là quá tay cho GPU) */
-  transition: opacity .55s var(--ease-soft), visibility 0s linear .55s; }
-.hero .hb-scene.on { opacity: 1; visibility: visible; transition: opacity .55s var(--ease-soft); }
+  /* lớp KHÔNG hiện thì không vẽ (5 ảnh mờ cùng lúc là quá tay cho GPU).
+     Chuyển cảnh nền chậm hơn hẳn chữ (900ms so với 520ms): nền là thứ mắt không
+     cần đọc, cho nó "trôi" phía sau thì cả banner có chiều sâu thay vì đổi phụt. */
+  transition: opacity .9s var(--ease-soft), visibility 0s linear .9s; }
+.hero .hb-scene.on { opacity: 1; visibility: visible; transition: opacity .9s var(--ease-soft); }
 .hero .hb-scene .pic { position: absolute; inset: -10%; width: 120%; height: 120%;
   object-fit: cover; object-position: 50% 42%;
   filter: blur(34px) var(--hb-pic); transform: scale(1.04); }
+/* Ảnh nền "lắng" vào: từ 1,10 về 1,04 trong 1,6s. Chỉ transform nên chạy trên
+   compositor; kết thúc đúng ở giá trị tĩnh để không giữ trạng thái animate. */
+.hero .hb-scene.on .pic { animation: hbSettle 1.6s var(--ease-out) both; }
+@keyframes hbSettle { from { transform: scale(1.1); } to { transform: scale(1.04); } }
 /* BÌA DỌC phóng lớn, mờ đục: nền có hình khối của chính bộ truyện thay vì một
    tảng gradient phẳng. Cùng URL với bìa trong quạt ⇒ không tải thêm byte nào. */
 .hero .hb-scene .ghost { position: absolute; top: 50%; right: 1%;
@@ -618,6 +619,11 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   opacity: var(--hb-ghost); filter: blur(26px) saturate(1.28) brightness(1.04);
   -webkit-mask-image: radial-gradient(48% 56% at 52% 50%, #000 0%, rgba(0, 0, 0, .7) 52%, transparent 82%);
   mask-image: radial-gradient(48% 56% at 52% 50%, #000 0%, rgba(0, 0, 0, .7) 52%, transparent 82%); }
+.hero .hb-scene.on .ghost { animation: hbGhost 1.8s var(--ease-out) both; }
+@keyframes hbGhost {
+  from { transform: translateY(-50%) scale(1.05); }
+  to { transform: translateY(-50%) scale(1); }
+}
 /* quầng sáng màu accent ngay sau quạt bìa — “đèn rọi” của sạp báo */
 .hero .hb-scene .glow { position: absolute; inset: 0; mix-blend-mode: var(--hb-blend); opacity: var(--hb-glow);
   background: radial-gradient(42% 58% at 70% 46%,
@@ -666,6 +672,17 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   visibility: hidden; opacity: 0;
   transition: opacity .34s var(--ease-soft), visibility 0s linear .34s; }
 .hero .slide.on { visibility: visible; opacity: 1; transition: opacity .34s var(--ease-soft); }
+/* Từng tầng chữ (nhãn → tên → kệ nhãn → nút) nhích lên 10px rồi đứng, so le
+   70ms. Đây là chỗ tạo cảm giác "có nhịp" thay cho việc cả khối cùng nháy một
+   lần. Chỉ opacity + transform ⇒ không layout lại, không đổi chiều cao banner
+   (mỗi tầng dịch trong chính ô của nó, `both` giữ đúng trạng thái cuối).
+   `prefers-reduced-motion` tắt sạch qua luật chung ở đầu tệp. */
+.hero .slide.on .hb-info > * { animation: hbRise .62s var(--ease-out) both; }
+.hero .slide.on .hb-info > *:nth-child(1) { animation-delay: 40ms; }
+.hero .slide.on .hb-info > *:nth-child(2) { animation-delay: 110ms; }
+.hero .slide.on .hb-info > *:nth-child(3) { animation-delay: 180ms; }
+.hero .slide.on .hb-info > *:nth-child(4) { animation-delay: 250ms; }
+@keyframes hbRise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 /* Tên lớp có tiền tố hb- là CỐ Ý: `.info` là lớp DÙNG CHUNG của trang truyện
    (`.info { border-top: 1px solid var(--bd) }`), nên đặt trùng tên thì hero bị
    “thừa hưởng” một đường kẻ ngang ngay trên nhãn trạng thái. Đây chính là sợi
@@ -738,6 +755,12 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   color: var(--hb-fg); overflow-wrap: anywhere; min-height: 2.7em; }
 /* số và chữ dùng CHUNG một độ đậm — chỉ số là “tabular” để không nhảy bề rộng */
 .hero .spec dd.num { font-variant-numeric: tabular-nums; }
+/* từng ô trong kệ nhãn hiện so le, nối tiếp nhịp của tên truyện */
+.hero .slide.on .spec .c { animation: hbRise .5s var(--ease-out) both; }
+.hero .slide.on .spec .c:nth-child(1) { animation-delay: 220ms; }
+.hero .slide.on .spec .c:nth-child(2) { animation-delay: 280ms; }
+.hero .slide.on .spec .c:nth-child(3) { animation-delay: 340ms; }
+.hero .slide.on .spec .c:nth-child(4) { animation-delay: 400ms; }
 .hero .spec dd.soft { font-weight: 600; color: var(--hb-fg); }
 
 /* Banner KHÔNG còn mô tả truyện và thanh “đang đọc chương…”:
@@ -782,6 +805,10 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .hero .fanbar .count { font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em;
   color: var(--hb-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .hero .fanbar .count b { font-weight: 600; color: var(--hb-fg); }
+/* đổi truyện thì con số nhích lên thay vì đổi phụt: JS gắn .tick rồi gỡ sau một
+   nhịp. Rất ngắn (300ms) để không ai phải chờ nó. */
+.hero .fanbar .count.tick { animation: hbCount .3s var(--ease-out) both; }
+@keyframes hbCount { from { opacity: .35; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 /* mũi tên: nút kính tròn, LUÔN hiện (cảm ứng không có :hover), sáng lên khi trỏ */
 .hero .arrow { display: grid; place-items: center; border: 0; border-radius: 50%;
   color: var(--hb-dim); background: transparent; cursor: pointer;
@@ -793,7 +820,11 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .hero .arrow.play .i { width: 13px; height: 13px; }
 .hero .arrow.play:hover { background: var(--hb-hover); color: var(--hb-fg); }
 .hero .arrow.play.on { color: var(--hb-acc); }
-.hero .arrow.play:active { transform: scale(.92); }
+.hero .arrow.play:active { transform: scale(.9); transition-duration: 90ms; }
+/* icon ⏸/▶ hiện lên bằng một nhịp nảy nhẹ: JS vẽ lại icon mỗi lần bấm nên chỉ
+   cần animate phần tử mới, không phải tự dựng chuyển cảnh hai icon. */
+.hero .arrow.play .i { animation: hbIcoPop .34s var(--ease-spring) both; }
+@keyframes hbIcoPop { from { opacity: 0; transform: scale(.7); } to { opacity: 1; transform: none; } }
 .hero .arrow.play:focus-visible { outline: 2px solid var(--hb-acc); outline-offset: 2px; }
 
 /* ---- 5.6 quạt bìa ---------------------------------------------------------
@@ -839,10 +870,12 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   transform-origin: 50% 92%;
   transform: translate(-50%, -50%) translate3d(var(--x), var(--y), 0)
     rotateY(var(--ry)) rotate(var(--r)) scale(var(--s));
-  /* bìa không chọn hạ sáng ĐỒNG LOẠT (một quy tắc, không phải 5 kiểu) */
-  filter: brightness(.62) saturate(.95);
-  transition: transform var(--t-mid) var(--ease), filter var(--t-mid) var(--ease),
-    box-shadow var(--t-mid) var(--ease), border-color var(--t-mid) var(--ease); }
+  /* bìa không chọn hạ sáng ĐỒNG LOẠT (một quy tắc, không phải 5 kiểu).
+     Đây là chuyển động chính của banner: khi đổi truyện, cả quạt xếp lại. Cho nó
+     700ms với đường cong giảm tốc (vào nhanh, dừng êm) — 520ms trước đây dừng
+     hơi gắt, mắt kịp thấy "hụt" ở khung cuối. */
+  transition: transform .7s var(--ease-out), filter .5s var(--ease-soft),
+    box-shadow .5s var(--ease-soft); }
 .hero .coverbtn img { width: 100%; height: 100%; object-fit: cover; display: block; }
 /* GÁY SÁCH: dải tối bên trái + đường gấp sáng — bìa trông dày và thật hơn */
 .hero .coverbtn::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 9%;
@@ -865,6 +898,13 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
     0 0 44px -14px color-mix(in srgb, var(--hb-acc) 38%, transparent); }
 /* vị trí trong quạt: 0 = tâm, 1..4 xoay vòng hai bên, y/r/s theo bậc */
 .hero .fan [data-pos="0"] { --x: 0px; --y: -4px; --r: 0deg; --ry: 0deg; --s: 1.05; z-index: 5; }
+/* Bìa vừa được chọn "nở" từ 1,0 lên 1,05 trong 620ms rồi đứng — cùng nhịp với
+   tầng chữ, nên bìa và chữ như được đặt xuống cùng một nhịp tay. */
+.hero .coverbtn.on { animation: hbCoverIn .62s var(--ease-out) both; }
+@keyframes hbCoverIn {
+  from { transform: translate(-50%, -50%) translate3d(var(--x), var(--y), 0)
+    rotateY(var(--ry)) rotate(var(--r)) scale(calc(var(--s) * .96)); }
+}
 .hero .fan [data-pos="1"] { --x: var(--fan-unit); --y: 10px; --r: 7deg; --ry: -9deg; --s: .9; z-index: 2; }
 .hero .fan [data-pos="2"] { --x: calc(var(--fan-unit) * 1.22); --y: 24px; --r: 11deg; --ry: -15deg; --s: .8; z-index: 1; }
 .hero .fan [data-pos="3"] { --x: calc(var(--fan-unit) * -1.22); --y: 24px; --r: -11deg; --ry: 15deg; --s: .8; z-index: 1; }
@@ -872,10 +912,11 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 /* nhãn dưới bìa đang chọn: “01 · tác giả”. Nằm ngoài <button> (nút có
    overflow:hidden) và luôn ở tâm vì bìa đang chọn luôn ở data-pos="0". */
 
-/* vạch tiến trình tự chuyển: scaleX trên compositor (không layout lại) */
-.hero .bar { position: absolute; inset: auto 0 0; height: 2px; z-index: 3; background: var(--hb-track); }
-.hero .bar i { display: block; height: 100%; width: 100%; background: var(--hb-acc);
-  transform: scaleX(0); transform-origin: 0 50%; }
+/* Vạch tiến trình tự chuyển ở đáy banner đã BỎ (30/10/2026) cùng vạch cuộn ở
+   đỉnh trang: hai sợi chỉ chạy liên tục, một ở mép trên một ở mép dưới banner,
+   đúng lúc mắt đang đọc chữ bên trái. Nhịp tự chuyển giờ do chính chuyển động
+   của nội dung (mờ dần + nhích lên) nói ra, không cần đồng hồ đếm ngược.
+   Nút ⏸ và số "01 / 05" vẫn còn để điều khiển và định vị. */
 
 /* ---- 5.7 responsive -------------------------------------------------------
    ≥640 : HAI CỘT như mockup — bìa nằm MỘT BÊN, chữ một bên. Mốc tablet chỉ thu
@@ -2002,12 +2043,9 @@ body[data-rd-font="sans"], body[data-rd-font="bevn"], body[data-rd-font="roboto"
 @keyframes revIn { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .fade.in { animation: none; } }
 
-/* thanh tiến trình mỗi lần chuyển trang (JS gắn vào <body>) */
-#nprog { position: fixed; inset: 0 0 auto; height: 2px; z-index: 70; pointer-events: none; }
-#nprog i { display: block; height: 100%; width: 100%; background: var(--acc); opacity: 0;
-  box-shadow: 0 0 10px color-mix(in srgb, var(--acc) 70%, transparent);
-  transform: scaleX(0); transform-origin: 0 50%;
-  transition: transform var(--t-slow) var(--ease-out), opacity var(--t-fast) linear; }
+/* Vạch tiến độ mỗi lần chuyển trang cũng đã BỎ (30/10/2026): nó nháy ngang đỉnh
+   trang đúng lúc mắt đang chờ nội dung mới, mà thông tin mang lại gần như bằng
+   không. Trang vẫn "vào" bằng nhịp pageIn bên dưới — mượt mà không cần vạch. */
 body.page-in main { animation: pageIn var(--t-slow) var(--ease-out) both; }
 @keyframes pageIn { from { opacity: 0; transform: translateY(10px); } }
 
@@ -2181,7 +2219,7 @@ body.page-in main { animation: pageIn var(--t-slow) var(--ease-out) both; }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .fade.in, body.page-in main, .modal.on .box, #nprog i { animation: none !important; }
+  .fade.in, body.page-in main, .modal.on .box { animation: none !important; }
   .hdr, .btn, .card .th, .card .th img, .slid, .mnav, .scrim, .sheet .pan { transition: none !important; }
 }
 

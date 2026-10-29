@@ -1004,3 +1004,51 @@ rồi `npm run build` + bump `?v=`.
 
 `sw.js` + 76 HTML: `?v=20261029hero18`. Kiểm: `t_hero` "Hero banner đạt hết",
 `check_src` khớp.
+
+## 27. Bỏ hai vạch chạy + làm banner mượt hơn (30/10/2026)
+
+Yêu cầu: *"bỏ thanh chạy trên đầu lúc lướt web và thanh chạy trong banner; mọi
+thứ trong banner mượt mà hơn, animation xịn và transition oke hơn"*.
+
+### Bỏ ba vạch tiến trình
+
+| Vạch | Ở đâu | Xử lý |
+| --- | --- | --- |
+| `#sprog` | ghim đỉnh màn hình, chạy theo cuộn | **bỏ** khỏi 73 tệp HTML + CSS + JS |
+| `#nprog` | ghim đỉnh màn hình, nháy mỗi lần chuyển trang | **bỏ** (JS tạo, CSS, nhánh reduced-motion) |
+| `#heroBar` | đáy banner, đếm ngược tự chuyển | **bỏ** khỏi `cz-hero.js` + CSS + token `--hb-track` |
+
+`#nprog` cùng loại với `#sprog` — cũng là một sợi chỉ chạy ngang đỉnh trang, chỉ
+khác là chạy lúc bấm sang trang khác. Bỏ cả hai cho đúng ý "không còn thanh chạy
+ở đỉnh"; hiệu ứng `pageIn` (nội dung hiện dần) vẫn giữ nên chuyển trang không bị
+"nhảy khô". `scrollUI()` giờ chỉ còn bật/tắt nút "lên đầu" và lớp `.scrolled` —
+không ghi `transform` mỗi khung hình nữa. Điều hướng nội bộ cũng đi ngay, không
+còn chờ 170ms để vạch kịp chạy.
+
+Nhịp tự chuyển truyện giờ do chính chuyển động của nội dung nói ra; nút `⏸` và
+số `01 / 05` vẫn còn để điều khiển và định vị.
+
+### Chuyển động banner — trước → sau
+
+| Thành phần | Trước | Sau |
+| --- | --- | --- |
+| Nền (ảnh mờ + ghost) | đổi bằng `opacity .55s` | `opacity .9s` + ảnh **lắng** dần `scale 1,10 → 1,04` trong 1,6s |
+| Chữ | cả khối nháy một lần (`opacity .34s`) | từng tầng **nhích lên 10px** so le 70ms: nhãn 40 → tên 110 → kệ nhãn 180 → nút 250ms |
+| Kệ nhãn | hiện cùng chữ | 4 ô hiện tiếp nhịp 220 / 280 / 340 / 400ms |
+| Quạt bìa | `transform .52s` (dừng hơi gắt) | `transform .7s` với `--ease-out` — vào nhanh, dừng êm |
+| Bìa vừa chọn | đổi cỡ tức thì | "nở" `scale .96 → 1,05` trong 620ms, cùng nhịp với tầng chữ |
+| Số `01 / 05` | đổi phụt | nhích lên 4px, 300ms |
+| Nút `⏸/▶` | icon đổi phụt | icon nảy nhẹ `scale .7 → 1` (340ms, `--ease-spring`) |
+
+Nguyên tắc giữ nguyên: **chỉ animate `opacity` và `transform`** (không width/
+height/filter) để mọi thứ chạy trên compositor; mọi chuyển động tắt sạch khi
+`prefers-reduced-motion: reduce` nhờ luật chung ở đầu `cz.css`. Không đổi chiều
+cao banner, không có CLS — mỗi tầng dịch trong chính ô của nó.
+
+`cz.css` / `cz-hero.js` / `cz-home.js`: `hero22 → hero23` ·
+`cz-app.js`: `…sidebar1 → 20261029smooth1` (70 tệp HTML) · 73 tệp HTML bỏ `#sprog`.
+
+**Kiểm:** `t_hero` "Hero banner đạt hết" · `t_mobile` (`loi: []`) · `t_home`,
+`t_people`, `t_reader`, `t_flows`, `t_lock_ui`, `t_pwa` không lỗi JS ·
+`audit:a11y` 25 màn 0 lỗi axe · `check_src` khớp · `grep #sprog|#nprog|heroBar`
+= 0.

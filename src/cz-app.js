@@ -1808,21 +1808,17 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       Array.prototype.forEach.call(nums, function (b) { b.textContent = num(+b.dataset.count || 0); });
     }, 2500);
   }
-  /* vạch tiến độ cuộn trang + nút lên đầu */
+  /* nút "lên đầu" (vạch tiến độ cuộn ở đỉnh trang đã bỏ — xem cz.css)
+     Chỉ còn hai việc theo cuộn: hiện nút lên đầu và bật lớp .scrolled cho thanh
+     trên. Không còn ghi transform mỗi khung hình, nên handler nhẹ đi hẳn. */
   function scrollUI() {
-    var bar = d.querySelector('#sprog i'), top = d.querySelector('#toTop'), tick = false, lastY = w.scrollY || 0;
+    var top = d.querySelector('#toTop'), tick = false;
     function run() {
       if (tick) return; tick = true;
       requestAnimationFrame(function () {
         var y = w.scrollY || 0;
-        var h = d.documentElement.scrollHeight - w.innerHeight;
-        /* scaleX chứ không phải width: ghi width mỗi khung hình vừa bắt layout lại
-           vừa biến lần đọc scrollHeight ở khung kế thành đọc-cưỡng-bức. */
-        if (bar) bar.style.transform = 'scaleX(' + (h > 0 ? Math.min(1, Math.max(0, y / h)) : 0) + ')';
         if (top) top.classList.toggle('on', y > 700);
         d.body.classList.toggle('scrolled', y > 8);
-        /* thanh trên không còn trượt theo / ẩn hiện khi cuộn — đứng yên với trang */
-        lastY = y;
         tick = false;
       });
     }
@@ -1899,21 +1895,10 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     el.classList.add('pop');
     setTimeout(function () { if (el.classList) el.classList.remove('pop'); }, 480);
   }
-  /* chuyển trang: vạch tiến độ trên cùng + nội dung hiện dần, không nhảy khô */
+  /* chuyển trang: chỉ còn hiệu ứng nội dung hiện dần (không còn vạch chạy trên
+     cùng — người dùng đã yêu cầu bỏ hẳn thanh chạy ở đỉnh trang) */
   function pageFx() {
-    var bar = d.createElement('div');
-    bar.id = 'nprog'; bar.setAttribute('aria-hidden', 'true'); bar.innerHTML = '<i></i>';
-    d.body.appendChild(bar);
-    var fill = bar.firstChild;
     d.body.classList.add('page-in');
-    if (!reduce) {
-      fill.style.transform = 'scaleX(.1)'; fill.style.opacity = '1';
-      requestAnimationFrame(function () { fill.style.transform = 'scaleX(.64)'; });
-      setTimeout(function () {
-        fill.style.transform = 'scaleX(1)';
-        setTimeout(function () { fill.style.opacity = '0'; }, 220);
-      }, 240);
-    }
     /* bắt cú bấm: gợn sóng cho nút, và điệu chuyển trang cho liên kết nội bộ */
     d.addEventListener('click', function (e) {
       if (e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
@@ -1929,9 +1914,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       if (u.origin !== w.location.origin) return;
       if (u.pathname === w.location.pathname && u.search === w.location.search) return;
       e.preventDefault();
-      fill.style.opacity = '1'; fill.style.transform = 'scaleX(.92)';
-      var go = function () { w.location.href = link.href; };
-      if (reduce) go(); else setTimeout(go, 170);
+      w.location.href = link.href;
     }, true);
   }
 
