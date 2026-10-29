@@ -15,7 +15,7 @@
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://ssochuz.pages.dev/ssochuz.png">
   <!-- N13: bỏ preconnect Firestore — không còn đọc thẳng Firestore từ máy khách -->
-<link rel="stylesheet" href="/cz.css?v=20261030lib1">
+<link rel="stylesheet" href="/cz.css?v=20261030bento1">
 </head>
 <body class="hpage">
 
@@ -30,47 +30,67 @@
   <section class="hero" id="hero" aria-label="Truyện nổi bật"></section>
 
   <div class="wrap">
-    <!-- ===== MY SPACE: tiếp tục đọc + theo dõi chương mới (dữ liệu cá nhân) ===== -->
-    <section class="sec fade home-personal" id="resumeSec" hidden aria-labelledby="resumeTitle">
-      <div class="sechead"><h2 id="resumeTitle">Đọc tiếp</h2><a class="btn ghost sm" href="/my-space">My Space</a></div>
-      <div id="resumeRail" class="personal-rail" aria-live="polite"></div>
-    </section>
-    <section class="sec fade home-personal" id="followUpdatesSec" hidden aria-labelledby="followUpdatesTitle">
-      <div class="sechead"><h2 id="followUpdatesTitle">Theo dõi có chương mới</h2><a class="btn ghost sm" href="/#thu-vien">Thư viện</a></div>
-      <div id="followUpdatesRail" class="personal-rail" aria-live="polite"></div>
-    </section>
+    <!-- ============== TỔNG QUAN · dải bento (30/10/2026) ==================
+         Ba khối đầu (Đọc tiếp · Mới cập nhật · Ranking) gộp vào một dải 12 cột:
+         mở trang là thấy đang đọc gì, có gì mới, ai đang dẫn đầu. Ô nào cũng
+         `min-width:0`, bìa khoá tỉ lệ 2/3, huy hiệu dán BÊN TRONG bìa (inset)
+         nên không gì bị cắt; chữ trong ô thì xuống dòng, không đẩy ô bên cạnh. -->
+    <section class="sec fade" id="tong-quan" aria-label="Tổng quan hôm nay">
+      <div class="bento">
 
-    <!-- ================= MỚI CẬP NHẬT ================= -->
-    <section class="sec fade" id="moi-cap-nhat">
-      <div class="sechead">
-        <h2>Mới cập nhật</h2>
-        <span class="right">
-          <!-- VÒNG QUAY “HÔM NAY ĐỌC GÌ?” — src/cz-dice.js dựng nút vào đây -->
-          <span class="dicehost" data-dice></span>
-          <a class="btn ghost sm" href="/#thu-vien" title="Xem cả thư viện">Xem tất cả</a>
-        </span>
-      </div>
-      <div class="rail" id="newRail"></div>
-    </section>
+        <!-- 1 · Đọc tiếp (+ theo dõi có chương mới) -->
+        <article class="btile b-resume">
+          <div class="bth">
+            <h2 class="blb" id="resumeTitle">Đọc tiếp</h2>
+            <span class="grow"></span>
+            <a class="btn ghost sm" href="/my-space">My Space</a>
+          </div>
+          <section id="resumeSec" class="home-personal" hidden aria-labelledby="resumeTitle">
+            <div id="resumeRail" class="personal-rail" aria-live="polite"></div>
+          </section>
+          <section id="followUpdatesSec" class="home-personal" hidden aria-labelledby="followUpdatesTitle">
+            <div class="bth lt"><h2 class="blb dim" id="followUpdatesTitle">Theo dõi có chương mới</h2></div>
+            <div id="followUpdatesRail" class="personal-rail" aria-live="polite"></div>
+          </section>
+          <!-- chưa đọc gì: ô này thành “bắt đầu từ đâu” (src/cz-home.js dựng) -->
+          <div id="starterBox" class="starter" hidden></div>
+        </article>
 
-    <!-- ================= XẾP HẠNG ================= -->
-    <section class="sec fade" id="bxh">
-      <div class="sechead">
-        <h2>Ranking</h2>
-        <div class="tabs sm ranking-modes" id="rankModes" role="group" aria-label="Hạng mục Ranking">
-          <button class="on" data-mode="views" aria-pressed="true">Top View</button>
-          <button data-mode="votes" aria-pressed="false">Top Vote</button>
-        </div>
+        <!-- 2 · Mới cập nhật -->
+        <article class="btile b-new" id="moi-cap-nhat">
+          <div class="bth">
+            <h2 class="blb">Mới cập nhật</h2>
+            <span class="grow"></span>
+            <a class="btn ghost sm" href="#thu-vien" title="Xem cả thư viện">Tất cả</a>
+          </div>
+          <div class="mini" id="newRail"></div>
+          <!-- “Hôm nay đọc gì?” — src/cz-dice.js gắn nút vào đây -->
+          <span class="dicehost bdice" data-dice></span>
+        </article>
+
+        <!-- 3 · Ranking + Đáng xem -->
+        <article class="btile b-rank" id="bxh">
+          <div class="sechead tilehead">
+            <h2>Ranking</h2>
+            <span class="right">
+              <div class="tabs sm ranking-modes" id="rankModes" role="group" aria-label="Hạng mục Ranking">
+                <button class="on" data-mode="views" aria-pressed="true">Top View</button>
+                <button data-mode="votes" aria-pressed="false">Top Vote</button>
+              </div>
+            </span>
+          </div>
+          <div class="ranking-toolbar">
+            <h3 id="rankSummary">Top View · Tuần</h3>
+            <div class="tabs sm" id="rankTabs" role="group" aria-label="Khoảng thời gian"></div>
+          </div>
+          <div id="rank" aria-live="polite" aria-atomic="true"></div>
+          <section class="worth-section" aria-labelledby="worthTitle">
+            <div class="bth lt"><h3 class="blb dim" id="worthTitle">Đáng xem</h3></div>
+            <div class="mini3" id="worthRail"></div>
+          </section>
+        </article>
+
       </div>
-      <div class="ranking-toolbar">
-        <h3 id="rankSummary">Top View · Tuần</h3>
-        <div class="tabs sm" id="rankTabs" role="group" aria-label="Khoảng thời gian"></div>
-      </div>
-      <div id="rank" aria-live="polite" aria-atomic="true"></div>
-      <section class="worth-section" aria-labelledby="worthTitle">
-        <div class="sechead"><h3 id="worthTitle">Đáng xem</h3></div>
-        <div class="rail" id="worthRail"></div>
-      </section>
     </section>
 
     <!-- ============ CHUYỂN THỂ SERIES ============ -->
@@ -82,9 +102,10 @@
     </section>
 
     <!-- ================= LỊCH RA CHƯƠNG ================= -->
-    <section class="sec fade" id="lich">
+    <section class="sec fade" id="lich" aria-labelledby="lichTitle">
       <div class="sechead">
-        <h2>Lịch ra chương</h2>
+        <h2 id="lichTitle">Lịch ra chương</h2>
+        <span class="right"><span class="lcount" id="lichCount"></span></span>
       </div>
       <div id="sched"></div>
     </section>
@@ -132,11 +153,11 @@
 
 <script src="/cz-config.js?v=20261012n"></script>
 <script src="/cz-stickers.js?v=20261012n"></script>
-<script src="/cz-app.js?v=20261030lib1"></script>
+<script src="/cz-app.js?v=20261030bento1"></script>
 <script src="/cz-auth.js?v=20261012n"></script>
 <script src="/cz-personal.js?v=20261013notif1"></script>
 <script src="/cz-dice.js?v=20261014feat1"></script>
 <script src="/cz-hero.js?v=20261029perf1"></script>
-<script src="/cz-home.js?v=20261030lib1"></script>
+<script src="/cz-home.js?v=20261030bento1"></script>
 </body>
 </html>

@@ -126,7 +126,8 @@
     var rows = CZ.lib().slice().sort(function (a, b) {
       return String(b.updated || '').localeCompare(String(a.updated || '')) || (b.chapters - a.chapters);
     });
-    CZ.mountRail($('#newRail'), rows.slice(0, 12));
+    /* 6 bộ = lưới 3 × 2 trong ô bento (đủ thấy “có gì mới”, không cần cuộn) */
+    CZ.mountRail($('#newRail'), rows.slice(0, 6));
   }
 
   /* ===================== KHÔNG GIAN CÁ NHÂN ============================ */
@@ -143,48 +144,72 @@
       '<div class="personal-card-actions"><a class="btn primary sm" href="' + esc(href) + '">' + esc(badge && badge.indexOf('mới') >= 0 ? 'Đọc chương mới' : 'Đọc tiếp') + '</a>' +
       CZ.followBtn(n, 'personal-follow') + '</div></div></article>';
   }
+  /* Ô “Đọc tiếp” của bento: phần nào chưa có dữ liệu thì ẩn HẲN (không bày
+     khung rỗng), cả hai đều rỗng thì ô đổi thành “bắt đầu từ đâu” — nhờ vậy ô
+     không bao giờ trống mà cũng không cao lêu nghêu vì dòng “chưa có…”. */
+  function setPersonalParts(hasResume, hasFollow, showStarter) {
+    var r = $('#resumeSec'), f = $('#followUpdatesSec'), st = $('#starterBox');
+    if (r) r.hidden = !hasResume;
+    if (f) f.hidden = !hasFollow;
+    if (st) { st.hidden = !showStarter; if (showStarter) renderStarter(); }
+  }
+  var starterDone = false;
+  function renderStarter() {
+    var box = $('#starterBox');
+    if (!box || starterDone) return;
+    starterDone = true;
+    var lib = CZ.lib();
+    var done = lib.filter(function (n) { return n.statusCls === 'done' && n.chapters > 0; });
+    var longest = done.slice().sort(function (a, b) { return b.chapters - a.chapters; })[0];
+    var shortest = done.slice().sort(function (a, b) { return a.chapters - b.chapters; })[0];
+    var freshest = lib.filter(function (n) { return n.chapters > 0; })
+      .sort(function (a, b) { return String(b.updated || '').localeCompare(String(a.updated || '')); })[0];
+    var picks = [
+      { n: longest, k: 'Đọc trọn một mạch' },
+      { n: shortest, k: 'Ngắn, đọc một tối' },
+      { n: freshest, k: 'Mới lên kệ' }
+    ].filter(function (x, i, all) { return x.n && all.findIndex(function (y) { return y.n === x.n; }) === i; });
+    if (!picks.length) { box.hidden = true; return; }
+    box.innerHTML = '<div class="bth lt"><h2 class="blb dim">Bắt đầu từ đâu?</h2></div>' +
+      picks.map(function (x, i) {
+        var img = CZ.coverSrc(x.n);
+        return '<a class="s" href="' + esc(CZ.storyURL(x.n.slug)) + '">' +
+          '<span class="s-th">' + (img ? '<img src="' + esc(img) + '"' + CZ.coverFB(x.n, img) + ' alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</span>' +
+          '<span class="s-bd"><span class="s-n">0' + (i + 1) + ' · ' + esc(x.k) + '</span>' +
+          '<b>' + esc(x.n.title) + '</b><span class="s-m">' + esc(CZ.countText(x.n)) + '</span></span></a>';
+      }).join('');
+  }
   function renderPersonalBlocks() {
     var service = window.CZPersonal;
     var resumeSection = $('#resumeSec'), followSection = $('#followUpdatesSec');
     if (!resumeSection || !followSection) return;
-    if (!service) { resumeSection.hidden = true; followSection.hidden = true; return; }
-    resumeSection.hidden = false; followSection.hidden = false;
+    if (!service) { setPersonalParts(false, false, true); return; }
     var requestId = ++personalRenderId;
     var mode = service.mode();
     var resumeRail = $('#resumeRail'), followRail = $('#followUpdatesRail');
-    if (mode === 'loading') {
-      resumeRail.innerHTML = '<p class="personal-empty">Đang đồng bộ…</p>';
-      followRail.innerHTML = '<p class="personal-empty">Đang kiểm tra…</p>';
-      return;
-    }
-    if (mode === 'error') {
-      resumeRail.innerHTML = '<p class="personal-empty">Chưa tải được dữ liệu cá nhân.</p>';
-      followRail.innerHTML = '<p class="personal-empty">Chưa đồng bộ được danh sách theo dõi.</p>';
-      return;
-    }
+    /* Đang đồng bộ / lỗi: ô vẫn phải có nội dung — hiện “bắt đầu từ đâu” thay vì
+       một ô trống chỉ có cái nhãn (vừa xấu vừa làm trang nhảy khi dữ liệu về). */
+    if (mode === 'loading' || mode === 'error') { setPersonalParts(false, false, true); return; }
     var library = CZ.lib();
     var known = Object.create(null);
     library.forEach(function (story) { known[story.slug] = story; });
     var progressRows = service.progressRows().filter(function (row) {
       return row && row.chapterIndex > 0 && known[row.storyId];
-    }).sort(function (a, b) { return String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')); }).slice(0, 8);
-    if (progressRows.length) {
-      resumeRail.innerHTML = progressRows.map(function (row) {
-        var story = known[row.storyId];
-        var url = CZ.readURL(story.slug, row.chapterIndex);
-        var progress = Number(row.scrollPercent) || 0;
-        var chapterLabel = 'Chương ' + row.chapterIndex + (row.completedAt ? ' · đã đọc' : '');
-        return personalCard(story, chapterLabel, url, progress, chapterLabel);
-      }).join('');
-    } else {
-      resumeRail.innerHTML = '<p class="personal-empty">Chưa có truyện đọc dở.</p>';
-    }
+    }).sort(function (a, b) { return String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')); }).slice(0, 2);
+    resumeRail.innerHTML = progressRows.map(function (row) {
+      var story = known[row.storyId];
+      var url = CZ.readURL(story.slug, row.chapterIndex);
+      var progress = Number(row.scrollPercent) || 0;
+      var chapterLabel = 'Chương ' + row.chapterIndex + (row.completedAt ? ' · đã đọc' : '');
+      return personalCard(story, chapterLabel, url, progress, chapterLabel);
+    }).join('');
+    var hasResume = progressRows.length > 0;
     var follows = service.followRows().filter(function (row) { return row && known[row.storyId]; });
     if (!follows.length) {
-      followRail.innerHTML = '<p class="personal-empty">Chưa theo dõi truyện nào.</p>';
+      followRail.innerHTML = '';
+      setPersonalParts(hasResume, false, !hasResume);
       return;
     }
-    followRail.innerHTML = '<p class="personal-empty">Đang tải chương mới…</p>';
     service.fetchTocs(follows.map(function (row) { return row.storyId; })).then(function (tocRows) {
       if (requestId !== personalRenderId) return;
       var bySlug = Object.create(null);
@@ -201,19 +226,16 @@
         return { story: story, toc: toc, count: count, unseen: unseen };
       }).filter(function (item) { return item.unseen > 0; })
         .sort(function (a, b) { return b.unseen - a.unseen || String(b.toc.updatedAt || '').localeCompare(String(a.toc.updatedAt || '')); });
-      if (!updates.length) {
-        followRail.innerHTML = '<p class="personal-empty">Chưa có chương mới.</p>';
-        return;
-      }
-      followRail.innerHTML = updates.slice(0, 12).map(function (item) {
+      followRail.innerHTML = updates.slice(0, 2).map(function (item) {
         var last = item.toc.chapters && item.toc.chapters.length ? item.toc.chapters[item.toc.chapters.length - 1] : null;
         var index = Math.max(1, Number(last && last.index) || item.count);
         var title = last && last.title ? last.title : 'Chương ' + index;
         var url = item.story.locked ? CZ.storyURL(item.story.slug) : CZ.readURL(item.story.slug, index);
         return personalCard(item.story, title, url, null, item.unseen + ' chương mới');
       }).join('');
+      setPersonalParts(hasResume, updates.length > 0, !hasResume && !updates.length);
     }).catch(function () {
-      if (requestId === personalRenderId) followRail.innerHTML = '<p class="personal-empty">Chưa tải được mục lục.</p>';
+      if (requestId === personalRenderId) { followRail.innerHTML = ''; setPersonalParts(hasResume, false, !hasResume); }
     });
   }
   var personalRenderTimer = 0;
@@ -241,7 +263,7 @@
       var s = CZ.statsOf(n) || {};
       return { n: n, rating: positive(s.rating), count: positive(s.ratingCount) };
     }).filter(function (r) { return r.rating > 0 && r.rating <= 5 && r.count > 0; })
-      .sort(function (a, b) { return b.rating - a.rating || b.count - a.count || a.n.slug.localeCompare(b.n.slug); }).slice(0, 12) : [];
+      .sort(function (a, b) { return b.rating - a.rating || b.count - a.count || a.n.slug.localeCompare(b.n.slug); }).slice(0, 3) : [];
     if (!rows.length) {
       rail.innerHTML = statsOn() ? '<p class="empty">Chưa có truyện được đánh giá sao.</p>' : '';
       return;
@@ -267,7 +289,7 @@
     var key = rankMode + ({ day: 'Day', week: 'Week', month: 'Month' }[rankBy]);
     var rows = on ? CZ.lib().map(function (n) { return { n: n, score: positive((CZ.statsOf(n) || {})[key]) }; })
       .filter(function (r) { return r.score > 0; })
-      .sort(function (a, b) { return b.score - a.score || a.n.slug.localeCompare(b.n.slug); }).slice(0, 8) : [];
+      .sort(function (a, b) { return b.score - a.score || a.n.slug.localeCompare(b.n.slug); }).slice(0, 5) : [];
     $('#rankSummary').textContent = (rankMode === 'views' ? 'Top View' : 'Top Vote') + ' · ' + tabs.find(function (t) { return t.k === rankBy; }).l;
     var peak = rows.length ? rows[0].score : 0;
     $('#rank').innerHTML = rows.map(function (row, i) {
@@ -323,6 +345,12 @@
       return String(x.title || '').trim().toLowerCase() === want;
     }) || null;
   }
+  var WD = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  /* Lịch ra chương = DẢI 7 NGÀY của tuần này (thứ Hai → Chủ nhật). Mỗi bộ nằm ở
+     đúng cột thứ của nó, hôm nay tô sáng; bộ chưa ghi thứ thì xuống hàng riêng
+     bên dưới chứ không bị bỏ sót. Mỗi mục vẫn giữ lớp .sched như trước nên các
+     chỗ khác (và bài kiểm) không phải đổi. */
   function renderSched(sch) {
     var el = $('#sched');
     if (!el) return;
@@ -339,22 +367,35 @@
       el.innerHTML = '<div class="empty">Chưa có lịch ra chương.</div>';
       return;
     }
-    el.innerHTML = '<div class="schedlist">' + items.map(function (it) {
+    var cell = function (it) {
       var n = schedFind(it);
-      var days = parseDays(it.days).map(function (d) { return '<i>' + esc(d) + '</i>'; }).join('');
-      var title = (n && n.title) || it.title || '';
       var im = n && CZ.coverSrc(n);
-      var href = n ? 'href="' + esc(CZ.storyURL(n.slug)) + '"' : '';
-      var meta = n
-        ? (n.canRead ? esc(CZ.countText(n)) : CZ.statusLabel(n.statusCls))
-        : esc(it.detail || '');
-      return '<a class="sched' + (n ? ' clk' : '') + '" ' + href + '>' +
+      var title = (n && n.title) || it.title || '';
+      var meta = n ? (n.canRead ? CZ.countText(n) : CZ.statusLabel(n.statusCls)) : (it.detail || '');
+      return '<a class="sched' + (n ? ' clk' : '') + '"' + (n ? ' href="' + esc(CZ.storyURL(n.slug)) + '"' : '') + '>' +
         '<span class="sch-th' + (im ? '' : ' noimg') + '">' +
-          (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</span>' +
-        '<span class="sch-days">' + (days || '<i>—</i>') + '</span>' +
-        '<span class="sch-info"><b>' + esc(title) + '</b><span>' + meta + '</span></span></a>';
-    }).join('') + '</div>' +
-      (sch.note ? '<p class="schnote">' + esc(sch.note) + '</p>' : '');
+        (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</span>' +
+        '<span class="sch-info"><b>' + esc(title) + '</b><span>' + esc(meta) + '</span></span></a>';
+    };
+    var dated = items.map(function (it) { return { it: it, days: parseDays(it.days) }; });
+    var unplaced = dated.filter(function (x) { return !x.days.length; });
+    var now = new Date();
+    var monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
+    var cols = WD.map(function (wd, i) {
+      var d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+      var today = d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      var rows = dated.filter(function (x) { return x.days.indexOf(wd) >= 0; });
+      return '<div class="day' + (today ? ' today' : '') + '">' +
+        '<div class="wd">' + wd + (today ? '<span>· hôm nay</span>' : '') + '</div>' +
+        '<div class="dt">' + pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '</div>' +
+        (rows.length ? rows.map(function (x) { return cell(x.it); }).join('') : '<div class="dayoff">nghỉ</div>') +
+        '</div>';
+    }).join('');
+    el.innerHTML = '<div class="week">' + cols + '</div>' +
+      (unplaced.length ? '<div class="schedlist">' + unplaced.map(function (x) { return cell(x.it); }).join('') + '</div>' : '') +
+      (sch && sch.note ? '<p class="schnote">' + esc(sch.note) + '</p>' : '');
+    var count = $('#lichCount');
+    if (count) count.textContent = items.length + ' bộ · tuần này';
   }
   function renderEditorChoice() {
     var el = $('#bien-tap'), rail = $('#editRail');

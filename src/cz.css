@@ -1257,10 +1257,6 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .sched.clk:hover .sch-info b { color: var(--acc); }
 .sch-th { display: block; width: 46px; height: 66px; border-radius: var(--r-sm); overflow: hidden; background: var(--surf2); }
 .sch-th img { width: 100%; height: 100%; object-fit: cover; }
-.sch-days { display: flex; flex-wrap: wrap; gap: 4px; min-width: 72px; }
-.sch-days i { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 28px;
-  padding: 0 8px; border-radius: 99px; font-style: normal; font-size: 12px; font-weight: 700; letter-spacing: .04em;
-  color: var(--acc); background: color-mix(in srgb, var(--acc) 10%, transparent); border: 1px solid color-mix(in srgb, var(--acc) 22%, transparent); }
 .sch-info { min-width: 0; }
 .sch-info b { display: block; font-size: 14.5px; font-weight: 650; line-height: 1.35; letter-spacing: -.004em;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1268,7 +1264,6 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .schnote { margin: 12px 0 0; font-size: 12.5px; line-height: 1.55; color: var(--dim); }
 @media (max-width: 640px) {
   .sched { grid-template-columns: 40px 1fr; }
-  .sch-days { grid-column: 2; min-width: 0; }
   .sch-info { grid-column: 2; }
   .sch-th { width: 40px; height: 56px; }
 }
@@ -2836,15 +2831,12 @@ body.rd-focus .rdcmts { display: none; }
 /* Ranking: separate metrics, quiet rows and a subordinate discovery shelf. */
 .ranking-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 12px 0; }
 .ranking-toolbar h3 { margin: 0; font-size: 16px; }
-.ranking-note { color: var(--mut); font-size: 12px; line-height: 1.8; margin: 8px 0 16px; }
 .ranking-modes { flex-shrink: 0; }
 #bxh .sechead { flex-wrap: wrap; gap: 14px; }
 #bxh .rank { grid-template-columns: 28px 46px minmax(0,1fr) auto; }
 #bxh .rank .tt b { overflow: visible; white-space: normal; -webkit-line-clamp: unset; display: block; overflow-wrap: anywhere; line-height: 1.55; }
 #bxh .rank:hover, #bxh .rank:hover .n.top, #bxh .rank:hover .rk-th { transform: none; box-shadow: none; }
 .worth-section { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--bd); }
-.worth-section h3 { font-size: 20px; margin: 0; }
-.worth-section .sechead .ranking-note { margin: 0; }
 .worth-score { display: block; color: var(--acc); font-size: 12px; line-height: 1.6; padding: 10px 12px 14px; }
 #worthRail > .empty { width: 100%; }
 .synwrap.clamp.open > .synin { max-height: none; overflow: visible; mask-image: none; -webkit-mask-image: none; }
@@ -4154,7 +4146,6 @@ body.rd-focus .rdcmts { display: none; }
 .personal-follow { display: inline-grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--bd); border-radius: 50%; color: var(--mut); background: var(--surf2); cursor: pointer; }
 .personal-follow.on { color: var(--acc); border-color: color-mix(in srgb, var(--acc) 40%, var(--bd)); }
 .personal-follow .i { width: 18px; height: 18px; }
-.personal-empty { width: 100%; margin: 0; padding: 18px; border: 1px dashed var(--bd); border-radius: var(--r); color: var(--mut); font-size: 13px; }
 
 /* ===== Sticker picker Sso tích hợp comment/reply hiện có ================= */
 .cmt-sticker-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
@@ -4184,3 +4175,163 @@ body.rd-focus .rdcmts { display: none; }
 }
 
 [hidden] { display: none !important; }
+
+/* ================================================================
+   30/10/2026 · TRANG CHỦ: DẢI BENTO (ba ô đầu)
+   ----------------------------------------------------------------
+   Thay ba khối xếp chồng “Đọc tiếp / Mới cập nhật / Ranking” bằng MỘT
+   dải 12 cột: 5 · 4 · 3. Nguyên tắc chống cắt nội dung (yêu cầu của
+   người dùng): mọi ô `min-width:0`; bìa khoá tỉ lệ 2/3 nên không ô nào
+   đẩy ô bên cạnh; huy hiệu (tình trạng, NEW, 18+) nằm TRONG bìa bằng
+   inset nên mép ô không bao giờ cắt mất; chữ dài xuống dòng, không bị
+   `nowrap` đẩy ra khỏi ô. Ba ô cùng một hệ thước cho khớp mắt.
+   ================================================================ */
+#tong-quan { margin: 34px 0 8px; }
+.bento { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.btile { display: flex; flex-direction: column; min-width: 0; gap: 11px; padding: 14px;
+  border: 1px solid var(--bd); border-radius: 13px;
+  background: linear-gradient(180deg, var(--surf), var(--bg2)); }
+.b-resume { grid-column: span 5; }
+.b-new { grid-column: span 4; }
+.b-rank { grid-column: span 3; }
+
+/* đầu ô: nhãn in hoa + nút phụ bên phải; min-height giữ ba ô thẳng hàng mắt */
+.bth { display: flex; align-items: center; gap: 8px; min-height: 26px; }
+.bth.lt { min-height: 0; }
+.blb { min-width: 0; margin: 0; font-family: var(--font); font-size: 9.5px; font-weight: 800;
+  line-height: 1.25; letter-spacing: .16em; text-transform: uppercase; color: var(--acc); }
+.blb.dim { color: var(--dim); }
+.grow { flex: 1 1 auto; min-width: 0; }
+.bth .btn { flex: 0 0 auto; height: 24px; padding: 0 9px; font-size: 11.5px; }
+
+/* --- ô 1: đọc tiếp ------------------------------------------------- */
+.b-resume .personal-rail { padding-bottom: 2px; }
+.b-resume .personal-card { flex: 0 0 min(300px, 84%); }
+.bdice { display: flex; margin-top: auto; }
+.bdice .dicebtn { flex: 1 1 auto; justify-content: center; height: 30px; padding: 0 10px; font-size: 12px; }
+.starter { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 9px; }
+.side .starter { grid-template-columns: 1fr; }
+.starter .s { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 9px; min-width: 0;
+  padding: 8px; border: 1px solid var(--bd); border-radius: var(--r);
+  background: color-mix(in srgb, var(--surf2) 55%, transparent); }
+.starter .s:hover { border-color: var(--bd2); }
+.starter .s-th { display: block; width: 40px; aspect-ratio: 2/3; overflow: hidden;
+  border-radius: 4px; background: var(--surf2); }
+.starter .s-th img { width: 100%; height: 100%; object-fit: cover; }
+.starter .s-bd { min-width: 0; }
+.starter .s-n { display: block; margin-bottom: 4px; font-size: 9px; font-weight: 800;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--acc); }
+.starter .s-bd b { display: block; font-size: 12.5px; font-weight: 650; line-height: 1.35; overflow-wrap: anywhere; }
+.starter .s-m { display: block; margin-top: 3px; font-size: 10.5px; color: var(--dim); }
+
+/* --- ô 2 + 3: lưới bìa 3 cột (mới cập nhật / đáng xem) -------------- */
+/* Lưới con khoá 3 cột bằng minmax(0,1fr) — bìa co đều, không tràn ô. */
+.mini, .mini3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 9px; }
+.mini > .empty, .mini3 > .empty { grid-column: 1 / -1; }
+/* Tên truyện KHÔNG cắt: bỏ line-clamp ở lưới nhỏ, cho chữ xuống dòng hết. Các
+   thẻ cùng một hàng vẫn cao bằng nhau (grid), nên đáy vẫn thẳng. */
+.mini .card h3, .mini3 .card h3 { display: block; overflow: visible; min-height: 0;
+  margin-top: 8px; font-size: 11.5px; -webkit-line-clamp: unset; overflow-wrap: anywhere; }
+.mini .card .cb, .mini3 .card .cb { font-size: 9.5px; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
+/* huy hiệu thu nhỏ theo bìa: dán trong bìa, luôn nằm gọn mép */
+.mini .card .th .stic, .mini3 .card .th .stic { top: 6px; left: 6px; width: 20px; height: 20px; border-width: 1px; }
+.mini .card .th .stic .i, .mini3 .card .th .stic .i { width: 12px; height: 12px; min-width: 12px; }
+.mini .card .th .foot, .mini3 .card .th .foot { inset: auto 6px 6px; gap: 4px; }
+.mini .card .th .foot .ch, .mini3 .card .th .foot .ch { font-size: 9px; }
+.mini .card .th .b18, .mini3 .card .th .b18 { font-size: 8px; padding: 1px 4px; }
+.mini .card .th .nw-bookmark, .mini3 .card .th .nw-bookmark { width: 16px; height: 42px; right: 7px; }
+.mini .card .th .nw-bookmark > span, .mini3 .card .th .nw-bookmark > span { font-size: 6.5px; }
+.mini3 .worth-score { padding: 4px 0 0; font-size: 9px; line-height: 1.35; color: var(--acc); }
+/* huy hiệu “N chương mới” trong ô nhỏ: về sát chân bìa, co chữ lại cho vừa */
+.mini .card .th .badge-newchap, .mini3 .card .th .badge-newchap { top: auto; bottom: 22px;
+  max-width: calc(100% - 10px); min-height: 14px; padding: 1px 5px; font-size: 7.5px;
+  letter-spacing: .02em; }
+.mini .card .th .b18, .mini3 .card .th .b18 { min-height: 15px; }
+/* ô “đọc tiếp”: tên hiện đủ, không cắt bằng ellipsis */
+.b-resume .personal-card-title { display: block; overflow: visible; -webkit-line-clamp: unset;
+  overflow-wrap: anywhere; }
+
+/* --- ô 3: Ranking --------------------------------------------------- */
+#bxh { gap: 9px; }
+#bxh .tilehead { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 0; margin: 0; border-bottom: 0; }
+#bxh .tilehead h2 { margin: 0; font-size: 9.5px; font-weight: 800; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--acc); }
+#bxh .tilehead .right { margin-left: auto; padding: 0; gap: 0; }
+#bxh .tabs { padding: 2px; gap: 2px; }
+#bxh .tabs > button { min-height: 22px; padding: 0 8px; font-size: 10.5px; border-radius: 6px; }
+#bxh .ranking-toolbar { gap: 8px; margin: 0; }
+#bxh .ranking-toolbar h3 { font-size: 12px; font-weight: 700; color: var(--mut); }
+/* hàng xếp hạng trong ô hẹp: số · bìa · (tên / số lượt). Tên KHÔNG cắt bằng
+   nowrap — nó xuống dòng trong cột riêng, số lượt rơi xuống dưới tên. */
+#bxh .rank { grid-template-columns: 18px 34px minmax(0, 1fr); gap: 2px 9px; padding: 8px 6px; }
+#bxh .rank .n { font-size: 13px; }
+#bxh .rank .n.t1 { font-size: 16px; }
+#bxh .rank .rk-th { grid-row: 1 / span 2; width: 34px; height: auto; aspect-ratio: 2/3; align-self: center; }
+#bxh .rank .tt { grid-column: 3; grid-row: 1; }
+#bxh .rank .tt span { display: none; }
+#bxh .rank .tt b { font-size: 12px; line-height: 1.35; }
+#bxh .rank .v { grid-column: 3; grid-row: 2; font-size: 10px; color: var(--dim); }
+#bxh .rank .v b { font-weight: 700; color: var(--mut); }
+#bxh .worth-section { margin-top: 3px; padding-top: 9px; }
+
+/* --- lịch ra chương: dải 7 ngày ------------------------------------- */
+.lcount { font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+.week .day { min-width: 0; padding: 9px 9px 10px; border: 1px solid var(--bd);
+  border-radius: 10px; background: var(--bg2); }
+.week .day.today { border-color: color-mix(in srgb, var(--acc) 45%, var(--bd));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--acc) 9%, var(--surf)), var(--bg2)); }
+.week .wd { display: flex; align-items: baseline; gap: 4px; font-size: 9px; font-weight: 800;
+  letter-spacing: .13em; text-transform: uppercase; color: var(--dim); }
+.week .wd span { color: var(--acc); letter-spacing: .06em; }
+.week .dt { margin: 2px 0 8px; font-family: var(--font-head); font-size: 14px; font-weight: 700;
+  color: var(--mut); font-variant-numeric: tabular-nums; }
+.week .day.today .dt { color: var(--txt); }
+.week .dayoff { padding: 4px 0; font-size: 10px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--dim); opacity: .65; }
+.week .sched { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 7px; margin-bottom: 5px;
+  padding: 5px; border: 1px solid transparent; border-radius: 7px; background: transparent; }
+.week .sched:last-child { margin-bottom: 0; }
+.week .sched.clk:hover { border-color: var(--bd2); background: var(--surf2); transform: none; }
+.week .sch-th { width: 26px; height: auto; aspect-ratio: 2/3; border-radius: 3px; }
+.week .sch-info b { display: -webkit-box; font-size: 11px; font-weight: 650; line-height: 1.3;
+  overflow: hidden; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+.week .sch-info span { display: block; margin-top: 1px; font-size: 9.5px; color: var(--dim); }
+
+/* --- thu nhỏ theo bề ngang (giữ NGUYÊN cấu trúc, chỉ đổi số cột) ----- */
+@media (max-width: 1100px) {
+  .b-resume { grid-column: span 6; }
+  .b-new { grid-column: span 6; }
+  .b-rank { grid-column: span 12; }
+  .b-rank .mini3 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+@media (max-width: 880px) {
+  .bento { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .b-resume { grid-column: span 6; }
+  .b-new { grid-column: span 3; }
+  .b-rank { grid-column: span 3; }
+  .b-rank .mini3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  /* nửa màn hình: “mới cập nhật” 2 cột cho bìa khỏi bé như tem */
+  .b-new .mini { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* tuần: cuộn ngang theo ngày thay vì bóp 7 cột thành cột hẹp */
+  .week { grid-auto-flow: column; grid-auto-columns: 138px; grid-template-columns: none;
+    overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x proximity; }
+  .week .day { scroll-snap-align: start; }
+}
+@media (max-width: 620px) {
+  .bento { grid-template-columns: minmax(0, 1fr); }
+  .b-resume, .b-new, .b-rank { grid-column: 1 / -1; }
+  .btile { padding: 12px; gap: 9px; }
+  .mini, .mini3 { gap: 8px; }
+  .starter { grid-template-columns: 1fr; }
+  .week { grid-auto-columns: 128px; }
+  .b-resume .personal-card { flex-basis: min(290px, 88%); }
+}
+@media (min-width: 1101px) {
+  /* ô “đọc tiếp” rộng 5/12: xếp DỌC để thấy 2 bộ đang đọc cùng lúc, không phải vuốt */
+  .b-resume .personal-rail { flex-direction: column; gap: 8px; overflow: visible; padding: 0; }
+  .b-resume .personal-card { flex: 1 1 auto; width: auto; padding: 9px; gap: 10px; }
+  .b-resume .personal-cover { width: 52px; height: 78px; }
+  .b-resume .personal-card-title { font-size: 13px; }
+  .b-resume .personal-card-actions .btn { height: 26px; padding: 0 9px; font-size: 11.5px; }
+}
