@@ -169,7 +169,7 @@ Bản V4 cũ rối ở 5 điểm, tất cả đều đã xử lý:
 Ba biến thể trong `docs/mockups/hero/v4-options.html` (dữ liệu + bìa **thật**, không ảnh minh hoạ):
 
 - **A · “Sạp báo”** (tối) — quạt 5 bìa có tâm, tự chuyển 7 s kèm nút Tạm dừng (WCAG 2.2.2) và
-  vạch tiến trình 2 px; mobile đổi thành dải bìa cuộn ngang.
+  vạch tiến trình 2 px; mobile **giữ nguyên bố cục** (chữ trên, quạt 3 bìa dưới — chỉ thu nhỏ, không đổi kiểu điều hướng).
 - **B · “Kệ trưng”** (giấy) — bìa lớn đóng khung + **mục lục 01–05** bên cạnh trên một trục số,
   bỏ hẳn thumbnail nhỏ trong danh sách (thứ làm bản trước trông vụn); tổng cao ~440 px.
 - **C · “Đèn rọi”** (tối, ấn tượng nhất) — `perspective`, bìa chính + hai bìa kế `rotateY 15°`
@@ -179,4 +179,6 @@ Ba biến thể trong `docs/mockups/hero/v4-options.html` (dữ liệu + bìa **
 Kiểm chứng: jsdom **69/69** (3 khối, quạt/mục lục/ticks đủ 5, đổi truyện → tiêu đề + bìa + `aria-current` +
 vùng `aria-live`, nút Tạm dừng, bìa hai bên bấm/kbd, chip khổ & giao diện, 5 bìa có thật trong `assets/covers`).
 
-**Đang chờ chọn A / B / C** — sau đó mới đụng `src/cz-hero.js` (hiện vẫn là bản full-bleed V0).
+**Chốt 2026-10-29:** người duyệt chọn **A · “Sạp báo”**, kèm yêu cầu mobile phải cùng bố cục với desktop
+(đã sửa: bỏ dải cuộn ngang, quạt 3 bìa + ticks + prev/next + nhãn số–tác giả giữ nguyên).
+Bước tiếp theo: port A vào `src/cz-hero.js` (hiện vẫn là bản full-bleed V0).

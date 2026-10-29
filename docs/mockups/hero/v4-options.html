@@ -215,21 +215,22 @@ body[data-vp="tablet"] .vA{grid-template-columns:minmax(0,1fr) minmax(0,.96fr);g
 body[data-vp="tablet"] .vA .fan{height:340px;--fan-unit:96px;--fan-max:3}
 body[data-vp="tablet"] .vA .fan button{width:136px}
 body[data-vp="tablet"] .vA .fancap{--cap-y:278px}
-/* mobile: quạt → dải bìa cuộn ngang, chạm là đổi (thao tác thuận tay) */
-body[data-vp="mobile"] .vA{grid-template-columns:1fr;gap:20px;padding:24px 0 26px;min-height:0}
-body[data-vp="mobile"] .vA .in{padding:0 var(--pad);gap:13px;max-width:none}
-body[data-vp="mobile"] .vA h1{font-size:var(--title);max-width:none}
+/* mobile: GIỮ NGUYÊN cấu trúc như desktop/tablet — chữ trên, quạt bìa dưới
+   (chỉ thu nhỏ: 3 bìa gần nhất, bước quạt 96px). Không đổi sang dải cuộn ngang. */
+body[data-vp="mobile"] .vA{grid-template-columns:1fr;gap:16px;padding:22px var(--pad) 24px;min-height:0}
+body[data-vp="mobile"] .vA .in{gap:12px;max-width:none}
+body[data-vp="mobile"] .vA h1{font-size:var(--title);max-width:none;max-width:15ch}
 body[data-vp="mobile"] .vA .hb-x{display:none}
-body[data-vp="mobile"] .vA .fan{display:flex;gap:10px;height:auto;overflow-x:auto;padding:2px var(--pad) 6px;
-  scroll-snap-type:x mandatory;scrollbar-width:none}
-body[data-vp="mobile"] .vA .fan::-webkit-scrollbar{display:none}
-body[data-vp="mobile"] .vA .fan button{position:static;transform:none;width:128px;flex:none;filter:none;
-  scroll-snap-align:center;border-color:rgba(255,255,255,.16)}
-body[data-vp="mobile"] .vA .fan button.on{box-shadow:0 0 0 2px var(--hb-acc)}
-body[data-vp="mobile"] .vA .fancap{display:none}
-body[data-vp="mobile"] .vA .fan{--fan-max:5}
-body[data-vp="mobile"] .vA .nav [data-prev],body[data-vp="mobile"] .vA .nav [data-next]{display:none}
-body[data-vp="mobile"] .vA .foot{margin-top:4px}
+body[data-vp="mobile"] .vA .fan{height:250px;--fan-unit:96px;--fan-max:3}
+body[data-vp="mobile"] .vA .fan button{width:116px}
+body[data-vp="mobile"] .vA .fancap{--cap-y:216px}
+body[data-vp="mobile"] .vA .nav button,body[data-vp="mobile"] .vA .pause{width:36px;height:36px}
+body[data-vp="mobile"] .vA .foot{margin-top:6px;gap:12px}
+/* bề ngang 390: ticks co lại để ticks + "01 / 05" + 3 nút điều khiển vẫn nằm MỘT hàng */
+body[data-vp="mobile"] .vA .hb-ticks{gap:5px}
+body[data-vp="mobile"] .vA .hb-ticks button{width:20px}
+body[data-vp="mobile"] .vA .hb-ticks button.on{width:30px}
+body[data-vp="mobile"] .vA .hb-count{font-size:10px;letter-spacing:.06em}
 
 /* ============================================================================
    3. BIẾN THỂ B — “KỆ TRƯNG” (giấy, không tối; bìa lớn + danh sách như mục lục)
@@ -469,7 +470,7 @@ body.zoomfit .frame{zoom:.72}
       <dt>Vì sao “gọn” hơn</dt><dd>5 bìa cùng tâm, khoảng cách đều (146 / 268px), chỉ bìa đang chọn đủ sáng — mắt có một điểm dừng.
         Số + tác giả gắn ngay dưới bìa đang chọn thay vì mỗi bìa một nhãn đen.</dd>
       <dt>Điều khiển</dt><dd>Ticks 5 nhịp (bấm được, đọc được vị trí) + “01 / 05” + prev/next + nút Tạm dừng;
-        vạch tiến trình 2px ở đáy hero chạy trong 7 giây. Mobile: quạt → dải bìa cuộn ngang, chạm là đổi.</dd>
+        vạch tiến trình 2px ở đáy hero chạy trong 7 giây. Mobile: giữ đúng bố cục này (chữ trên, quạt 3 bìa dưới).</dd>
       <dt>Kỹ thuật</dt><dd>Chỉ <code>transform</code> + <code>filter: brightness()</code> tĩnh theo trạng thái; không animate blur,
         không đổi kích thước khung ⇒ không layout shift. Tôn trọng <code>prefers-reduced-motion</code>.</dd>
     </dl></div>
@@ -614,7 +615,7 @@ body.zoomfit .frame{zoom:.72}
       <li>Một màu nhấn duy nhất cho mỗi biến thể</li>
       <li>Nút phụ dạng viên tròn, CTA chỉ 2 nút</li>
       <li>Bìa không chọn hạ sáng <b>đồng loạt</b> (một quy tắc)</li>
-      <li>Mobile: quạt/danh sách → dải chạm, không còn khối chồng</li>
+      <li>Mobile: giữ nguyên bố cục như desktop, chỉ thu nhỏ — không đổi kiểu điều hướng</li>
     </ul>
   </section>
 </div>
@@ -827,7 +828,7 @@ function paint(demo) {
       if (off === 0) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
     });
     applyFanPositions(demo, btns);
-    /* mobile: quạt là dải cuộn ngang ⇒ kéo bìa đang chọn vào giữa tầm nhìn */
+    /* phòng khi quạt bị cuộn (màn hình hẹp hơn dự kiến): kéo bìa đang chọn vào giữa */
     var on = fan.querySelector('button.on');
     if (on && fan.scrollWidth > fan.clientWidth + 4 && on.scrollIntoView) {
       on.scrollIntoView({ block: 'nearest', inline: 'center', behavior: REDUCED ? 'auto' : 'smooth' });
