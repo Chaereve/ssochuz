@@ -159,7 +159,7 @@ const ICON = {
   grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg>',
   rows: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"><rect x="4" y="5" width="16" height="5"/><rect x="4" y="14" width="16" height="5"/></svg>',
   caret: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
-  play: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.2v13.6a1 1 0 0 0 1.53.85l10.4-6.8a1 1 0 0 0 0-1.7L9.53 4.35A1 1 0 0 0 8 5.2z"/></svg>'
+  read: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.4C9.9 5 7 4.5 4.6 4.5v15c2.4 0 5.3.5 7.4 1.9 2.1-1.4 5-1.9 7.4-1.9v-15c-2.4 0-5.3.5-7.4 1.9z"/><path d="M12 6.4v15"/></svg>'
 };
 
 /* ------------------------------ THÀNH PHẦN ------------------------------- */
@@ -176,7 +176,7 @@ function card(b, o = {}) {
         (o.pct ? `<span class="pbar"><i style="width:${o.pct}%"></i></span>` : '') +
         (o.lib
           ? `<span class="hov"><span class="hovIn">` +
-              `<span class="goIc">${ICON.play}</span>` +
+              `<span class="goIc">${ICON.read}</span>` +
               `<span class="goTx">Đọc ngay</span>` +
             `</span></span>`
           : '') +
@@ -686,7 +686,7 @@ const HOVER = `<!doctype html>
   <section class="vsec hvA">
     <span class="tag">Kiểu A · nút tròn son</span>
     <h2>Một vòng son bật lên giữa bìa</h2>
-    <p class="lead">Nút tròn 46px, phóng ra bằng nhịp nảy nhẹ; dưới là chữ “Đọc ngay” 10px giãn chữ, in hoa.</p>
+    <p class="lead">Nút tròn 46px màu son, bên trong là <b>biểu tượng sách mở</b>, phóng ra bằng nhịp nảy nhẹ; dưới là chữ “Đọc ngay” 10px giãn chữ, in hoa.</p>
     <div class="track demo">${demoCards()}</div>
   </section>
 

@@ -59,14 +59,14 @@ Không còn đường kẻ giữa các mục (chỉ còn khoảng thở 44px), k
 |---|---|
 | Số hạng | **A** — số serif lớn đè góc dưới-trái bìa, hạng 1 màu son |
 | ▲▼ | **A** — dấu trước số (`▲3`) |
-| Thanh lọc | **A** — có viền; đã sửa lệch: dropdown + nút lưới/danh sách gói trong một hàng `.lrow`, mọi thứ cao đúng 38px |
+| Thanh lọc | **A** — có viền; dropdown + nút lưới/danh sách nằm trong một hàng `.lrow` `flex:none`, chữ `nowrap` (không rớt dòng), mọi thứ cao đúng 38px |
 | Nút rê chuột | làm lại — ba kiểu ở `hover.html` |
 
 ### Ba kiểu nút khi rê chuột (`hover.html`)
 
 | Kiểu | Mô tả |
 |---|---|
-| A · nút tròn son | bìa tối đi, nút tròn 46px màu son bật lên (nhịp nảy nhẹ), dưới là “Đọc ngay” 10px in hoa giãn chữ — **đang dùng trong trang chính** |
+| A · nút tròn son + **sách mở** | bìa tối đi, nút tròn 46px màu son có biểu tượng **sách mở** (không dùng tam giác play), dưới là “Đọc ngay” 10px in hoa giãn chữ — **đang dùng trong trang chính** |
 | B · chữ lớn + gạch son | không nút: chữ “Đọc ngay” serif 20px trên bìa tối, gạch son 46px trượt ra, viền son 2px ôm bìa |
 | C · thanh son từ đáy | dải son đặc cao 34px trượt lên từ đáy, chữ đậm màu nền |
 
