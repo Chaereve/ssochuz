@@ -15,7 +15,7 @@
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://ssochuz.pages.dev/ssochuz.png">
   <!-- N13: bỏ preconnect Firestore — không còn đọc thẳng Firestore từ máy khách -->
-<link rel="stylesheet" href="/cz.css?v=20261030bento1">
+<link rel="stylesheet" href="/cz.css?v=20261030bento2">
 </head>
 <body class="hpage">
 
@@ -41,15 +41,15 @@
         <!-- 1 · Đọc tiếp (+ theo dõi có chương mới) -->
         <article class="btile b-resume">
           <div class="bth">
-            <h2 class="blb" id="resumeTitle">Đọc tiếp</h2>
-            <span class="grow"></span>
-            <a class="btn ghost sm" href="/my-space">My Space</a>
+            <h2 class="btl" id="resumeTitle">Đọc tiếp</h2>
+            <span class="bts" id="resumeSub"></span>
+            <a class="btm" href="/my-space">My Space ›</a>
           </div>
           <section id="resumeSec" class="home-personal" hidden aria-labelledby="resumeTitle">
             <div id="resumeRail" class="personal-rail" aria-live="polite"></div>
           </section>
           <section id="followUpdatesSec" class="home-personal" hidden aria-labelledby="followUpdatesTitle">
-            <div class="bth lt"><h2 class="blb dim" id="followUpdatesTitle">Theo dõi có chương mới</h2></div>
+            <div class="bth lt"><h3 class="blb" id="followUpdatesTitle">Theo dõi có chương mới</h3></div>
             <div id="followUpdatesRail" class="personal-rail" aria-live="polite"></div>
           </section>
           <!-- chưa đọc gì: ô này thành “bắt đầu từ đâu” (src/cz-home.js dựng) -->
@@ -59,9 +59,9 @@
         <!-- 2 · Mới cập nhật -->
         <article class="btile b-new" id="moi-cap-nhat">
           <div class="bth">
-            <h2 class="blb">Mới cập nhật</h2>
-            <span class="grow"></span>
-            <a class="btn ghost sm" href="#thu-vien" title="Xem cả thư viện">Tất cả</a>
+            <h2 class="btl">Mới cập nhật</h2>
+            <span class="bts" id="newSub"></span>
+            <a class="btm" href="#thu-vien">Tất cả ›</a>
           </div>
           <div class="mini" id="newRail"></div>
           <!-- “Hôm nay đọc gì?” — src/cz-dice.js gắn nút vào đây -->
@@ -74,18 +74,18 @@
             <h2>Ranking</h2>
             <span class="right">
               <div class="tabs sm ranking-modes" id="rankModes" role="group" aria-label="Hạng mục Ranking">
-                <button class="on" data-mode="views" aria-pressed="true">Top View</button>
-                <button data-mode="votes" aria-pressed="false">Top Vote</button>
+                <button class="on" data-mode="views" aria-pressed="true">Lượt đọc</button>
+                <button data-mode="votes" aria-pressed="false">Lượt thích</button>
               </div>
             </span>
           </div>
           <div class="ranking-toolbar">
-            <h3 id="rankSummary">Top View · Tuần</h3>
+            <h3 id="rankSummary" class="sr-only">Lượt đọc · Tuần</h3>
             <div class="tabs sm" id="rankTabs" role="group" aria-label="Khoảng thời gian"></div>
           </div>
           <div id="rank" aria-live="polite" aria-atomic="true"></div>
           <section class="worth-section" aria-labelledby="worthTitle">
-            <div class="bth lt"><h3 class="blb dim" id="worthTitle">Đáng xem</h3></div>
+            <div class="bth lt"><h3 class="blb" id="worthTitle">Đáng xem</h3></div>
             <div class="mini3" id="worthRail"></div>
           </section>
         </article>
@@ -153,11 +153,11 @@
 
 <script src="/cz-config.js?v=20261012n"></script>
 <script src="/cz-stickers.js?v=20261012n"></script>
-<script src="/cz-app.js?v=20261030bento1"></script>
+<script src="/cz-app.js?v=20261030bento2"></script>
 <script src="/cz-auth.js?v=20261012n"></script>
 <script src="/cz-personal.js?v=20261013notif1"></script>
 <script src="/cz-dice.js?v=20261014feat1"></script>
 <script src="/cz-hero.js?v=20261029perf1"></script>
-<script src="/cz-home.js?v=20261030bento1"></script>
+<script src="/cz-home.js?v=20261030bento2"></script>
 </body>
 </html>

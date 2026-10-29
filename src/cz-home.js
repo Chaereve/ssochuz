@@ -127,7 +127,10 @@
       return String(b.updated || '').localeCompare(String(a.updated || '')) || (b.chapters - a.chapters);
     });
     /* 6 bộ = lưới 3 × 2 trong ô bento (đủ thấy “có gì mới”, không cần cuộn) */
-    CZ.mountRail($('#newRail'), rows.slice(0, 6));
+    var pick = rows.slice(0, 6);
+    CZ.mountRail($('#newRail'), pick);
+    var sub = $('#newSub');
+    if (sub) sub.textContent = pick.length ? pick.length + ' bộ vừa lên chương' : '';
   }
 
   /* ===================== KHÔNG GIAN CÁ NHÂN ============================ */
@@ -147,10 +150,11 @@
   /* Ô “Đọc tiếp” của bento: phần nào chưa có dữ liệu thì ẩn HẲN (không bày
      khung rỗng), cả hai đều rỗng thì ô đổi thành “bắt đầu từ đâu” — nhờ vậy ô
      không bao giờ trống mà cũng không cao lêu nghêu vì dòng “chưa có…”. */
-  function setPersonalParts(hasResume, hasFollow, showStarter) {
-    var r = $('#resumeSec'), f = $('#followUpdatesSec'), st = $('#starterBox');
+  function setPersonalParts(hasResume, hasFollow, showStarter, resumeCount) {
+    var r = $('#resumeSec'), f = $('#followUpdatesSec'), st = $('#starterBox'), sub = $('#resumeSub');
     if (r) r.hidden = !hasResume;
     if (f) f.hidden = !hasFollow;
+    if (sub) sub.textContent = hasResume && resumeCount ? resumeCount + ' bộ đang đọc' : '';
     if (st) { st.hidden = !showStarter; if (showStarter) renderStarter(); }
   }
   var starterDone = false;
@@ -170,7 +174,7 @@
       { n: freshest, k: 'Mới lên kệ' }
     ].filter(function (x, i, all) { return x.n && all.findIndex(function (y) { return y.n === x.n; }) === i; });
     if (!picks.length) { box.hidden = true; return; }
-    box.innerHTML = '<div class="bth lt"><h2 class="blb dim">Bắt đầu từ đâu?</h2></div>' +
+    box.innerHTML = '<div class="bth lt"><h3 class="blb dim">Bắt đầu từ đâu?</h3></div>' +
       picks.map(function (x, i) {
         var img = CZ.coverSrc(x.n);
         return '<a class="s" href="' + esc(CZ.storyURL(x.n.slug)) + '">' +
@@ -195,7 +199,7 @@
     library.forEach(function (story) { known[story.slug] = story; });
     var progressRows = service.progressRows().filter(function (row) {
       return row && row.chapterIndex > 0 && known[row.storyId];
-    }).sort(function (a, b) { return String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')); }).slice(0, 2);
+    }).sort(function (a, b) { return String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')); }).slice(0, 3);
     resumeRail.innerHTML = progressRows.map(function (row) {
       var story = known[row.storyId];
       var url = CZ.readURL(story.slug, row.chapterIndex);
@@ -207,7 +211,7 @@
     var follows = service.followRows().filter(function (row) { return row && known[row.storyId]; });
     if (!follows.length) {
       followRail.innerHTML = '';
-      setPersonalParts(hasResume, false, !hasResume);
+      setPersonalParts(hasResume, false, !hasResume, progressRows.length);
       return;
     }
     service.fetchTocs(follows.map(function (row) { return row.storyId; })).then(function (tocRows) {
@@ -226,16 +230,16 @@
         return { story: story, toc: toc, count: count, unseen: unseen };
       }).filter(function (item) { return item.unseen > 0; })
         .sort(function (a, b) { return b.unseen - a.unseen || String(b.toc.updatedAt || '').localeCompare(String(a.toc.updatedAt || '')); });
-      followRail.innerHTML = updates.slice(0, 2).map(function (item) {
+      followRail.innerHTML = updates.slice(0, 3).map(function (item) {
         var last = item.toc.chapters && item.toc.chapters.length ? item.toc.chapters[item.toc.chapters.length - 1] : null;
         var index = Math.max(1, Number(last && last.index) || item.count);
         var title = last && last.title ? last.title : 'Chương ' + index;
         var url = item.story.locked ? CZ.storyURL(item.story.slug) : CZ.readURL(item.story.slug, index);
         return personalCard(item.story, title, url, null, item.unseen + ' chương mới');
       }).join('');
-      setPersonalParts(hasResume, updates.length > 0, !hasResume && !updates.length);
+      setPersonalParts(hasResume, updates.length > 0, !hasResume && !updates.length, progressRows.length);
     }).catch(function () {
-      if (requestId === personalRenderId) { followRail.innerHTML = ''; setPersonalParts(hasResume, false, !hasResume); }
+      if (requestId === personalRenderId) { followRail.innerHTML = ''; setPersonalParts(hasResume, false, !hasResume, progressRows.length); }
     });
   }
   var personalRenderTimer = 0;
@@ -290,7 +294,7 @@
     var rows = on ? CZ.lib().map(function (n) { return { n: n, score: positive((CZ.statsOf(n) || {})[key]) }; })
       .filter(function (r) { return r.score > 0; })
       .sort(function (a, b) { return b.score - a.score || a.n.slug.localeCompare(b.n.slug); }).slice(0, 5) : [];
-    $('#rankSummary').textContent = (rankMode === 'views' ? 'Top View' : 'Top Vote') + ' · ' + tabs.find(function (t) { return t.k === rankBy; }).l;
+    $('#rankSummary').textContent = (rankMode === 'views' ? 'Lượt đọc' : 'Lượt thích') + ' · ' + tabs.find(function (t) { return t.k === rankBy; }).l;
     var peak = rows.length ? rows[0].score : 0;
     $('#rank').innerHTML = rows.map(function (row, i) {
       var n = row.n, ratio = peak ? Math.max(.12, row.score / peak) : 0;
