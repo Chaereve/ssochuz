@@ -123,3 +123,32 @@ bị chặn). Vì vậy các mốc 375/390/414/768/820/1023/1280/1440/1920 mới
   component đã sẵn sàng, không phải viết lại markup.
 - Có thể nâng phiên bản lên `1.21.0` bằng `node tools/check_version.mjs --write 1.21.0`
   nếu muốn đánh dấu bản phát hành.
+
+## 9. Phản hồi 2026-10-29 (bản này chưa đạt) — 4 hướng khác + mockup
+
+Người duyệt cho rằng bản full-bleed ở trên **chưa đạt**. Nguyên nhân kỹ thuật đã xác định:
+kho chỉ có **bìa dọc 480×600**, phủ lên banner 2,4:1 là phóng ~3 lần ⇒ nhoè, mất chủ thể;
+`blur(2px)` chỉ che phần vỡ hạt chứ không tạo ra chủ thể.
+
+Mockup so sánh 5 hướng (bấm được thumbnail, đổi được cỡ màn hình 1440/820/390, sáng/tối):
+
+```
+python3 -m http.server 8090 -d .      # rồi mở /docs/mockups/hero/index.html
+```
+
+| Hướng | Lấy gì làm chủ thể | Cần ảnh ngang? | Giữ hero tối? | Chi phí |
+| --- | --- | --- | --- | --- |
+| **V0** bản hiện tại | Ảnh nền (bìa phóng to) | Không (nhưng nên có) | Có | đã xong |
+| **V1** đèn nền theo bìa ⭐ | **Bìa thật** + quầng sáng loang màu từ chính bìa | Không | Có | sửa CSS + 1 cột poster |
+| **V2** sân khấu 16:9 | Khung ảnh ngang + thẻ giấy | **Có** | Không (nền sáng) | cao (CMS + mirror) |
+| **V3** báo in | Chữ + bìa đóng khung, mục lục 01–05 | Không | Không (nền giấy) | thấp |
+| **V4** bộ bài | 5 bìa xoè quạt | Không | Có | trung bình |
+
+Đề xuất: **V1** mặc định (sửa đúng chỗ sai: bìa là chủ thể, không phóng bìa), **V3** nếu muốn
+rẻ nhất và đúng chất tạp chí in; **V2** chỉ sau khi registry có trường `banner` 16:9;
+**V4** để dành A/B.
+
+Ghi chú về mockup: `docs/mockups/hero/art/*.jpg` là **ảnh minh hoạ 16:9** chỉ dùng cho V2
+(dữ liệu thật **không có** ảnh ngang) — mọi chỗ khác đều dùng đúng bìa trong
+`/assets/covers`. Dữ liệu chữ lấy từ `data/registry.json`. Thư mục `docs/` đã bị
+`_redirects` chặn nên mockup không lên bản thật.

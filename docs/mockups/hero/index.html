@@ -1,0 +1,927 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ssochuz · 5 hướng thiết kế hero “Nổi bật hôm nay”</title>
+<!--
+  MOCKUP SO SÁNH — không phải trang thật, không nạp cz-*.js.
+  Mở: python3 -m http.server 8090 -d <repo>  →  /docs/mockups/hero/index.html
+  Dữ liệu truyện lấy từ data/registry.json (thật), bìa lấy từ /assets/covers (thật),
+  ảnh 16:9 trong art/ là ẢNH MINH HOẠ cho trường hợp CMS có ảnh ngang (xem ghi chú V2).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,900&family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* ============================================================================
+   0. TOKEN — copy từ src/cz.css để mockup nói cùng ngôn ngữ với web thật
+   ========================================================================== */
+:root{
+  --bg:#faf8f4; --bg2:#f3efe8; --surf:#fffefb; --surf2:#f2ede5; --surf3:#e7e0d5;
+  --txt:#191410; --mut:#6c6357; --dim:#756b61;
+  --acc:#a63a52; --acc-soft:rgba(166,58,82,.09);
+  --ok:#2f6b4f; --warn:#8a5f18; --bad:#a83232;
+  --bd:rgba(46,34,22,.14); --bd2:rgba(46,34,22,.3);
+  --r-sm:4px; --r:6px; --r-lg:10px; --r-xl:14px;
+  --font:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --font-head:"Fraunces","Iowan Old Style",Palatino,Georgia,serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --ease:cubic-bezier(.22,1,.36,1);
+  --t-fast:.15s; --t:.25s; --t-mid:.35s; --t-slow:.45s;
+  --ring:rgba(166,58,82,.35);
+}
+[data-theme="dark"]{
+  --bg:#14110e; --bg2:#1a1613; --surf:#1e1915; --surf2:#262019; --surf3:#322a20;
+  --txt:#f2ebe0; --mut:#a89d8d; --dim:#8a8174; --acc:#e0859b; --acc-soft:rgba(224,133,155,.12);
+  --ok:#74c69b; --warn:#dcae6a; --bad:#e58b8b;
+  --bd:rgba(255,240,220,.13); --bd2:rgba(255,240,220,.3);
+  --ring:rgba(224,133,155,.35);
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg2);color:var(--txt);font:400 15px/1.6 var(--font);-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{margin:0;font-family:var(--font-head);font-weight:700;line-height:1.15;letter-spacing:-.012em}
+p{margin:0}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+img{display:block;max-width:100%}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+
+/* ============================================================================
+   1. KHUNG TRANG MOCKUP (toolbar, giới thiệu, thẻ từng phương án)
+   ========================================================================== */
+.wrap{max-width:1560px;margin:0 auto;padding:0 20px 100px}
+
+.intro{padding:34px 0 8px;border-bottom:1px solid var(--bd);margin-bottom:26px}
+.intro .kicker{font:800 10.5px/1 var(--font-mono);letter-spacing:.16em;text-transform:uppercase;color:var(--acc)}
+.intro h1{font-size:clamp(26px,3.4vw,40px);margin:12px 0 10px;font-weight:900}
+.intro p{max-width:78ch;color:var(--mut);font-size:15.5px}
+.intro .diag{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));margin:20px 0 26px}
+.intro .diag div{border:1px solid var(--bd);border-left:3px solid var(--acc);border-radius:0 var(--r) var(--r) 0;background:var(--surf);padding:12px 14px;font-size:13.5px;color:var(--mut)}
+.intro .diag b{display:block;color:var(--txt);font-size:13.5px;margin-bottom:3px}
+
+.toolbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:10px 0;margin-bottom:18px;background:color-mix(in srgb,var(--bg2) 92%,transparent);
+  border-bottom:1px solid var(--bd);backdrop-filter:blur(6px)}
+.toolbar .lbl{font:700 10.5px/1 var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button{border:1px solid var(--bd);border-radius:99px;background:var(--surf);padding:6px 13px;font-size:12.5px;font-weight:650;color:var(--mut);transition:all var(--t-fast) var(--ease)}
+.chips button:hover{border-color:var(--bd2);color:var(--txt)}
+.chips button.on{background:var(--txt);border-color:var(--txt);color:var(--bg)}
+.toolbar .jump{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.toolbar .jump a{font-size:12.5px;font-weight:650;color:var(--mut);padding:6px 10px;border-radius:99px;border:1px solid transparent}
+.toolbar .jump a:hover{color:var(--txt);border-color:var(--bd)}
+
+article.demo{margin:0 0 40px;border:1px solid var(--bd);border-radius:var(--r-xl);background:var(--bg);overflow:hidden;
+  box-shadow:0 24px 50px -40px rgba(30,20,10,.55)}
+.dhead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid var(--bd);background:var(--surf)}
+.dhead .v{font:800 10.5px/1 var(--font-mono);letter-spacing:.14em;color:var(--acc)}
+.dhead h2{font-size:19px}
+.dhead em{font-style:normal;color:var(--mut);font-size:13px}
+.dhead .tag{margin-left:auto;font:700 10.5px/1 var(--font-mono);letter-spacing:.1em;text-transform:uppercase;padding:5px 9px;border-radius:99px;border:1px solid}
+.tag.bad{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,transparent);background:color-mix(in srgb,var(--bad) 8%,transparent)}
+.tag.best{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,transparent);background:color-mix(in srgb,var(--ok) 9%,transparent)}
+.tag.mid{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 40%,transparent);background:color-mix(in srgb,var(--warn) 8%,transparent)}
+
+/* khung mô phỏng thiết bị: bề rộng do body[data-vp] quyết định (không dùng media
+   query của cửa sổ, nên 1 trang xem được cả 3 cỡ màn hình một cách chắc chắn) */
+.frame{overflow-x:auto;overflow-y:hidden;background:var(--bg2)}
+body[data-vp="desktop"] .frame{--title:56px;--title-h1:1.04;--pad:52px;--gap:44px;--railW:112px}
+body[data-vp="tablet"]  .frame{--title:38px;--title-h1:1.07;--pad:32px;--gap:28px;--railW:96px}
+body[data-vp="mobile"]  .frame{--title:28px;--title-h1:1.1;--pad:18px;--gap:16px;--railW:64px}
+body[data-vp="desktop"] .vpage{width:1440px}
+body[data-vp="tablet"]  .vpage{width:820px}
+body[data-vp="mobile"]  .vpage{width:390px}
+.vpage{background:var(--bg);color:var(--txt);font-size:15px;margin:0 auto}
+
+/* khung trang thu nhỏ: header + hero + dải số + đầu section sau */
+.mhdr{display:flex;align-items:center;gap:18px;padding:0 22px;height:58px;border-bottom:1px solid var(--bd);background:var(--bg)}
+.mhdr .logo{display:inline-flex;align-items:baseline;gap:7px;font-family:var(--font-head);font-weight:900;font-size:20px;letter-spacing:-.02em}
+.mhdr .logo i{font-style:normal;font:800 9.5px/1 var(--font);letter-spacing:.15em;text-transform:uppercase;color:var(--mut)}
+.mhdr nav{display:flex;gap:16px;font-size:13px;font-weight:600;color:var(--mut);margin-left:8px}
+.mhdr nav a.on{color:var(--txt);box-shadow:inset 0 -2px 0 var(--acc);padding-bottom:20px}
+.mhdr .acts{margin-left:auto;display:flex;gap:8px;align-items:center}
+.mhdr .acts span{border:1px solid var(--bd);border-radius:var(--r);padding:6px 10px;font-size:12.5px;color:var(--mut);white-space:nowrap}
+body[data-vp="tablet"] .mhdr nav a:nth-child(n+4){display:none}
+body[data-vp="mobile"] .mhdr nav{display:none}
+body[data-vp="mobile"] .mhdr .acts span:nth-child(-n+2){display:none}
+.facts{display:flex;gap:26px;flex-wrap:wrap;padding:16px 22px;border-bottom:1px solid var(--bd);font-size:12.5px;color:var(--mut);background:var(--bg)}
+.facts b{display:block;font-family:var(--font-head);font-size:20px;color:var(--txt)}
+.nextsec{padding:22px}
+.nextsec h3{font-size:17px;margin-bottom:12px}
+.nextp{display:flex;gap:10px;overflow:hidden}
+.nextp span{flex:none;width:calc((100% - 40px)/5);aspect-ratio:2/3;border-radius:var(--r);background:var(--surf3);border:1px solid var(--bd)}
+body[data-vp="mobile"] .nextp span{width:calc((100% - 20px)/3)}
+
+.notes{padding:14px 18px 16px;border-top:1px solid var(--bd);background:var(--surf)}
+.notes dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 22px;margin:0}
+.notes dt{font:700 10.5px/1 var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:3px}
+.notes dd{margin:0;font-size:13px;color:var(--mut);line-height:1.5}
+.notes dd b{color:var(--txt)}
+
+/* ============================================================================
+   2. THÀNH PHẦN DÙNG CHUNG TRONG HERO (mỗi phương án tự bố cục)
+   ========================================================================== */
+.eb{display:inline-flex;align-items:center;gap:8px;font:800 10.5px/1 var(--font);letter-spacing:.17em;text-transform:uppercase}
+.eb::before{content:"";width:22px;height:1px;background:currentColor}
+.meta{display:flex;align-items:center;gap:7px 14px;flex-wrap:wrap;font-size:12.5px;line-height:1.5}
+.meta > span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.meta i{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.6;flex:none;font-style:normal}
+.pill{display:inline-flex;align-items:center;gap:5px;border:1px solid;border-radius:99px;padding:3px 8px;font-size:10.5px;font-weight:750;letter-spacing:.04em;white-space:nowrap}
+.pill.run{gap:6px}
+.pill.run::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 2.4s var(--ease) infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.pill.done::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--bd2);border-radius:var(--r);
+  padding:11px 16px;font-size:13.5px;font-weight:700;white-space:nowrap;transition:all var(--t-fast) var(--ease)}
+.btn .ic{width:15px;height:15px;flex:none;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.btn.solid{background:var(--txt);border-color:var(--txt);color:var(--bg)}
+.btn.solid:hover{transform:translateY(-1px);box-shadow:0 10px 22px -14px rgba(30,20,10,.7)}
+.btn.line{background:transparent}
+.btn.line:hover{border-color:var(--txt)}
+.btn.pill{border-radius:99px;padding:11px 20px}
+.excerpt{font-size:14.5px;line-height:1.62;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+
+/* ============================================================================
+   3. V0 — BẢN HIỆN TẠI (ảnh nền full-bleed, bìa dọc phóng to)
+   ========================================================================== */
+.v0{position:relative;isolation:isolate;overflow:hidden;background:#0b0a0c;color:#fff;
+  min-height:540px;display:grid;align-items:center;padding:var(--pad)}
+.v0 .media{position:absolute;inset:0;z-index:0}
+.v0 .media img{width:100%;height:100%;object-fit:cover;object-position:50% 20%;
+  filter:blur(2px) saturate(.94) brightness(.94);transform:scale(1.04)}
+.v0 .scrim{position:absolute;inset:0;z-index:1;background:
+  linear-gradient(90deg,rgba(10,10,11,.95),rgba(10,10,11,.6) 40%,rgba(10,10,11,.1) 70%,transparent),
+  linear-gradient(to top,rgba(0,0,0,.85),rgba(0,0,0,.35) 35%,transparent 70%)}
+.v0 .in{position:relative;z-index:2;max-width:600px;display:flex;flex-direction:column;align-items:flex-start;gap:15px}
+.v0 .eb{color:#ff9db1}
+.v0 h1{font-size:var(--title);line-height:var(--title-h1);font-weight:800;color:#fff;max-width:16ch}
+.v0 .meta{color:rgba(255,255,255,.82)}
+.v0 .pill{border-color:rgba(255,255,255,.28);background:rgba(12,10,10,.5);color:rgba(255,255,255,.85)}
+.v0 .excerpt{color:rgba(255,255,255,.82);max-width:56ch}
+.v0 .acts{display:flex;gap:10px;flex-wrap:wrap}
+.v0 .btn.line{border-color:rgba(255,255,255,.34);color:#fff;background:rgba(255,255,255,.07)}
+.v0 .btn.solid{background:#a63a52;border-color:#a63a52;color:#fff}
+.v0 .rail{position:absolute;right:var(--pad);bottom:calc(var(--pad) - 6px);z-index:3;display:flex;gap:8px;align-items:center}
+.v0 .rail button{width:var(--railW);aspect-ratio:16/10;border-radius:4px;overflow:hidden;border:2px solid transparent;opacity:.6}
+.v0 .rail button.on{opacity:1;border-color:#ff9db1}
+.v0 .rail img{width:100%;height:100%;object-fit:cover}
+body[data-vp="tablet"] .v0 .rail{position:static;margin-top:20px;flex-wrap:wrap}
+body[data-vp="tablet"] .v0 .rail button{width:84px}
+body[data-vp="mobile"] .v0 .rail{position:static;margin-top:14px;max-width:220px}
+body[data-vp="mobile"] .v0 .rail button{width:auto;flex:1;aspect-ratio:auto;height:6px;border-radius:99px;
+  border:0;background:rgba(255,255,255,.26);opacity:1}
+body[data-vp="mobile"] .v0 .rail img{display:none}
+body[data-vp="mobile"] .v0 .rail button.on{background:#ff9db1;height:6px}
+.flag{position:absolute;z-index:4;top:calc(var(--pad) - 4px);right:var(--pad);font:700 10px/1 var(--font-mono);
+  letter-spacing:.08em;text-transform:uppercase;color:#ffb4b4;background:rgba(168,50,50,.28);border:1px solid rgba(255,140,140,.5);
+  padding:5px 8px;border-radius:99px}
+body[data-vp="mobile"] .flag{display:none}
+
+/* ============================================================================
+   4. V1 — “ĐÈN NỀN THEO BÌA” (poster là nhân vật chính + quầng sáng từ bìa)
+   ========================================================================== */
+.v1{position:relative;isolation:isolate;overflow:hidden;background:#0a090b;color:#fff;padding:var(--pad)}
+.v1 .glow{position:absolute;inset:-14% -8%;z-index:0;background-size:cover;background-position:50% 30%;
+  filter:blur(76px) saturate(1.55) brightness(.42);transform:scale(1.12)}
+.v1 .scrim{position:absolute;inset:0;z-index:1;background:
+  radial-gradient(120% 100% at 85% 30%,transparent 20%,rgba(8,7,9,.55) 70%),
+  linear-gradient(90deg,rgba(8,7,9,.9) 0%,rgba(8,7,9,.72) 38%,rgba(8,7,9,.25) 68%,rgba(8,7,9,.45) 100%)}
+.v1 .grid{position:relative;z-index:2;display:grid;grid-template-columns:minmax(0,1fr) 332px;gap:var(--gap);align-items:center}
+.v1 .in{display:flex;flex-direction:column;align-items:flex-start;gap:16px;min-width:0}
+.v1 .eb{color:#ffa3b6}
+.v1 h1{font-size:var(--title);line-height:var(--title-h1);font-weight:800;max-width:15ch;letter-spacing:-.02em}
+.v1 .meta{color:rgba(255,255,255,.8)}
+.v1 .pill{border-color:rgba(255,255,255,.26);background:rgba(12,10,10,.45);color:rgba(255,255,255,.86)}
+.v1 .excerpt{color:rgba(255,255,255,.78);max-width:52ch}
+.v1 .acts{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.v1 .btn.line{border-color:rgba(255,255,255,.3);color:#fff;background:rgba(255,255,255,.06)}
+.v1 .btn.solid{background:#a63a52;border-color:#a63a52;color:#fff}
+.v1 .btn.icon{width:42px;height:42px;padding:0;border-radius:50%;border-color:rgba(255,255,255,.3);color:#fff;background:rgba(255,255,255,.06)}
+.v1 .prog{display:flex;align-items:center;gap:10px;font-size:12px;color:rgba(255,255,255,.62)}
+.v1 .prog .pb{width:150px;height:3px;background:rgba(255,255,255,.2);overflow:hidden}
+.v1 .prog .pb i{display:block;height:100%;width:42%;background:#ffa3b6}
+/* dải bìa nhỏ dưới cột chữ — KHÔNG đè lên poster lớn */
+.v1 .rail{display:flex;align-items:center;gap:9px;margin-top:2px}
+.v1 .rail button{width:56px;aspect-ratio:2/3;border-radius:5px;overflow:hidden;border:2px solid rgba(255,255,255,.16);
+  opacity:.55;transition:all var(--t) var(--ease);position:relative}
+.v1 .rail button:hover{opacity:.85}
+.v1 .rail button.on{opacity:1;border-color:#ffa3b6;box-shadow:0 0 0 3px rgba(255,163,182,.16)}
+.v1 .rail img{width:100%;height:100%;object-fit:cover}
+.v1 .rail .cnt{font:600 11px/1 var(--font-mono);letter-spacing:.08em;color:rgba(255,255,255,.6);margin-left:2px}
+/* poster lớn */
+.v1 .stage{position:relative;justify-self:end;width:100%}
+.v1 .stage::before{content:"";position:absolute;inset:8% -12% -6% -12%;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(255,180,120,.28),transparent 75%);filter:blur(26px);z-index:-1}
+.v1 .poster{position:relative;width:100%;aspect-ratio:2/3;border-radius:10px;overflow:hidden;
+  border:1px solid rgba(255,255,255,.22);box-shadow:0 34px 60px -26px rgba(0,0,0,.95),0 0 0 1px rgba(0,0,0,.5);
+  transform:rotate(-1.1deg);transition:transform var(--t-mid) var(--ease)}
+.v1 .stage:hover .poster{transform:rotate(0) translateY(-4px)}
+.v1 .poster img{width:100%;height:100%;object-fit:cover}
+.v1 .poster .b18{position:absolute;top:10px;left:10px;background:#a83232;color:#fff;font:800 9px/1 var(--font);padding:3px 6px;border-radius:3px}
+.v1 .pcap{display:flex;justify-content:space-between;gap:10px;margin-top:10px;font-size:11.5px;color:rgba(255,255,255,.55)}
+.v1 .pcap b{color:rgba(255,255,255,.85);font-weight:700}
+body[data-vp="tablet"] .v1 .grid{grid-template-columns:minmax(0,1fr) 236px}
+body[data-vp="tablet"] .v1 .rail button{width:46px}
+body[data-vp="mobile"] .v1 .grid{grid-template-columns:1fr}
+body[data-vp="mobile"] .v1 .stage{display:none}
+body[data-vp="mobile"] .v1 .rail button{width:auto;flex:1;aspect-ratio:auto;height:6px;border-radius:99px;border:0;background:rgba(255,255,255,.26);opacity:1}
+body[data-vp="mobile"] .v1 .rail img{display:none}
+body[data-vp="mobile"] .v1 .rail button.on{background:#ffa3b6;box-shadow:none;height:6px}
+
+/* ============================================================================
+   5. V2 — “SÂN KHẤU 16:9” (khung ảnh ngang + thẻ giấy, không phủ chữ lên ảnh)
+   ========================================================================== */
+.v2{position:relative;background:
+  radial-gradient(120% 120% at 12% 0%,var(--acc-soft),transparent 55%),var(--bg);padding:calc(var(--pad) * .8) var(--pad) var(--pad);
+  border-bottom:1px solid var(--bd)}
+.v2 .grid{display:grid;grid-template-columns:minmax(0,1.42fr) minmax(0,.92fr);gap:30px;align-items:start}
+.v2 .media{position:relative;border-radius:var(--r-xl);overflow:hidden;border:1px solid var(--bd2);
+  box-shadow:0 26px 50px -34px rgba(30,20,10,.75);background:var(--surf3)}
+.v2 .media .shot{position:relative;aspect-ratio:16/9}
+.v2 .media .shot img{width:100%;height:100%;object-fit:cover;object-position:50% 32%}
+.v2 .media .shot::after{content:"";position:absolute;inset:0;background:
+  linear-gradient(to top,rgba(10,8,8,.55),transparent 42%)}
+.v2 .media .cap{position:absolute;left:14px;bottom:12px;z-index:2;display:flex;align-items:center;gap:8px;
+  font:600 10.5px/1 var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.9)}
+.v2 .media .cap .rec{width:7px;height:7px;border-radius:50%;background:#e0536b;box-shadow:0 0 0 3px rgba(224,83,107,.25)}
+/* dải khung nhỏ dưới ảnh chính */
+.v2 .rail{display:flex;align-items:center;gap:8px;margin-top:12px}
+.v2 .rail button{flex:1;min-width:0;aspect-ratio:16/10;border-radius:var(--r-sm);overflow:hidden;border:2px solid transparent;
+  opacity:.55;transition:all var(--t) var(--ease);background:var(--surf3)}
+.v2 .rail button:hover{opacity:.9}
+.v2 .rail button.on{opacity:1;border-color:var(--acc)}
+.v2 .rail img{width:100%;height:100%;object-fit:cover;object-position:50% 26%}
+.v2 .arrows{display:flex;gap:6px;margin-left:4px}
+.v2 .arrows button{width:32px;height:32px;border:1px solid var(--bd2);border-radius:50%;display:grid;place-items:center;color:var(--mut);flex:none}
+.v2 .arrows button:hover{color:var(--txt);border-color:var(--txt)}
+/* thẻ giấy: chữ luôn nằm trên nền sáng ⇒ không phụ thuộc độ sáng của ảnh */
+.v2 .card{background:var(--surf);border:1px solid var(--bd);border-radius:var(--r-lg);padding:22px 22px 20px;
+  box-shadow:0 18px 36px -30px rgba(30,20,10,.6);display:flex;flex-direction:column;align-items:flex-start;gap:13px}
+.v2 .eb{color:var(--acc)}
+.v2 h1{font-size:calc(var(--title) * .78);line-height:1.1;max-width:18ch}
+.v2 h1 a:hover{color:var(--acc)}
+.v2 .meta{color:var(--mut)}
+.v2 .pill{border-color:var(--bd);color:var(--mut)}
+.v2 .pill.run{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 40%,transparent);background:color-mix(in srgb,var(--warn) 8%,transparent)}
+.v2 .pill.done{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 38%,transparent);background:color-mix(in srgb,var(--ok) 8%,transparent)}
+.v2 .excerpt{color:var(--mut)}
+.v2 .acts{display:flex;gap:9px;flex-wrap:wrap;width:100%}
+.v2 .btn.line{color:var(--mut);border-color:var(--bd2)}
+.v2 .btn.line:hover{color:var(--txt);border-color:var(--txt)}
+.v2 .byline{display:flex;align-items:center;gap:8px;padding-top:12px;border-top:1px solid var(--bd);width:100%;
+  font-size:12px;color:var(--dim)}
+.v2 .byline b{color:var(--txt);font-weight:700}
+body[data-vp="tablet"] .v2 .grid{grid-template-columns:1fr}
+body[data-vp="mobile"] .v2 .grid{grid-template-columns:1fr;gap:16px}
+body[data-vp="mobile"] .v2 .card{padding:16px;border-radius:var(--r)}
+body[data-vp="mobile"] .v2 .rail button:nth-child(n+5){display:none}
+
+/* ============================================================================
+   6. V3 — “BÁO IN” (không ảnh nền; chữ là chính, bìa đóng khung, mục lục 01–05)
+   ========================================================================== */
+.v3{position:relative;overflow:hidden;background:var(--bg);padding:calc(var(--pad) * .7) var(--pad) var(--pad);
+  border-bottom:1px solid var(--bd)}
+.v3 .ghost{position:absolute;right:-4%;top:-18%;width:44%;height:140%;background-size:cover;background-position:50% 25%;
+  filter:grayscale(1) contrast(1.05) brightness(1.1);opacity:.075;z-index:0}
+[data-theme="dark"] .v3 .ghost{filter:grayscale(1) contrast(1.1) brightness(.7);opacity:.16}
+.v3 .grid{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1fr) 268px;gap:40px;align-items:start}
+.v3 .top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-bottom:10px;
+  border-bottom:2px solid var(--txt);margin-bottom:18px}
+.v3 .eb{color:var(--acc)}
+.v3 .top .idx{font:600 11px/1 var(--font-mono);letter-spacing:.14em;color:var(--dim)}
+.v3 h1{font-size:calc(var(--title) * 1.02);line-height:1.02;font-weight:900;letter-spacing:-.03em;max-width:20ch}
+.v3 h1 a:hover{color:var(--acc)}
+.v3 .sub{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;padding-bottom:14px;border-bottom:1px solid var(--bd);
+  font:600 11px/1.4 var(--font-mono);letter-spacing:.09em;text-transform:uppercase;color:var(--mut)}
+.v3 .sub .sep{width:1px;height:12px;background:var(--bd2)}
+.v3 .sub .hot{display:inline-flex;align-items:center;gap:6px;color:var(--acc)}
+.v3 .lead{display:flex;gap:18px;margin-top:16px}
+.v3 .lead .excerpt{font-size:16px;line-height:1.65;color:var(--txt);-webkit-line-clamp:4;flex:1;
+  font-family:var(--font-head);font-weight:400}
+.v3 .acts{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:18px}
+.v3 .btn{border-radius:0;padding:12px 18px;letter-spacing:.02em}
+.v3 .btn.line{border-color:var(--txt);color:var(--txt)}
+/* mục lục 01–05 thay cho dot/thumbnail */
+.v3 .index{list-style:none;margin:20px 0 0;padding:14px 0 0;border-top:1px solid var(--bd);display:flex;gap:6px;flex-wrap:wrap}
+.v3 .index li{flex:1 1 0;min-width:0}
+.v3 .index button{display:flex;flex-direction:column;gap:6px;width:100%;text-align:left;padding:6px 8px 8px;border-radius:var(--r)}
+.v3 .index button:hover{background:var(--surf2)}
+.v3 .index .n{font:600 10.5px/1 var(--font-mono);letter-spacing:.1em;color:var(--dim)}
+.v3 .index .t{font-size:12px;font-weight:650;line-height:1.3;color:var(--mut);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  border-bottom:2px solid transparent;padding-bottom:4px}
+.v3 .index button.on .n{color:var(--acc)}
+.v3 .index button.on .t{color:var(--txt);border-bottom-color:var(--acc)}
+/* bìa đóng khung bên phải */
+.v3 .aside{position:relative}
+.v3 .coverbox{border:1px solid var(--bd2);padding:8px;background:var(--surf);box-shadow:0 20px 40px -32px rgba(30,20,10,.7)}
+.v3 .coverbox .img{position:relative;aspect-ratio:2/3;overflow:hidden;background:var(--surf3)}
+.v3 .coverbox img{width:100%;height:100%;object-fit:cover}
+.v3 .coverbox .b18{position:absolute;top:0;left:0;background:var(--bad);color:#fff;font:800 9px/1 var(--font);padding:4px 7px;letter-spacing:.06em}
+.v3 .ccap{margin-top:10px;font-size:11.5px;line-height:1.5;color:var(--dim);text-align:center}
+.v3 .ccap b{display:block;color:var(--txt);font-size:12.5px}
+.v3 .stamp{margin-top:10px;border-top:1px dashed var(--bd2);padding-top:8px;display:flex;justify-content:space-between;
+  font:600 10px/1.4 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+body[data-vp="tablet"] .v3 .grid{grid-template-columns:minmax(0,1fr) 200px;gap:26px}
+body[data-vp="mobile"] .v3 .grid{grid-template-columns:1fr}
+body[data-vp="mobile"] .v3 .aside{display:none}
+body[data-vp="mobile"] .v3 .ghost{width:70%;opacity:.06}
+body[data-vp="mobile"] .v3 .index{gap:2px}
+body[data-vp="mobile"] .v3 .index .t{display:none}
+body[data-vp="mobile"] .v3 .index button{padding:4px 2px}
+body[data-vp="mobile"] .v3 .lead .excerpt{font-size:15px;-webkit-line-clamp:3}
+
+/* ============================================================================
+   7. V4 — “BỘ BÀI” (5 bìa xoè quạt; click bìa để đổi)
+   ========================================================================== */
+.v4{position:relative;overflow:hidden;background:#100d0c;color:#fff;padding:var(--pad);isolation:isolate}
+.v4::before{content:"";position:absolute;inset:0;z-index:0;background:
+  radial-gradient(80% 90% at 78% 42%,rgba(166,58,82,.3),transparent 62%),
+  radial-gradient(60% 70% at 8% 12%,rgba(255,180,120,.09),transparent 60%)}
+.v4 .grid{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr);gap:var(--gap);align-items:center}
+.v4 .in{display:flex;flex-direction:column;align-items:flex-start;gap:15px}
+.v4 .eb{color:#ffa3b6}
+.v4 h1{font-size:var(--title);line-height:var(--title-h1);font-weight:800;max-width:15ch}
+.v4 .meta{color:rgba(255,255,255,.78)}
+.v4 .pill{border-color:rgba(255,255,255,.24);background:rgba(255,255,255,.05);color:rgba(255,255,255,.85)}
+.v4 .excerpt{color:rgba(255,255,255,.72);max-width:50ch}
+.v4 .acts{display:flex;gap:10px;flex-wrap:wrap}
+.v4 .btn.line{border-color:rgba(255,255,255,.28);color:#fff}
+.v4 .btn.solid{background:#a63a52;border-color:#a63a52;color:#fff}
+.v4 .hint{font-size:11.5px;color:rgba(255,255,255,.45)}
+.v4 .rail{display:none}
+body[data-vp="mobile"] .v4 .rail{display:flex;gap:8px;margin-top:14px;width:100%}
+body[data-vp="mobile"] .v4 .rail button{flex:1;height:6px;border-radius:99px;background:rgba(255,255,255,.26);border:0;opacity:1}
+body[data-vp="mobile"] .v4 .rail img{display:none}
+body[data-vp="mobile"] .v4 .rail button.on{background:#ffa3b6}
+/* sân khấu bộ bài */
+.v4 .deck{position:relative;height:calc(var(--title) * 8.1);min-height:300px}
+.v4 .deck button{position:absolute;left:50%;top:50%;width:calc(var(--title) * 3.4);max-width:250px;aspect-ratio:2/3;
+  border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,.18);background:#241d1a;
+  box-shadow:0 22px 40px -22px rgba(0,0,0,.9);transition:transform var(--t-mid) var(--ease),box-shadow var(--t-mid) var(--ease),filter var(--t-mid) var(--ease);
+  --x:0px;--r:0deg;--y:0px;--s:1;transform:translate(-50%,-50%) translate(var(--x),var(--y)) rotate(var(--r)) scale(var(--s))}
+.v4 .deck img{width:100%;height:100%;object-fit:cover}
+.v4 .deck button:not(.on){filter:brightness(.62) saturate(.85)}
+.v4 .deck button:hover{filter:brightness(.9)}
+.v4 .deck button.on{--s:1.1;--y:-10px;z-index:5;border-color:rgba(255,163,182,.7);
+  box-shadow:0 34px 60px -24px rgba(0,0,0,.95),0 0 0 2px rgba(255,163,182,.35)}
+.v4 .deck .pos{position:absolute;left:8px;top:8px;z-index:2;font:700 10px/1 var(--font-mono);letter-spacing:.1em;
+  background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.22);border-radius:99px;padding:4px 7px;color:#fff}
+body[data-vp="desktop"] .v4 .deck button:nth-child(1){--x:-176px;--r:-12deg;z-index:1}
+body[data-vp="desktop"] .v4 .deck button:nth-child(2){--x:-92px;--r:-6deg;z-index:2}
+body[data-vp="desktop"] .v4 .deck button:nth-child(3){z-index:3}
+body[data-vp="desktop"] .v4 .deck button:nth-child(4){--x:92px;--r:6deg;z-index:2}
+body[data-vp="desktop"] .v4 .deck button:nth-child(5){--x:176px;--r:12deg;z-index:1}
+body[data-vp="tablet"] .v4 .deck button{width:150px}
+body[data-vp="tablet"] .v4 .deck button:nth-child(1){--x:-118px;--r:-11deg;z-index:1}
+body[data-vp="tablet"] .v4 .deck button:nth-child(2){--x:-62px;--r:-5deg;z-index:2}
+body[data-vp="tablet"] .v4 .deck button:nth-child(4){--x:62px;--r:5deg;z-index:2}
+body[data-vp="tablet"] .v4 .deck button:nth-child(5){--x:118px;--r:11deg;z-index:1}
+body[data-vp="mobile"] .v4 .grid{grid-template-columns:1fr;gap:18px}
+body[data-vp="mobile"] .v4 .deck{display:none}
+
+/* ============================================================================
+   8. BẢNG SO SÁNH + KẾT LUẬN
+   ========================================================================== */
+.cmp{margin:10px 0 0;border:1px solid var(--bd);border-radius:var(--r-lg);overflow:hidden;background:var(--surf)}
+.cmp table{width:100%;border-collapse:collapse;font-size:13px}
+.cmp th,.cmp td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--bd);vertical-align:top}
+.cmp th{font:700 10.5px/1.4 var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim);background:var(--surf2)}
+.cmp tr:last-child td{border-bottom:0}
+.cmp td b{color:var(--txt)}
+.cmp .yes{color:var(--ok);font-weight:700}
+.cmp .no{color:var(--warn);font-weight:700}
+.cmp .x{color:var(--bad);font-weight:700}
+.verdict{margin:26px 0 0;padding:20px 22px;border:1px solid var(--bd);border-left:4px solid var(--ok);
+  border-radius:0 var(--r-lg) var(--r-lg) 0;background:var(--surf)}
+.verdict h2{font-size:19px;margin-bottom:8px}
+.verdict p{color:var(--mut);font-size:14px;max-width:80ch}
+.verdict ol{margin:12px 0 0;padding-left:20px;color:var(--mut);font-size:14px}
+.verdict li{margin-bottom:6px}
+.verdict b{color:var(--txt)}
+body[data-vp="mobile"] .v0 .excerpt,
+body[data-vp="mobile"] .v1 .excerpt,
+body[data-vp="mobile"] .v2 .excerpt,
+body[data-vp="mobile"] .v4 .excerpt{display:none}
+.sr{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* nút “thu nhỏ” để xem desktop vừa một màn hình */
+body.zoomfit .frame{zoom:.72}
+</style>
+</head>
+<body data-vp="desktop">
+<div class="wrap">
+
+  <!-- ======================= GIỚI THIỆU / CHẨN ĐOÁN ======================= -->
+  <section class="intro">
+    <div class="kicker">ssochuz · thiết kế hero “Nổi bật hôm nay”</div>
+    <h1>Bản full-bleed chưa đạt — đây là 4 hướng khác, cùng dữ liệu thật</h1>
+    <p>Mỗi phương án dưới đây dựng bằng HTML/CSS thật trên đúng 5 bộ truyện đang nằm trong
+      <code>data/registry.json</code> và đúng bìa đang có trong <code>/assets/covers</code> — bấm được thumbnail,
+      đổi được truyện, và đổi được cỡ màn hình ở thanh trên. Không có ảnh minh hoạ nào được dùng
+      ở vị trí mà dữ liệu thật không có (trừ V2, có ghi rõ).</p>
+    <div class="diag">
+      <div><b>Vì sao bản trước trượt</b>Kho chỉ có bìa <b>dọc 480×600</b>. Phủ nó lên banner 2,4:1 nghĩa là phóng ~3 lần rồi
+        cắt thành một dải: nhoè, mất chủ thể, trông như “ảnh nền giả”. Blur 2px chỉ che bớt phần vỡ hạt, không tạo ra chủ thể.</div>
+      <div><b>Nên đổi cách nghĩ</b>Không phải “làm hero to hơn”, mà là <b>chọn cái gì làm chủ thể</b>: bìa thật (đẹp, sắc nét),
+        chữ (báo in), hay khung ảnh ngang (chỉ khi CMS có ảnh 16:9).</div>
+      <div><b>Cách chọn</b>Ba câu hỏi: (1) có ảnh ngang chưa? (2) muốn giữ “cảm giác hero tối” không?
+        (3) chấp nhận chi phí CSS/JS nào? Bảng so sánh ở cuối trang.</div>
+    </div>
+  </section>
+
+  <!-- ============================== TOOLBAR =============================== -->
+  <div class="toolbar" role="group" aria-label="Điều khiển xem thử">
+    <span class="lbl">Màn hình</span>
+    <div class="chips" id="vpChips">
+      <button data-vp="desktop" class="on">Desktop 1440</button>
+      <button data-vp="tablet">Tablet 820</button>
+      <button data-vp="mobile">Mobile 390</button>
+    </div>
+    <span class="lbl" style="margin-left:6px">Giao diện</span>
+    <div class="chips" id="themeChips">
+      <button data-theme="light" class="on">Sáng</button>
+      <button data-theme="dark">Tối</button>
+    </div>
+    <div class="chips" style="margin-left:6px">
+      <button id="zoomBtn" aria-pressed="false">Thu nhỏ để xem trọn</button>
+    </div>
+    <div class="jump">
+      <a href="#v0">V0</a><a href="#v1">V1</a><a href="#v2">V2</a><a href="#v3">V3</a><a href="#v4">V4</a><a href="#cmp">So sánh</a>
+    </div>
+  </div>
+
+  <!-- ================================ V0 ================================= -->
+  <article class="demo" id="v0" data-demo>
+    <div class="dhead">
+      <span class="v">V0</span><h2>Bản hiện tại — ảnh nền full-bleed</h2>
+      <em>Đúng yêu cầu ban đầu, nhưng bìa dọc bị phóng 3× nên nhoè và mất chủ thể</em>
+      <span class="tag bad">chưa đạt</span>
+    </div>
+    <div class="frame"><div class="vpage">
+      <div class="mhdr"><span class="logo">ssochuz<i>library</i></span>
+        <nav><a class="on">Trang chủ</a><a>My Space</a><a>Thư viện</a><a>Ranking</a><a>Lịch ra chương</a></nav>
+        <span class="acts"><span>Tìm nhanh ⌘K</span><span>Nền</span><span>Tài khoản</span></span></div>
+
+      <section class="v0">
+        <div class="flag">bìa phóng 3× · nhoè</div>
+        <div class="media"><img data-src="cover" alt=""></div>
+        <div class="scrim"></div>
+        <div class="in">
+          <span class="eb" data-f="eyebrow">Nổi bật hôm nay</span>
+          <h1 data-f="title">Third Person</h1>
+          <div class="meta"><span class="pill done" data-f="status">Hoàn thành</span>
+            <span data-f="chapters">42 chương</span><span><i></i><span data-f="author">SIIX</span></span>
+            <span><i></i><span data-f="couple">Garn x Mimie</span></span><span><i></i><span data-f="updated">29-09</span></span></div>
+          <p class="excerpt" data-f="excerpt"></p>
+          <div class="acts"><a class="btn solid pill" href="#v0"><svg class="ic" viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg><span data-f="cta">Đọc từ đầu</span></a>
+            <a class="btn line pill" href="#v0"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>Thông tin</a>
+            <button class="btn line pill"><svg class="ic" viewBox="0 0 24 24"><path d="M5 4h14v16l-7-4-7 4z"/></svg>Lưu vào tủ</button></div>
+        </div>
+        <div class="rail" data-rail></div>
+      </section>
+
+      <div class="facts"><div><b>62</b>Bộ truyện</div><div><b>1.284</b>Chương đã đăng</div>
+        <div><b>41</b>Hoàn thành</div><div><b>6</b>Sắp ra mắt</div></div>
+      <div class="nextsec"><h3>Mới cập nhật</h3><div class="nextp"><span></span><span></span><span></span><span></span><span></span></div></div>
+    </div></div>
+    <div class="notes"><dl>
+      <dt>Vì sao trượt</dt><dd>Ảnh nền là bìa dọc 480×600 phủ lên khung 1440×540 ⇒ phóng <b>3,2×</b>; mọi chi tiết trên bìa
+        (mặt người, đồ hoạ chữ) đều thành vệt nhoè. Gradient chỉ giấu được phần chữ, không giấu được việc “không có chủ thể”.</dd>
+      <dt>Vẫn giữ được gì</dt><dd>Cảm giác banner tối, thumbnail góc phải, dot mobile — phần <b>tương tác</b> của bản này dùng lại được cho mọi phương án khác.</dd>
+      <dt>Kết luận</dt><dd>Chỉ nên giữ nếu CMS bổ sung ảnh ngang 16:9.</dd>
+    </dl></div>
+  </article>
+
+  <!-- ================================ V1 ================================= -->
+  <article class="demo" id="v1" data-demo>
+    <div class="dhead">
+      <span class="v">V1</span><h2>“Đèn nền theo bìa” — bìa thật là nhân vật chính</h2>
+      <em>Vẫn là hero tối full-bleed, nhưng bìa sắc nét đứng riêng bên phải và cả nền loang màu từ chính bìa đó</em>
+      <span class="tag best">khuyến nghị</span>
+    </div>
+    <div class="frame"><div class="vpage">
+      <div class="mhdr"><span class="logo">ssochuz<i>library</i></span>
+        <nav><a class="on">Trang chủ</a><a>My Space</a><a>Thư viện</a><a>Ranking</a><a>Lịch ra chương</a></nav>
+        <span class="acts"><span>Tìm nhanh ⌘K</span><span>Nền</span><span>Tài khoản</span></span></div>
+
+      <section class="v1">
+        <div class="glow" data-bg="cover"></div>
+        <div class="scrim"></div>
+        <div class="grid">
+          <div class="in">
+            <span class="eb" data-f="eyebrow">Nổi bật hôm nay</span>
+            <h1 data-f="title">Third Person</h1>
+            <div class="meta"><span class="pill done" data-f="status">Hoàn thành</span>
+              <span data-f="chapters">42 chương</span><span><i></i><span data-f="author">SIIX</span></span>
+              <span><i></i><span data-f="couple">Garn x Mimie</span></span><span><i></i><span data-f="updated">29-09</span></span></div>
+            <p class="excerpt" data-f="excerpt"></p>
+            <div class="prog"><span class="pb"><i data-f="pbar" style="width:42%"></i></span><span data-f="prog">đang đọc chương 18 / 42 · 42%</span></div>
+            <div class="acts">
+              <a class="btn solid pill" href="#v1"><svg class="ic" viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg><span data-f="cta">Đọc tiếp</span></a>
+              <a class="btn line pill" href="#v1"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>Thông tin</a>
+              <button class="btn icon" aria-label="Lưu vào tủ"><svg class="ic" viewBox="0 0 24 24"><path d="M5 4h14v16l-7-4-7 4z"/></svg></button>
+            </div>
+            <div class="rail" data-rail></div>
+          </div>
+          <div class="stage">
+            <div class="poster"><img data-src="cover" alt=""><span class="b18" data-f="b18">18+</span></div>
+            <div class="pcap"><span><b data-f="author">SIIX</b> · <span data-f="couple">Garn x Mimie</span></span><span data-f="year">2026</span></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="facts"><div><b>62</b>Bộ truyện</div><div><b>1.284</b>Chương đã đăng</div>
+        <div><b>41</b>Hoàn thành</div><div><b>6</b>Sắp ra mắt</div></div>
+      <div class="nextsec"><h3>Mới cập nhật</h3><div class="nextp"><span></span><span></span><span></span><span></span><span></span></div></div>
+    </div></div>
+    <div class="notes"><dl>
+      <dt>Ý tưởng</dt><dd>Bìa là thứ duy nhất trong kho có chất lượng thật ⇒ cho nó làm <b>chủ thể</b>: bìa đứng riêng, sắc nét,
+        hơi nghiêng 1°, có bóng đổ và quầng sáng. Phía sau, chính bìa đó bị blur 76px ⇒ cả khung loang đúng tông màu của truyện
+        (đỏ ấm, xanh lạnh…) nên mỗi truyện có “không khí” riêng, mà không phải phóng to ảnh.</dd>
+      <dt>Cần dữ liệu mới?</dt><dd class="yes">Không. Chỉ <code>thumb</code>/<code>slide</code> hiện có (bìa dọc). Không cần ảnh 16:9.</dd>
+      <dt>Ưu / nhược</dt><dd>Ưu: giữ nguyên “cảm giác hero tối” của bản cũ, nhìn có chiều sâu, hợp thư viện truyện (bìa là điểm nhận diện).
+        Nhược: bìa chiếm ~330px nên trên tablet phải thu còn ~230px; mobile phải ẩn poster (đã xử lý: dot + tiêu đề dẫn).</dd>
+      <dt>Chi phí</dt><dd>Trung bình: sửa 1 khối CSS của hero + thêm 1 cột poster; JS/thumbnail/live region của bản hiện tại giữ nguyên.</dd>
+    </dl></div>
+  </article>
+
+  <!-- ================================ V2 ================================= -->
+  <article class="demo" id="v2" data-demo>
+    <div class="dhead">
+      <span class="v">V2</span><h2>“Sân khấu 16:9” — khung ảnh ngang + thẻ giấy</h2>
+      <em>Ảnh là một khung được đóng, chữ nằm trên thẻ giấy: không bao giờ lo chữ chìm vào ảnh</em>
+      <span class="tag mid">cần ảnh ngang</span>
+    </div>
+    <div class="frame"><div class="vpage">
+      <div class="mhdr"><span class="logo">ssochuz<i>library</i></span>
+        <nav><a class="on">Trang chủ</a><a>My Space</a><a>Thư viện</a><a>Ranking</a><a>Lịch ra chương</a></nav>
+        <span class="acts"><span>Tìm nhanh ⌘K</span><span>Nền</span><span>Tài khoản</span></span></div>
+
+      <section class="v2">
+        <div class="grid">
+          <div class="left">
+            <div class="media">
+              <div class="shot"><img data-src="art" alt=""><span class="cap"><span class="rec"></span><span data-f="eyebrow">Nổi bật hôm nay</span></span></div>
+            </div>
+            <div class="rail" data-rail></div>
+          </div>
+          <div class="card">
+            <span class="eb" data-f="eyebrow">Nổi bật hôm nay</span>
+            <h1><a href="#v2" data-f="title">Third Person</a></h1>
+            <div class="meta"><span class="pill done" data-f="status">Hoàn thành</span>
+              <span data-f="chapters">42 chương</span><span><i></i><span data-f="author">SIIX</span></span>
+              <span><i></i><span data-f="couple">Garn x Mimie</span></span></div>
+            <p class="excerpt" data-f="excerpt"></p>
+            <div class="acts">
+              <a class="btn solid" href="#v2"><svg class="ic" viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg><span data-f="cta">Đọc từ đầu</span></a>
+              <button class="btn line"><svg class="ic" viewBox="0 0 24 24"><path d="M5 4h14v16l-7-4-7 4z"/></svg>Lưu vào tủ</button>
+            </div>
+            <div class="byline"><b>Cập nhật</b> <span data-f="updated">29-09</span> · <span data-f="note">Tập mới mỗi thứ Sáu</span></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="facts"><div><b>62</b>Bộ truyện</div><div><b>1.284</b>Chương đã đăng</div>
+        <div><b>41</b>Hoàn thành</div><div><b>6</b>Sắp ra mắt</div></div>
+      <div class="nextsec"><h3>Mới cập nhật</h3><div class="nextp"><span></span><span></span><span></span><span></span><span></span></div></div>
+    </div></div>
+    <div class="notes"><dl>
+      <dt>Ý tưởng</dt><dd>Ngôn ngữ “dịch vụ xem phim”: một khung 16:9 lớn + thẻ nội dung bằng giấy bên cạnh (hoặc phủ góc dưới).
+        Vì chữ nằm trên giấy, <b>không cần gradient để cứu chữ</b>, và ảnh được nhìn ở đúng tỷ lệ nên không bị phóng dọc.</dd>
+      <dt>Cần dữ liệu mới?</dt><dd class="no">Có — ảnh ngang 16:9 (trường <code>banner</code>/<code>backdrop</code> trong registry).
+        <b>Ảnh trong mockup này là ảnh minh hoạ</b> (thư mục <code>art/</code>) để cho thấy hình dung; nếu chưa có dữ liệu,
+        khung sẽ hiện bìa dọc crop giữa (đã có fallback <code>object-position: 50% 32%</code>) — nhìn vẫn ổn hơn phóng toàn khung,
+        nhưng không đẹp bằng.</dd>
+      <dt>Ưu / nhược</dt><dd>Ưu: rõ ràng nhất về phân cấp, dễ thêm “tập mới”, video trailer, rating. Nhược: <b>phụ thuộc dữ liệu ảnh ngang</b>;
+        trên giấy nền sáng nên khác “chất” với phần còn lại của trang chủ (có thể là điểm cộng, cũng có thể là điểm trừ).</dd>
+      <dt>Chi phí</dt><dd>Trung bình–cao: cần bổ sung ảnh trong CMS + mirror ảnh + thêm trường vào registry.</dd>
+    </dl></div>
+  </article>
+
+  <!-- ================================ V3 ================================= -->
+  <article class="demo" id="v3" data-demo>
+    <div class="dhead">
+      <span class="v">V3</span><h2>“Báo in” — chữ là chính, bìa đóng khung như trang bìa tạp chí</h2>
+      <em>Không có ảnh nền, không cần ảnh ngang: dùng đúng ngôn ngữ tạp chí in của web này</em>
+      <span class="tag best">rẻ nhất · hợp thương hiệu</span>
+    </div>
+    <div class="frame"><div class="vpage">
+      <div class="mhdr"><span class="logo">ssochuz<i>library</i></span>
+        <nav><a class="on">Trang chủ</a><a>My Space</a><a>Thư viện</a><a>Ranking</a><a>Lịch ra chương</a></nav>
+        <span class="acts"><span>Tìm nhanh ⌘K</span><span>Nền</span><span>Tài khoản</span></span></div>
+
+      <section class="v3">
+        <div class="ghost" data-bg="cover"></div>
+        <div class="grid">
+          <div>
+            <div class="top"><span class="eb" data-f="eyebrow">Nổi bật hôm nay</span>
+              <span class="idx"><span data-f="num">01</span> / 05 · <span data-f="day">Thứ Tư 29.10</span></span></div>
+            <h1><a href="#v3" data-f="title">Third Person</a></h1>
+            <div class="sub">
+              <span class="hot"><i style="width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block"></i><span data-f="status">Hoàn thành</span></span>
+              <span class="sep"></span><span data-f="chapters">42 chương</span>
+              <span class="sep"></span><span data-f="author">SIIX</span>
+              <span class="sep"></span><span data-f="couple">Garn x Mimie</span>
+              <span class="sep"></span><span data-f="updated">cập nhật 29-09</span>
+            </div>
+            <div class="lead"><p class="excerpt" data-f="excerpt"></p></div>
+            <div class="acts">
+              <a class="btn solid" href="#v3"><svg class="ic" viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg><span data-f="cta">Đọc từ đầu</span></a>
+              <a class="btn line" href="#v3">Thông tin</a>
+              <button class="btn line"><svg class="ic" viewBox="0 0 24 24"><path d="M5 4h14v16l-7-4-7 4z"/></svg>Lưu vào tủ</button>
+            </div>
+            <ul class="index" data-index></ul>
+          </div>
+          <div class="aside">
+            <div class="coverbox"><div class="img"><img data-src="cover" alt=""><span class="b18" data-f="b18">18+</span></div></div>
+            <div class="ccap"><b data-f="title2">Third Person</b><span data-f="author2">SIIX</span></div>
+            <div class="stamp"><span>ssochuz library</span><span data-f="year">2026</span></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="facts"><div><b>62</b>Bộ truyện</div><div><b>1.284</b>Chương đã đăng</div>
+        <div><b>41</b>Hoàn thành</div><div><b>6</b>Sắp ra mắt</div></div>
+      <div class="nextsec"><h3>Mới cập nhật</h3><div class="nextp"><span></span><span></span><span></span><span></span><span></span></div></div>
+    </div></div>
+    <div class="notes"><dl>
+      <dt>Ý tưởng</dt><dd>Đúng “DNA” của ssochuz: tạp chí in, chữ có chân (Fraunces), đường kẻ mảnh, mục lục 01–05 như trang bìa báo.
+        Bìa truyện đóng khung như ảnh minh hoạ bài báo, có chú thích dưới. Không có ảnh nền ⇒ <b>không có chuyện ảnh nhoè</b>.</dd>
+      <dt>Cần dữ liệu mới?</dt><dd class="yes">Không. Dùng đúng bìa + metadata hiện có.</dd>
+      <dt>Ưu / nhược</dt><dd>Ưu: nhẹ nhất (gần như chỉ CSS), đọc tốt nhất trên điện thoại, in ấn/PDF/SEO đều đẹp, không phụ thuộc chất lượng ảnh.
+        Nhược: <b>không còn “cảm giác banner”</b> — nếu bạn muốn trang chủ trông như Netflix thì hướng này đi ngược lại.</dd>
+      <dt>Chi phí</dt><dd>Thấp: 1 khối CSS mới + đổi markup hero. Không đụng JS carousel (chỉ đổi phần điều khiển thành mục lục).</dd>
+    </dl></div>
+  </article>
+
+  <!-- ================================ V4 ================================= -->
+  <article class="demo" id="v4" data-demo>
+    <div class="dhead">
+      <span class="v">V4</span><h2>“Bộ bài” — 5 bìa xoè quạt, bấm bìa để đổi truyện</h2>
+      <em>Khác biệt nhất: điều hướng bằng chính bìa, rất hợp kho truyện chỉ có bìa dọc</em>
+      <span class="tag mid">ấn tượng · cần thử</span>
+    </div>
+    <div class="frame"><div class="vpage">
+      <div class="mhdr"><span class="logo">ssochuz<i>library</i></span>
+        <nav><a class="on">Trang chủ</a><a>My Space</a><a>Thư viện</a><a>Ranking</a><a>Lịch ra chương</a></nav>
+        <span class="acts"><span>Tìm nhanh ⌘K</span><span>Nền</span><span>Tài khoản</span></span></div>
+
+      <section class="v4">
+        <div class="grid">
+          <div class="in">
+            <span class="eb" data-f="eyebrow">Nổi bật hôm nay</span>
+            <h1 data-f="title">Third Person</h1>
+            <div class="meta"><span class="pill done" data-f="status">Hoàn thành</span>
+              <span data-f="chapters">42 chương</span><span><i></i><span data-f="author">SIIX</span></span>
+              <span><i></i><span data-f="couple">Garn x Mimie</span></span><span><i></i><span data-f="updated">29-09</span></span></div>
+            <p class="excerpt" data-f="excerpt"></p>
+            <div class="acts">
+              <a class="btn solid" href="#v4"><svg class="ic" viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg><span data-f="cta">Đọc từ đầu</span></a>
+              <button class="btn line"><svg class="ic" viewBox="0 0 24 24"><path d="M5 4h14v16l-7-4-7 4z"/></svg>Lưu vào tủ</button>
+            </div>
+            <span class="hint">Bấm vào bìa để xem truyện khác · <span data-f="num">01</span> / 05</span>
+            <div class="rail" data-rail></div>
+          </div>
+          <div class="deck" data-deck></div>
+        </div>
+      </section>
+
+      <div class="facts"><div><b>62</b>Bộ truyện</div><div><b>1.284</b>Chương đã đăng</div>
+        <div><b>41</b>Hoàn thành</div><div><b>6</b>Sắp ra mắt</div></div>
+      <div class="nextsec"><h3>Mới cập nhật</h3><div class="nextp"><span></span><span></span><span></span><span></span><span></span></div></div>
+    </div></div>
+    <div class="notes"><dl>
+      <dt>Ý tưởng</dt><dd>Coi 5 truyện nổi bật là một “bộ bài”: bìa hiện tại nằm trên cùng, các bìa khác xoè hai bên. Đổi truyện
+        bằng cách bấm vào bìa — đúng bản năng của người đọc truyện tranh/truyện chữ (nhìn bìa để chọn).</dd>
+      <dt>Cần dữ liệu mới?</dt><dd class="yes">Không. Bìa dọc là dạng ảnh mạnh nhất của hướng này.</dd>
+      <dt>Ưu / nhược</dt><dd>Ưu: nhận diện mạnh, không đụng gì tới ảnh nền, cảm giác “thư viện” rõ. Nhược: 5 bìa xoè cần chỗ ⇒ tablet phải thu,
+        mobile phải bỏ (chuyển sang 1 bìa + dot); cần test kỹ vùng bấm và bàn phím vì các bìa chồng nhau.</dd>
+      <dt>Chi phí</dt><dd>Trung bình: thêm CSS deck + JS tính vị trí/aria cho từng bìa (chồng lớp ⇒ phải kiểm tra thứ tự tab).</dd>
+    </dl></div>
+  </article>
+
+  <!-- ============================ BẢNG SO SÁNH =========================== -->
+  <section class="cmp" id="cmp">
+    <table>
+      <thead><tr><th>Phương án</th><th>Chủ thể</th><th>Cần ảnh ngang?</th><th>Giữ “hero tối”?</th><th>Mobile</th><th>Chi phí</th></tr></thead>
+      <tbody>
+        <tr><td><b>V0 — hiện tại</b></td><td>Ảnh nền (bìa phóng to)</td><td class="no">Không, nhưng nên có</td><td class="yes">Có</td><td>Dot, ổn</td><td>Đã xong</td></tr>
+        <tr><td><b>V1 — đèn nền theo bìa</b></td><td><b>Bìa thật</b> + quầng màu</td><td class="yes">Không cần</td><td class="yes">Có</td><td>Ẩn bìa, dot, sạch</td><td>Sửa CSS + 1 cột</td></tr>
+        <tr><td><b>V2 — sân khấu 16:9</b></td><td>Khung ảnh ngang + thẻ giấy</td><td class="x">Có (bắt buộc để đẹp)</td><td class="no">Không (nền sáng)</td><td>Xếp dọc, tốt</td><td>Cao (CMS + mirror)</td></tr>
+        <tr><td><b>V3 — báo in</b></td><td>Chữ + bìa đóng khung</td><td class="yes">Không cần</td><td class="no">Không (nền giấy)</td><td>Rất tốt</td><td>Thấp</td></tr>
+        <tr><td><b>V4 — bộ bài</b></td><td>5 bìa xoè quạt</td><td class="yes">Không cần</td><td class="yes">Có</td><td>1 bìa + dot</td><td>Trung bình</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="verdict">
+    <h2>Đề xuất của tôi</h2>
+    <p>Đổi <b>V1</b> làm mặc định — nó sửa đúng chỗ bản trước sai (lấy bìa thật làm chủ thể thay vì phóng nó lên),
+      vẫn giữ “cảm giác hero tối” bạn muốn, và <b>không cần</b> dữ liệu ảnh mới. Phần carousel/bàn phím/live region của bản
+      hiện tại dùng lại nguyên. Nếu bạn thích hướng tạp chí thì <b>V3</b> là phương án ít rủi ro nhất về kỹ thuật và rẻ nhất.
+      <b>V2</b> chỉ nên làm sau khi CMS có ảnh 16:9; <b>V4</b> để dành cho một đợt thử nghiệm A/B.</p>
+    <ol>
+      <li><b>Bước 1</b> — chốt hướng (V1 hoặc V3). Tôi dựng thành component thật trong <code>src/</code>, giữ nguyên data contract.</li>
+      <li><b>Bước 2</b> — bạn xem trên máy thật ở 375 / 820 / 1440, tôi chỉnh lại tỷ lệ chữ/quầng sáng theo ảnh chụp.</li>
+      <li><b>Bước 3</b> — nếu chọn V2: bổ sung trường <code>banner</code> (16:9) vào registry + <code>tools/mirror_covers.mjs</code>, rồi mới đổi giao diện.</li>
+    </ol>
+  </section>
+</div>
+
+<script>
+/* ============================================================================
+   DỮ LIỆU THẬT (rút từ data/registry.json — chỉ rút gọn phần mô tả cho vừa khung)
+   ========================================================================== */
+var STORIES = [
+  {
+    slug:'third-person', title:'Third Person', author:'SIIX', couple:'Garn x Mimie',
+    chapters:'42 chương', status:'Hoàn thành', statusCls:'done', updated:'29-09', year:'2026',
+    is18:false, progress:42,
+    cover:'/assets/covers/6a6f3cd4.webp', art:'/docs/mockups/hero/art/a1-third-person.jpg',
+    excerpt:'Khi quá khứ là một ẩn số: Chris mất trí nhớ, tỉnh dậy giữa một cuộc hôn nhân mà cô không nhớ đã bước vào — và người chồng ấy cũng chẳng buồn giấu việc anh ta biết nhiều hơn cô.',
+    day:'Thứ Tư 29.10'
+  },
+  {
+    slug:'pls-love', title:'PLS LOVE', author:'REVERSE', couple:'Lena x Miu',
+    chapters:'71 chương', status:'Hoàn thành', statusCls:'done', updated:'27-09', year:'2026',
+    is18:true, progress:63,
+    cover:'/assets/covers/d0d80952.webp', art:'/docs/mockups/hero/art/a2-pls-love.jpg',
+    excerpt:'Hai người hàng xóm, một bản hợp đồng “giả yêu” cho có lệ với gia đình, và một mùa hè đủ dài để cả hai quên mất mình đang diễn.',
+    day:'Thứ Tư 29.10'
+  },
+  {
+    slug:'love-in-the-fast-lane', title:'Love in the Fast Lane', author:'Kawee Seerung', couple:'Faye x Atom',
+    chapters:'0 chương', status:'Sắp ra mắt', statusCls:'soon', updated:'30-09', year:'2026',
+    is18:false, progress:0,
+    cover:'/assets/covers/85452efe.webp', art:'/docs/mockups/hero/art/a3-fast-lane.jpg',
+    excerpt:'Một tay đua đường phố và cô luật sư được thuê để dọn hậu quả cho anh ta. Chương đầu lên sóng thứ Sáu tuần này.',
+    day:'Thứ Sáu 31.10'
+  },
+  {
+    slug:'nguoi-chong-lanh-lung-cua-co-vo-beo', title:'Người Chồng Lạnh Lùng Của Cô Vợ Béo', author:'Sawitchaya', couple:'',
+    chapters:'0 chương', status:'Đang cập nhật', statusCls:'run', updated:'30-09', year:'2026',
+    is18:true, progress:0,
+    cover:'/assets/covers/5eb112f5.webp', art:'/assets/covers/5eb112f5.webp',
+    excerpt:'“Cô sinh con cho tôi đi.” Phraphai chỉ là người vợ có nhiệm vụ sinh người nối dõi cho gia tộc Butsaya — còn Phima thì chưa từng nghĩ sẽ yêu cô.',
+    day:'Thứ Tư 29.10'
+  },
+  {
+    slug:'nakira-la-mot-ke-nhan-tam', title:'Nakira Là Một Kẻ Nhẫn Tâm', author:'Sawitchaya', couple:'',
+    chapters:'0 chương', status:'Đang cập nhật', statusCls:'run', updated:'30-09', year:'2026',
+    is18:true, progress:0,
+    cover:'/assets/covers/022cf203.webp', art:'/assets/covers/022cf203.webp',
+    excerpt:'Nakira không tin vào lòng tốt. Cho tới khi người duy nhất tử tế với cô lại chính là người cô phải huỷ hoại.',
+    day:'Thứ Tư 29.10'
+  }
+];
+
+function pad2(n){ return (n < 10 ? '0' : '') + n; }
+
+/* mỗi khối demo giữ index riêng */
+document.querySelectorAll('[data-demo]').forEach(function (demo, di) {
+  demo._i = 0;
+
+  /* dải thumbnail / mục lục / bộ bài */
+  var rail = demo.querySelector('[data-rail]');
+  var index = demo.querySelector('[data-index]');
+  var deck = demo.querySelector('[data-deck]');
+
+  function thumbHTML(k){
+    var s = STORIES[k];
+    var crop = demo.id === 'v2' ? ' style="object-position:50% 24%"' : '';
+    return '<button type="button" data-go="' + k + '" class="' + (k === demo._i ? 'on' : '') + '"' +
+      ' aria-label="Xem: ' + s.title + '"' + (k === demo._i ? ' aria-current="true"' : '') + '>' +
+      '<img src="' + s.cover + '" alt="" loading="lazy" decoding="async"' + crop + '></button>';
+  }
+  if (rail) rail.innerHTML = STORIES.map(function (_, k) { return thumbHTML(k); }).join('') +
+    (demo.id === 'v0' ? '' : '<span class="cnt" data-f="num5">01 / 05</span>');
+  if (index) {
+    index.innerHTML = STORIES.map(function (s, k) {
+      return '<li><button type="button" data-go="' + k + '" class="' + (k === demo._i ? 'on' : '') + '"' +
+        (k === demo._i ? ' aria-current="true"' : '') + ' aria-label="Xem: ' + s.title + '">' +
+        '<span class="n">' + pad2(k + 1) + '</span><span class="t">' + s.title + '</span></button></li>';
+    }).join('');
+  }
+  if (deck) {
+    deck.innerHTML = STORIES.map(function (s, k) {
+      return '<button type="button" data-go="' + k + '" class="' + (k === demo._i ? 'on' : '') + '"' +
+        (k === demo._i ? ' aria-current="true"' : '') + ' aria-label="Xem: ' + s.title + '">' +
+        '<span class="pos">' + pad2(k + 1) + '</span>' +
+        '<img src="' + s.cover + '" alt="" loading="lazy" decoding="async"></button>';
+    }).join('');
+  }
+
+  function paint(){
+    var s = STORIES[demo._i];
+    demo.querySelectorAll('[data-f]').forEach(function (el) {
+      var k = el.dataset.f;
+      var v;
+      switch (k) {
+        case 'title': v = s.title; break;
+        case 'title2': v = s.title; break;
+        case 'author': v = s.author; break;
+        case 'author2': v = s.author ? s.author : '—'; break;
+        case 'couple': v = s.couple || 'Đang cập nhật'; break;
+        case 'chapters': v = s.chapters; break;
+        case 'status': v = s.status; break;
+        case 'updated': v = demo.id === 'v3' ? ('cập nhật ' + s.updated) : s.updated; break;
+        case 'excerpt': v = s.excerpt; break;
+        case 'year': v = s.year; break;
+        case 'num': v = pad2(demo._i + 1); break;
+        case 'num5': v = pad2(demo._i + 1) + ' / 05'; break;
+        case 'day': v = s.day; break;
+        case 'eyebrow': v = demo._i === 0 ? 'Nổi bật hôm nay' : 'Đề xuất cho bạn'; break;
+        case 'cta': v = s.statusCls === 'soon' ? 'Xem thông tin' : (s.progress ? 'Đọc tiếp' : 'Đọc từ đầu'); break;
+        case 'prog': v = s.progress ? ('đang đọc chương ' + Math.round(s.progress / 100 * (parseInt(s.chapters, 10) || 42)) + ' · ' + s.progress + '%') : 'chưa đọc chương nào'; break;
+        case 'pbar': el.style.width = (s.progress || 0) + '%'; return;
+        case 'note': v = s.statusCls === 'soon' ? 'Sắp lên sóng' : 'Tập mới mỗi thứ Sáu'; break;
+        default: v = ''; break;
+      }
+      el.textContent = v;
+    });
+    demo.querySelectorAll('[data-src]').forEach(function (img) {
+      var want = img.dataset.src === 'art' ? s.art : s.cover;
+      if (img.getAttribute('src') !== want) img.setAttribute('src', want);
+      img.alt = img.dataset.src === 'art' ? ('Ảnh minh hoạ cho ' + s.title) : ('Bìa ' + s.title);
+    });
+    demo.querySelectorAll('[data-bg]').forEach(function (el) {
+      el.style.backgroundImage = 'url("' + (el.dataset.bg === 'art' ? s.art : s.cover) + '")';
+    });
+    /* trạng thái pill đổi màu theo tình trạng */
+    demo.querySelectorAll('.pill[data-f="status"]').forEach(function (el) {
+      el.className = 'pill ' + s.statusCls;
+    });
+    /* bìa 18+ */
+    demo.querySelectorAll('[data-f="b18"]').forEach(function (el) { el.hidden = !s.is18; });
+    /* aria-current cho mọi điều khiển */
+    demo.querySelectorAll('[data-go]').forEach(function (b) {
+      var on = +b.dataset.go === demo._i;
+      b.classList.toggle('on', on);
+      if (on) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
+    });
+  }
+
+  demo.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-go]');
+    if (!b) return;
+    demo._i = +b.dataset.go;
+    paint();
+  });
+
+  paint();
+});
+
+/* ---------- thanh công cụ: cỡ màn hình, sáng/tối, thu nhỏ ---------- */
+function syncChips(box) {
+  box.querySelectorAll('button').forEach(function (x) {
+    x.setAttribute('aria-pressed', x.classList.contains('on') ? 'true' : 'false');
+  });
+}
+function setZoom(on) {
+  document.body.classList.toggle('zoomfit', on);
+  var z = document.getElementById('zoomBtn');
+  z.setAttribute('aria-pressed', on ? 'true' : 'false');
+  z.textContent = on ? 'Xem đúng cỡ 100%' : 'Thu nhỏ để xem trọn';
+}
+/* màn hình hẹp hơn khung 1440 ⇒ tự thu nhỏ để thấy trọn bố cục desktop */
+if (window.innerWidth < 1330) setZoom(true);
+document.getElementById('vpChips').addEventListener('click', function (e) {
+  var b = e.target.closest('[data-vp]');
+  if (!b) return;
+  document.body.dataset.vp = b.dataset.vp;
+  this.querySelectorAll('button').forEach(function (x) {
+    x.classList.toggle('on', x === b);
+    x.setAttribute('aria-pressed', x === b ? 'true' : 'false');
+  });
+});
+document.getElementById('themeChips').addEventListener('click', function (e) {
+  var b = e.target.closest('[data-theme]');
+  if (!b) return;
+  document.documentElement.dataset.theme = b.dataset.theme;
+  this.querySelectorAll('button').forEach(function (x) {
+    x.classList.toggle('on', x === b);
+    x.setAttribute('aria-pressed', x === b ? 'true' : 'false');
+  });
+});
+document.getElementById('zoomBtn').addEventListener('click', function () {
+  setZoom(!document.body.classList.contains('zoomfit'));
+});
+syncChips(document.getElementById('vpChips'));
+syncChips(document.getElementById('themeChips'));
+
+/* phím ← → đổi truyện cho khối đang trỏ chuột (giống hành vi hero thật) */
+document.addEventListener('keydown', function (e) {
+  if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName || '')) return;
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  var active = document.querySelector('.demo:hover');
+  if (!active) return;
+  e.preventDefault();
+  var next = (active._i + (e.key === 'ArrowRight' ? 1 : STORIES.length - 1)) % STORIES.length;
+  var btn = active.querySelector('[data-go="' + next + '"]');
+  if (btn) btn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+});
+</script>
+</body>
+</html>
