@@ -152,3 +152,31 @@ Ghi chú về mockup: `docs/mockups/hero/art/*.jpg` là **ảnh minh hoạ 16:9*
 (dữ liệu thật **không có** ảnh ngang) — mọi chỗ khác đều dùng đúng bìa trong
 `/assets/covers`. Dữ liệu chữ lấy từ `data/registry.json`. Thư mục `docs/` đã bị
 `_redirects` chặn nên mockup không lên bản thật.
+
+## 10. Phản hồi 2026-10-29 (lần 2) — chọn V4, làm lại cho “đẹp hơn, gọn gàng, ấn tượng hơn”
+
+Người duyệt chọn **V4 (“bộ bài”)** nhưng yêu cầu bản V4 đầu tiên phải gọn và có nhịp hơn.
+Bản V4 cũ rối ở 5 điểm, tất cả đều đã xử lý:
+
+| V4 cũ | Bản làm lại |
+| --- | --- |
+| 5 bìa xoè nhưng không cùng một tâm | Quạt xếp theo **khoảng cách tới bìa đang chọn** (`--fan-unit`), đổi slide nào cũng đúng nhịp |
+| Mỗi bìa dán nhãn “01” nền đen | Một dòng chữ mono **số + tác giả** dưới bìa đang chọn |
+| Dòng hint chữ trôi nổi | Bỏ; nhãn trên bìa thay thế |
+| 4–5 viên pill viền tranh nhau | **Chấm trạng thái + chữ** trên một hàng meta |
+| Dot / thumbnail làm phân trang | **Ticks 5 nhịp** bấm được + `01 / 05` + prev/next |
+
+Ba biến thể trong `docs/mockups/hero/v4-options.html` (dữ liệu + bìa **thật**, không ảnh minh hoạ):
+
+- **A · “Sạp báo”** (tối) — quạt 5 bìa có tâm, tự chuyển 7 s kèm nút Tạm dừng (WCAG 2.2.2) và
+  vạch tiến trình 2 px; mobile đổi thành dải bìa cuộn ngang.
+- **B · “Kệ trưng”** (giấy) — bìa lớn đóng khung + **mục lục 01–05** bên cạnh trên một trục số,
+  bỏ hẳn thumbnail nhỏ trong danh sách (thứ làm bản trước trông vụn); tổng cao ~440 px.
+- **C · “Đèn rọi”** (tối, ấn tượng nhất) — `perspective`, bìa chính + hai bìa kế `rotateY 15°`
+  bấm được (có `role`/`tabindex`/Enter-Space), phản chiếu `mask-image` tĩnh, quầng sáng lấy từ chính bìa,
+  parallax con trỏ ≤2,5° và tắt khi `prefers-reduced-motion`.
+
+Kiểm chứng: jsdom **69/69** (3 khối, quạt/mục lục/ticks đủ 5, đổi truyện → tiêu đề + bìa + `aria-current` +
+vùng `aria-live`, nút Tạm dừng, bìa hai bên bấm/kbd, chip khổ & giao diện, 5 bìa có thật trong `assets/covers`).
+
+**Đang chờ chọn A / B / C** — sau đó mới đụng `src/cz-hero.js` (hiện vẫn là bản full-bleed V0).
