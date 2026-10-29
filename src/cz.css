@@ -597,9 +597,10 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
    hướng (bấm bìa nào mở truyện đó). Chữ đọc ở cột trái, cùng một hệ với phần
    còn lại của trang.
 
-   BỐ CỤC: ≥1024 hai cột (chữ | quạt). <1024 MỘT cột: chữ → quạt → hàng điều
-   khiển, tức là bố cục mobile/tablet giống hệt desktop, chỉ thu nhỏ — đúng yêu
-   cầu “mobile cùng một layout”. Không có kiểu điều hướng thứ hai để phải học.
+   BỐ CỤC: ≥640 HAI CỘT (chữ | quạt) — bìa luôn nằm MỘT BÊN như mockup, kể cả
+   ở mốc tablet. <640 mới xếp một cột: chữ → quạt → hàng điều khiển, vẫn cùng
+   thứ tự và cùng kiểu điều hướng, chỉ thu nhỏ. Không có kiểu điều hướng thứ
+   hai để phải học.
 
    ĐÃ DỌN (so với bản V4 đầu): bỏ 5 viên pill viền ⇒ “● trạng thái + chữ” trên
    một hàng meta; bỏ nhãn “01” nền đen dán từng bìa ⇒ một dòng mono số + tác giả
@@ -672,7 +673,8 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   max-width: var(--maxw); margin: 0 auto;
   padding: 52px 24px 44px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  /* cột bìa rộng hơn cột chữ một chút — đúng tỉ lệ mockup (quạt là nhân vật chính) */
+  grid-template-columns: minmax(0, .94fr) minmax(0, 1.06fr);
   gap: 44px;
   align-items: center;
   min-height: clamp(500px, 62vh, 600px);
@@ -686,7 +688,7 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   transition: opacity .34s var(--ease-soft), visibility 0s linear .34s; }
 .hero .slide.on { visibility: visible; opacity: 1; transition: opacity .34s var(--ease-soft); }
 .hero .info { display: flex; flex-direction: column; align-items: flex-start;
-  gap: 15px; min-width: 0; max-width: 560px; }
+  gap: 15px; min-width: 0; max-width: 520px; }
 
 /* nhãn nhỏ phía trên tiêu đề (kiểu manchette): gạch ngang bằng ::before nên
    textContent của .eyebrow vẫn là chuỗi thuần cho trình đọc màn hình */
@@ -777,8 +779,8 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
    --fan-unit: khoảng cách giữa hai bìa kề nhau trong quạt
    Bìa đang chọn luôn ở data-pos="0" (tâm). */
 .hero .fan {
-  --cover-w: clamp(150px, 13.6vw, 196px);
-  --fan-unit: clamp(84px, 7.6vw, 108px);
+  --cover-w: clamp(150px, 14vw, 208px);
+  --fan-unit: clamp(84px, 7.4vw, 116px);
   position: relative;
   justify-self: stretch;
   height: calc(var(--cover-w) * 1.59 + 118px);
@@ -825,21 +827,25 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   transform: scaleX(0); transform-origin: 0 50%; }
 
 /* ---- 5.7 responsive -------------------------------------------------------
-   <1024 : MỘT cột, giữ nguyên thứ tự và cùng một kiểu điều hướng (chữ → quạt →
-   hàng ticks) — chỉ thu nhỏ, không đổi cấu trúc. */
-@media (max-width: 1023px) {
-  .hero .hb-grid { grid-template-columns: minmax(0, 1fr); gap: 22px;
-    padding: 34px 24px 30px; min-height: 0; }
+   ≥640 : HAI CỘT như mockup — bìa nằm MỘT BÊN, chữ một bên. Mốc tablet chỉ thu
+          quạt + bớt đệm, KHÔNG đổi bố cục (đúng mockup ở 820).
+   <640 : một cột (điện thoại), vẫn cùng thứ tự và cùng kiểu điều hướng
+          (chữ → quạt → ticks), chỉ thu nhỏ. */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .hero .hb-grid { gap: 22px; padding: 36px 24px 32px; min-height: 0; }
   .hero .hb-col { gap: 18px; }
-  .hero .info { max-width: 620px; }
-  .hero h1 { font-size: clamp(30px, 4.4vw, 40px); max-width: 18ch; }
-  .hero .fan { --cover-w: clamp(150px, 24vw, 210px); --fan-unit: clamp(96px, 15vw, 130px); }
+  .hero .info { max-width: 400px; }
+  .hero h1 { font-size: clamp(26px, 3.6vw, 38px); max-width: 12ch; }
+  .hero .syn { font-size: 14px; }
+  .hero .fan { --cover-w: clamp(100px, 15vw, 150px); --fan-unit: clamp(56px, 8.4vw, 90px); }
 }
 @media (max-width: 639px) {
   .hero { min-height: max(440px, 56vh); }
-  .hero .hb-grid { padding: 24px 18px 22px; gap: 18px; }
-  .hero .info { gap: 12px; }
-  .hero h1 { font-size: clamp(25px, 6.6vw, 31px); }
+  .hero .hb-grid { grid-template-columns: minmax(0, 1fr); gap: 18px;
+    padding: 24px 18px 22px; min-height: 0; }
+  .hero .hb-col { gap: 16px; }
+  .hero .info { gap: 12px; max-width: none; }
+  .hero h1 { font-size: clamp(25px, 6.6vw, 31px); max-width: 18ch; }
   .hero .syn { display: none; }               /* điện thoại: ưu tiên tiêu đề + CTA */
   .hero .prog .pb { flex-basis: 130px; }
   .hero .fan { --cover-w: 100px; --fan-unit: 68px; height: calc(var(--cover-w) * 1.59 + 112px); }
@@ -1845,14 +1851,11 @@ kbd { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; b
   .admin .amain { padding-top: 16px; }
   .admin .tbl { min-width: 760px; }
   .admin .keys { grid-template-columns: 1fr; }
-  .hero .col { grid-template-columns: 1fr; gap: 24px; padding: 30px 16px 26px; }
-  .hero .poster { order: -1; justify-self: start; width: min(56vw, 224px); margin-bottom: 2px; }
-  .hero .strip { display: none; }
   .shero .in { grid-template-columns: 1fr; gap: 24px; }
   .shero .cover { width: min(42vw, 180px); }
   .rnav { grid-template-columns: 1fr 1fr; }
   .rnav .mid { grid-column: 1 / -1; order: -1; }
-  .wrap, .hero .col, .hero .footin, .facts .in, .ftr .in { padding-left: 16px; padding-right: 16px; }
+  .wrap, .facts .in, .ftr .in { padding-left: 16px; padding-right: 16px; }
   .rdhead, .rtext, .ract, .rend, .rnav { padding-left: 18px; padding-right: 18px; }
 }
 @media (max-width: 620px) {
@@ -1906,7 +1909,7 @@ kbd { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; b
 /* màn hình cảm ứng: tắt hiệu ứng "treo" của :hover để thao tác không bị khựng */
 @media (hover: none) {
   .btn:hover, .hbtn:hover, .nav a:hover, .card:hover .th, .card:hover .th img, .relcard:hover,
-  .relcard:hover .rc-th img, .hero .posterwrap:hover .poster, .hero .posterwrap:hover .poster img,
+  .relcard:hover .rc-th img,
   .ract > *:hover, .tile:hover, .cha:hover { transform: none; }
   .card:hover .th, .relcard:hover, .tile:hover { box-shadow: none; }
 }
@@ -2497,7 +2500,7 @@ body.rd-focus .rdcmts { display: none; }
    nút chính ≥ 40px; nhãn dài được xuống dòng thay vì tràn ra ngoài màn hình. */
 @media (max-width: 560px) {
   .pill, .b18, .badge-new, .chart .ax, .cmt-guest, .cmt-ch, .flab, .amtop .role,
-  .sgrp h5, .hero .keys kbd, .cha.k-open .no, .cha.k-extra .no, .card .th .pill,
+  .sgrp h5, .cha.k-open .no, .cha.k-extra .no, .card .th .pill,
   .card.list .pill, .relcard .pill, .tbl th, .ovhead { font-size: 11px; }
   .btn { white-space: normal; text-align: center; }        /* nhãn dài xuống dòng, không tràn */
   .btn.sm { height: auto; min-height: 40px; padding: 8px 12px; }
@@ -2541,7 +2544,6 @@ body.rd-focus .rdcmts { display: none; }
   .hbtn.burger { display: inline-flex; }
   .mnav { padding-left: 16px; padding-right: 16px; }
   .hero { min-height: 510px; }
-  .hero .stage { padding: 72px 16px 82px; }
   .hero h1 { font-size: clamp(28px, 9vw, 40px); }
   .hero .syn { -webkit-line-clamp: 3; }
   .hero .btn-row, .shero .btn-row { gap: 8px; }
@@ -2562,7 +2564,6 @@ body.rd-focus .rdcmts { display: none; }
 }
 @media (max-width: 430px) {
   .hero { min-height: 470px; }
-  .hero .stage { padding-top: 62px; }
   .fbox .row1 { grid-template-columns: 1fr; }
   .seg { grid-column: auto; }
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }

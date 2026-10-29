@@ -189,10 +189,16 @@ Hero chạy thật giờ là hướng **A · “Sạp báo”**. Bản full-blee
 `src/cz-hero.js` và `src/cz.css` §5 — không còn `.hb-media/.hb-bg/.hb-scrim` phủ
 ảnh bìa dọc lên khung ngang.
 
-**Bố cục** — ≥1024 hai cột (chữ | quạt 5 bìa). **<1024 MỘT cột nhưng cùng thứ tự
-và cùng kiểu điều hướng**: chữ → quạt → ticks/‹ ›/⏸. Không có kiểu điều hướng
-thứ hai cho điện thoại (bản mockup trước dùng “dải cuộn ngang” — đã bỏ theo yêu
-cầu “mobile cùng một layout”).
+**Bố cục** — **≥640 HAI CỘT** (chữ | quạt 5 bìa): bìa luôn nằm một bên như mockup,
+kể cả ở mốc tablet 820. **<640** mới xếp một cột nhưng vẫn cùng thứ tự và cùng
+kiểu điều hướng: chữ → quạt → ticks/‹ ›/⏸. Không có kiểu điều hướng thứ hai cho
+điện thoại (bản mockup trước dùng “dải cuộn ngang” — đã bỏ theo yêu cầu
+“mobile cùng một layout”).
+
+> Lần đầu ship, `cz.css` bị giữ nguyên `?v=` cũ nên service worker vẫn phục vụ
+> bản CSS cũ (hero hiện ra như khối chữ + ảnh bìa xếp dọc). Đã đổi `?v=` của
+> `cz.css` ở toàn bộ 76 tệp HTML + `sw.js` (`20261029hero3`) — đổi CSS là **bắt
+> buộc** phải đổi `?v=`.
 
 **Vị trí quạt nằm trong CSS**: mỗi bìa mang `data-pos` (0 = đang chọn, 1..4 xoay
 vòng hai bên) và đọc `--x/--y/--r/--s`; JS chỉ đổi `data-pos`. Đổi breakpoint chỉ
