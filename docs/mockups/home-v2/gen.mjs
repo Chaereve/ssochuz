@@ -483,6 +483,13 @@ const HTML = `<!doctype html>
     });
   });
 
+  /* mở bằng điện thoại thì mặc định vào khung Mobile cho khỏi vỡ */
+  if (window.innerWidth < 760) {
+    document.body.setAttribute('data-w', 'mobile');
+    Array.prototype.forEach.call(document.querySelectorAll('.mkbar .wsw button'),
+      function (b) { b.classList.toggle('on', b.getAttribute('data-w') === 'mobile'); });
+  }
+
   paint();
 })();
 </script>
