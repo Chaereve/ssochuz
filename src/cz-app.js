@@ -1990,23 +1990,23 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       { k: 'library', label: 'Thư viện', i: 'library', h: '/#thu-vien' },
       { k: 'new', label: 'Mới cập nhật', i: 'sparkle', h: '/#moi-cap-nhat' },
       { k: 'rank', label: 'Ranking', i: 'trophy', h: '/#bxh' },
-      { k: 'sched', label: 'Lịch ra chương', i: 'calendar', h: '/#lich', more: true },
-      { k: 'authors', label: 'Tác giả', i: 'pen', h: '/tac-gia/', more: true },
-      { k: 'couples', label: 'Couple', i: 'users', h: '/couple/', more: true }
+      { k: 'sched', label: 'Lịch ra chương', i: 'calendar', h: '/#lich' },
+      { k: 'authors', label: 'Tác giả', i: 'pen', h: '/tac-gia/' },
+      { k: 'couples', label: 'Couple', i: 'users', h: '/couple/' }
     ];
-    /* Điều hướng một tầng: bốn mục chính + một nút "Khám phá" mở menu chứa ba
-       mục còn lại. NAV vẫn là nguồn duy nhất — cờ `more` quyết định mục nào nằm
-       trong menu, nên thêm/bớt điểm đến chỉ cần sửa đúng mảng này. Thứ tự DOM
-       giữ nguyên thứ tự NAV để menu mobile (vốn liệt kê đủ bảy mục) vẫn khớp. */
-    function navA(n, inMenu) {
+    /* Điều hướng bằng MỘT nút "Danh mục" thay cho dãy mục ngang: bảy điểm đến
+       nằm trong một bảng hai cột, mở tại chỗ. Dãy ngang cũ phải thu về icon ở
+       mọi khổ dưới 1200px (mất nhãn, phải đoán hình), còn nút này giữ nguyên
+       nhãn chữ ở mọi khổ và trả lại chiều ngang cho ô tìm kiếm.
+       NAV vẫn là nguồn duy nhất; thứ tự DOM = thứ tự NAV nên menu mobile (vốn
+       liệt kê đủ bảy mục) khớp từng nhãn một. */
+    function navA(n) {
       return '<a href="' + n.h + '" data-k="' + n.k + '"' + (n.k === active ? ' class="on" aria-current="page"' : '') +
-        (inMenu ? ' role="menuitem"' : '') +
-        ' title="' + esc(n.label) + '" aria-label="' + esc(n.label) + '">' +
+        ' role="menuitem" title="' + esc(n.label) + '" aria-label="' + esc(n.label) + '">' +
         icon(n.i, 'i-s') + '<span class="nav-lbl">' + esc(n.label) + '</span></a>';
     }
-    var links = NAV.filter(function (n) { return !n.more; }).map(function (n) { return navA(n, false); }).join('');
-    var moreLinks = NAV.filter(function (n) { return n.more; }).map(function (n) { return navA(n, true); }).join('');
-    var moreOn = NAV.some(function (n) { return n.more && n.k === active; });
+    var menuLinks = NAV.map(navA).join('');
+    var menuOn = NAV.some(function (n) { return n.k === active; });
     var mLinks = NAV.map(function (n) {
       return '<a href="' + n.h + '" data-k="' + n.k + '"' + (n.k === active ? ' class="on"' : '') + ' aria-label="' + esc(n.label) + '">' +
         icon(n.i, 'i-s') + ' ' + esc(n.label) + '</a>';
@@ -2017,13 +2017,11 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     d.querySelectorAll('nav.crumb:not([aria-label])').forEach(function (el) { el.setAttribute('aria-label', 'Đường dẫn trang'); });
     host.innerHTML = '<a class="skip" href="#main" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden">Chuyển tới nội dung chính</a><div class="in">' +
       '<a class="logo" href="/" title="ssochuz library">' + MARK() + '</a>' +
-      '<nav class="nav" id="czNav" aria-label="Điều hướng chính"><span class="ink" id="czInk" aria-hidden="true"></span>' + links +
-        (moreLinks ? '<span class="nav-more">' +
-          '<button class="nb' + (moreOn ? ' on' : '') + '" id="czNavMore" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="czNavMenu" title="Khám phá thêm">' +
-            icon('grid', 'i-s') + '<span class="nav-lbl">Khám phá</span>' + icon('down', 'cv') + '</button>' +
-          '<div class="nav-menu" id="czNavMenu" role="menu" aria-label="Khám phá thêm">' + moreLinks + '</div>' +
-        '</span>' : '') +
-      '</nav>' +
+      '<nav class="nav" id="czNav" aria-label="Điều hướng chính"><span class="nav-more">' +
+        '<button class="nb' + (menuOn ? ' on' : '') + '" id="czNavMore" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="czNavMenu">' +
+          icon('grid', 'i-s') + '<span class="nav-lbl">Danh mục</span>' + icon('down', 'cv') + '</button>' +
+        '<div class="nav-menu" id="czNavMenu" role="menu" aria-label="Điều hướng chính">' + menuLinks + '</div>' +
+      '</span></nav>' +
       '<span class="grow"></span>' +
       /* ô tìm kiếm rộng: bấm (hoặc ⌘K) là mở bảng tìm nhanh — cùng một đường vào
          với phím tắt, không dựng thêm một ô nhập thứ hai để khỏi lệch kết quả */
@@ -2373,43 +2371,35 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   }
   /* thanh mục ở đầu trang: gạch chân trượt sang mục đang xem, không chỉ là mấy chữ chết */
   function navInk(host) {
-    var nav = host.querySelector('#czNav'), ink = host.querySelector('#czInk');
-    if (!nav || !ink) return;
+    var nav = host.querySelector('#czNav');
+    if (!nav) return;
     var links = Array.prototype.slice.call(nav.querySelectorAll('a[data-k]'));
     if (!links.length) return;
     var ids = links.map(function (a) { return (a.getAttribute('href') || '').split('#')[1] || ''; });
     var have = ids.filter(function (id) { return !!(id && d.getElementById(id)); }).length;
-    var more = nav.querySelector('.nav-more'), nb = more && more.querySelector('.nb');
-    /* Mục nằm trong menu “Khám phá” không có gạch riêng: gạch và aria-current
-       dồn về nút mở menu, còn dấu .on vẫn nằm trên chính liên kết đó. */
+    var nb = nav.querySelector('#czNavMore');
+    /* Đánh dấu mục đang xem: .on + aria-current nằm trên chính liên kết trong
+       menu; nút "Danh mục" chỉ sáng lên (không đổi nhãn) để người đọc biết
+       trang hiện tại nằm trong menu. Không còn gạch chân trượt: gạch chỉ có
+       nghĩa khi các mục nằm cạnh nhau trên một hàng. */
     function mark(el) {
       links.forEach(function (a) {
         var on = a === el;
         a.classList.toggle('on', on);
         if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
       });
-      var inMore = !!(el && nb && more.contains(el));
-      if (nb) {
-        nb.classList.toggle('on', inMore);
-        if (inMore) nb.setAttribute('aria-current', 'page'); else nb.removeAttribute('aria-current');
-      }
-      var t = inMore ? nb : el;
-      if (!t) { ink.style.opacity = '0'; return; }
-      /* .nav .ink có nền 100px: scaleX(w/100) cho đúng độ dài, không animate width.
-         Đo bằng getBoundingClientRect vì nút “Khám phá” nằm trong một lớp bọc
-         position:relative — offsetLeft của nó tính theo lớp bọc, không theo .nav. */
-      var a0 = t.getBoundingClientRect(), b0 = nav.getBoundingClientRect();
-      ink.style.transform = 'translateX(' + (a0.left - b0.left) + 'px) scaleX(' + (a0.width / 100) + ')';
-      ink.style.opacity = '1';
+      if (nb) nb.classList.toggle('on', !!el);
     }
     var here = links.filter(function (a) { return a.classList.contains('on'); })[0];
-    if (have < 2) { mark(here || links[0]); return; }
+    /* Không có mục nào là “trang hiện tại” thì để trống — trước đây rơi về mục
+       đầu tiên và làm “My Space” trông như đang được xem ở mọi trang khác. */
+    if (have < 2) { mark(here || null); return; }
     var tick = false;
     function spy() {
       tick = false;
       var y = (w.scrollY || 0) + 150, cur = null;
       ids.forEach(function (id, i) { var el = d.getElementById(id); if (el && el.offsetTop <= y) cur = i; });
-      mark(cur == null ? links[0] : links[cur]);
+      mark(cur == null ? here : links[cur]);
     }
     function run() { if (tick) return; tick = true; requestAnimationFrame(spy); }
     w.addEventListener('scroll', run, { passive: true });
