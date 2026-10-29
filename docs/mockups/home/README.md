@@ -10,7 +10,9 @@ http://localhost:8080/docs/mockups/home/
 này **trên máy**, xem `serve_mockup()`. `tools/check_secrets.js` vẫn canh đúng luật
 chặn đó.)
 
-Trang TĨNH: CSS nhúng trong `<style>`, 67 bìa thật nằm sẵn trong HTML — tắt JS
+Trang TĨNH: CSS nhúng trong `<style>`, 67 bìa thật nằm sẵn trong HTML (đường dẫn
+tương đối `../../../assets/covers/…` nên mở được cả bằng `file://` lẫn qua máy chủ
+ở cổng 8080) — tắt JS
 vẫn thấy đủ. JS chỉ là lớp tiện xem (đổi bề rộng khung, bấm chip lọc, chọn ô chọn,
 tắt/bật “Đã có lịch sử đọc”).
 

@@ -36,7 +36,7 @@ function coverOf(b) {
   for (const c of [b.thumb, b.slide]) {
     if (!c) continue;
     const k = coverKey(c);
-    if (coverFiles.has(k)) return `../../assets/covers/${k}.webp`;
+    if (coverFiles.has(k)) return `../../../assets/covers/${k}.webp`;
   }
   return '';
 }
