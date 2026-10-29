@@ -268,10 +268,13 @@
       return { n: n, rating: positive(s.rating), count: positive(s.ratingCount) };
     }).filter(function (r) { return r.rating > 0 && r.rating <= 5 && r.count > 0; })
       .sort(function (a, b) { return b.rating - a.rating || b.count - a.count || a.n.slug.localeCompare(b.n.slug); }).slice(0, 3) : [];
+    var box = rail.closest('.worth-section');
     if (!rows.length) {
       rail.innerHTML = statsOn() ? '<p class="empty">Chưa có truyện được đánh giá sao.</p>' : '';
+      if (box) box.hidden = true;
       return;
     }
+    if (box) box.hidden = false;
     CZ.mountRail(rail, rows.map(function (r) { return r.n; }));
     rail.querySelectorAll('.card').forEach(function (card, i) {
       var score = document.createElement('span');
@@ -296,6 +299,10 @@
       .sort(function (a, b) { return b.score - a.score || a.n.slug.localeCompare(b.n.slug); }).slice(0, 5) : [];
     $('#rankSummary').textContent = (rankMode === 'views' ? 'Lượt đọc' : 'Lượt thích') + ' · ' + tabs.find(function (t) { return t.k === rankBy; }).l;
     var peak = rows.length ? rows[0].score : 0;
+    /* Không có số liệu thì KHÔNG bịa gì trong #rank (bài kiểm canh đúng chỗ này);
+       trạng thái “chưa có số” nói ở phụ đề cạnh tiêu đề. */
+    var rankSub = $('#rankSub');
+    if (rankSub) rankSub.textContent = rows.length ? rows.length + ' bộ dẫn đầu' : (on ? '' : 'chưa có số liệu');
     $('#rank').innerHTML = rows.map(function (row, i) {
       var n = row.n, ratio = peak ? Math.max(.12, row.score / peak) : 0;
       return '<a class="rank" href="' + esc(CZ.storyURL(n.slug)) + '" style="--d:' + (i * 55) + 'ms;--w:' + ratio.toFixed(3) + '">' +
