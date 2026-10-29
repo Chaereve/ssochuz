@@ -15,7 +15,7 @@
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://ssochuz.pages.dev/ssochuz.png">
   <!-- N13: bỏ preconnect Firestore — không còn đọc thẳng Firestore từ máy khách -->
-<link rel="stylesheet" href="/cz.css?v=20261030nofacts1">
+<link rel="stylesheet" href="/cz.css?v=20261030lib1">
 </head>
 <body class="hpage">
 
@@ -90,42 +90,38 @@
     </section>
 
     <!-- ================= THƯ VIỆN ================= -->
+    <!-- Thanh lọc hai tầng (D1): tầng 1 = tìm + Năm + Sắp xếp + kiểu xem,
+         tầng 2 = chips tình trạng/nhãn kèm số lượng + số kết quả.
+         Tác giả/couple không còn ô chọn riêng (dữ liệu: mỗi couple tối đa 2 bộ)
+         — vẫn ghép được qua ?author= / ?couple= khi cần chia sẻ liên kết. -->
     <section class="sec fade" id="thu-vien">
       <div class="sechead">
         <h2>Thư viện</h2>
       </div>
-      <div class="fbox">
-        <div class="row1">
-          <label class="search"><span data-ic="search"></span>
-            <input id="q" placeholder="Tìm truyện, tác giả, couple…" autocomplete="off" spellcheck="false">
+      <div class="libd">
+        <div class="libbar">
+          <label class="srch"><span data-ic="search"></span>
+            <input id="q" type="search" placeholder="Tìm truyện, tác giả, couple…" aria-label="Tìm trong thư viện" autocomplete="off" spellcheck="false">
             <button class="qclr hide" id="qClr" aria-label="Xoá ô tìm kiếm" title="Xoá"><span data-ic="x"></span></button>
+            <kbd aria-hidden="true">⌘K</kbd>
           </label>
-          <select class="sel" id="fYear" aria-label="Năm"></select>
-          <select class="sel" id="fAuthor" aria-label="Tác giả"></select>
-          <select class="sel" id="fCouple" aria-label="Couple"></select>
-          <select class="sel" id="fSort" aria-label="Sắp xếp"></select>
-          <div class="seg" id="viewSeg" role="group" aria-label="Kiểu hiển thị">
-            <button data-view="grid" class="on" title="Xem dạng lưới"><span data-ic="grid"></span></button>
-            <button data-view="list" title="Xem dạng danh sách"><span data-ic="rows"></span></button>
-          </div>
-        </div>
-        <div class="fgroups">
-          <div class="fgroup">
-            <span class="flab">Tình trạng</span>
-            <div class="tabs" id="tabs" role="tablist"></div>
-          </div>
-          <div class="fgroup">
-            <span class="flab">Nhãn</span>
-            <div class="tabs" id="ageTabs" role="group">
-              <button class="tab" data-age="18" aria-pressed="false">18+</button>
+          <span class="dd"><span class="lb">Năm</span><select id="fYear" aria-label="Lọc theo năm"></select><span class="cv" aria-hidden="true" data-ic="down"></span></span>
+          <span class="dd"><span class="lb">Sắp xếp:</span><select id="fSort" aria-label="Sắp xếp"></select><span class="cv" aria-hidden="true" data-ic="down"></span></span>
+          <div class="end">
+            <div class="seg vseg" id="viewSeg" role="group" aria-label="Kiểu hiển thị">
+              <button data-view="grid" class="on" title="Xem dạng lưới" aria-label="Xem dạng lưới"><span data-ic="grid"></span></button>
+              <button data-view="list" title="Xem dạng danh sách" aria-label="Xem dạng danh sách"><span data-ic="rows"></span></button>
             </div>
           </div>
         </div>
+        <div class="librow">
+          <div class="libchips" id="tabs" role="group" aria-label="Lọc theo tình trạng và nhãn"></div>
+          <div class="end"><span class="lcount" id="fcount" aria-live="polite" aria-atomic="true"></span></div>
+        </div>
         <div class="fpick" id="fpick"></div>
-        <div class="fcount" id="fcount"></div>
+        <div class="grid" id="grid"></div>
+        <div class="pager" id="pager"></div>
       </div>
-      <div class="grid" id="grid"></div>
-      <div class="pager" id="pager"></div>
     </section>
 
   </div>
@@ -136,11 +132,11 @@
 
 <script src="/cz-config.js?v=20261012n"></script>
 <script src="/cz-stickers.js?v=20261012n"></script>
-<script src="/cz-app.js?v=20261030nofacts1"></script>
+<script src="/cz-app.js?v=20261030lib1"></script>
 <script src="/cz-auth.js?v=20261012n"></script>
 <script src="/cz-personal.js?v=20261013notif1"></script>
 <script src="/cz-dice.js?v=20261014feat1"></script>
 <script src="/cz-hero.js?v=20261029perf1"></script>
-<script src="/cz-home.js?v=20261030nofacts1"></script>
+<script src="/cz-home.js?v=20261030lib1"></script>
 </body>
 </html>

@@ -64,3 +64,18 @@ người mới sẽ không biết có bộ lọc.
   tính từ toàn thư viện, không phải từ 18 bộ đang hiện.
 - Mọi số lượng lấy từ `data/registry.json`; không hardcode.
 - `prefers-reduced-motion` đã có luật chung, khối mới không được lách.
+
+## Đã dựng thật (30/10/2026) — D1
+
+Thanh lọc D1 đã vào trang chủ thật (`index.html` + `src/cz-home.js` + `src/cz.css`):
+
+- Lớp: `.libd / .libbar / .srch / .dd / .librow / .libchips / .lcount / .seg.vseg`;
+  chip dựng bằng JS (`renderChips()`) với số đếm lấy từ `CZ.lib()`, **không** hardcode.
+- Hai ô `Năm` và `Sắp xếp` vẫn là `<select>` thật (bàn phím, đọc màn hình, danh sách
+  quen thuộc của hệ điều hành) nhưng khoác áo `.dd` — không dựng dropdown tự chế.
+- Chip tình trạng là **chọn-một**, `18+` là **công tắc riêng**: bấm “Hoàn thành” rồi
+  “18+” ra đúng 4 bộ. Số trên chip luôn tính trên toàn thư viện (67/46/4/17/29).
+- Bỏ ô chọn Tác giả/Couple; liên kết chia sẻ `?author=…` · `?couple=…` vẫn lọc được
+  (nhận cả tên lẫn slug) và vẫn hiện link “Xem tất cả truyện của …”.
+- Hàng `.fpick` chỉ còn những điều kiện *không nhìn thấy được* (từ khoá, năm) + nút
+  “Xoá lọc”; đang lọc gì thì chip đã nói rồi.

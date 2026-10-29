@@ -1092,3 +1092,49 @@ Byte: `cz.css` 195,7 → **194,7 kB**; `cz-app.js` 104,5 → **103,6 kB**;
 `cz-home.js` 19,6 kB. Tổng 500,2 → **497,6 kB** (bỏ được 2,6 kB).
 
 `tests/t_home.js`: bỏ phép dò `#facts .f` (phần tử không còn tồn tại).
+
+## 30. Thư viện: thanh lọc D1 “hai tầng” (30/10/2026)
+
+Người dùng duyệt phương án **D1** trong `docs/mockups/home/` (D2/D3 bị loại), nên
+thanh lọc cũ được thay bằng đúng bản đã duyệt.
+
+**Bố cục.** Tầng 1 = ô tìm (`⌘K`) + `Năm` + `Sắp xếp` + kiểu xem; tầng 2 = chip
+`Tất cả 67 · Hoàn thành 46 · Đang cập nhật 4 · Sắp ra mắt 17 · 18+ 29` và số kết
+quả `1–24 / 67` bên phải. Bỏ hộp viền `.fbox` (tìm kiếm + 4 ô chọn + tab + chip
+18+ + chip đã chọn dồn trong một khung) — thanh lọc giờ nằm thẳng trên lưới.
+
+**Ghép được, không thay thế nhau.** Tình trạng là nhóm *chọn một*, `18+` là *công
+tắc* riêng, cả hai ghép với Năm và từ khoá: “Hoàn thành” + “18+” ra đúng 18 bộ.
+Lỗi cũ (round 22) là chip chọn-tất-cả xoá lẫn nhau. Số trên chip luôn tính trên
+toàn thư viện nên không nhảy loạn khi bật bộ lọc khác.
+
+**Bỏ Tác giả/Couple.** Mỗi couple tối đa 2 bộ; danh sách dài không giúp ai. Nhưng
+liên kết chia sẻ `?author=…` · `?couple=…` vẫn lọc được (nhận cả tên lẫn slug) và
+vẫn in link “Xem tất cả truyện của …” như trước — `filtered()` giữ nguyên nhánh
+`author/couple`.
+
+**Ô chọn thật, áo nút.** `Năm`/`Sắp xếp` vẫn là `<select>` (bàn phím, đọc màn
+hình, danh sách của hệ điều hành) khoác `.dd`; không dựng dropdown tự chế. Năm
+kèm số bộ: `2025 (19)`.
+
+**Hàng `.fpick`** chỉ còn điều kiện *không nhìn thấy được* (từ khoá, năm) + nút
+“Xoá lọc”, nên mặc định không chiếm dòng nào (`:empty{display:none}`).
+
+Lớp mới: `.libd/.libbar/.srch/.dd/.librow/.libchips/.lcount/.seg.vseg` (đặt tên
+theo mockup). Bỏ CSS chết: `.fbox*`, `.fgroups/.fgroup/.flab`, `.gchips`, `.fcount`.
+Máy hẹp (≤620px): ô tìm chiếm cả dòng, kiểu xem xuống dưới, ô nhập 38px, chip 32px,
+chữ trong chip ≥11px.
+
+`tests/t_home.js`: `#tabs .tab` → `#tabs .chip`, thêm phép kiểm ghép 18+.
+`tests/t_people.js`: phép “lọc theo tác giả” chuyển sang liên kết `?author=`.
+
+Byte: `cz.css` 194,7 → **196,9 kB** (92% trần 215 kB), `cz-home.js` 19,6 →
+**19,3 kB**. Tổng 497,6 → **499,5 kB**.
+
+**Kiểm:** `t_home`, `t_mobile`, `t_hero`, `t_reader`, `t_flows`, `t_lock_ui`,
+`t_pwa`, `t_adult`, `t_ranking`, `t_stats`, `t_sweep`, `t_dice`, `t_people` đều
+exit 0 · `audit:a11y` 25 màn 0 lỗi axe · `check_src`/`check_html`/`check_version`/
+`check_secrets` sạch.
+
+`sw.js`: PRECACHE còn ghi `cz-story.js?v=20261014feat1` trong khi 68 trang đã dùng
+`…unlock1` — đồng bộ lại (t_pwa canh đúng chỗ này).

@@ -23,6 +23,16 @@
   paintIcons();
 
   var state = { tab: 'all', adult: false, year: '', author: '', couple: '', q: '', sort: 'new', view: 'grid', page: 1, per: 24 };
+  /* Thanh lọc không còn ô chọn tác giả/couple (mỗi couple tối đa 2 bộ), nhưng
+     liên kết chia sẻ ?author=… / ?couple=… vẫn phải lọc được — nhận cả tên
+     nguyên bản lẫn dạng slug trong /tac-gia/?q=… · /couple/?q=… */
+  (function () {
+    try {
+      var qp = new URLSearchParams(location.search);
+      if (qp.get('author')) state.author = qp.get('author');
+      if (qp.get('couple')) state.couple = qp.get('couple');
+    } catch (e) {}
+  })();
 
   /* ======================= HERO (banner dùng chung) ===================== */
   /* VÁ (2026-10-29): trang chủ KHÔNG tự vẽ hero nữa. Nó chỉ đổi dữ liệu truyện
@@ -373,35 +383,48 @@
     var lib = CZ.lib();
     var uniq = function (a) { var seen = {}; return a.filter(function (v) { if (!v || seen[v]) return false; seen[v] = 1; return true; }); };
     var years = uniq(lib.map(function (n) { return n.year; })).sort(function (a, b) { return b - a; });
-    var authors = uniq(lib.map(function (n) { return n.author; })).sort(function (a, b) { return a.localeCompare(b, 'vi'); });
-    var allCouples = [];
-    lib.forEach(function (n) {
-      var cs = CZ.couplesOf ? CZ.couplesOf(n) : (n.couple ? [n.couple] : []);
-      cs.forEach(function (c) { allCouples.push(c); });
-    });
-    var couples = uniq(allCouples).sort(function (a, b) { return a.localeCompare(b, 'vi'); });
-    var fill = function (sel, label, list) {
-      sel.innerHTML = '<option value="">' + label + '</option>' + list.map(function (v) {
-        return '<option value="' + esc(v) + '">' + esc(v) + '</option>';
-      }).join('');
-    };
-    fill($('#fYear'), 'Mọi năm', years);
-    fill($('#fAuthor'), 'Mọi tác giả', authors);
-    fill($('#fCouple'), 'Mọi couple', couples);
+    var yearCount = {};
+    lib.forEach(function (n) { if (n.year) yearCount[n.year] = (yearCount[n.year] || 0) + 1; });
+    /* Năm kèm số bộ: chọn năm nào là biết ngay còn bao nhiêu truyện, không phải
+       bấm rồi mới thấy lưới trống. Tác giả/couple không còn ô chọn riêng —
+       mỗi couple chỉ có tối đa 2 bộ, một danh sách dài như thế không giúp gì. */
+    $('#fYear').innerHTML = '<option value="">Tất cả năm</option>' + years.map(function (y) {
+      return '<option value="' + esc(y) + '">' + esc(y) + ' (' + yearCount[y] + ')</option>';
+    }).join('');
     var sorts = [['new', 'Mới cập nhật'], ['year-desc', 'Năm mới nhất'], ['year-asc', 'Năm cũ nhất'],
       ['chap-desc', 'Nhiều chương nhất'], ['az', 'Tên A → Z']];
     if (statsOn()) sorts.push(['views', 'Đọc nhiều nhất']);   /* chỉ khi có số thật */
     $('#fSort').innerHTML = sorts.map(function (o) {
       return '<option value="' + o[0] + '">' + o[1] + '</option>';
     }).join('');
-    $('#tabs').innerHTML = tabDefs().map(function (t) {
-      return '<button class="tab' + (t.k === state.tab ? ' on' : '') + '" data-k="' + t.k + '" role="tab" aria-selected="' +
-        (t.k === state.tab) + '">' + t.l + '<span class="ct">' + t.c + '</span></button>';
-    }).join('');
-    retab();
+    renderChips();
   }
-  function retab() { if (CZ.inkAll) CZ.inkAll(); }
-  /* dãy tab chỉ còn TÌNH TRẠNG; nhãn 18+ tách ra nhóm riêng bên cạnh */
+  /* Chips lọc: tình trạng là một nhóm chọn-một, 18+ là công tắc riêng — hai thứ
+     GHÉP ĐƯỢC với nhau và với Năm, nên “Hoàn thành + 18+” ra đúng 4 bộ chứ
+     không phải thay thế lẫn nhau như dãy tab cũ. Số trên chip luôn là số của
+     toàn thư viện (không co theo bộ lọc đang bật) để người đọc không bị đếm
+     trượt. */
+  function adultCount() {
+    return CZ.lib().filter(function (n) { return n.is18; }).length;
+  }
+  function renderChips() {
+    var box = $('#tabs');
+    if (!box) return;
+    var defs = tabDefs().map(function (t) { return { k: t.k, l: t.l, c: t.c }; });
+    var n18 = adultCount();
+    if (n18) defs.push({ k: '18', l: '18+', c: n18 });
+    /* số liệu đọc về sau (KV) chỉ đổi phần đếm — dựng lại y nguyên thì chip
+       đang được bàn phím trỏ tới sẽ mất focus, nên chỉ vẽ khi thật sự khác */
+    var sig = defs.map(function (t) { return t.k + ':' + t.c; }).join('|');
+    if (box.dataset.sig === sig) return;
+    box.dataset.sig = sig;
+    box.innerHTML = defs.map(function (t) {
+      var on = t.k === '18' ? !!state.adult : t.k === state.tab;
+      return '<button class="chip' + (on ? ' on' : '') + '" data-k="' + t.k + '" aria-pressed="' + on + '">' +
+        esc(t.l) + '<b>' + t.c + '</b></button>';
+    }).join('');
+  }
+  /* chip tình trạng (chọn một) — nhãn 18+ là chip riêng, ghép được với nhau */
   function tabDefs() {
     var lib = CZ.lib();
     var byStatus = function (k) { return lib.filter(function (n) { return n.statusCls === k; }).length; };
@@ -413,21 +436,25 @@
     ];
     return TABS.filter(function (t) { return t.k === 'all' || t.c > 0; });
   }
-  function tabLabel(k) {
-    var t = tabDefs().filter(function (x) { return x.k === k; })[0];
-    return t ? t.l : k;
-  }
   function filtered() {
     var lib = CZ.lib().slice(), s = state.tab;
     if (s === 'done' || s === 'run' || s === 'soon') lib = lib.filter(function (n) { return n.statusCls === s; });
     if (state.adult) lib = lib.filter(function (n) { return n.is18; });
     if (state.year) lib = lib.filter(function (n) { return String(n.year) === state.year; });
-    if (state.author) lib = lib.filter(function (n) { return n.author === state.author; });
-    if (state.couple) lib = lib.filter(function (n) {
-      if (n.couple === state.couple) return true;
-      var cs = CZ.couplesOf ? CZ.couplesOf(n) : [];
-      return cs.indexOf(state.couple) >= 0;
-    });
+    if (state.author) {
+      var auWant = CZ.slugify(state.author);
+      lib = lib.filter(function (n) {
+        return n.author === state.author || CZ.slugify(n.author) === auWant;
+      });
+    }
+    if (state.couple) {
+      var cpWant = CZ.slugify(state.couple);
+      lib = lib.filter(function (n) {
+        if (n.couple === state.couple) return true;
+        var cs = CZ.couplesOf ? CZ.couplesOf(n) : [];
+        return cs.some(function (c) { return c === state.couple || CZ.slugify(c) === cpWant; });
+      });
+    }
     if (state.q) {
       var q = state.q.toLowerCase();
       lib = lib.filter(function (n) {
@@ -479,20 +506,23 @@
         }).join('') +
         '<button class="pg ' + (state.page === total ? 'off' : '') + '" data-go="' + (state.page + 1) + '">Sau' + ic('right', 'i-s') + '</button>'
       : '';
+    /* Chip trên thanh lọc đã hiện tình trạng và nhãn 18+, nên hàng này chỉ
+       còn những điều kiện KHÔNG nhìn thấy được: từ khoá, năm, tác giả/couple
+       (hai cái sau đi vào bằng liên kết chia sẻ). Bật bất cứ bộ lọc nào là
+       hàng này xuất hiện kèm nút xoá nhanh. */
     var picked = [];
-    if (state.tab !== 'all') picked.push(['tab', tabLabel(state.tab)]);
-    if (state.adult) picked.push(['adult', '18+']);
     ['year', 'author', 'couple'].forEach(function (k) { if (state[k]) picked.push([k, state[k]]); });
     if (state.q) picked.push(['q', '“' + state.q + '”']);
-    $('#fpick').innerHTML = picked.length
-      ? picked.map(function (p, i) {
+    var anyFilter = picked.length > 0 || state.tab !== 'all' || state.adult;
+    $('#fpick').innerHTML = !anyFilter ? '' : picked.map(function (p, i) {
         return '<span class="fchip">' + esc(p[1]) + '<span data-rm="' + i + '" title="Bỏ lọc">' + ic('x', 'i-s') + '</span></span>';
-      }).join('') + '<button class="btn ghost sm" id="clrAll2">Xoá tất cả lọc</button>'
-      : '';
+      }).join('') + '<button class="lnk" id="clrAll2">Xoá lọc</button>';
     $('#qClr').classList.toggle('hide', !state.q);
-    $('#fcount').innerHTML = '<b>' + list.length + '</b> truyện' +
-      (picked.length ? ' · đang lọc ' + picked.length + ' tiêu chí' : '') +
-      (total > 1 ? ' · trang ' + state.page + '/' + total : '') +
+    /* “1–24 / 67”: đang xem bao nhiêu trên tổng bao nhiêu, gọn hơn câu
+       “67 truyện · đang lọc 2 tiêu chí · trang 1/3” mà vẫn đủ thông tin. */
+    var from = list.length ? (state.page - 1) * state.per + 1 : 0;
+    var to = Math.min(list.length, state.page * state.per);
+    $('#fcount').innerHTML = (list.length ? '<b>' + from + '–' + to + '</b> / ' + list.length : '0 / 0') +
       /* lọc theo tác giả/couple thì dẫn sang trang riêng của người đó */
       (state.author ? ' · <a href="/tac-gia/?q=' + encodeURIComponent(CZ.slugify(state.author)) + '">Xem tất cả truyện của ' + esc(state.author) + '</a>' : '') +
       (state.couple ? ' · <a href="/couple/?q=' + encodeURIComponent(CZ.slugify(state.couple)) + '">Xem tất cả truyện của ' + esc(state.couple) + '</a>' : '');
@@ -500,8 +530,6 @@
       b.addEventListener('click', function () {
         var k = picked[+b.dataset.rm][0];
         if (k === 'q') { state.q = ''; $('#q').value = ''; }
-        else if (k === 'tab') state.tab = 'all';
-        else if (k === 'adult') state.adult = false;
         else state[k] = '';
         syncFilterUI(); state.page = 1; render();
       });
@@ -527,18 +555,18 @@
   function clearAll() {
     state.tab = 'all'; state.adult = false; state.year = state.author = state.couple = state.q = '';
     $('#q').value = ''; syncFilterUI(); state.page = 1; render();
+    if ($('#tabs .chip')) $('#tabs .chip').focus({ preventScroll: true });
   }
   function syncFilterUI() {
-    $$('#tabs .tab').forEach(function (t) {
-      var on = t.dataset.k === state.tab;
-      t.classList.toggle('on', on);
-      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    $$('#tabs .chip').forEach(function (c) {
+      var on = c.dataset.k === '18' ? !!state.adult : c.dataset.k === state.tab;
+      c.classList.toggle('on', on);
+      c.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
-    $$('#ageTabs .tab').forEach(function (t) {
-      t.classList.toggle('on', state.adult);
-      t.setAttribute('aria-pressed', state.adult ? 'true' : 'false');
-    });
-    $('#fYear').value = state.year; $('#fAuthor').value = state.author; $('#fCouple').value = state.couple;
+    $('#fYear').value = state.year;
+    /* danh sách sắp xếp đổi theo việc có số liệu thật hay không — chỉ gán khi
+       lựa chọn đang giữ còn tồn tại, tránh ô chọn rỗng */
+    if ($('#fSort').querySelector('option[value="' + state.sort + '"]')) $('#fSort').value = state.sort;
   }
   var qTimer = null;
   $('#q').addEventListener('input', function (e) {
@@ -548,17 +576,14 @@
   });
   $('#q').addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.target.value = ''; state.q = ''; state.page = 1; render(); } });
   $('#fYear').addEventListener('change', function (e) { state.year = e.target.value; state.page = 1; render(); });
-  $('#fAuthor').addEventListener('change', function (e) { state.author = e.target.value; state.page = 1; render(); });
-  $('#fCouple').addEventListener('change', function (e) { state.couple = e.target.value; state.page = 1; render(); });
   $('#fSort').addEventListener('change', function (e) { state.sort = e.target.value; state.page = 1; render(); });
+  /* Một chỗ duy nhất xử lý cả nhóm: tình trạng là chọn-một, 18+ là công tắc
+     riêng, cả hai ghép được với Năm và từ khoá. */
   $('#tabs').addEventListener('click', function (e) {
-    var b = e.target.closest('.tab'); if (!b) return;
-    state.tab = b.dataset.k; state.page = 1; render();
-  });
-  $('#ageTabs').addEventListener('click', function (e) {
-    var b = e.target.closest('.tab'); if (!b) return;
-    state.adult = !state.adult; state.page = 1; render();
-    if (CZ.inkAll) CZ.inkAll();          /* nhãn 18+ cũng có viên nền trượt */
+    var b = e.target.closest('.chip'); if (!b) return;
+    if (b.dataset.k === '18') state.adult = !state.adult;
+    else state.tab = b.dataset.k;
+    state.page = 1; render();
   });
   $('#qClr').addEventListener('click', function () {
     $('#q').value = ''; state.q = ''; state.page = 1; render();

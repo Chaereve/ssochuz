@@ -127,17 +127,21 @@ const byCount = (lib, f) => {
   }
 
   /* ---------- H. link từ bộ lọc thư viện ---------- */
-  const h = page('index.html', { fetch: dataFetch() });
+  /* Thanh lọc thư viện (bản D1) bỏ ô chọn tác giả/couple — mỗi couple chỉ có
+     tối đa 2 bộ nên danh sách dài không giúp gì. Liên kết chia sẻ ?author=…
+     vẫn phải lọc được và vẫn phải dẫn sang /tac-gia/. */
+  const h = page('index.html', {
+    url: 'https://ssochuz.pages.dev/?author=' + encodeURIComponent(AU),
+    fetch: dataFetch(),
+  });
   await wait(1000);
-  const sel = h.doc.querySelector('#fAuthor');
-  ok(sel && sel.options.length > 1, 'thieu dropdown tac gia');
-  if (sel) {
-    sel.value = AU;
-    sel.dispatchEvent(new h.win.Event('change', { bubbles: true }));
-    await wait(250);
-    const fl = h.doc.querySelector('#fcount a[href^="/tac-gia/?q="]');
-    ok(fl && fl.textContent.includes(AU), 'loc theo tac gia phai co link Xem tat ca (thay: ' + (h.doc.querySelector('#fcount') || {}).textContent + ')');
-  }
+  const nAll = LIB.length;
+  const hCards = h.doc.querySelectorAll('#grid .card').length;
+  ok(hCards > 0 && hCards < nAll, 'loc theo tac gia phai thu hep luoi (thay: ' + hCards + '/' + nAll + ')');
+  const auChip = h.doc.querySelector('#fpick .fchip');
+  ok(auChip && auChip.textContent.includes(AU), 'phai hien chip loc tac gia (thay: ' + (h.doc.querySelector('#fpick') || {}).textContent + ')');
+  const fl = h.doc.querySelector('#fcount a[href^="/tac-gia/?q="]');
+  ok(fl && fl.textContent.includes(AU), 'loc theo tac gia phai co link Xem tat ca (thay: ' + (h.doc.querySelector('#fcount') || {}).textContent + ')');
   const bienTapH2 = h.doc.querySelector('#bien-tap h2');
   ok(bienTapH2 && bienTapH2.textContent.trim() === 'Chuyển thể Series', '#bien-tap h2 phai la Chuyển thể Series');
   const normMulti = h.win.CZ.norm({ title: 'Multi Couple', slug: 'multi-cp', couple: 'Lingling x Orm, Lookmhee x Sonya' });
