@@ -1,61 +1,66 @@
-# Mockup · nửa dưới trang chủ (từ “Đọc tiếp” tới cuối “Thư viện”)
+# Mockup · Phương án C + 3 cách bày Thư viện
 
-**Mở:** máy chủ xem thử đang chạy ở cổng 8080 →
+**Mở:** máy chủ xem thử ở cổng 8080 →
 
 ```
 http://localhost:8080/docs/mockups/home/
 ```
 
-(`/docs/*` bị `_redirects` chặn trên bản thật — `tools/dev_server.py` chỉ mở
-đường này **trên máy**, xem `serve_mockup()`. `tools/check_secrets.js` vẫn canh
-đúng luật chặn đó, nên tài liệu nội bộ không lộ ra ngoài.)
+(`/docs/*` bị `_redirects` chặn trên bản thật — `tools/dev_server.py` chỉ mở đường
+này **trên máy**, xem `serve_mockup()`. `tools/check_secrets.js` vẫn canh đúng luật
+chặn đó.)
 
-## Trang này là trang TĨNH
+Trang TĨNH: CSS nhúng trong `<style>`, 67 bìa thật nằm sẵn trong HTML — tắt JS
+vẫn thấy đủ. JS chỉ là lớp tiện xem (đổi bề rộng khung, bấm chip lọc, chọn ô chọn,
+tắt/bật “Đã có lịch sử đọc”).
 
-`index.html` **đã chứa sẵn toàn bộ nội dung** (CSS nhúng trong `<style>`, 67 bìa
-thật). Tắt JS vẫn thấy đủ mọi khối — bản trước dựng toàn bộ bằng JS nên mở ra chỉ
-có khung rỗng, đó là lỗi.
-
-JS chỉ là lớp tiện xem: đổi bề rộng khung (Máy tính / Tablet 834 / Điện thoại
-390), bấm chip lọc, bấm cột lọc ở phương án C, tắt/bật “Đã có lịch sử đọc”.
-
-Sinh lại trang sau khi sửa `gen.mjs` hoặc `mock.css`:
+Sinh lại sau khi sửa `gen.mjs` / `mock.css`:
 
 ```bash
 node docs/mockups/home/gen.mjs
 ```
 
-Nguồn dữ liệu: `data/registry.json` + `assets/covers/*.webp` (bìa thật). Lượt
-xem, tiến độ đọc, ngày trong tuần là số giả để thấy hình dạng thông tin.
+## Vì sao thư viện bị làm lại
 
-## Phần chung — nằm trong cả ba phương án
+Bản trước có **hai** cơ chế lọc cùng lúc (chip tình trạng + cột lọc bên trái) và
+**bốn** ô chọn ngang — cùng một việc bày ở nhiều nơi nên rối, mà vẫn không trả lời
+được “đang lọc gì”. Ba cách dưới đây đều chỉ dùng **một** cơ chế.
 
-| Hiện tại | Đề nghị | Vì sao |
-| --- | --- | --- |
-| Kệ 12 bộ nhưng desktop chỉ thấy ~7, 5 bộ giấu sau thanh cuộn ngang | Kệ **6 cột cố định** trên desktop; chỉ cuộn ngang ở tablet/mobile | Thanh cuộn ngang trong lưới ảnh gần như không ai dùng — nội dung coi như mất |
-| Bìa chỉ có nhãn tình trạng | Thêm **số chương** góc dưới phải, “18+” góc trái | Trả lời “dài không, đọc mất bao lâu” ngay trên kệ |
-| Đầu mục chỉ có tên | **Nhãn mono nhỏ + số lượng** + “Xem tất cả ›” | Biết mục này có bao nhiêu thứ trước khi bấm |
-| “Đọc tiếp” là một kệ như mọi kệ khác | Thẻ rộng có **thanh tiến độ + “Ch. 34/71 · còn 37”**; chưa có lịch sử thì hiện **gợi ý bắt đầu** | Mục hữu ích nhất của web đọc truyện — không để trống trơn |
-| Ranking là danh sách chữ | **Số thứ tự lớn** + bìa nhỏ + lượt xem + mũi tên tăng/giảm | Quét bằng mắt nhanh hơn (cách glvietsub.org làm ở “Xem nhiều nhất”) |
+## Số liệu thật (67 bộ)
 
-## Ba phương án
+| | |
+| --- | --- |
+| Hoàn thành | 46 |
+| Sắp ra mắt | 17 |
+| Đang cập nhật | 4 |
+| 18+ | 29 |
+| Năm 2025 / 2026 / 2023 | 19 / 18 / 11 |
+| Couple nhiều nhất | 2 bộ |
 
-| | A · Kệ sách | B · Bảng tin | C · Bento |
+⇒ **Bỏ bộ lọc “Couple”** (và tác giả): mỗi couple chỉ 1–2 bộ, lọc theo danh sách
+dài không ai dùng — gõ tên vào ô tìm là ra. Năm mới là bộ lọc có nghĩa.
+
+## Ba cách
+
+| | D1 · Hai tầng | D2 · Một hàng | D3 · Mở ra khi cần |
 | --- | --- | --- | --- |
-| Thứ tự | giữ nguyên như hiện tại | Mới cập nhật → Ranking → Thư viện; phần cá nhân ở cột phụ | dải bento (Đọc tiếp + Mới + Ranking) → Lịch → Thư viện |
-| Mạnh | ít rủi ro nhất | “đang đọc gì” luôn trong tầm mắt | gọn nhất, lọc tốt nhất |
-| Yếu | vẫn 5 mục dài | cột phụ 322px nên bìa nhỏ | thay đổi nhiều nhất |
-| Công dựng | ~1 buổi | ~1 buổi | ~1,5 buổi |
+| Chiều cao | 2 dòng (~78px) | 1 dòng (~44px) | 1 dòng (~44px) |
+| Thấy ngay | 4 tình trạng + 18+ (có số) | không (phải mở ô chọn) | không (phải mở tấm) |
+| Số cú bấm để lọc | **1** | 2 | 2 |
+| Ghép nhiều điều kiện | có (tình trạng + 18+ + năm) | không | có |
+| Máy hẹp | chip xuống dòng | ô chọn cuộn được | tấm mở toàn ngang |
 
-Chi tiết từng phương án nằm ngay trên khung xem trong `index.html`.
+**Đề xuất: D1.** Thư viện 67 bộ, tình trạng là thứ người đọc lọc nhiều nhất — cho
+nó một tầng riêng có số lượng là đáng. D2 chỉ hơn D1 đúng một dòng (~34px) nhưng
+giấu toàn bộ số lượng; D3 sạch nhất khi chưa lọc nhưng thêm một cú bấm mỗi lần và
+người mới sẽ không biết có bộ lọc.
 
 ## Ghi chú kỹ thuật khi dựng thật
 
-- Chỉ `transform`/`opacity` cho chuyển động; không `backdrop-filter` trên lớp
-  phủ toàn màn hình (luật số 3 đầu `src/cz.css`).
-- Kệ/lưới dùng `grid-template-columns` + `aspect-ratio: 2/3` sẵn có — không
-  thêm thư viện, không ảnh mới.
-- Mọi số lượng lấy từ dữ liệu đã có; không hardcode.
+- Chỉ `transform`/`opacity` cho chuyển động; không `backdrop-filter` trên lớp phủ
+  toàn màn hình (luật số 3 đầu `src/cz.css`).
+- Lưới dùng `grid-template-columns` + `aspect-ratio: 2/3` sẵn có.
 - Lưới thư viện dựng **đủ 67 bộ** trong HTML rồi JS ẩn/hiện 18 bộ khớp: lọc luôn
   tính từ toàn thư viện, không phải từ 18 bộ đang hiện.
+- Mọi số lượng lấy từ `data/registry.json`; không hardcode.
 - `prefers-reduced-motion` đã có luật chung, khối mới không được lách.

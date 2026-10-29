@@ -67,12 +67,19 @@ const ICON = {
   dn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
   play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
   book: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v18H6.5A2.5 2.5 0 0 1 4 18.5z"/><path d="M8 3v18"/></svg>',
-  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l6 6L20 6"/></svg>'
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l6 6L20 6"/></svg>',
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>',
+  caret: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+  filter: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>',
+  x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg>',
+  rows: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"><rect x="4" y="5" width="16" height="5"/><rect x="4" y="14" width="16" height="5"/></svg>'
 };
 
 /* ---------- chọn dữ liệu cho từng khối ---------- */
 const recent = BOOKS.slice().sort((a, b) => String(b.u).localeCompare(String(a.u))).slice(0, 12);
-const doneList = BOOKS.filter((b) => b.st === 'Hoàn thành' && b.n > 20);
+const doneAll = BOOKS.filter((b) => b.st === 'Hoàn thành');        /* đếm đúng cho chip lọc */
+const doneList = BOOKS.filter((b) => b.st === 'Hoàn thành' && b.n > 20);  /* để chọn “Đáng xem” */
 const soonList = BOOKS.filter((b) => b.st === 'Sắp ra mắt');
 const adultList = BOOKS.filter((b) => b.e);
 const runList = BOOKS.filter((b) => b.st === 'Đang cập nhật');
@@ -239,18 +246,6 @@ const head = (o) =>
   `</div>`;
 const more = (txt) => `<a class="more" href="#">${txt}${ICON.chev}</a>`;
 
-const CHIPS = [
-  { k: 'all', t: 'Tất cả', n: BOOKS.length },
-  { k: 'done', t: 'Hoàn thành', n: doneList.length },
-  { k: 'run', t: 'Đang cập nhật', n: runList.length },
-  { k: 'soon', t: 'Sắp ra mắt', n: soonList.length },
-  { k: '18', t: '18+', n: adultList.length }
-];
-const chipRow = (scope) =>
-  CHIPS.map((c, i) =>
-    `<button class="chip${i === 0 ? ' on' : ''}" data-f="${c.k}" data-scope="${scope}">${c.t}<b>${c.n}</b></button>`
-  ).join('');
-
 const libGrid = (list) => `<div class="lgrid">${list.map(poster).join('')}</div>`;
 const PAGER = `<div class="pager"><button class="on">1</button><button>2</button><button>3</button>` +
   `<span class="gap">…</span><button>8</button></div>`;
@@ -261,115 +256,8 @@ const YEAR = `<select class="sel" aria-label="Năm"><option>Năm: tất cả</op
   `<option>2026</option><option>2025</option></select>`;
 const VSEG = `<span class="seg" style="padding:2px"><button class="on">Tuần</button><button>Tháng</button></span>`;
 
-/* ============================ PHƯƠNG ÁN A ================================= */
-function variantA() {
-  const resume = `<div class="when-hist"><div class="rgrid">` +
-    RESUME.map(resumeCard).join('') + `</div></div>` +
-    `<div class="when-new">${starterBlock()}` +
-    `<div class="emptyhint" style="margin-top:12px"><span class="ic">${ICON.book}</span>` +
-    `<span>Chưa có lịch sử đọc — mở một bộ bất kỳ là mục <b>Đọc tiếp</b> sẽ hiện ở đây.</span></div></div>`;
-
-  return `<div class="pg">
-  <section class="sec">
-    ${head({ lb: 'My Space', t: 'Đọc tiếp', cnt: `${RESUME.length} bộ`, r: more('My Space') })}
-    ${resume}
-  </section>
-  <section class="sec">
-    ${head({ lb: 'Vừa lên kệ', t: 'Mới cập nhật', cnt: '12 bộ',
-      r: `<button class="more">Hôm nay đọc gì?</button>${more('Xem tất cả')}` })}
-    <div class="shelf wrap">${recent.map(poster).join('')}</div>
-  </section>
-  <section class="sec">
-    ${head({ lb: 'Bảng xếp hạng', t: 'Ranking', cnt: 'tuần này',
-      r: `${VSEG}${more('Toàn bảng')}` })}
-    <div data-chart>${chart(RANK)}</div>
-    <div style="margin-top:24px">
-      ${head({ lb: 'Biên tập chọn', t: 'Đáng xem' })}
-      <div class="shelf wrap">${worthSix().map(poster).join('')}</div>
-    </div>
-  </section>
-  <section class="sec">
-    ${head({ lb: 'Trong tuần', t: 'Lịch ra chương', cnt: '6 bộ', r: more('Xem lịch đầy đủ') })}
-    ${weekStrip()}
-  </section>
-  <section class="sec">
-    ${head({ lb: `Toàn bộ ${BOOKS.length} bộ`, t: 'Thư viện',
-      r: `<span class="lbar">1–18 / ${BOOKS.length}</span>` })}
-    <div class="ltool" style="margin-bottom:14px">
-      <div class="chips" data-chips="A">${chipRow('A')}</div>
-      <div class="end">${SORT}${YEAR}</div>
-    </div>
-    <div data-grid="A">${libGrid(BOOKS)}</div>
-    ${PAGER}
-  </section>
-</div>`;
-}
-
-/* ============================ PHƯƠNG ÁN B ================================= */
-function variantB() {
-  const resume = `<div class="when-hist">${RESUME.slice(0, 3).map(resumeCard).join('')}</div>` +
-    `<div class="when-new" style="margin-top:10px">${starterBlock()}</div>`;
-
-  const side = `<aside class="side">
-    <div class="blk pin">
-      <div class="h"><span class="lb">Đọc tiếp</span>${more('My Space')}</div>
-      ${resume}
-      <div class="when-hist" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bd)">
-        <div class="h" style="margin-bottom:8px"><span class="lb" style="color:var(--dim)">Theo dõi có chương mới</span></div>
-        <div class="mini">${doneList.slice(0, 3).map(poster).join('')}</div>
-      </div>
-    </div>
-    <div class="blk">
-      <div class="h"><span class="lb">Lịch ra chương</span>${more('Tuần này')}</div>
-      ${weekList()}
-    </div>
-    <div class="blk">
-      <div class="h"><span class="lb">Đáng xem</span></div>
-      <div class="worth">${WORTH.map(poster).join('')}</div>
-    </div>
-  </aside>`;
-
-  const main = `<div class="main">
-  <section class="sec" style="padding-top:0">
-    ${head({ lb: 'Vừa lên kệ', t: 'Mới cập nhật', cnt: '12 bộ',
-      r: `<button class="more">Hôm nay đọc gì?</button>${more('Xem tất cả')}` })}
-    <div class="shelf wrap c4">${recent.map(poster).join('')}</div>
-  </section>
-  <section class="sec">
-    ${head({ lb: 'Bảng xếp hạng', t: 'Ranking', cnt: 'tuần này', r: `${VSEG}${more('Toàn bảng')}` })}
-    <div data-chart>${chart(RANK)}</div>
-  </section>
-  <section class="sec">
-    ${head({ lb: `Toàn bộ ${BOOKS.length} bộ`, t: 'Thư viện',
-      r: `<span class="lbar">1–18 / ${BOOKS.length}</span>` })}
-    <div class="ltool" style="margin-bottom:14px">
-      <div class="chips" data-chips="B">${chipRow('B')}</div>
-      <div class="end">${SORT}</div>
-    </div>
-    <div data-grid="B">${libGrid(BOOKS)}</div>
-    ${PAGER}
-  </section>
-</div>`;
-
-  return `<div class="pg"><div class="two">${side}${main}</div></div>`;
-}
-
 /* ============================ PHƯƠNG ÁN C ================================= */
-function fgroup(title, kind, opts) {
-  return `<div class="grp"><div class="t">${title}</div>` +
-    opts.map((o, i) =>
-      `<div class="op${i === 0 ? ' on' : ''}" data-k="${kind}" data-v="${esc(o.v)}">` +
-        `<span class="bx">${i === 0 ? ICON.check : ''}</span>${esc(o.t)}` +
-        `<span class="n">${o.n}</span></div>`
-    ).join('') + `</div>`;
-}
-function topCount(key, take) {
-  const c = {};
-  BOOKS.forEach((b) => { if (b[key]) c[b[key]] = (c[b[key]] || 0) + 1; });
-  return Object.keys(c).sort((a, b) => c[b] - c[a] || String(b).localeCompare(String(a)))
-    .slice(0, take).map((k) => ({ v: k, t: k, n: c[k] }));
-}
-
+/* (A và B đã bỏ — đã chốt C; trang này giờ chỉ còn C + 3 cách làm THƯ VIỆN) */
 function variantC() {
   const big = RESUME[0];
   const resumeTile = `<div class="tile b-resume">
@@ -418,21 +306,6 @@ function variantC() {
     </div>
   </div>`;
 
-  const fcol = `<div class="fcol" data-fcol>` +
-    fgroup('Tình trạng', 'st', [
-      { v: '', t: 'Tất cả', n: BOOKS.length },
-      { v: 'Hoàn thành', t: 'Hoàn thành', n: doneList.length },
-      { v: 'Đang cập nhật', t: 'Đang cập nhật', n: runList.length },
-      { v: 'Sắp ra mắt', t: 'Sắp ra mắt', n: soonList.length }
-    ]) +
-    fgroup('Nhãn', '18', [
-      { v: '', t: 'Tất cả', n: BOOKS.length },
-      { v: '1', t: '18+', n: adultList.length }
-    ]) +
-    fgroup('Năm', 'y', [{ v: '', t: 'Tất cả', n: BOOKS.length }, ...topCount('y', 3)]) +
-    fgroup('Couple', 'c', [{ v: '', t: 'Tất cả', n: BOOKS.length }, ...topCount('c', 3)]) +
-    `</div>`;
-
   return `<div class="pg">
   <section class="sec" style="padding-top:22px">
     ${head({ lb: 'Tổng quan', t: 'Hôm nay', r: `<span class="lbar">cập nhật 12 phút trước</span>` })}
@@ -443,64 +316,166 @@ function variantC() {
     ${weekStrip()}
   </section>
   <section class="sec">
-    ${head({ lb: `Toàn bộ ${BOOKS.length} bộ`, t: 'Thư viện',
-      r: `<span class="lbar" data-libcount>1–18 / ${BOOKS.length}</span>` })}
-    <div class="lib2">${fcol}
-      <div>
-        <div class="ltool" style="margin-bottom:4px">
-          <div class="chips" data-chips="C">${chipRow('C')}</div>
-          <div class="end">${SORT}</div>
-        </div>
-        <div data-grid="C">${libGrid(BOOKS)}</div>
-        ${PAGER}
-      </div>
-    </div>
+    ${head({ lb: `Toàn bộ ${BOOKS.length} bộ`, t: 'Thư viện', r: `<span class="lbar">xem 3 cách bên dưới ↓</span>` })}
+    <div class="phint">Phần lọc + lưới của Thư viện đang được làm lại — 3 cách bày ngay bên dưới.</div>
   </section>
 </div>`;
 }
 
+/* ======================== THƯ VIỆN — 3 CÁCH BÀY ========================== */
+function topCount(key, take) {
+  const c = {};
+  BOOKS.forEach((b) => { if (b[key]) c[b[key]] = (c[b[key]] || 0) + 1; });
+  return Object.keys(c).sort((a, b) => c[b] - c[a] || String(b).localeCompare(String(a)))
+    .slice(0, take).map((k) => ({ v: k, t: k, n: c[k] }));
+}
+const STATUS = [
+  { k: 'all', t: 'Tất cả', n: BOOKS.length },
+  { k: 'done', t: 'Hoàn thành', n: doneAll.length },
+  { k: 'run', t: 'Đang cập nhật', n: runList.length },
+  { k: 'soon', t: 'Sắp ra mắt', n: soonList.length }
+];
+
+const srch = (hint, kbd) =>
+  `<label class="srch"><span class="ic">${ICON.search}</span>` +
+  `<input type="search" placeholder="${hint}" aria-label="Tìm trong thư viện">` +
+  (kbd ? `<kbd>${kbd}</kbd>` : '') + `</label>`;
+
+const dd = (t) => `<button class="dd" type="button">${t}${ICON.caret}</button>`;
+const viewSeg = `<span class="seg vseg" role="group" aria-label="Kiểu hiển thị">` +
+  `<button class="on" aria-label="Lưới">${ICON.grid}</button>` +
+  `<button aria-label="Danh sách">${ICON.rows}</button></span>`;
+const countTag = (sc) => `<span class="lcount" data-libcount="${sc}">1–18 / ${BOOKS.length}</span>`;
+
+function libBlock(sc) {
+  return `<div class="libd"><div data-grid="${sc}">${libGrid(BOOKS)}</div>${PAGER}</div>`;
+}
+
+/* ---- D1 · “Hai tầng”: tìm + 2 ô chọn ở tầng 1, tình trạng ở tầng 2 ---- */
+function libD1() {
+  return `<div class="libd">
+    <div class="libbar">
+      ${srch('Tìm truyện, tác giả, couple…', '⌘K')}
+      ${dd('Năm')}${dd('Sắp xếp: Mới cập nhật')}
+      <div class="end">${viewSeg}</div>
+    </div>
+    <div class="librow">
+      <div class="chips" data-chips="D1">
+        ${STATUS.map((c, i) => `<button class="chip${i === 0 ? ' on' : ''}" data-f="${c.k}" data-scope="D1">${c.t}<b>${c.n}</b></button>`).join('')}
+        <button class="chip" data-f="18" data-scope="D1">18+<b>${adultList.length}</b></button>
+      </div>
+      <div class="end">${countTag('D1')}</div>
+    </div>
+    <div data-grid="D1">${libGrid(BOOKS)}</div>
+    ${PAGER}
+  </div>`;
+}
+
+/* ---- D2 · “Một hàng”: gom hết vào một dòng, tình trạng thành ô chọn ---- */
+function libD2() {
+  const opt = (v, t) => `<option value="${v}">${t}</option>`;
+  return `<div class="libd">
+    <div class="libbar">
+      ${srch('Tìm truyện, tác giả, couple…')}
+      <select class="sel" data-filter="D2" aria-label="Tình trạng">
+        ${opt('all', 'Tình trạng: tất cả')}${opt('done', `Hoàn thành (${doneAll.length})`)}
+        ${opt('run', `Đang cập nhật (${runList.length})`)}${opt('soon', `Sắp ra mắt (${soonList.length})`)}
+        ${opt('18', `18+ (${adultList.length})`)}
+      </select>
+      <select class="sel" aria-label="Năm"><option>Năm: tất cả</option>${topCount('y', 3).map((o) => `<option>${esc(o.v)}</option>`).join('')}</select>
+      <select class="sel" aria-label="Sắp xếp"><option>Mới cập nhật</option><option>Nhiều chương</option><option>Tên A→Z</option></select>
+      <div class="end">${countTag('D2')}${viewSeg}</div>
+    </div>
+    <div data-grid="D2">${libGrid(BOOKS)}</div>
+    ${PAGER}
+  </div>`;
+}
+
+/* ---- D3 · “Mở ra khi cần”: một dòng, bộ lọc nằm trong tấm mở ra ---- */
+function libD3() {
+  return `<div class="libd">
+    <div class="libbar">
+      ${srch('Tìm truyện, tác giả, couple…', '⌘K')}
+      <button class="dd open" type="button">${ICON.filter}Bộ lọc <b class="badge">2</b></button>
+      <select class="sel" aria-label="Sắp xếp"><option>Sắp xếp: Mới cập nhật</option><option>Nhiều chương</option></select>
+      <div class="end">${countTag('D3')}${viewSeg}</div>
+    </div>
+    <div class="fpanel">
+      <div class="fph"><span class="lb">Bộ lọc</span>
+        <button class="x" type="button" aria-label="Đóng bộ lọc">${ICON.x}</button></div>
+      <div class="fpgrid">
+        <div class="fg"><span class="t">Tình trạng</span>
+          <div class="chips">${STATUS.map((c, i) =>
+            `<button class="chip${i === 0 ? ' on' : ''}" data-f="${c.k}" data-scope="D3">${c.t}<b>${c.n}</b></button>`).join('')}</div></div>
+        <div class="fg"><span class="t">Nhãn</span>
+          <div class="chips"><button class="chip" data-f="18" data-scope="D3">18+<b>${adultList.length}</b></button></div></div>
+        <div class="fg"><span class="t">Năm</span>
+          <div class="chips">${topCount('y', 3).map((o) => `<button class="chip" data-f="y:${esc(o.v)}" data-scope="D3">${esc(o.v)}<b>${o.n}</b></button>`).join('')}</div></div>
+      </div>
+      <div class="fpf">
+        <button class="lnk" type="button">Xoá lọc</button>
+        <span class="grow"></span>
+        <span class="lcount" data-libcount="D3">1–18 / ${BOOKS.length}</span>
+        <button class="btn-pri" type="button">Xem kết quả</button>
+      </div>
+    </div>
+    <div data-grid="D3">${libGrid(BOOKS)}</div>
+    ${PAGER}
+  </div>`;
+}
+
 /* ------------------------------- trang ------------------------------- */
 const VHEADS = {
-  A: {
-    t: 'Kệ sách — giữ nguyên thứ tự mục, làm lại từng khối',
-    p: `Thứ tự mục như hiện tại (Đọc tiếp → Mới cập nhật → Ranking → Lịch → Thư viện) nhưng mỗi khối
-        được làm lại theo cách các web cùng loại đang làm: bìa có nhãn tình trạng <b>và</b> số chương
-        nằm ngay trên ảnh, đầu mục có số lượng + “Xem tất cả”, bảng xếp hạng dùng số thứ tự lớn, lịch
-        ra chương thành dải 7 ngày. Ít rủi ro nhất, dễ duyệt nhất.`,
-    pts: [
-      '<b>Bìa:</b> nhãn tình trạng + “39 chương” trên ảnh, tên 2 dòng, tác giả dòng mono',
-      '<b>Kệ:</b> 6 cột cố định trên desktop — hết cảnh 12 bộ mà 5 bộ bị giấu sau thanh cuộn ngang',
-      '<b>Ranking:</b> 5 dòng có số thứ tự lớn + mũi tên tăng/giảm',
-      '<b>Đọc tiếp:</b> thẻ rộng có thanh tiến độ + “Ch. 34/71 · còn 37”'
-    ],
-    ref: 'glvietsubz.net — bìa + nhãn trên ảnh, “Xem thêm”;<br>glvietsub.org — BXH số lớn, dải lịch'
-  },
-  B: {
-    t: 'Bảng tin — hai cột, cột phụ dính bên phải',
-    p: `Toàn bộ phần “của riêng bạn” (Đọc tiếp, Theo dõi, Lịch tuần, Đáng xem) gom vào một cột phụ
-        bên phải, khối “Đọc tiếp” dính lại nên vẫn thấy khi đã cuộn sâu trong lưới thư viện. Cột chính
-        chỉ còn nội dung để lướt: Mới cập nhật → Ranking → Thư viện. Trên máy hẹp, cột phụ tự nhảy lên
-        trên nên “Đọc tiếp” vẫn là thứ đầu tiên gặp được.`,
-    pts: [
-      '<b>Đọc tiếp</b> thành chồng 3 thẻ dọc, có tiến độ — không cần cuộn ngang',
-      '<b>Lịch tuần</b> dạng danh sách dọc, hôm nay tô nền hồng nhạt',
-      '<b>Thư viện</b> chiếm trọn cột chính: lưới rộng hơn, ít mắt phải nhảy hơn',
-      'Cột phụ chỉ dính khối Đọc tiếp (dính cả cột thì cột cao hơn màn hình, phần dưới không cuộn tới được)'
-    ],
-    ref: 'glvietsubz.net — cột chính + cột phụ;<br>glvietsub.org — khối danh sách có số'
-  },
   C: {
-    t: 'Bento — gom 3 khối đầu thành một dải, thư viện có cột lọc',
+    t: 'Bento — phần đầu trang (đã chốt)',
     p: `Ba khối đầu (Đọc tiếp · Mới cập nhật · Ranking) gộp thành một dải bento 12 cột nên vùng đầu
-        trang gọn trong một màn hình. Thư viện được nâng thành trang con thực thụ: cột lọc bên trái
-        (tình trạng, nhãn, năm, couple — có số lượng) + chip lọc nhanh phía trên lưới.`,
+        trang gọn trong một màn hình. Đây là phần <b>đã chốt</b> — ba cách bày Thư viện ở dưới chỉ thay
+        phần lọc + lưới, không đụng gì tới khối này.`,
     pts: [
       '<b>Một màn hình</b> là thấy đủ: đang đọc gì, có gì mới, ai đang dẫn đầu',
-      '<b>Lọc dạng cột</b> thay vì 4 ô chọn ngang — nhìn được số lượng từng lựa chọn',
-      '<b>Thư viện</b> lưới dày, đầu trang ít khoảng trống',
-      'Nhiều thay đổi nhất — cần duyệt kỹ phần lọc'
+      '<b>Lịch tuần</b> giữ nguyên dải 7 ngày',
+      'Phần Thư viện tách ra làm lại — xem D1 · D2 · D3'
     ],
-    ref: 'glvietsubz.net — khối tổng hợp + lọc cột;<br>glvietsub.org — bento chủ đề, số đếm'
+    ref: 'glvietsubz.net — khối tổng hợp;<br>glvietsub.org — bento chủ đề, số đếm'
+  },
+  D1: {
+    t: 'Thư viện · Hai tầng — tìm ở tầng 1, tình trạng ở tầng 2',
+    p: `<b>Tầng 1:</b> ô tìm + Năm + Sắp xếp + kiểu xem. <b>Tầng 2:</b> tình trạng để dạng chip có số
+        lượng, kèm số kết quả bên phải. Tình trạng là bộ lọc dùng nhiều nhất nên cho nó một tầng riêng
+        — thấy ngay, bấm một phát, không phải mở menu.`,
+    pts: [
+      '<b>Bốn ô chọn ngang + 2 hàng chip</b> của bản cũ gộp còn <b>2 ô chọn + 1 hàng chip</b>',
+      '<b>Bỏ bộ lọc “Couple”</b>: mỗi couple chỉ 1–2 bộ, lọc theo danh sách dài không ai dùng — gõ tên vào ô tìm là ra',
+      '<b>Tình trạng</b> thành chip có số: “Hoàn thành 46” — biết trước khi bấm',
+      'Chỉ <b>một</b> cơ chế lọc, không chip + cột lọc trùng nhau như bản trước'
+    ],
+    ref: 'glvietsubz.net — hàng tab tình trạng có số;<br>NetTruyen/Mangadex — tìm + ô chọn gọn'
+  },
+  D2: {
+    t: 'Thư viện · Một hàng — gom hết vào một dòng',
+    p: `Tất cả nằm trên <b>đúng một dòng</b>: tìm, tình trạng, năm, sắp xếp, kiểu xem. Gọn nhất về
+        chiều cao. Đổi lại tình trạng phải mở ô chọn mới thấy số lượng, và trên máy hẹp hàng này tự
+        xuống dòng.`,
+    pts: [
+      'Cao đúng <b>một dòng</b> — lưới truyện lên cao hơn ~40px so với D1',
+      'Tình trạng thành ô chọn: gọn nhưng <b>giấu số lượng</b>',
+      'Ô chọn gốc của trình duyệt: nhẹ, quen tay, tự cuộn được trên điện thoại',
+      'Máy hẹp: hàng tự xuống 2–3 dòng, không vỡ'
+    ],
+    ref: 'MyAnimeList / AniList — thanh lọc một dòng;<br>glvietsubz.net — ô chọn gốc'
+  },
+  D3: {
+    t: 'Thư viện · Mở ra khi cần — một dòng, bộ lọc trong tấm',
+    p: `Mặc định chỉ còn ô tìm + nút <b>Bộ lọc</b> (có số điều kiện đang bật) + Sắp xếp. Bấm Bộ lọc thì
+        một tấm mở ra ngay dưới thanh, gom đủ tình trạng · nhãn · năm · couple có số lượng, và một nút
+        “Xem kết quả”. Sạch nhất khi chưa lọc, nhưng thêm một cú bấm khi cần lọc.`,
+    pts: [
+      'Chưa lọc thì chỉ còn <b>2 nút</b> — sạch nhất trong ba cách',
+      'Bấm “Bộ lọc 2” là biết đang bật mấy điều kiện',
+      'Tấm lọc dùng lại đúng cho điện thoại (mở toàn bề ngang)',
+      'Thêm một cú bấm mỗi lần lọc — đổi lại đầu trang gọn hơn'
+    ],
+    ref: 'glvietsub.org — tấm lọc bung ra;<br>Viki / iQIYI — lọc trong sheet'
   }
 };
 
@@ -520,17 +495,18 @@ const variantSection = (k, body) => {
 };
 
 const CMP = `<section class="cmp">
-  <h2>So nhanh ba phương án</h2>
-  <p>Bìa và tên truyện là dữ liệu thật trong <code>data/registry.json</code>. Lượt xem và tiến độ đọc
-     là số giả để thấy hình dạng thông tin.</p>
+  <h2>So nhanh ba cách bày Thư viện</h2>
+  <p>Bìa và tên truyện là dữ liệu thật trong <code>data/registry.json</code> (67 bộ: 46 hoàn thành ·
+     17 sắp ra mắt · 4 đang cập nhật · 29 bộ 18+). Lượt xem và tiến độ đọc là số giả.</p>
   <table>
     <thead><tr><th scope="col"><span class="sr">Tiêu chí</span></th>` +
-  `<th scope="col">A · Kệ sách</th><th scope="col">B · Bảng tin</th><th scope="col">C · Bento</th></tr></thead>
+  `<th scope="col">D1 · Hai tầng</th><th scope="col">D2 · Một hàng</th><th scope="col">D3 · Mở ra khi cần</th></tr></thead>
     <tbody>
-      <tr><th scope="row">Thay đổi</th><td>ít nhất — chỉ ruột từng khối</td><td>vừa — thêm cột phụ</td><td>nhiều nhất</td></tr>
-      <tr><th scope="row">Mạnh</th><td>dễ duyệt, không đụng điều hướng</td><td>“đang đọc gì” luôn trong tầm mắt</td><td>gọn nhất, lọc tốt nhất</td></tr>
-      <tr><th scope="row">Yếu</th><td>vẫn 5 mục dài, phải cuộn lên đầu</td><td>cột phụ 322px nên bìa nhỏ</td><td>phải duyệt lại phần lọc</td></tr>
-      <tr><th scope="row">Công dựng</th><td>~1 buổi</td><td>~1 buổi</td><td>~1,5 buổi</td></tr>
+      <tr><th scope="row">Chiều cao thanh lọc</th><td>2 dòng (~78px)</td><td><b>1 dòng (~44px)</b></td><td>1 dòng (~44px)</td></tr>
+      <tr><th scope="row">Số điều kiện thấy ngay</th><td><b>4 tình trạng + 18+</b></td><td>0 (phải mở ô chọn)</td><td>0 (phải mở tấm)</td></tr>
+      <tr><th scope="row">Số cú bấm để lọc</th><td><b>1</b></td><td>2</td><td>2</td></tr>
+      <tr><th scope="row">Máy hẹp</th><td>chip xuống dòng, vẫn rõ</td><td>ô chọn cuộn được</td><td>tấm mở toàn ngang</td></tr>
+      <tr><th scope="row">Hợp khi</th><td>muốn thấy số lượng, lọc nhanh</td><td>cần tiết kiệm chỗ nhất</td><td>thư viện lớn, ít lọc</td></tr>
     </tbody>
   </table>
 </section>`;
@@ -555,10 +531,10 @@ body[data-hist="0"] .when-new{display:block}
 <body data-w="d" data-hist="1">
 
 <div class="mk-top">
-  <h1><span>ssochuz · mockup</span>Nửa dưới trang chủ — 3 phương án</h1>
+  <h1><span>ssochuz · mockup</span>Phương án C + 3 cách bày Thư viện</h1>
   <div class="grow"></div>
   <nav class="mk-nav" aria-label="Phương án"><span class="lbl">Xem</span>
-    <a href="#A">A</a><a href="#B">B</a><a href="#C">C</a></nav>
+    <a href="#C">C</a><a href="#D1">D1</a><a href="#D2">D2</a><a href="#D3">D3</a></nav>
   <div class="seg" data-width role="group" aria-label="Bề rộng khung xem">
     <span class="lbl">Khung</span>
     <button data-w="d" class="on">Máy tính</button>
@@ -569,9 +545,10 @@ body[data-hist="0"] .when-new{display:block}
 </div>
 
 <div class="wrap-mk">
-${variantSection('A', variantA())}
-${variantSection('B', variantB())}
 ${variantSection('C', variantC())}
+${variantSection('D1', libD1())}
+${variantSection('D2', libD2())}
+${variantSection('D3', libD3())}
 ${CMP}
 </div>
 
@@ -581,7 +558,6 @@ ${CMP}
    chỉ có khung rỗng — đó là lỗi). */
 (function () {
   var body = document.body;
-  var CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l6 6L20 6"/></svg>';
 
   /* Lưới dựng ĐỦ 67 bộ trong HTML; JS chỉ ẩn những bộ không khớp và chỉ chừa
      18 bộ khớp đầu tiên (đúng như một trang của pager). Nhờ vậy:
@@ -589,7 +565,8 @@ ${CMP}
        · lọc     → luôn tính từ toàn bộ thư viện, không phải từ 18 bộ đang hiện */
   var PAGE = 18;
   var SNAP = {};
-  ['A', 'B', 'C'].forEach(function (sc) {
+  var SCOPES = ['D1', 'D2', 'D3'];
+  SCOPES.forEach(function (sc) {
     var g = document.querySelector('[data-grid="' + sc + '"]');
     if (g) SNAP[sc] = Array.prototype.slice.call(g.querySelectorAll('.poster'));
   });
@@ -603,24 +580,56 @@ ${CMP}
       if (vis) shown++;
       p.style.display = vis ? 'block' : 'none';   /* inline thắng luật :nth-child */
     });
-    var c = document.querySelector('[data-libcount]');
+    var c = document.querySelector('[data-libcount="' + sc + '"]');
     if (c) c.textContent = (shown ? '1–' + shown : '0') + ' / ' + total;
   }
+  /* Bộ lọc: {f} = một điều kiện đơn (D2), hoặc {st, n18, y} ghép được nhiều
+     điều kiện (D1, D3 — tình trạng + 18+ + năm cộng lại). */
+  var S = { D1: { st: '', n18: false, y: '' }, D3: { st: '', n18: false, y: '' } };
+
   function match(p, o) {
     var ds = p.dataset;
     if (o.f && o.f !== 'all') {
-      if (o.f === '18') { if (ds['18'] !== '1') return false; }
-      else if (o.f === 'done') { if (ds.st !== 'Hoàn thành') return false; }
-      else if (o.f === 'run') { if (ds.st !== 'Đang cập nhật') return false; }
-      else if (o.f === 'soon') { if (ds.st !== 'Sắp ra mắt') return false; }
+      if (o.f === '18' && ds['18'] !== '1') return false;
+      if (o.f === 'done' && ds.st !== 'Hoàn thành') return false;
+      if (o.f === 'run' && ds.st !== 'Đang cập nhật') return false;
+      if (o.f === 'soon' && ds.st !== 'Sắp ra mắt') return false;
     }
     if (o.st && ds.st !== o.st) return false;
     if (o.n18 && ds['18'] !== '1') return false;
     if (o.y && ds.y !== o.y) return false;
-    if (o.c && ds.c !== o.c) return false;
     return true;
   }
-  function filterScope(sc, o) { paint(sc, o); }
+
+  function syncChips(sc) {
+    var st = S[sc].st, n18 = S[sc].n18, y = S[sc].y;
+    document.querySelectorAll('.chip[data-scope="' + sc + '"]').forEach(function (c) {
+      var f = c.getAttribute('data-f'), on;
+      if (f === 'all') on = !st;
+      else if (f === '18') on = n18;
+      else if (f.indexOf('y:') === 0) on = y === f.slice(2);
+      else on = st === f;
+      c.classList.toggle('on', on);
+    });
+    var badge = document.querySelector('.dd .badge');
+    if (badge && sc === 'D3') {
+      var n = (st ? 1 : 0) + (n18 ? 1 : 0) + (y ? 1 : 0);
+      badge.textContent = n;
+      badge.style.display = n ? '' : 'none';
+    }
+  }
+
+  var STMAP = { done: 'Hoàn thành', run: 'Đang cập nhật', soon: 'Sắp ra mắt' };
+
+  function toggleChip(sc, f) {
+    var st = S[sc];
+    if (f === 'all') { st.st = ''; st.n18 = false; st.y = ''; }
+    else if (f === '18') st.n18 = !st.n18;
+    else if (f.indexOf('y:') === 0) st.y = st.y === f.slice(2) ? '' : f.slice(2);
+    else st.st = STMAP[f] || '';
+    syncChips(sc);
+    paint(sc, st);
+  }
 
   document.addEventListener('click', function (e) {
     /* đổi bề rộng khung */
@@ -632,34 +641,34 @@ ${CMP}
       });
       return;
     }
-    /* chip lọc nhanh */
+    /* chip lọc */
     var chip = e.target.closest('.chip[data-f]');
     if (chip) {
-      var box = chip.parentNode;
-      box.querySelectorAll('.chip').forEach(function (x) { x.classList.toggle('on', x === chip); });
-      filterScope(chip.getAttribute('data-scope'), { f: chip.getAttribute('data-f') });
-      return;
-    }
-    /* cột lọc của phương án C (kết hợp được nhiều điều kiện) */
-    var op = e.target.closest('.fcol .op');
-    if (op) {
-      var k = op.getAttribute('data-k');
-      op.closest('.fcol').querySelectorAll('[data-k="' + k + '"]').forEach(function (x) {
-        var on = x === op;
-        x.classList.toggle('on', on);
-        x.querySelector('.bx').innerHTML = on ? CHECK : '';
-      });
-      var o = {};
-      op.closest('.fcol').querySelectorAll('.op.on').forEach(function (x) {
-        var kk = x.getAttribute('data-k'), v = x.getAttribute('data-v');
-        if (!v) return;
-        if (kk === '18') o.n18 = true; else o[kk] = v;
-      });
-      filterScope('C', o);
+      var sc = chip.getAttribute('data-scope');
+      if (S[sc]) toggleChip(sc, chip.getAttribute('data-f'));
+      else paint(sc, { f: chip.getAttribute('data-f') });
     }
   });
 
-  ['A', 'B', 'C'].forEach(function (sc) { if (SNAP[sc]) paint(sc, {}); });
+  SCOPES.forEach(function (sc) { if (SNAP[sc]) paint(sc, {}); });
+  S.D3 = { st: 'Hoàn thành', n18: true, y: '' };
+  syncChips('D3');
+  paint('D3', S.D3);
+
+  /* “Xoá lọc” trong tấm bộ lọc */
+  var clear = document.querySelector('.fpf .lnk');
+  if (clear) clear.addEventListener('click', function () {
+    S.D3 = { st: '', n18: false, y: '' };
+    syncChips('D3');
+    paint('D3', S.D3);
+  });
+
+  /* ô chọn gốc (phương án D2): đổi là lọc luôn */
+  document.addEventListener('change', function (e) {
+    var sel = e.target.closest('select[data-filter]');
+    if (!sel) return;
+    paint(sel.getAttribute('data-filter'), { f: sel.value });
+  });
 
   var hist = document.getElementById('histChk');
   if (hist) hist.addEventListener('change', function () {
