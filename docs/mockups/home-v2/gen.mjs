@@ -155,7 +155,9 @@ const ICON = {
   chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
   prev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>',
   next: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
-  search: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>',
+  search: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>',
+  grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg>',
+  rows: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"><rect x="4" y="5" width="16" height="5"/><rect x="4" y="14" width="16" height="5"/></svg>',
   caret: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'
 };
 
@@ -250,11 +252,15 @@ function library() {
   ];
   return (
     `<div class="libtop filters">` +
-      `<label class="srch" id="srch">${ICON.search}` +
+      `<div class="srch" id="srch">${ICON.search}` +
         `<input id="q" type="search" placeholder="Tìm truyện, tác giả…" aria-label="Tìm trong thư viện">` +
-        `<button type="button" class="clear" id="qclear" aria-label="Xoá từ khoá">✕</button></label>` +
+        `<button type="button" class="clear" id="qclear" aria-label="Xoá từ khoá">✕</button></div>` +
       `<span class="dd"><span class="lbl">Năm</span><span class="v">Tất cả</span>${ICON.caret}</span>` +
       `<span class="dd"><span class="lbl">Sắp xếp</span><span class="v">Đề xuất</span>${ICON.caret}</span>` +
+      `<div class="vseg" role="group" aria-label="Kiểu hiển thị">` +
+        `<button class="on" aria-label="Xem dạng lưới">${ICON.grid}</button>` +
+        `<button aria-label="Xem dạng danh sách">${ICON.rows}</button>` +
+      `</div>` +
     `</div>` +
     `<div class="frow"><div class="chips">` +
       chips.map(([f, label, n], i) =>
@@ -294,6 +300,7 @@ const HTML = `<!doctype html>
   <span class="ttl">ssochuz · nửa dưới trang chủ</span>
   <span>dải bìa cuộn ngang · bìa và tên thật 67 bộ</span>
   <span class="fwv" id="fwv">khung —</span>
+  <a href="variants.html" style="color:var(--mut);text-decoration:underline;text-underline-offset:3px">biến thể A/B</a>
   <div class="wsw">
     <button data-w="desktop" class="on">Desktop</button>
     <button data-w="tablet">Tablet</button>
@@ -518,6 +525,111 @@ const HTML = `<!doctype html>
 `;
 
 fs.writeFileSync(path.join(HERE, 'index.html'), HTML);
+
+/* ------------------------------ TRANG BIẾN THỂ --------------------------- */
+const vRows = () => RANK.slice(0, 3).map((r, i) => {
+  const v = r.tr === 'up' ? `<span class="v up">▲<b>${r.d}</b></span>`
+    : r.tr === 'dn' ? `<span class="v dn">▼<b>${r.d}</b></span>`
+    : '<span class="v eq">—</span>';
+  return prow(i, r.b, `${vn(r.week)} lượt tuần`, v);
+}).join('');
+
+const vToolbar = (cls) => library().split('<div class="frow">')[0]
+  .replace('<div class="libtop filters">', `<div class="libtop ${cls}">`)
+  .replace(/ id="[^"]*"/g, '');
+
+const VARIANTS = `<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ssochuz · biến thể cho 4 chỗ vừa sửa</title>
+<link rel="stylesheet" href="mock2.css">
+<style>
+  body { background: #0d0b09; }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 26px 22px 60px; }
+  .vhead { position: static; }
+  h1 { font-family: var(--font-head); font-size: 22px; margin-bottom: 6px; }
+  .lead { color: var(--dim); font-size: 12.5px; margin: 0 0 26px; }
+  .vsec { border-top: 1px solid var(--bd); padding-top: 22px; margin-top: 26px; }
+  .vsec h2 { font-size: 16px; margin-bottom: 14px; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .box { border: 1px solid var(--bd); border-radius: 14px; padding: 16px 14px; background: var(--bg); }
+  .tag { display: inline-block; margin-bottom: 10px; font: 800 10px/1 var(--font-mono);
+    letter-spacing: .12em; text-transform: uppercase; color: var(--acc); }
+  .plist { margin: 0; padding: 0; list-style: none; }
+  @media (max-width: 720px) { .pair { grid-template-columns: 1fr; } }
+
+  /* ---- B1: số trong ô vuông mờ ---- */
+  .b1 .prow .n { width: 26px; height: 26px; display: grid; place-items: center;
+    border-radius: 7px; background: rgba(255,240,220,.07); font-size: 14px;
+    color: var(--txt); text-align: center; }
+  .b1 .prow:nth-child(1) .n { background: var(--acc-soft); color: var(--acc); font-size: 15px; }
+  .b1 .prow:nth-child(2) .n { color: #e6bcc7; }
+  /* ---- B2: số đứng trước, mũi tên sau ---- */
+  .b2 .prow .v { flex-direction: row-reverse; justify-content: flex-start; }
+  .b2 .prow .v b { font-size: 13px; }
+  /* ---- B3: dropdown không viền ---- */
+  .b3 .dd { border-color: transparent; background: none; padding: 0 6px; gap: 5px; }
+  .b3 .dd:hover { background: var(--surf2); border-color: transparent; }
+  /* ---- B4: hover kiểu nút son đặc ---- */
+  .force .cv::after { opacity: 1; }
+  .force .go { opacity: 1; transform: translate(-50%, -50%); }
+  .b4 .go { background: var(--acc); border-color: transparent; color: #20100f;
+    font-weight: 750; box-shadow: 0 10px 24px -12px rgba(0,0,0,.8); }
+  .b4 .cv::after { background: linear-gradient(180deg, rgba(10,7,5,.1), rgba(10,7,5,.62)); }
+  .pair .card { max-width: 170px; }
+</style>
+</head>
+<body>
+
+<div class="mkbar vhead">
+  <span class="ttl">ssochuz · biến thể</span>
+  <span>bốn chỗ vừa sửa · mỗi chỗ hai kiểu</span>
+  <a href="index.html" style="margin-left:auto;color:var(--mut);text-decoration:underline;text-underline-offset:3px">← về trang chính</a>
+</div>
+
+<div class="wrap">
+  <h1>Chọn kiểu cho bốn chỗ</h1>
+  <p class="lead">Bên trái là kiểu mình vừa làm trong trang chính. Bên phải là kiểu khác để so.</p>
+
+  <section class="vsec">
+    <h2>1 · Vị trí truyện (Xếp hạng / Đáng xem)</h2>
+    <div class="pair">
+      <div class="box"><span class="tag">A · chữ số lớn</span><ol class="plist">${vRows()}</ol></div>
+      <div class="box b1"><span class="tag">B · số trong ô mờ</span><ol class="plist">${vRows()}</ol></div>
+    </div>
+  </section>
+
+  <section class="vsec">
+    <h2>2 · Số tăng/giảm và số sao</h2>
+    <div class="pair">
+      <div class="box"><span class="tag">A · ▲3 (dấu trước)</span><ol class="plist">${vRows()}</ol></div>
+      <div class="box b2"><span class="tag">B · 3▲ (số trước)</span><ol class="plist">${vRows()}</ol></div>
+    </div>
+  </section>
+
+  <section class="vsec">
+    <h2>3 · Thanh lọc thư viện</h2>
+    <div class="pair">
+      <div class="box"><span class="tag">A · có viền</span>${vToolbar('')}</div>
+      <div class="box b3"><span class="tag">B · không viền</span>${vToolbar('')}</div>
+    </div>
+  </section>
+
+  <section class="vsec">
+    <h2>4 · Rê chuột lên bìa (hiện sẵn để so)</h2>
+    <div class="pair">
+      <div class="box force"><span class="tag">A · nút viền mảnh</span>${card(RECENT[0], { lib: true, pill: 'Ch. ' + RECENT[0].n, sub: RECENT[0].a })}</div>
+      <div class="box force b4"><span class="tag">B · nút son đặc</span>${card(RECENT[1], { lib: true, pill: 'Ch. ' + RECENT[1].n, sub: RECENT[1].a })}</div>
+    </div>
+  </section>
+</div>
+</body>
+</html>
+`;
+
+fs.writeFileSync(path.join(HERE, 'variants.html'), VARIANTS);
 console.log('đã ghi index.html ·', Math.round(HTML.length / 1024), 'kB · bìa thiếu:',
   BOOKS.filter((b) => !b.img).length, '· đọc tiếp', RESUME.length, '· mới', RECENT.length,
   '· hạng', RANK.length, '· đáng xem', WORTH.length, '· trang', PAGES);

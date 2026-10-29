@@ -38,6 +38,18 @@ Lịch ra chương **tạm gác** (theo yêu cầu) — không có trong bản n
   nền son nổi lên giữa bìa; tên truyện đổi màu son.
 - **Lưới thư viện**: 3 hàng × 6 bìa mỗi trang (18 bộ), phân trang kèm “Trang 1 / 4”.
 
+## Làm lại bốn chỗ (bản mới nhất)
+
+| Chỗ | Trước | Bây giờ |
+|---|---|---|
+| Vị trí truyện | huy hiệu tròn 38px, viền + quầng | **chữ số serif** 20px (hạng 1: 24px son, 2: 22px hồng phấn, 3: 21px), không khung — chỉ chữ |
+| ▲▼ ★ | viên nền màu | **chữ màu** canh phải, số 12,5px đậm, dấu 11px; xanh / đỏ / vàng |
+| Thanh lọc | ô 42px bo 12 + quầng | đúng cỡ của web thật: ô tìm **38px bo 9**, dropdown 38px có nhãn mờ, chip 30px, thêm **nút lưới/danh sách** như trang thật |
+| Rê chuột lên bìa | ảnh tối bằng filter + nút son | lớp **gradient tối** phủ bìa, nút **viền trắng mảnh** nền tối mờ, không phóng ảnh |
+
+**Trang biến thể:** `variants.html` — bốn chỗ, mỗi chỗ hai kiểu (A là kiểu đang dùng, B là kiểu khác)
+đặt cạnh nhau để chọn.
+
 ## Dữ liệu
 
 Bìa, tên, tác giả, số chương, trạng thái, ngày cập nhật, `editorChoice`: **thật** (67 bộ).
