@@ -733,14 +733,14 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   letter-spacing: .16em; text-transform: uppercase; color: var(--acc); }
 .eyebrow::before { content: ""; width: 22px; height: 1px; background: var(--acc); }
 
-.hero h1 { font-size: clamp(32px, 3.1vw, 46px); line-height: 1.06; margin: 12px 0 0;
+.hero h1 { font-size: clamp(34px, 3.6vw, 54px); line-height: 1.05; margin: 12px 0 0;
   letter-spacing: -.026em; color: var(--hb-fg); font-weight: 800; max-width: 100%;
-  /* Hộp tiêu đề CAO CỐ ĐỊNH 3 dòng và dồn chữ xuống ĐÁY hộp: tên ngắn hay dài
-     thì kệ nhãn + hàng nút vẫn nằm đúng một toạ độ, mà tên ngắn vẫn ngồi sát
-     đường kẻ của kệ nhãn chứ không lơ lửng giữa trời */
-  height: 3.18em; display: flex; align-items: flex-end; }
+  /* Giữ chỗ 2 DÒNG (đúng cỡ phần lớn tên truyện) để kệ nhãn + hàng nút đứng yên;
+     tên dài hiếm khi quá 3 dòng và chỉ đẩy mọi thứ xuống đúng 1 dòng.
+     KHÔNG dồn chữ xuống đáy hộp: làm vậy thành lỗ hổng giữa nhãn trạng thái và tên. */
+  min-height: 2.12em; }
 .hero h1 .hb-t { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
-  overflow: hidden; width: 100%; }
+  overflow: hidden; }
 .hero h1 a { color: inherit; }
 .hero h1 a:hover { color: var(--hb-acc); }
 
@@ -785,7 +785,7 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .hero .spec dt { font-family: var(--font-mono); font-size: 10px; font-weight: 600;
   letter-spacing: .14em; text-transform: uppercase; color: var(--hb-dim); }
 .hero .spec dd { margin: 6px 0 0; font-size: 13.5px; font-weight: 600; line-height: 1.35;
-  color: var(--hb-fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  color: var(--hb-fg); overflow-wrap: anywhere; min-height: 2.7em; }
 /* số và chữ dùng CHUNG một độ đậm — chỉ số là “tabular” để không nhảy bề rộng */
 .hero .spec dd.num { font-variant-numeric: tabular-nums; }
 .hero .spec dd.soft { font-weight: 600; color: var(--hb-fg); }
@@ -797,7 +797,7 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
    Bỏ cả hai ⇒ mọi truyện có đúng cùng một bố cục chữ/nút, đứng yên khi đổi. */
 
 /* ---- 5.4 CTA: một nút chính + nút phụ dạng ICON TRÒN 44px --------------- */
-.hero .btn-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 22px 0 0; }
+.hero .btn-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 20px 0 0; }
 .hero .btn.hb-cta { border-radius: 99px; border-color: var(--hb-line2); color: var(--hb-fg);
   background: var(--hb-glass); padding: 0 20px; height: 44px; line-height: 1; }
 .hero .btn.hb-cta:hover { border-color: var(--hb-fg); color: var(--hb-fg);
@@ -837,7 +837,7 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   text-transform: uppercase; color: var(--hb-dim); max-width: 22ch; overflow: hidden;
   text-overflow: ellipsis; }
 .hero .fanbar.no-who .fanbar-dot, .hero .fanbar.no-who .who { display: none; }
-.hero .fanbar .arrow { width: 30px; height: 30px; flex: none; border-radius: 50%;
+.hero .fanbar .arrow { width: 32px; height: 32px; flex: none; border-radius: 50%;
   border: 0; color: var(--hb-dim); background: transparent;
   display: grid; place-items: center;
   transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease),
@@ -848,7 +848,7 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .hero .fanbar .arrow:focus-visible { outline: 2px solid var(--hb-acc); outline-offset: 2px; }
 /* ⏸ là điều khiển phụ: nhỏ hơn, không nền, chỉ sáng lên khi trỏ */
 .hero .fanbar .arrow.play { width: 26px; height: 26px; color: var(--hb-dim); }
-.hero .fanbar .arrow.play .i { width: 13px; height: 13px; }
+.hero .fanbar .arrow.play .i { width: 14px; height: 14px; }
 .hero .fanbar .arrow.play:hover { color: var(--hb-fg); background: rgba(255, 255, 255, .1); }
 .hero .fanbar .arrow.play.on { color: var(--hb-acc); }
 
@@ -862,7 +862,7 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   position: relative;
   justify-self: stretch;
   /* bìa cao đúng 1.5× bề rộng (tỉ lệ 2:3) + 64px cho thanh điều khiển dưới chân */
-  height: calc(var(--cover-w) * 1.5 + 96px);
+  height: calc(var(--cover-w) * 1.5 + 70px);
   perspective: 1400px;                      /* cho bìa bên cạnh nghiêng vào trong */
 }
 .hero .fan::after {            /* bóng đổ mềm dưới chân quạt — “kệ” có nền đất */
@@ -933,12 +933,17 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   .hero .hb-grid { gap: 24px; padding: 28px 20px 26px; min-height: 0; }
   .hero { --hb-w: 400px; }
   .hero .hb-col { gap: 0; }
-  .hero h1 { font-size: clamp(26px, 3.6vw, 38px); max-width: 20ch; }
-  .hero .spec { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 14px; }
-  .hero .spec dt { font-size: 9px; letter-spacing: .1em; }
-  .hero .spec dd { font-size: 12.5px; }
+  .hero h1 { font-size: clamp(28px, 4vw, 42px); max-width: 22ch; }
+  .hero .spec { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 18px; }
+  .hero .spec .c[data-slot="ch"] { grid-column: 1; }
+  .hero .spec .c[data-slot="au"] { grid-column: 2; }
+  .hero .spec .c[data-slot="cp"] { grid-column: 1; }
+  .hero .spec .c[data-slot="up"] { grid-column: 2; }
+  .hero .spec dt { font-size: 9.5px; letter-spacing: .1em; }
+  .hero .spec dd { font-size: 12.5px; min-height: 2.6em; }
   .hero .fan { --cover-w: clamp(140px, 19vw, 200px); }
   .hero .fanbar { gap: 8px; }
+  .hero .fanbar .arrow { width: 30px; height: 30px; }
 }
 @media (max-width: 639px) {
   .hero { min-height: max(420px, 52vh); }
