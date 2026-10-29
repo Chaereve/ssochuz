@@ -45,6 +45,7 @@ h1, h2, h3, h4 { margin: 0; font-family: var(--font-head); font-weight: 700;
 }
 .mkbar .ttl { font-family: var(--font-head); font-size: 14.5px; }
 .mkbar .hint { font-size: 11.5px; color: var(--dim); }
+.mkbar .hint b { color: var(--mut); font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; }
 .mkbar .wsw { display: flex; gap: 2px; padding: 2px; margin-left: auto;
   border: 1px solid var(--bd); border-radius: 8px; }
 .mkbar .wsw button {
@@ -55,7 +56,7 @@ h1, h2, h3, h4 { margin: 0; font-family: var(--font-head); font-weight: 700;
 
 .mkframe { display: flex; justify-content: center; padding: 20px 20px 40px; }
 .frame {
-  width: min(var(--fw), 100%);
+  width: min(var(--fw), 100%); container-type: inline-size;
   border: 1px solid var(--bd); border-radius: 14px;
   overflow: clip; background: var(--bg);
   box-shadow: 0 34px 70px -46px #000;
@@ -285,52 +286,60 @@ h1, h2, h3, h4 { margin: 0; font-family: var(--font-head); font-weight: 700;
 .foot .r { margin-left: auto; font-family: var(--font-mono); font-size: 10.5px; }
 
 /* ============================== CO GIÃN ================================= */
-/* Mockup có nút Desktop/Tablet/Mobile nên bề rộng khung do body[data-w] quyết
-   định (không dùng @container để khỏi phụ thuộc trình duyệt). Bản thật chỉ cần
-   đổi ba nhóm này thành media query 1100px / 900px / 620px. */
+/* Bố cục bám theo BỀ RỘNG CỦA KHUNG (.frame), không bám màn hình: nhờ vậy
+   khung 1180 / 834 / 390 của nút chuyển đều đúng, và khi khung xem trước bị
+   bóp (iframe hẹp) trang cũng tự co chứ không vỡ. Bản thật đổi ba nhóm này
+   thành media query 1100 / 900 / 620px. */
 
-/* ---------- TABLET · khung 834px ---------- */
-body[data-w="tablet"] .grid6 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-body[data-w="tablet"] .side { grid-template-columns: 1fr; gap: 30px; }
-body[data-w="tablet"] .railCol {
-  border-left: 0; padding-left: 0; border-top: 1px solid var(--bd); padding-top: 26px;
+/* ---------- khung ≤ 1100px: cột phụ xuống dưới, thành 2 cột ---------- */
+@container (max-width: 1100px) {
+  .side { grid-template-columns: 1fr; gap: 30px; }
+  .railCol {
+    border-left: 0; padding-left: 0; border-top: 1px solid var(--bd); padding-top: 26px;
+  }
+  .rail {
+    position: static; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 26px 34px; align-items: start;
+  }
+  .rblk + .rblk { margin-top: 0; padding-top: 0; border-top: 0; }
 }
-body[data-w="tablet"] .rail {
-  position: static; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 26px 34px; align-items: start;
-}
-body[data-w="tablet"] .rblk + .rblk { margin-top: 0; padding-top: 0; border-top: 0; }
-body[data-w="tablet"] .gridlib { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-body[data-w="tablet"] .rcard { grid-template-columns: 76px minmax(0, 1fr); gap: 14px; padding: 14px; }
-body[data-w="tablet"] .rcard .cv { width: 76px; }
 
-/* ---------- MOBILE · khung 390px ---------- */
-body[data-w="mobile"] .pg { padding: 0 18px; }
-body[data-w="mobile"] .hdr { padding: 0 18px; gap: 14px; }
-body[data-w="mobile"] .hdr nav { display: none; }
-body[data-w="mobile"] .hero { padding: 18px; flex-direction: column; align-items: flex-start; gap: 6px; }
-body[data-w="mobile"] .band { padding-top: 30px; }
-body[data-w="mobile"] .shead { flex-wrap: wrap; row-gap: 6px; margin-bottom: 14px; }
-body[data-w="mobile"] .shead h2 { font-size: 18.5px; }
-body[data-w="mobile"] .shead .cnt { display: none; }
-body[data-w="mobile"] .zoneHead { padding-top: 18px; }
-body[data-w="mobile"] .zoneHead .cnt,
-body[data-w="mobile"] .zoneHead .right { display: none; }
-body[data-w="mobile"] .resumeRow { grid-template-columns: 1fr; gap: 12px; }
-body[data-w="mobile"] .grid6 { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px 11px; }
-body[data-w="mobile"] .poster h3 { font-size: 12.5px; }
-body[data-w="mobile"] .side { grid-template-columns: 1fr; gap: 30px; }
-body[data-w="mobile"] .railCol {
-  border-left: 0; padding-left: 0; border-top: 1px solid var(--bd); padding-top: 26px;
+/* ---------- khung ≤ 900px: bảng tính ---------- */
+@container (max-width: 900px) {
+  .grid6 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .resumeRow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rcard { grid-template-columns: 76px minmax(0, 1fr); gap: 14px; padding: 14px; }
+  .rcard .cv { width: 76px; }
+  .gridlib { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .pg { padding: 0 22px; }
+  .hdr { padding: 0 22px; }
+  .hero { padding: 22px; }
 }
-body[data-w="mobile"] .rail { position: static; display: grid; grid-template-columns: 1fr; gap: 24px; }
-body[data-w="mobile"] .rblk + .rblk { margin-top: 0; padding-top: 0; border-top: 0; }
-body[data-w="mobile"] .gridlib { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 22px 12px; }
-body[data-w="mobile"] .libbar .dd b { display: none; }
-body[data-w="mobile"] .libcount { display: none; }
-body[data-w="mobile"] .pager { gap: 6px; margin-top: 26px; }
-body[data-w="mobile"] .pager button { min-width: 32px; height: 32px; padding: 0 8px; }
-body[data-w="mobile"] .pager #pnums button { min-width: 32px; }
-body[data-w="mobile"] .foot { margin-top: 40px; flex-wrap: wrap; gap: 8px 14px; }
-body[data-w="mobile"] .foot nav { display: none; }
-body[data-w="mobile"] .foot .r { margin-left: 0; }
+
+/* ---------- khung ≤ 620px: điện thoại, cùng thứ tự, chỉ đổi số cột ---------- */
+@container (max-width: 620px) {
+  .pg { padding: 0 18px; }
+  .hdr { padding: 0 18px; gap: 14px; }
+  .hdr nav { display: none; }
+  .hero { padding: 18px; flex-direction: column; align-items: flex-start; gap: 6px; }
+  .band { padding-top: 30px; }
+  .shead { flex-wrap: wrap; row-gap: 6px; margin-bottom: 14px; }
+  .shead h2 { font-size: 18.5px; }
+  .shead .cnt { display: none; }
+  .shead .rule { display: none; }
+  .zoneHead { padding-top: 18px; }
+  .zoneHead .cnt, .zoneHead .right { display: none; }
+  .resumeRow { grid-template-columns: 1fr; gap: 12px; }
+  .grid6 { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px 11px; }
+  .poster h3 { font-size: 12.5px; }
+  .rail { grid-template-columns: 1fr; gap: 24px; }
+  .gridlib { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 22px 12px; }
+  .libbar .dd b { display: none; }
+  .libcount { display: none; }
+  .pager { gap: 6px; margin-top: 26px; }
+  .pager button { min-width: 32px; height: 32px; padding: 0 8px; }
+  .pager #pnums button { min-width: 32px; }
+  .foot { margin-top: 40px; flex-wrap: wrap; gap: 8px 14px; }
+  .foot nav { display: none; }
+  .foot .r { margin-left: 0; }
+}

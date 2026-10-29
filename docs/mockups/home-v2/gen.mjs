@@ -334,7 +334,7 @@ const HTML = `<!doctype html>
 
 <div class="mkbar">
   <span class="ttl">ssochuz · nửa dưới trang chủ</span>
-  <span class="hint">phương án 2 “tạp chí” · bản 2 · bìa và tên thật (67 bộ)</span>
+  <span class="hint">phương án 2 “tạp chí” · bìa và tên thật (67 bộ) · <b id="fwv">khung</b></span>
   <div class="wsw">
     <button data-w="desktop" class="on">Desktop</button>
     <button data-w="tablet">Tablet</button>
@@ -483,12 +483,16 @@ const HTML = `<!doctype html>
     });
   });
 
-  /* mở bằng điện thoại thì mặc định vào khung Mobile cho khỏi vỡ */
-  if (window.innerWidth < 760) {
-    document.body.setAttribute('data-w', 'mobile');
-    Array.prototype.forEach.call(document.querySelectorAll('.mkbar .wsw button'),
-      function (b) { b.classList.toggle('on', b.getAttribute('data-w') === 'mobile'); });
+  var frame = document.querySelector('.frame');
+  var fwv = document.getElementById('fwv');
+  function showW() {
+    if (!frame || !fwv) return;
+    var w = Math.round(frame.getBoundingClientRect().width);
+    fwv.textContent = w > 120 ? 'khung ' + w + 'px' : 'khung —';
   }
+  if (window.ResizeObserver) new window.ResizeObserver(showW).observe(frame);
+  else window.addEventListener('resize', showW);
+  showW();
 
   paint();
 })();
