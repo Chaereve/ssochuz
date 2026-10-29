@@ -1809,16 +1809,16 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     }, 2500);
   }
   /* nút "lên đầu" (vạch tiến độ cuộn ở đỉnh trang đã bỏ — xem cz.css)
-     Chỉ còn hai việc theo cuộn: hiện nút lên đầu và bật lớp .scrolled cho thanh
-     trên. Không còn ghi transform mỗi khung hình, nên handler nhẹ đi hẳn. */
+     Chỉ còn MỘT việc theo cuộn: bật/tắt nút lên đầu, và chỉ ghi khi trạng thái
+     thật sự đổi. Lớp .scrolled trên <body> đã bỏ: không luật CSS nào dùng nó,
+     nên nó chỉ là một lần ghi style vô ích ở mỗi khung hình cuộn. */
   function scrollUI() {
-    var top = d.querySelector('#toTop'), tick = false;
+    var top = d.querySelector('#toTop'), tick = false, shown = null;
     function run() {
       if (tick) return; tick = true;
       requestAnimationFrame(function () {
-        var y = w.scrollY || 0;
-        if (top) top.classList.toggle('on', y > 700);
-        d.body.classList.toggle('scrolled', y > 8);
+        var y = w.scrollY || 0, on = y > 700;
+        if (top && on !== shown) { top.classList.toggle('on', on); shown = on; }
         tick = false;
       });
     }
@@ -2164,16 +2164,25 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
        aria-expanded/aria-label của nút menu; nền khoá cuộn khi sidebar mở để
        bánh xe không cuộn trang phía sau. */
     burger.setAttribute('aria-controls', 'czMnav');
+    var lastMenuOn = null;
     function paintMenu() {
       var on = mnav.classList.contains('on');
       burger.setAttribute('aria-expanded', on ? 'true' : 'false');
       burger.setAttribute('aria-label', on ? 'Đóng menu' : 'Mở menu');
       if (mscrim) mscrim.classList.toggle('on', on);
       d.body.classList.toggle('nav-open', on);
+      /* Chỉ phát khi trạng thái ĐỔI: hero nghe sự kiện này để tạm dừng tự chuyển
+         (chuyển động banner chạy sau lớp phủ chỉ tốn khung hình). */
+      if (lastMenuOn !== null && lastMenuOn !== on) {
+        try { d.dispatchEvent(new w.CustomEvent('cz:nav', { detail: { open: on } })); } catch (err) {}
+      }
+      lastMenuOn = on;
     }
     function openMenu() {
       mnav.classList.add('slid', 'on');
       paintMenu();
+      /* tô sáng mục đang đọc đúng lúc panel mở (thay cho listener scroll cũ) */
+      if (host._navRefresh) host._navRefresh();
       var first = mnav.querySelector('a, button');
       if (first && first.focus && !reduce) { try { first.focus({ preventScroll: true }); } catch (err) {} }
     }
@@ -2342,31 +2351,41 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     var ids = links.map(function (a) { return (a.getAttribute('href') || '').split('#')[1] || ''; });
     var have = ids.filter(function (id) { return !!(id && d.getElementById(id)); }).length;
     /* Đánh dấu mục đang xem trong sidebar: .on + aria-current trên chính liên
-       kết. Không còn gạch chân trượt — gạch đó chỉ có nghĩa khi các mục nằm
-       cạnh nhau trên một hàng ngang. */
+       kết, và CHỈ ghi khi trạng thái đổi — bản cũ ghi lại class + attribute cho
+       cả bảy mục ở mỗi khung hình cuộn, đủ để trình duyệt tính lại style liên tục
+       trong lúc người dùng đang lướt. */
     function mark(el) {
       links.forEach(function (a) {
         var on = a === el;
-        a.classList.toggle('on', on);
-        if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+        if (a.classList.contains('on') !== on) a.classList.toggle('on', on);
+        var cur = a.getAttribute('aria-current') === 'page';
+        if (on && !cur) a.setAttribute('aria-current', 'page');
+        else if (!on && cur) a.removeAttribute('aria-current');
       });
     }
     var here = links.filter(function (a) { return a.classList.contains('on'); })[0];
-    /* Không có mục nào là “trang hiện tại” thì để trống — trước đây rơi về mục
-       đầu tiên và làm “My Space” trông như đang được xem ở mọi trang khác. */
-    if (have < 2) { mark(here || null); return; }
-    var tick = false;
-    function spy() {
-      tick = false;
-      var y = (w.scrollY || 0) + 150, cur = null;
-      ids.forEach(function (id, i) { var el = d.getElementById(id); if (el && el.offsetTop <= y) cur = i; });
+    mark(here || null);
+    if (have < 2) return;
+    /* Trước đây có một listener scroll chạy "spy" mỗi khung hình để tô sáng mục
+       theo khúc đang đọc. Từ khi điều hướng chuyển vào sidebar, danh sách này
+       GẦN NHƯ LUÔN ẨN — đo offsetTop của từng khúc trên mỗi khung hình cuộn chỉ
+       để tô sáng một thứ không ai thấy. Nay chỉ tính MỘT lần, đúng lúc mở panel
+       (mountHeader gọi host._navRefresh trong openMenu). */
+    function refresh() {
+      /* getBoundingClientRect thay cho offsetTop: offsetTop tính theo offsetParent,
+         nên khi khối nằm trong một lớp có position thì nó trả về số nhỏ và mục
+         “Lịch ra chương” bị tô sáng ngay khi vừa vào trang chủ. Rect là toạ độ
+         thật trên màn hình nên đúng với mọi bố cục — và giờ chỉ chạy một lần mỗi
+         lần mở panel nên chi phí đọc layout này không đáng kể. */
+      var cur = null;
+      ids.forEach(function (id, i) {
+        var el = d.getElementById(id);
+        if (el && el.getBoundingClientRect().top <= 150) cur = i;
+      });
       mark(cur == null ? here : links[cur]);
     }
-    function run() { if (tick) return; tick = true; requestAnimationFrame(spy); }
-    w.addEventListener('scroll', run, { passive: true });
-    w.addEventListener('resize', run);
+    host._navRefresh = refresh;
     d.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('#czNav a'); if (a) mark(a); });
-    run();
   }
   /* Chân trang nền tối: logo (đồng bộ đầu trang) + câu cảm ơn + 3 liên kết,
      dồn cột trái. Nền tối CỐ ĐỊNH ở cả hai tông sáng/tối để luôn giống mẫu. */

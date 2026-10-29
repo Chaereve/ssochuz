@@ -418,7 +418,12 @@
      không nằm trên khối + focus bàn phím không ở trong khối + tab đang hiện. */
   HeroBanner.prototype.restart = function () {
     if (!this.autoPlay) return;
-    if (this.userPaused || this.hovered || this.focused || w.document.hidden) { this.stop(); return; }
+    /* Sidebar đang mở (body.nav-open) ⇒ dừng tự chuyển. Banner nằm sau lớp phủ,
+       người dùng không xem nó nữa, mà mỗi lần đổi truyện lại kéo theo cả loạt
+       chuyển động (nền lắng, chữ nhích, quạt xếp lại) đúng lúc họ đang tương tác
+       với menu — đó là phần "lag" còn lại khi bấm nút menu. */
+    if (this.userPaused || this.hovered || this.focused || w.document.hidden ||
+      (w.document.body && w.document.body.classList.contains('nav-open'))) { this.stop(); return; }
     this.start();
   };
 
@@ -494,6 +499,9 @@
     });
     this._onVis = function () { if (w.document.hidden) self.stop(); else self.restart(); };
     w.document.addEventListener('visibilitychange', this._onVis);
+    /* cz-app phát 'cz:nav' mỗi lần sidebar mở/đóng (xem paintMenu) — banner chỉ
+       cần biết để tạm dừng, không phải dò DOM. */
+    this.on(w.document, 'cz:nav', function () { self.restart(); });
 
     /* vuốt ngang trên điện thoại: chỉ tính khi quãng ngang > 44px và lớn hơn dọc */
     var x0 = null, y0 = null;

@@ -215,11 +215,11 @@ body, .hdr, .hero, .facts, .ftr, .fbox, .sechead, .authcard {
   font-weight: 700; font-optical-sizing: auto; color: var(--txt); letter-spacing: -.022em; line-height: 1; }
 .logo .mark { display: block; flex: 0 0 auto; height: 1em; width: auto;
   transform-origin: 0 60%;
-  transition: opacity .2s var(--ease-soft), transform .32s var(--ease-spring); }
+  transition: opacity .18s var(--ease-soft), transform .2s var(--ease-out); }
 /* trỏ vào: nhạt mực một nhịp + phóng 2% — đủ để thấy "có phản hồi" mà không
    làm khoá chữ nhảy khỏi đường chân chữ của thanh. Bấm thì lún lại. */
-.logo:hover .mark { opacity: .84; transform: scale(1.02); }
-.logo:active .mark { transform: scale(.985); transition-duration: 90ms; }
+.logo:hover .mark { opacity: .86; transform: scale(1.025); }
+.logo:active .mark { transform: scale(.985); transition-duration: 70ms; }
 .logo i { font-style: normal; margin-left: .42em; font-size: 10.5px; font-weight: 800;
   letter-spacing: .14em; text-transform: uppercase; color: var(--mut); }
 .logo .dot { width: 7px; height: 7px; margin-right: 9px; flex: 0 0 auto; align-self: center;
@@ -242,7 +242,12 @@ body, .hdr, .hero, .facts, .ftr, .fbox, .sechead, .authcard {
   padding: 12px 10px 16px; border-right: 1px solid var(--bd); background: var(--bg2);
   box-shadow: 34px 0 60px -40px #000;
   overflow-y: auto; overscroll-behavior: contain;
-  transform: translateX(-102%); visibility: hidden;
+  /* translate3d thay cho translateX: phần tử được đưa lên compositor NGAY, nên
+     bóng đổ 60px của panel chỉ nướng một lần thay vì vẽ lại mỗi khung hình —
+     đây là nguồn giật thứ hai khi trượt panel. backface-visibility tắt luôn
+     bước xử lý mặt sau. */
+  transform: translate3d(-102%, 0, 0); backface-visibility: hidden;
+  visibility: hidden;
   /* đóng: 300ms đi thẳng (người dùng đã muốn nó biến đi); mở: 420ms giảm tốc
      để panel "trôi" vào. visibility đi sau transform để panel không biến mất
      giữa lúc đang trượt. */
@@ -250,21 +255,18 @@ body, .hdr, .hero, .facts, .ftr, .fbox, .sechead, .authcard {
 /* .slid do JS thêm (giữ từ bản menu cũ), .on là trạng thái mở — nhận cả hai để
    không bao giờ kẹt ở trạng thái ẩn nếu một nhánh JS quên lớp kia. */
 .mnav.slid, .mnav.on { display: flex; }
-.mnav.on { transform: none; visibility: visible;
-  transition: transform .42s var(--ease-out); }
-/* nội dung trong panel nhích lên so le 28ms một nhịp — panel trượt vào mà các
-   mục cũng "đến" thì chuyển động có hai lớp thay vì một khối trượt cứng */
-.mnav.on .mnav-hd, .mnav.on nav > a, .mnav.on > a, .mnav.on #czAuthMWrap > a {
-  animation: hdrMenuRow .34s var(--ease-out) both; }
-.mnav.on .mnav-hd { animation-delay: 60ms; }
-.mnav.on nav > a:nth-child(1) { animation-delay: 90ms; }
-.mnav.on nav > a:nth-child(2) { animation-delay: 118ms; }
-.mnav.on nav > a:nth-child(3) { animation-delay: 146ms; }
-.mnav.on nav > a:nth-child(4) { animation-delay: 174ms; }
-.mnav.on nav > a:nth-child(5) { animation-delay: 202ms; }
-.mnav.on nav > a:nth-child(6) { animation-delay: 230ms; }
-.mnav.on nav > a:nth-child(7) { animation-delay: 258ms; }
-.mnav.on > a, .mnav.on #czAuthMWrap > a { animation-delay: 286ms; }
+.mnav.on { transform: translate3d(0, 0, 0); visibility: visible;
+  transition: transform .4s var(--ease-out); }
+/* Nội dung panel mờ dần CÙNG panel (một lớp duy nhất) thay vì so le từng mục.
+   Bản trước cho 10 phần tử animate riêng: mỗi phần tử một layer, cộng với panel
+   đang trượt ⇒ máy yếu tụt khung ngay lúc mở. Một lớp mờ cho cảm giác "panel đến
+   cùng nội dung" mà gần như không tốn gì. */
+.mnav.on > nav, .mnav.on > a, .mnav.on > #czAuthMWrap { animation: hdrMenuRow .3s var(--ease-out) both; }
+/* Mở panel thì thanh cuộn biến mất ⇒ cả trang rộng thêm ~15px và nội dung nhảy
+   ngang đúng lúc panel đang trượt (rất dễ đọc thành "lag"). Giữ chỗ sẵn cho
+   thanh cuộn ở mọi trang là cách rẻ nhất để hết nhảy, và cũng bớt một nguồn dịch
+   bố cục giữa trang ngắn với trang dài. */
+html { scrollbar-gutter: stable; }
 body.nav-open { overflow: hidden; }
 
 /* đầu panel: thương hiệu + nút đóng, cùng chiều cao với thanh trên để mắt
@@ -274,18 +276,18 @@ body.nav-open { overflow: hidden; }
 .mnav-x { margin-left: auto; display: grid; place-items: center; width: 34px; height: 34px;
   border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--mut); cursor: pointer;
   transition: color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease); }
-.mnav-x { transition: color .18s var(--ease-soft), background-color .18s var(--ease-soft),
-    transform .3s var(--ease-spring); }
+.mnav-x { transition: color .15s var(--ease-soft), background-color .15s var(--ease-soft),
+    transform .2s var(--ease-out); }
 .mnav-x:hover { color: var(--txt); background: var(--surf2); }
-.mnav-x:active { transform: rotate(90deg) scale(.92); transition-duration: .18s, .18s, .2s; }
+.mnav-x:active { transform: rotate(90deg) scale(.92); transition-duration: .12s; }
 .mnav-x .i { width: 17px; height: 17px; }
 
 /* mục điều hướng: icon + nhãn chữ, mục đang xem tô mực + gạch nhấn bên trái */
 .mnav a { position: relative; display: flex; align-items: center; gap: 11px; min-height: 42px; padding: 0 10px;
   border-radius: 9px; color: var(--mut); font-size: 14px; font-weight: 550;
-  transition: color .18s var(--ease-soft), background-color .18s var(--ease-soft),
-    transform .3s var(--ease-spring); }
-.mnav a:active { transform: scale(.985); transition-duration: .18s, .18s, 90ms; }
+  transition: color .15s var(--ease-soft), background-color .15s var(--ease-soft),
+    transform .18s var(--ease-out); }
+.mnav a:active { transform: scale(.985); transition-duration: 90ms; }
 .mnav a:hover { color: var(--txt); background: var(--surf2); }
 .mnav a.on { color: var(--txt); font-weight: 650; background: var(--surf); }
 .mnav a .i { width: 17px; height: 17px; flex: none; color: var(--dim);
@@ -299,11 +301,15 @@ body.nav-open { overflow: hidden; }
 .mnav nav { display: flex; flex-direction: column; gap: 2px; }
 .mnav #czAuthMWrap { display: contents; }
 
-/* scrim: lớp tối phủ nội dung, bấm vào là đóng */
-.mscrim { position: fixed; inset: 0; z-index: 70; background: rgba(10, 8, 6, .62);
-  backdrop-filter: blur(2px); opacity: 0; pointer-events: none;
+/* scrim: lớp tối phủ nội dung, bấm vào là đóng.
+   KHÔNG backdrop-filter (luật số 3 ở đầu tệp): đây là lớp phủ TOÀN màn hình, mờ
+   dần trong lúc panel đang trượt ⇒ mỗi khung hình phải lọc lại cả vùng phía sau.
+   Đó chính là chỗ giật khi mở menu. Nền rgba đậm thêm .06 làm đúng việc tách nội
+   dung nổi mà chỉ tốn một lần vẽ. */
+.mscrim { position: fixed; inset: 0; z-index: 70; background: rgba(10, 8, 6, .68);
+  opacity: 0; pointer-events: none;
   transition: opacity .26s var(--ease-soft); }
-.mscrim.on { opacity: 1; pointer-events: auto; transition: opacity .38s var(--ease-out); }
+.mscrim.on { opacity: 1; pointer-events: auto; transition: opacity .34s var(--ease-out); }
 
 /* cụm tiện ích: cùng một cỡ, cùng một kiểu viền; trỏ vào chỉ đổi màu, không nhấc */
 .hbtn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: var(--ctl);
@@ -311,12 +317,12 @@ body.nav-open { overflow: hidden; }
   font-size: 13px; font-weight: 600; letter-spacing: .004em; background: var(--surf); white-space: nowrap;
   /* màu/viền phai nhanh (.18s) để trỏ qua lại không bị "đuổi hình"; còn transform
      dùng nhịp lò xo (.3s) nên cú lún khi bấm trả về êm chứ không giật. */
-  transition: color .18s var(--ease-soft), border-color .18s var(--ease-soft),
-    background-color .18s var(--ease-soft), box-shadow .18s var(--ease-soft),
-    transform .3s var(--ease-spring); }
+  transition: color .15s var(--ease-soft), border-color .15s var(--ease-soft),
+    background-color .15s var(--ease-soft), box-shadow .15s var(--ease-soft),
+    transform .18s var(--ease-out); }
 .hbtn:hover { color: var(--txt); border-color: var(--bd2); background: var(--surf2); }
 /* bấm: lún 4% + viền sáng lên một nhịp — phản hồi tay, không đổi bố cục */
-.hbtn:active { background: var(--surf3); transform: scale(.96); transition-duration: .12s, .12s, .12s, .12s, 90ms; }
+.hbtn:active { background: var(--surf3); transform: scale(.96); transition-duration: 90ms; }
 /* vòng tiêu điểm dạng quầng (không dùng outline) vì thanh đầu trang có nhiều
    nút sát nhau: quầng không chen vào khoảng cách 8px giữa hai nút */
 .hbtn:focus-visible { outline: 0; box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--ring); }
@@ -2365,7 +2371,7 @@ body.rd-fs .rdbar { position: fixed; left:0; right:0; }
   border-radius: 99px; background: var(--bad); color: #fff; font-size: 10.5px; font-weight: 800; line-height: 17px;
   text-align: center; font-variant-numeric: tabular-nums; pointer-events: none;
   /* khi có số mới phần tử đi từ display:none sang hiện ⇒ animation chạy lại */
-  animation: ndotIn .42s var(--ease-spring) both; }
+  animation: ndotIn .32s var(--ease-out) both; }
 @keyframes ndotIn { from { opacity: 0; transform: scale(.55); } to { opacity: 1; transform: none; } }
 .hnotif .hbtn.hasnew { color: var(--acc); border-color: color-mix(in srgb, var(--acc) 45%, transparent); }
 .nmenu { position: absolute; right: 0; top: calc(100% + 8px); width: 320px; max-height: min(70vh, 420px);
@@ -3500,11 +3506,11 @@ body.rd-focus .rdcmts { display: none; }
   background: var(--bg2); border-color: var(--bd); color: var(--dim); }
 .hdr #czJump:hover { color: var(--mut); background: var(--surf2); border-color: var(--bd2); }
 .hdr #czJump .i { width: 17px; height: 17px; flex: none; color: var(--mut);
-  transition: color .18s var(--ease-soft), transform .3s var(--ease-spring); }
+  transition: color .15s var(--ease-soft), transform .18s var(--ease-out); }
 /* rê vào ô tìm kiếm: kính lúp nhích lên 1px — chi tiết nhỏ báo "ô này bấm được"
    mà không phải tô đậm cả ô */
 .hdr #czJump:hover .i { color: var(--txt); transform: translateY(-1px); }
-.hdr #czJump:active .i { transform: scale(.92); transition-duration: .1s; }
+.hdr #czJump:active .i { transform: scale(.92); transition-duration: 80ms; }
 .hdr #czJump .searchbtn-txt { display: block; flex: 1 1 auto; min-width: 0; text-align: left;
   font-size: 13px; font-weight: 500; letter-spacing: 0; color: inherit;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
