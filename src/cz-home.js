@@ -53,10 +53,13 @@
     if (n.updated) meta.push({ label: CZ.timeAgo(n.updated), title: 'Cập nhật gần nhất' });
     /* “KỆ NHÃN” của hero: 4 ô, ô nào không có dữ liệu thì KHÔNG dựng.
        Couple ẩn ở điện thoại (hideSm) — đó là thông tin phụ nhất trong bốn ô. */
-    var facts = [{ label: 'Chương', value: tot > 0 ? String(tot) : '—', num: true }];
-    if (n.author) facts.push({ label: 'Tác giả', value: n.author, soft: true });
-    if (n.couple) facts.push({ label: 'Couple', value: n.couple, soft: true, hideSm: true });
-    if (n.updated) facts.push({ label: 'Cập nhật', value: CZ.timeAgo(n.updated), num: true });
+    /* `slot` ghim ô vào ĐÚNG một cột của lưới (ch/au/cp/up): số chương dài
+       ngắn khác nhau giữa các truyện nên nếu để lưới tự co thì mỗi lần đổi
+       truyện cả hàng nhãn lại nhảy ngang. Ghim cột ⇒ nhãn đứng im. */
+    var facts = [{ label: 'Chương', value: tot > 0 ? String(tot) : '—', num: true, slot: 'ch' }];
+    if (n.author) facts.push({ label: 'Tác giả', value: n.author, soft: true, slot: 'au' });
+    if (n.couple) facts.push({ label: 'Couple', value: n.couple, soft: true, hideSm: true, slot: 'cp' });
+    if (n.updated) facts.push({ label: 'Cập nhật', value: CZ.timeAgo(n.updated), num: true, slot: 'up' });
 
     var primary = n.canRead
       ? (n.locked

@@ -22,6 +22,7 @@ Mặc định server TẮT Worker (window.CZ_API='') để trang chạy hoàn to
 liệu tĩnh trong /data — đúng tình huống khi bạn chưa nối KV.
 """
 import argparse
+import hashlib
 import json
 import os
 import posixpath
@@ -275,6 +276,21 @@ class Handler(SimpleHTTPRequestHandler):
         if not head_only:
             self.wfile.write(body)
 
+    #: tệp quyết định “bản đang chạy” — đổi một cái là trang tự tải lại
+    BUILD_FILES = ('index.html', 'cz.css', 'cz-hero.js', 'cz-home.js',
+                   'cz-app.js', 'sw.js')
+
+    def build_stamp(self):
+        """Dấu vân tay của bản đang phục vụ (mtime + kích thước các tệp chính)."""
+        parts = []
+        for name in self.BUILD_FILES:
+            try:
+                st = os.stat(os.path.join(ROOT, name))
+                parts.append('%s:%d:%d' % (name, int(st.st_mtime), st.st_size))
+            except OSError:
+                parts.append(name + ':0:0')
+        return hashlib.md5('|'.join(parts).encode()).hexdigest()[:8]
+
     def inject(self, body):
         """Bơm cấu hình chạy-thử vào HTML."""
         try:
@@ -283,18 +299,53 @@ class Handler(SimpleHTTPRequestHandler):
             return body
         api = self.api if self.api is not None else ''
         cfg = json.dumps(api)
-        patch = ('<script>/* ssochuz dev server */'
-                 'window.CZ_API=%s;window.CZ_DEV=true;</script>' % cfg)
-        if '/cz-config.js' in html:
-            html = html.replace('<script src="/cz-config.js"></script>', patch, 1)
-        else:
+        # Bản xem thử KHÔNG được phục vụ bởi Service Worker đã cài từ lần trước:
+        # SW giữ HTML/CSS/JS cũ trong kho riêng nên F5 vẫn ra bản cũ (“không khác
+        # gì”). Đoạn script dưới gỡ đăng ký + xoá kho một lần rồi tự tải lại, và
+        # hỏi /__czbuild mỗi 1,2 s để tự tải lại khi có bản mới.
+        stamp = self.build_stamp()
+        # Ghi chú (Python, không lọt vào JS):
+        # · Chặn ĐĂNG KÝ service worker ngay từ đầu — cz-app.js đăng ký SW sau
+        #   khi trang tải xong; không chặn thì vừa gỡ đã cài lại, bản cũ quay về.
+        # · Gỡ đăng ký cũ + xoá kho cache một lần rồi tự tải lại (cờ sessionStorage
+        #   để không lặp vô hạn).
+        # · Hỏi /__czbuild mỗi 1,2 s: sửa tệp là trang tự tải lại bản mới.
+        patch = (
+            '<script>/* ssochuz dev server */'
+            'window.CZ_API=%s;window.CZ_DEV=true;window.__CZB=%s;'
+            'try{if(navigator.serviceWorker){'
+            'navigator.serviceWorker.register=function(){'
+            'return Promise.resolve({waiting:null,installing:null,'
+            'addEventListener:function(){}})}}}catch(e){}'
+            'if(navigator.serviceWorker&&navigator.serviceWorker.getRegistrations){'
+            'navigator.serviceWorker.getRegistrations().then(function(rs){'
+            'if(!rs.length)return;'
+            'rs.forEach(function(r){try{r.unregister()}catch(e){}});'
+            'var done=function(){if(!sessionStorage.getItem("czdev-fresh")){'
+            'sessionStorage.setItem("czdev-fresh","1");location.reload()}};'
+            'if(window.caches&&caches.keys){caches.keys().then(function(ks){'
+            'Promise.all(ks.map(function(k){return caches.delete(k)}))'
+            '}).then(done,done)}else done()'
+            '});}'
+            'window.__czPoll=function(){fetch("/__czbuild",{cache:"no-store"})'
+            '.then(function(r){return r.text()}).then(function(v){'
+            'if(v!==window.__CZB){location.reload()}else{setTimeout(window.__czPoll,1200)}})'
+            '.catch(function(){setTimeout(window.__czPoll,3000)})};'
+            'setTimeout(window.__czPoll,1200);</script>' % (cfg, json.dumps(stamp)))
+        # thẻ cz-config.js trong bản build LUÔN có ?v=... nên so khớp chính xác
+        # chuỗi không có query là trượt ⇒ script cấu hình (và cả script tự tải
+        # lại của dev server) biến mất êm. Dùng regex nuốt luôn phần ?v=.
+        html, hit = re.subn(r'<script src="/cz-config\.js[^"]*"></script>',
+                            lambda m: patch, html, count=1)
+        if not hit:
             html = html.replace('</head>', patch + '</head>', 1)
         # hiện nhãn nhỏ cho biết đang chạy bản xem thử
         html = html.replace('</body>',
                             '<div style="position:fixed;left:10px;bottom:10px;z-index:99;'
                             'font:11px/1.4 system-ui;padding:5px 9px;border-radius:99px;'
                             'background:rgba(20,16,24,.82);color:#ffb3c7;border:1px solid rgba(255,255,255,.14)">'
-                            'xem thử trên máy · dữ liệu %s</div></body>' % ('Worker (KV)' if api else 'tĩnh /data'))
+                            'xem thử trên máy · dữ liệu %s · bản %s</div></body>'
+                            % ('Worker (KV)' if api else 'tĩnh /data', stamp))
         return html.encode('utf-8')
 
     # ---------- HTTP ----------
@@ -304,8 +355,20 @@ class Handler(SimpleHTTPRequestHandler):
     def do_HEAD(self):
         self.serve(True)
 
+    def send_build_stamp(self, head_only=False):
+        body = self.build_stamp().encode('utf-8')
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/plain; charset=utf-8')
+        self.send_header('Content-Length', str(len(body)))
+        self.send_header('Cache-Control', 'no-store')
+        self.end_headers()
+        if not head_only:
+            self.wfile.write(body)
+
     def serve(self, head_only):
         split = urllib.parse.urlsplit(self.path)
+        if split.path == '/__czbuild':
+            return self.send_build_stamp(head_only)
         res = self.route(split.path, split.query)
         kind = res[0]
         if kind == 'file':

@@ -444,3 +444,54 @@ chỉ số là `tabular-nums`. Kệ nhãn ở tablet cũng **giữ 4 cột** (tr
 `t_hero` “Hero banner đạt hết” · `t_home` · `t_adult` N12 · `t_lock_ui` · `t_pwa` ·
 `tests/run.js` 1 bài lỗi (`t_admin_editor_lazy.js`, hỏng từ trước) · `audit:a11y` 25 màn
 0 lỗi axe · `check_src` khớp · `cz.css` 194,9 kB (91 % trần 215 kB).
+
+---
+
+## 17. Vòng 3 — cột chữ bên cạnh quạt bìa (2026-10-29)
+
+Yêu cầu: “chỉnh mấy cái kế bên chỗ sạp báo bìa” — tức **cột chữ nằm cạnh quạt bìa**
+(không phải các mục bên dưới hero). Ba việc: hàng nhãn phải đứng yên, hệ chữ phải
+cùng một thang, và điện thoại không được để ô trống lẻ loi.
+
+### 1. Hàng nhãn KHÔNG còn nhảy ngang khi đổi truyện
+
+`<dl class="spec">` trước đây dùng `grid-template-columns: repeat(4, minmax(0, auto))`.
+Cột `auto` co theo nội dung ⇒ mỗi lần đổi truyện, bề rộng cột đổi theo
+(`42` → `1.2K`, `SIIX` → `Takling Kaemjai`) nên **cả hàng nhãn dịch ngang**, và truyện
+thiếu COUPLE thì ô CẬP NHẬT tụt vào cột 3.
+
+Nay:
+
+- lưới `repeat(4, minmax(0, 1fr))` — 4 cột chia đều, khe 18px;
+- mỗi ô mang `data-slot` (`ch` / `au` / `cp` / `up`) do `cz-home.js` gán, CSS ghim
+  `grid-column` tương ứng ⇒ thiếu dữ liệu thì **để trống ô**, không kéo ô sau lên lấp;
+- component vẫn dựng được `facts` **không có** `slot` (rơi về lưới tự động) nên chỗ
+  khác dùng `CZ.heroBanner` không phải sửa theo.
+
+### 2. Một thang chữ cho mọi nhãn
+
+| Chỗ | Trước | Sau |
+| --- | --- | --- |
+| Con dấu trạng thái (`.hb-st`) | mono 10px, giãn **.18em** | mono 10px, giãn **.14em** (cùng nhịp với `dt`, `count`, `fancap`) |
+| Nhãn 18+ (`.hb-b18`) | sans **9.5px**, đậm 800, giãn .06em | mono **10px**, đậm 700, giãn .08em |
+| Thanh tiến trình đọc (`.prog`) | 12.5px | **13px** (cùng thang với `dd` 13.5) |
+
+### 3. Điện thoại: ô CẬP NHẬT trải hết dòng
+
+Ở 2 cột, `CHƯƠNG / TÁC GIẢ` chiếm dòng 1, `COUPLE` ẩn, nên `CẬP NHẬT` nằm lẻ ở cột 1
+dòng 2 và chừa một ô trống bên phải. Nay `data-slot="up"` chiếm `grid-column: 1 / -1`
+⇒ kệ nhãn thành 2 tầng gọn: hai ô trên, một ô rộng dưới.
+
+### Tệp đã sửa
+
+| Tệp | Vì sao |
+| --- | --- |
+| `src/cz-home.js` | `facts` mang thêm `slot: ch/au/cp/up` |
+| `src/cz-hero.js` | `factsHTML()` ghi `data-slot`; tài liệu hoá hợp đồng `facts` |
+| `src/cz.css` | §5.3 lưới 4 cột chia đều + ghim cột; `.hb-st` .14em; `.hb-b18` mono 10px; `.prog` 13px; mobile `up` trải dòng |
+| `sw.js` + 76 HTML | `?v=20261029hero6` (cz.css, cz-hero, cz-home, PRECACHE) |
+
+### Kiểm
+
+`t_hero` “Hero banner đạt hết” · `t_home` · `t_pwa` · `check_src` khớp ·
+`cz.css` 195,2 kB (91 % trần 215 kB) · `cz-hero.js` 13,1 kB (82 % trần 16 kB).

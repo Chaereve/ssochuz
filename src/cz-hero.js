@@ -102,9 +102,14 @@
   function factsHTML(item) {
     var f = factsOf(item).filter(function (x) { return x && x.label && x.value != null && x.value !== ''; });
     if (!f.length) return '';
+    /* `slot` (ch/au/cp/up) được CSS ghim vào một cột cố định: hàng nhãn không
+       nhảy ngang khi đổi truyện (số chương, tên tác giả dài ngắn khác nhau).
+       Không có `slot` thì thẻ rơi về lưới tự động — component vẫn dựng được
+       `facts` từ nơi khác mà không cần biết chuyện này. */
     return '<dl class="spec">' + f.map(function (x) {
       var cls = x.num ? 'num' : (x.soft ? 'soft' : '');
-      return '<div class="c' + (x.hideSm ? ' sm-hide' : '') + '">' +
+      return '<div class="c' + (x.hideSm ? ' sm-hide' : '') + '"' +
+        (x.slot ? ' data-slot="' + esc(x.slot) + '"' : '') + '>' +
         '<dt>' + esc(x.label) + '</dt>' +
         '<dd' + (cls ? ' class="' + cls + '"' : '') + '>' + esc(String(x.value)) + '</dd></div>';
     }).join('') + '</dl>';
