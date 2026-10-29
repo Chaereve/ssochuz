@@ -756,7 +756,11 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   visibility: hidden; opacity: 0;
   transition: opacity .34s var(--ease-soft), visibility 0s linear .34s; }
 .hero .slide.on { visibility: visible; opacity: 1; transition: opacity .34s var(--ease-soft); }
-.hero .info { display: flex; flex-direction: column; align-items: flex-start;
+/* Tên lớp có tiền tố hb- là CỐ Ý: `.info` là lớp DÙNG CHUNG của trang truyện
+   (`.info { border-top: 1px solid var(--bd) }`), nên đặt trùng tên thì hero bị
+   “thừa hưởng” một đường kẻ ngang ngay trên nhãn trạng thái. Đây chính là sợi
+   gạch người dùng thấy. Đổi tên là hết, không cần vá bằng border-top: 0. */
+.hero .hb-info { display: flex; flex-direction: column; align-items: flex-start;
   min-width: 0; max-width: var(--hb-w); }   /* nhịp dọc do margin từng tầng, không do gap */
 
 /* nhãn nhỏ phía trên tiêu đề (kiểu manchette): gạch ngang bằng ::before nên
@@ -804,11 +808,11 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 
 .hero .spec { display: grid; gap: 0 16px;
   grid-template-columns: minmax(0, .62fr) minmax(0, 1fr) minmax(0, 1.24fr) minmax(0, .86fr);
-  /* KHÔNG kẻ đường ngang phía trên kệ nhãn: trên nền có ảnh bìa mờ, một sợi
-     1px trắng nằm lơ lửng ngay dưới tên truyện đọc ra như vết gạch thừa (và
-     khi cột chữ dồn đáy thì nó lại càng tách khỏi cụm chữ). Tách tầng bằng
-     KHOẢNG THỞ, không bằng đường kẻ. */
-  width: 100%; margin: 24px 0 0; }
+  /* Đường kẻ DUY NHẤT trong cột chữ: mép trên của kệ nhãn, nằm ngay dưới tên
+     truyện. Nó tách “tên truyện” khỏi “dữ liệu” và ăn nhịp với mép kệ bên
+     quạt. (Sợi gạch người dùng thấy TRÊN nhãn trạng thái là border-top của
+     lớp `.info` dùng chung — xem chú thích ở `.hero .hb-info`.) */
+  width: 100%; margin: 20px 0 0; padding: 14px 0 0; border-top: 1px solid var(--hb-line); }
 .hero .spec .c { min-width: 0; }
 /* Cột CỐ ĐỊNH + ghim ô theo `data-slot`: trước đây lưới dùng cột `auto` nên bề
    rộng cột co theo nội dung ⇒ đổi truyện là cả hàng nhãn nhảy ngang (CHƯƠNG
@@ -872,17 +876,8 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .hero .arrow { display: grid; place-items: center; border: 0; border-radius: 50%;
   color: var(--hb-dim); background: transparent; cursor: pointer;
   transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease),
-    border-color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
+    transform var(--t-fast) var(--ease); }
 .hero .arrow .i { width: 15px; height: 15px; }
-.hero .arrow.edge { position: absolute; top: 52%; z-index: 9;
-  width: 44px; height: 44px; transform: translateY(-50%);
-  border: 1px solid var(--hb-line2); background: var(--hb-glass); color: var(--hb-fg); }
-.hero .arrow.edge .i { width: 18px; height: 18px; }
-.hero .arrow.edge.prev { left: 0; }
-.hero .arrow.edge.next { right: 0; }
-.hero .arrow.edge:hover { background: var(--hb-hover); border-color: var(--hb-fg); }
-.hero .arrow.edge:active { transform: translateY(-50%) scale(.94); }
-.hero .arrow.edge:focus-visible { outline: 2px solid var(--hb-acc); outline-offset: 2px; }
 /* ⏸ là điều khiển PHỤ: nhỏ, không nền, chỉ sáng lên khi trỏ/focus */
 .hero .arrow.play { width: 28px; height: 28px; }
 .hero .arrow.play .i { width: 13px; height: 13px; }
@@ -984,8 +979,6 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   .hero .spec dd { font-size: 12.5px; min-height: 2.6em; }
   .hero .fan { --cover-w: clamp(140px, 19vw, 200px); }
   .hero .fanbar { gap: 6px; }
-  .hero .arrow.edge { width: 40px; height: 40px; }
-  .hero .arrow.edge .i { width: 17px; height: 17px; }
 }
 @media (max-width: 639px) {
   .hero { min-height: max(420px, 52vh); }
@@ -1000,7 +993,7 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   .hero .hb-scene .veil { background: linear-gradient(180deg, rgba(var(--hb-veil), .96) 0%,
     rgba(var(--hb-veil), .9) 42%, rgba(var(--hb-veil), .56) 66%, rgba(var(--hb-veil), .78) 100%); }
   .hero .spec { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 18px;
-    margin-top: 16px; }
+    margin-top: 14px; padding-top: 12px; }
   /* 2 cột: CHƯƠNG | TÁC GIẢ, rồi CẬP NHẬT trải hết dòng dưới (COUPLE ẩn) */
   .hero .spec .c[data-slot="ch"] { grid-column: 1; }
   .hero .spec .c[data-slot="au"] { grid-column: 2; }
@@ -1013,10 +1006,6 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   .hero .hb-scene .ghost { opacity: .45; }
   .hero .btn.hb-cta { padding: 0 16px; }
   .hero .fanbar { gap: 4px; }
-  .hero .arrow.edge { width: 38px; height: 38px; }
-  .hero .arrow.edge .i { width: 16px; height: 16px; }
-  .hero .arrow.edge.prev { left: -2px; }
-  .hero .arrow.edge.next { right: -2px; }
 }
 /* máy rất hẹp (≤380): thu quạt để 2 bìa ngoài cùng không bị cắt ở mép section */
 @media (max-width: 380px) {

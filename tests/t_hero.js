@@ -51,13 +51,13 @@ const ok = (cond, msg, extra) => { if (!cond) bad.push(msg + (extra ? ' → ' + 
     dangHien: $$('#stage .slide.on').length,
     bia: covers.length,
     thanhGop: !!fanbar,
-    nutTruocSau: !!$('#hPrev') && !!$('#hNext'),
+    /* vòng 9: BỎ hẳn hai nút ‹ › (người dùng: “xấu quá, bỏ luôn”).
+       Chuyển truyện = bấm bìa trong quạt + ← → trên bàn phím + tự chuyển. */
+    khongNutMuiTen: !$('#hPrev') && !$('#hNext') && !$('#hero .arrow.edge'),
     nutTamDung: !!$('#hPlay'),
     dem: ($('#hCount') || {}).textContent,
     /* vòng 8: bỏ vạch ticks + bỏ tên tác giả (đã có trong kệ nhãn); ‹ › tách ra
        hai MÉP quạt, số đếm + ⏸ gom vào góc trên-phải */
-    mepTrai: !!$('#hero .fan .arrow.edge.prev'),
-    mepPhai: !!$('#hero .fan .arrow.edge.next'),
     conTicks: !!$('#hTicks') || !!$('#hero .ticks'),
     conTenTacGia: !!$('#hero .fanbar .who'),
     conAnhNenFullBleed: !!$('#hero .hb-media') || !!$('#hero .hb-scrim') || !!$('#hero .hb-bg')
@@ -67,9 +67,10 @@ const ok = (cond, msg, extra) => { if (!cond) bad.push(msg + (extra ? ' → ' + 
   ok(out.cauTruc.bia === 5, 'quạt phải có đủ 5 bìa', out.cauTruc.bia);
   ok(out.cauTruc.thanhGop, 'phải có thanh điều khiển gộp (.fanbar) dưới quạt');
   ok(!$('#hTicks') && !$('#hero .ticks'), 'không còn 5 vạch ticks rời (đã gộp vào .fanbar)');
-  ok(out.cauTruc.nutTruocSau && out.cauTruc.nutTamDung, 'thiếu nút trước/sau hoặc nút tạm dừng');
+  ok(out.cauTruc.nutTamDung, 'thiếu nút tạm dừng (⏸)');
+  ok(out.cauTruc.khongNutMuiTen, 'không được dựng lại nút ‹ › ở mép quạt');
   ok(/^01 \/ 05$/.test(out.cauTruc.dem || ''), 'số đếm phải là “01 / 05”', out.cauTruc.dem);
-  ok(out.cauTruc.mepTrai && out.cauTruc.mepPhai, '‹ › phải nằm ở hai mép quạt');
+
   ok(!out.cauTruc.conTicks, 'không được quay lại 5 vạch ticks');
   ok(!out.cauTruc.conTenTacGia, 'tên tác giả không lặp lại ở cụm điều khiển (đã có trong kệ nhãn)');
   ok(!out.cauTruc.conAnhNenFullBleed, 'vẫn còn lớp ảnh nền full-bleed của bản cũ trong hero');
@@ -138,7 +139,8 @@ const ok = (cond, msg, extra) => { if (!cond) bad.push(msg + (extra ? ' → ' + 
   /* ---------- 2. ĐỔI TRUYỆN --------------------------------------------- */
   const titleOf = k => (slides[k].querySelector('h1').textContent || '').trim();
   const truoc = titleOf(0), sau = titleOf(1);
-  click($('#hNext'));
+  covers[0].focus();
+  covers[0].dispatchEvent(new win.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
   await wait(80);
   out.doiSlide = {
     on: $$('#stage .slide.on').length,
@@ -179,7 +181,7 @@ const ok = (cond, msg, extra) => { if (!cond) bad.push(msg + (extra ? ' → ' + 
     'bấm bìa ngoài cùng phải mở đúng truyện');
 
   /* ---------- 3. BÀN PHÍM ------------------------------------------------- */
-  const nut = $('#hNext');
+  const nut = covers[1];
   nut.focus();
   const before = ($('#stage .slide.on h1') || {}).textContent.trim();
   nut.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
@@ -244,14 +246,12 @@ const ok = (cond, msg, extra) => { if (!cond) bad.push(msg + (extra ? ' → ' + 
     thuTu: kids,
     soDemHtml: ($('#hCount') || {}).innerHTML,
     soNut: $$('#hero .arrow').length,
-    nutMep: $$('#hero .fan .arrow.edge').length,
     trongQuat: !!(bar && bar.closest('.fan')),
     cotChuSach: !!$('#hero .hb-col .foot')
   };
   ok(out.dieuKhien.thuTu.join(',') === 'count,arrow',
     'cụm góc chỉ còn số đếm + ⏸ (không ticks, không tên tác giả)', out.dieuKhien.thuTu.join(','));
-  ok(out.dieuKhien.nutMep === 2, 'phải có đúng 2 nút chuyển ở hai mép quạt', out.dieuKhien.nutMep);
-  ok(out.dieuKhien.soNut === 3, 'phải có đúng 3 nút ‹ › ⏸', out.dieuKhien.soNut);
+  ok(out.dieuKhien.soNut === 1, 'cụm góc chỉ còn đúng nút ⏸', out.dieuKhien.soNut);
   ok(out.dieuKhien.trongQuat, 'cụm điều khiển phải nằm trong quạt');
   ok(!out.dieuKhien.cotChuSach, 'cột chữ không còn hàng điều khiển riêng');
   ok(/<b>01<\/b>/.test(out.dieuKhien.soDemHtml || ''),
@@ -285,8 +285,7 @@ const ok = (cond, msg, extra) => { if (!cond) bad.push(msg + (extra ? ' → ' + 
     bia: mot.root.querySelectorAll('.coverbtn').length,
     quatAn: !!mot.root.querySelector('.fan').hidden,
     thanhAn: !mot.root.querySelector('.fan') || !!mot.root.querySelector('.fan').hidden,
-    coNutTruoc: !mot.root.querySelector('[data-hb-prev]').hidden,
-    coNutSau: !mot.root.querySelector('[data-hb-next]').hidden,
+    coNutMuiTen: !!mot.root.querySelector('[data-hb-prev], [data-hb-next], .arrow.edge'),
     playAn: !!mot.root.querySelector('[data-hb-play]').hidden,
     biaLayAnhNen: (function () {
       const im = mot.root.querySelector('.coverbtn img');
@@ -294,7 +293,7 @@ const ok = (cond, msg, extra) => { if (!cond) bad.push(msg + (extra ? ' → ' + 
     })()
   };
   ok(out.motMuc.slides === 1, 'props 1 mục phải dựng đúng 1 slide');
-  ok(!out.motMuc.coNutTruoc && !out.motMuc.coNutSau, '1 mục thì KHÔNG được có nút trước/sau', JSON.stringify(out.motMuc));
+  ok(!out.motMuc.coNutMuiTen, 'không được dựng nút ‹ › (đã bỏ ở mọi số mục)');
   ok(out.motMuc.quatAn && out.motMuc.thanhAn, '1 mục thì ẩn cả quạt lẫn thanh điều khiển');
   ok(out.motMuc.biaLayAnhNen, 'thiếu thumbnail thì quạt phải lấy backgroundImage làm bìa');
 
@@ -303,11 +302,9 @@ const ok = (cond, msg, extra) => { if (!cond) bad.push(msg + (extra ? ' → ' + 
   ok(out.rong.an && out.rong.rongRuot, 'props rỗng thì ẩn cả section, không để khối trắng');
 
   const nhieu = mount({ items: [makeItem(1), makeItem(2), makeItem(3)] });
-  const next2 = nhieu.root.querySelector('[data-hb-next]');
-  if (next2) {
-    next2.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
-    next2.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
-  }
+  /* không còn nút ‹ ›: chuyển mục bằng bấm bìa trong quạt */
+  const bia3 = nhieu.root.querySelectorAll('.coverbtn')[2];
+  if (bia3) bia3.dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
   await wait(50);
   out.nhieuMuc = {
     slides: nhieu.root.querySelectorAll('.slide').length,
@@ -317,13 +314,13 @@ const ok = (cond, msg, extra) => { if (!cond) bad.push(msg + (extra ? ' → ' + 
     live: (nhieu.root.querySelector('#hbLive') || {}).textContent
   };
   ok(out.nhieuMuc.slides === 3 && out.nhieuMuc.dangHien === 1, 'nhiều mục: đúng 3 slide, 1 hiện');
-  ok(out.nhieuMuc.tieuDe === 'Truyện 3', 'bấm tick phải mở đúng mục', out.nhieuMuc.tieuDe);
+  ok(out.nhieuMuc.tieuDe === 'Truyện 3', 'bấm bìa phải mở đúng mục', out.nhieuMuc.tieuDe);
   ok(out.nhieuMuc.live === 'Mục 3 / 3: Truyện 3', 'live region của component phải đúng', out.nhieuMuc.live);
 
   /* destroy(): gỡ listener — mount lại KHÔNG được cộng dồn (bấm 1 lần chỉ tiến 1 mục) */
   const tam = mount({ items: [makeItem(1), makeItem(2), makeItem(3), makeItem(4)] });
   const api2 = CZ.heroBanner(tam.root, { items: [makeItem(1), makeItem(2), makeItem(3), makeItem(4)] });
-  tam.root.querySelector('[data-hb-next]').dispatchEvent(new win.MouseEvent('click', { bubbles: true }));
+  tam.root.querySelector('.coverbtn').dispatchEvent(new win.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
   await wait(30);
   out.mountLai = {
     chiTien1: (tam.root.querySelector('.slide.on h1') || {}).textContent === 'Truyện 2'

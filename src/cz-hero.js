@@ -156,7 +156,7 @@
     return '<div class="slide' + (i === 0 ? ' on' : '') + '" data-i="' + i + '"' +
       ' role="group" aria-roledescription="slide" aria-label="' + (i + 1) + ' / ' + total + '"' +
       (i === 0 ? '' : ' aria-hidden="true"') + '>' +
-        '<div class="info">' +
+        '<div class="hb-info">' +
           (head ? '<div class="head">' + head + '</div>' : '') +
           '<h1 id="hbTitle-' + i + '"><span class="hb-t">' + titleHTML + '</span></h1>' +
           factsHTML(item) +
@@ -259,15 +259,10 @@
           : '<span class="noimg" aria-hidden="true"></span>') +
         '</button>';
     }).join('');
-    return '<button class="arrow edge prev" id="hPrev" type="button" data-hb-prev aria-label="Xem mục trước">' +
-        ic('left', 'i-s') + '</button>' +
-      btns +
-      '<button class="arrow edge next" id="hNext" type="button" data-hb-next aria-label="Xem mục tiếp theo">' +
-        ic('right', 'i-s') + '</button>' +
-      fanBarHTML();
+    return btns + fanBarHTML();
   }
 
-  /* ---------- ĐIỀU KHIỂN: hai mũi tên ở MÉP QUẠT + bộ đếm ở góc ----------
+  /* ---------- ĐIỀU KHIỂN: quạt là bộ chọn, chỉ còn bộ đếm + ⏸ ở góc --------
      Ba đời trước của khối này:
 
        5 vạch ticks + “02 / 05” + tên tác giả + ‹ › ⏸   ← một hàng nhiều thứ
@@ -349,14 +344,9 @@
     this.live = root.querySelector('#hbLive');
     this.playBtn = root.querySelector('[data-hb-play]');
 
-    /* Chỉ một mục ⇒ không có gì để chuyển: ẩn quạt + ticks + nút trước/sau. */
+    /* Chỉ một mục ⇒ không có gì để chuyển: ẩn cả quạt (kèm bộ đếm ⏸). */
     var many = this.total > 1;
-    if (!many) {
-      this.fan.hidden = true;
-      if (this.barEl) this.barEl.hidden = true;
-      root.querySelector('[data-hb-prev]').hidden = true;
-      root.querySelector('[data-hb-next]').hidden = true;
-    }
+    if (!many) this.fan.hidden = true;
     /* `showThumbnails: false` / `showDots: false` giữ nguyên tên cũ: tắt quạt /
        tắt thanh điều khiển — hai thứ đóng cùng vai trò “chọn mục”. */
     if (this.props.showThumbnails === false) this.fan.hidden = true;

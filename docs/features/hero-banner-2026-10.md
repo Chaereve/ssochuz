@@ -888,3 +888,52 @@ tách tầng bằng khoảng thở. Cột chữ giờ không có đường kẻ 
 `t_hero` đạt hết (gồm: ‹ › ở hai mép quạt, cụm góc chỉ còn `count + ⏸`, không
 ticks, không lặp tên tác giả) · `t_home` · `t_adult` N12 · `t_lock_ui` · `t_pwa`
 · `audit:a11y` 25 màn 0 lỗi axe · `check_src` khớp · `cz.css` 196.6 kB (91 % trần).
+
+---
+
+## 24. Vòng 9 — sửa đúng đường kẻ (lỗi trùng tên lớp), bỏ hẳn ‹ › (2026-10-29)
+
+### 1. Đường kẻ “lạ” phía trên nhãn trạng thái — nguyên nhân thật
+
+Không phải quy tắc nào của hero. Hero dựng khối chữ bằng `<div class="info">`,
+mà `cz.css` có một quy tắc **dùng chung cho trang truyện**:
+
+```css
+.info { border-top: 1px solid var(--bd); }   /* khối thông tin trang truyện */
+```
+
+Lớp trùng tên ⇒ hero “thừa hưởng” một sợi 1px ngay trên nhãn trạng thái, rộng
+đúng bằng cột chữ. Vòng trước t đi tìm trong khối hero nên không thấy, rồi lại
+xoá nhầm đường kẻ **của kệ nhãn** (dưới tên truyện) — đường duy nhất đáng giữ.
+
+Nay:
+
+- `.hero .info` → **`.hero .hb-info`** (đổi tên, không vá bằng `border-top: 0`
+  để sau này không ai dựng lại đúng cái bẫy đó); markup cũng đổi theo;
+- trả lại `border-top` cho `.spec` (`margin: 20px 0 0; padding: 14px 0 0`);
+- quy ước mới ghi trong CSS: **lớp nào của hero cũng mang tiền tố `hb-`**.
+
+### 2. Bỏ hẳn nút ‹ ›
+
+Người dùng: “cái nút chuyển qua lại xấu quá, bỏ luôn đi”. Đã bỏ khỏi markup
+(`fanHTML` không còn dựng `#hPrev/#hNext`, `mount` không còn ẩn chúng).
+
+Cách chuyển truyện còn lại — đủ và không thêm nút:
+
+- **bấm bìa** trong quạt (bộ chọn chính, có `aria-current`);
+- **← →** khi focus ở trong hero (`role="group"`, `aria-roledescription="carousel"`);
+- **tự chuyển** (bật/tắt bằng ⏸).
+
+Góc trên-phải vẫn giữ `01 / 05` + `⏸` (định vị + dừng tự chuyển).
+
+### Tệp đã sửa
+
+`src/cz.css` (đổi tên `.hb-info`, trả lại đường kẻ `.spec`, xoá `.arrow.edge`) ·
+`src/cz-hero.js` (đổi tên lớp, bỏ 2 nút) · `tests/t_hero.js` (khoá: không có
+`#hPrev/#hNext/.arrow.edge`; đổi slide bằng bấm bìa + ← →) ·
+`sw.js` + 76 HTML: `?v=20261029hero15`.
+
+### Kiểm
+
+`t_hero` đạt hết · `t_home` · `t_adult` N12 · `t_pwa` · `audit:a11y` 25 màn 0
+lỗi axe · `check_src` khớp.
