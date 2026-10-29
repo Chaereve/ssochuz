@@ -207,15 +207,15 @@ body, .hdr, .hero, .facts, .ftr, .fbox, .sechead, .authcard {
    sát nhau nên bỏ hẳn. */
 .hdr .in > .grow { position: relative; flex: 1 1 auto; min-width: 20px; }
 
-/* Thương hiệu: chữ "ssochuz" VẼ TAY (ảnh trắng, nền trong suốt) đặt đúng đường
-   chân chữ với nhãn "library" nhỏ bên cạnh — hai thứ nằm chung một baseline chứ
-   không căn giữa: căn giữa làm nhãn nhỏ trôi lửng lơ giữa thân chữ lớn.
-   Ảnh cao đúng 1em nên mọi bậc font-size sẵn có của .logo (22 / 20 / 19 / 18px ở
-   các breakpoint) tự co ảnh theo, không cần thêm luật responsive nào; width:auto
-   + width/height khai báo trong markup giữ đúng tỉ lệ 359×98 nên chỗ của ảnh đã
-   được chừa trước khi tải xong (không CLS).
+/* Thương hiệu: TRỌN khoá chữ "ssochuz Library" vẽ tay (ảnh trắng, nền trong
+   suốt, 699×98). Ảnh đã chứa cả phần chữ nhỏ nên KHÔNG còn nhãn <i> trong
+   lockup của đầu trang / chân trang (nhãn <i> chỉ còn ở trang quản trị).
+   Ảnh cao đúng 1em nên mọi bậc font-size sẵn có của .logo (22 / 20 / 19 / 16px ở
+   các breakpoint, 24px ở chân trang) tự co ảnh theo, không cần thêm luật
+   responsive nào; width:auto + width/height khai báo trong markup giữ đúng tỉ lệ
+   699×98 nên chỗ của ảnh đã được chừa trước khi tải xong (không CLS).
    Trỏ vào thì ảnh nhạt mực đi một nhịp — cùng nhịp --t-fast với phần còn lại. */
-.logo { display: inline-flex; align-items: baseline; font-family: var(--font-logo); font-size: 22px;
+.logo { display: inline-flex; align-items: center; font-family: var(--font-logo); font-size: 22px;
   font-weight: 700; font-optical-sizing: auto; color: var(--txt); letter-spacing: -.022em; line-height: 1; }
 .logo .mark { display: block; flex: 0 0 auto; height: 1em; width: auto;
   transition: opacity var(--t-fast) var(--ease); }
@@ -2619,10 +2619,12 @@ body.rd-focus .rdcmts { display: none; }
   .hdr #czJump { width: 40px; }
 }
 @media (max-width: 400px) {
-  .hdr .in { padding: 0 14px; gap: 6px; }
+  /* ≤400px: khoá chữ trọn bộ rộng ~7,1× chiều cao, nên hạ cỡ chữ và bớt khe để
+     logo + ô tìm kiếm + chuông + tài khoản + burger vẫn vừa một hàng ở 320px
+     (đo: 15px × 7,133 ≈ 107px; 107 + 160 nút + 20 khe + 28 lề = 315 ≤ 320). */
+  .hdr .in { padding: 0 14px; gap: 4px; }
   .hdr .in > .grow { min-width: 0; }          /* màn 320px: không chừa chỗ chết */
-  .hdr .logo { font-size: 18px; }
-  .hdr .logo i { display: none; }
+  .hdr .logo { font-size: 15px; }
 }
 /* Responsive polish — giữ bố cục biên tập, chỉ làm rõ nhịp và vùng chạm trên màn hình nhỏ. */
 @media (max-width: 700px) {
