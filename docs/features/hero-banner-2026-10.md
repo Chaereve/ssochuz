@@ -723,3 +723,68 @@ hơn nhưng quạt vẫn không chạm cột chữ). Mốc tablet `clamp(140px, 
 
 `t_hero` “Hero banner đạt hết” · `t_home` · `t_adult` N12 · `t_lock_ui` · `t_pwa` ·
 `audit:a11y` 25 màn 0 lỗi axe · `check_src` khớp · `cz.css` 196,3 kB · `cz-hero.js` 12,6 kB.
+
+---
+
+## 21. Vòng 7 — bỏ mô tả, bố cục chữ đứng yên, làm lại dải chuyển và viền bìa (2026-10-29)
+
+### 1. Banner chỉ còn: nhãn trạng thái · tên truyện · kệ nhãn · nút
+
+Bỏ hẳn hai thứ khỏi slide:
+
+- `<p class="syn">` — mô tả bị cắt 2 dòng nên đọc không hết ý mà vẫn chiếm chỗ;
+- `.prog` (thanh “đang đọc chương …”) — chỉ hiện với truyện người dùng đang đọc,
+  tức là **chiều cao cột chữ đổi theo từng người**, kéo nút và mọi thứ bên dưới
+  nhảy chỗ. Trạng thái đọc vẫn còn: nút chính đổi thành “Đọc tiếp”.
+
+Hàm `progressHTML()` trong component cũng bị xoá (không còn nơi dùng).
+
+**Vị trí cố định** bằng ba chốt:
+
+| Phần | Cách chốt |
+| --- | --- |
+| Tiêu đề | `h1` cao **cố định 3 dòng** (`3.18em`), chữ dồn **đáy** hộp qua `.hb-t` (`-webkit-line-clamp: 3`) ⇒ tên 1 dòng hay 3 dòng thì kệ nhãn vẫn nằm đúng một chỗ |
+| Kệ nhãn | `dd` **một dòng** (`white-space: nowrap` + `text-overflow: ellipsis`) ⇒ hàng nhãn không cao thấp theo tên tác giả/couple |
+| Nút | `.btn-row` cao 44px cố định, cách kệ nhãn 22px |
+
+Thêm: bỏ chốt cũ `.hero { min-height: 510px }` ở `@media (max-width: 700px)` —
+nó đè lên chiều cao nội dung và tạo lại khoảng trống dưới banner trên điện thoại.
+
+### 2. Dải chuyển: bỏ đường kẻ, gom thành cụm giữa
+
+Đường kẻ `border-top` của `.fanbar` chạy **ngang qua chân các bìa** (bìa có`z-index`
+1–6, thanh là 8) nên nhìn như một vạch kẻ lạc vào ảnh — đó là lý do “kì”.
+
+Nay: không kẻ, không nền, không khung; chỉ một cụm canh giữa dưới quạt:
+
+```
+        ‹     02 / 05 · REVERSE     ›        ⏸
+```
+
+- `‹` `›` là hai nút tròn 30px **trong suốt**, chỉ hiện nền khi hover/focus;
+- ⏸ tách khỏi cụm 8px (điều khiển phụ), nhỏ hơn (26px);
+- làn dành cho cụm dưới chân bìa tăng `78px → 96px` ⇒ bìa không bao giờ chồng lên nút.
+
+### 3. Viền bìa: bỏ “sticker”, dùng cạnh tối + bóng
+
+- bỏ `border: 1px solid rgba(255,255,255,.18)` và **vòng `0 0 0 2px var(--hb-acc)`**
+  của bìa đang chọn (chính là viền hồng nhìn kì trong ảnh);
+- thay bằng `inset 0 0 0 1px rgba(0,0,0,.45)` (cạnh tối) + bóng mềm
+  `0 26px 48px -30px rgba(0,0,0,.92)`;
+- gáy: dải tối 13 % → **9 %**, bỏ đường gấp sáng; mép giấy 4 % → 3 %;
+- vệt ánh giấy chéo 20 % → **10 %** (bìa không còn bị “bợt trắng” ở góc);
+- bìa đang chọn: sáng đầy đủ + scale 1.05 + bóng sâu hơn + quầng ấm 38 % accent
+  (rất nhẹ), không có đường kẻ màu.
+
+### Tệp đã sửa
+
+| Tệp | Vì sao |
+| --- | --- |
+| `src/cz-hero.js` | bỏ `.syn` + `.prog` khỏi slide, xoá `progressHTML()`; `h1` bọc `.hb-t` để khoá 3 dòng và dồn đáy |
+| `src/cz.css` | hộp tiêu đề cố định 3 dòng; `dd` một dòng; bỏ rule `.syn`/`.prog`; `.fanbar` bỏ kẻ, canh giữa; làn chân quạt 96px; viền bìa mới; bỏ `min-height: 510px` cũ ở ≤700px |
+| `sw.js` + 76 HTML | `?v=20261029hero11` |
+
+### Kiểm
+
+`t_hero` “Hero banner đạt hết” · `t_home` · `t_adult` N12 · `t_lock_ui` · `t_pwa` ·
+`audit:a11y` 25 màn 0 lỗi axe · `check_src` khớp · `cz.css` 195,5 kB · `cz-hero.js` 12,2 kB.

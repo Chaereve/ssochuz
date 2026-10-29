@@ -115,15 +115,6 @@
     }).join('') + '</dl>';
   }
 
-  function progressHTML(p) {
-    if (!p) return '';
-    var pct = Math.max(0, Math.min(100, Number(p.percent) || 0));
-    var label = p.label || ('đang đọc <b>chương ' + esc(p.current || 1) + '</b>' +
-      (p.total ? ' / ' + esc(p.total) : '') + ' · ' + Math.round(pct) + '%');
-    return '<div class="prog"><span class="pb"><i style="width:' + pct + '%"></i></span>' +
-      '<span>' + label + '</span></div>';
-  }
-
   function primaryHTML(cta) {
     if (!cta || !cta.label) return '';
     var inner = (cta.icon ? ic(cta.icon, 'i-s') : '') +
@@ -167,10 +158,8 @@
       (i === 0 ? '' : ' aria-hidden="true"') + '>' +
         '<div class="info">' +
           (head ? '<div class="head">' + head + '</div>' : '') +
-          '<h1 id="hbTitle-' + i + '">' + titleHTML + '</h1>' +
+          '<h1 id="hbTitle-' + i + '"><span class="hb-t">' + titleHTML + '</span></h1>' +
           factsHTML(item) +
-          (item.description ? '<p class="syn">' + esc(item.description) + '</p>' : '') +
-          progressHTML(item.progress) +
           '<div class="btn-row">' + primaryHTML(item.primaryCta) + secondary + '</div>' +
         '</div>' +
       '</div>';
