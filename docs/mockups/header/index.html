@@ -352,6 +352,28 @@ svg{display:block}
       focus-visible rõ · mục đang xem có <code>aria-current</code> · mobile: burger mở drawer phải, tìm kiếm thành
       tấm trượt dưới thanh · tôn trọng <code>prefers-reduced-motion</code>.</div>
   </section>
+
+  <section style="margin-top:44px">
+    <h2 style="font-size:15px;letter-spacing:.01em;margin:0 0 12px">Đã chốt: A + ô tìm kiếm rộng của B + nav 5 mục</h2>
+    <p class="lede" style="margin:0 0 14px">Anh/chị chọn bản trộn: giữ khung một tầng 64px của <b>A</b> (gọn, không đẩy nội dung
+      xuống), lấy ô tìm kiếm rộng của <b>B</b>, và gộp hàng điều hướng còn 5 mục bằng cách đưa 3 điểm đến ít dùng
+      hằng ngày vào menu “Khám phá”. Đây là bản đã dựng vào site (không phải bản xem trước nữa).</p>
+    <table>
+      <thead><tr><th>Khổ</th><th>Còn gì trên thanh</th></tr></thead>
+      <tbody>
+        <tr><td><b>&gt; 1200px</b></td><td>logo · nav đủ nhãn (4 mục + Khám phá ▾) · ô tìm kiếm 320–420px · chuông · tài khoản · cài app</td></tr>
+        <tr><td><b>981–1200px</b></td><td>nav thu về icon 40px (5 ô) · ô tìm kiếm vẫn còn chữ, hẹp dần · nút tài khoản còn nhãn</td></tr>
+        <tr><td><b>761–980px</b></td><td>như trên, nút tài khoản chỉ còn avatar; ô tìm kiếm 200–240px</td></tr>
+        <tr><td><b>≤ 760px</b></td><td>logo · ô tìm kiếm thu về icon · chuông · tài khoản · burger; cả 7 mục nằm trong drawer</td></tr>
+      </tbody>
+    </table>
+    <div class="reco" style="border-color:var(--bd);background:var(--surf)">
+      <b>Ô tìm kiếm là một nút, không phải ô nhập:</b> bấm vào hay gõ <code>⌘K</code> đều mở đúng bảng tìm nhanh
+      sẵn có — một đường vào, một nguồn kết quả, không có hai ô nhập chạy song song.
+      <br><b>“Khám phá” giữ nguyên dữ liệu:</b> danh sách điểm đến vẫn là một mảng duy nhất; cờ <code>more</code>
+      chỉ định mục nào nằm trong menu, nên thêm/bớt mục chỉ sửa một chỗ.
+    </div>
+  </section>
 </main>
 
 <script>

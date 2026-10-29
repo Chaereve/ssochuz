@@ -202,11 +202,10 @@ body, .hdr, .hero, .facts, .ftr, .fbox, .sechead, .authcard {
 .hdr { position: relative; z-index: 50; background: var(--bg); border-bottom: 1px solid var(--bd); }
 .hdr .in { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; height: var(--hdr-h);
   display: flex; align-items: center; gap: 8px; }
-/* vạch tóc ngăn “điều hướng” khỏi “tiện ích” — chi tiết nhỏ kiểu bìa tạp chí,
-   chỉ hiện khi còn chỗ (màn hẹp thì bỏ, xem @media bên dưới) */
+/* khoảng đệm giữa điều hướng và cụm tiện ích. Trước đây có thêm một vạch tóc
+   1px ở đây; từ khi ô tìm kiếm rộng có viền riêng, vạch đó thành hai đường kẻ
+   sát nhau nên bỏ hẳn. */
 .hdr .in > .grow { position: relative; flex: 1 1 auto; min-width: 20px; }
-.hdr .in > .grow::after { content: ""; position: absolute; right: 0; top: 50%; width: 1px; height: 20px;
-  margin-top: -10px; background: var(--bd); }
 
 /* thương hiệu đặt như manchette báo: tên riêng bằng Fraunces, còn "library" lùi
    xuống thành dòng chữ nhỏ giãn khoảng cách, mực nhạt — cùng một kiểu chữ nhãn
@@ -234,27 +233,51 @@ body, .hdr, .hero, .facts, .ftr, .fbox, .sechead, .authcard {
    đường kẻ đáy. KHÔNG đổi font-weight khi đang xem — trước đây .on in đậm làm
    cả dãy mục xô ngang mỗi lần cuộn trang. */
 .nav { position: relative; display: flex; align-items: center; align-self: stretch; margin-right: 8px; }
-.nav a { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+.nav > a { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   height: 100%; padding: 0 10px; border: 0; background: none; color: var(--mut);
   font-size: 13.5px; font-weight: 600; letter-spacing: .004em; white-space: nowrap;
   transition: color var(--t-fast) var(--ease); }
-.nav a:hover { color: var(--txt); }
-.nav a.on { color: var(--txt); }
+.nav > a:hover { color: var(--txt); }
+.nav > a.on { color: var(--txt); }
 /* gạch mờ khi trỏ (chưa phải mục đang xem) — kẻ từ trái sang, biến mất khi .on */
-.nav a::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: 0; height: 2px;
+.nav > a::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: 0; height: 2px;
   background: var(--bd2); transform: scaleX(0); transform-origin: 50% 50%; opacity: 0;
   transition: transform var(--t) var(--ease), opacity var(--t-fast) linear; }
-.nav a:hover::after { transform: scaleX(1); opacity: 1; }
-.nav a.on::after { opacity: 0; transform: scaleX(0); }
-.nav a .nav-lbl { display: inline; font-size: inherit; font-weight: inherit; letter-spacing: inherit; }
+.nav > a:hover::after { transform: scaleX(1); opacity: 1; }
+.nav > a.on::after { opacity: 0; transform: scaleX(0); }
+.nav > a .nav-lbl { display: inline; font-size: inherit; font-weight: inherit; letter-spacing: inherit; }
 /* icon của mục điều hướng chỉ hiện khi nhãn chữ bị ẩn (màn 761–900px) */
-.nav a .i { display: none; }
+.nav > a .i { display: none; }
 /* Gạch chân trượt theo mục đang đọc. Nền rộng 100px, JS đặt
    translateX(vị trí) + scaleX(rộng / 100) — cả hai đều là transform. */
 .nav .ink { position: absolute; left: 0; bottom: -1px; width: 100px; height: 2px; background: var(--acc);
   border-radius: 2px 2px 0 0; opacity: 0; pointer-events: none;
   transform: translateX(0) scaleX(0); transform-origin: 0 50%;
   transition: transform var(--t-mid) var(--ease), opacity var(--t) linear; }
+
+/* “Khám phá” — mục thứ năm của hàng điều hướng, mở ra menu dọc chứa những điểm
+   đến ít dùng hằng ngày (lịch ra chương, tác giả, couple). Nút dùng chung nhịp
+   chữ với các mục ngang; khi trang đang xem nằm trong menu thì gạch mực và mực
+   chữ bám vào chính nút này, nên người đọc vẫn biết mình đang ở đâu. */
+.nav-more { position: relative; display: flex; align-self: stretch; }
+.nb { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 100%; padding: 0 10px; border: 0; background: none; color: var(--mut);
+  font: inherit; font-size: 13.5px; font-weight: 600; letter-spacing: .004em; white-space: nowrap;
+  cursor: pointer; transition: color var(--t-fast) var(--ease); }
+.nb:hover, .nb.on, .nb[aria-expanded="true"] { color: var(--txt); }
+.nb .cv { width: 13px; height: 13px; transition: transform var(--t-fast) var(--ease); }
+.nb[aria-expanded="true"] .cv { transform: rotate(180deg); }
+.nb .i { display: none; }
+.nav-menu { position: absolute; left: 0; top: calc(100% - 6px); z-index: 60; min-width: 212px; padding: 6px;
+  display: none; border: 1px solid var(--bd); border-radius: 12px; background: var(--surf);
+  box-shadow: 0 26px 48px -30px #000, 0 2px 10px -6px #000; }
+.nav-menu.on { display: block; animation: navMenuIn 200ms var(--ease-out) both; }
+@keyframes navMenuIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.nav-menu a { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 10px; border-radius: 8px;
+  color: var(--mut); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.nav-menu a:hover { background: var(--surf2); color: var(--txt); }
+.nav-menu a.on { background: var(--surf2); color: var(--txt); }
+.nav-menu a .i { display: inline-block; width: 16px; height: 16px; opacity: .85; }
 
 /* cụm tiện ích: cùng một cỡ, cùng một kiểu viền; trỏ vào chỉ đổi màu, không nhấc */
 .hbtn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: var(--ctl);
@@ -327,20 +350,30 @@ body, .hdr, .hero, .facts, .ftr, .fbox, .sechead, .authcard {
    nhất luôn vừa: nhãn chỉ còn chữ trong dải 761–1200px. */
 @media (max-width: 1080px) {
   .hdr .logo, .abar .logo { font-size: 20px; }
-  .nav a { padding: 0 8px; font-size: 12.5px; }
-  .nav a::after { left: 8px; right: 8px; }
+  .nav > a { padding: 0 8px; font-size: 12.5px; }
+  .nav > a::after { left: 8px; right: 8px; }
+  .nb { padding: 0 8px; font-size: 12.5px; }
+  .hdr #czJump { flex-basis: 280px; }
   .hbtn .nav-lbl, .hbtn .searchbtn-txt { font-size: 12.5px; }
   .hbtn .k { display: none; }
 }
 @media (max-width: 1200px) {
-  .hdr .in > .grow::after { display: none; }
-  .nav a { width: 40px; padding: 0; }
-  .nav a .nav-lbl { display: none; }
-  .nav a .i { display: inline-block; }
-  .nav a::after { left: 9px; right: 9px; }
+  .nav > a { width: 40px; padding: 0; }
+  .nav > a .nav-lbl { display: none; }
+  .nav > a .i { display: inline-block; }
+  .nav > a::after { left: 9px; right: 9px; }
+  .nb { width: 40px; padding: 0; }
+  .nb .nav-lbl, .nb .cv { display: none; }
+  .nb .i { display: inline-block; }
+  .nav-menu { left: 50%; transform: translateX(-50%); }
+  .nav-menu.on { transform: translateX(-50%); animation: none; }
+}
+@media (max-width: 900px) {
+  .hdr #czJump { flex-basis: 200px; max-width: 240px; }
 }
 @media (max-width: 760px) {
   .hdr .in { gap: 8px; height: 56px; padding: 0 16px; }
+  .hdr #czJump { flex: 0 0 auto; max-width: none; width: var(--ctl); padding: 0; justify-content: center; }
   .hdr .logo, .abar .logo { font-size: 19px; }
   .hdr .logo .dot, .abar .logo .dot { width: 7px; height: 7px; margin-right: 8px; }
   .nav { display: none; }
@@ -2576,6 +2609,7 @@ body.rd-focus .rdcmts { display: none; }
    trang cao bất thường. */
 @media (max-width: 560px) {
   #czJump, .hbtn.icon, .authbtn { width: 40px; padding: 0; }
+  .hdr #czJump { width: 40px; }
 }
 @media (max-width: 400px) {
   .hdr .in { padding: 0 14px; gap: 6px; }
@@ -3379,11 +3413,26 @@ body.rd-focus .rdcmts { display: none; }
    BẢN TINH GỌN · header, admin workspace và nhịp chuyển động
    ========================================================================== */
 
-/* Hai tiện ích này ưu tiên không gian: nhãn vẫn còn trong title/aria-label để
-   người dùng bàn phím và trình đọc màn hình không mất ngữ cảnh. */
-.hdr #czInstall, .hdr #czJump { width: 38px; min-width: 38px; height: 36px; padding: 0; gap: 0; justify-content: center; }
-.hdr #czInstall .nav-lbl, .hdr #czJump .searchbtn-txt, .hdr #czJump .k { display: none; }
-.hdr #czInstall .i, .hdr #czJump .i { width: 17px; height: 17px; }
+/* Nút “Cài app” ưu tiên không gian: nhãn vẫn còn trong title/aria-label để người
+   dùng bàn phím và trình đọc màn hình không mất ngữ cảnh. */
+.hdr #czInstall { width: 38px; min-width: 38px; height: 36px; padding: 0; gap: 0; justify-content: center; }
+.hdr #czInstall .nav-lbl { display: none; }
+.hdr #czInstall .i { width: 17px; height: 17px; }
+
+/* Ô tìm kiếm rộng: trông như một ô nhập nhưng là MỘT nút — bấm vào (hoặc ⌘K) là
+   mở bảng tìm nhanh. Nhờ vậy chỉ có một đường vào và một nguồn kết quả, không
+   sinh ra ô nhập thứ hai chạy song song với bảng tìm. Chỗ trống còn lại do nó
+   co giãn; chữ dài tự cắt bằng dấu ba chấm chứ không đẩy các nút khác tràn. */
+.hdr #czJump { width: auto; min-width: 0; flex: 1 1 320px; max-width: 420px; height: 36px;
+  justify-content: flex-start; gap: 9px; padding: 0 6px 0 11px; border-radius: 10px;
+  background: var(--bg2); border-color: var(--bd); color: var(--dim); }
+.hdr #czJump:hover { color: var(--mut); background: var(--surf2); border-color: var(--bd2); }
+.hdr #czJump .i { width: 17px; height: 17px; flex: none; color: var(--mut); }
+.hdr #czJump .searchbtn-txt { display: block; flex: 1 1 auto; min-width: 0; text-align: left;
+  font-size: 13px; font-weight: 500; letter-spacing: 0; color: inherit;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hdr #czJump .k { display: inline-block; flex: none; margin-left: 6px;
+  background: var(--surf); border-color: var(--bd); }
 
 /* Chuyển động chậm hơn một nhịp: hover vẫn phản hồi ngay, phần vào/ra có đủ
    thời gian để mắt theo kịp, tránh cảm giác “AI slop”. */

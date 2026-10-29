@@ -1981,14 +1981,23 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       { k: 'library', label: 'Thư viện', i: 'library', h: '/#thu-vien' },
       { k: 'new', label: 'Mới cập nhật', i: 'sparkle', h: '/#moi-cap-nhat' },
       { k: 'rank', label: 'Ranking', i: 'trophy', h: '/#bxh' },
-      { k: 'sched', label: 'Lịch ra chương', i: 'calendar', h: '/#lich' },
-      { k: 'authors', label: 'Tác giả', i: 'pen', h: '/tac-gia/' },
-      { k: 'couples', label: 'Couple', i: 'users', h: '/couple/' }
+      { k: 'sched', label: 'Lịch ra chương', i: 'calendar', h: '/#lich', more: true },
+      { k: 'authors', label: 'Tác giả', i: 'pen', h: '/tac-gia/', more: true },
+      { k: 'couples', label: 'Couple', i: 'users', h: '/couple/', more: true }
     ];
-    var links = NAV.map(function (n) {
-      return '<a href="' + n.h + '" data-k="' + n.k + '"' + (n.k === active ? ' class="on"' : '') + ' title="' + esc(n.label) + '" aria-label="' + esc(n.label) + '">' +
+    /* Điều hướng một tầng: bốn mục chính + một nút "Khám phá" mở menu chứa ba
+       mục còn lại. NAV vẫn là nguồn duy nhất — cờ `more` quyết định mục nào nằm
+       trong menu, nên thêm/bớt điểm đến chỉ cần sửa đúng mảng này. Thứ tự DOM
+       giữ nguyên thứ tự NAV để menu mobile (vốn liệt kê đủ bảy mục) vẫn khớp. */
+    function navA(n, inMenu) {
+      return '<a href="' + n.h + '" data-k="' + n.k + '"' + (n.k === active ? ' class="on" aria-current="page"' : '') +
+        (inMenu ? ' role="menuitem"' : '') +
+        ' title="' + esc(n.label) + '" aria-label="' + esc(n.label) + '">' +
         icon(n.i, 'i-s') + '<span class="nav-lbl">' + esc(n.label) + '</span></a>';
-    }).join('');
+    }
+    var links = NAV.filter(function (n) { return !n.more; }).map(function (n) { return navA(n, false); }).join('');
+    var moreLinks = NAV.filter(function (n) { return n.more; }).map(function (n) { return navA(n, true); }).join('');
+    var moreOn = NAV.some(function (n) { return n.more && n.k === active; });
     var mLinks = NAV.map(function (n) {
       return '<a href="' + n.h + '" data-k="' + n.k + '"' + (n.k === active ? ' class="on"' : '') + ' aria-label="' + esc(n.label) + '">' +
         icon(n.i, 'i-s') + ' ' + esc(n.label) + '</a>';
@@ -1999,12 +2008,18 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     d.querySelectorAll('nav.crumb:not([aria-label])').forEach(function (el) { el.setAttribute('aria-label', 'Đường dẫn trang'); });
     host.innerHTML = '<a class="skip" href="#main" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden">Chuyển tới nội dung chính</a><div class="in">' +
       '<a class="logo" href="/" title="ssochuz library"><span class="dot"></span>ssochuz<i> library</i></a>' +
-      '<nav class="nav" id="czNav" aria-label="Điều hướng chính"><span class="ink" id="czInk" aria-hidden="true"></span>' + links + '</nav>' +
+      '<nav class="nav" id="czNav" aria-label="Điều hướng chính"><span class="ink" id="czInk" aria-hidden="true"></span>' + links +
+        (moreLinks ? '<span class="nav-more">' +
+          '<button class="nb' + (moreOn ? ' on' : '') + '" id="czNavMore" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="czNavMenu" title="Khám phá thêm">' +
+            icon('grid', 'i-s') + '<span class="nav-lbl">Khám phá</span>' + icon('down', 'cv') + '</button>' +
+          '<div class="nav-menu" id="czNavMenu" role="menu" aria-label="Khám phá thêm">' + moreLinks + '</div>' +
+        '</span>' : '') +
+      '</nav>' +
       '<span class="grow"></span>' +
-      '<button class="hbtn" id="czInstall" hidden title="Cài app ssochuz library" aria-label="Cài app ssochuz library">' + icon('download', 'i-s') +
-        '<span class="nav-lbl">Cài app</span></button>' +
-      '<button class="hbtn" id="czJump" title="Tìm truyện, tác giả, couple (⌘K)" aria-label="Tìm kiếm">' + icon('search', 'i-s') +
-        '<span class="searchbtn-txt">Tìm</span><span class="k">⌘K</span></button>' +
+      /* ô tìm kiếm rộng: bấm (hoặc ⌘K) là mở bảng tìm nhanh — cùng một đường vào
+         với phím tắt, không dựng thêm một ô nhập thứ hai để khỏi lệch kết quả */
+      '<button class="hbtn" id="czJump" title="Tìm truyện, tác giả, couple (⌘K)" aria-label="Tìm kiếm truyện, tác giả, couple" aria-haspopup="dialog">' + icon('search', 'i-s') +
+        '<span class="searchbtn-txt">Tìm truyện, tác giả, couple…</span><span class="k">⌘K</span></button>' +
       /* chuông trung tâm thông báo: truyện đã theo dõi có chương mới thì hiện số */
       '<div class="hnotif" id="czNotif">' +
         '<button class="hbtn icon" id="czNotifBtn" aria-haspopup="menu" aria-expanded="false" aria-label="Thông báo chương mới" title="Thông báo chương mới">' +
@@ -2019,6 +2034,8 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         '</button>' +
         '<div class="amenu" id="czAuthMenu" role="menu" aria-label="Tài khoản"></div>' +
       '</div>' +
+      '<button class="hbtn" id="czInstall" hidden title="Cài app ssochuz library" aria-label="Cài app ssochuz library">' + icon('download', 'i-s') +
+        '<span class="nav-lbl">Cài app</span></button>' +
       '<button class="hbtn icon burger" id="czBurger" aria-label="Mở menu" aria-expanded="false" aria-controls="czMnav">' + icon('menu', 'i-s') + '</button>' +
       '</div>' +
       '<div class="mnav" id="czMnav">' + mLinks +
@@ -2170,6 +2187,48 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     d.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && mnav.classList.contains('on')) { slide(mnav, false); paintMenu(); try { burger.focus(); } catch (err) {} }
     });
+    /* ---- menu “Khám phá”: mở/đóng bằng chuột, phím mũi tên, Home/End, Esc;
+       bấm ra ngoài hoặc chuyển tiêu điểm ra khỏi khối thì đóng. ---- */
+    var moreBtn = host.querySelector('#czNavMore'), moreMenu = host.querySelector('#czNavMenu');
+    if (moreBtn && moreMenu) {
+      function moreItems() { return Array.prototype.slice.call(moreMenu.querySelectorAll('a')); }
+      function openMore() { moreMenu.classList.add('on'); moreBtn.setAttribute('aria-expanded', 'true'); }
+      function closeMore(back) {
+        if (moreMenu.classList.contains('on')) {
+          moreMenu.classList.remove('on');
+          moreBtn.setAttribute('aria-expanded', 'false');
+        }
+        if (back) { try { moreBtn.focus(); } catch (err) {} }
+      }
+      moreBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (moreMenu.classList.contains('on')) closeMore(); else openMore();
+      });
+      moreBtn.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault(); openMore();
+          var f = moreItems()[0]; if (f) f.focus();
+        }
+      });
+      moreMenu.addEventListener('keydown', function (e) {
+        var list = moreItems(), i = list.indexOf(d.activeElement);
+        if (e.key === 'Escape') { e.preventDefault(); closeMore(true); }
+        else if (e.key === 'ArrowDown') { e.preventDefault(); var nx = list[Math.min(list.length - 1, i + 1)]; if (nx) nx.focus(); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); if (i <= 0) closeMore(true); else list[i - 1].focus(); }
+        else if (e.key === 'Home') { e.preventDefault(); if (list[0]) list[0].focus(); }
+        else if (e.key === 'End') { e.preventDefault(); if (list[list.length - 1]) list[list.length - 1].focus(); }
+      });
+      moreMenu.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('a')) closeMore(); });
+      d.addEventListener('click', function (e) {
+        if (e.target.closest && e.target.closest('.nav-more')) return;
+        closeMore();
+      });
+      d.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMore(); });
+      d.addEventListener('focusin', function (e) {
+        if (e.target.closest && e.target.closest('.nav-more')) return;
+        closeMore();
+      });
+    }
     host.querySelector('#czJump').addEventListener('click', function () { openJump(); });
     var insBtn = host.querySelector('#czInstall');
     if (insBtn) insBtn.addEventListener('click', function () { installApp(); });
@@ -2311,11 +2370,27 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     if (!links.length) return;
     var ids = links.map(function (a) { return (a.getAttribute('href') || '').split('#')[1] || ''; });
     var have = ids.filter(function (id) { return !!(id && d.getElementById(id)); }).length;
+    var more = nav.querySelector('.nav-more'), nb = more && more.querySelector('.nb');
+    /* Mục nằm trong menu “Khám phá” không có gạch riêng: gạch và aria-current
+       dồn về nút mở menu, còn dấu .on vẫn nằm trên chính liên kết đó. */
     function mark(el) {
-      links.forEach(function (a) { a.classList.toggle('on', a === el); });
-      if (!el) { ink.style.opacity = '0'; return; }
-      /* .nav .ink có nền 100px: scaleX(w/100) cho đúng độ dài, không animate width */
-      ink.style.transform = 'translateX(' + el.offsetLeft + 'px) scaleX(' + (el.offsetWidth / 100) + ')';
+      links.forEach(function (a) {
+        var on = a === el;
+        a.classList.toggle('on', on);
+        if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+      });
+      var inMore = !!(el && nb && more.contains(el));
+      if (nb) {
+        nb.classList.toggle('on', inMore);
+        if (inMore) nb.setAttribute('aria-current', 'page'); else nb.removeAttribute('aria-current');
+      }
+      var t = inMore ? nb : el;
+      if (!t) { ink.style.opacity = '0'; return; }
+      /* .nav .ink có nền 100px: scaleX(w/100) cho đúng độ dài, không animate width.
+         Đo bằng getBoundingClientRect vì nút “Khám phá” nằm trong một lớp bọc
+         position:relative — offsetLeft của nó tính theo lớp bọc, không theo .nav. */
+      var a0 = t.getBoundingClientRect(), b0 = nav.getBoundingClientRect();
+      ink.style.transform = 'translateX(' + (a0.left - b0.left) + 'px) scaleX(' + (a0.width / 100) + ')';
       ink.style.opacity = '1';
     }
     var here = links.filter(function (a) { return a.classList.contains('on'); })[0];
