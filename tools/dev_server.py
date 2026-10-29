@@ -195,6 +195,31 @@ class Handler(SimpleHTTPRequestHandler):
                 return bare
         return None
 
+    # ---------------------------------------------------------------- mockup
+    # CHỈ TRÊN MÁY: mở thẳng file trong /docs/mockups/ để soi mockup cho tiện.
+    # Bản thật KHÔNG mở đường này — `_redirects` có luật `/docs/*  /  301` và
+    # tools/check_secrets.js canh đúng luật đó, nên tài liệu nội bộ vẫn kín.
+    MOCKUP_PREFIX = '/docs/mockups/'
+
+    def serve_mockup(self, url_path):
+        """Trả (kind, ...) giống route(): mở tệp thật, không qua _redirects."""
+        rel = urllib.parse.unquote(url_path).lstrip('/')
+        base = os.path.join(ROOT, 'docs', 'mockups')
+        full = os.path.normpath(os.path.join(ROOT, rel))
+        if not (full == base or full.startswith(base + os.sep)):
+            return ('miss', None)                       # chặn ../ thoát khỏi thư mục
+        if os.path.isdir(full):
+            for name in ('index.html', 'index.htm'):
+                cand = os.path.join(full, name)
+                if os.path.isfile(cand):
+                    return ('file', cand, rel.rstrip('/') + '/' + name)
+            return ('miss', None)
+        if os.path.isfile(full):
+            return ('file', full, rel)
+        if os.path.isfile(full + '.html'):
+            return ('file', full + '.html', rel + '.html')
+        return ('miss', None)
+
     def route(self, url_path, query):
         """Chạy đúng trình tự của Cloudflare Pages: _redirects → xử lý HTML → tệp thật.
 
@@ -202,6 +227,8 @@ class Handler(SimpleHTTPRequestHandler):
         (Pages làm vậy thật, nên mới sinh ra vòng lặp). Mình đếm số lần nhảy và
         bắt vòng lặp ngay trong server — thay vì để trình duyệt treo như bản thật.
         """
+        if url_path.startswith(self.MOCKUP_PREFIX):
+            return self.serve_mockup(url_path)
         seen = []
         pending = None      # bước 308 "bỏ đuôi .html" mà Pages sẽ gửi cho trình duyệt
         p = url_path
