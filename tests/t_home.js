@@ -30,7 +30,10 @@ const LIB = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data/registry
     readHref: ($('#stage .slide.on .btn-row a') || {}).getAttribute ? $('#stage .slide.on .btn-row a').getAttribute('href') : '',
     dots: $$('#hDots button').length,
     strip: $$('#hStrip button').length,
-    hasBlurBg: !!$('#hero .bg')
+    /* 2026-10-29: hero dùng ảnh nền full-bleed thật (<img> trong .hb-media) */
+    hasMediaBg: !!$('#hero .hb-media'),
+    hasDarkScrim: !!$('#hero .hb-scrim'),
+    playBtn: !!$('#hPlay')
   };
   click($$('#hDots button')[1]); await wait(120);
   out.heroAfterDot = (($('#stage .slide.on h1') || {}).textContent || '').trim() === (LIB.find(n => n.slug === p.win.CZ.slides(p.win.CZ._memo.reg)[1].slug) || {}).title;

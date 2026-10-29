@@ -140,6 +140,10 @@ kbd { background: var(--surf2); border: 1px solid var(--bd); border-bottom-width
 .i-s { width: 14px; height: 14px; min-width: 14px; }
 .grow { flex: 1; }
 .hide { display: none !important; }
+/* chữ chỉ dành cho trình đọc màn hình (live region của hero, nhãn phụ…): vẫn
+   nằm trong cây trợ năng nhưng không chiếm một pixel nào trên màn hình */
+.sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
 .noscroll { overflow: hidden; }
 .sm { font-size: 13px; }
 .mt { margin-top: 14px; }
@@ -585,116 +589,253 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 /* dãy tab lớn (mục “Khám phá”) */
 
 /* ============================== 5. HERO ================================== */
-/* Khối “truyện nổi bật”: nền mờ lấy từ chính ảnh bìa, áp phích có khung + vệt
-   sáng khi trỏ, và chuyển cảnh trượt-mờ. JS giữ lại một bản .ghost của bộ cũ
-   trong lúc bộ mới hiện ra nên bố cục không bao giờ nhảy. */
-.hero { position: relative; border-bottom: 1px solid var(--bd); background: var(--bg2); overflow: hidden; }
-.hero::before { content: ""; position: absolute; inset: 0; pointer-events: none;
-  background: radial-gradient(120% 90% at 100% 0%, var(--acc-soft), transparent 55%); }
-.hero .bg { position: absolute; inset: -12% -6% 0; pointer-events: none; overflow: hidden; }
-.hero .bg i { position: absolute; inset: 0; opacity: 0; transform: scale(1.1); background-size: cover;
-  background-position: 50% 28%; filter: blur(44px) saturate(.9);
-  transition: opacity var(--t-slow) linear; }
-.hero .bg i.on { opacity: .46; }
-[data-theme="dark"] .hero .bg i.on { opacity: .26; }
-.hero .bg::after { content: ""; position: absolute; inset: 0;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--bg2) 58%, transparent), var(--bg2) 88%); }
-.hero .stage { position: relative; }
-.slide { display: none; }
-.slide.on { display: block; animation: hIn var(--t-slow) var(--ease-out) both; }
-.slide.ghost { display: block; position: absolute; inset: 0; z-index: 2; pointer-events: none; animation: none; }
-.slide.ghost.out { animation: hOut var(--t-slow) var(--ease) both; }
-/* Không blur ở đây: slide hero to gần bằng cả màn hình, blur 4–5px buộc trình
-   duyệt lọc lại cả vùng đó từng khung hình trong suốt 480ms đổi slide. */
-@keyframes hIn { from { opacity: 0; transform: translateX(28px); } }
-@keyframes hOut { to { opacity: 0; transform: translateX(-28px) scale(.985); } }
-@keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } }
-.hero .col { max-width: var(--maxw); margin: 0 auto; padding: 48px 24px 40px; display: grid;
-  grid-template-columns: minmax(0, 1fr) 312px; gap: 48px; align-items: center; }
-.hero .info { min-width: 0; }
+/* VÁ (2026-10-29) — HERO “NỔI BẬT HÔM NAY” ĐỔI TỪ THẺ DỌC SANG BANNER.
+   Bản cũ: áp phích 2:3 bên phải, số thứ tự “01” mờ phía sau, nền phẳng, và mỗi
+   khối nổi bật mới là một lần chép lại markup. Bản này:
+     · ảnh nền <img> phủ TOÀN section (absolute inset 0, object-fit: cover) —
+       dùng <img> chứ không phải background-image để đặt được fetchpriority,
+       loading và width/height (trình duyệt biết trước khung ⇒ không nhảy CLS);
+     · hai lớp gradient (ngang trái→phải + dọc dưới→trên) giữ chữ/CTA luôn đọc
+       được trên mọi ảnh bìa;
+     · nội dung một cột bên trái (≤650px), dải thumbnail ở góc dưới-phải trên
+       desktop, dot pagination trên điện thoại;
+     · chuyển slide bằng CROSSFADE 400ms trên lớp ảnh + fade nhẹ nội dung, không
+       animate width/height/kích thước khung ⇒ không layout shift.
+   Vì hero giờ nằm trên ảnh tối nên nó có bảng màu “trên ảnh” riêng, khai báo
+   ĐÚNG MỘT LẦN trong khối .hero dưới đây (--hb-*): không rải mã màu vào từng
+   thuộc tính, và vẫn lấy gốc từ token của theme (--acc). */
+.hero {
+  /* bảng màu trên ảnh — chỉ dùng bên trong khối này */
+  --hb-void: #0b0b0c;                        /* nền khi ảnh chưa tải / tải lỗi */
+  --hb-fg: #ffffff;
+  --hb-mut: rgba(255, 255, 255, .82);
+  --hb-dim: rgba(255, 255, 255, .62);
+  --hb-line: rgba(255, 255, 255, .18);
+  --hb-line2: rgba(255, 255, 255, .34);
+  --hb-glass: rgba(12, 10, 10, .55);
+  /* accent đọc được trên ảnh tối: bản sáng của --acc (bản gốc quá tối khi nằm
+     trên nền đen, chỉ đạt ~2,9:1) */
+  --hb-acc: #ff9db1;
+  /* màu trạng thái trên nền ảnh tối: bản sáng của --ok/--warn/vàng khoá, vì
+     token gốc (dùng cho nền giấy) quá tối khi nằm trên ảnh */
+  --hb-ok: #8fe0b6;
+  --hb-warn: #ffc46b;
+  --hb-gold: #f0d78a;
+  --hb-cta-bg: var(--acc);                   /* nút chính vẫn dùng accent của theme */
+  --hb-cta-fg: #ffffff;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  /* chừa sẵn chiều cao ngay từ khung HTML tĩnh (trước khi JS dựng hero) nên
+     nội dung bên dưới không bị đẩy xuống khi ảnh/dữ liệu về — không CLS */
+  min-height: clamp(540px, 68vh, 660px);
+  overflow: hidden;
+  border-bottom: 1px solid var(--bd);
+  background: var(--hb-void);
+  color: var(--hb-fg);
+  isolation: isolate;
+}
+[data-theme="dark"] .hero {
+  --hb-acc: var(--acc);                      /* nền tối: accent của theme đã đủ sáng */
+  --hb-cta-fg: #1a1113;                      /* chữ đậm trên viên accent sáng */
+}
+/* `hidden` phải thắng `display: flex` của .hero (thuộc tính hidden của trình
+   duyệt yếu hơn class) — component ẩn cả section khi không có mục nào. */
+.hero[hidden] { display: none !important; }
+/* điều khiển bị ẩn khi chỉ có 1 mục (nút trước/sau, dot, dải thumbnail, play) */
+.hero [hidden] { display: none !important; }
+
+/* ---- 5.1 lớp ảnh nền: mỗi mục một <img>, chồng lên nhau, mờ dần khi đổi ---- */
+.hero .hb-media { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: var(--hb-void); }
+.hero .hb-bg {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: 50% 22%;
+  opacity: 0; transition: opacity .4s var(--ease-soft);
+  /* Ảnh bìa trong kho là áp phích dọc (480×600, tỷ lệ 0,8) nên khi phủ ngang
+     một banner 2,3:1 nó bị phóng ~3 lần và cắt thành một dải. Blur TĨNH 2px +
+     scale 1.04 (che mép nhoè của blur) giữ ảnh trông như phông nền điện ảnh
+     thay vì một dải áp phích vỡ hạt; gradient bên trên lo phần tương phản chữ.
+     Đây là filter TĨNH — không animate filter (điều cấm ở đầu tệp).
+     Khi API có ảnh ngang thật (banner/backdrop), chỉ cần truyền
+     backgroundImage.srcSet/sizes là hết phải phóng: không sửa CSS. */
+  filter: blur(2px) saturate(.94) brightness(.94);
+  transform: scale(1.04);
+  transform-origin: 50% 45%;
+}
+.hero .hb-bg.on { opacity: 1; }
+/* ---- 5.2 gradient: ngang cho cột chữ + dọc cho đáy (CTA/thumbnail) -------- */
+.hero .hb-scrim { position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background:
+    linear-gradient(90deg,
+      rgba(10, 10, 11, .95) 0%,
+      rgba(10, 10, 11, .82) 32%,
+      rgba(10, 10, 11, .45) 58%,
+      rgba(10, 10, 11, .12) 78%,
+      rgba(10, 10, 11, .42) 100%),
+    linear-gradient(to top,
+      rgba(0, 0, 0, .85) 0%,
+      rgba(0, 0, 0, .35) 35%,
+      transparent 70%); }
+
+/* ---- 5.3 khung nội dung --------------------------------------------------- */
+.hero .stage { position: relative; z-index: 2; flex: 1 1 auto; display: grid; }
+.hero .slide { grid-area: 1 / 1; display: grid; align-items: center; min-width: 0;
+  visibility: hidden; opacity: 0;
+  transition: opacity .4s var(--ease-soft), visibility 0s linear .4s; }
+.hero .slide.on { visibility: visible; opacity: 1; transition: opacity .4s var(--ease-soft); }
+.hero .hb-inner { max-width: var(--maxw); margin: 0 auto; width: 100%;
+  padding: 56px 24px 32px; }
+.hero .col { max-width: 650px; min-width: 0; }
+.hero .info { display: flex; flex-direction: column; align-items: flex-start;
+  gap: 16px; min-width: 0; }
+
+/* nhãn nhỏ phía trên tiêu đề (kiểu manchette): giữ gạch ngang mảnh của hệ thống
+   bằng ::before nên textContent của .eyebrow vẫn là chuỗi thuần — trình đọc màn
+   hình và bài kiểm thử đọc đúng nhãn, không dính dấu “—” */
 .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 800;
   letter-spacing: .16em; text-transform: uppercase; color: var(--acc); }
 .eyebrow::before { content: ""; width: 22px; height: 1px; background: var(--acc); }
-.hero h1 { font-size: clamp(32px, 4.4vw, 54px); line-height: 1.08; margin: 16px 0; letter-spacing: -.025em; }
-.hero h1 a { color: inherit; }
-.hero h1 a:hover { color: var(--acc); }
-.hero .meta { display: flex; align-items: center; gap: 8px 16px; flex-wrap: wrap; font-size: 13.5px;
-  line-height: 1.5; color: var(--mut); padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--bd); }
-.hero .meta b { color: var(--txt); }
-.hero .meta > span { display: inline-flex; align-items: center; gap: 6px; }
-.hero .syn { font-size: 16px; line-height: 1.7; color: var(--mut); max-width: 58ch; margin-bottom: 20px;
+.hero .eyebrow { color: var(--hb-acc); }
+.hero .eyebrow::before { background: var(--hb-acc); }
+
+.hero h1 { font-size: clamp(38px, 3.7vw, 54px); line-height: 1.06; margin: 0;
+  letter-spacing: -.025em; color: var(--hb-fg); font-weight: 800;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.hero .prog { display: flex; align-items: center; gap: 12px; font-size: 12.5px; color: var(--mut); margin: -4px 0 24px; }
-.hero .prog .pb { flex: 0 1 230px; height: 3px; background: var(--surf3); overflow: hidden; }
-.hero .prog .pb i { display: block; height: 100%; background: var(--acc); }
-.hero .btn-row { margin-bottom: 4px; }
-.hero .keys { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 20px;
-  font-size: 11.5px; color: var(--dim); }
+.hero h1 a { color: inherit; }
+.hero h1 a:hover { color: var(--hb-acc); }
+
+/* hàng meta: badge + số chương + tác giả + couple + ngày cập nhật */
+.hero .meta { display: flex; align-items: center; gap: 8px 18px; flex-wrap: wrap;
+  font-size: 13.5px; line-height: 1.5; color: var(--hb-mut); }
+.hero .meta b { color: var(--hb-fg); font-weight: 700; }
+.hero .meta > span { display: inline-flex; align-items: center; gap: 6px; }
+.hero .meta .pill { color: var(--hb-mut); border-color: var(--hb-line); background: var(--hb-glass);
+  padding: 4px 9px; font-size: 11px; letter-spacing: .04em; }
+.hero .meta .pill .d { width: 6px; height: 6px; }
+.hero .meta .pill.done { color: var(--hb-ok); border-color: color-mix(in srgb, var(--hb-ok) 38%, transparent); }
+.hero .meta .pill.run { color: var(--hb-warn); border-color: color-mix(in srgb, var(--hb-warn) 38%, transparent); }
+.hero .meta .pill.soon { color: var(--hb-mut); }
+.hero .meta .pill.run .d { animation: hbPulse 2.4s var(--ease-soft) infinite; }
+.hero .meta .pill.acc { color: var(--hb-acc); border-color: color-mix(in srgb, var(--hb-acc) 45%, transparent); }
+.hero .meta .pill.lock { color: var(--hb-gold); border-color: color-mix(in srgb, var(--hb-gold) 40%, transparent); }
+.hero .meta .pill.bad { color: #fff; background: var(--bad); border-color: transparent; }
+@keyframes hbPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .45; transform: scale(.82); } }
+
+/* mô tả: tối đa 3 dòng, điện thoại ẩn hẳn (xem @media bên dưới) */
+.hero .syn { font-size: 16px; line-height: 1.62; color: var(--hb-mut); margin: 0; max-width: 56ch;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.hero .prog { display: flex; align-items: center; gap: 12px; font-size: 12.5px; color: var(--hb-mut); }
+.hero .prog .pb { flex: 0 0 200px; height: 3px; background: rgba(255, 255, 255, .22); overflow: hidden; }
+.hero .prog .pb i { display: block; height: 100%; background: var(--hb-acc); }
+.hero .prog b { color: var(--hb-fg); }
+
+/* CTA: nút chính là viên accent đặc (chữ đậm), nút phụ viền trắng mờ */
+.hero .btn-row { display: flex; flex-wrap: wrap; gap: 12px; margin: 4px 0 0; }
+.hero .btn.hb-cta { border-radius: 99px; border-color: var(--hb-line2); color: var(--hb-fg);
+  background: rgba(255, 255, 255, .07); padding: 13px 22px; }
+.hero .btn.hb-cta:hover { border-color: var(--hb-fg); color: var(--hb-fg);
+  background: rgba(255, 255, 255, .14); transform: translateY(-1px); box-shadow: none; }
+.hero .btn.hb-cta:focus-visible { outline: 2px solid var(--hb-acc); outline-offset: 3px; box-shadow: none; }
+.hero .btn.pri.hb-cta { background: var(--hb-cta-bg); border-color: var(--hb-cta-bg); color: var(--hb-cta-fg); }
+.hero .btn.pri.hb-cta:hover { filter: brightness(1.06); background: var(--hb-cta-bg); color: var(--hb-cta-fg); }
+.hero .btn.hb-cta.on { color: var(--hb-acc); border-color: var(--hb-acc);
+  background: color-mix(in srgb, var(--hb-acc) 16%, transparent); }
+.hero .btn.hb-cta.off { opacity: .55; }
+
+/* gợi ý phím tắt: chỉ hiện khi còn chỗ (≥620px) */
+.hero .keys { display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  font-size: 11.5px; color: var(--hb-dim); }
 .hero .keys span { display: inline-flex; align-items: center; gap: 6px; }
-.hero .keys kbd { font-family: var(--font-mono); font-size: 10.5px; padding: 2px 6px; border: 1px solid var(--bd);
-  border-bottom-width: 2px; border-radius: 4px; background: var(--surf); color: var(--mut); }
-.hero .posterwrap { position: relative; padding-top: 8px; }
-.hero .idx { position: absolute; top: -32px; left: -32px; font-family: var(--font-head); font-size: 86px; line-height: 1;
-  color: var(--txt); opacity: .07; pointer-events: none; font-variant-numeric: tabular-nums; letter-spacing: -.04em; }
-.hero .poster { position: relative; display: block; aspect-ratio: 2/3; border-radius: var(--r); overflow: hidden;
-  background: var(--surf3); border: 1px solid var(--bd2); box-shadow: var(--sh-lg);
-  transition: transform var(--t-mid) var(--ease), box-shadow var(--t-mid) var(--ease); }
-.hero .poster::after { content: ""; position: absolute; inset: 7px; border: 1px solid rgba(255, 255, 255, .2);
-  border-radius: 3px; pointer-events: none; }
-.hero .poster img { width: 100%; height: 100%; object-fit: cover; transition: transform var(--t-mid) var(--ease-out); }
-.hero .poster .b18 { position: absolute; top: 12px; left: 12px; z-index: 2; }
-.hero .poster.noimg::before { content: "ssochuz"; position: absolute; inset: 0; display: grid; place-items: center;
-  font: 800 11px/1 var(--font); letter-spacing: .24em; text-transform: uppercase; color: var(--dim); opacity: .6; }
-.hero .poster .gloss { position: absolute; inset: 0; pointer-events: none; transform: translateX(-125%);
-  background: linear-gradient(105deg, transparent 36%, rgba(255, 255, 255, .3) 50%, transparent 64%); }
-.hero .posterwrap:hover .gloss { transform: translateX(125%); transition: transform .6s var(--ease-soft); }
-.hero .posterwrap:hover .poster { transform: translateY(-4px); box-shadow: 0 24px 44px -28px rgba(20, 12, 4, .6); }
-.hero .posterwrap:hover .poster img { transform: scale(1.03); }
-.hero .pcap { display: block; margin-top: 12px; text-align: center; font-size: 12px; line-height: 1.5; color: var(--dim); }
-.hero .pcap b { color: var(--mut); font-weight: 650; }
-/* thanh điều khiển của hero: nền đặc, KHÔNG kính mờ — đúng lời hứa “tạp chí in,
-   không gradient/kính mờ” ở đầu tệp, và đỡ một lớp blur phải vẽ lại khi cuộn */
-.hero .foot { position: relative; border-top: 1px solid var(--bd); background: var(--bg); }
-.hero .footin { max-width: var(--maxw); margin: 0 auto; padding: 12px 24px; display: flex; align-items: center; gap: 12px; }
-.hero .arrow { width: 34px; height: 34px; border: 1px solid var(--bd); border-radius: var(--r); color: var(--mut);
-  display: grid; place-items: center; transition: border-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease),
-    background var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
-.hero .arrow:hover { border-color: var(--bd2); color: var(--txt); background: var(--surf); }
-.hero .arrow:active { transform: scale(.96); }
-.hero .dots { display: flex; gap: 6px; }
-.hero .dots button { width: 20px; height: 2px; background: var(--bd2); border-radius: 2px;
+.hero .keys kbd { font-family: var(--font-mono); font-size: 10.5px; padding: 2px 6px;
+  border: 1px solid var(--hb-line); border-bottom-width: 2px; border-radius: 4px;
+  background: rgba(255, 255, 255, .08); color: var(--hb-mut); }
+
+/* ---- 5.4 thanh điều khiển: dải thumbnail góc dưới-phải ------------------- */
+.hero .foot { position: relative; z-index: 3; border-top: 1px solid var(--hb-line);
+  background: linear-gradient(to top, rgba(6, 6, 7, .95) 40%, rgba(6, 6, 7, .78)); }
+.hero .footin { max-width: var(--maxw); margin: 0 auto; padding: 12px 24px;
+  display: flex; align-items: center; gap: 12px; min-height: 64px; }
+.hero .arrow { width: 38px; height: 38px; flex: none; border-radius: 50%;
+  border: 1px solid var(--hb-line2); color: var(--hb-fg); background: rgba(255, 255, 255, .06);
+  display: grid; place-items: center;
+  transition: background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease),
+    transform var(--t-fast) var(--ease); }
+.hero .arrow:hover { background: rgba(255, 255, 255, .16); border-color: var(--hb-fg); color: var(--hb-fg); }
+.hero .arrow:active { transform: scale(.94); }
+.hero .arrow:focus-visible { outline: 2px solid var(--hb-acc); outline-offset: 2px; }
+.hero .dots { display: flex; gap: 7px; align-items: center; }
+.hero .dots button { width: 22px; height: 3px; border-radius: 2px; background: var(--hb-line2);
   transition: background var(--t) var(--ease), width var(--t) var(--ease); }
-.hero .dots button:hover { background: var(--mut); }
-.hero .dots button.on { background: var(--acc); width: 32px; }
-.hero .count { font-size: 11.5px; letter-spacing: .1em; color: var(--dim); font-variant-numeric: tabular-nums; }
-.hero .strip { display: flex; gap: 7px; margin-left: auto; }
-.hero .strip button { width: 44px; height: 58px; border: 1px solid var(--bd); border-radius: var(--r-sm);
-  overflow: hidden; background: var(--surf2); opacity: .45;
-  transition: opacity var(--t) var(--ease), transform var(--t) var(--ease), border-color var(--t) var(--ease), box-shadow var(--t) var(--ease); }
-.hero .strip button:hover { opacity: .85; }
-.hero .strip button.on { opacity: 1; border-color: var(--acc); }
-.hero .strip img { width: 100%; height: 100%; object-fit: cover; }
+.hero .dots button:hover { background: var(--hb-mut); }
+.hero .dots button.on { background: var(--hb-acc); width: 34px; }
+.hero .dots button:focus-visible { outline: 2px solid var(--hb-acc); outline-offset: 3px; }
+.hero .count { font-size: 11.5px; letter-spacing: .1em; color: var(--hb-dim);
+  font-variant-numeric: tabular-nums; }
+.hero .strip { display: flex; gap: 8px; margin-left: auto; max-width: 62%;
+  overflow-x: auto; scrollbar-width: none; padding: 2px; }
+.hero .strip::-webkit-scrollbar { display: none; }
+.hero .strip button { width: 120px; aspect-ratio: 16 / 10; flex: none; border-radius: var(--r-sm);
+  border: 2px solid transparent; overflow: hidden; background: rgba(255, 255, 255, .1); opacity: .62;
+  transition: opacity var(--t) var(--ease), border-color var(--t) var(--ease), transform var(--t) var(--ease); }
+.hero .strip button:hover { opacity: .92; transform: translateY(-1px); }
+.hero .strip button.on { opacity: 1; border-color: var(--hb-acc); }
+.hero .strip button:focus-visible { outline: 2px solid var(--hb-acc); outline-offset: 2px; }
+.hero .strip img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* vạch đếm thời gian tự chuyển slide: scaleX trên compositor, không layout lại */
 .hero .bar { position: absolute; inset: auto 0 0; height: 2px; }
-/* Vạch đếm thời gian tự đổi slide: chạy liên tục 6–7 giây, mỗi khung một lần
-   layout nếu để width. scaleX thì compositor tự chạy, main thread rảnh. */
-.hero .bar i { display: block; height: 100%; width: 100%; background: var(--acc);
+.hero .bar i { display: block; height: 100%; width: 100%; background: var(--hb-acc);
   transform: scaleX(0); transform-origin: 0 50%; }
-@media (max-width: 900px) {
-  .hero .col { grid-template-columns: 1fr; gap: 30px; padding: 34px 20px 30px; }
-  .hero .posterwrap { max-width: 220px; }
-  .hero .idx { font-size: 64px; top: -22px; left: -18px; }
-  .hero .syn { -webkit-line-clamp: 4; }
+
+/* ---- 5.5 responsive ------------------------------------------------------
+   Desktop ≥1024 : như trên. Tablet 640–1023 : thu chữ + thumbnail nhỏ lại.
+   Mobile <640 : gradient dọc từ dưới lên, nội dung sát đáy, ẩn dải thumbnail,
+   hiện dot, chỉ còn một CTA chữ (các CTA phụ thành nút icon). */
+@media (max-width: 1023px) {
+  .hero h1 { font-size: 38px; }
+  .hero .hb-inner { padding: 40px 24px 28px; }
+  .hero .strip button { width: 92px; }
+  .hero .strip { max-width: 56%; }
+  .hero .col { max-width: 560px; }
 }
-@media (max-width: 620px) {
-  .hero .strip { display: none; }
+@media (max-width: 639px) {
+  .hero { min-height: max(440px, 58vh); }
+  .hero .hb-scrim { background:
+    linear-gradient(to top,
+      rgba(8, 8, 9, .97) 0%,
+      rgba(8, 8, 9, .86) 38%,
+      rgba(8, 8, 9, .5) 68%,
+      rgba(8, 8, 9, .3) 100%); }
+  .hero .slide { align-items: end; }
+  .hero .hb-inner { padding: 24px 18px 22px; }
+  .hero h1 { font-size: clamp(26px, 7vw, 32px); -webkit-line-clamp: 3; }
+  .hero .info { gap: 12px; }
+  .hero .syn { display: none; }             /* điện thoại: ưu tiên tiêu đề + CTA */
   .hero .keys { display: none; }
-  .hero .footin { padding: 8px 16px; gap: 8px; }
+  .hero .prog .pb { flex-basis: 140px; }
+  /* CTA phụ chỉ còn icon (44px = vùng chạm đủ rộng), nhãn vẫn nằm ở aria-label */
+  .hero .btn-row { gap: 10px; align-items: center; }
+  .hero .btn.hb-cta { padding: 12px 18px; }
+  .hero .btn.hb-cta:not(.pri) { padding: 0; width: 44px; height: 44px; border-radius: 50%; }
+  .hero .btn.hb-cta:not(.pri) .hb-cta-lbl { display: none; }
+  /* mobile: dải thumbnail ẩn, dot pagination hiện (2 điều khiển dễ bấm hai bên) */
+  .hero .strip { display: none; }
+  .hero .footin { padding: 8px 14px; gap: 10px; min-height: 56px; }
+  .hero .arrow { width: 34px; height: 34px; }
+  /* hàng điều khiển điện thoại: ‹ (trái) · dot pagination (giữa) · ▶ ⏸ › (phải) */
+  .hero .count { display: none; }
+  .hero .dots { margin: 0 auto; }
+}
+/* máy rất hẹp (≤380px): thu vạch dot để hàng điều khiển vẫn lọt một dòng */
+@media (max-width: 380px) {
+  .hero .dots { gap: 5px; }
+  .hero .dots button { width: 16px; }
+  .hero .dots button.on { width: 26px; }
+  .hero .footin { gap: 8px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .slide.on, .slide.ghost.out { animation: none; }
-  .hero .posterwrap:hover .poster, .hero .posterwrap:hover .poster img { transform: none; }
+  .hero .hb-bg, .hero .slide { transition: none; }
+  .hero .meta .pill.run .d { animation: none; }
 }
-
 /* ============================ 6. DẢI SỐ ================================== */
 .facts { border-bottom: 1px solid var(--bd); }
 .facts .in { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; display: grid; grid-template-columns: repeat(4, 1fr); }

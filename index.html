@@ -24,20 +24,11 @@
 
 <main>
   <!-- ================= HERO LANDING ================= -->
-  <section class="hero" id="hero" aria-label="Truyện nổi bật">
-    <div class="bg" id="heroBg" aria-hidden="true"><i></i><i></i></div>
-    <div class="stage" id="stage" aria-live="polite"></div>
-    <div class="foot">
-      <div class="footin">
-        <button class="arrow" id="hPrev" aria-label="Truyện trước"></button>
-        <div class="dots" id="hDots" role="tablist" aria-label="Chọn truyện nổi bật"></div>
-        <span class="count" id="hCount"></span>
-        <div class="strip" id="hStrip"></div>
-        <button class="arrow" id="hNext" aria-label="Truyện kế tiếp"></button>
-      </div>
-      <div class="bar"><i id="heroBar"></i></div>
-    </div>
-  </section>
+  <!-- VÁ (2026-10-29): hero là BANNER full-bleed dựng bởi component dùng chung
+       `CZ.heroBanner` (src/cz-hero.js) — ảnh nền phủ toàn section, nội dung bên
+       trái, dải thumbnail ở góc dưới-phải. Khối rỗng trong HTML là CỐ Ý: component
+       tự dựng thanh điều khiển nên không có markup trùng lặp ở hai nơi. -->
+  <section class="hero" id="hero" aria-label="Truyện nổi bật"></section>
 
   <!-- ================= SỐ LIỆU THẬT ================= -->
   <section class="facts" aria-label="Số liệu thư viện"><div class="in" id="facts"></div></section>
@@ -153,6 +144,7 @@
 <script src="/cz-auth.js?v=20261012n"></script>
 <script src="/cz-personal.js?v=20261013notif1"></script>
 <script src="/cz-dice.js?v=20261014feat1"></script>
-<script src="/cz-home.js?v=20261012n"></script>
+<script src="/cz-hero.js?v=20261029hero1"></script>
+<script src="/cz-home.js?v=20261029hero1"></script>
 </body>
 </html>
