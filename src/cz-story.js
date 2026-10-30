@@ -429,13 +429,16 @@
     $('#shero').innerHTML =
       '<div class="in">' +
         '<div class="cover" data-t="' + esc(n.title) + '">' + (im ? '<img src="' + esc(im) + '"' + CZ.coverFB(n, im) + ' alt="Bìa ' + esc(n.title) + '" width="300" height="450" fetchpriority="high" referrerpolicy="no-referrer">' : '') +
-          (n.is18 ? '<span class="b18">18+</span>' : '') +
+          (n.is18 ? '<span class="b18" title="Dành cho 18 tuổi trở lên">18+</span>' : '') +
           (n.locked ? '<span class="lock-cover" title="Truyện có mật mã — cần mật mã để đọc" aria-label="Truyện có mật mã">' + ic('lock', 'i-s') + '</span>' : '') +
-          (n.fresh ? '<span class="nw-bookmark"><span>NEW</span></span>' : '') + '</div>' +
+          (n.fresh ? '<span class="nw-bookmark"><span>NEW</span></span>' : '') +
+          /* tình trạng nằm TRÊN BÌA dưới dạng chữ in hoa nhỏ + chấm màu (vòng 10 · C1),
+             không lặp lại thành pill trong hàng meta nữa — mỗi dữ kiện chỉ hiện một lần */
+          '<span class="cvGrad" aria-hidden="true"></span>' +
+          '<span class="cvSt ' + esc(n.statusCls || 'run') + '"><i aria-hidden="true"></i>' + esc(CZ.statusLabel(n.statusCls || n.status)) + '</span>' + '</div>' +
         '<div>' +
           '<h1>' + esc(n.title) + '</h1>' +
           '<div class="meta">' +
-            '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(CZ.statusLabel(n.statusCls || n.status)) + '</span>' +
             (n.locked ? '<span class="pill lock" title="Truyện được bảo vệ bằng mật mã — thẻ và giới thiệu công khai, chương cần mật mã">' + ic('lock', 'i-s') + 'Có mật mã</span>' : '') +
             '<span>' + ic('book', 'i-s') + ' <b>' + esc(CZ.countText(n)) + '</b></span>' +
             (n.author ? '<span>' + ic('pen', 'i-s') + ' ' + esc(n.author) + '</span>' : '') +

@@ -1414,7 +1414,33 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   font: 800 10px/1 var(--font); letter-spacing: .28em; text-transform: uppercase; color: var(--dim); opacity: .6; }
 .shero .cover.noimg::after { content: attr(data-t); position: absolute; inset: auto 20px 24px; font-family: var(--font-head);
   font-size: 21px; font-weight: 700; line-height: 1.22; color: var(--mut); }
-.shero .cover .b18 { position: absolute; top: 10px; left: 10px; }
+/* ---- hai nhãn trên bìa trang truyện (vòng 10 · C1) -------------------------
+   Hai thứ KHÁC LOẠI nên không mặc chung một bộ đồ:
+   · tình trạng = CHỮ in hoa nhỏ (mono, giãn chữ) + chấm màu, trên dải mờ đáy bìa;
+   · 18+ = KÝ HIỆU kiểm duyệt: vòng tròn viền ở góc trên trái.
+   Góc trên phải đã là băng rôn MỚI (.nw-bookmark) nên 18+ nằm bên trái. */
+.shero .cover .cvGrad { position: absolute; left: 0; right: 0; bottom: 0; height: 46%; z-index: 1;
+  background: linear-gradient(0deg, rgba(4, 3, 2, .93) 16%, rgba(4, 3, 2, 0)); pointer-events: none; }
+.shero .cover .cvSt { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+  display: flex; align-items: center; gap: 6px; padding: 0 10px 9px; pointer-events: none;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 800; line-height: 1;
+  letter-spacing: .16em; text-transform: uppercase; color: #fff;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, .95); }
+.shero .cover .cvSt i { width: 6px; height: 6px; border-radius: 50%; flex: none; background: currentColor; }
+.shero .cover .cvSt.done i { background: #6ce8a5; box-shadow: 0 0 8px #6ce8a5; }
+.shero .cover .cvSt.run i { background: #ffcb78; box-shadow: 0 0 8px #ffcb78; }
+.shero .cover .cvSt.soon i { background: #b0a3f5; box-shadow: 0 0 8px #b0a3f5; }
+/* 18+ giữ nguyên class .b18 (thẻ lưới vẫn là pill đỏ) nhưng trên bìa trang truyện
+   đổi hẳn hình thức: vòng tròn viền 27px, chữ 9,5px bên trong, quầng tối cục bộ
+   để đọc được cả trên bìa sáng. */
+.shero .cover .b18 { position: absolute; left: 10px; top: 10px; z-index: 3;
+  display: grid; place-items: center; width: 30px; height: 30px; min-height: 0; padding: 0;
+  border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, .92);
+  background: rgba(8, 6, 4, .58); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+  color: #fff; font-family: var(--font-mono); font-size: 10px; font-weight: 800; line-height: 1;
+  letter-spacing: .01em; text-transform: none;
+  box-shadow: 0 2px 10px -2px rgba(0, 0, 0, .8); text-shadow: 0 1px 6px rgba(0, 0, 0, .9); }
+.shero .cover.noimg::after { bottom: 32px; }   /* chừa chỗ cho dải tình trạng */
 .shero h1 { font-size: clamp(28px, 3.4vw, 42px); line-height: 1.1; margin-bottom: 14px; }
 .shero .meta { display: flex; align-items: center; gap: 9px 16px; flex-wrap: wrap; font-size: 13.5px; color: var(--mut);
   padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--bd); }
@@ -2087,6 +2113,10 @@ kbd { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; b
   .admin .keys { grid-template-columns: 1fr; }
   .shero .in { grid-template-columns: 1fr; gap: 24px; }
   .shero .cover { width: min(42vw, 180px); }
+  /* nhãn bìa hạ cỡ theo bìa, giữ đúng cấu trúc (chỉ scale, không đổi bố cục) */
+  .shero .cover .b18 { width: 20px; height: 20px; left: 6px; top: 6px; font-size: 8px; border-width: 1px; }
+  .shero .cover .cvSt { padding: 0 7px 7px; font-size: 8px; letter-spacing: .1em; gap: 4px; }
+  .shero .cover .cvSt i { width: 4px; height: 4px; }
   .rnav { grid-template-columns: 1fr 1fr; }
   .rnav .mid { grid-column: 1 / -1; order: -1; }
   .wrap, .ftr .in { padding-left: 16px; padding-right: 16px; }

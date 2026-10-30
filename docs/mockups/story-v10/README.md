@@ -57,3 +57,15 @@ Theo yêu cầu: vòng tròn 18+ dời từ **góc dưới phải** lên **góc 
 
 Vòng tròn có **quầng tối cục bộ** (`rgba(8,6,4,.58)` + blur 4px) để đọc được trên bìa sáng;
 mobile hạ còn 19px, cách mép 5px. Khoảng thở ở hàng nút giảm 18px → 10px để phần đầu bớt rỗng.
+
+## Đã port vào site thật (C1)
+
+| Việc | Chỗ sửa |
+|---|---|
+| Trạng thái rời khỏi hàng meta, thành chữ trên dải mờ đáy bìa | `src/cz-story.js` → `renderStory()`: bỏ `span.pill.<statusCls>`, thêm `span.cvGrad` + `span.cvSt.<statusCls>` trong `.cover` |
+| 18+ thành vòng tròn viền ở góc trên trái | `src/cz.css`: khối `.shero .cover .cvGrad / .cvSt / .b18` (thay dòng `top/left: 10px` cũ) |
+| Nhãn hạ cỡ trên mobile | `@media (max-width: 900px)`: vòng 20px, chữ 8px, chấm 4px |
+
+Class `.b18` vẫn dùng chung với thẻ lưới (ở đó vẫn là pill đỏ); chỉ trong `.shero .cover` mới đổi
+thành vòng tròn. Bìa không ảnh (`.cover.noimg`) được đẩy chữ tên truyện lên 32px để không đè dải
+tình trạng. Đo lại ở 1216px: bìa 236×354, vòng 30px cách mép 10px, dải tình trạng cao 46% đáy.
