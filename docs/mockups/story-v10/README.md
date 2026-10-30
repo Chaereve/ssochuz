@@ -69,3 +69,17 @@ mobile hạ còn 19px, cách mép 5px. Khoảng thở ở hàng nút giảm 18px
 Class `.b18` vẫn dùng chung với thẻ lưới (ở đó vẫn là pill đỏ); chỉ trong `.shero .cover` mới đổi
 thành vòng tròn. Bìa không ảnh (`.cover.noimg`) được đẩy chữ tên truyện lên 32px để không đè dải
 tình trạng. Đo lại ở 1216px: bìa 236×354, vòng 30px cách mép 10px, dải tình trạng cao 46% đáy.
+
+## Port toàn bộ thẻ hero C1 (không chỉ nhãn)
+
+Sau khi so lại với mockup, trang thật vẫn là bố cục cũ → port luôn khung `C1`:
+`src/cz-story.js` dựng `#shero > .hC` (nền là chính bìa phóng to + mờ, `.hVeil` phủ tối),
+`.in` = 172px bìa | cột chữ `.txtC` (h1 → hàng tác giả `·` → sao đánh giá → tóm tắt 2 dòng
+→ hàng nút canh đáy), dải tiến độ `.prog` chạy hết bề ngang thẻ ở đáy.
+
+- Hàng meta đổi từ pill + icon sang **chữ nhỏ ngăn bằng “·”**; dấu `·` do CSS chèn trước
+  từng `.mi` nên khi xuống dòng không bị lửng lơ ở cuối dòng.
+- Nút chính trong hero là **mực son đặc** (`--acc`, chữ nâu đậm), nút phụ trên nền ảnh.
+- Sao đánh giá thu còn một hàng 16px + nhãn 12px (bắt buộc giữ, mockup không có).
+- `≤900px`: bìa 150px; `≤620px`: bìa 132px bên trái, tiêu đề canh giữa theo chiều cao bìa,
+  hàng meta + phần còn lại xuống hết bề ngang thẻ, nút xếp một cột.

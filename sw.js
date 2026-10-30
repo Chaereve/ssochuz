@@ -12,7 +12,7 @@
    ⚠ MỖI LẦN ĐỔI ?v= TĨNH (cz.css/cz-*.js): sửa cả PRECACHE dưới đây + tăng
    CZ_SW_VER → trình duyệt tự tải SW mới, hiện “Đã có bản cập nhật — tải lại”.
    ========================================================================== */
-var CZ_SW_VER = '20261030badge1';
+var CZ_SW_VER = '20261030hero2';
 
 /* kho shell theo version (update là thay kho mới, xoá kho cũ);
    kho trang/API/ảnh KHÔNG theo version để dữ liệu offline còn lại sau update */
@@ -40,10 +40,10 @@ var PRECACHE = [
   '/profile',
   '/cz-space.js?v=20261012n',
   '/manifest.webmanifest',
-  '/cz.css?v=20261030badge1',
-  '/cz-app.js?v=20261030badge1',
-  '/cz-home.js?v=20261030badge1',
-  '/cz-story.js?v=20261030badge1',
+  '/cz.css?v=20261030hero2',
+  '/cz-app.js?v=20261030hero2',
+  '/cz-home.js?v=20261030hero2',
+  '/cz-story.js?v=20261030hero2',
   '/cz-people.js?v=20261012n',
   '/cz-config.js?v=20261012n',
   '/cz-stickers.js?v=20261012n',
