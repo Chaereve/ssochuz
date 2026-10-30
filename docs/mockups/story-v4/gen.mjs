@@ -77,6 +77,8 @@ const REL_AUTHOR = reg.lib.filter((b) => b.author === SRC.author && b.slug !== S
 const REL_COUPLE = S.c
   ? reg.lib.filter((b) => b.couple === SRC.couple && b.slug !== SRC.slug).slice(0, 3)
   : [];
+/* bộ đã nằm ở cột “cùng couple” thì không lặp lại ở cột “cùng tác giả” */
+const REL_AUTHOR_VIEW = REL_AUTHOR.filter((b) => !REL_COUPLE.includes(b));
 const CH = S.n;
 /* tên chương thật: data/book/<slug>.json · chapters[].t = "Chương 12: Tên chương" */
 let CHT = [];
@@ -98,8 +100,6 @@ const ICON = {
   rss: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5 19h.01"/><path d="M5 12.5A6.5 6.5 0 0 1 11.5 19"/><path d="M5 6a13 13 0 0 1 13 13"/></svg>',
   chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
   search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>',
-  eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>',
-  star: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.6l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.8l5.9-.8z"/></svg>',
   arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M12.5 6l6 6-6 6"/></svg>'
 };
 
@@ -118,15 +118,8 @@ const hero =
   <div class="inC">
     <a class="cvC" href="#">${S.img ? `<img src="${esc(S.img)}" alt="Bìa ${esc(S.t)}" loading="lazy">` : ''}</a>
     <div class="txtC">
-      <div class="kickC">Cập nhật ${dmy(S.u)}</div>
       <h1>${esc(S.t)}</h1>
-      <div class="byC"><b>${esc(S.a)}</b>${S.c ? ` · ${esc(S.c)}` : ''}${S.y ? ` · ${S.y}` : ''}</div>
-      <div class="chipC">
-        ${statusPill}
-        <span class="ch2">${ICON.book}${S.n} chương</span>
-        <span class="ch2">${ICON.star}<b>${STATS.rating}</b>/${STATS.ratings}</span>
-        <span class="ch2">${ICON.eye}${vn(STATS.views)}</span>
-      </div>
+      <div class="byC">${statusPill}<b>${esc(S.a)}</b>${S.c ? `<i>·</i>${esc(S.c)}` : ''}${S.y ? `<i>·</i>${S.y}` : ''}</div>
       <div class="synC"><p>${esc(PARAS[0])}</p>
         <button class="synMore" type="button">Đọc giới thiệu đầy đủ ${ICON.chev}</button></div>
       <div class="actC">
@@ -149,14 +142,13 @@ const tabs = `<div class="tabs2" role="tablist">
   <button type="button" class="on" data-p="chap" role="tab" aria-selected="true">Danh sách chương <b>${CH}</b></button>
   <button type="button" data-p="info" role="tab" aria-selected="false">Thông tin</button>
   <button type="button" data-p="cmt" role="tab" aria-selected="false">Bình luận <b>38</b></button>
-  <span class="tabEnd">Đang đọc chương ${PROG.read} / ${CH} · ${PROG.pct}%</span>
 </div>`;
 
 const toolbar = (pager) => `<div class="tbar">
   <label class="srch">${ICON.search}<input type="search" placeholder="Tìm số chương hoặc tên chương…" aria-label="Tìm chương"><kbd>/</kbd></label>
   <span class="sort"><b>Cũ nhất</b><i></i><span>Mới nhất</span></span>
   <span class="jump">Đi tới <input type="number" placeholder="số" aria-label="Số chương"><button type="button">Đi</button></span>
-  ${pager || `<span class="cnt">${CH} chương</span>`}
+
 </div>`;
 
 const chapters = Array.from({ length: CH }, (_, i) => i + 1);
@@ -205,33 +197,8 @@ const react = (cls = '') => `<div class="rx ${cls}">
   <button type="button" class="stk add" aria-label="Thêm cảm xúc">＋</button>
 </div>`;
 
-const cpChip = (label, n) => `<a href="#" class="cpChip">${esc(label)}<b>${n} bộ</b></a>`;
-
-const coupleBlock = (headingCls) => `<div class="${headingCls}">Cùng couple</div>
-  <div class="chipRow">${cpChip(S.c || '—', REL_COUPLE.length + 1)}</div>
-  ${REL_COUPLE.length ? `<div class="mList">${REL_COUPLE.map(miniRow).join('')}</div>` : ''}`;
-
 const miniRow = (b) => `<a class="mRow" href="#"><span class="mcv"><img src="${esc(coverOf(b))}" alt="" loading="lazy"></span>
   <span class="mtx"><b>${esc(b.title)}</b><span>${esc(b.status || '')} · ${b.chapters || 0} chương</span></span></a>`;
-
-const relCard = (b) => `<a class="rCard" href="#"><span class="rcv"><img src="${esc(coverOf(b))}" alt="" loading="lazy"></span>
-  <b>${esc(b.title)}</b><span>${esc(b.status || '')} · ${b.chapters || 0} chương</span></a>`;
-
-const cmt = (h = '38 bình luận') => `<div class="cmtH"><h3>Bình luận</h3><span>${h}</span>
-  <a class="cmtMore" href="#">Mở trang bình luận ${ICON.chev}</a></div>
-  <div class="cmtBox">Khung giscus giữ nguyên — chỉ canh lại lề cho thẳng với phần trên.</div>`;
-
-const infoPairs = [
-  ['Tên khác', esc(S.t)],
-  ['Tác giả', esc(S.a)],
-  ['Couple', esc(S.c || '—')],
-  ['Năm', esc(S.y)],
-  ['Tình trạng', esc(S.st)],
-  ['Số chương', S.n],
-  ['Cập nhật', dmy(S.u)],
-  ['Giới hạn', S.e ? '18+' : 'Mọi lứa tuổi']
-];
-
 
 /* ================================ CÁC MỤC ================================= */
 /* 1 · Danh sách chương — chỉ có thanh công cụ, danh sách và phân trang */
@@ -246,17 +213,15 @@ const FACTS_MAIN = [
   ['Tác giả', esc(S.a)],
   ['Couple', esc(S.c || '—')],
   ['Năm', esc(S.y)],
-  ['Tình trạng', esc(S.st)],
   ['Số chương', String(S.n)],
-  ['Cập nhật', dmy(S.u)]
+  ['Cập nhật', dmy(S.u)],
+  ['Giới hạn', S.e ? '18+' : 'Mọi lứa tuổi']
 ];
 
 const paneInfo = `<div class="pane" data-p="info" data-label="Thông tin">
   <div class="infoWrap">
     <div class="infoFacts">
       ${FACTS_MAIN.map(([k, v]) => `<div class="iF"><span>${k}</span><b>${v}</b></div>`).join('')}
-      <p class="iSub"><span>Giới hạn</span>${S.e ? '18+' : 'Mọi lứa tuổi'}
-        <a class="iGo" href="#">Đọc tiếp chương ${PROG.read + 1} ${ICON.chev}</a></p>
     </div>
     <div class="infoStats">
       <div class="iS"><span>Điểm ★</span><b>${STATS.rating}<em>/ ${STATS.ratings} đánh giá</em></b></div>
@@ -281,9 +246,8 @@ const relCol = (title, sub, rows, extra = '') => `<div class="relCol">
 
 const relSec = `<section class="relSec">
   <div class="relCols">
-    ${relCol('Cùng couple', `${esc(S.c || '—')} · ${REL_COUPLE.length + 1} bộ`, REL_COUPLE,
-      `<div class="chipRow" style="margin-bottom:6px">${cpChip(S.c || '—', REL_COUPLE.length + 1)}</div>`)}
-    ${relCol('Cùng tác giả', `${esc(S.a)} · ${REL_AUTHOR.length + 1} bộ`, REL_AUTHOR)}
+    ${relCol('Cùng couple', `${esc(S.c || '—')} · ${REL_COUPLE.length + 1} bộ`, REL_COUPLE)}
+    ${relCol('Cùng tác giả', `${esc(S.a)} · ${REL_AUTHOR_VIEW.length + 1} bộ`, REL_AUTHOR_VIEW)}
   </div>
 </section>`;
 
@@ -322,7 +286,6 @@ const CSS = `
   .btnGho svg { width: 14px; height: 14px; }
   .btnGho.onDark { border-color: rgba(255, 255, 255, .24); color: #fff; background: rgba(18, 12, 9, .3); }
   .btnGho.onDark:hover { background: rgba(18, 12, 9, .6); border-color: rgba(255, 255, 255, .4); }
-  .wide { justify-content: center; width: 100%; }
   .iconBtn { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px;
     border: 1px solid rgba(255, 255, 255, .24); border-radius: 9px; color: #fff; background: rgba(18, 12, 9, .3); }
   .iconBtn svg { width: 15px; height: 15px; }
@@ -339,18 +302,13 @@ const CSS = `
   .cvC { display: block; border-radius: 9px; overflow: hidden;
     box-shadow: 0 22px 40px -18px #000, 0 0 0 1px rgba(255, 255, 255, .18); }
   .cvC img { display: block; width: 100%; aspect-ratio: 2/3; object-fit: cover; }
-  .kickC { font: 800 9px/1 var(--font-mono); letter-spacing: .16em; text-transform: uppercase; color: var(--acc); }
-  .txtC h1 { margin-top: 9px; font-family: var(--font-head); font-size: 30px; font-weight: 700;
+  .txtC h1 { font-family: var(--font-head); font-size: 30px; font-weight: 700;
     line-height: 1.15; letter-spacing: -.022em; color: #fff; text-shadow: 0 2px 20px rgba(0, 0, 0, .5);
     display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-  .byC { margin-top: 8px; font-size: 12.5px; color: rgba(255, 255, 255, .66); }
+  .byC { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-top: 10px;
+    font-size: 12.5px; color: rgba(255, 255, 255, .66); }
+  .byC i { font-style: normal; opacity: .5; }
   .byC b { color: rgba(255, 255, 255, .9); font-weight: 600; }
-  .chipC { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-top: 12px; }
-  .ch2 { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 9px;
-    border-radius: 6px; background: rgba(12, 9, 6, .38); border: 1px solid rgba(255, 255, 255, .13);
-    font: 600 10.5px/1 var(--font-mono); color: rgba(255, 255, 255, .8); }
-  .ch2 b { color: var(--warn); font-weight: 700; }
-  .ch2 svg { width: 11px; height: 11px; opacity: .82; }
   .synC { margin-top: 12px; max-width: 76ch; }
   .synC p { margin: 0; font-size: 13px; line-height: 1.68; color: rgba(255, 255, 255, .74);
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -370,7 +328,6 @@ const CSS = `
   .tabs2 button.on b { color: var(--acc); }
   .tabs2 button.on::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px;
     height: 2px; border-radius: 2px; background: var(--acc); }
-  .tabEnd { margin-left: auto; font: 500 10.5px/1 var(--font-mono); color: var(--dim); }
 
   .pane { display: none; animation: pfade .18s ease; }
   .pane.on { display: block; }
@@ -400,7 +357,6 @@ const CSS = `
   .jump button { height: 28px; padding: 0 9px; border: 1px solid var(--bd); border-radius: 6px;
     background: none; color: var(--mut); font: 600 11.5px/1 var(--font); cursor: pointer; }
   .jump button:hover { border-color: var(--bd2); color: var(--txt); }
-  .cnt { margin-left: auto; font: 500 10.5px/1 var(--font-mono); color: var(--dim); letter-spacing: .04em; }
 
   .cg4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 30px; margin-top: 4px; }
   .ch4 { display: grid; grid-template-columns: 18px minmax(0, 1fr); align-items: baseline; gap: 9px;
@@ -431,10 +387,6 @@ const CSS = `
     color: var(--dim); }
   .iF b { min-width: 0; font-size: 12.5px; font-weight: 600; color: var(--txt);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .iSub { grid-column: 1 / -1; margin: 12px 0 0; font-size: 11.5px; color: var(--mut); }
-  .iSub span { margin-right: 5px; font: 700 9px/1 var(--font-mono); letter-spacing: .11em;
-    text-transform: uppercase; color: var(--dim); }
-  .iSub { display: flex; align-items: center; gap: 6px; }
   .infoStats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 20px;
     align-self: stretch; padding-left: 30px; border-left: 1px solid var(--bd); align-content: space-between; }
   .iS { min-width: 0; }
@@ -445,9 +397,6 @@ const CSS = `
     color: var(--txt); font-variant-numeric: tabular-nums; }
   .iS em { font: 500 10px/1 var(--font-mono); font-style: normal; color: var(--dim);
     letter-spacing: .02em; }
-  .iGo { margin-left: auto; display: inline-flex; align-items: center; gap: 3px;
-    font: 650 11.5px/1 var(--font); color: var(--acc); }
-  .iGo svg { width: 9px; height: 9px; }
   .hProg { margin-top: 14px; max-width: 320px; }
   .hProg span { display: block; font: 500 10px/1 var(--font-mono); letter-spacing: .03em;
     color: rgba(255, 255, 255, .56); }
@@ -487,11 +436,6 @@ const CSS = `
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .mtx span { display: block; margin-top: 1px; font-size: 10px; color: var(--dim); }
   .mRow:hover .mtx b { color: var(--acc); }
-  .chipRow { display: flex; flex-wrap: wrap; gap: 6px; }
-  .cpChip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px;
-    border: 1px solid var(--bd); border-radius: 99px; font-size: 11.5px; color: var(--mut); }
-  .cpChip b { font: 600 9.5px/1 var(--font-mono); color: var(--dim); }
-  .cpChip:hover { border-color: var(--acc); color: var(--txt); }
 
   /* -------------------------------- bình luận ------------------------------ */
   .cmtBox { margin-top: 18px; border: 1px solid var(--bd); border-radius: 10px; padding: 18px;
@@ -511,13 +455,11 @@ const CSS = `
     .hC { padding: 18px; }
     .inC { grid-template-columns: 106px minmax(0, 1fr); gap: 14px; }
     .txtC h1 { font-size: 21px; }
-    .kickC { display: none; }
     .synC { margin-top: 8px; }
     .synC p { font-size: 12px; }
     .cg4 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
     .relCols { grid-template-columns: minmax(0, 1fr); gap: 0; }
     .relCol + .relCol { margin-top: 20px; }
-    .tabEnd { display: none; }
     .tabs2 { gap: 16px; overflow-x: auto; }
     .jump { display: none; }
     .iF { grid-template-columns: 84px minmax(0, 1fr); }
@@ -538,7 +480,7 @@ const HTML = `<!doctype html>
 
 <div class="mkbar">
   <span class="ttl">ssochuz · trang thông tin truyện</span>
-  <span>vòng 4 · tab Thông tin gọn lại</span>
+  <span>vòng 4 · đã bỏ phần thừa</span>
   <label class="mkall"><input type="checkbox" id="allToggle"> hiện cả ba mục</label>
   <a href="../story-v3/index.html" style="margin-left:auto;color:var(--mut);text-decoration:underline;text-underline-offset:3px">← vòng 3</a>
   <a href="../home-v2/index.html" style="color:var(--mut);text-decoration:underline;text-underline-offset:3px">trang chủ</a>
@@ -588,7 +530,7 @@ const HTML = `<!doctype html>
 
 fs.mkdirSync(HERE, { recursive: true });
 fs.writeFileSync(path.join(HERE, 'index.html'), HTML);
-console.log('đã ghi story-v3/index.html ·', Math.round(HTML.length / 1024), 'kB ·',
+console.log('đã ghi story-v4/index.html ·', Math.round(HTML.length / 1024), 'kB ·',
   'truyện', S.t, '· chương', CH, '· cùng tác giả', REL_AUTHOR.length,
   '· cùng couple', REL_COUPLE.length, '· bìa thiếu',
   [SRC].concat(REL_AUTHOR, REL_COUPLE).filter((b) => !coverOf(b)).length);

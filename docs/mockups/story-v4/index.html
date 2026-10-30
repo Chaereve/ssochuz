@@ -39,7 +39,6 @@
   .btnGho svg { width: 14px; height: 14px; }
   .btnGho.onDark { border-color: rgba(255, 255, 255, .24); color: #fff; background: rgba(18, 12, 9, .3); }
   .btnGho.onDark:hover { background: rgba(18, 12, 9, .6); border-color: rgba(255, 255, 255, .4); }
-  .wide { justify-content: center; width: 100%; }
   .iconBtn { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px;
     border: 1px solid rgba(255, 255, 255, .24); border-radius: 9px; color: #fff; background: rgba(18, 12, 9, .3); }
   .iconBtn svg { width: 15px; height: 15px; }
@@ -56,18 +55,13 @@
   .cvC { display: block; border-radius: 9px; overflow: hidden;
     box-shadow: 0 22px 40px -18px #000, 0 0 0 1px rgba(255, 255, 255, .18); }
   .cvC img { display: block; width: 100%; aspect-ratio: 2/3; object-fit: cover; }
-  .kickC { font: 800 9px/1 var(--font-mono); letter-spacing: .16em; text-transform: uppercase; color: var(--acc); }
-  .txtC h1 { margin-top: 9px; font-family: var(--font-head); font-size: 30px; font-weight: 700;
+  .txtC h1 { font-family: var(--font-head); font-size: 30px; font-weight: 700;
     line-height: 1.15; letter-spacing: -.022em; color: #fff; text-shadow: 0 2px 20px rgba(0, 0, 0, .5);
     display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-  .byC { margin-top: 8px; font-size: 12.5px; color: rgba(255, 255, 255, .66); }
+  .byC { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-top: 10px;
+    font-size: 12.5px; color: rgba(255, 255, 255, .66); }
+  .byC i { font-style: normal; opacity: .5; }
   .byC b { color: rgba(255, 255, 255, .9); font-weight: 600; }
-  .chipC { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-top: 12px; }
-  .ch2 { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 9px;
-    border-radius: 6px; background: rgba(12, 9, 6, .38); border: 1px solid rgba(255, 255, 255, .13);
-    font: 600 10.5px/1 var(--font-mono); color: rgba(255, 255, 255, .8); }
-  .ch2 b { color: var(--warn); font-weight: 700; }
-  .ch2 svg { width: 11px; height: 11px; opacity: .82; }
   .synC { margin-top: 12px; max-width: 76ch; }
   .synC p { margin: 0; font-size: 13px; line-height: 1.68; color: rgba(255, 255, 255, .74);
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -87,7 +81,6 @@
   .tabs2 button.on b { color: var(--acc); }
   .tabs2 button.on::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px;
     height: 2px; border-radius: 2px; background: var(--acc); }
-  .tabEnd { margin-left: auto; font: 500 10.5px/1 var(--font-mono); color: var(--dim); }
 
   .pane { display: none; animation: pfade .18s ease; }
   .pane.on { display: block; }
@@ -117,7 +110,6 @@
   .jump button { height: 28px; padding: 0 9px; border: 1px solid var(--bd); border-radius: 6px;
     background: none; color: var(--mut); font: 600 11.5px/1 var(--font); cursor: pointer; }
   .jump button:hover { border-color: var(--bd2); color: var(--txt); }
-  .cnt { margin-left: auto; font: 500 10.5px/1 var(--font-mono); color: var(--dim); letter-spacing: .04em; }
 
   .cg4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 30px; margin-top: 4px; }
   .ch4 { display: grid; grid-template-columns: 18px minmax(0, 1fr); align-items: baseline; gap: 9px;
@@ -148,10 +140,6 @@
     color: var(--dim); }
   .iF b { min-width: 0; font-size: 12.5px; font-weight: 600; color: var(--txt);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .iSub { grid-column: 1 / -1; margin: 12px 0 0; font-size: 11.5px; color: var(--mut); }
-  .iSub span { margin-right: 5px; font: 700 9px/1 var(--font-mono); letter-spacing: .11em;
-    text-transform: uppercase; color: var(--dim); }
-  .iSub { display: flex; align-items: center; gap: 6px; }
   .infoStats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 20px;
     align-self: stretch; padding-left: 30px; border-left: 1px solid var(--bd); align-content: space-between; }
   .iS { min-width: 0; }
@@ -162,9 +150,6 @@
     color: var(--txt); font-variant-numeric: tabular-nums; }
   .iS em { font: 500 10px/1 var(--font-mono); font-style: normal; color: var(--dim);
     letter-spacing: .02em; }
-  .iGo { margin-left: auto; display: inline-flex; align-items: center; gap: 3px;
-    font: 650 11.5px/1 var(--font); color: var(--acc); }
-  .iGo svg { width: 9px; height: 9px; }
   .hProg { margin-top: 14px; max-width: 320px; }
   .hProg span { display: block; font: 500 10px/1 var(--font-mono); letter-spacing: .03em;
     color: rgba(255, 255, 255, .56); }
@@ -204,11 +189,6 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .mtx span { display: block; margin-top: 1px; font-size: 10px; color: var(--dim); }
   .mRow:hover .mtx b { color: var(--acc); }
-  .chipRow { display: flex; flex-wrap: wrap; gap: 6px; }
-  .cpChip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px;
-    border: 1px solid var(--bd); border-radius: 99px; font-size: 11.5px; color: var(--mut); }
-  .cpChip b { font: 600 9.5px/1 var(--font-mono); color: var(--dim); }
-  .cpChip:hover { border-color: var(--acc); color: var(--txt); }
 
   /* -------------------------------- bình luận ------------------------------ */
   .cmtBox { margin-top: 18px; border: 1px solid var(--bd); border-radius: 10px; padding: 18px;
@@ -228,13 +208,11 @@
     .hC { padding: 18px; }
     .inC { grid-template-columns: 106px minmax(0, 1fr); gap: 14px; }
     .txtC h1 { font-size: 21px; }
-    .kickC { display: none; }
     .synC { margin-top: 8px; }
     .synC p { font-size: 12px; }
     .cg4 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
     .relCols { grid-template-columns: minmax(0, 1fr); gap: 0; }
     .relCol + .relCol { margin-top: 20px; }
-    .tabEnd { display: none; }
     .tabs2 { gap: 16px; overflow-x: auto; }
     .jump { display: none; }
     .iF { grid-template-columns: 84px minmax(0, 1fr); }
@@ -246,7 +224,7 @@
 
 <div class="mkbar">
   <span class="ttl">ssochuz · trang thông tin truyện</span>
-  <span>vòng 4 · tab Thông tin gọn lại</span>
+  <span>vòng 4 · đã bỏ phần thừa</span>
   <label class="mkall"><input type="checkbox" id="allToggle"> hiện cả ba mục</label>
   <a href="../story-v3/index.html" style="margin-left:auto;color:var(--mut);text-decoration:underline;text-underline-offset:3px">← vòng 3</a>
   <a href="../home-v2/index.html" style="color:var(--mut);text-decoration:underline;text-underline-offset:3px">trang chủ</a>
@@ -272,15 +250,8 @@
   <div class="inC">
     <a class="cvC" href="#"><img src="../../../assets/covers/0c9fbe53.webp" alt="Bìa HOMETOWN ROMANCE" loading="lazy"></a>
     <div class="txtC">
-      <div class="kickC">Cập nhật 29/05/2026</div>
       <h1>HOMETOWN ROMANCE</h1>
-      <div class="byC"><b>Lambo</b> · Lookmhee x Sonya · 2025</div>
-      <div class="chipC">
-        <span class="pill done"><i></i>Hoàn thành</span>
-        <span class="ch2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.4C9.9 5 7 4.5 4.6 4.5v15c2.4 0 5.3.5 7.4 1.9 2.1-1.4 5-1.9 7.4-1.9v-15c-2.4 0-5.3.5-7.4 1.9z"/><path d="M12 6.4v15"/></svg>25 chương</span>
-        <span class="ch2"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.6l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.8l5.9-.8z"/></svg><b>4.7</b>/52</span>
-        <span class="ch2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>12.480</span>
-      </div>
+      <div class="byC"><span class="pill done"><i></i>Hoàn thành</span><b>Lambo</b><i>·</i>Lookmhee x Sonya<i>·</i>2025</div>
       <div class="synC"><p>Ai nhìn vào cũng bảo mối tình giữa tiểu thư đài các và cô nàng nông dân này chắc chắn sẽ chẳng đi đến đâu. Thậm chí, ngay cả chính người trong cuộc cũng nghĩ vậy nên mới gật đầu chấp nhận…</p>
         <button class="synMore" type="button">Đọc giới thiệu đầy đủ <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button></div>
       <div class="actC">
@@ -302,14 +273,13 @@
   <button type="button" class="on" data-p="chap" role="tab" aria-selected="true">Danh sách chương <b>25</b></button>
   <button type="button" data-p="info" role="tab" aria-selected="false">Thông tin</button>
   <button type="button" data-p="cmt" role="tab" aria-selected="false">Bình luận <b>38</b></button>
-  <span class="tabEnd">Đang đọc chương 13 / 25 · 65%</span>
 </div>
     <div class="pane on" data-p="chap" data-label="Danh sách chương">
   <div class="tbar">
   <label class="srch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg><input type="search" placeholder="Tìm số chương hoặc tên chương…" aria-label="Tìm chương"><kbd>/</kbd></label>
   <span class="sort"><b>Cũ nhất</b><i></i><span>Mới nhất</span></span>
   <span class="jump">Đi tới <input type="number" placeholder="số" aria-label="Số chương"><button type="button">Đi</button></span>
-  <span class="cnt">25 chương</span>
+
 </div>
   <div class="cg4"><a class="ch4" href="#" title="Chương 1: Giới Thượng Lưu Đụng Độ Dân Chơi"><em>01</em><span>Giới Thượng Lưu Đụng Độ Dân Chơi</span></a><a class="ch4" href="#" title="Chương 2: Người Điềm Tĩnh Đụng Độ Kẻ Hay Quạu"><em>02</em><span>Người Điềm Tĩnh Đụng Độ Kẻ Hay Quạu</span></a><a class="ch4" href="#" title="Chương 3: Đưa Nàng Về Bangkok"><em>03</em><span>Đưa Nàng Về Bangkok</span></a><a class="ch4" href="#" title="Chương 4: Lần Đầu Qua Đêm Cùng Nhau"><em>04</em><span>Lần Đầu Qua Đêm Cùng Nhau</span></a><a class="ch4" href="#" title="Chương 5: Tôi Muốn Cưới Rồi"><em>05</em><span>Tôi Muốn Cưới Rồi</span></a><a class="ch4" href="#" title="Chương 6: Vô Tình Nuông Chiều Trái Tim"><em>06</em><span>Vô Tình Nuông Chiều Trái Tim</span></a><a class="ch4" href="#" title="Chương 7: Chịu Thua... Chịu Thua Toàn Tập Luôn Rồi"><em>07</em><span>Chịu Thua... Chịu Thua Toàn Tập Luôn Rồi</span></a><a class="ch4" href="#" title="Chương 8: Tin Nhắn Gửi Đến"><em>08</em><span>Tin Nhắn Gửi Đến</span></a><a class="ch4" href="#" title="Chương 9: Chương 9"><em>09</em><span>Chương 9</span></a><a class="ch4" href="#" title="Chương 10: Phải Lòng Con Gái Thành Thị"><em>10</em><span>Phải Lòng Con Gái Thành Thị</span></a><a class="ch4" href="#" title="Chương 11: Thay Đổi"><em>11</em><span>Thay Đổi</span></a><a class="ch4" href="#" title="Chương 12: Cô Thích Tôi À?"><em>12</em><span>Cô Thích Tôi À?</span></a><a class="ch4 cur" href="#" title="Chương 13: Người Cũ Từng Bặt Vô Âm Tín"><em>13</em><span>Người Cũ Từng Bặt Vô Âm Tín</span></a><a class="ch4" href="#" title="Chương 14: Chiến Trường Tình Ái"><em>14</em><span>Chiến Trường Tình Ái</span></a><a class="ch4" href="#" title="Chương 15: Vợ Nó Là Con Nào?"><em>15</em><span>Vợ Nó Là Con Nào?</span></a><a class="ch4" href="#" title="Chương 16: Trả Thù"><em>16</em><span>Trả Thù</span></a><a class="ch4" href="#" title="Chương 17: Jiw"><em>17</em><span>Jiw</span></a><a class="ch4" href="#" title="Chương 18: Ghen Vì &#39;Chồng&#39;"><em>18</em><span>Ghen Vì &#39;Chồng&#39;</span></a><a class="ch4" href="#" title="Chương 19: Chồng Đến Dỗ Dành (H+)"><em>19</em><span>Chồng Đến Dỗ Dành (H+)</span></a><a class="ch4" href="#" title="Chương 20: Cô Nhà Thầu Tài Năng"><em>20</em><span>Cô Nhà Thầu Tài Năng</span></a></div>
   <div class="pgr">
@@ -320,9 +290,7 @@
     <div class="pane" data-p="info" data-label="Thông tin">
   <div class="infoWrap">
     <div class="infoFacts">
-      <div class="iF"><span>Tác giả</span><b>Lambo</b></div><div class="iF"><span>Couple</span><b>Lookmhee x Sonya</b></div><div class="iF"><span>Năm</span><b>2025</b></div><div class="iF"><span>Tình trạng</span><b>Hoàn thành</b></div><div class="iF"><span>Số chương</span><b>25</b></div><div class="iF"><span>Cập nhật</span><b>29/05/2026</b></div>
-      <p class="iSub"><span>Giới hạn</span>18+
-        <a class="iGo" href="#">Đọc tiếp chương 14 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></a></p>
+      <div class="iF"><span>Tác giả</span><b>Lambo</b></div><div class="iF"><span>Couple</span><b>Lookmhee x Sonya</b></div><div class="iF"><span>Năm</span><b>2025</b></div><div class="iF"><span>Số chương</span><b>25</b></div><div class="iF"><span>Cập nhật</span><b>29/05/2026</b></div><div class="iF"><span>Giới hạn</span><b>18+</b></div>
     </div>
     <div class="infoStats">
       <div class="iS"><span>Điểm ★</span><b>4.7<em>/ 52 đánh giá</em></b></div>
@@ -347,13 +315,12 @@
   <div class="relCols">
     <div class="relCol">
   <div class="relH"><h3>Cùng couple</h3><span>Lookmhee x Sonya · 2 bộ</span><a href="#">Xem tất cả ›</a></div>
-  <div class="chipRow" style="margin-bottom:6px"><a href="#" class="cpChip">Lookmhee x Sonya<b>2 bộ</b></a></div><div class="mList"><a class="mRow" href="#"><span class="mcv"><img src="../../../assets/covers/80b25f67.webp" alt="" loading="lazy"></span>
+  <div class="mList"><a class="mRow" href="#"><span class="mcv"><img src="../../../assets/covers/80b25f67.webp" alt="" loading="lazy"></span>
   <span class="mtx"><b>HOMETOWN ROMANCE - SPECIAL</b><span>Hoàn thành · 10 chương</span></span></a></div>
 </div>
     <div class="relCol">
-  <div class="relH"><h3>Cùng tác giả</h3><span>Lambo · 3 bộ</span><a href="#">Xem tất cả ›</a></div>
-  <div class="mList"><a class="mRow" href="#"><span class="mcv"><img src="../../../assets/covers/80b25f67.webp" alt="" loading="lazy"></span>
-  <span class="mtx"><b>HOMETOWN ROMANCE - SPECIAL</b><span>Hoàn thành · 10 chương</span></span></a><a class="mRow" href="#"><span class="mcv"><img src="../../../assets/covers/dca93c57.webp" alt="" loading="lazy"></span>
+  <div class="relH"><h3>Cùng tác giả</h3><span>Lambo · 2 bộ</span><a href="#">Xem tất cả ›</a></div>
+  <div class="mList"><a class="mRow" href="#"><span class="mcv"><img src="../../../assets/covers/dca93c57.webp" alt="" loading="lazy"></span>
   <span class="mtx"><b>Ngọt Ngào Là Mây Bay, Đắng Cay Mới Là Tình</b><span>Hoàn thành · 23 chương</span></span></a></div>
 </div>
   </div>
