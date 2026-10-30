@@ -1501,6 +1501,10 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 /* hàng nút: nằm sát đáy bìa, nút chính là mực son đặc trên nền ảnh */
 .shero .btn-row { margin: auto 0 0; padding-top: 10px; gap: 8px; }
 .shero .btn-row .btn { height: 38px; padding: 0 14px; border-radius: 9px; font-size: 12.5px; }
+/* việc phụ (chia sẻ · RSS · đặt lại 18+) — nút vuông icon, dồn cuối hàng */
+.shero .btn-utils { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.shero .btn-row .btn.ic { width: 38px; padding: 0; gap: 0; flex: none; }
+.shero .btn-row .btn.ic .i { width: 15px; height: 15px; }
 .shero .btn-row .btn.pri { background: var(--acc); border-color: var(--acc); color: #2a1016;
   box-shadow: 0 10px 22px -14px rgba(224, 133, 155, .9); }
 .shero .btn-row .btn.pri:hover { filter: brightness(1.07); color: #2a1016; }
@@ -2177,8 +2181,11 @@ kbd { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; b
   .shero .editable-rating .stars .st { width: 20px; height: 22px; padding: 2px; }
   .shero .editable-rating svg { width: 15px; height: 15px; }
   .shero .editable-rating .rating-own { font-size: 10.5px; }
-  .shero .btn-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin-top: 12px; padding-top: 0; }
+  .shero .btn-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; padding-top: 0; }
   .shero .btn-row .btn { width: 100%; justify-content: center; font-size: 12.5px; }
+  .shero .btn-row .btn.pri { grid-column: 1 / -1; }         /* nút chính chiếm cả hàng */
+  .shero .btn-utils { grid-column: 1 / -1; margin: 2px 0 0; justify-content: flex-end; }
+  .shero .btn-row .btn.ic { width: 38px; height: 36px; justify-content: center; }
   .shero .prog { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 10px; margin-top: 14px; }
   .shero .prog > span { grid-area: 1 / 1; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .shero .prog em { grid-area: 1 / 2; align-self: center; }

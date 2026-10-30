@@ -1176,6 +1176,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     history: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M12 8l0 4l2 2" /> <path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5" /></g>',
     wand: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M6 21l15 -15l-3 -3l-15 15l3 3" /> <path d="M15 6l3 3" /> <path d="M9 3a2 2 0 0 0 2 2a2 2 0 0 0 -2 2a2 2 0 0 0 -2 -2a2 2 0 0 0 2 -2" /> <path d="M19 13a2 2 0 0 0 2 2a2 2 0 0 0 -2 2a2 2 0 0 0 -2 -2a2 2 0 0 0 2 -2" /></g>',
     heart: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572" /></g>',
+    rss: '<path d="M5 19a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" /><path d="M4 4a16 16 0 0 1 16 16" /><path d="M4 11a9 9 0 0 1 9 9" />',
     share: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M13 4v4c-6.575 1.028 -9.02 6.788 -10 12c-.037 .206 5.384 -5.962 10 -6v4l8 -7l-8 -7" /></g>',
     check: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M5 12l5 5l10 -10" /></g>',
     moon: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454l0 .008" /></g>',

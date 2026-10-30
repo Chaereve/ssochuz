@@ -83,3 +83,12 @@ Sau khi so lại với mockup, trang thật vẫn là bố cục cũ → port lu
 - Sao đánh giá thu còn một hàng 16px + nhãn 12px (bắt buộc giữ, mockup không có).
 - `≤900px`: bìa 150px; `≤620px`: bìa 132px bên trái, tiêu đề canh giữa theo chiều cao bìa,
   hàng meta + phần còn lại xuống hết bề ngang thẻ, nút xếp một cột.
+
+## Hàng nút: đúng 4 nút chính như bản vẽ, việc phụ thu thành icon
+
+Bản vẽ chỉ có **Đọc từ đầu · Chương mới nhất · Theo dõi · Tủ truyện**. Trang thật còn
+Chia sẻ / RSS / Đặt lại xác nhận 18+ nên hàng nút bị xuống hai dòng, nặng mặt thẻ.
+Nay ba việc phụ gom vào `.btn-utils` cuối hàng dưới dạng **nút vuông 38px chỉ có icon**
+(`share`, `rss`, `refresh`), có `title` + `aria-label` để vẫn rõ nghĩa; mobile thì nhóm này
+xuống một hàng riêng canh phải, nút chính chiếm trọn một hàng, các nút còn lại chia đôi.
+Thêm glyph `rss` vào bộ icon (`src/cz-app.js`) — trước đó nút RSS rơi về icon “info”.

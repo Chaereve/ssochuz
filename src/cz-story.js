@@ -475,9 +475,13 @@
                 '<span class="lbl">' + (CZ.isFollowed(n) ? 'Đang theo dõi' : 'Theo dõi') + '</span></button>' +
               '<button class="btn ghost' + (CZ.inShelf(n) ? ' on' : '') + '" id="shelfBtn" aria-pressed="' + CZ.inShelf(n) + '" title="Lưu vào tủ truyện của bạn (icon tủ sách)">' + ic('shelf', 'i-s') +
                 '<span>' + (CZ.inShelf(n) ? 'Đã lưu' : 'Tủ truyện') + '</span></button>' +
-              '<button class="btn ghost" id="shareBtn">' + ic('share', 'i-s') + 'Chia sẻ</button>' +
-              /* RSS riêng bộ này — feed reader theo dõi được từng truyện */
-              (CZ.API && SLUG.indexOf('private-') !== 0 ? '<a class="btn ghost" href="' + esc(CZ.API + '/feed.xml?slug=' + encodeURIComponent(n.slug)) + '" target="_blank" rel="noopener" title="RSS riêng bộ này (dùng cho Feedly, Inoreader…)">' + ic('rss', 'i-s') + 'RSS</a>' : '') +
+              /* ba việc phụ (chia sẻ / RSS / đặt lại 18+) gom thành nút icon cùng cỡ,
+                 dồn về cuối hàng — hàng nút chính vẫn đúng 4 nút như bản vẽ đã duyệt */
+              '<span class="btn-utils">' +
+                '<button class="btn ghost ic" id="shareBtn" type="button" title="Chia sẻ liên kết bộ truyện" aria-label="Chia sẻ liên kết bộ truyện">' + ic('share', 'i-s') + '</button>' +
+                /* RSS riêng bộ này — feed reader theo dõi được từng truyện */
+                (CZ.API && SLUG.indexOf('private-') !== 0 ? '<a class="btn ghost ic" href="' + esc(CZ.API + '/feed.xml?slug=' + encodeURIComponent(n.slug)) + '" target="_blank" rel="noopener" title="RSS riêng bộ này (dùng cho Feedly, Inoreader…)" aria-label="RSS của bộ này">' + ic('rss', 'i-s') + '</a>' : '') +
+              '</span>' +
             '</div>' +
           '</div>' +
         '</div>' +
@@ -550,12 +554,15 @@
       var rg = $('#shero .btn-row');
       if (rg) {
         var rb = document.createElement('button');
-        rb.className = 'btn ghost sm'; rb.type = 'button'; rb.id = 'reset18';
-        rb.innerHTML = 'Đặt lại xác nhận 18+';
+        rb.className = 'btn ghost ic'; rb.type = 'button'; rb.id = 'reset18';
+        rb.title = 'Đặt lại xác nhận 18+ (dành cho máy dùng chung)';
+        rb.setAttribute('aria-label', rb.title);
+        rb.innerHTML = ic('refresh', 'i-s');
         rb.addEventListener('click', function () {
           reset18(); renderStory(); CZ.toast('Đã đặt lại — lần đọc sau sẽ hỏi xác nhận 18+');
         });
-        rg.appendChild(rb);
+        /* nằm cùng cụm nút phụ ở cuối hàng, không chen vào 4 nút chính */
+        (rg.querySelector('.btn-utils') || rg).appendChild(rb);
       }
     }
     bindRating();
