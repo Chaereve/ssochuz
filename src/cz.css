@@ -1067,8 +1067,8 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
     background-size .3s var(--ease) .04s; }
 .card:hover .th::before, .card:focus-visible .th::before {
   opacity: 1; transform: translateY(-50%); background-size: 44px 2px; }
-.mini .card .th::before, .mini3 .card .th::before { font-size: 13px; padding-bottom: 9px; }
-.mini .card:hover .th::before, .mini3 .card:hover .th::before { background-size: 30px 2px; }
+.mini3 .card .th::before { font-size: 13px; padding-bottom: 9px; }
+.mini3 .card:hover .th::before { background-size: 30px 2px; }
 .card .th img { width: 100%; height: 100%; object-fit: cover; }
 /* lớp tối chân bìa: chỉ đủ để chữ trắng đọc được, không phủ bùn lên ảnh */
 .card .th .scrim { position: absolute; inset: auto 0 0; height: 40%;
@@ -4237,22 +4237,6 @@ body.rd-focus .rdcmts { display: none; }
   line-height: 1.3; letter-spacing: 0; color: var(--dim); }
 
 /* --- hàng bìa “Mới cập nhật”: 6 cột tự co theo bề ngang -------------- */
-.mini { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 18px 14px; }
-.mini > .empty { grid-column: 1 / -1; }
-.mini .card .th { border-radius: 6px; }
-.mini .card h3 { display: block; overflow: visible; min-height: 0; margin: 10px 0 3px;
-  font-family: var(--font); font-size: 13px; font-weight: 650; line-height: 1.4; letter-spacing: 0;
-  color: var(--txt); -webkit-line-clamp: unset; -webkit-box-orient: initial; overflow-wrap: anywhere; }
-.mini .card .cb { font-family: var(--font); font-size: 11px; line-height: 1.45; color: var(--dim);
-  -webkit-line-clamp: 2; overflow-wrap: anywhere; }
-.mini .card .th .stic { top: 8px; left: 8px; width: 22px; height: 22px; }
-.mini .card .th .stic .i { width: 13px; height: 13px; min-width: 13px; }
-.mini .card .th .nw-bookmark { display: none; }
-.mini .card .th .foot .ch { font-size: 10px; }
-.mini .card .th .b18 { min-height: 16px; padding: 1px 6px; font-size: 8px; letter-spacing: .04em; }
-.mini .card .th .badge-newchap { top: auto; bottom: 24px; max-width: calc(100% - 14px);
-  min-height: 16px; padding: 1px 6px; font-size: 8px; letter-spacing: .02em; }
-
 /* --- ô “Đọc tiếp”: dòng danh sách, không hộp lồng hộp ---------------- */
 .b-resume .personal-rail { display: flex; flex-direction: column; gap: 0; overflow: visible; padding: 0; }
 .b-resume .personal-card { display: grid; grid-template-columns: 64px minmax(0, 1fr); flex: 0 0 auto; width: auto;
@@ -4325,6 +4309,41 @@ body.rd-focus .rdcmts { display: none; }
   font-size: 12px; font-weight: 650; line-height: 1.4; letter-spacing: 0; color: var(--txt);
   -webkit-line-clamp: unset; -webkit-box-orient: initial; overflow-wrap: anywhere; }
 .mini3 .card .cb { display: none; }
+/* ============ MỚI CẬP NHẬT · bảng gọn ba cột (1B) ================== */
+.mlist { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 40px; }
+.mrow { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 12px;
+  align-items: center; min-width: 0; padding: 9px 6px 9px 0; border-radius: 6px;
+  border-bottom: 1px solid var(--bd-soft);
+  transition: background-color var(--t-fast) var(--ease); }
+.mrow:hover { background: color-mix(in srgb, var(--surf2) 60%, transparent); }
+.mrow img, .mrow-ph { width: 34px; height: 48px; border-radius: 4px; background: var(--surf2); }
+.mrow img { object-fit: cover; }
+.mt { min-width: 0; }
+.mt b { display: block; font-size: 13px; font-weight: 650; line-height: 1.35; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; transition: color var(--t-fast) var(--ease); }
+.mrow:hover .mt b { color: var(--acc); }
+.mt span { display: block; margin-top: 2px; font-size: 11px; color: var(--dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mn { text-align: right; }
+.mn b { display: block; font-size: 11px; font-weight: 700; color: var(--mut); white-space: nowrap; }
+.mn span { display: block; margin-top: 5px; font-size: 10px; color: var(--dim); white-space: nowrap; }
+
+/* ========= CHUYỂN THỂ SERIES · băng ngang 16:10 (2C) ================ */
+.wcards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.wcard { position: relative; display: block; aspect-ratio: 16/10; border-radius: 9px;
+  overflow: hidden; background: var(--surf2); border: 1px solid var(--bd); }
+.wcard img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  object-position: center 26%; transition: transform .4s var(--ease); }
+.wcard:hover img { transform: scale(1.04); }
+.wsh { position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(10, 7, 5, 0) 32%, rgba(10, 7, 5, .86)); }
+.wt { position: absolute; left: 11px; right: 11px; bottom: 9px; }
+.wk { display: block; font-size: 8.5px; font-weight: 800; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--acc); }
+.wn { display: -webkit-box; margin-top: 5px; font-size: 13.5px; font-weight: 650; line-height: 1.3;
+  color: #fff; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  overflow-wrap: anywhere; text-shadow: 0 1px 10px rgba(0, 0, 0, .6); }
+.wm { display: block; margin-top: 4px; font-size: 10px; color: rgba(255, 255, 255, .72); }
 .mini3 .worth-score { padding: 3px 0 0; font-size: 10px; line-height: 1.4; color: var(--acc); }
 .mini3 .card .th .stic, .mini3 .card .th .nw-bookmark, .mini3 .card .th .badge-newchap { display: none; }
 .mini3 .card .th .foot .ch { font-size: 9px; }
@@ -4359,7 +4378,8 @@ body.rd-focus .rdcmts { display: none; }
 
 @media (max-width: 880px) {
   #bxh .tilehead h2 { font-size: 18px; }
-  .mini { gap: 16px 12px; }
+  .mlist { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 26px; }
+  .wcards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   /* tuần: cuộn ngang theo ngày, mỗi ngày thành thẻ riêng cho dễ đọc */
   .week { grid-auto-flow: column; grid-auto-columns: 154px; grid-template-columns: none;
     border-top: 0; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x proximity; }
@@ -4370,13 +4390,14 @@ body.rd-focus .rdcmts { display: none; }
 @media (max-width: 620px) {
   #tong-quan { margin-top: 28px; }
 
-  .mini { grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 16px 11px; }
   .mini3 { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
   #bxh .rank { grid-template-columns: 20px 36px minmax(0, 1fr); }
   #bxh .rank .rk-th { width: 36px; grid-row: 1 / span 2; }
   #bxh .rank .tt { grid-column: 3; grid-row: 1; }
   #bxh .rank .v { grid-column: 3; grid-row: 2; }
   #bxh .tilehead .right { width: 100%; justify-content: flex-start; }
+  .mlist { grid-template-columns: minmax(0, 1fr); }
+  .wcards { grid-template-columns: minmax(0, 1fr); }
   .week { grid-auto-columns: 142px; }
 }
 

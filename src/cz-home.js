@@ -122,13 +122,23 @@
   }
 
   /* ======================= MỚI CẬP NHẬT ================================ */
+  /* Mới cập nhật: bảng gọn ba cột (30/10/2026). Mỗi dòng là bìa nhỏ · tên một dòng
+     · tác giả, và cột phải canh thẳng “Ch. 42” + “2 giờ trước” — đọc lướt một màn là
+     biết bộ nào vừa lên chương, khỏi cuộn ngang. */
   function renderNew() {
+    var box = $('#newRail');
+    if (!box) return;
     var rows = CZ.lib().slice().sort(function (a, b) {
       return String(b.updated || '').localeCompare(String(a.updated || '')) || (b.chapters - a.chapters);
     });
-    /* 6 bộ = lưới 3 × 2 trong ô bento (đủ thấy “có gì mới”, không cần cuộn) */
-    var pick = rows.slice(0, 6);
-    CZ.mountRail($('#newRail'), pick);
+    var pick = rows.slice(0, 12);
+    box.innerHTML = pick.map(function (n) {
+      var src = CZ.coverSrc(n), ch = n.chapters ? 'Ch. ' + n.chapters : CZ.statusLabel(n.statusCls || n.status);
+      return '<a class="mrow" href="' + esc(CZ.storyURL(n.slug)) + '">' +
+        (src ? '<img src="' + esc(src) + '"' + CZ.coverFB(n, src) + ' alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '<span class="mrow-ph" aria-hidden="true"></span>') +
+        '<span class="mt"><b>' + esc(n.title) + '</b><span>' + esc(n.author || n.couple || '') + '</span></span>' +
+        '<span class="mn"><b>' + esc(ch) + '</b><span>' + esc(CZ.timeAgo(n.updated)) + '</span></span></a>';
+    }).join('');
     var sub = $('#newSub');
     if (sub) sub.textContent = pick.length ? pick.length + ' bộ vừa lên chương' : '';
   }
@@ -433,7 +443,19 @@
     }
     if (!list || !list.length) { el.hidden = true; return; }
     el.hidden = false;
-    CZ.mountRail(rail, list.slice(0, 12));
+    /* Chuyển thể Series: băng ngang 16:10, chữ đè chân ảnh (30/10/2026).
+       Bìa là ảnh dọc nên cắt ở 26% chiều cao để giữ mặt nhân vật. */
+    rail.innerHTML = list.slice(0, 6).map(function (n) {
+      var src = CZ.coverSrc(n), meta = [];
+      if (n.chapters) meta.push(n.chapters + ' chương');
+      meta.push(CZ.statusLabel(n.statusCls || n.status));
+      return '<a class="wcard" href="' + esc(CZ.storyURL(n.slug)) + '">' +
+        (src ? '<img src="' + esc(src) + '"' + CZ.coverFB(n, src) + ' alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') +
+        '<span class="wsh" aria-hidden="true"></span>' +
+        '<span class="wt"><span class="wk">Chuyển thể' + (n.year ? ' · ' + esc(n.year) : '') + '</span>' +
+        '<span class="wn">' + esc(n.title) + '</span>' +
+        '<span class="wm">' + esc(meta.join(' · ')) + '</span></span></a>';
+    }).join('');
   }
 
   /* ======================= THƯ VIỆN ==================================== */

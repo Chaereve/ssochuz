@@ -72,7 +72,10 @@ Không còn đường kẻ giữa các mục (chỉ còn khoảng thở 44px), k
 
 Đánh dấu bằng class trên khung chứa: `.hvA` / `.hvB` / `.hvC`; trong trang chính đặt ở `<body>`.
 
-**Trang biến thể:**## Phương án cho “Mới cập nhật” và “Chuyển thể Series” (`rails.html`)
+**Trang biến thể:**## Phương án cho “Mới cập nhật” và “Chuyển thể Series” (`rails.html`) — **đã chốt 1B · 2C**
+
+> Chốt 30/10/2026: **1B** bảng gọn ba cột cho “Mới cập nhật”, **2C** băng ngang 16:10 cho
+> “Chuyển thể Series”. Đã đưa vào trang thật (`index.html`, `src/cz-home.js`, `src/cz.css`).
 
 Dựng bằng `gen-rails.mjs`, ba kiểu cho mỗi mục, đúng khổ 1180px, dữ liệu và bìa thật.
 
