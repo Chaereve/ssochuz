@@ -1080,23 +1080,24 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   font-weight: 700; letter-spacing: .03em; }
 .card .th .pill .d { width: 4px; height: 4px; }
 .card .th .pill.done { color: #c8ead6; } .card .th .pill.run { color: #f3dfb8; } .card .th .pill.soon { color: #d8d4ea; }
-/* Ký hiệu tình trạng trên bìa lưới: vòng tròn 28px, icon Tabler 15px ở giữa.
-   Mỗi tình trạng một màu vòng + nền pha màu + quầng sáng riêng để nhận diện ngay
-   từ xa: xanh lá = hoàn thành, vàng be = đang cập nhật, tím nhạt = sắp ra mắt. */
-.card .th .stic { position: absolute; top: 8px; left: 8px; z-index: 2; width: 28px; height: 28px;
-  display: grid; place-items: center; border-radius: 50%;
-  background: rgba(14, 9, 5, .82); border: 1.5px solid rgba(255, 255, 255, .24);
-  box-shadow: 0 1px 4px rgba(10, 6, 4, .45); }
-.card .th .stic .i { width: 15px; height: 15px; min-width: 15px; }
-.card .th .stic.st-done { color: #c8ead6; border-color: rgba(200, 234, 214, .8);
-  background: color-mix(in srgb, var(--ok) 32%, rgba(14, 9, 5, .85));
-  box-shadow: 0 0 10px color-mix(in srgb, var(--ok) 45%, transparent), 0 1px 4px rgba(10, 6, 4, .45); }
-.card .th .stic.st-run { color: #f3dfb8; border-color: rgba(243, 223, 184, .8);
-  background: color-mix(in srgb, var(--warn) 32%, rgba(14, 9, 5, .85));
-  box-shadow: 0 0 10px color-mix(in srgb, var(--warn) 45%, transparent), 0 1px 4px rgba(10, 6, 4, .45); }
-.card .th .stic.st-soon { color: #d8d4ea; border-color: rgba(216, 212, 234, .8);
-  background: color-mix(in srgb, #8f83c7 32%, rgba(14, 9, 5, .85));
-  box-shadow: 0 0 10px color-mix(in srgb, #8f83c7 45%, transparent), 0 1px 4px rgba(10, 6, 4, .45); }
+/* ---- Huy hiệu trên bìa (chốt vòng 55 · phương án C) ----------------------
+   Một hệ duy nhất, ba thứ được nói: TÌNH TRẠNG (chấm màu + chữ), SỐ CHƯƠNG,
+   18+. Cùng chiều cao 18px, cùng bo 5px, cùng nền tối mờ — nhìn như một bộ,
+   không phải ba món trang trí khác nhau. Bỏ vòng tròn icon 28px phát sáng:
+   người đọc không phải nhớ “vòng xanh là hoàn thành”, chữ nói thẳng.
+   Cả ba nằm ở z-index 3 — TRÊN lớp tối khi trỏ chuột, nên hover không bao giờ
+   phủ lên huy hiệu. */
+.card .th .spill { position: absolute; top: 8px; left: 8px; display: inline-flex;
+  align-items: center; gap: 5px; height: 18px; padding: 0 6px; border-radius: 5px;
+  background: rgba(14, 9, 5, .78); border: 1px solid rgba(255, 255, 255, .16);
+  font-size: 9.5px; font-weight: 700; letter-spacing: -.002em; line-height: 1;
+  white-space: nowrap; }
+.card .th .spill .d { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex: none; }
+.card .th .spill.t-done { color: #a9dcc0; }
+.card .th .spill.t-run { color: #e7cd9a; }
+.card .th .spill.t-soon { color: #c3bce8; }
+.card .th .spill, .card .th .foot, .card .th .nw-bookmark,
+.card .th .lock-bookmark, .card .th .badge-newchap { z-index: 3; }
 /* Bookmark “NEW” trên mọi bìa (lưới, hero, trang truyện): dải thả từ cạnh trên,
    đuôi cắt chữ V bằng clip-path, chữ “NEW” xếp dọc đứng chữ, phông serif cùng
    họ với tiêu đề web cho sang. Tỉ lệ dải ≈ 1:2.6 (bookmark kinh điển); chữ chỉ
@@ -1118,10 +1119,17 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
     clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 8px), 0 100%); }
   .nw-bookmark > span { font-size: 7px; }
 }
-.card .th .foot .b18 { margin-left: auto; }
-.card .th .foot { position: absolute; inset: auto 8px 8px; display: flex; align-items: center; gap: 8px; color: #fff; }
-.card .th .foot .ch { font-size: 11px; font-weight: 750; letter-spacing: .03em; line-height: 1.4;
-  font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px rgba(10, 6, 4, .45); }
+.card .th .foot { position: absolute; inset: auto 8px 8px; display: flex; align-items: center;
+  gap: 6px; color: #fff; }
+.card .th .foot .ch { display: inline-flex; align-items: center; height: 18px; padding: 0 6px;
+  border-radius: 5px; background: rgba(14, 9, 5, .78);
+  font-size: 9.5px; font-weight: 700; letter-spacing: .01em; line-height: 1;
+  font-variant-numeric: tabular-nums; text-shadow: none; }
+.card .th .foot .b18 { margin-left: auto; display: inline-flex; align-items: center;
+  height: 18px; min-height: 0; padding: 0 5px; border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, .5); background: rgba(14, 9, 5, .72);
+  color: #fff; font-size: 8.5px; font-weight: 800; letter-spacing: .04em; line-height: 1;
+  box-shadow: none; }
 .card .th .bar { position: absolute; inset: auto 0 0; height: 2px; background: rgba(255, 255, 255, .22); }
 .card .th .bar i { display: block; height: 100%; background: #fff; }
 .skel { position: relative; }
@@ -4412,9 +4420,9 @@ body.rd-focus .rdcmts { display: none; }
   overflow-wrap: anywhere; text-shadow: 0 1px 10px rgba(0, 0, 0, .6); }
 .wm { display: block; margin-top: 3px; font-size: 9.5px; color: rgba(255, 255, 255, .72); }
 .mini3 .worth-score { padding: 3px 0 0; font-size: 10px; line-height: 1.4; color: var(--acc); }
-.mini3 .card .th .stic, .mini3 .card .th .nw-bookmark, .mini3 .card .th .badge-newchap { display: none; }
-.mini3 .card .th .foot .ch { font-size: 9px; }
-.mini3 .card .th .b18 { min-height: 14px; padding: 1px 5px; font-size: 7.5px; }
+.mini3 .card .th .spill, .mini3 .card .th .nw-bookmark, .mini3 .card .th .badge-newchap { display: none; }
+.mini3 .card .th .foot .ch { height: 15px; padding: 0 5px; font-size: 8.5px; }
+.mini3 .card .th .foot .b18 { height: 15px; padding: 0 4px; font-size: 7.5px; }
 
 /* ================= LỊCH RA CHƯƠNG · TIÊU ĐIỂM HÔM NAY ==================
    30/10/2026 (phương án 3B đã chốt): bên trái là bộ ra hôm nay — nền là chính bìa

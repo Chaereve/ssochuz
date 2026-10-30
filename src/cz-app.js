@@ -1635,11 +1635,15 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       '<div class="th' + (img ? ' skel' : '') + '">' +
       (img ? '<img src="' + esc(img) + '"' + coverFB(n, img) + ' alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer" width="300" height="450">' : '') +
       '<span class="scrim"></span>' +
-      '<span class="stic st-' + stCls + '" title="' + esc(stLab) + '" aria-label="Tình trạng: ' + esc(stLab) + '" role="img">' + icon(STATUS_ICON[stCls] || 'clock', 'i-s') + '</span>' +
+      /* Tình trạng = VIÊN CHỮ (chấm màu + tên) thay cho vòng tròn icon 28px phát
+         sáng: không phải nhớ “vòng xanh là gì”, và cùng một hệ với số chương/18+
+         ở chân bìa (cùng cao, cùng bo, cùng nền tối mờ). */
+      '<span class="spill t-' + stCls + '" title="' + esc(stLab) + '" aria-label="Tình trạng: ' + esc(stLab) + '" role="img"><i class="d"></i>' + esc(stLab) + '</span>' +
       (n.fresh ? '<span class="nw-bookmark"><span>NEW</span></span>' : '') +
       (n.locked ? '<span class="lock-bookmark" title="Truyện có mật mã — bấm vào để nhập mật mã và đọc" aria-label="Truyện có mật mã">' + icon('lock', 'i-s') + '</span>' : '') +
       followBadge(n) +
-      '<span class="foot"><span class="ch">' + esc(countText(n)) + '</span>' +
+      /* chưa có chương thì KHÔNG in “0/—” nữa — tình trạng “Sắp ra mắt” đã nói đủ */
+      '<span class="foot">' + (parseInt(n.chapters, 10) ? '<span class="ch">' + esc(countText(n)) + '</span>' : '') +
         (n.is18 ? '<span class="b18">18+</span>' : '') + '</span>' +
       (pct ? '<span class="bar"><i style="width:' + pct + '%"></i></span>' : '') +
       '</div>' +
