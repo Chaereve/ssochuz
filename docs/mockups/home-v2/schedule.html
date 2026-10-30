@@ -83,53 +83,108 @@
   .qst.done { color: var(--ok); }
   .qst.soon { color: #b9b2d6; }
 
-  /* ---- 3 · hôm nay nổi bật ---- */
-  .feat { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 34px;
-    align-items: stretch; }
-  .fcard { position: relative; display: block; min-height: 214px; border-radius: 10px;
-    overflow: hidden; background: var(--surf2); }
-  .fcard img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
-    object-position: center 22%; transition: transform .4s ease; }
-  .fcard:hover img { transform: scale(1.03); }
-  .fsh { position: absolute; inset: 0;
-    background: linear-gradient(90deg, rgba(10,7,5,.94) 0%, rgba(10,7,5,.72) 46%, rgba(10,7,5,.15) 100%); }
-  .fx { position: absolute; left: 20px; bottom: 18px; right: 40%; display: block; }
-  .fk { display: block; font: 800 9px/1 var(--font-mono); letter-spacing: .13em;
-    text-transform: uppercase; color: var(--acc); }
-  .fn { display: block; margin-top: 7px; font-family: var(--font-head); font-size: 21px;
-    font-weight: 700; line-height: 1.24; color: #fff; text-shadow: 0 2px 16px rgba(0,0,0,.6); }
-  .fm { display: block; margin-top: 7px; font: 500 10.5px/1.4 var(--font-mono);
-    color: rgba(255,255,255,.74); }
-  .flist { display: flex; flex-direction: column; }
-  .frow { display: grid; grid-template-columns: 34px 30px minmax(0, 1fr); gap: 12px;
-    align-items: center; min-width: 0; padding: 10px 0; border-bottom: 1px solid var(--bd-soft); }
-  .frow:first-child { padding-top: 0; }
-  .frow:last-child { border-bottom: 0; padding-bottom: 0; }
-  .frow img { width: 30px; aspect-ratio: 2/3; object-fit: cover; border-radius: 4px;
-    background: var(--surf2); }
-  .fd { font: 700 9.5px/1 var(--font-mono); letter-spacing: .1em; text-transform: uppercase;
+  /* ---- 3 · tiêu điểm hôm nay (bản làm mịn) ---- */
+  /* dải tuần mảnh */
+  .wrib { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0;
+    border-top: 1px solid var(--bd-soft); border-bottom: 1px solid var(--bd-soft);
+    margin-bottom: 18px; }
+  .rb { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0;
+    padding: 11px 4px 10px; border-right: 1px solid var(--bd-soft); position: relative; }
+  .rb:last-child { border-right: 0; }
+  .rb b { font: 700 9.5px/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase;
     color: var(--mut); }
-  .frow.now .fd { color: var(--acc); }
-  .ft { min-width: 0; }
-  .ft b { display: block; font-size: 12.5px; font-weight: 650; line-height: 1.35; color: var(--txt);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .frow:hover .ft b { color: var(--acc); }
-  .ft span { display: block; margin-top: 2px; font-size: 10.5px; color: var(--dim);
+  .rb em { font-style: normal; font: 500 10px/1 var(--font-mono); color: var(--dim); }
+  .rb i { font-style: normal; height: 6px; font-size: 9px; line-height: 1; letter-spacing: 2px;
+    color: var(--acc); opacity: .8; }
+  .rb.off i { opacity: 0; }
+  .rb.now b, .rb.now em { color: var(--acc); }
+  .rb.now::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: -1px;
+    height: 2px; border-radius: 2px; background: var(--acc); }
+  .wrib.thin .rb { padding: 9px 4px 8px; }
+
+  /* lưới: tiêu điểm bên trái · danh sách bên phải */
+  .w3grid { display: grid; grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr);
+    gap: 32px; align-items: stretch; }
+
+  .w3feat { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr);
+    gap: 20px; align-items: center; min-width: 0; padding: 18px 20px; border-radius: 12px;
+    background: linear-gradient(118deg, color-mix(in srgb, var(--surf) 72%, transparent),
+      color-mix(in srgb, var(--surf) 12%, transparent) 72%, transparent);
+    transition: background .2s ease; }
+  .w3feat:hover { background: linear-gradient(118deg, color-mix(in srgb, var(--surf) 92%, transparent),
+      color-mix(in srgb, var(--surf) 22%, transparent) 72%, transparent); }
+  .w3poster { display: block; width: 116px; flex: none; border-radius: 7px; overflow: hidden;
+    box-shadow: 0 16px 30px -18px #000, 0 0 0 1px rgba(255, 240, 220, .09) inset;
+    transition: transform .25s cubic-bezier(.22,.61,.36,1); }
+  .w3feat:hover .w3poster { transform: translateY(-3px); }
+  .w3poster img { display: block; width: 100%; aspect-ratio: 2/3; object-fit: cover; }
+  .w3txt { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
+  .w3k { font: 800 9px/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase;
+    color: var(--acc); }
+  .w3n { display: -webkit-box; margin-top: 9px; font-family: var(--font-head); font-size: 22px;
+    font-weight: 700; line-height: 1.22; letter-spacing: -.012em; color: var(--txt);
+    -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  .w3m { display: block; margin-top: 9px; font: 500 10.5px/1.4 var(--font-mono); color: var(--dim); }
+  .w3go { display: inline-flex; align-items: center; gap: 4px; margin-top: 15px;
+    font-size: 12px; font-weight: 700; color: var(--mut); transition: color .15s ease, gap .15s ease; }
+  .w3go svg { width: 11px; height: 11px; }
+  .w3feat:hover .w3go { color: var(--acc); gap: 7px; }
+
+  /* 3B: nền là chính bìa phóng mờ */
+  .w3feat.v3b { overflow: hidden; padding: 22px 22px; min-height: 224px; isolation: isolate;
+    background: var(--surf2); }
+  .w3feat.v3b:hover { background: var(--surf2); }
+  .w3bg { position: absolute; inset: -8%; width: 116%; height: 116%; object-fit: cover;
+    object-position: center 28%; filter: blur(16px) saturate(1.1) brightness(.52); z-index: -2; }
+  .w3veil { position: absolute; inset: 0; z-index: -1;
+    background: linear-gradient(100deg, rgba(10,7,5,.9) 8%, rgba(10,7,5,.62) 52%, rgba(10,7,5,.28)); }
+  .v3b .w3n { color: #fff; text-shadow: 0 2px 18px rgba(0,0,0,.55); }
+  .v3b .w3m { color: rgba(255,255,255,.72); }
+  .v3b .w3poster { box-shadow: 0 18px 34px -16px #000, 0 0 0 1px rgba(255,255,255,.14); }
+  .v3b .w3go.on { color: var(--acc); }
+  .v3b:hover .w3go.on { color: #fff; }
+
+  /* danh sách bên phải */
+  .w3list { display: flex; flex-direction: column; min-width: 0; }
+  .w3lh { display: flex; align-items: baseline; gap: 8px; padding-bottom: 9px;
+    border-bottom: 1px solid var(--bd-soft);
+    font: 700 9.5px/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase;
+    color: var(--mut); }
+  .w3lh em { font-style: normal; margin-left: auto; letter-spacing: 0; text-transform: none;
+    font-weight: 600; color: var(--dim); }
+  .w3r { display: grid; grid-template-columns: 26px 28px minmax(0, 1fr); gap: 12px;
+    align-items: center; min-width: 0; padding: 10px 0; border-bottom: 1px solid var(--bd-soft); }
+  .w3r:last-child { border-bottom: 0; }
+  .w3d { font: 700 9.5px/1 var(--font-mono); letter-spacing: .1em; text-transform: uppercase;
+    color: var(--mut); }
+  .w3r.now .w3d { color: var(--acc); }
+  .w3r img, .w3ph { width: 28px; aspect-ratio: 2/3; object-fit: cover; border-radius: 4px;
+    background: var(--surf2); }
+  .w3t { min-width: 0; }
+  .w3t b { display: block; font-size: 12.5px; font-weight: 650; line-height: 1.35; color: var(--txt);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color .15s ease; }
+  .w3r:hover .w3t b { color: var(--acc); }
+  .w3t span { display: block; margin-top: 2px; font-size: 10.5px; color: var(--dim);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   @media (max-width: 960px) {
     .wk { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .wcol:nth-child(4n) { border-right: 0; }
     .q2 { grid-template-columns: minmax(0, 1fr); gap: 0; }
-    .feat { grid-template-columns: minmax(0, 1fr); gap: 22px; }
-    .fcard { min-height: 180px; }
-    .fx { right: 30%; }
+    .w3grid { grid-template-columns: minmax(0, 1fr); gap: 22px; }
+    .rb b { font-size: 9px; }
+    .w3feat.v3b { min-height: 196px; }
   }
   @media (max-width: 620px) {
     .wk { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .wcol:nth-child(2n) { border-right: 0; }
     .qrow { grid-template-columns: 38px 32px minmax(0, 1fr); }
     .qst { grid-column: 3; margin-top: 4px; }
+    .wrib { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .rb:nth-child(4) { border-right: 0; }
+    .w3feat { grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 16px; }
+    .w3poster { width: 92px; }
+    .w3n { font-size: 19px; }
   }
 </style>
 </head>
@@ -137,17 +192,18 @@
 
 <div class="mkbar">
   <span class="ttl">ssochuz · lịch ra chương</span>
-  <span>3 phương án · dữ liệu thật 6 bộ</span>
+  <span>4 phương án · dữ liệu thật 6 bộ</span>
   <a href="index.html" style="margin-left:auto;color:var(--mut);text-decoration:underline;text-underline-offset:3px">← trang chính</a>
   <a href="rails.html" style="color:var(--mut);text-decoration:underline;text-underline-offset:3px">phương án 2 mục</a>
 </div>
 
 <div class="wrap">
-  <h1>Lịch ra chương — ba cách bày</h1>
+  <h1>Lịch ra chương — bốn cách bày</h1>
   <p class="lead">Dữ liệu thật từ <b>registry.schedule</b>: 6 bộ, mỗi bộ một thứ (bộ cuối phủ cả
     Thứ 7 và CN). Tuần minh hoạ 26/10 – 01/11/2026, “hôm nay” là Thứ 6 30/10.</p>
   <p class="note">Sáu bộ, nhưng bộ cuối phủ cả Thứ 7 và CN nên bảy ngày đều có lịch. Ngày nào trống
-    thì mỗi phương án xử lý khác nhau (dấu “—”, hoặc ẩn hẳn dòng). Bạn chọn số, ví dụ <b>2</b>.</p>
+    thì mỗi phương án xử lý khác nhau (dấu “—”, hoặc ẩn hẳn dòng). Bạn chọn mã, ví dụ <b>3A</b>.
+    1 và 2 giữ nguyên để đối chiếu; <b>3A / 3B</b> là bản làm mịn từ phương án 3 bạn đã thích.</p>
 
   <section class="opt">
     <span class="otag"><i>1</i>Bảng tuần · bảng tuần 7 cột</span>
@@ -172,23 +228,55 @@
   </section>
 
   <section class="opt">
-    <span class="otag"><i>3</i>Tiêu điểm hôm nay · hôm nay nổi bật</span>
-    <p class="onote">Bên trái là bộ ra hôm nay, ảnh lớn 214px, chữ đè trên nền tối (nhãn “RA HÔM NAY · 30/10”). Bên phải là năm bộ còn lại, mỗi dòng một bộ kèm thứ. <b>Ưu:</b> có điểm nhấn, khác hẳn các mục khác. <b>Nhược:</b> hôm nay không có bộ nào thì phải lấy bộ kế tiếp và đổi nhãn thành “Ra Thứ 7” (mình đã xử lý sẵn).</p>
+    <span class="otag"><i>3A</i>Tiêu điểm hôm nay — bìa dọc · tiêu điểm · bản mịn</span>
+    <p class="onote">Thêm <b>dải tuần mảnh</b> ngay trên: bảy ô, ô hôm nay có gạch son, chấm son = ngày có bộ ra. Bên trái là <b>bìa dọc 116×174</b> đặt trên nền giấy rất nhẹ (không cắt ảnh nên mặt nhân vật còn nguyên), chữ bên phải: nhãn son in hoa · tên serif 22px · dòng meta mono · “Xem truyện ›”. Bên phải: năm bộ còn lại, mỗi dòng một bộ, đầu danh sách có nhãn “CÒN LẠI TRONG TUẦN · 5 BỘ”.</p>
     <div class="hr"><h2>Lịch ra chương</h2><span class="hs">6 bộ · tuần này</span>
       <span class="hm">Cả tuần
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
           stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
-    <div class="feat">
-  <a class="fcard" href="#">
-    <img src="../../../assets/covers/c890362a.webp" alt="" loading="lazy">
-    <span class="fsh"></span>
-    <span class="fx">
-      <span class="fk">Ra hôm nay · 30/10</span>
-      <span class="fn">Càng Thêm Oán Hận</span>
-      <span class="fm">Sắp ra mắt</span>
+    <div class="wrib"><span class="rb"><b>T2</b><em>26/10</em><i>•</i></span><span class="rb"><b>T3</b><em>27/10</em><i>•</i></span><span class="rb"><b>T4</b><em>28/10</em><i>•</i></span><span class="rb"><b>T5</b><em>29/10</em><i>•</i></span><span class="rb now"><b>T6</b><em>30/10</em><i>•</i></span><span class="rb"><b>T7</b><em>31/10</em><i>•</i></span><span class="rb"><b>CN</b><em>01/11</em><i>•</i></span></div>
+<div class="w3grid">
+  <a class="w3feat" href="#">
+    <span class="w3poster"><img src="../../../assets/covers/c890362a.webp" alt="" loading="lazy"></span>
+    <span class="w3txt">
+      <span class="w3k">Ra hôm nay · 30/10</span>
+      <span class="w3n">Càng Thêm Oán Hận</span>
+      <span class="w3m">Sắp ra mắt</span>
+      <span class="w3go">Xem truyện <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
     </span>
   </a>
-  <div class="flist"><a class="frow" href="#"><span class="fd">T2</span><img src="../../../assets/covers/5eb112f5.webp" alt="" loading="lazy"><span class="ft"><b>Người Chồng Lạnh Lùng Của Cô Vợ Béo</b><span>Thứ 2 · Đang cập nhật</span></span></a><a class="frow" href="#"><span class="fd">T3</span><img src="../../../assets/covers/022cf203.webp" alt="" loading="lazy"><span class="ft"><b>Nakira Là Một Kẻ Nhẫn Tâm</b><span>Thứ 3 · Đang cập nhật</span></span></a><a class="frow" href="#"><span class="fd">T4</span><img src="../../../assets/covers/20124c95.webp" alt="" loading="lazy"><span class="ft"><b>Cô Vợ Hờ Đanh Đá Của Tôi</b><span>Thứ 4 · 25 chương · Đang cập nhật</span></span></a><a class="frow" href="#"><span class="fd">T5</span><img src="../../../assets/covers/52b55f57.webp" alt="" loading="lazy"><span class="ft"><b>Bởi Chẳng Thể Ngăn Con Tim Rung Động</b><span>Thứ 5 · Sắp ra mắt</span></span></a><a class="frow" href="#"><span class="fd">T7</span><img src="../../../assets/covers/7c33de96.webp" alt="" loading="lazy"><span class="ft"><b>Juliet &amp; Juliet</b><span>Thứ 7, CN · 16 chương · Đang cập nhật</span></span></a></div>
+  <div class="w3list">
+  <div class="w3lh"><span>Còn lại trong tuần</span><em>5 bộ</em></div>
+  <a class="w3r" href="#"><span class="w3d">T2</span><img src="../../../assets/covers/5eb112f5.webp" alt="" loading="lazy"><span class="w3t"><b>Người Chồng Lạnh Lùng Của Cô Vợ Béo</b><span>Thứ 2 · Đang cập nhật</span></span></a><a class="w3r" href="#"><span class="w3d">T3</span><img src="../../../assets/covers/022cf203.webp" alt="" loading="lazy"><span class="w3t"><b>Nakira Là Một Kẻ Nhẫn Tâm</b><span>Thứ 3 · Đang cập nhật</span></span></a><a class="w3r" href="#"><span class="w3d">T4</span><img src="../../../assets/covers/20124c95.webp" alt="" loading="lazy"><span class="w3t"><b>Cô Vợ Hờ Đanh Đá Của Tôi</b><span>Thứ 4 · 25 chương · Đang cập nhật</span></span></a><a class="w3r" href="#"><span class="w3d">T5</span><img src="../../../assets/covers/52b55f57.webp" alt="" loading="lazy"><span class="w3t"><b>Bởi Chẳng Thể Ngăn Con Tim Rung Động</b><span>Thứ 5 · Sắp ra mắt</span></span></a><a class="w3r" href="#"><span class="w3d">T7</span><img src="../../../assets/covers/7c33de96.webp" alt="" loading="lazy"><span class="w3t"><b>Juliet &amp; Juliet</b><span>Thứ 7, CN · 16 chương · Đang cập nhật</span></span></a>
+</div>
+</div>
+<p class="snote">Lịch có thể thay đổi nếu có việc đột xuất.</p>
+  </section>
+
+  <section class="opt">
+    <span class="otag"><i>3B</i>Tiêu điểm hôm nay — nền bìa mờ · tiêu điểm · bản sâu</span>
+    <p class="onote">Cùng bố cục với 3A nhưng tấm tiêu điểm là một <b>khối ảnh</b>: chính bìa của bộ đó phóng to làm nền, phủ lớp tối chuyển sắc và làm mờ nhẹ, còn bìa dọc sắc nét nổi lên bên trái. Đậm và “điện ảnh” hơn, vẫn không cắt mất mặt nhân vật.</p>
+    <div class="hr"><h2>Lịch ra chương</h2><span class="hs">6 bộ · tuần này</span>
+      <span class="hm">Cả tuần
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
+          stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+    <div class="wrib thin"><span class="rb"><b>T2</b><em>26/10</em><i>•</i></span><span class="rb"><b>T3</b><em>27/10</em><i>•</i></span><span class="rb"><b>T4</b><em>28/10</em><i>•</i></span><span class="rb"><b>T5</b><em>29/10</em><i>•</i></span><span class="rb now"><b>T6</b><em>30/10</em><i>•</i></span><span class="rb"><b>T7</b><em>31/10</em><i>•</i></span><span class="rb"><b>CN</b><em>01/11</em><i>•</i></span></div>
+<div class="w3grid">
+  <a class="w3feat v3b" href="#">
+    <img class="w3bg" src="../../../assets/covers/c890362a.webp" alt="" loading="lazy">
+    <span class="w3veil"></span>
+    <span class="w3poster"><img src="../../../assets/covers/c890362a.webp" alt="" loading="lazy"></span>
+    <span class="w3txt">
+      <span class="w3k">Ra hôm nay · 30/10</span>
+      <span class="w3n">Càng Thêm Oán Hận</span>
+      <span class="w3m">Sắp ra mắt</span>
+      <span class="w3go on">Xem truyện <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+    </span>
+  </a>
+  <div class="w3list">
+  <div class="w3lh"><span>Còn lại trong tuần</span><em>5 bộ</em></div>
+  <a class="w3r" href="#"><span class="w3d">T2</span><img src="../../../assets/covers/5eb112f5.webp" alt="" loading="lazy"><span class="w3t"><b>Người Chồng Lạnh Lùng Của Cô Vợ Béo</b><span>Thứ 2 · Đang cập nhật</span></span></a><a class="w3r" href="#"><span class="w3d">T3</span><img src="../../../assets/covers/022cf203.webp" alt="" loading="lazy"><span class="w3t"><b>Nakira Là Một Kẻ Nhẫn Tâm</b><span>Thứ 3 · Đang cập nhật</span></span></a><a class="w3r" href="#"><span class="w3d">T4</span><img src="../../../assets/covers/20124c95.webp" alt="" loading="lazy"><span class="w3t"><b>Cô Vợ Hờ Đanh Đá Của Tôi</b><span>Thứ 4 · 25 chương · Đang cập nhật</span></span></a><a class="w3r" href="#"><span class="w3d">T5</span><img src="../../../assets/covers/52b55f57.webp" alt="" loading="lazy"><span class="w3t"><b>Bởi Chẳng Thể Ngăn Con Tim Rung Động</b><span>Thứ 5 · Sắp ra mắt</span></span></a><a class="w3r" href="#"><span class="w3d">T7</span><img src="../../../assets/covers/7c33de96.webp" alt="" loading="lazy"><span class="w3t"><b>Juliet &amp; Juliet</b><span>Thứ 7, CN · 16 chương · Đang cập nhật</span></span></a>
+</div>
 </div>
 <p class="snote">Lịch có thể thay đổi nếu có việc đột xuất.</p>
   </section>

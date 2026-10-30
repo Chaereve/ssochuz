@@ -138,27 +138,62 @@ ${NOTE ? `<p class="snote">${esc(NOTE)}</p>` : ''}`;
 const hero = NOW[0] || ITEMS.find((it) => it.days.some((k) => k > TODAY)) || ITEMS[0];
 const heroDay = hero ? hero.days.find((k) => k === TODAY) : TODAY;
 const rest = ITEMS.filter((it) => it !== hero);
-const opt3 = `<div class="feat">
-  <a class="fcard" href="#">
-    ${hero.img ? `<img src="${esc(hero.img)}" alt="" loading="lazy">` : ''}
-    <span class="fsh"></span>
-    <span class="fx">
-      <span class="fk">${heroDay === TODAY ? 'Ra hôm nay' : 'Ra ' + dayLong(heroDay)} · ${(DAYS.find((d) => d.k === heroDay) || {}).d || ''}</span>
-      <span class="fn">${esc(hero.title)}</span>
-      <span class="fm">${esc(meta(hero))}</span>
-    </span>
-  </a>
-  <div class="flist">${rest.map((it) => {
+/* ---- ba phương án 3 (làm mịn từ “tiêu điểm hôm nay”) -------------------- */
+const chev =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" ' +
+  'stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
+
+/* dải tuần mảnh: 7 ô, ô hôm nay có gạch son; chấm nhỏ = có bộ ra hôm đó */
+const ribbon = (cls = '') => `<div class="wrib${cls}">${DAYS.map((d) => {
+  const n = onDay(d.k).length;
+  return `<span class="rb${d.k === TODAY ? ' now' : ''}${n ? '' : ' off'}">` +
+    `<b>${d.l.replace('Thứ ', 'T')}</b><em>${d.d.slice(0, 5)}</em>` +
+    `<i>${n ? '•'.repeat(Math.min(n, 3)) : ''}</i></span>`;
+}).join('')}</div>`;
+
+const restList = (title) => `<div class="w3list">
+  <div class="w3lh"><span>${title}</span><em>${rest.length} bộ</em></div>
+  ${rest.map((it) => {
     const k = it.days[0];
     const today = it.days.includes(TODAY);
-    return (
-      `<a class="frow${today ? ' now' : ''}" href="#">` +
-        `<span class="fd">${k === 0 ? 'CN' : 'T' + (k + 1)}</span>` +
-        (it.img ? `<img src="${esc(it.img)}" alt="" loading="lazy">` : '') +
-        `<span class="ft"><b>${esc(it.title)}</b><span>${esc(it.dayLabel)} · ${esc(meta(it))}</span></span>` +
-      `</a>`
-    );
-  }).join('')}</div>
+    return `<a class="w3r${today ? ' now' : ''}" href="#">` +
+      `<span class="w3d">${k === 0 ? 'CN' : 'T' + (k + 1)}</span>` +
+      (it.img ? `<img src="${esc(it.img)}" alt="" loading="lazy">` : '<span class="w3ph"></span>') +
+      `<span class="w3t"><b>${esc(it.title)}</b><span>${esc(it.days.length > 1 ? it.dayLabel : dayLong(k))} · ${esc(meta(it))}</span></span></a>`;
+  }).join('')}
+</div>`;
+
+/* 3A · bìa dọc + chữ, trên nền giấy rất nhẹ — sạch và “biên tập” */
+const opt3a = `${ribbon()}
+<div class="w3grid">
+  <a class="w3feat" href="#">
+    ${hero.img ? `<span class="w3poster"><img src="${esc(hero.img)}" alt="" loading="lazy"></span>` : ''}
+    <span class="w3txt">
+      <span class="w3k">${heroDay === TODAY ? 'Ra hôm nay' : 'Ra ' + dayLong(heroDay)} · ${(DAYS.find((d) => d.k === heroDay) || {}).d || ''}</span>
+      <span class="w3n">${esc(hero.title)}</span>
+      <span class="w3m">${esc(meta(hero))}</span>
+      <span class="w3go">Xem truyện ${chev}</span>
+    </span>
+  </a>
+  ${restList('Còn lại trong tuần')}
+</div>
+${NOTE ? `<p class="snote">${esc(NOTE)}</p>` : ''}`;
+
+/* 3B · nền là chính bìa phóng mờ, bìa dọc nổi bên trái — sâu và “điện ảnh” hơn */
+const opt3b = `${ribbon(' thin')}
+<div class="w3grid">
+  <a class="w3feat v3b" href="#">
+    ${hero.img ? `<img class="w3bg" src="${esc(hero.img)}" alt="" loading="lazy">` : ''}
+    <span class="w3veil"></span>
+    ${hero.img ? `<span class="w3poster"><img src="${esc(hero.img)}" alt="" loading="lazy"></span>` : ''}
+    <span class="w3txt">
+      <span class="w3k">${heroDay === TODAY ? 'Ra hôm nay' : 'Ra ' + dayLong(heroDay)} · ${(DAYS.find((d) => d.k === heroDay) || {}).d || ''}</span>
+      <span class="w3n">${esc(hero.title)}</span>
+      <span class="w3m">${esc(meta(hero))}</span>
+      <span class="w3go on">Xem truyện ${chev}</span>
+    </span>
+  </a>
+  ${restList('Còn lại trong tuần')}
 </div>
 ${NOTE ? `<p class="snote">${esc(NOTE)}</p>` : ''}`;
 
@@ -241,53 +276,108 @@ const CSS = `
   .qst.done { color: var(--ok); }
   .qst.soon { color: #b9b2d6; }
 
-  /* ---- 3 · hôm nay nổi bật ---- */
-  .feat { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 34px;
-    align-items: stretch; }
-  .fcard { position: relative; display: block; min-height: 214px; border-radius: 10px;
-    overflow: hidden; background: var(--surf2); }
-  .fcard img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
-    object-position: center 22%; transition: transform .4s ease; }
-  .fcard:hover img { transform: scale(1.03); }
-  .fsh { position: absolute; inset: 0;
-    background: linear-gradient(90deg, rgba(10,7,5,.94) 0%, rgba(10,7,5,.72) 46%, rgba(10,7,5,.15) 100%); }
-  .fx { position: absolute; left: 20px; bottom: 18px; right: 40%; display: block; }
-  .fk { display: block; font: 800 9px/1 var(--font-mono); letter-spacing: .13em;
-    text-transform: uppercase; color: var(--acc); }
-  .fn { display: block; margin-top: 7px; font-family: var(--font-head); font-size: 21px;
-    font-weight: 700; line-height: 1.24; color: #fff; text-shadow: 0 2px 16px rgba(0,0,0,.6); }
-  .fm { display: block; margin-top: 7px; font: 500 10.5px/1.4 var(--font-mono);
-    color: rgba(255,255,255,.74); }
-  .flist { display: flex; flex-direction: column; }
-  .frow { display: grid; grid-template-columns: 34px 30px minmax(0, 1fr); gap: 12px;
-    align-items: center; min-width: 0; padding: 10px 0; border-bottom: 1px solid var(--bd-soft); }
-  .frow:first-child { padding-top: 0; }
-  .frow:last-child { border-bottom: 0; padding-bottom: 0; }
-  .frow img { width: 30px; aspect-ratio: 2/3; object-fit: cover; border-radius: 4px;
-    background: var(--surf2); }
-  .fd { font: 700 9.5px/1 var(--font-mono); letter-spacing: .1em; text-transform: uppercase;
+  /* ---- 3 · tiêu điểm hôm nay (bản làm mịn) ---- */
+  /* dải tuần mảnh */
+  .wrib { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0;
+    border-top: 1px solid var(--bd-soft); border-bottom: 1px solid var(--bd-soft);
+    margin-bottom: 18px; }
+  .rb { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0;
+    padding: 11px 4px 10px; border-right: 1px solid var(--bd-soft); position: relative; }
+  .rb:last-child { border-right: 0; }
+  .rb b { font: 700 9.5px/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase;
     color: var(--mut); }
-  .frow.now .fd { color: var(--acc); }
-  .ft { min-width: 0; }
-  .ft b { display: block; font-size: 12.5px; font-weight: 650; line-height: 1.35; color: var(--txt);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .frow:hover .ft b { color: var(--acc); }
-  .ft span { display: block; margin-top: 2px; font-size: 10.5px; color: var(--dim);
+  .rb em { font-style: normal; font: 500 10px/1 var(--font-mono); color: var(--dim); }
+  .rb i { font-style: normal; height: 6px; font-size: 9px; line-height: 1; letter-spacing: 2px;
+    color: var(--acc); opacity: .8; }
+  .rb.off i { opacity: 0; }
+  .rb.now b, .rb.now em { color: var(--acc); }
+  .rb.now::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: -1px;
+    height: 2px; border-radius: 2px; background: var(--acc); }
+  .wrib.thin .rb { padding: 9px 4px 8px; }
+
+  /* lưới: tiêu điểm bên trái · danh sách bên phải */
+  .w3grid { display: grid; grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr);
+    gap: 32px; align-items: stretch; }
+
+  .w3feat { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr);
+    gap: 20px; align-items: center; min-width: 0; padding: 18px 20px; border-radius: 12px;
+    background: linear-gradient(118deg, color-mix(in srgb, var(--surf) 72%, transparent),
+      color-mix(in srgb, var(--surf) 12%, transparent) 72%, transparent);
+    transition: background .2s ease; }
+  .w3feat:hover { background: linear-gradient(118deg, color-mix(in srgb, var(--surf) 92%, transparent),
+      color-mix(in srgb, var(--surf) 22%, transparent) 72%, transparent); }
+  .w3poster { display: block; width: 116px; flex: none; border-radius: 7px; overflow: hidden;
+    box-shadow: 0 16px 30px -18px #000, 0 0 0 1px rgba(255, 240, 220, .09) inset;
+    transition: transform .25s cubic-bezier(.22,.61,.36,1); }
+  .w3feat:hover .w3poster { transform: translateY(-3px); }
+  .w3poster img { display: block; width: 100%; aspect-ratio: 2/3; object-fit: cover; }
+  .w3txt { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
+  .w3k { font: 800 9px/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase;
+    color: var(--acc); }
+  .w3n { display: -webkit-box; margin-top: 9px; font-family: var(--font-head); font-size: 22px;
+    font-weight: 700; line-height: 1.22; letter-spacing: -.012em; color: var(--txt);
+    -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  .w3m { display: block; margin-top: 9px; font: 500 10.5px/1.4 var(--font-mono); color: var(--dim); }
+  .w3go { display: inline-flex; align-items: center; gap: 4px; margin-top: 15px;
+    font-size: 12px; font-weight: 700; color: var(--mut); transition: color .15s ease, gap .15s ease; }
+  .w3go svg { width: 11px; height: 11px; }
+  .w3feat:hover .w3go { color: var(--acc); gap: 7px; }
+
+  /* 3B: nền là chính bìa phóng mờ */
+  .w3feat.v3b { overflow: hidden; padding: 22px 22px; min-height: 224px; isolation: isolate;
+    background: var(--surf2); }
+  .w3feat.v3b:hover { background: var(--surf2); }
+  .w3bg { position: absolute; inset: -8%; width: 116%; height: 116%; object-fit: cover;
+    object-position: center 28%; filter: blur(16px) saturate(1.1) brightness(.52); z-index: -2; }
+  .w3veil { position: absolute; inset: 0; z-index: -1;
+    background: linear-gradient(100deg, rgba(10,7,5,.9) 8%, rgba(10,7,5,.62) 52%, rgba(10,7,5,.28)); }
+  .v3b .w3n { color: #fff; text-shadow: 0 2px 18px rgba(0,0,0,.55); }
+  .v3b .w3m { color: rgba(255,255,255,.72); }
+  .v3b .w3poster { box-shadow: 0 18px 34px -16px #000, 0 0 0 1px rgba(255,255,255,.14); }
+  .v3b .w3go.on { color: var(--acc); }
+  .v3b:hover .w3go.on { color: #fff; }
+
+  /* danh sách bên phải */
+  .w3list { display: flex; flex-direction: column; min-width: 0; }
+  .w3lh { display: flex; align-items: baseline; gap: 8px; padding-bottom: 9px;
+    border-bottom: 1px solid var(--bd-soft);
+    font: 700 9.5px/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase;
+    color: var(--mut); }
+  .w3lh em { font-style: normal; margin-left: auto; letter-spacing: 0; text-transform: none;
+    font-weight: 600; color: var(--dim); }
+  .w3r { display: grid; grid-template-columns: 26px 28px minmax(0, 1fr); gap: 12px;
+    align-items: center; min-width: 0; padding: 10px 0; border-bottom: 1px solid var(--bd-soft); }
+  .w3r:last-child { border-bottom: 0; }
+  .w3d { font: 700 9.5px/1 var(--font-mono); letter-spacing: .1em; text-transform: uppercase;
+    color: var(--mut); }
+  .w3r.now .w3d { color: var(--acc); }
+  .w3r img, .w3ph { width: 28px; aspect-ratio: 2/3; object-fit: cover; border-radius: 4px;
+    background: var(--surf2); }
+  .w3t { min-width: 0; }
+  .w3t b { display: block; font-size: 12.5px; font-weight: 650; line-height: 1.35; color: var(--txt);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color .15s ease; }
+  .w3r:hover .w3t b { color: var(--acc); }
+  .w3t span { display: block; margin-top: 2px; font-size: 10.5px; color: var(--dim);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   @media (max-width: 960px) {
     .wk { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .wcol:nth-child(4n) { border-right: 0; }
     .q2 { grid-template-columns: minmax(0, 1fr); gap: 0; }
-    .feat { grid-template-columns: minmax(0, 1fr); gap: 22px; }
-    .fcard { min-height: 180px; }
-    .fx { right: 30%; }
+    .w3grid { grid-template-columns: minmax(0, 1fr); gap: 22px; }
+    .rb b { font-size: 9px; }
+    .w3feat.v3b { min-height: 196px; }
   }
   @media (max-width: 620px) {
     .wk { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .wcol:nth-child(2n) { border-right: 0; }
     .qrow { grid-template-columns: 38px 32px minmax(0, 1fr); }
     .qst { grid-column: 3; margin-top: 4px; }
+    .wrib { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .rb:nth-child(4) { border-right: 0; }
+    .w3feat { grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 16px; }
+    .w3poster { width: 92px; }
+    .w3n { font-size: 19px; }
   }
 `;
 
@@ -315,17 +405,18 @@ const HTML = `<!doctype html>
 
 <div class="mkbar">
   <span class="ttl">ssochuz · lịch ra chương</span>
-  <span>3 phương án · dữ liệu thật 6 bộ</span>
+  <span>4 phương án · dữ liệu thật 6 bộ</span>
   <a href="index.html" style="margin-left:auto;color:var(--mut);text-decoration:underline;text-underline-offset:3px">← trang chính</a>
   <a href="rails.html" style="color:var(--mut);text-decoration:underline;text-underline-offset:3px">phương án 2 mục</a>
 </div>
 
 <div class="wrap">
-  <h1>Lịch ra chương — ba cách bày</h1>
+  <h1>Lịch ra chương — bốn cách bày</h1>
   <p class="lead">Dữ liệu thật từ <b>registry.schedule</b>: 6 bộ, mỗi bộ một thứ (bộ cuối phủ cả
     Thứ 7 và CN). Tuần minh hoạ 26/10 – 01/11/2026, “hôm nay” là Thứ 6 30/10.</p>
   <p class="note">Sáu bộ, nhưng bộ cuối phủ cả Thứ 7 và CN nên bảy ngày đều có lịch. Ngày nào trống
-    thì mỗi phương án xử lý khác nhau (dấu “—”, hoặc ẩn hẳn dòng). Bạn chọn số, ví dụ <b>2</b>.</p>
+    thì mỗi phương án xử lý khác nhau (dấu “—”, hoặc ẩn hẳn dòng). Bạn chọn mã, ví dụ <b>3A</b>.
+    1 và 2 giữ nguyên để đối chiếu; <b>3A / 3B</b> là bản làm mịn từ phương án 3 bạn đã thích.</p>
 
   ${opt('1', 'bảng tuần 7 cột', 'Bảng tuần',
     'Bảy cột mảnh, mỗi ngày một cột: thứ + ngày ở trên, dưới là bìa nhỏ 32px và tên hai dòng. ' +
@@ -340,12 +431,18 @@ const HTML = `<!doctype html>
     '<b>Nhược:</b> không thấy “tuần” như một tờ lịch.',
     opt2)}
 
-  ${opt('3', 'hôm nay nổi bật', 'Tiêu điểm hôm nay',
-    'Bên trái là bộ ra hôm nay, ảnh lớn 214px, chữ đè trên nền tối (nhãn “RA HÔM NAY · 30/10”). ' +
-    'Bên phải là năm bộ còn lại, mỗi dòng một bộ kèm thứ. ' +
-    '<b>Ưu:</b> có điểm nhấn, khác hẳn các mục khác. <b>Nhược:</b> hôm nay không có bộ nào thì phải ' +
-    'lấy bộ kế tiếp và đổi nhãn thành “Ra Thứ 7” (mình đã xử lý sẵn).',
-    opt3)}
+  ${opt('3A', 'tiêu điểm · bản mịn', 'Tiêu điểm hôm nay — bìa dọc',
+    'Thêm <b>dải tuần mảnh</b> ngay trên: bảy ô, ô hôm nay có gạch son, chấm son = ngày có bộ ra. ' +
+    'Bên trái là <b>bìa dọc 116×174</b> đặt trên nền giấy rất nhẹ (không cắt ảnh nên mặt nhân vật còn nguyên), ' +
+    'chữ bên phải: nhãn son in hoa · tên serif 22px · dòng meta mono · “Xem truyện ›”. ' +
+    'Bên phải: năm bộ còn lại, mỗi dòng một bộ, đầu danh sách có nhãn “CÒN LẠI TRONG TUẦN · 5 BỘ”.',
+    opt3a)}
+
+  ${opt('3B', 'tiêu điểm · bản sâu', 'Tiêu điểm hôm nay — nền bìa mờ',
+    'Cùng bố cục với 3A nhưng tấm tiêu điểm là một <b>khối ảnh</b>: chính bìa của bộ đó phóng to làm nền, ' +
+    'phủ lớp tối chuyển sắc và làm mờ nhẹ, còn bìa dọc sắc nét nổi lên bên trái. Đậm và “điện ảnh” hơn, ' +
+    'vẫn không cắt mất mặt nhân vật.',
+    opt3b)}
 </div>
 </body>
 </html>
