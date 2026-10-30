@@ -90,6 +90,17 @@ Dựng bằng `gen-rails.mjs`, ba kiểu cho mỗi mục, đúng khổ 1180px, d
 
 Nhãn thời gian trong mockup tính theo mốc 30/09/2026 (ngày dữ liệu mới nhất).
 
+## Lịch ra chương (`schedule.html`)
+
+Dựng bằng `gen-sched.mjs`, ba phương án từ dữ liệu thật `registry.schedule` (6 bộ, tuần 26/10–01/11/2026,
+“hôm nay” = Thứ 6 30/10).
+
+| Mã | Kiểu | Ghi chú |
+|---|---|---|
+| 1 | Bảng tuần 7 cột | thứ + ngày ở trên, bìa 32px + tên 2 dòng; cột hôm nay tô son nhạt; ngày trống hiện “—” |
+| 2 | Danh sách theo ngày | 6 dòng × 2 cột: nhãn thứ · bìa 34px · tên 1 dòng · nhãn tình trạng; dòng hôm nay có vạch son trái |
+| 3 | Tiêu điểm hôm nay | trái: bộ ra hôm nay, ảnh lớn 214px chữ đè; phải: 5 bộ còn lại |
+
 ## Dữ liệu
 
 Bìa, tên, tác giả, số chương, trạng thái, ngày cập nhật, `editorChoice`: **thật** (67 bộ).
