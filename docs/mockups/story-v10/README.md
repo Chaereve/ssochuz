@@ -34,3 +34,17 @@ Các bản trước sai vì bắt cả hai mặc cùng một bộ đồ (hai vi�
 | **C4** | Nhãn gấp mép: dải mực 27px chữ dọc ở góc trái · vòng tròn góc phải | chất bìa sách |
 
 Kiểm ảnh chụp 1216px + 390px. Lưu ý: mock2.css có `.sc` (nhãn góc thẻ) — đã tránh đặt tên trùng.
+
+## Vòng 10b · sửa bố cục lệch
+
+Ảnh chụp cho thấy dòng `hProg` **thụt vào 49px** so với `.hC` (1134px), tức dải tiến độ không
+thẳng mép trên/dưới với bìa. Nguyên nhân: `.hProg { display: flex }` — nó là con trực tiếp của
+`.hC` nhưng `.hProg span` vẫn dính `text-transform` cũ, còn hàng thì bị `margin` của khối trên đẩy vào.
+Đã sửa:
+
+- `.hProg` bỏ `display:flex` khỏi ngữ cảnh container, cho `align-items:center` + `margin: 18px 0 0`,
+  giữ `border-top` chạy hết bề ngang 1082px bằng `.inC`.
+- Bìa canh **đỉnh** với tiêu đề (trước canh giữa nên bìa thấp hơn chữ 13px).
+- Hàng 4 nút canh **đáy** với bìa (`margin-top:auto` trong cột chữ) → bìa và cụm nút thẳng đáy nhau,
+  không còn mảng trống 60px dưới nút.
+- Tiêu đề serif thụt `-2px` để canh quang học với mép bìa.

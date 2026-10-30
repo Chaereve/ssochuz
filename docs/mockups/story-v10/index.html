@@ -31,12 +31,14 @@
     object-position: center 24%; filter: blur(26px) saturate(1.1) brightness(.44); z-index: -2; }
   .veilC { position: absolute; inset: 0; z-index: -1;
     background: linear-gradient(96deg, rgba(10, 7, 5, .95) 6%, rgba(10, 7, 5, .76) 48%, rgba(10, 7, 5, .28)); }
-  .inC { display: grid; grid-template-columns: 172px minmax(0, 1fr); gap: 30px; align-items: center; }
-  .cvC { position: relative; display: block; border-radius: 6px; overflow: hidden; background: var(--surf2);
+  /* hàng bìa + chữ: bìa canh đỉnh với tiêu đề, hàng nút canh đáy với bìa */
+  .inC { display: grid; grid-template-columns: 172px minmax(0, 1fr); gap: 30px; align-items: stretch; }
+  .cvC { position: relative; display: block; align-self: start; border-radius: 6px; overflow: hidden;
+    background: var(--surf2);
     box-shadow: 0 24px 40px -22px rgba(0, 0, 0, .95), 0 0 0 1px rgba(255, 243, 230, .13); }
   .cvC img { display: block; width: 100%; aspect-ratio: 2/3; object-fit: cover; object-position: center top; }
-  .txtC { min-width: 0; }
-  .txtC h1 { font-family: var(--font-head); font-size: 32px; font-weight: 700; line-height: 1.13;
+  .txtC { display: flex; flex-direction: column; min-width: 0; }
+  .txtC h1 { margin-left: -2px; font-family: var(--font-head); font-size: 32px; font-weight: 700; line-height: 1.13;
     letter-spacing: -.024em; color: #fff; text-shadow: 0 2px 20px rgba(0, 0, 0, .5);
     display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .byC { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px;
@@ -62,7 +64,8 @@
   .btnGho svg { width: 14px; height: 14px; }
   .btnGho.onDark { border-color: rgba(255, 255, 255, .24); color: #fff; background: rgba(18, 12, 9, .3); }
   .btnGho.onDark:hover { background: rgba(18, 12, 9, .6); border-color: rgba(255, 255, 255, .4); }
-  .actC { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 18px; }
+  .actC { display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+    margin-top: auto; padding-top: 18px; }
 
   .synC { margin-top: 14px; max-width: 78ch; }
   .synC p { margin: 0; font-size: 13px; line-height: 1.68; color: rgba(255, 255, 255, .72);
@@ -71,7 +74,7 @@
     border: 0; background: none; font: 650 11.5px/1 var(--font); color: var(--acc); cursor: pointer; }
   .synMore svg { width: 9px; height: 9px; }
 
-  .hProg { display: flex; align-items: center; gap: 14px; margin-top: 22px; padding-top: 14px;
+  .hProg { display: flex; align-items: center; gap: 14px; margin-top: 18px; padding-top: 14px;
     border-top: 1px solid rgba(255, 255, 255, .13); }
   .hProg span { font: 600 10px/1 var(--font-mono); letter-spacing: .09em; text-transform: uppercase;
     color: rgba(255, 255, 255, .58); white-space: nowrap; }
@@ -164,6 +167,7 @@
   @container (max-width: 660px) {
     .hC { padding: 18px; }
     .inC { grid-template-columns: 108px minmax(0, 1fr); gap: 14px; align-items: start; }
+    .txtC { display: block; }
     .txtC h1 { font-size: 21px; }
     .synC { margin-top: 8px; }
     .synC p { font-size: 12px; }
