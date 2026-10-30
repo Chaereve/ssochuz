@@ -45,6 +45,7 @@ vẫn nền than ấm `--bg`, mực son `--acc`, chữ `--txt`.
 | Tóm tắt | mask fade | `-webkit-line-clamp: 3`, **không mask** |
 | Focus ring | `rgba(acc,.4)` | **`--ring: #e0859b`** + khe nền 2px → 6.14:1 trên thẻ |
 | Mobile | 4 hàng nút | **CTA 48px full-width + Theo dõi + ⋯** |
+| Rộng 800 | trang cuộn ngang 1076px | `.storylab` cột `minmax(0,1fr)`; `.rx-row` tự cuộn trong thẻ |
 
 ## Đo lại (Chromium, dev server 8081)
 
@@ -65,4 +66,5 @@ Tiêu đề dài thử bằng `ngot-ngao-la-may-bay-ang-cay-moi-la-tinh`: h1 gi�
 - `.rreact .rx-row` được chặn tràn ngang ở ≤620px (lỗi có sẵn, hàng sticker từng đẩy cả trang
   cuộn ngang 1003px).
 - `h4` trong 2 sheet “Mục lục” / “Cài đặt đọc” đổi thành `h2` để hết nhảy bậc heading.
-- `cz.css` 219 117 byte (giảm 536 byte so với trước dù thêm rule focus/hero).
+- `cz.css` 214.1 / 215 kB (219 289 byte) — vẫn **giảm** so với 219 653 byte của bản trước
+  dù thêm rule hero/focus, nhờ xoá veil, mask, blur, hover và ba tầng shadow.

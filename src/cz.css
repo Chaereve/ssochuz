@@ -2191,7 +2191,10 @@ kbd { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; b
   .shero .cover .b18 { width: 26px; height: 26px; left: 8px; top: 8px; font-size: 11px; }
   .shero .txtC { padding: 16px; }
   .shero h1 { font-size: 24px; }
-  .shero .meta { margin-top: 10px; gap: 4px 7px; font-size: 13px; }
+  /* hàng meta trên máy hẹp hay xuống dòng; bỏ dấu · để dòng hai không bắt đầu
+     bằng một dấu lửng lơ, các mục vẫn cách nhau bằng khoảng trắng */
+  .shero .meta { margin-top: 10px; gap: 2px 12px; font-size: 13px; }
+  .shero .meta .mi + .mi::before { content: none; }
   .shero .metaSub { font-size: 13px; }
   .shero .synwrap { margin-top: 10px; }
   .shero .syn, .shero .synwrap > .synin { font-size: 13px; }
