@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đề xuất · thanh tìm &amp; lọc thư viện (một hàng)</title>
+<link rel="stylesheet" href="/cz.css?v=20261030grid1">
+<link rel="stylesheet" href="mock.css">
+<style>
+  .page { max-width: 1120px; margin: 0 auto; padding: 40px 20px 90px; }
+  .kick { font: 700 11px/1 ui-monospace, monospace; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--acc); }
+  h1 { margin: 14px 0 12px; font-size: 34px; line-height: 1.12; letter-spacing: -.015em;
+    font-family: var(--font-head); }
+  .lede { margin: 0; max-width: 68ch; color: var(--mut); font-size: 15px; }
+  .lede b { color: var(--txt); }
+  .lede + .lede { margin-top: 10px; }
+
+  h2 { margin: 48px 0 6px; font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--dim); font-weight: 700; }
+  .h2sub { margin: 0 0 18px; color: var(--mut); font-size: 14px; max-width: 72ch; }
+
+  .stage { border: 1px solid var(--bd); border-radius: 14px; background: var(--bg2);
+    padding: 16px 18px 22px; }
+  .stage .flab { display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+    font: 700 10.5px/1 ui-monospace, monospace; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--dim); }
+  .stage .flab .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--acc); }
+
+  /* đầu mục giả lập để thấy số kết quả nằm đâu */
+  .fakeHead { display: flex; align-items: flex-end; gap: 16px; padding-bottom: 12px;
+    border-bottom: 1px solid var(--bd); margin-bottom: 20px; }
+  .fakeHead h3 { margin: 0; font-size: 22px; line-height: 1.2; letter-spacing: -.018em;
+    font-family: var(--font-head); font-weight: 700; }
+  .fakeHead .sub { font-size: 13px; color: var(--mut); padding-bottom: 3px; }
+  .fakeHead .right { margin-left: auto; display: flex; align-items: center; gap: 10px;
+    padding-bottom: 3px; }
+
+  .shot { display: block; width: 100%; height: auto; border-radius: 8px; }
+  .frame { border: 1px solid var(--bd); border-radius: 12px; overflow: hidden; background: var(--bg); }
+  .frame .flab { display: flex; align-items: center; gap: 8px; padding: 7px 12px;
+    border-bottom: 1px solid var(--bd); font: 700 10.5px/1 ui-monospace, monospace;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+  .frame .fv { padding: 0; }
+  .frame iframe { display: block; width: 390px; max-width: 100%; height: 200px; border: 0; }
+  .mobwrap { width: 392px; max-width: 100%; }
+
+  .rules { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 760px) { .rules { grid-template-columns: 1fr; } }
+  .rules li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px;
+    padding: 12px 14px; background: var(--surf); border: 1px solid var(--bd); border-radius: 10px; }
+  .rules .n { font: 700 11px/1.5 ui-monospace, monospace; color: var(--acc); }
+  .rules b { display: block; font-size: 13.5px; color: var(--txt); margin-bottom: 3px; }
+  .rules span.txt { font-size: 13px; color: var(--mut); line-height: 1.55; }
+
+  footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--bd);
+    color: var(--dim); font-size: 13px; }
+  code { font-family: var(--font-mono); font-size: .92em; color: var(--txt);
+    background: var(--surf2); padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <p class="kick">Đề xuất · chưa sửa vào site</p>
+  <h1>Thư viện: một hàng, không nhãn</h1>
+  <p class="lede">Bỏ hẳn chữ <b>“Năm”</b> và <b>“Sắp xếp”</b>, bỏ nguyên dãy tab
+    <b>Tất cả 67 · Hoàn thành 46 · Đang cập nhật 4 · Sắp ra mắt 17 · 18+ 29</b>, bỏ luôn
+    công tắc lưới/danh sách. Tất cả còn lại đứng chung một hàng, cùng cỡ chữ, cùng màu —
+    chỉ ô nhập là có khung.</p>
+  <p class="lede">Đây là kiểu MangaDex / AniList: trên thanh chỉ có <b>giá trị đang chọn</b>,
+    không có nhãn giải thích. Số truyện và số đang xem dời lên dòng tiêu đề
+    <b>“Thư viện”</b>, nơi mắt vốn đã ở đó.</p>
+
+  <h2>Trước / sau</h2>
+  <p class="h2sub">Bên trên là bản đang chạy (chụp từ dev server), bên dưới là đề xuất.</p>
+
+  <div class="stage">
+    <div class="flab"><span class="dot"></span> Hiện tại · 6 điều khiển, 2 hàng, 5 nhãn số</div>
+    <img class="shot" src="../library-bar-r51/img/now-d.webp" alt="Thanh lọc hiện tại: ô tìm, Năm, Sắp xếp, tab tình trạng kèm số đếm">
+  </div>
+
+  <div class="stage" style="margin-top:18px">
+    <div class="flab"><span class="dot"></span> Đề xuất · 4 điều khiển, 1 hàng, 0 nhãn</div>
+
+    <div class="fakeHead">
+      <h3>Thư viện</h3>
+      <span class="sub">67 bộ</span>
+      <span class="right"><span class="headCount"><b>1–24</b> / 67</span></span>
+    </div>
+
+    <div class="barP">
+      <label class="sP">
+        <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"></path><path d="M21 21l-6 -6"></path></g></svg>
+        <input type="search" placeholder="Tìm truyện, tác giả, couple…" aria-label="Tìm trong thư viện">
+        <button class="clr" type="button" aria-label="Xoá ô tìm kiếm" title="Xoá">
+          <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.44" transform="translate(-2.16 -2.16) scale(1.18)"><path d="M18 6l-12 12"></path><path d="M6 6l12 12"></path></g></svg>
+        </button>
+      </label>
+
+      <span class="ddP">
+        <select aria-label="Lọc theo năm"><option>Mọi năm</option><option>2026 (18)</option><option>2025 (19)</option></select>
+        <span class="cv" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><g stroke-width="1.2" transform="translate(-5.04 -5.04) scale(1.42)"><path d="M6 9l6 6l6 -6"></path></g></svg></span>
+      </span>
+
+      <span class="ddP set">
+        <select aria-label="Lọc theo tình trạng"><option>Hoàn thành (46)</option><option>Mọi tình trạng</option></select>
+        <span class="cv" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><g stroke-width="1.2" transform="translate(-5.04 -5.04) scale(1.42)"><path d="M6 9l6 6l6 -6"></path></g></svg></span>
+      </span>
+
+      <span class="ddP">
+        <select aria-label="Sắp xếp"><option>Mới nhất</option><option>Năm mới nhất</option><option>Tên A → Z</option></select>
+        <span class="cv" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><g stroke-width="1.2" transform="translate(-5.04 -5.04) scale(1.42)"><path d="M6 9l6 6l6 -6"></path></g></svg></span>
+      </span>
+
+      <button class="t18" type="button" aria-pressed="false">18+</button>
+      <button class="clrAll" type="button">Xoá lọc</button>
+    </div>
+  </div>
+
+  <h2>Trên mobile</h2>
+  <p class="h2sub">Ô nhập chiếm một hàng; bốn mục còn lại xuống hàng dưới nhưng vẫn là chữ,
+    không khung, không nhãn. Khung dưới đây rộng 390px và chạy CSS thật của site.</p>
+  <div class="mobwrap">
+    <div class="frame">
+      <div class="flab">Mobile · 390px</div>
+      <div class="fv"><iframe src="frame.html" title="Đề xuất thanh lọc trên mobile" loading="lazy"></iframe></div>
+    </div>
+  </div>
+
+  <h2>Vì sao gọn hơn</h2>
+  <ul class="rules">
+    <li><span class="n">01</span><span><b>Không còn nhãn</b><span class="txt">“Năm” và “Sắp xếp” là chữ giải thích cho một ô đã tự nói ra nó là gì. Bỏ đi, hàng lọc nhẹ hẳn.</span></span></li>
+    <li><span class="n">02</span><span><b>Không còn dãy tab</b><span class="txt">Tình trạng thành một ô chọn “Mọi tình trạng / Hoàn thành (46) / …”. Số đếm vẫn còn, nhưng nằm trong danh sách chứ không bày ra thanh.</span></span></li>
+    <li><span class="n">03</span><span><b>Một hàng thay vì hai</b><span class="txt">Lưới truyện lên cao hơn ~54px. Số “1–24 / 67” dời lên dòng “Thư viện”, chỗ mắt đã đọc.</span></span></li>
+    <li><span class="n">04</span><span><b>Chỉ một khối có viền</b><span class="txt">Ô nhập là thứ duy nhất cần khung. Ba ô chọn và hai nút còn lại là chữ — đúng nguyên tắc “kẻ tóc + chữ” của site.</span></span></li>
+    <li><span class="n">05</span><span><b>Biết đang lọc cái gì</b><span class="txt">Ô chọn có lọc thì chữ sáng lên, mũi tên chuyển màu son; nút “Xoá lọc” chỉ hiện khi thật sự có lọc.</span></span></li>
+    <li><span class="n">06</span><span><b>Giữ đủ chức năng</b><span class="txt">Tìm, năm, tình trạng, sắp xếp, lọc 18+ vẫn đủ; bỏ đúng một thứ bạn yêu cầu bỏ là công tắc kiểu xem.</span></span></li>
+  </ul>
+
+  <footer>
+    Chốt thì mình mới sửa <code>index.html</code> + <code>src/cz-home.js</code> +
+    <code>src/cz.css</code>. Bản thật hiện chỉ mới bỏ công tắc kiểu xem, thanh lọc vẫn y như cũ.
+  </footer>
+</div>
+</body>
+</html>
