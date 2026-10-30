@@ -373,11 +373,14 @@
     }) || null;
   }
   var WD = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+  var WDL = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
-  /* Lịch ra chương = DẢI 7 NGÀY của tuần này (thứ Hai → Chủ nhật). Mỗi bộ nằm ở
-     đúng cột thứ của nó, hôm nay tô sáng; bộ chưa ghi thứ thì xuống hàng riêng
-     bên dưới chứ không bị bỏ sót. Mỗi mục vẫn giữ lớp .sched như trước nên các
-     chỗ khác (và bài kiểm) không phải đổi. */
+  /* Lịch ra chương (30/10/2026 · phương án 3B đã chốt): MỘT tấm tiêu điểm bên trái
+     + danh sách phần còn lại bên phải. Bìa dọc giữ nguyên tỉ lệ 2/3 nên không cắt
+     mặt nhân vật; nền tấm tiêu điểm là chính bìa đó phóng to, làm mờ và tối đi.
+     Hôm nay không có bộ nào thì lấy bộ gần nhất sắp ra và đổi nhãn cho đúng thứ.
+     Mỗi mục vẫn mang lớp .sched (chỉ để đếm, không còn tạo kiểu) nên bài kiểm cũ
+     không phải sửa. */
   function renderSched(sch) {
     var el = $('#sched');
     if (!el) return;
@@ -394,35 +397,68 @@
       el.innerHTML = '<div class="empty">Chưa có lịch ra chương.</div>';
       return;
     }
-    var cell = function (it) {
-      var n = schedFind(it);
-      var im = n && CZ.coverSrc(n);
-      var title = (n && n.title) || it.title || '';
-      var meta = n ? (n.canRead ? CZ.countText(n) : CZ.statusLabel(n.statusCls)) : (it.detail || '');
-      return '<a class="sched' + (n ? ' clk' : '') + '"' + (n ? ' href="' + esc(CZ.storyURL(n.slug)) + '"' : '') + '>' +
-        '<span class="sch-th' + (im ? '' : ' noimg') + '">' +
-        (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</span>' +
-        '<span class="sch-info"><b>' + esc(title) + '</b><span>' + esc(meta) + '</span></span></a>';
-    };
-    var dated = items.map(function (it) { return { it: it, days: parseDays(it.days) }; });
-    var unplaced = dated.filter(function (x) { return !x.days.length; });
     var now = new Date();
     var monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
-    var cols = WD.map(function (wd, i) {
+    var dayDate = function (i) {
       var d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
-      var today = d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-      var rows = dated.filter(function (x) { return x.days.indexOf(wd) >= 0; });
-      return '<div class="day' + (today ? ' today' : '') + '">' +
-        '<div class="wd">' + wd + (today ? '<span>· hôm nay</span>' : '') + '</div>' +
-        '<div class="dt">' + pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '</div>' +
-        (rows.length ? rows.map(function (x) { return cell(x.it); }).join('') : '<div class="dayoff">nghỉ</div>') +
-        '</div>';
-    }).join('');
-    el.innerHTML = '<div class="week">' + cols + '</div>' +
-      (unplaced.length ? '<div class="schedlist">' + unplaced.map(function (x) { return cell(x.it); }).join('') + '</div>' : '') +
+      return pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1);
+    };
+    var todayIdx = (now.getDay() + 6) % 7;
+    var dated = items.map(function (it) { return { it: it, days: parseDays(it.days) }; });
+    var dayIdx = function (x) { return x.days.length ? WD.indexOf(x.days[0]) : -1; };
+    var unplaced = dated.filter(function (x) { return dayIdx(x) < 0; });
+
+    /* chọn tấm tiêu điểm: hôm nay → bộ gần nhất sắp ra → bộ đầu tiên */
+    var hero = dated.filter(function (x) { return x.days.indexOf(WD[todayIdx]) >= 0; })[0] ||
+      dated.filter(function (x) { return dayIdx(x) > todayIdx; })[0] ||
+      dated[0];
+    var heroIsToday = hero.days.indexOf(WD[todayIdx]) >= 0;
+    var heroIdx = heroIsToday ? todayIdx : Math.max(0, dayIdx(hero));
+
+    var row = function (x) {
+      var n = schedFind(x.it);
+      var im = n && CZ.coverSrc(n);
+      var title = (n && n.title) || x.it.title || '';
+      var meta = n ? (n.canRead ? CZ.countText(n) : CZ.statusLabel(n.statusCls)) : (x.it.detail || '');
+      var i = dayIdx(x);
+      var label = i >= 0 ? (i === todayIdx ? 'Hôm nay' : WDL[i]) : 'Chưa hẹn';
+      return '<a class="w3r sched' + (i === todayIdx ? ' now' : '') + '"' +
+        (n ? ' href="' + esc(CZ.storyURL(n.slug)) + '"' : '') + '>' +
+        '<span class="w3d">' + esc(i >= 0 ? WD[i] : '—') + '</span>' +
+        (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">'
+            : '<span class="w3ph"></span>') +
+        '<span class="w3t"><b>' + esc(title) + '</b><span>' + esc(label) +
+          (meta ? ' · ' + esc(meta) : '') + '</span></span></a>';
+    };
+
+    var hn = schedFind(hero.it);
+    var him = hn && CZ.coverSrc(hn);
+    var htitle = (hn && hn.title) || hero.it.title || '';
+    var hmeta = hn ? (hn.canRead ? CZ.countText(hn) : CZ.statusLabel(hn.statusCls)) : (hero.it.detail || '');
+    var kicker = (heroIsToday ? 'Ra hôm nay' : 'Ra ' + WDL[heroIdx]) + ' · ' + dayDate(heroIdx);
+    var heroHTML = '<a class="w3feat v3b sched' + (hn ? '' : ' off') + '"' +
+      (hn ? ' href="' + esc(CZ.storyURL(hn.slug)) + '"' : '') + '>' +
+      (him ? '<img class="w3bg" src="' + esc(him) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' +
+        '<span class="w3veil"></span>' +
+        '<span class="w3poster"><img src="' + esc(him) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"></span>' : '') +
+      '<span class="w3txt"><span class="w3k">' + esc(kicker) + '</span>' +
+        '<span class="w3n">' + esc(htitle) + '</span>' +
+        (hmeta ? '<span class="w3m">' + esc(hmeta) + '</span>' : '') +
+        (hn ? '<span class="w3go">Xem truyện</span>' : '') +
+      '</span></a>';
+
+    var rest = dated.filter(function (x) { return x !== hero; });
+    el.innerHTML = '<div class="w3grid">' + heroHTML +
+      '<div class="w3list"><div class="w3lh"><span>Còn lại trong tuần</span><em>' +
+        (rest.length + unplaced.length) + ' bộ</em></div>' +
+        rest.map(row).join('') +
+      '</div></div>' +
       (sch && sch.note ? '<p class="schnote">' + esc(sch.note) + '</p>' : '');
+
     var count = $('#lichCount');
     if (count) count.textContent = items.length + ' bộ · tuần này';
+    var today = $('#lichToday');
+    if (today) today.textContent = 'Hôm nay · ' + WDL[todayIdx] + ' ' + dayDate(todayIdx);
   }
   function renderEditorChoice() {
     var el = $('#bien-tap'), rail = $('#editRail');

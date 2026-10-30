@@ -1267,24 +1267,7 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   .rank .bar { transform: scaleX(var(--w, 0)); }
 }
 
-.schedlist { display: flex; flex-direction: column; gap: 8px; }
-.sched { display: grid; grid-template-columns: 46px auto 1fr; gap: 12px 16px; align-items: center;
-  padding: 12px; border: 1px solid var(--bd); border-radius: var(--r); color: var(--txt);
-  background: var(--surf); transition: border-color var(--t-fast) var(--ease), transform var(--t) var(--ease), background-color var(--t) var(--ease); }
-.sched.clk:hover { border-color: var(--bd2); transform: translateX(2px); background: color-mix(in srgb, var(--surf2) 55%, transparent); }
-.sched.clk:hover .sch-info b { color: var(--acc); }
-.sch-th { display: block; width: 46px; height: 66px; border-radius: var(--r-sm); overflow: hidden; background: var(--surf2); }
-.sch-th img { width: 100%; height: 100%; object-fit: cover; }
-.sch-info { min-width: 0; }
-.sch-info b { display: block; font-size: 14.5px; font-weight: 650; line-height: 1.35; letter-spacing: -.004em;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sch-info span { display: block; font-size: 12.5px; line-height: 1.5; color: var(--mut); margin-top: 2px; }
 .schnote { margin: 12px 0 0; font-size: 12.5px; line-height: 1.55; color: var(--dim); }
-@media (max-width: 640px) {
-  .sched { grid-template-columns: 40px 1fr; }
-  .sch-info { grid-column: 2; }
-  .sch-th { width: 40px; height: 56px; }
-}
 
 
 /* =========================== 10. THƯ VIỆN =============================== */
@@ -4376,30 +4359,69 @@ body.rd-focus .rdcmts { display: none; }
 .mini3 .card .th .foot .ch { font-size: 9px; }
 .mini3 .card .th .b18 { min-height: 14px; padding: 1px 5px; font-size: 7.5px; }
 
-/* --- lịch ra chương: dải 7 ngày, kẻ tóc thay vì 7 cái hộp ----------- */
+/* ================= LỊCH RA CHƯƠNG · TIÊU ĐIỂM HÔM NAY ==================
+   30/10/2026 (phương án 3B đã chốt): bên trái là bộ ra hôm nay — nền là chính bìa
+   phóng to làm mờ, bìa dọc 116×174 sắc nét nổi lên trên; bên phải là phần còn lại
+   của tuần, mỗi dòng một bộ. Không khung, không hộp, chỉ kẻ tóc.
+   ====================================================================== */
 .lcount { font-size: 12.5px; color: var(--dim); font-variant-numeric: tabular-nums; }
-.week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--bd); }
-.week .day { min-width: 0; padding: 15px 15px 16px;
-  border-right: 1px solid color-mix(in srgb, var(--bd) 55%, transparent); }
-.week .day:last-child { border-right: 0; }
-.week .day.today { background: linear-gradient(180deg, color-mix(in srgb, var(--acc) 8%, transparent), transparent 70%); }
-.week .wd { display: flex; align-items: baseline; gap: 6px; font-family: var(--font-mono); font-size: 10px;
-  font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
-.week .wd span { font-family: var(--font); font-size: 10px; letter-spacing: 0; text-transform: none; color: var(--acc); }
-.week .dt { margin: 4px 0 12px; font-family: var(--font-head); font-size: 16px; font-weight: 700;
-  color: var(--mut); font-variant-numeric: tabular-nums; }
-.week .day.today .dt { color: var(--txt); }
-.week .dayoff { padding: 4px 0; font-size: 11px; font-weight: 600; color: var(--dim); opacity: .55; }
-.week .sched { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px; margin-bottom: 10px;
-  padding: 0; border: 0; border-radius: 6px; background: none; }
-.week .sched:last-child { margin-bottom: 0; }
-.week .sched.clk:hover { background: none; transform: none; }
-.week .sched.clk:hover .sch-info b { color: var(--acc); }
-.week .sch-th { width: 34px; height: auto; aspect-ratio: 2/3; border-radius: 4px; }
-.week .sch-info b { display: -webkit-box; font-family: var(--font); font-size: 12px; font-weight: 650;
-  line-height: 1.35; overflow: hidden; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
-.week .sch-info span { display: block; margin-top: 2px; font-size: 10.5px; color: var(--dim); }
-#sched .schnote { margin: 12px 0 0; font-size: 12px; color: var(--dim); }
+.lnow { display: inline-flex; align-items: center; height: 20px; padding: 0 8px;
+  border-radius: 5px; background: var(--acc-soft); color: var(--acc);
+  font-family: var(--font-mono); font-size: 9.5px; font-weight: 700;
+  letter-spacing: .07em; text-transform: uppercase; }
+#sched .w3grid { display: grid; grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr);
+  gap: 32px; align-items: stretch; }
+#sched .w3feat { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr);
+  gap: 20px; align-items: center; min-width: 0; min-height: 224px;
+  padding: 22px; border-radius: 12px; overflow: hidden; isolation: isolate;
+  background: var(--surf2); color: var(--txt); }
+#sched .w3bg { position: absolute; inset: -8%; width: 116%; height: 116%; object-fit: cover;
+  object-position: center 28%; filter: blur(16px) saturate(1.1) brightness(.52); z-index: -2; }
+#sched .w3veil { position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(100deg, rgba(10, 7, 5, .9) 8%, rgba(10, 7, 5, .62) 52%, rgba(10, 7, 5, .28)); }
+#sched .w3poster { display: block; width: 116px; flex: none; border-radius: 7px; overflow: hidden;
+  box-shadow: 0 18px 34px -16px #000, 0 0 0 1px rgba(255, 255, 255, .14);
+  transition: transform .25s var(--ease); }
+#sched .w3feat:hover .w3poster { transform: translateY(-3px); }
+#sched .w3poster img { display: block; width: 100%; aspect-ratio: 2/3; object-fit: cover; }
+#sched .w3txt { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
+#sched .w3k { font-family: var(--font-mono); font-size: 9px; font-weight: 800; line-height: 1;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--acc); }
+#sched .w3n { display: -webkit-box; margin-top: 9px; font-family: var(--font-head); font-size: 22px;
+  font-weight: 700; line-height: 1.22; letter-spacing: -.012em; color: #fff;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, .55);
+  -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+#sched .w3m { display: block; margin-top: 9px; font-family: var(--font-mono); font-size: 10.5px;
+  line-height: 1.4; color: rgba(255, 255, 255, .72); }
+#sched .w3go { display: inline-flex; align-items: center; margin-top: 15px;
+  font-size: 12px; font-weight: 700; color: var(--acc);
+  transition: color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
+#sched .w3go::after { content: "›"; margin-left: 5px; }
+#sched .w3feat:hover .w3go { color: #fff; transform: translateX(3px); }
+#sched .w3feat.off { background: var(--surf); }
+#sched .w3list { display: flex; flex-direction: column; min-width: 0; }
+#sched .w3lh { display: flex; align-items: baseline; gap: 8px; padding-bottom: 9px;
+  border-bottom: 1px solid var(--bd-soft); font-family: var(--font-mono); font-size: 9.5px;
+  font-weight: 700; line-height: 1; letter-spacing: .12em; text-transform: uppercase; color: var(--mut); }
+#sched .w3lh em { margin-left: auto; font-style: normal; font-weight: 600;
+  letter-spacing: 0; text-transform: none; color: var(--dim); }
+#sched .w3r { display: grid; grid-template-columns: 26px 28px minmax(0, 1fr); gap: 12px;
+  align-items: center; min-width: 0; padding: 10px 0;
+  border-bottom: 1px solid var(--bd-soft); color: var(--txt); }
+#sched .w3r:last-child { border-bottom: 0; }
+#sched .w3d { font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; line-height: 1;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--mut); }
+#sched .w3r.now .w3d { color: var(--acc); }
+#sched .w3r img, #sched .w3ph { width: 28px; aspect-ratio: 2/3; object-fit: cover;
+  border-radius: 4px; background: var(--surf2); }
+#sched .w3t { min-width: 0; }
+#sched .w3t b { display: block; font-size: 12.5px; font-weight: 650; line-height: 1.35;
+  color: var(--txt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: color var(--t-fast) var(--ease); }
+#sched .w3r:hover .w3t b { color: var(--acc); }
+#sched .w3t span { display: block; margin-top: 2px; font-size: 10.5px; color: var(--dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#sched .schnote { margin: 12px 0 0; font-size: 12px; line-height: 1.55; color: var(--dim); }
 
 /* --- thu nhỏ theo bề ngang (giữ nguyên cấu trúc, đổi số cột) --------- */
 
@@ -4407,12 +4429,8 @@ body.rd-focus .rdcmts { display: none; }
   #bxh .tilehead h2 { font-size: 18px; }
   .mlist { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 26px; }
   .wcards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  /* tuần: cuộn ngang theo ngày, mỗi ngày thành thẻ riêng cho dễ đọc */
-  .week { grid-auto-flow: column; grid-auto-columns: 154px; grid-template-columns: none;
-    border-top: 0; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x proximity; }
-  .week .day { border: 1px solid var(--bd); border-radius: 12px; scroll-snap-align: start;
-    margin-right: 10px; padding: 12px; }
-  .week .day:last-child { margin-right: 0; }
+  #sched .w3grid { grid-template-columns: minmax(0, 1fr); gap: 22px; }
+  #sched .w3feat { min-height: 196px; }
 }
 @media (max-width: 620px) {
   #tong-quan { margin-top: 28px; }
@@ -4425,7 +4443,9 @@ body.rd-focus .rdcmts { display: none; }
   #bxh .tilehead .right { width: 100%; justify-content: flex-start; }
   .mlist { grid-template-columns: minmax(0, 1fr); }
   .wcards { grid-template-columns: minmax(0, 1fr); }
-  .week { grid-auto-columns: 142px; }
+  #sched .w3feat { grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 16px; }
+  #sched .w3poster { width: 92px; }
+  #sched .w3n { font-size: 19px; }
 }
 
 /* --- Thư viện: nhịp và cỡ bìa khớp hàng bìa phía trên ------------------ */
