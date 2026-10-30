@@ -48,3 +48,12 @@ thẳng mép trên/dưới với bìa. Nguyên nhân: `.hProg { display: flex }`
 - Hàng 4 nút canh **đáy** với bìa (`margin-top:auto` trong cột chữ) → bìa và cụm nút thẳng đáy nhau,
   không còn mảng trống 60px dưới nút.
 - Tiêu đề serif thụt `-2px` để canh quang học với mép bìa.
+
+## Vòng 10c · 18+ lên góc trên
+
+Theo yêu cầu: vòng tròn 18+ dời từ **góc dưới phải** lên **góc trên trái** bìa
+(góc trên phải đang là băng rôn “MỚI” nên không đặt được). Dải đáy bìa giờ chỉ còn
+**● Hoàn thành**, canh trái.
+
+Vòng tròn có **quầng tối cục bộ** (`rgba(8,6,4,.58)` + blur 4px) để đọc được trên bìa sáng;
+mobile hạ còn 19px, cách mép 5px. Khoảng thở ở hàng nút giảm 18px → 10px để phần đầu bớt rỗng.

@@ -138,8 +138,9 @@ const heroC1 = `<section class="hC">
   ${BG}
   <div class="inC">
     <a class="cvC" href="#">${IMG}${BOOKMARK}
+      ${ageRing('cornerTL')}
       <span class="shade"></span>
-      <span class="cvBot"><b class="stT ${cls}"><i></i>${esc(S.st)}</b>${ageRing('onImg')}</span>
+      <span class="cvBot"><b class="stT ${cls}"><i></i>${esc(S.st)}</b></span>
     </a>
     ${TEXT()}
   </div>
@@ -252,7 +253,7 @@ const CSS = `
   .btnGho.onDark { border-color: rgba(255, 255, 255, .24); color: #fff; background: rgba(18, 12, 9, .3); }
   .btnGho.onDark:hover { background: rgba(18, 12, 9, .6); border-color: rgba(255, 255, 255, .4); }
   .actC { display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
-    margin-top: auto; padding-top: 18px; }
+    margin-top: auto; padding-top: 10px; }
 
   .synC { margin-top: 14px; max-width: 78ch; }
   .synC p { margin: 0; font-size: 13px; line-height: 1.68; color: rgba(255, 255, 255, .72);
@@ -288,6 +289,9 @@ const CSS = `
   .ageRing.onImg { background: rgba(8, 6, 4, .34); }
   .ageRing.corner { position: absolute; right: 8px; bottom: 8px; z-index: 3;
     background: rgba(8, 6, 4, .62); backdrop-filter: blur(4px); }
+  .ageRing.cornerTL { position: absolute; left: 8px; top: 8px; z-index: 3;
+    background: rgba(8, 6, 4, .58); backdrop-filter: blur(4px);
+    box-shadow: 0 2px 10px -2px rgba(0, 0, 0, .8); }
 
   /* dải mờ đáy bìa */
   .shade { position: absolute; left: 0; right: 0; bottom: 0; height: 44%; z-index: 1;
@@ -295,7 +299,7 @@ const CSS = `
   .shadeSm { position: absolute; right: 0; bottom: 0; width: 62px; height: 62px; z-index: 1;
     background: radial-gradient(circle at 100% 100%, rgba(4, 3, 2, .62), rgba(4, 3, 2, 0) 70%); }
   .cvBot { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
-    display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 9px 8px; }
+    display: flex; align-items: center; gap: 8px; padding: 0 9px 8px; }
 
   /* C2 · tab tối gói gọn */
   .tabSt { position: absolute; left: 0; bottom: 0; z-index: 3; display: inline-flex; align-items: center;
@@ -365,6 +369,7 @@ const CSS = `
     .stT i { width: 4px; height: 4px; }
     .ageRing { width: 19px; height: 19px; font-size: 7px; border-width: 1px; }
     .ageRing.corner { right: 5px; bottom: 5px; }
+    .ageRing.cornerTL { left: 5px; top: 5px; }
     .cvBot { padding: 0 6px 6px; gap: 5px; }
     .shade { height: 48%; }
     .tabSt { font-size: 7px; letter-spacing: .1em; padding: 5px 7px 6px; }
