@@ -96,8 +96,6 @@ const ICON = {
   book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.4C9.9 5 7 4.5 4.6 4.5v15c2.4 0 5.3.5 7.4 1.9 2.1-1.4 5-1.9 7.4-1.9v-15c-2.4 0-5.3.5-7.4 1.9z"/><path d="M12 6.4v15"/></svg>',
   bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10.5 19a1.8 1.8 0 0 0 3 0"/></svg>',
   shelf: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v16l-7-4.5L5 20z"/></svg>',
-  share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.6l6.8-4M8.6 13.4l6.8 4"/></svg>',
-  rss: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5 19h.01"/><path d="M5 12.5A6.5 6.5 0 0 1 11.5 19"/><path d="M5 6a13 13 0 0 1 13 13"/></svg>',
   chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
   search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>',
   arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M12.5 6l6 6-6 6"/></svg>'
@@ -111,7 +109,7 @@ const crumb = `<nav class="crumb"><a href="#">Trang chủ</a><i>/</i><a href="#"
 /* trạng thái: chữ mono in hoa + chấm màu — không đóng hộp */
 const statusLine = `<div class="stC ${statusCls(S.st)}"><i></i>${esc(S.st)}${S.e ? '<em>18+</em>' : ''}</div>`;
 
-/* phần đầu · C+ : nền bìa mờ, gọn hơn bản C đầu tiên */
+/* phần đầu · C+ : nền bìa mờ */
 const hero =
 `<section class="hC">
   ${S.img ? `<img class="bgC" src="${esc(S.img)}" alt="" loading="lazy">` : ''}
@@ -119,7 +117,10 @@ const hero =
   <div class="inC">
     <a class="cvC" href="#">${S.img ? `<img src="${esc(S.img)}" alt="Bìa ${esc(S.t)}" loading="lazy">` : ''}</a>
     <div class="txtC">
-      ${statusLine}
+      <div class="badgeRow">
+        <div class="stC ${statusCls(S.st)}"><i></i>${esc(S.st)}</div>
+        ${S.e ? '<span class="ageC">18+</span>' : ''}
+      </div>
       <h1>${esc(S.t)}</h1>
       <div class="byC"><b>${esc(S.a)}</b>${S.c ? `<i>·</i>${esc(S.c)}` : ''}${S.y ? `<i>·</i>${S.y}` : ''}</div>
       <div class="synC"><p>${esc(PARAS[0])}</p>
@@ -129,15 +130,11 @@ const hero =
         <a class="btnGho onDark" href="#">${ICON.book}Chương mới nhất</a>
         <a class="btnGho onDark" href="#">${ICON.bell}Theo dõi</a>
         <a class="btnGho onDark" href="#">${ICON.shelf}Tủ truyện</a>
-        <span class="icRow">
-          <a class="iconBtn" href="#" aria-label="Chia sẻ">${ICON.share}</a>
-          <a class="iconBtn" href="#" aria-label="RSS">${ICON.rss}</a>
-        </span>
       </div>
-      <div class="hProg"><span>Đang đọc chương ${PROG.read} / ${CH} · còn ${CH - PROG.read} chương</span>
-        <div class="pb"><i style="width:${PROG.pct}%"></i></div></div>
     </div>
   </div>
+  <div class="hProg"><span>Đang đọc chương ${PROG.read} / ${CH} · còn ${CH - PROG.read} chương</span>
+    <div class="pb"><i style="width:${PROG.pct}%"></i></div><em>${PROG.pct}%</em></div>
 </section>`;
 
 const tabs = `<div class="tabs2" role="tablist">
@@ -147,7 +144,7 @@ const tabs = `<div class="tabs2" role="tablist">
 </div>`;
 
 const toolbar = (pager) => `<div class="tbar">
-  <label class="srch">${ICON.search}<input type="search" placeholder="Tìm số chương hoặc tên chương…" aria-label="Tìm chương"><kbd>/</kbd></label>
+  <label class="csearch">${ICON.search}<input type="search" placeholder="Tìm số chương hoặc tên chương…" aria-label="Tìm chương"><kbd>/</kbd></label>
   <span class="sort"><b>Cũ nhất</b><i></i><span>Mới nhất</span></span>
   <span class="jump">Đi tới <input type="number" placeholder="số" aria-label="Số chương"><button type="button">Đi</button></span>
 
@@ -281,56 +278,64 @@ const CSS = `
   .btnGho svg { width: 14px; height: 14px; }
   .btnGho.onDark { border-color: rgba(255, 255, 255, .24); color: #fff; background: rgba(18, 12, 9, .3); }
   .btnGho.onDark:hover { background: rgba(18, 12, 9, .6); border-color: rgba(255, 255, 255, .4); }
-  .iconBtn { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px;
-    border: 1px solid rgba(255, 255, 255, .24); border-radius: 9px; color: #fff; background: rgba(18, 12, 9, .3); }
-  .iconBtn svg { width: 15px; height: 15px; }
-  .iconBtn:hover { background: rgba(18, 12, 9, .62); border-color: rgba(255, 255, 255, .42); }
 
   /* ------------------------------ phần đầu C+ ----------------------------- */
   .hC { position: relative; overflow: hidden; border-radius: 12px; isolation: isolate;
-    padding: 24px 26px 22px; background: var(--surf2); }
+    padding: 26px 26px 18px; background: var(--surf2); }
   .bgC { position: absolute; inset: -10%; width: 120%; height: 120%; object-fit: cover;
-    object-position: center 24%; filter: blur(24px) saturate(1.1) brightness(.46); z-index: -2; }
+    object-position: center 24%; filter: blur(26px) saturate(1.1) brightness(.44); z-index: -2; }
   .veilC { position: absolute; inset: 0; z-index: -1;
-    background: linear-gradient(96deg, rgba(10, 7, 5, .94) 8%, rgba(10, 7, 5, .74) 50%, rgba(10, 7, 5, .3)); }
-  .inC { display: grid; grid-template-columns: 178px minmax(0, 1fr); gap: 28px; align-items: start; }
-  .cvC { position: relative; display: block; border-radius: 8px; overflow: hidden; background: var(--surf2);
-    margin-top: 2px;
-    box-shadow: 0 26px 44px -20px rgba(0, 0, 0, .92), 0 0 0 1px rgba(255, 243, 230, .16); }
-  .cvC img { display: block; width: 100%; aspect-ratio: 2/3; object-fit: cover; object-position: center top; }
-  .cvC::after { content: ""; position: absolute; inset: 0; pointer-events: none;
-    background: linear-gradient(90deg, rgba(0, 0, 0, .38) 0, rgba(0, 0, 0, .1) 7%,
-      rgba(255, 255, 255, 0) 16%, rgba(255, 255, 255, 0) 93%, rgba(255, 255, 255, .16) 100%),
-      linear-gradient(0deg, rgba(0, 0, 0, .22), rgba(0, 0, 0, 0) 18%); }
+    background: linear-gradient(96deg, rgba(10, 7, 5, .95) 6%, rgba(10, 7, 5, .76) 48%, rgba(10, 7, 5, .28)); }
 
-  /* trạng thái bằng chữ, không hộp */
-  .stC { display: flex; align-items: center; gap: 7px; margin-bottom: 10px;
-    font: 800 9.5px/1 var(--font-mono); letter-spacing: .17em; text-transform: uppercase; }
-  .stC i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
-  .stC em { margin-left: 6px; padding-left: 10px; font-style: normal; letter-spacing: .1em;
-    color: rgba(255, 255, 255, .62); border-left: 1px solid rgba(255, 255, 255, .24); }
-  .stC.run { color: #f0cd97; } .stC.done { color: #9fd8b8; } .stC.soon { color: #c3baea; }
-  .txtC h1 { font-family: var(--font-head); font-size: 32px; font-weight: 700;
+  .inC { display: grid; grid-template-columns: 186px minmax(0, 1fr); gap: 30px; align-items: center; }
+  .cvC { display: block; border-radius: 8px; overflow: hidden; background: var(--surf2);
+    box-shadow: 0 26px 44px -22px rgba(0, 0, 0, .95), 0 0 0 1px rgba(255, 243, 230, .14); }
+  .cvC img { display: block; width: 100%; aspect-ratio: 2/3; object-fit: cover; object-position: center top; }
+
+  .txtC { min-width: 0; }
+  .badgeRow { display: flex; align-items: center; gap: 8px; }
+  .stC { display: inline-flex; align-items: center; gap: 8px; height: 26px; padding: 0 12px;
+    border-radius: 99px; border: 1px solid; font: 800 10.5px/1 var(--font-mono);
+    letter-spacing: .13em; text-transform: uppercase;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 6px 16px -10px currentColor; }
+  .stC i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, .1); }
+  .stC.done { color: #cdf3dd; background: rgba(116, 198, 155, .2); border-color: rgba(120, 205, 160, .5); }
+  .stC.run { color: #fbe7bd; background: rgba(220, 174, 106, .2); border-color: rgba(222, 176, 108, .52); }
+  .stC.soon { color: #ded6ff; background: rgba(143, 131, 199, .24); border-color: rgba(148, 136, 205, .55); }
+  .ageC { display: inline-flex; align-items: center; height: 26px; padding: 0 9px; border-radius: 7px;
+    border: 1px solid rgba(255, 255, 255, .26); background: rgba(12, 9, 6, .42);
+    font: 800 10px/1 var(--font-mono); letter-spacing: .1em; color: #fff; }
+
+  .txtC h1 { margin-top: 12px; font-family: var(--font-head); font-size: 32px; font-weight: 700;
     line-height: 1.13; letter-spacing: -.024em; color: #fff; text-shadow: 0 2px 20px rgba(0, 0, 0, .5);
     display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-  .byC { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 9px;
-    font-size: 12.5px; color: rgba(255, 255, 255, .66); }
+  .byC { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px;
+    font-size: 12.5px; color: rgba(255, 255, 255, .64); }
   .byC i { font-style: normal; opacity: .5; }
-  .byC b { color: rgba(255, 255, 255, .9); font-weight: 600; }
-  .synC { margin-top: 12px; max-width: 76ch; }
-  .synC p { margin: 0; font-size: 13px; line-height: 1.68; color: rgba(255, 255, 255, .74);
+  .byC b { color: rgba(255, 255, 255, .92); font-weight: 600; }
+  .synC { margin-top: 14px; max-width: 78ch; }
+  .synC p { margin: 0; font-size: 13px; line-height: 1.68; color: rgba(255, 255, 255, .72);
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .synMore { display: inline-flex; align-items: center; gap: 3px; margin-top: 4px; padding: 0;
+  .synMore { display: inline-flex; align-items: center; gap: 3px; margin-top: 5px; padding: 0;
     border: 0; background: none; font: 650 11.5px/1 var(--font); color: var(--acc); cursor: pointer; }
   .synMore svg { width: 9px; height: 9px; }
-  .actC { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; }
-  .icRow { display: inline-flex; gap: 8px; margin-left: auto; }
+  .actC { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 18px; }
+
+  .hProg { display: flex; align-items: center; gap: 14px; margin-top: 22px; padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, .13); }
+  .hProg span { font: 600 10px/1 var(--font-mono); letter-spacing: .09em; text-transform: uppercase;
+    color: rgba(255, 255, 255, .58); white-space: nowrap; }
+  .hProg .pb { flex: 1; min-width: 60px; height: 3px; border-radius: 99px;
+    background: rgba(255, 255, 255, .15); overflow: hidden; }
+  .hProg .pb i { display: block; height: 100%; border-radius: 99px; background: var(--acc); }
+  .hProg em { font: 700 10px/1 var(--font-mono); font-style: normal; color: rgba(255, 255, 255, .82); }
 
   /* ---------------------------------- tab --------------------------------- */
   .tabs2 { display: flex; align-items: center; gap: 24px; margin: 22px 0 0;
     border-bottom: 1px solid var(--bd); }
   .tabs2 button { position: relative; height: 38px; padding: 0; border: 0; background: none;
-    font: 600 13px/1 var(--font); color: var(--mut); cursor: pointer; }
+    font: 600 13px/1 var(--font); color: var(--mut); cursor: pointer; white-space: nowrap; flex: none; }
   .tabs2 button b { margin-left: 5px; font: 700 10px/1 var(--font-mono); color: var(--dim); }
   .tabs2 button.on { color: var(--txt); }
   .tabs2 button.on b { color: var(--acc); }
@@ -348,13 +353,13 @@ const CSS = `
   /* -------------------------- thanh công cụ · chương ---------------------- */
   .tbar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
     padding: 10px 0; border-bottom: 1px solid var(--bd); }
-  .srch { flex: 1 1 260px; display: flex; align-items: center; gap: 9px; min-width: 180px;
+  .csearch { flex: 1 1 260px; display: flex; align-items: center; gap: 9px; min-width: 180px;
     height: 30px; color: var(--dim); }
-  .srch:focus-within { color: var(--acc); }
-  .srch svg { width: 14px; height: 14px; flex: none; }
-  .srch input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: none;
+  .csearch:focus-within { color: var(--acc); }
+  .csearch svg { width: 14px; height: 14px; flex: none; }
+  .csearch input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: none;
     color: var(--txt); font-size: 13px; }
-  .srch kbd { font: 600 10px/1 var(--font-mono); color: var(--dim); border: 1px solid var(--bd);
+  .csearch kbd { font: 600 10px/1 var(--font-mono); color: var(--dim); border: 1px solid var(--bd);
     border-radius: 4px; padding: 2px 5px; }
   .sort { display: flex; align-items: center; gap: 10px; height: 30px; font-size: 12px; color: var(--dim); }
   .sort b { color: var(--txt); font-weight: 650; }
@@ -395,8 +400,9 @@ const CSS = `
     color: var(--dim); }
   .iF b { min-width: 0; font-size: 12.5px; font-weight: 600; color: var(--txt);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .infoStats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 20px;
-    align-self: stretch; padding-left: 30px; border-left: 1px solid var(--bd); align-content: space-between; }
+  .infoStats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px 20px;
+    align-self: stretch; padding: 12px 0 0 30px; border-left: 1px solid var(--bd);
+    align-content: start; }
   .iS { min-width: 0; }
   .iS > span { display: block; font: 700 9px/1 var(--font-mono); letter-spacing: .13em;
     text-transform: uppercase; color: var(--dim); }
@@ -405,12 +411,6 @@ const CSS = `
     color: var(--txt); font-variant-numeric: tabular-nums; }
   .iS em { font: 500 10px/1 var(--font-mono); font-style: normal; color: var(--dim);
     letter-spacing: .02em; }
-  .hProg { margin-top: 14px; max-width: 320px; }
-  .hProg span { display: block; font: 500 10px/1 var(--font-mono); letter-spacing: .03em;
-    color: rgba(255, 255, 255, .56); }
-  .hProg .pb { height: 3px; margin-top: 6px; border-radius: 99px;
-    background: rgba(255, 255, 255, .16); overflow: hidden; }
-  .hProg .pb i { display: block; height: 100%; border-radius: 99px; background: var(--acc); }
 
   /* --------------------------------- cảm xúc ------------------------------ */
   .rx { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -451,7 +451,7 @@ const CSS = `
 
   /* ------------------------------- màn hẹp -------------------------------- */
   @container (max-width: 960px) {
-    .inC { grid-template-columns: 150px minmax(0, 1fr); gap: 22px; }
+    .inC { grid-template-columns: 152px minmax(0, 1fr); gap: 24px; }
     .txtC h1 { font-size: 26px; }
     .cg4 { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 22px; }
     .infoWrap { grid-template-columns: minmax(0, 1fr); }
@@ -461,10 +461,24 @@ const CSS = `
   }
   @container (max-width: 660px) {
     .hC { padding: 18px; }
-    .inC { grid-template-columns: 104px minmax(0, 1fr); gap: 14px; }
+    .inC { grid-template-columns: 106px minmax(0, 1fr); gap: 14px; align-items: start; }
     .txtC h1 { font-size: 21px; }
-    .stC { font-size: 8.5px; margin-bottom: 7px; }
-    .cvC::after { display: none; }
+    .stC { height: 22px; padding: 0 9px; font-size: 9px; }
+    .ageC { height: 22px; font-size: 9px; }
+    .txtC h1 { margin-top: 9px; }
+    .hProg { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 10px; margin-top: 16px; }
+    .hProg span { grid-area: 1 / 1; font-size: 9px; letter-spacing: .04em; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis; }
+    .hProg em { grid-area: 1 / 2; align-self: center; }
+    .hProg .pb { grid-area: 2 / 1 / 3 / 3; }
+    .byC { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden; font-size: 11.5px; gap: 6px; }
+    .byC i { margin: 0 4px; }
+    .actC { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin-top: 16px; }
+    .btnPri, .btnGho { justify-content: center; width: 100%; }
+    .relH h3 { white-space: nowrap; }
+    .relH span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .relH a { white-space: nowrap; }
     .synC { margin-top: 8px; }
     .synC p { font-size: 12px; }
     .cg4 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
@@ -502,10 +516,10 @@ const HTML = `<!doctype html>
     <p class="lead">Phần đầu <b>C · nền bìa mờ</b>. Ba mục dưới là ba tab thật — <b>bấm tab để xem</b>,
       hoặc tích “hiện cả ba mục”. Dữ kiện của bộ truyện <b>chỉ nằm trong tab Thông tin</b>, không nhắc lại
       ở dưới danh sách chương.</p>
-    <p class="note">Truyện mẫu: <b>${esc(S.t)}</b> · ${S.n} chương · ${esc(S.st)} · tên chương thật.
-      <b>Thông tin</b> gọn lại: sáu dữ kiện chính hai cột bên trái, giới hạn + tên khác dồn thành
-      một dòng phụ; bốn ô số liệu bên phải, ngăn bằng một đường kẻ dọc; cảm xúc một hàng dưới cùng.
-      Truyện cùng couple / cùng tác giả nằm ngoài tab, dưới cùng, chia hai cột bằng một đường kẻ.</p>
+    <p class="note">Truyện mẫu: <b>${esc(S.t)}</b> · ${S.n} chương · tên chương thật.
+      <b>Thông tin</b>: sáu dữ kiện hai cột bên trái, bốn ô số liệu bên phải, cảm xúc một hàng —
+      không lặp lại ở đâu khác. Đã bỏ nút <b>chia sẻ / RSS</b> khỏi phần đầu.
+      Truyện cùng couple / cùng tác giả nằm ngoài tab, hai cột ở đáy.</p>
   </div>
 
   <div class="frame" style="margin-top:14px">

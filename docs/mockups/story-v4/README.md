@@ -4,11 +4,13 @@
 
 **Phần đầu (C · nền bìa mờ)** — chỉ còn thứ không lặp ở đâu khác:
 dòng trạng thái · tiêu đề · tác giả · couple · năm · giới thiệu 2 dòng + “đọc đầy đủ” ·
-6 nút (đọc / chương mới nhất / theo dõi / tủ truyện / chia sẻ / RSS dạt phải) · tiến độ đọc.
+**4 nút** (đọc / chương mới nhất / theo dõi / tủ truyện — đã bỏ chia sẻ và RSS) · tiến độ đọc.
 
 Bìa: 178px, canh thẳng đỉnh chữ, có **gáy tối bên trái + mép sáng bên phải** và đổ bóng sâu
 để tách khỏi nền mờ; ảnh `object-position: center top` nên không cắt vào mặt.
-Trạng thái: bỏ viên thuốc có viền, đổi thành **chữ mono in hoa + chấm màu** (`● HOÀN THÀNH | 18+`).
+Trạng thái: **badge nổi** — nền màu nhạt 20 %, viền cùng màu 50 %, chữ sáng, chấm tròn có quầng;
+mốc **18+** thành chip riêng cạnh bên. Tiến độ đọc là dải mảnh chạy hết bề ngang ở đáy khối, có % bên phải.
+Mobile: nút xếp dọc đủ bề ngang, tiến độ 2 hàng, byline cắt 2 dòng.
 
 **Đã bỏ khỏi phần đầu:** dòng nhãn “Cập nhật …”, cả hàng chip
 (trạng thái · số chương · điểm ★ · lượt đọc — bốn thứ này đều có trong tab Thông tin).
