@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đề xuất vòng 58 · nút bấm gọn và đồng bộ</title>
+<link rel="stylesheet" href="/cz.css?v=20261031upd1">
+<link rel="stylesheet" href="variants.css">
+<style>
+  .page { max-width: 1140px; margin: 0 auto; padding: 40px 20px 90px; }
+  .kick { font: 700 11px/1 ui-monospace, monospace; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--acc); }
+  h1 { margin: 14px 0 12px; font-size: 34px; line-height: 1.12; letter-spacing: -.015em;
+    font-family: var(--font-head); }
+  .lede { margin: 0 0 10px; max-width: 74ch; color: var(--mut); font-size: 15px; }
+  .lede b { color: var(--txt); }
+
+  h2 { margin: 46px 0 6px; font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--dim); font-weight: 700; }
+  .h2sub { margin: 0 0 16px; color: var(--mut); font-size: 14px; max-width: 76ch; }
+
+  .dev { border: 1px solid var(--bd); border-radius: 12px; background: var(--bg); overflow: hidden; }
+  .dev .cap { display: flex; align-items: center; gap: 8px; padding: 7px 12px;
+    border-bottom: 1px solid var(--bd); font: 700 10.5px/1 ui-monospace, monospace;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+  .dev .cap .w { margin-left: auto; font-weight: 600; }
+  .dev .pad { padding: 8px; }
+  .dev + .dev { margin-top: 12px; }
+  .duo { display: flex; gap: 12px; flex-wrap: wrap; }
+  .duo > .dev { flex: 1 1 300px; min-width: 0; }
+  .duo > .dev + .dev { margin-top: 0; }
+  @media (max-width: 720px) { .duo > .dev { flex: 1 1 100%; } }
+
+  .opt { margin: 0 0 44px; }
+  .opt-h { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+  .opt-h .tag { font: 700 11px/1 ui-monospace, monospace; letter-spacing: .12em;
+    text-transform: uppercase; padding: 4px 8px; border: 1px solid var(--acc);
+    border-radius: 4px; color: var(--acc); }
+  .opt-h h3 { margin: 0; font-size: 20px; font-family: var(--font-head); letter-spacing: -.01em; }
+  .opt-h .pick { margin-left: auto; font-size: 12px; color: var(--dim); }
+  .opt .say { margin: 10px 0 14px; color: var(--mut); font-size: 14px; max-width: 80ch; }
+  .opt .say b { color: var(--txt); }
+
+  .k { display: grid; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 760px) { .k { grid-template-columns: 1fr; } }
+  .k li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 9px;
+    padding: 10px 12px; background: var(--surf); border: 1px solid var(--bd); border-radius: 9px; }
+  .k .n { font: 700 10.5px/1.6 ui-monospace, monospace; color: var(--acc); }
+  .k > li > span > b { display: block; font-size: 13px; color: var(--txt); margin-bottom: 2px; }
+  .k span.t { font-size: 12.5px; color: var(--mut); line-height: 1.55; }
+  .k span.t b { color: var(--txt); font-weight: 600; }
+
+  .why { margin: 18px 0 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+  .why li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px;
+    padding: 12px 14px; border-left: 2px solid var(--acc); background: var(--surf); border-radius: 0 8px 8px 0; }
+  .why .n { font: 700 12px/1.5 ui-monospace, monospace; color: var(--acc); }
+  .why > li > span > b:first-child { display: block; color: var(--txt); font-size: 13.5px; margin-bottom: 2px; }
+  .why span.t { color: var(--mut); font-size: 13px; line-height: 1.55; }
+  .why span.t b { display: inline; color: var(--txt); font-weight: 600; }
+  body > div[style*="position:fixed"] { display: none !important; }
+  .why code, footer code { font-family: var(--font-mono); font-size: .92em; color: var(--txt);
+    background: var(--surf2); padding: 1px 5px; border-radius: 4px; }
+
+  footer { margin-top: 44px; padding-top: 20px; border-top: 1px solid var(--bd);
+    color: var(--dim); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <p class="kick">Đề xuất vòng 58 · chưa sửa vào site</p>
+  <h1>Nút bấm: dùng một hệ, thôi trộn ba kiểu</h1>
+  <p class="lede">Hai hình bạn gửi là <b>hai hệ nút khác nhau</b> cho cùng một việc — mở truyện.
+    Không phải xấu từng cái, mà là <b>không khớp nhau</b>. Mình đo trên trang thật (1240px) và
+    ghi lại đúng năm chỗ lệch:</p>
+
+  <ul class="why">
+    <li><span class="n">01</span><span><b>Ba hình bo góc cho cùng một thứ gọi là “nút”</b>
+      <span class="t">Hero trang chủ: <code>99px</code> (viên thuốc). Nút (i) cạnh nó: <code>50%</code>
+      (tròn). Trang truyện: <code>9px</code> (chữ nhật).</span></span></li>
+    <li><span class="n">02</span><span><b>Hai chiều cao, hai cỡ chữ</b>
+      <span class="t">Hero: cao <b>44px</b>, chữ <b>14,5px</b>. Trang truyện: cao <b>38px</b>, chữ
+      <b>12,5px</b>. Cùng là “nút đọc” mà bên to bên nhỏ.</span></span></li>
+    <li><span class="n">03</span><span><b>Nút phụ hai kiểu nền</b>
+      <span class="t">Hero: nền trắng 7%. Trang truyện: nền nâu 30%. Hai tông khác nhau cho cùng
+      một cấp bậc phụ.</span></span></li>
+    <li><span class="n">04</span><span><b>Nút chia sẻ bị đẩy ra tận mép</b>
+      <span class="t">Trong hàng, nút cuối cách nút trước <b>~300px</b> vì bị đẩy bằng
+      <code>margin-left:auto</code> — tạo một khoảng trống chết giữa hàng nút.</span></span></li>
+    <li><span class="n">05</span><span><b>Trạng thái “đang bật” thêm tông thứ ba</b>
+      <span class="t">Khi đã theo dõi / đã lưu, nút mọc thêm nền hồng nhạt + chữ hồng: hàng nút
+      lúc đó có tới ba tông màu.</span></span></li>
+  </ul>
+
+  <h2>Đang chạy</h2>
+  <p class="h2sub">Đây là <b>trang thật trong khung</b> — không phải ảnh chụp, không phải bản dựng
+    lại. Trên: hero trang chủ. Dưới: khối nút ở trang truyện 18+ (chưa xác nhận tuổi).</p>
+
+  <div class="dev"><div class="cap">Trang chủ · hero <span class="w">1240px</span></div>
+    <div class="pad"><div class="stage" data-v="0" data-page="/" data-sel="#hero .btn-row"
+      data-off="26" data-w="1240" data-h="100"></div></div></div>
+
+  <div class="dev"><div class="cap">Trang truyện · khối nút <span class="w">1240px</span></div>
+    <div class="pad"><div class="stage" data-v="0" data-page="/truyen/hometown-romance-special/" data-sel="#shero .btn-row"
+      data-off="6" data-w="1240" data-h="62"></div></div></div>
+
+  <h2>Ba phương án</h2>
+  <p class="h2sub">Cả ba đều sửa cùng năm chỗ lệch trên, theo ba mức can thiệp khác nhau: <b>A</b>
+    giữ nguyên số hộp, chỉ thống nhất hình học; <b>B</b> gộp các việc phụ thành một khối;
+    <b>C</b> bỏ hộp khỏi mọi việc phụ.</p>
+
+  <!-- ================= A ================= -->
+  <section class="opt">
+    <div class="opt-h"><span class="tag">A</span><h3>Một hệ nút</h3>
+      <span class="pick">ít thay đổi nhất · vẫn là hộp, nhưng cùng một luật</span></div>
+    <p class="say">Mọi nút về <b>cùng bo 10px · cùng cao 44px · cùng cỡ chữ 13,5px</b>. Nút chính
+      đặc màu nhấn, nút phụ chỉ còn <b>đường kẻ mảnh trên nền trong</b>. Trạng thái “đang bật” chỉ
+      đổi màu chữ, không mọc thêm nền. Nút chia sẻ đứng ngay sau nút cuối thay vì dạt ra mép.</p>
+
+    <div class="dev"><div class="cap">Trang chủ · hero <span class="w">1240px</span></div>
+      <div class="pad"><div class="stage" data-v="a" data-page="/" data-sel="#hero .btn-row"
+        data-off="26" data-w="1240" data-h="100"></div></div></div>
+
+    <div class="dev"><div class="cap">Trang truyện · khối nút <span class="w">1240px</span></div>
+      <div class="pad"><div class="stage" data-v="a" data-page="/truyen/hometown-romance-special/" data-sel="#shero .btn-row"
+        data-off="6" data-w="1240" data-h="62"></div></div></div>
+
+    <div class="duo" style="margin-top:12px">
+      <div class="dev"><div class="cap">Máy hẹp · trang chủ <span class="w">390px</span></div>
+        <div class="pad"><div class="stage" data-v="a" data-page="/" data-sel="#hero .btn-row"
+          data-off="26" data-w="390" data-h="108"></div></div></div>
+      <div class="dev"><div class="cap">Máy hẹp · trang truyện <span class="w">390px</span></div>
+        <div class="pad"><div class="stage" data-v="a" data-page="/truyen/hometown-romance-special/" data-sel="#shero .btn-row"
+          data-off="4" data-w="390" data-h="152"></div></div></div>
+    </div>
+
+    <ul class="k">
+      <li><span class="n">01</span><span><b>Đồng bộ thật</b><span class="t">Hai trang nhìn như cùng một sản phẩm; chuyển trang không còn “đổi hệ”.</span></span></li>
+      <li><span class="n">02</span><span><b>Ít rủi ro</b><span class="t">Chỉ đổi CSS của nút, không đổi markup, không đổi chữ trên nút.</span></span></li>
+      <li><span class="n">03</span><span><b>Vẫn còn nhiều hộp</b><span class="t">Hàng nút trang truyện vẫn là 3 hộp rời + 1 hộp icon.</span></span></li>
+    </ul>
+  </section>
+
+  <!-- ================= B ================= -->
+  <section class="opt">
+    <div class="opt-h"><span class="tag">B</span><h3>Nhóm liền mạch</h3>
+      <span class="pick">ít hộp hơn · đọc theo nhóm việc</span></div>
+    <p class="say">Nút chính đứng riêng. Các việc phụ <b>gộp thành một khối duy nhất</b>, chia nhau
+      bằng đường kẻ dọc — như thanh công cụ. Ở hero, ô (i) cũng thành <b>nửa phải của cùng một nút</b>
+      (kiểu split button): một khối liền, hai hành động.</p>
+
+    <div class="dev"><div class="cap">Trang chủ · hero <span class="w">1240px</span></div>
+      <div class="pad"><div class="stage" data-v="b" data-page="/" data-sel="#hero .btn-row"
+        data-off="26" data-w="1240" data-h="100"></div></div></div>
+
+    <div class="dev"><div class="cap">Trang truyện · khối nút <span class="w">1240px</span></div>
+      <div class="pad"><div class="stage" data-v="b" data-page="/truyen/hometown-romance-special/" data-sel="#shero .btn-row"
+        data-off="6" data-w="1240" data-h="62"></div></div></div>
+
+    <div class="duo" style="margin-top:12px">
+      <div class="dev"><div class="cap">Máy hẹp · trang chủ <span class="w">390px</span></div>
+        <div class="pad"><div class="stage" data-v="b" data-page="/" data-sel="#hero .btn-row"
+          data-off="26" data-w="390" data-h="108"></div></div></div>
+      <div class="dev"><div class="cap">Máy hẹp · trang truyện <span class="w">390px</span></div>
+        <div class="pad"><div class="stage" data-v="b" data-page="/truyen/hometown-romance-special/" data-sel="#shero .btn-row"
+          data-off="4" data-w="390" data-h="152"></div></div></div>
+    </div>
+
+    <ul class="k">
+      <li><span class="n">01</span><span><b>Ít hộp nhất trong hai phương án còn hộp</b><span class="t">Ba việc phụ chỉ còn một khung bao ngoài thay vì ba.</span></span></li>
+      <li><span class="n">02</span><span><b>Hàng nút ngắn hơn</b><span class="t">Bỏ được khoảng hở giữa các hộp nên cả hàng gọn lại.</span></span></li>
+      <li><span class="n">03</span><span><b>Đánh đổi</b><span class="t">Viền liền làm ba việc phụ trông “ngang hàng” nhau hơn; ở hero, ô (i) nằm chung khối với nút Đọc nên dễ bị hiểu là một hành động.</span></span></li>
+    </ul>
+  </section>
+
+  <!-- ================= C ================= -->
+  <section class="opt">
+    <div class="opt-h"><span class="tag">C</span><h3>Bớt hộp</h3>
+      <span class="pick">gọn nhất · chỉ nút chính là hộp</span></div>
+    <p class="say">Chỉ <b>nút chính</b> còn là hộp. Theo dõi · Tủ truyện · Chia sẻ thành nút
+      <b>chữ không viền, không nền</b>; rê chuột mới hiện một lớp nền rất nhẹ. Ở hero, ô (i) đổi thành
+      nút chữ “Thông tin truyện” — rõ nghĩa hơn một vòng tròn có chữ “i”.</p>
+
+    <div class="dev"><div class="cap">Trang chủ · hero <span class="w">1240px</span></div>
+      <div class="pad"><div class="stage" data-v="c" data-page="/" data-sel="#hero .btn-row"
+        data-off="26" data-w="1240" data-h="100"></div></div></div>
+
+    <div class="dev"><div class="cap">Trang truyện · khối nút <span class="w">1240px</span></div>
+      <div class="pad"><div class="stage" data-v="c" data-page="/truyen/hometown-romance-special/" data-sel="#shero .btn-row"
+        data-off="6" data-w="1240" data-h="62"></div></div></div>
+
+    <div class="duo" style="margin-top:12px">
+      <div class="dev"><div class="cap">Máy hẹp · trang chủ <span class="w">390px</span></div>
+        <div class="pad"><div class="stage" data-v="c" data-page="/" data-sel="#hero .btn-row"
+          data-off="26" data-w="390" data-h="108"></div></div></div>
+      <div class="dev"><div class="cap">Máy hẹp · trang truyện <span class="w">390px</span></div>
+        <div class="pad"><div class="stage" data-v="c" data-page="/truyen/hometown-romance-special/" data-sel="#shero .btn-row"
+          data-off="4" data-w="390" data-h="152"></div></div></div>
+    </div>
+
+    <ul class="k">
+      <li><span class="n">01</span><span><b>Gọn và êm nhất</b><span class="t">Chỉ còn một khối màu hồng duy nhất trên màn; phần còn lại là chữ.</span></span></li>
+      <li><span class="n">02</span><span><b>Đúng nguyên tắc “bớt hộp”</b><span class="t">Cùng tinh thần với thẻ truyện và thanh lọc vừa chốt ở các vòng trước.</span></span></li>
+      <li><span class="n">03</span><span><b>Đánh đổi</b><span class="t">Nút phụ nhạt hơn nên khó thấy ngay trên nền bìa sáng; chạm mục tiêu nhỏ hơn (không còn viền để bám mắt).</span></span></li>
+    </ul>
+  </section>
+
+  <h2>Phần chung · cả ba phương án</h2>
+  <ul class="k">
+    <li><span class="n">A</span><span><b>Một bo góc duy nhất</b><span class="t">10px cho mọi nút, kể cả ô icon — hết cảnh pill / tròn / chữ nhật.</span></span></li>
+    <li><span class="n">B</span><span><b>Một chiều cao duy nhất</b><span class="t">44px ở cả hai trang; chữ 13,5px ở cả hai trang.</span></span></li>
+    <li><span class="n">C</span><span><b>Vẫn chỉ một CTA chính</b><span class="t">Đúng nguyên tắc đã chốt: mỗi màn một nút chính, không thêm nút màu thứ hai.</span></span></li>
+    <li><span class="n">D</span><span><b>Không thêm hiệu ứng mới</b><span class="t">Bỏ hiệu ứng nhấc nút khi rê chuột (translateY) — chỉ còn đổi màu. Không gradient, không blur mới.</span></span></li>
+    <li><span class="n">E</span><span><b>Giữ nguyên chữ trên nút</b><span class="t">Đọc từ đầu · Xác nhận 18+ để đọc · Theo dõi · Tủ truyện — không đổi nhãn, không đổi chức năng.</span></span></li>
+    <li><span class="n">F</span><span><b>Máy hẹp giữ đúng cấu trúc</b><span class="t">Chỉ đổi số cột và cỡ chữ; đo ở 390px không tràn ngang.</span></span></li>
+  </ul>
+
+  <footer>
+    Chốt <b>A</b>, <b>B</b> hay <b>C</b> thì mình sửa CSS nút trong <code>src/cz.css</code>
+    (khối <code>5.4 CTA</code> của hero và <code>.shero .btn-row</code>); nếu chọn <b>C</b> thì
+    sửa thêm một dòng nhãn trong <code>src/cz-home.js</code>. Site thật chưa sửa gì ở vòng này.
+  </footer>
+</div>
+
+<script>
+  /* Nạp CSS phương án một lần, rồi tiêm vào từng iframe (cùng nguồn nên đọc/ghi được) */
+  var CSS_TEXT = '';
+  var hideCSS = 'html{scrollbar-width:none}::-webkit-scrollbar{display:none}' +
+    '#toTop,.toTop,.skip,.dicehost,.czdevbar{display:none!important}' +
+    'body>div[style*="position:fixed"]{display:none!important}' +
+    '.hero *,.shero *{animation:none!important;transition:none!important}';
+
+  function mount(stage) {
+    var w = +stage.dataset.w, h = +stage.dataset.h;
+    var f = document.createElement('iframe');
+    f.src = stage.dataset.page + (stage.dataset.page.indexOf('?') >= 0 ? '&' : '?') + 'r58=' + Math.random().toString(36).slice(2);
+    f.style.width = w + 'px';
+    f.style.height = h + 'px';
+    f.style.border = '0';
+    f.loading = 'lazy';
+    f.title = (stage.dataset.page || '') + ' · ' + (stage.dataset.v || 'hiện tại');
+    stage.appendChild(f);
+
+    var fit = function () {
+      var avail = (stage.parentElement.clientWidth || w);
+      var k = Math.min(1, avail / w);
+      f.style.transform = 'scale(' + k + ')';
+      stage.style.width = Math.round(w * k) + 'px';
+      stage.style.height = Math.round(h * k) + 'px';
+      stage.style.margin = '0 auto';
+    };
+    fit();
+    if (window.ResizeObserver) new ResizeObserver(fit).observe(stage.parentElement);
+
+    function apply() {
+      var d = f.contentDocument, win = f.contentWindow;
+      if (!d || !d.head) return;
+      var v = stage.dataset.v;
+      if (d.documentElement.className.indexOf('v' + (v || '').toUpperCase()) < 0 && v && v !== '0') {
+        d.documentElement.classList.add('v' + v.toUpperCase());
+      }
+      if (!d.getElementById('r58css')) {
+        var s = d.createElement('style');
+        s.id = 'r58css';
+        s.textContent = hideCSS + (v && v !== '0' ? CSS_TEXT : '');
+        d.head.appendChild(s);
+      }
+      /* hero trang chủ tự chuyển truyện: tạm dừng rồi ghim đúng truyện đầu
+         (Third Person) để mọi lần xem đều thấy đúng một trạng thái nút */
+      var play = d.querySelector('#hero [data-hb-play]');
+      if (play && play.getAttribute('aria-pressed') !== 'true') play.click();
+      var cov = d.querySelector('#hero .coverbtn');
+      if (cov) cov.click();
+      setTimeout(function () {
+        var t = d.querySelector(stage.dataset.sel);
+        if (!t) return;
+        var y = t.getBoundingClientRect().top + win.scrollY - (+stage.dataset.off || 40);
+        win.scrollTo(0, Math.max(0, y));
+      }, 260);
+    }
+    f.addEventListener('load', function () { setTimeout(apply, 500); setTimeout(apply, 1600); });
+  }
+
+  fetch('variants.css', { cache: 'no-store' })
+    .then(function (r) { return r.text(); })
+    .then(function (t) { CSS_TEXT = t; })
+    .catch(function () {})
+    .then(function () { document.querySelectorAll('.stage').forEach(mount); });
+</script>
+</body>
+</html>

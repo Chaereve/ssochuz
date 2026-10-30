@@ -1,0 +1,203 @@
+/* ============================================================================
+   Nút bấm — 3 phương án (vòng 58)
+   Mỗi khung là TRANG THẬT trong iframe (trang chủ + trang truyện), chỉ TIÊM
+   thêm phần CSS của phương án — nhờ vậy bản xem không thể "khác bản thật".
+   ========================================================================== */
+
+/* ---------- khung xem ---------- */
+.stage { position: relative; overflow: hidden; border-radius: 10px; background: #120c09; }
+.stage iframe { display: block; transform-origin: top left; }
+.stage .fill { position: absolute; inset: 0; }
+
+/* ==========================================================================
+   A · MỘT HỆ NÚT
+   Chuẩn hoá hình học: mọi nút cao 44px, bo 10px, một cỡ chữ; nút chính đặc
+   màu nhấn, nút phụ chỉ còn đường kẻ mảnh trên nền trong; trạng thái "đang
+   bật" chỉ đổi màu chữ chứ không thêm nền thứ hai.
+   ========================================================================== */
+.vA .hero .btn-row,
+.vA .shero .btn-row { gap: 8px; }
+
+.vA .hero .btn.hb-cta,
+.vA .shero .btn-row .btn {
+  height: 44px; padding: 0 18px; border-radius: 10px;
+  font-size: 13.5px; font-weight: 650; gap: 8px; letter-spacing: 0;
+  transform: none; box-shadow: none;
+}
+.vA .shero .btn-row .btn.lg { padding: 0 18px; font-size: 13.5px; }
+.vA .hero .btn.hb-cta:not(.pri) { width: 44px; padding: 0; border-radius: 10px; }
+.vA .shero .btn-row .btn.ic { width: 44px; padding: 0; }
+
+/* nút chính: đặc, giữ nguyên khi rê chuột (chỉ sáng lên một chút) */
+.vA .hero .btn.pri.hb-cta,
+.vA .shero .btn-row .btn.pri {
+  background: var(--acc); border-color: var(--acc); color: #221017;
+  min-width: 0; justify-content: center;
+}
+.vA .hero .btn.pri.hb-cta:hover,
+.vA .shero .btn-row .btn.pri:hover {
+  background: var(--acc); border-color: var(--acc); color: #221017;
+  filter: brightness(1.07); transform: none;
+}
+
+/* nút phụ: một kiểu duy nhất — viền mảnh, nền trong */
+.vA .hero .btn.hb-cta:not(.pri),
+.vA .shero .btn-row .btn.ghost {
+  background: transparent; border-color: rgba(255, 255, 255, .24);
+  color: rgba(255, 255, 255, .86);
+}
+.vA .hero .btn.hb-cta:not(.pri):hover,
+.vA .shero .btn-row .btn.ghost:hover {
+  background: rgba(255, 255, 255, .07); border-color: rgba(255, 255, 255, .46);
+  color: #fff; transform: none;
+}
+
+/* đang bật: chỉ đổi màu, không thêm tông nền thứ hai */
+.vA .shero .btn-row .btn.ghost.on {
+  background: transparent; color: var(--acc);
+  border-color: color-mix(in srgb, var(--acc) 58%, rgba(255, 255, 255, .18));
+}
+.vA .shero .btn-row .btn.ghost.on:hover { background: rgba(255, 255, 255, .05); }
+
+/* cụm tiện ích đứng ngay sau nút cuối — không dạt ra mép phải */
+.vA .shero .btn-utils { margin-left: 2px; gap: 8px; }
+
+/* ==========================================================================
+   B · NHÓM LIỀN MẠCH
+   Nút chính đứng riêng; các việc phụ gộp thành MỘT khối duy nhất (vạch chia
+   bằng đường kẻ dọc). Ít hộp hơn, hàng nút ngắn hơn, mắt đọc theo nhóm việc.
+   ========================================================================== */
+.vB .hero .btn-row { gap: 0; }
+.vB .shero .btn-row { gap: 0; align-items: center; }
+
+.vB .hero .btn.hb-cta,
+.vB .shero .btn-row .btn {
+  height: 44px; padding: 0 18px; border-radius: 0;
+  font-size: 13.5px; font-weight: 650; gap: 8px; letter-spacing: 0;
+  transform: none; box-shadow: none;
+}
+.vB .shero .btn-row .btn.lg { padding: 0 18px; font-size: 13.5px; }
+
+/* nút chính: hộp riêng, đứng trước một khoảng trống nhỏ */
+.vB .hero .btn.pri.hb-cta,
+.vB .shero .btn-row .btn.pri {
+  border-radius: 10px; margin-right: 12px;
+  background: var(--acc); border-color: var(--acc); color: #221017;
+  min-width: 0; justify-content: center;
+}
+.vB .hero .btn.pri.hb-cta:hover,
+.vB .shero .btn-row .btn.pri:hover {
+  background: var(--acc); color: #221017; filter: brightness(1.07); transform: none;
+}
+
+/* ô thông tin ở hero: nửa phải của cùng một khối, chia bằng vạch tối */
+.vB .hero .btn.hb-cta:not(.pri) {
+  width: 46px; padding: 0; margin-left: -1px; border-radius: 0 10px 10px 0;
+  background: var(--acc); border-color: var(--acc);
+  border-left: 1px solid rgba(26, 17, 19, .3); color: rgba(26, 17, 19, .78);
+}
+.vB .hero .btn.hb-cta:not(.pri):hover {
+  background: var(--acc); color: #1a1113; filter: brightness(1.07); transform: none;
+}
+.vB .hero .btn.pri.hb-cta { border-radius: 10px 0 0 10px; margin-right: 0; }
+
+/* khối phụ liền: viền chung, vạch chia, chỉ bo hai đầu */
+.vB .shero .btn-row .btn.ghost {
+  background: rgba(14, 9, 6, .42); border-color: rgba(255, 255, 255, .22);
+  color: rgba(255, 255, 255, .86); margin-left: -1px;
+}
+.vB .shero .btn-row .btn.ghost:first-of-type {
+  border-radius: 10px 0 0 10px; margin-left: 0;
+}
+.vB .shero .btn-row .btn.ghost:hover {
+  background: rgba(255, 255, 255, .1); border-color: rgba(255, 255, 255, .34);
+  color: #fff; transform: none;
+}
+.vB .shero .btn-row .btn.ghost.on {
+  background: rgba(224, 133, 155, .14); color: var(--acc);
+  border-color: rgba(255, 255, 255, .22);
+}
+.vB .shero .btn-row .btn-utils {
+  display: flex; align-items: center; gap: 0; margin: 0 0 0 -1px;
+}
+.vB .shero .btn-row .btn-utils .btn {
+  border-radius: 0; margin: 0; background: rgba(14, 9, 6, .42);
+  border-color: rgba(255, 255, 255, .22); color: rgba(255, 255, 255, .86);
+}
+.vB .shero .btn-row .btn-utils .btn:hover { background: rgba(255, 255, 255, .1); color: #fff; }
+/* nút đầu của cụm nối liền với nút phụ phía trước ⇒ vuông cả bốn góc;
+   nút cuối (chia sẻ, hoặc RSS nếu có) mới được bo mép phải */
+.vB .shero .btn-row .btn-utils .btn:first-child,
+.vB .shero .btn-row .btn-utils .btn:last-child { border-radius: 0; }
+.vB .shero .btn-row .btn-utils .btn:only-child { border-radius: 0; }
+
+/* ==========================================================================
+   C · BỚT HỘP
+   Chỉ nút chính là hộp. Mọi việc phụ thành nút CHỮ không viền, không nền —
+   rê chuột mới hiện một lớp nền rất nhẹ. Gọn nhất, ít mảng màu nhất.
+   ========================================================================== */
+.vC .hero .btn-row { gap: 6px; }
+.vC .shero .btn-row { gap: 4px; }
+
+.vC .hero .btn.hb-cta,
+.vC .shero .btn-row .btn {
+  height: 44px; padding: 0 16px; border-radius: 9px;
+  font-size: 13.5px; font-weight: 650; gap: 8px; letter-spacing: 0;
+  transform: none; box-shadow: none;
+}
+.vC .shero .btn-row .btn.lg { padding: 0 18px; font-size: 13.5px; }
+
+.vC .hero .btn.pri.hb-cta,
+.vC .shero .btn-row .btn.pri {
+  background: var(--acc); border-color: var(--acc); color: #221017;
+  min-width: 0; justify-content: center; margin-right: 8px;
+}
+.vC .hero .btn.pri.hb-cta:hover,
+.vC .shero .btn-row .btn.pri:hover {
+  background: var(--acc); color: #221017; filter: brightness(1.07); transform: none;
+}
+
+/* phụ: bỏ viền + bỏ nền, chỉ còn icon và chữ */
+.vC .hero .btn.hb-cta:not(.pri),
+.vC .shero .btn-row .btn.ghost {
+  background: transparent; border-color: transparent;
+  color: rgba(255, 255, 255, .74);
+}
+.vC .hero .btn.hb-cta:not(.pri):hover,
+.vC .shero .btn-row .btn.ghost:hover {
+  background: rgba(255, 255, 255, .08); border-color: transparent;
+  color: #fff; transform: none;
+}
+.vC .shero .btn-row .btn.ghost.on {
+  background: rgba(224, 133, 155, .13); border-color: transparent; color: var(--acc);
+}
+.vC .shero .btn-row .btn.ghost.on:hover { background: rgba(224, 133, 155, .19); }
+
+/* ô thông tin ở hero: hiện chữ thay vì chỉ có icon, vẫn không viền */
+.vC .hero .btn.hb-cta:not(.pri) {
+  width: auto; padding: 0 14px; border-radius: 9px;
+}
+.vC .hero .btn.hb-cta:not(.pri) .hb-cta-lbl {
+  position: static; width: auto; height: auto; overflow: visible;
+  clip-path: none; white-space: nowrap;
+}
+
+.vC .shero .btn-row .btn.ic { width: 42px; padding: 0; }
+.vC .shero .btn-utils { margin-left: 2px; gap: 2px; }
+
+/* ==========================================================================
+   MÁY HẸP: giữ đúng cấu trúc, chỉ đổi số cột của hàng nút
+   ========================================================================== */
+@media (max-width: 520px) {
+  .vA .shero .btn-row .btn,
+  .vB .shero .btn-row .btn,
+  .vC .shero .btn-row .btn { font-size: 12.5px; padding: 0 12px; }
+  .vC .shero .btn-row .btn.ic { width: 40px; }
+  /* máy hẹp: cụm tiện ích rơi xuống hàng riêng nên phải bo lại cả bốn góc,
+     nếu không nó thành một mẩu hộp cụt trông như lỗi */
+  .vB .shero .btn-row .btn-utils { margin: 2px 0 0 auto; }
+  .vB .shero .btn-row .btn-utils .btn,
+  .vB .shero .btn-row .btn-utils .btn:first-child,
+  .vB .shero .btn-row .btn-utils .btn:last-child,
+  .vB .shero .btn-row .btn-utils .btn:only-child { border-radius: 10px; }
+}

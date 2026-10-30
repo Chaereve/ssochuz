@@ -53,8 +53,10 @@
   .why li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px;
     padding: 12px 14px; border-left: 2px solid var(--acc); background: var(--surf); border-radius: 0 8px 8px 0; }
   .why .n { font: 700 12px/1.5 ui-monospace, monospace; color: var(--acc); }
-  .why b { display: block; color: var(--txt); font-size: 13.5px; margin-bottom: 2px; }
+  .why > li > span > b:first-child { display: block; color: var(--txt); font-size: 13.5px; margin-bottom: 2px; }
   .why span.t { color: var(--mut); font-size: 13px; line-height: 1.55; }
+  .why span.t b { display: inline; color: var(--txt); font-weight: 600; }
+  body > div[style*="position:fixed"] { display: none !important; }
 
   footer { margin-top: 44px; padding-top: 20px; border-top: 1px solid var(--bd);
     color: var(--dim); font-size: 13px; }
