@@ -426,80 +426,74 @@
        đổ thành một bức tường chữ */
     var paras = syn.split(/\n+/).map(function (x) { return x.trim(); }).filter(Boolean);
     if (!paras.length) paras = ['Bộ này chưa có mô tả.'];
-    /* --- hàng nhận diện: tác giả in đậm, các mục ngăn bằng “·” --------------
-       Tình trạng KHÔNG còn nằm ở đây: nó ở dưới bìa; cập nhật + số liệu thật
-       xuống dòng caption 13px để hàng 15px chỉ còn thứ để nhận ra bộ truyện. */
+    /* Hàng thông tin dưới tên truyện: tác giả in đậm, các mục ngăn bằng dấu “·”
+       như gáy sách — không icon, không pill. Tình trạng KHÔNG nằm ở đây nữa:
+       nó ở dải đáy bìa (vòng 10 · C1), mỗi dữ kiện chỉ hiện một lần. */
+    var metaBits = [];
+    if (n.author) metaBits.push('<b>' + esc(n.author) + '</b>');
+    if (n.couple) metaBits.push(esc(n.couple));
+    if (n.year) metaBits.push(esc(n.year));
+    metaBits.push('<b>' + esc(CZ.countText(n)) + '</b>');
+    metaBits.push('cập nhật ' + esc(CZ.timeAgo(n.updated)));
+    /* mỗi mục là một .mi; dấu “·” do CSS chèn TRƯỚC mục sau nên khi xuống dòng
+       dấu luôn nằm ở đầu dòng mới, không lửng lơ ở cuối dòng như ghép chuỗi */
     var mi = function (html) { return '<span class="mi">' + html + '</span>'; };
-    var metaRow = '<div class="meta">' +
-      (n.author ? mi('<b>' + esc(n.author) + '</b>') : '') +
-      (n.couple ? mi(esc(n.couple)) : '') +
-      (n.year ? mi(esc(n.year)) : '') +
-      mi('<b>' + esc(CZ.countText(n)) + '</b>') +
+    var metaRow = '<div class="meta">' + metaBits.map(mi).join('') +
       (n.locked ? mi('<span class="pill lock" title="Truyện được bảo vệ bằng mật mã — thẻ và giới thiệu công khai, chương cần mật mã">' + ic('lock', 'i-s') + 'Có mật mã</span>') : '') +
-      '</div>';
-
-    var stat = statChip();
-    var subBits = [];
-    if (n.updated) subBits.push('Cập nhật ' + esc(CZ.timeAgo(n.updated)));
-    if (stat) subBits.push(stat);
-    var metaSub = subBits.length ? '<div class="metaSub">' + subBits.join('<i aria-hidden="true">·</i>') + '</div>' : '';
-
+      (statChip() ? mi(statChip()) : '') + '</div>';
     var pct = progressPct(n, ch);
-    var prog = (ch && n.chapters)
-      ? '<div class="prog"><span>Đã đọc ' + ch + '/' + n.chapters + ' chương · ' + pct + '%</span>' +
-        '<div class="bar"><i style="width:' + pct + '%"></i></div></div>'
-      : '';
-
-    /* việc phụ gom vào menu ⋯ (details) — vẫn đủ chức năng, không chiếm chỗ của CTA */
-    var moreMenu = '<details class="amore">' +
-      '<summary class="btn ghost ic" title="Thêm tuỳ chọn" aria-label="Thêm tuỳ chọn">' + ic('dots', 'i-s') + '</summary>' +
-      '<div class="amore-in">' +
-        (n.canRead && ch && ch < n.chapters ? '<a class="btn ghost" href="' + chapterPath(n.chapters) + '">' + ic('up', 'i-s') + 'Chương mới nhất</a>' : '') +
-        '<button class="btn ghost' + (CZ.inShelf(n) ? ' on' : '') + '" id="shelfBtn" aria-pressed="' + CZ.inShelf(n) + '" title="Lưu vào tủ truyện của bạn">' + ic('shelf', 'i-s') +
-          '<span>' + (CZ.inShelf(n) ? 'Đã lưu' : 'Tủ truyện') + '</span></button>' +
-        '<button class="btn ghost" id="shareBtn" type="button">' + ic('share', 'i-s') + 'Chia sẻ liên kết</button>' +
-        /* RSS riêng bộ này — feed reader theo dõi được từng truyện */
-        (CZ.API && SLUG.indexOf('private-') !== 0 ? '<a class="btn ghost" href="' + esc(CZ.API + '/feed.xml?slug=' + encodeURIComponent(n.slug)) + '" target="_blank" rel="noopener" title="RSS riêng bộ này (dùng cho Feedly, Inoreader…)">' + ic('rss', 'i-s') + 'RSS bộ này</a>' : '') +
-      '</div></details>';
-
     $('#shero').innerHTML =
-      '<div class="in">' +
-        /* cột bìa: ảnh + hai nhãn, tình trạng nằm DƯỚI ảnh (không chữ nào trên ảnh) */
-        '<div class="cvCol">' +
+      '<div class="hC">' +
+        /* nền: chính bìa phóng to + làm mờ, phủ lớp tối để chữ trắng đọc được */
+        (im ? '<img class="hBg" src="' + esc(im) + '" alt="" aria-hidden="true" loading="lazy" referrerpolicy="no-referrer">' : '') +
+        '<span class="hVeil" aria-hidden="true"></span>' +
+        '<div class="in">' +
           '<div class="cover" data-t="' + esc(n.title) + '">' + (im ? '<img src="' + esc(im) + '"' + CZ.coverFB(n, im) + ' alt="Bìa ' + esc(n.title) + '" width="300" height="450" fetchpriority="high" referrerpolicy="no-referrer">' : '') +
             (n.is18 ? '<span class="b18" title="Dành cho 18 tuổi trở lên">18+</span>' : '') +
             (n.locked ? '<span class="lock-cover" title="Truyện có mật mã — cần mật mã để đọc" aria-label="Truyện có mật mã">' + ic('lock', 'i-s') + '</span>' : '') +
             (n.fresh ? '<span class="nw-bookmark"><span>NEW</span></span>' : '') +
+            '<span class="cvGrad" aria-hidden="true"></span>' +
+            '<span class="cvSt ' + esc(n.statusCls || 'run') + '"><i aria-hidden="true"></i>' + esc(CZ.statusLabel(n.statusCls || n.status)) + '</span>' + '</div>' +
+          '<div class="txtC">' +
+            '<h1>' + esc(n.title) + '</h1>' +
+            metaRow +
+            ratingTag() +
+            '<div class="synwrap' + (syn ? ' clamp' : '') + (synopsisOpen ? ' open' : '') + '" id="synWrap">' +
+              '<div class="synin" id="synIn">' +
+                paras.map(function (x, i) {
+                  return '<p class="syn"' + (i ? '' : ' id="synBox"') + '>' + esc(x) + '</p>';
+                }).join('') +
+              '</div></div>' +
+            (syn
+              ? '<button class="synbtn" id="synToggle" type="button" aria-controls="synIn" aria-expanded="' + synopsisOpen + '"><span class="syn-label">' + (synopsisOpen ? 'Thu gọn' : 'Đọc giới thiệu đầy đủ') + '</span>' + ic('right', 'i-s') + '</button>'
+              : '') +
+            '<div class="btn-row">' + readBtn(n, ch) +
+              (n.canRead && ch && ch < n.chapters ? '<a class="btn ghost" href="' + chapterPath(n.chapters) + '">' + ic('up', 'i-s') + 'Chương mới nhất</a>' : '') +
+              /* nút chuông chuyển từ card trang chủ vào đây cho gọn — bấm ở đâu
+                 (hero/reader) thì hai nơi tự đổi theo nhờ refreshFollowUI */
+              '<button class="btn ghost' + (CZ.isFollowed(n) ? ' on' : '') + '" data-followbtn="' + esc(n.slug) + '" aria-pressed="' + CZ.isFollowed(n) + '" title="' + (CZ.isFollowed(n) ? 'Bỏ theo dõi (không báo chương mới nữa)' : 'Theo dõi — báo khi có chương mới') + '">' + ic('bell', 'i-s') +
+                '<span class="lbl">' + (CZ.isFollowed(n) ? 'Đang theo dõi' : 'Theo dõi') + '</span></button>' +
+              '<button class="btn ghost' + (CZ.inShelf(n) ? ' on' : '') + '" id="shelfBtn" aria-pressed="' + CZ.inShelf(n) + '" title="Lưu vào tủ truyện của bạn (icon tủ sách)">' + ic('shelf', 'i-s') +
+                '<span>' + (CZ.inShelf(n) ? 'Đã lưu' : 'Tủ truyện') + '</span></button>' +
+              /* ba việc phụ (chia sẻ / RSS / đặt lại 18+) gom thành nút icon cùng cỡ,
+                 dồn về cuối hàng — hàng nút chính vẫn đúng 4 nút như bản vẽ đã duyệt */
+              '<span class="btn-utils">' +
+                '<button class="btn ghost ic" id="shareBtn" type="button" title="Chia sẻ liên kết bộ truyện" aria-label="Chia sẻ liên kết bộ truyện">' + ic('share', 'i-s') + '</button>' +
+                /* RSS riêng bộ này — feed reader theo dõi được từng truyện */
+                (CZ.API && SLUG.indexOf('private-') !== 0 ? '<a class="btn ghost ic" href="' + esc(CZ.API + '/feed.xml?slug=' + encodeURIComponent(n.slug)) + '" target="_blank" rel="noopener" title="RSS riêng bộ này (dùng cho Feedly, Inoreader…)" aria-label="RSS của bộ này">' + ic('rss', 'i-s') + '</a>' : '') +
+              '</span>' +
+            '</div>' +
           '</div>' +
-          '<span class="cvSt ' + esc(n.statusCls || 'run') + '"><i aria-hidden="true"></i>' + esc(CZ.statusLabel(n.statusCls || n.status)) + '</span>' +
         '</div>' +
-        '<div class="txtC">' +
-          '<h1>' + esc(n.title) + '</h1>' +
-          metaRow +
-          metaSub +
-          '<div class="synwrap' + (syn ? ' clamp' : '') + (synopsisOpen ? ' open' : '') + '" id="synWrap">' +
-            '<div class="synin" id="synIn">' +
-              paras.map(function (x, i) {
-                return '<p class="syn"' + (i ? '' : ' id="synBox"') + '>' + esc(x) + '</p>';
-              }).join('') +
-            '</div></div>' +
-          (syn
-            ? '<button class="synbtn" id="synToggle" type="button" aria-controls="synIn" aria-expanded="' + synopsisOpen + '"><span class="syn-label">' + (synopsisOpen ? 'Thu gọn' : 'Đọc giới thiệu đầy đủ') + '</span>' + ic('right', 'i-s') + '</button>'
-            : '') +
-          prog +
-          '<div class="btn-row">' + readBtn(n, ch) +
-            /* nút chuông: bấm ở đâu (hero/reader) thì hai nơi tự đổi theo nhờ refreshFollowUI */
-            '<button class="btn ghost' + (CZ.isFollowed(n) ? ' on' : '') + '" data-followbtn="' + esc(n.slug) + '" aria-pressed="' + CZ.isFollowed(n) + '" title="' + (CZ.isFollowed(n) ? 'Bỏ theo dõi (không báo chương mới nữa)' : 'Theo dõi — báo khi có chương mới') + '">' + ic('bell', 'i-s') +
-              '<span class="lbl">' + (CZ.isFollowed(n) ? 'Đang theo dõi' : 'Theo dõi') + '</span></button>' +
-            moreMenu +
-          '</div>' +
-          ratingTag() +
-        '</div>' +
+        (ch && n.chapters ? '<div class="prog"><span>Đang đọc chương ' + ch + ' / ' + n.chapters + ' · còn ' + Math.max(0, n.chapters - ch) + ' chương</span>' +
+          '<div class="bar"><i style="width:' + pct + '%"></i></div><em>' + pct + '%</em></div>' : '') +
       '</div>';
     /* bìa hỏng / chưa có ảnh: khung vẫn có tên truyện thay vì để trống trơn */
     var cw = $('#shero .cover'), cim = cw ? cw.querySelector('img') : null;
     if (cim) cim.addEventListener('error', function () { if (cw && cw.isConnected) cw.classList.add('noimg'); });
     if (cw && (!cim || (cim.complete && !cim.naturalWidth))) cw.classList.add('noimg');
+    var cbg = $('#shero .hBg');
+    if (cbg) cbg.addEventListener('error', function () { cbg.remove(); });
     // Keep the control available: measuring before fonts/layout settle used to
     // delete it permanently. Preserve expansion when votes/stats repaint hero.
     var sw = $('#synWrap'), tg = $('#synToggle');
@@ -560,14 +554,15 @@
       var rg = $('#shero .btn-row');
       if (rg) {
         var rb = document.createElement('button');
-        rb.className = 'btn ghost'; rb.type = 'button'; rb.id = 'reset18';
+        rb.className = 'btn ghost ic'; rb.type = 'button'; rb.id = 'reset18';
         rb.title = 'Đặt lại xác nhận 18+ (dành cho máy dùng chung)';
-        rb.innerHTML = ic('refresh', 'i-s') + 'Đặt lại xác nhận 18+';
+        rb.setAttribute('aria-label', rb.title);
+        rb.innerHTML = ic('refresh', 'i-s');
         rb.addEventListener('click', function () {
           reset18(); renderStory(); CZ.toast('Đã đặt lại — lần đọc sau sẽ hỏi xác nhận 18+');
         });
         /* nằm cùng cụm nút phụ ở cuối hàng, không chen vào 4 nút chính */
-        (rg.querySelector('.amore-in') || rg).appendChild(rb);
+        (rg.querySelector('.btn-utils') || rg).appendChild(rb);
       }
     }
     bindRating();
