@@ -1,14 +1,14 @@
-# Mockup · Chân bìa — vòng 8
+# Mockup · Nhãn trạng thái — vòng 8
 
 `node docs/mockups/story-v8/gen.mjs` → `index.html`
 
-Vòng 7 (D1) bị **chìm** vì chữ đặt thẳng trên ảnh bìa sáng. Vòng 8 đổi **nền của nhãn**:
+Bốn bản trước (một dải ngang dán lên ảnh bìa) đều bị chê. Bốn hướng khác hẳn:
 
-| Mã | Nền nhãn | Đặc điểm |
+| Mã | Cách | Vì sao khác |
 |---|---|---|
-| **A** | Chân bìa **đặc 27px nằm ngoài ảnh** (bìa bo góc trên, chân nối liền) | không che ảnh, tương phản tuyệt đối |
-| **B** | Thanh đặc **tràn viền trong bìa** 28px, bóng hắt lên ảnh | gọn chiều cao nhất |
-| **C** | **Kính mờ 30px** + kẻ sáng 1px, 18+ đóng khung | đẹp nhất, cần `backdrop-filter` |
+| **1** | Hai khối dính mép: trạng thái ở góc dưới trái, 18+ ô giấy ở góc dưới phải, chỉ bo góc phía trong | không chạy ngang qua ảnh, ăn theo góc bìa như nhãn nhà phát hành |
+| **2** | Băng **ôbi** kiểu sách Nhật: dải giấy màu giấy, chữ serif mực, 18+ ô mực | đọc như vật thể thật, ăn hệ màu giấy của web |
+| **3** | Nhãn **dọc, ngoài bìa**: cột 20px bên trái ảnh, có đường kẻ ngăn | ảnh bìa không bị phủ điểm nào |
+| **4** | Chú thích **dưới bìa**: gạch son 16px + trạng thái + 18+ | bìa sạch tuyệt đối, chỉ chữ + nét son |
 
-Nhãn vẫn ở đáy bìa (trạng thái trái · 18+ phải), vẫn tránh băng rôn “MỚI” góc trên phải.
-Chữ 8,5–9px mono in hoa, chấm màu phát sáng; mobile thu về 6,6px, chân bìa 22px.
+Kiểm ảnh chụp 1216px · 390px.
