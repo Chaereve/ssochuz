@@ -2209,11 +2209,6 @@ kbd { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; b
   .shero .editable-rating { margin-top: 16px; padding-top: 12px; }
   .shero .editable-rating .stars .st { width: 26px; height: 26px; padding: 3px; }
   .shero .editable-rating svg { width: 17px; height: 17px; }
-  /* hàng reaction sticker không được đẩy cả trang cuộn ngang trên máy hẹp */
-  .rreact { max-width: 100%; overflow: hidden; }
-  .rreact .rx-row { overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
-  .rreact .rx-row::-webkit-scrollbar { display: none; }
-  .rreact .rx-head { flex-wrap: wrap; }
 }
 @media (max-width: 620px) {
   .admin .amain { padding: 14px 12px 44px; }
@@ -3990,7 +3985,11 @@ body.rd-focus .rdcmts { display: none; }
    ========================================================================== */
 
 /* ===================== 1. REACTION STICKER CUỐI CHƯƠNG =================== */
-.storylab { display: grid; gap: 10px; margin: 16px auto 10px; max-width: 100%; }
+/* minmax(0,1fr): cột auto của grid từng bị hàng sticker (nowrap: 14 cột) kéo
+   rộng 1060px làm cả trang cuộn ngang ở màn 800px */
+.storylab { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px;
+  margin: 16px auto 10px; max-width: 100%; }
+.storylab > * { min-width: 0; }
 .storylab .rreact { max-width: none; width: 100%; margin: 0; }
 .storylab .dicehost { justify-self: center; margin-top: 2px; }
 
@@ -4007,7 +4006,16 @@ body.rd-focus .rdcmts { display: none; }
   border: 1px solid var(--rd-bd, var(--bd)); background: var(--rd-surf2, var(--surf2));
   border-radius: 99px; padding: 2px 8px; white-space: nowrap; }
 .rreact .rx-all-btn { padding: 2px 9px; min-height: 24px; font-size: 11px; border-radius: 99px; }
-.rreact .rx-row { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 5px; padding: 2px 0; }
+/* hàng sticker: khi 14 sticker không đủ chỗ thì tự cuộn trong thẻ, không tràn viền
+   và không đẩy cả trang cuộn ngang */
+.rreact .rx-row { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 5px; padding: 2px 0;
+  max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; }
+.rreact .rx-row::-webkit-scrollbar { height: 6px; }
+@media (max-width: 620px) {
+  .rreact .rx-row { scrollbar-width: none; }
+  .rreact .rx-row::-webkit-scrollbar { display: none; }
+  .rreact .rx-head { flex-wrap: wrap; }
+}
 
 /* --- một sticker: hiển thị gọn gàng ảnh WebP + tên cảm xúc + số lượt ----- */
 .rx { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px;
