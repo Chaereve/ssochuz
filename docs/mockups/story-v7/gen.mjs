@@ -2,11 +2,9 @@
 /* ============================================================================
    gen.mjs · TRANG THÔNG TIN TRUYỆN — vòng 2
    ----------------------------------------------------------------------------
-   Vòng 5: BỎ HẲN nhãn trạng thái / 18+ kiểu viên thuốc. Bốn phương án bày trạng thái:
-      A · dòng son   — trạng thái là chữ đầu tiên của dòng tác giả, màu son
-      B · nhịp số    — “25 chương · Hoàn thành · 18+” thành một hàng chữ có số serif lớn
-      C · dải chân   — trạng thái + 18+ rời xuống dải đáy, cạnh thanh tiến độ
-      D · nhãn trên bìa — trạng thái in trên bìa (dưới trái), 18+ góc trên phải bìa
+   Vòng 7: chốt D (nhãn nằm trên bìa) nhưng D1 cũ bị chìm. Bốn cách làm nổi:
+      1 · dải đen đặc          4 · dải son đặc
+      2 · dải đen + gờ son     3 · hai nhãn nổi, không dải
    Phần dưới: ba cách bày KHÁC NHAU (thay cho khối “dùng chung” cũ):
 
       1 · Dải thông tin  — một cột, thông tin thành dải 6 ô, chương 4 cột
@@ -107,7 +105,7 @@ const ICON = {
 const statusCls = (st) => (/hoàn thành/i.test(st) ? 'done' : /sắp|chưa/i.test(st) ? 'soon' : 'run');
 
 /* ------------------------------- khối dùng lại ---------------------------- */
-const crumb = `<nav class="crumb"><a href="#">Trang chủ</a><i>/</i><a href="#">Thư viện</i><i>/</i><b>${esc(S.t)}</b></nav>`;
+const crumb = `<nav class="crumb"><a href="#">Trang chủ</a><i>/</i><a href="#">Thư viện</a><i>/</i><b>${esc(S.t)}</b></nav>`;
 
 const ACT = `<div class="actC">
   <a class="btnPri" href="#">${ICON.play}Đọc từ đầu</a>
@@ -122,6 +120,7 @@ const SYN = `<div class="synC"><p>${esc(PARAS[0])}</p>
 const PROGRESS = `<div class="hProg"><span>Đang đọc chương ${PROG.read} / ${CH} · còn ${CH - PROG.read} chương</span>
   <div class="pb"><i style="width:${PROG.pct}%"></i></div><em>${PROG.pct}%</em></div>`;
 
+/* bookmark “MỚI” đúng trang thật: góc trên phải, không được đụng vào */
 const BOOKMARK = `<span class="nwBook" aria-hidden="true"><span>MỚI</span></span>`;
 const cover = (inner = '') => `<a class="cvC" href="#">${S.img ? `<img src="${esc(S.img)}" alt="Bìa ${esc(S.t)}" loading="lazy">` : ''}${BOOKMARK}${inner}</a>`;
 
@@ -130,23 +129,39 @@ const TEXT = `<div class="txtC">
   <div class="byC"><b>${esc(S.a)}</b>${S.c ? `<i>·</i>${esc(S.c)}` : ''}${S.y ? `<i>·</i>${esc(S.y)}` : ''}</div>
   ${SYN}${ACT}</div>`;
 
-const shell = (inner) => `<section class="hC">
+const shell = (cvExtra) => `<section class="hC">
   ${S.img ? `<img class="bgC" src="${esc(S.img)}" alt="" loading="lazy">` : ''}
   <span class="veilC"></span>
-  <div class="inC">${cover(inner)}${TEXT}</div>
+  <div class="inC">
+    ${cover(cvExtra)}
+    ${TEXT}
+  </div>
   ${PROGRESS}
 </section>`;
 
-const label = (cls = '') => `<b class="cvSt ${statusCls(S.st)} ${cls}"><i></i>${esc(S.st)}</b>`;
+/* ============ 1 · DẢI ĐEN ĐẶC — nền liền, không gradient ================= */
+const hero1 = shell(`<span class="barSolid">
+  <b class="lbSt ${statusCls(S.st)}"><i></i>${esc(S.st)}</b>
+  ${S.e ? '<em class="lbAge ring">18+</em>' : ''}
+</span>`);
 
-/* D1a · dải đậm + chữ sáng + 18+ đóng khung */
-const heroA = shell(`<span class="cvFoot scrim1">${label()}${S.e ? '<em class="cvAge box">18+</em>' : ''}</span>`);
+/* ================= 2 · DẢI ĐEN + GỜ SON (2px cạnh trên) ================= */
+const hero2 = shell(`<span class="barSolid edgeAcc">
+  <b class="lbSt ${statusCls(S.st)}"><i></i>${esc(S.st)}</b>
+  ${S.e ? '<em class="lbAge ring">18+</em>' : ''}
+</span>`);
 
-/* D1b · dải đậm + kính mờ + đường kẻ sáng */
-const heroB = shell(`<span class="cvFoot scrim2">${label()}${S.e ? '<em class="cvAge box">18+</em>' : ''}</span>`);
+/* ===================== 3 · HAI NHÃN NỔI, KHÔNG DẢI ====================== */
+const hero3 = shell(`<span class="floatRow">
+  <b class="plate ${statusCls(S.st)}"><i></i>${esc(S.st)}</b>
+  ${S.e ? '<em class="plate age">18+</em>' : ''}
+</span>`);
 
-/* D1c · thanh đặc đáy bìa, chữ to nhất */
-const heroC = shell(`<span class="cvFoot scrim3">${label('big')}${S.e ? '<em class="cvAge big">18+</em>' : ''}</span>`);
+/* ======================= 4 · DẢI SON ĐẶC (nổi nhất) ===================== */
+const hero4 = shell(`<span class="barAcc">
+  <b class="lbSt onAcc">${esc(S.st)}</b>
+  ${S.e ? '<em class="lbAge onAcc">18+</em>' : ''}
+</span>`);
 
 const tabs = `<div class="tabs2">
   <button class="on">Danh sách chương <b>${CH}</b></button>
@@ -175,6 +190,7 @@ const CSS = `
   .crumb a { color: var(--mut); } .crumb a:hover { color: var(--acc); }
   .crumb i { font-style: normal; opacity: .5; } .crumb b { color: var(--txt); font-weight: 600; }
 
+  /* ------------------------------ khối đầu chung -------------------------- */
   .hC { position: relative; overflow: hidden; border-radius: 12px; isolation: isolate;
     padding: 26px 26px 18px; background: var(--surf2); }
   .bgC { position: absolute; inset: -10%; width: 120%; height: 120%; object-fit: cover;
@@ -230,37 +246,47 @@ const CSS = `
   .hProg .pb i { display: block; height: 100%; border-radius: 99px; background: var(--acc); }
   .hProg em { font: 700 10px/1 var(--font-mono); font-style: normal; color: rgba(255, 255, 255, .82); }
 
-  /* ----------------------------- nhãn trạng thái -------------------------- */
-  .cvSt { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
-    font: 800 9px/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase;
-    color: #fff; text-shadow: 0 1px 4px rgba(0, 0, 0, .9); }
-  .cvSt i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex: none;
-    box-shadow: 0 0 7px currentColor, 0 0 0 2px rgba(0, 0, 0, .35); }
-  .cvSt.done i { color: #6fe3a2; } .cvSt.run i { color: #ffc76b; } .cvSt.soon i { color: #b3a4ff; }
-  .cvSt.big { font-size: 10px; letter-spacing: .15em; }
-  .cvAge { font: 800 9px/1 var(--font-mono); font-style: normal; letter-spacing: .06em; color: #fff;
-    text-shadow: 0 1px 4px rgba(0, 0, 0, .9); }
-  .cvAge.box { padding: 3px 5px; border: 1px solid rgba(255, 255, 255, .5); border-radius: 3px;
-    background: rgba(0, 0, 0, .3); text-shadow: none; }
-  .cvAge.big { padding: 4px 6px; border: 1px solid rgba(255, 255, 255, .55); border-radius: 3px;
-    background: rgba(0, 0, 0, .34); font-size: 10px; text-shadow: none; }
+  /* --------------------------- nhãn trạng thái ---------------------------- */
+  .lbSt { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+    font: 800 9.5px/1 var(--font-mono); letter-spacing: .13em; text-transform: uppercase; color: #fff; }
+  .lbSt i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+  .lbSt.done i { background: #63dd9d; box-shadow: 0 0 7px #63dd9d; }
+  .lbSt.run i { background: #ffbe5c; box-shadow: 0 0 7px #ffbe5c; }
+  .lbSt.soon i { background: #a99bf0; box-shadow: 0 0 7px #a99bf0; }
+  .lbAge { display: inline-flex; align-items: center; height: 17px; padding: 0 5px; border-radius: 3px;
+    font: 800 9px/1 var(--font-mono); font-style: normal; letter-spacing: .06em; color: #fff; }
+  .lbAge.ring { border: 1px solid rgba(255, 255, 255, .55); }
+  .lbAge.onAcc { background: rgba(255, 255, 255, .2); border: 1px solid rgba(255, 255, 255, .42); }
+  .lbSt.onAcc { color: #fff; }
 
-  /* ---- D1a · dải tối dần nhưng đậm hẳn ---- */
-  .cvFoot { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center;
-    justify-content: space-between; gap: 8px; }
-  .scrim1 { padding: 30px 11px 11px;
-    background: linear-gradient(0deg, rgba(5, 3, 2, .97) 42%, rgba(5, 3, 2, .78) 68%, rgba(5, 3, 2, 0)); }
+  /* 1 · dải đen đặc */
+  .barSolid { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    height: 30px; padding: 0 10px; background: #0b0806;
+    border-top: 1px solid rgba(255, 255, 255, .16); }
+  /* 2 · thêm gờ son */
+  .barSolid.edgeAcc { border-top: 2px solid #b23a52; background: linear-gradient(180deg, #17100c, #0b0806 60%); }
 
-  /* ---- D1b · dải + kính mờ + đường kẻ sáng ---- */
-  .scrim2 { padding: 9px 11px 10px;
-    background: rgba(9, 6, 4, .62); border-top: 1px solid rgba(255, 255, 255, .17);
-    backdrop-filter: blur(10px) saturate(1.1); -webkit-backdrop-filter: blur(10px) saturate(1.1);
-    box-shadow: 0 -14px 22px -16px rgba(0, 0, 0, .9); }
-  .scrim2 .cvSt, .scrim2 .cvAge { text-shadow: 0 1px 3px rgba(0, 0, 0, .85); }
+  /* 3 · hai nhãn nổi */
+  .floatRow { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 2;
+    display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: nowrap; }
+  .plate { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px;
+    white-space: nowrap; flex: none;
+    border-radius: 5px; background: #0b0806; border: 1px solid rgba(255, 255, 255, .2);
+    font: 800 9px/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: #fff;
+    box-shadow: 0 4px 12px -4px rgba(0, 0, 0, .9); }
+  .plate i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+  .plate.done i { background: #63dd9d; box-shadow: 0 0 6px #63dd9d; }
+  .plate.run i { background: #ffbe5c; box-shadow: 0 0 6px #ffbe5c; }
+  .plate.soon i { background: #a99bf0; box-shadow: 0 0 6px #a99bf0; }
+  .plate.age { font-style: normal; letter-spacing: .06em; background: #fff; color: #1a1210;
+    border-color: #fff; }
 
-  /* ---- D1c · thanh đặc, chữ to nhất ---- */
-  .scrim3 { padding: 10px 11px; background: #0a0705;
-    border-top: 1px solid rgba(255, 255, 255, .12); }
+  /* 4 · dải son đặc */
+  .barAcc { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    height: 30px; padding: 0 10px; background: #9d3348;
+    border-top: 1px solid rgba(255, 255, 255, .22); }
 
   /* --------------------------------- tab --------------------------------- */
   .tabs2 { display: flex; align-items: center; gap: 24px; margin: 22px 0 0;
@@ -289,21 +315,20 @@ const CSS = `
   }
   @container (max-width: 660px) {
     .hC { padding: 18px; }
-    .inC { grid-template-columns: 106px minmax(0, 1fr); gap: 14px; align-items: start; }
+    .inC { grid-template-columns: 112px minmax(0, 1fr); gap: 14px; align-items: start; }
     .txtC h1 { font-size: 21px; }
     .synC { margin-top: 8px; }
     .synC p { font-size: 12px; }
     .actC { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin-top: 16px; }
     .btnPri, .btnGho { justify-content: center; width: 100%; }
-    .byC { font-size: 11.5px; gap: 6px; }
-    .cvSt { font-size: 6.6px; letter-spacing: .05em; gap: 3px; }
-    .cvSt i { width: 4px; height: 4px; }
-    .cvSt.big { font-size: 6.8px; letter-spacing: .04em; }
-    .cvAge, .cvAge.big { font-size: 6.8px; letter-spacing: .02em; }
-    .cvAge.box, .cvAge.big { padding: 2px 3px; border-radius: 2px; }
-    .scrim1 { padding: 22px 6px 6px; }
-    .scrim2 { padding: 5px 6px 6px; }
-    .scrim3 { padding: 6px 6px; }
+    .barSolid, .barAcc { height: 24px; padding: 0 7px; }
+    .lbSt { font-size: 7.5px; letter-spacing: .05em; gap: 4px; }
+    .lbSt i { width: 4px; height: 4px; }
+    .lbAge { height: 14px; padding: 0 4px; font-size: 7.5px; }
+    .floatRow { left: 4px; right: 4px; bottom: 4px; gap: 4px; }
+    .plate { height: 17px; padding: 0 5px; font-size: 6.8px; letter-spacing: .02em; gap: 3px; }
+    .plate i { width: 4px; height: 4px; }
+    .synMore { font-size: 11px; white-space: nowrap; }
     .hProg { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 10px; margin-top: 16px; }
     .hProg > span { grid-area: 1 / 1; font-size: 9px; white-space: nowrap; overflow: hidden;
       text-overflow: ellipsis; }
@@ -333,42 +358,51 @@ const HTML = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ssochuz · nhãn đáy bìa · ba mức tương phản</title>
+<title>ssochuz · nhãn trên bìa · bốn cách làm nổi</title>
 <link rel="stylesheet" href="../home-v2/mock2.css?v=story7">
 <style>${CSS}</style>
 </head>
 <body>
 
 <div class="mkbar">
-  <span class="ttl">ssochuz · nhãn đáy bìa</span>
-  <span>D1 nhưng đẩy tương phản — ba mức</span>
+  <span class="ttl">ssochuz · nhãn trên bìa</span>
+  <span>D1 nhưng nhãn phải nổi — bốn cách xử lý tương phản</span>
   <a href="../story-v6/index.html" style="margin-left:auto;color:var(--mut);text-decoration:underline;text-underline-offset:3px">← vòng 6</a>
   <a href="../home-v2/index.html" style="color:var(--mut);text-decoration:underline;text-underline-offset:3px">trang chủ</a>
 </div>
 
 <div class="wrap">
   <div class="hd">
-    <h2>Nhãn đáy bìa — D1 nhưng không còn chìm</h2>
-    <p class="lead">Giữ nguyên chỗ đặt của <b>D1</b> (dải đáy bìa, trạng thái trái · 18+ phải).
-      Ba mức đẩy tương phản: nền đậm hơn, chữ trắng viền bóng, chấm màu phát sáng, 18+ đóng khung sáng.</p>
-    <p class="note">Bìa mẫu là bìa thật <b>sáng nhất</b> trong kho (trời xanh + đồng cỏ) — đây là ca xấu nhất;
-      bìa tối thì nhãn còn nổi hơn nữa.</p>
+    <h2>Nhãn ở đáy bìa — bốn cách cho khỏi chìm</h2>
+    <p class="lead">Bố cục giữ nguyên D1 (hai nhãn ở nửa dưới bìa, chừa băng rôn MỚI góc trên phải).
+      Nguyên nhân chìm của D1 cũ: dải <b>gradient mỏng</b> + chữ <b>8,5px màu nhạt</b> ⇒ trên bìa sáng là mất.
+      Bốn cách dưới đây bỏ gradient, dùng <b>nền đặc</b>, chữ trắng 9–9,5px.</p>
+    <p class="note">Bìa mẫu cố tình rất sáng (trời xanh, đồng cỏ) — đúng ca khó nhất. Băng rôn MỚI vẫn ở
+      góc trên phải như trang thật, không bị đụng.</p>
   </div>
 
-  ${opt('D1a', 'Dải tối đậm dần · chữ trắng + 18+ đóng khung',
-    'Gradient đen <b>97% ở đáy</b> kéo cao hơn, chữ trắng có bóng đổ mạnh, chấm màu phát sáng có quầng, ' +
-    '<b>18+</b> đóng khung 1px trắng 50% trên nền đen 30%. Không blur — chạy được mọi máy.',
-    body(heroA))}
+  ${opt('1', 'Dải đen đặc · chữ trắng',
+    'Thay gradient bằng <b>dải đen đặc #0b0806 cao 30px</b>, có đường kẻ sáng 1px ở cạnh trên. ' +
+    'Trạng thái: chữ trắng + chấm màu phát sáng; 18+ trắng đóng khung. ' +
+    '<b>Chắc chắn đọc được trên mọi bìa</b>, nhưng trông như thanh thông tin của app.',
+    body(hero1))}
 
-  ${opt('D1b', 'Dải + kính mờ · đường kẻ sáng trên',
-    'Dải <b>kính mờ</b> cao 32px (blur 10px nền bìa), đường kẻ sáng 1px ở trên, bóng đổ hắt xuống. ' +
-    'Chữ nổi vì nền kính luôn đủ tối bất kể ảnh bìa. Vẫn giữ khung 18+.',
-    body(heroB))}
+  ${opt('2', 'Dải đen + gờ son',
+    'Như 1 nhưng cạnh trên là <b>gờ son 2px</b> và dải chuyển nhẹ từ nâu đen sang đen. ' +
+    'Gờ son nối màu với <b>băng rôn MỚI</b> nên nhìn ra một hệ, và dải không còn “dán” lên ảnh. ' +
+    '<b>Cân nhất giữa nổi và tinh tế.</b>',
+    body(hero2))}
 
-  ${opt('D1c', 'Thanh đặc đáy bìa · chữ to nhất',
-    'Đổi hẳn sang <b>thanh đặc màu nền</b> cao 34px, có đường kẻ trên — như gáy dưới của bìa sách. ' +
-    'Chữ 10px, 18+ khung đậm. <b>Tương phản tuyệt đối, không phụ thuộc ảnh bìa</b>, nhưng che mất 34px ảnh.',
-    body(heroC))}
+  ${opt('3', 'Hai nhãn nổi · không dải',
+    'Bỏ dải: mỗi nhãn là một <b>viên nền đen đặc, viền sáng mảnh, bo 5px</b>, đặt hai góc dưới bìa. ' +
+    'Bìa không bị cắt ngang. 18+ đảo thành <b>nền trắng chữ đen</b> nên nổi nhất trên bìa. ' +
+    '<b>Gọn và “sạch bìa” nhất.</b>',
+    body(hero3))}
+
+  ${opt('4', 'Dải son đặc',
+    'Cả dải đáy bìa tô <b>son đậm #9d3348</b>, chữ trắng, 18+ là ô sáng mờ bên phải. ' +
+    '<b>Nổi nhất tuyệt đối</b> và cùng họ màu băng rôn — nhưng nặng, và át màu ảnh bìa.',
+    body(hero4))}
 </div>
 </body>
 </html>
