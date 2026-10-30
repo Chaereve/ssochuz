@@ -140,8 +140,8 @@ const byCount = (lib, f) => {
   ok(hCards > 0 && hCards < nAll, 'loc theo tac gia phai thu hep luoi (thay: ' + hCards + '/' + nAll + ')');
   const auChip = h.doc.querySelector('#fpick .fchip');
   ok(auChip && auChip.textContent.includes(AU), 'phai hien chip loc tac gia (thay: ' + (h.doc.querySelector('#fpick') || {}).textContent + ')');
-  const fl = h.doc.querySelector('#fcount a[href^="/tac-gia/?q="]');
-  ok(fl && fl.textContent.includes(AU), 'loc theo tac gia phai co link Xem tat ca (thay: ' + (h.doc.querySelector('#fcount') || {}).textContent + ')');
+  const fl = h.doc.querySelector('#fpick a[href^="/tac-gia/?q="]');
+  ok(fl && fl.textContent.includes(AU), 'loc theo tac gia phai co link Xem tat ca (thay: ' + (h.doc.querySelector('#fpick') || {}).textContent + ')');
   const bienTapH2 = h.doc.querySelector('#bien-tap h2');
   ok(bienTapH2 && bienTapH2.textContent.trim() === 'Chuyển thể Series', '#bien-tap h2 phai la Chuyển thể Series');
   const normMulti = h.win.CZ.norm({ title: 'Multi Couple', slug: 'multi-cp', couple: 'Lingling x Orm, Lookmhee x Sonya' });

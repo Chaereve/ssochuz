@@ -49,29 +49,35 @@ const LIB = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data/registry
   q.value = 'chain'; q.dispatchEvent(new win.Event('input', { bubbles: true })); await wait(300);
   out.search = { n: $$('#grid .card').length, fcount: txt('#fcount'), chip: txt('#fpick') };
   q.value = ''; q.dispatchEvent(new win.Event('input', { bubbles: true })); await wait(300);
-  /* Thanh lọc D1: chips tình trạng (chọn một) + chip 18+ (công tắc riêng) */
-  const chips = $$('#tabs .chip');
-  out.chips = chips.map(c => c.textContent.trim());
-  click(chips[2]); await wait(200);
-  out.tabFilter = { label: chips[2].textContent.trim(), n: $$('#grid .card').length };
-  click(chips[0]); await wait(200);
-  /* tình trạng lọc bằng chip ngay trên lưới — không còn ô “Tình trạng” trùng lặp */
+  /* Thanh lọc kiểu Linear (vòng 54): tình trạng + năm + 18+ nằm trong popover
+     “Bộ lọc”, đang lọc thì hiện hàng chip xoá được ngay dưới thanh */
+  click('#fBtn'); await wait(120);
+  out.popMo = { open: !$('#fPop').hidden, expanded: $('#fBtn').getAttribute('aria-expanded'), rows: $$('#fPopB .opt').length };
+  const opts = $$('#fPopB .opt');
+  out.chips = opts.map(c => c.textContent.trim());
+  const stOpt = opts.find(b => /Hoàn thành/.test(b.textContent));
+  click(stOpt); await wait(220);
+  out.tabFilter = { label: stOpt.textContent.trim(), n: $$('#grid .card').length,
+    checked: stOpt.getAttribute('aria-checked'), badge: txt('#fBtnN') };
+  const allOpt = opts.find(b => /^Tất cả/.test(b.textContent.trim()));
+  click(allOpt); await wait(200);
+  /* tình trạng lọc trong popover — không còn ô “Tình trạng” trùng lặp */
   out.statusSel = { conOLoc: !!$('#fStatus'), n0: $$('#grid .card').length };
-  const stTab = $$('#tabs .chip').find(b => /Hoàn thành/.test(b.textContent));
-  click(stTab); await wait(220);
+  click(stOpt); await wait(220);
   out.statusFilter = { n: $$('#grid .card').length, chip: txt('#fpick'), fcount: txt('#fcount') };
   /* 18+ ghép được với tình trạng: bật lên thì số thẻ phải ≤ số thẻ đang có */
   const nDone = $$('#grid .card').length;
-  const c18 = $$('#tabs .chip').find(b => /^18\+/.test(b.textContent.trim()));
-  click(c18); await wait(220);
+  const opt18 = opts.find(b => /^18\+/.test(b.textContent.trim()));
+  click(opt18); await wait(220);
   out.adultChip = {
-    on: c18.classList.contains('on'), pressed: c18.getAttribute('aria-pressed'),
+    on: opt18.getAttribute('aria-checked') === 'true',
     n: $$('#grid .card').length, leDone: $$('#grid .card').length <= nDone,
-    fcount: txt('#fcount'),
-    allPressed: $$('#tabs .chip').filter(c => c.getAttribute('aria-pressed') === 'true').length
+    fcount: txt('#fcount'), badge: txt('#fBtnN')
   };
-  click($$('#tabs .chip').find(b => /^18\+/.test(b.textContent.trim()))); await wait(160);
-  click($$('#tabs .chip')[0]); await wait(200);
+  click(opt18); await wait(160);
+  click(allOpt); await wait(200);
+  doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await wait(120);
+  out.popDong = { hidden: $('#fPop').hidden, expanded: $('#fBtn').getAttribute('aria-expanded'), chipRong: txt('#fpick') };
   const sel = $('#fSort');
   out.sortOptions = [...sel.options].map(o => o.textContent);
   sel.value = 'az'; sel.dispatchEvent(new win.Event('change', { bubbles: true })); await wait(200);

@@ -495,6 +495,7 @@
   }
 
   /* ======================= THƯ VIỆN ==================================== */
+  var yearList = [];          /* [{ v: '2026', c: 18 }] — popover dựng từ đây */
   function buildFilters() {
     var lib = CZ.lib();
     var uniq = function (a) { var seen = {}; return a.filter(function (v) { if (!v || seen[v]) return false; seen[v] = 1; return true; }); };
@@ -502,18 +503,16 @@
     var yearCount = {};
     lib.forEach(function (n) { if (n.year) yearCount[n.year] = (yearCount[n.year] || 0) + 1; });
     /* Năm kèm số bộ: chọn năm nào là biết ngay còn bao nhiêu truyện, không phải
-       bấm rồi mới thấy lưới trống. Tác giả/couple không còn ô chọn riêng —
-       mỗi couple chỉ có tối đa 2 bộ, một danh sách dài như thế không giúp gì. */
-    $('#fYear').innerHTML = '<option value="">Tất cả</option>' + years.map(function (y) {
-      return '<option value="' + esc(y) + '">' + esc(y) + ' (' + yearCount[y] + ')</option>';
-    }).join('');
+       bấm rồi mới thấy lưới trống. Năm không còn ô chọn riêng trên thanh —
+       nó là một nhóm trong popover “Bộ lọc”. */
+    yearList = years.map(function (y) { return { v: String(y), c: yearCount[y] }; });
     var sorts = [['new', 'Mới nhất'], ['year-desc', 'Năm mới nhất'], ['year-asc', 'Năm cũ nhất'],
       ['chap-desc', 'Nhiều chương nhất'], ['az', 'Tên A → Z']];
     if (statsOn()) sorts.push(['views', 'Đọc nhiều nhất']);   /* chỉ khi có số thật */
     $('#fSort').innerHTML = sorts.map(function (o) {
       return '<option value="' + o[0] + '">' + o[1] + '</option>';
     }).join('');
-    renderChips();
+    renderPop();
   }
   /* Chips lọc: tình trạng là một nhóm chọn-một, 18+ là công tắc riêng — hai thứ
      GHÉP ĐƯỢC với nhau và với Năm, nên “Hoàn thành + 18+” ra đúng 4 bộ chứ
@@ -523,22 +522,32 @@
   function adultCount() {
     return CZ.lib().filter(function (n) { return n.is18; }).length;
   }
-  function renderChips() {
-    var box = $('#tabs');
+  /* Popover “Bộ lọc”: hai nhóm — Tình trạng (chọn một + công tắc 18+) và Năm ra
+     mắt (chọn một). Mỗi dòng có dấu ✓ (chỉ hiện khi đang chọn) và số đếm lấy
+     trên toàn thư viện, nên bấm là biết ngay còn bao nhiêu bộ. */
+  function renderPop() {
+    var box = $('#fPopB');
     if (!box) return;
     var defs = tabDefs().map(function (t) { return { k: t.k, l: t.l, c: t.c }; });
     var n18 = adultCount();
-    if (n18) defs.push({ k: '18', l: '18+', c: n18 });
-    /* số liệu đọc về sau (KV) chỉ đổi phần đếm — dựng lại y nguyên thì chip
-       đang được bàn phím trỏ tới sẽ mất focus, nên chỉ vẽ khi thật sự khác */
-    var sig = defs.map(function (t) { return t.k + ':' + t.c; }).join('|');
-    if (box.dataset.sig === sig) return;
+    var row = function (g, v, label, c) {
+      return '<button class="opt" type="button" role="menuitemradio" aria-checked="false" data-g="' + g +
+        '" data-v="' + esc(v) + '"><span class="tick">' + ic('check') + '</span>' + esc(label) +
+        (c == null ? '' : '<span class="c">' + c + '</span>') + '</button>';
+    };
+    var st = defs.map(function (t) { return row('tab', t.k, t.l, t.c); }).join('');
+    if (n18) st += row('adult', '1', '18+', n18);
+    var yr = row('year', '', 'Tất cả năm', CZ.lib().length) +
+      yearList.map(function (y) { return row('year', y.v, y.v, y.c); }).join('');
+    var sig = st + '|' + yr;
+    if (box.dataset.sig === sig) return;      /* số liệu đọc về sau chỉ đổi số đếm */
     box.dataset.sig = sig;
-    box.innerHTML = defs.map(function (t) {
-      var on = t.k === '18' ? !!state.adult : t.k === state.tab;
-      return '<button class="chip' + (on ? ' on' : '') + '" data-k="' + t.k + '" aria-pressed="' + on + '">' +
-        esc(t.l) + '<b>' + t.c + '</b></button>';
-    }).join('');
+    box.innerHTML = '<div class="grp"><div class="gl">Tình trạng</div>' + st + '</div>' +
+      '<div class="grp"><div class="gl">Năm ra mắt</div>' + yr + '</div>';
+  }
+  function statusLabel(k) {
+    var hit = tabDefs().filter(function (t) { return t.k === k; })[0];
+    return hit ? hit.l : k;
   }
   /* chip tình trạng (chọn một) — nhãn 18+ là chip riêng, ghép được với nhau */
   function tabDefs() {
@@ -603,7 +612,7 @@
   }
   function render() {
     var libSub = $('#libSub');
-    if (libSub) libSub.textContent = CZ.lib().length + ' bộ · ' + state.per + ' bộ mỗi trang';
+    if (libSub) libSub.innerHTML = CZ.lib().length + ' bộ<span class="per"> · ' + state.per + ' bộ mỗi trang</span>';
     syncFilterUI();                      /* dãy tab phải chạy theo trạng thái lọc */
     var list = filtered();
     var total = Math.max(1, Math.ceil(list.length / state.per));
@@ -629,27 +638,42 @@
        (hai cái sau đi vào bằng liên kết chia sẻ). Bật bất cứ bộ lọc nào là
        hàng này xuất hiện kèm nút xoá nhanh. */
     var picked = [];
-    ['year', 'author', 'couple'].forEach(function (k) { if (state[k]) picked.push([k, state[k]]); });
-    if (state.q) picked.push(['q', '“' + state.q + '”']);
-    var anyFilter = picked.length > 0 || state.tab !== 'all' || state.adult;
-    $('#fpick').innerHTML = !anyFilter ? '' : picked.map(function (p, i) {
-        return '<span class="fchip">' + esc(p[1]) + '<span data-rm="' + i + '" title="Bỏ lọc">' + ic('x', 'i-s') + '</span></span>';
-      }).join('') + '<button class="lnk" id="clrAll2">Xoá lọc</button>';
+    if (state.tab !== 'all') picked.push(['tab', state.tab, 'Tình trạng: ' + statusLabel(state.tab)]);
+    if (state.year) picked.push(['year', state.year, 'Năm: ' + state.year]);
+    if (state.adult) picked.push(['adult', '1', '18+']);
+    if (state.q) picked.push(['q', state.q, '“' + state.q + '”']);
+    if (state.author) picked.push(['author', state.author, 'Tác giả: ' + state.author]);
+    if (state.couple) picked.push(['couple', state.couple, 'Couple: ' + state.couple]);
+    $('#fpick').innerHTML = !picked.length ? '' :
+      '<span class="cl">Đang lọc</span>' + picked.map(function (p, i) {
+        return '<span class="fchip">' + esc(p[2]) +
+          '<span data-rm="' + i + '" role="button" tabindex="0" title="Bỏ lọc" aria-label="Bỏ lọc ' +
+          esc(p[2]) + '">' + ic('x', 'i-s') + '</span></span>';
+      }).join('') + '<button class="lnk" id="clrAll2" type="button">Xoá tất cả</button>' +
+      /* lọc theo tác giả/couple (đi vào bằng liên kết chia sẻ) thì dẫn sang
+         trang riêng của người đó — trước đây nằm cạnh số đếm, giờ nằm ở đây */
+      (state.author ? '<a class="lnk" href="/tac-gia/?q=' + encodeURIComponent(CZ.slugify(state.author)) +
+        '">Xem tất cả truyện của ' + esc(state.author) + '</a>' : '') +
+      (state.couple ? '<a class="lnk" href="/couple/?q=' + encodeURIComponent(CZ.slugify(state.couple)) +
+        '">Xem tất cả truyện của ' + esc(state.couple) + '</a>' : '');
     $('#qClr').classList.toggle('hide', !state.q);
     /* “1–24 / 67”: đang xem bao nhiêu trên tổng bao nhiêu, gọn hơn câu
        “67 truyện · đang lọc 2 tiêu chí · trang 1/3” mà vẫn đủ thông tin. */
     var from = list.length ? (state.page - 1) * state.per + 1 : 0;
     var to = Math.min(list.length, state.page * state.per);
-    $('#fcount').innerHTML = (list.length ? '<b>' + from + '–' + to + '</b> / ' + list.length : '0 / 0') +
-      /* lọc theo tác giả/couple thì dẫn sang trang riêng của người đó */
-      (state.author ? ' · <a href="/tac-gia/?q=' + encodeURIComponent(CZ.slugify(state.author)) + '">Xem tất cả truyện của ' + esc(state.author) + '</a>' : '') +
-      (state.couple ? ' · <a href="/couple/?q=' + encodeURIComponent(CZ.slugify(state.couple)) + '">Xem tất cả truyện của ' + esc(state.couple) + '</a>' : '');
+    $('#fcount').innerHTML = list.length ? '<b>' + from + '–' + to + '</b> / ' + list.length : '0 / 0';
     $$('[data-rm]', $('#fpick')).forEach(function (b) {
-      b.addEventListener('click', function () {
+      var drop = function () {
         var k = picked[+b.dataset.rm][0];
-        if (k === 'q') { state.q = ''; $('#q').value = ''; }
+        if (k === 'tab') state.tab = 'all';
+        else if (k === 'adult') state.adult = false;
+        else if (k === 'q') { state.q = ''; $('#q').value = ''; }
         else state[k] = '';
-        syncFilterUI(); state.page = 1; render();
+        state.page = 1; render();
+      };
+      b.addEventListener('click', drop);
+      b.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); drop(); }
       });
     });
     var clr = $('#clrAll') || $('#clrAll2');
@@ -673,15 +697,23 @@
   function clearAll() {
     state.tab = 'all'; state.adult = false; state.year = state.author = state.couple = state.q = '';
     $('#q').value = ''; syncFilterUI(); state.page = 1; render();
-    if ($('#tabs .chip')) $('#tabs .chip').focus({ preventScroll: true });
+    if ($('#fBtn')) $('#fBtn').focus({ preventScroll: true });
+  }
+  /* số điều kiện đang bật HIỆN TRONG POPOVER (tình trạng / năm / 18+) — con số
+     trên nút “Bộ lọc”; từ khoá có nút xoá riêng trong ô tìm nên không tính */
+  function filterCount() {
+    return (state.tab !== 'all' ? 1 : 0) + (state.year ? 1 : 0) + (state.adult ? 1 : 0);
   }
   function syncFilterUI() {
-    $$('#tabs .chip').forEach(function (c) {
-      var on = c.dataset.k === '18' ? !!state.adult : c.dataset.k === state.tab;
-      c.classList.toggle('on', on);
-      c.setAttribute('aria-pressed', on ? 'true' : 'false');
+    $$('#fPopB .opt').forEach(function (b) {
+      var g = b.dataset.g, v = b.dataset.v, on;
+      if (g === 'tab') on = v === state.tab;
+      else if (g === 'adult') on = !!state.adult;
+      else on = String(state.year || '') === v;
+      b.setAttribute('aria-checked', on ? 'true' : 'false');
     });
-    $('#fYear').value = state.year;
+    var n = filterCount(), nb = $('#fBtnN');
+    if (nb) { nb.textContent = n; nb.hidden = !n; }
     /* danh sách sắp xếp đổi theo việc có số liệu thật hay không — chỉ gán khi
        lựa chọn đang giữ còn tồn tại, tránh ô chọn rỗng */
     if ($('#fSort').querySelector('option[value="' + state.sort + '"]')) $('#fSort').value = state.sort;
@@ -693,15 +725,40 @@
     qTimer = setTimeout(function () { state.q = v.trim(); state.page = 1; render(); }, 160);
   });
   $('#q').addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.target.value = ''; state.q = ''; state.page = 1; render(); } });
-  $('#fYear').addEventListener('change', function (e) { state.year = e.target.value; state.page = 1; render(); });
   $('#fSort').addEventListener('change', function (e) { state.sort = e.target.value; state.page = 1; render(); });
-  /* Một chỗ duy nhất xử lý cả nhóm: tình trạng là chọn-một, 18+ là công tắc
-     riêng, cả hai ghép được với Năm và từ khoá. */
-  $('#tabs').addEventListener('click', function (e) {
-    var b = e.target.closest('.chip'); if (!b) return;
-    if (b.dataset.k === '18') state.adult = !state.adult;
-    else state.tab = b.dataset.k;
+  /* ---- popover Bộ lọc: mở/đóng, chọn điều kiện, bàn phím ---- */
+  var fBtn = $('#fBtn'), fPop = $('#fPop');
+  function togglePop(open) {
+    if (!fPop) return;
+    fPop.hidden = !open;
+    fBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) {
+      var first = $('#fPopB .opt[aria-checked="true"]') || $('#fPopB .opt');
+      if (first) first.focus({ preventScroll: true });
+    }
+  }
+  fBtn.addEventListener('click', function () { togglePop(fPop.hidden); });
+  $('#fPopX').addEventListener('click', function () { togglePop(false); fBtn.focus({ preventScroll: true }); });
+  $('#fPopOk').addEventListener('click', function () { togglePop(false); fBtn.focus({ preventScroll: true }); });
+  $('#fPopClr').addEventListener('click', clearAll);
+  /* Một chỗ duy nhất xử lý cả nhóm: tình trạng chọn-một, năm chọn-một, 18+ là
+     công tắc riêng — cả ba ghép được với nhau và với từ khoá. Popover giữ
+     nguyên trạng thái mở để chọn tiếp như Linear. */
+  $('#fPopB').addEventListener('click', function (e) {
+    var b = e.target.closest('.opt'); if (!b) return;
+    var g = b.dataset.g;
+    if (g === 'tab') state.tab = b.dataset.v;
+    else if (g === 'adult') state.adult = !state.adult;
+    else state.year = b.dataset.v;
     state.page = 1; render();
+  });
+  document.addEventListener('click', function (e) {
+    if (!fPop || fPop.hidden) return;
+    if (e.target.closest('#fPop') || e.target.closest('#fBtn')) return;
+    togglePop(false);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && fPop && !fPop.hidden) { togglePop(false); fBtn.focus({ preventScroll: true }); }
   });
   $('#qClr').addEventListener('click', function () {
     $('#q').value = ''; state.q = ''; state.page = 1; render();

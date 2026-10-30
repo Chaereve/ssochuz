@@ -15,7 +15,7 @@
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://ssochuz.pages.dev/ssochuz.png">
   <!-- N13: bỏ preconnect Firestore — không còn đọc thẳng Firestore từ máy khách -->
-<link rel="stylesheet" href="/cz.css?v=20261030grid1">
+<link rel="stylesheet" href="/cz.css?v=20261030bar1">
 </head>
 <body class="hpage">
 
@@ -114,31 +114,44 @@
     </section>
 
     <!-- ================= THƯ VIỆN ================= -->
-    <!-- Thanh lọc hai tầng: tầng 1 = tìm + Năm + Sắp xếp,
-         tầng 2 = chips tình trạng/nhãn kèm số lượng + số kết quả. Thư viện chỉ
-         có một kiểu xem là lưới nên không còn công tắc kiểu xem.
-         Tác giả/couple không còn ô chọn riêng (dữ liệu: mỗi couple tối đa 2 bộ)
-         — vẫn ghép được qua ?author= / ?couple= khi cần chia sẻ liên kết. -->
+    <!-- Thanh công cụ kiểu Linear/Stripe: ô tìm đứng riêng, mọi bộ lọc ít dùng
+         (tình trạng, năm ra mắt, 18+) gom vào MỘT nút “Bộ lọc” có số đếm, mở ra
+         popover chia nhóm. Đang lọc thì ngay dưới hiện hàng chip điều kiện xoá
+         được — trả lời đúng câu “tôi đang xem cái gì”. Tác giả/couple không có
+         ô chọn riêng nhưng vẫn lọc được qua ?author= / ?couple=. -->
     <section class="sec fade" id="thu-vien">
       <div class="sechead">
         <h2>Thư viện</h2>
         <span class="sub" id="libSub"></span>
+        <span class="right"><span class="lcount" id="fcount" aria-live="polite" aria-atomic="true"></span></span>
       </div>
       <div class="libd">
-        <div class="libbar">
-          <label class="srch"><span data-ic="search"></span>
-            <input id="q" type="search" placeholder="Tìm truyện, tác giả, couple…" aria-label="Tìm trong thư viện" autocomplete="off" spellcheck="false">
-            <button class="qclr hide" id="qClr" aria-label="Xoá ô tìm kiếm" title="Xoá"><span data-ic="x"></span></button>
-            <kbd aria-hidden="true">⌘K</kbd>
-          </label>
-          <span class="dd"><span class="lb">Năm</span><select id="fYear" aria-label="Lọc theo năm"></select><span class="cv" aria-hidden="true" data-ic="down"></span></span>
-          <span class="dd"><span class="lb">Sắp xếp</span><select id="fSort" aria-label="Sắp xếp"></select><span class="cv" aria-hidden="true" data-ic="down"></span></span>
+        <div class="lbtop">
+          <div class="lbtool">
+            <label class="srch"><span data-ic="search"></span>
+              <input id="q" type="search" placeholder="Tìm truyện, tác giả, couple…" aria-label="Tìm trong thư viện" autocomplete="off" spellcheck="false">
+              <button class="qclr hide" id="qClr" aria-label="Xoá ô tìm kiếm" title="Xoá"><span data-ic="x"></span></button>
+              <kbd aria-hidden="true">⌘K</kbd>
+            </label>
+            <div class="lbtools">
+              <button class="lbf" id="fBtn" type="button" aria-expanded="false" aria-controls="fPop">
+                <span data-ic="filter"></span><span>Bộ lọc</span><b class="n" id="fBtnN" hidden></b>
+              </button>
+              <span class="dd"><select id="fSort" aria-label="Sắp xếp"></select><span class="cv" aria-hidden="true" data-ic="down"></span></span>
+            </div>
+          </div>
+          <!-- popover: nội dung do cz-home.js dựng theo dữ liệu thật -->
+          <div class="fpop" id="fPop" hidden>
+            <div class="fpop-h"><b>Bộ lọc</b>
+              <button class="x" id="fPopX" type="button" aria-label="Đóng bộ lọc"><span data-ic="x"></span></button></div>
+            <div class="fpop-b" id="fPopB" role="group" aria-label="Điều kiện lọc"></div>
+            <div class="fpop-f">
+              <button class="clr" id="fPopClr" type="button">Xoá lọc</button>
+              <button class="ok" id="fPopOk" type="button">Xong</button>
+            </div>
+          </div>
         </div>
-        <div class="librow">
-          <div class="libchips" id="tabs" role="group" aria-label="Lọc theo tình trạng và nhãn"></div>
-          <div class="end"><span class="lcount" id="fcount" aria-live="polite" aria-atomic="true"></span></div>
-        </div>
-        <div class="fpick" id="fpick"></div>
+        <div class="fpick" id="fpick" aria-live="polite"></div>
         <div class="grid" id="grid"></div>
         <div class="pager" id="pager"></div>
       </div>
@@ -152,11 +165,11 @@
 
 <script src="/cz-config.js?v=20261012n"></script>
 <script src="/cz-stickers.js?v=20261012n"></script>
-<script src="/cz-app.js?v=20261030grid1"></script>
+<script src="/cz-app.js?v=20261030bar1"></script>
 <script src="/cz-auth.js?v=20261012n"></script>
 <script src="/cz-personal.js?v=20261013notif1"></script>
 <script src="/cz-dice.js?v=20261014feat1"></script>
 <script src="/cz-hero.js?v=20261029perf1"></script>
-<script src="/cz-home.js?v=20261030grid1"></script>
+<script src="/cz-home.js?v=20261030bar1"></script>
 </body>
 </html>
