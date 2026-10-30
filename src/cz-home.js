@@ -468,10 +468,10 @@
     /* Năm kèm số bộ: chọn năm nào là biết ngay còn bao nhiêu truyện, không phải
        bấm rồi mới thấy lưới trống. Tác giả/couple không còn ô chọn riêng —
        mỗi couple chỉ có tối đa 2 bộ, một danh sách dài như thế không giúp gì. */
-    $('#fYear').innerHTML = '<option value="">Tất cả năm</option>' + years.map(function (y) {
+    $('#fYear').innerHTML = '<option value="">Tất cả</option>' + years.map(function (y) {
       return '<option value="' + esc(y) + '">' + esc(y) + ' (' + yearCount[y] + ')</option>';
     }).join('');
-    var sorts = [['new', 'Mới cập nhật'], ['year-desc', 'Năm mới nhất'], ['year-asc', 'Năm cũ nhất'],
+    var sorts = [['new', 'Mới nhất'], ['year-desc', 'Năm mới nhất'], ['year-asc', 'Năm cũ nhất'],
       ['chap-desc', 'Nhiều chương nhất'], ['az', 'Tên A → Z']];
     if (statsOn()) sorts.push(['views', 'Đọc nhiều nhất']);   /* chỉ khi có số thật */
     $('#fSort').innerHTML = sorts.map(function (o) {

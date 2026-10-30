@@ -1297,9 +1297,13 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .libbar .dd, .libbar .end { flex: 0 0 auto; }
 .libbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
   padding-bottom: 12px; border-bottom: 1px solid var(--bd); margin-bottom: 14px; }
-.libbar .end, .srch { flex: 1 1 250px; min-width: 190px; display: flex; align-items: center; gap: 8px;
+.libbar .srch { flex: 1 1 240px; min-width: 170px; display: flex; align-items: center; gap: 8px;
   height: 34px; padding: 0 10px; border: 1px solid var(--bd); border-radius: 9px;
   background: var(--surf); transition: border-color var(--t-fast), background var(--t-fast); }
+/* cụm nút xem (lưới / danh sách) KHÔNG phải ô nhập liệu: không viền, không nền,
+   không co giãn — chỉ là hai nút dính sát mép phải của thanh lọc. */
+.libbar .end { flex: 0 0 auto; min-width: 0; height: auto; padding: 0; margin-left: auto;
+  display: flex; align-items: center; gap: 8px; border: 0; background: none; }
 .srch:focus-within, .dd:focus-within { border-color: var(--acc); box-shadow: 0 0 0 3px var(--ring); }
 .srch .i { width: 14px; height: 14px; color: var(--mut); }
 .srch input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: 0;
@@ -1311,13 +1315,13 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   color: var(--dim); font-size: 9.5px; font-weight: 700; white-space: nowrap; }
 /* ô chọn thật, khoác áo nút: bấm là ra danh sách quen thuộc của hệ điều hành
    (bàn phím, tìm theo chữ, đọc màn hình đều chuẩn) nhưng nhìn như một nút */
-.dd { position: relative; display: inline-flex; align-items: center; gap: 5px; height: 34px;
-  padding: 0 9px 0 11px; border: 1px solid var(--bd); border-radius: 9px; background: var(--surf);
-  font-size: 12.5px; font-weight: 650; color: var(--mut); white-space: nowrap;
+.dd { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 34px;
+  padding: 0 8px 0 11px; border: 1px solid var(--bd); border-radius: 9px; background: var(--surf);
+  font-size: 12.5px; font-weight: 650; color: var(--txt); white-space: nowrap;
   transition: border-color var(--t-fast), color var(--t-fast); }
 .dd:hover { color: var(--txt); border-color: var(--bd2); }
 .dd:focus-within { color: var(--txt); }
-.dd .lb { color: var(--dim); }
+.dd .lb { color: var(--dim); font-weight: 500; }
 .dd select { max-width: 168px; height: 100%; padding: 0; border: 0; outline: 0; background: none;
   color: inherit; font: inherit; cursor: pointer; appearance: none; -webkit-appearance: none; }
 .dd select option { background: var(--surf2); color: var(--txt); }
@@ -1326,15 +1330,16 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .librow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .librow .end { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 .libchips { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
-.libchips .chip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px;
-  border: 1px solid var(--bd); border-radius: 99px; background: var(--surf);
+.libchips .chip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px;
+  border: 1px solid transparent; border-radius: 8px; background: var(--surf);
   font-size: 12px; font-weight: 650; color: var(--mut);
   transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast); }
-.libchips .chip b { padding: 2px 4px; border-radius: var(--r-sm); background: var(--surf2);
+.libchips .chip b { padding: 2px 5px; border-radius: 5px; background: var(--surf2);
   color: var(--dim); font-size: 9.5px; font-weight: 700; line-height: 1;
-  font-variant-numeric: tabular-nums; }
-.libchips .chip:hover { color: var(--txt); border-color: var(--bd2); }
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.libchips .chip:hover { color: var(--txt); border-color: var(--bd2); background: var(--surf2); }
 .libchips .chip.on { background: var(--acc-soft); border-color: var(--acc); color: var(--txt); }
+.libchips .chip:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
 .libchips .chip.on b { background: color-mix(in srgb, var(--acc) 22%, transparent); color: var(--acc); }
 .lcount { font-family: var(--font-mono); font-size: 11px; font-weight: 650; letter-spacing: .05em;
   text-transform: uppercase; color: var(--dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -1360,7 +1365,8 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
      dưới — cùng một bố cục, chỉ hẹp lại */
   .libbar { gap: 7px; margin-bottom: 12px; }
   .libbar .srch { flex: 1 1 100%; }
-  .libbar .dd select { max-width: 124px; }
+  .libbar .dd select { max-width: 118px; }
+  .libbar .srch kbd { display: none; }
   .libbar .end { margin-left: 0; width: 100%; justify-content: flex-end; }
   .librow { gap: 8px; }
   .librow .end { margin-left: 0; width: 100%; justify-content: flex-end; }
