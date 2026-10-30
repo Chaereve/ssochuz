@@ -496,6 +496,7 @@
 
   /* ======================= THƯ VIỆN ==================================== */
   var yearList = [];          /* [{ v: '2026', c: 18 }] — popover dựng từ đây */
+  var sortList = [['new', 'Mới nhất']];   /* [[khoá, nhãn]] — menu sắp xếp dựng từ đây */
   function buildFilters() {
     var lib = CZ.lib();
     var uniq = function (a) { var seen = {}; return a.filter(function (v) { if (!v || seen[v]) return false; seen[v] = 1; return true; }); };
@@ -509,9 +510,8 @@
     var sorts = [['new', 'Mới nhất'], ['year-desc', 'Năm mới nhất'], ['year-asc', 'Năm cũ nhất'],
       ['chap-desc', 'Nhiều chương nhất'], ['az', 'Tên A → Z']];
     if (statsOn()) sorts.push(['views', 'Đọc nhiều nhất']);   /* chỉ khi có số thật */
-    $('#fSort').innerHTML = sorts.map(function (o) {
-      return '<option value="' + o[0] + '">' + o[1] + '</option>';
-    }).join('');
+    sortList = sorts;
+    renderSort();
     renderPop();
   }
   /* Chips lọc: tình trạng là một nhóm chọn-một, 18+ là công tắc riêng — hai thứ
@@ -544,6 +544,20 @@
     box.dataset.sig = sig;
     box.innerHTML = '<div class="grp"><div class="gl">Tình trạng</div>' + st + '</div>' +
       '<div class="grp"><div class="gl">Năm ra mắt</div>' + yr + '</div>';
+  }
+  /* Menu sắp xếp tự vẽ: danh sách xổ của <select> do hệ điều hành vẽ nên không
+     theo được nền tối — thay bằng listbox cùng ngôn ngữ với popover Bộ lọc. */
+  function renderSort() {
+    var box = $('#fSortBody');
+    if (!box) return;
+    box.innerHTML = sortList.map(function (o) {
+      return '<button class="opt" type="button" role="option" aria-selected="false" data-v="' + o[0] +
+        '"><span class="tick">' + ic('check') + '</span>' + esc(o[1]) + '</button>';
+    }).join('');
+  }
+  function sortLabel(k) {
+    var hit = sortList.filter(function (o) { return o[0] === k; })[0];
+    return hit ? hit[1] : 'Mới nhất';
   }
   function statusLabel(k) {
     var hit = tabDefs().filter(function (t) { return t.k === k; })[0];
@@ -714,9 +728,15 @@
     });
     var n = filterCount(), nb = $('#fBtnN');
     if (nb) { nb.textContent = n; nb.hidden = !n; }
-    /* danh sách sắp xếp đổi theo việc có số liệu thật hay không — chỉ gán khi
-       lựa chọn đang giữ còn tồn tại, tránh ô chọn rỗng */
-    if ($('#fSort').querySelector('option[value="' + state.sort + '"]')) $('#fSort').value = state.sort;
+    /* danh sách sắp xếp đổi theo việc có số liệu thật hay không — chỉ đổi nhãn
+       khi lựa chọn đang giữ còn tồn tại, tránh hiện một kiểu đã bị gỡ */
+    if (sortList.some(function (o) { return o[0] === state.sort; })) {
+      var sv = $('#fSortVal');
+      if (sv) sv.textContent = sortLabel(state.sort);
+    }
+    $$('#fSortBody .opt').forEach(function (b) {
+      b.setAttribute('aria-selected', b.dataset.v === state.sort ? 'true' : 'false');
+    });
   }
   var qTimer = null;
   $('#q').addEventListener('input', function (e) {
@@ -725,37 +745,52 @@
     qTimer = setTimeout(function () { state.q = v.trim(); state.page = 1; render(); }, 160);
   });
   $('#q').addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.target.value = ''; state.q = ''; state.page = 1; render(); } });
-  $('#fSort').addEventListener('change', function (e) { state.sort = e.target.value; state.page = 1; render(); });
-  /* ---- popover Bộ lọc: mở/đóng, chọn điều kiện, bàn phím ---- */
+  /* ---- hai menu (Bộ lọc + Sắp xếp): cùng cách bung ra, cùng cách đóng ---- */
   var fBtn = $('#fBtn'), fPop = $('#fPop');
-  /* Bung ra đúng dưới nút: mép phải popover thẳng với mép phải nút, nhưng luôn
-     kẹp trong khung nhìn — nút nằm sát lề phải thì popover trượt sang trái,
-     nút nằm sát lề trái (máy hẹp) thì căn trái theo nút. */
-  function placePop() {
-    if (!fPop || !fBtn) return;
+  var sBtn = $('#fSort'), sPop = $('#fSortList');
+  /* Bung ra đúng dưới nút: mép phải menu thẳng với mép phải nút, nhưng luôn kẹp
+     trong khung nhìn — nút sát lề phải thì menu trượt sang trái, máy hẹp thì
+     căn trái theo nút. */
+  function placePop(pop, btn) {
+    if (!pop || !btn) return;
     var vw = document.documentElement.clientWidth;
-    var w = Math.min(320, vw - 32);
-    var r = fBtn.getBoundingClientRect();
+    var w = Math.min(+(pop.dataset.w || 320), vw - 32);
+    var r = btn.getBoundingClientRect();
     var l = Math.min(0, r.width - w);
     l = Math.max(l, 16 - r.left);
     if (r.left + l + w > vw - 16) l = vw - 16 - w - r.left;
-    fPop.style.width = w + 'px';
-    fPop.style.left = Math.round(l) + 'px';
+    pop.style.width = w + 'px';
+    pop.style.left = Math.round(l) + 'px';
   }
-  window.addEventListener('resize', function () { if (fPop && !fPop.hidden) placePop(); });
-  function togglePop(open) {
-    if (!fPop) return;
-    if (open) placePop();
-    fPop.hidden = !open;
-    fBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
-    if (open) {
-      var first = $('#fPopB .opt[aria-checked="true"]') || $('#fPopB .opt');
-      if (first) first.focus({ preventScroll: true });
+  function setMenu(pop, btn, open, focusSel) {
+    if (!pop || !btn) return;
+    if (open) placePop(pop, btn);
+    pop.hidden = !open;
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open && focusSel) {
+      var cur = pop.querySelector('[aria-checked="true"], [aria-selected="true"]') || pop.querySelector('.opt');
+      if (cur) cur.focus({ preventScroll: true });
     }
   }
-  fBtn.addEventListener('click', function () { togglePop(fPop.hidden); });
-  $('#fPopX').addEventListener('click', function () { togglePop(false); fBtn.focus({ preventScroll: true }); });
-  $('#fPopOk').addEventListener('click', function () { togglePop(false); fBtn.focus({ preventScroll: true }); });
+  function closeMenus(except) {
+    if (fPop && fPop !== except && !fPop.hidden) setMenu(fPop, fBtn, false);
+    if (sPop && sPop !== except && !sPop.hidden) setMenu(sPop, sBtn, false);
+  }
+  /* focusSel: chỉ dồn focus vào mục đang chọn khi mở bằng BÀN PHÍM — mở bằng
+     chuột mà cướp focus sẽ hiện vòng son như đang tab tới */
+  function togglePop(open, focusSel) { closeMenus(fPop); setMenu(fPop, fBtn, open, focusSel); }
+  function toggleSort(open, focusSel) { closeMenus(sPop); setMenu(sPop, sBtn, open, focusSel); }
+  window.addEventListener('resize', function () {
+    if (fPop && !fPop.hidden) placePop(fPop, fBtn);
+    if (sPop && !sPop.hidden) placePop(sPop, sBtn);
+  });
+
+  fBtn.addEventListener('click', function () { togglePop(fPop.hidden, false); });
+  fBtn.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); togglePop(true, true); }
+  });
+  $('#fPopX').addEventListener('click', function () { togglePop(false, false); fBtn.focus({ preventScroll: true }); });
+  $('#fPopOk').addEventListener('click', function () { togglePop(false, false); fBtn.focus({ preventScroll: true }); });
   $('#fPopClr').addEventListener('click', clearAll);
   /* Một chỗ duy nhất xử lý cả nhóm: tình trạng chọn-một, năm chọn-một, 18+ là
      công tắc riêng — cả ba ghép được với nhau và với từ khoá. Popover giữ
@@ -768,13 +803,45 @@
     else state.year = b.dataset.v;
     state.page = 1; render();
   });
-  document.addEventListener('click', function (e) {
-    if (!fPop || fPop.hidden) return;
-    if (e.target.closest('#fPop') || e.target.closest('#fBtn')) return;
-    togglePop(false);
+
+  /* ---- sắp xếp: nút chữ mở listbox tự vẽ ---- */
+  sBtn.addEventListener('click', function () { toggleSort(sPop.hidden, false); });
+  sBtn.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); toggleSort(true, true); }
   });
+  $('#fSortBody').addEventListener('click', function (e) {
+    var b = e.target.closest('.opt'); if (!b) return;
+    state.sort = b.dataset.v; state.page = 1;
+    toggleSort(false, false);
+    sBtn.focus({ preventScroll: true });
+    render();
+  });
+  /* điều hướng bằng bàn phím trong cả hai menu */
+  function menuKey(e, pop, btn) {
+    if (pop.hidden || e.target === btn) return false;   /* phím mở menu do nút xử lý */
+    var items = $$('.opt', pop);
+    var i = items.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown') { e.preventDefault(); (items[i + 1] || items[0]).focus(); return true; }
+    if (e.key === 'ArrowUp') { e.preventDefault(); (items[i - 1] || items[items.length - 1]).focus(); return true; }
+    if (e.key === 'Home') { e.preventDefault(); items[0].focus(); return true; }
+    if (e.key === 'End') { e.preventDefault(); items[items.length - 1].focus(); return true; }
+    if (e.key === 'Escape' || e.key === 'Tab') {
+      setMenu(pop, btn, false);
+      if (e.key === 'Escape') { e.preventDefault(); btn.focus({ preventScroll: true }); }
+      return true;
+    }
+    return false;
+  }
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && fPop && !fPop.hidden) { togglePop(false); fBtn.focus({ preventScroll: true }); }
+    if (menuKey(e, fPop, fBtn)) return;
+    menuKey(e, sPop, sBtn);
+  });
+  document.addEventListener('click', function (e) {
+    /* bấm vào chính nút thì để handler của nút lo (đừng đóng ngay sau khi mở) */
+    if (e.target.closest('#fBtn') || e.target.closest('#fSort')) return;
+    if (e.target.closest('#fPop')) { closeMenus(fPop); return; }
+    if (e.target.closest('#fSortList')) { closeMenus(sPop); return; }
+    closeMenus(null);
   });
   $('#qClr').addEventListener('click', function () {
     $('#q').value = ''; state.q = ''; state.page = 1; render();

@@ -150,7 +150,18 @@
                   </div>
                 </div>
               </span>
-              <span class="dd"><select id="fSort" aria-label="Sắp xếp"></select><span class="cv" aria-hidden="true" data-ic="down"></span></span>
+              <!-- sắp xếp: nút chữ + menu tự vẽ (danh sách xổ của <select> do hệ
+                   điều hành vẽ nên không theo được nền tối) -->
+              <span class="lbwrap">
+                <button class="dd" id="fSort" type="button" aria-haspopup="listbox"
+                  aria-expanded="false" aria-controls="fSortList" aria-label="Sắp xếp thư viện">
+                  <span class="val" id="fSortVal">Mới nhất</span>
+                  <span class="cv" aria-hidden="true" data-ic="down"></span>
+                </button>
+                <div class="fpop lpop" id="fSortList" data-w="232" hidden>
+                  <div class="fpop-b" id="fSortBody" role="listbox" aria-label="Sắp xếp thư viện"></div>
+                </div>
+              </span>
             </div>
           </div>
         </div>

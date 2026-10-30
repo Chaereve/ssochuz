@@ -88,12 +88,15 @@ function makeApi(log, votes) {
   out.rankThang = $$(p.doc, '#rank .rank').slice(0, 3).map(r => r.querySelector('.tt b').textContent.trim());
 
   /* ---------- 2. thư viện: sắp xếp “Đọc nhiều nhất” ---------- */
-  const sel = $(p.doc, '#fSort');
-  out.sortOptions = [...sel.options].map(o => o.textContent);
+  const clickEl = (el) => el && el.dispatchEvent(new p.win.MouseEvent('click', { bubbles: true }));
+  const sortOpts = () => [...p.doc.querySelectorAll('#fSortBody .opt')];
+  out.sortOptions = sortOpts().map(o => o.textContent.trim());
   out.hasViewsSort = out.sortOptions.includes('Đọc nhiều nhất');
-  sel.value = 'views'; sel.dispatchEvent(new p.win.Event('change', { bubbles: true })); await wait(300);
+  clickEl($(p.doc, '#fSort')); await wait(120);
+  clickEl(sortOpts().find(o => /Đọc nhiều nhất/.test(o.textContent))); await wait(300);
   out.viewsFirst = (($(p.doc, '#grid .card h3') || {}).textContent || '').trim();
-  sel.value = 'new'; sel.dispatchEvent(new p.win.Event('change', { bubbles: true })); await wait(150);
+  clickEl($(p.doc, '#fSort')); await wait(120);
+  clickEl(sortOpts().find(o => /^Mới nhất/.test(o.textContent))); await wait(200);
   out.errors0 = p.errors.slice(0, 5);
 
   /* ---------- 3. trang đọc: đếm lượt đọc + bấm Thích gửi lên KV ---------- */

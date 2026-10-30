@@ -78,11 +78,17 @@ const LIB = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data/registry
   click(allOpt); await wait(200);
   doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await wait(120);
   out.popDong = { hidden: $('#fPop').hidden, expanded: $('#fBtn').getAttribute('aria-expanded'), chipRong: txt('#fpick') };
-  const sel = $('#fSort');
-  out.sortOptions = [...sel.options].map(o => o.textContent);
-  sel.value = 'az'; sel.dispatchEvent(new win.Event('change', { bubbles: true })); await wait(200);
+  /* sắp xếp: nút chữ mở listbox tự vẽ (không còn <select> của hệ điều hành) */
+  const sortOpts = () => $$('#fSortBody .opt');
+  out.sortOptions = sortOpts().map(o => o.textContent.trim());
+  click('#fSort'); await wait(120);
+  out.sortMenuMo = { open: !$('#fSortList').hidden, expanded: $('#fSort').getAttribute('aria-expanded') };
+  click(sortOpts().find(o => /Tên A → Z/.test(o.textContent))); await wait(250);
   out.sortAZ = (($('#grid .card h3') || {}).textContent || '').trim();
-  sel.value = 'new'; sel.dispatchEvent(new win.Event('change', { bubbles: true })); await wait(150);
+  out.sortNhan = txt('#fSortVal');
+  out.sortDong = !$('#fSortList').hidden;
+  click('#fSort'); await wait(120);
+  click(sortOpts().find(o => /^Mới nhất/.test(o.textContent))); await wait(200);
 
   /* ---------- tìm nhanh (⌘K / phím /) ---------- */
   click('#czJump'); await wait(200);

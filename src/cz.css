@@ -1262,20 +1262,18 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   padding: 0 4px; border-radius: 8px; background: var(--acc); color: #2a1016;
   font-family: var(--font-mono); font-size: 10px; font-weight: 700; line-height: 1; }
 .lbf .n[hidden] { display: none; }
-/* sắp xếp: chữ + mũi tên, đổi giá trị tại chỗ (vẫn là <select> thật) */
-.dd { position: relative; display: inline-flex; align-items: center; gap: 5px; height: 32px;
-  padding: 0 4px 0 8px; border-radius: 7px; background: none; color: var(--mut);
-  font-size: 13px; font-weight: 500; letter-spacing: -.005em; white-space: nowrap;
+/* sắp xếp: chỉ chữ + mũi tên, mở ra menu tự vẽ (đồng bộ với popover Bộ lọc) */
+.dd { display: inline-flex; align-items: center; gap: 5px; height: 32px; padding: 0 4px 0 8px;
+  border: 0; border-radius: 7px; background: none; color: var(--mut);
+  font: inherit; font-size: 13px; font-weight: 500; letter-spacing: -.005em; white-space: nowrap;
   transition: color var(--t-fast), background var(--t-fast); }
-.dd:hover, .dd:focus-within { background: var(--surf2); color: var(--txt); }
-.dd select { max-width: 190px; height: 100%; padding: 0; border: 0; outline: 0; background: none;
-  /* ô chọn co theo ĐÚNG lựa chọn đang hiện nên mũi tên nằm sát chữ */
-  field-sizing: content; min-width: 0;
-  color: inherit; font: inherit; cursor: pointer; appearance: none; -webkit-appearance: none; }
-.dd select option { background: var(--surf2); color: var(--txt); font-weight: 500; }
+.dd:hover, .dd:focus-visible { background: var(--surf2); color: var(--txt); outline: 0; }
+.dd[aria-expanded="true"] { background: var(--surf2); color: var(--txt); }
+.dd .val { pointer-events: none; }
 .dd .cv { display: inline-flex; pointer-events: none; color: var(--dim); }
 .dd .cv .i { width: 10px; height: 10px; }
-.dd:hover .cv { color: var(--mut); }
+.dd:hover .cv, .dd[aria-expanded="true"] .cv { color: var(--mut); }
+.dd[aria-expanded="true"] .cv { transform: rotate(180deg); }
 /* ---- popover lọc ---- */
 /* bung ra ngay dưới nút “Bộ lọc” (không dạt sang phải, không rời khỏi nút) */
 .lbwrap { position: relative; display: inline-flex; }
@@ -1312,6 +1310,12 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .fpop-f .ok { height: 30px; padding: 0 14px; border: 0; border-radius: 7px;
   background: var(--txt); color: #1a1512; font: inherit; font-size: 12.5px; font-weight: 650; }
 .fpop-f .ok:hover { background: var(--acc); color: #2a1016; }
+/* menu sắp xếp: cùng ngôn ngữ với popover lọc nhưng gọn hơn (không đầu/đuôi) */
+.lpop { width: 232px; }
+.lpop .fpop-b { padding: 6px; max-height: none; overflow: visible; }
+.lpop .opt { height: 34px; }
+.lpop .opt[aria-selected="true"] { color: var(--txt); font-weight: 600; }
+.lpop .opt[aria-selected="true"] .tick { opacity: 1; }
 /* ---- hàng chip điều kiện đang bật ---- */
 .fpick { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-top: 12px; }
 .fpick:empty { display: none; }
