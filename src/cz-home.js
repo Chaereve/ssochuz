@@ -445,7 +445,7 @@
     el.hidden = false;
     /* Chuyển thể Series: băng ngang 16:10, chữ đè chân ảnh (30/10/2026).
        Bìa là ảnh dọc nên cắt ở 26% chiều cao để giữ mặt nhân vật. */
-    rail.innerHTML = list.slice(0, 6).map(function (n) {
+    rail.innerHTML = list.slice(0, 8).map(function (n) {
       var src = CZ.coverSrc(n), meta = [];
       if (n.chapters) meta.push(n.chapters + ' chương');
       meta.push(CZ.statusLabel(n.statusCls || n.status));
