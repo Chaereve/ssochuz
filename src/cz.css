@@ -1368,6 +1368,7 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   .libbar .dd select { max-width: 118px; }
   .libbar .srch kbd { display: none; }
   .libbar .end { margin-left: 0; width: 100%; justify-content: flex-end; }
+  @media (max-width: 430px) { .libbar .dd .lb { display: none; } }
   .librow { gap: 8px; }
   .librow .end { margin-left: 0; width: 100%; justify-content: flex-end; }
   .srch kbd { display: none; }
