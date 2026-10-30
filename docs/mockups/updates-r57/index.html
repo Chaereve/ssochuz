@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đề xuất vòng 57 · “Mới cập nhật” bớt rối</title>
+<link rel="stylesheet" href="/cz.css?v=20261030card1">
+<style>
+  .page { max-width: 1140px; margin: 0 auto; padding: 40px 20px 90px; }
+  .kick { font: 700 11px/1 ui-monospace, monospace; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--acc); }
+  h1 { margin: 14px 0 12px; font-size: 34px; line-height: 1.12; letter-spacing: -.015em;
+    font-family: var(--font-head); }
+  .lede { margin: 0 0 10px; max-width: 74ch; color: var(--mut); font-size: 15px; }
+  .lede b { color: var(--txt); }
+
+  h2 { margin: 46px 0 6px; font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--dim); font-weight: 700; }
+  .h2sub { margin: 0 0 16px; color: var(--mut); font-size: 14px; max-width: 76ch; }
+
+  .dev { border: 1px solid var(--bd); border-radius: 12px; background: var(--bg); overflow: hidden; }
+  .dev .cap { display: flex; align-items: center; gap: 8px; padding: 7px 12px;
+    border-bottom: 1px solid var(--bd); font: 700 10.5px/1 ui-monospace, monospace;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+  .dev .cap .w { margin-left: auto; font-weight: 600; }
+  .dev .stage2 { padding: 6px; }
+  .dev.mob { width: 402px; max-width: 100%; flex: none; }
+  .row { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+  .row .dev:not(.mob) { flex: 1 1 520px; min-width: 0; }
+  @media (max-width: 720px) { .dev.dsk { display: none; } }
+
+  .opt { margin: 0 0 44px; }
+  .opt-h { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+  .opt-h .tag { font: 700 11px/1 ui-monospace, monospace; letter-spacing: .12em;
+    text-transform: uppercase; padding: 4px 8px; border: 1px solid var(--acc);
+    border-radius: 4px; color: var(--acc); }
+  .opt-h h3 { margin: 0; font-size: 20px; font-family: var(--font-head); letter-spacing: -.01em; }
+  .opt-h .pick { margin-left: auto; font-size: 12px; color: var(--dim); }
+  .opt .say { margin: 0 0 14px; color: var(--mut); font-size: 14px; max-width: 78ch; }
+  .opt .say b { color: var(--txt); }
+
+  .k { display: grid; gap: 8px; margin: 16px 0 0; padding: 0; list-style: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 760px) { .k { grid-template-columns: 1fr; } }
+  .k li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 9px;
+    padding: 10px 12px; background: var(--surf); border: 1px solid var(--bd); border-radius: 9px; }
+  .k .n { font: 700 10.5px/1.6 ui-monospace, monospace; color: var(--acc); }
+  .k > li > span > b { display: block; font-size: 13px; color: var(--txt); margin-bottom: 2px; }
+  .k span.t { font-size: 12.5px; color: var(--mut); line-height: 1.55; }
+  .k span.t b { color: var(--txt); font-weight: 600; }
+
+  .why { margin: 18px 0 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+  .why li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px;
+    padding: 12px 14px; border-left: 2px solid var(--acc); background: var(--surf); border-radius: 0 8px 8px 0; }
+  .why .n { font: 700 12px/1.5 ui-monospace, monospace; color: var(--acc); }
+  .why b { display: block; color: var(--txt); font-size: 13.5px; margin-bottom: 2px; }
+  .why span.t { color: var(--mut); font-size: 13px; line-height: 1.55; }
+
+  footer { margin-top: 44px; padding-top: 20px; border-top: 1px solid var(--bd);
+    color: var(--dim); font-size: 13px; }
+  code { font-family: var(--font-mono); font-size: .92em; color: var(--txt);
+    background: var(--surf2); padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <p class="kick">Đề xuất vòng 57 · chưa sửa vào site</p>
+  <h1>“Mới cập nhật”: bốn nguyên nhân làm nó rối</h1>
+  <p class="lede">Danh sách này không sai bố cục. Nó đang <b>trộn bốn thứ khác đơn vị</b> vào cùng một
+    cột và để <b>cột phải tự co giãn theo chữ</b>, nên mỗi hàng cắt một kiểu. Ba phương án dưới đây
+    xử lý cùng bốn lỗi đó, theo ba mức can thiệp khác nhau.</p>
+
+  <ul class="why">
+    <li><span class="n">01</span><span><b>Trộn chữ với số ở cột phải</b>
+      <span class="t">“Đang cập nhật” (dài) đứng chung chỗ với “Ch. 42” (ngắn) — hai đơn vị khác nhau
+      mà cùng một cột.</span></span></li>
+    <li><span class="n">02</span><span><b>Cột phải tự co giãn</b>
+      <span class="t">“Đang cập nhật” chiếm ~92px, “Ch. 42” chiếm ~34px. Vì thế <b>mỗi hàng tiêu đề
+      cắt ở một mốc khác nhau</b> — không có cột nào để mắt bám.</span></span></li>
+    <li><span class="n">03</span><span><b>Bốn cỡ chữ trong một hàng 64px</b>
+      <span class="t">Tên 13px đậm · tác giả 11px mờ · số chương 11px đậm · ngày 10px mờ. Bốn cỡ chen
+      nhau, không cỡ nào làm “neo” cho hàng.</span></span></li>
+    <li><span class="n">04</span><span><b>Dữ liệu sai chỗ (lỗi thật, không phải thẩm mỹ)</b>
+      <span class="t">Mục tên là “12 bộ <b>vừa lên chương</b>” nhưng có 3 bộ <b>chưa có chương nào</b>
+      (Người Chồng Lạnh Lùng…, Nakira…, Love in the Fast Lane). Chính ba bộ này là thứ kéo chữ dài
+      vào cột phải.</span></span></li>
+  </ul>
+
+  <h2>Đang chạy</h2>
+  <p class="h2sub">Đúng 12 bộ thật, đúng thứ tự đang chạy. Đo ở 1180px: <b>5/12 tên bị cắt</b> “…”,
+    cột phải có ba kiểu khổ khác nhau.</p>
+  <div class="dev dsk"><div class="cap">Hiện tại · 3 cột <span class="w">1180px</span></div>
+    <div class="stage2"><div class="pv" data-src="frame.html?o=now" data-w="1180" data-t="Hiện tại"></div></div></div>
+
+  <h2>Ba phương án</h2>
+  <p class="h2sub">Mỗi khung là <b>iframe thật</b> rộng đúng bề ngang thiết bị rồi thu nhỏ — chữ, bìa,
+    đường kẻ đều là bản thật. Cả ba đều <b>bỏ ba bộ chưa có chương</b> khỏi mục này, vì “vừa lên
+    chương” thì phải có chương.</p>
+
+  <!-- ================= A ================= -->
+  <section class="opt">
+    <div class="opt-h"><span class="tag">A</span><h3>Cột phải cố định</h3>
+      <span class="pick">ít thay đổi nhất · giữ đúng dáng đang chạy</span></div>
+    <p class="say">Không đổi bố cục, chỉ <b>khoá cột phải ở 56px</b>: số chương to hơn (12.5px, chữ số
+      canh cột, chữ “Ch.” nhỏ nằm trước), ngày 10px mờ ở dưới. Cột không còn co giãn nên mọi tiêu đề
+      cắt ở cùng một mốc: <b>5/12 → 3/12 tên bị cắt</b>.</p>
+    <div class="dev dsk"><div class="cap">Desktop · 3 cột <span class="w">1180px</span></div>
+      <div class="stage2"><div class="pv" data-src="frame.html?o=a" data-w="1180" data-t="Phương án A ở 1180px"></div></div></div>
+    <div class="row" style="margin-top:14px">
+      <div class="dev mob"><div class="cap">Mobile <span class="w">390px</span></div>
+        <div class="stage2"><div class="pv" data-src="frame.html?o=a" data-w="390" data-t="Phương án A ở 390px"></div></div></div>
+      <div style="flex:1 1 320px"><ul class="k" style="grid-template-columns:1fr;margin-top:0">
+        <li><span class="n">01</span><span><b>Rủi ro thấp nhất</b><span class="t">Vẫn là “bìa · tên/tác giả · cột phải”, chỉ đổi độ rộng và cỡ chữ. Ghép vào bản đang chạy rất nhanh.</span></span></li>
+        <li><span class="n">02</span><span><b>Số chương thành cột thật</b><span class="t">42 / 71 / 16 xếp thẳng một cột, mắt quét dọc được.</span></span></li>
+        <li><span class="n">03</span><span><b>Đánh đổi</b><span class="t">Cột phải vẫn hai dòng chữ, và tên vẫn cắt “…” ở hai bộ tên dài nhất.</span></span></li>
+      </ul></div>
+    </div>
+  </section>
+
+  <!-- ================= B ================= -->
+  <section class="opt">
+    <div class="opt-h"><span class="tag">B</span><h3>Số chương lên bìa</h3>
+      <span class="pick">tên rộng nhất · cột phải chỉ còn ngày</span></div>
+    <p class="say">Con số rời khỏi cột chữ, thành <b>viên nhỏ ở góc dưới bìa</b> — cùng kiểu huy hiệu
+      vừa chốt cho thẻ thư viện. Cột phải chỉ còn <b>một dòng ngày</b>. Tên được rộng thêm ~60px:
+      còn <b>2/12 tên bị cắt</b>, và cả hai đều là bộ tên dài nhất trong thư viện.</p>
+    <div class="dev dsk"><div class="cap">Desktop · 3 cột <span class="w">1180px</span></div>
+      <div class="stage2"><div class="pv" data-src="frame.html?o=b" data-w="1180" data-t="Phương án B ở 1180px"></div></div></div>
+    <div class="row" style="margin-top:14px">
+      <div class="dev mob"><div class="cap">Mobile <span class="w">390px</span></div>
+        <div class="stage2"><div class="pv" data-src="frame.html?o=b" data-w="390" data-t="Phương án B ở 390px"></div></div></div>
+      <div style="flex:1 1 320px"><ul class="k" style="grid-template-columns:1fr;margin-top:0">
+        <li><span class="n">01</span><span><b>Cột phải sạch nhất</b><span class="t">Chỉ còn ngày — một cỡ chữ, không có gì so le để mắt phải chỉnh.</span></span></li>
+        <li><span class="n">02</span><span><b>Tên gần như không cắt</b><span class="t">Rộng thêm ~60px so với hiện tại.</span></span></li>
+        <li><span class="n">03</span><span><b>Đánh đổi</b><span class="t">Bìa chỉ 34×48px nên viên số phải nhỏ (14px cao, chữ 8.5px) — đọc được nhưng không “to” như cột phải. Bìa cũng bị viên số che một góc nhỏ.</span></span></li>
+      </ul></div>
+    </div>
+  </section>
+
+  <!-- ================= C ================= -->
+  <section class="opt">
+    <div class="opt-h"><span class="tag">C</span><h3>Hai dòng, không cột phải</h3>
+      <span class="pick">êm nhất · chỉ còn hai cỡ chữ</span></div>
+    <p class="say">Bỏ hẳn cột phải. Dòng dưới gom <b>tác giả · Ch. 42 · 29-09</b> thành một hàng chữ
+      cùng cỡ: tác giả dạt trái, số chương và ngày dạt phải. Tiêu đề rộng nhất trong ba phương án nên
+      <b>chỉ 2/12 tên bị cắt</b>. Mỗi hàng chỉ còn <b>hai cỡ chữ</b>: tên và dòng phụ.</p>
+    <div class="dev dsk"><div class="cap">Desktop · 3 cột <span class="w">1180px</span></div>
+      <div class="stage2"><div class="pv" data-src="frame.html?o=c" data-w="1180" data-t="Phương án C ở 1180px"></div></div></div>
+    <div class="row" style="margin-top:14px">
+      <div class="dev mob"><div class="cap">Mobile <span class="w">390px</span></div>
+        <div class="stage2"><div class="pv" data-src="frame.html?o=c" data-w="390" data-t="Phương án C ở 390px"></div></div></div>
+      <div style="flex:1 1 320px"><ul class="k" style="grid-template-columns:1fr;margin-top:0">
+        <li><span class="n">01</span><span><b>Ít cỡ chữ nhất</b><span class="t">Chỉ còn tên đậm và một dòng phụ mờ — đúng kiểu “bớt hộp, bớt cỡ chữ”.</span></span></li>
+        <li><span class="n">02</span><span><b>Không còn cột để lệch</b><span class="t">Không có cột phải thì không còn chuyện cột phải so le.</span></span></li>
+        <li><span class="n">03</span><span><b>Đánh đổi</b><span class="t">Số chương không đứng riêng một cột nên khó quét dọc để so bộ nào nhiều chương hơn; hàng cao hơn 4px.</span></span></li>
+      </ul></div>
+    </div>
+  </section>
+
+  <h2>Phần chung · cả ba phương án</h2>
+  <ul class="k">
+    <li><span class="n">A</span><span><b>Chỉ lấy bộ đã có chương</b><span class="t">Bộ chưa ra chương nào đã có chỗ riêng ở khối “Sắp ra mắt”.</span></span></li>
+    <li><span class="n">B</span><span><b>Giữ nguyên 12 dòng, 3 cột</b><span class="t">Không đổi số lượng, không đổi thứ tự sắp xếp, không thêm khối mới.</span></span></li>
+    <li><span class="n">C</span><span><b>Chữ số canh cột</b><span class="t">42 / 71 / 16 thẳng hàng dọc, không nhảy trái phải theo số chữ số.</span></span></li>
+    <li><span class="n">D</span><span><b>Mobile cùng một cấu trúc</b><span class="t">Xuống 1 cột, không đổi cách sắp; đo ở 390px không tràn ngang.</span></span></li>
+    <li><span class="n">E</span><span><b>Không thêm màu, không thêm hiệu ứng</b><span class="t">Vẫn chỉ chữ, đường kẻ tóc và màu nhấn son đỏ đang dùng.</span></span></li>
+  </ul>
+
+  <footer>
+    Chốt <b>A</b>, <b>B</b> hay <b>C</b> thì mình sửa <code>renderNew()</code> trong
+    <code>src/cz-home.js</code> + vài dòng CSS <code>.mrow/.mt/.mn</code> trong <code>src/cz.css</code>.
+    Site thật chưa sửa gì ở vòng này.
+  </footer>
+</div>
+
+<script>
+  /* iframe giữ đúng bề ngang thiết bị, cao theo nội dung, rồi thu nhỏ cho vừa khung */
+  function mount(pv) {
+    const w = +pv.dataset.w;
+    const f = document.createElement('iframe');
+    f.src = pv.dataset.src;
+    f.title = pv.dataset.t || '';
+    f.style.width = w + 'px';
+    f.style.border = '0';
+    f.loading = 'lazy';
+    pv.appendChild(f);
+    const fit = () => {
+      const h = +pv.dataset.h || 320;
+      const avail = (pv.parentElement.clientWidth || w) - 12;
+      const k = Math.min(1, avail / w);
+      f.style.height = h + 'px';
+      f.style.transform = 'scale(' + k + ')';
+      f.style.transformOrigin = 'top left';
+      pv.style.width = Math.round(w * k) + 'px';
+      pv.style.height = Math.round(h * k) + 'px';
+      pv.style.margin = '0 auto';
+      pv.style.overflow = 'hidden';
+    };
+    const measure = () => {
+      try {
+        const d = f.contentDocument;
+        if (!d) return;
+        const sec = d.querySelector('#moi-cap-nhat');
+        const h = Math.ceil((sec ? sec.getBoundingClientRect().bottom : d.documentElement.scrollHeight)
+          + (sec ? sec.getBoundingClientRect().top : 0)) + 12;
+        if (h > 60) { pv.dataset.h = h; fit(); }
+      } catch (e) {}
+    };
+    f.addEventListener('load', () => { measure(); setTimeout(measure, 400); setTimeout(measure, 1400); });
+    fit();
+    if (window.ResizeObserver) new ResizeObserver(fit).observe(pv.parentElement);
+  }
+  document.querySelectorAll('.pv').forEach(mount);
+</script>
+</body>
+</html>
