@@ -72,7 +72,22 @@ Không còn đường kẻ giữa các mục (chỉ còn khoảng thở 44px), k
 
 Đánh dấu bằng class trên khung chứa: `.hvA` / `.hvB` / `.hvC`; trong trang chính đặt ở `<body>`.
 
-**Trang biến thể:**## Dữ liệu
+**Trang biến thể:**## Phương án cho “Mới cập nhật” và “Chuyển thể Series” (`rails.html`)
+
+Dựng bằng `gen-rails.mjs`, ba kiểu cho mỗi mục, đúng khổ 1180px, dữ liệu và bìa thật.
+
+| Mã | Kiểu | Ghi chú |
+|---|---|---|
+| 1A | Dải bìa cuộn ngang (glvietsubz) | 7 bìa/hàng, một nhãn mỗi bìa, dưới: “tác giả · 2 giờ trước” |
+| 1B | Bảng gọn ba cột | 12 dòng · bìa 34×48 · tên 1 dòng · phải: “Ch. 42” + “2 giờ trước” |
+| 1C | Nhóm theo ngày | nhãn Hôm nay / Hôm qua / 28/09, mỗi ngày 6 bìa nhỏ |
+| 2A | Dải bìa + nhãn **SERIES** | góc trên phải bìa, giữ nguyên bìa dọc |
+| 2B | Thẻ ngang: bìa dọc + chữ | 2 cột, nhãn “CHUYỂN THỂ · 2026” màu son, số chương + tình trạng |
+| 2C | Băng ngang 16:10 (glvietsub.org) | 3 tấm/hàng, chữ đè chân ảnh — **ảnh dọc bị cắt giữa** |
+
+Nhãn thời gian trong mockup tính theo mốc 30/09/2026 (ngày dữ liệu mới nhất).
+
+## Dữ liệu
 
 Bìa, tên, tác giả, số chương, trạng thái, ngày cập nhật, `editorChoice`: **thật** (67 bộ).
 Lượt đọc, thứ hạng tăng/giảm, điểm sao, chương đang đọc dở: **số minh hoạ**.
