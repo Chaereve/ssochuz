@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đề xuất vòng 3 · thanh tìm &amp; lọc thư viện</title>
+<link rel="stylesheet" href="/cz.css?v=20261030grid1">
+<link rel="stylesheet" href="mock.css">
+<style>
+  .page { max-width: 1140px; margin: 0 auto; padding: 40px 20px 90px; }
+  .kick { font: 700 11px/1 ui-monospace, monospace; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--acc); }
+  h1 { margin: 14px 0 12px; font-size: 34px; line-height: 1.12; letter-spacing: -.015em;
+    font-family: var(--font-head); }
+  .lede { margin: 0 0 10px; max-width: 72ch; color: var(--mut); font-size: 15px; }
+  .lede b { color: var(--txt); }
+
+  h2 { margin: 46px 0 6px; font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--dim); font-weight: 700; }
+  .h2sub { margin: 0 0 16px; color: var(--mut); font-size: 14px; max-width: 74ch; }
+
+  /* ---- khung xem: iframe đúng bề ngang thiết bị, thu nhỏ bằng transform ---- */
+  .dev { border: 1px solid var(--bd); border-radius: 12px; background: var(--bg); overflow: hidden; }
+  .dev .cap { display: flex; align-items: center; gap: 8px; padding: 7px 12px;
+    border-bottom: 1px solid var(--bd); font: 700 10.5px/1 ui-monospace, monospace;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+  .dev .cap .w { margin-left: auto; font-weight: 600; }
+  .dev .stage2 { padding: 6px; }
+  .dev.mob { width: 402px; max-width: 100%; flex: none; }
+  .row { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+  .row .dev:not(.mob) { flex: 1 1 520px; min-width: 0; }
+  .dev.wide { width: 100%; }
+  @media (max-width: 720px) { .dev.dsk { display: none; } }
+
+  .opt { margin: 0 0 44px; }
+  .opt-h { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+  .opt-h .tag { font: 700 11px/1 ui-monospace, monospace; letter-spacing: .12em;
+    text-transform: uppercase; padding: 4px 8px; border: 1px solid var(--acc);
+    border-radius: 4px; color: var(--acc); }
+  .opt-h h3 { margin: 0; font-size: 20px; font-family: var(--font-head); letter-spacing: -.01em; }
+  .opt-h .pick { margin-left: auto; font-size: 12px; color: var(--dim); }
+  .opt .say { margin: 0 0 12px; color: var(--mut); font-size: 14px; max-width: 78ch; }
+  .opt .say b { color: var(--txt); }
+
+  /* ghi chú nguồn: nhỏ, không hộp to */
+  .src { margin: 0 0 16px; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline;
+    font-size: 12.5px; color: var(--dim); }
+  .src .lbl { font: 700 10px/1.6 ui-monospace, monospace; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--acc); }
+  .src b { color: var(--mut); font-weight: 600; }
+
+  .k { display: grid; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 760px) { .k { grid-template-columns: 1fr; } }
+  .k li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 9px;
+    padding: 10px 12px; background: var(--surf); border: 1px solid var(--bd); border-radius: 9px; }
+  .k .n { font: 700 10.5px/1.6 ui-monospace, monospace; color: var(--acc); }
+  .k > li > span > b { display: block; font-size: 13px; color: var(--txt); margin-bottom: 2px; }
+  .k span.t { font-size: 12.5px; color: var(--mut); line-height: 1.55; }
+  .k span.t b { color: var(--txt); font-weight: 600; }
+
+  footer { margin-top: 44px; padding-top: 20px; border-top: 1px solid var(--bd);
+    color: var(--dim); font-size: 13px; }
+  code { font-family: var(--font-mono); font-size: .92em; color: var(--txt);
+    background: var(--surf2); padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <p class="kick">Đề xuất vòng 3 · chưa sửa vào site</p>
+  <h1>Ba kiểu thanh lọc đã được làm đúng ở nơi khác</h1>
+  <p class="lede">Hai vòng trước mình tự nghĩ kiểu mới nên chỉ <b>đổi da</b> — vẫn một hàng ô tìm
+    cộng mấy ô chọn, nên vẫn xấu. Vòng này làm ngược lại: lấy <b>ba pattern đang chạy trên site lớn</b>
+    (AniList / Letterboxd / Linear), dựng đúng theo cách họ làm, rồi mới đổi màu cho hợp trang.</p>
+  <p class="lede">Điểm khác gốc: <b>tình trạng truyện không nằm trong ô xổ xuống nữa</b> — nó là thứ
+    người xem đổi liên tục nên phải lộ ra ngoài; còn năm ra mắt / sắp xếp là thứ đổi ít, để dạng chữ
+    hoặc giấu vào popover. Cả ba đều giữ nguyên dữ liệu đang có: 5 tab tình trạng, 4 kiểu sắp xếp,
+    4 mốc năm, công tắc 18+.</p>
+
+  <h2>Đang chạy</h2>
+  <p class="h2sub">Để so: thanh lọc hiện tại trên site — ô tìm cộng hai ô xổ xuống có nhãn chữ,
+    dãy tab tình trạng nằm ở hàng dưới, số đếm tách sang góc phải.</p>
+  <div class="dev"><div class="cap">Hiện tại <span class="w">1216px</span></div>
+    <div class="stage2"><img src="../library-bar-r51/img/now-d.webp" alt="Thanh lọc hiện tại trên site" style="display:block;width:100%;height:auto;border-radius:8px"></div></div>
+
+  <h2>Ba phương án</h2>
+  <p class="h2sub">Mỗi khung dưới là <b>iframe thật</b> rộng đúng bề ngang thiết bị rồi thu nhỏ —
+    không phải ảnh, nên chữ, khoảng cách và chỗ xuống dòng đều là thật.</p>
+
+  <!-- ================= A ================= -->
+  <section class="opt">
+    <div class="opt-h"><span class="tag">A</span><h3>Segmented control</h3>
+      <span class="pick">gọn nhất, một hàng</span></div>
+    <p class="say">Tình trạng gom vào <b>một viên segmented</b>: bốn mục chia đều, mục đang chọn là ô
+      sáng nhô lên trong viên. Mắt đọc được “đang ở Tất cả” mà không phải mở gì. Ô tìm 300px bên trái,
+      sắp xếp + 18+ dạt phải. Đây là kiểu AniList và app iOS dùng cho nhóm chọn-một.</p>
+    <div class="src"><span class="lbl">Pattern lấy từ</span>
+      <span><b>AniList</b> — dải tab tình trạng ngay trên lưới</span>
+      <span><b>MangaDex</b> — lọc một-chọn-một để lộ hết</span>
+      <span><b>iOS segmented</b> — mục chọn là ô sáng trong viên</span></div>
+    <div class="dev dsk"><div class="cap">Desktop <span class="w">1180px · một hàng</span></div>
+      <div class="stage2"><div class="pv" data-src="frame.html?o=a" data-w="1180" data-h="126" data-t="Phương án A ở 1180px"></div></div></div>
+    <div class="row" style="margin-top:14px">
+      <div class="dev"><div class="cap">Máy bảng <span class="w">768px · hai hàng</span></div>
+        <div class="stage2"><div class="pv" data-src="frame.html?o=a" data-w="768" data-h="176" data-t="Phương án A ở 768px"></div></div></div>
+      <div class="dev mob"><div class="cap">Mobile <span class="w">390px · lưới 2×2</span></div>
+        <div class="stage2"><div class="pv" data-src="frame.html?o=a" data-w="390" data-h="257" data-t="Phương án A ở 390px"></div></div></div>
+    </div>
+    <ul class="k">
+      <li><span class="n">01</span><span><b>Một hàng trên desktop</b><span class="t">Ô tìm + viên bốn mục + sắp xếp + 18+ vừa đúng 1180px, không cần hàng thứ hai.</span></span></li>
+      <li><span class="n">02</span><span><b>Mobile gập thành 2×2</b><span class="t">Không cuộn ngang, không cắt chữ: bốn mục chia bốn ô bằng nhau, vẫn thấy đủ số đếm.</span></span></li>
+      <li><span class="n">03</span><span><b>Số đếm nằm trong mục</b><span class="t">“Tất cả <b>67</b>” — số là phần phụ, màu son chỉ ở mục đang chọn.</span></span></li>
+      <li><span class="n">04</span><span><b>Hợp nhất, không thêm hộp</b><span class="t">Viên segmented là một khung duy nhất, khác hẳn kiểu 5 viên rời rạc đang có.</span></span></li>
+    </ul>
+  </section>
+
+  <!-- ================= B ================= -->
+  <section class="opt">
+    <div class="opt-h"><span class="tag">B</span><h3>Chip rail</h3>
+      <span class="pick">rõ nhất khi có nhiều lựa chọn</span></div>
+    <p class="say">Tình trạng thành <b>dãy chip có số đếm</b> ở hàng dưới; chip đang chọn <b>tô đặc</b> bằng
+      màu chữ nên nó là thứ sáng nhất trên thanh. 18+ đứng riêng sau một vạch kẻ. Hàng trên chỉ còn ô tìm
+      và hai ô chọn dạng chữ, dạt phải.</p>
+    <div class="src"><span class="lbl">Pattern lấy từ</span>
+      <span><b>Letterboxd</b> — chip lọc tô đặc khi chọn</span>
+      <span><b>Airbnb</b> — chip có số lượng, bấm lại để bỏ</span>
+      <span><b>MangaDex</b> — manhwa/manhua/manga chung một dãy</span></div>
+    <div class="dev dsk"><div class="cap">Desktop <span class="w">1180px · hai hàng</span></div>
+      <div class="stage2"><div class="pv" data-src="frame.html?o=b" data-w="1180" data-h="171" data-t="Phương án B ở 1180px"></div></div></div>
+    <div class="row" style="margin-top:14px">
+      <div class="dev"><div class="cap">Máy bảng <span class="w">768px · chip xuống dòng</span></div>
+        <div class="stage2"><div class="pv" data-src="frame.html?o=b" data-w="768" data-h="215" data-t="Phương án B ở 768px"></div></div></div>
+      <div class="dev mob"><div class="cap">Mobile <span class="w">390px · chip hai hàng</span></div>
+        <div class="stage2"><div class="pv" data-src="frame.html?o=b" data-w="390" data-h="259" data-t="Phương án B ở 390px"></div></div></div>
+    </div>
+    <ul class="k">
+      <li><span class="n">01</span><span><b>Chỗ sáng nhất là lựa chọn</b><span class="t">Chip đang chọn tô đặc màu chữ — nhìn 0,2 giây là biết đang lọc gì.</span></span></li>
+      <li><span class="n">02</span><span><b>Số đếm nói trước</b><span class="t">Thấy “Đang cập nhật 4” là biết bấm vào chỉ có 4 bộ, không phải bấm rồi mới biết.</span></span></li>
+      <li><span class="n">03</span><span><b>Mobile xuống dòng, không cắt</b><span class="t">Chip tự rớt xuống hàng dưới; 18+ tách sang phải hàng cuối, không bị cắt giữa chữ.</span></span></li>
+      <li><span class="n">04</span><span><b>Hai hàng có lý do</b><span class="t">Hàng trên là công cụ (tìm, năm, sắp xếp), hàng dưới là tình trạng — không trộn hai loại vào nhau.</span></span></li>
+    </ul>
+  </section>
+
+  <!-- ================= C ================= -->
+  <section class="opt">
+    <div class="opt-h"><span class="tag">C</span><h3>Toolbar + popover</h3>
+      <span class="pick">sạch nhất, đúng chất công cụ</span></div>
+    <p class="say">Thanh chỉ còn <b>ô tìm + nút “Bộ lọc” + sắp xếp</b>. Nút Bộ lọc mang số nhỏ màu son cho
+      biết đang bật mấy điều kiện; bấm vào mở popover chia nhóm, mỗi dòng có dấu ✓ và số đếm. Đang lọc thì
+      hàng dưới hiện <b>chip điều kiện xoá được</b> — trả lời đúng câu “tôi đang xem cái gì”.</p>
+    <div class="src"><span class="lbl">Pattern lấy từ</span>
+      <span><b>Linear</b> — nút lọc có số đếm, menu chia nhóm bằng kẻ tóc</span>
+      <span><b>Stripe</b> — tìm và lọc đứng cạnh nhau, không thay thế nhau</span>
+      <span><b>GitHub</b> — chip điều kiện + “Xoá tất cả”</span></div>
+    <div class="dev dsk"><div class="cap">Desktop <span class="w">1180px · hai hàng</span></div>
+      <div class="stage2"><div class="pv" data-src="frame.html?o=c" data-w="1180" data-h="164" data-t="Phương án C ở 1180px"></div></div></div>
+    <div class="dev wide dsk" style="margin-top:14px"><div class="cap">Desktop · mở popover <span class="w">1180px</span></div>
+      <div class="stage2"><div class="pv" data-src="frame.html?o=c&amp;pop=1" data-w="1180" data-h="586" data-t="Phương án C, popover mở"></div></div></div>
+    <div class="row" style="margin-top:14px">
+      <div class="dev"><div class="cap">Máy bảng <span class="w">768px</span></div>
+        <div class="stage2"><div class="pv" data-src="frame.html?o=c" data-w="768" data-h="206" data-t="Phương án C ở 768px"></div></div></div>
+      <div class="dev mob"><div class="cap">Mobile <span class="w">390px</span></div>
+        <div class="stage2"><div class="pv" data-src="frame.html?o=c" data-w="390" data-h="209" data-t="Phương án C ở 390px"></div></div></div>
+    </div>
+    <ul class="k">
+      <li><span class="n">01</span><span><b>Thanh lọc im lặng</b><span class="t">Chưa lọc gì thì chỉ có ô tìm và hai nút chữ — không trang trí, không viên thuốc la liệt.</span></span></li>
+      <li><span class="n">02</span><span><b>Số trên nút Bộ lọc</b><span class="t">Một chấm son nhỏ “2” nói đủ: đang bật hai điều kiện, kể cả khi đã cuộn xuống.</span></span></li>
+      <li><span class="n">03</span><span><b>Chip điều kiện xoá được</b><span class="t">“Tình trạng: Hoàn thành ✕” + “18+ ✕” + “Xoá tất cả” — thấy rõ và bỏ được ngay tại chỗ.</span></span></li>
+      <li><span class="n">04</span><span><b>Nhóm trong popover</b><span class="t">TÌNH TRẠNG / NĂM RA MẮT ngăn bằng kẻ tóc, mỗi dòng có ✓ và số đếm — không nhãn, không lặp.</span></span></li>
+      <li><span class="n">05</span><span><b>Mobile giữ nguyên cấu trúc</b><span class="t">Ô tìm một hàng; Bộ lọc bên trái, sắp xếp bên phải; chip điều kiện xuống hàng dưới.</span></span></li>
+      <li><span class="n">06</span><span><b>Đổi nhiều nhất khi port</b><span class="t">Cần thêm popover và trạng thái “đang lọc” vào <code>cz-home.js</code> — nhiều việc hơn A và B.</span></span></li>
+    </ul>
+  </section>
+
+  <h2>Phần chung · cả ba phương án</h2>
+  <ul class="k">
+    <li><span class="n">A</span><span><b>Một nhịp 4px</b><span class="t">Mọi điều khiển cao 40px (mobile 44px), khe 12px, chữ 13–14px — không còn ô to ô nhỏ.</span></span></li>
+    <li><span class="n">B</span><span><b>Một điểm son mỗi hàng</b><span class="t">Chỉ mục đang chọn mang màu son. Bỏ hết viền son, chấm son, gạch son thừa.</span></span></li>
+    <li><span class="n">C</span><span><b>Bỏ nhãn chữ trên ô chọn</b><span class="t">Không còn “Năm” / “Sắp xếp” viết hoa trước giá trị — đúng kiểu MangaDex/AniList: chỉ hiện giá trị.</span></span></li>
+    <li><span class="n">D</span><span><b>Tìm tách khỏi lọc</b><span class="t">Ô tìm luôn đứng một mình bên trái, không bị nhồi chung hàng với filter khi hẹp.</span></span></li>
+    <li><span class="n">E</span><span><b>Đếm thật, không đoán</b><span class="t">Số trong chip / mục / popover lấy từ dữ liệu sẵn có (67 / 46 / 4 / 17 / 29) và tự đổi theo từ khoá.</span></span></li>
+    <li><span class="n">F</span><span><b>Không tràn ngang</b><span class="t">Đo ở 390 / 768 / 860 / 1024 / 1180px: cả ba đều không đẩy trang cuộn ngang, không cắt chữ.</span></span></li>
+  </ul>
+
+  <footer>
+    Chốt <b>A</b>, <b>B</b> hay <b>C</b> thì mình port đúng bản đó vào <code>index.html</code> +
+    <code>src/cz.css</code> + <code>src/cz-home.js</code>. Site thật chưa sửa gì ở vòng này.
+  </footer>
+</div>
+
+<script>
+  /* iframe giữ đúng bề ngang thiết bị rồi thu nhỏ bằng transform để vừa khung xem */
+  function mount(pv) {
+    const w = +pv.dataset.w, h = +pv.dataset.h;
+    const f = document.createElement('iframe');
+    f.src = pv.dataset.src;
+    f.title = pv.dataset.t || '';
+    f.style.width = w + 'px';
+    f.style.height = h + 'px';
+    f.style.border = '0';
+    f.loading = 'lazy';
+    pv.appendChild(f);
+    const fit = () => {
+      const avail = (pv.parentElement.clientWidth || w) - 12;
+      const k = Math.min(1, avail / w);
+      f.style.transform = 'scale(' + k + ')';
+      f.style.transformOrigin = 'top left';
+      pv.style.width = Math.round(w * k) + 'px';
+      pv.style.height = Math.round(h * k) + 'px';
+      pv.style.margin = '0 auto';
+      pv.style.overflow = 'hidden';
+    };
+    fit();
+    if (window.ResizeObserver) new ResizeObserver(fit).observe(pv.parentElement);
+  }
+  document.querySelectorAll('.pv').forEach(mount);
+</script>
+</body>
+</html>

@@ -1,0 +1,243 @@
+/* ============================================================================
+   Thanh tìm & lọc thư viện — 3 phương án theo pattern của site chuyên nghiệp.
+
+   Nguyên tắc craft dùng chung (đây là phần làm nó "trông nghề"):
+   · một nhịp 4px: cao 40px cho mọi điều khiển, khe 12px, chữ 13–14px
+   · CHỈ một điểm nhấn son cho mỗi hàng (ô đang chọn hoặc ô đang lọc)
+   · search tách khỏi filter, filter tần suất cao để lộ ra (segmented/chips),
+     filter ít dùng giấu vào popover
+   · không gradient, không bóng loang, không pill lồng pill
+   ========================================================================== */
+
+/* ---------- dòng tiêu đề dùng chung ---------- */
+.lbh { display: flex; align-items: baseline; gap: 12px; margin: 0 0 16px; }
+.lbh h3 { margin: 0; font-family: var(--font-head); font-size: 22px; font-weight: 700;
+  line-height: 1.2; letter-spacing: -.018em; }
+.lbh .n { font-size: 13px; color: var(--mut); }
+.lbh .p { margin-left: auto; font-family: var(--font-mono); font-size: 11.5px; font-weight: 600;
+  color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lbh .p b { color: var(--mut); }
+
+/* ---------- ô tìm: phần tử duy nhất có "mặt" ---------- */
+.lbq { display: flex; align-items: center; gap: 9px; height: 40px; padding: 0 10px 0 12px;
+  border: 1px solid var(--bd); border-radius: 9px; background: var(--bg2); }
+.lbq .ic { width: 15px; height: 15px; flex: none; color: var(--dim); }
+.lbq input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: 0;
+  background: none; color: var(--txt); font: inherit; font-size: 13.5px; letter-spacing: -.005em; }
+.lbq input::placeholder { color: var(--dim); }
+.lbq input::-webkit-search-cancel-button { display: none; }
+.lbq .cx { display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border: 0; border-radius: 5px; background: none;
+  color: var(--dim); flex: none; }
+.lbq .cx:hover { color: var(--txt); background: var(--surf2); }
+.lbq .cx .i { width: 11px; height: 11px; }
+.lbq .kbd { flex: none; font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+  color: var(--dim); padding: 2px 5px; border: 1px solid var(--bd); border-radius: 4px;
+  line-height: 1.4; }
+.lbq:focus-within { border-color: var(--bd2); background: var(--surf); }
+.lbq:focus-within .ic { color: var(--mut); }
+
+/* ---------- ô chọn kiểu "chữ + mũi tên" (span hiện giá trị, select phủ trong suốt) ---------- */
+.lbs { position: relative; display: inline-flex; align-items: center; height: 32px;
+  padding: 0 22px 0 9px; border-radius: 7px; flex: none; }
+.lbs .val { font-size: 13px; font-weight: 500; letter-spacing: -.005em;
+  color: var(--mut); white-space: nowrap; }
+.lbs select { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0;
+  padding: 0; border: 0; outline: 0; opacity: 0; cursor: pointer; font: inherit; }
+.lbs .cv { position: absolute; right: 7px; display: inline-flex; pointer-events: none;
+  color: var(--dim); transition: color .15s, opacity .15s; }
+.lbs .cv .i { width: 10px; height: 10px; }
+.lbs:hover { background: var(--surf2); }
+.lbs:hover .val { color: var(--txt); }
+.lbs:hover .cv { color: var(--mut); }
+.lbs:focus-within { background: var(--surf2); }
+.lbs:focus-within .val { color: var(--txt); }
+.lbs:focus-within .cv { color: var(--acc); }
+.lbs.on .val { color: var(--txt); font-weight: 600; }
+.lbs.on .cv { color: var(--acc); }
+
+/* ---------- công tắc 18+ ---------- */
+.lb18 { flex: none; height: 28px; padding: 0 9px; border: 1px solid var(--bd);
+  border-radius: 6px; background: none; color: var(--mut); font: inherit;
+  font-size: 11.5px; font-weight: 700; letter-spacing: .02em; }
+.lb18:hover { border-color: var(--bd2); color: var(--txt); }
+.lb18[aria-pressed="true"] { background: var(--acc); border-color: var(--acc); color: #2a1016; }
+
+/* ==========================================================================
+   A · SEGMENTED CONTROL   (pattern: AniList / MangaDex / iOS)
+   Tình trạng là nhóm chọn-một tần suất cao → để lộ hết trong một viên thuốc.
+   ========================================================================== */
+.barA { display: flex; align-items: center; gap: 12px; }
+.barA .lbq { flex: 0 1 300px; min-width: 170px; }
+.segA { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 2px;
+  height: 40px; padding: 3px; border: 1px solid var(--bd); border-radius: 9px;
+  background: var(--bg2); }
+.segA button { flex: 1 1 auto; min-width: 0; height: 32px; padding: 0 10px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border: 0; border-radius: 6px; background: none; color: var(--mut);
+  font: inherit; font-size: 13px; font-weight: 500; letter-spacing: -.005em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.segA button:hover { color: var(--txt); background: rgba(255, 255, 255, .035); }
+.segA button .c { font: 600 10.5px var(--font-mono); color: var(--dim);
+  font-variant-numeric: tabular-nums; }
+.segA button.on { background: var(--surf3); color: var(--txt); font-weight: 650;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .05); }
+.segA button.on .c { color: var(--acc); }
+.barA .endA { display: flex; align-items: center; gap: 8px; flex: none; }
+.barA .sepA { width: 1px; height: 20px; background: var(--bd); flex: none; }
+
+/* ==========================================================================
+   B · CHIP RAIL   (pattern: Letterboxd / Airbnb / Netflix)
+   Chip đang chọn tô ĐẶC bằng màu chữ — tương phản mạnh nhất có thể trên nền tối.
+   ========================================================================== */
+.barB { display: flex; flex-direction: column; gap: 12px; }
+.rowB { display: flex; align-items: center; gap: 12px; }
+.rowB .lbq { flex: 0 1 380px; min-width: 160px; }
+.rowB .endB { margin-left: auto; display: flex; align-items: center; gap: 6px; flex: none; }
+.railB { display: flex; align-items: center; gap: 7px; overflow-x: auto;
+  scrollbar-width: none; padding-bottom: 1px; }
+.railB::-webkit-scrollbar { display: none; }
+.chipB { flex: none; display: inline-flex; align-items: center; gap: 7px; height: 32px;
+  padding: 0 13px; border: 1px solid var(--bd); border-radius: 99px;
+  background: none; color: var(--mut); font: inherit; font-size: 13px; font-weight: 500;
+  letter-spacing: -.005em; white-space: nowrap; }
+.chipB .c { font: 600 10.5px var(--font-mono); color: var(--dim);
+  font-variant-numeric: tabular-nums; }
+.chipB:hover { border-color: var(--bd2); color: var(--txt); }
+.chipB:hover .c { color: var(--mut); }
+.chipB.on { background: var(--txt); border-color: var(--txt); color: #1a1512; font-weight: 650; }
+.chipB.on .c { color: rgba(26, 21, 18, .55); }
+.railB .divB { flex: none; width: 1px; height: 18px; background: var(--bd); margin: 0 4px; }
+
+/* ==========================================================================
+   C · TOOLBAR + POPOVER   (pattern: Linear / Stripe / GitHub)
+   Thanh chỉ có search và vài nút chữ. Filter nằm trong popover, và khi đang
+   lọc thì hiện hàng chip xoá được — trả lời đúng câu "đang xem cái gì".
+   ========================================================================== */
+.barC { display: flex; flex-direction: column; gap: 12px; }
+.rowC { display: flex; align-items: center; gap: 10px; }
+.rowC .lbq { flex: 0 1 420px; min-width: 160px; }
+.btnC { flex: none; display: inline-flex; align-items: center; gap: 7px; height: 34px;
+  padding: 0 11px; border: 1px solid var(--bd); border-radius: 8px; background: none;
+  color: var(--mut); font: inherit; font-size: 13px; font-weight: 500;
+  letter-spacing: -.005em; }
+.btnC .i { width: 14px; height: 14px; }
+.btnC:hover { border-color: var(--bd2); color: var(--txt); background: var(--surf); }
+.btnC .n { display: inline-flex; align-items: center; justify-content: center;
+  min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
+  background: var(--acc); color: #2a1016; font: 700 10px var(--font-mono); }
+.rowC .endC { margin-left: auto; display: flex; align-items: center; gap: 4px; flex: none; }
+/* hàng chip lọc đang bật */
+.actC { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.actC .cl { font-size: 12px; color: var(--dim); }
+.actC .fchip { display: inline-flex; align-items: center; gap: 6px; height: 26px;
+  padding: 0 4px 0 9px; border: 1px solid var(--bd); border-radius: 6px;
+  background: var(--surf); font-size: 12px; color: var(--txt); }
+.actC .fchip .rm { display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border: 0; border-radius: 4px; background: none; color: var(--dim); }
+.actC .fchip .rm:hover { background: var(--surf3); color: var(--txt); }
+.actC .fchip .rm .i { width: 9px; height: 9px; }
+.actC .clr { height: 26px; padding: 0 4px; border: 0; background: none; font: inherit;
+  font-size: 12px; font-weight: 600; color: var(--dim); }
+.actC .clr:hover { color: var(--txt); }
+.poprow { display: flex; justify-content: flex-end; padding-right: 86px; }
+@media (max-width: 860px) { .poprow { padding-right: 0; } }
+/* popover */
+.popC { width: 320px; max-width: 100%; border: 1px solid var(--bd2); border-radius: 12px;
+  background: var(--surf); box-shadow: var(--sh-lg); overflow: hidden; }
+.popC .ph { display: flex; align-items: center; gap: 8px; padding: 12px 14px;
+  border-bottom: 1px solid var(--bd); }
+.popC .ph b { font-size: 13px; font-weight: 650; letter-spacing: -.005em; }
+.popC .ph .x { margin-left: auto; width: 22px; height: 22px; border: 0; border-radius: 5px;
+  background: none; color: var(--dim); display: inline-flex; align-items: center;
+  justify-content: center; }
+.popC .ph .x:hover { background: var(--surf2); color: var(--txt); }
+.popC .pb { padding: 6px; }
+.popC .grp { padding: 8px 8px 6px; }
+.popC .grp .gl { font-size: 10.5px; font-weight: 700; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--dim); padding: 0 2px 6px; }
+.popC .opt { display: flex; align-items: center; gap: 8px; width: 100%; height: 32px;
+  padding: 0 8px; border: 0; border-radius: 6px; background: none; color: var(--mut);
+  font: inherit; font-size: 13px; text-align: left; }
+.popC .opt:hover { background: var(--surf2); color: var(--txt); }
+.popC .opt .tick { width: 14px; height: 14px; flex: none; color: var(--acc); opacity: 0; }
+.popC .opt .c { margin-left: auto; font: 600 10.5px var(--font-mono); color: var(--dim); }
+.popC .opt.on { color: var(--txt); font-weight: 600; }
+.popC .opt.on .tick { opacity: 1; }
+.popC .pf { display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; border-top: 1px solid var(--bd); background: var(--bg2); }
+.popC .pf .clr { border: 0; background: none; font: inherit; font-size: 12.5px;
+  font-weight: 600; color: var(--mut); }
+.popC .pf .ok { height: 30px; padding: 0 14px; border: 0; border-radius: 7px;
+  background: var(--txt); color: #1a1512; font: inherit; font-size: 12.5px; font-weight: 650; }
+
+/* ==========================================================================
+   ĐÁP BỀ NGANG
+   ========================================================================== */
+@media (max-width: 1080px) {
+  /* A: viên segmented bắt đầu chật → thu chữ, bỏ số đếm của mục không chọn */
+  .segA button { padding: 0 8px; font-size: 12.5px; }
+  .segA button .c { display: none; }
+  .segA button.on .c { display: inline; }
+  .barA .lbq { flex: 0 1 240px; }
+  .rowB .lbq { flex: 0 1 300px; }
+  .rowC .lbq { flex: 0 1 320px; }
+}
+@media (max-width: 860px) {
+  /* dưới 860: search một hàng riêng, filter xuống hàng dưới — không chen */
+  .barA { flex-wrap: wrap; gap: 10px; }
+  .barA .lbq { flex: 1 1 100%; }
+  .segA { flex: 1 1 auto; }
+  .barA .endA { flex: none; }
+  .rowB { flex-wrap: wrap; }
+  .rowB .lbq { flex: 1 1 100%; }
+  .rowB .endB { margin-left: 0; flex: 1 1 100%; justify-content: flex-start; }
+  .rowC { flex-wrap: wrap; gap: 8px; }
+  .rowC .lbq { flex: 1 1 100%; }
+  .rowC .endC { margin-left: 0; flex: 1 1 100%; justify-content: space-between; }
+  .popC { width: 100%; }
+}
+@media (max-width: 620px) {
+  .lbh h3 { font-size: 19px; }
+  .lbh { margin-bottom: 14px; }
+  .lbq { height: 44px; }
+  .lbq input { font-size: 14px; }
+  .lbq .kbd { display: none; }
+
+  /* A: viên segmented gập thành lưới 2×2 — bốn lựa chọn vẫn thấy đủ, không cắt chữ */
+  .barA { gap: 10px; }
+  .segA { flex: 1 1 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 2px;
+    height: auto; padding: 3px; overflow: visible; }
+  .segA button { height: 34px; padding: 0 8px; font-size: 12.5px; }
+  .segA button .c { display: inline; }
+  .barA .endA { flex: 1 1 100%; justify-content: flex-start; gap: 6px; }
+  .barA .sepA { display: none; }
+  .barA .endA .lbs { height: 34px; padding: 0 22px 0 4px; }
+  .barA .endA .lbs .val { font-size: 13px; }
+  .barA .endA .lbs .cv { right: 6px; }
+  .lb18 { height: 30px; padding: 0 10px; }
+
+  /* B: chip xuống dòng thay vì bị cắt giữa chữ; 18+ tách xuống góc phải */
+  .railB { flex-wrap: wrap; overflow: visible; gap: 7px; }
+  .railB .divB { display: none; }
+  .chipB { height: 34px; font-size: 13px; }
+  .chipB.plus { margin-left: auto; }
+  .rowB .endB { justify-content: flex-start; gap: 4px; }
+  .rowB .endB .lbs { height: 34px; }
+  .rowB .endB .sepA { margin: 0 4px; }
+
+  /* C: nút Bộ lọc + sắp xếp cùng hàng, chia đôi */
+  .rowC { gap: 8px; }
+  .rowC .endC { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px;
+    align-items: center; }
+  .btnC { height: 38px; justify-content: center; }
+  .rowC .endC .lbs { height: 38px; justify-self: end; }
+  .rowC .endC .lbs .val { font-size: 13.5px; }
+  .actC { gap: 6px; }
+  .actC .cl { display: none; }
+  .fchip { height: 28px; font-size: 12.5px; }
+}
+@media (max-width: 400px) {
+  .segA button { padding: 0 10px; font-size: 12.5px; }
+  .chipB { padding: 0 11px; }
+}

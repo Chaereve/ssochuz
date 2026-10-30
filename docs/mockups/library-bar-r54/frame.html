@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thanh lọc · khung xem</title>
+<link rel="stylesheet" href="/cz.css?v=20261030grid1">
+<link rel="stylesheet" href="mock.css">
+<style>
+  html, body { margin: 0; background: var(--bg); }
+  body { padding: 18px 18px 22px; }
+  body > div[style*="position:fixed"] { display: none !important; }
+</style>
+</head>
+<body>
+<div id="pv"></div>
+<script src="mock.js"></script>
+<script>
+  var q = new URLSearchParams(location.search);
+  var o = q.get('o') || 'a';
+  document.getElementById('pv').innerHTML = MOCK.build(o, q.get('pop') === '1' && o === 'c');
+</script>
+</body>
+</html>
