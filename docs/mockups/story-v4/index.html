@@ -21,13 +21,6 @@
   .crumb { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--dim); margin-bottom: 14px; }
   .crumb a { color: var(--mut); } .crumb a:hover { color: var(--acc); }
   .crumb i { font-style: normal; opacity: .5; } .crumb b { color: var(--txt); font-weight: 600; }
-  .pill { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px;
-    border-radius: 99px; border: 1px solid rgba(255, 255, 255, .2); background: rgba(12, 9, 6, .55);
-    font: 700 10.5px/1 var(--font); white-space: nowrap; }
-  .pill i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
-  .pill.run { color: #f3dfb8; } .pill.run i { background: var(--warn); }
-  .pill.done { color: #c8ead6; } .pill.done i { background: var(--ok); }
-  .pill.soon { color: #d6d2ea; } .pill.soon i { background: #8f83c7; }
   .btnPri, .btnGho { display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 15px;
     border-radius: 9px; font-size: 12.5px; font-weight: 650; white-space: nowrap;
     transition: background .16s ease, border-color .16s ease, color .16s ease, transform .16s ease; }
@@ -51,14 +44,27 @@
     object-position: center 24%; filter: blur(24px) saturate(1.1) brightness(.46); z-index: -2; }
   .veilC { position: absolute; inset: 0; z-index: -1;
     background: linear-gradient(96deg, rgba(10, 7, 5, .94) 8%, rgba(10, 7, 5, .74) 50%, rgba(10, 7, 5, .3)); }
-  .inC { display: grid; grid-template-columns: 176px minmax(0, 1fr); gap: 26px; align-items: center; }
-  .cvC { display: block; border-radius: 9px; overflow: hidden;
-    box-shadow: 0 22px 40px -18px #000, 0 0 0 1px rgba(255, 255, 255, .18); }
-  .cvC img { display: block; width: 100%; aspect-ratio: 2/3; object-fit: cover; }
-  .txtC h1 { font-family: var(--font-head); font-size: 30px; font-weight: 700;
-    line-height: 1.15; letter-spacing: -.022em; color: #fff; text-shadow: 0 2px 20px rgba(0, 0, 0, .5);
+  .inC { display: grid; grid-template-columns: 178px minmax(0, 1fr); gap: 28px; align-items: start; }
+  .cvC { position: relative; display: block; border-radius: 8px; overflow: hidden; background: var(--surf2);
+    margin-top: 2px;
+    box-shadow: 0 26px 44px -20px rgba(0, 0, 0, .92), 0 0 0 1px rgba(255, 243, 230, .16); }
+  .cvC img { display: block; width: 100%; aspect-ratio: 2/3; object-fit: cover; object-position: center top; }
+  .cvC::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(90deg, rgba(0, 0, 0, .38) 0, rgba(0, 0, 0, .1) 7%,
+      rgba(255, 255, 255, 0) 16%, rgba(255, 255, 255, 0) 93%, rgba(255, 255, 255, .16) 100%),
+      linear-gradient(0deg, rgba(0, 0, 0, .22), rgba(0, 0, 0, 0) 18%); }
+
+  /* trạng thái bằng chữ, không hộp */
+  .stC { display: flex; align-items: center; gap: 7px; margin-bottom: 10px;
+    font: 800 9.5px/1 var(--font-mono); letter-spacing: .17em; text-transform: uppercase; }
+  .stC i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+  .stC em { margin-left: 6px; padding-left: 10px; font-style: normal; letter-spacing: .1em;
+    color: rgba(255, 255, 255, .62); border-left: 1px solid rgba(255, 255, 255, .24); }
+  .stC.run { color: #f0cd97; } .stC.done { color: #9fd8b8; } .stC.soon { color: #c3baea; }
+  .txtC h1 { font-family: var(--font-head); font-size: 32px; font-weight: 700;
+    line-height: 1.13; letter-spacing: -.024em; color: #fff; text-shadow: 0 2px 20px rgba(0, 0, 0, .5);
     display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-  .byC { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-top: 10px;
+  .byC { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 9px;
     font-size: 12.5px; color: rgba(255, 255, 255, .66); }
   .byC i { font-style: normal; opacity: .5; }
   .byC b { color: rgba(255, 255, 255, .9); font-weight: 600; }
@@ -69,7 +75,7 @@
     border: 0; background: none; font: 650 11.5px/1 var(--font); color: var(--acc); cursor: pointer; }
   .synMore svg { width: 9px; height: 9px; }
   .actC { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; }
-  .icRow { display: inline-flex; gap: 8px; margin-left: 2px; }
+  .icRow { display: inline-flex; gap: 8px; margin-left: auto; }
 
   /* ---------------------------------- tab --------------------------------- */
   .tabs2 { display: flex; align-items: center; gap: 24px; margin: 22px 0 0;
@@ -196,7 +202,7 @@
 
   /* ------------------------------- màn hẹp -------------------------------- */
   @container (max-width: 960px) {
-    .inC { grid-template-columns: 148px minmax(0, 1fr); gap: 20px; }
+    .inC { grid-template-columns: 150px minmax(0, 1fr); gap: 22px; }
     .txtC h1 { font-size: 26px; }
     .cg4 { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 22px; }
     .infoWrap { grid-template-columns: minmax(0, 1fr); }
@@ -206,8 +212,10 @@
   }
   @container (max-width: 660px) {
     .hC { padding: 18px; }
-    .inC { grid-template-columns: 106px minmax(0, 1fr); gap: 14px; }
+    .inC { grid-template-columns: 104px minmax(0, 1fr); gap: 14px; }
     .txtC h1 { font-size: 21px; }
+    .stC { font-size: 8.5px; margin-bottom: 7px; }
+    .cvC::after { display: none; }
     .synC { margin-top: 8px; }
     .synC p { font-size: 12px; }
     .cg4 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
@@ -250,8 +258,9 @@
   <div class="inC">
     <a class="cvC" href="#"><img src="../../../assets/covers/0c9fbe53.webp" alt="Bìa HOMETOWN ROMANCE" loading="lazy"></a>
     <div class="txtC">
+      <div class="stC done"><i></i>Hoàn thành<em>18+</em></div>
       <h1>HOMETOWN ROMANCE</h1>
-      <div class="byC"><span class="pill done"><i></i>Hoàn thành</span><b>Lambo</b><i>·</i>Lookmhee x Sonya<i>·</i>2025</div>
+      <div class="byC"><b>Lambo</b><i>·</i>Lookmhee x Sonya<i>·</i>2025</div>
       <div class="synC"><p>Ai nhìn vào cũng bảo mối tình giữa tiểu thư đài các và cô nàng nông dân này chắc chắn sẽ chẳng đi đến đâu. Thậm chí, ngay cả chính người trong cuộc cũng nghĩ vậy nên mới gật đầu chấp nhận…</p>
         <button class="synMore" type="button">Đọc giới thiệu đầy đủ <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button></div>
       <div class="actC">

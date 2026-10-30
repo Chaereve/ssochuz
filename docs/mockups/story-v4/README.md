@@ -3,8 +3,12 @@
 `node docs/mockups/story-v4/gen.mjs` → `index.html`.
 
 **Phần đầu (C · nền bìa mờ)** — chỉ còn thứ không lặp ở đâu khác:
-tiêu đề · nhãn trạng thái + tác giả · couple · năm · giới thiệu 2 dòng + “đọc đầy đủ” ·
-6 nút (đọc / chương mới nhất / theo dõi / tủ truyện / chia sẻ / RSS) · tiến độ đọc.
+dòng trạng thái · tiêu đề · tác giả · couple · năm · giới thiệu 2 dòng + “đọc đầy đủ” ·
+6 nút (đọc / chương mới nhất / theo dõi / tủ truyện / chia sẻ / RSS dạt phải) · tiến độ đọc.
+
+Bìa: 178px, canh thẳng đỉnh chữ, có **gáy tối bên trái + mép sáng bên phải** và đổ bóng sâu
+để tách khỏi nền mờ; ảnh `object-position: center top` nên không cắt vào mặt.
+Trạng thái: bỏ viên thuốc có viền, đổi thành **chữ mono in hoa + chấm màu** (`● HOÀN THÀNH | 18+`).
 
 **Đã bỏ khỏi phần đầu:** dòng nhãn “Cập nhật …”, cả hàng chip
 (trạng thái · số chương · điểm ★ · lượt đọc — bốn thứ này đều có trong tab Thông tin).
