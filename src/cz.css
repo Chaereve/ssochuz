@@ -1277,7 +1277,9 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .dd .cv .i { width: 10px; height: 10px; }
 .dd:hover .cv { color: var(--mut); }
 /* ---- popover lọc ---- */
-.fpop { position: absolute; right: 0; top: calc(100% + 8px); z-index: 60;
+/* bung ra ngay dưới nút “Bộ lọc” (không dạt sang phải, không rời khỏi nút) */
+.lbwrap { position: relative; display: inline-flex; }
+.fpop { position: absolute; left: 0; top: calc(100% + 8px); z-index: 60;
   width: 320px; max-width: calc(100vw - 32px); border: 1px solid var(--bd2); border-radius: 12px;
   background: var(--surf); box-shadow: var(--sh-lg); overflow: hidden; text-align: left; }
 .fpop[hidden] { display: none; }
@@ -1341,7 +1343,6 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   .lbtool .srch kbd { display: none; }
   .lbf { height: 38px; }
   .dd { height: 38px; }
-  .fpop { width: 100%; max-width: none; }
   .fpick { gap: 6px; margin-top: 10px; }
   /* máy hẹp: bỏ nhãn “Đang lọc” để chip + Xoá tất cả nằm gọn một hàng */
   .fpick .cl { display: none; }

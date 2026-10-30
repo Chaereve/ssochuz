@@ -728,8 +728,24 @@
   $('#fSort').addEventListener('change', function (e) { state.sort = e.target.value; state.page = 1; render(); });
   /* ---- popover Bộ lọc: mở/đóng, chọn điều kiện, bàn phím ---- */
   var fBtn = $('#fBtn'), fPop = $('#fPop');
+  /* Bung ra đúng dưới nút: mép phải popover thẳng với mép phải nút, nhưng luôn
+     kẹp trong khung nhìn — nút nằm sát lề phải thì popover trượt sang trái,
+     nút nằm sát lề trái (máy hẹp) thì căn trái theo nút. */
+  function placePop() {
+    if (!fPop || !fBtn) return;
+    var vw = document.documentElement.clientWidth;
+    var w = Math.min(320, vw - 32);
+    var r = fBtn.getBoundingClientRect();
+    var l = Math.min(0, r.width - w);
+    l = Math.max(l, 16 - r.left);
+    if (r.left + l + w > vw - 16) l = vw - 16 - w - r.left;
+    fPop.style.width = w + 'px';
+    fPop.style.left = Math.round(l) + 'px';
+  }
+  window.addEventListener('resize', function () { if (fPop && !fPop.hidden) placePop(); });
   function togglePop(open) {
     if (!fPop) return;
+    if (open) placePop();
     fPop.hidden = !open;
     fBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
     if (open) {

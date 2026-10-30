@@ -134,20 +134,23 @@
               <kbd aria-hidden="true">⌘K</kbd>
             </label>
             <div class="lbtools">
-              <button class="lbf" id="fBtn" type="button" aria-expanded="false" aria-controls="fPop">
-                <span data-ic="filter"></span><span>Bộ lọc</span><b class="n" id="fBtnN" hidden></b>
-              </button>
+              <!-- popover nằm ngay trong khung nút để luôn bung ra ĐÚNG DƯỚI nút
+                   (nội dung do cz-home.js dựng theo dữ liệu thật) -->
+              <span class="lbwrap">
+                <button class="lbf" id="fBtn" type="button" aria-expanded="false" aria-controls="fPop">
+                  <span data-ic="filter"></span><span>Bộ lọc</span><b class="n" id="fBtnN" hidden></b>
+                </button>
+                <div class="fpop" id="fPop" hidden>
+                  <div class="fpop-h"><b>Bộ lọc</b>
+                    <button class="x" id="fPopX" type="button" aria-label="Đóng bộ lọc"><span data-ic="x"></span></button></div>
+                  <div class="fpop-b" id="fPopB" role="group" aria-label="Điều kiện lọc"></div>
+                  <div class="fpop-f">
+                    <button class="clr" id="fPopClr" type="button">Xoá lọc</button>
+                    <button class="ok" id="fPopOk" type="button">Xong</button>
+                  </div>
+                </div>
+              </span>
               <span class="dd"><select id="fSort" aria-label="Sắp xếp"></select><span class="cv" aria-hidden="true" data-ic="down"></span></span>
-            </div>
-          </div>
-          <!-- popover: nội dung do cz-home.js dựng theo dữ liệu thật -->
-          <div class="fpop" id="fPop" hidden>
-            <div class="fpop-h"><b>Bộ lọc</b>
-              <button class="x" id="fPopX" type="button" aria-label="Đóng bộ lọc"><span data-ic="x"></span></button></div>
-            <div class="fpop-b" id="fPopB" role="group" aria-label="Điều kiện lọc"></div>
-            <div class="fpop-f">
-              <button class="clr" id="fPopClr" type="button">Xoá lọc</button>
-              <button class="ok" id="fPopOk" type="button">Xong</button>
             </div>
           </div>
         </div>
