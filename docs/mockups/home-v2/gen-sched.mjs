@@ -143,14 +143,6 @@ const chev =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" ' +
   'stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
 
-/* dải tuần mảnh: 7 ô, ô hôm nay có gạch son; chấm nhỏ = có bộ ra hôm đó */
-const ribbon = (cls = '') => `<div class="wrib${cls}">${DAYS.map((d) => {
-  const n = onDay(d.k).length;
-  return `<span class="rb${d.k === TODAY ? ' now' : ''}${n ? '' : ' off'}">` +
-    `<b>${d.l.replace('Thứ ', 'T')}</b><em>${d.d.slice(0, 5)}</em>` +
-    `<i>${n ? '•'.repeat(Math.min(n, 3)) : ''}</i></span>`;
-}).join('')}</div>`;
-
 const restList = (title) => `<div class="w3list">
   <div class="w3lh"><span>${title}</span><em>${rest.length} bộ</em></div>
   ${rest.map((it) => {
@@ -164,8 +156,7 @@ const restList = (title) => `<div class="w3list">
 </div>`;
 
 /* 3A · bìa dọc + chữ, trên nền giấy rất nhẹ — sạch và “biên tập” */
-const opt3a = `${ribbon()}
-<div class="w3grid">
+const opt3a = `<div class="w3grid">
   <a class="w3feat" href="#">
     ${hero.img ? `<span class="w3poster"><img src="${esc(hero.img)}" alt="" loading="lazy"></span>` : ''}
     <span class="w3txt">
@@ -180,8 +171,7 @@ const opt3a = `${ribbon()}
 ${NOTE ? `<p class="snote">${esc(NOTE)}</p>` : ''}`;
 
 /* 3B · nền là chính bìa phóng mờ, bìa dọc nổi bên trái — sâu và “điện ảnh” hơn */
-const opt3b = `${ribbon(' thin')}
-<div class="w3grid">
+const opt3b = `<div class="w3grid">
   <a class="w3feat v3b" href="#">
     ${hero.img ? `<img class="w3bg" src="${esc(hero.img)}" alt="" loading="lazy">` : ''}
     <span class="w3veil"></span>
@@ -216,6 +206,9 @@ const CSS = `
     border-bottom: 1px solid var(--bd); margin-bottom: 16px; }
   .hr h2 { font-size: 20px; font-weight: 650; }
   .hs { font-size: 12.5px; color: var(--dim); }
+  .htoday { display: inline-flex; align-items: center; height: 20px; padding: 0 8px;
+    border-radius: 5px; background: var(--acc-soft); color: var(--acc);
+    font: 700 9.5px/1 var(--font-mono); letter-spacing: .07em; text-transform: uppercase; }
   .hm { margin-left: auto; display: inline-flex; align-items: center; gap: 3px;
     font-size: 12.5px; font-weight: 650; color: var(--mut); white-space: nowrap; }
   .hm svg { width: 11px; height: 11px; }
@@ -277,24 +270,6 @@ const CSS = `
   .qst.soon { color: #b9b2d6; }
 
   /* ---- 3 · tiêu điểm hôm nay (bản làm mịn) ---- */
-  /* dải tuần mảnh */
-  .wrib { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0;
-    border-top: 1px solid var(--bd-soft); border-bottom: 1px solid var(--bd-soft);
-    margin-bottom: 18px; }
-  .rb { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0;
-    padding: 11px 4px 10px; border-right: 1px solid var(--bd-soft); position: relative; }
-  .rb:last-child { border-right: 0; }
-  .rb b { font: 700 9.5px/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase;
-    color: var(--mut); }
-  .rb em { font-style: normal; font: 500 10px/1 var(--font-mono); color: var(--dim); }
-  .rb i { font-style: normal; height: 6px; font-size: 9px; line-height: 1; letter-spacing: 2px;
-    color: var(--acc); opacity: .8; }
-  .rb.off i { opacity: 0; }
-  .rb.now b, .rb.now em { color: var(--acc); }
-  .rb.now::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: -1px;
-    height: 2px; border-radius: 2px; background: var(--acc); }
-  .wrib.thin .rb { padding: 9px 4px 8px; }
-
   /* lưới: tiêu điểm bên trái · danh sách bên phải */
   .w3grid { display: grid; grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr);
     gap: 32px; align-items: stretch; }
@@ -373,8 +348,6 @@ const CSS = `
     .wcol:nth-child(2n) { border-right: 0; }
     .qrow { grid-template-columns: 38px 32px minmax(0, 1fr); }
     .qst { grid-column: 3; margin-top: 4px; }
-    .wrib { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    .rb:nth-child(4) { border-right: 0; }
     .w3feat { grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 16px; }
     .w3poster { width: 92px; }
     .w3n { font-size: 19px; }
@@ -386,6 +359,7 @@ const opt = (id, tag, title, note, html) =>
     <span class="otag"><i>${id}</i>${title}${tag ? ' · ' + tag : ''}</span>
     <p class="onote">${note}</p>
     <div class="hr"><h2>Lịch ra chương</h2><span class="hs">${ITEMS.length} bộ · tuần này</span>
+      <span class="htoday">Hôm nay · Thứ 6 30/10</span>
       <span class="hm">Cả tuần
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
           stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
@@ -432,14 +406,14 @@ const HTML = `<!doctype html>
     opt2)}
 
   ${opt('3A', 'tiêu điểm · bản mịn', 'Tiêu điểm hôm nay — bìa dọc',
-    'Thêm <b>dải tuần mảnh</b> ngay trên: bảy ô, ô hôm nay có gạch son, chấm son = ngày có bộ ra. ' +
+    'Bỏ dải tuần — chỉ còn một nhãn nhỏ “Hôm nay · Thứ 6 30/10” ở đầu mục để giữ bối cảnh. ' +
     'Bên trái là <b>bìa dọc 116×174</b> đặt trên nền giấy rất nhẹ (không cắt ảnh nên mặt nhân vật còn nguyên), ' +
     'chữ bên phải: nhãn son in hoa · tên serif 22px · dòng meta mono · “Xem truyện ›”. ' +
     'Bên phải: năm bộ còn lại, mỗi dòng một bộ, đầu danh sách có nhãn “CÒN LẠI TRONG TUẦN · 5 BỘ”.',
     opt3a)}
 
   ${opt('3B', 'tiêu điểm · bản sâu', 'Tiêu điểm hôm nay — nền bìa mờ',
-    'Cùng bố cục với 3A nhưng tấm tiêu điểm là một <b>khối ảnh</b>: chính bìa của bộ đó phóng to làm nền, ' +
+    'Cùng bố cục với 3A (cũng không có dải tuần) nhưng tấm tiêu điểm là một <b>khối ảnh</b>: chính bìa của bộ đó phóng to làm nền, ' +
     'phủ lớp tối chuyển sắc và làm mờ nhẹ, còn bìa dọc sắc nét nổi lên bên trái. Đậm và “điện ảnh” hơn, ' +
     'vẫn không cắt mất mặt nhân vật.',
     opt3b)}

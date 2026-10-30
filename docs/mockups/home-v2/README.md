@@ -99,7 +99,7 @@ Dựng bằng `gen-sched.mjs`, ba phương án từ dữ liệu thật `registry
 |---|---|---|
 | 1 | Bảng tuần 7 cột | thứ + ngày ở trên, bìa 32px + tên 2 dòng; cột hôm nay tô son nhạt; ngày trống hiện “—” |
 | 2 | Danh sách theo ngày | 6 dòng × 2 cột: nhãn thứ · bìa 34px · tên 1 dòng · nhãn tình trạng; dòng hôm nay có vạch son trái |
-| 3A | Tiêu điểm · bìa dọc | dải tuần mảnh 7 ô (ô hôm nay có gạch son, chấm = có bộ ra); trái: bìa dọc 116×174 trên nền giấy nhẹ + nhãn son · tên serif 22px · meta mono · “Xem truyện ›”; phải: 5 bộ còn lại |
+| 3A | Tiêu điểm · bìa dọc | **không có dải tuần** (bỏ theo yêu cầu), chỉ một nhãn “Hôm nay · Thứ 6 30/10” ở đầu mục; trái: bìa dọc 116×174 trên nền giấy nhẹ + nhãn son · tên serif 22px · meta mono · “Xem truyện ›”; phải: 5 bộ còn lại |
 | 3B | Tiêu điểm · nền bìa mờ | như 3A nhưng tấm tiêu điểm là khối ảnh: chính bìa phóng to làm nền `blur(16px) brightness(.52)`, lớp tối chuyển sắc, bìa dọc sắc nét nổi bên trái |
 
 ## Dữ liệu

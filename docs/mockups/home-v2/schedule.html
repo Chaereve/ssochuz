@@ -23,6 +23,9 @@
     border-bottom: 1px solid var(--bd); margin-bottom: 16px; }
   .hr h2 { font-size: 20px; font-weight: 650; }
   .hs { font-size: 12.5px; color: var(--dim); }
+  .htoday { display: inline-flex; align-items: center; height: 20px; padding: 0 8px;
+    border-radius: 5px; background: var(--acc-soft); color: var(--acc);
+    font: 700 9.5px/1 var(--font-mono); letter-spacing: .07em; text-transform: uppercase; }
   .hm { margin-left: auto; display: inline-flex; align-items: center; gap: 3px;
     font-size: 12.5px; font-weight: 650; color: var(--mut); white-space: nowrap; }
   .hm svg { width: 11px; height: 11px; }
@@ -84,24 +87,6 @@
   .qst.soon { color: #b9b2d6; }
 
   /* ---- 3 · tiêu điểm hôm nay (bản làm mịn) ---- */
-  /* dải tuần mảnh */
-  .wrib { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0;
-    border-top: 1px solid var(--bd-soft); border-bottom: 1px solid var(--bd-soft);
-    margin-bottom: 18px; }
-  .rb { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0;
-    padding: 11px 4px 10px; border-right: 1px solid var(--bd-soft); position: relative; }
-  .rb:last-child { border-right: 0; }
-  .rb b { font: 700 9.5px/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase;
-    color: var(--mut); }
-  .rb em { font-style: normal; font: 500 10px/1 var(--font-mono); color: var(--dim); }
-  .rb i { font-style: normal; height: 6px; font-size: 9px; line-height: 1; letter-spacing: 2px;
-    color: var(--acc); opacity: .8; }
-  .rb.off i { opacity: 0; }
-  .rb.now b, .rb.now em { color: var(--acc); }
-  .rb.now::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: -1px;
-    height: 2px; border-radius: 2px; background: var(--acc); }
-  .wrib.thin .rb { padding: 9px 4px 8px; }
-
   /* lưới: tiêu điểm bên trái · danh sách bên phải */
   .w3grid { display: grid; grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr);
     gap: 32px; align-items: stretch; }
@@ -180,8 +165,6 @@
     .wcol:nth-child(2n) { border-right: 0; }
     .qrow { grid-template-columns: 38px 32px minmax(0, 1fr); }
     .qst { grid-column: 3; margin-top: 4px; }
-    .wrib { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    .rb:nth-child(4) { border-right: 0; }
     .w3feat { grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 16px; }
     .w3poster { width: 92px; }
     .w3n { font-size: 19px; }
@@ -209,6 +192,7 @@
     <span class="otag"><i>1</i>Bảng tuần · bảng tuần 7 cột</span>
     <p class="onote">Bảy cột mảnh, mỗi ngày một cột: thứ + ngày ở trên, dưới là bìa nhỏ 32px và tên hai dòng. Cột hôm nay tô son nhạt, chữ ngày màu son. Ngày trống hiện dấu “—” chứ không phải ô rỗng. <b>Ưu:</b> thấy cả tuần trong một cái liếc, đúng nghĩa “lịch”. <b>Nhược:</b> cột hẹp nên tên bị cắt 2 dòng.</p>
     <div class="hr"><h2>Lịch ra chương</h2><span class="hs">6 bộ · tuần này</span>
+      <span class="htoday">Hôm nay · Thứ 6 30/10</span>
       <span class="hm">Cả tuần
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
           stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
@@ -220,6 +204,7 @@
     <span class="otag"><i>2</i>Danh sách theo ngày · hàng đợi hai cột</span>
     <p class="onote">Sáu dòng chia hai cột (3 + 3): nhãn thứ + ngày bên trái, bìa 34px, tên một dòng và dòng phụ (số chương · tình trạng), cuối dòng là nhãn tình trạng. Dòng của hôm nay có vạch son bên trái. <b>Ưu:</b> gọn nhất, không có ô trống nào, cùng nhịp với bảng “Mới cập nhật” bạn vừa chốt. <b>Nhược:</b> không thấy “tuần” như một tờ lịch.</p>
     <div class="hr"><h2>Lịch ra chương</h2><span class="hs">6 bộ · tuần này</span>
+      <span class="htoday">Hôm nay · Thứ 6 30/10</span>
       <span class="hm">Cả tuần
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
           stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
@@ -229,13 +214,13 @@
 
   <section class="opt">
     <span class="otag"><i>3A</i>Tiêu điểm hôm nay — bìa dọc · tiêu điểm · bản mịn</span>
-    <p class="onote">Thêm <b>dải tuần mảnh</b> ngay trên: bảy ô, ô hôm nay có gạch son, chấm son = ngày có bộ ra. Bên trái là <b>bìa dọc 116×174</b> đặt trên nền giấy rất nhẹ (không cắt ảnh nên mặt nhân vật còn nguyên), chữ bên phải: nhãn son in hoa · tên serif 22px · dòng meta mono · “Xem truyện ›”. Bên phải: năm bộ còn lại, mỗi dòng một bộ, đầu danh sách có nhãn “CÒN LẠI TRONG TUẦN · 5 BỘ”.</p>
+    <p class="onote">Bỏ dải tuần — chỉ còn một nhãn nhỏ “Hôm nay · Thứ 6 30/10” ở đầu mục để giữ bối cảnh. Bên trái là <b>bìa dọc 116×174</b> đặt trên nền giấy rất nhẹ (không cắt ảnh nên mặt nhân vật còn nguyên), chữ bên phải: nhãn son in hoa · tên serif 22px · dòng meta mono · “Xem truyện ›”. Bên phải: năm bộ còn lại, mỗi dòng một bộ, đầu danh sách có nhãn “CÒN LẠI TRONG TUẦN · 5 BỘ”.</p>
     <div class="hr"><h2>Lịch ra chương</h2><span class="hs">6 bộ · tuần này</span>
+      <span class="htoday">Hôm nay · Thứ 6 30/10</span>
       <span class="hm">Cả tuần
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
           stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
-    <div class="wrib"><span class="rb"><b>T2</b><em>26/10</em><i>•</i></span><span class="rb"><b>T3</b><em>27/10</em><i>•</i></span><span class="rb"><b>T4</b><em>28/10</em><i>•</i></span><span class="rb"><b>T5</b><em>29/10</em><i>•</i></span><span class="rb now"><b>T6</b><em>30/10</em><i>•</i></span><span class="rb"><b>T7</b><em>31/10</em><i>•</i></span><span class="rb"><b>CN</b><em>01/11</em><i>•</i></span></div>
-<div class="w3grid">
+    <div class="w3grid">
   <a class="w3feat" href="#">
     <span class="w3poster"><img src="../../../assets/covers/c890362a.webp" alt="" loading="lazy"></span>
     <span class="w3txt">
@@ -255,13 +240,13 @@
 
   <section class="opt">
     <span class="otag"><i>3B</i>Tiêu điểm hôm nay — nền bìa mờ · tiêu điểm · bản sâu</span>
-    <p class="onote">Cùng bố cục với 3A nhưng tấm tiêu điểm là một <b>khối ảnh</b>: chính bìa của bộ đó phóng to làm nền, phủ lớp tối chuyển sắc và làm mờ nhẹ, còn bìa dọc sắc nét nổi lên bên trái. Đậm và “điện ảnh” hơn, vẫn không cắt mất mặt nhân vật.</p>
+    <p class="onote">Cùng bố cục với 3A (cũng không có dải tuần) nhưng tấm tiêu điểm là một <b>khối ảnh</b>: chính bìa của bộ đó phóng to làm nền, phủ lớp tối chuyển sắc và làm mờ nhẹ, còn bìa dọc sắc nét nổi lên bên trái. Đậm và “điện ảnh” hơn, vẫn không cắt mất mặt nhân vật.</p>
     <div class="hr"><h2>Lịch ra chương</h2><span class="hs">6 bộ · tuần này</span>
+      <span class="htoday">Hôm nay · Thứ 6 30/10</span>
       <span class="hm">Cả tuần
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
           stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
-    <div class="wrib thin"><span class="rb"><b>T2</b><em>26/10</em><i>•</i></span><span class="rb"><b>T3</b><em>27/10</em><i>•</i></span><span class="rb"><b>T4</b><em>28/10</em><i>•</i></span><span class="rb"><b>T5</b><em>29/10</em><i>•</i></span><span class="rb now"><b>T6</b><em>30/10</em><i>•</i></span><span class="rb"><b>T7</b><em>31/10</em><i>•</i></span><span class="rb"><b>CN</b><em>01/11</em><i>•</i></span></div>
-<div class="w3grid">
+    <div class="w3grid">
   <a class="w3feat v3b" href="#">
     <img class="w3bg" src="../../../assets/covers/c890362a.webp" alt="" loading="lazy">
     <span class="w3veil"></span>
