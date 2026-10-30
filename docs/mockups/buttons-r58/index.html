@@ -1,69 +1,212 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Đề xuất vòng 58 · nút bấm gọn và đồng bộ</title>
 <link rel="stylesheet" href="/cz.css?v=20261031upd1">
-<link rel="stylesheet" href="variants.css">
 <style>
-  .page { max-width: 1140px; margin: 0 auto; padding: 40px 20px 90px; }
-  .kick { font: 700 11px/1 ui-monospace, monospace; letter-spacing: .14em;
-    text-transform: uppercase; color: var(--acc); }
-  h1 { margin: 14px 0 12px; font-size: 34px; line-height: 1.12; letter-spacing: -.015em;
-    font-family: var(--font-head); }
-  .lede { margin: 0 0 10px; max-width: 74ch; color: var(--mut); font-size: 15px; }
-  .lede b { color: var(--txt); }
+/* ==========================================================================
+   Trang so sánh nút bấm (vòng 58). TĨNH HOÀN TOÀN: không iframe, không
+   fetch, không JS. Mọi thứ dưới đây là HTML + CSS, nên mở ở đâu cũng thấy
+   đúng như vậy — kể cả khi mạng chậm hay trang thật đang tải.
+   Kích thước nút lấy đúng số đo trên site thật (ghi trong từng phương án).
+   ========================================================================== */
+.page { max-width: 1140px; margin: 0 auto; padding: 40px 20px 90px; }
+.kick { font: 700 11px/1 ui-monospace, monospace; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--acc); }
+h1 { margin: 14px 0 12px; font-size: 34px; line-height: 1.12; letter-spacing: -.015em;
+  font-family: var(--font-head); }
+.lede { margin: 0 0 10px; max-width: 74ch; color: var(--mut); font-size: 15px; }
+.lede b { color: var(--txt); }
 
-  h2 { margin: 46px 0 6px; font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase;
-    color: var(--dim); font-weight: 700; }
-  .h2sub { margin: 0 0 16px; color: var(--mut); font-size: 14px; max-width: 76ch; }
+h2 { margin: 48px 0 6px; font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--dim); font-weight: 700; }
+.h2sub { margin: 0 0 16px; color: var(--mut); font-size: 14px; max-width: 78ch; }
 
-  .dev { border: 1px solid var(--bd); border-radius: 12px; background: var(--bg); overflow: hidden; }
-  .dev .cap { display: flex; align-items: center; gap: 8px; padding: 7px 12px;
-    border-bottom: 1px solid var(--bd); font: 700 10.5px/1 ui-monospace, monospace;
-    letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
-  .dev .cap .w { margin-left: auto; font-weight: 600; }
-  .dev .pad { padding: 8px; }
-  .dev + .dev { margin-top: 12px; }
-  .duo { display: flex; gap: 12px; flex-wrap: wrap; }
-  .duo > .dev { flex: 1 1 300px; min-width: 0; }
-  .duo > .dev + .dev { margin-top: 0; }
-  @media (max-width: 720px) { .duo > .dev { flex: 1 1 100%; } }
+/* ---------- danh sách vấn đề ---------- */
+.why { margin: 18px 0 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.why li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px;
+  padding: 12px 14px; border-left: 2px solid var(--acc); background: var(--surf);
+  border-radius: 0 8px 8px 0; }
+.why .n { font: 700 12px/1.5 ui-monospace, monospace; color: var(--acc); }
+.why b { display: block; color: var(--txt); font-size: 13.5px; margin-bottom: 2px; }
+.why span.t { color: var(--mut); font-size: 13px; line-height: 1.55; }
+.why span.t b { display: inline; color: var(--txt); font-weight: 600; }
+code { font-family: var(--font-mono); font-size: .92em; color: var(--txt);
+  background: var(--surf2); padding: 1px 5px; border-radius: 4px; }
 
-  .opt { margin: 0 0 44px; }
-  .opt-h { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
-  .opt-h .tag { font: 700 11px/1 ui-monospace, monospace; letter-spacing: .12em;
-    text-transform: uppercase; padding: 4px 8px; border: 1px solid var(--acc);
-    border-radius: 4px; color: var(--acc); }
-  .opt-h h3 { margin: 0; font-size: 20px; font-family: var(--font-head); letter-spacing: -.01em; }
-  .opt-h .pick { margin-left: auto; font-size: 12px; color: var(--dim); }
-  .opt .say { margin: 10px 0 14px; color: var(--mut); font-size: 14px; max-width: 80ch; }
-  .opt .say b { color: var(--txt); }
+/* ---------- khung so sánh nhanh ---------- */
+.quick { display: grid; gap: 10px; margin-top: 8px; }
+.qrow { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 14px; align-items: center;
+  padding: 12px 14px; background: var(--surf); border: 1px solid var(--bd); border-radius: 10px; }
+.qlab { font: 700 12px/1.3 ui-monospace, monospace; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--dim); }
+.qrow.on .qlab { color: var(--acc); }
+.qbox { min-width: 0; overflow: visible; }
 
-  .k { display: grid; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none;
-    grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  @media (max-width: 760px) { .k { grid-template-columns: 1fr; } }
-  .k li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 9px;
-    padding: 10px 12px; background: var(--surf); border: 1px solid var(--bd); border-radius: 9px; }
-  .k .n { font: 700 10.5px/1.6 ui-monospace, monospace; color: var(--acc); }
-  .k > li > span > b { display: block; font-size: 13px; color: var(--txt); margin-bottom: 2px; }
-  .k span.t { font-size: 12.5px; color: var(--mut); line-height: 1.55; }
-  .k span.t b { color: var(--txt); font-weight: 600; }
+/* ==========================================================================
+   NÚT — phần dùng chung
+   .b        nút nền tảng: cao 44px, bo 10px, chữ 13,5px
+   .b.pri    nút chính: đặc màu nhấn, chữ tối
+   .b.gh     nút phụ: viền mảnh, nền trong
+   .b.ico    nút chỉ có icon (vẫn cao 44px)
+   ========================================================================== */
+.row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.b { display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 44px; padding: 0 18px; border: 1px solid transparent; border-radius: 10px;
+  font-family: var(--font); font-size: 13.5px; font-weight: 650; line-height: 1;
+  color: #fff; text-decoration: none; white-space: nowrap; }
+.b .ic { width: 15px; height: 15px; flex: none; }
+.b.pri { background: var(--acc); border-color: var(--acc); color: #221017; }
+.b.gh { background: transparent; border-color: rgba(255, 255, 255, .24); color: rgba(255, 255, 255, .86); }
+.b.ico { width: 44px; padding: 0; }
+/* trạng thái đang bật (đã theo dõi / đã lưu) — dùng cho phần ghi chú */
+.b.gh.on { color: var(--acc); border-color: color-mix(in srgb, var(--acc) 58%, rgba(255,255,255,.18)); }
 
-  .why { margin: 18px 0 0; padding: 0; list-style: none; display: grid; gap: 10px; }
-  .why li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px;
-    padding: 12px 14px; border-left: 2px solid var(--acc); background: var(--surf); border-radius: 0 8px 8px 0; }
-  .why .n { font: 700 12px/1.5 ui-monospace, monospace; color: var(--acc); }
-  .why > li > span > b:first-child { display: block; color: var(--txt); font-size: 13.5px; margin-bottom: 2px; }
-  .why span.t { color: var(--mut); font-size: 13px; line-height: 1.55; }
-  .why span.t b { display: inline; color: var(--txt); font-weight: 600; }
-  body > div[style*="position:fixed"] { display: none !important; }
-  .why code, footer code { font-family: var(--font-mono); font-size: .92em; color: var(--txt);
-    background: var(--surf2); padding: 1px 5px; border-radius: 4px; }
+/* ==========================================================================
+   V0 · HIỆN TẠI (số đo thật trên site)
+   hero: cao 44 · bo 99px · chữ 14,5 · nút (i) tròn 44
+   trang truyện: cao 38 · bo 9px · chữ 12,5 · nút chia sẻ bị đẩy ra mép
+   ========================================================================== */
+.v0 .b.pri { min-width: 168px; padding: 0 20px; border-radius: 99px; font-size: 14.5px; }
+.v0 .b.gh { width: 44px; padding: 0; border-radius: 50%;
+  background: rgba(255, 255, 255, .07); border-color: rgba(255, 255, 255, .26); }
+.v0 .b { font-size: 14.5px; }
 
-  footer { margin-top: 44px; padding-top: 20px; border-top: 1px solid var(--bd);
-    color: var(--dim); font-size: 13px; }
+.v0.st .row { gap: 8px; }
+.v0.st .b { height: 38px; padding: 0 14px; border-radius: 9px; font-size: 12.5px; }
+.v0.st .b.gh { width: auto; border-radius: 9px;
+  background: rgba(18, 12, 9, .3); border-color: rgba(255, 255, 255, .24); }
+.v0.st .b.ico { width: 38px; padding: 0; }
+.v0.st .utils { margin-left: auto; }   /* đây là thứ tạo khoảng trống ~300px */
+
+/* ==========================================================================
+   V-A · MỘT HỆ NÚT
+   mọi nút: cao 44 · bo 10 · chữ 13,5 · nút phụ nền trong, viền mảnh
+   ========================================================================== */
+.vA .b.gh { background: transparent; }
+
+/* ==========================================================================
+   V-B · NHÓM LIỀN MẠCH
+   nút chính + nút phụ cùng một khối, chia bằng vạch dọc
+   ========================================================================== */
+.vB .row { gap: 0; }
+.vB .b.pri { border-radius: 10px 0 0 10px; margin-right: 0; }
+.vB .b.split { width: 46px; padding: 0; border-radius: 0 10px 10px 0;
+  background: var(--acc); border-color: var(--acc); color: rgba(26, 17, 19, .8);
+  border-left: 1px solid rgba(26, 17, 19, .3); }
+.vB.st .b.pri { border-radius: 10px; margin-right: 12px; }
+.vB.st .group { display: flex; align-items: stretch; }
+.vB.st .group .b { border-radius: 0; margin-left: -1px; background: rgba(14, 9, 6, .42); }
+.vB.st .group .b:first-child { border-radius: 10px 0 0 10px; margin-left: 0; }
+.vB.st .group .b:last-child { border-radius: 0 10px 10px 0; }
+.vB.st .group .b.ico { width: 44px; padding: 0; }
+
+/* ==========================================================================
+   V-C · BỚT HỘP
+   chỉ nút chính là hộp; việc phụ là nút chữ, không viền, không nền
+   ========================================================================== */
+.vC .b.gh { background: transparent; border-color: transparent; color: rgba(255, 255, 255, .74); }
+.vC .b.pri { margin-right: 8px; }
+.vC .b.ico { width: 42px; }
+
+/* ---------- bảng ngữ cảnh ---------- */
+.panel { position: relative; border-radius: 12px; overflow: hidden; background: #15100d;
+  border: 1px solid var(--bd); }
+.panel .art { position: absolute; inset: 0; background: center 28% / cover no-repeat; opacity: .5; }
+.panel .veil { position: absolute; inset: 0;
+  background: linear-gradient(90deg, #141110 0%, rgba(20,17,16,.94) 46%, rgba(20,17,16,.35) 100%); }
+.panel .in { position: relative; padding: 24px 26px 26px; display: grid; gap: 12px; }
+.panel .statusline { font: 700 10px/1 ui-monospace, monospace; letter-spacing: .16em;
+  text-transform: uppercase; color: #a9dcc0; display: flex; align-items: center; gap: 7px; }
+.panel .statusline i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.panel h3 { margin: 0; font-family: var(--font-head); font-size: 30px; line-height: 1.12;
+  letter-spacing: -.015em; color: #fff; }
+.panel .facts { display: flex; gap: 26px; margin: 2px 0 4px; padding: 10px 0 0;
+  border-top: 1px solid rgba(255, 255, 255, .1); }
+.panel .facts div { display: grid; gap: 5px; }
+.panel .facts dt { font: 600 9px/1 ui-monospace, monospace; letter-spacing: .12em;
+  text-transform: uppercase; color: rgba(255, 255, 255, .45); }
+.panel .facts dd { margin: 0; font-size: 13px; font-weight: 700; color: #fff; }
+
+.story .in { grid-template-columns: 96px minmax(0, 1fr); gap: 22px; align-items: start; }
+.story .cv { width: 96px; aspect-ratio: 2 / 3; border-radius: 8px; overflow: hidden;
+  background: #241a15; }
+.story .cv img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.story h3 { font-size: 23px; }
+.story .sub { margin: 0 0 12px; font-size: 12.5px; color: rgba(255, 255, 255, .6); }
+.story .stack { display: grid; gap: 12px; align-content: start; }
+/* không để hàng nút ép rộng khung: cho phép co rồi tự quấn xuống dòng
+   (khi mở trang trên máy hẹp, bản desktop không được đẩy tràn ngang) */
+.panel .in > *, .panel .stack > * { min-width: 0; }
+.panel .row { min-width: 0; max-width: 100%; }
+
+/* khung máy hẹp: đúng bề ngang 390, không co theo cửa sổ */
+.mob { width: 390px; max-width: 100%; }
+.mob .in { padding: 18px; }
+.mob h3 { font-size: 22px; }
+.mob .facts { gap: 18px; flex-wrap: wrap; }
+.mob.story .in { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.mob.story .cv { width: 76px; }
+.mob .row { gap: 8px; }
+/* trang truyện ở máy hẹp: nút chính chiếm cả hàng, hai nút phụ chia đôi (đúng CSS thật) */
+.mob.story .row .b.pri { flex: 1 1 100%; }
+.mob.story .row .b.gh { flex: 1 1 calc(50% - 4px); }
+/* hero máy hẹp: nút chính giữ đúng bề ngang chữ, nút icon đứng cạnh */
+.mob:not(.story) .row .b.pri { flex: 0 1 auto; }
+/* nút chỉ-icon: đúng 44px, không bao giờ giãn */
+.mob .row .b.ico,
+.mob .row .utils .b { flex: 0 0 auto; width: 44px; padding: 0; }
+.mob .row > .utils { flex: 1 1 100%; display: flex; justify-content: flex-end; margin-top: 2px; }
+.mob .row > .utils .b { width: 44px; }
+.mob.vB .row { gap: 0; }
+.mob.vB.st .row .b.pri { flex: 1 1 100%; border-radius: 10px; margin-right: 0; }
+.mob.vB.st .group { flex: 1 1 100%; }
+.mob.vB.st .group .b { flex: 1 1 50%; }
+.mob.vB.st .utils { flex: 0 0 auto; margin: 4px 0 0 auto; }
+.mob.vB.st .utils .b { border-radius: 10px; margin: 0; }
+.mob.vC .row .b.gh { flex: 1 1 calc(50% - 4px); }
+.mob.vC .row .b.pri { margin-right: 0; }
+
+/* ---------- bố cục từng phương án ---------- */
+.opt { margin: 0 0 46px; }
+.opt-h { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.opt-h .tag { font: 700 11px/1 ui-monospace, monospace; letter-spacing: .12em;
+  text-transform: uppercase; padding: 4px 8px; border: 1px solid var(--acc);
+  border-radius: 4px; color: var(--acc); }
+.opt-h h3 { margin: 0; font-size: 20px; font-family: var(--font-head); letter-spacing: -.01em; }
+.opt-h .pick { margin-left: auto; font-size: 12px; color: var(--dim); }
+.opt .say { margin: 10px 0 14px; color: var(--mut); font-size: 14px; max-width: 80ch; }
+.opt .say b { color: var(--txt); }
+.opt .spec { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 14px; }
+.opt .spec span { font: 700 11px/1 ui-monospace, monospace; letter-spacing: .04em;
+  padding: 6px 9px; border-radius: 5px; background: var(--surf2); color: var(--mut);
+  border: 1px solid var(--bd); }
+.dev + .dev { margin-top: 12px; }
+.dev .cap { display: flex; align-items: center; gap: 8px; padding: 7px 12px;
+  border: 1px solid var(--bd); border-bottom: 0; border-radius: 11px 11px 0 0;
+  background: var(--surf); font: 700 10.5px/1 ui-monospace, monospace;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+.dev .cap .w { margin-left: auto; font-weight: 600; }
+.dev .panel { border-radius: 0 0 11px 11px; }
+.dev.mobdev { width: 392px; max-width: 100%; }
+.duo { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; }
+.duo > .dev { flex: 0 0 auto; }
+
+.k { display: grid; gap: 8px; margin: 16px 0 0; padding: 0; list-style: none;
+  grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 760px) { .k { grid-template-columns: 1fr; } .qrow { grid-template-columns: 1fr; } }
+.k li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 9px;
+  padding: 10px 12px; background: var(--surf); border: 1px solid var(--bd); border-radius: 9px; }
+.k .n { font: 700 10.5px/1.6 ui-monospace, monospace; color: var(--acc); }
+.k > li > span > b { display: block; font-size: 13px; color: var(--txt); margin-bottom: 2px; }
+.k span.t { font-size: 12.5px; color: var(--mut); line-height: 1.55; }
+.k span.t b { color: var(--txt); font-weight: 600; }
+footer { margin-top: 44px; padding-top: 20px; border-top: 1px solid var(--bd);
+  color: var(--dim); font-size: 13px; }
+/* nhãn của dev server (chèn vào mọi trang HTML khi xem thử) — ẩn cho sạch ảnh */
+body > div[style*="position:fixed"] { display: none !important; }
 </style>
 </head>
 <body>
@@ -86,123 +229,366 @@
       <span class="t">Hero: nền trắng 7%. Trang truyện: nền nâu 30%. Hai tông khác nhau cho cùng
       một cấp bậc phụ.</span></span></li>
     <li><span class="n">04</span><span><b>Nút chia sẻ bị đẩy ra tận mép</b>
-      <span class="t">Trong hàng, nút cuối cách nút trước <b>~300px</b> vì bị đẩy bằng
+      <span class="t">Nút cuối cách nút trước <b>~300px</b> vì bị đẩy bằng
       <code>margin-left:auto</code> — tạo một khoảng trống chết giữa hàng nút.</span></span></li>
     <li><span class="n">05</span><span><b>Trạng thái “đang bật” thêm tông thứ ba</b>
       <span class="t">Khi đã theo dõi / đã lưu, nút mọc thêm nền hồng nhạt + chữ hồng: hàng nút
       lúc đó có tới ba tông màu.</span></span></li>
   </ul>
 
-  <h2>Đang chạy</h2>
-  <p class="h2sub">Đây là <b>trang thật trong khung</b> — không phải ảnh chụp, không phải bản dựng
-    lại. Trên: hero trang chủ. Dưới: khối nút ở trang truyện 18+ (chưa xác nhận tuổi).</p>
+  <h2>So sánh nhanh · hàng nút ở hero trang chủ</h2>
+  <p class="h2sub">Cùng một khung, đúng cỡ thật. Từ trên xuống: hiện tại → A → B → C. Đây là phần
+    cần nhìn trước tiên; phía dưới mới là bản trong ngữ cảnh và bản máy hẹp.</p>
 
-  <div class="dev"><div class="cap">Trang chủ · hero <span class="w">1240px</span></div>
-    <div class="pad"><div class="stage" data-v="0" data-page="/" data-sel="#hero .btn-row"
-      data-off="26" data-w="1240" data-h="100"></div></div></div>
+  <div class="quick">
+    <div class="qrow on"><span class="qlab">Hiện tại</span>
+      <div class="qbox"><div class="row v0">
+        <a class="b pri" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16l13 -8l-13 -8"/></svg><span>Đọc từ đầu</span></a>
+        <a class="b gh ico" href="#" aria-label="Thông tin truyện"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 9h.01"/><path d="M11 12h1v4h1"/></svg></a>
+      </div></div></div>
 
-  <div class="dev"><div class="cap">Trang truyện · khối nút <span class="w">1240px</span></div>
-    <div class="pad"><div class="stage" data-v="0" data-page="/truyen/hometown-romance-special/" data-sel="#shero .btn-row"
-      data-off="6" data-w="1240" data-h="62"></div></div></div>
+    <div class="qrow"><span class="qlab">A</span>
+      <div class="qbox"><div class="row vA">
+        <a class="b pri" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16l13 -8l-13 -8"/></svg><span>Đọc từ đầu</span></a>
+        <a class="b gh ico" href="#" aria-label="Thông tin truyện"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 9h.01"/><path d="M11 12h1v4h1"/></svg></a>
+      </div></div></div>
 
+    <div class="qrow"><span class="qlab">B</span>
+      <div class="qbox"><div class="row vB">
+        <a class="b pri" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16l13 -8l-13 -8"/></svg><span>Đọc từ đầu</span></a>
+        <a class="b split" href="#" aria-label="Thông tin truyện"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 9h.01"/><path d="M11 12h1v4h1"/></svg></a>
+      </div></div></div>
+
+    <div class="qrow"><span class="qlab">C</span>
+      <div class="qbox"><div class="row vC">
+        <a class="b pri" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16l13 -8l-13 -8"/></svg><span>Đọc từ đầu</span></a>
+        <a class="b gh" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 9h.01"/><path d="M11 12h1v4h1"/></svg><span>Thông tin truyện</span></a>
+      </div></div></div>
+  </div>
+
+  <h2>Hiện tại · trong ngữ cảnh</h2>
+  <p class="h2sub">Đây là bản đang chạy, dựng lại tĩnh đúng số đo: hero bo 99px / chữ 14,5px; trang
+    truyện cao 38px / chữ 12,5px, và nút chia sẻ bị đẩy ra tận mép phải.</p>
+
+  <div class="dev"><div class="cap">Trang chủ · hero <span class="w">desktop</span></div>
+    <div class="panel">
+      <div class="art" style="background-image:url('/assets/covers/6a6f3cd4.webp')"></div>
+      <div class="veil"></div>
+      <div class="in">
+        <span class="statusline"><i></i>Hoàn thành</span>
+        <h3>Third Person</h3>
+        <div class="facts">
+          <div><dt>Chương</dt><dd>42</dd></div>
+          <div><dt>Tác giả</dt><dd>SIIX</dd></div>
+          <div><dt>Couple</dt><dd>Garn x Mimie</dd></div>
+          <div><dt>Cập nhật</dt><dd>29-09</dd></div>
+        </div>
+        <div class="row v0">
+          <a class="b pri" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16l13 -8l-13 -8"/></svg><span>Đọc từ đầu</span></a>
+          <a class="b gh ico" href="#" aria-label="Thông tin truyện"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 9h.01"/><path d="M11 12h1v4h1"/></svg></a>
+        </div>
+      </div>
+    </div></div>
+
+  <div class="dev"><div class="cap">Trang truyện · khối nút <span class="w">desktop</span></div>
+    <div class="panel story">
+      <div class="veil"></div>
+      <div class="in">
+        <span class="cv"><img src="/assets/covers/80b25f67.webp" alt=""></span>
+        <div class="stack">
+          <h3>HOMETOWN ROMANCE - SPECIAL</h3>
+          <p class="sub">18+ · Hoàn thành · 10 chương · Lambo · Lookmhee x Sonya</p>
+          <div class="row v0 st">
+            <a class="b pri" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/></svg><span>Xác nhận 18+ để đọc</span></a>
+            <a class="b gh" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg><span>Theo dõi</span></a>
+            <a class="b gh" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10v11l-5 -3l-5 3v-11a3 3 0 0 1 3 -3h4a3 3 0 0 1 3 3"/><path d="M11 3h5a3 3 0 0 1 3 3v11"/></svg><span>Tủ truyện</span></a>
+            <span class="utils"><a class="b gh ico" href="#" aria-label="Chia sẻ"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4v4c-6.575 1.028 -9.02 6.788 -10 12c-.037 .206 5.384 -5.962 10 -6v4l8 -7l-8 -7"/></svg></a></span>
+          </div>
+        </div>
+      </div>
+    </div></div>
+
+  <!-- ==================== A ==================== -->
   <h2>Ba phương án</h2>
-  <p class="h2sub">Cả ba đều sửa cùng năm chỗ lệch trên, theo ba mức can thiệp khác nhau: <b>A</b>
-    giữ nguyên số hộp, chỉ thống nhất hình học; <b>B</b> gộp các việc phụ thành một khối;
-    <b>C</b> bỏ hộp khỏi mọi việc phụ.</p>
+  <p class="h2sub">Cả ba sửa cùng năm chỗ lệch, theo ba mức can thiệp: <b>A</b> giữ số hộp, chỉ thống
+    nhất hình học; <b>B</b> gộp các việc phụ thành một khối; <b>C</b> bỏ hộp khỏi mọi việc phụ.</p>
 
-  <!-- ================= A ================= -->
   <section class="opt">
     <div class="opt-h"><span class="tag">A</span><h3>Một hệ nút</h3>
       <span class="pick">ít thay đổi nhất · vẫn là hộp, nhưng cùng một luật</span></div>
-    <p class="say">Mọi nút về <b>cùng bo 10px · cùng cao 44px · cùng cỡ chữ 13,5px</b>. Nút chính
-      đặc màu nhấn, nút phụ chỉ còn <b>đường kẻ mảnh trên nền trong</b>. Trạng thái “đang bật” chỉ
-      đổi màu chữ, không mọc thêm nền. Nút chia sẻ đứng ngay sau nút cuối thay vì dạt ra mép.</p>
+    <p class="say">Mọi nút về <b>cùng bo 10px · cùng cao 44px · cùng cỡ chữ 13,5px</b>. Nút chính đặc
+      màu nhấn, nút phụ chỉ còn <b>đường kẻ mảnh trên nền trong</b>. Nút chia sẻ đứng ngay sau nút
+      cuối thay vì dạt ra mép. Không đổi markup, không đổi chữ trên nút.</p>
+    <div class="spec"><span>cao 44px</span><span>bo 10px</span><span>chữ 13,5px</span><span>gap 8px</span><span>phụ: nền trong</span></div>
 
-    <div class="dev"><div class="cap">Trang chủ · hero <span class="w">1240px</span></div>
-      <div class="pad"><div class="stage" data-v="a" data-page="/" data-sel="#hero .btn-row"
-        data-off="26" data-w="1240" data-h="100"></div></div></div>
+    <div class="dev"><div class="cap">Trang chủ · hero <span class="w">desktop</span></div>
+      <div class="panel">
+        <div class="art" style="background-image:url('/assets/covers/6a6f3cd4.webp')"></div>
+        <div class="veil"></div>
+        <div class="in">
+          <span class="statusline"><i></i>Hoàn thành</span>
+          <h3>Third Person</h3>
+          <div class="facts">
+            <div><dt>Chương</dt><dd>42</dd></div>
+            <div><dt>Tác giả</dt><dd>SIIX</dd></div>
+            <div><dt>Couple</dt><dd>Garn x Mimie</dd></div>
+            <div><dt>Cập nhật</dt><dd>29-09</dd></div>
+          </div>
+          <div class="row vA">
+            <a class="b pri" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16l13 -8l-13 -8"/></svg><span>Đọc từ đầu</span></a>
+            <a class="b gh ico" href="#" aria-label="Thông tin truyện"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 9h.01"/><path d="M11 12h1v4h1"/></svg></a>
+          </div>
+        </div>
+      </div></div>
 
-    <div class="dev"><div class="cap">Trang truyện · khối nút <span class="w">1240px</span></div>
-      <div class="pad"><div class="stage" data-v="a" data-page="/truyen/hometown-romance-special/" data-sel="#shero .btn-row"
-        data-off="6" data-w="1240" data-h="62"></div></div></div>
+    <div class="dev"><div class="cap">Trang truyện · khối nút <span class="w">desktop</span></div>
+      <div class="panel story">
+        <div class="veil"></div>
+        <div class="in">
+          <span class="cv"><img src="/assets/covers/80b25f67.webp" alt=""></span>
+          <div class="stack">
+            <h3>HOMETOWN ROMANCE - SPECIAL</h3>
+            <p class="sub">18+ · Hoàn thành · 10 chương · Lambo · Lookmhee x Sonya</p>
+            <div class="row vA st">
+              <a class="b pri" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/></svg><span>Xác nhận 18+ để đọc</span></a>
+              <a class="b gh" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg><span>Theo dõi</span></a>
+              <a class="b gh" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10v11l-5 -3l-5 3v-11a3 3 0 0 1 3 -3h4a3 3 0 0 1 3 3"/><path d="M11 3h5a3 3 0 0 1 3 3v11"/></svg><span>Tủ truyện</span></a>
+              <a class="b gh ico" href="#" aria-label="Chia sẻ"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4v4c-6.575 1.028 -9.02 6.788 -10 12c-.037 .206 5.384 -5.962 10 -6v4l8 -7l-8 -7"/></svg></a>
+            </div>
+          </div>
+        </div>
+      </div></div>
 
     <div class="duo" style="margin-top:12px">
-      <div class="dev"><div class="cap">Máy hẹp · trang chủ <span class="w">390px</span></div>
-        <div class="pad"><div class="stage" data-v="a" data-page="/" data-sel="#hero .btn-row"
-          data-off="26" data-w="390" data-h="108"></div></div></div>
-      <div class="dev"><div class="cap">Máy hẹp · trang truyện <span class="w">390px</span></div>
-        <div class="pad"><div class="stage" data-v="a" data-page="/truyen/hometown-romance-special/" data-sel="#shero .btn-row"
-          data-off="4" data-w="390" data-h="152"></div></div></div>
+      <div class="dev mobdev"><div class="cap">Máy hẹp · trang truyện <span class="w">390</span></div>
+        <div class="panel story mob vA st">
+          <div class="veil"></div>
+          <div class="in">
+            <span class="cv"><img src="/assets/covers/80b25f67.webp" alt=""></span>
+            <div class="stack">
+              <h3>HOMETOWN ROMANCE - SPECIAL</h3>
+              <p class="sub">18+ · Hoàn thành · 10 chương</p>
+              <div class="row">
+                <a class="b pri" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/></svg><span>Xác nhận 18+ để đọc</span></a>
+                <a class="b gh" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg><span>Theo dõi</span></a>
+                <a class="b gh" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10v11l-5 -3l-5 3v-11a3 3 0 0 1 3 -3h4a3 3 0 0 1 3 3"/><path d="M11 3h5a3 3 0 0 1 3 3v11"/></svg><span>Tủ truyện</span></a>
+                <span class="utils"><a class="b gh ico" href="#" aria-label="Chia sẻ"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4v4c-6.575 1.028 -9.02 6.788 -10 12c-.037 .206 5.384 -5.962 10 -6v4l8 -7l-8 -7"/></svg></a></span>
+              </div>
+            </div>
+          </div>
+        </div></div>
+
+      <div class="dev mobdev"><div class="cap">Máy hẹp · trang chủ <span class="w">390</span></div>
+        <div class="panel mob vA">
+          <div class="art" style="background-image:url('/assets/covers/6a6f3cd4.webp')"></div>
+          <div class="veil"></div>
+          <div class="in">
+            <span class="statusline"><i></i>Hoàn thành</span>
+            <h3>Third Person</h3>
+            <div class="facts">
+              <div><dt>Chương</dt><dd>42</dd></div>
+              <div><dt>Tác giả</dt><dd>SIIX</dd></div>
+            </div>
+            <div class="row">
+              <a class="b pri" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16l13 -8l-13 -8"/></svg><span>Đọc từ đầu</span></a>
+              <a class="b gh ico" href="#" aria-label="Thông tin truyện"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 9h.01"/><path d="M11 12h1v4h1"/></svg></a>
+            </div>
+          </div>
+        </div></div>
     </div>
 
     <ul class="k">
       <li><span class="n">01</span><span><b>Đồng bộ thật</b><span class="t">Hai trang nhìn như cùng một sản phẩm; chuyển trang không còn “đổi hệ”.</span></span></li>
       <li><span class="n">02</span><span><b>Ít rủi ro</b><span class="t">Chỉ đổi CSS của nút, không đổi markup, không đổi chữ trên nút.</span></span></li>
-      <li><span class="n">03</span><span><b>Vẫn còn nhiều hộp</b><span class="t">Hàng nút trang truyện vẫn là 3 hộp rời + 1 hộp icon.</span></span></li>
+      <li><span class="n">03</span><span><b>Còn lại</b><span class="t">Hàng nút trang truyện vẫn là 3 hộp rời + 1 hộp icon.</span></span></li>
     </ul>
   </section>
 
-  <!-- ================= B ================= -->
+  <!-- ==================== B ==================== -->
   <section class="opt">
     <div class="opt-h"><span class="tag">B</span><h3>Nhóm liền mạch</h3>
       <span class="pick">ít hộp hơn · đọc theo nhóm việc</span></div>
-    <p class="say">Nút chính đứng riêng. Các việc phụ <b>gộp thành một khối duy nhất</b>, chia nhau
-      bằng đường kẻ dọc — như thanh công cụ. Ở hero, ô (i) cũng thành <b>nửa phải của cùng một nút</b>
-      (kiểu split button): một khối liền, hai hành động.</p>
+    <p class="say">Nút chính đứng riêng. Các việc phụ <b>gộp thành một khối duy nhất</b>, chia nhau bằng
+      đường kẻ dọc — như thanh công cụ. Ở hero, ô (i) thành <b>nửa phải của cùng một nút</b>
+      (split button): một khối liền, hai hành động.</p>
+    <div class="spec"><span>cao 44px</span><span>bo 10px (chỉ hai đầu khối)</span><span>chữ 13,5px</span><span>gap trong khối: 0</span></div>
 
-    <div class="dev"><div class="cap">Trang chủ · hero <span class="w">1240px</span></div>
-      <div class="pad"><div class="stage" data-v="b" data-page="/" data-sel="#hero .btn-row"
-        data-off="26" data-w="1240" data-h="100"></div></div></div>
+    <div class="dev"><div class="cap">Trang chủ · hero <span class="w">desktop</span></div>
+      <div class="panel">
+        <div class="art" style="background-image:url('/assets/covers/6a6f3cd4.webp')"></div>
+        <div class="veil"></div>
+        <div class="in">
+          <span class="statusline"><i></i>Hoàn thành</span>
+          <h3>Third Person</h3>
+          <div class="facts">
+            <div><dt>Chương</dt><dd>42</dd></div>
+            <div><dt>Tác giả</dt><dd>SIIX</dd></div>
+            <div><dt>Couple</dt><dd>Garn x Mimie</dd></div>
+            <div><dt>Cập nhật</dt><dd>29-09</dd></div>
+          </div>
+          <div class="row vB">
+            <a class="b pri" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16l13 -8l-13 -8"/></svg><span>Đọc từ đầu</span></a>
+            <a class="b split" href="#" aria-label="Thông tin truyện"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 9h.01"/><path d="M11 12h1v4h1"/></svg></a>
+          </div>
+        </div>
+      </div></div>
 
-    <div class="dev"><div class="cap">Trang truyện · khối nút <span class="w">1240px</span></div>
-      <div class="pad"><div class="stage" data-v="b" data-page="/truyen/hometown-romance-special/" data-sel="#shero .btn-row"
-        data-off="6" data-w="1240" data-h="62"></div></div></div>
+    <div class="dev"><div class="cap">Trang truyện · khối nút <span class="w">desktop</span></div>
+      <div class="panel story">
+        <div class="veil"></div>
+        <div class="in">
+          <span class="cv"><img src="/assets/covers/80b25f67.webp" alt=""></span>
+          <div class="stack">
+            <h3>HOMETOWN ROMANCE - SPECIAL</h3>
+            <p class="sub">18+ · Hoàn thành · 10 chương · Lambo · Lookmhee x Sonya</p>
+            <div class="row vB st">
+              <a class="b pri" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/></svg><span>Xác nhận 18+ để đọc</span></a>
+              <span class="group">
+                <a class="b gh" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg><span>Theo dõi</span></a>
+                <a class="b gh" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10v11l-5 -3l-5 3v-11a3 3 0 0 1 3 -3h4a3 3 0 0 1 3 3"/><path d="M11 3h5a3 3 0 0 1 3 3v11"/></svg><span>Tủ truyện</span></a>
+                <a class="b gh ico" href="#" aria-label="Chia sẻ"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4v4c-6.575 1.028 -9.02 6.788 -10 12c-.037 .206 5.384 -5.962 10 -6v4l8 -7l-8 -7"/></svg></a>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div></div>
 
     <div class="duo" style="margin-top:12px">
-      <div class="dev"><div class="cap">Máy hẹp · trang chủ <span class="w">390px</span></div>
-        <div class="pad"><div class="stage" data-v="b" data-page="/" data-sel="#hero .btn-row"
-          data-off="26" data-w="390" data-h="108"></div></div></div>
-      <div class="dev"><div class="cap">Máy hẹp · trang truyện <span class="w">390px</span></div>
-        <div class="pad"><div class="stage" data-v="b" data-page="/truyen/hometown-romance-special/" data-sel="#shero .btn-row"
-          data-off="4" data-w="390" data-h="152"></div></div></div>
+      <div class="dev mobdev"><div class="cap">Máy hẹp · trang truyện <span class="w">390</span></div>
+        <div class="panel story mob vB st">
+          <div class="veil"></div>
+          <div class="in">
+            <span class="cv"><img src="/assets/covers/80b25f67.webp" alt=""></span>
+            <div class="stack">
+              <h3>HOMETOWN ROMANCE - SPECIAL</h3>
+              <p class="sub">18+ · Hoàn thành · 10 chương</p>
+              <div class="row">
+                <a class="b pri" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/></svg><span>Xác nhận 18+ để đọc</span></a>
+                <span class="group">
+                  <a class="b gh" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg><span>Theo dõi</span></a>
+                  <a class="b gh" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10v11l-5 -3l-5 3v-11a3 3 0 0 1 3 -3h4a3 3 0 0 1 3 3"/><path d="M11 3h5a3 3 0 0 1 3 3v11"/></svg><span>Tủ truyện</span></a>
+                </span>
+                <span class="utils"><a class="b gh ico" href="#" aria-label="Chia sẻ"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4v4c-6.575 1.028 -9.02 6.788 -10 12c-.037 .206 5.384 -5.962 10 -6v4l8 -7l-8 -7"/></svg></a></span>
+              </div>
+            </div>
+          </div>
+        </div></div>
+
+      <div class="dev mobdev"><div class="cap">Máy hẹp · trang chủ <span class="w">390</span></div>
+        <div class="panel mob vB">
+          <div class="art" style="background-image:url('/assets/covers/6a6f3cd4.webp')"></div>
+          <div class="veil"></div>
+          <div class="in">
+            <span class="statusline"><i></i>Hoàn thành</span>
+            <h3>Third Person</h3>
+            <div class="facts">
+              <div><dt>Chương</dt><dd>42</dd></div>
+              <div><dt>Tác giả</dt><dd>SIIX</dd></div>
+            </div>
+            <div class="row">
+              <a class="b pri" href="#" style="border-radius:10px 0 0 10px;flex:1 1 auto"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16l13 -8l-13 -8"/></svg><span>Đọc từ đầu</span></a>
+              <a class="b split" href="#" aria-label="Thông tin truyện" style="border-radius:0 10px 10px 0"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 9h.01"/><path d="M11 12h1v4h1"/></svg></a>
+            </div>
+          </div>
+        </div></div>
     </div>
 
     <ul class="k">
-      <li><span class="n">01</span><span><b>Ít hộp nhất trong hai phương án còn hộp</b><span class="t">Ba việc phụ chỉ còn một khung bao ngoài thay vì ba.</span></span></li>
-      <li><span class="n">02</span><span><b>Hàng nút ngắn hơn</b><span class="t">Bỏ được khoảng hở giữa các hộp nên cả hàng gọn lại.</span></span></li>
-      <li><span class="n">03</span><span><b>Đánh đổi</b><span class="t">Viền liền làm ba việc phụ trông “ngang hàng” nhau hơn; ở hero, ô (i) nằm chung khối với nút Đọc nên dễ bị hiểu là một hành động.</span></span></li>
+      <li><span class="n">01</span><span><b>Ít hộp nhất (trong hai phương án còn hộp)</b><span class="t">Ba việc phụ chỉ còn một khung bao ngoài thay vì ba.</span></span></li>
+      <li><span class="n">02</span><span><b>Hàng nút ngắn hơn</b><span class="t">Bỏ khoảng hở giữa các hộp nên cả hàng gọn lại thấy rõ.</span></span></li>
+      <li><span class="n">03</span><span><b>Đánh đổi</b><span class="t">Ở hero, ô (i) nằm chung khối với nút Đọc nên dễ bị hiểu là một hành động; viền liền làm ba việc phụ trông ngang hàng nhau hơn.</span></span></li>
     </ul>
   </section>
 
-  <!-- ================= C ================= -->
+  <!-- ==================== C ==================== -->
   <section class="opt">
     <div class="opt-h"><span class="tag">C</span><h3>Bớt hộp</h3>
       <span class="pick">gọn nhất · chỉ nút chính là hộp</span></div>
-    <p class="say">Chỉ <b>nút chính</b> còn là hộp. Theo dõi · Tủ truyện · Chia sẻ thành nút
-      <b>chữ không viền, không nền</b>; rê chuột mới hiện một lớp nền rất nhẹ. Ở hero, ô (i) đổi thành
-      nút chữ “Thông tin truyện” — rõ nghĩa hơn một vòng tròn có chữ “i”.</p>
+    <p class="say">Chỉ <b>nút chính</b> còn là hộp. Theo dõi · Tủ truyện · Chia sẻ thành nút <b>chữ
+      không viền, không nền</b>; rê chuột mới hiện một lớp nền rất nhẹ. Ở hero, ô (i) đổi thành nút
+      chữ “Thông tin truyện” — rõ nghĩa hơn một vòng tròn có chữ “i”.</p>
+    <div class="spec"><span>cao 44px</span><span>bo 10px cho nút chính</span><span>phụ: không viền, không nền</span><span>icon 15px</span></div>
 
-    <div class="dev"><div class="cap">Trang chủ · hero <span class="w">1240px</span></div>
-      <div class="pad"><div class="stage" data-v="c" data-page="/" data-sel="#hero .btn-row"
-        data-off="26" data-w="1240" data-h="100"></div></div></div>
+    <div class="dev"><div class="cap">Trang chủ · hero <span class="w">desktop</span></div>
+      <div class="panel">
+        <div class="art" style="background-image:url('/assets/covers/6a6f3cd4.webp')"></div>
+        <div class="veil"></div>
+        <div class="in">
+          <span class="statusline"><i></i>Hoàn thành</span>
+          <h3>Third Person</h3>
+          <div class="facts">
+            <div><dt>Chương</dt><dd>42</dd></div>
+            <div><dt>Tác giả</dt><dd>SIIX</dd></div>
+            <div><dt>Couple</dt><dd>Garn x Mimie</dd></div>
+            <div><dt>Cập nhật</dt><dd>29-09</dd></div>
+          </div>
+          <div class="row vC">
+            <a class="b pri" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16l13 -8l-13 -8"/></svg><span>Đọc từ đầu</span></a>
+            <a class="b gh" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 9h.01"/><path d="M11 12h1v4h1"/></svg><span>Thông tin truyện</span></a>
+          </div>
+        </div>
+      </div></div>
 
-    <div class="dev"><div class="cap">Trang truyện · khối nút <span class="w">1240px</span></div>
-      <div class="pad"><div class="stage" data-v="c" data-page="/truyen/hometown-romance-special/" data-sel="#shero .btn-row"
-        data-off="6" data-w="1240" data-h="62"></div></div></div>
+    <div class="dev"><div class="cap">Trang truyện · khối nút <span class="w">desktop</span></div>
+      <div class="panel story">
+        <div class="veil"></div>
+        <div class="in">
+          <span class="cv"><img src="/assets/covers/80b25f67.webp" alt=""></span>
+          <div class="stack">
+            <h3>HOMETOWN ROMANCE - SPECIAL</h3>
+            <p class="sub">18+ · Hoàn thành · 10 chương · Lambo · Lookmhee x Sonya</p>
+            <div class="row vC st">
+              <a class="b pri" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/></svg><span>Xác nhận 18+ để đọc</span></a>
+              <a class="b gh" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg><span>Theo dõi</span></a>
+              <a class="b gh" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10v11l-5 -3l-5 3v-11a3 3 0 0 1 3 -3h4a3 3 0 0 1 3 3"/><path d="M11 3h5a3 3 0 0 1 3 3v11"/></svg><span>Tủ truyện</span></a>
+              <a class="b gh ico" href="#" aria-label="Chia sẻ"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4v4c-6.575 1.028 -9.02 6.788 -10 12c-.037 .206 5.384 -5.962 10 -6v4l8 -7l-8 -7"/></svg></a>
+            </div>
+          </div>
+        </div>
+      </div></div>
 
     <div class="duo" style="margin-top:12px">
-      <div class="dev"><div class="cap">Máy hẹp · trang chủ <span class="w">390px</span></div>
-        <div class="pad"><div class="stage" data-v="c" data-page="/" data-sel="#hero .btn-row"
-          data-off="26" data-w="390" data-h="108"></div></div></div>
-      <div class="dev"><div class="cap">Máy hẹp · trang truyện <span class="w">390px</span></div>
-        <div class="pad"><div class="stage" data-v="c" data-page="/truyen/hometown-romance-special/" data-sel="#shero .btn-row"
-          data-off="4" data-w="390" data-h="152"></div></div></div>
+      <div class="dev mobdev"><div class="cap">Máy hẹp · trang truyện <span class="w">390</span></div>
+        <div class="panel story mob vC st">
+          <div class="veil"></div>
+          <div class="in">
+            <span class="cv"><img src="/assets/covers/80b25f67.webp" alt=""></span>
+            <div class="stack">
+              <h3>HOMETOWN ROMANCE - SPECIAL</h3>
+              <p class="sub">18+ · Hoàn thành · 10 chương</p>
+              <div class="row">
+                <a class="b pri" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/></svg><span>Xác nhận 18+ để đọc</span></a>
+                <a class="b gh" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg><span>Theo dõi</span></a>
+                <a class="b gh" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10v11l-5 -3l-5 3v-11a3 3 0 0 1 3 -3h4a3 3 0 0 1 3 3"/><path d="M11 3h5a3 3 0 0 1 3 3v11"/></svg><span>Tủ truyện</span></a>
+                <a class="b gh ico" href="#" aria-label="Chia sẻ"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4v4c-6.575 1.028 -9.02 6.788 -10 12c-.037 .206 5.384 -5.962 10 -6v4l8 -7l-8 -7"/></svg></a>
+              </div>
+            </div>
+          </div>
+        </div></div>
+
+      <div class="dev mobdev"><div class="cap">Máy hẹp · trang chủ <span class="w">390</span></div>
+        <div class="panel mob vC">
+          <div class="art" style="background-image:url('/assets/covers/6a6f3cd4.webp')"></div>
+          <div class="veil"></div>
+          <div class="in">
+            <span class="statusline"><i></i>Hoàn thành</span>
+            <h3>Third Person</h3>
+            <div class="facts">
+              <div><dt>Chương</dt><dd>42</dd></div>
+              <div><dt>Tác giả</dt><dd>SIIX</dd></div>
+            </div>
+            <div class="row">
+              <a class="b pri" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16l13 -8l-13 -8"/></svg><span>Đọc từ đầu</span></a>
+              <a class="b gh" href="#" style="flex:0 0 auto;padding:0 10px"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 9h.01"/><path d="M11 12h1v4h1"/></svg><span>Thông tin</span></a>
+            </div>
+          </div>
+        </div></div>
     </div>
 
     <ul class="k">
       <li><span class="n">01</span><span><b>Gọn và êm nhất</b><span class="t">Chỉ còn một khối màu hồng duy nhất trên màn; phần còn lại là chữ.</span></span></li>
-      <li><span class="n">02</span><span><b>Đúng nguyên tắc “bớt hộp”</b><span class="t">Cùng tinh thần với thẻ truyện và thanh lọc vừa chốt ở các vòng trước.</span></span></li>
-      <li><span class="n">03</span><span><b>Đánh đổi</b><span class="t">Nút phụ nhạt hơn nên khó thấy ngay trên nền bìa sáng; chạm mục tiêu nhỏ hơn (không còn viền để bám mắt).</span></span></li>
+      <li><span class="n">02</span><span><b>Đúng nguyên tắc “bớt hộp”</b><span class="t">Cùng tinh thần với thẻ truyện và thanh lọc đã chốt ở các vòng trước.</span></span></li>
+      <li><span class="n">03</span><span><b>Đánh đổi</b><span class="t">Nút phụ nhạt hơn nên khó thấy ngay trên nền bìa sáng; chạm mục tiêu nhỏ hơn vì không còn viền để bám mắt.</span></span></li>
     </ul>
   </section>
 
@@ -211,82 +597,16 @@
     <li><span class="n">A</span><span><b>Một bo góc duy nhất</b><span class="t">10px cho mọi nút, kể cả ô icon — hết cảnh pill / tròn / chữ nhật.</span></span></li>
     <li><span class="n">B</span><span><b>Một chiều cao duy nhất</b><span class="t">44px ở cả hai trang; chữ 13,5px ở cả hai trang.</span></span></li>
     <li><span class="n">C</span><span><b>Vẫn chỉ một CTA chính</b><span class="t">Đúng nguyên tắc đã chốt: mỗi màn một nút chính, không thêm nút màu thứ hai.</span></span></li>
-    <li><span class="n">D</span><span><b>Không thêm hiệu ứng mới</b><span class="t">Bỏ hiệu ứng nhấc nút khi rê chuột (translateY) — chỉ còn đổi màu. Không gradient, không blur mới.</span></span></li>
+    <li><span class="n">D</span><span><b>Không thêm hiệu ứng mới</b><span class="t">Bỏ hiệu ứng nhấc nút khi rê chuột; chỉ còn đổi màu. Không gradient, không blur mới.</span></span></li>
     <li><span class="n">E</span><span><b>Giữ nguyên chữ trên nút</b><span class="t">Đọc từ đầu · Xác nhận 18+ để đọc · Theo dõi · Tủ truyện — không đổi nhãn, không đổi chức năng.</span></span></li>
-    <li><span class="n">F</span><span><b>Máy hẹp giữ đúng cấu trúc</b><span class="t">Chỉ đổi số cột và cỡ chữ; đo ở 390px không tràn ngang.</span></span></li>
+    <li><span class="n">F</span><span><b>Máy hẹp giữ đúng cấu trúc</b><span class="t">Chỉ đổi số cột và cỡ chữ; bản 390px ở trên cho thấy bố cục đó.</span></span></li>
   </ul>
 
   <footer>
     Chốt <b>A</b>, <b>B</b> hay <b>C</b> thì mình sửa CSS nút trong <code>src/cz.css</code>
-    (khối <code>5.4 CTA</code> của hero và <code>.shero .btn-row</code>); nếu chọn <b>C</b> thì
-    sửa thêm một dòng nhãn trong <code>src/cz-home.js</code>. Site thật chưa sửa gì ở vòng này.
+    (khối CTA của hero và <code>.shero .btn-row</code>); nếu chọn <b>C</b> thì sửa thêm một dòng nhãn
+    trong <code>src/cz-home.js</code>. Site thật chưa sửa gì ở vòng này.
   </footer>
 </div>
-
-<script>
-  /* Nạp CSS phương án một lần, rồi tiêm vào từng iframe (cùng nguồn nên đọc/ghi được) */
-  var CSS_TEXT = '';
-  var hideCSS = 'html{scrollbar-width:none}::-webkit-scrollbar{display:none}' +
-    '#toTop,.toTop,.skip,.dicehost,.czdevbar{display:none!important}' +
-    'body>div[style*="position:fixed"]{display:none!important}' +
-    '.hero *,.shero *{animation:none!important;transition:none!important}';
-
-  function mount(stage) {
-    var w = +stage.dataset.w, h = +stage.dataset.h;
-    var f = document.createElement('iframe');
-    f.src = stage.dataset.page + (stage.dataset.page.indexOf('?') >= 0 ? '&' : '?') + 'r58=' + Math.random().toString(36).slice(2);
-    f.style.width = w + 'px';
-    f.style.height = h + 'px';
-    f.style.border = '0';
-    f.loading = 'lazy';
-    f.title = (stage.dataset.page || '') + ' · ' + (stage.dataset.v || 'hiện tại');
-    stage.appendChild(f);
-
-    var fit = function () {
-      var avail = (stage.parentElement.clientWidth || w);
-      var k = Math.min(1, avail / w);
-      f.style.transform = 'scale(' + k + ')';
-      stage.style.width = Math.round(w * k) + 'px';
-      stage.style.height = Math.round(h * k) + 'px';
-      stage.style.margin = '0 auto';
-    };
-    fit();
-    if (window.ResizeObserver) new ResizeObserver(fit).observe(stage.parentElement);
-
-    function apply() {
-      var d = f.contentDocument, win = f.contentWindow;
-      if (!d || !d.head) return;
-      var v = stage.dataset.v;
-      if (d.documentElement.className.indexOf('v' + (v || '').toUpperCase()) < 0 && v && v !== '0') {
-        d.documentElement.classList.add('v' + v.toUpperCase());
-      }
-      if (!d.getElementById('r58css')) {
-        var s = d.createElement('style');
-        s.id = 'r58css';
-        s.textContent = hideCSS + (v && v !== '0' ? CSS_TEXT : '');
-        d.head.appendChild(s);
-      }
-      /* hero trang chủ tự chuyển truyện: tạm dừng rồi ghim đúng truyện đầu
-         (Third Person) để mọi lần xem đều thấy đúng một trạng thái nút */
-      var play = d.querySelector('#hero [data-hb-play]');
-      if (play && play.getAttribute('aria-pressed') !== 'true') play.click();
-      var cov = d.querySelector('#hero .coverbtn');
-      if (cov) cov.click();
-      setTimeout(function () {
-        var t = d.querySelector(stage.dataset.sel);
-        if (!t) return;
-        var y = t.getBoundingClientRect().top + win.scrollY - (+stage.dataset.off || 40);
-        win.scrollTo(0, Math.max(0, y));
-      }, 260);
-    }
-    f.addEventListener('load', function () { setTimeout(apply, 500); setTimeout(apply, 1600); });
-  }
-
-  fetch('variants.css', { cache: 'no-store' })
-    .then(function (r) { return r.text(); })
-    .then(function (t) { CSS_TEXT = t; })
-    .catch(function () {})
-    .then(function () { document.querySelectorAll('.stage').forEach(mount); });
-</script>
 </body>
 </html>
