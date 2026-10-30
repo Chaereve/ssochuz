@@ -4218,8 +4218,8 @@ body.rd-focus .rdcmts { display: none; }
    · Tiêu đề ô 20px serif như các mục khác; phụ đề 12,5px; liên kết phụ 12,5px.
    · Ô nào cũng min-width:0, bìa khoá 2/3, huy hiệu dán TRONG bìa → không cắt.
    ================================================================ */
-#tong-quan { margin: 40px 0 10px; }
-.fsec { display: flex; flex-direction: column; min-width: 0; gap: 14px; padding-top: 34px; }
+#tong-quan { margin: 30px 0 8px; }
+.fsec { display: flex; flex-direction: column; min-width: 0; gap: 14px; padding-top: 22px; }
 .fsec:first-child { padding-top: 0; }
 /* Ranking + Đáng xem: hai bên, ngăn bằng một đường tóc dọc — không khung, không nền.
    Hai cột cùng nhịp hàng (số hạng · bìa · tên · điểm) nên đọc ngang rất đều. */
