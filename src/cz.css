@@ -4386,8 +4386,8 @@ body.rd-focus .rdcmts { display: none; }
 .mini3 .card .cb { display: none; }
 /* ============ MỚI CẬP NHẬT · bảng gọn ba cột (1B) ================== */
 .mlist { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 40px; }
-.mrow { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 12px;
-  align-items: center; min-width: 0; padding: 9px 6px 9px 0; border-radius: 6px;
+.mrow { display: grid; grid-template-columns: 34px minmax(0, 1fr) 56px; gap: 12px;
+  align-items: center; min-width: 0; padding: 9px 4px 9px 0; border-radius: 6px;
   border-bottom: 1px solid var(--bd-soft);
   transition: background-color var(--t-fast) var(--ease); }
 .mrow:hover { background: color-mix(in srgb, var(--surf2) 60%, transparent); }
@@ -4399,9 +4399,13 @@ body.rd-focus .rdcmts { display: none; }
 .mrow:hover .mt b { color: var(--acc); }
 .mt span { display: block; margin-top: 2px; font-size: 11px; color: var(--dim);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mn { text-align: right; }
-.mn b { display: block; font-size: 11px; font-weight: 700; color: var(--mut); white-space: nowrap; }
-.mn span { display: block; margin-top: 5px; font-size: 10px; color: var(--dim); white-space: nowrap; }
+.mn { text-align: right; white-space: nowrap; }
+.mn b { display: block; font-size: 12.5px; font-weight: 700; color: var(--txt);
+  font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+.mn b i { font-style: normal; margin-right: 3px; font-size: 9.5px; font-weight: 600;
+  letter-spacing: .02em; color: var(--dim); }
+.mn .tm { display: block; margin-top: 3px; font-size: 10px; color: var(--dim);
+  font-variant-numeric: tabular-nums; }
 
 /* ========= CHUYỂN THỂ SERIES · băng ngang 16:10 (2C) ================ */
 .wcards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
@@ -4507,6 +4511,7 @@ body.rd-focus .rdcmts { display: none; }
   #bxh .rank .v { grid-column: 3; grid-row: 2; }
   #bxh .tilehead .right { width: 100%; justify-content: flex-start; }
   .mlist { grid-template-columns: minmax(0, 1fr); }
+  .mrow { grid-template-columns: 34px minmax(0, 1fr) 52px; gap: 10px; }
   .wcards { grid-template-columns: minmax(0, 1fr); }
   #sched .w3feat { grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 16px; }
   #sched .w3poster { width: 92px; }

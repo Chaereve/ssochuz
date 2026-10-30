@@ -122,22 +122,26 @@
   }
 
   /* ======================= MỚI CẬP NHẬT ================================ */
-  /* Mới cập nhật: bảng gọn ba cột (30/10/2026). Mỗi dòng là bìa nhỏ · tên một dòng
-     · tác giả, và cột phải canh thẳng “Ch. 42” + “2 giờ trước” — đọc lướt một màn là
-     biết bộ nào vừa lên chương, khỏi cuộn ngang. */
+  /* Mới cập nhật: bảng gọn ba cột. Mỗi dòng là bìa nhỏ · tên một dòng · tác giả;
+     cột phải rộng CỐ ĐỊNH 56px — số chương (to, đậm, chữ số canh cột) ở trên,
+     ngày (nhỏ, mờ) ở dưới. Cột không co giãn theo nội dung nên mọi tiêu đề cắt ở
+     cùng một mốc (trước đây cột phải rộng ra khi gặp nhãn “Đang cập nhật” nên
+     mỗi hàng cắt một kiểu). Chỉ lấy bộ ĐÃ CÓ CHƯƠNG: mục tên là “vừa lên chương”
+     nên bộ chưa ra chương nào không thuộc đây — nhãn “Sắp ra mắt” của nó cũng là
+     thứ duy nhất từng chen chữ dài vào cột số. */
   function renderNew() {
     var box = $('#newRail');
     if (!box) return;
-    var rows = CZ.lib().slice().sort(function (a, b) {
-      return String(b.updated || '').localeCompare(String(a.updated || '')) || (b.chapters - a.chapters);
-    });
-    var pick = rows.slice(0, 12);
+    var pick = CZ.lib().filter(function (n) { return parseInt(n.chapters, 10) > 0; })
+      .sort(function (a, b) {
+        return String(b.updated || '').localeCompare(String(a.updated || '')) || (b.chapters - a.chapters);
+      }).slice(0, 12);
     box.innerHTML = pick.map(function (n) {
-      var src = CZ.coverSrc(n), ch = n.chapters ? 'Ch. ' + n.chapters : CZ.statusLabel(n.statusCls || n.status);
+      var src = CZ.coverSrc(n), ch = parseInt(n.chapters, 10);
       return '<a class="mrow" href="' + esc(CZ.storyURL(n.slug)) + '">' +
         (src ? '<img src="' + esc(src) + '"' + CZ.coverFB(n, src) + ' alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '<span class="mrow-ph" aria-hidden="true"></span>') +
         '<span class="mt"><b>' + esc(n.title) + '</b><span>' + esc(n.author || n.couple || '') + '</span></span>' +
-        '<span class="mn"><b>' + esc(ch) + '</b><span>' + esc(CZ.timeAgo(n.updated)) + '</span></span></a>';
+        '<span class="mn"><b><i>Ch.</i>' + ch + '</b><span class="tm">' + esc(CZ.timeAgo(n.updated)) + '</span></span></a>';
     }).join('');
     var sub = $('#newSub');
     if (sub) sub.textContent = pick.length ? pick.length + ' bộ vừa lên chương' : '';
