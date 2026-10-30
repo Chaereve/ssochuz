@@ -1,0 +1,134 @@
+/* Đề xuất vòng 2 — thanh lọc thư viện.
+   Sửa hai thứ: (1) BỐ CỤC có luật rõ theo bề ngang thay vì co giãn tuỳ tiện,
+   (2) ĐIỂM NEO để thanh không chìm vào nền.
+   Có hai cách làm nổi:  .v1 = ô tìm sáng + icon son
+                         .v2 = cả thanh thành một dải công cụ */
+
+/* ============================ BỐ CỤC CHUNG ============================= */
+.libTool { display: flex; align-items: center; gap: 14px;
+  padding-bottom: 13px; border-bottom: 1px solid var(--bd); }
+/* phương án 2: dải đã tự ngăn cách nên bỏ kẻ dưới thanh */
+.v2 { padding-bottom: 0; border-bottom: 0; }
+
+/* dòng tiêu đề: mắt đọc số ở đây, không phải ở thanh lọc */
+.libHead { display: flex; align-items: baseline; gap: 12px; padding-bottom: 11px; }
+.libHead h3 { margin: 0; font-family: var(--font-head); font-size: 22px; font-weight: 700;
+  line-height: 1.2; letter-spacing: -.018em; }
+.libHead .cnt { font-size: 13px; color: var(--mut); }
+.libHead .cntPg { margin-left: auto; font-family: var(--font-mono); font-size: 11.5px;
+  font-weight: 600; color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.libHead .cntPg b { color: var(--mut); }
+
+/* ---- ô tìm: phần tử DUY NHẤT được làm to ---- */
+.q2 { flex: 0 1 430px; min-width: 200px; display: flex; align-items: center; gap: 10px;
+  height: 46px; padding: 0 8px 0 14px; border-radius: 10px; }
+.q2 .ico { width: 17px; height: 17px; flex: none; }
+.q2 input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: 0;
+  background: none; color: var(--txt); font: inherit; font-size: 14.5px; letter-spacing: -.005em; }
+.q2 input::placeholder { color: var(--mut); }
+.q2 input::-webkit-search-cancel-button { display: none; }
+.q2 .cx { display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border: 0; border-radius: 7px; background: none;
+  color: var(--dim); flex: none; }
+.q2 .cx:hover { color: var(--txt); background: var(--surf2); }
+.q2 .cx .i { width: 13px; height: 13px; }
+
+/* ---- cụm lọc: chữ, cùng cỡ, cùng màu ---- */
+.fset { display: flex; align-items: center; gap: 2px; margin-left: auto; }
+.sl { position: relative; display: inline-flex; align-items: center;
+  height: 38px; padding: 0 24px 0 10px; border-radius: 8px; }
+.sl .val { font-size: 14px; font-weight: 600; letter-spacing: -.005em;
+  color: var(--txt); white-space: nowrap; }
+.sl select { position: absolute; inset: 0; width: 100%; height: 100%;
+  margin: 0; padding: 0; border: 0; outline: 0; opacity: 0; cursor: pointer;
+  font: inherit; }
+.sl .cv { position: absolute; right: 9px; display: inline-flex; pointer-events: none;
+  color: var(--mut); opacity: .75; }
+.sl .cv .i { width: 11px; height: 11px; }
+.sl:hover { background: var(--surf2); }
+.sl:hover .cv { opacity: 1; }
+.sl:focus-within { background: var(--surf2); }
+.sl:focus-within .cv { color: var(--acc); opacity: 1; }
+.sl:focus-within .val { color: var(--txt); }
+/* ô đang có lọc: vạch son dưới chữ (không khung) + mũi tên son */
+.sl.on::after { content: ""; position: absolute; left: 10px; right: 24px; bottom: 5px;
+  height: 2px; border-radius: 2px; background: var(--acc); }
+.sl.on .cv { color: var(--acc); opacity: 1; }
+
+/* 18+ là công tắc: chỉ khi bật mới có nền */
+.t18 { height: 30px; margin-left: 6px; padding: 0 10px; border: 1px solid var(--bd);
+  border-radius: 7px; background: none; color: var(--mut); font: inherit;
+  font-size: 12.5px; font-weight: 700; letter-spacing: .01em; }
+.t18:hover { color: var(--txt); border-color: var(--bd2); }
+.t18[aria-pressed="true"] { background: var(--acc); border-color: var(--acc); color: #2a1016; }
+
+/* xoá lọc: chỉ hiện khi có lọc */
+.clr2 { height: 38px; margin-left: 8px; padding: 0 4px; border: 0; background: none;
+  font: inherit; font-size: 12.5px; font-weight: 600; color: var(--dim);
+  white-space: nowrap; flex: none; }
+.clr2:hover { color: var(--txt); }
+.clr2.hide { display: none; }
+
+/* ====================== V1 · ô tìm sáng, icon son ====================== */
+.v1 .q2 { background: var(--surf2); border: 1px solid var(--bd2);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .35); }
+.v1 .q2 .ico { color: var(--acc); }
+.v1 .q2:focus-within { border-color: var(--acc); box-shadow: 0 0 0 3px var(--ring); }
+.v1 .q2 input::placeholder { color: var(--mut); }
+
+/* ====================== V2 · cả thanh là dải công cụ ==================== */
+.band2 { background: var(--surf); border-top: 1px solid var(--bd);
+  border-bottom: 1px solid var(--bd); padding: 14px 16px; margin-bottom: 16px; }
+/* trong dải, ô tìm lõm xuống nền trang để thành “giếng” */
+.v2 .q2 { background: var(--bg); border-color: var(--bd); }
+.v2 .q2 { background: var(--bg); border: 1px solid var(--bd); }
+.v2 .q2 .ico { color: var(--mut); }
+.v2 .q2:focus-within { border-color: var(--acc); }
+.v2 .q2:focus-within .ico { color: var(--acc); }
+.v2 .sl:hover { background: rgba(255, 255, 255, .045); }
+
+/* ============================== ĐÁP BỀ NGANG =========================== */
+/* 900–1180: giữ một hàng nhưng cho ô tìm co lại, cụm lọc nhỏ lại một nhịp */
+@media (max-width: 1180px) {
+  .libTool { gap: 10px; }
+  .q2 { flex: 1 1 auto; max-width: 430px; }
+  .sl { padding-right: 22px; }
+  .sl .val { font-size: 13.5px; }
+  .clr2 { margin-left: 4px; }
+}
+/* dưới 900: hai hàng có chủ đích — ô tìm một hàng, lọc một hàng.
+   Ngưỡng là 900 chứ không phải 720 vì ở 768px cụm lọc đã chiếm ~520px, ô tìm
+   chỉ còn 219px và placeholder bị cắt cụt. */
+@media (max-width: 900px) {
+  /* máy nhỏ: hai hàng có chủ đích. Hàng 2 là lưới 3 cột đều nhau nên ba ô chọn
+     luôn thẳng hàng và không bao giờ đẩy trang cuộn ngang; 18+ và Xoá lọc
+     xuống hàng 3, hai đầu. */
+  .libTool { flex-wrap: wrap; gap: 0; }
+  .q2 { flex: 1 1 100%; height: 46px; max-width: none; margin-bottom: 6px; }
+  .fset { flex: 1 1 100%; margin-left: 0; display: grid;
+    grid-template-columns: repeat(3, auto); justify-content: space-between;
+    gap: 0 10px; align-items: center; }
+  /* ô chọn co theo ĐÚNG chữ đang hiện để vạch son ôm sát chữ, không kéo dài
+     hết 1/3 bề ngang; ba cột vẫn chia đều nên vẫn thẳng hàng */
+  .sl { height: 40px; min-width: 0; width: max-content; max-width: 100%;
+    padding: 0 18px 0 0; }
+  .sl .val { font-size: 13px; }
+  .sl .cv { right: 2px; }
+  .sl .cv .i { width: 10px; height: 10px; }
+  .sl:hover, .sl:focus-within { background: none; }
+  .sl.on::after { left: 0; right: 18px; bottom: 6px; }
+  .t18 { grid-row: 2; grid-column: 1; justify-self: start; margin: 8px 0 0;
+    height: 32px; }
+  .clr2 { grid-row: 2; grid-column: 3; justify-self: end; margin: 0; height: 40px; }
+  .libHead h3 { font-size: 20px; }
+}
+@media (max-width: 420px) {
+  .sl .val { font-size: 12.6px; }
+  .q2 { height: 44px; }
+  .q2 input { font-size: 14px; }
+  .fset { gap: 0 8px; }
+}
+
+/* ---------- khung xem thu nhỏ: iframe giữ đúng bề ngang thiết bị rồi scale ---------- */
+.pv { position: relative; overflow: hidden; }
+.pv iframe { display: block; border: 0; transform-origin: top left; }

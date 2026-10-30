@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đề xuất vòng 2 · thanh tìm &amp; lọc thư viện</title>
+<link rel="stylesheet" href="/cz.css?v=20261030grid1">
+<link rel="stylesheet" href="mock.css">
+<style>
+  .page { max-width: 1140px; margin: 0 auto; padding: 40px 20px 90px; }
+  .kick { font: 700 11px/1 ui-monospace, monospace; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--acc); }
+  h1 { margin: 14px 0 12px; font-size: 34px; line-height: 1.12; letter-spacing: -.015em;
+    font-family: var(--font-head); }
+  .lede { margin: 0 0 10px; max-width: 70ch; color: var(--mut); font-size: 15px; }
+  .lede b { color: var(--txt); }
+
+  h2 { margin: 46px 0 6px; font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--dim); font-weight: 700; }
+  .h2sub { margin: 0 0 16px; color: var(--mut); font-size: 14px; max-width: 74ch; }
+
+  /* ---- khung xem: iframe giữ đúng bề ngang thiết bị, thu nhỏ bằng transform ---- */
+  .dev { border: 1px solid var(--bd); border-radius: 12px; background: var(--bg); overflow: hidden; }
+  .dev .cap { display: flex; align-items: center; gap: 8px; padding: 7px 12px;
+    border-bottom: 1px solid var(--bd); font: 700 10.5px/1 ui-monospace, monospace;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+  .dev .cap .w { margin-left: auto; font-weight: 600; }
+  .dev .stage2 { padding: 6px; }
+  .dev.mob { width: 402px; max-width: 100%; flex: none; }
+  .row { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+  .row .dev:not(.mob) { flex: 1 1 620px; min-width: 0; }
+  .dev.wide { width: 100%; }
+
+  .opt { margin: 0 0 40px; }
+  .opt-h { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 3px; }
+  .opt-h .tag { font: 700 10.5px/1 ui-monospace, monospace; letter-spacing: .12em;
+    text-transform: uppercase; padding: 4px 7px; border: 1px solid var(--acc);
+    border-radius: 4px; color: var(--acc); }
+  .opt-h h3 { margin: 0; font-size: 20px; font-family: var(--font-head); letter-spacing: -.01em; }
+  .opt-h .pick { margin-left: auto; font-size: 12px; color: var(--dim); }
+  .opt .say { margin: 0 0 14px; color: var(--mut); font-size: 14px; max-width: 76ch; }
+
+  .k { display: grid; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 760px) { .k { grid-template-columns: 1fr; } }
+  .k li { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 9px;
+    padding: 10px 12px; background: var(--surf); border: 1px solid var(--bd); border-radius: 9px; }
+  .k .n { font: 700 10.5px/1.6 ui-monospace, monospace; color: var(--acc); }
+  .k b { display: block; font-size: 13px; color: var(--txt); margin-bottom: 2px; }
+  .k span.t { font-size: 12.5px; color: var(--mut); line-height: 1.55; }
+
+  footer { margin-top: 44px; padding-top: 20px; border-top: 1px solid var(--bd);
+    color: var(--dim); font-size: 13px; }
+  code { font-family: var(--font-mono); font-size: .92em; color: var(--txt);
+    background: var(--surf2); padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <p class="kick">Đề xuất vòng 2 · chưa sửa vào site</p>
+  <h1>Cho thanh lọc đứng ra khỏi nền</h1>
+  <p class="lede">Vòng trước gọn nhưng <b>chìm</b>: ô tìm chỉ hơn nền một chút, mọi thứ cùng cỡ chữ nhỏ,
+    bố cục co giãn nên mỗi bề ngang lại lệch một kiểu. Vòng này sửa đúng hai thứ đó.</p>
+  <p class="lede"><b>Bố cục có luật:</b> ≥1180px ô tìm 430px + cụm lọc dạt phải trên <b>một hàng</b>;
+    900–1180 ô tìm co lại nhưng vẫn một hàng; <b>dưới 900px xuống hai hàng</b> — ô tìm một hàng,
+    ba ô chọn chia đều một hàng, 18+ và Xoá lọc hai đầu hàng cuối. Ngưỡng 900 chứ không phải 720
+    vì ở 768px cụm lọc chiếm ~520px, ô tìm chỉ còn 219px là placeholder bị cắt cụt.</p>
+
+  <h2>Đang chạy</h2>
+  <p class="h2sub">Để so: thanh lọc hiện tại trên site — ô tìm 40px, hai ô chọn có nhãn chữ, dãy tab
+    tình trạng kèm số đếm, công tắc kiểu xem đã bỏ.</p>
+  <div class="dev"><div class="cap">Hiện tại <span class="w">1216px</span></div>
+    <div class="stage2" style="padding:6px"><img src="../library-bar-r51/img/now-d.webp" alt="Thanh lọc hiện tại trên site" style="display:block;width:100%;height:auto;border-radius:8px"></div></div>
+
+  <h2>Hai cách làm nổi · cùng một bố cục</h2>
+  <p class="h2sub">Chỉ khác nhau ở <b>điểm neo</b>: phương án 1 neo vào ô tìm, phương án 2 neo vào cả
+    dải. Mỗi khung dưới đây là một iframe rộng đúng bề ngang thiết bị rồi thu nhỏ — không phải ảnh,
+    nên chữ và khoảng cách là thật.</p>
+
+  <section class="opt">
+    <div class="opt-h"><span class="tag">1</span><h3>Ô tìm sáng, icon son</h3>
+      <span class="pick">nhẹ, đúng chất site</span></div>
+    <p class="say">Ô tìm được nâng lên một tầng mặt (<code>--surf2</code> + viền <code>--bd2</code> +
+      bóng 1px), icon kính lúp tô màu son. Cụm lọc vẫn là chữ nhưng đổi sang chữ <b>sáng</b>
+      (14px, <code>--txt</code>, đậm 600) thay vì xám mờ — đọc được ngay, không cần khung.</p>
+    <div class="dev"><div class="cap">Desktop <span class="w">1180px</span></div>
+      <div class="stage2"><div class="pv" data-src="frame-wide.html?v=v1" data-w="1180" data-h="128" data-t="Phương án 1 ở 1180px"></div></div></div>
+    <div class="row" style="margin-top:14px">
+      <div class="dev"><div class="cap">Máy bảng <span class="w">768px · hai hàng</span></div>
+        <div class="stage2"><div class="pv" data-src="frame-mid.html?v=v1" data-w="768" data-h="128" data-t="Phương án 1 ở 768px"></div></div></div>
+      <div class="dev mob"><div class="cap">Mobile <span class="w">390px</span></div>
+        <div class="stage2"><div class="pv" data-src="frame.html?v=v1" data-w="390" data-h="190" data-t="Phương án 1 ở 390px"></div></div></div>
+    </div>
+    <ul class="k">
+      <li><span class="n">01</span><span><b>Điểm neo</b><span class="t">Một khối sáng duy nhất — mắt vào đó trước, rồi mới đọc cụm chữ bên phải.</span></span></li>
+      <li><span class="n">02</span><span><b>Cụm lọc sáng hơn</b><span class="t">Giá trị đang chọn dùng <code>--txt</code> đậm 600 thay vì xám mờ; ô đang lọc có vạch son dưới đáy.</span></span></li>
+      <li><span class="n">03</span><span><b>18+ có hình dạng</b><span class="t">Công tắc nhỏ có viền; bật thì nền son, chữ nâu — nhìn ra ngay là đang bật.</span></span></li>
+      <li><span class="n">04</span><span><b>Ít rủi ro</b><span class="t">Không thêm mảng nền mới, chỉ nâng tương phản và cỡ chữ. Hợp trang đang có.</span></span></li>
+    </ul>
+  </section>
+
+  <section class="opt">
+    <div class="opt-h"><span class="tag">2</span><h3>Cả thanh thành dải công cụ</h3>
+      <span class="pick">nổi nhất</span></div>
+    <p class="say">Cả thanh nằm trên một dải <code>--surf</code> chạy hết bề ngang, ngăn với nội dung bằng
+      hai đường kẻ tóc trên/dưới. Ô tìm lõm xuống nền trang (<code>--bg</code>) thành một cái “giếng” —
+      tương phản sáng/tối đảo chiều nên nhìn ra ngay đây là khu điều khiển.</p>
+    <div class="dev"><div class="cap">Desktop <span class="w">1180px</span></div>
+      <div class="stage2"><div class="pv" data-src="frame-wide.html?v=v2" data-w="1180" data-h="154" data-t="Phương án 2 ở 1180px"></div></div></div>
+    <div class="row" style="margin-top:14px">
+      <div class="dev"><div class="cap">Máy bảng <span class="w">768px · hai hàng</span></div>
+        <div class="stage2"><div class="pv" data-src="frame-mid.html?v=v2" data-w="768" data-h="154" data-t="Phương án 2 ở 768px"></div></div></div>
+      <div class="dev mob"><div class="cap">Mobile <span class="w">390px</span></div>
+        <div class="stage2"><div class="pv" data-src="frame.html?v=v2" data-w="390" data-h="216" data-t="Phương án 2 ở 390px"></div></div></div>
+    </div>
+    <ul class="k">
+      <li><span class="n">01</span><span><b>Điểm neo là cả dải</b><span class="t">Mắt thấy một mảng sáng hơn nền trước khi đọc từng chữ — mạnh nhất trong ba vòng.</span></span></li>
+      <li><span class="n">02</span><span><b>Không thêm hộp</b><span class="t">Dải chỉ là nền + hai kẻ tóc, không bo góc, không đổ bóng — đúng ngôn ngữ “kẻ tóc + chữ”.</span></span></li>
+      <li><span class="n">03</span><span><b>Lưới truyện tách bạch</b><span class="t">Kẻ dưới dải đóng vai trò đường phân cách; lưới bắt đầu sạch, không lẫn với thanh lọc.</span></span></li>
+      <li><span class="n">04</span><span><b>Đổi nhiều hơn</b><span class="t">Phải đưa khối thanh lọc ra ngoài khung nội dung để dải chạy hết bề ngang — sửa cả HTML lẫn CSS.</span></span></li>
+    </ul>
+  </section>
+
+  <h2>Phần chung · sửa ở cả hai phương án</h2>
+  <ul class="k">
+    <li><span class="n">A</span><span><b>Ô tìm 46px</b><span class="t">Trước 40px, chữ 13.5px. Giờ 46px, chữ 14.5px — chỗ bấm thoải mái hơn hẳn.</span></span></li>
+    <li><span class="n">B</span><span><b>Lọc cùng một cỡ</b><span class="t">Ba ô chọn 14px / 600, cùng màu, cùng cao 38px — không còn ô to ô nhỏ.</span></span></li>
+    <li><span class="n">C</span><span><b>Đang lọc thì thấy</b><span class="t">Vạch son dưới ô đang lọc + mũi tên son; <code>Xoá lọc</code> chỉ hiện khi thật sự có lọc.</span></span></li>
+    <li><span class="n">D</span><span><b>Mobile hai hàng có chủ đích</b><span class="t">Ô tìm một hàng; ba ô chọn chia đều; 18+ và Xoá lọc hai đầu hàng cuối.</span></span></li>
+    <li><span class="n">E</span><span><b>Nhãn ngắn trên máy hẹp</b><span class="t">Dưới 900px bỏ phần “(46)” trong nhãn để không bị cắt cụt; số đếm vẫn nằm trong danh sách xổ ra.</span></span></li>
+    <li><span class="n">F</span><span><b>Không tràn ngang</b><span class="t">Đo ở 360 / 390 / 768 / 860 / 1024 / 1180px: đều không đẩy trang cuộn ngang.</span></span></li>
+  </ul>
+
+  <footer>
+    Chốt <b>1</b> hay <b>2</b> thì mình port vào <code>index.html</code> + <code>src/cz.css</code>.
+    Bản thật hiện chỉ mới bỏ công tắc kiểu xem; thanh lọc vẫn nguyên.
+  </footer>
+</div>
+
+<script>
+  /* iframe giữ đúng bề ngang thiết bị rồi thu nhỏ bằng transform để vừa khung xem */
+  function mount(pv) {
+    const w = +pv.dataset.w, h = +pv.dataset.h;
+    const f = document.createElement('iframe');
+    f.src = pv.dataset.src;
+    f.title = pv.dataset.t || '';
+    f.style.width = w + 'px';
+    f.style.height = h + 'px';
+    f.loading = 'lazy';
+    pv.appendChild(f);
+    const fit = () => {
+      const avail = (pv.parentElement.clientWidth || w) - 12;
+      const k = Math.min(1, avail / w);
+      f.style.transform = 'scale(' + k + ')';
+      pv.style.width = Math.round(w * k) + 'px';
+      pv.style.height = Math.round(h * k) + 'px';
+      pv.style.margin = '0 auto';
+    };
+    fit();
+    if (window.ResizeObserver) new ResizeObserver(fit).observe(pv.parentElement);
+  }
+  document.querySelectorAll('.pv').forEach(mount);
+</script>
+</body>
+</html>

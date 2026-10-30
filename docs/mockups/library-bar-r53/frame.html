@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thanh lọc · khung hẹp</title>
+<link rel="stylesheet" href="/cz.css?v=20261030grid1">
+<link rel="stylesheet" href="mock.css">
+<style>
+  html, body { margin: 0; background: var(--bg); }
+  body { padding: 16px 16px 20px; }
+  body > div[style*="position:fixed"] { display: none !important; }
+</style>
+</head>
+<body>
+<div id="pv"></div>
+<script src="mock.js"></script>
+<script>
+  var q = new URLSearchParams(location.search);
+  document.getElementById('pv').innerHTML = MOCK.head() + MOCK.short(q.get('v') === 'v2' ? 'v2' : 'v1');
+</script>
+</body>
+</html>
