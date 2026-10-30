@@ -45,7 +45,7 @@ section[id], [id^="pane-"] { scroll-margin-top: 16px; }
   --sheen: rgba(255, 255, 255, .1);    /* nền tối chỉ cần dải sáng rất nhẹ */
   --sh-lg: 0 22px 44px -28px rgba(0, 0, 0, .75);
   --sh-card: 0 10px 22px -16px rgba(0, 0, 0, .8);   /* bìa khi trỏ: bóng sát chân, không loang xám */
-  --ring: rgba(224, 133, 155, .4);
+  --ring: #e0859b;                              /* focus ring ĐẶC — alpha .4 chỉ đạt 2.1:1 */
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-head: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, "Times New Roman", serif;
   --font-logo: "Fraunces", "Iowan Old Style", Palatino, Georgia, serif;
@@ -413,7 +413,7 @@ body.nav-open { overflow: hidden; }
     color var(--t-fast) var(--ease), background var(--t-fast) var(--ease), filter var(--t-fast) var(--ease); }
 .btn:hover { border-color: var(--txt); color: var(--txt); transform: translateY(-1px); box-shadow: var(--sh-hover); }
 .btn:active { transform: translateY(1px) scale(.985); box-shadow: none; }
-.btn:focus-visible { outline: 0; box-shadow: 0 0 0 3px var(--ring); }
+.btn:focus-visible { outline: 0; box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--acc); }
 .btn .i { transition: transform var(--t-fast) var(--ease); }
 .btn:hover .i.right, .btn:hover .i.left { transform: translateX(2px); }
 /* gợn sóng khi bấm — JS gắn thêm, không có JS thì nút vẫn lún xuống bình thường */
@@ -1402,125 +1402,133 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .crumb b { color: var(--txt); font-weight: 600; }
 /* Thẻ hero trang truyện: nền là chính bìa phóng to + làm mờ, phủ lớp tối để chữ
    trắng đọc được. Bố cục: bìa 172px | cột chữ; dải tiến độ chạy hết bề ngang thẻ. */
+/* ============================================================================
+   TRANG TRUYỆN · HERO HAI CỘT (bản dựng lại có chủ đích — không phải restyle)
+   ----------------------------------------------------------------------------
+   Nguyên tắc:
+   · Bìa và khối chữ TÁCH HẲN. Không một chữ nào nằm trên ảnh → hết lỗi
+     contrast 1.5:1 khi bìa sáng (WCAG 1.4.3).
+   · Không nền mờ, không gradient phủ, không hover nâng bìa, không quầng màu.
+     Bìa chỉ có MỘT bóng nhẹ; khối chữ là mặt phẳng --surf2.
+   · Thang chữ 4 bậc: 32 (display) / 15 (body) / 13 (caption) / 11 (micro).
+     Không dùng mono ở bất kỳ đâu trong hero.
+   · Một CTA chính duy nhất; việc phụ nằm trong menu ⋯ (details).
+   ========================================================================== */
 .shero { padding: 22px 0 10px; }
-.shero .hC { position: relative; overflow: hidden; isolation: isolate; border-radius: 12px;
-  padding: 26px 26px 18px; background: var(--surf2);
-  box-shadow: 0 18px 40px -30px rgba(0, 0, 0, .9), 0 0 0 1px rgba(255, 240, 220, .08); }
-.shero .hBg { position: absolute; inset: -10%; width: 120%; height: 120%; object-fit: cover;
-  object-position: center 24%; filter: blur(26px) saturate(1.1) brightness(.44); z-index: -2; }
-.shero .hVeil { position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  background: linear-gradient(96deg, rgba(10, 7, 5, .95) 6%, rgba(10, 7, 5, .76) 48%, rgba(10, 7, 5, .28)); }
-.shero .in { display: grid; grid-template-columns: 172px minmax(0, 1fr); gap: 30px; align-items: stretch; }
-.shero .cover { position: relative; align-self: start; border-radius: 6px; overflow: hidden; border: 0;
-  background: var(--surf2); aspect-ratio: 2/3; display: block;
-  box-shadow: 0 24px 40px -22px rgba(0, 0, 0, .95), 0 0 0 1px rgba(255, 243, 230, .13);
-  transition: transform var(--t-mid) var(--ease), box-shadow var(--t-mid) var(--ease); }
-.shero .cover img { width: 100%; height: 100%; object-fit: cover;
-  transition: transform var(--t-mid) var(--ease-out); }
-.shero .cover:hover { transform: translateY(-4px); box-shadow: var(--sh-lg); }
-.shero .cover:hover img { transform: scale(1.03); }
-.shero .cover.noimg { background: linear-gradient(160deg, var(--surf3), var(--surf2)); }
+.shero .in { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 32px; align-items: start; }
+.shero .cvCol { min-width: 0; }
+
+/* ---- cột bìa -------------------------------------------------------------- */
+.shero .cover { position: relative; display: block; overflow: hidden; border-radius: 10px;
+  background: var(--surf2); aspect-ratio: 2/3; box-shadow: 0 1px 2px rgba(0, 0, 0, .4); }
+.shero .cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .shero .cover.noimg::before { content: "ssochuz"; position: absolute; top: 15px; left: 0; right: 0; text-align: center;
-  font: 800 10px/1 var(--font); letter-spacing: .28em; text-transform: uppercase; color: var(--dim); opacity: .6; }
-.shero .cover.noimg::after { content: attr(data-t); position: absolute; inset: auto 20px 24px; font-family: var(--font-head);
-  font-size: 21px; font-weight: 700; line-height: 1.22; color: var(--mut); }
-/* ---- hai nhãn trên bìa trang truyện (vòng 10 · C1) -------------------------
-   Hai thứ KHÁC LOẠI nên không mặc chung một bộ đồ:
-   · tình trạng = CHỮ in hoa nhỏ (mono, giãn chữ) + chấm màu, trên dải mờ đáy bìa;
-   · 18+ = KÝ HIỆU kiểm duyệt: vòng tròn viền ở góc trên trái.
-   Góc trên phải đã là băng rôn MỚI (.nw-bookmark) nên 18+ nằm bên trái. */
-.shero .cover .cvGrad { position: absolute; left: 0; right: 0; bottom: 0; height: 46%; z-index: 1;
-  background: linear-gradient(0deg, rgba(4, 3, 2, .93) 16%, rgba(4, 3, 2, 0)); pointer-events: none; }
-.shero .cover .cvSt { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
-  display: flex; align-items: center; gap: 6px; padding: 0 10px 9px; pointer-events: none;
-  font-family: var(--font-mono); font-size: 10px; font-weight: 800; line-height: 1;
-  letter-spacing: .16em; text-transform: uppercase; color: #fff;
-  text-shadow: 0 1px 10px rgba(0, 0, 0, .95); }
-.shero .cover .cvSt i { width: 6px; height: 6px; border-radius: 50%; flex: none; background: currentColor; }
-.shero .cover .cvSt.done i { background: #6ce8a5; box-shadow: 0 0 8px #6ce8a5; }
-.shero .cover .cvSt.run i { background: #ffcb78; box-shadow: 0 0 8px #ffcb78; }
-.shero .cover .cvSt.soon i { background: #b0a3f5; box-shadow: 0 0 8px #b0a3f5; }
-/* 18+ giữ nguyên class .b18 (thẻ lưới vẫn là pill đỏ) nhưng trên bìa trang truyện
-   đổi hẳn hình thức: vòng tròn viền 27px, chữ 9,5px bên trong, quầng tối cục bộ
-   để đọc được cả trên bìa sáng. */
-.shero .cover .b18 { position: absolute; left: 10px; top: 10px; z-index: 3;
-  display: grid; place-items: center; width: 30px; height: 30px; min-height: 0; padding: 0;
-  border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, .92);
-  background: rgba(8, 6, 4, .58); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
-  color: #fff; font-family: var(--font-mono); font-size: 10px; font-weight: 800; line-height: 1;
-  letter-spacing: .01em; text-transform: none;
-  box-shadow: 0 2px 10px -2px rgba(0, 0, 0, .8); text-shadow: 0 1px 6px rgba(0, 0, 0, .9); }
-.shero .cover.noimg::after { bottom: 32px; }   /* chừa chỗ cho dải tình trạng */
-.shero .txtC { display: flex; flex-direction: column; min-width: 0; }
-.shero h1 { margin: 0 0 0 -2px; font-size: clamp(25px, 3.1vw, 32px); line-height: 1.13; letter-spacing: -.024em;
-  color: #fff; text-shadow: 0 2px 20px rgba(0, 0, 0, .5); }
-/* hàng tác giả · couple · năm · số chương · cập nhật: chữ nhỏ, ngăn bằng “·” */
-.shero .meta { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 9px;
-  margin: 10px 0 0; padding: 0; border: 0; font-size: 12.5px; line-height: 1.5; color: rgba(255, 255, 255, .62); }
-.shero .meta b { color: rgba(255, 255, 255, .92); font-weight: 600; }
+  font: 700 10px/1 var(--font); letter-spacing: .24em; text-transform: uppercase; color: var(--dim); }
+.shero .cover.noimg::after { content: attr(data-t); position: absolute; inset: auto 18px 18px; font-family: var(--font-logo);
+  font-size: 19px; font-weight: 700; line-height: 1.25; color: var(--mut); }
+
+/* tình trạng: chữ dưới bìa, cùng cấp caption, chấm màu lấy từ token */
+.shero .cvSt { display: flex; align-items: center; gap: 7px; margin-top: 10px;
+  font-size: 13px; font-weight: 500; line-height: 1.4; letter-spacing: .01em; color: var(--mut); }
+.shero .cvSt i { width: 6px; height: 6px; border-radius: 50%; flex: none; background: var(--dim); }
+.shero .cvSt.done i { background: var(--ok); }
+.shero .cvSt.run i { background: var(--warn); }
+.shero .cvSt.soon i { background: var(--acc); }
+
+/* 18+: ký hiệu kiểm duyệt dạng vòng tròn, nền ĐẶC (bỏ kính mờ + quầng + bóng chữ) */
+.shero .cover .b18 { position: absolute; left: 10px; top: 10px; z-index: 2;
+  display: grid; place-items: center; width: 28px; height: 28px; min-height: 0; padding: 0;
+  border-radius: 50%; border: 1.5px solid #fff; background: rgba(8, 6, 4, .86);
+  color: #fff; font-family: var(--font); font-size: 11px; font-weight: 600; line-height: 1;
+  letter-spacing: .01em; text-transform: none; box-shadow: none; text-shadow: none; }
+
+/* ---- khối chữ ------------------------------------------------------------ */
+.shero .txtC { display: flex; flex-direction: column; min-width: 0;
+  padding: 24px; border-radius: 10px; background: var(--surf2); }
+
+.shero h1 { margin: 0; font-family: var(--font-logo); font-size: 32px; font-weight: 700;
+  line-height: 1.2; letter-spacing: -.01em; color: var(--txt);
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+.shero .meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px;
+  margin: 12px 0 0; padding: 0; border: 0;
+  font-size: 15px; font-weight: 400; line-height: 1.5; color: var(--mut); }
+.shero .meta b { color: var(--txt); font-weight: 600; }
 .shero .meta > span { display: inline-flex; align-items: center; gap: 6px; }
 .shero .meta .mi { min-width: 0; }
-.shero .meta .mi + .mi::before { content: "·"; margin-right: 7px; opacity: .45; }
-.shero .syn { font-size: 13.5px; line-height: 1.68; color: rgba(255, 255, 255, .72); margin: 0; }
-.shero .synwrap { margin-top: 12px; max-width: 78ch; }
-.shero .synwrap > .synin { font-size: 13.5px; line-height: 1.68; }
-.shero .synwrap.clamp > .synin { max-height: 3.4em; }   /* hé 2 dòng cho gọn như bản vẽ */
-.shero .synbtn { margin: 3px 0 0; font-size: 11.5px; }
-/* Tóm tắt hé 5 dòng; nút mở toàn bộ tại chỗ, bỏ giới hạn chiều cao và mask.
-   Tab Thông tin không lặp lại tóm tắt. */
-.synwrap > .synin { overflow: hidden; font-size: 15.5px; line-height: 1.7; }
-.synin > .syn:last-child { margin-bottom: 0; }
-.synwrap.clamp > .synin {
-  max-height: 8.5em;                      /* 5 dòng × line-height 1.7 */
-  /* chữ nhạt dần ở cuối phần hé ra: người đọc biết là còn nữa, không phải chữ cụt */
-  -webkit-mask-image: linear-gradient(#000 58%, rgba(0, 0, 0, 0));
-          mask-image: linear-gradient(#000 58%, rgba(0, 0, 0, 0));
-  transition: max-height var(--t-close) var(--ease-close);
-}
-.synwrap.clamp.open > .synin {
-  max-height: none;
-  -webkit-mask-image: none; mask-image: none;
-  transition: max-height var(--t) var(--ease);
-}
-.synbtn .i { transition: transform var(--t-fast) var(--ease); }
-.synbtn[aria-expanded="true"] .i { transform: rotate(180deg); }
-.synbtn { display: inline-flex; align-items: center; gap: 5px; margin: 0 0 10px; font-size: 12.5px; font-weight: 700;
-  color: var(--acc); border-bottom: 1px solid transparent; transition: color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease); }
-.synbtn:hover { border-bottom-color: currentColor; }
-/* sao + nhãn đánh giá thu lại một hàng mảnh, không tranh chỗ với phần chữ */
-.shero .editable-rating { margin: 10px 0 0; }
-.shero .editable-rating .rating-main { gap: 2px 10px; }
-.shero .editable-rating .rl { order: 0; flex-basis: auto; font-size: 12px; color: rgba(255, 255, 255, .62); }
-.shero .editable-rating .rl b { color: rgba(255, 255, 255, .92); }
-.shero .editable-rating .stars .st { width: 22px; height: 24px; padding: 3px; }
-.shero .editable-rating svg { width: 16px; height: 16px; }
-.shero .editable-rating .rating-value { font-size: 12px; color: rgba(255, 255, 255, .62); }
-.shero .editable-rating .rating-value b { color: rgba(255, 255, 255, .92); }
-.shero .editable-rating .rating-own { margin-top: 1px; min-height: 0; font-size: 11px; color: rgba(255, 255, 255, .42); }
-.shero .editable-rating .rating-remove { padding: 2px 0; font-size: 11px; color: rgba(255, 255, 255, .55); }
-/* hàng nút: nằm sát đáy bìa, nút chính là mực son đặc trên nền ảnh */
-.shero .btn-row { margin: auto 0 0; padding-top: 10px; gap: 8px; }
-.shero .btn-row .btn { height: 38px; padding: 0 14px; border-radius: 9px; font-size: 12.5px; }
-/* việc phụ (chia sẻ · RSS · đặt lại 18+) — nút vuông icon, dồn cuối hàng */
-.shero .btn-utils { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-.shero .btn-row .btn.ic { width: 38px; padding: 0; gap: 0; flex: none; }
-.shero .btn-row .btn.ic .i { width: 15px; height: 15px; }
+.shero .meta .mi + .mi::before { content: "·"; margin-right: 8px; color: var(--dim); }
+.shero .metaSub { display: flex; align-items: center; flex-wrap: wrap; gap: 5px 7px;
+  margin-top: 6px; font-size: 13px; line-height: 1.4; letter-spacing: .01em; color: var(--mut); }
+.shero .metaSub i { font-style: normal; opacity: .5; }
+.shero .metaSub > span { display: inline-flex; align-items: center; gap: 5px; }
+
+/* tóm tắt: đúng 3 dòng bằng line-clamp, KHÔNG mask fade (mask làm dòng 2 mờ đi) */
+.shero .syn { margin: 0; font-size: 15px; font-weight: 400; line-height: 1.5; color: var(--mut); }
+.shero .synwrap { margin-top: 14px; max-width: 72ch; }
+.shero .synwrap > .synin { font-size: 15px; line-height: 1.5; }
+.shero .synwrap.clamp > .synin { max-height: none; -webkit-mask-image: none; mask-image: none;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.shero .synwrap.open > .synin { display: block; -webkit-line-clamp: unset; overflow: visible; }
+.shero .synbtn { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px;
+  margin: 6px 0 0; font-size: 13px; font-weight: 500; line-height: 1.4; letter-spacing: .01em;
+  color: var(--acc); border: 0; }
+.shero .synbtn:hover { color: var(--txt); }
+.shero .synbtn .i { width: 12px; height: 12px; }
+
+/* tiến độ đọc: một dòng caption + thanh 2px, không mono, không IN HOA */
+.shero .prog { margin: 16px 0 0; }
+.shero .prog > span { display: block; font-size: 13px; font-weight: 500; line-height: 1.4;
+  letter-spacing: .01em; color: var(--mut); }
+.shero .prog .bar { margin-top: 6px; height: 2px; border-radius: 2px; overflow: hidden; background: var(--surf3); }
+.shero .prog .bar i { display: block; height: 100%; background: var(--acc); }
+
+/* hàng nút: 1 CTA chính + 1 phụ + menu ⋯ */
+.shero .btn-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 18px 0 0; padding: 0; }
+.shero .btn-row .btn { height: 40px; padding: 0 16px; border-radius: 8px;
+  font-size: 13px; font-weight: 600; letter-spacing: .01em; }
 .shero .btn-row .btn.pri { background: var(--acc); border-color: var(--acc); color: #2a1016;
-  box-shadow: 0 10px 22px -14px rgba(224, 133, 155, .9); }
-.shero .btn-row .btn.pri:hover { filter: brightness(1.07); color: #2a1016; }
-.shero .btn-row .btn.ghost { border-color: rgba(255, 255, 255, .24); color: #fff; background: rgba(18, 12, 9, .3); }
-.shero .btn-row .btn.ghost:hover { background: rgba(18, 12, 9, .6); border-color: rgba(255, 255, 255, .4); color: #fff; }
-.shero .btn-row .btn.on { border-color: var(--acc); color: var(--acc); background: rgba(224, 133, 155, .16); }
-/* dải tiến độ đọc: chữ mono in hoa trái · thanh giữa · phần trăm phải */
-.shero .prog { display: flex; align-items: center; gap: 14px; max-width: none; margin: 18px 0 0;
-  padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, .13); }
-.shero .prog > span { font-family: var(--font-mono); font-size: 10px; font-weight: 600; line-height: 1;
-  letter-spacing: .09em; text-transform: uppercase; color: rgba(255, 255, 255, .58); white-space: nowrap; }
-.shero .prog .bar { flex: 1; min-width: 60px; height: 3px; border-radius: 99px; overflow: hidden;
-  background: rgba(255, 255, 255, .15); }
-.shero .prog .bar i { display: block; height: 100%; border-radius: 99px; background: var(--acc); }
-.shero .prog em { font-family: var(--font-mono); font-size: 10px; font-weight: 700; font-style: normal;
-  color: rgba(255, 255, 255, .82); }
+  box-shadow: none; }
+.shero .btn-row .btn.pri:hover { filter: brightness(1.06); color: #2a1016; }
+.shero .btn-row .btn.ghost { border-color: var(--bd); color: var(--mut); background: transparent; }
+.shero .btn-row .btn.ghost:hover { border-color: var(--bd2); color: var(--txt); background: var(--surf3); }
+.shero .btn-row .btn.on { border-color: var(--acc); color: var(--acc); }
+.shero .btn-row .btn.ic { width: 40px; padding: 0; justify-content: center; gap: 0; flex: none; }
+
+/* menu ⋯ (details) — việc phụ vẫn đủ, không tranh chỗ với CTA */
+.shero .amore { position: relative; margin-left: auto; }
+.shero .amore > summary { list-style: none; }
+.shero .amore > summary::-webkit-details-marker { display: none; }
+.shero .amore[open] > summary { border-color: var(--acc); color: var(--acc); }
+.shero .amore-in { position: absolute; z-index: 20; right: 0; top: calc(100% + 6px); min-width: 224px;
+  display: flex; flex-direction: column; gap: 2px; padding: 6px; border-radius: 8px;
+  background: var(--bg2); border: 1px solid var(--bd); box-shadow: 0 12px 24px -16px rgba(0, 0, 0, .8); }
+.shero .amore-in .btn { display: flex; align-items: center; justify-content: flex-start; gap: 9px;
+  width: 100%; height: 36px; padding: 0 10px; border: 0; border-radius: 6px;
+  font-size: 13px; font-weight: 500; color: var(--mut); background: transparent; }
+.shero .amore-in .btn:hover, .shero .amore-in .btn:focus-visible { color: var(--txt); background: var(--surf2); }
+.shero .amore-in .btn.on { color: var(--acc); }
+
+/* đánh giá: hàng phụ cuối khối, ngăn bằng hairline; target ≥ 24px */
+/* focus ring: viền son ĐẶC, có khe nền 2px để đọc được cả trên nút đặc lẫn nền thẻ
+   (alpha .4 trước đây chỉ đạt 2.1:1 — WCAG 1.4.11 cần ≥ 3:1) */
+.shero :focus-visible { outline: 0; }
+.shero .btn-row .btn:focus-visible,
+.shero .amore > summary:focus-visible,
+.shero .synbtn:focus-visible,
+.shero .editable-rating button:focus-visible {
+  outline: 0; box-shadow: 0 0 0 2px var(--bg2), 0 0 0 4px var(--acc); }
+.shero .btn-row .btn.pri:focus-visible { box-shadow: 0 0 0 2px var(--bg2), 0 0 0 4px var(--acc); }
+
+.shero .editable-rating { margin: 18px 0 0; padding-top: 14px; border-top: 1px solid var(--bd); }
+.shero .editable-rating .rating-main { gap: 4px 10px; }
+.shero .editable-rating .rl { order: 0; flex-basis: auto; font-size: 13px; color: var(--mut); }
+.shero .editable-rating .rl b { color: var(--txt); font-weight: 600; }
+.shero .editable-rating .stars .st { width: 28px; height: 28px; padding: 4px; }
+.shero .editable-rating svg { width: 18px; height: 18px; }
+.shero .editable-rating .rating-value { font-size: 13px; color: var(--mut); }
+.shero .editable-rating .rating-value b { color: var(--txt); font-weight: 600; }
+.shero .editable-rating .rating-own { min-height: 0; margin-top: 4px; font-size: 11px; color: var(--mut); }
+.shero .editable-rating .rating-remove { padding: 2px 0; font-size: 11px; color: var(--mut); }
 
 .chapbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
 .chapbar .search { flex: 1 1 260px; max-width: 420px; }
@@ -1987,7 +1995,7 @@ body.reading .sgrp, body.reading .toastline, body.reading .rnav button, body.rea
   transition: transform var(--t) var(--ease), opacity var(--t) var(--ease); }
 .sheet.on.closing .pan { transform: translateX(18px); opacity: .6; }
 .sheet .ph { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--rd-bd, var(--bd)); }
-.sheet .ph h4 { flex: 1; font-size: 18px; }
+.sheet .ph h4, .sheet .ph h2 { flex: 1; font-size: 18px; }
 .sheet .pb { flex: 1; overflow: auto; padding: 8px 12px 24px; }
 .sheet .dsearch { display: flex; align-items: center; gap: 9px; margin: 8px 8px 12px; padding: 9px 14px;
   border: 1px solid var(--rd-bd, var(--bd)); border-radius: 99px; background: var(--rd-surf, var(--surf));
@@ -2154,49 +2162,58 @@ kbd { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; b
   .admin .amain { padding-top: 16px; }
   .admin .tbl { min-width: 760px; }
   .admin .keys { grid-template-columns: 1fr; }
-  .shero .in { grid-template-columns: 150px minmax(0, 1fr); gap: 24px; }
-  .shero .cover { width: auto; }
-  .shero .hC { padding: 20px 20px 16px; }
-  .shero h1 { font-size: 26px; }
-  /* nhãn bìa hạ cỡ theo bìa, giữ đúng cấu trúc (chỉ scale, không đổi bố cục) */
-  .shero .cover .b18 { width: 20px; height: 20px; left: 6px; top: 6px; font-size: 8px; border-width: 1px; }
-  .shero .cover .cvSt { padding: 0 7px 7px; font-size: 8px; letter-spacing: .1em; gap: 4px; }
-  .shero .cover .cvSt i { width: 4px; height: 4px; }
-/* máy nhỏ: một cột — bìa thu 132px rồi chữ xuống dưới hết bề ngang thẻ;
-   nhồi chữ cạnh bìa 104px thì hàng meta và nút bị bóp, chữ gãy giữa từ. */
-@media (max-width: 620px) {
-  .shero .hC { padding: 16px 14px 14px; border-radius: 10px; }
-  /* bìa 132px bên trái, tiêu đề canh GIỮA theo chiều cao bìa (không để mảng trống
-     to bên phải bìa), rồi hàng meta và phần còn lại xuống hết bề ngang thẻ */
-  .shero .in { grid-template-columns: 132px minmax(0, 1fr); gap: 12px 14px; align-items: start; }
-  .shero .cover { width: 100%; grid-column: 1; grid-row: 1; }
-  .shero .txtC { display: contents; }
-  .shero .txtC > h1 { grid-column: 2; grid-row: 1; align-self: center; font-size: 22px; }
-  .shero .txtC > :not(h1) { grid-column: 1 / -1; }
-  .shero .meta { margin-top: 0; gap: 3px 7px; font-size: 11.5px; }
-  .shero .synwrap { margin-top: 8px; }
-  .shero .syn, .shero .synwrap > .synin { font-size: 12px; }
-  .shero .synbtn { margin-top: 2px; font-size: 11px; }
-  .shero .editable-rating { margin-top: 8px; }
-  .shero .editable-rating .stars .st { width: 20px; height: 22px; padding: 2px; }
-  .shero .editable-rating svg { width: 15px; height: 15px; }
-  .shero .editable-rating .rating-own { font-size: 10.5px; }
-  .shero .btn-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; padding-top: 0; }
-  .shero .btn-row .btn { width: 100%; justify-content: center; font-size: 12.5px; }
-  .shero .btn-row .btn.pri { grid-column: 1 / -1; }         /* nút chính chiếm cả hàng */
-  .shero .btn-utils { grid-column: 1 / -1; margin: 2px 0 0; justify-content: flex-end; }
-  .shero .btn-row .btn.ic { width: 38px; height: 36px; justify-content: center; }
-  .shero .prog { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 10px; margin-top: 14px; }
-  .shero .prog > span { grid-area: 1 / 1; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .shero .prog em { grid-area: 1 / 2; align-self: center; }
-  .shero .prog .bar { grid-area: 2 / 1 / 3 / 3; }
-}
-
-
+  /* hero: vẫn hai cột, bìa thu lại để khối chữ còn chỗ thở */
+  .shero .in { grid-template-columns: 220px minmax(0, 1fr); gap: 24px; }
+  .shero .txtC { padding: 20px; }
+  .shero h1 { font-size: 28px; }
   .rnav { grid-template-columns: 1fr 1fr; }
   .rnav .mid { grid-column: 1 / -1; order: -1; }
   .wrap, .ftr .in { padding-left: 16px; padding-right: 16px; }
   .rdhead, .rtext, .ract, .rend, .rnav { padding-left: 18px; padding-right: 18px; }
+}
+@media (max-width: 700px) {
+  /* vẫn hai cột nhưng bìa nhỏ dần để tiêu đề không gãy chữ trên màn hẹp */
+  .shero .in { grid-template-columns: 180px minmax(0, 1fr); gap: 20px; }
+  .shero h1 { font-size: 26px; }
+}
+/* máy nhỏ: MỘT cột — bìa hết bề ngang rồi khối chữ xuống dưới; chỉ 2 nút hiện,
+   phần còn lại vào menu ⋯. Bìa cap chiều cao để CTA chính vẫn nằm trong màn đầu. */
+@media (max-width: 620px) {
+  .shero { padding: 16px 0 8px; }
+  .shero .in { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  /* bìa: giữ ĐÚNG tỉ lệ 2:3 và không crop (bìa dọc cắt ngang là cắt vào mặt nhân vật),
+     nên thay vì kéo full-width rồi cắt, ta chặn chiều cao bằng svh → chiều ngang tự co.
+     40svh giữ CTA chính nằm trong màn đầu trên máy 844px. */
+  .shero .cover { --cvh: min(400px, 36svh); width: 100%; max-width: calc(var(--cvh) * 2 / 3);
+    max-height: var(--cvh); }
+  .shero .cover img { object-position: center top; }
+  .shero .cvSt { margin-top: 8px; font-size: 13px; }
+  .shero .cover .b18 { width: 26px; height: 26px; left: 8px; top: 8px; font-size: 11px; }
+  .shero .txtC { padding: 16px; }
+  .shero h1 { font-size: 24px; }
+  .shero .meta { margin-top: 10px; gap: 4px 7px; font-size: 13px; }
+  .shero .metaSub { font-size: 13px; }
+  .shero .synwrap { margin-top: 10px; }
+  .shero .syn, .shero .synwrap > .synin { font-size: 13px; }
+  .shero .btn-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-top: 16px; }
+  /* .lg của bản cũ vẫn còn rule ở media 430px (specificity cao hơn) nên khai báo
+     lại kèm .lg để CTA chính đúng 48px / 15px trên máy nhỏ */
+  .shero .btn-row .btn.pri,
+  .shero .btn-row .btn.pri.lg { grid-column: 1 / -1; width: 100%; height: 48px; padding: 0 18px; font-size: 15px; }
+  .shero .btn-row [data-followbtn],
+  .shero .btn-row .btn.lg[data-followbtn] { grid-column: 1; width: 100%; height: 44px; font-size: 13px; }
+  .shero .amore { grid-column: 2; margin-left: 0; }
+  .shero .amore > summary { width: 40px; height: 40px; padding: 0; justify-content: center; }
+  .shero .btn-row .btn.ic { width: 40px; }
+  .shero .amore-in { left: auto; right: 0; }
+  .shero .editable-rating { margin-top: 16px; padding-top: 12px; }
+  .shero .editable-rating .stars .st { width: 26px; height: 26px; padding: 3px; }
+  .shero .editable-rating svg { width: 17px; height: 17px; }
+  /* hàng reaction sticker không được đẩy cả trang cuộn ngang trên máy hẹp */
+  .rreact { max-width: 100%; overflow: hidden; }
+  .rreact .rx-row { overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
+  .rreact .rx-row::-webkit-scrollbar { display: none; }
+  .rreact .rx-head { flex-wrap: wrap; }
 }
 @media (max-width: 620px) {
   .admin .amain { padding: 14px 12px 44px; }
