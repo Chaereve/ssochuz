@@ -39,7 +39,13 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   const rdoc = r.doc;
   out.errors1 = r.errors.slice(0, 6);
   const heroRss = rdoc.querySelector('#shero a[href*="/feed.xml?slug=' + RS + '"]');
-  ok(heroRss && /rss/i.test(heroRss.textContent), 'hero trang truyen thieu nut RSS feed rieng');
+  /* nút RSS ở hero là nút icon (chỉ có hình), nên tên đọc được nằm ở aria-label/
+     title — chấp nhận cả hai, miễn là có nhãn nói rõ đây là RSS */
+  const rssName = heroRss
+    ? (heroRss.textContent + ' ' + (heroRss.getAttribute('aria-label') || '') + ' ' +
+       (heroRss.getAttribute('title') || ''))
+    : '';
+  ok(heroRss && /rss/i.test(rssName), 'hero trang truyen thieu nut RSS feed rieng');
   ok(heroRss && heroRss.getAttribute('target') === '_blank', 'nut RSS hero phai target=_blank');
   const alts = [...rdoc.querySelectorAll('link[rel="alternate"][type="application/rss+xml"]')]
     .map(x => x.getAttribute('href'));

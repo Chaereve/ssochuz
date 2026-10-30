@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Khung mobile</title>
+<link rel="stylesheet" href="/cz.css?v=20261030back1">
+<link rel="stylesheet" href="mock.css">
+<style>
+  html, body { margin: 0; background: var(--bg); }
+  body { padding: 14px 14px 20px; }
+  /* nhãn “xem thử trên máy” của dev server không thuộc nội dung mockup */
+  body > div[style*="position:fixed"] { display: none !important; }
+</style>
+</head>
+<body>
+<div id="pv"></div>
+<script src="mock.js"></script>
+<script>
+  var k = new URLSearchParams(location.search).get('v') || 'base';
+  document.getElementById('pv').innerHTML = MOCK.html(k);
+</script>
+</body>
+</html>

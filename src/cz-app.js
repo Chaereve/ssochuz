@@ -1623,7 +1623,6 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       '<h3>' + esc((n&&n.title)||'—') + '</h3><div class="cb">' + esc((n&&n.author)||'') + '</div></div>';
     var pg = progress(n), pct = n.chapters ? Math.min(100, Math.round(pg / n.chapters * 100)) : 0;
     var img = coverSrc(n);
-    if (opts.view === 'list') return cardList(n, img, pg, pct);
     /* thẻ lưới: tình trạng là KÝ HIỆU TRÒN ở góc trái bìa; “Mới” là BOOKMARK thả
        từ cạnh trên-phải (đuôi cắt chữ V, chữ xếp dọc); 18+ nằm ở hàng chân bìa
        cạnh số chương. Ba thứ ba góc nên không bao giờ chồng nhau.
@@ -1652,39 +1651,6 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       '</a></div>';
   }
   /* xem dạng danh sách: mỗi bộ một hàng, đủ thông tin để quyết định mở hay không */
-  function cardList(n, img, pg, pct) {
-    if (!n || !n.slug) return '<div class="card list off"><span class="cl-main"><span class="cl-top"><b class="cl-t">' + esc((n&&n.title)||'—') + '</b></span><span class="cl-meta">thiếu slug — sửa trong trang quản trị</span></span></div>';
-    /* tác giả trước, couple sau — cùng thứ tự với thẻ lưới và với trang truyện */
-    var bits = [n.author, n.couple, n.year].filter(Boolean);
-    var read = pg > 0;
-    return '<div class="cardwrap listwrap"><a class="card list st-' + esc(n.statusCls || 'soon') + '" href="' + esc(storyURL(n.slug)) + '" data-t="' + esc(n.title) + '" title="' + esc(n.title) + '">' +
-      '<span class="cl-th' + (img ? ' skel' : '') + '">' +
-        (img ? '<img src="' + esc(img) + '"' + coverFB(n, img) + ' alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer" width="300" height="450">' : '') +
-      '</span>' +
-      '<span class="cl-main">' +
-        '<span class="cl-top"><b class="cl-t">' + esc(n.title) + '</b>' +
-          (n.locked ? '<span class="b18 locktag" title="Truyện có mật mã">' + icon('lock', 'i-s') + '</span>' : '') +
-          (n.is18 ? '<span class="b18">18+</span>' : '') +
-          (n.fresh ? '<span class="badge-new">NEW</span>' : '') +
-          followBadge(n) +
-        '</span>' +
-        '<span class="cl-meta">' + esc(bits.join(' · ') || '—') + '</span>' +
-        '<span class="cl-syn">' + esc(n.syn || 'Chưa có mô tả cho bộ này.') + '</span>' +
-        (pct ? '<span class="cl-prog" title="đã đọc ' + pct + '%"><i style="width:' + pct + '%"></i></span>' : '') +
-      '</span>' +
-      '<span class="cl-side">' +
-        '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(statusLabel(n.statusCls || n.status)) + '</span>' +
-        '<span class="cl-ch">' + esc(countText(n)) + '</span>' +
-        '<span class="cl-year">' + esc(n.year ? 'Năm ' + n.year : '—') + '</span>' +
-      '</span>' +
-      '<span class="cl-go">' + (read ? 'Đọc tiếp' : 'Xem truyện') + icon('right', 'i-s') + '</span>' +
-      '</a></div>';
-  }
-  /* hàng tiêu đề cho kiểu xem danh sách (chỉ là nhãn, không bấm được) */
-  function listHead() {
-    return '<div class="list-head" aria-hidden="true">' +
-      '<span>Bộ truyện</span><span>Tình trạng · chương</span><span></span></div>';
-  }
   function mountRail(el, list, opts) {
     if (!el) return;
     opts = opts || {};
@@ -3021,7 +2987,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     realCount: realCount, reconcileCount: reconcileCount, onStatsChange: onStatsChange, notifyStats: notifyStats,
     rdGet: rdGet, rdSet: rdSet, themeInit: themeInit, themeToggle: themeToggle, themeMeta: themeMeta,
     icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo, teaser: teaser,
-    statusCls: statusCls, statusLabel: statusLabel, statusIcon: statusIcon, words: words, norm: norm, couplesOf: couplesOf, countText: countText, listHead: listHead,
+    statusCls: statusCls, statusLabel: statusLabel, statusIcon: statusIcon, words: words, norm: norm, couplesOf: couplesOf, countText: countText,
     /* bóc tên chương dùng chung (src/shared/chapters.js): trang truyện, mục
        lục, nhảy chương — và trang quản trị đều qua đây, khỏi lệch nhau */
     chapInfo: function (t) { return parseChapterTitle(t); },

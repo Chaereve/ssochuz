@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup · thanh tìm &amp; lọc thư viện</title>
+<link rel="stylesheet" href="/cz.css?v=20261030back1">
+<link rel="stylesheet" href="mock.css">
+<style>
+  body { padding: 0; }
+  .page { max-width: 1120px; margin: 0 auto; padding: 40px 20px 90px; }
+  .kick { font: 700 11px/1 ui-monospace, monospace; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--acc); }
+  h1 { margin: 14px 0 10px; font-size: 34px; line-height: 1.15; letter-spacing: -.01em;
+    font-family: var(--font-head); }
+  .lede { margin: 0; max-width: 66ch; color: var(--mut); font-size: 15px; }
+  .lede b { color: var(--txt); }
+
+  h2 { margin: 54px 0 4px; font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--dim); font-weight: 700; }
+  .h2sub { margin: 0 0 20px; color: var(--mut); font-size: 14px; max-width: 70ch; }
+
+  /* khung xem */
+  .opt { margin: 0 0 34px; padding: 18px 18px 14px; border: 1px solid var(--bd);
+    border-radius: 14px; background: var(--bg2); }
+  .opt.now { border-color: var(--bd2); }
+  .opt-h { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+  .opt-h .tag { font: 700 10.5px/1 ui-monospace, monospace; letter-spacing: .12em;
+    text-transform: uppercase; padding: 4px 7px; border-radius: 4px;
+    border: 1px solid var(--bd); color: var(--dim); }
+  .opt-h .tag.now { border-color: var(--acc); color: var(--acc); }
+  .opt-h h3 { margin: 0; font-size: 19px; letter-spacing: -.005em; font-family: var(--font-head); }
+  .opt-h .pick { margin-left: auto; font-size: 12px; color: var(--dim); }
+  .opt .say { margin: 2px 0 14px; color: var(--mut); font-size: 14px; max-width: 74ch; }
+
+  .frames { display: grid; gap: 14px; }
+  .frame { border: 1px solid var(--bd); border-radius: 12px; overflow: hidden;
+    background: var(--bg); }
+  .frame .flab { display: flex; align-items: center; gap: 8px; padding: 7px 12px;
+    border-bottom: 1px solid var(--bd); font: 700 10.5px/1 ui-monospace, monospace;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+  .frame .fv { padding: 16px; }
+  .frame.mob { width: 384px; max-width: 100%; }
+  .frame.mob.wide { width: 400px; }
+  .frame .shot { display: block; width: 100%; height: auto; border-radius: 8px; }
+  .frame.mob .fv { padding: 0; }
+  .frame.mob iframe { display: block; width: 360px; max-width: 100%; height: 240px;
+    border: 0; background: var(--bg); transition: height .15s; }
+  .pair { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+  .pair .frame.desk { flex: 1 1 620px; min-width: 0; }
+
+  .notes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+  @media (max-width: 760px) { .notes { grid-template-columns: 1fr; } }
+  .note { background: var(--surf); border: 1px solid var(--bd); border-radius: 10px; padding: 10px 12px; }
+  .note b { display: block; font: 700 10.5px/1.4 ui-monospace, monospace; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--dim); margin-bottom: 5px; }
+  .note p { margin: 0; font-size: 13px; color: var(--mut); line-height: 1.55; }
+  .note p em { color: var(--txt); font-style: normal; font-weight: 600; }
+
+  footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--bd);
+    color: var(--dim); font-size: 13px; }
+  code { font-family: var(--font-mono); font-size: .92em; color: var(--txt);
+    background: var(--surf2); padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <p class="kick">Mockup · chưa đụng vào site</p>
+  <h1>Thanh tìm &amp; lọc ở thư viện</h1>
+  <p class="lede">Việc <b>bỏ công tắc lưới/danh sách</b> đã làm trong bản thật — ảnh chụp ngay
+    bên dưới. Phần còn lại là <b>ba phương án</b> cho thanh <b>Tìm · Năm · Sắp xếp</b>, mỗi phương án
+    có bản desktop và bản mobile 360px (khung nhỏ bên cạnh, chạy bằng iframe để media query chạy
+    đúng). Mọi thứ dùng đúng class, màu và cỡ chữ của site thật.</p>
+
+  <h2>Đã làm · bỏ công tắc kiểu xem</h2>
+  <p class="h2sub">Thư viện giờ chỉ còn dạng lưới. Đã xoá: nút <code>#viewSeg</code> trong
+    markup, <code>state.view</code> + khoá <code>ssochuz-view</code> trong <code>src/cz-home.js</code>,
+    nhánh thẻ dạng danh sách (<code>cardList</code>/<code>listHead</code>) trong
+    <code>src/cz-app.js</code>, và toàn bộ CSS <code>.list-view</code> / <code>.card.list</code> /
+    <code>.cl-*</code> (50 khối luật). Kèm một chỉnh nhỏ: mũi tên ô chọn giờ nằm sát chữ thay vì
+    bị đẩy ra xa.</p>
+  <div class="opt now">
+    <div class="opt-h"><span class="tag now">Đang chạy</span><h3>Thanh lọc sau khi bỏ công tắc</h3>
+      <span class="pick">chụp từ site thật</span></div>
+    <p class="say">Ảnh chụp trực tiếp từ trang chủ trên dev server, không phải dựng lại.</p>
+    <div class="frames">
+      <div class="frame"><div class="flab">Desktop · 1216px</div>
+        <div class="fv"><img class="shot" src="img/now-d.webp" alt="Thanh tìm và lọc ở thư viện sau khi bỏ công tắc kiểu xem"></div></div>
+      <div class="frame mob wide"><div class="flab">Mobile · 390px</div>
+        <div class="fv"><img class="shot" src="img/now-m.webp" alt="Thanh tìm và lọc ở thư viện trên mobile"></div></div>
+    </div>
+  </div>
+
+  <h2>Ba phương án cho thanh lọc</h2>
+  <p class="h2sub">Điểm khác nhau: <b>bao nhiêu khối có viền</b>, và <b>Năm / Sắp xếp nằm ở đâu</b>. Phương án “giữ nguyên như đang chạy” chính là ảnh chụp ở trên — nếu bạn thấy vậy là đủ thì khỏi cần chọn.</p>
+
+  <div class="opt">
+    <div class="opt-h"><span class="tag">A</span><h3>Một hộp, ba ngăn</h3>
+      <span class="pick">gọn nhất về số khối</span></div>
+    <p class="say">Ô tìm, Năm và Sắp xếp nằm chung trong <b>một</b> khối duy nhất, ngăn nhau bằng
+      kẻ tóc dọc — đúng kiểu “một hộp + kẻ tóc” bạn đã chốt cho thanh thư viện trước đây.</p>
+    <div class="frames">
+      <div class="pair">
+        <div class="frame desk"><div class="flab">Desktop · 1112px</div><div class="fv" id="pv-b"></div></div>
+        <div class="frame mob"><div class="flab">Mobile · 360px</div><div class="fv">
+          <iframe src="frame.html?v=b" title="Phương án B trên mobile" loading="lazy"></iframe>
+        </div></div>
+      </div>
+    </div>
+    <div class="notes">
+      <div class="note"><b>Đổi gì</b><p>HTML thanh lọc gộp vào một <code>.barB</code>; hai ô chọn
+        mất viền riêng, chỉ còn kẻ tóc ngăn. Mobile: ô tìm chiếm trọn hàng đầu, hai ô chọn xuống
+        hàng dưới trong cùng khối.</p></div>
+      <div class="note"><b>Được</b><p>Cả khu lọc chỉ còn <em>một</em> hình chữ nhật — mắt đọc một
+        mạch từ trái sang phải. Lên mobile không bị rớt khối lẻ.</p></div>
+      <div class="note"><b>Mất</b><p>Khối cao 44px nên nặng hơn bản A một chút; đường kẻ dọc trong
+        hộp cần canh đều, sai một ly là thấy ngay.</p></div>
+    </div>
+  </div>
+
+  <div class="opt">
+    <div class="opt-h"><span class="tag">B</span><h3>Tìm là chính, lọc là chữ</h3>
+      <span class="pick">thoáng nhất</span></div>
+    <p class="say">Ô tìm chiếm trọn một hàng (cao 48px). Năm và Sắp xếp xuống hàng dưới dưới dạng
+      <b>chữ + mũi tên</b>, không viền, đứng cùng hàng với số kết quả. Tình trạng vẫn là dãy tab
+      gạch chân như hiện tại.</p>
+    <div class="frames">
+      <div class="pair">
+        <div class="frame desk"><div class="flab">Desktop · 1112px</div><div class="fv" id="pv-c"></div></div>
+        <div class="frame mob"><div class="flab">Mobile · 360px</div><div class="fv">
+          <iframe src="frame.html?v=c" title="Phương án C trên mobile" loading="lazy"></iframe>
+        </div></div>
+      </div>
+    </div>
+    <div class="notes">
+      <div class="note"><b>Đổi gì</b><p>Ô tìm thành hàng riêng; Năm/Sắp xếp thành chữ + mũi tên
+        (vẫn là <code>&lt;select&gt;</code> thật, chỉ bỏ khung). Số kết quả dời lên hàng lọc.</p></div>
+      <div class="note"><b>Được</b><p>Ô tìm to, dễ bấm nhất; không còn khối viền nào ngoài ô nhập.
+        Rất hợp mắt mobile.</p></div>
+      <div class="note"><b>Mất</b><p>Cao thêm một hàng (~40px) — đẩy lưới truyện xuống. Hàng lọc
+        chữ nhỏ nên dễ bị bỏ qua hơn ô chọn có khung.</p></div>
+    </div>
+  </div>
+
+  <div class="opt">
+    <div class="opt-h"><span class="tag">C</span><h3>Một nút Lọc</h3>
+      <span class="pick">nhiều việc nhất</span></div>
+    <p class="say">Trên thanh chỉ còn ô tìm và một nút <b>Lọc</b> (kèm số điều kiện đang bật).
+      Năm, Sắp xếp, tình trạng và 18+ chuyển vào tấm trượt — mở ra mới thấy.</p>
+    <div class="frames">
+      <div class="pair">
+        <div class="frame desk"><div class="flab">Desktop · 1112px</div><div class="fv" id="pv-d"></div></div>
+        <div class="frame mob"><div class="flab">Mobile · 360px</div><div class="fv">
+          <iframe src="frame.html?v=d" title="Phương án D trên mobile" loading="lazy"></iframe>
+        </div></div>
+      </div>
+    </div>
+    <div class="notes">
+      <div class="note"><b>Đổi gì</b><p>Dựng thêm một tấm trượt (<code>sheet</code>) cho bộ lọc;
+        dãy tab tình trạng rời khỏi trang, thay bằng một dòng “Đang lọc: …”.</p></div>
+      <div class="note"><b>Được</b><p>Thanh gọn nhất có thể, lưới truyện lên cao; mobile rất sạch.</p></div>
+      <div class="note"><b>Mất</b><p>Mất chỗ “thấy ngay”: muốn đổi tình trạng phải mở tấm trượt.
+        Nhiều code mới, dễ sinh lỗi bàn phím/focus hơn ba phương án kia.</p></div>
+    </div>
+  </div>
+
+  <footer>
+    Công tắc kiểu xem <b>đã bỏ</b> trong bản thật. Phần thanh lọc thì mình nghiêng về
+    <b>A — một hộp, ba ngăn</b> (đúng kiểu “một hộp + kẻ tóc” bạn chốt trước đó); muốn giữ y như
+    đang chạy cũng được, không cần chọn gì. Chốt <code>A</code> / <code>B</code> / <code>C</code>
+    (hoặc “giữ nguyên”) thì mình mới sửa tiếp vào <code>index.html</code> +
+    <code>src/cz.css</code>.
+  </footer>
+</div>
+
+<script src="mock.js"></script>
+<script>
+  /* khung mobile tự cao theo nội dung để không cắt mất hàng tab */
+  function fit(f) {
+    try {
+      const d = f.contentDocument;
+      const h = Math.ceil(d.documentElement.scrollHeight);
+      if (h > 40) f.style.height = h + 'px';
+    } catch (e) { /* khác origin thì thôi */ }
+  }
+  document.querySelectorAll('.frame.mob iframe').forEach(f => {
+    f.addEventListener('load', () => { fit(f); setTimeout(() => fit(f), 120); });
+  });
+  for (const k of ['base', 'a', 'b', 'c', 'd']) {
+    const el = document.getElementById('pv-' + k);
+    if (el) el.innerHTML = MOCK.html(k);
+  }
+</script>
+</body>
+</html>

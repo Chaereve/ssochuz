@@ -22,7 +22,7 @@
   }
   paintIcons();
 
-  var state = { tab: 'all', adult: false, year: '', author: '', couple: '', q: '', sort: 'new', view: 'grid', page: 1, per: 24 };
+  var state = { tab: 'all', adult: false, year: '', author: '', couple: '', q: '', sort: 'new', page: 1, per: 24 };
   /* Thanh lọc không còn ô chọn tác giả/couple (mỗi couple tối đa 2 bộ), nhưng
      liên kết chia sẻ ?author=… / ?couple=… vẫn phải lọc được — nhận cả tên
      nguyên bản lẫn dạng slug trong /tac-gia/?q=… · /couple/?q=… */
@@ -610,9 +610,9 @@
     if (state.page > total) state.page = 1;
     var slice = list.slice((state.page - 1) * state.per, state.page * state.per);
     var grid = $('#grid');
-    grid.className = 'grid' + (state.view === 'list' ? ' list-view' : '');
-    grid.innerHTML = (slice.length && state.view === 'list' ? CZ.listHead() : '') +
-      (slice.length ? slice.map(function (n) { return CZ.card(n, { view: state.view }); }).join('')
+    grid.className = 'grid';
+    grid.innerHTML =
+      (slice.length ? slice.map(function (n) { return CZ.card(n); }).join('')
       : '<div class="empty" style="grid-column:1/-1"><div class="big">Không có truyện nào khớp</div>Thử bỏ một vài tiêu chí lọc.' +
         '<div class="mt"><button class="btn ghost" id="clrAll">Xoá tất cả lọc</button></div></div>');
     stagger(grid);
@@ -707,13 +707,6 @@
     $('#q').value = ''; state.q = ''; state.page = 1; render();
     $('#q').focus();
   });
-  $('#viewSeg').addEventListener('click', function (e) {
-    var b = e.target.closest('button'); if (!b) return;
-    state.view = b.dataset.view;
-    $$('#viewSeg button').forEach(function (x) { x.classList.toggle('on', x === b); });
-    try { localStorage.setItem('ssochuz-view', state.view); } catch (err) {}
-    render();
-  });
 
   /* ======================= KHỞI ĐỘNG ================================== */
   /* khung xám chờ: hiện ngay khi mở trang, dữ liệu về là thay bằng thẻ thật */
@@ -737,8 +730,6 @@
       CZ._setLib();
       var lib = CZ.lib();
       CZ.mountShell({ active: 'home' });       /* dựng lại để chân trang có rev mới */
-      try { var v = localStorage.getItem('ssochuz-view'); if (v === 'list') state.view = 'list'; } catch (e) {}
-      $$('#viewSeg button').forEach(function (x) { x.classList.toggle('on', x.dataset.view === state.view); });
       mountHero(CZ.slides(reg).slice(0, 5));
       renderNew();
       renderPersonalBlocks();
