@@ -3196,6 +3196,8 @@ body.rd-focus .rdcmts { display: none; }
 #bxh .rank:hover .tt b { color: var(--acc); transform: translateX(2px); }
 #bxh .rank .v { display: inline-flex; align-items: baseline; gap: 4px; color: var(--mut); }
 #bxh .rank .v b { color: var(--acc); font-weight: 750; font-variant-numeric: tabular-nums; }
+#bxh .wrank .v { color: #f2d9a6; }
+#bxh .wrank .n.top { color: var(--acc); }
 #bxh .rank .bar {
   animation: rankingBarIn .65s var(--ease-out) both !important;
   animation-delay: var(--d, 40ms) !important;
@@ -4209,6 +4211,18 @@ body.rd-focus .rdcmts { display: none; }
 #tong-quan { margin: 40px 0 10px; }
 .fsec { display: flex; flex-direction: column; min-width: 0; gap: 14px; padding-top: 34px; }
 .fsec:first-child { padding-top: 0; }
+/* Ranking + Đáng xem: hai bên, ngăn bằng một đường tóc dọc — không khung, không nền.
+   Hai cột cùng nhịp hàng (số hạng · bìa · tên · điểm) nên đọc ngang rất đều. */
+.duo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 40px; align-items: start; }
+.duoA, .duoB { display: flex; flex-direction: column; min-width: 0; gap: 12px; }
+.duoB { padding-left: 40px; border-left: 1px solid var(--bd); }
+.duo .bts { white-space: nowrap; }
+.duo .btm { margin-left: 0; }
+@media (max-width: 980px) {
+  .duo { grid-template-columns: minmax(0, 1fr); gap: 26px; }
+  .duoB { padding-left: 0; border-left: 0; padding-top: 24px; border-top: 1px solid var(--bd); }
+}
 
 /* --- đầu ô: tiêu đề · phụ đề · liên kết phụ -------------------------- */
 .bth { display: flex; align-items: baseline; gap: 10px; min-width: 0; }

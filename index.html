@@ -15,7 +15,7 @@
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://ssochuz.pages.dev/ssochuz.png">
   <!-- N13: bỏ preconnect Firestore — không còn đọc thẳng Firestore từ máy khách -->
-<link rel="stylesheet" href="/cz.css?v=20261030flat6">
+<link rel="stylesheet" href="/cz.css?v=20261030duo7">
 </head>
 <body class="hpage">
 
@@ -64,29 +64,35 @@
         <span class="dicehost" data-dice></span>
       </div>
 
-      <div class="fsec" id="bxh">
-        <div class="sechead tilehead">
-          <h2>Ranking</h2>
-          <span class="bts" id="rankSub"></span>
-          <span class="right">
-            <div class="tabs sm ranking-modes" id="rankModes" role="group" aria-label="Hạng mục Ranking">
-              <button class="on" data-mode="views" aria-pressed="true">Lượt đọc</button>
-              <button data-mode="votes" aria-pressed="false">Lượt thích</button>
-            </div>
-            <h3 id="rankSummary" class="sr-only">Lượt đọc · Tuần</h3>
-            <div class="tabs sm" id="rankTabs" role="group" aria-label="Khoảng thời gian"></div>
-          </span>
+      <!-- Ranking + Đáng xem: hai cột cạnh nhau, cùng một nhịp hàng — số hạng
+           serif bên trái, điểm ★ bên phải. Ngăn cách bằng một đường tóc dọc, không
+           khung, không nền, đúng kiểu “hai bên” đã chốt. -->
+      <div class="fsec duo" id="bxh" aria-label="Xếp hạng và Đáng xem">
+        <div class="duoA">
+          <div class="sechead tilehead">
+            <h2>Ranking</h2>
+            <span class="bts" id="rankSub"></span>
+            <span class="right">
+              <div class="tabs sm ranking-modes" id="rankModes" role="group" aria-label="Hạng mục Ranking">
+                <button class="on" data-mode="views" aria-pressed="true">Lượt đọc</button>
+                <button data-mode="votes" aria-pressed="false">Lượt thích</button>
+              </div>
+              <h3 id="rankSummary" class="sr-only">Lượt đọc · Tuần</h3>
+              <div class="tabs sm" id="rankTabs" role="group" aria-label="Khoảng thời gian"></div>
+            </span>
+          </div>
+          <div class="rbody">
+            <div id="rank" aria-live="polite" aria-atomic="true"></div>
+          </div>
         </div>
-        <div class="rbody">
-          <div id="rank" aria-live="polite" aria-atomic="true"></div>
+        <div class="duoB worth-section" id="dang-xem">
+          <div class="sechead">
+            <h2 id="worthTitle">Đáng xem</h2>
+            <span class="bts">điểm từ người đọc</span>
+            <a class="btm" href="#thu-vien">Xem thêm ›</a>
+          </div>
+          <div id="worthRail" class="rbody"></div>
         </div>
-      </div>
-
-      <div class="fsec worth-section" id="dang-xem">
-        <div class="sechead">
-          <h3 class="blb" id="worthTitle">Đáng xem</h3>
-        </div>
-        <div class="mini3" id="worthRail"></div>
       </div>
 
     <!-- ============ CHUYỂN THỂ SERIES ============ -->
@@ -150,11 +156,11 @@
 
 <script src="/cz-config.js?v=20261012n"></script>
 <script src="/cz-stickers.js?v=20261012n"></script>
-<script src="/cz-app.js?v=20261030flat6"></script>
+<script src="/cz-app.js?v=20261030duo7"></script>
 <script src="/cz-auth.js?v=20261012n"></script>
 <script src="/cz-personal.js?v=20261013notif1"></script>
 <script src="/cz-dice.js?v=20261014feat1"></script>
 <script src="/cz-hero.js?v=20261029perf1"></script>
-<script src="/cz-home.js?v=20261030flat6"></script>
+<script src="/cz-home.js?v=20261030duo7"></script>
 </body>
 </html>

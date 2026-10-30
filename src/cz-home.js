@@ -267,7 +267,7 @@
       var s = CZ.statsOf(n) || {};
       return { n: n, rating: positive(s.rating), count: positive(s.ratingCount) };
     }).filter(function (r) { return r.rating > 0 && r.rating <= 5 && r.count > 0; })
-      .sort(function (a, b) { return b.rating - a.rating || b.count - a.count || a.n.slug.localeCompare(b.n.slug); }).slice(0, 3) : [];
+      .sort(function (a, b) { return b.rating - a.rating || b.count - a.count || a.n.slug.localeCompare(b.n.slug); }).slice(0, 5) : [];
     var box = rail.closest('.worth-section');
     if (!rows.length) {
       rail.innerHTML = statsOn() ? '<p class="empty">Chưa có truyện được đánh giá sao.</p>' : '';
@@ -275,13 +275,19 @@
       return;
     }
     if (box) box.hidden = false;
-    CZ.mountRail(rail, rows.map(function (r) { return r.n; }));
-    rail.querySelectorAll('.card').forEach(function (card, i) {
-      var score = document.createElement('span');
-      score.className = 'worth-score';
-      score.textContent = '★ ' + rows[i].rating.toFixed(1) + '/5 · ' + num(rows[i].count) + ' đánh giá';
-      card.appendChild(score);
-    });
+    /* Hai bên cùng một nhịp: cột trái là hàng xếp hạng, cột phải là hàng đáng xem —
+       cùng cỡ số, cùng cỡ bìa, cùng chỗ đặt điểm số, chỉ khác đơn vị (lượt / ★). */
+    var top = rows[0] ? rows[0].rating : 0;
+    rail.innerHTML = rows.map(function (row, i) {
+      var n = row.n, src = CZ.coverSrc(n), ratio = top ? Math.max(.12, row.rating / top) : 0;
+      return '<a class="rank wrank" href="' + esc(CZ.storyURL(n.slug)) + '" style="--d:' + (i * 55) + 'ms;--w:' + ratio.toFixed(3) + '">' +
+        '<span class="n' + (i < 3 ? ' top t' + (i + 1) : '') + '">' + (i + 1) + '</span>' +
+        '<span class="rk-th' + (src ? '' : ' noimg') + '">' +
+        (src ? '<img src="' + esc(src) + '"' + CZ.coverFB(n, src) + ' alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</span>' +
+        '<span class="tt"><b>' + esc(n.title) + '</b><span>' + num(row.count) + ' đánh giá</span></span>' +
+        '<span class="v">★<b>' + row.rating.toFixed(1) + '</b></span><i class="bar" aria-hidden="true"></i></a>';
+    }).join('');
+    if (CZ.inkAll) CZ.inkAll();
   }
   function renderRank() {
     var on = statsOn(), tabs = rankTabs();
