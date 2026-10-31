@@ -1711,17 +1711,11 @@ mark.hit { background: var(--acc-soft); color: var(--acc); padding: 0 2px; borde
   font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .info dd.acc { color: var(--acc); font-weight: 600; }
 .info dd.dim { color: var(--mut); font-weight: 400; }
-.info .ilinks { display: flex; flex-wrap: wrap; gap: 8px 26px; padding-top: 15px; }
-.info .ilinks a { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px;
-  color: var(--mut); transition: color var(--t-fast) var(--ease); }
-.info .ilinks a:hover { color: var(--txt); }
-.info .ilinks .i { width: 12px; height: 12px; flex: none; color: var(--acc); }
 @media (max-width: 860px) {
   .infogrid { grid-template-columns: 1fr; gap: 26px; }
   .info .igrid { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 18px; row-gap: 18px;
     padding-bottom: 16px; }
   .info dd { font-size: 13.5px; }
-  .info .ilinks { flex-direction: column; gap: 9px; padding-top: 14px; }
   .storytabs { margin-top: 20px; }
   .stab { padding: 11px 12px 12px; font-size: 13.5px; }
 }

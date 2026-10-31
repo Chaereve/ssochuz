@@ -110,7 +110,9 @@ const byCount = (lib, f) => {
     ok(/Không có tác giả nào khớp/.test(p3.doc.querySelector('#ppGrid').textContent), 'loc khong khop phai bao ro');
   }
 
-  /* ---------- G. link từ trang truyện ---------- */
+  /* ---------- G. trang truyện nêu tác giả / couple ---------- */
+  /* Vòng 78b: bỏ hàng link “Tất cả truyện của …” ở cuối tab Thông tin — tên tác
+     giả và couple đã nằm ngay trong lưới dữ liệu phía trên, lặp lại là thừa. */
   const RS = 'third-person';
   const meta = LIB.find(n => n.slug === RS);
   const r = page('truyen.html', {
@@ -118,13 +120,10 @@ const byCount = (lib, f) => {
     fetch: dataFetch(),
   });
   await wait(1300);
-  const infoLinks = [...r.doc.querySelectorAll('#storyInfo a')].map(a => a.getAttribute('href'));
-  const expAU = '/tac-gia/?q=' + encodeURIComponent(r.win.CZ.slugify(meta.author));
-  ok(infoLinks.includes(expAU), 'tab Gioi thieu thieu link tac gia (thay: ' + JSON.stringify(infoLinks) + ')');
-  if (meta.couple) {
-    const expCP = '/couple/?q=' + encodeURIComponent(r.win.CZ.slugify(meta.couple));
-    ok(infoLinks.includes(expCP), 'tab Gioi thieu thieu link couple');
-  }
+  const infoText = r.doc.querySelector('#storyInfo').textContent;
+  ok(infoText.includes(meta.author), 'tab Thong tin thieu ten tac gia (thay: ' + JSON.stringify(infoText.slice(0, 120)) + ')');
+  if (meta.couple) ok(infoText.includes(meta.couple), 'tab Thong tin thieu ten couple');
+  ok(!r.doc.querySelector('#storyInfo .ilinks'), 'hang link tac gia/couple phai duoc bo');
 
   /* ---------- H. link từ bộ lọc thư viện ---------- */
   /* Thanh lọc thư viện (bản D1) bỏ ô chọn tác giả/couple — mỗi couple chỉ có

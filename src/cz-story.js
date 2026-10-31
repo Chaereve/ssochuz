@@ -596,17 +596,6 @@
       return '<div class="ikv"><dt>' + esc(c[0]) + '</dt><dd' +
         (c[2] ? ' class="' + c[2] + '"' : '') + '>' + esc(String(c[1])) + '</dd></div>';
     }).join('') + '</dl>';
-    /* hàng link “khám phá”: sang trang riêng của tác giả/couple — tách khỏi
-       bảng dữ liệu để hai câu link không đọc ra như một dòng số liệu */
-    var more = [];
-    if (n.author) more.push('<a href="/tac-gia/?q=' + encodeURIComponent(CZ.slugify(n.author)) +
-      '">Tất cả truyện của ' + esc(n.author) + ic('right', 'i-s') + '</a>');
-    var cps = CZ.couplesOf ? CZ.couplesOf(n) : (n.couple ? [n.couple] : []);
-    cps.forEach(function (cp) {
-      more.push('<a href="/couple/?q=' + encodeURIComponent(CZ.slugify(cp)) +
-        '">Tất cả truyện của ' + esc(cp) + ic('right', 'i-s') + '</a>');
-    });
-    if (more.length) info.insertAdjacentHTML('beforeend', '<div class="ilinks">' + more.join('') + '</div>');
   }
   /* một dòng chương: số · tên (tô sáng khi tìm) · dấu đã đọc / đã đánh dấu.
      Ký hiệu ngoại truyện là S (S1, S2…; S khi không ghi số) — gọn hơn NT cũ
