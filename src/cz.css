@@ -4029,77 +4029,75 @@ body.rd-focus .rdcmts { display: none; }
    ========================================================================== */
 
 /* ===================== 1. REACTION STICKER CUỐI CHƯƠNG =================== */
-.storylab { display: grid; gap: 10px; margin: 16px auto 10px; max-width: 100%; }
+.storylab { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin: 16px auto 10px; max-width: 100%; }
 .storylab .rreact { max-width: none; width: 100%; margin: 0; }
 .storylab .dicehost { justify-self: center; margin-top: 2px; }
 
-.rreact { max-width: min(1120px, calc(100% - 32px)); margin: 12px auto; padding: 10px 12px;
-  border: 1px solid var(--rd-bd, var(--bd)); border-radius: 14px;
-  background: var(--rd-surf, var(--surf)); color: var(--rd-tx, var(--txt)); }
-.rreact .rx-head { display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  flex-wrap: wrap; margin-bottom: 8px; }
-.rreact .rx-title { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; min-width: 0; }
-.rreact .rx-title b { font-family: var(--font-head); font-size: 14px; font-weight: 700; line-height: 1.2; }
+/* Dải cảm xúc (vòng 79c · C5): CHỈ HÌNH — không hộp, không nhãn thường trực,
+   không dãy số dưới chân. Tên + số lượt hiện ở một dòng chú thích cố định khi
+   rê / chạm vào một hình. Cả khối nằm trần trên nền trang, chỉ có một đường
+   kẻ mảnh phía trên để tách khỏi phần chương ở trên. */
+.rreact { max-width: min(1120px, calc(100% - 32px)); min-width: 0; margin: 12px auto; padding: 14px 0 6px;
+  border: 0; border-top: 1px solid var(--rd-bd, var(--bd));
+  background: transparent; color: var(--rd-tx, var(--txt)); }
+.rreact .rx-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.rreact .rx-title { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; min-width: 0; }
+.rreact .rx-title b { font-family: var(--font-head); font-size: 13.5px; font-weight: 700; line-height: 1.2; }
 .rreact .rx-sub { font-size: 11.5px; color: var(--rd-mut, var(--mut)); }
-.rreact .rx-head-act { display: flex; align-items: center; gap: 6px; flex: none; }
-.rreact .rx-total { font-size: 11px; font-weight: 700; color: var(--rd-mut, var(--mut));
-  border: 1px solid var(--rd-bd, var(--bd)); background: var(--rd-surf2, var(--surf2));
-  border-radius: 99px; padding: 2px 8px; white-space: nowrap; }
-.rreact .rx-all-btn { padding: 2px 9px; min-height: 24px; font-size: 11px; border-radius: 99px; }
-.rreact .rx-row { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 5px; padding: 2px 0; }
+.rreact .rx-head-act { display: flex; align-items: center; gap: 14px; margin-left: auto; flex: none; }
+.rreact .rx-total { font-size: 11px; color: var(--rd-mut, var(--mut)); font-variant-numeric: tabular-nums; }
+.rreact .rx-all-btn { display: inline-flex; align-items: center; gap: 2px; min-height: 0; padding: 4px 0;
+  border: 0; border-radius: 0; background: transparent; box-shadow: none;
+  font: 500 12px/1 inherit; color: var(--rd-mut, var(--mut)); cursor: pointer; }
+.rreact .rx-all-btn:hover { color: var(--rd-tx, var(--txt)); background: transparent; border: 0; }
+.rreact .rx-all-btn:focus-visible { outline: 2px solid var(--ring, rgba(166, 58, 82, .45)); outline-offset: 3px; }
+.rreact .rx-more-ar { width: 12px; height: 12px; color: var(--rd-acc, var(--acc)); }
+.rreact .rx-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 0; }
+/* Trang đọc: dải cảm xúc phải trùng bề ngang cột chữ (--rd-w), không tràn ra
+   hai bên rộng hơn đoạn văn. Hình nhỏ lại một bậc để 14 hình vẫn vừa một hàng. */
+#rd .rreact { max-width: var(--rd-w, 720px); border-top: 0; padding-top: 4px; }
+#rd .rreact .rx-row { gap: 4px; }
+#rd .rx-art { width: 46px; height: 46px; }
+#rd .rx-img { width: 42px; height: 42px; }
 
-/* --- một sticker: hiển thị gọn gàng ảnh WebP + tên cảm xúc + số lượt ----- */
-.rx { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px;
-  width: 100%; min-width: 0; min-height: 56px; padding: 5px 3px 4px;
-  border: 1px solid var(--rd-bd, var(--bd)); border-radius: 9px;
-  background: color-mix(in srgb, var(--rd-surf2, var(--surf2)) 50%, var(--rd-surf, var(--surf)));
-  color: inherit; cursor: pointer;
-  transition: transform 180ms var(--ease, cubic-bezier(.2,.7,.3,1)), border-color 160ms var(--ease, ease), background 160ms var(--ease, ease); }
-.rx-art { position: relative; display: grid; place-items: center; width: 28px; height: 28px;
-  border-radius: 8px; background: transparent; border: 0; box-shadow: none;
-  transition: transform 200ms var(--ease, cubic-bezier(.2,.7,.3,1)); }
-.rx-img { width: 26px; height: 26px; display: block; object-fit: contain; pointer-events: none;
-  filter: drop-shadow(0 1px 2px rgba(30, 20, 10, .12)); }
-.rx-emo { display: none; font-size: 20px; line-height: 1; }
+/* một sticker: đúng ảnh WebP, không khung, không nền, không số */
+.rx { position: relative; display: block; flex: 0 0 auto; width: auto; min-width: 0; min-height: 0;
+  padding: 0; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; }
+.rx-art { position: relative; display: grid; place-items: center; width: 50px; height: 50px;
+  border-radius: 50%; border: 0; box-shadow: none;
+  transition: background 170ms var(--ease, ease), box-shadow 190ms var(--ease, ease); }
+.rx-img { width: 46px; height: 46px; display: block; object-fit: contain; pointer-events: none;
+  filter: drop-shadow(0 2px 3px rgba(20, 12, 4, .22));
+  transition: transform 190ms var(--ease, cubic-bezier(.2, .7, .3, 1)); }
+.rx-emo { display: none; font-size: 24px; line-height: 1; }
 .rx-art.noimg .rx-img { display: none; }
 .rx-art.noimg .rx-emo { display: block; }
-.rx-tick { position: absolute; right: -4px; bottom: -2px; width: 13px; height: 13px; border-radius: 50%;
-  background: var(--rd-acc, var(--acc)); color: #fff; font-size: 8.5px; font-weight: 800;
-  display: grid; place-items: center; border: 1.5px solid var(--rd-surf, var(--surf)); }
-.rx-ct { position: absolute; top: 3px; right: 3px; font-size: 9.5px; font-weight: 750; line-height: 1;
-  padding: 1.5px 4px; border-radius: 99px; font-variant-numeric: tabular-nums;
-  color: var(--rd-mut, var(--mut)); background: var(--rd-surf, var(--surf));
-  border: 1px solid var(--rd-bd, var(--bd));
-  transition: transform 180ms var(--ease, cubic-bezier(.2,.7,.3,1)), color 160ms var(--ease, ease), background 160ms var(--ease, ease); }
-.rx-lbl { position: static; transform: none; opacity: 1; pointer-events: none;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-  max-width: 100%; overflow: hidden; white-space: normal; word-break: break-word;
-  font-size: 10px; font-weight: 600; line-height: 1.15; text-align: center;
-  padding: 0 1px; background: transparent; color: var(--rd-tx, var(--txt)); box-shadow: none; }
-.rx:hover { transform: translateY(-1.5px); border-color: color-mix(in srgb, var(--rx) 55%, var(--rd-bd, var(--bd)));
-  background: color-mix(in srgb, var(--rx) 8%, var(--rd-surf, var(--surf))); }
-.rx:hover .rx-art { transform: scale(1.07) rotate(-2deg); }
-.rx:focus-visible { outline: 2px solid var(--ring, rgba(166, 58, 82, .45)); outline-offset: 2px; }
-.rx.on { border-color: var(--rx); background: color-mix(in srgb, var(--rx) 12%, var(--rd-surf, var(--surf)));
-  box-shadow: 0 3px 10px -6px color-mix(in srgb, var(--rx) 55%, transparent); }
-.rx.on .rx-ct { color: #fff; background: var(--rx); border-color: var(--rx); }
-.rx.on .rx-lbl { color: var(--rx); font-weight: 700; }
-.rx:active .rx-art { transform: scale(.92); }
-@media (max-width: 960px) {
-  .rreact .rx-row {
-    display: flex; flex-wrap: nowrap; gap: 6px;
-    overflow-x: auto; overflow-y: hidden; padding: 2px 2px 6px;
-    scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; scrollbar-width: thin;
-  }
-  .rreact .rx-row .rx { flex: 0 0 68px; width: 68px; min-width: 68px; scroll-snap-align: start; }
-}
+.rx:hover .rx-art, .rx:focus-visible .rx-art { background: color-mix(in srgb, var(--rx) 10%, transparent);
+  box-shadow: 0 9px 20px -14px color-mix(in srgb, var(--rx) 80%, transparent); }
+.rx:hover .rx-img { transform: translateY(-2px) scale(1.05); }
+.rx:focus-visible { outline: none; }
+.rx:focus-visible .rx-art { outline: 2px solid color-mix(in srgb, var(--rx) 55%, transparent); outline-offset: 2px; }
+.rx.on .rx-art { background: color-mix(in srgb, var(--rx) 12%, transparent);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--rx) 62%, transparent); }
+.rx.on:hover .rx-art { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--rx) 62%, transparent),
+  0 9px 20px -14px color-mix(in srgb, var(--rx) 80%, transparent); }
+.rx:active .rx-art { transform: scale(.94); }
+
+/* dòng chú thích: chỗ cố định nên hàng hình không nhảy khi rê */
+.rreact .rx-cap { display: flex; align-items: center; gap: 6px; min-height: 17px;
+  margin: 6px 0 0; font-size: 11.5px; line-height: 1.5; color: var(--rd-mut, var(--mut)); }
+.rreact .rx-cap b { color: var(--rd-tx, var(--txt)); font-weight: 600; }
+.rreact .rx-cap .dot { color: color-mix(in srgb, currentColor 45%, transparent); }
+
 @media (max-width: 480px) {
-  .rreact { max-width: calc(100% - 20px); padding: 9px 10px; }
-  .rreact .rx-row { gap: 5px; }
-  .rreact .rx-row .rx { flex: 0 0 64px; width: 64px; min-width: 64px; min-height: 54px; padding: 4px 2px 3.5px; }
-  .rx-art { width: 26px; height: 26px; }
-  .rx-img { width: 24px; height: 24px; }
-  .rx-lbl { font-size: 9.5px; }
+  .rreact { max-width: calc(100% - 20px); }
+  .rreact .rx-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px 0; justify-items: center; }
+  .rx { justify-self: center; }
+  .rx-art { width: 46px; height: 46px; }
+  .rx-img { width: 40px; height: 40px; }
+  .rreact .rx-head-act { gap: 10px; }
+  .rreact .rx-cap { font-size: 11px; }
 }
 /* hết cooldown / bị chặn: mờ đi nhưng KHÔNG ẩn khỏi bàn phím */
 .rx.cool { opacity: .55; }
@@ -4302,7 +4300,7 @@ body.rd-focus .rdcmts { display: none; }
 
 /* ===================== 3. GIẢM CHUYỂN ĐỘNG (riêng khối này) =============== */
 @media (prefers-reduced-motion: reduce) {
-  .rx, .rx-art, .rx-ct, .dc-wheel { transition: none !important; }
+  .rx, .rx-art, .rx-img, .dc-wheel { transition: none !important; }
   .rx:hover { transform: none; }
   .rx:hover .rx-art { transform: none; }
   .czfx { display: none; }        /* lớp sticker bay: tắt hẳn, chỉ còn đổi số */

@@ -314,17 +314,18 @@
   }
 
   /* ======================= 4. ReactionSticker =========================== */
+  /* Dải cảm xúc chỉ có HÌNH (r79c · C5): không hộp, không nhãn thường trực,
+     không dãy số dưới chân. Tên + số lượt hiện ở một dòng chú thích chung khi
+     rê / chạm vào một hình; số lượt vẫn nằm trong aria-label cho trình đọc. */
   function stickerHTML(rx, c, mineOn) {
     return '<button type="button" class="rx' + (mineOn ? ' on' : '') + '" data-rx="' + esc(rx.id) + '"' +
+      ' data-label="' + esc(rx.label) + '" data-ct="' + num(c) + '"' +
       ' aria-pressed="' + (mineOn ? 'true' : 'false') + '"' +
       ' aria-label="' + esc(rx.alt + ' — ' + num(c) + ' lượt' + (mineOn ? ', bạn đã thả' : '')) + '"' +
       ' title="' + esc(rx.label) + '" style="--rx:' + esc(rx.color) + ';--rx2:' + esc(rx.color2 || rx.color) + '">' +
       '<span class="rx-art">' + stickerIcon(rx, 'rx-img') +
         '<span class="rx-emo" aria-hidden="true">' + esc(rx.fallback_emoji) + '</span>' +
-        (mineOn ? '<span class="rx-tick" aria-hidden="true">✓</span>' : '') +
       '</span>' +
-      '<span class="rx-ct" data-rx-ct="' + esc(rx.id) + '">' + num(c) + '</span>' +
-      '<span class="rx-lbl" aria-hidden="true">' + esc(rx.short_label) + '</span>' +
       '</button>';
   }
   /* ảnh sticker hỏng (chặn host, offline lần đầu) → hiện emoji dự phòng */
@@ -340,14 +341,15 @@
     });
   }
 
+  /* Không còn con số dưới sticker để “nảy” — cho chính hình nảy một nhịp. */
   function bump(btn) {
-    if (!btn) return;
-    var ct = btn.querySelector('.rx-ct');
-    if (!ct || reduce()) return;
-    ct.classList.remove('rx-bump', 'rx-down');
-    void ct.offsetWidth;
-    ct.classList.add(btn.classList.contains('on') ? 'rx-bump' : 'rx-down');
-    setTimeout(function () { ct.classList.remove('rx-bump', 'rx-down'); }, 520);
+    if (!btn || reduce()) return;
+    var art = btn.querySelector('.rx-art');
+    if (!art) return;
+    art.classList.remove('rx-bump', 'rx-down');
+    void art.offsetWidth;
+    art.classList.add(btn.classList.contains('on') ? 'rx-bump' : 'rx-down');
+    setTimeout(function () { art.classList.remove('rx-bump', 'rx-down'); }, 520);
   }
 
   /* ======================= 5. ReactionBar + Popover ===================== */
@@ -358,15 +360,49 @@
     var isStoryPage = hostId === 'storyReact';
     return '<div class="rx-head">' +
         '<div class="rx-title"><b>' + (isStoryPage ? 'Cảm xúc' : 'Cảm xúc chương') + '</b>' +
-        '<span class="rx-sub">' + (apiOn() ? 'Chạm để thả cảm xúc' : 'Chưa kết nối máy chủ') + '</span></div>' +
+        (apiOn() ? '' : '<span class="rx-sub">Chưa kết nối máy chủ</span>') + '</div>' +
         '<div class="rx-head-act">' +
           '<span class="rx-total">' + num(total(ctx.slug, ctx.ch)) + ' lượt</span>' +
-          '<button type="button" class="btn ghost sm rx-all-btn" id="rxAll">Chi tiết</button>' +
+          '<button type="button" class="rx-all-btn" id="rxAll">Chi tiết' +
+            '<svg class="rx-more-ar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>' +
+          '</button>' +
         '</div>' +
       '</div>' +
       '<div class="rx-row" role="group" aria-label="Cảm xúc cho ' + esc(ctx.label || 'chương này') + '">' +
         REACTIONS.map(function (r) { return stickerHTML(r, c[r.id], mineArr.indexOf(r.id) >= 0); }).join('') +
-      '</div>';
+      '</div>' +
+      '<p class="rx-cap" data-rx-cap>' + CAP_HINT + '</p>';
+  }
+
+  var CAP_HINT = '<span class="hint">Chạm vào một hình để xem cảm xúc đó là gì.</span>';
+  function bindCap(host) {
+    var cap = host.querySelector('[data-rx-cap]');
+    var row = host.querySelector('.rx-row');
+    if (!cap || !row || row.__cap) return;
+    row.__cap = 1;
+    function name(btn) { return btn && btn.getAttribute ? btn.getAttribute('data-label') || '' : ''; }
+    function show(btn) {
+      var n = btn.getAttribute('data-ct') || '0';
+      cap.innerHTML = '<b>' + esc(name(btn)) + '</b>' +
+        (n !== '0' ? '<span class="dot">·</span>' + esc(n) + ' lượt' : '');
+    }
+    function reset() { cap.innerHTML = CAP_HINT; }
+    function fromEvent(e) {
+      var t = e.target;
+      while (t && t !== row && !(t.classList && t.classList.contains('rx'))) t = t.parentNode;
+      return t && t !== row ? t : null;
+    }
+    function over(e) { var b = fromEvent(e); if (b) show(b); }
+    function out(e) {
+      var b = fromEvent(e);
+      if (b && !(e.relatedTarget && b.contains(e.relatedTarget))) reset();
+    }
+    row.addEventListener('mouseover', over);
+    row.addEventListener('mouseout', out);
+    row.addEventListener('pointerover', over);
+    row.addEventListener('pointerout', out);
+    row.addEventListener('focusin', over);
+    row.addEventListener('focusout', reset);
   }
 
   function mount(host, ctx) {
@@ -379,6 +415,7 @@
     host.__rxCtx = ctx;
     host.innerHTML = barHTML(ctx, host.id || '');
     host.classList.add('on');
+    bindCap(host);
     var all = host.querySelector('#rxAll');
     if (all) all.addEventListener('click', function () { popover(ctx); });
     bindImgFallback(host);
@@ -397,19 +434,11 @@
     REACTIONS.forEach(function (r) {
       var btn = host.querySelector('.rx[data-rx="' + r.id + '"]');
       if (!btn) return;
-      var ct = btn.querySelector('.rx-ct');
-      if (ct) ct.textContent = num(c[r.id]);
+      btn.setAttribute('data-ct', num(c[r.id]));
       var on = mineArr.indexOf(r.id) >= 0;
       btn.classList.toggle('on', on);
       btn.setAttribute('aria-pressed', on ? 'true' : 'false');
       btn.setAttribute('aria-label', r.label + ' — ' + num(c[r.id]) + ' lượt' + (on ? ', bạn đã thả' : ''));
-      var art = btn.querySelector('.rx-art');
-      if (on && !btn.querySelector('.rx-tick') && art) {
-        var t = d.createElement('span'); t.className = 'rx-tick'; t.setAttribute('aria-hidden', 'true'); t.textContent = '✓'; art.appendChild(t);
-      } else if (!on) {
-        var old = btn.querySelector('.rx-tick');
-        if (old) old.remove();
-      }
     });
     var tot = host.querySelector('.rx-total');
     if (tot) tot.textContent = num(total(ctx.slug, ctx.ch)) + ' lượt';

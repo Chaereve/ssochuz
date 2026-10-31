@@ -95,6 +95,9 @@ function supabaseStub(w) {
   await win.CZReact.pull({ slug: 'third-person', ch: 1 });
   win.CZReact.mount(bar, ctx);
 
+  /* Dải cảm xúc chỉ-hình: số lượt nằm ở data-ct (và trong aria-label), không
+     còn in ra dưới từng sticker. */
+  const ct = el => parseInt(String(el.getAttribute('data-ct') || '0').replace(/\./g, ''), 10);
   const stickers = $$('#rdReact .rx');
   out.soSticker = stickers.length;
   if (stickers.length !== win.CZReact.REACTIONS.length || win.CZReact.QUICK_REACTIONS.length !== 6) out.errors0.push('khung cảm xúc phải hiện đầy đủ ' + win.CZReact.REACTIONS.length + ' sticker trong registry');
@@ -109,10 +112,10 @@ function supabaseStub(w) {
   if (image && !fs.existsSync(path.join(ROOT, image.getAttribute('src').replace(/^\//, 'public/')))) out.errors0.push('thiếu asset full: ' + image.src);
   if (image && !['lazy', 'eager'].includes(image.getAttribute('loading'))) out.errors0.push('ảnh quick sticker phải có loading policy');
 
-  const before = parseInt(first.querySelector('.rx-ct').textContent.replace(/\./g, ''), 10);
+  const before = ct(first);
   first.dispatchEvent(new win.MouseEvent('click', { bubbles: true, cancelable: true }));
   await wait(25);
-  const after = parseInt(first.querySelector('.rx-ct').textContent.replace(/\./g, ''), 10);
+  const after = ct(first);
   out.afterToggle = { before, after, mine: first.getAttribute('aria-pressed'), endpoint: store.calls[store.calls.length - 1] };
   if (after !== before + 1 || first.getAttribute('aria-pressed') !== 'true') out.errors0.push('sau phản hồi Worker, toggle phải cập nhật count + aria state');
   if (!store.calls.some(call => call.route === '/api/community/reactions' && call.body.action === 'toggle' && call.body.storyId === 'third-person' && call.body.chapterIndex === 1 && call.body.stickerId === id)) {
@@ -131,11 +134,11 @@ function supabaseStub(w) {
   // Cooldown prevents repeated taps before allowing an actual toggle-off.
   first.dispatchEvent(new win.MouseEvent('click', { bubbles: true, cancelable: true }));
   await wait(20);
-  if (parseInt(first.querySelector('.rx-ct').textContent.replace(/\./g, ''), 10) !== after) out.errors0.push('cooldown phải chặn tap lặp ngay lập tức');
+  if (ct(first) !== after) out.errors0.push('cooldown phải chặn tap lặp ngay lập tức');
   await wait(450);
   first.dispatchEvent(new win.MouseEvent('click', { bubbles: true, cancelable: true }));
   await wait(30);
-  if (first.getAttribute('aria-pressed') !== 'false' || parseInt(first.querySelector('.rx-ct').textContent.replace(/\./g, ''), 10) !== before) {
+  if (first.getAttribute('aria-pressed') !== 'false' || ct(first) !== before) {
     out.errors0.push('toggle lần hai phải bỏ reaction, giảm aggregate đúng một');
   }
 
