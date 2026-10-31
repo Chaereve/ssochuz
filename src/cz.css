@@ -406,13 +406,23 @@ body.nav-open { overflow: hidden; }
 }
 
 /* ========================= 3. NÚT & NHẬP LIỆU ============================= */
-.btn { position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 15px;
-  border: 1px solid var(--bd2); border-radius: var(--r); background: transparent; color: var(--txt);
-  font-size: 13.5px; font-weight: 650; white-space: nowrap;
-  transition: transform var(--t) var(--ease), box-shadow var(--t) var(--ease), border-color var(--t-fast) var(--ease),
-    color var(--t-fast) var(--ease), background var(--t-fast) var(--ease), filter var(--t-fast) var(--ease); }
-.btn:hover { border-color: var(--txt); color: var(--txt); transform: translateY(-1px); box-shadow: var(--sh-hover); }
-.btn:active { transform: translateY(1px) scale(.985); box-shadow: none; }
+/* ---- NGÔN NGỮ NÚT “BẢNG HIỆU” (vòng 66) --------------------------------
+   Một hình nút duy nhất cho cả web: ô vuông bo nhẹ 6px, nhãn IN HOA cỡ nhỏ
+   đậm, chữ giãn nhẹ; nút chính là mảng son ĐẶC dán lên nền bằng một bóng
+   cứng 3px (như miếng decal dán lệch, không phải bóng mờ loang), nút phụ chỉ
+   là một lớp trắng 7%. Bỏ hẳn kiểu “viên thuốc” bo tròn và bóng mờ nhấc lên
+   khi trỏ — hai thứ đó là lý do hàng nút trước đây trông như dãy hộp nổi.
+   Nút CTA lớn ở trang chủ (.hero .btn.hb-cta) giữ nguyên dáng riêng. */
+.btn { position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  height: 44px; padding: 0 18px;
+  border: 1px solid rgba(255, 255, 255, .14); border-radius: 6px; background: rgba(255, 255, 255, .07); color: var(--txt);
+  font-size: 11.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; white-space: nowrap;
+  transition: transform var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease),
+    background var(--t-fast) var(--ease), filter var(--t-fast) var(--ease); }
+.btn .i, .btn .i-s { width: 16px; height: 16px; min-width: 16px; }
+.btn:hover { border-color: rgba(255, 255, 255, .28); color: var(--txt); background: rgba(255, 255, 255, .12); transform: none; box-shadow: none; }
+.btn:active { transform: translateY(1px); box-shadow: none; }
 .btn:focus-visible { outline: 0; box-shadow: 0 0 0 3px var(--ring); }
 .btn .i { transition: transform var(--t-fast) var(--ease); }
 .btn:hover .i.right, .btn:hover .i.left { transform: translateX(2px); }
@@ -420,17 +430,22 @@ body.nav-open { overflow: hidden; }
 .rip { position: absolute; border-radius: 50%; transform: scale(0); opacity: .5; pointer-events: none;
   background: currentColor; animation: rip .55s var(--ease-out) forwards; }
 @keyframes rip { to { transform: scale(2.4); opacity: 0; } }
-.btn.pri { background: var(--txt); border-color: var(--txt); color: var(--bg); }
-.btn.pri:hover { filter: brightness(1.12); }
-.btn.ghost { border-color: var(--bd); color: var(--mut); }
-.btn.ghost:hover { border-color: var(--bd2); color: var(--txt); }
-.btn.lg { padding: 13px 20px; font-size: 14.5px; }
-/* nút phụ trong tiêu đề khối: cao đúng 32px để ngang hàng với tab cùng cỡ */
-.btn.sm { padding: 0 12px; height: 32px; font-size: 12.5px; gap: 6px; }
-.btn.acc { border-color: var(--acc); color: var(--acc); }
-.btn.on { border-color: var(--acc); color: var(--acc); background: var(--acc-soft); }
+.btn.pri, .btn.primary { background: var(--acc); border-color: var(--acc); color: #1a1113;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, .55); }
+.btn.pri:hover, .btn.primary:hover { background: var(--acc); border-color: var(--acc); color: #1a1113;
+  filter: brightness(1.06); box-shadow: 3px 3px 0 rgba(0, 0, 0, .55); }
+.btn.pri:active, .btn.primary:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(0, 0, 0, .55); }
+.btn.pri.off, .btn.pri[disabled], .btn.primary[disabled] { box-shadow: none; }
+.btn.ghost { border-color: rgba(255, 255, 255, .14); background: rgba(255, 255, 255, .07); color: var(--txt); }
+.btn.ghost:hover { border-color: rgba(255, 255, 255, .26); background: rgba(255, 255, 255, .12); color: var(--txt); }
+.btn.lg { height: 46px; padding: 0 20px; font-size: 12px; }
+/* nút phụ trong tiêu đề khối: một bậc nhỏ hơn, vẫn cùng hình nút */
+.btn.sm { padding: 0 12px; height: 34px; font-size: 10.5px; letter-spacing: .08em; gap: 7px; border-radius: 5px; }
+.btn.sm .i, .btn.sm .i-s { width: 14px; height: 14px; min-width: 14px; }
+.btn.acc { border-color: var(--acc); background: transparent; color: var(--acc); }
+.btn.on { border-color: var(--acc); color: var(--acc); background: rgba(224, 133, 155, .16); }
 /* nút Thích (trang truyện): tim hồng nổi bật hẳn để không chìm vào dãy nút phụ */
-.btn.like { border-color: color-mix(in srgb, var(--acc) 38%, var(--bd)); color: var(--acc); }
+.btn.like { border-color: color-mix(in srgb, var(--acc) 38%, var(--bd)); background: rgba(255, 255, 255, .07); color: var(--acc); }
 .btn.like .i { stroke: var(--acc); }
 .btn.like:hover { border-color: var(--acc); color: var(--acc);
   background: color-mix(in srgb, var(--acc) 8%, transparent); }
@@ -820,7 +835,8 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 /* ---- 5.4 CTA: một nút chính + nút phụ dạng ICON TRÒN 44px --------------- */
 .hero .btn-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 20px 0 0; }
 .hero .btn.hb-cta { border-radius: 99px; border-color: var(--hb-line2); color: var(--hb-fg);
-  background: var(--hb-glass); padding: 0 20px; height: 44px; line-height: 1; }
+  background: var(--hb-glass); padding: 0 20px; height: 44px; line-height: 1;
+  font-size: 14.5px; font-weight: 650; letter-spacing: 0; text-transform: none; gap: 8px; }
 .hero .btn.hb-cta:hover { border-color: var(--hb-fg); color: var(--hb-fg);
   background: var(--hb-hover); transform: translateY(-1px); box-shadow: none; }
 .hero .btn.hb-cta:focus-visible { outline: 2px solid var(--hb-acc); outline-offset: 3px; box-shadow: none; }
@@ -1478,17 +1494,19 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .shero .editable-rating .rating-own { margin-top: 1px; min-height: 0; font-size: 11px; color: rgba(255, 255, 255, .42); }
 .shero .editable-rating .rating-remove { padding: 2px 0; font-size: 11px; color: rgba(255, 255, 255, .55); }
 /* hàng nút: nằm sát đáy bìa, nút chính là mực son đặc trên nền ảnh */
-.shero .btn-row { margin: auto 0 0; padding-top: 10px; gap: 8px; }
-.shero .btn-row .btn { height: 38px; padding: 0 14px; border-radius: 9px; font-size: 12.5px; }
+.shero .btn-row { margin: auto 0 0; padding-top: 10px; gap: 10px; }
+.shero .btn-row .btn { height: 44px; padding: 0 18px; border-radius: 6px; font-size: 11.5px; }
 /* việc phụ (chia sẻ · RSS · đặt lại 18+) — nút vuông icon, dồn cuối hàng */
 .shero .btn-utils { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-.shero .btn-row .btn.ic { width: 38px; padding: 0; gap: 0; flex: none; }
-.shero .btn-row .btn.ic .i { width: 15px; height: 15px; }
-.shero .btn-row .btn.pri { background: var(--acc); border-color: var(--acc); color: #2a1016;
-  box-shadow: 0 10px 22px -14px rgba(224, 133, 155, .9); }
-.shero .btn-row .btn.pri:hover { filter: brightness(1.07); color: #2a1016; }
-.shero .btn-row .btn.ghost { border-color: rgba(255, 255, 255, .24); color: #fff; background: rgba(18, 12, 9, .3); }
-.shero .btn-row .btn.ghost:hover { background: rgba(18, 12, 9, .6); border-color: rgba(255, 255, 255, .4); color: #fff; }
+.shero .btn-row .btn.ic { width: 44px; padding: 0; gap: 0; flex: none; }
+.shero .btn-row .btn.ic .i, .shero .btn-row .btn.ic .i-s { width: 17px; height: 17px; }
+/* nút chính: mảng son đặc + bóng cứng (đúng ngôn ngữ B), không dùng bóng mờ */
+.shero .btn-row .btn.pri { background: var(--acc); border-color: var(--acc); color: #1a1113;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, .55); }
+.shero .btn-row .btn.pri:hover { background: var(--acc); border-color: var(--acc); color: #1a1113;
+  filter: brightness(1.07); box-shadow: 3px 3px 0 rgba(0, 0, 0, .55); }
+.shero .btn-row .btn.ghost { border-color: rgba(255, 255, 255, .14); background: rgba(255, 255, 255, .07); color: #fff; }
+.shero .btn-row .btn.ghost:hover { background: rgba(255, 255, 255, .13); border-color: rgba(255, 255, 255, .26); color: #fff; }
 .shero .btn-row .btn.on { border-color: var(--acc); color: var(--acc); background: rgba(224, 133, 155, .16); }
 /* dải tiến độ đọc: chữ mono in hoa trái · thanh giữa · phần trăm phải */
 .shero .prog { display: flex; align-items: center; gap: 14px; max-width: none; margin: 18px 0 0;
@@ -2160,10 +2178,10 @@ kbd { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; b
   .shero .editable-rating svg { width: 15px; height: 15px; }
   .shero .editable-rating .rating-own { font-size: 10.5px; }
   .shero .btn-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; padding-top: 0; }
-  .shero .btn-row .btn { width: 100%; justify-content: center; font-size: 12.5px; }
+  .shero .btn-row .btn { width: 100%; justify-content: center; font-size: 11.5px; }
   .shero .btn-row .btn.pri { grid-column: 1 / -1; }         /* nút chính chiếm cả hàng */
   .shero .btn-utils { grid-column: 1 / -1; margin: 2px 0 0; justify-content: flex-end; }
-  .shero .btn-row .btn.ic { width: 38px; height: 36px; justify-content: center; }
+  .shero .btn-row .btn.ic { width: 44px; height: 44px; justify-content: center; }
   .shero .prog { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 10px; margin-top: 14px; }
   .shero .prog > span { grid-area: 1 / 1; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .shero .prog em { grid-area: 1 / 2; align-self: center; }
@@ -2429,8 +2447,7 @@ body.rd-fs .rdbar { position: fixed; left:0; right:0; }
 /* màn rất hẹp: nút gọn lại để hàng nút không tràn / phải quấn quá nhiều */
 @media (max-width: 430px) {
   .hero .btn-row .btn.lg { font-size: 13px; }
-  .shero .btn-row .btn.lg { padding: 11px 14px; font-size: 13.5px; }
-  .shero .btn-row .btn { padding: 9px 11px; font-size: 12.5px; gap: 6px; }
+  .shero .btn-row .btn { padding: 0 12px; font-size: 11px; gap: 7px; }
   .chapbar .seg button { padding: 0 8px; font-size: 11.5px; }
   .hero h1 { font-size: 30px; }
 }
