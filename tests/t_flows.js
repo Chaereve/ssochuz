@@ -121,10 +121,12 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   click('#chapSort'); await wait(200);
   out.sortOldFirst = txt('#chapGrid .cha .nm');
   out.sortLabelOld = txt('#chapSort .lbl');
+  /* vòng 83: bỏ khối “Cùng couple / Cùng tác giả” — tên tác giả và couple ngay
+     dưới tiêu đề là liên kết sang trang danh sách tương ứng. */
   out.story = {
     tabChapCt: txt('#tabChapCt'),
-    relSeries: $$('#relSeries a').length,
-    relCouple: $$('#relCouple a').length
+    relGone: !$('#relSec') && !$('#relCouple') && !$('#relAuthor'),
+    whoLinks: $$('#shero .who a').map(function (a) { return a.getAttribute('href'); })
   };
   out.errStory = errors.slice(0, 5);
   out.logCount = log.length;

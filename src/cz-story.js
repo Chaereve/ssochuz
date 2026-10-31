@@ -433,10 +433,11 @@
        · tầng 1: tác giả (đậm, sáng) rồi cặp đôi (mờ hơn), ngăn bằng dấu “·”;
        · tầng 2: năm · số chương · ngày cập nhật, nhỏ hơn và ngăn bằng gạch dọc do
          CSS vẽ, nên mắt tách hai nhóm ngay chứ không đọc thành hai chuỗi giống nhau.
-       Tình trạng KHÔNG nằm ở đây: nó ở dải đáy bìa, mỗi dữ kiện chỉ hiện một lần. */
+       Tình trạng KHÔNG nằm ở đây (và cũng không còn trên bìa): nó chỉ ở tab
+       Thông tin, hàng “Tình trạng” — mỗi dữ kiện hiện đúng một lần. */
     var whoBits = [];
-    if (n.author) whoBits.push('<span class="u"><b>' + esc(n.author) + '</b>' + (n.couple ? '<i>·</i>' : '') + '</span>');
-    if (n.couple) whoBits.push('<span class="u">' + esc(n.couple) + '</span>');
+    if (n.author) whoBits.push('<a class="u" href="/tac-gia/?q=' + encodeURIComponent(CZ.slugify(n.author)) + '" title="Xem mọi truyện của ' + esc(n.author) + '"><b>' + esc(n.author) + '</b></a>' + (n.couple ? '<i>·</i>' : ''));
+    if (n.couple) whoBits.push('<a class="u" href="/couple/?q=' + encodeURIComponent(CZ.slugify(n.couple)) + '" title="Xem mọi truyện của ' + esc(n.couple) + '">' + esc(n.couple) + '</a>');
     var whoRow = whoBits.length
       ? '<p class="who">' + whoBits.join('') +
         (n.locked ? '<span class="pill lock" title="Truyện được bảo vệ bằng mật mã — thẻ và giới thiệu công khai, chương cần mật mã">' + ic('lock', 'i-s') + 'Có mật mã</span>' : '') +
@@ -446,7 +447,7 @@
        luôn trong ngày cập nhật; nhãn in hoa cỡ nhỏ, giá trị sáng và to hơn một
        bậc — mắt tách được đâu là tên dữ kiện, đâu là số, không cần gạch ngăn. */
     var cnt = String(CZ.countText(n)).replace(/\s*chương$/, '');
-    var upd = String(CZ.dateVN(n.updated) || '').replace(/\//g, '-');
+    var upd = CZ.dateVN(n.updated) || '';
     var statRow = '<p class="stat">' +
       '<span class="p"><i>Chương</i><b>' + esc(cnt) + '</b></span>' +
       (upd ? '<span class="p"><i>Cập nhật</i><b>' + esc(upd) + '</b></span>' : '') +
@@ -459,8 +460,7 @@
             (n.is18 ? '<span class="b18" title="Dành cho 18 tuổi trở lên">18+</span>' : '') +
             (n.locked ? '<span class="lock-cover" title="Truyện có mật mã — cần mật mã để đọc" aria-label="Truyện có mật mã">' + ic('lock', 'i-s') + '</span>' : '') +
             (n.fresh ? '<span class="nw-bookmark"><span>NEW</span></span>' : '') +
-            '<span class="cvGrad" aria-hidden="true"></span>' +
-            '<span class="cvSt ' + esc(n.statusCls || 'run') + '"><i aria-hidden="true"></i>' + esc(CZ.statusLabel(n.statusCls || n.status)) + '</span>' + '</div>' +
+            '</div>' +
           '<div class="txtW">' +
           '<h1>' + esc(n.title) + '</h1>' +
           '<div class="txtC">' + whoRow + statRow + ratingTag() + '</div>' +
@@ -586,7 +586,7 @@
       ['Số chương', n.canRead ? String(n.chapters) : '0', 'num'],
       ['Đã đọc', ch && n.chapters ? ch + '/' + n.chapters + ' · ' + chPct + '%' : 'chưa đọc',
         ch && n.chapters ? 'acc' : 'dim'],
-      ['Cập nhật', n.updated ? String(CZ.dateVN(n.updated)).replace(/\//g, '-') : '—', 'num']
+      ['Cập nhật', n.updated ? String(CZ.dateVN(n.updated)) : '—', 'num']
     ];
     if (st && st.views) cells.push(['Lượt đọc', num(st.views), 'num']);
     if (st && st.votes) cells.push(['Phiếu', num(st.votes), 'num']);
@@ -755,43 +755,6 @@
   });
   var goBtn = $('#chapGo');
   if (goBtn) goBtn.addEventListener('click', function () { jumpFrom($('#chapJump')); });
-
-  function relCard(n) {
-    var img = CZ.coverSrc(n);
-    return '<a class="relcard" href="' + esc(CZ.storyURL(n.slug)) + '" title="' + esc(n.title) + '">' +
-      '<span class="rc-th' + (img ? '' : ' noimg') + '">' +
-        (img ? '<img src="' + esc(img) + '"' + CZ.coverFB(n, img) + ' alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer" width="120" height="180">' : '') +
-      '</span>' +
-      '<span class="rc-body">' +
-        '<b>' + esc(n.title) + '</b>' +
-        '<span class="rc-meta">' + esc([n.author, n.couple].filter(Boolean).join(' · ') || '—') + '</span>' +
-        '<span class="rc-foot">' +
-          '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(CZ.statusLabel(n.statusCls || n.status)) + '</span>' +
-          '<span class="rc-ch">' + esc(CZ.countText(n)) + '</span>' +
-        '</span>' +
-      '</span></a>';
-  }
-  function renderRelated() {
-    var n = N;
-    var lib = CZ.lib();
-    var myCouples = CZ.couplesOf ? CZ.couplesOf(n) : (n.couple ? [n.couple] : []);
-    var sameCouple = myCouples.length ? lib.filter(function (x) {
-      if (x.slug === n.slug) return false;
-      var xCouples = CZ.couplesOf ? CZ.couplesOf(x) : (x.couple ? [x.couple] : []);
-      return xCouples.some(function (c) { return myCouples.indexOf(c) >= 0; });
-    }).slice(0, 6) : [];
-    var sameAuthor = n.author ? lib.filter(function (x) { return x.author === n.author && x.slug !== n.slug; }).slice(0, 6) : [];
-    var shown = 0;
-    function put(sel, rows) {
-      var el = $(sel);
-      var wrap = el.parentElement;
-      el.innerHTML = rows.map(relCard).join('');
-      wrap.style.display = rows.length ? '' : 'none';
-      if (rows.length) shown++;
-    }
-    put('#relCouple', sameCouple); put('#relAuthor', sameAuthor);
-    $('#relSec').style.display = shown ? '' : 'none';
-  }
 
   /* ======================= 3b. BÌNH LUẬN =================================
      Dùng chung khung bình luận của CZ.comments (cz-app.js) cho CẢ HAI nơi:
@@ -1899,7 +1862,6 @@
     if (rb) rb.addEventListener('click', function () { location.reload(); });
     try { document.title = title + ' · ssochuz library'; } catch (e) {}
     $('#chapSec').style.display = 'none';
-    $('#relSec').style.display = 'none';
     $('#pane-cmt').style.display = 'none';
     $('#pane-info').style.display = 'none';
     $('#storyTabs').style.display = 'none';
@@ -2049,7 +2011,7 @@
             $('#bookPassword').value = '';
             var data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Không mở được truyện.');
-            ['chapSec', 'relSec', 'pane-cmt', 'pane-info', 'storyTabs', 'rd'].forEach(function (id) { $('#' + id).style.display = ''; });
+            ['chapSec', 'pane-cmt', 'pane-info', 'storyTabs', 'rd'].forEach(function (id) { $('#' + id).style.display = ''; });
             window.czPrivateBook = data; loadBook(); window.czPrivateBook = null;
           } catch (error) { $('#unlockMessage').textContent = error.message; button.disabled = false; }
         };
@@ -2151,7 +2113,7 @@
           document.head.appendChild(rss);
         } catch (e) {}
       }
-      renderStory(); renderChapters(); renderRelated(); loadMyRating(false);
+      renderStory(); renderChapters(); loadMyRating(false);
       showTab(/danh-gia|binh-luan/.test(location.hash) ? 'cmt' : (/gioi-thieu|thong-tin/.test(location.hash) ? 'info' : 'chap'));
       CZ.reveal();
       route(chapterFromHash() ? 'hash' : 'path');
