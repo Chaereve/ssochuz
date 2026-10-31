@@ -1,0 +1,205 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cảm xúc — vòng 79c</title><style>
+:root{
+  --acc:#e0859b; --txt:#f7f1e7; --mut:#a89d8d; --dim:#8a8174;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,"Times New Roman",serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --bd:rgba(255,240,220,.10);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#14110e;color:#f7f1e7;font:400 13.5px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+.w{max-width:1470px;margin:0 auto;padding:34px 24px 56px}
+.lede{color:rgba(255,255,255,.58);margin:0;max-width:92ch;font-size:13.5px;line-height:1.78}
+.lede b{color:#f7f1e7;font-weight:600}
+section{margin:44px 0 0}
+.hd{display:flex;align-items:baseline;gap:10px;margin:0 0 6px}
+.hd .n{color:var(--acc);font-weight:600}
+.hd h2{font:600 13.5px/1.3 var(--sans);margin:0}
+.hd2{font-size:12.5px;color:rgba(255,255,255,.46);margin:0 0 14px;line-height:1.75;max-width:104ch}
+.hd2 b{color:rgba(255,255,255,.72);font-weight:600}
+.frame{width:1032px;max-width:100%}
+.frame.p{width:720px}
+.side{display:flex;gap:24px;align-items:flex-start}
+.mob{width:343px;flex:none}
+.tag{font:500 9.5px/1 var(--mono);letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,.28);margin:0 0 8px}
+.tag.p{color:#a2907a}
+
+/* ---------- khối cảm xúc: phần dùng chung ---------- */
+.rxsec{border-top:1px solid var(--bd);padding:15px 0 7px}
+.rxsec.t-paper{background:#f8f2e6;color:#322a1e;border-top-color:rgba(70,45,20,.16);padding:15px 20px 9px}
+.rxhead{display:flex;align-items:center;gap:10px;margin-bottom:13px}
+.rxhead b{font:600 13.5px/1.2 var(--sans)}
+.rxsub{font-size:11.5px;color:rgba(255,255,255,.38)}
+.rxacts{margin-left:auto;display:inline-flex;align-items:center;gap:16px}
+.rxtot{font-size:11px;color:rgba(255,255,255,.40);font-variant-numeric:tabular-nums}
+.rxmore{display:inline-flex;align-items:center;gap:4px;border:0;background:transparent;
+  font:500 12px var(--sans);color:rgba(255,255,255,.52);padding:4px 0;cursor:pointer}
+.rxmore svg{width:12px;height:12px;color:var(--acc)}
+.rxmore:hover{color:#fff}
+.t-paper .rxhead b{color:#322a1e}
+.t-paper .rxsub,.t-paper .rxtot{color:#8a7a63}
+.t-paper .rxmore{color:#7b6b56}
+.t-paper .rxmore:hover{color:#322a1e}
+.t-paper .rxmore svg{color:#9c4a2a}
+
+.rxrow{display:flex;align-items:center;margin:0;padding:0;list-style:none}
+.rx{border:0;background:none;color:inherit;font-family:var(--sans);cursor:pointer;padding:0;
+  position:relative;min-width:0;-webkit-tap-highlight-color:transparent}
+.rx-art{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;
+  transition:background 170ms ease,box-shadow 190ms ease}
+.rx-img{display:block;object-fit:contain;transition:transform 190ms cubic-bezier(.2,.7,.3,1);
+  filter:drop-shadow(0 2px 3px rgba(16,10,4,.24))}
+.rx-n{font-variant-numeric:tabular-nums;transition:color 160ms ease}
+.rx:hover .rx-art,.rx:focus-visible .rx-art{background:color-mix(in srgb,var(--rx) 10%,transparent);
+  box-shadow:0 9px 20px -14px color-mix(in srgb,var(--rx) 80%,transparent)}
+.rx:hover .rx-img{transform:translateY(-2px) scale(1.05)}
+.rx:focus-visible{outline:none}
+.rx:focus-visible .rx-art{outline:2px solid color-mix(in srgb,var(--rx) 55%,transparent);outline-offset:2px}
+.rx.on .rx-art{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--rx) 60%,transparent)}
+.rx.on:hover .rx-art{box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--rx) 60%,transparent),
+  0 9px 20px -14px color-mix(in srgb,var(--rx) 80%,transparent)}
+
+/* ================= C4 · gói bên trái, số nằm cạnh hình ================= */
+.m-c4 .rxrow{flex-wrap:wrap;gap:2px 6px}
+.m-c4 .rx{display:inline-flex;align-items:center;gap:5px;padding:4px 0}
+.m-c4 .rx-art{width:42px;height:42px}
+.m-c4 .rx-img{width:36px;height:36px}
+.m-c4 .rx-n{font-size:11px;line-height:1;color:rgba(255,255,255,.40);min-width:20px;text-align:left}
+.m-c4 .rx:hover .rx-n{color:rgba(255,255,255,.74)}
+.m-c4 .rx.on .rx-n{color:var(--rx);font-weight:700}
+.m-c4 .rx[data-z="1"] .rx-n{display:none}
+.t-paper.m-c4 .rx-n{color:#9a8a73}
+.t-paper.m-c4 .rx:hover .rx-n{color:#4a3f2f}
+.t-paper.m-c4 .rx-img{filter:drop-shadow(0 2px 2px rgba(70,45,20,.18))}
+.t-paper.m-c4 .rx:hover .rx-art{background:color-mix(in srgb,var(--rx) 16%,transparent)}
+
+/* ================= C5 · chỉ hình + một dòng chú thích ================= */
+.m-c5 .rxrow{gap:12px}
+.m-c5 .rx{padding:0}
+.m-c5 .rx-art{width:50px;height:50px}
+.m-c5 .rx-img{width:46px;height:46px}
+.m-c5 .rx-n{display:none}
+.m-c5 .cap{margin:6px 0 0;font-size:11.5px;line-height:1.5;color:rgba(255,255,255,.40);
+  display:flex;align-items:center;gap:6px;min-height:17px}
+.m-c5 .cap b{color:rgba(255,255,255,.78);font-weight:600}
+.m-c5 .cap .dot{color:rgba(255,255,255,.22)}
+.m-c5 .cap .hint{color:rgba(255,255,255,.26)}
+.t-paper.m-c5 .cap{color:#8a7a63}
+.t-paper.m-c5 .cap b{color:#4a3f2f}
+.t-paper.m-c5 .cap .dot{color:#c3b49c}
+.t-paper.m-c5 .cap .hint{color:#a2907a}
+.t-paper.m-c5 .rx-img{filter:drop-shadow(0 2px 2px rgba(70,45,20,.18))}
+.t-paper.m-c5 .rx:hover .rx-art{background:color-mix(in srgb,var(--rx) 16%,transparent)}
+
+/* ================= C6 · một hàng cuộn ngang ================= */
+.m-c6 .rxrow{gap:15px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;
+  -webkit-mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 26px),transparent 100%);
+  mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 26px),transparent 100%);
+  padding-bottom:2px}
+.m-c6 .rxrow::-webkit-scrollbar{display:none}
+.m-c6 .rx{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:3px}
+.m-c6 .rx-art{width:46px;height:46px}
+.m-c6 .rx-img{width:44px;height:44px}
+.m-c6 .rx-n{font-size:10.5px;line-height:1;color:rgba(255,255,255,.34)}
+.m-c6 .rx:hover .rx-n{color:rgba(255,255,255,.70)}
+.m-c6 .rx.on .rx-n{color:var(--rx);font-weight:700}
+.m-c6 .rx[data-z="1"] .rx-n{opacity:0}
+.t-paper.m-c6 .rx-n{color:#9a8a73}
+.t-paper.m-c6 .rx:hover .rx-n{color:#4a3f2f}
+.t-paper.m-c6 .rx-img{filter:drop-shadow(0 2px 2px rgba(70,45,20,.18))}
+
+/* ---------- mobile ---------- */
+.is-m .rxhead{gap:8px;margin-bottom:11px}
+.is-m .rxhead b{font-size:12.5px}
+.is-m .rxsub{display:none}
+.is-m .rxtot{font-size:10.5px}
+.is-m .rxmore{font-size:11.5px}
+.is-m .rxacts{gap:10px}
+.is-m .rx-art{width:44px;height:44px}
+.is-m .rx-img{width:36px;height:36px}
+.is-m.m-c4 .rxrow{gap:0 4px;justify-content:space-between}
+.is-m.m-c4 .rx{flex-direction:column;gap:4px;padding:2px 0;align-items:center}
+.is-m.m-c4 .rx-art{width:44px;height:44px}
+.is-m.m-c4 .rx-img{width:38px;height:38px}
+.is-m.m-c4 .rx-n{font-size:9.5px;min-width:0;text-align:center}
+.is-m.m-c4 .rxrow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px 0}
+.is-m.m-c5 .rxrow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px 0;justify-items:center}
+.is-m.m-c5 .rx-art{width:46px;height:46px}
+.is-m.m-c5 .rx-img{width:38px;height:38px}
+.is-m.m-c5 .cap{margin-top:9px}
+.is-m.m-c6 .rxrow{gap:12px}
+</style></head><body><div class="w">
+<p class="lede">Hướng <b>C</b> giữ nguyên: <b>hình là chính, không nhãn thường trực</b>. Ba bản dưới sửa đúng ba chỗ khiến C chưa đẹp — <b>14 hình bị dàn đều hết bề ngang 1032px</b> nên rời rạc như dãy icon; <b>dãy số 0 giăng thành một hàng riêng</b> đọc như bảng số liệu; và <b>dải không có nhịp</b> nên mắt không biết bắt đầu từ đâu. Cả ba đều: gói cụm lại một chỗ, bỏ số 0, giữ nguyên sticker gốc.</p>
+<div id="host"></div>
+</div>
+<script>
+const STICKERS = [
+  ['sso-brick','Lẹ lẹ ik',12],['sso-love-it','Toẹt',34,1],['sso-cry-flood','Ulatr',9],
+  ['sso-plot-twist','Plot twist!',17],['sso-popcorn-spy','Hả?!',23,1],['sso-more','Cho xin chương nữa',8],
+  ['sso-crown-chaos','Yasss!!!',4],['sso-fighting','Cố lên!',6],['sso-flattened','Xỉu tại chỗ...',3],
+  ['sso-no-sleep','Nốt chương nữa hoi',5],['sso-rage-roomba','Cưng vô lây',2],
+  ['sso-secondhand-shame','Ngại giùm',3],['sso-sugar-overload','Ngọt quá trời',2],
+  ['sso-witness-protection','Hong thấy gì hết nha',0]
+];
+const ARROW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+
+function items(mode){
+  return STICKERS.map(function(s){
+    const id=s[0], label=s[1], n=s[2], on=s[3]?' on':'';
+    const num = '<span class="rx-n">'+n+'</span>';
+    return '<button class="rx'+on+'" type="button" data-label="'+label+'" data-n="'+n+'" data-z="'+(n?'0':'1')+'" '+
+      'style="--rx:#e0859b" title="'+label+'" aria-label="'+label+'">'+
+      '<span class="rx-art"><img class="rx-img" src="/stickers/sso/thumb/'+id+'.webp" alt="" width="46" height="46" loading="lazy"></span>'+
+      (mode==='c5'?'':num)+
+    '</button>';
+  }).join('');
+}
+
+function block(mode, opts){
+  const mobile = opts.mobile ? ' is-m' : '';
+  const paper  = opts.paper ? ' t-paper' : '';
+  const cap = mode==='c5' ? '<p class="cap"><span class="hint">Chạm vào một hình để xem cảm xúc đó là gì.</span></p>' : '';
+  return '<div class="rxsec'+paper+' m-'+mode+mobile+'"><div class="rxhead">'+
+    '<b>Cảm xúc</b><span class="rxsub">Chạm để thả cảm xúc</span>'+
+    '<span class="rxacts"><span class="rxtot">128 lượt</span>'+
+    '<button class="rxmore" type="button">Chi tiết'+ARROW+'</button></span></div>'+
+    '<div class="rxrow">'+items(mode)+'</div>'+cap+'</div>';
+}
+
+function section(mode, n, title, note){
+  return '<section><div class="hd"><span class="n">'+n+'</span><h2>'+title+'</h2></div>'+
+    '<p class="hd2">'+note+'</p>'+
+    '<p class="tag">trang truyện · 1032px</p>'+
+    '<div class="frame">'+block(mode,{})+'</div>'+
+    '<div class="side" style="margin-top:22px">'+
+      '<div><p class="tag p">trang đọc · nền giấy · 720px</p><div class="frame p">'+block(mode,{paper:true})+'</div></div>'+
+      '<div><p class="tag">máy 390px</p><div class="mob">'+block(mode,{mobile:true})+'</div></div>'+
+    '</div></section>';
+}
+
+document.getElementById('host').innerHTML =
+  section('c4','C4','C4 · Gói bên trái, số nằm cạnh hình',
+    'Mười bốn hình <b>đứng sát nhau thành một cụm</b> thay vì dàn hết bề ngang, nên mắt đọc được như một dãy cảm xúc chứ không phải icon rời. Số nằm ngay cạnh hình cùng một hàng, <b>số 0 thì không hiện</b> — hết cảnh mười bốn số 0 giăng thành bảng số. Hình đã thả có vành màu và số đổi sang đúng màu sticker.')+
+  section('c5','C5','C5 · Chỉ hình, một dòng chú thích',
+    'Bản thuần nhất: <b>không một con số nào thường trực</b>, chỉ mười bốn hình. Rê hoặc chạm vào hình nào thì dòng dưới hiện đúng tên và số lượt của hình đó, bỏ ra lại trở về câu gợi ý. Tổng lượt vẫn nằm ở góc phải. Dải cao đúng một hàng, không có hàng số thứ hai.')+
+  section('c6','C6','C6 · Một hàng cuộn ngang',
+    'Giữ mười bốn hình cùng cỡ trong <b>một hàng không bao giờ xuống dòng</b>: máy rộng thấy hết, máy hẹp thì vuốt ngang, mép phải mờ dần để biết còn nữa. Cách này xử lý luôn lỗi tràn ngang ở máy 390px hiện tại, và hai trang dùng chung một thước.');
+/* C5: dòng chú thích chạy theo hình đang rê/chạm */
+document.querySelectorAll('.m-c5').forEach(function(sec){
+  const cap = sec.querySelector('.cap'); if(!cap) return;
+  const hint = cap.innerHTML;
+  sec.querySelectorAll('.rx').forEach(function(b){
+    const show = function(){
+      const n = b.dataset.n;
+      cap.innerHTML = '<b>'+b.dataset.label+'</b>' + (n && n!=='0' ? '<span class="dot">·</span>'+n+' lượt' : '');
+    };
+    const reset = function(){ cap.innerHTML = hint; };
+    b.addEventListener('mouseenter', show);
+    b.addEventListener('focus', show);
+    b.addEventListener('mouseleave', reset);
+    b.addEventListener('blur', reset);
+    b.addEventListener('touchstart', show, {passive:true});
+  });
+});
+</script>
+</body></html>
