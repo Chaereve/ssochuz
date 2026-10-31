@@ -442,11 +442,15 @@
         (n.locked ? '<span class="pill lock" title="Truyện được bảo vệ bằng mật mã — thẻ và giới thiệu công khai, chương cần mật mã">' + ic('lock', 'i-s') + 'Có mật mã</span>' : '') +
         '</p>'
       : '';
-    var statBits = [];
-    if (n.year) statBits.push('<span>' + esc(n.year) + '</span>');
-    statBits.push('<span>' + esc(CZ.countText(n)) + '</span>');
-    statBits.push('<span>cập nhật ' + esc(CZ.timeAgo(n.updated)) + '</span>');
-    var statRow = '<p class="stat">' + statBits.join('') + '</p>';
+    /* Số liệu = hai cụm NHÃN + GIÁ TRỊ. Năm đứng riêng thì vô nghĩa, nên nó nằm
+       luôn trong ngày cập nhật; nhãn in hoa cỡ nhỏ, giá trị sáng và to hơn một
+       bậc — mắt tách được đâu là tên dữ kiện, đâu là số, không cần gạch ngăn. */
+    var cnt = String(CZ.countText(n)).replace(/\s*chương$/, '');
+    var upd = String(CZ.dateVN(n.updated) || '').replace(/\//g, '-');
+    var statRow = '<p class="stat">' +
+      '<span class="p"><i>Chương</i><b>' + esc(cnt) + '</b></span>' +
+      (upd ? '<span class="p"><i>Cập nhật</i><b>' + esc(upd) + '</b></span>' : '') +
+      '</p>';
     var pct = progressPct(n, ch);
     $('#shero').innerHTML =
       '<div class="hC">' +
@@ -459,7 +463,7 @@
             '<span class="cvSt ' + esc(n.statusCls || 'run') + '"><i aria-hidden="true"></i>' + esc(CZ.statusLabel(n.statusCls || n.status)) + '</span>' + '</div>' +
           '<div class="txtW">' +
           '<h1>' + esc(n.title) + '</h1>' +
-          '<div class="txtC">' + whoRow + statRow + '</div>' +
+          '<div class="txtC">' + whoRow + statRow + ratingTag() + '</div>' +
           '<div class="rest">' +
             '<div class="synwrap' + (syn ? ' clamp' : '') + (synopsisOpen ? ' open' : '') + '" id="synWrap">' +
               '<div class="synin" id="synIn">' +
@@ -475,16 +479,16 @@
         '</div>' +
         /* THANH ĐÁY: điểm bên trái, việc cần làm dồn về mép phải. Chỉ một nút có
            chữ; “Theo dõi” là chữ + chuông trên nền thẻ, “Tủ truyện” là ô icon. */
-        '<div class="bar">' + ratingTag() + '<span class="sp"></span>' +
+        '<div class="bar">' +
           '<div class="btn-row">' + readBtn(n, ch) +
             '<button class="btn tx' + (CZ.isFollowed(n) ? ' on' : '') + '" data-followbtn="' + esc(n.slug) + '" aria-pressed="' + CZ.isFollowed(n) + '" title="' + (CZ.isFollowed(n) ? 'Bỏ theo dõi (không báo chương mới nữa)' : 'Theo dõi — báo khi có chương mới') + '" aria-label="' + (CZ.isFollowed(n) ? 'Bỏ theo dõi ' : 'Theo dõi ') + esc(n.title) + '">' + ic('bell', 'i-s') +
               '<span class="lbl">' + (CZ.isFollowed(n) ? 'Đang theo dõi' : 'Theo dõi') + '</span></button>' +
             '<button class="btn ic' + (CZ.inShelf(n) ? ' on' : '') + '" id="shelfBtn" aria-pressed="' + CZ.inShelf(n) + '" title="' + (CZ.inShelf(n) ? 'Bỏ khỏi tủ truyện' : 'Lưu vào tủ truyện') + '" aria-label="' + (CZ.inShelf(n) ? 'Bỏ khỏi tủ truyện ' : 'Lưu vào tủ truyện ') + esc(n.title) + '">' + ic('shelf', 'i-s') +
               '<span class="lbl" hidden>' + (CZ.inShelf(n) ? 'Đã lưu' : 'Tủ truyện') + '</span></button>' +
           '</div>' +
+          (ch && n.chapters ? '<div class="mini"><div class="ln"><span>Đang đọc ' + ch + ' / ' + n.chapters + '</span><b>' + pct + '%</b></div>' +
+            '<div class="tk"><i style="width:' + pct + '%"></i></div></div>' : '') +
         '</div>' +
-        (ch && n.chapters ? '<div class="prog"><span>Đang đọc chương ' + ch + ' / ' + n.chapters + ' · còn ' + Math.max(0, n.chapters - ch) + ' chương</span>' +
-          '<div class="bar"><i style="width:' + pct + '%"></i></div><em>' + pct + '%</em></div>' : '') +
       '</div>';
     /* bìa hỏng / chưa có ảnh: khung vẫn có tên truyện thay vì để trống trơn */
     var cw = $('#shero .cover'), cim = cw ? cw.querySelector('img') : null;

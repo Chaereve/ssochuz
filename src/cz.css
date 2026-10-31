@@ -1464,12 +1464,13 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 /* TẦNG 2 — số liệu: nhỏ hơn, ngăn bằng GẠCH DỌC chứ không dùng “·” như tầng trên.
    Hai tầng khác nhau về kiểu ngăn, nên mắt tách được ngay chứ không đọc thành
    hai chuỗi giống nhau. */
-.shero .stat { display: flex; align-items: center; flex-wrap: wrap;
-  margin: 8px 0 0; font-size: 11px; line-height: 1.5; letter-spacing: .014em;
-  color: rgba(255, 255, 255, .34); font-variant-numeric: tabular-nums; }
-.shero .stat > span { white-space: nowrap; }
-.shero .stat > span + span { margin-left: 11px; padding-left: 11px;
-  border-left: 1px solid rgba(255, 240, 220, .13); }
+.shero .stat { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 26px;
+  margin: 9px 0 0; font-variant-numeric: tabular-nums; }
+.shero .stat > .p { display: inline-flex; align-items: baseline; gap: 7px; white-space: nowrap; }
+.shero .stat i { font-style: normal; font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+  line-height: 1; letter-spacing: .13em; text-transform: uppercase; color: rgba(255, 255, 255, .32); }
+.shero .stat b { font-weight: 500; font-size: 13px; line-height: 1.4; letter-spacing: .012em;
+  color: rgba(255, 255, 255, .82); }
 /* phần chữ còn lại: giới thiệu */
 .shero .rest { min-width: 0; }
 .shero .syn { font-size: 13.5px; line-height: 1.72; color: rgba(255, 255, 255, .64); margin: 0; }
@@ -1495,28 +1496,36 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   transition: max-height var(--t) var(--ease);
 }
 .shero .synbtn { margin: 10px 0 0; font-size: 12px; }
-/* ĐÁNH GIÁ: nằm trong thanh đáy. Sao viền rỗng (sao rỗng tô xám đọc ra như đã
-   chấm), điểm đứng trước phần chữ, dòng gợi ý chỉ còn cho trình đọc màn hình. */
-.shero .editable-rating { margin: 0; }
-.shero .editable-rating .rating-main { gap: 0 9px; }
-.shero .editable-rating .rating-control { gap: 10px; }
-.shero .editable-rating .rl { order: 0; flex-basis: auto; font-size: 12px; color: rgba(255, 255, 255, .40); }
-.shero .editable-rating .stars .st { width: 24px; height: 30px; padding: 0; }
-.shero .editable-rating svg { width: 16px; height: 16px;
-  fill: none; stroke: rgba(255, 245, 235, .30); stroke-width: 1.15; }
+/* ĐÁNH GIÁ: một hàng nhỏ ngay dưới số liệu — nó là thông tin của truyện, không
+   phải việc cần làm, nên không nằm chung hàng với nút. Sao viền rỗng (sao rỗng
+   tô xám đọc ra như đã chấm), điểm đứng trước phần chữ. */
+.shero .editable-rating { margin: 11px 0 0; }
+.shero .editable-rating .rating-main { gap: 0 8px; }
+.shero .editable-rating .rating-control { gap: 8px; }
+.shero .editable-rating .rl { order: 0; flex-basis: auto; font-size: 11.5px; color: rgba(255, 255, 255, .40); }
+.shero .editable-rating .stars .st { width: 20px; height: 22px; padding: 0; }
+.shero .editable-rating svg { width: 13px; height: 13px;
+  fill: none; stroke: rgba(255, 245, 235, .32); stroke-width: 1.2; }
 .shero .editable-rating .st.on svg { fill: var(--rating-fill); stroke: var(--rating-fill); }
-.shero .editable-rating .rating-value { font-size: 12.5px; color: rgba(255, 255, 255, .42); }
+.shero .editable-rating .rating-value { font-size: 11.5px; color: rgba(255, 255, 255, .42); }
 .shero .editable-rating .rating-value b { color: rgba(255, 255, 255, .92); }
 .shero .editable-rating .rating-own { position: absolute; width: 1px; height: 1px; margin: -1px;
   padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 .shero .editable-rating .rating-own.vis { position: static; width: auto; height: auto; margin: 4px 0 0;
   overflow: visible; clip-path: none; white-space: normal; font-size: 11px; color: rgba(255, 255, 255, .46); }
 .shero .editable-rating .rating-remove { padding: 2px 0; font-size: 11px; color: rgba(255, 255, 255, .55); }
-/* THANH ĐÁY: đường kẻ tóc chạy hết bề ngang thẻ (nhờ lề âm), điểm bên trái, việc
-   cần làm dồn về mép phải — nút chính nằm ở cuối đường mắt. */
-.shero .bar { display: flex; align-items: center; gap: 14px;
-  margin: 24px -26px 0; padding: 16px 26px 0; border-top: 1px solid rgba(255, 240, 220, .10); }
-.shero .bar .sp { flex: 1 1 auto; min-width: 0; }
+/* THANH ĐÁY: đường kẻ tóc chạy hết bề ngang thẻ (nhờ lề âm). Việc cần làm nằm
+   bên trái, tiến độ đọc của bạn bên phải — hai nhóm, hai mép, không có khoảng
+   trống chết ở giữa như khi điểm và nút nằm hai đầu. */
+.shero .bar { display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  margin: 24px -26px 0; padding: 17px 26px 0; border-top: 1px solid rgba(255, 240, 220, .09); }
+.shero .bar .mini { min-width: 190px; max-width: 230px; }
+.shero .bar .mini .ln { display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  font-size: 11.5px; line-height: 1.4; color: rgba(255, 255, 255, .44); }
+.shero .bar .mini .ln b { font-weight: 600; color: rgba(255, 255, 255, .86); font-variant-numeric: tabular-nums; }
+.shero .bar .tk { height: 3px; margin-top: 7px; border-radius: 99px; overflow: hidden;
+  background: rgba(255, 255, 255, .10); }
+.shero .bar .tk i { display: block; height: 100%; border-radius: 99px; background: var(--acc); }
 .shero .btn-row { display: flex; align-items: center; gap: 8px; margin: 0; padding: 0; }
 .shero .btn-row .btn { height: 40px; padding: 0 16px; border-radius: 9px;
   font-size: 12.5px; font-weight: 600; letter-spacing: .006em; gap: 8px; text-transform: none;
@@ -1538,16 +1547,7 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .shero .btn-row .btn.pri.off, .shero .btn-row .btn.pri[disabled] {
   background: rgba(255, 255, 255, .10); color: rgba(255, 255, 255, .42);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); }
-/* dải tiến độ đọc: chữ mono in hoa trái · thanh giữa · phần trăm phải */
-.shero .prog { display: flex; align-items: center; gap: 14px; max-width: none; margin: 18px 0 0;
-  padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, .13); }
-.shero .prog > span { font-family: var(--font-mono); font-size: 10px; font-weight: 600; line-height: 1;
-  letter-spacing: .09em; text-transform: uppercase; color: rgba(255, 255, 255, .58); white-space: nowrap; }
-.shero .prog .bar { flex: 1; min-width: 60px; height: 3px; border-radius: 99px; overflow: hidden;
-  background: rgba(255, 255, 255, .15); }
-.shero .prog .bar i { display: block; height: 100%; border-radius: 99px; background: var(--acc); }
-.shero .prog em { font-family: var(--font-mono); font-size: 10px; font-weight: 700; font-style: normal;
-  color: rgba(255, 255, 255, .82); }
+
 
 .chapbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
 .chapbar .search { flex: 1 1 260px; max-width: 420px; }
@@ -2200,22 +2200,23 @@ kbd { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; b
   .shero .cover { grid-column: 1; grid-row: 2; width: 100%; }
   .shero h1 { grid-column: 1 / -1; grid-row: 1; margin: 0 0 13px; font-size: 17px; line-height: 1.24; }
   .shero .txtW { display: contents; }
-  .shero .txtC { grid-column: 2; grid-row: 2; align-self: center; }
+  .shero .txtC { grid-column: 2; grid-row: 2; align-self: start; min-width: 0; }
   .shero .rest { grid-column: 1 / -1; grid-row: 3; }
   /* tác giả và số liệu xuống dòng thay vì chen dấu ngăn vào cuối dòng */
   .shero .who { display: block; margin: 0; font-size: 11.5px; line-height: 1.45; }
   .shero .who .u { display: block; }
   .shero .who i { display: none; }
-  .shero .stat { display: block; margin: 5px 0 0; font-size: 10.5px; line-height: 1.62; letter-spacing: .006em; }
-  .shero .stat > span { display: block; }
-  .shero .stat > span + span { margin-left: 0; padding-left: 0; border-left: 0; }
+  .shero .stat { display: block; margin: 7px 0 0; }
+  .shero .stat > .p { display: flex; align-items: baseline; gap: 5px; margin-top: 4px; }
+  .shero .stat i { font-size: 9px; letter-spacing: .11em; }
+  .shero .stat b { font-size: 11.5px; line-height: 1.5; }
   .shero .synwrap { margin-top: 14px; }
   .shero .syn, .shero .synwrap > .synin { font-size: 12.5px; line-height: 1.7; }
   .shero .synbtn { margin-top: 9px; font-size: 11.5px; }
   /* thanh đáy: điểm một hàng, nút một hàng — nút chính giãn, hai nút phụ 44×44 */
-  .shero .bar { margin: 14px -14px 0; padding: 13px 14px 0; flex-wrap: wrap; gap: 11px; }
-  .shero .bar .rating { order: 1; flex: 1 1 100%; }
-  .shero .bar .btn-row { order: 2; width: 100%; }
+  .shero .bar { margin: 14px -14px 0; padding: 13px 14px 0; flex-wrap: wrap; gap: 12px; }
+  .shero .bar .btn-row { order: 1; width: 100%; }
+  .shero .bar .mini { order: 2; width: 100%; min-width: 0; max-width: none; }
   .shero .btn-row .btn { height: 44px; font-size: 12px; }
   .shero .btn-row .btn.pri { flex: 1 1 auto; }
   .shero .btn-row .btn.ic, .shero .btn-row .btn.tx { width: 44px; height: 44px; flex: 0 0 44px;
@@ -2224,12 +2225,11 @@ kbd { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; b
   .shero .btn-row .btn.tx { order: 2; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .09);
     background: rgba(255, 255, 255, .045); color: rgba(255, 255, 255, .66); }
   .shero .btn-row .btn.tx .lbl { display: none; }
-  .shero .editable-rating .stars .st { width: 24px; height: 30px; }
-  .shero .editable-rating svg { width: 16px; height: 16px; }
-  .shero .prog { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 10px; margin-top: 14px; }
-  .shero .prog > span { grid-area: 1 / 1; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .shero .prog em { grid-area: 1 / 2; align-self: center; }
-  .shero .prog .bar { grid-area: 2 / 1 / 3 / 3; }
+  .shero .editable-rating { margin: 9px 0 0; }
+  .shero .editable-rating .rating-control { gap: 6px; }
+  .shero .editable-rating .stars .st { width: 18px; height: 20px; }
+  .shero .editable-rating svg { width: 12px; height: 12px; }
+  .shero .editable-rating .rl { display: none; }
 }
 
   .rnav { grid-template-columns: 1fr 1fr; }
