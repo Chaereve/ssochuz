@@ -1407,7 +1407,9 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .shero .hBg { position: absolute; inset: -10%; width: 120%; height: 120%; object-fit: cover;
   object-position: center 24%; filter: blur(26px) saturate(1.1) brightness(.44); z-index: -2; }
 .shero .hVeil { position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  background: linear-gradient(96deg, rgba(10, 7, 5, .95) 6%, rgba(10, 7, 5, .76) 48%, rgba(10, 7, 5, .28)); }
+  background:
+    linear-gradient(180deg, rgba(10, 7, 5, .30) 40%, rgba(10, 7, 5, .02) 88%),
+    linear-gradient(96deg, rgba(10, 7, 5, .94) 6%, rgba(10, 7, 5, .72) 48%, rgba(10, 7, 5, .24)); }
 .shero .in { display: grid; grid-template-columns: 172px minmax(0, 1fr); gap: 30px; align-items: stretch; }
 .shero .cover { position: relative; align-self: start; border-radius: 6px; overflow: hidden; border: 0;
   background: var(--surf2); aspect-ratio: 2/3; display: block;
@@ -1505,48 +1507,62 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
    Chữ thu nhỏ + bớt đệm: nhãn chỉ còn 11px, nút icon 44×44 không chữ.
    Ba đường lui bắt buộc ở cuối khối này (không nhoè / giảm trong suốt). */
 .shero .btn-row .btn {
-  height: 44px; padding: 0 15px; border-radius: 8px;
+  height: 44px; padding: 0 15px; border-radius: 9px;
   font-size: 11px; letter-spacing: .07em; gap: 8px;
-  /* nền kính hai lớp: một lớp sương trắng ở trên + một sàn tối rất nhẹ ở dưới
-     để icon trắng vẫn đọc được khi phía sau là vùng ảnh sáng */
-  background: linear-gradient(180deg, rgba(255, 255, 255, .15), rgba(255, 255, 255, .06)), rgba(18, 14, 11, .26);
-  border-color: rgba(255, 255, 255, .22); color: #fff;
-  -webkit-backdrop-filter: blur(10px) saturate(150%) brightness(1.22);
-  backdrop-filter: blur(10px) saturate(150%) brightness(1.22);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .42), 0 6px 18px rgba(0, 0, 0, .26);
+  /* kính trắng: trắng sữa 62% + nhoè nền, chữ/icon dùng mực tối nên đọc được cả
+     khi phía sau là vùng ảnh sáng (nền tối + icon trắng thì luôn bị “chìm”) */
+  background:
+    radial-gradient(150% 130% at 20% 0%, rgba(255, 255, 255, .92), rgba(255, 255, 255, 0) 68%),
+    linear-gradient(180deg, rgba(255, 255, 255, .70), rgba(255, 255, 255, .52)),
+    rgba(30, 24, 20, .10);
+  border-color: rgba(255, 255, 255, .62); color: #1a1113;
+  -webkit-backdrop-filter: blur(18px) saturate(170%) brightness(1.25);
+  backdrop-filter: blur(18px) saturate(170%) brightness(1.25);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, .95),
+    inset 1px 0 0 rgba(255, 255, 255, .5),
+    inset -1px 0 0 rgba(255, 255, 255, .45),
+    inset 0 -1px 0 rgba(255, 255, 255, .6),
+    0 12px 28px rgba(0, 0, 0, .34);
 }
-.shero .btn-row .btn:hover {
-  background: linear-gradient(180deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, .10)), rgba(18, 14, 11, .26);
-  border-color: rgba(255, 255, 255, .34); color: #fff;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), 0 8px 20px rgba(0, 0, 0, .3);
-}
+.shero .btn-row .btn:hover { border-color: #fff; background-color: rgba(255, 255, 255, .16); }
 .shero .btn-row .btn.ic { width: 44px; padding: 0; gap: 0; flex: 0 0 44px; }
-/* việc phụ (chia sẻ · RSS · đặt lại 18+) — nút vuông icon, dồn cuối hàng */
-.shero .btn-utils { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-.shero .btn-row .btn.ic .i, .shero .btn-row .btn.ic .i-s { width: 18px; height: 18px; }
+.shero .btn-row .btn.ic .i, .shero .btn-row .btn.ic .i-s { width: 18px; height: 18px;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .5)); }
 /* nút chính: kính pha son — vẫn son, nhưng trong và có đường loá như miếng kính */
 .shero .btn-row .btn.pri {
-  background: color-mix(in srgb, var(--acc) 84%, transparent); color: #1a1113;
-  border-color: rgba(255, 255, 255, .42);
-  -webkit-backdrop-filter: blur(8px) saturate(160%) brightness(1.18);
-  backdrop-filter: blur(8px) saturate(160%) brightness(1.18);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .62), 0 8px 22px rgba(224, 133, 155, .26);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, .62), rgba(255, 255, 255, .06) 52%),
+    linear-gradient(180deg, rgba(230, 142, 163, .99), rgba(214, 120, 142, .92));
+  color: #1a1113; text-shadow: none;
+  border-color: rgba(255, 255, 255, .55);
+  -webkit-backdrop-filter: blur(14px) saturate(180%) brightness(1.25);
+  backdrop-filter: blur(14px) saturate(180%) brightness(1.25);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, .95),
+    inset 0 -1px 0 rgba(255, 255, 255, .34),
+    0 12px 26px rgba(224, 133, 155, .34);
 }
 .shero .btn-row .btn.pri:hover {
-  background: color-mix(in srgb, var(--acc) 92%, transparent); color: #1a1113;
-  border-color: rgba(255, 255, 255, .55); filter: none;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7), 0 10px 24px rgba(224, 133, 155, .32);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, .62), rgba(255, 255, 255, .06) 58%),
+    linear-gradient(180deg, rgba(224, 133, 155, 1), rgba(224, 133, 155, .82));
+  color: #1a1113; border-color: rgba(255, 255, 255, .68); filter: none;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, .95),
+    inset 0 -1px 0 rgba(255, 255, 255, .3),
+    0 14px 30px rgba(224, 133, 155, .34);
 }
-.shero .btn-row .btn.ghost { color: #fff; }
+.shero .btn-row .btn.ghost { color: #1a1113; }
 .shero .btn-row .btn.on {
-  color: #ffd7e1; border-color: rgba(224, 133, 155, .68); background: rgba(224, 133, 155, .22);
+  color: #6d1130; border-color: rgba(224, 133, 155, .9); background: rgba(253, 224, 232, .82);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .34), 0 6px 18px rgba(0, 0, 0, .26);
 }
 /* nút chính bị khoá (chưa có chương): kính trơn, không còn hồng để không hứa hẹn bấm được */
 .shero .btn-row .btn.pri.off, .shero .btn-row .btn.pri[disabled] {
-  background: rgba(255, 255, 255, .10); border-color: rgba(255, 255, 255, .2);
-  color: rgba(243, 237, 233, .78); opacity: 1;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .52), rgba(255, 255, 255, .38));
+  border-color: rgba(255, 255, 255, .42); color: rgba(26, 17, 19, .52); opacity: 1;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7);
 }
 /* đường lui: máy không nhoè được nền → nền đặc hơn, chữ vẫn đủ tương phản */
 @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
@@ -2234,7 +2250,6 @@ kbd { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; b
   .shero .btn-row .btn { width: auto; font-size: 11px; }
   .shero .btn-row .btn.pri { flex: 1 1 100%; }              /* nút chính chiếm cả hàng */
   .shero .btn-row .btn.ic { width: 44px; height: 44px; flex: 0 0 44px; justify-content: center; }
-  .shero .btn-utils { margin: 2px 0 0 auto; }
   .shero .btn-row .lbl[hidden] { display: none; }
   .shero .prog { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 10px; margin-top: 14px; }
   .shero .prog > span { grid-area: 1 / 1; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

@@ -127,9 +127,6 @@
   function confirm18() {
     try { localStorage.setItem(LS18, String(Date.now())); } catch (e) {}
   }
-  function reset18() {
-    try { localStorage.removeItem(LS18); } catch (e) {}
-  }
   function isAdult() { return !!(N && N.is18); }
   /* bấm Đọc/next… mà chưa xác nhận độ tuổi → chặn, hiện modal */
   function adultGuard(go) {
@@ -141,7 +138,7 @@
       '<div class="mh"><h4>Nội dung dành cho người trưởng thành</h4></div>' +
       '<div class="mb"><p>“' + esc(String((N && N.title) || 'Truyện này')) + '” có nội dung <b>18+</b> — chỉ dành cho người từ 18 tuổi trở lên.</p>' +
       '<p>Tôi xác nhận mình đã đủ 18 tuổi và đồng ý xem nội dung này.</p></div>' +
-      '<div class="mf"><button class="btn ghost" data-close>Không — quay lại</button>' +
+      '<div class="mf"><button class="btn ghost" data-close>Quay lại</button>' +
       '<button class="btn pri" id="cz18ok">' + ic('check', 'i-s') + 'Tôi đã đủ 18 tuổi</button></div>');
     var ok = document.getElementById('cz18ok');
     if (ok) ok.addEventListener('click', function () {
@@ -322,11 +319,11 @@
     if (n.locked && !CHS.length) {
       return '<button class="btn pri lg" id="lockBtn" type="button" title="Cần mật mã để đọc truyện này">' + ic('lock', 'i-s') + 'Mở khóa</button>';
     }
-    if (!n.canRead) return '<button class="btn pri lg off" disabled>' + ic('clock', 'i-s') + 'Chưa có chương — sắp ra mắt</button>';
+    if (!n.canRead) return '<button class="btn pri lg off" disabled>' + ic('clock', 'i-s') + 'Sắp ra mắt</button>';
     /* truyện 18+ chưa xác nhận: nút thành chốt chặn, không đi thẳng vào chương */
     if (isAdult() && !confirmed18()) {
       return '<button class="btn pri lg" id="adultGate" type="button" title="Cần xác nhận độ tuổi để đọc">' +
-        ic('lock', 'i-s') + 'Xác nhận 18+ để đọc</button>';
+        ic('lock', 'i-s') + 'Xác nhận 18+</button>';
     }
     return '<a class="btn pri lg" href="' + chapterPath(ch || 1) + '" title="' +
       (ch > 1 ? 'Mở đúng chỗ bạn đang đọc dở' : 'Bắt đầu từ chương đầu') + '">' + ic('play', 'i-s') +
@@ -376,7 +373,7 @@
     if (!N || !CZ.API || (!force && key === ratingKey)) return;
     ratingKey = key; myStars = 0; var seq = ++ratingSeq;
     repaintRating();
-    CZ.myRating(SLUG).then(function(r){if(seq !== ratingSeq)return;myStars = r && r.ok ? Number(r.rating) || 0 : 0;repaintRating(r && r.ok ? '' : 'Chưa tải được đánh giá cá nhân. Bạn vẫn có thể chọn số sao.');});
+    CZ.myRating(SLUG).then(function(r){if(seq !== ratingSeq)return;myStars = r && r.ok ? Number(r.rating) || 0 : 0;repaintRating(r && r.ok ? '' : 'Không tải được đánh giá. Bạn vẫn chấm điểm được.');});
   }
   function bindRating() {
     var buttons = $$('#shero [data-star]');
@@ -392,8 +389,8 @@
          nói đúng bệnh thay vì chỉ báo "chưa lưu được" chung chung */
       var authBlocked = !result && value && window.CZ_AUTH && CZ_AUTH.current() && CZ_AUTH._verify && CZ_AUTH._verify.error;
       repaintRating(result && result.ok ? (value ? 'Đã lưu ' + value + '/5 sao.' : 'Đã rút đánh giá của bạn.')
-        : (authBlocked ? 'Máy chủ chưa xác nhận được phiên đăng nhập của bạn nên chưa lưu điểm. Bấm Đăng xuất rồi Đăng nhập lại ở đầu trang (hoặc thử lại khi chưa đăng nhập).' : 'Chưa lưu được. Đánh giá cũ được giữ nguyên, vui lòng thử lại.'));
-      if (result && result.ok) CZ.toast(value ? 'Đã đánh giá ' + value + ' trên 5 sao' : 'Đã rút đánh giá', 'ok');
+        : (authBlocked ? 'Máy chủ chưa xác nhận được phiên đăng nhập của bạn nên chưa lưu điểm. Bấm Đăng xuất rồi Đăng nhập lại ở đầu trang (hoặc thử lại khi chưa đăng nhập).' : 'Không lưu được. Đánh giá cũ vẫn giữ nguyên.'));
+      if (result && result.ok) CZ.toast(value ? 'Đã chấm ' + value + '/5 sao' : 'Đã rút đánh giá', 'ok');
       var focus = value ? $('#shero [data-star="'+value+'"]') : $('#shero [data-star="1"]');
       if (focus) focus.focus({preventScroll:true});
     }
@@ -526,8 +523,8 @@
       CZ.vote(n.slug, on, 0).then(function (r) {
         if (r && r.ok) {
           paint(r.total != null ? r.total : r.votes);
-          CZ.toast(on ? 'Cảm ơn bạn đã thích “' + n.title + '” · ' + num(r.total != null ? r.total : r.votes) + ' phiếu' : 'Đã bỏ thích');
-        } else CZ.toast(on ? 'Đã thích (lưu trong máy — chưa nối được Worker)' : 'Đã bỏ thích');
+          CZ.toast(on ? 'Đã thích · ' + num(r.total != null ? r.total : r.votes) + ' phiếu' : 'Đã bỏ thích');
+        } else CZ.toast(on ? 'Đã thích. Lưu trên máy này.' : 'Đã bỏ thích');
       });
     });
     /* khóa mật mã: nút Đọc dẫn xuống hộp nhập mật mã ở phần chương */
@@ -547,22 +544,8 @@
         enterReader(Math.max(1, Math.min(CHS.length, want)));
       });
     });
-    /* nút “Đặt lại” cho phép thiết lập lại xác nhận 18+ (dành cho máy dùng chung) */
-    if (isAdult() && confirmed18()) {
-      var rg = $('#shero .btn-row');
-      if (rg) {
-        var rb = document.createElement('button');
-        rb.className = 'btn ghost ic'; rb.type = 'button'; rb.id = 'reset18';
-        rb.title = 'Đặt lại xác nhận 18+ (dành cho máy dùng chung)';
-        rb.setAttribute('aria-label', rb.title);
-        rb.innerHTML = ic('refresh', 'i-s');
-        rb.addEventListener('click', function () {
-          reset18(); renderStory(); CZ.toast('Đã đặt lại — lần đọc sau sẽ hỏi xác nhận 18+');
-        });
-        /* nằm cùng cụm nút phụ ở cuối hàng, không chen vào 4 nút chính */
-        (rg.querySelector('.btn-utils') || rg).appendChild(rb);
-      }
-    }
+    /* Nút “Đặt lại xác nhận 18+” đã bỏ (vòng 66): hàng nút chỉ còn việc thật sự
+       dùng hằng ngày; xoá ghi nhớ 18+ thì xoá dữ liệu trang trong trình duyệt. */
     bindRating();
     renderInfo();
     var ct = $('#tabChapCt');
@@ -983,13 +966,13 @@
     var fsBtn = $('#fsBtn');
     if (fsBtn) fsBtn.addEventListener('click', function () {
       try {
-        if (!document.fullscreenElement) { document.documentElement.requestFullscreen(); toast('Đã vào fullscreen — bấm Esc để thoát'); }
+        if (!document.fullscreenElement) { document.documentElement.requestFullscreen(); toast('Đã vào toàn màn hình. Bấm Esc để thoát.'); }
         else { document.exitFullscreen(); }
-      } catch(e) { toast('Trình duyệt không hỗ trợ fullscreen'); }
+      } catch(e) { toast('Trình duyệt không hỗ trợ toàn màn hình.'); }
     });
     $('#setReset').addEventListener('click', function () {
       CZ.rdSet({ mode: 'scroll', size: 18, font: 'serif', line: 1.85, para: 1.05, theme: 'kem', width: 720, justify: 0 });
-      applyRD(); paintSettings(); relayout(); CZ.toast('Đã về mặc định');
+      applyRD(); paintSettings(); relayout(); CZ.toast('Đã đặt lại mặc định.');
     });
   }
   function paintTOC() {
@@ -1444,7 +1427,7 @@
           paint(r.votes, r.total != null ? r.total : r.votes);
           toast(on ? ('Đã thích ' + chapLabel(cur) + ' · ' + num(r.votes) + ' người thích chương này') : ('Đã bỏ thích ' + chapLabel(cur)));
         } else {
-          toast(on ? 'Đã thích (lưu trên máy bạn — chưa nối được Worker nên bảng xếp hạng chưa tăng)' : 'Đã bỏ thích');
+          toast(on ? 'Đã thích. Lưu trên máy này.' : 'Đã bỏ thích');
         }
       });
     });
@@ -1461,7 +1444,7 @@
       this.setAttribute('aria-label', lab);
       CZ.refreshFollowUI(N.slug);   /* nút hero + huy hiệu đổi theo */
       CZ.pop(this);
-      toast(on ? 'Đã theo dõi — có chương mới sẽ hiện huy hiệu đỏ' : 'Đã bỏ theo dõi');
+      toast(on ? 'Đã theo dõi. Chương mới sẽ hiện huy hiệu đỏ.' : 'Đã bỏ theo dõi');
       if (CZ.followPushHook) CZ.followPushHook(on);   /* hỏi bật thông báo đẩy */
     });
     $('#actMark').addEventListener('click', function () {
@@ -1489,15 +1472,14 @@
       var text = head + '\n' + link + '\n\nChỗ cần sửa: ';
       var m = CZ.modal('czReport',
         '<div class="mh"><h4>Báo lỗi chữ</h4></div>' +
-        '<div class="mb"><p class="sm muted">Ghi rõ chỗ sai rồi bấm <b>Gửi báo lỗi</b> — nội dung tới thẳng hộp thư ban biên tập, ' +
-          'trang đã kèm sẵn tên bộ, số chương và link nên bạn không phải copy gì cả.</p>' +
+        '<div class="mb"><p class="sm muted">Ghi rõ chỗ sai rồi bấm <b>Gửi báo lỗi</b>. Tên bộ, chương và liên kết đã có sẵn trong nội dung gửi đi.</p>' +
         '<textarea class="inp ta" id="rpText" rows="6" maxlength="4000" spellcheck="false">' + esc(text) + '</textarea>' +
-        '<label class="sm muted" for="rpImage">Ảnh chụp màn hình (không bắt buộc)</label>' +
+        '<label class="sm muted" for="rpImage">Ảnh chụp màn hình (tuỳ chọn)</label>' +
         '<input class="inp" id="rpImage" type="file" accept="image/jpeg,image/png,image/webp">' +
-        '<div class="sm muted" id="rpImageNote">Ảnh sẽ được nén trước khi tải lên (tối đa 12 MB ảnh gốc).</div>' +
+        '<div class="sm muted" id="rpImageNote">Ảnh được nén trước khi gửi. Tối đa 12 MB.</div>' +
         '<div class="sm muted rpcount" id="rpCount" aria-live="off"></div>' +
         '<div class="mt row" id="rpFall" style="display:none">' +
-          '<button class="btn ghost sm" id="rpCopy" type="button">' + ic('copy', 'i-s') + ' Copy nội dung</button>' +
+          '<button class="btn ghost sm" id="rpCopy" type="button">' + ic('copy', 'i-s') + ' Sao chép</button>' +
         '</div></div>' +
         '<div class="mf"><span class="sm muted" id="rpNote" role="status" aria-live="polite"></span>' +
         '<button class="btn ghost" data-close>Đóng</button>' +
@@ -1513,7 +1495,7 @@
       }
       if (cbox) { paintCount(); ta.addEventListener('input', paintCount); }
       function fallback(why) {
-        note.textContent = why + ' Bạn có thể copy nội dung rồi gửi qua kênh liên hệ công khai.';
+        note.textContent = why + ' Sao chép nội dung và gửi qua kênh liên hệ công khai.';
         var f = m.querySelector('#rpFall');
         if (f) f.style.display = '';
       }
@@ -1525,7 +1507,7 @@
         /* mẫu tin có sẵn tên bộ + link nên phải đòi thêm phần người đọc tự ghi, không cho gửi trống */
         var added = body.replace(text.trim(), '').trim();
         if (body.length < 20 || added.length < 3) {
-          note.textContent = 'Bạn ghi thêm chỗ cần sửa giúp mình nhé.';
+          note.textContent = 'Ghi rõ chỗ cần sửa giúp mình.';
           try { ta.focus(); } catch (e) {}
           return;
         }
@@ -1564,7 +1546,7 @@
     /* cuối chương: đã bỏ dòng Hết chương / Chương kế tiếp theo yêu cầu */
     var last = cur >= CHS.length;
     $('#rdEnd').innerHTML = last
-      ? '<div class="endrule" aria-hidden="true"></div><div class="endline"><span class="endsub">Bộ này đang cập nhật — lưu vào tủ truyện để quay lại khi có chương mới.</span></div><a class="btn ghost sm mt" href="' + esc(CZ.storyURL(N.slug)) + '" id="endInfo">' + ic('info', 'i-s') + 'Thông tin truyện</a>'
+      ? '<div class="endrule" aria-hidden="true"></div><div class="endline"><span class="endsub">Bộ này đang cập nhật. Lưu vào tủ truyện để quay lại khi có chương mới.</span></div><a class="btn ghost sm mt" href="' + esc(CZ.storyURL(N.slug)) + '" id="endInfo">' + ic('info', 'i-s') + 'Thông tin truyện</a>'
       : '<div class="endrule" aria-hidden="true"></div>';
     var currentScrollPercent = 0;
     if (s.mode !== 'paged') {
@@ -1951,7 +1933,7 @@
           '<h3>Truyện này được bảo vệ bằng mật mã</h3>' +
           '<p class="lg-sub">“' + esc(N.title) + '” chỉ mở cho người có mật mã do chủ web cung cấp. ' +
           'Thẻ truyện và phần giới thiệu vẫn công khai — danh sách chương và nội dung chỉ hiện sau khi mở khóa.</p>' +
-          (CZ.API ? '' : '<p class="lg-warn">Máy này đang dùng dữ liệu tĩnh (chưa nối được Worker) nên không xác minh mật mã được. Hãy mở web khi có kết nối rồi thử lại.</p>') +
+          (CZ.API ? '' : '<p class="lg-warn">Chưa kết nối máy chủ nên chưa kiểm tra được mật mã. Mở lại khi có mạng.</p>') +
           '<form id="unlockForm" novalidate>' +
             '<label class="fl" for="unlockPw">Mật mã của truyện</label>' +
             '<div class="lg-row">' +
@@ -1979,7 +1961,7 @@
       e.preventDefault();
       var inp = $('#unlockPw'), btn = form.querySelector('button[type="submit"]'), msgEl = $('#unlockMsg');
       if (!CZ.API) {
-        msgEl.textContent = 'Chưa nối Worker — không mở khóa được ở chế độ dữ liệu tĩnh.';
+        msgEl.textContent = 'Chưa kết nối máy chủ. Chưa mở khoá được.';
         msgEl.className = 'lg-msg err';
         return;
       }

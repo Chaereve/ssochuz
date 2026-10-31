@@ -594,7 +594,7 @@
         hero(shown, true); profileForm(shown);
         window.CZ_AUTH.applyServerProfile(Object.assign({}, space.profile, { avatarOff: space.profile.avatarOff }));
         setMessage($('#profileMessage'), 'Đã lưu hồ sơ — tên và ảnh này dùng chung cho bình luận và hồ sơ công khai.', 'ok');
-        if (CZ.toast) CZ.toast('Đã lưu hồ sơ', 'ok');
+        if (CZ.toast) CZ.toast('Đã lưu hồ sơ.', 'ok');
       } catch (err) { setMessage($('#profileMessage'), err.message, 'err'); }
       finally { button.disabled = false; button.textContent = 'Lưu hồ sơ'; }
     };
@@ -658,7 +658,7 @@
         try { localStorage.removeItem('ssochuz-prog-' + k); localStorage.removeItem('ssochuz-when-' + k); } catch (err) {}
       });
       localData();
-      if (CZ.toast) CZ.toast('Đã xoá tiến độ của bộ này');
+      if (CZ.toast) CZ.toast('Đã xoá tiến độ của bộ này.');
     };
     $('#clearHistory').onclick = async function () {
       if (!await CZ.confirm('Xoá lịch sử và tiến độ đọc trên thiết bị này? Thống kê và tủ truyện vẫn giữ nguyên.', 'Xoá lịch sử')) return;
@@ -668,7 +668,7 @@
         });
       });
       localData();
-      if (CZ.toast) CZ.toast('Đã xoá lịch sử đọc trên thiết bị này');
+      if (CZ.toast) CZ.toast('Đã xoá lịch sử đọc trên máy này.');
     };
     $('#newShelf').onclick = function () { editShelf(); };
     var openNewBtn = $('#openNewShelf');

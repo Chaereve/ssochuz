@@ -63,10 +63,9 @@ function api(p, opt, statsItems) {
     setup(w) { try { w.localStorage.setItem('ssochuz-confirmed18', String(Date.now())); } catch (e) {} }
   });
   await wait(1600);
+  /* vòng 66: nút “Đặt lại xác nhận 18+” đã bỏ khỏi hàng nút — kiểm đúng luật mới */
   out.nutDatLai = !!$(confirmed.doc, '#reset18');
-  const rBtn = $(confirmed.doc, '#reset18');
-  if (rBtn) rBtn.dispatchEvent(new confirmed.win.MouseEvent('click', { bubbles: true })); await wait(200);
-  out.datLaiXoaLocal = !confirmed.win.localStorage.getItem('ssochuz-confirmed18');
+  out.ghiNho18ConNguyen = !!confirmed.win.localStorage.getItem('ssochuz-confirmed18');
 
   /* ---------- 3. hero có nhãn reason riêng + BXH 0 phiếu → đọc nhiều nhất ---------- */
   const home = page('index.html', {
@@ -112,8 +111,8 @@ function api(p, opt, statsItems) {
   eq('18+/bấm mở modal xác nhận', out.modal18Hien, true);
   eq('18+/xác nhận xong vào trang đọc', out.daXacNhan, true);
   eq('18+/ghi nhớ khoác ssochuz-confirmed18', !!out.local, true);
-  eq('18+/có nút Đặt lại xác nhận', out.nutDatLai, true);
-  eq('18+/đặt lại xoá ghi nhớ', out.datLaiXoaLocal, true);
+  eq('18+/không còn nút Đặt lại xác nhận', out.nutDatLai, false);
+  eq('18+/ghi nhớ 18+ vẫn còn sau khi mở truyện', out.ghiNho18ConNguyen, true);
   eq('hero/slide có badge trạng thái', out.heroBadge.length >= 1, true);
   eq('hero/không còn nhãn mục (eyebrow)', out.heroEyebrow, 0);
   eq('Ranking giữ đúng tên dù không có phiếu', out.rankTitle, 'Ranking');

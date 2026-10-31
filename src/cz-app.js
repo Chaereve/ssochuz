@@ -361,7 +361,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         memo.stats = st;
         return st;
       }
-      memo.stats = { on: false, items: {}, err: API ? 'chưa có lượt đọc/bình chọn nào trên KV' : 'chưa nối Worker nên không có số liệu' };
+      memo.stats = { on: false, items: {}, err: API ? 'chưa có lượt đọc hay bình chọn' : 'chưa có số liệu' };
       return memo.stats;
     });
   }
@@ -858,8 +858,8 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         m._close();
         pushSubscribe().then(function (r) {
           if (r === 'new' || r === 'old') toast('Đã bật thông báo chương mới');
-          else if (r === 'err') toast('Chưa bật được thông báo đẩy — hãy thử lại khi có mạng', 'err');
-          else if (r === 'denied' || r === 'no') toast('Chưa bật được — kiểm tra quyền thông báo của trình duyệt');
+          else if (r === 'err') toast('Không bật được thông báo. Kiểm tra kết nối rồi thử lại.', 'err');
+          else if (r === 'denied' || r === 'no') toast('Trình duyệt đang chặn thông báo. Mở cài đặt để cho phép.');
         });
       });
     }).catch(function () {});
@@ -1340,14 +1340,14 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         d.body.appendChild(b); b.click(); b.remove();
         return true;
       } catch (e2) {
-        toast('Trình duyệt không cho tải tệp — bạn copy nội dung trong bảng thay thế');
+        toast('Trình duyệt chặn tải tệp. Sao chép nội dung trong bảng.');
         return false;
       }
     }
   }
   function copy(text, okMsg) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      return navigator.clipboard.writeText(text).then(function () { toast(okMsg || 'Đã copy liên kết'); return true; })
+      return navigator.clipboard.writeText(text).then(function () { toast(okMsg || 'Đã sao chép liên kết'); return true; })
         .catch(function () { toast(text); return false; });
     }
     toast(text);
@@ -1707,18 +1707,18 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       task.then(function (saved) {
         b.disabled = false;
         refreshFollowUI(slug);
-        toast(saved ? 'Đã theo dõi — có chương mới sẽ hiện ở trang chủ' : 'Đã bỏ theo dõi');
+        toast(saved ? 'Đã theo dõi. Chương mới sẽ hiện ở trang chủ.' : 'Đã bỏ theo dõi');
         followPushHook(saved);   /* chỉ hỏi bật Push sau khi lưu thành công */
       }).catch(function (error) {
         b.disabled = false;
         refreshFollowUI(slug);  /* service đã hoàn tác optimistic update */
-        toast(error.message || 'Không lưu được trạng thái theo dõi', 'err');
+        toast(error.message || 'Không lưu được. Thử lại sau.', 'err');
       });
       return;
     }
     on = toggleFollow(findLib(slug) || { slug: slug });
     refreshFollowUI(slug);
-    toast(on ? 'Đã theo dõi — có chương mới sẽ hiện ở trang chủ' : 'Đã bỏ theo dõi');
+    toast(on ? 'Đã theo dõi. Chương mới sẽ hiện ở trang chủ.' : 'Đã bỏ theo dõi');
     followPushHook(on);
   }, true);
   w.addEventListener('cz:personal', function (event) {
@@ -2246,7 +2246,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     if (isIOS()) {
       modal('czIosGuide',
         '<div class="mh"><h4>Cài app ssochuz library</h4></div>' +
-        '<div class="mb"><p>iPhone/iPad chưa hỗ trợ nút cài tự động — bạn cài bằng tay nhé:</p>' +
+        '<div class="mb"><p>iPhone/iPad chưa hỗ trợ cài tự động. Cài thủ công theo các bước sau:</p>' +
         '<p><b>1.</b> Bấm nút <b>Chia sẻ</b> ' + icon('share', 'i-s') + ' ở thanh công cụ Safari.<br>' +
         '<b>2.</b> Chọn <b>Thêm vào Màn hình chính</b>.<br>' +
         '<b>3.</b> Bấm <b>Thêm</b> là xong — app mở toàn màn hình, đọc được offline.</p></div>' +
@@ -2278,7 +2278,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     if (!('serviceWorker' in navigator)) return;
     if (location.protocol !== 'http:' && location.protocol !== 'https:') return;
     w.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferredPrompt = e; paintInstall(); });
-    w.addEventListener('appinstalled', function () { deferredPrompt = null; paintInstall(); toast('Đã cài app ssochuz library'); });
+    w.addEventListener('appinstalled', function () { deferredPrompt = null; paintInstall(); toast('Đã cài ứng dụng.'); });
     /* đăng ký sau khi trang tải xong để không giành mạng với nội dung chính */
     if (d.readyState === 'complete') swRegister(); else w.addEventListener('load', swRegister);
   }
@@ -2722,8 +2722,8 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         var nm = host.querySelector('[data-reply-form="' + safeId + '"] [data-reply-name]');
         var text = ta ? String(ta.value || '').replace(/[\r\n\t]+/g, ' ').trim() : '';
         var selectedSticker = state.replyStickers[safeId] || '';
-        if (!text && !stickerOf(selectedSticker)) { toast('Viết câu trả lời hoặc chọn sticker trước khi gửi', 'err'); if (ta) ta.focus(); return; }
-        if (!base()) { toast('Chưa nối Worker (cz-config.js) nên không gửi được trả lời', 'err'); return; }
+        if (!text && !stickerOf(selectedSticker)) { toast('Nhập nội dung hoặc chọn sticker trước khi gửi.', 'err'); if (ta) ta.focus(); return; }
+        if (!base()) { toast('Chưa kết nối máy chủ. Chưa gửi được.', 'err'); return; }
         if (state.busy) return;
         state.busy = true;
         if (sd) { sd.disabled = true; sd.textContent = 'Đang gửi…'; }
@@ -2758,8 +2758,8 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         var ta = host.querySelector('[data-text]');
         var sd = host.querySelector('[data-send]');
         var text = ta ? String(ta.value || '').replace(/\s+/g, ' ').trim() : '';
-        if (!text && !stickerOf(state.stickerId)) { toast('Viết bình luận hoặc chọn sticker trước khi gửi', 'err'); if (ta) ta.focus(); return; }
-        if (!base()) { toast('Chưa nối Worker (cz-config.js) nên không gửi được bình luận', 'err'); return; }
+        if (!text && !stickerOf(state.stickerId)) { toast('Nhập nội dung hoặc chọn sticker trước khi gửi.', 'err'); if (ta) ta.focus(); return; }
+        if (!base()) { toast('Chưa kết nối máy chủ. Chưa gửi được.', 'err'); return; }
         if (state.busy) return;
         state.busy = true;
         if (sd) { sd.disabled = true; sd.textContent = 'Đang gửi…'; }
@@ -2779,7 +2779,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
                 /* token hết hạn hoặc Worker chưa có SUPABASE_URL -> ưu tiên hiển thị
                    LÝ DO thật từ body Worker (bản mới trả kèm nguyên nhân cụ thể),
                    không âm thầm biến thành khách */
-                throw new Error(j.error || 'Phiên đăng nhập hết hạn — hãy đăng nhập lại (hoặc kiểm tra cấu hình SUPABASE_URL/SESSION_SECRET trên Worker)');
+                throw new Error(j.error || 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
               }
               throw new Error(j.error || ('HTTP ' + r.status));
             }
@@ -2812,12 +2812,12 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
               load(true);
               toast('Đã xoá bình luận', 'ok');
             });
-          }).catch(function (e) { toast(String(e.message || 'Không xoá được'), 'err'); });
+          }).catch(function (e) { toast(String(e.message || 'Không xoá được. Thử lại sau.'), 'err'); });
         });
       }
       function load(keepUI) {
         if (!base()) {
-          host.innerHTML = '<div class="cmt-wrap"><div class="cmt-status">Chưa nối Worker (<code>cz-config.js</code>) nên chưa đọc được bình luận.</div></div>';
+          host.innerHTML = '<div class="cmt-wrap"><div class="cmt-status">Chưa tải được bình luận.</div></div>';
           return Promise.resolve(0);
         }
         if (!keepUI) { state.busy = true; paint(); }
