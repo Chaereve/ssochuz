@@ -467,21 +467,18 @@
             (syn
               ? '<button class="synbtn" id="synToggle" type="button" aria-controls="synIn" aria-expanded="' + synopsisOpen + '"><span class="syn-label">' + (synopsisOpen ? 'Thu gọn' : 'Đọc giới thiệu đầy đủ') + '</span>' + ic('right', 'i-s') + '</button>'
               : '') +
+            /* Hàng nút gọn (vòng 66): một nút chữ duy nhất là CTA chính; việc phụ
+               đứng cạnh nhau dưới dạng ICON 44×44. Nút chia sẻ, RSS và nút đặt
+               lại 18+ đã bỏ khỏi hàng — mỗi nút icon vẫn có aria-label + title
+               nên trình đọc màn hình và rê chuột đều hiểu, chỉ là không chiếm chữ. */
             '<div class="btn-row">' + readBtn(n, ch) +
-              (n.canRead && ch && ch < n.chapters ? '<a class="btn ghost" href="' + chapterPath(n.chapters) + '">' + ic('up', 'i-s') + 'Chương mới nhất</a>' : '') +
+              (n.canRead && ch && ch < n.chapters ? '<a class="btn ghost" href="' + chapterPath(n.chapters) + '" title="Đọc chương mới nhất (chương ' + n.chapters + ')">' + ic('up', 'i-s') + 'Chương mới nhất</a>' : '') +
               /* nút chuông chuyển từ card trang chủ vào đây cho gọn — bấm ở đâu
                  (hero/reader) thì hai nơi tự đổi theo nhờ refreshFollowUI */
-              '<button class="btn ghost' + (CZ.isFollowed(n) ? ' on' : '') + '" data-followbtn="' + esc(n.slug) + '" aria-pressed="' + CZ.isFollowed(n) + '" title="' + (CZ.isFollowed(n) ? 'Bỏ theo dõi (không báo chương mới nữa)' : 'Theo dõi — báo khi có chương mới') + '">' + ic('bell', 'i-s') +
-                '<span class="lbl">' + (CZ.isFollowed(n) ? 'Đang theo dõi' : 'Theo dõi') + '</span></button>' +
-              '<button class="btn ghost' + (CZ.inShelf(n) ? ' on' : '') + '" id="shelfBtn" aria-pressed="' + CZ.inShelf(n) + '" title="Lưu vào tủ truyện của bạn (icon tủ sách)">' + ic('shelf', 'i-s') +
-                '<span>' + (CZ.inShelf(n) ? 'Đã lưu' : 'Tủ truyện') + '</span></button>' +
-              /* ba việc phụ (chia sẻ / RSS / đặt lại 18+) gom thành nút icon cùng cỡ,
-                 dồn về cuối hàng — hàng nút chính vẫn đúng 4 nút như bản vẽ đã duyệt */
-              '<span class="btn-utils">' +
-                '<button class="btn ghost ic" id="shareBtn" type="button" title="Chia sẻ liên kết bộ truyện" aria-label="Chia sẻ liên kết bộ truyện">' + ic('share', 'i-s') + '</button>' +
-                /* RSS riêng bộ này — feed reader theo dõi được từng truyện */
-                (CZ.API && SLUG.indexOf('private-') !== 0 ? '<a class="btn ghost ic" href="' + esc(CZ.API + '/feed.xml?slug=' + encodeURIComponent(n.slug)) + '" target="_blank" rel="noopener" title="RSS riêng bộ này (dùng cho Feedly, Inoreader…)" aria-label="RSS của bộ này">' + ic('rss', 'i-s') + '</a>' : '') +
-              '</span>' +
+              '<button class="btn ghost ic' + (CZ.isFollowed(n) ? ' on' : '') + '" data-followbtn="' + esc(n.slug) + '" aria-pressed="' + CZ.isFollowed(n) + '" title="' + (CZ.isFollowed(n) ? 'Bỏ theo dõi (không báo chương mới nữa)' : 'Theo dõi — báo khi có chương mới') + '" aria-label="' + (CZ.isFollowed(n) ? 'Bỏ theo dõi ' : 'Theo dõi ') + esc(n.title) + '">' + ic('bell', 'i-s') +
+                '<span class="lbl" hidden>' + (CZ.isFollowed(n) ? 'Đang theo dõi' : 'Theo dõi') + '</span></button>' +
+              '<button class="btn ghost ic' + (CZ.inShelf(n) ? ' on' : '') + '" id="shelfBtn" aria-pressed="' + CZ.inShelf(n) + '" title="' + (CZ.inShelf(n) ? 'Bỏ khỏi tủ truyện' : 'Lưu vào tủ truyện') + '" aria-label="' + (CZ.inShelf(n) ? 'Bỏ khỏi tủ truyện ' : 'Lưu vào tủ truyện ') + esc(n.title) + '">' + ic('shelf', 'i-s') +
+                '<span class="lbl" hidden>' + (CZ.inShelf(n) ? 'Đã lưu' : 'Tủ truyện') + '</span></button>' +
             '</div>' +
           '</div>' +
         '</div>' +
@@ -531,7 +528,6 @@
         } else CZ.toast(on ? 'Đã thích (lưu trong máy — chưa nối được Worker)' : 'Đã bỏ thích');
       });
     });
-    $('#shareBtn').addEventListener('click', function () { CZ.copy(location.origin + CZ.storyURL(n.slug), 'Đã copy link bộ truyện'); });
     /* khóa mật mã: nút Đọc dẫn xuống hộp nhập mật mã ở phần chương */
     var lk = $('#lockBtn');
     if (lk) lk.addEventListener('click', function () {
