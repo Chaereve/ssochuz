@@ -1439,8 +1439,8 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 /* Tiêu đề: dữ liệu viết hoa toàn bộ nên hạ cỡ và giãn nhẹ — chữ hoa kéo sít lại
    thì luôn trông nặng và thô. Canh quang học: kéo lên 1px cho ngang đỉnh bìa. */
 .shero h1 { min-width: 0; margin: -1px 0 0;
-  font-family: var(--font-head); font-weight: 400; font-size: clamp(24px, 2.4vw, 32px);
-  line-height: 1.18; letter-spacing: .004em; color: #f7f1e7; text-wrap: balance; }
+  font-family: var(--font-head); font-weight: 400; font-size: clamp(26px, 2.5vw, 33px);
+  line-height: 1.15; letter-spacing: -.004em; color: #f7f1e7; text-wrap: balance; }
 /* TẦNG 1 — tác giả (sáng, đậm) và cặp đôi (mờ hơn), ngăn bằng dấu “·”. */
 .shero .who { display: flex; align-items: center; flex-wrap: wrap; gap: 0 2px;
   margin: 13px 0 0; font-size: 13.5px; line-height: 1.5; color: rgba(255, 255, 255, .56); }
@@ -1656,7 +1656,7 @@ mark.hit { background: var(--acc-soft); color: var(--acc); padding: 0 2px; borde
 .stab { display: inline-flex; align-items: center; gap: 7px; padding: 12px 16px 13px; font-size: 14px; font-weight: 650;
   color: var(--mut); border-radius: var(--r) var(--r) 0 0;
   transition: color var(--t) var(--ease), background var(--t) var(--ease); }
-.stab:hover { color: var(--txt); background: color-mix(in srgb, var(--surf2) 65%, transparent); }
+.stab:not(.on):hover { color: var(--txt); background: color-mix(in srgb, var(--surf2) 65%, transparent); }
 .stab.on { color: var(--txt); }
 .stab .ct { padding: 1px 7px; border-radius: 99px; background: var(--surf2); color: var(--dim);
   font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; }
@@ -1674,20 +1674,35 @@ mark.hit { background: var(--acc-soft); color: var(--acc); padding: 0 2px; borde
 /* Tab Thông tin — bố cục vòng 78 (A): nhãn in hoa cỡ nhỏ NẰM TRÊN giá trị, lưới
    ba cột, không kẻ ngang giữa các mục. Bảng nhãn-trái/giá-trị-phải cũ đẩy hai
    đầu ra hai mép khung 1032px nên mắt phải nhảy gần 900px mỗi dòng. */
-.info .igrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
-  column-gap: 34px; row-gap: 22px; margin: 0; padding: 2px 0 20px;
+.info .igrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  column-gap: 30px; row-gap: 22px; margin: 0; padding: 2px 0 20px;
   border-bottom: 1px solid var(--bd); }
+@media (max-width: 1020px) { .info .igrid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .info .ikv { min-width: 0; }
+#pane-info, #chapSec { margin-top: 30px; }
 .info dt { margin: 0 0 8px; font: 500 9.5px/1 var(--font-mono); letter-spacing: .13em;
   text-transform: uppercase; color: var(--dim); }
 .info dd { margin: 0; font-size: 14.5px; line-height: 1.35; font-weight: 500; color: var(--txt);
   font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .info dd.acc { color: var(--acc); font-weight: 600; }
 .info dd.dim { color: var(--mut); font-weight: 400; }
+/* Tác giả / couple dẫn sang danh sách của họ: giá trị là link, và cả ô (nhãn +
+   giá trị) là vùng bấm nhờ lớp phủ ::after — đích to hơn chữ, không thêm hộp,
+   không thêm nút. Mũi tên nhỏ nói trước là bấm được, rê vào mới sáng lên. */
+.info .ikv.has-lnk { position: relative; }
+.info dd a.lnk { display: inline-flex; align-items: baseline; gap: 5px; color: inherit;
+  text-decoration: none; transition: color var(--t-fast) var(--ease); }
+.info dd a.lnk::after { content: ""; position: absolute; inset: 0; border-radius: 4px; }
+.info dd a.lnk .i { flex: none; align-self: center; width: 13px; height: 13px; color: var(--dim);
+  transition: color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
+.info .ikv.has-lnk:hover dt { color: var(--mut); }
+.info dd a.lnk:hover, .info dd a.lnk:hover .i { color: var(--acc); }
+.info dd a.lnk:hover .i { transform: translateX(2px); }
 @media (max-width: 860px) {
   .infogrid { grid-template-columns: 1fr; gap: 26px; }
   .info .igrid { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 18px; row-gap: 18px;
     padding-bottom: 16px; }
+  #pane-info, #chapSec { margin-top: 22px; }
   .info dd { font-size: 13.5px; }
   .storytabs { margin-top: 20px; }
   .stab { padding: 11px 12px 12px; font-size: 13.5px; }
@@ -2208,7 +2223,7 @@ kbd { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; b
      giả nằm cạnh nhau ngay dưới tiêu đề. */
   .shero .in { grid-template-columns: 132px minmax(0, 1fr); gap: 0 14px; }
   .shero .cover { grid-column: 1; grid-row: 2; width: 100%; }
-  .shero h1 { grid-column: 1 / -1; grid-row: 1; margin: 0 0 13px; font-size: 17px; line-height: 1.24; }
+  .shero h1 { grid-column: 1 / -1; grid-row: 1; margin: 0 0 13px; font-size: 20px; line-height: 1.22; }
   .shero .txtW { display: contents; }
   .shero .txtC { grid-column: 2; grid-row: 2; align-self: start; min-width: 0; }
   .shero .rest { grid-column: 1 / -1; grid-row: 3; }

@@ -25,7 +25,7 @@
   <!-- hai khối nội dung, chuyển bằng thanh tab có gạch chân trượt -->
   <div class="storytabs" id="storyTabs" role="tablist" aria-label="Nội dung truyện">
     <span class="ink" id="stInk" aria-hidden="true"></span>
-    <button class="stab" data-tab="info" role="tab" aria-selected="false">Thông tin</button>
+    <button class="stab" id="tabInfo" data-tab="info" role="tab" aria-selected="false">Thông tin</button>
     <button class="stab on" data-tab="chap" role="tab" aria-selected="true">Danh sách chương<span class="ct" id="tabChapCt"></span></button>
   </div>
 
@@ -45,8 +45,10 @@
     <div class="pager" id="chapPager"></div>
   </section>
 
-  <section class="sec" id="pane-info" hidden>
-    <div class="sechead"><h2>Thông tin truyện</h2></div>
+  <!-- Không đặt lại tiêu đề “Thông tin truyện” ở đây: thanh tab ngay trên đã là
+       tên của khối. Một h2 lặp lại nhãn tab làm cấp bậc trang rối (ba cỡ chữ
+       cùng nói một việc) nên bỏ; khối lấy tên từ chính nút tab qua aria-labelledby. -->
+  <section class="sec" id="pane-info" hidden aria-labelledby="tabInfo">
     <div class="info" id="storyInfo"></div>
   </section>
 

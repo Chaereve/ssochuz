@@ -575,11 +575,16 @@
     /* Bố cục vòng 78 (phương án A): mỗi mục là NHÃN in hoa cỡ nhỏ nằm trên,
        giá trị ngay bên dưới — mắt không phải nhảy sang mép phải của khung
        1032px như bảng hai cột cũ. Lưới ba cột, không kẻ ngang giữa các mục;
-       chỉ một đường kẻ mảnh đóng phần dữ liệu trước hàng link “tất cả truyện”. */
+       chỉ một đường kẻ mảnh đóng phần dữ liệu. Tác giả và couple tự là link. */
     var chPct = ch && n.chapters ? progressPct(n, ch) : 0;
+    /* Tác giả và couple là ĐÍCH ĐẾN, không chỉ là chữ: bấm vào ô là sang danh
+       sách của người đó. Dùng lại hai route có sẵn (/tac-gia/, /couple/) nên
+       không thêm trang mới; toàn bộ ô bấm được, không chỉ chữ. */
+    var authorURL = n.author ? '/tac-gia/?q=' + encodeURIComponent(CZ.slugify(n.author)) : '';
+    var coupleURL = n.couple ? '/couple/?q=' + encodeURIComponent(CZ.slugify(n.couple)) : '';
     var cells = [
-      ['Tác giả', n.author || '—', ''],
-      ['Couple', n.couple || '—', ''],
+      ['Tác giả', n.author || '—', '', authorURL],
+      ['Couple', n.couple || '—', '', coupleURL],
       ['Năm', n.year || '—', ''],
       ['Tình trạng', CZ.statusLabel(n.statusCls || n.status), ''],
       /* nhãn đã nói “chương” nên giá trị chỉ còn con số (bản cũ in “39 chương”) */
@@ -593,8 +598,13 @@
     var info = $('#storyInfo');
     if (!info) return;
     info.innerHTML = '<dl class="igrid">' + cells.map(function (c) {
-      return '<div class="ikv"><dt>' + esc(c[0]) + '</dt><dd' +
-        (c[2] ? ' class="' + c[2] + '"' : '') + '>' + esc(String(c[1])) + '</dd></div>';
+      var val = esc(String(c[1]));
+      if (c[3] && c[1] !== '—') {
+        val = '<a class="lnk" href="' + esc(c[3]) + '" title="Xem mọi truyện của ' +
+          esc(String(c[1])) + '">' + val + ic('right', 'i-s') + '</a>';
+      }
+      return '<div class="ikv' + (c[3] && c[1] !== '—' ? ' has-lnk' : '') + '"><dt>' + esc(c[0]) +
+        '</dt><dd' + (c[2] ? ' class="' + c[2] + '"' : '') + '>' + val + '</dd></div>';
     }).join('') + '</dl>';
   }
   /* một dòng chương: số · tên (tô sáng khi tìm) · dấu đã đọc / đã đánh dấu.
