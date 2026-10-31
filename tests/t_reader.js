@@ -283,12 +283,12 @@ function chFromLog(log) {
     out.soChuong = {
       registryNoi: soSai,
       chuongThat: thatTrongFile,
-      dongChuong: t2('#chapCount'),
+      dongChuong: t2('#tabChapCt'),
       oThongTin: infoRows.slice(0, 2),
       soChuongTrongLuoi: d2.querySelectorAll('#chapGrid .cha').length,
       daTuSuaTrongMay: p2.win.localStorage.getItem('ssochuz-realcounts'),
-      hienDungSo: t2('#chapCount').indexOf(String(thatTrongFile)) >= 0 && t2('#chapCount').indexOf(String(soSai)) < 0,
-      khongConSoSai: !/\b30\b/.test(t2('#chapCount')),
+      hienDungSo: t2('#tabChapCt').indexOf(String(thatTrongFile)) >= 0 && t2('#tabChapCt').indexOf(String(soSai)) < 0,
+      khongConSoSai: !/\b30\b/.test(t2('#tabChapCt')),
       loi: p2.errors.slice(0, 3)
     };
   }

@@ -113,13 +113,16 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   click($$('#chapGrid .cha')[3]); await wait(300);
   out.chapClickOpens = { reading: doc.body.classList.contains('reading'), sub: txt('#rdSub') };
   key('Escape'); await wait(200);
-  out.sortUI = { active: txt('#chapSort .on'), topGone: !$('#chapTop') };
-  click($$('#chapSort button')[0]); await wait(200);
+  /* vòng 77: thứ tự chương là MỘT nút bấm-để-đảo, nhãn đổi theo trạng thái */
+  out.sortUI = { label: txt('#chapSort .lbl'), topGone: !$('#chapTop') };
+  click('#chapSort'); await wait(200);
   out.sortNewFirst = txt('#chapGrid .cha .nm');
-  click($$('#chapSort button')[1]); await wait(200);
+  out.sortLabelNew = txt('#chapSort .lbl');
+  click('#chapSort'); await wait(200);
   out.sortOldFirst = txt('#chapGrid .cha .nm');
+  out.sortLabelOld = txt('#chapSort .lbl');
   out.story = {
-    chapCount: txt('#chapCount'),
+    tabChapCt: txt('#tabChapCt'),
     relSeries: $$('#relSeries a').length,
     relCouple: $$('#relCouple a').length
   };

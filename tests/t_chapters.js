@@ -141,7 +141,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     out.storyErrors = errors.slice(0, 4);
     /* thông tin bộ */
     eq('truyện/tiêu đề', ($('#shero h1') || {}).textContent, 'Bộ Thử Số');
-    ok('truyện/tổng chương hiển thị', (($('#chapCount') || {}).textContent || '').includes('6 chương'), (($('#chapCount') || {}).textContent || ''));
+    /* vòng 77: số chương nằm trên tab, dòng “Đang có N chương” đã bỏ */
+    ok('truyện/tổng chương hiển thị', (($('#tabChapCt') || {}).textContent || '').trim() === '6', (($('#tabChapCt') || {}).textContent || ''));
     /* nhóm chương */
     const groups = $$('#chapGrid .cvol').map((b) => b.textContent.trim().replace(/\s+/g, ' '));
     ok('truyện/có nhóm Mở đầu', groups.some((g) => /mở đầu/i.test(g)), groups);
@@ -176,7 +177,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     ok('0chương/vẫn hiện mục lục (không rơi vào showError)', !!$('#chapSec') && $('#chapSec').style.display !== 'none',
       $('#chapSec') && $('#chapSec').style.display);
     /* thiết kế: bộ chưa ra chương để TRỐNG ô đếm — nhãn “Sắp ra mắt” đã ở đầu trang */
-    eq('0chương/ô đếm để trống', (($('#chapCount') || {}).textContent || '').trim(), '');
+    eq('0chương/tab đếm để trống', (($('#tabChapCt') || {}).textContent || '').trim(), '');
+    ok('0chương/lưới chương trống', !$('#chapGrid .cha'), ($('#chapGrid') || {}).textContent);
     const heroTxt = ((($('#shero') || doc).textContent || '')).replace(/\s+/g, ' ');
     ok('0chương/nút đọc khoá sắp ra mắt', /sắp ra mắt|chưa có chương/i.test(heroTxt), heroTxt.slice(0, 160));
   }

@@ -558,11 +558,10 @@
     if (ct) ct.textContent = n.canRead ? n.chapters : '';
     $('#crumb').innerHTML = '<a href="/">Trang chủ</a> ' + ic('right', 'i-s') + ' <a href="/#thu-vien">Thư viện</a> ' +
       ic('right', 'i-s') + ' <b>' + esc(n.title) + '</b>';
-    /* bộ chưa ra chương thì để trống — nhãn trạng thái đã nằm ở đầu trang, không nhắc lại */
-    $('#chapCount').textContent = !n.canRead ? ''
-      : (n.declared > n.chapters
-        ? 'Đang có ' + n.chapters + '/' + n.declared + ' chương'
-        : 'Đang có ' + n.chapters + ' chương');
+    /* Số chương KHÔNG nhắc lại ở đây nữa: tab “Danh sách chương” đã mang sẵn con
+       số, thêm một dòng “Đang có N chương” chỉ làm loãng thanh công cụ. */
+    var ccount = $('#chapCount');
+    if (ccount) ccount.textContent = '';
     /* mở truyện là đã biết hết chương hiện có → huy hiệu “N chương mới” tắt */
     if (CZ.markFollowSeen) CZ.markFollowSeen(n);
     /* góc tương tác của trang truyện: hàng reaction sticker (tính năng được
@@ -656,7 +655,7 @@
       gopen[key] = open;
       return '<button class="cvol' + (open ? ' on' : '') + '" data-g="' + key + '" type="button" aria-expanded="' + (open ? 'true' : 'false') + '">' +
           ic('right', 'i-s') + title +
-          '<span class="ct">' + rows.length + '</span></button>' +
+          '</button>' +
         '<div class="cgroup' + (open ? ' on' : '') + '" data-g="' + key + '"><div class="chapgrid">' +
           rows.map(function (x) { return chapLink(x, prog, marks, q); }).join('') + '</div></div>';
     }
@@ -718,10 +717,23 @@
     var v = e.target.value;
     chapQT = setTimeout(function () { chState.q = v.trim(); chState.page = 1; renderChapters(); }, 150);
   });
-  $('#chapSort').addEventListener('click', function (e) {
-    var b = e.target.closest('button'); if (!b) return;
-    chState.sort = b.dataset.sort; chState.page = 1;
-    $$('#chapSort button').forEach(function (x) { x.classList.toggle('on', x === b); });
+  /* Thứ tự chương: MỘT nút, bấm là đảo giữa cũ/mới. Nhãn + mũi tên đổi theo trạng
+     thái; không còn hai khối tô trắng để mắt phải đọc cả cặp. */
+  function paintSort() {
+    var b = $('#chapSort'); if (!b) return;
+    var isNew = chState.sort === 'new';
+    b.dataset.sort = chState.sort;
+    b.setAttribute('aria-label', 'Thứ tự chương: ' + (isNew ? 'mới nhất trước' : 'cũ nhất trước') + ' — bấm để đổi');
+    var lbl = b.querySelector('.lbl'); if (lbl) lbl.textContent = isNew ? 'Mới nhất' : 'Cũ nhất';
+    /* data-ic được thay bằng <svg class="i"> lúc khởi động, nên đổi icon bằng cách
+       thay chính thẻ svg đó (không dựa vào lớp bọc). */
+    var box = b.querySelector('.i'); if (box) box.outerHTML = ic(isNew ? 'down' : 'up', 'i-s');
+  }
+  paintSort();
+  $('#chapSort').addEventListener('click', function () {
+    chState.sort = chState.sort === 'new' ? 'old' : 'new';
+    chState.page = 1;
+    paintSort();
     renderChapters();
   });
   /* người đọc gõ số chương nhìn thấy trên danh sách — số đó lấy từ tên chương nên

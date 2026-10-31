@@ -37,7 +37,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     actions: $$('#shero .btn-row > *').map(b => b.textContent.trim()),
     readHref: ($('#shero .btn-row a.btn.pri') || {}).getAttribute ? $('#shero .btn-row a.btn.pri').getAttribute('href') : '',
     infoRows: $$('#shero .info .r').length,
-    chapCount: txt('#chapCount')
+    tabChapCt: txt('#tabChapCt')
   };
   out.chapters = { n: $$('#chapGrid .cha').length, first: txt('#chapGrid .cha') };
   /* Trang truyện KHÔNG còn nút Thích (yêu cầu chủ trang: chỉ thích trong trang đọc) */

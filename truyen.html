@@ -30,21 +30,15 @@
   </div>
 
   <section class="sec" id="chapSec">
-    <div class="panehead">
-      <span class="sub" id="chapCount">—</span>
-    </div>
     <div class="chapbar">
       <label class="search"><span data-ic="search"></span>
         <input id="chapQ" placeholder="Tìm số chương hoặc tên chương…" autocomplete="off" spellcheck="false">
       </label>
-      <div class="seg" id="chapSort" role="group" aria-label="Thứ tự chương">
-        <button data-sort="new">Mới nhất trước</button>
-        <button data-sort="old" class="on">Cũ nhất trước</button>
-      </div>
+      <button class="sortbtn" id="chapSort" type="button" data-sort="old" title="Đổi thứ tự chương" aria-label="Thứ tự chương: cũ nhất trước — bấm để đổi"><span class="si" data-ic="up"></span><span class="lbl">Cũ nhất</span></button>
       <span class="jumpin">
-        <label for="chapJump">Đi tới chương</label>
+        <label for="chapJump">Tới chương</label>
         <input id="chapJump" type="number" min="1" inputmode="numeric" placeholder="số" aria-label="Số chương cần tới">
-        <button class="btn ghost sm ic" id="chapGo" type="button" title="Tới chương vừa nhập" aria-label="Tới chương vừa nhập"><span data-ic="right"></span></button>
+        <button class="goic" id="chapGo" type="button" title="Tới chương vừa nhập" aria-label="Tới chương vừa nhập"><span data-ic="right"></span></button>
       </span>
     </div>
     <div class="chapgrid" id="chapGrid"></div>
