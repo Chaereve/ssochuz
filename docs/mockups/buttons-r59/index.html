@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đề xuất vòng 59 · đồng bộ nút theo nút ở trang chủ</title>
+<link rel="stylesheet" href="/cz.css?v=20261031upd1">
+<style>
+/* ==========================================================================
+   Vòng 59 — GIỮ NGUYÊN nút ở hero trang chủ, đồng bộ phần còn lại theo nó.
+   Trang TĨNH: không iframe, không JS. Số đo lấy từ trang thật (ghi kèm).
+   ========================================================================== */
+.page { max-width: 1140px; margin: 0 auto; padding: 40px 20px 90px; }
+.kick { font: 700 11px/1 ui-monospace, monospace; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--acc); }
+h1 { margin: 14px 0 12px; font-size: 34px; line-height: 1.12; letter-spacing: -.015em;
+  font-family: var(--font-head); }
+.lede { margin: 0 0 10px; max-width: 76ch; color: var(--mut); font-size: 15px; }
+.lede b { color: var(--txt); }
+h2 { margin: 50px 0 6px; font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--dim); font-weight: 700; }
+.h2sub { margin: 0 0 16px; color: var(--mut); font-size: 14px; max-width: 80ch; }
+.h2sub b { color: var(--txt); }
+code { font-family: var(--font-mono); font-size: .92em; color: var(--txt);
+  background: var(--surf2); padding: 1px 5px; border-radius: 4px; }
+
+/* ---------- danh sách vấn đề ---------- */
+.why { margin: 18px 0 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.why li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px;
+  padding: 12px 14px; border-left: 2px solid var(--acc); background: var(--surf);
+  border-radius: 0 8px 8px 0; }
+.why .n { font: 700 12px/1.5 ui-monospace, monospace; color: var(--acc); }
+.why b { display: block; color: var(--txt); font-size: 13.5px; margin-bottom: 2px; }
+.why span.t { color: var(--mut); font-size: 13px; line-height: 1.55; }
+.why span.t b { display: inline; color: var(--txt); font-weight: 600; }
+
+/* ---------- khối "giữ nguyên" ---------- */
+.keep { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr) 280px;
+  padding: 20px; border: 1px solid color-mix(in srgb, #a9dcc0 40%, var(--bd));
+  border-radius: 12px; background: var(--surf); }
+.keep .lab { font: 700 10px/1 ui-monospace, monospace; letter-spacing: .16em;
+  text-transform: uppercase; color: #a9dcc0; margin-bottom: 10px; }
+.keep p { margin: 0; color: var(--mut); font-size: 13px; line-height: 1.6; }
+.keep p b { color: var(--txt); }
+.keep .side { border-left: 1px solid var(--bd); padding-left: 16px; }
+.keep dl { margin: 0; display: grid; grid-template-columns: 1fr auto; gap: 7px 10px; }
+.keep dt { font-size: 12px; color: var(--dim); }
+.keep dd { margin: 0; font-size: 12px; font-weight: 700; color: var(--txt);
+  font-variant-numeric: tabular-nums; text-align: right; }
+
+/* ==========================================================================
+   HỆ NÚT · dùng chung cho mọi khung
+   .b       nút thuốc: bo 999px, chữ đậm, icon 15px
+   .b.md    36px — nút phụ / công cụ (option A, C)
+   .b.lg    44px — ngang nút hero
+   .pri     đặc màu nhấn, chữ tối   .gh  viền mảnh, nền trong   .ic  chỉ icon
+   ========================================================================== */
+.b { display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 36px; padding: 0 14px; border: 1px solid transparent; border-radius: 999px;
+  font-family: var(--font); font-size: 13px; font-weight: 650; line-height: 1;
+  color: #fff; text-decoration: none; white-space: nowrap; }
+.b .ic { width: 15px; height: 15px; flex: none; }
+.b.lg { height: 44px; padding: 0 20px; font-size: 14.5px; }
+.b.md { height: 38px; padding: 0 16px; font-size: 13.5px; }
+.b.pri { background: var(--acc); border-color: var(--acc); color: #1f1016; }
+.b.gh { background: transparent; border-color: rgba(255, 255, 255, .24); color: rgba(255, 255, 255, .88); }
+.b.gh.fill { background: rgba(255, 255, 255, .07); border-color: rgba(255, 255, 255, .18); }
+.b.ic { width: 36px; padding: 0; }
+.b.lg.ic { width: 44px; }
+.row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
+
+/* ---------- nút y hệt trang chủ (KHÔNG đổi) ---------- */
+.herobtn { height: 44px; padding: 0 20px; border-radius: 99px; font-size: 14.5px;
+  background: var(--acc); border: 1px solid var(--acc); color: #1a1113;
+  display: inline-flex; align-items: center; gap: 8px; font-weight: 650; text-decoration: none; }
+.herobtn .ic { width: 15px; height: 15px; }
+.heroicon { width: 44px; height: 44px; border-radius: 50%; display: inline-flex;
+  align-items: center; justify-content: center; background: rgba(255, 255, 255, .07);
+  border: 1px solid rgba(255, 255, 255, .26); color: #fff; }
+.heroicon .ic { width: 18px; height: 18px; }
+
+/* ---------- thanh công cụ: ô tìm + nút thuốc ---------- */
+.tb { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tb .inp { display: inline-flex; align-items: center; gap: 9px; height: 36px; padding: 0 14px;
+  border: 1px solid var(--bd2); border-radius: 999px; background: var(--surf);
+  color: var(--mut); font-size: 13px; width: 320px; max-width: 100%; }
+.tb .inp .ic { width: 15px; height: 15px; color: var(--dim); }
+.tb .inp kbd { margin-left: auto; font-size: 10px; padding: 2px 5px; border-radius: 4px;
+  border: 1px solid var(--bd2); color: var(--dim); }
+
+/* ---------- khối phụ "một viên dài" (phương án C) ---------- */
+.pillgroup { display: inline-flex; align-items: stretch; height: 44px;
+  border: 1px solid rgba(255, 255, 255, .24); border-radius: 999px;
+  background: transparent; }
+.pillgroup > a { display: inline-flex; align-items: center; gap: 8px; padding: 0 16px;
+  font-family: var(--font); font-size: 14.5px; font-weight: 650; color: rgba(255, 255, 255, .88);
+  text-decoration: none; border-left: 1px solid rgba(255, 255, 255, .16); }
+.pillgroup > a:first-child { border-left: 0; border-radius: 999px 0 0 999px; }
+.pillgroup > a:last-child { border-radius: 0 999px 999px 0; }
+.pillgroup > a:hover { background: rgba(255, 255, 255, .07); color: #fff; }
+.pillgroup .ic { width: 15px; height: 15px; }
+
+/* ---------- segmented kiểu "viên thuốc trong viên thuốc" ---------- */
+.segp { display: inline-flex; align-items: center; gap: 2px; padding: 3px;
+  border-radius: 999px; background: var(--surf2); border: 1px solid var(--bd); }
+.segp button, .segp span { display: inline-flex; align-items: center; height: 30px; padding: 0 13px;
+  border-radius: 999px; font-size: 12.5px; font-weight: 650; color: var(--mut);
+  background: transparent; border: 0; white-space: nowrap; }
+.segp .on { background: var(--txt); color: var(--bg); }
+
+/* ---------- khung nền tối mô phỏng hero/trang truyện ---------- */
+.panel { position: relative; border-radius: 12px; overflow: hidden; background: #15100d;
+  border: 1px solid var(--bd); }
+.panel .art { position: absolute; inset: 0; background: center 28% / cover no-repeat; opacity: .5; }
+.panel .veil { position: absolute; inset: 0;
+  background: linear-gradient(90deg, #141110 0%, rgba(20,17,16,.94) 46%, rgba(20,17,16,.35) 100%); }
+.panel .in { position: relative; padding: 24px 26px 26px; display: grid; gap: 12px; }
+.panel .statusline { font: 700 10px/1 ui-monospace, monospace; letter-spacing: .16em;
+  text-transform: uppercase; color: #a9dcc0; display: flex; align-items: center; gap: 7px; }
+.panel .statusline i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.panel h3 { margin: 0; font-family: var(--font-head); font-size: 30px; line-height: 1.12;
+  letter-spacing: -.015em; color: #fff; }
+.panel .facts { display: flex; gap: 26px; margin: 2px 0 4px; padding: 10px 0 0;
+  border-top: 1px solid rgba(255, 255, 255, .1); }
+.panel .facts div { display: grid; gap: 5px; }
+.panel .facts dt { font: 600 9px/1 ui-monospace, monospace; letter-spacing: .12em;
+  text-transform: uppercase; color: rgba(255, 255, 255, .45); }
+.panel .facts dd { margin: 0; font-size: 13px; font-weight: 700; color: #fff; }
+.panel.story .in { grid-template-columns: 96px minmax(0, 1fr); gap: 22px; align-items: start; }
+.panel.story .cv { width: 96px; aspect-ratio: 2 / 3; border-radius: 8px; overflow: hidden; background: #241a15; }
+.panel.story .cv img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.panel.story h3 { font-size: 23px; }
+.panel.story .sub { margin: 0 0 12px; font-size: 12.5px; color: rgba(255, 255, 255, .6); }
+.panel.story .stack { display: grid; gap: 12px; align-content: start; min-width: 0; }
+.panel.story .stack > * { min-width: 0; }
+.panel .row { min-width: 0; max-width: 100%; }
+
+/* khung máy hẹp: đúng bề ngang 390 */
+.mob { width: 390px; max-width: 100%; }
+.mob .in { padding: 18px; }
+.mob h3 { font-size: 22px; }
+.mob .facts { gap: 18px; flex-wrap: wrap; }
+.mob.story .in { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.mob.story .cv { width: 76px; }
+.mob.story .row .b.pri { flex: 1 1 100%; }
+.mob.story .row .b.gh:not(.ic) { flex: 1 1 0; }
+.mob .row .b.ic { flex: 0 0 auto; }
+
+/* ---------- khung demo ---------- */
+.dev + .dev { margin-top: 12px; }
+.dev .cap { display: flex; align-items: center; gap: 8px; padding: 7px 12px;
+  border: 1px solid var(--bd); border-bottom: 0; border-radius: 11px 11px 0 0;
+  background: var(--surf); font: 700 10.5px/1 ui-monospace, monospace;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+.dev .cap .w { margin-left: auto; font-weight: 600; }
+.dev .panel, .dev .plain { border-radius: 0 0 11px 11px; }
+.plain { padding: 18px 20px; border: 1px solid var(--bd); background: #14100d; display: grid; gap: 12px; }
+.plain .hint { font-size: 11px; color: var(--dim); }
+.dev.mobdev { width: 392px; max-width: 100%; }
+.duo { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; }
+
+/* ---------- từng phương án ---------- */
+.opt { margin: 0 0 48px; }
+.opt-h { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.opt-h .tag { font: 700 11px/1 ui-monospace, monospace; letter-spacing: .12em;
+  text-transform: uppercase; padding: 4px 8px; border: 1px solid var(--acc);
+  border-radius: 4px; color: var(--acc); }
+.opt-h h3 { margin: 0; font-size: 20px; font-family: var(--font-head); letter-spacing: -.01em; }
+.opt-h .pick { margin-left: auto; font-size: 12px; color: var(--dim); }
+.opt .say { margin: 10px 0 14px; color: var(--mut); font-size: 14px; max-width: 82ch; }
+.opt .say b { color: var(--txt); }
+.opt .spec { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 14px; }
+.opt .spec span { font: 700 11px/1 ui-monospace, monospace; letter-spacing: .04em;
+  padding: 6px 9px; border-radius: 5px; background: var(--surf2); color: var(--mut);
+  border: 1px solid var(--bd); }
+
+/* Máy hẹp: khung "desktop" không đủ chỗ ⇒ xếp dọc như khung máy hẹp,
+   để không nhãn nút nào bị cắt (nút chính xuống hàng riêng, nút phụ chia đôi). */
+@media (max-width: 760px) {
+  .panel.story .in { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .panel.story .cv { width: 76px; }
+  .panel.story .row .b.lg.pri { flex: 1 1 100%; }
+  .panel.story .row .b.gh:not(.ic) { flex: 1 1 0; }
+  .b { max-width: 100%; }
+  /* phương án C: khối phụ tự xuống hàng riêng, chữ không bị bẻ đôi */
+  .pillgroup { max-width: 100%; }
+  .panel .row > .pillgroup { flex: 0 1 auto; height: 44px; max-width: 100%; }
+  .pillgroup > a { white-space: nowrap; }
+  .pillgroup > a:not([aria-label]) { flex: 1 1 0; justify-content: center; }
+  .pillgroup > a[aria-label] { flex: 0 0 44px; justify-content: center; }
+}
+
+.k { display: grid; gap: 8px; margin: 16px 0 0; padding: 0; list-style: none;
+  grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 760px) { .k { grid-template-columns: 1fr; } .keep { grid-template-columns: 1fr; }
+  .keep .side { border-left: 0; padding-left: 0; border-top: 1px solid var(--bd); padding-top: 14px; } }
+.k li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 9px;
+  padding: 10px 12px; background: var(--surf); border: 1px solid var(--bd); border-radius: 9px; }
+.k .n { font: 700 10.5px/1.6 ui-monospace, monospace; color: var(--acc); }
+.k > li > span > b { display: block; font-size: 13px; color: var(--txt); margin-bottom: 2px; }
+.k span.t { font-size: 12.5px; color: var(--mut); line-height: 1.55; }
+.k span.t b { color: var(--txt); font-weight: 600; }
+footer { margin-top: 44px; padding-top: 20px; border-top: 1px solid var(--bd);
+  color: var(--dim); font-size: 13px; }
+body > div[style*="position:fixed"] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <p class="kick">Đề xuất vòng 59 · chưa sửa vào site</p>
+  <h1>Giữ nút ở trang chủ, kéo phần còn lại về cùng một hệ</h1>
+  <p class="lede">Nút ở hero trang chủ <b>không đổi một chi tiết nào</b>. Vấn đề chỉ nằm ở những chỗ
+    khác: cùng là nút nhưng mỗi nơi một hình, một chiều cao. Mình đo trên trang thật rồi gom lại
+    dưới đây — ba phương án, cả ba đều <b>giữ nguyên nút trang chủ</b>.</p>
+
+  <div class="keep">
+    <div>
+      <p class="lab">✓ Giữ nguyên · bạn đã chốt</p>
+      <div class="row" style="margin-bottom:12px">
+        <a class="herobtn" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16l13 -8l-13 -8"/></svg><span>Đọc từ đầu</span></a>
+        <a class="heroicon" href="#" aria-label="Thông tin truyện"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 9h.01"/><path d="M11 12h1v4h1"/></svg></a>
+      </div>
+      <p>Đây là nút đang chạy ở hero trang chủ: <b>viên thuốc đặc màu nhấn</b>, chữ tối, cạnh nó là
+        nút tròn chỉ-icon. Ba phương án dưới đây chỉ <b>lấy nút này làm chuẩn</b> rồi kéo trang truyện,
+        thanh công cụ và các nút phụ về cùng ngôn ngữ đó — không sửa gì ở đây.</p>
+    </div>
+    <div class="side">
+      <dl>
+        <dt>Chiều cao</dt><dd>44px</dd>
+        <dt>Bo góc</dt><dd>99px</dd>
+        <dt>Cỡ chữ</dt><dd>14,5px</dd>
+        <dt>Nền</dt><dd>đặc · màu nhấn</dd>
+        <dt>Chữ</dt><dd>tối #1a1113</dd>
+        <dt>Nút icon</dt><dd>tròn 44px</dd>
+      </dl>
+    </div>
+  </div>
+
+  <h2>Vì sao những chỗ khác trông lạc</h2>
+  <p class="h2sub">Đo thật ở 1240px. Chỉ riêng một trang truyện đã có <b>bốn hình bo góc</b> và
+    <b>năm chiều cao</b> khác nhau:</p>
+  <ul class="why">
+    <li><span class="n">01</span><span><b>Bo góc: 6 · 9 · 10 · 99px</b>
+      <span class="t">Ô tìm ở header <code>10px</code>, nút đọc ở trang truyện <code>9px</code>, nút
+      lọc/sắp xếp <code>6px</code>, còn nút hero <code>99px</code>. Bốn hình cho cùng một khái niệm.</span></span></li>
+    <li><span class="n">02</span><span><b>Chiều cao: 30 · 32 · 36 · 38 · 42px</b>
+      <span class="t">Nút hero là <b>44px</b>. Mọi nút khác đều thấp hơn, mỗi loại một cỡ — nên khi
+      rời trang chủ, tay và mắt phải “hạ cỡ” theo.</span></span></li>
+    <li><span class="n">03</span><span><b>Cỡ chữ cũng đổi theo nút</b>
+      <span class="t">13px · 12,5px · 11px · 14,5px. Nút càng nhỏ chữ càng nhỏ, đến mức nút “Chi tiết”
+      chỉ còn 11px.</span></span></li>
+    <li><span class="n">04</span><span><b>Thanh công cụ không có “hình” riêng</b>
+      <span class="t">Ô tìm kiếm bo 10px nhưng nút cạnh nó bo 6px — hai hình đứng cạnh nhau trong cùng
+      một hàng.</span></span></li>
+  </ul>
+
+  <h2>Ba phương án · cả ba giữ nguyên nút trang chủ</h2>
+  <p class="h2sub">Khác nhau ở <b>một quyết định duy nhất</b>: nút phụ to bằng nút chính, nhỏ hơn một
+    nấc, hay gộp lại thành một khối.</p>
+
+  <!-- ==================== A ==================== -->
+  <section class="opt">
+    <div class="opt-h"><span class="tag">A</span><h3>Hai cỡ thuốc</h3>
+      <span class="pick">gọn nhất trong ba · khuyên dùng</span></div>
+    <p class="say">Mọi nút đều là <b>viên thuốc</b> (bo 999px). Chỉ còn <b>hai chiều cao</b>: nút chính
+      <b>44px</b> như hero, và nút phụ / công cụ <b>36px</b>. Trang truyện vì thế không bị ba nút to
+      đùng, mà vẫn cùng một ngôn ngữ với trang chủ.</p>
+    <div class="spec"><span>bo 999px · mọi nút</span><span>chính 44px</span><span>phụ &amp; công cụ 36px</span><span>chữ 14,5 / 13px</span></div>
+
+    <div class="dev"><div class="cap">Trang truyện · khối nút <span class="w">desktop</span></div>
+      <div class="panel story">
+        <div class="veil"></div>
+        <div class="in">
+          <span class="cv"><img src="/assets/covers/80b25f67.webp" alt=""></span>
+          <div class="stack">
+            <h3>HOMETOWN ROMANCE - SPECIAL</h3>
+            <p class="sub">18+ · Hoàn thành · 10 chương · Lambo · Lookmhee x Sonya</p>
+            <div class="row vA">
+              <a class="b lg pri" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/></svg><span>Xác nhận 18+ để đọc</span></a>
+              <a class="b gh" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg><span>Theo dõi</span></a>
+              <a class="b gh" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10v11l-5 -3l-5 3v-11a3 3 0 0 1 3 -3h4a3 3 0 0 1 3 3"/><path d="M11 3h5a3 3 0 0 1 3 3v11"/></svg><span>Tủ truyện</span></a>
+              <a class="b gh ic" href="#" aria-label="Chia sẻ"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4v4c-6.575 1.028 -9.02 6.788 -10 12c-.037 .206 5.384 -5.962 10 -6v4l8 -7l-8 -7"/></svg></a>
+              <a class="b gh ic" href="#" aria-label="RSS"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/><path d="M4 4a16 16 0 0 1 16 16"/><path d="M4 11a9 9 0 0 1 9 9"/></svg></a>
+            </div>
+          </div>
+        </div>
+      </div></div>
+
+    <div class="duo" style="margin-top:12px">
+      <div class="dev mobdev"><div class="cap">Trang truyện · máy hẹp <span class="w">390</span></div>
+        <div class="panel story mob">
+          <div class="veil"></div>
+          <div class="in">
+            <span class="cv"><img src="/assets/covers/80b25f67.webp" alt=""></span>
+            <div class="stack">
+              <h3>HOMETOWN ROMANCE - SPECIAL</h3>
+              <p class="sub">18+ · Hoàn thành · 10 chương</p>
+              <div class="row">
+                <a class="b lg pri" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/></svg><span>Xác nhận 18+ để đọc</span></a>
+                <a class="b gh" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg><span>Theo dõi</span></a>
+                <a class="b gh" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10v11l-5 -3l-5 3v-11a3 3 0 0 1 3 -3h4a3 3 0 0 1 3 3"/><path d="M11 3h5a3 3 0 0 1 3 3v11"/></svg><span>Tủ truyện</span></a>
+                <a class="b gh ic" href="#" aria-label="Chia sẻ"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4v4c-6.575 1.028 -9.02 6.788 -10 12c-.037 .206 5.384 -5.962 10 -6v4l8 -7l-8 -7"/></svg></a>
+              </div>
+            </div>
+          </div>
+        </div></div>
+
+      <div class="dev mobdev"><div class="cap">Trang chủ · máy hẹp <span class="w">390</span></div>
+        <div class="panel mob">
+          <div class="art" style="background-image:url('/assets/covers/6a6f3cd4.webp')"></div>
+          <div class="veil"></div>
+          <div class="in">
+            <span class="statusline"><i></i>Hoàn thành</span>
+            <h3>Third Person</h3>
+            <div class="facts">
+              <div><dt>Chương</dt><dd>42</dd></div>
+              <div><dt>Tác giả</dt><dd>SIIX</dd></div>
+            </div>
+            <div class="row">
+              <a class="herobtn" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16l13 -8l-13 -8"/></svg><span>Đọc từ đầu</span></a>
+              <a class="heroicon" href="#" aria-label="Thông tin truyện"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 9h.01"/><path d="M11 12h1v4h1"/></svg></a>
+            </div>
+          </div>
+        </div></div>
+    </div>
+
+    <div class="dev"><div class="cap">Thanh công cụ · tìm kiếm · lọc · sắp xếp <span class="w">desktop</span></div>
+      <div class="plain">
+        <div class="tb">
+          <span class="inp"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"/><path d="M21 21l-6 -6"/></svg>Tìm truyện, tác giả, couple…<kbd>⌘K</kbd></span>
+          <a class="b gh" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v2.172a2 2 0 0 1 -.586 1.414l-4.828 4.828a2 2 0 0 0 -.586 1.414v4.172a2 2 0 0 1 -1 1.732l-2 1.155v-7.059a2 2 0 0 0 -.586 -1.414l-4.828 -4.828a2 2 0 0 1 -.586 -1.414v-2.172z"/></svg><span>Bộ lọc</span></a>
+          <a class="b gh" href="#"><span>Mới nhất</span><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6l6 -6"/></svg></a>
+        </div>
+        <div class="tb">
+          <span class="segp"><span class="on">Mới nhất trước</span><span>Cũ nhất trước</span></span>
+          <span class="segp"><span class="on">Tất cả</span><span>Đã đọc</span><span>Chưa đọc</span></span>
+        </div>
+      </div></div>
+
+    <ul class="k">
+      <li><span class="n">01</span><span><b>Gọn nhất</b><span class="t">Trang truyện không bị ba nút 44px nằm ngang — nút chính vẫn 44 để ngang tầm nút hero.</span></span></li>
+      <li><span class="n">02</span><span><b>Chỉ còn hai cỡ</b><span class="t">44 và 36. Không còn 30 / 32 / 38 / 42 lẻ tẻ.</span></span></li>
+      <li><span class="n">03</span><span><b>Đánh đổi</b><span class="t">Nút phụ 36px nhỏ hơn nút chính một nấc; nếu bạn muốn mọi nút đọc y hệt nhau thì chọn B.</span></span></li>
+    </ul>
+  </section>
+
+  <!-- ==================== B ==================== -->
+  <section class="opt">
+    <div class="opt-h"><span class="tag">B</span><h3>Một cỡ thuốc</h3>
+      <span class="pick">đồng bộ mạnh nhất · mọi nút bằng nhau</span></div>
+    <p class="say">Mọi nút hành động <b>đều 44px, bo 999px, chữ 14,5px</b> — đúng bằng nút ở trang chủ.
+      Chỉ thanh công cụ (ô tìm, bộ lọc, sắp xếp, segmented) giữ <b>36px</b> vì chúng là ô điều khiển,
+      không phải nút hành động.</p>
+    <div class="spec"><span>bo 999px</span><span>nút hành động 44px</span><span>công cụ 36px</span><span>chữ 14,5px</span></div>
+
+    <div class="dev"><div class="cap">Trang truyện · khối nút <span class="w">desktop</span></div>
+      <div class="panel story">
+        <div class="veil"></div>
+        <div class="in">
+          <span class="cv"><img src="/assets/covers/80b25f67.webp" alt=""></span>
+          <div class="stack">
+            <h3>HOMETOWN ROMANCE - SPECIAL</h3>
+            <p class="sub">18+ · Hoàn thành · 10 chương · Lambo · Lookmhee x Sonya</p>
+            <div class="row">
+              <a class="b lg pri" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/></svg><span>Xác nhận 18+ để đọc</span></a>
+              <a class="b lg gh" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg><span>Theo dõi</span></a>
+              <a class="b lg gh" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10v11l-5 -3l-5 3v-11a3 3 0 0 1 3 -3h4a3 3 0 0 1 3 3"/><path d="M11 3h5a3 3 0 0 1 3 3v11"/></svg><span>Tủ truyện</span></a>
+              <a class="b lg gh ic" href="#" aria-label="Chia sẻ"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4v4c-6.575 1.028 -9.02 6.788 -10 12c-.037 .206 5.384 -5.962 10 -6v4l8 -7l-8 -7"/></svg></a>
+            </div>
+          </div>
+        </div>
+      </div></div>
+
+    <div class="dev"><div class="cap">Thanh công cụ <span class="w">desktop</span></div>
+      <div class="plain">
+        <div class="tb">
+          <span class="inp"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"/><path d="M21 21l-6 -6"/></svg>Tìm truyện, tác giả, couple…<kbd>⌘K</kbd></span>
+          <a class="b gh" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v2.172a2 2 0 0 1 -.586 1.414l-4.828 4.828a2 2 0 0 0 -.586 1.414v4.172a2 2 0 0 1 -1 1.732l-2 1.155v-7.059a2 2 0 0 0 -.586 -1.414l-4.828 -4.828a2 2 0 0 1 -.586 -1.414v-2.172z"/></svg><span>Bộ lọc</span></a>
+          <a class="b gh" href="#"><span>Mới nhất</span><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6l6 -6"/></svg></a>
+          <span class="segp"><span class="on">Mới nhất trước</span><span>Cũ nhất trước</span></span>
+        </div>
+      </div></div>
+
+    <ul class="k">
+      <li><span class="n">01</span><span><b>Đồng bộ tuyệt đối</b><span class="t">Rời trang chủ sang trang truyện không phải “đổi hệ” — nút y hệt nhau về mọi số đo.</span></span></li>
+      <li><span class="n">02</span><span><b>Dễ nhớ, dễ chạm</b><span class="t">Mọi mục tiêu chạm đều 44px — thoải mái trên điện thoại.</span></span></li>
+      <li><span class="n">03</span><span><b>Đánh đổi</b><span class="t">Hàng nút trang truyện nặng hơn: ba nút 44px cạnh nhau chiếm nhiều chỗ, máy hẹp phải xuống hai hàng.</span></span></li>
+    </ul>
+  </section>
+
+  <!-- ==================== C ==================== -->
+  <section class="opt">
+    <div class="opt-h"><span class="tag">C</span><h3>Một viên dài</h3>
+      <span class="pick">hàng nút ngắn nhất · ít hình nhất</span></div>
+    <p class="say">Nút chính 44px như hero. Ba việc phụ <b>gộp vào một viên thuốc dài 44px</b>, chia nhau
+      bằng vạch dọc — vẫn là thuốc, nhưng chỉ còn <b>hai hình</b> trong hàng: nút chính và một khối phụ.</p>
+    <div class="spec"><span>bo 999px</span><span>chính 44px</span><span>khối phụ 44px</span><span>vạch chia 1px</span></div>
+
+    <div class="dev"><div class="cap">Trang truyện · khối nút <span class="w">desktop</span></div>
+      <div class="panel story">
+        <div class="veil"></div>
+        <div class="in">
+          <span class="cv"><img src="/assets/covers/80b25f67.webp" alt=""></span>
+          <div class="stack">
+            <h3>HOMETOWN ROMANCE - SPECIAL</h3>
+            <p class="sub">18+ · Hoàn thành · 10 chương · Lambo · Lookmhee x Sonya</p>
+            <div class="row vC">
+              <a class="b lg pri" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/></svg><span>Xác nhận 18+ để đọc</span></a>
+              <span class="pillgroup">
+                <a href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg><span>Theo dõi</span></a>
+                <a href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10v11l-5 -3l-5 3v-11a3 3 0 0 1 3 -3h4a3 3 0 0 1 3 3"/><path d="M11 3h5a3 3 0 0 1 3 3v11"/></svg><span>Tủ truyện</span></a>
+                <a href="#" aria-label="Chia sẻ"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4v4c-6.575 1.028 -9.02 6.788 -10 12c-.037 .206 5.384 -5.962 10 -6v4l8 -7l-8 -7"/></svg></a>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div></div>
+
+    <div class="dev mobdev"><div class="cap">Trang truyện · máy hẹp <span class="w">390</span></div>
+      <div class="panel story mob">
+        <div class="veil"></div>
+        <div class="in">
+          <span class="cv"><img src="/assets/covers/80b25f67.webp" alt=""></span>
+          <div class="stack">
+            <h3>HOMETOWN ROMANCE - SPECIAL</h3>
+            <p class="sub">18+ · Hoàn thành · 10 chương</p>
+            <div class="row vC">
+              <a class="b lg pri" href="#" style="flex:1 1 100%"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/></svg><span>Xác nhận 18+ để đọc</span></a>
+              <span class="pillgroup" style="flex:1 1 100%">
+                <a href="#" style="flex:1 1 50%;justify-content:center"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg><span>Theo dõi</span></a>
+                <a href="#" style="flex:1 1 50%;justify-content:center"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10v11l-5 -3l-5 3v-11a3 3 0 0 1 3 -3h4a3 3 0 0 1 3 3"/><path d="M11 3h5a3 3 0 0 1 3 3v11"/></svg><span>Tủ truyện</span></a>
+                <a href="#" aria-label="Chia sẻ" style="flex:0 0 44px;justify-content:center"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4v4c-6.575 1.028 -9.02 6.788 -10 12c-.037 .206 5.384 -5.962 10 -6v4l8 -7l-8 -7"/></svg></a>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div></div>
+
+    <ul class="k">
+      <li><span class="n">01</span><span><b>Ít hình nhất</b><span class="t">Chỉ còn hai hình trong hàng: một nút và một khối — mắt không phải đếm hộp.</span></span></li>
+      <li><span class="n">02</span><span><b>Hàng ngắn nhất</b><span class="t">Bỏ 3 khoảng hở giữa các nút nên cả hàng co lại rõ rệt.</span></span></li>
+      <li><span class="n">03</span><span><b>Đánh đổi</b><span class="t">Khối liền làm ba việc phụ trông ngang hàng nhau; nút icon nằm chung khối nên mép phải khó nhận ra là nút riêng.</span></span></li>
+    </ul>
+  </section>
+
+  <h2>Áp cho những chỗ khác · cùng một luật</h2>
+  <p class="h2sub">Ba phương án chỉ khác nhau ở hàng nút hành động. Phần dưới đây <b>giống nhau ở cả
+    ba</b> — đây là những chỗ đang lệch nhiều nhất:</p>
+  <div class="plain" style="border-radius: 12px">
+    <div class="tb">
+      <span class="inp" style="min-width:200px"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"/><path d="M21 21l-6 -6"/></svg>Tìm truyện, tác giả, couple…</span>
+      <a class="b gh ic" href="#" aria-label="Thông báo"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg></a>
+      <a class="b gh" href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg><span>Đăng nhập</span></a>
+      <span class="segp"><span class="on">Vi</span><span>En</span></span>
+    </div>
+    <div class="hint">Thanh đầu trang · trước: ô tìm bo 10px, hai nút bo 6px, cao 36px → sau: tất cả là thuốc, cùng cao 36px.</div>
+    <div class="tb" style="margin-top:4px">
+      <span class="segp"><span class="on">Tất cả</span><span>Đã đọc</span><span>Chưa đọc</span></span>
+      <a class="b gh" href="#"><span>Chi tiết</span></a>
+      <a class="b gh ic" href="#" aria-label="Sắp xếp"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"/><path d="M7 12h10"/><path d="M10 18h4"/></svg></a>
+    </div>
+    <div class="hint">Mục lục · trước: segmented bo 6px cao 42, nút “Chi tiết” bo 99px cao 32, nút icon bo 6px → sau: cùng thuốc, segmented là “thuốc trong thuốc”.</div>
+  </div>
+
+  <h2>Phần chung · áp cho cả ba</h2>
+  <ul class="k">
+    <li><span class="n">A</span><span><b>Một hình bo duy nhất</b><span class="t">999px cho mọi nút và mọi ô điều khiển; hết cảnh 6 / 9 / 10 / 99 đứng cạnh nhau.</span></span></li>
+    <li><span class="n">B</span><span><b>Nút trang chủ không đổi</b><span class="t">44px · 99px · 14,5px · đặc màu nhấn · nút icon tròn 44px — giữ y như bạn chốt.</span></span></li>
+    <li><span class="n">C</span><span><b>Giữ đủ chức năng</b><span class="t">Không bỏ nút nào: Đọc · Theo dõi · Tủ truyện · Chia sẻ · RSS vẫn còn đủ.</span></span></li>
+    <li><span class="n">D</span><span><b>Không đổi nhãn</b><span class="t">“Xác nhận 18+ để đọc”, “Theo dõi”, “Tủ truyện”, “Mở khóa” — giữ nguyên chữ.</span></span></li>
+    <li><span class="n">E</span><span><b>Chỉ một CTA chính</b><span class="t">Mỗi màn vẫn đúng một nút màu nhấn, các nút còn lại là viền hoặc khối phụ.</span></span></li>
+    <li><span class="n">F</span><span><b>Máy hẹp giữ cấu trúc</b><span class="t">Chỉ đổi cách xuống hàng; bản 390px ở mỗi phương án cho thấy bố cục đó.</span></span></li>
+  </ul>
+
+  <footer>
+    Chốt <b>A</b>, <b>B</b> hay <b>C</b> thì mình sửa CSS nút trong <code>src/cz.css</code>:
+    <code>.shero .btn-row</code> (trang truyện), <code>.seg</code> (segmented), <code>.hbtn</code> /
+    <code>.tb</code> (thanh đầu trang &amp; công cụ). Khối CTA của hero trang chủ <b>không đụng tới</b>.
+    Site thật chưa sửa gì ở vòng này.
+  </footer>
+</div>
+</body>
+</html>
