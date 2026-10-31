@@ -1,0 +1,170 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bộ chữ — vòng 81</title>
+<style>
+/* ---------- font ---------- */
+@font-face{font-family:'Fraunces';font-style:normal;font-weight:400;font-display:swap;
+  src:url(fonts/fraunces-latin-400-normal.woff2) format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:'Fraunces';font-style:normal;font-weight:400;font-display:swap;
+  src:url(fonts/fraunces-vietnamese-400-normal.woff2) format('woff2');
+  unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;}
+@font-face{font-family:'Fraunces';font-style:normal;font-weight:600;font-display:swap;
+  src:url(fonts/fraunces-latin-600-normal.woff2) format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:'Fraunces';font-style:normal;font-weight:600;font-display:swap;
+  src:url(fonts/fraunces-vietnamese-600-normal.woff2) format('woff2');
+  unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;}
+
+@font-face{font-family:'BVP';font-style:normal;font-weight:400;font-display:swap;
+  src:url(fonts/be-vietnam-pro-latin-400-normal.woff2) format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:'BVP';font-style:normal;font-weight:400;font-display:swap;
+  src:url(fonts/be-vietnam-pro-vietnamese-400-normal.woff2) format('woff2');
+  unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;}
+@font-face{font-family:'BVP';font-style:normal;font-weight:500;font-display:swap;
+  src:url(fonts/be-vietnam-pro-latin-500-normal.woff2) format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:'BVP';font-style:normal;font-weight:500;font-display:swap;
+  src:url(fonts/be-vietnam-pro-vietnamese-500-normal.woff2) format('woff2');
+  unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;}
+@font-face{font-family:'BVP';font-style:normal;font-weight:600;font-display:swap;
+  src:url(fonts/be-vietnam-pro-latin-600-normal.woff2) format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:'BVP';font-style:normal;font-weight:600;font-display:swap;
+  src:url(fonts/be-vietnam-pro-vietnamese-600-normal.woff2) format('woff2');
+  unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;}
+
+@font-face{font-family:'Manrope';font-style:normal;font-weight:500;font-display:swap;
+  src:url(fonts/manrope-latin-500-normal.woff2) format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:'Manrope';font-style:normal;font-weight:500;font-display:swap;
+  src:url(fonts/manrope-vietnamese-500-normal.woff2) format('woff2');
+  unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;}
+@font-face{font-family:'Manrope';font-style:normal;font-weight:700;font-display:swap;
+  src:url(fonts/manrope-latin-700-normal.woff2) format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:'Manrope';font-style:normal;font-weight:700;font-display:swap;
+  src:url(fonts/manrope-vietnamese-700-normal.woff2) format('woff2');
+  unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;}
+@font-face{font-family:'Manrope';font-style:normal;font-weight:800;font-display:swap;
+  src:url(fonts/manrope-latin-800-normal.woff2) format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:'Manrope';font-style:normal;font-weight:800;font-display:swap;
+  src:url(fonts/manrope-vietnamese-800-normal.woff2) format('woff2');
+  unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;}
+
+@font-face{font-family:'Anton';font-style:normal;font-weight:400;font-display:swap;
+  src:url(fonts/anton-latin-400-normal.woff2) format('woff2');
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:'Anton';font-style:normal;font-weight:400;font-display:swap;
+  src:url(fonts/anton-vietnamese-400-normal.woff2) format('woff2');
+  unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;}
+
+/* ---------- trang ---------- */
+:root{--bg:#14110e;--surf:#1b1611;--surf2:#241d17;--txt:#f2ebe0;--mut:#a89d8d;--dim:#8a8174;
+  --acc:#e0859b;--bd:rgba(255,240,220,.10);--bd2:rgba(255,240,220,.16)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:400 13.5px/1.6 'BVP',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.w{max-width:1120px;margin:0 auto;padding:36px 24px 70px}
+.lede{color:rgba(255,255,255,.58);margin:0 0 8px;max-width:82ch;font-size:13.5px;line-height:1.78}
+.lede b{color:var(--txt);font-weight:600}
+.warn{margin:0 0 30px;font-size:12.5px;color:var(--dim);max-width:82ch}
+h2.opt{display:flex;align-items:baseline;gap:10px;font:600 13px/1.3 'BVP',sans-serif;margin:36px 0 4px}
+h2.opt i{font-style:normal;color:var(--acc)}
+h2.opt span{font-weight:400;color:rgba(255,255,255,.42);font-size:12.5px}
+.note{margin:0 0 14px;font-size:12.5px;color:rgba(255,255,255,.46);max-width:100ch}
+
+/* ---------- bảng mẫu ---------- */
+.spec{background:var(--surf);border:1px solid var(--bd);border-radius:14px;padding:22px 24px}
+.spec .hd{display:flex;align-items:center;gap:22px;padding-bottom:14px;border-bottom:1px solid var(--bd)}
+.logo{font-size:21px;letter-spacing:-.01em}
+.nav{display:flex;gap:18px;font-size:13px;color:rgba(255,255,255,.62)}
+.nav b{color:var(--txt);font-weight:600}
+.nav .dot{color:var(--acc)}
+h1.big{font-size:40px;line-height:1.1;margin:20px 0 0;letter-spacing:-.015em}
+.who{font-size:13.5px;color:var(--mut);margin:9px 0 0}
+.who b{color:var(--txt);font-weight:600}
+.meta{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);margin:10px 0 0}
+p.ex{font-size:14px;line-height:1.78;color:rgba(255,255,255,.78);margin:16px 0 0;max-width:66ch}
+p.ex em{color:var(--txt);font-style:normal;font-weight:600}
+.row{display:flex;align-items:center;gap:10px;margin-top:20px}
+.btn{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 16px;border-radius:8px;
+  background:var(--acc);color:#2a1116;font-weight:600;font-size:13px;border:0}
+.btn.ghost{background:transparent;color:rgba(255,255,255,.72);border:1px solid var(--bd2)}
+.disp{font-size:22px;line-height:1.3;margin:18px 0 0;color:rgba(255,255,255,.88)}
+.dia{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:18px;padding-top:14px;border-top:1px solid var(--bd);
+  font-size:15px;color:rgba(255,255,255,.66);letter-spacing:.02em}
+.dia b{color:rgba(255,255,255,.34);font:600 10px/1.6 'BVP',sans-serif;letter-spacing:.14em;text-transform:uppercase;
+  align-self:center;margin-right:4px}
+
+/* ---------- A · Fraunces + Be Vietnam Pro ---------- */
+.f-a .logo,.f-a h1.big,.f-a .nav b{font-family:'Fraunces',Georgia,serif;font-weight:600}
+.f-a .logo{font-size:23px}
+.f-a h1.big{font-size:42px;font-weight:600}
+.f-a .meta,.f-a .btn,.f-a .nav,.f-a .who,.f-a p.ex{font-family:'BVP',sans-serif}
+.f-a .meta{font-family:'BVP',sans-serif}
+.f-a .disp{font-family:'Fraunces',Georgia,serif;font-weight:600;letter-spacing:-.01em}
+
+/* ---------- B · Manrope ---------- */
+.f-b .logo,.f-b h1.big,.f-b .nav,.f-b .who,.f-b p.ex,.f-b .meta,.f-b .btn{font-family:'Manrope',system-ui,sans-serif}
+.f-b .logo{font-weight:800;font-size:21px;letter-spacing:-.02em}
+.f-b h1.big{font-weight:800;letter-spacing:-.03em;font-size:40px}
+.f-b .meta{font-weight:700;letter-spacing:.12em}
+.f-b p.ex{font-weight:500;color:rgba(255,255,255,.74)}
+.f-b .btn{font-weight:700;border-radius:99px}
+.f-b .disp{font-family:'Manrope',system-ui,sans-serif;font-weight:800;letter-spacing:-.02em;font-size:20px}
+
+/* ---------- C · Anton + Be Vietnam Pro ---------- */
+.f-c .logo,.f-c h1.big,.f-c .meta{font-family:'Anton',Impact,sans-serif;font-weight:400;text-transform:uppercase}
+.f-c .logo{font-size:20px;letter-spacing:.04em}
+.f-c h1.big{font-size:44px;letter-spacing:.005em;line-height:1.02}
+.f-c .nav,.f-c .who,.f-c p.ex,.f-c .btn{font-family:'BVP',sans-serif}
+.f-c .meta{letter-spacing:.1em;font-size:11px;color:var(--acc);opacity:.85}
+.f-c .btn{border-radius:6px;font-weight:600;letter-spacing:.01em}
+.f-c .disp{font-family:'Anton',Impact,sans-serif;font-weight:400;text-transform:uppercase;font-size:20px;letter-spacing:.02em}
+</style></head><body><div class="w">
+
+<p class="lede">Ba bộ chữ dưới đây đều <b>tự lưu trong máy</b> (không gọi Google Fonts, không CDN) và đều có đủ bộ dấu tiếng Việt. (Instrument Serif/Sans mà tôi định dùng ban đầu <b>thiếu</b> phần lớn dấu — chỉ có latin-ext — nên đã loại.) Mỗi bảng in đúng các vai trò thật của trang: logo, tiêu đề truyện, tên tác giả, dòng thông số, đoạn giới thiệu, nút.</p>
+<p class="warn">Màu và bố cục giữ nguyên như hiện tại — bảng này chỉ đổi chữ. Cả ba dùng cỡ tương đương nhau để so công bằng.</p>
+
+<h2 class="opt"><i>A</i>Bộ “ấn phẩm”<span>Fraunces (tiêu đề) + Be Vietnam Pro (nội dung)</span></h2>
+<p class="note">Fraunces là serif có nét tương phản cao, đầu chữ hơi mềm — đọc ra chất sách, hợp với truyện chữ. Be Vietnam Pro được thiết kế riêng cho tiếng Việt nên dấu không bị lệch hay chen vào dòng trên. Hai mặt chữ tách vai rõ: tiêu đề có cá tính, phần đọc thì trung tính.</p>
+<div class="spec f-a">
+  <div class="hd"><span class="logo">ssochuz</span><nav class="nav"><span class="dot">●</span><b>Thư viện</b><span>Truyện tranh</span><span>Tủ truyện</span></nav></div>
+  <h1 class="big">Lunar Secret</h1>
+  <p class="who"><b>Purple Moon</b> · Lookmhee x Sonya</p>
+  <p class="meta">Hoàn thành · cập nhật 09-07-2026 · 39 chương</p>
+  <p class="ex">Hai vì sao tình cờ chạm mặt nhau dưới ánh đèn rực rỡ của sân khấu. <em>Pawida</em>, nàng công chúa hoàn mỹ không tì vết, và <em>Alin</em> — thiên thần mang trong mình những vết sẹo thầm kín. Cùng tắm mình trong ánh sáng ấy, cả hai dần nhận ra vẻ đẹp không nằm ở chỗ không có khuyết điểm.</p>
+  <p class="disp">Truyện chữ &amp; truyện tranh — Đọc một mạch</p>
+  <div class="row"><button class="btn">Đọc tiếp chương 12</button><button class="btn ghost">Theo dõi</button></div>
+  <div class="dia"><b>Dấu tiếng Việt</b>Ả ạ Ấ ầ Ẫ Ễ ệ Ố ỡ Ợ ứ Ự ỹ · 12.480 lượt · 39/39</div>
+</div>
+
+<h2 class="opt"><i>B</i>Bộ “ứng dụng”<span>Manrope cho tất cả</span></h2>
+<p class="note">Một mặt chữ duy nhất, hình học và tròn — tiêu đề đậm 800, nội dung 500. Sạch, đều, không có chỗ nào “lệch giọng”, nhưng cũng là bản ít chất sách nhất; hợp nếu bạn muốn trang giống một sản phẩm hơn là một ấn phẩm.</p>
+<div class="spec f-b">
+  <div class="hd"><span class="logo">ssochuz</span><nav class="nav"><span class="dot">●</span><b>Thư viện</b><span>Truyện tranh</span><span>Tủ truyện</span></nav></div>
+  <h1 class="big">Lunar Secret</h1>
+  <p class="who"><b>Purple Moon</b> · Lookmhee x Sonya</p>
+  <p class="meta">Hoàn thành · cập nhật 09-07-2026 · 39 chương</p>
+  <p class="ex">Hai vì sao tình cờ chạm mặt nhau dưới ánh đèn rực rỡ của sân khấu. <em>Pawida</em>, nàng công chúa hoàn mỹ không tì vết, và <em>Alin</em> — thiên thần mang trong mình những vết sẹo thầm kín. Cùng tắm mình trong ánh sáng ấy, cả hai dần nhận ra vẻ đẹp không nằm ở chỗ không có khuyết điểm.</p>
+  <p class="disp">Truyện chữ &amp; truyện tranh — Đọc một mạch</p>
+  <div class="row"><button class="btn">Đọc tiếp chương 12</button><button class="btn ghost">Theo dõi</button></div>
+  <div class="dia"><b>Dấu tiếng Việt</b>Ả ạ Ấ ầ Ẫ Ễ ệ Ố ỡ Ợ ứ Ự ỹ · 12.480 lượt · 39/39</div>
+</div>
+
+<h2 class="opt"><i>C</i>Bộ “poster truyện tranh”<span>Anton (tiêu đề) + Be Vietnam Pro (nội dung)</span></h2>
+<p class="note">Anton là chữ hẹp, in hoa, nét dày — cho cảm giác bìa truyện tranh/poster. Tên truyện và nhãn thông số sẽ rất “nổi”, nhưng chữ in hoa toàn bộ ở tiêu đề dài thì khó đọc hơn, và chất này hơi lấn át phần nội dung.</p>
+<div class="spec f-c">
+  <div class="hd"><span class="logo">ssochuz</span><nav class="nav"><span class="dot">●</span><b>Thư viện</b><span>Truyện tranh</span><span>Tủ truyện</span></nav></div>
+  <h1 class="big">Lunar Secret</h1>
+  <p class="who"><b>Purple Moon</b> · Lookmhee x Sonya</p>
+  <p class="meta">Hoàn thành · cập nhật 09-07-2026 · 39 chương</p>
+  <p class="ex">Hai vì sao tình cờ chạm mặt nhau dưới ánh đèn rực rỡ của sân khấu. <em>Pawida</em>, nàng công chúa hoàn mỹ không tì vết, và <em>Alin</em> — thiên thần mang trong mình những vết sẹo thầm kín. Cùng tắm mình trong ánh sáng ấy, cả hai dần nhận ra vẻ đẹp không nằm ở chỗ không có khuyết điểm.</p>
+  <p class="disp">Truyện chữ &amp; truyện tranh — Đọc một mạch</p>
+  <div class="row"><button class="btn">Đọc tiếp chương 12</button><button class="btn ghost">Theo dõi</button></div>
+  <div class="dia"><b>Dấu tiếng Việt</b>Ả ạ Ấ ầ Ẫ Ễ ệ Ố ỡ Ợ ứ Ự ỹ · 12.480 lượt · 39/39</div>
+</div>
+
+</div></body></html>
