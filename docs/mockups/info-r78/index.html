@@ -1,0 +1,90 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Thông tin truyện — vòng 78</title><style>
+:root{
+  --acc:#e0859b; --txt:#f7f1e7;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,"Times New Roman",serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --bd:rgba(255,240,220,.08); --bd2:rgba(255,240,220,.13);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#121010;color:var(--txt);font:400 13.5px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+.w{max-width:1120px;margin:0 auto;padding:34px 24px 64px}
+.lede{color:rgba(255,255,255,.58);margin:0;max-width:80ch;font-size:13.5px;line-height:1.78}
+.lede b{color:var(--txt);font-weight:600}
+section{margin:40px 0 0}
+.hd{display:flex;align-items:baseline;gap:10px;margin:0 0 6px}
+.hd .n{color:var(--acc);font-weight:600}
+.hd h2{font:600 13px/1.3 var(--sans);margin:0}
+.hd p{margin:0;font-size:12.5px;color:rgba(255,255,255,.40)}
+.hd2{font-size:12.5px;color:rgba(255,255,255,.46);margin:0 0 14px;line-height:1.7}
+.frame{width:1032px;max-width:100%}
+.sec{padding:0 7px}
+.mobrow{display:flex;gap:24px;margin-top:22px}
+.mob{width:343px;flex:none}
+.tag{font:500 9.5px/1 var(--mono);letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,.28);margin:0 0 8px}
+
+/* khung chung: tiêu đề mục giống trang thật */
+.sechead{display:flex;align-items:flex-end;gap:16px;padding-bottom:12px;margin-bottom:18px;border-bottom:1px solid var(--bd)}
+.sechead h2{font:400 22px/1.2 var(--serif);letter-spacing:-.018em;margin:0}
+
+/* link "khám phá" */
+.links{display:flex;flex-wrap:wrap;gap:8px 26px;padding-top:15px}
+.links a{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:rgba(255,255,255,.62);text-decoration:none}
+.links a:hover{color:#fff}
+.links svg{width:12px;height:12px;flex:none;color:var(--acc)}
+
+/* ---------------- A ---------------- */
+.a .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:34px;row-gap:22px;
+  padding:2px 0 20px;border-bottom:1px solid var(--bd)}
+.a .kv{min-width:0}
+.a .k{display:block;font:500 9.5px/1 var(--mono);letter-spacing:.13em;text-transform:uppercase;
+  color:rgba(255,255,255,.32);margin-bottom:8px}
+.a .v{display:block;font-size:14.5px;line-height:1.35;font-weight:500;color:rgba(255,255,255,.90);
+  font-variant-numeric:tabular-nums}
+.a .v.acc{color:var(--acc);font-weight:600}
+
+/* ---------------- B ---------------- */
+.b .cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 56px}
+.b .tbl{display:grid;grid-auto-rows:39px;align-content:start;border-bottom:1px solid var(--bd);min-height:156px}
+.b .row{display:grid;grid-template-columns:120px minmax(0,1fr);align-items:center;gap:14px;
+  border-bottom:1px solid var(--bd)}
+.b .row:last-child{border-bottom:0}
+.b .k{font-size:12.5px;color:rgba(255,255,255,.38)}
+.b .v{font-size:14px;color:rgba(255,255,255,.88);font-variant-numeric:tabular-nums}
+.b .v.acc{color:var(--acc);font-weight:600}
+
+/* ---------------- C ---------------- */
+.c .two{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:48px;padding-bottom:12px;border-bottom:1px solid var(--bd)}
+.c .two2{border-left:1px solid var(--bd);padding-left:48px}
+.c .gk{font:500 9.5px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;
+  color:rgba(255,255,255,.30);margin-bottom:6px}
+.c .tr{display:grid;grid-template-columns:96px minmax(0,1fr);align-items:baseline;gap:14px;padding:7px 0}
+.c .tr .k{font-size:12.5px;color:rgba(255,255,255,.40)}
+.c .tr .v{font-size:14px;color:rgba(255,255,255,.88);font-variant-numeric:tabular-nums}
+.c .tr .v.acc{color:var(--acc);font-weight:600}
+.c .prg{padding:8px 0 4px}
+.c .prg + .prg{margin-top:14px;border-top:1px solid var(--bd);padding-top:16px}
+.c .prgh{display:flex;align-items:baseline;gap:5px}
+.c .prgh .p1{font-size:19px;font-weight:600;color:rgba(255,255,255,.94);font-variant-numeric:tabular-nums}
+.c .prgh .p2{font-size:12.5px;color:rgba(255,255,255,.38)}
+.c .prgh .p3{margin-left:auto;font:500 10.5px/1 var(--mono);letter-spacing:.08em;color:var(--acc)}
+.c .bar{height:3px;border-radius:2px;background:rgba(255,255,255,.07);margin:11px 0 9px;overflow:hidden}
+.c .bar i{display:block;height:100%;background:var(--acc);border-radius:2px}
+.c .pnote{margin:0;font-size:11.5px;line-height:1.55;color:rgba(255,255,255,.38)}
+.c .pnote.dim{color:rgba(255,255,255,.26);margin-top:7px}
+
+/* ---------------- 343 ---------------- */
+.is-m .sechead{padding-bottom:10px;margin-bottom:14px}
+.is-m .sechead h2{font-size:20px}
+.is-m .links{flex-direction:column;gap:9px;padding-top:14px}
+.is-m .links a{font-size:12px}
+.is-m.a .grid{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:18px;row-gap:18px;padding-bottom:16px}
+.is-m.a .v{font-size:13.5px}
+.is-m.b .cols{grid-template-columns:1fr;gap:0}
+.is-m.b .tbl{min-height:0}
+.is-m.b .tbl + .tbl .row:first-child{border-top:0}
+.is-m.b .row{grid-template-columns:104px minmax(0,1fr);height:38px}
+.is-m.c .two{grid-template-columns:1fr;gap:0}
+.is-m.c .tr{grid-template-columns:88px minmax(0,1fr);padding:6px 0}
+.is-m.c .two2{border-left:0;padding-left:0;border-top:1px solid var(--bd);margin-top:16px;padding-top:16px}
+</style></head><body><div class="w"><p class="lede">Bảng thông tin hiện tại có bốn chỗ đang chướng: <b>nhãn và giá trị bị đẩy ra hai mép</b> — ở 1440 mắt phải nhảy gần 900px giữa “Tác giả” và “Purple Moon”; <b>mọi giá trị đều đậm trắng như nhau</b> nên tác giả, ngày cập nhật và hai câu link đọc ra cùng một giọng; <b>“Số chương · 39 chương” lặp chữ</b> và ngày dùng gạch chéo trong khi phần đầu trang đã dùng 09-07-2026; <b>mục “Khám phá” là hai câu link in đậm</b> nằm trong bảng số liệu nên trông như dữ liệu. Cả ba bản dưới đây giữ đủ dữ liệu, bỏ chữ lặp, và đưa link “tất cả truyện của…” xuống thành một hàng link riêng có mũi tên.</p><section><div class="hd"><span class="n">A</span><h2>A · Lưới nhãn trên giá trị</h2></div><p class="hd2">— nhãn mono nhỏ phía trên, giá trị bên dưới, chia 3 cột — không kẻ ngang, không kéo giá trị ra tận mép phải</p><div class="frame"><div class="sec a"><div class="sechead"><h2>Thông tin truyện</h2></div><div class="grid"><div class="kv"><span class="k">Tác giả</span><span class="v ">Purple Moon</span></div><div class="kv"><span class="k">Couple</span><span class="v ">Ginny x Jayna</span></div><div class="kv"><span class="k">Năm</span><span class="v ">2014</span></div><div class="kv"><span class="k">Tình trạng</span><span class="v ">Hoàn thành</span></div><div class="kv"><span class="k">Số chương</span><span class="v ">39</span></div><div class="kv"><span class="k">Đã đọc</span><span class="v acc">12/39 · 31%</span></div><div class="kv"><span class="k">Cập nhật</span><span class="v ">09-07-2026</span></div></div><div class="links"><a href="/tac-gia/?q=purple-moon">Tất cả truyện của Purple Moon<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></a><a href="/couple/?q=ginny-x-jayna">Tất cả truyện của Ginny x Jayna<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></a></div></div></div><div class="mobrow"><div class="mob"><p class="tag">343px</p><div class="sec a is-m"><div class="sechead"><h2>Thông tin truyện</h2></div><div class="grid"><div class="kv"><span class="k">Tác giả</span><span class="v ">Purple Moon</span></div><div class="kv"><span class="k">Couple</span><span class="v ">Ginny x Jayna</span></div><div class="kv"><span class="k">Năm</span><span class="v ">2014</span></div><div class="kv"><span class="k">Tình trạng</span><span class="v ">Hoàn thành</span></div><div class="kv"><span class="k">Số chương</span><span class="v ">39</span></div><div class="kv"><span class="k">Đã đọc</span><span class="v acc">12/39 · 31%</span></div><div class="kv"><span class="k">Cập nhật</span><span class="v ">09-07-2026</span></div></div><div class="links"><a href="/tac-gia/?q=purple-moon">Tất cả truyện của Purple Moon<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></a><a href="/couple/?q=ginny-x-jayna">Tất cả truyện của Ginny x Jayna<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></a></div></div></div></div></section><section><div class="hd"><span class="n">B</span><h2>B · Bảng nhãn trái, giá trị phải</h2></div><p class="hd2">— kiểu bảng thông tin MAL/Letterboxd: nhãn cột trái cố định 120px, giá trị canh trái cùng một trục, chia hai khối cạnh nhau</p><div class="frame"><div class="sec b"><div class="sechead"><h2>Thông tin truyện</h2></div><div class="cols"><div class="tbl"><div class="row"><span class="k">Tác giả</span><span class="v ">Purple Moon</span></div><div class="row"><span class="k">Couple</span><span class="v ">Ginny x Jayna</span></div><div class="row"><span class="k">Năm</span><span class="v ">2014</span></div><div class="row"><span class="k">Tình trạng</span><span class="v ">Hoàn thành</span></div></div><div class="tbl"><div class="row"><span class="k">Số chương</span><span class="v ">39</span></div><div class="row"><span class="k">Đã đọc</span><span class="v acc">12/39 · 31%</span></div><div class="row"><span class="k">Cập nhật</span><span class="v ">09-07-2026</span></div></div></div><div class="links"><a href="/tac-gia/?q=purple-moon">Tất cả truyện của Purple Moon<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></a><a href="/couple/?q=ginny-x-jayna">Tất cả truyện của Ginny x Jayna<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></a></div></div></div><div class="mobrow"><div class="mob"><p class="tag">343px</p><div class="sec b is-m"><div class="sechead"><h2>Thông tin truyện</h2></div><div class="cols"><div class="tbl"><div class="row"><span class="k">Tác giả</span><span class="v ">Purple Moon</span></div><div class="row"><span class="k">Couple</span><span class="v ">Ginny x Jayna</span></div><div class="row"><span class="k">Năm</span><span class="v ">2014</span></div><div class="row"><span class="k">Tình trạng</span><span class="v ">Hoàn thành</span></div></div><div class="tbl"><div class="row"><span class="k">Số chương</span><span class="v ">39</span></div><div class="row"><span class="k">Đã đọc</span><span class="v acc">12/39 · 31%</span></div><div class="row"><span class="k">Cập nhật</span><span class="v ">09-07-2026</span></div></div></div><div class="links"><a href="/tac-gia/?q=purple-moon">Tất cả truyện của Purple Moon<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></a><a href="/couple/?q=ginny-x-jayna">Tất cả truyện của Ginny x Jayna<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></a></div></div></div></div></section><section><div class="hd"><span class="n">C</span><h2>C · Tách “Về truyện” và “Của bạn”</h2></div><p class="hd2">— cột trái là dữ liệu truyện, cột phải là tiến độ đọc của bạn có thanh 3px — hai nhóm, một đường kẻ dọc</p><div class="frame"><div class="sec c"><div class="sechead"><h2>Thông tin truyện</h2></div><div class="two"><div class="col"><div class="gk">Về truyện</div><div class="tr"><span class="k">Tác giả</span><span class="v ">Purple Moon</span></div><div class="tr"><span class="k">Couple</span><span class="v ">Ginny x Jayna</span></div><div class="tr"><span class="k">Năm</span><span class="v ">2014</span></div><div class="tr"><span class="k">Tình trạng</span><span class="v ">Hoàn thành</span></div><div class="tr"><span class="k">Số chương</span><span class="v ">39</span></div><div class="tr"><span class="k">Cập nhật</span><span class="v ">09-07-2026</span></div></div><div class="col two2"><div class="gk">Của bạn</div><div class="prg"><div class="prgh"><span class="p1">12</span><span class="p2">/ 39 chương</span><span class="p3">31%</span></div><div class="bar"><i style="width:31%"></i></div><p class="pnote">Đang đọc chương 12 · còn 27 chương</p></div></div></div><div class="links"><a href="/tac-gia/?q=purple-moon">Tất cả truyện của Purple Moon<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></a><a href="/couple/?q=ginny-x-jayna">Tất cả truyện của Ginny x Jayna<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></a></div></div></div><div class="mobrow"><div class="mob"><p class="tag">343px</p><div class="sec c is-m"><div class="sechead"><h2>Thông tin truyện</h2></div><div class="two"><div class="col"><div class="gk">Về truyện</div><div class="tr"><span class="k">Tác giả</span><span class="v ">Purple Moon</span></div><div class="tr"><span class="k">Couple</span><span class="v ">Ginny x Jayna</span></div><div class="tr"><span class="k">Năm</span><span class="v ">2014</span></div><div class="tr"><span class="k">Tình trạng</span><span class="v ">Hoàn thành</span></div><div class="tr"><span class="k">Số chương</span><span class="v ">39</span></div><div class="tr"><span class="k">Cập nhật</span><span class="v ">09-07-2026</span></div></div><div class="col two2"><div class="gk">Của bạn</div><div class="prg"><div class="prgh"><span class="p1">12</span><span class="p2">/ 39 chương</span><span class="p3">31%</span></div><div class="bar"><i style="width:31%"></i></div><p class="pnote">Đang đọc chương 12 · còn 27 chương</p></div></div></div><div class="links"><a href="/tac-gia/?q=purple-moon">Tất cả truyện của Purple Moon<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></a><a href="/couple/?q=ginny-x-jayna">Tất cả truyện của Ginny x Jayna<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></a></div></div></div></div></section></div></body></html>
