@@ -277,7 +277,8 @@ function chFromLog(log) {
     await wait(1600);
     const d2 = p2.doc;
     const t2 = s => { const e = d2.querySelector(s); return e ? e.textContent.trim().replace(/\s+/g, ' ') : '<null>'; };
-    const infoRows = [...d2.querySelectorAll('#storyInfo .r')]
+    /* vòng 78: mỗi mục là một ô .ikv (nhãn <dt> trên, giá trị <dd> dưới) */
+    const infoRows = [...d2.querySelectorAll('#storyInfo .ikv')]
       .map(r => r.textContent.replace(/\s+/g, ' ').trim())
       .filter(x => /chương/i.test(x));
     out.soChuong = {

@@ -572,34 +572,41 @@
   /* Tab Thông tin chỉ chứa metadata; tóm tắt nằm ở đầu trang. */
   function renderInfo() {
     var n = N, ch = CZ.progress(n), st = CZ.statsOf(n);
-    var rows = [
-      ['Tác giả', n.author || '—'],
-      ['Couple', n.couple || '—'],
-      ['Năm', n.year || '—'],
-      ['Tình trạng', CZ.statusLabel(n.statusCls || n.status)],
-      /* bộ chưa đăng chương: ghi “0 chương”, không lặp lại câu mô tả trạng thái */
-      ['Số chương', n.canRead ? CZ.countText(n) : '0 chương'],
-      ['Bạn đã đọc', ch && n.chapters ? ch + '/' + n.chapters + ' chương (' + progressPct(n, ch) + '%)' : 'chưa đọc chương nào'],
-      ['Cập nhật gần nhất', n.updated ? CZ.dateVN(n.updated) : '—']
+    /* Bố cục vòng 78 (phương án A): mỗi mục là NHÃN in hoa cỡ nhỏ nằm trên,
+       giá trị ngay bên dưới — mắt không phải nhảy sang mép phải của khung
+       1032px như bảng hai cột cũ. Lưới ba cột, không kẻ ngang giữa các mục;
+       chỉ một đường kẻ mảnh đóng phần dữ liệu trước hàng link “tất cả truyện”. */
+    var chPct = ch && n.chapters ? progressPct(n, ch) : 0;
+    var cells = [
+      ['Tác giả', n.author || '—', ''],
+      ['Couple', n.couple || '—', ''],
+      ['Năm', n.year || '—', ''],
+      ['Tình trạng', CZ.statusLabel(n.statusCls || n.status), ''],
+      /* nhãn đã nói “chương” nên giá trị chỉ còn con số (bản cũ in “39 chương”) */
+      ['Số chương', n.canRead ? String(n.chapters) : '0', 'num'],
+      ['Đã đọc', ch && n.chapters ? ch + '/' + n.chapters + ' · ' + chPct + '%' : 'chưa đọc',
+        ch && n.chapters ? 'acc' : 'dim'],
+      ['Cập nhật', n.updated ? String(CZ.dateVN(n.updated)).replace(/\//g, '-') : '—', 'num']
     ];
-    if (st && (st.views || st.votes)) {
-      rows.push(['Số liệu thật', (st.views ? num(st.views) + ' lượt đọc' : '') +
-        (st.views && st.votes ? ' · ' : '') + (st.votes ? num(st.votes) + ' phiếu' : '')]);
-    }
+    if (st && st.views) cells.push(['Lượt đọc', num(st.views), 'num']);
+    if (st && st.votes) cells.push(['Phiếu', num(st.votes), 'num']);
     var info = $('#storyInfo');
-    if (info) info.innerHTML = rows.map(function (r) {
-      return '<div class="r"><span>' + esc(r[0]) + '</span><b>' + esc(String(r[1])) + '</b></div>';
-    }).join('');
-    /* dòng Khám phá: sang trang riêng của tác giả/couple */
-    if (info && (n.author || n.couple)) {
-      var more = [];
-      if (n.author) more.push('<a href="/tac-gia/?q=' + encodeURIComponent(CZ.slugify(n.author)) + '">Xem tất cả truyện của ' + esc(n.author) + '</a>');
-      var cps = CZ.couplesOf ? CZ.couplesOf(n) : (n.couple ? [n.couple] : []);
-      cps.forEach(function (cp) {
-        more.push('<a href="/couple/?q=' + encodeURIComponent(CZ.slugify(cp)) + '">Xem tất cả truyện của ' + esc(cp) + '</a>');
-      });
-      info.innerHTML += '<div class="r"><span>Khám phá</span><b>' + more.join('<br>') + '</b></div>';
-    }
+    if (!info) return;
+    info.innerHTML = '<dl class="igrid">' + cells.map(function (c) {
+      return '<div class="ikv"><dt>' + esc(c[0]) + '</dt><dd' +
+        (c[2] ? ' class="' + c[2] + '"' : '') + '>' + esc(String(c[1])) + '</dd></div>';
+    }).join('') + '</dl>';
+    /* hàng link “khám phá”: sang trang riêng của tác giả/couple — tách khỏi
+       bảng dữ liệu để hai câu link không đọc ra như một dòng số liệu */
+    var more = [];
+    if (n.author) more.push('<a href="/tac-gia/?q=' + encodeURIComponent(CZ.slugify(n.author)) +
+      '">Tất cả truyện của ' + esc(n.author) + ic('right', 'i-s') + '</a>');
+    var cps = CZ.couplesOf ? CZ.couplesOf(n) : (n.couple ? [n.couple] : []);
+    cps.forEach(function (cp) {
+      more.push('<a href="/couple/?q=' + encodeURIComponent(CZ.slugify(cp)) +
+        '">Tất cả truyện của ' + esc(cp) + ic('right', 'i-s') + '</a>');
+    });
+    if (more.length) info.insertAdjacentHTML('beforeend', '<div class="ilinks">' + more.join('') + '</div>');
   }
   /* một dòng chương: số · tên (tô sáng khi tìm) · dấu đã đọc / đã đánh dấu.
      Ký hiệu ngoại truyện là S (S1, S2…; S khi không ghi số) — gọn hơn NT cũ
