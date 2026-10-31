@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đề xuất vòng 64 · ba chất khác nhau cho nút và chữ</title>
+<style>
+/* ==========================================================================
+   FONT — tự host, có bộ dấu tiếng Việt (Playfair Display / Inter / Montserrat /
+   JetBrains Mono, giấy phép OFL nằm trong ./fonts). Không gọi mạng ra ngoài.
+   ========================================================================== */
+@font-face { font-family: 'Playfair'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url('fonts/playfair-display-vietnamese-500-normal.woff2') format('woff2');
+  unicode-range: U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB; }
+@font-face { font-family: 'Playfair'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url('fonts/playfair-display-latin-500-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'Playfair'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url('fonts/playfair-display-vietnamese-700-normal.woff2') format('woff2');
+  unicode-range: U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB; }
+@font-face { font-family: 'Playfair'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url('fonts/playfair-display-latin-700-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url('fonts/inter-vietnamese-400-normal.woff2') format('woff2');
+  unicode-range: U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB; }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url('fonts/inter-latin-400-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 600; font-display: swap;
+  src: url('fonts/inter-vietnamese-600-normal.woff2') format('woff2');
+  unicode-range: U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB; }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 600; font-display: swap;
+  src: url('fonts/inter-latin-600-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url('fonts/inter-vietnamese-700-normal.woff2') format('woff2');
+  unicode-range: U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB; }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url('fonts/inter-latin-700-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'Montserrat'; font-style: normal; font-weight: 800; font-display: swap;
+  src: url('fonts/montserrat-vietnamese-800-normal.woff2') format('woff2');
+  unicode-range: U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB; }
+@font-face { font-family: 'Montserrat'; font-style: normal; font-weight: 800; font-display: swap;
+  src: url('fonts/montserrat-latin-800-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: 'JBMono'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url('fonts/jetbrains-mono-latin-500-normal.woff2') format('woff2'); }
+
+:root {
+  --bg: #12100f; --surf: #1a1613; --surf2: #221c18;
+  --bd: rgba(255,255,255,.11); --bd2: rgba(255,255,255,.2);
+  --txt: #f3ede9; --mut: rgba(243,237,233,.64); --dim: rgba(243,237,233,.4);
+  --acc: rgb(224,133,155); --ink: #1a1113;
+  --sans: 'Inter', system-ui, sans-serif;
+  --serif: 'Playfair', Georgia, serif;
+  --mono: 'JBMono', ui-monospace, monospace;
+  --cap: 'Montserrat', system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); }
+body { color: var(--txt); font-family: var(--sans); -webkit-font-smoothing: antialiased;
+  font-size: 15px; line-height: 1.6; }
+body > div[style*="position:fixed"] { display: none !important; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 44px 22px 96px; }
+a { text-decoration: none; color: inherit; }
+
+/* ---------- đầu trang ---------- */
+.kick { margin: 0; font: 500 10.5px/1 var(--mono); letter-spacing: .2em; text-transform: uppercase; color: var(--acc); }
+h1 { margin: 16px 0 14px; max-width: 20ch; font: 700 clamp(34px, 5vw, 54px)/1.04 var(--serif);
+  letter-spacing: -.022em; }
+.lede { margin: 0; max-width: 74ch; color: var(--mut); font-size: 15.5px; }
+.lede b { color: var(--txt); font-weight: 600; }
+.refs-row { display: grid; gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 26px 0 0; padding: 0; list-style: none; }
+.refs-row li { padding: 14px 16px; border: 1px solid var(--bd); border-radius: 3px; background: rgba(255,255,255,.015); }
+.refs-row .src { display: block; font: 500 9.5px/1 var(--mono); letter-spacing: .18em; text-transform: uppercase; color: var(--dim); margin-bottom: 7px; }
+.refs-row b { display: block; font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+.refs-row span.t { font-size: 12.5px; color: var(--mut); line-height: 1.5; }
+
+/* ---------- khối mỗi hướng ---------- */
+.dir { margin: 64px 0 0; padding-top: 30px; border-top: 1px solid var(--bd); }
+.dhead { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px 14px; margin-bottom: 6px; }
+.dhead .num { font: 500 11px/1 var(--mono); letter-spacing: .2em; color: var(--acc); padding-bottom: 6px; }
+.dhead h2 { margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
+.dhead .tagline { margin-left: auto; font: 500 10.5px/1.5 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); text-align: right; }
+.dsay { margin: 10px 0 0; max-width: 78ch; color: var(--mut); font-size: 14.5px; }
+.dsay b { color: var(--txt); font-weight: 600; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 0; }
+.chips span { font: 500 10.5px/1 var(--mono); letter-spacing: .04em; padding: 6px 9px; border: 1px solid var(--bd);
+  border-radius: 3px; color: var(--mut); }
+
+/* specimen chữ */
+.specimen { display: grid; grid-template-columns: 128px minmax(0,1fr); gap: 22px; align-items: center;
+  margin: 22px 0 0; padding: 18px 20px; border: 1px solid var(--bd); border-radius: 3px; background: var(--surf); }
+.specimen .aa { font-size: 64px; line-height: .9; letter-spacing: -.03em; color: var(--txt); }
+.specimen .names { display: grid; gap: 4px; }
+.specimen .names b { font-size: 14px; font-weight: 600; }
+.specimen .names span { font: 500 10.5px/1.5 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+
+/* ---------- khung mô phỏng ---------- */
+.stage { margin: 18px 0 0; border: 1px solid var(--bd); border-radius: 4px; overflow: hidden; background: #14100d; }
+.stage .cap { display: flex; align-items: center; gap: 8px; padding: 8px 13px; border-bottom: 1px solid var(--bd);
+  font: 500 9.5px/1 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--dim); }
+.stage .cap .w { margin-left: auto; }
+.duo { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start; margin-top: 18px; }
+.duo > * { flex: 0 1 auto; }
+
+/* ---------- panel trang truyện (dùng chung khung) ---------- */
+.story.narrow { grid-template-columns: 74px minmax(0,1fr); gap: 16px; padding: 20px; }
+.story.narrow .cv { width: 74px; }
+.story { position: relative; padding: 26px 28px; display: grid; grid-template-columns: 96px minmax(0,1fr);
+  gap: 24px; align-items: start; overflow: hidden; }
+.story .bg { position: absolute; inset: 0; background: center 30% / cover no-repeat; opacity: .34; }
+.story .veil { position: absolute; inset: 0;
+  background: linear-gradient(90deg, #14100d 0%, rgba(20,16,13,.94) 46%, rgba(20,16,13,.42) 100%); }
+.story > * { position: relative; }
+.story .cv { width: 96px; aspect-ratio: 2/3; border-radius: 3px; overflow: hidden; background: #241a15; }
+.story .cv img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.story .body { min-width: 0; }
+.story .kicker { display: block; margin-bottom: 10px; }
+.story h3 { margin: 0 0 8px; line-height: 1.06; }
+.story .meta { margin: 0 0 18px; }
+.story .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* ---------- mục trang chủ ---------- */
+.sec { padding: 24px 26px 26px; }
+.sechead { display: flex; align-items: baseline; gap: 12px; padding-bottom: 12px; margin-bottom: 16px; border-bottom: 1px solid var(--bd); }
+.sechead h4 { margin: 0; }
+.sechead .count { font: 500 10.5px/1 var(--mono); color: var(--dim); letter-spacing: .12em; }
+.sechead .more { margin-left: auto; font-size: 12.5px; }
+.cards { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 14px; }
+.card .cvr { position: relative; aspect-ratio: 2/3; border-radius: 3px; overflow: hidden; background: #241a15; }
+.card .cvr img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.card .cvr .b18 { position: absolute; left: 8px; bottom: 8px; font: 500 9.5px/1 var(--mono); letter-spacing: .1em;
+  padding: 4px 6px; background: rgba(0,0,0,.62); color: #fff; }
+.card .n { margin: 9px 0 0; font-size: 13px; font-weight: 600; line-height: 1.35;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; height: 2.7em; }
+.card .m { margin: 3px 0 0; font: 500 10.5px/1.4 var(--mono); color: var(--dim); letter-spacing: .06em; }
+
+/* ==========================================================================
+   A · TOÀ SOẠN — chữ serif tương phản cao, nút vuông, nhãn mono
+   ========================================================================== */
+[data-dir="A"] { --disp: var(--serif); }
+[data-dir="A"] .dhead h2 { font: 700 32px/1.05 var(--serif); letter-spacing: -.015em; }
+[data-dir="A"] .story h3 { font: 700 38px/1.02 var(--serif); letter-spacing: -.02em; }
+[data-dir="A"] .story .meta { font: 500 10.5px/1.6 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--mut); }
+[data-dir="A"] .story .kicker { font: 500 9.5px/1 var(--mono); letter-spacing: .22em; text-transform: uppercase; color: var(--acc); }
+[data-dir="A"] .row { gap: 0; }
+[data-dir="A"] .btn { display: inline-flex; align-items: center; justify-content: center; gap: 9px; height: 42px;
+  padding: 0 20px; border-radius: 2px; border: 1px solid transparent; font: 600 12.5px/1 var(--sans);
+  letter-spacing: .04em; text-transform: uppercase; color: #fff; }
+[data-dir="A"] .btn.ico { width: 42px; padding: 0; }
+[data-dir="A"] .btn svg { width: 17px; height: 17px; }
+[data-dir="A"] .btn.pri { background: var(--acc); border-color: var(--acc); color: var(--ink); }
+[data-dir="A"] .btn.gh { border-color: rgba(255,255,255,.26); color: var(--mut); border-left: 0; }
+[data-dir="A"] .btn.gh.first { border-left: 1px solid rgba(255,255,255,.26); }
+[data-dir="A"] .btn.on { color: var(--acc); border-color: var(--acc); }
+[data-dir="A"] .sechead h4 { font: 700 26px/1 var(--serif); letter-spacing: -.01em; }
+[data-dir="A"] .sechead .more { font: 500 10.5px/1 var(--mono); letter-spacing: .18em; text-transform: uppercase;
+  color: var(--acc); border-bottom: 1px solid var(--acc); padding-bottom: 3px; }
+[data-dir="A"] .card .n { font-family: var(--serif); font-size: 15px; font-weight: 700; }
+[data-dir="A"] .specimen .aa { font-family: var(--serif); font-weight: 700; }
+
+/* ==========================================================================
+   B · BẢNG HIỆU — caps dày, nút dán “sticker”, nhãn in hoa
+   ========================================================================== */
+[data-dir="B"] .dhead h2 { font: 800 30px/1.05 var(--cap); letter-spacing: -.02em; text-transform: uppercase; }
+[data-dir="B"] .story h3 { font: 800 33px/1.02 var(--cap); letter-spacing: -.028em; text-transform: uppercase; }
+[data-dir="B"] .story .meta { font: 600 11px/1.6 var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--mut); }
+[data-dir="B"] .story .kicker { display: inline-block; font: 700 9.5px/1 var(--sans); letter-spacing: .16em;
+  text-transform: uppercase; color: var(--ink); background: var(--acc); padding: 5px 8px; border-radius: 3px; }
+[data-dir="B"] .btn { display: inline-flex; align-items: center; justify-content: center; gap: 9px; height: 44px;
+  padding: 0 18px; border-radius: 6px; border: 1px solid transparent;
+  font: 700 11.5px/1 var(--sans); letter-spacing: .09em; text-transform: uppercase; color: #fff; }
+[data-dir="B"] .btn.ico { width: 44px; padding: 0; }
+[data-dir="B"] .btn svg { width: 18px; height: 18px; }
+[data-dir="B"] .btn.pri { background: var(--acc); color: var(--ink); box-shadow: 3px 3px 0 rgba(0,0,0,.55); }
+[data-dir="B"] .btn.gh { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.14); color: var(--txt); }
+[data-dir="B"] .btn.on { color: var(--acc); background: rgba(224,133,155,.16); border-color: var(--acc); }
+[data-dir="B"] .sechead h4 { font: 800 26px/1 var(--cap); letter-spacing: -.02em; text-transform: uppercase; }
+[data-dir="B"] .sechead .count { background: rgba(255,255,255,.08); padding: 4px 7px; border-radius: 3px; color: var(--mut); }
+[data-dir="B"] .sechead .more { font: 700 11px/1 var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--acc); }
+[data-dir="B"] .card .n { font-family: var(--cap); font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: -.01em; }
+[data-dir="B"] .specimen .aa { font-family: var(--cap); font-weight: 800; }
+
+/* ==========================================================================
+   C · KỆ SÁCH — serif nhẹ, nút phụ gom thành MỘT dải (segmented group)
+   ========================================================================== */
+[data-dir="C"] .dhead h2 { font: 500 34px/1.05 var(--serif); letter-spacing: -.01em; }
+[data-dir="C"] .story h3 { font: 500 40px/1.02 var(--serif); letter-spacing: -.015em; }
+[data-dir="C"] .story .meta { font: 400 12.5px/1.6 var(--sans); color: var(--mut); }
+[data-dir="C"] .story .kicker { font: 500 10px/1 var(--mono); letter-spacing: .2em; text-transform: uppercase; color: var(--dim); }
+[data-dir="C"] .btn { display: inline-flex; align-items: center; justify-content: center; gap: 9px; height: 44px;
+  padding: 0 22px; border-radius: 999px; border: 1px solid transparent; font: 600 13px/1 var(--sans);
+  letter-spacing: .01em; color: #fff; }
+[data-dir="C"] .btn.pri { background: var(--acc); color: var(--ink); }
+[data-dir="C"] .btn svg { width: 19px; height: 19px; }
+[data-dir="C"] .group { display: inline-flex; align-items: center; height: 44px; border: 1px solid var(--bd2);
+  border-radius: 999px; overflow: hidden; }
+[data-dir="C"] .group .btn { border: 0; border-radius: 0; background: transparent; height: 42px; width: 46px;
+  padding: 0; color: var(--mut); }
+[data-dir="C"] .group .btn + .btn { border-left: 1px solid var(--bd); }
+[data-dir="C"] .group .btn.on { color: var(--acc); background: rgba(224,133,155,.14); }
+[data-dir="C"] .sechead h4 { font: 500 27px/1 var(--serif); }
+[data-dir="C"] .sechead .count { font: 500 12px/1 var(--serif); color: var(--mut); letter-spacing: 0; }
+[data-dir="C"] .sechead .more { font: 400 12.5px/1 var(--sans); color: var(--mut); text-decoration: underline;
+  text-underline-offset: 3px; text-decoration-color: var(--bd2); }
+[data-dir="C"] .card .n { font-family: var(--serif); font-weight: 500; font-size: 15px; }
+[data-dir="C"] .specimen .aa { font-family: var(--serif); font-weight: 500; }
+
+/* ---------- bảng trạng thái ---------- */
+.board { padding: 18px 20px; display: grid; gap: 12px; }
+.board .line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.board .lab { width: 78px; font: 500 9.5px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+.board .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* ---------- so sánh ---------- */
+.cmp { margin: 64px 0 0; padding: 24px 26px; border: 1px solid var(--bd); border-radius: 4px; }
+.cmp h2 { margin: 0 0 4px; font: 700 22px/1.2 var(--serif); }
+.cmp p { margin: 0 0 18px; color: var(--mut); font-size: 13.5px; }
+.cmp .line { display: grid; gap: 16px; }
+.cmp .lab { font: 500 9.5px/1 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--dim); margin-bottom: 8px; }
+.cmp .lab, .cmp .row svg { }
+.cmp .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--bd); color: var(--dim); font-size: 13px; line-height: 1.65; }
+footer code { font-family: var(--mono); color: var(--mut); background: rgba(255,255,255,.05); padding: 1px 5px; border-radius: 3px; }
+
+@media (max-width: 820px) {
+  .refs-row { grid-template-columns: 1fr; }
+  .sechead { gap: 8px; }
+  .sechead h4 { font-size: 20px; }
+  .sechead .count { font-size: 9.5px; }
+  .sechead .more { white-space: nowrap; }
+  /* nút dính thành dải sẽ gãy khi xuống dòng — tách ra, mỗi nút một viền */
+  [data-dir="A"] .row { gap: 8px; }
+  [data-dir="A"] .btn.gh { border-left: 1px solid rgba(255,255,255,.26); }
+  .story { grid-template-columns: 74px minmax(0,1fr); gap: 16px; padding: 20px; }
+  .story .cv { width: 74px; }
+  [data-dir="A"] .story h3 { font-size: 28px; }
+  [data-dir="B"] .story h3 { font-size: 24px; }
+  [data-dir="C"] .story h3 { font-size: 30px; }
+  .cards { grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
+  .specimen { grid-template-columns: 84px minmax(0,1fr); }
+  .specimen .aa { font-size: 46px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="kick">Đề xuất vòng 64 · chưa sửa vào site</p>
+  <h1>Ba chất khác nhau, không phải ba cái bo góc</h1>
+  <p class="lede">Vòng trước ba phương án chỉ khác nhau ở độ bo và độ đậm — đúng là đơn điệu. Lần này mỗi hướng là một
+    <b>chất</b> riêng: chữ, nhịp, hình nút, cách kể. Cùng nội dung, cùng <b>một màu nhấn</b>, cùng bộ icon có sẵn.
+    Có <b>font tự host</b> (đủ dấu tiếng Việt) để bạn nhìn đúng chất chứ không phải font hệ thống.</p>
+
+  <ul class="refs-row">
+    <li><span class="src">Material 3 · Expressive</span><b>Nút chính phải khác cỡ, không chỉ khác màu</b>
+      <span class="t">Cho nút chính hình dáng lớn và tròn hơn hẳn nút phụ; việc liên quan thì gom thành một dải
+      thay vì một hàng nút bằng nhau.</span></li>
+    <li><span class="src">Xu hướng chữ 2026</span><b>Serif quay lại, chữ phải “là” thiết kế</b>
+      <span class="t">Tiêu đề lớn, tương phản cao; nhãn nhỏ in mono; bỏ kiểu sans đều đều ở mọi cấp.</span></li>
+    <li><span class="src">Bài học từ các vòng trước</span><b>Đơn điệu vì mọi thứ cùng một giọng</b>
+      <span class="t">Ba hướng dưới đây khác nhau ở <b>giọng kể</b> — toà soạn, bảng hiệu, kệ sách.</span></li>
+  </ul>
+
+  <!-- ================= A ================= -->
+  <section class="dir" data-dir="A">
+    <div class="dhead"><span class="num">A</span><h2>Toà soạn</h2>
+      <span class="tagline">serif tương phản cao · nút vuông · nhãn mono</span></div>
+    <p class="dsay">Chữ kể chuyện: tiêu đề <b>Playfair Display</b> rất lớn, nhãn nhỏ in <b>mono</b> cách chữ rộng,
+      nút <b>vuông 2px</b> và in hoa. Nút phụ dính liền nút chính thành một dải có vạch chia — nhìn như một khối
+      chứ không phải ba viên rời. Chất: tạp chí phim, sách ảnh.</p>
+    <div class="chips"><span>Playfair Display</span><span>Inter</span><span>JetBrains Mono</span><span>nút bo 2px</span><span>nhãn IN HOA +0.18em</span></div>
+
+    <div class="specimen">
+      <span class="aa">Aa</span>
+      <span class="names"><b>Playfair Display · 700 / 500</b>
+        <span>Tiêu đề 38–54px · nhãn mono 10px · thân bài Inter 15px</span></span>
+    </div>
+
+    <div class="stage"><div class="cap">Trang truyện · khối nút <span class="w">1240</span></div>
+      <div class="story">
+        <div class="bg" style="background-image:url('/assets/covers/80b25f67.webp')"></div><div class="veil"></div>
+        <span class="cv"><img src="/assets/covers/80b25f67.webp" alt=""></span>
+        <div class="body">
+          <span class="kicker">Hoàn thành · 18+</span>
+          <h3>Hometown Romance<br>— Special</h3>
+          <p class="meta">10 chương · Lambo · Lookmhee x Sonya · cập nhật 29-09</p>
+          <div class="row">
+            <a class="btn pri" href="#">Đọc từ đầu</a>
+            <a class="btn gh first" href="#">Chương mới nhất</a>
+            <a class="btn gh ico" href="#" aria-label="Theo dõi truyện"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /><path d="M9 17v1a3 3 0 0 0 6 0v-1" /></g></svg></a>
+            <a class="btn gh ico" href="#" aria-label="Tủ truyện"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M15 10v11l-5 -3l-5 3v-11a3 3 0 0 1 3 -3h4a3 3 0 0 1 3 3" /><path d="M11 3h5a3 3 0 0 1 3 3v11" /></g></svg></a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage"><div class="cap">Trang chủ · một mục <span class="w">1240</span></div>
+      <div class="sec">
+        <div class="sechead"><h4>Mới cập nhật</h4><span class="count">42 bộ</span><a class="more" href="#">Xem tất cả</a></div>
+        <div class="cards"><div class="card"><div class="cvr"><img src="/assets/covers/6a6f3cd4.webp" alt=""></div><p class="n">Third Person</p><p class="m">42 chương · 29-09</p></div><div class="card"><div class="cvr"><img src="/assets/covers/80b25f67.webp" alt=""><span class="b18">18+</span></div><p class="n">Hometown Romance — Special</p><p class="m">10 chương · 27-09</p></div><div class="card"><div class="cvr"><img src="/assets/covers/022cf203.webp" alt=""></div><p class="n">Love Bound</p><p class="m">18 chương · 25-09</p></div><div class="card"><div class="cvr"><img src="/assets/covers/150dd2b9.webp" alt=""></div><p class="n">Lunar Secret</p><p class="m">12 chương · 24-09</p></div><div class="card"><div class="cvr"><img src="/assets/covers/20124c95.webp" alt=""></div><p class="n">Chain Baby</p><p class="m">9 chương · 22-09</p></div></div></div></div>
+
+    <div class="duo">
+      <div class="stage" style="flex:1 1 420px"><div class="cap">Trang truyện · máy hẹp <span class="w">390</span></div>
+        <div class="story narrow">
+          <div class="bg" style="background-image:url('/assets/covers/80b25f67.webp')"></div><div class="veil"></div>
+          <span class="cv"><img src="/assets/covers/80b25f67.webp" alt=""></span>
+          <div class="body">
+            <span class="kicker">Hoàn thành · 18+</span>
+            <h3 style="font-size:28px">Hometown Romance</h3>
+            <p class="meta">10 chương · Lambo</p>
+            <div class="row">
+              <a class="btn pri" href="#">Đọc từ đầu</a>
+              <a class="btn gh first ico" href="#" aria-label="Chương mới nhất"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.4" transform="translate(-5.04 -5.04) scale(1.42)"><path d="M6 15l6 -6l6 6" /></g></svg></a>
+              <a class="btn gh ico" href="#" aria-label="Theo dõi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /><path d="M9 17v1a3 3 0 0 0 6 0v-1" /></g></svg></a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stage" style="flex:1 1 380px"><div class="cap">Trạng thái</div>
+        <div class="board">
+          <div class="line"><span class="lab">Chính</span><div class="row"><a class="btn pri" href="#">Đọc tiếp</a></div></div>
+          <div class="line"><span class="lab">Phụ</span><div class="row"><a class="btn gh first" href="#">Chương mới nhất</a><a class="btn gh ico" href="#" aria-label="Chia sẻ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M13 4v4c-6.575 1.028 -9.02 6.788 -10 12c-.037 .206 5.384 -5.962 10 -6v4l8 -7l-8 -7" /></g></svg></a></div></div>
+          <div class="line"><span class="lab">Đang bật</span><div class="row"><a class="btn gh first ico on" href="#" aria-label="Bỏ theo dõi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /><path d="M9 17v1a3 3 0 0 0 6 0v-1" /></g></svg></a><a class="btn gh ico on" href="#" aria-label="Đã lưu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M15 10v11l-5 -3l-5 3v-11a3 3 0 0 1 3 -3h4a3 3 0 0 1 3 3" /><path d="M11 3h5a3 3 0 0 1 3 3v11" /></g></svg></a></div></div>
+          <div class="line"><span class="lab">Chờ</span><div class="row"><a class="btn pri" href="#" style="opacity:.45">Chưa có chương</a></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= B ================= -->
+  <section class="dir" data-dir="B">
+    <div class="dhead"><span class="num">B</span><h2>Bảng hiệu</h2>
+      <span class="tagline">caps dày · nút dán “sticker” · nhãn in hoa</span></div>
+    <p class="dsay">Chất webtoon: tiêu đề <b>Montserrat 800 in hoa</b>, nhãn trạng thái thành <b>ô màu nhấn</b>,
+      nút là <b>khối dày</b> có bóng cứng 3px lệch phải-dưới (không mờ, không gradient) — nhìn như sticker dán lên.
+      Chất: bảng hiệu rạp phim, bìa truyện.</p>
+    <div class="chips"><span>Montserrat 800</span><span>Inter 700</span><span>nút bo 6px</span><span>bóng cứng 3px</span><span>nhãn IN HOA</span></div>
+
+    <div class="specimen">
+      <span class="aa">Aa</span>
+      <span class="names"><b>Montserrat 800 · in hoa</b>
+        <span>Tiêu đề 24–33px · nhãn 11px +0.09em · thân bài Inter 15px</span></span>
+    </div>
+
+    <div class="stage"><div class="cap">Trang truyện · khối nút <span class="w">1240</span></div>
+      <div class="story">
+        <div class="bg" style="background-image:url('/assets/covers/6a6f3cd4.webp')"></div><div class="veil"></div>
+        <span class="cv"><img src="/assets/covers/6a6f3cd4.webp" alt=""></span>
+        <div class="body">
+          <span class="kicker">Hoàn thành</span>
+          <h3>Third Person</h3>
+          <p class="meta">42 chương · SIIX · Garn x Mimie</p>
+          <div class="row">
+            <a class="btn pri" href="#">Đọc tiếp</a>
+            <a class="btn gh" href="#">Chương mới nhất</a>
+            <a class="btn gh ico" href="#" aria-label="Theo dõi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /><path d="M9 17v1a3 3 0 0 0 6 0v-1" /></g></svg></a>
+            <a class="btn gh ico" href="#" aria-label="Tủ truyện"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M15 10v11l-5 -3l-5 3v-11a3 3 0 0 1 3 -3h4a3 3 0 0 1 3 3" /><path d="M11 3h5a3 3 0 0 1 3 3v11" /></g></svg></a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage"><div class="cap">Trang chủ · một mục <span class="w">1240</span></div>
+      <div class="sec">
+        <div class="sechead"><h4>Mới cập nhật</h4><span class="count">42</span><a class="more" href="#">Xem tất cả</a></div>
+        <div class="cards"><div class="card"><div class="cvr"><img src="/assets/covers/6a6f3cd4.webp" alt=""></div><p class="n">Third Person</p><p class="m">42 chương · 29-09</p></div><div class="card"><div class="cvr"><img src="/assets/covers/80b25f67.webp" alt=""><span class="b18">18+</span></div><p class="n">Hometown Romance — Special</p><p class="m">10 chương · 27-09</p></div><div class="card"><div class="cvr"><img src="/assets/covers/022cf203.webp" alt=""></div><p class="n">Love Bound</p><p class="m">18 chương · 25-09</p></div><div class="card"><div class="cvr"><img src="/assets/covers/150dd2b9.webp" alt=""></div><p class="n">Lunar Secret</p><p class="m">12 chương · 24-09</p></div><div class="card"><div class="cvr"><img src="/assets/covers/20124c95.webp" alt=""></div><p class="n">Chain Baby</p><p class="m">9 chương · 22-09</p></div></div></div></div>
+
+    <div class="duo">
+      <div class="stage" style="flex:1 1 420px"><div class="cap">Trang truyện · máy hẹp <span class="w">390</span></div>
+        <div class="story narrow">
+          <div class="bg" style="background-image:url('/assets/covers/6a6f3cd4.webp')"></div><div class="veil"></div>
+          <span class="cv"><img src="/assets/covers/6a6f3cd4.webp" alt=""></span>
+          <div class="body">
+            <span class="kicker">Hoàn thành</span>
+            <h3 style="font-size:24px">Third Person</h3>
+            <p class="meta">42 chương · SIIX</p>
+            <div class="row">
+              <a class="btn pri" href="#">Đọc tiếp</a>
+              <a class="btn gh ico" href="#" aria-label="Chương mới nhất"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.4" transform="translate(-5.04 -5.04) scale(1.42)"><path d="M6 15l6 -6l6 6" /></g></svg></a>
+              <a class="btn gh ico" href="#" aria-label="Theo dõi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /><path d="M9 17v1a3 3 0 0 0 6 0v-1" /></g></svg></a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stage" style="flex:1 1 380px"><div class="cap">Trạng thái</div>
+        <div class="board">
+          <div class="line"><span class="lab">Chính</span><div class="row"><a class="btn pri" href="#">Đọc tiếp</a></div></div>
+          <div class="line"><span class="lab">Phụ</span><div class="row"><a class="btn gh" href="#">Chương mới nhất</a><a class="btn gh ico" href="#" aria-label="Chia sẻ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M13 4v4c-6.575 1.028 -9.02 6.788 -10 12c-.037 .206 5.384 -5.962 10 -6v4l8 -7l-8 -7" /></g></svg></a></div></div>
+          <div class="line"><span class="lab">Đang bật</span><div class="row"><a class="btn gh ico on" href="#" aria-label="Bỏ theo dõi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /><path d="M9 17v1a3 3 0 0 0 6 0v-1" /></g></svg></a><a class="btn gh ico on" href="#" aria-label="Đã lưu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M15 10v11l-5 -3l-5 3v-11a3 3 0 0 1 3 -3h4a3 3 0 0 1 3 3" /><path d="M11 3h5a3 3 0 0 1 3 3v11" /></g></svg></a></div></div>
+          <div class="line"><span class="lab">Chờ</span><div class="row"><a class="btn pri" href="#" style="opacity:.45">Chưa có chương</a></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= C ================= -->
+  <section class="dir" data-dir="C">
+    <div class="dhead"><span class="num">C</span><h2>Kệ sách</h2>
+      <span class="tagline">serif nhẹ · nút phụ gom thành một dải</span></div>
+    <p class="dsay">Êm và có trật tự: tiêu đề <b>serif 500</b> lớn nhưng không hét, nút chính là <b>viên thuốc</b>,
+      còn ba việc phụ gom vào <b>một dải duy nhất</b> có vạch chia — một khối thay vì ba khối. Chất: thư viện,
+      nhà sách độc lập.</p>
+    <div class="chips"><span>Playfair 500</span><span>Inter 600</span><span>nút chính bo 999</span><span>dải phụ 1 khối</span><span>nhãn mono nhỏ</span></div>
+
+    <div class="specimen">
+      <span class="aa">Aa</span>
+      <span class="names"><b>Playfair Display 500 · Inter 600</b>
+        <span>Tiêu đề 30–40px · dải phụ 44px · thân bài Inter 15px</span></span>
+    </div>
+
+    <div class="stage"><div class="cap">Trang truyện · khối nút <span class="w">1240</span></div>
+      <div class="story">
+        <div class="bg" style="background-image:url('/assets/covers/80b25f67.webp')"></div><div class="veil"></div>
+        <span class="cv"><img src="/assets/covers/80b25f67.webp" alt=""></span>
+        <div class="body">
+          <span class="kicker">Hoàn thành · 18+</span>
+          <h3>Hometown Romance<br>— Special</h3>
+          <p class="meta">10 chương · Lambo · Lookmhee x Sonya</p>
+          <div class="row">
+            <a class="btn pri" href="#">Đọc từ đầu</a>
+            <span class="group">
+              <a class="btn" href="#" aria-label="Chương mới nhất"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.4" transform="translate(-5.04 -5.04) scale(1.42)"><path d="M6 15l6 -6l6 6" /></g></svg></a>
+              <a class="btn on" href="#" aria-label="Theo dõi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /><path d="M9 17v1a3 3 0 0 0 6 0v-1" /></g></svg></a>
+              <a class="btn" href="#" aria-label="Tủ truyện"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M15 10v11l-5 -3l-5 3v-11a3 3 0 0 1 3 -3h4a3 3 0 0 1 3 3" /><path d="M11 3h5a3 3 0 0 1 3 3v11" /></g></svg></a>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage"><div class="cap">Trang chủ · một mục <span class="w">1240</span></div>
+      <div class="sec">
+        <div class="sechead"><h4>Mới cập nhật</h4><span class="count">42 bộ</span><a class="more" href="#">Xem tất cả</a></div>
+        <div class="cards"><div class="card"><div class="cvr"><img src="/assets/covers/6a6f3cd4.webp" alt=""></div><p class="n">Third Person</p><p class="m">42 chương · 29-09</p></div><div class="card"><div class="cvr"><img src="/assets/covers/80b25f67.webp" alt=""><span class="b18">18+</span></div><p class="n">Hometown Romance — Special</p><p class="m">10 chương · 27-09</p></div><div class="card"><div class="cvr"><img src="/assets/covers/022cf203.webp" alt=""></div><p class="n">Love Bound</p><p class="m">18 chương · 25-09</p></div><div class="card"><div class="cvr"><img src="/assets/covers/150dd2b9.webp" alt=""></div><p class="n">Lunar Secret</p><p class="m">12 chương · 24-09</p></div><div class="card"><div class="cvr"><img src="/assets/covers/20124c95.webp" alt=""></div><p class="n">Chain Baby</p><p class="m">9 chương · 22-09</p></div></div></div></div>
+
+    <div class="duo">
+      <div class="stage" style="flex:1 1 420px"><div class="cap">Trang truyện · máy hẹp <span class="w">390</span></div>
+        <div class="story narrow">
+          <div class="bg" style="background-image:url('/assets/covers/80b25f67.webp')"></div><div class="veil"></div>
+          <span class="cv"><img src="/assets/covers/80b25f67.webp" alt=""></span>
+          <div class="body">
+            <span class="kicker">Hoàn thành · 18+</span>
+            <h3 style="font-size:30px">Hometown Romance</h3>
+            <p class="meta">10 chương · Lambo</p>
+            <div class="row">
+              <a class="btn pri" href="#">Đọc từ đầu</a>
+              <span class="group">
+                <a class="btn" href="#" aria-label="Chương mới nhất"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.4" transform="translate(-5.04 -5.04) scale(1.42)"><path d="M6 15l6 -6l6 6" /></g></svg></a>
+                <a class="btn on" href="#" aria-label="Theo dõi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /><path d="M9 17v1a3 3 0 0 0 6 0v-1" /></g></svg></a>
+                <a class="btn" href="#" aria-label="Tủ truyện"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M15 10v11l-5 -3l-5 3v-11a3 3 0 0 1 3 -3h4a3 3 0 0 1 3 3" /><path d="M11 3h5a3 3 0 0 1 3 3v11" /></g></svg></a>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stage" style="flex:1 1 380px"><div class="cap">Trạng thái</div>
+        <div class="board">
+          <div class="line"><span class="lab">Chính</span><div class="row"><a class="btn pri" href="#">Đọc tiếp</a></div></div>
+          <div class="line"><span class="lab">Dải phụ</span><div class="row"><span class="group">
+            <a class="btn" href="#" aria-label="Chương mới nhất"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.4" transform="translate(-5.04 -5.04) scale(1.42)"><path d="M6 15l6 -6l6 6" /></g></svg></a>
+            <a class="btn" href="#" aria-label="Chia sẻ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M13 4v4c-6.575 1.028 -9.02 6.788 -10 12c-.037 .206 5.384 -5.962 10 -6v4l8 -7l-8 -7" /></g></svg></a>
+            <a class="btn" href="#" aria-label="Tủ truyện"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M15 10v11l-5 -3l-5 3v-11a3 3 0 0 1 3 -3h4a3 3 0 0 1 3 3" /><path d="M11 3h5a3 3 0 0 1 3 3v11" /></g></svg></a></span></div></div>
+          <div class="line"><span class="lab">Đang bật</span><div class="row"><span class="group">
+            <a class="btn on" href="#" aria-label="Bỏ theo dõi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /><path d="M9 17v1a3 3 0 0 0 6 0v-1" /></g></svg></a>
+            <a class="btn on" href="#" aria-label="Đã lưu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M15 10v11l-5 -3l-5 3v-11a3 3 0 0 1 3 -3h4a3 3 0 0 1 3 3" /><path d="M11 3h5a3 3 0 0 1 3 3v11" /></g></svg></a>
+            <a class="btn" href="#" aria-label="Tủ truyện"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.4" transform="translate(-5.04 -5.04) scale(1.42)"><path d="M6 15l6 -6l6 6" /></g></svg></a></span></div></div>
+          <div class="line"><span class="lab">Chờ</span><div class="row"><a class="btn pri" href="#" style="opacity:.45">Chưa có chương</a></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cmp">
+    <h2>Đặt cạnh nhau</h2>
+    <p>Cùng một hàng nút, cùng một tiêu đề — chỉ khác chất.</p>
+    <div class="line">
+      <div data-dir="A"><div class="lab">A · Toà soạn</div>
+        <div class="row"><a class="btn pri" href="#">Đọc tiếp</a><a class="btn gh first" href="#">Chương mới nhất</a>
+          <a class="btn gh ico" href="#" aria-label="Theo dõi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /><path d="M9 17v1a3 3 0 0 0 6 0v-1" /></g></svg></a></div></div>
+      <div data-dir="B"><div class="lab">B · Bảng hiệu</div>
+        <div class="row"><a class="btn pri" href="#">Đọc tiếp</a><a class="btn gh" href="#">Chương mới nhất</a>
+          <a class="btn gh ico" href="#" aria-label="Theo dõi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /><path d="M9 17v1a3 3 0 0 0 6 0v-1" /></g></svg></a></div></div>
+      <div data-dir="C"><div class="lab">C · Kệ sách</div>
+        <div class="row"><a class="btn pri" href="#">Đọc tiếp</a><span class="group">
+          <a class="btn" href="#" aria-label="Chương mới nhất"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.4" transform="translate(-5.04 -5.04) scale(1.42)"><path d="M6 15l6 -6l6 6" /></g></svg></a>
+          <a class="btn on" href="#" aria-label="Theo dõi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /><path d="M9 17v1a3 3 0 0 0 6 0v-1" /></g></svg></a>
+          <a class="btn" href="#" aria-label="Tủ truyện"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M15 10v11l-5 -3l-5 3v-11a3 3 0 0 1 3 -3h4a3 3 0 0 1 3 3" /><path d="M11 3h5a3 3 0 0 1 3 3v11" /></g></svg></a></span></div></div>
+    </div>
+  </section>
+
+  <footer>
+    Chọn <b>A</b>, <b>B</b> hay <b>C</b> thì mình mới sửa site: thêm font tự host vào <code>/public/fonts</code>,
+    đổi <code>--font</code> / <code>--font-head</code> và các biến nút trong <code>src/cz.css</code>, rồi áp cho
+    trang chủ (banner, mục “Mới cập nhật”) và trang truyện. Vòng này <b>chưa sửa gì</b> vào <code>src/</code>.
+  </footer>
+</div>
+</body>
+</html>
