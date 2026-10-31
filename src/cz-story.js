@@ -472,7 +472,9 @@
                lại 18+ đã bỏ khỏi hàng — mỗi nút icon vẫn có aria-label + title
                nên trình đọc màn hình và rê chuột đều hiểu, chỉ là không chiếm chữ. */
             '<div class="btn-row">' + readBtn(n, ch) +
-              (n.canRead && ch && ch < n.chapters ? '<a class="btn ghost" href="' + chapterPath(n.chapters) + '" title="Đọc chương mới nhất (chương ' + n.chapters + ')">' + ic('up', 'i-s') + 'Chương mới nhất</a>' : '') +
+              /* “Chương mới nhất” = mũi tên lên, không chữ (nhãn nằm trong title +
+                 aria-label): hàng nút chỉ còn đúng một nút có chữ là CTA chính */
+              (n.canRead && ch && ch < n.chapters ? '<a class="btn ghost ic" href="' + chapterPath(n.chapters) + '" title="Đọc chương mới nhất (chương ' + n.chapters + ')" aria-label="Đọc chương mới nhất (chương ' + n.chapters + ')">' + ic('up', 'i-s') + '</a>' : '') +
               /* nút chuông chuyển từ card trang chủ vào đây cho gọn — bấm ở đâu
                  (hero/reader) thì hai nơi tự đổi theo nhờ refreshFollowUI */
               '<button class="btn ghost ic' + (CZ.isFollowed(n) ? ' on' : '') + '" data-followbtn="' + esc(n.slug) + '" aria-pressed="' + CZ.isFollowed(n) + '" title="' + (CZ.isFollowed(n) ? 'Bỏ theo dõi (không báo chương mới nữa)' : 'Theo dõi — báo khi có chương mới') + '" aria-label="' + (CZ.isFollowed(n) ? 'Bỏ theo dõi ' : 'Theo dõi ') + esc(n.title) + '">' + ic('bell', 'i-s') +

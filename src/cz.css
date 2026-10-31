@@ -442,6 +442,9 @@ body.nav-open { overflow: hidden; }
 /* nút phụ trong tiêu đề khối: một bậc nhỏ hơn, vẫn cùng hình nút */
 .btn.sm { padding: 0 12px; height: 34px; font-size: 10.5px; letter-spacing: .08em; gap: 7px; border-radius: 5px; }
 .btn.sm .i, .btn.sm .i-s { width: 14px; height: 14px; min-width: 14px; }
+/* nút nhỏ chỉ có icon (vd. “Đi” ở ô nhảy chương): vuông, không đệm ngang */
+.btn.sm.ic { width: 34px; padding: 0; gap: 0; }
+.jumpin .btn.ic { width: 30px; padding: 0; gap: 0; }
 .btn.acc { border-color: var(--acc); background: transparent; color: var(--acc); }
 .btn.on { border-color: var(--acc); color: var(--acc); background: rgba(224, 133, 155, .16); }
 /* nút Thích (trang truyện): tim hồng nổi bật hẳn để không chìm vào dãy nút phụ */
@@ -1495,19 +1498,67 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .shero .editable-rating .rating-remove { padding: 2px 0; font-size: 11px; color: rgba(255, 255, 255, .55); }
 /* hàng nút: nằm sát đáy bìa, nút chính là mực son đặc trên nền ảnh */
 .shero .btn-row { margin: auto 0 0; padding-top: 10px; gap: 10px; }
-.shero .btn-row .btn { height: 44px; padding: 0 18px; border-radius: 6px; font-size: 11.5px; }
+/* ---- HÀNG NÚT BANNER = KÍNH MỜ (vòng 66, bản G1 bạn chọn) ----------------
+   Một lớp sương trắng 10% + nhoè nền 10px, viền sáng mảnh ở mép trên (đường
+   loá là thứ duy nhất khiến nó đọc ra “kính” chứ không phải “ô xám”).
+   Nút chính là kính pha son 84% để vẫn là thứ nổi nhất trong khung.
+   Chữ thu nhỏ + bớt đệm: nhãn chỉ còn 11px, nút icon 44×44 không chữ.
+   Ba đường lui bắt buộc ở cuối khối này (không nhoè / giảm trong suốt). */
+.shero .btn-row .btn {
+  height: 44px; padding: 0 15px; border-radius: 8px;
+  font-size: 11px; letter-spacing: .07em; gap: 8px;
+  /* nền kính hai lớp: một lớp sương trắng ở trên + một sàn tối rất nhẹ ở dưới
+     để icon trắng vẫn đọc được khi phía sau là vùng ảnh sáng */
+  background: linear-gradient(180deg, rgba(255, 255, 255, .15), rgba(255, 255, 255, .06)), rgba(18, 14, 11, .26);
+  border-color: rgba(255, 255, 255, .22); color: #fff;
+  -webkit-backdrop-filter: blur(10px) saturate(150%) brightness(1.22);
+  backdrop-filter: blur(10px) saturate(150%) brightness(1.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .42), 0 6px 18px rgba(0, 0, 0, .26);
+}
+.shero .btn-row .btn:hover {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, .10)), rgba(18, 14, 11, .26);
+  border-color: rgba(255, 255, 255, .34); color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), 0 8px 20px rgba(0, 0, 0, .3);
+}
+.shero .btn-row .btn.ic { width: 44px; padding: 0; gap: 0; flex: 0 0 44px; }
 /* việc phụ (chia sẻ · RSS · đặt lại 18+) — nút vuông icon, dồn cuối hàng */
 .shero .btn-utils { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-.shero .btn-row .btn.ic { width: 44px; padding: 0; gap: 0; flex: none; }
-.shero .btn-row .btn.ic .i, .shero .btn-row .btn.ic .i-s { width: 17px; height: 17px; }
-/* nút chính: mảng son đặc + bóng cứng (đúng ngôn ngữ B), không dùng bóng mờ */
-.shero .btn-row .btn.pri { background: var(--acc); border-color: var(--acc); color: #1a1113;
-  box-shadow: 3px 3px 0 rgba(0, 0, 0, .55); }
-.shero .btn-row .btn.pri:hover { background: var(--acc); border-color: var(--acc); color: #1a1113;
-  filter: brightness(1.07); box-shadow: 3px 3px 0 rgba(0, 0, 0, .55); }
-.shero .btn-row .btn.ghost { border-color: rgba(255, 255, 255, .14); background: rgba(255, 255, 255, .07); color: #fff; }
-.shero .btn-row .btn.ghost:hover { background: rgba(255, 255, 255, .13); border-color: rgba(255, 255, 255, .26); color: #fff; }
-.shero .btn-row .btn.on { border-color: var(--acc); color: var(--acc); background: rgba(224, 133, 155, .16); }
+.shero .btn-row .btn.ic .i, .shero .btn-row .btn.ic .i-s { width: 18px; height: 18px; }
+/* nút chính: kính pha son — vẫn son, nhưng trong và có đường loá như miếng kính */
+.shero .btn-row .btn.pri {
+  background: color-mix(in srgb, var(--acc) 84%, transparent); color: #1a1113;
+  border-color: rgba(255, 255, 255, .42);
+  -webkit-backdrop-filter: blur(8px) saturate(160%) brightness(1.18);
+  backdrop-filter: blur(8px) saturate(160%) brightness(1.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .62), 0 8px 22px rgba(224, 133, 155, .26);
+}
+.shero .btn-row .btn.pri:hover {
+  background: color-mix(in srgb, var(--acc) 92%, transparent); color: #1a1113;
+  border-color: rgba(255, 255, 255, .55); filter: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7), 0 10px 24px rgba(224, 133, 155, .32);
+}
+.shero .btn-row .btn.ghost { color: #fff; }
+.shero .btn-row .btn.on {
+  color: #ffd7e1; border-color: rgba(224, 133, 155, .68); background: rgba(224, 133, 155, .22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .34), 0 6px 18px rgba(0, 0, 0, .26);
+}
+/* nút chính bị khoá (chưa có chương): kính trơn, không còn hồng để không hứa hẹn bấm được */
+.shero .btn-row .btn.pri.off, .shero .btn-row .btn.pri[disabled] {
+  background: rgba(255, 255, 255, .10); border-color: rgba(255, 255, 255, .2);
+  color: rgba(243, 237, 233, .78); opacity: 1;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18);
+}
+/* đường lui: máy không nhoè được nền → nền đặc hơn, chữ vẫn đủ tương phản */
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .shero .btn-row .btn { background: rgba(26, 22, 19, .78); }
+  .shero .btn-row .btn.pri { background: var(--acc); }
+}
+/* người dùng xin giảm trong suốt: tắt nhoè, dùng nền đục */
+@media (prefers-reduced-transparency: reduce) {
+  .shero .btn-row .btn { -webkit-backdrop-filter: none; backdrop-filter: none;
+    background: rgba(30, 25, 21, .92); box-shadow: none; }
+  .shero .btn-row .btn.pri { background: var(--acc); color: #1a1113; }
+}
 /* dải tiến độ đọc: chữ mono in hoa trái · thanh giữa · phần trăm phải */
 .shero .prog { display: flex; align-items: center; gap: 14px; max-width: none; margin: 18px 0 0;
   padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, .13); }
@@ -2180,7 +2231,7 @@ kbd { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; b
   /* hàng nút máy hẹp: nút chính một hàng, các nút phụ (icon 44 + nhãn ngắn) nằm
      gọn một hàng bên dưới — không còn lưới 2 cột làm nút icon bị kéo rộng */
   .shero .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; padding-top: 0; }
-  .shero .btn-row .btn { width: auto; font-size: 11.5px; }
+  .shero .btn-row .btn { width: auto; font-size: 11px; }
   .shero .btn-row .btn.pri { flex: 1 1 100%; }              /* nút chính chiếm cả hàng */
   .shero .btn-row .btn.ic { width: 44px; height: 44px; flex: 0 0 44px; justify-content: center; }
   .shero .btn-utils { margin: 2px 0 0 auto; }
