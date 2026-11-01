@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="vi"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trang đọc — bản dựng mới (01/11)</title>
+<link rel="stylesheet" href="reader.css">
+<link rel="stylesheet" href="../doc-r89/toc.css">
+</head>
+<body data-v="c" data-rd="kem">
+
+<div class="r90note" id="r90note">
+  <b>Bản dựng mới · 01/11</b>
+  <span>Mục lục kiểu 1 · bỏ khối cảm xúc chương · cuối chương làm lại</span>
+  <button type="button" data-r90="end">↓ Cuối chương</button>
+  <button type="button" data-act="toc">Mục lục</button>
+  <button type="button" class="nx" aria-label="Ẩn ghi chú" data-r90="x">×</button>
+</div>
+
+<header class="bar" id="bar"></header>
+
+<main class="doc">
+  <header class="head" id="head">
+    <div class="overline" id="overline"></div>
+    <h1 id="h1"></h1>
+    <div class="meta" id="meta"></div>
+  </header>
+  <article class="txt" id="txt"></article>
+  <nav class="tail" id="tail"></nav>
+  <section class="cmts" id="cmts"></section>
+  <p class="foot"><a href="../index.html">← Danh sách mockup</a><span>·</span>
+     <a href="?pane=1" id="alone">Mở riêng trang này</a></p>
+</main>
+
+<aside class="dock" id="dock" aria-label="Công cụ đọc"></aside>
+<div id="sheetHost"></div>
+<div class="fx" id="fx"><button type="button" data-act="focus">Thoát tập trung</button></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<div class="tb" id="tb" role="group" aria-label="Xem thử">
+  <button type="button" data-dev="d" aria-pressed="true">Máy tính</button>
+  <button type="button" data-dev="m" aria-pressed="false">Điện thoại</button>
+  <span class="sp"></span>
+  <button type="button" data-act="help" aria-label="Hướng dẫn thao tác">?</button>
+</div>
+
+<script src="../doc-r89/chap-data.js"></script>
+<script src="reader.js"></script>
+<script>
+(function () {
+  var n = document.getElementById('r90note');
+  n.addEventListener('click', function (e) {
+    var k = e.target.dataset.r90;
+    if (k === 'x') n.remove();
+    if (k === 'end') {
+      var t = document.getElementById('tail');
+      if (t) window.scrollTo({ top: t.getBoundingClientRect().top + window.scrollY - 90, behavior: 'smooth' });
+    }
+  });
+})();
+</script>
+</body></html>
