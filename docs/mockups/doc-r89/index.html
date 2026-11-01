@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trang đọc — phương án giao diện (r89)</title>
+<style>
+:root{--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+ --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+ --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+ --bg:#efeae2;--tx:#2b251d;--mut:#5f5546;--acc:#9c4a2a;--bd:#ded5c6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:400 14px/1.65 var(--sans);padding:34px 26px 56px}
+.w{max-width:880px;margin:0 auto}
+h1{font:600 23px/1.28 var(--serif);margin:0 0 8px;letter-spacing:-.01em}
+p.sub{margin:0 0 30px;color:var(--mut);font-size:13px;line-height:1.7;max-width:76ch}
+h2{font:700 10px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:#8b7f6d;margin:34px 0 12px}
+h2:first-of-type{margin-top:0}
+a{color:var(--acc)}
+table{width:100%;border-collapse:collapse;font-size:12.5px;margin:0 0 6px}
+th,td{text-align:left;padding:7px 10px 7px 0;border-bottom:1px solid #e2d9c9;vertical-align:top}
+th{font:700 9.5px/1.4 var(--mono);letter-spacing:.09em;text-transform:uppercase;color:#8b7f6d;
+ border-bottom-color:#cfc4b1}
+td:first-child{width:106px;color:#8a7f6e}
+td b{font-weight:650}
+td.old{color:#8a7f6e}
+td.new{color:var(--tx)}
+.note{font-size:12px;color:#8a7f6e;margin:8px 0 0}
+ol,ul{margin:0 0 4px;padding-left:20px;font-size:13px;line-height:1.7;color:#43392c}
+li{margin:0 0 4px}
+li b{color:var(--tx)}
+.opts{display:grid;gap:12px;margin:4px 0 0}
+.opt{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:16px 18px;
+ box-shadow:0 1px 2px rgba(40,30,10,.05)}
+.opt .top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+.opt b.k{font:700 10px/1 var(--mono);letter-spacing:.1em;color:var(--acc)}
+.opt .name{font:600 16px/1.3 var(--serif);letter-spacing:-.01em}
+.opt .pick{font:700 9px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:#3f6b3a;
+ background:#e7efe1;border-radius:99px;padding:4px 8px;margin-left:auto}
+.opt p{margin:0 0 10px;font-size:13px;color:#4f4638;line-height:1.65}
+.opt ul{font-size:12.5px;margin-bottom:12px}
+.opt .go{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:0 16px;border-radius:8px;
+ background:var(--tx);color:#f6f1e7;text-decoration:none;font-size:13px;font-weight:600}
+.opt .go:hover{background:#12100c}
+.opt .meta2{font:11.5px/1.5 var(--mono);color:#8a7f6e;display:block;margin-top:10px}
+.foot{font-size:12.5px;color:var(--mut);margin-top:36px;border-top:1px solid var(--bd);padding-top:14px}
+@media(max-width:560px){body{padding:24px 16px 44px}td,th{padding-right:6px}}
+</style></head><body><div class="w">
+
+<h1>Trang đọc — chỉnh toàn bộ giao diện</h1>
+<p class="sub">Ba phương án cho trang đọc thật: cùng một nội dung, cùng bảng màu, cùng font, chỉ khác cách tổ chức
+công cụ. Cả ba đều cố định chỗ chữ (cột 720 px, cỡ 18 px), không khung bao ngoài, và <b>không đổi đường dẫn</b>.
+Mỗi trang có nút <b>Máy tính / Điện thoại</b> ở góc dưới trái để xem bản 390 px.</p>
+
+<h2>Đo trên bản thật (chương 2, khổ 1240 px)</h2>
+<table>
+<tr><th>Chỗ</th><th>Hiện tại</th><th>Đề xuất</th></tr>
+<tr><td>Thanh trên</td><td class="old">70 px (điện thoại 91 px), 7 icon 34×34, icon trơn không nhãn</td>
+  <td class="new">56 px, 3–5 icon 44×44; <b>Đánh dấu</b> và <b>Tập trung</b> đang <b>0×0 trên điện thoại</b> → luôn hiện</td></tr>
+<tr><td>Đầu chương</td><td class="old">148 px: tên truyện nhỏ + tiêu đề cao 57 px + dòng meta — tên truyện lặp 3 lần trên màn hình</td>
+  <td class="new">127 px (105 px trên phone): tiêu đề 32 px + một dòng meta, bỏ dòng tên truyện trùng với thanh trên</td></tr>
+<tr><td>Nút cuối chương</td><td class="old">7 nút 44×44 <b>có viền</b> xếp hàng: Thích, Lưu, Theo dõi, Đánh dấu, Bình luận, Chia sẻ, Báo lỗi</td>
+  <td class="new">5 mục, <b>không viền</b>: icon + nhãn chữ; bỏ <b>Chia sẻ</b> (đã chốt bỏ từ vòng 62)</td></tr>
+<tr><td>Chuyển chương</td><td class="old">3 khung: 2 khung viền + 1 khung tô màu, cạnh tranh với nút GỬI hồng bên dưới</td>
+  <td class="new">không khung — chỉ chữ + đường kẻ 1 px; cả trang còn <b>đúng 1 nút tô</b> (Gửi)</td></tr>
+<tr><td>Khung bình luận</td><td class="old">3 nút đen/hồng chen nhau, ô tên nền đen trên nền kem, tiêu đề “Bình luận Chương 1”</td>
+  <td class="new">1 nút chính, ô nhập chỉ có đường kẻ dưới, tiêu đề “Bình luận” + số đếm</td></tr>
+<tr><td>Cài đặt</td><td class="old">nút “Về mặc định” <b>chữ sáng trên nền sáng</b> — không đọc được ở nền kem</td>
+  <td class="new">sửa luôn trong lúc làm (không đổi bố cục bảng cài đặt)</td></tr>
+<tr><td>Cảm xúc</td><td class="old">6 sticker 44 px + dòng hướng dẫn “Chạm vào một hình…” + “0 lượt · Chi tiết ›”</td>
+  <td class="new">giữ sticker, bỏ dòng hướng dẫn (chuyển thành tooltip), giữ “Chi tiết”</td></tr>
+</table>
+<p class="note">Trên bản thật, 7 nút cuối chương và thanh trên là hai chỗ “nhiều khung” nhất; phần chữ thì đang đúng
+(80–85 ký tự/dòng trên máy tính, cột 720 px). Vì vậy ba phương án chỉ đụng vào phần khung công cụ, không đụng vào chữ.</p>
+
+<h2>Ba phương án</h2>
+<div class="opts">
+
+  <div class="opt">
+    <div class="top"><b class="k">A</b><span class="name">Dọc — công cụ sang bên phải</span></div>
+    <p>Giữ đủ công cụ nhưng đưa khỏi thanh trên: một dải dọc sát lề phải (Mục lục, Đánh dấu, Tập trung, Toàn màn,
+    Cài đặt), mỗi mục icon + nhãn chữ 10,5 px. Thanh trên co lại còn tên truyện, số chương và 4 icon.
+    Trên điện thoại dải dọc chuyển thành dải ngang sát đáy — nên các công cụ đang bị ẩn sẽ dùng được.</p>
+    <ul>
+      <li>Cuối chương: cảm xúc → 5 mục chữ (icon + nhãn) → chuyển chương 3 cột có nhãn nhỏ phía trên</li>
+      <li>Nhìn được nhiều chữ hơn ở màn đầu; mọi công cụ đều có nhãn</li>
+      <li>Đổi nhiều nhất so với hiện tại: thanh dọc là chỗ mắt chưa quen</li>
+    </ul>
+    <a class="go" href="a.html">Mở phương án A →</a>
+    <span class="meta2">đuôi trang 288 px · bình luận 367 px · thanh trên 57 px · 1 nút tô</span>
+  </div>
+
+  <div class="opt">
+    <div class="top"><b class="k">B</b><span class="name">Ưu tiên nội dung — nút nằm dưới chương</span></div>
+    <p>Thanh trên chỉ còn quay lại + tên chương + % + 2 icon (Mục lục, Cài đặt), có vạch tiến độ 2 px chạy theo
+    chiều đọc. Toàn bộ việc “làm gì với chương” dồn xuống cuối chương: một dải 5 cột, mỗi cột icon trên / nhãn dưới;
+    chuyển chương thành hai hàng rộng bấm được cả hàng.</p>
+    <ul>
+      <li>Dải 5 cột và 2 hàng chuyển chương — vẫn chỉ là đường kẻ 1 px, không khung con</li>
+      <li>Hợp người đọc liền mạch, không cần công cụ khi đang đọc</li>
+      <li>Đuôi trang dài nhất trong ba phương án (401 px) — nhiều khoảng trống trước bình luận</li>
+    </ul>
+    <a class="go" href="b.html">Mở phương án B →</a>
+    <span class="meta2">đuôi trang 401 px · bình luận 367 px · thanh trên 57 px · 1 nút tô</span>
+  </div>
+
+  <div class="opt">
+    <div class="top"><b class="k">C</b><span class="name">Sạch — một vùng cuối chương, form gập</span><span class="pick">gợi ý</span></div>
+    <p>Thanh trên có tên chương và 6 vạch tiến độ nhỏ (đọc tới đâu sáng tới đó) + 3 icon. Cuối chương gộp còn
+    đúng ba dòng ngăn bằng đường kẻ: cảm xúc, 5 mục hành động, một hàng chuyển chương
+    (‹ Chương trước · Mục lục · Chương tiếp theo ›). Khung bình luận gập lại thành dòng “+ Viết bình luận”,
+    chỉ mở ra khi cần — nên nút <b>Gửi</b> là nút tô duy nhất và chỉ xuất hiện khi đang viết.</p>
+    <ul>
+      <li>Gọn nhất: đuôi trang 278 px, khung bình luận 182 px (hiện tại 367 px)</li>
+      <li>Bớt được một tầng khung ở chỗ bình luận, đúng yêu cầu “hạn chế khung chồng khung”</li>
+      <li>Phải bấm một lần mới thấy ô viết bình luận</li>
+    </ul>
+    <a class="go" href="c.html">Mở phương án C →</a>
+    <span class="meta2">đuôi trang 278 px · bình luận 182 px · thanh trên 57 px · 1 nút tô</span>
+  </div>
+
+</div>
+
+<h2>Không đổi ở cả ba</h2>
+<ul>
+  <li>Bảng màu, font đọc (serif hệ thống), cỡ chữ 18 px / giãn dòng 1,8, cột 720 px, ba nền sáng / kem / tối</li>
+  <li>Đường dẫn chương <code>/truyen/&lt;slug&gt;/chuong-N/</code>, mục lục, bảng cài đặt, sticker</li>
+  <li>Không thêm thư viện icon, không ảnh ngoài, không hiệu ứng chuyển động; mọi nút bấm ≥ 44×44 và có nhãn đọc màn hình</li>
+</ul>
+
+<p class="foot">Góp ý xong mình port đúng phương án được chọn, có thể trả lại như cũ.
+<a href="../index.html">← Danh sách mockup</a></p>
+</div></body></html>
