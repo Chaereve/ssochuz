@@ -160,7 +160,8 @@
       '<span class="dc-dot" aria-hidden="true"></span>' +
       '<button class="dc-q" id="dcShuffle" data-act="shuffle" type="button">Xáo bài</button>' +
       '<span class="dc-dot" aria-hidden="true"></span>' +
-      '<span class="dc-cnt"><b>' + num(n) + '</b> lá còn lại</span>';
+      (n ? '<span class="dc-cnt"><b>' + num(n) + '</b> lá còn lại</span>'
+         : '<span class="dc-cnt">Hết xấp · lá sau sẽ xáo lại</span>');
   }
 
   /* -------------------------------------------------------------------------
