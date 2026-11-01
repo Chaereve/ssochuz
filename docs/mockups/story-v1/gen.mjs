@@ -1,0 +1,544 @@
+#!/usr/bin/env node
+/* ============================================================================
+   gen-story.mjs · mockup PHƯƠNG ÁN cho TRANG THÔNG TIN TRUYỆN (/truyen/<slug>)
+   ----------------------------------------------------------------------------
+   Dữ liệu thật: data/registry.json + bìa thật (assets/covers).
+   Truyện mẫu: “Người Chồng Xấu Xa Của Cô Vợ Béo” (20 chương, Hoàn thành).
+
+      A · Tờ bìa báo    — một cột, bìa 200px, chữ serif lớn, meta một dòng có dấu ·
+      B · Cột phải dính — nội dung bên trái, cột 300px bên phải dính khi cuộn
+      C · Nền bìa mờ    — bìa phóng to làm nền, bìa nổi, meta thành chip
+
+   Phần dưới (bảng thông tin · cùng tác giả · bình luận) dùng chung cho cả ba,
+   in một lần ở cuối trang.
+   Chạy: node docs/mockups/story-v1/gen.mjs
+   ========================================================================== */
+import fs from 'node:fs';
+import path from 'node:path';
+import url from 'node:url';
+
+const HERE = path.dirname(url.fileURLToPath(import.meta.url));
+const ROOT = path.resolve(HERE, '../../..');
+const reg = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/registry.json'), 'utf8'));
+const coverFiles = new Set(
+  fs.readdirSync(path.join(ROOT, 'assets/covers')).map((f) => f.replace(/\.webp$/, ''))
+);
+
+function coverKey(s) {
+  const bytes = Buffer.from(String(s == null ? '' : s), 'utf8');
+  let h = 0x811c9dc5;
+  for (let i = 0; i < bytes.length; i++) {
+    h ^= bytes[i];
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return ('0000000' + h.toString(16)).slice(-8);
+}
+const coverOf = (b) => {
+  for (const c of [b.thumb, b.slide]) {
+    if (!c) continue;
+    const k = coverKey(c);
+    if (coverFiles.has(k)) return `../../../assets/covers/${k}.webp`;
+  }
+  return '';
+};
+const esc = (s) =>
+  String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const vn = (n) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+const dmy = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : '—');
+
+/* --------------------------------- dữ liệu -------------------------------- */
+const SRC = reg.lib.find((b) => b.slug === 'nguoi-chong-xau-xa-cua-co-vo-beo') || reg.lib[0];
+const S = {
+  t: SRC.title,
+  a: SRC.author || '—',
+  c: SRC.couple || '',
+  y: SRC.year || '',
+  st: SRC.status || 'Đang cập nhật',
+  n: SRC.chapters || 0,
+  u: SRC.updated || '',
+  e: !!SRC.is18,
+  img: coverOf(SRC),
+  syn: String(SRC.syn || '').trim()
+};
+const PARAS = S.syn
+  .split(/(?<=[.!?…])\s+/)
+  .reduce((acc, s) => {
+    if (!acc.length || acc[acc.length - 1].length > 160) acc.push(s);
+    else acc[acc.length - 1] += ' ' + s;
+    return acc;
+  }, [])
+  .slice(0, 3);
+if (!PARAS.length) PARAS.push('Chưa có giới thiệu cho bộ truyện này.');
+
+const REL_AUTHOR = reg.lib.filter((b) => b.author === SRC.author && b.slug !== SRC.slug).slice(0, 4);
+const REL_MORE = reg.lib.filter((b) => b.slug !== SRC.slug && !REL_AUTHOR.includes(b)).slice(0, 4);
+const CH = S.n;
+
+/* số liệu minh hoạ cho phần thống kê (trang thật lấy từ CZ.statsOf) */
+const STATS = { views: 12480, votes: 386, rating: 4.7, ratings: 52, follows: 214 };
+
+const ICON = {
+  play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.3v13.4a1 1 0 0 0 1.53.85l10.3-6.7a1 1 0 0 0 0-1.7L9.53 4.45A1 1 0 0 0 8 5.3z"/></svg>',
+  book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.4C9.9 5 7 4.5 4.6 4.5v15c2.4 0 5.3.5 7.4 1.9 2.1-1.4 5-1.9 7.4-1.9v-15c-2.4 0-5.3.5-7.4 1.9z"/><path d="M12 6.4v15"/></svg>',
+  bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10.5 19a1.8 1.8 0 0 0 3 0"/></svg>',
+  shelf: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v16l-7-4.5L5 20z"/></svg>',
+  share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.6l6.8-4M8.6 13.4l6.8 4"/></svg>',
+  chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
+  caret: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>',
+  eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7.5-4.6-7.5-9.4A4.1 4.1 0 0 1 12 7.6a4.1 4.1 0 0 1 7.5 3c0 4.8-7.5 9.4-7.5 9.4z"/></svg>',
+  star: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.6l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.8l5.9-.8z"/></svg>'
+};
+
+const statusCls = (st) => (/hoàn thành/i.test(st) ? 'done' : /sắp|chưa/i.test(st) ? 'soon' : 'run');
+
+/* ------------------------------- khối dùng lại --------------------------- */
+const crumb = `<nav class="crumb"><a href="#">Trang chủ</a><i>/</i><a href="#">Thư viện</a><i>/</i><b>${esc(S.t)}</b></nav>`;
+
+const statusPill = `<span class="pill ${statusCls(S.st)}"><i></i>${esc(S.st)}</span>`;
+
+const chapters = Array.from({ length: CH }, (_, i) => i + 1);
+const chapGrid = (n = CH) => `<div class="cgrid">${chapters.slice(0, n).map((k) =>
+  `<a class="chap${k === 13 ? ' cur' : ''}" href="#"><span>Chương ${k}</span><em>${k === 13 ? 'đang đọc' : dmy(S.u)}</em></a>`
+).join('')}</div>`;
+
+const chapBar = `<div class="cbar">
+  <label class="csrch">${ICON.search}<input type="search" placeholder="Tìm số chương hoặc tên chương…" aria-label="Tìm chương"></label>
+  <span class="csort"><b>Cũ nhất</b><span>Mới nhất</span></span>
+  <span class="cjump">Đi tới <input type="number" placeholder="số" aria-label="Số chương"> <button type="button">Đi</button></span>
+</div>`;
+
+const tabs = (active = 'chap') => `<div class="stabs">
+  <button class="${active === 'info' ? 'on' : ''}">Thông tin</button>
+  <button class="${active === 'chap' ? 'on' : ''}">Danh sách chương <b>${CH}</b></button>
+  <button class="${active === 'cmt' ? 'on' : ''}">Bình luận <b>38</b></button>
+</div>`;
+
+/* danh sách truyện cùng tác giả */
+const relCards = (list) => list.map((b) =>
+  `<a class="rcard" href="#"><span class="rcv"><img src="${esc(coverOf(b))}" alt="" loading="lazy"></span>` +
+  `<span class="rct"><b>${esc(b.title)}</b><span>${esc(b.status || '')} · ${b.chapters || 0} chương</span></span></a>`
+).join('');
+
+/* ================================ PHƯƠNG ÁN A ============================= */
+/* Tờ bìa báo: bìa 200px bên trái, chữ serif lớn, meta một dòng ngăn bằng dấu · */
+const optA = `${crumb}
+<section class="hA">
+  <a class="cvA" href="#">${S.img ? `<img src="${esc(S.img)}" alt="Bìa ${esc(S.t)}" loading="lazy">` : ''}</a>
+  <div class="txtA">
+    <h1>${esc(S.t)}</h1>
+    <div class="byA">${esc(S.a)}${S.c ? ' · <span>' + esc(S.c) + '</span>' : ''}</div>
+    <div class="metA">
+      ${statusPill}
+      <span>${ICON.book} <b>${S.n}</b> chương</span>
+      <span>${S.y}</span>
+      <span>Cập nhật ${dmy(S.u)}</span>
+      <span class="rate">${ICON.star}<b>${STATS.rating}</b><em>(${STATS.ratings})</em></span>
+    </div>
+    <div class="synA">${PARAS.map((p) => `<p>${esc(p)}</p>`).join('')}</div>
+    <button class="moreA" type="button">Đọc giới thiệu đầy đủ ${ICON.chev}</button>
+    <div class="actA">
+      <a class="btnPri" href="#">${ICON.play}Đọc từ đầu</a>
+      <a class="btnGho" href="#">${ICON.book}Chương mới nhất</a>
+      <a class="btnGho" href="#">${ICON.bell}Theo dõi</a>
+      <a class="btnGho" href="#">${ICON.shelf}Tủ truyện</a>
+      <a class="btnGho" href="#">${ICON.share}Chia sẻ</a>
+    </div>
+  </div>
+</section>
+${tabs()}
+<section class="cwrap">${chapBar}${chapGrid()}</section>`;
+
+/* ================================ PHƯƠNG ÁN B ============================= */
+/* Cột phải dính: nội dung bên trái, cột 300px (đọc ngay · số liệu · tiến độ · cùng tác giả) */
+const optB = `${crumb}
+<div class="hB">
+  <div class="mainB">
+    <section class="heroB">
+      <a class="cvB" href="#">${S.img ? `<img src="${esc(S.img)}" alt="Bìa ${esc(S.t)}" loading="lazy">` : ''}</a>
+      <div>
+        <h1>${esc(S.t)}</h1>
+        <div class="byB">${esc(S.a)}${S.c ? ' · ' + esc(S.c) : ''} · ${S.y}</div>
+        <div class="metB">${statusPill}<span>${ICON.book} <b>${S.n}</b> chương</span><span>Cập nhật ${dmy(S.u)}</span></div>
+        <div class="synB">${PARAS.slice(0, 2).map((p) => `<p>${esc(p)}</p>`).join('')}</div>
+        <button class="moreA" type="button">Đọc giới thiệu đầy đủ ${ICON.chev}</button>
+      </div>
+    </section>
+    ${tabs()}
+    <section class="cwrap">${chapBar}${chapGrid(12)}
+      <div class="pgrow"><button class="pgn on">1</button><button class="pgn">2</button><span class="pgi">Trang 1 / 2</span></div>
+    </section>
+  </div>
+  <aside class="sideB">
+    <a class="btnPri wide" href="#">${ICON.play}Đọc từ đầu</a>
+    <div class="progB"><div class="pl"><span>Tiến độ của bạn</span><b>chương 13 / ${S.n}</b></div>
+      <div class="pb"><i style="width:65%"></i></div><span class="pd">còn 7 chương · 65%</span></div>
+    <div class="statsB">
+      <div><b>${vn(STATS.views)}</b><span>lượt đọc</span></div>
+      <div><b>${vn(STATS.votes)}</b><span>lượt thích</span></div>
+      <div><b>${STATS.rating}</b><span>điểm ★</span></div>
+      <div><b>${STATS.follows}</b><span>theo dõi</span></div>
+    </div>
+    <div class="sideActs">
+      <a class="btnGho wide" href="#">${ICON.bell}Theo dõi</a>
+      <a class="btnGho wide" href="#">${ICON.shelf}Tủ truyện</a>
+      <a class="btnGho wide" href="#">${ICON.share}Chia sẻ bộ này</a>
+    </div>
+    <div class="sideRel">
+      <div class="srH">Cùng tác giả</div>
+      ${relCards(REL_AUTHOR.slice(0, 3))}
+    </div>
+  </aside>
+</div>`;
+
+/* ================================ PHƯƠNG ÁN C ============================= */
+/* Nền bìa mờ: bìa phóng to làm nền, bìa nổi, meta thành chip trên nền tối */
+const optC = `${crumb}
+<section class="hC">
+  ${S.img ? `<img class="bgC" src="${esc(S.img)}" alt="" loading="lazy">` : ''}
+  <span class="veilC"></span>
+  <div class="inC">
+    <a class="cvC" href="#">${S.img ? `<img src="${esc(S.img)}" alt="Bìa ${esc(S.t)}" loading="lazy">` : ''}</a>
+    <div class="txtC">
+      <div class="kickC">Truyện chuyển thể · ${S.y}</div>
+      <h1>${esc(S.t)}</h1>
+      <div class="byC">${esc(S.a)}${S.c ? ' · ' + esc(S.c) : ''}</div>
+      <div class="chipC">
+        ${statusPill}
+        <span class="ch2">${ICON.book}${S.n} chương</span>
+        <span class="ch2">${ICON.star}${STATS.rating} · ${STATS.ratings} đánh giá</span>
+        <span class="ch2">${ICON.eye}${vn(STATS.views)} lượt đọc</span>
+      </div>
+      <div class="synC">${PARAS.slice(0, 2).map((p) => `<p>${esc(p)}</p>`).join('')}</div>
+      <div class="actC">
+        <a class="btnPri" href="#">${ICON.play}Đọc từ đầu</a>
+        <a class="btnGho onDark" href="#">${ICON.bell}Theo dõi</a>
+        <a class="btnGho onDark" href="#">${ICON.shelf}Tủ truyện</a>
+      </div>
+    </div>
+  </div>
+</section>
+${tabs()}
+<section class="cwrap">${chapBar}${chapGrid()}</section>`;
+
+/* ----------------------------------- CSS ---------------------------------- */
+const CSS = `
+  body { background: #0d0b09; }
+  .wrap { max-width: 1216px; margin: 0 auto; padding: 20px 18px 80px; }
+  h1 { margin: 0; }
+  .lead { color: var(--dim); font-size: 12.5px; margin: 0 0 6px; max-width: 94ch; }
+  .note { color: var(--mut); font-size: 11.5px; margin: 10px 0 0; }
+  .hd { margin-bottom: 6px; }
+  .hd h2 { font-family: var(--font-head); font-size: 23px; margin: 0 0 8px; }
+  .opt { border-top: 1px solid var(--bd); margin-top: 32px; padding-top: 20px; }
+  .otag { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 6px;
+    font: 800 10px/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--acc); }
+  .otag i { font-style: normal; padding: 3px 7px; border-radius: 5px; background: var(--acc-soft); letter-spacing: .06em; }
+  .onote { color: var(--dim); font-size: 12px; margin: 0 0 18px; max-width: 100ch; }
+  .onote b { color: var(--mut); font-weight: 650; }
+  .frame { container-type: inline-size; border: 1px solid var(--bd); border-radius: 12px;
+    padding: 20px 22px 24px; background: var(--bg); }
+
+  /* ---- dùng chung ---- */
+  .crumb { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--dim);
+    margin-bottom: 16px; }
+  .crumb a { color: var(--mut); }
+  .crumb a:hover { color: var(--acc); }
+  .crumb i { font-style: normal; opacity: .5; }
+  .crumb b { color: var(--txt); font-weight: 600; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px;
+    border-radius: 99px; border: 1px solid rgba(255, 255, 255, .14); background: rgba(12, 9, 6, .7);
+    font: 700 10.5px/1 var(--font); white-space: nowrap; }
+  .pill i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+  .pill.run { color: #f3dfb8; } .pill.run i { background: var(--warn); }
+  .pill.done { color: #c8ead6; } .pill.done i { background: var(--ok); }
+  .pill.soon { color: #d6d2ea; } .pill.soon i { background: #8f83c7; }
+  .btnPri, .btnGho { display: inline-flex; align-items: center; gap: 7px; height: 38px;
+    padding: 0 15px; border-radius: 9px; font-size: 12.5px; font-weight: 650; white-space: nowrap;
+    transition: background .16s ease, border-color .16s ease, color .16s ease, transform .16s ease; }
+  .btnPri { background: var(--acc); color: #2a1016; box-shadow: 0 10px 22px -14px rgba(224, 133, 155, .9); }
+  .btnPri:hover { transform: translateY(-1px); }
+  .btnPri svg { width: 13px; height: 13px; }
+  .btnGho { border: 1px solid var(--bd); color: var(--mut); background: none; }
+  .btnGho:hover { border-color: var(--bd2); color: var(--txt); background: var(--surf2); }
+  .btnGho svg { width: 14px; height: 14px; }
+  .btnGho.onDark { border-color: rgba(255, 255, 255, .26); color: #fff; background: rgba(18, 12, 9, .34); }
+  .wide { justify-content: center; width: 100%; }
+  .moreA { display: inline-flex; align-items: center; gap: 4px; margin-top: 10px; padding: 0;
+    border: 0; background: none; font: 650 12px/1 var(--font); color: var(--mut); cursor: pointer; }
+  .moreA:hover { color: var(--acc); }
+  .moreA svg { width: 10px; height: 10px; }
+  .metA, .metB { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 12px;
+    font-size: 12px; color: var(--dim); }
+  .metA span, .metB span { display: inline-flex; align-items: center; gap: 5px; }
+  .metA span + span::before, .metB span + span::before { content: "·"; margin-right: 9px; color: var(--dim); opacity: .6; }
+  .metA b, .metB b { color: var(--mut); font-weight: 650; }
+  .metA svg, .metB svg { width: 13px; height: 13px; opacity: .8; }
+  .rate { color: var(--warn) !important; }
+  .rate svg { width: 12px; height: 12px; }
+  .rate b { color: var(--warn) !important; }
+  .rate em { font-style: normal; color: var(--dim); }
+
+  /* dải tab + danh sách chương (cả ba dùng chung) */
+  .stabs { display: flex; align-items: center; gap: 26px; margin: 26px 0 18px;
+    border-bottom: 1px solid var(--bd); }
+  .stabs button { position: relative; height: 40px; padding: 0; border: 0; background: none;
+    font: 600 13px/1 var(--font); color: var(--mut); cursor: pointer; }
+  .stabs button b { margin-left: 5px; font: 700 10.5px/1 var(--font-mono); color: var(--dim); }
+  .stabs button.on { color: var(--txt); }
+  .stabs button.on b { color: var(--acc); }
+  .stabs button.on::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px;
+    height: 2px; border-radius: 2px; background: var(--acc); }
+  .cbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .csrch { flex: 1 1 300px; min-width: 190px; display: flex; align-items: center; gap: 9px;
+    height: 42px; padding: 0 12px; border: 1px solid var(--bd); border-radius: 10px; background: var(--surf);
+    color: var(--dim); }
+  .csrch:focus-within { border-color: var(--acc); }
+  .csrch input { flex: 1; min-width: 0; border: 0; background: none; outline: 0;
+    color: var(--txt); font-size: 13.5px; }
+  .csrch svg { width: 14px; height: 14px; }
+  .csort { display: flex; align-items: center; gap: 14px; height: 42px; padding-left: 14px;
+    border-left: 1px solid var(--bd); font-size: 12.5px; color: var(--dim); }
+  .csort b { color: var(--txt); font-weight: 650; }
+  .cjump { display: flex; align-items: center; gap: 7px; margin-left: auto; font-size: 12px; color: var(--dim); }
+  .cjump input { width: 58px; height: 30px; padding: 0 8px; border: 1px solid var(--bd);
+    border-radius: 7px; background: var(--surf); color: var(--txt); font-size: 12px; }
+  .cjump button { height: 30px; padding: 0 10px; border: 1px solid var(--bd); border-radius: 7px;
+    background: none; color: var(--mut); font: 600 12px/1 var(--font); cursor: pointer; }
+  .cgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 34px; }
+  .chap { display: flex; align-items: baseline; gap: 8px; min-width: 0; padding: 9px 0;
+    border-bottom: 1px solid var(--bd-soft); font-size: 12.5px; color: var(--mut); }
+  .chap em { margin-left: auto; font-style: normal; font: 500 10px/1 var(--font-mono); color: var(--dim); }
+  .chap:hover { color: var(--acc); }
+  .chap.cur { color: var(--acc); font-weight: 700; }
+  .chap.cur em { color: var(--acc); }
+  .pgrow { display: flex; align-items: center; gap: 8px; margin-top: 20px; }
+  .pgn { width: 34px; height: 34px; border: 1px solid var(--bd); border-radius: 8px; background: none;
+    color: var(--mut); font: 600 13px/1 var(--font); cursor: pointer; }
+  .pgn.on { background: var(--txt); border-color: var(--txt); color: var(--bg); }
+  .pgi { margin-left: 6px; font: 500 11.5px/1 var(--font-mono); color: var(--dim); }
+
+  /* ================= A · tờ bìa báo ================= */
+  .hA { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 30px; align-items: start; }
+  .cvA { display: block; border-radius: 8px; overflow: hidden; background: var(--surf2);
+    box-shadow: 0 20px 38px -22px #000, 0 0 0 1px rgba(255, 240, 220, .08); }
+  .cvA img { display: block; width: 100%; aspect-ratio: 2/3; object-fit: cover; }
+  .txtA h1 { font-family: var(--font-head); font-size: 34px; font-weight: 700; line-height: 1.14;
+    letter-spacing: -.022em; }
+  .byA { margin-top: 10px; font-size: 13.5px; color: var(--mut); }
+  .byA span { color: var(--dim); }
+  .synA { margin-top: 16px; max-width: 74ch; }
+  .synA p { margin: 0 0 9px; font-size: 13.5px; line-height: 1.72; color: var(--mut); }
+  .synA p:last-child { margin-bottom: 0; }
+  .actA { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+
+  /* ================= B · cột phải dính ================= */
+  .hB { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 40px; align-items: start; }
+  .heroB { display: grid; grid-template-columns: 168px minmax(0, 1fr); gap: 22px; align-items: start; }
+  .cvB { display: block; border-radius: 8px; overflow: hidden; background: var(--surf2);
+    box-shadow: 0 18px 34px -20px #000, 0 0 0 1px rgba(255, 240, 220, .08); }
+  .cvB img { display: block; width: 100%; aspect-ratio: 2/3; object-fit: cover; }
+  .heroB h1 { font-family: var(--font-head); font-size: 27px; font-weight: 700; line-height: 1.16;
+    letter-spacing: -.02em; }
+  .byB { margin-top: 8px; font-size: 12.5px; color: var(--dim); }
+  .synB { margin-top: 14px; }
+  .synB p { margin: 0 0 8px; font-size: 13px; line-height: 1.7; color: var(--mut); }
+  .sideB { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 16px;
+    padding: 18px; border: 1px solid var(--bd); border-radius: 12px;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--surf) 70%, transparent), var(--bg2)); }
+  .progB { display: flex; flex-direction: column; gap: 7px; }
+  .pl { display: flex; align-items: baseline; justify-content: space-between; font-size: 11.5px; color: var(--dim); }
+  .pl b { color: var(--txt); font-weight: 650; font-size: 12px; }
+  .pb { height: 4px; border-radius: 99px; background: rgba(255, 255, 255, .1); overflow: hidden; }
+  .pb i { display: block; height: 100%; background: var(--acc); border-radius: 99px; }
+  .pd { font: 500 10.5px/1 var(--font-mono); color: var(--dim); }
+  .statsB { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 10px; padding: 14px 0;
+    border-top: 1px solid var(--bd-soft); border-bottom: 1px solid var(--bd-soft); }
+  .statsB div { min-width: 0; }
+  .statsB b { display: block; font-family: var(--font-head); font-size: 19px; font-weight: 700;
+    line-height: 1; color: var(--txt); font-variant-numeric: tabular-nums; }
+  .statsB span { display: block; margin-top: 5px; font-size: 10.5px; color: var(--dim); }
+  .sideActs { display: flex; flex-direction: column; gap: 8px; }
+  .sideRel { display: flex; flex-direction: column; gap: 2px; padding-top: 14px;
+    border-top: 1px solid var(--bd-soft); }
+  .srH { margin-bottom: 8px; font: 700 9.5px/1 var(--font-mono); letter-spacing: .12em;
+    text-transform: uppercase; color: var(--mut); }
+  .rcard { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; align-items: center;
+    min-width: 0; padding: 7px 0; }
+  .rcv { display: block; width: 30px; border-radius: 4px; overflow: hidden; background: var(--surf2); }
+  .rcv img { display: block; width: 100%; aspect-ratio: 2/3; object-fit: cover; }
+  .rct { min-width: 0; }
+  .rct b { display: block; font-size: 12px; font-weight: 650; line-height: 1.3; color: var(--txt);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rcard:hover .rct b { color: var(--acc); }
+  .rct span { display: block; margin-top: 2px; font-size: 10px; color: var(--dim);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ================= C · nền bìa mờ ================= */
+  .hC { position: relative; overflow: hidden; border-radius: 12px; isolation: isolate;
+    padding: 26px 26px 24px; background: var(--surf2); }
+  .bgC { position: absolute; inset: -10%; width: 120%; height: 120%; object-fit: cover;
+    object-position: center 26%; filter: blur(22px) saturate(1.08) brightness(.5); z-index: -2; }
+  .veilC { position: absolute; inset: 0; z-index: -1;
+    background: linear-gradient(100deg, rgba(10, 7, 5, .93) 10%, rgba(10, 7, 5, .7) 52%, rgba(10, 7, 5, .34)); }
+  .inC { display: grid; grid-template-columns: 186px minmax(0, 1fr); gap: 28px; align-items: center; }
+  .cvC { display: block; border-radius: 9px; overflow: hidden;
+    box-shadow: 0 22px 40px -18px #000, 0 0 0 1px rgba(255, 255, 255, .16); }
+  .cvC img { display: block; width: 100%; aspect-ratio: 2/3; object-fit: cover; }
+  .kickC { font: 800 9px/1 var(--font-mono); letter-spacing: .16em; text-transform: uppercase;
+    color: var(--acc); }
+  .txtC h1 { margin-top: 10px; font-family: var(--font-head); font-size: 32px; font-weight: 700;
+    line-height: 1.14; letter-spacing: -.022em; color: #fff;
+    text-shadow: 0 2px 20px rgba(0, 0, 0, .5); }
+  .byC { margin-top: 9px; font-size: 13px; color: rgba(255, 255, 255, .72); }
+  .chipC { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .chipC .pill { border-color: rgba(255, 255, 255, .22); }
+  .ch2 { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px;
+    border-radius: 6px; background: rgba(12, 9, 6, .42); border: 1px solid rgba(255, 255, 255, .12);
+    font: 600 10.5px/1 var(--font-mono); color: rgba(255, 255, 255, .82); }
+  .ch2 svg { width: 11px; height: 11px; opacity: .85; }
+  .synC { margin-top: 14px; max-width: 68ch; }
+  .synC p { margin: 0 0 8px; font-size: 13px; line-height: 1.7; color: rgba(255, 255, 255, .74); }
+  .actC { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+
+  /* ================= phần chung: thông tin · cùng tác giả · bình luận ==== */
+  .shared { margin-top: 22px; }
+  .infoT { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 44px; }
+  .infoT div { display: flex; align-items: baseline; gap: 12px; padding: 11px 0;
+    border-bottom: 1px solid var(--bd-soft); font-size: 12.5px; }
+  .infoT span { flex: 0 0 104px; color: var(--dim); }
+  .infoT b { color: var(--txt); font-weight: 600; }
+  .relGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px 14px; }
+  .relCard { min-width: 0; }
+  .relCard .cv { position: relative; aspect-ratio: 2/3; border-radius: 6px; overflow: hidden;
+    background: var(--surf2); }
+  .relCard .cv img { width: 100%; height: 100%; object-fit: cover; }
+  .relCard b { display: -webkit-box; margin-top: 8px; font-size: 12.5px; font-weight: 650;
+    line-height: 1.35; color: var(--txt); -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; }
+  .relCard span { display: block; margin-top: 2px; font-size: 10.5px; color: var(--dim); }
+  .cmtBox { border: 1px solid var(--bd); border-radius: 10px; padding: 16px; background: var(--surf);
+    color: var(--dim); font-size: 12.5px; }
+  .sh { display: flex; align-items: baseline; gap: 10px; margin: 26px 0 14px;
+    padding-bottom: 10px; border-bottom: 1px solid var(--bd); }
+  .sh h3 { margin: 0; font-family: var(--font-head); font-size: 17px; font-weight: 650; }
+  .sh span { font-size: 12px; color: var(--dim); }
+
+  @container (max-width: 900px) {
+    .hA { grid-template-columns: 150px minmax(0, 1fr); gap: 20px; }
+    .txtA h1 { font-size: 27px; }
+    .hB { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+    .sideB { position: static; }
+    .heroB { grid-template-columns: 140px minmax(0, 1fr); gap: 18px; }
+    .inC { grid-template-columns: 140px minmax(0, 1fr); gap: 20px; }
+    .txtC h1 { font-size: 26px; }
+    .cgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 24px; }
+    .relGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .infoT { grid-template-columns: minmax(0, 1fr); }
+  }
+  @container (max-width: 560px) {
+    .hA, .heroB, .inC { grid-template-columns: minmax(0, 1fr); }
+    .cvA, .cvB, .cvC { width: 132px; }
+    .txtA h1 { font-size: 24px; }
+    .cgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px; }
+    .relGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .cjump { margin-left: 0; }
+  }
+`;
+
+const opt = (id, tag, title, note, html) =>
+  `<section class="opt">
+    <span class="otag"><i>${id}</i>${title}${tag ? ' · ' + tag : ''}</span>
+    <p class="onote">${note}</p>
+    <div class="frame">${html}</div>
+  </section>`;
+
+const shared = `<section class="opt">
+  <span class="otag"><i>DÙNG CHUNG</i>Phần dưới của trang</span>
+  <p class="onote">Ba phương án chỉ khác nhau ở <b>phần đầu trang</b>; phần thông tin, truyện cùng
+    tác giả và bình luận dùng chung một thiết kế cho cả ba.</p>
+  <div class="frame">
+    ${tabs('info')}
+    <div class="sh"><h3>Thông tin truyện</h3><span>bảng hai cột, nhãn xám — giá trị trắng</span></div>
+    <div class="infoT">
+      <div><span>Tên khác</span><b>${esc(S.t)}</b></div>
+      <div><span>Tác giả</span><b>${esc(S.a)}</b></div>
+      <div><span>Couple</span><b>${esc(S.c || '—')}</b></div>
+      <div><span>Năm</span><b>${esc(S.y)}</b></div>
+      <div><span>Tình trạng</span><b>${esc(S.st)}</b></div>
+      <div><span>Số chương</span><b>${S.n}</b></div>
+      <div><span>Cập nhật</span><b>${dmy(S.u)}</b></div>
+      <div><span>Giới hạn</span><b>${S.e ? '18+' : 'Mọi lứa tuổi'}</b></div>
+    </div>
+
+    <div class="sh"><h3>Truyện cùng tác giả</h3><span>${REL_AUTHOR.length} bộ</span>
+      <a href="#" style="margin-left:auto;font-size:12px;font-weight:650;color:var(--mut)">Xem tất cả ›</a></div>
+    <div class="relGrid">${REL_AUTHOR.concat(REL_MORE).slice(0, 4).map((b) =>
+      `<a class="relCard" href="#"><span class="cv"><img src="${esc(coverOf(b))}" alt="" loading="lazy"></span>` +
+      `<b>${esc(b.title)}</b><span>${esc(b.status || '')} · ${b.chapters || 0} chương</span></a>`
+    ).join('')}</div>
+
+    <div class="sh"><h3>Đánh giá &amp; bình luận</h3><span>38 bình luận</span></div>
+    <div class="cmtBox">Khung bình luận (giscus) giữ nguyên — chỉ canh lại lề cho thẳng với phần trên.</div>
+  </div>
+</section>`;
+
+const HTML = `<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ssochuz · phương án trang thông tin truyện</title>
+<link rel="stylesheet" href="../home-v2/mock2.css?v=story1">
+<style>${CSS}</style>
+</head>
+<body>
+
+<div class="mkbar">
+  <span class="ttl">ssochuz · trang thông tin truyện</span>
+  <span>3 phương án · dữ liệu và bìa thật</span>
+  <a href="../home-v2/index.html" style="margin-left:auto;color:var(--mut);text-decoration:underline;text-underline-offset:3px">← mockup trang chủ</a>
+  <a href="../home-v2/schedule.html" style="color:var(--mut);text-decoration:underline;text-underline-offset:3px">lịch ra chương</a>
+</div>
+
+<div class="wrap">
+  <div class="hd">
+    <h2>Trang thông tin truyện — ba phương án</h2>
+    <p class="lead">Truyện mẫu: <b>${esc(S.t)}</b> · ${S.n} chương · ${esc(S.st)} · bìa thật.
+      Cả ba đều giữ đủ những gì trang thật đang có: trạng thái, số chương, tác giả, couple, năm,
+      cập nhật, điểm ★, giới thiệu, các nút hành động, danh sách chương và phần bình luận.</p>
+    <p class="note">Điểm khác biệt lớn nhất: <b>các nút hành động đặt ở đâu</b> và <b>giới thiệu dài
+      hiển thị bao nhiêu</b>. Bạn chọn mã, ví dụ <b>B</b>.</p>
+  </div>
+
+  ${opt('A', 'tờ bìa báo', 'Một cột · bìa 200px',
+    'Bìa lớn bên trái, chữ bên phải: tên serif 34px, dòng tác giả · couple, một dòng meta ngăn bằng dấu ·, ' +
+    'giới thiệu 3 đoạn (có nút “Đọc giới thiệu đầy đủ”), rồi hàng nút. ' +
+    '<b>Ưu:</b> sạch, dễ đọc, đúng chất trang truyện chữ. <b>Nhược:</b> các nút ít nổi, trang dài hơn.',
+    optA)}
+
+  ${opt('B', 'cột phải dính', 'Hai cột · cột phải dính',
+    'Cột nội dung bên trái (bìa 168px + giới thiệu ngắn), cột phải rộng 300px <b>dính khi cuộn</b>: ' +
+    'nút Đọc, tiến độ đọc, bốn ô số liệu (lượt đọc · lượt thích · điểm ★ · theo dõi), ba nút phụ và ' +
+    'ba truyện cùng tác giả. Danh sách chương chia trang. ' +
+    '<b>Ưu:</b> chuyên nghiệp nhất, hành động luôn trong tầm mắt khi cuộn. <b>Nhược:</b> cột phải chiếm 300px.',
+    optB)}
+
+  ${opt('C', 'nền bìa mờ', 'Nền bìa · chip',
+    'Cả phần đầu là một khối ảnh: chính bìa phóng to làm nền (mờ 22px, tối 50%), bìa 186px sắc nét nổi bên trái. ' +
+    'Trạng thái và số liệu thành <b>chip</b> trên nền tối, chữ trắng. ' +
+    '<b>Ưu:</b> ấn tượng nhất, mỗi truyện một màu riêng. <b>Nhược:</b> nặng hơn, và bìa tối thì nền sẽ bết.',
+    optC)}
+
+  ${shared}
+</div>
+</body>
+</html>
+`;
+
+fs.mkdirSync(HERE, { recursive: true });
+fs.writeFileSync(path.join(HERE, 'index.html'), HTML);
+console.log('đã ghi story-v1/index.html ·', Math.round(HTML.length / 1024), 'kB ·',
+  'truyện', S.t, '· chương', CH, '· cùng tác giả', REL_AUTHOR.length, '· bìa thiếu',
+  [SRC].concat(REL_AUTHOR, REL_MORE).filter((b) => !coverOf(b)).length);

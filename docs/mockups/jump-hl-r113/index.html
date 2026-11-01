@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tô sáng dòng đang chọn trong hộp tìm nhanh — 3 kiểu</title>
+<link rel="stylesheet" href="/cz.css">
+<style>
+html, body { margin: 0; }
+body { padding: 0 24px 70px; background: var(--bg); }
+.wrap { max-width: 1000px; margin: 0 auto; }
+header.top { padding: 26px 0 18px; border-bottom: 1px solid var(--bd); margin-bottom: 8px; }
+h1 { margin: 0 0 10px; font-size: 24px; line-height: 1.25; letter-spacing: -.02em; }
+.lead { max-width: 70ch; margin: 0; font-size: 13.5px; line-height: 1.65; color: var(--mut); }
+.lead b { color: var(--txt); font-weight: 600; }
+
+/* Khung xem: hộp tìm nhanh thật, nhưng nằm yên trong trang thay vì phủ toàn màn */
+.slab { margin: 26px 0 0; }
+.slab > h2 { display: flex; align-items: baseline; gap: 10px; margin: 0 0 4px;
+  font-family: var(--font); font-size: 15px; font-weight: 600; letter-spacing: 0; }
+.slab > h2 i { font-style: normal; display: grid; place-items: center; min-width: 22px; height: 22px;
+  padding: 0 6px; border-radius: 6px; background: var(--acc-soft); color: var(--acc);
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700; }
+.slab > p { margin: 0 0 12px; max-width: 72ch; font-size: 12.5px; line-height: 1.6; color: var(--mut); }
+.slab > p b { color: var(--txt); font-weight: 600; }
+.slab .jump { position: static; display: block; overflow: visible; inset: auto; }
+.slab .jump .scrim { display: none; }
+.slab .jump .box { margin: 0; width: 100%; max-width: 560px; max-height: none;
+  transform: none; opacity: 1; transition: none; }
+
+/* ---------- 1 · son nhạt + viền son ---------- */
+.h1 .jump .res a.on { background: var(--acc-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acc) 38%, transparent); }
+.h1 .jump .res a.on b { color: #fff; }
+
+/* ---------- 2 · đổ son, chữ tối ---------- */
+.h2 .jump .res a.on { background: var(--acc); box-shadow: none; }
+.h2 .jump .res a.on b { color: #2b1018; }
+.h2 .jump .res a.on .tx > span, .h2 .jump .res a.on .ch { color: rgba(38, 14, 20, .8); }
+.h2 .jump .res a.on mark { color: #6b2233; }
+.h2 .jump .res a.on .th img { filter: none; }
+
+/* ---------- (bỏ) tên son: trùng màu với phần tô từ khoá ---------- */
+
+/* ---------- 3 · khung son, không tô ---------- */
+.h3v .jump .res a.on { background: transparent;
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--acc) 70%, transparent); }
+.h3v .jump .res a.on b { color: #fff; }
+
+@media (max-width: 700px) {
+  body { padding: 0 16px 50px; }
+  h1 { font-size: 21px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Tô sáng dòng đang chọn trong hộp tìm nhanh — 3 kiểu</h1>
+    <p class="lead">Cùng một hộp tìm (520px, dòng 52px, bìa 30×40, nhãn “Truyện”, số chương canh phải).
+      Chỉ khác <b>cách đánh dấu dòng đang chọn</b> — dòng thứ hai trong mỗi khung. Kiểu nào cũng bỏ hẳn
+      vạch kẻ đè lên góc bìa và không đổi bề rộng dòng khi bấm ↑ ↓.</p>
+  </header>
+
+  <section class="slab h1">
+    <h2><i>1</i>Son nhạt + viền son <span class="now">đang áp dụng</span></h2>
+    <p>Nền pha hồng của bảng màu (<b>--acc-soft</b>, chính token đang dùng cho ô nhập khi focus) và một
+      viền son 1px ôm trọn hàng. Không vạch kẻ, không khối nâu.</p>
+    <div class="jump on"><div class="box">
+      <div class="q"><span class="qi"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"></path><path d="M21 21l-6 -6"></path></g></svg></span>
+        <input type="search" value="love" aria-label="Tìm"><button class="qx" type="button" aria-label="Đóng"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><g stroke-width="1.44" transform="translate(-2.16 -2.16) scale(1.18)"><path d="M18 6l-12 12"></path><path d="M6 6l12 12"></path></g></svg></button></div>
+      <div class="jhead"><span>Truyện</span><em>17 bộ</em></div>
+      <div class="res"></div>
+      <div class="foot"><span><kbd>↑</kbd><kbd>↓</kbd> chọn</span><span><kbd>↵</kbd> mở</span><span><kbd>Esc</kbd> đóng</span></div>
+    </div></div>
+  </section>
+
+  <section class="slab h2">
+    <h2><i>2</i>Đổ son, chữ tối</h2>
+    <p>Cả hàng thành nền son đặc, chữ chuyển màu tối như nút chính. Rõ nhất trong bốn kiểu và không thể
+      nhầm với hover, nhưng là một mảng màu lớn nên nặng mắt hơn.</p>
+    <div class="jump on"><div class="box">
+      <div class="q"><span class="qi"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"></path><path d="M21 21l-6 -6"></path></g></svg></span>
+        <input type="search" value="love" aria-label="Tìm"><button class="qx" type="button" aria-label="Đóng"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><g stroke-width="1.44" transform="translate(-2.16 -2.16) scale(1.18)"><path d="M18 6l-12 12"></path><path d="M6 6l12 12"></path></g></svg></button></div>
+      <div class="jhead"><span>Truyện</span><em>17 bộ</em></div>
+      <div class="res"></div>
+      <div class="foot"><span><kbd>↑</kbd><kbd>↓</kbd> chọn</span><span><kbd>↵</kbd> mở</span><span><kbd>Esc</kbd> đóng</span></div>
+    </div></div>
+  </section>
+
+  <section class="slab h3v">
+    <h2><i>3</i>Khung son, không tô</h2>
+    <p>Chỉ một đường khung son 1,5px vòng quanh hàng — như vòng focus của bàn phím. Gọn và chắc chắn,
+      đứng giữa kiểu 1 và kiểu 3 về độ nổi.</p>
+    <div class="jump on"><div class="box">
+      <div class="q"><span class="qi"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"></path><path d="M21 21l-6 -6"></path></g></svg></span>
+        <input type="search" value="love" aria-label="Tìm"><button class="qx" type="button" aria-label="Đóng"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><g stroke-width="1.44" transform="translate(-2.16 -2.16) scale(1.18)"><path d="M18 6l-12 12"></path><path d="M6 6l12 12"></path></g></svg></button></div>
+      <div class="jhead"><span>Truyện</span><em>17 bộ</em></div>
+      <div class="res"></div>
+      <div class="foot"><span><kbd>↑</kbd><kbd>↓</kbd> chọn</span><span><kbd>↵</kbd> mở</span><span><kbd>Esc</kbd> đóng</span></div>
+    </div></div>
+  </section>
+  <p class="tail">Đang áp dụng <b>kiểu 1</b>. Muốn đổi thì chỉ cần nhắn <b>“tô sáng: 2”</b> (nổi nhất) hoặc
+    <b>“tô sáng: 3”</b> (chỉ khung son, không tô nền) — mình đổi trong một nốt nhạc, không phải bàn lại từ đầu.</p>
+</div>
+
+<script>
+(function () {
+  var DATA = [
+    { t: 'Love On Hire', a: 'Yuufuku', c: 'Ginny x Jayna', ch: '63 chương', th: '/assets/covers/79d97ab3.webp' },
+    { t: 'Love Bound', a: 'Navika', c: 'Orm x Folk', ch: '44 chương', th: '/assets/covers/c3cb1fca.webp' },
+    { t: 'Love Fribe', a: 'Flower of memory', c: '', ch: '33 chương', th: '/assets/covers/de5d14e6.webp' },
+    { t: 'BUILT IN LOVE', a: 'SalmonLover', c: 'Pimji x Pineare', ch: '24 chương', th: '/assets/covers/b65362c1.webp' },
+    { t: 'Love Design', a: 'THEK34', c: 'Kao x Jane', ch: '10 chương', th: '/assets/covers/d7e8d3c7.webp' },
+    { t: 'Love Status Is Blocked', a: 'ferrary_ff', c: '', ch: '', th: '/assets/covers/c2519871.webp' }
+  ];
+  var SEL = 1;   /* dòng thứ hai = “đang chọn” */
+  var html = DATA.map(function (n, i) {
+    return '<a href="#" role="option" aria-selected="' + (i === SEL) + '"' + (i === SEL ? ' class="on"' : '') + '>' +
+      '<span class="th"><img src="' + n.th + '" alt="" loading="lazy"></span>' +
+      '<span class="tx"><b>' + n.t.replace(/love/i, function (m) { return '<mark>' + m + '</mark>'; }) + '</b>' +
+        '<span>' + [n.a, n.c].filter(Boolean).join(' · ') + '</span></span>' +
+      '<span class="ch">' + n.ch + '</span></a>';
+  }).join('');
+  Array.prototype.forEach.call(document.querySelectorAll('.slab .res'), function (r) { r.innerHTML = html; });
+})();
+</script>
+</body>
+</html>

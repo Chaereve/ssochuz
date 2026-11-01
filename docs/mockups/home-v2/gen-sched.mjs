@@ -1,0 +1,427 @@
+#!/usr/bin/env node
+/* ============================================================================
+   gen-sched.mjs · mockup PHƯƠNG ÁN cho mục “Lịch ra chương”
+   ----------------------------------------------------------------------------
+   Dữ liệu thật: data/registry.json → schedule.items (6 bộ) + bìa thật.
+   Tuần minh hoạ: 26/10 – 01/11/2026 (hôm nay = Thứ 6, 30/10/2026).
+
+     1 · Bảng tuần 7 cột      — mỗi ngày một cột mảnh, hôm nay tô son
+     2 · Hàng đợi hai cột     — 6 dòng, mỗi dòng một bộ, gọn nhất
+     3 · Hôm nay nổi bật      — bộ ra hôm nay to bên trái, cả tuần bên phải
+
+   Chạy: node docs/mockups/home-v2/gen-sched.mjs
+   ========================================================================== */
+import fs from 'node:fs';
+import path from 'node:path';
+import url from 'node:url';
+
+const HERE = path.dirname(url.fileURLToPath(import.meta.url));
+const ROOT = path.resolve(HERE, '../../..');
+const reg = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/registry.json'), 'utf8'));
+const coverFiles = new Set(
+  fs.readdirSync(path.join(ROOT, 'assets/covers')).map((f) => f.replace(/\.webp$/, ''))
+);
+
+function coverKey(s) {
+  const bytes = Buffer.from(String(s == null ? '' : s), 'utf8');
+  let h = 0x811c9dc5;
+  for (let i = 0; i < bytes.length; i++) {
+    h ^= bytes[i];
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return ('0000000' + h.toString(16)).slice(-8);
+}
+const coverOf = (b) => {
+  for (const c of [b.thumb, b.slide]) {
+    if (!c) continue;
+    const k = coverKey(c);
+    if (coverFiles.has(k)) return `../../../assets/covers/${k}.webp`;
+  }
+  return '';
+};
+const esc = (s) =>
+  String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+/* -------------------------------- dữ liệu -------------------------------- */
+const by = {};
+reg.lib.forEach((b) => { by[b.slug] = b; });
+
+/* nhãn ngày → các thứ trong tuần (0 = CN) */
+const DAYS = [
+  { k: 1, l: 'Thứ 2', d: '26/10' },
+  { k: 2, l: 'Thứ 3', d: '27/10' },
+  { k: 3, l: 'Thứ 4', d: '28/10' },
+  { k: 4, l: 'Thứ 5', d: '29/10' },
+  { k: 5, l: 'Thứ 6', d: '30/10' },
+  { k: 6, l: 'Thứ 7', d: '31/10' },
+  { k: 0, l: 'CN', d: '01/11' }
+];
+const TODAY = 5; /* Thứ 6 */
+const dayKeys = (label) => {
+  const s = String(label || '');
+  const out = [];
+  [['Thứ 2', 1], ['Thứ 3', 2], ['Thứ 4', 3], ['Thứ 5', 4], ['Thứ 6', 5], ['Thứ 7', 6]]
+    .forEach(([t, k]) => { if (s.includes(t)) out.push(k); });
+  if (/\bCN\b|Chủ nhật/i.test(s)) out.push(0);
+  return out;
+};
+
+const ITEMS = (reg.schedule.items || []).map((it) => {
+  const b = by[it.slug] || {};
+  return {
+    title: it.title || b.title || '',
+    slug: it.slug,
+    detail: it.detail || '',
+    days: dayKeys(it.days),
+    dayLabel: it.days || '',
+    img: coverOf(b),
+    ch: b.chapters || 0,
+    st: b.status || '',
+    u: String(b.updated || '')
+  };
+});
+const onDay = (k) => ITEMS.filter((it) => it.days.includes(k));
+const NOW = ITEMS.filter((it) => it.days.includes(TODAY));
+const NOTE = (reg.schedule.note || '').trim();
+const dayLong = (k) => (k === 0 ? 'Chủ nhật' : 'Thứ ' + (k + 1));
+
+/* phần đuôi mỗi dòng: số chương + tình trạng (detail nếu có thì ưu tiên) */
+const meta = (it) => {
+  const bits = [];
+  if (it.detail) bits.push(it.detail);
+  if (it.ch) bits.push(it.ch + ' chương');
+  if (it.st) bits.push(it.st);
+  return bits.join(' · ') || 'Chưa có chương';
+};
+
+const pillKind = (it) => (it.st === 'Hoàn thành' ? 'done' : it.st === 'Sắp ra mắt' ? 'soon' : 'run');
+
+/* ============================== PHƯƠNG ÁN 1 ============================== */
+const opt1 = `<div class="wk">${DAYS.map((d) => {
+  const list = onDay(d.k);
+  const today = d.k === TODAY;
+  return (
+    `<div class="wcol${today ? ' now' : ''}${list.length ? '' : ' off'}">` +
+      `<div class="wd"><span class="wn2">${d.l}</span><span class="wd2">${d.d}</span>` +
+      (today ? '<span class="wnow">hôm nay</span>' : '') + `</div>` +
+      (list.length
+        ? list.map((it) =>
+            `<a class="witem" href="#">` +
+              (it.img ? `<img src="${esc(it.img)}" alt="" loading="lazy">` : '<span class="wph"></span>') +
+              `<span class="wt2"><b>${esc(it.title)}</b><span>${esc(meta(it))}</span></span>` +
+            `</a>`
+          ).join('')
+        : '<span class="wnone">—</span>') +
+    `</div>`
+  );
+}).join('')}</div>
+${NOTE ? `<p class="snote">${esc(NOTE)}</p>` : ''}`;
+
+/* ============================== PHƯƠNG ÁN 2 ============================== */
+const opt2 = `<div class="q2">${DAYS.flatMap((d) =>
+  onDay(d.k).map((it) => {
+    const today = d.k === TODAY;
+    return (
+      `<a class="qrow${today ? ' now' : ''}" href="#">` +
+        `<span class="qday">${d.l.replace('Thứ ', 'T')}${d.k === 0 ? 'CN' : ''}` +
+        `<em>${d.d}</em>` + (today ? '<i>hôm nay</i>' : '') + `</span>` +
+        (it.img ? `<img src="${esc(it.img)}" alt="" loading="lazy">` : '<span class="qph"></span>') +
+        `<span class="qt"><b>${esc(it.title)}</b><span>${esc(meta(it))}</span></span>` +
+        `<span class="qst ${pillKind(it)}">${esc(it.st || 'Đang cập nhật')}</span>` +
+      `</a>`
+    );
+  })
+).join('')}</div>
+${NOTE ? `<p class="snote">${esc(NOTE)}</p>` : ''}`;
+
+/* ============================== PHƯƠNG ÁN 3 ============================== */
+const hero = NOW[0] || ITEMS.find((it) => it.days.some((k) => k > TODAY)) || ITEMS[0];
+const heroDay = hero ? hero.days.find((k) => k === TODAY) : TODAY;
+const rest = ITEMS.filter((it) => it !== hero);
+/* ---- ba phương án 3 (làm mịn từ “tiêu điểm hôm nay”) -------------------- */
+const chev =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" ' +
+  'stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
+
+const restList = (title) => `<div class="w3list">
+  <div class="w3lh"><span>${title}</span><em>${rest.length} bộ</em></div>
+  ${rest.map((it) => {
+    const k = it.days[0];
+    const today = it.days.includes(TODAY);
+    return `<a class="w3r${today ? ' now' : ''}" href="#">` +
+      `<span class="w3d">${k === 0 ? 'CN' : 'T' + (k + 1)}</span>` +
+      (it.img ? `<img src="${esc(it.img)}" alt="" loading="lazy">` : '<span class="w3ph"></span>') +
+      `<span class="w3t"><b>${esc(it.title)}</b><span>${esc(it.days.length > 1 ? it.dayLabel : dayLong(k))} · ${esc(meta(it))}</span></span></a>`;
+  }).join('')}
+</div>`;
+
+/* 3A · bìa dọc + chữ, trên nền giấy rất nhẹ — sạch và “biên tập” */
+const opt3a = `<div class="w3grid">
+  <a class="w3feat" href="#">
+    ${hero.img ? `<span class="w3poster"><img src="${esc(hero.img)}" alt="" loading="lazy"></span>` : ''}
+    <span class="w3txt">
+      <span class="w3k">${heroDay === TODAY ? 'Ra hôm nay' : 'Ra ' + dayLong(heroDay)} · ${(DAYS.find((d) => d.k === heroDay) || {}).d || ''}</span>
+      <span class="w3n">${esc(hero.title)}</span>
+      <span class="w3m">${esc(meta(hero))}</span>
+      <span class="w3go">Xem truyện ${chev}</span>
+    </span>
+  </a>
+  ${restList('Còn lại trong tuần')}
+</div>
+${NOTE ? `<p class="snote">${esc(NOTE)}</p>` : ''}`;
+
+/* 3B · nền là chính bìa phóng mờ, bìa dọc nổi bên trái — sâu và “điện ảnh” hơn */
+const opt3b = `<div class="w3grid">
+  <a class="w3feat v3b" href="#">
+    ${hero.img ? `<img class="w3bg" src="${esc(hero.img)}" alt="" loading="lazy">` : ''}
+    <span class="w3veil"></span>
+    ${hero.img ? `<span class="w3poster"><img src="${esc(hero.img)}" alt="" loading="lazy"></span>` : ''}
+    <span class="w3txt">
+      <span class="w3k">${heroDay === TODAY ? 'Ra hôm nay' : 'Ra ' + dayLong(heroDay)} · ${(DAYS.find((d) => d.k === heroDay) || {}).d || ''}</span>
+      <span class="w3n">${esc(hero.title)}</span>
+      <span class="w3m">${esc(meta(hero))}</span>
+      <span class="w3go on">Xem truyện ${chev}</span>
+    </span>
+  </a>
+  ${restList('Còn lại trong tuần')}
+</div>
+${NOTE ? `<p class="snote">${esc(NOTE)}</p>` : ''}`;
+
+/* --------------------------------- CSS ---------------------------------- */
+const CSS = `
+  body { background: #0d0b09; }
+  .wrap { max-width: 1216px; margin: 0 auto; padding: 22px 18px 80px; }
+  h1 { font-family: var(--font-head); font-size: 23px; margin: 0 0 8px; }
+  .lead { color: var(--dim); font-size: 12.5px; margin: 0 0 6px; max-width: 94ch; }
+  .note { color: var(--mut); font-size: 11.5px; margin: 10px 0 0; }
+  .opt { border-top: 1px solid var(--bd); margin-top: 34px; padding-top: 20px; }
+  .otag { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 6px;
+    font: 800 10px/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--acc); }
+  .otag i { font-style: normal; padding: 3px 7px; border-radius: 5px; background: var(--acc-soft);
+    letter-spacing: .06em; }
+  .onote { color: var(--dim); font-size: 12px; margin: 0 0 18px; max-width: 96ch; }
+  .onote b { color: var(--mut); font-weight: 650; }
+  /* đầu mục giống .sechead của trang thật */
+  .hr { display: flex; align-items: baseline; gap: 10px; padding-bottom: 12px;
+    border-bottom: 1px solid var(--bd); margin-bottom: 16px; }
+  .hr h2 { font-size: 20px; font-weight: 650; }
+  .hs { font-size: 12.5px; color: var(--dim); }
+  .htoday { display: inline-flex; align-items: center; height: 20px; padding: 0 8px;
+    border-radius: 5px; background: var(--acc-soft); color: var(--acc);
+    font: 700 9.5px/1 var(--font-mono); letter-spacing: .07em; text-transform: uppercase; }
+  .hm { margin-left: auto; display: inline-flex; align-items: center; gap: 3px;
+    font-size: 12.5px; font-weight: 650; color: var(--mut); white-space: nowrap; }
+  .hm svg { width: 11px; height: 11px; }
+  .snote { margin: 12px 0 0; font-size: 11.5px; color: var(--dim); }
+
+  /* ---- 1 · bảng tuần 7 cột ---- */
+  .wk { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+    border-top: 1px solid var(--bd-soft); }
+  .wcol { min-width: 0; padding: 12px 12px 14px; border-right: 1px solid var(--bd-soft); }
+  .wcol:last-child { border-right: 0; }
+  .wcol.now { background: color-mix(in srgb, var(--acc) 5%, transparent); }
+  .wd { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; margin-bottom: 11px;
+    padding-bottom: 9px; border-bottom: 1px solid var(--bd-soft); }
+  .wn2 { font: 700 9.5px/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase;
+    color: var(--mut); }
+  .wd2 { font: 600 10.5px/1 var(--font-mono); color: var(--dim); }
+  .wnow { margin-left: auto; font: 700 8.5px/1 var(--font-mono); letter-spacing: .06em;
+    text-transform: uppercase; color: var(--acc); }
+  .wcol.now .wn2, .wcol.now .wd2 { color: var(--acc); }
+  .witem { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 9px;
+    align-items: start; min-width: 0; padding: 3px 0; }
+  .witem + .witem { margin-top: 8px; }
+  .witem img, .wph { width: 32px; aspect-ratio: 2/3; object-fit: cover; border-radius: 4px;
+    background: var(--surf2); }
+  .wt2 { min-width: 0; }
+  .wt2 b { display: -webkit-box; font-size: 11.5px; font-weight: 600; line-height: 1.32;
+    color: var(--txt); -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    overflow-wrap: anywhere; transition: color .15s ease; }
+  .witem:hover .wt2 b { color: var(--acc); }
+  .wt2 span { display: block; margin-top: 3px; font: 500 9px/1.3 var(--font-mono);
+    color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wcol.off .wnone { display: block; padding: 2px 0; font-size: 12px; color: var(--dim); }
+
+  /* ---- 2 · hàng đợi hai cột ---- */
+  .q2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 44px; }
+  .qrow { display: grid; grid-template-columns: 42px 34px minmax(0, 1fr) auto; gap: 12px;
+    align-items: center; min-width: 0; padding: 11px 0;
+    border-bottom: 1px solid var(--bd-soft); }
+  .qrow.now { box-shadow: inset 2px 0 0 var(--acc); padding-left: 10px; }
+  .qday { display: block; font: 700 10px/1 var(--font-mono); letter-spacing: .1em;
+    text-transform: uppercase; color: var(--mut); }
+  .qday em { display: block; margin-top: 4px; font-style: normal; font: 500 9.5px/1 var(--font-mono);
+    color: var(--dim); }
+  .qrow.now .qday, .qrow.now .qday em { color: var(--acc); }
+  .qday i { display: block; margin-top: 5px; font-style: normal; font: 700 8px/1 var(--font-mono);
+    letter-spacing: .06em; text-transform: uppercase; color: var(--acc); }
+  .qrow img, .qph { width: 34px; aspect-ratio: 2/3; object-fit: cover; border-radius: 4px;
+    background: var(--surf2); }
+  .qt { min-width: 0; }
+  .qt b { display: block; font-size: 13.5px; font-weight: 650; line-height: 1.35; color: var(--txt);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color .15s ease; }
+  .qrow:hover .qt b { color: var(--acc); }
+  .qt span { display: block; margin-top: 3px; font-size: 11px; color: var(--dim);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .qst { font: 700 9px/1 var(--font-mono); letter-spacing: .06em; text-transform: uppercase;
+    white-space: nowrap; }
+  .qst.run { color: var(--mut); }
+  .qst.done { color: var(--ok); }
+  .qst.soon { color: #b9b2d6; }
+
+  /* ---- 3 · tiêu điểm hôm nay (bản làm mịn) ---- */
+  /* lưới: tiêu điểm bên trái · danh sách bên phải */
+  .w3grid { display: grid; grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr);
+    gap: 32px; align-items: stretch; }
+
+  .w3feat { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr);
+    gap: 20px; align-items: center; min-width: 0; padding: 18px 20px; border-radius: 12px;
+    background: linear-gradient(118deg, color-mix(in srgb, var(--surf) 72%, transparent),
+      color-mix(in srgb, var(--surf) 12%, transparent) 72%, transparent);
+    transition: background .2s ease; }
+  .w3feat:hover { background: linear-gradient(118deg, color-mix(in srgb, var(--surf) 92%, transparent),
+      color-mix(in srgb, var(--surf) 22%, transparent) 72%, transparent); }
+  .w3poster { display: block; width: 116px; flex: none; border-radius: 7px; overflow: hidden;
+    box-shadow: 0 16px 30px -18px #000, 0 0 0 1px rgba(255, 240, 220, .09) inset;
+    transition: transform .25s cubic-bezier(.22,.61,.36,1); }
+  .w3feat:hover .w3poster { transform: translateY(-3px); }
+  .w3poster img { display: block; width: 100%; aspect-ratio: 2/3; object-fit: cover; }
+  .w3txt { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
+  .w3k { font: 800 9px/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase;
+    color: var(--acc); }
+  .w3n { display: -webkit-box; margin-top: 9px; font-family: var(--font-head); font-size: 22px;
+    font-weight: 700; line-height: 1.22; letter-spacing: -.012em; color: var(--txt);
+    -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  .w3m { display: block; margin-top: 9px; font: 500 10.5px/1.4 var(--font-mono); color: var(--dim); }
+  .w3go { display: inline-flex; align-items: center; gap: 4px; margin-top: 15px;
+    font-size: 12px; font-weight: 700; color: var(--mut); transition: color .15s ease, gap .15s ease; }
+  .w3go svg { width: 11px; height: 11px; }
+  .w3feat:hover .w3go { color: var(--acc); gap: 7px; }
+
+  /* 3B: nền là chính bìa phóng mờ */
+  .w3feat.v3b { overflow: hidden; padding: 22px 22px; min-height: 224px; isolation: isolate;
+    background: var(--surf2); }
+  .w3feat.v3b:hover { background: var(--surf2); }
+  .w3bg { position: absolute; inset: -8%; width: 116%; height: 116%; object-fit: cover;
+    object-position: center 28%; filter: blur(16px) saturate(1.1) brightness(.52); z-index: -2; }
+  .w3veil { position: absolute; inset: 0; z-index: -1;
+    background: linear-gradient(100deg, rgba(10,7,5,.9) 8%, rgba(10,7,5,.62) 52%, rgba(10,7,5,.28)); }
+  .v3b .w3n { color: #fff; text-shadow: 0 2px 18px rgba(0,0,0,.55); }
+  .v3b .w3m { color: rgba(255,255,255,.72); }
+  .v3b .w3poster { box-shadow: 0 18px 34px -16px #000, 0 0 0 1px rgba(255,255,255,.14); }
+  .v3b .w3go.on { color: var(--acc); }
+  .v3b:hover .w3go.on { color: #fff; }
+
+  /* danh sách bên phải */
+  .w3list { display: flex; flex-direction: column; min-width: 0; }
+  .w3lh { display: flex; align-items: baseline; gap: 8px; padding-bottom: 9px;
+    border-bottom: 1px solid var(--bd-soft);
+    font: 700 9.5px/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase;
+    color: var(--mut); }
+  .w3lh em { font-style: normal; margin-left: auto; letter-spacing: 0; text-transform: none;
+    font-weight: 600; color: var(--dim); }
+  .w3r { display: grid; grid-template-columns: 26px 28px minmax(0, 1fr); gap: 12px;
+    align-items: center; min-width: 0; padding: 10px 0; border-bottom: 1px solid var(--bd-soft); }
+  .w3r:last-child { border-bottom: 0; }
+  .w3d { font: 700 9.5px/1 var(--font-mono); letter-spacing: .1em; text-transform: uppercase;
+    color: var(--mut); }
+  .w3r.now .w3d { color: var(--acc); }
+  .w3r img, .w3ph { width: 28px; aspect-ratio: 2/3; object-fit: cover; border-radius: 4px;
+    background: var(--surf2); }
+  .w3t { min-width: 0; }
+  .w3t b { display: block; font-size: 12.5px; font-weight: 650; line-height: 1.35; color: var(--txt);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color .15s ease; }
+  .w3r:hover .w3t b { color: var(--acc); }
+  .w3t span { display: block; margin-top: 2px; font-size: 10.5px; color: var(--dim);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  @media (max-width: 960px) {
+    .wk { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .wcol:nth-child(4n) { border-right: 0; }
+    .q2 { grid-template-columns: minmax(0, 1fr); gap: 0; }
+    .w3grid { grid-template-columns: minmax(0, 1fr); gap: 22px; }
+    .rb b { font-size: 9px; }
+    .w3feat.v3b { min-height: 196px; }
+  }
+  @media (max-width: 620px) {
+    .wk { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .wcol:nth-child(2n) { border-right: 0; }
+    .qrow { grid-template-columns: 38px 32px minmax(0, 1fr); }
+    .qst { grid-column: 3; margin-top: 4px; }
+    .w3feat { grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 16px; }
+    .w3poster { width: 92px; }
+    .w3n { font-size: 19px; }
+  }
+`;
+
+const opt = (id, tag, title, note, html) =>
+  `<section class="opt">
+    <span class="otag"><i>${id}</i>${title}${tag ? ' · ' + tag : ''}</span>
+    <p class="onote">${note}</p>
+    <div class="hr"><h2>Lịch ra chương</h2><span class="hs">${ITEMS.length} bộ · tuần này</span>
+      <span class="htoday">Hôm nay · Thứ 6 30/10</span>
+      <span class="hm">Cả tuần
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
+          stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+    ${html}
+  </section>`;
+
+const HTML = `<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ssochuz · phương án cho “Lịch ra chương”</title>
+<link rel="stylesheet" href="mock2.css?v=sched1">
+<style>${CSS}</style>
+</head>
+<body>
+
+<div class="mkbar">
+  <span class="ttl">ssochuz · lịch ra chương</span>
+  <span>4 phương án · dữ liệu thật 6 bộ</span>
+  <a href="index.html" style="margin-left:auto;color:var(--mut);text-decoration:underline;text-underline-offset:3px">← trang chính</a>
+  <a href="rails.html" style="color:var(--mut);text-decoration:underline;text-underline-offset:3px">phương án 2 mục</a>
+</div>
+
+<div class="wrap">
+  <h1>Lịch ra chương — bốn cách bày</h1>
+  <p class="lead">Dữ liệu thật từ <b>registry.schedule</b>: 6 bộ, mỗi bộ một thứ (bộ cuối phủ cả
+    Thứ 7 và CN). Tuần minh hoạ 26/10 – 01/11/2026, “hôm nay” là Thứ 6 30/10.</p>
+  <p class="note">Sáu bộ, nhưng bộ cuối phủ cả Thứ 7 và CN nên bảy ngày đều có lịch. Ngày nào trống
+    thì mỗi phương án xử lý khác nhau (dấu “—”, hoặc ẩn hẳn dòng). Bạn chọn mã, ví dụ <b>3A</b>.
+    1 và 2 giữ nguyên để đối chiếu; <b>3A / 3B</b> là bản làm mịn từ phương án 3 bạn đã thích.</p>
+
+  ${opt('1', 'bảng tuần 7 cột', 'Bảng tuần',
+    'Bảy cột mảnh, mỗi ngày một cột: thứ + ngày ở trên, dưới là bìa nhỏ 32px và tên hai dòng. ' +
+    'Cột hôm nay tô son nhạt, chữ ngày màu son. Ngày trống hiện dấu “—” chứ không phải ô rỗng. ' +
+    '<b>Ưu:</b> thấy cả tuần trong một cái liếc, đúng nghĩa “lịch”. <b>Nhược:</b> cột hẹp nên tên bị cắt 2 dòng.',
+    opt1)}
+
+  ${opt('2', 'hàng đợi hai cột', 'Danh sách theo ngày',
+    'Sáu dòng chia hai cột (3 + 3): nhãn thứ + ngày bên trái, bìa 34px, tên một dòng và dòng phụ ' +
+    '(số chương · tình trạng), cuối dòng là nhãn tình trạng. Dòng của hôm nay có vạch son bên trái. ' +
+    '<b>Ưu:</b> gọn nhất, không có ô trống nào, cùng nhịp với bảng “Mới cập nhật” bạn vừa chốt. ' +
+    '<b>Nhược:</b> không thấy “tuần” như một tờ lịch.',
+    opt2)}
+
+  ${opt('3A', 'tiêu điểm · bản mịn', 'Tiêu điểm hôm nay — bìa dọc',
+    'Bỏ dải tuần — chỉ còn một nhãn nhỏ “Hôm nay · Thứ 6 30/10” ở đầu mục để giữ bối cảnh. ' +
+    'Bên trái là <b>bìa dọc 116×174</b> đặt trên nền giấy rất nhẹ (không cắt ảnh nên mặt nhân vật còn nguyên), ' +
+    'chữ bên phải: nhãn son in hoa · tên serif 22px · dòng meta mono · “Xem truyện ›”. ' +
+    'Bên phải: năm bộ còn lại, mỗi dòng một bộ, đầu danh sách có nhãn “CÒN LẠI TRONG TUẦN · 5 BỘ”.',
+    opt3a)}
+
+  ${opt('3B', 'tiêu điểm · bản sâu', 'Tiêu điểm hôm nay — nền bìa mờ',
+    'Cùng bố cục với 3A (cũng không có dải tuần) nhưng tấm tiêu điểm là một <b>khối ảnh</b>: chính bìa của bộ đó phóng to làm nền, ' +
+    'phủ lớp tối chuyển sắc và làm mờ nhẹ, còn bìa dọc sắc nét nổi lên bên trái. Đậm và “điện ảnh” hơn, ' +
+    'vẫn không cắt mất mặt nhân vật.',
+    opt3b)}
+</div>
+</body>
+</html>
+`;
+
+fs.writeFileSync(path.join(HERE, 'schedule.html'), HTML);
+console.log('đã ghi schedule.html ·', Math.round(HTML.length / 1024), 'kB ·',
+  'mục lịch', ITEMS.length, '· hôm nay', NOW.length, '· bìa thiếu', ITEMS.filter((i) => !i.img).length);

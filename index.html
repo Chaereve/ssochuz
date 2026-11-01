@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="vi" data-theme="light">
+<html lang="vi" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ssochuz library · thư viện truyện</title>
 <meta name="description" content="ssochuz library — thư viện truyện chọn lọc: đọc trong máy, lưu tiến độ, lọc theo năm, tác giả, couple và lịch ra chương.">
-<meta name="theme-color" content="#faf8f4">
+<meta name="theme-color" content="#14110e">
 <link rel="alternate" type="application/rss+xml" title="ssochuz library — Chương mới (RSS)" href="https://chuseoz-cms.kimtong1906.workers.dev/feed.xml">
 <link rel="icon" type="image/png" href="/ssochuz.png?v=1">
 <link rel="apple-touch-icon" href="/ssochuz.png?v=1">
@@ -15,130 +15,156 @@
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://ssochuz.pages.dev/ssochuz.png">
   <!-- N13: bỏ preconnect Firestore — không còn đọc thẳng Firestore từ máy khách -->
-<link rel="stylesheet" href="/cz.css?v=20261014feat1">
-<script>/* chống nháy nền: áp tông màu đã lưu trước khi vẽ */try{var t=localStorage.getItem('ssochuz-theme')||localStorage.getItem('chuseoz-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+<link rel="stylesheet" href="/cz.css?v=20261102r118">
 </head>
 <body class="hpage">
-<div id="sprog" aria-hidden="true"><i></i></div>
+
 <header id="hdr"></header>
 
 <main>
   <!-- ================= HERO LANDING ================= -->
-  <section class="hero" id="hero" aria-label="Truyện nổi bật">
-    <div class="bg" id="heroBg" aria-hidden="true"><i></i><i></i></div>
-    <div class="stage" id="stage" aria-live="polite"></div>
-    <div class="foot">
-      <div class="footin">
-        <button class="arrow" id="hPrev" aria-label="Truyện trước"></button>
-        <div class="dots" id="hDots" role="tablist" aria-label="Chọn truyện nổi bật"></div>
-        <span class="count" id="hCount"></span>
-        <div class="strip" id="hStrip"></div>
-        <button class="arrow" id="hNext" aria-label="Truyện kế tiếp"></button>
-      </div>
-      <div class="bar"><i id="heroBar"></i></div>
-    </div>
-  </section>
-
-  <!-- ================= SỐ LIỆU THẬT ================= -->
-  <section class="facts" aria-label="Số liệu thư viện"><div class="in" id="facts"></div></section>
+  <!-- VÁ (2026-10-29): hero là “BỘ BÀI” dựng bởi component dùng chung
+       `CZ.heroBanner` (src/cz-hero.js) — 5 bìa xoè thành quạt có tâm, bấm bìa để
+       đổi truyện, chữ đọc ở cột trái. Khối rỗng trong HTML là CỐ Ý: component tự
+       dựng quạt + điều khiển nên không có markup trùng lặp ở hai nơi. -->
+  <section class="hero" id="hero" aria-label="Truyện nổi bật"></section>
 
   <div class="wrap">
-    <!-- ===== MY SPACE: tiếp tục đọc + theo dõi chương mới (dữ liệu cá nhân) ===== -->
-    <section class="sec fade home-personal" id="resumeSec" hidden aria-labelledby="resumeTitle">
-      <div class="sechead"><h2 id="resumeTitle">Đọc tiếp</h2><a class="btn ghost sm" href="/my-space">My Space</a></div>
-      <div id="resumeRail" class="personal-rail" aria-live="polite"></div>
-    </section>
-    <section class="sec fade home-personal" id="followUpdatesSec" hidden aria-labelledby="followUpdatesTitle">
-      <div class="sechead"><h2 id="followUpdatesTitle">Theo dõi có chương mới</h2><a class="btn ghost sm" href="/#thu-vien">Thư viện</a></div>
-      <div id="followUpdatesRail" class="personal-rail" aria-live="polite"></div>
-    </section>
-
-    <!-- ================= MỚI CẬP NHẬT ================= -->
-    <section class="sec fade" id="moi-cap-nhat">
-      <div class="sechead">
-        <h2>Mới cập nhật</h2>
-        <span class="right">
-          <!-- VÒNG QUAY “HÔM NAY ĐỌC GÌ?” — src/cz-dice.js dựng nút vào đây -->
-          <span class="dicehost" data-dice></span>
-          <a class="btn ghost sm" href="/#thu-vien" title="Xem cả thư viện">Xem tất cả</a>
-        </span>
+    <!-- ============== TỔNG QUAN · các dải phẳng (30/10/2026) ==============
+         Không còn khung bento: bốn mục xếp thẳng hàng, mỗi mục là một dải
+         (Đọc tiếp · Mới cập nhật · Ranking · Đáng xem) ngăn bằng một đường tóc.
+         Đầu mục dùng chung `.sechead` như Lịch và Thư viện nên cả trang chỉ còn
+         MỘT kiểu đầu mục. Bìa khoá tỉ lệ 2/3, huy hiệu dán BÊN TRONG bìa. -->
+    <section class="sec fade" id="tong-quan" aria-label="Tổng quan hôm nay">
+      <div class="fsec" id="doc-tiep">
+        <div class="sechead">
+          <h2 id="resumeTitle">Đọc tiếp</h2>
+          <a class="btm" href="/my-space">My Space ›</a>
+        </div>
+        <section id="resumeSec" class="home-personal" hidden aria-labelledby="resumeTitle">
+          <div id="resumeRail" class="personal-rail" aria-live="polite"></div>
+        </section>
+        <section id="followUpdatesSec" class="home-personal" hidden aria-labelledby="followUpdatesTitle">
+          <div class="bth lt"><h3 class="blb" id="followUpdatesTitle">Theo dõi có chương mới</h3></div>
+          <div id="followUpdatesRail" class="personal-rail" aria-live="polite"></div>
+        </section>
+        <!-- chưa đọc gì: chỗ này thành “bắt đầu từ đâu” (src/cz-home.js dựng) -->
+        <div id="starterBox" class="starter" hidden></div>
       </div>
-      <div class="rail" id="newRail"></div>
-    </section>
 
-    <!-- ================= XẾP HẠNG ================= -->
-    <section class="sec fade" id="bxh">
-      <div class="sechead">
-        <h2>Ranking</h2>
-        <div class="tabs sm ranking-modes" id="rankModes" role="group" aria-label="Hạng mục Ranking">
-          <button class="on" data-mode="views" aria-pressed="true">Top View</button>
-          <button data-mode="votes" aria-pressed="false">Top Vote</button>
+      <div class="fsec" id="moi-cap-nhat">
+        <div class="sechead">
+          <h2>Mới cập nhật</h2>
+          <a class="btm" href="#thu-vien">Cả thư viện ›</a>
+        </div>
+        <div class="mlist" id="newRail"></div>
+        <!-- “Hôm nay đọc gì?” — src/cz-dice.js gắn nút vào đây -->
+        <span class="dicehost" data-dice></span>
+      </div>
+
+      <!-- Ranking + Đáng xem: hai cột cạnh nhau, cùng một nhịp hàng — số hạng
+           serif bên trái, điểm ★ bên phải. Ngăn cách bằng một đường tóc dọc, không
+           khung, không nền, đúng kiểu “hai bên” đã chốt. -->
+      <div class="fsec duo" id="bxh" aria-label="Xếp hạng và Đáng xem">
+        <div class="duoA">
+          <div class="sechead tilehead">
+            <h2>Ranking</h2>
+            <span class="right">
+              <div class="tabs sm ranking-modes" id="rankModes" role="group" aria-label="Hạng mục Ranking">
+                <button class="on" data-mode="views" aria-pressed="true">Lượt đọc</button>
+                <button data-mode="votes" aria-pressed="false">Lượt thích</button>
+              </div>
+              <h3 id="rankSummary" class="sr-only">Lượt đọc · Tuần</h3>
+              <div class="tabs sm" id="rankTabs" role="group" aria-label="Khoảng thời gian"></div>
+            </span>
+          </div>
+          <div class="rbody">
+            <div id="rank" aria-live="polite" aria-atomic="true"></div>
+          </div>
+        </div>
+        <div class="duoB worth-section" id="dang-xem">
+          <div class="sechead">
+            <h2 id="worthTitle">Đáng xem</h2>
+            <span class="bts">điểm từ người đọc</span>
+            <a class="btm" href="#thu-vien">Xem thêm ›</a>
+          </div>
+          <div id="worthRail" class="rbody"></div>
         </div>
       </div>
-      <div class="ranking-toolbar">
-        <h3 id="rankSummary">Top View · Tuần</h3>
-        <div class="tabs sm" id="rankTabs" role="group" aria-label="Khoảng thời gian"></div>
-      </div>
-      <div id="rank" aria-live="polite" aria-atomic="true"></div>
-      <section class="worth-section" aria-labelledby="worthTitle">
-        <div class="sechead"><h3 id="worthTitle">Đáng xem</h3></div>
-        <div class="rail" id="worthRail"></div>
-      </section>
-    </section>
 
     <!-- ============ CHUYỂN THỂ SERIES ============ -->
     <section class="sec fade" id="bien-tap" hidden>
       <div class="sechead">
         <h2>Chuyển thể Series</h2>
       </div>
-      <div class="rail" id="editRail"></div>
+      <div class="wcards" id="editRail"></div>
     </section>
 
     <!-- ================= LỊCH RA CHƯƠNG ================= -->
-    <section class="sec fade" id="lich">
-      <div class="sechead">
-        <h2>Lịch ra chương</h2>
+    <section class="sec fade" id="lich" aria-labelledby="lichTitle">
+      <div class="sechead kickhead">
+        <p class="kick" id="lichToday"></p>
+        <h2 id="lichTitle">Lịch ra chương</h2>
       </div>
+      <p class="schnote" id="lichNote" hidden></p>
       <div id="sched"></div>
     </section>
 
     <!-- ================= THƯ VIỆN ================= -->
+    <!-- Thanh công cụ kiểu Linear/Stripe: ô tìm đứng riêng, mọi bộ lọc ít dùng
+         (tình trạng, năm ra mắt, 18+) gom vào MỘT nút “Bộ lọc” có số đếm, mở ra
+         popover chia nhóm. Đang lọc thì ngay dưới hiện hàng chip điều kiện xoá
+         được — trả lời đúng câu “tôi đang xem cái gì”. Tác giả/couple không có
+         ô chọn riêng nhưng vẫn lọc được qua ?author= / ?couple=. -->
     <section class="sec fade" id="thu-vien">
       <div class="sechead">
         <h2>Thư viện</h2>
+        <span class="right"><span class="lcount" id="fcount" aria-live="polite" aria-atomic="true"></span></span>
       </div>
-      <div class="fbox">
-        <div class="row1">
-          <label class="search"><span data-ic="search"></span>
-            <input id="q" placeholder="Tìm truyện, tác giả, couple…" autocomplete="off" spellcheck="false">
-            <button class="qclr hide" id="qClr" aria-label="Xoá ô tìm kiếm" title="Xoá"><span data-ic="x"></span></button>
-          </label>
-          <select class="sel" id="fYear" aria-label="Năm"></select>
-          <select class="sel" id="fAuthor" aria-label="Tác giả"></select>
-          <select class="sel" id="fCouple" aria-label="Couple"></select>
-          <select class="sel" id="fSort" aria-label="Sắp xếp"></select>
-          <div class="seg" id="viewSeg" role="group" aria-label="Kiểu hiển thị">
-            <button data-view="grid" class="on" title="Xem dạng lưới"><span data-ic="grid"></span></button>
-            <button data-view="list" title="Xem dạng danh sách"><span data-ic="rows"></span></button>
-          </div>
-        </div>
-        <div class="fgroups">
-          <div class="fgroup">
-            <span class="flab">Tình trạng</span>
-            <div class="tabs" id="tabs" role="tablist"></div>
-          </div>
-          <div class="fgroup">
-            <span class="flab">Nhãn</span>
-            <div class="tabs" id="ageTabs" role="group">
-              <button class="tab" data-age="18" aria-pressed="false">18+</button>
+      <div class="libd">
+        <div class="lbtop">
+          <div class="lbtool">
+            <label class="srch"><span data-ic="search"></span>
+              <input id="q" type="search" placeholder="Tìm truyện, tác giả, couple…" aria-label="Tìm trong thư viện" autocomplete="off" spellcheck="false">
+              <button class="qclr hide" id="qClr" aria-label="Xoá ô tìm kiếm" title="Xoá"><span data-ic="x"></span></button>
+              <kbd aria-hidden="true">⌘K</kbd>
+            </label>
+            <div class="lbtools">
+              <!-- popover nằm ngay trong khung nút để luôn bung ra ĐÚNG DƯỚI nút
+                   (nội dung do cz-home.js dựng theo dữ liệu thật) -->
+              <span class="lbwrap">
+                <button class="lbf" id="fBtn" type="button" aria-expanded="false" aria-controls="fPop">
+                  <span data-ic="filter"></span><span>Bộ lọc</span><b class="n" id="fBtnN" hidden></b>
+                </button>
+                <div class="fpop" id="fPop" hidden>
+                  <div class="fpop-h"><b>Bộ lọc</b>
+                    <button class="x" id="fPopX" type="button" aria-label="Đóng bộ lọc"><span data-ic="x"></span></button></div>
+                  <div class="fpop-b" id="fPopB" role="group" aria-label="Điều kiện lọc"></div>
+                  <div class="fpop-f">
+                    <button class="clr" id="fPopClr" type="button">Xoá lọc</button>
+                    <button class="ok" id="fPopOk" type="button">Xong</button>
+                  </div>
+                </div>
+              </span>
+              <!-- sắp xếp: nút chữ + menu tự vẽ (danh sách xổ của <select> do hệ
+                   điều hành vẽ nên không theo được nền tối) -->
+              <span class="lbwrap">
+                <button class="dd" id="fSort" type="button" aria-haspopup="listbox"
+                  aria-expanded="false" aria-controls="fSortList">
+                  <span class="sr-only">Sắp xếp thư viện: </span><span class="val" id="fSortVal">Mới nhất</span>
+                  <span class="cv" aria-hidden="true" data-ic="down"></span>
+                </button>
+                <div class="fpop lpop" id="fSortList" data-w="232" hidden>
+                  <div class="fpop-b" id="fSortBody" role="listbox" aria-label="Sắp xếp thư viện"></div>
+                </div>
+              </span>
             </div>
           </div>
         </div>
-        <div class="fpick" id="fpick"></div>
-        <div class="fcount" id="fcount"></div>
+        <div class="fpick" id="fpick" aria-live="polite"></div>
+        <div class="grid" id="grid"></div>
+        <div class="pager" id="pager"></div>
       </div>
-      <div class="grid" id="grid"></div>
-      <div class="pager" id="pager"></div>
     </section>
 
   </div>
@@ -149,10 +175,11 @@
 
 <script src="/cz-config.js?v=20261012n"></script>
 <script src="/cz-stickers.js?v=20261012n"></script>
-<script src="/cz-app.js?v=20261014feat1"></script>
+<script src="/cz-app.js?v=20261102r118"></script>
 <script src="/cz-auth.js?v=20261012n"></script>
 <script src="/cz-personal.js?v=20261013notif1"></script>
-<script src="/cz-dice.js?v=20261014feat1"></script>
-<script src="/cz-home.js?v=20261012n"></script>
+<script src="/cz-dice.js?v=20261102r118"></script>
+<script src="/cz-hero.js?v=20261029perf1"></script>
+<script src="/cz-home.js?v=20261102r118"></script>
 </body>
 </html>

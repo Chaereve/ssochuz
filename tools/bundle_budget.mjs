@@ -17,6 +17,10 @@ export const BUNDLE_BUDGETS = {
      chỉ nạp ở trang thật sự dùng nên vẫn có trần riêng, khá chặt. */
   'cz-react.js':     { warnKb: 19,  maxKb: 22 },
   'cz-dice.js':      { warnKb: 13,  maxKb: 18 },
+  /* 2026-10-29 — hero banner dùng chung (src/cz-hero.js). Chỉ trang chủ nạp,
+     nhưng vẫn có trần: component này đã “ăn” phần markup/animation trước đây
+     nằm rải trong cz-home.js nên tổng trang gần như không đổi. */
+  'cz-hero.js':      { warnKb: 12.5, maxKb: 16 },
   'cz.css':          { warnKb: 195, maxKb: 215 },
   /* v6: nâng có chủ đích (giao diện admin kiểu Wattpad: bố cục hai cột, bìa lớn,
      trạng thái đầy đủ). Vẫn có trần — tăng thêm phải ghi lý do ở đây. */

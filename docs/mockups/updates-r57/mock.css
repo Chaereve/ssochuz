@@ -1,0 +1,71 @@
+/* ============================================================================
+   “Mới cập nhật” — 4 khung (vòng 57): hiện tại · A · B · C
+   Chỉ ĐỊNH NGHĨA LẠI phần dòng danh sách; mọi thứ khác (chữ, đường kẻ, bìa)
+   lấy nguyên từ /cz.css để bản xem đúng bằng bản thật.
+   ========================================================================== */
+
+body { background: var(--bg); }
+.fsec { margin: 26px 0 0; }
+
+/* nhãn nhỏ dùng chung cho các phương án */
+.mu { color: var(--dim); font-weight: 600; }
+
+/* ==========================================================================
+   HIỆN TẠI — giữ nguyên .mrow / .mt / .mn của site
+   ========================================================================== */
+
+/* ==========================================================================
+   A · CỘT PHẢI GỌN
+   Giữ đúng dáng hiện tại nhưng cột phải rộng CỐ ĐỊNH 56px: số chương (to, đậm,
+   canh cột) ở trên, ngày (nhỏ, mờ) ở dưới. Không còn dòng nào kéo cột rộng ra
+   nên mọi tiêu đề cắt ở cùng một mốc.
+   ========================================================================== */
+.vA .mrow { grid-template-columns: 34px minmax(0, 1fr) 56px; padding: 9px 4px 9px 0; }
+.vA .mn { text-align: right; white-space: nowrap; }
+.vA .mn b { display: block; font-size: 12.5px; font-weight: 700; color: var(--txt);
+  font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+.vA .mn b i { font-style: normal; margin-right: 3px; font-size: 9.5px; font-weight: 600;
+  letter-spacing: .02em; color: var(--dim); }
+.vA .mn span.tm { display: block; margin-top: 3px; font-size: 10px; color: var(--dim);
+  font-variant-numeric: tabular-nums; }
+
+/* ==========================================================================
+   B · SỐ CHƯƠNG LÊN BÌA
+   Con số rời khỏi cột chữ, thành viên nhỏ ở góc bìa. Cột phải chỉ còn ngày.
+   ========================================================================== */
+.vB .mrow { grid-template-columns: 34px minmax(0, 1fr) auto; padding: 9px 4px 9px 0; }
+.vB .cv { position: relative; width: 34px; height: 48px; align-self: center; }
+.vB .cv img, .vB .cv .mrow-ph { width: 34px; height: 48px; }
+.vB .cch { position: absolute; right: 2px; bottom: 2px; display: inline-flex;
+  align-items: center; justify-content: center; height: 14px; min-width: 14px;
+  padding: 0 3px; border-radius: 3px; border: 1px solid rgba(255, 255, 255, .34);
+  background: rgba(14, 9, 5, .84); color: #fff;
+  font-size: 8.5px; font-weight: 800; letter-spacing: .01em; line-height: 1;
+  font-variant-numeric: tabular-nums; }
+.vB .mn { text-align: right; }
+.vB .mn span.tm { display: block; font-size: 11px; color: var(--dim);
+  font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* ==========================================================================
+   C · HAI DÒNG, KHÔNG CỘT PHẢI
+   Không còn cột phải: dòng dưới cùng một cỡ chữ — tác giả bên trái,
+   “Ch. 42 · 30-09” dạt mép phải. Tiêu đề được rộng nhất nên gần như không
+   còn dấu “…”, và cả hàng chỉ còn hai cỡ chữ.
+   ========================================================================== */
+.vC .mrow { grid-template-columns: 34px minmax(0, 1fr); gap: 12px; padding: 9px 4px 9px 0; }
+.vC .mrow img, .vC .mrow-ph { align-self: center; }
+.vC .mt b { line-height: 1.4; }
+.vC .mt .meta2 { display: flex; align-items: baseline; gap: 10px; margin-top: 3px;
+  font-size: 11px; color: var(--dim); }
+.vC .mt .meta2 .who { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vC .mt .meta2 .num { margin-left: auto; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.vC .mt .meta2 .num b { display: inline; margin: 0; font-size: 11px; font-weight: 700; color: var(--mut); }
+.vC .mt .meta2 .num .sp { display: inline; margin: 0; font-size: 11px; color: var(--bd-soft); }
+
+/* --- thu nhỏ theo bề ngang: đúng mốc của site ------------------------- */
+@media (max-width: 880px) {
+  .vA .mrow { grid-template-columns: 34px minmax(0, 1fr) 56px; }
+}
+@media (max-width: 430px) {
+  .vA .mrow { grid-template-columns: 34px minmax(0, 1fr) 52px; }
+}

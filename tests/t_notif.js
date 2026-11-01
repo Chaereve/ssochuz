@@ -1,6 +1,7 @@
 /* ============================================================================
    Kiểm thử TRUNG TÂM THÔNG BÁO (chuông ở đầu trang) + modal push mới
    - chuông hiện tổng số chương mới của truyện đã follow, bấm mở panel liệt kê
+     (đầu mục: tổng; mỗi dòng: bìa + tên + ngày cập nhật + chip “+N”)
    - bấm ngoài / Esc đóng panel; mở truyện (markFollowSeen) thì tắt số
    - chưa follow gì → không badge, panel báo "Chưa có chương mới"
    - modal hỏi bật push có giao diện mới (.pushbox + icon + 3 lợi ích)
@@ -45,7 +46,9 @@ function supabaseStub(w) {
   ok(menu.classList.contains('on') && btn.getAttribute('aria-expanded') === 'true', 'bam chuong phai mo panel');
   const item = menu.querySelector('a[role="menuitem"]');
   ok(item && item.textContent.includes(n.title), 'panel phai liet ke ten truyen');
-  ok(item && item.textContent.includes('2 chương mới'), 'panel phai ghi "2 chương mới"');
+  /* số chương mới giờ nằm ở chip “+2” cuối dòng, đầu mục chỉ ghi tổng */
+  ok(item && item.querySelector('.nnum') && item.querySelector('.nnum').textContent === '+2', 'panel phai ghi so chuong moi (chip +2)');
+  ok(menu.querySelector('.nhead span') && /2 chương/.test(menu.querySelector('.nhead span').textContent), 'dau muc panel phai ghi tong so chuong moi');
   ok(item && item.getAttribute('href') === CZ.storyURL(slug), 'bam item phai sang trang truyen (thay: ' + (item && item.getAttribute('href')) + ')');
   /* bấm ra ngoài → đóng; mở lại + Esc → đóng */
   doc.body.dispatchEvent(new win.MouseEvent('click', { bubbles: true, cancelable: true }));

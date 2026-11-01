@@ -11,7 +11,6 @@ Bản đồ các bề mặt **thật sự có trong repo** (không kê các tran
 | Hồ sơ công khai | `/profile` | Độc giả đã đăng nhập | Chia sẻ hồ sơ | Sửa hồ sơ/ảnh đại diện, tủ riêng tư ↔ công khai | Durable Object `MEMBER_SPACES` | Hoàn chỉnh; có chốt không lộ email/nháp | `profile.html`, `src/cz-space.js` |
 | Tác giả | `/tac-gia/` | Khách, độc giả | Xem theo tác giả | Lọc theo tác giả, theo dõi | registry + `localStorage` follow | Hoàn chỉnh | `tac-gia/index.html`, `src/cz-people.js`, `tests/t_people_data.js` |
 | Couple | `/couple/` | Khách, độc giả | Xem theo cặp nhân vật | Lọc, lưu tủ | registry | Hoàn chỉnh | `couple/index.html`, `tests/t_people.js` |
-| Hướng dẫn | `/guide` | Khách | Biết cách dùng web/cài app | Đọc hướng dẫn PWA | tĩnh | Hoàn chỉnh | `guide.html` |
 | Đăng nhập | `/api/auth/*` (Worker) + Supabase OAuth | Độc giả | Bình luận, lưu hồ sơ | Đăng nhập Google/Supabase | Supabase Auth (JWT RS256) | Hoàn chỉnh, có test ký thật | `src/cz-auth.js`, `worker/cms.js`, `tests/t_worker.mjs` |
 | Bình luận / đánh giá | tab "Đánh giá" | Khách (bình luận), đã đăng nhập (tên) | Phản hồi | Gửi bình luận, thả tim, chấm sao | KV `comments:*`, `rate:*`; Giscus tuỳ chọn | Hoàn chỉnh, có chống spam + kiểm duyệt | `worker/cms.js`, `tests/t_rating.js`, `tests/t_rating_withdraw.js` |
 | Báo lỗi chữ | nút trong trình đọc | Khách, độc giả | Báo lỗi nội dung | Gửi báo lỗi (kèm ảnh chụp) | KV `report`, email tuỳ chọn | Hoàn chỉnh; email là **tuỳ chọn**, không chặn luồng | `worker/cms.js` (`postReport`), `BAO-CAO-SUA-LOI-BAO-LOI*`… |
@@ -28,7 +27,7 @@ Bản đồ các bề mặt **thật sự có trong repo** (không kê các tran
 | **Thanh toán** | — | — | — | — | — | **Not present** (không có cổng thanh toán; chỉ có cấu hình ủng hộ ở `settings.donation`) | `data/registry.json` → `settings.donation` |
 | **Trang quản trị độc giả** | — | — | — | — | — | **Not present** — tab "Độc giả" ghi rõ "Chưa có API danh sách độc giả trên KV" | `src/admin/components/UsersPanel.jsx` |
 | **Tìm kiếm toàn văn** | — | — | — | — | — | **Not present** (tìm theo metadata truyện) | `index.html` `#q` |
-| **Onboarding nhiều bước** | — | — | — | — | — | **Not present** (không có tour/hướng dẫn lần đầu; có `/guide`) | không có tệp |
+| **Onboarding nhiều bước** | — | — | — | — | — | **Not present** (không có tour/hướng dẫn lần đầu; trang `/guide` đã bỏ 2026-11-01) | không có tệp |
 
 ## Ghi chú kiến trúc dữ liệu (để tránh hiểu sai khi đọc code)
 

@@ -113,15 +113,20 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   click($$('#chapGrid .cha')[3]); await wait(300);
   out.chapClickOpens = { reading: doc.body.classList.contains('reading'), sub: txt('#rdSub') };
   key('Escape'); await wait(200);
-  out.sortUI = { active: txt('#chapSort .on'), topGone: !$('#chapTop') };
-  click($$('#chapSort button')[0]); await wait(200);
+  /* vòng 77: thứ tự chương là MỘT nút bấm-để-đảo, nhãn đổi theo trạng thái */
+  out.sortUI = { label: txt('#chapSort .lbl'), topGone: !$('#chapTop') };
+  click('#chapSort'); await wait(200);
   out.sortNewFirst = txt('#chapGrid .cha .nm');
-  click($$('#chapSort button')[1]); await wait(200);
+  out.sortLabelNew = txt('#chapSort .lbl');
+  click('#chapSort'); await wait(200);
   out.sortOldFirst = txt('#chapGrid .cha .nm');
+  out.sortLabelOld = txt('#chapSort .lbl');
+  /* vòng 83: bỏ khối “Cùng couple / Cùng tác giả” — tên tác giả và couple ngay
+     dưới tiêu đề là liên kết sang trang danh sách tương ứng. */
   out.story = {
-    chapCount: txt('#chapCount'),
-    relSeries: $$('#relSeries a').length,
-    relCouple: $$('#relCouple a').length
+    tabChapCt: txt('#tabChapCt'),
+    relGone: !$('#relSec') && !$('#relCouple') && !$('#relAuthor'),
+    whoLinks: $$('#shero .who a').map(function (a) { return a.getAttribute('href'); })
   };
   out.errStory = errors.slice(0, 5);
   out.logCount = log.length;
@@ -269,12 +274,11 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
     await wait(120);
     out.lightboxClosed = !q2('#lightbox').classList.contains('on');
   }
-  /* đổi sáng/tối ở đầu trang: có nhớ không */
-  const tb = D2.querySelector('#czTheme');
-  tb.dispatchEvent(new img.win.MouseEvent('click', { bubbles: true })); await wait(120);
-  out.theme = { attr: D2.documentElement.getAttribute('data-theme'), ls: img.win.localStorage.getItem('ssochuz-theme') };
-  tb.dispatchEvent(new img.win.MouseEvent('click', { bubbles: true })); await wait(120);
-  out.themeBack = D2.documentElement.getAttribute('data-theme');
+  /* nền tối là duy nhất: không còn công tắc để đổi */
+  out.theme = {
+    conCongTac: !!D2.querySelector('#czTheme'),
+    attr: D2.documentElement.getAttribute('data-theme')
+  };
   /* menu điện thoại */
   const bg = D2.querySelector('#czBurger');
   bg.dispatchEvent(new img.win.MouseEvent('click', { bubbles: true })); await wait(120);

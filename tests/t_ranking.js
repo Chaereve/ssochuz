@@ -22,15 +22,18 @@ const J = body => Promise.resolve({ok:true,json:async()=>body,text:async()=>JSON
   assert.equal(p.doc.querySelectorAll('#rankTabs [aria-pressed="true"]').length,1);
   assert.equal(p.doc.activeElement.dataset.k,period);
  }
- const cards=[...p.doc.querySelectorAll('#worthRail .card')];
+ /* 30/10/2026: “Đáng xem” đứng hai bên với Ranking → cùng nhịp hàng, tối đa 5 dòng,
+    điểm ★ (+ số đánh giá) nằm ở cột phải của chính dòng đó. */
+ const cards=[...p.doc.querySelectorAll('#worthRail .wrank')];
  assert.equal(cards.length,3);
  assert.ok(cards[0].outerHTML.includes(b));assert.ok(cards[1].outerHTML.includes(a));
- assert.equal(cards[0].querySelector('.worth-score').textContent,'★ 4.8/5 · 8 đánh giá');
+ assert.equal(cards[0].querySelector('.v').textContent,'★4.8');
+ assert.equal(cards[0].querySelector('.tt span').textContent,'8 đánh giá');
  p.win.CZ._memo.stats.items[c].votesMonth=100; p.win.CZ._memo.stats.items[c].rating=5; p.win.CZ.notifyStats();
- assert.ok(first().includes(c));assert.ok(p.doc.querySelector('#worthRail .card').outerHTML.includes(c));
+ assert.ok(first().includes(c));assert.ok(p.doc.querySelector('#worthRail .wrank').outerHTML.includes(c));
  p.win.CZ._memo.stats.items={}; p.win.CZ.notifyStats();
  assert.equal(p.doc.querySelectorAll('#rank .rank').length,0);assert.equal(p.doc.querySelector('#bxh').hidden,false);
- assert.equal(p.doc.querySelectorAll('#worthRail .card').length,0);assert.ok(p.doc.querySelector('#rank .empty'));
+ assert.equal(p.doc.querySelectorAll('#worthRail .wrank').length,0);assert.ok(p.doc.querySelector('#rank .empty'));
  p.win.CZ._memo.stats.on=false;p.win.CZ.notifyStats();
  assert.equal(p.doc.querySelector('#rank').textContent,'');
  assert.equal(p.doc.querySelector('#worthRail').textContent,'');

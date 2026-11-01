@@ -1,0 +1,112 @@
+/* ============================================================================
+   Huy hiệu trên bìa thẻ truyện — 3 phương án (vòng 55)
+   Chỉ ĐỊNH NGHĨA LẠI phần huy hiệu; mọi thứ khác (bìa, tỉ lệ, tiêu đề, tác giả)
+   lấy nguyên từ /cz.css để bản xem đúng bằng bản thật.
+   Bốn biến thể: v0 (đang chạy) · vA · vB · vC
+   ========================================================================== */
+
+/* ---------- lưới thẻ (bằng nhịp lưới thư viện: 6 cột) ---------- */
+.mgrid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 20px 12px; }
+@media (max-width: 900px) { .mgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .mgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 10px; } }
+
+/* mọi phần mới đều ẩn mặc định, từng phương án tự bật phần của mình */
+.cmeta, .spill, .sline, .corner18 { display: none; }
+/* tag 18+ “im”: viền mảnh, nền tối mờ — dùng cho A và B */
+.corner18 { position: absolute; top: 8px; left: 8px; z-index: 2;
+  display: inline-flex; align-items: center; height: 15px; padding: 0 4px;
+  border-radius: 3px; border: 1px solid rgba(255, 255, 255, .5);
+  background: rgba(14, 9, 5, .72); color: #fff;
+  font-size: 8.5px; font-weight: 800; letter-spacing: .04em; line-height: 1; }
+
+/* màu tình trạng dùng chung cho cả ba phương án chữ */
+.t-done { color: #a9dcc0; }
+.t-run { color: #e7cd9a; }
+.t-soon { color: #c3bce8; }
+.cmeta .d, .spill .d, .sline .d { width: 5px; height: 5px; border-radius: 50%;
+  background: currentColor; flex: none; }
+
+.corner18 { display: none; }
+
+/* ==========================================================================
+   A · BÌA SẠCH — thông tin xuống một dòng dưới tên truyện
+   Trên bìa chỉ còn băng rôn NEW và vạch tiến độ. Tình trạng · số chương · 18+
+   thành một dòng chữ ngay dưới tên truyện, cùng cỡ với dòng tác giả.
+   ========================================================================== */
+.vA .card .th .stic,
+.vA .card .th .spill,
+.vA .card .th .corner18,
+.vA .card .th .foot .sline,
+.vA .card .th .foot .ch { display: none; }
+.vA .card .th .foot { justify-content: flex-end; }
+.vA .card .th .foot .b18 { margin-left: 0; min-height: 0; padding: 1px 4px;
+  border: 1px solid rgba(255, 255, 255, .5); border-radius: 3px;
+  background: rgba(14, 9, 5, .72); font-size: 8.5px; letter-spacing: .04em;
+  box-shadow: none; }
+.vA .card .th .bar { height: 3px; background: rgba(255, 255, 255, .18); }
+.vA .card .th .bar i { background: rgba(255, 255, 255, .85); }
+.vA .cmeta { display: flex; align-items: center; gap: 5px;
+  margin-top: 4px; min-width: 0; font-size: 11px; line-height: 1.5; color: var(--dim); }
+.vA .cmeta > * { white-space: nowrap; }
+.vA .cmeta .stext { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.vA .cmeta .stext { display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 600; letter-spacing: -.002em; }
+.vA .cmeta .sep { color: var(--dim); }
+.vA .cmeta .cch { font-size: 11px; color: var(--mut); font-variant-numeric: tabular-nums; }
+.vA .cmeta .t18 { margin-left: 2px; padding: 0 4px; border-radius: 3px;
+  border: 1px solid rgba(194, 71, 90, .5); color: #e79aa6;
+  font-size: 9px; font-weight: 800; letter-spacing: .04em; line-height: 1.5; }
+
+/* ==========================================================================
+   B · MỘT DẢI CHÂN BÌA — gộp tình trạng + số chương + 18+ vào cùng một dải
+   Bìa chỉ còn băng rôn NEW; ba mảnh rời cũ thay bằng một dải mờ chạy hết chân
+   bìa, ngăn với ảnh bằng một kẻ tóc sáng.
+   ========================================================================== */
+.vB .card .th .stic,
+.vB .card .th .spill,
+.vB .card .th .foot .b18 { display: none; }
+.vB .card .th .corner18 { display: inline-flex; }
+.vB .card .th .foot { inset: auto 0 0; gap: 6px; padding: 7px 8px 8px; font-size: 9.5px;
+  background: rgba(14, 9, 5, .84); border-top: 1px solid rgba(255, 255, 255, .14); }
+.vB .card .th .foot .sline { display: inline-flex; align-items: center; gap: 5px; min-width: 0;
+  font-size: 9.5px; font-weight: 700; letter-spacing: -.002em; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; }
+.vB .card .th .foot .sline .d { background: currentColor; }
+.vB .card .th .foot .ch { margin-left: auto; font-size: 9.5px; font-weight: 700;
+  letter-spacing: .01em; white-space: nowrap; text-shadow: none; }
+.vB .card .th .bar { display: none; }
+
+/* ==========================================================================
+   C · HAI VIÊN GÓC — bớt chói, giữ nguyên bố cục ba góc
+   Tình trạng: viên chữ nhỏ (chấm màu + chữ) thay cho vòng tròn 28px phát sáng.
+   Số chương: viên mờ ở chân trái. 18+: ô viền mảnh, bỏ nền đỏ đặc.
+   ========================================================================== */
+.vC .card .th .stic { display: none; }
+.vC .card .th .spill { position: absolute; top: 8px; left: 8px; z-index: 2;
+  display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 7px;
+  border-radius: 6px; background: rgba(14, 9, 5, .82); border: 1px solid rgba(255, 255, 255, .16);
+  font-size: 9.5px; font-weight: 700; letter-spacing: -.002em; white-space: nowrap; }
+.vC .card .th .foot { inset: auto 8px 8px; gap: 6px; }
+.vC .card .th .foot .ch { display: inline-flex; align-items: center; height: 17px;
+  padding: 0 6px; border-radius: 4px; background: rgba(14, 9, 5, .78);
+  font-size: 9.5px; font-weight: 700; text-shadow: none; font-variant-numeric: tabular-nums; }
+.vC .card .th .foot .b18 { display: inline-flex; align-items: center; height: 17px;
+  margin-left: 0; padding: 0 5px; border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, .5); background: rgba(14, 9, 5, .72);
+  color: #fff; font-size: 8.5px; letter-spacing: .04em; box-shadow: none; }
+.vC .card .th .foot { justify-content: space-between; }
+.vC .card .th .bar { height: 3px; background: rgba(255, 255, 255, .16); }
+
+/* máy hẹp: thẻ chỉ còn ~165px nên chữ phải nhỏ lại một nhịp để không bị cắt */
+@media (max-width: 560px) {
+  .vA .cmeta, .vA .cmeta .stext, .vA .cmeta .cch { font-size: 10px; }
+  .vA .cmeta { gap: 4px; }
+  .vB .card .th .foot { padding: 6px 7px 7px; gap: 5px; }
+  .vB .card .th .foot .sline, .vB .card .th .foot .ch { font-size: 9px; }
+  .vC .card .th .spill { height: 18px; padding: 0 6px; font-size: 9px; }
+}
+
+/* khung xem: nền trang, không viền thừa */
+html, body { margin: 0; background: var(--bg); }
+body { padding: 18px; }
+body > div[style*="position:fixed"] { display: none !important; }

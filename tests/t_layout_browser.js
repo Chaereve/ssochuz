@@ -31,7 +31,8 @@ const items={}; reg.lib.slice(0,5).forEach((n,i)=>items[n.slug]={viewsDay:20-i,v
    await page.click('[data-mode="'+mode+'"]');await page.click('#rankTabs [data-k="'+period+'"]');
    assert.equal(await page.locator('#rank .rank').count(),5);
   }
-  assert.equal(await page.locator('#worthRail .worth-score').count(),5);
+  /* 30/10/2026: “Đáng xem” đứng hai bên với Ranking → cùng tối đa 5 dòng như cột trái. */
+  assert.equal(await page.locator('#worthRail .wrank').count(),5);
   if (process.env.LAYOUT_SCREENSHOTS && (width === 1440 || width === 390)) {
     fs.mkdirSync(process.env.LAYOUT_SCREENSHOTS, { recursive: true });
     await page.locator('#bxh').screenshot({ path: path.join(process.env.LAYOUT_SCREENSHOTS, 'ranking-' + width + '.png') });
@@ -45,13 +46,14 @@ const items={}; reg.lib.slice(0,5).forEach((n,i)=>items[n.slug]={viewsDay:20-i,v
   assert.ok(expanded.client>collapsed,'expansion height '+width);assert.ok(expanded.scroll<=expanded.client+1);assert.equal(expanded.mask,'none');
   await page.click('#synToggle');assert.ok(await page.locator('#synIn').evaluate(e=>e.clientHeight)<expanded.client);
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'story overflow '+width);
-  for(const url of ['/tac-gia/','/couple/','/guide','/admin','/my-space.html']) {
+  for(const url of ['/tac-gia/','/couple/','/admin','/my-space.html']) {
    await page.goto('http://localhost:8000'+url);
    await page.waitForLoadState('domcontentloaded');
-   if(url.includes('tac-gia')||url.includes('couple')) await page.waitForSelector('.pcard');
+   if(url.includes('tac-gia')) await page.waitForSelector('.pcard');
+   if(url.includes('couple')) await page.waitForSelector('.pcard');
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),url+' overflow '+width);
   }
-  console.log('Browser layout '+width+'px: Ranking (6 modes), ratings rail, full synopsis, people, guide and admin gate passed');
+  console.log('Browser layout '+width+'px: Ranking (6 modes), ratings rail, full synopsis, people and admin gate passed');
  }
  await page.emulateMedia({reducedMotion:'reduce'});await page.goto('http://localhost:8000/');await page.waitForSelector('#rank .rank');
  assert.equal(await page.locator('#rank .rank').first().evaluate(e=>getComputedStyle(e).animationName),'none');

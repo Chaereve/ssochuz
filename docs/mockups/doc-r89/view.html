@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="vi"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trang đọc — bản dựng lại</title>
+<link rel="stylesheet" href="view.css">
+<link rel="stylesheet" href="toc.css">
+</head>
+<body data-v="c" data-rd="kem">
+
+<header class="bar" id="bar"></header>
+
+<main class="doc">
+  <header class="head" id="head">
+    <div class="overline" id="overline"></div>
+    <h1 id="h1"></h1>
+    <div class="meta" id="meta"></div>
+  </header>
+  <article class="txt" id="txt"></article>
+  <nav class="tail" id="tail"></nav>
+  <section class="cmts" id="cmts"></section>
+  <p class="foot"><a href="../index.html">← Danh sách mockup</a><span>·</span>
+     <a href="?pane=1" id="alone">Mở riêng trang này</a></p>
+</main>
+
+<aside class="dock" id="dock" aria-label="Công cụ đọc"></aside>
+<div id="sheetHost"></div>
+<div class="fx" id="fx"><button type="button" data-act="focus">Thoát tập trung</button></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<div class="tb" id="tb" role="group" aria-label="Xem thử">
+  <span class="lb">Phương án</span>
+  <button type="button" data-v="a" aria-pressed="false">A</button>
+  <button type="button" data-v="b" aria-pressed="false">B</button>
+  <button type="button" data-v="c" aria-pressed="true">C</button>
+  <span class="sp"></span>
+  <button type="button" data-dev="d" aria-pressed="true">Máy tính</button>
+  <button type="button" data-dev="m" aria-pressed="false">Điện thoại</button>
+  <span class="sp"></span>
+  <button type="button" data-act="help" aria-label="Hướng dẫn thao tác">?</button>
+</div>
+
+<script src="chap-data.js"></script>
+<script src="view.js"></script>
+</body></html>

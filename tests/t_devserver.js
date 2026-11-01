@@ -112,8 +112,6 @@ async function boot(root, pys) {
       ['/reader/third-person/', 200, 'link đời cũ /reader/<slug>/'],
       ['/reader?slug=third-person&ch=3', 200, 'link đời cũ /reader?slug=…'],
       ['/truyen/?slug=third-person', 200, 'trang bộ qua query'],
-      ['/guide', 200, 'trang hướng dẫn'],
-      ['/guide/', 200, 'trang hướng dẫn (dấu /)'],
       ['/couple/', 200, 'trang couple (thư mục có index.html)'],
       ['/tac-gia/', 200, 'trang tác giả'],
       ['/admin', 200, 'trang quản trị (một admin duy nhất)'],

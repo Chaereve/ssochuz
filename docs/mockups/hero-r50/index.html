@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hero trang truyện — trước / sau (mockup rà soát)</title>
+<style>
+  :root {
+    --bg: #14110e; --bg2: #1a1612; --surf: #221d18; --surf2: #272119;
+    --bd: #3a322a; --txt: #f2ebe0; --mut: #a89d8d; --dim: #8a8174;
+    --acc: #e0859b; --ok: #74c69b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--txt);
+    font: 15px/1.6 ui-sans-serif, system-ui, "Segoe UI", sans-serif; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; }
+  .kick { font: 700 11px/1 ui-monospace, monospace; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--acc); }
+  h1 { margin: 14px 0 10px; font-size: 34px; line-height: 1.15; letter-spacing: -.01em; }
+  .lede { margin: 0; max-width: 62ch; color: var(--mut); }
+  .meta { margin: 18px 0 0; display: flex; flex-wrap: wrap; gap: 8px; }
+  .meta span { font-size: 12px; color: var(--mut); border: 1px solid var(--bd);
+    border-radius: 99px; padding: 4px 10px; }
+
+  h2 { margin: 56px 0 6px; font-size: 13px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--dim); font-weight: 700; }
+  h2 + .h2sub { margin: 0 0 18px; color: var(--mut); font-size: 14px; max-width: 66ch; }
+
+  /* toàn cảnh */
+  .stack { display: grid; gap: 18px; }
+  figure { margin: 0; background: var(--bg2); border: 1px solid var(--bd);
+    border-radius: 12px; overflow: hidden; }
+  figure img { display: block; width: 100%; height: auto; }
+  figcaption { display: flex; align-items: baseline; gap: 10px; padding: 11px 14px;
+    border-top: 1px solid var(--bd); font-size: 12.5px; color: var(--mut); }
+  .tag { font: 700 10px/1 ui-monospace, monospace; letter-spacing: .12em; text-transform: uppercase;
+    padding: 4px 7px; border-radius: 4px; border: 1px solid var(--bd); color: var(--dim); }
+  .tag.now { border-color: var(--acc); color: var(--acc); }
+
+  /* từng thay đổi */
+  .change { margin: 0 0 40px; padding: 0 0 30px; border-bottom: 1px solid var(--bd); }
+  .change:last-child { border-bottom: 0; }
+  .change h3 { margin: 0; font-size: 21px; letter-spacing: -.005em; }
+  .change h3 b { color: var(--acc); font-weight: 700; margin-right: 8px;
+    font-family: ui-monospace, monospace; font-size: 17px; }
+  .why { margin: 6px 0 16px; color: var(--mut); font-size: 14px; max-width: 70ch; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+  @media (max-width: 720px) { .pair { grid-template-columns: 1fr; } }
+  .cell { background: var(--bg2); border: 1px solid var(--bd); border-radius: 10px; overflow: hidden; }
+  .cell .cap { display: flex; gap: 8px; align-items: center; padding: 8px 10px;
+    border-bottom: 1px solid var(--bd); font-size: 11px; letter-spacing: .1em;
+    text-transform: uppercase; font-weight: 700; color: var(--dim); }
+  .cell.now .cap { color: var(--acc); border-bottom-color: #4a3a3a; }
+  .cell img { display: block; width: 100%; height: auto; background: var(--bg); }
+  /* ảnh cắt hẹp: giữ đúng cỡ gốc, không kéo giãn cho khỏi nhoè chữ */
+  .cell.tight img { width: auto; max-width: 100%; }
+  .note { margin: 14px 0 0; padding: 0 0 0 18px; }
+  .note li { margin: 4px 0; color: var(--mut); font-size: 14px; }
+  .note li b { color: var(--txt); font-weight: 600; }
+
+  /* bảng */
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 6px; }
+  th, td { text-align: left; padding: 11px 12px; border-bottom: 1px solid var(--bd); vertical-align: top; }
+  th { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+  td:first-child { color: var(--txt); }
+  td { color: var(--mut); }
+  td.now { color: var(--txt); }
+  td.now b { color: var(--ok); }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
+  @media (max-width: 720px) { .cols { grid-template-columns: 1fr; } }
+  .box { background: var(--surf2); border: 1px solid var(--bd); border-radius: 12px; padding: 16px 18px; }
+  .box h4 { margin: 0 0 8px; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+  .box ul { margin: 0; padding-left: 18px; }
+  .box li { margin: 5px 0; color: var(--mut); font-size: 14px; }
+  .box li b { color: var(--txt); font-weight: 600; }
+
+  .mobilepair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .mobilepair figure img { max-height: 720px; object-fit: contain; object-position: top; background: var(--bg); }
+  @media (max-width: 560px) { .mobilepair { grid-template-columns: 1fr; } }
+
+  footer { margin-top: 46px; padding-top: 20px; border-top: 1px solid var(--bd);
+    color: var(--dim); font-size: 13px; }
+  code { font-family: ui-monospace, monospace; font-size: .92em; color: var(--txt);
+    background: #241f19; padding: 1px 5px; border-radius: 4px; }
+  a { color: var(--acc); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="kick">Mockup rà soát · không phải bản vẽ</p>
+  <h1>Hero trang truyện: trước → sau</h1>
+  <p class="lede">Mọi ảnh dưới đây là <b>chụp từ site thật</b>, không phải hình minh hoạ.
+    Bản <b>TRƯỚC</b> chụp từ commit <code>27f7159</code>, bản <b>SAU</b> chụp từ bản đang chạy
+    trên dev server. Cùng một truyện (Hometown Romance) để so cho công bằng.</p>
+  <div class="meta">
+    <span>Desktop 1216px</span><span>Mobile 390px</span><span>5 nhóm thay đổi</span>
+    <span>0 chức năng bị bỏ</span>
+  </div>
+
+  <h2>Toàn cảnh</h2>
+  <p class="h2sub">Nhìn tổng thể trước, rồi xuống từng chỗ. Khác biệt lớn nhất: bên trái chữ
+    nằm <i>trên</i> nền ảnh mờ; bên phải chữ nằm trên một mặt phẳng riêng, ảnh tách ra một cột.</p>
+  <div class="stack">
+    <figure>
+      <img src="img/old-d.webp" alt="Hero bản cũ: bìa 172px, nền ảnh phóng to làm mờ, chữ trắng nằm trên nền">
+      <figcaption><span class="tag">Trước</span> Bìa 172px · nền ảnh mờ + lớp phủ · chữ trên ảnh · 4 nút + 1 icon rời</figcaption>
+    </figure>
+    <figure>
+      <img src="img/new-d.webp" alt="Hero bản mới: bìa 260px bên trái, khối chữ nền phẳng bên phải">
+      <figcaption><span class="tag now">Sau</span> Bìa 260px · nền thẻ phẳng · chữ tách khỏi ảnh · 1 CTA + Theo dõi + menu ⋯</figcaption>
+    </figure>
+  </div>
+
+  <h2>Năm chỗ đã sửa</h2>
+  <p class="h2sub">Mỗi hàng: bên trái là bản cũ, bên phải là bản mới, cắt đúng vùng đó. Hai bên trong cùng một hàng luôn được cắt <b>cùng bề ngang</b> nên cùng tỉ lệ phóng — chữ to ra thu nhỏ lại là thật, không phải do ảnh phóng to thu nhỏ.</p>
+
+  <section class="change">
+    <h3><b>01</b>Bìa và nền</h3>
+    <p class="why">Bản cũ lấy chính bìa phóng to, làm mờ <code>26px</code>, phủ một lớp tối rồi
+      đặt chữ trắng lên trên — đó là lý do chữ chỉ đạt tương phản 1.54:1. Bản mới bỏ hẳn
+      nền ảnh: bìa là một cột riêng, khối chữ là một mặt phẳng.</p>
+    <div class="pair">
+      <div class="cell"><div class="cap">Trước</div><img src="img/old-cover.webp" alt="Bìa cũ rộng 172px, sát ngay cột chữ"></div>
+      <div class="cell now"><div class="cap">Sau</div><img src="img/new-cover.webp" alt="Bìa mới rộng 260px, tách khỏi cột chữ"></div>
+    </div>
+    <ul class="note">
+      <li><b>Bìa:</b> 172px → <b>260px</b>, giữ đúng tỉ lệ 2:3 nên không cắt vào mặt nhân vật. Hai ảnh trong hàng này cùng tỉ lệ phóng, nên bìa bên phải to hơn là to thật.</li>
+      <li><b>Hiệu ứng bỏ đi:</b> nền ảnh mờ, lớp phủ tối, gradient đáy bìa, hover phóng to, 3 tầng bóng → còn 1 bóng nhẹ.</li>
+      <li><b>Điều được:</b> không còn một chữ nào nằm trên ảnh, nên không phải “vẽ” độ tương phản bằng lớp phủ nữa.</li>
+    </ul>
+  </section>
+
+  <section class="change">
+    <h3><b>02</b>Tên truyện và hàng thông tin</h3>
+    <p class="why">Bản cũ nhồi 5 thứ vào một hàng 15px: tác giả · couple · năm · số chương · “cập nhật 29-05”.
+      Bản mới tách làm hai tầng: hàng 15px chỉ để nhận ra bộ truyện, hàng 13px cho phần phụ.</p>
+    <div class="pair">
+      <div class="cell"><div class="cap">Trước</div><img src="img/old-head.webp" alt="Tên truyện và một hàng meta 15px gộp 5 mục, phông serif hệ thống"></div>
+      <div class="cell now"><div class="cap">Sau</div><img src="img/new-head.webp" alt="Tên truyện Fraunces, hàng meta 15px và hàng phụ 13px"></div>
+    </div>
+    <ul class="note">
+      <li><b>Thang chữ:</b> 6 bậc (11 · 11.5 · 12 · 12.5 · 13 · 13.5) → <b>4 bậc</b> (32 · 15 · 13 · 11).</li>
+      <li><b>Tiêu đề:</b> cùng 32px nhưng chuyển sang Fraunces, chặn tối đa 3 dòng để tên dài không phá bố cục.</li>
+      <li><b>Không lặp dữ kiện:</b> tình trạng chỉ còn ở dưới bìa, số liệu thật nằm ở tab Thông tin.</li>
+    </ul>
+  </section>
+
+  <section class="change">
+    <h3><b>03</b>Đánh giá sao</h3>
+    <p class="why">Bản cũ đặt ngay dưới tên, chen giữa phần giới thiệu và nút đọc — mắt bị cắt nhịp
+      đúng lúc cần đọc tiếp. Bản mới đẩy xuống dưới cùng, ngăn bằng một đường mảnh.</p>
+    <div class="pair">
+      <div class="cell"><div class="cap">Trước</div><img src="img/old-rating.webp" alt="Đánh giá sao nằm ngay dưới tên truyện"></div>
+      <div class="cell now"><div class="cap">Sau</div><img src="img/new-rating.webp" alt="Đánh giá sao nằm dưới cùng, ngăn bằng đường kẻ mảnh"></div>
+    </div>
+    <ul class="note">
+      <li>Vẫn đủ <b>5 sao bấm được</b>, vẫn có nhãn “chưa có” và điểm <b>0/5</b> — chỉ đổi vị trí và cỡ sao.</li>
+      <li>Đường ngăn là hairline, không phải hộp: thêm một khung nữa sẽ thành hộp lồng hộp.</li>
+    </ul>
+  </section>
+
+  <section class="change">
+    <h3><b>04</b>Hàng nút</h3>
+    <p class="why">Bản cũ: 4 nút cùng cỡ (Xác nhận 18+ · Theo dõi · Tủ truyện · Chia sẻ) và một icon chia sẻ
+      nằm lẻ tít bên phải — icon đó ở ngoài khung cắt này, xem ảnh toàn cảnh phía trên; trên mobile thành 4 hàng nút. Bản mới: một CTA chính, một nút theo dõi,
+      phần còn lại vào menu <code>⋯</code>.</p>
+    <div class="pair">
+      <div class="cell"><div class="cap">Trước</div><img src="img/old-buttons.webp" alt="Hàng 4 nút cùng cỡ và một icon chia sẻ nằm lẻ bên phải"></div>
+      <div class="cell now"><div class="cap">Sau</div><img src="img/new-buttons.webp" alt="Một CTA chính, nút Theo dõi và nút menu ba chấm"></div>
+    </div>
+    <ul class="note">
+      <li><b>Vẫn đủ chức năng:</b> trong <code>⋯</code> có Chương mới nhất · Tủ truyện · Chia sẻ · RSS bộ này · Đặt lại xác nhận 18+.</li>
+      <li><b>Mobile:</b> CTA cao 48px, rộng hết khung, nằm trong màn đầu (y=619 trên màn 844px).</li>
+      <li><b>Focus ring:</b> từ <code>rgba(224,133,155,.4)</code> (2.12:1) sang son đặc có khe nền → <b>6.14:1</b>, đạt WCAG 1.4.11.</li>
+    </ul>
+  </section>
+
+  <section class="change">
+    <h3><b>05</b>Nhãn tình trạng</h3>
+    <p class="why">Bản cũ là một nhãn chữ IN HOA kiểu mono, dán đè lên đáy bìa kèm chấm phát sáng.
+      Bản mới hạ nó thành chú thích 13px ngay dưới bìa — cùng thông tin, không đè lên ảnh.</p>
+    <div class="pair">
+      <div class="cell tight"><div class="cap">Trước</div><img src="img/old-status.webp" alt="Nhãn HOÀN THÀNH in hoa trên đáy bìa, có chấm phát sáng"></div>
+      <div class="cell tight now"><div class="cap">Sau</div><img src="img/new-status.webp" alt="Chú thích Hoàn thành 13px nằm dưới bìa, chấm màu"></div>
+    </div>
+    <ul class="note">
+      <li>Bỏ <b>glow</b> và chữ mono in hoa; giữ chấm màu để vẫn phân biệt được đang ra / hoàn thành / sắp ra.</li>
+      <li>Đọc được ở cả nền sáng lẫn nền tối của bìa vì nó không còn nằm trên bìa.</li>
+    </ul>
+  </section>
+
+  <h2>Trên mobile</h2>
+  <p class="h2sub">Bản cũ: bìa 132px chen cạnh tiêu đề, rồi 4 hàng nút. Bản mới: một cột — bìa,
+    tên, thông tin, tóm tắt, CTA, rồi mới tới đánh giá. Cùng cấu trúc với desktop, chỉ thu nhỏ.</p>
+  <div class="mobilepair">
+    <figure>
+      <img src="img/old-m.webp" alt="Hero bản cũ trên mobile: bìa nhỏ bên trái, tiêu đề bên phải, 4 hàng nút">
+      <figcaption><span class="tag">Trước · 390px</span></figcaption>
+    </figure>
+    <figure>
+      <img src="img/new-m.webp" alt="Hero bản mới trên mobile: bìa một cột, chữ bên dưới, một CTA chính">
+      <figcaption><span class="tag now">Sau · 390px</span></figcaption>
+    </figure>
+  </div>
+
+  <h2>Số đo</h2>
+  <table>
+    <thead><tr><th>Hạng mục</th><th>Trước</th><th>Sau</th></tr></thead>
+    <tbody>
+      <tr><td>Bìa (desktop)</td><td>172px, chữ đè lên nền ảnh</td><td class="now"><b>260px</b>, cột riêng, giữ 2:3</td></tr>
+      <tr><td>Số bậc cỡ chữ trong hero</td><td>6 bậc (11–13.5px)</td><td class="now"><b>4 bậc</b> (32 / 15 / 13 / 11)</td></tr>
+      <tr><td>Nút ở hàng chính</td><td>4 nút + 1 icon rời</td><td class="now"><b>3</b>: CTA · Theo dõi · ⋯</td></tr>
+      <tr><td>Tương phản chữ phụ trên hero</td><td>1.54:1</td><td class="now"><b>13.6:1</b></td></tr>
+      <tr><td>Tương phản focus ring</td><td>2.12:1</td><td class="now"><b>6.14:1</b></td></tr>
+      <tr><td>Cuộn ngang ở màn 800px</td><td>1076px (tràn)</td><td class="now"><b>không tràn</b></td></tr>
+      <tr><td>Đáy hero (desktop)</td><td>440px</td><td class="now">450px</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Không đổi</h2>
+  <div class="cols">
+    <div class="box">
+      <h4>Giữ nguyên</h4>
+      <ul>
+        <li>Màu brand: nền than ấm, mực son <code>--acc</code>, chữ <code>--txt</code></li>
+        <li>Toàn bộ chức năng: theo dõi · vote sao · chia sẻ · tủ truyện · RSS · đặt lại 18+ · mục lục · cài đặt đọc</li>
+        <li>Đường dẫn, dữ liệu, cấu trúc trang, tab Thông tin, bình luận, cùng couple / cùng tác giả</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h4>Đã bỏ hẳn</h4>
+      <ul>
+        <li>Nền ảnh mờ + lớp phủ tối + gradient đáy bìa</li>
+        <li>Mask làm mờ dần ở tóm tắt</li>
+        <li>Hover phóng to bìa, 3 tầng bóng, glow ở nhãn</li>
+        <li>Chữ mono in hoa trong hero</li>
+      </ul>
+    </div>
+  </div>
+
+  <footer>
+    Xem bản thật: <code>/truyen/hometown-romance/</code> trên dev server (cổng 8081) ·
+    tài liệu kỹ thuật: <code>docs/features/truyen-hero-2col-2026-10.md</code> ·
+    ảnh chụp bằng Chromium ở bội số 2×, cắt đúng khung <code>#shero</code>.
+  </footer>
+</div>
+</body>
+</html>

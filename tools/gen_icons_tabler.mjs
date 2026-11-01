@@ -107,6 +107,9 @@ const MAP = {
   wall: 'wall',
   volume: 'volume',
   sparkles: 'sparkles',
+  /* 2026-10-29: nút Tạm dừng/Tiếp tục của hero banner (cz-hero.js) — cặp
+     play/pause phải cùng bộ Tabler để nét và hộp mực khớp nhau */
+  pause: 'player-pause',
 };
 
 /* MoMo chưa có trong bộ Tabler — giữ đúng hình thương hiệu riêng, không phải

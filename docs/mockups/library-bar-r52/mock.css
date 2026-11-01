@@ -1,0 +1,74 @@
+/* Đề xuất thanh tìm/lọc thư viện — viết đúng như thể port vào src/cz.css.
+   Ý chính: bỏ nhãn chữ ("Năm"/"Sắp xếp"), bỏ dãy tab tình trạng có số đếm,
+   mọi điều khiển cùng một cỡ, cùng một màu; chỉ ô nhập là có khung. */
+
+/* ---------- một hàng duy nhất ---------- */
+.barP { display: flex; align-items: center; gap: 22px;
+  padding-bottom: 13px; border-bottom: 1px solid var(--bd); }
+
+/* ô nhập: khối duy nhất có viền */
+.sP { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 9px;
+  height: 40px; padding: 0 12px; border: 1px solid var(--bd); border-radius: 9px;
+  background: var(--surf); transition: border-color .15s, box-shadow .15s; }
+.sP .i { width: 14px; height: 14px; color: var(--mut); flex: none; }
+.sP input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: 0;
+  background: none; color: var(--txt); font: inherit; font-size: 13.5px; }
+.sP input::placeholder { color: var(--dim); }
+.sP input::-webkit-search-cancel-button { display: none; }
+.sP:focus-within { border-color: var(--acc); box-shadow: 0 0 0 3px var(--ring); }
+.sP .clr { display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border: 0; border-radius: 50%; background: none;
+  color: var(--dim); flex: none; }
+.sP .clr:hover { color: var(--txt); background: var(--surf2); }
+.sP .clr .i { width: 12px; height: 12px; }
+
+/* ô chọn: chữ + mũi tên, không khung, không nhãn */
+.ddP { position: relative; display: inline-flex; align-items: center; gap: 6px;
+  height: 40px; flex: none; color: var(--mut); font-size: 13.5px; font-weight: 500;
+  letter-spacing: -.005em; }
+.ddP select { appearance: none; max-width: 190px; padding: 0 18px 0 0; border: 0;
+  outline: 0; background: none; color: inherit; font: inherit; cursor: pointer;
+  text-overflow: ellipsis; }
+.ddP .cv { position: absolute; right: 0; display: inline-flex; pointer-events: none;
+  opacity: .45; transition: opacity .15s; }
+.ddP .cv .i { width: 11px; height: 11px; }
+.ddP:hover { color: var(--txt); }
+.ddP:hover .cv { opacity: .8; }
+.ddP.set { color: var(--txt); font-weight: 600; }
+.ddP.set .cv { opacity: .8; color: var(--acc); }
+.ddP:focus-within { color: var(--txt); }
+.ddP select:focus-visible { outline: 0; }
+.ddP:focus-within .cv { opacity: .9; color: var(--acc); }
+
+/* 18+ : công tắc chữ, bật thì đổi màu — không phải cái hộp */
+.t18 { flex: none; height: 40px; padding: 0 2px; border: 0; background: none;
+  font: inherit; font-size: 13.5px; font-weight: 600; letter-spacing: -.005em;
+  color: var(--mut); }
+.t18:hover { color: var(--txt); }
+.t18.on { color: var(--acc); }
+
+/* xoá lọc: chỉ hiện khi có lọc, chữ nhỏ, không khung */
+.clrAll { flex: none; height: 40px; padding: 0; border: 0; background: none;
+  font: inherit; font-size: 12.5px; font-weight: 600; color: var(--dim); }
+.clrAll:hover { color: var(--txt); }
+.clrAll.hide { display: none; }
+
+/* số kết quả dời lên đầu mục, cạnh chữ “Thư viện” */
+.headCount { font-family: var(--font-mono); font-size: 11.5px; font-weight: 600;
+  color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.headCount b { color: var(--mut); }
+
+@media (max-width: 900px) {
+  .barP { gap: 16px; }
+  .ddP { font-size: 13px; }
+}
+
+@media (max-width: 620px) {
+  /* máy nhỏ: ô nhập một hàng, các ô chọn xuống hàng dưới nhưng vẫn là chữ,
+     không khung, chia đều khoảng trống */
+  .barP { flex-wrap: wrap; gap: 0 18px; padding-bottom: 12px; }
+  .sP { flex: 1 1 100%; height: 42px; margin-bottom: 2px; }
+  .ddP { height: 38px; font-size: 13px; }
+  .t18 { height: 38px; font-size: 13px; }
+  .clrAll { height: 38px; margin-left: auto; }
+}

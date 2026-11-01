@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hộp tìm nhanh — phương án</title>
+<link rel="stylesheet" href="/cz.css">
+<style>
+/* ==========================================================================
+   Khung xem thử: hộp tìm nhanh (⌘K) đặt trên một trang mờ phía sau, đúng như
+   lúc dùng thật. Dùng nguyên /site/cz.css rồi ghi đè có phạm vi .vA/.vB/.vC.
+   Gõ được thật: lọc theo tên / tác giả / couple, ↑ ↓ chọn, Esc xoá.
+   ========================================================================== */
+html, body { margin: 0; }
+body { background: var(--bg); min-height: 660px; }
+@media (max-width: 640px) { body { min-height: 780px; } }
+/* --- trang giả phía sau, chỉ để lớp phủ có thứ để phủ --------------------- */
+.fake { position: fixed; inset: 0; padding: 0 24px; }
+.fbar { display: flex; align-items: center; gap: 18px; height: 60px; border-bottom: 1px solid var(--bd); }
+.fl { display: block; width: 96px; height: 12px; border-radius: 3px; background: var(--surf3); opacity: .8; }
+.fl.s { width: 58px; opacity: .5; }
+.fhero { margin: 26px auto 0; max-width: 1100px; height: 210px; border-radius: 14px;
+  background: linear-gradient(110deg, #2b2119, #3a2a22 45%, #241c16); }
+.fr { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; max-width: 1100px; margin: 18px auto 0; }
+.fr span { display: block; height: 128px; border-radius: 10px; background: var(--surf2); }
+
+/* --- phần chung: chip phím + đếm kết quả ---------------------------------- */
+.jump .foot { gap: 14px; }
+.jump .foot > span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.jump .foot kbd { font-family: var(--font-mono); font-size: 10px; line-height: 1; padding: 3px 5px;
+  border: 1px solid var(--bd); border-radius: 4px; background: var(--bg); color: var(--mut); }
+.jump .jhead { display: flex; align-items: baseline; gap: 8px; padding: 11px 14px 5px;
+  font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--dim); }
+.jump .jhead em { font-style: normal; font-weight: 600; color: var(--mut); letter-spacing: 0; text-transform: none; }
+.jump .ch { font-family: var(--font-mono); font-size: 10.5px; color: var(--dim);
+  font-variant-numeric: tabular-nums; white-space: nowrap; }
+.jump .res b { font-weight: 600; }
+
+/* ==================== X · BẢN ĐANG CHẠY (để so sánh) =====================
+   Không ghi đè gì: đây đúng là hộp tìm nhanh của bản r111 đang chạy.
+   ========================================================================= */
+.vX .jump .jhead, .vX .jump .ch { display: none; }
+.vX .jump .foot { justify-content: flex-start; }
+.vX .jump .foot kbd { display: inline; padding: 0; border: 0; background: none;
+  font-family: var(--font); font-size: 11.5px; color: inherit; }
+
+/* ============================ A · DANH SÁCH CHỮ ==========================
+   Bỏ hẳn bìa: 22 bìa hồng giống nhau xếp cạnh nhau là nhiễu, không phải thông
+   tin. Còn lại tên truyện (to hơn), tác giả · couple, số chương canh phải.
+   ========================================================================= */
+.vA .jump .box { width: min(480px, 94vw); border-radius: 14px; }
+.vA .jump .q { padding: 13px 12px 13px 16px; }
+.vA .jump .q input { font-size: 15px; }
+.vA .jump .res { padding: 4px 6px 6px; }
+.vA .jump .res a { grid-template-columns: minmax(0, 1fr) auto; gap: 14px;
+  min-height: 44px; padding: 4px 12px; border-radius: 8px; }
+.vA .jump .res .th { display: none; }
+.vA .jump .res b { font-size: 14px; line-height: 1.35; letter-spacing: -.005em; }
+.vA .jump .res .tx > span { margin-top: 2px; font-size: 12px; color: var(--mut); }
+.vA .jump .res a.on { box-shadow: inset 2px 0 0 var(--acc); }
+.vA .jump .foot { justify-content: flex-end; padding: 8px 14px; background: transparent; }
+
+/* ========================= B · BÌA NHỎ, HAI DÒNG =========================
+   Giữ bìa (nhận ra truyện nhanh khi đã biết mặt bìa) nhưng thu bìa lại và
+   dồn số chương sang phải để dòng phụ chỉ còn tác giả · couple.
+   ========================================================================= */
+.vB .jump .box { width: min(520px, 94vw); }
+.vB .jump .res a { grid-template-columns: 30px minmax(0, 1fr) auto; gap: 11px;
+  min-height: 52px; padding: 5px 11px 5px 9px; border-radius: 9px; }
+.vB .jump .res .th { width: 30px; height: 40px; }
+.vB .jump .res b { font-size: 13.5px; }
+.vB .jump .res .tx > span { margin-top: 1px; font-size: 11.5px; }
+.vB .jump .foot { justify-content: flex-start; padding: 8px 14px; }
+/* đã chốt: dòng đang chọn = nền lướt + viền son 1px, KHÔNG vạch kẻ bên trái */
+.vB .jump .res a.on { background: var(--surf3); box-shadow: inset 3px 0 0 var(--acc); }
+.vB .jump .res a { padding-left: 13px; }
+.vB .jump .res a.on b { color: #fff; }
+
+/* ========================= C · HAI CỘT, DÀY =============================
+   Màn hình rộng: chia hai cột để 20+ kết quả nằm gọn trong một khung mắt,
+   gần như không phải cuộn. Điện thoại tự về một cột.
+   ========================================================================= */
+.vC .jump .box { width: min(720px, 96vw); }
+.vC .jump .res { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px;
+  align-content: start; padding: 4px 8px 8px; }
+.vC .jump .res .jem { grid-column: 1 / -1; }
+.vC .jump .res a { grid-template-columns: minmax(0, 1fr) auto; gap: 9px;
+  min-height: 44px; padding: 4px 10px; border-radius: 8px; }
+.vC .jump .res .th { display: none; }
+.vC .jump .res b { font-size: 12.8px; line-height: 1.3; letter-spacing: -.004em; }
+.vC .jump .res .tx > span { margin-top: 1px; font-size: 11px; color: var(--dim); }
+.vC .jump .jhead { grid-column: 1 / -1; }
+.vC .jump .foot { justify-content: flex-end; border-top: 1px solid var(--bd); }
+@media (max-width: 640px) {
+  .vC .jump .res { grid-template-columns: 1fr; }
+  .vA .jump .res b, .vB .jump .res b { font-size: 14px; }
+  .vA .jump .res .tx > span, .vC .jump .res .tx > span { font-size: 12px; }
+  .jB .jump .foot, .vB .jump .foot { justify-content: flex-start; }
+}
+</style>
+</head>
+<body class="vA">
+<div class="fake" aria-hidden="true">
+  <div class="fbar"><span class="fl"></span><span class="fl s"></span><span class="fl s"></span></div>
+  <div class="fhero"></div>
+  <div class="fr"><span></span><span></span><span></span></div>
+</div>
+
+<div class="jump on">
+  <div class="scrim"></div>
+  <div class="box">
+    <div class="q">
+      <span class="qi" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"></path><path d="M21 21l-6 -6"></path></g></svg></span>
+      <input id="q" type="search" placeholder="Tìm truyện, tác giả, couple…" autocomplete="off" spellcheck="false" aria-label="Tìm truyện, tác giả, couple">
+      <button class="qx" type="button" aria-label="Đóng tìm kiếm"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><g stroke-width="1.44" transform="translate(-2.16 -2.16) scale(1.18)"><path d="M18 6l-12 12"></path><path d="M6 6l12 12"></path></g></svg></button>
+    </div>
+    <div class="jhead"><span>Truyện</span><em id="cnt"></em></div>
+    <div class="res" id="res" role="listbox" aria-label="Kết quả tìm kiếm"></div>
+    <div class="foot">
+      <span><kbd>&uarr;</kbd><kbd>&darr;</kbd> chọn</span>
+      <span><kbd>&crarr;</kbd> mở</span>
+      <span><kbd>Esc</kbd> đóng</span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var DATA = [
+    { t: 'Juliet & Juliet', a: 'Freaky', c: 'Mingming x Nepjune', ch: 16, th: '/assets/covers/7c33de96.webp' },
+    { t: 'Bởi Chẳng Thể Ngăn Con Tim Rung Động', a: 'Li Ting', c: '', ch: 0, th: '/assets/covers/52b55f57.webp' },
+    { t: 'Càng Thêm Oán Hận', a: 'Li Ting', c: '', ch: 0, th: '/assets/covers/c890362a.webp' },
+    { t: 'Nakira Là Một Kẻ Nhẫn Tâm', a: 'Sawitchaya', c: '', ch: 0, th: '/assets/covers/022cf203.webp' },
+    { t: 'Be my Sugar!', a: 'Khun Phuying', c: '', ch: 21, th: '/assets/covers/fd67e6e3.webp' },
+    { t: 'Lunar Secret', a: 'Purple Moon', c: 'Ginny x Jayna', ch: 39, th: '/assets/covers/23ec3114.webp' },
+    { t: 'Love Bound', a: 'Navika', c: 'Orm x Folk', ch: 44, th: '/assets/covers/c3cb1fca.webp' },
+    { t: 'Bake Love Feelings', a: 'Snow Leopard', c: 'View x Mim', ch: 38, th: '/assets/covers/aa1bfb37.webp' },
+    { t: 'Third Person', a: 'SIIX', c: 'Garn x Mimie', ch: 42, th: '/assets/covers/6a6f3cd4.webp' },
+    { t: 'HOMETOWN ROMANCE - SPECIAL', a: 'Lambo', c: 'Lookmhee x Sonya', ch: 10, th: '/assets/covers/80b25f67.webp' },
+    { t: 'My Only Sunshine', a: 'Flower of memory', c: 'Atom x Mersedes', ch: 29, th: '/assets/covers/d148f325.webp' },
+    { t: 'Frozen Valentine', a: 'Takling Kaemjai', c: 'Natty x Yeepun', ch: 23, th: '/assets/covers/d1f16799.webp' },
+    { t: 'Un-Trovert', a: 'Guy Suwannaroj & Lita P', c: 'Jenny x Yume', ch: 22, th: '/assets/covers/d36934c5.webp' },
+    { t: 'Chain', a: 'REVERSE', c: '', ch: 52, th: '/assets/covers/8007bf42.webp' },
+    { t: 'By Your Side', a: 'Ma-Bung', c: 'Shelly x Pundao', ch: 32, th: '/assets/covers/fff49de0.webp' },
+    { t: 'Love On Hire', a: 'Yuufuku', c: 'Ginny x Jayna', ch: 63, th: '/assets/covers/79d97ab3.webp' },
+    { t: 'Santy Nextdoor', a: 'RainbowCandy', c: '', ch: 16, th: '/assets/covers/9a9fb0e1.webp' },
+    { t: 'Ghost house', a: 'PEONY', c: '', ch: 27, th: '/assets/covers/826fd4e0.webp' },
+    { t: 'Buy My Boss', a: 'Foxyfox', c: 'Ying x Aom', ch: 15, th: '/assets/covers/be2cd879.webp' },
+    { t: 'Yours Ever', a: 'JinJin', c: '', ch: 49, th: '/assets/covers/6afc08e7.webp' },
+    { t: 'Be My Angel', a: 'Freaky', c: 'Bambam x Baipor', ch: 29, th: '/assets/covers/43bbe6f4.webp' },
+    { t: 'Love Fribe', a: 'Flower of memory', c: '', ch: 33, th: '/assets/covers/de5d14e6.webp' }
+  ];
+  var res = document.getElementById('res'), input = document.getElementById('q'), cnt = document.getElementById('cnt');
+  var cur = 0, list = [];
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+  function hl(s, q) {
+    if (!q) return esc(s);
+    var i = String(s).toLowerCase().indexOf(q);
+    if (i < 0) return esc(s);
+    return esc(s.slice(0, i)) + '<mark>' + esc(s.slice(i, i + q.length)) + '</mark>' + esc(s.slice(i + q.length));
+  }
+  function score(n, q) {
+    if (!q) return 1;
+    var t = n.t.toLowerCase(), s = 0;
+    if (t.indexOf(q) === 0) s += 6; else if (t.indexOf(q) >= 0) s += 4;
+    if (n.a.toLowerCase().indexOf(q) >= 0) s += 2;
+    if (n.c.toLowerCase().indexOf(q) >= 0) s += 2;
+    return s;
+  }
+  function render() {
+    var q = input.value.trim().toLowerCase();
+    list = DATA.map(function (n) { return { n: n, s: score(n, q) }; })
+      .filter(function (x) { return x.s > 0; })
+      .sort(function (a, b) { return b.s - a.s || b.n.ch - a.n.ch; })
+      .slice(0, 24).map(function (x) { return x.n; });
+    cnt.textContent = list.length ? list.length + ' bộ' : '';
+    if (!list.length) {
+      res.innerHTML = '<div class="jem"><b>Không tìm thấy “' + esc(input.value.trim()) + '”</b><span>Thử tên khác, hoặc tìm theo tác giả / couple.</span></div>';
+      return;
+    }
+    cur = 0;
+    res.innerHTML = list.map(function (n, i) {
+      var meta = [n.a, n.c].filter(Boolean).map(esc);
+      if (v === 'x' && n.ch > 0) meta.push(n.ch + ' chương');
+      meta = meta.join(' · ');
+      return '<a href="#" role="option" aria-selected="' + (i === 0 ? 'true' : 'false') + '"' + (i === 0 ? ' class="on"' : '') + '>' +
+        '<span class="th">' + (n.th ? '<img src="' + esc(n.th) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '') + '</span>' +
+        '<span class="tx"><b>' + hl(n.t, q) + '</b><span>' + meta + '</span></span>' +
+        '<span class="ch">' + (n.ch > 0 ? n.ch + ' chương' : '') + '</span></a>';
+    }).join('');
+  }
+  function move(d) {
+    var as = res.querySelectorAll('a');
+    if (!as.length) return;
+    cur = Math.max(0, Math.min(as.length - 1, cur + d));
+    Array.prototype.forEach.call(as, function (a, i) {
+      a.classList.toggle('on', i === cur);
+      a.setAttribute('aria-selected', i === cur ? 'true' : 'false');
+    });
+    as[cur].scrollIntoView({ block: 'nearest' });
+  }
+  input.addEventListener('input', render);
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowDown') { e.preventDefault(); move(1); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); move(-1); }
+    if (e.key === 'Escape') { input.value = ''; render(); }
+  });
+  var v = (new URLSearchParams(location.search).get('v') || 'a').toLowerCase().slice(0, 1);
+  if (v !== 'b' && v !== 'c' && v !== 'x') v = 'a';
+  document.body.className = 'v' + v.toUpperCase();
+  render();
+  setTimeout(function () { input.focus(); }, 60);
+  function report() {
+    if (parent !== window) parent.postMessage({ mk: 'h', h: Math.ceil(document.body.getBoundingClientRect().height) }, '*');
+  }
+  addEventListener('load', report);
+  addEventListener('resize', report);
+  setTimeout(report, 500);
+})();
+</script>
+</body>
+</html>

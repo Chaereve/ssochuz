@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tác giả · ba phương án (r101) · ssochuz library</title>
+<meta name="description" content="Ba phương án phân cấp giao diện cho trang Tác giả — bản đề xuất r101.">
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="/site/ssochuz.png">
+<link rel="stylesheet" href="/site/cz.css">
+<link rel="stylesheet" href="pp.css">
+<script>try{var t=localStorage.getItem('ssochuz-theme')||localStorage.getItem('chuseoz-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+</head>
+<body data-personal-follow-only>
+<div id="sprog" aria-hidden="true"><i></i></div>
+<header id="hdr"></header>
+
+<!-- thanh chọn phương án: chỉ có ở bản đề xuất, không nằm trong thiết kế trang -->
+<div class="mkbar">
+  <div class="mkbar-in">
+    <span class="tag">r101 · đề xuất</span>
+    <span class="lab">Giao diện</span>
+    <div class="mseg" id="mkSeg" role="tablist" aria-label="Phương án giao diện">
+      <button type="button" role="tab" data-v="A" aria-selected="false">A · Chỉ mục</button>
+      <button type="button" role="tab" data-v="B" aria-selected="false">B · Bảng</button>
+      <button type="button" role="tab" data-v="C" aria-selected="true">C · Tạp chí</button>
+    </div>
+    <span class="lab">Đầu trang</span>
+    <div class="mseg mseg2" id="mkHead" role="tablist" aria-label="Kiểu đầu trang">
+      <button type="button" role="tab" data-h="1" aria-selected="true">Đầu trang 1</button>
+      <button type="button" role="tab" data-h="2" aria-selected="false">2</button>
+      <button type="button" role="tab" data-h="3" aria-selected="false">3</button>
+    </div>
+    <p class="desc" id="mkDesc">A · Chỉ mục — chữ cái A–Z dính trên đầu là mốc phân cấp lớn nhất.</p>
+    <a class="live" href="https://8081-inpi9mz09qz9bfup3iuwi.e2b.app/tac-gia/" target="_blank" rel="noopener">Bản đang chạy (r101) ↗</a>
+  </div>
+</div>
+
+<main class="m101 hd1">
+  <nav class="mcrumb"><a href="/site/">Trang chủ</a> <span>›</span> <a href="/site/#thu-vien">Thư viện</a> <span>›</span> <b>Tất cả tác giả</b></nav>
+
+  <header class="mlead">
+    <div class="mnm">
+      <h1>Tất cả tác giả</h1>
+      <p class="sub" id="ppSub">Đang tải…</p>
+    </div>
+    <label class="search" id="ppQWrap"><span data-ic="search"></span><input id="ppQ" placeholder="Tìm theo tên…" autocomplete="off" spellcheck="false" aria-label="Tìm theo tên"></label>
+  </header>
+
+  <div id="out" class="vA"></div>
+</main>
+
+<footer id="ftr"></footer>
+<script src="/site/cz-config.js"></script>
+<script src="/site/cz-app.js"></script>
+<script src="data.js"></script>
+<script src="pp.js"></script>
+<script>
+try {
+  if (window.CZ && CZ.mountShell) CZ.mountShell({ active: 'authors' });
+  var sp = document.querySelector('.search [data-ic]');
+  if (sp && window.CZ && CZ.icon) sp.outerHTML = CZ.icon('search');
+} catch (e) {}
+</script>
+</body>
+</html>

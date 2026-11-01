@@ -56,8 +56,6 @@
 /reader.html   /truyen   200
 /my-space/    /my-space    200
 /profile/     /profile     200
-/guide.html    /guide    200
-/guide/        /guide    200
 # Admin gộp MỘT trang duy nhất: /admin mở thẳng admin.html. URL thời hai bản
 # (admin-v2 / admin-legacy) vẫn đưa về đúng một admin này, không chết link.
 /admin-v2       /admin       200
@@ -218,7 +216,6 @@
 /docs/*           /  301
 /_inbox/*         /  301
 /blogger-theme/*  /  301
-/guide/*       /guide    200
 # slug cũ kèm đường dẫn con (link chương cũ) → slug mới
 /truyen/vuot-khoi-uong-chan-troi-endless-blue_01775777241/* /truyen/vuot-khoi-uong-chan-troi-endless-blue-01775777241/:splat 301
 # Lưới an toàn chung — hứng: link chương của MỌI bộ (/truyen/<slug>/chuong-N/),

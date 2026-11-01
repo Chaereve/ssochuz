@@ -101,7 +101,8 @@ const byCount = (lib, f) => {
     q.value = probe;
     q.dispatchEvent(new p3.win.Event('input', { bubbles: true }));
     await wait(120);
-    const shown = [...p3.doc.querySelectorAll('#ppGrid .pcard')].filter(c => c.style.display !== 'none').length;
+    /* bộ lọc của bản gốc ẩn thẻ bằng display:none, không xoá khỏi DOM */
+    const shown = [...p3.doc.querySelectorAll('#ppGrid .pcard')].filter(el => el.style.display !== 'none').length;
     ok(shown >= 1 && shown < AUTHORS.length, 'go loc phai thu hep danh sach (thay: ' + shown + '/' + AUTHORS.length + ')');
     ok(/Tìm thấy/.test(p3.doc.querySelector('#ppSub').textContent), 'loc phai cap nhat dong dem');
     q.value = 'zzzz-khong-co';
@@ -110,7 +111,9 @@ const byCount = (lib, f) => {
     ok(/Không có tác giả nào khớp/.test(p3.doc.querySelector('#ppGrid').textContent), 'loc khong khop phai bao ro');
   }
 
-  /* ---------- G. link từ trang truyện ---------- */
+  /* ---------- G. trang truyện nêu tác giả / couple ---------- */
+  /* Vòng 78b: bỏ hàng link “Tất cả truyện của …” ở cuối tab Thông tin — tên tác
+     giả và couple đã nằm ngay trong lưới dữ liệu phía trên, lặp lại là thừa. */
   const RS = 'third-person';
   const meta = LIB.find(n => n.slug === RS);
   const r = page('truyen.html', {
@@ -118,26 +121,27 @@ const byCount = (lib, f) => {
     fetch: dataFetch(),
   });
   await wait(1300);
-  const infoLinks = [...r.doc.querySelectorAll('#storyInfo a')].map(a => a.getAttribute('href'));
-  const expAU = '/tac-gia/?q=' + encodeURIComponent(r.win.CZ.slugify(meta.author));
-  ok(infoLinks.includes(expAU), 'tab Gioi thieu thieu link tac gia (thay: ' + JSON.stringify(infoLinks) + ')');
-  if (meta.couple) {
-    const expCP = '/couple/?q=' + encodeURIComponent(r.win.CZ.slugify(meta.couple));
-    ok(infoLinks.includes(expCP), 'tab Gioi thieu thieu link couple');
-  }
+  const infoText = r.doc.querySelector('#storyInfo').textContent;
+  ok(infoText.includes(meta.author), 'tab Thong tin thieu ten tac gia (thay: ' + JSON.stringify(infoText.slice(0, 120)) + ')');
+  if (meta.couple) ok(infoText.includes(meta.couple), 'tab Thong tin thieu ten couple');
+  ok(!r.doc.querySelector('#storyInfo .ilinks'), 'hang link tac gia/couple phai duoc bo');
 
   /* ---------- H. link từ bộ lọc thư viện ---------- */
-  const h = page('index.html', { fetch: dataFetch() });
+  /* Thanh lọc thư viện (bản D1) bỏ ô chọn tác giả/couple — mỗi couple chỉ có
+     tối đa 2 bộ nên danh sách dài không giúp gì. Liên kết chia sẻ ?author=…
+     vẫn phải lọc được và vẫn phải dẫn sang /tac-gia/. */
+  const h = page('index.html', {
+    url: 'https://ssochuz.pages.dev/?author=' + encodeURIComponent(AU),
+    fetch: dataFetch(),
+  });
   await wait(1000);
-  const sel = h.doc.querySelector('#fAuthor');
-  ok(sel && sel.options.length > 1, 'thieu dropdown tac gia');
-  if (sel) {
-    sel.value = AU;
-    sel.dispatchEvent(new h.win.Event('change', { bubbles: true }));
-    await wait(250);
-    const fl = h.doc.querySelector('#fcount a[href^="/tac-gia/?q="]');
-    ok(fl && fl.textContent.includes(AU), 'loc theo tac gia phai co link Xem tat ca (thay: ' + (h.doc.querySelector('#fcount') || {}).textContent + ')');
-  }
+  const nAll = LIB.length;
+  const hCards = h.doc.querySelectorAll('#grid .card').length;
+  ok(hCards > 0 && hCards < nAll, 'loc theo tac gia phai thu hep luoi (thay: ' + hCards + '/' + nAll + ')');
+  const auChip = h.doc.querySelector('#fpick .fchip');
+  ok(auChip && auChip.textContent.includes(AU), 'phai hien chip loc tac gia (thay: ' + (h.doc.querySelector('#fpick') || {}).textContent + ')');
+  const fl = h.doc.querySelector('#fpick a[href^="/tac-gia/?q="]');
+  ok(fl && fl.textContent.includes(AU), 'loc theo tac gia phai co link Xem tat ca (thay: ' + (h.doc.querySelector('#fpick') || {}).textContent + ')');
   const bienTapH2 = h.doc.querySelector('#bien-tap h2');
   ok(bienTapH2 && bienTapH2.textContent.trim() === 'Chuyển thể Series', '#bien-tap h2 phai la Chuyển thể Series');
   const normMulti = h.win.CZ.norm({ title: 'Multi Couple', slug: 'multi-cp', couple: 'Lingling x Orm, Lookmhee x Sonya' });

@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đề xuất vòng 67 · làm lại bố cục banner trang truyện</title>
+<style>
+:root {
+  --bg:#12100f; --surf:#1a1613; --surf2:#221c18;
+  --bd:rgba(255,255,255,.11); --bd2:rgba(255,255,255,.2);
+  --txt:#f3ede9; --mut:rgba(243,237,233,.64); --dim:rgba(243,237,233,.4);
+  --acc:rgb(224,133,155); --ink:#1a1113;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+* { box-sizing:border-box; }
+html, body { margin:0; background:var(--bg); }
+body { color:var(--txt); font-family:var(--sans); font-size:15.5px; line-height:1.6; -webkit-font-smoothing:antialiased; }
+body > div[style*="position:fixed"] { display:none !important; }
+a { color:inherit; text-decoration:none; }
+.wrap { max-width:1160px; margin:0 auto; padding:44px 22px 96px; }
+.kick { margin:0; font:600 10.5px/1 var(--mono); letter-spacing:.2em; text-transform:uppercase; color:var(--acc); }
+h1 { margin:16px 0 14px; max-width:28ch; font:400 clamp(32px,4.4vw,52px)/1.08 var(--serif); letter-spacing:-.015em; }
+.lede { margin:0; max-width:74ch; color:var(--mut); font-size:15.5px; }
+.lede b { color:var(--txt); font-weight:600; }
+h2.sec { margin:54px 0 6px; font:600 12px/1 var(--mono); letter-spacing:.18em; text-transform:uppercase; color:var(--dim); }
+.sub { margin:0 0 16px; color:var(--mut); font-size:14px; max-width:82ch; }
+
+/* ---------- khung mô phỏng banner trang truyện ---------- */
+.stage { margin:14px 0 0; border:1px solid var(--bd); border-radius:8px; overflow:hidden; background:#141110; }
+.stage .cap { display:flex; gap:8px; padding:8px 13px; border-bottom:1px solid var(--bd);
+  font:600 9.5px/1 var(--mono); letter-spacing:.16em; text-transform:uppercase; color:var(--dim); }
+.stage .cap .w { margin-left:auto; }
+
+.hero { position:relative; padding:26px 28px 22px; display:grid; grid-template-columns:96px minmax(0,1fr);
+  gap:24px; align-items:start; overflow:hidden; }
+.hero .bg { position:absolute; inset:0; background:center 34% / cover no-repeat; opacity:.26; }
+.hero .veil { position:absolute; inset:0;
+  background:linear-gradient(94deg,#141110 0%,rgba(20,17,16,.93) 46%,rgba(20,17,16,.55) 100%); }
+.hero > * { position:relative; }
+.hero .cv { width:96px; aspect-ratio:2/3; border-radius:4px; overflow:hidden; background:#241a15; }
+.hero .cv img { width:100%; height:100%; object-fit:cover; display:block; }
+.hero .badge { display:inline-flex; align-items:center; gap:6px; font:600 9.5px/1 var(--mono);
+  letter-spacing:.12em; text-transform:uppercase; color:rgba(243,237,233,.62); }
+.hero .badge i { width:5px; height:5px; border-radius:50%; background:#74c69b; }
+.hero h3 { margin:8px 0 0; font:700 33px/1.08 var(--serif); letter-spacing:-.022em; }
+.hero .meta { margin:10px 0 0; font-size:13px; color:rgba(243,237,233,.6); display:flex; flex-wrap:wrap;
+  align-items:center; gap:4px 10px; }
+.hero .meta b { color:rgba(243,237,233,.9); font-weight:600; }
+.hero .meta i.sep { font-style:normal; opacity:.35; }
+.hero .rate { margin:10px 0 0; display:flex; align-items:center; gap:8px; font-size:12px; color:rgba(243,237,233,.55); }
+.hero .rate .stars { display:flex; gap:2px; color:rgba(243,237,233,.3); }
+.hero .rate .stars svg { width:13px; height:13px; }
+.hero .rate b { color:rgba(243,237,233,.82); font-weight:600; }
+.hero .syn { margin:14px 0 0; max-width:70ch; font-size:13.5px; line-height:1.65; color:rgba(243,237,233,.72); }
+.hero .more { display:inline-flex; align-items:center; gap:4px; margin-top:6px; font-size:12px;
+  font-weight:650; color:var(--acc); }
+.hero .more svg { width:13px; height:13px; }
+
+/* ---------- ba kiểu nút ---------- */
+.acts { display:flex; align-items:center; flex-wrap:wrap; margin-top:18px; }
+.acts .b { display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  border:1px solid transparent; font-weight:650; white-space:nowrap; }
+.acts .b svg { width:16px; height:16px; }
+
+/* A — nút son nhỏ + chữ trơn */
+[data-v="A"] .acts { gap:6px; }
+[data-v="A"] .acts .pri { height:38px; padding:0 16px; border-radius:7px; background:var(--acc);
+  color:#20100f; font-size:12.5px; letter-spacing:.01em; }
+[data-v="A"] .acts .pri:hover { filter:brightness(1.06); }
+[data-v="A"] .acts .txt { height:38px; padding:0 10px; gap:6px; color:rgba(243,237,233,.66);
+  font-size:12.5px; font-weight:600; border-radius:7px; }
+[data-v="A"] .acts .txt svg { width:15px; height:15px; }
+[data-v="A"] .acts .txt:hover { color:var(--txt); background:rgba(255,255,255,.05); }
+
+/* B — chip tối, icon trần */
+[data-v="B"] .acts { gap:8px; }
+[data-v="B"] .acts .pri { height:38px; padding:0 16px; border-radius:7px; background:var(--acc);
+  color:#20100f; font-size:12.5px; }
+[data-v="B"] .acts .chip { width:38px; height:38px; border-radius:7px;
+  background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.13); color:rgba(243,237,233,.82); }
+[data-v="B"] .acts .chip:hover { background:rgba(255,255,255,.11); color:var(--txt); }
+
+/* C — một thanh liền */
+[data-v="C"] .acts { gap:0; height:40px; border:1px solid rgba(255,255,255,.13); border-radius:9px;
+  background:rgba(255,255,255,.045); overflow:hidden; width:max-content; max-width:100%; }
+[data-v="C"] .acts .pri { height:100%; padding:0 16px; background:var(--acc); color:#20100f;
+  font-size:12.5px; border:0; border-radius:0; }
+[data-v="C"] .acts .seg { width:40px; height:100%; border:0; border-left:1px solid rgba(255,255,255,.12);
+  border-radius:0; color:rgba(243,237,233,.7); background:transparent; }
+[data-v="C"] .acts .seg:hover { background:rgba(255,255,255,.07); color:var(--txt); }
+
+
+/* B — hai cột: nội dung bên trái, số liệu bên phải (dùng chỗ trống bấy lâu) */
+.hero[data-l="B"] .body { display:grid; grid-template-columns:minmax(0,1fr) 168px; gap:30px; align-items:start; }
+.hero[data-l="B"] .facts { display:grid; gap:12px; padding-left:20px; border-left:1px solid rgba(255,255,255,.10); }
+.hero[data-l="B"] .facts div { display:grid; gap:3px; }
+.hero[data-l="B"] .facts dt { font:600 9px/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:rgba(243,237,233,.38); }
+.hero[data-l="B"] .facts dd { margin:0; font-size:13px; font-weight:600; color:rgba(243,237,233,.86); }
+
+/* ---------- dòng tiến độ ---------- */
+.prog { display:flex; align-items:center; gap:10px; margin:16px 0 0; padding-top:12px;
+  border-top:1px solid rgba(255,255,255,.09); font:600 9.5px/1 var(--mono); letter-spacing:.12em;
+  text-transform:uppercase; color:rgba(243,237,233,.45); }
+.prog .bar { flex:0 0 132px; height:2px; border-radius:2px; background:rgba(255,255,255,.14); overflow:hidden; }
+.prog .bar i { display:block; height:100%; background:var(--acc); }
+.prog em { font-style:normal; color:rgba(243,237,233,.7); }
+.prog.hidebar { border-top:0; padding-top:0; }
+
+/* ---------- bản 390 ---------- */
+.duo { display:flex; gap:14px; flex-wrap:wrap; align-items:flex-start; margin-top:14px; }
+.duo .mobf { flex:0 0 392px; max-width:100%; }
+.mob .hero { grid-template-columns:74px minmax(0,1fr); gap:16px; padding:20px; }
+.mob .hero .cv { width:74px; }
+.mob .hero h3 { font-size:23px; }
+.mob .hero .meta { font-size:12px; }
+.mob .hero .syn { font-size:13px; }
+.mob .acts { margin-top:14px; }
+.mob[data-v="C"] .acts { width:100%; }
+.mob[data-v="C"] .acts .pri { flex:1 1 auto; }
+.mob[data-v="C"] .acts .seg { margin-left:auto; }
+
+.var { margin:52px 0 0; padding-top:24px; border-top:1px solid var(--bd); }
+.vhead { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+.vhead .n { font:600 11px/1 var(--mono); letter-spacing:.18em; color:var(--acc); }
+.vhead h3 { margin:0; font-size:25px; font-weight:600; letter-spacing:-.01em; }
+.vhead .tagline { margin-left:auto; font:600 10px/1.6 var(--mono); letter-spacing:.12em; text-transform:uppercase; color:var(--dim); }
+.vsay { margin:9px 0 0; color:var(--mut); font-size:14.5px; max-width:82ch; }
+.vsay b { color:var(--txt); font-weight:600; }
+
+footer { margin-top:52px; padding-top:18px; border-top:1px solid var(--bd); color:var(--dim); font-size:13px; line-height:1.7; }
+footer code { font-family:var(--mono); background:rgba(255,255,255,.05); padding:1px 5px; border-radius:3px; color:var(--mut); }
+
+@media (max-width:820px) {
+  .hero[data-l="B"] .body { grid-template-columns:1fr; }
+  .hero[data-l="B"] .facts { display:none; }
+  .hero { grid-template-columns:74px minmax(0,1fr); gap:16px; padding:20px; }
+  .hero .cv { width:74px; }
+  .hero h3 { font-size:23px; }
+  .duo .mobf { flex:1 1 100%; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="kick">Đề xuất vòng 67 · banner trang truyện · chỉ để bìa yên</p>
+  <h1>Làm lại banner: nút nhỏ, nền tối, bố cục có nhịp</h1>
+  <p class="lede">Mình bỏ hẳn chất kính trắng vừa rồi — nó <b>quá sáng và quá to</b> so với phần còn lại của khung.
+    Bìa giữ nguyên 96px. Phía sau bìa có ba bản, khác nhau ở <b>kiểu nút</b> và <b>cách chia cột</b>; cả ba đều:
+    nút chính 38px (nhỏ hơn 44px cũ nhưng vẫn đủ 44px vùng chạm), nhãn 12,5px chữ thường (không in hoa),
+    không bóng đổ, không nhoè nền, và <b>chỉ còn một nút có nền</b>.</p>
+
+  <h2 class="sec">Ba bản</h2>
+  <p class="sub">Cùng một nội dung: truyện 10 chương, đã đọc 10/10, chưa đánh giá.</p>
+
+  <!-- ================= A ================= -->
+  <section class="var" data-v="A">
+    <div class="vhead"><span class="n">A</span><h3>Nút son nhỏ · chữ trơn</h3>
+      <span class="tagline">ít hộp nhất</span></div>
+    <p class="vsay">Một nút son 38px, phần còn lại là <b>chữ trơn kèm icon</b> — không viền, không nền.
+      Chuột vào mới hiện nền 5%. Đây là bản “bớt hộp” triệt để nhất; mắt đi từ tiêu đề → giới thiệu → nút
+      theo một đường thẳng, không bị ô vuông nào cắt ngang.</p>
+
+    <div class="stage"><div class="cap">Banner trang truyện <span class="w">1240</span></div>
+      <div class="hero">
+        <div class="bg" style="background-image:url('/assets/covers/80b25f67.webp')"></div><div class="veil"></div>
+        <span class="cv"><img src="/assets/covers/80b25f67.webp" alt=""></span>
+        <div>
+          <span class="badge"><i></i> Hoàn thành · 18+</span>
+          <h3>Hometown Romance — Special</h3>
+          <p class="meta"><span><b>Lambo</b></span><i class="sep">·</i><span>Lookmhee x Sonya</span><i class="sep">·</i>
+            <span>2026</span><i class="sep">·</i><span><b>10 chương</b></span><i class="sep">·</i><span>cập nhật 29-05</span></p>
+          <p class="rate"><span class="stars">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.9L12 16.4 6.8 19.2l1-5.9L3.5 9.2l5.9-.9z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.9L12 16.4 6.8 19.2l1-5.9L3.5 9.2l5.9-.9z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.9L12 16.4 6.8 19.2l1-5.9L3.5 9.2l5.9-.9z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.9L12 16.4 6.8 19.2l1-5.9L3.5 9.2l5.9-.9z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.9L12 16.4 6.8 19.2l1-5.9L3.5 9.2l5.9-.9z"/></svg></span>
+            <b>0/5</b> <span>chưa có đánh giá</span></p>
+          <p class="syn">Một cuộc hôn nhân chưa bao giờ thực sự êm đêm nhưng lại gắn kết với nhau một cách hoàn hảo,
+            giống hệt như một ly rượu vang đỏ đắt tiền không hiểu sao lại vô cùng ý khi thưởng thức cùng…</p>
+          <a class="more" href="#">Đọc giới thiệu đầy đủ
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></a>
+
+          <div class="acts">
+            <a class="b pri" href="#"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>Đọc tiếp</a>
+            <a class="b txt" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 15l6-6 6 6"/></svg>Chương mới nhất</a>
+            <a class="b txt" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2-3v-3a7 7 0 0 1 4-6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg>Theo dõi</a>
+            <a class="b txt" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 10v11l-5-3-5 3V10a3 3 0 0 1 3-3h4a3 3 0 0 1 3 3"/><path d="M11 3h5a3 3 0 0 1 3 3v11"/></svg>Tủ truyện</a>
+          </div>
+        </div>
+      </div>
+
+    <div class="duo">
+      <div class="stage mobf mob" data-v="A"><div class="cap">Máy hẹp <span class="w">390</span></div>
+        <div class="hero">
+          <div class="bg" style="background-image:url('/assets/covers/80b25f67.webp')"></div><div class="veil"></div>
+          <span class="cv"><img src="/assets/covers/80b25f67.webp" alt=""></span>
+          <div>
+            <span class="badge"><i></i> Hoàn thành · 18+</span>
+            <h3>Hometown Romance</h3>
+            <p class="meta"><span><b>Lambo</b></span><i class="sep">·</i><span>2026</span><i class="sep">·</i><span><b>10 chương</b></span></p>
+            <div class="acts">
+              <a class="b pri" href="#"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>Đọc tiếp</a>
+              <a class="b txt" href="#" aria-label="Theo dõi" title="Theo dõi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2-3v-3a7 7 0 0 1 4-6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg></a>
+              <a class="b txt" href="#" aria-label="Tủ truyện" title="Tủ truyện"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 10v11l-5-3-5 3V10a3 3 0 0 1 3-3h4a3 3 0 0 1 3 3"/><path d="M11 3h5a3 3 0 0 1 3 3v11"/></svg></a>
+            </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= B ================= -->
+  <section class="var" data-v="B">
+    <div class="vhead"><span class="n">B</span><h3>Chip tối · cột số liệu</h3>
+      <span class="tagline">lấp chỗ trống bên phải</span></div>
+    <p class="vsay">Ba việc phụ là <b>chip tối 38×38</b> chỉ có icon. Còn phần bố cục: tên truyện + giới thiệu nằm cột trái,
+      <b>số liệu dồn thành một cột mảnh bên phải</b> (chương · cập nhật · đã đọc) — chỗ mà bản đang chạy để trống
+      gần nửa khung. Dòng meta vì thế chỉ còn tác giả và couple, không lặp lại số chương lần thứ hai.</p>
+
+    <div class="stage"><div class="cap">Banner trang truyện <span class="w">1240</span></div>
+      <div class="hero" data-l="B">
+        <div class="bg" style="background-image:url('/assets/covers/80b25f67.webp')"></div><div class="veil"></div>
+        <span class="cv"><img src="/assets/covers/80b25f67.webp" alt=""></span>
+        <div class="body">
+          <div>
+            <span class="badge"><i></i> Hoàn thành · 18+</span>
+            <h3>Hometown Romance — Special</h3>
+            <p class="meta"><span><b>Lambo</b></span><i class="sep">·</i><span>Lookmhee x Sonya</span><i class="sep">·</i><span>2026</span></p>
+            <p class="rate"><span class="stars">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.9L12 16.4 6.8 19.2l1-5.9L3.5 9.2l5.9-.9z"/></svg>
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.9L12 16.4 6.8 19.2l1-5.9L3.5 9.2l5.9-.9z"/></svg>
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.9L12 16.4 6.8 19.2l1-5.9L3.5 9.2l5.9-.9z"/></svg>
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.9L12 16.4 6.8 19.2l1-5.9L3.5 9.2l5.9-.9z"/></svg>
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.9L12 16.4 6.8 19.2l1-5.9L3.5 9.2l5.9-.9z"/></svg></span>
+              <b>0/5</b> <span>chưa có đánh giá</span></p>
+            <p class="syn">Một cuộc hôn nhân chưa bao giờ thực sự êm đêm nhưng lại gắn kết với nhau một cách hoàn hảo,
+              giống hệt như một ly rượu vang đỏ đắt tiền không hiểu sao lại vô cùng ý khi thưởng thức cùng…</p>
+            <a class="more" href="#">Đọc giới thiệu đầy đủ
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></a>
+
+            <div class="acts">
+              <a class="b pri" href="#"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>Đọc tiếp</a>
+              <a class="b chip" href="#" aria-label="Chương mới nhất" title="Chương mới nhất"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 15l6-6 6 6"/></svg></a>
+              <a class="b chip" href="#" aria-label="Theo dõi" title="Theo dõi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2-3v-3a7 7 0 0 1 4-6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg></a>
+              <a class="b chip" href="#" aria-label="Tủ truyện" title="Tủ truyện"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 10v11l-5-3-5 3V10a3 3 0 0 1 3-3h4a3 3 0 0 1 3 3"/><path d="M11 3h5a3 3 0 0 1 3 3v11"/></svg></a>
+            </div>
+          </div>
+          <dl class="facts">
+            <div><dt>Chương</dt><dd>10</dd></div>
+            <div><dt>Cập nhật</dt><dd>29-05</dd></div>
+            <div><dt>Đã đọc</dt><dd>10 / 10</dd></div>
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <div class="duo">
+      <div class="stage mobf mob" data-v="B"><div class="cap">Máy hẹp <span class="w">390</span></div>
+        <div class="hero">
+          <div class="bg" style="background-image:url('/assets/covers/80b25f67.webp')"></div><div class="veil"></div>
+          <span class="cv"><img src="/assets/covers/80b25f67.webp" alt=""></span>
+          <div>
+            <span class="badge"><i></i> Hoàn thành · 18+</span>
+            <h3>Hometown Romance</h3>
+            <p class="meta"><span><b>Lambo</b></span><i class="sep">·</i><span>2026</span><i class="sep">·</i><span><b>10 chương</b></span></p>
+            <div class="acts">
+              <a class="b pri" href="#"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>Đọc tiếp</a>
+              <a class="b chip" href="#" aria-label="Chương mới nhất"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 15l6-6 6 6"/></svg></a>
+              <a class="b chip" href="#" aria-label="Theo dõi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2-3v-3a7 7 0 0 1 4-6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg></a>
+              <a class="b chip" href="#" aria-label="Tủ truyện"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 10v11l-5-3-5 3V10a3 3 0 0 1 3-3h4a3 3 0 0 1 3 3"/><path d="M11 3h5a3 3 0 0 1 3 3v11"/></svg></a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= C ================= -->
+  <section class="var" data-v="C">
+    <div class="vhead"><span class="n">C</span><h3>Một thanh liền</h3>
+      <span class="tagline">gộp thành một khối</span></div>
+    <p class="vsay">Ba việc phụ nhập vào cùng nút chính thành <b>một thanh 40px</b>, ngăn bằng đường kẻ tóc.
+      Nhìn gọn nhất và không có “mấy ô rời”, nhưng nút chính bị khoá trong thanh nên kém nổi hơn A/B.</p>
+
+    <div class="stage"><div class="cap">Banner trang truyện <span class="w">1240</span></div>
+      <div class="hero">
+        <div class="bg" style="background-image:url('/assets/covers/80b25f67.webp')"></div><div class="veil"></div>
+        <span class="cv"><img src="/assets/covers/80b25f67.webp" alt=""></span>
+        <div>
+          <span class="badge"><i></i> Hoàn thành · 18+</span>
+          <h3>Hometown Romance — Special</h3>
+          <p class="meta"><span><b>Lambo</b></span><i class="sep">·</i><span>Lookmhee x Sonya</span><i class="sep">·</i>
+            <span>2026</span><i class="sep">·</i><span><b>10 chương</b></span><i class="sep">·</i><span>cập nhật 29-05</span></p>
+          <p class="rate"><span class="stars">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.9L12 16.4 6.8 19.2l1-5.9L3.5 9.2l5.9-.9z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.9L12 16.4 6.8 19.2l1-5.9L3.5 9.2l5.9-.9z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.9L12 16.4 6.8 19.2l1-5.9L3.5 9.2l5.9-.9z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.9L12 16.4 6.8 19.2l1-5.9L3.5 9.2l5.9-.9z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.9L12 16.4 6.8 19.2l1-5.9L3.5 9.2l5.9-.9z"/></svg></span>
+            <b>0/5</b> <span>chưa có đánh giá</span></p>
+          <p class="syn">Một cuộc hôn nhân chưa bao giờ thực sự êm đêm nhưng lại gắn kết với nhau một cách hoàn hảo,
+            giống hệt như một ly rượu vang đỏ đắt tiền không hiểu sao lại vô cùng ý khi thưởng thức cùng…</p>
+          <a class="more" href="#">Đọc giới thiệu đầy đủ
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></a>
+
+          <div class="acts">
+            <a class="b pri" href="#"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>Đọc tiếp</a>
+            <a class="b seg" href="#" aria-label="Chương mới nhất" title="Chương mới nhất"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 15l6-6 6 6"/></svg></a>
+            <a class="b seg" href="#" aria-label="Theo dõi" title="Theo dõi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2-3v-3a7 7 0 0 1 4-6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg></a>
+            <a class="b seg" href="#" aria-label="Tủ truyện" title="Tủ truyện"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 10v11l-5-3-5 3V10a3 3 0 0 1 3-3h4a3 3 0 0 1 3 3"/><path d="M11 3h5a3 3 0 0 1 3 3v11"/></svg></a>
+          </div>
+        </div>
+      </div>
+
+    <div class="duo">
+      <div class="stage mobf mob" data-v="C"><div class="cap">Máy hẹp <span class="w">390</span></div>
+        <div class="hero">
+          <div class="bg" style="background-image:url('/assets/covers/80b25f67.webp')"></div><div class="veil"></div>
+          <span class="cv"><img src="/assets/covers/80b25f67.webp" alt=""></span>
+          <div>
+            <span class="badge"><i></i> Hoàn thành · 18+</span>
+            <h3>Hometown Romance</h3>
+            <p class="meta"><span><b>Lambo</b></span><i class="sep">·</i><span>2026</span><i class="sep">·</i><span><b>10 chương</b></span></p>
+            <div class="acts">
+              <a class="b pri" href="#"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>Đọc tiếp</a>
+              <a class="b seg" href="#" aria-label="Chương mới nhất"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 15l6-6 6 6"/></svg></a>
+              <a class="b seg" href="#" aria-label="Theo dõi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2-3v-3a7 7 0 0 1 4-6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg></a>
+              <a class="b seg" href="#" aria-label="Tủ truyện"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 10v11l-5-3-5 3V10a3 3 0 0 1 3-3h4a3 3 0 0 1 3 3"/><path d="M11 3h5a3 3 0 0 1 3 3v11"/></svg></a>
+            </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <h2 class="sec">Dòng tiến độ: chỉ hiện khi đang đọc dở</h2>
+  <p class="sub">Đọc xong (10/10) hoặc chưa đọc thì ẩn hẳn — không còn chữ “100%” nằm dưới nút như ảnh bạn gửi.
+    Khi đang đọc dở, nó là một sợi chỉ 2px, không phải thanh ngang hết bề rộng.</p>
+  <div class="stage"><div class="cap">Đang đọc chương 7/10 <span class="w">1240</span></div>
+    <div class="hero" style="grid-template-columns:96px minmax(0,1fr)">
+      <div class="bg" style="background-image:url('/assets/covers/80b25f67.webp')"></div><div class="veil"></div>
+      <span class="cv"><img src="/assets/covers/80b25f67.webp" alt=""></span>
+      <div>
+        <span class="badge"><i></i> Hoàn thành · 18+</span>
+        <h3 style="font-size:26px">Hometown Romance — Special</h3>
+        <div class="prog"><span>Đang đọc chương 7/10 · còn 3 chương</span><div class="bar"><i style="width:70%"></i></div><em>70%</em></div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="sec">Ngoài phần nút, mình đổi luôn mấy chỗ “tệ bố cục”</h2>
+  <p class="sub">Áp dụng cho cả ba bản, vì đây là lỗi của khung chứ không phải của nút:</p>
+  <ul class="sub" style="line-height:1.9">
+    <li>Bỏ dòng nhắc <b>“Chọn số sao để đánh giá truyện.”</b> — nó chiếm một dòng chỉ để nói điều ai cũng thấy; chuyển thành chú thích khi rê chuột.</li>
+    <li>Điểm đánh giá gộp <b>một dòng</b>: sao + <b>0/5</b> + “chưa có đánh giá”, thay vì ba cụm rời rạc.</li>
+    <li>Meta xuống <b>chữ thường 13px</b> (bỏ in hoa giãn chữ) — dòng thông tin không còn nặng như một tiêu đề phụ.</li>
+    <li>Dòng tiến độ chỉ hiện khi <b>đang đọc dở</b>; đọc 100% hoặc chưa đọc thì ẩn hẳn — hết cảnh “100%” nằm chình ình dưới nút.</li>
+    <li>Nút <b>38px</b> thay vì 44px, nhưng vùng chạm vẫn 44px (đệm trong suốt) nên ngón tay không khó bấm hơn.</li>
+  </ul>
+
+  <footer>
+    Bản vẽ thôi — <code>src/</code> chưa đổi. Bạn chọn <b>A / B / C</b> là mình thay vào banner trang truyện,
+    kèm luôn phần dọn bố cục ở trên. Bìa giữ nguyên đúng như bạn dặn.
+  </footer>
+</div>
+</body>
+</html>

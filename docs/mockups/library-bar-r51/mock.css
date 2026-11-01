@@ -1,0 +1,86 @@
+/* ---------- công tắc kiểu xem: đã bị xoá khỏi site, giữ bản sao ở đây để
+   khung “Hiện tại” vẫn nhìn đúng như bản cũ ---------- */
+.seg.vseg { display: inline-flex; align-items: center; padding: 0; gap: 2px;
+  border: 0; border-radius: 0; background: none; }
+.seg.vseg button { width: 32px; height: 32px; padding: 0; display: inline-flex;
+  align-items: center; justify-content: center; border: 0; border-radius: 8px;
+  background: none; color: var(--dim); }
+.seg.vseg button:hover { background: var(--surf2); color: var(--txt); }
+.seg.vseg button .i { width: 15px; height: 15px; }
+.seg.vseg button.on { background: var(--surf2); color: var(--txt); }
+
+/* CSS riêng cho các phương án — chỉ dùng trong mockup, không nằm trong src/. */
+
+/* ---------- B: một hộp, ba ngăn ---------- */
+.barB { display: flex; align-items: center; gap: 0; height: 44px; padding: 0;
+  border: 1px solid var(--bd); border-radius: 10px; background: var(--surf); }
+.barB .srch { flex: 1 1 auto; min-width: 0; height: 100%; padding: 0 12px;
+  border: 0; border-radius: 10px 0 0 10px; background: none; }
+.barB .srch:hover { border-color: transparent; background: rgba(255, 255, 255, .02); }
+.barB .srch input { height: 100%; }
+.barB .ddB { height: 100%; padding: 0 10px 0 14px; border-left: 1px solid var(--bd); }
+.barB .ddB:last-child { border-radius: 0 10px 10px 0; }
+.barB .ddB select { max-width: 150px; }
+
+/* ---------- C: tìm là chính, lọc là chữ ---------- */
+.barC { display: grid; gap: 10px; }
+.barC .srch.big { height: 48px; border-radius: 11px; padding: 0 14px; }
+.barC .srch.big .i { width: 16px; height: 16px; }
+.barC .srch.big input { font-size: 14.5px; }
+.cRow { display: flex; align-items: center; gap: 4px 18px; flex-wrap: wrap; min-height: 34px; }
+.cRow .lcount { margin-left: auto; }
+.ddC { height: 34px; gap: 7px; }
+.ddC .lb { font-size: 12.5px; }
+.ddC select { font-size: 13px; }
+.ddC .cv .i { width: 12px; height: 12px; }
+
+/* ---------- D: một nút Lọc ---------- */
+.barD { display: flex; align-items: center; gap: 10px; }
+.barD .srch { flex: 1 1 auto; }
+.btnL { display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 14px;
+  border: 1px solid var(--bd); border-radius: 10px; background: var(--surf);
+  color: var(--txt); font-size: 13px; font-weight: 650; }
+.btnL:hover { border-color: var(--bd2); }
+.btnL .i { width: 15px; height: 15px; color: var(--mut); }
+.btnL .n { display: inline-flex; align-items: center; justify-content: center; min-width: 18px;
+  height: 18px; padding: 0 5px; border-radius: 9px; background: var(--acc); color: #2a1016;
+  font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; }
+.dBar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin-top: 2px; padding-bottom: 13px; border-bottom: 1px solid var(--bd); }
+.dBar .lcount { margin-left: auto; }
+.dActive { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-size: 13px; color: var(--mut); }
+.dActive b { color: var(--txt); font-weight: 650; }
+.dActive .lnk, .sh-f .lnk { padding: 0 0 2px; border: 0; border-bottom: 1px dashed var(--bd2);
+  background: none; font-size: 12px; font-weight: 650; color: var(--mut); }
+
+/* tấm trượt: chỉ vẽ sơ lược cho thấy nội dung nằm trong đó */
+.sheetSketch { margin-top: 12px; width: 340px; max-width: 100%; padding: 12px 14px 20px;
+  border: 1px solid var(--bd); border-radius: 12px; background: var(--surf2);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, .5); }
+.sheetSketch .sh-h { font-family: var(--font-head); font-size: 16px; font-weight: 700;
+  padding-bottom: 9px; border-bottom: 1px solid var(--bd); }
+.sheetSketch .sh-r { display: grid; grid-template-columns: 74px minmax(0, 1fr); align-items: center;
+  gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--bd); font-size: 13px; color: var(--mut); }
+.sheetSketch .sh-r > b { color: var(--txt); font-weight: 650; justify-self: end; }
+.sheetSketch .sh-r .libchips { gap: 4px 12px; flex-wrap: wrap; justify-content: flex-end; }
+.sheetSketch .sh-r .libchips .chip { height: 28px; font-size: 12.5px; justify-content: flex-end; }
+.sheetSketch .sh-r .libchips .chip.on::after { display: none; }
+.sheetSketch .sh-f { display: flex; align-items: center; justify-content: space-between; padding-top: 12px; }
+
+/* ---------- mobile: trong iframe 360px media query chạy theo bề ngang iframe ---------- */
+@media (max-width: 620px) {
+  .barB { flex-wrap: wrap; height: auto; }
+  .barB .srch { flex: 1 1 100%; height: 44px; border-radius: 10px 10px 0 0; }
+  .barB .ddB { flex: 1 1 0; min-width: 0; height: 42px; border-left: 0;
+    border-top: 1px solid var(--bd); padding: 0 8px 0 12px; }
+  .barB .ddB select { max-width: 100%; font-size: 13px; }
+  .barB .ddB + .ddB { border-left: 1px solid var(--bd); }
+  .barC .srch.big { height: 46px; }
+  .cRow { gap: 4px 14px; }
+  .cRow .lcount { margin-left: 0; }
+  .barD { flex-wrap: wrap; }
+  .barD .srch { flex: 1 1 100%; }
+  .barD .btnL { flex: 1 1 100%; justify-content: center; }
+  .sheetSketch { width: 100%; }
+}

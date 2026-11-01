@@ -2,8 +2,9 @@
    Kiểm thử BỘ NHẬN DIỆN CHƯƠNG DÙNG CHUNG (src/shared/chapters.js)
    · corpus: Lời mở đầu / Giới thiệu nhân vật / Chương 0 KHÔNG tính là Chương 1
    · parity: parser nạp trực tiếp (Node) == parser bên trong bản rút gọn cz-app.js
-   · trang truyện: danh sách chương gom đúng nhóm Mở đầu / Chương / Ngoại truyện,
-     nhãn hiển thị Mở · S1 · 1 … theo số trong TÊN chương, không theo vị trí
+   · trang truyện: danh sách chương gom đúng nhóm Mở đầu / Chương / Ghi chú /
+     Ngoại truyện, nhãn hiển thị 0 · số · S1 theo số trong TÊN chương,
+     không theo vị trí (vòng 85 phương án A: mở đầu = 0)
    · bộ 0 chương trên Worker: trang truyện vẫn MỞ ĐƯỢC (không rớt về /data 404)
    · splitChaptersTxt: nhận diện tiêu đề mở đầu/ngoại truyện, đánh số theo chương chính
    Chạy:  node tests/t_chapters.js
@@ -56,6 +57,28 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     eq('corpus[' + i + '] no ' + title, p.no, no);
     eq('corpus[' + i + '] has ' + title, p.has, has);
   });
+  /* vòng 86: bốn nhóm phụ tách riêng (lời tác giả ≠ lời mở đầu truyện,
+     lời kết ≠ ngoại truyện) — mục lục dựa vào `group`, không dựa vào `kind` */
+  const grp = [
+    ['Lờ'+'i mở đầu', 'prologue'],
+    ['Giới thiệu nhân vật', 'prologue'],
+    ['Lờ'+'i tác giả', 'author'],
+    ['Đôi lời từ tác giả', 'author'],
+    ['Trò chuyện cùng tác giả', 'author'],
+    ['Ngoại truyện 1: Đêm Qua', 'extra'],
+    ['Lờ'+'i kết: Always You', 'end'],
+    ['Lờ'+'i bạt', 'end'],
+    ['Chương 5: Summer Đặc Biệt Và Ấm', ''],
+    ['Chương 12: Gặp gỡ', ''],
+  ];
+  grp.forEach(([title, want], i) => eq('group[' + i + '] ' + title, parse(title).group, want));
+  /* chữ “đặc biệt” giữa tên KHÔNG được kéo chương chính sang ngoại truyện */
+  eq('group/đặc biệt giữa tên', parse('Chương 8: Thực Tập Sinh Đặc Biệt').kind, 'main');
+  eq('kind/lời kết là extra', parse('Lờ'+'i kết: Always You').kind, 'extra');
+  /* tiêu đề không có dấu ngăn: giữ nguyên cả câu, không cắt mất chữ đầu */
+  eq('name/không dấu ngăn', parse('Giới Thiệu Nhân Vật').name, 'Giới Thiệu Nhân Vật');
+  eq('name/đôi lời', parse('Đôi lời từ tác giả').name, 'Đôi lời từ tác giả');
+  eq('name/có dấu ngăn', parse('Ngoại truyện 1: Đêm Qua').name, 'Đêm Qua');
   /* gợi ý số chương chính kế tiếp */
   eq('next/mở đầu không tính', nextMainChapterNo([{ t: 'Lờ'+'i mở đầu' }, { t: 'Giới thiệu nhân vật' }]), 1);
   eq('next/sau chương 0', nextMainChapterNo([{ t: 'Chương 0' }]), 1);
@@ -141,15 +164,16 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     out.storyErrors = errors.slice(0, 4);
     /* thông tin bộ */
     eq('truyện/tiêu đề', ($('#shero h1') || {}).textContent, 'Bộ Thử Số');
-    ok('truyện/tổng chương hiển thị', (($('#chapCount') || {}).textContent || '').includes('6 chương'), (($('#chapCount') || {}).textContent || ''));
+    /* vòng 77: số chương nằm trên tab, dòng “Đang có N chương” đã bỏ */
+    ok('truyện/tổng chương hiển thị', (($('#tabChapCt') || {}).textContent || '').trim() === '6', (($('#tabChapCt') || {}).textContent || ''));
     /* nhóm chương */
     const groups = $$('#chapGrid .cvol').map((b) => b.textContent.trim().replace(/\s+/g, ' '));
     ok('truyện/có nhóm Mở đầu', groups.some((g) => /mở đầu/i.test(g)), groups);
     ok('truyện/có nhóm Ngoại truyện', groups.some((g) => /ngoại truyện|đặc biệt/i.test(g)), groups);
-    /* nhãn số: Mở · Mở · Mở · 1 · 2 · S1 */
+    /* nhãn số (vòng 85 · A): 0 · 0 · 0 · 1 · 2 · S1 */
     const labels = $$('#chapGrid .cha .no').map((e) => e.textContent.trim());
     const names = $$('#chapGrid .cha .nm').map((e) => e.textContent.trim());
-    ok('truyện/3 nhãn Mở', labels.filter((x) => x === 'Mở').length === 3, labels);
+    ok('truyện/3 nhãn mở đầu là 0', labels.filter((x) => x === '0').length === 3, labels);
     ok('truyện/có S1', labels.includes('S1'), labels);
     ok('truyện/số 1-2', labels.includes('1') && labels.includes('2'), labels);
     ok('truyện/giới thiệu nhân vật nằm trong danh sách', names.some((n) => /nhân vật/i.test(n)), names);
@@ -157,9 +181,9 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const mainRow = $$('#chapGrid .cha').find((a) => /Gặp gỡ/.test(a.textContent));
     ok('truyện/Chương 1 giữ đúng số', mainRow && (mainRow.querySelector('.no') || {}).textContent === '1',
       mainRow ? mainRow.textContent : '<không thấy>');
-    /* thứ tự nhãn đúng: Mở ×3 trước, rồi 1, 2, rồi S1 — nhãn lấy từ TÊN chương,
+    /* thứ tự nhãn đúng: 0 ×3 trước, rồi 1, 2, rồi S1 — nhãn lấy từ TÊN chương,
        không đếm phần mở đầu/ngoại truyện vào số chương chính */
-    eq('truyện/thứ tự nhãn', labels.join('|'), ['Mở', 'Mở', 'Mở', '1', '2', 'S1'].join('|'));
+    eq('truyện/thứ tự nhãn', labels.join('|'), ['0', '0', '0', '1', '2', 'S1'].join('|'));
     ok('truyện/có ô nhảy chương', !!$('#chapJump'));
   }
 
@@ -176,7 +200,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     ok('0chương/vẫn hiện mục lục (không rơi vào showError)', !!$('#chapSec') && $('#chapSec').style.display !== 'none',
       $('#chapSec') && $('#chapSec').style.display);
     /* thiết kế: bộ chưa ra chương để TRỐNG ô đếm — nhãn “Sắp ra mắt” đã ở đầu trang */
-    eq('0chương/ô đếm để trống', (($('#chapCount') || {}).textContent || '').trim(), '');
+    eq('0chương/tab đếm để trống', (($('#tabChapCt') || {}).textContent || '').trim(), '');
+    ok('0chương/lưới chương trống', !$('#chapGrid .cha'), ($('#chapGrid') || {}).textContent);
     const heroTxt = ((($('#shero') || doc).textContent || '')).replace(/\s+/g, ' ');
     ok('0chương/nút đọc khoá sắp ra mắt', /sắp ra mắt|chưa có chương/i.test(heroTxt), heroTxt.slice(0, 160));
   }

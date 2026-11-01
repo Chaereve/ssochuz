@@ -14,7 +14,7 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
  assert.equal($('#ratingValue b').textContent,'3');
  const sameStar = $('[data-star="3"]');
  $('#removeRating').click();await wait(80);assert.equal($('[data-star="3"]'),sameStar,'Rating updates must preserve DOM to avoid replay/flicker');assert.deepEqual(calls,[0]);assert.equal($('#ratingValue b').textContent,'0');assert.equal(notices.length,1);assert.equal($('#removeRating').hidden,true);assert.equal(p.doc.querySelectorAll('.stars .on').length,0);
- $('[data-star="1"]').dispatchEvent(new p.win.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));await wait(80);assert.equal(mine,2);assert.equal($('#ratingValue b').textContent,'2');assert.match(notices[1].msg,/2 trên 5/);assert.equal(notices[1].kind,'ok');
+ $('[data-star="1"]').dispatchEvent(new p.win.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));await wait(80);assert.equal(mine,2);assert.equal($('#ratingValue b').textContent,'2');assert.match(notices[1].msg,/Đã chấm 2\/5 sao/);   /* câu chốt hiện tại: gọn, dùng "/5" */assert.equal(notices[1].kind,'ok');
  failed=true;$('#removeRating').click();await wait(1350);assert.equal(mine,2);assert.equal($('[data-star="2"]').getAttribute('aria-checked'),'true');assert.match($('#ratingOwn').textContent,/giữ nguyên/);
  assert.equal($('#ratingValue b').textContent,'2');assert.equal(notices.length,2,'No success toast on failure');
  assert.deepEqual(p.errors,[]);p.dom.window.close();console.log('Rating: server-owned selection, withdrawal to zero, keyboard selection, failed withdrawal preserves old rating passed');

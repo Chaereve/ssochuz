@@ -6229,7 +6229,7 @@ function scrollToTop() {
     document.body.appendChild(script);
   }
 
-  function panelTheme(){var db=ensure(), th=(db.settings&&db.settings.theme)||'dark'; return '<div class="novel-list"><div class="novel-list-item"><b>Dark / Light Mode</b><div class="novel-actions"><button class="novel-small-btn '+(th==='light'?'active':'')+'" data-theme="light" type="button">Light</button><button class="novel-small-btn '+(th==='dark'?'active':'')+'" data-theme="dark" type="button">Dark</button></div></div></div>'}
+  function panelTheme(){var db=ensure(), th=(db.settings&&db.settings.theme)||'dark'; return '<div class="novel-list"><div class="novel-list-item"><b>Dark / Light Mode</b><div class="novel-actions"><button class="novel-small-btn '+(th==='light'?'active':'')+'" data-theme="dark" type="button">Light</button><button class="novel-small-btn '+(th==='dark'?'active':'')+'" data-theme="dark" type="button">Dark</button></div></div></div>'}
   function panelJournal(){var db=ensure(), val=db.journal[currentUrl]||''; return '<div class="novel-journal"><p class="novel-list-meta">Nhật ký đọc truyện được lưu trong trình duyệt của bạn cho trang hiện tại.</p><textarea id="novelJournalText" placeholder="Ghi cảm nghĩ, trích dẫn yêu thích, chương đang đọc...">'+esc(val)+'</textarea><div class="novel-actions"><button id="novelSaveJournal" class="novel-primary-btn" type="button">Lưu nhật ký</button></div></div>'}
   /* ===================== THÔNG TIN LIÊN HỆ DONATE =====================
      👉 CHỈ CẦN SỬA CÁC DÒNG DƯỚI ĐÂY

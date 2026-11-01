@@ -101,19 +101,12 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   function newer(a, b) { if (!a) return b; if (!b) return a; return revNum(a) >= revNum(b) ? a : b; }
 
   /* -- thư viện: ưu tiên KV → cache → file tĩnh -------------------------
-     VÁ (23/09): KV có thể trả `{lib: []}` khi kho trống hoặc admin vô tình ghi
-     đè bản đã lọc — bản cũ coi mảng rỗng là “hợp lệ” nên nhận luôn, bỏ qua file
-     tĩnh còn đủ bộ, rồi cache luôn bản rỗng vào localStorage (lần sau đọc cache
-     rỗng → trang tác giả/couple báo “Chưa tải được dữ liệu”). Nay: chỉ nhận bản
-     KV có sách; bản rỗng rớt về tĩnh/cache tốt và không bao giờ ghi đè cache
-     tốt bằng bản rỗng. */
+     Chỉ nhận bản KV CÓ SÁCH; bản rỗng rớt về tĩnh/cache và không bao giờ ghi đè
+     cache tốt (KV trống từng làm trang tác giả/couple báo lỗi). */
   function hasLib(r) { return !!(r && Array.isArray(r.lib) && r.lib.length); }
-  /* Gán registry MỚI: phải xoá luôn libCache.
-     VÁ (23/09, lượt 2): `libCache` trước đây chỉ bị xoá khi số chương đổi, KHÔNG
-     bị xoá khi registry về. Nên bất kỳ ai gọi CZ.lib() TRƯỚC lúc registry về
-     (chuông thông báo, ô tìm kiếm ⌘K, sự kiện pageshow khi quay lại từ bfcache…)
-     là danh sách ĐÓNG BĂNG ở [] — registry sau đó có đủ 63 bộ thì trang tác
-     giả/couple vẫn báo “Chưa tải được dữ liệu” cho tới khi tải lại trang. */
+    /* Ba “kho” khiến lỗi rỗng dính cứng: memo.reg, localStorage `ssochuz-reg` +
+     cờ cấm Worker 10 phút (`ssochuz-fallback`), và cache stale-while-revalidate
+     của service worker. purgeRegistry() dọn cả ba; registry(true) đọc lại từ đầu. */
   function setReg(reg, src) {
     memo.reg = reg; memo.src = src; w.CZ_SRC = src;
     libCache = null;
@@ -250,15 +243,11 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     memo.books[slug] = p;
     return p;
   }
-  /* -- ĐỌC NHẸ (bản 1.16.0): mục lục + đúng 1 chương ----------------------
-     Vì sao: đường cũ `book(slug)` tải CẢ bộ cho mỗi lần mở chương — trung bình
-     334 KB, bộ lớn 1,4 MB trong repo thật. Trang đọc giờ lấy:
-       · toc(slug)          → đầu sách + tên chương (vài KB)
-       · chapter(slug, n)   → đúng 1 chương (n = vị trí trong danh sách đang hiện)
-     Worker cũ (chưa deploy bản mới) hoặc mất mạng thì 2 hàm này trả về
-     null/`ok:false` → trang đọc tự rớt về đường cũ, hành vi y như trước.
-     KHÔNG thử lại ở đây: đường cũ đã có sẵn cơ chế thử lại + rớt về file tĩnh.
-     Không nhớ kết quả vào localStorage (chương sửa xong phải thấy ngay). */
+    /* -- ĐỌC NHẸ: mục lục + đúng 1 chương -----------------------------------
+     toc(slug) → đầu sách + tên chương; chapter(slug, n) → đúng 1 chương theo vị
+     trí đang hiện (thay vì tải cả bộ như `book(slug)`). Worker cũ hoặc mất mạng
+     thì hai hàm trả null/`ok:false` → tự rớt về đường cũ. Không thử lại ở đây,
+     không nhớ kết quả vào localStorage (chương sửa xong phải thấy ngay). */
   function lightFetch(url, ms) {
     var opt = {}, ctl = null, to = null;
     if (w.AbortController && ms !== -1) { ctl = new w.AbortController(); opt.signal = ctl.signal; to = setTimeout(function () { ctl.abort(); }, ms || 12000); }
@@ -361,7 +350,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         memo.stats = st;
         return st;
       }
-      memo.stats = { on: false, items: {}, err: API ? 'chưa có lượt đọc/bình chọn nào trên KV' : 'chưa nối Worker nên không có số liệu' };
+      memo.stats = { on: false, items: {}, err: API ? 'chưa có lượt đọc hay bình chọn' : 'chưa có số liệu' };
       return memo.stats;
     });
   }
@@ -397,11 +386,8 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   }
   function authToken() { try { return (w.CZ_AUTH && w.CZ_AUTH.token) ? (w.CZ_AUTH.token() || '') : ''; } catch (e) { return ''; } }
   /* 1 máy · 1 bộ · 1 ngày = 1 lượt đọc (phía máy và phía Worker đều khử trùng lặp) */
-  /* Đếm lượt đọc: mỗi máy + mỗi truyện + mỗi ngày chỉ gửi 1 lần — kiểm tra
-     TRƯỚC khi POST nên tải lại 10 lần cũng chỉ tốn 1 request (tiết kiệm quota
-     ghi KV của Worker). Khoá cũ `ssochuz-viewed-…` (ngày UTC) vẫn được đọc để
-     không đếm trùng trong ngày người đọc chuyển từ bản cũ sang (ghi thì chỉ
-     ghi khoá mới, theo ngày trên máy người đọc). */
+  /* Đếm lượt đọc: mỗi máy + mỗi truyện + mỗi ngày gửi 1 lần, kiểm tra TRƯỚC khi
+     POST nên tải lại nhiều lần cũng chỉ tốn 1 request (tiết kiệm quota ghi KV). */
   function reportView(slug, ch) {
     if (!API || !slug) return Promise.resolve(null);
     var d = new Date();
@@ -847,9 +833,9 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
           '<span class="pushic">' + icon('bell') + '</span>' +
           '<p class="pushlead">Truyện bạn theo dõi ra chương mới là máy báo ngay.</p>' +
           '<ul>' +
-            '<li>' + icon('check', 'i-s') + 'Báo cả khi không mở web, trên điện thoại lẫn máy tính</li>' +
-            '<li>' + icon('check', 'i-s') + 'Chỉ báo truyện bạn đã bấm Theo dõi</li>' +
-            '<li>' + icon('check', 'i-s') + 'Tắt lúc nào cũng được, không spam</li>' +
+            '<li>' + icon('check', 'i-s') + 'Báo cả khi chưa mở web, trên điện thoại lẫn máy tính</li>' +
+            '<li>' + icon('check', 'i-s') + 'Chỉ truyện bạn đã theo dõi</li>' +
+            '<li>' + icon('check', 'i-s') + 'Tắt lúc nào cũng được</li>' +
           '</ul>' +
         '</div>' +
         '<div class="mf"><button class="btn ghost" data-close>Để sau</button>' +
@@ -858,8 +844,8 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         m._close();
         pushSubscribe().then(function (r) {
           if (r === 'new' || r === 'old') toast('Đã bật thông báo chương mới');
-          else if (r === 'err') toast('Chưa bật được thông báo đẩy — hãy thử lại khi có mạng', 'err');
-          else if (r === 'denied' || r === 'no') toast('Chưa bật được — kiểm tra quyền thông báo của trình duyệt');
+          else if (r === 'err') toast('Không bật được thông báo. Kiểm tra kết nối rồi thử lại.', 'err');
+          else if (r === 'denied' || r === 'no') toast('Trình duyệt đang chặn thông báo. Mở cài đặt để cho phép.');
         });
       });
     }).catch(function () {});
@@ -927,6 +913,11 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     var personalMode = (w.CZPersonal || w.CZFollowPersonal) && (w.CZPersonal || w.CZFollowPersonal).mode();
     var state = personalMode === 'loading' ? 'loading' : personalMode === 'error' ? 'error' : notifState;
     var items = notifItems(), total = 0, i;
+    /* Tài khoản vừa sẵn sàng (server) thì một lần tải registry hỏng TRƯỚC ĐÓ không
+       còn là lý do để cả khung đứng ở "Không tải được": danh sách theo dõi và số
+       chương mới lúc này do dịch vụ tài khoản trả về, đã có mục để hiện. Giữ
+       khung lỗi là bắt người dùng bấm "Thử lại" cho một việc đã xong. */
+    if (state === 'error' && personalMode === 'server' && items.length) state = 'ready';
     for (i = 0; i < items.length; i++) total += items[i].c;
     var dot = d.getElementById('czNotifCount');
     if (dot) {
@@ -935,19 +926,29 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     }
     btn.classList.toggle('hasnew', total > 0);
     btn.setAttribute('aria-label', total > 0 ? ('Thông báo chương mới (' + total + ' chương mới)') : 'Thông báo chương mới');
-    menu.innerHTML = '<div class="nhead" role="presentation">' + icon('bell', 'i-s') + '<b>Chương mới</b>' +
-      (total ? '<span>' + total + ' chương mới</span>' : '') + '</div>' +
-      (state === 'loading' ? '<div class="nempty" role="menuitem" aria-disabled="true"><span role="status">Đang tải chương mới…</span></div>' :
-        state === 'error' ? '<div class="nempty" role="menuitem" aria-disabled="true"><span role="alert">Không tải được cập nhật. Kiểm tra kết nối và mở lại chuông sau một phút.</span></div>' : '') +
-      (items.length ? items.map(function (it) {
-        var n = it.n, im = coverSrc(n);
-        return '<a href="' + esc(storyURL(n.slug)) + '" role="menuitem">' +
-          '<span class="nth' + (im ? '' : ' noimg') + '">' +
-            (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</span>' +
-          '<span class="ntx"><b>' + esc(n.title) + '</b>' +
-          '<span class="nsub"><i class="nnum">' + it.c + ' chương mới</i> · ' + esc(timeAgo(n.updated)) + '</span></span>' +
-          icon('right', 'i-s') + '</a>';
-      }).join('') : (state === 'loading' || state === 'error') ? '' : '<div class="nempty" role="menuitem" aria-disabled="true">Chưa có chương mới.<br>Truyện bạn theo dõi ra chương là báo ở đây.</div>');
+    /* đầu mục: một tiêu đề + con số tổng, KHÔNG lặp lại chữ "chương mới" ở từng dòng */
+    /* role="menu" chỉ đặt khi trong khung THẬT SỰ có menuitem: tiêu đề và các
+       trạng thái tải/trống/lỗi mang role="presentation" nên không phá
+       aria-required-children; khung rỗng chuyển sang role="status" (aria-live). */
+    var head = '<div class="nhead" role="presentation"><b>Chương mới</b>' +
+      (state === 'ready' && items.length ? '<span>' + items.length + ' truyện · ' + total + ' chương</span>' : '') + '</div>';
+    var body;
+    if (state === 'loading') body = '<div class="nempty" role="presentation">Đang tải…</div>';
+    else if (state === 'error') body = '<div class="nempty" role="presentation">Không tải được thông báo.<button class="nretry" type="button">Thử lại</button></div>';
+    else if (!items.length) body = '<div class="nempty" role="presentation"><b>Chưa có chương mới</b><span>Truyện bạn theo dõi ra chương sẽ hiện ở đây.</span></div>';
+    else body = items.map(function (it) {
+      var n = it.n, im = coverSrc(n);
+      return '<a href="' + esc(storyURL(n.slug)) + '" role="menuitem" aria-label="' + esc(n.title + ' — ' + it.c + ' chương mới, cập nhật ' + timeAgo(n.updated)) + '">' +
+        '<span class="nth' + (im ? '' : ' noimg') + '">' +
+          (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</span>' +
+        '<span class="ntx"><b>' + esc(n.title) + '</b>' +
+        '<span class="nsub">Cập nhật ' + esc(timeAgo(n.updated)) + '</span></span>' +
+        '<span class="nnum">+' + it.c + '</span></a>';
+    }).join('');
+    menu.innerHTML = head + body;
+    menu.setAttribute('role', (state === 'ready' && items.length) ? 'menu' : 'status');
+    var retry = menu.querySelector('.nretry');
+    if (retry) retry.addEventListener('click', function () { notifLastCheck = 0; notifState = 'idle'; refreshNotifications(); });
   }
   function closeNotif() {
     var m = d.getElementById('czNotifMenu'), b = d.getElementById('czNotifBtn');
@@ -1078,16 +1079,13 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     return { total: total, today: today, streak: streak, week: week, last: last };
   }
 
-  /* cài đặt đọc — 2 font (serif / sans) · 3 nền (sang / kem / toi)
-     Chỉ còn các tuỳ chọn hiển thị đọc. Bộ tương tác 1.19.0 (Bionic, Terminal,
-     Zen, hộp góp gạch, tiếng hiệu ứng) đã bỏ khỏi trang; riêng hàng reaction
-     sticker cuối chương được GIỮ LẠI và luôn bật — không có công tắc trong
-     Cài đặt đọc nữa. Chỉ lưu các tuỳ chọn đọc còn dùng trong `ssochuz-reader`. */
+  /* cài đặt đọc — 2 font (serif/sans), nền TỐI duy nhất, lưu ở `ssochuz-reader`.
+     Hàng reaction cuối chương luôn bật nên không còn công tắc ở đây. */
   var RD_DEF = {
-    mode: 'scroll', size: 18, font: 'serif', line: 1.85, para: 1.05, theme: 'kem', width: 720, justify: 0
+    mode: 'scroll', size: 18, font: 'serif', line: 1.85, para: 1.05, theme: 'toi', width: 720, justify: 0
   };
   var RD_FONTS = { serif: 1, sans: 1 };
-  var RD_THEMES = { sang: 1, kem: 1, toi: 1 };
+  var RD_THEMES = { toi: 1 };
   function rdGet() {
     var cur = jsonGet(LS.read, {}) || {};
     if (typeof cur !== 'object' || Array.isArray(cur)) cur = {};
@@ -1097,9 +1095,8 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     if (cur.font && !RD_FONTS[cur.font]) {
       cur.font = (cur.font === 'sans' || cur.font === 'bevn' || cur.font === 'roboto' || cur.font === 'inter' || cur.font === 'arial') ? 'sans' : 'serif';
     }
-    if (cur.theme && !RD_THEMES[cur.theme]) {
-      cur.theme = (cur.theme === 'xam') ? 'toi' : 'kem';
-    }
+    /* cấu hình cũ (kem/sang/xam/sepia…) đều dồn về tối */
+    cur.theme = 'toi';
     return Object.assign({}, RD_DEF, cur);
   }
   function rdSet(o) {
@@ -1116,13 +1113,13 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     return v;
   }
 
-  /* sáng / tối (mặc định: nền giấy sáng) */
+  /* NỀN TỐI LÀ DUY NHẤT: giữ tên hàm cho nơi khác gọi, nhưng nó chỉ khoá
+     <html data-theme="dark"> — không đọc localStorage, nên máy từng lưu "light"
+     cũng vào thẳng nền tối. */
   function themeInit() {
-    var t = safeGet(LS.theme);
-    if (!t) { var old = safeGet(LS.dir); t = old === 'ctoi' ? 'dark' : old ? 'light' : 'light'; }
-    d.documentElement.setAttribute('data-theme', t);
+    d.documentElement.setAttribute('data-theme', 'dark');
     themeMeta();
-    return t;
+    return 'dark';
   }
   /* Thanh trình duyệt điện thoại tô theo <meta name="theme-color">. Không cập nhật
      nó thì lật sang nền tối mà thanh địa chỉ vẫn trắng — đúng cái cảm giác “lệch
@@ -1137,21 +1134,14 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     try {
       c = (w.getComputedStyle(rd ? d.body : d.documentElement).getPropertyValue(rd ? '--rd-bg' : '--bg') || '').trim();
     } catch (e) {}
-    if (!/^(#|rgb|hsl)/i.test(c)) c = d.documentElement.getAttribute('data-theme') === 'dark' ? '#14110e' : '#faf8f4';
+    if (!/^(#|rgb|hsl)/i.test(c)) c = '#14110e';
     if (m.getAttribute('content') !== c) m.setAttribute('content', c);
   }
-  /* Sáng ⇄ tối: đổi token trên html ngay trong cùng một frame.
-     Không dùng View Transitions hoặc transition hàng nghìn phần tử: trình duyệt
-     phải chụp lại toàn trang rồi blend, gây trễ rõ trên điện thoại và trang đọc.
-     Các thành phần cần chuyển động riêng (nút, menu, switch) vẫn có transition
-     cục bộ trong CSS; đổi theme nền tảng thì ưu tiên phản hồi tức thì. */
+  /* Không còn gì để lật. Giữ hàm rỗng (trả 'dark') cho nơi còn gọi tới. */
   function themeToggle() {
-    var root = d.documentElement;
-    var now = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-    root.setAttribute('data-theme', now);
-    safeSet(LS.theme, now);
+    d.documentElement.setAttribute('data-theme', 'dark');
     themeMeta();
-    return now;
+    return 'dark';
   }
 
   /* ======================= 3. BỘ ICON ================================== */
@@ -1182,6 +1172,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     history: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M12 8l0 4l2 2" /> <path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5" /></g>',
     wand: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M6 21l15 -15l-3 -3l-15 15l3 3" /> <path d="M15 6l3 3" /> <path d="M9 3a2 2 0 0 0 2 2a2 2 0 0 0 -2 2a2 2 0 0 0 -2 -2a2 2 0 0 0 2 -2" /> <path d="M19 13a2 2 0 0 0 2 2a2 2 0 0 0 -2 2a2 2 0 0 0 -2 -2a2 2 0 0 0 2 -2" /></g>',
     heart: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572" /></g>',
+    rss: '<path d="M5 19a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" /><path d="M4 4a16 16 0 0 1 16 16" /><path d="M4 11a9 9 0 0 1 9 9" />',
     share: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M13 4v4c-6.575 1.028 -9.02 6.788 -10 12c-.037 .206 5.384 -5.962 10 -6v4l8 -7l-8 -7" /></g>',
     check: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M5 12l5 5l10 -10" /></g>',
     moon: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454l0 .008" /></g>',
@@ -1240,6 +1231,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     wall: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M4 6a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2l0 -12" /> <path d="M4 8h16" /> <path d="M20 12h-16" /> <path d="M4 16h16" /> <path d="M9 4v4" /> <path d="M14 8v4" /> <path d="M8 12v4" /> <path d="M16 12v4" /> <path d="M11 16v4" /></g>',
     volume: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M15 8a5 5 0 0 1 0 8" /> <path d="M17.7 5a9 9 0 0 1 0 14" /> <path d="M6 15h-2a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 1 -1h2l3.5 -4.5a.8 .8 0 0 1 1.5 .5v14a.8 .8 0 0 1 -1.5 .5l-3.5 -4.5" /></g>',
     sparkles: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M16 18a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m0 -12a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m-7 12a6 6 0 0 1 6 -6a6 6 0 0 1 -6 -6a6 6 0 0 1 -6 6a6 6 0 0 1 6 6" /></g>',
+    pause: '<g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M6 6a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1l0 -12" /> <path d="M14 6a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1l0 -12" /></g>',
     momo: '<rect x="4" y="4" width="16" height="16" rx="4.5"/><path d="M8.4 12c0-2 1.6-3.6 3.6-3.6s3.6 1.6 3.6 3.6-1.6 3.6-3.6 3.6S8.4 14 8.4 12z"/><circle cx="12" cy="12" r="1.2"/>'
   };
 
@@ -1254,11 +1246,9 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
     });
   }
-  /* Bản rút gọn của một đoạn chữ dài, dùng cho thẻ truyện, hero trang chủ và
-     meta description. KHÉP Ở DẤU CÂU khi còn chỗ; không khép được thì mới cắt ở
-     khoảng trắng — cắt cứng theo số ký tự (.slice(0, 220)) là thứ đã tạo ra
-     những câu đứt ngang giữa một từ trong registry trước đây.
-     Cùng một luật với syn_teaser() trong tools/sync_blogger.py. */
+  /* Rút gọn đoạn chữ dài cho thẻ truyện, hero và meta description: khép ở dấu câu
+     khi còn chỗ, không được thì cắt ở khoảng trắng (không cắt cứng theo ký tự).
+     Cùng luật với syn_teaser() trong tools/sync_blogger.py. */
   function teaser(text, limit) {
     var s = String(text == null ? '' : text).replace(/\s+/g, ' ').trim();
     var lim = parseInt(limit, 10) || 200;
@@ -1344,28 +1334,23 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         d.body.appendChild(b); b.click(); b.remove();
         return true;
       } catch (e2) {
-        toast('Trình duyệt không cho tải tệp — bạn copy nội dung trong bảng thay thế');
+        toast('Trình duyệt chặn tải tệp. Sao chép nội dung trong bảng.');
         return false;
       }
     }
   }
   function copy(text, okMsg) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      return navigator.clipboard.writeText(text).then(function () { toast(okMsg || 'Đã copy liên kết'); return true; })
+      return navigator.clipboard.writeText(text).then(function () { toast(okMsg || 'Đã sao chép liên kết'); return true; })
         .catch(function () { toast(text); return false; });
     }
     toast(text);
     return Promise.resolve(false);
   }
-  /* ---- SỐ CHƯƠNG THẬT (đối chiếu từ kho chương) ---------------------------
-     Bệnh: sửa 30/30 → 29/29 trong file JSON trên GitHub nhưng web vẫn hiện 30,
-     vì web đọc registry trên Cloudflare KV trước, và con số trong registry là
-     bản chép tay nên dễ lệch với số chương thật của bộ.
-     Chữa 3 lớp:
-       1. Worker tự đếm lại mỗi lần ghi 1 bộ + có nút /api/recount (admin).
-       2. Web mở bộ nào thì đối chiếu số chương thật của bộ đó và GHI NHỚ trong
-          máy (ssochuz-realcounts) — từ đó trang chủ/thư viện hiện đúng số.
-       3. norm() dưới đây luôn lấy số đã đối chiếu thay cho nhãn cũ.            */
+    /* ---- SỐ CHƯƠNG THẬT (đối chiếu từ kho chương) ---------------------------
+     Registry là bản chép tay nên dễ lệch số: Worker tự đếm lại mỗi lần ghi một
+     bộ (kèm /api/recount cho admin); web mở bộ nào thì đối chiếu bộ đó và nhớ
+     trong máy (`ssochuz-realcounts`); norm() luôn lấy số đã đối chiếu. */
   var LS_REAL = 'ssochuz-realcounts';
   var realMap = null;
   function realCounts() {
@@ -1509,17 +1494,26 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     }
     return b;
   }
+  /* Thông báo nổi: biểu tượng + một dòng chữ, tối đa 3 cái cùng lúc (cái cũ
+     nhất tự rụng), lỗi giữ lâu hơn để kịp đọc, trỏ vào thì dừng đếm giờ. */
   function toast(msg, kind) {
     var b = toastBox(), el = d.createElement('div');
-    el.className = 'toast' + (kind ? ' ' + kind : '');
-    el.innerHTML = msg;
+    var k = kind === 'err' ? 'err' : kind === 'ok' ? 'ok' : '';
+    el.className = 'toast' + (k ? ' ' + k : '');
+    el.innerHTML = icon(k === 'err' ? 'alert' : 'check', 'i-s') + '<span class="ttx">' + msg + '</span>';
     b.appendChild(el);
+    while (b.children.length > 3) { var old = b.firstElementChild; if (old === el) break; old.remove(); }
     requestAnimationFrame(function () { el.classList.add('in'); });     /* trồi lên */
-    setTimeout(function () {
+    function dismiss() {
+      if (el._gone) return;
+      el._gone = true;
       el.classList.remove('in');
       el.classList.add('out');                                         /* đi xuống, nhanh hơn */
       setTimeout(function () { el.remove(); }, ms('--t-close', 150) + 60);
-    }, 2800);
+    }
+    var timer = setTimeout(dismiss, k === 'err' ? 5000 : 3000);
+    el.addEventListener('mouseenter', function () { clearTimeout(timer); });
+    el.addEventListener('mouseleave', function () { if (!el._gone) timer = setTimeout(dismiss, 1500); });
   }
   function modal(id, html, opt) {
     opt = opt || {};
@@ -1627,7 +1621,6 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       '<h3>' + esc((n&&n.title)||'—') + '</h3><div class="cb">' + esc((n&&n.author)||'') + '</div></div>';
     var pg = progress(n), pct = n.chapters ? Math.min(100, Math.round(pg / n.chapters * 100)) : 0;
     var img = coverSrc(n);
-    if (opts.view === 'list') return cardList(n, img, pg, pct);
     /* thẻ lưới: tình trạng là KÝ HIỆU TRÒN ở góc trái bìa; “Mới” là BOOKMARK thả
        từ cạnh trên-phải (đuôi cắt chữ V, chữ xếp dọc); 18+ nằm ở hàng chân bìa
        cạnh số chương. Ba thứ ba góc nên không bao giờ chồng nhau.
@@ -1640,55 +1633,24 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       '<div class="th' + (img ? ' skel' : '') + '">' +
       (img ? '<img src="' + esc(img) + '"' + coverFB(n, img) + ' alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer" width="300" height="450">' : '') +
       '<span class="scrim"></span>' +
-      '<span class="stic st-' + stCls + '" title="' + esc(stLab) + '" aria-label="Tình trạng: ' + esc(stLab) + '" role="img">' + icon(STATUS_ICON[stCls] || 'clock', 'i-s') + '</span>' +
+      /* Tình trạng = VIÊN CHỮ (chấm màu + tên) thay cho vòng tròn icon 28px phát
+         sáng: không phải nhớ “vòng xanh là gì”, và cùng một hệ với số chương/18+
+         ở chân bìa (cùng cao, cùng bo, cùng nền tối mờ). */
+      '<span class="spill t-' + stCls + '" title="' + esc(stLab) + '" aria-label="Tình trạng: ' + esc(stLab) + '" role="img"><i class="d"></i>' + esc(stLab) + '</span>' +
       (n.fresh ? '<span class="nw-bookmark"><span>NEW</span></span>' : '') +
       (n.locked ? '<span class="lock-bookmark" title="Truyện có mật mã — bấm vào để nhập mật mã và đọc" aria-label="Truyện có mật mã">' + icon('lock', 'i-s') + '</span>' : '') +
       followBadge(n) +
-      '<span class="foot"><span class="ch">' + esc(countText(n)) + '</span>' +
+      /* chưa có chương thì KHÔNG in “0/—” nữa — tình trạng “Sắp ra mắt” đã nói đủ */
+      '<span class="foot">' + (parseInt(n.chapters, 10) ? '<span class="ch">' + esc(countText(n)) + '</span>' : '') +
         (n.is18 ? '<span class="b18">18+</span>' : '') + '</span>' +
       (pct ? '<span class="bar"><i style="width:' + pct + '%"></i></span>' : '') +
       '</div>' +
       '<h3>' + esc(n.title) + '</h3>' +
-      /* dòng ngay dưới tên truyện là TÁC GIẢ. Bản cũ ưu tiên couple nên 25 bộ có
-         couple bị đề tên cặp đôi thay vì người viết — couple vẫn còn chỗ riêng của
-         nó ở bộ lọc, ở hero và trong trang truyện. */
+      /* dòng dưới tên truyện là TÁC GIẢ; couple có chỗ riêng ở bộ lọc, hero và trang truyện. */
       '<div class="cb">' + esc(n.author || n.couple || '') + '</div>' +
       '</a></div>';
   }
   /* xem dạng danh sách: mỗi bộ một hàng, đủ thông tin để quyết định mở hay không */
-  function cardList(n, img, pg, pct) {
-    if (!n || !n.slug) return '<div class="card list off"><span class="cl-main"><span class="cl-top"><b class="cl-t">' + esc((n&&n.title)||'—') + '</b></span><span class="cl-meta">thiếu slug — sửa trong trang quản trị</span></span></div>';
-    /* tác giả trước, couple sau — cùng thứ tự với thẻ lưới và với trang truyện */
-    var bits = [n.author, n.couple, n.year].filter(Boolean);
-    var read = pg > 0;
-    return '<div class="cardwrap listwrap"><a class="card list st-' + esc(n.statusCls || 'soon') + '" href="' + esc(storyURL(n.slug)) + '" data-t="' + esc(n.title) + '" title="' + esc(n.title) + '">' +
-      '<span class="cl-th' + (img ? ' skel' : '') + '">' +
-        (img ? '<img src="' + esc(img) + '"' + coverFB(n, img) + ' alt="Bìa ' + esc(n.title) + '" loading="lazy" decoding="async" referrerpolicy="no-referrer" width="300" height="450">' : '') +
-      '</span>' +
-      '<span class="cl-main">' +
-        '<span class="cl-top"><b class="cl-t">' + esc(n.title) + '</b>' +
-          (n.locked ? '<span class="b18 locktag" title="Truyện có mật mã">' + icon('lock', 'i-s') + '</span>' : '') +
-          (n.is18 ? '<span class="b18">18+</span>' : '') +
-          (n.fresh ? '<span class="badge-new">NEW</span>' : '') +
-          followBadge(n) +
-        '</span>' +
-        '<span class="cl-meta">' + esc(bits.join(' · ') || '—') + '</span>' +
-        '<span class="cl-syn">' + esc(n.syn || 'Chưa có mô tả cho bộ này.') + '</span>' +
-        (pct ? '<span class="cl-prog" title="đã đọc ' + pct + '%"><i style="width:' + pct + '%"></i></span>' : '') +
-      '</span>' +
-      '<span class="cl-side">' +
-        '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(statusLabel(n.statusCls || n.status)) + '</span>' +
-        '<span class="cl-ch">' + esc(countText(n)) + '</span>' +
-        '<span class="cl-year">' + esc(n.year ? 'Năm ' + n.year : '—') + '</span>' +
-      '</span>' +
-      '<span class="cl-go">' + (read ? 'Đọc tiếp' : 'Xem truyện') + icon('right', 'i-s') + '</span>' +
-      '</a></div>';
-  }
-  /* hàng tiêu đề cho kiểu xem danh sách (chỉ là nhãn, không bấm được) */
-  function listHead() {
-    return '<div class="list-head" aria-hidden="true">' +
-      '<span>Bộ truyện</span><span>Tình trạng · chương</span><span></span></div>';
-  }
   function mountRail(el, list, opts) {
     if (!el) return;
     opts = opts || {};
@@ -1741,18 +1703,18 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       task.then(function (saved) {
         b.disabled = false;
         refreshFollowUI(slug);
-        toast(saved ? 'Đã theo dõi — có chương mới sẽ hiện ở trang chủ' : 'Đã bỏ theo dõi');
+        toast(saved ? 'Đã theo dõi. Chương mới sẽ hiện ở trang chủ.' : 'Đã bỏ theo dõi');
         followPushHook(saved);   /* chỉ hỏi bật Push sau khi lưu thành công */
       }).catch(function (error) {
         b.disabled = false;
         refreshFollowUI(slug);  /* service đã hoàn tác optimistic update */
-        toast(error.message || 'Không lưu được trạng thái theo dõi', 'err');
+        toast(error.message || 'Không lưu được. Thử lại sau.', 'err');
       });
       return;
     }
     on = toggleFollow(findLib(slug) || { slug: slug });
     refreshFollowUI(slug);
-    toast(on ? 'Đã theo dõi — có chương mới sẽ hiện ở trang chủ' : 'Đã bỏ theo dõi');
+    toast(on ? 'Đã theo dõi. Chương mới sẽ hiện ở trang chủ.' : 'Đã bỏ theo dõi');
     followPushHook(on);
   }, true);
   w.addEventListener('cz:personal', function (event) {
@@ -1782,52 +1744,14 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     }, { rootMargin: '0px 0px -50px 0px' });
     Array.prototype.forEach.call(els, function (e) { io.observe(e); });
   }
-  function countUp(el, to) {
-    if (reduce) { el.textContent = num(to); return; }
-    el.classList.add('numrun');
-    setTimeout(function () { el.classList.remove('numrun'); }, 420);
-    var t0 = (w.performance && performance.now) ? performance.now() : Date.now(), dur = 750;
-    (function step(t) {
-      var k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
-      el.textContent = num(Math.round(to * e));
-      if (k < 1) requestAnimationFrame(step); else el.textContent = num(to);
-    })(t0);
-  }
-  function scaleFacts(root) {
-    var nums = (root || d).querySelectorAll('[data-count]');
-    if (!nums.length) return;
-    if (reduce || !w.IntersectionObserver) { Array.prototype.forEach.call(nums, function (b) { b.textContent = num(+b.dataset.count || 0); }); return; }
-    var fired = 0;
-    var io = new IntersectionObserver(function (es) {
-      es.forEach(function (e) {
-        fired++;
-        if (!e.isIntersecting) return;
-        countUp(e.target, +e.target.dataset.count || 0);
-        io.unobserve(e.target);
-      });
-    }, { threshold: .4 });
-    Array.prototype.forEach.call(nums, function (b) { b.textContent = '0'; io.observe(b); });
-    /* lưới an toàn: nếu máy không gọi lại observer (bị chặn, khung ẩn…) thì điền số luôn */
-    setTimeout(function () {
-      if (fired) return;
-      Array.prototype.forEach.call(nums, function (b) { b.textContent = num(+b.dataset.count || 0); });
-    }, 2500);
-  }
-  /* vạch tiến độ cuộn trang + nút lên đầu */
+  /* nút "lên đầu": chỉ bật/tắt khi trạng thái đổi, không ghi style mỗi khung hình. */
   function scrollUI() {
-    var bar = d.querySelector('#sprog i'), top = d.querySelector('#toTop'), tick = false, lastY = w.scrollY || 0;
+    var top = d.querySelector('#toTop'), tick = false, shown = null;
     function run() {
       if (tick) return; tick = true;
       requestAnimationFrame(function () {
-        var y = w.scrollY || 0;
-        var h = d.documentElement.scrollHeight - w.innerHeight;
-        /* scaleX chứ không phải width: ghi width mỗi khung hình vừa bắt layout lại
-           vừa biến lần đọc scrollHeight ở khung kế thành đọc-cưỡng-bức. */
-        if (bar) bar.style.transform = 'scaleX(' + (h > 0 ? Math.min(1, Math.max(0, y / h)) : 0) + ')';
-        if (top) top.classList.toggle('on', y > 700);
-        d.body.classList.toggle('scrolled', y > 8);
-        /* thanh trên không còn trượt theo / ẩn hiện khi cuộn — đứng yên với trang */
-        lastY = y;
+        var y = w.scrollY || 0, on = y > 700;
+        if (top && on !== shown) { top.classList.toggle('on', on); shown = on; }
         tick = false;
       });
     }
@@ -1904,21 +1828,10 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     el.classList.add('pop');
     setTimeout(function () { if (el.classList) el.classList.remove('pop'); }, 480);
   }
-  /* chuyển trang: vạch tiến độ trên cùng + nội dung hiện dần, không nhảy khô */
+  /* chuyển trang: chỉ còn hiệu ứng nội dung hiện dần (không còn vạch chạy trên
+     cùng — người dùng đã yêu cầu bỏ hẳn thanh chạy ở đỉnh trang) */
   function pageFx() {
-    var bar = d.createElement('div');
-    bar.id = 'nprog'; bar.setAttribute('aria-hidden', 'true'); bar.innerHTML = '<i></i>';
-    d.body.appendChild(bar);
-    var fill = bar.firstChild;
     d.body.classList.add('page-in');
-    if (!reduce) {
-      fill.style.transform = 'scaleX(.1)'; fill.style.opacity = '1';
-      requestAnimationFrame(function () { fill.style.transform = 'scaleX(.64)'; });
-      setTimeout(function () {
-        fill.style.transform = 'scaleX(1)';
-        setTimeout(function () { fill.style.opacity = '0'; }, 220);
-      }, 240);
-    }
     /* bắt cú bấm: gợn sóng cho nút, và điệu chuyển trang cho liên kết nội bộ */
     d.addEventListener('click', function (e) {
       if (e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
@@ -1934,9 +1847,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       if (u.origin !== w.location.origin) return;
       if (u.pathname === w.location.pathname && u.search === w.location.search) return;
       e.preventDefault();
-      fill.style.opacity = '1'; fill.style.transform = 'scaleX(.92)';
-      var go = function () { w.location.href = link.href; };
-      if (reduce) go(); else setTimeout(go, 170);
+      w.location.href = link.href;
     }, true);
   }
 
@@ -1976,11 +1887,18 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', inkAll); else inkAll();
 
   /* ======================= 8. ĐẦU TRANG / CHÂN TRANG =================== */
+  /* Thương hiệu: TRỌN khoá chữ "ssochuz Library" vẽ tay (PNG trắng, nền trong
+     suốt, 699×98) — ảnh đã chứa cả phần chữ nhỏ, nên không còn nhãn <i> riêng.
+     width/height khai báo đúng tỉ lệ gốc để trình duyệt chừa chỗ trước khi ảnh
+     tải xong (không CLS). alt trùng đúng tên thương hiệu mà nhãn cũ đọc lên
+     ("ssochuz library") ⇒ tên đọc của liên kết không đổi, không cần aria-label. */
+  var BRAND_IMG = '/assets/brand/ssochuz-logo.png';
+  function MARK() {
+    return '<img class="mark" src="' + BRAND_IMG + '" width="699" height="98" alt="ssochuz library" decoding="async">';
+  }
   function mountHeader(host, active) {
     if (!host) return;
-    /* Một nhãn dùng chung cho header desktop, menu mobile và tiêu đề các khối
-       trên trang. Trước đây desktop dùng tên rút gọn còn mobile dùng `vi`, nên
-       cùng một điểm đến lại hiện hai cách gọi khác nhau. */
+    /* Một nhãn dùng chung cho header, menu mobile và tiêu đề khối trên trang. */
     var NAV = [
       { k: 'space', label: 'My Space', i: 'shelf', h: '/my-space' },
       { k: 'library', label: 'Thư viện', i: 'library', h: '/#thu-vien' },
@@ -1990,10 +1908,17 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       { k: 'authors', label: 'Tác giả', i: 'pen', h: '/tac-gia/' },
       { k: 'couples', label: 'Couple', i: 'users', h: '/couple/' }
     ];
-    var links = NAV.map(function (n) {
-      return '<a href="' + n.h + '" data-k="' + n.k + '"' + (n.k === active ? ' class="on"' : '') + ' title="' + esc(n.label) + '" aria-label="' + esc(n.label) + '">' +
+    /* Điều hướng bằng MỘT nút "Danh mục" thay cho dãy mục ngang: bảy điểm đến
+       nằm trong một bảng hai cột, mở tại chỗ. Dãy ngang cũ phải thu về icon ở
+       mọi khổ dưới 1200px (mất nhãn, phải đoán hình), còn nút này giữ nguyên
+       nhãn chữ ở mọi khổ và trả lại chiều ngang cho ô tìm kiếm.
+       NAV vẫn là nguồn duy nhất; thứ tự DOM = thứ tự NAV nên menu mobile (vốn
+       liệt kê đủ bảy mục) khớp từng nhãn một. */
+    function navA(n) {
+      return '<a href="' + n.h + '" data-k="' + n.k + '"' + (n.k === active ? ' class="on" aria-current="page"' : '') +
+        ' title="' + esc(n.label) + '" aria-label="' + esc(n.label) + '">' +
         icon(n.i, 'i-s') + '<span class="nav-lbl">' + esc(n.label) + '</span></a>';
-    }).join('');
+    }
     var mLinks = NAV.map(function (n) {
       return '<a href="' + n.h + '" data-k="' + n.k + '"' + (n.k === active ? ' class="on"' : '') + ' aria-label="' + esc(n.label) + '">' +
         icon(n.i, 'i-s') + ' ' + esc(n.label) + '</a>';
@@ -2002,14 +1927,26 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     var mn = d.querySelector('main');
     if (mn && !mn.id) mn.id = 'main';
     d.querySelectorAll('nav.crumb:not([aria-label])').forEach(function (el) { el.setAttribute('aria-label', 'Đường dẫn trang'); });
-    host.innerHTML = '<a class="skip" href="#main" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden">Chuyển tới nội dung chính</a><div class="in">' +
-      '<a class="logo" href="/" title="ssochuz library"><span class="dot"></span>ssochuz<i> library</i></a>' +
-      '<nav class="nav" id="czNav" aria-label="Điều hướng chính"><span class="ink" id="czInk" aria-hidden="true"></span>' + links + '</nav>' +
+    /* Skip link phải trỏ tới một đích CÓ THẬT và focus được: mỗi trang đặt tên
+       <main> khác nhau (#story, .space-wrap, …) nên lấy id của <main> ngay tại
+       đây, thiếu thì đặt id="main" + tabindex=-1. Trước đây href="#main" cứng
+       mà phần lớn trang không có id đó ⇒ Lighthouse báo skip-link hỏng. */
+    var mainEl = d.querySelector('main');
+    if (mainEl) {
+      if (!mainEl.id) mainEl.id = 'main';
+      if (!mainEl.hasAttribute('tabindex')) mainEl.setAttribute('tabindex', '-1');
+    }
+    host.innerHTML = '<a class="skip" href="#' + (mainEl ? mainEl.id : 'main') + '">Chuyển tới nội dung chính</a><div class="in">' +
+      '<a class="logo" href="/" title="ssochuz library">' + MARK() + '</a>' +
       '<span class="grow"></span>' +
-      '<button class="hbtn" id="czInstall" hidden title="Cài app ssochuz library" aria-label="Cài app ssochuz library">' + icon('download', 'i-s') +
-        '<span class="nav-lbl">Cài app</span></button>' +
-      '<button class="hbtn" id="czJump" title="Tìm truyện, tác giả, couple (⌘K)" aria-label="Tìm kiếm">' + icon('search', 'i-s') +
-        '<span class="searchbtn-txt">Tìm</span><span class="k">⌘K</span></button>' +
+      /* ô tìm kiếm rộng: bấm (hoặc ⌘K) là mở bảng tìm nhanh — cùng một đường vào
+         với phím tắt, không dựng thêm một ô nhập thứ hai để khỏi lệch kết quả */
+      /* Không đặt aria-label khác chữ hiện ra (WCAG 2.5.3 “nhãn bằng chữ”):
+         tên đọc lên phải CHỨA đúng chữ người dùng nhìn thấy. Chữ trong nút đã
+         đủ nghĩa nên bỏ aria-label là cách gọn nhất — trước đây “Tìm kiếm…” vs
+         “Tìm…” lệch một chữ là Lighthouse báo lỗi. */
+      '<button class="hbtn" id="czJump" title="Tìm truyện, tác giả, couple (⌘K)" aria-haspopup="dialog">' + icon('search', 'i-s') +
+        '<span class="searchbtn-txt">Tìm truyện, tác giả, couple…</span><span class="k">⌘K</span></button>' +
       /* chuông trung tâm thông báo: truyện đã theo dõi có chương mới thì hiện số */
       '<div class="hnotif" id="czNotif">' +
         '<button class="hbtn icon" id="czNotifBtn" aria-haspopup="menu" aria-expanded="false" aria-label="Thông báo chương mới" title="Thông báo chương mới">' +
@@ -2017,14 +1954,6 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         '</button>' +
         '<div class="nmenu" id="czNotifMenu" role="menu" aria-label="Truyện có chương mới"></div>' +
       '</div>' +
-      /* công tắc sáng/tối — lấy cấu trúc của uiverse.io/catraco/brown-termite-67:
-         rãnh bo tròn, biểu tượng trượt + xoay và đổi tông trời. Giữ id #czTheme
-         / #czThemeIn để trạng thái cũ, bàn phím và các bài kiểm thử không vỡ. */
-      '<label class="tsw switch-name" id="czTheme" title="Đổi nền sáng/tối">' +
-        '<input type="checkbox" class="tsw-in checkbox" id="czThemeIn" role="switch" aria-label="Nền tối">' +
-        '<span class="tsw-sl back" aria-hidden="true"></span>' +
-        icon('moon', 'tsw-icon moon') + icon('sun', 'tsw-icon sun') +
-      '</label>' +
       /* ---- ĐĂNG NHẬP: nút luôn có trên mọi trang (kể cả trang chủ) ---- */
       '<div class="hauth" id="czAuth">' +
         '<button class="hbtn authbtn" id="czAuthBtn" aria-haspopup="menu" aria-expanded="false">' +
@@ -2032,35 +1961,25 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         '</button>' +
         '<div class="amenu" id="czAuthMenu" role="menu" aria-label="Tài khoản"></div>' +
       '</div>' +
+      '<button class="hbtn" id="czInstall" hidden title="Cài app ssochuz library" aria-label="Cài app ssochuz library">' + icon('download', 'i-s') +
+        '<span class="nav-lbl">Cài app</span></button>' +
       '<button class="hbtn icon burger" id="czBurger" aria-label="Mở menu" aria-expanded="false" aria-controls="czMnav">' + icon('menu', 'i-s') + '</button>' +
       '</div>' +
-      '<div class="mnav" id="czMnav">' + mLinks +
-      '<a href="/guide">' + icon('info', 'i-s') + ' Hướng dẫn</a>' +
-      /* mục Quản trị được vẽ trong paintAuth(): người thường KHÔNG thấy */
-      '<span id="czAuthMWrap"></span></div>';
-
-    var tb = host.querySelector('#czTheme');
-    var tin = host.querySelector('#czThemeIn');
-    /* công tắc chỉ có 2 trạng thái (sáng ⇄ tối) nên chỉ cần đồng bộ lại ô chọn
-       và nhãn đọc máy sau mỗi lần đổi — nhãn nói rõ đang ở nền nào */
-    function paintTheme() {
-      var dark = d.documentElement.getAttribute('data-theme') === 'dark';
-      var lbl = dark ? 'Đang bật nền tối — bấm để về nền sáng' : 'Đang ở nền sáng — bấm để bật nền tối';
-      if (tin) { tin.checked = dark; tin.setAttribute('aria-label', lbl); }
-      tb.setAttribute('title', lbl);
-      tb.setAttribute('aria-label', lbl);
-    }
-    paintTheme();
-    /* KHÔNG gắn handler cho cú bấm: <label> đã bọc sẵn ô chọn nên trình duyệt tự
-       chuyển cú bấm vào ô, ô lật checked rồi phát 'change' — dựng thêm handler
-       bấm nữa là mỗi cú bấm đổi 2 lần thành ra… không đổi gì. Việc duy nhất cần
-       làm ở đây là lật nền cho khớp với ô, và chỉ lật khi hai bên đang LỆCH nhau
-       (nhờ vậy dù 'change' có bị phát thừa cũng không đổi hai lần). */
-    if (tin) tin.addEventListener('change', function () {
-      var dark = d.documentElement.getAttribute('data-theme') === 'dark';
-      if (tin.checked !== dark) themeToggle();
-      paintTheme();
-    });
+      /* ---- SIDEBAR: một cột mục dọc dùng cho MỌI khổ ----
+         Trước đây chỉ điện thoại/tablet có menu này, còn desktop phải nhồi bảy
+         mục lên thanh trên (rồi dưới 1200px thu về icon trơ). Nay chỉ còn MỘT
+         cách điều hướng: nút menu mở sidebar trượt từ trái, nội dung y như bản
+         di động cũ, nên ba khổ không còn lệch nhau về cấu trúc. */
+      '<div class="mscrim" id="czMscrim" aria-hidden="true"></div>' +
+      '<aside class="mnav" id="czMnav" aria-label="Menu điều hướng">' +
+        '<div class="mnav-hd">' +
+          '<span class="logo mnav-brand">' + MARK() + '</span>' +
+          '<button class="mnav-x" id="czMnavX" type="button" aria-label="Đóng menu">' + icon('x', 'i-s') + '</button>' +
+        '</div>' +
+        '<nav id="czNav" aria-label="Điều hướng chính">' + mLinks + '</nav>' +
+        /* mục Quản trị được vẽ trong paintAuth(): người thường KHÔNG thấy */
+        '<span id="czAuthMWrap"></span>' +
+      '</aside>';
 
     /* ---- nút đăng nhập + menu tài khoản ----
        · Chưa đăng nhập: bấm là mở đăng nhập (Supabase → Google, hoặc link email).
@@ -2181,30 +2100,57 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     navInk(host);
     var mnav = host.querySelector('#czMnav');
     var burger = host.querySelector('#czBurger');
-    /* Nút menu (chỉ hiện trên điện thoại): phải báo rõ đang mở/đóng cho trình đọc
-       màn hình, đóng được bằng phím Esc và bằng cú bấm ra ngoài — trước đây chỉ
-       bấm lại đúng nút mới đóng. */
+    var mscrim = host.querySelector('#czMscrim');
+    var mclose = host.querySelector('#czMnavX');
+    /* SIDEBAR (mọi khổ): mở bằng nút menu, đóng bằng nút X, phím Esc, bấm ra
+       scrim hoặc chọn một mục. Trạng thái báo cho trình đọc màn hình qua
+       aria-expanded/aria-label của nút menu; nền khoá cuộn khi sidebar mở để
+       bánh xe không cuộn trang phía sau. */
     burger.setAttribute('aria-controls', 'czMnav');
+    var lastMenuOn = null;
     function paintMenu() {
       var on = mnav.classList.contains('on');
       burger.setAttribute('aria-expanded', on ? 'true' : 'false');
       burger.setAttribute('aria-label', on ? 'Đóng menu' : 'Mở menu');
+      if (mscrim) mscrim.classList.toggle('on', on);
+      d.body.classList.toggle('nav-open', on);
+      /* Chỉ phát khi trạng thái ĐỔI: hero nghe sự kiện này để tạm dừng tự chuyển
+         (chuyển động banner chạy sau lớp phủ chỉ tốn khung hình). */
+      if (lastMenuOn !== null && lastMenuOn !== on) {
+        try { d.dispatchEvent(new w.CustomEvent('cz:nav', { detail: { open: on } })); } catch (err) {}
+      }
+      lastMenuOn = on;
+    }
+    function openMenu() {
+      mnav.classList.add('slid', 'on');
+      paintMenu();
+      /* tô sáng mục đang đọc đúng lúc panel mở (thay cho listener scroll cũ) */
+      if (host._navRefresh) host._navRefresh();
+      var first = mnav.querySelector('a, button');
+      if (first && first.focus && !reduce) { try { first.focus({ preventScroll: true }); } catch (err) {} }
+    }
+    function closeMenuNav(back) {
+      if (!mnav.classList.contains('on')) return;
+      mnav.classList.remove('on');
+      paintMenu();
+      if (back) { try { burger.focus(); } catch (err) {} }
     }
     paintMenu();
     burger.addEventListener('click', function (e) {
       e.stopPropagation();                       /* để không bị chính handler "bấm ra ngoài" đóng ngay */
-      slide(mnav);
+      mnav.classList.contains('on') ? closeMenuNav() : openMenu();
       d.body.classList.remove('nav-up');
-      paintMenu();
     });
-    mnav.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('a')) { slide(mnav, false); paintMenu(); } });
+    if (mclose) mclose.addEventListener('click', function () { closeMenuNav(true); });
+    if (mscrim) mscrim.addEventListener('click', function () { closeMenuNav(true); });
+    mnav.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('a')) closeMenuNav(); });
     d.addEventListener('click', function (e) {
       if (!mnav.classList.contains('on')) return;
       if (e.target.closest && (e.target.closest('#czMnav') || e.target.closest('#czBurger'))) return;
-      slide(mnav, false); paintMenu();
+      closeMenuNav();
     });
     d.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && mnav.classList.contains('on')) { slide(mnav, false); paintMenu(); try { burger.focus(); } catch (err) {} }
+      if (e.key === 'Escape' && mnav.classList.contains('on')) { closeMenuNav(true); }
     });
     host.querySelector('#czJump').addEventListener('click', function () { openJump(); });
     var insBtn = host.querySelector('#czInstall');
@@ -2303,10 +2249,10 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     if (isIOS()) {
       modal('czIosGuide',
         '<div class="mh"><h4>Cài app ssochuz library</h4></div>' +
-        '<div class="mb"><p>iPhone/iPad chưa hỗ trợ nút cài tự động — bạn cài bằng tay nhé:</p>' +
-        '<p><b>1.</b> Bấm nút <b>Chia sẻ</b> ' + icon('share', 'i-s') + ' ở thanh công cụ Safari.<br>' +
+        '<div class="mb"><p class="mtip">iPhone/iPad chưa cài tự động được — làm 3 bước:</p>' +
+        '<p><b>1.</b> Bấm <b>Chia sẻ</b> ' + icon('share', 'i-s') + ' trên thanh công cụ Safari.<br>' +
         '<b>2.</b> Chọn <b>Thêm vào Màn hình chính</b>.<br>' +
-        '<b>3.</b> Bấm <b>Thêm</b> là xong — app mở toàn màn hình, đọc được offline.</p></div>' +
+        '<b>3.</b> Bấm <b>Thêm</b> — app mở toàn màn hình, đọc được offline.</p></div>' +
         '<div class="mf"><button class="btn pri" data-close>Đã hiểu</button></div>');
     }
   }
@@ -2335,42 +2281,54 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     if (!('serviceWorker' in navigator)) return;
     if (location.protocol !== 'http:' && location.protocol !== 'https:') return;
     w.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferredPrompt = e; paintInstall(); });
-    w.addEventListener('appinstalled', function () { deferredPrompt = null; paintInstall(); toast('Đã cài app ssochuz library'); });
+    w.addEventListener('appinstalled', function () { deferredPrompt = null; paintInstall(); toast('Đã cài ứng dụng.'); });
     /* đăng ký sau khi trang tải xong để không giành mạng với nội dung chính */
     if (d.readyState === 'complete') swRegister(); else w.addEventListener('load', swRegister);
   }
   /* thanh mục ở đầu trang: gạch chân trượt sang mục đang xem, không chỉ là mấy chữ chết */
   function navInk(host) {
-    var nav = host.querySelector('#czNav'), ink = host.querySelector('#czInk');
-    if (!nav || !ink) return;
+    var nav = host.querySelector('#czNav');
+    if (!nav) return;
     var links = Array.prototype.slice.call(nav.querySelectorAll('a[data-k]'));
     if (!links.length) return;
     var ids = links.map(function (a) { return (a.getAttribute('href') || '').split('#')[1] || ''; });
     var have = ids.filter(function (id) { return !!(id && d.getElementById(id)); }).length;
+    /* Đánh dấu mục đang xem trong sidebar (.on + aria-current), chỉ ghi khi đổi. */
     function mark(el) {
-      links.forEach(function (a) { a.classList.toggle('on', a === el); });
-      if (!el) { ink.style.opacity = '0'; return; }
-      /* .nav .ink có nền 100px: scaleX(w/100) cho đúng độ dài, không animate width */
-      ink.style.transform = 'translateX(' + el.offsetLeft + 'px) scaleX(' + (el.offsetWidth / 100) + ')';
-      ink.style.opacity = '1';
+      links.forEach(function (a) {
+        var on = a === el;
+        if (a.classList.contains('on') !== on) a.classList.toggle('on', on);
+        var cur = a.getAttribute('aria-current') === 'page';
+        if (on && !cur) a.setAttribute('aria-current', 'page');
+        else if (!on && cur) a.removeAttribute('aria-current');
+      });
     }
     var here = links.filter(function (a) { return a.classList.contains('on'); })[0];
-    if (have < 2) { mark(here || links[0]); return; }
-    var tick = false;
-    function spy() {
-      tick = false;
-      var y = (w.scrollY || 0) + 150, cur = null;
-      ids.forEach(function (id, i) { var el = d.getElementById(id); if (el && el.offsetTop <= y) cur = i; });
-      mark(cur == null ? links[0] : links[cur]);
+    mark(here || null);
+    if (have < 2) return;
+    /* Tô sáng mục sidebar chỉ tính MỘT lần lúc mở panel (mountHeader gọi
+       host._navRefresh), không chạy theo mỗi khung hình cuộn. */
+    function refresh() {
+      /* getBoundingClientRect thay cho offsetTop: offsetTop tính theo offsetParent,
+         nên khi khối nằm trong một lớp có position thì nó trả về số nhỏ và mục
+         “Lịch ra chương” bị tô sáng ngay khi vừa vào trang chủ. Rect là toạ độ
+         thật trên màn hình nên đúng với mọi bố cục — và giờ chỉ chạy một lần mỗi
+         lần mở panel nên chi phí đọc layout này không đáng kể. */
+      var cur = null;
+      ids.forEach(function (id, i) {
+        var el = d.getElementById(id);
+        if (el && el.getBoundingClientRect().top <= 150) cur = i;
+      });
+      mark(cur == null ? here : links[cur]);
     }
-    function run() { if (tick) return; tick = true; requestAnimationFrame(spy); }
-    w.addEventListener('scroll', run, { passive: true });
-    w.addEventListener('resize', run);
+    host._navRefresh = refresh;
     d.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('#czNav a'); if (a) mark(a); });
-    run();
   }
-  /* Chân trang nền tối: logo (đồng bộ đầu trang) + câu cảm ơn + 3 liên kết,
-     dồn cột trái. Nền tối CỐ ĐỊNH ở cả hai tông sáng/tối để luôn giống mẫu. */
+  /* Chân trang nền tối, HAI tầng ngăn bằng đường kẻ tóc:
+       trên  · khoá chữ ssochuz + một câu cảm ơn, dồn trái, không hộp lồng hộp
+       dưới  · bản quyền (trái) + ba liên kết ngoài (phải)
+     Nền tối CỐ ĐỊNH (web chỉ còn một tông tối) để chân trang luôn giống mẫu.
+     Trang hướng dẫn đã bỏ (2026-11-01) nên chân trang chỉ còn kênh liên lạc. */
   function mountFooter(host) {
     if (!host) return;
     host.className = 'ftr';
@@ -2378,14 +2336,18 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     var fb = 'https://www.facebook.com/profile.php?id=61592803761987';
     var survey = cfg.form || 'https://forms.gle/YW3PvtrNVQ7xt8nCA';
     host.innerHTML = '<div class="in">' +
-      '<a class="logo" href="/" title="ssochuz library"><span class="dot"></span>ssochuz<i>library</i></a>' +
-      '<p class="fthanks">Cảm ơn bạn đã ủng hộ và đồng hành cùng ssochuz library!</p>' +
-      '<nav class="flinks" aria-label="Trợ giúp và kênh liên lạc">' +
-        '<a href="/guide">Hướng dẫn</a>' +
-        '<a href="' + esc(fb) + '" target="_blank" rel="noopener">Facebook</a>' +
-        '<a href="' + esc(survey) + '" target="_blank" rel="noopener">Khảo sát truyện</a>' +
-        (API ? '<a href="' + esc(API + '/feed.xml') + '" target="_blank" rel="noopener" title="RSS chương mới (dùng cho Feedly, Inoreader…)">' + icon('rss', 'i-s') + 'RSS</a>' : '') +
-      '</nav>' +
+      '<div class="ft-brand">' +
+        '<a class="logo ft-logo" href="/" title="ssochuz library — về trang chủ">' + MARK() + '</a>' +
+        '<p class="ft-note">Cảm ơn bạn đã ủng hộ và đồng hành cùng ssochuz library.</p>' +
+      '</div>' +
+      '<div class="ft-base">' +
+        '<span class="ft-copy">© ' + new Date().getFullYear() + ' ssochuz library</span>' +
+        '<nav class="ft-links" aria-label="Kênh liên lạc">' +
+          '<a href="' + esc(fb) + '" target="_blank" rel="noopener">Facebook</a>' +
+          '<a href="' + esc(survey) + '" target="_blank" rel="noopener">Khảo sát truyện</a>' +
+          (API ? '<a href="' + esc(API + '/feed.xml') + '" target="_blank" rel="noopener" title="RSS chương mới (dùng cho Feedly, Inoreader…)">' + icon('rss', 'i-s') + 'RSS</a>' : '') +
+        '</nav>' +
+      '</div>' +
     '</div>';
   }
   function mountShell(opt) {
@@ -2394,6 +2356,15 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     if (d.getElementById('ftr')) mountFooter(d.getElementById('ftr'));
   }
 
+  /* Tô đậm phần khớp trong tên truyện: tách chuỗi TRƯỚC khi escape từng khúc —
+     esc() đổi ký tự thành entity nên không thể tìm vị trí trên chuỗi đã escape. */
+  function jumpHL(text, q) {
+    var t = String(text || '');
+    if (!q) return esc(t);
+    var i = t.toLowerCase().indexOf(q);
+    if (i < 0) return esc(t);
+    return esc(t.slice(0, i)) + '<mark>' + esc(t.slice(i, i + q.length)) + '</mark>' + esc(t.slice(i + q.length));
+  }
   /* -- tìm kiếm nổi (Ctrl+K) ------------------------------------------- */
   var jumpMounted = false, jumpList = [], jumpCur = 0;
   function openJump() {
@@ -2402,11 +2373,14 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       box = d.createElement('div');
       box.id = 'czJumpBox'; box.className = 'jump';
       box.innerHTML = '<div class="scrim"></div><div class="box">' +
-        '<div class="q">' + icon('search') +
-        '<input id="czJumpInput" placeholder="Tìm truyện, tác giả, couple…" autocomplete="off" spellcheck="false">' +
-        '<button class="btn ghost sm" data-close>Esc</button></div>' +
-        '<div class="res" id="czJumpRes"></div>' +
-        '<div class="foot"><span><kbd>↑</kbd><kbd>↓</kbd> chọn</span><span><kbd>Enter</kbd> mở</span><span><kbd>Esc</kbd> đóng</span></div></div>';
+        '<div class="q"><span class="qi" aria-hidden="true">' + icon('search', 'i-s') + '</span>' +
+          '<input id="czJumpInput" type="search" placeholder="Tìm truyện, tác giả, couple…" autocomplete="off" spellcheck="false" ' +
+            'role="combobox" aria-expanded="true" aria-controls="czJumpRes" aria-autocomplete="list" aria-label="Tìm truyện, tác giả, couple">' +
+          '<button class="qx" type="button" data-close aria-label="Đóng tìm kiếm">' + icon('x', 'i-s') + '</button></div>' +
+        '<div class="jhead"><span>Truyện</span><em id="czJumpCnt"></em></div>' +
+        '<div class="res" id="czJumpRes" role="listbox" aria-label="Kết quả tìm kiếm"></div>' +
+        '<div class="foot"><span><kbd>↑</kbd><kbd>↓</kbd> chọn</span>' +
+          '<span><kbd>↵</kbd> mở</span><span><kbd>Esc</kbd> đóng</span></div></div>';
       d.body.appendChild(box);
       box.addEventListener('click', function (e) { if (e.target.classList.contains('scrim') || e.target.closest('[data-close]')) close(); });
       var input = box.querySelector('#czJumpInput');
@@ -2461,17 +2435,37 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       .sort(function (a, b) { return b.s - a.s || (b.n.chapters - a.n.chapters); })
       .slice(0, 24).map(function (x) { return x.n; });
     jumpCur = 0;
-    res.innerHTML = jumpList.length ? jumpList.map(function (n, i) {
-      return '<a href="' + esc(storyURL(n.slug)) + '" class="' + (i === 0 ? 'on' : '') + '">' +
-        (coverSrc(n) ? '<img src="' + esc(coverSrc(n)) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '<img alt="">') +
-        '<span><b>' + esc(n.title) + '</b><span>' + esc(n.author || '') +
-        (n.couple ? ' · ' + esc(n.couple) : '') + ' · ' + esc(countText(n)) + '</span></span></a>';
-    }).join('') : '<div class="empty" style="border:0;background:none">Không tìm thấy truyện nào khớp “' + esc(q) + '”.</div>';
+    if (!jumpList.length) {
+      var c0 = box.querySelector('#czJumpCnt');
+      if (c0) c0.textContent = '';
+      res.innerHTML = ql
+        ? '<div class="jem"><b>Không tìm thấy “' + esc(String(q).trim()) + '”</b><span>Thử tên khác, hoặc tìm theo tác giả / couple.</span></div>'
+        : '<div class="jem"><b>Đang tải thư viện…</b></div>';
+      return;
+    }
+    var cnt = box.querySelector('#czJumpCnt');
+    if (cnt) cnt.textContent = jumpList.length + ' bộ';
+    res.innerHTML = jumpList.map(function (n, i) {
+      var im = coverSrc(n);
+      /* dòng phụ chỉ có tác giả · couple; số chương dồn sang cột phải để mắt
+         quét tên trước, không phải đọc hết câu */
+      var meta = [n.author, n.couple].filter(Boolean).map(esc).join(' · ');
+      var ch = (parseInt(n.chapters, 10) || 0) > 0 ? countText(n) : '';
+      return '<a href="' + esc(storyURL(n.slug)) + '" role="option" aria-selected="' + (i === 0 ? 'true' : 'false') + '"' +
+        (i === 0 ? ' class="on"' : '') + '>' +
+        '<span class="th">' + (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '') + '</span>' +
+        '<span class="tx"><b>' + jumpHL(n.title, ql) + '</b><span>' + meta + '</span></span>' +
+        '<span class="ch">' + esc(ch) + '</span></a>';
+    }).join('');
   }
   function paintLast() {
     var box = d.getElementById('czJumpBox'); if (!box) return;
     var as = box.querySelectorAll('#czJumpRes a');
-    Array.prototype.forEach.call(as, function (a, i) { a.classList.toggle('on', i === jumpCur); });
+    Array.prototype.forEach.call(as, function (a, i) {
+      var on = i === jumpCur;
+      a.classList.toggle('on', on);
+      a.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
     if (as[jumpCur]) as[jumpCur].scrollIntoView({ block: 'nearest' });
   }
 
@@ -2492,7 +2486,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
          vị trí trong kho chương nên không phải lúc nào cũng trùng tên chương thật. */
       var chLabel = String(opt.chLabel || '').trim();
       function chWord() { return chLabel || (chap ? 'chương ' + chap : ''); }
-      var state = { all: [], byChap: {}, filter: chap > 0 && opt.chapterFilter !== false ? 'chap' : 'all', busy: false, count: 0, replyTo: '', stickerId: '', replyStickers: Object.create(null) };
+      var state = { all: [], byChap: {}, filter: chap > 0 && opt.chapterFilter !== false ? 'chap' : 'all', busy: false, count: 0, replyTo: '', stickerId: '', open: false, replyStickers: Object.create(null) };
 
       function u() { return (w.CZ_AUTH && w.CZ_AUTH.current && w.CZ_AUTH.current()) || null; }
       function tk() { return (w.CZ_AUTH && w.CZ_AUTH.token && w.CZ_AUTH.token()) || ''; }
@@ -2514,7 +2508,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         var selected = stickerOf(stickerId);
         var list = Array.isArray(w.CZStickers) ? w.CZStickers : [];
         return '<div class="cmt-sticker-tools" data-sticker-tools="' + esc(scope) + '">' +
-          '<button type="button" class="cmt-sticker-open" data-sticker-open="' + esc(scope) + '" aria-expanded="false" aria-controls="' + esc(id + '-stickers-' + scope) + '">＋ Sticker Sso</button>' +
+          '<button type="button" class="cmt-sticker-open" data-sticker-open="' + esc(scope) + '" aria-expanded="false" aria-controls="' + esc(id + '-stickers-' + scope) + '"><span>Kèm sticker</span></button>' +
           (selected ? '<span class="cmt-sticker-selected">' + stickerCard(selected, true) + '<button type="button" data-sticker-clear="' + esc(scope) + '" aria-label="Bỏ sticker ' + esc(selected.label) + '">×</button></span>' : '') +
           '<div class="cmt-sticker-picker" id="' + esc(id + '-stickers-' + scope) + '" data-sticker-picker="' + esc(scope) + '" hidden role="group" aria-label="Chọn sticker Sso">' +
           list.map(function (sticker) {
@@ -2579,7 +2573,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         var rows = state.filter === 'chap' ? state.all.filter(function (c) { return (Number(c.ch) || 0) === chap; }) : state.all;
         if (!rows.length) {
           return '<div class="cmt-status">' + (state.filter === 'chap'
-            ? 'Chưa có bình luận nào cho ' + chWord() + '. Viết câu đầu tiên đi!'
+            ? 'Chưa có bình luận nào. Bạn mở màn nhé.'
             : 'Chưa có bình luận nào. Hãy là người đầu tiên!') + '</div>';
         }
         var children = {};
@@ -2605,6 +2599,13 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       function guestName() { return safeGet('ssochuz-cmtname') || ''; }
       function form() {
         var me = u();
+        /* bản gọn (trang đọc): form thu thành MỘT hàng chữ, bấm mới mở ra —
+           để cuối chương không có sẵn ba ô nhập trước khi người đọc muốn viết */
+        if (opt.compact && !state.open) {
+          return '<button class="cmt-open" data-openform type="button">' +
+            '<span class="cmt-open-plus" aria-hidden="true">+</span>' +
+            '<span>Viết bình luận…</span></button>';
+        }
         if (!me) {
           /* KHÔNG bắt đăng nhập mới được bình luận: trang chưa bật Supabase thì người đọc
              vẫn viết được (bình luận gắn với mã máy ẩn danh). Có tài khoản thì tốt hơn. */
@@ -2653,6 +2654,13 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
             if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'enter') send();
           });
         }
+        var ob = host.querySelector('[data-openform]');
+        if (ob) ob.addEventListener('click', function () {
+          state.open = true;
+          paint();
+          var t = host.querySelector('[data-text]');
+          if (t) { try { t.focus(); } catch (e) {} }
+        });
         host.querySelectorAll('[data-f]').forEach(function (b) {
           b.addEventListener('click', function () { state.filter = b.dataset.f; paint(); });
         });
@@ -2764,8 +2772,8 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         var nm = host.querySelector('[data-reply-form="' + safeId + '"] [data-reply-name]');
         var text = ta ? String(ta.value || '').replace(/[\r\n\t]+/g, ' ').trim() : '';
         var selectedSticker = state.replyStickers[safeId] || '';
-        if (!text && !stickerOf(selectedSticker)) { toast('Viết câu trả lời hoặc chọn sticker trước khi gửi', 'err'); if (ta) ta.focus(); return; }
-        if (!base()) { toast('Chưa nối Worker (cz-config.js) nên không gửi được trả lời', 'err'); return; }
+        if (!text && !stickerOf(selectedSticker)) { toast('Nhập nội dung hoặc chọn sticker trước khi gửi.', 'err'); if (ta) ta.focus(); return; }
+        if (!base()) { toast('Chưa kết nối máy chủ. Chưa gửi được.', 'err'); return; }
         if (state.busy) return;
         state.busy = true;
         if (sd) { sd.disabled = true; sd.textContent = 'Đang gửi…'; }
@@ -2800,8 +2808,8 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         var ta = host.querySelector('[data-text]');
         var sd = host.querySelector('[data-send]');
         var text = ta ? String(ta.value || '').replace(/\s+/g, ' ').trim() : '';
-        if (!text && !stickerOf(state.stickerId)) { toast('Viết bình luận hoặc chọn sticker trước khi gửi', 'err'); if (ta) ta.focus(); return; }
-        if (!base()) { toast('Chưa nối Worker (cz-config.js) nên không gửi được bình luận', 'err'); return; }
+        if (!text && !stickerOf(state.stickerId)) { toast('Nhập nội dung hoặc chọn sticker trước khi gửi.', 'err'); if (ta) ta.focus(); return; }
+        if (!base()) { toast('Chưa kết nối máy chủ. Chưa gửi được.', 'err'); return; }
         if (state.busy) return;
         state.busy = true;
         if (sd) { sd.disabled = true; sd.textContent = 'Đang gửi…'; }
@@ -2821,7 +2829,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
                 /* token hết hạn hoặc Worker chưa có SUPABASE_URL -> ưu tiên hiển thị
                    LÝ DO thật từ body Worker (bản mới trả kèm nguyên nhân cụ thể),
                    không âm thầm biến thành khách */
-                throw new Error(j.error || 'Phiên đăng nhập hết hạn — hãy đăng nhập lại (hoặc kiểm tra cấu hình SUPABASE_URL/SESSION_SECRET trên Worker)');
+                throw new Error(j.error || 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
               }
               throw new Error(j.error || ('HTTP ' + r.status));
             }
@@ -2831,6 +2839,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
           state.busy = false;
           addSent(j);
           state.stickerId = '';
+          if (opt.compact) state.open = false;
           paint();
           toast('Đã gửi bình luận', 'ok');
           if (opt.onChanged) opt.onChanged(state.count);
@@ -2854,21 +2863,17 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
               load(true);
               toast('Đã xoá bình luận', 'ok');
             });
-          }).catch(function (e) { toast(String(e.message || 'Không xoá được'), 'err'); });
+          }).catch(function (e) { toast(String(e.message || 'Không xoá được. Thử lại sau.'), 'err'); });
         });
       }
       function load(keepUI) {
         if (!base()) {
-          host.innerHTML = '<div class="cmt-wrap"><div class="cmt-status">Chưa nối Worker (<code>cz-config.js</code>) nên chưa đọc được bình luận.</div></div>';
+          host.innerHTML = '<div class="cmt-wrap"><div class="cmt-status">Chưa tải được bình luận.</div></div>';
           return Promise.resolve(0);
         }
         if (!keepUI) { state.busy = true; paint(); }
-        /* lấy bình luận:
-           · trang truyện (ch=0, chapterFilter false) → chỉ lấy bình luận chung (ch=0)
-           · trang đọc (chap>0) → lấy HẾT để có đủ byChapter cho tab “Tất cả”,
-             rồi lọc ở client (list()).
-           Trước đây dòng này là '?limit=200' + (chap ? '&ch=' : '') → ch rỗng nên
-           luôn trả hết, và thiếu giá trị khi chap>0. */
+        /* lấy bình luận: trang truyện (ch=0) lấy bình luận chung; trang đọc lấy HẾT rồi
+           lọc ở client để tab “Tất cả” có đủ byChapter. */
         var q = '?limit=200';
         if (chap === 0 && opt.chapterFilter === false) q += '&ch=0';
         /* truyện khóa mật mã: đính kèm token để GET comments qua được chốt
@@ -3033,7 +3038,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     realCount: realCount, reconcileCount: reconcileCount, onStatsChange: onStatsChange, notifyStats: notifyStats,
     rdGet: rdGet, rdSet: rdSet, themeInit: themeInit, themeToggle: themeToggle, themeMeta: themeMeta,
     icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo, teaser: teaser,
-    statusCls: statusCls, statusLabel: statusLabel, statusIcon: statusIcon, words: words, norm: norm, couplesOf: couplesOf, countText: countText, listHead: listHead,
+    statusCls: statusCls, statusLabel: statusLabel, statusIcon: statusIcon, words: words, norm: norm, couplesOf: couplesOf, countText: countText,
     /* bóc tên chương dùng chung (src/shared/chapters.js): trang truyện, mục
        lục, nhảy chương — và trang quản trị đều qua đây, khỏi lệch nhau */
     chapInfo: function (t) { return parseChapterTitle(t); },
@@ -3041,7 +3046,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     chapEmpty: chapterIsEmpty,
     chapHasMedia: chapterHasMedia,
     storyURL: storyURL, readURL: readURL, slugify: slugify, qs: qs, copy: copy, download: download,
-    card: card, coverFB: coverFB, coverSrc: coverSrc, bookCover: bookCover, mountRail: mountRail, reveal: reveal, countUp: countUp, scaleFacts: scaleFacts,
+    card: card, coverFB: coverFB, coverSrc: coverSrc, bookCover: bookCover, mountRail: mountRail, reveal: reveal,
     scrollUI: scrollUI, slide: slide, pageFx: pageFx, pop: pop, setIcon: setIcon, shake: shake,
     msWait: function () { return ms('--t-close', 150); }, ink: ink, inkAll: inkAll,
     mountShell: mountShell, mountHeader: mountHeader, mountFooter: mountFooter,

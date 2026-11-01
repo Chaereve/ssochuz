@@ -19,6 +19,10 @@
 /cz-home.js
   Cache-Control: no-cache
 
+# 2026-10-29 — component hero banner dùng chung (cz-hero.js)
+/cz-hero.js
+  Cache-Control: no-cache
+
 /cz-story.js
   Cache-Control: no-cache
 

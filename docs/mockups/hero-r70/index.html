@@ -1,0 +1,136 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bìa truyện — vòng 70</title><style>
+:root{
+  --bg:#121010; --txt:#f4efe8;
+  --mut:rgba(255,255,255,.62); --dim:rgba(255,255,255,.42); --faint:rgba(255,255,255,.30);
+  --acc:#e0859b; --ink:#1a1113; --bd:rgba(255,240,220,.08);
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,"Times New Roman",serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:400 14px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1240px;margin:0 auto;padding:40px 24px 88px}
+.doc .lede{color:var(--mut);margin:0;max-width:74ch;font-size:13.5px;line-height:1.75}
+.doc b{color:var(--txt);font-weight:600}
+
+.opt{margin:44px 0 0}
+.oh{display:flex;align-items:baseline;gap:10px;margin:0 0 15px}
+.oh .no{color:var(--acc);font-weight:600}
+.oh h2{font:600 13px/1.3 var(--sans);margin:0;color:var(--txt)}
+.oh p{margin:0;font-size:12.5px;color:var(--dim)}
+.frame{width:1032px;max-width:100%}
+
+/* ---------- phần lõi dùng chung ---------- */
+.hero{position:relative}
+.pad{padding:26px}
+.cover{position:relative;display:block;grid-column:1;grid-row:1/span 2;width:172px;aspect-ratio:2/3;border-radius:7px;overflow:hidden;
+  background:#241d19;box-shadow:0 26px 44px -28px rgba(0,0,0,.95),0 0 0 1px rgba(255,255,255,.10)}
+.cover img{width:100%;height:100%;object-fit:cover;display:block}
+.cover .cg{position:absolute;inset:auto 0 0;height:44%;background:linear-gradient(transparent,rgba(8,6,5,.86))}
+.b18{position:absolute;left:9px;top:9px;display:grid;place-items:center;width:24px;height:24px;
+  border-radius:50%;border:1px solid rgba(255,255,255,.88);background:rgba(10,8,6,.5);
+  font:700 8.5px/1 var(--mono);color:#fff}
+.cs{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:5px;padding:0 10px 9px;
+  font:700 8.5px/1 var(--mono);letter-spacing:.15em;text-transform:uppercase;color:#93eebb}
+.cs i{width:4px;height:4px;border-radius:50%;background:currentColor;box-shadow:0 0 7px currentColor}
+
+.in{display:grid;grid-template-columns:172px minmax(0,1fr);gap:0 32px;align-items:start}
+.txtW{grid-column:2;grid-row:1;min-width:0}
+.rest{grid-column:2;grid-row:2;min-width:0}
+h1.tt{margin:-4px 0 0;font-family:var(--serif);font-weight:400;font-size:clamp(24px,2.4vw,30px);
+  line-height:1.18;letter-spacing:.004em;color:#f8f3ea;text-wrap:balance}
+.who{display:flex;align-items:center;flex-wrap:wrap;margin:13px 0 0;font-size:13.5px;line-height:1.5;color:var(--mut)}
+.who .u{white-space:nowrap}
+.who b{font-weight:600;color:rgba(255,255,255,.96)}
+.who i{font-style:normal;opacity:.28;margin:0 8px}
+.stat{display:flex;align-items:center;flex-wrap:wrap;margin:5px 0 0;font-size:11.5px;line-height:1.5;
+  letter-spacing:.012em;color:var(--dim);font-variant-numeric:tabular-nums}
+.stat .u{white-space:nowrap}
+.stat i{font-style:normal;opacity:.38;margin:0 8px}
+
+.rate{display:flex;align-items:center;gap:10px;margin:17px 0 0}
+.stars{display:flex}
+.st{display:grid;place-items:center;width:24px;height:28px}
+.st svg{width:15px;height:15px;fill:none;stroke:rgba(255,245,235,.32);stroke-width:1.15;stroke-linejoin:round}
+.sc{font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--dim)}
+.sc b{color:rgba(255,255,255,.9);font-weight:600}
+.rn{font-size:12px;color:var(--faint)}
+
+.acts{display:flex;align-items:center;gap:8px;margin:18px 0 0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:38px;padding:0 15px;
+  border-radius:8px;font:600 12.5px/1 var(--sans);text-decoration:none;color:rgba(255,255,255,.70);
+  background:rgba(255,255,255,.035);box-shadow:inset 0 0 0 1px rgba(255,255,255,.10)}
+.btn svg{width:15px;height:15px;flex:none}
+.btn.pri{background:var(--acc);color:var(--ink);padding:0 17px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 1px 2px rgba(0,0,0,.45)}
+.btn.gh{background:transparent;box-shadow:none;padding:0 9px;color:rgba(255,255,255,.55)}
+.btn.ic{width:38px;padding:0;flex:none}
+
+.rule{height:1px;margin:25px 0 0;
+  background:linear-gradient(90deg,rgba(255,240,220,.14),rgba(255,240,220,.05) 46%,rgba(255,240,220,0))}
+.lab{margin:15px 0 0;font:600 9px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+.syn{margin:9px 0 0;font-size:13.5px;line-height:1.75;color:rgba(255,255,255,.66);max-width:70ch}
+.more{display:inline-flex;align-items:center;gap:4px;margin-top:11px;font:600 12px/1 var(--sans);color:var(--acc);text-decoration:none}
+.more svg{width:12px;height:12px}
+
+/* ---------- P1: không khung ---------- */
+.p1{padding:2px 0 6px}
+.p1 .in{grid-template-columns:172px minmax(0,1fr);gap:0 34px}
+.p1 .base{height:1px;margin-top:20px;
+  background:linear-gradient(90deg,rgba(255,240,220,.14),rgba(255,240,220,.05) 46%,rgba(255,240,220,0))}
+
+/* ---------- P2: thẻ nổi ---------- */
+.p2{background:#1d1815;border-radius:14px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 2px 4px rgba(0,0,0,.35),0 30px 60px -34px rgba(0,0,0,.9)}
+
+/* ---------- 390 ---------- */
+.mob{width:343px;flex:none}
+.is-m .pad{padding:14px}
+.is-m .in{grid-template-columns:132px minmax(0,1fr);grid-template-rows:auto auto 1fr;gap:0 14px}
+.is-m .txtW{display:contents}
+.is-m h1.tt{grid-column:1/-1;grid-row:1;margin:0 0 13px;font-size:17px;line-height:1.24}
+.is-m .cover{grid-column:1;grid-row:2 / span 2;width:132px;align-self:start}
+.is-m .who{grid-column:2;grid-row:2;display:block;margin:0;font-size:11.5px;line-height:1.45}
+.is-m .who .u{display:block}
+.is-m .who i{display:none}
+.is-m .stat{grid-column:2;grid-row:3;display:block;margin:5px 0 0;font-size:10.5px;line-height:1.6}
+.is-m .stat .u{display:block}
+.is-m .stat i{display:none}
+.is-m .rest{grid-column:1/-1;grid-row:4}
+.is-m .rate{margin:14px 0 0}
+.is-m .acts{margin:12px 0 0}
+.is-m .btn{height:42px}
+.is-m .btn.pri{flex:1 1 auto}
+.is-m .btn.ic{width:42px;height:42px;flex:0 0 42px}
+.is-m .btn.gh{display:none}
+.is-m .rule{margin-top:18px}
+.is-m .lab{margin-top:13px}
+.is-m .syn{margin-top:7px;font-size:12.5px;line-height:1.7}
+.is-m .more{margin-top:9px;font-size:11.5px}
+.is-m.p1{padding-bottom:4px}
+
+.foot{margin:60px 0 0;padding-top:18px;border-top:1px solid var(--bd);color:var(--dim);font-size:12px;line-height:1.9}
+.foot b{color:var(--mut);font-weight:600}
+@media (max-width:900px){ .oh{flex-wrap:wrap} }
+</style></head><body>
+<div class="wrap">
+<header class="doc">
+  <p class="lede">Bìa truyện cũ đang là một tấm thẻ gần như <b>cùng màu với nền</b> nên nhìn không ra khối, lại còn một dải kẻ và một hàng số liệu vụn bên trong. Dưới đây là hai cách dựng lại — cùng một bố cục, khác cách tạo chiều sâu. Cả hai đã bỏ khung lồng khung, gộp năm vào ngày, và chỉ giữ một nút son.</p>
+</header>
+
+<section class="opt">
+  <div class="oh"><span class="no">1</span><h2>Không khung</h2><p>— bìa và chữ đứng thẳng trên nền trang, ngăn với danh sách chương bằng một đường kẻ mảnh</p></div>
+  <div class="frame"><div class="hero p1"><div class="pad"><div class="in"><span class="cover"><img src="/assets/covers/80b25f67.webp" alt="Bìa Hometown Romance"><span class="cg"></span><span class="b18">18+</span><span class="cs"><i></i>Hoàn thành</span></span><div class="txtW"><h1 class="tt">HOMETOWN ROMANCE - SPECIAL</h1><p class="who"><span class="u"><b>Lambo</b><i>·</i></span><span class="u">Lookmhee x Sonya</span></p><p class="stat"><span class="u">10 chương<i>·</i></span><span class="u">cập nhật 29-05-2026</span></p></div><div class="rest"><div class="rate"><span class="stars"><span class="st"><svg viewBox="0 0 24 24"><path d="m12 2.6 2.95 6 6.55.95-4.75 4.6 1.15 6.5L12 17.6l-5.9 3.05 1.15-6.5L2.5 9.55l6.55-.95Z"/></svg></span><span class="st"><svg viewBox="0 0 24 24"><path d="m12 2.6 2.95 6 6.55.95-4.75 4.6 1.15 6.5L12 17.6l-5.9 3.05 1.15-6.5L2.5 9.55l6.55-.95Z"/></svg></span><span class="st"><svg viewBox="0 0 24 24"><path d="m12 2.6 2.95 6 6.55.95-4.75 4.6 1.15 6.5L12 17.6l-5.9 3.05 1.15-6.5L2.5 9.55l6.55-.95Z"/></svg></span><span class="st"><svg viewBox="0 0 24 24"><path d="m12 2.6 2.95 6 6.55.95-4.75 4.6 1.15 6.5L12 17.6l-5.9 3.05 1.15-6.5L2.5 9.55l6.55-.95Z"/></svg></span><span class="st"><svg viewBox="0 0 24 24"><path d="m12 2.6 2.95 6 6.55.95-4.75 4.6 1.15 6.5L12 17.6l-5.9 3.05 1.15-6.5L2.5 9.55l6.55-.95Z"/></svg></span></span><span class="sc"><b>0</b> / 5</span><span class="rn">chưa có đánh giá</span></div><div class="acts"><a class="btn pri" href="#"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.2v13.6L19 12Z"/></svg>Đọc tiếp</a><a class="btn gh" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>Theo dõi</a><a class="btn ic" href="#" aria-label="Lưu vào tủ truyện"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12a1 1 0 011 1v17l-7-4-7 4V4a1 1 0 011-1z"/></svg></a></div><div class="rule"></div><p class="lab">Giới thiệu</p><p class="syn">Một cuộc hôn nhân chưa bao giờ thực sự êm đềm nhưng lại gắn kết với nhau một cách hoàn hảo, giống hệt như một ly rượu vang đỏ đắt tiền không hiểu sao lại vô cùng ăn ý khi thưởng thức cùng…</p><a class="more" href="#">Đọc giới thiệu đầy đủ<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></a></div></div></div><div class="base"></div></div></div>
+  <div style="display:flex;gap:22px;margin-top:20px"><div class="mob is-m p1"><div class="pad"><div class="in"><span class="cover"><img src="/assets/covers/80b25f67.webp" alt="Bìa Hometown Romance"><span class="cg"></span><span class="b18">18+</span><span class="cs"><i></i>Hoàn thành</span></span><div class="txtW"><h1 class="tt">HOMETOWN ROMANCE - SPECIAL</h1><p class="who"><span class="u"><b>Lambo</b><i>·</i></span><span class="u">Lookmhee x Sonya</span></p><p class="stat"><span class="u">10 chương<i>·</i></span><span class="u">cập nhật 29-05-2026</span></p></div><div class="rest"><div class="rate"><span class="stars"><span class="st"><svg viewBox="0 0 24 24"><path d="m12 2.6 2.95 6 6.55.95-4.75 4.6 1.15 6.5L12 17.6l-5.9 3.05 1.15-6.5L2.5 9.55l6.55-.95Z"/></svg></span><span class="st"><svg viewBox="0 0 24 24"><path d="m12 2.6 2.95 6 6.55.95-4.75 4.6 1.15 6.5L12 17.6l-5.9 3.05 1.15-6.5L2.5 9.55l6.55-.95Z"/></svg></span><span class="st"><svg viewBox="0 0 24 24"><path d="m12 2.6 2.95 6 6.55.95-4.75 4.6 1.15 6.5L12 17.6l-5.9 3.05 1.15-6.5L2.5 9.55l6.55-.95Z"/></svg></span><span class="st"><svg viewBox="0 0 24 24"><path d="m12 2.6 2.95 6 6.55.95-4.75 4.6 1.15 6.5L12 17.6l-5.9 3.05 1.15-6.5L2.5 9.55l6.55-.95Z"/></svg></span><span class="st"><svg viewBox="0 0 24 24"><path d="m12 2.6 2.95 6 6.55.95-4.75 4.6 1.15 6.5L12 17.6l-5.9 3.05 1.15-6.5L2.5 9.55l6.55-.95Z"/></svg></span></span><span class="sc"><b>0</b> / 5</span><span class="rn">chưa có đánh giá</span></div><div class="acts"><a class="btn pri" href="#"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.2v13.6L19 12Z"/></svg>Đọc tiếp</a><a class="btn ic" href="#" aria-label="Lưu vào tủ truyện"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12a1 1 0 011 1v17l-7-4-7 4V4a1 1 0 011-1z"/></svg></a></div><div class="rule"></div><p class="lab">Giới thiệu</p><p class="syn">Một cuộc hôn nhân chưa bao giờ thực sự êm đềm nhưng lại gắn kết với nhau một cách hoàn hảo, giống hệt như một ly rượu vang đỏ đắt tiền không hiểu sao lại vô cùng ăn ý…</p><a class="more" href="#">Đọc giới thiệu đầy đủ<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></a></div></div></div><div class="base"></div></div></div>
+</section>
+
+<section class="opt">
+  <div class="oh"><span class="no">2</span><h2>Thẻ nổi</h2><p>— vẫn một tấm thẻ, nhưng sáng hơn nền và có bóng thật, nhìn ra ngay là một khối</p></div>
+  <div class="frame"><div class="hero p2"><div class="pad"><div class="in"><span class="cover"><img src="/assets/covers/80b25f67.webp" alt="Bìa Hometown Romance"><span class="cg"></span><span class="b18">18+</span><span class="cs"><i></i>Hoàn thành</span></span><div class="txtW"><h1 class="tt">HOMETOWN ROMANCE - SPECIAL</h1><p class="who"><span class="u"><b>Lambo</b><i>·</i></span><span class="u">Lookmhee x Sonya</span></p><p class="stat"><span class="u">10 chương<i>·</i></span><span class="u">cập nhật 29-05-2026</span></p></div><div class="rest"><div class="rate"><span class="stars"><span class="st"><svg viewBox="0 0 24 24"><path d="m12 2.6 2.95 6 6.55.95-4.75 4.6 1.15 6.5L12 17.6l-5.9 3.05 1.15-6.5L2.5 9.55l6.55-.95Z"/></svg></span><span class="st"><svg viewBox="0 0 24 24"><path d="m12 2.6 2.95 6 6.55.95-4.75 4.6 1.15 6.5L12 17.6l-5.9 3.05 1.15-6.5L2.5 9.55l6.55-.95Z"/></svg></span><span class="st"><svg viewBox="0 0 24 24"><path d="m12 2.6 2.95 6 6.55.95-4.75 4.6 1.15 6.5L12 17.6l-5.9 3.05 1.15-6.5L2.5 9.55l6.55-.95Z"/></svg></span><span class="st"><svg viewBox="0 0 24 24"><path d="m12 2.6 2.95 6 6.55.95-4.75 4.6 1.15 6.5L12 17.6l-5.9 3.05 1.15-6.5L2.5 9.55l6.55-.95Z"/></svg></span><span class="st"><svg viewBox="0 0 24 24"><path d="m12 2.6 2.95 6 6.55.95-4.75 4.6 1.15 6.5L12 17.6l-5.9 3.05 1.15-6.5L2.5 9.55l6.55-.95Z"/></svg></span></span><span class="sc"><b>0</b> / 5</span><span class="rn">chưa có đánh giá</span></div><div class="acts"><a class="btn pri" href="#"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.2v13.6L19 12Z"/></svg>Đọc tiếp</a><a class="btn gh" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>Theo dõi</a><a class="btn ic" href="#" aria-label="Lưu vào tủ truyện"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12a1 1 0 011 1v17l-7-4-7 4V4a1 1 0 011-1z"/></svg></a></div><div class="rule"></div><p class="lab">Giới thiệu</p><p class="syn">Một cuộc hôn nhân chưa bao giờ thực sự êm đềm nhưng lại gắn kết với nhau một cách hoàn hảo, giống hệt như một ly rượu vang đỏ đắt tiền không hiểu sao lại vô cùng ăn ý khi thưởng thức cùng…</p><a class="more" href="#">Đọc giới thiệu đầy đủ<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></a></div></div></div></div></div>
+  <div style="display:flex;gap:22px;margin-top:20px"><div class="mob is-m p2"><div class="pad"><div class="in"><span class="cover"><img src="/assets/covers/80b25f67.webp" alt="Bìa Hometown Romance"><span class="cg"></span><span class="b18">18+</span><span class="cs"><i></i>Hoàn thành</span></span><div class="txtW"><h1 class="tt">HOMETOWN ROMANCE - SPECIAL</h1><p class="who"><span class="u"><b>Lambo</b><i>·</i></span><span class="u">Lookmhee x Sonya</span></p><p class="stat"><span class="u">10 chương<i>·</i></span><span class="u">cập nhật 29-05-2026</span></p></div><div class="rest"><div class="rate"><span class="stars"><span class="st"><svg viewBox="0 0 24 24"><path d="m12 2.6 2.95 6 6.55.95-4.75 4.6 1.15 6.5L12 17.6l-5.9 3.05 1.15-6.5L2.5 9.55l6.55-.95Z"/></svg></span><span class="st"><svg viewBox="0 0 24 24"><path d="m12 2.6 2.95 6 6.55.95-4.75 4.6 1.15 6.5L12 17.6l-5.9 3.05 1.15-6.5L2.5 9.55l6.55-.95Z"/></svg></span><span class="st"><svg viewBox="0 0 24 24"><path d="m12 2.6 2.95 6 6.55.95-4.75 4.6 1.15 6.5L12 17.6l-5.9 3.05 1.15-6.5L2.5 9.55l6.55-.95Z"/></svg></span><span class="st"><svg viewBox="0 0 24 24"><path d="m12 2.6 2.95 6 6.55.95-4.75 4.6 1.15 6.5L12 17.6l-5.9 3.05 1.15-6.5L2.5 9.55l6.55-.95Z"/></svg></span><span class="st"><svg viewBox="0 0 24 24"><path d="m12 2.6 2.95 6 6.55.95-4.75 4.6 1.15 6.5L12 17.6l-5.9 3.05 1.15-6.5L2.5 9.55l6.55-.95Z"/></svg></span></span><span class="sc"><b>0</b> / 5</span><span class="rn">chưa có đánh giá</span></div><div class="acts"><a class="btn pri" href="#"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.2v13.6L19 12Z"/></svg>Đọc tiếp</a><a class="btn ic" href="#" aria-label="Lưu vào tủ truyện"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12a1 1 0 011 1v17l-7-4-7 4V4a1 1 0 011-1z"/></svg></a></div><div class="rule"></div><p class="lab">Giới thiệu</p><p class="syn">Một cuộc hôn nhân chưa bao giờ thực sự êm đềm nhưng lại gắn kết với nhau một cách hoàn hảo, giống hệt như một ly rượu vang đỏ đắt tiền không hiểu sao lại vô cùng ăn ý…</p><a class="more" href="#">Đọc giới thiệu đầy đủ<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></a></div></div></div></div></div>
+</section>
+
+<p class="foot"><b>Còn một chỗ tôi chưa chắc:</b> nút son hiện là hồng phấn (#e0859b). Nếu bạn muốn nó “đắt” hơn, tôi thử bản son trầm hơn (đậm, ít hồng) — nhưng đó là đổi màu thương hiệu nên tôi chờ bạn nói.</p>
+</div></body></html>

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tác giả · bản gọn có tìm &amp; lọc (r103) · ssochuz library</title>
+<meta name="description" content="Đề xuất bố cục gọn cho trang Tác giả: ô tìm, lọc trạng thái và sắp xếp — r103.">
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="/site/ssochuz.png">
+<link rel="stylesheet" href="/site/cz.css">
+<link rel="stylesheet" href="pp.css">
+<script>try{var t=localStorage.getItem('ssochuz-theme')||localStorage.getItem('chuseoz-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+</head>
+<body data-personal-follow-only>
+<div id="sprog" aria-hidden="true"><i></i></div>
+<header id="hdr"></header>
+
+<main class="ta">
+  <nav class="ta-crumb"><a href="/site/">Trang chủ</a> <span>›</span> <a href="/site/#thu-vien">Thư viện</a> <span>›</span> <b>Tất cả tác giả</b></nav>
+
+  <header class="ta-head">
+    <h1>Tất cả tác giả</h1>
+    <p class="sub" id="taSub">Đang tải…</p>
+  </header>
+
+  <div class="ta-tools">
+    <div class="in">
+      <label class="ta-search" id="taSearch">
+        <span data-ic="search"></span>
+        <input id="taQ" type="search" placeholder="Tìm tác giả…" autocomplete="off" spellcheck="false" aria-label="Tìm tác giả theo tên">
+        <span class="kbd" aria-hidden="true">⌘K</span>
+        <button type="button" class="clr" id="taClr" aria-label="Xoá từ khoá">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </label>
+
+      <div class="ta-f" id="taF" role="group" aria-label="Lọc theo trạng thái"></div>
+
+      <div class="ta-sort" id="taSortBox">
+        <button type="button" id="taSortBtn" aria-expanded="false" aria-haspopup="true">
+          <span>Sắp xếp: <b id="taSortLabel">Tên A–Z</b></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="menu" id="taSortMenu" role="menu" aria-label="Cách sắp xếp">
+          <button type="button" role="menuitemradio" data-sort="az" aria-checked="true">Tên A–Z <span class="ck">✓</span></button>
+          <button type="button" role="menuitemradio" data-sort="count" aria-checked="false">Nhiều truyện <span class="ck">✓</span></button>
+          <button type="button" role="menuitemradio" data-sort="new" aria-checked="false">Mới cập nhật <span class="ck">✓</span></button>
+        </div>
+      </div>
+      <div class="ta-now" id="taNow" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <div class="ta-out" id="taOut"></div>
+</main>
+
+<footer id="ftr"></footer>
+<script src="/site/cz-config.js"></script>
+<script src="/site/cz-app.js"></script>
+<script src="data.js"></script>
+<script src="pp.js"></script>
+<script>
+try {
+  if (window.CZ && CZ.mountShell) CZ.mountShell({ active: 'authors' });
+  document.querySelectorAll('[data-ic]').forEach(function (el) {
+    if (window.CZ && CZ.icon) el.outerHTML = CZ.icon(el.dataset.ic);
+  });
+} catch (e) {}
+</script>
+</body>
+</html>

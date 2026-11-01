@@ -25,10 +25,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self.serve_file("truyen.html")
         if dec_path.startswith("/reader/") or path.startswith("/reader/") or dec_path in ("/reader", "/reader.html") or path in ("/reader", "/reader.html"):
             return self.serve_file("truyen.html")
-        if dec_path == "/guide" or dec_path == "/guide/" or path == "/guide" or path == "/guide/":
-            return self.serve_file("guide.html")
-        if dec_path.startswith("/guide/"):
-            return self.serve_file("guide.html")
         if dec_path in ("/admin", "/admin/", "/admin-v2", "/admin-v2/", "/admin-legacy", "/admin-legacy/") or path in ("/admin", "/admin/", "/admin-v2", "/admin-v2/", "/admin-legacy", "/admin-legacy/"):
             # Một trang quản trị duy nhất (admin.html); URL đời v2/legacy vẫn vào đúng trang này.
             return self.serve_file("admin.html")

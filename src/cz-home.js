@@ -22,216 +22,125 @@
   }
   paintIcons();
 
-  var state = { tab: 'all', adult: false, year: '', author: '', couple: '', q: '', sort: 'new', view: 'grid', page: 1, per: 24 };
+  var state = { tab: 'all', adult: false, year: '', author: '', couple: '', q: '', sort: 'new', page: 1, per: 24 };
+  /* Thanh lọc không còn ô chọn tác giả/couple (mỗi couple tối đa 2 bộ), nhưng
+     liên kết chia sẻ ?author=… / ?couple=… vẫn phải lọc được — nhận cả tên
+     nguyên bản lẫn dạng slug trong /tac-gia/?q=… · /couple/?q=… */
+  (function () {
+    try {
+      var qp = new URLSearchParams(location.search);
+      if (qp.get('author')) state.author = qp.get('author');
+      if (qp.get('couple')) state.couple = qp.get('couple');
+    } catch (e) {}
+  })();
 
-  /* ======================= HERO ======================================== */
-  var hero = { list: [], i: 0, timer: null, auto: 8000, bg: 0 };
-  function pad2(k) { return (k < 10 ? '0' : '') + k; }
-  /* nền mờ phía sau lấy từ chính ảnh bìa; hai lớp chồng nhau để đổi mờ dần */
-  function heroBg(im) {
-    var box = $('#heroBg');
-    if (!box || !box.children.length || CZ.reduce) return;
-    var k = hero.bg ? 0 : 1;
-    box.children[k].style.backgroundImage = im ? 'url("' + im + '")' : 'none';
-    box.children[k].classList.toggle('on', !!im);
-    box.children[hero.bg].classList.remove('on');
-    hero.bg = k;
+  /* ======================= HERO (banner dùng chung) ===================== */
+  /* VÁ (2026-10-29): trang chủ KHÔNG tự vẽ hero nữa. Nó chỉ đổi dữ liệu truyện
+     sang đúng hợp đồng HeroBannerItem rồi giao cho `CZ.heroBanner`
+     (src/cz-hero.js) — markup, chuyển slide, bàn phím, vuốt và live region chỉ
+     tồn tại ở MỘT chỗ, nên khối “Nổi bật hôm nay” và mọi banner nổi bật sau này
+     dùng chung đúng một component.
+     Dữ liệu truyền vào vẫn là dữ liệu thật: tình trạng, số chương, tác giả,
+     couple, ngày cập nhật, tiến độ đang đọc, CTA đọc/thông tin và “Lưu vào tủ”. */
+  var heroApi = null;
+  function heroItem(n, i) {
+    var pg = CZ.progress(n), tot = n.chapters || 0;
+    var pct = tot && pg ? Math.min(100, Math.round(pg / tot * 100)) : 0;
+    var img = CZ.coverSrc(n) || '';
+    /* bìa NGANG cho lớp nền: chỉ dùng khi registry có ảnh khác bìa dọc; thiếu thì
+       component tự lấy gradient từ chính bìa dọc (canvas) — xem cz-hero.js */
+    var wide = (n.slide && n.slide !== n.thumb) ? (CZ.coverSrc(n, n.slide) || '') : '';
+    var badges = [{ label: CZ.statusLabel(n.statusCls || n.status), tone: n.statusCls || 'run', dot: true }];
+    if (n.locked) badges.push({ label: 'Có mật mã', tone: 'lock', icon: 'lock' });
+    if (n.is18) badges.push({ label: '18+', tone: 'bad' });
+    if (n.fresh) badges.push({ label: 'MỚI', tone: 'acc' });
+    /* Một hàng meta KHÔNG icon: chỉ còn chữ, cách nhau bằng dấu chấm mảnh (CSS lo). */
+    var meta = [{ label: CZ.countText(n), strong: true, title: 'Số chương' }];
+    if (n.author) meta.push({ label: n.author, title: 'Tác giả' });
+    if (n.couple) meta.push({ label: n.couple, title: 'Couple' });
+    if (n.updated) meta.push({ label: CZ.timeAgo(n.updated), title: 'Cập nhật gần nhất' });
+    /* “KỆ NHÃN” của hero: 4 ô, ô nào không có dữ liệu thì KHÔNG dựng.
+       Couple ẩn ở điện thoại (hideSm) — đó là thông tin phụ nhất trong bốn ô. */
+    /* `slot` ghim ô vào ĐÚNG một cột của lưới (ch/au/cp/up): số chương dài
+       ngắn khác nhau giữa các truyện nên nếu để lưới tự co thì mỗi lần đổi
+       truyện cả hàng nhãn lại nhảy ngang. Ghim cột ⇒ nhãn đứng im. */
+    var facts = [{ label: 'Chương', value: tot > 0 ? String(tot) : '—', num: true, slot: 'ch' }];
+    if (n.author) facts.push({ label: 'Tác giả', value: n.author, soft: true, slot: 'au' });
+    if (n.couple) facts.push({ label: 'Couple', value: n.couple, soft: true, hideSm: true, slot: 'cp' });
+    if (n.updated) facts.push({ label: 'Cập nhật', value: CZ.timeAgo(n.updated), num: true, slot: 'up' });
+
+    var primary = n.canRead
+      ? (n.locked
+        /* truyện khoá mật mã: dẫn về trang truyện (có chốt nhập mật mã),
+           không dẫn thẳng vào chương — mở chương là lộ nội dung */
+        /* nhãn ngắn "Mở khóa": mật mã là chuyện của trang truyện, nhồi cả câu
+           giải thích vào nút chỉ làm nút dài và nặng hơn hành động. Lời giải
+           thích đầy đủ nằm ở title (rê chuột) chứ không chiếm mặt nút. */
+        ? { label: 'Mở khóa', href: CZ.storyURL(n.slug), icon: 'lock',
+            title: 'Truyện có mật mã — mở trang truyện để nhập mật mã' }
+        : { label: pg ? 'Đọc tiếp' : 'Đọc từ đầu', href: CZ.readURL(n.slug, pg || 1), icon: 'play',
+            title: pg ? 'Mở đúng chỗ bạn đang đọc dở' : 'Bắt đầu từ chương đầu' })
+      : { label: 'Sắp ra mắt', icon: 'clock', disabled: true };
+    return {
+      id: n.slug,
+      title: n.title,
+      href: CZ.storyURL(n.slug),
+      description: n.syn || n.synFull || '',
+      thumbnail: { src: img, alt: n.title },    /* bìa cho quạt — có alt để dự phòng */
+      caption: n.author || '',                  /* dòng mono dưới bìa đang chọn */
+      backdrop: wide ? { src: wide } : null,     /* bìa ngang cho nền (nếu có) */
+      badges: badges,
+      facts: facts,
+      meta: meta,
+      progress: pg ? {
+        current: pg, total: tot, percent: pct,
+        label: 'đang đọc <b>chương ' + pg + '</b>' + (tot ? ' / ' + tot : '') + ' · ' + pct + '%'
+      } : null,
+      primaryCta: primary,
+      /* CTA phụ là nút ICON TRÒN 44px “i” (thông tin truyện) thay cho nút lưu:
+         lưu vào tủ đã có ở trang truyện + thẻ truyện, còn ở đây người đọc cần
+         một lối tắt sang trang thông tin (tác giả, thể loại, mục lục). */
+      secondaryCtas: [
+        { label: 'Thông tin truyện', href: CZ.storyURL(n.slug), icon: 'info', variant: 'outline',
+          title: 'Thông tin truyện — tác giả, thể loại, danh sách chương' }
+      ]
+    };
   }
-  function heroSlide(n, i) {
-    var p = CZ.progress(n), resume = p || 1, tot = n.chapters || 0;
-    var inShelf = CZ.inShelf(n), im = CZ.coverSrc(n);
-    var pct = tot && p ? Math.min(100, Math.round(p / tot * 100)) : 0;
-    var eyebrow = (n._reason && n._reason.trim()) || (i === 0 ? 'Nổi bật hôm nay' : 'Đề xuất cho bạn');
-    return '<article class="slide' + (i === 0 ? ' on' : '') + '" data-i="' + i + '" aria-label="' + esc(n.title) + '">' +
-      '<div class="col">' +
-        '<div class="info">' +
-          '<span class="eyebrow">' + esc(eyebrow) + '</span>' +
-          '<h1><a href="' + esc(CZ.storyURL(n.slug)) + '">' + esc(n.title) + '</a></h1>' +
-          '<div class="meta">' +
-            '<span class="pill ' + n.statusCls + '"><span class="d"></span>' + esc(CZ.statusLabel(n.statusCls || n.status)) + '</span>' +
-            (n.locked ? '<span class="pill lock" title="Truyện có mật mã — cần mật mã để đọc">' + ic('lock', 'i-s') + 'Có mật mã</span>' : '') +
-            (n.fresh ? '<span class="badge-new">NEW</span>' : '') +
-            '<span>' + ic('book', 'i-s') + ' <b>' + esc(CZ.countText(n)) + '</b></span>' +
-            (n.author ? '<span>' + ic('pen', 'i-s') + ' ' + esc(n.author) + '</span>' : '') +
-            (n.couple ? '<span>' + ic('users', 'i-s') + ' ' + esc(n.couple) + '</span>' : '') +
-            (n.updated ? '<span>' + ic('refresh', 'i-s') + ' ' + esc(CZ.timeAgo(n.updated)) + '</span>' : '') +
-          '</div>' +
-          /* hero trang chủ chỉ cần đoạn mở đầu: mô tả đầy đủ (có thể tới 3.300 ký
-             tự) nằm trong tệp chương và dành cho trang truyện */
-          '<p class="syn">' + esc(n.syn || n.synFull || '') + '</p>' +
-          (pct ? '<div class="prog"><span class="pb"><i style="width:' + pct + '%"></i></span>' +
-            '<span>đang đọc <b>chương ' + p + '</b>' + (tot ? ' / ' + tot : '') + ' · ' + pct + '%</span></div>' : '') +
-          '<div class="btn-row">' +
-            (n.canRead
-              ? (n.locked
-                /* truyện khóa mật mã: dẫn về trang truyện (có chốt nhập mật mã),
-                   không dẫn thẳng vào chương — mở chương là lộ nội dung */
-                ? '<a class="btn pri lg" href="' + esc(CZ.storyURL(n.slug)) + '" title="Truyện này có mật mã — vào trang truyện để nhập mật mã">' + ic('lock', 'i-s') + 'Nhập mật mã để đọc</a>'
-                : '<a class="btn pri lg" href="' + esc(CZ.readURL(n.slug, resume)) + '" title="' +
-                    (p ? 'Mở đúng chỗ bạn đang đọc dở' : 'Bắt đầu từ chương đầu') + '">' + ic('play', 'i-s') +
-                  (p ? 'Đọc tiếp' : 'Đọc từ đầu') + '</a>')
-              : '<button class="btn lg off" disabled>' + ic('clock', 'i-s') + 'Sắp ra mắt</button>') +
-            '<a class="btn lg" href="' + esc(CZ.storyURL(n.slug)) + '" title="Thông tin bộ truyện, mục lục, bình luận">' + ic('info', 'i-s') + 'Thông tin</a>' +
-            '<button class="btn lg' + (inShelf ? ' on' : '') + '" data-shelf="' + esc(n.slug) + '" aria-pressed="' + (inShelf ? 'true' : 'false') + '" title="Lưu vào tủ truyện (icon tủ sách)">' +
-              ic('shelf', 'i-s') + '<span>' + (inShelf ? 'Đã lưu' : 'Lưu vào tủ') + '</span></button>' +
-          '</div>' +
-          '<div class="keys">' +
-            '<span><kbd>←</kbd><kbd>→</kbd> đổi truyện</span>' +
-            '<span><kbd>⌘</kbd><kbd>K</kbd> tìm nhanh</span>' +
-            (n.canRead ? '<span>' + ic('book', 'i-s') + ' đọc ngay trên web</span>' : '') +
-          '</div>' +
-        '</div>' +
-        '<div class="posterwrap">' +
-          '<span class="idx" aria-hidden="true">' + pad2(i + 1) + '</span>' +
-          '<a class="poster" href="' + esc(CZ.storyURL(n.slug)) + '" aria-label="' + esc(n.title) + '">' +
-            (im ? '<img src="' + esc(im) + '"' + CZ.coverFB(n, im) + ' alt="Bìa ' + esc(n.title) + '" width="300" height="450"' +
-              (i === 0 ? ' fetchpriority="high"' : ' loading="lazy"') + ' decoding="async" referrerpolicy="no-referrer">' : '') +
-            '<span class="gloss"></span>' +
-            (n.is18 ? '<span class="b18">18+</span>' : '') +
-            (n.locked ? '<span class="lock-cover" title="Truyện có mật mã" aria-label="Truyện có mật mã">' + ic('lock', 'i-s') + '</span>' : '') +
-            (n.fresh ? '<span class="nw-bookmark"><span>NEW</span></span>' : '') +
-          '</a>' +
-          '<span class="pcap">' + (n.author || n.couple ? '<b>' + esc(n.author || n.couple) + '</b>' : '') +
-            (n.year ? (n.author || n.couple ? ' · ' : '') + 'năm ' + esc(n.year) : '') + '</span>' +
-        '</div>' +
-      '</div></article>';
-  }
-  /* vẽ lại đúng một bộ: lớp .on, chấm, dải bìa, số đếm và nền mờ */
-  function paintSlide(i) {
-    var all = $$('#stage .slide');
-    if (!all.length) return;
-    hero.i = i;
-    all.forEach(function (s, k) { s.classList.toggle('on', k === i); });
-    $$('#hDots button').forEach(function (b, k) { b.classList.toggle('on', k === i); });
-    $$('#hStrip button').forEach(function (b, k) { b.classList.toggle('on', k === i); });
-    var c = $('#hCount');
-    if (c) c.textContent = (i + 1) + '/' + hero.list.length;
-    var n = hero.list[i] || {};
-    heroBg(CZ.coverSrc(n));
-  }
-  function heroPaint(animate) {
-    var stage = $('#stage');
-    if (!stage) return;
-    stage.innerHTML = hero.list.map(heroSlide).join('');
-    $('#hDots').innerHTML = hero.list.map(function (n, k) {
-      return '<button data-go="' + k + '" class="' + (k === hero.i ? 'on' : '') + '" role="tab" aria-label="' + esc(n.title) + '"></button>';
-    }).join('');
-    $('#hStrip').innerHTML = hero.list.map(function (n, k) {
-      var im = CZ.coverSrc(n);
-      return '<button data-go="' + k + '" class="' + (k === hero.i ? 'on' : '') + '" title="' + esc(n.title) + '">' +
-        (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</button>';
-    }).join('');
-    paintSlide(hero.i);
-    if (animate) restart();
-  }
-  /* đổi bộ nổi bật: bộ cũ trượt sang trái rồi mờ đi (giữ lại một bản .ghost),
-     bộ mới trượt vào từ bên phải; chiều cao khối được khoá nên không nhảy bố cục */
-  function goSlide(i) {
-    if (!hero.list.length) return;
-    i = (i + hero.list.length) % hero.list.length;
-    var stage = $('#stage');
-    if (i === hero.i || !stage) { if (i !== hero.i) paintSlide(i); restart(); return; }
-    if (!CZ.reduce) {
-      var all = $$('.slide', stage), cur = all[hero.i];
-      if (cur && cur.cloneNode) {
-        var ghost = cur.cloneNode(true);
-        ghost.className = 'slide ghost';
-        ghost.setAttribute('aria-hidden', 'true');
-        var h = stage.offsetHeight;
-        if (h) stage.style.height = h + 'px';
-        stage.appendChild(ghost);
-        requestAnimationFrame(function () { ghost.classList.add('out'); });
-        setTimeout(function () {
-          if (ghost.parentNode) ghost.parentNode.removeChild(ghost);
-          if (!$$('.slide.ghost', stage).length) stage.style.height = '';
-        }, 480);
-      }
+  function mountHero(list) {
+    var root = $('#hero');
+    if (!root) return;
+    if (!CZ.heroBanner) {
+      if (window.console && console.warn) console.warn('[ssochuz] thiếu cz-hero.js — không dựng được hero banner');
+      return;
     }
-    paintSlide(i);
-    restart();
-  }
-  function restart() {
-    var bar = $('#heroBar');
-    if (!bar) return;
-    bar.style.transition = 'none'; bar.style.transform = 'scaleX(0)';
-    clearInterval(hero.timer);
-    if (CZ.reduce || document.hidden) return;
-    requestAnimationFrame(function () {
-      /* transform thay cho width: vạch này chạy suốt thời gian chờ, để width thì
-         mỗi khung hình một lần layout + paint ngay giữa lúc người dùng đang cuộn. */
-      bar.style.transition = 'transform ' + hero.auto + 'ms linear';
-      bar.style.transform = 'scaleX(1)';
-    });
-    hero.timer = setInterval(function () { goSlide(hero.i + 1); }, hero.auto);
-  }
-  function heroInit() {
-    var stage = $('#stage');
-    if (!stage || !hero.list.length) return;
-    heroPaint(false);
-    $('#hPrev').innerHTML = ic('left', 'i-s'); $('#hNext').innerHTML = ic('right', 'i-s');
-    $('#hPrev').addEventListener('click', function () { goSlide(hero.i - 1); });
-    $('#hNext').addEventListener('click', function () { goSlide(hero.i + 1); });
-    document.addEventListener('click', function (e) {
-      var d = e.target.closest('[data-go]');
-      if (d) goSlide(+d.dataset.go);
-      var s = e.target.closest('[data-shelf]');
-      if (s) {
-        var n = CZ.findLib(s.dataset.shelf);
-        if (!n) return;
-        var on = CZ.toggleShelf(n);
-        s.setAttribute('aria-pressed', on ? 'true' : 'false');
-        s.classList.toggle('on', on);
-        CZ.pop(s);
-        s.querySelector('span').textContent = on ? 'Đã lưu' : 'Lưu vào tủ';
-
-        CZ.toast(on ? 'Đã thêm vào tủ truyện' : 'Đã bỏ khỏi tủ truyện');
-      }
-    });
-    $('#hero').addEventListener('mouseenter', function () { clearInterval(hero.timer); $('#heroBar').style.transition = 'none'; });
-    $('#hero').addEventListener('mouseleave', restart);
-    document.addEventListener('visibilitychange', function () { if (document.hidden) clearInterval(hero.timer); else restart(); });
-    document.addEventListener('keydown', function (e) {
-      if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName || '')) return;
-      if (e.key === 'ArrowRight') goSlide(hero.i + 1);
-      if (e.key === 'ArrowLeft') goSlide(hero.i - 1);
-    });
-    /* vuốt ngang trên điện thoại */
-    var x0 = null, y0 = null;
-    stage.addEventListener('touchstart', function (e) {
-      x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
-    }, { passive: true });
-    stage.addEventListener('touchend', function (e) {
-      if (x0 == null) return;
-      var t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
-      if (Math.abs(dx) > 44 && Math.abs(dx) > Math.abs(dy)) goSlide(hero.i + (dx < 0 ? 1 : -1));
-      x0 = y0 = null;
-    }, { passive: true });
-    restart();
-  }
-
-  /* ======================= DẢI SỐ LIỆU ================================= */
-  function renderFacts(lib) {
-    var chap = lib.reduce(function (a, n) { return a + n.chapters; }, 0);
-    var done = lib.filter(function (n) { return n.statusCls === 'done'; }).length;
-    var soon = lib.filter(function (n) { return n.statusCls === 'soon'; }).length;
-    var facts = [
-      { n: lib.length, l: 'Bộ truyện' },
-      { n: chap, l: 'Chương đã đăng' },
-      { n: done, l: 'Hoàn thành' },
-      { n: soon, l: 'Sắp ra mắt' }
-    ];
-    $('#facts').innerHTML = facts.map(function (f) {
-      return '<div class="f"><b data-count="' + f.n + '">0</b><span>' + f.l + '</span></div>';
-    }).join('');
-    CZ.scaleFacts($('#facts'));
+    /* dựng lại (ví dụ khi quay lại tab) thì giữ đúng mục người đọc đang xem */
+    var keep = heroApi && typeof heroApi.index === 'number' ? heroApi.index : 0;
+    if (heroApi && heroApi.destroy) heroApi.destroy();
+    heroApi = CZ.heroBanner(root, { items: (list || []).map(heroItem), autoPlay: true, initialIndex: keep });
   }
 
   /* ======================= MỚI CẬP NHẬT ================================ */
+  /* Mới cập nhật: bảng gọn ba cột. Mỗi dòng là bìa nhỏ · tên một dòng · tác giả;
+     cột phải rộng CỐ ĐỊNH 56px — số chương (to, đậm, chữ số canh cột) ở trên,
+     ngày (nhỏ, mờ) ở dưới. Cột không co giãn theo nội dung nên mọi tiêu đề cắt ở
+     cùng một mốc (trước đây cột phải rộng ra khi gặp nhãn “Đang cập nhật” nên
+     mỗi hàng cắt một kiểu). Chỉ lấy bộ ĐÃ CÓ CHƯƠNG: mục tên là “vừa lên chương”
+     nên bộ chưa ra chương nào không thuộc đây — nhãn “Sắp ra mắt” của nó cũng là
+     thứ duy nhất từng chen chữ dài vào cột số. */
   function renderNew() {
-    var rows = CZ.lib().slice().sort(function (a, b) {
-      return String(b.updated || '').localeCompare(String(a.updated || '')) || (b.chapters - a.chapters);
-    });
-    CZ.mountRail($('#newRail'), rows.slice(0, 12));
+    var box = $('#newRail');
+    if (!box) return;
+    var pick = CZ.lib().filter(function (n) { return parseInt(n.chapters, 10) > 0; })
+      .sort(function (a, b) {
+        return String(b.updated || '').localeCompare(String(a.updated || '')) || (b.chapters - a.chapters);
+      }).slice(0, 12);
+    box.innerHTML = pick.map(function (n) {
+      var src = CZ.coverSrc(n), ch = parseInt(n.chapters, 10);
+      return '<a class="mrow" href="' + esc(CZ.storyURL(n.slug)) + '">' +
+        (src ? '<img src="' + esc(src) + '"' + CZ.coverFB(n, src) + ' alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '<span class="mrow-ph" aria-hidden="true"></span>') +
+        '<span class="mt"><b>' + esc(n.title) + '</b><span>' + esc(n.author || n.couple || '') + '</span></span>' +
+        '<span class="mn"><b><i>Ch.</i>' + ch + '</b><span class="tm">' + esc(CZ.timeAgo(n.updated)) + '</span></span></a>';
+    }).join('');
   }
 
   /* ===================== KHÔNG GIAN CÁ NHÂN ============================ */
@@ -248,48 +157,72 @@
       '<div class="personal-card-actions"><a class="btn primary sm" href="' + esc(href) + '">' + esc(badge && badge.indexOf('mới') >= 0 ? 'Đọc chương mới' : 'Đọc tiếp') + '</a>' +
       CZ.followBtn(n, 'personal-follow') + '</div></div></article>';
   }
+  /* Ô “Đọc tiếp” của bento: phần nào chưa có dữ liệu thì ẩn HẲN (không bày
+     khung rỗng), cả hai đều rỗng thì ô đổi thành “bắt đầu từ đâu” — nhờ vậy ô
+     không bao giờ trống mà cũng không cao lêu nghêu vì dòng “chưa có…”. */
+  function setPersonalParts(hasResume, hasFollow, showStarter, resumeCount) {
+    var r = $('#resumeSec'), f = $('#followUpdatesSec'), st = $('#starterBox');
+    if (r) r.hidden = !hasResume;
+    if (f) f.hidden = !hasFollow;
+    if (st) { st.hidden = !showStarter; if (showStarter) renderStarter(); }
+  }
+  var starterDone = false;
+  function renderStarter() {
+    var box = $('#starterBox');
+    if (!box || starterDone) return;
+    starterDone = true;
+    var lib = CZ.lib();
+    var done = lib.filter(function (n) { return n.statusCls === 'done' && n.chapters > 0; });
+    var longest = done.slice().sort(function (a, b) { return b.chapters - a.chapters; })[0];
+    var shortest = done.slice().sort(function (a, b) { return a.chapters - b.chapters; })[0];
+    var freshest = lib.filter(function (n) { return n.chapters > 0; })
+      .sort(function (a, b) { return String(b.updated || '').localeCompare(String(a.updated || '')); })[0];
+    var picks = [
+      { n: longest, k: 'Đọc trọn một mạch' },
+      { n: shortest, k: 'Ngắn, đọc một tối' },
+      { n: freshest, k: 'Mới lên kệ' }
+    ].filter(function (x, i, all) { return x.n && all.findIndex(function (y) { return y.n === x.n; }) === i; });
+    if (!picks.length) { box.hidden = true; return; }
+    box.innerHTML = '<div class="bth lt"><h3 class="blb dim">Bắt đầu từ đâu?</h3></div>' +
+      picks.map(function (x, i) {
+        var img = CZ.coverSrc(x.n);
+        return '<a class="s" href="' + esc(CZ.storyURL(x.n.slug)) + '">' +
+          '<span class="s-th">' + (img ? '<img src="' + esc(img) + '"' + CZ.coverFB(x.n, img) + ' alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</span>' +
+          '<span class="s-bd"><span class="s-n">0' + (i + 1) + ' · ' + esc(x.k) + '</span>' +
+          '<b>' + esc(x.n.title) + '</b><span class="s-m">' + esc(CZ.countText(x.n)) + '</span></span></a>';
+      }).join('');
+  }
   function renderPersonalBlocks() {
     var service = window.CZPersonal;
     var resumeSection = $('#resumeSec'), followSection = $('#followUpdatesSec');
     if (!resumeSection || !followSection) return;
-    if (!service) { resumeSection.hidden = true; followSection.hidden = true; return; }
-    resumeSection.hidden = false; followSection.hidden = false;
+    if (!service) { setPersonalParts(false, false, true); return; }
     var requestId = ++personalRenderId;
     var mode = service.mode();
     var resumeRail = $('#resumeRail'), followRail = $('#followUpdatesRail');
-    if (mode === 'loading') {
-      resumeRail.innerHTML = '<p class="personal-empty">Đang đồng bộ…</p>';
-      followRail.innerHTML = '<p class="personal-empty">Đang kiểm tra…</p>';
-      return;
-    }
-    if (mode === 'error') {
-      resumeRail.innerHTML = '<p class="personal-empty">Chưa tải được dữ liệu cá nhân.</p>';
-      followRail.innerHTML = '<p class="personal-empty">Chưa đồng bộ được danh sách theo dõi.</p>';
-      return;
-    }
+    /* Đang đồng bộ / lỗi: ô vẫn phải có nội dung — hiện “bắt đầu từ đâu” thay vì
+       một ô trống chỉ có cái nhãn (vừa xấu vừa làm trang nhảy khi dữ liệu về). */
+    if (mode === 'loading' || mode === 'error') { setPersonalParts(false, false, true); return; }
     var library = CZ.lib();
     var known = Object.create(null);
     library.forEach(function (story) { known[story.slug] = story; });
     var progressRows = service.progressRows().filter(function (row) {
       return row && row.chapterIndex > 0 && known[row.storyId];
-    }).sort(function (a, b) { return String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')); }).slice(0, 8);
-    if (progressRows.length) {
-      resumeRail.innerHTML = progressRows.map(function (row) {
-        var story = known[row.storyId];
-        var url = CZ.readURL(story.slug, row.chapterIndex);
-        var progress = Number(row.scrollPercent) || 0;
-        var chapterLabel = 'Chương ' + row.chapterIndex + (row.completedAt ? ' · đã đọc' : '');
-        return personalCard(story, chapterLabel, url, progress, chapterLabel);
-      }).join('');
-    } else {
-      resumeRail.innerHTML = '<p class="personal-empty">Chưa có truyện đọc dở.</p>';
-    }
+    }).sort(function (a, b) { return String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')); }).slice(0, 3);
+    resumeRail.innerHTML = progressRows.map(function (row) {
+      var story = known[row.storyId];
+      var url = CZ.readURL(story.slug, row.chapterIndex);
+      var progress = Number(row.scrollPercent) || 0;
+      var chapterLabel = 'Chương ' + row.chapterIndex + (row.completedAt ? ' · đã đọc' : '');
+      return personalCard(story, chapterLabel, url, progress, chapterLabel);
+    }).join('');
+    var hasResume = progressRows.length > 0;
     var follows = service.followRows().filter(function (row) { return row && known[row.storyId]; });
     if (!follows.length) {
-      followRail.innerHTML = '<p class="personal-empty">Chưa theo dõi truyện nào.</p>';
+      followRail.innerHTML = '';
+      setPersonalParts(hasResume, false, !hasResume, progressRows.length);
       return;
     }
-    followRail.innerHTML = '<p class="personal-empty">Đang tải chương mới…</p>';
     service.fetchTocs(follows.map(function (row) { return row.storyId; })).then(function (tocRows) {
       if (requestId !== personalRenderId) return;
       var bySlug = Object.create(null);
@@ -306,19 +239,16 @@
         return { story: story, toc: toc, count: count, unseen: unseen };
       }).filter(function (item) { return item.unseen > 0; })
         .sort(function (a, b) { return b.unseen - a.unseen || String(b.toc.updatedAt || '').localeCompare(String(a.toc.updatedAt || '')); });
-      if (!updates.length) {
-        followRail.innerHTML = '<p class="personal-empty">Chưa có chương mới.</p>';
-        return;
-      }
-      followRail.innerHTML = updates.slice(0, 12).map(function (item) {
+      followRail.innerHTML = updates.slice(0, 3).map(function (item) {
         var last = item.toc.chapters && item.toc.chapters.length ? item.toc.chapters[item.toc.chapters.length - 1] : null;
         var index = Math.max(1, Number(last && last.index) || item.count);
         var title = last && last.title ? last.title : 'Chương ' + index;
         var url = item.story.locked ? CZ.storyURL(item.story.slug) : CZ.readURL(item.story.slug, index);
         return personalCard(item.story, title, url, null, item.unseen + ' chương mới');
       }).join('');
+      setPersonalParts(hasResume, updates.length > 0, !hasResume && !updates.length, progressRows.length);
     }).catch(function () {
-      if (requestId === personalRenderId) followRail.innerHTML = '<p class="personal-empty">Chưa tải được mục lục.</p>';
+      if (requestId === personalRenderId) { followRail.innerHTML = ''; setPersonalParts(hasResume, false, !hasResume, progressRows.length); }
     });
   }
   var personalRenderTimer = 0;
@@ -346,18 +276,27 @@
       var s = CZ.statsOf(n) || {};
       return { n: n, rating: positive(s.rating), count: positive(s.ratingCount) };
     }).filter(function (r) { return r.rating > 0 && r.rating <= 5 && r.count > 0; })
-      .sort(function (a, b) { return b.rating - a.rating || b.count - a.count || a.n.slug.localeCompare(b.n.slug); }).slice(0, 12) : [];
+      .sort(function (a, b) { return b.rating - a.rating || b.count - a.count || a.n.slug.localeCompare(b.n.slug); }).slice(0, 5) : [];
+    var box = rail.closest('.worth-section');
     if (!rows.length) {
       rail.innerHTML = statsOn() ? '<p class="empty">Chưa có truyện được đánh giá sao.</p>' : '';
+      if (box) box.hidden = true;
       return;
     }
-    CZ.mountRail(rail, rows.map(function (r) { return r.n; }));
-    rail.querySelectorAll('.card').forEach(function (card, i) {
-      var score = document.createElement('span');
-      score.className = 'worth-score';
-      score.textContent = '★ ' + rows[i].rating.toFixed(1) + '/5 · ' + num(rows[i].count) + ' đánh giá';
-      card.appendChild(score);
-    });
+    if (box) box.hidden = false;
+    /* Hai bên cùng một nhịp: cột trái là hàng xếp hạng, cột phải là hàng đáng xem —
+       cùng cỡ số, cùng cỡ bìa, cùng chỗ đặt điểm số, chỉ khác đơn vị (lượt / ★). */
+    var top = rows[0] ? rows[0].rating : 0;
+    rail.innerHTML = rows.map(function (row, i) {
+      var n = row.n, src = CZ.coverSrc(n), ratio = top ? Math.max(.12, row.rating / top) : 0;
+      return '<a class="rank wrank" href="' + esc(CZ.storyURL(n.slug)) + '" style="--d:' + (i * 55) + 'ms;--w:' + ratio.toFixed(3) + '">' +
+        '<span class="n' + (i < 3 ? ' top t' + (i + 1) : '') + '">' + (i + 1) + '</span>' +
+        '<span class="rk-th' + (src ? '' : ' noimg') + '">' +
+        (src ? '<img src="' + esc(src) + '"' + CZ.coverFB(n, src) + ' alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</span>' +
+        '<span class="tt"><b>' + esc(n.title) + '</b><span>' + num(row.count) + ' đánh giá</span></span>' +
+        '<span class="v">★<b>' + row.rating.toFixed(1) + '</b></span><i class="bar" aria-hidden="true"></i></a>';
+    }).join('');
+    if (CZ.inkAll) CZ.inkAll();
   }
   function renderRank() {
     var on = statsOn(), tabs = rankTabs();
@@ -372,9 +311,11 @@
     var key = rankMode + ({ day: 'Day', week: 'Week', month: 'Month' }[rankBy]);
     var rows = on ? CZ.lib().map(function (n) { return { n: n, score: positive((CZ.statsOf(n) || {})[key]) }; })
       .filter(function (r) { return r.score > 0; })
-      .sort(function (a, b) { return b.score - a.score || a.n.slug.localeCompare(b.n.slug); }).slice(0, 8) : [];
-    $('#rankSummary').textContent = (rankMode === 'views' ? 'Top View' : 'Top Vote') + ' · ' + tabs.find(function (t) { return t.k === rankBy; }).l;
+      .sort(function (a, b) { return b.score - a.score || a.n.slug.localeCompare(b.n.slug); }).slice(0, 5) : [];
+    $('#rankSummary').textContent = (rankMode === 'views' ? 'Lượt đọc' : 'Lượt thích') + ' · ' + tabs.find(function (t) { return t.k === rankBy; }).l;
     var peak = rows.length ? rows[0].score : 0;
+    /* Không có số liệu thì KHÔNG bịa gì trong #rank (bài kiểm canh đúng chỗ này);
+       trạng thái “chưa có số” nói ở phụ đề cạnh tiêu đề. */
     $('#rank').innerHTML = rows.map(function (row, i) {
       var n = row.n, ratio = peak ? Math.max(.12, row.score / peak) : 0;
       return '<a class="rank" href="' + esc(CZ.storyURL(n.slug)) + '" style="--d:' + (i * 55) + 'ms;--w:' + ratio.toFixed(3) + '">' +
@@ -428,6 +369,15 @@
       return String(x.title || '').trim().toLowerCase() === want;
     }) || null;
   }
+  var WD = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+  var WDL = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  /* Lịch ra chương (30/10/2026 · phương án 3B đã chốt): MỘT tấm tiêu điểm bên trái
+     + danh sách phần còn lại bên phải. Bìa dọc giữ nguyên tỉ lệ 2/3 nên không cắt
+     mặt nhân vật; nền tấm tiêu điểm là chính bìa đó phóng to, làm mờ và tối đi.
+     Hôm nay không có bộ nào thì lấy bộ gần nhất sắp ra và đổi nhãn cho đúng thứ.
+     Mỗi mục vẫn mang lớp .sched (chỉ để đếm, không còn tạo kiểu) nên bài kiểm cũ
+     không phải sửa. */
   function renderSched(sch) {
     var el = $('#sched');
     if (!el) return;
@@ -444,22 +394,72 @@
       el.innerHTML = '<div class="empty">Chưa có lịch ra chương.</div>';
       return;
     }
-    el.innerHTML = '<div class="schedlist">' + items.map(function (it) {
-      var n = schedFind(it);
-      var days = parseDays(it.days).map(function (d) { return '<i>' + esc(d) + '</i>'; }).join('');
-      var title = (n && n.title) || it.title || '';
+    var now = new Date();
+    var monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
+    var dayDate = function (i) {
+      var d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+      return pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1);
+    };
+    var todayIdx = (now.getDay() + 6) % 7;
+    var dated = items.map(function (it) { return { it: it, days: parseDays(it.days) }; });
+    var dayIdx = function (x) { return x.days.length ? WD.indexOf(x.days[0]) : -1; };
+    var unplaced = dated.filter(function (x) { return dayIdx(x) < 0; });
+
+    /* chọn tấm tiêu điểm: hôm nay → bộ gần nhất sắp ra → bộ đầu tiên */
+    var hero = dated.filter(function (x) { return x.days.indexOf(WD[todayIdx]) >= 0; })[0] ||
+      dated.filter(function (x) { return dayIdx(x) > todayIdx; })[0] ||
+      dated[0];
+    var heroIsToday = hero.days.indexOf(WD[todayIdx]) >= 0;
+    var heroIdx = heroIsToday ? todayIdx : Math.max(0, dayIdx(hero));
+
+    var row = function (x) {
+      var n = schedFind(x.it);
       var im = n && CZ.coverSrc(n);
-      var href = n ? 'href="' + esc(CZ.storyURL(n.slug)) + '"' : '';
-      var meta = n
-        ? (n.canRead ? esc(CZ.countText(n)) : CZ.statusLabel(n.statusCls))
-        : esc(it.detail || '');
-      return '<a class="sched' + (n ? ' clk' : '') + '" ' + href + '>' +
-        '<span class="sch-th' + (im ? '' : ' noimg') + '">' +
-          (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</span>' +
-        '<span class="sch-days">' + (days || '<i>—</i>') + '</span>' +
-        '<span class="sch-info"><b>' + esc(title) + '</b><span>' + meta + '</span></span></a>';
-    }).join('') + '</div>' +
-      (sch.note ? '<p class="schnote">' + esc(sch.note) + '</p>' : '');
+      var title = (n && n.title) || x.it.title || '';
+      var meta = n ? (n.canRead ? CZ.countText(n) : CZ.statusLabel(n.statusCls)) : (x.it.detail || '');
+      var i = dayIdx(x);
+      var label = i >= 0 ? (i === todayIdx ? 'Hôm nay' : WDL[i]) : 'Chưa hẹn';
+      return '<a class="w3r sched' + (i === todayIdx ? ' now' : '') + '"' +
+        (n ? ' href="' + esc(CZ.storyURL(n.slug)) + '"' : '') + '>' +
+        '<span class="w3d">' + esc(i >= 0 ? WD[i] : '—') + '</span>' +
+        (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">'
+            : '<span class="w3ph"></span>') +
+        '<span class="w3t"><b>' + esc(title) + '</b><span>' + esc(label) +
+          (meta ? ' · ' + esc(meta) : '') + '</span></span></a>';
+    };
+
+    var hn = schedFind(hero.it);
+    var him = hn && CZ.coverSrc(hn);
+    var htitle = (hn && hn.title) || hero.it.title || '';
+    var hmeta = hn ? (hn.canRead ? CZ.countText(hn) : CZ.statusLabel(hn.statusCls)) : (hero.it.detail || '');
+    var kicker = (heroIsToday ? 'Ra hôm nay' : 'Ra ' + WDL[heroIdx]) + ' · ' + dayDate(heroIdx);
+    var heroHTML = '<a class="w3feat v3b sched' + (hn ? '' : ' off') + '"' +
+      (hn ? ' href="' + esc(CZ.storyURL(hn.slug)) + '"' : '') + '>' +
+      (him ? '<img class="w3bg" src="' + esc(him) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' +
+        '<span class="w3veil"></span>' +
+        '<span class="w3poster"><img src="' + esc(him) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"></span>' : '') +
+      '<span class="w3txt"><span class="w3k">' + esc(kicker) + '</span>' +
+        '<span class="w3n">' + esc(htitle) + '</span>' +
+        (hmeta ? '<span class="w3m">' + esc(hmeta) + '</span>' : '') +
+        (hn ? '<span class="w3go">Xem truyện</span>' : '') +
+      '</span></a>';
+
+    var rest = dated.filter(function (x) { return x !== hero; });
+    el.innerHTML = '<div class="w3grid">' + heroHTML +
+      '<div class="w3list"><div class="w3lh"><span>Còn lại trong tuần</span><em>' +
+        (rest.length + unplaced.length) + ' bộ</em></div>' +
+        rest.map(row).join('') +
+      '</div></div>';
+
+    /* Ghi chú “lịch có thể thay đổi” không nằm trong lưới: nó là câu dẫn ngay
+       dưới đầu mục (xem #lichNote trong index.html). */
+    var note = $('#lichNote');
+    if (note) {
+      if (sch && sch.note) { note.textContent = sch.note; note.hidden = false; }
+      else { note.textContent = ''; note.hidden = true; }
+    }
+    var today = $('#lichToday');
+    if (today) today.textContent = WDL[todayIdx] + ', ' + dayDate(todayIdx);
   }
   function renderEditorChoice() {
     var el = $('#bien-tap'), rail = $('#editRail');
@@ -480,43 +480,91 @@
     }
     if (!list || !list.length) { el.hidden = true; return; }
     el.hidden = false;
-    CZ.mountRail(rail, list.slice(0, 12));
+    /* Chuyển thể Series: băng ngang 16:10, chữ đè chân ảnh; bìa là ảnh dọc nên cắt ở
+       26% chiều cao để giữ mặt nhân vật. */
+    rail.innerHTML = list.slice(0, 8).map(function (n) {
+      var src = CZ.coverSrc(n), meta = [];
+      if (n.chapters) meta.push(n.chapters + ' chương');
+      meta.push(CZ.statusLabel(n.statusCls || n.status));
+      return '<a class="wcard" href="' + esc(CZ.storyURL(n.slug)) + '">' +
+        (src ? '<img src="' + esc(src) + '"' + CZ.coverFB(n, src) + ' alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') +
+        '<span class="wsh" aria-hidden="true"></span>' +
+        '<span class="wt"><span class="wk">Chuyển thể' + (n.year ? ' · ' + esc(n.year) : '') + '</span>' +
+        '<span class="wn">' + esc(n.title) + '</span>' +
+        '<span class="wm">' + esc(meta.join(' · ')) + '</span></span></a>';
+    }).join('');
   }
 
   /* ======================= THƯ VIỆN ==================================== */
+  var yearList = [];          /* [{ v: '2026', c: 18 }] — popover dựng từ đây */
+  var sortList = [['new', 'Mới nhất']];   /* [[khoá, nhãn]] — menu sắp xếp dựng từ đây */
   function buildFilters() {
     var lib = CZ.lib();
     var uniq = function (a) { var seen = {}; return a.filter(function (v) { if (!v || seen[v]) return false; seen[v] = 1; return true; }); };
     var years = uniq(lib.map(function (n) { return n.year; })).sort(function (a, b) { return b - a; });
-    var authors = uniq(lib.map(function (n) { return n.author; })).sort(function (a, b) { return a.localeCompare(b, 'vi'); });
-    var allCouples = [];
-    lib.forEach(function (n) {
-      var cs = CZ.couplesOf ? CZ.couplesOf(n) : (n.couple ? [n.couple] : []);
-      cs.forEach(function (c) { allCouples.push(c); });
-    });
-    var couples = uniq(allCouples).sort(function (a, b) { return a.localeCompare(b, 'vi'); });
-    var fill = function (sel, label, list) {
-      sel.innerHTML = '<option value="">' + label + '</option>' + list.map(function (v) {
-        return '<option value="' + esc(v) + '">' + esc(v) + '</option>';
-      }).join('');
-    };
-    fill($('#fYear'), 'Mọi năm', years);
-    fill($('#fAuthor'), 'Mọi tác giả', authors);
-    fill($('#fCouple'), 'Mọi couple', couples);
-    var sorts = [['new', 'Mới cập nhật'], ['year-desc', 'Năm mới nhất'], ['year-asc', 'Năm cũ nhất'],
+    var yearCount = {};
+    lib.forEach(function (n) { if (n.year) yearCount[n.year] = (yearCount[n.year] || 0) + 1; });
+    /* Năm kèm số bộ: chọn năm nào là biết ngay còn bao nhiêu truyện, không phải
+       bấm rồi mới thấy lưới trống. Năm không còn ô chọn riêng trên thanh —
+       nó là một nhóm trong popover “Bộ lọc”. */
+    yearList = years.map(function (y) { return { v: String(y), c: yearCount[y] }; });
+    var sorts = [['new', 'Mới nhất'], ['year-desc', 'Năm mới nhất'], ['year-asc', 'Năm cũ nhất'],
       ['chap-desc', 'Nhiều chương nhất'], ['az', 'Tên A → Z']];
     if (statsOn()) sorts.push(['views', 'Đọc nhiều nhất']);   /* chỉ khi có số thật */
-    $('#fSort').innerHTML = sorts.map(function (o) {
-      return '<option value="' + o[0] + '">' + o[1] + '</option>';
-    }).join('');
-    $('#tabs').innerHTML = tabDefs().map(function (t) {
-      return '<button class="tab' + (t.k === state.tab ? ' on' : '') + '" data-k="' + t.k + '" role="tab" aria-selected="' +
-        (t.k === state.tab) + '">' + t.l + '<span class="ct">' + t.c + '</span></button>';
-    }).join('');
-    retab();
+    sortList = sorts;
+    renderSort();
+    renderPop();
   }
-  function retab() { if (CZ.inkAll) CZ.inkAll(); }
-  /* dãy tab chỉ còn TÌNH TRẠNG; nhãn 18+ tách ra nhóm riêng bên cạnh */
+  /* Chips lọc: tình trạng là một nhóm chọn-một, 18+ là công tắc riêng — hai thứ
+     GHÉP ĐƯỢC với nhau và với Năm, nên “Hoàn thành + 18+” ra đúng 4 bộ chứ
+     không phải thay thế lẫn nhau như dãy tab cũ. Số trên chip luôn là số của
+     toàn thư viện (không co theo bộ lọc đang bật) để người đọc không bị đếm
+     trượt. */
+  function adultCount() {
+    return CZ.lib().filter(function (n) { return n.is18; }).length;
+  }
+  /* Popover “Bộ lọc”: hai nhóm — Tình trạng (chọn một + công tắc 18+) và Năm ra
+     mắt (chọn một). Mỗi dòng có dấu ✓ (chỉ hiện khi đang chọn) và số đếm lấy
+     trên toàn thư viện, nên bấm là biết ngay còn bao nhiêu bộ. */
+  function renderPop() {
+    var box = $('#fPopB');
+    if (!box) return;
+    var defs = tabDefs().map(function (t) { return { k: t.k, l: t.l, c: t.c }; });
+    var n18 = adultCount();
+    var row = function (g, v, label, c) {
+      return '<button class="opt" type="button" role="menuitemradio" aria-checked="false" data-g="' + g +
+        '" data-v="' + esc(v) + '"><span class="tick">' + ic('check') + '</span>' + esc(label) +
+        (c == null ? '' : '<span class="c">' + c + '</span>') + '</button>';
+    };
+    var st = defs.map(function (t) { return row('tab', t.k, t.l, t.c); }).join('');
+    if (n18) st += row('adult', '1', '18+', n18);
+    var yr = row('year', '', 'Tất cả năm', CZ.lib().length) +
+      yearList.map(function (y) { return row('year', y.v, y.v, y.c); }).join('');
+    var sig = st + '|' + yr;
+    if (box.dataset.sig === sig) return;      /* số liệu đọc về sau chỉ đổi số đếm */
+    box.dataset.sig = sig;
+    box.innerHTML = '<div class="grp"><div class="gl">Tình trạng</div>' + st + '</div>' +
+      '<div class="grp"><div class="gl">Năm ra mắt</div>' + yr + '</div>';
+  }
+  /* Menu sắp xếp tự vẽ: danh sách xổ của <select> do hệ điều hành vẽ nên không
+     theo được nền tối — thay bằng listbox cùng ngôn ngữ với popover Bộ lọc. */
+  function renderSort() {
+    var box = $('#fSortBody');
+    if (!box) return;
+    box.innerHTML = sortList.map(function (o) {
+      return '<button class="opt" type="button" role="option" aria-selected="false" data-v="' + o[0] +
+        '"><span class="tick">' + ic('check') + '</span>' + esc(o[1]) + '</button>';
+    }).join('');
+  }
+  function sortLabel(k) {
+    var hit = sortList.filter(function (o) { return o[0] === k; })[0];
+    return hit ? hit[1] : 'Mới nhất';
+  }
+  function statusLabel(k) {
+    var hit = tabDefs().filter(function (t) { return t.k === k; })[0];
+    return hit ? hit.l : k;
+  }
+  /* chip tình trạng (chọn một) — nhãn 18+ là chip riêng, ghép được với nhau */
   function tabDefs() {
     var lib = CZ.lib();
     var byStatus = function (k) { return lib.filter(function (n) { return n.statusCls === k; }).length; };
@@ -528,21 +576,25 @@
     ];
     return TABS.filter(function (t) { return t.k === 'all' || t.c > 0; });
   }
-  function tabLabel(k) {
-    var t = tabDefs().filter(function (x) { return x.k === k; })[0];
-    return t ? t.l : k;
-  }
   function filtered() {
     var lib = CZ.lib().slice(), s = state.tab;
     if (s === 'done' || s === 'run' || s === 'soon') lib = lib.filter(function (n) { return n.statusCls === s; });
     if (state.adult) lib = lib.filter(function (n) { return n.is18; });
     if (state.year) lib = lib.filter(function (n) { return String(n.year) === state.year; });
-    if (state.author) lib = lib.filter(function (n) { return n.author === state.author; });
-    if (state.couple) lib = lib.filter(function (n) {
-      if (n.couple === state.couple) return true;
-      var cs = CZ.couplesOf ? CZ.couplesOf(n) : [];
-      return cs.indexOf(state.couple) >= 0;
-    });
+    if (state.author) {
+      var auWant = CZ.slugify(state.author);
+      lib = lib.filter(function (n) {
+        return n.author === state.author || CZ.slugify(n.author) === auWant;
+      });
+    }
+    if (state.couple) {
+      var cpWant = CZ.slugify(state.couple);
+      lib = lib.filter(function (n) {
+        if (n.couple === state.couple) return true;
+        var cs = CZ.couplesOf ? CZ.couplesOf(n) : [];
+        return cs.some(function (c) { return c === state.couple || CZ.slugify(c) === cpWant; });
+      });
+    }
     if (state.q) {
       var q = state.q.toLowerCase();
       lib = lib.filter(function (n) {
@@ -580,9 +632,9 @@
     if (state.page > total) state.page = 1;
     var slice = list.slice((state.page - 1) * state.per, state.page * state.per);
     var grid = $('#grid');
-    grid.className = 'grid' + (state.view === 'list' ? ' list-view' : '');
-    grid.innerHTML = (slice.length && state.view === 'list' ? CZ.listHead() : '') +
-      (slice.length ? slice.map(function (n) { return CZ.card(n, { view: state.view }); }).join('')
+    grid.className = 'grid';
+    grid.innerHTML =
+      (slice.length ? slice.map(function (n) { return CZ.card(n); }).join('')
       : '<div class="empty" style="grid-column:1/-1"><div class="big">Không có truyện nào khớp</div>Thử bỏ một vài tiêu chí lọc.' +
         '<div class="mt"><button class="btn ghost" id="clrAll">Xoá tất cả lọc</button></div></div>');
     stagger(grid);
@@ -594,31 +646,47 @@
         }).join('') +
         '<button class="pg ' + (state.page === total ? 'off' : '') + '" data-go="' + (state.page + 1) + '">Sau' + ic('right', 'i-s') + '</button>'
       : '';
+    /* Chip trên thanh lọc đã hiện tình trạng và nhãn 18+, nên hàng này chỉ
+       còn những điều kiện KHÔNG nhìn thấy được: từ khoá, năm, tác giả/couple
+       (hai cái sau đi vào bằng liên kết chia sẻ). Bật bất cứ bộ lọc nào là
+       hàng này xuất hiện kèm nút xoá nhanh. */
     var picked = [];
-    if (state.tab !== 'all') picked.push(['tab', tabLabel(state.tab)]);
-    if (state.adult) picked.push(['adult', '18+']);
-    ['year', 'author', 'couple'].forEach(function (k) { if (state[k]) picked.push([k, state[k]]); });
-    if (state.q) picked.push(['q', '“' + state.q + '”']);
-    $('#fpick').innerHTML = picked.length
-      ? picked.map(function (p, i) {
-        return '<span class="fchip">' + esc(p[1]) + '<span data-rm="' + i + '" title="Bỏ lọc">' + ic('x', 'i-s') + '</span></span>';
-      }).join('') + '<button class="btn ghost sm" id="clrAll2">Xoá tất cả lọc</button>'
-      : '';
+    if (state.tab !== 'all') picked.push(['tab', state.tab, 'Tình trạng: ' + statusLabel(state.tab)]);
+    if (state.year) picked.push(['year', state.year, 'Năm: ' + state.year]);
+    if (state.adult) picked.push(['adult', '1', '18+']);
+    if (state.q) picked.push(['q', state.q, '“' + state.q + '”']);
+    if (state.author) picked.push(['author', state.author, 'Tác giả: ' + state.author]);
+    if (state.couple) picked.push(['couple', state.couple, 'Couple: ' + state.couple]);
+    $('#fpick').innerHTML = !picked.length ? '' :
+      '<span class="cl">Đang lọc</span>' + picked.map(function (p, i) {
+        return '<span class="fchip">' + esc(p[2]) +
+          '<span data-rm="' + i + '" role="button" tabindex="0" title="Bỏ lọc" aria-label="Bỏ lọc ' +
+          esc(p[2]) + '">' + ic('x', 'i-s') + '</span></span>';
+      }).join('') + '<button class="lnk" id="clrAll2" type="button">Xoá tất cả</button>' +
+      /* lọc theo tác giả/couple (vào bằng liên kết chia sẻ) thì dẫn sang trang riêng
+         của người đó. */
+      (state.author ? '<a class="lnk" href="/tac-gia/?q=' + encodeURIComponent(CZ.slugify(state.author)) +
+        '">Xem tất cả truyện của ' + esc(state.author) + '</a>' : '') +
+      (state.couple ? '<a class="lnk" href="/couple/?q=' + encodeURIComponent(CZ.slugify(state.couple)) +
+        '">Xem tất cả truyện của ' + esc(state.couple) + '</a>' : '');
     $('#qClr').classList.toggle('hide', !state.q);
-    $('#fcount').innerHTML = '<b>' + list.length + '</b> truyện' +
-      (picked.length ? ' · đang lọc ' + picked.length + ' tiêu chí' : '') +
-      (total > 1 ? ' · trang ' + state.page + '/' + total : '') +
-      /* lọc theo tác giả/couple thì dẫn sang trang riêng của người đó */
-      (state.author ? ' · <a href="/tac-gia/?q=' + encodeURIComponent(CZ.slugify(state.author)) + '">Xem tất cả truyện của ' + esc(state.author) + '</a>' : '') +
-      (state.couple ? ' · <a href="/couple/?q=' + encodeURIComponent(CZ.slugify(state.couple)) + '">Xem tất cả truyện của ' + esc(state.couple) + '</a>' : '');
+    /* “1–24 / 67”: đang xem bao nhiêu trên tổng bao nhiêu, gọn hơn câu
+       “67 truyện · đang lọc 2 tiêu chí · trang 1/3” mà vẫn đủ thông tin. */
+    var from = list.length ? (state.page - 1) * state.per + 1 : 0;
+    var to = Math.min(list.length, state.page * state.per);
+    $('#fcount').innerHTML = list.length ? '<b>' + from + '–' + to + '</b> / ' + list.length : '0 / 0';
     $$('[data-rm]', $('#fpick')).forEach(function (b) {
-      b.addEventListener('click', function () {
+      var drop = function () {
         var k = picked[+b.dataset.rm][0];
-        if (k === 'q') { state.q = ''; $('#q').value = ''; }
-        else if (k === 'tab') state.tab = 'all';
+        if (k === 'tab') state.tab = 'all';
         else if (k === 'adult') state.adult = false;
+        else if (k === 'q') { state.q = ''; $('#q').value = ''; }
         else state[k] = '';
-        syncFilterUI(); state.page = 1; render();
+        state.page = 1; render();
+      };
+      b.addEventListener('click', drop);
+      b.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); drop(); }
       });
     });
     var clr = $('#clrAll') || $('#clrAll2');
@@ -642,18 +710,32 @@
   function clearAll() {
     state.tab = 'all'; state.adult = false; state.year = state.author = state.couple = state.q = '';
     $('#q').value = ''; syncFilterUI(); state.page = 1; render();
+    if ($('#fBtn')) $('#fBtn').focus({ preventScroll: true });
+  }
+  /* số điều kiện đang bật HIỆN TRONG POPOVER (tình trạng / năm / 18+) — con số
+     trên nút “Bộ lọc”; từ khoá có nút xoá riêng trong ô tìm nên không tính */
+  function filterCount() {
+    return (state.tab !== 'all' ? 1 : 0) + (state.year ? 1 : 0) + (state.adult ? 1 : 0);
   }
   function syncFilterUI() {
-    $$('#tabs .tab').forEach(function (t) {
-      var on = t.dataset.k === state.tab;
-      t.classList.toggle('on', on);
-      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    $$('#fPopB .opt').forEach(function (b) {
+      var g = b.dataset.g, v = b.dataset.v, on;
+      if (g === 'tab') on = v === state.tab;
+      else if (g === 'adult') on = !!state.adult;
+      else on = String(state.year || '') === v;
+      b.setAttribute('aria-checked', on ? 'true' : 'false');
     });
-    $$('#ageTabs .tab').forEach(function (t) {
-      t.classList.toggle('on', state.adult);
-      t.setAttribute('aria-pressed', state.adult ? 'true' : 'false');
+    var n = filterCount(), nb = $('#fBtnN');
+    if (nb) { nb.textContent = n; nb.hidden = !n; }
+    /* danh sách sắp xếp đổi theo việc có số liệu thật hay không — chỉ đổi nhãn
+       khi lựa chọn đang giữ còn tồn tại, tránh hiện một kiểu đã bị gỡ */
+    if (sortList.some(function (o) { return o[0] === state.sort; })) {
+      var sv = $('#fSortVal');
+      if (sv) sv.textContent = sortLabel(state.sort);
+    }
+    $$('#fSortBody .opt').forEach(function (b) {
+      b.setAttribute('aria-selected', b.dataset.v === state.sort ? 'true' : 'false');
     });
-    $('#fYear').value = state.year; $('#fAuthor').value = state.author; $('#fCouple').value = state.couple;
   }
   var qTimer = null;
   $('#q').addEventListener('input', function (e) {
@@ -662,29 +744,107 @@
     qTimer = setTimeout(function () { state.q = v.trim(); state.page = 1; render(); }, 160);
   });
   $('#q').addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.target.value = ''; state.q = ''; state.page = 1; render(); } });
-  $('#fYear').addEventListener('change', function (e) { state.year = e.target.value; state.page = 1; render(); });
-  $('#fAuthor').addEventListener('change', function (e) { state.author = e.target.value; state.page = 1; render(); });
-  $('#fCouple').addEventListener('change', function (e) { state.couple = e.target.value; state.page = 1; render(); });
-  $('#fSort').addEventListener('change', function (e) { state.sort = e.target.value; state.page = 1; render(); });
-  $('#tabs').addEventListener('click', function (e) {
-    var b = e.target.closest('.tab'); if (!b) return;
-    state.tab = b.dataset.k; state.page = 1; render();
+  /* ---- hai menu (Bộ lọc + Sắp xếp): cùng cách bung ra, cùng cách đóng ---- */
+  var fBtn = $('#fBtn'), fPop = $('#fPop');
+  var sBtn = $('#fSort'), sPop = $('#fSortList');
+  /* Bung ra đúng dưới nút: mép phải menu thẳng với mép phải nút, nhưng luôn kẹp
+     trong khung nhìn — nút sát lề phải thì menu trượt sang trái, máy hẹp thì
+     căn trái theo nút. */
+  function placePop(pop, btn) {
+    if (!pop || !btn) return;
+    var vw = document.documentElement.clientWidth;
+    var w = Math.min(+(pop.dataset.w || 320), vw - 32);
+    var r = btn.getBoundingClientRect();
+    var l = Math.min(0, r.width - w);
+    l = Math.max(l, 16 - r.left);
+    if (r.left + l + w > vw - 16) l = vw - 16 - w - r.left;
+    pop.style.width = w + 'px';
+    pop.style.left = Math.round(l) + 'px';
+  }
+  function setMenu(pop, btn, open, focusSel) {
+    if (!pop || !btn) return;
+    if (open) placePop(pop, btn);
+    pop.hidden = !open;
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open && focusSel) {
+      var cur = pop.querySelector('[aria-checked="true"], [aria-selected="true"]') || pop.querySelector('.opt');
+      if (cur) cur.focus({ preventScroll: true });
+    }
+  }
+  function closeMenus(except) {
+    if (fPop && fPop !== except && !fPop.hidden) setMenu(fPop, fBtn, false);
+    if (sPop && sPop !== except && !sPop.hidden) setMenu(sPop, sBtn, false);
+  }
+  /* focusSel: chỉ dồn focus vào mục đang chọn khi mở bằng BÀN PHÍM — mở bằng
+     chuột mà cướp focus sẽ hiện vòng son như đang tab tới */
+  function togglePop(open, focusSel) { closeMenus(fPop); setMenu(fPop, fBtn, open, focusSel); }
+  function toggleSort(open, focusSel) { closeMenus(sPop); setMenu(sPop, sBtn, open, focusSel); }
+  window.addEventListener('resize', function () {
+    if (fPop && !fPop.hidden) placePop(fPop, fBtn);
+    if (sPop && !sPop.hidden) placePop(sPop, sBtn);
   });
-  $('#ageTabs').addEventListener('click', function (e) {
-    var b = e.target.closest('.tab'); if (!b) return;
-    state.adult = !state.adult; state.page = 1; render();
-    if (CZ.inkAll) CZ.inkAll();          /* nhãn 18+ cũng có viên nền trượt */
+
+  fBtn.addEventListener('click', function () { togglePop(fPop.hidden, false); });
+  fBtn.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); togglePop(true, true); }
+  });
+  $('#fPopX').addEventListener('click', function () { togglePop(false, false); fBtn.focus({ preventScroll: true }); });
+  $('#fPopOk').addEventListener('click', function () { togglePop(false, false); fBtn.focus({ preventScroll: true }); });
+  $('#fPopClr').addEventListener('click', clearAll);
+  /* Một chỗ duy nhất xử lý cả nhóm: tình trạng chọn-một, năm chọn-một, 18+ là
+     công tắc riêng — cả ba ghép được với nhau và với từ khoá. Popover giữ
+     nguyên trạng thái mở để chọn tiếp như Linear. */
+  $('#fPopB').addEventListener('click', function (e) {
+    var b = e.target.closest('.opt'); if (!b) return;
+    var g = b.dataset.g;
+    if (g === 'tab') state.tab = b.dataset.v;
+    else if (g === 'adult') state.adult = !state.adult;
+    else state.year = b.dataset.v;
+    state.page = 1; render();
+  });
+
+  /* ---- sắp xếp: nút chữ mở listbox tự vẽ ---- */
+  sBtn.addEventListener('click', function () { toggleSort(sPop.hidden, false); });
+  sBtn.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); toggleSort(true, true); }
+  });
+  $('#fSortBody').addEventListener('click', function (e) {
+    var b = e.target.closest('.opt'); if (!b) return;
+    state.sort = b.dataset.v; state.page = 1;
+    toggleSort(false, false);
+    sBtn.focus({ preventScroll: true });
+    render();
+  });
+  /* điều hướng bằng bàn phím trong cả hai menu */
+  function menuKey(e, pop, btn) {
+    if (pop.hidden || e.target === btn) return false;   /* phím mở menu do nút xử lý */
+    var items = $$('.opt', pop);
+    var i = items.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown') { e.preventDefault(); (items[i + 1] || items[0]).focus(); return true; }
+    if (e.key === 'ArrowUp') { e.preventDefault(); (items[i - 1] || items[items.length - 1]).focus(); return true; }
+    if (e.key === 'Home') { e.preventDefault(); items[0].focus(); return true; }
+    if (e.key === 'End') { e.preventDefault(); items[items.length - 1].focus(); return true; }
+    if (e.key === 'Escape' || e.key === 'Tab') {
+      setMenu(pop, btn, false);
+      if (e.key === 'Escape') { e.preventDefault(); btn.focus({ preventScroll: true }); }
+      return true;
+    }
+    return false;
+  }
+  document.addEventListener('keydown', function (e) {
+    if (menuKey(e, fPop, fBtn)) return;
+    menuKey(e, sPop, sBtn);
+  });
+  document.addEventListener('click', function (e) {
+    /* bấm vào chính nút thì để handler của nút lo (đừng đóng ngay sau khi mở) */
+    if (e.target.closest('#fBtn') || e.target.closest('#fSort')) return;
+    if (e.target.closest('#fPop')) { closeMenus(fPop); return; }
+    if (e.target.closest('#fSortList')) { closeMenus(sPop); return; }
+    closeMenus(null);
   });
   $('#qClr').addEventListener('click', function () {
     $('#q').value = ''; state.q = ''; state.page = 1; render();
     $('#q').focus();
-  });
-  $('#viewSeg').addEventListener('click', function (e) {
-    var b = e.target.closest('button'); if (!b) return;
-    state.view = b.dataset.view;
-    $$('#viewSeg button').forEach(function (x) { x.classList.toggle('on', x === b); });
-    try { localStorage.setItem('ssochuz-view', state.view); } catch (err) {}
-    render();
   });
 
   /* ======================= KHỞI ĐỘNG ================================== */
@@ -696,14 +856,6 @@
     grid.innerHTML = new Array(n + 1).join(one);
     $('#pager').innerHTML = '';
     $('#fcount').textContent = 'đang tải dữ liệu…';
-    skeletonNumbers();    /* N12: dải số liệu cũng có khung xám chờ thay vì trống trơn */
-  }
-  /* N12: khối số liệu hiện khung xương trước, số thật (đã đối chiếu realcounts)
-     về là thế chỗ ngay — không nhấp nháy như bản cũ. */
-  function skeletonNumbers() {
-    var box = $('#facts');
-    if (!box) return;
-    box.innerHTML = new Array(5).join('<div class="f fsk"><span class="ln rskel"></span><span class="ln sm rskel"></span></div>');
   }
   function fail(msg, err) {
     if (window.console && console.warn) console.warn('[ssochuz]', msg, err || '');
@@ -717,12 +869,7 @@
       CZ._setLib();
       var lib = CZ.lib();
       CZ.mountShell({ active: 'home' });       /* dựng lại để chân trang có rev mới */
-      try { var v = localStorage.getItem('ssochuz-view'); if (v === 'list') state.view = 'list'; } catch (e) {}
-      $$('#viewSeg button').forEach(function (x) { x.classList.toggle('on', x.dataset.view === state.view); });
-      hero.list = CZ.slides(reg).slice(0, 5);
-      heroInit();
-      renderFacts(lib);
-
+      mountHero(CZ.slides(reg).slice(0, 5));
       renderNew();
       renderPersonalBlocks();
       renderRank();
@@ -739,12 +886,13 @@
       /* một bộ vừa được đối chiếu số chương thật → vẽ lại thẻ cho đúng */
       window.addEventListener('cz:count', function () {
         try { CZ._setLib(); } catch (e) {}
-        renderFacts(CZ.lib()); renderNew(); renderPersonalBlocks(); renderRank(); render();
+        renderNew(); renderPersonalBlocks(); renderRank(); render();
       });
     } catch (e) { fail('lỗi dựng trang chủ', e); }
   }
   /* quay lại tab (hoặc bấm Back) → dựng lại bàn đọc cho khớp dữ liệu trong máy */
-  window.addEventListener('pageshow', function () { if (CZ._memo.reg) {  heroPaint(false); } });
+  /* quay lại tab/Back: dựng lại hero để nhãn “Đã lưu” khớp tủ trong máy */
+  window.addEventListener('pageshow', function () { if (CZ._memo.reg) mountHero(CZ.slides().slice(0, 5)); });
   skeleton(12);
   CZ.registry().then(function (r) { boot(r.reg); })
     .catch(function (e) { fail('lỗi tải registry', e); });

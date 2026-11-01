@@ -30,13 +30,15 @@ const LIB = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data/registry
     readHref: ($('#stage .slide.on .btn-row a') || {}).getAttribute ? $('#stage .slide.on .btn-row a').getAttribute('href') : '',
     dots: $$('#hDots button').length,
     strip: $$('#hStrip button').length,
-    hasBlurBg: !!$('#hero .bg')
+    /* 2026-10-29: hero dùng ảnh nền full-bleed thật (<img> trong .hb-media) */
+    hasMediaBg: !!$('#hero .hb-media'),
+    hasDarkScrim: !!$('#hero .hb-scrim'),
+    playBtn: !!$('#hPlay')
   };
   click($$('#hDots button')[1]); await wait(120);
   out.heroAfterDot = (($('#stage .slide.on h1') || {}).textContent || '').trim() === (LIB.find(n => n.slug === p.win.CZ.slides(p.win.CZ._memo.reg)[1].slug) || {}).title;
 
-  /* ---------- số liệu + thư viện ---------- */
-  out.facts = { n: $$('#facts .f').length, labels: $$('#facts .f span').map(e => e.textContent.trim()) };
+  /* ---------- thư viện (dải số liệu đã bỏ 30/10/2026 — xem docs §29) ---------- */
   out.cards = { n: $$('#grid .card').length, pager: txt('#pager'), firstHref: ($('#grid .card') || {}).getAttribute('href') };
   out.cardsAreRealLinks = /^\/truyen\/[^/]+\/$/.test(out.cards.firstHref || '');
   out.genreGone = !$('#genreGroup') && !$$('#genreTabs [data-genre]').length;
@@ -47,21 +49,46 @@ const LIB = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data/registry
   q.value = 'chain'; q.dispatchEvent(new win.Event('input', { bubbles: true })); await wait(300);
   out.search = { n: $$('#grid .card').length, fcount: txt('#fcount'), chip: txt('#fpick') };
   q.value = ''; q.dispatchEvent(new win.Event('input', { bubbles: true })); await wait(300);
-  const tabs = $$('#tabs .tab');
-  click(tabs[2]); await wait(200);
-  out.tabFilter = { label: tabs[2].textContent.trim(), n: $$('#grid .card').length };
-  click(tabs[0]); await wait(200);
-  /* tình trạng lọc bằng dãy tab ngay trên lưới — không còn ô “Tình trạng” trùng lặp */
+  /* Thanh lọc kiểu Linear (vòng 54): tình trạng + năm + 18+ nằm trong popover
+     “Bộ lọc”, đang lọc thì hiện hàng chip xoá được ngay dưới thanh */
+  click('#fBtn'); await wait(120);
+  out.popMo = { open: !$('#fPop').hidden, expanded: $('#fBtn').getAttribute('aria-expanded'), rows: $$('#fPopB .opt').length };
+  const opts = $$('#fPopB .opt');
+  out.chips = opts.map(c => c.textContent.trim());
+  const stOpt = opts.find(b => /Hoàn thành/.test(b.textContent));
+  click(stOpt); await wait(220);
+  out.tabFilter = { label: stOpt.textContent.trim(), n: $$('#grid .card').length,
+    checked: stOpt.getAttribute('aria-checked'), badge: txt('#fBtnN') };
+  const allOpt = opts.find(b => /^Tất cả/.test(b.textContent.trim()));
+  click(allOpt); await wait(200);
+  /* tình trạng lọc trong popover — không còn ô “Tình trạng” trùng lặp */
   out.statusSel = { conOLoc: !!$('#fStatus'), n0: $$('#grid .card').length };
-  const stTab = $$('#tabs .tab').find(b => /Hoàn thành/.test(b.textContent));
-  click(stTab); await wait(220);
+  click(stOpt); await wait(220);
   out.statusFilter = { n: $$('#grid .card').length, chip: txt('#fpick'), fcount: txt('#fcount') };
-  click($$('#tabs .tab')[0]); await wait(200);
-  const sel = $('#fSort');
-  out.sortOptions = [...sel.options].map(o => o.textContent);
-  sel.value = 'az'; sel.dispatchEvent(new win.Event('change', { bubbles: true })); await wait(200);
+  /* 18+ ghép được với tình trạng: bật lên thì số thẻ phải ≤ số thẻ đang có */
+  const nDone = $$('#grid .card').length;
+  const opt18 = opts.find(b => /^18\+/.test(b.textContent.trim()));
+  click(opt18); await wait(220);
+  out.adultChip = {
+    on: opt18.getAttribute('aria-checked') === 'true',
+    n: $$('#grid .card').length, leDone: $$('#grid .card').length <= nDone,
+    fcount: txt('#fcount'), badge: txt('#fBtnN')
+  };
+  click(opt18); await wait(160);
+  click(allOpt); await wait(200);
+  doc.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await wait(120);
+  out.popDong = { hidden: $('#fPop').hidden, expanded: $('#fBtn').getAttribute('aria-expanded'), chipRong: txt('#fpick') };
+  /* sắp xếp: nút chữ mở listbox tự vẽ (không còn <select> của hệ điều hành) */
+  const sortOpts = () => $$('#fSortBody .opt');
+  out.sortOptions = sortOpts().map(o => o.textContent.trim());
+  click('#fSort'); await wait(120);
+  out.sortMenuMo = { open: !$('#fSortList').hidden, expanded: $('#fSort').getAttribute('aria-expanded') };
+  click(sortOpts().find(o => /Tên A → Z/.test(o.textContent))); await wait(250);
   out.sortAZ = (($('#grid .card h3') || {}).textContent || '').trim();
-  sel.value = 'new'; sel.dispatchEvent(new win.Event('change', { bubbles: true })); await wait(150);
+  out.sortNhan = txt('#fSortVal');
+  out.sortDong = !$('#fSortList').hidden;
+  click('#fSort'); await wait(120);
+  click(sortOpts().find(o => /^Mới nhất/.test(o.textContent))); await wait(200);
 
   /* ---------- tìm nhanh (⌘K / phím /) ---------- */
   click('#czJump'); await wait(200);
@@ -95,7 +122,8 @@ const LIB = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data/registry
   click(rc[rc.length - 1]); await wait(120);
   out.rankChap = txt('#rank .rank');
   out.sched = { rows: $$('#sched .sched').length, src: txt('#schedSrc') };
-  out.newRail = { n: $$('#newRail .card').length, sub: txt('#newSub') };
+  /* 30/10/2026: “Mới cập nhật” là bảng gọn ba cột (phương án 1B) → 12 dòng .mrow. */
+  out.newRail = { n: $$('#newRail .mrow').length, row: (($('#newRail .mrow .mt b')||{}).textContent||'') };
 
   /* My Space is now a separate page; its history/shelves are covered in t_space.js. */
   out.spaceSeparate = !$('#ban-doc') && !!doc.querySelector('a[href="/my-space"]');

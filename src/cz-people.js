@@ -64,6 +64,21 @@
     if (c.other) bits.push(c.other + ' khác');
     return bits.join(' · ');
   }
+  /* dòng meta của thẻ tác giả: "6 truyện  • 4 hoàn thành  • 2 sắp ra mắt" */
+  function metaHTML(rows) {
+    var c = { done: 0, run: 0, soon: 0, other: 0 };
+    rows.forEach(function (n) {
+      if (c[n.statusCls] == null) c.other++;
+      else c[n.statusCls]++;
+    });
+    var out = ['<span class="n">' + rows.length + ' truyện</span>'];
+    ['done', 'run', 'soon'].forEach(function (k) {
+      if (c[k]) out.push('<span class="sp"><i class="d ' + k + '"></i>' + c[k] + ' ' +
+        esc(CZ.statusLabel(k).toLowerCase()) + '</span>');
+    });
+    if (c.other) out.push('<span class="sp">' + c.other + ' khác</span>');
+    return out.join('');
+  }
   function setHead(title, desc) {
     try { document.title = title + ' · ssochuz library'; } catch (e) {}
     var md = document.querySelector('meta[name="description"]');
@@ -98,13 +113,15 @@
   function renderOne(name) {
     var w = document.querySelector('#ppQWrap');
     if (w) w.setAttribute('hidden', '');
+    var g1 = document.querySelector('#ppGrid');
+    if (g1) g1.classList.remove('pgrid');
     var lib = CZ.lib().filter(function (n) { return fields(n).indexOf(name) >= 0 || field(n) === name; });
     lib.sort(function (a, b) { return String(b.updated || '').localeCompare(String(a.updated || '')); });
     document.querySelector('#crumb').innerHTML = '<a href="/">Trang chủ</a> <span>›</span> ' +
       '<a href="/#thu-vien">Thư viện</a> <span>›</span> ' +
       '<a href="' + kindPath() + '">Tất cả ' + kindLabel().toLowerCase() + '</a> <span>›</span> <b>' + esc(name) + '</b>';
     document.querySelector('#ppTitle').textContent = name;
-    document.querySelector('#ppSub').textContent = kindLabel() + ' · ' + statusLine(lib);
+    document.querySelector('#ppSub').textContent = statusLine(lib);
     document.querySelector('#ppGrid').innerHTML = lib.length
       ? lib.map(function (n) { return CZ.card(n, { view: 'grid' }); }).join('')
       : '<div class="empty">Chưa có truyện nào.</div>';
@@ -113,6 +130,8 @@
   }
   function renderAll(missQ) {
     var lib = CZ.lib(), names = allNames(lib);
+    var g0 = document.querySelector('#ppGrid');
+    if (g0) g0.classList.add('pgrid');
     var by = {};
     lib.forEach(function (n) {
       fields(n).forEach(function (v) {
@@ -129,14 +148,17 @@
         var rows = (by[name] || []).sort(function (a, b) {
           return String(b.updated || '').localeCompare(String(a.updated || ''));
         });
-        var thumbs = rows.slice(0, 3).map(function (n) {
+        /* một bìa (truyện mới nhất) — số truyện đã có ở dòng meta, xếp ba bìa
+           chồng lên nhau chỉ làm thẻ rối mà không thêm thông tin */
+        var thumbs = rows.slice(0, 1).map(function (n) {
           var im = n.thumb || n.slide || '';
           return im ? '<img src="' + esc(im) + '"' + CZ.coverFB(n, im) + ' alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '';
         }).join('');
-        return '<a class="pcard" href="' + personURL(name) + '" data-name="' + esc(CZ.slugify(name)) + '">' +
+        return '<a class="pcard" href="' + personURL(name) + '" data-name="' + esc(CZ.slugify(name)) +
+          '" title="' + esc(name) + '">' +
           '<span class="pth">' + thumbs + '</span>' +
           '<span class="pbody"><b>' + esc(name) + '</b>' +
-          '<span class="pmeta">' + esc(statusLine(rows)) + '</span></span></a>';
+          '<span class="pmeta">' + metaHTML(rows) + '</span></span></a>';
       }).join('');
     bindFilter(names.length);
     setHead('Tất cả ' + kindLabel().toLowerCase(), 'Danh sách ' + kindLabel().toLowerCase() + ' trên ssochuz library.');
