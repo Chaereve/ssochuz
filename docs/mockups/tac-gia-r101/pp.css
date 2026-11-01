@@ -1,0 +1,197 @@
+/* ============================================================================
+   r101 · ba phương án cho trang Tác giả — CSS riêng của bản đề xuất.
+   Chỉ dùng token của cz.css (--surf, --bd, --mut, --dim, --acc, --font-head…)
+   nên đổi theme là đổi theo. Mọi lớp ở đây có tiền tố riêng, không đụng cz.css.
+   ========================================================================== */
+
+.m101 { max-width: 1120px; margin: 0 auto; padding: 0 24px 72px; }
+
+/* ---- thanh chọn phương án (chỉ có ở bản đề xuất) ------------------------- */
+.mkbar { position: sticky; top: 0; z-index: 60; background: #12100e; border-bottom: 1px solid var(--bd); }
+.mkbar-in { max-width: 1120px; margin: 0 auto; padding: 9px 24px; display: flex; align-items: center;
+  gap: 10px 16px; flex-wrap: wrap; }
+.mkbar .tag { font: 700 9px/1 var(--font); letter-spacing: .14em; text-transform: uppercase;
+  color: var(--acc); border: 1px solid #e0859b55; border-radius: 99px; padding: 5px 9px; }
+.mkbar .mseg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 99px;
+  border: 1px solid var(--bd); background: var(--surf); }
+.mkbar .mseg button { height: 30px; padding: 0 13px; border: 0; border-radius: 99px; background: transparent;
+  color: var(--mut); font: 600 12px/1 var(--font); cursor: pointer; white-space: nowrap; }
+.mkbar .mseg button:hover { color: var(--txt); }
+.mkbar .mseg button[aria-selected="true"] { background: #e0859b2b; color: var(--acc); }
+.mkbar .desc { margin: 0; font: 400 12px/1.4 var(--font); color: var(--dim); flex: 1 1 260px; min-width: 0; }
+.mkbar .live { font: 500 11.5px/1 var(--font); color: var(--mut); text-decoration: none;
+  border-bottom: 1px solid var(--bd); padding-bottom: 2px; }
+.mkbar .live:hover { color: var(--txt); border-color: var(--bd2); }
+
+/* ---- đầu trang: dùng chung cho cả ba phương án --------------------------- */
+.m101 .mcrumb { padding: 26px 0 0; font-size: 12.5px; color: var(--dim); }
+.m101 .mcrumb a { color: var(--dim); text-decoration: none; }
+.m101 .mcrumb a:hover { color: var(--txt); }
+.m101 .mcrumb b { color: var(--mut); font-weight: 600; }
+
+.m101 .mlead { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px 28px;
+  padding: 10px 0 16px; margin: 0 0 18px; border-bottom: 1px solid var(--bd); }
+.m101 .mlead .mnm { min-width: 0; }
+.m101 .mlead h1 { font-family: var(--font-head); font-weight: 600; letter-spacing: -.022em;
+  font-size: clamp(28px, 3.4vw, 40px); line-height: 1.04; margin: 0; }
+.m101 .mlead .sub { color: var(--mut); font-size: 13.5px; line-height: 1.5; margin: 7px 0 0; }
+.m101 .mlead .sub b { color: var(--txt); font-weight: 600; }
+.m101 .mlead .search { max-width: 300px; flex: 0 1 300px; margin: 0; }
+.m101 .mlead .search[hidden] { display: none; }
+.m101 .mlead .search input { font-size: 14px; }
+
+/* ---- bìa + chấm trạng thái ---------------------------------------------- */
+.m101 .mbk { position: relative; display: block; flex: none; border-radius: 5px; overflow: hidden;
+  background: var(--surf2); box-shadow: 0 1px 0 #ffffff17, 0 10px 18px -14px #000c; }
+.m101 .mbk img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.m101 .mbk.sm { width: 32px; height: 48px; }
+.m101 .mbk.md { width: 40px; height: 60px; }
+.m101 .mbk.lg { width: 84px; height: 118px; }
+.m101 .mst { display: inline-flex; align-items: center; gap: 5px; color: var(--mut);
+  font: 400 12px/1.4 var(--font); white-space: nowrap; }
+.m101 .mst i { width: 5px; height: 5px; border-radius: 50%; background: var(--dim); flex: none; }
+.m101 .mst i.done { background: var(--ok); }
+.m101 .mst i.run { background: var(--warn); }
+.m101 .mcnt { color: var(--txt); font: 600 12.5px/1.4 var(--font); white-space: nowrap; }
+.m101 .mempty { padding: 40px 0; color: var(--mut); font-size: 14px; border-top: 1px solid var(--bd); }
+
+/* ============================================================================
+   A · CHỈ MỤC — phân cấp bằng CHỮ CÁI: chữ cái là mốc lớn nhất sau tên trang,
+   mỗi nhóm là một khối, trong nhóm là các dòng tên + số truyện.
+   ========================================================================== */
+.vA .azwrap { position: sticky; top: var(--mkbar-h, 47px); z-index: 20; background: var(--bg);
+  padding: 8px 0 6px; border-bottom: 1px solid var(--bd); }
+.vA .maz { display: flex; gap: 1px; overflow-x: auto; scrollbar-width: none; }
+.vA .maz::-webkit-scrollbar { display: none; }
+.vA .maz button { flex: none; min-width: 30px; height: 30px; display: grid; place-items: center; padding: 0;
+  border: 0; border-radius: 7px; background: transparent; color: var(--txt); cursor: pointer;
+  font: 600 12px/1 var(--font); }
+.vA .maz button:hover { background: var(--surf2); color: var(--acc); }
+.vA .maz button[aria-current="true"] { background: var(--acc); color: #2a1119; }
+.vA .maz button:disabled { opacity: .22; cursor: default; }
+.vA .mgrp { padding-top: 24px; scroll-margin-top: 96px; }
+.vA .mgh { display: flex; align-items: baseline; gap: 11px; margin: 0 0 8px; }
+.vA .mgh .l { font: 600 28px/1 var(--font-head); letter-spacing: -.02em; color: var(--txt); min-width: 24px; }
+.vA .mgh .c { font: 700 9.5px/1 var(--font); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+.vA .mgh .r { flex: 1; height: 1px; background: var(--bd); }
+.vA .mrows { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px 18px; }
+.vA .mrow { display: flex; align-items: center; gap: 12px; padding: 7px 8px 7px 0; border-radius: 9px;
+  color: inherit; text-decoration: none; min-width: 0; }
+.vA .mrow:hover { background: var(--surf); }
+.vA .mrow:hover .mnm { color: var(--acc); }
+.vA .mrow:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+.vA .mtx { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.vA .mnm { font: 600 16px/1.3 var(--font-head); letter-spacing: -.006em; color: var(--txt);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vA .mmt { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+
+/* ============================================================================
+   B · BẢNG — phân cấp bằng CỘT: hàng tiêu đề cột, số liệu thẳng cột, bấm tiêu
+   đề để sắp xếp. Dạng này đọc nhanh khi cần so sánh.
+   ========================================================================== */
+.vB .mthead { display: grid; grid-template-columns: minmax(0, 1fr) 92px 196px 104px;
+  gap: 14px; align-items: end; padding: 0 8px 9px 0; border-bottom: 1px solid var(--bd2); }
+.vB .mthead > * { font: 700 9.5px/1 var(--font); letter-spacing: .14em; text-transform: uppercase;
+  color: var(--dim); text-align: left; background: none; border: 0; padding: 0; }
+.vB .mthead button { cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+.vB .mthead button:hover { color: var(--txt); }
+.vB .mthead button[aria-pressed="true"] { color: var(--acc); }
+.vB .mthead .ar { font-size: 9px; }
+.vB .mtrow { display: grid; grid-template-columns: minmax(0, 1fr) 92px 196px 104px; gap: 14px;
+  align-items: center; padding: 6px 8px 6px 0; border-bottom: 1px solid var(--bd);
+  color: inherit; text-decoration: none; min-width: 0; }
+.vB .mtrow:hover { background: var(--surf); }
+.vB .mtrow:hover .mnm { color: var(--acc); }
+.vB .mtrow:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+.vB .mwho { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.vB .mnm { font: 600 16px/1.3 var(--font-head); letter-spacing: -.006em; color: var(--txt);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vB .mnum { font: 600 15px/1 var(--font); color: var(--txt); font-variant-numeric: tabular-nums; }
+.vB .mnum small { font: 500 11px/1 var(--font); color: var(--dim); margin-left: 3px; letter-spacing: .02em; }
+.vB .mstw { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.vB .mwhen { font: 500 12px/1 var(--font); color: var(--dim); font-variant-numeric: tabular-nums; }
+
+/* ============================================================================
+   C · TẠP CHÍ — phân cấp bằng CỠ: dải “nhiều truyện nhất” với bìa lớn, rồi tới
+   danh sách đều. Có thêm kiểu xem Thẻ / Gọn.
+   ========================================================================== */
+.vC .mband { padding: 4px 0 22px; border-bottom: 1px solid var(--bd); }
+.vC .band-hd { display: flex; align-items: baseline; gap: 10px; margin: 0 0 14px; }
+.vC .band-hd h2 { font: 600 21px/1.2 var(--font-head); letter-spacing: -.014em; margin: 0; color: var(--txt); }
+.vC .band-hd .c { font: 700 9.5px/1 var(--font); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+.vC .band-hd .r { flex: 1; height: 1px; background: var(--bd); }
+.vC .mf3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.vC .mf1 { display: flex; align-items: center; gap: 16px; min-width: 0; color: inherit; text-decoration: none; }
+.vC .mf1:hover .mnm { color: var(--acc); }
+.vC .mf1:focus-visible { outline: 2px solid var(--acc); outline-offset: 4px; border-radius: 8px; }
+.vC .mf1 .mtx { min-width: 0; }
+.vC .mf1 .mnm { font: 600 20px/1.25 var(--font-head); letter-spacing: -.01em; color: var(--txt);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.vC .mf1 .mmt { margin-top: 5px; display: flex; flex-direction: column; gap: 3px; }
+.vC .mf1 .mlt { font: 400 12px/1.4 var(--font); color: var(--dim); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; }
+
+.vC .mallhd { display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 22px 0 12px; }
+.vC .mallhd h2 { font: 600 16px/1.2 var(--font-head); letter-spacing: -.01em; margin: 0; }
+.vC .mallhd .mseg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 99px;
+  border: 1px solid var(--bd); background: var(--surf); }
+.vC .mallhd .mseg button { height: 28px; padding: 0 11px; border: 0; border-radius: 99px; background: transparent;
+  color: var(--mut); font: 600 11.5px/1 var(--font); cursor: pointer; }
+.vC .mallhd .mseg button[aria-pressed="true"] { background: #e0859b2b; color: var(--acc); }
+
+.vC .mcards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 26px; }
+.vC .mcard { display: flex; align-items: center; gap: 14px; padding: 9px 8px 9px 0; border-radius: 10px;
+  color: inherit; text-decoration: none; min-width: 0; }
+.vC .mcard:hover { background: var(--surf); }
+.vC .mcard:hover .mnm { color: var(--acc); }
+.vC .mcard:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+.vC .mcard .mtx { min-width: 0; }
+.vC .mcard .mnm { font: 600 17px/1.3 var(--font-head); letter-spacing: -.008em; color: var(--txt);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vC .mcard .mmt { display: flex; align-items: center; gap: 9px; margin-top: 3px; flex-wrap: wrap; }
+/* kiểu Gọn: ba cột, bìa nhỏ, không bìa lớn */
+.vC .mcards.compact { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px 18px; }
+.vC .mcards.compact .mcard { gap: 11px; padding: 6px 8px 6px 0; }
+.vC .mcards.compact .mnm { font-size: 15.5px; }
+.vC .mcards.compact .mbk.lg { display: none; }
+
+/* ---- hẹp dần ------------------------------------------------------------- */
+@media (max-width: 1024px) {
+  .vA .mrows { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .vB .mthead, .vB .mtrow { grid-template-columns: minmax(0, 1fr) 74px 168px 92px; gap: 12px; }
+  .vC .mf3 { gap: 16px; }
+  .vC .mf1 { gap: 13px; }
+  .vC .mf1 .mnm { font-size: 18px; }
+  .vC .mbk.lg { width: 70px; height: 99px; }
+}
+@media (max-width: 900px) {
+  .vC .mcards { grid-template-columns: minmax(0, 1fr); }
+  .vC .mcards.compact { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .vB .mthead, .vB .mtrow { grid-template-columns: minmax(0, 1fr) 66px 140px; }
+  .vB .mthead .cwhen, .vB .mwhen { display: none; }
+}
+@media (max-width: 720px) {
+  .mkbar { position: static; }
+  .m101 { padding: 0 16px 56px; }
+  .m101 .mlead { flex-direction: column; align-items: stretch; gap: 14px; }
+  .m101 .mlead .search { max-width: none; flex: 1 1 auto; }
+  .mkbar-in { padding: 8px 16px; gap: 8px 10px; }
+  .mkbar .live, .mkbar .desc { display: none; }
+  .vA .azwrap { top: 0; }
+  .vC .mf3 { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .vC .mband { padding-bottom: 16px; }
+  .vC .mband-hd .c { display: none; }
+  .vC .mband-hd { margin-bottom: 16px; }
+  .vC .mband-hd h2 { font-size: 20px; }
+  .vC .mf1 .mnm { font-size: 18px; }
+}
+@media (max-width: 680px) {
+  .vA .mrows { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .vC .mcards.compact { grid-template-columns: minmax(0, 1fr); }
+  .vB .mthead, .vB .mtrow { grid-template-columns: minmax(0, 1fr) 58px; }
+  .vB .mthead .cst, .vB .mstw { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .m101 * { transition: none !important; }
+}
