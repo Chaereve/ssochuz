@@ -100,7 +100,7 @@
     if (w) w.setAttribute('hidden', '');
     PP.hide();
     var g1 = document.querySelector('#ppGrid');
-    if (g1) g1.setAttribute('data-mode', 'one');   /* .people #ppGrid là block; lưới thẻ cần grid */
+    if (g1) g1.setAttribute('data-mode', 'one');   /* .grid gốc: lưới thẻ truyện */   /* .people #ppGrid là block; lưới thẻ cần grid */
     var lib = CZ.lib().filter(function (n) { return fields(n).indexOf(name) >= 0 || field(n) === name; });
     lib.sort(function (a, b) { return String(b.updated || '').localeCompare(String(a.updated || '')); });
     document.querySelector('#crumb').innerHTML = '<a href="/">Trang chủ</a> <span>›</span> ' +
@@ -213,10 +213,9 @@
     var AZ = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
     var ST = ['run', 'soon', 'done'];
     var SORTS = ['az', 'count', 'new'];
-    var SORT_LABEL = { az: 'A–Z', count: 'Nhiều truyện', new: 'Mới cập nhật' };
     var ST_LABEL = { run: 'Đang cập nhật', soon: 'Sắp ra mắt', done: 'Hoàn thành' };
-    var q = '', sort = 'az', st = {}, miss = '', data = [];
-    var bound = false, timer = null, spy = 0, curLetter = '';
+    var q = '', sort = 'az', stv = '', miss = '', data = [];
+    var bound = false, timer = null, spy = 0, curLetter = '', jumpTo = 0;
 
     function el(s) { return document.querySelector(s); }
     function ready() { return !!el('#ppAZ'); }
@@ -228,16 +227,8 @@
       var c = s ? s.charAt(0).toUpperCase() : '';
       return /[A-Z]/.test(c) ? c : '#';
     }
-    /* 1–2 chữ cái đầu cho tác giả chưa có bìa */
-    function initials(name) {
-      var p = String(name || '').trim().split(/\s+/).filter(Boolean);
-      if (!p.length) return '?';
-      var a = p[0].charAt(0);
-      var b = p.length > 1 ? p[p.length - 1].charAt(0) : p[0].charAt(1) || '';
-      return (a + b).toUpperCase();
-    }
     function groupId(L) { return 'ppL-' + (L === '#' ? 'num' : L); }
-    /* "2026-08-28" → "28-08" (ngắn, đủ để so sánh nhanh) */
+    /* "2026-08-28" → "28-08" */
     function dmy(s) {
       var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s || ''));
       return m ? m[3] + '-' + m[2] : '';
@@ -260,59 +251,45 @@
         e.books.sort(function (a, b) { return String(b.updated || '').localeCompare(String(a.updated || '')); });
         e.count = e.books.length;
         e.updated = String((e.books[0] || {}).updated || '');
-        e.best = String((e.books[0] || {}).title || '');
         e.books.forEach(function (b) {
           var k = CZ.statusCls(b.status);
           if (e.st[k] == null) e.st[k] = 0;
           e.st[k]++;
         });
-        e.covers = e.books.map(function (b) { return { src: CZ.coverSrc(b), n: b }; })
-          .filter(function (c) { return !!c.src; }).slice(0, 1);
+        /* trạng thái hiển thị = trạng thái nhiều truyện nhất; hoà thì lấy của
+           truyện mới nhất. Bảng đầy đủ nằm trong title của ô. */
+        var best = '', bestN = -1;
+        ST.forEach(function (k) {
+          if (e.st[k] > bestN) { bestN = e.st[k]; best = k; }
+        });
+        e.key = best;
+        e.cover = CZ.coverSrc(e.books[0]);
+        e.title = e.count + ' truyện' + ST.filter(function (k) { return e.st[k] > 0; })
+          .map(function (k) { return ' · ' + e.st[k] + ' ' + ST_LABEL[k].toLowerCase(); }).join('');
         e.letter = letterOf(e.name);
       });
       return out;
     }
 
-    /* khối sách: bìa thật ở trước + tối đa 2 lớp giấy lệch sau (đọc ra ngay là
-       chồng sách, mà bìa vẫn nguyên vẹn ở 44 × 64). Không có bìa → avatar chữ. */
-    function stackHTML(e, big) {
-      var c = e.covers[0];
-      if (!c) {
-        return '<span class="pava' + (big ? ' lg' : '') + '" aria-hidden="true">' +
-          esc(initials(e.name)) + '</span>';
-      }
-      var lay = Math.min(Math.max(e.count - 1, 0), 2);
-      var w = big ? 76 : 44, h = big ? 108 : 64;
-      var pgs = '';
-      for (var i = 1; i <= lay; i++) pgs += '<i class="pg" style="--i:' + i + '"></i>';
-      return '<span class="pbook' + (big ? ' lg' : '') + '" aria-hidden="true" data-ini="' +
-        esc(initials(e.name)) + '" style="--lay:' + lay + '">' + pgs +
-        '<span class="bk"><img src="' + esc(c.src) + '"' + CZ.coverFB(c.n, c.src) +
-        ' alt="" width="' + w + '" height="' + h + '" loading="lazy" decoding="async"' +
-        ' referrerpolicy="no-referrer"></span></span>';
-    }
-    function badgesHTML(e) {
-      return ST.filter(function (k) { return e.st[k] > 0; }).map(function (k) {
-        return '<span class="pbadge ' + k + '">' + e.st[k] + ' ' + CZ.statusLabel(k).toLowerCase() + '</span>';
-      }).join('');
-    }
-    function cardHTML(e, big) {
-      var meta = e.count + ' truyện' + (e.updated ? ' · cập nhật ' + dmy(e.updated) : '');
-      /* .pacard/.pafeat là hợp đồng với tests/t_people.js + tools/audit*; .pca/.pcf là lớp vẽ mới */
-      return '<a class="' + (big ? 'pcf pafeat pacard' : 'pca pacard') + '" href="' + personURL(e.name) +
-        '" data-name="' + esc(e.slug) + '">' + stackHTML(e, !!big) +
-        '<span class="pct"><b>' + esc(e.name) + '</b>' +
-        '<span class="pcm">' + esc(meta) + '</span>' +
-        (big && e.best ? '<span class="pcl">Mới nhất: ' + esc(e.best) + '</span>' : '') +
-        '<span class="pcb">' + badgesHTML(e) + '</span></span></a>';
+    function rowHTML(e) {
+      var src = e.cover;
+      return '<a class="ppr pacard" href="' + personURL(e.name) + '" data-name="' + esc(e.slug) + '">' +
+        '<span class="ppcv">' + (src
+          ? '<img src="' + esc(src) + '"' + CZ.coverFB(e.books[0], src) +
+            ' alt="" width="36" height="52" loading="lazy" decoding="async" referrerpolicy="no-referrer">'
+          : '') + '</span>' +
+        '<span class="ppn">' + esc(e.name) + '</span>' +
+        '<span class="ppsm">' +
+          '<span class="ppc">' + e.count + ' truyện</span>' +
+          (e.updated ? '<span class="ppd">' + dmy(e.updated) + '</span>' : '<span class="ppd"></span>') +
+          '<span class="pps ' + e.key + '" title="' + esc(e.title) + '"><i></i>' +
+            ST_LABEL[e.key] + '</span>' +
+        '</span></a>';
     }
     function emptyHTML() {
       return '<div class="ppempty"><b>Không có tác giả nào khớp</b>' +
-        '<p>Thử bỏ từ khoá hoặc bộ lọc trạng thái.</p>' +
+        '<p>Thử từ khoá khác, hoặc bỏ bộ lọc trạng thái.</p>' +
         '<button type="button" data-ppclear>Xoá bộ lọc</button></div>';
-    }
-    function noteHTML() {
-      return '<div class="ppmiss">Không tìm thấy “' + esc(miss) + '” — hiện tất cả tác giả.</div>';
     }
 
     function cmp(mode) {
@@ -327,56 +304,28 @@
     /* đọc/ghi trạng thái lên query string (không đụng ?q= của trang tác giả) */
     function readState() {
       var sq = CZ.qs('s'); if (sq != null) q = String(sq);
-      var ss = CZ.qs('sort'); sort = SORTS.indexOf(String(ss || '')) >= 0 ? String(ss) : 'az';
-      var sx = String(CZ.qs('st') || '');
-      st = {};
-      sx.split(',').forEach(function (k) { if (ST.indexOf(k) >= 0) st[k] = true; });
+      var ss = String(CZ.qs('sort') || '');
+      sort = SORTS.indexOf(ss) >= 0 ? ss : 'az';
+      var sx = String(CZ.qs('st') || '').split(',')[0];
+      stv = ST.indexOf(sx) >= 0 ? sx : '';
     }
     function sync() {
       try {
         var u = new URL(location.href);
         if (q) u.searchParams.set('s', q); else u.searchParams.delete('s');
         if (sort !== 'az') u.searchParams.set('sort', sort); else u.searchParams.delete('sort');
-        var keys = ST.filter(function (k) { return st[k]; });
-        if (keys.length) u.searchParams.set('st', keys.join(',')); else u.searchParams.delete('st');
+        if (stv) u.searchParams.set('st', stv); else u.searchParams.delete('st');
         history.replaceState(null, '', u.pathname + u.search + u.hash);
       } catch (e) {}
     }
     function mark() {
-      var box = el('#ppTools');
-      if (!box) return;
-      Array.prototype.forEach.call(box.querySelectorAll('button[data-sort]'), function (b) {
-        b.setAttribute('aria-pressed', String(b.getAttribute('data-sort') === sort));
-      });
-      Array.prototype.forEach.call(box.querySelectorAll('button[data-st]'), function (b) {
-        b.setAttribute('aria-pressed', String(!!st[b.getAttribute('data-st')]));
-      });
-      /* nút "Lọc" trên điện thoại: mở/đóng hàng chip + đếm số bộ lọc đang bật */
-      var keys = ST.filter(function (k) { return st[k]; });
-      var n = el('#ppFiltN');
-      if (n) { n.textContent = String(keys.length); n.hidden = !keys.length; }
-      var f = el('#ppFilt');
-      if (f && keys.length) f.setAttribute('aria-expanded', 'true');
-      var wrap = el('#ppStWrap');
-      if (wrap) { if (keys.length) wrap.classList.add('on'); else if (f && f.getAttribute('aria-expanded') !== 'true') wrap.classList.remove('on'); }
-      /* dòng chip "đang lọc" + nút xoá hết bộ lọc */
-      var act = el('#ppAct');
-      if (act) {
-        var parts = [];
-        if (q) parts.push('<span class="a">“' + esc(q) + '”<button type="button" data-ppx="s" aria-label="Bỏ từ khoá">' +
-          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span>');
-        keys.forEach(function (k) {
-          parts.push('<span class="a">' + ST_LABEL[k] + '<button type="button" data-ppx="st:' + k +
-            '" aria-label="Bỏ lọc ' + ST_LABEL[k] + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span>');
-        });
-        if (parts.length) {
-          act.innerHTML = parts.join('') + '<button type="button" class="all" data-ppclear>Bỏ tất cả bộ lọc</button>';
-          act.classList.add('on');
-        } else { act.innerHTML = ''; act.classList.remove('on'); }
-      }
+      var so = el('#ppSort'), st = el('#ppSt'), cl = el('#ppClear');
+      if (so) so.value = sort;
+      if (st) st.value = stv;
+      if (cl) cl.hidden = !q && !stv && sort === 'az';
     }
 
-    /* ---- chỉ mục A–Z: tô chữ cái đang xem, bấm thì nhảy tới nhóm ----------- */
+    /* ---- chỉ mục chữ cái ------------------------------------------------- */
     function setCur(L) {
       if (L === curLetter) return;
       curLetter = L;
@@ -386,23 +335,27 @@
         if (b.getAttribute('data-l') === L) b.setAttribute('aria-current', 'true');
         else b.removeAttribute('aria-current');
       });
-      /* giữ ô đang xem nằm trong tầm mắt của dải chữ cái */
       var on = azin.querySelector('button[aria-current="true"]');
       if (on && azin.scrollWidth > azin.clientWidth + 2) {
-        var l = on.offsetLeft - azin.clientWidth / 2 + on.offsetWidth / 2;
-        azin.scrollLeft = Math.max(0, l);
+        azin.scrollLeft = Math.max(0, on.offsetLeft - azin.clientWidth / 2 + on.offsetWidth / 2);
       }
     }
     function spyOn() {
-      if (!spy) window.addEventListener('scroll', function () {
-        if (spy) return;
-        spy = requestAnimationFrame(function () {
-          spy = 0;
+      if (spy) return;
+      spy = 1;
+      window.addEventListener('scroll', function () {
+        if (spy !== 1) return;
+        spy = 2;
+        requestAnimationFrame(function () {
+          spy = 1;
+          /* vừa bấm một chữ cái: trong ~1s tới, giữ đúng chữ đó thay vì để
+             con trỏ chạy theo quán tính của cú cuộn mượt */
+          if (jumpTo && Date.now() < jumpTo) return;
           var az = el('#ppAZ');
           if (!az || az.hidden) return;
-          var groups = document.querySelectorAll('#ppGrid .ppgrp');
+          var groups = document.querySelectorAll('#ppGrid .ppg[id]');
           if (!groups.length) return;
-          var y = az.getBoundingClientRect().height + 12, cur = groups[0].id;
+          var y = az.getBoundingClientRect().height + 10, cur = groups[0].id;
           Array.prototype.forEach.call(groups, function (g) {
             if (g.getBoundingClientRect().top <= y) cur = g.id;
           });
@@ -415,38 +368,19 @@
       var root = el('#ppGrid');
       if (!root) return;
       var qq = CZ.slugify(q);
-      var stKeys = ST.filter(function (k) { return st[k]; });
       var list = data.filter(function (e) {
         if (qq && e.slug.indexOf(qq) === -1) return false;
-        if (stKeys.length) {
-          for (var i = 0; i < stKeys.length; i++) { if (e.st[stKeys[i]] > 0) return true; }
-          return false;
-        }
-        return true;
+        return !stv || e.st[stv] > 0;
       });
       list.sort(cmp(sort));
-      var filtered = !!qq || stKeys.length > 0;
+      var filtered = !!qq || !!stv;
       var grouped = sort === 'az' && !filtered;
 
       var sub = el('#ppSub');
       if (sub) {
         sub.textContent = filtered
           ? ('Tìm thấy ' + list.length + ' / ' + data.length + ' tác giả')
-          : (data.length + ' tác giả' + (sort === 'az' ? '' : ' · ' + SORT_LABEL[sort].toLowerCase()));
-      }
-
-      /* nổi bật: chỉ khi đang xem toàn bộ danh sách */
-      var feat = el('#ppFeat');
-      if (feat) {
-        if (filtered || !data.length) { feat.hidden = true; }
-        else {
-          var top = data.slice().sort(function (a, b) {
-            return (b.count - a.count) || a.slug.localeCompare(b.slug, 'vi');
-          }).slice(0, 3);
-          var fg = el('#ppFeatGrid');
-          if (fg) fg.innerHTML = top.map(function (e) { return cardHTML(e, true); }).join('');
-          feat.hidden = false;
-        }
+          : (data.length + ' tác giả · ' + data.reduce(function (n, e) { return n + e.count; }, 0) + ' truyện');
       }
 
       /* chỉ mục A–Z: chỉ có nghĩa khi đang gom theo chữ cái */
@@ -457,8 +391,7 @@
           var have = {};
           list.forEach(function (e) { have[e.letter] = 1; });
           azin.innerHTML = AZ.concat(['#']).map(function (L) {
-            var on = !!have[L];
-            return '<button type="button" data-l="' + L + '"' + (on ? ' aria-label="Tới nhóm ' + L + '"' :
+            return '<button type="button" data-l="' + L + '"' + (have[L] ? '' :
               ' class="off" disabled aria-hidden="true"') + '>' + L + '</button>';
           }).join('');
           az.hidden = false;
@@ -467,9 +400,15 @@
         }
       }
 
-      /* thân danh sách */
+      var cols = el('#ppCols');
+      if (cols) cols.hidden = !grouped;
+
+      /* thân danh mục */
+      root.setAttribute('data-mode', 'pp');
+      var note = miss ? '<p class="ppnote">Không tìm thấy “' + esc(miss) +
+        '” — đang hiện tất cả tác giả.</p>' : '';
       if (!list.length) {
-        root.innerHTML = (miss ? noteHTML() : '') + emptyHTML();
+        root.innerHTML = note + emptyHTML();
       } else if (grouped) {
         var buckets = {}, order = [];
         list.forEach(function (e) {
@@ -477,40 +416,31 @@
           buckets[e.letter].push(e);
         });
         order.sort(function (a, b) { return a === '#' ? 1 : b === '#' ? -1 : a.localeCompare(b); });
-        root.innerHTML = (miss ? noteHTML() : '') + order.map(function (L) {
+        root.innerHTML = note + order.map(function (L) {
           var rows = buckets[L];
-          return '<section class="ppgrp" id="' + groupId(L) + '">' +
-            '<h2 class="ppgh"><span class="l">' + (L === '#' ? '#' : L) + '</span>' +
-            '<span class="c">' + rows.length + ' tác giả</span><span class="r"></span></h2>' +
-            '<div class="pplist">' + rows.map(function (e) { return cardHTML(e, false); }).join('') +
-            '</div></section>';
+          return '<section class="ppg" id="' + groupId(L) + '">' +
+            '<span class="l">' + (L === '#' ? '#' : L) + '</span>' +
+            '<span class="c">' + rows.length + ' tác giả</span><span class="r"></span></section>' +
+            rows.map(rowHTML).join('');
         }).join('');
       } else {
-        root.innerHTML = (miss ? noteHTML() : '') + '<div class="pplist">' +
-          list.map(function (e) { return cardHTML(e, false); }).join('') + '</div>';
+        root.innerHTML = note + list.map(rowHTML).join('');
       }
       spyOn();
     }
 
     function clearAll() {
-      q = ''; sort = 'az'; st = {};
+      q = ''; sort = 'az'; stv = '';
       var qi = el('#ppQ'); if (qi) qi.value = '';
-      var wrap = el('#ppStWrap'); if (wrap) wrap.classList.remove('on');
-      var f = el('#ppFilt'); if (f) f.setAttribute('aria-expanded', 'false');
       mark(); apply(); sync();
     }
 
-    /* ảnh bìa hỏng → avatar chữ cái (không để lại ô đen trống) */
+    /* ảnh bìa hỏng: bỏ ảnh, giữ ô nền --surf2 (không hiện icon vỡ) */
     function onImgError(ev) {
       var im = ev.target;
       if (!im || im.tagName !== 'IMG') return;
-      var stk = im.closest('.pbook');
-      if (!stk) return;
-      var sp = document.createElement('span');
-      sp.className = 'pava' + (stk.classList.contains('lg') ? ' lg' : '');
-      sp.setAttribute('aria-hidden', 'true');
-      sp.textContent = stk.getAttribute('data-ini') || '';
-      if (stk.parentNode) stk.parentNode.replaceChild(sp, stk);
+      im.removeAttribute('src');
+      im.style.display = 'none';
     }
 
     function bind() {
@@ -521,55 +451,32 @@
         qi.addEventListener('input', function () {
           q = qi.value;
           clearTimeout(timer);
-          timer = setTimeout(function () { apply(); sync(); }, 90);
+          timer = setTimeout(function () { mark(); apply(); sync(); }, 90);
         });
       }
-      var tools = el('#ppTools');
-      if (tools) {
-        tools.addEventListener('click', function (ev) {
-          var b = ev.target.closest('button[data-sort]');
-          if (b) { sort = b.getAttribute('data-sort'); mark(); apply(); sync(); return; }
-          var t = ev.target.closest('button[data-st]');
-          if (t) {
-            var k = t.getAttribute('data-st');
-            st[k] = !st[k];
-            mark(); apply(); sync();
-            return;
-          }
-          if (ev.target.closest('#ppFilt')) {
-            var f = el('#ppFilt'), wrap = el('#ppStWrap');
-            var open = f.getAttribute('aria-expanded') === 'true';
-            f.setAttribute('aria-expanded', String(!open));
-            if (wrap) wrap.classList.toggle('on', !open);
-            return;
-          }
-          var x = ev.target.closest('[data-ppx]');
-          if (x) {
-            var v = x.getAttribute('data-ppx');
-            if (v === 's') { q = ''; var qq = el('#ppQ'); if (qq) qq.value = ''; }
-            else if (v.indexOf('st:') === 0) st[v.slice(3)] = false;
-            mark(); apply(); sync();
-          }
-        });
-      }
+      var so = el('#ppSort');
+      if (so) so.addEventListener('change', function () { sort = so.value; mark(); apply(); sync(); });
+      var st = el('#ppSt');
+      if (st) st.addEventListener('change', function () { stv = st.value; mark(); apply(); sync(); });
+      var cl = el('#ppClear');
+      if (cl) cl.addEventListener('click', clearAll);
       var az = el('#ppAZ');
       if (az) {
         az.addEventListener('click', function (ev) {
           var b = ev.target.closest('button[data-l]');
           if (!b || b.disabled) return;
           var g = document.getElementById(groupId(b.getAttribute('data-l')));
-          if (g) {
-            var h = az.getBoundingClientRect().height + 10;
-            var y = g.getBoundingClientRect().top + window.pageYOffset - h;
-            window.scrollTo({ top: y, behavior: CZ.reduce ? 'auto' : 'smooth' });
-            setCur(b.getAttribute('data-l'));
-          }
+          if (!g) return;
+          var y = g.getBoundingClientRect().top + window.pageYOffset - az.getBoundingClientRect().height - 8;
+          jumpTo = Date.now() + 1000;
+          window.scrollTo({ top: y, behavior: CZ.reduce ? 'auto' : 'smooth' });
+          setCur(b.getAttribute('data-l'));
         });
       }
       var grid = el('#ppGrid');
       if (grid) {
         grid.addEventListener('click', function (ev) {
-          if (ev.target.closest('[data-ppclear]')) clearAll();
+          if (ev.target.closest('[data-ppclear]')) { clearAll(); return; }
         });
         grid.addEventListener('error', onImgError, true);
       }
@@ -588,7 +495,7 @@
       sync();
     }
     function hide() {
-      ['#ppTools', '#ppFeat', '#ppAZ'].forEach(function (s) {
+      ['#ppTools', '#ppAZ', '#ppCols'].forEach(function (s) {
         var n = el(s); if (n) n.hidden = true;
       });
       var g = el('#ppGrid'); if (g) g.removeAttribute('data-mode');
