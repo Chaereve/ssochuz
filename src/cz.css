@@ -1439,8 +1439,8 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 /* Tiêu đề: dữ liệu viết hoa toàn bộ nên hạ cỡ và giãn nhẹ — chữ hoa kéo sít lại
    thì luôn trông nặng và thô. Canh quang học: kéo lên 1px cho ngang đỉnh bìa. */
 .shero h1 { min-width: 0; margin: -1px 0 0;
-  font-family: var(--font-head); font-weight: 400; font-size: clamp(26px, 2.5vw, 33px);
-  line-height: 1.15; letter-spacing: -.004em; color: #f7f1e7; text-wrap: balance; }
+  font-family: var(--font-head); font-weight: 700; font-size: clamp(26px, 2.5vw, 33px);
+  line-height: 1.15; letter-spacing: -.011em; color: #f7f1e7; text-wrap: balance; }
 /* TẦNG 1 — tác giả (sáng, đậm) và cặp đôi (mờ hơn), ngăn bằng dấu “·”. */
 .shero .who { display: flex; align-items: center; flex-wrap: wrap; gap: 0 2px;
   margin: 13px 0 0; font-size: 13.5px; line-height: 1.5; color: rgba(255, 255, 255, .56); }
