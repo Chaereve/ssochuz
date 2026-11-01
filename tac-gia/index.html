@@ -10,105 +10,178 @@
 <link rel="icon" type="image/png" href="/ssochuz.png?v=1">
 <link rel="apple-touch-icon" href="/ssochuz.png?v=1">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="stylesheet" href="/cz.css?v=20261101r98">
+<link rel="stylesheet" href="/cz.css?v=20261101r99">
 <style>
 /* ============================================================================
-   TRANG TÁC GIẢ (r98) — một danh mục có trật tự
+   TRANG TÁC GIẢ (r99) — “sạp báo” đồng bộ với banner trang chủ
    ----------------------------------------------------------------------------
-   Bỏ hết thứ gây rối của bản trước: không khối "nổi bật" lệch lưới, không
-   quầng hồng, không huy hiệu nhiều màu, không dải chữ cái to như nút bấm.
-   Còn lại một cột thông tin thẳng hàng như một danh mục thư viện: bìa nhỏ ·
-   tên · số truyện · ngày cập nhật · trạng thái. Chỉ một màu nhấn, chỉ một
-   cỡ chữ cho mỗi cấp thông tin, mọi khoảng cách là bội số của 4.
+   Cùng một ngôn ngữ với .hero ở trang chủ, KHÔNG phải bản sao của nó:
+     · nền “void” #0a090b + hạt phim 4% + đường kẻ mảnh ở chân banner;
+     · quạt bìa bên phải: cùng công thức xoè (data-pos 0..4 → --x/--y/--r/--ry/--s),
+       cùng cách làm bìa dày (gáy tối 9% + mép giấy), cùng bóng “nền đất”;
+     · nhãn vi mô bằng chữ ĐƠN CÁCH in hoa, giãn chữ .14em, có vạch 3px đầu dòng
+       (đúng kiểu .hb-st của banner) — dùng cho “kicker”, “sạp nhãn” và tem trạng thái;
+     · tiêu đề bằng --font-head, số liệu tabular-nums.
+   Danh mục bên dưới giữ đúng trật tự của bản r98 (một cột, thẳng hàng) nhưng đổi
+   sang cùng bộ chữ trên, nên trang đọc như một tờ báo: banner → chỉ mục → mục lục.
 
-   Chỉ áp cho /tac-gia/; /couple/ giữ danh sách cũ trong cz.css.
-   Hợp đồng giữ nguyên: .pacard trong #ppGrid, ?q=, ?s=, ?sort=, ?st=.
+   Chỉ áp cho /tac-gia/; /couple/ giữ danh sách cũ. Hợp đồng giữ nguyên:
+   .pacard trong #ppGrid, ?q=, ?s=, ?sort=, ?st=.
    ========================================================================== */
-.people{max-width:1060px;margin:0 auto;padding:0 32px 96px}
 
-/* ---- đầu trang ---------------------------------------------------------- */
-.ppcrumb{display:flex;align-items:center;gap:8px;margin:28px 0 0;
-  font:400 12px/1.4 var(--font);color:var(--dim)}
-.ppcrumb a{color:var(--dim)}
-.ppcrumb a:hover{color:var(--txt)}
-.ppcrumb b{color:var(--mut);font-weight:500}
-.ppcrumb i,.ppcrumb span{font-style:normal;opacity:.55}
+/* main.people của cz.css là 1180px canh trái — banner cần tràn ngang, nên bỏ
+   khung đó và để .ppstand-in / .ppbody tự căn 1060px. */
+main.people{max-width:none;margin:0;padding:0}
 
-.pphead{display:flex;align-items:flex-end;justify-content:space-between;gap:16px 24px;
-  flex-wrap:wrap;margin:14px 0 0;padding-bottom:16px;border-bottom:1px solid var(--bd)}
-.pphead h1{margin:0;font-family:var(--font-head);font-weight:600;font-size:clamp(27px,3.4vw,35px);
-  line-height:1.04;letter-spacing:-.02em}
-.pphead .ppmeta{margin:0 0 4px;font-size:12.5px;line-height:1.5;color:var(--mut);
+/* ---- 1. BANNER ---------------------------------------------------------- */
+.ppstand{
+  /* bảng màu của banner — suy từ token site, khai báo ĐÚNG MỘT LẦN ở đây */
+  --st-void:#0a090b; --st-fg:#fff;
+  --st-mut:rgba(255,255,255,.74); --st-dim:rgba(255,255,255,.56);
+  --st-line:rgba(255,255,255,.16); --st-card:#1a1416; --st-glass:rgba(255,255,255,.07);
+  --st-shade:0,0,0;
+  --st-acc:color-mix(in srgb, var(--acc) 52%, #fff);
+  --cover-w:clamp(104px, 11.4vw, 146px);
+  --fan-unit:calc(var(--cover-w) * .42);
+  position:relative; isolation:isolate; overflow:hidden; color:var(--st-fg);
+  background:var(--st-void); border-bottom:1px solid var(--bd);
+}
+.ppstand::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.04;
+  background-image:radial-gradient(rgba(255,255,255,.9) .5px,transparent .5px);background-size:3px 3px}
+.ppstand .glow{position:absolute;z-index:0;right:0;top:-18%;width:min(560px,52%);height:140%;
+  pointer-events:none;mix-blend-mode:screen;opacity:.9;
+  background:radial-gradient(48% 48% at 50% 50%, color-mix(in srgb,var(--st-acc) 30%,transparent), transparent 72%)}
+.ppstand-in{position:relative;z-index:2;max-width:1060px;margin:0 auto;padding:24px 32px 26px;
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.84fr);gap:24px 28px;align-items:center}
+
+.ppcrumb{display:flex;align-items:center;gap:8px;font:400 12px/1.4 var(--font);color:var(--st-dim)}
+.ppcrumb a{color:var(--st-dim)}
+.ppcrumb a:hover{color:var(--st-fg)}
+.ppcrumb b{color:var(--st-mut);font-weight:500}
+.ppcrumb i,.ppcrumb span{font-style:normal;opacity:.5}
+
+.ppkick{display:flex;align-items:center;gap:8px;margin:14px 0 0;color:var(--st-dim);
+  font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase}
+.ppkick::before{content:"";flex:none;width:3px;height:12px;background:var(--st-acc)}
+.ppstand #ppTitle{margin:10px 0 0;font-family:var(--font-head);font-weight:600;
+  font-size:clamp(30px,3.6vw,44px);line-height:1.04;letter-spacing:-.022em;color:var(--st-fg)}
+.ppsub{margin:8px 0 0;font-size:13px;line-height:1.55;color:var(--st-mut)}
+
+/* “sạp nhãn”: 4 ô số liệu, cùng kiểu dt/dd của banner trang chủ */
+.ppspec{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0 18px;
+  width:100%;margin:18px 0 0;padding:13px 0 0;border-top:1px solid var(--st-line)}
+.ppspec dt{font-family:var(--font-mono);font-size:9.5px;font-weight:600;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--st-dim)}
+.ppspec dd{margin:6px 0 0;font-size:13.5px;font-weight:600;line-height:1.3;color:var(--st-fg);
   font-variant-numeric:tabular-nums}
 
-/* ---- thanh công cụ: 1 ô tìm + 2 ô chọn ---------------------------------- */
-.ppbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:16px 0}
+/* công cụ nằm NGAY TRONG banner: tìm và lọc là việc đầu tiên người ta làm */
+.ppbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:18px 0 0}
 .ppbar[hidden]{display:none}
-.ppsearch{position:relative;display:flex;align-items:center;gap:8px;flex:0 1 264px;min-width:0;
-  height:40px;padding:0 12px;border:1px solid var(--bd);border-radius:8px;background:var(--surf);
-  color:var(--dim);transition:border-color .15s var(--ease)}
-.ppsearch:focus-within{border-color:var(--bd2)}
+.ppsearch{position:relative;display:flex;align-items:center;gap:8px;flex:1 1 190px;min-width:0;
+  height:40px;padding:0 14px;border:1px solid var(--st-line);border-radius:99px;background:var(--st-glass);
+  color:var(--st-dim);transition:border-color .15s var(--ease),background-color .15s var(--ease)}
+.ppsearch:focus-within{border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.11)}
 .ppsearch svg{width:15px;height:15px;flex:none}
-.ppsearch input{flex:1;min-width:0;border:0;background:none;outline:none;color:var(--txt);
-  font:400 14px/1.4 var(--font)}
-.ppsearch input::placeholder{color:var(--dim)}
+.ppsearch input{flex:1;min-width:0;border:0;background:none;outline:none;color:var(--st-fg);
+  font:400 13.5px/1.4 var(--font)}
+.ppsearch input::placeholder{color:var(--st-dim)}
 .ppsearch input::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none}
 
 .ppsel{position:relative;flex:none}
-.ppsel select{appearance:none;-webkit-appearance:none;height:40px;padding:0 32px 0 12px;
-  border:1px solid var(--bd);border-radius:8px;background:var(--surf);color:var(--txt);
-  font:500 13px/1 var(--font);cursor:pointer;transition:border-color .15s var(--ease)}
-.ppsel select:hover{border-color:var(--bd2)}
-.ppsel select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.ppsel select{appearance:none;-webkit-appearance:none;height:40px;padding:0 30px 0 14px;
+  border:1px solid var(--st-line);border-radius:99px;background:var(--st-glass);color:var(--st-fg);
+  font:600 10.5px/1 var(--font-mono);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;
+  transition:border-color .15s var(--ease),background-color .15s var(--ease)}
+.ppsel select:hover{border-color:rgba(255,255,255,.36);background:rgba(255,255,255,.11)}
+.ppsel select:focus-visible{outline:2px solid var(--st-acc);outline-offset:2px}
 .ppsel svg{position:absolute;right:11px;top:50%;width:12px;height:12px;margin-top:-6px;
-  color:var(--dim);pointer-events:none}
-
-.pplink{margin-left:auto;padding:8px 2px;border:0;background:none;color:var(--mut);
-  font:500 12.5px/1 var(--font);cursor:pointer;text-decoration:underline;
-  text-underline-offset:3px;text-decoration-color:var(--bd2)}
-.pplink:hover{color:var(--txt)}
+  color:var(--st-dim);pointer-events:none}
+.pplink{flex:none;padding:9px 2px;border:0;background:none;color:var(--st-mut);cursor:pointer;
+  font:500 12px/1 var(--font);text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:rgba(255,255,255,.28)}
+.pplink:hover{color:var(--st-fg)}
 .pplink[hidden]{display:none}
 
-/* ---- chỉ mục chữ cái: chữ, không phải nút ------------------------------- */
-.ppaz{position:sticky;top:0;z-index:30;margin:4px 0 0;padding:2px 0;background:var(--bg);
+/* ---- quạt bìa: cùng công thức xoè của banner trang chủ ------------------ */
+.fanwrap{position:relative;justify-self:end;width:100%;max-width:430px}
+.fan{position:relative;height:calc(var(--cover-w) * 1.66 + 34px);perspective:1400px}
+.fan::after{content:"";position:absolute;left:50%;z-index:0;pointer-events:none;
+  top:calc(50% + var(--cover-w) * .75 - 6px);
+  width:calc(var(--cover-w) * 1.9);height:22px;transform:translateX(-50%);border-radius:50%;
+  background:radial-gradient(50% 50% at 50% 50%, rgba(var(--st-shade),.66), transparent 72%);
+  filter:blur(9px);opacity:.85}
+.fan a{position:absolute;left:50%;top:50%;width:var(--cover-w);aspect-ratio:2/3;
+  border-radius:4px 8px 8px 4px;overflow:hidden;background:var(--st-card);
+  box-shadow:0 26px 48px -30px rgba(var(--st-shade),.92), inset 0 0 0 1px rgba(var(--st-shade),.45);
+  --x:0px; --y:0px; --r:0deg; --ry:0deg; --s:1;
+  transform-origin:50% 92%;
+  transform:translate(-50%,-50%) translate3d(var(--x),var(--y),0) rotateY(var(--ry)) rotate(var(--r)) scale(var(--s));
+  transition:transform .5s var(--ease-out), box-shadow .4s var(--ease-soft), filter .3s var(--ease)}
+.fan a img{width:100%;height:100%;object-fit:cover;display:block}
+.fan a::before{content:"";position:absolute;inset:0 auto 0 0;width:9%;z-index:2;pointer-events:none;
+  background:linear-gradient(90deg,rgba(0,0,0,.38),rgba(0,0,0,.08) 70%,transparent)}
+.fan a::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:linear-gradient(90deg,transparent 97%,rgba(0,0,0,.3)),
+    linear-gradient(148deg,rgba(255,255,255,.1),rgba(255,255,255,.02) 22%,transparent 40%)}
+.fan a[data-pos="0"]{--x:0px;--y:-2px;--r:0deg;--ry:0deg;--s:1.04;z-index:5}
+.fan a[data-pos="1"]{--x:var(--fan-unit);--y:10px;--r:7deg;--ry:-9deg;--s:.9;z-index:2}
+.fan a[data-pos="2"]{--x:calc(var(--fan-unit) * 1.22);--y:24px;--r:11deg;--ry:-15deg;--s:.8;z-index:1}
+.fan a[data-pos="3"]{--x:calc(var(--fan-unit) * -1.22);--y:24px;--r:-11deg;--ry:15deg;--s:.8;z-index:1}
+.fan a[data-pos="4"]{--x:calc(var(--fan-unit) * -1);--y:10px;--r:-7deg;--ry:9deg;--s:.9;z-index:2}
+.fan a:hover,.fan a:focus-visible{
+  transform:translate(-50%,-50%) translate3d(var(--x),calc(var(--y) - 14px),0)
+    rotateY(var(--ry)) rotate(var(--r)) scale(calc(var(--s) + .05));z-index:9}
+.fan a:focus-visible{outline:2px solid var(--st-acc);outline-offset:3px}
+.ppcap{margin:14px 0 0;text-align:right;color:var(--st-dim);
+  font-family:var(--font-mono);font-size:9.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase}
+.ppcap b{color:var(--st-mut);font-weight:600}
+
+/* ---- 2. DANH MỤC ------------------------------------------------------- */
+.ppbody{max-width:1060px;margin:0 auto;padding:8px 32px 96px}
+
+.ppaz{position:sticky;top:0;z-index:30;margin:0;padding:2px 0;background:var(--bg);
   border-bottom:1px solid var(--bd)}
 .ppaz[hidden]{display:none}
 .ppazin{display:flex;overflow-x:auto;scrollbar-width:none}
 .ppazin::-webkit-scrollbar{display:none}
 .ppazin button{flex:1 1 0;min-width:30px;max-width:38px;height:42px;padding:0;border:0;
   border-bottom:2px solid transparent;background:none;cursor:pointer;color:var(--mut);
-  font:600 12.5px/1 var(--font);
+  font-family:var(--font-mono);font-size:11.5px;font-weight:700;letter-spacing:.04em;
   transition:color .15s var(--ease),border-color .15s var(--ease)}
 .ppazin button:hover{color:var(--txt)}
 .ppazin button[aria-current="true"]{color:var(--acc);border-bottom-color:var(--acc)}
 .ppazin button.off{color:var(--dim);opacity:.32;pointer-events:none}
 .ppazin button:focus-visible{outline:2px solid var(--acc);outline-offset:-2px}
 
-/* ---- danh mục ---------------------------------------------------------- */
-.ppnote{margin:0;padding:10px 8px 0;font-size:12.5px;line-height:1.5;color:var(--mut)}
-.ppcol{display:grid;grid-template-columns:36px minmax(0,1fr) 76px 92px 124px;gap:14px;
+.ppnote{margin:0;padding:12px 8px 0;font-size:12.5px;line-height:1.5;color:var(--mut)}
+.ppcol{display:grid;grid-template-columns:36px minmax(0,1fr) 76px 92px 132px;gap:14px;
   align-items:center;padding:14px 8px 9px;border-bottom:1px solid var(--bd);
-  font:700 9.5px/1 var(--font);letter-spacing:.13em;text-transform:uppercase;color:var(--dim)}
+  font-family:var(--font-mono);font-size:9.5px;font-weight:700;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--dim)}
 .ppcol[hidden]{display:none}
 .ppcol span:nth-child(3),.ppcol span:nth-child(4){text-align:right}
 
 .ppg{display:flex;align-items:center;gap:12px;padding:24px 8px 10px}
-.ppg .l{min-width:14px;font-family:var(--font-head);font-weight:600;font-size:17px;line-height:1}
-.ppg .c{font-size:11.5px;line-height:1;color:var(--dim);font-variant-numeric:tabular-nums}
+.ppg .l{min-width:14px;font-family:var(--font-head);font-weight:600;font-size:18px;line-height:1}
+.ppg .c{font-family:var(--font-mono);font-size:9.5px;font-weight:600;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--dim);font-variant-numeric:tabular-nums}
 .ppg .r{flex:1;height:1px;background:var(--bd)}
 
-.ppr{display:grid;grid-template-columns:36px minmax(0,1fr) 76px 92px 124px;gap:14px;
+.ppr{display:grid;grid-template-columns:36px minmax(0,1fr) 76px 92px 132px;gap:14px;
   align-items:center;padding:6px 8px;border-bottom:1px solid var(--bd);border-radius:6px;
   color:inherit;text-decoration:none;transition:background-color .14s var(--ease)}
 .ppr:hover{background:var(--surf)}
 .ppr:focus-visible{outline:2px solid var(--acc);outline-offset:-2px}
 
-/* bìa: 34×49, gáy tối bên trái, mép giấy 2px bên phải — gợi ý "cuốn sách",
-   không dựng khối 3D. Ảnh hỏng thì để nền --surf2, không hiện ô đen. */
-.ppcv{position:relative;width:36px;height:52px}
-.ppcv img{display:block;width:36px;height:52px;object-fit:cover;border-radius:3px;
-  background:var(--surf2);box-shadow:0 1px 2px #0000009e,inset 0 0 0 1px #ffffff14}
-
+/* bìa nhỏ dùng CHÍNH cách làm bìa của banner: bo 4/8, gáy tối, mép giấy */
+.ppcv{position:relative;width:36px;height:52px;border-radius:3px 6px 6px 3px;overflow:hidden;
+  background:var(--surf2);box-shadow:0 10px 18px -14px #000000d9, inset 0 0 0 1px #00000066}
+.ppcv img{width:100%;height:100%;object-fit:cover;display:block}
+.ppcv::before{content:"";position:absolute;inset:0 auto 0 0;width:9%;z-index:2;pointer-events:none;
+  background:linear-gradient(90deg,rgba(0,0,0,.36),transparent)}
+.ppcv::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:linear-gradient(90deg,transparent 95%,rgba(0,0,0,.28))}
 
 .ppn{overflow:hidden;font-size:14.5px;font-weight:600;line-height:1.35;letter-spacing:-.005em;
   white-space:nowrap;text-overflow:ellipsis;transition:color .14s var(--ease)}
@@ -116,118 +189,159 @@
 .ppsm{display:contents}
 .ppc,.ppd{font-size:12px;line-height:1.4;color:var(--mut);text-align:right;
   font-variant-numeric:tabular-nums;white-space:nowrap}
-.pps{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:500;
-  line-height:1.4;white-space:nowrap;color:var(--mut)}
-.pps i{flex:none;width:5px;height:5px;border-radius:50%}
-.pps.run i{background:#ddba74}
-.pps.soon i{background:#dba5b5}
-.pps.done i{background:#8cc7a5}
+
+/* tem trạng thái: chữ đơn cách in hoa + vạch 3px — cùng kiểu .hb-st ở banner */
+.pps{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;color:var(--dim);
+  font-family:var(--font-mono);font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.pps::before{content:"";flex:none;width:3px;height:11px;background:currentColor}
+.pps.run{color:#e8c46a}
+.pps.soon{color:var(--mut)}
+.pps.done{color:#8fd3a5}
+
+/* ---- 3. rỗng ----------------------------------------------------------- */
+.ppempty{padding:64px 8px;text-align:center}
+.ppempty b{display:block;margin-bottom:8px;font-family:var(--font-head);font-weight:600;font-size:19px}
+.ppempty p{margin:0 0 18px;font-size:13px;line-height:1.6;color:var(--mut)}
+.ppempty button{height:40px;padding:0 18px;border:1px solid var(--acc);border-radius:99px;
+  background:var(--acc);color:#2a1119;font:600 13px/1 var(--font);cursor:pointer}
 
 #ppGrid[data-mode="pp"]{display:block}
 #ppGrid[data-mode="one"]{display:grid}
 
-/* ---- rỗng -------------------------------------------------------------- */
-.ppempty{padding:64px 8px;text-align:center}
-.ppempty b{display:block;margin-bottom:8px;font-family:var(--font-head);font-weight:600;font-size:19px}
-.ppempty p{margin:0 0 18px;font-size:13px;line-height:1.6;color:var(--mut)}
-.ppempty button{height:40px;padding:0 18px;border:1px solid var(--acc);border-radius:8px;
-  background:var(--acc);color:#2a1119;font:600 13px/1 var(--font);cursor:pointer}
-
-/* ---- 640–1023: bớt một cột ngày, giữ nhịp hàng ------------------------- */
+/* ---- 4. màn hình 640–1023: banner thấp lại, bớt một cột ---------------- */
 @media (max-width:1023px){
-  .people{padding:0 24px 84px}
-  .ppcol,.ppr{grid-template-columns:36px minmax(0,1fr) 72px 108px}
+  .ppstand-in{padding:22px 24px 24px;gap:20px}
+  .ppstand{--cover-w:clamp(88px,11vw,118px)}
+  /* cột chữ hẹp: "ĐANG CẬP NHẬT" không vừa 4 cột → 2×2, và ô tìm chiếm trọn
+     một hàng để hai ô chọn đứng cạnh nhau cho gọn */
+  .ppspec{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 18px}
+  .ppsearch{flex:1 1 100%}
+  .ppsel{flex:1 1 0}
+  .ppsel select{width:100%}
+  .ppbody{padding:0 24px 84px}
+  .ppcol,.ppr{grid-template-columns:36px minmax(0,1fr) 72px 116px}
   .ppcol span:nth-child(4){display:none}
   .ppd{display:none}
-  .ppsearch{flex:0 1 236px}
-  /* chỉ từ đây dải chữ cái mới phải cuộn → mờ mép phải để thấy còn nữa */
   .ppazin{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 20px),transparent);
     mask-image:linear-gradient(90deg,#000 calc(100% - 20px),transparent)}
 }
 
-/* ---- điện thoại -------------------------------------------------------- */
+/* ---- 5. điện thoại: banner = “cột báo” + dải bìa nằm ngang -------------- */
 @media (max-width:719px){
-  .people{padding:0 20px 76px}
-  .ppcrumb{margin-top:18px}
-  .pphead{flex-direction:column;align-items:flex-start;margin-top:10px;padding-bottom:12px;gap:6px}
-  .pphead .ppmeta{margin:0}
-  .ppbar{padding:12px 0;gap:8px}
+  .ppstand-in{grid-template-columns:minmax(0,1fr);gap:16px;padding:18px 20px 20px}
+  .ppstand h1{font-size:clamp(26px,7vw,32px)}
+  .ppsub{display:none}
+  .ppspec{grid-template-columns:repeat(3,minmax(0,1fr));gap:0 14px;margin-top:14px;padding-top:11px}
+  .ppspec > div:nth-child(4){display:none}
+  .ppspec dd{font-size:13px;margin-top:4px}
+  .ppbar{margin-top:16px;gap:8px}
   .ppsearch{flex:1 1 100%;height:44px}
   .ppsel{flex:1 1 0}
   .ppsel select{width:100%;height:44px}
-  .pplink{margin-left:0;order:3;padding:10px 2px}
-  .ppaz{margin:0 -20px;padding:0 10px}
-  .ppazin button{flex:none;width:40px;min-width:40px;max-width:none;height:44px;font-size:13px}
+  .pplink{order:3;padding:10px 2px}
 
+  /* quạt → dải bìa: 4 cuốn đứng cạnh nhau, không xoay (ở cỡ này xoay là nhoè) */
+  .fanwrap{order:2;justify-self:stretch;max-width:none;
+    display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:12px}
+  .fan{display:flex;gap:7px;height:auto;perspective:none}
+  .fan::after{display:none}
+  .fan a{position:static;width:auto;left:auto;top:auto;flex:0 0 44px;
+    transform:none;box-shadow:0 8px 16px -10px #000000e6, inset 0 0 0 1px #00000059;
+    transition:transform .2s var(--ease)}
+  .fan a[data-pos="3"],.fan a[data-pos="4"]{display:none}
+  .fan a:hover,.fan a:focus-visible{transform:translateY(-3px)}
+  .ppcap{margin:0;text-align:left;font-size:9px}
+  .ppcap .cc{display:none}
+  .fan a{border-radius:3px 5px 5px 3px}
+
+  .ppbody{padding:0 20px 76px}
+  .ppaz{margin:0 -20px;padding:0 10px}
+  .ppazin button{flex:none;width:40px;min-width:40px;max-width:none;height:44px}
   .ppcol{display:none}
   .ppg{padding:22px 0 6px;gap:10px}
   .ppr{grid-template-columns:34px minmax(0,1fr);grid-template-areas:"c n" "c m";
     gap:2px 12px;padding:11px 0}
   .ppcv{grid-area:c;width:34px;height:49px}
-  .ppcv img{width:34px;height:49px}
   .ppn{grid-area:n;font-size:15px;white-space:normal;overflow:visible}
-  .ppsm{grid-area:m;display:flex;align-items:center;flex-wrap:wrap;gap:2px 8px}
+  .ppsm{grid-area:m;display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px}
   .ppc,.ppd{display:inline;font-size:12px;text-align:left}
   .ppd::before{content:"·";margin-right:6px;color:var(--dim)}
   .ppempty{padding:48px 4px}
 }
 
 @media (prefers-reduced-motion:reduce){
-  .ppr,.ppn,.ppazin button,.ppsearch,.ppsel select{transition:none}
+  .fan a,.ppr,.ppn,.ppazin button,.ppsearch,.ppsel select{transition:none}
 }
 </style>
 </head>
 <body data-personal-follow-only>
 <header id="hdr"></header>
 <main class="people">
-  <nav class="ppcrumb" id="crumb" aria-label="Bạn đang ở"><a href="/">Trang chủ</a><i aria-hidden="true">›</i><b>Tác giả</b></nav>
 
-  <header class="pphead">
-    <h1 id="ppTitle">Tác giả</h1>
-    <p class="ppmeta" id="ppSub">Đang tải…</p>
-  </header>
+  <section class="ppstand" aria-labelledby="ppTitle">
+    <span class="glow" aria-hidden="true"></span>
+    <div class="ppstand-in">
+      <div class="ppstand-col">
+        <nav class="ppcrumb" id="crumb" aria-label="Bạn đang ở"><a href="/">Trang chủ</a><i aria-hidden="true">›</i><b>Tác giả</b></nav>
+        <p class="ppkick">Thư viện · người viết</p>
+        <h1 id="ppTitle">Tác giả</h1>
+        <p class="ppsub" id="ppSub">Đang tải…</p>
 
-  <div class="ppbar" id="ppTools" hidden>
-    <label class="ppsearch" id="ppQWrap" hidden>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.6-3.6"></path></svg>
-      <input id="ppQ" type="search" placeholder="Tìm tác giả…" aria-label="Tìm tác giả"
-             autocomplete="off" spellcheck="false">
-    </label>
+        <dl class="ppspec" id="ppSpec" hidden>
+          <div><dt>Tác giả</dt><dd id="ppStN">—</dd></div>
+          <div><dt>Truyện</dt><dd id="ppStB">—</dd></div>
+          <div><dt>Đang cập nhật</dt><dd id="ppStRun">—</dd></div>
+          <div><dt>Cập nhật</dt><dd id="ppStUp">—</dd></div>
+        </dl>
 
-    <div class="ppsel">
-      <select id="ppSort" aria-label="Sắp xếp danh sách">
-        <option value="az">A–Z</option>
-        <option value="count">Nhiều truyện</option>
-        <option value="new">Mới cập nhật</option>
-      </select>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+        <div class="ppbar" id="ppTools" hidden>
+          <label class="ppsearch" id="ppQWrap" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.6-3.6"></path></svg>
+            <input id="ppQ" type="search" placeholder="Tìm tác giả…" aria-label="Tìm tác giả"
+                   autocomplete="off" spellcheck="false">
+          </label>
+          <div class="ppsel">
+            <select id="ppSort" aria-label="Sắp xếp danh sách">
+              <option value="az">A–Z</option>
+              <option value="count">Nhiều truyện</option>
+              <option value="new">Mới cập nhật</option>
+            </select>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+          </div>
+          <div class="ppsel">
+            <select id="ppSt" aria-label="Lọc theo trạng thái">
+              <option value="">Mọi trạng thái</option>
+              <option value="run">Đang cập nhật</option>
+              <option value="soon">Sắp ra mắt</option>
+              <option value="done">Hoàn thành</option>
+            </select>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+          </div>
+          <button type="button" class="pplink" id="ppClear" hidden>Xoá bộ lọc</button>
+        </div>
+      </div>
+
+      <div class="fanwrap" id="ppFanWrap">
+        <div class="fan" id="ppFan"></div>
+        <p class="ppcap" id="ppFanCap"></p>
+      </div>
+    </div>
+  </section>
+
+  <div class="ppbody">
+    <nav class="ppaz" id="ppAZ" aria-label="Chỉ mục theo chữ cái" hidden>
+      <div class="ppazin" id="ppAZin"></div>
+    </nav>
+
+    <div class="ppcol" id="ppCols" hidden aria-hidden="true">
+      <span></span><span>Tác giả</span><span>Truyện</span><span>Cập nhật</span><span>Trạng thái</span>
     </div>
 
-    <div class="ppsel">
-      <select id="ppSt" aria-label="Lọc theo trạng thái">
-        <option value="">Mọi trạng thái</option>
-        <option value="run">Đang cập nhật</option>
-        <option value="soon">Sắp ra mắt</option>
-        <option value="done">Hoàn thành</option>
-      </select>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
-    </div>
-
-    <button type="button" class="pplink" id="ppClear" hidden>Xoá bộ lọc</button>
+    <div class="grid" id="ppGrid"></div>
   </div>
-
-  <nav class="ppaz" id="ppAZ" aria-label="Chỉ mục theo chữ cái" hidden>
-    <div class="ppazin" id="ppAZin"></div>
-  </nav>
-
-  <div class="ppcol" id="ppCols" hidden aria-hidden="true">
-    <span></span><span>Tác giả</span><span>Truyện</span><span>Cập nhật</span><span>Trạng thái</span>
-  </div>
-
-  <div class="grid" id="ppGrid"></div>
 </main>
 <footer id="ftr"></footer>
-<script src="/cz-config.js?v=20261012n"></script><script src="/cz-app.js?v=20261101r98"></script><script src="/cz-auth.js?v=20261012n"></script><script src="/cz-personal.js?v=20261013notif1"></script><script src="/cz-people.js?v=20261101r98"></script>
+<script src="/cz-config.js?v=20261012n"></script><script src="/cz-app.js?v=20261101r99"></script><script src="/cz-auth.js?v=20261012n"></script><script src="/cz-personal.js?v=20261013notif1"></script><script src="/cz-people.js?v=20261101r99"></script>
 <script>
   // tab + ô tìm của header dùng chung
   try { document.querySelectorAll('[data-ic]').forEach(function (e) { if (window.CZ && CZ.icon) e.outerHTML = CZ.icon(e.dataset.ic); }); } catch (err) {}

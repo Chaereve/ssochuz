@@ -282,10 +282,49 @@
         '<span class="ppsm">' +
           '<span class="ppc">' + e.count + ' truyện</span>' +
           (e.updated ? '<span class="ppd">' + dmy(e.updated) + '</span>' : '<span class="ppd"></span>') +
-          '<span class="pps ' + e.key + '" title="' + esc(e.title) + '"><i></i>' +
+          '<span class="pps ' + e.key + '" title="' + esc(e.title) + '">' +
             ST_LABEL[e.key] + '</span>' +
         '</span></a>';
     }
+    /* ---- banner “sạp báo” ------------------------------------------------
+       Số liệu đi vào “sạp nhãn” (4 ô), bìa của 5 tác giả nhiều truyện nhất
+       đi vào quạt bên phải — đúng cách banner trang chủ bày bìa. Quạt là bàn
+       tay vào truyện, không phải trang trí: mỗi bìa là một liên kết. */
+    function paintStand() {
+      var n = data.length, books = 0, run = 0, up = '';
+      data.forEach(function (e) {
+        books += e.count;
+        if (e.st.run > 0) run++;
+        if (e.updated && e.updated > up) up = e.updated;
+      });
+      var set = function (id, v) { var el2 = el(id); if (el2) el2.textContent = v; };
+      set('#ppStN', String(n));
+      set('#ppStB', String(books));
+      set('#ppStRun', String(run));
+      set('#ppStUp', up ? dmy(up) : '—');
+
+      var fan = el('#ppFan');
+      if (!fan) return;
+      var top = data.filter(function (e) { return !!e.cover; })
+        .slice().sort(function (a, b) { return (b.count - a.count) || a.slug.localeCompare(b.slug, 'vi'); })
+        .slice(0, 5);
+      fan.innerHTML = top.map(function (e, i) {
+        return '<a href="' + personURL(e.name) + '" data-pos="' + i + '"' +
+          ' aria-label="' + esc(e.name + ' — ' + e.count + ' truyện') + '"' +
+          ' title="' + esc(e.name + ' · ' + e.count + ' truyện') + '">' +
+          '<img src="' + esc(e.cover) + '"' + CZ.coverFB(e.books[0], e.cover) +
+          ' alt="" width="292" height="438" loading="lazy" decoding="async" referrerpolicy="no-referrer"></a>';
+      }).join('');
+      var cap = el('#ppFanCap');
+      if (cap) {
+        /* trên điện thoại phần "— N truyện" bị ẩn (không đủ chỗ), xem pp.css */
+        cap.innerHTML = top.length
+          ? '<b>01</b> · <span class="cn">' + esc(top[0].name) + '</span>' +
+            '<span class="cc"> — ' + top[0].count + ' truyện</span>'
+          : '';
+      }
+    }
+
     function emptyHTML() {
       return '<div class="ppempty"><b>Không có tác giả nào khớp</b>' +
         '<p>Thử từ khoá khác, hoặc bỏ bộ lọc trạng thái.</p>' +
@@ -380,7 +419,7 @@
       if (sub) {
         sub.textContent = filtered
           ? ('Tìm thấy ' + list.length + ' / ' + data.length + ' tác giả')
-          : (data.length + ' tác giả · ' + data.reduce(function (n, e) { return n + e.count; }, 0) + ' truyện');
+          : 'Tất cả người viết có truyện trong thư viện.';
       }
 
       /* chỉ mục A–Z: chỉ có nghĩa khi đang gom theo chữ cái */
@@ -488,6 +527,10 @@
       data = buildIndex(CZ.lib());
       readState();
       bind(); mark();
+      paintStand();
+      ['#ppSpec', '#ppFanWrap'].forEach(function (s2) {
+        var n2 = el(s2); if (n2) n2.hidden = false;
+      });
       var tools = el('#ppTools'); if (tools) tools.hidden = false;
       var wrap = el('#ppQWrap'); if (wrap) wrap.removeAttribute('hidden');
       var qi = el('#ppQ'); if (qi) qi.value = q;
@@ -495,7 +538,7 @@
       sync();
     }
     function hide() {
-      ['#ppTools', '#ppAZ', '#ppCols'].forEach(function (s) {
+      ['#ppTools', '#ppAZ', '#ppCols', '#ppSpec', '#ppFanWrap'].forEach(function (s) {
         var n = el(s); if (n) n.hidden = true;
       });
       var g = el('#ppGrid'); if (g) g.removeAttribute('data-mode');
