@@ -1973,7 +1973,6 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
           '<button class="mnav-x" id="czMnavX" type="button" aria-label="Đóng menu">' + icon('x', 'i-s') + '</button>' +
         '</div>' +
         '<nav id="czNav" aria-label="Điều hướng chính">' + mLinks + '</nav>' +
-        '<a href="/guide">' + icon('info', 'i-s') + ' Hướng dẫn</a>' +
         /* mục Quản trị được vẽ trong paintAuth(): người thường KHÔNG thấy */
         '<span id="czAuthMWrap"></span>' +
       '</aside>';
@@ -2327,8 +2326,11 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     host._navRefresh = refresh;
     d.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('#czNav a'); if (a) mark(a); });
   }
-  /* Chân trang nền tối: logo (đồng bộ đầu trang) + câu cảm ơn + 3 liên kết,
-     dồn cột trái. Nền tối CỐ ĐỊNH ở cả hai tông sáng/tối để luôn giống mẫu. */
+  /* Chân trang nền tối, HAI tầng ngăn bằng đường kẻ tóc:
+       trên  · khoá chữ ssochuz + một câu cảm ơn, dồn trái, không hộp lồng hộp
+       dưới  · bản quyền (trái) + ba liên kết ngoài (phải)
+     Nền tối CỐ ĐỊNH (web chỉ còn một tông tối) để chân trang luôn giống mẫu.
+     Trang hướng dẫn đã bỏ (2026-11-01) nên chân trang chỉ còn kênh liên lạc. */
   function mountFooter(host) {
     if (!host) return;
     host.className = 'ftr';
@@ -2336,14 +2338,18 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     var fb = 'https://www.facebook.com/profile.php?id=61592803761987';
     var survey = cfg.form || 'https://forms.gle/YW3PvtrNVQ7xt8nCA';
     host.innerHTML = '<div class="in">' +
-      '<a class="logo" href="/" title="ssochuz library">' + MARK() + '</a>' +
-      '<p class="fthanks">Cảm ơn bạn đã ủng hộ và đồng hành cùng ssochuz library!</p>' +
-      '<nav class="flinks" aria-label="Trợ giúp và kênh liên lạc">' +
-        '<a href="/guide">Hướng dẫn</a>' +
-        '<a href="' + esc(fb) + '" target="_blank" rel="noopener">Facebook</a>' +
-        '<a href="' + esc(survey) + '" target="_blank" rel="noopener">Khảo sát truyện</a>' +
-        (API ? '<a href="' + esc(API + '/feed.xml') + '" target="_blank" rel="noopener" title="RSS chương mới (dùng cho Feedly, Inoreader…)">' + icon('rss', 'i-s') + 'RSS</a>' : '') +
-      '</nav>' +
+      '<div class="ft-brand">' +
+        '<a class="logo ft-logo" href="/" title="ssochuz library — về trang chủ">' + MARK() + '</a>' +
+        '<p class="ft-note">Cảm ơn bạn đã ủng hộ và đồng hành cùng ssochuz library.</p>' +
+      '</div>' +
+      '<div class="ft-base">' +
+        '<span class="ft-copy">© ' + new Date().getFullYear() + ' ssochuz library</span>' +
+        '<nav class="ft-links" aria-label="Kênh liên lạc">' +
+          '<a href="' + esc(fb) + '" target="_blank" rel="noopener">Facebook</a>' +
+          '<a href="' + esc(survey) + '" target="_blank" rel="noopener">Khảo sát truyện</a>' +
+          (API ? '<a href="' + esc(API + '/feed.xml') + '" target="_blank" rel="noopener" title="RSS chương mới (dùng cho Feedly, Inoreader…)">' + icon('rss', 'i-s') + 'RSS</a>' : '') +
+        '</nav>' +
+      '</div>' +
     '</div>';
   }
   function mountShell(opt) {

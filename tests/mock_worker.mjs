@@ -32,7 +32,6 @@ function serveStatic(req, res) {
   else if (/^\/reader(\/[^/]*)?\/?$/.test(rel)) rel = '/truyen.html';
   else if (rel === '/admin' || rel === '/admin/' || rel === '/admin-v2' || rel === '/admin-v2/'
     || rel === '/admin-legacy' || rel === '/admin-legacy/') rel = '/admin.html';
-  else if (rel === '/guide' || rel === '/guide/') rel = '/guide.html';
   else if (rel.endsWith('/')) rel += 'index.html';
   const file = path.join(ROOT, path.normalize(rel).replace(/^(\.\.[\\/])+/, ''));
   if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {

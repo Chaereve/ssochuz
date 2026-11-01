@@ -155,7 +155,7 @@ const state = (p) => ({
   ok(e2.cards === N_AU, 'E: bam "Thu lai" xong phai hien du ' + N_AU + ' tac gia (thay ' + e2.cards + ')');
 
   /* ---------- F. CZ.lib() gọi sớm không được đóng băng (mọi trang) --------- */
-  const pF = page('guide.html', { url: 'https://ssochuz.pages.dev/guide', fetch: mkFetch(), setup: follower });
+  const pF = page('tac-gia/index.html', { url: 'https://ssochuz.pages.dev/tac-gia/', fetch: mkFetch(), setup: follower });
   const early = pF.win.CZ.lib().length;
   await pF.win.CZ.registry();
   out.F = { early, after: pF.win.CZ.lib().length };

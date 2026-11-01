@@ -46,14 +46,14 @@ const items={}; reg.lib.slice(0,5).forEach((n,i)=>items[n.slug]={viewsDay:20-i,v
   assert.ok(expanded.client>collapsed,'expansion height '+width);assert.ok(expanded.scroll<=expanded.client+1);assert.equal(expanded.mask,'none');
   await page.click('#synToggle');assert.ok(await page.locator('#synIn').evaluate(e=>e.clientHeight)<expanded.client);
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'story overflow '+width);
-  for(const url of ['/tac-gia/','/couple/','/guide','/admin','/my-space.html']) {
+  for(const url of ['/tac-gia/','/couple/','/admin','/my-space.html']) {
    await page.goto('http://localhost:8000'+url);
    await page.waitForLoadState('domcontentloaded');
    if(url.includes('tac-gia')) await page.waitForSelector('.pcard');
    if(url.includes('couple')) await page.waitForSelector('.pcard');
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),url+' overflow '+width);
   }
-  console.log('Browser layout '+width+'px: Ranking (6 modes), ratings rail, full synopsis, people, guide and admin gate passed');
+  console.log('Browser layout '+width+'px: Ranking (6 modes), ratings rail, full synopsis, people and admin gate passed');
  }
  await page.emulateMedia({reducedMotion:'reduce'});await page.goto('http://localhost:8000/');await page.waitForSelector('#rank .rank');
  assert.equal(await page.locator('#rank .rank').first().evaluate(e=>getComputedStyle(e).animationName),'none');

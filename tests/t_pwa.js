@@ -23,7 +23,7 @@ const pngSize = f => {
 (async () => {
   const out = {};
   /* ---------- manifest trong mọi trang ---------- */
-  const PAGES = ['index.html', 'truyen.html', 'admin.html', 'guide.html', '404.html'];
+  const PAGES = ['index.html', 'truyen.html', 'admin.html', 'tac-gia/index.html', '404.html'];
   PAGES.forEach(f => {
     ok(read(f).includes('<link rel="manifest" href="/manifest.webmanifest">'), f + ' thieu link manifest');
   });

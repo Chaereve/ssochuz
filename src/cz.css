@@ -382,27 +382,35 @@ body.nav-open { overflow: hidden; }
    khối .tsw* (rãnh, núm, icon trượt) cùng các luật responsive của nó đã dọn. */
 
 /* ---- chân trang: dải nền tối chữ ký ------------------------------------------
-   Một cột dồn trái: logo (hình thoi hồng + “ssochuz” trắng + “library” hồng
-   nghiêng) → câu cảm ơn → 3 liên kết. Màu GHI CỐ ĐỊNH (không theo tông
-   sáng/tối) để chân trang luôn giống mẫu ở mọi chế độ. */
-.ftr { background: #171310; border-top: 1px solid rgba(255, 240, 220, .13); margin-top: 80px; }
-.ftr .in { max-width: var(--maxw); margin: 0 auto; padding: 48px 24px 52px; }
-/* logo chân trang DÙNG CHUNG kiểu với đầu trang (.logo): cùng chữ Fraunces, cùng
-   chữ “library” nhỏ giãn cách, cùng dấu vuông — chỉ đổi màu cho hợp nền tối. */
-.ftr .logo { font-size: 24px; color: #f5efe6; }
-.ftr .logo i { color: #a89d8d; }
-.ftr .logo .dot { border-color: #e0859b; }
-.ftr .logo:hover { color: #fff; }
-.ftr .logo:hover i { color: #cfc4b4; }
-.ftr .logo:hover .dot { background: #e0859b; }
-.fthanks { margin: 20px 0 0; max-width: 40ch; font-size: 15px; line-height: 1.7; color: #a89d8d; }
-.flinks { display: flex; flex-wrap: wrap; gap: 8px 28px; margin-top: 28px; }
-.flinks a { font-size: 14.5px; color: #a89d8d;
-  transition: color var(--t-fast) var(--ease); }
-.flinks a:hover { color: #f5efe6; }
-@media (max-width: 520px) {
-  .ftr .in { padding: 36px 16px 44px; }
-  .ftr .logo { font-size: 22px; }
+   HAI tầng, ngăn bằng một đường kẻ tóc — không hộp lồng hộp, không cột thừa:
+     tầng trên  khoá chữ ssochuz + một câu cảm ơn, dồn trái
+     tầng dưới  bản quyền (trái) + liên kết ngoài (phải), chữ 13–14,5px
+   Nền tối CỐ ĐỊNH ở mọi trang (web chỉ còn một tông tối). Mọi màu chữ ở đây đều
+   đạt ≥ 4,5:1 trên #171310: câu cảm ơn 6,9:1 · liên kết 10,4:1 · bản quyền 6,0:1. */
+.ftr { background: #171310; border-top: 1px solid rgba(255, 240, 220, .13); margin-top: 72px; }
+.ftr .in { max-width: var(--maxw); margin: 0 auto; padding: 40px 24px 24px; }
+.ft-brand { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; min-width: 0; }
+.ft-logo { font-size: 27px; }                /* ảnh khoá chữ cao 1em ⇒ 27px */
+.ft-note { margin: 0; max-width: 56ch; font-size: 14.5px; line-height: 1.6; color: #a89d8d; }
+/* tầng dưới: kẻ tóc mảnh, bản quyền bên trái — liên kết bên phải */
+.ft-base { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 8px 24px; margin-top: 26px; padding-top: 14px;
+  border-top: 1px solid rgba(255, 240, 220, .09); }
+.ft-copy { font-size: 13px; line-height: 1.5; color: #9b9184; }
+.ft-links { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 24px; }
+.ft-links a { display: inline-flex; align-items: center; gap: 6px; min-height: 34px;
+  font-size: 14.5px; color: #cbc1b2; transition: color var(--t-fast) var(--ease); }
+.ft-links a:hover { color: #fff; }
+.ft-links a .i { width: 15px; height: 15px; opacity: .85; }
+@media (max-width: 640px) {
+  .ftr { margin-top: 56px; }
+  .ftr .in { padding: 30px 16px 20px; }
+  .ft-brand { gap: 10px; }
+  .ft-logo { font-size: 22px; }
+  /* hẹp thì liên kết lên trên, bản quyền xuống dưới — mỗi liên kết đủ 44px chạm */
+  .ft-base { flex-direction: column; align-items: flex-start; gap: 2px; margin-top: 20px; padding-top: 10px; }
+  .ft-links { order: -1; gap: 0 20px; }
+  .ft-links a { min-height: 44px; }
 }
 
 /* ---- nhịp của thanh đầu trang theo bề ngang -------------------------------
@@ -435,7 +443,6 @@ body.nav-open { overflow: hidden; }
   .hbtn { padding: 0 10px; }
   .hbtn .searchbtn-txt, .hbtn .nav-lbl, .hbtn .k { display: none; }
   #czJump { width: var(--ctl); padding: 0; }
-  .ftr .in { padding: 36px 16px 44px; }
 }
 
 /* ========================= 3. NÚT & NHẬP LIỆU ============================= */
@@ -2331,7 +2338,7 @@ kbd { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; b
 
   .rnav { grid-template-columns: 1fr 1fr; }
   .rnav .mid { grid-column: 1 / -1; order: -1; }
-  .wrap, .ftr .in { padding-left: 16px; padding-right: 16px; }
+  .wrap { padding-left: 16px; padding-right: 16px; }
   .rdhead, .rtext, .ract, .rend, .rnav { padding-left: 18px; padding-right: 18px; }
 }
 @media (max-width: 620px) {
