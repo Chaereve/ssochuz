@@ -256,7 +256,8 @@
   .fgrid { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory;
     margin: 0 -16px; padding: 0 16px 6px; scroll-padding-left: 16px; scrollbar-width: none; }
   .fgrid::-webkit-scrollbar { display: none; }
-  .fc { flex: 0 0 82%; scroll-snap-align: start; padding: 13px; gap: 11px; }
+  .fc { flex: 0 0 88%; scroll-snap-align: start; padding: 13px; gap: 11px; }
+  .fc .stline { gap: 2px 8px; }
   .fc .stack { --cw: 50px; --ch: 72px; --off: 21px; --t: 6px; }
   .fc .last { display: none; }      /* thẻ hẹp: chỉ tên + số truyện + trạng thái */
   .fc b { font-size: 15px; }
