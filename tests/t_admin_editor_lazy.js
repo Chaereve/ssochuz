@@ -23,7 +23,7 @@ const assert = require('assert');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { requestInterceptor } = require('jsdom');   /* jsdom 30: ResourceLoader → interceptors */
+const jsdom = require('jsdom');
 const { page, read } = require('./mk');
 const ROOT = path.join(__dirname, '..');
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -69,21 +69,30 @@ function json(body, ok = true, status = 200) {
   };
 
   /* máy chủ tệp tĩnh giả cho jsdom: admin-editor.js lấy từ repo; lần đầu lỗi mạng.
-     jsdom 30 bỏ lớp ResourceLoader, thay bằng `resources.interceptors` +
-     `requestInterceptor` (trả về Response). Hành vi kiểm vẫn y như cũ. */
+     jsdom 30 bỏ lớp ResourceLoader (thay bằng `resources.interceptors` +
+     `requestInterceptor`), còn jsdom 24 thì ngược lại. CI cài jsdom 24 trong
+     tests/, máy dev có thể dùng jsdom 30 ở gốc ⇒ phải chạy được CẢ HAI, nếu
+     không bài này xanh trên máy mà đỏ trên CI. */
   const loads = [];
   let failNext = 1, delay = 0;
-  const js = (body) => new Response(body, { headers: { 'Content-Type': 'text/javascript' } });
-  const RepoInterceptor = requestInterceptor((request) => {
-    const u = new URL(request.url);
-    if (u.pathname !== '/admin-editor.js') return js('');
+  const serve = (url) => {
+    const u = new URL(url);
+    if (u.pathname !== '/admin-editor.js') return Promise.resolve('');
     loads.push(u.pathname + u.search);
     if (failNext > 0) { failNext--; return Promise.reject(new Error('mạng rớt (test)')); }
-    return wait(delay).then(() => js(editorSrc));
-  });
+    return wait(delay).then(() => editorSrc.toString());
+  };
+  const resources = typeof jsdom.requestInterceptor === 'function'
+    ? { interceptors: [jsdom.requestInterceptor(async (request) => {
+        const body = await serve(request.url);
+        return new Response(body, { headers: { 'Content-Type': 'text/javascript' } });
+      })] }
+    : new (class RepoLoader extends jsdom.ResourceLoader {
+        fetch(url) { return serve(url).then((body) => Buffer.from(body)); }
+      })();
   const newPage = () => page('admin.html', {
     fetch: apiFetch, url: 'https://ssochuz.pages.dev/admin.html', config: { CZ_API: 'https://cms.test' },
-    preload: [], resources: { interceptors: [RepoInterceptor] },
+    preload: [], resources,
   });
 
   let p = newPage();
