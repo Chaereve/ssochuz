@@ -70,8 +70,17 @@ function checkLighthouseMeta(doc, file, { requireDesc = true, requireSkip = true
     }
   }
   if (!doc.querySelector('main#main, main')) issues.push(`${file}: thiếu vùng chính <main>`);
-  if (requireSkip && !doc.querySelector('a.skip[href="#main"]')) {
-    issues.push(`${file}: thiếu liên kết bỏ qua điều hướng a.skip[href="#main"]`);
+  /* Skip link: KHÔNG đòi href="#main" cứng nữa — mỗi trang đặt id cho <main>
+     khác nhau (index: main, truyen: story, my-space: space-…) nên cz-app.js trỏ
+     tới id thật của <main> trên trang đó. Điều cần kiểm là ĐÍCH CÓ THẬT và focus
+     được, chứ không phải một chuỗi cố định. */
+  if (requireSkip) {
+    const skip = doc.querySelector('a.skip[href^="#"]');
+    const targetId = skip ? (skip.getAttribute('href') || '').slice(1) : '';
+    const target = targetId ? doc.getElementById(targetId) : null;
+    if (!skip) issues.push(`${file}: thiếu liên kết bỏ qua điều hướng a.skip`);
+    else if (!target) issues.push(`${file}: skip link trỏ tới #${targetId} nhưng trang không có đích đó`);
+    else if (!target.hasAttribute('tabindex')) issues.push(`${file}: skip link tới #${targetId} nhưng đích không focus được (thiếu tabindex="-1")`);
   }
   return issues;
 }

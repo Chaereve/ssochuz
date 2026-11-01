@@ -17,7 +17,8 @@ const ROOT = path.join(__dirname, '..');
 function srcFile(name) {
   const a = path.join(ROOT, 'src', name);
   return fs.existsSync(a) ? a : path.join(ROOT, name);
-}const PAGES = ['index.html', 'truyen.html', 'admin.html'];
+}const PAGES = ['index.html', 'truyen.html', 'admin.html',
+  'vong-quay/index.html', 'my-space.html', 'profile.html'];
 
 /* --- bỏ phần trong dấu nháy để không soi nhầm thẻ nằm trong data-URI --- */
 function stripValues(html) {
@@ -47,6 +48,15 @@ for (const f of PAGES) {
     const ok = p === '/' || fs.existsSync(path.join(ROOT, rel)) ||
       (p.endsWith('/') ? fs.existsSync(path.join(ROOT, rel, 'index.html')) : fs.existsSync(path.join(ROOT, rel + '.html')));
     if (!ok) problems.push(`${f}: href="${p}" không trỏ tới trang/tệp nào`);
+  }
+  /* <script src> nội bộ phải có thật: Pages chặn /src/* bằng 301 về "/" nên một
+     thẻ trỏ vào tệp không tồn tại sẽ nhận về index.html — trình duyệt parse HTML
+     như JS và báo "Unexpected token '<'" (lỗi thật của trang /vong-quay/). */
+  for (const m of raw.matchAll(/<script[^>]+src="(\/[^"]*)"/g)) {
+    const p = m[1].split('?')[0];
+    if (!fs.existsSync(path.join(ROOT, p.replace(/^\//, '')))) {
+      problems.push(`${f}: <script src="${p}"> không có tệp này trong repo (Pages sẽ trả HTML ⇒ lỗi parse)`);
+    }
   }
   /* biểu tượng dùng trong HTML phải có trong bộ icon */
   const iconsSrc = fs.readFileSync(srcFile('cz-app.js'), 'utf8');

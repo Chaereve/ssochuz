@@ -22,6 +22,7 @@ Mặc định server TẮT Worker (window.CZ_API='') để trang chạy hoàn to
 liệu tĩnh trong /data — đúng tình huống khi bạn chưa nối KV.
 """
 import argparse
+import gzip
 import hashlib
 import json
 import os
@@ -54,6 +55,10 @@ def make_output_safe():
             stream.reconfigure(errors='replace')
         except (AttributeError, ValueError, OSError):
             pass
+
+#: đuôi tệp nén được (mọi thứ trình duyệt đọc dạng chữ) — giống cách Pages nén
+GZIP_EXT = ('.html', '.css', '.js', '.mjs', '.json', '.webmanifest',
+            '.svg', '.txt', '.xml', '.rss', '.md')
 
 MIME = {
     '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
@@ -296,9 +301,20 @@ class Handler(SimpleHTTPRequestHandler):
             if not rel.startswith('docs/mockups/'):
                 body = self.inject(body)
             body = body.replace(b'__DEV_LIVE__', b'')
+        # Nén như Pages thật: máy chủ này KHÔNG nén thì cz.css 193 kB đi nguyên
+        # trên mạng còn Pages chỉ gửi ~33 kB — đo Lighthouse ở đây sẽ ra điểm
+        # hiệu năng thấp giả tạo (FCP 2,9 s) mà không nói gì về bản thật.
+        enc = None
+        if (ext in GZIP_EXT and len(body) > 1024
+                and 'gzip' in (self.headers.get('Accept-Encoding') or '')):
+            body = gzip.compress(body, 6)
+            enc = 'gzip'
         self.send_response(200)
         self.send_header('Content-Type', ctype)
         self.send_header('Content-Length', str(len(body)))
+        if enc:
+            self.send_header('Content-Encoding', enc)
+            self.send_header('Vary', 'Accept-Encoding')
         self.send_header('Cache-Control', 'no-store')      # luôn thấy bản mới khi F5
         for k, v in (extra_headers or {}).items():
             self.send_header(k, v)

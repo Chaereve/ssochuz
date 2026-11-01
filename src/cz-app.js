@@ -1922,12 +1922,25 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     var mn = d.querySelector('main');
     if (mn && !mn.id) mn.id = 'main';
     d.querySelectorAll('nav.crumb:not([aria-label])').forEach(function (el) { el.setAttribute('aria-label', 'Đường dẫn trang'); });
-    host.innerHTML = '<a class="skip" href="#main" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden">Chuyển tới nội dung chính</a><div class="in">' +
+    /* Skip link phải trỏ tới một đích CÓ THẬT và focus được: mỗi trang đặt tên
+       <main> khác nhau (#story, .space-wrap, …) nên lấy id của <main> ngay tại
+       đây, thiếu thì đặt id="main" + tabindex=-1. Trước đây href="#main" cứng
+       mà phần lớn trang không có id đó ⇒ Lighthouse báo skip-link hỏng. */
+    var mainEl = d.querySelector('main');
+    if (mainEl) {
+      if (!mainEl.id) mainEl.id = 'main';
+      if (!mainEl.hasAttribute('tabindex')) mainEl.setAttribute('tabindex', '-1');
+    }
+    host.innerHTML = '<a class="skip" href="#' + (mainEl ? mainEl.id : 'main') + '">Chuyển tới nội dung chính</a><div class="in">' +
       '<a class="logo" href="/" title="ssochuz library">' + MARK() + '</a>' +
       '<span class="grow"></span>' +
       /* ô tìm kiếm rộng: bấm (hoặc ⌘K) là mở bảng tìm nhanh — cùng một đường vào
          với phím tắt, không dựng thêm một ô nhập thứ hai để khỏi lệch kết quả */
-      '<button class="hbtn" id="czJump" title="Tìm truyện, tác giả, couple (⌘K)" aria-label="Tìm kiếm truyện, tác giả, couple" aria-haspopup="dialog">' + icon('search', 'i-s') +
+      /* Không đặt aria-label khác chữ hiện ra (WCAG 2.5.3 “nhãn bằng chữ”):
+         tên đọc lên phải CHỨA đúng chữ người dùng nhìn thấy. Chữ trong nút đã
+         đủ nghĩa nên bỏ aria-label là cách gọn nhất — trước đây “Tìm kiếm…” vs
+         “Tìm…” lệch một chữ là Lighthouse báo lỗi. */
+      '<button class="hbtn" id="czJump" title="Tìm truyện, tác giả, couple (⌘K)" aria-haspopup="dialog">' + icon('search', 'i-s') +
         '<span class="searchbtn-txt">Tìm truyện, tác giả, couple…</span><span class="k">⌘K</span></button>' +
       /* chuông trung tâm thông báo: truyện đã theo dõi có chương mới thì hiện số */
       '<div class="hnotif" id="czNotif">' +
