@@ -139,40 +139,68 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
   border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid var(--acc)}
 
 /* ======================= B · BỐC BÀI ===================================== */
-.deal{display:grid;grid-template-columns:auto minmax(0,1fr);gap:52px;align-items:center;margin-top:26px}
-.deal-left{display:flex;flex-direction:column;align-items:center;gap:16px}
-.stack{position:relative;width:190px;height:272px;margin-top:4px}
-.card3d{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .68s cubic-bezier(.2,.9,.25,1)}
-.stack .under{transform:translateY(-11px) rotate(-3.4deg);opacity:1;z-index:2}
-.stack .under2{transform:translateY(-21px) rotate(3deg);opacity:.8;z-index:1}
-.stack .under .cf.back,.stack .under2 .cf.back{background:#2c231b;border-color:rgba(255,240,220,.26)}
-.stack .under .cf.back span,.stack .under2 .cf.back span{opacity:0}
-.card3d.top{z-index:3}
+/* Bàn có ba chỗ: bộ bài (trái) · chỗ đáp (giữa) · phần chữ (phải).
+   Lá bay từ bộ bài sang chỗ đáp theo một cung, lật giữa đường, đáp xuống êm. */
+.deal{position:relative;display:grid;grid-template-columns:var(--cw) var(--cw) minmax(0,1fr);
+  gap:46px;align-items:center;margin-top:30px;--cw:196px;--ch:280px}
+.deck{display:flex;flex-direction:column;align-items:center;gap:16px}
+.deck-cards{position:relative;width:var(--cw);height:var(--ch)}
+.dcard{position:absolute;inset:0;border-radius:9px;background:#241d17;
+  border:1px solid rgba(255,240,220,.18);
+  transition:transform .55s var(--ease),opacity .45s var(--ease),border-color .3s var(--ease);
+  box-shadow:0 18px 30px -26px rgba(0,0,0,.95)}
+.dcard::before{content:"";position:absolute;inset:9px;border:1px solid rgba(224,133,155,.16);border-radius:5px}
+.dcard::after{content:"";position:absolute;inset:0;border-radius:8px;opacity:.55;
+  background:repeating-linear-gradient(45deg,rgba(255,240,220,.05) 0 1px,transparent 1px 10px)}
+.dcard.u2{transform:translateY(-17px) rotate(2.8deg) scale(.982);opacity:.5}
+.dcard.u1{transform:translateY(-8px) rotate(-2.2deg) scale(.994);opacity:.82}
+.dcard.top{transform:none}
+.dcard .dm{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1;
+  font-family:var(--head);font-size:32px;line-height:1;color:color-mix(in srgb,var(--acc) 55%,transparent)}
+.deck:hover .dcard.u2{transform:translateY(-25px) rotate(5deg) scale(.982);opacity:.6}
+.deck:hover .dcard.u1{transform:translateY(-13px) rotate(-4deg) scale(.994);opacity:.95}
+.deck:hover .dcard.top{transform:translateY(-3px)}
+.deck-act{display:flex;flex-direction:column;align-items:center;gap:7px;width:100%}
+.deck-act .btn.pri{width:100%;min-height:44px}
+.lnk{font-size:12.5px;color:var(--dim);padding:6px 4px;border-radius:6px;transition:color .15s var(--ease)}
+.lnk:hover{color:var(--txt)}
+.deck-cnt{font-size:12px;color:var(--dim);margin:0;font-variant-numeric:tabular-nums}
+.deck-cnt b{color:var(--mut);font-weight:600}
 
-.cf{position:absolute;inset:0;border-radius:8px;overflow:hidden;backface-visibility:hidden;border:1px solid var(--bd)}
-.cf.back{background:
-   linear-gradient(145deg,#241d17,#191411);display:grid;place-items:center}
-.cf.back::before{content:"";position:absolute;inset:9px;border:1px solid rgba(224,133,155,.22);border-radius:4px}
-.cf.back span{font-family:var(--head);font-size:34px;color:color-mix(in srgb,var(--acc) 62%,transparent)}
-.cf.back::after{content:"";position:absolute;inset:15px;border:1px solid rgba(255,240,220,.07);border-radius:3px;
-  background:repeating-linear-gradient(45deg,rgba(255,240,220,.03) 0 1px,transparent 1px 9px)}
-.cf.front{transform:rotateY(180deg);background:var(--surf2)}
-.cf.front img{width:100%;height:100%;object-fit:cover}
-.card3d.flipped{transform:rotateY(180deg)}
-.card3d.flipped.lift{transform:translateY(-8px) rotateY(180deg)}
-.card3d.lift{transform:translateY(-8px)}
-.stack.shake .under{animation:sh1 .5s var(--ease)}
-.stack.shake .under2{animation:sh2 .5s var(--ease)}
-.stack.shake .top:not(.flipped){animation:sh3 .5s var(--ease)}
-@keyframes sh1{50%{transform:translateY(-9px) rotate(-5deg) scale(.975)}}
-@keyframes sh2{50%{transform:translateY(-16px) rotate(5deg) scale(.95)}}
-@keyframes sh3{50%{transform:translate(-4px,-4px) rotate(-2deg)}}
-.deal-right{min-width:0;max-width:560px;padding-top:0}
+/* chỗ đáp: khung chờ + lá đã đáp */
+.slot{position:relative;width:var(--cw);height:var(--ch)}
+.slot-frame{position:absolute;inset:0;border:1px solid var(--bd);border-radius:9px;
+  display:grid;place-items:center;color:var(--dim);font-family:var(--head);font-size:26px;
+  transition:opacity .35s var(--ease),border-color .35s var(--ease)}
+.slot-frame::before{content:"";position:absolute;inset:10px;border:1px solid rgba(255,240,220,.06);border-radius:4px}
+.slot-card{position:absolute;inset:0;border-radius:9px;overflow:hidden;background:var(--surf2);
+  box-shadow:0 26px 46px -34px rgba(0,0,0,.95)}
+.slot-card img{width:100%;height:100%;object-fit:cover}
+.slot-ring{position:absolute;inset:0;border-radius:9px;border:1px solid var(--acc);opacity:0;pointer-events:none}
+.slot-glow{position:absolute;inset:-14%;border-radius:50%;pointer-events:none;opacity:0;
+  background:radial-gradient(closest-side,color-mix(in srgb,var(--acc) 26%,transparent),transparent)}
+.slot-sheen{position:absolute;inset:0;border-radius:9px;overflow:hidden;pointer-events:none}
+.slot-sheen i{position:absolute;top:-25%;left:-75%;width:55%;height:150%;transform:rotate(16deg);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);opacity:0}
+
+/* lá đang bay */
+.fly{position:absolute;z-index:20;pointer-events:none;transform-origin:50% 50%;will-change:transform}
+.fly-in{position:absolute;inset:0;transform-style:preserve-3d}
+.fly .f{position:absolute;inset:0;border-radius:9px;overflow:hidden;backface-visibility:hidden}
+.fly .f-back{background:#241d17;border:1px solid rgba(255,240,220,.2);
+  background-image:repeating-linear-gradient(45deg,rgba(255,240,220,.05) 0 1px,transparent 1px 10px)}
+.fly .f-front{transform:rotateY(180deg);background:var(--surf2);border:1px solid var(--bd)}
+.fly .f-front img{width:100%;height:100%;object-fit:cover}
+.fly-shadow{position:absolute;z-index:19;border-radius:50%;pointer-events:none;
+  background:radial-gradient(closest-side,rgba(0,0,0,.6),transparent);filter:blur(1px)}
+
+/* phần chữ bên phải */
+.panel{min-width:0}
+.panel .res.plain{grid-template-columns:1fr;gap:16px;align-items:start}
+.panel .res-acts{margin-top:0}
 .hint h2{font-family:var(--head);font-weight:400;font-size:clamp(21px,2.6vw,27px);line-height:1.2;margin:0 0 10px}
-.hint p{color:var(--mut);font-size:13.5px;line-height:1.65;margin:0 0 14px;max-width:40ch}
-.hint ol{margin:0;padding:0;list-style:none;display:grid;gap:9px}
-.hint li{display:grid;grid-template-columns:19px 1fr;gap:10px;font-size:13px;color:var(--mut);line-height:1.5}
-.hint li b{font-family:var(--mono);font-size:11px;color:var(--acc);padding-top:2px}
+.hint p{color:var(--mut);font-size:13.5px;line-height:1.7;margin:0 0 12px;max-width:42ch}
+.hint .tiny{font-size:12px;color:var(--dim);margin:0}
 
 /* ======================= C · VÒNG BÌA ==================================== */
 .ringsec{margin-top:14px;display:flex;flex-direction:column;align-items:center}
@@ -209,10 +237,12 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
   .res{grid-template-columns:auto minmax(0,1fr);gap:16px;margin-top:22px;padding-top:18px}
   .res-acts{grid-column:1/-1;margin-top:2px}
   .res-acts .btn{flex:1}
-  .deal{grid-template-columns:1fr;gap:24px;justify-items:center}
-  .deal-right{text-align:left;width:100%;padding-top:0}
+  .deal{grid-template-columns:auto auto;justify-content:center;gap:16px;margin-top:20px;--cw:140px;--ch:200px}
+  .panel{grid-column:1/-1;margin-top:10px}
+  .deck{gap:12px}
+  .deck-act .btn.pri{min-height:40px;font-size:13px;padding:0 10px}
+  .deck-cnt{font-size:11.5px}
   .hint p{max-width:none}
-  .stack{width:164px;height:234px}
   .ringwrap{width:min(100%,340px)}
   .rpos{width:56px;height:80px;margin:-40px 0 0 -28px}
   .ring-hub{width:78px;height:78px;margin:-39px 0 0 -39px}
@@ -258,7 +288,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 <footer class="mkfoot">
   <h2>Ba phương án khác nhau ở đâu</h2>
   <p><b>A · Băng chuyền</b> — dải bìa chạy ngang, dừng đúng ô giữa. Cảm giác nhanh, “quay số” rõ ràng; thấy được nhiều truyện trong vòng cùng lúc.</p>
-  <p><b>B · Bốc bài</b> — bộ bài úp, bốc một lá rồi lật. Chậm rãi, riêng tư; ít chuyển động nên rất nhẹ máy.</p>
+  <p><b>B · Bốc bài</b> — bộ bài úp bên trái, chỗ đáp bên phải. Bấm là lá trên cùng bay theo một cung sang chỗ đáp, <i>lật ngay khi gần tới nơi</i>, chạm bàn thì một vòng sáng lan ra và một vệt sáng quét qua bìa; chữ bên phải hiện lần lượt. Bốc lá khác thì lá cũ thu về bộ bài trước. Toàn bộ chỉ dùng transform/opacity nên rất nhẹ máy.</p>
   <p><b>C · Vòng bìa</b> — bìa xếp thành vòng tròn nhưng <i>luôn đứng thẳng</i>, không lát màu, không đinh tán; kim ở đỉnh dừng đúng bìa được chọn. Gần bản hiện tại nhất nhưng sạch hơn nhiều.</p>
   <p>Chung cho cả ba: bỏ hộp lồng hộp, bỏ dải “6 bộ · tuần này”, bỏ danh sách “Trong vòng (10)” (chính cơ chế đã cho thấy danh sách), không emoji, mỗi màn một nút chính. Bìa lấy từ registry thật; bộ lọc chạy thật.</p>
   <p>Trả lời giúp: <b>“A”</b>, <b>“B”</b> hay <b>“C”</b> — hoặc trộn, ví dụ “C nhưng nút kiểu B”.</p>
@@ -347,14 +377,14 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
       '</div><p class="fcount"><b data-count>0</b> truyện trong vòng</p></div>';
   }
   function resultHTML(n, plain) {
-    return (plain ? '' : '<span class="res-cv">' + imgHTML(n) + '</span>') +
+    return (plain ? '' : '<span class="res-cv st">' + imgHTML(n) + '</span>') +
       '<div class="res-tx">' +
-        '<p class="res-kick">Chọn cho hôm nay</p>' +
-        '<h2 class="res-tt">' + esc(n.title) + '</h2>' +
-        '<p class="res-meta">' + [esc(n.author), esc(n.couple), esc(recountLabel(n))].filter(Boolean).join(' · ') +
+        '<p class="res-kick st">Chọn cho hôm nay</p>' +
+        '<h2 class="res-tt st">' + esc(n.title) + '</h2>' +
+        '<p class="res-meta st">' + [esc(n.author), esc(n.couple), esc(recountLabel(n))].filter(Boolean).join(' · ') +
           (n.status ? ' <em>· ' + esc(n.status) + '</em>' : '') + '</p>' +
       '</div>' +
-      '<div class="res-acts">' +
+      '<div class="res-acts st">' +
         '<a class="btn pri" href="/truyen/' + encodeURIComponent(n.slug) + '/chuong-1/">Đọc ngay</a>' +
         '<a class="btn ghost" href="/truyen/' + encodeURIComponent(n.slug) + '/">Trang truyện</a>' +
       '</div>';
@@ -452,81 +482,250 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 
   /* ============================ B · BỐC BÀI ============================== */
   var B = { list: [], busy: false, hasCard: false };
+
+  function cardBackHTML() { return '<b class="dm">S</b>'; }
+
   function buildB() {
     return heroHTML() + filterHTML() +
-      '<section class="deal" aria-label="Bốc bài chọn truyện">' +
-        '<div class="deal-left">' +
-          '<div class="stack" id="stk-b">' +
-            '<div class="card3d under2"><span class="cf back"><span>?</span></span></div>' +
-            '<div class="card3d under"><span class="cf back"><span>?</span></span></div>' +
-            '<div class="card3d top" id="top-b">' +
-              '<span class="cf back"><span>?</span></span>' +
-              '<span class="cf front" id="front-b"></span>' +
-            '</div>' +
+      '<section class="deal" id="deal-b" aria-label="Bốc bài chọn truyện">' +
+        '<div class="deck" id="deck-b">' +
+          '<div class="deck-cards">' +
+            '<span class="dcard u2"></span>' +
+            '<span class="dcard u1"></span>' +
+            '<span class="dcard top" id="top-b">' + cardBackHTML() + '</span>' +
           '</div>' +
-          '<div class="stage-foot" style="justify-content:center">' +
+          '<div class="deck-act">' +
             '<button class="btn pri" id="btn-b" type="button">Bốc một lá</button>' +
-            '<button class="btn ghost sm" id="shuf-b" type="button">Xáo bài</button>' +
+            '<button class="lnk" id="shuf-b" type="button">Xáo bài</button>' +
           '</div>' +
-          '<p class="live" role="status" id="live-b">Sẵn sàng</p>' +
+          '<p class="deck-cnt" id="cnt-b"></p>' +
         '</div>' +
-        '<div class="deal-right" id="right-b" aria-live="polite"></div>' +
-      '</section>';
+        '<div class="slot" id="slot-b" aria-hidden="true">' +
+          '<span class="slot-frame" id="slotframe-b">?</span>' +
+          '<span class="slot-card" id="slotcard-b" hidden></span>' +
+          '<span class="slot-ring" id="slotring-b"></span>' +
+          '<span class="slot-glow" id="slotglow-b"></span>' +
+          '<span class="slot-sheen"><i id="sheen-b"></i></span>' +
+        '</div>' +
+        '<div class="panel" id="panel-b" aria-live="polite"></div>' +
+      '</section>' +
+      '<p class="live" role="status" id="live-b" style="margin-top:18px;position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap"></p>';
   }
+
   function hintB() {
     return '<div class="hint"><h2>Một lá cho hôm nay</h2>' +
-      '<p>Bộ bài giữ đúng những truyện bạn đang theo dõi hoặc mới cập nhật. Bốc một lá, lật ra rồi đọc.</p>' +
-      '<ol><li><b>01</b><span>Bốc một lá bất kỳ</span></li>' +
-      '<li><b>02</b><span>Lá bài lật ra là truyện của hôm nay</span></li>' +
-      '<li><b>03</b><span>Không ưng thì xáo bài rồi bốc lại</span></li></ol></div>';
+      '<p>Bộ bài chỉ gồm truyện bạn đang theo dõi hoặc vừa cập nhật. Bốc một lá, lật ra rồi đọc.</p>' +
+      '<p class="tiny">Không ưng thì xáo bài rồi bốc lại — mỗi lần một lá khác.</p></div>';
   }
+
   function mountB(root) {
     B.root = root;
     paintB(root);
     root.querySelector('#btn-b').addEventListener('click', function () { drawB(root); });
-    root.querySelector('#shuf-b').addEventListener('click', function () {
-      if (B.busy) return;
-      B.list = shuffled(B.list);
-      var st = root.querySelector('#stk-b');
-      st.classList.remove('shake'); void st.offsetWidth; st.classList.add('shake');
-      root.querySelector('#live-b').innerHTML = 'Đã xáo · <b>' + B.list.length + '</b> lá';
-    });
+    root.querySelector('#shuf-b').addEventListener('click', function () { shuffleB(root); });
   }
+
   function paintB(root) {
-    B.list = shuffled(candidates());
-    var n = B.list.length;
+    var all = candidates();
+    B.list = shuffled(all);
+    B.hasCard = false;
     var cnt = root.querySelector('[data-count]');
-    if (cnt) cnt.textContent = n;
-    root.querySelector('#right-b').innerHTML = hintB();
-    root.querySelector('#live-b').innerHTML = n ? ('<b>' + n + '</b> lá trong bộ bài') : 'Không còn truyện khớp bộ lọc.';
-    root.querySelector('#btn-b').disabled = !n;
-    root.querySelector('#shuf-b').disabled = !n;
-    var top = root.querySelector('#top-b');
-    top.classList.remove('flipped', 'lift');
-    root.querySelector('#front-b').innerHTML = '';
+    if (cnt) cnt.textContent = all.length;
+    root.querySelector('#cnt-b').innerHTML = '<b>' + B.list.length + '</b> lá trong bộ bài';
+    root.querySelector('#panel-b').innerHTML = hintB();
+    root.querySelector('#slotcard-b').hidden = true;
+    root.querySelector('#slotframe-b').style.opacity = '1';
+    var tb = root.querySelector('#top-b');
+    if (tb) tb.style.opacity = '';
+    [root.querySelector('.dcard.u1'), root.querySelector('.dcard.u2')].forEach(function (el) {
+      if (el) el.getAnimations().forEach(function (an) { an.cancel(); });
+    });
+    var btn = root.querySelector('#btn-b');
+    btn.textContent = 'Bốc một lá';
+    btn.disabled = !B.list.length;
+    root.querySelector('#shuf-b').disabled = !B.list.length;
+    root.querySelector('#live-b').textContent = B.list.length ? '' : 'Không còn truyện khớp bộ lọc.';
   }
+
+  /* lá bài bay theo cung từ bộ bài sang chỗ đáp, lật giữa đường */
   function drawB(root) {
     if (B.busy || !B.list.length) return;
     B.busy = true;
     var btn = root.querySelector('#btn-b'), live = root.querySelector('#live-b');
-    var top = root.querySelector('#top-b'), front = root.querySelector('#front-b'), right = root.querySelector('#right-b');
+    var slotCard = root.querySelector('#slotcard-b');
+    btn.disabled = true; btn.textContent = 'Đang bốc…';
+    live.textContent = '';
     var pick = pickIndex(B.list), book = B.list[pick];
-    btn.disabled = true; btn.textContent = 'Đang lật…';
-    live.textContent = 'Đang lật lá bài…';
-    right.innerHTML = '';
-    if (reduce) { finish(); return; }
-    top.classList.add('lift');
-    setTimeout(function () { top.classList.add('flipped'); }, 180);
-    setTimeout(finish, 900);
-    function finish() {
-      front.innerHTML = imgHTML(book);
-      top.classList.remove('lift');
-      B.busy = false;
-      btn.disabled = false; btn.textContent = 'Bốc lá khác';
-      lastPick = book.slug;
-      live.innerHTML = '<b>' + B.list.length + '</b> lá trong bộ bài';
-      right.innerHTML = '<div class="res plain" style="margin-top:0;padding-top:0;border-top:0">' + resultHTML(book, true) + '</div>';
+
+    var launch = function () { flyB(root, book, pick); };
+
+    if (B.hasCard && !reduce) {
+      /* lá cũ thu về bộ bài trước, rồi mới rút lá mới */
+      var back = slotCard.animate([
+        { transform: 'translate3d(0,0,0) rotate(0deg) scale(1)', opacity: 1 },
+        { transform: 'translate3d(0,-10px,0) rotate(-2deg) scale(.98)', opacity: 1, offset: .35 },
+        { transform: 'translate3d(-14px,-30px,0) rotate(-7deg) scale(.86)', opacity: 0 }
+      ], { duration: 320, easing: 'cubic-bezier(.4,0,.7,1)', fill: 'both' });
+      back.finished.then(function () {
+        slotCard.hidden = true;
+        slotCard.style.opacity = '';
+        try { back.cancel(); } catch (e) {}
+        launch();
+      });
+    } else {
+      slotCard.hidden = true;
+      launch();
     }
+
+    function flyB(root, book, pick) {
+      var deal = root.querySelector('#deal-b');
+      var topBack = root.querySelector('#top-b');
+      var slot = root.querySelector('#slot-b');
+      var dRect = deal.getBoundingClientRect();
+      var a = topBack.getBoundingClientRect();
+      var b = slot.getBoundingClientRect();
+      var dx = b.left - a.left, dy = b.top - a.top;
+
+      var fly = d.createElement('div');
+      fly.className = 'fly';
+      fly.style.left = (a.left - dRect.left) + 'px';
+      fly.style.top = (a.top - dRect.top) + 'px';
+      fly.style.width = a.width + 'px';
+      fly.style.height = a.height + 'px';
+      fly.style.transform = 'translate3d(0,0,0)';
+      fly.innerHTML = '<span class="fly-in"><span class="f f-back"></span>' +
+        '<span class="f f-front">' + imgHTML(book) + '</span></span>';
+      deal.appendChild(fly);
+      var inner = fly.querySelector('.fly-in');
+
+      /* bộ bài khép lại khi lá trên cùng rời đi */
+      topBack.style.opacity = '0';
+      if (!reduce) {
+        root.querySelector('.dcard.u1').animate(
+          [{ transform: 'translateY(-8px) rotate(-2.2deg) scale(.994)' },
+           { transform: 'translateY(-14px) rotate(-3.4deg) scale(.99)' }],
+          { duration: 420, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'both' });
+        root.querySelector('.dcard.u2').animate(
+          [{ transform: 'translateY(-17px) rotate(2.8deg) scale(.982)' },
+           { transform: 'translateY(-26px) rotate(4.4deg) scale(.978)' }],
+          { duration: 420, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'both' });
+      }
+
+      var shadow = d.createElement('span');
+      shadow.className = 'fly-shadow';
+      shadow.style.left = (a.left - dRect.left + a.width * .12) + 'px';
+      shadow.style.top = (a.top - dRect.top + a.height * .97) + 'px';
+      shadow.style.width = (a.width * .76) + 'px';
+      shadow.style.height = '16px';
+      deal.appendChild(shadow);
+
+      var D = reduce ? 0 : 440;
+      var path = fly.animate([
+        { transform: 'translate3d(0,0,0) rotate(-1.5deg) scale(1)' },
+        { transform: 'translate3d(' + (dx * .4) + 'px,' + (dy - 36) + 'px,0) rotate(5deg) scale(1.05)', offset: .45 },
+        { transform: 'translate3d(' + (dx * .82) + 'px,' + (dy - 10) + 'px,0) rotate(1.2deg) scale(1.015)', offset: .82 },
+        { transform: 'translate3d(' + dx + 'px,' + dy + 'px,0) rotate(0deg) scale(1)' }
+      ], { duration: D, easing: 'cubic-bezier(.32,.62,.2,1)', fill: 'both' });
+
+      shadow.animate([
+        { opacity: 0, transform: 'translate3d(0,0,0) scale(.7)' },
+        { opacity: .5, transform: 'translate3d(' + (dx * .5) + 'px,' + (dy * .5) + 'px,0) scale(1)', offset: .45 },
+        { opacity: 0, transform: 'translate3d(' + dx + 'px,' + dy + 'px,0) scale(.75)' }
+      ], { duration: D, easing: 'cubic-bezier(.32,.62,.2,1)', fill: 'both' });
+
+      /* lật bắt đầu khi lá đã gần tới chỗ đáp (82% đường bay) */
+      var flipDelay = reduce ? 0 : Math.round(D * 0.72);
+      var flip = reduce ? null : inner.animate([
+        { transform: 'rotateY(0deg) scale(1)' },
+        { transform: 'rotateY(90deg) scale(1.055)', offset: .5 },
+        { transform: 'rotateY(180deg) scale(1)' }
+      ], { duration: 420, delay: flipDelay, easing: 'cubic-bezier(.45,.05,.25,1)', fill: 'both' });
+
+      var glow = root.querySelector('#slotglow-b');
+      var glowAnim = (reduce || !glow) ? null : glow.animate([
+        { opacity: 0, transform: 'scale(.82)' },
+        { opacity: .6, offset: .45 },
+        { opacity: 0, transform: 'scale(1.18)' }
+      ], { duration: 760, delay: Math.max(0, flipDelay - 90), easing: 'cubic-bezier(.3,.7,.3,1)' });
+
+      var waits = [path.finished];
+      if (flip) waits.push(flip.finished);
+      Promise.all(waits).then(function () {
+        path.cancel();
+        shadow.remove();
+        fly.style.transform = 'translate3d(' + dx + 'px,' + dy + 'px,0)';
+        landB(root, book, pick, fly);
+      }).catch(function () { landB(root, book, pick, fly); });
+    }
+
+    function landB(root, book, pick, fly) {
+      if (fly && fly.parentNode) fly.remove();
+      /* bộ bài nhận lại lá trên cùng (bộ bài không vơi) */
+      root.querySelector('#top-b').style.opacity = '';
+      [root.querySelector('.dcard.u1'), root.querySelector('.dcard.u2')].forEach(function (el) {
+        if (el) el.getAnimations().forEach(function (an) { an.cancel(); });
+      });
+      var slotCard = root.querySelector('#slotcard-b');
+      slotCard.innerHTML = imgHTML(book);
+      slotCard.hidden = false;
+      slotCard.style.opacity = '';
+      root.querySelector('#slotframe-b').style.opacity = '0';
+
+      /* vòng sáng lan ra + vệt sáng quét qua bìa */
+      if (!reduce) {
+        root.querySelector('#slotring-b').animate([
+          { opacity: .9, transform: 'scale(1)' },
+          { opacity: 0, transform: 'scale(1.075)' }
+        ], { duration: 640, easing: 'cubic-bezier(.2,.8,.3,1)' });
+        var sheen = root.querySelector('#sheen-b');
+        sheen.animate([
+          { transform: 'translate3d(0,0,0) rotate(16deg)', opacity: 0 },
+          { opacity: .85, offset: .2 },
+          { opacity: 0 }
+        ], { duration: 720, delay: 40, easing: 'ease-out' });
+        sheen.animate([
+          { left: '-75%' }, { left: '118%' }
+        ], { duration: 720, delay: 40, easing: 'cubic-bezier(.25,.7,.3,1)' });
+      }
+
+      /* chữ hiện lần lượt */
+      var panel = root.querySelector('#panel-b');
+      panel.innerHTML = '<div class="res plain" style="margin-top:0;padding-top:0;border-top:0">' +
+        resultHTML(book, true) + '</div>';
+      Array.prototype.forEach.call(panel.querySelectorAll('.st'), function (el, i) {
+        if (reduce) return;
+        el.animate([
+          { opacity: 0, transform: 'translateY(10px)' },
+          { opacity: 1, transform: 'none' }
+        ], { duration: 360, delay: 70 + i * 65, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'both' });
+      });
+
+      B.hasCard = true;
+      B.busy = false;
+      lastPick = book.slug;
+      var btn = root.querySelector('#btn-b');
+      btn.disabled = false;
+      btn.textContent = 'Bốc lá khác';
+      root.querySelector('#live-b').textContent = 'Đã bốc: ' + book.title;
+    }
+  }
+
+  function shuffleB(root) {
+    if (B.busy) return;
+    B.list = shuffled(B.list);
+    var u1 = root.querySelector('.dcard.u1'), u2 = root.querySelector('.dcard.u2');
+    if (reduce) return;
+    u1.animate([
+      { transform: 'translateY(-8px) rotate(-2.2deg) scale(.994)' },
+      { transform: 'translateY(-26px) rotate(-9deg) scale(.99)' },
+      { transform: 'translateY(-8px) rotate(-2.2deg) scale(.994)' }
+    ], { duration: 520, easing: 'cubic-bezier(.3,.7,.3,1)' });
+    u2.animate([
+      { transform: 'translateY(-17px) rotate(2.8deg) scale(.982)' },
+      { transform: 'translateY(-36px) rotate(10deg) scale(.978)' },
+      { transform: 'translateY(-17px) rotate(2.8deg) scale(.982)' }
+    ], { duration: 560, easing: 'cubic-bezier(.3,.7,.3,1)' });
+    root.querySelector('#live-b').textContent = 'Đã xáo · ' + B.list.length + ' lá';
   }
 
   /* ============================ C · VÒNG BÌA ============================= */
