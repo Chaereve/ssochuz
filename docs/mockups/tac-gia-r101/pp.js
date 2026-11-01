@@ -12,10 +12,11 @@
   var DATA = (window.MKA && window.MKA.a) || [];
   var LIVE = 'https://8081-inpi9mz09qz9bfup3iuwi.e2b.app/tac-gia/?q=';
 
-  var V = 'A';            /* phương án đang xem */
+  var V = 'C';            /* phương án đang xem (C đã duyệt) */
   var Q = '';             /* từ khoá lọc */
   var SORT = 'name';      /* name | count | new */
   var MODE = 'card';      /* C: card | compact */
+  var H = '1';            /* kiểu đầu trang: 1 | 2 | 3 */
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
@@ -152,11 +153,29 @@
   }
 
   /* ======================================================================== */
+  var HEADDESC = {
+    '1': ' · Đầu trang 1 — ô tìm canh đáy, hẹp, ngang tầm dòng đếm.',
+    '2': ' · Đầu trang 2 — ô tìm xuống dòng riêng, canh trái như thanh lọc.',
+    '3': ' · Đầu trang 3 — ô tìm xuống thanh danh sách, đứng cạnh kiểu xem.'
+  };
   var DESC = {
     A: 'A · Chỉ mục — chữ cái A–Z dính trên đầu là mốc phân cấp lớn nhất, mỗi nhóm một khối, trong nhóm là dòng tên gọn. Bấm chữ cái để nhảy nhóm.',
     B: 'B · Bảng — phân cấp bằng cột: hàng tiêu đề (TÁC GIẢ · TRUYỆN · TRẠNG THÁI · CẬP NHẬT) và số liệu thẳng cột. Bấm tiêu đề để sắp xếp.',
     C: 'C · Tạp chí — phân cấp bằng cỡ: dải “Nhiều truyện nhất” với bìa lớn mở đầu, rồi danh sách đều; đổi được kiểu Thẻ / Gọn.'
   };
+
+  /* ô tìm nằm trong masthead hay trong thanh của danh sách (kiểu 3) */
+  function placeSearch() {
+    var box = document.getElementById('ppQWrap');
+    if (!box) return;
+    var home = document.querySelector('.mlead');
+    var bar = document.querySelector('.mallhd');
+    if (H === '3' && V === 'C' && bar) {
+      if (box.parentNode !== bar) bar.appendChild(box);
+    } else if (home && box.parentNode !== home) {
+      home.appendChild(box);
+    }
+  }
 
   function paint(keepScroll) {
     var out = $('#out');
@@ -164,11 +183,16 @@
     var list = view();
     out.className = 'v' + V;
     out.innerHTML = V === 'A' ? renderA(list) : V === 'B' ? renderB(list) : renderC(list);
-    $('#mkDesc').textContent = DESC[V];
+    $('#mkDesc').textContent = DESC[V] + (V === 'C' ? (HEADDESC[H] || '') : '');
     $('#ppSub').innerHTML = list.length === DATA.length
       ? '<b>' + DATA.length + '</b> tác giả · <b>' + total({ c: DATA.reduce(function (s, a) { return s + a.c; }, 0) }) + '</b> truyện'
       : 'Tìm thấy <b>' + list.length + '</b> / ' + DATA.length + ' tác giả';
-    $('#ppQWrap').removeAttribute('hidden');
+    var qw = $('#ppQWrap');
+    if (!qw) return;                  /* trang đã bị điều hướng đi trong lúc chờ gõ */
+    qw.removeAttribute('hidden');
+    var host = $('.m101');
+    if (host) host.className = 'm101 hd' + H;
+    placeSearch();
     if (keepScroll) window.scrollTo(0, y); else spy();
     spy();
   }
@@ -205,6 +229,18 @@
     });
     window.scrollTo(0, 0);
     paint();
+  });
+
+  $('#mkHead').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-h]');
+    if (!b) return;
+    H = b.getAttribute('data-h');
+    [].forEach.call(this.querySelectorAll('button'), function (x) {
+      x.setAttribute('aria-selected', String(x === b));
+    });
+    document.querySelector('.m101').className = 'm101 hd' + H;
+    placeSearch();
+    $('#mkDesc').textContent = DESC[V] + (V === 'C' ? (HEADDESC[H] || '') : '');
   });
 
   $('#out').addEventListener('click', function (e) {

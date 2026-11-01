@@ -18,8 +18,14 @@
   color: var(--mut); font: 600 12px/1 var(--font); cursor: pointer; white-space: nowrap; }
 .mkbar .mseg button:hover { color: var(--txt); }
 .mkbar .mseg button[aria-selected="true"] { background: #e0859b2b; color: var(--acc); }
-.mkbar .desc { margin: 0; font: 400 12px/1.4 var(--font); color: var(--dim); flex: 1 1 260px; min-width: 0; }
-.mkbar .live { font: 500 11.5px/1 var(--font); color: var(--mut); text-decoration: none;
+.mkbar .lab { font: 700 9px/1 var(--font); letter-spacing: .13em; text-transform: uppercase;
+  color: var(--dim); margin-right: -6px; }
+.mkbar .mseg2 button[aria-selected="true"], .mkbar .mseg button[aria-selected="true"] {
+  background: #e0859b2b; color: var(--acc); }
+.mkbar .mseg2 button { min-width: 30px; padding: 0 9px; }
+.mkbar .desc { margin: 0; font: 400 11.5px/1.45 var(--font); color: var(--dim);
+  flex: 1 1 100%; order: 9; min-width: 0; }
+.mkbar .live { margin-left: auto; font: 500 11.5px/1 var(--font); color: var(--mut); text-decoration: none;
   border-bottom: 1px solid var(--bd); padding-bottom: 2px; }
 .mkbar .live:hover { color: var(--txt); border-color: var(--bd2); }
 
@@ -29,16 +35,37 @@
 .m101 .mcrumb a:hover { color: var(--txt); }
 .m101 .mcrumb b { color: var(--mut); font-weight: 600; }
 
-.m101 .mlead { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px 28px;
-  padding: 10px 0 16px; margin: 0 0 18px; border-bottom: 1px solid var(--bd); }
+/* ---- đầu trang: ba kiểu bố trí tên trang ↔ ô tìm ----------------------
+   Cả ba đều giữ đúng thứ bậc: tên trang là khối lớn nhất, ô tìm là công cụ
+   phụ. Khác nhau ở chỗ ô tìm đứng đâu và rộng bao nhiêu. */
 .m101 .mlead .mnm { min-width: 0; }
-.m101 .mlead h1 { font-family: var(--font-head); font-weight: 600; letter-spacing: -.022em;
-  font-size: clamp(28px, 3.4vw, 40px); line-height: 1.04; margin: 0; }
-.m101 .mlead .sub { color: var(--mut); font-size: 13.5px; line-height: 1.5; margin: 7px 0 0; }
+.m101 .mlead h1 { font-family: var(--font-head); font-weight: 600; letter-spacing: -.024em;
+  font-size: clamp(27px, 3.1vw, 37px); line-height: 1.06; margin: 0; }
+.m101 .mlead .sub { color: var(--mut); font-size: 13px; line-height: 1.5; margin: 7px 0 0;
+  font-variant-numeric: tabular-nums; }
 .m101 .mlead .sub b { color: var(--txt); font-weight: 600; }
-.m101 .mlead .search { max-width: 300px; flex: 0 1 300px; margin: 0; }
+.m101 .mlead .search { margin: 0; border-color: var(--bd2); background: var(--surf);
+  width: 100%; max-width: none; }
+.m101 .mlead .search:focus-within { border-color: var(--acc); }
+.m101 .mlead .search input { font-size: 13.5px; }
 .m101 .mlead .search[hidden] { display: none; }
-.m101 .mlead .search input { font-size: 14px; }
+
+/* 1 · ô tìm canh đáy, hẹp — ngang tầm dòng đếm, không tranh chỗ với tên trang */
+.hd1 .mlead { display: grid; grid-template-columns: minmax(0, 1fr) 264px;
+  align-items: end; gap: 12px 36px;
+  padding: 6px 0 18px; margin: 0 0 22px; border-bottom: 1px solid var(--bd); }
+.hd1 .mlead .search { height: 38px; }
+
+/* 2 · ô tìm xuống dòng riêng, canh trái như một thanh lọc của danh sách */
+.hd2 .mlead { padding: 6px 0 18px; margin: 0 0 20px; border-bottom: 1px solid var(--bd); }
+.hd2 .mlead .search { margin-top: 15px; max-width: 400px; height: 40px; }
+
+/* 3 · ô tìm chuyển xuống thanh của danh sách, đứng cạnh kiểu xem */
+.hd3 .mlead { padding: 6px 0 16px; margin: 0 0 18px; border-bottom: 1px solid var(--bd); }
+.hd3 .mlead .search { display: none; }
+.hd3 .mallhd { padding: 20px 0 12px; gap: 12px; justify-content: flex-start; }
+.hd3 .mallhd .mseg { margin-left: auto; }
+.hd3 .mallhd .search { display: flex; flex: 0 1 264px; margin-left: 4px; height: 38px; }
 
 /* ---- bìa + chấm trạng thái ---------------------------------------------- */
 .m101 .mbk { position: relative; display: block; flex: none; border-radius: 5px; overflow: hidden;
@@ -174,8 +201,14 @@
 @media (max-width: 720px) {
   .mkbar { position: static; }
   .m101 { padding: 0 16px 56px; }
-  .m101 .mlead { flex-direction: column; align-items: stretch; gap: 14px; }
-  .m101 .mlead .search { max-width: none; flex: 1 1 auto; }
+  .m101 .mlead, .hd1 .mlead { grid-template-columns: minmax(0, 1fr); gap: 13px;
+    padding: 4px 0 16px; margin-bottom: 18px; }
+  .m101 .mlead .search, .hd1 .mlead .search { height: 42px; }
+  .hd2 .mlead .search { max-width: none; margin-top: 12px; }
+  .hd3 .mallhd { flex-wrap: wrap; padding: 18px 0 10px; }
+  .hd3 .mallhd { justify-content: space-between; }
+  .hd3 .mallhd .mseg { margin-left: auto; }
+  .hd3 .mallhd .search { order: 3; flex: 1 1 100%; margin-left: 0; height: 42px; }
   .mkbar-in { padding: 8px 16px; gap: 8px 10px; }
   .mkbar .live, .mkbar .desc { display: none; }
   .vA .azwrap { top: 0; }
