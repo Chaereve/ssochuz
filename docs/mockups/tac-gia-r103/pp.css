@@ -1,0 +1,170 @@
+/* ============================================================================
+   r103 · trang Tác giả — một bố cục duy nhất, gọn: đầu trang + thanh công cụ
+   (tìm · lọc trạng thái · sắp xếp) + danh sách hai cột.
+   Chỉ dùng token của cz.css; mọi lớp có tiền tố .ta- để không đụng cz.css.
+   ========================================================================== */
+
+.ta { max-width: 1080px; margin: 0 auto; padding: 0 24px 72px; }
+
+/* ---- đầu trang ---------------------------------------------------------- */
+.ta-crumb { padding: 24px 0 0; font: 400 12.5px/1.4 var(--font); color: var(--dim); }
+.ta-crumb a { color: var(--dim); text-decoration: none; }
+.ta-crumb a:hover { color: var(--txt); }
+.ta-crumb b { color: var(--mut); font-weight: 600; }
+
+.ta-head { display: flex; align-items: baseline; gap: 12px 16px; flex-wrap: wrap;
+  padding: 12px 0 18px; }
+.ta-head h1 { font: 600 clamp(26px, 3vw, 34px)/1.06 var(--font-head); letter-spacing: -.024em;
+  margin: 0; color: var(--txt); }
+.ta-head .sub { margin: 0; font: 400 13px/1.4 var(--font); color: var(--mut);
+  font-variant-numeric: tabular-nums; }
+.ta-head .sub b { color: var(--txt); font-weight: 600; }
+
+/* ---- thanh công cụ: dính trên đầu khi cuộn ------------------------------ */
+.ta-tools { position: sticky; top: 0; z-index: 40; background: var(--bg);
+  border-top: 1px solid var(--bd2); border-bottom: 1px solid var(--bd2); }
+.ta-tools .in { display: flex; align-items: center; gap: 10px 12px; flex-wrap: wrap;
+  padding: 11px 0; }
+
+.ta-search { position: relative; display: flex; align-items: center; gap: 8px;
+  flex: 1 1 300px; min-width: 0; height: 42px; padding: 0 8px 0 12px;
+  border: 1px solid var(--bd2); border-radius: 10px; background: var(--surf); color: var(--dim); }
+.ta-search:focus-within { border-color: var(--acc); box-shadow: 0 0 0 3px #e0859b1f; }
+.ta-search svg { width: 15px; height: 15px; flex: none; }
+.ta-search input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0;
+  background: transparent; color: var(--txt); font: 400 14px/1 var(--font); }
+.ta-search input::placeholder { color: var(--dim); }
+.ta-search .kbd { font: 600 10px/1 var(--font); letter-spacing: .04em; color: var(--dim);
+  border: 1px solid var(--bd); border-radius: 5px; padding: 4px 5px; flex: none; }
+.ta-search .clr { width: 26px; height: 26px; flex: none; display: none; place-items: center;
+  border: 0; border-radius: 50%; background: transparent; color: var(--dim); cursor: pointer; }
+.ta-search .clr:hover { background: var(--surf3); color: var(--txt); }
+.ta-search.has-q .clr { display: grid; }
+.ta-search.has-q .kbd { display: none; }
+
+/* lọc trạng thái: chip có số đếm, bấm để bật/tắt */
+.ta-f { display: flex; align-items: center; gap: 6px; flex: none; }
+.ta-f button { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 11px;
+  border: 1px solid var(--bd); border-radius: 99px; background: transparent; color: var(--mut);
+  font: 600 12px/1 var(--font); cursor: pointer; white-space: nowrap;
+  transition: color .14s var(--ease), border-color .14s var(--ease), background-color .14s var(--ease); }
+.ta-f button:hover { color: var(--txt); border-color: var(--bd2); }
+.ta-f button[aria-pressed="true"] { color: var(--acc); border-color: #e0859b66;
+  background: #e0859b1a; }
+.ta-f button .d { width: 5px; height: 5px; border-radius: 50%; background: var(--dim); flex: none; }
+.ta-f button .d.done { background: var(--ok); }
+.ta-f button .d.run { background: var(--warn); }
+.ta-f button .d.soon { background: var(--acc); }
+.ta-f button .n { font: 500 11px/1 var(--font); color: var(--dim); font-variant-numeric: tabular-nums; }
+.ta-f button[aria-pressed="true"] .n { color: var(--acc); }
+.ta-f button:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+
+/* sắp xếp: một nút mở menu, gọn hơn ba ô */
+.ta-sort { position: relative; flex: none; margin-left: auto; }
+.ta-sort > button { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 11px;
+  border: 1px solid var(--bd); border-radius: 99px; background: transparent; color: var(--mut);
+  font: 600 12px/1 var(--font); cursor: pointer; white-space: nowrap; }
+.ta-sort > button:hover { color: var(--txt); border-color: var(--bd2); }
+.ta-sort > button b { color: var(--txt); font-weight: 600; }
+.ta-sort > button svg { width: 12px; height: 12px; }
+.ta-sort .menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 5; min-width: 178px;
+  padding: 5px; border: 1px solid var(--bd2); border-radius: 11px; background: #1d1815;
+  box-shadow: 0 22px 44px -22px #000; display: none; }
+.ta-sort.open .menu { display: block; }
+.ta-sort .menu button { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; height: 34px; padding: 0 9px; border: 0; border-radius: 7px; background: transparent;
+  color: var(--mut); font: 500 12.5px/1 var(--font); cursor: pointer; text-align: left; }
+.ta-sort .menu button:hover { background: var(--surf2); color: var(--txt); }
+.ta-sort .menu button[aria-checked="true"] { color: var(--acc); }
+.ta-sort .menu button .ck { opacity: 0; }
+.ta-sort .menu button[aria-checked="true"] .ck { opacity: 1; }
+
+/* dòng đang lọc (chỉ hiện khi có lọc) */
+.ta-now { display: none; flex: 1 1 100%; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 2px 0 0; font: 400 12px/1.45 var(--font); color: var(--mut); }
+.ta-now.on { display: flex; }
+.ta-now b { color: var(--txt); font-weight: 600; }
+.ta-now .x { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 11px;
+  border: 1px solid var(--bd); border-radius: 99px; background: transparent; color: var(--mut);
+  font: 500 11.5px/1 var(--font); cursor: pointer; }
+.ta-now .x:hover { color: var(--txt); border-color: var(--bd2); }
+
+/* ---- danh sách ---------------------------------------------------------- */
+.ta-out { padding-top: 16px; }
+/* mỗi nhóm: một cột hẹp bên trái giữ chữ cái (không chiếm hàng riêng), bên phải
+   là lưới ba cột dòng thấp 60px — 40 tác giả gần như gọn trong một màn hình. */
+.ta-grp { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 0 10px;
+  padding-top: 6px; }
+.ta-grp .ta-let { align-self: start; padding-top: 20px; font: 600 13px/1 var(--font-head);
+  color: var(--dim); letter-spacing: .02em; }
+.ta-grp + .ta-grp { border-top: 1px solid var(--bd2); margin-top: 4px; }
+.ta-grp-flat { padding-top: 0; }
+.ta-grp-flat + .ta-grp-flat { border-top: 0; margin-top: 0; }
+.ta-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 26px; }
+
+.ta-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 11px;
+  align-items: center; min-height: 60px; padding: 6px 6px 6px 0; border-bottom: 1px solid var(--bd);
+  color: inherit; text-decoration: none; min-width: 0; }
+.ta-row:hover { background: var(--surf); }
+.ta-row:hover .nm { color: var(--acc); }
+.ta-row:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; border-radius: 5px; }
+.ta-row .cv { width: 34px; height: 51px; border-radius: 4px; overflow: hidden; background: var(--surf2);
+  box-shadow: 0 1px 0 #ffffff17; }
+.ta-row .cv img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ta-row .tx { min-width: 0; }
+.ta-row .nm { display: block; font: 600 14.5px/1.3 var(--font-head); letter-spacing: -.006em;
+  color: var(--txt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: color .14s var(--ease); }
+.ta-row .mt { display: flex; align-items: center; gap: 7px; margin-top: 2px; flex-wrap: wrap;
+  font: 400 11.5px/1.4 var(--font); color: var(--dim); font-variant-numeric: tabular-nums;
+  min-width: 0; }
+.ta-row .mt > span { flex: none; }
+.ta-row .dt { font: 400 11.5px/1.4 var(--font); color: var(--dim); white-space: nowrap;
+  font-variant-numeric: tabular-nums; align-self: center; }
+.ta-row .mt .c { color: var(--mut); font-weight: 600; }
+.ta-row .mt .s { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.ta-row .mt .s i { width: 5px; height: 5px; border-radius: 50%; background: var(--dim); flex: none; }
+.ta-row .mt .s i.done { background: var(--ok); }
+.ta-row .mt .s i.run { background: var(--warn); }
+.ta-row .mt .s i.soon { background: var(--acc); }
+
+
+.ta-empty { padding: 46px 0 8px; max-width: 460px; }
+.ta-empty b { display: block; font: 600 17px/1.3 var(--font-head); color: var(--txt); }
+.ta-empty p { margin: 6px 0 16px; font: 400 13px/1.55 var(--font); color: var(--mut); }
+.ta-empty button { height: 38px; padding: 0 15px; border: 1px solid var(--bd2); border-radius: 99px;
+  background: transparent; color: var(--txt); font: 600 12.5px/1 var(--font); cursor: pointer; }
+.ta-empty button:hover { border-color: var(--acc); color: var(--acc); }
+
+/* ---- hẹp dần ------------------------------------------------------------ */
+@media (max-width: 1000px) {
+  .ta-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) {
+  .ta-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .ta { padding: 0 16px 56px; }
+  .ta-head { padding-bottom: 14px; }
+  /* trên điện thoại thanh lọc dài ~166px nên để nó trôi đi cùng trang, không
+     dính lại che mất danh sách. */
+  .ta-tools { position: static; }
+  .ta-tools .in { gap: 8px; padding: 9px 0; }
+  .ta-search { flex: 1 1 100%; height: 44px; }
+  .ta-search .kbd { display: none; }
+  /* 2×2 ô đều nhau: bốn chip vừa một khối gọn, không còn hàng lẻ thừa. */
+  .ta-f { flex: 1 1 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .ta-f button { height: 33px; padding: 0 10px; font-size: 11.5px; justify-content: center; }
+  .ta-sort { margin-left: 0; flex: 1 1 100%; }
+  .ta-sort > button { width: 100%; justify-content: space-between; height: 36px; }
+  .ta-sort .menu { left: 0; right: 0; min-width: 0; }
+  .ta-row { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 12px; min-height: 68px; }
+  .ta-row .cv { width: 40px; height: 60px; }
+  /* tên dài xuống dòng (tối đa 2 dòng) thay vì bị cắt cụt. */
+  .ta-row .nm { font-size: 16px; white-space: normal; overflow: hidden;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  
+}
+@media (prefers-reduced-motion: reduce) {
+  .ta *, .ta *::before { transition: none !important; }
+}
