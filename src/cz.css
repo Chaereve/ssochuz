@@ -2349,16 +2349,11 @@ kbd { display: inline-flex; align-items: center; height: 22px; padding: 0 7px; b
     box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--rx) 62%, transparent); }
 }
 /* Theme đổi token tức thì trong JS; không dùng cross-fade toàn trang để tránh lag. */
-/* ===================== 12b. NỀN ĐỌC (3 tông) + 3 FONT ================== */
-body[data-rd="sang"] { --rd-bg: #ffffff; --rd-tx: #191712; --rd-mut: #6d6659; --rd-bd: rgba(30, 22, 12, .12);
-  --rd-surf: #fff; --rd-surf2: #f4f2ee; --rd-acc: #a63a52; }
-body[data-rd="kem"] { --rd-bg: #f8f2e6; --rd-tx: #322a1e; --rd-mut: #7b6b56; --rd-bd: rgba(70, 45, 20, .16);
-  --rd-surf: #fdf9f0; --rd-surf2: #efe6d5; --rd-acc: #9c4a2a; }
-body[data-rd="toi"] { --rd-bg: #121110; --rd-tx: #d9d5cf; --rd-mut: #8f8a83; --rd-bd: rgba(255, 250, 240, .1);
-  --rd-surf: #1a1817; --rd-surf2: #232120; --rd-acc: #e08fa4; }
-body[data-rd="sepia"], body[data-rd="la"] { --rd-bg: #f8f2e6; --rd-tx: #322a1e; --rd-mut: #7b6b56; --rd-bd: rgba(70, 45, 20, .16);
-  --rd-surf: #fdf9f0; --rd-surf2: #efe6d5; --rd-acc: #9c4a2a; }
-body[data-rd="xam"] { --rd-bg: #121110; --rd-tx: #d9d5cf; --rd-mut: #8f8a83; --rd-bd: rgba(255, 250, 240, .1);
+/* ===================== 12b. NỀN ĐỌC (CHỈ CÒN TỐI) + 3 FONT =============
+   11/2026: bỏ hẳn nền kem và nền trắng của trang đọc. Bộ token này gắn với
+   body[data-rd] (KHÔNG theo giá trị cụ thể) nên cấu hình cũ trong máy người
+   đọc — kem, sang, sepia, xam… — cũng ra đúng một tông tối. */
+body[data-rd] { --rd-bg: #121110; --rd-tx: #d9d5cf; --rd-mut: #8f8a83; --rd-bd: rgba(255, 250, 240, .1);
   --rd-surf: #1a1817; --rd-surf2: #232120; --rd-acc: #e08fa4; }
 body[data-rd-font="serif"], body[data-rd-font="georgia"], body[data-rd-font="times"] { --rd-font: var(--font-head); }
 body[data-rd-font="sans"], body[data-rd-font="bevn"], body[data-rd-font="roboto"], body[data-rd-font="inter"], body[data-rd-font="arial"] {

@@ -868,9 +868,6 @@
   }
 
   /* ======================= 4. TRANG ĐỌC ================================= */
-  var RD_THEMES = [
-    { k: 'sang', l: 'Sáng' }, { k: 'kem', l: 'Kem' }, { k: 'toi', l: 'Tối' }
-  ];
   var FONTS = [
     { k: 'serif', l: 'Serif' },
     { k: 'sans', l: 'Sans' }
@@ -885,7 +882,8 @@
 
   function applyRD() {
     var s = CZ.rdGet();
-    document.body.dataset.rd = s.theme;
+    /* nền đọc chỉ còn TỐI — gán cứng để cấu hình cũ trong máy không kéo về kem/trắng */
+    document.body.dataset.rd = 'toi';
     document.body.dataset.rdFont = s.font || 'serif';
     document.body.classList.toggle('rd-paged', s.mode === 'paged');
     document.body.classList.toggle('rd-scroll', s.mode !== 'paged');
@@ -938,7 +936,6 @@
         sliderRow('Giãn dòng', 'line', 1.4, 2.4, 0.05, '') +
         sliderRow('Giãn đoạn', 'para', 0.6, 1.8, 0.05, 'em') +
         row('Căn đều hai bên', 'justify', [{ k: 0, l: 'Tắt' }, { k: 1, l: 'Bật' }])) +
-      grp('Nền đọc', row('Nền đọc', 'theme', RD_THEMES)) +
       /* Bỏ nhóm “Tương tác & kiểu đọc” (Bionic/Terminal/Zen/âm thanh/góp gạch)
          — sticker là tính năng được giữ lại nên luôn hiện, không còn công tắc. */
       '<div class="srow2" style="border:0"><span></span>' +
@@ -972,7 +969,7 @@
       } catch(e) { toast('Trình duyệt không hỗ trợ toàn màn hình.'); }
     });
     $('#setReset').addEventListener('click', function () {
-      CZ.rdSet({ mode: 'scroll', size: 18, font: 'serif', line: 1.85, para: 1.05, theme: 'kem', width: 720, justify: 0 });
+      CZ.rdSet({ mode: 'scroll', size: 18, font: 'serif', line: 1.85, para: 1.05, theme: 'toi', width: 720, justify: 0 });
       applyRD(); paintSettings(); relayout(); CZ.toast('Đã đặt lại mặc định.');
     });
   }

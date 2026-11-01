@@ -1078,16 +1078,17 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     return { total: total, today: today, streak: streak, week: week, last: last };
   }
 
-  /* cài đặt đọc — 2 font (serif / sans) · 3 nền (sang / kem / toi)
+  /* cài đặt đọc — 2 font (serif / sans) · nền TỐI duy nhất (11/2026: bỏ nền
+     kem và trắng, trang đọc chỉ còn một tông tối)
      Chỉ còn các tuỳ chọn hiển thị đọc. Bộ tương tác 1.19.0 (Bionic, Terminal,
      Zen, hộp góp gạch, tiếng hiệu ứng) đã bỏ khỏi trang; riêng hàng reaction
      sticker cuối chương được GIỮ LẠI và luôn bật — không có công tắc trong
      Cài đặt đọc nữa. Chỉ lưu các tuỳ chọn đọc còn dùng trong `ssochuz-reader`. */
   var RD_DEF = {
-    mode: 'scroll', size: 18, font: 'serif', line: 1.85, para: 1.05, theme: 'kem', width: 720, justify: 0
+    mode: 'scroll', size: 18, font: 'serif', line: 1.85, para: 1.05, theme: 'toi', width: 720, justify: 0
   };
   var RD_FONTS = { serif: 1, sans: 1 };
-  var RD_THEMES = { sang: 1, kem: 1, toi: 1 };
+  var RD_THEMES = { toi: 1 };
   function rdGet() {
     var cur = jsonGet(LS.read, {}) || {};
     if (typeof cur !== 'object' || Array.isArray(cur)) cur = {};
@@ -1097,9 +1098,8 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     if (cur.font && !RD_FONTS[cur.font]) {
       cur.font = (cur.font === 'sans' || cur.font === 'bevn' || cur.font === 'roboto' || cur.font === 'inter' || cur.font === 'arial') ? 'sans' : 'serif';
     }
-    if (cur.theme && !RD_THEMES[cur.theme]) {
-      cur.theme = (cur.theme === 'xam') ? 'toi' : 'kem';
-    }
+    /* cấu hình cũ (kem/sang/xam/sepia…) đều dồn về tối */
+    cur.theme = 'toi';
     return Object.assign({}, RD_DEF, cur);
   }
   function rdSet(o) {
