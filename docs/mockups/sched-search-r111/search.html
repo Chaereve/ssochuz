@@ -72,6 +72,9 @@ body { background: var(--bg); min-height: 660px; }
 .vB .jump .res b { font-size: 13.5px; }
 .vB .jump .res .tx > span { margin-top: 1px; font-size: 11.5px; }
 .vB .jump .foot { justify-content: flex-start; padding: 8px 14px; }
+/* đã chốt: dòng đang chọn = nền lướt + viền son 1px, KHÔNG vạch kẻ bên trái */
+.vB .jump .res a.on { background: var(--surf2);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acc) 40%, transparent); }
 
 /* ========================= C · HAI CỘT, DÀY =============================
    Màn hình rộng: chia hai cột để 20+ kết quả nằm gọn trong một khung mắt,

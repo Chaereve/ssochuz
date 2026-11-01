@@ -1209,9 +1209,17 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   .rank .bar { transform: scaleX(var(--w, 0)); }
 }
 
-.schnote { display: flex; align-items: flex-start; gap: 7px; margin: 16px 0 0; padding-top: 12px;
-  border-top: 1px solid var(--bd); font-size: 12.5px; line-height: 1.55; color: var(--mut); }
-.schnote .i { width: 14px; height: 14px; flex: none; margin-top: 1px; color: var(--acc); }
+/* Đầu mục Lịch: ngày là nhãn mono in hoa phía TRÊN tiêu đề; ghi chú “lịch có thể
+   thay đổi” là câu dẫn serif nghiêng dưới đầu mục — nổi bằng phân cấp chữ và một
+   vạch son, không dùng mền màu hay viên thuốc. */
+.kick { margin: 0 0 6px; font-family: var(--font-mono); font-size: 9.5px; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.sechead.kickhead { display: block; }
+.schnote { margin: 2px 0 20px; max-width: 58ch; padding-left: 14px;
+  border-left: 2px solid var(--acc); font-family: var(--font-head); font-style: italic;
+  font-size: 15.5px; line-height: 1.4; color: var(--txt); }
+.schnote[hidden] { display: none; }
+@media (max-width: 640px) { .schnote { font-size: 14px; } }
 
 /* =========================== 10. THƯ VIỆN =============================== */
 /* ---- thanh lọc HAI TẦNG (bản D1 — xem docs/mockups/home) ---------------
@@ -2000,10 +2008,13 @@ body.reading ::selection { background: color-mix(in srgb, var(--rd-acc) 30%, tra
 .jump .res { flex: 1; min-height: 0; overflow-y: auto; padding: 6px; overscroll-behavior: contain;
   scrollbar-width: thin; scrollbar-color: var(--bd2) transparent; }
 .jump .res::-webkit-scrollbar { width: 0; height: 0; }
-.jump .res a { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; align-items: center;
-  min-height: 52px; padding: 5px 9px; border-radius: 9px; color: var(--txt); }
-.jump .res a:hover, .jump .res a.on { background: var(--surf2); }
-.jump .res a.on { box-shadow: inset 2px 0 0 var(--acc); }
+.jump .res a { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 11px; align-items: center;
+  min-height: 52px; padding: 5px 11px 5px 9px; border-radius: 9px; color: var(--txt); }
+.jump .res a:hover { background: var(--surf2); }
+/* Dòng đang chọn: nền pha son rất nhạt + viền tóc son, KHÔNG dùng vạch kẻ bên
+   trái — vạch đó chui vào góc bìa, trông như lỗi vẽ. */
+.jump .res a.on { background: var(--surf2);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acc) 40%, transparent); }
 .jump .res .th { width: 30px; height: 40px; border-radius: 5px; overflow: hidden; background: var(--surf2); }
 .jump .res .th img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .jump .res .tx { min-width: 0; }
@@ -2011,11 +2022,21 @@ body.reading ::selection { background: color-mix(in srgb, var(--rd-acc) 30%, tra
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .jump .res .tx > span { display: block; margin-top: 1px; font-size: 11.5px; color: var(--mut);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jump .res .ch { font-family: var(--font-mono); font-size: 10.5px; color: var(--mut);
+  font-variant-numeric: tabular-nums; white-space: nowrap; }
 .jump .res mark { background: none; color: var(--acc); }
+.jump .jhead { display: flex; align-items: baseline; gap: 8px; padding: 11px 15px 5px;
+  font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--dim); }
+.jump .jhead em { font-style: normal; font-weight: 600; letter-spacing: 0;
+  text-transform: none; color: var(--mut); }
 .jump .jem { padding: 24px 18px; text-align: center; font-size: 13px; line-height: 1.6; color: var(--mut); }
 .jump .jem b { display: block; margin-bottom: 3px; font-size: 14px; font-weight: 600; color: var(--txt); }
-.jump .foot { display: flex; gap: 16px; padding: 9px 15px; border-top: 1px solid var(--bd);
+.jump .foot { display: flex; gap: 14px; padding: 9px 15px; border-top: 1px solid var(--bd);
   background: var(--bg2); font-size: 11.5px; color: var(--dim); }
+.jump .foot > span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.jump .foot kbd { font-family: var(--font-mono); font-size: 10px; line-height: 1; padding: 3px 5px;
+  border: 1px solid var(--bd); border-radius: 4px; background: var(--bg); color: var(--mut); }
 @media (max-width: 640px) {
   .jump .box { margin: 10px auto; width: calc(100vw - 16px); max-height: calc(100vh - 20px); border-radius: 14px; }
   .jump .q input { font-size: 16px; }          /* 16px để iOS không tự phóng to */
@@ -4381,13 +4402,6 @@ body.rd-focus .rdcmts { display: none; }
    phóng to làm mờ, bìa dọc 116×174 sắc nét nổi lên trên; bên phải là phần còn lại
    của tuần, mỗi dòng một bộ. Không khung, không hộp, chỉ kẻ tóc.
    ====================================================================== */
-.lcount { font-size: 12.5px; color: var(--dim); font-variant-numeric: tabular-nums; }
-/* Ngày hôm nay của lịch: hai bậc chữ, không viên thuốc — “Hôm nay” son đậm,
-   phần ngày mờ hơn, ngăn bằng một vạch tóc dọc. */
-.lnow { display: inline-flex; align-items: center; gap: 9px; height: 20px; }
-.lnow b { font-size: 11.5px; font-weight: 700; letter-spacing: .01em; color: var(--acc); }
-.lnow span { padding-left: 9px; border-left: 1px solid var(--bd);
-  font-size: 12.5px; color: var(--mut); }
 #sched .w3grid { display: grid; grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr);
   gap: 32px; align-items: stretch; }
 #sched .w3feat { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr);

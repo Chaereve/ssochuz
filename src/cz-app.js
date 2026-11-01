@@ -2355,8 +2355,10 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
           '<input id="czJumpInput" type="search" placeholder="Tìm truyện, tác giả, couple…" autocomplete="off" spellcheck="false" ' +
             'role="combobox" aria-expanded="true" aria-controls="czJumpRes" aria-autocomplete="list" aria-label="Tìm truyện, tác giả, couple">' +
           '<button class="qx" type="button" data-close aria-label="Đóng tìm kiếm">' + icon('x', 'i-s') + '</button></div>' +
+        '<div class="jhead"><span>Truyện</span><em id="czJumpCnt"></em></div>' +
         '<div class="res" id="czJumpRes" role="listbox" aria-label="Kết quả tìm kiếm"></div>' +
-        '<div class="foot"><span>↑ ↓ chọn</span><span>↵ mở</span><span>Esc đóng</span></div></div>';
+        '<div class="foot"><span><kbd>↑</kbd><kbd>↓</kbd> chọn</span>' +
+          '<span><kbd>↵</kbd> mở</span><span><kbd>Esc</kbd> đóng</span></div></div>';
       d.body.appendChild(box);
       box.addEventListener('click', function (e) { if (e.target.classList.contains('scrim') || e.target.closest('[data-close]')) close(); });
       var input = box.querySelector('#czJumpInput');
@@ -2412,21 +2414,26 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       .slice(0, 24).map(function (x) { return x.n; });
     jumpCur = 0;
     if (!jumpList.length) {
+      var c0 = box.querySelector('#czJumpCnt');
+      if (c0) c0.textContent = '';
       res.innerHTML = ql
         ? '<div class="jem"><b>Không tìm thấy “' + esc(String(q).trim()) + '”</b><span>Thử tên khác, hoặc tìm theo tác giả / couple.</span></div>'
         : '<div class="jem"><b>Đang tải thư viện…</b></div>';
       return;
     }
+    var cnt = box.querySelector('#czJumpCnt');
+    if (cnt) cnt.textContent = jumpList.length + ' bộ';
     res.innerHTML = jumpList.map(function (n, i) {
       var im = coverSrc(n);
-      /* dòng phụ: chỉ những gì có thật — tác giả · couple · số chương, không
-         để lại dấu “·” lửng hay “0/—” của bộ chưa ra chương */
-      var meta = [n.author, n.couple].filter(Boolean).map(esc);
-      if ((parseInt(n.chapters, 10) || 0) > 0) meta.push(esc(countText(n)));
+      /* dòng phụ chỉ có tác giả · couple; số chương dồn sang cột phải để mắt
+         quét tên trước, không phải đọc hết câu */
+      var meta = [n.author, n.couple].filter(Boolean).map(esc).join(' · ');
+      var ch = (parseInt(n.chapters, 10) || 0) > 0 ? countText(n) : '';
       return '<a href="' + esc(storyURL(n.slug)) + '" role="option" aria-selected="' + (i === 0 ? 'true' : 'false') + '"' +
         (i === 0 ? ' class="on"' : '') + '>' +
         '<span class="th">' + (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '') + '</span>' +
-        '<span class="tx"><b>' + jumpHL(n.title, ql) + '</b><span>' + meta.join(' · ') + '</span></span></a>';
+        '<span class="tx"><b>' + jumpHL(n.title, ql) + '</b><span>' + meta + '</span></span>' +
+        '<span class="ch">' + esc(ch) + '</span></a>';
     }).join('');
   }
   function paintLast() {

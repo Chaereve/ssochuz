@@ -449,13 +449,17 @@
       '<div class="w3list"><div class="w3lh"><span>Còn lại trong tuần</span><em>' +
         (rest.length + unplaced.length) + ' bộ</em></div>' +
         rest.map(row).join('') +
-      '</div></div>' +
-      (sch && sch.note ? '<p class="schnote">' + CZ.icon('info', 'i-s') + '<span>' + esc(sch.note) + '</span></p>' : '');
+      '</div></div>';
 
-    var count = $('#lichCount');
-    if (count) count.textContent = items.length + ' bộ · tuần này';
+    /* Ghi chú “lịch có thể thay đổi” không nằm trong lưới: nó là câu dẫn ngay
+       dưới đầu mục (xem #lichNote trong index.html). */
+    var note = $('#lichNote');
+    if (note) {
+      if (sch && sch.note) { note.textContent = sch.note; note.hidden = false; }
+      else { note.textContent = ''; note.hidden = true; }
+    }
     var today = $('#lichToday');
-    if (today) today.innerHTML = '<b>Hôm nay</b><span>' + esc(WDL[todayIdx] + ' ' + dayDate(todayIdx)) + '</span>';
+    if (today) today.textContent = WDL[todayIdx] + ', ' + dayDate(todayIdx);
   }
   function renderEditorChoice() {
     var el = $('#bien-tap'), rail = $('#editRail');
