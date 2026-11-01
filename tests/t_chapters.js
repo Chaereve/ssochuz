@@ -2,8 +2,9 @@
    Kiểm thử BỘ NHẬN DIỆN CHƯƠNG DÙNG CHUNG (src/shared/chapters.js)
    · corpus: Lời mở đầu / Giới thiệu nhân vật / Chương 0 KHÔNG tính là Chương 1
    · parity: parser nạp trực tiếp (Node) == parser bên trong bản rút gọn cz-app.js
-   · trang truyện: danh sách chương gom đúng nhóm Mở đầu / Chương / Ngoại truyện,
-     nhãn hiển thị Mở · S1 · 1 … theo số trong TÊN chương, không theo vị trí
+   · trang truyện: danh sách chương gom đúng nhóm Mở đầu / Chương / Ghi chú /
+     Ngoại truyện, nhãn hiển thị 0 · số · S1 theo số trong TÊN chương,
+     không theo vị trí (vòng 85 phương án A: mở đầu = 0)
    · bộ 0 chương trên Worker: trang truyện vẫn MỞ ĐƯỢC (không rớt về /data 404)
    · splitChaptersTxt: nhận diện tiêu đề mở đầu/ngoại truyện, đánh số theo chương chính
    Chạy:  node tests/t_chapters.js
@@ -147,10 +148,10 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const groups = $$('#chapGrid .cvol').map((b) => b.textContent.trim().replace(/\s+/g, ' '));
     ok('truyện/có nhóm Mở đầu', groups.some((g) => /mở đầu/i.test(g)), groups);
     ok('truyện/có nhóm Ngoại truyện', groups.some((g) => /ngoại truyện|đặc biệt/i.test(g)), groups);
-    /* nhãn số: Mở · Mở · Mở · 1 · 2 · S1 */
+    /* nhãn số (vòng 85 · A): 0 · 0 · 0 · 1 · 2 · S1 */
     const labels = $$('#chapGrid .cha .no').map((e) => e.textContent.trim());
     const names = $$('#chapGrid .cha .nm').map((e) => e.textContent.trim());
-    ok('truyện/3 nhãn Mở', labels.filter((x) => x === 'Mở').length === 3, labels);
+    ok('truyện/3 nhãn mở đầu là 0', labels.filter((x) => x === '0').length === 3, labels);
     ok('truyện/có S1', labels.includes('S1'), labels);
     ok('truyện/số 1-2', labels.includes('1') && labels.includes('2'), labels);
     ok('truyện/giới thiệu nhân vật nằm trong danh sách', names.some((n) => /nhân vật/i.test(n)), names);
@@ -158,9 +159,9 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const mainRow = $$('#chapGrid .cha').find((a) => /Gặp gỡ/.test(a.textContent));
     ok('truyện/Chương 1 giữ đúng số', mainRow && (mainRow.querySelector('.no') || {}).textContent === '1',
       mainRow ? mainRow.textContent : '<không thấy>');
-    /* thứ tự nhãn đúng: Mở ×3 trước, rồi 1, 2, rồi S1 — nhãn lấy từ TÊN chương,
+    /* thứ tự nhãn đúng: 0 ×3 trước, rồi 1, 2, rồi S1 — nhãn lấy từ TÊN chương,
        không đếm phần mở đầu/ngoại truyện vào số chương chính */
-    eq('truyện/thứ tự nhãn', labels.join('|'), ['Mở', 'Mở', 'Mở', '1', '2', 'S1'].join('|'));
+    eq('truyện/thứ tự nhãn', labels.join('|'), ['0', '0', '0', '1', '2', 'S1'].join('|'));
     ok('truyện/có ô nhảy chương', !!$('#chapJump'));
   }
 
