@@ -1,0 +1,75 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{background:#14110e;color:#f2ebe0;font:13px system-ui;margin:0;padding:20px 24px}
+h3{font:600 10.5px monospace;letter-spacing:.08em;color:#a89d8d;margin:0 0 10px;text-transform:uppercase}
+.wrap{display:flex;gap:40px;align-items:flex-start}
+.col{display:flex;flex-direction:column;gap:14px}
+.sizes{display:flex;align-items:flex-end;gap:16px}
+img{display:block;width:100%;height:100%;object-fit:cover}
+.bk{position:relative;flex:none;--w:40px;--h:56px;--p:2px;width:calc(var(--w) + var(--p));height:var(--h)}
+.bk .cov{position:absolute;left:0;right:var(--p);top:0;bottom:0;border-radius:2px 0 0 2px;overflow:hidden;background:#241c1f;
+  box-shadow:0 8px 14px -10px #000d}
+.bk .cov::after{content:"";position:absolute;inset:0;pointer-events:none;
+  box-shadow:inset 0 0 0 1px #ffffff1f}
+/* gáy in trong bìa */
+.bk .cov::before{content:"";position:absolute;left:0;top:0;bottom:0;width:13%;z-index:2;
+  background:linear-gradient(90deg,#000000b3,#0000002e 62%,transparent);
+  box-shadow:inset 1px 0 0 #ffffff24}
+/* khối giấy */
+.bk .pg{position:absolute;right:0;top:1px;bottom:1px;width:var(--p);border-radius:0 2px 2px 0;
+  background:linear-gradient(90deg,#7c705e,#d3c8ae 60%,#b7ac93);
+  box-shadow:1px 0 5px -2px #000b}
+
+/* B1 · cân bằng */
+.b1{--p:2px}
+.b1.big{--p:4px}
+
+/* B2 · khối giấy dày hơn + bóng đậm */
+.b2{--p:3px}
+.b2 .pg{background:linear-gradient(90deg,#6f6455,#ded3b9 55%,#a89d85);box-shadow:2px 1px 6px -2px #000c}
+
+/* B3 · B2 + nghiêng 6° */
+.b3{--p:3px;transform:perspective(900px) rotateY(6deg);transform-origin:left center}
+.b3 .pg{background:linear-gradient(90deg,#6f6455,#ded3b9 55%,#a89d85);box-shadow:2px 1px 6px -2px #000c}
+
+/* B4 · giấy cả cạnh phải + đáy (dày 2 chiều) */
+.b4{--p:3px;--pb:3px;height:calc(var(--h) + var(--pb))}
+.b4 .cov{right:var(--p);bottom:var(--pb);border-radius:2px 0 0 2px}
+.b4 .pg{top:1px;bottom:calc(var(--pb) + 1px)}
+.b4 .pbot{position:absolute;left:1px;right:var(--p);bottom:0;height:var(--pb);border-radius:0 0 2px 2px;
+  background:linear-gradient(180deg,#c8bda4,#8e8371)}
+</style></head><body>
+<div class="wrap">
+  <div class="col"><h3>B1 · 2px giấy</h3>
+    <div class="sizes">
+      <div class="bk b1"><span class="cov"><img src="/assets/covers/9036e7d5.webp"></span><span class="pg"></span></div>
+      <div class="bk b1" style="--w:84px;--h:118px;--p:4px"><span class="cov"><img src="/assets/covers/9036e7d5.webp"></span><span class="pg"></span></div>
+      <div class="bk b1" style="--w:56px;--h:78px;--p:3px"><span class="cov"><img src="/assets/covers/7eb1d555.webp"></span><span class="pg"></span></div>
+      <div class="bk b1" style="--w:84px;--h:118px;--p:4px"><span class="cov"><img src="/assets/covers/c2519871.webp"></span><span class="pg"></span></div>
+    </div>
+  </div>
+  <div class="col"><h3>B2 · 3px + bóng</h3>
+    <div class="sizes">
+      <div class="bk b2"><span class="cov"><img src="/assets/covers/9036e7d5.webp"></span><span class="pg"></span></div>
+      <div class="bk b2" style="--w:84px;--h:118px;--p:5px"><span class="cov"><img src="/assets/covers/9036e7d5.webp"></span><span class="pg"></span></div>
+      <div class="bk b2" style="--w:56px;--h:78px;--p:4px"><span class="cov"><img src="/assets/covers/7eb1d555.webp"></span><span class="pg"></span></div>
+      <div class="bk b2" style="--w:84px;--h:118px;--p:5px"><span class="cov"><img src="/assets/covers/c2519871.webp"></span><span class="pg"></span></div>
+    </div>
+  </div>
+  <div class="col"><h3>B3 · B2 + nghiêng 6°</h3>
+    <div class="sizes">
+      <div class="bk b3"><span class="cov"><img src="/assets/covers/9036e7d5.webp"></span><span class="pg"></span></div>
+      <div class="bk b3" style="--w:84px;--h:118px;--p:5px"><span class="cov"><img src="/assets/covers/9036e7d5.webp"></span><span class="pg"></span></div>
+      <div class="bk b3" style="--w:56px;--h:78px;--p:4px"><span class="cov"><img src="/assets/covers/7eb1d555.webp"></span><span class="pg"></span></div>
+      <div class="bk b3" style="--w:84px;--h:118px;--p:5px"><span class="cov"><img src="/assets/covers/c2519871.webp"></span><span class="pg"></span></div>
+    </div>
+  </div>
+  <div class="col"><h3>B4 · giấy phải + đáy</h3>
+    <div class="sizes">
+      <div class="bk b4"><span class="cov"><img src="/assets/covers/9036e7d5.webp"></span><span class="pg"></span><span class="pbot"></span></div>
+      <div class="bk b4" style="--w:84px;--h:118px;--p:5px;--pb:4px"><span class="cov"><img src="/assets/covers/9036e7d5.webp"></span><span class="pg"></span><span class="pbot"></span></div>
+      <div class="bk b4" style="--w:56px;--h:78px;--p:4px;--pb:3px"><span class="cov"><img src="/assets/covers/7eb1d555.webp"></span><span class="pg"></span><span class="pbot"></span></div>
+      <div class="bk b4" style="--w:84px;--h:118px;--p:5px;--pb:4px"><span class="cov"><img src="/assets/covers/c2519871.webp"></span><span class="pg"></span><span class="pbot"></span></div>
+    </div>
+  </div>
+</div>
+</body></html>

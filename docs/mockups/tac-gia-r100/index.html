@@ -12,26 +12,26 @@
 
 <div class="mknote" id="mkNote">
   <div class="box">
-    <h2>
+    <div class="hd">
       <span class="tag">r100 · đề xuất</span>
-      <span>Bìa 3D trở lại, bố cục gọn hơn, thêm bảng chi tiết tác giả</span>
+      <span>Bìa sách 3D, bố cục gọn, bấm tác giả mở bảng chi tiết</span>
       <span class="grow"></span>
       <a class="cmp" href="https://8081-inpi9mz09qz9bfup3iuwi.e2b.app/tac-gia/" target="_blank" rel="noopener">Bản đang chạy (r99) ↗</a>
-      <button type="button" id="mkNoteX">Ẩn</button>
-    </h2>
+      <button type="button" class="btn2" id="mkNoteX">Ẩn</button>
+    </div>
     <ul>
-      <li><b>Bìa 3D rõ hơn</b> — gáy là một cột bìa cứng thật bên trái, bìa hơi nghiêng vào trong, có bóng đổ sát chân. Nhìn ra ngay là một cuốn sách, không còn là hình chữ nhật bị xoay.</li>
-      <li><b>Bố cục gọn</b> — một hàng công cụ (tìm · sắp xếp · trạng thái), nhóm chữ cái nhẹ lại, danh sách chia ba cột, mọi dòng cao bằng nhau nên đường kẻ chạy liền một mạch.</li>
-      <li><b>Bớt nhãn lặp</b> — mỗi thẻ chỉ còn “số truyện · ngày cập nhật” và một dòng trạng thái dùng chấm màu; thẻ nổi bật lên thẳng bìa lớn.</li>
-      <li><b>Bảng chi tiết</b> — bấm một tác giả để xem bìa lớn và toàn bộ truyện của họ, không phải rời trang.</li>
-      <li><b>Thử được hết</b> — gõ vào ô tìm, đổi kiểu sắp xếp, bấm chữ cái A–Z, bấm “Lọc” trên điện thoại, bấm một tác giả để mở bảng.</li>
+      <li><b>Bìa sách</b> — gáy in trong bìa (tối dần vào nếp, một đường bắt sáng ở cạnh), khối giấy nhô ra bên phải, bóng đổ sát chân. Không xoay vặn nên chữ trên bìa vẫn thẳng, mà vẫn ra dáng một cuốn sách.</li>
+      <li><b>Bố cục</b> — một hàng công cụ, danh sách chia ba cột, mọi dòng cao bằng nhau nên đường kẻ chạy liền; nhóm chữ cái nhẹ lại, số tác giả in kiểu nhãn nhỏ.</li>
+      <li><b>Bớt nhãn lặp</b> — mỗi thẻ chỉ còn “số truyện · ngày cập nhật” và một dòng trạng thái chấm màu.</li>
+      <li><b>Bảng chi tiết</b> — bấm một tác giả: bìa lớn + toàn bộ truyện của họ, không phải rời trang.</li>
+      <li><b>Thử được hết</b> — gõ tìm, đổi kiểu sắp xếp, bấm chữ cái A–Z, bấm “Lọc” trên điện thoại, bấm một tác giả.</li>
     </ul>
   </div>
 </div>
 
 <main class="mk" id="main">
   <nav class="xcrumb" id="mkCrumb">
-    <a href="site/">Trang chủ</a><span aria-hidden="true">›</span><b>Tác giả</b>
+    <a href="/site/">Trang chủ</a><span aria-hidden="true">›</span><b>Tác giả</b>
   </nav>
 
   <header class="mkhead">
@@ -43,7 +43,7 @@
     <label class="xsearch">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.6-3.6"></path></svg>
       <input id="mkQ" type="search" placeholder="Tìm tác giả" aria-label="Tìm tác giả" autocomplete="off">
-      <button type="button" class="clr" id="mkClr" aria-label="Xoá từ khoá" hidden>
+      <button type="button" class="xclr" id="mkClr" aria-label="Xoá từ khoá" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg>
       </button>
     </label>
@@ -54,56 +54,56 @@
       <button type="button" data-sort="new" aria-pressed="false">Mới cập nhật</button>
     </div>
 
-    <button type="button" class="fbtn" id="mkFilter" aria-expanded="false" aria-controls="mkStWrap">
+    <button type="button" class="xfilter" id="mkFilter" aria-expanded="false" aria-controls="mkStWrap">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"></path></svg>
-      Lọc<span class="xn" id="mkFilterN" hidden>0</span>
+      Lọc<span class="xnum" id="mkFilterN" hidden>0</span>
     </button>
 
-    <div class="stwrap" id="mkStWrap">
-      <span class="lab" aria-hidden="true">Trạng thái</span>
-      <div class="stchips" id="mkSt" role="group" aria-label="Lọc theo trạng thái"></div>
+    <div class="xstwrap" id="mkStWrap">
+      <span class="xlab" aria-hidden="true">Trạng thái</span>
+      <div class="xchips" id="mkSt" role="group" aria-label="Lọc theo trạng thái"></div>
     </div>
   </div>
 
-  <p class="actbar" id="mkAct" hidden></p>
+  <p class="xact" id="mkAct" hidden></p>
 
-  <section class="shelf" id="mkShelf" aria-labelledby="mkShelfH">
-    <div class="sh-hd">
+  <section class="xshelf" id="mkShelf" aria-labelledby="mkShelfH">
+    <div class="xsh-hd">
       <h2 id="mkShelfH">Nhiều truyện nhất</h2>
-      <span class="cnt">ba tác giả có nhiều truyện trong thư viện</span>
+      <span class="xcnt">ba tác giả có nhiều truyện trong thư viện</span>
     </div>
-    <div class="sh-row" id="mkShelfRow"></div>
+    <div class="xsh-row" id="mkShelfRow"></div>
   </section>
 
-  <nav class="az" id="mkAZbar" aria-label="Nhảy tới nhóm chữ cái">
-    <div class="azin" id="mkAZ"></div>
+  <nav class="xaz" id="mkAZbar" aria-label="Nhảy tới nhóm chữ cái">
+    <div class="xazin" id="mkAZ"></div>
   </nav>
 
   <div id="mkOut" class="mkout"></div>
 
-  <p class="alldone" id="mkEnd" hidden>Đã hết danh sách.</p>
+  <p class="xend" id="mkEnd" hidden>Đã hết danh sách</p>
 </main>
 
-<div class="mfeed" id="mkModal" hidden>
-  <div class="mscr" data-close></div>
-  <div class="mbox" role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="mkMTitle" aria-describedby="mkMMeta">
-    <button type="button" class="mx" data-close aria-label="Đóng">
+<div class="xmfeed" id="mkModal" hidden>
+  <div class="xmscr" data-close></div>
+  <div class="xmbox" role="dialog" aria-modal="true" aria-labelledby="mkMTitle" aria-describedby="mkMMeta" tabindex="-1">
+    <button type="button" class="xmx" data-close aria-label="Đóng">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg>
     </button>
-    <div class="mtop">
-      <div class="mfig" id="mkMFig"></div>
-      <div class="minfo">
-        <p class="over">Tác giả</p>
+    <div class="xmtop">
+      <div class="xmfig" id="mkMFig"></div>
+      <div class="xminfo">
+        <p class="xover">Tác giả</p>
         <h2 id="mkMTitle"></h2>
-        <p class="mmas" id="mkMMeta"></p>
-        <p class="mst" id="mkMSt"></p>
-        <a class="mgo" id="mkMGo" href="#">Xem trang tác giả
+        <p class="xmm" id="mkMMeta"></p>
+        <p class="xms" id="mkMSt"></p>
+        <a class="xmgo" id="mkMGo" href="#">Xem trang tác giả
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
         </a>
       </div>
     </div>
-    <div class="mbody">
-      <p class="mlab" id="mkMLab">Truyện</p>
+    <div class="xmbody">
+      <p class="xmlab" id="mkMLab">Truyện</p>
       <ul class="xmlist" id="mkMList"></ul>
     </div>
   </div>
