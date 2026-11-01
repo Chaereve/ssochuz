@@ -1062,6 +1062,17 @@
   $$('[data-shut]').forEach(function (el) { el.addEventListener('click', function () { sheet('#tocSheet', false); sheet('#setSheet', false); }); });
   $$('#tocSheet .ibo, #setSheet .ibo').forEach(function (b) { b.innerHTML = ic('x', 'i-s'); });
   $$('#tocSheet .pan, #setSheet .pan').forEach(function (p) { p.removeAttribute('role'); });
+  /* Tấm phủ chuyển chương (r94): một lớp CỠ MÀN HÌNH chỉ đổi opacity, dựng một
+     lần ở đây thay vì nhét vào 68 trang tĩnh. Nhờ nó mà cột chữ — phần tử cao
+     nhất trang — không phải animate gì khi lật chương. */
+  (function makeVeil() {
+    if ($('#rdVeil')) return;
+    var rd = $('#rd');
+    if (!rd) return;
+    var v = document.createElement('div');
+    v.id = 'rdVeil'; v.className = 'rdveil'; v.setAttribute('aria-hidden', 'true');
+    rd.appendChild(v);
+  })();
   $$('#tocSheet .ph h4, #setSheet .ph h4').forEach(function (h) { h.setAttribute('role', 'heading'); h.setAttribute('aria-level', '2'); });
   if ($('#rdCrumb')) $('#rdCrumb').setAttribute('aria-label', 'Đường dẫn chương');
   if ($('#rdNav')) $('#rdNav').setAttribute('aria-label', 'Chuyển chương');
@@ -1203,16 +1214,17 @@
     if (dir && !keepScroll && !CZ.reduce && box && !swapping) {
       var paged = CZ.rdGet().mode === 'paged';
       swapping = true;
-      box.classList.add(paged ? 'cut-out' : 'cut-fade');
+      var veil = $('#rdVeil');
+      if (veil) veil.classList.add('on');          /* .12s: phủ kín trước khi thay chữ */
       if (bar) bar.classList.add('loading');
       setTimeout(function () {
         paintChapter(keepScroll);
         swapping = false;
-        box.classList.remove('cut-out', 'cut-fade');
+        if (veil) veil.classList.remove('on');     /* .14s: chữ mới hiện ra dưới tấm phủ đang tan */
         box.classList.add(paged ? 'cut-in' : 'cut-in-soft');
         if (bar) setTimeout(function () { bar.classList.remove('loading'); }, 120);
-        setTimeout(function () { box.classList.remove('cut-in', 'cut-in-soft'); }, 340);
-      }, 150);
+        setTimeout(function () { box.classList.remove('cut-in', 'cut-in-soft'); }, 260);
+      }, 120);
       return;
     }
     paintChapter(keepScroll);
