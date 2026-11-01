@@ -450,12 +450,12 @@
         (rest.length + unplaced.length) + ' bộ</em></div>' +
         rest.map(row).join('') +
       '</div></div>' +
-      (sch && sch.note ? '<p class="schnote">' + esc(sch.note) + '</p>' : '');
+      (sch && sch.note ? '<p class="schnote">' + CZ.icon('info', 'i-s') + '<span>' + esc(sch.note) + '</span></p>' : '');
 
     var count = $('#lichCount');
     if (count) count.textContent = items.length + ' bộ · tuần này';
     var today = $('#lichToday');
-    if (today) today.textContent = 'Hôm nay · ' + WDL[todayIdx] + ' ' + dayDate(todayIdx);
+    if (today) today.innerHTML = '<b>Hôm nay</b><span>' + esc(WDL[todayIdx] + ' ' + dayDate(todayIdx)) + '</span>';
   }
   function renderEditorChoice() {
     var el = $('#bien-tap'), rail = $('#editRail');

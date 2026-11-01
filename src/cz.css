@@ -1209,7 +1209,9 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   .rank .bar { transform: scaleX(var(--w, 0)); }
 }
 
-.schnote { margin: 12px 0 0; font-size: 12.5px; line-height: 1.55; color: var(--dim); }
+.schnote { display: flex; align-items: flex-start; gap: 7px; margin: 16px 0 0; padding-top: 12px;
+  border-top: 1px solid var(--bd); font-size: 12.5px; line-height: 1.55; color: var(--mut); }
+.schnote .i { width: 14px; height: 14px; flex: none; margin-top: 1px; color: var(--acc); }
 
 /* =========================== 10. THƯ VIỆN =============================== */
 /* ---- thanh lọc HAI TẦNG (bản D1 — xem docs/mockups/home) ---------------
@@ -1979,7 +1981,7 @@ body.reading ::selection { background: color-mix(in srgb, var(--rd-acc) 30%, tra
 /* Hộp tìm nhanh (⌘K): một cột hẹp, danh sách phẳng không kẻ dòng; dòng đang
    chọn phân biệt bằng nền + vạch son bên trái, không cần mũi tên hay hộp. */
 .jump .box { position: relative; display: flex; flex-direction: column; max-height: min(74vh, 560px);
-  margin: min(10vh, 72px) auto 24px; width: min(560px, 94vw); background: var(--surf);
+  margin: min(10vh, 72px) auto 24px; width: min(520px, 94vw); background: var(--surf);
   border: 1px solid var(--bd); border-radius: 16px; box-shadow: var(--sh-lg); overflow: hidden;
   transform-origin: center top; transform: scale(var(--mo-scale)) translateY(-6px); opacity: 0;
   transition: transform var(--t-close) var(--ease-close), opacity var(--t-close) var(--ease-close); }
@@ -1997,18 +1999,17 @@ body.reading ::selection { background: color-mix(in srgb, var(--rd-acc) 30%, tra
 .jump .qx .i { width: 15px; height: 15px; }
 .jump .res { flex: 1; min-height: 0; overflow-y: auto; padding: 6px; overscroll-behavior: contain;
   scrollbar-width: thin; scrollbar-color: var(--bd2) transparent; }
-.jump .res::-webkit-scrollbar { width: 8px; }
-.jump .res::-webkit-scrollbar-thumb { background: var(--bd2); border-radius: 99px; }
-.jump .res a { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 11px; align-items: center;
-  min-height: 56px; padding: 6px 10px; border-radius: 10px; color: var(--txt); }
+.jump .res::-webkit-scrollbar { width: 0; height: 0; }
+.jump .res a { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; align-items: center;
+  min-height: 52px; padding: 5px 9px; border-radius: 9px; color: var(--txt); }
 .jump .res a:hover, .jump .res a.on { background: var(--surf2); }
 .jump .res a.on { box-shadow: inset 2px 0 0 var(--acc); }
-.jump .res .th { width: 32px; height: 44px; border-radius: 5px; overflow: hidden; background: var(--surf2); }
+.jump .res .th { width: 30px; height: 40px; border-radius: 5px; overflow: hidden; background: var(--surf2); }
 .jump .res .th img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .jump .res .tx { min-width: 0; }
-.jump .res b { display: block; font-size: 14px; font-weight: 650; line-height: 1.3;
+.jump .res b { display: block; font-size: 13.5px; font-weight: 650; line-height: 1.3;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.jump .res .tx > span { display: block; margin-top: 2px; font-size: 12px; color: var(--mut);
+.jump .res .tx > span { display: block; margin-top: 1px; font-size: 11.5px; color: var(--mut);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .jump .res mark { background: none; color: var(--acc); }
 .jump .jem { padding: 24px 18px; text-align: center; font-size: 13px; line-height: 1.6; color: var(--mut); }
@@ -2018,7 +2019,7 @@ body.reading ::selection { background: color-mix(in srgb, var(--rd-acc) 30%, tra
 @media (max-width: 640px) {
   .jump .box { margin: 10px auto; width: calc(100vw - 16px); max-height: calc(100vh - 20px); border-radius: 14px; }
   .jump .q input { font-size: 16px; }          /* 16px để iOS không tự phóng to */
-  .jump .res a { min-height: 60px; }
+  .jump .res a { min-height: 56px; }
 }
 /* Ngăn kéo không dùng display:none: panel luôn "có mặt" với visibility:hidden +
    pointer-events:none nên transition trượt chạy được và không vào thứ tự tab. */
@@ -4381,10 +4382,12 @@ body.rd-focus .rdcmts { display: none; }
    của tuần, mỗi dòng một bộ. Không khung, không hộp, chỉ kẻ tóc.
    ====================================================================== */
 .lcount { font-size: 12.5px; color: var(--dim); font-variant-numeric: tabular-nums; }
-.lnow { display: inline-flex; align-items: center; height: 20px; padding: 0 8px;
-  border-radius: 5px; background: var(--acc-soft); color: var(--acc);
-  font-family: var(--font-mono); font-size: 9.5px; font-weight: 700;
-  letter-spacing: .07em; text-transform: uppercase; }
+/* Ngày hôm nay của lịch: hai bậc chữ, không viên thuốc — “Hôm nay” son đậm,
+   phần ngày mờ hơn, ngăn bằng một vạch tóc dọc. */
+.lnow { display: inline-flex; align-items: center; gap: 9px; height: 20px; }
+.lnow b { font-size: 11.5px; font-weight: 700; letter-spacing: .01em; color: var(--acc); }
+.lnow span { padding-left: 9px; border-left: 1px solid var(--bd);
+  font-size: 12.5px; color: var(--mut); }
 #sched .w3grid { display: grid; grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr);
   gap: 32px; align-items: stretch; }
 #sched .w3feat { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr);
@@ -4437,7 +4440,6 @@ body.rd-focus .rdcmts { display: none; }
 #sched .w3r:hover .w3t b { color: var(--acc); }
 #sched .w3t span { display: block; margin-top: 2px; font-size: 10.5px; color: var(--dim);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#sched .schnote { margin: 12px 0 0; font-size: 12px; line-height: 1.55; color: var(--dim); }
 
 /* --- thu nhỏ theo bề ngang (giữ nguyên cấu trúc, đổi số cột) --------- */
 
