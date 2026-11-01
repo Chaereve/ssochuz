@@ -922,12 +922,15 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     btn.classList.toggle('hasnew', total > 0);
     btn.setAttribute('aria-label', total > 0 ? ('Thông báo chương mới (' + total + ' chương mới)') : 'Thông báo chương mới');
     /* đầu mục: một tiêu đề + con số tổng, KHÔNG lặp lại chữ "chương mới" ở từng dòng */
-    var head = '<div class="nhead"><b>Chương mới</b>' +
+    /* role="menu" chỉ đặt khi trong khung THẬT SỰ có menuitem: tiêu đề và các
+       trạng thái tải/trống/lỗi mang role="presentation" nên không phá
+       aria-required-children; khung rỗng chuyển sang role="status" (aria-live). */
+    var head = '<div class="nhead" role="presentation"><b>Chương mới</b>' +
       (state === 'ready' && items.length ? '<span>' + items.length + ' truyện · ' + total + ' chương</span>' : '') + '</div>';
     var body;
-    if (state === 'loading') body = '<div class="nempty">Đang tải…</div>';
-    else if (state === 'error') body = '<div class="nempty">Không tải được thông báo.<button class="nretry" type="button">Thử lại</button></div>';
-    else if (!items.length) body = '<div class="nempty"><b>Chưa có chương mới</b><span>Truyện bạn theo dõi ra chương sẽ hiện ở đây.</span></div>';
+    if (state === 'loading') body = '<div class="nempty" role="presentation">Đang tải…</div>';
+    else if (state === 'error') body = '<div class="nempty" role="presentation">Không tải được thông báo.<button class="nretry" type="button">Thử lại</button></div>';
+    else if (!items.length) body = '<div class="nempty" role="presentation"><b>Chưa có chương mới</b><span>Truyện bạn theo dõi ra chương sẽ hiện ở đây.</span></div>';
     else body = items.map(function (it) {
       var n = it.n, im = coverSrc(n);
       return '<a href="' + esc(storyURL(n.slug)) + '" role="menuitem" aria-label="' + esc(n.title + ' — ' + it.c + ' chương mới, cập nhật ' + timeAgo(n.updated)) + '">' +
@@ -938,6 +941,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         '<span class="nnum">+' + it.c + '</span></a>';
     }).join('');
     menu.innerHTML = head + body;
+    menu.setAttribute('role', (state === 'ready' && items.length) ? 'menu' : 'status');
     var retry = menu.querySelector('.nretry');
     if (retry) retry.addEventListener('click', function () { notifLastCheck = 0; notifState = 'idle'; refreshNotifications(); });
   }
