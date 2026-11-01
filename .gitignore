@@ -10,3 +10,7 @@ worker/cms.bundle.js
 # bản sao lưu ẢNH kéo từ KV/Supabase về máy (tools/pull_from_kv.py --images).
 # Để ngoài git cho repo nhẹ; muốn giữ trong git thì bỏ dòng này rồi commit thư mục.
 _backup/
+
+# liên kết tượng trưng chỉ dùng khi mở mockup trên máy (assets/fonts, bìa, cz.css)
+docs/mockups/assets
+docs/mockups/*/site
