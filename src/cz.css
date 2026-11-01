@@ -3972,7 +3972,24 @@ body.rd-focus .rdcmts { display: none; }
 #bxh .tilehead .right { width: 100%; justify-content: flex-start; }
 .mlist { grid-template-columns: minmax(0, 1fr); }
 .mrow { grid-template-columns: 34px minmax(0, 1fr) 52px; gap: 10px; }
-.wcards { grid-template-columns: minmax(0, 1fr); }
+/* Máy nhỏ: HAI cột. Bản trước để MỘT cột nên mỗi băng 16:10 chiếm trọn bề
+   ngang điện thoại (~360×225) — nhìn như ảnh bìa phóng to, cuộn mỏi tay.
+   Hai cột cho mỗi băng ~170×106, đúng tầm "ô" để liếc cả hàng. */
+.wcards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+/* Ô chỉ còn ~170×106: nếu vẫn đè chữ lên ảnh thì tên truyện nằm chình ình giữa
+   mặt nhân vật. Nay ảnh và chữ TÁCH HÀNG: ảnh 16:10 giữ nguyên tỉ lệ, chữ
+   xuống dưới trên nền phẳng — cùng một nhịp với hàng bìa dọc phía trên.
+   Nhãn "CHUYỂN THỂ · năm" bỏ luôn: đầu mục ngay trên đã ghi “Chuyển thể”. */
+.wcard { aspect-ratio: auto; background: none; border: 0; border-radius: 0;
+  display: flex; flex-direction: column; overflow: visible; }
+.wcard img { position: static; aspect-ratio: 16 / 10; height: auto; border-radius: 8px;
+  border: 1px solid var(--bd); }
+.wcard:hover img { transform: none; border-color: var(--bd2); }
+.wsh, .wcard .wk { display: none; }
+.wt { position: static; margin-top: 8px; }
+.wcard .wn { margin-top: 0; font-size: 12px; line-height: 1.35; color: var(--txt);
+  text-shadow: none; -webkit-line-clamp: 2; }
+.wcard .wm { margin-top: 2px; font-size: 10px; color: var(--dim); }
 #sched .w3feat { grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 16px; }
 #sched .w3poster { width: 92px; }
 #sched .w3n { font-size: 19px; }
@@ -4101,3 +4118,37 @@ img.cmt-ava { border: 0; background: transparent; }
 /* Liên kết nhỏ trong dòng (tác giả · couple): nới vùng chạm lên 24 px theo
    WCAG 2.2 (2.5.8) mà không đổi nhịp chữ — chỉ thêm đệm dọc. */
 .who a.u { display: inline-flex; align-items: center; min-height: 24px; }
+
+/* ==========================================================================
+   ĐIỆN THOẠI · thanh đầu trang
+   --------------------------------------------------------------------------
+   LỖI (báo 02/11/2026): logo bị bóp dẹp trên máy nhỏ.
+   Nguyên nhân: khối "BẢN TINH GỌN" ở trên khai báo ô tìm kiếm bằng ID
+   (`.hdr #czJump { flex: 1 1 320px; … }`) và nằm SAU các @media hẹp. Cùng một
+   selector nên luật ID thắng theo thứ tự nguồn ⇒ trên điện thoại ô tìm kiếm
+   vẫn giữ nguyên chữ "Tìm truyện, tác giả, couple…" + phím ⌘K, đòi 320px.
+   Hàng ngang hết chỗ, flex co phần tử duy nhất co được là logo ⇒ ảnh 699×98
+   bị ép còn ~5:1 (chữ dẹp). Nay nhắc lại luật hẹp Ở CUỐI TỆP để nó thắng,
+   và khoá logo không cho co nữa: thương hiệu là thứ duy nhất không được méo.
+   ========================================================================== */
+.logo .mark { object-fit: contain; object-position: left center; }
+.hdr .in > .logo { flex: 0 0 auto; }
+/* 561–760px: vẫn còn chỗ, giữ chữ trong ô tìm kiếm nhưng để nó co lại (240px),
+   chỉ bỏ phím tắt ⌘K — trước đây ô bị ép về icon giữa một hàng còn trống. */
+@media (max-width: 760px) {
+  .hdr #czJump { flex: 0 1 240px; max-width: 240px; }
+  .hdr #czJump .k { display: none; }
+}
+/* ≤560px: ô tìm kiếm chỉ còn icon, đúng như các bậc nhịp đã ghi ở đầu tệp. */
+@media (max-width: 560px) {
+  .hdr #czJump { flex: 0 0 auto; width: 40px; max-width: none; padding: 0;
+    justify-content: center; gap: 0; }
+  .hdr #czJump .searchbtn-txt { display: none; }
+}
+/* 320–400px: giữ đủ năm vùng chạm 40px trên một hàng — logo 15px ≈ 107px,
+   bốn nút 160px, lề 28px, khe 16px ⇒ 311 ≤ 320. */
+@media (max-width: 400px) {
+  .hdr .in { padding: 0 14px; gap: 4px; }
+  .hdr .in > .grow { min-width: 0; }
+  .hdr .logo { font-size: 15px; }
+}
