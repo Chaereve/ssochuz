@@ -677,7 +677,9 @@
       /* số mục: chỉ in khi nhóm có từ 2 mục và không phải nhóm chương (nhãn
          “Chương 25–36” đã là con số rồi). Đặt NGAY SAU nhãn, không đẩy ra mép
          phải khung 1000px — để xa thế mắt không nối được số với nhãn. */
-      var cnt = (key === 'main' || key.charAt(0) === 'm' || rows.length < 2) ? '' :
+      /* khoá của nhóm chương có dạng “main0” / “m0_0” — nhãn đã là con số rồi */
+      var isChap = /^(?:main|m)\d/.test(key);
+      var cnt = (isChap || rows.length < 2) ? '' :
         '<span class="cv-n">' + rows.length + '</span>';
       return '<button class="cvol' + (open ? ' on' : '') + '" data-g="' + key + '" type="button" aria-expanded="' + (open ? 'true' : 'false') + '">' +
           ic('right', 'i-s') + '<span class="cv-lbl">' + title + '</span>' + cnt +
@@ -686,11 +688,11 @@
           rows.map(function (x) { return chapLink(x, prog, marks, q); }).join('') + '</div></div>';
     }
     if (!q) {
-      /* Gom theo NHÓM, và xếp nhóm theo đúng thứ tự nó xuất hiện trong dữ liệu
-         — không áp một thứ tự cứng. Bộ mở đầu bằng “Lời tác giả” thì nhóm đó
-         đứng đầu; bộ có “Trò chuyện cùng tác giả” ở cuối thì nhóm đó đứng cuối.
-         Bốn nhóm phụ tách riêng (vòng 86): lời mở đầu truyện của tác giả, lời
-         mở đầu của truyện, ngoại truyện, lời kết. */
+      /* Gom theo CỤM LIỀN NHAU, không gom theo loại: thứ tự đăng là bất khả
+         xâm phạm. Nếu một loại xuất hiện ở hai chỗ (lời tác giả vừa mở đầu vừa
+         kết), gom theo loại sẽ dồn cả hai về chỗ xuất hiện đầu tiên — tức là
+         dời bài. Ở đây mỗi cụm giữ nguyên vị trí của nó; cùng một loại xuất
+         hiện hai lần thì thành hai nhóm, đúng như tác giả đăng. */
       var GNAME = {
         prologue: 'Lời mở đầu truyện',
         author: 'Lời tác giả',
@@ -699,30 +701,31 @@
         note: 'Ghi chú',
         chap: 'Chương'
       };
-      var order = [], buckets = {};
+      var runs = [], lastKey = null;
       list.forEach(function (x) {
         var sp = chapSplit(x.c);
         var key = sp.group || (sp.no ? 'chap' : 'note');
-        if (!buckets[key]) { buckets[key] = { key: key, rows: [] }; order.push(buckets[key]); }
-        buckets[key].rows.push(x);
+        if (!runs.length || key !== lastKey) { runs.push({ key: key, rows: [] }); lastKey = key; }
+        runs[runs.length - 1].rows.push(x);
       });
-      var chapRows = buckets.chap ? buckets.chap.rows : [];
-      var hasSpecial = order.length > (chapRows.length ? 1 : 0);
-      if (hasSpecial || chapRows.length > 24) {
+      var chapCount = runs.reduce(function (n, r) { return n + (r.key === 'chap' ? r.rows.length : 0); }, 0);
+      if (runs.length > 1 || chapCount > 24) {
         var hasCur = list.some(function (x) { return x.i === prog; });
+        var opened = false;
         var html = '';
-        order.forEach(function (bk, bi) {
-          var hasNow = bk.rows.some(function (x) { return x.i === prog; });
-          /* nhóm chứa chương đang đọc luôn mở; chưa đọc gì thì mở nhóm đầu */
-          var auto = hasNow || (!hasCur && bi === 0);
-          if (bk.key !== 'chap') {
-            html += volBlock(bk.key, GNAME[bk.key], bk.rows, auto);
+        runs.forEach(function (run, ri) {
+          var auto = !opened && (run.rows.some(function (x) { return x.i === prog; }) || !hasCur) && run.rows.length;
+          if (auto) opened = true;
+          if (run.key !== 'chap') {
+            /* khoá DOM kèm chỉ số cụm: cùng một loại ở hai chỗ thì hai khoá khác
+               nhau, không đè lên nhau khi gấp/mở */
+            html += volBlock(run.key + ri, GNAME[run.key], run.rows, !!auto);
             return;
           }
-          if (bk.rows.length > 24) {
+          if (run.rows.length > 24) {
             var per = 24;
-            for (var gi = 0; gi * per < bk.rows.length; gi++) {
-              var chunk = bk.rows.slice(gi * per, gi * per + per);
+            for (var gi = 0; gi * per < run.rows.length; gi++) {
+              var chunk = run.rows.slice(gi * per, gi * per + per);
               /* nhãn lấy số chương THẬT ở hai đầu nhóm, không lấy vị trí */
               var a = 0, z = 0;
               chunk.forEach(function (x) {
@@ -731,11 +734,12 @@
               });
               if (!a) a = chunk[0].i;
               if (!z) z = chunk[chunk.length - 1].i;
-              html += volBlock('m' + gi, 'Chương ' + a + '–' + z, chunk,
-                chunk.some(function (x) { return x.i === prog; }) || (!hasCur && gi === 0 && bi === 0));
+              var cauto = !opened && (chunk.some(function (x) { return x.i === prog; }) || !hasCur);
+              if (cauto) opened = true;
+              html += volBlock('m' + ri + '_' + gi, 'Chương ' + a + '–' + z, chunk, cauto);
             }
           } else {
-            html += volBlock('main', GNAME.chap, bk.rows, auto);
+            html += volBlock('main' + ri, GNAME.chap, run.rows, !!auto);
           }
         });
         $('#chapGrid').innerHTML = html;
@@ -1009,25 +1013,54 @@
       applyRD(); paintSettings(); relayout(); CZ.toast('Đã đặt lại mặc định.');
     });
   }
+  /* Nhãn nhóm của mục lục — cùng tên với danh sách chương để hai nơi khớp nhau */
+  var GNAME_TOC = {
+    prologue: 'Lời mở đầu truyện',
+    author: 'Lời tác giả',
+    end: 'Lời kết',
+    extra: 'Ngoại truyện',
+    note: 'Ghi chú'
+  };
   function paintTOC() {
     $('#tocName').textContent = N.title;
     var pr = CZ.progress(N);
-    $('#tocSub').textContent = CHS.length + ' chương' + (pr ? ' · đang ở chương ' + pr : '');
+    /* đếm đúng: mục không phải chương (lời kết, ghi chú…) không được tính vào
+       “42 chương” — bản cũ đếm tất cả nên third-person ghi 42 trong khi chỉ có
+       36 chương đánh số */
+    /* chapter = KHÔNG thuộc nhóm phụ nào. Không đếm theo “có số” vì ngoại
+       truyện cũng mang số (“Ngoại Truyện 1” → no = 1) nên bản trước cộng nhầm
+       nó vào tổng chương. */
+    var chapN = 0;
+    CHS.forEach(function (c) {
+      var sp = chapSplit(c);
+      if ((sp.group || (sp.no ? 'chap' : 'note')) === 'chap') chapN++;
+    });
+    var otherN = CHS.length - chapN;
+    $('#tocSub').textContent = chapN + ' chương' +
+      (otherN ? ' · ' + otherN + ' mục khác' : '') +
+      (pr ? ' · đang ở chương ' + pr : '');
     var q = ($('#tocQ').value || '').trim().toLowerCase();
     var prog = CZ.progress(N), marks = CZ.marks(N);
-    $('#tocList').innerHTML = CHS.map(function (c, i) {
+    var parts = [], lastKey = null;
+    CHS.forEach(function (c, i) {
       var n = i + 1;
       var sp = chapSplit(c);
-      if (q && c.t.toLowerCase().indexOf(q) < 0 && String(n) !== q && String(sp.no) !== q) return '';
-      /* cùng ký hiệu với danh sách chương (0 / số / S1) — một hàm duy nhất nên
-         hai nơi không thể lệch nhau; bản cũ chỉ hiện số nên ngoại truyện 1 và
-         chương 1 nhìn giống hệt nhau trong mục lục */
-      var tno = chapToken(sp);
-      return '<a href="' + chapterPath(n) + '" data-ch="' + n + '" class="' + (n === cur ? 'on' : '') + (n < prog ? ' read' : '') + '">' +
-        '<span class="no">' + tno + '</span><span class="nm">' + esc(sp.name) + '</span>' +
+      var hit = !q || c.t.toLowerCase().indexOf(q) >= 0 || String(n) === q || String(sp.no) === q;
+      if (!hit) return;
+      var key = sp.group || (sp.no ? 'chap' : 'note');
+      /* nhãn nhóm chỉ hiện khi KHÔNG tìm kiếm, và chỉ ở ranh giới cụm — thứ tự
+         đăng giữ nguyên, không nhóm nào bị dời chỗ */
+      if (!q && key !== 'chap' && key !== lastKey) {
+        parts.push('<div class="toc-grp">' + esc(GNAME_TOC[key]) + '</div>');
+      }
+      if (hit) lastKey = key;
+      parts.push('<a href="' + chapterPath(n) + '" data-ch="' + n + '" class="' + (n === cur ? 'on' : '') + (n < prog ? ' read' : '') + '">' +
+        '<span class="no">' + chapToken(sp) + '</span><span class="nm">' + esc(sp.name) + '</span>' +
         (marks.indexOf(n) >= 0 ? '<span class="ck">' + ic('bookmark', 'i-s') + '</span>'
-          : (n < prog ? '<span class="ck">' + ic('check', 'i-s') + '</span>' : '<span></span>')) + '</a>';
-    }).join('') || '<div class="empty" style="border:0;background:none">Không có chương nào khớp.</div>';
+          : (n < prog ? '<span class="ck">' + ic('check', 'i-s') + '</span>' : '<span></span>')) + '</a>');
+    });
+    $('#tocList').innerHTML = parts.join('') ||
+      '<div class="empty" style="border:0;background:none">Không có chương nào khớp.</div>';
   }
   $('#tocQ').addEventListener('input', paintTOC);
   function sheet(id, on) {

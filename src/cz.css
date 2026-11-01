@@ -2063,6 +2063,11 @@ body.reading .sgrp, body.reading .toastline, body.reading .rnav button, body.rea
 .toc .no { text-align: right; font-size: 12.5px; color: var(--rd-mut, var(--mut)); font-variant-numeric: tabular-nums; }
 .toc .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .toc .ck { display: flex; color: var(--ok); }
+/* nhãn nhóm trong mục lục — cùng kiểu với nhãn nhóm ở danh sách chương */
+.toc-grp { margin: 8px 0 2px; padding: 9px 12px 5px; border-bottom: 1px solid var(--rd-bd, var(--bd));
+  font: 700 10px/1 var(--font-mono); letter-spacing: .1em; text-transform: uppercase;
+  color: var(--rd-dim, var(--dim)); }
+.toc-grp:first-child { margin-top: 0; }
 .srow2 { display: flex; align-items: center; gap: 12px; padding: 14px 10px; border-bottom: 1px solid var(--rd-bd, var(--bd)); }
 .srow2 > span { flex: 1; font-size: 13.5px; font-weight: 650; }
 .opts { display: flex; gap: 6px; flex-wrap: wrap; }
