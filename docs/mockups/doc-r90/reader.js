@@ -40,6 +40,8 @@
   try { S = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { S = {}; }
   Object.keys(DEF).forEach(function (k) { if (S[k] === undefined) S[k] = DEF[k]; });
   if (!S.v) S.v = 'c';
+  if (!S.toc) S.toc = 'a';
+  S.openC = S.openC || {};
   if (S.ch === undefined) S.ch = 2;
   S.cm = S.cm || {}; S.mark = S.mark || {}; S.like = S.like || {};
   if (!S.seeded) {
@@ -296,69 +298,129 @@
     markCur();
   }
 
-  /* ---------------- mục lục ---------------- */
+  /* ---------------- mục lục: ba kiểu, chọn ngay trong ngăn kéo ------------- */
   var TQ = '';
   function norm(s) {
     return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/đ/g, 'd');
   }
-  function tocRowHtml(i) {
-    var c = CH[i], n = chapNo(c.t), cur = i === S.ch;
-    return '<button class="row-t' + (cur ? ' cur' : '') + '" type="button" data-i="' + i + '">' +
-      '<span class="num">' + (n || '') + '</span>' +
-      '<span class="tt">' + esc(n ? titleName(c.t) : c.t) + '</span>' +
-      (!cur && S.mark[i] ? '<span class="bk" aria-hidden="true"></span>' : '') +
-      (cur ? '<span class="note">đang đọc</span>' : '') + '</button>';
+  function chapList() {
+    var out = [];
+    CH.forEach(function (c, i) { var n = chapNo(c.t); if (n) out.push({ i: i, t: c.t, n: n }); });
+    return out;
   }
-  function tocRowsHtml() {
-    var q = norm(TQ), out = '', last = null, buf = [];
+  function otherList() {
+    var out = [];
+    CH.forEach(function (c, i) { if (!chapNo(c.t)) out.push({ i: i, t: c.t, n: 0 }); });
+    return out;
+  }
+  function curNo() { return chapNo(CH[S.ch].t); }
+  function curName() { return titleName(CH[S.ch].t); }
+
+  /* dải ngữ cảnh: đang ở đâu trong truyện */
+  function ctxHtml() {
+    var n = curNo(), pct = n ? Math.round(n / NCHAP * 100) : 0;
+    return '<div class="mctx"><span class="eyebrow">Đang đọc</span>' +
+      '<span class="ct">' + esc(n ? 'Chương ' + n + ' · ' + curName() : curName()) + '</span>' +
+      '<span class="cn">' + (n ? n + ' / ' + NCHAP : '—') + '</span>' +
+      '<span class="mbar"><i style="width:' + pct + '%"></i></span></div>';
+  }
+  function rowHtml(x) {
+    var cur = x.i === S.ch;
+    return '<button class="row-t' + (cur ? ' cur' : '') + '" type="button" data-i="' + x.i + '">' +
+      '<span class="num">' + (x.n || '') + '</span>' +
+      '<span class="tt">' + esc(titleName(x.t)) + '</span>' +
+      (!cur && S.mark[x.i] ? '<span class="dot" aria-label="đã đánh dấu"></span>' : '') + '</button>';
+  }
+  /* --- kiểu 1: danh sách gọn, có tìm --- */
+  function listOne() {
+    var q = norm(TQ), out = '', last = '', buf = [];
     function flush() {
       if (!buf.length) return;
-      out += '<div class="tg"><span>' + last.h + '</span><i>' + buf.length + '</i></div>' +
+      out += '<div class="mg"><span>' + last + '</span><i>' + buf.length + '</i></div>' +
         '<div class="rows">' + buf.join('') + '</div>';
       buf = [];
     }
     CH.forEach(function (c, i) {
-      var kd = kindOf(c.t), n = chapNo(c.t);
+      var n = chapNo(c.t);
       if (q && norm(c.t + ' ' + n).indexOf(q) < 0) return;
-      if (!last || kd.h !== last.h) { flush(); last = kd; }
-      buf.push(tocRowHtml(i));
+      var h = kindOf(c.t).h;
+      if (h !== last) { flush(); last = h; }
+      buf.push(rowHtml({ i: i, t: c.t, n: n }));
     });
     flush();
     return out || '<p class="tempty">Không có mục nào khớp “' + esc(TQ) + '”.</p>';
   }
-  function tocFootHtml() {
-    var n = chapNo(CH[S.ch].t), pct = n ? Math.round(n / NCHAP * 100) : 0;
-    var lab = n ? n + '/' + NCHAP : kindOf(CH[S.ch].t).h.toLowerCase();
-    return '<div class="tfoot"><span class="pos">' + lab + '</span>' +
-      '<span class="bar2"><i style="width:' + pct + '%"></i></span>' +
-      '<b>' + esc(titleName(CH[S.ch].t)) + '</b></div>';
+  /* --- kiểu 2: lưới số --- */
+  function gridTwo() {
+    var cs = chapList(), os = otherList();
+    var cells = cs.map(function (x) {
+      return '<button class="cell' + (x.i === S.ch ? ' cur' : '') + '" type="button" data-i="' + x.i +
+        '" aria-label="' + esc(x.t) + '" title="' + esc(x.t) + '">' + x.n +
+        (x.i !== S.ch && S.mark[x.i] ? '<span class="dot"></span>' : '') + '</button>';
+    }).join('');
+    var rest = os.length
+      ? '<div class="mg"><span>Mục khác</span><i>' + os.length + '</i></div><div class="rows">' +
+        os.map(function (x) { return rowHtml(x); }).join('') + '</div>'
+      : '';
+    return '<div class="mgrid">' + cells + '</div>' + rest;
+  }
+  /* --- kiểu 3: nhóm mười chương gập mở --- */
+  function accThree() {
+    var cs = chapList(), blocks = [], out = '';
+    for (var k = 0; k < cs.length; k += 10) blocks.push(cs.slice(k, k + 10));
+    out += blocks.map(function (g, gi) {
+      var id = 'b' + gi;
+      var has = g.some(function (x) { return x.i === S.ch; });
+      var open = S.openC[id] === undefined ? has : !!S.openC[id];
+      return '<div class="acc' + (open ? ' on' : '') + '">' +
+        '<button class="acch" type="button" data-acc="' + id + '" aria-expanded="' + open + '">' +
+        '<span class="tt">Chương ' + g[0].n + '–' + g[g.length - 1].n + '</span>' +
+        (has ? '<span class="here">đang đọc</span>' : '') +
+        '<i>' + g.length + '</i>' + ic('chev', 16) + '</button>' +
+        (open ? '<div class="accb">' + g.map(rowHtml).join('') + '</div>' : '') + '</div>';
+    }).join('');
+    var os = otherList();
+    if (os.length) out += '<div class="mg"><span>Mục khác</span><i>' + os.length + '</i></div>' +
+      '<div class="rows">' + os.map(rowHtml).join('') + '</div>';
+    return out;
+  }
+  function tocBody() {
+    return S.toc === 'b' ? gridTwo() : (S.toc === 'c' ? accThree() : listOne());
   }
   function markCur() {
-    $$('.row-t[data-i]').forEach(function (b) { b.classList.toggle('cur', +b.dataset.i === S.ch); });
+    $$('[data-i]').forEach(function (b) { b.classList.toggle('cur', +b.dataset.i === S.ch); });
   }
-  function paintTocRows() {
+  function paintTocBody() {
     var r = $('#tocRows'); if (!r) return;
-    r.innerHTML = tocRowsHtml();
+    r.innerHTML = tocBody();
     var clr = $('[data-act="tqClr"]'); if (clr) clr.hidden = !TQ;
   }
   function renderToc() {
     var s = $('#sheetToc'); if (!s) return;
+    var search = S.toc === 'a'
+      ? '<div class="msearch">' + ic('search', 17) +
+        '<input type="search" id="tq" placeholder="Tìm chương hoặc số…" value="' + esc(TQ) + '" ' +
+        'autocomplete="off" spellcheck="false" aria-label="Tìm chương">' +
+        '<button class="clr" type="button" data-act="tqClr" aria-label="Xóa tìm kiếm"' +
+        (TQ ? '' : ' hidden') + '>' + ic('x', 15) + '</button></div>'
+      : '';
     s.innerHTML =
-      '<div class="sh-h"><b>Mục lục</b><span class="sub">' + CH.length + ' mục · ' + NCHAP + ' chương</span>' +
-      '<button class="x" type="button" data-close aria-label="Đóng mục lục">' + ic('x') + '</button></div>' +
-      '<div class="sh-b">' +
-        '<div class="tsearch">' + ic('search', 17) +
-          '<input type="search" id="tq" placeholder="Tìm chương hoặc số…" value="' + esc(TQ) + '" ' +
-          'autocomplete="off" spellcheck="false" aria-label="Tìm chương">' +
-          '<button class="clr" type="button" data-act="tqClr" aria-label="Xóa tìm kiếm"' +
-          (TQ ? '' : ' hidden') + '>' + ic('x', 15) + '</button></div>' +
-        '<div id="tocRows">' + tocRowsHtml() + '</div>' +
-      '</div>' + tocFootHtml();
-    $('#tq').addEventListener('input', function () { TQ = this.value; paintTocRows(); });
+      '<div class="sh-h"><b>Mục lục</b><span class="sub">' + NCHAP + ' chương · ' +
+        (CH.length - NCHAP) + ' mục khác</span>' +
+        '<button class="x" type="button" data-close aria-label="Đóng mục lục">' + ic('x') + '</button></div>' +
+      ctxHtml() +
+      '<div class="sh-b">' + search + '<div id="tocRows">' + tocBody() + '</div></div>' +
+      '<div class="mcut"><span>Kiểu mục lục</span>' +
+        ['a', 'b', 'c'].map(function (k, idx) {
+          return '<button type="button" data-toc="' + k + '" aria-pressed="' +
+            String(S.toc === k) + '" title="Kiểu ' + (idx + 1) + '">' + (idx + 1) + '</button>';
+        }).join('') + '</div>';
+    var inp = $('#tq');
+    if (inp) inp.addEventListener('input', function () { TQ = this.value; paintTocBody(); });
   }
   function scrollTocToCur() {
-    var b = $('#sheetToc .sh-b'), cur = $('#tocRows .row-t.cur');
+    var b = $('#sheetToc .sh-b'), cur = $('#tocRows .cur');
     if (!b || !cur) return;
     var r = cur.getBoundingClientRect(), br = b.getBoundingClientRect();
     b.scrollTop += (r.top - br.top) - (br.height / 2 - r.height / 2);
@@ -611,10 +673,39 @@
   document.addEventListener('click', function (e) {
     if (e.target.closest('[data-act="tqClr"]')) {
       TQ = ''; var tqi = $('#tq'); if (tqi) { tqi.value = ''; tqi.focus(); }
-      paintTocRows(); return;
+      paintTocBody(); return;
     }
-    var ti = e.target.closest('.row-t[data-i]');
-    if (ti) { TQ = ''; load(+ti.dataset.i); closeSheets(); return; }
+    /* đổi kiểu mục lục ngay trong ngăn kéo */
+    var tk = e.target.closest('[data-toc]');
+    if (tk) {
+      S.toc = tk.dataset.toc; save(); TQ = '';
+      renderToc();
+      requestAnimationFrame(scrollTocToCur);
+      return;
+    }
+    /* mở/đóng một nhóm mười chương (kiểu 3) */
+    var ac = e.target.closest('[data-acc]');
+    if (ac) {
+      var id = ac.dataset.acc;
+      S.openC[id] = !ac.closest('.acc').classList.contains('on');
+      save(); paintTocBody();
+      return;
+    }
+    /* chọn chương: ngăn kéo GIỮ MỞ để so ba kiểu, dải ngữ cảnh cập nhật ngay */
+    var ti = e.target.closest('[data-i]');
+    if (ti) {
+      var wasOpen = !!$('#sheetToc') && !$('#sheetToc').hidden;
+      TQ = '';
+      load(+ti.dataset.i);
+      if (wasOpen) {
+        var ctx = $('#sheetToc .mctx');
+        if (ctx) ctx.outerHTML = ctxHtml();
+        markCur();
+        var tgr = $('#tq'); if (tgr) tgr.value = '';
+        var clr = $('[data-act="tqClr"]'); if (clr) clr.hidden = true;
+      } else closeSheets();
+      return;
+    }
     if (e.target.closest('[data-close]')) { closeSheets(); return; }
     var pick = e.target.closest('[data-pick]');
     if (pick) {

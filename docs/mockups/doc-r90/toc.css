@@ -1,0 +1,99 @@
+/* MỤC LỤC TRONG TRANG ĐỌC — bản dựng lại 01/11 (thay kiểu cũ ở doc-r89/toc.css)
+   Ba kiểu dùng chung: dải ngữ cảnh trên cùng, dòng 44px, nhãn nhóm dính,
+   không khung, không chấm "đã đọc" gây nhầm. */
+
+/* ---------- ngăn kéo ---------- */
+#sheetToc{width:min(430px,92vw)}
+#sheetToc .sh-b{padding:0 0 26px}
+
+/* ---------- dải ngữ cảnh: đang đọc chương nào ---------- */
+.mctx{flex:0 0 auto;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 10px;
+  padding:12px 20px 14px;border-bottom:1px solid var(--bd)}
+.mctx .eyebrow{grid-column:1/-1;font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;
+  color:var(--mut)}
+.mctx .ct{font-size:14.5px;font-weight:650;color:var(--tx);letter-spacing:-.01em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mctx .cn{font-size:12px;color:var(--mut);font-variant-numeric:tabular-nums;align-self:end}
+.mctx .mbar{grid-column:1/-1;height:2px;border-radius:2px;background:var(--surf2);
+  margin-top:9px;overflow:hidden}
+.mctx .mbar i{display:block;height:100%;background:var(--acc);border-radius:2px;
+  transition:width var(--e3)}
+
+/* ---------- ô tìm ---------- */
+.msearch{display:flex;align-items:center;gap:9px;padding:11px 20px;border-bottom:1px solid var(--bd)}
+.msearch svg{color:var(--mut);flex:0 0 auto}
+.msearch input{flex:1;min-width:0;border:0;background:transparent;font:inherit;font-size:14px;
+  color:var(--tx);padding:5px 0;appearance:none;-webkit-appearance:none}
+.msearch input::placeholder{color:var(--mut)}
+.msearch input:focus{outline:none}
+.msearch input::-webkit-search-cancel-button{display:none}
+.msearch .clr{width:32px;height:32px;display:grid;place-items:center;border-radius:8px;color:var(--mut)}
+.msearch .clr:hover{background:var(--surf2);color:var(--tx)}
+
+/* ---------- nhãn nhóm ---------- */
+.mg{position:sticky;top:0;z-index:2;display:flex;align-items:baseline;justify-content:space-between;
+  gap:10px;padding:14px 20px 6px;background:var(--bg);
+  font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--mut)}
+.mg i{font-style:normal;font-variant-numeric:tabular-nums;letter-spacing:0}
+
+/* ---------- một dòng chương ---------- */
+.rows{display:flex;flex-direction:column}
+.row-t{display:grid;grid-template-columns:26px minmax(0,1fr) auto;align-items:center;gap:10px;
+  width:100%;min-height:44px;padding:0 20px;text-align:left;color:var(--tx);font-size:14.2px;
+  transition:background-color var(--e1),color var(--e1),box-shadow var(--e1)}
+.row-t:hover{background:var(--surf2)}
+.row-t .num{font-size:11.5px;color:var(--mut);font-variant-numeric:tabular-nums;text-align:right}
+.row-t .tt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row-t .dot{width:5px;height:5px;border-radius:50%;background:var(--acc);opacity:.55;
+  transition:opacity var(--e1)}
+.row-t.cur{background:color-mix(in srgb,var(--acc) 10%,transparent);font-weight:650;
+  box-shadow:inset 2px 0 0 var(--acc)}
+.row-t.cur .num{color:var(--acc);font-weight:600}
+.row-t.hit{animation:rowHit var(--e3)}
+@keyframes rowHit{0%{background:color-mix(in srgb,var(--acc) 26%,transparent)}100%{}}
+
+/* ---------- kiểu 2: lưới số ---------- */
+.mgrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:2px 4px;padding:14px 16px 6px}
+/* số trần, không khung: 36 ô có viền đọc thành 36 cái hộp */
+.cell{position:relative;min-height:46px;display:grid;place-items:center;border:0;border-radius:10px;
+  background:transparent;color:var(--tx);font-size:14px;font-variant-numeric:tabular-nums;
+  transition:background-color var(--e1),color var(--e1),transform var(--e1)}
+.cell:hover{background:var(--surf2)}
+.cell:active{transform:scale(.96)}
+.cell.cur{background:var(--acc);border-color:transparent;color:#fff;font-weight:700}
+body[data-rd=toi] .cell.cur{color:#141210}
+.cell .dot{position:absolute;top:6px;right:6px;width:4px;height:4px;border-radius:50%;
+  background:var(--acc)}
+
+/* ---------- kiểu 3: nhóm mười chương ---------- */
+.acc{border-bottom:1px solid var(--bd)}
+.acc:first-child{border-top:0}
+.acch{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:0 20px;
+  color:var(--tx);font-size:13.5px;text-align:left}
+.acch:hover{background:var(--surf2)}
+.acch .tt{font-weight:650;letter-spacing:-.01em}
+.acch .here{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--acc)}
+.acch i{font-style:normal;margin-left:auto;font-size:11.5px;color:var(--mut);
+  font-variant-numeric:tabular-nums}
+.acch svg{color:var(--mut);transition:transform var(--e2)}
+.acc.on .acch svg{transform:rotate(180deg)}
+.accb{animation:accIn var(--e2) both}
+@keyframes accIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+
+/* ---------- rỗng ---------- */
+.tempty{padding:22px 20px;font-size:13.5px;color:var(--mut)}
+
+/* ---------- thanh chọn kiểu (chỉ có trong mockup) ---------- */
+.mcut{flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:9px 20px;
+  border-top:1px dashed color-mix(in srgb,var(--mut) 45%,transparent);
+  font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--mut)}
+.mcut button{min-width:34px;min-height:30px;padding:0 8px;border:1px solid var(--bd);border-radius:8px;
+  font-size:12px;color:var(--tx);transition:background-color var(--e1),color var(--e1)}
+.mcut button:hover{background:var(--surf2)}
+.mcut button[aria-pressed=true]{background:var(--tx);color:var(--bg);border-color:transparent;font-weight:700}
+
+@media (max-width:380px){.mgrid{grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}}
+@media (prefers-reduced-motion:reduce){
+  .row-t,.cell,.acch svg,.mctx .mbar i{transition-duration:1ms}
+  .accb,.row-t.hit{animation:none}
+}
