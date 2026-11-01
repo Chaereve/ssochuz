@@ -1,0 +1,211 @@
+/* ============================================================================
+   r102 · trang Tác giả — dựng lại toàn bộ bố cục, ba cấu trúc khác nhau:
+     X · Mục lục  — danh sách bên trái, bảng xem trước dính bên phải
+     Y · Sổ danh mục — nhóm theo chữ cái, mỗi mục kèm tên truyện
+     Z · Bảng xếp hạng — chia bậc theo số tác phẩm, có số thứ tự
+   Chỉ dùng token của cz.css; mọi lớp có tiền tố .ix- để không đụng cz.css.
+   ========================================================================== */
+
+.m2 { max-width: 1120px; margin: 0 auto; padding: 0 24px 72px; }
+
+/* ---- thanh chọn phương án (chỉ có ở bản đề xuất) ------------------------- */
+.m2bar { position: sticky; top: 0; z-index: 60; background: #12100e; border-bottom: 1px solid var(--bd); }
+.m2bar .in { max-width: 1120px; margin: 0 auto; padding: 9px 24px; display: flex; align-items: center;
+  gap: 10px 14px; flex-wrap: wrap; }
+.m2bar .tag { font: 700 9px/1 var(--font); letter-spacing: .14em; text-transform: uppercase;
+  color: var(--acc); border: 1px solid #e0859b55; border-radius: 99px; padding: 5px 9px; }
+.m2bar .seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 99px;
+  border: 1px solid var(--bd); background: var(--surf); }
+.m2bar .seg button { height: 30px; padding: 0 13px; border: 0; border-radius: 99px; background: transparent;
+  color: var(--mut); font: 600 12px/1 var(--font); cursor: pointer; white-space: nowrap; }
+.m2bar .seg button:hover { color: var(--txt); }
+.m2bar .seg button[aria-selected="true"] { background: #e0859b2b; color: var(--acc); }
+.m2bar .desc { margin: 0; flex: 1 1 100%; order: 9; font: 400 11.5px/1.45 var(--font); color: var(--dim); }
+.m2bar .live { margin-left: auto; font: 500 11.5px/1 var(--font); color: var(--mut);
+  text-decoration: none; border-bottom: 1px solid var(--bd); padding-bottom: 2px; }
+.m2bar .live:hover { color: var(--txt); border-color: var(--bd2); }
+
+/* ---- đầu trang ---------------------------------------------------------- */
+.ix-crumb { padding: 26px 0 0; font-size: 12.5px; color: var(--dim); }
+.ix-crumb a { color: var(--dim); text-decoration: none; }
+.ix-crumb a:hover { color: var(--txt); }
+.ix-crumb b { color: var(--mut); font-weight: 600; }
+
+/* tên trang ở trái, ô tìm ở phải, canh giữa theo trục dọc; đường kẻ chân rộng hết */
+.ix-mast { display: flex; align-items: center; gap: 20px 32px;
+  padding: 10px 0 18px; margin: 0 0 4px; border-bottom: 1px solid var(--bd2); }
+.ix-mast .t { flex: 1; min-width: 0; }
+.ix-mast h1 { font: 600 clamp(26px, 3vw, 36px)/1.06 var(--font-head); letter-spacing: -.024em;
+  margin: 0; color: var(--txt); }
+.ix-mast .sub { margin: 7px 0 0; font: 400 13px/1.5 var(--font); color: var(--mut);
+  font-variant-numeric: tabular-nums; }
+.ix-mast .sub b { color: var(--txt); font-weight: 600; }
+.ix-mast .search { flex: 0 0 296px; max-width: 296px; height: 40px; margin: 0;
+  border-color: var(--bd2); background: var(--surf); }
+.ix-mast .search:focus-within { border-color: var(--acc); }
+.ix-mast .search input { font-size: 13.5px; }
+.ix-mast .search[hidden] { display: none; }
+
+/* ---- phần dùng chung ---------------------------------------------------- */
+.ix-cv { flex: none; border-radius: 4px; overflow: hidden; background: var(--surf2);
+  box-shadow: 0 1px 0 #ffffff18, 0 8px 14px -12px #000b; }
+.ix-cv img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ix-st { display: inline-flex; align-items: center; gap: 5px; color: var(--mut);
+  font: 400 12px/1.45 var(--font); white-space: nowrap; }
+.ix-st i { display: inline-block; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--dim); flex: none; }
+.ix-st i.done { background: var(--ok); }
+.ix-st i.run { background: var(--warn); }
+.ix-num { color: var(--txt); font: 600 12.5px/1.45 var(--font); white-space: nowrap; }
+.ix-empty { padding: 44px 0; border-top: 1px solid var(--bd); color: var(--mut); font-size: 14px; }
+
+/* ============================================================================
+   X · MỤC LỤC — một cột danh sách bên trái, bảng xem trước dính bên phải.
+   Phân cấp: danh sách (dày, đọc nhanh) ↔ nội dung (thưa, đọc kỹ).
+   ========================================================================== */
+.ix-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 384px; gap: 34px;
+  align-items: start; padding-top: 20px; }
+.ix-list { min-width: 0; }
+.ix-row { display: grid; grid-template-columns: 18px 38px minmax(0, 1fr) auto;
+  align-items: center; gap: 13px; padding: 8px 10px 8px 0; border-bottom: 1px solid var(--bd);
+  color: inherit; text-decoration: none; border-radius: 6px; min-width: 0; }
+.ix-row:hover { background: var(--surf); }
+.ix-row:hover .nm { color: var(--acc); }
+.ix-row.is-on { background: var(--surf); box-shadow: inset 2px 0 0 var(--acc); }
+.ix-row.is-on .nm { color: var(--acc); }
+.ix-row:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+.ix-row .lt { font: 700 10px/1 var(--font); letter-spacing: .1em; color: var(--dim);
+  text-transform: uppercase; text-align: center; }
+.ix-row .ix-cv { width: 38px; height: 57px; }
+.ix-row .tx { min-width: 0; }
+.ix-row .nm { font: 600 16px/1.3 var(--font-head); letter-spacing: -.006em; color: var(--txt);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color .16s var(--ease); }
+.ix-row .mt { display: flex; align-items: center; gap: 10px; margin-top: 2px; flex-wrap: wrap; }
+.ix-row .c { font: 600 12px/1.4 var(--font); color: var(--dim); white-space: nowrap;
+  font-variant-numeric: tabular-nums; }
+
+/* bảng xem trước */
+.ix-pan { position: sticky; top: 18px; min-width: 0; padding-left: 26px; border-left: 1px solid var(--bd); }
+.ix-pan .hd { display: flex; gap: 16px; align-items: flex-start; }
+.ix-pan .ix-cv { width: 86px; height: 129px; }
+.ix-pan .tt { min-width: 0; flex: 1; padding-top: 2px; }
+.ix-pan .k { font: 700 9px/1 var(--font); letter-spacing: .18em; text-transform: uppercase; color: var(--acc); }
+.ix-pan h2 { font: 600 23px/1.2 var(--font-head); letter-spacing: -.016em; margin: 7px 0 0; color: var(--txt);
+  overflow-wrap: anywhere; }
+.ix-pan .st { display: flex; flex-wrap: wrap; gap: 3px 12px; margin-top: 8px; min-width: 0; }
+.ix-pan .st .ix-st { min-width: 0; }
+.ix-pan .go { display: inline-flex; align-items: center; gap: 7px; margin-top: 15px; height: 38px;
+  white-space: nowrap; max-width: 100%;
+  padding: 0 15px; border-radius: 99px; background: var(--acc); color: #2a1119;
+  font: 600 12.5px/1 var(--font); text-decoration: none; }
+.ix-pan .go:hover { filter: brightness(1.06); }
+.ix-pan .bk-hd { display: flex; align-items: baseline; gap: 9px; margin: 20px 0 6px;
+  padding-top: 14px; border-top: 1px solid var(--bd); }
+.ix-pan .bk-hd b { font: 700 9px/1 var(--font); letter-spacing: .18em; text-transform: uppercase;
+  color: var(--dim); }
+.ix-pan .bk-hd span { font: 400 11.5px/1 var(--font); color: var(--dim); }
+.ix-pan ul { list-style: none; margin: 0; padding: 0; }
+.ix-pan li .tx { min-width: 0; }
+.ix-pan li { border-bottom: 1px solid var(--bd); }
+.ix-pan li:last-child { border-bottom: 0; }
+.ix-pan li a { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; min-height: 46px;
+  color: inherit; text-decoration: none; }
+.ix-pan li .tx { min-width: 0; flex: 1; }
+.ix-pan li b { display: block; font: 600 13px/1.3 var(--font); color: var(--txt);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ix-pan li .mt { display: flex; align-items: center; gap: 8px; margin-top: 2px; flex-wrap: wrap;
+  font: 400 11px/1.4 var(--font); color: var(--dim); font-variant-numeric: tabular-nums; }
+.ix-pan li a:hover b { color: var(--acc); }
+.ix-pan li a:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+
+/* ============================================================================
+   Y · SỔ DANH MỤC — chữ cái làm mốc, mỗi mục có tên truyện, hai cột.
+   ========================================================================== */
+.ix-grp { padding-top: 26px; }
+.ix-gh { display: flex; align-items: baseline; gap: 12px; margin: 0 0 8px; }
+.ix-gh .l { font: 600 30px/1 var(--font-head); letter-spacing: -.02em; color: var(--txt); min-width: 23px; }
+.ix-gh .c { font: 700 9.5px/1 var(--font); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+.ix-gh .r { flex: 1; height: 1px; background: var(--bd); }
+.ix-ents { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 34px; }
+.ix-ent { display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 13px; overflow: hidden;
+  padding: 11px 0 12px; border-bottom: 1px solid var(--bd); color: inherit; text-decoration: none; min-width: 0; }
+.ix-ent .ix-cv { width: 42px; height: 63px; }
+.ix-ent > span { min-width: 0; }
+.ix-ent .nm { display: block; font: 600 16.5px/1.28 var(--font-head); letter-spacing: -.008em;
+  color: var(--txt); overflow-wrap: anywhere; }
+.ix-ent .mt { display: flex; align-items: center; gap: 9px; margin-top: 3px; flex-wrap: wrap; min-width: 0; }
+.ix-ent .tl { display: block; min-width: 0; margin-top: 4px; font: 400 12px/1.45 var(--font);
+  color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ix-ent .tl em { font-style: normal; color: var(--mut); }
+.ix-ent:hover .nm { color: var(--acc); }
+.ix-ent:hover { background: var(--surf); }
+.ix-ent:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+
+/* ============================================================================
+   Z · BẢNG XẾP HẠNG — chia bậc theo số tác phẩm, số thứ tự lớn, cột số liệu.
+   ========================================================================== */
+.ix-zbar { display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 18px 0 10px; }
+.ix-zbar .hint { font: 400 12.5px/1.4 var(--font); color: var(--dim); }
+.ix-zbar .seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 99px;
+  border: 1px solid var(--bd); background: var(--surf); flex: none; }
+.ix-zbar .seg button { height: 28px; padding: 0 12px; border: 0; border-radius: 99px; background: transparent;
+  color: var(--mut); font: 600 11.5px/1 var(--font); cursor: pointer; }
+.ix-zbar .seg button[aria-pressed="true"] { background: #e0859b2b; color: var(--acc); }
+.ix-tier { padding-top: 20px; }
+.ix-tier .th { display: flex; align-items: baseline; gap: 10px; margin: 0 0 4px; }
+.ix-tier .th h2 { font: 600 18px/1.25 var(--font-head); letter-spacing: -.01em; margin: 0; color: var(--txt); }
+.ix-tier .th .c { font: 700 9.5px/1 var(--font); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+.ix-tier .th .r { flex: 1; height: 1px; background: var(--bd); }
+.ix-rk { display: grid; grid-template-columns: 30px 38px minmax(0, 1fr) 132px 56px;
+  gap: 14px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--bd);
+  color: inherit; text-decoration: none; min-width: 0; }
+.ix-rk:hover { background: var(--surf); }
+.ix-rk:hover .nm { color: var(--acc); }
+.ix-rk:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+.ix-rk .no { font: 600 12px/1 var(--font); color: var(--dim); font-variant-numeric: tabular-nums; }
+.ix-rk .ix-cv { width: 38px; height: 57px; }
+.ix-rk .tx { min-width: 0; }
+.ix-rk .nm { font: 600 16px/1.3 var(--font-head); letter-spacing: -.006em; color: var(--txt);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ix-rk .mt { margin-top: 2px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.ix-rk .bar { height: 3px; border-radius: 2px; background: #ffffff14; overflow: hidden; }
+.ix-rk .bar i { display: block; height: 100%; background: var(--acc); opacity: .65; }
+.ix-rk .c { font: 600 12.5px/1 var(--font); color: var(--txt); text-align: right;
+  font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ix-rk .c small { display: block; margin-top: 3px; font: 500 10px/1 var(--font); color: var(--dim);
+  letter-spacing: .04em; text-transform: uppercase; }
+
+/* ---- hẹp dần ------------------------------------------------------------ */
+@media (max-width: 1023px) {
+  .ix-wrap { grid-template-columns: minmax(0, 1fr) 320px; gap: 26px; }
+  .ix-pan { padding-left: 20px; }
+  .ix-pan .ix-cv { width: 72px; height: 108px; }
+  .ix-pan h2 { font-size: 20px; }
+  .ix-rk { grid-template-columns: 28px 36px minmax(0, 1fr) 92px 50px; gap: 12px; }
+}
+@media (max-width: 900px) {
+  .ix-wrap { grid-template-columns: minmax(0, 1fr); }
+  .ix-pan { display: none; }              /* máy hẹp: bảng xem trước nhường chỗ cho danh sách */
+  .ix-ents { grid-template-columns: minmax(0, 1fr); }
+  .ix-rk { grid-template-columns: 26px 34px minmax(0, 1fr) 50px; }
+  .ix-rk .bar { display: none; }
+}
+@media (max-width: 720px) {
+  .m2 { padding: 0 16px 56px; }
+  .m2bar .in { padding: 8px 16px; }
+  .m2bar .live, .m2bar .desc { display: none; }
+  .m2bar .seg { overflow-x: auto; scrollbar-width: none; max-width: 100%; }
+  .m2bar .seg::-webkit-scrollbar { display: none; }
+  .m2bar .seg button { padding: 0 10px; font-size: 11.5px; }
+  .ix-mast { flex-direction: column; align-items: stretch; gap: 13px; padding: 6px 0 16px; }
+  .ix-mast .search { flex: 1 1 auto; max-width: none; height: 42px; }
+  .ix-row { grid-template-columns: 38px minmax(0, 1fr) auto; }
+  .ix-row .lt { display: none; }
+  .ix-rk { grid-template-columns: 34px minmax(0, 1fr) 46px; }
+  .ix-rk .no { display: none; }
+  .ix-zbar { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .m2 * { transition: none !important; }
+}

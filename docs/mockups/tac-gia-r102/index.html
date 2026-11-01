@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tác giả · ba bố cục mới (r102) · ssochuz library</title>
+<meta name="description" content="Ba bố cục mới cho trang Tác giả — bản đề xuất r102.">
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="/site/ssochuz.png">
+<link rel="stylesheet" href="/site/cz.css">
+<link rel="stylesheet" href="pp.css">
+<script>try{var t=localStorage.getItem('ssochuz-theme')||localStorage.getItem('chuseoz-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+</head>
+<body data-personal-follow-only>
+<div id="sprog" aria-hidden="true"><i></i></div>
+<header id="hdr"></header>
+
+<!-- thanh chọn bố cục: chỉ có ở bản đề xuất -->
+<div class="m2bar">
+  <div class="in">
+    <span class="tag">r102 · đề xuất</span>
+    <div class="seg" id="mkSeg" role="tablist" aria-label="Bố cục">
+      <button type="button" role="tab" data-v="X" aria-selected="true">X · Mục lục</button>
+      <button type="button" role="tab" data-v="Y" aria-selected="false">Y · Sổ danh mục</button>
+      <button type="button" role="tab" data-v="Z" aria-selected="false">Z · Bảng xếp hạng</button>
+    </div>
+    <a class="live" href="https://8081-inpi9mz09qz9bfup3iuwi.e2b.app/tac-gia/" target="_blank" rel="noopener">Bản đang chạy ↗</a>
+    <p class="desc" id="mkDesc">X · Mục lục</p>
+  </div>
+</div>
+
+<main class="m2">
+  <nav class="ix-crumb"><a href="/site/">Trang chủ</a> <span>›</span> <a href="/site/#thu-vien">Thư viện</a> <span>›</span> <b>Tất cả tác giả</b></nav>
+
+  <header class="ix-mast">
+    <div class="t">
+      <h1>Tất cả tác giả</h1>
+      <p class="sub" id="ppSub">Đang tải…</p>
+    </div>
+    <label class="search" id="ppQWrap"><span data-ic="search"></span><input id="ppQ" placeholder="Tìm theo tên…" autocomplete="off" spellcheck="false" aria-label="Tìm theo tên"></label>
+  </header>
+
+  <div id="out" class="vX"></div>
+</main>
+
+<footer id="ftr"></footer>
+<script src="/site/cz-config.js"></script>
+<script src="/site/cz-app.js"></script>
+<script src="data.js"></script>
+<script src="pp.js"></script>
+<script>
+try {
+  if (window.CZ && CZ.mountShell) CZ.mountShell({ active: 'authors' });
+  var sp = document.querySelector('.search [data-ic]');
+  if (sp && window.CZ && CZ.icon) sp.outerHTML = CZ.icon('search');
+} catch (e) {}
+</script>
+</body>
+</html>
