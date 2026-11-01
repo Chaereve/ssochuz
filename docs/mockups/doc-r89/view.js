@@ -21,6 +21,7 @@
     shelf: '<path d="M4 19V5a1 1 0 0 1 1-1h4v16H5a1 1 0 0 1-1-1z"/><path d="M11 4h4a1 1 0 0 1 1 1v14h-5"/><path d="M18 4l2 .7a1 1 0 0 1 .7 1.2L18 19"/>',
     bell: '<path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3l1 2H5l1-2v-3a7 7 0 0 1 4-6"/><path d="M10 20a2 2 0 0 0 4 0"/>',
     flag: '<path d="M5 21V4"/><path d="M5 4h11l-1.5 4L16 12H5"/>',
+    search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.6-4.6"/>',
     comment: '<path d="M8 9h8"/><path d="M8 13h5"/><path d="M21 12c0 4.4-4 8-9 8c-1 0-2-.14-2.9-.4L4 21l1.4-4.2A7.6 7.6 0 0 1 3 12c0-4.4 4-8 9-8s9 3.6 9 8z"/>'
   };
   function ic(name, w) {
@@ -39,7 +40,7 @@
   Object.keys(DEF).forEach(function (k) { if (S[k] === undefined) S[k] = DEF[k]; });
   if (!S.v) S.v = 'c';
   if (S.ch === undefined) S.ch = 2;
-  S.cm = S.cm || {}; S.rx = S.rx || {}; S.mark = S.mark || {}; S.like = S.like || {};
+  S.cm = S.cm || {}; S.mark = S.mark || {}; S.like = S.like || {};
   if (!S.seeded) {
     S.cm[2] = [
       { n: 'Minh Anh', tm: '2 giờ trước', x: 'Đoạn tả bức tường đọc mà buồn cười, kiểu gì cũng có chuyện.' },
@@ -105,8 +106,8 @@
   /* ---------------- thanh trên ---------------- */
   function barHtml() {
     var v = S.v, c = CH[S.ch], n = chapNo(c.t);
-    var sub = v === 'a' ? (n ? 'Chương ' + n + ' / ' + NCHAP : 'Phần mở đầu')
-      : (BOOK + ' · ' + (n ? n + ' / ' + NCHAP : 'mở đầu'));
+    var kind = n ? 'Chương ' + n + ' / ' + NCHAP : kindOf(CH[S.ch].t).h.toLowerCase();
+    var sub = v === 'a' ? kind : (BOOK + ' · ' + kind);
     var title = v === 'a' ? BOOK : titleName(c.t);
     var acts = '';
     acts += '<button class="ibo" type="button" data-act="toc" aria-label="Mục lục" title="Mục lục">' + ic('toc') + '</button>';
@@ -125,19 +126,6 @@
   }
 
   /* ---------------- cuối chương ---------------- */
-  function rxHtml() {
-    var rx = S.rx[S.ch] || {};
-    var total = Object.keys(rx).filter(function (k) { return rx[k]; }).length;
-    return '<section class="rx" id="rx">' +
-      '<div class="rxh"><span class="lab">Cảm xúc chương</span><span class="rxn" id="rxN">' + total + ' lượt</span>' +
-      '<button class="rxmore" type="button" data-act="rxMore">Chi tiết ' + ic('next', 14) + '</button></div>' +
-      '<div class="rxrow">' + ST.map(function (s) {
-        return '<button class="rxb" type="button" data-s="' + s + '" aria-pressed="' +
-          (rx[s] ? 'true' : 'false') + '" aria-label="' + STNAME[s] + '" title="' + STNAME[s] + '">' +
-          '<img src="st/' + s + '.webp" alt=""></button>';
-      }).join('') + '</div>' +
-      '<p class="rxlist" id="rxList" hidden></p></section>';
-  }
   function actsHtml(kind) {
     var items = [['heart', 'Thích', 'like'], ['shelf', 'Lưu', 'shelf'], ['bell', 'Theo dõi', 'follow'],
       ['comment', 'Bình luận', 'cmt'], ['flag', 'Báo lỗi', 'report']];
@@ -161,11 +149,15 @@
     }
     if (v === 'c') {
       return '<nav class="rnav c">' +
-        '<a href="#" data-act="prev"' + (pv ? '' : ' data-off') + '>' + ic('back', 16) +
-        '<span>' + esc(pv ? shortName(pv.t) : 'Hết') + '</span></a>' +
+        '<a class="pv" href="#" data-act="prev"' + (pv ? '' : ' data-off') + '>' +
+        '<span class="k">' + ic('back', 14) +
+          esc(pv ? (chapNo(pv.t) ? shortName(pv.t) : 'Mục trước') : 'Chương đầu') + '</span>' +
+        '<span class="v">' + esc(pv ? titleName(pv.t) : 'Đây là chương đầu') + '</span></a>' +
         '<button class="mi" type="button" data-act="toc">Mục lục</button>' +
-        '<a class="nx" href="#" data-act="next"' + (nx ? '' : ' data-off') + '><span>' +
-        esc(nx ? shortName(nx.t) : 'Hết') + '</span>' + ic('next', 16) + '</a></nav>';
+        '<a class="nx" href="#" data-act="next"' + (nx ? '' : ' data-off') + '>' +
+        '<span class="k">' + esc(nx ? (chapNo(nx.t) ? shortName(nx.t) : 'Mục tiếp') : 'Hết') +
+          ic('next', 14) + '</span>' +
+        '<span class="v">' + esc(nx ? titleName(nx.t) : 'Hết truyện') + '</span></a></nav>';
     }
     return '<nav class="rnav a">' +
       '<a class="nb" href="#" data-act="prev"' + (pv ? '' : ' data-off') + '>' +
@@ -184,7 +176,7 @@
       ? '<a class="nb mid" href="#" data-act="toc"><span class="k">Mục lục</span><span class="v">' + CH.length + ' mục</span></a>'
       : '';
     return '<div class="hend"><span>' + (n ? 'Hết chương ' + n : 'Hết mục') + '</span></div>' +
-      rxHtml() + acts + (v === 'a' ? navHtml('a') : navHtml(v));
+      acts + (v === 'a' ? navHtml('a') : navHtml(v));
   }
   function dockHtml() {
     var it = [['toc', 'Mục lục'], ['mark', 'Đánh dấu'], ['focus', 'Tập trung'],
@@ -247,13 +239,14 @@
   function paintHead() {
     var c = CH[S.ch], n = chapNo(c.t);
     HEAD.classList.remove('swap-in'); void HEAD.offsetWidth; HEAD.classList.add('swap-in');
-    OVER.innerHTML = (n ? 'Chương ' + n : 'Mở đầu') + '<span class="dot"></span>' + esc(BOOK);
+    var kd = kindOf(c.t);
+    OVER.innerHTML = esc(kd.k === 'chap' ? 'Chương ' + n : kd.h) + '<span class="dot"></span>' + esc(BOOK);
     H1.textContent = titleName(c.t);
     var w = c.w || wordCount(c.ps);
     c.w = w;
     META.innerHTML = '<span>' + fmt(w) + ' từ</span><span class="sep">·</span><span>' +
       Math.max(1, Math.round(w / 250)) + ' phút đọc</span><span class="sep">·</span><span>' +
-      (n ? 'Chương ' + n + ' / ' + NCHAP : 'phần mở đầu') + '</span>';
+      (n ? 'Chương ' + n + ' / ' + NCHAP : esc(kindOf(c.t).h).toLowerCase()) + '</span>';
   }
   function paintTxt(instant) {
     var c = CH[S.ch];
@@ -272,12 +265,6 @@
 
   /* ---------------- đồng bộ trạng thái ---------------- */
   function syncChapterUI() {
-    var rx = S.rx[S.ch] || {}, total = Object.keys(rx).filter(function (k) { return rx[k]; }).length;
-    $$('.rxb').forEach(function (b) { b.setAttribute('aria-pressed', String(!!rx[b.dataset.s])); });
-    var n = $('#rxN'); if (n) n.textContent = total + ' lượt';
-    var list = $('#rxList');
-    if (list && !list.hidden) paintRxList();
-
     setLabel('like', S.like[S.ch] ? 'Đã thích' : 'Thích');
     setLabel('shelf', S.shelf ? 'Đã lưu' : 'Lưu');
     setLabel('follow', S.follow ? 'Đã theo dõi' : 'Theo dõi');
@@ -295,12 +282,6 @@
       var s = el.querySelector('span'); if (s) s.textContent = text;
     });
   }
-  function paintRxList() {
-    var list = $('#rxList'), rx = S.rx[S.ch] || {};
-    var on = ST.filter(function (k) { return rx[k]; }).map(function (k) { return STNAME[k]; });
-    list.textContent = on.length ? 'Bạn đã thả: ' + on.join(' · ') : 'Chưa có cảm xúc nào ở chương này.';
-  }
-
   /* ---------------- chương ---------------- */
   function load(i, opts) {
     opts = opts || {};
@@ -315,24 +296,71 @@
   }
 
   /* ---------------- mục lục ---------------- */
-  function tocHtml() {
-    var counts = {}, last = null, out = '';
-    CH.forEach(function (c) { var k = kindOf(c.t).k; counts[k] = (counts[k] || 0) + 1; });
+  var TQ = '';
+  function norm(s) {
+    return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd');
+  }
+  function tocRowHtml(i) {
+    var c = CH[i], n = chapNo(c.t), cur = i === S.ch;
+    return '<button class="row-t' + (cur ? ' cur' : '') + '" type="button" data-i="' + i + '">' +
+      '<span class="num">' + (n || '') + '</span>' +
+      '<span class="tt">' + esc(n ? titleName(c.t) : c.t) + '</span>' +
+      (!cur && S.mark[i] ? '<span class="bk" aria-hidden="true"></span>' : '') +
+      (cur ? '<span class="note">đang đọc</span>' : '') + '</button>';
+  }
+  function tocRowsHtml() {
+    var q = norm(TQ), out = '', last = null, buf = [];
+    function flush() {
+      if (!buf.length) return;
+      out += '<div class="tg"><span>' + last.h + '</span><i>' + buf.length + '</i></div>' +
+        '<div class="rows">' + buf.join('') + '</div>';
+      buf = [];
+    }
     CH.forEach(function (c, i) {
-      var kd = kindOf(c.t);
-      if (kd.h !== last) {
-        out += '<div class="tg"><span>' + kd.h + '</span><span>' + counts[kd.k] + '</span></div>';
-        last = kd.h;
-      }
-      var n = chapNo(c.t);
-      out += '<button class="ti' + (i === S.ch ? ' cur' : '') + '" style="animation-delay:' +
-        Math.min(i, 12) * 14 + 'ms" type="button" data-i="' + i + '">' +
-        '<span class="n">' + (n || '·') + '</span><span class="tt">' + esc(c.t) + '</span></button>';
+      var kd = kindOf(c.t), n = chapNo(c.t);
+      if (q && norm(c.t + ' ' + n).indexOf(q) < 0) return;
+      if (!last || kd.h !== last.h) { flush(); last = kd; }
+      buf.push(tocRowHtml(i));
     });
-    return out;
+    flush();
+    return out || '<p class="tempty">Không có mục nào khớp “' + esc(TQ) + '”.</p>';
+  }
+  function tocFootHtml() {
+    var n = chapNo(CH[S.ch].t), pct = n ? Math.round(n / NCHAP * 100) : 0;
+    var lab = n ? n + '/' + NCHAP : kindOf(CH[S.ch].t).h.toLowerCase();
+    return '<div class="tfoot"><span class="pos">' + lab + '</span>' +
+      '<span class="bar2"><i style="width:' + pct + '%"></i></span>' +
+      '<b>' + esc(titleName(CH[S.ch].t)) + '</b></div>';
   }
   function markCur() {
-    $$('.ti').forEach(function (b) { b.classList.toggle('cur', +b.dataset.i === S.ch); });
+    $$('.row-t[data-i]').forEach(function (b) { b.classList.toggle('cur', +b.dataset.i === S.ch); });
+  }
+  function paintTocRows() {
+    var r = $('#tocRows'); if (!r) return;
+    r.innerHTML = tocRowsHtml();
+    var clr = $('[data-act="tqClr"]'); if (clr) clr.hidden = !TQ;
+  }
+  function renderToc() {
+    var s = $('#sheetToc'); if (!s) return;
+    s.innerHTML =
+      '<div class="sh-h"><b>Mục lục</b><span class="sub">' + CH.length + ' mục · ' + NCHAP + ' chương</span>' +
+      '<button class="x" type="button" data-close aria-label="Đóng mục lục">' + ic('x') + '</button></div>' +
+      '<div class="sh-b">' +
+        '<div class="tsearch">' + ic('search', 17) +
+          '<input type="search" id="tq" placeholder="Tìm chương hoặc số…" value="' + esc(TQ) + '" ' +
+          'autocomplete="off" spellcheck="false" aria-label="Tìm chương">' +
+          '<button class="clr" type="button" data-act="tqClr" aria-label="Xóa tìm kiếm"' +
+          (TQ ? '' : ' hidden') + '>' + ic('x', 15) + '</button></div>' +
+        '<div id="tocRows">' + tocRowsHtml() + '</div>' +
+      '</div>' + tocFootHtml();
+    $('#tq').addEventListener('input', function () { TQ = this.value; paintTocRows(); });
+  }
+  function scrollTocToCur() {
+    var b = $('#sheetToc .sh-b'), cur = $('#tocRows .row-t.cur');
+    if (!b || !cur) return;
+    var r = cur.getBoundingClientRect(), br = b.getBoundingClientRect();
+    b.scrollTop += (r.top - br.top) - (br.height / 2 - r.height / 2);
   }
 
   /* ---------------- bảng ---------------- */
@@ -340,10 +368,7 @@
   function buildSheets() {
     HOST.innerHTML =
       '<div class="scrim" id="scrim" hidden></div>' +
-      '<aside class="sheet left" id="sheetToc" role="dialog" aria-modal="true" aria-label="Mục lục" hidden>' +
-      '<div class="sh-h"><b>Mục lục</b><span class="sub" id="tocSub">' + CH.length + ' mục · ' + NCHAP + ' chương</span>' +
-      '<button class="x" type="button" data-close aria-label="Đóng mục lục">' + ic('x') + '</button></div>' +
-      '<div class="sh-b" id="tocList"></div></aside>' +
+      '<aside class="sheet left toc" id="sheetToc" role="dialog" aria-modal="true" aria-label="Mục lục" hidden></aside>' +
       '<aside class="sheet right" id="sheetSet" role="dialog" aria-modal="true" aria-label="Cài đặt đọc" hidden>' +
       '<div class="sh-h"><b>Cài đặt đọc</b><span class="sub">Nhớ cho lần sau</span>' +
       '<button class="x" type="button" data-close aria-label="Đóng cài đặt">' + ic('x') + '</button></div>' +
@@ -354,7 +379,7 @@
       '<div class="sh-b">' + helpHtml() + '</div></aside>';
     scrim = $('#scrim');
     scrim.addEventListener('click', closeSheets);
-    $('#tocList').innerHTML = tocHtml();
+    renderToc();
     bindSet();
   }
   function setHtml() {
@@ -392,8 +417,8 @@
       '<ol style="margin:0;padding-left:18px;font-size:13.5px;line-height:1.85">' +
       '<li><b>Mục lục</b> → chọn chương khác (nội dung thật).</li>' +
       '<li><b>Cài đặt</b> → nền Tối, cỡ 22, rộng 620, canh đều.</li>' +
-      '<li>Cuối chương: thả <b>cảm xúc</b>, Thích / Lưu / Theo dõi.</li>' +
-      '<li><b>Gửi bình luận</b> kèm sticker.</li>' +
+      '<li>Cuối chương: Thích / Lưu / Theo dõi, chuyển chương.</li>' +
+      '<li><b>Bình luận</b> — sticker giờ chỉ nằm ở đây.</li>' +
       '<li><b>Đánh dấu</b>, <b>Tập trung</b>, <b>Toàn màn hình</b>.</li>' +
       '<li>Phím ← → đổi chương, Esc đóng bảng.</li>' +
       '<li>Thanh dưới đáy: đổi <b>A / B / C</b> và xem khổ điện thoại.</li>' +
@@ -406,7 +431,7 @@
     s.hidden = false; s.classList.remove('closing');
     scrim.hidden = false;
     scrim.style.animation = 'none'; void scrim.offsetWidth; scrim.style.animation = '';
-    if (id === 'sheetToc') markCur();
+    if (id === 'sheetToc') { renderToc(); requestAnimationFrame(scrollTocToCur); }
     if (id === 'sheetSet') syncSet();
     B.style.overflow = 'hidden';
     activeSheet = s;
@@ -561,12 +586,6 @@
         S.follow = !S.follow; save(); syncChapterUI();
         toast(S.follow ? 'Đang theo dõi truyện' : 'Đã bỏ theo dõi'); break;
       case 'report': toast('Đã gửi báo lỗi chữ tới tác giả'); break;
-      case 'rxMore': {
-        var l = $('#rxList'); if (!l) break;
-        l.hidden = !l.hidden; if (!l.hidden) paintRxList();
-        t.innerHTML = (l.hidden ? 'Chi tiết ' + ic('next', 14) : 'Ẩn');
-        break;
-      }
       case 'sort': S.sort = S.sort === 'old' ? 'new' : 'old'; save(); renderCmts(); break;
       case 'reset':
         Object.keys(DEF).forEach(function (k) { S[k] = DEF[k]; });
@@ -584,18 +603,12 @@
   });
 
   document.addEventListener('click', function (e) {
-    var b = e.target.closest('.rxb');
-    if (!b) return;
-    var rx = S.rx[S.ch] = S.rx[S.ch] || {}, k = b.dataset.s;
-    rx[k] = !rx[k]; save();
-    b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
-    syncChapterUI();
-    toast(rx[k] ? 'Đã thả cảm xúc' : 'Đã bỏ cảm xúc', rx[k] ? k : null);
-  });
-
-  document.addEventListener('click', function (e) {
-    var ti = e.target.closest('.ti');
-    if (ti) { load(+ti.dataset.i); closeSheets(); return; }
+    if (e.target.closest('[data-act="tqClr"]')) {
+      TQ = ''; var tqi = $('#tq'); if (tqi) { tqi.value = ''; tqi.focus(); }
+      paintTocRows(); return;
+    }
+    var ti = e.target.closest('.row-t[data-i]');
+    if (ti) { TQ = ''; load(+ti.dataset.i); closeSheets(); return; }
     if (e.target.closest('[data-close]')) { closeSheets(); return; }
     var pick = e.target.closest('[data-pick]');
     if (pick) {
