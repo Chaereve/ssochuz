@@ -2450,7 +2450,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
          vị trí trong kho chương nên không phải lúc nào cũng trùng tên chương thật. */
       var chLabel = String(opt.chLabel || '').trim();
       function chWord() { return chLabel || (chap ? 'chương ' + chap : ''); }
-      var state = { all: [], byChap: {}, filter: chap > 0 && opt.chapterFilter !== false ? 'chap' : 'all', busy: false, count: 0, replyTo: '', stickerId: '', replyStickers: Object.create(null) };
+      var state = { all: [], byChap: {}, filter: chap > 0 && opt.chapterFilter !== false ? 'chap' : 'all', busy: false, count: 0, replyTo: '', stickerId: '', open: false, replyStickers: Object.create(null) };
 
       function u() { return (w.CZ_AUTH && w.CZ_AUTH.current && w.CZ_AUTH.current()) || null; }
       function tk() { return (w.CZ_AUTH && w.CZ_AUTH.token && w.CZ_AUTH.token()) || ''; }
@@ -2472,7 +2472,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         var selected = stickerOf(stickerId);
         var list = Array.isArray(w.CZStickers) ? w.CZStickers : [];
         return '<div class="cmt-sticker-tools" data-sticker-tools="' + esc(scope) + '">' +
-          '<button type="button" class="cmt-sticker-open" data-sticker-open="' + esc(scope) + '" aria-expanded="false" aria-controls="' + esc(id + '-stickers-' + scope) + '">＋ Sticker Sso</button>' +
+          '<button type="button" class="cmt-sticker-open" data-sticker-open="' + esc(scope) + '" aria-expanded="false" aria-controls="' + esc(id + '-stickers-' + scope) + '"><span>Kèm sticker</span></button>' +
           (selected ? '<span class="cmt-sticker-selected">' + stickerCard(selected, true) + '<button type="button" data-sticker-clear="' + esc(scope) + '" aria-label="Bỏ sticker ' + esc(selected.label) + '">×</button></span>' : '') +
           '<div class="cmt-sticker-picker" id="' + esc(id + '-stickers-' + scope) + '" data-sticker-picker="' + esc(scope) + '" hidden role="group" aria-label="Chọn sticker Sso">' +
           list.map(function (sticker) {
@@ -2537,7 +2537,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         var rows = state.filter === 'chap' ? state.all.filter(function (c) { return (Number(c.ch) || 0) === chap; }) : state.all;
         if (!rows.length) {
           return '<div class="cmt-status">' + (state.filter === 'chap'
-            ? 'Chưa có bình luận nào cho ' + chWord() + '. Viết câu đầu tiên đi!'
+            ? 'Chưa có bình luận nào. Bạn mở màn nhé.'
             : 'Chưa có bình luận nào. Hãy là người đầu tiên!') + '</div>';
         }
         var children = {};
@@ -2563,6 +2563,13 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       function guestName() { return safeGet('ssochuz-cmtname') || ''; }
       function form() {
         var me = u();
+        /* bản gọn (trang đọc): form thu thành MỘT hàng chữ, bấm mới mở ra —
+           để cuối chương không có sẵn ba ô nhập trước khi người đọc muốn viết */
+        if (opt.compact && !state.open) {
+          return '<button class="cmt-open" data-openform type="button">' +
+            '<span class="cmt-open-plus" aria-hidden="true">+</span>' +
+            '<span>Viết bình luận…</span></button>';
+        }
         if (!me) {
           /* KHÔNG bắt đăng nhập mới được bình luận: trang chưa bật Supabase thì người đọc
              vẫn viết được (bình luận gắn với mã máy ẩn danh). Có tài khoản thì tốt hơn. */
@@ -2611,6 +2618,13 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
             if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'enter') send();
           });
         }
+        var ob = host.querySelector('[data-openform]');
+        if (ob) ob.addEventListener('click', function () {
+          state.open = true;
+          paint();
+          var t = host.querySelector('[data-text]');
+          if (t) { try { t.focus(); } catch (e) {} }
+        });
         host.querySelectorAll('[data-f]').forEach(function (b) {
           b.addEventListener('click', function () { state.filter = b.dataset.f; paint(); });
         });
@@ -2789,6 +2803,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
           state.busy = false;
           addSent(j);
           state.stickerId = '';
+          if (opt.compact) state.open = false;
           paint();
           toast('Đã gửi bình luận', 'ok');
           if (opt.onChanged) opt.onChanged(state.count);

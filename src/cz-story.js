@@ -582,7 +582,6 @@
     if (CZ.markFollowSeen) CZ.markFollowSeen(n);
     /* góc tương tác của trang truyện: hàng reaction sticker (tính năng được
        giữ lại của bộ 1.19.0 — luôn hiện, không còn công tắc bật/tắt). */
-    try { renderStoryReact(); } catch (e) {}
   }
 
   /* Tab Thông tin chỉ chứa metadata; tóm tắt nằm ở đầu trang. */
@@ -840,18 +839,13 @@
     if (!CMT_READER) {
       CMT_READER = CZ.comments.mount(box, {
         slug: N.slug, ch: cur, chLabel: chapLabel(cur), compact: true,
-        title: 'Bình luận ' + chapLabel(cur),
+        title: 'Bình luận',
         hint: ''
       });
     } else {
       CMT_READER.setChapter(cur, chapLabel(cur));
-      /* tiêu đề cũng phải đổi theo chương vừa lật sang — bỏ dòng spoiler theo yêu cầu */
-      var hw = box.querySelector('.cmt-head2');
-      if (hw) {
-        var hb = hw.querySelector('b'), hh = hw.querySelector('.cmt-hint');
-        if (hb) hb.textContent = 'Bình luận ' + chapLabel(cur);
-        if (hh) hh.textContent = '';
-      }
+      /* tiêu đề giữ nguyên “Bình luận”; số chương đã hiện ở tab lọc bên dưới,
+         không lặp lại thành “Bình luận Chương 3” mỗi lần lật chương */
     }
   }
   function bumpTabCount(delta, set) {
@@ -889,36 +883,6 @@
      được giữ lại, LUÔN bật và không có công tắc trong Cài đặt đọc.
      ====================================================================== */
 
-  /* ---- REACTION: hàng reaction sticker cuối chương ------------------------ */
-  function syncReactBox() {
-    var host = $('#rdReact');
-    if (!host) return;
-    /* Sticker luôn hiện — không còn công tắc bật/tắt trong Cài đặt đọc. */
-    host.hidden = false;
-    if (!host.__rxCtx) paintReact();
-  }
-  function paintReact() {
-    if (!window.CZReact || !N || !CHS[cur - 1]) return;
-    var host = $('#rdReact');
-    if (!host) return;
-    host.hidden = false;
-    window.CZReact.afterChapterPaint($('#rdText'), {
-      slug: SLUG, ch: cur, title: chapLabel(cur), story: N
-    });
-  }
-  /* trang chi tiết truyện: cùng hàng sticker đó, gắn với chương đang đọc dở
-     (chưa đọc thì chương 1) — người đọc thấy ngay là bộ này có tương tác */
-  function renderStoryReact() {
-    var host = $('#storyReact');
-    if (!host || !window.CZReact || !N) return;
-    host.hidden = false;
-    var ch = Math.max(1, Math.min(CHS.length || 1, CZ.progress(N) || 1));
-    window.CZReact.mount(host, {
-      slug: SLUG, ch: ch, story: N,
-      label: N.title + (CHS.length ? ' · ' + chapLabel(ch) : '')
-    });
-  }
-
   function applyRD() {
     var s = CZ.rdGet();
     document.body.dataset.rd = s.theme;
@@ -930,7 +894,6 @@
       el.classList.remove('nofont');
       el.classList.toggle('just', !!Number(s.justify));
     }
-    syncReactBox();
     document.documentElement.style.setProperty('--rd-size', (s.size||18) + 'px');
     document.documentElement.style.setProperty('--rd-line', s.line || 1.85);
     document.documentElement.style.setProperty('--rd-para', (s.para||1.05) + 'em');
@@ -1015,6 +978,7 @@
   }
   /* Nhãn nhóm của mục lục — cùng tên với danh sách chương để hai nơi khớp nhau */
   var GNAME_TOC = {
+    chap: 'Chương',
     prologue: 'Lời mở đầu truyện',
     author: 'Lời tác giả',
     end: 'Lời kết',
@@ -1022,45 +986,67 @@
     note: 'Ghi chú'
   };
   function paintTOC() {
-    $('#tocName').textContent = N.title;
+    $('#tocName').textContent = 'Mục lục';
     var pr = CZ.progress(N);
-    /* đếm đúng: mục không phải chương (lời kết, ghi chú…) không được tính vào
-       “42 chương” — bản cũ đếm tất cả nên third-person ghi 42 trong khi chỉ có
-       36 chương đánh số */
-    /* chapter = KHÔNG thuộc nhóm phụ nào. Không đếm theo “có số” vì ngoại
-       truyện cũng mang số (“Ngoại Truyện 1” → no = 1) nên bản trước cộng nhầm
-       nó vào tổng chương. */
     var chapN = 0;
     CHS.forEach(function (c) {
       var sp = chapSplit(c);
       if ((sp.group || (sp.no ? 'chap' : 'note')) === 'chap') chapN++;
     });
     var otherN = CHS.length - chapN;
-    $('#tocSub').textContent = chapN + ' chương' +
-      (otherN ? ' · ' + otherN + ' mục khác' : '') +
-      (pr ? ' · đang ở chương ' + pr : '');
+    $('#tocSub').textContent = chapN + ' chương' + (otherN ? ' · ' + otherN + ' mục khác' : '');
     var q = ($('#tocQ').value || '').trim().toLowerCase();
-    var prog = CZ.progress(N), marks = CZ.marks(N);
-    var parts = [], lastKey = null;
+    var marks = CZ.marks(N);
+    /* lọc trước, rồi mới gom cụm — thứ tự đăng giữ nguyên, không dời mục nào */
+    var rows = [];
     CHS.forEach(function (c, i) {
-      var n = i + 1;
-      var sp = chapSplit(c);
+      var n = i + 1, sp = chapSplit(c);
       var hit = !q || c.t.toLowerCase().indexOf(q) >= 0 || String(n) === q || String(sp.no) === q;
-      if (!hit) return;
-      var key = sp.group || (sp.no ? 'chap' : 'note');
-      /* nhãn nhóm chỉ hiện khi KHÔNG tìm kiếm, và chỉ ở ranh giới cụm — thứ tự
-         đăng giữ nguyên, không nhóm nào bị dời chỗ */
-      if (!q && key !== 'chap' && key !== lastKey) {
-        parts.push('<div class="toc-grp">' + esc(GNAME_TOC[key]) + '</div>');
-      }
-      if (hit) lastKey = key;
-      parts.push('<a href="' + chapterPath(n) + '" data-ch="' + n + '" class="' + (n === cur ? 'on' : '') + (n < prog ? ' read' : '') + '">' +
-        '<span class="no">' + chapToken(sp) + '</span><span class="nm">' + esc(sp.name) + '</span>' +
-        (marks.indexOf(n) >= 0 ? '<span class="ck">' + ic('bookmark', 'i-s') + '</span>'
-          : (n < prog ? '<span class="ck">' + ic('check', 'i-s') + '</span>' : '<span></span>')) + '</a>');
+      if (hit) rows.push({ i: i, n: n, sp: sp, key: sp.group || (sp.no ? 'chap' : 'note') });
     });
+    var parts = [], run = [], lastKey = null;
+    function flush() {
+      if (!run.length) return;
+      parts.push('<div class="toc-grp"><span>' + (GNAME_TOC[lastKey] || 'Khác') + '</span><i>' + run.length + '</i></div>');
+      Array.prototype.push.apply(parts, run);
+      run = [];
+    }
+    rows.forEach(function (r) {
+      if (r.key !== lastKey) { flush(); lastKey = r.key; }
+      var on = r.n === cur;
+      run.push('<a href="' + chapterPath(r.n) + '" data-ch="' + r.n + '" class="' + (on ? 'on' : '') +
+        (r.n < pr ? ' read' : '') + '">' +
+        '<span class="no">' + chapToken(r.sp) + '</span>' +
+        '<span class="nm">' + esc(r.sp.name || r.sp.t || '') + '</span>' +
+        (on ? '<span class="now">đang đọc</span>'
+          : marks.indexOf(r.n) >= 0 ? '<span class="ck">' + ic('bookmark', 'i-s') + '</span>'
+          : r.n < pr ? '<span class="ck">' + ic('check', 'i-s') + '</span>' : '<span></span>') +
+        '</a>');
+    });
+    flush();
     $('#tocList').innerHTML = parts.join('') ||
       '<div class="empty" style="border:0;background:none">Không có chương nào khớp.</div>';
+    paintTOCFoot();
+  }
+  /* chân khung: vị trí + thanh tiến độ + tên chương đang đọc */
+  function paintTOCFoot() {
+    var host = $('#tocFoot');
+    if (!host || !CHS.length) return;
+    var sp = chapSplit(CHS[cur - 1] || {});
+    var total = chapTotal();
+    var no = sp.no || 0;
+    var pct = total ? Math.round(no / total * 100) : 0;
+    host.innerHTML = '<span class="pos">' + (no ? no + '/' + total : (GNAME_TOC[sp.group] || 'Mục lục').toLowerCase()) + '</span>' +
+      '<span class="bar"><i style="width:' + pct + '%"></i></span>' +
+      '<b>' + esc(sp.name || chapLabel(cur)) + '</b>';
+  }
+  function tocScrollToCur(center) {
+    var pan = $('#tocSheet .pb');
+    var on = $('#tocList a.on');
+    if (!pan || !on) return;
+    var r = on.getBoundingClientRect(), pr2 = pan.getBoundingClientRect();
+    if (center) pan.scrollTop += (r.top - pr2.top) - (pr2.height / 2 - r.height / 2);
+    else if (r.top < pr2.top || r.bottom > pr2.bottom) pan.scrollTop += (r.top - pr2.top) - 12;
   }
   $('#tocQ').addEventListener('input', paintTOC);
   function sheet(id, on) {
@@ -1148,26 +1134,40 @@
     var prev = cur > 1, next = cur < CHS.length;
     var first = !isPage || PI === 0, last = !isPage || PI >= PAGES.length - 1;
     var paged = s.mode === 'paged' && PAGES.length > 0;
+    function navName(i) {
+      var c = CHS[i - 1];
+      if (!c) return '';
+      var sp = chapSplit(c);
+      return sp.name || chapLabel(i);
+    }
     var left = paged
-      ? (first ? (prev ? chapLabel(cur - 1) : 'Đầu bộ') : 'Trang ' + PI)
-      : (prev ? chapLabel(cur - 1) : 'Đầu bộ');
+      ? (first ? navName(cur - 1) : 'Trang ' + PI + '/' + PAGES.length)
+      : (prev ? navName(cur - 1) : 'Đây là chương đầu');
     var right = paged
-      ? (last ? (next ? chapLabel(cur + 1) : 'Hết bộ') : 'Trang ' + (PI + 2))
-      : (next ? chapLabel(cur + 1) : 'Hết bộ');
+      ? (last ? navName(cur + 1) : 'Trang ' + (PI + 2) + '/' + PAGES.length)
+      : (next ? navName(cur + 1) : 'Hết truyện');
+    /* nhãn: chương có số thì ghi số, mục không số thì ghi “Mục trước/Mục tiếp”
+       — tránh trường hợp nhãn và tên trùng nhau (“Lời Mở Đầu” hai lần) */
+    function navKind(i) {
+      var c = CHS[i - 1];
+      if (!c) return '';
+      return chapSplit(c).no ? chapLabel(i) : '';
+    }
+    var leftK = paged && !first ? 'Trang trước' : (prev ? (navKind(cur - 1) || 'Mục trước') : 'Chương trước');
+    var rightK = paged && !last ? 'Trang sau' : (next ? (navKind(cur + 1) || 'Mục tiếp') : 'Chương tiếp theo');
+    /* hai khối trái/phải, không khung: nhãn nhỏ ở trên, tên chương ở dưới.
+       Mục lục đã có trên thanh đọc nên bỏ nút giữa cho khỏi ba cỡ chữ tranh nhau. */
     $('#rdNav').innerHTML =
-      '<button id="navPrev" class="' + ((paged ? (first && !prev) : !prev) ? 'off' : '') + '"' +
+      '<button id="navPrev" class="pv' + ((paged ? (first && !prev) : !prev) ? ' off' : '') + '"' +
         ((paged ? (first && !prev) : !prev) ? ' disabled' : '') + '>' +
-        '<b>' + ic('left', 'i-s') + ' ' + (paged ? (first ? 'Chương trước' : 'Trang trước') : 'Chương trước') + '</b>' +
-        '<small>' + esc(left) + '</small></button>' +
-      '<button id="navToc" class="mid"><b>' + ic('list', 'i-s') + ' Mục lục</b><small>' + esc(chapLabel(cur)) +
-        (paged ? ' · trang ' + (PI + 1) + '/' + PAGES.length : '') + '</small></button>' +
-      '<button id="navNext" class="main' + ((paged ? (last && !next) : !next) ? ' off' : '') + '"' +
+        '<span class="k">' + ic('left', 'i-s') + ' ' + esc(leftK) + '</span>' +
+        '<span class="v">' + esc(left) + '</span></button>' +
+      '<button id="navNext" class="nx' + ((paged ? (last && !next) : !next) ? ' off' : '') + '"' +
         ((paged ? (last && !next) : !next) ? ' disabled' : '') + '>' +
-        '<b>' + (paged ? (last ? 'Chương tiếp theo' : 'Trang sau') : 'Chương tiếp theo') + ' ' + ic('right', 'i-s') + '</b>' +
-        '<small>' + esc(right) + '</small></button>';
+        '<span class="k">' + esc(rightK) + ' ' + ic('right', 'i-s') + '</span>' +
+        '<span class="v">' + esc(right) + '</span></button>';
     $('#navPrev').addEventListener('click', function () { turn(-1); });
     $('#navNext').addEventListener('click', function () { turn(1); });
-    $('#navToc').addEventListener('click', function () { sheet('#tocSheet', true); paintTOC(); });
   }
   function turn(dir) {
     var s = CZ.rdGet();
@@ -1458,14 +1458,15 @@
       actBtn('actLike', 'heart', likeL, liked),
       actBtn('actSave', 'shelf', saveL, CZ.inShelf(N)),          /* icon TỦ SÁCH */
       actBtn('actFollow', 'bell', CZ.isFollowed(N) ? 'Đang theo dõi' : 'Theo dõi', CZ.isFollowed(N)),
-      actBtn('actMark', 'bookmark', marked ? 'Đã đánh dấu' : 'Đánh dấu', marked),   /* icon THẺ */
-      actBtn('actComment', 'chat', 'Bình luận chương này', false),
-      actBtn('actShare', 'share', 'Chia sẻ', false),
-      actBtn('actReport', 'alert', 'Báo lỗi chữ', false)
+      actBtn('actComment', 'chat', 'Bình luận', false),
+      actBtn('actReport', 'alert', 'Báo lỗi', false)
     ];
-    if (st && st.views) acts.unshift('<span class="chip" id="rdViews" title="lượt đọc thật, lưu trên KV">' + ic('eye', 'i-s') + '<span class="lbl">' + num(st.views) + ' lượt đọc</span></span>');
-    if (st && st.votes) acts.unshift('<span class="chip" id="rdVotes" title="tổng phiếu thích của bộ (mọi chương)">' + ic('trophy', 'i-s') + '<span class="lbl">' + num(st.votes) + ' phiếu</span></span>');
-    $('#rdActs').innerHTML = acts.join('');
+    /* số liệu không chen vào hàng nút nữa: một dòng chữ nhỏ phía trên */
+    var nums = [];
+    if (st && st.views) nums.push('<span class="n" id="rdViews" title="lượt đọc thật, lưu trên KV">' + num(st.views) + ' lượt đọc</span>');
+    if (st && st.votes) nums.push('<span class="n" id="rdVotes" title="tổng phiếu thích của bộ (mọi chương)">' + num(st.votes) + ' phiếu</span>');
+    $('#rdActs').innerHTML = (nums.length ? '<p class="racts-nums">' + nums.join('<span class="dot">·</span>') + '</p>' : '') +
+      '<div class="racts-row">' + acts.join('') + '</div>';
     paintMark();
     $('#actLike').addEventListener('click', function () {
       var btn = this;
@@ -1514,12 +1515,6 @@
       toast(on ? 'Đã theo dõi. Chương mới sẽ hiện huy hiệu đỏ.' : 'Đã bỏ theo dõi');
       if (CZ.followPushHook) CZ.followPushHook(on);   /* hỏi bật thông báo đẩy */
     });
-    $('#actMark').addEventListener('click', function () {
-      var on = CZ.toggleMark(N, cur);
-      paintMark(); paintTOC();
-      CZ.pop(this);
-      toast(on ? 'Đã đánh dấu ' + chapLabel(cur) : 'Đã bỏ đánh dấu ' + chapLabel(cur));
-    });
     /* Bình luận ngay trong trang đọc: cuộn xuống khung cuối chương (không thoát trang) */
     $('#actComment').addEventListener('click', function () {
       mountReaderComments();
@@ -1531,7 +1526,6 @@
         if (ta) setTimeout(function () { try { ta.focus(); } catch (e) {} }, 420);
       }
     });
-    $('#actShare').addEventListener('click', shareChapter);
     var rp = $('#actReport');
     if (rp) rp.addEventListener('click', function () {
       var head = 'Báo lỗi · ' + N.title + ' · ' + chapLabel(cur);
@@ -1612,9 +1606,11 @@
     });
     /* cuối chương: đã bỏ dòng Hết chương / Chương kế tiếp theo yêu cầu */
     var last = cur >= CHS.length;
+    /* dấu hết chương bằng CHỮ, không thêm đường kẻ: đường kẻ đã có ở chuyển chương
+       (bản cũ vẽ một vạch nữa ngay trên đó, hai vạch cách nhau 40px trông như hộp) */
     $('#rdEnd').innerHTML = last
-      ? '<div class="endrule" aria-hidden="true"></div><div class="endline"><span class="endsub">Bộ này đang cập nhật. Lưu vào tủ truyện để quay lại khi có chương mới.</span></div><a class="btn ghost sm mt" href="' + esc(CZ.storyURL(N.slug)) + '" id="endInfo">' + ic('info', 'i-s') + 'Thông tin truyện</a>'
-      : '<div class="endrule" aria-hidden="true"></div>';
+      ? '<div class="endline"><span class="endmark">Hết truyện</span><span class="endsub">Bộ này đang cập nhật. Lưu vào tủ để quay lại khi có chương mới.</span></div><a class="btn ghost sm mt" href="' + esc(CZ.storyURL(N.slug)) + '" id="endInfo">' + ic('info', 'i-s') + 'Thông tin truyện</a>'
+      : '<div class="endline"><span class="endmark">Hết ' + esc(chapLabel(cur)) + '</span></div>';
     var currentScrollPercent = 0;
     if (s.mode !== 'paged') {
       var scrollMax = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
@@ -1648,7 +1644,6 @@
     paintTOC(); paintTopNav();
     /* hàng reaction sticker cuối chương — dựng SAU khi nội dung chương đã nằm
        trong #rdText, không đụng tới dữ liệu chương. */
-    paintReact();
     mountReaderComments();          /* bình luận theo chương, nằm cuối trang đọc */
     var cr = $('#crumbStory');
     if (cr) cr.addEventListener('click', function (e) { e.preventDefault(); exitReader(); });
@@ -1657,18 +1652,6 @@
     var on = CZ.marks(N).indexOf(cur) >= 0;
     $('#rdMark').classList.toggle('on', on);
     $('#rdMark').title = on ? 'Bỏ đánh dấu chương này (B)' : 'Đánh dấu chương này (B)';
-    var am = $('#actMark');
-    if (am) {
-      var lab = on ? 'Đã đánh dấu' : 'Đánh dấu';
-      am.classList.toggle('on', on);
-      var sp = am.querySelector('.lbl') || am.querySelector('span');
-      if (sp) sp.textContent = lab;
-      am.setAttribute('title', lab);
-      am.setAttribute('aria-label', lab);
-    }
-  }
-  function shareChapter() {
-    CZ.copy(location.origin + chapterPath(cur), 'Đã copy link ' + chapLabel(cur));
   }
   /* ---- thẻ meta theo chương (SEO + tab trình duyệt) -----------------------
      Khối JSON-LD tĩnh của trang truyện được giữ nguyên khi xem thông tin;
@@ -1738,7 +1721,6 @@
     $('#rdMark').innerHTML = ic('bookmark', 'i-s');
     $('#rdSet').innerHTML = ic('gear', 'i-s');
     $('#rdFocus').innerHTML = ic('expand', 'i-s');
-    $('#rdShare').innerHTML = ic('share', 'i-s');
     applyRD();
     renderCur(false, dir);
     paintChapterMeta();
@@ -1858,6 +1840,7 @@
   $('#rdSet').addEventListener('click', function () { sheet('#setSheet', true); paintSettings(); });
   $('#rdToc').addEventListener('click', function () {
     sheet('#tocSheet', true); paintTOC();
+    requestAnimationFrame(function () { tocScrollToCur(true); });
     setTimeout(function () { $('#tocQ').focus(); }, 50);
   });
   $('#rdMark').addEventListener('click', function () {
@@ -1870,7 +1853,6 @@
     this.classList.toggle('on', on);
     toast(on ? 'Chế độ tập trung: chỉ còn nội dung truyện' : 'Đã tắt chế độ tập trung');
   });
-  $('#rdShare').addEventListener('click', shareChapter);
   document.addEventListener('click', function (e) {
     var a = e.target.closest('#tocList a[data-ch]');
     if (a) { sheet('#tocSheet', false); }
@@ -2207,9 +2189,6 @@
       showTab(/danh-gia|binh-luan/.test(location.hash) ? 'cmt' : (/gioi-thieu|thong-tin/.test(location.hash) ? 'info' : 'chap'));
       CZ.reveal();
       route(chapterFromHash() ? 'hash' : 'path');
-      /* nhắc khi vào bằng link chương cụ thể */
-      var ch = chapterWanted();
-      if (ch && CHS.length) setTimeout(function () { toast('Mở thẳng ' + chapLabel(ch) + '.'); }, 400);
       CZ.onStats(function () { renderStory(); if (reading) renderCur(true); });
     }
   }
