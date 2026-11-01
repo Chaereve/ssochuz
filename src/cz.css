@@ -3972,24 +3972,7 @@ body.rd-focus .rdcmts { display: none; }
 #bxh .tilehead .right { width: 100%; justify-content: flex-start; }
 .mlist { grid-template-columns: minmax(0, 1fr); }
 .mrow { grid-template-columns: 34px minmax(0, 1fr) 52px; gap: 10px; }
-/* Máy nhỏ: HAI cột. Bản trước để MỘT cột nên mỗi băng 16:10 chiếm trọn bề
-   ngang điện thoại (~360×225) — nhìn như ảnh bìa phóng to, cuộn mỏi tay.
-   Hai cột cho mỗi băng ~170×106, đúng tầm "ô" để liếc cả hàng. */
 .wcards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-/* Ô chỉ còn ~170×106: nếu vẫn đè chữ lên ảnh thì tên truyện nằm chình ình giữa
-   mặt nhân vật. Nay ảnh và chữ TÁCH HÀNG: ảnh 16:10 giữ nguyên tỉ lệ, chữ
-   xuống dưới trên nền phẳng — cùng một nhịp với hàng bìa dọc phía trên.
-   Nhãn "CHUYỂN THỂ · năm" bỏ luôn: đầu mục ngay trên đã ghi “Chuyển thể”. */
-.wcard { aspect-ratio: auto; background: none; border: 0; border-radius: 0;
-  display: flex; flex-direction: column; overflow: visible; }
-.wcard img { position: static; aspect-ratio: 16 / 10; height: auto; border-radius: 8px;
-  border: 1px solid var(--bd); }
-.wcard:hover img { transform: none; border-color: var(--bd2); }
-.wsh, .wcard .wk { display: none; }
-.wt { position: static; margin-top: 8px; }
-.wcard .wn { margin-top: 0; font-size: 12px; line-height: 1.35; color: var(--txt);
-  text-shadow: none; -webkit-line-clamp: 2; }
-.wcard .wm { margin-top: 2px; font-size: 10px; color: var(--dim); }
 #sched .w3feat { grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 16px; }
 #sched .w3poster { width: 92px; }
 #sched .w3n { font-size: 19px; }
@@ -4151,4 +4134,32 @@ img.cmt-ava { border: 0; background: transparent; }
   .hdr .in { padding: 0 14px; gap: 4px; }
   .hdr .in > .grow { min-width: 0; }
   .hdr .logo { font-size: 15px; }
+}
+
+/* ==========================================================================
+   CHUYỂN THỂ SERIES · ô trên điện thoại (≤620px)
+   --------------------------------------------------------------------------
+   Bản trước ở ≤620px để MỘT cột: mỗi băng 16:10 rộng trọn màn hình điện thoại
+   (~360×225) nên nhìn như ảnh bìa phóng to, cuộn rất mỏi. Nay hai cột, mỗi ô
+   ~170×106. Ô nhỏ thì không đè nổi ba tầng chữ lên mặt nhân vật nữa ⇒ ảnh và
+   chữ TÁCH HÀNG (ảnh 16:10, tên, "n chương · tình trạng" trên nền phẳng) —
+   cùng một nhịp với hàng bìa dọc phía trên. Nhãn "CHUYỂN THỂ · năm" bỏ: đầu
+   mục ngay trên đã ghi “Chuyển thể”. Từ 621px trở lên giữ nguyên 3 cột + chữ
+   đè chân ảnh của bản máy tính (bậc ≤880px đã có sẵn).
+   ========================================================================== */
+@media (max-width: 620px) {
+  .wcards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .wcard { aspect-ratio: auto; display: flex; flex-direction: column;
+    background: none; border: 0; border-radius: 0; overflow: visible; }
+  .wcard img { position: static; aspect-ratio: 16 / 10; height: auto;
+    border: 1px solid var(--bd); border-radius: 8px; }
+  .wcard:hover img { transform: none; border-color: var(--bd2); }
+  .wcard .wsh, .wcard .wk { display: none; }
+  .wcard .wt { position: static; margin-top: 8px; }
+  .wcard .wn { margin-top: 0; font-size: 12.5px; line-height: 1.35;
+    color: var(--txt); text-shadow: none; -webkit-line-clamp: 2; }
+  .wcard .wm { margin-top: 2px; font-size: 10px; color: var(--dim); }
+}
+@media (max-width: 380px) {
+  .wcard .wn { font-size: 12px; }
 }
