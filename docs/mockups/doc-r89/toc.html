@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="vi"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mục lục trong trang đọc — 3 kiểu</title>
+<link rel="stylesheet" href="view.css">
+<link rel="stylesheet" href="toc.css">
+</head>
+<body data-rd="kem" data-v="c">
+
+<!-- nền: trang đọc thật (C) để thấy mục lục nằm trong ngữ cảnh nào -->
+<div class="bg-reader" aria-hidden="true">
+  <header class="bar stuck">
+    <div class="bin">
+      <span class="ibo" id="bgBack"></span>
+      <a class="bti" href="#"><b id="bgTitle">Hạt Mầm</b><span class="sub" id="bgSub">THIRD PERSON · 2 / 36</span></a>
+      <div class="bacts">
+        <span class="ibo" id="bgToc"></span>
+        <span class="ibo" id="bgMark"></span>
+        <span class="ibo" id="bgSet"></span>
+      </div>
+    </div>
+  </header>
+  <main class="doc">
+    <header class="head">
+      <div class="overline" id="bgOver"></div>
+      <h1 id="bgH1">Hạt Mầm</h1>
+      <div class="meta" id="bgMeta"></div>
+    </header>
+    <article class="txt" id="bgTxt"></article>
+  </main>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="sheet left toc" id="sheet" role="dialog" aria-modal="true" aria-label="Mục lục"></aside>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<div class="tb" id="tb" role="group" aria-label="Xem thử mục lục">
+  <span class="lb">Kiểu</span>
+  <button type="button" data-t="a" aria-pressed="true">1</button>
+  <button type="button" data-t="b" aria-pressed="false">2</button>
+  <button type="button" data-t="c" aria-pressed="false">3</button>
+  <span class="sp"></span>
+  <span class="lb">Nền</span>
+  <button type="button" data-rd="kem" aria-pressed="true">Kem</button>
+  <button type="button" data-rd="sang" aria-pressed="false">Sáng</button>
+  <button type="button" data-rd="toi" aria-pressed="false">Tối</button>
+  <span class="sp"></span>
+  <button type="button" id="toggle">Đóng</button>
+</div>
+
+<script src="chap-data.js"></script>
+<script src="toc.js"></script>
+</body></html>
