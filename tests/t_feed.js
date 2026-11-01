@@ -2,7 +2,7 @@
    Kiểm thử RSS FEED (phía web tĩnh)
    - <head> có <link rel=alternate type=rss> feed chung (bot/feed reader đọc HTML thô)
    - footer có link RSS → CZ_API/feed.xml
-   - trang truyện: nút RSS trong hero → feed riêng + thẻ alternate feed riêng (JS chèn)
+   - trang truyện: thẻ alternate feed riêng (JS chèn) — KHÔNG còn nút RSS ở hero (đã bỏ ở r62)
    - file OG tĩnh của từng truyện có sẵn alternate feed riêng (bot không chạy JS)
    ========================================================================== */
 const { page, dataFetch } = require('./mk');
@@ -38,15 +38,9 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   await wait(1300);
   const rdoc = r.doc;
   out.errors1 = r.errors.slice(0, 6);
-  const heroRss = rdoc.querySelector('#shero a[href*="/feed.xml?slug=' + RS + '"]');
-  /* nút RSS ở hero là nút icon (chỉ có hình), nên tên đọc được nằm ở aria-label/
-     title — chấp nhận cả hai, miễn là có nhãn nói rõ đây là RSS */
-  const rssName = heroRss
-    ? (heroRss.textContent + ' ' + (heroRss.getAttribute('aria-label') || '') + ' ' +
-       (heroRss.getAttribute('title') || ''))
-    : '';
-  ok(heroRss && /rss/i.test(rssName), 'hero trang truyen thieu nut RSS feed rieng');
-  ok(heroRss && heroRss.getAttribute('target') === '_blank', 'nut RSS hero phai target=_blank');
+  /* KHÔNG còn nút RSS ở hero: người dùng đã chốt bỏ lối tắt RSS/chia sẻ trên
+     trang truyện (r62) và hero trang truyện được làm lại ở r95–r114. Kênh RSS
+     cho feed reader vẫn nguyên — kiểm bằng thẻ <link rel=alternate> ngay dưới. */
   const alts = [...rdoc.querySelectorAll('link[rel="alternate"][type="application/rss+xml"]')]
     .map(x => x.getAttribute('href'));
   ok(alts.some(h => h === api + '/feed.xml'), 'trang truyen thieu alternate feed chung (thay: ' + JSON.stringify(alts) + ')');

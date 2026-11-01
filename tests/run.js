@@ -33,9 +33,8 @@
                        nhiễm bản rỗng vẫn tự lành; mất sạch nguồn thì báo lỗi kèm
                        nút “Thử lại” chạy thật chứ không đứng ở “Đang tải…”
      t_sweep.js        bấm hết mọi nút trong trang xem có lỗi JS nào không
-     t_react.js        (1.20.0) reaction D1 theo tài khoản/chương/sticker, dùng
-                       registry chung, không lưu action localStorage, tôn trọng reduce motion;
-                       sticker LUÔN hiện — không còn công tắc bật/tắt trong Cài đặt đọc
+     t_react.js        trang đọc KHÔNG tải cz-react.js nữa (khối cảm xúc bỏ từ r89e/r90),
+                       không còn #rdReact/.rreact, hàng hành động cuối chương vẫn nguyên
      t_dice.js         vòng quay: ưu tiên follow, lọc 18+/tình trạng/thể loại,
                        loại truyện vừa đọc, tùy chọn/kết quả lưu key versioned :v1
      t_schedule.mjs    HẸN GIỜ CHƯƠNG + LƯU 1 CHƯƠNG + DUNG LƯỢNG ẢNH: chương hẹn

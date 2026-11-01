@@ -57,13 +57,18 @@ function makeApi(log, opts = {}) {
   });
   await wait(1600);
   out.sheroSao = $$(st.doc, '#shero .stars [data-star]').length;
-  out.sheroLabel = ($(st.doc, '#shero .rl') || {}).textContent;
+  /* Giao diện đánh giá hiện tại (đã chốt): số trung bình nằm trong
+     `.rating-value` ("4,5 / 5"), còn `.rl` là SỐ LƯỢT ("10 lượt"). Bài này kiểm
+     cả hai — trước đây nó đọc `.rl` cho điểm nên báo sai. */
+  out.sheroDiem = ($(st.doc, '#shero .rating-value') || {}).textContent;
+  out.sheroLuot = ($(st.doc, '#shero .rl') || {}).textContent;
   /* bấm sao 5 → gọi /api/rate, retry đúng 1 lần */
   const stars = $$(st.doc, '#shero .stars [data-star]');
   if (stars.length) { stars[4].dispatchEvent(new st.win.MouseEvent('click', { bubbles: true })); await wait(1600); }
   out.rateCalls = api.calls.rate;
   out.postRateLog = log.filter(u => /POST.*\/api\/rate/.test(u)).length;
-  out.labelSauBam = ($(st.doc, '#shero .rl') || {}).textContent;
+  out.diemSauBam = ($(st.doc, '#shero .rating-value') || {}).textContent;
+  out.luotSauBam = ($(st.doc, '#shero .rl') || {}).textContent;
 
   /* ---------- 2. thư viện/trang chủ: KHÔNG có sao ---------- */
   const home = page('index.html', { config: { CZ_API: BASE }, fetch: dataFetch({ apiBase: BASE, api: makeApi([]).api }) });
@@ -86,10 +91,15 @@ function makeApi(log, opts = {}) {
 
   /* ---------- nghiệm thu ---------- */
   eq('rating/sheAll hero có 5 sao', out.sheroSao, 5);
-  eq('rating/nhãn hiện trung bình', /4,5 \/ 5/.test(out.sheroLabel || ''), true);
+  eq('rating/hiện điểm trung bình', /4,5\s*\/\s*5/.test(out.sheroDiem || ''), true);
+  eq('rating/hiện số lượt', /10 lượt/.test(out.sheroLuot || ''), true);
   eq('rating/bấm sao POST /api/rate', out.postRateLog >= 1, true);
   eq('rating/ghi trượt retry đúng 1 lần', out.rateCalls, 2);
-  eq('rating/sau bấm nhãn vẽ số mới', /4,6 \/ 5/.test(out.labelSauBam || ''), true);
+  /* Sau khi chấm, ô điểm hiện SAO CỦA BẠN (5 / 5) — đúng thứ tự đọc đã chốt:
+     "sao của bạn → điểm → số lượt". Điểm trung bình mới (4,6) không còn chỗ hiện
+     ở đây nên bài kiểm tra số lượt (10 → 11) mới là bằng chứng dữ liệu đã về. */
+  eq('rating/sau bấm hiện số sao của bạn', /5\s*\/\s*5/.test(out.diemSauBam || ''), true);
+  eq('rating/sau bấm vẽ số lượt mới', /11 lượt/.test(out.luotSauBam || ''), true);
   eq('rating/không có sao ở thư viện', out.homeSao, 0);
   eq('rating/không có sao trong thanh đọc (reader)', out.readerSaoTrongActs, 0);
   eq('rating/reader giữ nút thích chương', out.readerLikeKept, true);

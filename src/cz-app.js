@@ -913,6 +913,11 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     var personalMode = (w.CZPersonal || w.CZFollowPersonal) && (w.CZPersonal || w.CZFollowPersonal).mode();
     var state = personalMode === 'loading' ? 'loading' : personalMode === 'error' ? 'error' : notifState;
     var items = notifItems(), total = 0, i;
+    /* Tài khoản vừa sẵn sàng (server) thì một lần tải registry hỏng TRƯỚC ĐÓ không
+       còn là lý do để cả khung đứng ở "Không tải được": danh sách theo dõi và số
+       chương mới lúc này do dịch vụ tài khoản trả về, đã có mục để hiện. Giữ
+       khung lỗi là bắt người dùng bấm "Thử lại" cho một việc đã xong. */
+    if (state === 'error' && personalMode === 'server' && items.length) state = 'ready';
     for (i = 0; i < items.length; i++) total += items[i].c;
     var dot = d.getElementById('czNotifCount');
     if (dot) {
