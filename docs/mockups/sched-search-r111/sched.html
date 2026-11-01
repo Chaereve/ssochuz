@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lịch ra chương — phương án đầu mục</title>
+<link rel="stylesheet" href="/cz.css">
+<style>
+/* ==========================================================================
+   Khung xem thử: chỉ mô phỏng đúng khối “Lịch ra chương” của trang chủ.
+   Nạp thẳng /site/cz.css để phần lưới bên dưới là CSS thật, không phải bản vẽ lại.
+   Ba phương án chỉ khác nhau ở ĐẦU MỤC (dòng ngày) và CHỖ ĐẶT GHI CHÚ.
+   ========================================================================== */
+html, body { margin: 0; }
+body { padding: 26px 24px 34px; background: var(--bg); }
+@media (max-width: 700px) { body { padding: 18px 16px 26px; } }
+.wrap { max-width: var(--maxw); margin: 0 auto; }
+.sec { margin: 0; }
+
+/* --- A: nhãn ngày bên phải, chú thích thành cước chú ở chân khối ---------- */
+.dlabel { margin-left: auto; padding-bottom: 3px; font-size: 12.5px; line-height: 1.4;
+  color: var(--mut); white-space: nowrap; }
+.dlabel b { font-weight: 600; color: var(--acc); }
+.fn { display: flex; align-items: baseline; gap: 7px; margin: 16px 0 0; padding-top: 12px;
+  border-top: 1px solid var(--bd);
+  font-family: var(--font-head); font-style: italic; font-size: 12.5px; line-height: 1.5;
+  color: var(--dim); }
+.fn .i { width: 12px; height: 12px; min-width: 12px; color: var(--dim); align-self: center; }
+
+/* --- B: dải thông báo ngay dưới đầu mục (rõ nhất) ------------------------- */
+.band { display: flex; align-items: flex-start; gap: 9px; margin: -4px 0 20px;
+  padding: 10px 14px 10px 12px; border-left: 2px solid var(--acc);
+  background: var(--acc-soft); font-size: 12.5px; line-height: 1.45; color: var(--txt); }
+.band .i { width: 13px; height: 13px; min-width: 13px; margin-top: 2px; color: var(--acc); }
+
+/* --- C: ngày thành kicker trên tiêu đề, câu dẫn có vạch son ---------------- */
+.kick { margin: 0 0 6px; font-family: var(--font-mono); font-size: 9.5px; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.vC .sechead { display: block; }
+.lead { margin: 2px 0 20px; max-width: 58ch; padding-left: 14px; border-left: 2px solid var(--acc);
+  font-family: var(--font-head); font-style: italic; font-size: 15.5px; line-height: 1.4; color: var(--txt); }
+
+@media (max-width: 640px) {
+  .sechead { flex-wrap: wrap; }
+  .dlabel { margin-left: 0; padding-bottom: 0; }
+  .lead { font-size: 14px; }
+}
+</style>
+</head>
+<body class="vA">
+<div class="wrap">
+  <section class="sec" aria-labelledby="lichTitle">
+    <div class="sechead">
+      <p class="kick" data-only="c">Chủ nhật, 01/11</p>
+      <h2 id="lichTitle">Lịch ra chương</h2>
+      <span class="dlabel" data-only="a"><b>Hôm nay</b> · Chủ nhật 01/11</span>
+      <span class="dlabel" data-only="b">Chủ nhật, 01/11</span>
+      <span class="sub" data-only="x">6 bộ · tuần này</span>
+      <span class="lnow" data-only="x"><b>Hôm nay</b><span>Chủ nhật 01/11</span></span>
+    </div>
+
+    <p class="lead" data-only="c">Lịch có thể thay đổi nếu có việc đột xuất.</p>
+
+    <div class="band" data-only="b"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"></path><path d="M12 9h.01"></path><path d="M11 12h1v4h1"></path></g></svg><span>Lịch có thể thay đổi nếu có việc đột xuất.</span></div>
+
+    <div id="sched">
+      <div class="w3grid">
+        <a class="w3feat v3b sched" href="#">
+          <img class="w3bg" src="/assets/covers/7c33de96.webp" alt="">
+          <span class="w3veil"></span>
+          <span class="w3poster"><img src="/assets/covers/7c33de96.webp" alt=""></span>
+          <span class="w3txt">
+            <span class="w3k">Ra hôm nay · 01/11</span>
+            <span class="w3n">Juliet &amp; Juliet</span>
+            <span class="w3m">16 chương</span>
+            <span class="w3go">Xem truyện</span>
+          </span>
+        </a>
+        <div class="w3list">
+          <div class="w3lh"><span>Còn lại trong tuần</span><em>5 bộ</em></div>
+          <a class="w3r sched" href="#"><span class="w3d">T2</span>
+            <img src="/assets/covers/5eb112f5.webp" alt="">
+            <span class="w3t"><b>Người Chồng Lạnh Lùng Của Cô Vợ Béo</b><span>Thứ 2 · Đang cập nhật</span></span></a>
+          <a class="w3r sched" href="#"><span class="w3d">T3</span>
+            <img src="/assets/covers/022cf203.webp" alt="">
+            <span class="w3t"><b>Nakira Là Một Kẻ Nhẫn Tâm</b><span>Thứ 3 · Đang cập nhật</span></span></a>
+          <a class="w3r sched" href="#"><span class="w3d">T4</span>
+            <img src="/assets/covers/20124c95.webp" alt="">
+            <span class="w3t"><b>Cô Vợ Hờ Danh Đá Của Tôi</b><span>Thứ 4 · 25 chương</span></span></a>
+          <a class="w3r sched" href="#"><span class="w3d">T5</span>
+            <img src="/assets/covers/52b55f57.webp" alt="">
+            <span class="w3t"><b>Bởi Chẳng Thể Ngăn Con Tim Rung Động</b><span>Thứ 5 · Sắp ra mắt</span></span></a>
+          <a class="w3r sched" href="#"><span class="w3d">T6</span>
+            <img src="/assets/covers/c890362a.webp" alt="">
+            <span class="w3t"><b>Càng Thêm Oán Hận</b><span>Thứ 6 · Sắp ra mắt</span></span></a>
+        </div>
+      </div>
+    </div>
+
+    <p class="schnote" data-only="x"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"></path><path d="M12 9h.01"></path><path d="M11 12h1v4h1"></path></g></svg><span>Lịch có thể thay đổi nếu có việc đột xuất.</span></p>
+    <p class="fn" data-only="a"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g stroke-width="1.6" transform="translate(-0.72 -0.72) scale(1.06)"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"></path><path d="M12 9h.01"></path><path d="M11 12h1v4h1"></path></g></svg><span>Lịch có thể thay đổi nếu có việc đột xuất.</span></p>
+  </section>
+</div>
+<script>
+(function () {
+  var v = (new URLSearchParams(location.search).get('v') || 'a').toLowerCase().slice(0, 1);
+  if (v !== 'b' && v !== 'c' && v !== 'x') v = 'a';
+  document.body.className = 'v' + v.toUpperCase();
+  document.querySelectorAll('[data-only]').forEach(function (el) {
+    if (el.getAttribute('data-only').indexOf(v) < 0) el.remove();
+  });
+  function report() {
+    if (parent !== window) parent.postMessage({ mk: 'h', h: Math.ceil(document.body.getBoundingClientRect().height) }, '*');
+  }
+  addEventListener('load', report);
+  addEventListener('resize', report);
+  setTimeout(report, 400); setTimeout(report, 1400);
+})();
+</script>
+</body>
+</html>

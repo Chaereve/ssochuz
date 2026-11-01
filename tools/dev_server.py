@@ -291,7 +291,10 @@ class Handler(SimpleHTTPRequestHandler):
         ext = os.path.splitext(full)[1].lower()
         ctype = MIME.get(ext, 'application/octet-stream')
         if ext == '.html':
-            body = self.inject(body)
+            # Mockup trong docs/ giữ nguyên bản gốc: không nhãn “xem thử trên máy”,
+            # không script tự tải lại — mockup là bản để duyệt, phải sạch.
+            if not rel.startswith('docs/mockups/'):
+                body = self.inject(body)
             body = body.replace(b'__DEV_LIVE__', b'')
         self.send_response(200)
         self.send_header('Content-Type', ctype)
