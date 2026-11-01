@@ -507,7 +507,6 @@ body.nav-open { overflow: hidden; }
 .qclr:hover { background: var(--surf3); color: var(--txt); }
 .search:focus-within { border-color: var(--acc); box-shadow: 0 0 0 3px var(--ring); }
 .qclr:active { transform: scale(.9); }
-.search:focus-within { border-color: var(--acc); }
 .sel, .inp, textarea.inp, select.inp, input.inp {
   border: 1px solid var(--bd); border-radius: var(--r); background: var(--surf); padding: 0 12px;
   font-size: 14.5px; width: 100%; max-width: 100%; }
@@ -1322,7 +1321,6 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .fpick .lnk { padding: 0 2px; border: 0; background: none; font-size: 12px; font-weight: 600;
   color: var(--dim); text-decoration: none; }
 .fpick .lnk:hover { color: var(--txt); }
-@media (max-width: 620px) { #libSub .per { display: none; } }
 .lcount { font-family: var(--font-mono); font-size: 11.5px; font-weight: 600; letter-spacing: 0;
   color: var(--dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .lcount b { color: var(--mut); font-weight: 700; }
@@ -1978,29 +1976,50 @@ body.reading ::selection { background: color-mix(in srgb, var(--rd-acc) 30%, tra
 .jump .scrim { position: absolute; inset: 0; background: rgba(18, 12, 8, .56);
   opacity: 1; transition: opacity var(--t-close) var(--ease-close); }
 .jump.closing .scrim { opacity: 0; }
-.jump .box { position: relative; margin: min(10vh, 48px) auto 32px; width: min(640px, 92vw); background: var(--surf);
-  border: 1px solid var(--bd); border-radius: var(--r-lg); box-shadow: var(--sh-lg); overflow: hidden;
-  transform-origin: center top; will-change: transform, opacity;
-  transform: scale(var(--mo-scale)) translateY(-6px); opacity: 0;
+/* Hộp tìm nhanh (⌘K): một cột hẹp, danh sách phẳng không kẻ dòng; dòng đang
+   chọn phân biệt bằng nền + vạch son bên trái, không cần mũi tên hay hộp. */
+.jump .box { position: relative; display: flex; flex-direction: column; max-height: min(74vh, 560px);
+  margin: min(10vh, 72px) auto 24px; width: min(560px, 94vw); background: var(--surf);
+  border: 1px solid var(--bd); border-radius: 16px; box-shadow: var(--sh-lg); overflow: hidden;
+  transform-origin: center top; transform: scale(var(--mo-scale)) translateY(-6px); opacity: 0;
   transition: transform var(--t-close) var(--ease-close), opacity var(--t-close) var(--ease-close); }
-.jump.on .box { transform: none; opacity: 1;
-  transition: transform var(--t) var(--ease), opacity var(--t) var(--ease); }
+.jump.on .box { transform: none; opacity: 1; transition: transform var(--t) var(--ease), opacity var(--t) var(--ease); }
 .jump.on.closing .box { transform: scale(.98) translateY(-4px); opacity: 0; }
-.jump .q { display: flex; align-items: center; gap: 12px; padding: 15px 18px; border-bottom: 1px solid var(--bd); }
-.jump .q .i { color: var(--dim); }
-.jump .q input { flex: 1; border: 0; outline: 0; background: transparent; font-size: 16px; }
-.jump .res { max-height: 52vh; overflow: auto; }
-.jump .res:empty::after { content: "Gõ tên truyện, tác giả hoặc couple…"; display: block; padding: 26px 20px;
-  color: var(--dim); font-size: 14px; }
-.jump .res a { display: grid; grid-template-columns: 38px 1fr auto; gap: 13px; align-items: center; padding: 10px 18px;
-  border-bottom: 1px solid var(--bd); }
-.jump .res a:last-child { border-bottom: 0; }
-.jump .res a:hover, .jump .res a.on { background: var(--surf2); color: var(--txt); }
-.jump .res img { width: 38px; height: 52px; object-fit: cover; border-radius: var(--r-sm); background: var(--surf2); }
-.jump .res b { display: block; font-size: 14.5px; font-weight: 650; }
-.jump .res .m { font-size: 12.5px; color: var(--mut); }
-.jump .foot { display: flex; gap: 18px; padding: 10px 18px; border-top: 1px solid var(--bd); background: var(--bg2);
-  font-size: 12px; color: var(--dim); }
+.jump .q { display: flex; align-items: center; gap: 10px; padding: 11px 10px 11px 15px; border-bottom: 1px solid var(--bd); }
+.jump .q .qi { display: flex; flex: none; color: var(--dim); }
+.jump .q .qi .i { width: 17px; height: 17px; }
+.jump .q input { flex: 1; min-width: 0; height: 28px; border: 0; outline: 0; background: transparent;
+  font-size: 15.5px; color: var(--txt); }
+.jump .q input::-webkit-search-cancel-button { display: none; }
+.jump .qx { display: inline-grid; place-items: center; width: 30px; height: 30px; flex: none;
+  border: 0; border-radius: 8px; background: transparent; color: var(--dim); cursor: pointer; }
+.jump .qx:hover { background: var(--surf2); color: var(--txt); }
+.jump .qx .i { width: 15px; height: 15px; }
+.jump .res { flex: 1; min-height: 0; overflow-y: auto; padding: 6px; overscroll-behavior: contain;
+  scrollbar-width: thin; scrollbar-color: var(--bd2) transparent; }
+.jump .res::-webkit-scrollbar { width: 8px; }
+.jump .res::-webkit-scrollbar-thumb { background: var(--bd2); border-radius: 99px; }
+.jump .res a { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 11px; align-items: center;
+  min-height: 56px; padding: 6px 10px; border-radius: 10px; color: var(--txt); }
+.jump .res a:hover, .jump .res a.on { background: var(--surf2); }
+.jump .res a.on { box-shadow: inset 2px 0 0 var(--acc); }
+.jump .res .th { width: 32px; height: 44px; border-radius: 5px; overflow: hidden; background: var(--surf2); }
+.jump .res .th img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.jump .res .tx { min-width: 0; }
+.jump .res b { display: block; font-size: 14px; font-weight: 650; line-height: 1.3;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jump .res .tx > span { display: block; margin-top: 2px; font-size: 12px; color: var(--mut);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jump .res mark { background: none; color: var(--acc); }
+.jump .jem { padding: 24px 18px; text-align: center; font-size: 13px; line-height: 1.6; color: var(--mut); }
+.jump .jem b { display: block; margin-bottom: 3px; font-size: 14px; font-weight: 600; color: var(--txt); }
+.jump .foot { display: flex; gap: 16px; padding: 9px 15px; border-top: 1px solid var(--bd);
+  background: var(--bg2); font-size: 11.5px; color: var(--dim); }
+@media (max-width: 640px) {
+  .jump .box { margin: 10px auto; width: calc(100vw - 16px); max-height: calc(100vh - 20px); border-radius: 14px; }
+  .jump .q input { font-size: 16px; }          /* 16px để iOS không tự phóng to */
+  .jump .res a { min-height: 60px; }
+}
 /* Ngăn kéo không dùng display:none: panel luôn "có mặt" với visibility:hidden +
    pointer-events:none nên transition trượt chạy được và không vào thứ tự tab. */
 .sheet { position: fixed; inset: 0; z-index: 65; visibility: hidden; pointer-events: none; }
@@ -2638,27 +2657,6 @@ body.rd-fs .rdbar { position: fixed; left:0; right:0; }
   .authcard .btn { flex: 1 1 auto; }
 }
 
-/* ---- N10: thống kê đọc cá nhân trong My Space ----------------------------
-   Khối số tuần/chuỗi ngày/tổng + biểu đồ cột 7 ngày vẽ bằng SVG inline,
-   màu chạy theo tông trang (sáng/tối) nên không cần hai bảng riêng. */
-.mystats-wrap:empty { display: none; }
-.mystats { display: flex; align-items: flex-end; gap: 22px; padding: 16px 18px; margin-bottom: 18px;
-  border: 1px solid var(--bd); border-radius: var(--r-lg); background: var(--surf); flex-wrap: wrap; }
-.ms-tot { display: grid; grid-template-columns: repeat(3, auto); gap: 22px; min-width: 0; }
-.ms-m { display: flex; flex-direction: column; gap: 3px; }
-.ms-m b { font-family: var(--font-head); font-size: clamp(22px, 2.4vw, 28px); line-height: 1;
-  color: var(--txt); font-variant-numeric: tabular-nums; }
-.ms-m span { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--mut); }
-.mychart { width: min(250px, 100%); height: auto; display: block; }
-.mychart rect { fill: color-mix(in srgb, var(--acc) 28%, transparent); }
-.mychart rect.on { fill: var(--acc); }
-.mychart text { font-size: 10px; fill: var(--mut); text-transform: uppercase; }
-.mychart text.on { fill: var(--acc); font-weight: 800; }
-@media (max-width: 560px) {
-  .mystats { gap: 16px; }
-  .ms-tot { gap: 16px; width: 100%; }
-}
-
 /* ---- ghi chú trong hộp thoại (modal) ---- */
 .note { padding: 11px 13px; border: 1px solid var(--bd); border-radius: var(--r); font-size: 13px;
   line-height: 1.7; color: var(--mut); background: var(--surf2); }
@@ -2800,13 +2798,6 @@ body.rd-focus .rdcmts { display: none; }
 .vrow.none:hover { background: transparent; }
 
 /* ---- TÌM CHỮ TRONG TOÀN BỘ CHƯƠNG (tab Sửa bộ) --------------------------- */
-.findbox { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
-.findbox .search { flex: 1; min-width: 240px; max-width: 560px; }
-.findres { margin-top: 10px; max-height: 320px; overflow: auto; border: 1px solid var(--bd);
-  border-radius: var(--r); background: var(--surf); }
-.findrow .fno { font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
-.findrow .fno b { display: block; color: var(--txt); font-size: 13px; }
-.findrow .ftxt { font-size: 13px; line-height: 1.65; color: var(--mut); min-width: 0; overflow-wrap: anywhere; }
 
 /* bình luận của khách chưa đăng nhập: ô tên + nhãn "khách" */
 .cmt-name {

@@ -141,8 +141,6 @@
         '<span class="mt"><b>' + esc(n.title) + '</b><span>' + esc(n.author || n.couple || '') + '</span></span>' +
         '<span class="mn"><b><i>Ch.</i>' + ch + '</b><span class="tm">' + esc(CZ.timeAgo(n.updated)) + '</span></span></a>';
     }).join('');
-    var sub = $('#newSub');
-    if (sub) sub.textContent = pick.length ? pick.length + ' bộ vừa lên chương' : '';
   }
 
   /* ===================== KHÔNG GIAN CÁ NHÂN ============================ */
@@ -163,10 +161,9 @@
      khung rỗng), cả hai đều rỗng thì ô đổi thành “bắt đầu từ đâu” — nhờ vậy ô
      không bao giờ trống mà cũng không cao lêu nghêu vì dòng “chưa có…”. */
   function setPersonalParts(hasResume, hasFollow, showStarter, resumeCount) {
-    var r = $('#resumeSec'), f = $('#followUpdatesSec'), st = $('#starterBox'), sub = $('#resumeSub');
+    var r = $('#resumeSec'), f = $('#followUpdatesSec'), st = $('#starterBox');
     if (r) r.hidden = !hasResume;
     if (f) f.hidden = !hasFollow;
-    if (sub) sub.textContent = hasResume && resumeCount ? resumeCount + ' bộ đang đọc' : '';
     if (st) { st.hidden = !showStarter; if (showStarter) renderStarter(); }
   }
   var starterDone = false;
@@ -319,8 +316,6 @@
     var peak = rows.length ? rows[0].score : 0;
     /* Không có số liệu thì KHÔNG bịa gì trong #rank (bài kiểm canh đúng chỗ này);
        trạng thái “chưa có số” nói ở phụ đề cạnh tiêu đề. */
-    var rankSub = $('#rankSub');
-    if (rankSub) rankSub.textContent = rows.length ? rows.length + ' bộ dẫn đầu' : (on ? '' : 'chưa có số liệu');
     $('#rank').innerHTML = rows.map(function (row, i) {
       var n = row.n, ratio = peak ? Math.max(.12, row.score / peak) : 0;
       return '<a class="rank" href="' + esc(CZ.storyURL(n.slug)) + '" style="--d:' + (i * 55) + 'ms;--w:' + ratio.toFixed(3) + '">' +
@@ -627,8 +622,6 @@
     return out;
   }
   function render() {
-    var libSub = $('#libSub');
-    if (libSub) libSub.innerHTML = CZ.lib().length + ' bộ<span class="per"> · ' + state.per + ' bộ mỗi trang</span>';
     syncFilterUI();                      /* dãy tab phải chạy theo trạng thái lọc */
     var list = filtered();
     var total = Math.max(1, Math.ceil(list.length / state.per));

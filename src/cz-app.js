@@ -2334,6 +2334,15 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     if (d.getElementById('ftr')) mountFooter(d.getElementById('ftr'));
   }
 
+  /* Tô đậm phần khớp trong tên truyện: tách chuỗi TRƯỚC khi escape từng khúc —
+     esc() đổi ký tự thành entity nên không thể tìm vị trí trên chuỗi đã escape. */
+  function jumpHL(text, q) {
+    var t = String(text || '');
+    if (!q) return esc(t);
+    var i = t.toLowerCase().indexOf(q);
+    if (i < 0) return esc(t);
+    return esc(t.slice(0, i)) + '<mark>' + esc(t.slice(i, i + q.length)) + '</mark>' + esc(t.slice(i + q.length));
+  }
   /* -- tìm kiếm nổi (Ctrl+K) ------------------------------------------- */
   var jumpMounted = false, jumpList = [], jumpCur = 0;
   function openJump() {
@@ -2342,11 +2351,12 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       box = d.createElement('div');
       box.id = 'czJumpBox'; box.className = 'jump';
       box.innerHTML = '<div class="scrim"></div><div class="box">' +
-        '<div class="q">' + icon('search') +
-        '<input id="czJumpInput" placeholder="Tìm truyện, tác giả, couple…" autocomplete="off" spellcheck="false">' +
-        '<button class="btn ghost sm" data-close>Esc</button></div>' +
-        '<div class="res" id="czJumpRes"></div>' +
-        '<div class="foot"><span><kbd>↑</kbd><kbd>↓</kbd> chọn</span><span><kbd>Enter</kbd> mở</span><span><kbd>Esc</kbd> đóng</span></div></div>';
+        '<div class="q"><span class="qi" aria-hidden="true">' + icon('search', 'i-s') + '</span>' +
+          '<input id="czJumpInput" type="search" placeholder="Tìm truyện, tác giả, couple…" autocomplete="off" spellcheck="false" ' +
+            'role="combobox" aria-expanded="true" aria-controls="czJumpRes" aria-autocomplete="list" aria-label="Tìm truyện, tác giả, couple">' +
+          '<button class="qx" type="button" data-close aria-label="Đóng tìm kiếm">' + icon('x', 'i-s') + '</button></div>' +
+        '<div class="res" id="czJumpRes" role="listbox" aria-label="Kết quả tìm kiếm"></div>' +
+        '<div class="foot"><span>↑ ↓ chọn</span><span>↵ mở</span><span>Esc đóng</span></div></div>';
       d.body.appendChild(box);
       box.addEventListener('click', function (e) { if (e.target.classList.contains('scrim') || e.target.closest('[data-close]')) close(); });
       var input = box.querySelector('#czJumpInput');
@@ -2401,17 +2411,32 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       .sort(function (a, b) { return b.s - a.s || (b.n.chapters - a.n.chapters); })
       .slice(0, 24).map(function (x) { return x.n; });
     jumpCur = 0;
-    res.innerHTML = jumpList.length ? jumpList.map(function (n, i) {
-      return '<a href="' + esc(storyURL(n.slug)) + '" class="' + (i === 0 ? 'on' : '') + '">' +
-        (coverSrc(n) ? '<img src="' + esc(coverSrc(n)) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '<img alt="">') +
-        '<span><b>' + esc(n.title) + '</b><span>' + esc(n.author || '') +
-        (n.couple ? ' · ' + esc(n.couple) : '') + ' · ' + esc(countText(n)) + '</span></span></a>';
-    }).join('') : '<div class="empty" style="border:0;background:none">Không tìm thấy truyện nào khớp “' + esc(q) + '”.</div>';
+    if (!jumpList.length) {
+      res.innerHTML = ql
+        ? '<div class="jem"><b>Không tìm thấy “' + esc(String(q).trim()) + '”</b><span>Thử tên khác, hoặc tìm theo tác giả / couple.</span></div>'
+        : '<div class="jem"><b>Đang tải thư viện…</b></div>';
+      return;
+    }
+    res.innerHTML = jumpList.map(function (n, i) {
+      var im = coverSrc(n);
+      /* dòng phụ: chỉ những gì có thật — tác giả · couple · số chương, không
+         để lại dấu “·” lửng hay “0/—” của bộ chưa ra chương */
+      var meta = [n.author, n.couple].filter(Boolean).map(esc);
+      if ((parseInt(n.chapters, 10) || 0) > 0) meta.push(esc(countText(n)));
+      return '<a href="' + esc(storyURL(n.slug)) + '" role="option" aria-selected="' + (i === 0 ? 'true' : 'false') + '"' +
+        (i === 0 ? ' class="on"' : '') + '>' +
+        '<span class="th">' + (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '') + '</span>' +
+        '<span class="tx"><b>' + jumpHL(n.title, ql) + '</b><span>' + meta.join(' · ') + '</span></span></a>';
+    }).join('');
   }
   function paintLast() {
     var box = d.getElementById('czJumpBox'); if (!box) return;
     var as = box.querySelectorAll('#czJumpRes a');
-    Array.prototype.forEach.call(as, function (a, i) { a.classList.toggle('on', i === jumpCur); });
+    Array.prototype.forEach.call(as, function (a, i) {
+      var on = i === jumpCur;
+      a.classList.toggle('on', on);
+      a.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
     if (as[jumpCur]) as[jumpCur].scrollIntoView({ block: 'nearest' });
   }
 

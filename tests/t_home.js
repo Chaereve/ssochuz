@@ -123,7 +123,7 @@ const LIB = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data/registry
   out.rankChap = txt('#rank .rank');
   out.sched = { rows: $$('#sched .sched').length, src: txt('#schedSrc') };
   /* 30/10/2026: “Mới cập nhật” là bảng gọn ba cột (phương án 1B) → 12 dòng .mrow. */
-  out.newRail = { n: $$('#newRail .mrow').length, sub: txt('#newSub'), row: (($('#newRail .mrow .mt b')||{}).textContent||'') };
+  out.newRail = { n: $$('#newRail .mrow').length, row: (($('#newRail .mrow .mt b')||{}).textContent||'') };
 
   /* My Space is now a separate page; its history/shelves are covered in t_space.js. */
   out.spaceSeparate = !$('#ban-doc') && !!doc.querySelector('a[href="/my-space"]');
