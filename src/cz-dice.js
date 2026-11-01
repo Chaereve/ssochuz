@@ -1,17 +1,22 @@
 /* ============================================================================
-   ssochuz · TRANG VÒNG QUAY “HÔM NAY ĐỌC GÌ?” (/vong-quay/ · bản 1.20.0)
+   ssochuz · TRANG “HÔM NAY ĐỌC GÌ?” (/vong-quay/ · bản 1.20.0)
    ----------------------------------------------------------------------------
-   Trang riêng cho vòng quay chọn truyện ngẫu nhiên: quay một vòng 2,6 giây rồi
-   chốt một bộ truyện, kèm nút Đọc ngay và nút Trộn truyện.
+   Cơ chế: BỐC BÀI. Một xấp bài úp nằm giữa trang; bấm “Bốc một lá” thì lá trên
+   cùng nhấc lên, lật tại chỗ (rotateY) và đáp xuống — không bay ngang, không có
+   bánh xe nhiều màu. Bốc tiếp thì lá cũ chìm về xấp rồi lá mới lật lên.
 
-   NGUỒN TRUYỆN — theo đúng thứ tự ưu tiên, không bịa dữ liệu:
+   BỘ BÀI: mỗi lần bốc LẤY MỘT LÁ RA khỏi xấp, nên trong một lượt không bao giờ
+   lặp lại; hết xấp thì tự xáo lại. Số lá còn lại hiện ngay dưới xấp.
+
+   NGUỒN TRUYỆN — đúng thứ tự ưu tiên, không bịa dữ liệu:
      1. truyện bạn ĐANG THEO DÕI (CZ.followMap) mà đang ra chương;
      2. truyện MỚI CẬP NHẬT (theo trường `updated`);
      3. toàn bộ truyện đọc được.
-   BỘ LỌC: tình trạng (đang cập nhật / hoàn thành), bỏ qua 18+ (máy này chưa xác
-   nhận 18+ thì mặc định bỏ qua), thể loại khi kho có dữ liệu, và BỎ QUA truyện
-   vừa đọc trong 14 ngày gần đây nếu vẫn còn đủ lựa chọn (CZ.lastReadAt).
-   Không lặp lại kết quả vừa quay nếu còn phương án khác.
+   BỘ LỌC: tình trạng (đang ra / hoàn thành), bỏ qua 18+ khi máy chưa xác nhận,
+   thể loại khi kho có dữ liệu, và BỎ QUA truyện vừa đọc trong 14 ngày nếu vẫn
+   còn đủ lựa chọn (CZ.lastReadAt).
+
+   Chỉ dùng transform/opacity cho chuyển động; tôn trọng prefers-reduced-motion.
    ========================================================================== */
 (function (w, d) {
   'use strict';
@@ -19,14 +24,15 @@
   var CZ = w.CZ || {};
   function esc(s) { return CZ.esc ? CZ.esc(s) : String(s == null ? '' : s); }
   function num(n) { return CZ.num ? CZ.num(n) : String(n); }
-  function reduce() { return !!CZ.reduce; }
+  function reduce() { return !!CZ.reduce || (w.matchMedia && w.matchMedia('(prefers-reduced-motion: reduce)').matches); }
 
   var DICE_URL = '/vong-quay/';
-  var MAX_SLICES = 10;          /* quá 10 lát thì vòng quay rối mắt */
-  var SPIN_MS = 2600;
+  var LOGO = '/assets/brand/ssochuz-logo.png';
+  var FLIP_MS = 640;            /* thời gian lật một lá */
+  var FOLD_MS = 240;            /* lá cũ chìm về xấp */
   var LS = { last: 'ssochuz:dice:last:v1', opt: 'ssochuz:dice:options:v1' };
   var LEGACY_LS = { last: 'ssochuz-dice-last', opt: 'ssochuz-dice-opt' };
-  var S = { rot: 0, spinning: false, cands: [], pick: null };
+  var S = { deck: [], pool: [], busy: false, hasCard: false, gen: 0, pick: null, panel: null };
   var CZDice = { _S: S, url: DICE_URL };
 
   function jget(k, dv) { try { var v = JSON.parse(localStorage.getItem(k) || 'null'); return v == null ? dv : v; } catch (e) { return dv; } }
@@ -65,10 +71,10 @@
     var tier = followed.length ? followed : all.slice().sort(function (a, b) {
       return String(b.updated || '').localeCompare(String(a.updated || ''));
     });
-    /* bỏ truyện vừa đọc gần đây — chỉ khi vẫn còn đủ phương án để quay */
+    /* bỏ truyện vừa đọc gần đây — chỉ khi vẫn còn đủ phương án để bốc */
     var recent = tier.filter(function (n) { return (Date.now() - (CZ.lastReadAt ? CZ.lastReadAt(n) : 0)) < 14 * 86400000; });
     if (tier.length - recent.length >= 4) tier = tier.filter(function (n) { return recent.indexOf(n) < 0; });
-    /* không lặp kết quả vừa quay nếu còn lựa chọn */
+    /* không lặp kết quả vừa bốc nếu còn lựa chọn */
     var last = readVersioned(LS.last, LEGACY_LS.last, '');
     if (last && tier.length > 1) {
       var trimmed = tier.filter(function (n) { return n.slug !== last; });
@@ -86,165 +92,135 @@
     return a;
   }
 
-  /* chọn ngẫu nhiên tối đa MAX_SLICES lát cho vòng quay */
-  function wheelSet(list, shuffleOrder) {
-    if (list.length <= MAX_SLICES) return shuffleOrder ? shuffleArr(list) : list.slice();
-    var pool = list.slice(), out = [];
-    while (out.length < MAX_SLICES && pool.length) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
-    return out;
-  }
-
-  function coverTag(n, onWheel) {
+  function coverTag(n, eager) {
     var src = CZ.coverSrc ? CZ.coverSrc(n) : (n.thumb || '');
     var ch = esc((n && n.title ? n.title : '?').slice(0, 1));
     if (!src) return '<span class="dc-ph" aria-hidden="true">' + ch + '</span>';
-    return (onWheel ? '<span class="dc-ph" aria-hidden="true">' + ch + '</span>' : '') +
-      '<img src="' + esc(src) + '"' + (CZ.coverFB ? CZ.coverFB(n, src) : '') +
-      ' alt="" width="120" height="180"' + (onWheel ? '' : ' loading="lazy"') +
+    return '<img src="' + esc(src) + '"' + (CZ.coverFB ? CZ.coverFB(n, src) : '') +
+      ' alt="" width="240" height="360"' + (eager ? ' loading="eager"' : ' loading="lazy"') +
       ' decoding="async" referrerpolicy="no-referrer">';
   }
 
-  function palette(i) {
-    var c = ['#7a2e38', '#284b52', '#875829', '#3d3856', '#2f5241', '#6e3b2c', '#36495e', '#785230', '#543852', '#3d5235'];
-    return c[i % c.length];
+  function todayHTML() {
+    var now = new Date();
+    var days = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
+    var dd = String(now.getDate()).padStart(2, '0'), mm = String(now.getMonth() + 1).padStart(2, '0');
+    return '<b><i></i>' + days[now.getDay()] + ', ' + dd + '/' + mm + '</b><span>Hôm nay</span>';
   }
 
-  function wheelSlotsHTML(list) {
-    var step = 360 / list.length;
-    return list.map(function (n, i) {
-      var a = i * step + step / 2;
-      return '<span class="dc-slot" data-slot="' + i + '" title="' + esc(n.title) + '" style="--slot-i:' + i + ';transform:rotate(' + a.toFixed(2) + 'deg) translateY(calc(-1 * var(--dc-r, 104px)))">' +
-        '<span class="dc-slot-in">' + coverTag(n, true) + '</span>' +
-      '</span>';
-    }).join('');
-  }
-
-  function wheelBg(list) {
-    var step = 360 / list.length;
-    var stops = list.map(function (n, i) {
-      return palette(i) + ' ' + (i * step).toFixed(2) + 'deg ' + ((i + 1) * step).toFixed(2) + 'deg';
-    }).join(', ');
-    return 'conic-gradient(' + stops + ')';
-  }
-
-  function wheelDivsHTML(list) {
-    var step = 360 / list.length;
-    return list.length > 1 ? list.map(function (_, i) {
-      return '<i class="dc-div" style="transform:rotate(' + (i * step).toFixed(2) + 'deg)"></i>';
-    }).join('') : '';
-  }
-
-  function wheelInnerHTML(list) {
-    return wheelDivsHTML(list) +
-      '<span class="dc-sheen" aria-hidden="true"></span>' +
-      wheelSlotsHTML(list) +
-      '<span class="dc-hub" id="dcHub" aria-hidden="true"><span class="dc-hub-in">🎲</span></span>';
-  }
-
-  function wheelHTML(list) {
-    var pegs = [];
-    for (var p = 0; p < 12; p++) {
-      pegs.push('<i class="dc-peg" style="--peg-a:' + (p * 30) + 'deg"></i>');
-    }
-    return '<div class="dc-wheelbox">' +
-        '<div class="dc-wheelwrap"' + (list.length <= 6 ? ' data-few="1"' : '') + '>' +
-          '<span class="dc-pegs" aria-hidden="true">' + pegs.join('') + '</span>' +
-          '<div class="dc-pointer" id="dcPointer" aria-hidden="true"><span class="dc-pin"></span></div>' +
-          '<div class="dc-wheel" id="dcWheel" style="background:' + wheelBg(list) + '">' +
-            wheelInnerHTML(list) +
-          '</div>' +
-        '</div>' +
-        '<p class="dc-live" role="status" aria-live="polite" id="dcLive">Sẵn sàng · ' + num(list.length) + ' truyện</p>' +
-      '</div>';
-  }
-
-  function rosterHTML(list, pickedSlug) {
-    return '<div class="dc-roster" id="dcRoster">' +
-      '<div class="dc-roster-head">' +
-        '<span>Trong vòng (' + num(list.length) + ')</span>' +
-      '</div>' +
-      '<div class="dc-roster-list">' +
-        list.map(function (n, idx) {
-          var isPick = pickedSlug && n.slug === pickedSlug;
-          return '<a class="dc-ritem' + (isPick ? ' on' : '') + '" href="' + esc(n.url || (CZ.storyURL ? CZ.storyURL(n.slug) : '/truyen/')) + '" data-rslug="' + esc(n.slug) + '">' +
-            '<span class="dc-rnum">' + (idx + 1) + '</span>' +
-            '<span class="dc-rth">' + coverTag(n, false) + '</span>' +
-            '<span class="dc-rtxt"><b>' + esc(n.title) + '</b>' +
-              '<span>' + [n.author ? esc(n.author) : '', esc(CZ.countText ? CZ.countText(n) : '')].filter(Boolean).join(' · ') + '</span>' +
-            '</span>' +
-          '</a>';
-        }).join('') +
-      '</div>' +
-    '</div>';
-  }
-
-  function filtersHTML() {
+  function filtersHTML(total) {
     var o = opts();
     var genres = {};
     lib().forEach(function (n) { String(n.genre || '').split(/[,;/|]/).forEach(function (g) { g = g.trim(); if (g) genres[g] = (genres[g] || 0) + 1; }); });
     var gk = Object.keys(genres).sort();
-    return '<div class="dc-filters">' +
-      '<div class="dc-fgroup">' +
-        '<span class="dc-fl">Lọc</span>' +
+    return '<div class="dc-fbar">' +
+      '<div class="dc-chips" role="group" aria-label="Lọc truyện">' +
         '<button type="button" class="dc-chip' + (o.run ? ' on' : '') + '" data-opt="run" aria-pressed="' + o.run + '">Đang ra</button>' +
         '<button type="button" class="dc-chip' + (o.done ? ' on' : '') + '" data-opt="done" aria-pressed="' + o.done + '">Hoàn thành</button>' +
         '<button type="button" class="dc-chip' + (o.adult ? ' on' : '') + '" data-opt="adult" aria-pressed="' + o.adult + '">Gồm 18+</button>' +
+        (gk.length ? gk.map(function (g) {
+          return '<button type="button" class="dc-chip' + (o.genre === g ? ' on' : '') + '" data-genre="' + esc(g) + '" aria-pressed="' + (o.genre === g) + '">' + esc(g) + '</button>';
+        }).join('') : '') +
       '</div>' +
-      (gk.length ? '<div class="dc-fgroup dc-fgenres"><span class="dc-fl">Thể loại</span>' + gk.map(function (g) {
-        return '<button type="button" class="dc-chip' + (o.genre === g ? ' on' : '') + '" data-genre="' + esc(g) + '">' + esc(g) + '</button>';
-      }).join('') + '</div>' : '') +
-      '</div>';
+      '<p class="dc-count"><b id="dcCount">' + num(total == null ? candidates().length : total) + '</b> truyện trong vòng</p>' +
+    '</div>';
   }
 
-  function emptyHTML() {
-    return '<div class="dc-empty"><b>Chưa có truyện khớp bộ lọc.</b>' +
-      '<p class="sm muted">Thử bật thêm tình trạng hoặc “Gồm 18+”.</p></div>';
+  function hintHTML() {
+    return '<p class="dc-kick">Bốc bài</p>' +
+      '<h2 class="dc-tt">Một lá cho hôm nay</h2>' +
+      '<p class="dc-sub">Bộ bài gồm truyện bạn đang theo dõi hoặc vừa cập nhật. Bốc một lá, lật ra rồi đọc.</p>';
   }
 
+  function cardHTML(n, ch) {
+    var o = opts();
+    return '<p class="dc-kick">Chọn cho hôm nay</p>' +
+      '<h2 class="dc-tt">' + esc(n.title) + '</h2>' +
+      '<p class="dc-meta">' + [n.author ? esc(n.author) : '', n.couple ? esc(n.couple) : '',
+        esc(CZ.countText ? CZ.countText(n) : '')].filter(Boolean).join(' · ') +
+        (n.status ? ' <em>· ' + esc(n.status) + '</em>' : '') + '</p>' +
+      '<p class="dc-meta dc-latest" data-latest>' + (ch ? ('Đang đọc chương ' + ch) : 'Chưa đọc chương nào') + '</p>';
+  }
+
+  function idleActsHTML() {
+    return '<button class="btn pri" id="dcDraw" data-act="draw" type="button">Bốc một lá</button>';
+  }
+  function idleFootHTML(n) {
+    return '<button class="dc-q" id="dcShuffle" data-act="shuffle" type="button">Xáo bài</button>' +
+      '<span class="dc-dot" aria-hidden="true"></span>' +
+      '<span class="dc-cnt"><b>' + num(n) + '</b> lá trong bộ bài</span>';
+  }
+  function doneActsHTML(n, ch) {
+    return '<a class="btn pri" href="' + esc(CZ.readURL ? CZ.readURL(n.slug, Math.max(1, ch || 1)) : n.url) + '" data-dice-read>' +
+        (CZ.icon ? CZ.icon('play', 'i-s') : '') + 'Đọc ngay</a>' +
+      '<a class="btn ghost" href="' + esc(n.url || (CZ.storyURL ? CZ.storyURL(n.slug) : '/truyen/')) + '">Trang truyện</a>';
+  }
+  function doneFootHTML(n) {
+    return '<button class="dc-q" id="dcAgain" data-act="draw" type="button">Bốc lá khác</button>' +
+      '<span class="dc-dot" aria-hidden="true"></span>' +
+      '<button class="dc-q" id="dcShuffle" data-act="shuffle" type="button">Xáo bài</button>' +
+      '<span class="dc-dot" aria-hidden="true"></span>' +
+      '<span class="dc-cnt"><b>' + num(n) + '</b> lá còn lại</span>';
+  }
+
+  /* -------------------------------------------------------------------------
+     Dựng toàn bộ khu bốc bài (gọi lại mỗi khi đổi bộ lọc)
+     ---------------------------------------------------------------------- */
   function renderBox(m, first) {
     if (!m) return;
-    var list = candidates();
-    S.cands = wheelSet(list);
-    S.pick = null;
     var body = m.querySelector('#dcBody') || m;
-    if (!S.cands.length) { body.innerHTML = filtersHTML() + emptyHTML(); }
-    else {
-      body.innerHTML = filtersHTML() +
-        '<div class="dc-stage">' +
-          '<div class="dc-wheel-col">' +
-            wheelHTML(S.cands) +
-            '<div class="dc-actions">' +
-              '<div class="dc-act-btns">' +
-                '<button class="btn pri dc-spin" id="dcSpin" type="button">Quay ngay</button>' +
-                '<button class="btn pri dc-spin" id="dcAgain" type="button" hidden>Quay lại</button>' +
-                '<button class="btn ghost dc-shuf" id="dcShuffle" type="button" title="Trộn danh sách truyện khác">' +
-                  (CZ.icon ? CZ.icon('spark', 'i-s') : '') + '<span>Trộn truyện</span></button>' +
-              '</div>' +
-              '<span class="sm muted dc-note" id="dcNote">' + (list.length !== S.cands.length
-                ? (num(S.cands.length) + '/' + num(list.length) + ' truyện phù hợp')
-                : 'Ưu tiên truyện đang theo dõi') + '</span>' +
-            '</div>' +
-          '</div>' +
-          '<div class="dc-side-col">' +
-            '<div class="dc-standby" id="dcStandby">' +
-              '<div class="dc-standby-ic" aria-hidden="true">🎲</div>' +
-              '<div><b>Chạm để quay</b><p class="sm muted">Bấm <b>Quay ngay</b> hoặc chạm tâm vòng quay để chọn truyện.</p></div>' +
-            '</div>' +
-            '<div class="dc-result" id="dcResult" hidden></div>' +
-            rosterHTML(S.cands, '') +
-          '</div>' +
-        '</div>';
+    var todayEl = d.querySelector('#dcToday');
+    if (todayEl && !todayEl.innerHTML) todayEl.innerHTML = todayHTML();
+
+    refreshPool();
+    if (!S.pool.length) {
+      body.innerHTML = filtersHTML(0) +
+        '<div class="dc-empty"><b>Chưa có truyện khớp bộ lọc.</b>' +
+        '<p class="sm muted">Thử bật thêm tình trạng hoặc “Gồm 18+”.</p></div>';
+      bindBody(m);
+      return;
     }
+    body.innerHTML = filtersHTML(S.pool.length) +
+      '<div class="dc-draw" id="dcDrawWrap">' +
+        '<div class="dc-board" id="dcBoard">' +
+          '<div class="dc-pile" id="dcPile" aria-hidden="true">' +
+            '<span class="dc-bk u3"></span>' +
+            '<span class="dc-bk u2"></span>' +
+            '<span class="dc-bk u1"><img src="' + LOGO + '" width="699" height="98" alt="" decoding="async"></span>' +
+          '</div>' +
+          '<div class="dc-face" id="dcFace" hidden></div>' +
+          '<span class="dc-ring" id="dcRing" aria-hidden="true"></span>' +
+          '<span class="dc-sheen" aria-hidden="true"><i id="dcSheen"></i></span>' +
+        '</div>' +
+        '<div class="dc-floor" aria-hidden="true"></div>' +
+        '<div class="dc-copy" id="dcCopy">' +
+          '<div id="dcHint">' + hintHTML() + '</div>' +
+          '<div id="dcResult" tabindex="-1" hidden></div>' +
+        '</div>' +
+        '<div class="dc-acts" id="dcActs">' + idleActsHTML() + '</div>' +
+        '<div class="dc-foot" id="dcFoot">' + idleFootHTML(S.pool.length) + '</div>' +
+        '<p class="dc-live" role="status" aria-live="polite" id="dcLive">Sẵn sàng · ' + num(S.pool.length) + ' lá</p>' +
+      '</div>';
+
+    S.hasCard = false;
+    S.pick = null;
     bindBody(m);
     if (first) {
-      var sp = m.querySelector('#dcSpin');
+      var sp = m.querySelector('#dcDraw');
       if (sp) { try { sp.focus({ preventScroll: true }); } catch (e) {} }
     }
   }
 
-  function bindHub(m) {
-    var hub = m.querySelector('#dcHub');
-    if (hub) hub.addEventListener('click', function () { spinWheel(m); });
+  /* dựng lại thanh lọc làm mất focus — trả lại đúng chip vừa bấm */
+  function keepFocus(m, sel) {
+    var el = m.querySelector(sel);
+    if (el) { try { el.focus({ preventScroll: true }); } catch (e) {} }
+  }
+
+  /* xấp bài mới: xáo lại toàn bộ truyện khớp bộ lọc */
+  function refreshPool() {
+    S.pool = shuffleArr(candidates());
+    S.deck = S.pool.slice();
   }
 
   function bindBody(m) {
@@ -256,190 +232,191 @@
         if (!o.run && !o.done) o[k] = true;
         saveOpts(o);
         renderBox(m, false);
+        keepFocus(m, '[data-opt="' + k + '"]');
       });
     });
     Array.prototype.forEach.call(body.querySelectorAll('[data-genre]'), function (b) {
       b.addEventListener('click', function () {
-        var o = opts();
-        o.genre = o.genre === b.dataset.genre ? '' : b.dataset.genre;
+        var o = opts(), g = b.dataset.genre;
+        o.genre = o.genre === g ? '' : g;
         saveOpts(o);
         renderBox(m, false);
+        keepFocus(m, '[data-genre="' + g + '"]');
       });
     });
-    var spin = m.querySelector('#dcSpin');
-    if (spin) spin.addEventListener('click', function () { spinWheel(m); });
-    var again = m.querySelector('#dcAgain');
-    if (again) again.addEventListener('click', function () { spinWheel(m); });
-    var shuf = m.querySelector('#dcShuffle');
-    if (shuf) shuf.addEventListener('click', function () { shuffleWheel(m); });
-    bindHub(m);
+    if (body.__dcBound) return;
+    body.__dcBound = 1;
+    body.addEventListener('click', function (e) {
+      var act = e.target.closest('[data-act]');
+      if (act) {
+        if (act.dataset.act === 'draw') drawCard(m);
+        else if (act.dataset.act === 'shuffle') shuffleDeck(m);
+        return;
+      }
+      if (e.target.closest('#dcPile') && !S.hasCard) drawCard(m);
+    });
   }
 
-  function shuffleWheel(m) {
-    if (S.spinning) return;
-    var list = candidates();
-    var full = candidates(true);
-    if (full.length > list.length && list.length < MAX_SLICES) list = full;
-    if (!list.length) return;
-    var prevKey = S.cands.map(function (n) { return n.slug; }).join(',');
-    var next = wheelSet(list, true);
-    for (var tries = 0; tries < 5 && list.length > 1; tries++) {
-      if (next.map(function (n) { return n.slug; }).join(',') !== prevKey) break;
-      next = wheelSet(list, true);
+  /* một lá rút ra khỏi xấp (hết xấp thì xáo lại) */
+  function nextCard() {
+    if (!S.deck.length) S.deck = shuffleArr(S.pool);
+    if (!S.deck.length) return null;
+    var last = readVersioned(LS.last, LEGACY_LS.last, '');
+    var card = S.deck.pop();
+    /* không lặp lá vừa bốc: đẩy xuống đáy xấp rồi rút lá kế */
+    if (card && card.slug === last && S.deck.length) {
+      S.deck.unshift(card);
+      card = S.deck.pop();
     }
-    S.cands = next;
-    S.pick = null;
-    var wheel = m.querySelector('#dcWheel');
-    var wrap = m.querySelector('.dc-wheelwrap');
-    var stage = m.querySelector('.dc-stage');
-    var res = m.querySelector('#dcResult');
-    var standby = m.querySelector('#dcStandby');
-    var roster = m.querySelector('#dcRoster');
+    return card;
+  }
+
+  /* Web Animations có thể không tồn tại (jsdom, trình duyệt cũ) — luôn có đường lùi */
+  function anim(el, kf, opt) {
+    if (!el || reduce() || typeof el.animate !== 'function') return null;
+    try { return el.animate(kf, opt); } catch (e) { return null; }
+  }
+  function done(a, fn) {
+    if (a && a.finished && a.finished.then) a.finished.then(fn).catch(fn);
+    else fn();
+  }
+
+  function setBusy(on) {
+    S.busy = on;
+    var wrap = d.querySelector('#dcDrawWrap');
+    if (wrap) wrap.classList.toggle('busy', on);
+  }
+
+  function drawCard(m) {
+    if (S.busy || !S.pool.length) return;
+    var book = nextCard();
+    if (!book) return;
+    setBusy(true);
+    var gen = S.gen;
+    var draw = m.querySelector('#dcDraw');
+    if (draw) { draw.disabled = true; draw.textContent = 'Đang bốc…'; }
     var live = m.querySelector('#dcLive');
-    var note = m.querySelector('#dcNote');
-    if (stage) stage.classList.remove('has-result');
-    if (wrap) {
-      wrap.classList.remove('won', 'spinning');
-      if (S.cands.length <= 6) wrap.setAttribute('data-few', '1');
-      else wrap.removeAttribute('data-few');
-    }
-    if (res) res.hidden = true;
-    if (standby) standby.hidden = false;
-    if (roster) roster.outerHTML = rosterHTML(S.cands, '');
-    if (wheel) {
-      wheel.style.transition = 'none';
-      S.rot = 0;
-      wheel.style.transform = 'rotate(0deg)';
-      wheel.style.background = wheelBg(S.cands);
-      wheel.innerHTML = wheelInnerHTML(S.cands);
-      wheel.classList.remove('shuffling');
-      void wheel.offsetWidth;
-      wheel.classList.add('shuffling');
-      bindHub(m);
-    }
-    if (live) live.textContent = 'Đã trộn · ' + num(S.cands.length) + ' truyện';
-    if (note) {
-      note.textContent = list.length !== S.cands.length
-        ? ('Đã trộn ' + num(S.cands.length) + '/' + num(list.length) + ' truyện')
-        : ('Đã trộn ' + num(S.cands.length) + ' truyện');
-    }
+    if (live) live.textContent = 'Đang bốc…';
+    if (S.pick) jset(LS.last, S.pick.slug);
+
+    if (!S.hasCard) { flipIn(book, gen); return; }
+
+    /* lá cũ chìm về xấp rồi mới rút lá mới */
+    var face = m.querySelector('#dcFace');
+    S.hasCard = false;
+    if (!face) { flipIn(book, gen); return; }
+    var fold = anim(face, [
+      { transform: 'translate3d(0,0,0) scale(1)', opacity: 1 },
+      { transform: 'translate3d(0,16px,0) scale(.95)', opacity: 0 }
+    ], { duration: FOLD_MS, easing: 'cubic-bezier(.4,0,.7,1)', fill: 'both' });
+    var go = function () {
+      if (fold) { try { fold.cancel(); } catch (e) {} }
+      face.hidden = true;
+      face.style.opacity = '';
+      if (gen !== S.gen) return;
+      var pile = m.querySelector('#dcPile');
+      if (pile) pile.hidden = false;
+      if (reduce() || !pile) { flipIn(book, gen); return; }
+      var back = anim(pile, [{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: 'linear', fill: 'both' });
+      done(back, function () { if (back) { try { back.cancel(); } catch (e) {} } flipIn(book, gen); });
+    };
+    done(fold, go);
   }
 
-  function scheduleTicks(m, spinId) {
-    if (reduce()) return;
-    var ptr = m.querySelector('#dcPointer');
-    var totalTicks = 15;
-    for (var ti = 0; ti < totalTicks; ti++) {
-      (function (idx) {
-        var progress = idx / (totalTicks - 1);
-        var delay = Math.round(Math.pow(progress, 2.15) * (SPIN_MS - 130));
-        setTimeout(function () {
-          if (!S.spinning || S.spin !== spinId) return;
-          if (ptr) {
-            ptr.classList.remove('tick');
-            void ptr.offsetWidth;
-            ptr.classList.add('tick');
-          }
-        }, delay);
-      })(ti);
-    }
-  }
+  /* lá lật tại chỗ: nhấc lên, xoay 3D 180°, đáp xuống */
+  function flipIn(book, gen) {
+    var m = d.querySelector('#czDiceBox') || d;
+    var board = m.querySelector('#dcBoard'), pile = m.querySelector('#dcPile'), face = m.querySelector('#dcFace');
+    if (!board || !face) { settle(); return; }
+    var ch = CZ.progress ? (CZ.progress(book) || 0) : 0;
+    var el = d.createElement('div');
+    el.className = 'dc-flip';
+    el.innerHTML =
+      '<span class="dc-fc back"><img src="' + LOGO + '" width="699" height="98" alt="" decoding="async"></span>' +
+      '<span class="dc-fc front">' + coverTag(book, true) + '</span>';
+    board.appendChild(el);
 
-  function spinWheel(m) {
-    if (S.spinning || !S.cands.length) return;
-    var list = S.cands.slice();
-    var spinId = S.spin = (S.spin || 0) + 1;
-    var wheel = m.querySelector('#dcWheel'), live = m.querySelector('#dcLive');
-    var wrap = m.querySelector('.dc-wheelwrap');
-    if (wheel) {
-      wheel.classList.remove('shuffling');
-      Array.prototype.forEach.call(wheel.querySelectorAll('.dc-slot.is-pick'), function (el) {
-        el.classList.remove('is-pick');
-      });
-    }
-    var avoid = (S.pick && S.pick.slug) || readVersioned(LS.last, LEGACY_LS.last, '');
-    var pool = [];
-    for (var pi = 0; pi < list.length; pi++) {
-      if (!avoid || list[pi].slug !== avoid) pool.push(pi);
-    }
-    if (!pool.length) { for (pi = 0; pi < list.length; pi++) pool.push(pi); }
-    var pick = pool[Math.floor(Math.random() * pool.length)];
-    var step = 360 / list.length;
-    var target = 360 * 4 + (360 - (pick * step + step / 2));
-    S.rot = Math.floor(S.rot / 360) * 360 + target;
-    S.spinning = true;
-    var spin = m.querySelector('#dcSpin'), again = m.querySelector('#dcAgain'), shuf = m.querySelector('#dcShuffle');
-    var stage = m.querySelector('.dc-stage');
-    var standby = m.querySelector('#dcStandby');
-    if (stage) stage.classList.remove('has-result');
-    if (wrap) { wrap.classList.remove('won'); wrap.classList.add('spinning'); }
-    if (spin) { spin.hidden = false; spin.disabled = true; spin.textContent = 'Đang quay…'; }
-    if (again) again.hidden = true;
-    if (shuf) shuf.disabled = true;
-    m.querySelector('#dcResult').hidden = true;
-    if (standby) standby.hidden = false;
-    if (live) live.textContent = 'Đang quay…';
-    if (reduce()) {
-      if (wheel) wheel.style.transition = 'none';
-      if (wheel) wheel.style.transform = 'rotate(' + S.rot + 'deg)';
-      finish(0);
-    } else {
-      scheduleTicks(m, spinId);
-      if (wheel) {
-        wheel.style.transition = 'transform ' + SPIN_MS + 'ms cubic-bezier(.16,.86,.22,1)';
-        wheel.style.transform = 'rotate(' + S.rot + 'deg)';
+    var D = reduce() ? 0 : FLIP_MS;
+    var flip = null;
+    if (D) {
+      flip = anim(el, [
+        { transform: 'translate3d(0,0,0) rotateY(0deg) scale(1)' },
+        { transform: 'translate3d(0,-20px,0) rotateY(88deg) scale(1.035)', offset: .46 },
+        { transform: 'translate3d(0,0,0) rotateY(180deg) scale(1)' }
+      ], { duration: D, easing: 'cubic-bezier(.30,.72,.24,1)', fill: 'both' });
+      var floor = m.querySelector('.dc-floor');
+      if (floor) anim(floor, [
+        { opacity: 1, transform: 'scale(1)' },
+        { opacity: .35, transform: 'scale(.86)', offset: .46 },
+        { opacity: 1, transform: 'scale(1)' }
+      ], { duration: D, easing: 'cubic-bezier(.30,.72,.24,1)' });
+      if (pile) {
+        var u1 = pile.querySelector('.u1');
+        if (u1) anim(u1, [{ opacity: 1 }, { opacity: 0 }], { duration: 150, easing: 'linear', fill: 'both' });
+        Array.prototype.forEach.call(pile.querySelectorAll('.u2, .u3'), function (n) {
+          anim(n, [{ opacity: 1 }, { opacity: 0 }], { duration: 380, delay: 40, easing: 'cubic-bezier(.4,0,.7,1)', fill: 'both' });
+        });
       }
-      setTimeout(finish, SPIN_MS + 40);
+    } else if (pile) {
+      pile.style.opacity = '0';
     }
 
-    function finish() {
-      S.spinning = false;
-      if (wrap) wrap.classList.remove('spinning');
-      if (spinId !== S.spin) return;
-      S.pick = list[pick] || null;
-      if (!S.pick) return;
-      if (spin) { spin.disabled = false; spin.textContent = 'Quay ngay'; spin.hidden = true; }
-      if (again) again.hidden = false;
-      if (shuf) { shuf.hidden = false; shuf.disabled = false; }
-      if (stage) stage.classList.add('has-result');
-      if (wrap) wrap.classList.add('won');
-      if (standby) standby.hidden = true;
-      if (wheel) {
-        var chosenSlot = wheel.querySelector('[data-slot="' + pick + '"]');
-        if (chosenSlot) chosenSlot.classList.add('is-pick');
-      }
-      var roster = m.querySelector('#dcRoster');
-      if (roster) roster.outerHTML = rosterHTML(list, S.pick.slug);
-      jset(LS.last, S.pick.slug);
-      if (live) live.textContent = 'Đã chọn: ' + S.pick.title;
-      paintResult(m, S.pick);
-    }
+    var settle = function () {
+      el.remove();
+      if (gen !== S.gen) { setBusy(false); return; }
+      if (pile) { pile.hidden = true; pile.style.opacity = ''; }
+      face.innerHTML = coverTag(book, true);
+      face.classList.remove('noart');
+      face.hidden = false;
+      land(book, ch, gen);
+    };
+    if (flip) done(flip, settle);
+    else if (reduce()) settle();          /* giảm chuyển động: lật tức thì */
+    else setTimeout(settle, 120);          /* trình duyệt không có Web Animations */
   }
 
-  function paintResult(m, n) {
-    var box = m.querySelector('#dcResult');
-    if (!box) return;
-    var ch = CZ.progress ? (CZ.progress(n) || 0) : 0;
-    box.hidden = false;
-    box.innerHTML =
-      '<div class="dc-card">' +
-        '<div class="dc-cv">' + coverTag(n, false) + '</div>' +
-        '<div class="dc-info">' +
-          '<span class="pill ' + esc(n.statusCls || 'run') + '"><span class="d"></span>' + esc(n.status || '') + '</span>' +
-          '<h4>' + esc(n.title) + '</h4>' +
-          '<p class="sm muted">' + [n.author ? esc(n.author) : '', n.couple ? esc(n.couple) : '', esc(CZ.countText ? CZ.countText(n) : '')]
-            .filter(Boolean).join(' · ') + '</p>' +
-          '<p class="dc-latest sm" data-latest>' + (ch ? ('Đang đọc chương ' + ch) : 'Chưa đọc') + '</p>' +
-          '<div class="dc-cardbtn">' +
-            '<a class="btn pri" href="' + esc(CZ.readURL ? CZ.readURL(n.slug, Math.max(1, ch || 1)) : n.url) + '" data-dice-read>' +
-              (CZ.icon ? CZ.icon('play', 'i-s') : '') + 'Đọc ngay</a>' +
-            '<a class="btn ghost" href="' + esc(n.url || (CZ.storyURL ? CZ.storyURL(n.slug) : '/truyen/')) + '">Trang truyện</a>' +
-          '</div>' +
-        '</div>' +
-      '</div>';
+  function land(book, ch, gen) {
+    var m = d.querySelector('#czDiceBox') || d;
+    var hint = m.querySelector('#dcHint'), res = m.querySelector('#dcResult');
+    var acts = m.querySelector('#dcActs'), foot = m.querySelector('#dcFoot');
+    var live = m.querySelector('#dcLive');
+    if (res) {
+      res.innerHTML = cardHTML(book, ch);
+      res.hidden = false;
+    }
+    if (hint) hint.hidden = true;
+    if (acts) acts.innerHTML = doneActsHTML(book, ch);
+    if (foot) foot.innerHTML = doneFootHTML(S.deck.length);
+
+    {
+      var ring = m.querySelector('#dcRing');
+      if (ring) anim(ring, [{ opacity: .85, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(1.05)' }],
+        { duration: 620, easing: 'cubic-bezier(.2,.8,.3,1)' });
+      var sheen = m.querySelector('#dcSheen');
+      if (sheen) {
+        anim(sheen, [{ transform: 'translateX(-160%) rotate(14deg)', opacity: 0 },
+          { opacity: .75, offset: .18 }, { opacity: 0 }], { duration: 700, delay: 80, easing: 'ease-out' });
+        anim(sheen, [{ transform: 'translateX(-160%) rotate(14deg)' },
+          { transform: 'translateX(300%) rotate(14deg)' }],
+          { duration: 700, delay: 80, easing: 'cubic-bezier(.25,.7,.3,1)' });
+      }
+      if (res) anim(res, [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }],
+        { duration: 320, easing: 'cubic-bezier(.22,1,.36,1)' });
+      if (acts) anim(acts, [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }],
+        { duration: 320, delay: 70, easing: 'cubic-bezier(.22,1,.36,1)' });
+    }
+
+    S.hasCard = true;
+    S.pick = book;
+    jset(LS.last, book.slug);
+    setBusy(false);
+    if (res) { try { res.focus({ preventScroll: true }); } catch (e) {} }
+    if (live) live.textContent = 'Đã bốc: ' + book.title;
+
     if (CZ.toc) {
-      CZ.toc(n.slug).then(function (head) {
-        var slot = box.querySelector('[data-latest]');
+      CZ.toc(book.slug).then(function (head) {
+        if (gen !== S.gen) return;
+        var slot = m.querySelector('[data-latest]');
         if (!slot || !head || !head.ok || !head.chapters || !head.chapters.length) return;
         var last = head.chapters[head.chapters.length - 1];
         var t = String((last && last.t) || '').trim();
@@ -449,7 +426,25 @@
     }
   }
 
-  /* ---- nút dẫn sang trang riêng /vong-quay/ ở trang chủ, trang truyện, menu ---- */
+  function shuffleDeck(m) {
+    if (S.busy) return;
+    refreshPool();
+    var live = m.querySelector('#dcLive');
+    var pile = m.querySelector('#dcPile');
+    if (pile && !reduce() && !pile.hidden) {
+      Array.prototype.forEach.call(pile.querySelectorAll('.u2, .u3'), function (n, i) {
+        var base = i ? 'translate(-13px,-13px) rotate(-5.4deg) scale(.972)' : 'translate(-6px,-7px) rotate(-2.2deg) scale(.986)';
+        anim(n, [{ transform: base },
+          { transform: i ? 'translate(-16px,-26px) rotate(-9deg) scale(.97)' : 'translate(-8px,-19px) rotate(4deg) scale(.982)' },
+          { transform: base }], { duration: 520, easing: 'cubic-bezier(.3,.7,.3,1)' });
+      });
+    }
+    var foot = m.querySelector('#dcFoot');
+    if (foot) foot.innerHTML = S.hasCard ? doneFootHTML(S.deck.length) : idleFootHTML(S.deck.length);
+    if (live) live.textContent = 'Đã xáo · ' + num(S.deck.length) + ' lá';
+  }
+
+  /* ---- nút dẫn sang trang riêng /vong-quay/ ở trang chủ ---- */
   function buttons() {
     var hosts = Array.prototype.slice.call(d.querySelectorAll('[data-dice]'));
     hosts.forEach(function (h) {
@@ -459,13 +454,11 @@
       a.href = DICE_URL;
       a.className = 'btn ghost sm dicebtn';
       a.innerHTML = (CZ.icon ? CZ.icon('dice', 'i-s') : '') + '<span>Hôm nay đọc gì?</span>';
-      a.setAttribute('title', 'Mở trang vòng quay chọn truyện ngẫu nhiên — ưu tiên truyện bạn theo dõi');
+      a.setAttribute('title', 'Mở trang bốc bài chọn truyện ngẫu nhiên — ưu tiên truyện bạn theo dõi');
       h.appendChild(a);
     });
   }
 
-  /* Khi gọi CZDice.open() từ thanh đọc / cài đặt đọc: nếu đang ở trang vòng quay
-     thì dựng ngay trên trang, còn ở trang khác thì chuyển hướng sang /vong-quay/ */
   function open() {
     var pageBox = d.querySelector('#czDiceBox.dicepage-box');
     if (pageBox) {
@@ -490,8 +483,8 @@
       if (CZ.reveal) CZ.reveal();
     });
     w.addEventListener('cz:personal', function (e) {
-      var dt = e && e.detail || {};
-      if (dt.type === 'ready' && !S.spinning && !S.pick) renderBox(pageBox, false);
+      var dt = (e && e.detail) || {};
+      if (dt.type === 'ready' && !S.busy && !S.hasCard) renderBox(pageBox, false);
     });
   }
 

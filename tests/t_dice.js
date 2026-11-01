@@ -104,19 +104,18 @@ const REG = JSON.parse(read('data/registry.json'));
   out.trangRieng = {
     coKhungTrang: !!box,
     khongPhaiModal: !doc.querySelector('.modal.dicebox'),
-    coVongQuay: !!(box && box.querySelector('.dc-wheel')),
-    coNutQuay: !!(box && box.querySelector('#dcSpin')),
-    coNutTron: !!(box && box.querySelector('#dcShuffle')),
-    soLat: box ? box.querySelectorAll('.dc-slot').length : 0,
+    coBoBai: !!(box && box.querySelector('.dc-board') && box.querySelector('#dcPile')),
+    coNutBoc: !!(box && box.querySelector('#dcDraw')),
+    coNutXao: !!(box && box.querySelector('#dcShuffle')),
+    soLat: box ? box.querySelectorAll('.dc-bk').length : 0,
     chipTinhTrang: box ? box.querySelectorAll('[data-opt="run"],[data-opt="done"]').length : 0,
     chip18: !!(box && box.querySelector('[data-opt="adult"]')),
     live: (box && box.querySelector('#dcLive') ? box.querySelector('#dcLive').textContent : ''),
     tiengKhiMo: sfxLog.slice()
   };
-  if (!out.trangRieng.coKhungTrang || !out.trangRieng.coVongQuay || !out.trangRieng.coNutQuay) err('trang /vong-quay/ phải có vòng quay và nút Quay ngay trên trang');
-  if (!out.trangRieng.khongPhaiModal) err('vòng quay phải là trang riêng chứ không phải popup modal');
-  if (!out.trangRieng.soLat) err('vòng quay phải có lát truyện (bìa/tên)');
-  if (out.trangRieng.soLat > 10) err('vòng quay chỉ nên có tối đa 10 lát cho dễ nhìn');
+  if (!out.trangRieng.coKhungTrang || !out.trangRieng.coBoBai || !out.trangRieng.coNutBoc) err('trang /vong-quay/ phải có xấp bài và nút “Bốc một lá” trên trang');
+  if (!out.trangRieng.khongPhaiModal) err('bốc bài phải là trang riêng chứ không phải popup modal');
+  if (out.trangRieng.soLat < 3) err('xấp bài phải có các lớp lá úp phía sau');
   if (out.trangRieng.chipTinhTrang !== 2) err('bộ lọc phải có hai lựa chọn tình trạng: đang cập nhật / hoàn thành');
   if (!out.trangRieng.chip18) err('bộ lọc phải có lựa chọn “Gồm 18+”');
   if (out.trangRieng.tiengKhiMo.length) err('mở trang chưa bấm gì thì không được phát tiếng');
@@ -151,20 +150,20 @@ const REG = JSON.parse(read('data/registry.json'));
   /* =====================================================================
      5. quay: ~2,6 giây, kết quả đầy đủ, nút Đọc ngay đúng chương
      ===================================================================== */
-  click(win, $('#dcSpin'));
+  click(win, $('#dcDraw'));
   await wait(60);
   out.trongLucQuay = {
     live: $('#dcLive').textContent,
-    nutKhoa: $('#dcSpin').disabled,
-    nhan: $('#dcSpin').textContent.trim(),
+    nutKhoa: $('#dcDraw').disabled,
+    nhan: $('#dcDraw').textContent.trim(),
     coKetQua: !$('#dcResult').hidden
   };
-  if (!/Đang quay/.test(out.trongLucQuay.live)) err('trong lúc quay phải báo “Đang quay…” ở vùng role=status');
-  if (!out.trongLucQuay.nutKhoa) err('đang quay thì nút Quay phải khoá để không bấm chồng');
-  if (out.trongLucQuay.coKetQua) err('chưa quay xong đã hiện kết quả');
+  if (!/Đang bốc/.test(out.trongLucQuay.live)) err('trong lúc bốc phải báo “Đang bốc…” ở vùng role=status');
+  if (!out.trongLucQuay.nutKhoa) err('đang bốc thì nút phải khoá để không bấm chồng');
+  if (out.trongLucQuay.coKetQua) err('chưa bốc xong đã hiện kết quả');
   await wait(2900);
   const res = $('#dcResult');
-  const link = res.querySelector('[data-dice-read]');
+  const link = $('#dcActs [data-dice-read]');
   let pick = null;
   try { pick = JSON.parse(win.localStorage.getItem('ssochuz:dice:last:v1') || 'null'); } catch (e) { pick = null; }
   const pickRaw = win.localStorage.getItem('ssochuz:dice:last:v1');
@@ -172,13 +171,14 @@ const REG = JSON.parse(read('data/registry.json'));
     hien: res && !res.hidden,
     slug: pick,
     slugTrongMay: pickRaw,
-    tieuDe: (res.querySelector('h4') || {}).textContent,
-    coBia: !!res.querySelector('.dc-cv img, .dc-cv .dc-ph'),
+    tieuDe: (res.querySelector('h2') || {}).textContent,
+    coBia: !!$('#dcFace') && !$('#dcFace').hidden && !!$('#dcFace').querySelector('img, .dc-ph'),
     link: link ? link.getAttribute('href') : '',
     chuongMoiNhat: (res.querySelector('[data-latest]') || {}).textContent,
-    nutQuayLai: !!$('#dcAgain') && !$('#dcAgain').hidden,
-    nutTronTruyen: !!$('#dcShuffle') && !$('#dcShuffle').hidden,
-    latDuocChon: !!box.querySelector('.dc-slot.is-pick'),
+    nutBocLai: !!$('#dcAgain') && !$('#dcAgain').hidden,
+    nutXaoBai: !!$('#dcShuffle') && !$('#dcShuffle').hidden,
+    latDaLat: !!$('#dcFace') && !$('#dcFace').hidden,
+    xapAn: !!$('#dcPile') && $('#dcPile').hidden,
     tieng: sfxLog.slice()
   };
   if (!out.ketQua.hien) err('quay xong phải hiện thẻ kết quả');
@@ -187,20 +187,22 @@ const REG = JSON.parse(read('data/registry.json'));
   if (!pick || out.ketQua.link.indexOf('/truyen/' + pick + '/') !== 0) err('nút “Đọc ngay” phải trỏ vào truyện vừa quay (thấy: ' + out.ketQua.link + ')');
   if (!/\/(chuong|chapter)-?\d+\/?$/.test(out.ketQua.link)) err('nút “Đọc ngay” phải trỏ tới một chương cụ thể (thấy: ' + out.ketQua.link + ')');
   if (pick === FOLLOW && out.ketQua.link.indexOf('chuong-3') < 0) err('truyện đang đọc dở phải mở đúng chương đang đọc (chuong-3)');
-  if (!out.ketQua.nutQuayLai) err('quay xong phải hiện nút “Quay lại”');
-  if (!out.ketQua.nutTronTruyen) err('quay xong phải hiện nút “Trộn truyện”');
-  if (!out.ketQua.latDuocChon) err('quay xong phải đánh dấu nổi bật bìa trúng trên vòng quay');
+  if (!out.ketQua.nutBocLai) err('bốc xong phải hiện nút “Bốc lá khác”');
+  if (!out.ketQua.nutXaoBai) err('bốc xong phải hiện nút “Xáo bài”');
+  if (!out.ketQua.latDaLat) err('bốc xong phải lật mặt bìa ra');
+  if (!out.ketQua.xapAn) err('đã bốc thì xấp bài phải ẩn đi, không chồng lên lá đã lật');
   if (out.ketQua.tieng.length) err('tính năng âm thanh hiệu ứng đã bỏ — vòng quay không được phát tiếng');
 
   /* bấm “Trộn truyện” sau khi quay: phải trộn sang danh sách truyện mới trên vòng quay */
   click(win, $('#dcShuffle'));
   await wait(80);
   out.tronTruyen = {
-    soLatSauKhiTron: box.querySelectorAll('.dc-slot').length,
+    soLaSauKhiXao: win.CZDice._S.deck.length,
+    soLaKhopBoLoc: win.CZDice.candidates().length,
     live: $('#dcLive').textContent
   };
-  if (out.tronTruyen.soLatSauKhiTron < 2) err('bấm “Trộn truyện” phải nạp danh sách truyện mới lên vòng quay');
-  if (!/Đã trộn/.test(out.tronTruyen.live)) err('bấm “Trộn truyện” phải cập nhật trạng thái đã trộn vòng quay');
+  if (out.tronTruyen.soLaSauKhiXao < 1 || out.tronTruyen.soLaSauKhiXao !== out.tronTruyen.soLaKhopBoLoc) err('bấm “Xáo bài” phải nạp lại đủ cả xấp bài khớp bộ lọc');
+  if (!/Đã xáo/.test(out.tronTruyen.live)) err('bấm “Xáo bài” phải cập nhật trạng thái ở vùng role=status');
 
   /* =====================================================================
      7. truyện vừa đọc bị loại khi vẫn còn đủ lựa chọn khác
@@ -218,11 +220,11 @@ const REG = JSON.parse(read('data/registry.json'));
   win.CZDice.mount(box, false);
   await wait(80);
   out.vongMoi = {
-    soLat: box.querySelectorAll('.dc-slot').length,
+    soLa: win.CZDice._S.deck.length,
     coKetQuaCu: !$('#dcResult').hidden
   };
-  if (out.vongMoi.soLat < 2) err('bỏ theo dõi rồi dựng lại phải có nhiều lát để quay (đang ' + out.vongMoi.soLat + ')');
-  click(win, $('#dcSpin'));
+  if (out.vongMoi.soLa < 2) err('bỏ theo dõi rồi dựng lại phải còn nhiều lá để bốc (đang ' + out.vongMoi.soLa + ')');
+  click(win, $('#dcDraw'));
   await wait(2900);
   let pickA = null, pickB = null;
   try { pickA = JSON.parse(win.localStorage.getItem('ssochuz:dice:last:v1') || 'null'); } catch (e) {}
@@ -230,7 +232,7 @@ const REG = JSON.parse(read('data/registry.json'));
   await wait(2900);
   try { pickB = JSON.parse(win.localStorage.getItem('ssochuz:dice:last:v1') || 'null'); } catch (e) {}
   out.khongLapLai = { truoc: pickA, sau: pickB, khac: pickA !== pickB, khacKetQuaCu: pickB !== pick };
-  if (pickB === pickA) err('“Quay lại” không được trả về đúng bộ vừa quay khi còn lựa chọn khác');
+  if (pickB === pickA) err('“Bốc lá khác” không được trả về đúng bộ vừa bốc khi còn lựa chọn khác');
   if (pickB === pick) err('kết quả vừa đọc hôm nay không được quay lại trúng ngay');
 
   win.CZ.sfx = realSfx;
@@ -258,7 +260,7 @@ const REG = JSON.parse(read('data/registry.json'));
     }
   });
   await wait(1500);
-  click(pm.win, pm.doc.querySelector('#dcSpin'));
+  click(pm.win, pm.doc.querySelector('#dcDraw'));
   await wait(80);
   out.giamChuyenDong = {
     reduce: pm.win.CZ.reduce,

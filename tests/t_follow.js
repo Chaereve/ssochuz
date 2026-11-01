@@ -89,11 +89,11 @@ function supabaseStub(w) {
   doc.body.appendChild(diceHost);
   win.CZDice.mount(diceHost, true);
   await wait(50);
-  ok(!!doc.querySelector('#czDiceBox #dcSpin'), 'trang vòng quay có nút Quay ngay');
-  const spin = doc.querySelector('#czDiceBox #dcSpin');
-  spin && spin.click();
-  await wait(70);
-  ok(doc.querySelector('#czDiceBox #dcResult h4')?.textContent === story.title, 'vòng quay chốt truyện theo dõi khi chỉ còn một ứng viên ưu tiên');
+  ok(!!doc.querySelector('#czDiceBox #dcDraw'), 'trang bốc bài có nút “Bốc một lá”');
+  const drawBtn = doc.querySelector('#czDiceBox #dcDraw');
+  drawBtn && drawBtn.click();
+  await wait(220);
+  ok(doc.querySelector('#czDiceBox #dcResult h2')?.textContent === story.title, 'bốc bài chốt truyện theo dõi khi chỉ còn một ứng viên ưu tiên');
 
   // Follow click in the story hero and in-reader control runs the shared async service.
   const reader = page('truyen.html', {
