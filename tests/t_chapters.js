@@ -57,6 +57,28 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     eq('corpus[' + i + '] no ' + title, p.no, no);
     eq('corpus[' + i + '] has ' + title, p.has, has);
   });
+  /* vòng 86: bốn nhóm phụ tách riêng (lời tác giả ≠ lời mở đầu truyện,
+     lời kết ≠ ngoại truyện) — mục lục dựa vào `group`, không dựa vào `kind` */
+  const grp = [
+    ['Lờ'+'i mở đầu', 'prologue'],
+    ['Giới thiệu nhân vật', 'prologue'],
+    ['Lờ'+'i tác giả', 'author'],
+    ['Đôi lời từ tác giả', 'author'],
+    ['Trò chuyện cùng tác giả', 'author'],
+    ['Ngoại truyện 1: Đêm Qua', 'extra'],
+    ['Lờ'+'i kết: Always You', 'end'],
+    ['Lờ'+'i bạt', 'end'],
+    ['Chương 5: Summer Đặc Biệt Và Ấm', ''],
+    ['Chương 12: Gặp gỡ', ''],
+  ];
+  grp.forEach(([title, want], i) => eq('group[' + i + '] ' + title, parse(title).group, want));
+  /* chữ “đặc biệt” giữa tên KHÔNG được kéo chương chính sang ngoại truyện */
+  eq('group/đặc biệt giữa tên', parse('Chương 8: Thực Tập Sinh Đặc Biệt').kind, 'main');
+  eq('kind/lời kết là extra', parse('Lờ'+'i kết: Always You').kind, 'extra');
+  /* tiêu đề không có dấu ngăn: giữ nguyên cả câu, không cắt mất chữ đầu */
+  eq('name/không dấu ngăn', parse('Giới Thiệu Nhân Vật').name, 'Giới Thiệu Nhân Vật');
+  eq('name/đôi lời', parse('Đôi lời từ tác giả').name, 'Đôi lời từ tác giả');
+  eq('name/có dấu ngăn', parse('Ngoại truyện 1: Đêm Qua').name, 'Đêm Qua');
   /* gợi ý số chương chính kế tiếp */
   eq('next/mở đầu không tính', nextMainChapterNo([{ t: 'Lờ'+'i mở đầu' }, { t: 'Giới thiệu nhân vật' }]), 1);
   eq('next/sau chương 0', nextMainChapterNo([{ t: 'Chương 0' }]), 1);

@@ -270,15 +270,14 @@
      Bản cũ trộn bốn kiểu trong cùng một cột: chữ “Mở” màu hồng, số màu mờ,
      “S1” màu vàng, và dấu “—” cho mọi mục không có số. */
   function chapToken(sp) {
-    var k = sp.kind || 'main';
-    if (k === 'open') return '0';
-    if (k === 'extra') return sp.no ? 'S' + sp.no : 'S';
+    var g = sp.group || '';
+    if (g === 'prologue') return '0';
+    if (g === 'extra') return sp.no ? 'S' + sp.no : 'S';
     return sp.no ? String(sp.no) : '';
   }
-  /* mục chính không có số: hàng “ghi chú” chứ không phải chương đánh số */
+  /* hàng không đánh số: “ghi chú” chứ không phải chương đánh số */
   function chapKindCls(sp) {
-    var k = sp.kind || 'main';
-    return k === 'main' && !sp.no ? 'note' : k;
+    return sp.group || (sp.no ? 'main' : 'note');
   }
   function chapTotal() {
     var mx = 0;
@@ -675,57 +674,70 @@
       if (!rows.length) return '';
       var open = gopen[key] == null ? autoOpen : !!gopen[key];
       gopen[key] = open;
+      /* số mục: chỉ in khi nhóm có từ 2 mục và không phải nhóm chương (nhãn
+         “Chương 25–36” đã là con số rồi). Đặt NGAY SAU nhãn, không đẩy ra mép
+         phải khung 1000px — để xa thế mắt không nối được số với nhãn. */
+      var cnt = (key === 'main' || key.charAt(0) === 'm' || rows.length < 2) ? '' :
+        '<span class="cv-n">' + rows.length + '</span>';
       return '<button class="cvol' + (open ? ' on' : '') + '" data-g="' + key + '" type="button" aria-expanded="' + (open ? 'true' : 'false') + '">' +
-          ic('right', 'i-s') + title +
+          ic('right', 'i-s') + '<span class="cv-lbl">' + title + '</span>' + cnt +
           '</button>' +
         '<div class="cgroup' + (open ? ' on' : '') + '" data-g="' + key + '"><div class="chapgrid">' +
           rows.map(function (x) { return chapLink(x, prog, marks, q); }).join('') + '</div></div>';
     }
     if (!q) {
-      var opens = [], mains = [], extras = [], notes = [];
+      /* Gom theo NHÓM, và xếp nhóm theo đúng thứ tự nó xuất hiện trong dữ liệu
+         — không áp một thứ tự cứng. Bộ mở đầu bằng “Lời tác giả” thì nhóm đó
+         đứng đầu; bộ có “Trò chuyện cùng tác giả” ở cuối thì nhóm đó đứng cuối.
+         Bốn nhóm phụ tách riêng (vòng 86): lời mở đầu truyện của tác giả, lời
+         mở đầu của truyện, ngoại truyện, lời kết. */
+      var GNAME = {
+        prologue: 'Lời mở đầu truyện',
+        author: 'Lời tác giả',
+        end: 'Lời kết',
+        extra: 'Ngoại truyện',
+        note: 'Ghi chú',
+        chap: 'Chương'
+      };
+      var order = [], buckets = {};
       list.forEach(function (x) {
-        var k = chapSplit(x.c).kind || 'main';
-        if (k === 'open') opens.push(x);
-        else if (k === 'extra') extras.push(x);
-        else mains.push(x);
+        var sp = chapSplit(x.c);
+        var key = sp.group || (sp.no ? 'chap' : 'note');
+        if (!buckets[key]) { buckets[key] = { key: key, rows: [] }; order.push(buckets[key]); }
+        buckets[key].rows.push(x);
       });
-      /* Đuôi không đánh số (lời kết, trò chuyện cùng tác giả, tóm tắt…) tách
-         thành nhóm “Kết / ghi chú”: chúng không phải chương nên không được nằm
-         lẫn trong “Chương 25–36” rồi hiện dấu “—”. CHỈ tách khi chúng nằm liền
-         một mạch ở CUỐI và vẫn còn chương đánh số phía trước — bộ mà mục không
-         số nằm ở đầu (be-my-angel, love-bound) phải giữ nguyên thứ tự. */
-      var cut = mains.length;
-      while (cut > 0 && !chapSplit(mains[cut - 1].c).no) cut--;
-      if (cut > 0 && cut < mains.length) { notes = mains.slice(cut); mains = mains.slice(0, cut); }
-      var hasKinds = opens.length + extras.length + notes.length > 0;
-      if (hasKinds || mains.length > 24) {
-        var html = '';
+      var chapRows = buckets.chap ? buckets.chap.rows : [];
+      var hasSpecial = order.length > (chapRows.length ? 1 : 0);
+      if (hasSpecial || chapRows.length > 24) {
         var hasCur = list.some(function (x) { return x.i === prog; });
-        if (opens.length) html += volBlock('open', 'Mở đầu / lời tác giả', opens, !hasCur || opens.some(function (x) { return x.i === prog; }));
-        if (mains.length > 24) {
-          var per = 24, gi, chunk;
-          for (gi = 0; gi * per < mains.length; gi++) {
-            chunk = mains.slice(gi * per, gi * per + per);
-            /* nhãn nhóm lấy số chương THẬT ở hai đầu nhóm, không lấy vị trí
-               trong danh sách: bản cũ rơi về vị trí khi hàng cuối không đánh
-               số nên third-person (36 chương + 4 mục ghi chú) in ra
-               “Chương 25–42”, sai số cuối. */
-            var a = 0, b = 0;
-            chunk.forEach(function (x) {
-              var n = chapSplit(x.c).no;
-              if (n) { if (!a) a = n; b = n; }
-            });
-            if (!a) a = chunk[0].i;
-            if (!b) b = chunk[chunk.length - 1].i;
-            var auto = chunk.some(function (x) { return x.i === prog; }) || (!hasCur && !opens.length && gi === 0);
-            html += volBlock('m' + gi, 'Chương ' + a + '–' + b, chunk, auto);
+        var html = '';
+        order.forEach(function (bk, bi) {
+          var hasNow = bk.rows.some(function (x) { return x.i === prog; });
+          /* nhóm chứa chương đang đọc luôn mở; chưa đọc gì thì mở nhóm đầu */
+          var auto = hasNow || (!hasCur && bi === 0);
+          if (bk.key !== 'chap') {
+            html += volBlock(bk.key, GNAME[bk.key], bk.rows, auto);
+            return;
           }
-        } else if (mains.length) {
-          html += volBlock('main', 'Chương', mains, !hasCur || mains.some(function (x) { return x.i === prog; }) || !opens.length);
-        }
-        /* thứ tự theo đúng thứ tự gốc của dữ liệu: chương chính → ghi chú → ngoại truyện */
-        if (notes.length) html += volBlock('note', 'Kết / ghi chú', notes, notes.some(function (x) { return x.i === prog; }));
-        if (extras.length) html += volBlock('extra', 'Ngoại truyện / đặc biệt', extras, extras.some(function (x) { return x.i === prog; }));
+          if (bk.rows.length > 24) {
+            var per = 24;
+            for (var gi = 0; gi * per < bk.rows.length; gi++) {
+              var chunk = bk.rows.slice(gi * per, gi * per + per);
+              /* nhãn lấy số chương THẬT ở hai đầu nhóm, không lấy vị trí */
+              var a = 0, z = 0;
+              chunk.forEach(function (x) {
+                var n = chapSplit(x.c).no;
+                if (n) { if (!a) a = n; z = n; }
+              });
+              if (!a) a = chunk[0].i;
+              if (!z) z = chunk[chunk.length - 1].i;
+              html += volBlock('m' + gi, 'Chương ' + a + '–' + z, chunk,
+                chunk.some(function (x) { return x.i === prog; }) || (!hasCur && gi === 0 && bi === 0));
+            }
+          } else {
+            html += volBlock('main', GNAME.chap, bk.rows, auto);
+          }
+        });
         $('#chapGrid').innerHTML = html;
         $('#chapPager').innerHTML = '';
         bindVols();

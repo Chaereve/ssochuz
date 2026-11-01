@@ -1592,7 +1592,7 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .cha.now .nm { font-weight: 700; }
 .cha.now .no { color: var(--acc); font-weight: 800; }
 .cha.off { opacity: .5; pointer-events: none; }
-.cha.k-extra .nm, .cha.k-note .nm { color: var(--mut); }
+.cha.k-extra .nm, .cha.k-note .nm, .cha.k-end .nm, .cha.k-author .nm { color: var(--mut); }
 mark.hit { background: var(--acc-soft); color: var(--acc); padding: 0 2px; border-radius: 2px; }
 
 .cmts { border-top: 1px solid var(--bd); padding-top: 26px; }
@@ -1708,10 +1708,19 @@ mark.hit { background: var(--acc-soft); color: var(--acc); padding: 0 2px; borde
 }
 
 /* bộ dài: nhóm chương gấp/mở mượt bằng grid-template-rows */
-.cvol { display: flex; align-items: center; gap: 9px; width: 100%; padding: 14px 2px 9px;
-  border: 0; border-bottom: 1px solid var(--bd); font-size: 13px; font-weight: 600; color: var(--txt);
+/* Nhãn nhóm chương: một bậc THẤP hơn tên chương về độ nặng nhưng khác hẳn về
+   chất — in hoa, giãn chữ, màu mờ. Bản cũ in đậm cùng cỡ với tên chương nên khi
+   tách thành 5–6 nhóm (lời mở đầu truyện, lời tác giả, chương, lời kết, ngoại
+   truyện) cả danh sách đọc ra như chục cái tiêu đề giành nhau. */
+.cvol { display: flex; align-items: center; gap: 8px; width: 100%; padding: 15px 2px 9px;
+  border: 0; border-bottom: 1px solid var(--bd); font-size: 11.5px; font-weight: 700;
+  letter-spacing: .09em; text-transform: uppercase; color: var(--mut);
   text-align: left; grid-column: 1 / -1; transition: color var(--t-fast) var(--ease); }
-.cvol:hover { color: #fff; }
+.cvol .cv-lbl { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cvol .cv-n { flex: none; padding: 1px 6px; border-radius: 99px; background: var(--surf2);
+  font: 600 10px/1.5 var(--font-mono); letter-spacing: .02em; color: var(--dim); }
+.cvol:hover { color: var(--txt); }
+.cvol:hover .cv-n { color: var(--mut); }
 .cvol .i { width: 13px; height: 13px; color: var(--dim); transition: transform var(--t-fast) var(--ease); }
 .cvol.on .i { transform: rotate(90deg); }
 /* Gấp/mở bằng grid-template-rows 0fr→1fr (không đo chiều cao bằng JS); ruột chỉ
