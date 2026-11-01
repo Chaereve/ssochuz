@@ -47,8 +47,8 @@
     var cv = im
       ? '<span class="cv"><img src="' + esc(im) + '" alt="" loading="lazy" decoding="async"></span>'
       : '<span class="cv"><span>' + esc(a.ini) + '</span></span>';
-    return '<span class="bk' + (im ? '' : ' noimg') + '" aria-hidden="true">' + cv +
-      '<span class="pp"></span></span>';
+    return '<span class="bk' + (im ? '' : ' noimg') + '" aria-hidden="true">' +
+      '<span class="sp"></span>' + cv + '<span class="pp"></span></span>';
   }
 
   function stBits(a) {
@@ -227,8 +227,8 @@
     $('#mkSt').innerHTML = ST.map(function (x) {
       return '<button type="button" class="xchip" data-st="' + x.k + '" aria-pressed="' +
         String(S.st === x.k) + '"><i class="xdot ' + x.k + '"></i>' + x.label + '</button>';
-    }).join('') + '<button type="button" class="xchip" data-st="" aria-pressed="' +
-      String(!S.st) + '">Tất cả</button>';
+    }).join('') + (S.st ? '<button type="button" class="xchip xchip-all" data-st="" aria-pressed="false">' +
+      'Tất cả</button>' : '');
     $$('#mkSt .xchip').forEach(function (b) {
       b.addEventListener('click', function () {
         S.st = b.getAttribute('data-st');
@@ -272,6 +272,10 @@
       if (g.getBoundingClientRect().top - top <= 0) hit = g.id.replace('mkG-', '');
     });
     if (!hit && gs.length) hit = gs[0].id.replace('mkG-', '');   /* đầu trang: nhóm đầu tiên */
+    /* cuối trang: nhóm cuối cùng (thanh A–Z che mất hàng cuối) */
+    if (gs.length && window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 4) {
+      hit = gs[gs.length - 1].id.replace('mkG-', '');
+    }
     if (!hit) return;
     setActive(hit);
     var b = $('#mkAZ button[aria-current="true"]');
@@ -294,7 +298,8 @@
     if (!g) return;
     setActive(L);
     jumping = Date.now();
-    g.scrollIntoView({ behavior: 'instant', block: 'start' });
+    var y = g.getBoundingClientRect().top + window.pageYOffset - barH() - 8;
+    window.scrollTo({ top: Math.max(0, y), behavior: 'instant' });
     setTimeout(function () { jumping = 0; spyTick(); }, 260);
   });
 
@@ -313,9 +318,11 @@
       return '<li><a href="/site/truyen/' + esc(r.s) + '/">' +
         '<span class="xth">' + (r.cov ? '<img src="' + esc(r.cov) + '" alt="" loading="lazy" decoding="async">' : '') + '</span>' +
         '<span class="xtx"><b>' + esc(r.t) + '</b>' +
-        '<span class="xm"><span><i class="xdot ' + r.st + '"></i>' + STNAME[r.st] + '</span>' +
-        (r.c > 0 ? '<span>' + r.c + ' chương</span>' : '') +
-        '<span>' + shortDate(r.u) + '</span></span></span></a></li>';
+        '<span class="xm">' + [
+          '<span><i class="xdot ' + r.st + '"></i>' + STNAME[r.st] + '</span>',
+          (r.c > 0 ? '<span>' + r.c + ' chương</span>' : ''),
+          '<span>' + shortDate(r.u) + '</span>'
+        ].filter(Boolean).join('<em class="xsepx">·</em>') + '</span></span></a></li>';
     }).join('');
     var body = $('.xmbody');
     if (body) body.scrollTop = 0;

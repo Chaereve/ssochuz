@@ -6,11 +6,11 @@
    Tên lớp đều có tiền tố riêng để không đụng cz.css (.grid, .seg, .dot, …).
    ========================================================================== */
 
-.mk { max-width: 1180px; margin: 0 auto; padding: 0 32px 96px; position: relative; }
+.mk { max-width: 1180px; margin: 0 auto; padding: 0 32px 52px; position: relative; }
 
 /* ---- dải ghi chú của bản dựng (không thuộc thiết kế) -------------------- */
 .mknote { max-width: 1180px; margin: 18px auto 0; padding: 0 32px; }
-.mknote .box { border: 1px solid #ffffff14; background: #1a1617; border-radius: 12px; padding: 13px 15px; }
+.mknote .box { border: 1px solid #ffffff14; background: #1c1713; border-radius: 12px; padding: 13px 15px; }
 .mknote .hd { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   font: 600 12.5px/1.35 var(--font); color: var(--txt); }
 .mknote .tag { font: 700 9px/1 var(--font); letter-spacing: .12em; text-transform: uppercase;
@@ -23,6 +23,11 @@
   border-bottom: 1px solid var(--bd); padding-bottom: 3px; }
 .mknote .cmp:hover { color: var(--txt); border-color: var(--bd2); }
 .mknote ul { margin: 11px 0 0; padding: 0; list-style: none; display: grid; gap: 5px; }
+@media (max-width: 639px) {
+  .mknote { margin-top: 12px; padding: 0 16px; }
+  .mknote .box { padding: 11px 12px; }
+  .mknote ul { display: none; }
+}
 .mknote li { font: 400 12.5px/1.6 var(--font); color: var(--mut); padding-left: 13px;
   position: relative; }
 .mknote li::before { content: ""; position: absolute; left: 0; top: 8px; width: 4px; height: 4px;
@@ -132,21 +137,22 @@
 .xsh-i:hover .xn { color: var(--acc); }
 .xsh-i:focus-visible { outline: 2px solid var(--acc); outline-offset: 4px; border-radius: 6px; }
 
-/* ---- bìa: gáy in trong bìa + khối giấy bên phải ------------------------ */
+/* ---- bìa: cột gáy riêng bên trái + bìa phẳng + khối giấy bên phải ------ */
 .bk { position: relative; display: inline-block; vertical-align: top; flex: none;
-  --bw: 40px; --bh: 56px; --pg: 3px;
-  width: calc(var(--bw) + var(--pg)); height: var(--bh);
+  --bw: 40px; --bh: 56px; --pg: 3px; --sp: clamp(2px, calc(var(--bw) * .095), 11px);
+  width: calc(var(--sp) + var(--bw) + var(--pg)); height: var(--bh);
   transition: transform .22s var(--ease); }
-.bk .cv { position: absolute; left: 0; right: var(--pg); top: 0; bottom: 0;
-  border-radius: 2px 0 0 2px; overflow: hidden; background: var(--surf2);
-  box-shadow: 0 9px 16px -13px #000000e6, inset -2px 0 0 #00000073; }
+/* gáy: cột tối, có đường bắt sáng ở nếp gấp */
+.bk .sp { position: absolute; left: 0; top: 1px; bottom: 1px; width: var(--sp);
+  border-radius: 2px 0 0 2px; background: linear-gradient(90deg, #100c0a, #2b241e 64%, #1a1512);
+  box-shadow: inset -1px 0 0 #000000b3, inset 1px 0 0 #ffffff16; }
+.bk .sp::after { content: ""; position: absolute; left: 2px; right: 1px; top: 7%; bottom: 7%;
+  border-radius: 1px; background: linear-gradient(180deg, transparent, #ffffff12 10%, #ffffff12 90%, transparent); }
+.bk .cv { position: absolute; left: var(--sp); right: var(--pg); top: 0; bottom: 0;
+  border-radius: 0 2px 2px 0; overflow: hidden; background: var(--surf2);
+  box-shadow: 0 9px 16px -13px #000000e6, inset 0 0 0 1px #ffffff1c,
+              inset 6px 0 8px -6px #000000d9; }
 .bk .cv img { width: 100%; height: 100%; object-fit: cover; display: block; }
-/* gáy: tối dần vào nếp, một đường bắt sáng ở cạnh ngoài */
-.bk .cv::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 13%; z-index: 2;
-  background: linear-gradient(90deg, #000000c6, #0000003a 58%, transparent);
-  box-shadow: inset 1px 0 0 #ffffff2e; }
-.bk .cv::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
-  box-shadow: inset 0 0 0 1px #ffffff1f; }
 /* khối giấy */
 .bk .pp { position: absolute; right: 0; top: 1px; bottom: 1px; width: var(--pg);
   border-radius: 0 2px 2px 0;
@@ -160,7 +166,7 @@
   transform: translateY(-2px); }
 
 /* ---- nhóm chữ cái + danh sách ------------------------------------------ */
-.mkout .xgrp { padding-top: 24px; scroll-margin-top: 62px; }
+.mkout .xgrp { padding-top: 24px; scroll-margin-top: 64px; }
 .xgh { display: flex; align-items: center; gap: 11px; margin: 0 0 2px; }
 .xgh .xl { font-family: var(--font-head); font-weight: 600; font-size: 19px; line-height: 1;
   letter-spacing: .01em; color: var(--txt); min-width: 13px; }
@@ -191,11 +197,12 @@
 .xazin::-webkit-scrollbar { display: none; }
 .xazin button { flex: none; min-width: 36px; height: 36px; display: grid; place-items: center; padding: 0;
   border: 0; border-radius: 9px; background: transparent; color: var(--txt); cursor: pointer;
-  font: 600 12.5px/1 var(--font);
+  font: 600 12.5px/1 var(--font); -webkit-tap-highlight-color: transparent;
   transition: background-color .16s var(--ease), color .16s var(--ease); }
 .xazin button:hover { background: var(--surf2); color: var(--acc); }
 .xazin button[aria-current="true"] { background: var(--acc); color: #2a1119; }
-.xazin button:disabled { opacity: .2; cursor: default; }
+.xazin button { color: var(--txt); }
+.xazin button:disabled { opacity: .28; cursor: default; color: var(--dim); }
 .xazin button:focus-visible { outline: 2px solid var(--acc); outline-offset: 1px; }
 
 /* ---- rỗng / hết --------------------------------------------------------- */
@@ -210,11 +217,11 @@
 /* ---- bảng chi tiết tác giả --------------------------------------------- */
 .xmfeed { position: fixed; inset: 0; z-index: 300; display: grid; place-items: center; padding: 24px; }
 .xmfeed[hidden] { display: none; }
-.xmscr { position: absolute; inset: 0; background: #0a0809e0; opacity: 0;
+.xmscr { position: absolute; inset: 0; background: #0a0706e6; opacity: 0;
   transition: opacity .18s linear; }
 .xmbox { position: relative; width: min(600px, 100%); max-height: min(720px, 88vh);
   display: flex; flex-direction: column; overflow: hidden;
-  background: #1b1618; border: 1px solid #ffffff1a; border-radius: 18px;
+  background: #201914; border: 1px solid #ffffff1a; border-radius: 18px;
   box-shadow: 0 36px 90px -36px #000;
   opacity: 0; transform: translateY(10px);
   transition: opacity .2s var(--ease), transform .2s var(--ease); }
@@ -266,13 +273,14 @@
 .xmlist .xm { font: 400 11.5px/1.35 var(--font); color: var(--dim); display: flex;
   align-items: center; gap: 4px 10px; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
 .xmlist .xm span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.xmlist .xsepx { font-style: normal; color: var(--dim); opacity: .55; margin: 0 -4px; }
 .xmlist a:hover b { color: var(--acc); }
 .xmlist a:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; border-radius: 4px; }
 body.mk-lock { overflow: hidden; }
 
 /* ---- màn hình vừa ------------------------------------------------------- */
 @media (max-width: 1023px) {
-  .mk { padding: 0 22px 80px; }
+  .mk { padding: 0 22px 44px; }
   .xg { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 26px; }
   .xsearch { flex: 0 1 300px; max-width: 300px; }
   .xstwrap { margin-left: 0; flex: 1 1 100%; order: 4; margin-top: 2px; }
@@ -295,14 +303,15 @@ body.mk-lock { overflow: hidden; }
 
 /* ---- điện thoại --------------------------------------------------------- */
 @media (max-width: 639px) {
-  .mk { padding: 0 16px 68px; }
+  .mk { padding: 0 16px 40px; }
   .mk .xcrumb { margin-top: 18px; }
   .mkhead { margin: 8px 0 18px; }
   .xtools { gap: 8px; }
   .xsearch { flex: 1 1 120px; max-width: none; }
   .xseg { order: 3; flex: 1 1 100%; overflow-x: auto; scrollbar-width: none; }
   .xseg::-webkit-scrollbar { display: none; }
-  .xseg button { height: 38px; padding: 0 13px; flex: 1 0 auto; }
+  .xseg { overflow: visible; }
+  .xseg button { height: 38px; padding: 0 4px; flex: 1 1 0; text-align: center; }
   .xfilter { display: inline-flex; }
   .xstwrap { display: none; margin: 0; order: 4; }
   .xstwrap.xopen { display: flex; flex: 1 1 100%; margin: 4px 0 0; }
@@ -347,6 +356,7 @@ body.mk-lock { overflow: hidden; }
 }
 
 @media (max-width: 360px) {
+  .xseg button { font-size: 11.5px; letter-spacing: -.01em; }
   .mkhead .xsub .xwhen { display: none; }
 }
 
