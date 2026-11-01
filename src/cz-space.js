@@ -95,12 +95,9 @@
        tài khoản đã đăng nhập mà chưa sửa hồ sơ, và dòng trạng thái khi đang kiểm
        tra phiên. */
     var bio = p.bio || (p.checking ? 'Đang kiểm tra phiên đăng nhập…' : (owner && user() ? 'Gom những câu chuyện yêu thích về một nơi.' : ''));
-    /* Cấu trúc hero: [hộp ảnh + vòng đồng tâm] [khối chữ] [cột thao tác].
-       Vòng tròn nằm TRONG hộp ảnh (CSS: inset:0) nên luôn đồng tâm với ảnh ở mọi
-       mốc màn hình — bản cũ đặt vòng absolute theo hero bằng left/top cứng nên
-       lệch ảnh 36px ngang / 2px dọc trên máy và 29px / 13px trên điện thoại.
-       Giữ đúng khung này trong HTML tĩnh (my-space.html, profile.html) để trang
-       chưa nạp JS không hiện nhãn và tiêu đề nằm ngang hàng nhau. */
+    /* Cấu trúc hero: [hộp ảnh + vòng đồng tâm] [khối chữ] [cột thao tác]. Vòng nằm
+       TRONG hộp ảnh (inset:0) nên luôn đồng tâm với ảnh ở mọi mốc màn hình.
+       Giữ đúng khung này trong HTML tĩnh để trang chưa nạp JS vẫn thẳng hàng. */
     host.innerHTML = '<div class="space-hero-portrait">' +
       '<span class="space-hero-ring" aria-hidden="true"></span>' +
       '<div class="space-avatar space-hero-avatar">' + portrait(p) + '</div>' +

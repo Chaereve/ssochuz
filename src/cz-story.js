@@ -263,12 +263,8 @@
     if ((x.kind || 'main') === 'extra') return x.no ? 'S' + x.no : (x.name || ('Chương ' + i));
     return x.no ? 'Chương ' + x.no : (x.name || ('Chương ' + i));
   }
-  /* Ký hiệu ngắn ở cột trái của danh sách chương và mục lục trong trang đọc —
-     phương án A: mở đầu là 0 (đứng ngay trước chương 1), chương chính là số
-     thật, ngoại truyện là S1/S2 (đã dùng ở trang đọc và bình luận), mục không
-     đánh số (lời kết, ghi chú, tóm tắt) để trống.
-     Bản cũ trộn bốn kiểu trong cùng một cột: chữ “Mở” màu hồng, số màu mờ,
-     “S1” màu vàng, và dấu “—” cho mọi mục không có số. */
+  /* Ký hiệu ngắn ở cột trái danh sách chương và mục lục: mở đầu là 0, chương là số
+     thật, ngoại truyện là S1/S2, mục không đánh số (lời kết, ghi chú) để trống. */
   function chapToken(sp) {
     var g = sp.group || '';
     if (g === 'prologue') return '0';
@@ -527,8 +523,8 @@
     if (sh) sh.addEventListener('click', function () {
       openShelfModal(n);
     });
-    /* Nút Thích ở TRANG TRUYỆN đã bỏ theo yêu cầu — chỉ còn thích TỪNG CHƯƠNG
-       trong trang đọc. Mã cũ giữ lại để lỡ HTML đang cache còn nút thì vẫn chạy. */
+    /* Nút Thích ở TRANG TRUYỆN đã bỏ — chỉ còn thích từng chương trong trang đọc;
+       mã cũ giữ lại để HTML đang cache còn nút thì vẫn chạy. */
     var lb = $('#likeBtn');
     if (lb) lb.addEventListener('click', function () {
       var on = CZ.toggleLike(n, 0);
@@ -566,8 +562,8 @@
         enterReader(Math.max(1, Math.min(CHS.length, want)));
       });
     });
-    /* Nút “Đặt lại xác nhận 18+” đã bỏ (vòng 66): hàng nút chỉ còn việc thật sự
-       dùng hằng ngày; xoá ghi nhớ 18+ thì xoá dữ liệu trang trong trình duyệt. */
+    /* Nút “Đặt lại xác nhận 18+” đã bỏ: muốn xoá ghi nhớ thì xoá dữ liệu trang
+       trong trình duyệt. */
     bindRating();
     renderInfo();
     var ct = $('#tabChapCt');
@@ -875,9 +871,7 @@
   var WIDTHS = [{ k: 640, l: 'Hẹp' }, { k: 720, l: 'Vừa' }, { k: 900, l: 'Rộng' }];
 
   /* ======================= 4b. TƯƠNG TÁC ĐỌC ============================
-     Bộ tính năng 1.19.0 (Bionic, Terminal, Zen, hộp góp gạch, tiếng hiệu ứng)
-     đã bỏ khỏi trang. Chỉ còn hàng reaction sticker cuối chương — tính năng
-     được giữ lại, LUÔN bật và không có công tắc trong Cài đặt đọc.
+     Chỉ còn hàng reaction sticker cuối chương — LUÔN bật, không có công tắc.
      ====================================================================== */
 
   function applyRD() {
@@ -1241,20 +1235,13 @@
      Trang đọc không còn giữ sẵn cả bộ trong RAM: mở tới chương nào thì tải
      đúng chương đó (trung bình 18 KB thay vì 334 KB cả bộ), chương kế bên được
      tải trước nên bấm “Tiếp” vẫn hiện ngay. Đã tải rồi thì nằm lại trong phiên. */
-  /* ---- A1: BẢN LƯU TĨNH — đường lui khi Worker/KV lỗi ---------------------
-     Worker lỗi hoặc KV hết hạn mức đọc (100.000 lượt/ngày) thì đường nhẹ chỉ
-     trả `null`, người đọc thấy "Không tải được… Thử lại" mãi — dù repo luôn có
-     /data/book/<slug>.json (bản sao lưu do workflow KV → repo sinh ra). Đọc tạm
-     từ đó khi máy chủ chập.
+    /* ---- A1: BẢN LƯU TĨNH — đường lui khi Worker/KV lỗi ---------------------
+     KV lỗi thì đường nhẹ trả `null`; đọc tạm /data/book/<slug>.json.
      BA LUẬT KHÔNG ĐƯỢC PHÁ:
-       1. truyện riêng tư (`private-*`) và truyện KHOÁ MẬT MÃ: không bao giờ đọc
-          bản lưu — bản lưu có đủ chữ, đọc là lộ nội dung;
-       2. bộ đang có chương HẸN GIỜ/ẨN (PEND > 0): bản lưu không mang trường
-          `status`/`at` nên không biết chương nào chưa tới mốc → bỏ, thà báo lỗi
-          còn hơn lộ chương chưa ra;
-       3. bản lưu phải khớp SỐ CHƯƠNG đang hiện; lệch số là vị trí chương sai → bỏ.
-     Chỉ tải 1 lần cho cả bộ trong phiên (nhớ trong RAM, KHÔNG ghi localStorage —
-     bộ lớn 1,9 MB, ghi vào máy người đọc là vô trách nhiệm). */
+       1. truyện riêng tư / KHOÁ MẬT MÃ: không đọc bản lưu (đủ chữ ⇒ lộ nội dung);
+       2. bộ có chương HẸN GIỜ/ẨN: bản lưu không mang `status`/`at` ⇒ bỏ;
+       3. bản lưu phải khớp SỐ CHƯƠNG đang hiện, lệch là sai vị trí ⇒ bỏ.
+     Chỉ tải 1 lần mỗi bộ trong phiên, nhớ trong RAM, KHÔNG ghi localStorage. */
   var SNAP = { slug: '', p: null };
   function snapshotBook() {
     if (SNAP.slug === SLUG) return SNAP.p;
@@ -1443,15 +1430,13 @@
       }
       paintPage();
     } else renderNav(false);
-    /* tải trước 2 chương kề (nhỏ, ~18 KB mỗi chương) để bấm Tiếp/Trước là hiện
-       ngay — đúng thứ bản cũ có sẵn vì nó tải cả bộ từ đầu */
+    /* tải trước 2 chương kề (~18 KB mỗi chương) để bấm Tiếp/Trước là hiện ngay */
     if (CHS[cur]) ensureChapter(cur + 1);
     if (cur > 1) ensureChapter(cur - 1);
     try { paintChapterMeta(); } catch (e) {}
     /* ---- dải nút cuối chương: THÍCH tính riêng cho TỪNG CHƯƠNG -------------
-       Trước đây nút Thích lưu theo bộ nên thích một lần là sang chương sau không
-       thích được nữa (bấm lại thành bỏ thích). Giờ mỗi chương một phiếu, số phiếu
-       của chương hiện ngay trên nút, và tổng phiếu của bộ vẫn cộng lên bảng xếp hạng. */
+       Mỗi chương một phiếu, số phiếu hiện trên nút; tổng phiếu của bộ vẫn cộng lên
+       bảng xếp hạng. */
     var st = CZ.statsOf(N);
     function actBtn(id, ico, label, on) {
       var followAttr = id === 'actFollow' ? ' data-followbtn="' + esc(N.slug) + '" aria-pressed="' + (!!on) + '"' : '';
@@ -1615,8 +1600,8 @@
     });
     /* cuối chương: đã bỏ dòng Hết chương / Chương kế tiếp theo yêu cầu */
     var last = cur >= CHS.length;
-    /* dấu hết chương bằng CHỮ, không thêm đường kẻ: đường kẻ đã có ở chuyển chương
-       (bản cũ vẽ một vạch nữa ngay trên đó, hai vạch cách nhau 40px trông như hộp) */
+    /* dấu hết chương bằng CHỮ, không thêm đường kẻ: đã có kẻ ở chuyển chương, thêm
+       nữa thành hai vạch sát nhau. */
     $('#rdEnd').innerHTML = last
       ? '<div class="endline"><span class="endmark">Hết truyện</span><span class="endsub">Bộ này đang cập nhật. Lưu vào tủ để quay lại khi có chương mới.</span></div><a class="btn ghost sm mt" href="' + esc(CZ.storyURL(N.slug)) + '" id="endInfo">' + ic('info', 'i-s') + 'Thông tin truyện</a>'
       : '<div class="endline"><span class="endmark">Hết ' + esc(chapLabel(cur)) + '</span></div>';
@@ -1773,11 +1758,8 @@
   }
   function wake() {
     if (rdLock) return;
-    /* Bản trước ghi class + clearTimeout/setTimeout ở MỌI pointermove — trên máy
-       cảm ứng, vuốt để cuộn bắn ra hàng chục sự kiện mỗi giây, mỗi lần là một
-       lượt tính lại kiểu dáng cho cả <body>. Nay chỉ làm khi thật sự cần: class
-       còn thì mới gỡ, hẹn giờ còn xa (chưa qua 2,2s) thì thôi — vẫn luôn sớm hơn
-       mốc 3s nên thanh không tự ẩn giữa lúc đang thao tác. */
+    /* Chỉ ghi class + hẹn giờ khi thật sự cần: pointermove bắn hàng chục sự kiện mỗi
+       giây, mỗi lần là một lượt tính lại kiểu dáng cho cả <body>. */
     if (document.body.classList.contains('rd-hide')) document.body.classList.remove('rd-hide');
     var now = Date.now();
     if (idleT && now - idleAt < 2200) return;

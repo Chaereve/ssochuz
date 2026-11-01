@@ -85,21 +85,16 @@ section[id], [id^="pane-"] { scroll-margin-top: 16px; }
   --hdr-h: 60px;    /* chiều cao thanh đầu trang */
   --ctl: 36px;      /* chiều cao điều khiển (nút, ô, chip) trên thanh đầu trang */
   --ctl-lg: 40px;   /* chiều cao điều khiển một dòng trong nội dung (ô lọc, ô nhập) */
-  /* ---- BỘ CHUYỂN ĐỘNG (theo thang đo transitions.dev) --------------------
-     Nguyên tắc: chỉ chạy trên transform / opacity — hai thuộc tính duy nhất trình
-     duyệt chạy được trên luồng compositor, không cần layout lại hay vẽ lại.
-     MỞ chậm – ĐÓNG nhanh, khoảng cách 16px, thu 0.96, và mọi thứ tắt hẳn khi
-     người dùng bật “giảm chuyển động”. Đừng đặt nhịp riêng ở nơi khác.
-     BA ĐIỀU CẤM (đã dọn sạch ngày 2026-09-15, đừng thêm lại):
-       1. KHÔNG animate width/height/left/top/right/bottom/grid-template-rows cho
-          thứ chạy lặp lại theo khung hình (vạch tiến độ, con chạy tab). Thanh nào
-          cần lớn dần thì cho width cố định rồi scale theo trục X.
-       2. KHÔNG animate filter: blur(). Blur bắt trình duyệt dựng buffer ngoài cỡ
-          phần tử rồi lọc lại từng khung; trên slide hero hay cột chữ trang đọc
-          (to bằng cả màn hình) thì đó là chỗ giật thấy rõ nhất. Chỉ filter tĩnh
-          (nền hero blur 44px một lần) và brightness() trên nút nhỏ là được giữ.
-       3. KHÔNG backdrop-filter trên lớp phủ mở/đóng có transition: mỗi khung hình
-          phải lọc lại cả vùng màn hình phía sau. Nền tối hơn một chút là đủ. */
+  /* ---- BỘ CHUYỂN ĐỘNG (thang transitions.dev) ----------------------------
+   Chỉ transform/opacity; mở chậm – đóng nhanh, khoảng cách 16px, thu 0.96;
+   tắt sạch khi người dùng bật “giảm chuyển động”. Nhịp đặt ở đây, đừng đặt riêng.
+   BA ĐIỀU CẤM:
+     1. animate width/height/left/top/right/bottom/grid-template-rows cho thứ
+        chạy lặp theo khung hình — cần lớn dần thì width cố định + scale trục X.
+     2. animate filter: blur() (dựng buffer ngoài cỡ rồi lọc lại từng khung);
+        chỉ giữ filter tĩnh (nền hero blur 44px) và brightness() trên nút nhỏ.
+     3. backdrop-filter trên lớp phủ có transition (mỗi khung phải lọc lại cả
+        vùng phía sau) — nền tối hơn một chút là đủ. */
   --ease: cubic-bezier(.22, 1, .36, 1);         /* mở: vào nhanh, dừng êm */
   --ease-out: cubic-bezier(.22, 1, .36, 1);
   --ease-close: cubic-bezier(.4, 0, 1, 1);      /* đóng: đi thẳng, dứt khoát */
@@ -198,32 +193,13 @@ body.admin { --maxw: 1400px; }              /* bảng dữ liệu cần chỗ */
    và nó chỉ lặp lại điều thanh cuộn bên phải đã nói. Nút "lên đầu" vẫn còn. */
 
 /* ---- THANH ĐẦU TRANG (masthead) -----------------------------------------
-   Nguyên tắc: một đường kẻ tóc duy nhất ở đáy, chữ là chính, hộp viền chỉ dành
-   cho điều khiển thật sự bấm được. Trước đây mỗi mục điều hướng là một “viên
-   thuốc” có viền + nền + nhấc lên khi trỏ + gạch chân accent → bốn lần nhấn
-   mạnh cho cùng một việc, thanh đầu trang thành dãy hộp lộn xộn. Nay:
-     · mục điều hướng = chữ trơn, gạch mực trượt (#czInk) đè đúng lên đường kẻ đáy
-     · tiện ích (tìm · nền · tài khoản) = một cụm cùng cỡ 36px, viền tóc
-     · không còn nhấc lên/xuống khi trỏ — chỉ đổi màu mực và màu viền */
-/* ---- LẬT NỀN SÁNG ⇄ TỐI ---------------------------------------------------
-   Vì sao bản cũ “lag”: nó cho CẢ `color` lẫn `background-color` nội suy tuyến
-   tính suốt .35s. Mà --txt và --bg đổi chỗ cho nhau (mực #191410 trên giấy
-   #faf8f4  ⇄  giấy #f2ebe0 trên mực #14110e), nên đúng GIỮA chặng hai màu gặp
-   nhau ở xám ~(134,130,125)/(135,132,129) — tương phản chữ/nền tụt còn **1,05:1**.
-   Nghĩa là cả trang CHỮ BIẾN MẤT ~115ms rồi mới hiện lại: mắt đọc đúng cái đó là
-   “khựng / đục”, không phải chuyện thiếu khung hình.
-   Cách sửa (đã đo lại bằng số):
-     1. CHỮ ĐỔI TỨC THÌ — bỏ `color` khỏi transition. Đỡ luôn khoản vẽ lại từng
-        dòng chữ mỗi khung hình, và không còn cảnh nửa trang đã đổi màu chữ, nửa
-        chưa (đa số phần tử ở đây tự đặt color nên vốn dĩ không phai theo body).
-     2. NỀN/VIỀN chỉ phai .16s theo `--ease-out` (.22,1,.36,1) — dốc mạnh ngay
-        đầu: nền đi được nửa đường chỉ sau 13% thời gian ⇒ cửa sổ chữ-mờ còn
-        ~21ms (≈1 khung hình) thay vì 115–175ms như .35s linear.
-     3. Gộp đúng các MẶT PHẲNG LỚN vào MỘT luật để cả trang lật cùng một nhịp,
-        mọi trang như nhau (bản cũ chỉ có trang chủ). Danh sách cố ý ngắn: thêm
-        phần tử là thêm việc cho máy yếu.
-   KHÔNG dùng View Transitions: phải chụp lại toàn trang rồi blend — trễ rõ trên
-   điện thoại và trong trang đọc (xem ghi chú themeToggle trong src/cz-app.js). */
+   Một đường kẻ tóc ở đáy, chữ là chính; hộp viền chỉ dành cho thứ bấm được.
+   Mục điều hướng = chữ trơn + gạch mực trượt; tiện ích = một cụm cùng cỡ. */
+/* ---- ĐỔI TÔNG NỀN (nay chỉ còn nền tối) --------------------------------
+   Nền/viền phai .16s theo `--ease-out`, CHỮ đổi tức thì (bỏ `color` khỏi
+   transition) để không có khung hình nào chữ chìm vào nền.
+   KHÔNG dùng View Transitions: phải chụp lại toàn trang rồi blend, trễ rõ trên
+   máy yếu và trong trang đọc. */
 body, .hdr, .hero, .ftr, .sechead, .authcard {
   transition: background-color var(--t-theme) var(--ease-out),
               border-color var(--t-theme) var(--ease-out);
@@ -231,9 +207,8 @@ body, .hdr, .hero, .ftr, .sechead, .authcard {
 .hdr { position: relative; z-index: 50; background: var(--bg); border-bottom: 1px solid var(--bd); }
 .hdr .in { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; height: var(--hdr-h);
   display: flex; align-items: center; gap: 8px; }
-/* khoảng đệm giữa điều hướng và cụm tiện ích. Trước đây có thêm một vạch tóc
-   1px ở đây; từ khi ô tìm kiếm rộng có viền riêng, vạch đó thành hai đường kẻ
-   sát nhau nên bỏ hẳn. */
+/* khoảng đệm giữa điều hướng và cụm tiện ích (không thêm vạch tóc: ô tìm kiếm
+   đã có viền riêng). */
 .hdr .in > .grow { position: relative; flex: 1 1 auto; min-width: 20px; }
 
 /* Thương hiệu: TRỌN khoá chữ "ssochuz Library" vẽ tay (ảnh trắng, nền trong
@@ -378,8 +353,7 @@ body.nav-open { overflow: hidden; }
   border-radius: 4px; padding: 0 5px; }
 .hbtn:hover .k { color: var(--mut); border-color: var(--bd2); }
 
-/* Công tắc nền sáng/tối đã bị BỎ (2026-10-29): web chỉ còn nền tối, nên cả
-   khối .tsw* (rãnh, núm, icon trượt) cùng các luật responsive của nó đã dọn. */
+/* Công tắc nền sáng/tối đã bỏ — web chỉ còn nền tối. */
 
 /* ---- chân trang: dải nền tối chữ ký ------------------------------------------
    HAI tầng, ngăn bằng một đường kẻ tóc — không hộp lồng hộp, không cột thừa:
@@ -414,18 +388,12 @@ body.nav-open { overflow: hidden; }
 }
 
 /* ---- nhịp của thanh đầu trang theo bề ngang -------------------------------
-   Bốn bậc, mỗi bậc bỏ bớt một lớp chữ để không bao giờ phải bóp méo hộp:
-     ≤1080px  chữ nhỏ lại một nấc, giấu phím tắt ⌘K
+   Mỗi bậc bỏ bớt một lớp chữ để không phải bóp méo hộp:
+     ≤1200px  mục điều hướng chỉ còn icon (vẫn có title + aria-label)
+     ≤1080px  chữ nhỏ một nấc, giấu phím tắt ⌘K
      ≤ 980px  nút tài khoản chỉ còn avatar
-     ≤1200px  mục điều hướng chỉ còn icon (mỗi icon vẫn có title + aria-label)
-     ≤ 760px  nút tìm kiếm chỉ còn icon, hiện nút menu, thanh cao 56px
-   Lớp phủ #czInk tự đo theo mục đang chọn nên vẫn khớp ở mọi bậc.
-
-   Ngưỡng icon nav là ≤1200px chứ KHÔNG phải ≤1020px: trước đây dải 1021–1199px
-   để lộ cả nhãn chữ nav lẫn chữ nút công cụ, thanh cần tới ~1200px mới vừa nên
-   nút tài khoản thò ra mép phải (đo thật 17/09: 1024px tràn 91px với khách,
-   48px khi đã đăng nhập; hết tràn từ ~1210px). Ẩn nhãn nav sớm hơn để thanh dài
-   nhất luôn vừa: nhãn chỉ còn chữ trong dải 761–1200px. */
+     ≤ 760px  tìm kiếm chỉ còn icon, hiện nút menu, thanh cao 56px
+   Lớp phủ #czInk tự đo theo mục đang chọn nên vẫn khớp ở mọi bậc. */
 @media (max-width: 1080px) {
   .hdr .logo, .abar .logo { font-size: 20px; }
   .hdr #czJump { flex-basis: 280px; }
@@ -543,8 +511,7 @@ body.nav-open { overflow: hidden; }
 .sel, .inp, textarea.inp, select.inp, input.inp {
   border: 1px solid var(--bd); border-radius: var(--r); background: var(--surf); padding: 0 12px;
   font-size: 14.5px; width: 100%; max-width: 100%; }
-/* Điều khiển MỘT DÒNG cùng cao 40px: trước đây ô chọn cao ~45px, ô tìm kiếm 42px
-   còn nút đổi kiểu xem 40px nên cùng một hàng lọc mà ba mép trên lệch nhau. */
+/* Điều khiển một dòng cùng cao 40px để mép trên của hàng lọc thẳng nhau. */
 .sel, .inp, select.inp, input.inp { height: var(--ctl-lg); }
 .sel { appearance: none; padding-right: 30px; cursor: pointer;
   background-image: linear-gradient(45deg, transparent 50%, var(--dim) 50%), linear-gradient(135deg, var(--dim) 50%, transparent 50%);
@@ -628,30 +595,14 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 /* dãy tab lớn (mục “Khám phá”) */
 
 /* ============================== 5. HERO ================================== */
-/* HERO “NỔI BẬT HÔM NAY” — HƯỚNG A “BỘ BÀI” (duyệt 2026-10-29)
+/* HERO “NỔI BẬT HÔM NAY” — HƯỚNG A “BỘ BÀI”
    --------------------------------------------------------------------------
-   VÌ SAO ĐỔI LẦN NỮA: bản full-bleed phủ bìa dọc 480×600 lên banner 2,3:1 là
-   phóng ~3 lần ⇒ nhoè, mất chủ thể. Kho chỉ có bìa DỌC, nên chủ thể phải CHÍNH
-   LÀ BÌA: 5 bìa xoè thành một quạt có tâm, bìa đang chọn sáng nhất và là điều
-   hướng (bấm bìa nào mở truyện đó). Chữ đọc ở cột trái, cùng một hệ với phần
-   còn lại của trang.
-
-   BỐ CỤC: ≥640 HAI CỘT (chữ | quạt) — bìa luôn nằm MỘT BÊN như mockup, kể cả
-   ở mốc tablet. <640 mới xếp một cột: chữ → quạt → hàng điều khiển, vẫn cùng
-   thứ tự và cùng kiểu điều hướng, chỉ thu nhỏ. Không có kiểu điều hướng thứ
-   hai để phải học.
-
-   ĐÃ DỌN (so với bản V4 đầu): bỏ 5 viên pill viền ⇒ “● trạng thái + chữ” trên
-   một hàng meta; bỏ nhãn “01” nền đen dán từng bìa ⇒ một dòng mono số + tác giả
-   dưới bìa đang chọn; bỏ dòng hint chữ trôi nổi; dot/thumbnail ⇒ ticks 5 nhịp.
-
-   VỊ TRÍ QUẠT NẰM TRONG CSS: mỗi bìa mang `data-pos` (0 = đang chọn, 1..4 xoay
-   vòng hai bên) và đọc `--x/--y/--r/--s`; JS chỉ đổi `data-pos`, không đo đạc
-   và không đặt toạ độ px — đổi breakpoint chỉ cần sửa `--cover-w/--fan-unit`.
-
-   Màu: bảng màu “trên nền tối” khai báo ĐÚNG MỘT LẦN ở `.hero` (--hb-*), gốc
-   vẫn là token theme (--acc qua color-mix) nên đổi theme là đổi theo.
-   Chuyển động: chỉ `transform`/`opacity`; `prefers-reduced-motion` tắt sạch. */
+   Kho chỉ có bìa DỌC nên chủ thể chính là BÌA: 5 bìa xoè thành quạt có tâm,
+   bìa đang chọn sáng nhất và là điều hướng; chữ đọc ở cột trái.
+   BỐ CỤC: ≥640 hai cột (chữ | quạt); <640 một cột: chữ → quạt → điều khiển.
+   VỊ TRÍ QUẠT: mỗi bìa mang `data-pos` rồi đọc `--x/--y/--r/--s`; JS chỉ đổi
+   `data-pos`, không đo px — đổi breakpoint chỉ sửa `--cover-w/--fan-unit`.
+   Màu: bảng --hb-* khai báo đúng một lần ở `.hero`, gốc vẫn là token theme. */
 .hero {
   /* BẢNG MÀU CỦA HERO — nền tối là bảng màu DUY NHẤT của web (đã bỏ chế độ
      sáng). Mọi màu của hero (chữ, đường kẻ, màn che, bóng đổ) suy ra từ token
@@ -762,8 +713,8 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   grid-template-columns: minmax(0, .84fr) minmax(0, 1.16fr);
   gap: 32px;
   align-items: center;
-  /* chiều cao do QUẠT quyết định (chữ tự canh giữa), nên banner thấp và ổn định
-     giữa các truyện: trước đây slide cao nhất trong 5 truyện kéo cả banner lên */
+  /* chiều cao do QUẠT quyết định (chữ tự canh giữa) nên banner thấp và ổn định
+     giữa các truyện */
   min-height: clamp(360px, 38vh, 420px);
 }
 .hero .hb-col { display: flex; flex-direction: column; justify-content: flex-end; gap: 0;
@@ -814,19 +765,11 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .hero h1 a:hover { color: var(--hb-acc); }
 
 /* ---- 5.3 “KỆ NHÃN”: badge trạng thái + lưới 4 ô -----------------------------
-   Bản trước nhét trạng thái và 5 mục thông tin vào MỘT hàng chữ, cách nhau bằng
-   dấu chấm. Truyện khoá mật mã có 7 mục ⇒ tự xuống 2 dòng, dấu chấm rơi vào ĐẦU
-   dòng thứ hai, và trạng thái đứng ngang hàng tác giả nên không ai đọc ra “tình
-   trạng bộ truyện”. Nay hai tầng:
-
-     .head  = badge trạng thái (kiểu CON DẤU: chữ mono + gạch đầu 3px, không nền
-              không viền) + 18+ + nhãn phụ hiếm. Không phải “chip” nên không
-              thành hình khối thứ tư cạnh nút.
-     .spec  = <dl> lưới dt/dd: CHƯƠNG · TÁC GIẢ · [COUPLE] · CẬP NHẬT.
-              Ô nào không có dữ liệu thì component KHÔNG dựng (không hiện “—”).
-
-   “Có mật mã” không còn là nhãn: nó nằm trong nhãn nút (“Mở khóa”)
-   ⇒ hành động nói thay trạng thái, hàng badge chỉ còn 1–2 mục. */
+     .head  = badge trạng thái (chữ mono + gạch đầu 3px, không nền không viền)
+              + 18+ + nhãn phụ hiếm.
+     .spec  = <dl> lưới dt/dd: CHƯƠNG · TÁC GIẢ · [COUPLE] · CẬP NHẬT; ô nào
+              không có dữ liệu thì KHÔNG dựng (không hiện “—”).
+   “Có mật mã” nằm trong nhãn nút (“Mở khoá”) chứ không phải nhãn rời. */
 .hero .head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .hero .hb-st { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
   font-family: var(--font-mono); font-size: 10px; font-weight: 700;
@@ -847,10 +790,8 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
      lớp `.info` dùng chung — xem chú thích ở `.hero .hb-info`.) */
   width: 100%; margin: 20px 0 0; padding: 14px 0 0; border-top: 1px solid var(--hb-line); }
 .hero .spec .c { min-width: 0; }
-/* Cột CỐ ĐỊNH + ghim ô theo `data-slot`: trước đây lưới dùng cột `auto` nên bề
-   rộng cột co theo nội dung ⇒ đổi truyện là cả hàng nhãn nhảy ngang (CHƯƠNG
-   “42” → “1.2K”, tác giả dài → ngắn). Nay 4 cột chia đều và mỗi ô nằm đúng cột
-   của nó, thiếu dữ liệu thì để TRỐNG ô chứ không kéo ô sau lên lấp. */
+/* Cột CỐ ĐỊNH + ghim ô theo `data-slot`: 4 cột chia đều, thiếu dữ liệu thì để
+   TRỐNG ô chứ không kéo ô sau lên lấp. */
 .hero .spec .c[data-slot="ch"] { grid-column: 1; }
 .hero .spec .c[data-slot="au"] { grid-column: 2; }
 .hero .spec .c[data-slot="cp"] { grid-column: 3; }
@@ -899,14 +840,8 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 /* ---- 5.5 điều khiển quạt: MŨI TÊN HAI MÉP + BỘ ĐẾM Ở GÓC ---------------
         ‹  [ bìa … bìa ]  ›                    ← hai mép quạt, giữa chiều cao bìa
                               01 / 05  ⏸      ← góc trên-phải, ngang hàng nhãn
-
-   Bản trước là MỘT DẢI CHỮ chạy hết bề rộng dưới chân quạt: nó không dính vào
-   đâu cả (không cùng hàng với bìa, cũng chẳng cùng cột với chữ), lại thêm tên
-   tác giả vốn đã có trong kệ nhãn ⇒ đọc ra như dòng chú thích lạc chỗ.
-   Nay: ‹ › là hai nút tròn NẰM HAI MÉP QUẠT — đúng chiều tay và chiều mắt khi
-   đang nhìn bìa; số đếm + ⏸ gom vào góc trên-phải, cao ngang hàng nhãn trạng
-   thái bên trái ⇒ banner có hai “neo” ngang hàng, chân quạt sạch, không còn
-   dòng chữ lơ lửng. Bỏ tên tác giả ở đây (trùng kệ nhãn). */
+   ‹ › nằm hai mép quạt cho đúng chiều tay và chiều mắt; số đếm + ⏸ gom vào góc
+   trên-phải. Không lặp tên tác giả ở đây (đã có trong kệ nhãn). */
 .hero .fanbar { position: absolute; top: 0; right: 0; z-index: 9;
   display: flex; align-items: center; gap: 8px; }
 .hero .fanbar .count { font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em;
@@ -941,12 +876,8 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .hero .fan {
   --cover-w: clamp(196px, 22.5vw, 292px);   /* bìa TO thêm ~15% nữa */
   --fan-unit: calc(var(--cover-w) * .42);   /* khoảng xoè suy ra từ bề rộng bìa */
-  /* Tâm dọc của quạt, tính theo chiều cao khung quạt. Trước đây là 52%: đo ở
-     1440px thì đáy bìa chỉ cách đáy banner 40px trong khi đỉnh bìa cách đỉnh
-     67px, nên cả "sạp bìa" trông dồn xuống dưới. 49,5% nhấc quạt lên ~13px và
-     hai khoảng thở gần bằng nhau (≈53px cả trên lẫn dưới). Đây là biến DUY NHẤT
-     dùng cho cả bìa lẫn bóng đổ, nên quạt và "nền đất" không bao giờ lệch nhau;
-     muốn nhấc cao/thấp thêm chỉ cần đổi đúng tỉ lệ này. */
+  /* Tâm dọc của quạt, tính theo chiều cao khung quạt; biến DUY NHẤT dùng cho cả
+     bìa lẫn bóng đổ nên quạt và "nền đất" không bao giờ lệch nhau. */
   --fan-cy: 49.5%;
   position: relative;
   justify-self: stretch;
@@ -1019,11 +950,8 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 /* nhãn dưới bìa đang chọn: “01 · tác giả”. Nằm ngoài <button> (nút có
    overflow:hidden) và luôn ở tâm vì bìa đang chọn luôn ở data-pos="0". */
 
-/* Vạch tiến trình tự chuyển ở đáy banner đã BỎ (30/10/2026) cùng vạch cuộn ở
-   đỉnh trang: hai sợi chỉ chạy liên tục, một ở mép trên một ở mép dưới banner,
-   đúng lúc mắt đang đọc chữ bên trái. Nhịp tự chuyển giờ do chính chuyển động
-   của nội dung (mờ dần + nhích lên) nói ra, không cần đồng hồ đếm ngược.
-   Nút ⏸ và số "01 / 05" vẫn còn để điều khiển và định vị. */
+/* Vạch tiến trình tự chuyển ở đáy banner đã bỏ; nút ⏸ và số “01 / 05” vẫn còn
+   để điều khiển và định vị. */
 
 /* ---- 5.7 responsive -------------------------------------------------------
    ≥640 : HAI CỘT như mockup — bìa nằm MỘT BÊN, chữ một bên. Mốc tablet chỉ thu
@@ -1210,9 +1138,8 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .card .th.noimg { background: linear-gradient(160deg, var(--surf3), var(--surf2)); }
 .card .th.noimg::after { content: "ssochuz"; position: absolute; inset: 0; display: grid; place-items: center;
   font: 800 10.5px/1 var(--font); letter-spacing: .22em; text-transform: uppercase; color: var(--dim); opacity: .55; }
-/* Tiêu đề: giữ chỗ đúng 2 dòng (min-height 2.8em) để đáy mọi thẻ trong một hàng
-   thẳng nhau; khi trỏ chỉ ĐỔI MÀU — bản cũ vừa nhấc bìa vừa nhấc chữ nên tiêu đề
-   rời khỏi dòng tác giả bên dưới. */
+/* Tiêu đề giữ chỗ đúng 2 dòng (min-height 2.8em) để đáy mọi thẻ trong một hàng
+   thẳng nhau; trỏ vào chỉ ĐỔI MÀU, không nhấc chữ khỏi dòng tác giả. */
 .card h3 { font-family: var(--font-head); font-size: 14.5px; font-weight: 600; line-height: 1.4;
   letter-spacing: -.006em; margin: 10px 0 4px; min-height: 2.8em;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
@@ -1292,13 +1219,11 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
    Chip GHÉP được với nhau và với Năm/từ khoá; số trên chip luôn tính trên toàn
    thư viện nên không nhảy loạn khi bật bộ lọc khác. */
 /* ==================== THƯ VIỆN · THANH CÔNG CỤ + POPOVER ==============
-   Pattern Linear / Stripe / GitHub (chốt vòng 54):
-   · ô tìm đứng RIÊNG, chỉ nó có “mặt” (viền + nền), cao 40px;
-   · lọc ít dùng (tình trạng, năm, 18+) gom vào MỘT nút “Bộ lọc” + số son;
-     sắp xếp chỉ là chữ + mũi tên, không nhãn;
-   · bấm nút mở popover chia nhóm bằng kẻ tóc, mỗi dòng có ✓ và số đếm;
+   · ô tìm đứng riêng, chỉ nó có “mặt” (viền + nền), cao 40px;
+   · lọc ít dùng (tình trạng, năm, 18+) gom vào nút “Bộ lọc” + số son;
+     sắp xếp chỉ là chữ + mũi tên;
+   · popover chia nhóm bằng kẻ tóc, mỗi dòng có ✓ và số đếm;
    · đang lọc thì hiện hàng chip điều kiện xoá được ngay dưới thanh.
-   Một điểm son mỗi hàng: số trên nút, hoặc dấu ✓ của dòng đang chọn.
    ===================================================================== */
 .libd { min-width: 0; }
 .lbtop { position: relative; }
@@ -1580,9 +1505,7 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); }
 
 /* ---- THANH CÔNG CỤ DANH SÁCH CHƯƠNG (vòng 77) --------------------------
-   Một hàng, ba điều khiển cùng cao 38px, cùng bán kính 9px, cùng một kiểu viền:
-   ô tìm · nút đổi thứ tự · ô tới chương. Không khối nào tô trắng (bản cũ tô
-   trắng nút sắp xếp — khối sáng nhất trang), không hộp lồng hộp ở ô tới chương. */
+   Một hàng, ba điều khiển cùng cao 38px, cùng bán kính 9px, cùng kiểu viền. */
 .chapbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
 .chapbar .search { flex: 1 1 240px; max-width: none; height: 38px; border-radius: 9px;
   background: color-mix(in srgb, var(--surf) 55%, transparent); }
@@ -1610,8 +1533,7 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .jumpin .goic:hover { background: var(--surf2); color: var(--txt); }
 .jumpin .goic .i { width: 14px; height: 14px; }
 /* ---- LƯỚI CHƯƠNG: hai cột, hàng 38px, KHÔNG kẻ đường dưới từng ô ----------
-   Bản cũ mỗi ô tự kẻ một đường nên cả lưới đọc ra như cái thang, và các đường
-   không chạm nhau. Đổi nền khi rê chuột là đủ để thấy ô. */
+   Đổi nền khi rê chuột là đủ để thấy ô. */
 .chapgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 2px 24px; padding-top: 8px; }
 .cha { display: grid; grid-template-columns: 26px minmax(0, 1fr) 16px; gap: 10px; align-items: center;
@@ -1744,10 +1666,7 @@ mark.hit { background: var(--acc-soft); color: var(--acc); padding: 0 2px; borde
 }
 
 /* bộ dài: nhóm chương gấp/mở mượt bằng grid-template-rows */
-/* Nhãn nhóm chương: một bậc THẤP hơn tên chương về độ nặng nhưng khác hẳn về
-   chất — in hoa, giãn chữ, màu mờ. Bản cũ in đậm cùng cỡ với tên chương nên khi
-   tách thành 5–6 nhóm (lời mở đầu truyện, lời tác giả, chương, lời kết, ngoại
-   truyện) cả danh sách đọc ra như chục cái tiêu đề giành nhau. */
+/* Nhãn nhóm chương: in hoa, giãn chữ, màu mờ — một bậc thấp hơn tên chương. */
 .cvol { display: flex; align-items: center; gap: 8px; width: 100%; padding: 15px 2px 9px;
   border: 0; border-bottom: 1px solid var(--bd); font-size: 11.5px; font-weight: 700;
   letter-spacing: .09em; text-transform: uppercase; color: var(--mut);
@@ -1994,15 +1913,19 @@ body.reading ::selection { background: color-mix(in srgb, var(--rd-acc) 30%, tra
 .toasts { position: fixed; right: 18px; bottom: 18px; z-index: 85; display: flex; flex-direction: column; gap: 10px;
   max-width: min(92vw, 380px); }
 /* Thông báo: trồi lên 350ms với mờ + thu nhẹ, biến mất 250ms (đóng nhanh hơn mở). */
-.toast { background: var(--surf); border: 1px solid var(--bd2); color: var(--txt); padding: 12px 16px;
-  border-radius: var(--r); font-size: 13.5px; box-shadow: var(--sh-lg);
+.toast { display: grid; grid-template-columns: 16px minmax(0, 1fr); align-items: start; gap: 10px;
+  background: var(--surf); border: 1px solid var(--bd2); color: var(--txt); padding: 11px 14px;
+  border-radius: 12px; font-size: 13.5px; line-height: 1.5; box-shadow: var(--sh-lg);
   opacity: 0; transform: translateY(var(--mo-dist)) scale(.97);
   transition: transform var(--t-mid) var(--ease), opacity var(--t-mid) var(--ease); }
 .toast.in { opacity: 1; transform: none; }
 .toast.out { opacity: 0; transform: translateY(6px) scale(.98);
   transition: transform var(--t-close) var(--ease-close), opacity var(--t-close) var(--ease-close); }
-.toast.ok { border-left: 3px solid var(--ok); }
-.toast.err { border-left: 3px solid var(--bad); }
+/* biểu tượng thay cho vạch màu: cùng một khuôn, khác nhau ở màu dấu */
+.toast > .i { width: 16px; height: 16px; margin-top: 1px; color: var(--mut); }
+.toast.ok > .i { color: var(--ok); }
+.toast.err > .i { color: var(--bad); }
+.toast .ttx { min-width: 0; overflow-wrap: anywhere; }
 /* ---- PWA: thanh báo offline / có bản cập nhật (dưới cùng, giữa màn hình) ----
    Nằm trên toast (85) nhưng dưới hộp thoại (88); nút Tải lại dùng .btn có sẵn. */
 .netbars { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 86;
@@ -2013,9 +1936,10 @@ body.reading ::selection { background: color-mix(in srgb, var(--rd-acc) 30%, tra
   color: var(--txt); font-size: 13px; font-weight: 600; white-space: nowrap;
   box-shadow: var(--sh-card); pointer-events: auto; }
 .netbar[hidden] { display: none; }
-.netbar .i-s { flex: none; }
-#czOffline { border-left: 3px solid var(--acc); }
-#czUpdate { border-left: 3px solid var(--ok, var(--acc)); }
+.netbar .i-s { flex: none; color: var(--mut); }
+#czOffline .i-s { color: var(--warn); }
+#czUpdate .i-s { color: var(--ok); }
+.netbar .btn { margin-left: 2px; }
 @media (max-width: 560px) { .netbar { font-size: 12.5px; padding: 9px 12px; } }
 /* Hộp thoại: mở 250ms / đóng 150ms (bất đối xứng như transitions.dev), chỉ
    chạy transform + opacity nên không giật; đóng thì gỡ .on sau khi chạy xong. */
@@ -2038,8 +1962,8 @@ body.reading ::selection { background: color-mix(in srgb, var(--rd-acc) 30%, tra
 .modal.on.closing .box { transform: scale(var(--mo-scale)) translateY(4px); opacity: 0;
   transition: transform var(--t-close) var(--ease-close), opacity var(--t-close) var(--ease-close); }
 .modal .mh { padding: 18px 22px 0; }
-.modal .mh h4 { font-size: 18px; }
-.modal .mb { padding: 12px 22px 20px; color: var(--mut); font-size: 14.5px; }
+.modal .mh h4 { font-size: 17px; letter-spacing: -.012em; }
+.modal .mb { padding: 10px 22px 20px; color: var(--mut); font-size: 14.5px; line-height: 1.65; }
 .modal .mf { display: flex; justify-content: flex-end; align-items: center; gap: 10px; padding: 14px 22px; background: var(--bg2);
   border-top: 1px solid var(--bd); }
 /* báo lỗi chữ: ghi chú ở chân hộp thoại + ô xác nhận đã gửi */
@@ -2077,12 +2001,8 @@ body.reading ::selection { background: color-mix(in srgb, var(--rd-acc) 30%, tra
 .jump .res .m { font-size: 12.5px; color: var(--mut); }
 .jump .foot { display: flex; gap: 18px; padding: 10px 18px; border-top: 1px solid var(--bd); background: var(--bg2);
   font-size: 12px; color: var(--dim); }
-/* Ngăn kéo KHÔNG dùng display:none. Bản cũ để `display:none` rồi bật `.on`:
-   trình duyệt đổi display và transform trong CÙNG một lượt ⇒ không có trạng thái
-   khởi đầu nào được vẽ ⇒ transition không bao giờ chạy ⇒ panel nhảy ra đột ngột
-   (mở thì giật, đóng thì mới trượt — vì lúc đóng phần tử đã hiện sẵn). Nay panel
-   luôn "có mặt" nhưng `visibility:hidden` + `pointer-events:none`: không vẽ, không
-   bắt sự kiện, không vào thứ tự tab, mà vẫn giữ đúng vị trí 100% để trượt vào. */
+/* Ngăn kéo không dùng display:none: panel luôn "có mặt" với visibility:hidden +
+   pointer-events:none nên transition trượt chạy được và không vào thứ tự tab. */
 .sheet { position: fixed; inset: 0; z-index: 65; visibility: hidden; pointer-events: none; }
 .sheet.on { visibility: visible; pointer-events: auto; }
 /* Ngăn kéo (mục lục, cài đặt đọc). r94: CHỈ trượt, KHÔNG đổi opacity cho tấm
@@ -2418,9 +2338,7 @@ body[data-rd-font="sans"], body[data-rd-font="bevn"], body[data-rd-font="roboto"
 @keyframes revIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .fade.in { animation: none; } }
 
-/* Vạch tiến độ mỗi lần chuyển trang cũng đã BỎ (30/10/2026): nó nháy ngang đỉnh
-   trang đúng lúc mắt đang chờ nội dung mới, mà thông tin mang lại gần như bằng
-   không. Trang vẫn "vào" bằng nhịp pageIn bên dưới — mượt mà không cần vạch. */
+/* Vạch tiến độ mỗi lần chuyển trang đã bỏ; trang vẫn "vào" bằng nhịp pageIn. */
 body.page-in main { animation: pageIn var(--t-slow) var(--ease-out) both; }
 @keyframes pageIn { from { opacity: 0; transform: translateY(10px); } }
 
@@ -2437,11 +2355,8 @@ body.page-in main { animation: pageIn var(--t-slow) var(--ease-out) both; }
   border-color: color-mix(in srgb, var(--warn) 46%, var(--bd)); }
 .pill.soon { color: var(--acc); background: color-mix(in srgb, var(--acc) 13%, var(--surf));
   border-color: color-mix(in srgb, var(--acc) 44%, var(--bd)); }
-/* Hai huy hiệu 18+ / Mới dùng CHUNG một khuôn: cùng cao 20px, cùng bo tròn pill,
-   cùng chữ 10px/800/.08em/in hoa, cùng viền sáng + bóng chân 1px để đọc được cả
-   trên bìa ảnh lẫn trên nền giấy. Chỉ khác màu: 18+ đỏ (--bad), Mới mực son (--acc).
-   Bản cũ mỗi nơi một kiểu (chữ nhật 4px, chỗ nền đỏ chữ trắng, chỗ nền trắng chữ
-   đỏ) nên nhìn rời rạc. */
+/* Hai huy hiệu 18+ / Mới dùng CHUNG một khuôn (cao 20px, pill, chữ 10px/800/in
+   hoa); chỉ khác màu: 18+ đỏ (--bad), Mới son (--acc). */
 .b18, .badge-new, .badge-newchap { display: inline-flex; align-items: center; justify-content: center;
   min-height: 20px; padding: 3px 9px; border-radius: 999px; white-space: nowrap;
   font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; line-height: 1.4;
@@ -2487,9 +2402,8 @@ body.page-in main { animation: pageIn var(--t-slow) var(--ease-out) both; }
   color: var(--dim); transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
 .fchip [data-rm]:hover { background: var(--acc); color: #fff; }
 
-/* Lưới truyện khi trỏ: bìa nhấc 2px với bóng sát chân (var(--sh-card) — đã theo
-   tông sáng/tối), ảnh phóng 1.03, tiêu đề đổi màu. Bỏ quầng xám 15px/30px của
-   bản cũ vì nó loang ra nền giấy và làm mờ cạnh bìa. */
+/* Lưới truyện khi trỏ: bìa nhấc 2px + bóng sát chân, ảnh phóng 1.03, tiêu đề
+   đổi màu. */
 .card:active .th { transform: translateY(0) scale(.995); }
 .card .th img { transition: transform var(--t-mid) var(--ease-out); }
 .card:hover .th img { transform: scale(1.03); }
@@ -2665,7 +2579,7 @@ body.rd-fs .rdbar { position: fixed; left:0; right:0; }
   animation: ndotIn .32s var(--ease-out) both; }
 @keyframes ndotIn { from { opacity: 0; transform: scale(.55); } to { opacity: 1; transform: none; } }
 .hnotif .hbtn.hasnew { color: var(--acc); border-color: color-mix(in srgb, var(--acc) 45%, transparent); }
-.nmenu { position: absolute; right: 0; top: calc(100% + 8px); width: 320px; max-height: min(70vh, 420px);
+.nmenu { position: absolute; right: 0; top: calc(100% + 8px); width: 336px; max-height: min(70vh, 420px);
   overflow: auto; z-index: 70; border: 1px solid var(--bd); border-radius: var(--r-lg); background: var(--surf);
   box-shadow: var(--sh-lg); padding: 6px; opacity: 0; transform: translateY(-6px) scale(.97); pointer-events: none; }
 
@@ -2676,23 +2590,31 @@ body.rd-fs .rdbar { position: fixed; left:0; right:0; }
   transition: opacity .14s var(--ease-close), transform .14s var(--ease-close); }
 .amenu.on, .nmenu.on { opacity: 1; transform: none; pointer-events: auto;
   transition: opacity .2s var(--ease-out), transform .26s var(--ease-out); }
-.nmenu .nhead { display: flex; align-items: center; gap: 8px; padding: 9px 10px 11px;
-  border-bottom: 1px solid var(--bd); margin-bottom: 5px; }
-.nmenu .nhead b { font-size: 13.5px; }
-.nmenu .nhead span { margin-left: auto; font-size: 12px; color: var(--mut); }
-.nmenu a[role="menuitem"] { display: flex; align-items: center; gap: 10px; padding: 8px 10px;
-  border-radius: var(--r); transition: background var(--t-fast) var(--ease); }
-.nmenu a[role="menuitem"]:hover { background: var(--surf2); }
-.nmenu .nth { width: 40px; height: 56px; border-radius: 6px; overflow: hidden; flex: none;
+.nmenu .nhead { display: flex; align-items: baseline; gap: 10px; padding: 10px 12px 9px;
+  border-bottom: 1px solid var(--bd); margin-bottom: 4px; }
+.nmenu .nhead b { font-size: 13.5px; letter-spacing: -.01em; }
+.nmenu .nhead span { margin-left: auto; font-size: 11.5px; color: var(--mut); font-variant-numeric: tabular-nums; }
+/* một dòng = bìa nhỏ + tên truyện + ngày cập nhật + chip “+N”; không lặp chữ,
+   không mũi tên thừa — cả dòng là vùng bấm, cao 56px */
+.nmenu a[role="menuitem"] { display: flex; align-items: center; gap: 11px; min-height: 56px; padding: 7px 10px;
+  border-radius: 10px; transition: background var(--t-fast) var(--ease); }
+.nmenu a[role="menuitem"]:hover, .nmenu a[role="menuitem"]:focus-visible { background: var(--surf2); }
+.nmenu .nth { width: 38px; height: 51px; border-radius: 6px; overflow: hidden; flex: none;
   border: 1px solid var(--bd); background: var(--surf2); }
 .nmenu .nth img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.nmenu .ntx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.nmenu .ntx b { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.nmenu .nsub { font-size: 12px; color: var(--mut); }
-.nmenu .nnum { font-style: normal; font-weight: 700; color: var(--acc); }
-.nmenu .nempty { padding: 22px 12px; text-align: center; font-size: 13px; color: var(--mut); line-height: 1.7; }
+.nmenu .ntx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.nmenu .ntx b { font-size: 13.5px; font-weight: 650; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nmenu .nsub { font-size: 11.5px; color: var(--mut); }
+.nmenu .nnum { flex: none; font-size: 12px; font-weight: 700; color: var(--acc);
+  padding: 3px 8px; border-radius: 999px; background: color-mix(in srgb, var(--acc) 14%, transparent);
+  font-variant-numeric: tabular-nums; }
+.nmenu .nempty { padding: 15px 14px 17px; text-align: center; font-size: 12.5px; color: var(--mut); line-height: 1.6; }
+.nmenu .nempty b { display: block; font-size: 13.5px; color: var(--txt); font-weight: 600; margin-bottom: 3px; }
+.nmenu .nempty span { display: block; }
+.nmenu .nretry { margin-left: 6px; padding: 0; border: 0; background: none; color: var(--acc);
+  font: inherit; font-weight: 650; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 @media (max-width: 980px) {
-  .nmenu { width: min(88vw, 320px); }
+  .nmenu { width: min(88vw, 332px); }
 }
 
 /* ---- hộp hỏi bật thông báo đẩy ---- */
@@ -2934,12 +2856,8 @@ body.rd-focus .rdcmts { display: none; }
   .modal .box, .jump .box { margin-top: 14px; }
 }
 
-/* ---- đầu trang trên máy nhỏ: công tắc sáng/tối nhỏ lại cho vừa một hàng ----
-   44×24 vẫn giữ đúng tỉ lệ rãnh–núm của bản desktop (núm 20px, cách mép rãnh
-   1px ở cả hai đầu), vùng chạm phủ kín toàn rãnh. Điều khiển chỉ còn icon thì
-   lên 40×40 cho đúng sàn chạm. Dưới 400px tên thương hiệu rút còn “ssochuz”
-   (bỏ chữ “library” màu đỏ): trước đây chữ đó tự xuống dòng thứ hai làm đầu
-   trang cao bất thường. */
+/* ---- đầu trang trên máy nhỏ: điều khiển chỉ còn icon thì lên 40×40 cho đúng
+    sàn chạm; dưới 400px tên thương hiệu rút còn “ssochuz”. */
 @media (max-width: 560px) {
   #czJump, .hbtn.icon, .authbtn { width: 40px; padding: 0; }
   .hdr #czJump { width: 40px; }
@@ -3339,12 +3257,8 @@ body.rd-focus .rdcmts { display: none; }
 }
 
 /* ==========================================================================
-   BẢN VÁ GIAO DIỆN 16/09 — chống "lòi ra ngoài" ở trang đọc, My Space và admin
-   ----------------------------------------------------------------------------
-   Bệnh do chủ trang báo: giao diện trang lẫn trang quản trị còn nhiều chỗ bị
-   tràn ra ngoài. Các điểm đã soi và vá ở dưới đây chọn theo nguyên nhân thật:
-   nội dung nhập từ Blogger (ảnh/table size gốc), chữ dài không có dấu cách
-   (URL Worker, slug, email), và thanh đầu trang admin khoéc chiều cao.
+   CHỐNG "LÒI RA NGOÀI" ở trang đọc, My Space và admin: nội dung Blogger (ảnh/
+   table), chữ dài không dấu cách (URL, slug, email), thanh đầu trang admin.
    ========================================================================== */
 
 /* ---- 1. chữ dài không có dấu cách trong admin: URL, slug, email ----------
@@ -4585,12 +4499,9 @@ body.rd-focus .rdcmts { display: none; }
 /* --- bình luận trong trang đọc (vòng 90): hàng phẳng, avatar viền mảnh,
        form thu thành một hàng chữ — không hộp lồng hộp, không viên thuốc ----- */
 .rdcmts { max-width: var(--rd-w, 720px); margin: 0 auto; padding: 34px 20px 56px; }
-/* Bình luận là khối dài NHẤT của trang mà mắt chỉ tới sau khi đọc xong chương.
-   Trước đây mở chương là trình duyệt đo + vẽ hết mọi bình luận (kèm sticker,
-   ảnh) rồi mới cho cuộn — trên máy yếu đó là cú khựng ngay sau khi bấm chương.
-   `content-visibility:auto` để phần ngoài màn hình chỉ được dựng khi cuộn gần
-   tới; `contain-intrinsic-size:auto` giữ đúng chiều cao đã đo lần đầu nên thanh
-   cuộn không nhảy. */
+/* Bình luận là khối dài nhất trang: `content-visibility:auto` để phần ngoài màn
+   hình chỉ dựng khi cuộn gần tới; `contain-intrinsic-size` giữ chiều cao đã đo
+   nên thanh cuộn không nhảy. */
 .rdcmts .cmt-item, .rdcmts .cmt-thread > .cmt-item {
   content-visibility: auto; contain-intrinsic-size: auto 132px; }
 .rdcmts .cmt-wrap { margin-top: 0; }

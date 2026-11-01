@@ -101,19 +101,12 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   function newer(a, b) { if (!a) return b; if (!b) return a; return revNum(a) >= revNum(b) ? a : b; }
 
   /* -- thư viện: ưu tiên KV → cache → file tĩnh -------------------------
-     VÁ (23/09): KV có thể trả `{lib: []}` khi kho trống hoặc admin vô tình ghi
-     đè bản đã lọc — bản cũ coi mảng rỗng là “hợp lệ” nên nhận luôn, bỏ qua file
-     tĩnh còn đủ bộ, rồi cache luôn bản rỗng vào localStorage (lần sau đọc cache
-     rỗng → trang tác giả/couple báo “Chưa tải được dữ liệu”). Nay: chỉ nhận bản
-     KV có sách; bản rỗng rớt về tĩnh/cache tốt và không bao giờ ghi đè cache
-     tốt bằng bản rỗng. */
+     Chỉ nhận bản KV CÓ SÁCH; bản rỗng rớt về tĩnh/cache và không bao giờ ghi đè
+     cache tốt (KV trống từng làm trang tác giả/couple báo lỗi). */
   function hasLib(r) { return !!(r && Array.isArray(r.lib) && r.lib.length); }
-  /* Gán registry MỚI: phải xoá luôn libCache.
-     VÁ (23/09, lượt 2): `libCache` trước đây chỉ bị xoá khi số chương đổi, KHÔNG
-     bị xoá khi registry về. Nên bất kỳ ai gọi CZ.lib() TRƯỚC lúc registry về
-     (chuông thông báo, ô tìm kiếm ⌘K, sự kiện pageshow khi quay lại từ bfcache…)
-     là danh sách ĐÓNG BĂNG ở [] — registry sau đó có đủ 63 bộ thì trang tác
-     giả/couple vẫn báo “Chưa tải được dữ liệu” cho tới khi tải lại trang. */
+    /* Ba “kho” khiến lỗi rỗng dính cứng: memo.reg, localStorage `ssochuz-reg` +
+     cờ cấm Worker 10 phút (`ssochuz-fallback`), và cache stale-while-revalidate
+     của service worker. purgeRegistry() dọn cả ba; registry(true) đọc lại từ đầu. */
   function setReg(reg, src) {
     memo.reg = reg; memo.src = src; w.CZ_SRC = src;
     libCache = null;
@@ -250,15 +243,11 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     memo.books[slug] = p;
     return p;
   }
-  /* -- ĐỌC NHẸ (bản 1.16.0): mục lục + đúng 1 chương ----------------------
-     Vì sao: đường cũ `book(slug)` tải CẢ bộ cho mỗi lần mở chương — trung bình
-     334 KB, bộ lớn 1,4 MB trong repo thật. Trang đọc giờ lấy:
-       · toc(slug)          → đầu sách + tên chương (vài KB)
-       · chapter(slug, n)   → đúng 1 chương (n = vị trí trong danh sách đang hiện)
-     Worker cũ (chưa deploy bản mới) hoặc mất mạng thì 2 hàm này trả về
-     null/`ok:false` → trang đọc tự rớt về đường cũ, hành vi y như trước.
-     KHÔNG thử lại ở đây: đường cũ đã có sẵn cơ chế thử lại + rớt về file tĩnh.
-     Không nhớ kết quả vào localStorage (chương sửa xong phải thấy ngay). */
+    /* -- ĐỌC NHẸ: mục lục + đúng 1 chương -----------------------------------
+     toc(slug) → đầu sách + tên chương; chapter(slug, n) → đúng 1 chương theo vị
+     trí đang hiện (thay vì tải cả bộ như `book(slug)`). Worker cũ hoặc mất mạng
+     thì hai hàm trả null/`ok:false` → tự rớt về đường cũ. Không thử lại ở đây,
+     không nhớ kết quả vào localStorage (chương sửa xong phải thấy ngay). */
   function lightFetch(url, ms) {
     var opt = {}, ctl = null, to = null;
     if (w.AbortController && ms !== -1) { ctl = new w.AbortController(); opt.signal = ctl.signal; to = setTimeout(function () { ctl.abort(); }, ms || 12000); }
@@ -397,11 +386,8 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   }
   function authToken() { try { return (w.CZ_AUTH && w.CZ_AUTH.token) ? (w.CZ_AUTH.token() || '') : ''; } catch (e) { return ''; } }
   /* 1 máy · 1 bộ · 1 ngày = 1 lượt đọc (phía máy và phía Worker đều khử trùng lặp) */
-  /* Đếm lượt đọc: mỗi máy + mỗi truyện + mỗi ngày chỉ gửi 1 lần — kiểm tra
-     TRƯỚC khi POST nên tải lại 10 lần cũng chỉ tốn 1 request (tiết kiệm quota
-     ghi KV của Worker). Khoá cũ `ssochuz-viewed-…` (ngày UTC) vẫn được đọc để
-     không đếm trùng trong ngày người đọc chuyển từ bản cũ sang (ghi thì chỉ
-     ghi khoá mới, theo ngày trên máy người đọc). */
+  /* Đếm lượt đọc: mỗi máy + mỗi truyện + mỗi ngày gửi 1 lần, kiểm tra TRƯỚC khi
+     POST nên tải lại nhiều lần cũng chỉ tốn 1 request (tiết kiệm quota ghi KV). */
   function reportView(slug, ch) {
     if (!API || !slug) return Promise.resolve(null);
     var d = new Date();
@@ -847,9 +833,9 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
           '<span class="pushic">' + icon('bell') + '</span>' +
           '<p class="pushlead">Truyện bạn theo dõi ra chương mới là máy báo ngay.</p>' +
           '<ul>' +
-            '<li>' + icon('check', 'i-s') + 'Báo cả khi không mở web, trên điện thoại lẫn máy tính</li>' +
-            '<li>' + icon('check', 'i-s') + 'Chỉ báo truyện bạn đã bấm Theo dõi</li>' +
-            '<li>' + icon('check', 'i-s') + 'Tắt lúc nào cũng được, không spam</li>' +
+            '<li>' + icon('check', 'i-s') + 'Báo cả khi chưa mở web, trên điện thoại lẫn máy tính</li>' +
+            '<li>' + icon('check', 'i-s') + 'Chỉ truyện bạn đã theo dõi</li>' +
+            '<li>' + icon('check', 'i-s') + 'Tắt lúc nào cũng được</li>' +
           '</ul>' +
         '</div>' +
         '<div class="mf"><button class="btn ghost" data-close>Để sau</button>' +
@@ -935,19 +921,25 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     }
     btn.classList.toggle('hasnew', total > 0);
     btn.setAttribute('aria-label', total > 0 ? ('Thông báo chương mới (' + total + ' chương mới)') : 'Thông báo chương mới');
-    menu.innerHTML = '<div class="nhead" role="presentation">' + icon('bell', 'i-s') + '<b>Chương mới</b>' +
-      (total ? '<span>' + total + ' chương mới</span>' : '') + '</div>' +
-      (state === 'loading' ? '<div class="nempty" role="menuitem" aria-disabled="true"><span role="status">Đang tải chương mới…</span></div>' :
-        state === 'error' ? '<div class="nempty" role="menuitem" aria-disabled="true"><span role="alert">Không tải được cập nhật. Kiểm tra kết nối và mở lại chuông sau một phút.</span></div>' : '') +
-      (items.length ? items.map(function (it) {
-        var n = it.n, im = coverSrc(n);
-        return '<a href="' + esc(storyURL(n.slug)) + '" role="menuitem">' +
-          '<span class="nth' + (im ? '' : ' noimg') + '">' +
-            (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</span>' +
-          '<span class="ntx"><b>' + esc(n.title) + '</b>' +
-          '<span class="nsub"><i class="nnum">' + it.c + ' chương mới</i> · ' + esc(timeAgo(n.updated)) + '</span></span>' +
-          icon('right', 'i-s') + '</a>';
-      }).join('') : (state === 'loading' || state === 'error') ? '' : '<div class="nempty" role="menuitem" aria-disabled="true">Chưa có chương mới.<br>Truyện bạn theo dõi ra chương là báo ở đây.</div>');
+    /* đầu mục: một tiêu đề + con số tổng, KHÔNG lặp lại chữ "chương mới" ở từng dòng */
+    var head = '<div class="nhead"><b>Chương mới</b>' +
+      (state === 'ready' && items.length ? '<span>' + items.length + ' truyện · ' + total + ' chương</span>' : '') + '</div>';
+    var body;
+    if (state === 'loading') body = '<div class="nempty">Đang tải…</div>';
+    else if (state === 'error') body = '<div class="nempty">Không tải được thông báo.<button class="nretry" type="button">Thử lại</button></div>';
+    else if (!items.length) body = '<div class="nempty"><b>Chưa có chương mới</b><span>Truyện bạn theo dõi ra chương sẽ hiện ở đây.</span></div>';
+    else body = items.map(function (it) {
+      var n = it.n, im = coverSrc(n);
+      return '<a href="' + esc(storyURL(n.slug)) + '" role="menuitem" aria-label="' + esc(n.title + ' — ' + it.c + ' chương mới, cập nhật ' + timeAgo(n.updated)) + '">' +
+        '<span class="nth' + (im ? '' : ' noimg') + '">' +
+          (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</span>' +
+        '<span class="ntx"><b>' + esc(n.title) + '</b>' +
+        '<span class="nsub">Cập nhật ' + esc(timeAgo(n.updated)) + '</span></span>' +
+        '<span class="nnum">+' + it.c + '</span></a>';
+    }).join('');
+    menu.innerHTML = head + body;
+    var retry = menu.querySelector('.nretry');
+    if (retry) retry.addEventListener('click', function () { notifLastCheck = 0; notifState = 'idle'; refreshNotifications(); });
   }
   function closeNotif() {
     var m = d.getElementById('czNotifMenu'), b = d.getElementById('czNotifBtn');
@@ -1078,12 +1070,8 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     return { total: total, today: today, streak: streak, week: week, last: last };
   }
 
-  /* cài đặt đọc — 2 font (serif / sans) · nền TỐI duy nhất (11/2026: bỏ nền
-     kem và trắng, trang đọc chỉ còn một tông tối)
-     Chỉ còn các tuỳ chọn hiển thị đọc. Bộ tương tác 1.19.0 (Bionic, Terminal,
-     Zen, hộp góp gạch, tiếng hiệu ứng) đã bỏ khỏi trang; riêng hàng reaction
-     sticker cuối chương được GIỮ LẠI và luôn bật — không có công tắc trong
-     Cài đặt đọc nữa. Chỉ lưu các tuỳ chọn đọc còn dùng trong `ssochuz-reader`. */
+  /* cài đặt đọc — 2 font (serif/sans), nền TỐI duy nhất, lưu ở `ssochuz-reader`.
+     Hàng reaction cuối chương luôn bật nên không còn công tắc ở đây. */
   var RD_DEF = {
     mode: 'scroll', size: 18, font: 'serif', line: 1.85, para: 1.05, theme: 'toi', width: 720, justify: 0
   };
@@ -1116,10 +1104,9 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     return v;
   }
 
-  /* NỀN TỐI LÀ DUY NHẤT (2026-10-29): web bỏ hẳn chế độ sáng.
-     Giữ nguyên tên hàm vì nhiều nơi gọi (và để bản cũ không vỡ), nhưng việc của
-     nó giờ chỉ là khoá <html> ở data-theme="dark" — không đọc localStorage nữa,
-     nhờ vậy máy nào từng lưu “light” cũng vào thẳng nền tối. */
+  /* NỀN TỐI LÀ DUY NHẤT: giữ tên hàm cho nơi khác gọi, nhưng nó chỉ khoá
+     <html data-theme="dark"> — không đọc localStorage, nên máy từng lưu "light"
+     cũng vào thẳng nền tối. */
   function themeInit() {
     d.documentElement.setAttribute('data-theme', 'dark');
     themeMeta();
@@ -1250,11 +1237,9 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
     });
   }
-  /* Bản rút gọn của một đoạn chữ dài, dùng cho thẻ truyện, hero trang chủ và
-     meta description. KHÉP Ở DẤU CÂU khi còn chỗ; không khép được thì mới cắt ở
-     khoảng trắng — cắt cứng theo số ký tự (.slice(0, 220)) là thứ đã tạo ra
-     những câu đứt ngang giữa một từ trong registry trước đây.
-     Cùng một luật với syn_teaser() trong tools/sync_blogger.py. */
+  /* Rút gọn đoạn chữ dài cho thẻ truyện, hero và meta description: khép ở dấu câu
+     khi còn chỗ, không được thì cắt ở khoảng trắng (không cắt cứng theo ký tự).
+     Cùng luật với syn_teaser() trong tools/sync_blogger.py. */
   function teaser(text, limit) {
     var s = String(text == null ? '' : text).replace(/\s+/g, ' ').trim();
     var lim = parseInt(limit, 10) || 200;
@@ -1353,15 +1338,10 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     toast(text);
     return Promise.resolve(false);
   }
-  /* ---- SỐ CHƯƠNG THẬT (đối chiếu từ kho chương) ---------------------------
-     Bệnh: sửa 30/30 → 29/29 trong file JSON trên GitHub nhưng web vẫn hiện 30,
-     vì web đọc registry trên Cloudflare KV trước, và con số trong registry là
-     bản chép tay nên dễ lệch với số chương thật của bộ.
-     Chữa 3 lớp:
-       1. Worker tự đếm lại mỗi lần ghi 1 bộ + có nút /api/recount (admin).
-       2. Web mở bộ nào thì đối chiếu số chương thật của bộ đó và GHI NHỚ trong
-          máy (ssochuz-realcounts) — từ đó trang chủ/thư viện hiện đúng số.
-       3. norm() dưới đây luôn lấy số đã đối chiếu thay cho nhãn cũ.            */
+    /* ---- SỐ CHƯƠNG THẬT (đối chiếu từ kho chương) ---------------------------
+     Registry là bản chép tay nên dễ lệch số: Worker tự đếm lại mỗi lần ghi một
+     bộ (kèm /api/recount cho admin); web mở bộ nào thì đối chiếu bộ đó và nhớ
+     trong máy (`ssochuz-realcounts`); norm() luôn lấy số đã đối chiếu. */
   var LS_REAL = 'ssochuz-realcounts';
   var realMap = null;
   function realCounts() {
@@ -1505,17 +1485,26 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     }
     return b;
   }
+  /* Thông báo nổi: biểu tượng + một dòng chữ, tối đa 3 cái cùng lúc (cái cũ
+     nhất tự rụng), lỗi giữ lâu hơn để kịp đọc, trỏ vào thì dừng đếm giờ. */
   function toast(msg, kind) {
     var b = toastBox(), el = d.createElement('div');
-    el.className = 'toast' + (kind ? ' ' + kind : '');
-    el.innerHTML = msg;
+    var k = kind === 'err' ? 'err' : kind === 'ok' ? 'ok' : '';
+    el.className = 'toast' + (k ? ' ' + k : '');
+    el.innerHTML = icon(k === 'err' ? 'alert' : 'check', 'i-s') + '<span class="ttx">' + msg + '</span>';
     b.appendChild(el);
+    while (b.children.length > 3) { var old = b.firstElementChild; if (old === el) break; old.remove(); }
     requestAnimationFrame(function () { el.classList.add('in'); });     /* trồi lên */
-    setTimeout(function () {
+    function dismiss() {
+      if (el._gone) return;
+      el._gone = true;
       el.classList.remove('in');
       el.classList.add('out');                                         /* đi xuống, nhanh hơn */
       setTimeout(function () { el.remove(); }, ms('--t-close', 150) + 60);
-    }, 2800);
+    }
+    var timer = setTimeout(dismiss, k === 'err' ? 5000 : 3000);
+    el.addEventListener('mouseenter', function () { clearTimeout(timer); });
+    el.addEventListener('mouseleave', function () { if (!el._gone) timer = setTimeout(dismiss, 1500); });
   }
   function modal(id, html, opt) {
     opt = opt || {};
@@ -1648,9 +1637,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       (pct ? '<span class="bar"><i style="width:' + pct + '%"></i></span>' : '') +
       '</div>' +
       '<h3>' + esc(n.title) + '</h3>' +
-      /* dòng ngay dưới tên truyện là TÁC GIẢ. Bản cũ ưu tiên couple nên 25 bộ có
-         couple bị đề tên cặp đôi thay vì người viết — couple vẫn còn chỗ riêng của
-         nó ở bộ lọc, ở hero và trong trang truyện. */
+      /* dòng dưới tên truyện là TÁC GIẢ; couple có chỗ riêng ở bộ lọc, hero và trang truyện. */
       '<div class="cb">' + esc(n.author || n.couple || '') + '</div>' +
       '</a></div>';
   }
@@ -1748,10 +1735,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     }, { rootMargin: '0px 0px -50px 0px' });
     Array.prototype.forEach.call(els, function (e) { io.observe(e); });
   }
-  /* nút "lên đầu" (vạch tiến độ cuộn ở đỉnh trang đã bỏ — xem cz.css)
-     Chỉ còn MỘT việc theo cuộn: bật/tắt nút lên đầu, và chỉ ghi khi trạng thái
-     thật sự đổi. Lớp .scrolled trên <body> đã bỏ: không luật CSS nào dùng nó,
-     nên nó chỉ là một lần ghi style vô ích ở mỗi khung hình cuộn. */
+  /* nút "lên đầu": chỉ bật/tắt khi trạng thái đổi, không ghi style mỗi khung hình. */
   function scrollUI() {
     var top = d.querySelector('#toTop'), tick = false, shown = null;
     function run() {
@@ -1905,9 +1889,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   }
   function mountHeader(host, active) {
     if (!host) return;
-    /* Một nhãn dùng chung cho header desktop, menu mobile và tiêu đề các khối
-       trên trang. Trước đây desktop dùng tên rút gọn còn mobile dùng `vi`, nên
-       cùng một điểm đến lại hiện hai cách gọi khác nhau. */
+    /* Một nhãn dùng chung cho header, menu mobile và tiêu đề khối trên trang. */
     var NAV = [
       { k: 'space', label: 'My Space', i: 'shelf', h: '/my-space' },
       { k: 'library', label: 'Thư viện', i: 'library', h: '/#thu-vien' },
@@ -2245,10 +2227,10 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     if (isIOS()) {
       modal('czIosGuide',
         '<div class="mh"><h4>Cài app ssochuz library</h4></div>' +
-        '<div class="mb"><p>iPhone/iPad chưa hỗ trợ cài tự động. Cài thủ công theo các bước sau:</p>' +
-        '<p><b>1.</b> Bấm nút <b>Chia sẻ</b> ' + icon('share', 'i-s') + ' ở thanh công cụ Safari.<br>' +
+        '<div class="mb"><p class="mtip">iPhone/iPad chưa cài tự động được — làm 3 bước:</p>' +
+        '<p><b>1.</b> Bấm <b>Chia sẻ</b> ' + icon('share', 'i-s') + ' trên thanh công cụ Safari.<br>' +
         '<b>2.</b> Chọn <b>Thêm vào Màn hình chính</b>.<br>' +
-        '<b>3.</b> Bấm <b>Thêm</b> là xong — app mở toàn màn hình, đọc được offline.</p></div>' +
+        '<b>3.</b> Bấm <b>Thêm</b> — app mở toàn màn hình, đọc được offline.</p></div>' +
         '<div class="mf"><button class="btn pri" data-close>Đã hiểu</button></div>');
     }
   }
@@ -2289,10 +2271,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     if (!links.length) return;
     var ids = links.map(function (a) { return (a.getAttribute('href') || '').split('#')[1] || ''; });
     var have = ids.filter(function (id) { return !!(id && d.getElementById(id)); }).length;
-    /* Đánh dấu mục đang xem trong sidebar: .on + aria-current trên chính liên
-       kết, và CHỈ ghi khi trạng thái đổi — bản cũ ghi lại class + attribute cho
-       cả bảy mục ở mỗi khung hình cuộn, đủ để trình duyệt tính lại style liên tục
-       trong lúc người dùng đang lướt. */
+    /* Đánh dấu mục đang xem trong sidebar (.on + aria-current), chỉ ghi khi đổi. */
     function mark(el) {
       links.forEach(function (a) {
         var on = a === el;
@@ -2305,11 +2284,8 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     var here = links.filter(function (a) { return a.classList.contains('on'); })[0];
     mark(here || null);
     if (have < 2) return;
-    /* Trước đây có một listener scroll chạy "spy" mỗi khung hình để tô sáng mục
-       theo khúc đang đọc. Từ khi điều hướng chuyển vào sidebar, danh sách này
-       GẦN NHƯ LUÔN ẨN — đo offsetTop của từng khúc trên mỗi khung hình cuộn chỉ
-       để tô sáng một thứ không ai thấy. Nay chỉ tính MỘT lần, đúng lúc mở panel
-       (mountHeader gọi host._navRefresh trong openMenu). */
+    /* Tô sáng mục sidebar chỉ tính MỘT lần lúc mở panel (mountHeader gọi
+       host._navRefresh), không chạy theo mỗi khung hình cuộn. */
     function refresh() {
       /* getBoundingClientRect thay cho offsetTop: offsetTop tính theo offsetParent,
          nên khi khối nằm trong một lớp có position thì nó trả về số nhỏ và mục
@@ -2842,12 +2818,8 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
           return Promise.resolve(0);
         }
         if (!keepUI) { state.busy = true; paint(); }
-        /* lấy bình luận:
-           · trang truyện (ch=0, chapterFilter false) → chỉ lấy bình luận chung (ch=0)
-           · trang đọc (chap>0) → lấy HẾT để có đủ byChapter cho tab “Tất cả”,
-             rồi lọc ở client (list()).
-           Trước đây dòng này là '?limit=200' + (chap ? '&ch=' : '') → ch rỗng nên
-           luôn trả hết, và thiếu giá trị khi chap>0. */
+        /* lấy bình luận: trang truyện (ch=0) lấy bình luận chung; trang đọc lấy HẾT rồi
+           lọc ở client để tab “Tất cả” có đủ byChapter. */
         var q = '?limit=200';
         if (chap === 0 && opt.chapterFilter === false) q += '&ch=0';
         /* truyện khóa mật mã: đính kèm token để GET comments qua được chốt

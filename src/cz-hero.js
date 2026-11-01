@@ -60,14 +60,9 @@
      Tách nhỏ để mỗi quy tắc fallback nằm ngay chỗ quyết định. */
 
   /* ---------- “KỆ NHÃN”: dòng badge + lưới 4 ô thông tin -------------------
-     Bản cũ nhét trạng thái + 5 mục thông tin vào MỘT hàng chữ, cách nhau bằng
-     dấu chấm: truyện khoá mật mã có 7 mục ⇒ tự xuống 2 dòng, dấu chấm rơi vào
-     đầu dòng, và trạng thái đứng ngang hàng với tác giả nên không ai đọc ra
-     “đây là tình trạng bộ truyện”. Nay tách làm hai tầng:
-       · .head  = badge trạng thái (kiểu con dấu) + 18+ + nhãn phụ hiếm
-       · .spec  = lưới dt/dd: CHƯƠNG · TÁC GIẢ · [COUPLE] · CẬP NHẬT
-     “Có mật mã” KHÔNG còn là chip: nó nằm trong nhãn nút (“Mở khóa”) nên hành
-     động nói thay trạng thái — nhãn ngắn, phần giải thích để ở title. */
+     Hai tầng: .head = badge trạng thái (kiểu con dấu) + 18+ + nhãn phụ hiếm;
+     .spec = lưới dt/dd: CHƯƠNG · TÁC GIẢ · [COUPLE] · CẬP NHẬT.
+     “Có mật mã” nằm trong nhãn nút (“Mở khoá”) chứ không phải chip. */
   var ST_TONES = { done: 1, run: 1, soon: 1 };
 
   function statusHTML(badges) {

@@ -54,9 +54,7 @@
     if (n.locked) badges.push({ label: 'Có mật mã', tone: 'lock', icon: 'lock' });
     if (n.is18) badges.push({ label: '18+', tone: 'bad' });
     if (n.fresh) badges.push({ label: 'MỚI', tone: 'acc' });
-    /* Một hàng meta KHÔNG icon: bản trước nhét 5 “pill” có viền + 4 icon vào
-       cùng một hàng, nhìn như một dãy nút bấm được. Nay chỉ còn chữ, cách nhau
-       bằng dấu chấm mảnh (CSS lo phần dấu chấm). */
+    /* Một hàng meta KHÔNG icon: chỉ còn chữ, cách nhau bằng dấu chấm mảnh (CSS lo). */
     var meta = [{ label: CZ.countText(n), strong: true, title: 'Số chương' }];
     if (n.author) meta.push({ label: n.author, title: 'Tác giả' });
     if (n.couple) meta.push({ label: n.couple, title: 'Couple' });
@@ -483,8 +481,8 @@
     }
     if (!list || !list.length) { el.hidden = true; return; }
     el.hidden = false;
-    /* Chuyển thể Series: băng ngang 16:10, chữ đè chân ảnh (30/10/2026).
-       Bìa là ảnh dọc nên cắt ở 26% chiều cao để giữ mặt nhân vật. */
+    /* Chuyển thể Series: băng ngang 16:10, chữ đè chân ảnh; bìa là ảnh dọc nên cắt ở
+       26% chiều cao để giữ mặt nhân vật. */
     rail.innerHTML = list.slice(0, 8).map(function (n) {
       var src = CZ.coverSrc(n), meta = [];
       if (n.chapters) meta.push(n.chapters + ' chương');
@@ -668,8 +666,8 @@
           '<span data-rm="' + i + '" role="button" tabindex="0" title="Bỏ lọc" aria-label="Bỏ lọc ' +
           esc(p[2]) + '">' + ic('x', 'i-s') + '</span></span>';
       }).join('') + '<button class="lnk" id="clrAll2" type="button">Xoá tất cả</button>' +
-      /* lọc theo tác giả/couple (đi vào bằng liên kết chia sẻ) thì dẫn sang
-         trang riêng của người đó — trước đây nằm cạnh số đếm, giờ nằm ở đây */
+      /* lọc theo tác giả/couple (vào bằng liên kết chia sẻ) thì dẫn sang trang riêng
+         của người đó. */
       (state.author ? '<a class="lnk" href="/tac-gia/?q=' + encodeURIComponent(CZ.slugify(state.author)) +
         '">Xem tất cả truyện của ' + esc(state.author) + '</a>' : '') +
       (state.couple ? '<a class="lnk" href="/couple/?q=' + encodeURIComponent(CZ.slugify(state.couple)) +
