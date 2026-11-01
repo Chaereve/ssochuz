@@ -58,7 +58,7 @@ const byCount = (lib, f) => {
   /* ---------- C. không slug → danh sách ---------- */
   const p3 = page('tac-gia/index.html', { url: 'https://ssochuz.pages.dev/tac-gia/', fetch: dataFetch() });
   await wait(1000);
-  const plist = p3.doc.querySelectorAll('#ppGrid .pacard');
+  const plist = p3.doc.querySelectorAll('#ppGrid .pcard');
   ok(plist.length === AUTHORS.length, 'tac-gia khong slug phai liet ke ' + AUTHORS.length + ' tac gia (thay: ' + plist.length + ')');
   ok(/truyện/.test(p3.doc.querySelector('#ppGrid').textContent), 'danh sach tac gia thieu so truyen');
 
@@ -88,7 +88,7 @@ const byCount = (lib, f) => {
   });
   await wait(1000);
   ok(/Không tìm thấy/.test(p7.doc.querySelector('#ppGrid').textContent), 'q la phai bao khong tim thay + hien tat ca');
-  ok(p7.doc.querySelectorAll('#ppGrid .pacard').length === AUTHORS.length, 'q la phai hien full danh sach');
+  ok(p7.doc.querySelectorAll('#ppGrid .pcard').length === AUTHORS.length, 'q la phai hien full danh sach');
 
   /* ---------- F. ô lọc tên + mục nav ---------- */
   const navHrefs = [...p3.doc.querySelectorAll('#czNav a')].map(a => a.getAttribute('href'));
@@ -101,7 +101,8 @@ const byCount = (lib, f) => {
     q.value = probe;
     q.dispatchEvent(new p3.win.Event('input', { bubbles: true }));
     await wait(120);
-    const shown = p3.doc.querySelectorAll('#ppGrid .pacard').length;
+    /* bộ lọc của bản gốc ẩn thẻ bằng display:none, không xoá khỏi DOM */
+    const shown = [...p3.doc.querySelectorAll('#ppGrid .pcard')].filter(el => el.style.display !== 'none').length;
     ok(shown >= 1 && shown < AUTHORS.length, 'go loc phai thu hep danh sach (thay: ' + shown + '/' + AUTHORS.length + ')');
     ok(/Tìm thấy/.test(p3.doc.querySelector('#ppSub').textContent), 'loc phai cap nhat dong dem');
     q.value = 'zzzz-khong-co';

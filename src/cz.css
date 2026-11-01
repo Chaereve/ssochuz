@@ -2999,18 +2999,40 @@ body.rd-focus .rdcmts { display: none; }
 .people #ppTitle { line-height: 1.3; overflow-wrap: anywhere; letter-spacing: -.025em; margin: 28px 0 12px; }
 .people .crumb { flex-wrap: wrap; white-space: normal; overflow-wrap: anywhere; }
 .people .sub { line-height: 1.7; }
-.people #ppGrid:has(.pcard) { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
-.people #ppGrid .pcard { display: flex; flex-direction: column; align-items: stretch; gap: 20px; padding: 24px; border-radius: 14px; transform: none; box-shadow: none; min-width: 0; }
-.people #ppGrid .pth { min-width: 0; min-height: 90px; }
-.people #ppGrid .pth img { width: 60px; height: 90px; border-radius: 6px; }
-.people #ppGrid .pth img+img { margin-left: -12px; }
-.people #ppGrid .pbody { gap: 10px; flex: 1; overflow: visible; }
-.people #ppGrid .pbody b { font-size: 20px; line-height: 1.5; white-space: normal; overflow: visible; text-overflow: clip; -webkit-line-clamp: unset; max-height: none; }
-.people #ppGrid .pmeta { font-size: 13px; line-height: 1.8; overflow-wrap: anywhere; }
-.people #ppGrid .pcard:hover { background: var(--bg); border-color: var(--acc); }
+/* Danh sách tác giả: thẻ NGANG — bìa xếp lớp bên trái, tên + dòng trạng thái bên
+   phải. Thẻ dọc cũ để trống gần nửa thẻ vì bìa chỉ rộng 60px. */
+.people #ppGrid.pgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 14px; }
+.people #ppGrid.pgrid .pcard { display: flex; flex-direction: row; align-items: center;
+  gap: 13px; padding: 9px 12px 9px 0; border-radius: 12px; transform: none; box-shadow: none; min-width: 0; }
+.people #ppGrid.pgrid .pth { position: relative; flex: none; display: flex; align-items: center;
+  width: auto; min-width: 0; height: 66px; min-height: 0; }
+.people #ppGrid.pgrid .pcard { transition: border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease); }
+.people #ppGrid.pgrid .pth img { width: 44px; height: 66px; border-radius: 6px;
+  box-shadow: 0 8px 16px -12px #000c; }
+.people #ppGrid.pgrid .pth img + img { margin-left: -22px; }
+.people #ppGrid.pgrid .pth img:nth-child(1) { z-index: 4; }
+.people #ppGrid.pgrid .pth img:nth-child(2) { z-index: 3; }
+.people #ppGrid.pgrid .pth img:nth-child(3) { z-index: 2; }
+.people #ppGrid.pgrid .pbody { flex: 1; min-width: 0; gap: 4px; overflow: hidden; }
+.people #ppGrid.pgrid .pbody b { font-family: var(--font-head); font-size: 17px; font-weight: 600;
+  line-height: 1.32; letter-spacing: -.006em; color: var(--txt);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+  transition: color var(--t-fast) var(--ease); }
+.people #ppGrid.pgrid .pcard:hover .pbody b { color: var(--acc); }
+.people #ppGrid.pgrid .pmeta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px;
+  font-size: 12.5px; line-height: 1.5; color: var(--mut); overflow-wrap: normal; }
+.people #ppGrid.pgrid .pmeta .n { color: var(--txt); font-weight: 600; }
+.people #ppGrid.pgrid .pmeta .sp { display: inline-flex; align-items: center; white-space: nowrap; }
+.people #ppGrid.pgrid .pmeta .d { width: 5px; height: 5px; border-radius: 50%; margin-right: 5px;
+  background: var(--dim); flex: none; }
+.people #ppGrid.pgrid .pmeta .d.done { background: var(--ok); }
+.people #ppGrid.pgrid .pmeta .d.run { background: var(--warn); }
+.people #ppGrid.pgrid .pcard:hover { background: var(--bg); border-color: var(--acc); }
 .people .pcard:focus-visible { outline: 2px solid var(--acc); outline-offset: 4px; }
-@media(max-width: 960px) { .people #ppGrid:has(.pcard) { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media(max-width: 560px) { .people #ppGrid:has(.pcard) { grid-template-columns: minmax(0, 1fr); } .people #ppGrid .pcard { padding: 20px; } }
+@media(max-width: 1080px) { .people #ppGrid.pgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media(max-width: 680px) { .people #ppGrid.pgrid { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .people #ppGrid.pgrid .pcard { padding: 9px 12px 9px 0; }
+  .people #ppGrid.pgrid .pbody b { font-size: 16.5px; } }
 
 /* Admin workspace: stable navigation and one task surface, not a wall of tabs.
    LƯU Ý (sửa 17/09): khối này từng gồm luật cho #tabs & #scApp theo layout CŨ

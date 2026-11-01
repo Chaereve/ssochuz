@@ -10,21 +10,46 @@
 <link rel="icon" type="image/png" href="/ssochuz.png?v=1">
 <link rel="apple-touch-icon" href="/ssochuz.png?v=1">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="stylesheet" href="/cz.css?v=20261101r95">
+<link rel="stylesheet" href="/cz.css?v=20261101r101">
 <style>
-.people{max-width:1180px;margin:auto;padding:0 24px 56px}.people h1{font-size:clamp(26px,3.6vw,36px);margin:18px 0 4px}.people .sub{color:var(--mut);font-size:14px;margin:0 0 16px}.people .search{max-width:340px;margin:0 0 20px}.pcard{display:flex;gap:14px;align-items:center;background:var(--surf);border:1px solid var(--bd);border-radius:var(--r-lg);padding:14px 16px;color:inherit;transition:border-color var(--t-fast) var(--ease),transform var(--t-fast) var(--ease),box-shadow var(--t-fast) var(--ease)}.pcard:hover{border-color:var(--bd2);transform:translateY(-2px);box-shadow:var(--sh-card)}.pcard:hover .pbody b{color:var(--acc)}.pcard .pth{display:flex;flex:none;min-width:80px;min-height:66px;align-items:center}.pcard .pth img{width:44px;height:66px;object-fit:cover;border-radius:8px;border:1px solid var(--bd);background:var(--bg)}.pcard .pth img+img{margin-left:-18px}.pcard .pbody{display:flex;flex-direction:column;gap:4px;min-width:0}.pcard .pbody b{font-size:16px;display:block;overflow-wrap:anywhere;white-space:normal}.pcard .pmeta{font-size:12.5px;color:var(--mut);line-height:1.45;white-space:normal}@media(max-width:700px){.people{padding:0 16px 48px}.people .search{max-width:none}}
+/* Trang danh sách người (tác giả / couple): cùng một ngôn ngữ với phần còn lại
+   của web — token của cz.css, chỉ nâng nhịp chữ và khoảng thở. */
+.people { max-width: 1120px; margin: auto; padding: 0 24px 72px; }
+.people .crumb { padding: 26px 0 0; font-size: 12.5px; color: var(--dim); }
+.people .crumb a { color: var(--dim); text-decoration: none; }
+.people .crumb a:hover { color: var(--txt); }
+.people .crumb b { color: var(--mut); font-weight: 600; }
+.people .phead { display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 14px 28px; padding: 10px 0 16px; margin: 0 0 22px; border-bottom: 1px solid var(--bd); }
+.people .pname { min-width: 0; }
+.people #ppTitle { font-family: var(--font-head); font-weight: 600; letter-spacing: -.022em;
+  font-size: clamp(28px, 3.4vw, 38px); line-height: 1.06; margin: 0; overflow-wrap: anywhere; }
+.people .sub { color: var(--mut); font-size: 13.5px; line-height: 1.5; margin: 7px 0 0; }
+.people .sub b { color: var(--txt); font-weight: 600; }
+.people .search { max-width: 320px; flex: 0 1 320px; margin: 0; }
+.people .search[hidden] { display: none; }
+.people .search input { font-size: 14px; }
+@media (max-width: 720px) {
+  .people { padding: 0 16px 56px; }
+  .people .phead { flex-direction: column; align-items: stretch; gap: 16px; padding-bottom: 14px; }
+  .people .search { max-width: none; flex: 1 1 auto; }
+}
 </style>
 </head>
 <body data-personal-follow-only>
 <header id="hdr"></header>
 <main class="people">
-  <nav class="crumb" id="crumb" style="padding:24px 0 0"><a href="/">Trang chủ</a> <span>›</span> <b>Couple</b></nav>
-  <h1 id="ppTitle">Couple</h1>
-  <p class="sub" id="ppSub">Đang tải…</p>
-  <label class="search" id="ppQWrap" hidden><span data-ic="search"></span><input id="ppQ" placeholder="Lọc theo tên…" autocomplete="off" spellcheck="false" aria-label="Lọc theo tên"></label>
-  <div class="grid" id="ppGrid"></div>
+  <nav class="crumb" id="crumb"><a href="/">Trang chủ</a> <span>›</span> <b>Couple</b></nav>
+  <header class="phead">
+    <div class="pname">
+      <h1 id="ppTitle">Couple</h1>
+      <p class="sub" id="ppSub">Đang tải…</p>
+    </div>
+    <label class="search" id="ppQWrap" hidden><span data-ic="search"></span><input id="ppQ" placeholder="Tìm theo tên…" autocomplete="off" spellcheck="false" aria-label="Tìm theo tên"></label>
+  </header>
+  <div class="grid pgrid" id="ppGrid"></div>
 </main>
 <footer id="ftr"></footer><button id="toTop" aria-label="Lên đầu trang"></button>
-<script src="/cz-config.js?v=20261012n"></script><script src="/cz-app.js?v=20261101r95"></script><script src="/cz-auth.js?v=20261012n"></script><script src="/cz-personal.js?v=20261013notif1"></script><script src="/cz-people.js?v=20261012n"></script>
+<script src="/cz-config.js?v=20261101r101"></script><script src="/cz-app.js?v=20261101r101"></script><script src="/cz-auth.js?v=20261101r101"></script><script src="/cz-personal.js?v=20261101r101"></script><script src="/cz-people.js?v=20261101r101"></script>
 <script>CZPeople.init('couple');document.querySelectorAll('[data-ic]').forEach(function(el){el.outerHTML=CZ.icon(el.dataset.ic);});</script>
 </body></html>
