@@ -22,6 +22,7 @@
     bell: '<path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3l1 2H5l1-2v-3a7 7 0 0 1 4-6"/><path d="M10 20a2 2 0 0 0 4 0"/>',
     flag: '<path d="M5 21V4"/><path d="M5 4h11l-1.5 4L16 12H5"/>',
     search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.6-4.6"/>',
+    chev: '<path d="M6 9l6 6l6-6"/>',
     comment: '<path d="M8 9h8"/><path d="M8 13h5"/><path d="M21 12c0 4.4-4 8-9 8c-1 0-2-.14-2.9-.4L4 21l1.4-4.2A7.6 7.6 0 0 1 3 12c0-4.4 4-8 9-8s9 3.6 9 8z"/>'
   };
   function ic(name, w) {
@@ -153,7 +154,6 @@
         '<span class="k">' + ic('back', 14) +
           esc(pv ? (chapNo(pv.t) ? shortName(pv.t) : 'Mục trước') : 'Chương đầu') + '</span>' +
         '<span class="v">' + esc(pv ? titleName(pv.t) : 'Đây là chương đầu') + '</span></a>' +
-        '<button class="mi" type="button" data-act="toc">Mục lục</button>' +
         '<a class="nx" href="#" data-act="next"' + (nx ? '' : ' data-off') + '>' +
         '<span class="k">' + esc(nx ? (chapNo(nx.t) ? shortName(nx.t) : 'Mục tiếp') : 'Hết') +
           ic('next', 14) + '</span>' +
@@ -194,18 +194,19 @@
       '<label class="fl"><span>Tên hiển thị</span><input type="text" id="cmtName" value="Khách" maxlength="24" autocomplete="off"></label>' +
       '<label class="fl"><span>Nội dung</span><textarea id="cmtText" rows="3" maxlength="600" placeholder="Cảm nhận của bạn về chương này…"></textarea></label>' +
       '<div class="crow"><button type="button" class="sticker" id="cmtStickerBtn" aria-expanded="false">' +
-      ic('comment', 18) + '<span>Sticker</span></button><span class="cstick" id="cmtStick" hidden></span>' +
+      ic('comment', 18) + '<span>Kèm sticker</span></button><span class="cstick" id="cmtStick" hidden></span>' +
       '<button type="submit" class="btn-pri" id="cmtSend">Gửi</button></div>' +
       '<div class="pickrow" id="cmtPick" hidden>' + ST.map(function (s) {
         return '<button type="button" data-pick="' + s + '" aria-label="' + STNAME[s] + '">' +
           '<img src="st/' + s + '.webp" alt=""></button>';
       }).join('') + '</div><p class="err" id="cmtErr" hidden>Bạn chưa viết gì.</p></form>';
     var body = v === 'c'
-      ? '<details class="fold" id="cmtFold"><summary><span class="pl">' + ic('plus', 16) +
-        '</span>Viết bình luận</summary>' + form + '</details>'
+      ? '<details class="fold" id="cmtFold"><summary><span class="pl">' + ic('plus', 17) +
+        '</span><span class="pl2">Viết bình luận…</span></summary>' + form + '</details>'
       : form;
-    return '<div class="ch"><h2>Bình luận</h2><span class="cnt" id="cmtCount">0</span>' +
-      '<button class="sort" type="button" data-act="sort">Mới nhất</button></div>' +
+    return '<div class="chead"><h2>Bình luận</h2><span class="cnt" id="cmtCount">0</span>' +
+      '<button class="sort" type="button" data-act="sort" aria-label="Đổi thứ tự bình luận">' +
+      '<span id="sortLbl">Mới nhất</span>' + ic('chev', 14) + '</button></div>' +
       '<div class="clist" id="cmtList"></div>' + body +
       '<p class="fine">Bình luận hiển thị công khai. Vui lòng giữ lịch sự.</p>';
   }
@@ -511,12 +512,17 @@
     host.innerHTML = arr.length ? arr.map(function (c, idx) {
       return '<div class="cmt" style="animation-delay:' + Math.min(idx, 6) * 35 + 'ms">' +
         '<div class="av">' + esc((c.n || 'K').trim()[0].toUpperCase()) + '</div><div class="cb">' +
-        '<div><span class="nm">' + esc(c.n) + '</span><span class="tm">' + esc(c.tm) + '</span></div>' +
+        '<div class="who"><span class="nm">' + esc(c.n) + '</span>' +
+        '<span class="tm">' + esc(c.tm) + '</span></div>' +
         (c.x ? '<p>' + esc(c.x) + '</p>' : '') +
         (c.s ? '<img src="st/' + c.s + '.webp" alt="' + STNAME[c.s] + '">' : '') + '</div></div>';
     }).join('') : '<p class="empty">Chưa có bình luận nào. Bạn mở màn nhé.</p>';
     var cnt = $('#cmtCount'); if (cnt) cnt.textContent = arr.length;
-    var sort = $('[data-act=sort]'); if (sort) sort.textContent = S.sort === 'old' ? 'Cũ nhất' : 'Mới nhất';
+    var sort = $('#sortLbl');
+    if (sort) {
+      sort.textContent = S.sort === 'old' ? 'Cũ nhất' : 'Mới nhất';
+      sort.parentNode.dataset.on = S.sort === 'old' ? 'old' : 'new';
+    }
     setLabel('cmt', arr.length ? 'Bình luận ' + arr.length : 'Bình luận');
   }
   var pending = null;
