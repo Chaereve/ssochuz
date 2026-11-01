@@ -98,6 +98,7 @@
   function renderOne(name) {
     var w = document.querySelector('#ppQWrap');
     if (w) w.setAttribute('hidden', '');
+    PP.hide();
     var lib = CZ.lib().filter(function (n) { return fields(n).indexOf(name) >= 0 || field(n) === name; });
     lib.sort(function (a, b) { return String(b.updated || '').localeCompare(String(a.updated || '')); });
     document.querySelector('#crumb').innerHTML = '<a href="/">Trang chủ</a> <span>›</span> ' +
@@ -168,14 +169,19 @@
     var b = document.querySelector('#ppRetry');
     if (b) b.onclick = function () { b.disabled = true; return reloadData(); };
   }
+  /* danh sách: trang tác giả dùng bộ vẽ "kệ sách" mới, /couple/ giữ bản cũ */
+  function renderList(missQ) {
+    if (KIND === 'author' && PP.ready()) { PP.show(missQ); return; }
+    renderAll(missQ);
+  }
   function paint() {
     var lib = CZ.lib(), q = readQ();
     if (!lib.length) { paintFail(); return; }
     healed = false;
-    if (!q) { renderAll(''); return; }
+    if (!q) { renderList(''); return; }
     var name = findName(lib, q);
     if (name) renderOne(name);
-    else renderAll(q);
+    else renderList(q);
   }
   function init(kind) {
     KIND = kind === 'couple' ? 'couple' : 'author';
@@ -185,5 +191,316 @@
     /* đổi hash tay thì vẽ lại (link ?q= thường tải lại trang nên không cần popstate) */
     window.addEventListener('hashchange', paint);
   }
+  /* ======================================================================
+     DANH SÁCH TÁC GIẢ (r95) — "kệ sách tác giả"
+     ----------------------------------------------------------------------
+     Bốn phần: tìm kiếm + chip sắp xếp/lọc · 3 tác giả nổi bật (sách 3D lớn)
+     · chỉ mục A–Z dính đỉnh · lưới thẻ gom theo chữ cái (hoặc lưới phẳng khi
+     đang tìm/lọc/sắp theo số truyện).
+
+     Dữ liệu: chỉ CZ.lib() — không thêm API, không đổi schema. Mỗi mục tính
+     sẵn số truyện theo từng trạng thái để dựng badge.
+
+     Trạng thái nằm trên query string để chia sẻ link được:
+        ?s=<từ khoá>   ?sort=az|count|new   ?st=run,soon,done
+     `?q=` VẪN là "mở đúng một tác giả" như cũ — đường dẫn đó không đổi.
+     ====================================================================== */
+  var PP = (function () {
+    var AZ = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    var ST = ['run', 'soon', 'done'];
+    var SORTS = ['az', 'count', 'new'];
+    var q = '', sort = 'az', st = {}, miss = '', data = [];
+    var bound = false, timer = null;
+
+    function el(s) { return document.querySelector(s); }
+    function ready() { return !!el('#ppAZ'); }
+
+    /* chữ cái đầu sau khi bỏ dấu; không phải A–Z thì vào nhóm "#" */
+    function letterOf(name) {
+      var s = String(name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd').replace(/Đ/g, 'D').trim();
+      var c = s ? s.charAt(0).toUpperCase() : '';
+      return /[A-Z]/.test(c) ? c : '#';
+    }
+    /* 1–2 chữ cái đầu cho avatar của tác giả chưa có bìa */
+    function initials(name) {
+      var p = String(name || '').trim().split(/\s+/).filter(Boolean);
+      if (!p.length) return '?';
+      var a = p[0].charAt(0);
+      var b = p.length > 1 ? p[p.length - 1].charAt(0) : p[0].charAt(1) || '';
+      return (a + b).toUpperCase();
+    }
+    function groupId(L) { return 'ppL-' + (L === '#' ? 'num' : L); }
+
+    /* gom tác giả từ thư viện; tên đã được CZ chuẩn hoá nên không lệch hoa/thường */
+    function buildIndex(lib) {
+      var map = {}, out = [];
+      lib.forEach(function (n) {
+        fields(n).forEach(function (name) {
+          var e = map[name];
+          if (!e) {
+            e = map[name] = { name: name, slug: CZ.slugify(name), books: [], st: { done: 0, run: 0, soon: 0 } };
+            out.push(e);
+          }
+          e.books.push(n);
+        });
+      });
+      out.forEach(function (e) {
+        e.books.sort(function (a, b) { return String(b.updated || '').localeCompare(String(a.updated || '')); });
+        e.count = e.books.length;
+        e.updated = String((e.books[0] || {}).updated || '');
+        e.books.forEach(function (b) {
+          var k = CZ.statusCls(b.status);
+          if (e.st[k] == null) e.st[k] = 0;
+          e.st[k]++;
+        });
+        e.covers = e.books.slice(0, 3).map(function (b) { return { src: CZ.coverSrc(b), n: b }; })
+          .filter(function (c) { return !!c.src; });
+        e.letter = letterOf(e.name);
+      });
+      return out;
+    }
+
+    /* sách 3D: tối đa 3 bìa chồng nhau; không có bìa nào → avatar chữ cái */
+    function stackHTML(e, big) {
+      var cs = e.covers.slice(0, 3);
+      if (!cs.length) {
+        return '<span class="pava" aria-hidden="true">' + esc(initials(e.name)) + '</span>';
+      }
+      var w = big ? 72 : 44, h = big ? 104 : 64;
+      var inner = cs.map(function (c) {
+        return '<i><img src="' + esc(c.src) + '"' + CZ.coverFB(c.n, c.src) +
+          ' alt="" width="' + w + '" height="' + h + '" loading="lazy" decoding="async" referrerpolicy="no-referrer"></i>';
+      }).join('');
+      var more = e.count > 3 ? '<span class="pmore" aria-hidden="true">+' + (e.count - 3) + '</span>' : '';
+      return '<span class="stack' + (big ? ' lg' : '') + '" aria-hidden="true" data-ini="' +
+        esc(initials(e.name)) + '">' + inner + more + '</span>';
+    }
+    function badgesHTML(e) {
+      return ST.filter(function (k) { return e.st[k] > 0; }).map(function (k) {
+        return '<span class="pbadge ' + k + '">' + e.st[k] + ' ' + CZ.statusLabel(k).toLowerCase() + '</span>';
+      }).join('');
+    }
+    function cardHTML(e, big) {
+      return '<a class="pacard' + (big ? ' pafeat' : '') + '" href="' + personURL(e.name) +
+        '" data-name="' + esc(e.slug) + '">' +
+        stackHTML(e, !!big) +
+        '<span class="pbody"><b>' + esc(e.name) + '</b>' +
+        '<span class="pcount">' + e.count + ' truyện</span>' +
+        '<span class="pbadges">' + badgesHTML(e) + '</span></span></a>';
+    }
+    function emptyHTML() {
+      return '<div class="ppempty"><b>Không có tác giả nào khớp</b>' +
+        'Thử bỏ từ khoá hoặc bộ lọc trạng thái.' +
+        '<div><button type="button" class="btn pri" data-ppclear>Xoá bộ lọc</button></div></div>';
+    }
+    function noteHTML() {
+      return '<div class="pnote">Không tìm thấy “' + esc(miss) + '” — hiện tất cả tác giả.</div>';
+    }
+
+    function cmp(mode) {
+      return function (a, b) {
+        if (mode === 'count') return (b.count - a.count) || a.slug.localeCompare(b.slug, 'vi');
+        if (mode === 'new') return String(b.updated).localeCompare(String(a.updated)) ||
+          a.slug.localeCompare(b.slug, 'vi');
+        return a.name.localeCompare(b.name, 'vi', { sensitivity: 'base' });
+      };
+    }
+
+    /* đọc/ghi trạng thái lên query string (không đụng ?q= của trang tác giả) */
+    function readState() {
+      var sq = CZ.qs('s'); if (sq != null) q = String(sq);
+      var ss = CZ.qs('sort'); sort = SORTS.indexOf(String(ss || '')) >= 0 ? String(ss) : 'az';
+      var sx = String(CZ.qs('st') || '');
+      st = {};
+      sx.split(',').forEach(function (k) { if (ST.indexOf(k) >= 0) st[k] = true; });
+    }
+    function sync() {
+      try {
+        var u = new URL(location.href);
+        if (q) u.searchParams.set('s', q); else u.searchParams.delete('s');
+        if (sort !== 'az') u.searchParams.set('sort', sort); else u.searchParams.delete('sort');
+        var keys = ST.filter(function (k) { return st[k]; });
+        if (keys.length) u.searchParams.set('st', keys.join(',')); else u.searchParams.delete('st');
+        history.replaceState(null, '', u.pathname + u.search + u.hash);
+      } catch (e) {}
+    }
+    function mark() {
+      var box = el('#ppTools');
+      if (!box) return;
+      Array.prototype.forEach.call(box.querySelectorAll('button[data-sort]'), function (b) {
+        b.setAttribute('aria-pressed', String(b.getAttribute('data-sort') === sort));
+      });
+      Array.prototype.forEach.call(box.querySelectorAll('button[data-st]'), function (b) {
+        b.setAttribute('aria-pressed', String(!!st[b.getAttribute('data-st')]));
+      });
+    }
+
+    function apply() {
+      var root = el('#ppGrid');
+      if (!root) return;
+      var qq = CZ.slugify(q);
+      var stKeys = ST.filter(function (k) { return st[k]; });
+      var list = data.filter(function (e) {
+        if (qq && e.slug.indexOf(qq) === -1) return false;
+        if (stKeys.length) {
+          for (var i = 0; i < stKeys.length; i++) { if (e.st[stKeys[i]] > 0) return true; }
+          return false;
+        }
+        return true;
+      });
+      list.sort(cmp(sort));
+      var filtered = !!qq || stKeys.length > 0;
+      var grouped = sort === 'az' && !filtered;
+
+      var sub = el('#ppSub');
+      if (sub) {
+        sub.textContent = filtered
+          ? ('Tìm thấy ' + list.length + ' / ' + data.length + ' tác giả')
+          : (data.length + ' tác giả');
+      }
+
+      /* nổi bật: chỉ khi đang xem toàn bộ danh sách */
+      var feat = el('#ppFeat');
+      if (feat) {
+        if (filtered || !data.length) { feat.hidden = true; }
+        else {
+          var top = data.slice().sort(function (a, b) {
+            return (b.count - a.count) || a.slug.localeCompare(b.slug, 'vi');
+          }).slice(0, 3);
+          var fg = el('#ppFeatGrid');
+          if (fg) fg.innerHTML = top.map(function (e) { return cardHTML(e, true); }).join('');
+          feat.hidden = false;
+        }
+      }
+
+      /* chỉ mục A–Z: chỉ có nghĩa khi đang gom theo chữ cái */
+      var az = el('#ppAZ'), azin = el('#ppAZin');
+      if (az && azin) {
+        if (!grouped || !list.length) az.hidden = true;
+        else {
+          var have = {};
+          list.forEach(function (e) { have[e.letter] = 1; });
+          azin.innerHTML = AZ.concat(['#']).map(function (L) {
+            var on = !!have[L];
+            return '<button type="button" data-l="' + L + '"' + (on ? '' :
+              ' class="off" disabled aria-hidden="true"') + '>' + L + '</button>';
+          }).join('');
+          az.hidden = false;
+        }
+      }
+
+      /* thân danh sách */
+      if (!list.length) {
+        root.innerHTML = (miss ? noteHTML() : '') + emptyHTML();
+      } else if (grouped) {
+        var buckets = {}, order = [];
+        list.forEach(function (e) {
+          if (!buckets[e.letter]) { buckets[e.letter] = []; order.push(e.letter); }
+          buckets[e.letter].push(e);
+        });
+        order.sort(function (a, b) { return a === '#' ? 1 : b === '#' ? -1 : a.localeCompare(b); });
+        root.innerHTML = (miss ? noteHTML() : '') + order.map(function (L) {
+          var rows = buckets[L];
+          return '<section class="ppgrp" id="' + groupId(L) + '">' +
+            '<h2 class="ppghead"><b>' + (L === '#' ? '#' : L) + '</b>' +
+            '<span>' + rows.length + ' tác giả</span></h2>' +
+            '<div class="pplist">' + rows.map(function (e) { return cardHTML(e, false); }).join('') +
+            '</div></section>';
+        }).join('');
+      } else {
+        root.innerHTML = (miss ? noteHTML() : '') + '<div class="pplist">' +
+          list.map(function (e) { return cardHTML(e, false); }).join('') + '</div>';
+      }
+    }
+
+    function clearAll() {
+      q = ''; sort = 'az'; st = {};
+      var qi = el('#ppQ'); if (qi) qi.value = '';
+      mark(); apply(); sync();
+    }
+
+    /* ảnh bìa hỏng: bỏ cuốn đó; hỏng hết thì đổi sang avatar chữ cái */
+    function onImgError(ev) {
+      var im = ev.target;
+      if (!im || im.tagName !== 'IMG') return;
+      var i = im.parentNode;
+      if (!i || i.tagName !== 'I') return;
+      i.style.display = 'none';
+      var stk = i.parentNode;
+      if (!stk || !stk.classList || !stk.classList.contains('stack')) return;
+      var live = Array.prototype.filter.call(stk.querySelectorAll('i'), function (n) {
+        return n.style.display !== 'none';
+      });
+      if (live.length) return;
+      var sp = document.createElement('span');
+      sp.className = 'pava';
+      sp.setAttribute('aria-hidden', 'true');
+      sp.textContent = stk.getAttribute('data-ini') || '';
+      if (stk.parentNode) stk.parentNode.replaceChild(sp, stk);
+    }
+
+    function bind() {
+      if (bound) return;
+      bound = true;
+      var qi = el('#ppQ');
+      if (qi) {
+        qi.addEventListener('input', function () {
+          q = qi.value;
+          clearTimeout(timer);
+          timer = setTimeout(function () { apply(); sync(); }, 90);
+        });
+      }
+      var tools = el('#ppTools');
+      if (tools) {
+        tools.addEventListener('click', function (ev) {
+          var b = ev.target.closest('button[data-sort]');
+          if (b) { sort = b.getAttribute('data-sort'); mark(); apply(); sync(); return; }
+          var t = ev.target.closest('button[data-st]');
+          if (t) {
+            var k = t.getAttribute('data-st');
+            st[k] = !st[k];
+            mark(); apply(); sync();
+          }
+        });
+      }
+      var az = el('#ppAZ');
+      if (az) {
+        az.addEventListener('click', function (ev) {
+          var b = ev.target.closest('button[data-l]');
+          if (!b || b.disabled) return;
+          var g = document.getElementById(groupId(b.getAttribute('data-l')));
+          if (g) g.scrollIntoView({ behavior: CZ.reduce ? 'auto' : 'smooth', block: 'start' });
+        });
+      }
+      var grid = el('#ppGrid');
+      if (grid) {
+        grid.addEventListener('click', function (ev) {
+          if (ev.target.closest('[data-ppclear]')) clearAll();
+        });
+        grid.addEventListener('error', onImgError, true);
+      }
+    }
+
+    function show(missQ) {
+      if (!ready()) return;
+      miss = missQ || '';
+      data = buildIndex(CZ.lib());
+      readState();
+      bind(); mark();
+      var tools = el('#ppTools'); if (tools) tools.hidden = false;
+      var wrap = el('#ppQWrap'); if (wrap) wrap.removeAttribute('hidden');
+      var qi = el('#ppQ'); if (qi) qi.value = q;
+      apply();
+      sync();
+    }
+    function hide() {
+      ['#ppTools', '#ppFeat', '#ppAZ'].forEach(function (s) {
+        var n = el(s); if (n) n.hidden = true;
+      });
+    }
+    return { ready: ready, show: show, hide: hide };
+  })();
+
   window.CZPeople = { init: init };
 })();
