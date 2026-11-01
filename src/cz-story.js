@@ -1211,8 +1211,8 @@
         box.classList.remove('cut-out', 'cut-fade');
         box.classList.add(paged ? 'cut-in' : 'cut-in-soft');
         if (bar) setTimeout(function () { bar.classList.remove('loading'); }, 120);
-        setTimeout(function () { box.classList.remove('cut-in', 'cut-in-soft'); }, 470);
-      }, 170);
+        setTimeout(function () { box.classList.remove('cut-in', 'cut-in-soft'); }, 340);
+      }, 150);
       return;
     }
     paintChapter(keepScroll);
@@ -1738,7 +1738,21 @@
     renderStory(); renderChapters();
   }
   /* ---- thanh công cụ tự ẩn sau 3 giây ---------------------------------- */
-  var idleT = null, rdLock = 0;
+  var idleT = null, rdLock = 0, idleAt = 0;
+  /* `rdPaged` = bản sao của chế độ đọc trong bộ nhớ. Đọc thẳng CZ.rdGet() ở mỗi
+     khung hình cuộn (như bản trước) là mỗi khung một lần localStorage.getItem +
+     JSON.parse + Object.assign — đúng chỗ mắt đang bám vào chữ nên thấy rõ là
+     khựng. Cấu hình chỉ đổi khi người đọc bấm công tắc, nên nghe sự kiện
+     `cz:setting` mà cập nhật lại là đủ. */
+  var rdPaged = false, rdCounted = 0;
+  /* tham chiếu + mốc so sánh của vạch tiến độ: chỉ ghi khi giá trị thật sự đổi
+     (đổi chương thì ép ghi lại một lần vì thanh được vẽ theo tỉ lệ chương). */
+  var rdFill = null, rdPctEl = null, rdFillAt = -1, rdFillCh = 0;
+  function rdPagedSync() { try { rdPaged = CZ.rdGet().mode === 'paged'; } catch (e) { rdPaged = false; } }
+  rdPagedSync();
+  document.addEventListener('cz:setting', function (e) {
+    if (e && e.detail && e.detail.key === 'mode') rdPagedSync();
+  });
   function sleep() {
     if ($('#setSheet').classList.contains('on') || $('#tocSheet').classList.contains('on')) return;
     var a = document.activeElement;
@@ -1747,7 +1761,15 @@
   }
   function wake() {
     if (rdLock) return;
-    document.body.classList.remove('rd-hide');
+    /* Bản trước ghi class + clearTimeout/setTimeout ở MỌI pointermove — trên máy
+       cảm ứng, vuốt để cuộn bắn ra hàng chục sự kiện mỗi giây, mỗi lần là một
+       lượt tính lại kiểu dáng cho cả <body>. Nay chỉ làm khi thật sự cần: class
+       còn thì mới gỡ, hẹn giờ còn xa (chưa qua 2,2s) thì thôi — vẫn luôn sớm hơn
+       mốc 3s nên thanh không tự ẩn giữa lúc đang thao tác. */
+    if (document.body.classList.contains('rd-hide')) document.body.classList.remove('rd-hide');
+    var now = Date.now();
+    if (idleT && now - idleAt < 2200) return;
+    idleAt = now;
     clearTimeout(idleT);
     idleT = setTimeout(sleep, 3000);
   }
@@ -1792,18 +1814,26 @@
         rdLastY = y;
       }
       /* tiến độ đọc trong chương (theo vị trí cuộn) */
-      if (CZ.rdGet().mode === 'paged') return;
+      if (rdPaged) return;
       var h = document.documentElement.scrollHeight - window.innerHeight;
       if (h > 0) {
         var f = Math.min(1, Math.max(0, y / h));
-        var fill = $('#rdProgFill');
-        if (fill) fill.style.transform = 'scaleX(' + f + ')';
-        var pc = $('#rdPct');
-        if (pc) pc.textContent = Math.round(f * 100) + '%';
+        rdFill = rdFill || $('#rdProgFill');
+        if (rdFill && (rdFillCh !== cur || Math.abs(f - rdFillAt) > .0005)) {
+          rdFillCh = cur; rdFillAt = f;
+          rdFill.style.transform = 'scaleX(' + f + ')';
+        }
+        rdPctEl = rdPctEl || $('#rdPct');
+        var pct = Math.round(f * 100) + '%';
+        /* so với chữ đang có trong DOM (không phải biến nhớ) — chỗ khác trong
+           trang cũng ghi #rdPct, so sánh kiểu này tự khớp lại, khỏi lệch. */
+        if (rdPctEl && rdPctEl.textContent !== pct) rdPctEl.textContent = pct;
         if (f >= 0.5) preNextFire();
-        /* Thống kê local khi tới ≥90%; tiến độ Supabase chỉ flush theo ngưỡng
-           15 giây + thay đổi ≥8%, không ghi ở mỗi scroll event. */
-        if (f >= 0.9 && N && CZ.myReadAdd) CZ.myReadAdd(N.slug, cur);
+        /* Thống kê local khi tới ≥90% — ĐÚNG MỘT lần cho mỗi chương (bản trước
+           gọi ở mọi khung hình đã qua 90%, mà mỗi lần gọi là một lượt đọc +
+           parse localStorage). Tiến độ Supabase chỉ flush theo ngưỡng 15 giây +
+           thay đổi ≥8%, không ghi ở mỗi scroll event. */
+        if (f >= 0.9 && N && CZ.myReadAdd && rdCounted !== cur) { rdCounted = cur; CZ.myReadAdd(N.slug, cur); }
         recordReadPosition(f * 100, f >= 0.9);
       }
     });
@@ -1881,7 +1911,7 @@
     var x0 = null, y0 = null;
     document.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
     document.addEventListener('touchend', function (e) {
-      if (x0 == null || !reading || CZ.rdGet().mode === 'paged') { x0 = null; return; }
+      if (x0 == null || !reading || rdPaged) { x0 = null; return; }
       var t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
       if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.6) turn(dx < 0 ? 1 : -1);
       x0 = y0 = null;

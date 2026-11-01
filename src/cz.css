@@ -15,7 +15,6 @@
 /* ============================ 1. NỀN TẢNG ================================= */
 *, *::before, *::after { box-sizing: border-box; }
 a { transition: color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), opacity var(--t-fast) var(--ease); }
-html { scroll-behavior: smooth; }
 section[id], [id^="pane-"] { scroll-margin-top: 16px; }
 :root {
   /* BẢNG MÀU DUY NHẤT — NỀN TỐI. Web đã bỏ hẳn chế độ sáng (2026-10-29): không
@@ -90,6 +89,11 @@ section[id], [id^="pane-"] { scroll-margin-top: 16px; }
   --rd-size: 18px; --rd-line: 1.8; --rd-w: 720px; --rd-para: 1.05em; --rd-font: var(--font-head);
 }
 html { scroll-behavior: smooth; scroll-padding-top: 16px; }
+/* TRANG ĐỌC CUỘN TỨC THÌ (r93). Chương dài vài nghìn px, nên "smooth" biến mỗi
+   lần lật chương / về đầu / nhảy tới khung bình luận thành một cú trượt vài
+   trăm ms: mắt đọc thấy đúng là "lag" dù máy khoẻ. Cuộn bằng ngón tay không
+   bị ảnh hưởng — smooth chỉ áp cho cuộn do mã hoặc mỏ neo. */
+html:has(body.reading) { scroll-behavior: auto; }
 body {
   margin: 0; background: var(--bg); color: var(--txt);
   font: 400 15.5px/1.62 var(--font);
@@ -1748,7 +1752,11 @@ body.reading #story { display: none; }
 #rd { display: none; }
 body.reading #rd { display: block; }
 .rdbar { position: sticky; top: 0; z-index: 45; background: var(--rd-bg); border-bottom: 1px solid var(--rd-bd);
-  transition: transform .32s var(--ease); will-change: transform; }
+  transition: transform .26s var(--ease); }
+/* Ẩn/hiện thanh đọc. KHÔNG `will-change: transform` thường trực: thanh này nằm
+   trên suốt buổi đọc, giữ một layer GPU toàn thời gian chỉ làm máy yếu thiếu bộ
+   nhớ dựng hình — mà transition transform thì trình duyệt tự cấp layer trong lúc
+   chạy. .32s → .26s: cùng một đường cong, về đích sớm hơn một nhịp mắt. */
 body.rd-hide .rdbar { transform: translateY(-100%); }
 .rdbar .in { max-width: 1080px; margin: 0 auto; padding: 9px 20px; display: flex; align-items: center; gap: 12px; }
 .rdbar .ttl { min-width: 0; flex: 1; }
@@ -1861,25 +1869,35 @@ body.rd-focus .rdbar .tools:hover { opacity: 1; }
 body.rd-focus .rdpct { opacity: .35; }
 
 /* chuyển chương: cũ trượt sang trái rồi mờ đi, mới trượt vào từ phải.
-   Trang đọc là nơi blur đắt nhất — 5 khối này gộp lại phủ gần hết màn hình và đổi
+   Trang đọc là nơi blur đắt nhất — các khối này gộp lại phủ gần hết màn hình và đổi
    trạng thái mỗi lần lật chương — nên chỉ còn trượt + mờ, không filter.
-   Riêng cột chữ mới cho `color` chuyển động, và cũng chỉ .2s ease-out: đổi nền đọc
-   (sang/kem/tối) mà bắt cả chương sách vẽ lại chữ trong .35s linear thì đúng là khựng. */
+   r93: hai chỗ bớt việc —
+     · bỏ `background-color`/`border-color` khỏi danh sách transition (đọc chỉ còn
+       nền tối, không còn chuyện lật nền để mà phai), nên mỗi lần đổi class chỉ
+       đúng hai thuộc tính compositor phải chạy;
+     · CỘT CHỮ chỉ MỜ, không trượt: .rtext cao bằng cả chương (vài nghìn px), dựng
+       layer chuyển động cho nó rồi dịch ngang là thừa — chữ đằng nào cũng được
+       thay mới. Phần đầu chương, chân chương và thanh chuyển vẫn trượt như cũ. */
 #rd .rdhead, #rd .rtext, #rd .ract, #rd .rend, #rd .rnav {
-  transition: opacity var(--t) var(--ease), transform var(--t) var(--ease),
-    background-color var(--t-theme) var(--ease-out),
-    border-color var(--t-theme) var(--ease-out); }
-#rd.cut-out .rdhead, #rd.cut-out .rtext, #rd.cut-out .ract, #rd.cut-out .rend, #rd.cut-out .rnav {
-  opacity: 0; transform: translateX(-30px); }
-#rd.cut-in .rdhead, #rd.cut-in .rtext, #rd.cut-in .ract, #rd.cut-in .rend, #rd.cut-in .rnav {
-  animation: chapIn var(--t-slow) var(--ease-out) both; }
-@keyframes chapIn { from { opacity: 0; transform: translateX(30px); } }
+  transition: opacity var(--t) var(--ease), transform var(--t) var(--ease); }
+#rd.cut-out .rdhead, #rd.cut-out .ract, #rd.cut-out .rend, #rd.cut-out .rnav {
+  opacity: .15; transform: translateX(-30px); }
+#rd.cut-out .rtext { opacity: .15; }
+#rd.cut-in .rdhead, #rd.cut-in .ract, #rd.cut-in .rend, #rd.cut-in .rnav {
+  animation: chapIn var(--t) var(--ease-out) both; }
+#rd.cut-in .rtext { animation: chapSoft var(--t) var(--ease-out) both; }
+/* r93: KHÔNG mờ về 0. Bản trước để trang trắng bệch đúng một nhịp giữa hai chương
+   (mờ hết .17s → thay chữ → hiện dần từ 0 trong .35s): trên máy thật đó là một
+   khoảng LẶNG, mắt đọc hiểu thành "khựng". Nay cũ xuống còn 15% và mới vào từ 30%
+   — chữ cũ thành bóng mờ, chữ mới hiện lên ngay trong cùng khung hình thay chữ,
+   rồi .25s để về nét. Cùng một chuyển động, không còn khoảng trống nào. */
+@keyframes chapIn { from { opacity: .3; transform: translateX(30px); } }
 /* chế độ cuộn liên tục: chỉ mờ đi rồi hiện lại, không đẩy chữ sang ngang */
 #rd.cut-fade .rdhead, #rd.cut-fade .rtext, #rd.cut-fade .ract, #rd.cut-fade .rend, #rd.cut-fade .rnav {
-  opacity: 0; transition: opacity .17s linear; }
+  opacity: .15; transition: opacity .15s linear; }
 #rd.cut-in-soft .rdhead, #rd.cut-in-soft .rtext, #rd.cut-in-soft .ract, #rd.cut-in-soft .rend, #rd.cut-in-soft .rnav {
-  animation: chapSoft var(--t-slow) var(--ease-out) both; }
-@keyframes chapSoft { from { opacity: 0; } }
+  animation: chapSoft var(--t) var(--ease-out) both; }
+@keyframes chapSoft { from { opacity: .3; } }
 /* Dải sáng chạy suốt lúc tải chương. background-position bắt vẽ lại từng khung
    hình; đổi sang khối ::after trượt bằng transform thì compositor tự lo, còn main
    thread rảnh đúng lúc đang dựng nội dung chương mới. */
@@ -1897,7 +1915,7 @@ body.rd-focus .rdpct { opacity: .35; }
   #rd.cut-in-soft .rdhead, #rd.cut-in-soft .rtext, #rd.cut-in-soft .ract, #rd.cut-in-soft .rend, #rd.cut-in-soft .rnav,
   .rdbar.loading .rdprog::after { animation: none; }
   #rd.cut-out .rdhead, #rd.cut-out .rtext, #rd.cut-out .ract, #rd.cut-out .rend, #rd.cut-out .rnav,
-  #rd.cut-fade .rdhead, #rd.cut-fade .rtext, #rd.cut-fade .ract, #rd.cut-fade .rend, #rd.cut-fade .rnav { opacity: 1; transform: none; filter: none; }
+  #rd.cut-fade .rdhead, #rd.cut-fade .rtext, #rd.cut-fade .ract, #rd.cut-fade .rend, #rd.cut-fade .rnav { opacity: 1; transform: none; filter: none; transition: none; }
 }
 
 /* trang đọc: chữ nghỉ mắt hơn — trích dẫn, đường ngắt cảnh, bôi đen */
@@ -1927,21 +1945,11 @@ body.reading ::selection { background: color-mix(in srgb, var(--rd-acc) 30%, tra
   color: var(--rd-mut); padding: 11px 10px 3px; }
 .sgrp .srow2 { border-bottom: 0; padding: 9px 10px; }
 
-/* Trang đọc theo đúng một nguyên tắc với thân trang: NỀN GIẤY phai .16s, MỰC đổi
-   tức thì, và giữ transform của thanh trên để khỏi nhấp nháy. Cột chữ ở đây dài
-   cả màn hình — cho `color` chuyển động là bắt máy vẽ lại từng dòng mỗi khung
-   hình, mà giữa chặng mực với giấy vẫn gặp nhau ở một màu xám đục (tương phản
-   ~1:1) nên chẳng đổi lại được gì. Các lớp (thanh công cụ, cột chữ, chân trang,
-   ngăn kéo) dùng chung một nhịp + một đường cong để về đích cùng lúc. */
-body.reading { transition: background-color var(--t-theme) var(--ease-out),
-  border-color var(--t-theme) var(--ease-out); }
-body.reading .rdbar { transition: transform .32s var(--ease), background-color var(--t-theme) var(--ease-out),
-  border-color var(--t-theme) var(--ease-out); }
-body.reading .rdprog { transition: background-color var(--t-theme) var(--ease-out), border-color var(--t-theme) var(--ease-out); }
-body.reading .sheet .pan, body.reading .sheet .pb, body.reading .toc a, body.reading .opts button,
-body.reading .sgrp, body.reading .toastline, body.reading .rnav button, body.reading .ract > * {
-  transition: background-color var(--t-theme) var(--ease-out),
-    border-color var(--t-theme) var(--ease-out); }
+/* Trang đọc chỉ còn MỘT nền (tối — r91), nên cả cụm transition "lật nền" ở đây
+   đã thành vô nghĩa: nó còn TỆ hơn vô nghĩa, vì luật `transition` ghi đè trọn
+   danh sách của .toc a / .opts button / .rnav button — chúng mất luôn phần phai
+   màu khi trỏ, thành giật. r93 xoá hẳn cụm này; thanh đọc lấy nhịp transform ở
+   luật gốc `.rdbar` phía trên. */
 
 /* nút trong thanh đọc: nâng nhẹ khi trỏ */
 .ibo:hover { transform: translateY(-1px); }
