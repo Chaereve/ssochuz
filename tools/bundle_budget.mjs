@@ -24,7 +24,7 @@ export const BUNDLE_BUDGETS = {
   'cz.css':          { warnKb: 195, maxKb: 215 },
   /* v6: nâng có chủ đích (giao diện admin kiểu Wattpad: bố cục hai cột, bìa lớn,
      trạng thái đầy đủ). Vẫn có trần — tăng thêm phải ghi lý do ở đây. */
-  'admin.css':       { warnKb: 70,  maxKb: 84 },
+  'admin.css':       { warnKb: 82,  maxKb: 96 },   /* r123: giao diện Studio cần thêm token + rail/shell */
   'admin.js':        { warnKb: 230, maxKb: 260 },
   'admin-editor.js': { warnKb: 400, maxKb: 420 },
   'admin-docx.js':   { warnKb: 430, maxKb: 460 },

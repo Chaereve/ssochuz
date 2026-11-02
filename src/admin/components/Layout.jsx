@@ -70,6 +70,14 @@ function groupOf(tabId) {
   return 'Quản trị';
 }
 
+/* Bỏ dấu tiếng Việt để gõ “thu vien” vẫn tìm ra “Thư viện”. */
+function fold(text) {
+  return String(text || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+    .toLowerCase();
+}
+
 function Icon({ name }) {
   const html = window.CZ && window.CZ.icon ? window.CZ.icon(name, 'i-s') : '';
   return <span class="admin-nav-icon" dangerouslySetInnerHTML={{ __html: html }} />;
@@ -119,7 +127,7 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
   });
   const [drawer, setDrawer] = useState(false);
   const [q, setQ] = useState('');
-  const [suggest, setSuggest] = useState([]);
+  const [suggest, setSuggest] = useState({ nav: [], books: [] });
   const [menu, setMenu] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
   const openReports = Number(state.reports && state.reports.open) || 0;
@@ -133,16 +141,17 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
 
   useEffect(() => {
     const t = setTimeout(() => {
-      const query = q.trim().toLowerCase();
-      if (!query || query.length < 2) { setSuggest([]); return; }
-      const hits = lib.filter((b) => {
-        const hay = [b.title, b.author, b.slug].join(' ').toLowerCase();
-        return hay.indexOf(query) >= 0;
-      }).slice(0, 8);
-      setSuggest(hits);
-    }, 350);
+      const nq = fold(q.trim());
+      if (!nq) { setSuggest({ nav: [], books: [] }); return; }
+      const navHits = NAV.flatMap((g) => g.items)
+        .filter(([id]) => !allowed || allowed.indexOf(id) >= 0)
+        .filter(([id, label]) => fold(label).indexOf(nq) >= 0 || fold(id).indexOf(nq) >= 0)
+        .slice(0, 5);
+      const bookHits = lib.filter((b) => fold([b.title, b.author, b.slug].join(' ')).indexOf(nq) >= 0).slice(0, 6);
+      setSuggest({ nav: navHits, books: bookHits });
+    }, 160);
     return () => clearTimeout(t);
-  }, [q, lib]);
+  }, [q, lib, allowed]);
 
   const nav = useMemo(() => NAV.map((g) => ({
     group: g.group,
@@ -158,7 +167,7 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
 
   function submitSearch(e) {
     e.preventDefault();
-    setSuggest([]);
+    setSuggest({ nav: [], books: [] });
     if (onSearch) onSearch(q);
     else go('list');
   }
@@ -200,6 +209,7 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
                     title={editTip}
                     data-tab={id} onClick={() => go(id)} disabled={id === 'edit' && !currentSlug}>
                     <Icon name={icon} /><span>{label}</span>
+                    {id === 'list' && lib.length ? <span class="ct">{lib.length}</span> : null}
                     {id === 'edit' && currentSlug ? <span class="ct">đang sửa</span> : null}
                     {id === 'reports' && openReports ? <span class="ct">{openReports}</span> : null}
                   </button>
@@ -209,7 +219,12 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
           ))}
         </nav>
         <div class="v2side-foot">
-          <p class="v2side-note">Chỉ ghi vào KV khi phiên đã nối ADMIN_KEY. Chưa nối thì mọi thay đổi chỉ nằm trong tab này.</p>
+          <span class={`v2conn ${chip.cls}`} title={chip.hint || chip.text}><span class="d"></span><b>{chip.text}</b></span>
+          <div class={`v2qbar ${qLevel}`} title={quotaTitle}>
+            <span class="lab"><span>Ghi KV hôm nay</span><b>{used} / {limit}</b></span>
+            <span class="bar"><i style={{ width: `${pct(used, limit)}%` }}></i></span>
+          </div>
+          <p class="v2side-note">{state.online ? 'Thay đổi đi thẳng vào KV qua Worker.' : 'Chưa nối ADMIN_KEY — thay đổi chỉ nằm trong tab này.'}</p>
         </div>
       </aside>
       {drawer ? <div class="v2scrim" onClick={() => setDrawer(false)} /> : null}
@@ -221,14 +236,25 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
             <a class="logo v2mlogo" href="/" aria-label="Trang chủ ssochuz"><span class="dot"></span>ssochuz</a>
             <form class="v2search" onSubmit={submitSearch}>
               <Icon name="search" />
-              <input class="inp" ref={searchRef} value={q} placeholder="Tìm bộ truyện…" title="Tìm nhanh (Ctrl+K)" onInput={(e) => setQ(e.target.value)} aria-label="Tìm trong quản trị" />
-              {suggest.length ? (
-                <div class="v2search-suggest" role="listbox" aria-label="Gợi ý tìm kiếm">
-                  {suggest.map((b) => (
-                    <button type="button" key={b.slug} onClick={() => { setQ(b.title || b.slug); setSuggest([]); if (onSearch) onSearch(b.title || b.slug); }}>
-                      <b>{b.title}</b> <span class="sm muted">{b.author || b.slug}</span>
+              <input class="inp" ref={searchRef} value={q} placeholder="Tìm bộ truyện…" title="Tìm nhanh (Ctrl+K)" onInput={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') { setQ(''); setSuggest({ nav: [], books: [] }); } }} aria-label="Tìm trong quản trị" />
+              <kbd class="v2kbd" aria-hidden="true">⌘K</kbd>
+              {q.trim() ? (
+                <div class="v2search-suggest" aria-label="Gợi ý tìm kiếm">
+                  {suggest.nav.length ? <div class="v2ss-group">Điều hướng</div> : null}
+                  {suggest.nav.map(([id, label, icon]) => (
+                    <button type="button" key={'n-' + id} onClick={() => { setQ(''); setSuggest({ nav: [], books: [] }); go(id); }}>
+                      <Icon name={icon} /><b>{label}</b><span class="grow"></span><kbd>↵</kbd>
                     </button>
                   ))}
+                  {suggest.books.length ? <div class="v2ss-group">Bộ truyện</div> : null}
+                  {suggest.books.map((b) => (
+                    <button type="button" key={b.slug} onClick={() => { setQ(b.title || b.slug); setSuggest({ nav: [], books: [] }); if (onSearch) onSearch(b.title || b.slug); }}>
+                      <Icon name="book" /><b>{b.title}</b><span class="sm muted">{b.author || b.slug}</span>
+                    </button>
+                  ))}
+                  {!suggest.nav.length && !suggest.books.length
+                    ? <div class="v2ss-empty">Không có mục nào khớp “{q.trim()}”.</div>
+                    : null}
                 </div>
               ) : null}
             </form>

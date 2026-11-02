@@ -21,7 +21,7 @@ export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulk
   const [vis, setVis] = useState('');
   const [locked, setLocked] = useState('');
   const [page, setPage] = useState(1);
-  const [view, setView] = useState('grid');
+  const [view, setView] = useState('table');
 
   const filtered = useMemo(() => {
     return lib.filter((book) => {

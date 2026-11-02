@@ -159,8 +159,8 @@ const STATS = {
   /* 4. Thư viện: bìa + phân trang + lọc 18+ */
   click($('button[data-tab="list"]'));
   await wait(250);
-  check('Thư viện/mặc định hiển thị LƯỚI', !!$('.v2grid'), '');
-  /* Thư viện mặc định là LƯỚI; các check đếm dòng bảng cần chế độ Bảng */
+  check('Thư viện/mặc định hiển thị BẢNG', !!$('.v2book-table'), '');
+  /* r123: bảng là mặc định (67 bộ, soát hàng loạt); nút Lưới đổi sang lưới bìa */
   $$('button').find((b) => b.textContent.trim() === 'Bảng').click();
   await wait(150);
   check('Thư viện/phân trang 24/trang', $$('.v2book-table tbody tr').length === 24, $$('.v2book-table tbody tr').length);
