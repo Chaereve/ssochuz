@@ -96,13 +96,20 @@ export function BookEditor({ registry, slug, bookData, bookLoading, bookError, a
 
   return (
     <div id="pane-edit" class="v2edit">
-      <div class="v2edit-top">
-        <button class="btn ghost sm" type="button" onClick={onBack}>← Thư viện</button>
-        <div class="v2edit-title">
-          <h3>Sửa metadata: {book.title}</h3>
-          <BookBadges book={book} />
+      {/* Màn này tự vẽ đầu trang vì tiêu đề là TÊN BỘ đang mở (khung chung
+          không biết tên bộ). Một dòng tiêu đề, dưới nó là hai tab — trước đây
+          “Sửa bộ” của khung + “Sửa metadata: …” của pane + tab = ba tầng. */}
+      <header class="v2pagehead v2head-edit">
+        <div class="v2head-text">
+          <div class="v2head-top">
+            <button class="v2back" type="button" onClick={() => onBack && onBack()}>← Thư viện</button>
+            <span class="eyebrow">Nội dung</span>
+          </div>
+          <h2>Sửa metadata: {book.title}</h2>
+          <p class="hint">{Number(book.chapters) || 0} chương · cập nhật {book.updated || '—'} · <code class="v2slug">{book.slug}</code></p>
         </div>
-      </div>
+        <div class="v2head-actions"><BookBadges book={book} /></div>
+      </header>
       <div class="v2tabs" role="tablist" aria-label="Khu vực sửa bộ truyện">
         <button type="button" role="tab" id="tab-info" aria-selected={tab === 'info'} aria-controls="pane-info" class={'v2tab' + (tab === 'info' ? ' on' : '')} onClick={() => setTab('info')}>Thông tin</button>
         <button type="button" role="tab" id="tab-chapters" aria-selected={tab === 'chapters'} aria-controls="pane-chapters" class={'v2tab' + (tab === 'chapters' ? ' on' : '')} onClick={() => setTab('chapters')}>Chương</button>

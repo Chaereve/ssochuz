@@ -25,9 +25,14 @@ export function UsersPanel({ registry, onEdit, onFilterAuthor }) {
   return (
     <div id="pane-users" class="v2pane">
       <section class="card2">
-        <div class="row"><h3>Tác giả</h3><span class="grow"></span><span class="sm muted">{authors.length} người</span></div>
-        <p class="hint">Tổng hợp từ thông tin các bộ truyện.</p>
-        <input class="inp" aria-label="Tìm tác giả" value={q} placeholder="Tìm tác giả…" onInput={(e) => setQ(e.target.value)} />
+        {/* Tìm nằm ngay trên hàng tiêu đề của thẻ: một dòng công cụ, không phải
+            một khối riêng chiếm hết chiều ngang. */}
+        <div class="row v2panel-head">
+          <h3>Tác giả</h3>
+          <span class="grow"></span>
+          <input class="inp v2head-search" type="search" aria-label="Tìm tác giả" value={q} placeholder="Tìm tác giả…" onInput={(e) => setQ(e.target.value)} />
+          <span class="sm muted">{shown.length}/{authors.length} người</span>
+        </div>
         {shown.length ? (
           <div class="v2tablewrap v2authors-wrap">
             <table class="v2authors">

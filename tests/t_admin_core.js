@@ -52,7 +52,9 @@ const chapCount = (reg.lib || []).reduce((sum, b) => sum + (Number(b.chapters) |
   assert.ok(rowWithChapters, 'không có dòng nào còn chương để mở');
   click(rowWithChapters.querySelector('.v2actions button'));
   await wait(1200);
-  out.edit = doc.querySelector('#pane-edit h3').textContent.trim();
+  /* r123: đầu trang của màn sửa bộ do chính pane vẽ (tiêu đề = tên bộ), nên
+     tiêu đề nằm ở h2 chứ không còn h3 trong pane. */
+  out.edit = doc.querySelector('#pane-edit .v2pagehead h2').textContent.trim();
   out.chapterEditor = {
     chapters: doc.querySelectorAll('.v2chapter-list button').length,
     toolbar: doc.querySelectorAll('.v2tipbar button').length,

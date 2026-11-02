@@ -35,6 +35,16 @@ export function ChaptersHub({ registry, apiBase, onEdit }) {
       </li>
     );
   }
+  /* Bốn hàng đợi là BỐN CỘT VIỆC cùng hạng, không phải bốn tầng nội dung —
+     trước đây mỗi hàng là một thẻ lớn xếp dọc, mắt phải nhảy qua cả thẻ trống
+     mới tới hàng có việc. Nay chúng nằm cạnh nhau, số việc hiện ngay ở đầu
+     thẻ, và thẻ rỗng vẫn giữ chỗ để bố cục không nhảy khi dữ liệu đổi. */
+  const queues = [
+    { key: 'draft', title: 'Nháp', hint: 'Chưa xuất bản.', rows: drafts, empty: 'Không có bộ nháp.' },
+    { key: 'pending', title: 'Chờ duyệt', hint: 'Đã gửi duyệt.', rows: pending, empty: 'Không có bộ chờ duyệt.' },
+    { key: 'scheduled', title: 'Hẹn giờ', hint: 'Cả bộ xuất bản theo lịch.', rows: scheduled, empty: 'Không có bộ hẹn giờ.' },
+    { key: 'waiting', title: 'Chờ tới giờ', hint: 'Có chương hẹn giờ bên trong.', rows: waiting, empty: 'Không có chương nào đang hẹn giờ.' }
+  ];
   return (
     <div id="pane-chapters" class="v2pane">
       <section class="card2">
@@ -49,39 +59,37 @@ export function ChaptersHub({ registry, apiBase, onEdit }) {
           </div>
         ) : null}
       </section>
+      <div class="v2queues">
+        {queues.map((q) => (
+          <section class="card2 v2queue" key={q.key} aria-label={q.title}>
+            <div class="row v2queue-head">
+              <h3>{q.title}</h3>
+              <span class={'v2count' + (q.rows.length ? ' has' : '')} title={q.hint}>{q.rows.length}</span>
+              <span class="grow"></span>
+            </div>
+            {q.key === 'waiting'
+              ? (q.rows.length ? (
+                <ul class="v2sort">
+                  {q.rows.map((b) => (
+                    <li key={b.slug}>
+                      <BookCover book={b} apiBase={apiBase} width={40} height={60} />
+                      <span class="grow">
+                        <b title={b.title}>{b.title}</b>
+                        <span class="sm muted">{Number(b.pending) || 0} chương chờ{b.schedNext ? ' · gần nhất ' + fmtNext(b.schedNext) + (hoursUntil(chapterAtMs({ at: b.schedNext })) ? ' (còn ~' + hoursUntil(chapterAtMs({ at: b.schedNext })) + ' giờ)' : '') : ''}</span>
+                      </span>
+                      <button class="btn sm" type="button" onClick={() => onEdit(b.slug)}>Sửa chương</button>
+                    </li>
+                  ))}
+                </ul>
+              ) : <div class="empty sm">{q.empty}</div>)
+              : (q.rows.length ? <ul class="v2sort">{q.rows.map((b) => <Row key={b.slug} b={b} action="Sửa" />)}</ul> : <div class="empty sm">{q.empty}</div>)}
+          </section>
+        ))}
+      </div>
       <section class="card2">
-        <h3>Hàng đợi nháp</h3>
-        {drafts.length ? <ul class="v2sort">{drafts.map((b) => <Row key={b.slug} b={b} action="Sửa" />)}</ul> : <div class="empty sm">Không có bộ nháp.</div>}
-      </section>
-      <section class="card2">
-        <h3>Hàng đợi chờ duyệt</h3>
-        {pending.length ? <ul class="v2sort">{pending.map((b) => <Row key={b.slug} b={b} action="Sửa" />)}</ul> : <div class="empty sm">Không có bộ chờ duyệt.</div>}
-      </section>
-      <section class="card2">
-        <h3>Chương đang chờ tới giờ</h3>
-        {waiting.length ? (
-          <ul class="v2sort">
-            {waiting.map((b) => (
-              <li key={b.slug}>
-                <BookCover book={b} apiBase={apiBase} width={40} height={60} />
-                <span class="grow">
-                  <b title={b.title}>{b.title}</b>
-                  <span class="sm muted">{Number(b.pending) || 0} chương chờ{b.schedNext ? ' · gần nhất ' + fmtNext(b.schedNext) + (hoursUntil(chapterAtMs({ at: b.schedNext })) ? ' (còn ~' + hoursUntil(chapterAtMs({ at: b.schedNext })) + ' giờ)' : '') : ''}</span>
-                </span>
-                <button class="btn sm" type="button" onClick={() => onEdit(b.slug)}>Sửa chương</button>
-              </li>
-            ))}
-          </ul>
-        ) : <div class="empty sm">Không có chương nào đang hẹn giờ.</div>}
-      </section>
-      <section class="card2">
-        <h3>Hàng đợi hẹn giờ (cả bộ)</h3>
-        {scheduled.length ? <ul class="v2sort">{scheduled.map((b) => <Row key={b.slug} b={b} action="Sửa" />)}</ul> : <div class="empty sm">Không có bộ hẹn giờ.</div>}
-      </section>
-      <section class="card2">
-        <h3>Mới cập nhật</h3>
+        <div class="row"><h3>Mới cập nhật</h3><span class="grow"></span><span class="sm muted">16 bộ gần nhất</span></div>
         <ul class="v2sort">
-          {lib.slice(0, 16).map((b) => <Row b={b} action="Sửa chương" />)}
+          {lib.slice(0, 16).map((b) => <Row key={b.slug} b={b} action="Sửa chương" />)}
         </ul>
       </section>
     </div>
