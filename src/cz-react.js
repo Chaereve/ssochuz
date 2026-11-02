@@ -459,7 +459,7 @@
       btn.disabled = false; btn.removeAttribute('aria-busy');
       if (!res) return;
       if (res.blocked) {
-        if (res.blocked === 'rate') CZtoast('Từ từ thôi bạn — thả chậm lại một chút nhé!', 'err');
+        if (res.blocked === 'rate') CZtoast('Hơi nhanh rồi — thử lại sau giây lát.', 'err');
         return;
       }
       refresh(host);
@@ -474,7 +474,7 @@
     }).catch(function (error) {
       btn.disabled = false; btn.removeAttribute('aria-busy');
       if (error && error.status === 401) CZtoast('Đăng nhập Supabase để thả reaction sticker.', 'err');
-      else if (error && error.status === 429) CZtoast('Bạn thao tác hơi nhanh — thử lại sau.', 'err');
+      else if (error && error.status === 429) CZtoast('Hơi nhanh rồi — thử lại sau giây lát.', 'err');
       else CZtoast((error && error.message) || 'Reaction chưa đồng bộ được; thử lại sau.', 'err');
     });
   }
@@ -531,7 +531,7 @@
       }).catch(function (error) {
         b.disabled = false;
         if (error && error.status === 401) CZtoast('Đăng nhập Supabase để thả reaction sticker.', 'err');
-        else if (error && error.status === 429) CZtoast('Bạn thao tác hơi nhanh — thử lại sau.', 'err');
+        else if (error && error.status === 429) CZtoast('Hơi nhanh rồi — thử lại sau giây lát.', 'err');
         else CZtoast((error && error.message) || 'Reaction chưa đồng bộ được; thử lại sau.', 'err');
       });
     });

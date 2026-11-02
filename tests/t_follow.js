@@ -77,7 +77,9 @@ function supabaseStub(w) {
   const tocRequests = log.filter(row => row.route === '/api/community/tocs');
   ok(tocRequests.length <= 1 && tocRequests.every(row => JSON.parse(row.options.body).storyIds.length <= 20),
     'homepage gọi TOC theo batch, không phát sinh N+1 request');
-  ok(!!doc.querySelector('[data-dice] .dicebtn'), 'random picker có nút trên trang chủ');
+  /* r121: trang chủ KHÔNG còn nút bốc bài; lối vào duy nhất là tab trong sidebar. */
+  ok(!doc.querySelector('[data-dice]') && !doc.querySelector('.dicebtn'),
+    'trang chủ không còn nút bốc bài');
   /* r120: bộ bài là cả kho. Truyện này vừa được máy ghi tiến độ nên bị luật
      “bỏ truyện đọc trong 14 ngày” loại — chuyện đó KHÔNG được biến bộ bài
      thành “chỉ còn truyện đang theo dõi” như bản cũ. */
@@ -85,8 +87,9 @@ function supabaseStub(w) {
   ok(candidates.length >= 4, 'bộ bài phải còn nhiều lá của cả kho để bốc');
   ok(candidates.some(item => item.slug !== story.slug),
     'bộ bài không bị thu về truyện đang theo dõi');
-  const diceButton = doc.querySelector('[data-dice] .dicebtn');
-  ok(diceButton && diceButton.getAttribute('href') === '/vong-quay/', 'random picker dẫn tới trang riêng /vong-quay/');
+  const diceTab = doc.querySelector('#czNav a[data-k="dice"]');
+  ok(diceTab && diceTab.getAttribute('href') === '/boc-bai/', 'tab “Bốc bài” trong sidebar dẫn tới /boc-bai/');
+  ok(diceTab && diceTab.textContent.trim() === 'Bốc bài', 'tab trong sidebar mang nhãn “Bốc bài”');
   const diceHost = doc.createElement('section');
   diceHost.id = 'czDiceBox';
   diceHost.className = 'dicepage-box';

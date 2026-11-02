@@ -18,7 +18,7 @@ function srcFile(name) {
   const a = path.join(ROOT, 'src', name);
   return fs.existsSync(a) ? a : path.join(ROOT, name);
 }const PAGES = ['index.html', 'truyen.html', 'admin.html',
-  'vong-quay/index.html', 'my-space.html', 'profile.html'];
+  'boc-bai/index.html', 'my-space.html', 'profile.html'];
 
 /* --- bỏ phần trong dấu nháy để không soi nhầm thẻ nằm trong data-URI --- */
 function stripValues(html) {
@@ -51,7 +51,7 @@ for (const f of PAGES) {
   }
   /* <script src> nội bộ phải có thật: Pages chặn /src/* bằng 301 về "/" nên một
      thẻ trỏ vào tệp không tồn tại sẽ nhận về index.html — trình duyệt parse HTML
-     như JS và báo "Unexpected token '<'" (lỗi thật của trang /vong-quay/). */
+     như JS và báo "Unexpected token '<'" (lỗi thật của trang /boc-bai/). */
   for (const m of raw.matchAll(/<script[^>]+src="(\/[^"]*)"/g)) {
     const p = m[1].split('?')[0];
     if (!fs.existsSync(path.join(ROOT, p.replace(/^\//, '')))) {

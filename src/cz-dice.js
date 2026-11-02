@@ -1,5 +1,5 @@
 /* ============================================================================
-   ssochuz · TRANG “HÔM NAY ĐỌC GÌ?” (/vong-quay/ · bản 1.20.0)
+   ssochuz · TRANG “BỐC BÀI” (/boc-bai/ · bản 1.20.0)
    ----------------------------------------------------------------------------
    Cơ chế: BỐC BÀI. Một xấp bài úp nằm giữa trang; bấm “Bốc một lá” thì lá trên
    cùng nhấc lên, lật tại chỗ (rotateY) và đáp xuống — không bay ngang, không có
@@ -26,7 +26,7 @@
   function num(n) { return CZ.num ? CZ.num(n) : String(n); }
   function reduce() { return !!CZ.reduce || (w.matchMedia && w.matchMedia('(prefers-reduced-motion: reduce)').matches); }
 
-  var DICE_URL = '/vong-quay/';
+  var DICE_URL = '/boc-bai/';
   var LOGO = '/assets/brand/ssochuz-logo.png';
   var FLIP_MS = 640;            /* thời gian lật một lá */
   var FOLD_MS = 240;            /* lá cũ chìm về xấp */
@@ -123,19 +123,21 @@
           return '<button type="button" class="dc-chip' + (o.genre === g ? ' on' : '') + '" data-genre="' + esc(g) + '" aria-pressed="' + (o.genre === g) + '">' + esc(g) + '</button>';
         }).join('') : '') +
       '</div>' +
-      '<p class="dc-count"><b id="dcCount">' + num(total == null ? candidates().length : total) + '</b> truyện trong vòng</p>' +
+      '<p class="dc-count"><b id="dcCount">' + num(total == null ? candidates().length : total) + '</b> truyện khớp bộ lọc</p>' +
     '</div>';
   }
 
   function hintHTML() {
-    return '<p class="dc-kick">Bốc bài</p>' +
+    /* Lời dẫn ở đầu trang đã nói bộ bài gồm những gì, nên chỗ này chỉ còn
+       đúng một câu chỉ việc — không nhắc lại lần thứ hai. */
+    return '<p class="dc-kick">Sẵn sàng</p>' +
       '<h2 class="dc-tt">Một lá cho hôm nay</h2>' +
-      '<p class="dc-sub">Bộ bài gồm mọi truyện trên trang, đã lọc theo lựa chọn của bạn. Bốc một lá, lật ra rồi đọc.</p>';
+      '<p class="dc-sub">Bấm “Bốc một lá” để máy chọn giúp bạn.</p>';
   }
 
   function cardHTML(n, ch) {
     var o = opts();
-    return '<p class="dc-kick">Chọn cho hôm nay</p>' +
+    return '<p class="dc-kick">Lá của bạn</p>' +
       '<h2 class="dc-tt">' + esc(n.title) + '</h2>' +
       '<p class="dc-meta">' + [n.author ? esc(n.author) : '', n.couple ? esc(n.couple) : '',
         esc(CZ.countText ? CZ.countText(n) : '')].filter(Boolean).join(' · ') +
@@ -146,10 +148,10 @@
   function idleActsHTML() {
     return '<button class="btn pri" id="dcDraw" data-act="draw" type="button">Bốc một lá</button>';
   }
-  function idleFootHTML(n) {
-    return '<button class="dc-q" id="dcShuffle" data-act="shuffle" type="button">Xáo bài</button>' +
-      '<span class="dc-dot" aria-hidden="true"></span>' +
-      '<span class="dc-cnt"><b>' + num(n) + '</b> lá trong bộ bài</span>';
+  /* Số lá đã có chỗ nói rồi — dòng “N truyện khớp bộ lọc” ngay trên đầu bộ bài.
+     Chân khung chỉ còn đúng một việc: xáo lại. */
+  function idleFootHTML() {
+    return '<button class="dc-q" id="dcShuffle" data-act="shuffle" type="button">Xáo bài</button>';
   }
   function doneActsHTML(n, ch) {
     return '<a class="btn pri" href="' + esc(CZ.readURL ? CZ.readURL(n.slug, Math.max(1, ch || 1)) : n.url) + '" data-dice-read>' +
@@ -178,7 +180,7 @@
     if (!S.pool.length) {
       body.innerHTML = filtersHTML(0) +
         '<div class="dc-empty"><b>Chưa có truyện khớp bộ lọc.</b>' +
-        '<p class="sm muted">Thử bật thêm tình trạng hoặc “Gồm 18+”.</p></div>';
+        '<p class="sm muted">Bật thêm tình trạng hoặc “Gồm 18+” để có thêm lá.</p></div>';
       bindBody(m);
       return;
     }
@@ -200,8 +202,8 @@
           '<div id="dcResult" tabindex="-1" hidden></div>' +
         '</div>' +
         '<div class="dc-acts" id="dcActs">' + idleActsHTML() + '</div>' +
-        '<div class="dc-foot" id="dcFoot">' + idleFootHTML(S.pool.length) + '</div>' +
-        '<p class="dc-live" role="status" aria-live="polite" id="dcLive">Sẵn sàng · ' + num(S.pool.length) + ' lá</p>' +
+        '<div class="dc-foot" id="dcFoot">' + idleFootHTML() + '</div>' +
+        '<p class="dc-live" role="status" aria-live="polite" id="dcLive">Sẵn sàng</p>' +
       '</div>';
 
     S.hasCard = false;
@@ -442,23 +444,8 @@
       });
     }
     var foot = m.querySelector('#dcFoot');
-    if (foot) foot.innerHTML = S.hasCard ? doneFootHTML(S.deck.length) : idleFootHTML(S.deck.length);
+    if (foot) foot.innerHTML = S.hasCard ? doneFootHTML(S.deck.length) : idleFootHTML();
     if (live) live.textContent = 'Đã xáo · ' + num(S.deck.length) + ' lá';
-  }
-
-  /* ---- nút dẫn sang trang riêng /vong-quay/ ở trang chủ ---- */
-  function buttons() {
-    var hosts = Array.prototype.slice.call(d.querySelectorAll('[data-dice]'));
-    hosts.forEach(function (h) {
-      if (h.__dice) return;
-      h.__dice = 1;
-      var a = d.createElement('a');
-      a.href = DICE_URL;
-      a.className = 'btn ghost sm dicebtn';
-      a.innerHTML = (CZ.icon ? CZ.icon('dice', 'i-s') : '') + '<span>Hôm nay đọc gì?</span>';
-      a.setAttribute('title', 'Mở trang bốc bài chọn truyện ngẫu nhiên trong toàn bộ truyện trên trang');
-      h.appendChild(a);
-    });
   }
 
   function open() {
@@ -476,7 +463,7 @@
   function initPage() {
     var pageBox = d.querySelector('#czDiceBox.dicepage-box');
     if (!pageBox) return;
-    if (CZ.mountShell) CZ.mountShell('dice');
+    if (CZ.mountShell) CZ.mountShell({ active: 'dice' });
     var ready = (CZ.registry ? CZ.registry() : Promise.resolve()).then(function () {
       if (w.CZPersonal && w.CZPersonal.whenReady) return w.CZPersonal.whenReady(1200);
     }).catch(function () {});
@@ -491,16 +478,15 @@
   }
 
   function boot() {
-    buttons();
     initPage();
   }
 
-  CZDice.open = open; CZDice.close = close; CZDice.buttons = buttons;
+  /* Trang riêng giờ là một tab trong sidebar (NAV ở src/cz-app.js) nên KHÔNG còn
+     nút “Hôm nay đọc gì?” trên trang chủ; giữ `open()` cho lối gọi cũ. */
+  CZDice.open = open; CZDice.close = close;
   CZDice.candidates = candidates; CZDice.mount = renderBox;
   w.CZDice = CZDice;
 
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', boot);
   else boot();
-  d.addEventListener('cz:stats', function () { setTimeout(buttons, 30); });
-  w.addEventListener('load', function () { setTimeout(buttons, 60); });
 })(window, document);

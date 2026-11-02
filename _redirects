@@ -40,6 +40,11 @@
 #        (tìm kiếm, bài chia sẻ) không 404. Khi không còn ai dùng thì xoá.
 /truyen/vuot-khoi-uong-chan-troi-endless-blue_01775777241  /truyen/vuot-khoi-uong-chan-troi-endless-blue-01775777241/  301
 /truyen/vuot-khoi-uong-chan-troi-endless-blue_01775777241/ /truyen/vuot-khoi-uong-chan-troi-endless-blue-01775777241/  301
+# --- b2) trang bốc bài đổi slug (r121): /vong-quay → /boc-bai --------
+# Trang không còn “vòng quay” nào từ r115 (bốc bài bằng bộ bài), nên
+# đường dẫn cũng đổi theo. Giữ 301 để link cũ trong bài chia sẻ không 404.
+/vong-quay        /boc-bai/  301
+/vong-quay/       /boc-bai/  301
 # --- c) URL sạch (proxy 200) ---
 # Trang truyện và trang đọc nằm chung MỘT tệp (truyen.html). Các luật dưới đây
 # mở tệp đó mà KHÔNG đổi URL trên trình duyệt (proxy 200), nhờ vậy

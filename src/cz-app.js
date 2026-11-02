@@ -845,7 +845,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         pushSubscribe().then(function (r) {
           if (r === 'new' || r === 'old') toast('Đã bật thông báo chương mới');
           else if (r === 'err') toast('Không bật được thông báo. Kiểm tra kết nối rồi thử lại.', 'err');
-          else if (r === 'denied' || r === 'no') toast('Trình duyệt đang chặn thông báo. Mở cài đặt để cho phép.');
+          else if (r === 'denied' || r === 'no') toast('Trình duyệt đang chặn thông báo — mở cài đặt để bật.');
         });
       });
     }).catch(function () {});
@@ -925,7 +925,9 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       else { dot.setAttribute('hidden', ''); dot.textContent = ''; }
     }
     btn.classList.toggle('hasnew', total > 0);
-    btn.setAttribute('aria-label', total > 0 ? ('Thông báo chương mới (' + total + ' chương mới)') : 'Thông báo chương mới');
+    /* Nút đã tên “Thông báo chương mới” rồi, nên nhãn đầy đủ chỉ thêm SỐ trong
+       ngoặc — nói lại “chương mới” lần nữa là đọc dư. */
+    btn.setAttribute('aria-label', total > 0 ? ('Thông báo chương mới (' + total + ')') : 'Thông báo chương mới');
     /* đầu mục: một tiêu đề + con số tổng, KHÔNG lặp lại chữ "chương mới" ở từng dòng */
     /* role="menu" chỉ đặt khi trong khung THẬT SỰ có menuitem: tiêu đề và các
        trạng thái tải/trống/lỗi mang role="presentation" nên không phá
@@ -935,7 +937,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     var body;
     if (state === 'loading') body = '<div class="nempty" role="presentation">Đang tải…</div>';
     else if (state === 'error') body = '<div class="nempty" role="presentation">Không tải được thông báo.<button class="nretry" type="button">Thử lại</button></div>';
-    else if (!items.length) body = '<div class="nempty" role="presentation"><b>Chưa có chương mới</b><span>Truyện bạn theo dõi ra chương sẽ hiện ở đây.</span></div>';
+    else if (!items.length) body = '<div class="nempty" role="presentation"><b>Chưa có chương mới</b><span>Truyện bạn theo dõi vừa ra chương sẽ hiện ở đây.</span></div>';
     else body = items.map(function (it) {
       var n = it.n, im = coverSrc(n);
       return '<a href="' + esc(storyURL(n.slug)) + '" role="menuitem" aria-label="' + esc(n.title + ' — ' + it.c + ' chương mới, cập nhật ' + timeAgo(n.updated)) + '">' +
@@ -1703,7 +1705,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       task.then(function (saved) {
         b.disabled = false;
         refreshFollowUI(slug);
-        toast(saved ? 'Đã theo dõi. Chương mới sẽ hiện ở trang chủ.' : 'Đã bỏ theo dõi');
+        toast(saved ? 'Đã theo dõi. Chương mới sẽ hiện ở chuông.' : 'Đã bỏ theo dõi');
         followPushHook(saved);   /* chỉ hỏi bật Push sau khi lưu thành công */
       }).catch(function (error) {
         b.disabled = false;
@@ -1714,7 +1716,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     }
     on = toggleFollow(findLib(slug) || { slug: slug });
     refreshFollowUI(slug);
-    toast(on ? 'Đã theo dõi. Chương mới sẽ hiện ở trang chủ.' : 'Đã bỏ theo dõi');
+    toast(on ? 'Đã theo dõi. Chương mới sẽ hiện ở chuông.' : 'Đã bỏ theo dõi');
     followPushHook(on);
   }, true);
   w.addEventListener('cz:personal', function (event) {
@@ -1903,20 +1905,25 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       { k: 'space', label: 'My Space', i: 'shelf', h: '/my-space' },
       { k: 'library', label: 'Thư viện', i: 'library', h: '/#thu-vien' },
       { k: 'new', label: 'Mới cập nhật', i: 'sparkle', h: '/#moi-cap-nhat' },
+      /* “Bốc bài” là TRANG RIÊNG nên chỉ có một lối vào: tab này. Trước đây
+         trang chủ còn một nút “Hôm nay đọc gì?” nữa — hai chỗ cùng dẫn một
+         đích, nay bỏ nút ấy. `tip` chỉ là tooltip: tên đọc lên vẫn đúng bằng
+         chữ người dùng nhìn thấy (WCAG 2.5.3). */
+      { k: 'dice', label: 'Bốc bài', i: 'dice', h: '/boc-bai/', tip: 'Bốc bài — hôm nay đọc gì?' },
       { k: 'rank', label: 'Ranking', i: 'trophy', h: '/#bxh' },
       { k: 'sched', label: 'Lịch ra chương', i: 'calendar', h: '/#lich' },
       { k: 'authors', label: 'Tác giả', i: 'pen', h: '/tac-gia/' },
       { k: 'couples', label: 'Couple', i: 'users', h: '/couple/' }
     ];
-    /* Điều hướng bằng MỘT nút "Danh mục" thay cho dãy mục ngang: bảy điểm đến
+    /* Điều hướng bằng MỘT nút "Danh mục" thay cho dãy mục ngang: tám điểm đến
        nằm trong một bảng hai cột, mở tại chỗ. Dãy ngang cũ phải thu về icon ở
        mọi khổ dưới 1200px (mất nhãn, phải đoán hình), còn nút này giữ nguyên
        nhãn chữ ở mọi khổ và trả lại chiều ngang cho ô tìm kiếm.
        NAV vẫn là nguồn duy nhất; thứ tự DOM = thứ tự NAV nên menu mobile (vốn
-       liệt kê đủ bảy mục) khớp từng nhãn một. */
+       liệt kê đủ tám mục) khớp từng nhãn một. */
     function navA(n) {
       return '<a href="' + n.h + '" data-k="' + n.k + '"' + (n.k === active ? ' class="on" aria-current="page"' : '') +
-        ' title="' + esc(n.label) + '" aria-label="' + esc(n.label) + '">' +
+        ' title="' + esc(n.tip || n.label) + '" aria-label="' + esc(n.label) + '">' +
         icon(n.i, 'i-s') + '<span class="nav-lbl">' + esc(n.label) + '</span></a>';
     }
     var mLinks = NAV.map(function (n) {

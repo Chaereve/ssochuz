@@ -165,6 +165,15 @@
     if (r) r.hidden = !hasResume;
     if (f) f.hidden = !hasFollow;
     if (st) { st.hidden = !showStarter; if (showStarter) renderStarter(); }
+    /* Người mới chưa đọc gì: khối này KHÔNG còn là “Đọc tiếp” nữa, nên đầu mục
+       đổi theo chứ không để tiêu đề “Đọc tiếp” đứng trên lời mời bắt đầu. Link
+       bên phải cũng đổi: tủ còn trống thì “My Space” chẳng có gì để xem. */
+    var t = $('#resumeTitle'), a = $('#doc-tiep .sechead a.btm');
+    if (t) t.textContent = showStarter ? 'Bắt đầu từ đâu?' : 'Đọc tiếp';
+    if (a) {
+      a.textContent = showStarter ? 'Thư viện ›' : 'My Space ›';
+      a.setAttribute('href', showStarter ? '#thu-vien' : '/my-space');
+    }
   }
   var starterDone = false;
   function renderStarter() {
@@ -183,7 +192,9 @@
       { n: freshest, k: 'Mới lên kệ' }
     ].filter(function (x, i, all) { return x.n && all.findIndex(function (y) { return y.n === x.n; }) === i; });
     if (!picks.length) { box.hidden = true; return; }
-    box.innerHTML = '<div class="bth lt"><h3 class="blb dim">Bắt đầu từ đâu?</h3></div>' +
+    /* Không lặp lại “Bắt đầu từ đâu?” ở đây nữa — đầu mục của khối đã là câu đó
+       (xem setPersonalParts). */
+    box.innerHTML =
       picks.map(function (x, i) {
         var img = CZ.coverSrc(x.n);
         return '<a class="s" href="' + esc(CZ.storyURL(x.n.slug)) + '">' +
