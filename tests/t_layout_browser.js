@@ -31,7 +31,7 @@ const items={}; reg.lib.slice(0,5).forEach((n,i)=>items[n.slug]={viewsDay:20-i,v
    await page.click('[data-mode="'+mode+'"]');await page.click('#rankTabs [data-k="'+period+'"]');
    assert.equal(await page.locator('#rank .rank').count(),5);
   }
-  /* 30/10/2026: “Đáng xem” đứng hai bên với Ranking → cùng tối đa 5 dòng như cột trái. */
+  /* r120: “Đáng xem” là dải riêng ngay dưới Ranking → vẫn tối đa 5 dòng. */
   assert.equal(await page.locator('#worthRail .wrank').count(),5);
   if (process.env.LAYOUT_SCREENSHOTS && (width === 1440 || width === 390)) {
     fs.mkdirSync(process.env.LAYOUT_SCREENSHOTS, { recursive: true });

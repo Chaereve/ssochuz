@@ -1411,7 +1411,10 @@ textarea.inp { height: auto; min-height: 120px; padding: 10px 12px; resize: vert
 .shero .editable-rating { margin: 11px 0 0; }
 .shero .editable-rating .rating-main { gap: 0 8px; }
 .shero .editable-rating .rating-control { gap: 8px; }
-.shero .editable-rating .rl { order: 0; flex-basis: auto; font-size: 11.5px; color: rgba(255, 255, 255, .40); }
+/* .40 trên nền #171210 chỉ được ~3,2:1 — dưới ngưỡng 4,5:1 cho chữ 11,5px
+   (axe báo color-contrast ở “chưa có đánh giá”). .58 cho ~6,8:1, vẫn là chữ
+   phụ mờ chứ không phải chữ chính. */
+.shero .editable-rating .rl { order: 0; flex-basis: auto; font-size: 11.5px; color: rgba(255, 255, 255, .58); }
 .shero .editable-rating .stars .st { width: 20px; height: 22px; padding: 0; }
 .shero .editable-rating svg { width: 13px; height: 13px;
   fill: none; stroke: rgba(255, 245, 235, .32); stroke-width: 1.2; }
@@ -2784,21 +2787,21 @@ body.rd-focus .rdcmts { display: none; }
 .fade { opacity: 1 !important; }
 }
 .ranking-modes { flex-shrink: 0; }
-#bxh .sechead { flex-wrap: wrap; gap: 14px; }
-#bxh .rank { grid-template-columns: 28px 46px minmax(0,1fr) auto; }
-#bxh .rank .tt b { overflow: visible; white-space: normal; -webkit-line-clamp: unset; display: block; overflow-wrap: anywhere; line-height: 1.55; }
-#bxh .rank:hover, #bxh .rank:hover .n.top, #bxh .rank:hover .rk-th { transform: none; box-shadow: none; }
+.rankbox .sechead { flex-wrap: wrap; gap: 14px; }
+.rankbox .rank { grid-template-columns: 28px 46px minmax(0,1fr) auto; }
+.rankbox .rank .tt b { overflow: visible; white-space: normal; -webkit-line-clamp: unset; display: block; overflow-wrap: anywhere; line-height: 1.55; }
+.rankbox .rank:hover, .rankbox .rank:hover .n.top, .rankbox .rank:hover .rk-th { transform: none; box-shadow: none; }
 .worth-section { min-width: 0; }
 #worthRail > .empty { width: 100%; }
 .synwrap.clamp.open > .synin { max-height: none; overflow: visible; mask-image: none; -webkit-mask-image: none; }
-.synbtn:focus-visible, #bxh button:focus-visible { outline: 2px solid var(--acc); outline-offset: 4px; }
+.synbtn:focus-visible, .rankbox button:focus-visible { outline: 2px solid var(--acc); outline-offset: 4px; }
 @media(max-width: 480px) {
-#bxh .rank { grid-template-columns: 24px 40px minmax(0,1fr); gap: 10px; }
-#bxh .rank .rk-th { width: 40px; height: 58px; grid-row: 1 / span 2; grid-column: 2; }
-#bxh .rank .tt { grid-column: 3; }
-#bxh .rank .v { grid-column: 3; white-space: normal; }
+.rankbox .rank { grid-template-columns: 24px 40px minmax(0,1fr); gap: 10px; }
+.rankbox .rank .rk-th { width: 40px; height: 58px; grid-row: 1 / span 2; grid-column: 2; }
+.rankbox .rank .tt { grid-column: 3; }
+.rankbox .rank .v { grid-column: 3; white-space: normal; }
 }
-#bxh .rank { animation: none; }
+.rankbox .rank { animation: none; }
 /* A quiet { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 18px; padding: 22px 24px; border: 1px solid var(--bd); border-radius: 12px; background: var(--surf); align-items: center; }
 /* My Space / public profiles — the same warm paper, type and accent as the library. */
 .space-wrap { max-width: 1180px; margin: auto; padding: 24px 24px 72px; }
@@ -3061,32 +3064,32 @@ body.rd-focus .rdcmts { display: none; }
    ========================================================================== */
 
 /* ---- Ranking: bảng có nhịp đọc, không còn là một cột chữ phẳng ------------- */
-#bxh .rank { animation: rankingRowIn .52s var(--ease-out) both !important;
+.rankbox .rank { animation: rankingRowIn .52s var(--ease-out) both !important;
   animation-delay: var(--d, 0ms) !important;
   background: transparent;
   transition: background-color var(--t-fast) var(--ease), transform var(--t) var(--ease),
     border-color var(--t-fast) var(--ease), box-shadow var(--t) var(--ease); }
-#bxh .rank:hover { transform: translateX(4px) !important;
+.rankbox .rank:hover { transform: translateX(4px) !important;
   background: color-mix(in srgb, var(--acc) 5%, var(--surf));
   border-color: color-mix(in srgb, var(--acc) 28%, var(--bd));
   box-shadow: 0 10px 24px -22px color-mix(in srgb, var(--acc) 80%, transparent); }
-#bxh .rank:hover .n.top { transform: scale(1.12) !important; }
-#bxh .rank:hover .rk-th { transform: translateY(-3px) !important; box-shadow: var(--sh-card); }
-#bxh .rank .rk-th { transition: transform var(--t) var(--ease), box-shadow var(--t) var(--ease); }
-#bxh .rank .tt b { transition: color var(--t-fast) var(--ease), transform var(--t) var(--ease); }
-#bxh .rank:hover .tt b { color: var(--acc); transform: translateX(2px); }
-#bxh .rank .v { display: inline-flex; align-items: baseline; gap: 4px; color: var(--mut); }
-#bxh .rank .v b { color: var(--acc); font-weight: 750; font-variant-numeric: tabular-nums; }
-#bxh .wrank .v { color: #f2d9a6; }
-#bxh .wrank .n.top { color: var(--acc); }
-#bxh .rank .bar { animation: rankingBarIn .65s var(--ease-out) both !important;
+.rankbox .rank:hover .n.top { transform: scale(1.12) !important; }
+.rankbox .rank:hover .rk-th { transform: translateY(-3px) !important; box-shadow: var(--sh-card); }
+.rankbox .rank .rk-th { transition: transform var(--t) var(--ease), box-shadow var(--t) var(--ease); }
+.rankbox .rank .tt b { transition: color var(--t-fast) var(--ease), transform var(--t) var(--ease); }
+.rankbox .rank:hover .tt b { color: var(--acc); transform: translateX(2px); }
+.rankbox .rank .v { display: inline-flex; align-items: baseline; gap: 4px; color: var(--mut); }
+.rankbox .rank .v b { color: var(--acc); font-weight: 750; font-variant-numeric: tabular-nums; }
+.rankbox .wrank .v { color: #f2d9a6; }
+.rankbox .wrank .n.top { color: var(--acc); }
+.rankbox .rank .bar { animation: rankingBarIn .65s var(--ease-out) both !important;
   animation-delay: var(--d, 40ms) !important;
   height: 3px;
   left: 10px;
   right: 10px;
   background: linear-gradient(90deg, var(--acc), color-mix(in srgb, var(--acc) 28%, transparent));
   opacity: .7; }
-#bxh .rank:nth-child(1) .n { text-shadow: 0 0 18px color-mix(in srgb, var(--acc) 35%, transparent); }
+.rankbox .rank:nth-child(1) .n { text-shadow: 0 0 18px color-mix(in srgb, var(--acc) 35%, transparent); }
 @keyframes rankingRowIn{ from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @keyframes rankingBarIn{ from { opacity: 0; transform: scaleX(0); } to { opacity: .7; transform: scaleX(var(--w, 0)); } }
 /* ==========================================================================
@@ -3365,9 +3368,9 @@ body.rd-focus .rdcmts { display: none; }
 .profile-actions .btn { flex: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
-#bxh .rank, #bxh .rank .bar, .space-page *, .space-page *::before, .space-page *::after { animation: none !important; transition: none !important; }
-#bxh .rank, #bxh .rank:hover, #bxh .rank:hover .n.top, #bxh .rank:hover .rk-th, .space-page .space-book-cell > .card:hover, .space-page .space-book-cell > .card:hover .th { transform: none !important; }
-#bxh .rank .bar { transform: scaleX(var(--w, 0)); opacity: .7; }
+.rankbox .rank, .rankbox .rank .bar, .space-page *, .space-page *::before, .space-page *::after { animation: none !important; transition: none !important; }
+.rankbox .rank, .rankbox .rank:hover, .rankbox .rank:hover .n.top, .rankbox .rank:hover .rk-th, .space-page .space-book-cell > .card:hover, .space-page .space-book-cell > .card:hover .th { transform: none !important; }
+.rankbox .rank .bar { transform: scaleX(var(--w, 0)); opacity: .7; }
 }
 /* ==========================================================================
    BẢN TINH GỌN · header, admin workspace và nhịp chuyển động
@@ -3401,8 +3404,8 @@ body.rd-focus .rdcmts { display: none; }
    thời gian để mắt theo kịp, tránh cảm giác “AI slop”. */
 :root { --t-fast: 210ms; --t: 360ms; --t-mid: 520ms; --t-slow: 680ms; }
 .fade.in { animation-duration: 520ms !important; }
-#bxh .rank { animation-duration: 680ms !important; }
-#bxh .rank .bar { animation-duration: 820ms !important; }
+.rankbox .rank { animation-duration: 680ms !important; }
+.rankbox .rank .bar { animation-duration: 820ms !important; }
 .space-view-enter { animation-duration: 620ms; }
 .space-shelf { animation-duration: 620ms; }
 .space-book-cell { animation-duration: 680ms; }
@@ -3803,18 +3806,6 @@ body.rd-focus .rdcmts { display: none; }
 #tong-quan { margin: 30px 0 8px; }
 .fsec { display: flex; flex-direction: column; min-width: 0; gap: 14px; padding-top: 22px; }
 .fsec:first-child { padding-top: 0; }
-/* Ranking + Đáng xem: hai bên, ngăn bằng một đường tóc dọc — không khung, không nền.
-   Hai cột cùng nhịp hàng (số hạng · bìa · tên · điểm) nên đọc ngang rất đều. */
-.duo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 40px; align-items: start; }
-.duoA, .duoB { display: flex; flex-direction: column; min-width: 0; gap: 12px; }
-.duoB { padding-left: 40px; border-left: 1px solid var(--bd); }
-.duo .bts { white-space: nowrap; }
-.duo .btm { margin-left: 0; }
-@media (max-width: 980px) {
-.duo { grid-template-columns: minmax(0, 1fr); gap: 26px; }
-.duoB { padding-left: 0; border-left: 0; padding-top: 24px; border-top: 1px solid var(--bd); }
-}
 /* --- đầu ô: tiêu đề · phụ đề · liên kết phụ -------------------------- */
 .bth { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
 .bth.lt { align-items: center; }
@@ -3852,15 +3843,15 @@ body.rd-focus .rdcmts { display: none; }
 #bxh .tabs > button:hover { color: var(--txt); }
 .rbody { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 /* số · bìa · tên/tác giả · số lượt — tên xuống dòng, không nowrap */
-#bxh .rank { grid-template-columns: 20px 40px minmax(0, 1fr) auto; gap: 10px; padding: 10px 4px; }
-#bxh .rank .n { font-size: 14px; }
-#bxh .rank .n.t1 { font-size: 18px; }
-#bxh .rank .rk-th { width: 40px; height: auto; aspect-ratio: 2/3; border-radius: 4px; }
-#bxh .rank .tt b { font-size: 13px; font-weight: 650; line-height: 1.4; letter-spacing: 0; }
-#bxh .rank .tt span { font-size: 11px; margin-top: 1px; line-height: 1.4; }
-#bxh .rank .v { font-size: 11px; color: var(--dim); }
-#bxh .rank .v b { font-weight: 700; color: var(--mut); }
-#bxh .rank:hover { transform: none; }
+.rankbox .rank { grid-template-columns: 20px 40px minmax(0, 1fr) auto; gap: 10px; padding: 10px 4px; }
+.rankbox .rank .n { font-size: 14px; }
+.rankbox .rank .n.t1 { font-size: 18px; }
+.rankbox .rank .rk-th { width: 40px; height: auto; aspect-ratio: 2/3; border-radius: 4px; }
+.rankbox .rank .tt b { font-size: 13px; font-weight: 650; line-height: 1.4; letter-spacing: 0; }
+.rankbox .rank .tt span { font-size: 11px; margin-top: 1px; line-height: 1.4; }
+.rankbox .rank .v { font-size: 11px; color: var(--dim); }
+.rankbox .rank .v b { font-weight: 700; color: var(--mut); }
+.rankbox .rank:hover { transform: none; }
 /* ============ MỚI CẬP NHẬT · bảng gọn ba cột (1B) ================== */
 .mlist { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 40px; }
 .mrow { display: grid; grid-template-columns: 34px minmax(0, 1fr) 56px; gap: 12px;
@@ -3965,10 +3956,10 @@ body.rd-focus .rdcmts { display: none; }
   #sched .w3feat { min-height: 196px; } }
 @media (max-width: 620px) {
 #tong-quan { margin-top: 28px; }
-#bxh .rank { grid-template-columns: 20px 36px minmax(0, 1fr); }
-#bxh .rank .rk-th { width: 36px; grid-row: 1 / span 2; }
-#bxh .rank .tt { grid-column: 3; grid-row: 1; }
-#bxh .rank .v { grid-column: 3; grid-row: 2; }
+.rankbox .rank { grid-template-columns: 20px 36px minmax(0, 1fr); }
+.rankbox .rank .rk-th { width: 36px; grid-row: 1 / span 2; }
+.rankbox .rank .tt { grid-column: 3; grid-row: 1; }
+.rankbox .rank .v { grid-column: 3; grid-row: 2; }
 #bxh .tilehead .right { width: 100%; justify-content: flex-start; }
 .mlist { grid-template-columns: minmax(0, 1fr); }
 .mrow { grid-template-columns: 34px minmax(0, 1fr) 52px; gap: 10px; }
@@ -4163,3 +4154,42 @@ img.cmt-ava { border: 0; background: transparent; }
 @media (max-width: 380px) {
   .wcard .wn { font-size: 12px; }
 }
+/* ==========================================================================
+   r120 · CHỪA SẴN KHUNG — chống nhảy bố cục (CLS)
+   --------------------------------------------------------------------------
+   Ba chỗ dưới đây đều là “khung do JS dựng”: lúc vẽ khung trong HTML còn rỗng
+   nên nội dung phía dưới nằm cao, chờ JS dựng xong mới bị đẩy xuống. Đo trên
+   bản chạy thử (Chrome headless):
+     · #hdr   rỗng → 61px (≥761px) / 57px (≤760px)  ⇒ nội dung tụt lên rồi
+              xuống: 0,045 điểm CLS ở trang chủ và là phần lớn CLS trang truyện;
+     · .hero  rỗng 395px, dựng xong 561px @1280 ⇒ 0,39 điểm CLS;
+     · #shero rỗng 0, khung xám 422px, nội dung thật 418px ⇒ mép trên của
+              “Đánh giá & bình luận” nhảy >600px.
+   Mọi con số dưới đây là CHIỀU CAO ĐO ĐƯỢC của chính khung đó sau khi dựng,
+   không phải số tuỳ ý: quạt bìa cao `--cover-w * 1.64 + 50px`, cộng 38px đệm
+   của .hb-grid và 1px đường kẻ dưới. Sửa --cover-w hay đệm thì sửa luôn đây.
+   Chỉ chừa khung, KHÔNG đổi bố cục bên trong.
+   ========================================================================== */
+#hdr { min-height: calc(var(--hdr-h) + 1px); }
+@media (max-width: 760px) { #hdr { min-height: 57px; } }
+
+.hero { min-height: calc(clamp(196px, 22.5vw, 292px) * 1.64 + 89px); }
+@media (min-width: 640px) and (max-width: 1023px) { .hero { min-height: 420px; } }
+@media (max-width: 639px) { .hero { min-height: 660px; } }
+
+#shero { min-height: 418px; }
+@media (min-width: 640px) and (max-width: 1023px) { #shero { min-height: 375px; } }
+@media (max-width: 639px) { #shero { min-height: 455px; } }
+/* khung xám chờ phải cao ĐÚNG bằng nội dung thật, nếu không thì lúc thay nhau
+   mép trên của thanh tab và danh sách chương vẫn nhích (đo được 4px ở bản
+   ≥1024px). Số dưới đây = chiều cao thật − 32px đệm của .shero. */
+.skhero { min-height: 386px; }
+@media (min-width: 640px) and (max-width: 1023px) { .skhero { min-height: 343px; } }
+@media (max-width: 639px) { .skhero { min-height: 423px; } }
+
+/* Ô “Đọc tiếp”: lúc đầu chỉ có đầu mục (59px), vài trăm ms sau khối “Bắt đầu
+   từ đâu?” (328px) mới được vẽ ⇒ mọi dải bên dưới tụt xuống 341px (0,09 điểm
+   CLS còn lại của trang chủ). Chừa sẵn đúng chiều cao đo được của ô: 401px khi
+   máy chưa có tiến độ (chỉ có “Bắt đầu từ đâu?”), 421px khi có thẻ Đọc tiếp.
+   400px là mốc chung — máy đã có thẻ thì nội dung thật cao hơn nên không hụt. */
+#doc-tiep { min-height: 400px; }

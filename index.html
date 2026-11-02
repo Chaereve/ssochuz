@@ -15,7 +15,7 @@
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://ssochuz.pages.dev/ssochuz.png">
   <!-- N13: bỏ preconnect Firestore — không còn đọc thẳng Firestore từ máy khách -->
-<link rel="stylesheet" href="/cz.css?v=20261102r118">
+<link rel="stylesheet" href="/cz.css?v=20261102r120">
 </head>
 <body class="hpage">
 
@@ -62,34 +62,34 @@
         <span class="dicehost" data-dice></span>
       </div>
 
-      <!-- Ranking + Đáng xem: hai cột cạnh nhau, cùng một nhịp hàng — số hạng
-           serif bên trái, điểm ★ bên phải. Ngăn cách bằng một đường tóc dọc, không
-           khung, không nền, đúng kiểu “hai bên” đã chốt. -->
-      <div class="fsec duo" id="bxh" aria-label="Xếp hạng và Đáng xem">
-        <div class="duoA">
-          <div class="sechead tilehead">
-            <h2>Ranking</h2>
-            <span class="right">
-              <div class="tabs sm ranking-modes" id="rankModes" role="group" aria-label="Hạng mục Ranking">
-                <button class="on" data-mode="views" aria-pressed="true">Lượt đọc</button>
-                <button data-mode="votes" aria-pressed="false">Lượt thích</button>
-              </div>
-              <h3 id="rankSummary" class="sr-only">Lượt đọc · Tuần</h3>
-              <div class="tabs sm" id="rankTabs" role="group" aria-label="Khoảng thời gian"></div>
-            </span>
-          </div>
-          <div class="rbody">
-            <div id="rank" aria-live="polite" aria-atomic="true"></div>
-          </div>
+      <!-- Ranking và Đáng xem: HAI dải riêng, mỗi dải chiếm trọn bề ngang như
+           “Mới cập nhật”, không còn nằm chung một khung hai cột và không dính
+           nhau bằng đường tóc dọc. -->
+      <div class="fsec rankbox" id="bxh" aria-label="Xếp hạng">
+        <div class="sechead tilehead">
+          <h2>Ranking</h2>
+          <span class="right">
+            <div class="tabs sm ranking-modes" id="rankModes" role="group" aria-label="Hạng mục Ranking">
+              <button class="on" data-mode="views" aria-pressed="true">Lượt đọc</button>
+              <button data-mode="votes" aria-pressed="false">Lượt thích</button>
+            </div>
+            <h3 id="rankSummary" class="sr-only">Lượt đọc · Tuần</h3>
+            <!-- ba mốc vẽ sẵn trong HTML: renderRank thay lại y hệt, nhưng có sẵn từ khung
+                 đầu nên đầu mục không cao lên (62px) sau khi JS chạy -->
+            <div class="tabs sm" id="rankTabs" role="group" aria-label="Khoảng thời gian"><button class="tab" data-k="day" aria-pressed="false">Ngày</button><button class="tab on" data-k="week" aria-pressed="true">Tuần</button><button class="tab" data-k="month" aria-pressed="false">Tháng</button></div>
+          </span>
         </div>
-        <div class="duoB worth-section" id="dang-xem">
-          <div class="sechead">
-            <h2 id="worthTitle">Đáng xem</h2>
-            <span class="bts">điểm từ người đọc</span>
-            <a class="btm" href="#thu-vien">Xem thêm ›</a>
-          </div>
-          <div id="worthRail" class="rbody"></div>
+        <div class="rbody">
+          <div id="rank" aria-live="polite" aria-atomic="true"></div>
         </div>
+      </div>
+
+      <div class="fsec rankbox worth-section" id="dang-xem" aria-label="Đáng xem">
+        <div class="sechead">
+          <h2 id="worthTitle">Đáng xem</h2>
+          <a class="btm" href="#thu-vien">Xem thêm ›</a>
+        </div>
+        <div id="worthRail" class="rbody"></div>
       </div>
 
     <!-- ============ CHUYỂN THỂ SERIES ============ -->
@@ -175,11 +175,11 @@
 
 <script src="/cz-config.js?v=20261012n"></script>
 <script src="/cz-stickers.js?v=20261012n"></script>
-<script src="/cz-app.js?v=20261102r118"></script>
+<script src="/cz-app.js?v=20261102r120"></script>
 <script src="/cz-auth.js?v=20261012n"></script>
 <script src="/cz-personal.js?v=20261013notif1"></script>
-<script src="/cz-dice.js?v=20261102r118"></script>
+<script src="/cz-dice.js?v=20261102r120"></script>
 <script src="/cz-hero.js?v=20261029perf1"></script>
-<script src="/cz-home.js?v=20261102r118"></script>
+<script src="/cz-home.js?v=20261102r120"></script>
 </body>
 </html>
