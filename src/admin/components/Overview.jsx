@@ -49,11 +49,11 @@ export function Overview({ state, onReload, onTodo }) {
       <section class="v2kpi" aria-label="Số liệu thư viện">
         <div class="tiles v2tiles4">
           {heroTiles.map((tile) => <Tile key={tile.label} value={tile.value} label={tile.label} />)}
+        </div>
+        <div class="tiles v2tiles4 v2tiles-second">
           {quota.readSupported
             ? <Tile value={quota.readsToday || 0} label="Lượt đọc KV hôm nay" hint={quota.readCritical ? 'sắp chạm trần 100k' : quota.readWarn ? 'đã qua 70% trần' : 'ước lượng · trần 100k'} />
             : <div class="tile"><b>—</b><span>Lượt đọc KV hôm nay</span><small>Worker chưa trả readsToday</small></div>}
-        </div>
-        <div class="tiles v2tiles4 v2tiles-second">
           <Tile value={quota.writesToday || 0} label="Quota KV hôm nay" hint={quota.supported ? 'nguồn Worker' : 'ước tính phía trình duyệt'} />
           {secondTiles.map((tile) => <Tile key={tile.label} value={tile.value} label={tile.label} />)}
         </div>

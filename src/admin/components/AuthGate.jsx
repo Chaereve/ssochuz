@@ -26,7 +26,7 @@ export function AuthGate({ defaultApi = '', defaultKey = '', busy = false, messa
   return (
     <main class="v2gate" aria-label="Đăng nhập quản trị">
       <section class="v2gate-brand" aria-hidden="false">
-        <a class="logo v2gate-logo" href="/"><span class="dot"></span>ssochuz<i>admin</i></a>
+        <a class="logo v2gate-logo" href="/"><span class="dot"></span>ssochuz<i>quản trị</i></a>
         <div class="v2gate-copy">
           <h2>Quản lý thư viện<br />từ một chỗ.</h2>
           <p>Mọi thao tác ghi đều cần đăng nhập và được lưu vào Cloudflare KV.</p>

@@ -195,6 +195,11 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
           </button>
           <button class="hbtn icon v2side-close" type="button" title="Đóng menu" aria-label="Đóng menu" onClick={() => setDrawer(false)}>×</button>
         </div>
+        <div class="v2side-cta">
+          <button class="btn pri v2cta" type="button" onClick={() => go('new')} aria-label="Thêm bộ truyện mới">
+            <Icon name="plus" /><span>Thêm bộ truyện</span>
+          </button>
+        </div>
         <nav class="snav v2aside" id="tabs">
           {nav.map((g) => (
             <div class="v2nav-group" key={g.group}>
@@ -244,7 +249,7 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
             <span class="grow"></span>
             <form class="v2search" onSubmit={submitSearch}>
               <Icon name="search" />
-              <input class="inp" ref={searchRef} value={q} placeholder="Tìm bộ truyện…" title="Tìm nhanh (Ctrl+K)" onInput={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') { setQ(''); setSuggest({ nav: [], books: [] }); } }} aria-label="Tìm trong quản trị" />
+              <input class="inp" ref={searchRef} value={q} placeholder="Tìm truyện, tác giả, mục quản trị…" title="Tìm nhanh (Ctrl+K)" onInput={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') { setQ(''); setSuggest({ nav: [], books: [] }); } }} aria-label="Tìm trong quản trị" />
               <kbd class="v2kbd" aria-hidden="true">⌘K</kbd>
               {q.trim() ? (
                 <div class="v2search-suggest" aria-label="Gợi ý tìm kiếm">
@@ -322,12 +327,24 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
                   <h2>{head[0]}</h2>
                   {head[1] ? <p class="hint">{head[1]}</p> : null}
                 </div>
-                {activeTab === 'overview' ? (
-                  <div class="v2head-actions">
-                    <button class="btn ghost" type="button" onClick={() => go('list')}>Mở thư viện</button>
-                    <button class="btn pri" type="button" onClick={() => go('new')}>Thêm bộ</button>
-                  </div>
-                ) : null}
+                {(() => {
+                  /* Mỗi màn có đúng một hành động chính, đặt cùng chỗ để tay
+                     không phải đi tìm: thêm bộ ở Thư viện/Tổng quan, mở thư
+                     viện ở Chương, xem web ở Trang chủ. */
+                  const acts = {
+                    overview: [['list', 'Mở thư viện', 'ghost'], ['new', 'Thêm bộ', 'pri']],
+                    list: [['new', 'Thêm bộ', 'pri']],
+                    chapters: [['list', 'Mở thư viện', 'ghost']],
+                  }[activeTab];
+                  if (!acts) return null;
+                  return (
+                    <div class="v2head-actions">
+                      {acts.map(([tab, label, kind]) => (
+                        <button class={'btn ' + kind} type="button" key={tab} onClick={() => go(tab)}>{label}</button>
+                      ))}
+                    </div>
+                  );
+                })()}
               </header>
             );
           })()}
