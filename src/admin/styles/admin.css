@@ -14,22 +14,23 @@
    Bảng màu tự khai (không mượn cz.css) để khu quản trị có tông riêng: than ấm
    + hồng phấn, đủ tương phản trên nền tối. Trang công khai không đổi. */
 body.admin{
-  /* Bảng màu SÁNG, tối giản kiểu công cụ (Linear/Notion): nền giấy trắng ngà,
-     thẻ trắng, đường kẻ 1px, mực gần đen. Sắc hồng của trang công khai chỉ còn
-     làm điểm nhấn (nút chính, mục đang chọn, số liệu). */
-  --a-bg:#fbfbfa;--a-bg2:#f6f6f4;--a-surf:#ffffff;--a-surf2:#f3f3f1;--a-surf3:#e9e8e5;
-  --a-txt:#1c1d21;--a-mut:#565b63;--a-dim:#6f747c;
-  --a-acc:#c2415f;--a-acc-soft:rgba(194,65,95,.10);--a-acc-ink:#9d2f4a;
-  --a-ring:rgba(194,65,95,.22);
-  --a-bd:#e7e6e3;--a-bd2:#d6d5d1;
-  --a-ok:#1f7a4d;--a-warn:#8a5a00;--a-bad:#b03030;--a-info:#2b6cb0;--a-violet:#6b46c1;
+  /* Nền tối là nền tảng: dùng lại đúng bảng màu trang công khai (cz.css) để
+     admin và site là một hệ. Ba lớp: giấy #14110e → mặt #1e1915 → mặt nổi
+     #241e19; vạch tóc trắng 8% thay cho đường kẻ đậm. Hồng #e0859b chỉ để
+     điểm nhấn: mục đang chọn, nút chính, số liệu. */
+  --a-bg:#14110e;--a-bg2:#181411;--a-surf:#1e1915;--a-surf2:#241e19;--a-surf3:#2e2721;
+  --a-txt:#f4efe9;--a-mut:#b9afa4;--a-dim:#968b7f;
+  --a-acc:#e0859b;--a-acc-soft:rgba(224,133,155,.15);--a-acc-ink:#f0a9ba;--a-acc-ink-dark:#2a1118;
+  --a-ring:rgba(224,133,155,.30);
+  --a-bd:#2a2420;--a-bd2:#3b332c;
+  --a-ok:#7fd0a0;--a-warn:#e2b473;--a-bad:#ef8b8b;--a-info:#8cb6f0;--a-violet:#bfa8f2;
   --a-r-sm:6px;--a-r:8px;--a-r-lg:10px;
   --a-h:32px;--a-h-lg:38px;
   --a-side:240px;--a-top:56px;--a-pad:28px;
   --a-font:var(--font);--a-head:var(--font);--a-mono:var(--font-mono);
   --a-shadow:none;
-  --a-shadow-lg:0 12px 32px -12px rgba(16,17,20,.22),0 2px 8px rgba(16,17,20,.08);
-  color-scheme:light;
+  --a-shadow-lg:0 18px 40px -18px rgba(0,0,0,.78),0 2px 10px rgba(0,0,0,.42);
+  color-scheme:dark;
   --a-ease:cubic-bezier(.2,.7,.3,1);
   --a-card-pad:16px 18px;
   font-family:var(--a-font);font-size:13.5px;line-height:1.55;color:var(--a-txt);background:var(--a-bg);
@@ -52,7 +53,7 @@ body.admin .grow{flex:1 1 auto;min-width:0}
 body.admin .hide{display:none!important}
 body.admin [hidden]{display:none!important}
 body.admin :focus-visible{outline:2px solid var(--a-acc);outline-offset:2px}
-body.admin ::selection{background:var(--a-acc);color:#fff}
+body.admin ::selection{background:var(--a-acc);color:var(--a-acc-ink-dark)}
 body.admin a{color:inherit}
 body.admin img{max-width:100%}
 body.admin code,body.admin kbd{font-family:var(--a-mono)}
@@ -108,7 +109,7 @@ body.admin .v2aside button.on .ct,body.admin #tabs button.on .ct{background:var(
 /* Chân rail: tình trạng phiên + mức ghi KV */
 body.admin .v2side-foot{flex:none;display:grid;gap:10px;padding:12px 14px 14px;border-top:1px solid var(--a-bd)}
 body.admin .v2side-note{margin:0;color:var(--a-dim);font-size:11px;line-height:1.5}
-body.admin .v2scrim{position:fixed;inset:0;z-index:35;background:rgba(16,17,20,.32)}
+body.admin .v2scrim{position:fixed;inset:0;z-index:35;background:rgba(8,6,5,.62)}
 /* Khối “phiên làm việc” trong chân rail (dựng bởi Layout) */
 body.admin .v2conn{display:flex;align-items:center;gap:7px;font:600 11.5px/1 var(--a-font);color:var(--a-ok);min-width:0}
 body.admin .v2conn b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -127,7 +128,7 @@ body.admin .v2qbar.critical .bar i,body.admin .v2qbar.blocked .bar i{background:
 
 /* --- Topbar: tìm kiếm + công cụ, dính trên --- */
 body.admin .v2top{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:12px;
-  min-height:var(--a-top);padding:0 var(--a-pad);background:rgba(255,255,255,.86);
+  min-height:var(--a-top);padding:0 var(--a-pad);background:rgba(20,17,14,.88);
   border-bottom:1px solid var(--a-bd);backdrop-filter:blur(8px)}
 body.admin .v2top .in{display:flex;align-items:center;gap:10px;width:100%;min-width:0;position:static;
   padding:0;background:none;border:0;box-shadow:none;backdrop-filter:none}
@@ -137,7 +138,7 @@ body.admin .v2search{position:relative;display:flex;align-items:center;flex:0 1 
 body.admin .v2search>.admin-nav-icon,body.admin .v2search>.i,body.admin .v2search>svg{position:absolute;left:11px;
   top:50%;transform:translateY(-50%);display:inline-flex;width:15px;height:15px;color:var(--a-dim);pointer-events:none}
 body.admin .v2search .inp{height:var(--a-h);padding:0 12px 0 34px;background:var(--a-surf2);border-color:transparent;margin:0}
-body.admin .v2search .inp:hover{background:#eeeceb;border-color:transparent}
+body.admin .v2search .inp:hover{background:var(--a-surf3);border-color:transparent}
 body.admin .v2search .inp:focus{background:var(--a-surf);border-color:var(--a-acc);box-shadow:0 0 0 3px var(--a-ring)}
 body.admin .v2search .inp::placeholder{color:var(--a-dim);opacity:1}
 body.admin .v2search .inp{padding-right:44px}
@@ -171,7 +172,7 @@ body.admin .admin-tool.icon,body.admin .admin-tool.hbtn.icon{width:var(--a-h);pa
 body.admin .admin-tool .i{width:16px;height:16px}
 body.admin .admin-tool-label{font-size:12.5px}
 body.admin .v2ndot{position:absolute;top:3px;right:4px;display:inline-flex;align-items:center;justify-content:center;
-  min-width:15px;height:15px;padding:0 4px;border-radius:99px;background:var(--a-acc);color:#fff;
+  min-width:15px;height:15px;padding:0 4px;border-radius:99px;background:var(--a-acc);color:var(--a-acc-ink-dark);
   font:700 9.5px/1 var(--a-mono);margin:0}
 body.admin .v2usermenu{position:absolute;right:0;top:calc(100% + 6px);z-index:40;min-width:240px;padding:6px;
   border:1px solid var(--a-bd);border-radius:var(--a-r-lg);background:var(--a-surf);box-shadow:var(--a-shadow-lg)}
@@ -201,7 +202,7 @@ body.admin .v2quota.critical i,body.admin .v2quota.blocked i{background:var(--a-
 body.admin .v2main{width:auto;max-width:none;margin:0;padding:0 var(--a-pad) 72px;min-width:0}
 body.admin .v2pagehead{position:sticky;top:var(--a-top);z-index:20;display:flex;flex-wrap:wrap;align-items:center;
   gap:4px 20px;margin:0 calc(var(--a-pad) * -1) 20px;padding:18px var(--a-pad) 14px;
-  background:rgba(251,251,250,.93);backdrop-filter:blur(8px);border-bottom:1px solid var(--a-bd)}
+  background:rgba(20,17,14,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--a-bd)}
 body.admin .v2pagehead .eyebrow{display:block;margin:0 0 5px;color:var(--a-dim)}
 body.admin .v2pagehead h1,body.admin .v2pagehead h2{margin:0;font-size:25px;line-height:1.2;letter-spacing:-.02em;font-weight:600}
 body.admin .v2pagehead p{margin:5px 0 0;color:var(--a-mut);font-size:13px;max-width:78ch;line-height:1.45}
@@ -231,14 +232,14 @@ body.admin .btn:active{transform:none}
 body.admin .btn .i,body.admin .btn .i-s{width:15px;height:15px}
 body.admin .btn.sm{height:28px;padding:0 9px;font-size:11.5px;border-radius:7px}
 body.admin .btn.lg{height:var(--a-h-lg);padding:0 18px;font-size:13.5px}
-body.admin .btn.pri{background:#1c1d21;border-color:#1c1d21;color:#fff;box-shadow:none}
-body.admin .btn.pri:hover{background:#33363c;border-color:#33363c;color:#fff}
+body.admin .btn.pri{background:var(--a-acc);border-color:var(--a-acc);color:var(--a-acc-ink-dark);box-shadow:none}
+body.admin .btn.pri:hover{background:color-mix(in srgb,var(--a-acc) 86%,#fff);border-color:transparent;color:var(--a-acc-ink-dark)}
 body.admin .btn.pri:active{transform:none;box-shadow:none}
 body.admin .btn.ghost.ghost{background:transparent;border-color:var(--a-bd);color:var(--a-mut);box-shadow:none}
 body.admin .btn.ghost:hover{background:var(--a-surf2);border-color:var(--a-bd2);color:var(--a-txt)}
 body.admin .btn.danger,body.admin .btn.bad{color:var(--a-bad)}
 body.admin .btn.danger:hover,body.admin .btn.bad:hover{border-color:var(--a-bad);background:color-mix(in srgb,var(--a-bad) 12%,var(--a-surf))}
-body.admin .btn.armed{background:var(--a-bad);border-color:var(--a-bad);color:#fff}
+body.admin .btn.armed{background:var(--a-bad);border-color:var(--a-bad);color:#2a1118}
 body.admin .btn.acc{border-color:var(--a-acc);background:transparent;color:var(--a-acc)}
 body.admin .btn.acc:hover{background:var(--a-acc-soft);border-color:var(--a-acc);color:var(--a-acc-ink)}
 body.admin .btn[disabled],body.admin .btn.off{opacity:.45;cursor:not-allowed;box-shadow:none}
@@ -256,7 +257,7 @@ body.admin .v2empty-actions{justify-content:center}
 
 /* --- Ô nhập / nhãn / lựa chọn --- */
 body.admin .inp{width:100%;min-height:var(--a-h);padding:6px 11px;border:1px solid var(--a-bd2);border-radius:var(--a-r);
-  background:var(--a-surf);color:var(--a-txt);font:400 13px/1.4 var(--a-font);box-shadow:none;
+  background:var(--a-surf2);color:var(--a-txt);font:400 13px/1.4 var(--a-font);box-shadow:none;
   transition:border-color .16s var(--a-ease),box-shadow .16s var(--a-ease)}
 body.admin .inp::placeholder{color:var(--a-dim)}
 body.admin .inp:hover{border-color:var(--a-bd2)}
@@ -265,7 +266,7 @@ body.admin textarea.inp{min-height:96px;resize:vertical;line-height:1.65}
 body.admin textarea.inp.ta{min-height:132px}
 body.admin select.inp{appearance:none;-webkit-appearance:none;height:var(--a-h);padding:0 30px 0 11px;cursor:pointer;
   text-overflow:ellipsis;white-space:nowrap;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236f747c' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23968b7f' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 10px center}
 body.admin .sel{width:auto;min-width:0}
 body.admin .fl{display:block;margin:0 0 6px;font:600 11.5px/1.3 var(--a-font);color:var(--a-mut);
@@ -292,7 +293,7 @@ body.admin .v2switch-track{position:relative;width:36px;height:20px;border-radiu
 body.admin .v2switch-track::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
   background:var(--a-mut);transition:transform .16s var(--a-ease),background-color .16s var(--a-ease)}
 body.admin .v2switch input:checked+.v2switch-track{background:color-mix(in srgb,var(--a-ok) 70%,var(--a-surf3));border-color:var(--a-ok)}
-body.admin .v2switch input:checked+.v2switch-track::after{transform:translateX(16px);background:#fff}
+body.admin .v2switch input:checked+.v2switch-track::after{transform:translateX(16px);background:#10231a}
 body.admin .v2switch input:focus-visible+.v2switch-track{outline:2px solid var(--a-acc);outline-offset:2px}
 body.admin .v2switch-text{display:grid;gap:2px;min-width:0}
 body.admin .v2switch-text b{font-size:13px;font-weight:600}
@@ -389,7 +390,7 @@ body.admin .seg button{height:28px;padding:0 11px;border:0;border-right:1px soli
   color:var(--a-mut);font:600 11.5px/1 var(--a-font);cursor:pointer;white-space:nowrap}
 body.admin .seg button:last-child{border-right:0}
 body.admin .seg button:hover{background:var(--a-surf3);color:var(--a-txt)}
-body.admin .seg button.on{background:var(--a-surf);color:var(--a-txt);box-shadow:0 1px 2px rgba(16,17,20,.12)}
+body.admin .seg button.on{background:var(--a-surf);color:var(--a-txt);box-shadow:0 1px 2px rgba(0,0,0,.5)}
 body.admin .v2tabs{display:inline-flex;gap:2px;padding:0;border:0;border-bottom:1px solid var(--a-bd);border-radius:0;
   background:none;align-self:flex-start;max-width:100%;overflow-x:auto;scrollbar-width:none}
 body.admin .v2tab{appearance:none;position:relative;min-height:38px;padding:0 14px;border:0;background:transparent;
@@ -435,7 +436,7 @@ body.admin .v2gate-card h1{font-size:26px;margin:0 0 6px}
 body.admin .v2gate-card .gsub{margin:0 0 22px;color:var(--a-mut);font-size:13px}
 body.admin .v2gate-actions{display:flex;flex-direction:column;gap:8px}
 body.admin .v2gate-actions .btn{width:100%;height:auto;min-height:var(--a-h-lg);white-space:normal;padding:10px 14px;text-align:center}
-body.admin .v2gate-primary{background:#1c1d21;border-color:#1c1d21;color:#fff}
+body.admin .v2gate-primary{background:var(--a-acc);border-color:var(--a-acc);color:var(--a-acc-ink-dark)}
 body.admin .v2connect{display:flex;flex-direction:column;gap:14px;min-width:0}
 /* Kết nối ADMIN_KEY: gấp lại — màn đăng nhập chỉ nên có một hành động chính */
 body.admin .v2gate-more{margin:16px 0 0;border-top:1px solid var(--a-bd);padding-top:12px}
@@ -590,7 +591,7 @@ body.admin .v2thumb.skel,body.admin .ovth.skel{background:linear-gradient(100deg
 body.admin .v2grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(166px,1fr));gap:14px;align-items:stretch}
 body.admin .v2gcard{display:flex;flex-direction:column;min-width:0;overflow:hidden;border:1px solid var(--a-bd);
   border-radius:var(--a-r-lg);background:var(--a-surf);transition:border-color .16s var(--a-ease)}
-body.admin .v2gcard:hover{border-color:var(--a-bd2);box-shadow:0 10px 24px -20px rgba(16,17,20,.5)}
+body.admin .v2gcard:hover{border-color:var(--a-bd2);box-shadow:0 14px 30px -22px rgba(0,0,0,.9)}
 body.admin .v2gcard .v2thumb{width:100%;height:auto;aspect-ratio:2/3;border-radius:0}
 body.admin .v2gcard-body{display:flex;flex-direction:column;gap:4px;flex:1 1 auto;min-width:0;padding:10px 12px 12px}
 body.admin .v2gcard-title{display:block;font-family:var(--a-head);font-size:13.5px;font-weight:600;line-height:1.35;
