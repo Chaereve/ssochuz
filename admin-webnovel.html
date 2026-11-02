@@ -575,6 +575,38 @@ dialog.modal.wide{max-width:min(880px,calc(100vw - 32px))}
 .drop-zone svg{width:26px;height:26px}
 .drop-zone b{color:var(--text);font-size:13px;font-weight:600}
 
+/* Popover thông báo trên thanh trên */
+.notif-pop{position:absolute;top:calc(100% - 6px);right:12px;z-index:50;
+  width:min(374px,calc(100vw - 24px));background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-card);box-shadow:var(--shadow-lg);overflow:hidden}
+.notif-pop[hidden]{display:none}
+.notif-head{display:flex;align-items:center;gap:8px;padding:14px 16px;
+  border-bottom:1px solid var(--border);font-size:13.5px;font-weight:600}
+.notif-head .grow{flex:1 1 auto}
+.notif-item{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;
+  padding:12px 16px;border-top:1px solid var(--border);min-height:56px}
+.notif-item:first-of-type{border-top:0}
+.notif-item:hover{background:var(--surface-2)}
+.notif-item .ic{display:grid;place-items:center;width:34px;height:34px;border-radius:9px;
+  background:var(--surface-2);color:var(--text-2);flex:none}
+.notif-item .ic svg{width:17px;height:17px}
+.notif-item .tx{min-width:0;flex:1 1 auto}
+.notif-item .tx b{display:block;font-size:13px;font-weight:600;line-height:1.35}
+.notif-item .tx span{display:block;font-size:12px;color:var(--text-3);margin-top:1px}
+.notif-item .n{font-size:12px;font-weight:600;color:var(--text-2);flex:none}
+.notif-foot{display:flex;gap:8px;padding:10px 16px;border-top:1px solid var(--border)}
+#bellBtn{position:relative}
+#bellBtn .dot{position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:50%;
+  background:var(--accent);border:2px solid var(--surface)}
+a.kpi{color:inherit;text-decoration:none;transition:border-color .14s ease}
+a.kpi:hover{border-color:var(--border-strong);text-decoration:none}
+.goal{margin-top:12px}
+.goal-bar{height:6px;border-radius:999px;background:var(--surface-2);overflow:hidden}
+.goal-bar i{display:block;height:100%;border-radius:999px;background:var(--accent);
+  transition:width .2s ease}
+.goal-txt{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;
+  color:var(--text-3);margin-top:6px;font-variant-numeric:tabular-nums}
+
 /* Thanh đếm từ dưới trang soạn */
 .word-bar{display:flex;align-items:center;gap:14px;margin-top:20px;padding-top:12px;
   border-top:1px solid var(--border);font-size:12px;color:var(--text-3);
@@ -608,6 +640,18 @@ dialog.modal.wide{max-width:min(880px,calc(100vw - 32px))}
 .thread-row .ref{font-size:12px;color:var(--text-3);margin-top:6px;display:flex;
   align-items:center;gap:6px;flex-wrap:wrap}
 .thread-row .ref svg{width:13px;height:13px}
+
+/* Mật độ gọn cho bảng nhiều dòng */
+.dense .content{padding:16px}
+.dense .page-head{margin-bottom:16px}
+.dense .kpi{padding:14px 16px}
+.dense .kpi-grid{margin-bottom:16px}
+.dense .card-head{padding:12px 16px}
+.dense .card-body{padding:16px}
+.dense .card-pad{padding:16px}
+.dense tbody td{padding:8px 16px}
+.dense .chapter-row{padding:6px 16px;min-height:56px}
+.dense .thread-row{padding:12px 16px}
 
 /* ============================================================================
    8. RESPONSIVE — 1440 / 768 / 360
@@ -656,6 +700,8 @@ dialog.modal.wide{max-width:min(880px,calc(100vw - 32px))}
   .theme-pick{grid-template-columns:minmax(0,1fr)}
   .word-bar{gap:10px;font-size:11.5px}
   #helpBtn,#collapseBtn{display:none}
+  .chap-nav{display:none !important}
+  .notif-pop{right:8px}
   .breadcrumb{font-size:12px;gap:5px}
   .breadcrumb b{max-width:150px}
   .thread-row{flex-wrap:wrap}
@@ -728,13 +774,18 @@ dialog.modal.wide{max-width:min(880px,calc(100vw - 32px))}
         <button class="icon-btn" type="button" id="themeBtn" aria-label="Chuyển chế độ tối" title="Chế độ sáng/tối">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
         </button>
-        <button class="icon-btn" type="button" id="bellBtn" aria-label="Thông báo, có 5 mục mới" title="Thông báo">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+        <button class="icon-btn" type="button" id="bellBtn" aria-label="Thông báo" title="Thông báo"
+                aria-haspopup="dialog" aria-expanded="false" aria-controls="notifPop">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+          <span class="dot" id="notifDot" aria-hidden="true"></span>
         </button>
         <button class="icon-btn" type="button" id="helpBtn" aria-label="Trợ giúp và phím tắt" title="Trợ giúp">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.2 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4"/><path d="M12 17.5h.01"/></svg>
         </button>
       </div>
+
+      <!-- Bảng thông báo, nội dung do JS dựng theo dữ liệu thật -->
+      <div class="notif-pop" id="notifPop" role="dialog" aria-label="Thông báo" hidden></div>
     </header>
 
     <main class="content" id="view" tabindex="-1"></main>
@@ -853,6 +904,11 @@ const ICONS = {
   chart: '<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>',
   shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>',
   eyeOff: '<path d="M10.7 5.1A10.9 10.9 0 0 1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-2.4 3.4"/><path d="M6.6 6.6A17.6 17.6 0 0 0 2 12s3.5 7 10 7a10.9 10.9 0 0 0 5.4-1.4"/><path d="M2 2l20 20"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
+  download: '<path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 21h16"/>',
+  copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/>',
+  reply: '<path d="M9 17 4 12l5-5"/><path d="M20 18v-4a4 4 0 0 0-4-4H4"/>',
+  flag: '<path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/>',
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/>',
 };
 function icon(name, size = 18, extra = '') {
   const p = ICONS[name] || ICONS.grid;
@@ -1044,9 +1100,11 @@ const SETTINGS = {
   contactEmail: 'hotro@sachmuc.vn', seoTitle: 'Sách Mực — Đọc và đăng truyện chữ Việt',
   seoDesc: 'Nền tảng đăng truyện chữ dành cho tác giả Việt: soạn chương, hẹn giờ đăng, chia sẻ doanh thu minh bạch.',
   bannerText: 'Tuần lễ truyện mùa thu — giảm 30% gói VIP',
+  language: 'Tiếng Việt', timezone: 'GMT+7 · Hồ Chí Minh', currency: 'VNĐ (đ)',
+  commentRules: { profanity: true, reports: true, verified: false, links: true },
   toggles: {
     comments: true, readerLogin: true, vip: true, autoApprove: false,
-    maintenance: false, ads: false, watermark: true,
+    maintenance: false, ads: false, watermark: true, index: true,
   },
 };
 
@@ -1068,10 +1126,11 @@ const state = {
   editor: { storyId: null, chapterId: null, draftTimer: null, savedAt: null, preview: false },
   reviewTab: 'Chương',
   taxonomyTab: 'Thể loại',
-  userQuery: '', userRole: '', userPage: 1,
+  userQuery: '', userRole: '', userStatus: '', userPage: 1,
   commentFilter: 'Mới',
-  revenueTab: 'Giao dịch',
-  settingsTab: 'Chung',
+  revenueTab: 'Giao dịch', txQuery: '', txType: '',
+  settingsTab: 'Chung', density: 'Thoáng (mặc định)',
+  notifRead: false,
   paletteIndex: 0,
   paletteResults: [],
 };
@@ -1310,9 +1369,15 @@ const badge = (text, cls) => '<span class="badge ' + cls + '">' + esc(text) + '<
 const storyBadge = (status) => badge(status, STATUS_CLASS[status] || 'badge-neutral');
 const chapBadge = (status) => badge(status, CHAP_CLASS[status] || 'badge-neutral');
 const toneFor = (id) => COVER_TONES[Math.abs([...String(id || 'x')].reduce((a, c) => a + c.charCodeAt(0), 0)) % COVER_TONES.length];
-const coverOf = (story, size = 38) =>
-  '<span class="cover" style="background:' + toneFor(story.id) + ';width:' + size +
-  'px;height:' + Math.round(size * 1.36) + 'px" aria-hidden="true">' + esc(initials(story.title)) + '</span>';
+const coverOf = (story, size = 38) => {
+  const h = Math.round(size * 1.36);
+  if (story.cover) {
+    return '<img class="cover" src="' + esc(story.cover) + '" alt="" aria-hidden="true" ' +
+      'style="width:' + size + 'px;height:' + h + 'px;object-fit:cover">';
+  }
+  return '<span class="cover" style="background:' + toneFor(story.id) + ';width:' + size +
+    'px;height:' + h + 'px" aria-hidden="true">' + esc(initials(story.title)) + '</span>';
+};
 const money = (n) => fmtNum(n) + ' Xu';
 
 /* Dữ liệu biểu đồ 30 ngày, tất định để mỗi lần mở giống nhau */
@@ -1387,11 +1452,11 @@ function renderDashboard() {
   const newComments = COMMENTS.filter((c) => c.status === 'Mới').length;
   const reported = COMMENTS.filter((c) => c.status === 'Bị báo cáo').length;
   const recent = [...STORIES].sort((a, b) => b.updated.localeCompare(a.updated)).slice(0, 6);
-  const kpi = (label, value, hint, trend, trendDown, iconName) =>
-    '<div class="kpi"><div class="kpi-top"><span class="kpi-ic">' + icon(iconName) + '</span>' +
-      esc(label) + '</div><b>' + value + '</b><small>' +
+  const kpi = (label, value, hint, trend, trendDown, iconName, href) =>
+    '<a class="kpi" href="#' + href + '"><span class="kpi-top"><span class="kpi-ic">' + icon(iconName) + '</span>' +
+      esc(label) + '</span><b>' + value + '</b><small>' +
       '<span class="' + (trendDown ? 'trend-down' : 'trend-up') + '">' +
-      (trendDown ? '▼' : '▲') + ' ' + trend + '</span> ' + esc(hint) + '</small></div>';
+      (trendDown ? '▼' : '▲') + ' ' + trend + '</span> ' + esc(hint) + '</small></a>';
 
   return '' +
     '<div class="page-head"><div class="head-text">' +
@@ -1403,10 +1468,10 @@ function renderDashboard() {
     '</div></div>' +
 
     '<div class="kpi-grid">' +
-      kpi('Tổng lượt đọc', fmtShort(totalViews), 'so với 30 ngày trước', '+12,4%', false, 'chart') +
-      kpi('Truyện đang đăng', fmtNum(running), 'trên ' + STORIES.length + ' truyện', '+2 truyện', false, 'book') +
-      kpi('Chương chờ duyệt', fmtNum(pendingCh), 'cần xử lý trong hôm nay', '+3 chương', false, 'layers') +
-      kpi('Bình luận mới', fmtNum(newComments), 'và ' + reported + ' bình luận bị báo cáo', '—', false, 'message') +
+      kpi('Tổng lượt đọc', fmtShort(totalViews), 'so với 30 ngày trước', '+12,4%', false, 'chart', 'stories') +
+      kpi('Truyện đang đăng', fmtNum(running), 'trên ' + STORIES.length + ' truyện', '+2 truyện', false, 'book', 'stories') +
+      kpi('Chương chờ duyệt', fmtNum(pendingCh), 'cần xử lý trong hôm nay', '+3 chương', false, 'layers', 'review') +
+      kpi('Bình luận mới', fmtNum(newComments), 'và ' + reported + ' bình luận bị báo cáo', '—', false, 'message', 'comments') +
     '</div>' +
 
     '<div class="split">' +
@@ -1528,7 +1593,7 @@ function renderStories() {
     '<div class="page-head"><div class="head-text"><h1>Quản lý truyện</h1>' +
       '<p>' + fmtNum(STORIES.length) + ' truyện · ' + fmtNum(CHAPTERS.length) + ' chương trong hệ thống.</p></div>' +
       '<div class="page-actions">' +
-        '<button class="btn" type="button" data-action="export">' + icon('upload') + 'Xuất CSV</button>' +
+        '<button class="btn" type="button" data-export="stories">' + icon('download') + 'Xuất CSV</button>' +
         '<button class="btn btn-primary" type="button" data-nav="story-new">' + icon('plus') + 'Đăng truyện mới</button>' +
       '</div></div>' +
 
@@ -1696,6 +1761,8 @@ function renderStoryDetail() {
       '<h1>' + esc(s.title) + '</h1>' +
       '<p>' + esc(s.author) + ' · ' + esc(s.genre) + ' · cập nhật ' + relTime(s.updated) + '</p></div>' +
       '<div class="page-actions">' +
+        '<button class="btn" type="button" data-story-preview="' + s.id + '">' + icon('eye') + 'Xem công khai</button>' +
+        '<button class="btn" type="button" data-story-duplicate="' + s.id + '">' + icon('copy') + 'Nhân bản</button>' +
         '<button class="btn" type="button" data-story-edit="' + s.id + '">' + icon('edit') + 'Sửa thông tin</button>' +
         '<button class="btn btn-primary" type="button" data-open-editor="' + s.id + '">' + icon('pen') + 'Viết chương mới</button>' +
       '</div></div>' +
@@ -1869,12 +1936,19 @@ function renderEditorPage() {
       '<div class="editor-top">' +
         '<button class="btn btn-ghost btn-sm" type="button" data-editor="close" aria-label="Thoát trình soạn">' +
           icon('chevronLeft', 17) + '</button>' +
+        '<span class="chap-nav" style="display:flex;gap:2px">' +
+          '<button class="btn btn-ghost btn-sm" type="button" data-editor="prev" aria-label="Chương trước" title="Chương trước">' +
+            icon('chevronLeft', 17) + '</button>' +
+          '<button class="btn btn-ghost btn-sm" type="button" data-editor="next" aria-label="Chương sau" title="Chương sau">' +
+            icon('chevronRight', 17) + '</button>' +
+        '</span>' +
         '<div class="title"><b>' + esc(story.title) + '</b>' +
           '<span>Chương ' + chap.number + ' · ' + esc(story.author) + '</span></div>' +
         '<span class="save-state' + (state.editor.savedAt ? ' saved' : '') + '" id="saveState" aria-live="polite">' +
           icon('check') + (state.editor.savedAt ? 'Đã lưu lúc ' + state.editor.savedAt : 'Thay đổi sẽ được lưu tự động') + '</span>' +
         '<button class="btn btn-sm" type="button" data-editor="preview" aria-pressed="' + state.editor.preview + '">' +
           icon('eye', 16) + 'Xem trước</button>' +
+        '<button class="btn btn-sm" type="button" data-editor="draft">' + icon('save', 16) + 'Lưu nháp</button>' +
         '<button class="btn btn-primary btn-sm" type="button" data-editor="publish">' + icon('check', 16) + 'Đăng chương</button>' +
       '</div>' +
 
@@ -1936,6 +2010,8 @@ function renderEditorPage() {
             '<div class="meta-line"><span>Trạng thái lưu</span><b id="sideSaved">' +
               (state.editor.savedAt ? 'Đã lưu' : 'Chưa lưu') + '</b></div>' +
             '<div class="meta-line"><span>Chương số</span><b>' + chap.number + '</b></div>' +
+            '<div class="goal"><div class="goal-bar"><i id="goalBar" style="width:0%"></i></div>' +
+              '<div class="goal-txt"><span>Mục tiêu hôm nay</span><span id="goalTxt">0 / 2.000 từ</span></div></div>' +
           '</div>' +
           '<div><h3>Hướng dẫn</h3>' +
             '<p style="font-size:12.5px;color:var(--text-3);line-height:1.6">Bôi đen văn bản để dùng thanh công cụ. Ctrl/Cmd + S để lưu ngay, Ctrl/Cmd + P để xem trước.</p></div>' +
@@ -1972,6 +2048,7 @@ function renderReview() {
       '<div class="pager" style="border-top:1px solid var(--border)">' +
         '<span class="info">' + fmtNum(c.words) + ' từ · ' + readTime(c.words) + ' · gửi ' +
           relTime(c.publishedAt || '2026-11-01T15:00:00') + '</span>' +
+        '<button class="btn btn-sm btn-ghost" type="button" data-review-preview="' + c.id + '">' + icon('eye', 15) + 'Xem</button>' +
         '<button class="btn btn-sm" type="button" data-review="reject" data-id="' + c.id + '">' + icon('x', 15) + 'Từ chối</button>' +
         '<button class="btn btn-sm btn-primary" type="button" data-review="approve" data-id="' + c.id + '">' +
           icon('check', 15) + 'Duyệt</button>' +
@@ -1988,6 +2065,7 @@ function renderReview() {
         s.tags.map((t) => '<span class="chip">' + esc(t) + '</span>').join('') + '</div></div>' +
     '<div class="pager" style="border-top:1px solid var(--border)">' +
       '<span class="info">' + fmtNum(s.chapters) + ' chương · gửi ' + relTime(s.updated) + '</span>' +
+      '<button class="btn btn-sm btn-ghost" type="button" data-review-preview-story="' + s.id + '">' + icon('eye', 15) + 'Xem</button>' +
       '<button class="btn btn-sm" type="button" data-review="reject" data-story="' + s.id + '">' + icon('x', 15) + 'Từ chối</button>' +
       '<button class="btn btn-sm btn-primary" type="button" data-review="approve" data-story="' + s.id + '">' +
         icon('check', 15) + 'Duyệt</button>' +
@@ -2064,6 +2142,8 @@ function renderComments() {
               '<div class="acts">' +
                 (c.status !== 'Đã duyệt' ? '<button class="btn btn-ghost btn-sm" type="button" data-comment="approve" data-id="' + c.id +
                   '" aria-label="Duyệt bình luận của ' + esc(c.user) + '">' + icon('check', 15) + '</button>' : '') +
+                '<button class="btn btn-ghost btn-sm" type="button" data-comment="reply" data-id="' + c.id +
+                  '" aria-label="Phản hồi bình luận của ' + esc(c.user) + '">' + icon('reply', 15) + '</button>' +
                 (c.status !== 'Đã ẩn' ? '<button class="btn btn-ghost btn-sm" type="button" data-comment="hide" data-id="' + c.id +
                   '" aria-label="Ẩn bình luận của ' + esc(c.user) + '">' + icon('eyeOff', 15) + '</button>' : '') +
                 '<button class="btn btn-ghost btn-sm" type="button" data-comment="delete" data-id="' + c.id +
@@ -2077,6 +2157,7 @@ function renderComments() {
    O. THỂ LOẠI & THẺ
    ========================================================================== */
 function renderTaxonomy() {
+  recountTaxonomy();
   const isGenre = state.taxonomyTab === 'Thể loại';
   const items = isGenre ? CATEGORIES : TAGS;
 
@@ -2118,9 +2199,12 @@ function renderTaxonomy() {
             '<button class="btn btn-ghost btn-sm" type="button" data-tax-delete="' + it.id + '" data-kind="' +
               (isGenre ? 'genre' : 'tag') + '" aria-label="Xóa ' + esc(it.name) + '">' + icon('trash', 15) + '</button>' +
           '</div></td></tr>').join('') +
+        '<tr id="taxEmpty" hidden><td colspan="5">' +
+          '<div class="empty" style="padding:32px 16px"><b>Không tìm thấy mục nào</b>' +
+          '<p>Thử từ khóa ngắn hơn hoặc thêm mục mới cho danh mục này.</p></div></td></tr>' +
       '</tbody></table></div>' +
       '<div class="pager"><span class="info">Thay đổi áp dụng ngay cho trang đọc và bộ lọc.</span>' +
-        '<button class="btn btn-sm" type="button" data-action="export">' + icon('upload', 15) + 'Xuất danh mục</button></div>' +
+        '<button class="btn btn-sm" type="button" data-export="taxonomy">' + icon('download', 15) + 'Xuất danh mục</button></div>' +
     '</section>';
 }
 
@@ -2132,6 +2216,7 @@ function renderUsers() {
   const rows = USERS.filter((u) => {
     if (q && !(u.name + ' ' + u.email).toLowerCase().includes(q)) return false;
     if (state.userRole && u.role !== state.userRole) return false;
+    if (state.userStatus && u.status !== state.userStatus) return false;
     return true;
   });
   const perPage = 8;
@@ -2147,7 +2232,7 @@ function renderUsers() {
       '<p>' + USERS.length + ' tài khoản · ' + USERS.filter((u) => u.role === 'Tác giả').length + ' tác giả · ' +
       USERS.filter((u) => u.status === 'Chờ xác minh').length + ' hồ sơ chờ xác minh.</p></div>' +
       '<div class="page-actions">' +
-        '<button class="btn" type="button" data-action="export">' + icon('upload') + 'Xuất danh sách</button>' +
+        '<button class="btn" type="button" data-export="users">' + icon('download') + 'Xuất danh sách</button>' +
         '<button class="btn btn-primary" type="button" data-user-invite>' + icon('plus') + 'Mời thành viên</button>' +
       '</div></div>' +
     '<section class="card">' +
@@ -2159,6 +2244,11 @@ function renderUsers() {
           '<option value="">Mọi vai trò</option>' +
           ['Admin', 'Biên tập viên', 'Tác giả', 'Độc giả'].map((r) =>
             '<option value="' + r + '"' + (state.userRole === r ? ' selected' : '') + '>' + r + '</option>').join('') +
+        '</select>' +
+        '<select class="select" id="userStatus" aria-label="Lọc theo trạng thái">' +
+          '<option value="">Mọi trạng thái</option>' +
+          ['Hoạt động', 'Bị khóa', 'Tạm khóa', 'Chờ xác minh'].map((st) =>
+            '<option value="' + st + '"' + (state.userStatus === st ? ' selected' : '') + '>' + st + '</option>').join('') +
         '</select>' +
         '<span class="grow"></span>' +
         '<button class="btn btn-ghost btn-sm" type="button" data-action="clear-user-filters">' + icon('x', 15) + 'Xóa lọc</button>' +
@@ -2217,11 +2307,31 @@ function renderRevenue() {
       '<span style="color:var(--text-3);font-weight:500;margin-left:6px">' +
       (t === 'Giao dịch' ? TRANSACTIONS.length : WITHDRAWALS.length) + '</span></button>').join('') + '</div>';
 
-  const txTable = '<div class="table-wrap"><table><thead><tr>' +
+  const q = state.txQuery.trim().toLowerCase();
+  const txRows = TRANSACTIONS.filter((t) => {
+    if (state.txType && t.type !== state.txType) return false;
+    if (q && !(t.user + ' ' + t.story + ' ' + t.id).toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const types = [...new Set(TRANSACTIONS.map((t) => t.type))];
+  const txFilter = '<div class="filter-bar">' +
+      '<div class="search-inline">' + icon('search') +
+        '<input class="input" id="txSearch" type="search" placeholder="Tìm theo người dùng, truyện, mã…" value="' +
+          esc(state.txQuery) + '" aria-label="Tìm giao dịch"></div>' +
+      '<select class="select" id="txType" aria-label="Lọc theo loại giao dịch">' +
+        '<option value="">Mọi loại</option>' +
+        types.map((t) => '<option value="' + esc(t) + '"' + (state.txType === t ? ' selected' : '') + '>' + esc(t) + '</option>').join('') +
+      '</select><span class="grow"></span>' +
+      '<span class="sub" style="font-size:12.5px;color:var(--text-3)">' + txRows.length + ' giao dịch</span></div>';
+  const txTable = txFilter + '<div class="table-wrap"><table><thead><tr>' +
     '<th scope="col">Mã</th><th scope="col">Người dùng</th><th scope="col">Loại</th>' +
     '<th scope="col" class="hide-sm">Nội dung</th><th scope="col">Số tiền</th>' +
-    '<th scope="col" class="hide-xs">Thời gian</th><th scope="col">Trạng thái</th></tr></thead><tbody>' +
-    TRANSACTIONS.map((t) => '<tr>' +
+    '<th scope="col" class="hide-xs">Thời gian</th><th scope="col">Trạng thái</th>' +
+    '<th scope="col"><span class="sr-only">Chi tiết</span></th></tr></thead><tbody>' +
+    (txRows.length === 0
+      ? '<tr><td colspan="8">' + emptyState({ iconName: 'search', title: 'Không có giao dịch phù hợp',
+          message: 'Thử bỏ lọc loại giao dịch hoặc tìm bằng mã khác.' }) + '</td></tr>'
+      : txRows.map((t) => '<tr>' +
       '<td class="cell-muted">#' + esc(t.id.toUpperCase()) + '</td>' +
       '<td><b style="font-weight:600">' + esc(t.user) + '</b></td>' +
       '<td>' + esc(t.type) + '</td>' +
@@ -2229,7 +2339,9 @@ function renderRevenue() {
       '<td class="num">' + fmtMoney(t.amount) + '</td>' +
       '<td class="cell-muted hide-xs">' + fmtDateTime(t.at) + '</td>' +
       '<td>' + badge(t.status, t.status === 'Thành công' ? 'badge-dang-ra' : 'badge-tam-ngung') + '</td>' +
-    '</tr>').join('') + '</tbody></table></div>';
+      '<td><div class="row-actions"><button class="btn btn-ghost btn-sm" type="button" data-tx-view="' + t.id +
+        '" aria-label="Chi tiết giao dịch ' + esc(t.id) + '">' + icon('eye', 15) + '</button></div></td>' +
+    '</tr>').join('')) + '</tbody></table></div>';
 
   const wTable = '<div class="table-wrap"><table><thead><tr>' +
     '<th scope="col">Tác giả</th><th scope="col">Số tiền</th><th scope="col" class="hide-sm">Phương thức</th>' +
@@ -2255,7 +2367,7 @@ function renderRevenue() {
     '<div class="page-head"><div class="head-text"><h1>Doanh thu &amp; Xu</h1>' +
       '<p>Đối soát giao dịch mua chương, nạp Xu và yêu cầu rút tiền của tác giả.</p></div>' +
       '<div class="page-actions">' +
-        '<button class="btn" type="button" data-action="export">' + icon('upload') + 'Xuất báo cáo</button>' +
+        '<button class="btn" type="button" data-export="transactions">' + icon('download') + 'Xuất báo cáo</button>' +
         '<button class="btn btn-primary" type="button" data-action="payout">' + icon('wallet') + 'Chi trả đợt mới</button>' +
       '</div></div>' +
 
@@ -2276,7 +2388,7 @@ function renderRevenue() {
     '<section class="card">' + tabs +
       (state.revenueTab === 'Giao dịch' ? txTable : wTable) +
       '<div class="pager"><span class="info">Số liệu mẫu, đơn vị: đồng Việt Nam.</span>' +
-        '<button class="btn btn-sm" type="button" data-action="export">' + icon('upload', 15) + 'Tải CSV</button></div>' +
+        '<button class="btn btn-sm" type="button" data-export="transactions">' + icon('download', 15) + 'Tải CSV</button></div>' +
     '</section>';
 }
 
@@ -2303,11 +2415,17 @@ function renderSettings() {
           '<div class="field"><label for="setEmail">Email liên hệ</label>' +
             '<input class="input" id="setEmail" type="email" value="' + esc(SETTINGS.contactEmail) + '"></div>' +
           '<div class="field"><label for="setLang">Ngôn ngữ</label>' +
-            '<select class="select" id="setLang"><option>Tiếng Việt</option><option>English</option></select></div>' +
+            '<select class="select" id="setLang">' +
+              ['Tiếng Việt', 'English'].map((v) => '<option' + (SETTINGS.language === v ? ' selected' : '') + '>' + v + '</option>').join('') +
+            '</select></div>' +
           '<div class="field"><label for="setTz">Múi giờ</label>' +
-            '<select class="select" id="setTz"><option>GMT+7 · Hồ Chí Minh</option><option>GMT+8 · Singapore</option></select></div>' +
+            '<select class="select" id="setTz">' +
+              ['GMT+7 · Hồ Chí Minh', 'GMT+8 · Singapore'].map((v) => '<option' + (SETTINGS.timezone === v ? ' selected' : '') + '>' + v + '</option>').join('') +
+            '</select></div>' +
           '<div class="field"><label for="setCurrency">Đơn vị tiền tệ</label>' +
-            '<select class="select" id="setCurrency"><option>VNĐ (đ)</option><option>Xu</option></select></div>' +
+            '<select class="select" id="setCurrency">' +
+              ['VNĐ (đ)', 'Xu'].map((v) => '<option' + (SETTINGS.currency === v ? ' selected' : '') + '>' + v + '</option>').join('') +
+            '</select></div>' +
           '<div class="field full"><label for="setBanner">Chữ trên banner đầu trang</label>' +
             '<input class="input" id="setBanner" value="' + esc(SETTINGS.bannerText) + '"></div>' +
         '</div>' +
@@ -2352,7 +2470,7 @@ function renderSettings() {
       '<div style="margin-top:20px;padding-top:8px;border-top:1px solid var(--border)">' +
         sw('watermark', 'Đóng dấu bản quyền', 'Chèn watermark vào ảnh bìa tải lên.') +
         '<div class="switch-row"><span class="tx"><b>Cho phép index</b><span>Cho công cụ tìm kiếm lập chỉ mục.</span></span>' +
-          '<button class="switch" type="button" role="switch" aria-checked="true" aria-label="Cho phép index"></button></div>' +
+          '<button class="switch" type="button" role="switch" data-toggle="index" aria-checked="true" aria-label="Cho phép index"></button></div>' +
       '</div>' +
       '<div style="display:flex;gap:8px;margin-top:20px"><button class="btn btn-primary" type="button" data-save-settings>' +
         icon('save') + 'Lưu thay đổi</button></div>' +
@@ -2385,16 +2503,24 @@ function renderSettings() {
             '<span style="font-size:12px;color:var(--text-3)">Dịu mắt khi làm việc đêm</span></button>' +
         '</div>' +
         '<div class="field" style="margin-top:20px;max-width:320px"><label for="setDensity">Mật độ hiển thị</label>' +
-          '<select class="select" id="setDensity"><option>Thoáng (mặc định)</option><option>Gọn</option></select></div>' +
+          '<select class="select" id="setDensity">' +
+            ['Thoáng (mặc định)', 'Gọn'].map((d) => '<option' + (state.density === d ? ' selected' : '') + '>' + d + '</option>').join('') +
+          '</select>' +
+          '<span class="hint">Gọn giảm khoảng đệm bảng và thẻ để xem nhiều dòng hơn.</span></div>' +
       '</section>' +
-      '<section class="card card-pad"><h2 style="font-size:15px;font-weight:600;margin-bottom:12px">Màu nhấn</h2>' +
-        '<div style="display:flex;gap:10px;flex-wrap:wrap">' +
-          [['#4F46E5', 'Indigo'], ['#0F766E', 'Teal'], ['#9A3412', 'Nâu đất'], ['#1D4ED8', 'Lam']].map(([hex, name], i) =>
-            '<button type="button" aria-label="Màu ' + name + '" aria-pressed="' + (i === 0) + '" ' +
-            'style="width:44px;height:44px;border-radius:10px;border:2px solid ' +
-            (i === 0 ? 'var(--text)' : 'var(--border)') + ';background:' + hex + '"></button>').join('') +
+      '<section class="card card-pad"><h2 style="font-size:15px;font-weight:600;margin-bottom:12px">Bộ thành phần</h2>' +
+        '<p style="font-size:12px;color:var(--text-3);line-height:1.6;margin-bottom:14px">' +
+          'Kiểm tra nhanh nút, nhãn trạng thái và ô nhập theo giao diện đang chọn.</p>' +
+        '<div aria-hidden="true" style="display:flex;flex-direction:column;gap:12px;pointer-events:none">' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+            '<span class="btn btn-primary btn-sm">Nút chính</span>' +
+            '<span class="btn btn-sm">Nút phụ</span>' +
+            '<span class="btn btn-danger btn-sm">Xóa</span></div>' +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap">' + storyBadge('Đang ra') +
+            chapBadge('Chờ duyệt') + badge('Tạm ngưng', 'badge-tam-ngung') +
+            badge('Hoàn thành', 'badge-hoan-thanh') + '</div>' +
+          '<input class="input" placeholder="Ô nhập liệu" aria-label="Ô nhập liệu mẫu">' +
         '</div>' +
-        '<p style="font-size:12px;color:var(--text-3);margin-top:12px;line-height:1.6">Màu nhấn dùng cho nút chính, liên kết và trạng thái đang chọn.</p>' +
       '</section>' +
     '</div>';
 
@@ -2421,7 +2547,7 @@ function renderSettings() {
     '<div class="page-head"><div class="head-text"><h1>Cài đặt</h1>' +
       '<p>Thông tin website, SEO, giao diện và các tính năng đang bật.</p></div>' +
       '<div class="page-actions">' +
-        '<button class="btn" type="button" data-action="export">' + icon('upload') + 'Sao lưu cấu hình</button>' +
+        '<button class="btn" type="button" data-export="settings">' + icon('download') + 'Sao lưu cấu hình</button>' +
         '<button class="btn btn-primary" type="button" data-save-settings>' + icon('save') + 'Lưu thay đổi</button>' +
       '</div></div>' +
     '<section class="card" style="margin-bottom:16px"><div class="tabs" role="tablist" aria-label="Nhóm cài đặt">' +
@@ -2436,11 +2562,13 @@ function renderSettings() {
    ========================================================================== */
 let searchTimer = null;
 const FORM_TAGS = [];
+let FORM_COVER = null;
 
 function refresh(focusId) {
   renderPage();
   renderSidebar();
   renderBreadcrumb();
+  renderNotifPop();
   if (focusId) {
     const el = document.getElementById(focusId);
     if (el) {
@@ -2674,6 +2802,10 @@ function updateEditorCounts() {
   [['#wordBar', fmtNum(n) + ' từ'], ['#sideWords', fmtNum(n)],
    ['#sideRead', readTime(n)], ['#liveWords', fmtNum(n) + ' từ · ' + readTime(n)]]
     .forEach(([sel, val]) => { const el = $(sel); if (el) el.textContent = val; });
+  const goal = 2000;
+  const bar = $('#goalBar'), txt = $('#goalTxt');
+  if (bar) bar.style.width = Math.min(100, Math.round((n / goal) * 100)) + '%';
+  if (txt) txt.textContent = fmtNum(n) + ' / ' + fmtNum(goal) + ' từ';
 }
 function persistEditor() {
   const body = $('#chapBody');
@@ -2728,6 +2860,20 @@ function editorPreview() {
     ($('#chapBody') ? $('#chapBody').innerHTML : '');
   if (pane.scrollIntoView) pane.scrollIntoView({ block: 'nearest' });
 }
+function openSiblingChapter(dir) {
+  clearTimeout(state.editor.draftTimer);
+  const body0 = $('#chapBody');
+  if (body0 && String(body0.textContent || '').trim()) persistEditor();
+  const { story, chap } = editorTarget();
+  const list = CHAPTERS.filter((c) => c.storyId === story.id).sort((a, b) => a.number - b.number);
+  const idx = list.findIndex((c) => c.id === chap.id);
+  const target = idx === -1 ? (dir < 0 ? list[list.length - 1] : null) : list[idx + dir];
+  if (!target) {
+    toast('Đã hết chương', dir < 0 ? 'Đây là chương đầu tiên.' : 'Đây là chương cuối cùng.', 'info');
+    return;
+  }
+  openEditor(story.id, target.id);
+}
 function publishChapter() {
   const titleEl = $('#chapTitle');
   const body = $('#chapBody');
@@ -2752,7 +2898,12 @@ function publishChapter() {
   const status = $('#eStatus') ? $('#eStatus').value : 'Đã đăng';
   chap.status = status;
   const sch = $('#eSchedule');
-  chap.scheduleAt = status === 'Hẹn giờ' && sch && sch.value ? sch.value + ':00' : null;
+  if (status === 'Hẹn giờ' && (!sch || !sch.value)) {
+    toast('Thiếu lịch đăng', 'Chọn ngày giờ cho chương ở trạng thái hẹn giờ.', 'err');
+    if (sch) sch.focus();
+    return;
+  }
+  chap.scheduleAt = status === 'Hẹn giờ' ? sch.value + ':00' : null;
   const vip = $('#eVip');
   chap.vipPrice = vip ? Number(vip.value) || 0 : 0;
   chap.publishedAt = status === 'Đã đăng' ? '2026-11-02T12:00:00' : chap.publishedAt;
@@ -3011,15 +3162,24 @@ function helpModal() {
   });
 }
 function commentRulesModal() {
+  const rules = SETTINGS.commentRules || (SETTINGS.commentRules = {
+    profanity: true, reports: true, verified: false, links: true,
+  });
+  const row = (key, label) => '<label class="checkbox"><input type="checkbox" data-rule="' + key + '"' +
+    (rules[key] ? ' checked' : '') + '><span>' + label + '</span></label>';
   openModal({
     title: 'Quy tắc kiểm duyệt',
     subtitle: 'Áp dụng tự động cho bình luận mới.',
     confirmText: 'Lưu quy tắc',
-    body: '<label class="checkbox"><input type="checkbox" checked><span>Tự ẩn bình luận có từ khóa xúc phạm</span></label>' +
-      '<label class="checkbox"><input type="checkbox" checked><span>Ẩn bình luận có hơn 3 lượt báo cáo</span></label>' +
-      '<label class="checkbox"><input type="checkbox"><span>Bắt buộc tài khoản xác minh email mới được bình luận</span></label>' +
-      '<label class="checkbox"><input type="checkbox" checked><span>Chặn liên kết ngoài trong bình luận</span></label>',
-    onConfirm: () => { toast('Đã lưu quy tắc', 'Quy tắc kiểm duyệt mới có hiệu lực ngay.'); return true; },
+    body: row('profanity', 'Tự ẩn bình luận có từ khóa xúc phạm') +
+      row('reports', 'Ẩn bình luận có hơn 3 lượt báo cáo') +
+      row('verified', 'Bắt buộc tài khoản xác minh email mới được bình luận') +
+      row('links', 'Chặn liên kết ngoài trong bình luận'),
+    onConfirm: (dlg) => {
+      dlg.querySelectorAll('[data-rule]').forEach((el) => { rules[el.getAttribute('data-rule')] = el.checked; });
+      toast('Đã lưu quy tắc', 'Quy tắc kiểm duyệt mới có hiệu lực ngay.');
+      return true;
+    },
   });
 }
 function payoutModal() {
@@ -3063,6 +3223,8 @@ function syncBulkBars() {
 
 function handleClick(e) {
   const t = (sel) => e.target.closest(sel);
+  const pop = $('#notifPop');
+  if (pop && !pop.hidden && !t('#notifPop') && !t('#bellBtn')) toggleNotif(false);
 
   if (e.target.id === 'paletteWrap' || t('#scrim')) { closePalette(); state.sidebarOpen = false; applySidebarState(); return; }
   if (t('#menuBtn')) { state.sidebarOpen = !state.sidebarOpen; applySidebarState(); return; }
@@ -3070,12 +3232,26 @@ function handleClick(e) {
   if (t('#themeBtn')) { toggleTheme(); return; }
   if (t('#searchTrigger')) { openPalette(); return; }
   if (t('#paletteClose')) { closePalette(); return; }
-  if (t('#bellBtn')) { toast('Thông báo', '3 chương chờ duyệt và 2 bình luận bị báo cáo.', 'info'); return; }
+  if (t('#bellBtn')) { toggleNotif(); return; }
+  if (t('[data-notif-close]')) { toggleNotif(false); return; }
+  if (t('[data-notif-readall]')) {
+    state.notifRead = true;
+    renderNotifPop();
+    toast('Đã đánh dấu đã đọc', 'Chấm thông báo trên thanh trên sẽ tắt.', 'info');
+    return;
+  }
   if (t('#helpBtn')) { helpModal(); return; }
   if (t('#sideUser')) { accountModal(); return; }
   if (t('[data-modal-theme]')) { toggleTheme(); return; }
 
   let el;
+  if ((el = t('[data-notif-nav]'))) { toggleNotif(false); navigate(el.getAttribute('data-notif-nav')); return; }
+  if ((el = t('[data-export]'))) { exportData(el.getAttribute('data-export')); return; }
+  if ((el = t('[data-story-preview]'))) { storyPreviewModal(el.getAttribute('data-story-preview')); return; }
+  if ((el = t('[data-story-duplicate]'))) { duplicateStory(el.getAttribute('data-story-duplicate')); return; }
+  if ((el = t('[data-review-preview]'))) { reviewPreviewModal('chapter', el.getAttribute('data-review-preview')); return; }
+  if ((el = t('[data-review-preview-story]'))) { reviewPreviewModal('story', el.getAttribute('data-review-preview-story')); return; }
+  if ((el = t('[data-tx-view]'))) { txModal(el.getAttribute('data-tx-view')); return; }
   if ((el = t('[data-page]'))) { navigate(el.getAttribute('data-page')); return; }
   if ((el = t('[data-nav]'))) { navigate(el.getAttribute('data-nav')); return; }
 
@@ -3183,6 +3359,20 @@ function handleClick(e) {
       editorPreview();
     } else if (a === 'publish') {
       publishChapter();
+    } else if (a === 'draft') {
+      clearTimeout(state.editor.draftTimer);
+      const body0 = $('#chapBody');
+      if (!body0 || !String(body0.textContent || '').trim()) {
+        toast('Chưa có nội dung', 'Viết ít nhất một đoạn trước khi lưu nháp.', 'err');
+        return;
+      }
+      const saved = persistEditor();
+      if (saved) {
+        saved.status = 'Bản nháp';
+        toast('Đã lưu nháp', 'Chương ' + saved.number + ' đang ở trạng thái bản nháp.');
+      }
+    } else if (a === 'prev' || a === 'next') {
+      openSiblingChapter(a === 'prev' ? -1 : 1);
     } else if (a === 'delete') {
       const id = state.editor.chapterId;
       if (!id) { toast('Chưa có gì để xóa', 'Chương này chưa được lưu.', 'err'); return; }
@@ -3279,6 +3469,7 @@ function handleClick(e) {
     const act = el.getAttribute('data-comment');
     const c = COMMENTS.find((x) => x.id === el.getAttribute('data-id'));
     if (!c) return;
+    if (act === 'reply') { replyCommentModal(c.id); return; }
     if (act === 'delete') {
       confirmDelete({
         title: 'Xóa bình luận của ' + c.user + '?',
@@ -3367,6 +3558,14 @@ function handleClick(e) {
     if (email) SETTINGS.contactEmail = email.value.trim();
     if (url) SETTINGS.siteUrl = url.value.trim();
     if (banner) SETTINGS.bannerText = banner.value.trim();
+    const seoT = $('#seoTitle'), seoD = $('#seoDesc');
+    if (seoT) SETTINGS.seoTitle = seoT.value.trim();
+    if (seoD) SETTINGS.seoDesc = seoD.value.trim();
+    const lang = $('#setLang'), tz = $('#setTz'), cur = $('#setCurrency');
+    if (lang) SETTINGS.language = lang.value;
+    if (tz) SETTINGS.timezone = tz.value;
+    if (cur) SETTINGS.currency = cur.value;
+    renderNotifPop();
     toast('Đã lưu cài đặt', 'Thay đổi được áp dụng cho toàn bộ website.');
     refresh();
     return;
@@ -3394,7 +3593,7 @@ function handleClick(e) {
       state.storyPage = 1; refresh();
       toast('Đã xóa bộ lọc', 'Đang hiển thị toàn bộ truyện.', 'info');
     } else if (a === 'clear-user-filters') {
-      state.userQuery = ''; state.userRole = ''; state.userPage = 1; refresh();
+      state.userQuery = ''; state.userRole = ''; state.userStatus = ''; state.userPage = 1; refresh();
       toast('Đã xóa bộ lọc', 'Đang hiển thị toàn bộ người dùng.', 'info');
     } else if (a === 'import-chapters') { importModal(); }
     else if (a === 'comment-settings') { commentRulesModal(); }
@@ -3430,11 +3629,23 @@ function handleInput(e) {
     searchTimer = setTimeout(() => refresh('userSearch'), 260);
     return;
   }
+  if (id === 'txSearch') {
+    state.txQuery = el.value;
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => refresh('txSearch'), 260);
+    return;
+  }
   if (id === 'taxSearch') {
     const q = el.value.trim().toLowerCase();
+    let visible = 0;
     $$('#view tbody tr').forEach((tr) => {
-      tr.hidden = q !== '' && !tr.textContent.toLowerCase().includes(q);
+      if (tr.id === 'taxEmpty') return;
+      const hit = q === '' || tr.textContent.toLowerCase().includes(q);
+      tr.hidden = !hit;
+      if (hit) visible++;
     });
+    const emptyRow = $('#taxEmpty');
+    if (emptyRow) emptyRow.hidden = visible > 0;
     return;
   }
   if (id === 'sDesc') {
@@ -3467,6 +3678,14 @@ function handleChange(e) {
   if (id === 'filterStatus') { state.storyStatus = el.value; state.storyPage = 1; refresh(); return; }
   if (id === 'filterAuthor') { state.storyAuthor = el.value; state.storyPage = 1; refresh(); return; }
   if (id === 'userRole') { state.userRole = el.value; state.userPage = 1; refresh(); return; }
+  if (id === 'userStatus') { state.userStatus = el.value; state.userPage = 1; refresh(); return; }
+  if (id === 'txType') { state.txType = el.value; refresh(); return; }
+  if (id === 'setDensity') {
+    state.density = el.value;
+    document.documentElement.classList.toggle('dense', el.value === 'Gọn');
+    toast('Đã đổi mật độ', el.value === 'Gọn' ? 'Bảng và thẻ hiển thị gọn hơn.' : 'Đang dùng khoảng cách thoáng.', 'info');
+    return;
+  }
 
   if (id === 'checkAll') {
     const rows = filteredStories().slice((state.storyPage - 1) * state.storyPerPage,
@@ -3493,11 +3712,19 @@ function handleChange(e) {
     if (!/^image\//.test(file.type)) { toast('Tệp không hợp lệ', 'Chỉ nhận ảnh JPG, PNG hoặc WebP.', 'err'); return; }
     if (file.size > 2 * 1024 * 1024) { toast('Ảnh quá lớn', 'Dung lượng tối đa là 2MB.', 'err'); return; }
     const host = id === 'coverInput' ? $('#coverPreview') : el.previousElementSibling;
-    if (host) {
-      const url = URL.createObjectURL(file);
-      host.innerHTML = '<img src="' + url + '" alt="Ảnh xem trước" ' +
+    const paint = (src) => {
+      if (!host) return;
+      host.innerHTML = '<img src="' + src + '" alt="Ảnh xem trước" ' +
         'style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;border:1px solid var(--border)">' +
         '<p style="font-size:12px;color:var(--text-3);margin-top:8px">' + esc(file.name) + '</p>';
+    };
+    if (id === 'coverInput' && typeof FileReader !== 'undefined') {
+      const reader = new FileReader();
+      reader.onload = () => { FORM_COVER = String(reader.result); paint(FORM_COVER); };
+      reader.onerror = () => toast('Không đọc được ảnh', 'Thử lại với tệp JPG hoặc PNG.', 'err');
+      reader.readAsDataURL(file);
+    } else if (typeof URL !== 'undefined' && URL.createObjectURL) {
+      paint(URL.createObjectURL(file));
     }
     toast('Đã tải ảnh lên', file.name + ' · ' + Math.round(file.size / 1024) + ' KB');
     return;
@@ -3542,6 +3769,7 @@ function handleSubmit(e) {
       adult: $('#sAdult') ? $('#sAdult').checked : false,
       tags: [...FORM_TAGS],
       desc: descEl.value.trim(),
+      cover: FORM_COVER,
     };
     STORIES.unshift(story);
     const chapTitle = $('#sChapTitle'), chapBody = $('#sChapBody');
@@ -3556,6 +3784,7 @@ function handleSubmit(e) {
     }
     toast('Đã đăng truyện', '“' + story.title + '” · trạng thái “' + story.status + '”.');
     FORM_TAGS.length = 0;
+    FORM_COVER = null;
     form.reset();
     navigate('stories');
     return;
@@ -3575,6 +3804,7 @@ function handleKeydown(e) {
   }
   if (e.key === 'Escape') {
     if ($('#paletteWrap').classList.contains('show')) { closePalette(); return; }
+    if ($('#notifPop') && !$('#notifPop').hidden) { toggleNotif(false); return; }
     if (state.sidebarOpen) { state.sidebarOpen = false; applySidebarState(); return; }
   }
   if (state.page === 'editor') {
@@ -3744,6 +3974,227 @@ function closePalette() {
   if (wrap) wrap.classList.remove('show');
 }
 
+/* ============================================================================
+   U. BỔ SUNG — thông báo, xuất tệp, xem trước, nhân bản, phản hồi
+   ========================================================================== */
+function notifItems() {
+  const ch = CHAPTERS.filter((c) => c.status === 'Chờ duyệt').length;
+  const cm = COMMENTS.filter((c) => c.status === 'Bị báo cáo').length;
+  const wd = WITHDRAWALS.filter((w) => w.status === 'Chờ duyệt').length;
+  const us = USERS.filter((u) => u.status === 'Chờ xác minh').length;
+  return [
+    { n: ch, icon: 'check-circle', title: ch + ' chương chờ duyệt', sub: 'Hạn chót hôm nay · 2 chương quá 24 giờ', page: 'review' },
+    { n: cm, icon: 'alert', title: cm + ' bình luận bị báo cáo', sub: 'Cần xem lại nội dung và người báo cáo', page: 'comments' },
+    { n: wd, icon: 'wallet', title: wd + ' yêu cầu rút tiền', sub: 'Đang chờ kế toán xác nhận', page: 'revenue' },
+    { n: us, icon: 'shield', title: us + ' hồ sơ chờ xác minh', sub: 'Tác giả mới cần duyệt email và CCCD', page: 'users' },
+  ];
+}
+function renderNotifPop() {
+  const host = $('#notifPop');
+  if (!host) return;
+  const items = notifItems();
+  const total = items.reduce((a, b) => a + b.n, 0);
+  host.innerHTML =
+    '<div class="notif-head"><span>Thông báo</span><span class="grow"></span>' +
+      (total ? '<span class="badge badge-accent plain">' + total + ' mới</span>' : '<span class="badge badge-neutral plain">Đã đọc hết</span>') +
+      '<button class="icon-btn" type="button" data-notif-close aria-label="Đóng thông báo" style="margin:-8px -8px -8px 0">' + icon('x') + '</button>' +
+    '</div>' +
+    (items.filter((i) => i.n > 0).map((i) =>
+      '<button class="notif-item" type="button" data-notif-nav="' + i.page + '">' +
+        '<span class="ic">' + icon(i.icon) + '</span>' +
+        '<span class="tx"><b>' + esc(i.title) + '</b><span>' + esc(i.sub) + '</span></span>' +
+        '<span class="n">' + i.n + '</span></button>').join('') ||
+      '<div class="palette-empty">Không còn thông báo nào cần xử lý.</div>') +
+    '<div class="notif-foot">' +
+      '<button class="btn btn-sm" type="button" data-notif-readall>' + icon('check', 15) + 'Đánh dấu đã đọc</button>' +
+      '<span class="grow"></span>' +
+      '<button class="btn btn-sm btn-ghost" type="button" data-nav="review">Mở hàng đợi</button>' +
+    '</div>';
+  const dot = $('#notifDot');
+  if (dot) dot.hidden = state.notifRead || total === 0;
+  const bell = $('#bellBtn');
+  if (bell) bell.setAttribute('aria-label', total ? 'Thông báo, ' + total + ' mục mới' : 'Thông báo');
+}
+function toggleNotif(force) {
+  const pop = $('#notifPop');
+  if (!pop) return;
+  const open = force === undefined ? pop.hidden : force;
+  if (open) renderNotifPop();
+  pop.hidden = !open;
+  const bell = $('#bellBtn');
+  if (bell) bell.setAttribute('aria-expanded', String(open));
+  if (open) {
+    const first = pop.querySelector('.notif-item') || pop.querySelector('button');
+    if (first) first.focus();
+  }
+}
+
+/* --- Xuất tệp thật (CSV / JSON) --- */
+const csvCell = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+const csvRows = (head, rows) =>
+  '\ufeff' + [head, ...rows].map((r) => r.map(csvCell).join(',')).join('\r\n');
+function downloadFile(name, content, mime = 'text/csv;charset=utf-8') {
+  try {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { a.remove(); try { URL.revokeObjectURL(url); } catch (_) { /* bỏ qua */ } }, 400);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+function exportData(kind) {
+  const stamp = '2026-11-02';
+  const map = {
+    stories: () => downloadFile('truyen-' + stamp + '.csv', csvRows(
+      ['ID', 'Tên truyện', 'Tác giả', 'Thể loại', 'Trạng thái', 'Chương', 'Lượt đọc', 'Đánh giá', 'Cập nhật'],
+      STORIES.map((s) => [s.id, s.title, s.author, s.genre, s.status, s.chapters, s.views, s.rating, s.updated]))),
+    users: () => downloadFile('nguoi-dung-' + stamp + '.csv', csvRows(
+      ['ID', 'Tên', 'Email', 'Vai trò', 'Trạng thái', 'Truyện', 'Lượt đọc', 'Tham gia'],
+      USERS.map((u) => [u.id, u.name, u.email, u.role, u.status, u.stories, u.reads, u.joined]))),
+    transactions: () => downloadFile('giao-dich-' + stamp + '.csv', csvRows(
+      ['Mã', 'Người dùng', 'Loại', 'Nội dung', 'Số tiền (đ)', 'Thời gian', 'Trạng thái'],
+      TRANSACTIONS.map((t) => [t.id, t.user, t.type, t.story, t.amount, t.at, t.status]))),
+    taxonomy: () => downloadFile('danh-muc-' + stamp + '.csv', csvRows(
+      ['Loại', 'Tên', 'Đường dẫn', 'Số truyện'],
+      CATEGORIES.map((c) => ['Thể loại', c.name, c.slug, c.count])
+        .concat(TAGS.map((t) => ['Thẻ', t.name, t.slug || slugify(t.name), t.count])))),
+    settings: () => downloadFile('cau-hinh-' + stamp + '.json',
+      JSON.stringify({ ...SETTINGS, exportedAt: '2026-11-02T12:00:00' }, null, 2), 'application/json'),
+  };
+  const run = map[kind];
+  if (!run) return;
+  const okDone = run();
+  toast(okDone ? 'Đã xuất tệp' : 'Không xuất được tệp', okDone
+    ? 'Tệp được tải xuống thư mục Downloads của bạn.'
+    : 'Trình duyệt không cho phép tạo tệp trong chế độ này.', okDone ? 'ok' : 'err');
+}
+
+/* --- Chi tiết giao dịch --- */
+function txModal(id) {
+  const t = TRANSACTIONS.find((x) => x.id === id);
+  if (!t) return;
+  openModal({
+    title: 'Giao dịch #' + t.id.toUpperCase(),
+    subtitle: t.type + ' · ' + fmtDateTime(t.at),
+    confirmText: 'Đóng',
+    body: '<div class="meta-line"><span>Người dùng</span><b>' + esc(t.user) + '</b></div>' +
+      '<div class="meta-line"><span>Nội dung</span><b>' + esc(t.story) + '</b></div>' +
+      '<div class="meta-line"><span>Số tiền</span><b>' + fmtNum(t.amount) + ' đ</b></div>' +
+      '<div class="meta-line"><span>Trạng thái</span><b>' + esc(t.status) + '</b></div>' +
+      '<div class="meta-line"><span>Cổng thanh toán</span><b>VNPay · thẻ nội địa</b></div>' +
+      '<p style="font-size:12.5px;color:var(--text-3);margin-top:12px">Mã đối soát được tạo tự động mỗi 24 giờ.</p>',
+    onConfirm: () => true,
+  });
+}
+
+/* --- Xem trước nội dung chờ duyệt --- */
+function reviewPreviewModal(kind, id) {
+  const isStory = kind === 'story';
+  const item = isStory ? STORIES.find((s) => s.id === id) : CHAPTERS.find((c) => c.id === id);
+  if (!item) return;
+  const story = isStory ? item : (STORIES.find((s) => s.id === item.storyId) || { title: item.title, author: '—' });
+  openModal({
+    title: isStory ? 'Xem trước truyện' : 'Chương ' + item.number + ' · ' + item.title,
+    subtitle: story.title + ' · ' + story.author,
+    confirmText: 'Duyệt nội dung',
+    wide: true,
+    body: (isStory
+      ? '<p style="font-size:14px;line-height:1.7;color:var(--text-2)">' + esc(item.desc) + '</p>'
+      : '<div style="font-family:var(--serif);font-size:16px;line-height:1.8">' + item.body + '</div>') +
+      '<div class="chart-legend" style="margin-top:16px"><span>' +
+        fmtNum(isStory ? item.chapters : item.words) + ' ' + (isStory ? 'chương' : 'từ') + '</span>' +
+        '<span>Gửi ' + relTime(isStory ? item.updated : (item.publishedAt || '2026-11-01T15:00:00')) + '</span></div>',
+    onConfirm: () => {
+      approveItem(isStory ? 'story' : 'chapter', item.id);
+      return true;
+    },
+  });
+}
+
+/* --- Xem trang công khai của truyện --- */
+function storyPreviewModal(id) {
+  const s = STORIES.find((x) => x.id === id);
+  if (!s) return;
+  const chs = CHAPTERS.filter((c) => c.storyId === s.id).sort((a, b) => a.number - b.number).slice(0, 4);
+  openModal({
+    title: 'Xem như độc giả',
+    subtitle: 'sachmuc.vn/truyen/' + s.id,
+    confirmText: 'Đóng',
+    wide: true,
+    body: '<div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap">' + coverOf(s, 96) +
+        '<div style="flex:1 1 240px;min-width:0">' +
+          '<h3 style="font-family:var(--serif);font-size:22px;line-height:1.3;margin-bottom:6px">' + esc(s.title) + '</h3>' +
+          '<div style="font-size:13px;color:var(--text-3)">' + esc(s.author) + ' · ' + esc(s.genre) + ' · ' +
+            fmtNum(s.views) + ' lượt đọc</div>' +
+          '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">' + storyBadge(s.status) +
+            (s.vip ? '<span class="badge badge-accent plain">VIP</span>' : '') + '</div>' +
+        '</div></div>' +
+      '<p style="font-size:13.5px;line-height:1.7;color:var(--text-2);margin-top:16px">' + esc(s.desc) + '</p>' +
+      '<div style="margin-top:14px;display:flex;flex-direction:column;gap:2px">' +
+        chs.map((c) => '<div class="meta-line" style="border-top:1px solid var(--border)">' +
+          '<span>Chương ' + c.number + '. ' + esc(c.title) + '</span><b>' +
+          (c.vipPrice ? c.vipPrice + ' Xu' : 'Miễn phí') + '</b></div>').join('') +
+      '</div>',
+    onConfirm: () => true,
+  });
+}
+
+/* --- Nhân bản truyện --- */
+function duplicateStory(id) {
+  const s = STORIES.find((x) => x.id === id);
+  if (!s) return;
+  const copy = { ...s, id: uid('s'), title: s.title + ' (bản sao)', status: 'Bản nháp',
+    views: 0, featured: false, updated: '2026-11-02T12:00:00' };
+  STORIES.unshift(copy);
+  CHAPTERS.filter((c) => c.storyId === s.id).forEach((c) => {
+    CHAPTERS.push({ ...c, id: uid('c'), storyId: copy.id, status: 'Bản nháp',
+      publishedAt: null, scheduleAt: null, vipPrice: 0 });
+  });
+  toast('Đã nhân bản truyện', '“' + copy.title + '” ở trạng thái bản nháp.');
+  navigate('stories');
+}
+
+/* --- Phản hồi bình luận --- */
+function replyCommentModal(id) {
+  const c = COMMENTS.find((x) => x.id === id);
+  if (!c) return;
+  openModal({
+    title: 'Phản hồi bình luận',
+    subtitle: c.user + ' · ' + c.story + ' · chương ' + c.chapter,
+    confirmText: 'Gửi phản hồi',
+    body: '<div class="preview-box" style="max-height:120px;margin-bottom:14px">' + esc(c.text) + '</div>' +
+      '<div class="field"><label for="replyText">Nội dung phản hồi (hiển thị công khai)</label>' +
+        '<textarea class="textarea" id="replyText" data-field="text" placeholder="Cảm ơn bạn đã đọc và góp ý…"></textarea>' +
+        '<span class="error">Cần ít nhất 5 ký tự.</span></div>',
+    validate: (dlg) => (dlg.querySelector('[data-field=text]').value.trim().length >= 5
+      ? true : 'Nội dung phản hồi quá ngắn.'),
+    onConfirm: (dlg) => {
+      COMMENTS.unshift({
+        id: uid('cm'), user: 'Lê Anh (QTV)', story: c.story, chapter: c.chapter,
+        text: dlg.querySelector('[data-field=text]').value.trim(), status: 'Đã duyệt',
+        at: '2026-11-02T12:00:00', reports: 0,
+      });
+      toast('Đã gửi phản hồi', 'Phản hồi của bạn hiển thị công khai dưới bình luận.');
+      refresh();
+      return true;
+    },
+  });
+}
+
+/* --- Đếm lại số truyện cho danh mục --- */
+function recountTaxonomy() {
+  CATEGORIES.forEach((c) => { c.count = STORIES.filter((s) => s.genre === c.name).length; });
+  TAGS.forEach((t) => {
+    t.count = STORIES.filter((s) => s.tags.some((x) => x.toLowerCase() === t.name.toLowerCase())).length;
+  });
+}
+
 /* --- Khởi động --- */
 const ROUTES = [...PAGES.map((p) => p.id), 'story-new', 'story-detail', 'editor'];
 
@@ -3757,6 +4208,7 @@ function initApp() {
   renderSidebar();
   renderBreadcrumb();
   applySidebarState();
+  renderNotifPop();
 
   document.addEventListener('click', handleClick);
   document.addEventListener('input', handleInput);
