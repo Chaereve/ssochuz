@@ -5,7 +5,7 @@
         /vong-quay/ (không mở popup);
      2. trang /vong-quay/ có sẵn vòng quay + nút Quay + nút Trộn truyện + bộ lọc
         tình trạng/18+/thể loại ngay trên trang;
-     3. nguồn truyện theo thứ tự ưu tiên: đang theo dõi → mới cập nhật → cả kho,
+     3. bộ bài là CẢ KHO truyện đọc được (không thu về nhóm đang theo dõi),
         KHÔNG bịa truyện nào ngoài dữ liệu (mọi kết quả đều có trong registry);
      4. máy chưa xác nhận 18+ thì không bao giờ quay trúng truyện 18+;
      5. quay ~2,6 giây mới ra kết quả; kết quả có bìa + tên + chương mới nhất /
@@ -120,10 +120,19 @@ const REG = JSON.parse(read('data/registry.json'));
   if (!out.trangRieng.chip18) err('bộ lọc phải có lựa chọn “Gồm 18+”');
   if (out.trangRieng.tiengKhiMo.length) err('mở trang chưa bấm gì thì không được phát tiếng');
 
-  /* ưu tiên truyện đang theo dõi */
+  /* r120: bộ bài là CẢ KHO đọc được, không thu về nhóm đang theo dõi. Máy đang
+     theo dõi đúng một truyện (FOLLOW) — nếu còn kiểu “ưu tiên nhóm theo dõi”
+     thì bộ bài chỉ có một lá; nay phải có nhiều lá và có cả truyện ngoài nhóm. */
   const cands = win.CZDice.candidates().map(n => n.slug);
-  out.theoDoi = { ds: cands, chiTheoDoi: cands.length === 1 && cands[0] === FOLLOW };
-  if (!out.theoDoi.chiTheoDoi) err('khi đang theo dõi truyện có chương thì vòng quay phải ưu tiên nhóm đó (thấy: ' + cands.join(',') + ')');
+  out.boBai = {
+    ds: cands,
+    soLa: cands.length,
+    coTruyenTheoDoi: cands.indexOf(FOLLOW) >= 0,
+    coTruyenNgoaiNhom: cands.some(s => s !== FOLLOW)
+  };
+  if (out.boBai.soLa < 4) err('bộ bài phải gồm nhiều truyện của cả kho, không thu về nhóm đang theo dõi (thấy: ' + cands.join(',') + ')');
+  if (!out.boBai.coTruyenTheoDoi) err('truyện đang theo dõi vẫn phải nằm trong bộ bài');
+  if (!out.boBai.coTruyenNgoaiNhom) err('bộ bài không được chỉ gồm truyện đang theo dõi');
 
   /* không bịa truyện: mọi kết quả phải có trong registry và đọc được */
   const allSlugs = REG.lib.map(n => n.slug);

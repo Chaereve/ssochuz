@@ -78,8 +78,13 @@ function supabaseStub(w) {
   ok(tocRequests.length <= 1 && tocRequests.every(row => JSON.parse(row.options.body).storyIds.length <= 20),
     'homepage gọi TOC theo batch, không phát sinh N+1 request');
   ok(!!doc.querySelector('[data-dice] .dicebtn'), 'random picker có nút trên trang chủ');
+  /* r120: bộ bài là cả kho. Truyện này vừa được máy ghi tiến độ nên bị luật
+     “bỏ truyện đọc trong 14 ngày” loại — chuyện đó KHÔNG được biến bộ bài
+     thành “chỉ còn truyện đang theo dõi” như bản cũ. */
   const candidates = win.CZDice.candidates();
-  ok(candidates.length > 0 && candidates.some(item => item.slug === story.slug), 'random picker ưu tiên truyện được theo dõi');
+  ok(candidates.length >= 4, 'bộ bài phải còn nhiều lá của cả kho để bốc');
+  ok(candidates.some(item => item.slug !== story.slug),
+    'bộ bài không bị thu về truyện đang theo dõi');
   const diceButton = doc.querySelector('[data-dice] .dicebtn');
   ok(diceButton && diceButton.getAttribute('href') === '/vong-quay/', 'random picker dẫn tới trang riêng /vong-quay/');
   const diceHost = doc.createElement('section');
@@ -93,7 +98,9 @@ function supabaseStub(w) {
   const drawBtn = doc.querySelector('#czDiceBox #dcDraw');
   drawBtn && drawBtn.click();
   await wait(220);
-  ok(doc.querySelector('#czDiceBox #dcResult h2')?.textContent === story.title, 'bốc bài chốt truyện theo dõi khi chỉ còn một ứng viên ưu tiên');
+  const drawnTitle = doc.querySelector('#czDiceBox #dcResult h2')?.textContent || '';
+  ok(drawnTitle && candidates.some(item => item.title === drawnTitle),
+    'bốc bài phải ra một lá nằm trong bộ bài (cả kho, không chỉ truyện theo dõi)');
 
   // Follow click in the story hero and in-reader control runs the shared async service.
   const reader = page('truyen.html', {

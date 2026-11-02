@@ -8,10 +8,10 @@
    BỘ BÀI: mỗi lần bốc LẤY MỘT LÁ RA khỏi xấp, nên trong một lượt không bao giờ
    lặp lại; hết xấp thì tự xáo lại. Số lá còn lại hiện ngay dưới xấp.
 
-   NGUỒN TRUYỆN — đúng thứ tự ưu tiên, không bịa dữ liệu:
-     1. truyện bạn ĐANG THEO DÕI (CZ.followMap) mà đang ra chương;
-     2. truyện MỚI CẬP NHẬT (theo trường `updated`);
-     3. toàn bộ truyện đọc được.
+   NGUỒN TRUYỆN — TOÀN BỘ kho truyện đọc được trên trang, không chỉ truyện bạn
+   theo dõi: ai cũng bốc được mọi bộ, kể cả bộ chưa từng mở. Danh sách xếp theo
+   `updated` mới nhất trước để lúc xáo bài trộn đều, và không bịa truyện nào
+   ngoài registry.
    BỘ LỌC: tình trạng (đang ra / hoàn thành), bỏ qua 18+ khi máy chưa xác nhận,
    thể loại khi kho có dữ liệu, và BỎ QUA truyện vừa đọc trong 14 ngày nếu vẫn
    còn đủ lựa chọn (CZ.lastReadAt).
@@ -53,8 +53,11 @@
   function lib() { try { return (CZ.lib && CZ.lib()) || []; } catch (e) { return []; } }
   function readable(n) { return n && n.canRead && !n.locked; }
 
-  /* thứ tự ưu tiên: đang theo dõi → mới cập nhật → cả kho */
-  function candidates(allPool) {
+  /* Bộ bài = MỌI truyện đọc được trong kho, đã qua bộ lọc của người đọc.
+     Trước đây nhóm “đang theo dõi” được ưu tiên tuyệt đối: hễ máy có theo dõi
+     ít nhất một bộ thì bộ bài bị thu về đúng nhóm đó, nên người theo dõi một
+     bộ chỉ bốc trúng bộ ấy. Nay theo dõi không còn thu hẹp bộ bài. */
+  function candidates() {
     var o = opts();
     var all = lib().filter(function (n) {
       if (!readable(n)) return false;
@@ -66,9 +69,7 @@
       return true;
     });
     if (!all.length) return [];
-    var follow = CZ.followMap ? CZ.followMap() : {};
-    var followed = allPool ? [] : all.filter(function (n) { return Object.prototype.hasOwnProperty.call(follow, n.slug); });
-    var tier = followed.length ? followed : all.slice().sort(function (a, b) {
+    var tier = all.slice().sort(function (a, b) {
       return String(b.updated || '').localeCompare(String(a.updated || ''));
     });
     /* bỏ truyện vừa đọc gần đây — chỉ khi vẫn còn đủ phương án để bốc */
@@ -129,7 +130,7 @@
   function hintHTML() {
     return '<p class="dc-kick">Bốc bài</p>' +
       '<h2 class="dc-tt">Một lá cho hôm nay</h2>' +
-      '<p class="dc-sub">Bộ bài gồm truyện bạn đang theo dõi hoặc vừa cập nhật. Bốc một lá, lật ra rồi đọc.</p>';
+      '<p class="dc-sub">Bộ bài gồm mọi truyện trên trang, đã lọc theo lựa chọn của bạn. Bốc một lá, lật ra rồi đọc.</p>';
   }
 
   function cardHTML(n, ch) {
@@ -455,7 +456,7 @@
       a.href = DICE_URL;
       a.className = 'btn ghost sm dicebtn';
       a.innerHTML = (CZ.icon ? CZ.icon('dice', 'i-s') : '') + '<span>Hôm nay đọc gì?</span>';
-      a.setAttribute('title', 'Mở trang bốc bài chọn truyện ngẫu nhiên — ưu tiên truyện bạn theo dõi');
+      a.setAttribute('title', 'Mở trang bốc bài chọn truyện ngẫu nhiên trong toàn bộ truyện trên trang');
       h.appendChild(a);
     });
   }

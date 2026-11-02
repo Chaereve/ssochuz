@@ -22,8 +22,8 @@ const J = body => Promise.resolve({ok:true,json:async()=>body,text:async()=>JSON
   assert.equal(p.doc.querySelectorAll('#rankTabs [aria-pressed="true"]').length,1);
   assert.equal(p.doc.activeElement.dataset.k,period);
  }
- /* 30/10/2026: “Đáng xem” đứng hai bên với Ranking → cùng nhịp hàng, tối đa 5 dòng,
-    điểm ★ (+ số đánh giá) nằm ở cột phải của chính dòng đó. */
+ /* r120: “Đáng xem” là một dải RIÊNG dưới Ranking (không còn chung khung hai cột),
+    nhưng vẫn giữ nhịp hàng và tối đa 5 dòng; điểm ★ (+ số đánh giá) ở cột phải. */
  const cards=[...p.doc.querySelectorAll('#worthRail .wrank')];
  assert.equal(cards.length,3);
  assert.ok(cards[0].outerHTML.includes(b));assert.ok(cards[1].outerHTML.includes(a));
