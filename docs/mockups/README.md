@@ -28,3 +28,17 @@ Mở:
 
 - `http://127.0.0.1:8087/` — danh sách mockup
 - `http://127.0.0.1:8087/tac-gia-r103/` — trang Tác giả bản gọn (đang chờ duyệt)
+
+## Mockup quản trị (vòng 122) — dùng đường dẫn TƯƠNG ĐỐI
+
+`admin-r122/index.html` tự chứa CSS (chép `src/admin/styles/admin.css` + token
+của `cz.css`) và trỏ ảnh bằng `../../../assets/…`, nên mở được bằng máy chủ đặt
+ở **gốc repo**, không cần ba liên kết trên:
+
+```bash
+python3 -m http.server 8090 --bind 0.0.0.0      # ở gốc repo
+# http://127.0.0.1:8090/docs/mockups/admin-r122/
+```
+
+File này không phải hình vẽ lại: mỗi “màn hình” là markup admin **chụp từ
+chính app** (jsdom) rồi dán vào trang cùng bảng CSS thật.

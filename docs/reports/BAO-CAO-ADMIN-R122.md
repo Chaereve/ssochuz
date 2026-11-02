@@ -42,6 +42,18 @@ Thay vì vá tiếp, `src/admin/styles/admin.css` được **viết lại một 
 Mọi quy tắc nằm dưới `body.admin` nên không chạm trang công khai. Hai chỗ từng phải
 chống luật `cz.css` (`.abar`, `.amain`) nay **gỡ khỏi markup**, không cần luật đè nữa.
 
+### Tinh chỉnh cấu trúc (đợt hai)
+
+Sau khi bảng màu và khung đã thống nhất, ba chỗ còn lệch nhịp được chỉnh ở tầng
+markup — chỗ mà CSS một mình không sửa được:
+
+| Màn | Trước | Sau |
+| --- | --- | --- |
+| Sửa bộ | Ba tầng tiêu đề xếp chồng: khung vẽ “Sửa bộ”, trong pane vẽ “Sửa metadata: …”, rồi tới thanh tab | Khung **không** vẽ đầu trang cho tab này; pane vẽ một đầu trang duy nhất — nhãn nhóm, tên bộ làm tiêu đề, dòng phụ `slug · số chương · ngày cập nhật`, nút quay lại và huy hiệu dồn sang phải. Hai tab dính ngay dưới, đường kẻ của thanh tab thay cho đường kẻ đầu trang. |
+| Chương & xuất bản | Bốn hàng đợi là bốn thẻ lớn xếp dọc; thẻ trống chiếm đúng chỗ của thẻ có việc | `.v2queues`: bốn khối cùng cỡ đứng cạnh nhau (2 cột khi đủ chỗ), **số việc hiện ở đầu thẻ**; thẻ rỗng vẫn giữ chỗ nên bố cục không nhảy |
+| Tác giả | Ô tìm full-width nằm riêng một dòng, đẩy bảng xuống | Ô tìm nằm ngay trên hàng tiêu đề thẻ, cạnh con số `đang xem/tổng` |
+| Tổng quan | Tiêu đề trang trùng với tên nhóm (“Tổng quan / Tổng quan”) | Tiêu đề là “Hôm nay”, nhãn nhóm phía trên vẫn là “Tổng quan” |
+
 ### Thay đổi ở markup
 
 | Tệp | Thay đổi | Lý do |

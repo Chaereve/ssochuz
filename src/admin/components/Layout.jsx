@@ -44,7 +44,7 @@ const CRUMBS = {
 /* Page header chuẩn hoá cho mọi tab: title + mô tả ngắn đúng theo dữ liệu
    thật của từng module (không hứa tính năng không tồn tại). */
 const PAGE_HEAD = {
-  overview: ['Tổng quan', 'Số liệu thư viện và việc cần làm hôm nay.'],
+  overview: ['Hôm nay', 'Số liệu thư viện và việc cần làm hôm nay.'],
   list: ['Thư viện', 'Lọc, sửa và xuất bản hàng loạt.'],
   new: ['Thêm bộ', 'Tạo bộ truyện mới, kèm chương đầu nếu có.'],
   chapters: ['Chương', 'Nháp, chờ duyệt và lịch đăng.'],
@@ -277,12 +277,12 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
         </header>
         <main class="v2main">
           {(() => {
-            const head = activeTab === 'edit'
-              ? ['Sửa bộ', '']
-              : (PAGE_HEAD[activeTab] || [CRUMBS[activeTab] || activeTab, '']);
-            /* Đầu trang: nhãn nhóm (eyebrow) + tên trang + một câu nói rõ trang
-               này để làm gì. Không có breadcrumb riêng nữa — nó lặp đúng chữ
-               “Admin › …” ngay trên tiêu đề. */
+            /* Trang “Sửa bộ” tự đặt tiêu đề theo BỘ ĐANG MỞ (tên truyện), nên
+               đầu trang ở đây chỉ vẽ cho các tab còn lại — trước đây màn sửa bộ
+               có tới ba dòng tiêu đề xếp chồng: “Sửa bộ” (khung) → “Sửa
+               metadata: …” (trong pane) → tab. Nay còn đúng một. */
+            if (activeTab === 'edit') return null;
+            const head = PAGE_HEAD[activeTab] || [CRUMBS[activeTab] || activeTab, ''];
             return (
               <header class="v2pagehead">
                 <div class="v2head-text">
