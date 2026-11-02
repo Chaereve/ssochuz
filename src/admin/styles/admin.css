@@ -25,7 +25,7 @@ body.admin{
   --a-r-sm:var(--r-sm);--a-r:var(--r);--a-r-lg:var(--r-lg);
   --a-h:var(--ctl);--a-h-lg:var(--ctl-lg);
   --a-side:244px;--a-top:var(--hdr-h);--a-pad:28px;
-  --a-font:var(--font);--a-head:var(--font-head);--a-mono:var(--font-mono);
+  --a-font:var(--font);--a-head:var(--font);--a-mono:var(--font-mono);
   --a-shadow:none;--a-shadow-lg:var(--sh-lg);
   --a-ease:var(--ease);
   --a-card-pad:18px 20px;
@@ -34,8 +34,8 @@ body.admin{
 }
 
 /* Chữ: tiêu đề có chân; nhãn nhỏ in hoa, giãn nhẹ; số dùng chữ đều. */
-body.admin h1,body.admin h2,body.admin h3,body.admin h4{font-family:var(--a-head);font-weight:400;
-  letter-spacing:-.01em;line-height:1.2;color:var(--a-txt)}
+body.admin h1,body.admin h2,body.admin h3,body.admin h4{font-family:var(--a-head);font-weight:600;
+  letter-spacing:-.015em;line-height:1.25;color:var(--a-txt)}
 body.admin h1{font-size:30px}
 body.admin h2{font-size:24px}
 body.admin h3{font-size:18px}
@@ -68,8 +68,8 @@ body.admin .v2side{grid-column:1;grid-row:1;position:sticky;top:0;align-self:sta
   display:flex;flex-direction:column;width:auto;height:100vh;
   background:var(--a-bg2);border-right:1px solid var(--a-bd);border-radius:0;box-shadow:none}
 body.admin .v2brand{display:flex;align-items:center;gap:9px;height:var(--a-top);padding:0 12px 0 18px;flex:none}
-body.admin .v2brand .logo{display:inline-flex;align-items:baseline;color:var(--a-txt);
-  font-family:var(--a-head);font-size:20px;letter-spacing:-.01em;text-decoration:none}
+body.admin .v2brand .logo,body.admin .v2mlogo{display:inline-flex;align-items:baseline;color:var(--a-txt);
+  font-family:var(--font-head);font-size:20px;font-weight:400;letter-spacing:-.01em;text-decoration:none}
 body.admin .v2brand .logo i{color:var(--a-dim);font-style:normal;font-family:var(--a-mono);font-size:9.5px;
   font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin-left:7px}
 body.admin .v2brand .logo .dot{display:inline-block;width:8px;height:8px;border-radius:50%;
@@ -193,9 +193,9 @@ body.admin .v2quota.critical i,body.admin .v2quota.blocked i{background:var(--a-
 
 /* --- Nội dung + đầu trang --- */
 body.admin .v2main{width:auto;max-width:none;margin:0;padding:0 var(--a-pad) 72px;min-width:0}
-body.admin .v2pagehead{display:flex;flex-wrap:wrap;align-items:flex-end;gap:4px 20px;margin:26px 0 20px}
+body.admin .v2pagehead{display:flex;flex-wrap:wrap;align-items:flex-end;gap:4px 20px;margin:22px 0 18px}
 body.admin .v2pagehead .eyebrow{display:block;margin:0 0 7px;color:var(--a-acc)}
-body.admin .v2pagehead h1,body.admin .v2pagehead h2{margin:0;font-size:31px;line-height:1.1;letter-spacing:-.015em}
+body.admin .v2pagehead h1,body.admin .v2pagehead h2{margin:0;font-size:28px;line-height:1.15;letter-spacing:-.02em;font-weight:600}
 body.admin .v2pagehead p{margin:7px 0 0;color:var(--a-mut);font-size:13.5px;max-width:78ch}
 body.admin .v2pagehead .v2head-text{display:block;min-width:0}
 body.admin .v2pagehead .v2head-actions{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap}
@@ -311,14 +311,14 @@ body.admin .card2,body.admin .card,body.admin .box,body.admin .v2fsec{position:r
   border:1px solid var(--a-bd);border-radius:var(--a-r-lg);background:var(--a-surf);box-shadow:none;min-width:0;max-width:100%}
 body.admin .card2+.card2,body.admin .v2pane>section+section,body.admin .v2pane>.card2+.card2{margin-top:14px}
 body.admin .card2>h3:first-child,body.admin .card2>.row:first-child h3,body.admin .card2>.v2sechead h3{
-  margin:0;font-family:var(--a-head);font-size:17px;font-weight:400;letter-spacing:-.005em}
+  margin:0;font-family:var(--a-head);font-size:15.5px;font-weight:600;letter-spacing:-.01em}
 body.admin .card2>.row:first-child{padding-bottom:11px;margin-bottom:13px;border-bottom:1px solid var(--a-bd)}
 body.admin .card2>.row:first-child h3{margin:0}
 body.admin .card2>.row:first-child .sm.muted{margin-left:auto;color:var(--a-dim)}
 body.admin .card2>h3:first-child+.hint,body.admin .card2>.row:first-child+.hint{margin:-4px 0 14px}
 body.admin .v2sechead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap}
 body.admin .v2fsec-head{display:grid;gap:3px;margin-bottom:13px}
-body.admin .v2fsec-head b{font-family:var(--a-head);font-size:16px;font-weight:400;letter-spacing:-.005em}
+body.admin .v2fsec-head b{font-family:var(--a-head);font-size:15px;font-weight:600;letter-spacing:-.01em}
 body.admin .v2fsec-head .hint{font-size:12.5px;margin:0}
 
 /* --- Ô số liệu: một dải liền, vạch chia mảnh --- */
@@ -327,8 +327,8 @@ body.admin .tiles,body.admin .kvtiles{display:grid;grid-template-columns:repeat(
 body.admin .v2tiles4{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin:14px 0}
 body.admin .tile,body.admin .kvtile{padding:12px 16px 13px;border:0;border-radius:0;
   background:var(--a-surf);box-shadow:none;min-width:0}
-body.admin .tile b,body.admin .kvtile b{display:block;font-family:var(--a-head);font-size:26px;font-weight:400;
-  line-height:1.15;letter-spacing:-.01em;font-variant-numeric:tabular-nums;color:var(--a-txt)}
+body.admin .tile b,body.admin .kvtile b{display:block;font-family:var(--a-head);font-size:25px;font-weight:600;
+  line-height:1.1;letter-spacing:-.025em;font-variant-numeric:tabular-nums;color:var(--a-txt)}
 body.admin .tile span,body.admin .kvtile span{display:block;margin-top:3px;font-family:var(--a-mono);font-size:9.5px;
   font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--a-dim);white-space:normal}
 body.admin .tile small,body.admin .kvtile small{display:block;margin-top:5px;font-size:11px;line-height:1.45;color:var(--a-mut)}
@@ -338,13 +338,13 @@ body.admin .kvbar span{display:block;height:100%;background:var(--a-acc);border-
 /* --- Huy hiệu trạng thái: chữ + chấm, không khung --- */
 body.admin .v2badges{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;min-width:0}
 body.admin .v2badges.compact{gap:3px 10px;margin-top:4px}
-body.admin .v2badge,body.admin .pill{display:inline-flex;align-items:center;gap:6px;height:auto;padding:0;margin:0;
-  border:0;border-radius:0;background:none;box-shadow:none;font-size:11.5px;font-weight:600;line-height:1.3;
-  letter-spacing:0;text-transform:none;color:var(--a-mut);white-space:nowrap}
-body.admin .v2badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
-body.admin .v2badge-18{color:var(--a-bad);font-weight:700}
+body.admin .v2badge,body.admin .pill{display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 7px;margin:0;
+  border:0;border-radius:999px;background:color-mix(in srgb,currentColor 13%,transparent);box-shadow:none;
+  font-size:11px;font-weight:600;line-height:1;letter-spacing:0;text-transform:none;color:var(--a-mut);white-space:nowrap}
+body.admin .v2badge::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;flex:none}
+body.admin .v2badge-18{color:var(--a-bad);font-weight:700;background:color-mix(in srgb,var(--a-bad) 14%,transparent)}
 body.admin .v2badge-18::before,body.admin .v2badge-lock::before{display:none}
-body.admin .v2badge-lock{color:var(--a-warn)}
+body.admin .v2badge-lock{color:var(--a-warn);gap:4px}
 body.admin .v2badge-ic{display:inline-flex;margin:0}
 body.admin .v2badge-ic .i{width:12px;height:12px}
 body.admin .v2badge-completion.tone-ok,body.admin .v2badge-pub.tone-ok{color:var(--a-ok)}
@@ -367,7 +367,7 @@ body.admin .v2donepill{padding:2px 9px;border:1px solid color-mix(in srgb,var(--
 body.admin .empty{display:grid;justify-items:center;gap:4px;padding:32px 24px;border:1px dashed var(--a-bd2);
   border-radius:var(--a-r-lg);background:var(--a-surf);color:var(--a-mut);font-size:13px;line-height:1.55;text-align:center}
 body.admin .empty.sm{padding:18px 16px;font-size:12.5px}
-body.admin .empty .big{font-family:var(--a-head);font-size:18px;font-weight:400;color:var(--a-txt);margin:0 0 2px}
+body.admin .empty .big{font-family:var(--a-head);font-size:16px;font-weight:600;color:var(--a-txt);margin:0 0 2px}
 
 /* --- Nhóm nút chọn và tab --- */
 body.admin .seg{display:inline-flex;border:1px solid var(--a-bd);border-radius:var(--a-r);overflow:hidden;background:var(--a-surf2)}
@@ -403,12 +403,12 @@ body.admin .v2result{margin-top:12px;max-height:280px;overflow:auto;padding:12px
 body.admin .v2gate{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,440px);min-height:100vh;background:var(--a-bg)}
 body.admin .v2gate-brand{display:flex;flex-direction:column;justify-content:center;gap:26px;padding:64px;
   background:var(--a-bg2);border-right:1px solid var(--a-bd);color:var(--a-txt)}
-body.admin .v2gate-logo{font-family:var(--a-head);font-size:32px;font-weight:400;color:var(--a-txt);letter-spacing:-.01em}
+body.admin .v2gate-logo{font-family:var(--font-head);font-size:32px;font-weight:400;color:var(--a-txt);letter-spacing:-.01em}
 body.admin .v2gate-logo i{font-style:normal;font-family:var(--a-mono);font-size:10px;font-weight:700;letter-spacing:.14em;
   text-transform:uppercase;color:var(--a-dim);margin-left:8px}
 body.admin .v2gate-logo .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--a-acc);border:0;margin-right:10px}
 body.admin .v2gate-copy{max-width:460px}
-body.admin .v2gate-copy h1,body.admin .v2gate-copy h2{margin:0 0 12px;font-size:36px;line-height:1.14;font-weight:400;letter-spacing:-.02em}
+body.admin .v2gate-copy h1,body.admin .v2gate-copy h2{margin:0 0 12px;font-size:32px;line-height:1.18;font-weight:600;letter-spacing:-.025em}
 body.admin .v2gate-copy p{margin:0;color:var(--a-mut);font-size:14px;line-height:1.7}
 body.admin .v2gate-list{list-style:none;margin:0;padding:0;display:grid;gap:12px;max-width:440px}
 body.admin .v2gate-list li{display:grid;gap:2px;padding-left:18px;position:relative;color:var(--a-mut);font-size:13px}
@@ -461,7 +461,7 @@ body.admin .v2todo .vd-ic{display:grid;place-items:center;flex:none;width:30px;h
 body.admin .v2todo:hover .vd-ic{color:var(--a-acc-ink);background:var(--a-acc-soft)}
 body.admin .v2todo .vd-ic .i{width:15px;height:15px}
 body.admin .v2todo .vd-tx{min-width:0;display:grid;gap:1px}
-body.admin .v2todo b{font-family:var(--a-head);font-size:21px;font-weight:400;line-height:1;color:var(--a-txt);
+body.admin .v2todo b{font-family:var(--a-head);font-size:20px;font-weight:600;line-height:1;color:var(--a-txt);
   font-variant-numeric:tabular-nums}
 body.admin .v2todo .vd-tx>span{font-size:11.5px;line-height:1.3;color:var(--a-mut);overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
@@ -538,7 +538,7 @@ body.admin .v2book-table th,body.admin .tbl th,body.admin .v2roles th,body.admin
   border-bottom:1px solid var(--a-bd);font-family:var(--a-mono);font-size:9.5px;font-weight:700;
   letter-spacing:.11em;text-transform:uppercase;color:var(--a-dim);white-space:nowrap}
 body.admin .v2book-table td,body.admin .tbl td,body.admin .v2roles td,body.admin .v2authors td{
-  height:60px;padding:8px 12px;vertical-align:middle;border-bottom:1px solid var(--a-bd);
+  height:56px;padding:7px 12px;vertical-align:middle;border-bottom:1px solid var(--a-bd);
   font-size:12.5px;min-width:0;overflow-wrap:anywhere;background:transparent}
 body.admin .v2book-table tbody tr,body.admin .tbl tbody tr,body.admin .v2authors tbody tr{transition:background-color .16s var(--a-ease)}
 body.admin .v2book-table tbody tr:hover td,body.admin .tbl tbody tr:hover td,body.admin .v2authors tbody tr:hover td{background:var(--a-surf2)}
@@ -548,7 +548,8 @@ body.admin .v2book-table th:nth-child(2),body.admin .v2book-table td:nth-child(2
 body.admin .v2book-table th:nth-child(4),body.admin .v2book-table td:nth-child(4){width:124px}
 body.admin .v2book-table th:nth-child(5),body.admin .v2book-table td:nth-child(5){width:116px}
 body.admin .v2book-table th:nth-child(6),body.admin .v2book-table td:nth-child(6){width:110px}
-body.admin .v2book-table th:nth-child(7),body.admin .v2book-table td:nth-child(7){width:92px;font-variant-numeric:tabular-nums;color:var(--a-mut)}
+body.admin .v2book-table th:nth-child(7),body.admin .v2book-table td:nth-child(7){width:92px;text-align:right;
+  font-variant-numeric:tabular-nums;color:var(--a-mut)}
 body.admin .v2book-table th:nth-child(8),body.admin .v2book-table td:nth-child(8){width:126px}
 body.admin .v2book-table input[type=checkbox]{width:15px;height:15px;margin:0}
 body.admin .v2rowtext{display:block;min-width:0}
@@ -574,7 +575,7 @@ body.admin .v2gcard{display:flex;flex-direction:column;min-width:0;overflow:hidd
 body.admin .v2gcard:hover{border-color:var(--a-bd2);box-shadow:0 12px 28px -22px rgba(0,0,0,.9)}
 body.admin .v2gcard .v2thumb{width:100%;height:auto;aspect-ratio:2/3;border-radius:0}
 body.admin .v2gcard-body{display:flex;flex-direction:column;gap:4px;flex:1 1 auto;min-width:0;padding:10px 12px 12px}
-body.admin .v2gcard-title{display:block;font-family:var(--a-head);font-size:14.5px;font-weight:400;line-height:1.3;
+body.admin .v2gcard-title{display:block;font-family:var(--a-head);font-size:13.5px;font-weight:600;line-height:1.35;
   color:var(--a-txt);overflow-wrap:anywhere}
 body.admin .v2gcard-author{display:block;font-size:11.5px;color:var(--a-dim);overflow-wrap:anywhere}
 body.admin .v2gcard-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;
@@ -652,7 +653,7 @@ body.admin .v2preview-cover img{width:100%;height:100%;object-fit:cover;display:
 body.admin .v2preview-cover span{padding:6px;font-size:10.5px;color:var(--a-dim);text-align:center}
 body.admin .v2preview-body{display:flex;flex-direction:column;gap:3px;min-width:0}
 body.admin .v2preview-body b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
-  font-family:var(--a-head);font-size:15.5px;font-weight:400;line-height:1.3;overflow-wrap:anywhere}
+  font-family:var(--a-head);font-size:15px;font-weight:600;line-height:1.35;overflow-wrap:anywhere}
 body.admin .v2preview-author{font-size:11.5px;color:var(--a-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 body.admin .v2preview-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 

@@ -39,7 +39,7 @@ export function Overview({ state, onReload, onTodo }) {
         <div class="row v2kpi-head">
           <h3>Tình trạng dữ liệu</h3>
           <span class="grow"></span>
-          <span class="hint">Tính từ {state.online ? 'KV qua Worker' : 'file /data/*.json trong repo'}</span>
+          <span class="hint">nguồn: {state.online ? 'KV qua Worker' : 'tệp tĩnh /data'}</span>
           <button class="btn ghost sm" type="button" onClick={onReload}>{state.loading ? 'Đang đọc…' : 'Đọc lại dữ liệu'}</button>
         </div>
         <div class="tiles">
@@ -53,7 +53,7 @@ export function Overview({ state, onReload, onTodo }) {
 
       <div class="v2dash">
         <section class="card2" aria-label="Việc cần làm hôm nay">
-          <div class="row"><h3>Việc cần làm hôm nay</h3><span class="grow"></span><span class="sm muted">bấm để mở danh sách</span></div>
+          <div class="row"><h3>Việc cần làm hôm nay</h3><span class="grow"></span><span class="sm muted">bấm để mở</span></div>
           <div class="v2todo-grid">
             <button type="button" class="v2todo" onClick={() => onTodo && onTodo('reports')}>
               <span class="vd-ic" dangerouslySetInnerHTML={{ __html: icon('alert') }} />
@@ -87,54 +87,6 @@ export function Overview({ state, onReload, onTodo }) {
           </div>
         </section>
 
-        <section class="card2" aria-label="Tình trạng hệ thống">
-          <div class="row"><h3>Tình trạng hệ thống</h3><span class="grow"></span><span class="sm muted">đăng nhập · chương · Worker · quota</span></div>
-          <div class="doc">
-            <SystemRow kind={supabaseOn ? 'good' : 'warn'} icon={supabaseOn ? 'check' : 'alert'} title={`Đăng nhập người đọc: ${supabaseOn ? (supabaseInCode ? 'Supabase (cz-config.js)' : 'Supabase (lưu trên KV)') : 'CHƯA bật'}`}>
-              {supabaseOn ? 'Người đọc đăng nhập qua Supabase/Google. Quyền quản trị vẫn do Worker xác nhận.' : 'Chưa thấy cấu hình Supabase public trong cz-config.js hoặc registry.settings.auth.'}
-            </SystemRow>
-            <SystemRow kind="good" icon="pulse" title="Doctor: đã có kiểm tra nền">
-              Tab Kiểm tra dữ liệu có audit KV, quét book, phát hiện lệch số chương/chương rỗng và nút recount có xác nhận mạnh.
-            </SystemRow>
-            <SystemRow kind={state.online ? 'good' : 'warn'} icon={state.online ? 'cloud' : 'info'} title={`Worker: ${state.online ? 'đã nối KV' : 'chưa nối — đang xem dữ liệu tĩnh'}`}>
-              {state.online ? `Worker ${state.worker && state.worker.version ? state.worker.version : ''} · sửa ở đây sẽ đi qua API tập trung.` : 'Nhập URL Worker + ADMIN_KEY để đọc KV và bật kiểm kê quota/server.'}
-            </SystemRow>
-            <SystemRow kind={quota.supported ? 'good' : 'warn'} icon={quota.supported ? 'check' : 'alert'} title={`Quota KV: ${quota.writesToday || 0}/${quota.limit || 1000} write hôm nay`}>
-              {quota.supported ? 'Worker trả writesToday/lastReset.' : 'Endpoint /api/admin/kv hiện chưa trả writesToday; quota v2 đang ở chế độ ước tính phía client.'}
-            </SystemRow>
-            <SystemRow
-              kind={!quota.readSupported ? 'warn' : (quota.readWarn ? 'warn' : 'good')}
-              icon={!quota.readSupported ? 'alert' : (quota.readWarn ? 'alert' : 'check')}
-              title={quota.readSupported
-                ? `Lượt đọc KV: ${num(quota.readsToday || 0)}/${num(quota.readBudget || 100000)} hôm nay (ước lượng)`
-                : 'Lượt đọc KV: Worker chưa trả readsToday'}
-            >
-              {quota.readSupported
-                ? (quota.readWarn
-                  ? 'Đã qua 70% trần đọc miễn phí (100.000/ngày, reset 00:00 UTC). Nếu người đọc báo lỗi tải chương, xem docs/features/reader-fallback-khi-worker-loi.md để biết cách hạ tải; số này là ước lượng theo từng máy chủ Cloudflare nên thường thấp hơn số thật trong dashboard.'
-                  : 'Đây là ước lượng bộ đếm trong RAM của Worker (không tốn lượt ghi KV nào); số chính xác nằm ở dashboard Cloudflare → Workers & Pages → KV.')
-                : 'Worker bản cũ chưa có bộ đếm lượt đọc — deploy worker/cms.js bản 1.18.0 trở lên.'}
-            </SystemRow>
-            {(() => {
-              const ovf = (state.worker && state.worker.overflow) || {};
-              const sb = !!ovf.supabase;
-              const r2 = !!ovf.r2;
-              return (
-                <SystemRow kind={sb || r2 ? 'good' : 'warn'} icon={sb || r2 ? 'check' : 'info'} title="Lưu trữ tràn (tuỳ chọn)">
-                  Supabase: {sb ? 'connected' : 'unavailable'}. R2: {r2 ? 'connected' : 'unavailable'}. Bìa: {ovf.covers ? 'Supabase Storage (bucket covers, 1 GB free)' : 'KV'}. Ảnh chương: KV. Overflow không bắt buộc — admin vẫn chạy full JSON trên KV.
-                </SystemRow>
-              );
-            })()}
-          </div>
-        </section>
-      </div>
-
-      <div class="v2dash">
-        <section class="card2" aria-label="Lượt đọc 14 ngày">
-          <div class="row"><h3>Lượt đọc 14 ngày</h3><span class="grow"></span><span class="sm muted">{statsDays.length ? 'cập nhật ' + (state.stats.updatedAt || '').slice(0, 16).replace('T', ' ') : 'chưa có số liệu'}</span></div>
-          {statsDays.length ? <BarsChart days={statsDays} take={14} /> : <p class="hint">Chưa có số liệu từ Worker.</p>}
-        </section>
-
         <section class="card2" aria-label="Mới cập nhật">
           <div class="row"><h3>Mới cập nhật</h3><span class="grow"></span><span class="sm muted">{ov.recent.length} bộ</span></div>
           <div class="ovrecent">
@@ -145,6 +97,53 @@ export function Overview({ state, onReload, onTodo }) {
                 <span class="ovwhen">{dateVN(book.updated)}</span>
               </button>
             )) : <div class="empty sm">Chưa có bộ nào.</div>}
+          </div>
+        </section>
+      </div>
+      <div class="v2dash">
+        <section class="card2" aria-label="Lượt đọc 14 ngày">
+          <div class="row"><h3>Lượt đọc 14 ngày</h3><span class="grow"></span><span class="sm muted">{statsDays.length ? 'cập nhật ' + (state.stats.updatedAt || '').slice(0, 16).replace('T', ' ') : 'chưa có số liệu'}</span></div>
+          {statsDays.length ? <BarsChart days={statsDays} take={14} /> : <p class="hint">Chưa có số liệu từ Worker.</p>}
+        </section>
+
+        <section class="card2" aria-label="Tình trạng hệ thống">
+          <div class="row"><h3>Tình trạng hệ thống</h3><span class="grow"></span><span class="sm muted">4 mục</span></div>
+          <div class="doc">
+            <SystemRow kind={supabaseOn ? 'good' : 'warn'} icon={supabaseOn ? 'check' : 'alert'} title={`Đăng nhập người đọc: ${supabaseOn ? 'đã bật' : 'chưa bật'}`}>
+              {supabaseOn ? 'Google qua Supabase; quyền quản trị vẫn do Worker xác nhận.' : 'Chưa cấu hình Supabase trong cz-config.js hoặc trên KV.'}
+            </SystemRow>
+            <SystemRow kind="good" icon="pulse" title="Kiểm tra dữ liệu: sẵn sàng">
+              Quét KV, lệch số chương và chương rỗng.
+            </SystemRow>
+            <SystemRow kind={state.online ? 'good' : 'warn'} icon={state.online ? 'cloud' : 'info'} title={`Worker: ${state.online ? 'đã nối KV' : 'chưa nối · đang đọc tệp tĩnh'}`}>
+              {state.online ? `API tập trung${state.worker && state.worker.version ? ' · ' + state.worker.version : ''}.` : 'Cần URL Worker + ADMIN_KEY để ghi.'}
+            </SystemRow>
+            <SystemRow kind={quota.supported ? 'good' : 'warn'} icon={quota.supported ? 'check' : 'alert'} title={`Quota KV: ${quota.writesToday || 0}/${quota.limit || 1000} lượt ghi hôm nay`}>
+              {quota.supported ? 'Số thật từ Worker.' : 'Worker chưa trả writesToday — đang ước tính phía trình duyệt.'}
+            </SystemRow>
+            <SystemRow
+              kind={!quota.readSupported ? 'warn' : (quota.readWarn ? 'warn' : 'good')}
+              icon={!quota.readSupported ? 'alert' : (quota.readWarn ? 'alert' : 'check')}
+              title={quota.readSupported
+                ? `Lượt đọc KV: ${num(quota.readsToday || 0)}/${num(quota.readBudget || 100000)}`
+                : 'Lượt đọc KV: chưa có số'}
+            >
+              {quota.readSupported
+                ? (quota.readWarn
+                  ? 'Đã qua 70% trần đọc miễn phí (100.000/ngày); ước lượng, có thể thấp hơn dashboard Cloudflare.'
+                  : 'Ước lượng bộ đếm RAM của Worker; không tốn lượt ghi.')
+                : 'Worker bản cũ chưa có bộ đếm lượt đọc.'}
+            </SystemRow>
+            {(() => {
+              const ovf = (state.worker && state.worker.overflow) || {};
+              const sb = !!ovf.supabase;
+              const r2 = !!ovf.r2;
+              return (
+                <SystemRow kind={sb || r2 ? 'good' : 'warn'} icon={sb || r2 ? 'check' : 'info'} title="Lưu trữ tràn: không bắt buộc">
+                  Supabase {sb ? 'có' : 'không'} · R2 {r2 ? 'có' : 'không'} · bìa {ovf.covers ? 'Supabase Storage' : 'KV'} · ảnh chương KV.
+                </SystemRow>
+              );
+            })()}
           </div>
         </section>
       </div>

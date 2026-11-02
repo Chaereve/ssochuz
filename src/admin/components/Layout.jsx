@@ -260,7 +260,7 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
             </form>
             <span class="grow"></span>
             <button type="button" class={`v2quota ${qLevel}`} title={quotaTitle} onClick={() => go('doctor')}>
-              <span>KV write</span>{' '}<b>{used}/{limit}</b>
+              <span>Ghi KV</span>{' '}<b>{used}/{limit}</b>
               {!quota.supported ? <em class="v2est">ước tính</em> : null}
               {quota.readSupported && quota.readWarn
                 ? <em class="v2est" title={`Lượt đọc KV hôm nay (ước lượng): ${Number(quota.readsToday) || 0}/${Number(quota.readBudget) || 100000}`}>
@@ -315,6 +315,12 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
                   <h2>{head[0]}</h2>
                   {head[1] ? <p class="hint">{head[1]}</p> : null}
                 </div>
+                {activeTab === 'overview' ? (
+                  <div class="v2head-actions">
+                    <button class="btn ghost" type="button" onClick={() => go('list')}>Mở thư viện</button>
+                    <button class="btn pri" type="button" onClick={() => go('new')}>Thêm bộ</button>
+                  </div>
+                ) : null}
               </header>
             );
           })()}

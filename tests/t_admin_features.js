@@ -113,7 +113,7 @@ const STATS = {
   check('Overview/lượt đọc từ KV không còn = 0', tiles.some((t) => /2\.134Lượt đọc \(KV\)/.test(t))  /* 1.234 + 900 của bộ 2 */, tiles);
   check('Overview/phiếu từ KV', tiles.some((t) => /^24Phiếu thích \(KV\)/.test(t)), tiles);
   check('Overview/biểu đồ 14 ngày vẽ 14 cột', $$('.v2chart-col').length === 14, $$('.v2chart-col').length);
-  check('Overview/quota pill lấy số Worker (12)', /\.v2quota|KV write/.test($('.v2quota').textContent) && /12\/1000/.test($('.v2quota').textContent), $('.v2quota').textContent);
+  check('Overview/quota pill lấy số Worker (12)', /Ghi KV/.test($('.v2quota').textContent) && /12\/1000/.test($('.v2quota').textContent), $('.v2quota').textContent);
   /* A2: lượt ĐỌC KV (A2) — tile + dòng hệ thống + badge cảnh báo trên pill */
   check('Overview/có tile “Lượt đọc KV hôm nay”', tiles.some((t) => /Lượt đọc KV hôm nay/.test(t)), tiles);
   check('Overview/tile lượt đọc hiện số Worker trả (71.234)', tiles.some((t) => /71\.?234/.test(t)), tiles);
