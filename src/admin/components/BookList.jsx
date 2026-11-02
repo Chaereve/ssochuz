@@ -68,23 +68,37 @@ export function BookList({ registry, selected, onSelected, onEdit, onNew, onBulk
             <option value="0">Mọi lứa tuổi</option>
             <option value="18">18+</option>
           </select>
-          <select class="inp" aria-label="Lọc trạng thái xuất bản" value={pub} onChange={(e) => { setPub(e.target.value); setPage(1); }}>
-            <option value="">Mọi xuất bản</option>
-            <option value="draft">Nháp</option>
-            <option value="pending_review">Chờ duyệt</option>
-            <option value="scheduled">Hẹn giờ</option>
-            <option value="published">Xuất bản</option>
-            <option value="archived">Lưu trữ</option>
-          </select>
-          <select class="inp" aria-label="Lọc chế độ hiển thị" value={vis} onChange={(e) => { setVis(e.target.value); setPage(1); }}>
-            <option value="">Mọi hiển thị</option>
-            {VISIBILITIES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-          </select>
-          <select class="inp" aria-label="Lọc truyện đang khóa" value={locked} onChange={(e) => { setLocked(e.target.value); setPage(1); }}>
-            <option value="">Khóa: tất cả</option>
-            <option value="1">Đã khóa</option>
-            <option value="0">Không khóa</option>
-          </select>
+          <details class="v2fmore">
+            <summary class={'v2fmore-btn' + ((pub || vis || locked) ? ' on' : '')}>
+              Bộ lọc khác
+              {(pub ? 1 : 0) + (vis ? 1 : 0) + (locked ? 1 : 0) ? <b>·{(pub ? 1 : 0) + (vis ? 1 : 0) + (locked ? 1 : 0)}</b> : null}
+            </summary>
+            <div class="v2fmore-pop">
+              <label class="fl">Xuất bản
+                <select class="inp" aria-label="Lọc trạng thái xuất bản" value={pub} onChange={(e) => { setPub(e.target.value); setPage(1); }}>
+                  <option value="">Mọi xuất bản</option>
+                  <option value="draft">Nháp</option>
+                  <option value="pending_review">Chờ duyệt</option>
+                  <option value="scheduled">Hẹn giờ</option>
+                  <option value="published">Xuất bản</option>
+                  <option value="archived">Lưu trữ</option>
+                </select>
+              </label>
+              <label class="fl">Hiển thị
+                <select class="inp" aria-label="Lọc chế độ hiển thị" value={vis} onChange={(e) => { setVis(e.target.value); setPage(1); }}>
+                  <option value="">Mọi hiển thị</option>
+                  {VISIBILITIES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+                </select>
+              </label>
+              <label class="fl">Truyện khóa
+                <select class="inp" aria-label="Lọc truyện đang khóa" value={locked} onChange={(e) => { setLocked(e.target.value); setPage(1); }}>
+                  <option value="">Khóa: tất cả</option>
+                  <option value="1">Đã khóa</option>
+                  <option value="0">Không khóa</option>
+                </select>
+              </label>
+            </div>
+          </details>
           {filtersOn ? <button class="btn ghost sm" type="button" onClick={clearFilters}>Xoá lọc</button> : null}
         </span>
         <span class="seg" role="group" aria-label="Kiểu hiển thị">

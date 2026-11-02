@@ -4,6 +4,10 @@ import { BarsChart } from './OperationalPanels.jsx';
 import { countText, dateVN, num } from '../utils/format.js';
 import { BookBadges } from './Badges.jsx';
 
+function icon(name) {
+  return window.CZ && window.CZ.icon ? window.CZ.icon(name, 'i-s') : '';
+}
+
 function Tile({ value, label, hint }) {
   return <div class="tile"><b>{num(value)}</b><span>{label}</span>{hint ? <small>{hint}</small> : null}</div>;
 }
@@ -51,9 +55,18 @@ export function Overview({ state, onReload, onTodo }) {
         <section class="card2" aria-label="Việc cần làm hôm nay">
           <div class="row"><h3>Việc cần làm hôm nay</h3><span class="grow"></span><span class="sm muted">bấm để mở danh sách</span></div>
           <div class="v2todo-grid">
-            <button type="button" class="v2todo" onClick={() => onTodo && onTodo('reports')}><b>{num(reportCount)}</b><span>Báo lỗi chưa xử lý</span></button>
-            <button type="button" class="v2todo" onClick={() => onTodo && onTodo('cmts')}><b>{num(spamCount)}</b><span>Bình luận nghi spam</span></button>
-            <button type="button" class="v2todo" onClick={() => onTodo && onTodo('list')}><b>{num(lockedCount)}</b><span>Bộ đang khóa mật mã</span></button>
+            <button type="button" class="v2todo" onClick={() => onTodo && onTodo('reports')}>
+              <span class="vd-ic" dangerouslySetInnerHTML={{ __html: icon('alert') }} />
+              <span class="vd-tx"><b>{num(reportCount)}</b><span>Báo lỗi chưa xử lý</span></span>
+            </button>
+            <button type="button" class="v2todo" onClick={() => onTodo && onTodo('cmts')}>
+              <span class="vd-ic" dangerouslySetInnerHTML={{ __html: icon('chat') }} />
+              <span class="vd-tx"><b>{num(spamCount)}</b><span>Bình luận nghi spam</span></span>
+            </button>
+            <button type="button" class="v2todo" onClick={() => onTodo && onTodo('list')}>
+              <span class="vd-ic" dangerouslySetInnerHTML={{ __html: icon('lock') }} />
+              <span class="vd-tx"><b>{num(lockedCount)}</b><span>Bộ đang khóa mật mã</span></span>
+            </button>
           </div>
           <div class="v2today">
             <div class="ovhead">Việc nên xem lại</div>

@@ -259,7 +259,6 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
               ) : null}
             </form>
             <span class="grow"></span>
-            <span class={`chip ${chip.cls}`} title={chip.hint || chip.text}><span class="d"></span><b>{chip.text}</b></span>
             <button type="button" class={`v2quota ${qLevel}`} title={quotaTitle} onClick={() => go('doctor')}>
               <span>KV write</span>{' '}<b>{used}/{limit}</b>
               {!quota.supported ? <em class="v2est">ước tính</em> : null}

@@ -52,8 +52,8 @@ export function AuthGate({ defaultApi = '', defaultKey = '', busy = false, messa
             </button>
           </div>
 
-          <div class="sep">hoặc kết nối bằng ADMIN_KEY</div>
-
+          <details class="v2gate-more">
+            <summary>Kết nối bằng ADMIN_KEY</summary>
           <form class="v2connect" onSubmit={submit}>
             <div class="v2field">
               <label class="fl" for="v2Api">URL Worker</label>
@@ -66,6 +66,7 @@ export function AuthGate({ defaultApi = '', defaultKey = '', busy = false, messa
             </div>
             <button class="btn pri" type="submit" disabled={busy}>{busy ? 'Đang kiểm tra…' : 'Kết nối'}</button>
           </form>
+          </details>
 
           {message ? <div class="msgbar show err" role="alert">{message}</div> : null}
         </div>

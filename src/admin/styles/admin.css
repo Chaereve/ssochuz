@@ -423,6 +423,17 @@ body.admin .v2gate-actions{display:flex;flex-direction:column;gap:8px}
 body.admin .v2gate-actions .btn{width:100%;height:auto;min-height:var(--a-h-lg);white-space:normal;padding:10px 14px;text-align:center}
 body.admin .v2gate-primary{background:var(--a-acc);border-color:transparent;color:#2a1118}
 body.admin .v2connect{display:flex;flex-direction:column;gap:14px;min-width:0}
+/* Kết nối ADMIN_KEY: gấp lại — màn đăng nhập chỉ nên có một hành động chính */
+body.admin .v2gate-more{margin:16px 0 0;border-top:1px solid var(--a-bd);padding-top:12px}
+body.admin .v2gate-more>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:7px;
+  font:600 12px/1.3 var(--a-font);color:var(--a-mut)}
+body.admin .v2gate-more>summary::-webkit-details-marker{display:none}
+body.admin .v2gate-more>summary::before{content:"+";display:inline-grid;place-items:center;width:16px;height:16px;
+  border:1px solid var(--a-bd2);border-radius:4px;font:600 11px/1 var(--a-mono);color:var(--a-dim)}
+body.admin .v2gate-more[open]>summary::before{content:"–"}
+body.admin .v2gate-more>summary:hover{color:var(--a-txt)}
+body.admin .v2gate-more>summary:hover::before{border-color:var(--a-acc);color:var(--a-acc)}
+body.admin .v2gate-more .v2connect{margin-top:12px}
 body.admin .v2connect .btn{width:100%}
 body.admin .v2connect .inp{font-family:var(--a-mono);font-size:12.5px}
 
@@ -445,10 +456,16 @@ body.admin .v2todo-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr
 body.admin .v2todo{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--a-bd);
   border-radius:var(--a-r);background:var(--a-surf2);text-align:left;cursor:pointer;
   transition:border-color .16s var(--a-ease)}
-body.admin .v2todo:hover{border-color:color-mix(in srgb,var(--a-acc) 45%,var(--a-bd));transform:none}
-body.admin .v2todo b{font-family:var(--a-head);font-size:22px;font-weight:400;line-height:1;color:var(--a-txt);
-  font-variant-numeric:tabular-nums;flex:none;min-width:22px}
-body.admin .v2todo span{font-size:11.5px;line-height:1.35;color:var(--a-mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.admin .v2todo .vd-ic{display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:8px;
+  background:var(--a-surf3);color:var(--a-mut)}
+body.admin .v2todo:hover .vd-ic{color:var(--a-acc-ink);background:var(--a-acc-soft)}
+body.admin .v2todo .vd-ic .i{width:15px;height:15px}
+body.admin .v2todo .vd-tx{min-width:0;display:grid;gap:1px}
+body.admin .v2todo b{font-family:var(--a-head);font-size:21px;font-weight:400;line-height:1;color:var(--a-txt);
+  font-variant-numeric:tabular-nums}
+body.admin .v2todo .vd-tx>span{font-size:11.5px;line-height:1.3;color:var(--a-mut);overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+body.admin .v2todo:hover{border-color:color-mix(in srgb,var(--a-acc) 45%,var(--a-bd))}
 body.admin .ovtasks{display:block}
 body.admin .ovtask{padding:10px 0;border-top:1px solid var(--a-bd)}
 body.admin .ovtask:first-child{border-top:0;padding-top:0}
@@ -494,6 +511,22 @@ body.admin .v2filters{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min
 body.admin .v2filters .inp{width:auto;min-width:0}
 body.admin .v2filters select.inp{height:var(--a-h);min-width:136px;max-width:190px}
 body.admin .v2filters>input.inp{flex:1 1 300px;min-width:200px;max-width:420px}
+/* Bộ lọc phụ: gấp vào một nút — thanh công cụ chỉ còn 2 lọc hay dùng */
+body.admin .v2fmore{position:relative;flex:none}
+body.admin .v2fmore>summary{display:inline-flex;align-items:center;gap:6px;height:var(--a-h);padding:0 11px;
+  border:1px solid var(--a-bd);border-radius:var(--a-r);background:var(--a-surf2);color:var(--a-mut);
+  font:600 12px/1 var(--a-font);cursor:pointer;list-style:none;white-space:nowrap}
+body.admin .v2fmore>summary::-webkit-details-marker{display:none}
+body.admin .v2fmore>summary::after{content:"⌄";font-size:11px;opacity:.7;line-height:1}
+body.admin .v2fmore>summary:hover{border-color:var(--a-bd2);color:var(--a-txt)}
+body.admin .v2fmore>summary.on{border-color:color-mix(in srgb,var(--a-acc) 45%,var(--a-bd));color:var(--a-acc-ink);
+  background:var(--a-acc-soft)}
+body.admin .v2fmore>summary b{font:700 10.5px/1 var(--a-mono)}
+body.admin .v2fmore-pop{position:absolute;right:0;top:calc(100% + 6px);z-index:25;display:grid;gap:10px;
+  min-width:232px;padding:12px;border:1px solid var(--a-bd);border-radius:var(--a-r-lg);
+  background:var(--a-surf);box-shadow:var(--a-shadow-lg)}
+body.admin .v2fmore-pop .fl{margin:0 0 5px}
+body.admin .v2fmore-pop select.inp{width:100%;min-width:0;max-width:none}
 body.admin .v2tablewrap,body.admin .v2table-wrap{position:relative;overflow:auto;max-width:100%;min-width:0;
   border:1px solid var(--a-bd);border-radius:var(--a-r-lg);background:var(--a-surf);scrollbar-width:thin}
 body.admin .v2table-wrap{max-height:64vh;margin-top:12px}
