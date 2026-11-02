@@ -1506,7 +1506,7 @@
       this.setAttribute('aria-label', lab);
       CZ.refreshFollowUI(N.slug);   /* nút hero + huy hiệu đổi theo */
       CZ.pop(this);
-      toast(on ? 'Đã theo dõi. Chương mới sẽ hiện huy hiệu đỏ.' : 'Đã bỏ theo dõi');
+      toast(on ? 'Đã theo dõi. Chương mới sẽ hiện ở chuông.' : 'Đã bỏ theo dõi');
       if (CZ.followPushHook) CZ.followPushHook(on);   /* hỏi bật thông báo đẩy */
     });
     /* Bình luận ngay trong trang đọc: cuộn xuống khung cuối chương (không thoát trang) */
@@ -2047,7 +2047,7 @@
         if (!o.ok || !o.j || !o.j.ok || !o.j.token) throw new Error((o.j && o.j.error) || 'Không mở được — kiểm tra lại mật mã.');
         CZ.setLockToken(SLUG, o.j.token, o.j.exp);
         CZ.forgetBook(SLUG);
-        CZ.toast('Đã mở khóa — token hết hạn sau 6 giờ (đóng tab là hết ngay).', 'ok');
+        CZ.toast('Đã mở khoá · hết hạn sau 6 giờ hoặc khi đóng tab.', 'ok');
         loadBook();
       }).catch(function (err) {
         msgEl.textContent = (err && err.message) || 'Không mở được — kiểm tra lại mật mã.';

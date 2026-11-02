@@ -226,7 +226,7 @@ body, .hdr, .hero, .ftr, .sechead, .authcard { transition: background-color var(
 /* ============================ SIDEBAR ĐIỀU HƯỚNG ==========================
    Một cột mục dọc, trượt từ trái, dùng cho MỌI khổ. Trước đây chỉ điện thoại /
    tablet có menu này (khối .mnav cũ mở tại chỗ, đẩy nội dung xuống), còn desktop
-   phải nhồi bảy mục lên thanh trên rồi dưới 1200px thu về icon trơ. Nay ba khổ
+   phải nhồi cả dãy mục lên thanh trên rồi dưới 1200px thu về icon trơ. Nay ba khổ
    dùng chung một cấu trúc: thanh trên chỉ còn thương hiệu + tìm kiếm + tiện ích, còn điều hướng nằm trong panel bên.
    Panel là position:fixed nên mở/đóng chỉ chạy transform + visibility — không
    đẩy layout, không làm nhảy nội dung. */
@@ -3606,17 +3606,14 @@ body.rd-focus .rdcmts { display: none; }
 /* ============================================================================
    1.19.0 · TĂNG TƯƠNG TÁC & TRẢI NGHIỆM ĐỌC
    ----------------------------------------------------------------------------
-   Gồm: reaction sticker cuối chương · Vòng quay “Hôm nay đọc gì?”.
+   Gồm: reaction sticker cuối chương · trang “Bốc bài” (/boc-bai/).
    Nguyên tắc chung của khối này:
      · mọi chuyển động chỉ chạy trên transform / opacity (không layout lại);
      · màu lấy từ token --rd-* khi đang đọc { display: block; font-size: 11.5px; font-weight: 500; color: var(--rd-mut, var(--mut));
   margin-top: 3px; line-height: 1.5; }
-/* ===================== 2. TRANG VÒNG QUAY “HÔM NAY ĐỌC GÌ?” ===================== */
-.dicebtn { border-radius: 99px; gap: 5px; padding: 6px 13px; font-weight: 650;
-  border-color: color-mix(in srgb, var(--acc) 32%, var(--bd));
-  background: color-mix(in srgb, var(--acc) 8%, var(--surf)); color: var(--txt); }
-.dicebtn:hover { border-color: var(--acc); background: color-mix(in srgb, var(--acc) 14%, var(--surf)); }
-.dicebtn .i { margin-right: 2px; color: var(--acc); }
+/* ===================== 2. TRANG “BỐC BÀI” (/boc-bai/) ===================== */
+/* Nút “Hôm nay đọc gì?” trên trang chủ đã bỏ (trang riêng giờ là tab trong
+   sidebar) nên ba luật .dicebtn dưới đây cũng bỏ theo. */
 .dice-page { max-width: 1040px; margin: 0 auto; padding: 0 24px 48px; }
 .dice-page .crumb { padding: 22px 0 6px; }
 .dice-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; padding: 20px 0 18px; }

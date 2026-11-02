@@ -1,9 +1,9 @@
 /* ============================================================================
-   Kiểm thử 1.20.0 — TRANG RIÊNG VÒNG QUAY “HÔM NAY ĐỌC GÌ?” (/vong-quay/)
+   Kiểm thử 1.20.0 — TRANG RIÊNG “BỐC BÀI” (/boc-bai/)
    ----------------------------------------------------------------------------
-     1. nút ở thanh đầu trang chủ và trang chi tiết truyện dẫn sang trang riêng
-        /vong-quay/ (không mở popup);
-     2. trang /vong-quay/ có sẵn vòng quay + nút Quay + nút Trộn truyện + bộ lọc
+     1. trang chủ KHÔNG còn nút “Hôm nay đọc gì?”; lối vào duy nhất là tab
+        “Bốc bài” trong sidebar, dẫn tới /boc-bai/ (không mở popup);
+     2. trang /boc-bai/ có sẵn bộ bài + nút Bốc + nút Xáo bài + bộ lọc
         tình trạng/18+/thể loại ngay trên trang;
      3. bộ bài là CẢ KHO truyện đọc được (không thu về nhóm đang theo dõi),
         KHÔNG bịa truyện nào ngoài dữ liệu (mọi kết quả đều có trong registry);
@@ -55,7 +55,7 @@ const REG = JSON.parse(read('data/registry.json'));
   const err = m => out.errors0.push(m);
 
   /* =====================================================================
-     1. Trang chủ có nút dẫn tới trang riêng /vong-quay/ (không mở popup)
+     1. Trang chủ không còn nút bốc bài; tab trong sidebar là lối vào duy nhất
      ===================================================================== */
   const FOLLOW = 'third-person';
   const hp = page('index.html', {
@@ -65,26 +65,27 @@ const REG = JSON.parse(read('data/registry.json'));
     setup: supabaseStub
   });
   await wait(1200);
-  const host = hp.doc.querySelector('[data-dice]');
-  const btn = host && host.querySelector('.dicebtn');
+  const tab = hp.doc.querySelector('#czNav a[data-k="dice"]');
   out.nut = {
-    coHost: !!host,
-    coNut: !!btn,
-    href: btn ? btn.getAttribute('href') : '',
-    nhan: btn ? btn.textContent.trim() : '',
+    khongCoNutTrenTrangChu: !hp.doc.querySelector('[data-dice]') && !hp.doc.querySelector('.dicebtn'),
+    coTabTrongSidebar: !!tab,
+    href: tab ? tab.getAttribute('href') : '',
+    nhan: tab ? tab.textContent.trim() : '',
     khongCoPopup: !hp.doc.querySelector('.modal.dicebox')
   };
-  if (!btn) { console.log(JSON.stringify(out, null, 1)); process.exit(1); }
-  if (!/Hôm nay đọc gì\?/.test(out.nut.nhan)) err('nút vòng quay phải có nhãn “Hôm nay đọc gì?”');
-  if (out.nut.href !== '/vong-quay/') err('nút vòng quay phải dẫn sang trang riêng /vong-quay/');
+  if (!tab) { console.log(JSON.stringify(out, null, 1)); process.exit(1); }
+  if (!out.nut.khongCoNutTrenTrangChu) err('trang chủ không được còn nút bốc bài — lối vào là tab trong sidebar');
+  if (out.nut.nhan !== 'Bốc bài') err('tab trong sidebar phải mang nhãn “Bốc bài” (thấy: ' + out.nut.nhan + ')');
+  if (out.nut.href !== '/boc-bai/') err('tab “Bốc bài” phải dẫn tới /boc-bai/ (thấy: ' + out.nut.href + ')');
+  if (!hp.doc.querySelectorAll('#czNav a').length) err('sidebar phải có danh sách tab');
   hp.win.close();
 
   /* =====================================================================
-     2 + 3: Trang riêng /vong-quay/, máy có theo dõi 1 truyện đang ra chương
+     2 + 3: Trang riêng /boc-bai/, máy có theo dõi 1 truyện đang ra chương
      ===================================================================== */
   const sfxLog = [];
-  const p = page('vong-quay/index.html', {
-    url: 'https://ssochuz.pages.dev/vong-quay/',
+  const p = page('boc-bai/index.html', {
+    url: 'https://ssochuz.pages.dev/boc-bai/',
     config: { CZ_API: BASE },
     fetch: dataFetch({ apiBase: BASE, api: makeApi(null), log: [] }),
     setup(w) {
@@ -113,7 +114,7 @@ const REG = JSON.parse(read('data/registry.json'));
     live: (box && box.querySelector('#dcLive') ? box.querySelector('#dcLive').textContent : ''),
     tiengKhiMo: sfxLog.slice()
   };
-  if (!out.trangRieng.coKhungTrang || !out.trangRieng.coBoBai || !out.trangRieng.coNutBoc) err('trang /vong-quay/ phải có xấp bài và nút “Bốc một lá” trên trang');
+  if (!out.trangRieng.coKhungTrang || !out.trangRieng.coBoBai || !out.trangRieng.coNutBoc) err('trang /boc-bai/ phải có xấp bài và nút “Bốc một lá” trên trang');
   if (!out.trangRieng.khongPhaiModal) err('bốc bài phải là trang riêng chứ không phải popup modal');
   if (out.trangRieng.soLat < 3) err('xấp bài phải có các lớp lá úp phía sau');
   if (out.trangRieng.chipTinhTrang !== 2) err('bộ lọc phải có hai lựa chọn tình trạng: đang cập nhật / hoàn thành');
@@ -257,10 +258,10 @@ const REG = JSON.parse(read('data/registry.json'));
   win.close();
 
   /* =====================================================================
-     8. giảm chuyển động: ra kết quả ngay trên trang /vong-quay/
+     8. giảm chuyển động: ra kết quả ngay trên trang /boc-bai/
      ===================================================================== */
-  const pm = page('vong-quay/index.html', {
-    url: 'https://ssochuz.pages.dev/vong-quay/',
+  const pm = page('boc-bai/index.html', {
+    url: 'https://ssochuz.pages.dev/boc-bai/',
     config: { CZ_API: BASE },
     fetch: dataFetch({ apiBase: BASE, api: makeApi(null), log: [] }),
     setup(w) {

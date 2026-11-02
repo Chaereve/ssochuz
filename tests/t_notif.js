@@ -40,7 +40,9 @@ function supabaseStub(w) {
   await wait(60);
   ok(dot && !dot.hasAttribute('hidden') && dot.textContent === '2', 'co 2 chuong moi thi badge phai hien "2" (thay: ' + (dot && dot.textContent) + ')');
   ok(btn.classList.contains('hasnew'), 'nut chuong phai co class hasnew khi co tin');
-  ok(btn.getAttribute('aria-label').includes('2 chương mới'), 'aria-label phai doc so tin (thay: ' + btn.getAttribute('aria-label') + ')');
+  /* r121: nhãn nút đã là “Thông báo chương mới” rồi, nên số đi trong ngoặc —
+     nói lại “2 chương mới” nữa là trình đọc màn hình đọc dư đúng một lần. */
+  ok(btn.getAttribute('aria-label') === 'Thông báo chương mới (2)', 'aria-label phai doc so tin (thay: ' + btn.getAttribute('aria-label') + ')');
   btn.dispatchEvent(new win.MouseEvent('click', { bubbles: true, cancelable: true }));
   await wait(60);
   ok(menu.classList.contains('on') && btn.getAttribute('aria-expanded') === 'true', 'bam chuong phai mo panel');

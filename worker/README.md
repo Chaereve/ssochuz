@@ -66,7 +66,7 @@ GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới c�
 | **Reaction chương** | 6 quick reaction dùng WebP full, toggle theo `sub` Supabase JWT và chương. Cloudflare D1 giữ action rows + bảng totals cập nhật bằng trigger; client chỉ giữ view trong RAM, không lưu action vào localStorage/KV. |
 | **Góp gạch ảo miễn phí** | Chỉ hiện với truyện đang ra chương; D1 unique `(story_id,user_id,day_utc)` giới hạn một viên/ngày/tài khoản/truyện. Không coin, thanh toán hay quà quy đổi. |
 | **Sticker bình luận** | Chỉ bổ sung picker thumbnail vào `CZ.comments` và endpoint comments KV đang có; hỗ trợ sticker-only/reply, server allowlist lấy từ registry dùng chung. Không tạo comment service mới. |
-| **Random picker** | Nút “Hôm nay đọc gì?” bốc từ **toàn bộ** truyện đọc được trong kho (đã lọc theo tình trạng/18+/thể loại), không còn thu về nhóm đang theo dõi; tuỳ chọn gần đây của vòng quay dùng khoá versioned `ssochuz:dice:*:v1`. |
+| **Bốc bài** | Trang riêng `/boc-bai/`, vào bằng tab “Bốc bài” trong sidebar (trang chủ không còn nút riêng). Bốc từ **toàn bộ** truyện đọc được trong kho, đã lọc theo tình trạng/18+/thể loại; không thu về nhóm đang theo dõi. Tuỳ chọn gần đây dùng khoá versioned `ssochuz:dice:*:v1`. |
 
 Schema, data flow, response/error codes và quy trình setup nằm tại [`docs/features/personal-community-1.20.md`](../docs/features/personal-community-1.20.md). Migration Supabase: `supabase/migrations/202610120001_personal_reading_data.sql`; migration D1 của Worker riêng: `community-worker/migrations/0001_community.sql`. `worker/wrangler.toml` vẫn chỉ dành cho CMS production `chuseoz-cms`; không thêm D1 vào file đó.
 

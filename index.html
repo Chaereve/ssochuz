@@ -15,7 +15,7 @@
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://ssochuz.pages.dev/ssochuz.png">
   <!-- N13: bỏ preconnect Firestore — không còn đọc thẳng Firestore từ máy khách -->
-<link rel="stylesheet" href="/cz.css?v=20261102r120">
+<link rel="stylesheet" href="/cz.css?v=20261102r121">
 </head>
 <body class="hpage">
 
@@ -58,8 +58,9 @@
           <a class="btm" href="#thu-vien">Cả thư viện ›</a>
         </div>
         <div class="mlist" id="newRail"></div>
-        <!-- “Hôm nay đọc gì?” — src/cz-dice.js gắn nút vào đây -->
-        <span class="dicehost" data-dice></span>
+        <!-- “Bốc bài” KHÔNG còn nút ở đây: trang riêng của nó là một tab trong
+             sidebar (src/cz-app.js → NAV), nên trang chủ không còn nút thứ hai
+             cùng dẫn một chỗ. -->
       </div>
 
       <!-- Ranking và Đáng xem: HAI dải riêng, mỗi dải chiếm trọn bề ngang như
@@ -175,11 +176,11 @@
 
 <script src="/cz-config.js?v=20261012n"></script>
 <script src="/cz-stickers.js?v=20261012n"></script>
-<script src="/cz-app.js?v=20261102r120"></script>
+<script src="/cz-app.js?v=20261102r121"></script>
 <script src="/cz-auth.js?v=20261012n"></script>
 <script src="/cz-personal.js?v=20261013notif1"></script>
-<script src="/cz-dice.js?v=20261102r120"></script>
+<script src="/cz-dice.js?v=20261102r121"></script>
 <script src="/cz-hero.js?v=20261029perf1"></script>
-<script src="/cz-home.js?v=20261102r120"></script>
+<script src="/cz-home.js?v=20261102r121"></script>
 </body>
 </html>
