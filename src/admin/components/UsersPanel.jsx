@@ -28,7 +28,7 @@ export function UsersPanel({ registry, onEdit, onFilterAuthor }) {
         {/* Tìm nằm ngay trên hàng tiêu đề của thẻ: một dòng công cụ, không phải
             một khối riêng chiếm hết chiều ngang. */}
         <div class="row v2panel-head">
-          <h3>Tác giả</h3>
+          <h3>Tác giả và số bộ</h3>
           <span class="grow"></span>
           <input class="inp v2head-search" type="search" aria-label="Tìm tác giả" value={q} placeholder="Tìm tác giả…" onInput={(e) => setQ(e.target.value)} />
           <span class="sm muted">{shown.length}/{authors.length} người</span>

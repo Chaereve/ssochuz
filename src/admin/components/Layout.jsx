@@ -189,7 +189,7 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
     <div class={'v2app' + (collapsed ? ' v2collapsed' : '') + (drawer ? ' v2drawer-on' : '')}>
       <aside class="v2side" aria-label="Điều hướng quản trị">
         <div class="v2brand">
-          <a class="logo" href="/" title="ssochuz library"><span class="dot"></span>ssochuz<i> admin</i></a>
+          <a class="logo" href="/" title="ssochuz library"><span class="dot"></span>ssochuz<i>quản trị</i></a>
           <button class="hbtn icon v2side-toggle" type="button" title="Thu gọn menu" onClick={() => setCollapsed(!collapsed)} aria-label="Thu gọn menu">
             <Icon name={collapsed ? 'right' : 'left'} />
           </button>
@@ -234,6 +234,14 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
           <div class="in">
             <button class="hbtn icon v2burger" type="button" aria-label="Mở menu" onClick={() => setDrawer(true)}><Icon name="menu" /></button>
             <a class="logo v2mlogo" href="/" aria-label="Trang chủ ssochuz"><span class="dot"></span>ssochuz</a>
+            <nav class="v2crumbs" aria-label="Vị trí trong quản trị">
+              <button class="lk" type="button" onClick={() => go('overview')}>Quản trị</button>
+              <span class="sep" aria-hidden="true">/</span>
+              <button class="lk" type="button" onClick={() => go(NAV.find((g) => g.items.some(([id]) => id === activeTab))?.items[0]?.[0] || 'overview')}>{groupOf(activeTab)}</button>
+              <span class="sep" aria-hidden="true">/</span>
+              <b aria-current="page">{(PAGE_HEAD[activeTab] || CRUMBS[activeTab] || activeTab)[0]}</b>
+            </nav>
+            <span class="grow"></span>
             <form class="v2search" onSubmit={submitSearch}>
               <Icon name="search" />
               <input class="inp" ref={searchRef} value={q} placeholder="Tìm bộ truyện…" title="Tìm nhanh (Ctrl+K)" onInput={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Escape') { setQ(''); setSuggest({ nav: [], books: [] }); } }} aria-label="Tìm trong quản trị" />
@@ -258,7 +266,6 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
                 </div>
               ) : null}
             </form>
-            <span class="grow"></span>
             <button type="button" class={`v2quota ${qLevel}`} title={quotaTitle} onClick={() => go('doctor')}>
               <span>Ghi KV</span>{' '}<b>{used}/{limit}</b>
               {!quota.supported ? <em class="v2est">ước tính</em> : null}
@@ -286,7 +293,8 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
               <a class="hbtn admin-tool" href="/" target="_blank" rel="noopener" title="Mở trang web ở tab mới" aria-label="Mở trang web ở tab mới"><Icon name="link" /><span class="admin-tool-label">Xem web</span></a>
               <div class="v2user">
                 <button class="hbtn admin-tool" type="button" onClick={() => { setMenu(!menu); setBellOpen(false); }} aria-haspopup="menu" aria-expanded={menu} aria-label="Menu tài khoản">
-                  <Icon name="user" /><span class="admin-tool-label">{roleLabel(role)}</span>
+                  <span class="v2avatar" aria-hidden="true">{String(roleLabel(role) || 'A').trim().charAt(0)}</span>
+                  <span class="admin-tool-label">{roleLabel(role)}</span>
                 </button>
                 {menu ? (
                   <div class="v2usermenu" role="menu" aria-label="Tài khoản quản trị">
@@ -311,7 +319,6 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
             return (
               <header class="v2pagehead">
                 <div class="v2head-text">
-                  <span class="eyebrow">{groupOf(activeTab)}</span>
                   <h2>{head[0]}</h2>
                   {head[1] ? <p class="hint">{head[1]}</p> : null}
                 </div>

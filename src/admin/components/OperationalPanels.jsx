@@ -98,7 +98,7 @@ export function DoctorPanel({ state, onKvAudit, onScanBooks, onRecount, onReload
   useEffect(() => { if (state.online && !audit && !busy) load(); }, [state.online]);
   return <div id="pane-doctor" class="v2pane">
     <section class="card2">
-      <div class="row"><h3>Kiểm tra dữ liệu</h3><span class="grow"></span><button class="btn ghost sm" type="button" onClick={onReload}>Đọc lại registry</button><button class="btn ghost sm" type="button" disabled={scanBusy} onClick={runScan}>{scanBusy ? 'Đang quét…' : 'Quét book'}</button><LoaderButton busy={busy} onClick={load}>Audit KV</LoaderButton></div>
+      <div class="row"><h3>Đối chiếu dữ liệu</h3><span class="grow"></span><button class="btn ghost sm" type="button" onClick={onReload}>Đọc lại registry</button><button class="btn ghost sm" type="button" disabled={scanBusy} onClick={runScan}>{scanBusy ? 'Đang quét…' : 'Quét book'}</button><LoaderButton busy={busy} onClick={load}>Audit KV</LoaderButton></div>
       <p class="hint">Chỉ đọc dữ liệu hiện có. “Quét book” liệt kê lỗi; “Sửa” trên từng dòng mới ghi KV.</p>
       <div class="tiles v2tiles4">
         <div class="tile"><b>{num(lib.length)}</b><span>bộ trong registry</span></div>
@@ -176,7 +176,7 @@ export function CommentsPanel({ state, onLoad, onDelete }) {
   const load = async () => { setBusy(true); setError(''); try { await onLoad(); } catch (e) { setError(e.message || String(e)); } finally { setBusy(false); } };
   useEffect(() => { if (state.online && !data.loaded && !busy) load(); }, [state.online]);
   return <div id="pane-cmts" class="v2pane"><section class="card2">
-    <div class="row"><h3>Bình luận</h3><span class="grow"></span><LoaderButton busy={busy} onClick={load}>Đọc bình luận</LoaderButton></div>
+    <div class="row"><h3>Hàng đợi kiểm duyệt</h3><span class="grow"></span><LoaderButton busy={busy} onClick={load}>Đọc bình luận</LoaderButton></div>
     <NeedOnline state={state}><p class="hint">Đang có {num(data.count != null ? data.count : (data.items || []).length)} bình luận trong bộ nhớ admin.{data.fallback ? ' Worker cũ nên đang gom từng bộ.' : ''}</p></NeedOnline>
     {error ? <div class="msgbar show err">{error}<div class="v2err-actions"><button class="btn ghost sm" type="button" onClick={load}>Thử lại</button></div></div> : null}
     <div class="row v2filters"><input class="inp" aria-label="Tìm bình luận" placeholder="Tìm nội dung/người gửi/slug" value={q} onInput={(e) => setQ(e.currentTarget.value)} /><select class="inp" aria-label="Lọc bình luận theo bộ truyện" value={slug} onChange={(e) => setSlug(e.currentTarget.value)}><option value="">Mọi bộ</option>{((state.registry && state.registry.lib) || []).map((b) => <option key={b.slug} value={b.slug}>{b.title}</option>)}</select><button type="button" class={`btn ghost sm ${onlySpam ? 'v2tab-on' : ''}`} onClick={() => setOnlySpam(!onlySpam)}>Chỉ nghi spam ({spamSuspects(data).length})</button></div>
@@ -210,7 +210,7 @@ export function ReportsPanel({ state, onLoad, onMark }) {
   const load = async () => { setBusy(true); setError(''); try { await onLoad(q); } catch (e) { setError(e.message || String(e)); } finally { setBusy(false); } };
   useEffect(() => { if (state.online && !data.loaded && !busy) load(); }, [state.online]);
   return <div id="pane-reports" class="v2pane"><section class="card2">
-    <div class="row"><h3>Báo lỗi</h3><span class="grow"></span><LoaderButton busy={busy} onClick={load}>Đọc báo lỗi</LoaderButton></div>
+    <div class="row"><h3>Hộp thư báo lỗi</h3><span class="grow"></span><LoaderButton busy={busy} onClick={load}>Đọc báo lỗi</LoaderButton></div>
     <NeedOnline state={state}><p class="hint">Bấm “Đánh dấu đã xử lý” để lưu trạng thái vào KV. Có thể mở lại báo lỗi khi cần.</p></NeedOnline>
     {error ? <div class="msgbar show err">{error}<div class="v2err-actions"><button class="btn ghost sm" type="button" onClick={load}>Thử lại</button></div></div> : null}
     <div class="row v2filters">
@@ -306,7 +306,7 @@ export function VotesPanel({ state, onLoadVoters, onRemoveVotes, onResetVotes })
   const toggle = (key) => setSelected((prev) => Object.assign({}, prev, { [key]: !prev[key] }));
   const remove = async () => { setError(''); try { await onRemoveVotes(slug, keys); await load(slug); } catch (e) { setError(e.message || String(e)); } };
   return <div id="pane-votes" class="v2pane"><section class="card2">
-    <div class="row"><h3>Phiếu bầu</h3><span class="grow"></span><LoaderButton busy={busy} onClick={() => load()}>Đọc phiếu</LoaderButton></div>
+    <div class="row"><h3>Phiếu người đọc</h3><span class="grow"></span><LoaderButton busy={busy} onClick={() => load()}>Đọc phiếu</LoaderButton></div>
     <NeedOnline state={state}><p class="hint">Gỡ/reset phiếu là thao tác ghi KV, admin tính quota ước lượng và hỏi xác nhận mạnh.</p></NeedOnline>
     {error ? <div class="msgbar show err">{error}<div class="v2err-actions"><button class="btn ghost sm" type="button" onClick={() => load()}>Thử lại</button></div></div> : null}
     <div class="row v2filters"><select class="inp" aria-label="Chọn bộ truyện" value={slug} onChange={(e) => { setSlug(e.currentTarget.value); setData(null); }}><option value="">Chọn bộ</option>{lib.map((b) => <option key={b.slug} value={b.slug}>{b.title}</option>)}</select><button class="btn ghost sm" type="button" onClick={() => load()}>Xem</button></div>
@@ -323,7 +323,7 @@ export function LogPanel({ state, onLoad }) {
   const load = async () => { setBusy(true); setError(''); try { const r = await onLoad(); setItems((r && r.items) || []); } catch (e) { setError(e.message || String(e)); } finally { setBusy(false); } };
   useEffect(() => { if (state.online && !items.length && !busy) load(); }, [state.online]);
   return <div id="pane-log" class="v2pane"><section class="card2">
-    <div class="row"><h3>Nhật ký</h3><span class="grow"></span><LoaderButton busy={busy} onClick={load}>Đọc log</LoaderButton></div>
+    <div class="row"><h3>200 thao tác gần nhất</h3><span class="grow"></span><LoaderButton busy={busy} onClick={load}>Đọc log</LoaderButton></div>
     <NeedOnline state={state}><p class="hint">Hiển thị tối đa 200 thao tác gần nhất từ key <code>log</code>.</p></NeedOnline>
     {error ? <div class="msgbar show err">{error}<div class="v2err-actions"><button class="btn ghost sm" type="button" onClick={load}>Thử lại</button></div></div> : null}
     {(() => {
@@ -351,7 +351,7 @@ export function SettingsPanel({ state, onReload, onRecount, onStatsRefresh, onIm
     finally { setBusy(''); }
   };
   return <div id="pane-settings" class="v2pane"><section class="card2">
-    <h3>Cài đặt & thao tác hệ thống</h3>
+    <h3>Thao tác hệ thống</h3>
     <p class="hint">Admin giữ static Cloudflare Pages, không thêm dịch vụ trả phí và không đưa secret vào bundle. Các nút ghi KV đều đi qua endpoint Worker có sẵn.</p>
     <div class="v2ops-grid"><div class="v2mini"><b>Kết nối</b><p class="hint">Chế độ: {state.online ? 'Worker + ADMIN_KEY' : 'dữ liệu tĩnh/login frontend'}</p><p class="hint">API: <code>{state.apiBase || (window.CZ && window.CZ.API) || '—'}</code></p></div><div class="v2mini"><b>Quota ghi KV</b><p class="hint">Counter hiện tại: {num(state.quota && state.quota.writesToday)}/{num(state.quota && state.quota.limit || 1000)} · nguồn {state.quota && state.quota.source}</p></div></div>
     <div class="v2ops-grid">
