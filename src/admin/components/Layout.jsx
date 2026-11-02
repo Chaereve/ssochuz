@@ -60,6 +60,16 @@ const PAGE_HEAD = {
   settings: ['Cài đặt', 'Sao lưu, khôi phục và nhập từ Blogger.'],
 };
 
+/* Nhãn nhóm của tab đang mở — dùng làm “eyebrow” cho tiêu đề trang, để người
+   dùng biết mình đang ở khu nào mà không cần thêm một thanh breadcrumb riêng
+   (thanh đó lặp lại đúng hai chữ đã có trong tiêu đề). */
+function groupOf(tabId) {
+  for (const group of NAV) {
+    if (group.items.some(([id]) => id === tabId)) return group.group;
+  }
+  return 'Quản trị';
+}
+
 function Icon({ name }) {
   const html = window.CZ && window.CZ.icon ? window.CZ.icon(name, 'i-s') : '';
   return <span class="admin-nav-icon" dangerouslySetInnerHTML={{ __html: html }} />;
@@ -198,12 +208,14 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
             </div>
           ))}
         </nav>
-        <p class="hint v2side-note">Ghi KV chỉ khi đã nối ADMIN_KEY.</p>
+        <div class="v2side-foot">
+          <p class="v2side-note">Chỉ ghi vào KV khi phiên đã nối ADMIN_KEY. Chưa nối thì mọi thay đổi chỉ nằm trong tab này.</p>
+        </div>
       </aside>
       {drawer ? <div class="v2scrim" onClick={() => setDrawer(false)} /> : null}
 
       <div class="v2frame">
-        <header class="v2top abar">
+        <header class="v2top">
           <div class="in">
             <button class="hbtn icon v2burger" type="button" aria-label="Mở menu" onClick={() => setDrawer(true)}><Icon name="menu" /></button>
             <a class="logo v2mlogo" href="/" aria-label="Trang chủ ssochuz"><span class="dot"></span>ssochuz</a>
@@ -263,25 +275,21 @@ export function Layout({ state, activeTab, currentSlug = '', currentTitle = '', 
             </div>
           </div>
         </header>
-        <main class="amain v2main">
-          <nav class="crumb v2crumbs" aria-label="Breadcrumb">
-            <a href="/">Trang chủ</a><span>›</span>
-            <button type="button" class="lk" onClick={() => go('overview')}>Admin</button><span>›</span>
-            {activeTab === 'edit' ? (
-              <span>
-                <button type="button" class="lk" onClick={() => go('list')}>Thư viện</button><span> › </span>
-                <b>{currentTitle || currentSlug || 'Sửa bộ'}</b><span> › </span><b>Sửa bộ</b>
-              </span>
-            ) : <b>{CRUMBS[activeTab] || activeTab}</b>}
-          </nav>
+        <main class="v2main">
           {(() => {
             const head = activeTab === 'edit'
               ? ['Sửa bộ', '']
               : (PAGE_HEAD[activeTab] || [CRUMBS[activeTab] || activeTab, '']);
+            /* Đầu trang: nhãn nhóm (eyebrow) + tên trang + một câu nói rõ trang
+               này để làm gì. Không có breadcrumb riêng nữa — nó lặp đúng chữ
+               “Admin › …” ngay trên tiêu đề. */
             return (
               <header class="v2pagehead">
-                <h2>{head[0]}</h2>
-                {head[1] ? <p class="hint">{head[1]}</p> : null}
+                <div class="v2head-text">
+                  <span class="eyebrow">{groupOf(activeTab)}</span>
+                  <h2>{head[0]}</h2>
+                  {head[1] ? <p class="hint">{head[1]}</p> : null}
+                </div>
               </header>
             );
           })()}
