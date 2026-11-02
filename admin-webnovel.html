@@ -501,7 +501,7 @@ dialog.modal.wide{max-width:min(880px,calc(100vw - 32px))}
   max-height:300px;overflow-y:auto}
 
 /* ============================================================================
-   7. TRANG RIÊNG: chương, duyệt bài, doanh thu, cài đặt
+   7. TRANG RIÊNG: chương, thể loại, bình luận, cài đặt, mở khoá bằng Xu
    ========================================================================== */
 .page-grid{display:grid;grid-template-columns:300px minmax(0,1fr);gap:16px;align-items:start}
 .side-list{display:flex;flex-direction:column}
@@ -574,6 +574,25 @@ dialog.modal.wide{max-width:min(880px,calc(100vw - 32px))}
   color:var(--accent-text)}
 .drop-zone svg{width:26px;height:26px}
 .drop-zone b{color:var(--text);font-size:13px;font-weight:600}
+
+/* Ví Xu trên thanh trên */
+.xu-pill{display:inline-flex;align-items:center;gap:6px;height:44px;padding:0 12px;flex:none;
+  border:1px solid var(--border);border-radius:var(--r-ctl);background:var(--surface-2);
+  font-size:12.5px;font-weight:600;color:var(--text)}
+.xu-pill:hover{border-color:var(--border-strong)}
+.xu-pill svg{color:var(--accent-text)}
+.xu-pill b{font-variant-numeric:tabular-nums}
+.xu-unit{font-size:11.5px;font-weight:500;color:var(--text-3)}
+
+/* Khối mở khoá bằng Xu trong trang xem trước */
+.paywall{border:1px solid var(--border);border-radius:10px;background:var(--surface-2);
+  padding:16px;margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.paywall .tx{flex:1 1 200px;min-width:0}
+.paywall b{display:block;font-size:13.5px}
+.paywall span{display:block;font-size:12.5px;color:var(--text-3);margin-top:2px}
+.paywall .unlocked{display:inline-flex;align-items:center;gap:6px;color:var(--ok-fg);
+  font-size:13px;font-weight:600}
+.wallet{font-size:12px;color:var(--text-3);margin-top:8px}
 
 /* Popover thông báo trên thanh trên */
 .notif-pop{position:absolute;top:calc(100% - 6px);right:12px;z-index:50;
@@ -699,7 +718,7 @@ a.kpi:hover{border-color:var(--border-strong);text-decoration:none}
   .kpi-grid{grid-template-columns:minmax(0,1fr)}
   .theme-pick{grid-template-columns:minmax(0,1fr)}
   .word-bar{gap:10px;font-size:11.5px}
-  #helpBtn,#collapseBtn{display:none}
+  #helpBtn,#collapseBtn,#xuBtn{display:none}
   .chap-nav{display:none !important}
   .notif-pop{right:8px}
   .breadcrumb{font-size:12px;gap:5px}
@@ -773,6 +792,11 @@ a.kpi:hover{border-color:var(--border-strong);text-decoration:none}
       <div class="top-actions">
         <button class="icon-btn" type="button" id="themeBtn" aria-label="Chuyển chế độ tối" title="Chế độ sáng/tối">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+        </button>
+        <button class="xu-pill" type="button" id="xuBtn" aria-label="Xu đã nhận" title="Xu đã nhận từ truyện trả phí">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h5M9.5 14.5h5"/></svg>
+          <b id="xuTotal">0</b><span class="xu-unit">Xu</span>
         </button>
         <button class="icon-btn" type="button" id="bellBtn" aria-label="Thông báo" title="Thông báo"
                 aria-haspopup="dialog" aria-expanded="false" aria-controls="notifPop">
@@ -923,60 +947,60 @@ function icon(name, size = 18, extra = '') {
 const COVER_TONES = ['#5B6B8C', '#8A5B5B', '#4E7A6A', '#7A6A4E', '#6A5B8A', '#4E6A7A', '#8A4E6A', '#5B7A5B'];
 
 const STORIES = [
-  { id: 's1', title: 'Mùa Hạ Không Trở Lại', author: 'Hạ Vũ', genre: 'Thanh xuân', status: 'Đang ra',
-    chapters: 87, views: 428900, rating: 4.7, updated: '2026-11-02T08:20:00', vip: true, featured: true,
+  { id: 's1', title: 'Mùa Hạ Không Trở Lại', author: 'Lê Anh', genre: 'Thanh xuân', status: 'Đang ra',
+    chapters: 87, views: 428900, rating: 4.7, updated: '2026-11-02T08:20:00', featured: true,
     adult: false, tags: ['học đường', 'thanh xuân', 'healing'],
     desc: 'Mười hai năm sau, Hà gặp lại người bạn cùng bàn cũ ở một quán cà phê ven sông. Câu chuyện về những mùa hạ đã qua và lời hẹn chưa kịp nói.' },
-  { id: 's2', title: 'Hôn Nhân Giả Dạng', author: 'Lam Nguyệt', genre: 'Ngôn tình', status: 'Đang ra',
-    chapters: 132, views: 712400, rating: 4.8, updated: '2026-11-02T06:05:00', vip: true, featured: true,
+  { id: 's2', title: 'Hôn Nhân Giả Dạng', author: 'Lê Anh', genre: 'Ngôn tình', status: 'Đang ra',
+    chapters: 132, views: 712400, rating: 4.8, updated: '2026-11-02T06:05:00', featured: true,
     adult: false, tags: ['hợp đồng hôn nhân', 'ngọt', 'đô thị'],
     desc: 'Một bản hợp đồng hôn nhân ba tháng, một căn hộ thuê chung và hai người đều tin rằng mình sẽ không rung động.' },
-  { id: 's3', title: 'Đêm Trắng Ở Sài Gòn', author: 'Trần Khải', genre: 'Trinh thám', status: 'Đang ra',
-    chapters: 64, views: 356100, rating: 4.6, updated: '2026-11-01T22:40:00', vip: false, featured: false,
+  { id: 's3', title: 'Đêm Trắng Ở Sài Gòn', author: 'Lê Anh', genre: 'Trinh thám', status: 'Đang ra',
+    chapters: 64, views: 356100, rating: 4.6, updated: '2026-11-01T22:40:00', featured: false,
     adult: true, tags: ['hình sự', 'đô thị', 'Sài Gòn'],
     desc: 'Ba vụ án nhìn qua cùng một ô cửa sổ. Một cảnh sát trẻ tin rằng hung thủ vẫn còn ở rất gần.' },
-  { id: 's4', title: 'Nàng Dâu Của Nhà Họ Trần', author: 'Mộc Miên', genre: 'Cổ đại', status: 'Hoàn thành',
-    chapters: 210, views: 1023800, rating: 4.9, updated: '2026-10-28T14:10:00', vip: true, featured: false,
+  { id: 's4', title: 'Nàng Dâu Của Nhà Họ Trần', author: 'Lê Anh', genre: 'Cổ đại', status: 'Hoàn thành',
+    chapters: 210, views: 1023800, rating: 4.9, updated: '2026-10-28T14:10:00', featured: false,
     adult: false, tags: ['cổ đại', 'gia đấu', 'trọng sinh'],
     desc: 'Kiếp trước nàng bị chính người chồng mình tin tưởng đẩy xuống giếng. Kiếp này, nàng trở về trong ngày thành thân.' },
-  { id: 's5', title: 'Chạm Vào Ánh Sáng', author: 'Diệp Tử', genre: 'Đam mỹ', status: 'Đang ra',
-    chapters: 96, views: 289300, rating: 4.5, updated: '2026-11-01T19:30:00', vip: false, featured: true,
+  { id: 's5', title: 'Chạm Vào Ánh Sáng', author: 'Lê Anh', genre: 'Đam mỹ', status: 'Đang ra',
+    chapters: 96, views: 289300, rating: 4.5, updated: '2026-11-01T19:30:00', featured: true,
     adult: false, tags: ['BL', 'thể thao', 'healing'],
     desc: 'Một vận động viên chấn thương và một bác sĩ mới về trường. Hai người học cách sống chậm lại.' },
-  { id: 's6', title: 'Khi Nàng Thơ Nổi Loạn', author: 'Phạm Quỳnh Anh', genre: 'Ngôn tình', status: 'Chờ duyệt',
-    chapters: 12, views: 18200, rating: 4.2, updated: '2026-11-02T09:45:00', vip: false, featured: false,
+  { id: 's6', title: 'Khi Nàng Thơ Nổi Loạn', author: 'Lê Anh', genre: 'Ngôn tình', status: 'Bản nháp',
+    chapters: 12, views: 18200, rating: 4.2, updated: '2026-11-02T09:45:00', featured: false,
     adult: false, tags: ['showbiz', 'hài'],
     desc: 'Nữ chính là người viết kịch bản, nam chính là ngôi sao khó tính nhất mà cô từng phục vụ.' },
-  { id: 's7', title: 'Sài Gòn Mùa Thay Lá', author: 'Đặng Thu Hà', genre: 'Đô thị', status: 'Tạm ngưng',
-    chapters: 45, views: 98400, rating: 4.4, updated: '2026-10-19T10:00:00', vip: false, featured: false,
+  { id: 's7', title: 'Sài Gòn Mùa Thay Lá', author: 'Lê Anh', genre: 'Đô thị', status: 'Tạm ngưng',
+    chapters: 45, views: 98400, rating: 4.4, updated: '2026-10-19T10:00:00', featured: false,
     adult: false, tags: ['đô thị', 'đời thường'],
     desc: 'Bốn người bạn thuê chung một căn nhà ở quận 3, mỗi người mang theo một cuộc đời dở dang.' },
-  { id: 's8', title: 'Bí Mật Của Quản Gia', author: 'Vũ Hoàng', genre: 'Huyền huyễn', status: 'Đang ra',
-    chapters: 78, views: 412700, rating: 4.6, updated: '2026-11-02T07:15:00', vip: true, featured: false,
+  { id: 's8', title: 'Bí Mật Của Quản Gia', author: 'Lê Anh', genre: 'Huyền huyễn', status: 'Đang ra',
+    chapters: 78, views: 412700, rating: 4.6, updated: '2026-11-02T07:15:00', featured: false,
     adult: false, tags: ['huyền huyễn', 'bí ẩn'],
     desc: 'Ông quản gia già của gia tộc họ Lâm biết nhiều hơn những gì ông nói, kể cả ngày gia tộc diệt vong.' },
-  { id: 's9', title: 'Thanh Xuân Của Tôi Là Cậu', author: 'Lý Bảo Châu', genre: 'Thanh xuân', status: 'Hoàn thành',
-    chapters: 54, views: 523600, rating: 4.8, updated: '2026-09-30T20:00:00', vip: false, featured: false,
+  { id: 's9', title: 'Thanh Xuân Của Tôi Là Cậu', author: 'Lê Anh', genre: 'Thanh xuân', status: 'Hoàn thành',
+    chapters: 54, views: 523600, rating: 4.8, updated: '2026-09-30T20:00:00', featured: false,
     adult: false, tags: ['học đường', 'mối tình đầu'],
     desc: 'Cậu ấy ngồi cạnh cửa sổ suốt ba năm cấp ba, và tôi đã dành cả thanh xuân để không nói ra.' },
-  { id: 's10', title: 'Ngôi Nhà Bên Sông', author: 'Tôn Nữ Bích Vân', genre: 'Lịch sử', status: 'Đang ra',
-    chapters: 38, views: 76500, rating: 4.3, updated: '2026-10-31T16:20:00', vip: false, featured: false,
+  { id: 's10', title: 'Ngôi Nhà Bên Sông', author: 'Lê Anh', genre: 'Lịch sử', status: 'Đang ra',
+    chapters: 38, views: 76500, rating: 4.3, updated: '2026-10-31T16:20:00', featured: false,
     adult: false, tags: ['lịch sử', 'gia đình'],
     desc: 'Ba thế hệ trong một ngôi nhà bên sông, kể từ mùa lũ năm 1954 đến ngày thành phố đổi tên.' },
-  { id: 's11', title: 'Mật Mã Tình Yêu', author: 'Trương Mỹ Duyên', genre: 'Ngôn tình', status: 'Đang ra',
-    chapters: 61, views: 198300, rating: 4.4, updated: '2026-11-01T11:05:00', vip: true, featured: false,
+  { id: 's11', title: 'Mật Mã Tình Yêu', author: 'Lê Anh', genre: 'Ngôn tình', status: 'Đang ra',
+    chapters: 61, views: 198300, rating: 4.4, updated: '2026-11-01T11:05:00', featured: false,
     adult: false, tags: ['công sở', 'ngọt'],
     desc: 'Hai lập trình viên cạnh tranh cùng một dự án, và cùng viết chung một đoạn mã chỉ họ hiểu.' },
-  { id: 's12', title: 'Tiệm Cà Phê Của Nàng', author: 'Nguyễn Thị Hồng', genre: 'Đời thường', status: 'Hoàn thành',
-    chapters: 72, views: 342000, rating: 4.7, updated: '2026-10-12T09:30:00', vip: false, featured: false,
+  { id: 's12', title: 'Tiệm Cà Phê Của Nàng', author: 'Lê Anh', genre: 'Đời thường', status: 'Hoàn thành',
+    chapters: 72, views: 342000, rating: 4.7, updated: '2026-10-12T09:30:00', featured: false,
     adult: false, tags: ['healing', 'ẩm thực'],
     desc: 'Một tiệm cà phê nhỏ ở Đà Lạt, một người chủ hay quên tên khách và những câu chuyện ghé qua mỗi sáng.' },
-  { id: 's13', title: 'Bóng Đêm Đô Thị', author: 'Trần Khải', genre: 'Kinh dị', status: 'Chờ duyệt',
-    chapters: 6, views: 8900, rating: 4.0, updated: '2026-11-02T10:10:00', vip: false, featured: false,
+  { id: 's13', title: 'Bóng Đêm Đô Thị', author: 'Lê Anh', genre: 'Kinh dị', status: 'Bản nháp',
+    chapters: 6, views: 8900, rating: 4.0, updated: '2026-11-02T10:10:00', featured: false,
     adult: true, tags: ['kinh dị', 'tâm linh'],
     desc: 'Mỗi đêm, tiếng gõ cửa lại vang lên ở căn hộ 1204 — nơi đã bỏ trống từ ba năm trước.' },
-  { id: 's14', title: 'Gió Thổi Qua Phố Cổ', author: 'Hạ Vũ', genre: 'Ngôn tình', status: 'Đang ra',
-    chapters: 29, views: 87400, rating: 4.3, updated: '2026-10-30T18:00:00', vip: false, featured: false,
+  { id: 's14', title: 'Gió Thổi Qua Phố Cổ', author: 'Lê Anh', genre: 'Ngôn tình', status: 'Đang ra',
+    chapters: 29, views: 87400, rating: 4.3, updated: '2026-10-30T18:00:00', featured: false,
     adult: false, tags: ['cổ trang', 'Hội An'],
     desc: 'Một người thợ may ở phố cổ và vị khách nước ngoài quay lại sau mười năm.' },
 ];
@@ -993,12 +1017,11 @@ function makeChapters() {
   STORIES.forEach((s, si) => {
     const n = Math.min(s.chapters, 26);
     for (let i = 1; i <= n; i++) {
-      const isLast = i === n;
       let status = 'Đã đăng';
-      if (s.status === 'Chờ duyệt' && i > n - 3) status = 'Chờ duyệt';
-      else if (isLast && (si % 5 === 0)) status = 'Chờ duyệt';
-      else if (isLast && (si % 7 === 0)) status = 'Bản nháp';
-      else if (isLast && (si % 4 === 0)) status = 'Hẹn giờ';
+      if (i === n) {
+        if (si % 4 === 0) status = 'Hẹn giờ';
+        else if (si % 5 === 0) status = 'Bản nháp';
+      }
       out.push({
         id: 'c' + s.id + '-' + i, storyId: s.id, number: i,
         title: CHAPTER_TITLES[(i + si) % CHAPTER_TITLES.length],
@@ -1006,7 +1029,6 @@ function makeChapters() {
         status,
         publishedAt: status === 'Đã đăng' ? '2026-10-' + String(10 + (i % 18)).padStart(2, '0') + 'T' + String(8 + (i % 12)).padStart(2, '0') + ':00:00' : null,
         scheduleAt: status === 'Hẹn giờ' ? '2026-11-05T20:00:00' : null,
-        vipPrice: s.vip ? (i > n - 6 ? 20 : 0) : 0,
         body: '<p>' + s.desc + '</p><p>Tiếng mưa gõ lên mái tôn, và cô ngồi đó rất lâu, để mặc cho tách trà nguội dần trên tay. Có những chuyện chỉ cần im lặng đủ lâu là sẽ tự rõ.</p><p>“Cậu còn nhớ không?” — cô hỏi, giọng nhẹ như sợ làm vỡ điều gì.</p>',
       });
     }
@@ -1014,63 +1036,38 @@ function makeChapters() {
   return out;
 }
 const CHAPTERS = makeChapters();
+STORIES.forEach((s) => { s.chapters = CHAPTERS.filter((c) => c.storyId === s.id).length; });
 
-const USERS = [
-  { id: 'u1', name: 'Lê Anh', email: 'leanh@sachmuc.vn', role: 'Admin', status: 'Hoạt động', joined: '2024-02-11', stories: 0, reads: 0 },
-  { id: 'u2', name: 'Hạ Vũ', email: 'havu@sachmuc.vn', role: 'Tác giả', status: 'Hoạt động', joined: '2024-03-02', stories: 2, reads: 516300 },
-  { id: 'u3', name: 'Lam Nguyệt', email: 'lamnguyet@sachmuc.vn', role: 'Tác giả', status: 'Hoạt động', joined: '2024-04-19', stories: 1, reads: 712400 },
-  { id: 'u4', name: 'Trần Khải', email: 'trankhai@sachmuc.vn', role: 'Tác giả', status: 'Hoạt động', joined: '2024-06-08', stories: 2, reads: 365000 },
-  { id: 'u5', name: 'Mộc Miên', email: 'mocmien@sachmuc.vn', role: 'Tác giả', status: 'Hoạt động', joined: '2024-07-21', stories: 1, reads: 1023800 },
-  { id: 'u6', name: 'Diệp Tử', email: 'dieptu@sachmuc.vn', role: 'Tác giả', status: 'Hoạt động', joined: '2024-09-14', stories: 1, reads: 289300 },
-  { id: 'u7', name: 'Phạm Quỳnh Anh', email: 'quynhanh@sachmuc.vn', role: 'Tác giả', status: 'Chờ xác minh', joined: '2026-10-28', stories: 1, reads: 18200 },
-  { id: 'u8', name: 'Nguyễn Thị Hồng', email: 'hongnguyen@sachmuc.vn', role: 'Tác giả', status: 'Hoạt động', joined: '2025-01-09', stories: 1, reads: 342000 },
-  { id: 'u9', name: 'Đỗ Minh Khuê', email: 'khueminh@sachmuc.vn', role: 'Biên tập viên', status: 'Hoạt động', joined: '2024-05-30', stories: 0, reads: 0 },
-  { id: 'u10', name: 'Vũ Thanh Tùng', email: 'tungvu@sachmuc.vn', role: 'Biên tập viên', status: 'Hoạt động', joined: '2024-08-12', stories: 0, reads: 0 },
-  { id: 'u11', name: 'Ngô Bảo Châu', email: 'baochau@mail.com', role: 'Độc giả', status: 'Hoạt động', joined: '2025-03-17', stories: 0, reads: 0 },
-  { id: 'u12', name: 'Trịnh Văn Sơn', email: 'son.trinh@mail.com', role: 'Độc giả', status: 'Bị khóa', joined: '2025-06-02', stories: 0, reads: 0 },
-  { id: 'u13', name: 'Hoàng Mai Phương', email: 'maiphuong@mail.com', role: 'Độc giả', status: 'Hoạt động', joined: '2025-09-25', stories: 0, reads: 0 },
-  { id: 'u14', name: 'Lý Bảo Châu', email: 'lybaochau@sachmuc.vn', role: 'Tác giả', status: 'Tạm khóa', joined: '2024-11-03', stories: 1, reads: 523600 },
+/* Giá mở khoá bằng Xu (0 = đọc miễn phí) + sổ lượt mở khoá mẫu */
+const PRICE_XU = { s1: 0, s2: 45, s3: 30, s4: 60, s5: 0, s6: 0, s7: 20,
+  s8: 40, s9: 35, s10: 0, s11: 25, s12: 0, s13: 0, s14: 30 };
+STORIES.forEach((s) => { s.priceXu = PRICE_XU[s.id] || 0; });
+
+const READER = { name: 'Bạn đọc mẫu', wallet: 480 };
+const UNLOCKS = [
+  { id: 'x1', storyId: 's2', reader: 'Ngô Bảo Châu', xu: 45, at: '2026-11-02T09:40:00' },
+  { id: 'x2', storyId: 's2', reader: 'Hoàng Mai Phương', xu: 45, at: '2026-11-02T08:05:00' },
+  { id: 'x3', storyId: 's4', reader: 'Trịnh Văn Sơn', xu: 60, at: '2026-11-01T21:12:00' },
+  { id: 'x4', storyId: 's8', reader: 'Ngô Bảo Châu', xu: 40, at: '2026-11-01T18:30:00' },
+  { id: 'x5', storyId: 's9', reader: 'Lý Thanh Hà', xu: 35, at: '2026-10-31T20:15:00' },
+  { id: 'x6', storyId: 's14', reader: 'Đỗ Minh Quân', xu: 30, at: '2026-10-31T19:02:00' },
 ];
 
 const COMMENTS = [
-  { id: 'cm1', user: 'Ngô Bảo Châu', story: 'Mùa Hạ Không Trở Lại', chapter: 87, text: 'Đọc đến chương này khóc thật, tác giả viết nhẹ mà thấm.', status: 'Mới', at: '2026-11-02T09:12:00', reports: 0 },
-  { id: 'cm2', user: 'Trịnh Văn Sơn', story: 'Hôn Nhân Giả Dạng', chapter: 132, text: 'Truyện nhạt, drop từ chương 40. Đừng đọc phí thời gian.', status: 'Bị báo cáo', at: '2026-11-02T08:40:00', reports: 4 },
-  { id: 'cm3', user: 'Hoàng Mai Phương', story: 'Đêm Trắng Ở Sài Gòn', chapter: 64, text: 'Tình tiết chương này hơi nhanh so với mấy chương trước, nhưng vẫn cuốn.', status: 'Mới', at: '2026-11-02T07:55:00', reports: 0 },
-  { id: 'cm4', user: 'Ngô Bảo Châu', story: 'Nàng Dâu Của Nhà Họ Trần', chapter: 210, text: 'Kết truyện trọn vẹn, cảm ơn tác giả rất nhiều.', status: 'Đã duyệt', at: '2026-11-01T22:18:00', reports: 0 },
-  { id: 'cm5', user: 'Trịnh Văn Sơn', story: 'Chạm Vào Ánh Sáng', chapter: 96, text: 'Link truyện khác ở đây, mọi người đọc bản full nhé: bit.ly/xxx', status: 'Bị báo cáo', at: '2026-11-01T20:02:00', reports: 7 },
-  { id: 'cm6', user: 'Hoàng Mai Phương', story: 'Khi Nàng Thơ Nổi Loạn', chapter: 12, text: 'Nữ chính hơi khó tính nhưng mà đúng kiểu người thật.', status: 'Mới', at: '2026-11-01T18:31:00', reports: 0 },
-  { id: 'cm7', user: 'Ngô Bảo Châu', story: 'Bí Mật Của Quản Gia', chapter: 78, text: 'Ông quản gia này chắc chắn giấu chuyện gì đó, hóng chương sau.', status: 'Đã duyệt', at: '2026-11-01T15:44:00', reports: 0 },
-  { id: 'cm8', user: 'Trịnh Văn Sơn', story: 'Thanh Xuân Của Tôi Là Cậu', chapter: 54, text: 'Spoil ai muốn nghe: cuối cùng hai người cũng gặp lại ở sân bay.', status: 'Bị báo cáo', at: '2026-10-31T21:09:00', reports: 2 },
-  { id: 'cm9', user: 'Hoàng Mai Phương', story: 'Ngôi Nhà Bên Sông', chapter: 38, text: 'Mình thích cách tác giả tả mùa lũ, rất thật.', status: 'Đã duyệt', at: '2026-10-31T09:27:00', reports: 0 },
-  { id: 'cm10', user: 'Ngô Bảo Châu', story: 'Mật Mã Tình Yêu', chapter: 61, text: 'Đoạn code trong truyện viết chuẩn thật sự, không bị sáo.', status: 'Mới', at: '2026-10-30T20:15:00', reports: 0 },
-  { id: 'cm11', user: 'Trịnh Văn Sơn', story: 'Tiệm Cà Phê Của Nàng', chapter: 72, text: 'Truyện này hay mà ít người biết, tiếc ghê.', status: 'Đã ẩn', at: '2026-10-30T11:03:00', reports: 1 },
-  { id: 'cm12', user: 'Hoàng Mai Phương', story: 'Bóng Đêm Đô Thị', chapter: 6, text: 'Đọc ban đêm hơi rợn, nhưng mà cuốn.', status: 'Mới', at: '2026-10-29T23:41:00', reports: 0 },
-  { id: 'cm13', user: 'Ngô Bảo Châu', story: 'Gió Thổi Qua Phố Cổ', chapter: 29, text: 'Bối cảnh Hội An tả đẹp quá, muốn đi ngay.', status: 'Đã duyệt', at: '2026-10-29T16:22:00', reports: 0 },
-  { id: 'cm14', user: 'Trịnh Văn Sơn', story: 'Sài Gòn Mùa Thay Lá', chapter: 45, text: 'Truyện tạm ngưng lâu quá rồi tác giả ơi.', status: 'Bị báo cáo', at: '2026-10-28T08:10:00', reports: 1 },
-];
-
-const TRANSACTIONS = [
-  { id: 't1', user: 'Ngô Bảo Châu', type: 'Mua chương VIP', story: 'Hôn Nhân Giả Dạng', amount: 24000, at: '2026-11-02T09:30:00', status: 'Thành công' },
-  { id: 't2', user: 'Hoàng Mai Phương', type: 'Mua chương VIP', story: 'Nàng Dâu Của Nhà Họ Trần', amount: 18000, at: '2026-11-02T08:12:00', status: 'Thành công' },
-  { id: 't3', user: 'Ngô Bảo Châu', type: 'Nạp Xu', story: '—', amount: 50000, at: '2026-11-01T21:40:00', status: 'Thành công' },
-  { id: 't4', user: 'Trịnh Văn Sơn', type: 'Mua chương VIP', story: 'Mật Mã Tình Yêu', amount: 12000, at: '2026-11-01T19:05:00', status: 'Hoàn tiền' },
-  { id: 't5', user: 'Hoàng Mai Phương', type: 'Nạp Xu', story: '—', amount: 100000, at: '2026-11-01T14:22:00', status: 'Thành công' },
-  { id: 't6', user: 'Ngô Bảo Châu', type: 'Mua chương VIP', story: 'Bí Mật Của Quản Gia', amount: 20000, at: '2026-10-31T20:55:00', status: 'Thành công' },
-  { id: 't7', user: 'Hoàng Mai Phương', type: 'Mua chương VIP', story: 'Mùa Hạ Không Trở Lại', amount: 16000, at: '2026-10-31T10:30:00', status: 'Thành công' },
-  { id: 't8', user: 'Trịnh Văn Sơn', type: 'Nạp Xu', story: '—', amount: 20000, at: '2026-10-30T18:12:00', status: 'Thành công' },
-  { id: 't9', user: 'Ngô Bảo Châu', type: 'Mua chương VIP', story: 'Chạm Vào Ánh Sáng', amount: 8000, at: '2026-10-30T09:48:00', status: 'Đang xử lý' },
-  { id: 't10', user: 'Hoàng Mai Phương', type: 'Mua chương VIP', story: 'Thanh Xuân Của Tôi Là Cậu', amount: 14000, at: '2026-10-29T22:14:00', status: 'Thành công' },
-  { id: 't11', user: 'Ngô Bảo Châu', type: 'Nạp Xu', story: '—', amount: 30000, at: '2026-10-29T11:02:00', status: 'Thành công' },
-  { id: 't12', user: 'Trịnh Văn Sơn', type: 'Mua chương VIP', story: 'Hôn Nhân Giả Dạng', amount: 22000, at: '2026-10-28T20:36:00', status: 'Thất bại' },
-];
-
-const WITHDRAWALS = [
-  { id: 'w1', user: 'Lam Nguyệt', amount: 4200000, method: 'Chuyển khoản', bank: 'Vietcombank · 0123 456 789', at: '2026-11-02T08:00:00', status: 'Chờ duyệt' },
-  { id: 'w2', user: 'Hạ Vũ', amount: 2150000, method: 'Ví điện tử', bank: 'MoMo · 0908 112 334', at: '2026-11-01T19:20:00', status: 'Chờ duyệt' },
-  { id: 'w3', user: 'Mộc Miên', amount: 6800000, method: 'Chuyển khoản', bank: 'Techcombank · 1903 556 771', at: '2026-11-01T10:05:00', status: 'Chờ duyệt' },
-  { id: 'w4', user: 'Trần Khải', amount: 1250000, method: 'Chuyển khoản', bank: 'BIDV · 3101 004 228', at: '2026-10-30T15:40:00', status: 'Đã duyệt' },
-  { id: 'w5', user: 'Diệp Tử', amount: 980000, method: 'Ví điện tử', bank: 'ZaloPay · 0912 447 118', at: '2026-10-28T09:12:00', status: 'Đã duyệt' },
-  { id: 'w6', user: 'Lý Bảo Châu', amount: 3400000, method: 'Chuyển khoản', bank: 'ACB · 2220 889 001', at: '2026-10-25T13:50:00', status: 'Từ chối' },
+  { id: 'cm1', user: 'Ngô Bảo Châu', story: 'Mùa Hạ Không Trở Lại', chapter: 18, text: 'Đọc đến chương này khóc thật, tác giả viết nhẹ mà thấm.', status: 'Hiển thị', at: '2026-11-02T09:12:00' },
+  { id: 'cm2', user: 'Trịnh Văn Sơn', story: 'Hôn Nhân Giả Dạng', chapter: 9, text: 'Truyện nhạt, drop từ chương 40. Đừng đọc phí thời gian.', status: 'Hiển thị', at: '2026-11-02T08:40:00' },
+  { id: 'cm3', user: 'Hoàng Mai Phương', story: 'Đêm Trắng Ở Sài Gòn', chapter: 21, text: 'Tình tiết chương này hơi nhanh so với mấy chương trước, nhưng vẫn cuốn.', status: 'Hiển thị', at: '2026-11-02T07:55:00' },
+  { id: 'cm4', user: 'Ngô Bảo Châu', story: 'Nàng Dâu Của Nhà Họ Trần', chapter: 26, text: 'Kết truyện trọn vẹn, cảm ơn tác giả rất nhiều.', status: 'Hiển thị', at: '2026-11-01T22:18:00' },
+  { id: 'cm5', user: 'Trịnh Văn Sơn', story: 'Chạm Vào Ánh Sáng', chapter: 14, text: 'Link truyện khác ở đây, mọi người đọc bản full nhé: bit.ly/xxx', status: 'Hiển thị', at: '2026-11-01T20:02:00' },
+  { id: 'cm6', user: 'Hoàng Mai Phương', story: 'Khi Nàng Thơ Nổi Loạn', chapter: 11, text: 'Nữ chính hơi khó tính nhưng mà đúng kiểu người thật.', status: 'Hiển thị', at: '2026-11-01T18:31:00' },
+  { id: 'cm7', user: 'Ngô Bảo Châu', story: 'Bí Mật Của Quản Gia', chapter: 17, text: 'Ông quản gia này chắc chắn giấu chuyện gì đó, hóng chương sau.', status: 'Hiển thị', at: '2026-11-01T15:44:00' },
+  { id: 'cm8', user: 'Trịnh Văn Sơn', story: 'Thanh Xuân Của Tôi Là Cậu', chapter: 23, text: 'Spoil ai muốn nghe: cuối cùng hai người cũng gặp lại ở sân bay.', status: 'Hiển thị', at: '2026-10-31T21:09:00' },
+  { id: 'cm9', user: 'Hoàng Mai Phương', story: 'Ngôi Nhà Bên Sông', chapter: 19, text: 'Mình thích cách tác giả tả mùa lũ, rất thật.', status: 'Hiển thị', at: '2026-10-31T09:27:00' },
+  { id: 'cm10', user: 'Ngô Bảo Châu', story: 'Mật Mã Tình Yêu', chapter: 22, text: 'Đoạn code trong truyện viết chuẩn thật sự, không bị sáo.', status: 'Hiển thị', at: '2026-10-30T20:15:00' },
+  { id: 'cm11', user: 'Trịnh Văn Sơn', story: 'Tiệm Cà Phê Của Nàng', chapter: 12, text: 'Truyện này hay mà ít người biết, tiếc ghê.', status: 'Đã ẩn', at: '2026-10-30T11:03:00' },
+  { id: 'cm12', user: 'Hoàng Mai Phương', story: 'Bóng Đêm Đô Thị', chapter: 5, text: 'Đọc ban đêm hơi rợn, nhưng mà cuốn.', status: 'Hiển thị', at: '2026-10-29T23:41:00' },
+  { id: 'cm13', user: 'Ngô Bảo Châu', story: 'Gió Thổi Qua Phố Cổ', chapter: 20, text: 'Bối cảnh Hội An tả đẹp quá, muốn đi ngay.', status: 'Hiển thị', at: '2026-10-29T16:22:00' },
+  { id: 'cm14', user: 'Trịnh Văn Sơn', story: 'Sài Gòn Mùa Thay Lá', chapter: 8, text: 'Truyện tạm ngưng lâu quá rồi tác giả ơi.', status: 'Hiển thị', at: '2026-10-28T08:10:00' },
 ];
 
 const CATEGORIES = [
@@ -1097,14 +1094,14 @@ const TAGS = [
 /* Cài đặt: thông tin site, SEO, banner, công tắc tính năng */
 const SETTINGS = {
   siteName: 'Sách Mực', siteUrl: 'https://sachmuc.vn', tagline: 'Nơi truyện chữ Việt được kể tử tế',
-  contactEmail: 'hotro@sachmuc.vn', seoTitle: 'Sách Mực — Đọc và đăng truyện chữ Việt',
-  seoDesc: 'Nền tảng đăng truyện chữ dành cho tác giả Việt: soạn chương, hẹn giờ đăng, chia sẻ doanh thu minh bạch.',
-  bannerText: 'Tuần lễ truyện mùa thu — giảm 30% gói VIP',
-  language: 'Tiếng Việt', timezone: 'GMT+7 · Hồ Chí Minh', currency: 'VNĐ (đ)',
-  commentRules: { profanity: true, reports: true, verified: false, links: true },
+  authorName: 'Lê Anh', authorBio: 'Viết truyện chữ Việt, thích những câu chuyện nhẹ và thật.',
+  contactEmail: 'hotro@sachmuc.vn', seoTitle: 'Sách Mực — Truyện chữ của Lê Anh',
+  seoDesc: 'Nơi mình đăng những câu chuyện chữ Việt đang viết: ngôn tình, thanh xuân, trinh thám và cổ đại.',
+  bannerText: 'Chương mới mỗi tối thứ Ba và thứ Sáu',
+  currency: 'Xu',
+  language: 'Tiếng Việt', timezone: 'GMT+7 · Hồ Chí Minh',
   toggles: {
-    comments: true, readerLogin: true, vip: true, autoApprove: false,
-    maintenance: false, ads: false, watermark: true, index: true,
+    comments: true, xu: true, maintenance: false, watermark: true, index: true,
   },
 };
 
@@ -1117,19 +1114,16 @@ const state = {
   theme: 'light',
   sidebarCollapsed: false,
   sidebarOpen: false,
-  storyQuery: '', storyGenre: '', storyStatus: '', storyAuthor: '',
-  storySort: { key: 'updated', dir: 'desc' },
+  storyQuery: '', storyGenre: '', storyStatus: '',
+  storySort: { key: 'updated', dir: 'desc' }, storyPrice: '',
   storyPage: 1, storyPerPage: 8,
   selectedStories: new Set(),
   chapterStoryId: 's1',
   chapterFilter: 'Tất cả',
   editor: { storyId: null, chapterId: null, draftTimer: null, savedAt: null, preview: false },
-  reviewTab: 'Chương',
-  taxonomyTab: 'Thể loại',
-  userQuery: '', userRole: '', userStatus: '', userPage: 1,
-  commentFilter: 'Mới',
-  revenueTab: 'Giao dịch', txQuery: '', txType: '',
+  storyDetailId: 's1', taxonomyTab: 'Thể loại',
   settingsTab: 'Chung', density: 'Thoáng (mặc định)',
+  commentFilter: 'Tất cả',
   notifRead: false,
   paletteIndex: 0,
   paletteResults: [],
@@ -1137,16 +1131,13 @@ const state = {
 
 /* Điều hướng + nhãn */
 const PAGES = [
-  { id: 'dashboard', label: 'Tổng quan', group: 'Tổng quan', icon: 'grid', desc: 'Số liệu và việc cần xử lý hôm nay' },
-  { id: 'stories', label: 'Quản lý truyện', group: 'Nội dung', icon: 'book', desc: 'Tìm, lọc, sửa và xuất bản truyện' },
-  { id: 'chapters', label: 'Quản lý chương', group: 'Nội dung', icon: 'layers', desc: 'Sắp xếp, hẹn giờ và đặt giá chương' },
+  { id: 'dashboard', label: 'Tổng quan', group: 'Tổng quan', icon: 'grid', desc: 'Số liệu và việc cần làm hôm nay' },
+  { id: 'stories', label: 'Truyện của tôi', group: 'Nội dung', icon: 'book', desc: 'Tìm, lọc, sửa và xuất bản truyện' },
+  { id: 'chapters', label: 'Chương', group: 'Nội dung', icon: 'layers', desc: 'Sắp xếp, hẹn giờ và đăng chương' },
   { id: 'editor', label: 'Soạn chương', group: 'Nội dung', icon: 'pen', desc: 'Trình soạn thảo toàn màn hình' },
-  { id: 'review', label: 'Duyệt bài', group: 'Kiểm duyệt', icon: 'check-circle', desc: 'Hàng đợi chương và truyện chờ duyệt', count: 9, hot: true },
-  { id: 'comments', label: 'Bình luận', group: 'Kiểm duyệt', icon: 'message', desc: 'Duyệt, ẩn và xử lý bình luận bị báo cáo', count: 5 },
-  { id: 'taxonomy', label: 'Thể loại & thẻ', group: 'Nội dung', icon: 'tags', desc: 'Quản lý danh mục dùng chung' },
-  { id: 'users', label: 'Người dùng', group: 'Cộng đồng', icon: 'users', desc: 'Vai trò, trạng thái và quyền truy cập' },
-  { id: 'revenue', label: 'Doanh thu & Xu', group: 'Kinh doanh', icon: 'wallet', desc: 'Giao dịch, doanh thu và yêu cầu rút tiền', count: 3 },
-  { id: 'settings', label: 'Cài đặt', group: 'Hệ thống', icon: 'settings', desc: 'Thông tin website, SEO và tính năng' },
+  { id: 'taxonomy', label: 'Thể loại & thẻ', group: 'Nội dung', icon: 'tags', desc: 'Danh mục dùng chung cho truyện' },
+  { id: 'comments', label: 'Bình luận', group: 'Tương tác', icon: 'message', desc: 'Xem, ẩn và xoá bình luận của độc giả' },
+  { id: 'settings', label: 'Cài đặt', group: 'Hệ thống', icon: 'settings', desc: 'Thông tin website, SEO và hiển thị' },
 ];
 const pageById = (id) => PAGES.find((p) => p.id === id) || PAGES[0];
 
@@ -1244,11 +1235,6 @@ function toggleTheme() {
 /* ============================================================================
    F. SIDEBAR · TOPBAR · BREADCRUMB
    ========================================================================== */
-function reviewCount() {
-  const ch = CHAPTERS.filter((c) => c.status === 'Chờ duyệt').length;
-  const st = STORIES.filter((s) => s.status === 'Chờ duyệt').length;
-  return ch + st;
-}
 function renderSidebar() {
   const groups = [];
   PAGES.forEach((p) => {
@@ -1263,14 +1249,8 @@ function renderSidebar() {
         || (state.page === 'editor' && p.id === 'editor')
         || ((state.page === 'story-new' || state.page === 'story-detail') && p.id === 'stories');
       let count = '';
-      if (p.id === 'review') {
-        const n = reviewCount();
-        if (n) count = '<span class="nav-count hot">' + n + '</span>';
-      } else if (p.id === 'comments') {
-        const n = COMMENTS.filter((c) => c.status === 'Mới' || c.status === 'Bị báo cáo').length;
-        if (n) count = '<span class="nav-count">' + n + '</span>';
-      } else if (p.id === 'revenue') {
-        const n = WITHDRAWALS.filter((w) => w.status === 'Chờ duyệt').length;
+      if (p.id === 'comments') {
+        const n = COMMENTS.length;
         if (n) count = '<span class="nav-count">' + n + '</span>';
       }
       return '<button class="nav-item" type="button" data-page="' + p.id + '" title="' + esc(p.label) + '"' +
@@ -1347,8 +1327,7 @@ function renderPage() {
   const fn = {
     dashboard: renderDashboard, stories: renderStories, 'story-new': renderStoryForm,
     'story-detail': renderStoryDetail, chapters: renderChapters, editor: renderEditorPage,
-    review: renderReview, comments: renderComments, taxonomy: renderTaxonomy,
-    users: renderUsers, revenue: renderRevenue, settings: renderSettings,
+    comments: renderComments, taxonomy: renderTaxonomy, settings: renderSettings,
   }[state.page] || renderDashboard;
   $('#view').innerHTML = fn();
   bindPage();
@@ -1358,11 +1337,11 @@ function renderPage() {
    H. HELPER HIỂN THỊ
    ========================================================================== */
 const STATUS_CLASS = {
-  'Đang ra': 'badge-dang-ra', 'Chờ duyệt': 'badge-cho-duyet',
+  'Đang ra': 'badge-dang-ra', 'Bản nháp': 'badge-neutral',
   'Tạm ngưng': 'badge-tam-ngung', 'Hoàn thành': 'badge-hoan-thanh',
 };
 const CHAP_CLASS = {
-  'Đã đăng': 'badge-dang-ra', 'Chờ duyệt': 'badge-cho-duyet',
+  'Đã đăng': 'badge-dang-ra',
   'Bản nháp': 'badge-neutral', 'Hẹn giờ': 'badge-accent',
 };
 const badge = (text, cls) => '<span class="badge ' + cls + '">' + esc(text) + '</span>';
@@ -1378,7 +1357,15 @@ const coverOf = (story, size = 38) => {
   return '<span class="cover" style="background:' + toneFor(story.id) + ';width:' + size +
     'px;height:' + h + 'px" aria-hidden="true">' + esc(initials(story.title)) + '</span>';
 };
-const money = (n) => fmtNum(n) + ' Xu';
+const xuOf = (id) => UNLOCKS.filter((u) => u.storyId === id).reduce((a, u) => a + u.xu, 0);
+const totalXu = () => UNLOCKS.reduce((a, u) => a + u.xu, 0);
+const isUnlocked = (id) => UNLOCKS.some((u) => u.storyId === id && u.reader === READER.name);
+function renderXuPill() {
+  const el = $('#xuTotal');
+  if (el) el.textContent = fmtNum(totalXu());
+  const btn = $('#xuBtn');
+  if (btn) btn.setAttribute('aria-label', 'Xu đã nhận: ' + fmtNum(totalXu()) + ' Xu');
+}
 
 /* Dữ liệu biểu đồ 30 ngày, tất định để mỗi lần mở giống nhau */
 const CHART_DATA = (() => {
@@ -1423,7 +1410,7 @@ function chartSVG(days, series) {
       d.date.getDate().toString().padStart(2, '0') + '/' + MONTHS[d.date.getMonth()] + '</text>';
   }).join('');
   const dots = pts.map((p, i) => '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="8" fill="transparent">' +
-    '<title>' + fmtDate(data[i].iso) + ' · ' + (series === 'views' ? fmtNum(data[i].views) + ' lượt đọc' : money(data[i].revenue)) + '</title></circle>').join('');
+    '<title>' + fmtDate(data[i].iso) + ' · ' + (series === 'views' ? fmtNum(data[i].views) + ' lượt đọc' : fmtNum(data[i].revenue) + ' Xu') + '</title></circle>').join('');
   const markers = pts.filter((_, i) => i === 0 || i === pts.length - 1 || i === Math.floor(pts.length / 2))
     .map((p, i) => '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="3.5" fill="var(--accent)" ' +
       'stroke="var(--surface)" stroke-width="2"/>').join('');
@@ -1445,23 +1432,33 @@ function emptyState({ iconName = 'book', title, message, action = '' }) {
    I. TỔNG QUAN
    ========================================================================== */
 function renderDashboard() {
-  const totalViews = STORIES.reduce((s, x) => s + x.views, 0);
+  const totalViews = STORIES.reduce((a, b) => a + b.views, 0);
   const running = STORIES.filter((s) => s.status === 'Đang ra').length;
-  const pendingCh = CHAPTERS.filter((c) => c.status === 'Chờ duyệt').length +
-    STORIES.filter((s) => s.status === 'Chờ duyệt').length;
-  const newComments = COMMENTS.filter((c) => c.status === 'Mới').length;
-  const reported = COMMENTS.filter((c) => c.status === 'Bị báo cáo').length;
+  const published = CHAPTERS.filter((c) => c.status === 'Đã đăng').length;
+  const drafts = CHAPTERS.filter((c) => c.status === 'Bản nháp').length;
+  const scheduled = CHAPTERS.filter((c) => c.status === 'Hẹn giờ').length;
+  const hidden = COMMENTS.filter((c) => c.status === 'Đã ẩn').length;
+  const paused = STORIES.filter((s) => s.status === 'Tạm ngưng').length;
+  const totalWords = CHAPTERS.reduce((a, c) => a + c.words, 0);
   const recent = [...STORIES].sort((a, b) => b.updated.localeCompare(a.updated)).slice(0, 6);
+
   const kpi = (label, value, hint, trend, trendDown, iconName, href) =>
     '<a class="kpi" href="#' + href + '"><span class="kpi-top"><span class="kpi-ic">' + icon(iconName) + '</span>' +
       esc(label) + '</span><b>' + value + '</b><small>' +
       '<span class="' + (trendDown ? 'trend-down' : 'trend-up') + '">' +
       (trendDown ? '▼' : '▲') + ' ' + trend + '</span> ' + esc(hint) + '</small></a>';
 
+  const task = (iconName, title, sub, count, key, urgent) =>
+    '<button class="todo-item' + (urgent ? ' urgent' : '') + '" type="button" data-task="' + key + '">' +
+      '<span class="todo-ic">' + icon(iconName) + '</span>' +
+      '<span class="tx"><b>' + esc(title) + '</b><span>' + esc(sub) + '</span></span>' +
+      '<span class="count">' + count + '</span><span class="chev">' + icon('chevronRight') + '</span>' +
+    '</button>';
+
   return '' +
     '<div class="page-head"><div class="head-text">' +
       '<h1>Tổng quan</h1>' +
-      '<p>Cập nhật lúc ' + fmtDateTime('2026-11-02T12:00:00') + ' · toàn bộ số liệu tính trên dữ liệu mẫu.</p>' +
+      '<p>Cập nhật lúc ' + fmtDateTime('2026-11-02T12:00:00') + ' · ' + fmtNum(totalWords) + ' từ đã viết trên ' + STORIES.length + ' truyện.</p>' +
     '</div><div class="page-actions">' +
       '<button class="btn" type="button" data-action="refresh">' + icon('undo') + 'Làm mới</button>' +
       '<button class="btn btn-primary" type="button" data-nav="story-new">' + icon('plus') + 'Đăng truyện mới</button>' +
@@ -1469,15 +1466,15 @@ function renderDashboard() {
 
     '<div class="kpi-grid">' +
       kpi('Tổng lượt đọc', fmtShort(totalViews), 'so với 30 ngày trước', '+12,4%', false, 'chart', 'stories') +
-      kpi('Truyện đang đăng', fmtNum(running), 'trên ' + STORIES.length + ' truyện', '+2 truyện', false, 'book', 'stories') +
-      kpi('Chương chờ duyệt', fmtNum(pendingCh), 'cần xử lý trong hôm nay', '+3 chương', false, 'layers', 'review') +
-      kpi('Bình luận mới', fmtNum(newComments), 'và ' + reported + ' bình luận bị báo cáo', '—', false, 'message', 'comments') +
+      kpi('Truyện đang ra', fmtNum(running), 'trên ' + STORIES.length + ' truyện', '+2 truyện', false, 'book', 'stories') +
+      kpi('Chương đã đăng', fmtNum(published), 'và ' + drafts + ' bản nháp', '+3 chương', false, 'layers', 'chapters') +
+      kpi('Xu đã nhận', fmtNum(totalXu()), UNLOCKS.length + ' lượt mở khoá', '+8,2%', false, 'coins', 'stories') +
     '</div>' +
 
     '<div class="split">' +
       '<section class="card" aria-label="Biểu đồ lượt đọc">' +
         '<div class="card-head"><h2>Lượt đọc theo ngày</h2>' +
-          '<span class="sub">Tổng ' + fmtNum(CHART_DATA.slice(-7).reduce((s, d) => s + d.views, 0)) + ' lượt trong 7 ngày</span>' +
+          '<span class="sub">Tổng ' + fmtNum(CHART_DATA.slice(-7).reduce((a, d) => a + d.views, 0)) + ' lượt trong 7 ngày</span>' +
           '<span class="grow"></span>' +
           '<div class="seg" role="group" aria-label="Khoảng thời gian">' +
             '<button class="btn btn-sm" type="button" data-chart-days="7" aria-pressed="true">7 ngày</button>' +
@@ -1492,31 +1489,14 @@ function renderDashboard() {
         '</div>' +
       '</section>' +
 
-      '<section class="card" aria-label="Việc cần xử lý">' +
-        '<div class="card-head"><h2>Cần xử lý</h2><span class="grow"></span>' +
-          '<span class="sub">' + fmtNum(pendingCh + newComments + reported + WITHDRAWALS.filter((w) => w.status === 'Chờ duyệt').length) + ' mục</span>' +
-        '</div>' +
+      '<section class="card" aria-label="Việc cần làm">' +
+        '<div class="card-head"><h2>Việc cần làm</h2><span class="grow"></span>' +
+          '<span class="sub">' + (drafts + scheduled + hidden + paused) + ' mục</span></div>' +
         '<div class="todo-list">' +
-          '<button class="todo-item urgent" type="button" data-nav="review">' +
-            '<span class="todo-ic">' + icon('check-circle') + '</span>' +
-            '<span class="tx"><b>Chương chờ duyệt</b><span>Hạn chót hôm nay · 2 chương quá 24 giờ</span></span>' +
-            '<span class="count">' + pendingCh + '</span><span class="chev">' + icon('chevronRight') + '</span>' +
-          '</button>' +
-          '<button class="todo-item" type="button" data-nav="comments">' +
-            '<span class="todo-ic">' + icon('alert') + '</span>' +
-            '<span class="tx"><b>Bình luận bị báo cáo</b><span>Có dấu hiệu spam hoặc xúc phạm</span></span>' +
-            '<span class="count">' + reported + '</span><span class="chev">' + icon('chevronRight') + '</span>' +
-          '</button>' +
-          '<button class="todo-item" type="button" data-nav="revenue">' +
-            '<span class="todo-ic">' + icon('wallet') + '</span>' +
-            '<span class="tx"><b>Yêu cầu rút tiền</b><span>Tổng ' + fmtNum(WITHDRAWALS.filter((w) => w.status === 'Chờ duyệt').reduce((s, w) => s + w.amount, 0)) + ' đ đang chờ</span></span>' +
-            '<span class="count">' + WITHDRAWALS.filter((w) => w.status === 'Chờ duyệt').length + '</span><span class="chev">' + icon('chevronRight') + '</span>' +
-          '</button>' +
-          '<button class="todo-item" type="button" data-nav="users">' +
-            '<span class="todo-ic">' + icon('users') + '</span>' +
-            '<span class="tx"><b>Tác giả chờ xác minh</b><span>Hồ sơ mới cần duyệt email và CCCD</span></span>' +
-            '<span class="count">' + USERS.filter((u) => u.status === 'Chờ xác minh').length + '</span><span class="chev">' + icon('chevronRight') + '</span>' +
-          '</button>' +
+          task('pen', 'Chương đang viết dở', 'Bản nháp chưa đăng', drafts, 'drafts', drafts > 0) +
+          task('clock', 'Chương hẹn giờ', 'Sẽ tự đăng theo lịch', scheduled, 'scheduled', false) +
+          task('eyeOff', 'Bình luận đang ẩn', 'Có thể hiện lại nếu cần', hidden, 'hidden-comments', false) +
+          task('book', 'Truyện tạm ngưng', 'Đang dừng cập nhật', paused, 'paused', false) +
         '</div>' +
       '</section>' +
     '</div>' +
@@ -1543,9 +1523,29 @@ function renderDashboard() {
             '<button class="btn btn-ghost btn-sm" type="button" data-story-edit="' + s.id + '" aria-label="Sửa ' + esc(s.title) + '">' + icon('edit') + '</button>' +
           '</div></td></tr>').join('') +
       '</tbody></table></div>' +
+    '</section>' +
+
+    '<section class="card" aria-label="Lượt mở khoá bằng Xu">' +
+      '<div class="card-head"><h2>Lượt mở khoá gần đây</h2><span class="grow"></span>' +
+        '<span class="sub">' + fmtNum(totalXu()) + ' Xu · ' + UNLOCKS.length + ' lượt</span>' +
+        '<button class="btn btn-sm" type="button" data-export="unlocks">' + icon('download', 15) + 'Xuất CSV</button>' +
+        '<button class="btn btn-sm" type="button" data-xu-history>' + icon('coins', 15) + 'Lịch sử Xu</button>' +
+      '</div>' +
+      (UNLOCKS.length === 0
+        ? emptyState({ iconName: 'coins', title: 'Chưa có lượt mở khoá nào', message: 'Đặt giá Xu cho một truyện để bắt đầu.' })
+        : '<div class="table-wrap"><table><thead><tr><th scope="col">Độc giả</th>' +
+          '<th scope="col">Truyện</th><th scope="col" class="hide-sm">Thời gian</th>' +
+          '<th scope="col" style="text-align:right">Xu</th></tr></thead><tbody>' +
+          UNLOCKS.slice(0, 6).map((u) => {
+            const st = STORIES.find((x) => x.id === u.storyId);
+            return '<tr><td><b style="font-weight:600">' + esc(u.reader) + '</b></td>' +
+              '<td class="cell-muted">' + esc(st ? st.title : '—') + '</td>' +
+              '<td class="cell-muted hide-sm">' + relTime(u.at) + '</td>' +
+              '<td class="num" style="text-align:right"><b>' + fmtNum(u.xu) + '</b> Xu</td></tr>';
+          }).join('') +
+          '</tbody></table></div>') +
     '</section>';
 }
-
 /* ============================================================================
    J. QUẢN LÝ TRUYỆN — lọc, sắp xếp, chọn nhiều, phân trang
    ========================================================================== */
@@ -1555,7 +1555,8 @@ function filteredStories() {
     if (q && !(s.title + ' ' + s.author + ' ' + s.tags.join(' ')).toLowerCase().includes(q)) return false;
     if (state.storyGenre && s.genre !== state.storyGenre) return false;
     if (state.storyStatus && s.status !== state.storyStatus) return false;
-    if (state.storyAuthor && s.author !== state.storyAuthor) return false;
+    if (state.storyPrice === 'paid' && !s.priceXu) return false;
+    if (state.storyPrice === 'free' && s.priceXu) return false;
     return true;
   });
   const { key, dir } = state.storySort;
@@ -1584,14 +1585,13 @@ function renderStories() {
   const page = Math.min(state.storyPage, pages);
   state.storyPage = page;
   const slice = rows.slice((page - 1) * perPage, page * perPage);
-  const authors = [...new Set(STORIES.map((s) => s.author))].sort((a, b) => a.localeCompare(b, 'vi'));
   const genres = [...new Set(STORIES.map((s) => s.genre))].sort((a, b) => a.localeCompare(b, 'vi'));
   const sel = [...state.selectedStories].filter((id) => STORIES.some((s) => s.id === id));
   const allChecked = slice.length > 0 && slice.every((s) => state.selectedStories.has(s.id));
 
   return '' +
-    '<div class="page-head"><div class="head-text"><h1>Quản lý truyện</h1>' +
-      '<p>' + fmtNum(STORIES.length) + ' truyện · ' + fmtNum(CHAPTERS.length) + ' chương trong hệ thống.</p></div>' +
+    '<div class="page-head"><div class="head-text"><h1>Truyện của tôi</h1>' +
+      '<p>' + fmtNum(STORIES.length) + ' truyện · ' + fmtNum(CHAPTERS.length) + ' chương đã tạo.</p></div>' +
       '<div class="page-actions">' +
         '<button class="btn" type="button" data-export="stories">' + icon('download') + 'Xuất CSV</button>' +
         '<button class="btn btn-primary" type="button" data-nav="story-new">' + icon('plus') + 'Đăng truyện mới</button>' +
@@ -1609,12 +1609,13 @@ function renderStories() {
         '</select>' +
         '<select class="select" id="filterStatus" aria-label="Lọc theo trạng thái">' +
           '<option value="">Mọi trạng thái</option>' +
-          ['Đang ra', 'Chờ duyệt', 'Tạm ngưng', 'Hoàn thành'].map((s) =>
+          ['Đang ra', 'Bản nháp', 'Tạm ngưng', 'Hoàn thành'].map((s) =>
             '<option value="' + s + '"' + (state.storyStatus === s ? ' selected' : '') + '>' + s + '</option>').join('') +
         '</select>' +
-        '<select class="select hide-sm" id="filterAuthor" aria-label="Lọc theo tác giả">' +
-          '<option value="">Mọi tác giả</option>' +
-          authors.map((a) => '<option value="' + esc(a) + '"' + (state.storyAuthor === a ? ' selected' : '') + '>' + esc(a) + '</option>').join('') +
+        '<select class="select" id="filterPrice" aria-label="Lọc theo giá mở khoá">' +
+          '<option value="">Mọi giá</option>' +
+          '<option value="paid"' + (state.storyPrice === 'paid' ? ' selected' : '') + '>Có phí Xu</option>' +
+          '<option value="free"' + (state.storyPrice === 'free' ? ' selected' : '') + '>Miễn phí</option>' +
         '</select>' +
         '<span class="grow"></span>' +
         '<button class="btn btn-ghost btn-sm" type="button" data-action="clear-filters">' + icon('x', 15) + 'Xóa lọc</button>' +
@@ -1653,6 +1654,7 @@ function renderStories() {
                 ' aria-label="Chọn ' + esc(s.title) + '"></label></td>' +
               '<td><div class="cell-title">' + coverOf(s) +
                 '<span class="t"><b>' + esc(s.title) + '</b><span>' + esc(s.author) +
+                (s.priceXu ? ' · <span style="color:var(--accent-text);font-weight:600">' + s.priceXu + ' Xu</span>' : '') +
                 (s.featured ? ' · <span style="color:var(--accent-text);font-weight:600">Đề cử</span>' : '') +
                 (s.adult ? ' · 18+' : '') + '</span></span></div></td>' +
               '<td class="hide-sm">' + esc(s.genre) + '</td>' +
@@ -1688,7 +1690,7 @@ function renderStoryForm() {
   const genres = [...new Set(STORIES.map((s) => s.genre))];
   return '' +
     '<div class="page-head"><div class="head-text"><h1>Đăng truyện mới</h1>' +
-      '<p>Truyện sẽ ở trạng thái “Chờ duyệt” cho tới khi biên tập viên xác nhận.</p></div>' +
+      '<p>Truyện mới ở trạng thái “Bản nháp” — bạn có thể đăng ngay hoặc viết tiếp sau.</p></div>' +
       '<div class="page-actions">' +
         '<button class="btn" type="button" data-nav="stories">Hủy</button>' +
         '<button class="btn btn-primary" type="submit" form="storyForm">' + icon('save') + 'Lưu truyện</button>' +
@@ -1699,10 +1701,10 @@ function renderStoryForm() {
           '<div class="field full" id="fTitle"><label for="sTitle">Tên truyện <span style="color:var(--danger)">*</span></label>' +
             '<input class="input" id="sTitle" name="title" placeholder="Ví dụ: Mùa Hạ Không Trở Lại" maxlength="120">' +
             '<span class="error">Vui lòng nhập tên truyện (ít nhất 3 ký tự).</span></div>' +
-          '<div class="field" id="fAuthor"><label for="sAuthor">Tác giả <span style="color:var(--danger)">*</span></label>' +
-            '<select class="select" id="sAuthor" name="author"><option value="">Chọn tác giả</option>' +
-            USERS.filter((u) => u.role === 'Tác giả').map((u) => '<option value="' + esc(u.name) + '">' + esc(u.name) + '</option>').join('') +
-            '</select><span class="error">Vui lòng chọn tác giả.</span></div>' +
+          '<div class="field"><label for="sAuthorRo">Tác giả</label>' +
+            '<input class="input" id="sAuthorRo" value="' + esc(SETTINGS.authorName) + '" readonly aria-readonly="true" ' +
+            'style="background:var(--surface-2)">' +
+            '<span class="hint">Đổi bút danh trong Cài đặt → Chung.</span></div>' +
           '<div class="field" id="fGenre"><label for="sGenre">Thể loại <span style="color:var(--danger)">*</span></label>' +
             '<select class="select" id="sGenre" name="genre"><option value="">Chọn thể loại</option>' +
             genres.map((g) => '<option value="' + esc(g) + '">' + esc(g) + '</option>').join('') +
@@ -1737,14 +1739,15 @@ function renderStoryForm() {
         '</section>' +
         '<section class="card card-pad"><h2 style="font-size:15px;font-weight:600;margin-bottom:12px">Xuất bản</h2>' +
           '<div class="field"><label for="sStatus">Trạng thái</label>' +
-            '<select class="select" id="sStatus"><option>Chờ duyệt</option><option>Đang ra</option>' +
+            '<select class="select" id="sStatus"><option>Bản nháp</option><option>Đang ra</option>' +
             '<option>Tạm ngưng</option><option>Hoàn thành</option></select></div>' +
           '<label class="checkbox" style="margin-top:8px"><input type="checkbox" id="sAdult">' +
             '<span>Gắn nhãn 18+ (có nội dung người lớn)</span></label>' +
-          '<label class="checkbox"><input type="checkbox" id="sVip">' +
-            '<span>Bật chương VIP (trả phí bằng Xu)</span></label>' +
           '<label class="checkbox"><input type="checkbox" id="sFeature">' +
             '<span>Ghim lên trang chủ (đề cử)</span></label>' +
+          '<div class="field" style="margin-top:12px"><label for="sPrice">Giá mở khoá (Xu)</label>' +
+            '<input class="input" id="sPrice" type="number" min="0" max="999" step="5" value="0" inputmode="numeric">' +
+            '<span class="hint">0 = đọc miễn phí. Độc giả trả Xu một lần để mở toàn bộ truyện.</span></div>' +
         '</section>' +
       '</div>' +
     '</div></form>';
@@ -1772,9 +1775,10 @@ function renderStoryDetail() {
           '<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">' + coverOf(s, 92) +
             '<div style="flex:1 1 220px;min-width:0">' +
               '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">' + storyBadge(s.status) +
-                (s.vip ? '<span class="badge badge-accent plain">VIP</span>' : '') +
                 (s.featured ? '<span class="badge badge-neutral plain">Đề cử</span>' : '') +
-                (s.adult ? '<span class="badge badge-danger plain">18+</span>' : '') + '</div>' +
+                (s.adult ? '<span class="badge badge-danger plain">18+</span>' : '') +
+                (s.priceXu ? '<span class="badge badge-accent plain">' + s.priceXu + ' Xu</span>'
+                  : '<span class="badge badge-neutral plain">Miễn phí</span>') + '</div>' +
               '<p style="color:var(--text-2);font-size:13.5px;line-height:1.65">' + esc(s.desc) + '</p>' +
               '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">' +
                 s.tags.map((t) => '<span class="chip">' + esc(t) + '</span>').join('') + '</div>' +
@@ -1784,7 +1788,8 @@ function renderStoryDetail() {
             '<div class="stat"><span>Lượt đọc</span><b>' + fmtNum(s.views) + '</b></div>' +
             '<div class="stat"><span>Chương</span><b>' + fmtNum(s.chapters) + '</b></div>' +
             '<div class="stat"><span>Đánh giá</span><b>' + s.rating.toFixed(1) + ' / 5</b></div>' +
-            '<div class="stat"><span>Doanh thu</span><b>' + money(Math.round(s.views * 0.9)) + '</b></div>' +
+            '<div class="stat"><span>Bình luận</span><b>' + COMMENTS.filter((c) => c.story === s.title).length + '</b></div>' +
+            '<div class="stat"><span>Xu đã nhận</span><b>' + fmtNum(xuOf(s.id)) + '</b></div>' +
           '</div>' +
         '</section>' +
         '<section class="card"><div class="card-head"><h2>Chương gần đây</h2><span class="grow"></span>' +
@@ -1806,7 +1811,10 @@ function renderStoryDetail() {
           '<div class="meta-line"><span>Trạng thái</span><b>' + esc(s.status) + '</b></div>' +
           '<div class="meta-line"><span>Ngày tạo</span><b>' + fmtDate('2025-0' + (1 + (s.id.charCodeAt(1) % 8)) + '-12') + '</b></div>' +
           '<div class="meta-line"><span>Cập nhật cuối</span><b>' + fmtDate(s.updated) + '</b></div>' +
-          '<div class="meta-line"><span>Chương VIP</span><b>' + (s.vip ? 'Đang bật' : 'Đang tắt') + '</b></div>' +
+          '<div class="meta-line"><span>Giá mở khoá</span><b>' + (s.priceXu ? s.priceXu + ' Xu' : 'Miễn phí') + '</b></div>' +
+          '<div class="meta-line"><span>Lượt mở khoá</span><b>' + fmtNum(UNLOCKS.filter((u) => u.storyId === s.id).length) + '</b></div>' +
+          '<button class="btn" type="button" data-unlock="' + s.id + '" style="width:100%">' +
+            icon('coins') + (isUnlocked(s.id) ? 'Đã mở khoá' : s.priceXu ? 'Mở khoá thử bằng Xu' : 'Đọc miễn phí') + '</button>' +
           '<hr style="border:0;border-top:1px solid var(--border);margin:4px 0">' +
           '<button class="btn" type="button" data-story-edit="' + s.id + '" style="width:100%">' + icon('edit') + 'Chỉnh sửa truyện</button>' +
           '<button class="btn btn-danger" type="button" data-story-delete="' + s.id + '" style="width:100%">' + icon('trash') + 'Xóa truyện</button>' +
@@ -1822,14 +1830,14 @@ state.selectedChapters = new Set();
 function renderChapters() {
   const story = STORIES.find((s) => s.id === state.chapterStoryId) || STORIES[0];
   const all = CHAPTERS.filter((c) => c.storyId === story.id);
-  const filters = ['Tất cả', 'Đã đăng', 'Chờ duyệt', 'Bản nháp', 'Hẹn giờ'];
+  const filters = ['Tất cả', 'Đã đăng', 'Bản nháp', 'Hẹn giờ'];
   const rows = state.chapterFilter === 'Tất cả' ? all : all.filter((c) => c.status === state.chapterFilter);
   const sel = [...state.selectedChapters].filter((id) => all.some((c) => c.id === id));
   const words = all.reduce((s, c) => s + c.words, 0);
 
   return '' +
     '<div class="page-head"><div class="head-text"><h1>Quản lý chương</h1>' +
-      '<p>Kéo thả để đổi thứ tự, hẹn giờ đăng và đặt giá Xu cho từng chương.</p></div>' +
+      '<p>Kéo thả để đổi thứ tự, xuất bản hàng loạt và hẹn giờ đăng.</p></div>' +
       '<div class="page-actions">' +
         '<button class="btn" type="button" data-action="import-chapters">' + icon('upload') + 'Nhập hàng loạt</button>' +
         '<button class="btn btn-primary" type="button" data-open-editor="' + story.id + '">' + icon('plus') + 'Thêm chương</button>' +
@@ -1853,7 +1861,8 @@ function renderChapters() {
       '<section class="card" aria-label="Danh sách chương">' +
         '<div class="card-head" style="align-items:flex-start">' +
           '<div style="min-width:0"><h2 style="white-space:normal">' + esc(story.title) + '</h2>' +
-            '<span class="sub">' + all.length + ' chương · ' + fmtNum(words) + ' từ · ' + readTime(words) + '</span></div>' +
+            '<span class="sub">' + all.length + ' chương · ' + fmtNum(words) + ' từ · ' +
+              (story.priceXu ? story.priceXu + ' Xu để mở khoá' : 'Miễn phí') + '</span></div>' +
           '<span class="grow"></span>' +
           '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
             '<button class="btn btn-sm" type="button" data-chapter-sort-auto>' + icon('sort', 15) + 'Đánh số lại</button>' +
@@ -1893,7 +1902,7 @@ function renderChapters() {
                 '<span class="tx"><b>' + esc(c.title) + '</b><span>' +
                   fmtNum(c.words) + ' từ · ' + readTime(c.words) +
                   (c.status === 'Hẹn giờ' && c.scheduleAt ? ' · hẹn ' + fmtDateTime(c.scheduleAt) : '') +
-                  (c.vipPrice ? ' · ' + c.vipPrice + ' Xu' : '') + '</span></span>' +
+                  '</span></span>' +
                 '<span class="meta">' + chapBadge(c.status) +
                   '<button class="btn btn-ghost btn-sm" type="button" data-open-editor="' + story.id +
                     '" data-chapter="' + c.id + '" aria-label="Sửa chương ' + c.number + '">' + icon('edit', 15) + '</button>' +
@@ -1920,7 +1929,7 @@ function editorTarget() {
     chap = {
       id: 'draft', storyId: story.id, number: max + 1,
       title: 'Chương ' + (max + 1) + ': ', words: 0, status: 'Bản nháp',
-      publishedAt: null, scheduleAt: null, vipPrice: 0, body: '',
+      publishedAt: null, scheduleAt: null, body: '',
     };
   }
   return { story, chap };
@@ -1933,6 +1942,7 @@ function renderEditorPage() {
 
   return '' +
     '<div class="editor show" id="editorPage" aria-label="Trình soạn chương">' +
+      '<h1 class="sr-only">Soạn chương</h1>' +
       '<div class="editor-top">' +
         '<button class="btn btn-ghost btn-sm" type="button" data-editor="close" aria-label="Thoát trình soạn">' +
           icon('chevronLeft', 17) + '</button>' +
@@ -1985,24 +1995,15 @@ function renderEditorPage() {
 
         '<aside class="editor-side" aria-label="Thiết lập chương">' +
           '<div><h3>Xuất bản</h3>' +
-            '<div class="field"><label for="eStatus">Trạng thái</label>' +
+            '<div class="field"><label for="eStatus">Khi bấm đăng</label>' +
               '<select class="select" id="eStatus">' +
-                ['Bản nháp', 'Chờ duyệt', 'Đã đăng', 'Hẹn giờ'].map((s) =>
+                ['Đã đăng', 'Hẹn giờ'].map((s) =>
                   '<option' + (chap.status === s ? ' selected' : '') + '>' + s + '</option>').join('') +
-              '</select></div>' +
+              '</select>' +
+              '<span class="hint">Lưu nháp bằng nút “Lưu nháp” trên thanh công cụ.</span></div>' +
             '<div class="field" style="margin-top:12px"><label for="eSchedule">Hẹn giờ đăng</label>' +
               '<input class="input" id="eSchedule" type="datetime-local" value="' +
                 (chap.scheduleAt ? chap.scheduleAt.slice(0, 16) : '') + '"></div>' +
-          '</div>' +
-          '<div><h3>Kiếm tiền</h3>' +
-            '<label class="switch-row" style="padding:0;border:0">' +
-              '<span class="tx"><b>Chương VIP</b><span>Độc giả trả Xu để mở</span></span>' +
-              '<button class="switch" type="button" role="switch" id="eVipSwitch" aria-checked="' +
-                (chap.vipPrice > 0) + '" aria-label="Bật chương VIP"></button>' +
-            '</label>' +
-            '<div class="field" style="margin-top:12px"><label for="eVip">Giá mở chương (Xu)</label>' +
-              '<input class="input" id="eVip" type="number" min="0" max="200" step="5" value="' + chap.vipPrice + '">' +
-              '<span class="hint">Gợi ý 20–40 Xu cho chương mới.</span></div>' +
           '</div>' +
           '<div><h3>Thống kê</h3>' +
             '<div class="meta-line"><span>Số từ</span><b id="sideWords">' + fmtNum(initialWords) + '</b></div>' +
@@ -2028,92 +2029,17 @@ function renderEditorPage() {
 const stripHTML = (html) => String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 const excerpt = (text, n) => (text.length > n ? text.slice(0, n).trimEnd() + '…' : text);
 
-function renderReview() {
-  const pendingChaps = CHAPTERS.filter((c) => c.status === 'Chờ duyệt');
-  const pendingStories = STORIES.filter((s) => s.status === 'Chờ duyệt');
-  const isChap = state.reviewTab === 'Chương';
-  const items = isChap ? pendingChaps : pendingStories;
-
-  const card = (c) => {
-    const story = STORIES.find((s) => s.id === c.storyId) || { title: c.title, author: '—', genre: '—' };
-    return '<article class="card review-card">' +
-      '<div class="card-head" style="align-items:flex-start">' +
-        '<div class="cell-title" style="min-width:0">' + coverOf(story, 34) +
-          '<span class="t"><b>' + esc(story.title) + '</b>' +
-          '<span>Chương ' + c.number + ' · ' + esc(story.author) + '</span></span></div>' +
-        '<span class="grow"></span>' + chapBadge(c.status) +
-      '</div>' +
-      '<div class="body"><b style="color:var(--text);font-family:var(--serif)">' +
-        esc(c.title) + '</b><p style="margin:8px 0 0">' + esc(excerpt(stripHTML(c.body), 260)) + '</p></div>' +
-      '<div class="pager" style="border-top:1px solid var(--border)">' +
-        '<span class="info">' + fmtNum(c.words) + ' từ · ' + readTime(c.words) + ' · gửi ' +
-          relTime(c.publishedAt || '2026-11-01T15:00:00') + '</span>' +
-        '<button class="btn btn-sm btn-ghost" type="button" data-review-preview="' + c.id + '">' + icon('eye', 15) + 'Xem</button>' +
-        '<button class="btn btn-sm" type="button" data-review="reject" data-id="' + c.id + '">' + icon('x', 15) + 'Từ chối</button>' +
-        '<button class="btn btn-sm btn-primary" type="button" data-review="approve" data-id="' + c.id + '">' +
-          icon('check', 15) + 'Duyệt</button>' +
-      '</div></article>';
-  };
-
-  const storyCard = (s) => '<article class="card review-card">' +
-    '<div class="card-head" style="align-items:flex-start">' +
-      '<div class="cell-title" style="min-width:0">' + coverOf(s, 34) +
-        '<span class="t"><b>' + esc(s.title) + '</b><span>' + esc(s.author) + ' · ' + esc(s.genre) + '</span></span></div>' +
-      '<span class="grow"></span>' + storyBadge(s.status) + '</div>' +
-    '<div class="body" style="font-size:14.5px">' + esc(s.desc) +
-      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">' +
-        s.tags.map((t) => '<span class="chip">' + esc(t) + '</span>').join('') + '</div></div>' +
-    '<div class="pager" style="border-top:1px solid var(--border)">' +
-      '<span class="info">' + fmtNum(s.chapters) + ' chương · gửi ' + relTime(s.updated) + '</span>' +
-      '<button class="btn btn-sm btn-ghost" type="button" data-review-preview-story="' + s.id + '">' + icon('eye', 15) + 'Xem</button>' +
-      '<button class="btn btn-sm" type="button" data-review="reject" data-story="' + s.id + '">' + icon('x', 15) + 'Từ chối</button>' +
-      '<button class="btn btn-sm btn-primary" type="button" data-review="approve" data-story="' + s.id + '">' +
-        icon('check', 15) + 'Duyệt</button>' +
-    '</div></article>';
-
-  return '' +
-    '<div class="page-head"><div class="head-text"><h1>Duyệt bài</h1>' +
-      '<p>' + pendingChaps.length + ' chương và ' + pendingStories.length + ' truyện đang chờ xử lý.</p></div>' +
-      '<div class="page-actions">' +
-        '<button class="btn" type="button" data-review-all="reject">' + icon('x') + 'Từ chối tất cả</button>' +
-        '<button class="btn btn-primary" type="button" data-review-all="approve">' + icon('check') + 'Duyệt tất cả</button>' +
-      '</div></div>' +
-    '<section class="card" style="margin-bottom:16px">' +
-      '<div class="tabs" role="tablist" aria-label="Loại nội dung chờ duyệt">' +
-        ['Chương', 'Truyện'].map((t) => {
-          const n = t === 'Chương' ? pendingChaps.length : pendingStories.length;
-          return '<button class="tab" type="button" role="tab" data-review-tab="' + t + '" aria-selected="' +
-            (state.reviewTab === t) + '">' + t +
-            '<span style="color:var(--text-3);font-weight:500;margin-left:6px">' + n + '</span></button>';
-        }).join('') +
-      '</div>' +
-      '<div class="card-body" style="color:var(--text-3);font-size:12.5px;display:flex;gap:8px;align-items:center">' +
-        icon('alert', 15) + 'Ưu tiên nội dung quá 24 giờ. Lý do từ chối sẽ được gửi tới tác giả.' +
-      '</div>' +
-    '</section>' +
-    (items.length === 0
-      ? '<section class="card">' + emptyState({
-          iconName: 'check-circle', title: 'Hàng đợi đã trống',
-          message: 'Không còn nội dung nào chờ duyệt. Nội dung mới sẽ hiện ở đây ngay khi được gửi.',
-        }) + '</section>'
-      : '<div class="review-grid">' + (isChap ? items.map(card).join('') : items.map(storyCard).join('')) + '</div>');
-}
-
 /* ============================================================================
    N. BÌNH LUẬN
    ========================================================================== */
 function renderComments() {
-  const filters = ['Mới', 'Bị báo cáo', 'Đã duyệt', 'Đã ẩn', 'Tất cả'];
+  const filters = ['Tất cả', 'Hiển thị', 'Đã ẩn'];
   const rows = COMMENTS.filter((c) => state.commentFilter === 'Tất cả' || c.status === state.commentFilter);
   const countFor = (f) => (f === 'Tất cả' ? COMMENTS.length : COMMENTS.filter((c) => c.status === f).length);
 
   return '' +
     '<div class="page-head"><div class="head-text"><h1>Bình luận</h1>' +
-      '<p>Duyệt, ẩn hoặc xóa bình luận. Nội dung bị báo cáo được ưu tiên hiển thị.</p></div>' +
-      '<div class="page-actions">' +
-        '<button class="btn" type="button" data-action="comment-settings">' + icon('settings') + 'Quy tắc kiểm duyệt</button>' +
-        '<button class="btn btn-primary" type="button" data-nav="review">' + icon('check-circle') + 'Duyệt nội dung</button>' +
-      '</div></div>' +
+      '<p>' + COMMENTS.length + ' bình luận · ' + countFor('Đã ẩn') + ' đang ẩn với độc giả.</p></div></div>' +
     '<section class="card">' +
       '<div class="tabs" role="tablist" aria-label="Lọc bình luận">' +
         filters.map((f) => '<button class="tab" type="button" role="tab" data-comment-filter="' + f +
@@ -2126,33 +2052,24 @@ function renderComments() {
             message: 'Mục “' + state.commentFilter + '” hiện đang trống. Chọn bộ lọc khác để xem thêm.',
           })
         : rows.map((c) => {
-            const reported = c.status === 'Bị báo cáo';
+            const hidden = c.status === 'Đã ẩn';
             return '<div class="thread-row">' +
               '<span class="avatar light" aria-hidden="true">' + esc(initials(c.user)) + '</span>' +
-              '<div class="tx"><div class="who">' + esc(c.user) +
-                (reported ? '<span class="badge badge-danger plain">' + c.reports + ' báo cáo</span>' : '') +
-                '<span>' + relTime(c.at) + '</span></div>' +
+              '<div class="tx"><div class="who">' + esc(c.user) + '<span>' + relTime(c.at) + '</span>' +
+                (hidden ? '<span class="badge badge-neutral plain" style="margin-left:4px">Đang ẩn</span>' : '') + '</div>' +
                 '<p>' + esc(c.text) + '</p>' +
-                '<div class="ref">' + icon('book', 13) + esc(c.story) + ' · Chương ' + c.chapter +
-                  '<span class="badge ' + (c.status === 'Mới' ? 'badge-cho-duyet' :
-                    c.status === 'Đã duyệt' ? 'badge-dang-ra' :
-                    c.status === 'Đã ẩn' ? 'badge-neutral' : 'badge-danger') + ' plain" style="margin-left:4px">' + c.status + '</span>' +
-                '</div>' +
+                '<div class="ref">' + icon('book', 13) + esc(c.story) + ' · Chương ' + c.chapter + '</div>' +
               '</div>' +
               '<div class="acts">' +
-                (c.status !== 'Đã duyệt' ? '<button class="btn btn-ghost btn-sm" type="button" data-comment="approve" data-id="' + c.id +
-                  '" aria-label="Duyệt bình luận của ' + esc(c.user) + '">' + icon('check', 15) + '</button>' : '') +
-                '<button class="btn btn-ghost btn-sm" type="button" data-comment="reply" data-id="' + c.id +
-                  '" aria-label="Phản hồi bình luận của ' + esc(c.user) + '">' + icon('reply', 15) + '</button>' +
-                (c.status !== 'Đã ẩn' ? '<button class="btn btn-ghost btn-sm" type="button" data-comment="hide" data-id="' + c.id +
-                  '" aria-label="Ẩn bình luận của ' + esc(c.user) + '">' + icon('eyeOff', 15) + '</button>' : '') +
+                '<button class="btn btn-ghost btn-sm" type="button" data-comment="toggle" data-id="' + c.id +
+                  '" aria-label="' + (hidden ? 'Hiện lại' : 'Ẩn') + ' bình luận của ' + esc(c.user) + '">' +
+                  icon(hidden ? 'eye' : 'eyeOff', 15) + '</button>' +
                 '<button class="btn btn-ghost btn-sm" type="button" data-comment="delete" data-id="' + c.id +
                   '" aria-label="Xóa bình luận của ' + esc(c.user) + '">' + icon('trash', 15) + '</button>' +
               '</div></div>';
           }).join('')) +
     '</section>';
 }
-
 /* ============================================================================
    O. THỂ LOẠI & THẺ
    ========================================================================== */
@@ -2205,190 +2122,6 @@ function renderTaxonomy() {
       '</tbody></table></div>' +
       '<div class="pager"><span class="info">Thay đổi áp dụng ngay cho trang đọc và bộ lọc.</span>' +
         '<button class="btn btn-sm" type="button" data-export="taxonomy">' + icon('download', 15) + 'Xuất danh mục</button></div>' +
-    '</section>';
-}
-
-/* ============================================================================
-   P. NGƯỜI DÙNG
-   ========================================================================== */
-function renderUsers() {
-  const q = state.userQuery.trim().toLowerCase();
-  const rows = USERS.filter((u) => {
-    if (q && !(u.name + ' ' + u.email).toLowerCase().includes(q)) return false;
-    if (state.userRole && u.role !== state.userRole) return false;
-    if (state.userStatus && u.status !== state.userStatus) return false;
-    return true;
-  });
-  const perPage = 8;
-  const pages = Math.max(1, Math.ceil(rows.length / perPage));
-  const page = Math.min(state.userPage, pages);
-  state.userPage = page;
-  const slice = rows.slice((page - 1) * perPage, page * perPage);
-  const roleClass = { Admin: 'badge-accent', 'Biên tập viên': 'badge-cho-duyet', 'Tác giả': 'badge-dang-ra', 'Độc giả': 'badge-neutral' };
-  const statusClass = { 'Hoạt động': 'badge-dang-ra', 'Bị khóa': 'badge-danger', 'Tạm khóa': 'badge-tam-ngung', 'Chờ xác minh': 'badge-cho-duyet' };
-
-  return '' +
-    '<div class="page-head"><div class="head-text"><h1>Người dùng</h1>' +
-      '<p>' + USERS.length + ' tài khoản · ' + USERS.filter((u) => u.role === 'Tác giả').length + ' tác giả · ' +
-      USERS.filter((u) => u.status === 'Chờ xác minh').length + ' hồ sơ chờ xác minh.</p></div>' +
-      '<div class="page-actions">' +
-        '<button class="btn" type="button" data-export="users">' + icon('download') + 'Xuất danh sách</button>' +
-        '<button class="btn btn-primary" type="button" data-user-invite>' + icon('plus') + 'Mời thành viên</button>' +
-      '</div></div>' +
-    '<section class="card">' +
-      '<div class="filter-bar">' +
-        '<div class="search-inline">' + icon('search') +
-          '<input class="input" id="userSearch" type="search" placeholder="Tìm theo tên hoặc email…" value="' +
-            esc(state.userQuery) + '" aria-label="Tìm người dùng"></div>' +
-        '<select class="select" id="userRole" aria-label="Lọc theo vai trò">' +
-          '<option value="">Mọi vai trò</option>' +
-          ['Admin', 'Biên tập viên', 'Tác giả', 'Độc giả'].map((r) =>
-            '<option value="' + r + '"' + (state.userRole === r ? ' selected' : '') + '>' + r + '</option>').join('') +
-        '</select>' +
-        '<select class="select" id="userStatus" aria-label="Lọc theo trạng thái">' +
-          '<option value="">Mọi trạng thái</option>' +
-          ['Hoạt động', 'Bị khóa', 'Tạm khóa', 'Chờ xác minh'].map((st) =>
-            '<option value="' + st + '"' + (state.userStatus === st ? ' selected' : '') + '>' + st + '</option>').join('') +
-        '</select>' +
-        '<span class="grow"></span>' +
-        '<button class="btn btn-ghost btn-sm" type="button" data-action="clear-user-filters">' + icon('x', 15) + 'Xóa lọc</button>' +
-      '</div>' +
-      (rows.length === 0
-        ? emptyState({ iconName: 'users', title: 'Không tìm thấy người dùng', message: 'Thử từ khóa khác hoặc bỏ lọc vai trò.' })
-        : '<div class="table-wrap"><table><thead><tr>' +
-          '<th scope="col">Thành viên</th><th scope="col">Vai trò</th><th scope="col">Trạng thái</th>' +
-          '<th scope="col" class="hide-sm">Truyện</th><th scope="col" class="hide-xs">Lượt đọc</th>' +
-          '<th scope="col" class="hide-sm">Tham gia</th><th scope="col" style="text-align:right">Thao tác</th>' +
-          '</tr></thead><tbody>' +
-          slice.map((u) => '<tr>' +
-            '<td><div class="cell-title"><span class="avatar light" aria-hidden="true">' + esc(initials(u.name)) + '</span>' +
-              '<span class="t"><b>' + esc(u.name) + '</b><span>' + esc(u.email) + '</span></span></div></td>' +
-            '<td>' + badge(u.role, roleClass[u.role] || 'badge-neutral') + '</td>' +
-            '<td>' + badge(u.status, statusClass[u.status] || 'badge-neutral') + '</td>' +
-            '<td class="num hide-sm">' + u.stories + '</td>' +
-            '<td class="num hide-xs">' + fmtShort(u.reads) + '</td>' +
-            '<td class="cell-muted hide-sm">' + fmtDate(u.joined) + '</td>' +
-            '<td><div class="row-actions">' +
-              '<button class="btn btn-ghost btn-sm" type="button" data-user-view="' + u.id + '" aria-label="Xem hồ sơ ' + esc(u.name) + '">' + icon('eye', 15) + '</button>' +
-              '<button class="btn btn-ghost btn-sm" type="button" data-user-lock="' + u.id + '" aria-label="' +
-                (u.status === 'Bị khóa' ? 'Mở khóa ' : 'Khóa ') + esc(u.name) + '">' +
-                icon('lock', 15) + '</button>' +
-              '<button class="btn btn-ghost btn-sm" type="button" data-user-role="' + u.id + '" aria-label="Đổi vai trò ' + esc(u.name) + '">' +
-                icon('shield', 15) + '</button>' +
-            '</div></td></tr>').join('') +
-          '</tbody></table></div>') +
-      '<div class="pager"><span class="info">Hiển thị ' + (rows.length ? (page - 1) * perPage + 1 : 0) + '–' +
-        Math.min(page * perPage, rows.length) + ' trong ' + rows.length + ' tài khoản</span>' +
-        '<button class="btn btn-sm" type="button" data-user-page="' + (page - 1) + '" ' + (page === 1 ? 'disabled' : '') +
-          ' aria-label="Trang trước">' + icon('chevronLeft', 15) + '</button>' +
-        Array.from({ length: pages }, (_, i) => i + 1).map((n) =>
-          '<button class="btn btn-sm min" type="button" data-user-page="' + n + '"' +
-          (n === page ? ' aria-current="true"' : '') + '>' + n + '</button>').join('') +
-        '<button class="btn btn-sm" type="button" data-user-page="' + (page + 1) + '" ' + (page === pages ? 'disabled' : '') +
-          ' aria-label="Trang sau">' + icon('chevronRight', 15) + '</button>' +
-      '</div>' +
-    '</section>';
-}
-
-/* ============================================================================
-   Q. DOANH THU & XU
-   ========================================================================== */
-function renderRevenue() {
-  const revenue = TRANSACTIONS.filter((t) => t.status === 'Thành công').reduce((s, t) => s + t.amount, 0);
-  const pendingW = WITHDRAWALS.filter((w) => w.status === 'Chờ duyệt');
-  const paid = WITHDRAWALS.filter((w) => w.status === 'Đã duyệt').reduce((s, w) => s + w.amount, 0);
-  const kpi = (label, value, hint, iconName) =>
-    '<div class="kpi"><div class="kpi-top"><span class="kpi-ic">' + icon(iconName) + '</span>' + esc(label) + '</div>' +
-    '<b>' + value + '</b><small>' + esc(hint) + '</small></div>';
-
-  const tabs = '<div class="tabs" role="tablist" aria-label="Loại dữ liệu">' +
-    ['Giao dịch', 'Rút tiền'].map((t) => '<button class="tab" type="button" role="tab" data-revenue-tab="' + t +
-      '" aria-selected="' + (state.revenueTab === t) + '">' + t +
-      '<span style="color:var(--text-3);font-weight:500;margin-left:6px">' +
-      (t === 'Giao dịch' ? TRANSACTIONS.length : WITHDRAWALS.length) + '</span></button>').join('') + '</div>';
-
-  const q = state.txQuery.trim().toLowerCase();
-  const txRows = TRANSACTIONS.filter((t) => {
-    if (state.txType && t.type !== state.txType) return false;
-    if (q && !(t.user + ' ' + t.story + ' ' + t.id).toLowerCase().includes(q)) return false;
-    return true;
-  });
-  const types = [...new Set(TRANSACTIONS.map((t) => t.type))];
-  const txFilter = '<div class="filter-bar">' +
-      '<div class="search-inline">' + icon('search') +
-        '<input class="input" id="txSearch" type="search" placeholder="Tìm theo người dùng, truyện, mã…" value="' +
-          esc(state.txQuery) + '" aria-label="Tìm giao dịch"></div>' +
-      '<select class="select" id="txType" aria-label="Lọc theo loại giao dịch">' +
-        '<option value="">Mọi loại</option>' +
-        types.map((t) => '<option value="' + esc(t) + '"' + (state.txType === t ? ' selected' : '') + '>' + esc(t) + '</option>').join('') +
-      '</select><span class="grow"></span>' +
-      '<span class="sub" style="font-size:12.5px;color:var(--text-3)">' + txRows.length + ' giao dịch</span></div>';
-  const txTable = txFilter + '<div class="table-wrap"><table><thead><tr>' +
-    '<th scope="col">Mã</th><th scope="col">Người dùng</th><th scope="col">Loại</th>' +
-    '<th scope="col" class="hide-sm">Nội dung</th><th scope="col">Số tiền</th>' +
-    '<th scope="col" class="hide-xs">Thời gian</th><th scope="col">Trạng thái</th>' +
-    '<th scope="col"><span class="sr-only">Chi tiết</span></th></tr></thead><tbody>' +
-    (txRows.length === 0
-      ? '<tr><td colspan="8">' + emptyState({ iconName: 'search', title: 'Không có giao dịch phù hợp',
-          message: 'Thử bỏ lọc loại giao dịch hoặc tìm bằng mã khác.' }) + '</td></tr>'
-      : txRows.map((t) => '<tr>' +
-      '<td class="cell-muted">#' + esc(t.id.toUpperCase()) + '</td>' +
-      '<td><b style="font-weight:600">' + esc(t.user) + '</b></td>' +
-      '<td>' + esc(t.type) + '</td>' +
-      '<td class="cell-muted hide-sm">' + esc(t.story) + '</td>' +
-      '<td class="num">' + fmtMoney(t.amount) + '</td>' +
-      '<td class="cell-muted hide-xs">' + fmtDateTime(t.at) + '</td>' +
-      '<td>' + badge(t.status, t.status === 'Thành công' ? 'badge-dang-ra' : 'badge-tam-ngung') + '</td>' +
-      '<td><div class="row-actions"><button class="btn btn-ghost btn-sm" type="button" data-tx-view="' + t.id +
-        '" aria-label="Chi tiết giao dịch ' + esc(t.id) + '">' + icon('eye', 15) + '</button></div></td>' +
-    '</tr>').join('')) + '</tbody></table></div>';
-
-  const wTable = '<div class="table-wrap"><table><thead><tr>' +
-    '<th scope="col">Tác giả</th><th scope="col">Số tiền</th><th scope="col" class="hide-sm">Phương thức</th>' +
-    '<th scope="col" class="hide-xs">Yêu cầu lúc</th><th scope="col">Trạng thái</th>' +
-    '<th scope="col" style="text-align:right">Thao tác</th></tr></thead><tbody>' +
-    WITHDRAWALS.map((w) => '<tr>' +
-      '<td><div class="cell-title"><span class="avatar light" aria-hidden="true">' + esc(initials(w.user)) + '</span>' +
-        '<span class="t"><b>' + esc(w.user) + '</b><span>' + esc(w.bank) + '</span></span></div></td>' +
-      '<td class="num">' + fmtNum(w.amount) + ' đ</td>' +
-      '<td class="hide-sm">' + esc(w.method) + '</td>' +
-      '<td class="cell-muted hide-xs">' + relTime(w.at) + '</td>' +
-      '<td>' + badge(w.status, w.status === 'Chờ duyệt' ? 'badge-cho-duyet' :
-        w.status === 'Đã duyệt' ? 'badge-dang-ra' : 'badge-danger') + '</td>' +
-      '<td><div class="row-actions">' +
-        (w.status === 'Chờ duyệt'
-          ? '<button class="btn btn-sm" type="button" data-withdraw="reject" data-id="' + w.id + '">Từ chối</button>' +
-            '<button class="btn btn-sm btn-primary" type="button" data-withdraw="approve" data-id="' + w.id + '">Duyệt</button>'
-          : '<button class="btn btn-ghost btn-sm" type="button" data-withdraw="view" data-id="' + w.id +
-            '" aria-label="Xem chi tiết yêu cầu của ' + esc(w.user) + '">' + icon('eye', 15) + '</button>') +
-      '</div></td></tr>').join('') + '</tbody></table></div>';
-
-  return '' +
-    '<div class="page-head"><div class="head-text"><h1>Doanh thu &amp; Xu</h1>' +
-      '<p>Đối soát giao dịch mua chương, nạp Xu và yêu cầu rút tiền của tác giả.</p></div>' +
-      '<div class="page-actions">' +
-        '<button class="btn" type="button" data-export="transactions">' + icon('download') + 'Xuất báo cáo</button>' +
-        '<button class="btn btn-primary" type="button" data-action="payout">' + icon('wallet') + 'Chi trả đợt mới</button>' +
-      '</div></div>' +
-
-    '<div class="kpi-grid">' +
-      kpi('Tổng doanh thu', fmtNum(revenue) + ' đ', 'trong 12 giao dịch gần nhất', 'coins') +
-      kpi('Xu đã bán', fmtShort(revenue * 3) + ' Xu', 'quy đổi từ ' + fmtNum(revenue) + ' đ', 'wallet') +
-      kpi('Chờ rút', fmtNum(pendingW.reduce((s, w) => s + w.amount, 0)) + ' đ', pendingW.length + ' yêu cầu cần duyệt', 'clock') +
-      kpi('Đã chi trả', fmtNum(paid) + ' đ', 'đợt trước đã hoàn tất', 'check-circle') +
-    '</div>' +
-
-    '<section class="card" style="margin-bottom:16px"><div class="card-head"><h2>Doanh thu theo ngày</h2>' +
-      '<span class="grow"></span>' +
-      '<div class="seg" role="group" aria-label="Khoảng thời gian">' +
-        '<button class="btn btn-sm" type="button" data-revenue-days="7" aria-pressed="true">7 ngày</button>' +
-        '<button class="btn btn-sm" type="button" data-revenue-days="30" aria-pressed="false">30 ngày</button></div>' +
-      '</div><div class="card-body" id="revChartHost">' + chartSVG(7, 'revenue') + '</div></section>' +
-
-    '<section class="card">' + tabs +
-      (state.revenueTab === 'Giao dịch' ? txTable : wTable) +
-      '<div class="pager"><span class="info">Số liệu mẫu, đơn vị: đồng Việt Nam.</span>' +
-        '<button class="btn btn-sm" type="button" data-export="transactions">' + icon('download', 15) + 'Tải CSV</button></div>' +
     '</section>';
 }
 
@@ -2469,8 +2202,7 @@ function renderSettings() {
       '</div>' +
       '<div style="margin-top:20px;padding-top:8px;border-top:1px solid var(--border)">' +
         sw('watermark', 'Đóng dấu bản quyền', 'Chèn watermark vào ảnh bìa tải lên.') +
-        '<div class="switch-row"><span class="tx"><b>Cho phép index</b><span>Cho công cụ tìm kiếm lập chỉ mục.</span></span>' +
-          '<button class="switch" type="button" role="switch" data-toggle="index" aria-checked="true" aria-label="Cho phép index"></button></div>' +
+        sw('index', 'Cho phép index', 'Cho công cụ tìm kiếm lập chỉ mục trang truyện.') +
       '</div>' +
       '<div style="display:flex;gap:8px;margin-top:20px"><button class="btn btn-primary" type="button" data-save-settings>' +
         icon('save') + 'Lưu thay đổi</button></div>' +
@@ -2517,7 +2249,7 @@ function renderSettings() {
             '<span class="btn btn-sm">Nút phụ</span>' +
             '<span class="btn btn-danger btn-sm">Xóa</span></div>' +
           '<div style="display:flex;gap:6px;flex-wrap:wrap">' + storyBadge('Đang ra') +
-            chapBadge('Chờ duyệt') + badge('Tạm ngưng', 'badge-tam-ngung') +
+            chapBadge('Hẹn giờ') + badge('Tạm ngưng', 'badge-tam-ngung') +
             badge('Hoàn thành', 'badge-hoan-thanh') + '</div>' +
           '<input class="input" placeholder="Ô nhập liệu" aria-label="Ô nhập liệu mẫu">' +
         '</div>' +
@@ -2528,11 +2260,8 @@ function renderSettings() {
     '<section class="card card-pad" style="max-width:860px">' +
       '<h2 style="font-size:15px;font-weight:600;margin-bottom:4px">Tính năng hệ thống</h2>' +
       '<p style="font-size:13px;color:var(--text-3);margin-bottom:8px">Bật/tắt nhanh các tính năng ảnh hưởng tới toàn bộ người đọc.</p>' +
+      sw('xu', 'Mở khoá bằng Xu', 'Bán truyện trả phí: độc giả trả Xu để mở khoá toàn bộ truyện.') +
       sw('comments', 'Bình luận', 'Cho phép độc giả bình luận dưới chương.') +
-      sw('readerLogin', 'Bắt buộc đăng nhập', 'Độc giả phải đăng nhập mới đọc được chương VIP.') +
-      sw('vip', 'Chương VIP', 'Mở bán chương trả phí bằng Xu.') +
-      sw('autoApprove', 'Tự duyệt chương', 'Chương của tác giả đã xác minh được đăng ngay.') +
-      sw('ads', 'Quảng cáo', 'Hiển thị banner quảng cáo cho độc giả miễn phí.') +
       sw('maintenance', 'Chế độ bảo trì', 'Tạm đóng trang đọc, chỉ quản trị viên truy cập được.') +
       '<div style="display:flex;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">' +
         '<button class="btn btn-primary" type="button" data-save-settings>' + icon('save') + 'Lưu thay đổi</button>' +
@@ -2569,6 +2298,7 @@ function refresh(focusId) {
   renderSidebar();
   renderBreadcrumb();
   renderNotifPop();
+  renderXuPill();
   if (focusId) {
     const el = document.getElementById(focusId);
     if (el) {
@@ -2615,9 +2345,13 @@ function editStoryModal(id) {
         genres.map((g) => '<option' + (g === s.genre ? ' selected' : '') + '>' + esc(g) + '</option>').join('') +
         '</select></div>' +
       '<div class="field"><label for="mStatus">Trạng thái</label><select class="select" id="mStatus" data-field="status">' +
-        ['Đang ra', 'Chờ duyệt', 'Tạm ngưng', 'Hoàn thành'].map((x) =>
+        ['Đang ra', 'Bản nháp', 'Tạm ngưng', 'Hoàn thành'].map((x) =>
           '<option' + (x === s.status ? ' selected' : '') + '>' + x + '</option>').join('') +
         '</select></div>' +
+      '<div class="field"><label for="mPrice">Giá mở khoá (Xu)</label>' +
+        '<input class="input" id="mPrice" type="number" min="0" max="999" step="5" inputmode="numeric" ' +
+        'data-field="priceXu" value="' + (s.priceXu || 0) + '">' +
+        '<span class="hint">0 = miễn phí.</span></div>' +
       '<div class="field full"><label for="mDesc">Mô tả</label>' +
         '<textarea class="textarea" id="mDesc" data-field="desc">' + esc(s.desc) + '</textarea></div>' +
       '</div>' +
@@ -2633,6 +2367,7 @@ function editStoryModal(id) {
       s.status = dlg.querySelector('[data-field=status]').value;
       s.desc = dlg.querySelector('[data-field=desc]').value.trim();
       s.featured = dlg.querySelector('[data-field=featured]').checked;
+      s.priceXu = Math.max(0, Math.min(999, Number(dlg.querySelector('[data-field=priceXu]').value) || 0));
       s.updated = '2026-11-02T12:00:00';
       toast('Đã cập nhật truyện', '“' + s.title + '” đã được lưu.');
       refresh();
@@ -2684,7 +2419,7 @@ function bulkStatusStories() {
     confirmText: 'Áp dụng',
     body: '<div class="field"><label for="bulkStatus">Trạng thái mới</label>' +
       '<select class="select" id="bulkStatus" data-field="status">' +
-      ['Đang ra', 'Chờ duyệt', 'Tạm ngưng', 'Hoàn thành'].map((s) => '<option>' + s + '</option>').join('') +
+      ['Đang ra', 'Bản nháp', 'Tạm ngưng', 'Hoàn thành'].map((s) => '<option>' + s + '</option>').join('') +
       '</select></div>',
     onConfirm: (dlg) => {
       const v = dlg.querySelector('[data-field=status]').value;
@@ -2751,47 +2486,6 @@ function chapterBulk(action) {
   refresh();
 }
 
-/* --- Duyệt bài --- */
-function rejectModal(kind, id) {
-  const isStory = kind === 'story';
-  const item = isStory ? STORIES.find((s) => s.id === id) : CHAPTERS.find((c) => c.id === id);
-  if (!item) return;
-  openModal({
-    title: 'Từ chối ' + (isStory ? 'truyện' : 'chương'),
-    subtitle: item.title,
-    confirmText: 'Gửi lý do từ chối',
-    danger: true,
-    body: '<div class="field"><label>Lý do từ chối</label>' +
-        ['Nội dung chưa đạt chất lượng', 'Sai thể loại', 'Nghi ngờ đạo văn', 'Vi phạm quy định cộng đồng']
-          .map((r, i) => '<label class="checkbox"><input type="radio" name="reason" value="' + r + '"' +
-            (i === 0 ? ' checked' : '') + '><span>' + r + '</span></label>').join('') +
-      '</div>' +
-      '<div class="field" style="margin-top:8px"><label for="rejectNote">Ghi chú thêm cho tác giả</label>' +
-        '<textarea class="textarea" id="rejectNote" placeholder="Ví dụ: phần mở đầu cần rõ bối cảnh hơn…"></textarea></div>',
-    onConfirm: (dlg) => {
-      const reason = dlg.querySelector('input[name=reason]:checked').value;
-      if (isStory) item.status = 'Tạm ngưng';
-      else { item.status = 'Bản nháp'; }
-      toast('Đã từ chối', reason + ' · thông báo đã gửi tác giả.');
-      refresh();
-      return true;
-    },
-  });
-}
-function approveItem(kind, id) {
-  if (kind === 'story') {
-    const s = STORIES.find((x) => x.id === id);
-    if (s) { s.status = 'Đang ra'; toast('Đã duyệt truyện', '“' + s.title + '” đã được xuất bản.'); }
-  } else {
-    const c = CHAPTERS.find((x) => x.id === id);
-    if (c) {
-      c.status = 'Đã đăng'; c.publishedAt = '2026-11-02T12:00:00';
-      toast('Đã duyệt chương', 'Chương ' + c.number + ' đã được đăng.');
-    }
-  }
-  refresh();
-}
-
 /* --- Đếm từ & tự động lưu --- */
 function editorWords() {
   const body = $('#chapBody');
@@ -2820,7 +2514,7 @@ function persistEditor() {
     chap = {
       id: uid('c'), storyId: story.id, number: max + 1,
       title: (titleEl && titleEl.value.trim()) || 'Chương ' + (max + 1), words: 0,
-      status: 'Bản nháp', publishedAt: null, scheduleAt: null, vipPrice: 0, body: html,
+      status: 'Bản nháp', publishedAt: null, scheduleAt: null, body: html,
     };
     CHAPTERS.push(chap);
     state.editor.chapterId = chap.id;
@@ -2887,7 +2581,7 @@ function publishChapter() {
     const max = CHAPTERS.filter((c) => c.storyId === story.id).reduce((m, c) => Math.max(m, c.number), 0);
     chap = {
       id: uid('c'), storyId: story.id, number: max + 1, title: '', words: 0,
-      status: 'Đã đăng', publishedAt: '2026-11-02T12:00:00', scheduleAt: null, vipPrice: 0, body: '',
+      status: 'Đã đăng', publishedAt: '2026-11-02T12:00:00', scheduleAt: null, body: '',
     };
     CHAPTERS.push(chap);
     state.editor.chapterId = chap.id;
@@ -2904,8 +2598,6 @@ function publishChapter() {
     return;
   }
   chap.scheduleAt = status === 'Hẹn giờ' ? sch.value + ':00' : null;
-  const vip = $('#eVip');
-  chap.vipPrice = vip ? Number(vip.value) || 0 : 0;
   chap.publishedAt = status === 'Đã đăng' ? '2026-11-02T12:00:00' : chap.publishedAt;
   toast('Đã lưu chương', 'Chương ' + chap.number + ' · trạng thái “' + status + '”.');
   navigate('chapters', { storyId: chap.storyId });
@@ -2969,135 +2661,6 @@ function deleteTaxonomy(kind, id) {
   });
 }
 
-/* --- Người dùng --- */
-function userDetailModal(id) {
-  const u = USERS.find((x) => x.id === id);
-  if (!u) return;
-  const st = { 'Hoạt động': 'badge-dang-ra', 'Bị khóa': 'badge-danger', 'Tạm khóa': 'badge-tam-ngung', 'Chờ xác minh': 'badge-cho-duyet' };
-  openModal({
-    title: u.name,
-    subtitle: u.email,
-    confirmText: 'Đóng',
-    cancelText: 'Hủy',
-    body: '<div style="display:flex;gap:14px;align-items:center;margin-bottom:16px">' +
-        '<span class="avatar light" style="width:52px;height:52px;font-size:16px" aria-hidden="true">' + esc(initials(u.name)) + '</span>' +
-        '<div><div style="display:flex;gap:6px;flex-wrap:wrap">' +
-          badge(u.role, 'badge-accent') + badge(u.status, st[u.status] || 'badge-neutral') + '</div>' +
-          '<div style="font-size:12.5px;color:var(--text-3);margin-top:6px">Tham gia ' + fmtDate(u.joined) + '</div></div>' +
-      '</div>' +
-      '<div class="stat-row">' +
-        '<div class="stat"><span>Truyện đã đăng</span><b>' + u.stories + '</b></div>' +
-        '<div class="stat"><span>Lượt đọc</span><b>' + fmtCompact0(u.reads) + '</b></div>' +
-        '<div class="stat"><span>Xu khả dụng</span><b>' + money(u.reads ? Math.round(u.reads / 42) : 0) + '</b></div>' +
-      '</div>' +
-      '<div style="margin-top:16px;border-top:1px solid var(--border);padding-top:8px">' +
-        '<div class="meta-line"><span>Mã người dùng</span><b>#' + esc(u.id.toUpperCase()) + '</b></div>' +
-        '<div class="meta-line"><span>Đăng nhập gần nhất</span><b>' + relTime('2026-11-02T07:20:00') + '</b></div>' +
-        '<div class="meta-line"><span>Xác thực 2 lớp</span><b>' + (u.role === 'Admin' ? 'Đang bật' : 'Chưa bật') + '</b></div>' +
-      '</div>',
-    onConfirm: () => true,
-  });
-}
-function userRoleModal(id) {
-  const u = USERS.find((x) => x.id === id);
-  if (!u) return;
-  openModal({
-    title: 'Đổi vai trò',
-    subtitle: u.name + ' · ' + u.email,
-    confirmText: 'Cập nhật',
-    body: '<div class="field"><label for="roleSel">Vai trò</label>' +
-      '<select class="select" id="roleSel" data-field="role">' +
-      ['Admin', 'Biên tập viên', 'Tác giả', 'Độc giả'].map((r) =>
-        '<option' + (r === u.role ? ' selected' : '') + '>' + r + '</option>').join('') +
-      '</select></div>' +
-      '<p style="font-size:12.5px;color:var(--text-3);margin-top:10px">Quyền hạn được áp dụng ngay sau khi lưu.</p>',
-    onConfirm: (dlg) => {
-      u.role = dlg.querySelector('[data-field=role]').value;
-      toast('Đã đổi vai trò', u.name + ' → ' + u.role);
-      refresh();
-      return true;
-    },
-  });
-}
-function inviteModal() {
-  openModal({
-    title: 'Mời thành viên',
-    subtitle: 'Gửi lời mời tham gia khu quản trị.',
-    confirmText: 'Gửi lời mời',
-    body: '<div class="form-grid">' +
-      '<div class="field full"><label for="invEmail">Email</label>' +
-        '<input class="input" id="invEmail" type="email" data-field="email" placeholder="ten@email.com">' +
-        '<span class="error">Email chưa hợp lệ.</span></div>' +
-      '<div class="field full"><label for="invRole">Vai trò</label>' +
-        '<select class="select" id="invRole" data-field="role">' +
-        ['Biên tập viên', 'Tác giả', 'Độc giả'].map((r) => '<option>' + r + '</option>').join('') + '</select></div>' +
-      '</div>',
-    validate: (dlg) => (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dlg.querySelector('[data-field=email]').value.trim())
-      ? true : 'Email chưa hợp lệ.'),
-    onConfirm: (dlg) => {
-      const email = dlg.querySelector('[data-field=email]').value.trim();
-      const role = dlg.querySelector('[data-field=role]').value;
-      USERS.push({
-        id: uid('u'), name: email.split('@')[0], email, role,
-        status: 'Chờ xác minh', joined: '2026-11-02', stories: 0, reads: 0,
-      });
-      toast('Đã gửi lời mời', email + ' · vai trò ' + role);
-      refresh();
-      return true;
-    },
-  });
-}
-
-/* --- Rút tiền --- */
-function withdrawAction(id, action) {
-  const w = WITHDRAWALS.find((x) => x.id === id);
-  if (!w) return;
-  if (action === 'view') {
-    openModal({
-      title: 'Yêu cầu rút tiền',
-      subtitle: w.user + ' · ' + fmtNum(w.amount) + ' đ',
-      confirmText: 'Đóng',
-      body: '<div class="meta-line"><span>Phương thức</span><b>' + esc(w.method) + '</b></div>' +
-        '<div class="meta-line"><span>Tài khoản nhận</span><b>' + esc(w.bank) + '</b></div>' +
-        '<div class="meta-line"><span>Yêu cầu lúc</span><b>' + fmtDateTime(w.at) + '</b></div>' +
-        '<div class="meta-line"><span>Trạng thái</span><b>' + esc(w.status) + '</b></div>',
-      onConfirm: () => true,
-    });
-    return;
-  }
-  if (action === 'approve') {
-    openModal({
-      title: 'Duyệt chi ' + fmtNum(w.amount) + ' đ',
-      subtitle: w.user + ' · ' + w.bank,
-      confirmText: 'Xác nhận chuyển khoản',
-      body: '<p style="font-size:13.5px;color:var(--text-2)">Hệ thống sẽ ghi nhận giao dịch và gửi email xác nhận cho tác giả.</p>',
-      onConfirm: () => {
-        w.status = 'Đã duyệt';
-        toast('Đã duyệt yêu cầu', fmtNum(w.amount) + ' đ → ' + w.user);
-        refresh();
-        return true;
-      },
-    });
-    return;
-  }
-  openModal({
-    title: 'Từ chối yêu cầu rút tiền',
-    subtitle: w.user + ' · ' + fmtNum(w.amount) + ' đ',
-    confirmText: 'Từ chối',
-    danger: true,
-    body: '<div class="field"><label for="wdNote">Lý do</label>' +
-      '<textarea class="textarea" id="wdNote" data-field="note" placeholder="Ví dụ: số dư chưa đủ ngưỡng chi trả."></textarea></div>',
-    validate: (dlg) => (dlg.querySelector('[data-field=note]').value.trim().length >= 6
-      ? true : 'Vui lòng nhập lý do ít nhất 6 ký tự.'),
-    onConfirm: (dlg) => {
-      w.status = 'Từ chối';
-      toast('Đã từ chối yêu cầu', dlg.querySelector('[data-field=note]').value.trim());
-      refresh();
-      return true;
-    },
-  });
-}
-
 /* --- Nhập chương hàng loạt --- */
 function importModal() {
   const story = STORIES.find((s) => s.id === state.chapterStoryId) || STORIES[0];
@@ -3120,7 +2683,7 @@ function importModal() {
         CHAPTERS.push({
           id: uid('c'), storyId: story.id, number: max + 1 + i,
           title: lines[0].slice(0, 80), words: (b.match(/[^\s]+/g) || []).length,
-          status: 'Bản nháp', publishedAt: null, scheduleAt: null, vipPrice: 0,
+          status: 'Bản nháp', publishedAt: null, scheduleAt: null,
           body: '<p>' + esc(lines.slice(1).join('\n')).replace(/\n/g, '</p><p>') + '</p>',
         });
       });
@@ -3161,48 +2724,6 @@ function helpModal() {
     onConfirm: () => true,
   });
 }
-function commentRulesModal() {
-  const rules = SETTINGS.commentRules || (SETTINGS.commentRules = {
-    profanity: true, reports: true, verified: false, links: true,
-  });
-  const row = (key, label) => '<label class="checkbox"><input type="checkbox" data-rule="' + key + '"' +
-    (rules[key] ? ' checked' : '') + '><span>' + label + '</span></label>';
-  openModal({
-    title: 'Quy tắc kiểm duyệt',
-    subtitle: 'Áp dụng tự động cho bình luận mới.',
-    confirmText: 'Lưu quy tắc',
-    body: row('profanity', 'Tự ẩn bình luận có từ khóa xúc phạm') +
-      row('reports', 'Ẩn bình luận có hơn 3 lượt báo cáo') +
-      row('verified', 'Bắt buộc tài khoản xác minh email mới được bình luận') +
-      row('links', 'Chặn liên kết ngoài trong bình luận'),
-    onConfirm: (dlg) => {
-      dlg.querySelectorAll('[data-rule]').forEach((el) => { rules[el.getAttribute('data-rule')] = el.checked; });
-      toast('Đã lưu quy tắc', 'Quy tắc kiểm duyệt mới có hiệu lực ngay.');
-      return true;
-    },
-  });
-}
-function payoutModal() {
-  openModal({
-    title: 'Chi trả đợt mới',
-    subtitle: 'Tổng hợp các yêu cầu đang chờ duyệt.',
-    confirmText: 'Tạo lệnh chi',
-    body: '<div class="meta-line"><span>Số yêu cầu</span><b>' +
-        WITHDRAWALS.filter((w) => w.status === 'Chờ duyệt').length + '</b></div>' +
-      '<div class="meta-line"><span>Tổng tiền</span><b>' +
-        fmtNum(WITHDRAWALS.filter((w) => w.status === 'Chờ duyệt').reduce((s, w) => s + w.amount, 0)) + ' đ</b></div>' +
-      '<div class="field" style="margin-top:14px"><label for="payCycle">Kỳ chi trả</label>' +
-        '<select class="select" id="payCycle"><option>Tháng 11/2026</option><option>Tháng 10/2026</option></select></div>',
-    onConfirm: () => {
-      let n = 0;
-      WITHDRAWALS.forEach((w) => { if (w.status === 'Chờ duyệt') { w.status = 'Đã duyệt'; n++; } });
-      toast('Đã tạo lệnh chi', n + ' yêu cầu được chuyển sang trạng thái đã duyệt.');
-      refresh();
-      return true;
-    },
-  });
-}
-
 /* ============================================================================
    T. XỬ LÝ SỰ KIỆN — uỷ quyền ở cấp document
    ========================================================================== */
@@ -3247,11 +2768,11 @@ function handleClick(e) {
   let el;
   if ((el = t('[data-notif-nav]'))) { toggleNotif(false); navigate(el.getAttribute('data-notif-nav')); return; }
   if ((el = t('[data-export]'))) { exportData(el.getAttribute('data-export')); return; }
+  if ((el = t('#xuBtn'))) { xuHistoryModal(); return; }
+  if (t('[data-xu-history]')) { xuHistoryModal(); return; }
+  if ((el = t('[data-unlock]'))) { unlockStory(el.getAttribute('data-unlock')); return; }
   if ((el = t('[data-story-preview]'))) { storyPreviewModal(el.getAttribute('data-story-preview')); return; }
   if ((el = t('[data-story-duplicate]'))) { duplicateStory(el.getAttribute('data-story-duplicate')); return; }
-  if ((el = t('[data-review-preview]'))) { reviewPreviewModal('chapter', el.getAttribute('data-review-preview')); return; }
-  if ((el = t('[data-review-preview-story]'))) { reviewPreviewModal('story', el.getAttribute('data-review-preview-story')); return; }
-  if ((el = t('[data-tx-view]'))) { txModal(el.getAttribute('data-tx-view')); return; }
   if ((el = t('[data-page]'))) { navigate(el.getAttribute('data-page')); return; }
   if ((el = t('[data-nav]'))) { navigate(el.getAttribute('data-nav')); return; }
 
@@ -3339,14 +2860,6 @@ function handleClick(e) {
     return;
   }
 
-  if ((el = t('#eVipSwitch'))) {
-    const vip = $('#eVip');
-    const on = el.getAttribute('aria-checked') !== 'true';
-    if (vip) vip.value = on ? (Number(vip.value) || 30) : 0;
-    el.setAttribute('aria-checked', String(on));
-    return;
-  }
-
   /* --- Trình soạn --- */
   if ((el = t('[data-editor]'))) {
     const a = el.getAttribute('data-editor');
@@ -3424,52 +2937,19 @@ function handleClick(e) {
     return;
   }
 
-  /* --- Duyệt bài --- */
-  if ((el = t('[data-review-tab]'))) { state.reviewTab = el.getAttribute('data-review-tab'); refresh(); return; }
-  if ((el = t('[data-review]'))) {
-    const act = el.getAttribute('data-review');
-    const cid = el.getAttribute('data-id');
-    const sid = el.getAttribute('data-story');
-    if (act === 'reject') rejectModal(sid ? 'story' : 'chapter', sid || cid);
-    else approveItem(sid ? 'story' : 'chapter', sid || cid);
-    return;
-  }
-  if ((el = t('[data-review-all]'))) {
-    const act = el.getAttribute('data-review-all');
-    if (act === 'approve') {
-      if (state.reviewTab === 'Chương') {
-        CHAPTERS.filter((c) => c.status === 'Chờ duyệt').forEach((c) => { c.status = 'Đã đăng'; c.publishedAt = '2026-11-02T12:00:00'; });
-      } else {
-        STORIES.filter((s) => s.status === 'Chờ duyệt').forEach((s) => { s.status = 'Đang ra'; });
-      }
-      toast('Đã duyệt tất cả', 'Hàng đợi “' + state.reviewTab + '” đã được xử lý.');
-      refresh();
-    } else {
-      confirmDelete({
-        title: 'Từ chối tất cả nội dung chờ duyệt?',
-        message: 'Tác giả sẽ nhận thông báo kèm lý do mặc định.',
-        confirmText: 'Từ chối tất cả',
-        onConfirm: () => {
-          if (state.reviewTab === 'Chương') {
-            CHAPTERS.filter((c) => c.status === 'Chờ duyệt').forEach((c) => { c.status = 'Bản nháp'; });
-          } else {
-            STORIES.filter((s) => s.status === 'Chờ duyệt').forEach((s) => { s.status = 'Tạm ngưng'; });
-          }
-          toast('Đã từ chối', 'Toàn bộ nội dung trong hàng đợi đã được trả về.');
-          refresh();
-        },
-      });
-    }
-    return;
-  }
-
   /* --- Bình luận --- */
   if ((el = t('[data-comment-filter]'))) { state.commentFilter = el.getAttribute('data-comment-filter'); refresh(); return; }
   if ((el = t('[data-comment]'))) {
     const act = el.getAttribute('data-comment');
     const c = COMMENTS.find((x) => x.id === el.getAttribute('data-id'));
     if (!c) return;
-    if (act === 'reply') { replyCommentModal(c.id); return; }
+    if (act === 'toggle') {
+      c.status = c.status === 'Đã ẩn' ? 'Hiển thị' : 'Đã ẩn';
+      toast(c.status === 'Đã ẩn' ? 'Đã ẩn bình luận' : 'Đã hiện lại bình luận',
+        c.user + ' · ' + c.story);
+      refresh();
+      return;
+    }
     if (act === 'delete') {
       confirmDelete({
         title: 'Xóa bình luận của ' + c.user + '?',
@@ -3481,8 +2961,8 @@ function handleClick(e) {
         },
       });
     } else {
-      c.status = act === 'approve' ? 'Đã duyệt' : 'Đã ẩn';
-      toast(act === 'approve' ? 'Đã duyệt bình luận' : 'Đã ẩn bình luận', c.user + ' · ' + c.story);
+      c.status = act === 'hide' ? 'Đã ẩn' : 'Hiển thị';
+      toast(act === 'hide' ? 'Đã ẩn bình luận' : 'Đã hiện bình luận', c.user + ' · ' + c.story);
       refresh();
     }
     return;
@@ -3498,41 +2978,6 @@ function handleClick(e) {
     return;
   }
   if ((el = t('[data-tax-delete]'))) { deleteTaxonomy(el.getAttribute('data-kind'), el.getAttribute('data-tax-delete')); return; }
-
-  /* --- Người dùng --- */
-  if ((el = t('[data-user-page]'))) {
-    const n = Number(el.getAttribute('data-user-page'));
-    if (!el.disabled && n > 0) { state.userPage = n; refresh(); }
-    return;
-  }
-  if ((el = t('[data-user-view]'))) { userDetailModal(el.getAttribute('data-user-view')); return; }
-  if ((el = t('[data-user-role]'))) { userRoleModal(el.getAttribute('data-user-role')); return; }
-  if ((el = t('[data-user-invite]'))) { inviteModal(); return; }
-  if ((el = t('[data-user-lock]'))) {
-    const u = USERS.find((x) => x.id === el.getAttribute('data-user-lock'));
-    if (!u) return;
-    if (u.status === 'Bị khóa') {
-      u.status = 'Hoạt động';
-      toast('Đã mở khóa', u.name + ' có thể đăng nhập trở lại.');
-      refresh();
-    } else {
-      confirmDelete({
-        title: 'Khóa tài khoản ' + u.name + '?',
-        message: 'Người dùng sẽ bị đăng xuất và không thể đăng nhập.',
-        confirmText: 'Khóa tài khoản',
-        onConfirm: () => {
-          u.status = 'Bị khóa';
-          toast('Đã khóa tài khoản', u.name + ' không thể truy cập hệ thống.');
-          refresh();
-        },
-      });
-    }
-    return;
-  }
-
-  /* --- Doanh thu --- */
-  if ((el = t('[data-revenue-tab]'))) { state.revenueTab = el.getAttribute('data-revenue-tab'); refresh(); return; }
-  if ((el = t('[data-withdraw]'))) { withdrawAction(el.getAttribute('data-id'), el.getAttribute('data-withdraw')); return; }
 
   /* --- Cài đặt --- */
   if ((el = t('[data-settings-tab]'))) { state.settingsTab = el.getAttribute('data-settings-tab'); refresh(); return; }
@@ -3589,15 +3034,10 @@ function handleClick(e) {
     if (a === 'refresh') { refresh(); toast('Đã làm mới', 'Số liệu được cập nhật lúc ' + fmtDateTime('2026-11-02T12:00:00') + '.', 'info'); }
     else if (a === 'export') { toast('Đang xuất tệp', 'Tệp CSV sẽ được tải xuống trong giây lát.', 'info'); }
     else if (a === 'clear-filters') {
-      state.storyQuery = ''; state.storyGenre = ''; state.storyStatus = ''; state.storyAuthor = '';
+      state.storyQuery = ''; state.storyGenre = ''; state.storyStatus = ''; state.storyPrice = '';
       state.storyPage = 1; refresh();
       toast('Đã xóa bộ lọc', 'Đang hiển thị toàn bộ truyện.', 'info');
-    } else if (a === 'clear-user-filters') {
-      state.userQuery = ''; state.userRole = ''; state.userStatus = ''; state.userPage = 1; refresh();
-      toast('Đã xóa bộ lọc', 'Đang hiển thị toàn bộ người dùng.', 'info');
     } else if (a === 'import-chapters') { importModal(); }
-    else if (a === 'comment-settings') { commentRulesModal(); }
-    else if (a === 'payout') { payoutModal(); }
     return;
   }
 }
@@ -3620,19 +3060,6 @@ function handleInput(e) {
     state.storyPage = 1;
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => refresh('storySearch'), 260);
-    return;
-  }
-  if (id === 'userSearch') {
-    state.userQuery = el.value;
-    state.userPage = 1;
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => refresh('userSearch'), 260);
-    return;
-  }
-  if (id === 'txSearch') {
-    state.txQuery = el.value;
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => refresh('txSearch'), 260);
     return;
   }
   if (id === 'taxSearch') {
@@ -3663,11 +3090,6 @@ function handleInput(e) {
     scheduleAutosave();
     return;
   }
-  if (id === 'eVip') {
-    const sw = $('#eVipSwitch');
-    if (sw) sw.setAttribute('aria-checked', String(Number(el.value) > 0));
-    return;
-  }
 }
 
 function handleChange(e) {
@@ -3676,10 +3098,7 @@ function handleChange(e) {
 
   if (id === 'filterGenre') { state.storyGenre = el.value; state.storyPage = 1; refresh(); return; }
   if (id === 'filterStatus') { state.storyStatus = el.value; state.storyPage = 1; refresh(); return; }
-  if (id === 'filterAuthor') { state.storyAuthor = el.value; state.storyPage = 1; refresh(); return; }
-  if (id === 'userRole') { state.userRole = el.value; state.userPage = 1; refresh(); return; }
-  if (id === 'userStatus') { state.userStatus = el.value; state.userPage = 1; refresh(); return; }
-  if (id === 'txType') { state.txType = el.value; refresh(); return; }
+  if (id === 'filterPrice') { state.storyPrice = el.value; state.storyPage = 1; refresh(); return; }
   if (id === 'setDensity') {
     state.density = el.value;
     document.documentElement.classList.toggle('dense', el.value === 'Gọn');
@@ -3729,17 +3148,15 @@ function handleChange(e) {
     toast('Đã tải ảnh lên', file.name + ' · ' + Math.round(file.size / 1024) + ' KB');
     return;
   }
-  if (id === 'eVipSwitch') return;
 }
 
 function handleSubmit(e) {
   const form = e.target;
   if (form.id === 'storyForm') {
     e.preventDefault();
-    const titleEl = $('#sTitle'), authorEl = $('#sAuthor'), genreEl = $('#sGenre'), descEl = $('#sDesc');
+    const titleEl = $('#sTitle'), genreEl = $('#sGenre'), descEl = $('#sDesc');
     const marks = [
       [titleEl.closest('.field'), titleEl.value.trim().length >= 3],
-      [authorEl.closest('.field'), authorEl.value !== ''],
       [genreEl.closest('.field'), genreEl.value !== ''],
       [descEl.closest('.field'), descEl.value.trim().length >= 30],
     ];
@@ -3760,11 +3177,11 @@ function handleSubmit(e) {
     const story = {
       id: 's' + (STORIES.length + 100),
       title: titleEl.value.trim(),
-      author: authorEl.value,
+      author: SETTINGS.authorName,
       genre: genreEl.value,
-      status: $('#sStatus') ? $('#sStatus').value : 'Chờ duyệt',
+      status: $('#sStatus') ? $('#sStatus').value : 'Bản nháp',
       chapters: 0, views: 0, rating: 0, updated: '2026-11-02T12:00:00',
-      vip: $('#sVip') ? $('#sVip').checked : false,
+      priceXu: $('#sPrice') ? Math.max(0, Math.min(999, Number($('#sPrice').value) || 0)) : 0,
       featured: $('#sFeature') ? $('#sFeature').checked : false,
       adult: $('#sAdult') ? $('#sAdult').checked : false,
       tags: [...FORM_TAGS],
@@ -3777,7 +3194,7 @@ function handleSubmit(e) {
       CHAPTERS.push({
         id: uid('c'), storyId: story.id, number: 1, title: chapTitle.value.trim(),
         words: (chapBody.value.trim().match(/[^\s]+/g) || []).length, status: 'Bản nháp',
-        publishedAt: null, scheduleAt: null, vipPrice: 0,
+        publishedAt: null, scheduleAt: null,
         body: '<p>' + esc(chapBody.value.trim()).replace(/\n+/g, '</p><p>') + '</p>',
       });
       story.chapters = 1;
@@ -3978,18 +3395,17 @@ function closePalette() {
    U. BỔ SUNG — thông báo, xuất tệp, xem trước, nhân bản, phản hồi
    ========================================================================== */
 function notifItems() {
-  const ch = CHAPTERS.filter((c) => c.status === 'Chờ duyệt').length;
-  const cm = COMMENTS.filter((c) => c.status === 'Bị báo cáo').length;
-  const wd = WITHDRAWALS.filter((w) => w.status === 'Chờ duyệt').length;
-  const us = USERS.filter((u) => u.status === 'Chờ xác minh').length;
+  const drafts = CHAPTERS.filter((c) => c.status === 'Bản nháp').length;
+  const scheduled = CHAPTERS.filter((c) => c.status === 'Hẹn giờ').length;
+  const hidden = COMMENTS.filter((c) => c.status === 'Đã ẩn').length;
+  const paused = STORIES.filter((s) => s.status === 'Tạm ngưng').length;
   return [
-    { n: ch, icon: 'check-circle', title: ch + ' chương chờ duyệt', sub: 'Hạn chót hôm nay · 2 chương quá 24 giờ', page: 'review' },
-    { n: cm, icon: 'alert', title: cm + ' bình luận bị báo cáo', sub: 'Cần xem lại nội dung và người báo cáo', page: 'comments' },
-    { n: wd, icon: 'wallet', title: wd + ' yêu cầu rút tiền', sub: 'Đang chờ kế toán xác nhận', page: 'revenue' },
-    { n: us, icon: 'shield', title: us + ' hồ sơ chờ xác minh', sub: 'Tác giả mới cần duyệt email và CCCD', page: 'users' },
+    { n: drafts, icon: 'pen', title: drafts + ' chương đang viết dở', sub: 'Bản nháp chưa đăng', page: 'chapters', task: 'drafts' },
+    { n: scheduled, icon: 'clock', title: scheduled + ' chương hẹn giờ', sub: 'Sẽ tự đăng theo lịch', page: 'chapters', task: 'scheduled' },
+    { n: hidden, icon: 'eyeOff', title: hidden + ' bình luận đang ẩn', sub: 'Hiện lại nếu bạn muốn', page: 'comments', task: 'hidden-comments' },
+    { n: paused, icon: 'book', title: paused + ' truyện tạm ngưng', sub: 'Đang dừng cập nhật', page: 'stories', task: 'paused' },
   ];
-}
-function renderNotifPop() {
+}function renderNotifPop() {
   const host = $('#notifPop');
   if (!host) return;
   const items = notifItems();
@@ -4052,14 +3468,15 @@ function exportData(kind) {
   const stamp = '2026-11-02';
   const map = {
     stories: () => downloadFile('truyen-' + stamp + '.csv', csvRows(
-      ['ID', 'Tên truyện', 'Tác giả', 'Thể loại', 'Trạng thái', 'Chương', 'Lượt đọc', 'Đánh giá', 'Cập nhật'],
-      STORIES.map((s) => [s.id, s.title, s.author, s.genre, s.status, s.chapters, s.views, s.rating, s.updated]))),
-    users: () => downloadFile('nguoi-dung-' + stamp + '.csv', csvRows(
-      ['ID', 'Tên', 'Email', 'Vai trò', 'Trạng thái', 'Truyện', 'Lượt đọc', 'Tham gia'],
-      USERS.map((u) => [u.id, u.name, u.email, u.role, u.status, u.stories, u.reads, u.joined]))),
-    transactions: () => downloadFile('giao-dich-' + stamp + '.csv', csvRows(
-      ['Mã', 'Người dùng', 'Loại', 'Nội dung', 'Số tiền (đ)', 'Thời gian', 'Trạng thái'],
-      TRANSACTIONS.map((t) => [t.id, t.user, t.type, t.story, t.amount, t.at, t.status]))),
+      ['ID', 'Tên truyện', 'Tác giả', 'Thể loại', 'Trạng thái', 'Chương', 'Lượt đọc', 'Đánh giá', 'Giá Xu', 'Xu đã nhận', 'Cập nhật'],
+      STORIES.map((s) => [s.id, s.title, s.author, s.genre, s.status, s.chapters, s.views, s.rating,
+        s.priceXu || 0, xuOf(s.id), s.updated]))),
+    unlocks: () => downloadFile('luot-mo-khoa-' + stamp + '.csv', csvRows(
+      ['Mã', 'Độc giả', 'Truyện', 'Xu', 'Thời gian'],
+      UNLOCKS.map((u) => {
+        const st = STORIES.find((x) => x.id === u.storyId);
+        return [u.id, u.reader, st ? st.title : u.storyId, u.xu, u.at];
+      }))),
     taxonomy: () => downloadFile('danh-muc-' + stamp + '.csv', csvRows(
       ['Loại', 'Tên', 'Đường dẫn', 'Số truyện'],
       CATEGORIES.map((c) => ['Thể loại', c.name, c.slug, c.count])
@@ -4075,49 +3492,72 @@ function exportData(kind) {
     : 'Trình duyệt không cho phép tạo tệp trong chế độ này.', okDone ? 'ok' : 'err');
 }
 
-/* --- Chi tiết giao dịch --- */
-function txModal(id) {
-  const t = TRANSACTIONS.find((x) => x.id === id);
-  if (!t) return;
-  openModal({
-    title: 'Giao dịch #' + t.id.toUpperCase(),
-    subtitle: t.type + ' · ' + fmtDateTime(t.at),
-    confirmText: 'Đóng',
-    body: '<div class="meta-line"><span>Người dùng</span><b>' + esc(t.user) + '</b></div>' +
-      '<div class="meta-line"><span>Nội dung</span><b>' + esc(t.story) + '</b></div>' +
-      '<div class="meta-line"><span>Số tiền</span><b>' + fmtNum(t.amount) + ' đ</b></div>' +
-      '<div class="meta-line"><span>Trạng thái</span><b>' + esc(t.status) + '</b></div>' +
-      '<div class="meta-line"><span>Cổng thanh toán</span><b>VNPay · thẻ nội địa</b></div>' +
-      '<p style="font-size:12.5px;color:var(--text-3);margin-top:12px">Mã đối soát được tạo tự động mỗi 24 giờ.</p>',
-    onConfirm: () => true,
-  });
+/* --- Xem trang công khai của truyện --- */
+function paywallHTML(s) {
+  if (!s.priceXu || !SETTINGS.toggles.xu) {
+    return '<div class="paywall"><div class="tx"><b>' + (s.priceXu ? 'Đang tạm tắt bán bằng Xu' : 'Truyện miễn phí') + '</b>' +
+      '<span>' + (s.priceXu ? 'Bật “Mở khoá bằng Xu” trong Cài đặt để thu phí truyện này.'
+        : 'Độc giả đọc toàn bộ chương mà không mất Xu.') + '</span></div></div>';
+  }
+  if (isUnlocked(s.id)) {
+    return '<div class="paywall"><div class="tx"><b>Đã mở khoá toàn bộ truyện</b>' +
+      '<span>' + esc(s.title) + ' · bạn có thể đọc mọi chương.</span></div>' +
+      '<span class="unlocked">' + icon('check', 15) + 'Đã trả ' + s.priceXu + ' Xu</span></div>';
+  }
+  return '<div class="paywall">' +
+    '<div class="tx"><b>Truyện trả phí · ' + s.priceXu + ' Xu</b>' +
+      '<span>Trả một lần, mở khoá toàn bộ ' + s.chapters + ' chương.</span></div>' +
+    '<button class="btn btn-primary" type="button" data-unlock="' + s.id + '">' +
+      icon('coins', 15) + 'Trả ' + s.priceXu + ' Xu để mở khoá</button>' +
+    '<div class="wallet">Số dư ví: <b>' + fmtNum(READER.wallet) + ' Xu</b></div></div>';
 }
 
-/* --- Xem trước nội dung chờ duyệt --- */
-function reviewPreviewModal(kind, id) {
-  const isStory = kind === 'story';
-  const item = isStory ? STORIES.find((s) => s.id === id) : CHAPTERS.find((c) => c.id === id);
-  if (!item) return;
-  const story = isStory ? item : (STORIES.find((s) => s.id === item.storyId) || { title: item.title, author: '—' });
+function unlockStory(id) {
+  const s = STORIES.find((x) => x.id === id);
+  if (!s) return;
+  if (!SETTINGS.toggles.xu) { toast('Đang tắt bán bằng Xu', 'Bật lại trong Cài đặt → Tính năng.', 'err'); return; }
+  if (!s.priceXu) { toast('Truyện miễn phí', '“' + s.title + '” không cần trả Xu.'); return; }
+  if (isUnlocked(s.id)) { toast('Đã mở khoá rồi', 'Bạn đã trả Xu cho “' + s.title + '”.', 'info'); return; }
+  if (READER.wallet < s.priceXu) {
+    toast('Không đủ Xu', 'Ví còn ' + fmtNum(READER.wallet) + ' Xu, cần ' + s.priceXu + ' Xu.', 'err');
+    return;
+  }
   openModal({
-    title: isStory ? 'Xem trước truyện' : 'Chương ' + item.number + ' · ' + item.title,
-    subtitle: story.title + ' · ' + story.author,
-    confirmText: 'Duyệt nội dung',
-    wide: true,
-    body: (isStory
-      ? '<p style="font-size:14px;line-height:1.7;color:var(--text-2)">' + esc(item.desc) + '</p>'
-      : '<div style="font-family:var(--serif);font-size:16px;line-height:1.8">' + item.body + '</div>') +
-      '<div class="chart-legend" style="margin-top:16px"><span>' +
-        fmtNum(isStory ? item.chapters : item.words) + ' ' + (isStory ? 'chương' : 'từ') + '</span>' +
-        '<span>Gửi ' + relTime(isStory ? item.updated : (item.publishedAt || '2026-11-01T15:00:00')) + '</span></div>',
+    title: 'Trả ' + s.priceXu + ' Xu để mở khoá?',
+    message: '“' + s.title + '” sẽ mở toàn bộ ' + s.chapters + ' chương. Số dư còn lại sau khi trả: ' +
+      fmtNum(READER.wallet - s.priceXu) + ' Xu. Giao dịch không hoàn lại.',
+    confirmText: 'Trả ' + s.priceXu + ' Xu',
     onConfirm: () => {
-      approveItem(isStory ? 'story' : 'chapter', item.id);
-      return true;
+      READER.wallet -= s.priceXu;
+      UNLOCKS.unshift({ id: uid('x'), storyId: s.id, reader: READER.name, xu: s.priceXu, at: '2026-11-02T12:00:00' });
+      toast('Đã mở khoá truyện', 'Trừ ' + s.priceXu + ' Xu · ví còn ' + fmtNum(READER.wallet) + ' Xu.');
+      refresh();
     },
   });
 }
 
-/* --- Xem trang công khai của truyện --- */
+function xuHistoryModal() {
+  const rows = [...UNLOCKS].sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  openModal({
+    title: 'Lịch sử Xu',
+    subtitle: fmtNum(totalXu()) + ' Xu từ ' + UNLOCKS.length + ' lượt mở khoá · ví hiện tại ' + fmtNum(READER.wallet) + ' Xu',
+    confirmText: 'Đóng',
+    wide: true,
+    body: rows.length === 0
+      ? emptyState({ iconName: 'coins', title: 'Chưa có giao dịch', message: 'Lượt mở khoá sẽ xuất hiện ở đây.' })
+      : '<div class="table-wrap"><table><thead><tr><th scope="col">Độc giả</th><th scope="col">Truyện</th>' +
+        '<th scope="col" class="hide-sm">Thời gian</th><th scope="col" style="text-align:right">Xu</th></tr></thead><tbody>' +
+        rows.map((u) => {
+          const st = STORIES.find((x) => x.id === u.storyId);
+          return '<tr><td>' + esc(u.reader) + (u.reader === READER.name ? ' <span class="badge badge-accent plain">Bạn</span>' : '') +
+            '</td><td class="cell-muted">' + esc(st ? st.title : '—') + '</td>' +
+            '<td class="cell-muted hide-sm">' + fmtDateTime(u.at) + '</td>' +
+            '<td class="num" style="text-align:right"><b>' + fmtNum(u.xu) + '</b></td></tr>';
+        }).join('') + '</tbody></table></div>',
+    onConfirm: () => true,
+  });
+}
+
 function storyPreviewModal(id) {
   const s = STORIES.find((x) => x.id === id);
   if (!s) return;
@@ -4133,14 +3573,16 @@ function storyPreviewModal(id) {
           '<div style="font-size:13px;color:var(--text-3)">' + esc(s.author) + ' · ' + esc(s.genre) + ' · ' +
             fmtNum(s.views) + ' lượt đọc</div>' +
           '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">' + storyBadge(s.status) +
-            (s.vip ? '<span class="badge badge-accent plain">VIP</span>' : '') + '</div>' +
+            (s.priceXu ? '<span class="badge badge-accent plain">' + s.priceXu + ' Xu</span>'
+              : '<span class="badge badge-neutral plain">Miễn phí</span>') + '</div>' +
         '</div></div>' +
       '<p style="font-size:13.5px;line-height:1.7;color:var(--text-2);margin-top:16px">' + esc(s.desc) + '</p>' +
       '<div style="margin-top:14px;display:flex;flex-direction:column;gap:2px">' +
         chs.map((c) => '<div class="meta-line" style="border-top:1px solid var(--border)">' +
           '<span>Chương ' + c.number + '. ' + esc(c.title) + '</span><b>' +
-          (c.vipPrice ? c.vipPrice + ' Xu' : 'Miễn phí') + '</b></div>').join('') +
-      '</div>',
+          (s.priceXu ? 'Trong gói' : 'Miễn phí') + '</b></div>').join('') +
+      '</div>' +
+      paywallHTML(s),
     onConfirm: () => true,
   });
 }
@@ -4154,7 +3596,7 @@ function duplicateStory(id) {
   STORIES.unshift(copy);
   CHAPTERS.filter((c) => c.storyId === s.id).forEach((c) => {
     CHAPTERS.push({ ...c, id: uid('c'), storyId: copy.id, status: 'Bản nháp',
-      publishedAt: null, scheduleAt: null, vipPrice: 0 });
+      publishedAt: null, scheduleAt: null });
   });
   toast('Đã nhân bản truyện', '“' + copy.title + '” ở trạng thái bản nháp.');
   navigate('stories');
@@ -4177,7 +3619,7 @@ function replyCommentModal(id) {
     onConfirm: (dlg) => {
       COMMENTS.unshift({
         id: uid('cm'), user: 'Lê Anh (QTV)', story: c.story, chapter: c.chapter,
-        text: dlg.querySelector('[data-field=text]').value.trim(), status: 'Đã duyệt',
+        text: dlg.querySelector('[data-field=text]').value.trim(), status: 'Hiển thị',
         at: '2026-11-02T12:00:00', reports: 0,
       });
       toast('Đã gửi phản hồi', 'Phản hồi của bạn hiển thị công khai dưới bình luận.');
@@ -4205,6 +3647,7 @@ function bindPage() {
 
 function initApp() {
   applyTheme();
+  renderXuPill();
   renderSidebar();
   renderBreadcrumb();
   applySidebarState();
