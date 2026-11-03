@@ -13,7 +13,6 @@ const NAV = [
     ['new', 'Thêm bộ', 'plus'],
     ['edit', 'Sửa bộ', 'edit'],
     ['chapters', 'Chương', 'list'],
-    ['taxonomy', 'Thể loại & thẻ', 'bookmark'],
   ]},
   { group: 'Cộng đồng', items: [
     ['cmts', 'Bình luận', 'chat'],
@@ -22,9 +21,6 @@ const NAV = [
   ]},
   { group: 'Trang chủ', items: [
     ['homepage', 'Homepage CMS', 'sparkle'],
-  ]},
-  { group: 'Kinh doanh', items: [
-    ['revenue', 'Doanh thu & ủng hộ', 'donate'],
   ]},
   { group: 'Người dùng', items: [
     ['users', 'Tác giả', 'users'],
@@ -43,7 +39,6 @@ const CRUMBS = {
   chapters: 'Chương', cmts: 'Bình luận', reports: 'Báo lỗi',
   votes: 'Phiếu bầu', homepage: 'Homepage CMS', users: 'Tác giả', roles: 'Vai trò',
   stats: 'Thống kê', doctor: 'Kiểm tra dữ liệu', log: 'Nhật ký', settings: 'Cài đặt',
-  taxonomy: 'Thể loại & thẻ', revenue: 'Doanh thu & ủng hộ',
 };
 
 /* Page header chuẩn hoá cho mọi tab: title + mô tả ngắn đúng theo dữ liệu
@@ -63,8 +58,6 @@ const PAGE_HEAD = {
   doctor: ['Kiểm tra dữ liệu', 'Đối chiếu KV, số chương và bộ thiếu dữ liệu.'],
   log: ['Nhật ký', '200 thao tác quản trị gần nhất.'],
   settings: ['Cài đặt', 'Sao lưu, khôi phục và nhập từ Blogger.'],
-  taxonomy: ['Thể loại & thẻ', 'Phân loại dùng chung cho cả thư viện: trạng thái, 18+, cặp đôi, thẻ nội dung.'],
-  revenue: ['Doanh thu & ủng hộ', 'Hộp ủng hộ hiện trên web, gói quy đổi và ước tính thu nhập.'],
 };
 
 /* Nhãn nhóm của tab đang mở — dùng làm “eyebrow” cho tiêu đề trang, để người

@@ -21,25 +21,21 @@
 
 /* ========== 1. TOKEN ========== */
 body.admin{
-  /* Ba lớp nền theo mockup: canvas xám lạnh → mặt trắng → mặt lõm. */
-  --a-bg:#f6f7f9;--a-bg2:#ffffff;--a-surf:#ffffff;--a-surf2:#f1f3f7;--a-surf3:#e9ecf2;
-  --a-txt:#1b1d29;--a-mut:#3f4553;--a-dim:#5f6778;
-  /* Một sắc nhấn duy nhất: tím #5046E5 (mockup). --a-acc-ink là bản đậm cho hover. */
-  --a-mark:#8d91e8;--a-acc:#5046e5;--a-acc-soft:#eeedfd;--a-acc-ink:#4338ca;
-  --a-acc-ink-dark:#1d1747;--a-ring:rgba(80,70,229,.18);
-  --a-bd:#e8eaf0;--a-bd2:#dce0e8;
-  --a-ok:#15803d;--a-warn:#96620e;--a-bad:#b42318;--a-info:#3b49df;--a-violet:#6b46c1;
-  /* Bo góc: điều khiển 9 · thẻ 14 (mockup dùng --r-ctl/--r-card). */
-  --a-r-sm:7px;--a-r:9px;--a-r-lg:14px;
-  --a-h:36px;--a-h-lg:40px;
-  --a-side:260px;--a-top:64px;--a-pad:32px;--a-canvas:1360px;
-  --a-font:'Inter','Be Vietnam Pro',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
-  --a-head:var(--a-font);--a-mono:var(--font-mono);
-  /* Rail tối: bộ màu riêng, không dùng chung token nền sáng. */
-  --a-side-bg:#13161f;--a-side-ink:#c3c9d6;--a-side-dim:#7c8496;
-  --a-side-line:rgba(255,255,255,.08);--a-side-hover:rgba(255,255,255,.06);
-  --a-shadow:0 1px 2px rgba(16,24,40,.05);
-  --a-shadow-lg:0 12px 32px rgba(16,24,40,.14),0 2px 6px rgba(16,24,40,.06);
+  /* Ba lớp nền: canvas → mặt → mặt lõm. Vạch tóc 1px thay cho bóng đổ. */
+  --a-bg:#f7f5f2;--a-bg2:#fbfaf8;--a-surf:#ffffff;--a-surf2:#f3f0ec;--a-surf3:#e9e4dd;
+  --a-txt:#1a1714;--a-mut:#54504a;--a-dim:#6e6860;
+  /* Hồng công khai chỉ để trang trí; --a-acc là bản đậm đủ tương phản cho chữ. */
+  --a-mark:#e0859b;--a-acc:#b8334f;--a-acc-soft:rgba(184,51,79,.08);--a-acc-ink:#9c2740;
+  --a-acc-ink-dark:#2a1118;--a-ring:rgba(184,51,79,.18);
+  --a-bd:#e7e2db;--a-bd2:#d4cdc4;
+  --a-ok:#1f7a4d;--a-warn:#8a5a00;--a-bad:#b03030;--a-info:#2b6cb0;--a-violet:#6b46c1;
+  /* Bo góc theo một gốc: nút = gốc − 2, thẻ = gốc + 4. */
+  --a-r-sm:6px;--a-r:10px;--a-r-lg:14px;
+  --a-h:34px;--a-h-lg:40px;
+  --a-side:248px;--a-top:60px;--a-pad:32px;--a-canvas:1240px;
+  --a-font:var(--font);--a-head:var(--font-head);--a-mono:var(--font-mono);
+  --a-shadow:0 1px 2px rgba(26,23,20,.05);
+  --a-shadow-lg:0 18px 44px -18px rgba(26,23,20,.22),0 2px 8px rgba(26,23,20,.06);
   color-scheme:light;
   --a-ease:cubic-bezier(.2,.7,.3,1);
   --a-card-pad:18px 20px;
@@ -77,86 +73,71 @@ body.admin .v2frame{grid-column:2;grid-row:1;display:flex;flex-direction:column;
 
 /* --- Rail: giấy trắng hơn canvas, một vạch tóc bên phải --- */
 body.admin .v2side{grid-column:1;grid-row:1;position:sticky;top:0;align-self:start;z-index:40;
-  display:flex;flex-direction:column;width:auto;height:100vh;color:var(--a-side-ink);
-  background:var(--a-side-bg);border-right:1px solid #0e1119;border-radius:0;box-shadow:none}
-body.admin .v2brand{display:flex;align-items:center;gap:9px;height:66px;padding:0 12px 0 18px;flex:none;
-  border-bottom:1px solid var(--a-side-line)}
-body.admin .v2brand .logo,body.admin .v2mlogo{display:inline-flex;align-items:center;gap:10px;color:#fff;
-  font-family:var(--a-font);font-size:15.5px;font-weight:650;letter-spacing:-.01em;text-decoration:none;
+  display:flex;flex-direction:column;width:auto;height:100vh;
+  background:var(--a-bg2);border-right:1px solid var(--a-bd);border-radius:0;box-shadow:none}
+body.admin .v2brand{display:flex;align-items:center;gap:9px;height:var(--a-top);padding:0 10px 0 16px;flex:none;
+  border-bottom:1px solid var(--a-bd)}
+body.admin .v2brand .logo,body.admin .v2mlogo{display:inline-flex;align-items:baseline;color:var(--a-txt);
+  font-family:var(--font-logo);font-size:19px;font-weight:400;letter-spacing:-.005em;text-decoration:none;
   min-width:0;overflow:hidden;white-space:nowrap}
-body.admin .v2brand .logo i{color:var(--a-side-dim);font-style:normal;font-family:var(--a-font);font-size:11px;
-  font-weight:500;letter-spacing:.04em;text-transform:uppercase;margin-left:0}
-/* Ô vuông tím mang chữ “s” thay cho chấm tròn cũ */
-body.admin .v2brand .logo .dot{display:grid;place-items:center;flex:none;width:28px;height:28px;border-radius:8px;
-  background:var(--a-acc);border:0;margin:0;color:#fff;font-size:15px;font-weight:700;letter-spacing:-.02em;
-  line-height:1;align-self:center}
-body.admin .v2brand .logo .dot::after{content:"s"}
-body.admin .v2side-toggle,body.admin .v2side-close{margin-left:auto;color:var(--a-side-dim);border-color:transparent;
+body.admin .v2brand .logo i{color:var(--a-dim);font-style:normal;font-family:var(--a-font);font-size:9.5px;
+  font-weight:600;letter-spacing:.09em;text-transform:uppercase;margin-left:8px}
+body.admin .v2brand .logo .dot{display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:var(--a-mark);border:0;margin-right:8px;align-self:center}
+body.admin .v2side-toggle,body.admin .v2side-close{margin-left:auto;color:var(--a-dim);border-color:transparent;
   background:transparent;width:28px;height:28px;padding:0}
-body.admin .v2side-toggle:hover,body.admin .v2side-close:hover{color:#fff;background:rgba(255,255,255,.08)}
+body.admin .v2side-toggle:hover,body.admin .v2side-close:hover{color:var(--a-txt);background:var(--a-surf2)}
 /* Nút hành động chính của rail — nhìn thấy ngay khi mở, không phải đi tìm */
-body.admin .v2side-cta{flex:none;padding:12px 12px 2px}
-body.admin .v2cta{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;height:38px;
-  border:0;border-radius:9px;background:var(--a-acc);color:#fff;font-size:13.5px;font-weight:600;
-  box-shadow:0 1px 2px rgba(80,70,229,.32)}
-body.admin .v2cta:hover{background:var(--a-acc-ink);color:#fff}
+body.admin .v2side-cta{flex:none;padding:14px 12px 2px}
+body.admin .v2cta{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;height:36px;
+  font-size:13px}
 body.admin .v2cta .admin-nav-icon .i{width:15px;height:15px;color:currentColor;opacity:1}
 body.admin .v2aside{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;
-  gap:0;padding:4px 12px 12px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.18) transparent}
-body.admin .v2nav-group{display:flex;flex-direction:column;gap:2px}
-body.admin .v2nav-group+.v2nav-group{margin-top:10px}
-body.admin .v2nav-group>.admin-nav-label{padding:16px 10px 6px;font-size:11px;letter-spacing:.09em;
-  font-weight:600;color:#666e80}
-body.admin .v2aside button,body.admin #tabs button{position:relative;display:flex;align-items:center;gap:11px;
-  width:100%;height:40px;padding:0 11px;border:0;border-radius:9px;
-  background-color:transparent;color:var(--a-side-ink);font:500 13.5px/1 var(--a-font);text-align:left;cursor:pointer;
-  transition:background-color .12s var(--a-ease),color .12s var(--a-ease)}
-body.admin .v2aside button:hover,body.admin #tabs button:hover{background-color:var(--a-side-hover);color:#fff;
+  gap:0;padding:14px 12px 16px;scrollbar-width:thin;scrollbar-color:var(--a-bd2) transparent}
+body.admin .v2nav-group{display:flex;flex-direction:column;gap:1px}
+body.admin .v2nav-group+.v2nav-group{margin-top:18px}
+body.admin .v2nav-group>.admin-nav-label{padding:0 9px 7px;font-size:10px;letter-spacing:.08em;color:var(--a-dim)}
+body.admin .v2aside button,body.admin #tabs button{position:relative;display:flex;align-items:center;gap:9px;
+  width:100%;height:34px;padding:0 9px;border:1px solid transparent;border-radius:8px;
+  background-color:transparent;color:var(--a-mut);font:500 13px/1 var(--a-font);text-align:left;cursor:pointer;
+  transition:background-color .14s var(--a-ease),color .14s var(--a-ease),box-shadow .14s var(--a-ease)}
+body.admin .v2aside button:hover,body.admin #tabs button:hover{background-color:var(--a-surf2);color:var(--a-txt);
   transform:none}
-body.admin .v2aside button.on,body.admin #tabs button.on{background-color:var(--a-acc);color:#fff;
-  border-color:transparent;font-weight:600;box-shadow:none}
-body.admin .v2aside button.on .admin-nav-icon .i{color:#fff;opacity:1}
-body.admin .v2aside button.muted,body.admin .v2aside button:disabled{color:#5b6273;cursor:not-allowed}
-body.admin .v2aside button:disabled:hover{background-color:transparent;color:#5b6273}
+body.admin .v2aside button.on,body.admin #tabs button.on{background-color:var(--a-surf);color:var(--a-txt);
+  border-color:var(--a-bd);font-weight:600;box-shadow:var(--a-shadow)}
+body.admin .v2aside button.on .admin-nav-icon .i{color:var(--a-acc);opacity:1}
+body.admin .v2aside button.muted,body.admin .v2aside button:disabled{color:var(--a-dim);cursor:not-allowed}
+body.admin .v2aside button:disabled:hover{background-color:transparent;color:var(--a-dim)}
 body.admin .v2aside .admin-nav-icon{display:grid;place-items:center;flex:none;width:18px;height:18px}
-body.admin .v2aside .admin-nav-icon .i,body.admin #tabs .admin-nav-icon .i{width:18px;height:18px;
-  color:#8d95a6;opacity:1}
-body.admin .v2aside button:hover .admin-nav-icon .i{color:#c9cedb}
+body.admin .v2aside .admin-nav-icon .i,body.admin #tabs .admin-nav-icon .i{width:16px;height:16px;
+  color:currentColor;opacity:.7}
 body.admin .v2aside button.on .admin-nav-icon .i{opacity:1}
 body.admin .v2aside button>span:not(.admin-nav-icon):not(.ct){flex:0 1 auto;min-width:0;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
-/* Số đếm: viên thuốc mờ như mockup, không phải số trần */
-body.admin .v2aside .ct,body.admin #tabs .ct{margin-left:auto;display:grid;place-items:center;
-  min-width:20px;height:19px;padding:0 6px;border-radius:999px;background:rgba(255,255,255,.12);
-  color:#d6dae5;font:600 11px/1 var(--a-font);text-align:center;font-variant-numeric:tabular-nums}
-body.admin .v2aside button:hover .ct{background:rgba(255,255,255,.18);color:#fff}
-body.admin .v2aside button.on .ct,body.admin #tabs button.on .ct{background:rgba(255,255,255,.22);color:#fff}
-body.admin .v2aside button[data-tab="reports"] .ct{background:rgba(224,82,82,.28);color:#ffd0d0}
+/* Số đếm: chỉ là con số, không phải viên thuốc */
+body.admin .v2aside .ct,body.admin #tabs .ct{margin-left:auto;min-width:0;padding:0 2px;border-radius:0;
+  background:none;color:var(--a-dim);font:600 11px/1 var(--a-font);text-align:right;
+  font-variant-numeric:tabular-nums}
+body.admin .v2aside button.on .ct,body.admin #tabs button.on .ct{background:none;color:var(--a-mut)}
+body.admin .v2aside button[data-tab="reports"] .ct{color:var(--a-acc)}
 /* Chân rail: tình trạng phiên + mức ghi KV */
-body.admin .v2side-foot{flex:none;display:grid;gap:10px;padding:12px 14px 14px;
-  border-top:1px solid var(--a-side-line)}
-body.admin .v2side-note{margin:0;color:#6e7688;font-size:11px;line-height:1.5}
-/* Lối tắt trong chân rail (Xem trang web…) */
-body.admin .v2side-link{display:flex;align-items:center;gap:9px;width:100%;height:34px;padding:0 10px;
-  border:0;border-radius:9px;background:none;color:var(--a-side-dim);font:500 12.5px/1 var(--a-font);
-  text-align:left;text-decoration:none;cursor:pointer}
-body.admin .v2side-link:hover{background:var(--a-side-hover);color:#fff}
-body.admin .v2side-link .i{width:15px;height:15px;color:#8d95a6;opacity:1}
+body.admin .v2side-foot{flex:none;display:grid;gap:12px;padding:14px 16px 16px;border-top:1px solid var(--a-bd)}
+body.admin .v2side-note{margin:0;color:var(--a-dim);font-size:11px;line-height:1.5}
 body.admin .v2scrim{position:fixed;inset:0;z-index:35;background:rgba(26,23,20,.34)}
-body.admin .v2conn{display:flex;align-items:center;gap:7px;font:600 11.5px/1 var(--a-font);color:#7ee0a8;min-width:0}
+body.admin .v2conn{display:flex;align-items:center;gap:7px;font:600 11.5px/1 var(--a-font);color:var(--a-ok);min-width:0}
 body.admin .v2conn b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-body.admin .v2conn.warn{color:#f0c469}
-body.admin .v2conn.bad{color:#f58b8b}
+body.admin .v2conn.warn{color:var(--a-warn)}
+body.admin .v2conn.bad{color:var(--a-bad)}
 body.admin .v2conn .d{width:6px;height:6px;border-radius:50%;background:currentColor;flex:none;
   box-shadow:0 0 0 3px color-mix(in srgb,currentColor 18%,transparent)}
 body.admin .v2qbar{display:grid;gap:6px}
 body.admin .v2qbar .lab{display:flex;justify-content:space-between;gap:8px;font:500 11px/1 var(--a-font);
-  color:#8a93a6}
-body.admin .v2qbar .lab b{font-weight:600;color:#c3c9d6;font-variant-numeric:tabular-nums}
-body.admin .v2qbar .bar{height:4px;border-radius:99px;background:rgba(255,255,255,.14);overflow:hidden}
+  color:var(--a-dim)}
+body.admin .v2qbar .lab b{font-weight:600;color:var(--a-mut);font-variant-numeric:tabular-nums}
+body.admin .v2qbar .bar{height:4px;border-radius:99px;background:var(--a-surf3);overflow:hidden}
 body.admin .v2qbar .bar i{display:block;height:100%;border-radius:99px;background:var(--a-mark)}
-body.admin .v2qbar.warning .bar i{background:#e0a11b}
-body.admin .v2qbar.critical .bar i,body.admin .v2qbar.blocked .bar i{background:#e05252}
+body.admin .v2qbar.warning .bar i{background:var(--a-warn)}
+body.admin .v2qbar.critical .bar i,body.admin .v2qbar.blocked .bar i{background:var(--a-bad)}
 
 /* --- Topbar: dính trên, mang breadcrumb + tìm kiếm + công cụ --- */
 body.admin .v2top{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:12px;
@@ -254,8 +235,8 @@ body.admin .v2main{width:100%;max-width:var(--a-canvas);margin:0 auto;padding:0 
 body.admin .v2pagehead{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 24px;margin:0;
   padding:26px 0 18px}
 body.admin .v2pagehead .eyebrow{display:block;margin:0 0 6px;color:var(--a-dim)}
-body.admin .v2pagehead h1,body.admin .v2pagehead h2{margin:0;font-size:26px;line-height:1.22;
-  letter-spacing:-.022em;font-weight:700}
+body.admin .v2pagehead h1,body.admin .v2pagehead h2{margin:0;font-size:31px;line-height:1.14;
+  letter-spacing:-.014em;font-weight:500}
 body.admin .v2pagehead p{margin:7px 0 0;color:var(--a-mut);font-size:13.5px;max-width:72ch;line-height:1.5}
 body.admin .v2pagehead .v2head-text{display:block;min-width:0;flex:0 1 auto}
 body.admin .v2pagehead .v2head-actions{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap;
@@ -283,9 +264,8 @@ body.admin .btn:active{transform:none;box-shadow:none}
 body.admin .btn .i,body.admin .btn .i-s{width:15px;height:15px}
 body.admin .btn.sm{height:28px;padding:0 9px;font-size:11.5px;border-radius:7px}
 body.admin .btn.lg{height:var(--a-h-lg);padding:0 18px;font-size:13.5px}
-body.admin .btn.pri{background:var(--a-acc);border-color:var(--a-acc);color:#fff;
-  box-shadow:0 1px 2px rgba(80,70,229,.28)}
-body.admin .btn.pri:hover{background:var(--a-acc-ink);border-color:var(--a-acc-ink);color:#fff}
+body.admin .btn.pri{background:var(--a-txt);border-color:var(--a-txt);color:#fff;box-shadow:0 1px 2px rgba(26,23,20,.2)}
+body.admin .btn.pri:hover{background:#332e28;border-color:#332e28;color:#fff}
 body.admin .btn.pri:active{transform:none;box-shadow:none}
 body.admin .btn.ghost.ghost{background:transparent;border-color:transparent;color:var(--a-mut);box-shadow:none}
 body.admin .btn.ghost:hover{background:var(--a-surf2);border-color:transparent;color:var(--a-txt)}
@@ -401,8 +381,8 @@ body.admin .tile,body.admin .kvtile{display:flex;flex-direction:column;padding:1
   border-radius:var(--a-r-lg);background:var(--a-surf);box-shadow:var(--a-shadow);min-width:0}
 body.admin .tile span,body.admin .kvtile span{order:-1;display:block;margin:0 0 7px;font-family:var(--a-font);
   font-size:12px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--a-mut);white-space:normal}
-body.admin .tile b,body.admin .kvtile b{display:block;font-family:var(--a-font);font-size:28px;font-weight:700;
-  line-height:1.1;letter-spacing:-.03em;font-variant-numeric:tabular-nums;color:var(--a-txt)}
+body.admin .tile b,body.admin .kvtile b{display:block;font-family:var(--a-font);font-size:27px;font-weight:600;
+  line-height:1.1;letter-spacing:-.025em;font-variant-numeric:tabular-nums;color:var(--a-txt)}
 body.admin .tile small,body.admin .kvtile small{display:block;margin-top:6px;font-size:11.5px;line-height:1.45;
   color:var(--a-dim)}
 body.admin .kvbar{display:block;width:100%;max-width:180px;height:4px;margin-top:9px;border-radius:99px;
@@ -485,9 +465,7 @@ body.admin .v2result{margin-top:12px;max-height:280px;overflow:auto;padding:12px
 body.admin .v2gate{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,460px);min-height:100vh;
   background:var(--a-surf)}
 body.admin .v2gate-brand{display:flex;flex-direction:column;justify-content:center;gap:26px;padding:64px;
-  background:var(--a-side-bg);border-right:0;color:#fff}
-body.admin .v2gate-brand h1,body.admin .v2gate-brand h2,body.admin .v2gate-brand h3{color:#fff}
-body.admin .v2gate-brand .hint,body.admin .v2gate-brand p,body.admin .v2gate-brand li{color:#c3c9d6}
+  background:var(--a-bg);border-right:1px solid var(--a-bd);color:var(--a-txt)}
 body.admin .v2gate-logo{font-family:var(--font-logo);font-size:30px;font-weight:400;color:var(--a-txt);
   letter-spacing:-.005em}
 body.admin .v2gate-logo i{font-style:normal;font-family:var(--a-mono);font-size:10px;font-weight:700;letter-spacing:.14em;
@@ -656,9 +634,9 @@ body.admin .v2table-wrap thead th{position:sticky;top:0;z-index:1}
 body.admin .v2book-table,body.admin .tbl,body.admin .v2roles,body.admin .v2authors{width:100%;border-collapse:separate;
   border-spacing:0;table-layout:fixed;font-size:13px}
 body.admin .v2book-table th,body.admin .tbl th,body.admin .v2roles th,body.admin .v2authors th{
-  height:38px;padding:0 12px;text-align:left;vertical-align:middle;background:#f8f9fb;
+  height:36px;padding:0 12px;text-align:left;vertical-align:middle;background:var(--a-bg2);
   border-bottom:1px solid var(--a-bd);font-family:var(--a-font);font-size:11.5px;font-weight:600;
-  letter-spacing:.02em;text-transform:uppercase;color:#5b6273;white-space:nowrap}
+  letter-spacing:0;text-transform:none;color:var(--a-mut);white-space:nowrap}
 body.admin .v2book-table td,body.admin .tbl td,body.admin .v2roles td,body.admin .v2authors td{
   height:46px;padding:5px 12px;vertical-align:middle;border-bottom:1px solid var(--a-bd);
   font-size:12.5px;min-width:0;overflow-wrap:anywhere;background:transparent}
@@ -1096,57 +1074,6 @@ body.admin .v2sort-x{border-color:transparent;color:var(--a-dim)}
 body.admin .v2sort-x:hover{border-color:color-mix(in srgb,var(--a-bad) 40%,transparent);color:var(--a-bad);
   background:color-mix(in srgb,var(--a-bad) 6%,var(--a-surf))}
 
-/* ---------- 4k. Phân loại & doanh thu (r127) ---------- */
-body.admin .v2num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
-body.admin .v2tax-facets{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0}
-body.admin .v2tax-chip{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 12px;
-  border:1px solid var(--a-bd);border-radius:9px;background:var(--a-surf);color:var(--a-txt);
-  font:600 12.5px/1 var(--a-font);cursor:pointer}
-body.admin .v2tax-chip:hover{border-color:var(--a-bd2);background:#f9fafb}
-body.admin .v2tax-chip .d{width:6px;height:6px;border-radius:50%;background:var(--a-acc);flex:none}
-body.admin .v2tax-chip b{font-weight:600}
-body.admin .v2tax-chip em{font-style:normal;color:var(--a-dim);font-weight:600;
-  font-variant-numeric:tabular-nums}
-body.admin .v2tax-add{display:flex;gap:8px;align-items:center;margin:12px 0 14px}
-body.admin .v2tax-add .inp{flex:1 1 auto;max-width:420px}
-body.admin .v2tax-tags{display:flex;flex-wrap:wrap;gap:7px}
-body.admin .v2tax-tag{display:inline-flex;align-items:center;gap:7px;padding:3px 4px 3px 11px;
-  border:1px solid var(--a-bd);border-radius:999px;background:var(--a-surf2)}
-body.admin .v2tax-tag b{font:600 12px/1.4 var(--a-font);color:var(--a-txt)}
-body.admin .v2tax-tag em{font-style:normal;font-size:11px;color:var(--a-dim);font-variant-numeric:tabular-nums}
-body.admin .v2tax-tag button{display:grid;place-items:center;width:18px;height:18px;border:0;border-radius:50%;
-  background:transparent;color:var(--a-dim);font:600 13px/1 var(--a-font);cursor:pointer}
-body.admin .v2tax-tag button:hover{background:color-mix(in srgb,var(--a-bad) 12%,transparent);color:var(--a-bad)}
-body.admin .v2tax-pick{position:relative;max-width:460px}
-body.admin .v2tax-hits{position:absolute;left:0;right:0;top:calc(100% + 5px);z-index:20;margin:0;padding:5px;
-  list-style:none;border:1px solid var(--a-bd);border-radius:var(--a-r);background:var(--a-surf);
-  box-shadow:var(--a-shadow-lg)}
-body.admin .v2tax-hits button{display:flex;flex-direction:column;gap:2px;width:100%;padding:8px 10px;
-  border:0;border-radius:6px;background:none;color:var(--a-txt);text-align:left;cursor:pointer}
-body.admin .v2tax-hits button:hover{background:var(--a-surf2)}
-body.admin .v2tax-hits b{font:600 13px/1.3 var(--a-font)}
-body.admin .v2tax-assign{display:flex;flex-wrap:wrap;gap:8px 16px;margin:14px 0 0}
-body.admin .v2tax-check{display:inline-flex;align-items:center;gap:7px;font:500 12.5px/1 var(--a-font);
-  color:var(--a-txt);cursor:pointer}
-body.admin .v2tax-check input{width:15px;height:15px;accent-color:var(--a-acc)}
-
-body.admin .v2rev-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px;margin:14px 0 0}
-body.admin .v2rev-field{display:grid;gap:5px;min-width:0}
-body.admin .v2rev-wide{grid-column:1 / -1}
-body.admin .v2rev-switch{display:inline-flex;align-items:center;gap:8px;font:500 12.5px/1 var(--a-font);
-  color:var(--a-mut)}
-body.admin .v2rev-switch input{width:16px;height:16px;accent-color:var(--a-acc)}
-body.admin .v2rev-calc{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px;
-  max-width:520px;margin:12px 0 4px}
-body.admin .v2rev-out{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:14px 0 0}
-body.admin .v2rev-out>div{display:grid;gap:4px;padding:13px 15px;border:1px solid var(--a-bd);
-  border-radius:12px;background:var(--a-bg2);min-width:0}
-body.admin .v2rev-out span{font-size:11.5px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;
-  color:var(--a-dim)}
-body.admin .v2rev-out b{font-size:21px;font-weight:700;letter-spacing:-.02em;color:var(--a-txt);
-  font-variant-numeric:tabular-nums}
-body.admin .v2rev-out b.ok{color:var(--a-ok)}
-
 /* ========== 5. RESPONSIVE ==========
    Ba khổ: ≥1280 (rộng), 901–1279 (hẹp vừa), ≤900 (rail thành drawer).
    Drawer điện thoại KHÔNG bao giờ ẩn nhãn theo trạng thái thu gọn. */
@@ -1261,9 +1188,6 @@ body.admin .v2rev-out b.ok{color:var(--a-ok)}
   body.admin .v2picker-row .btn{width:100%;justify-content:center}
   body.admin .v2sort li{flex-wrap:wrap}
   body.admin .v2sort li>.grow{flex:1 1 100%}
-  body.admin .v2rev-form,body.admin .v2rev-calc,body.admin .v2rev-out{grid-template-columns:minmax(0,1fr)}
-  body.admin .v2tax-add{flex-wrap:wrap}
-  body.admin .v2tax-add .inp{flex:1 1 100%;max-width:none}
   body.admin .v2top .v2quota{display:none}
   body.admin .admin-tool-label{display:none}
   body.admin .admin-tool{padding:0 8px}
