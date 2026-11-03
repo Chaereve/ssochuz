@@ -66,6 +66,24 @@
   Cache-Control: no-store, max-age=0
   X-Robots-Tag: noindex
 
+# /admin-cu = admin THẬT (ghi KV), /admin-mockup = alias bản thiết kế.
+# Cùng chế độ no-store/noindex như mọi route quản trị.
+/admin-cu
+  Cache-Control: no-store, max-age=0
+  X-Robots-Tag: noindex
+
+/admin-cu/
+  Cache-Control: no-store, max-age=0
+  X-Robots-Tag: noindex
+
+/admin-mockup
+  Cache-Control: no-store, max-age=0
+  X-Robots-Tag: noindex
+
+/admin-mockup/
+  Cache-Control: no-store, max-age=0
+  X-Robots-Tag: noindex
+
 /cz-auth.js
   Cache-Control: no-cache
 

@@ -136,6 +136,7 @@ Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 | 35 | Khoá migration theo `online` | `DoctorPanel` thật chỉ chạy khi `state.online`; mockup trước đó khoá mỗi `static` nên `checking` / `badkey` / `workererr` vẫn bấm được. Gộp `conn !== online` với quota `blocked`. |
 | 36 | Không giữ ADMIN_KEY trong state | Ô mật khẩu chỉ để minh hoạ; xoá ngay sau connect, đăng nhập Supabase, chế độ tĩnh và Đặt lại demo. |
 | 37 | Fallback trạng thái kết nối/quota | `CONN` và `QUOTA` có phương án dự phòng để một giá trị demo lạ không làm vỡ chip, Dashboard hay màn đăng nhập. |
+| 38 | Đưa mockup lên `/admin` | Owner muốn mở `/admin` là thấy bản thiết kế ngay. Đổi bằng 1 dòng rewrite trong `_redirects`, giữ admin thật tại `/admin-cu` và thêm link trong sidebar để không mất chức năng ghi KV. |
 
 ---
 
@@ -339,3 +340,19 @@ Owner yêu cầu rà lại audit, bug tính năng, giao diện, bảo mật và 
 ### 11.4 Kiểm chứng vòng 8
 
 **51/51** kiểm tra mới · 136/136 cấu trúc · 122/122 đối chiếu source · 85/85 vòng 5 · 124/124 vòng 6–7 · 0 lỗi JS · 0 màu literal ngoài `:root` · Chromium thật 14 route ở 360px `scrollWidth = 360`, 0 page error · dán HTML chứa `onerror` vào trình soạn cho **0 handler, 0 lỗi thực thi** · Phase 1 vẫn 398 từ.
+
+---
+
+## 12 · ĐƯA MOCKUP LÊN `/ADMIN` (VÒNG 9)
+
+Owner muốn mở `/admin` là thấy bản thiết kế ngay. Thay bằng **cấu hình route**, không sửa `src/admin/**` hay bundle production.
+
+| Thay đổi | Chi tiết |
+| --- | --- |
+| **Route** | `_redirects`: `/admin` rewrite `200` tới `/mockup/ssochuz-admin-mockup` (URL sạch, không `.html` để tránh 308 lặp). `/admin-v2`, `/admin-legacy`, `/admin-mockup` đều về bản thiết kế; `/admin.html` và `/admin/` vẫn 308 về `/admin`. |
+| **Giữ admin thật** | `admin-cu.html` là bản sao `admin.html` (Preact + TipTap, ghi KV bằng `ADMIN_KEY`), mở tại `/admin-cu`. Sidebar mockup có link `Admin thật · ghi KV`. `tools/build_admin.mjs` cập nhật `?v=` cho cả 2 file HTML. |
+| **Header** | `_headers` thêm `no-store` + `noindex` cho `/admin-cu`, `/admin-cu/`, `/admin-mockup`, `/admin-mockup/`. CSP của site đã cho phép inline script/style và Google Fonts nên mockup chạy nguyên vẹn. |
+| **Kiểm thử** | Cập nhật `tests/t_devserver.js` (kỳ vọng `/admin` là mockup, `/admin-cu` là `adminRoot` + `admin.js`) và `tools/check_headers.js`. Chạy `npm run build` và toàn bộ `npm test`: tất cả xanh; dev server thật trả đúng 8 route. |
+| **Ranh giới** | Mockup vẫn là **DỮ LIỆU MẪU**, không gọi Worker/KV/Supabase; mọi thao tác ghi chỉ mô phỏng. Muốn quay lại chỉ cần xoá 1 dòng `/admin` trong `_redirects`. Nếu đăng nhập Supabase/Google, thêm `https://ssochuz.pages.dev/admin-cu` vào **Redirect URLs**. |
+
+**Kiểm chứng vòng 9:** `npm run build` đạt · toàn bộ `npm test` đạt · `node --check` đạt · 14/14 smoke (13 tab, 14 route × 4 trạng thái, điều khiển chết, chèn HTML, khoá migration, link admin thật) · 0 lỗi JS · dev server thật `/admin` = mockup, `/admin-cu` = `adminRoot`, `/` = trang chủ.

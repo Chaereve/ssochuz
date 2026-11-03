@@ -61,16 +61,20 @@
 /reader.html   /truyen   200
 /my-space/    /my-space    200
 /profile/     /profile     200
-# Admin gộp MỘT trang duy nhất: /admin mở thẳng admin.html. URL thời hai bản
-# (admin-v2 / admin-legacy) vẫn đưa về đúng một admin này, không chết link.
+# /admin giờ mở BẢN THIẾT KẾ (mockup admin, PR #83) theo yêu cầu owner.
+# Admin THẬT (có ghi KV) vẫn sống ở /admin-cu = admin-cu.html; trong mockup có
+# link "Admin thật · ghi KV" để chuyển qua. Đích là URL SẠCH (không .html) để
+# Pages tự tìm .../<tên>.html, tránh 308 lặp.
+/admin              /mockup/ssochuz-admin-mockup   200
+# URL đời hai bản / bản cũ cũng đi về đúng một admin (nay là bản thiết kế),
+# không chết link.
 /admin-v2       /admin       200
 /admin-v2/      /admin       200
 /admin-v2.html  /admin       200
 /admin-legacy       /admin   200
 /admin-legacy/      /admin   200
 /admin-legacy.html  /admin   200
-# Mockup admin (prototype, PR #83): URL ngắn để mở bản thiết kế, KHÔNG đè /admin thật.
-# Đích là URL SẠCH (không .html) để Pages tự tìm .../<tên>.html, tránh 308 lặp.
+# Alias ngắn vẫn giữ để tài liệu và bookmark cũ mở được bản thiết kế.
 /admin-mockup       /mockup/ssochuz-admin-mockup   200
 /admin-mockup/      /mockup/ssochuz-admin-mockup   200
 # --- d) luật TĨNH từng truyện (sinh bởi tools/build_og.mjs, 2 luật mỗi bộ) ---

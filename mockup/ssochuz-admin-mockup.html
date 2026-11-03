@@ -114,6 +114,8 @@ ul,ol{margin:0;padding:0;list-style:none}
 .side-foot .note{font-size:11.5px;line-height:1.5;color:var(--dim)}
 .side-foot button{font:500 12px/1.4 var(--mono);color:var(--mut);text-align:left;text-decoration:underline;text-underline-offset:3px}
 .side-foot button:hover{color:var(--acc)}
+.side-foot a{font:500 12px/1.4 var(--mono);color:var(--acc);text-align:left;text-decoration:underline;text-underline-offset:3px}
+.side-foot a:hover{color:var(--txt)}
 .scrim{position:fixed;inset:0;z-index:42;background:var(--scrim);display:none}
 .app.drawer .scrim{display:block}
 
@@ -896,7 +898,8 @@ function renderSidebar(){
     '<div class="side-scroll">'+nav+'</div>'+
     '<div class="side-foot"><p class="note">Ghi KV cần ADMIN_KEY</p>'+
     '<button data-act="go" data-id="dang-nhap">Đăng nhập / nối Worker</button>'+
-    '<button data-act="docs">Tài liệu bàn giao</button></div>';
+    '<button data-act="docs">Tài liệu bàn giao</button>'+
+    '<a href="/admin-cu" title="Admin thật có ghi KV; bản này là DỮ LIỆU MẪU">Admin thật · ghi KV</a></div>';
 }
 function renderTopbar(){
   var c=CONN[state.conn]||CONN.online,q=QUOTA[state.quota]||QUOTA.ok;
@@ -1538,7 +1541,8 @@ const DOCS_HTML =
  ['34','Lọc HTML chương trước khi render lại','Vòng 8 phát hiện editorSeed từ contenteditable được đưa thẳng vào innerHTML: dán HTML lạ có thể chạy handler. sanitizeEditorHtml() chặn script, on*, javascript:/data:/blob: và chỉ giữ thẻ soạn thảo; sự kiện paste chèn text thường vì onerror chạy trước input.'],
  ['35','Khoá migration theo trạng thái online','DoctorPanel thật chỉ chạy khi state.online; mockup trước đó khoá mỗi static nên checking / badkey / workererr vẫn bấm được. Gộp conn!==online với quota blocked.'],
  ['36','Không giữ ADMIN_KEY trong state','Ô mật khẩu chỉ để minh hoạ; xoá giá trị ngay sau connect, đăng nhập Supabase, chế độ tĩnh và Đặt lại demo để khoá thật không bao giờ nằm lại trong bộ nhớ trang.'],
- ['37','Fallback cho trạng thái kết nối/quota','CONN và QUOTA có phương án dự phòng nên một giá trị demo không hợp lệ không làm vỡ render chip, Dashboard hay màn đăng nhập.']
+ ['37','Fallback cho trạng thái kết nối/quota','CONN và QUOTA có phương án dự phòng nên một giá trị demo không hợp lệ không làm vỡ render chip, Dashboard hay màn đăng nhập.'],
+ ['38','Đưa mockup lên /admin','Owner muốn mở /admin là thấy bản thiết kế ngay; đổi bằng 1 dòng rewrite trong _redirects, giữ admin thật ở /admin-cu và thêm link trong sidebar để không mất chức năng ghi KV.']
 ].map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td></tr>';}).join('')+
 '</tbody></table>'+
 
@@ -1569,6 +1573,7 @@ const DOCS_HTML =
 '<li>Đã bỏ 2 tab Tác giả, Vai trò theo xác nhận owner; nếu sau này có cộng tác viên cần khôi phục nhóm Người dùng.</li>'+
 '<li>Ở 360px bảng vẫn phải cuộn ngang trong vùng bảng; chưa thử ngón tay cái trên thiết bị thật.</li>'+
 '<li>Vòng 8 mới đối chiếu tĩnh mã nguồn; chưa gọi Worker, Supabase, R2, Blogger thật nên chưa kiểm được CORS, timeout 12/120/29s và đường rớt về KV khi overflow lỗi.</li>'+
+'<li>Vòng 9 đưa mockup lên /admin nhưng chưa port chức năng ghi KV sang giao diện mới; mọi thao tác vẫn là DỮ LIỆU MẪU, admin thật nằm ở /admin-cu.</li>'+
 '<li>Chưa dựng 2 biến thể phụ của source: chuyển Bảng/Lưới ở Thư viện và toolbar đủ 15 nút của TipTap.</li>'+
 '</ul>'+
 '<p><b>Đã sửa sau phản hồi owner:</b> scrim desktop che mờ trang, badge Mới cập nhật full-width, nút demo chèn nội dung, ô tiêu đề chương riêng, bỏ 2 tab, tinh gọn chữ. Vòng 6: bỏ Danh sách trong toolbar, thêm dấu ngăn cách, đổi case chỉ cho tên chương, ghi chú gọn, canh thẳng các ô Báo lỗi; vòng 7 dọn ghi chú. Render thử bằng Chromium thật: 13 tab / 5 nhóm, 360px không tràn ngang.</p>'+
@@ -1649,6 +1654,17 @@ const DOCS_HTML =
 '</tbody></table>'+
 '<p><b>Bảo mật đã kiểm:</b> 0 fetch / XHR / WebSocket / eval / new Function / document.write / localStorage / sessionStorage / indexedDB / cookie; tài nguyên ngoài duy nhất là 3 link Google Fonts có fallback hệ thống. Ô ADMIN_KEY là type=password và nhắc không nhập key thật, URL chỉ dùng mau.example và ten-worker.workers.dev, không có tenant thật hay service role. Mọi dữ liệu mẫu, title/desc/phrase của modal và URL người dùng đi qua esc(); sự kiện paste trong trình soạn chỉ chèn text thường. Thử chèn payload vào tên bộ, bình luận, báo lỗi, chương, slide, couple, ghi chú và nội dung editor ở 14 route × 4 trạng thái đều không tạo handler hay thẻ script.</p>'+
 '<p><b>Kiểm chứng vòng 8:</b> 51/51 kiểm tra mới (điều khiển chết, trùng id, chèn HTML, khoá migration, đối chiếu nhãn kết nối) · 136/136 cấu trúc · 122/122 đối chiếu source · 85/85 vòng 5 · 124/124 vòng 6–7 · 0 lỗi JS · 0 màu literal ngoài :root · Chromium thật 14 route ở 360px không tràn ngang, 0 page error; dán HTML chứa onerror vào trình soạn cho 0 handler và 0 lỗi thực thi. Phase 1 vẫn 398 từ.</p>'+
+'<h4>VÒNG 9 · ĐƯA MOCKUP LÊN /ADMIN</h4>'+
+'<p>Owner muốn mở /admin là thấy bản thiết kế ngay. Thay bằng cấu hình route, không sửa src/admin/** hay bất kỳ bundle production nào.</p>'+
+'<table><thead><tr><th>Thay đổi</th><th>Chi tiết</th></tr></thead><tbody>'+
+[['Route','_redirects: /admin rewrite 200 tới /mockup/ssochuz-admin-mockup (URL sạch, không .html để tránh 308 lặp). /admin-v2, /admin-legacy, /admin-mockup đều về bản thiết kế; /admin.html và /admin/ vẫn 308 về /admin.'],
+ ['Giữ admin thật','admin-cu.html là bản sao admin.html (Preact + TipTap, ghi KV bằng ADMIN_KEY), mở tại /admin-cu. Sidebar mockup có link Admin thật · ghi KV. build_admin.mjs cập nhật ?v= cho cả 2 file HTML.'],
+ ['Header','_headers thêm no-store + noindex cho /admin-cu, /admin-cu/, /admin-mockup, /admin-mockup/. CSP của site đã cho phép inline script/style và Google Fonts nên mockup chạy nguyên vẹn.'],
+ ['Kiểm thử','Cập nhật t_devserver.js (kỳ vọng /admin là mockup, /admin-cu là adminRoot + admin.js) và check_headers.js. Chạy npm run build và toàn bộ npm test: tất cả xanh; dev server thật trả đúng 8 route.'],
+ ['Ranh giới','Mockup vẫn là DỮ LIỆU MẪU, không gọi Worker/KV/Supabase; mọi thao tác ghi chỉ mô phỏng. Muốn quay lại chỉ cần xoá 1 dòng /admin trong _redirects.']]
+.map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>';}).join('')+
+'</tbody></table>'+
+'<p><b>Kiểm chứng vòng 9:</b> npm run build đạt · toàn bộ npm test đạt · node --check đạt · 14/14 smoke (13 tab, 14 route × 4 trạng thái, điều khiển chết, chèn HTML, khoá migration, link admin thật) · 0 lỗi JS · dev server thật /admin = mockup, /admin-cu = adminRoot, / = trang chủ.</p>'+
 '<h4>ĐỀ XUẤT THÊM (không nằm trong mockup)</h4>'+
 '<ul>'+
 '<li>Phỏng vấn chủ site và quan sát 2 ca tự dịch, đăng chương để kiểm chứng 5 giả thuyết.</li>'+
