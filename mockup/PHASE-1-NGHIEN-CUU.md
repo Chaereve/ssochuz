@@ -3,7 +3,7 @@
 *Nguồn: `Layout.jsx`, `Badges.jsx`, `docs/product-surface-map.md`, ảnh admin thật. Suy luận dưới đây là GIẢ THUYẾT; số liệu mockup là MẪU.*
 
 ## Người dùng & JTBD
-Chủ site (desktop, tự dịch truyện đã mua và đăng, có ADMIN_KEY): muốn biết việc cần làm và quota KV trước khi ghi; muốn thấy hậu quả khi đổi slug, khóa, khôi phục; muốn đối chiếu KV rồi recount an toàn; muốn soạn chương không mất nháp, đổi case nhanh và biết nháp đã lưu lúc nào. Không có tác giả hay nhân sự khác đăng chung.
+Chủ site (desktop, tự dịch truyện đã mua và đăng, có ADMIN_KEY): muốn biết việc cần làm và quota KV trước khi ghi; muốn thấy hậu quả khi đổi slug, khóa, khôi phục; muốn đối chiếu KV rồi recount an toàn; muốn soạn chương không mất nháp, đổi case nhanh và biết nháp đã lưu lúc nào.
 
 ## 5 điểm đau (GIẢ THUYẾT)
 1. 13 tab phẳng; "Sửa bộ" phụ thuộc lựa chọn ẩn.
@@ -25,8 +25,8 @@ Chủ site (desktop, tự dịch truyện đã mua và đăng, có ADMIN_KEY): m
 1. Một màn = một quyết định; nút chính cố định góc phải (Thư viện → Thêm bộ).
 2. Hồng chỉ cho việc chính, tab chọn, focus, số đếm; mỗi header đúng một nút chính.
 3. Trạng thái đặt trên khung; card không lặp chip kết nối hay quota.
-4. Ma sát tỉ lệ rủi ro: xóa, recount, reset phải gõ tên bộ.
+4. Ma sát tỉ lệ rủi ro: gõ đúng cụm hoặc slug theo mã nguồn.
 5. Nhịp 8px, serif cho số, mono cho nhãn, vạch tóc thay bóng (dải số liệu không card).
 
 ## Phê bình IA
-Giữ 5 nhóm, tên, thứ tự. Nổi bật Dashboard, Báo lỗi, Bình luận bằng số đếm; giữ Thêm bộ, Chương ngay dưới Thư viện; làm mờ Sửa bộ đến khi có bộ được chọn; đẩy Nhật ký, Kiểm tra dữ liệu, Cài đặt xuống cuối nhóm Hệ thống; eyebrow thay breadcrumb. Bỏ nhóm Người dùng (Tác giả, Vai trò) theo xác nhận owner: một người dịch và đăng, không có tác giả hay nhân sự khác.
+Giữ 5 nhóm, tên, thứ tự. Nổi bật Dashboard, Báo lỗi, Bình luận bằng số đếm; giữ Thêm bộ, Chương ngay dưới Thư viện; làm mờ Sửa bộ đến khi có bộ được chọn; đẩy Nhật ký, Kiểm tra dữ liệu, Cài đặt xuống cuối nhóm Hệ thống; eyebrow thay breadcrumb. Bỏ nhóm Người dùng (Tác giả, Vai trò): một chủ site tự dịch và đăng, không có người đăng chung.

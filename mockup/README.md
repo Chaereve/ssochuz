@@ -33,7 +33,7 @@ Phím tắt: `Ctrl+K` mở bảng lệnh (↑/↓/Enter/Esc), `Esc` đóng modal
 | Tiêu chí | Nơi kiểm tra |
 | --- | --- |
 | Đủ tab + màn đăng nhập, tên/thứ tự đúng | Sidebar 5 nhóm / 13 tab; `#/dang-nhap`. Xem ghi chú bên dưới. |
-| Không thêm/bớt chức năng | `TAI-LIEU-BAN-GIAO.md` → ma trận 15 màn + nhật ký quyết định #1, #2. |
+| Không thêm/bớt chức năng | `TAI-LIEU-BAN-GIAO.md` → ma trận 13 tab + nhật ký quyết định #1, #2, #20–#24. |
 | Cùng hệ thống thiết kế | `:root` trong HTML; mọi màu là biến; component dùng lại ở mọi màn. |
 | Đủ trạng thái rỗng/tải/lỗi + quota/kết nối | Bảng điều khiển demo, đổi được trên từng tab. |
 | Tương phản ≥ 4.5:1, bàn phím, 360px | `TAI-LIEU-BAN-GIAO.md` → Phase 4 (mục 3.2 / 3.3 / 3.4). |
@@ -47,3 +47,5 @@ Owner xác nhận tự dịch truyện đã mua và đăng, không có tác gi�
 Mockup **không** dùng bộ nhớ trình duyệt, không gọi Worker thật, không nhận ADMIN_KEY thật, không dùng ảnh ngoài (bìa là ô màu CSS), không có light mode.
 
 **Mới ở vòng 3:** đổi case đoạn trong trình soạn · ô tiêu đề chương riêng · sửa badge/scrim/nút demo ở card Mới cập nhật · rút gọn chữ.
+
+**Mới ở vòng 4 (đối chiếu `src/admin/**`):** bỏ field tự bịa (Tags, Số chương, Ngày) · thêm Năm, Hiển thị, 18+, 2 ô mật mã · 4 hàng đợi của BỘ trong tab Chương + đúng 4 trạng thái chương · bỏ nút Duyệt bình luận, thêm Mở lại báo lỗi · đúng cụm xác nhận `XOÁ / ĐẾM LẠI / RESET / GỠ PHIẾU / ĐỒNG BỘ / KHÔI PHỤC` và gõ slug khi xoá bộ · đúng nhãn source ở Dashboard, Thống kê, Kiểm tra dữ liệu, Cài đặt, Homepage CMS · nhật ký chỉ còn `admin-key`. Chi tiết ở `TAI-LIEU-BAN-GIAO.md` → mục 7.

@@ -63,7 +63,7 @@ Biến phái sinh (cũng tại `:root`, để mọi cặp nền/chữ đều là
 
 - **Font:** `Fraunces` (serif: tiêu đề, số lớn) · `Inter` (sans: nội dung) · `IBM Plex Mono` (nhãn nhỏ in hoa). Chỉ dùng Google Fonts; có fallback hệ thống nên vẫn đọc được khi mở offline.
 - **Quy mô:** lưới 8px (`--s1` … `--s5`); điều khiển 38–42px desktop, ≥ 44px mobile; bo 6/8/12px; **không bóng đổ**, không gradient; vạch tóc 1px; focus ring `2px solid var(--ring)`.
-- **Component:** nút (chính / phụ / ghost / nguy hiểm), input, select, checkbox & switch tự vẽ, tab, bảng (thead dính), thẻ, badge đủ tone (`ok / warn / bad / info / violet / slate / neutral / acc`), tag chip, modal xác nhận (kể cả kiểu **gõ tên bộ để xác nhận**), toast, skeleton, empty state, banner, tooltip, pagination.
+- **Component:** nút (chính / phụ / ghost / nguy hiểm), input, select, checkbox & switch tự vẽ, tab, bảng (thead dính), thẻ, badge đủ tone (`ok / warn / bad / info / violet / slate / neutral / acc`), tag chip, modal xác nhận (ví dụ gõ tên bộ; thao tác thật gõ cụm/slug theo source), toast, skeleton, empty state, banner, tooltip, pagination.
 - **Icon:** SVG inline `24×24`, `stroke-width="1.75"`, `currentColor`, nét đồng nhất, không emoji.
 
 ### 1.4 Ma trận màn hình
@@ -74,16 +74,16 @@ Biến phái sinh (cũng tại `:root`, để mọi cặp nền/chữ đều là
 | 1 | `#/dashboard` | Dải 6 số liệu → Việc cần làm → Tình trạng hệ thống → biểu đồ 14 ngày → Mới cập nhật | Đọc lại dữ liệu |
 | 2 | `#/thu-vien` | Tìm/lọc/sắp xếp → bảng sticky → phân trang → thanh thao tác hàng loạt | Thêm bộ |
 | 3 | `#/them-bo` | Metadata → chương đầu (tuỳ chọn) → ảnh bìa | Tạo bộ |
-| 4 | `#/sua-bo` | Form + cảnh báo slug → khóa mật mã → nhân bản | Lưu thay đổi |
-| 5 | `#/chuong` | Nháp / chờ duyệt / lịch đăng → ô tiêu đề riêng → trình soạn (toolbar + đổi case) | Soạn chương |
-| 6 | `#/binh-luan` | Kiểm duyệt + nghi spam + xóa 2 lần | Đọc lại dữ liệu |
-| 7 | `#/bao-loi` | Lỗi độc giả gửi + đánh dấu đã xử lý | Đọc lại dữ liệu |
-| 8 | `#/phieu-bau` | Phiếu theo người đọc + gỡ + reset | Reset phiếu |
-| 9 | `#/homepage-cms` | Slide → bộ được chọn → lịch ra chương | Lưu thay đổi |
-| 10 | `#/thong-ke` | Top lượt đọc / thích / người bầu / hôm nay | Đọc lại dữ liệu |
-| 11 | `#/kiem-tra-du-lieu` | Đối chiếu KV → kết quả quét → recount | Recount |
-| 12 | `#/nhat-ky` | 200 thao tác gần nhất | Đọc lại dữ liệu |
-| 13 | `#/cai-dat` | Sao lưu/khôi phục JSON → Blogger → flush stats/recount | Sao lưu JSON |
+| 4 | `#/sua-bo` | Form + cảnh báo slug → khóa mật mã → nhân bản | Lưu metadata |
+| 5 | `#/chuong` | 4 hàng đợi của BỘ (Nháp / Chờ duyệt / Hẹn giờ / Chờ tới giờ) → chọn bộ → ô tiêu đề riêng → trình soạn (toolbar + đổi case + trạng thái chương) | Quản lý chương |
+| 6 | `#/binh-luan` | Tìm + lọc bộ + Chỉ nghi spam + xoá 2 lần (không có Duyệt) | Đọc bình luận |
+| 7 | `#/bao-loi` | 3 nhóm trạng thái + đánh dấu đã xử lý + Mở lại | Đọc báo lỗi |
+| 8 | `#/phieu-bau` | Chọn nhiều → Gỡ phiếu đã chọn + reset có số chương | Reset phiếu bộ này |
+| 9 | `#/homepage-cms` | Hero/slides (Desktop/Mobile) → Chuyển thể Series → lịch + ghi chú → Thông báo trang chủ | Lưu trang chủ |
+| 10 | `#/thong-ke` | Số liệu KV: Views / Votes / Voters / Hôm nay + Phiếu theo chương | Đọc thống kê KV |
+| 11 | `#/kiem-tra-du-lieu` | Đọc lại registry → Quét book → Audit KV → Sửa từng dòng | Đếm lại số chương |
+| 12 | `#/nhat-ky` | 200 thao tác gần nhất | Đọc log |
+| 13 | `#/cai-dat` | Tải backup JSON / khôi phục → nhập + đồng bộ Blogger → Flush stats cache / Đếm lại số chương | Tải backup JSON |
 
 **Mỗi màn có 4 trạng thái** (bình thường / rỗng / đang tải skeleton / lỗi), điều khiển độc lập theo route trong bảng demo. Màn đăng nhập có biến thể riêng: rỗng = chưa cấu hình Worker, tải = đang kiểm tra kết nối, lỗi = sai ADMIN_KEY / lỗi Worker.
 
@@ -91,7 +91,7 @@ Biến phái sinh (cũng tại `:root`, để mọi cặp nền/chữ đều là
 
 ### 1.5 Tương tác đã chạy
 
-Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc · ô tìm gợi ý + `Ctrl+K` (↑/↓/Enter/Esc) · lọc/sắp xếp/phân trang Thư viện · chọn nhiều + thanh hàng loạt (đổi trạng thái, 18+, CSV, JSON, xóa mạnh) · "Sửa bộ" chỉ mở khi có bộ được chọn · modal xác nhận thường & mạnh · toast · validate form · cảnh báo đổi slug · tự lưu nháp "Đã lưu lúc…" · thêm/xóa/di chuyển chương · **đổi case đoạn/vùng chọn** · **ô tiêu đề chương riêng** · import mẫu · banner quota · tài liệu bàn giao trong modal.
+Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc · ô tìm gợi ý + `Ctrl+K` (↑/↓/Enter/Esc) · lọc/sắp xếp/phân trang Thư viện · chọn nhiều + thanh hàng loạt (6 lựa chọn đúng `BookList.jsx`, CSV, JSON; xoá mạnh chỉ cho từng bộ) · "Sửa bộ" chỉ mở khi có bộ được chọn · modal xác nhận thường & mạnh · toast · validate form · cảnh báo đổi slug · tự lưu nháp "Đã lưu lúc…" · thêm/xóa/di chuyển chương · **đổi case đoạn/vùng chọn** · **ô tiêu đề chương riêng** · import mẫu · banner quota · tài liệu bàn giao trong modal.
 
 ---
 
@@ -105,7 +105,7 @@ Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 | 4 | Dải 6 số liệu không bọc card, chỉ vạch tóc | Phát huy phong cách hiện có; card chồng card tạo nhiễu trên dashboard. |
 | 5 | Hồng chỉ cho việc chính / tab chọn / focus / số đếm | Màu nhấn hiếm mới có ý nghĩa; tránh biến mọi badge thành tín hiệu khẩn. |
 | 6 | Chip kết nối + pill quota + banner nằm trên khung | Trạng thái hệ thống là thông tin toàn cục, không nên lặp trong từng card. |
-| 7 | Xóa / recount / reset / khôi phục bắt gõ chính xác | Ma sát có chủ đích tỉ lệ rủi ro mất dữ liệu; xóa một bộ bắt gõ đúng tên bộ. |
+| 7 | Xoá / recount / reset / khôi phục gõ đúng cụm hoặc slug | Theo `main.jsx`: `XOÁ`, `ĐẾM LẠI`, `RESET`, `GỠ PHIẾU`, `ĐỒNG BỘ`, `KHÔI PHỤC`; xoá bộ và bỏ khóa gõ đúng slug. |
 | 8 | Xóa bình luận xác nhận hai lần | Thao tác kiểm duyệt nhạy cảm; hai bước tách "bấm nhầm" khỏi "đồng ý xóa". |
 | 9 | "Sửa bộ" làm mờ và chặn khi chưa chọn bộ | Phản ánh đúng ràng buộc thật, giải thích bằng tooltip + toast thay vì im lặng. |
 | 10 | Trạng thái rỗng/tải/lỗi điều khiển theo từng màn | Người review kiểm tra mọi màn mà không phải sửa dữ liệu mẫu. |
@@ -118,6 +118,11 @@ Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 | 17 | Ô tiêu đề chương tách riêng | Khớp `ChapterEditor.jsx` của bản gốc: `title` là field riêng, nội dung là field riêng. |
 | 18 | Sửa 3 lỗi ở card Mới cập nhật | Scrim desktop che mờ cả trang; `.list-item .t span` đè `display:block` làm badge full-width; nút demo chèn nội dung. |
 | 19 | Tinh gọn chữ | Bỏ câu giải thích lặp, rút nhãn dài, giữ một dòng MẪU chung. |
+| 20 | Đối chiếu lại toàn bộ chức năng với `src/admin/**` | Owner báo vài tính năng không khớp bản gốc; rà từng component thay vì chỉ khớp tên tab và màu. |
+| 21 | Bỏ field không có trong schema | `metaFromForm` xoá `tags`; không có Số chương / Ngày sửa tay. Thay bằng Năm, Hiển thị, 18+, 2 ô mật mã. |
+| 22 | Tab Chương là 4 hàng đợi của BỘ | `ChaptersHub` lọc theo `pubStatus` + `pending`; trạng thái riêng của CHƯƠNG là Xuất bản / Hẹn giờ / Ẩn / Nháp. |
+| 23 | Bỏ Duyệt bình luận, thêm Mở lại báo lỗi | `CommentsPanel` chỉ lọc nghi spam và xoá 2 bước; `ReportsPanel` cho mở lại. |
+| 24 | Đúng cụm xác nhận và tên hành động | `main.jsx`: `XOÁ`, `ĐẾM LẠI`, `RESET`, `GỠ PHIẾU`, `ĐỒNG BỘ`, `KHÔI PHỤC`; xoá bộ / bỏ khóa gõ slug. |
 
 ---
 
@@ -128,7 +133,7 @@ Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 | # | Tiêu chí | Điểm | Cải thiện đã làm |
 | --- | --- | --- | --- |
 | 1 | Hiện trạng hệ thống | 5 | Chip 5 trạng thái, quota 4 mức, banner đỏ, "đã lưu lúc…", skeleton, toast. |
-| 2 | Khớp thế giới thật | 5 | Đúng tên tab, nhãn trạng thái, thứ tự badge, thuật ngữ KV/Worker của mã nguồn. |
+| 2 | Khớp thế giới thật | 5 | Vòng 4 đối chiếu `src/admin/**`: đúng tên tab, 7 trạng thái xuất bản, 4 trạng thái chương, cụm xác nhận và thuật ngữ KV/Worker. |
 | 3 | Kiểm soát & tự do | 4 | Esc đóng modal/drawer/palette, "Bỏ chọn", "Nhập lại", "Thử lại", "Về bình thường". |
 | 4 | Nhất quán & chuẩn | 5 | Một `:root`, một bộ nút/badge/bảng, nhịp 8px, 1 nút chính/header ở mọi màn. |
 | 5 | Ngăn lỗi | 5 | Validate form, cảnh báo slug, xác nhận mạnh có gõ, xóa 2 lần, gated Sửa bộ. |
@@ -177,6 +182,7 @@ Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 6. Đã bỏ 2 tab theo xác nhận owner; nếu sau này có cộng tác viên cần khôi phục nhóm Người dùng và rà soát lại phân quyền.
 7. Ở 360px bảng vẫn phải cuộn ngang trong vùng bảng; chưa thử ngón tay cái trên thiết bị thật.
 8. Import `.docx`/`.html` mới mô phỏng bằng tên file, chưa parse nội dung (đúng tinh thần mockup, không code production).
+9. Chưa dựng hết biến thể phụ của source: chuyển Bảng/Lưới ở Thư viện, nhiều dòng Couple (`+ Thêm couple`), toolbar đủ 15 nút của TipTap, migration overflow KV → Supabase/R2, phím `Ctrl+S` / `Ctrl+N`. Mockup ưu tiên đúng luồng chính đã liệt kê trong brief; các mục này nằm ngoài phạm vi prototype hiện tại.
 
 ---
 
@@ -186,7 +192,7 @@ Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 - Lịch sử phiên bản / undo cho metadata và chương (ngoài danh sách chức năng hiện có).
 - Nếu sau này có cộng tác viên: phân quyền phía server thay vì chỉ ở UI như mã nguồn hiện tại.
 - Cảnh báo quota chủ động trước khi chạm 80% và báo cáo ghi theo ngày.
-- Xuất nhật ký ra CSV để đối soát định kỳ; shortcut duyệt nhanh cho kiểm duyệt viên.
+- Xuất nhật ký ra CSV để đối soát định kỳ; shortcut duyệt nhanh cho chủ site.
 - Đo hiệu năng bảng lớn, thử 360px trên thiết bị thật và kiểm tra công nghệ hỗ trợ trước khi chuyển code production.
 - Chốt giá trị `--acc` sau khi thử trên bìa thật và trên màn hình hiệu chuẩn thấp.
 
@@ -198,7 +204,7 @@ Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 - Trạng thái đang tải của màn đăng nhập nay có nhãn `ĐANG TẢI` + skeleton, thống nhất với 13 tab.
 - Sửa khung 360px: cụm nút trên thanh trên được phép xuống dòng, chip kết nối và pill quota gọn còn tối đa 132px; áp dụng cả cho công tắc "Giả lập khung 360px" trên desktop.
 - Dọn bản `renderDemo()` trùng tên không còn dùng; giữ một nguồn duy nhất cho bảng điều khiển demo.
-- Kiểm chứng lại: **142/142 kiểm tra tự động đạt, 0 lỗi JS** trên 16 route × 4 trạng thái, 15 lần bấm nav, 16 hành động chính, 5 chip kết nối, 4 mức quota, 3 biến thể khung, `Ctrl+K`, modal tài liệu, xác nhận mạnh và đăng nhập.
+- Kiểm chứng vòng 2 (trước khi bỏ 2 tab): **142/142 kiểm tra tự động đạt, 0 lỗi JS** trên 16 route × 4 trạng thái, 15 lần bấm nav. Con số 16 route / 15 tab là lịch sử, không còn đúng với mockup hiện tại (14 route / 13 tab).
 
 ## 6 · CẬP NHẬT THEO PHẢN HỒI CỦA OWNER (VÒNG 3)
 
@@ -212,3 +218,32 @@ Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 
 **Kiểm chứng vòng 3 bằng Chromium thật (không chỉ jsdom):** badge gọn còn 103/90/38px trên một dòng · scrim desktop `display:none` · đổi case `upper` ra chữ hoa tiếng Việt đúng · ô tiêu đề gõ xong cập nhật cả state lẫn danh sách · 13 tab / 5 nhóm · viewport 360px có `scrollWidth = 360` (không tràn ngang) · 0 lỗi JS.
 
+## 7 · ĐỐI CHIẾU VỚI MÃ NGUỒN GỐC (VÒNG 4)
+
+Owner báo "một vài tính năng không đúng với tính năng gốc". Rà lại `src/admin/components/*`, `src/admin/utils/books.js`, `src/shared/schedule.js`, `src/admin/main.jsx` và `src/admin/PARITY-CUTOVER.md`. **13 tab / 5 nhóm, đổi case đoạn và ô tiêu đề chương riêng giữ nguyên**; các chỗ lệch dưới đây đã sửa.
+
+| Nguồn | Mockup trước | Đã sửa |
+| --- | --- | --- |
+| `utils/books.js` · `PUB_STATUSES` | `Hẹn lịch`, `Đã xuất bản` | `Hẹn giờ`, `Xuất bản`; select dùng đúng 7 nhãn gốc |
+| `utils/books.js` · `VISIBILITIES` | Không có ô Hiển thị | Công khai / Không liệt kê (chỉ link) / Riêng tư |
+| `utils/books.js` · `metaFromForm` | Cột Tags, ô Tags, tìm theo tag | Bỏ hết; schema xoá `tags`, tìm theo tên / tác giả / couple / slug |
+| `NewBook.jsx`, `BookEditor.jsx` | Số chương, Ngày sửa tay | Bỏ; thêm Năm, Hiển thị, switch 18+, 2 ô mật mã (tối thiểu 8 ký tự) |
+| `Layout.jsx` · `connChip` | `Online`, `Lỗi Worker` | `Cloudflare KV · Online`, `Lỗi kết nối Worker`, `Đang kiểm tra kết nối` |
+| `Layout.jsx` · `quotaLevel` | 780 / 960 | Ngưỡng cảnh báo 800, nguy hiểm 950, chặn 1000 |
+| `utils/overview.js`, `Overview.jsx` | KPI tự đặt; việc "Slug thay đổi gần đây" | Đúng nhãn Bộ truyện / Chương đã đăng / Gắn 18+ / Thiếu thông tin; việc Đang ẩn, Thiếu bìa, Thiếu mô tả; thêm dòng Doctor và Lưu trữ tràn đúng nội dung |
+| `ChaptersHub.jsx` | 3 tab trạng thái CHƯƠNG | 4 hàng đợi của BỘ: Nháp, Chờ duyệt, Hẹn giờ, Chờ tới giờ + chọn bộ để quản lý chương |
+| `shared/schedule.js` · `CHAPTER_STATUSES` | Chờ duyệt là trạng thái chương | Xuất bản / Hẹn giờ / Ẩn / Nháp + ô "Chương lên sóng lúc" |
+| `ChapterEditor.jsx` | `.docx` đơn, Lưu nháp, Hẹn đăng | Import `.txt/.html`; nhiều chương `.txt/.docx`; `Lưu chương`; `Xoá chương` gõ `XOÁ` |
+| `OperationalPanels.jsx` · `CommentsPanel` | Nút Duyệt, trạng thái Chờ duyệt | Bỏ; tìm + lọc bộ + Chỉ nghi spam + Xoá 2 bước (`XOÁ`) |
+| `OperationalPanels.jsx` · `ReportsPanel` | Nút bị khoá sau khi xử lý | Thêm `Mở lại` và 3 nhóm Tất cả / Chưa xử lý / Đã xử lý |
+| `OperationalPanels.jsx` · `VotesPanel` | Gỡ từng phiếu | Chọn nhiều → `Gỡ phiếu đã chọn`; Reset có ô số chương |
+| `OperationalPanels.jsx` · `StatsPanel` | "Top lượt thích" | Số liệu KV: Views / Votes / Voters / Hôm nay + Phiếu theo chương |
+| `HomepageCMS.jsx` | "Bộ được chọn", thiếu banner | Chuyển thể Series, Desktop/Mobile, Ghi chú lịch, Thông báo trang chủ |
+| `OperationalPanels.jsx` · `DoctorPanel` | `Recount` | Đọc lại registry, Quét book, Audit KV, Sửa từng dòng, Đếm lại số chương từ KV |
+| `OperationalPanels.jsx` · `SettingsPanel` | Sao lưu JSON, Flush stats, Recount | Tải backup JSON, Flush stats cache, Đếm lại số chương, Đồng bộ metadata Blogger |
+| `main.jsx` · log | "Nhân sự mẫu 01–04" | `admin-key` ở mọi dòng: một chủ site tự dịch và đăng |
+| `BookList.jsx` | Xoá hàng loạt | 6 lựa chọn thao tác lô đúng source; xoá mạnh chỉ áp cho từng bộ |
+
+**Giữ theo yêu cầu riêng của owner (không có trong source):** đổi case đoạn/vùng chọn, ô tiêu đề chương riêng, 13 tab / 5 nhóm. **Giữ theo brief thiết kế:** lọc/sắp xếp/phân trang, 4 trạng thái mỗi màn, một nút chính cố định, tag chip trong bộ component, modal ví dụ "gõ tên bộ".
+
+**Kiểm chứng vòng 4:** `node --check` đạt · 136/136 kiểm tra cấu trúc (14 route × 4 trạng thái, 13 nav, 14 hành động chính, 5 chip, 4 quota, khung, `Ctrl+K`, docs) · 122/122 kiểm tra đối chiếu source · 0 lỗi JS · render bằng Chromium thật ở desktop và 360px.
