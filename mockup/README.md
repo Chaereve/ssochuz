@@ -4,13 +4,17 @@ Thiết kế lại giao diện quản trị. **Chức năng đã có, không th�
 
 ## Mở ngay
 
-**Đã merge vào `main`** qua PR #83 (merge commit `fbbe121`). Mockup nằm trong thư mục `mockup/`; `/admin` thật **không đổi** vì đây là prototype, không phải code production.
+**Đã merge vào `main`** qua PR #83 (`fbbe121`) và #84 (`59a6167`). Theo yêu cầu owner, **`/admin` giờ mở chính bản mockup này** (`_redirects` rewrite 200). Admin **thật** (Preact, có ghi KV qua `ADMIN_KEY`) vẫn sống ở **`/admin-cu`** = `admin-cu.html`; trong sidebar mockup có link `Admin thật · ghi KV` để chuyển qua. `/admin-v2`, `/admin-legacy`, `/admin-mockup` đều về bản thiết kế.
 
 | Cách mở | Địa chỉ |
 | --- | --- |
-| Trên site sau khi deploy | `https://ssochuz.pages.dev/admin-mockup` (hoặc `/mockup/ssochuz-admin-mockup.html`) |
+| Giao diện admin mặc định | `https://ssochuz.pages.dev/admin` |
+| Admin thật (quản lý nội dung, ghi KV) | `https://ssochuz.pages.dev/admin-cu` |
+| Alias bản thiết kế | `/admin-mockup`, `/mockup/ssochuz-admin-mockup.html` |
 | Trên GitHub `main` | `https://github.com/Chaereve/ssochuz/blob/main/mockup/ssochuz-admin-mockup.html` |
 | Không cần mạng | Double-click `ssochuz-admin-mockup.html` — file tự chứa, không cần server, không cần build |
+
+⚠️ Mockup vẫn là **DỮ LIỆU MẪU**: không gọi Worker/KV/Supabase, mọi thao tác ghi chỉ mô phỏng. Muốn sửa truyện thật thì dùng `/admin-cu`. `admin.html` được giữ nguyên và `tools/build_admin.mjs` cập nhật `?v=` cho cả `admin.html` lẫn `admin-cu.html`. Nếu đăng nhập bằng Supabase/Google, nhớ thêm `https://ssochuz.pages.dev/admin-cu` vào **Redirect URLs** trong Supabase (OAuth dùng `location.pathname` làm `redirectTo`). Muốn quay lại chỉ cần xoá 1 dòng `/admin` trong `_redirects`.
 
 Google Fonts là tài nguyên ngoài duy nhất; nếu offline thì dùng fallback hệ thống, vẫn đọc được. Bấm **Tài liệu bàn giao** trong sidebar (hoặc nút docs) để xem đủ 8 vòng, trong đó có mục 11 về kiểm chéo bảo mật/kết nối.
 

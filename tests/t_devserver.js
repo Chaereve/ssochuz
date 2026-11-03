@@ -114,7 +114,8 @@ async function boot(root, pys) {
       ['/truyen/?slug=third-person', 200, 'trang bộ qua query'],
       ['/couple/', 200, 'trang couple (thư mục có index.html)'],
       ['/tac-gia/', 200, 'trang tác giả'],
-      ['/admin', 200, 'trang quản trị (một admin duy nhất)'],
+      ['/admin', 200, '/admin giờ mở mockup thiết kế (theo yêu cầu owner)'],
+      ['/admin-cu', 200, 'admin THẬT vẫn sống ở /admin-cu để còn ghi KV'],
       ['/admin-v2', 200, 'URL đời hai bản vẫn vào đúng một admin'],
       ['/admin-v2/', 200, 'URL đời hai bản với dấu /'],
       ['/admin-legacy', 200, 'URL legacy cũng merge về một admin'],
@@ -152,12 +153,18 @@ async function boot(root, pys) {
     ok(/Third Person/.test(story.body), '/truyen/third-person/ phải là trang của bộ Third Person');
     const lib = await get(port, '/truyen');
     ok(/<html/i.test(lib.body) && lib.body.length > 3000, '/truyen phải trả về trang thật (không phải trang lỗi)');
+    /* Từ khi owner yêu cầu thay giao diện: /admin (và 2 alias cũ) trả MOCKUP,
+       còn admin THẬT nằm ở /admin-cu. Kiểm cả 2 chiều để không mất chức năng ghi KV. */
+    const MOCK = /Admin mockup|ssochuz-admin-mockup|DỮ LIỆU MẪU/;
+    const REAL = /adminRoot/;
     const adminNow = await get(port, '/admin');
-    ok(/adminRoot/.test(adminNow.body) && /admin\.js/.test(adminNow.body), '/admin phải trả về admin.html (một admin duy nhất)');
+    ok(MOCK.test(adminNow.body), '/admin phải trả mockup admin (đang trả admin.html cũ?)');
     const adminV2 = await get(port, '/admin-v2');
-    ok(/adminRoot/.test(adminV2.body) && /admin\.js/.test(adminV2.body), '/admin-v2 phải merge về admin.html');
+    ok(MOCK.test(adminV2.body), '/admin-v2 phải merge về mockup');
     const legacy = await get(port, '/admin-legacy');
-    ok(/adminRoot/.test(legacy.body) && /admin\.js/.test(legacy.body) && !/id="gate"/.test(legacy.body), '/admin-legacy phải merge về admin.html (không còn cổng admin cũ)');
+    ok(MOCK.test(legacy.body) && !/id="gate"/.test(legacy.body), '/admin-legacy phải merge về mockup (không còn cổng admin cũ)');
+    const adminCu = await get(port, '/admin-cu');
+    ok(REAL.test(adminCu.body) && /admin\.js/.test(adminCu.body), '/admin-cu phải trả admin THẬT (adminRoot + admin.js)');
   } finally {
     try { proc.kill('SIGKILL'); } catch (e) {}
   }
