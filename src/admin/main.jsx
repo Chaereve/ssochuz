@@ -18,6 +18,7 @@ import { HomepageCMS } from './components/HomepageCMS.jsx';
 import { UsersPanel } from './components/UsersPanel.jsx';
 import { RolesPanel } from './components/RolesPanel.jsx';
 import { ChaptersHub } from './components/ChaptersHub.jsx';
+import { TaxonomyPanel, RevenuePanel } from './components/BusinessPanels.jsx';
 
 
 const api = new AdminApi(loadSavedConnection());
@@ -1018,6 +1019,27 @@ function App() {
     registry.settings.staff = rows;
     await writeRegistry(registry, 'Đã lưu nhân sự');
   }
+  /* Thể loại & thẻ: ghi danh sách thẻ vào settings.tags, và gắn thẻ đã sửa vào
+     từng bộ trong registry.lib (một lần PUT registry, không gọi từng bộ). */
+  async function saveTaxonomy(payload) {
+    const registry = cloneRegistry(state.registry);
+    registry.settings = registry.settings || {};
+    registry.settings.tags = (payload.tags || []).map((t) => ({ id: t.id, label: t.label }));
+    (payload.assign || []).forEach((row) => {
+      const book = (registry.lib || []).find((b) => b.slug === row.slug);
+      if (book) book.tags = (row.tags || []).slice();
+    });
+    await writeRegistry(registry, 'Đã lưu phân loại & thẻ');
+  }
+
+  /* Doanh thu: cấu hình hộp ủng hộ — đúng field mà trang đọc dùng. */
+  async function saveDonation(cfg) {
+    const registry = cloneRegistry(state.registry);
+    registry.settings = registry.settings || {};
+    registry.settings.donation = Object.assign({}, registry.settings.donation || {}, cfg || {});
+    await writeRegistry(registry, cfg && cfg.enabled ? 'Đã bật hộp ủng hộ' : 'Đã lưu cấu hình ủng hộ');
+  }
+
   function handleTodo(kind, book) {
     if (book && book.slug) return editSlug(book.slug);
     if (kind === 'cmts' || kind === 'reports') return setActiveTab(kind);
@@ -1057,6 +1079,8 @@ function App() {
   else if (activeTab === 'homepage') pane = <HomepageCMS registry={state.registry} apiBase={state.apiBase} onSave={saveHomepage} writeBlocked={writeBlocked} online={state.online} />;
   else if (activeTab === 'users') pane = <UsersPanel registry={state.registry} onEdit={editSlug} onFilterAuthor={(name) => { setListQuery(name); setActiveTab('list'); }} />;
   else if (activeTab === 'roles') pane = <RolesPanel registry={state.registry} role={state.role} onSave={saveStaff} />;
+  else if (activeTab === 'taxonomy') pane = <TaxonomyPanel registry={state.registry} onSave={saveTaxonomy} onOpenList={(q) => { setListQuery(q || ''); setActiveTab('list'); }} writeBlocked={writeBlocked} online={state.online} />;
+  else if (activeTab === 'revenue') pane = <RevenuePanel registry={state.registry} onSave={saveDonation} writeBlocked={writeBlocked} online={state.online} />;
   else if (activeTab === 'doctor') pane = <DoctorPanel state={state} onKvAudit={loadKvAudit} onScanBooks={scanBooks} onRecount={runRecount} onReload={reload} onFix={fixScanIssue} onMigrate={runMigrateOverflow} />;
   else if (activeTab === 'cmts') pane = <CommentsPanel state={state} onLoad={refreshComments} onDelete={deleteComment} />;
   else if (activeTab === 'reports') pane = <ReportsPanel state={state} onLoad={refreshReports} onMark={markReport} />;
