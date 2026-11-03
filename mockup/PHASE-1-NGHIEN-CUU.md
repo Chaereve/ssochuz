@@ -3,10 +3,10 @@
 *Nguồn: `Layout.jsx`, `Badges.jsx`, `docs/product-surface-map.md`, ảnh admin thật. Suy luận dưới đây là GIẢ THUYẾT; số liệu mockup là MẪU.*
 
 ## Người dùng & JTBD
-Chủ site (desktop, có ADMIN_KEY): muốn biết việc cần làm và quota KV trước khi ghi; muốn thấy hậu quả khi đổi slug, khóa, khôi phục; muốn đối chiếu KV rồi recount an toàn. Biên tập viên (desktop, thỉnh thoảng mobile): muốn tìm bộ → sửa → soạn → hẹn đăng không mất nháp; muốn duyệt bình luận, báo lỗi, phiếu theo lô; muốn biết nháp đã lưu lúc nào.
+Chủ site (desktop, tự dịch truyện đã mua và đăng, có ADMIN_KEY): muốn biết việc cần làm và quota KV trước khi ghi; muốn thấy hậu quả khi đổi slug, khóa, khôi phục; muốn đối chiếu KV rồi recount an toàn; muốn soạn chương không mất nháp, đổi case nhanh và biết nháp đã lưu lúc nào. Không có tác giả hay nhân sự khác đăng chung.
 
 ## 5 điểm đau (GIẢ THUYẾT)
-1. 15 tab phẳng; "Sửa bộ" phụ thuộc lựa chọn ẩn.
+1. 13 tab phẳng; "Sửa bộ" phụ thuộc lựa chọn ẩn.
 2. Worker và quota rải rác → ghi khi sắp bị chặn.
 3. Xóa, recount, reset dùng chung một kiểu xác nhận.
 4. Bảng dài, nhiều badge, thead và thanh lô mất khi cuộn.
@@ -15,7 +15,7 @@ Chủ site (desktop, có ADMIN_KEY): muốn biết việc cần làm và quota K
 ## Tham chiếu (mỗi sản phẩm 1 mẫu)
 | Sản phẩm | Mẫu đáng học | Áp dụng |
 | --- | --- | --- |
-| Linear | Ctrl+K điều hướng | Ô tìm gợi ý + 15 tab |
+| Linear | Ctrl+K điều hướng | Ô tìm gợi ý + 13 tab |
 | Ghost CMS | "Đã lưu lúc…" + xem trước | Trình soạn chương |
 | Airtable | thead dính, chọn nhiều, thanh lô | Thư viện |
 | MangaDex author | nháp → chờ duyệt → lịch đăng | Tab Chương |
@@ -29,4 +29,4 @@ Chủ site (desktop, có ADMIN_KEY): muốn biết việc cần làm và quota K
 5. Nhịp 8px, serif cho số, mono cho nhãn, vạch tóc thay bóng (dải số liệu không card).
 
 ## Phê bình IA
-Giữ 6 nhóm, tên, thứ tự. Nổi bật Dashboard, Báo lỗi, Bình luận bằng số đếm; giữ Thêm bộ, Chương ngay dưới Thư viện; làm mờ Sửa bộ đến khi có bộ được chọn; đẩy Nhật ký, Kiểm tra dữ liệu, Cài đặt xuống cuối nhóm Hệ thống; eyebrow thay breadcrumb. Đề bài ghi 14 tab nhưng liệt kê 15, `Layout.jsx` cũng 15 → dựng đủ 15, không bớt chức năng.
+Giữ 5 nhóm, tên, thứ tự. Nổi bật Dashboard, Báo lỗi, Bình luận bằng số đếm; giữ Thêm bộ, Chương ngay dưới Thư viện; làm mờ Sửa bộ đến khi có bộ được chọn; đẩy Nhật ký, Kiểm tra dữ liệu, Cài đặt xuống cuối nhóm Hệ thống; eyebrow thay breadcrumb. Bỏ nhóm Người dùng (Tác giả, Vai trò) theo xác nhận owner: một người dịch và đăng, không có tác giả hay nhân sự khác.

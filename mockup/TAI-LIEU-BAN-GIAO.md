@@ -7,11 +7,11 @@
 | File | Nội dung |
 | --- | --- |
 | `PHASE-1-NGHIEN-CUU.md` | Bài viết nghiên cứu Phase 1 (≤ 400 từ): JTBD, 5 giả thuyết điểm đau, 5 tham chiếu, 5 nguyên tắc, phê bình IA. |
-| `ssochuz-admin-mockup.html` | **MỘT file HTML duy nhất**, tự chứa (inline CSS/JS): đăng nhập + 15 tab, 4 trạng thái/màn, biến thể khung, tương tác. Có cả nút **Tài liệu bàn giao** để đọc tài liệu này ngay trong file. |
+| `ssochuz-admin-mockup.html` | **MỘT file HTML duy nhất**, tự chứa (inline CSS/JS): đăng nhập + 13 tab, 4 trạng thái/màn, biến thể khung, tương tác. Có cả nút **Tài liệu bàn giao** để đọc tài liệu này ngay trong file. |
 | `TAI-LIEU-BAN-GIAO.md` | File này: Phase 2, ma trận màn hình, nhật ký quyết định, Phase 4, đề xuất thêm. |
 | `README.md` | Chỉ dẫn mở file và đối chiếu tiêu chí nghiệm thu. |
 
-**Lưu ý về số tab:** đề bài ghi "14 tab" nhưng danh sách liệt kê 15, và `src/admin/components/Layout.jsx` trong repo cũng có 15 (`docs/product-surface-map.md` ghi "Hoàn chỉnh, 15 tab"). Mockup dựng **đủ 15** để không bớt chức năng "Thư viện"; giữ nguyên tên, thứ tự, 6 nhóm. Đây là điểm cần owner xác nhận, đã ghi trong "Vấn đề còn tồn tại".
+**Lưu ý về số tab:** owner xác nhận site do một người tự dịch truyện đã mua và đăng, không có tác giả hay nhân sự khác. Vì vậy **bỏ 2 tab Tác giả, Vai trò** (cả nhóm Người dùng); mockup còn **13 tab / 5 nhóm**, giữ nguyên tên và thứ tự các nhóm còn lại. Trường metadata "Tác giả gốc" vẫn giữ để ghi tác giả nguyên tác.
 
 ---
 
@@ -75,17 +75,15 @@ Biến phái sinh (cũng tại `:root`, để mọi cặp nền/chữ đều là
 | 2 | `#/thu-vien` | Tìm/lọc/sắp xếp → bảng sticky → phân trang → thanh thao tác hàng loạt | Thêm bộ |
 | 3 | `#/them-bo` | Metadata → chương đầu (tuỳ chọn) → ảnh bìa | Tạo bộ |
 | 4 | `#/sua-bo` | Form + cảnh báo slug → khóa mật mã → nhân bản | Lưu thay đổi |
-| 5 | `#/chuong` | Nháp / chờ duyệt / lịch đăng → trình soạn chương | Soạn chương |
+| 5 | `#/chuong` | Nháp / chờ duyệt / lịch đăng → ô tiêu đề riêng → trình soạn (toolbar + đổi case) | Soạn chương |
 | 6 | `#/binh-luan` | Kiểm duyệt + nghi spam + xóa 2 lần | Đọc lại dữ liệu |
 | 7 | `#/bao-loi` | Lỗi độc giả gửi + đánh dấu đã xử lý | Đọc lại dữ liệu |
 | 8 | `#/phieu-bau` | Phiếu theo người đọc + gỡ + reset | Reset phiếu |
 | 9 | `#/homepage-cms` | Slide → bộ được chọn → lịch ra chương | Lưu thay đổi |
-| 10 | `#/tac-gia` | Tác giả + số bộ đã xuất bản | Đọc lại dữ liệu |
-| 11 | `#/vai-tro` | Nhân sự + quyền truy cập theo nhóm | Lưu quyền truy cập |
-| 12 | `#/thong-ke` | Top lượt đọc / thích / người bầu / hôm nay | Đọc lại dữ liệu |
-| 13 | `#/kiem-tra-du-lieu` | Đối chiếu KV → kết quả quét → recount | Recount |
-| 14 | `#/nhat-ky` | 200 thao tác gần nhất | Đọc lại dữ liệu |
-| 15 | `#/cai-dat` | Sao lưu/khôi phục JSON → Blogger → flush stats/recount | Sao lưu JSON |
+| 10 | `#/thong-ke` | Top lượt đọc / thích / người bầu / hôm nay | Đọc lại dữ liệu |
+| 11 | `#/kiem-tra-du-lieu` | Đối chiếu KV → kết quả quét → recount | Recount |
+| 12 | `#/nhat-ky` | 200 thao tác gần nhất | Đọc lại dữ liệu |
+| 13 | `#/cai-dat` | Sao lưu/khôi phục JSON → Blogger → flush stats/recount | Sao lưu JSON |
 
 **Mỗi màn có 4 trạng thái** (bình thường / rỗng / đang tải skeleton / lỗi), điều khiển độc lập theo route trong bảng demo. Màn đăng nhập có biến thể riêng: rỗng = chưa cấu hình Worker, tải = đang kiểm tra kết nối, lỗi = sai ADMIN_KEY / lỗi Worker.
 
@@ -93,7 +91,7 @@ Biến phái sinh (cũng tại `:root`, để mọi cặp nền/chữ đều là
 
 ### 1.5 Tương tác đã chạy
 
-Hash route 15 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc · ô tìm gợi ý + `Ctrl+K` (↑/↓/Enter/Esc) · lọc/sắp xếp/phân trang Thư viện · chọn nhiều + thanh hàng loạt (đổi trạng thái, 18+, CSV, JSON, xóa mạnh) · "Sửa bộ" chỉ mở khi có bộ được chọn · modal xác nhận thường & mạnh · toast · validate form · cảnh báo đổi slug · tự lưu nháp "Đã lưu lúc…" · thêm/xóa/di chuyển chương · import mẫu · banner quota · tài liệu bàn giao trong modal.
+Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc · ô tìm gợi ý + `Ctrl+K` (↑/↓/Enter/Esc) · lọc/sắp xếp/phân trang Thư viện · chọn nhiều + thanh hàng loạt (đổi trạng thái, 18+, CSV, JSON, xóa mạnh) · "Sửa bộ" chỉ mở khi có bộ được chọn · modal xác nhận thường & mạnh · toast · validate form · cảnh báo đổi slug · tự lưu nháp "Đã lưu lúc…" · thêm/xóa/di chuyển chương · **đổi case đoạn/vùng chọn** · **ô tiêu đề chương riêng** · import mẫu · banner quota · tài liệu bàn giao trong modal.
 
 ---
 
@@ -101,8 +99,8 @@ Hash route 15 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 
 | # | Quyết định | Lý do |
 | --- | --- | --- |
-| 1 | Dựng 15 tab dù đề bài ghi "14 tab" | Danh sách liệt kê và `Layout.jsx` đều có 15; bớt một tab sẽ bớt chức năng Thư viện đã mô tả chi tiết. |
-| 2 | Giữ nguyên 6 nhóm, tên, thứ tự | Đây là thiết kế lại giao diện cho chức năng đã có, không phải sắp xếp lại sản phẩm. |
+| 1 | Bỏ 2 tab Tác giả, Vai trò | Owner tự dịch và đăng truyện đã mua; không có tác giả hay nhân sự khác nên nhóm Người dùng không còn đối tượng dùng. |
+| 2 | Giữ 5 nhóm còn lại, tên, thứ tự | Đây là thiết kế lại giao diện cho chức năng đã có, không sắp xếp lại sản phẩm. |
 | 3 | Mỗi header có đúng một hành động chính, ở cùng góc | Giảm chi phí quét mắt, tránh hai nút chính cạnh nhau trên màn hẹp. |
 | 4 | Dải 6 số liệu không bọc card, chỉ vạch tóc | Phát huy phong cách hiện có; card chồng card tạo nhiễu trên dashboard. |
 | 5 | Hồng chỉ cho việc chính / tab chọn / focus / số đếm | Màu nhấn hiếm mới có ý nghĩa; tránh biến mọi badge thành tín hiệu khẩn. |
@@ -116,6 +114,10 @@ Hash route 15 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 | 13 | Bảng cuộn ngang trong `.table-wrap` tại 360px | Giữ thead dính và đủ cột dữ liệu mà không làm tràn ngang cả trang. |
 | 14 | Không dùng bộ nhớ trình duyệt, không gọi Worker thật | Mockup mở bằng double-click phải an toàn và không phụ thuộc hạ tầng. |
 | 15 | Nhúng luôn tài liệu bàn giao vào modal trong HTML | Một file duy nhất vẫn tự chứa toàn bộ nghiên cứu, token, tự phản biện và đề xuất. |
+| 16 | Thêm đổi case trong trình soạn | Owner dịch truyện nên cần sửa hoa/thường nhanh cho đoạn hoặc vùng chọn mà không rời editor. |
+| 17 | Ô tiêu đề chương tách riêng | Khớp `ChapterEditor.jsx` của bản gốc: `title` là field riêng, nội dung là field riêng. |
+| 18 | Sửa 3 lỗi ở card Mới cập nhật | Scrim desktop che mờ cả trang; `.list-item .t span` đè `display:block` làm badge full-width; nút demo chèn nội dung. |
+| 19 | Tinh gọn chữ | Bỏ câu giải thích lặp, rút nhãn dài, giữ một dòng MẪU chung. |
 
 ---
 
@@ -167,12 +169,12 @@ Hash route 15 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 
 ### 3.5 Vấn đề còn tồn tại
 
-1. Chưa phỏng vấn chủ site / biên tập viên thật: 5 điểm đau vẫn là **GIẢ THUYẾT**.
+1. Chưa phỏng vấn chủ site thật: 5 điểm đau vẫn là **GIẢ THUYẾT** (đã cập nhật theo mô hình một người dịch và đăng).
 2. Chưa có dữ liệu KV thật; skeleton là tĩnh, chưa mô phỏng độ trễ mạng theo thời gian thực.
 3. Chưa chạy trình đọc màn hình thật (NVDA / VoiceOver); mới kiểm tra cấu trúc ARIA bằng tay.
 4. Bảng 10.000+ bản ghi chưa đo hiệu năng; phân trang mới có 18 bộ mẫu.
 5. Màu hồng là **giá trị tạm**, cần thử lại với bìa thật (hiện là ô màu CSS) trước khi chốt token.
-6. Chênh lệch "14 tab / 15 tab" cần owner xác nhận; mockup chọn không bớt chức năng.
+6. Đã bỏ 2 tab theo xác nhận owner; nếu sau này có cộng tác viên cần khôi phục nhóm Người dùng và rà soát lại phân quyền.
 7. Ở 360px bảng vẫn phải cuộn ngang trong vùng bảng; chưa thử ngón tay cái trên thiết bị thật.
 8. Import `.docx`/`.html` mới mô phỏng bằng tên file, chưa parse nội dung (đúng tinh thần mockup, không code production).
 
@@ -180,9 +182,9 @@ Hash route 15 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 
 ## 4 · ĐỀ XUẤT THÊM (không nằm trong mockup)
 
-- Phỏng vấn 3 biên tập viên + quan sát 2 ca duyệt để kiểm chứng 5 giả thuyết ở Phase 1.
+- Phỏng vấn chủ site + quan sát 1 ca dịch/đăng chương để kiểm chứng 5 giả thuyết ở Phase 1.
 - Lịch sử phiên bản / undo cho metadata và chương (ngoài danh sách chức năng hiện có).
-- Phân quyền phía server thay vì chỉ ở UI như mã nguồn hiện tại.
+- Nếu sau này có cộng tác viên: phân quyền phía server thay vì chỉ ở UI như mã nguồn hiện tại.
 - Cảnh báo quota chủ động trước khi chạm 80% và báo cáo ghi theo ngày.
 - Xuất nhật ký ra CSV để đối soát định kỳ; shortcut duyệt nhanh cho kiểm duyệt viên.
 - Đo hiệu năng bảng lớn, thử 360px trên thiết bị thật và kiểm tra công nghệ hỗ trợ trước khi chuyển code production.
@@ -192,9 +194,21 @@ Hash route 15 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 
 ## 5 · CẬP NHẬT SAU VÒNG RÀ SOÁT THỨ 2
 
-- Thêm `eyebrow` dùng chung; màn đăng nhập cũng có eyebrow + h2 + mô tả ngắn như 15 tab, và eyebrow mọi trang đều ghi rõ **DỮ LIỆU MẪU**.
-- Trạng thái đang tải của màn đăng nhập nay có nhãn `ĐANG TẢI` + skeleton, thống nhất với 15 tab.
+- Thêm `eyebrow` dùng chung; màn đăng nhập cũng có eyebrow + h2 + mô tả ngắn như 13 tab, và eyebrow mọi trang đều ghi rõ **DỮ LIỆU MẪU**.
+- Trạng thái đang tải của màn đăng nhập nay có nhãn `ĐANG TẢI` + skeleton, thống nhất với 13 tab.
 - Sửa khung 360px: cụm nút trên thanh trên được phép xuống dòng, chip kết nối và pill quota gọn còn tối đa 132px; áp dụng cả cho công tắc "Giả lập khung 360px" trên desktop.
 - Dọn bản `renderDemo()` trùng tên không còn dùng; giữ một nguồn duy nhất cho bảng điều khiển demo.
 - Kiểm chứng lại: **142/142 kiểm tra tự động đạt, 0 lỗi JS** trên 16 route × 4 trạng thái, 15 lần bấm nav, 16 hành động chính, 5 chip kết nối, 4 mức quota, 3 biến thể khung, `Ctrl+K`, modal tài liệu, xác nhận mạnh và đăng nhập.
+
+## 6 · CẬP NHẬT THEO PHẢN HỒI CỦA OWNER (VÒNG 3)
+
+| Phản hồi | Đã làm |
+| --- | --- |
+| Bỏ Vai trò và Tác giả | Xoá cả nhóm Người dùng khỏi `NAV`, `PAGES`, `BODY`, dữ liệu mẫu và handler liên quan; còn 13 tab / 5 nhóm. Đổi nhãn field thành "Tác giả gốc" để không nhầm với người đăng. |
+| Thêm đổi case đoạn | Select "Đổi case…" trong toolbar: CHỮ HOA / chữ thường / Chữ Hoa Mỗi Từ / Định dạng câu, áp cho vùng chọn hoặc cả đoạn, có `toLocaleUpperCase('vi')` / `toLocaleLowerCase('vi')` và cập nhật "đã lưu lúc…". |
+| Ô tiêu đề chương riêng | Thêm `#chapterTitle` phía trên toolbar, bind trực tiếp với `state.chapters[active]`, cập nhật danh sách chương khi gõ. |
+| Lỗi phần Mới cập nhật | Ba lỗi cùng lúc: `.scrim` hiển thị ở desktop làm mờ toàn trang (sửa `display:none` + `.app.drawer .scrim`); `.list-item .t span` đè `display:block` lên badge (đổi `>span`, badge `inline-flex`); nút demo to chèn nội dung (thu thành nút tròn 44px + tăng padding đáy 120px). |
+| Tinh gọn chữ | Rút gọn ~25 chuỗi giao diện, bỏ "(mẫu)" lặp, gộp nhãn phụ dải số liệu về `MẪU`, giữ đánh dấu rõ ở eyebrow/meta/footer. |
+
+**Kiểm chứng vòng 3 bằng Chromium thật (không chỉ jsdom):** badge gọn còn 103/90/38px trên một dòng · scrim desktop `display:none` · đổi case `upper` ra chữ hoa tiếng Việt đúng · ô tiêu đề gõ xong cập nhật cả state lẫn danh sách · 13 tab / 5 nhóm · viewport 360px có `scrollWidth = 360` (không tràn ngang) · 0 lỗi JS.
 
