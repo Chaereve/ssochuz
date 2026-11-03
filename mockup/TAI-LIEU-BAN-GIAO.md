@@ -91,7 +91,7 @@ Biến phái sinh (cũng tại `:root`, để mọi cặp nền/chữ đều là
 
 ### 1.5 Tương tác đã chạy
 
-Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc · ô tìm gợi ý + `Ctrl+K` (↑/↓/Enter/Esc) · lọc/sắp xếp/phân trang Thư viện · chọn nhiều + thanh hàng loạt (6 lựa chọn đúng `BookList.jsx`, CSV, JSON; xoá mạnh chỉ cho từng bộ) · "Sửa bộ" chỉ mở khi có bộ được chọn · modal xác nhận thường & mạnh · toast · validate form · cảnh báo đổi slug · tự lưu nháp "Đã lưu lúc…" · thêm/xóa/di chuyển chương · **đổi case đoạn/vùng chọn** · **ô tiêu đề chương riêng** · **nhiều dòng + couple** · **Ctrl/Cmd+S** · **Ctrl/Cmd+Alt+N** · **migration overflow KV** · import mẫu · banner quota · tài liệu bàn giao trong modal.
+Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc · ô tìm gợi ý + `Ctrl+K` (↑/↓/Enter/Esc) · lọc/sắp xếp/phân trang Thư viện · chọn nhiều + thanh hàng loạt (6 lựa chọn đúng `BookList.jsx`, CSV, JSON; xoá mạnh chỉ cho từng bộ) · "Sửa bộ" chỉ mở khi có bộ được chọn · modal xác nhận thường & mạnh · toast · validate form · cảnh báo đổi slug · tự lưu nháp "Đã lưu lúc…" · thêm/xóa/di chuyển chương · **đổi case tên chương** · **dấu ngăn cách nội dung** · **ô tiêu đề chương riêng** · **nhiều dòng + couple** · **Ctrl/Cmd+S** · **Ctrl/Cmd+Alt+N** · **migration overflow KV** · import mẫu · banner quota · tài liệu bàn giao trong modal.
 
 ---
 
@@ -114,7 +114,7 @@ Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 | 13 | Bảng cuộn ngang trong `.table-wrap` tại 360px | Giữ thead dính và đủ cột dữ liệu mà không làm tràn ngang cả trang. |
 | 14 | Không dùng bộ nhớ trình duyệt, không gọi Worker thật | Mockup mở bằng double-click phải an toàn và không phụ thuộc hạ tầng. |
 | 15 | Nhúng luôn tài liệu bàn giao vào modal trong HTML | Một file duy nhất vẫn tự chứa toàn bộ nghiên cứu, token, tự phản biện và đề xuất. |
-| 16 | Thêm đổi case trong trình soạn | Owner dịch truyện nên cần sửa hoa/thường nhanh cho đoạn hoặc vùng chọn mà không rời editor. |
+| 16 | Đổi case chỉ áp dụng tên chương | Vòng 3 đặt select trong toolbar cho đoạn/vùng chọn; vòng 6 owner muốn nội dung không bị đổi nên select chuyển lên cạnh ô Tên chương. |
 | 17 | Ô tiêu đề chương tách riêng | Khớp `ChapterEditor.jsx` của bản gốc: `title` là field riêng, nội dung là field riêng. |
 | 18 | Sửa 3 lỗi ở card Mới cập nhật | Scrim desktop che mờ cả trang; `.list-item .t span` đè `display:block` làm badge full-width; nút demo chèn nội dung. |
 | 19 | Tinh gọn chữ | Bỏ câu giải thích lặp, rút nhãn dài, giữ một dòng MẪU chung. |
@@ -126,6 +126,10 @@ Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 | 25 | Nhiều dòng `+ couple` | `NewBook.jsx` / `BookEditor.jsx` có nút thêm, Enter thêm dòng và × xoá; gộp bằng dấu phẩy thay vì một ô duy nhất. |
 | 26 | Thêm migration overflow KV | `DoctorPanel` chuyển book/bìa/ảnh sang Supabase/R2; gắn trực tiếp với bài toán quota free-tier nên đưa vào Kiểm tra dữ liệu. |
 | 27 | `Ctrl+S` và `Ctrl+Alt+N` | `main.jsx` lưu màn gần nhất và thêm chương; `Ctrl+N` thường bị Chrome/Edge giữ nên bản chắc chắn là `Ctrl/Cmd+Alt+N`. |
+| 28 | Bỏ Danh sách trong trình soạn | Owner yêu cầu bỏ; toolbar gọn còn In đậm, In nghiêng, Tiêu đề, Trích dẫn, Liên kết, Ảnh. Bảng Danh sách chương ngoài editor vẫn giữ. |
+| 29 | Thêm dấu ngăn cách nội dung | Nút `Chèn dấu ngăn cách` chèn một đoạn `•••` căn giữa tại con trỏ, tách hai phần nội dung mà không cần gõ ký tự. |
+| 30 | Đổi case chỉ áp dụng tên chương | Select nằm cạnh ô Tên chương và chỉ ghi vào `state.chapters[active].t`; nội dung chương, vùng chọn không bị động tới. |
+| 31 | Ghi chú gọn, cột thẳng | Rút câu ghi chú trong panel; lưới 2 cột bằng nhau và cột cố định cho mọi hàng danh sách nên badge, nút không còn lệch. |
 
 ---
 
@@ -138,7 +142,7 @@ Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 | 1 | Hiện trạng hệ thống | 5 | Chip 5 trạng thái, quota 4 mức, banner đỏ, "đã lưu lúc…", skeleton, toast. |
 | 2 | Khớp thế giới thật | 5 | Vòng 4 đối chiếu `src/admin/**`: đúng tên tab, 7 trạng thái xuất bản, 4 trạng thái chương, cụm xác nhận và thuật ngữ KV/Worker. |
 | 3 | Kiểm soát & tự do | 4 | Esc đóng modal/drawer/palette, "Bỏ chọn", "Nhập lại", "Thử lại", "Về bình thường". |
-| 4 | Nhất quán & chuẩn | 5 | Một `:root`, một bộ nút/badge/bảng, nhịp 8px, 1 nút chính/header ở mọi màn. |
+| 4 | Nhất quán & chuẩn | 5 | Một `:root`, một bộ nút/badge/bảng, nhịp 8px, 1 nút chính/header; vòng 6 cho lưới 2 cột bằng nhau và cột badge/nút cố định ở mọi hàng. |
 | 5 | Ngăn lỗi | 5 | Validate form, cảnh báo slug, xác nhận mạnh có gõ, xóa 2 lần, gated Sửa bộ. |
 | 6 | Nhận diện thay vì nhớ | 5 | Gợi ý tìm + Ctrl+K, eyebrow nhóm, tooltip, nhãn mono rõ trên điều khiển. |
 | 7 | Linh hoạt & hiệu quả | 4 | Hash route, lọc/sắp xếp/phân trang, thao tác hàng loạt, Ctrl+K / Ctrl+S / Ctrl+Alt+N. |
@@ -174,6 +178,7 @@ Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 | Thanh trên | Gập 2 hàng, ô tìm full width, nhãn nút ẩn, cụm tools tự xuống dòng, chip/quota gọn tối đa 132px + ellipsis. |
 | Dải số liệu | 2 cột, vạch tóc, không card. |
 | Card / lưới | 1 cột; `.grid2`, `.grid3`, `.split`, `.todo` đều gập. |
+| Hàng danh sách | Báo lỗi / Bình luận gập thành 2 dòng: nội dung full width, badge trái + nút phải; cột nút rộng cố định nên mọi dòng thẳng hàng. |
 | Vùng bấm | Nút, input, tab, pagination ≥ 44px. |
 | Bảng | Cuộn ngang **bên trong** `.table-wrap`; `body { overflow-x: hidden }` → không tràn ngang trang. |
 | Demo | Panel thành bottom sheet tràn chiều ngang có padding; có công tắc "Giả lập khung 360px". |
@@ -218,7 +223,7 @@ Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 | Phản hồi | Đã làm |
 | --- | --- |
 | Bỏ Vai trò và Tác giả | Xoá cả nhóm Người dùng khỏi `NAV`, `PAGES`, `BODY`, dữ liệu mẫu và handler liên quan; còn 13 tab / 5 nhóm. Đổi nhãn field thành "Tác giả gốc" để không nhầm với người đăng. |
-| Thêm đổi case đoạn | Select "Đổi case…" trong toolbar: CHỮ HOA / chữ thường / Chữ Hoa Mỗi Từ / Định dạng câu, áp cho vùng chọn hoặc cả đoạn, có `toLocaleUpperCase('vi')` / `toLocaleLowerCase('vi')` và cập nhật "đã lưu lúc…". |
+| Thêm đổi case (vòng 6 thu hẹp cho tên chương) | Vòng 3: select "Đổi case…" trong toolbar, CHỮ HOA / chữ thường / Chữ Hoa Mỗi Từ / Định dạng câu, áp cho vùng chọn hoặc cả đoạn, có `toLocaleUpperCase('vi')` / `toLocaleLowerCase('vi')`. Vòng 6: select chuyển lên cạnh ô Tên chương, chỉ đổi tên. |
 | Ô tiêu đề chương riêng | Thêm `#chapterTitle` phía trên toolbar, bind trực tiếp với `state.chapters[active]`, cập nhật danh sách chương khi gõ. |
 | Lỗi phần Mới cập nhật | Ba lỗi cùng lúc: `.scrim` hiển thị ở desktop làm mờ toàn trang (sửa `display:none` + `.app.drawer .scrim`); `.list-item .t span` đè `display:block` lên badge (đổi `>span`, badge `inline-flex`); nút demo to chèn nội dung (thu thành nút tròn 44px + tăng padding đáy 120px). |
 | Tinh gọn chữ | Rút gọn ~25 chuỗi giao diện, bỏ "(mẫu)" lặp, gộp nhãn phụ dải số liệu về `MẪU`, giữ đánh dấu rõ ở eyebrow/meta/footer. |
@@ -227,7 +232,7 @@ Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 
 ## 7 · ĐỐI CHIẾU VỚI MÃ NGUỒN GỐC (VÒNG 4)
 
-Owner báo "một vài tính năng không đúng với tính năng gốc". Rà lại `src/admin/components/*`, `src/admin/utils/books.js`, `src/shared/schedule.js`, `src/admin/main.jsx` và `src/admin/PARITY-CUTOVER.md`. **13 tab / 5 nhóm, đổi case đoạn và ô tiêu đề chương riêng giữ nguyên**; các chỗ lệch dưới đây đã sửa.
+Owner báo "một vài tính năng không đúng với tính năng gốc". Rà lại `src/admin/components/*`, `src/admin/utils/books.js`, `src/shared/schedule.js`, `src/admin/main.jsx` và `src/admin/PARITY-CUTOVER.md`. **13 tab / 5 nhóm, đổi case (vòng 6 thu hẹp cho tên chương) và ô tiêu đề chương riêng giữ nguyên**; các chỗ lệch dưới đây đã sửa.
 
 | Nguồn | Mockup trước | Đã sửa |
 | --- | --- | --- |
@@ -251,7 +256,7 @@ Owner báo "một vài tính năng không đúng với tính năng gốc". Rà l
 | `main.jsx` · log | "Nhân sự mẫu 01–04" | `admin-key` ở mọi dòng: một chủ site tự dịch và đăng |
 | `BookList.jsx` | Xoá hàng loạt | 6 lựa chọn thao tác lô đúng source; xoá mạnh chỉ áp cho từng bộ |
 
-**Giữ theo yêu cầu riêng của owner (không có trong source):** đổi case đoạn/vùng chọn, ô tiêu đề chương riêng, 13 tab / 5 nhóm. **Giữ theo brief thiết kế:** lọc/sắp xếp/phân trang, 4 trạng thái mỗi màn, một nút chính cố định, tag chip trong bộ component, modal ví dụ "gõ tên bộ".
+**Giữ theo yêu cầu riêng của owner (không có trong source):** đổi case tên chương, dấu ngăn cách nội dung, ô tiêu đề chương riêng, 13 tab / 5 nhóm. **Giữ theo brief thiết kế:** lọc/sắp xếp/phân trang, 4 trạng thái mỗi màn, một nút chính cố định, tag chip trong bộ component, modal ví dụ "gõ tên bộ".
 
 **Kiểm chứng vòng 4:** `node --check` đạt · 136/136 kiểm tra cấu trúc (14 route × 4 trạng thái, 13 nav, 14 hành động chính, 5 chip, 4 quota, khung, `Ctrl+K`, docs) · 122/122 kiểm tra đối chiếu source · 0 lỗi JS · render bằng Chromium thật ở desktop và 360px.
 
@@ -266,3 +271,15 @@ Owner báo "một vài tính năng không đúng với tính năng gốc". Rà l
 Toast được gom tối đa 3 cái để không che nội dung khi bấm phím tắt liên tục.
 
 **Kiểm chứng vòng 5:** `node --check` đạt · 136/136 cấu trúc · 122/122 đối chiếu source · kiểm tra bổ sung cho couple / migration / phím tắt đều đạt · 0 lỗi JS · Chromium thật ở desktop và 360px không tràn ngang. Phase 1 vẫn 398 từ.
+
+## 9 · TINH CHỈNH VÒNG 6 THEO PHẢN HỒI
+
+| Phản hồi | Đã làm | Tinh chỉnh |
+| --- | --- | --- |
+| Bỏ Danh sách trong trình chỉnh sửa | Xoá nút `Danh sách` khỏi toolbar trình soạn | Giữ In đậm / In nghiêng / Tiêu đề / Trích dẫn / Liên kết / Ảnh. **Bảng Danh sách chương** ngoài trình soạn vẫn có, đúng `ChapterEditor.jsx`. |
+| Thêm dấu ngăn cách nội dung | Nút `Chèn dấu ngăn cách` chèn `<p class="ch-sep">•••</p>` vào nội dung | Chèn tại con trỏ, hoặc cuối chương nếu chưa có caret; dùng được cả khi đang Xem trước (tự tắt preview); cập nhật "đã lưu lúc…" và toast. Không sửa nội dung cũ. |
+| Đổi case chỉ dành cho tên chương | Select `Đổi case tên…` chuyển từ toolbar lên cạnh ô **Tên chương** | `applyCase()` chỉ đọc/ghi `#chapterTitle`, `state.chapters[active].t` và nhãn dòng trong Danh sách chương. Bỏ hết nhánh `execCommand('insertText')` / đổi đoạn / vùng chọn; `transformCase()` giữ nguyên 4 chế độ. |
+| Tinh gọn câu từ ghi chú | Rút ~40 câu ghi chú, hint và mô tả header trong toàn admin panel | Giữ đủ cụm xác nhận (`XOÁ`, `KHÔI PHỤC`, `gõ đúng slug`), nhãn `MẪU`, trạng thái KV/Worker; bỏ câu giải thích lặp. Ví dụ: "Báo lỗi có thể mở lại; trạng thái ghi vào KV qua Worker." → "Mở lại được · trạng thái ghi KV.". |
+| Canh chỉnh nút, ô, chữ; Báo lỗi còn lệch ô | Sửa cấu trúc card **Báo lỗi** (`.card-bd` bị lồng trong `.card-hd`), đổi `.grid2` thành 2 cột bằng nhau, cấp cột cố định cho mọi hàng danh sách | Badge + nút thẳng cột ở Báo lỗi, Bình luận, 4 hàng đợi Chương và Danh sách chương; nhãn `DỮ LIỆU MẪU` về đúng header; 360px ở Báo lỗi hết tràn ngang (trước đó `scrollWidth = 754`). |
+
+**Kiểm chứng vòng 6:** `node --check` đạt · 136/136 cấu trúc · 122/122 đối chiếu source · 85/85 vòng 5 · 99/99 vòng 6 · 0 lỗi JS · 0 màu literal ngoài `:root` · Chromium thật ở desktop và 360px: 14 route `scrollWidth = 360`, 0 page error · Phase 1 vẫn 398 từ.
