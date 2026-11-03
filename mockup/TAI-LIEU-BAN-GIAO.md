@@ -132,6 +132,10 @@ Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 | 31 | Ghi chú gọn, cột thẳng | Rút câu ghi chú trong panel; lưới 2 cột bằng nhau và cột cố định cho mọi hàng danh sách nên badge, nút không còn lệch. |
 | 32 | Chỉ giữ ghi chú có ích | Vòng 7 bỏ ghi chú thiết kế, chú thích lặp và câu giải thích lại nhãn; giữ an toàn (gõ slug/cụm), phạm vi đổi case, phím tắt và trạng thái đọc/ghi KV. |
 | 33 | Một dòng MẪU cho mỗi màn | Footer rút còn `DỮ LIỆU MẪU` và render đúng một lần; eyebrow và meta đã đánh dấu nên không lặp câu dài. |
+| 34 | Lọc HTML chương trước khi render lại | Vòng 8 phát hiện `state.editorSeed` lấy từ `contenteditable` rồi đưa thẳng vào `innerHTML`: dán HTML lạ có thể chạy handler. `sanitizeEditorHtml()` chặn script, `on*`, `javascript:/data:/blob:` và chỉ giữ thẻ soạn thảo; sự kiện `paste` chèn text thường vì `onerror` chạy trước `input`. |
+| 35 | Khoá migration theo `online` | `DoctorPanel` thật chỉ chạy khi `state.online`; mockup trước đó khoá mỗi `static` nên `checking` / `badkey` / `workererr` vẫn bấm được. Gộp `conn !== online` với quota `blocked`. |
+| 36 | Không giữ ADMIN_KEY trong state | Ô mật khẩu chỉ để minh hoạ; xoá ngay sau connect, đăng nhập Supabase, chế độ tĩnh và Đặt lại demo. |
+| 37 | Fallback trạng thái kết nối/quota | `CONN` và `QUOTA` có phương án dự phòng để một giá trị demo lạ không làm vỡ chip, Dashboard hay màn đăng nhập. |
 
 ---
 
@@ -145,7 +149,7 @@ Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 | 2 | Khớp thế giới thật | 5 | Vòng 4 đối chiếu `src/admin/**`: đúng tên tab, 7 trạng thái xuất bản, 4 trạng thái chương, cụm xác nhận và thuật ngữ KV/Worker. |
 | 3 | Kiểm soát & tự do | 4 | Esc đóng modal/drawer/palette, "Bỏ chọn", "Nhập lại", "Thử lại", "Về bình thường". |
 | 4 | Nhất quán & chuẩn | 5 | Một `:root`, một bộ nút/badge/bảng, nhịp 8px, 1 nút chính/header; vòng 6 cho lưới 2 cột bằng nhau và cột badge/nút cố định ở mọi hàng. |
-| 5 | Ngăn lỗi | 5 | Validate form, cảnh báo slug, xác nhận mạnh có gõ, xóa 2 lần, gated Sửa bộ. |
+| 5 | Ngăn lỗi | 5 | Validate form, cảnh báo slug, xác nhận mạnh có gõ, xóa 2 lần, gated Sửa bộ; vòng 8 lọc HTML chương, khoá migration khi chưa `online`, không giữ ADMIN_KEY. |
 | 6 | Nhận diện thay vì nhớ | 5 | Gợi ý tìm + Ctrl+K, eyebrow nhóm, tooltip, nhãn mono rõ trên điều khiển. |
 | 7 | Linh hoạt & hiệu quả | 4 | Hash route, lọc/sắp xếp/phân trang, thao tác hàng loạt, Ctrl+K / Ctrl+S / Ctrl+Alt+N. |
 | 8 | Thẩm mỹ & tối giản | 4 | Không bóng, không gradient, vạch tóc, hồng có chủ đích; vòng 7 bỏ ghi chú thừa, còn nhiều bảng đặc dữ liệu. |
@@ -197,6 +201,7 @@ Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 7. Ở 360px bảng vẫn phải cuộn ngang trong vùng bảng; chưa thử ngón tay cái trên thiết bị thật.
 8. Import `.docx`/`.html` mới mô phỏng bằng tên file, chưa parse nội dung (đúng tinh thần mockup, không code production).
 9. Chưa dựng 2 biến thể phụ của source: chuyển **Bảng/Lưới** ở Thư viện và toolbar đủ **15 nút** của TipTap. Các mục còn lại (nhiều dòng Couple, migration overflow, Ctrl+S / Ctrl+Alt+N) đã bổ sung ở vòng 5.
+10. Vòng 8 mới đối chiếu **tĩnh** mã nguồn; chưa gọi Worker / KV / Supabase / R2 / Blogger thật nên chưa kiểm được CORS, timeout 12/120/29 giây, header `x-admin-key` và đường rớt về KV khi overflow lỗi.
 
 ---
 
@@ -208,6 +213,7 @@ Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 - Cảnh báo quota chủ động trước khi chạm 80% và báo cáo ghi theo ngày.
 - Xuất nhật ký ra CSV để đối soát định kỳ; shortcut duyệt nhanh cho chủ site.
 - Đo hiệu năng bảng lớn, thử 360px trên thiết bị thật và kiểm tra công nghệ hỗ trợ trước khi chuyển code production.
+- Dựng staging có Worker + KV + Supabase/R2 + Blogger để kiểm chứng CORS, `x-admin-key`, timeout và migration overflow trước khi nối bản thật.
 - Chốt giá trị `--acc` sau khi thử trên bìa thật và trên màn hình hiệu chuẩn thấp.
 
 > Các mục trên **không** được dựng trong HTML, đúng yêu cầu "đề xuất ngoài phạm vi ghi riêng".
@@ -298,3 +304,38 @@ Owner: *"ghi chú vẫn còn rối quá, cái nào cần thì giữ, ko thì b�
 | **Không đổi** | Eyebrow, `h2`, mô tả ngắn, nhãn `MẪU` trên dữ liệu, cụm xác nhận trong modal và toàn bộ chức năng đã chốt ở vòng 1–6. |
 
 **Kiểm chứng vòng 7:** 136/136 cấu trúc · 122/122 đối chiếu source · 85/85 vòng 5 · **124/124 vòng 6–7** (gồm kiểm tra 19 chuỗi ghi chú đã bỏ, footer đúng 1 lần, đúng 1 ghi chú phím tắt trên Chương, 0 ghi chú trên Báo lỗi) · 0 lỗi JS · 0 màu literal ngoài `:root` · Chromium thật 14 route ở 360px `scrollWidth = 360`, 0 page error · Phase 1 vẫn 398 từ.
+
+---
+
+## 11 · KIỂM CHỨC NĂNG, GIAO DIỆN, BẢO MẬT, KẾT NỐI (VÒNG 8)
+
+Owner yêu cầu rà lại audit, bug tính năng, giao diện, bảo mật và kết nối với các bên dữ liệu. Đọc trực tiếp `src/admin/api.js`, `src/admin/quota.js`, `src/admin/components/AuthGate.jsx`, `src/admin/components/OperationalPanels.jsx`, `worker/overflow.js`, `community-worker/`, `supabase/` rồi đối chiếu từng nhãn, từng điều kiện khoá trong mockup. **Ranh giới:** đây là prototype — mọi kết nối là mô phỏng; lỗi thật là lỗi trong chính cách mockup render, khoá và giữ dữ liệu.
+
+### 11.1 Đối chiếu các bên dữ liệu
+
+| Bên / lớp | Mã nguồn thật | Mockup |
+| --- | --- | --- |
+| **Cloudflare KV** | `PUT /api/registry`, `/api/book/<slug>`, `/api/book/<slug>/chapter`; quota 1.000 ghi và 100.000 đọc/ngày, `writesToday` + `lastReset`. | Chip 5 trạng thái đúng nhãn `Layout.jsx`, 4 mức 800 / 950 / 1000, banner đỏ, dòng đọc 18.400 / 100.000; mọi thao tác ghi gắn `MẪU`. |
+| **Worker CMS** | `AdminApi` gửi `x-admin-key`, `mode:cors`, `cache:no-store`; `/api/health`, `/api/whoami`; timeout 12s, 120s cho `putBook`, 29s cho `migrate-overflow`. | Không `fetch`. URL và `ADMIN_KEY` là placeholder; chip `Sai ADMIN_KEY` / `Lỗi kết nối Worker` diễn đúng thông điệp `classifyConnError`. |
+| **Supabase + R2** | Overflow: bìa → Storage bucket `covers`, book/ảnh chương → bảng `ssochuz_blobs` hoặc binding `CZ_R2`; chưa gắn `SUPABASE_SERVICE_ROLE` thì báo `unavailable`, ghi lỗi rớt về KV. | Dòng `Supabase: unavailable · R2: unavailable · Bìa/Ảnh: KV` và 3 nút `Chuyển tất cả` / `Chỉ bìa` / `Chỉ book` đúng `only = "" / covers / books`. |
+| **Blogger** | `POST /api/sync` cập nhật registry từ `list-novel`, KV vẫn là nguồn thắng; `POST /api/import` nhận URL bài. | Nhập URL có validate, xác nhận gõ `ĐỒNG BỘ`, import mô phỏng; không chép SQL hay cấu hình thật. |
+| **community-worker** | Bình luận, báo lỗi, phiếu bầu; admin đọc `/api/admin/comments`, `/reports` (có `PATCH`), `/stats`, `/log`, `/voters`. | Đúng thao tác hẹp: xoá bình luận 2 bước, `Mở lại` báo lỗi, `GỠ PHIẾU` / `RESET`; không có Duyệt bình luận hay bulk export. |
+| **Dữ liệu tĩnh** | `fetch('/data/registry.json')`, `/data/book/<slug>.json` — chỉ đọc, thay đổi chỉ lưu trong phiên. | Chip `Dữ liệu tĩnh · Chỉ đọc`; migration và nút ghi bị khoá, không dùng `localStorage` / `sessionStorage`. |
+| **Supabase Auth** | `cz-auth.js` / `cz-config.js` phục vụ đăng nhập độc giả (Google hoặc Supabase); ghi KV vẫn cần `ADMIN_KEY` qua Worker. | Nút `Đăng nhập với Supabase (mô phỏng)` tách khỏi form `ADMIN_KEY` để không gợi ý hai cơ chế uỷ quyền là một. |
+
+### 11.2 Lỗi thật tìm thấy và đã sửa
+
+| Mức | Phát hiện | Sửa |
+| --- | --- | --- |
+| **Bảo mật** | `state.editorSeed` lấy từ `contenteditable` rồi đưa thẳng vào `innerHTML` của `#editor`: dán `<img onerror>` hoặc `<script>` là chạy lại khi `render()`. | Thêm `sanitizeEditorHtml()` 2 lớp: regex bỏ `script` / `on*` / `srcdoc` / `javascript:data:blob:` **trước khi parse**, rồi DOM allowlist chỉ giữ thẻ soạn thảo; dùng cho editor, Xem trước, `plainText()`, mọi lần đọc nội dung và sự kiện `paste` của `contenteditable`. |
+| **Kết nối** | 3 nút migration vẫn bấm được ở `checking`, `badkey`, `workererr` dù `DoctorPanel` thật khoá khi `!state.online`. | `blocked = conn !== 'online' || quota === 'blocked'`; kiểm tra đủ 5 trạng thái và mức hết quota. |
+| **Bảo mật** | `ADMIN_KEY` gõ vào form nằm lại trong `state.models` sau `Kết nối` và cả sau `Đặt lại demo`, hiện lại ở ô mật khẩu. | `delete state.models['gate-key']` trong `connect`, `login-supabase`, `static-mode`, `resetDemo`; reset cũng xoá `gate-api`. |
+| **Ổn định** | `CONN[state.conn]` / `QUOTA[state.quota]` không có fallback → giá trị demo lạ làm vỡ chip, Dashboard, màn đăng nhập. | Thêm `|| CONN.online` / `|| QUOTA.ok` ở cả 4 chỗ đọc. |
+
+### 11.3 Bảo mật đã kiểm
+
+0 `fetch` / XHR / WebSocket / `eval` / `new Function` / `document.write` / `localStorage` / `sessionStorage` / `indexedDB` / cookie trong code chạy. Tài nguyên ngoài duy nhất là 3 link Google Fonts có fallback hệ thống. Ô `ADMIN_KEY` là `type=password` và nhắc không nhập key thật; URL chỉ dùng `mau.example` và `ten-worker.workers.dev`, không có tenant thật hay service role. Mọi dữ liệu mẫu, `title`/`desc`/`phrase` của modal và URL người dùng đi qua `esc()`; sự kiện `paste` trong trình soạn chỉ chèn text thường. Thử chèn payload vào tên bộ, bình luận, báo lỗi, chương, slide, couple, ghi chú và nội dung editor ở **14 route × 4 trạng thái** đều không tạo handler hay thẻ script; cũng kiểm không có điều khiển chết, id trùng, `undefined`/`NaN` hay nút thiếu tên truy cập được.
+
+### 11.4 Kiểm chứng vòng 8
+
+**51/51** kiểm tra mới · 136/136 cấu trúc · 122/122 đối chiếu source · 85/85 vòng 5 · 124/124 vòng 6–7 · 0 lỗi JS · 0 màu literal ngoài `:root` · Chromium thật 14 route ở 360px `scrollWidth = 360`, 0 page error · dán HTML chứa `onerror` vào trình soạn cho **0 handler, 0 lỗi thực thi** · Phase 1 vẫn 398 từ.

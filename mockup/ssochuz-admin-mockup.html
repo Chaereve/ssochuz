@@ -899,7 +899,7 @@ function renderSidebar(){
     '<button data-act="docs">Tài liệu bàn giao</button></div>';
 }
 function renderTopbar(){
-  var c=CONN[state.conn],q=QUOTA[state.quota];
+  var c=CONN[state.conn]||CONN.online,q=QUOTA[state.quota]||QUOTA.ok;
   var sugg=state.suggestOpen?suggestList(state.suggestQuery,'suggest'):'';
   var notif=state.notifOpen?'<div class="popover" id="notifPop" style="right:0"><div class="ph"><b class="sm">Thông báo</b><div class="xs dim">3 thông báo · MẪU</div></div>'+SAMPLE_NOTIFS.map(function(n){return '<div class="row-item"><b>'+esc(n.t)+'</b>'+esc(n.s)+'</div>';}).join('')+'</div>':'';
   var acct=state.accountOpen?'<div class="popover" id="acctPop"><div class="ph"><b class="sm">Quản trị viên (mẫu)</b><div class="xs dim">Phiên quản trị · MẪU</div></div>'+
@@ -1000,8 +1000,8 @@ function dashboardHTML(){
   var sys='<div class="card"><div class="card-hd"><h3>Tình trạng hệ thống</h3><span class="right">đăng nhập · chương · Worker · quota</span></div><div class="card-bd">'+
     '<div class="sysrow"><span class="dot"></span><div><b>Đăng nhập người đọc: Supabase (cz-config.js)</b><span>Quyền quản trị vẫn do Worker xác nhận. · MẪU</span></div></div>'+
     '<div class="sysrow"><span class="dot"></span><div><b>Doctor: đã có kiểm tra nền</b><span>Audit KV, quét book, lệch số chương, chương rỗng. · MẪU</span></div></div>'+
-    '<div class="sysrow"><span class="dot'+(state.conn==='workererr'||state.conn==='badkey'?' bad':state.conn==='checking'?' warn':'')+'"></span><div><b>Worker: '+esc(CONN[state.conn][0])+'</b><span>Sửa ở đây sẽ đi qua API tập trung. · MẪU</span></div></div>'+
-    '<div class="sysrow"><span class="dot '+(state.quota==='ok'?'':'warn')+'"></span><div><b>Quota ghi KV: '+esc(QUOTA[state.quota].txt.replace('KV write ',''))+'</b><span>Worker trả writesToday/lastReset. · MẪU</span></div></div>'+
+    '<div class="sysrow"><span class="dot'+(state.conn==='workererr'||state.conn==='badkey'?' bad':state.conn==='checking'?' warn':'')+'"></span><div><b>Worker: '+esc((CONN[state.conn]||CONN.online)[0])+'</b><span>Sửa ở đây sẽ đi qua API tập trung. · MẪU</span></div></div>'+
+    '<div class="sysrow"><span class="dot '+(state.quota==='ok'?'':'warn')+'"></span><div><b>Quota ghi KV: '+esc((QUOTA[state.quota]||QUOTA.ok).txt.replace('KV write ',''))+'</b><span>Worker trả writesToday/lastReset. · MẪU</span></div></div>'+
     '<div class="sysrow"><span class="dot"></span><div><b>Quota đọc KV: 18.400 / 100.000</b><span>Ước lượng hôm nay, chưa chạm trần. · MẪU</span></div></div>'+
     '<div class="sysrow"><span class="dot '+(state.quota==='blocked'?'bad':'')+'"></span><div><b>Lưu trữ tràn (tuỳ chọn)</b><span>Supabase: unavailable · R2: unavailable · Bìa: KV · Ảnh chương: KV. · MẪU</span></div></div>'+
     '</div></div>';
@@ -1156,7 +1156,48 @@ function editBookHTML(){
 }
 
 /* ---------- 5 · Chương + trình soạn ---------- */
-function plainText(html){var d=document.createElement('div');d.innerHTML=html||'';return d.textContent||'';}
+/* Chặn HTML độc hại trước khi đưa nội dung chương vào innerHTML (kể cả
+   nội dung dán vào contenteditable). Mockup không ghi KV nhưng render() vẫn
+   dựng lại editorSeed, nên lọc 2 lớp: regex chặn handler/script TRƯỚC khi
+   parse, rồi DOM bỏ thẻ không cho phép và URL javascript:/data:/blob:. */
+function sanitizeEditorHtml(input){
+  var src=String(input==null?'':input)
+    .replace(/<\s*(script|iframe|object|embed|link|meta|base|style|form|svg|math|template)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi,'')
+    .replace(/<\s*(script|iframe|object|embed|link|meta|base|style|form|svg|math|template)\b[^>]*\/?>/gi,'')
+    .replace(/\son[a-z0-9_-]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi,'')
+    .replace(/\s(?:srcdoc|formaction)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi,'')
+    .replace(/(\s(?:href|src|xlink:href)\s*=\s*)(["']?)\s*(?:javascript|data|blob):[^"'<>\s]*\2/gi,'');
+  var box=document.createElement('div');
+  box.innerHTML=src;
+  var allowed={P:1,BR:1,B:1,STRONG:1,I:1,EM:1,U:1,H1:1,H2:1,H3:1,H4:1,BLOCKQUOTE:1,UL:1,OL:1,LI:1,A:1,IMG:1,DIV:1,SPAN:1,HR:1};
+  Array.prototype.slice.call(box.querySelectorAll('*')).forEach(function(el){
+    var tag=el.tagName.toUpperCase();
+    Array.prototype.slice.call(el.attributes).forEach(function(a){
+      var nm=a.name.toLowerCase(),v=String(a.value||'').trim();
+      if(/^on/i.test(nm)||nm==='srcdoc'||nm==='formaction'){el.removeAttribute(a.name);return;}
+      if((nm==='href'||nm==='src'||nm==='xlink:href')&&/^\s*(?:javascript|data|blob):/i.test(v)){el.removeAttribute(a.name);return;}
+      if(nm==='style'&&/(?:url\s*\(|expression\s*\()/i.test(v))el.removeAttribute(a.name);
+    });
+    if(!allowed[tag]){
+      var par=el.parentNode;if(!par)return;
+      while(el.firstChild)par.insertBefore(el.firstChild,el);
+      par.removeChild(el);return;
+    }
+    Array.prototype.slice.call(el.classList).forEach(function(c){if(c!=='ch-sep')el.classList.remove(c);});
+    if(!el.getAttribute('class'))el.removeAttribute('class');
+  });
+  return box.innerHTML;
+}
+function editorHtml(){return sanitizeEditorHtml(state.editorSeed);}
+function sanitizeEditorDom(){
+  var el=document.getElementById('editor');
+  if(!el)return state.editorSeed;
+  var clean=sanitizeEditorHtml(el.innerHTML);
+  if(clean!==el.innerHTML)el.innerHTML=clean;
+  state.editorSeed=clean;
+  return clean;
+}
+function plainText(html){var d=document.createElement('div');d.innerHTML=sanitizeEditorHtml(html);return d.textContent||'';}
 function chapterPipeline(){
   var tabs=[['draft','Nháp'],['pending','Chờ duyệt'],['scheduled','Hẹn giờ'],['waiting','Chờ tới giờ']];
   var queues={
@@ -1206,8 +1247,8 @@ function chapterEditorHTML(){
     '<button class="btn sm" data-act="insert-separator" data-tip="Chèn dấu ngăn cách nội dung" aria-label="Chèn dấu ngăn cách nội dung">'+icon('separator','s')+'Chèn dấu ngăn cách</button>'+
     '<span class="grow"></span><button class="btn sm" data-act="toggle-preview">'+icon('eye','s')+(state.editorPreview?'Đóng xem trước':'Xem trước')+'</button></div>'+
     (state.editorPreview
-      ? '<div class="card" style="background:var(--surf2)"><div class="card-bd"><div class="lb mb">Xem trước</div><div style="font-family:var(--head);font-size:16px;line-height:1.8">'+esc(plainText(state.editorSeed))+'</div></div></div>'
-      : '<div id="editor" class="inp" data-role="editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Nội dung chương mẫu" style="min-height:190px;height:auto;line-height:1.8;font-family:var(--head);font-size:15px">'+state.editorSeed+'</div>')+
+      ? '<div class="card" style="background:var(--surf2)"><div class="card-bd"><div class="lb mb">Xem trước</div><div style="font-family:var(--head);font-size:16px;line-height:1.8">'+esc(plainText(editorHtml()))+'</div></div></div>'
+      : '<div id="editor" class="inp" data-role="editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Nội dung chương mẫu" style="min-height:190px;height:auto;line-height:1.8;font-family:var(--head);font-size:15px">'+editorHtml()+'</div>')+
     '<div class="row wrap mt" style="gap:8px"><span class="lb">Nhập:</span>'+imports.map(function(im){
       return '<label class="btn sm">'+esc(im[1])+'<input type="file" class="sr-only" accept="'+esc(im[2])+'" data-role="import-file" data-kind="'+im[0]+'" aria-label="Nhập '+esc(im[1])+'"></label>';
     }).join('')+'<label class="btn sm">'+icon('image','s')+'Ảnh vào chương<input type="file" class="sr-only" accept="image/*" data-role="chapter-image" aria-label="Tải ảnh vào chương"></label></div>'+
@@ -1346,7 +1387,7 @@ function doctorHTML(){
     '</div></div>'+migrationCard();
 }
 function migrationCard(){
-  var blocked=state.conn==='static'||state.quota==='blocked';
+  var blocked=state.conn!=='online'||state.quota==='blocked';
   var opts=[['','Chuyển tất cả'],['covers','Chỉ bìa'],['books','Chỉ book']];
   return '<div class="card mt"><div class="card-hd"><h3>Lưu trữ tràn (tuỳ chọn)</h3><span class="right">KV → Supabase / R2 · MẪU</span></div><div class="card-bd">'+
     '<p class="sm mut">Supabase: unavailable · R2: unavailable · Bìa/Ảnh: KV.</p>'+
@@ -1399,7 +1440,7 @@ function loginStateBlock(mode){
 }
 function loginHTML(){
   var m=state.models,mode=state.modes['dang-nhap']||'normal';
-  var c=CONN[state.conn];
+  var c=CONN[state.conn]||CONN.online;
   var brand='<div class="gate-brand"><div class="logo"><span class="dot"></span>ssochuz <span style="font:600 11px/1 var(--mono);letter-spacing:.14em;color:var(--dim)">ADMIN</span></div>'+
     '<h1>Quản lý thư viện từ một chỗ.</h1><p>Ghi cần đăng nhập, lưu vào KV. Mockup: không kết nối thật.</p>'+
     '<ul class="gate-features"><li><b>Thư viện</b><span>Lọc, sửa và xuất bản bộ truyện hàng loạt</span></li>'+
@@ -1493,7 +1534,11 @@ const DOCS_HTML =
  ['30','Đổi case chỉ áp dụng tên chương','Select nằm ngay cạnh ô Tên chương và chỉ ghi vào state.chapters[active].t; nội dung chương và vùng chọn không bị động tới.'],
  ['31','Ghi chú gọn, cột thẳng','Rút các câu ghi chú trong panel; lưới 2 cột bằng nhau và cột cố định cho mọi hàng danh sách nên badge, nút không còn lệch.'],
  ['32','Chỉ giữ ghi chú có ích','Vòng 7 bỏ ghi chú thiết kế, chú thích lặp và câu giải thích lại nhãn; giữ an toàn (gõ slug/cụm), phạm vi đổi case, phím tắt và trạng thái đọc/ghi KV.'],
- ['33','Một dòng MẪU cho mỗi màn','Footer rút còn DỮ LIỆU MẪU và render đúng một lần; eyebrow và meta đã đánh dấu nên không lặp câu dài.']
+ ['33','Một dòng MẪU cho mỗi màn','Footer rút còn DỮ LIỆU MẪU và render đúng một lần; eyebrow và meta đã đánh dấu nên không lặp câu dài.'],
+ ['34','Lọc HTML chương trước khi render lại','Vòng 8 phát hiện editorSeed từ contenteditable được đưa thẳng vào innerHTML: dán HTML lạ có thể chạy handler. sanitizeEditorHtml() chặn script, on*, javascript:/data:/blob: và chỉ giữ thẻ soạn thảo; sự kiện paste chèn text thường vì onerror chạy trước input.'],
+ ['35','Khoá migration theo trạng thái online','DoctorPanel thật chỉ chạy khi state.online; mockup trước đó khoá mỗi static nên checking / badkey / workererr vẫn bấm được. Gộp conn!==online với quota blocked.'],
+ ['36','Không giữ ADMIN_KEY trong state','Ô mật khẩu chỉ để minh hoạ; xoá giá trị ngay sau connect, đăng nhập Supabase, chế độ tĩnh và Đặt lại demo để khoá thật không bao giờ nằm lại trong bộ nhớ trang.'],
+ ['37','Fallback cho trạng thái kết nối/quota','CONN và QUOTA có phương án dự phòng nên một giá trị demo không hợp lệ không làm vỡ render chip, Dashboard hay màn đăng nhập.']
 ].map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td></tr>';}).join('')+
 '</tbody></table>'+
 
@@ -1504,7 +1549,7 @@ const DOCS_HTML =
  ['2 · Khớp thế giới thật','5','Dùng đúng tên tab, nhãn trạng thái, thứ tự badge và thuật ngữ KV/Worker của mã nguồn.'],
  ['3 · Kiểm soát &amp; tự do','4','Esc đóng modal/drawer/palette, "Bỏ chọn", "Nhập lại", "Thử lại", "Về bình thường".'],
  ['4 · Nhất quán &amp; chuẩn','5','Một :root, một bộ nút/badge/bảng, nhịp 8px, 1 nút chính/header; vòng 6 cho lưới 2 cột bằng nhau và cột badge/nút cố định ở mọi hàng.'],
- ['5 · Ngăn lỗi','5','Validate form, cảnh báo đổi slug, xác nhận mạnh có gõ, xóa 2 lần, gated Sửa bộ.'],
+ ['5 · Ngăn lỗi','5','Validate form, cảnh báo đổi slug, xác nhận mạnh có gõ, xóa 2 lần, gated Sửa bộ; vòng 8 lọc HTML chương, khoá migration khi chưa online và không giữ ADMIN_KEY.'],
  ['6 · Nhận diện thay vì nhớ','5','Gợi ý tìm + Ctrl+K, eyebrow nhóm, tooltip, nhãn mono rõ ràng trên điều khiển.'],
  ['7 · Linh hoạt &amp; hiệu quả','4','Hash route, lọc/sắp xếp/phân trang, thao tác hàng loạt, Ctrl+K / Ctrl+S / Ctrl+Alt+N.'],
  ['8 · Thẩm mỹ &amp; tối giản','4','Không bóng, không gradient, vạch tóc, hồng có chủ đích; vòng 7 bỏ ghi chú thừa, còn nhiều bảng đặc dữ liệu.'],
@@ -1523,6 +1568,7 @@ const DOCS_HTML =
 '<li>Màu hồng là giá trị tạm, cần thử lại với bìa thật (hiện là ô màu CSS) trước khi chốt token.</li>'+
 '<li>Đã bỏ 2 tab Tác giả, Vai trò theo xác nhận owner; nếu sau này có cộng tác viên cần khôi phục nhóm Người dùng.</li>'+
 '<li>Ở 360px bảng vẫn phải cuộn ngang trong vùng bảng; chưa thử ngón tay cái trên thiết bị thật.</li>'+
+'<li>Vòng 8 mới đối chiếu tĩnh mã nguồn; chưa gọi Worker, Supabase, R2, Blogger thật nên chưa kiểm được CORS, timeout 12/120/29s và đường rớt về KV khi overflow lỗi.</li>'+
 '<li>Chưa dựng 2 biến thể phụ của source: chuyển Bảng/Lưới ở Thư viện và toolbar đủ 15 nút của TipTap.</li>'+
 '</ul>'+
 '<p><b>Đã sửa sau phản hồi owner:</b> scrim desktop che mờ trang, badge Mới cập nhật full-width, nút demo chèn nội dung, ô tiêu đề chương riêng, bỏ 2 tab, tinh gọn chữ. Vòng 6: bỏ Danh sách trong toolbar, thêm dấu ngăn cách, đổi case chỉ cho tên chương, ghi chú gọn, canh thẳng các ô Báo lỗi; vòng 7 dọn ghi chú. Render thử bằng Chromium thật: 13 tab / 5 nhóm, 360px không tràn ngang.</p>'+
@@ -1581,6 +1627,28 @@ const DOCS_HTML =
 .map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>';}).join('')+
 '</tbody></table>'+
 '<p><b>Kiểm chứng vòng 7:</b> 136/136 cấu trúc · 122/122 đối chiếu source · 85/85 vòng 5 · 124/124 vòng 6–7 (gồm kiểm tra ghi chú đã bỏ, footer đúng 1 lần, 1 ghi chú phím tắt) · 0 lỗi JS · 0 màu literal ngoài :root · Chromium thật 14 route ở 360px không tràn ngang, 0 page error. Phase 1 vẫn 398 từ.</p>'+
+'<h4>VÒNG 8 · KIỂM CHỨC NĂNG, GIAO DIỆN, BẢO MẬT, KẾT NỐI</h4>'+
+'<p>Owner yêu cầu rà audit, bug tính năng, giao diện, bảo mật và kết nối với các bên dữ liệu. Đọc trực tiếp <span class="token">src/admin/api.js</span>, <span class="token">worker/overflow.js</span>, <span class="token">community-worker/</span>, <span class="token">supabase/</span> rồi đối chiếu từng nhãn và từng điều kiện khoá trong mockup. Ranh giới: đây là prototype, mọi kết nối là mô phỏng; lỗi thật là lỗi trong chính cách mockup render, khoá và giữ dữ liệu.</p>'+
+'<table><thead><tr><th>Bên / lớp</th><th>Mã nguồn thật</th><th>Mockup (đối chiếu)</th></tr></thead><tbody>'+
+[['Cloudflare KV','PUT /api/registry, /api/book/&lt;slug&gt;, /api/book/&lt;slug&gt;/chapter; quota 1.000 ghi và 100.000 đọc/ngày, writesToday + lastReset.','Chip 5 trạng thái đúng nhãn Layout.jsx, 4 mức 800 / 950 / 1000, banner đỏ, dòng đọc 18.400 / 100.000; mọi thao tác ghi gắn MẪU.'],
+ ['Worker CMS','AdminApi gửi x-admin-key, mode:cors, cache:no-store; /api/health, /api/whoami; timeout 12s, 120s cho putBook, 29s cho migration overflow.','Không fetch. URL và ADMIN_KEY chỉ là placeholder; chip Sai ADMIN_KEY / Lỗi kết nối Worker diễn đúng thông điệp classifyConnError.'],
+ ['Supabase + R2','Overflow: bìa vào Storage bucket covers, book/ảnh chương vào bảng ssochuz_blobs hoặc binding CZ_R2; chưa gắn SUPABASE_SERVICE_ROLE thì báo unavailable và ghi lỗi rớt về KV.','Dòng Supabase: unavailable · R2: unavailable · Bìa/Ảnh: KV và 3 nút Chuyển tất cả / Chỉ bìa / Chỉ book đúng tham số only = "" / covers / books.'],
+ ['Blogger','POST /api/sync cập nhật registry từ list-novel, KV vẫn là nguồn thắng; POST /api/import nhận URL bài.','Nhập URL có validate https, xác nhận gõ ĐỒNG BỘ, import mô phỏng; không chép SQL hay cấu hình thật.'],
+ ['community-worker','Bình luận, báo lỗi, phiếu bầu; admin đọc /api/admin/comments, /reports (có PATCH), /stats, /log, /voters.','Đúng thao tác hẹp: xoá bình luận 2 bước, Mở lại báo lỗi, Gỡ phiếu / RESET; không có Duyệt bình luận hay bulk export.'],
+ ['Dữ liệu tĩnh','fetch("/data/registry.json") và /data/book/&lt;slug&gt;.json, chỉ đọc, thay đổi chỉ lưu trong phiên.','Chip Dữ liệu tĩnh · Chỉ đọc; migration và các nút ghi bị khoá, không dùng localStorage hay sessionStorage.'],
+ ['Supabase Auth','cz-auth.js / cz-config.js phục vụ đăng nhập độc giả (Google hoặc Supabase); ghi KV vẫn cần ADMIN_KEY qua Worker.','Nút Đăng nhập với Supabase (mô phỏng) tách khỏi form ADMIN_KEY để không gợi ý hai cơ chế uỷ quyền là một.']]
+.map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td></tr>';}).join('')+
+'</tbody></table>'+
+'<p><b>Lỗi thật tìm thấy và đã sửa</b></p>'+
+'<table><thead><tr><th>Mức</th><th>Phát hiện</th><th>Sửa</th></tr></thead><tbody>'+
+[['Bảo mật','state.editorSeed lấy từ contenteditable rồi đưa thẳng vào innerHTML của #editor: dán &lt;img onerror&gt; hoặc script là chạy lại khi render.','Thêm sanitizeEditorHtml() 2 lớp: regex bỏ script / on* / srcdoc / javascript:data:blob: TRƯỚC khi parse, rồi DOM allowlist chỉ giữ thẻ soạn thảo; dùng cho editor, Xem trước, plainText(), mọi lần đọc nội dung và sự kiện paste của contenteditable.'],
+ ['Kết nối','3 nút migration vẫn bấm được ở checking, badkey, workererr dù DoctorPanel thật khoá khi !state.online.','blocked = conn !== online || quota === blocked; kiểm tra đủ 5 trạng thái và mức hết quota.'],
+ ['Bảo mật','ADMIN_KEY gõ vào form nằm lại trong state.models sau khi Kết nối và cả sau Đặt lại demo, hiện lại ở ô mật khẩu.','delete state.models["gate-key"] ngay trong connect, login-supabase, static-mode và resetDemo; reset cũng xoá gate-api.'],
+ ['Ổn định','CONN[state.conn] và QUOTA[state.quota] không có fallback: một giá trị demo lạ làm vỡ chip, Dashboard và màn đăng nhập.','Thêm || CONN.online / || QUOTA.ok ở cả 4 chỗ đọc.']]
+.map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td></tr>';}).join('')+
+'</tbody></table>'+
+'<p><b>Bảo mật đã kiểm:</b> 0 fetch / XHR / WebSocket / eval / new Function / document.write / localStorage / sessionStorage / indexedDB / cookie; tài nguyên ngoài duy nhất là 3 link Google Fonts có fallback hệ thống. Ô ADMIN_KEY là type=password và nhắc không nhập key thật, URL chỉ dùng mau.example và ten-worker.workers.dev, không có tenant thật hay service role. Mọi dữ liệu mẫu, title/desc/phrase của modal và URL người dùng đi qua esc(); sự kiện paste trong trình soạn chỉ chèn text thường. Thử chèn payload vào tên bộ, bình luận, báo lỗi, chương, slide, couple, ghi chú và nội dung editor ở 14 route × 4 trạng thái đều không tạo handler hay thẻ script.</p>'+
+'<p><b>Kiểm chứng vòng 8:</b> 51/51 kiểm tra mới (điều khiển chết, trùng id, chèn HTML, khoá migration, đối chiếu nhãn kết nối) · 136/136 cấu trúc · 122/122 đối chiếu source · 85/85 vòng 5 · 124/124 vòng 6–7 · 0 lỗi JS · 0 màu literal ngoài :root · Chromium thật 14 route ở 360px không tràn ngang, 0 page error; dán HTML chứa onerror vào trình soạn cho 0 handler và 0 lỗi thực thi. Phase 1 vẫn 398 từ.</p>'+
 '<h4>ĐỀ XUẤT THÊM (không nằm trong mockup)</h4>'+
 '<ul>'+
 '<li>Phỏng vấn chủ site và quan sát 2 ca tự dịch, đăng chương để kiểm chứng 5 giả thuyết.</li>'+
@@ -1589,6 +1657,7 @@ const DOCS_HTML =
 '<li>Cảnh báo quota chủ động trước khi chạm 80% và báo cáo ghi theo ngày.</li>'+
 '<li>Xuất nhật ký ra CSV để đối soát định kỳ; shortcut duyệt nhanh cho chủ site.</li>'+
 '<li>Đo hiệu năng bảng lớn, thử nghiệm 360px trên thiết bị thật và kiểm tra AT trước khi chuyển code production.</li>'+
+'<li>Dựng môi trường staging có Worker + KV + Supabase/R2 + Blogger để kiểm chứng CORS, x-admin-key, timeout và migration overflow trước khi nối bản thật.</li>'+
 '</ul></div>';
 
 /* ============================================================
@@ -1870,11 +1939,13 @@ function connect(){
   else if(!/^https:\/\//.test(api))setErr('gate-api','Địa chỉ Worker phải dùng https://');
   if(!staticMode&&!key)setErr('gate-key','Cần ADMIN_KEY mẫu hoặc bật chế độ tĩnh chỉ đọc.');
   if(state.errors['gate-api']||state.errors['gate-key']){focusFirst(['gate-api','gate-key']);toast('Kiểm tra thông tin kết nối mẫu.','bad');return;}
+  delete state.models['gate-key'];
   state.conn=staticMode?'static':'online';
   toast(staticMode?'Đã mở chế độ dữ liệu tĩnh, chỉ đọc (mô phỏng).':'Đã nối Worker (mô phỏng, không gọi thật).');
   navigate('dashboard');
 }
 function resetDemo(){
+  delete state.models['gate-key'];delete state.models['gate-api'];
   state.conn='online';state.quota='ok';state.modes={};state.collapsed=false;state.drawer=false;state.forceDrawer=false;state.sim360=false;
   state.books=SAMPLE_BOOKS.slice();state.comments=SAMPLE_COMMENTS.slice();state.reports=SAMPLE_REPORTS.slice();state.votes=SAMPLE_VOTES.slice();
   state.chapters=SAMPLE_CHAPTERS.slice();state.slides=SAMPLE_SLIDES.slice();state.schedule=SAMPLE_SCHEDULE.slice();state.picked=['b01','b05','b12'];
@@ -1882,7 +1953,7 @@ function resetDemo(){
   state.votePage=1;state.logPage=1;state.chapterTab='draft';state.commentTab='all';state.reportTab='all';state.activeChapter=0;
   state.voteSel.clear();state.chapterStatus='published';state.chapterAt='';state.chapterBook=null;state.hpPreview='desktop';
   state.cmtQ='';state.cmtBook='';state.couples={nb:[''],eb:['']};state.migrateResult='';
-  state.editorPreview=false;state.savedAt='20:40:12';state.editorSeed=state.defaultEditor;
+  state.editorPreview=false;state.savedAt='20:40:12';state.editorSeed=sanitizeEditorHtml(state.defaultEditor);
   state.notifOpen=false;state.accountOpen=false;state.suggestOpen=false;state.suggestQuery='';
   if(state.selectedBook)initEditModels(getBook(state.selectedBook));
   toast('Đã đặt lại toàn bộ trạng thái và dữ liệu mẫu.');
@@ -1917,7 +1988,7 @@ function insertSeparator(){
   var sep='<p class="ch-sep">•••</p><p><br></p>';
   var ed=document.getElementById('editor');
   if(!ed){
-    state.editorPreview=false;state.editorSeed+=sep;render();
+    state.editorPreview=false;state.editorSeed=sanitizeEditorHtml(state.editorSeed+sep);render();
     toast('Đã chèn dấu ngăn cách (mô phỏng).');return;
   }
   ed.focus();
@@ -1929,7 +2000,7 @@ function insertSeparator(){
   var before=ed.innerHTML,done=false;
   try{done=document.execCommand('insertHTML',false,sep);}catch(e){}
   if(!done||ed.innerHTML===before)ed.insertAdjacentHTML('beforeend',sep);
-  state.editorSeed=ed.innerHTML;
+  state.editorSeed=sanitizeEditorHtml(ed.innerHTML);
   state.savedAt=timeNow();
   var n=document.getElementById('saveNote');
   if(n)n.innerHTML=icon('check','xs')+' Đã lưu lúc '+esc(state.savedAt)+' (mẫu)';
@@ -1942,7 +2013,7 @@ function insertSeparator(){
    Ctrl/Cmd+Alt+N; ở màn khác để nguyên hành vi native của trình duyệt. */
 function shortcutSave(){
   if(state.route==='chuong'){
-    var ed=document.getElementById('editor');if(ed)state.editorSeed=ed.innerHTML;
+    var ed=document.getElementById('editor');if(ed)state.editorSeed=sanitizeEditorHtml(ed.innerHTML);
     state.savedAt=timeNow();
     var n=document.getElementById('saveNote');
     if(n)n.innerHTML=icon('check','xs')+' Đã lưu lúc '+esc(state.savedAt)+' (mẫu)';
@@ -2082,16 +2153,16 @@ document.addEventListener('click',function(e){
         else if(cmd==='quote')document.execCommand('formatBlock',false,'blockquote');
         else document.execCommand(cmd,false,null);
       }catch(err){toast('Định dạng (mô phỏng).','info');}
-      var fe=document.getElementById('editor');if(fe){state.editorSeed=fe.innerHTML;fe.focus();}
+      var fe=document.getElementById('editor');if(fe){state.editorSeed=sanitizeEditorHtml(fe.innerHTML);fe.focus();}
       break;
     case 'insert-image':
       var img=document.querySelector('[data-role="chapter-image"]');if(img)img.click();break;
     case 'insert-separator':insertSeparator();break;
     case 'toggle-preview':
-      var ee=document.getElementById('editor');if(ee)state.editorSeed=ee.innerHTML;
+      var ee=document.getElementById('editor');if(ee)state.editorSeed=sanitizeEditorHtml(ee.innerHTML);
       state.editorPreview=!state.editorPreview;render();break;
     case 'save-draft':
-      var se=document.getElementById('editor');if(se)state.editorSeed=se.innerHTML;
+      var se=document.getElementById('editor');if(se)state.editorSeed=sanitizeEditorHtml(se.innerHTML);
       state.savedAt=timeNow();toast('Đã lưu nháp lúc '+state.savedAt+' (mô phỏng).');
       var sn=document.getElementById('saveNote');if(sn)sn.innerHTML=icon('check','xs')+' Đã lưu lúc '+esc(state.savedAt)+' (mẫu)';break;
     case 'save-chapter':toast('Đã lưu chương lên Worker (mô phỏng).');render();break;
@@ -2149,8 +2220,8 @@ document.addEventListener('click',function(e){
       toast('Đã tải backup JSON mẫu.');break;
     case 'blogger-import':bloggerImport();break;
     case 'blogger-sync':openStrong('Đồng bộ metadata Blogger','Cập nhật registry từ list-novel; KV vẫn là nguồn thắng.','ĐỒNG BỘ',function(){toast('Đã đồng bộ metadata Blogger (mô phỏng).');},'Đồng bộ');break;
-    case 'login-supabase':toast('Đăng nhập Supabase (mô phỏng) · DỮ LIỆU MẪU.');navigate('dashboard');break;
-    case 'static-mode':state.conn='static';toast('Chế độ dữ liệu tĩnh, chỉ đọc (mô phỏng).');navigate('dashboard');break;
+    case 'login-supabase':delete state.models['gate-key'];toast('Đăng nhập Supabase (mô phỏng) · DỮ LIỆU MẪU.');navigate('dashboard');break;
+    case 'static-mode':delete state.models['gate-key'];state.conn='static';toast('Chế độ dữ liệu tĩnh, chỉ đọc (mô phỏng).');navigate('dashboard');break;
     case 'connect':connect();break;
     default:break;
   }
@@ -2234,6 +2305,17 @@ document.addEventListener('change',function(e){
   }
 });
 let saveTimer=null;
+/* Dán vào trình soạn: chỉ chèn text thường. Nếu để trình duyệt tự dán HTML,
+   onerror của <img> chạy ngay trong DOM sống trước khi sự kiện input kịp lọc. */
+document.addEventListener('paste',function(e){
+  var t=e.target;
+  if(!t||!t.closest||!t.closest('#editor'))return;
+  e.preventDefault();
+  var cd=e.clipboardData||window.clipboardData;
+  var text=cd?String(cd.getData('text/plain')||''):'';
+  if(document.execCommand)document.execCommand('insertText',false,text);
+  sanitizeEditorDom();
+});
 document.addEventListener('input',function(e){
   var el=e.target;if(!el||!el.dataset)return;
   var mid=el.dataset.model;
@@ -2276,7 +2358,7 @@ document.addEventListener('input',function(e){
       if(ok&&state.modal&&state.modal.kind==='strong')ok.disabled=(el.value.trim()!==state.modal.phrase);
       break;
     case 'editor':
-      state.editorSeed=el.innerHTML;
+      sanitizeEditorDom();
       clearTimeout(saveTimer);
       saveTimer=setTimeout(function(){
         state.savedAt=timeNow();

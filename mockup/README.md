@@ -55,3 +55,5 @@ Mockup **không** dùng bộ nhớ trình duyệt, không gọi Worker thật, k
 **Mới ở vòng 6:** bỏ nút `Danh sách` trong trình soạn · thêm `Chèn dấu ngăn cách` (`•••` tại con trỏ) · đổi case chỉ tác động **Tên chương** · canh thẳng cột badge/nút (sửa luôn cấu trúc card Báo lỗi và lưới 2 cột). Chi tiết ở `TAI-LIEU-BAN-GIAO.md` → mục 9.
 
 **Mới ở vòng 7:** dọn ghi chú — bỏ hẳn ghi chú thiết kế/chú thích lặp, giữ chỉ các dòng an toàn (gõ slug/cụm), phạm vi case, 1 dòng phím tắt và trạng thái KV; footer mỗi màn còn đúng một dòng `DỮ LIỆU MẪU`. Chi tiết ở `TAI-LIEU-BAN-GIAO.md` → mục 10.
+
+**Mới ở vòng 8 (kiểm chéo):** rà `src/admin/api.js`, `worker/overflow.js`, `community-worker/`, `supabase/` và đối chiếu 7 lớp dữ liệu (KV, Worker, Supabase/R2, Blogger, community-worker, dữ liệu tĩnh, Supabase Auth). Sửa 4 điểm: lọc HTML chương trước khi `render()` + chèn text thường ở sự kiện `paste` (chặn self-XSS khi dán vào `contenteditable`), khoá migration ở mọi trạng thái chưa `online`, xoá `ADMIN_KEY` khỏi state sau kết nối/reset, thêm fallback `CONN`/`QUOTA`. Thêm 51 kiểm tra mới (điều khiển chết, id trùng, chèn HTML, nhãn kết nối). Chi tiết ở `TAI-LIEU-BAN-GIAO.md` → mục 11.
