@@ -26,7 +26,7 @@ Bấm **nút bánh răng tròn góc dưới phải** để mở. Trong đó:
 - **Thư viện component**: nút, input, select, checkbox, switch, tab, bảng, badge đủ tone, tag chip, skeleton, empty state, banner, tooltip, pagination, toast.
 - **Đặt lại demo**: nạp lại toàn bộ dữ liệu mẫu và trạng thái.
 
-Phím tắt: `Ctrl+K` mở bảng lệnh (↑/↓/Enter/Esc), `Esc` đóng modal / palette / drawer.
+Phím tắt: `Ctrl+K` bảng lệnh (↑/↓/Enter/Esc) · `Ctrl/Cmd+S` lưu chương / metadata / tạo bộ · `Ctrl/Cmd+Alt+N` thêm chương (`Ctrl+N` thường bị Chrome/Edge giữ để mở cửa sổ mới) · `Esc` đóng modal / palette / drawer.
 
 ## Đối chiếu tiêu chí nghiệm thu
 
@@ -49,3 +49,5 @@ Mockup **không** dùng bộ nhớ trình duyệt, không gọi Worker thật, k
 **Mới ở vòng 3:** đổi case đoạn trong trình soạn · ô tiêu đề chương riêng · sửa badge/scrim/nút demo ở card Mới cập nhật · rút gọn chữ.
 
 **Mới ở vòng 4 (đối chiếu `src/admin/**`):** bỏ field tự bịa (Tags, Số chương, Ngày) · thêm Năm, Hiển thị, 18+, 2 ô mật mã · 4 hàng đợi của BỘ trong tab Chương + đúng 4 trạng thái chương · bỏ nút Duyệt bình luận, thêm Mở lại báo lỗi · đúng cụm xác nhận `XOÁ / ĐẾM LẠI / RESET / GỠ PHIẾU / ĐỒNG BỘ / KHÔI PHỤC` và gõ slug khi xoá bộ · đúng nhãn source ở Dashboard, Thống kê, Kiểm tra dữ liệu, Cài đặt, Homepage CMS · nhật ký chỉ còn `admin-key`. Chi tiết ở `TAI-LIEU-BAN-GIAO.md` → mục 7.
+
+**Mới ở vòng 5:** nhiều dòng `+ couple` (Enter thêm, × xoá, gộp bằng dấu phẩy) · card **Lưu trữ tràn** trong Kiểm tra dữ liệu (chuyển book/bìa/ảnh sang Supabase/R2, khoá khi hết quota) · `Ctrl/Cmd+S` và `Ctrl/Cmd+Alt+N`. Chi tiết ở `TAI-LIEU-BAN-GIAO.md` → mục 8.

@@ -91,7 +91,7 @@ Biến phái sinh (cũng tại `:root`, để mọi cặp nền/chữ đều là
 
 ### 1.5 Tương tác đã chạy
 
-Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc · ô tìm gợi ý + `Ctrl+K` (↑/↓/Enter/Esc) · lọc/sắp xếp/phân trang Thư viện · chọn nhiều + thanh hàng loạt (6 lựa chọn đúng `BookList.jsx`, CSV, JSON; xoá mạnh chỉ cho từng bộ) · "Sửa bộ" chỉ mở khi có bộ được chọn · modal xác nhận thường & mạnh · toast · validate form · cảnh báo đổi slug · tự lưu nháp "Đã lưu lúc…" · thêm/xóa/di chuyển chương · **đổi case đoạn/vùng chọn** · **ô tiêu đề chương riêng** · import mẫu · banner quota · tài liệu bàn giao trong modal.
+Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc · ô tìm gợi ý + `Ctrl+K` (↑/↓/Enter/Esc) · lọc/sắp xếp/phân trang Thư viện · chọn nhiều + thanh hàng loạt (6 lựa chọn đúng `BookList.jsx`, CSV, JSON; xoá mạnh chỉ cho từng bộ) · "Sửa bộ" chỉ mở khi có bộ được chọn · modal xác nhận thường & mạnh · toast · validate form · cảnh báo đổi slug · tự lưu nháp "Đã lưu lúc…" · thêm/xóa/di chuyển chương · **đổi case đoạn/vùng chọn** · **ô tiêu đề chương riêng** · **nhiều dòng + couple** · **Ctrl/Cmd+S** · **Ctrl/Cmd+Alt+N** · **migration overflow KV** · import mẫu · banner quota · tài liệu bàn giao trong modal.
 
 ---
 
@@ -123,6 +123,9 @@ Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 | 22 | Tab Chương là 4 hàng đợi của BỘ | `ChaptersHub` lọc theo `pubStatus` + `pending`; trạng thái riêng của CHƯƠNG là Xuất bản / Hẹn giờ / Ẩn / Nháp. |
 | 23 | Bỏ Duyệt bình luận, thêm Mở lại báo lỗi | `CommentsPanel` chỉ lọc nghi spam và xoá 2 bước; `ReportsPanel` cho mở lại. |
 | 24 | Đúng cụm xác nhận và tên hành động | `main.jsx`: `XOÁ`, `ĐẾM LẠI`, `RESET`, `GỠ PHIẾU`, `ĐỒNG BỘ`, `KHÔI PHỤC`; xoá bộ / bỏ khóa gõ slug. |
+| 25 | Nhiều dòng `+ couple` | `NewBook.jsx` / `BookEditor.jsx` có nút thêm, Enter thêm dòng và × xoá; gộp bằng dấu phẩy thay vì một ô duy nhất. |
+| 26 | Thêm migration overflow KV | `DoctorPanel` chuyển book/bìa/ảnh sang Supabase/R2; gắn trực tiếp với bài toán quota free-tier nên đưa vào Kiểm tra dữ liệu. |
+| 27 | `Ctrl+S` và `Ctrl+Alt+N` | `main.jsx` lưu màn gần nhất và thêm chương; `Ctrl+N` thường bị Chrome/Edge giữ nên bản chắc chắn là `Ctrl/Cmd+Alt+N`. |
 
 ---
 
@@ -138,7 +141,7 @@ Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 | 4 | Nhất quán & chuẩn | 5 | Một `:root`, một bộ nút/badge/bảng, nhịp 8px, 1 nút chính/header ở mọi màn. |
 | 5 | Ngăn lỗi | 5 | Validate form, cảnh báo slug, xác nhận mạnh có gõ, xóa 2 lần, gated Sửa bộ. |
 | 6 | Nhận diện thay vì nhớ | 5 | Gợi ý tìm + Ctrl+K, eyebrow nhóm, tooltip, nhãn mono rõ trên điều khiển. |
-| 7 | Linh hoạt & hiệu quả | 4 | Hash route, lọc/sắp xếp/phân trang, thao tác hàng loạt, phím tắt bảng lệnh. |
+| 7 | Linh hoạt & hiệu quả | 4 | Hash route, lọc/sắp xếp/phân trang, thao tác hàng loạt, Ctrl+K / Ctrl+S / Ctrl+Alt+N. |
 | 8 | Thẩm mỹ & tối giản | 4 | Không bóng, không gradient, vạch tóc, hồng có chủ đích; còn nhiều bảng đặc dữ liệu. |
 | 9 | Sửa lỗi & phục hồi | 4 | Màn lỗi có nguyên nhân + Thử lại + lối tới Cài đặt; skeleton và empty state rõ. |
 | 10 | Trợ giúp & tài liệu | 4 | Tài liệu ngay trong modal, nhật ký quyết định, chú thích MẪU ở mọi màn. |
@@ -154,6 +157,10 @@ Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 | Thứ tự Tab | Theo thứ tự DOM: skip link → sidebar → topbar → nội dung → demo. |
 | Skip link | Có, hiện khi focus. |
 | `Ctrl+K` | Mở/đóng bảng lệnh; ↑/↓ chọn, Enter mở, Esc đóng. |
+| `Ctrl/Cmd+S` | Lưu chương (tab Chương), metadata (Sửa bộ) hoặc tạo bộ (Thêm bộ); màn khác hiện "Không có gì để lưu". |
+| `Ctrl/Cmd+Alt+N` | Thêm chương mới. Cũng bắt `Ctrl/Cmd+N`, nhưng Chrome/Edge giữ tổ hợp đó để mở cửa sổ mới nên bản Alt là đường chắc chắn. |
+| `Ctrl/Cmd+N` ngoài trình soạn | Không `preventDefault`; để nguyên hành vi native của trình duyệt. |
+| Enter trong ô Couple | Thêm một dòng Couple mới và focus vào dòng đó. |
 | Modal | `role="dialog"`, `aria-modal`, focus vào ô gõ / nút xác nhận, bẫy Tab, Esc đóng, focus được khôi phục. |
 | Điều khiển tự vẽ | Checkbox/switch vẫn là `<input>` thật, focusable, có `:focus-visible` trên phần tử vẽ. |
 | ARIA | `aria-current`, `aria-selected`, `aria-expanded`, `aria-live`, `aria-label`, `role="listbox"/"option"`. |
@@ -182,7 +189,7 @@ Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 6. Đã bỏ 2 tab theo xác nhận owner; nếu sau này có cộng tác viên cần khôi phục nhóm Người dùng và rà soát lại phân quyền.
 7. Ở 360px bảng vẫn phải cuộn ngang trong vùng bảng; chưa thử ngón tay cái trên thiết bị thật.
 8. Import `.docx`/`.html` mới mô phỏng bằng tên file, chưa parse nội dung (đúng tinh thần mockup, không code production).
-9. Chưa dựng hết biến thể phụ của source: chuyển Bảng/Lưới ở Thư viện, nhiều dòng Couple (`+ Thêm couple`), toolbar đủ 15 nút của TipTap, migration overflow KV → Supabase/R2, phím `Ctrl+S` / `Ctrl+N`. Mockup ưu tiên đúng luồng chính đã liệt kê trong brief; các mục này nằm ngoài phạm vi prototype hiện tại.
+9. Chưa dựng 2 biến thể phụ của source: chuyển **Bảng/Lưới** ở Thư viện và toolbar đủ **15 nút** của TipTap. Các mục còn lại (nhiều dòng Couple, migration overflow, Ctrl+S / Ctrl+Alt+N) đã bổ sung ở vòng 5.
 
 ---
 
@@ -247,3 +254,15 @@ Owner báo "một vài tính năng không đúng với tính năng gốc". Rà l
 **Giữ theo yêu cầu riêng của owner (không có trong source):** đổi case đoạn/vùng chọn, ô tiêu đề chương riêng, 13 tab / 5 nhóm. **Giữ theo brief thiết kế:** lọc/sắp xếp/phân trang, 4 trạng thái mỗi màn, một nút chính cố định, tag chip trong bộ component, modal ví dụ "gõ tên bộ".
 
 **Kiểm chứng vòng 4:** `node --check` đạt · 136/136 kiểm tra cấu trúc (14 route × 4 trạng thái, 13 nav, 14 hành động chính, 5 chip, 4 quota, khung, `Ctrl+K`, docs) · 122/122 kiểm tra đối chiếu source · 0 lỗi JS · render bằng Chromium thật ở desktop và 360px.
+
+## 8 · BỔ SUNG VÒNG 5 THEO YÊU CẦU
+
+| Yêu cầu | Đã làm | Tinh chỉnh cho phù hợp |
+| --- | --- | --- |
+| Nhiều dòng `+ couple` | Block Couple ở **Thêm bộ** và **Sửa bộ**, khớp `NewBook.jsx` / `BookEditor.jsx` | Nút ghost nhỏ cạnh nhãn; `Enter` thêm dòng và focus dòng mới; `×` chỉ hiện khi có ≥ 2 dòng hoặc dòng có chữ; gợi ý từ `datalist` lấy couple có sẵn. Giá trị gộp `", "` vào `state.models['nb-c' / 'eb-c']` nên `submitNew` / `commitEdit` / CSV không đổi. Không thêm câu giải thích dài. |
+| Migration overflow KV | Card **Lưu trữ tràn (tuỳ chọn)** trong **Kiểm tra dữ liệu** | Chọn vì đây là chức năng quan trọng với free-tier: nó chính là cách giảm áp lực ghi/đọc KV mà chip quota đang cảnh báo. 3 nút `Chuyển tất cả / Chỉ bìa / Chỉ book`, xác nhận thường như `DoctorPanel`, kết quả gọn 1 dòng; tự khoá khi `static` hoặc quota `blocked`. **Cài đặt** chỉ thêm một câu trạng thái, không chép khối SQL của source để tránh nhiễu. |
+| `Ctrl+S`, `Ctrl+N` | Handler trong `keydown`, đúng `main.jsx` | `Ctrl/Cmd+S` lưu chương / metadata / tạo bộ, màn khác báo "Không có gì để lưu". `Ctrl/Cmd+N` **và** `Ctrl/Cmd+Alt+N` thêm chương (bắt cả `e.code === 'KeyN'` cho bàn phím AltGr); ở màn khác không `preventDefault` để trình duyệt vẫn mở cửa sổ mới. Ghi chú ngắn dưới trình soạn và form Sửa bộ, có chú thích vì sao cần Alt. |
+
+Toast được gom tối đa 3 cái để không che nội dung khi bấm phím tắt liên tục.
+
+**Kiểm chứng vòng 5:** `node --check` đạt · 136/136 cấu trúc · 122/122 đối chiếu source · kiểm tra bổ sung cho couple / migration / phím tắt đều đạt · 0 lỗi JS · Chromium thật ở desktop và 360px không tràn ngang. Phase 1 vẫn 398 từ.

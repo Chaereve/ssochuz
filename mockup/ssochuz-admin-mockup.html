@@ -744,6 +744,7 @@ const state = {
   chapterTab:'draft', commentTab:'all', reportTab:'all', editorPreview:false, savedAt:'20:40:12',
   chapterStatus:'published', chapterAt:'', chapterBook:null, voteSel:new Set(), hpPreview:'desktop',
   cmtQ:'', cmtBook:'', hpNote:'Lịch có thể thay đổi nếu có việc đột xuất.',
+  couples:{nb:[''],eb:['']}, migrateResult:'',
   models:{}, errors:{}, notifOpen:false, accountOpen:false, suggestOpen:false, suggestQuery:'',
   paletteOpen:false, paletteQuery:'', paletteIndex:0,
   demoOpen:false, specOpen:false, modal:null, docsOpen:false, pendingDelete:null,
@@ -779,6 +780,24 @@ function field(label,id,val,opts){
   else ctl='<input class="inp'+(state.errors[id]?' invalid':'')+'" id="'+id+'" data-model="'+id+'" type="'+(opts.type||'text')+'" value="'+esc(val)+'" placeholder="'+esc(opts.ph||'')+'"'+(opts.readonly?' readonly':'')+'>';
   return '<div class="field"><label for="'+id+'">'+esc(label)+'</label>'+ctl+hint+err+'</div>';
 }
+/* Nhiều dòng Couple theo NewBook.jsx / BookEditor.jsx: Enter thêm dòng, × xoá,
+   giá trị gộp bằng ", " và ghi vào state.models['nb-c' | 'eb-c']. */
+function syncCouples(form){
+  var arr=state.couples[form]||[''];
+  state.models[form==='nb'?'nb-c':'eb-c']=arr.filter(function(x){return String(x||'').trim();}).join(', ');
+}
+function coupleBlock(form){
+  var arr=state.couples[form]||[''];
+  var all=state.books.map(function(b){return b.c;}).filter(Boolean);
+  var known=all.filter(function(x,i){return all.indexOf(x)===i;});
+  return '<div class="field mt" style="max-width:520px"><div class="row" style="justify-content:space-between;align-items:center;gap:8px">'+
+    '<span class="lb">Couple</span><button class="btn ghost sm" data-act="couple-add" data-form="'+form+'">+ Thêm couple</button></div>'+
+    '<datalist id="'+form+'-couples">'+known.map(function(x){return '<option value="'+esc(x)+'"></option>';}).join('')+'</datalist>'+
+    '<div class="stack" style="gap:6px">'+arr.map(function(v,i){
+      return '<div class="row" style="gap:6px"><input class="inp" style="flex:1 1 auto" data-role="couple-row" data-form="'+form+'" data-idx="'+i+'" list="'+form+'-couples" value="'+esc(v)+'" placeholder="'+(i?'Couple tiếp theo…':'VD: Lingling x Orm')+'" aria-label="Couple '+(i+1)+'">'+
+        ((arr.length>1||v)?'<button class="btn icon ghost sm" data-act="couple-remove" data-form="'+form+'" data-idx="'+i+'" aria-label="Xoá couple '+(i+1)+'">'+icon('x','s')+'</button>':'')+'</div>';
+    }).join('')+'</div><span class="hint">Enter thêm dòng · nhiều couple gộp bằng dấu phẩy.</span></div>';
+}
 function setErr(id,msg){
   state.errors[id]=msg||'';
   var el=document.getElementById(id), er=document.getElementById('err-'+id);
@@ -793,7 +812,9 @@ function toast(msg,tone){
   var box=document.createElement('div');
   box.className='toast '+(tone?'t-'+tone:'');
   box.innerHTML=icon(tone==='bad'?'alert':tone==='warn'?'alert':tone==='info'?'info':'check')+'<span>'+esc(msg)+'</span>';
-  document.getElementById('toasts').appendChild(box);
+  var host=document.getElementById('toasts');
+  host.appendChild(box);
+  while(host.children.length>3)host.removeChild(host.firstElementChild);
   setTimeout(function(){box.remove();},4200);
 }
 function timeNow(){var d=new Date();return [d.getHours(),d.getMinutes(),d.getSeconds()].map(function(x){return String(x).padStart(2,'0');}).join(':');}
@@ -1036,12 +1057,11 @@ function newBookHTML(){
       field('Tên bộ *','nb-t',v('nb-t'),{ph:'Ví dụ mẫu: Truyện mẫu 19'})+
       field('Slug *','nb-slug',v('nb-slug'),{ph:'truyen-mau-19',hint:'Chữ thường, gạch ngang; không dấu.'})+
       field('Tác giả gốc *','nb-a',v('nb-a'),{ph:'Tác giả mẫu A'})+
-      field('Couple','nb-c',v('nb-c'),{ph:'Couple mẫu A × B'})+
       field('Năm','nb-year',v('nb-year','2026'))+
       field('Tình trạng','nb-st',v('nb-st','Đang cập nhật'),{type:'select',options:stOpts})+
       field('Trạng thái xuất bản','nb-pub',v('nb-pub','draft'),{type:'select',options:pubOpts})+
       field('Hiển thị','nb-vis',v('nb-vis','public'),{type:'select',options:visOpts})+
-    '</div>'+
+    '</div>'+coupleBlock('nb')+
     '<label class="sw mt"><input type="checkbox" id="nb-18" data-model="nb-18"><span class="track"></span><span>Nội dung 18+ · chỉ hiện với độc giả đã xác nhận tuổi</span></label>'+
     '<div class="mt">'+field('Giới thiệu','nb-sum',v('nb-sum'),{type:'textarea',ph:'Tóm tắt mẫu…'})+'</div>'+
     '<div class="row mt"><button class="btn sm" data-act="submit-new">'+icon('plus','s')+'Tạo bộ</button><button class="btn ghost sm" data-act="reset-new">Nhập lại</button><span class="sm dim">* bắt buộc · kiểm tra form có lỗi</span></div>'+
@@ -1064,6 +1084,7 @@ function initEditModels(b){
   state.models['eb-st']=b.st;state.models['eb-pub']=b.pub;state.models['eb-year']='2026';
   state.models['eb-vis']=b.vis||'public';state.models['eb-18']=!!b.adult;
   state.models['eb-sum']='Tóm tắt mẫu cho '+b.t+'.';state.models['eb-pass']='';state.models['eb-pass2']='';
+  state.couples.eb=b.c?String(b.c).split(/,\s*/).filter(Boolean):[''];
 }
 function editBookHTML(){
   var b=getBook(state.selectedBook),m=state.models;
@@ -1080,13 +1101,12 @@ function editBookHTML(){
       field('Tên bộ *','eb-t',m['eb-t'],{ph:'Tên bộ mẫu'})+
       field('Slug *','eb-slug',slug,{ph:'truyen-mau-01',hint:'Đổi slug cần xác nhận.'})+
       field('Tác giả gốc *','eb-a',m['eb-a'],{ph:'Tác giả mẫu'})+
-      field('Couple','eb-c',m['eb-c'],{ph:'Couple mẫu'})+
       field('Năm','eb-year',m['eb-year'],{ph:'2026'})+
       field('Tình trạng hoàn thành','eb-st',m['eb-st'],{type:'select',options:stOpts})+
       field('Trạng thái xuất bản','eb-pub',m['eb-pub']||b.pub,{type:'select',options:pubOpts})+
       field('Hiển thị','eb-vis',m['eb-vis']||'public',{type:'select',options:visOpts})+
-    '</div>'+
-    '<label class="sw"><input type="checkbox" id="eb-18" data-model="eb-18"'+(b.adult?' checked':'')+'><span class="track"></span><span>Nội dung 18+ · chỉ hiện với độc giả đã xác nhận tuổi</span></label>'+
+    '</div>'+coupleBlock('eb')+
+    '<label class="sw mt"><input type="checkbox" id="eb-18" data-model="eb-18"'+(b.adult?' checked':'')+'><span class="track"></span><span>Nội dung 18+ · chỉ hiện với độc giả đã xác nhận tuổi</span></label>'+
     '<div id="slugWarn" class="mt" style="display:flex;gap:10px;padding:12px;border:1px solid var(--bad);border-radius:8px;background:var(--bad-bg);font-size:12.5px"'+(changed?'':' hidden')+'>'+icon('alert','s')+'<span id="slugWarnText"><b>Cảnh báo đổi slug:</b> '+esc(orig)+' → '+esc(slug)+'. Đường dẫn cũ và liên kết đã chia sẻ sẽ không còn trỏ tới bộ này. Cần xác nhận khi lưu.</span></div>'+
     '<div class="mt">'+field('Giới thiệu','eb-sum',m['eb-sum'],{type:'textarea'})+'</div>'+
     '<div class="row mt" style="align-items:flex-start;gap:14px"><div id="eb-cover-preview">'+cover(b,'lg')+'</div>'+
@@ -1104,7 +1124,8 @@ function editBookHTML(){
       '<button class="btn sm" data-act="clone-book">'+icon('copy','s')+'Nhân bản bộ</button></div></div>'+
     '<div class="card"><div class="card-hd"><h3>Trạng thái hiện tại</h3></div><div class="card-bd"><div class="badges">'+bookBadges(b)+'</div><p class="xs dim mt">Thứ tự: Tình trạng → Xuất bản → Đã khóa → 18+.</p></div></div>'+
     '</div>';
-  return picker+'<div class="split mt">'+main+side+'</div>';
+  return picker+'<div class="split mt">'+main+side+'</div>'+
+    '<div class="state-note mt">'+icon('info','s')+' Ctrl/Cmd+S lưu metadata · Ctrl/Cmd+Alt+N thêm chương (Ctrl/N bị trình duyệt giữ).</div>';
 }
 
 /* ---------- 5 · Chương + trình soạn ---------- */
@@ -1166,7 +1187,8 @@ function chapterEditorHTML(){
       '<button class="btn sm" data-act="restore-draft">Khôi phục nháp</button>'+
       '<button class="btn pri sm" data-act="save-chapter">'+icon('save','s')+'Lưu chương</button>'+
       '<button class="btn danger sm" data-act="chapter-delete" data-idx="'+state.activeChapter+'">'+icon('trash','s')+'Xoá chương</button></div>'+
-    '<p class="xs dim mt">Nhập .txt/.html · nhập nhiều chương .txt/.docx · tự lưu · xem trước · thêm/xoá/dời · ảnh. Xoá chương gõ XOÁ.</p>'+
+    '<p class="xs dim mt">Nhập .txt/.html · nhiều chương .txt/.docx · tự lưu · xem trước · thêm/xoá/dời · ảnh. Xoá gõ XOÁ.</p>'+
+    '<div class="state-note mt">'+icon('info','s')+' Ctrl/Cmd+S lưu chương · Ctrl/Cmd+Alt+N thêm chương. Ctrl+N thường bị trình duyệt giữ để mở cửa sổ mới.</div>'+
     '</div></div>';
   return chapterPipeline()+'<div class="mt">'+left+'</div><div class="mt">'+editor+'</div>';
 }
@@ -1293,6 +1315,19 @@ function doctorHTML(){
     SAMPLE_ISSUES.map(function(x){return '<tr><td>'+esc(x.b)+'</td><td><span class="strong">'+esc(x.t)+'</span></td><td class="sm mut">'+esc(x.d.split('·')[0])+'</td><td class="sm mut">'+esc(x.d.split('·').slice(1).join('·')||'—')+'</td><td style="text-align:right"><button class="btn sm" data-act="fix-row" data-id="'+esc(x.b)+'">Sửa</button></td></tr>';}).join('')+
     '</tbody></table></div>'+
     '<div class="row mt" style="padding:0 16px 14px"><span class="grow"></span><button class="btn pri sm" data-act="recount">Đếm lại số chương từ KV</button></div>'+
+    '</div></div>'+migrationCard();
+}
+function migrationCard(){
+  var blocked=state.conn==='static'||state.quota==='blocked';
+  var opts=[['','Chuyển tất cả'],['covers','Chỉ bìa'],['books','Chỉ book']];
+  return '<div class="card mt"><div class="card-hd"><h3>Lưu trữ tràn (tuỳ chọn)</h3><span class="right">KV → Supabase / R2 · MẪU</span></div><div class="card-bd">'+
+    '<p class="sm mut">Supabase: unavailable · R2: unavailable · Bìa: KV · Ảnh chương: KV. Chưa gắn secret nên book và ảnh vẫn nằm full trong KV.</p>'+
+    '<p class="xs dim">Ghi overflow lỗi sẽ rớt về KV, không mất dữ liệu. Secret chỉ đặt trên Worker, không vào bundle.</p>'+
+    '<div class="row wrap mt" style="gap:8px">'+opts.map(function(o){
+      return '<button class="btn sm" data-act="migrate" data-only="'+o[0]+'"'+(blocked?' disabled':'')+'>'+icon('database','s')+esc(o[1])+'</button>';
+    }).join('')+'</div>'+
+    (blocked?'<p class="xs dim mt">Chưa nối Worker hoặc đã hết quota ghi — thao tác chuyển bị khoá.</p>':'')+
+    (state.migrateResult?'<div class="state-note mt">'+icon('check','s')+' '+esc(state.migrateResult)+'</div>':'')+
     '</div></div>';
 }
 
@@ -1324,7 +1359,7 @@ function settingsHTML(){
   var maint='<div class="card"><div class="card-hd"><h3>Bảo trì số liệu</h3><span class="right">có xác nhận mạnh</span></div><div class="card-bd stack">'+
     '<p class="sm mut">Cả hai đều hỏi xác nhận mạnh (mô phỏng).</p>'+
     '<div class="row wrap"><button class="btn" data-act="flush-stats">'+icon('refresh','s')+'Flush stats cache</button><button class="btn danger" data-act="recount">'+icon('pulse','s')+'Đếm lại số chương</button></div>'+
-    '<p class="xs dim">Không nhập ADMIN_KEY thật; mockup không gọi Worker.</p></div></div>';
+    '<p class="xs dim">Không nhập ADMIN_KEY thật; mockup không gọi Worker. Overflow KV: Supabase/R2 chưa gắn, secret chỉ đặt trên Worker.</p></div></div>';
   return '<div class="grid2">'+backup+blogger+'</div><div class="mt">'+maint+'</div>';
 }
 
@@ -1423,7 +1458,10 @@ const DOCS_HTML =
  ['21','Bỏ các field không có trong schema','metaFromForm xoá tags; không có Số chương/Ngày sửa tay. Thay bằng Năm, Hiển thị, 18+, 2 ô mật mã.'],
  ['22','Chuyển tab Chương thành 4 hàng đợi của BỘ','ChaptersHub lọc theo pubStatus + pending; trạng thái riêng của CHƯƠNG là Xuất bản/Hẹn giờ/Ẩn/Nháp.'],
  ['23','Bỏ chức năng Duyệt bình luận','CommentsPanel chỉ có lọc nghi spam và xoá 2 bước; Báo lỗi có thêm Mở lại theo ReportsPanel.'],
- ['24','Dùng đúng cụm xác nhận và tên hành động','main.jsx: XOÁ, ĐẾM LẠI, RESET, GỠ PHIẾU, ĐỒNG BỘ, KHÔI PHỤC; xoá bộ/bỏ khóa gõ đúng slug.']
+ ['24','Dùng đúng cụm xác nhận và tên hành động','main.jsx: XOÁ, ĐẾM LẠI, RESET, GỠ PHIẾU, ĐỒNG BỘ, KHÔI PHỤC; xoá bộ/bỏ khóa gõ đúng slug.'],
+ ['25','Nhiều dòng Couple','NewBook.jsx / BookEditor.jsx có + Thêm couple, Enter thêm dòng và × xoá; gộp bằng dấu phẩy thay vì một ô duy nhất.'],
+ ['26','Thêm migration overflow KV','DoctorPanel chuyển book/bìa/ảnh sang Supabase/R2; gắn trực tiếp với bài toán quota free-tier nên đáng đưa vào Kiểm tra dữ liệu.'],
+ ['27','Ctrl+S và Ctrl+Alt+N','main.jsx lưu màn gần nhất và thêm chương; Ctrl+N thường bị Chrome/Edge giữ nên bản chắc chắn là Ctrl/Cmd+Alt+N.']
 ].map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td></tr>';}).join('')+
 '</tbody></table>'+
 
@@ -1436,14 +1474,14 @@ const DOCS_HTML =
  ['4 · Nhất quán &amp; chuẩn','5','Một :root, một bộ nút/badge/bảng, nhịp 8px và 1 nút chính/header ở mọi màn.'],
  ['5 · Ngăn lỗi','5','Validate form, cảnh báo đổi slug, xác nhận mạnh có gõ, xóa 2 lần, gated Sửa bộ.'],
  ['6 · Nhận diện thay vì nhớ','5','Gợi ý tìm + Ctrl+K, eyebrow nhóm, tooltip, nhãn mono rõ ràng trên điều khiển.'],
- ['7 · Linh hoạt &amp; hiệu quả','4','Hash route, lọc/sắp xếp/phân trang, thao tác hàng loạt, phím tắt trong bảng lệnh.'],
+ ['7 · Linh hoạt &amp; hiệu quả','4','Hash route, lọc/sắp xếp/phân trang, thao tác hàng loạt, Ctrl+K / Ctrl+S / Ctrl+Alt+N.'],
  ['8 · Thẩm mỹ &amp; tối giản','4','Không bóng, không gradient, vạch tóc, hồng có chủ đích; còn nhiều bảng đặc dữ liệu.'],
  ['9 · Sửa lỗi &amp; phục hồi','4','Màn lỗi có nguyên nhân + Thử lại + lối tới Cài đặt; skeleton và empty state rõ ràng.'],
  ['10 · Trợ giúp &amp; tài liệu','4','Tài liệu bàn giao ngay trong modal, nhật ký quyết định và chú thích MẪU ở mọi màn.']
 ].map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td></tr>';}).join('')+
 '</tbody></table>'+
 '<p><b>Kiểm tra tương phản:</b> --txt/--bg 16.03:1 · --mut/--bg 8.45:1 · --dim/--bg 6.91:1 · --dim/--surf3 5.41:1 · --ink/--acc 8.34:1 · --acc/--acc-soft 6.53:1 · --ok/--ok-bg 8.14:1 · --warn/--warn-bg 8.10:1 · --bad/--bad-bg 7.26:1 · --info/--info-bg 7.96:1 · --violet/--violet-bg 7.71:1 · --slate/--slate-bg 7.65:1 · --txt trên 6 ô bìa ≥ 10.14:1. Tất cả ≥ 4.5:1.</p>'+
-'<p><b>Bàn phím:</b> Tab đi theo thứ tự DOM · skip link · Ctrl+K mở bảng lệnh · ↑/↓/Enter/Esc trong bảng lệnh · Enter/Esc trong modal · focus ring 2px --ring · checkbox/switch là input thật · aria-current, aria-selected, aria-expanded, aria-modal, aria-live đầy đủ · focus được khôi phục sau khi đóng modal.</p>'+
+'<p><b>Bàn phím:</b> Tab theo thứ tự DOM · skip link · Ctrl+K bảng lệnh · Ctrl/Cmd+S lưu · Ctrl/Cmd+Alt+N thêm chương (Ctrl+N bị trình duyệt giữ) · ↑/↓/Enter/Esc trong bảng lệnh · Enter/Esc trong modal · focus ring 2px --ring · checkbox/switch là input thật · aria-current, aria-selected, aria-expanded, aria-modal, aria-live đầy đủ · focus được khôi phục sau khi đóng modal.</p>'+
 '<p><b>360px:</b> drawer rộng 360px, overlay đóng bằng Esc/scrim · topbar gập 2 hàng · dải số liệu 2 cột · card 1 cột · nút/input ≥ 44px · bảng cuộn ngang có chủ đích trong .table-wrap · không tràn ngang body · có công tắc "Giả lập khung 360px" để kiểm tra ngay trên desktop.</p>'+
 '<p><b>Vấn đề còn tồn tại</b></p><ul>'+
 '<li>Chưa phỏng vấn chủ site thật: 5 điểm đau vẫn là GIẢ THUYẾT; không có biên tập viên nào khác để quan sát.</li>'+
@@ -1453,7 +1491,7 @@ const DOCS_HTML =
 '<li>Màu hồng là giá trị tạm, cần thử lại với bìa thật (hiện là ô màu CSS) trước khi chốt token.</li>'+
 '<li>Đã bỏ 2 tab Tác giả, Vai trò theo xác nhận owner; nếu sau này có cộng tác viên cần khôi phục nhóm Người dùng.</li>'+
 '<li>Ở 360px bảng vẫn phải cuộn ngang trong vùng bảng; chưa thử ngón tay cái trên thiết bị thật.</li>'+
-'<li>Chưa dựng hết biến thể phụ của source: Bảng/Lưới ở Thư viện, nhiều dòng Couple, toolbar 15 nút, migration overflow KV, Ctrl+S/Ctrl+N.</li>'+
+'<li>Chưa dựng 2 biến thể phụ của source: chuyển Bảng/Lưới ở Thư viện và toolbar đủ 15 nút của TipTap.</li>'+
 '</ul>'+
 '<p><b>Đã sửa sau phản hồi owner:</b> scrim desktop che mờ trang, badge Mới cập nhật full-width, nút demo chèn nội dung, đổi case đoạn, ô tiêu đề chương riêng, bỏ 2 tab, tinh gọn chữ. Render thử bằng Chromium thật: 13 tab / 5 nhóm, 360px không tràn ngang.</p>'+
 '<h4>VÒNG 4 · ĐỐI CHIẾU VỚI MÃ NGUỒN GỐC</h4>'+
@@ -1483,6 +1521,14 @@ const DOCS_HTML =
 '</tbody></table>'+
 '<p><b>Giữ lại theo yêu cầu riêng của owner (không có trong source):</b> đổi case đoạn/vùng chọn, ô tiêu đề chương riêng, 13 tab / 5 nhóm. <b>Giữ lại theo brief thiết kế:</b> lọc/sắp xếp/phân trang, 4 trạng thái mỗi màn, nút chính cố định, tag chip trong bộ component.</p>'+
 '<p><b>Kiểm chứng vòng 4:</b> 136/136 kiểm tra cấu trúc + 122/122 kiểm tra đối chiếu source, 0 lỗi JS; render bằng Chromium thật.</p>'+
+'<h4>VÒNG 5 · BỔ SUNG THEO YÊU CẦU</h4>'+
+'<table><thead><tr><th>Yêu cầu</th><th>Đã làm</th><th>Tinh chỉnh</th></tr></thead><tbody>'+
+[['Nhiều dòng + couple','Thêm block Couple ở Thêm bộ và Sửa bộ','Nút ghost nhỏ, Enter thêm dòng, × hiện khi có từ 2 dòng hoặc dòng có chữ; giá trị gộp ", " vào field ẩn. Giữ một nhãn MẪU chung.'],
+ ['Migration overflow KV','Card Lưu trữ tràn trong Kiểm tra dữ liệu','3 nút Chuyển tất cả / Chỉ bìa / Chỉ book, xác nhận thường, kết quả gọn một dòng; khoá khi chưa nối Worker hoặc hết quota ghi. Cài đặt chỉ thêm một câu trạng thái, không chép SQL.'],
+ ['Ctrl+S, Ctrl+N','Handler phím tắt trong keydown','Ctrl/Cmd+S lưu chương, metadata hoặc tạo bộ; màn khác báo "Không có gì để lưu". Ctrl/Cmd+N và Ctrl/Cmd+Alt+N thêm chương; Ctrl+N ở màn khác vẫn để trình duyệt mở cửa sổ mới. Ghi chú ngắn ngay dưới trình soạn và form Sửa bộ; toast gom tối đa 3 để không che nội dung khi bấm phím liên tục.']
+].map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td></tr>';}).join('')+
+'</tbody></table>'+
+'<p><b>Kiểm chứng vòng 5:</b> cặp kiểm tra bổ sung cho 3 nhóm trên đều đạt, 0 lỗi JS; render Chromium thật ở desktop và 360px.</p>'+
 '<h4>ĐỀ XUẤT THÊM (không nằm trong mockup)</h4>'+
 '<ul>'+
 '<li>Phỏng vấn chủ site và quan sát 2 ca tự dịch, đăng chương để kiểm chứng 5 giả thuyết.</li>'+
@@ -1731,6 +1777,7 @@ function submitNew(){
     ch:val('nb-chapter')?1:0,d:'03/11/2026',cv:(state.books.length%6)+1,miss:false};
   state.books.unshift(b);
   Object.keys(state.models).forEach(function(k){if(k.indexOf('nb-')===0)delete state.models[k];});
+  state.couples.nb=[''];
   clearErrors(ids);
   toast('Đã tạo bộ mẫu "'+b.t+'" (mô phỏng).');
   render();
@@ -1782,7 +1829,7 @@ function resetDemo(){
   state.sel.clear();state.lib={q:'',status:'all',pub:'',vis:'',lock:'',adult:'',sort:'new',page:1};state.bulkAction='';
   state.votePage=1;state.logPage=1;state.chapterTab='draft';state.commentTab='all';state.reportTab='all';state.activeChapter=0;
   state.voteSel.clear();state.chapterStatus='published';state.chapterAt='';state.chapterBook=null;state.hpPreview='desktop';
-  state.cmtQ='';state.cmtBook='';
+  state.cmtQ='';state.cmtBook='';state.couples={nb:[''],eb:['']};state.migrateResult='';
   state.editorPreview=false;state.savedAt='20:40:12';state.editorSeed=state.defaultEditor;
   state.notifOpen=false;state.accountOpen=false;state.suggestOpen=false;state.suggestQuery='';
   if(state.selectedBook)initEditModels(getBook(state.selectedBook));
@@ -1826,6 +1873,29 @@ function applyCase(mode){
   var n=document.getElementById('saveNote');
   if(n)n.innerHTML=icon('check','xs')+' Đã lưu lúc '+esc(state.savedAt)+' (mẫu)';
   toast('Đã đổi case: '+mode+' (mô phỏng).');
+}
+
+/* Phím tắt theo src/admin/main.jsx:
+   Ctrl/Cmd+S lưu chương hoặc metadata; nếu không có gì để lưu thì báo.
+   Ctrl/Cmd+N thêm chương, nhưng Chrome/Edge GIỮ Ctrl+N nên bản chắc chắn là
+   Ctrl/Cmd+Alt+N; ở màn khác để nguyên hành vi native của trình duyệt. */
+function shortcutSave(){
+  if(state.route==='chuong'){
+    var ed=document.getElementById('editor');if(ed)state.editorSeed=ed.innerHTML;
+    state.savedAt=timeNow();
+    var n=document.getElementById('saveNote');
+    if(n)n.innerHTML=icon('check','xs')+' Đã lưu lúc '+esc(state.savedAt)+' (mẫu)';
+    toast('Ctrl+S · đã lưu chương (mô phỏng).');return;
+  }
+  if(state.route==='sua-bo'){saveEdit();return;}
+  if(state.route==='them-bo'){submitNew();return;}
+  toast('Không có gì để lưu ở màn hình này.','info');
+}
+function shortcutNewChapter(){
+  state.chapters.push({t:'Chương mẫu mới '+(state.chapters.length+1),b:'Truyện mẫu 01',s:'published',d:'03/11 20:40'});
+  state.activeChapter=state.chapters.length-1;state.chapterStatus='published';
+  toast('Ctrl+Alt+N · đã thêm chương (mô phỏng).');
+  if(state.route!=='chuong')navigate('chuong');else render();
 }
 
 /* ---------- CLICK ---------- */
@@ -1928,6 +1998,21 @@ document.addEventListener('click',function(e){
         state.chapterStatus=(state.chapters[state.activeChapter]||{}).s||'published';
         toast('Đã xoá chương mẫu.');render();
       },'Xoá chương');break;
+    case 'couple-add':
+      var cf=el.dataset.form;state.couples[cf].push('');syncCouples(cf);render();
+      var cr=document.querySelectorAll('[data-role="couple-row"][data-form="'+cf+'"]');
+      if(cr.length)cr[cr.length-1].focus();break;
+    case 'couple-remove':
+      var cf2=el.dataset.form;state.couples[cf2].splice(Number(el.dataset.idx),1);
+      if(!state.couples[cf2].length)state.couples[cf2].push('');
+      syncCouples(cf2);render();break;
+    case 'migrate':
+      var only=el.dataset.only||'';
+      var label=only==='books'?'chỉ book':only==='covers'?'chỉ bìa':'book + bìa + ảnh chương';
+      openSimple('Chuyển '+label+' sang Supabase/R2','KV chỉ còn stub nhỏ; bản đầy đủ nằm ở Supabase/R2. Có thể mất vài phút nếu kho lớn. Dữ liệu mẫu.',function(){
+        state.migrateResult='Đã chuyển: '+(only==='covers'?0:248)+' book · '+(only==='books'?0:248)+' bìa · '+(only==='books'||only==='covers'?0:36)+' ảnh chương — xong, KV chỉ còn stub. MẪU';
+        toast('Đã chuyển overflow (mô phỏng).');render();
+      },'Chuyển');break;
     case 'format':
       var cmd=el.dataset.cmd;
       if(cmd==='link'){toast('Chèn liên kết (mô phỏng).','info');break;}
@@ -2143,6 +2228,8 @@ document.addEventListener('input',function(e){
       if(ctb)ctb.textContent=el.value||'Chương mẫu';
       break;
     case 'chapter-at':state.chapterAt=el.value;break;
+    case 'couple-row':
+      var cf3=el.dataset.form;state.couples[cf3][Number(el.dataset.idx)]=el.value;syncCouples(cf3);break;
     case 'hp-note':state.hpNote=el.value;break;
     case 'slide-reason':state.slides[Number(el.dataset.idx)].r=el.value;break;
     case 'sched-date':state.schedule[Number(el.dataset.idx)].d=el.value;break;
@@ -2152,10 +2239,32 @@ document.addEventListener('input',function(e){
 
 /* ---------- BÀN PHÍM ---------- */
 document.addEventListener('keydown',function(e){
+  if(e.key==='Enter'&&e.target&&e.target.dataset&&e.target.dataset.role==='couple-row'){
+    e.preventDefault();
+    var cf4=e.target.dataset.form;state.couples[cf4].push('');syncCouples(cf4);render();
+    var er=document.querySelectorAll('[data-role="couple-row"][data-form="'+cf4+'"]');
+    if(er.length)er[er.length-1].focus();return;
+  }
   if((e.ctrlKey||e.metaKey)&&String(e.key).toLowerCase()==='k'){
     e.preventDefault();
     if(state.modal)return;
     state.paletteOpen?closePalette():openPalette();return;
+  }
+  var mod=e.ctrlKey||e.metaKey;
+  if(mod){
+    var kk=String(e.key||'').toLowerCase();
+    if(kk==='s'){
+      e.preventDefault();
+      if(state.modal||state.paletteOpen)return;
+      shortcutSave();return;
+    }
+    if(kk==='n'||e.code==='KeyN'){
+      if(state.modal||state.paletteOpen)return;
+      if(state.route==='chuong'||state.route==='sua-bo'){
+        e.preventDefault();shortcutNewChapter();
+      }
+      return;
+    }
   }
   if(e.key==='Escape'){
     if(state.modal){closeModal();return;}
