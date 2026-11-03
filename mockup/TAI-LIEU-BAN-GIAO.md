@@ -130,6 +130,8 @@ Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 | 29 | Thêm dấu ngăn cách nội dung | Nút `Chèn dấu ngăn cách` chèn một đoạn `•••` căn giữa tại con trỏ, tách hai phần nội dung mà không cần gõ ký tự. |
 | 30 | Đổi case chỉ áp dụng tên chương | Select nằm cạnh ô Tên chương và chỉ ghi vào `state.chapters[active].t`; nội dung chương, vùng chọn không bị động tới. |
 | 31 | Ghi chú gọn, cột thẳng | Rút câu ghi chú trong panel; lưới 2 cột bằng nhau và cột cố định cho mọi hàng danh sách nên badge, nút không còn lệch. |
+| 32 | Chỉ giữ ghi chú có ích | Vòng 7 bỏ ghi chú thiết kế, chú thích lặp và câu giải thích lại nhãn; giữ an toàn (gõ slug/cụm), phạm vi đổi case, phím tắt và trạng thái đọc/ghi KV. |
+| 33 | Một dòng MẪU cho mỗi màn | Footer rút còn `DỮ LIỆU MẪU` và render đúng một lần; eyebrow và meta đã đánh dấu nên không lặp câu dài. |
 
 ---
 
@@ -146,7 +148,7 @@ Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 | 5 | Ngăn lỗi | 5 | Validate form, cảnh báo slug, xác nhận mạnh có gõ, xóa 2 lần, gated Sửa bộ. |
 | 6 | Nhận diện thay vì nhớ | 5 | Gợi ý tìm + Ctrl+K, eyebrow nhóm, tooltip, nhãn mono rõ trên điều khiển. |
 | 7 | Linh hoạt & hiệu quả | 4 | Hash route, lọc/sắp xếp/phân trang, thao tác hàng loạt, Ctrl+K / Ctrl+S / Ctrl+Alt+N. |
-| 8 | Thẩm mỹ & tối giản | 4 | Không bóng, không gradient, vạch tóc, hồng có chủ đích; còn nhiều bảng đặc dữ liệu. |
+| 8 | Thẩm mỹ & tối giản | 4 | Không bóng, không gradient, vạch tóc, hồng có chủ đích; vòng 7 bỏ ghi chú thừa, còn nhiều bảng đặc dữ liệu. |
 | 9 | Sửa lỗi & phục hồi | 4 | Màn lỗi có nguyên nhân + Thử lại + lối tới Cài đặt; skeleton và empty state rõ. |
 | 10 | Trợ giúp & tài liệu | 4 | Tài liệu ngay trong modal, nhật ký quyết định, chú thích MẪU ở mọi màn. |
 
@@ -282,4 +284,17 @@ Toast được gom tối đa 3 cái để không che nội dung khi bấm phím 
 | Tinh gọn câu từ ghi chú | Rút ~40 câu ghi chú, hint và mô tả header trong toàn admin panel | Giữ đủ cụm xác nhận (`XOÁ`, `KHÔI PHỤC`, `gõ đúng slug`), nhãn `MẪU`, trạng thái KV/Worker; bỏ câu giải thích lặp. Ví dụ: "Báo lỗi có thể mở lại; trạng thái ghi vào KV qua Worker." → "Mở lại được · trạng thái ghi KV.". |
 | Canh chỉnh nút, ô, chữ; Báo lỗi còn lệch ô | Sửa cấu trúc card **Báo lỗi** (`.card-bd` bị lồng trong `.card-hd`), đổi `.grid2` thành 2 cột bằng nhau, cấp cột cố định cho mọi hàng danh sách | Badge + nút thẳng cột ở Báo lỗi, Bình luận, 4 hàng đợi Chương và Danh sách chương; nhãn `DỮ LIỆU MẪU` về đúng header; 360px ở Báo lỗi hết tràn ngang (trước đó `scrollWidth = 754`). |
 
-**Kiểm chứng vòng 6:** `node --check` đạt · 136/136 cấu trúc · 122/122 đối chiếu source · 85/85 vòng 5 · 99/99 vòng 6 · 0 lỗi JS · 0 màu literal ngoài `:root` · Chromium thật ở desktop và 360px: 14 route `scrollWidth = 360`, 0 page error · Phase 1 vẫn 398 từ.
+**Kiểm chứng vòng 6:** `node --check` đạt · 136/136 cấu trúc · 122/122 đối chiếu source · 85/85 vòng 5 · 124/124 vòng 6–7 · 0 lỗi JS · 0 màu literal ngoài `:root` · Chromium thật ở desktop và 360px: 14 route `scrollWidth = 360`, 0 page error · Phase 1 vẫn 398 từ.
+
+## 10 · DỌN GHI CHÚ (VÒNG 7)
+
+Owner: *"ghi chú vẫn còn rối quá, cái nào cần thì giữ, ko thì bỏ đi, chỗ nào dài thì tinh gọn lại"*. Rà toàn bộ ghi chú, hint, caption và mô tả xác nhận trong admin panel.
+
+| Xử lý | Nội dung |
+| --- | --- |
+| **Bỏ hẳn** | Ghi chú thiết kế ở Thư viện (`thead dính · thao tác lô…`, `Bảng, badge, tag chip dùng chung.`) · 3 chú thích ảnh bìa · `* bắt buộc · form có kiểm tra lỗi` · giải thích Nhân bản bộ / thứ tự badge · 4 hint trạng thái chương + gợi ý giờ · dòng liệt kê tính năng import · ghi chú phím tắt ở Sửa bộ · ghi chú Báo lỗi và Thống kê · 2 đoạn giải thích migration · 2 đoạn ở Cài đặt · footer bị render 2 lần ở Thư viện. |
+| **Giữ lại** | `Bỏ khóa gõ đúng slug.` · `Ghi đè gõ KHÔI PHỤC.` · `Cụm cần gõ:` · `Xoá 2 bước · Không có chức năng duyệt.` · `Chỉ đổi tên chương.` · một dòng `Ctrl/Cmd+S lưu · Ctrl/Cmd+Alt+N thêm chương.` · `Chỉ đọc · “Sửa” ghi KV.` · trạng thái `Supabase: unavailable · R2: unavailable · Bìa/Ảnh: KV.` và `Đang khoá · chưa nối Worker hoặc hết quota.` · kết quả chuyển, `200 thao tác · x/200`, nhãn loading/empty/error. |
+| **Tinh gọn** | Footer mỗi màn còn đúng **một** dòng `DỮ LIỆU MẪU` · 3 banner quota (`Quota 800/1000 · …`, `HẾT QUOTA GHI KV · …`) · các mô tả modal xác nhận · mô tả trạng thái rỗng/lỗi · tooltip sidebar, chân bảng lệnh, nhãn 18+ · 3 toast dài. |
+| **Không đổi** | Eyebrow, `h2`, mô tả ngắn, nhãn `MẪU` trên dữ liệu, cụm xác nhận trong modal và toàn bộ chức năng đã chốt ở vòng 1–6. |
+
+**Kiểm chứng vòng 7:** 136/136 cấu trúc · 122/122 đối chiếu source · 85/85 vòng 5 · **124/124 vòng 6–7** (gồm kiểm tra 19 chuỗi ghi chú đã bỏ, footer đúng 1 lần, đúng 1 ghi chú phím tắt trên Chương, 0 ghi chú trên Báo lỗi) · 0 lỗi JS · 0 màu literal ngoài `:root` · Chromium thật 14 route ở 360px `scrollWidth = 360`, 0 page error · Phase 1 vẫn 398 từ.

@@ -711,9 +711,9 @@ const SAMPLE_SCHEDULE = [
   {d:'Thứ 2, Thứ 5',b:'b03',c:'Ra chương 19'},{d:'Thứ 3, Thứ 6',b:'b08',c:'Ra chương 58'},{d:'Thứ 4',b:'b14',c:'Ra chương 27'}
 ];
 const SAMPLE_NOTIFS = [
-  {t:'3 báo lỗi chưa xử lý',s:'Cộng đồng · DỮ LIỆU MẪU'},
-  {t:'2 bình luận nghi spam',s:'Kiểm duyệt · DỮ LIỆU MẪU'},
-  {t:'Chương 19 đã được hẹn đăng',s:'Lịch ra chương · DỮ LIỆU MẪU'}
+  {t:'3 báo lỗi chưa xử lý',s:'Cộng đồng'},
+  {t:'2 bình luận nghi spam',s:'Kiểm duyệt'},
+  {t:'Chương 19 đã được hẹn đăng',s:'Lịch ra chương'}
 ];
 const SAMPLE_STATS = {
   reads:[['Truyện mẫu 01',1840],['Truyện mẫu 12',1520],['Truyện mẫu 02',1310],['Truyện mẫu 08',980],['Truyện mẫu 05',760]],
@@ -755,9 +755,9 @@ const CONN = {
 };
 const QUOTA = {
   ok:{tone:'t-ok',txt:'KV write 120/1000',banner:''},
-  warn:{tone:'t-warn',txt:'KV write 800/1000',banner:'Đã qua ngưỡng cảnh báo 800/1000 lượt ghi KV. Cân nhắc dời thao tác hàng loạt. · DỮ LIỆU MẪU'},
-  bad:{tone:'t-bad',txt:'KV write 950/1000',banner:'Sắp chạm trần 950/1000 lượt ghi KV. Các thao tác ghi có thể bị chặn. · DỮ LIỆU MẪU'},
-  blocked:{tone:'t-blocked',txt:'KV write 1000/1000 · bị chặn',banner:'HẾT QUOTA GHI KV: mọi thao tác ghi bị chặn cho đến khi reset. Đây là dữ liệu mẫu. · DỮ LIỆU MẪU'}
+  warn:{tone:'t-warn',txt:'KV write 800/1000',banner:'Quota 800/1000 · cân nhắc dời thao tác hàng loạt.'},
+  bad:{tone:'t-bad',txt:'KV write 950/1000',banner:'Quota 950/1000 · thao tác ghi có thể bị chặn.'},
+  blocked:{tone:'t-blocked',txt:'KV write 1000/1000 · bị chặn',banner:'HẾT QUOTA GHI KV · mọi thao tác ghi bị chặn.'}
 };
 
 /* ============================================================
@@ -796,8 +796,8 @@ function cover(b,cls){
   if(b.miss) return '<span class="cover cv-miss '+(cls||'')+'" aria-label="Bìa mẫu bị thiếu">THIẾU BÌA<br>MẪU</span>';
   return '<span class="cover cv-'+b.cv+' '+(cls||'')+'" aria-label="Ô màu bìa mẫu">'+esc(b.t.replace('Truyện mẫu ','M'))+'</span>';
 }
-function sampleNote(txt){
-  return '<p class="sample-note">DỮ LIỆU MẪU · '+(txt||'Tên truyện, số liệu, nội dung: MẪU.')+'</p>';
+function sampleNote(){
+  return '<p class="sample-note">DỮ LIỆU MẪU</p>';
 }
 function field(label,id,val,opts){
   opts=opts||{};
@@ -825,7 +825,7 @@ function coupleBlock(form){
     '<div class="stack" style="gap:6px">'+arr.map(function(v,i){
       return '<div class="row" style="gap:6px"><input class="inp" style="flex:1 1 auto" data-role="couple-row" data-form="'+form+'" data-idx="'+i+'" list="'+form+'-couples" value="'+esc(v)+'" placeholder="'+(i?'Couple tiếp theo…':'VD: Lingling x Orm')+'" aria-label="Couple '+(i+1)+'">'+
         ((arr.length>1||v)?'<button class="btn icon ghost sm" data-act="couple-remove" data-form="'+form+'" data-idx="'+i+'" aria-label="Xoá couple '+(i+1)+'">'+icon('x','s')+'</button>':'')+'</div>';
-    }).join('')+'</div><span class="hint">Enter thêm dòng · gộp bằng dấu phẩy.</span></div>';
+    }).join('')+'</div><span class="hint">Enter thêm dòng.</span></div>';
 }
 function setErr(id,msg){
   state.errors[id]=msg||'';
@@ -854,7 +854,7 @@ function download(name,text,type){
   setTimeout(function(){URL.revokeObjectURL(url);},1000);
 }
 function pagination(total,page,pages,act){
-  var h='<div class="pager"><span>Hiển thị '+total+' mục · MẪU</span><div class="pg">';
+  var h='<div class="pager"><span>'+total+' mục · MẪU</span><div class="pg">';
   h+='<button data-act="'+act+'" data-page="'+(page-1)+'"'+(page<=1?' disabled':'')+' aria-label="Trang trước">'+icon('left','s')+'</button>';
   for(var i=1;i<=pages;i++) h+='<button data-act="'+act+'" data-page="'+i+'" class="'+(i===page?'on':'')+'"'+(i===page?' aria-current="page"':'')+'>'+i+'</button>';
   h+='<button data-act="'+act+'" data-page="'+(page+1)+'"'+(page>=pages?' disabled':'')+' aria-label="Trang sau">'+icon('right','s')+'</button>';
@@ -863,16 +863,16 @@ function pagination(total,page,pages,act){
 function stateBlock(mode,label){
   var back='<button class="btn sm" data-act="set-mode" data-mode="normal">Về trạng thái bình thường</button>';
   if(mode==='loading'){
-    return '<div class="state-note">'+icon('info','s')+' ĐANG TẢI · '+esc(label)+' · skeleton</div>'+
+    return '<div class="state-note">'+icon('info','s')+' ĐANG TẢI · '+esc(label)+'</div>'+
       '<div class="sk-grid mb">'+[1,2,3].map(function(){return '<div class="sk-card"><div class="sk sk-line" style="width:40%"></div><div class="sk sk-line" style="width:80%"></div><div class="sk sk-block"></div></div>';}).join('')+'</div>'+
       '<div class="sk-grid">'+[1,2,3].map(function(){return '<div class="sk sk-block"></div>';}).join('')+'</div>'+
       '<div class="mt">'+back+'</div>';
   }
   if(mode==='empty'){
-    return '<div class="state">'+icon('inbox')+'<h3>Chưa có dữ liệu</h3><p>Trạng thái rỗng của <b>'+esc(label)+'</b>. Dữ liệu mẫu được ẩn, không bản ghi nào bị xoá.</p>'+back+'</div>';
+    return '<div class="state">'+icon('inbox')+'<h3>Chưa có dữ liệu</h3><p>Dữ liệu mẫu được ẩn.</p>'+back+'</div>';
   }
   if(mode==='error'){
-    return '<div class="state bad">'+icon('alert')+'<h3>Không đọc được dữ liệu</h3><p>Worker lỗi khi tải <b>'+esc(label)+'</b> (mô phỏng). Kiểm tra chip kết nối rồi thử lại.</p><div class="row"><button class="btn sm" data-act="set-mode" data-mode="normal">Thử lại</button><button class="btn sm ghost" data-act="go" data-id="cai-dat">Mở Cài đặt</button></div></div>';
+    return '<div class="state bad">'+icon('alert')+'<h3>Không đọc được dữ liệu</h3><p>Worker lỗi (mô phỏng). Thử lại.</p><div class="row"><button class="btn sm" data-act="set-mode" data-mode="normal">Thử lại</button><button class="btn sm ghost" data-act="go" data-id="cai-dat">Mở Cài đặt</button></div></div>';
   }
   return '';
 }
@@ -885,7 +885,7 @@ function renderSidebar(){
     return '<div class="nav-group"><span class="lb">'+esc(g.g)+'</span>'+g.items.map(function(it){
       var id=it[0],label=it[1],ic=it[2],on=state.route===id;
       var gated=id==='sua-bo'&&!state.selectedBook;
-      var tip=gated?'Chọn một bộ trong Thư viện để mở':label;
+      var tip=gated?'Chọn bộ để mở Sửa bộ':label;
       var ct=id==='bao-loi'?'<span class="ct hot">3</span>':'';
       return '<button class="nav-item'+(on?' on':'')+(gated?' gated':'')+'" data-act="go" data-id="'+id+'"'+(on?' aria-current="page"':'')+' title="'+esc(tip)+'"'+(gated?' data-tip="'+esc(tip)+'"':'')+'>'+icon(ic,'s')+'<span class="tx">'+esc(label)+'</span>'+ct+'</button>';
     }).join('')+'</div>';
@@ -894,7 +894,7 @@ function renderSidebar(){
     '<div class="brand"><span class="dot"></span><span class="logo"><span class="tx">ssochuz</span><i>admin</i></span>'+
     '<button class="tool icon" style="margin-left:auto" data-act="toggle-collapse" data-tip="Thu gọn / mở rộng sidebar" aria-label="Thu gọn sidebar">'+icon('menu','s')+'</button></div>'+
     '<div class="side-scroll">'+nav+'</div>'+
-    '<div class="side-foot"><p class="note">Ghi KV cần ADMIN_KEY · <b>DỮ LIỆU MẪU</b></p>'+
+    '<div class="side-foot"><p class="note">Ghi KV cần ADMIN_KEY</p>'+
     '<button data-act="go" data-id="dang-nhap">Đăng nhập / nối Worker</button>'+
     '<button data-act="docs">Tài liệu bàn giao</button></div>';
 }
@@ -941,7 +941,7 @@ function renderPalette(){
   box.innerHTML='<div class="palette-box" role="dialog" aria-modal="true" aria-label="Bảng lệnh Ctrl+K">'+
     '<div class="palette-top">'+icon('search','s')+'<input id="paletteInput" data-role="palette-input" placeholder="Tìm tab hoặc bộ…" value="'+esc(state.paletteQuery)+'" aria-label="Tìm trong bảng lệnh"><kbd class="mono xs dim">ESC</kbd></div>'+
     '<div class="palette-list" role="listbox">'+paletteRows(state.paletteQuery)+'</div>'+
-    '<div class="palette-ft">↑ ↓ để chọn · Enter để mở · Esc để đóng · DỮ LIỆU MẪU</div></div>';
+    '<div class="palette-ft">↑↓ chọn · Enter mở · Esc đóng</div></div>';
 }
 
 function paletteRows(q){
@@ -987,7 +987,7 @@ function dashboardHTML(){
   var metrics='<div class="metrics">'+SAMPLE_METRICS.map(function(m){
     return '<div class="metric"><div class="n">'+esc(m.n)+'</div><span class="k">'+esc(m.k)+'</span><span class="sub">'+esc(m.s)+'</span></div>';
   }).join('')+'</div>';
-  var todo='<div class="card"><div class="card-hd"><h3>Việc cần làm hôm nay</h3><span class="right">bấm để mở · MẪU</span></div><div class="card-bd">'+
+  var todo='<div class="card"><div class="card-hd"><h3>Việc cần làm hôm nay</h3><span class="right">MẪU</span></div><div class="card-bd">'+
     '<div class="todo">'+
       '<button data-act="go" data-id="bao-loi"><span class="n">3</span><span class="k">Báo lỗi chưa xử lý</span></button>'+
       '<button data-act="go" data-id="binh-luan"><span class="n">2</span><span class="k">Bình luận nghi spam</span></button>'+
@@ -1070,8 +1070,7 @@ function libraryHTML(){
     }).join('')+
     '</tbody></table></div>';
   var empty=rows.length?'':'<div class="state mt">'+icon('inbox')+'<h3>Không có bộ nào khớp</h3><p>Đổi từ khoá hoặc bộ lọc. Đây là dữ liệu mẫu.</p><button class="btn sm" data-act="reset-lib">Xoá lọc</button></div>';
-  return '<div class="state-note">'+icon('info','s')+' thead dính · thao tác lô · xoá gõ đúng slug</div>'+
-    toolbar+bulk+table+empty+pagination(arr.length,page,pages,'page-lib')+sampleNote('Bảng, badge, tag chip dùng chung.');
+  return toolbar+bulk+table+empty+pagination(arr.length,page,pages,'page-lib');
 }
 
 /* ---------- 3 · Thêm bộ ---------- */
@@ -1091,14 +1090,14 @@ function newBookHTML(){
       field('Trạng thái xuất bản','nb-pub',v('nb-pub','draft'),{type:'select',options:pubOpts})+
       field('Hiển thị','nb-vis',v('nb-vis','public'),{type:'select',options:visOpts})+
     '</div>'+coupleBlock('nb')+
-    '<label class="sw mt"><input type="checkbox" id="nb-18" data-model="nb-18"><span class="track"></span><span>Nội dung 18+ · chỉ hiện với độc giả đã xác nhận tuổi</span></label>'+
+    '<label class="sw mt"><input type="checkbox" id="nb-18" data-model="nb-18"><span class="track"></span><span>18+ · chỉ hiện sau xác nhận tuổi</span></label>'+
     '<div class="mt">'+field('Giới thiệu','nb-sum',v('nb-sum'),{type:'textarea',ph:'Tóm tắt mẫu…'})+'</div>'+
-    '<div class="row mt"><button class="btn sm" data-act="submit-new">'+icon('plus','s')+'Tạo bộ</button><button class="btn ghost sm" data-act="reset-new">Nhập lại</button><span class="sm dim">* bắt buộc · form có kiểm tra lỗi</span></div>'+
+    '<div class="row mt"><button class="btn sm" data-act="submit-new">'+icon('plus','s')+'Tạo bộ</button><button class="btn ghost sm" data-act="reset-new">Nhập lại</button></div>'+
     '</div></div>';
   var side='<div class="stack">'+
     '<div class="card"><div class="card-hd"><h3>Ảnh bìa</h3></div><div class="card-bd"><div class="row" style="align-items:flex-start;gap:14px">'+
       '<div id="nb-cover-preview"><span class="cover cv-1 lg" aria-label="Ô màu bìa mẫu">BÌA<br>MẪU</span></div>'+
-      '<div class="col" style="flex:1"><span class="sm mut">Bìa dùng ô màu CSS.</span><span class="file"><input type="file" accept="image/*" data-role="cover-upload" data-target="nb-cover-preview" aria-label="Tải ảnh bìa mẫu"></span><span class="xs dim">Tải ảnh: mô phỏng.</span></div>'+
+      '<div class="col" style="flex:1"><span class="file"><input type="file" accept="image/*" data-role="cover-upload" data-target="nb-cover-preview" aria-label="Tải ảnh bìa mẫu"></span></div>'+
     '</div></div></div>'+
     '<div class="card"><div class="card-hd"><h3>Chương đầu (tuỳ chọn)</h3></div><div class="card-bd">'+
       '<label class="chk"><input type="checkbox" data-role="nb-first"><span class="box"></span><span>Thêm chương đầu khi tạo bộ</span></label>'+
@@ -1135,11 +1134,11 @@ function editBookHTML(){
       field('Trạng thái xuất bản','eb-pub',m['eb-pub']||b.pub,{type:'select',options:pubOpts})+
       field('Hiển thị','eb-vis',m['eb-vis']||'public',{type:'select',options:visOpts})+
     '</div>'+coupleBlock('eb')+
-    '<label class="sw mt"><input type="checkbox" id="eb-18" data-model="eb-18"'+(b.adult?' checked':'')+'><span class="track"></span><span>Nội dung 18+ · chỉ hiện với độc giả đã xác nhận tuổi</span></label>'+
+    '<label class="sw mt"><input type="checkbox" id="eb-18" data-model="eb-18"'+(b.adult?' checked':'')+'><span class="track"></span><span>18+ · chỉ hiện sau xác nhận tuổi</span></label>'+
     '<div id="slugWarn" class="mt" style="display:flex;gap:10px;padding:12px;border:1px solid var(--bad);border-radius:8px;background:var(--bad-bg);font-size:12.5px"'+(changed?'':' hidden')+'>'+icon('alert','s')+'<span id="slugWarnText"><b>Cảnh báo đổi slug:</b> '+esc(orig)+' → '+esc(slug)+'. Liên kết cũ sẽ hỏng; cần xác nhận khi lưu.</span></div>'+
     '<div class="mt">'+field('Giới thiệu','eb-sum',m['eb-sum'],{type:'textarea'})+'</div>'+
     '<div class="row mt" style="align-items:flex-start;gap:14px"><div id="eb-cover-preview">'+cover(b,'lg')+'</div>'+
-      '<div class="col" style="flex:1"><span class="lb">Ảnh bìa</span><span class="file"><input type="file" accept="image/*" data-role="cover-upload" data-target="eb-cover-preview" aria-label="Tải ảnh bìa mẫu"></span><span class="xs dim">Ô màu CSS.</span></div></div>'+
+      '<div class="col" style="flex:1"><span class="lb">Ảnh bìa</span><span class="file"><input type="file" accept="image/*" data-role="cover-upload" data-target="eb-cover-preview" aria-label="Tải ảnh bìa mẫu"></span></div></div>'+
     '</div></div>';
   var side='<div class="stack">'+
     '<div class="card"><div class="card-hd"><h3>Khóa mật mã</h3><span class="right">'+(b.lock?'đang khóa':'không khóa')+' · MẪU</span></div><div class="card-bd">'+
@@ -1148,13 +1147,12 @@ function editBookHTML(){
       field('Nhập lại mật mã','eb-pass2',m['eb-pass2'],{type:'password',ph:'••••••••'})+
       '<div class="row mt"><button class="btn sm" data-act="set-lock" data-value="1">'+icon('lock','s')+'Đặt / đổi mật mã</button>'+
       '<button class="btn danger sm" data-act="set-lock" data-value="0">'+icon('unlock','s')+'Bỏ khóa</button></div>'+
-      '<p class="xs dim mt">2 ô mật mã khớp · bỏ khóa gõ đúng slug.</p></div></div>'+
-    '<div class="card"><div class="card-hd"><h3>Nhân bản bộ</h3></div><div class="card-bd"><p class="sm mut mb">Tạo bản sao; giữ bản gốc.</p>'+
+      '<p class="xs dim mt">Bỏ khóa gõ đúng slug.</p></div></div>'+
+    '<div class="card"><div class="card-hd"><h3>Nhân bản bộ</h3></div><div class="card-bd">'+
       '<button class="btn sm" data-act="clone-book">'+icon('copy','s')+'Nhân bản bộ</button></div></div>'+
-    '<div class="card"><div class="card-hd"><h3>Trạng thái hiện tại</h3></div><div class="card-bd"><div class="badges">'+bookBadges(b)+'</div><p class="xs dim mt">Thứ tự: Tình trạng → Xuất bản → Đã khóa → 18+.</p></div></div>'+
+    '<div class="card"><div class="card-hd"><h3>Trạng thái hiện tại</h3></div><div class="card-bd"><div class="badges">'+bookBadges(b)+'</div></div></div>'+
     '</div>';
-  return picker+'<div class="split mt">'+main+side+'</div>'+
-    '<div class="state-note mt">'+icon('info','s')+' Ctrl/Cmd+S lưu · Ctrl/Cmd+Alt+N thêm chương.</div>';
+  return picker+'<div class="split mt">'+main+side+'</div>';
 }
 
 /* ---------- 5 · Chương + trình soạn ---------- */
@@ -1197,11 +1195,10 @@ function chapterEditorHTML(){
       '<span class="sel"><select class="inp" data-role="case-mode" aria-label="Đổi case tên chương">'+
       '<option value="">Đổi case tên…</option><option value="upper">CHỮ HOA</option><option value="lower">chữ thường</option>'+
       '<option value="title">Chữ Hoa Mỗi Từ</option><option value="sentence">Định dạng câu</option></select></span></div>'+
-    '<span class="hint">Chỉ đổi tên chương, không đụng nội dung.</span></div>'+
+    '<span class="hint">Chỉ đổi tên chương.</span></div>'+
     '<div class="grid2 mb" style="gap:10px"><div class="field"><label for="chapterStatus">Trạng thái chương</label>'+
-      '<span class="sel"><select class="inp" id="chapterStatus" data-role="chapter-status">'+Object.keys(CH_STATUS).map(function(k){return '<option value="'+k+'"'+(k===state.chapterStatus?' selected':'')+'>'+esc(CH_STATUS[k])+'</option>';}).join('')+'</select></span>'+
-      '<span class="hint">'+(state.chapterStatus==='draft'?'Nhãn nội bộ; vẫn hiện ngoài web.':state.chapterStatus==='scheduled'?'Hiện khi tới giờ.':state.chapterStatus==='hidden'?'Độc giả không thấy.':'Hiện ngay khi lưu.')+'</span></div>'+
-      (state.chapterStatus==='scheduled'?'<div class="field"><label for="chapterAt">Chương lên sóng lúc</label><input class="inp" id="chapterAt" data-role="chapter-at" type="datetime-local" value="'+esc(state.chapterAt||'2026-11-05T08:00')+'"><span class="hint">20:00 hoặc +1 giờ · MẪU</span></div>':'<div class="field"><span class="lb">Số liệu chương</span><span class="sm mut">~120 từ · ~1 phút đọc · MẪU</span></div>')+
+      '<span class="sel"><select class="inp" id="chapterStatus" data-role="chapter-status">'+Object.keys(CH_STATUS).map(function(k){return '<option value="'+k+'"'+(k===state.chapterStatus?' selected':'')+'>'+esc(CH_STATUS[k])+'</option>';}).join('')+'</select></span></div>'+
+      (state.chapterStatus==='scheduled'?'<div class="field"><label for="chapterAt">Chương lên sóng lúc</label><input class="inp" id="chapterAt" data-role="chapter-at" type="datetime-local" value="'+esc(state.chapterAt||'2026-11-05T08:00')+'"></div>':'<div class="field"><span class="lb">Số liệu chương</span><span class="sm mut">~120 từ · MẪU</span></div>')+
     '</div>'+
     '<div class="row wrap mb" style="gap:6px">'+tools.map(function(t){
       return '<button class="btn icon sm" data-act="format" data-cmd="'+t[1]+'" data-tip="'+esc(t[2])+'" aria-label="'+esc(t[2])+'">'+icon(t[0],'s')+'</button>';
@@ -1209,17 +1206,16 @@ function chapterEditorHTML(){
     '<button class="btn sm" data-act="insert-separator" data-tip="Chèn dấu ngăn cách nội dung" aria-label="Chèn dấu ngăn cách nội dung">'+icon('separator','s')+'Chèn dấu ngăn cách</button>'+
     '<span class="grow"></span><button class="btn sm" data-act="toggle-preview">'+icon('eye','s')+(state.editorPreview?'Đóng xem trước':'Xem trước')+'</button></div>'+
     (state.editorPreview
-      ? '<div class="card" style="background:var(--surf2)"><div class="card-bd"><div class="lb mb">Xem trước · DỮ LIỆU MẪU</div><div style="font-family:var(--head);font-size:16px;line-height:1.8">'+esc(plainText(state.editorSeed))+'</div></div></div>'
+      ? '<div class="card" style="background:var(--surf2)"><div class="card-bd"><div class="lb mb">Xem trước</div><div style="font-family:var(--head);font-size:16px;line-height:1.8">'+esc(plainText(state.editorSeed))+'</div></div></div>'
       : '<div id="editor" class="inp" data-role="editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Nội dung chương mẫu" style="min-height:190px;height:auto;line-height:1.8;font-family:var(--head);font-size:15px">'+state.editorSeed+'</div>')+
     '<div class="row wrap mt" style="gap:8px"><span class="lb">Nhập:</span>'+imports.map(function(im){
       return '<label class="btn sm">'+esc(im[1])+'<input type="file" class="sr-only" accept="'+esc(im[2])+'" data-role="import-file" data-kind="'+im[0]+'" aria-label="Nhập '+esc(im[1])+'"></label>';
     }).join('')+'<label class="btn sm">'+icon('image','s')+'Ảnh vào chương<input type="file" class="sr-only" accept="image/*" data-role="chapter-image" aria-label="Tải ảnh vào chương"></label></div>'+
-    '<div class="row wrap mt"><span class="sm mut">Tự lưu nháp · mô phỏng, không lưu trình duyệt</span><span class="grow"></span>'+
+    '<div class="row wrap mt"><span class="grow"></span>'+
       '<button class="btn sm" data-act="restore-draft">Khôi phục nháp</button>'+
       '<button class="btn pri sm" data-act="save-chapter">'+icon('save','s')+'Lưu chương</button>'+
       '<button class="btn danger sm" data-act="chapter-delete" data-idx="'+state.activeChapter+'">'+icon('trash','s')+'Xoá chương</button></div>'+
-    '<p class="xs dim mt">Nhập .txt/.html · .txt/.docx · tự lưu · xem trước · ảnh. Xoá gõ XOÁ.</p>'+
-    '<div class="state-note mt">'+icon('info','s')+' Ctrl/Cmd+S lưu · Ctrl/Cmd+Alt+N thêm chương. Ctrl+N do trình duyệt giữ.</div>'+
+    '<div class="state-note mt">'+icon('info','s')+' Ctrl/Cmd+S lưu · Ctrl/Cmd+Alt+N thêm chương.</div>'+
     '</div></div>';
   return chapterPipeline()+'<div class="mt">'+left+'</div><div class="mt">'+editor+'</div>';
 }
@@ -1246,7 +1242,7 @@ function commentsHTML(){
         '<button class="btn danger sm" data-act="delete-comment" data-id="'+c.id+'">'+icon('trash','s')+'Xoá (2 lần)</button></div>';
     }).join(''):'<div class="state" style="min-height:150px;border:0">'+icon('inbox')+'<h3>Chưa có bình luận nào khớp</h3><p>Dữ liệu mẫu.</p></div>')+
     '</div></div></div>';
-  return head+'<div class="state-note mt">'+icon('info','s')+' Xoá 2 bước · gõ XOÁ · Không có chức năng duyệt.</div>';
+  return head+'<div class="state-note mt">'+icon('info','s')+' Xoá 2 bước · Không có chức năng duyệt.</div>';
 }
 
 /* ---------- 7 · Báo lỗi ---------- */
@@ -1264,7 +1260,7 @@ function reportsHTML(){
         '<button class="btn '+(r.done?'':'pri ')+'sm" data-act="toggle-report" data-id="'+r.id+'">'+icon(r.done?'refresh':'check','s')+(r.done?'Mở lại':'Đánh dấu đã xử lý')+'</button></div>';
     }).join(''):'<div class="state" style="min-height:140px;border:0"><h3>Không có báo lỗi ở nhóm này</h3><p>Dữ liệu mẫu.</p></div>')+
     '</div></div>'+
-    '<div class="state-note mt">'+icon('info','s')+' Mở lại được · trạng thái ghi KV.</div>';
+    '';
 }
 
 /* ---------- 8 · Phiếu bầu ---------- */
@@ -1333,7 +1329,7 @@ function statsHTML(){
     '</tbody></table></div></div></div>';
   var chap='<div class="card"><div class="card-hd"><h3>Phiếu theo chương</h3><span class="right">Truyện mẫu 01 · MẪU</span></div><div class="card-bd tight" style="padding:0 18px">'+
     [['Chương 64',31],['Chương 63',24],['Chương 62',18],['Chương 61',12]].map(function(x){return '<div class="list-item"><div class="t"><b>'+esc(x[0])+'</b><span>Phiếu bầu theo chương · MẪU</span></div>'+badge(String(x[1]),'tone-acc')+'</div>';}).join('')+'</div></div>';
-  return kpi+'<div class="grid2">'+table+'<div class="stack">'+chap+'<div class="state-note">'+icon('info','s')+' Chỉ đọc KV.</div></div></div>';
+  return kpi+'<div class="grid2">'+table+'<div class="stack">'+chap+'</div></div>';
 }
 
 /* ---------- 13 · Kiểm tra dữ liệu ---------- */
@@ -1342,7 +1338,7 @@ function doctorHTML(){
   return '<div class="grid3 mb">'+tiles.map(function(x){return '<div class="card"><div class="card-bd"><span class="lb">'+esc(x[0])+'</span><div class="num" style="font-size:26px;margin-top:8px">'+esc(x[1])+'</div><p class="xs dim mt">MẪU</p></div></div>';}).join('')+'</div>'+
   '<div class="card"><div class="card-hd"><h3>Kiểm tra dữ liệu</h3><div class="row"><button class="btn sm" data-act="refresh">Đọc lại registry</button>'+
     '<button class="btn sm" data-act="scan">Quét book</button><button class="btn sm" data-act="kv-audit">Audit KV</button></div></div><div class="card-bd tight">'+
-    '<div class="state-note" style="margin:12px">'+icon('info','s')+' Chỉ đọc. “Quét book” liệt kê lỗi; “Sửa” ghi KV.</div>'+
+    '<div class="state-note" style="margin:12px">'+icon('info','s')+' Chỉ đọc · “Sửa” ghi KV.</div>'+
     '<div class="table-wrap" style="border:0;border-radius:0"><table><thead><tr><th>Bộ</th><th>Vấn đề</th><th>Registry</th><th>Book</th><th style="text-align:right">Thao tác</th></tr></thead><tbody>'+
     SAMPLE_ISSUES.map(function(x){return '<tr><td>'+esc(x.b)+'</td><td><span class="strong">'+esc(x.t)+'</span></td><td class="sm mut">'+esc(x.d.split('·')[0])+'</td><td class="sm mut">'+esc(x.d.split('·').slice(1).join('·')||'—')+'</td><td style="text-align:right"><button class="btn sm" data-act="fix-row" data-id="'+esc(x.b)+'">Sửa</button></td></tr>';}).join('')+
     '</tbody></table></div>'+
@@ -1353,12 +1349,11 @@ function migrationCard(){
   var blocked=state.conn==='static'||state.quota==='blocked';
   var opts=[['','Chuyển tất cả'],['covers','Chỉ bìa'],['books','Chỉ book']];
   return '<div class="card mt"><div class="card-hd"><h3>Lưu trữ tràn (tuỳ chọn)</h3><span class="right">KV → Supabase / R2 · MẪU</span></div><div class="card-bd">'+
-    '<p class="sm mut">Supabase: unavailable · R2: unavailable · Bìa/Ảnh: KV. Chưa gắn secret.</p>'+
-    '<p class="xs dim">Lỗi overflow rớt về KV · secret chỉ trên Worker.</p>'+
+    '<p class="sm mut">Supabase: unavailable · R2: unavailable · Bìa/Ảnh: KV.</p>'+
     '<div class="row wrap mt" style="gap:8px">'+opts.map(function(o){
       return '<button class="btn sm" data-act="migrate" data-only="'+o[0]+'"'+(blocked?' disabled':'')+'>'+icon('database','s')+esc(o[1])+'</button>';
     }).join('')+'</div>'+
-    (blocked?'<p class="xs dim mt">Chưa nối Worker hoặc hết quota ghi · đang khoá.</p>':'')+
+    (blocked?'<p class="xs dim mt">Đang khoá · chưa nối Worker hoặc hết quota.</p>':'')+
     (state.migrateResult?'<div class="state-note mt">'+icon('check','s')+' '+esc(state.migrateResult)+'</div>':'')+
     '</div></div>';
 }
@@ -1368,7 +1363,7 @@ function logsHTML(){
   var per=6,pages=Math.ceil(SAMPLE_LOGS.length/per),page=Math.min(state.logPage||1,pages);
   state.logPage=page;
   var rows=SAMPLE_LOGS.slice((page-1)*per,page*per);
-  return '<div class="state-note">'+icon('history','s')+' 200 thao tác · mẫu '+rows.length+'/200</div>'+
+  return '<div class="state-note">'+icon('history','s')+' 200 thao tác · '+rows.length+'/200</div>'+
     '<div class="card"><div class="card-hd"><h3>Thao tác gần nhất</h3><span class="right">DỮ LIỆU MẪU</span></div><div class="card-bd tight">'+
     '<div class="table-wrap" style="border:0;border-radius:0"><table><thead><tr><th>Thời gian</th><th>Nguồn ghi</th><th>Thao tác</th><th>Đối tượng</th><th>Kết quả</th></tr></thead><tbody>'+
     rows.map(function(l){return '<tr><td class="mono sm">'+esc(l.t)+'</td><td>'+esc(l.a)+'</td><td><span class="strong">'+esc(l.x)+'</span></td><td class="sm mut">'+esc(l.o)+'</td><td>'+badge(l.r==='ok'?'Thành công':l.r==='warn'?'Cảnh báo':'Lỗi',l.r==='ok'?'tone-ok':l.r==='warn'?'tone-warn':'tone-bad')+'</td></tr>';}).join('')+
@@ -1389,9 +1384,8 @@ function settingsHTML(){
     '<div class="row wrap"><button class="btn" data-act="blogger-import">'+icon('upload','s')+'Nhập chương</button><button class="btn" data-act="blogger-sync">'+icon('refresh','s')+'Đồng bộ metadata Blogger</button></div>'+
     '</div></div>';
   var maint='<div class="card"><div class="card-hd"><h3>Bảo trì số liệu</h3><span class="right">có xác nhận mạnh</span></div><div class="card-bd stack">'+
-    '<p class="sm mut">Cả hai cần xác nhận mạnh.</p>'+
     '<div class="row wrap"><button class="btn" data-act="flush-stats">'+icon('refresh','s')+'Flush stats cache</button><button class="btn danger" data-act="recount">'+icon('pulse','s')+'Đếm lại số chương</button></div>'+
-    '<p class="xs dim">Không nhập ADMIN_KEY thật · mockup không gọi Worker.</p></div></div>';
+    '</div></div>';
   return '<div class="grid2">'+backup+blogger+'</div><div class="mt">'+maint+'</div>';
 }
 
@@ -1416,7 +1410,7 @@ function loginHTML(){
   if(mode!=='normal') body=loginStateBlock(mode);
   else body='<div class="stack" style="gap:14px">'+
     '<div class="gate-top"><div><span class="eyebrow">KHỞI ĐẦU · MẪU</span><h2>Đăng nhập</h2></div><span class="chip '+c[1]+'"><span class="dot"></span>'+esc(c[0])+'</span></div>'+
-    '<p class="sm mut">Đăng nhập hoặc nối bằng ADMIN_KEY (mẫu).</p>'+
+    '<p class="sm mut">Kết nối bằng ADMIN_KEY (mẫu).</p>'+
     '<button class="btn pri" data-act="login-supabase">'+icon('shield','s')+'Đăng nhập với Supabase (mô phỏng)</button>'+
     '<button class="btn" data-act="static-mode">'+icon('database','s')+'Xem dữ liệu tĩnh, chỉ đọc</button>'+
     '<div class="sep">hoặc kết nối bằng ADMIN_KEY</div>'+
@@ -1497,7 +1491,9 @@ const DOCS_HTML =
  ['28','Bỏ Danh sách trong trình soạn','Owner yêu cầu bỏ; toolbar gọn còn In đậm, In nghiêng, Tiêu đề, Trích dẫn, Liên kết, Ảnh. Bảng Danh sách chương ngoài editor vẫn giữ.'],
  ['29','Thêm dấu ngăn cách nội dung','Nút Chèn dấu ngăn cách chèn một đoạn ••• căn giữa tại con trỏ, tách hai phần nội dung rõ ràng mà không cần gõ ký tự.'],
  ['30','Đổi case chỉ áp dụng tên chương','Select nằm ngay cạnh ô Tên chương và chỉ ghi vào state.chapters[active].t; nội dung chương và vùng chọn không bị động tới.'],
- ['31','Ghi chú gọn, cột thẳng','Rút các câu ghi chú trong panel; lưới 2 cột bằng nhau và cột cố định cho mọi hàng danh sách nên badge, nút không còn lệch.']
+ ['31','Ghi chú gọn, cột thẳng','Rút các câu ghi chú trong panel; lưới 2 cột bằng nhau và cột cố định cho mọi hàng danh sách nên badge, nút không còn lệch.'],
+ ['32','Chỉ giữ ghi chú có ích','Vòng 7 bỏ ghi chú thiết kế, chú thích lặp và câu giải thích lại nhãn; giữ an toàn (gõ slug/cụm), phạm vi đổi case, phím tắt và trạng thái đọc/ghi KV.'],
+ ['33','Một dòng MẪU cho mỗi màn','Footer rút còn DỮ LIỆU MẪU và render đúng một lần; eyebrow và meta đã đánh dấu nên không lặp câu dài.']
 ].map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td></tr>';}).join('')+
 '</tbody></table>'+
 
@@ -1511,7 +1507,7 @@ const DOCS_HTML =
  ['5 · Ngăn lỗi','5','Validate form, cảnh báo đổi slug, xác nhận mạnh có gõ, xóa 2 lần, gated Sửa bộ.'],
  ['6 · Nhận diện thay vì nhớ','5','Gợi ý tìm + Ctrl+K, eyebrow nhóm, tooltip, nhãn mono rõ ràng trên điều khiển.'],
  ['7 · Linh hoạt &amp; hiệu quả','4','Hash route, lọc/sắp xếp/phân trang, thao tác hàng loạt, Ctrl+K / Ctrl+S / Ctrl+Alt+N.'],
- ['8 · Thẩm mỹ &amp; tối giản','4','Không bóng, không gradient, vạch tóc, hồng có chủ đích; còn nhiều bảng đặc dữ liệu.'],
+ ['8 · Thẩm mỹ &amp; tối giản','4','Không bóng, không gradient, vạch tóc, hồng có chủ đích; vòng 7 bỏ ghi chú thừa, còn nhiều bảng đặc dữ liệu.'],
  ['9 · Sửa lỗi &amp; phục hồi','4','Màn lỗi có nguyên nhân + Thử lại + lối tới Cài đặt; skeleton và empty state rõ ràng.'],
  ['10 · Trợ giúp &amp; tài liệu','4','Tài liệu bàn giao ngay trong modal, nhật ký quyết định và chú thích MẪU ở mọi màn.']
 ].map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td></tr>';}).join('')+
@@ -1529,7 +1525,7 @@ const DOCS_HTML =
 '<li>Ở 360px bảng vẫn phải cuộn ngang trong vùng bảng; chưa thử ngón tay cái trên thiết bị thật.</li>'+
 '<li>Chưa dựng 2 biến thể phụ của source: chuyển Bảng/Lưới ở Thư viện và toolbar đủ 15 nút của TipTap.</li>'+
 '</ul>'+
-'<p><b>Đã sửa sau phản hồi owner:</b> scrim desktop che mờ trang, badge Mới cập nhật full-width, nút demo chèn nội dung, ô tiêu đề chương riêng, bỏ 2 tab, tinh gọn chữ. Vòng 6: bỏ Danh sách trong toolbar, thêm dấu ngăn cách, đổi case chỉ cho tên chương, ghi chú gọn, canh thẳng các ô Báo lỗi. Render thử bằng Chromium thật: 13 tab / 5 nhóm, 360px không tràn ngang.</p>'+
+'<p><b>Đã sửa sau phản hồi owner:</b> scrim desktop che mờ trang, badge Mới cập nhật full-width, nút demo chèn nội dung, ô tiêu đề chương riêng, bỏ 2 tab, tinh gọn chữ. Vòng 6: bỏ Danh sách trong toolbar, thêm dấu ngăn cách, đổi case chỉ cho tên chương, ghi chú gọn, canh thẳng các ô Báo lỗi; vòng 7 dọn ghi chú. Render thử bằng Chromium thật: 13 tab / 5 nhóm, 360px không tràn ngang.</p>'+
 '<h4>VÒNG 4 · ĐỐI CHIẾU VỚI MÃ NGUỒN GỐC</h4>'+
 '<p>Sau phản hồi của owner, rà lại <span class="token">src/admin/components/*</span>, <span class="token">src/admin/utils/books.js</span>, <span class="token">src/shared/schedule.js</span> và <span class="token">src/admin/main.jsx</span>. Các chỗ lệch dưới đây đã sửa; 13 tab, 5 nhóm, đổi case và ô tiêu đề chương giữ nguyên.</p>'+
 '<table><thead><tr><th>Nguồn</th><th>Mockup trước</th><th>Đã sửa</th></tr></thead><tbody>'+
@@ -1574,7 +1570,17 @@ const DOCS_HTML =
  ['Canh nút, ô, chữ; Báo lỗi hết lệch','Sửa card Báo lỗi bị lồng card-bd trong card-hd; lưới 2 cột bằng nhau; cột cố định cho mọi hàng danh sách','Badge và nút thẳng cột ở Báo lỗi / Bình luận / 4 hàng đợi / danh sách chương; 360px Báo lỗi hết tràn ngang.']]
 .map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td></tr>';}).join('')+
 '</tbody></table>'+
-'<p><b>Kiểm chứng vòng 6:</b> node --check đạt · 136/136 cấu trúc · 122/122 đối chiếu source · 85/85 vòng 5 · 99/99 vòng 6 · 0 lỗi JS · Chromium thật ở desktop và 360px: 14 route không tràn ngang, 0 page error. Phase 1 vẫn 398 từ.</p>'+
+'<p><b>Kiểm chứng vòng 6:</b> node --check đạt · 136/136 cấu trúc · 122/122 đối chiếu source · 85/85 vòng 5 · 124/124 vòng 6–7 · 0 lỗi JS · Chromium thật ở desktop và 360px: 14 route không tràn ngang, 0 page error. Phase 1 vẫn 398 từ.</p>'+
+'<h4>VÒNG 7 · DỌN GHI CHÚ</h4>'+
+'<p>Owner: "cái nào cần thì giữ, ko thì bỏ đi, chỗ nào dài thì tinh gọn lại". Rà toàn bộ ghi chú, hint, caption và mô tả xác nhận trong panel.</p>'+
+'<table><thead><tr><th>Xử lý</th><th>Nội dung</th></tr></thead><tbody>'+
+[['Bỏ hẳn','Ghi chú thiết kế ở Thư viện (thead/badge/tag chip), chú thích ảnh bìa, "* bắt buộc · form có kiểm tra lỗi", giải thích Nhân bản / thứ tự badge, 4 hint trạng thái chương + gợi ý giờ, dòng liệt kê tính năng import, ghi chú phím tắt ở Sửa bộ, ghi chú Báo lỗi / Thống kê, 2 đoạn giải thích migration và Cài đặt.'],
+ ['Giữ lại','Cụm an toàn: Bỏ khóa gõ đúng slug, Ghi đè gõ KHÔI PHỤC, Cụm cần gõ, Xoá 2 bước · Không có chức năng duyệt. Phạm vi: Chỉ đổi tên chương. Phím tắt: một dòng Ctrl/Cmd+S · Ctrl/Cmd+Alt+N. Đọc/ghi: Chỉ đọc · "Sửa" ghi KV. Trạng thái: Supabase/R2, Đang khoá, kết quả chuyển, 200 thao tác.'],
+ ['Tinh gọn','Footer mỗi màn còn đúng một dòng DỮ LIỆU MẪU (trước đó lặp 2 lần ở Thư viện); 3 banner quota, mô tả modal xác nhận, mô tả rỗng/lỗi, tooltip sidebar, chân bảng lệnh, nhãn 18+, 3 toast dài.'],
+ ['Không đổi','Eyebrow, h2, mô tả ngắn, nhãn MẪU trên dữ liệu, cụm xác nhận trong modal và toàn bộ chức năng đã chốt ở vòng 1–6.']]
+.map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>';}).join('')+
+'</tbody></table>'+
+'<p><b>Kiểm chứng vòng 7:</b> 136/136 cấu trúc · 122/122 đối chiếu source · 85/85 vòng 5 · 124/124 vòng 6–7 (gồm kiểm tra ghi chú đã bỏ, footer đúng 1 lần, 1 ghi chú phím tắt) · 0 lỗi JS · 0 màu literal ngoài :root · Chromium thật 14 route ở 360px không tràn ngang, 0 page error. Phase 1 vẫn 398 từ.</p>'+
 '<h4>ĐỀ XUẤT THÊM (không nằm trong mockup)</h4>'+
 '<ul>'+
 '<li>Phỏng vấn chủ site và quan sát 2 ca tự dịch, đăng chương để kiểm chứng 5 giả thuyết.</li>'+
@@ -1601,7 +1607,7 @@ function renderModal(){
     inner='<div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="docsTitle">'+
       '<div class="modal-hd"><h3 id="docsTitle">Tài liệu bàn giao · Mockup admin ssochuz</h3><button class="btn icon ghost sm" data-act="close-modal" aria-label="Đóng">'+icon('x','s')+'</button></div>'+
       '<div class="modal-bd" style="display:block">'+DOCS_HTML+'</div>'+
-      '<div class="modal-ft"><span class="xs dim">DỮ LIỆU MẪU · một file HTML tự chứa</span><button class="btn sm" data-act="close-modal">Đóng</button></div></div>';
+      '<div class="modal-ft"><span class="xs dim">DỮ LIỆU MẪU</span><button class="btn sm" data-act="close-modal">Đóng</button></div></div>';
   }else if(c.kind==='strong'){
     var ok=(state.confirmValue||'').trim()===c.phrase;
     inner='<div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">'+
@@ -1661,13 +1667,13 @@ function openDocs(){openModal({kind:'docs',title:'Tài liệu bàn giao'});}
 function syncRoute(){
   var h=location.hash.replace(/^#\/?/,'').trim();
   if(!h||!ROUTES[h])h='dashboard';
-  if(h==='sua-bo'&&!state.selectedBook){toast('Chọn một bộ trong Thư viện trước khi mở Sửa bộ.','warn');h='thu-vien';}
+  if(h==='sua-bo'&&!state.selectedBook){toast('Chọn bộ trong Thư viện trước.','warn');h='thu-vien';}
   state.route=h;
   state.notifOpen=false;state.accountOpen=false;state.suggestOpen=false;
 }
 function navigate(id){
   if(!ROUTES[id])id='dashboard';
-  if(id==='sua-bo'&&!state.selectedBook){toast('Chọn một bộ trong Thư viện trước khi mở Sửa bộ.','warn');id='thu-vien';}
+  if(id==='sua-bo'&&!state.selectedBook){toast('Chọn bộ trong Thư viện trước.','warn');id='thu-vien';}
   if(id==='sua-bo')initEditModels(getBook(state.selectedBook));
   state.notifOpen=false;state.accountOpen=false;state.suggestOpen=false;state.drawer=false;
   var target='#/'+id;
@@ -1786,8 +1792,8 @@ function currentPageBooks(){
 }
 function setLock(v){
   var b=getBook(state.selectedBook);
-  if(v===1) openStrong('Đặt khóa mật mã','Bộ "'+b.t+'" sẽ bị khóa với độc giả. Đây là dữ liệu mẫu.','ĐẶT KHÓA',function(){b.lock=true;toast('Đã đặt khóa (mô phỏng).');render();},'Đặt khóa');
-  else openStrong('Bỏ khóa mật mã','Gỡ khóa cho "'+b.t+'". Gõ đúng slug để xác nhận.',slugOf(b),function(){b.lock=false;toast('Đã bỏ khóa (mô phỏng).');render();},'Bỏ khóa');
+  if(v===1) openStrong('Đặt khóa mật mã','Khóa "'+b.t+'" với độc giả. MẪU.','ĐẶT KHÓA',function(){b.lock=true;toast('Đã đặt khóa (mô phỏng).');render();},'Đặt khóa');
+  else openStrong('Bỏ khóa mật mã','Gỡ khóa "'+b.t+'". Gõ slug để xác nhận.',slugOf(b),function(){b.lock=false;toast('Đã bỏ khóa (mô phỏng).');render();},'Bỏ khóa');
 }
 function commitEdit(){
   var b=getBook(state.selectedBook),m=state.models;
@@ -1805,7 +1811,7 @@ function saveEdit(){
   else if(!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(sl))setErr('eb-slug','Slug chỉ gồm chữ thường, số và gạch ngang.');
   if(!val('eb-a'))setErr('eb-a','Tác giả gốc không được để trống.');
   if(ids.some(function(i){return state.errors[i];})){focusFirst(ids);toast('Form còn lỗi, kiểm tra các ô được đánh dấu.','bad');return;}
-  if(sl!==slugOf(b)) openStrong('Xác nhận đổi slug','Slug đổi từ '+slugOf(b)+' sang '+sl+'. Đường dẫn cũ sẽ hỏng. Dữ liệu mẫu.','ĐỔI SLUG',commitEdit,'Lưu và đổi slug');
+  if(sl!==slugOf(b)) openStrong('Xác nhận đổi slug',slugOf(b)+' → '+sl+' · liên kết cũ sẽ hỏng.','ĐỔI SLUG',commitEdit,'Lưu và đổi slug');
   else commitEdit();
 }
 function submitNew(){
@@ -1847,7 +1853,7 @@ function saveHomepage(){
   if(!state.slides.length){toast('Cần ít nhất 1 slide trước khi lưu.','bad');return;}
   var bad=state.schedule.some(function(s){return !s.d||!s.b;});
   if(bad){toast('Lịch ra chương còn dòng thiếu thứ hoặc bộ.','bad');return;}
-  toast('Đã lưu slide, Chuyển thể Series, lịch và thông báo (mô phỏng).');
+  toast('Đã lưu trang chủ (mô phỏng).');
 }
 function bloggerImport(){
   clearErrors(['st-blogger-url']);
@@ -1980,7 +1986,7 @@ document.addEventListener('click',function(e){
     case 'docs':openDocs();break;
     case 'close-modal':closeModal();break;
     case 'confirm-ok':applyConfirm();break;
-    case 'confirm-demo':openStrong('Xác nhận mạnh (minh hoạ)','Ví dụ design system: gõ tên bộ để xác nhận. Các thao tác thật dùng cụm hoặc slug đúng source.','Truyện mẫu 01',function(){toast('Đã xác nhận mạnh (mô phỏng).');},'Xác nhận');break;
+    case 'confirm-demo':openStrong('Xác nhận mạnh (minh hoạ)','Ví dụ design system: gõ tên bộ. Thao tác thật gõ cụm hoặc slug.','Truyện mẫu 01',function(){toast('Đã xác nhận mạnh (mô phỏng).');},'Xác nhận');break;
     case 'toast-demo':toast('Toast mẫu: thao tác đã hoàn tất (mô phỏng).','info');break;
     case 'reset-demo':resetDemo();break;
     case 'set-mode':state.modes[state.route]=el.dataset.mode;render();break;
@@ -2005,7 +2011,7 @@ document.addEventListener('click',function(e){
     case 'edit-book':selectBook(id);navigate('sua-bo');break;
     case 'delete-book':
       var b=getBook(id);
-      openStrong('Xoá bộ truyện','Gõ đúng slug "'+slugOf(b)+'" để xác nhận xoá lần cuối. Dữ liệu mẫu.',slugOf(b),function(){
+      openStrong('Xoá bộ truyện','Gõ đúng slug để xoá. MẪU.',slugOf(b),function(){
         state.books=state.books.filter(function(x){return x.id!==id;});
         state.sel.delete(id);toast('Đã xoá '+b.t+' (mô phỏng).');render();
       },'Xóa vĩnh viễn');break;
@@ -2017,7 +2023,7 @@ document.addEventListener('click',function(e){
     case 'set-lock':setLock(Number(el.dataset.value));break;
     case 'clone-book':
       var src=getBook(state.selectedBook);
-      openStrong('Nhân bản bộ','Tạo bản sao mẫu của "'+src.t+'". Dữ liệu mẫu.','NHÂN BẢN',function(){
+      openStrong('Nhân bản bộ','Tạo bản sao của "'+src.t+'". MẪU.','NHÂN BẢN',function(){
         var copy=Object.assign({},src,{id:'b'+(state.books.length+1),t:src.t+' (bản sao mẫu)',slug:slugOf(src)+'-ban-sao'});
         state.books.unshift(copy);toast('Đã nhân bản bộ mẫu.');render();
       },'Nhân bản');break;
@@ -2047,7 +2053,7 @@ document.addEventListener('click',function(e){
       if(j>=0&&j<state.chapters.length){var tmp=state.chapters[idx];state.chapters[idx]=state.chapters[j];state.chapters[j]=tmp;state.activeChapter=j;render();}
       break;
     case 'chapter-delete':
-      openStrong('Xoá chương','Xoá chương đang chọn khỏi bộ, không khôi phục được. Dữ liệu mẫu.','XOÁ',function(){
+      openStrong('Xoá chương','Xoá chương · không hoàn tác. MẪU.','XOÁ',function(){
         if(!state.chapters.length)return;
         state.chapters.splice(idx,1);state.activeChapter=Math.max(0,Math.min(idx,state.chapters.length-1));
         state.chapterStatus=(state.chapters[state.activeChapter]||{}).s||'published';
@@ -2064,7 +2070,7 @@ document.addEventListener('click',function(e){
     case 'migrate':
       var only=el.dataset.only||'';
       var label=only==='books'?'chỉ book':only==='covers'?'chỉ bìa':'book + bìa + ảnh chương';
-      openSimple('Chuyển '+label+' sang Supabase/R2','KV chỉ còn stub nhỏ; bản đầy đủ nằm ở Supabase/R2. Có thể mất vài phút nếu kho lớn. Dữ liệu mẫu.',function(){
+      openSimple('Chuyển '+label+' sang Supabase/R2','KV chỉ còn stub; bản đầy đủ ở Supabase/R2. MẪU.',function(){
         state.migrateResult='Đã chuyển: '+(only==='covers'?0:248)+' book · '+(only==='books'?0:248)+' bìa · '+(only==='books'||only==='covers'?0:36)+' ảnh chương — xong, KV chỉ còn stub. MẪU';
         toast('Đã chuyển overflow (mô phỏng).');render();
       },'Chuyển');break;
@@ -2093,8 +2099,8 @@ document.addEventListener('click',function(e){
     case 'schedule-chapter':state.chapterStatus='scheduled';toast('Đã chọn Hẹn giờ; đặt mốc rồi bấm Lưu chương.');render();break;
     case 'comment-tab':state.commentTab=el.dataset.tab;render();break;
     case 'delete-comment':
-      openSimple('Xác nhận lần 1 · xóa bình luận','Bạn sắp xóa một bình luận mẫu. Bước 2 sẽ yêu cầu gõ cụm xác nhận.',function(){
-        openStrong('Xác nhận lần 2 · xoá bình luận','Xoá vĩnh viễn bình luận này. Dữ liệu mẫu.','XOÁ',function(){
+      openSimple('Xác nhận lần 1 · xóa bình luận','Bước 2 sẽ yêu cầu gõ XOÁ.',function(){
+        openStrong('Xác nhận lần 2 · xoá bình luận','Xoá vĩnh viễn bình luận này. MẪU.','XOÁ',function(){
           state.comments=state.comments.filter(function(x){return x.id!==id;});
           toast('Đã xóa bình luận sau 2 lần xác nhận (mô phỏng).');render();
         },'Xóa vĩnh viễn');
@@ -2105,13 +2111,13 @@ document.addEventListener('click',function(e){
       if(rr){rr.done=!rr.done;toast(rr.done?'Đã đánh dấu đã xử lý (mẫu).':'Đã mở lại báo lỗi (mẫu).');render();}break;
     case 'remove-votes':
       if(!state.voteSel.size){toast('Chọn ít nhất một phiếu.','warn');break;}
-      openStrong('Gỡ phiếu đã chọn','Gỡ '+state.voteSel.size+' phiếu. Số phiếu ngoài web giảm ngay và không khôi phục được.','GỠ PHIẾU',function(){
+      openStrong('Gỡ phiếu đã chọn','Gỡ '+state.voteSel.size+' phiếu · không hoàn tác.','GỠ PHIẾU',function(){
         state.votes=state.votes.filter(function(v,i){return !state.voteSel.has(i);});
         state.voteSel.clear();toast('Đã gỡ phiếu (mô phỏng).');render();
       },'Gỡ phiếu');break;
     case 'reset-votes':
       var rch=(document.querySelector('[data-role="reset-ch"]')||{}).value||'';
-      openStrong('Reset phiếu bộ này','Lượt đọc giữ nguyên, phiếu về 0'+(rch?' ở chương '+rch:'')+' và không hoàn tác được.','RESET',function(){
+      openStrong('Reset phiếu bộ này','Phiếu về 0'+(rch?' ở chương '+rch:'')+' · không hoàn tác.','RESET',function(){
         state.votes=[];state.voteSel.clear();state.votePage=1;toast('Đã reset phiếu mẫu.');render();
       },'Reset phiếu');break;
     case 'hp-preview':state.hpPreview=el.dataset.v;render();break;
@@ -2127,22 +2133,22 @@ document.addEventListener('click',function(e){
     case 'sched-add':state.schedule.push({d:'Thứ 5',b:'b01',c:'Ghi chú mẫu'});render();break;
     case 'sched-remove':state.schedule.splice(idx,1);render();break;
     case 'save-homepage':saveHomepage();break;
-    case 'scan':toast('Đã quét 248 book · lệch số chương, chương rỗng, thiếu book (mẫu).');break;
+    case 'scan':toast('Đã quét 248 book (mẫu).');break;
     case 'kv-audit':toast('Audit KV: phân bổ key/byte theo prefix (mô phỏng).');break;
     case 'fix-row':toast('Đã sửa dòng '+id+' (mô phỏng, có ghi KV).');break;
     case 'recount':
-      openStrong('Đếm lại số chương từ KV','Thao tác có thể ghi registry nếu phát hiện lệch. Dữ liệu mẫu.','ĐẾM LẠI',function(){
+      openStrong('Đếm lại số chương từ KV','Có thể ghi registry nếu lệch. MẪU.','ĐẾM LẠI',function(){
         toast('Đã đếm lại số chương (mô phỏng).');render();
       },'Đếm lại');break;
     case 'flush-stats':
-      openSimple('Flush stats cache','Đẩy cache stats đang đệm vào KV. Đây là thao tác ghi (mô phỏng).',function(){
+      openSimple('Flush stats cache','Đẩy cache stats vào KV (mô phỏng).',function(){
         toast('Đã flush stats cache (mô phỏng).');
       },'Flush stats',true);break;
     case 'backup':
       download('ssochuz-backup-mau.json',JSON.stringify({note:'DỮ LIỆU MẪU — không phải dữ liệu thật',lib:state.books.slice(0,4)},null,2),'application/json;charset=utf-8');
       toast('Đã tải backup JSON mẫu.');break;
     case 'blogger-import':bloggerImport();break;
-    case 'blogger-sync':openStrong('Đồng bộ metadata Blogger','Cập nhật registry KV từ list-novel và lịch ra chương. Số chương thật trong KV vẫn là nguồn thắng.','ĐỒNG BỘ',function(){toast('Đã đồng bộ metadata Blogger (mô phỏng).');},'Đồng bộ');break;
+    case 'blogger-sync':openStrong('Đồng bộ metadata Blogger','Cập nhật registry từ list-novel; KV vẫn là nguồn thắng.','ĐỒNG BỘ',function(){toast('Đã đồng bộ metadata Blogger (mô phỏng).');},'Đồng bộ');break;
     case 'login-supabase':toast('Đăng nhập Supabase (mô phỏng) · DỮ LIỆU MẪU.');navigate('dashboard');break;
     case 'static-mode':state.conn='static';toast('Chế độ dữ liệu tĩnh, chỉ đọc (mô phỏng).');navigate('dashboard');break;
     case 'connect':connect();break;
@@ -2198,7 +2204,7 @@ document.addEventListener('change',function(e){
     case 'sched-book':state.schedule[Number(el.dataset.idx)].b=el.value;break;
     case 'restore-file':
       if(el.files&&el.files.length){
-        openStrong('Khôi phục từ JSON','Ghi đè registry và book bằng file backup mẫu. Không thể hoàn tác.','KHÔI PHỤC',function(){
+        openStrong('Khôi phục từ JSON','Ghi đè registry và book · không hoàn tác.','KHÔI PHỤC',function(){
           toast('Đã khôi phục backup mẫu (mô phỏng).');render();
         },'Khôi phục');
         el.value='';
