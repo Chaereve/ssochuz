@@ -4,7 +4,15 @@ Thiết kế lại giao diện quản trị. **Chức năng đã có, không th�
 
 ## Mở ngay
 
-Double-click `ssochuz-admin-mockup.html` (file tự chứa, không cần server, không cần build). Google Fonts là tài nguyên ngoài duy nhất; nếu offline thì dùng fallback hệ thống, vẫn đọc được.
+**Đã merge vào `main`** qua PR #83 (merge commit `fbbe121`). Mockup nằm trong thư mục `mockup/`; `/admin` thật **không đổi** vì đây là prototype, không phải code production.
+
+| Cách mở | Địa chỉ |
+| --- | --- |
+| Trên site sau khi deploy | `https://ssochuz.pages.dev/admin-mockup` (hoặc `/mockup/ssochuz-admin-mockup.html`) |
+| Trên GitHub `main` | `https://github.com/Chaereve/ssochuz/blob/main/mockup/ssochuz-admin-mockup.html` |
+| Không cần mạng | Double-click `ssochuz-admin-mockup.html` — file tự chứa, không cần server, không cần build |
+
+Google Fonts là tài nguyên ngoài duy nhất; nếu offline thì dùng fallback hệ thống, vẫn đọc được. Bấm **Tài liệu bàn giao** trong sidebar (hoặc nút docs) để xem đủ 8 vòng, trong đó có mục 11 về kiểm chéo bảo mật/kết nối.
 
 ## Các file
 

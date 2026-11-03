@@ -69,6 +69,10 @@
 /admin-legacy       /admin   200
 /admin-legacy/      /admin   200
 /admin-legacy.html  /admin   200
+# Mockup admin (prototype, PR #83): URL ngắn để mở bản thiết kế, KHÔNG đè /admin thật.
+# Đích là URL SẠCH (không .html) để Pages tự tìm .../<tên>.html, tránh 308 lặp.
+/admin-mockup       /mockup/ssochuz-admin-mockup   200
+/admin-mockup/      /mockup/ssochuz-admin-mockup   200
 # --- d) luật TĨNH từng truyện (sinh bởi tools/build_og.mjs, 2 luật mỗi bộ) ---
 # Nhiệm vụ: giữ URL của từng bộ trúng luật này (đứng TRƯỚC luật chung /truyen/*
 # ở cuối tệp) để trang bộ truyện được phục vụ từ tệp tĩnh truyen/<slug>/index.html
