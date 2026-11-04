@@ -61,6 +61,43 @@ html = html
     '<link rel="icon" type="image/png" href="/ssochuz.png?v=1">\n' +
     '<link rel="apple-touch-icon" href="/ssochuz.png?v=1">\n' +
     '<link rel="manifest" href="/manifest.webmanifest">')
+  /* Bản phát hành: BỎ đuôi "· MẪU" khỏi mọi nhãn thay vì đổi thành "· KV".
+     Ở vòng 10, scrub() runtime đổi MẪU → KV nên Thư viện hiện
+     "bake-love-feelings · KV", eyebrow hiện "NỘI DUNG · KV", card hiện
+     "tối đa 8 · KV" — owner báo "nhiều mục bị lệch". Nhãn prototype không có
+     ý nghĩa với dữ liệu thật, nên cắt bỏ hoàn toàn ở bản build. */
+  .replace('<p class="meta">DỮ LIỆU MẪU · 03/11 20:40</p>',
+    '<p class="meta">DỮ LIỆU THẬT · <span id="czClock"></span></p>')
+  .replace('03/11 20:40 · MẪU', '14 ngày gần nhất')
+  .replace(/\s*·\s*MẪU/g, '')
+  /* Placeholder / nhãn còn chữ "mẫu" trong form thật. */
+  .replace("ph:'Tóm tắt mẫu…'", "ph:'Tóm tắt bộ truyện…'")
+  .replace("ph:'Nội dung chương mẫu…'", "ph:'Nội dung chương đầu…'")
+  .replace("ph:'Tên bộ mẫu'", "ph:'Tên bộ truyện'")
+  .replace("ph:'Tác giả mẫu A'", "ph:'Tác giả gốc'")
+  .replace("ph:'Tác giả mẫu'", "ph:'Tác giả gốc'")
+  .replace("ph:'Ví dụ mẫu: Truyện mẫu 19'", "ph:'Ví dụ: Tên bộ 19'")
+  .replace('Mật mã (tối thiểu 8 ký tự, mẫu)', 'Mật mã (tối thiểu 8 ký tự)')
+  .replace("state.models['eb-sum']='Tóm tắt mẫu cho '", "state.models['eb-sum']='Mô tả cho '")
+  .replace('aria-label="Bìa mẫu bị thiếu"', 'aria-label="Bìa bị thiếu"')
+  .replace('aria-label="Ô màu bìa mẫu"', 'aria-label="Ô màu bìa"')
+  .replace('THIẾU BÌA<br>MẪU', 'THIẾU BÌA<br>CHƯA CÓ ẢNH')
+  .replace('BÌA<br>MẪU', 'BÌA<br>MỚI')
+  .replace('Truyện mẫu 04, 13, 17', 'Các bộ thiếu ảnh bìa')
+  /* Số liệu GIẢ nằm cứng trong 2 màn (Thống kê / Kiểm tra dữ liệu): bản
+     prototype giữ nguyên, bản phát hành phải tính từ state KV thật. */
+  .replace("var tiles=[['Bộ có số liệu','18'],['Lượt đọc trong top','8.420'],['Phiếu trong top','1.161'],['Ngày có chuỗi','30']];",
+    "var tiles=[['Bộ có số liệu',String(state.books.length)],['Lượt đọc trong top',nfmt(SAMPLE_STATS.reads.reduce(function(a,b){return a+(Number(b[1])||0);},0))],['Phiếu trong top',nfmt(SAMPLE_STATS.likes.reduce(function(a,b){return a+(Number(b[1])||0);},0))],['Ngày có chuỗi',String(SAMPLE_READS.length)]];")
+  .replace("var tiles=[['bộ trong registry','248'],['slug trùng/thiếu','0'],['thiếu bìa','4'],['thiếu mô tả','2']];",
+    "var tiles=[['bộ trong registry',String(state.books.length)],['vấn đề quét được',String(SAMPLE_ISSUES.length)],['thiếu bìa',String(SAMPLE_ISSUES.filter(function(x){return x.t==='Thiếu bìa';}).length)],['thiếu mô tả',String(SAMPLE_ISSUES.filter(function(x){return x.t==='Thiếu mô tả';}).length)]];")
+  .replace('<p class="xs dim mt">MẪU</p>', '<p class="xs dim mt">CLOUDFLARE KV</p>')
+  .replace('Đây là nội dung chương mẫu. Gõ vào đây để thấy chỉ báo tự lưu nháp cập nhật.',
+    'Soạn nội dung chương tại đây. Bản nháp được lưu tự động.')
+  /* Card "Phiếu theo chương" của mockup có 4 dòng số liệu bịa. Dùng regex vì
+     đuôi "· MẪU" đã bị cắt ở bước trên; bản thật lấy state.votes (nạp từ
+     /api/admin/voters), không có thì hiện trạng rỗng. */
+  .replace(/  var chap='<div class="card"><div class="card-hd"><h3>Phiếu theo chương<\/h3>[\s\S]*?\n  return kpi\+/,
+    "  var chap='<div class=\"card\"><div class=\"card-hd\"><h3>Phiếu theo chương</h3><span class=\"right\">DỮ LIỆU THẬT</span></div><div class=\"card-bd tight\" style=\"padding:0 18px\">'+\n    (state.votes.length ? state.votes.slice(0,4).map(function(v){return '<div class=\"list-item\"><div class=\"t\"><b>'+esc(v.b||'Bộ truyện')+'</b><span>'+esc(v.d||'Phiếu từ KV')+'</span></div>'+badge('1','tone-acc')+'</div>';}).join('') : '<div class=\"state\"><p>Chưa có phiếu nào trong KV.</p></div>')+'</div></div>';\n  return kpi+")
   .replace(/DỮ LIỆU MẪU — không phải dữ liệu thật/g, 'DỮ LIỆU THẬT TỪ CLOUDFLARE KV')
   .replace(/DỮ LIỆU MẪU/g, 'DỮ LIỆU THẬT')
   /* Màn đăng nhập / modal: prototype nói "mô phỏng, không gọi Worker thật" —

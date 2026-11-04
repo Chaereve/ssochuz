@@ -59,6 +59,7 @@
   function go(route) { M.navigate(route); }
   function guard(fn) { return function () { Promise.resolve().then(fn).catch(fail); }; }
   var WRAPPED = false;
+  var SAMPLE_CLEARED = false;
   function redraw() { if (WRAPPED) window.render(); else M.render(); }
   function findMeta(slug) { return (REG.lib || []).find(function (m) { return m.slug === slug; }); }
   function titleOf(slug) { var m = findMeta(slug); return m ? (m.title || slug) : slug; }
@@ -140,6 +141,20 @@
     var lib = REG.lib || [];
     S.books = lib.map(metaToBook);
     S.picked = lib.slice(0, 3).map(function (m) { return m.slug; });
+    /* DỌN DỮ LIỆU MẪU ĐÚNG MỘT LẦN ở lần hydrate đầu tiên. Nếu một GET con
+       hỏng (Promise.allSettled nuốt lỗi), giao diện phải hiện RỖNG thay vì
+       chương / phiếu / số liệu prototype. Không dọn lại ở mỗi reload(), vì lúc
+       đó các luồng tải thật đang chạy và đã có dữ liệu thật trong state. */
+    if (!SAMPLE_CLEARED) {
+      SAMPLE_CLEARED = true;
+      S.chapters = []; S.activeChapter = 0; S.editorSeed = '<p></p>';
+      S.votes = []; S.comments = []; S.reports = [];
+      var zeroRows = [['—', 0], ['—', 0], ['—', 0], ['—', 0], ['—', 0]];
+      ['reads', 'likes', 'voters', 'today'].forEach(function (k) {
+        replaceArr(M.SAMPLE_STATS[k], zeroRows.map(function (r) { return r.slice(); }));
+      });
+      replaceArr(M.SAMPLE_READS, [0]);
+    }
     if (!S.selectedBook || !S.books.some(function (b) { return b.id === S.selectedBook; }))
       S.selectedBook = S.books.length ? S.books[0].id : null;
     if (S.selectedBook) window.initEditModels(M.getBook(S.selectedBook));
@@ -898,10 +913,24 @@
   D.head.appendChild(st);
 
   var origRender = M.render;
+  /* Giờ hiển thị là giờ THẬT của phiên làm việc, thay cho "03/11 20:40" của
+     bản mockup (con số tĩnh đó khiến owner tưởng dữ liệu cũ). */
+  var CLOCK = (function () {
+    function z(n) { return ('0' + n).slice(-2); }
+    var d = new Date();
+    return z(d.getDate()) + '/' + z(d.getMonth() + 1) + ' ' + z(d.getHours()) + ':' + z(d.getMinutes());
+  })();
   window.render = function () {
     origRender();
     try {
-      ['view', 'login', 'topbar', 'sidebar', 'modalRoot', 'toasts'].forEach(function (id) { scrub(D.getElementById(id)); });
+      var clock = D.getElementById('czClock');
+      if (clock) clock.textContent = 'LÚC ' + CLOCK;
+      /* Tài liệu bàn giao kể lại lịch sử vòng 1–9, trong đó chữ MẪU là sự thật
+         của prototype: KHÔNG được scrub thành THẬT/KV. Các modal khác (xác
+         nhận mạnh…) vẫn scrub như thường. */
+      var inDocs = !!D.getElementById('docsTitle');
+      ['view', 'login', 'topbar', 'sidebar', inDocs ? null : 'modalRoot', 'toasts']
+        .forEach(function (id) { if (id) scrub(D.getElementById(id)); });
     } catch (e) {}
   };
   WRAPPED = true;
@@ -912,12 +941,18 @@
       var t = n.nodeValue;
       if (!/MẪU|mô phỏng|\(mẫu\)/i.test(t)) continue;
       n.nodeValue = t
-        .replace(/DỮ LIỆU MẪU/g, 'DỮ LIỆU THẬT · KV')
+        .replace(/DỮ LIỆU MẪU/g, 'DỮ LIỆU THẬT')
+        /* Bỏ ĐUÔI "· MẪU" thay vì đổi thành "· KV": trước đây mọi slug trong
+           Thư viện hiện "bake-love-feelings · KV", mọi eyebrow hiện
+           "NỘI DUNG · KV", mọi card hiện "tối đa 8 · KV" — trông như dữ liệu
+           bị lệch/kèm rác. Prototype suffix không có ý nghĩa ở bản thật. */
+        .replace(/\s*·\s*MẪU/g, '')
         .replace(/\s*\(mô phỏng\)/g, '')
         .replace(/mô phỏng/g, 'thật')
-        .replace(/\(mẫu\)/g, '(KV)')
-        .replace(/\bMẪU\b/g, 'KV')
-        .replace(/\bmẫu\b/g, 'KV');
+        .replace(/\s*\(mẫu\)/g, '')
+        .replace(/\bMẪU\b/g, 'THẬT');
+      /* Cố tình KHÔNG sửa chữ "mẫu" viết thường: đó có thể là tên bộ / tên tác
+         giả THẬT trong KV. Chỉ xử lý nhãn prototype viết hoa. */
     }
   }
 

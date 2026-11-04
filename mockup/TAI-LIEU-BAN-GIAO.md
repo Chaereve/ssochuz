@@ -375,3 +375,19 @@ Owner yêu cầu gỡ hoàn toàn bản sao tạm: chỉ còn **`admin.html` t�
 | **Dọn dẹp** | Xoá tệp bản sao tạm, luật rewrite `/admin → mockup`, header và mọi kỳ vọng test/docs về bản sao. `/admin` giờ do Cloudflare Pages tự phục vụ `admin.html`; `/admin.html` và `/admin/` vẫn 308 về `/admin`; `/admin-v2` + `/admin-legacy` về `/admin`; `/admin-mockup` vẫn là prototype offline. |
 
 **Kiểm chứng vòng 10:** `npm run build` đạt · toàn bộ `npm test` đạt · `node --check admin-real.js` đạt · jsdom bấm thật các luồng ghi với Worker giả (tạo bộ, sửa slug, lưu chương, xoá, xử lý báo lỗi) · 0 lỗi JS · 0 secret trong tệp client · dev server `/admin` = `admin.html` mới, bản sao cũ = 404. Sau phản hồi lỗi đăng nhập: bỏ header `cache-control`, thêm bài kiểm mô phỏng preflight bị từ chối (tái tạo lỗi ⇒ 24 kiểm đỏ, bản sửa ⇒ 0 lỗi).
+
+---
+
+## 14 · SỬA RAIL THU GỌN VÀ NHÃN GIAO DIỆN (VÒNG 11)
+
+Owner gửi 3 ảnh chụp `https://ssochuz.pages.dev/admin` với nhận xét **"nhiều mục bị lệch icon"** và **"phần sidebar thu gọn trong admin panel bị lỗi"**. Soi ra 3 nguyên nhân chỉ có ở bản phát hành; bản prototype tĩnh vẫn giữ nguyên thiết kế đã duyệt ở vòng 1–9.
+
+| Lỗi | Nguyên nhân | Sửa |
+| --- | --- | --- |
+| **Lệch trục icon** | Khi thu gọn, `.brand` vẫn giữ chấm thương hiệu `.dot` sát mép trái và nút thu gọn bị đẩy sang mép phải bởi `style="margin-left:auto"` **inline** (CSS thường không override được inline). Hai icon này không trùng trục với 13 icon nav bên dưới. | Đổi inline style thành class `.collapse-btn`; ẩn `.dot` và `.logo` khi `.app.collapsed`; nút lấy `margin:0 auto`. Brand lúc thu gọn còn **đúng một icon**, canh giữa 37,5px như mọi icon nav. `aria-label` đổi `Thu gọn` / `Mở rộng` theo trạng thái. |
+| **Icon bị đẩy trái** | `.side-scroll` hiện thanh cuộn kiểu Windows (~15px), làm content box hẹp lại nên `justify-content:center` canh icon lệch ~7,5px sang trái so với rail 76px. | `scrollbar-width:none` + `::-webkit-scrollbar` ẩn (vẫn cuộn bằng wheel/cảm ứng), `padding:10px`, `nav-item min-height:36px`, nhịp nhóm `8px` để 13 tab vừa màn laptop. Drawer `≤900px` và `force-drawer` mở lại chấm, chữ, thanh cuộn và padding như cũ. |
+| **Nhãn dư `KV`** | `scrub()` runtime thay chữ `MẪU` bằng `KV` nên đuôi prototype dính vào dữ liệu thật: slug `bake-love-feelings · KV`, eyebrow `NỘI DUNG · KV`, card `tối đa 8 · KV`. | `tools/build_admin_html.mjs` **cắt đuôi** prototype ở bản sinh thay vì đổi chữ; placeholder chứa "mẫu" đổi thành gợi ý thật; meta lấy giờ thật qua `#czClock`. `scrub()` cố tình **KHÔNG** sửa chữ "mẫu" viết thường (có thể là tên bộ thật trong KV) và bỏ qua tài liệu lịch sử (`#docsTitle`). |
+| **Số liệu giả** | `statsHTML()` có hằng `18 / 8.420 / 1.161 / 30`, `doctorHTML()` có `248 / 0 / 4 / 2`, card "Phiếu theo chương" có 4 dòng bịa — tất cả nằm cứng trong mockup. | Bản phát hành tính từ `state.books`, `SAMPLE_STATS`, `SAMPLE_ISSUES` và `state.votes` (nạp từ `/api/admin/voters`); không có phiếu thì hiện trạng rỗng. `hydrate()` dọn mảng mẫu **đúng một lần** để một GET con lỗi không bao giờ lộ dữ liệu giả như thể đó là KV thật. |
+| **Kiểm thử** | Không có bài nào khoá trục icon của rail mới. | Thêm `tests/t_admin_rail.js` (54 kiểm): CSS tĩnh ở cả prototype lẫn bản sinh, tính toán trục icon, jsdom bấm thật nút thu gọn rồi đếm icon/tooltip, đối chiếu nhãn và số liệu giả; đưa vào `npm test`. |
+
+**Kiểm chứng vòng 11:** `npm run build` đạt · toàn bộ `npm test` đạt · `tests/t_admin_rail.js` 50/50 · `tests/t_admin_real.js` 0 lỗi · 49 biến `:root` / 0 màu literal / 0 emoji giữ nguyên · 13 tab / 5 nhóm không đổi.
