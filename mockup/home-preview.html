@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mockup preview · Vòng 16 · ssochuz</title>
+<link rel="icon" type="image/png" href="/ssochuz.png?v=1">
+<!-- Dùng CHÍNH stylesheet đã sửa ở vòng 16 nên các ô Ranking / Đáng xem /
+     Chuyển thể trong bản xem thử này hiển thị đúng kiểu sẽ lên production. -->
+<link rel="stylesheet" href="/cz.css?v=20261102r121">
+<style>
+/* Chỉ dành cho khung mockup — KHÔNG nằm trong cz.css phát hành. */
+.pv-bar { max-width: var(--maxw); margin: 0 auto; padding: 22px 24px 0; }
+.pv-bar h1 { font-family: var(--font-head); font-size: 27px; line-height: 1.2; margin: 0 0 6px; }
+.pv-bar p { color: var(--mut); font-size: 13px; line-height: 1.6; margin: 0; }
+.pv-tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 4px; }
+.pv-tag { border: 1px solid var(--bd); border-radius: 99px; padding: 5px 11px;
+  font-size: 11.5px; color: var(--mut); background: var(--surf); }
+.pv-tag b { color: var(--acc); font-weight: 700; }
+.pv-note { max-width: var(--maxw); margin: 10px auto 0; padding: 0 24px;
+  color: var(--dim); font-size: 11.5px; line-height: 1.6; }
+/* Sạp báo thu nhỏ: mô phỏng đúng thông số desktop mới (bìa 176–244px). */
+.pv-hero { max-width: var(--maxw); margin: 18px auto 0; padding: 0 24px; }
+.pv-hero-in { position: relative; display: grid; grid-template-columns: minmax(0,.84fr) minmax(0,1.16fr);
+  gap: 26px; align-items: center; min-height: 340px; padding: 18px 24px 12px;
+  border: 1px solid var(--bd); border-radius: var(--r); background: var(--hb-void); overflow: hidden; }
+.pv-hero-copy { color: var(--hb-fg); }
+.pv-hero-copy .k { display: block; font-family: var(--font-mono, monospace); font-size: 10px;
+  letter-spacing: .16em; text-transform: uppercase; color: var(--acc); margin-bottom: 12px; }
+.pv-hero-copy h2 { font-family: var(--font-head); font-size: clamp(30px,3vw,44px); line-height: 1.15; margin: 0 0 12px; }
+.pv-hero-copy p { color: var(--hb-mut); font-size: 13px; line-height: 1.6; margin: 0 0 16px; max-width: 40ch; }
+.pv-cta { display: inline-block; padding: 9px 16px; border-radius: 99px; background: var(--acc);
+  color: var(--bg, #14110e); font-size: 12px; font-weight: 700; text-decoration: none; }
+.pv-fan { position: relative; height: calc(clamp(176px,18vw,244px) * 1.64 + 50px); }
+.pv-fan img { position: absolute; width: clamp(176px,18vw,244px); aspect-ratio: 2/3;
+  object-fit: cover; border-radius: 6px; left: 50%; top: 50%;
+  box-shadow: 0 18px 44px rgba(0,0,0,.55); }
+.pv-fan img:nth-child(1){ transform: translate(-50%,-50%) translateX(-2.1em) rotate(-11deg) scale(.8); opacity:.72; }
+.pv-fan img:nth-child(2){ transform: translate(-50%,-50%) translateX(-1.1em) rotate(-7deg) scale(.9); opacity:.86; }
+.pv-fan img:nth-child(3){ transform: translate(-50%,-50%); z-index:3; }
+.pv-fan img:nth-child(4){ transform: translate(-50%,-50%) translateX(1.1em) rotate(7deg) scale(.9); opacity:.86; }
+.pv-fan img:nth-child(5){ transform: translate(-50%,-50%) translateX(2.1em) rotate(11deg) scale(.8); opacity:.72; }
+.pv-measure { display: flex; align-items: center; gap: 12px; margin: 8px 2px 0;
+  font-size: 11px; color: var(--dim); }
+.pv-measure i { display: block; height: 1px; background: var(--bd); flex: 1 1 auto; }
+.pv-measure b { color: var(--acc); font-variant-numeric: tabular-nums; }
+@media (max-width: 900px){ .pv-hero-in { grid-template-columns: minmax(0,1fr); }
+  .pv-fan { height: 300px; } .pv-fan img { width: 150px; } }
+</style>
+</head>
+<body class="hpage">
+<div class="pv-bar">
+  <h1>Vòng 16 · bản xem thử trang chủ</h1>
+  <p>Bản mockup này nạp dữ liệu thật từ <code>/data/registry.json</code> và dùng chính <code>/cz.css</code> vừa chỉnh, nên hình dáng các ô bên dưới là hình dáng sẽ lên web. Bấm “Xem thêm ›” ở Chuyển thể Series để mở trang liệt kê toàn bộ bộ đã chọn.</p>
+  <div class="pv-tags">
+    <span class="pv-tag"><b>01</b> · Sạp báo nhỏ hơn trên desktop</span>
+    <span class="pv-tag"><b>02</b> · Ranking / Đáng xem thành 2 ô kiểu “Hôm Nay Xem Gì”</span>
+    <span class="pv-tag"><b>03</b> · Nút Xem thêm ở Chuyển thể Series</span>
+    <span class="pv-tag"><b>04</b> · Thông báo, lý do slide, ghi chú lịch hiện đúng dữ liệu admin</span>
+  </div>
+</div>
+<p class="pv-note">Ghi chú: lượt đọc / điểm sao lấy từ KV lúc chạy thật. Bản preview dùng số chương và năm xuất bản có thật trong registry để không bịa số liệu.</p>
+
+<div class="pv-hero">
+  <div class="pv-hero-in">
+    <div class="pv-hero-copy">
+      <span class="k">Bộ bài · sạp báo</span>
+      <h2 id="pvHeroTitle">Đang tải…</h2>
+      <p id="pvHeroDesc">Năm bìa xoè thành quạt, bấm để đổi truyện. Chỉ thu nhỏ ở màn hình ≥1024px; điện thoại giữ nguyên kích thước cũ.</p>
+      <a class="pv-cta" href="/">Về trang chủ ›</a>
+    </div>
+    <div class="pv-fan" id="pvFan" aria-hidden="true"></div>
+  </div>
+  <div class="pv-measure"><span>desktop ≥1024px · bìa <b>176–244px</b> (cũ 196–292px) · khung <b>~466px</b> (cũ ~561px)</span><i></i><span>mobile giữ nguyên</span></div>
+</div>
+
+<!-- Thông báo thật: công tắc trong Homepage CMS bật thì web hiện dòng này -->
+<div class="announce" id="pvAnnounce" role="note" hidden></div>
+
+<main>
+<div class="wrap" style="padding-top:26px">
+  <div class="rankpair">
+    <div class="fsec rankbox" id="bxh" aria-label="Xếp hạng">
+      <div class="sechead">
+        <h2>Ranking</h2>
+        <span class="right"><div class="tabs sm"><button class="on">Lượt đọc</button><button>Lượt thích</button><button>Tuần</button></div></span>
+      </div>
+      <div class="rbody"><div id="rank" aria-live="polite"></div></div>
+    </div>
+    <div class="fsec rankbox worth-section" id="dang-xem" aria-label="Đáng xem">
+      <div class="sechead"><h2>Đáng xem</h2><a class="btm" href="/#thu-vien">Xem thêm ›</a></div>
+      <div id="worthRail" class="rbody"></div>
+    </div>
+  </div>
+
+  <section class="sec" id="bien-tap">
+    <div class="sechead">
+      <h2>Chuyển thể Series</h2>
+      <a class="btm" href="/chuyen-the">Xem thêm ›</a>
+    </div>
+    <div class="wcards" id="editRail"></div>
+    <p class="pv-note" id="pvSeriesNote" style="padding:12px 0 0"></p>
+  </section>
+</div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (s) { return document.querySelector(s); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  }); };
+  function row(n, i, value, sub) {
+    return '<a class="rank' + (i === 0 ? ' wrank' : '') + '" href="/truyen/' + esc(n.slug) + '/">' +
+      '<span class="n' + (i < 3 ? ' top t' + (i + 1) : '') + '">' + (i + 1) + '</span>' +
+      '<span class="rk-th">' + (n.thumb ? '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') + '</span>' +
+      '<span class="tt"><b>' + esc(n.title) + '</b><span>' + esc(sub) + '</span></span>' +
+      '<span class="v">' + value + '</span><i class="bar" aria-hidden="true"></i></a>';
+  }
+  fetch('/data/registry.json', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (reg) {
+    var lib = (reg.lib || []).filter(function (n) { return n && n.slug && n.thumb; });
+    var by = {}; (reg.lib || []).forEach(function (n) { by[n.slug] = n; });
+    /* hero: 5 bìa thật, không dùng ảnh mẫu */
+    var picks = lib.slice(0, 5);
+    $('#pvFan').innerHTML = picks.map(function (n) { return '<img src="' + esc(n.thumb) + '" alt="">'; }).join('');
+    if (picks[2]) {
+      $('#pvHeroTitle').textContent = picks[2].title;
+      $('#pvHeroDesc').textContent = (picks[2].author ? picks[2].author + ' · ' : '') +
+        (picks[2].year || '') + ' · ' + (picks[2].syn || '').slice(0, 110);
+    }
+    /* banner: chỉ hiện khi chủ trang BẬT trong Homepage CMS — bản preview giữ ẩn */
+    var ann = (reg.settings && reg.settings.announcement) || {};
+    if (ann.enabled && String(ann.text || '').trim()) {
+      var el = $('#pvAnnounce');
+      el.innerHTML = '<span class="an-dot" aria-hidden="true"></span><span class="an-tx">' + esc(ann.text) + '</span>';
+      el.hidden = false;
+    }
+    /* Ranking: 5 bộ có chương, số chương THẬT (không bịa lượt đọc) */
+    var ranked = lib.filter(function (n) { return Number(n.chapters) > 0; })
+      .sort(function (a, b) { return (Number(b.chapters) || 0) - (Number(a.chapters) || 0); }).slice(0, 5);
+    $('#rank').innerHTML = ranked.map(function (n, i) {
+      return row(n, i, '<b>' + (Number(n.chapters) || 0) + '</b> chương', n.author || n.couple || '');
+    }).join('');
+    /* Đáng xem: 5 bộ khác, phụ đề là năm + tình trạng thật */
+    var worth = lib.filter(function (n) { return ranked.indexOf(n) < 0; }).slice(0, 5);
+    $('#worthRail').innerHTML = worth.map(function (n, i) {
+      return row(n, i, '<b>' + esc(n.year || '—') + '</b> năm', n.status || 'Đang cập nhật');
+    }).join('');
+    /* Chuyển thể Series: đúng 8 tấm như trang chủ, từ editorChoice thật */
+    var raw = reg.editorChoice || (reg.settings && reg.settings.editorChoice) || [];
+    var chosen = raw.map(function (x) { return by[typeof x === 'string' ? x : (x && x.slug)]; }).filter(Boolean);
+    $('#editRail').innerHTML = chosen.slice(0, 8).map(function (n) {
+      return '<a class="wcard" href="/truyen/' + esc(n.slug) + '/">' +
+        '<img src="' + esc(n.thumb) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' +
+        '<span class="wsh" aria-hidden="true"></span><span class="wt">' +
+        '<span class="wk">Chuyển thể' + (n.year ? ' · ' + esc(n.year) : '') + '</span>' +
+        '<span class="wn">' + esc(n.title) + '</span>' +
+        '<span class="wm">' + (Number(n.chapters) || 0) + ' chương · ' + esc(n.status || '') + '</span>' +
+        '</span></a>';
+    }).join('');
+    $('#pvSeriesNote').textContent = 'Trang chủ hiện 8 / ' + chosen.length + ' bộ đã chọn. Nút “Xem thêm ›” mở /chuyen-the liệt kê toàn bộ ' + chosen.length + ' bộ.';
+  }).catch(function (e) {
+    $('#pvHeroTitle').textContent = 'Không đọc được dữ liệu thật';
+    $('#pvHeroDesc').textContent = String(e && e.message || e);
+  });
+})();
+</script>
+</body>
+</html>

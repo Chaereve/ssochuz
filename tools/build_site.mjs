@@ -34,7 +34,7 @@ for (const dir of ['data/book', 'truyen']) {
    riêng, KHÔNG gộp vào cz-app.js — trang khác khỏi tải thêm. */
 const JS = ['cz-app.js', 'cz-auth.js', 'cz-stickers.js', 'cz-personal.js', 'cz-home.js', 'cz-story.js', 'cz-people.js', 'cz-space.js',
   'cz-react.js', 'cz-dice.js', /* 2026-10-29: hero banner dùng chung (chỉ trang chủ nạp) */
-  'cz-hero.js'];
+  'cz-hero.js', 'cz-series.js'];
 const CSS = ['cz.css'];
 
 const kb = (n) => (n / 1024).toFixed(1) + ' kB';

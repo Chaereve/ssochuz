@@ -22,6 +22,10 @@
 <header id="hdr"></header>
 
 <main>
+  <!-- Thông báo: admin Homepage CMS ghi settings.announcement lên KV; cz-home.js
+       hiện khi bật. Rỗng/ẩn mặc định ⇒ không có dữ liệu mẫu trên web. -->
+  <div class="announce" id="announce" role="note" hidden></div>
+
   <!-- ================= HERO LANDING ================= -->
   <!-- VÁ (2026-10-29): hero là “BỘ BÀI” dựng bởi component dùng chung
        `CZ.heroBanner` (src/cz-hero.js) — 5 bìa xoè thành quạt có tâm, bấm bìa để
@@ -63,9 +67,10 @@
              cùng dẫn một chỗ. -->
       </div>
 
-      <!-- Ranking và Đáng xem: HAI dải riêng, mỗi dải chiếm trọn bề ngang như
-           “Mới cập nhật”, không còn nằm chung một khung hai cột và không dính
-           nhau bằng đường tóc dọc. -->
+      <!-- Vòng 16: Ranking và Đáng xem thành HAI Ô song song, lấy cảm hứng từ
+           khung "Hôm Nay Xem Gì" (số lớn · bìa nhỏ · phụ đề · con số bên phải)
+           thay cho hai dải full-width có đường kẻ hồng chạy dài. -->
+      <div class="rankpair">
       <div class="fsec rankbox" id="bxh" aria-label="Xếp hạng">
         <div class="sechead tilehead">
           <h2>Ranking</h2>
@@ -92,11 +97,13 @@
         </div>
         <div id="worthRail" class="rbody"></div>
       </div>
+      </div><!-- /.rankpair -->
 
     <!-- ============ CHUYỂN THỂ SERIES ============ -->
     <section class="sec fade" id="bien-tap" hidden>
       <div class="sechead">
         <h2>Chuyển thể Series</h2>
+        <a class="btm" href="/chuyen-the">Xem thêm ›</a>
       </div>
       <div class="wcards" id="editRail"></div>
     </section>

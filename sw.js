@@ -12,7 +12,7 @@
    ⚠ MỖI LẦN ĐỔI ?v= TĨNH (cz.css/cz-*.js): sửa cả PRECACHE dưới đây + tăng
    CZ_SW_VER → trình duyệt tự tải SW mới, hiện “Đã có bản cập nhật — tải lại”.
    ========================================================================== */
-var CZ_SW_VER = '20261102r121';
+var CZ_SW_VER = '20261104v16';
 
 /* kho shell theo version (update là thay kho mới, xoá kho cũ);
    kho trang/API/ảnh KHÔNG theo version để dữ liệu offline còn lại sau update */
@@ -55,6 +55,9 @@ var PRECACHE = [
   '/cz-dice.js?v=20261102r121',
   /* 2026-10-29: hero banner dùng chung (component của khối “Nổi bật hôm nay”) */
   '/cz-hero.js?v=20261029perf1',
+  /* vòng 16: trang Chuyển thể Series (nút Xem thêm) + script dựng trang đó */
+  '/chuyen-the',
+  '/cz-series.js?v=20261102r121',
   '/stickers/sso/full/sso-brick.webp',
   '/stickers/sso/full/sso-love-it.webp',
   '/stickers/sso/full/sso-cry-flood.webp',

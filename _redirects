@@ -59,6 +59,10 @@
 /reader        /truyen   200
 /reader/       /truyen   200
 /reader.html   /truyen   200
+# Vòng 16: trang liệt kê TOÀN BỘ bộ Chuyển thể Series (nút Xem thêm).
+# Đích là URL sạch, KHÔNG trỏ về .html (sẽ vòng lặp 308 như /truyen cũ).
+/chuyen-the.html   /chuyen-the   200
+/chuyen-the/       /chuyen-the   200
 /my-space/    /my-space    200
 /profile/     /profile     200
 # /admin = admin.html (giao diện thiết kế MỚI + admin-real.js ghi KV thật).

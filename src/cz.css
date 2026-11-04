@@ -4190,3 +4190,102 @@ img.cmt-ava { border: 0; background: transparent; }
    máy chưa có tiến độ (chỉ có “Bắt đầu từ đâu?”), 421px khi có thẻ Đọc tiếp.
    400px là mốc chung — máy đã có thẻ thì nội dung thật cao hơn nên không hụt. */
 #doc-tiep { min-height: 400px; }
+
+/* ==========================================================================
+   VÒNG 16 · TRANG CHỦ (2026-11-04)
+   --------------------------------------------------------------------------
+   1. "Sạp báo" (hero BỘ BÀI) thu nhỏ ~20% CHỈ ở desktop ≥1024px. Tablet và
+      điện thoại giữ nguyên các luật cũ ở trên — owner dặn rõ "trên deskstop".
+   2. Ranking + Đáng xem bỏ dải full-width + đường kẻ hồng dài (ảnh hiện trạng),
+      chuyển sang HAI Ô song song kiểu "Hôm Nay Xem Gì" của glvietsubz.net:
+      số thứ tự mảnh lớn, bìa dọc nhỏ, tên + phụ đề, con số lệch phải. Lấy cảm
+      hứng bố cục, KHÔNG chép màu/chữ/ảnh của trang khác.
+   3. Banner thông báo: admin Homepage CMS đã ghi settings.announcement từ
+      vòng 14 nhưng web chưa từng đọc ⇒ công tắc vô tác dụng. Vòng 16 đọc và
+      hiện đúng nội dung/link thật (không có dữ liệu mẫu).
+   Mọi màu mới đều lấy từ biến :root / color-mix, không thêm màu literal.
+   ========================================================================== */
+
+/* ---- 16.1 Sạp báo gọn hơn trên desktop ---------------------------------- */
+@media (min-width: 1024px) {
+  .hero .fan { --cover-w: clamp(176px, 18vw, 244px); }
+  /* chiều cao khung = đúng chiều cao quạt, không chừa dư gây khoảng trống */
+  .hero .hb-grid { min-height: calc(clamp(176px, 18vw, 244px) * 1.64 + 50px);
+    gap: 26px; padding-top: 18px; padding-bottom: 12px; }
+  /* 50px đệm dưới quạt + 30px padding lưới + 1px viền = 81px */
+  .hero { min-height: calc(clamp(176px, 18vw, 244px) * 1.64 + 81px); }
+  .hero h1 { font-size: clamp(30px, 3vw, 44px); }
+}
+
+/* ---- 16.2 Thông báo từ Homepage CMS ------------------------------------- */
+.announce[hidden] { display: none !important; }
+.announce { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  max-width: var(--maxw); margin: 18px auto 0; padding: 10px 16px;
+  border: 1px solid color-mix(in srgb, var(--acc) 34%, var(--bd));
+  border-radius: var(--r-sm); background: var(--surf);
+  color: var(--txt); font-size: 13px; line-height: 1.5; }
+.announce .an-dot { flex: 0 0 auto; width: 7px; height: 7px;
+  border-radius: 50%; background: var(--acc); }
+.announce .an-tx { flex: 1 1 auto; min-width: 0; }
+.announce .an-link { flex: 0 0 auto; color: var(--acc); font-weight: 650;
+  text-decoration: none; white-space: nowrap; }
+.announce .an-link:hover, .announce .an-link:focus-visible { text-decoration: underline; }
+
+/* ---- 16.3 Ranking / Đáng xem · hai ô song song --------------------------- */
+.rankpair { display: grid; grid-template-columns: minmax(0, 1.06fr) minmax(0, 1fr);
+  gap: 16px; align-items: start; min-width: 0; }
+/* .fsec:first-child chỉ bỏ padding-top cho ô đầu; trong cặp này cả hai phải
+   cùng mép trên nên triệt tiêu padding của ô thứ hai. */
+.rankpair > .fsec { padding-top: 0; gap: 8px; }
+.rankpair > .fsec[hidden] { display: none !important; }
+.rankpair > .rankbox { min-width: 0; padding: 14px 16px 4px;
+  background: var(--surf); border: 1px solid var(--bd);
+  border-radius: var(--r); box-shadow: var(--sh-card); }
+.rankpair .sechead { align-items: center; flex-wrap: wrap; gap: 8px;
+  margin-bottom: 2px; padding-bottom: 10px; border-bottom: 1px solid var(--bd); }
+.rankpair .sechead h2 { font-size: 19px; }
+.rankpair .sechead .right { gap: 6px; padding-bottom: 0; }
+.rankpair .rbody { gap: 0; }
+.rankpair .rank { grid-template-columns: 38px 52px minmax(0, 1fr) auto;
+  gap: 12px; padding: 9px 2px 10px; border-radius: 0;
+  border-bottom: 1px solid var(--bd); background: transparent; }
+.rankpair .rank:last-child { border-bottom: 0; padding-bottom: 9px; }
+.rankpair .rank .n { font-size: 30px; font-weight: 400; line-height: 1;
+  color: var(--dim); }
+.rankpair .rank .n.t1 { font-size: 34px; }
+.rankpair .rank .n.top { color: var(--acc); }
+.rankpair .rank .rk-th { width: 52px; height: 76px; border-radius: 4px; }
+.rankpair .rank .tt b { display: -webkit-box; -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2; overflow: hidden; white-space: normal;
+  font-size: 13.5px; line-height: 1.35; }
+.rankpair .rank .tt span { font-size: 11px; }
+.rankpair .rank .v { font-size: 11px; }
+/* bỏ thanh hồng chạy dài dưới mỗi hàng: thay bằng một đường tóc ngăn hàng */
+.rankpair .rank .bar { display: none !important; }
+/* các luật hover/animation cũ có !important ⇒ triệt tiêu tại đây luôn */
+.rankpair .rank:hover { transform: none !important; box-shadow: none;
+  background: color-mix(in srgb, var(--acc) 5%, transparent);
+  border-color: var(--bd); }
+.rankpair .rank:hover .n.top { transform: none !important; }
+.rankpair .rank:hover .rk-th { transform: none !important; box-shadow: none; }
+.rankpair .rank:hover .tt b { transform: none !important; }
+@media (max-width: 900px) { .rankpair { grid-template-columns: minmax(0, 1fr); gap: 14px; } }
+@media (max-width: 560px) {
+  .rankpair .rank { grid-template-columns: 32px 46px minmax(0, 1fr); gap: 10px; }
+  .rankpair .rank .n { grid-row: 1 / span 2; font-size: 26px; }
+  .rankpair .rank .rk-th { grid-column: 2; grid-row: 1 / span 2; width: 46px; height: 66px; }
+  .rankpair .rank .tt { grid-column: 3; }
+  .rankpair .rank .v { grid-column: 3; justify-self: start; white-space: normal; }
+}
+
+/* ---- 16.4 Trang "Chuyển thể Series" (nút Xem thêm) ----------------------- */
+.series-page { max-width: var(--maxw); margin: 0 auto; padding: 26px 24px 72px; }
+.series-page .sechead { margin-bottom: 18px; }
+.series-page .crumb { margin-bottom: 18px; }
+.series-lead { color: var(--mut); font-size: 13px; line-height: 1.6;
+  margin: 0 0 20px; }
+.series-page .grid { grid-template-columns: repeat(auto-fill, minmax(154px, 1fr)); }
+.series-page h1.series-title { font-family: var(--font-head); font-size: 30px;
+  line-height: 1.2; letter-spacing: -.018em; }
+@media (max-width: 560px) { .series-page { padding: 20px 16px 56px; }
+  .series-page h1.series-title { font-size: 24px; } }
