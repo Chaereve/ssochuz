@@ -2,16 +2,24 @@
    build_admin_html.mjs · sinh admin.html (GIAO DIỆN QUẢN TRỊ DUY NHẤT)
    ----------------------------------------------------------------------------
    Nguồn thiết kế: mockup/ssochuz-admin-mockup.html (một file HTML tự chứa,
-   13 tab / 5 nhóm / design system). Bản sinh GIỮ NGUYÊN toàn bộ CSS và hàm
-   render, chỉ thêm:
+   13 tab / 5 nhóm / design system). Bản sinh GIỮ NGUYÊN cấu trúc CSS và các
+   hàm render, rồi áp 3 nhóm biến đổi:
 
      1. cầu nối window.CZ_MOCKUP ngay trước </script> của script inline;
-     2. <script src="/admin-real.js?v=<sha1>"> nạp lớp đọc/ghi KV thật;
-     3. đổi nhãn DỮ LIỆU MẪU → DỮ LIỆU THẬT, bỏ link sang bản admin cũ,
-        đổi <title>.
+        <script src="/admin-real.js?v=<sha1>"> nạp lớp đọc/ghi KV thật;
+        đổi <title>, favicon, bỏ link sang bản admin cũ.
+     2. tools/admin_prod_replacements.json (vòng 12): bảng KHÁC BIỆT giữa
+        prototype và bản phát hành — gỡ bảng điều khiển demo, thay 13 mảng
+        SAMPLE_* bằng cấu trúc rỗng, đổi số cứng thành số đếm từ KV, sửa
+        placeholder/aria-label/trạng rỗng/toast, thêm guard KV rỗng. Build
+        FAIL NGAY nếu một chuỗi nguồn biến mất do mockup đổi tay.
+     3. scrubProto(): dọn nốt cụm prototype trong mã JS còn sót (kể cả handler
+        bị lớp KV chặn), NHƯNG tách riêng khối DOCS_HTML để không ghi đè tài
+        liệu lịch sử các vòng (chữ MẪU ở đó là sự thật của bản thiết kế).
 
-   File mockup gốc KHÔNG bị sửa: mở double-click vẫn là prototype tĩnh, không
-   gọi Worker. Chạy tự động từ tools/build_admin.mjs (npm run build).
+   File mockup gốc KHÔNG bị xoá nội dung thiết kế: mở double-click vẫn là
+   prototype tĩnh MẪU, không gọi Worker. Chạy tự động từ tools/build_admin.mjs
+   (npm run build).
    ========================================================================== */
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -118,6 +126,52 @@ html = html
   .replace("ph:'Ghi chú lịch mẫu'", "ph:'Ghi chú lịch'")
   .replace('aria-label="Nội dung chương mẫu"', 'aria-label="Nội dung chương"')
   .replace('title="Ngày mẫu: ', 'title="Ngày: ');
+
+/* ----------------------------------------------------------------------------
+   BẢNG KHÁC BIỆT PROTOTYPE → BẢN PHÁT HÀNH (vòng 12)
+   ----------------------------------------------------------------------------
+   Owner rà lại toàn bộ /admin và hỏi "sao vẫn còn vài chỗ tạo lúc demo
+   mockup?". Ngoài nhãn, prototype còn có: nguyên bảng điều khiển demo (nút
+   tròn góc dưới + aside), chip topbar cho ĐỔI GIẢ trạng thái kết nối/quota,
+   số liệu cứng (3 báo lỗi / 2 spam / 5 khoá / 18.400 lượt đọc / 248 book…),
+   placeholder và aria-label chứa chữ "mẫu". Tất cả nằm trong
+   tools/admin_prod_replacements.json để dễ đối chiếu; build FAIL NGAY nếu
+   mockup đổi làm một chuỗi nguồn biến mất (tránh vá sót như trước). */
+const REPL = JSON.parse(readFileSync(path.join(ROOT, 'tools', 'admin_prod_replacements.json'), 'utf8'));
+for (const r of REPL) {
+  const before = html;
+  html = r.re
+    ? html.replace(new RegExp(r.from, r.flags || 'g'), r.to)
+    : html.split(r.from).join(r.to);
+  if (html === before && !r.optional) {
+    throw new Error('build_admin_html: mẫu prototype không còn khớp, cần rà lại → ' +
+      String(r.from).slice(0, 90) + (r.note ? ' (' + r.note + ')' : ''));
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   Vòng 12 · DỌN NỐT CÁC CỤM PROTOTYPE TRONG MÃ JS (ngoài khối tài liệu).
+   ----------------------------------------------------------------------------
+   Rất nhiều handler của prototype bị admin-real.js chặn trước khi chạy
+   (REAL_CLICK / change listener), nên không bao giờ hiện ra — nhưng để lại
+   hàng chục câu "… mẫu", "MẪU.", "(mô phỏng)" trong source. Owner yêu cầu rà
+   kĩ TOÀN BỘ trang, nên dọn cả mã chết. KHỐI DOCS_HTML được tách ra và giữ
+   nguyên: đó là tài liệu lịch sử các vòng, chữ MẪU ở đó là sự thật của bản
+   thiết kế, không phải dữ liệu giả lọt vào giao diện. */
+const DOCS_BLOCK = /const DOCS_HTML =[\s\S]*?\n'<\/ul><\/div>';/;
+const dm = html.match(DOCS_BLOCK);
+if (!dm) throw new Error('build_admin_html: không xác định được khối DOCS_HTML');
+function scrubProto(t) {
+  return t
+    .replace(/[ \t]*MẪU\b\.?/g, '')
+    .replace(/[ \t]*mẫu\b/g, '')
+    .replace(/[ \t]*\(mô phỏng[^)]*\)/g, '')
+    .replace(/\bmô phỏng\b/g, 'thật')
+    .replace(/[ \t]*Mockup:[ \t]*/g, '')
+    .replace(/[ \t]*\(minh hoạ\)/gi, '');
+}
+html = scrubProto(html.slice(0, dm.index)) + dm[0] +
+       scrubProto(html.slice(dm.index + dm[0].length));
 
 /* Không còn link sang bản admin cũ; admin.html TỰ ghi KV. */
 html = html.replace(

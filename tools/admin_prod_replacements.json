@@ -1,0 +1,507 @@
+[
+ {
+  "from": "</head>",
+  "to": "<!-- Bản phát hành: gỡ hoàn toàn bảng điều khiển prototype. -->\n</head>",
+  "note": "không còn CSS/nút/aside demo"
+ },
+ {
+  "from": "<button id=\"demoToggle\" class=\"demo-toggle\" data-act=\"demo\" aria-expanded=\"false\" aria-controls=\"demo\" aria-label=\"Bảng điều khiển demo\" data-tip=\"Bảng điều khiển demo\"><span class=\"ic s\" data-icon=\"gear\"></span></button>",
+  "to": "",
+  "note": "xoá nút tròn demo"
+ },
+ {
+  "from": "<aside id=\"demo\" class=\"demo\" hidden aria-label=\"Bảng điều khiển demo\"></aside>",
+  "to": "",
+  "note": "xoá aside demo"
+ },
+ {
+  "from": "'<button class=\"chip '+c[1]+'\" data-act=\"demo\" data-focus=\"conn\" data-tip=\"Đổi trạng thái kết nối trong bảng demo\"><span class=\"dot\"></span>'+esc(c[0])+'</button>'+",
+  "to": "'<span class=\"chip '+c[1]+'\"><span class=\"dot\"></span>'+esc(c[0])+'</span>'+",
+  "note": "chip trạng thái không còn mở bảng demo"
+ },
+ {
+  "from": "'<button class=\"quota '+q.tone+'\" data-act=\"demo\" data-focus=\"quota\" data-tip=\"Đổi mức quota trong bảng demo\">KV&nbsp;<b>'+esc(q.txt.replace('KV write ',''))+'</b></button>'+",
+  "to": "'<span class=\"quota '+q.tone+'\">KV&nbsp;<b>'+esc(q.txt.replace('KV write ',''))+'</b></span>'+",
+  "note": "chip quota không còn mở bảng demo"
+ },
+ {
+  "from": "<button class=\"btn sm ghost\" style=\"margin-left:auto\" data-act=\"demo\" data-focus=\"quota\">Đổi mức quota</button>",
+  "to": "",
+  "note": "bỏ nút Đổi mức quota"
+ },
+ {
+  "re": true,
+  "from": "function renderDemo\\(\\)\\{[\\s\\S]*?\\n\\}\\nfunction renderDemoContent\\(\\)\\{",
+  "to": "function renderDemo(){\n  /* BẢN PHÁT HÀNH: bảng điều khiển demo bị gỡ hoàn toàn. */\n  state.demoOpen=false;\n}\nfunction renderDemoContent(){",
+  "flags": "g",
+  "note": "renderDemo thành no-op"
+ },
+ {
+  "re": true,
+  "from": "function renderDemoContent\\(\\)\\{[\\s\\S]*?\\n\\}\\nfunction openPalette\\(\\)\\{",
+  "to": "function renderDemoContent(){ /* gỡ: nội dung chỉ có trong prototype */ }\nfunction openPalette(){",
+  "flags": "g",
+  "note": "xoá toàn bộ nội dung bảng demo"
+ },
+ {
+  "re": true,
+  "from": "const SAMPLE_BOOKS = \\[[\\s\\S]*?\\n\\};\\n\\n/\\* ={10}",
+  "to": "/* ----------------------------------------------------------------------------\n   BẢN PHÁT HÀNH: KHÔNG mang theo bản ghi prototype nào.\n   admin-real.js nạp lại các mảng này từ Cloudflare KV (hydrate / loadComments /\n   loadLog / loadStats). Giữ ĐÚNG cấu trúc để mọi hàm render chạy ngay cả khi\n   chưa cấu hình Worker hoặc KV đang rỗng. */\nconst SAMPLE_BOOKS = [];\nconst SAMPLE_METRICS = [\n  {n:'0',k:'Bộ truyện',s:'KV'},{n:'0',k:'Chương đã đăng',s:'KV'},\n  {n:'0',k:'Gắn 18+',s:'KV'},{n:'0',k:'Thiếu thông tin',s:'KV'},\n  {n:'0',k:'Quota ghi hôm nay',s:'KV'},{n:'0',k:'Lượt đọc KV hôm nay',s:'KV'}\n];\nconst SAMPLE_READS = [1];\nconst SAMPLE_COMMENTS = [];\nconst SAMPLE_REPORTS = [];\nconst SAMPLE_VOTES = [];\nconst SAMPLE_LOGS = [];\nconst SAMPLE_ISSUES = [];\nconst SAMPLE_CHAPTERS = [];\nconst SAMPLE_SLIDES = [];\nconst SAMPLE_SCHEDULE = [];\nconst SAMPLE_NOTIFS = [];\nconst SAMPLE_STATS = { reads:[], likes:[], voters:[], today:[] };\n\n/* ===========",
+  "flags": "g",
+  "note": "xoá 13 mảng dữ liệu giả (SAMPLE_*)"
+ },
+ {
+  "from": "picked:['b01','b05','b12']",
+  "to": "picked:[]",
+  "note": "bỏ id bộ mẫu"
+ },
+ {
+  "from": "savedAt:'20:40:12'",
+  "to": "savedAt:''",
+  "note": "bỏ mốc giờ giả"
+ },
+ {
+  "from": "savedAt='20:40:12'",
+  "to": "savedAt=''",
+  "note": "resetDemo không đặt lại giờ giả"
+ },
+ {
+  "from": "hpNote:'Lịch có thể thay đổi nếu có việc đột xuất.'",
+  "to": "hpNote:''",
+  "note": "bỏ ghi chú mẫu"
+ },
+ {
+  "from": "toast('Đã đặt lại toàn bộ trạng thái và dữ liệu mẫu.');",
+  "to": "toast('Đã đặt lại trạng thái giao diện.');",
+  "note": ""
+ },
+ {
+  "re": true,
+  "from": "editorSeed:'[^']*'",
+  "to": "editorSeed:'<p></p>'",
+  "flags": "g",
+  "note": "editor trống, nạp chương thật từ KV"
+ },
+ {
+  "from": "<div class=\"xs dim\">3 thông báo</div>",
+  "to": "<div class=\"xs dim\">Thông báo từ Cloudflare KV</div>",
+  "note": "bỏ số 3 cứng"
+ },
+ {
+  "from": "aria-label=\"Thông báo, 3 chưa đọc\"",
+  "to": "aria-label=\"Thông báo\"",
+  "note": ""
+ },
+ {
+  "from": "<span class=\"ndot\">3</span>",
+  "to": "<span class=\"ndot\">'+SAMPLE_NOTIFS.length+'</span>",
+  "note": "badge theo KV"
+ },
+ {
+  "from": "'<button data-act=\"go\" data-id=\"bao-loi\"><span class=\"n\">3</span><span class=\"k\">Báo lỗi chưa xử lý</span></button>'+",
+  "to": "'<button data-act=\"go\" data-id=\"bao-loi\"><span class=\"n\">'+state.reports.filter(function(x){return !x.done;}).length+'</span><span class=\"k\">Báo lỗi chưa xử lý</span></button>'+",
+  "note": "đếm thật"
+ },
+ {
+  "from": "'<button data-act=\"go\" data-id=\"binh-luan\"><span class=\"n\">2</span><span class=\"k\">Bình luận nghi spam</span></button>'+",
+  "to": "'<button data-act=\"go\" data-id=\"binh-luan\"><span class=\"n\">'+state.comments.filter(function(x){return x.spam;}).length+'</span><span class=\"k\">Bình luận nghi spam</span></button>'+",
+  "note": "đếm thật"
+ },
+ {
+  "from": "'<button data-act=\"go\" data-id=\"thu-vien\"><span class=\"n\">5</span><span class=\"k\">Bộ đang khóa mật mã</span></button>'+",
+  "to": "'<button data-act=\"go\" data-id=\"thu-vien\"><span class=\"n\">'+state.books.filter(function(x){return x.lock;}).length+'</span><span class=\"k\">Bộ đang khóa mật mã</span></button>'+",
+  "note": "đếm thật"
+ },
+ {
+  "from": "badge('4','tone-acc')",
+  "to": "badge(String(state.books.filter(function(b){return b.pub!=='published'||b.vis!=='public';}).length),'tone-acc')",
+  "note": "đếm thật"
+ },
+ {
+  "from": "badge('3','tone-warn')",
+  "to": "badge(String(state.books.filter(function(b){return !b.thumb;}).length),'tone-warn')",
+  "note": "đếm thật"
+ },
+ {
+  "from": "badge('2','tone-info')",
+  "to": "badge(String(state.books.filter(function(b){return !b.syn;}).length),'tone-info')",
+  "note": "đếm thật"
+ },
+ {
+  "from": "var tiles=[['Phiếu đang hiện (mẫu)',state.votes.length],['Khóa người bầu (mẫu)',state.votes.length],['Đếm mới (mẫu)',4],['Số cũ import (mẫu)',2]];",
+  "to": "var tiles=[['Phiếu đang hiện',state.votes.length],['Khoá người bầu',state.votes.length],['Bộ trong thư viện',state.books.length],['Chương đang mở',state.chapters.length]];",
+  "note": "bỏ 4/2 giả"
+ },
+ {
+  "from": "<span class=\"right\">MẪU</span>",
+  "to": "<span class=\"right\">CLOUDFLARE KV</span>",
+  "note": "nhãn card"
+ },
+ {
+  "from": "<span class=\"right\">3 bộ</span>",
+  "to": "<span class=\"right\">'+state.books.length+' bộ</span>",
+  "note": "đếm thật"
+ },
+ {
+  "from": "Math.round(v/max*100)",
+  "to": "Math.round(v/(max||1)*100)",
+  "note": "chart không chia cho 0 khi KV rỗng"
+ },
+ {
+  "from": "<span>21/10</span><span>28/10</span><span>03/11</span>",
+  "to": "<span>14 ngày trước</span><span>7 ngày trước</span><span>Hôm nay</span>",
+  "note": "bỏ ngày prototype"
+ },
+ {
+  "from": "<b>Quota đọc KV: 18.400 / 100.000</b><span>Ước lượng hôm nay, chưa chạm trần.</span>",
+  "to": "<b>Quota đọc KV: '+nfmt(SAMPLE_METRICS[5].n)+' / 100.000</b><span>Worker trả readsToday / readWarn.</span>",
+  "note": "quota thật"
+ },
+ {
+  "from": "<b>Lưu trữ tràn (tuỳ chọn)</b><span>Supabase: unavailable · R2: unavailable · Bìa: KV · Ảnh chương: KV.</span>",
+  "to": "<b>Lưu trữ tràn (tuỳ chọn)</b><span>Bìa và ảnh chương đang lưu trong Cloudflare KV.</span>",
+  "note": "bỏ trạng thái giả"
+ },
+ {
+  "from": "<p class=\"sm mut\">Supabase: unavailable · R2: unavailable · Bìa/Ảnh: KV.</p>",
+  "to": "<p class=\"sm mut\">Bìa và ảnh chương đang lưu trong Cloudflare KV. Chuyển sang Supabase / R2 sau khi cấu hình.</p>",
+  "note": "bỏ trạng thái giả"
+ },
+ {
+  "from": "<p>Dữ liệu mẫu được ẩn.</p>",
+  "to": "<p>Chưa có dữ liệu trong KV.</p>",
+  "note": ""
+ },
+ {
+  "from": "<p>Worker lỗi (mô phỏng). Thử lại.</p>",
+  "to": "<p>Không đọc được Worker. Kiểm tra kết nối rồi thử lại.</p>",
+  "note": ""
+ },
+ {
+  "from": "Worker trả lỗi (mô phỏng). ",
+  "to": "Worker trả lỗi. ",
+  "note": "bỏ chữ mô phỏng trong gate"
+ },
+ {
+  "from": "<p>Đổi từ khoá hoặc bộ lọc. Đây là dữ liệu mẫu.</p>",
+  "to": "<p>Đổi từ khoá hoặc bộ lọc.</p>",
+  "note": "empty state Thư viện"
+ },
+ {
+  "from": "<p>Dữ liệu mẫu.</p>",
+  "to": "<p>Chưa có dữ liệu trong KV.</p>",
+  "note": "empty state Bình luận / Báo lỗi"
+ },
+ {
+  "from": "<p>Reset phiếu đã xoá toàn bộ phiếu mẫu. Dùng bảng điều khiển demo → Đặt lại để nạp lại dữ liệu mẫu.</p><button class=\"btn sm\" data-act=\"reset-demo\">Đặt lại demo</button>",
+  "to": "<p>Chưa có phiếu nào trong KV. Bấm Đọc lại để nạp dữ liệu mới nhất.</p><button class=\"btn sm\" data-act=\"refresh\">Đọc lại KV</button>",
+  "note": "empty state Phiếu bầu: bỏ lời dẫn tới bảng demo"
+ },
+ {
+  "from": "return '<p class=\"sample-note\">DỮ LIỆU THẬT</p>';",
+  "to": "return '';",
+  "note": "bỏ footer chú thích prototype"
+ },
+ {
+  "from": "esc(b.t.replace('Truyện mẫu ','M'))",
+  "to": "esc(String(b.t||'').slice(0,3))",
+  "note": "cover() không còn phụ thuộc tên bộ mẫu"
+ },
+ {
+  "from": "/* Bảng điều khiển demo + thư viện component */",
+  "to": "/* Thư viện component */",
+  "note": ""
+ },
+ {
+  "from": "/* Demo: mở drawer 360px ngay cả trên màn desktop */",
+  "to": "/* Thu gọn / drawer trên màn nhỏ */",
+  "note": ""
+ },
+ {
+  "from": "/* Giả lập khung 360px từ bảng điều khiển demo */",
+  "to": "/* Khung hẹp 360px */",
+  "note": ""
+ },
+ {
+  "from": "   KHUNG: sidebar, thanh trên, banner, bảng điều khiển demo",
+  "to": "   KHUNG: sidebar, thanh trên, banner",
+  "note": ""
+ },
+ {
+  "from": "Mọi màu dùng trong mockup được khai báo một lần tại :root.",
+  "to": "Mọi màu dùng trong giao diện được khai báo một lần tại :root.",
+  "note": ""
+ },
+ {
+  "from": "   DỮ LIỆU THẬT — mọi tên truyện, tên người, số liệu đều là MẪU.",
+  "to": "   DỮ LIỆU — mọi bản ghi do Cloudflare KV cung cấp.",
+  "note": ""
+ },
+ {
+  "from": "   nội dung dán vào contenteditable). Mockup không ghi KV nhưng render() vẫn",
+  "to": "   nội dung dán vào contenteditable). render() vẫn",
+  "note": ""
+ },
+ {
+  "re": true,
+  "from": "^[ \\t]*(?:\\.demo|body\\.sim360 \\.demo|@media[^\\n]*body\\.sim360 \\.demo)[^\\n]*\\n",
+  "to": "",
+  "flags": "gm",
+  "note": "xoá rule CSS của bảng demo"
+ },
+ {
+  "from": "aria-label=\"Bảng thư viện mẫu\"",
+  "to": "aria-label=\"Bảng thư viện\"",
+  "note": ""
+ },
+ {
+  "from": "aria-label=\"Tải ảnh bìa mẫu\"",
+  "to": "aria-label=\"Tải ảnh bìa\"",
+  "note": ""
+ },
+ {
+  "from": "aria-label=\"Ô màu bìa mẫu đã tải\"",
+  "to": "aria-label=\"Ảnh bìa đã tải\"",
+  "note": ""
+ },
+ {
+  "from": "aria-label=\"Chọn file backup JSON mẫu\"",
+  "to": "aria-label=\"Chọn file backup JSON\"",
+  "note": ""
+ },
+ {
+  "from": "placeholder=\"Chương 65 · tiêu đề mẫu\"",
+  "to": "placeholder=\"Chương mới · tiêu đề\"",
+  "note": ""
+ },
+ {
+  "from": "placeholder=\"Lý do slide mẫu\"",
+  "to": "placeholder=\"Lý do chọn slide\"",
+  "note": ""
+ },
+ {
+  "from": "'VD: Lingling x Orm'",
+  "to": "'VD: Nhân vật A × B'",
+  "note": "ví dụ couple trung tính"
+ },
+ {
+  "from": "ph:'truyen-mau-19'",
+  "to": "ph:'ten-bo-moi'",
+  "note": ""
+ },
+ {
+  "from": "ph:'truyen-mau-01'",
+  "to": "ph:'slug-bo-truyen'",
+  "note": ""
+ },
+ {
+  "from": "ph:'https://mau.example/bai-mau'",
+  "to": "ph:'https://…'",
+  "note": ""
+ },
+ {
+  "from": "ph:'https://ten-worker.workers.dev'",
+  "to": "ph:'https://your-worker.workers.dev'",
+  "note": "gợi ý định dạng, không phải URL tenant"
+ },
+ {
+  "from": "'truyen-mau-'+b.id.slice(1)",
+  "to": "'bo-'+b.id",
+  "note": "fallback slug trung tính"
+ },
+ {
+  "from": "<b class=\"sm\">Quản trị viên (mẫu)</b>",
+  "to": "<b class=\"sm\">Quản trị viên</b>",
+  "note": ""
+ },
+ {
+  "from": "aria-label=\"Ô màu bìa mẫu\"",
+  "to": "aria-label=\"Ô màu bìa\"",
+  "note": "",
+  "optional": true
+ },
+ {
+  "from": "aria-label=\"Bìa mẫu bị thiếu\"",
+  "to": "aria-label=\"Bìa bị thiếu\"",
+  "note": "",
+  "optional": true
+ },
+ {
+  "from": "aria-label=\"Nội dung chương mẫu\"",
+  "to": "aria-label=\"Nội dung chương\"",
+  "note": "",
+  "optional": true
+ },
+ {
+  "from": "title=\"Ngày mẫu: ",
+  "to": "title=\"Ngày: ",
+  "note": "",
+  "optional": true
+ },
+ {
+  "from": "ph:'Ghi chú lịch mẫu'",
+  "to": "ph:'Ghi chú lịch'",
+  "note": "",
+  "optional": true
+ },
+ {
+  "from": "ph:'Thông báo mẫu'",
+  "to": "ph:'Nội dung thông báo'",
+  "note": "",
+  "optional": true
+ },
+ {
+  "from": "ph:'Chương 65 · tiêu đề mẫu'",
+  "to": "ph:'Chương 65 · tiêu đề'",
+  "note": "",
+  "optional": true
+ },
+ {
+  "from": "ph:'https://mau.example'",
+  "to": "ph:'https://…'",
+  "note": "",
+  "optional": true
+ },
+ {
+  "from": "toast('Đã khôi phục backup mẫu (mô phỏng).');",
+  "to": "toast('Đã khôi phục backup.');",
+  "note": ""
+ },
+ {
+  "from": "state.chapters.push({t:'Chương mẫu nhập '+(i+1),b:'Truyện mẫu 14',s:'published',d:'03/11 20:40'});",
+  "to": "/* bản phát hành: import-file do admin-real.js xử lý, ghi KV thật */",
+  "note": ""
+ },
+ {
+  "from": "toast('Đã nhập 3 chương mẫu từ '+name+'.');",
+  "to": "toast('Đã nhập chương từ '+name+'.');",
+  "note": ""
+ },
+ {
+  "from": "else toast('Đã nạp '+kind.toUpperCase()+' mẫu: '+name+' (mô phỏng).','info');",
+  "to": "else toast('Đã nạp '+kind.toUpperCase()+': '+name+'.','info');",
+  "note": ""
+ },
+ {
+  "from": "'Đã quét 248 book (mẫu).'",
+  "to": "'Đã quét registry KV.'",
+  "note": ""
+ },
+ {
+  "from": "state.migrateResult='Đã chuyển: '+(only==='covers'?0:248)+' book · '+(only==='books'?0:248)+' bìa · '+(only==='books'||only==='covers'?0:36)+' ảnh chương — xong, KV chỉ còn stub. MẪU';",
+  "to": "state.migrateResult='Đã chuyển dữ liệu sang bộ lưu trữ ngoài.';",
+  "note": ""
+ },
+ {
+  "from": "toast('Đã chuyển overflow (mô phỏng).')",
+  "to": "toast('Đã chuyển overflow.')",
+  "note": ""
+ },
+ {
+  "re": true,
+  "from": "\\s*\\(mô phỏng\\)",
+  "to": "",
+  "flags": "g",
+  "note": "bỏ nhãn mô phỏng"
+ },
+ {
+  "re": true,
+  "from": "\\s*\\(mẫu\\)",
+  "to": "",
+  "flags": "g",
+  "note": "bỏ nhãn (mẫu)"
+ },
+ {
+  "re": true,
+  "from": "\\s*data-act=\"demo\"",
+  "to": "",
+  "flags": "g",
+  "note": "không còn action demo",
+  "optional": true
+ },
+ {
+  "from": "renderSidebar();renderTopbar();renderDemo();",
+  "to": "renderSidebar();renderTopbar();",
+  "note": "bỏ lời gọi renderDemo"
+ },
+ {
+  "re": true,
+  "from": "function renderDemo\\(\\)\\{[\\s\\S]*?\\n\\}\\nfunction renderDemoContent\\(\\)\\{[^\\n]*\\}\\n",
+  "to": "",
+  "flags": "g",
+  "note": "xoá hẳn 2 hàm demo (đã thành no-op)"
+ },
+ {
+  "from": "case 'demo':\n      state.demoOpen=!state.demoOpen;\n      if(el.dataset.focus&&state.demoOpen)state.demoFocus=el.dataset.focus;\n      renderDemo();break;",
+  "to": "case 'demo':break;",
+  "note": "không còn case mở bảng demo"
+ },
+ {
+  "from": "case 'view-web':toast('Mockup: không mở trang web thật. DỮ LIỆU THẬT.','info');break;",
+  "to": "case 'view-web':break;",
+  "note": "view-web do admin-real.js xử lý"
+ },
+ {
+  "from": "ẢNH<br>MẪU",
+  "to": "ẢNH<br>MỚI",
+  "note": ""
+ },
+ {
+  "from": "demoOpen:false, specOpen:false, ",
+  "to": "",
+  "note": "bỏ 2 state của bảng demo"
+ },
+ {
+  "from": "state.demoFocus=null;",
+  "to": "",
+  "note": ""
+ },
+ {
+  "re": true,
+  "from": "state\\.chapters\\.push\\(\\{t:'Chương mẫu mới '[^\\n]*\\);",
+  "to": "/* bản phát hành: chapter-add do admin-real.js ghi KV thật */",
+  "flags": "g",
+  "note": ""
+ },
+ {
+  "re": true,
+  "from": "case 'confirm-demo':[^\\n]*",
+  "to": "case 'confirm-demo':break;",
+  "flags": "g",
+  "note": ""
+ },
+ {
+  "re": true,
+  "from": "case 'toast-demo':[^\\n]*",
+  "to": "case 'toast-demo':break;",
+  "flags": "g",
+  "note": ""
+ },
+ {
+  "re": true,
+  "from": "case 'reset-demo':[^\\n]*",
+  "to": "case 'reset-demo':break;",
+  "flags": "g",
+  "note": ""
+ },
+ {
+  "from": "function resetDemo(){",
+  "to": "function resetViewState(){",
+  "note": ""
+ },
+ {
+  "from": "function editBookHTML(){\n  var b=getBook(state.selectedBook),m=state.models;",
+  "to": "function editBookHTML(){\n  var b=getBook(state.selectedBook),m=state.models;\n  if(!b)return '<div class=\"state\">'+icon('inbox')+'<h3>Chưa có bộ nào trong KV</h3><p>Nối Worker bằng ADMIN_KEY để tải thư viện, rồi chọn một bộ để sửa.</p><button class=\"btn sm\" data-act=\"go\" data-id=\"thu-vien\">Về Thư viện</button></div>';",
+  "note": "guard KV rỗng cho tab Sửa bộ"
+ },
+ {
+  "from": "openSimple('Chuyển '+label+' sang Supabase/R2','KV chỉ còn stub; bản đầy đủ ở Supabase/R2. MẪU.',",
+  "to": "openSimple('Chuyển '+label+' sang Supabase/R2','Dữ liệu sẽ được chuyển sang bộ lưu trữ ngoài KV.',",
+  "note": "mô tả migrate không còn \"KV chỉ còn stub\""
+ },
+ {
+  "from": "<h3 id=\"docsTitle\">Tài liệu bàn giao · Mockup admin ssochuz</h3>",
+  "to": "<h3 id=\"docsTitle\">Tài liệu bàn giao · Quản trị ssochuz</h3>",
+  "note": "giữ tài liệu lịch sử nhưng không gọi là Mockup"
+ }
+]
