@@ -32,7 +32,7 @@ function get(port, urlPath) {
     const req = http.get({ host: '127.0.0.1', port, path: urlPath, timeout: 4000 }, res => {
       let body = '';
       res.setEncoding('utf8');
-      res.on('data', c => { body += c; if (body.length > 20000) body = body.slice(0, 20000); });
+      res.on('data', c => { body += c; if (body.length > 400000) body = body.slice(0, 400000); });
       res.on('end', () => resolve({ code: res.statusCode, loc: res.headers.location || '', type: res.headers['content-type'] || '', body }));
     });
     req.on('error', e => resolve({ code: 0, loc: '', body: '', err: e.message }));
@@ -114,8 +114,9 @@ async function boot(root, pys) {
       ['/truyen/?slug=third-person', 200, 'trang bộ qua query'],
       ['/couple/', 200, 'trang couple (thư mục có index.html)'],
       ['/tac-gia/', 200, 'trang tác giả'],
-      ['/admin', 200, '/admin giờ mở mockup thiết kế (theo yêu cầu owner)'],
-      ['/admin-cu', 200, 'admin THẬT vẫn sống ở /admin-cu để còn ghi KV'],
+      ['/admin', 200, '/admin = admin.html: giao diện thiết kế mới + lớp ghi KV thật'],
+      ['/admin-real.js', 200, 'lớp dữ liệu thật của admin.html phải được phục vụ'],
+      ['/admin-cu', 404, 'bản sao admin cũ đã bị gỡ hoàn toàn theo yêu cầu owner'],
       ['/admin-v2', 200, 'URL đời hai bản vẫn vào đúng một admin'],
       ['/admin-v2/', 200, 'URL đời hai bản với dấu /'],
       ['/admin-legacy', 200, 'URL legacy cũng merge về một admin'],
@@ -153,18 +154,20 @@ async function boot(root, pys) {
     ok(/Third Person/.test(story.body), '/truyen/third-person/ phải là trang của bộ Third Person');
     const lib = await get(port, '/truyen');
     ok(/<html/i.test(lib.body) && lib.body.length > 3000, '/truyen phải trả về trang thật (không phải trang lỗi)');
-    /* Từ khi owner yêu cầu thay giao diện: /admin (và 2 alias cũ) trả MOCKUP,
-       còn admin THẬT nằm ở /admin-cu. Kiểm cả 2 chiều để không mất chức năng ghi KV. */
-    const MOCK = /Admin mockup|ssochuz-admin-mockup|DỮ LIỆU MẪU/;
-    const REAL = /adminRoot/;
+    /* Vòng 10: /admin (và 2 alias cũ) trả CHÍNH admin.html — bản thiết kế mới
+       CÓ nạp admin-real.js để ghi KV thật. Không còn bản admin thứ hai. */
+    const NEW_ADMIN = b => /admin-real\.js/.test(b) && /CZ_MOCKUP/.test(b) && !/adminRoot/.test(b);
     const adminNow = await get(port, '/admin');
-    ok(MOCK.test(adminNow.body), '/admin phải trả mockup admin (đang trả admin.html cũ?)');
+    ok(NEW_ADMIN(adminNow.body), '/admin phải trả admin.html mới (mockup + admin-real.js, không còn adminRoot)');
     const adminV2 = await get(port, '/admin-v2');
-    ok(MOCK.test(adminV2.body), '/admin-v2 phải merge về mockup');
+    ok(NEW_ADMIN(adminV2.body), '/admin-v2 phải merge về đúng admin.html mới');
     const legacy = await get(port, '/admin-legacy');
-    ok(MOCK.test(legacy.body) && !/id="gate"/.test(legacy.body), '/admin-legacy phải merge về mockup (không còn cổng admin cũ)');
+    ok(NEW_ADMIN(legacy.body) && !/id="gate"/.test(legacy.body), '/admin-legacy phải merge về admin.html mới (không còn cổng admin cũ)');
     const adminCu = await get(port, '/admin-cu');
-    ok(REAL.test(adminCu.body) && /admin\.js/.test(adminCu.body), '/admin-cu phải trả admin THẬT (adminRoot + admin.js)');
+    ok(adminCu.code === 404, '/admin-cu phải 404 (bản sao cũ đã bị xoá, đang ' + adminCu.code + ')');
+    const proto = await get(port, '/admin-mockup');
+    ok(/Admin mockup|DỮ LIỆU MẪU/.test(proto.body) && !/<script[^>]+src="\/admin-real\.js/.test(proto.body),
+      '/admin-mockup vẫn là prototype offline (DỮ LIỆU MẪU, không nạp lớp KV)');
   } finally {
     try { proc.kill('SIGKILL'); } catch (e) {}
   }

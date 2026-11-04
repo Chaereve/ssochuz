@@ -32,6 +32,10 @@
 /admin.js
   Cache-Control: no-cache
 
+# lớp đọc/ghi KV của admin.html (URL có ?v= = sha1 nội dung)
+/admin-real.js
+  Cache-Control: no-cache
+
 /admin-docx.js
   Cache-Control: no-cache
 
@@ -66,16 +70,8 @@
   Cache-Control: no-store, max-age=0
   X-Robots-Tag: noindex
 
-# /admin-cu = admin THẬT (ghi KV), /admin-mockup = alias bản thiết kế.
-# Cùng chế độ no-store/noindex như mọi route quản trị.
-/admin-cu
-  Cache-Control: no-store, max-age=0
-  X-Robots-Tag: noindex
-
-/admin-cu/
-  Cache-Control: no-store, max-age=0
-  X-Robots-Tag: noindex
-
+# /admin = giao diện quản trị duy nhất (ghi KV thật).
+# /admin-mockup = bản thiết kế offline. Cùng chế độ no-store/noindex như mọi route quản trị.
 /admin-mockup
   Cache-Control: no-store, max-age=0
   X-Robots-Tag: noindex

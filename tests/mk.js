@@ -27,8 +27,14 @@ function inline(html, files) {
    trước. Bài kiểm việc tải thật (t_admin_editor_lazy.js) truyền preload: [] kèm
    resources: một jsdom ResourceLoader phục vụ tệp từ repo. */
 const PRELOAD = { 'admin.html': ['admin-editor.js'] };
-function page(file, { url = 'https://ssochuz.pages.dev/', fetch, config = {}, files = ['cz-config.js', 'cz-app.js'], setup = null, css = false, preload = PRELOAD[file] || [], resources = undefined } = {}) {
-  let html = read(file);
+/* Vòng 10: admin.html ở thư mục gốc là GIAO DIỆN MỚI (sinh từ mockup, nạp
+   admin-real.js). Các bài kiểm của admin CŨ (Preact + TipTap, admin.js) vẫn cần
+   cái shell cũ để nạp bundle — shell đó được giữ ở ĐÂY, dưới dạng fixture test,
+   KHÔNG phải một route hay một trang quản trị thứ hai. Bài kiểm giao diện mới là
+   tests/t_admin_real.js (mở đúng admin.html, không dùng fixture). */
+const LEGACY_SHELL = 'tests/fixtures/admin-legacy.html';
+function page(file, { url = 'https://ssochuz.pages.dev/', fetch, config = {}, files = ['cz-config.js', 'cz-app.js'], setup = null, css = false, preload = PRELOAD[file] || [], resources = undefined, legacyAdmin = true } = {}) {
+  let html = read(file === 'admin.html' && legacyAdmin ? LEGACY_SHELL : file);
   if (preload.length) {
     const pre = preload.map((f) => '<script>' + read(f) + '</script>').join('');
     html = html.replace('</head>', () => pre + '</head>');
@@ -114,4 +120,4 @@ function dataFetch({ api = null, apiBase = 'https://cms.test', stats = null, log
     } catch (e) { return ret({ err: String(e) }, false, 500); }
   };
 }
-module.exports = { page, dataFetch, read, ROOT };
+module.exports = { page, dataFetch, read, ROOT, LEGACY_SHELL };

@@ -4,19 +4,24 @@ Thiết kế lại giao diện quản trị. **Chức năng đã có, không th�
 
 ## Mở ngay
 
-**Đã merge vào `main`** qua PR #83 (`fbbe121`) và #84 (`59a6167`). Theo yêu cầu owner, **`/admin` giờ mở chính bản mockup này** (`_redirects` rewrite 200). Admin **thật** (Preact, có ghi KV qua `ADMIN_KEY`) vẫn sống ở **`/admin-cu`** = `admin-cu.html`; trong sidebar mockup có link `Admin thật · ghi KV` để chuyển qua. `/admin-v2`, `/admin-legacy`, `/admin-mockup` đều về bản thiết kế.
+**Đã merge vào `main`** qua PR #83 (`fbbe121`), #84 (`59a6167`) và #85 (`565f28c`). Theo yêu cầu owner, **`/admin` là `admin.html` — chính giao diện thiết kế này — và đọc/ghi dữ liệu thật trên Cloudflare KV**. Không còn bản admin thứ hai.
 
 | Cách mở | Địa chỉ |
 | --- | --- |
-| Giao diện admin mặc định | `https://ssochuz.pages.dev/admin` |
-| Admin thật (quản lý nội dung, ghi KV) | `https://ssochuz.pages.dev/admin-cu` |
-| Alias bản thiết kế | `/admin-mockup`, `/mockup/ssochuz-admin-mockup.html` |
+| **Quản trị thật (mặc định)** | `https://ssochuz.pages.dev/admin` → `admin.html` (sinh từ mockup + `admin-real.js`) |
+| Alias cũ gộp về một admin | `/admin-v2`, `/admin-legacy` → `/admin` |
+| Bản thiết kế offline (DỮ LIỆU MẪU) | `/admin-mockup`, `/mockup/ssochuz-admin-mockup.html` |
 | Trên GitHub `main` | `https://github.com/Chaereve/ssochuz/blob/main/mockup/ssochuz-admin-mockup.html` |
 | Không cần mạng | Double-click `ssochuz-admin-mockup.html` — file tự chứa, không cần server, không cần build |
 
-⚠️ Mockup vẫn là **DỮ LIỆU MẪU**: không gọi Worker/KV/Supabase, mọi thao tác ghi chỉ mô phỏng. Muốn sửa truyện thật thì dùng `/admin-cu`. `admin.html` được giữ nguyên và `tools/build_admin.mjs` cập nhật `?v=` cho cả `admin.html` lẫn `admin-cu.html`. Nếu đăng nhập bằng Supabase/Google, nhớ thêm `https://ssochuz.pages.dev/admin-cu` vào **Redirect URLs** trong Supabase (OAuth dùng `location.pathname` làm `redirectTo`). Muốn quay lại chỉ cần xoá 1 dòng `/admin` trong `_redirects`.
+⚠️ **Hai chế độ, một thiết kế:**
 
-Google Fonts là tài nguyên ngoài duy nhất; nếu offline thì dùng fallback hệ thống, vẫn đọc được. Bấm **Tài liệu bàn giao** trong sidebar (hoặc nút docs) để xem đủ 8 vòng, trong đó có mục 11 về kiểm chéo bảo mật/kết nối.
+- `admin.html` (tại `/admin`) nạp thêm `admin-real.js` → gọi Worker bằng `x-admin-key`, đổ registry / bình luận / báo lỗi / phiếu / thống kê / nhật ký / quota KV thật vào 13 tab và **ghi thật** (thêm bộ, sửa slug, lưu chương, xoá, xử lý báo lỗi, homepage CMS, backup…). URL Worker lưu ở `localStorage`, `ADMIN_KEY` chỉ ở `sessionStorage` và bị xoá khỏi state ngay sau khi nối. Không có key thì nạp `/data/registry.json` ở chế độ **chỉ đọc**.
+- `ssochuz-admin-mockup.html` (double-click hoặc `/admin-mockup`) vẫn là **DỮ LIỆU MẪU**, không gọi Worker/KV/Supabase; dùng để xem thiết kế khi offline.
+
+Sửa thiết kế thì sửa `mockup/ssochuz-admin-mockup.html`, sửa lớp dữ liệu thì sửa `admin-real.js` ở thư mục gốc, rồi chạy `npm run build` (`tools/build_admin_html.mjs` sinh lại `admin.html`; `?v=` là sha1 nội dung `admin-real.js`). URL Worker phải là `https://` và nằm trong `connect-src` của CSP hiện hành (mặc định `https://*.workers.dev`). Nếu đăng nhập bằng Supabase/Google, thêm `https://ssochuz.pages.dev/admin` vào **Redirect URLs** trong Supabase (OAuth dùng `location.pathname` làm `redirectTo`).
+
+Google Fonts là tài nguyên ngoài duy nhất; nếu offline thì dùng fallback hệ thống, vẫn đọc được. Bấm **Tài liệu bàn giao** trong sidebar (hoặc nút docs) để xem đủ 10 vòng, trong đó có mục 11 về kiểm chéo bảo mật/kết nối và vòng 10 về nối dữ liệu thật.
 
 ## Các file
 
@@ -69,3 +74,7 @@ Mockup **không** dùng bộ nhớ trình duyệt, không gọi Worker thật, k
 **Mới ở vòng 7:** dọn ghi chú — bỏ hẳn ghi chú thiết kế/chú thích lặp, giữ chỉ các dòng an toàn (gõ slug/cụm), phạm vi case, 1 dòng phím tắt và trạng thái KV; footer mỗi màn còn đúng một dòng `DỮ LIỆU MẪU`. Chi tiết ở `TAI-LIEU-BAN-GIAO.md` → mục 10.
 
 **Mới ở vòng 8 (kiểm chéo):** rà `src/admin/api.js`, `worker/overflow.js`, `community-worker/`, `supabase/` và đối chiếu 7 lớp dữ liệu (KV, Worker, Supabase/R2, Blogger, community-worker, dữ liệu tĩnh, Supabase Auth). Sửa 4 điểm: lọc HTML chương trước khi `render()` + chèn text thường ở sự kiện `paste` (chặn self-XSS khi dán vào `contenteditable`), khoá migration ở mọi trạng thái chưa `online`, xoá `ADMIN_KEY` khỏi state sau kết nối/reset, thêm fallback `CONN`/`QUOTA`. Thêm 51 kiểm tra mới (điều khiển chết, id trùng, chèn HTML, nhãn kết nối). Chi tiết ở `TAI-LIEU-BAN-GIAO.md` → mục 11.
+
+**Vòng 9:** đưa bản thiết kế lên `/admin` dạng prototype, có bản sao tạm của admin cũ để không mất chức năng ghi KV. Chi tiết ở `TAI-LIEU-BAN-GIAO.md` → mục 12.
+
+**Vòng 10 (theo yêu cầu owner):** gỡ hoàn toàn bản sao tạm. `admin.html` trở thành giao diện quản trị duy nhất, được sinh từ mockup và nạp `admin-real.js` để đọc/ghi Cloudflare KV thật; mọi luật rewrite, header, link sidebar và kỳ vọng test về bản sao cũ đều bị xoá. Chi tiết ở `TAI-LIEU-BAN-GIAO.md` → mục 13.

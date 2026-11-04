@@ -125,7 +125,7 @@ if (!/application\/manifest\+json/.test(mf)) errors.push(FILE + ': manifest.webm
 
 /* 5. các route quản trị dùng URL sạch, không rơi qua luật /*.html nên phải tự no-store/noindex */
 ['/admin', '/admin/', '/admin-v2', '/admin-v2/', '/admin-legacy', '/admin-legacy/',
-  '/admin-cu', '/admin-cu/', '/admin-mockup', '/admin-mockup/'].forEach(p => {
+  '/admin-mockup', '/admin-mockup/'].forEach(p => {
   const h = headersFor(rules, p);
   if (!/no-store/.test(h.get('cache-control') || '')) errors.push(FILE + ': ' + p + ' phải Cache-Control: no-store để trang quản trị không dính bản cũ');
   if (!/noindex/i.test(h.get('x-robots-tag') || '')) errors.push(FILE + ': ' + p + ' phải X-Robots-Tag: noindex');

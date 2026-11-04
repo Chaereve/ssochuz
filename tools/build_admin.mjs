@@ -1,5 +1,8 @@
-/* Build admin static bundle (một trang quản trị duy nhất): Preact + TipTap,
-   rồi copy source CSS ra thư mục gốc. Sửa src/admin/ rồi chạy npm run build:admin. */
+/* Build DI SẢN của admin cũ (Preact + TipTap) → admin.js / admin.css / ... .
+   Các bundle này vẫn được build để giữ nguyên bài kiểm dung lượng, nhưng KHÔNG
+   còn được nạp bởi admin.html: từ vòng 10 giao diện quản trị duy nhất là
+   admin.html (sinh từ mockup) + admin-real.js (ghi KV thật).
+   Cuối file gọi tools/build_admin_html.mjs để sinh lại admin.html. */
 import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -14,19 +17,6 @@ const kb = (n) => (n / 1024).toFixed(1) + 'kb';
 const adminCssSrc = readFileSync(path.join(ROOT, 'src/admin/styles/admin.css'), 'utf8');
 const adminCss = (await transform(adminCssSrc, { loader: 'css', minify: true, legalComments: 'none' })).code;
 writeFileSync(path.join(ROOT, 'admin.css'), adminCss);
-/* ?v= của admin.css trong admin.html = sha1 nội dung ⇒ mỗi lần đổi CSS là đổi URL,
-   trình duyệt không dùng bản cache cũ (trước đây chuỗi v cố định khiến thay đổi không hiện). */
-{
-  const cssHash = createHash('sha1').update(readFileSync(path.join(ROOT, 'admin.css'))).digest('hex').slice(0, 10);
-  /* /admin là mockup, admin THẬT nằm ở admin-cu.html — cập nhật cả 2 để bản
-     thật không bị dính cache admin.css cũ sau mỗi lần build. */
-  for (const name of ['admin.html', 'admin-cu.html']) {
-    const htmlPath = path.join(ROOT, name);
-    if (!existsSync(htmlPath)) continue;
-    const html = readFileSync(htmlPath, 'utf8');
-    writeFileSync(htmlPath, html.replace(/\/admin\.css\?v=[^"]*/, '/admin.css?v=' + cssHash));
-  }
-}
 
 /* Trình soạn thảo chương (Tiptap/ProseMirror) build TRƯỚC thành tệp riêng, tải khi
    mở khung soạn chương (src/admin/utils/editorLoader.js). ?v= của nó = sha1 nội
@@ -87,14 +77,6 @@ for (const f of ['admin.css', 'admin.js', 'admin-editor.js', 'admin-docx.js']) {
   }
 }
 
-/* ?v= của admin.js trong admin.html = sha1 nội dung (cùng lý do với admin.css ở trên). */
-{
-  const jsHash = createHash('sha1').update(readFileSync(path.join(ROOT, 'admin.js'))).digest('hex').slice(0, 10);
-  for (const name of ['admin.html', 'admin-cu.html']) {
-    const htmlPath = path.join(ROOT, name);
-    if (!existsSync(htmlPath)) continue;
-    const html = readFileSync(htmlPath, 'utf8');
-    writeFileSync(htmlPath, html.replace(/\/admin\.js\?v=[^"']*/, '/admin.js?v=' + jsHash));
-  }
-  console.log('  admin.html + admin-cu.html: ?v= admin.js = ' + jsHash);
-}
+/* admin.html KHÔNG nạp bundle di sản nữa: sinh lại từ mockup + admin-real.js.
+   ?v= của admin-real.js là sha1 nội dung, do build_admin_html.mjs tính. */
+await import('./build_admin_html.mjs');

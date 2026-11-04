@@ -1,0 +1,38 @@
+<!-- ============================================================================
+     FIXTURE KIỂM THỬ — shell của admin CŨ (Preact + TipTap, nạp admin.js).
+     ----------------------------------------------------------------------------
+     Đây KHÔNG phải một route, không phải bản admin thứ hai và không được deploy
+     làm trang quản trị: `_redirects` chặn /tests/* bằng 301 về /.
+
+     Từ vòng 10, /admin phục vụ admin.html (giao diện thiết kế mới) + admin-real.js
+     (đọc/ghi Cloudflare KV thật). Các bài t_admin_*.js vẫn kiểm bundle di sản
+     admin.js / admin-editor.js, nên tests/mk.js nạp fixture này thay cho
+     admin.html khi gọi page('admin.html'). Bài kiểm giao diện MỚI là
+     tests/t_admin_real.js — nó mở đúng admin.html, không dùng fixture.
+
+     Nội dung bên dưới là bản sao của admin.html trước vòng 10, giữ nguyên để
+     các bài kiểm di sản không đổi kỳ vọng. Sửa src/admin/** rồi npm run build
+     thì vẫn build ra admin.js như cũ; đừng sửa fixture này để "sửa web".
+     ============================================================================ -->
+<!doctype html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>ssochuz library · admin</title>
+<link rel="icon" type="image/png" href="/ssochuz.png?v=1">
+<link rel="apple-touch-icon" href="/ssochuz.png?v=1">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="stylesheet" href="/cz.css?v=20261102r121">
+<link rel="stylesheet" href="/admin.css?v=6c89577130">
+</head>
+<body class="admin admin-v2">
+<div id="adminRoot"></div>
+<div id="toasts" class="toasts" aria-live="polite" aria-atomic="true"></div>
+<script src="/cz-config.js?v=20260930a"></script>
+<script src="/cz-app.js?v=20261102r121"></script>
+<script src="/cz-auth.js?v=20260930a"></script>
+<script src="/admin.js?v=96520f286b"></script>
+</body>
+</html>
