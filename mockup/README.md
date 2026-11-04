@@ -79,4 +79,6 @@ Mockup **không** dùng bộ nhớ trình duyệt, không gọi Worker thật, k
 
 **Vòng 9:** đưa bản thiết kế lên `/admin` dạng prototype, có bản sao tạm của admin cũ để không mất chức năng ghi KV. Chi tiết ở `TAI-LIEU-BAN-GIAO.md` → mục 12.
 
+**Vòng 11 (sửa giao diện theo 3 ảnh owner gửi):** rail sidebar thu gọn giờ có **đúng một icon ở đầu** và 13 icon nav canh cùng một trục — bỏ `margin-left:auto` inline, ẩn chấm thương hiệu/logo, ẩn thanh cuộn Windows đang làm icon lệch trái ~7,5px. Bản phát hành cắt đuôi `· KV` dính vào slug/eyebrow, dùng giờ thật thay `03/11 20:40`, đổi placeholder "mẫu", và tính số liệu Thống kê / Kiểm tra dữ liệu từ KV thay vì hằng số mockup. Riêng bản prototype tĩnh vẫn giữ MẪU. Bài kiểm `tests/t_admin_rail.js` (54 kiểm) khoá cả trục icon lẫn nhãn; chi tiết ở `TAI-LIEU-BAN-GIAO.md` → mục 14.
+
 **Vòng 10 (theo yêu cầu owner):** gỡ hoàn toàn bản sao tạm. `admin.html` trở thành giao diện quản trị duy nhất, được sinh từ mockup và nạp `admin-real.js` để đọc/ghi Cloudflare KV thật; mọi luật rewrite, header, link sidebar và kỳ vọng test về bản sao cũ đều bị xoá. Chi tiết ở `TAI-LIEU-BAN-GIAO.md` → mục 13.
