@@ -192,9 +192,11 @@ function gzipSize(relPath) {
       files: ['truyen.html', 'cz.css', 'cz-config.js', 'cz-app.js', 'cz-auth.js', 'cz-story.js'],
       maxGzipKb: 160,
     },
+    /* Vòng 10: /admin là admin.html (sinh từ mockup) + admin-real.js, KHÔNG còn
+       nạp cz.css / admin.css / admin.js. Đo đúng những tệp trình duyệt tải thật. */
     adminInitial: {
-      files: ['admin.html', 'cz.css', 'admin.css', 'cz-config.js', 'admin.js'],
-      maxGzipKb: 190,
+      files: ['admin.html', 'admin-real.js'],
+      maxGzipKb: 100,
     },
   };
   const payloadSummary = {};

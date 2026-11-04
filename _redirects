@@ -61,20 +61,19 @@
 /reader.html   /truyen   200
 /my-space/    /my-space    200
 /profile/     /profile     200
-# /admin giờ mở BẢN THIẾT KẾ (mockup admin, PR #83) theo yêu cầu owner.
-# Admin THẬT (có ghi KV) vẫn sống ở /admin-cu = admin-cu.html; trong mockup có
-# link "Admin thật · ghi KV" để chuyển qua. Đích là URL SẠCH (không .html) để
-# Pages tự tìm .../<tên>.html, tránh 308 lặp.
-/admin              /mockup/ssochuz-admin-mockup   200
-# URL đời hai bản / bản cũ cũng đi về đúng một admin (nay là bản thiết kế),
-# không chết link.
+# /admin = admin.html (giao diện thiết kế MỚI + admin-real.js ghi KV thật).
+# KHÔNG có rewrite 200 ở đây: Cloudflare Pages tự phục vụ /admin từ admin.html,
+# còn /admin.html và /admin/ tự 308 về /admin. Viết rewrite về tệp .html sẽ tạo
+# vòng lặp 308 (đã từng làm chết /truyen). Bản thiết kế offline nằm ở
+# /admin-mockup.
+# URL đời hai bản / bản cũ cũng đi về đúng một admin, không chết link.
 /admin-v2       /admin       200
 /admin-v2/      /admin       200
 /admin-v2.html  /admin       200
 /admin-legacy       /admin   200
 /admin-legacy/      /admin   200
 /admin-legacy.html  /admin   200
-# Alias ngắn vẫn giữ để tài liệu và bookmark cũ mở được bản thiết kế.
+# Alias bản thiết kế offline (DỮ LIỆU MẪU, không gọi Worker) — không phải admin thứ hai.
 /admin-mockup       /mockup/ssochuz-admin-mockup   200
 /admin-mockup/      /mockup/ssochuz-admin-mockup   200
 # --- d) luật TĨNH từng truyện (sinh bởi tools/build_og.mjs, 2 luật mỗi bộ) ---

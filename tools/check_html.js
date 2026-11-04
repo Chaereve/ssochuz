@@ -24,6 +24,13 @@ function srcFile(name) {
 function stripValues(html) {
   return html.replace(/"[^"]*"/g, '""').replace(/'[^']*'/g, "''");
 }
+/* admin.html từ vòng 10 chứa script inline lớn (toàn bộ hàm render của bản
+   thiết kế). Bên trong đó có chuỗi HTML và biểu thức JS có dấu < ; nếu đem
+   parse như markup sẽ sinh ra "thẻ" giả như <state ...> rồi báo trùng thuộc
+   tính sai. Chỉ soi markup thật, bỏ nội dung mọi thẻ <script>. */
+function stripScripts(html) {
+  return html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '<script></script>');
+}
 function tags(html) {
   const out = [];
   const re = /<([a-zA-Z][a-zA-Z0-9-]*)((?:[^>"']|"[^"]*"|'[^']*')*)>/g;
@@ -36,7 +43,7 @@ const lineOf = (s, i) => s.slice(0, i).split('\n').length;
 const problems = [];
 for (const f of PAGES) {
   const raw = fs.readFileSync(path.join(ROOT, f), 'utf8');
-  const clean = stripValues(raw);
+  const clean = stripValues(stripScripts(raw));
   for (const t of tags(clean)) {
     const names = (t.attrs.match(/([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=/g) || []).map(s => s.replace(/\s*=$/, '').toLowerCase());
     const dup = [...new Set(names.filter((n, i) => names.indexOf(n) !== i))];

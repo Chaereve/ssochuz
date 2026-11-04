@@ -899,7 +899,7 @@ function renderSidebar(){
     '<div class="side-foot"><p class="note">Ghi KV cần ADMIN_KEY</p>'+
     '<button data-act="go" data-id="dang-nhap">Đăng nhập / nối Worker</button>'+
     '<button data-act="docs">Tài liệu bàn giao</button>'+
-    '<a href="/admin-cu" title="Admin thật có ghi KV; bản này là DỮ LIỆU MẪU">Admin thật · ghi KV</a></div>';
+    '</div>';
 }
 function renderTopbar(){
   var c=CONN[state.conn]||CONN.online,q=QUOTA[state.quota]||QUOTA.ok;
@@ -1542,7 +1542,8 @@ const DOCS_HTML =
  ['35','Khoá migration theo trạng thái online','DoctorPanel thật chỉ chạy khi state.online; mockup trước đó khoá mỗi static nên checking / badkey / workererr vẫn bấm được. Gộp conn!==online với quota blocked.'],
  ['36','Không giữ ADMIN_KEY trong state','Ô mật khẩu chỉ để minh hoạ; xoá giá trị ngay sau connect, đăng nhập Supabase, chế độ tĩnh và Đặt lại demo để khoá thật không bao giờ nằm lại trong bộ nhớ trang.'],
  ['37','Fallback cho trạng thái kết nối/quota','CONN và QUOTA có phương án dự phòng nên một giá trị demo không hợp lệ không làm vỡ render chip, Dashboard hay màn đăng nhập.'],
- ['38','Đưa mockup lên /admin','Owner muốn mở /admin là thấy bản thiết kế ngay; đổi bằng 1 dòng rewrite trong _redirects, giữ admin thật ở /admin-cu và thêm link trong sidebar để không mất chức năng ghi KV.']
+ ['38','Đưa bản thiết kế lên /admin','Owner muốn mở /admin là thấy bản thiết kế ngay; vòng 9 đổi bằng 1 dòng rewrite trong _redirects. Vòng 10 chuyển sang admin.html sinh từ mockup và nối dữ liệu thật.'],
+ ['39','Một admin, dữ liệu thật','Owner yêu cầu gỡ hoàn toàn bản sao tạm: chỉ còn admin.html tại /admin, chính giao diện thiết kế này đọc/ghi Cloudflare KV. Mockup tĩnh giữ lại làm bản thiết kế offline, không nạp lớp KV.']
 ].map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td></tr>';}).join('')+
 '</tbody></table>'+
 
@@ -1566,14 +1567,14 @@ const DOCS_HTML =
 '<p><b>360px:</b> drawer rộng 360px, overlay đóng bằng Esc/scrim · topbar gập 2 hàng · dải số liệu 2 cột · card 1 cột · nút/input ≥ 44px · bảng cuộn ngang có chủ đích trong .table-wrap · không tràn ngang body · có công tắc "Giả lập khung 360px" để kiểm tra ngay trên desktop.</p>'+
 '<p><b>Vấn đề còn tồn tại</b></p><ul>'+
 '<li>Chưa phỏng vấn chủ site thật: 5 điểm đau vẫn là GIẢ THUYẾT; không có biên tập viên nào khác để quan sát.</li>'+
-'<li>Chưa có dữ liệu KV thật; skeleton là tĩnh, chưa mô phỏng độ trễ/mạng chập theo thời gian thực.</li>'+
+'<li>Prototype vòng 1–9 chưa có dữ liệu KV thật; vòng 10 đã nối Worker thật nhưng chưa đo độ trễ/mạng chập trên production.</li>'+
 '<li>Chưa chạy trình đọc màn hình thật (NVDA/VoiceOver); mới kiểm tra cấu trúc aria bằng tay.</li>'+
 '<li>Bảng 10.000+ bản ghi chưa đo hiệu năng; phân trang mới có 18 bộ mẫu.</li>'+
 '<li>Màu hồng là giá trị tạm, cần thử lại với bìa thật (hiện là ô màu CSS) trước khi chốt token.</li>'+
 '<li>Đã bỏ 2 tab Tác giả, Vai trò theo xác nhận owner; nếu sau này có cộng tác viên cần khôi phục nhóm Người dùng.</li>'+
 '<li>Ở 360px bảng vẫn phải cuộn ngang trong vùng bảng; chưa thử ngón tay cái trên thiết bị thật.</li>'+
 '<li>Vòng 8 mới đối chiếu tĩnh mã nguồn; chưa gọi Worker, Supabase, R2, Blogger thật nên chưa kiểm được CORS, timeout 12/120/29s và đường rớt về KV khi overflow lỗi.</li>'+
-'<li>Vòng 9 đưa mockup lên /admin nhưng chưa port chức năng ghi KV sang giao diện mới; mọi thao tác vẫn là DỮ LIỆU MẪU, admin thật nằm ở /admin-cu.</li>'+
+'<li>Vòng 9 mới là prototype; vòng 10 đã nối dữ liệu thật và gỡ bản sao tạm. Lớp KV mới cần đo thêm độ trễ thực tế trên Worker production.</li>'+
 '<li>Chưa dựng 2 biến thể phụ của source: chuyển Bảng/Lưới ở Thư viện và toolbar đủ 15 nút của TipTap.</li>'+
 '</ul>'+
 '<p><b>Đã sửa sau phản hồi owner:</b> scrim desktop che mờ trang, badge Mới cập nhật full-width, nút demo chèn nội dung, ô tiêu đề chương riêng, bỏ 2 tab, tinh gọn chữ. Vòng 6: bỏ Danh sách trong toolbar, thêm dấu ngăn cách, đổi case chỉ cho tên chương, ghi chú gọn, canh thẳng các ô Báo lỗi; vòng 7 dọn ghi chú. Render thử bằng Chromium thật: 13 tab / 5 nhóm, 360px không tràn ngang.</p>'+
@@ -1652,19 +1653,31 @@ const DOCS_HTML =
  ['Ổn định','CONN[state.conn] và QUOTA[state.quota] không có fallback: một giá trị demo lạ làm vỡ chip, Dashboard và màn đăng nhập.','Thêm || CONN.online / || QUOTA.ok ở cả 4 chỗ đọc.']]
 .map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td></tr>';}).join('')+
 '</tbody></table>'+
-'<p><b>Bảo mật đã kiểm:</b> 0 fetch / XHR / WebSocket / eval / new Function / document.write / localStorage / sessionStorage / indexedDB / cookie; tài nguyên ngoài duy nhất là 3 link Google Fonts có fallback hệ thống. Ô ADMIN_KEY là type=password và nhắc không nhập key thật, URL chỉ dùng mau.example và ten-worker.workers.dev, không có tenant thật hay service role. Mọi dữ liệu mẫu, title/desc/phrase của modal và URL người dùng đi qua esc(); sự kiện paste trong trình soạn chỉ chèn text thường. Thử chèn payload vào tên bộ, bình luận, báo lỗi, chương, slide, couple, ghi chú và nội dung editor ở 14 route × 4 trạng thái đều không tạo handler hay thẻ script.</p>'+
+'<p><b>Bảo mật đã kiểm trên bản PROTOTYPE (vòng 8):</b> 0 fetch / XHR / WebSocket / eval / new Function / document.write / localStorage / sessionStorage / indexedDB / cookie; tài nguyên ngoài duy nhất là 3 link Google Fonts có fallback hệ thống. Ô ADMIN_KEY là type=password và nhắc không nhập key thật, URL chỉ dùng mau.example và ten-worker.workers.dev, không có tenant thật hay service role. Mọi dữ liệu mẫu, title/desc/phrase của modal và URL người dùng đi qua esc(); sự kiện paste trong trình soạn chỉ chèn text thường. Thử chèn payload vào tên bộ, bình luận, báo lỗi, chương, slide, couple, ghi chú và nội dung editor ở 14 route × 4 trạng thái đều không tạo handler hay thẻ script.</p>'+
 '<p><b>Kiểm chứng vòng 8:</b> 51/51 kiểm tra mới (điều khiển chết, trùng id, chèn HTML, khoá migration, đối chiếu nhãn kết nối) · 136/136 cấu trúc · 122/122 đối chiếu source · 85/85 vòng 5 · 124/124 vòng 6–7 · 0 lỗi JS · 0 màu literal ngoài :root · Chromium thật 14 route ở 360px không tràn ngang, 0 page error; dán HTML chứa onerror vào trình soạn cho 0 handler và 0 lỗi thực thi. Phase 1 vẫn 398 từ.</p>'+
 '<h4>VÒNG 9 · ĐƯA MOCKUP LÊN /ADMIN</h4>'+
 '<p>Owner muốn mở /admin là thấy bản thiết kế ngay. Thay bằng cấu hình route, không sửa src/admin/** hay bất kỳ bundle production nào.</p>'+
 '<table><thead><tr><th>Thay đổi</th><th>Chi tiết</th></tr></thead><tbody>'+
 [['Route','_redirects: /admin rewrite 200 tới /mockup/ssochuz-admin-mockup (URL sạch, không .html để tránh 308 lặp). /admin-v2, /admin-legacy, /admin-mockup đều về bản thiết kế; /admin.html và /admin/ vẫn 308 về /admin.'],
- ['Giữ admin thật','admin-cu.html là bản sao admin.html (Preact + TipTap, ghi KV bằng ADMIN_KEY), mở tại /admin-cu. Sidebar mockup có link Admin thật · ghi KV. build_admin.mjs cập nhật ?v= cho cả 2 file HTML.'],
- ['Header','_headers thêm no-store + noindex cho /admin-cu, /admin-cu/, /admin-mockup, /admin-mockup/. CSP của site đã cho phép inline script/style và Google Fonts nên mockup chạy nguyên vẹn.'],
- ['Kiểm thử','Cập nhật t_devserver.js (kỳ vọng /admin là mockup, /admin-cu là adminRoot + admin.js) và check_headers.js. Chạy npm run build và toàn bộ npm test: tất cả xanh; dev server thật trả đúng 8 route.'],
- ['Ranh giới','Mockup vẫn là DỮ LIỆU MẪU, không gọi Worker/KV/Supabase; mọi thao tác ghi chỉ mô phỏng. Muốn quay lại chỉ cần xoá 1 dòng /admin trong _redirects.']]
+ ['Bản sao tạm','Vòng 9 giữ một bản sao của admin cũ để không mất chức năng ghi KV trong lúc thiết kế chưa port. Vòng 10 đã gỡ bản sao đó vì admin.html mới tự ghi KV.'],
+ ['Header','_headers thêm no-store + noindex cho các route quản trị và alias bản thiết kế. CSP của site đã cho phép inline script/style và Google Fonts nên giao diện chạy nguyên vẹn.'],
+ ['Kiểm thử','Cập nhật t_devserver.js và check_headers.js. Chạy npm run build và toàn bộ npm test; dev server thật trả đúng các route.'],
+ ['Ranh giới','Vòng 9 chỉ là prototype: không gọi Worker/KV/Supabase, mọi thao tác ghi chỉ mô phỏng. Ranh giới này bị gỡ ở vòng 10 khi admin.html nạp admin-real.js.']]
 .map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>';}).join('')+
 '</tbody></table>'+
-'<p><b>Kiểm chứng vòng 9:</b> npm run build đạt · toàn bộ npm test đạt · node --check đạt · 14/14 smoke (13 tab, 14 route × 4 trạng thái, điều khiển chết, chèn HTML, khoá migration, link admin thật) · 0 lỗi JS · dev server thật /admin = mockup, /admin-cu = adminRoot, / = trang chủ.</p>'+
+'<p><b>Kiểm chứng vòng 9:</b> npm run build đạt · toàn bộ npm test đạt · node --check đạt · 14/14 smoke (13 tab, 14 route × 4 trạng thái, điều khiển chết, chèn HTML, khoá migration) · 0 lỗi JS · dev server thật /admin = bản thiết kế, / = trang chủ.</p>'+
+'<h4>VÒNG 10 · MỘT ADMIN.HTML, DỮ LIỆU THẬT</h4>'+
+'<p>Owner yêu cầu gỡ hoàn toàn bản sao tạm: chỉ còn <span class="token">admin.html</span> tại <span class="token">/admin</span>, và chính giao diện thiết kế này đọc/ghi Cloudflare KV. Bản mockup tĩnh vẫn mở bằng double-click nhưng không nạp lớp dữ liệu thật.</p>'+
+'<table><thead><tr><th>Thay đổi</th><th>Chi tiết</th></tr></thead><tbody>'+
+[['Sinh HTML','tools/build_admin_html.mjs sinh admin.html từ mockup: giữ nguyên CSS, 13 tab, 5 nhóm và mọi hàm render; chèn cầu nối window.CZ_MOCKUP rồi nạp admin-real.js?v=&lt;sha1&gt;. npm run build gọi lại mỗi lần.'],
+ ['Kết nối','admin-real.js fetch tới Worker với header x-admin-key, cache:no-store, timeout 12/120/29 giây. URL Worker lưu ở localStorage (cz_kv_api), ADMIN_KEY chỉ ở sessionStorage (cz_kv_key) và xoá khỏi state.models ngay sau khi nối.'],
+ ['Đọc','GET /api/registry, /api/book/&lt;slug&gt;, /api/admin/{comments,reports,stats,log,kv,voters} đổ vào state → Dashboard, Thư viện, Chương, Bình luận, Báo lỗi, Phiếu bầu, Thống kê, Nhật ký và quota hiện số liệu KV thật.'],
+ ['Ghi','Thêm bộ · sửa metadata/đổi slug · xoá bộ · lưu/thêm/xoá/đổi thứ tự chương · xoá bình luận · xử lý báo lỗi · gỡ/reset phiếu · slide/lịch/banner · bulk · recount · migration · nhập chương · khôi phục backup đều gọi API thật, có xác nhận mạnh như cũ.'],
+ ['Chế độ đọc','Không có ADMIN_KEY hoặc bật Dữ liệu tĩnh thì nạp /data/registry.json (chỉ đọc); mọi nút ghi báo rõ cần nối Worker. Không hardcode khoá, URL Worker hay tenant trong tệp client.'],
+ ['Dọn dẹp','Xoá tệp bản sao tạm, luật rewrite /admin → mockup, header và mọi kỳ vọng test/docs về bản sao. /admin giờ do Cloudflare Pages tự phục vụ admin.html; /admin.html và /admin/ vẫn 308 về /admin; /admin-v2 + /admin-legacy về /admin; /admin-mockup vẫn là prototype offline.']]
+.map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>';}).join('')+
+'</tbody></table>'+
+'<p><b>Kiểm chứng vòng 10:</b> npm run build đạt · toàn bộ npm test đạt · node --check admin-real.js đạt · jsdom bấm thật các luồng ghi với Worker giả (tạo bộ, sửa slug, lưu chương, xoá, xử lý báo lỗi) · 0 lỗi JS · 0 secret trong tệp client · dev server /admin = admin.html mới, bản sao cũ = 404.</p>'+
 '<h4>ĐỀ XUẤT THÊM (không nằm trong mockup)</h4>'+
 '<ul>'+
 '<li>Phỏng vấn chủ site và quan sát 2 ca tự dịch, đăng chương để kiểm chứng 5 giả thuyết.</li>'+

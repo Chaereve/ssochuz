@@ -39,7 +39,9 @@ const ROOT = path.join(__dirname, '..');
       }
       res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(value)); return;
     }
-    const name = pathname === '/admin' ? 'admin.html' : pathname.slice(1);
+    /* Bài này soi khung nhập DOCX của admin CŨ (Preact/TipTap); shell của nó giờ
+       nằm ở tests/fixtures/admin-legacy.html vì /admin đã là giao diện mới. */
+    const name = pathname === '/admin' ? 'tests/fixtures/admin-legacy.html' : pathname.slice(1);
     const file = path.resolve(ROOT, name);
     if (!file.startsWith(ROOT + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) { res.statusCode = 404; res.end(); return; }
     res.setHeader('Content-Type', name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : name.endsWith('.html') ? 'text/html' : 'application/octet-stream');

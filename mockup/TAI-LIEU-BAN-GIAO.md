@@ -136,7 +136,8 @@ Hash route 13 tab + đăng nhập · thu gọn sidebar · drawer + scrim + Esc �
 | 35 | Khoá migration theo `online` | `DoctorPanel` thật chỉ chạy khi `state.online`; mockup trước đó khoá mỗi `static` nên `checking` / `badkey` / `workererr` vẫn bấm được. Gộp `conn !== online` với quota `blocked`. |
 | 36 | Không giữ ADMIN_KEY trong state | Ô mật khẩu chỉ để minh hoạ; xoá ngay sau connect, đăng nhập Supabase, chế độ tĩnh và Đặt lại demo. |
 | 37 | Fallback trạng thái kết nối/quota | `CONN` và `QUOTA` có phương án dự phòng để một giá trị demo lạ không làm vỡ chip, Dashboard hay màn đăng nhập. |
-| 38 | Đưa mockup lên `/admin` | Owner muốn mở `/admin` là thấy bản thiết kế ngay. Đổi bằng 1 dòng rewrite trong `_redirects`, giữ admin thật tại `/admin-cu` và thêm link trong sidebar để không mất chức năng ghi KV. |
+| 38 | Đưa bản thiết kế lên `/admin` | Owner muốn mở `/admin` là thấy bản thiết kế ngay. Vòng 9 đổi bằng 1 dòng rewrite trong `_redirects`; vòng 10 chuyển sang `admin.html` sinh từ mockup và nối dữ liệu thật. |
+| 39 | Một admin, dữ liệu thật | Owner yêu cầu gỡ hoàn toàn bản sao tạm: chỉ còn `admin.html` tại `/admin`, chính giao diện thiết kế này đọc/ghi Cloudflare KV. Mockup tĩnh giữ lại làm bản thiết kế offline, không nạp lớp KV. |
 
 ---
 
@@ -350,9 +351,26 @@ Owner muốn mở `/admin` là thấy bản thiết kế ngay. Thay bằng **c�
 | Thay đổi | Chi tiết |
 | --- | --- |
 | **Route** | `_redirects`: `/admin` rewrite `200` tới `/mockup/ssochuz-admin-mockup` (URL sạch, không `.html` để tránh 308 lặp). `/admin-v2`, `/admin-legacy`, `/admin-mockup` đều về bản thiết kế; `/admin.html` và `/admin/` vẫn 308 về `/admin`. |
-| **Giữ admin thật** | `admin-cu.html` là bản sao `admin.html` (Preact + TipTap, ghi KV bằng `ADMIN_KEY`), mở tại `/admin-cu`. Sidebar mockup có link `Admin thật · ghi KV`. `tools/build_admin.mjs` cập nhật `?v=` cho cả 2 file HTML. |
-| **Header** | `_headers` thêm `no-store` + `noindex` cho `/admin-cu`, `/admin-cu/`, `/admin-mockup`, `/admin-mockup/`. CSP của site đã cho phép inline script/style và Google Fonts nên mockup chạy nguyên vẹn. |
-| **Kiểm thử** | Cập nhật `tests/t_devserver.js` (kỳ vọng `/admin` là mockup, `/admin-cu` là `adminRoot` + `admin.js`) và `tools/check_headers.js`. Chạy `npm run build` và toàn bộ `npm test`: tất cả xanh; dev server thật trả đúng 8 route. |
-| **Ranh giới** | Mockup vẫn là **DỮ LIỆU MẪU**, không gọi Worker/KV/Supabase; mọi thao tác ghi chỉ mô phỏng. Muốn quay lại chỉ cần xoá 1 dòng `/admin` trong `_redirects`. Nếu đăng nhập Supabase/Google, thêm `https://ssochuz.pages.dev/admin-cu` vào **Redirect URLs**. |
+| **Bản sao tạm** | Vòng 9 giữ một bản sao của admin cũ để không mất chức năng ghi KV trong lúc thiết kế chưa port. Vòng 10 đã gỡ bản sao đó vì `admin.html` mới tự ghi KV. |
+| **Header** | `_headers` giữ `no-store` + `noindex` cho các route quản trị và alias bản thiết kế; thêm `no-cache` cho `admin-real.js`. CSP của site đã cho phép inline script/style và Google Fonts nên giao diện chạy nguyên vẹn. |
+| **Kiểm thử** | Cập nhật `tests/t_devserver.js` và `tools/check_headers.js` theo từng vòng. Chạy `npm run build` và toàn bộ `npm test`; dev server thật trả đúng các route. |
+| **Ranh giới** | Vòng 9 chỉ là prototype: không gọi Worker/KV/Supabase, mọi thao tác ghi chỉ mô phỏng. Ranh giới này bị gỡ ở vòng 10 khi `admin.html` nạp `admin-real.js`. `cz-auth.js` dùng `location.pathname` làm `redirectTo` nên nếu đăng nhập Supabase/Google, thêm `https://ssochuz.pages.dev/admin` vào **Redirect URLs**. |
 
-**Kiểm chứng vòng 9:** `npm run build` đạt · toàn bộ `npm test` đạt · `node --check` đạt · 14/14 smoke (13 tab, 14 route × 4 trạng thái, điều khiển chết, chèn HTML, khoá migration, link admin thật) · 0 lỗi JS · dev server thật `/admin` = mockup, `/admin-cu` = `adminRoot`, `/` = trang chủ.
+**Kiểm chứng vòng 9:** `npm run build` đạt · toàn bộ `npm test` đạt · `node --check` đạt · 14/14 smoke (13 tab, 14 route × 4 trạng thái, điều khiển chết, chèn HTML, khoá migration) · 0 lỗi JS · dev server thật `/admin` = bản thiết kế, `/` = trang chủ.
+
+---
+
+## 13 · MỘT `ADMIN.HTML`, DỮ LIỆU THẬT (VÒNG 10)
+
+Owner yêu cầu gỡ hoàn toàn bản sao tạm: chỉ còn **`admin.html` tại `/admin`**, và chính giao diện thiết kế này đọc/ghi Cloudflare KV. Bản mockup tĩnh vẫn mở bằng double-click (hoặc `/admin-mockup`) nhưng **không nạp lớp dữ liệu thật**.
+
+| Thay đổi | Chi tiết |
+| --- | --- |
+| **Sinh HTML** | `tools/build_admin_html.mjs` sinh `admin.html` từ `mockup/ssochuz-admin-mockup.html`: giữ nguyên CSS, 13 tab, 5 nhóm và mọi hàm render; chèn cầu nối `window.CZ_MOCKUP` rồi nạp `admin-real.js?v=<sha1>`. `npm run build` gọi lại mỗi lần. |
+| **Kết nối** | `admin-real.js` `fetch` tới Worker với header `x-admin-key`, `cache: 'no-store'`, timeout 12 / 120 / 29 giây. URL Worker lưu ở `localStorage` (`cz_kv_api`), `ADMIN_KEY` chỉ ở `sessionStorage` (`cz_kv_key`) và bị xoá khỏi `state.models` ngay sau khi nối. |
+| **Đọc** | `GET /api/registry`, `GET /api/book/<slug>`, `GET /api/admin/{comments,reports,stats,log,kv,voters}` đổ vào `state` → Dashboard, Thư viện, Chương, Bình luận, Báo lỗi, Phiếu bầu, Thống kê, Nhật ký và quota hiện số liệu KV thật. |
+| **Ghi** | Thêm bộ · sửa metadata / đổi slug · xoá bộ · lưu / thêm / xoá / đổi thứ tự chương · xoá bình luận · xử lý báo lỗi · gỡ / reset phiếu · slide / lịch / banner · bulk · recount · migration · nhập chương · khôi phục backup đều gọi API thật, giữ nguyên xác nhận mạnh (gõ slug hoặc cụm in hoa). |
+| **Chế độ đọc** | Không có `ADMIN_KEY` hoặc bật *Dữ liệu tĩnh* thì nạp `/data/registry.json` (chỉ đọc); mọi nút ghi báo rõ cần nối Worker. Không hardcode khoá, URL Worker hay tenant trong tệp client. |
+| **Dọn dẹp** | Xoá tệp bản sao tạm, luật rewrite `/admin → mockup`, header và mọi kỳ vọng test/docs về bản sao. `/admin` giờ do Cloudflare Pages tự phục vụ `admin.html`; `/admin.html` và `/admin/` vẫn 308 về `/admin`; `/admin-v2` + `/admin-legacy` về `/admin`; `/admin-mockup` vẫn là prototype offline. |
+
+**Kiểm chứng vòng 10:** `npm run build` đạt · toàn bộ `npm test` đạt · `node --check admin-real.js` đạt · jsdom bấm thật các luồng ghi với Worker giả (tạo bộ, sửa slug, lưu chương, xoá, xử lý báo lỗi) · 0 lỗi JS · 0 secret trong tệp client · dev server `/admin` = `admin.html` mới, bản sao cũ = 404.
