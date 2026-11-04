@@ -60,7 +60,52 @@
   function guard(fn) { return function () { Promise.resolve().then(fn).catch(fail); }; }
   var WRAPPED = false;
   var SAMPLE_CLEARED = false;
-  function redraw() { if (WRAPPED) window.render(); else M.render(); }
+
+  /* --------------------------------------------------------------------------
+     Vòng 12 · KHÔNG để bất kỳ dữ liệu prototype nào tồn tại trong bản phát hành.
+     --------------------------------------------------------------------------
+     Trước đây dọn mẫu chỉ chạy BÊN TRONG hydrate(), tức là chỉ khi có URL
+     Worker. Mở /admin lần đầu chưa cấu hình → 18 bộ "Truyện mẫu 01…08",
+     6.420 chương, 248 book, 18.400 lượt đọc vẫn hiện ra; và ngay cả khi đã
+     cấu hình, render() đầu tiên vẫn chạy TRƯỚC khi loadAll() kịp đổ KV thật
+     nên có một nháy dữ liệu giả. Dọn ngay tại boot(), đúng MỘT LẦN, trước
+     window.render() đầu tiên. hydrate() gọi lại hàm này (no-op) để giữ nguyên
+     hợp đồng "không dọn lại giữa chừng làm mất dữ liệu thật". */
+  function clearPrototypeSeed() {
+    if (SAMPLE_CLEARED) return;
+    SAMPLE_CLEARED = true;
+    S.books = []; S.chapters = []; S.activeChapter = 0; S.editorSeed = '<p></p>';
+    S.votes = []; S.comments = []; S.reports = []; S.slides = []; S.schedule = [];
+    S.picked = []; S.selectedBook = null; S.chapterBook = null;
+    S.savedAt = ''; S.chapterAt = ''; S.hpNote = ''; S.hpText = ''; S.hpHref = '';
+    S.migrateResult = ''; S.demoOpen = false;
+    S.couples = { nb: [''], eb: [''] };
+    var zeroRows = [['—', 0], ['—', 0], ['—', 0], ['—', 0], ['—', 0]];
+    ['reads', 'likes', 'voters', 'today'].forEach(function (k) {
+      replaceArr(M.SAMPLE_STATS[k], zeroRows.map(function (r) { return r.slice(); }));
+    });
+    replaceArr(M.SAMPLE_METRICS, [
+      { n: '0', k: 'Bộ truyện', s: 'KV' },
+      { n: '0', k: 'Chương đã đăng', s: 'KV' },
+      { n: '0', k: 'Gắn 18+', s: 'KV' },
+      { n: '0', k: 'Thiếu thông tin', s: 'KV' },
+      { n: '0', k: 'Quota ghi hôm nay', s: 'KV' },
+      { n: '0', k: 'Lượt đọc KV hôm nay', s: 'KV' }
+    ]);
+    replaceArr(M.SAMPLE_ISSUES, []);
+    replaceArr(M.SAMPLE_LOGS, []);
+    replaceArr(M.SAMPLE_NOTIFS, []);
+    replaceArr(M.SAMPLE_READS, [0]);
+  }
+
+  /* Mỗi lần render: ép bảng demo luôn ĐÓNG + RỖNG. Dù còn sót một
+     data-act="demo" nào đó trong tương lai, panel không bao giờ hiện. */
+  function redraw() {
+    S.demoOpen = false;
+    var demo = D.getElementById('demo');
+    if (demo) { demo.hidden = true; if (demo.innerHTML) demo.innerHTML = ''; }
+    if (WRAPPED) window.render(); else M.render();
+  }
   function findMeta(slug) { return (REG.lib || []).find(function (m) { return m.slug === slug; }); }
   function titleOf(slug) { var m = findMeta(slug); return m ? (m.title || slug) : slug; }
   function couplesOf(m) { return Array.isArray(m.couples) && m.couples.length ? m.couples.join(', ') : (m.couple || ''); }
@@ -141,20 +186,9 @@
     var lib = REG.lib || [];
     S.books = lib.map(metaToBook);
     S.picked = lib.slice(0, 3).map(function (m) { return m.slug; });
-    /* DỌN DỮ LIỆU MẪU ĐÚNG MỘT LẦN ở lần hydrate đầu tiên. Nếu một GET con
-       hỏng (Promise.allSettled nuốt lỗi), giao diện phải hiện RỖNG thay vì
-       chương / phiếu / số liệu prototype. Không dọn lại ở mỗi reload(), vì lúc
-       đó các luồng tải thật đang chạy và đã có dữ liệu thật trong state. */
-    if (!SAMPLE_CLEARED) {
-      SAMPLE_CLEARED = true;
-      S.chapters = []; S.activeChapter = 0; S.editorSeed = '<p></p>';
-      S.votes = []; S.comments = []; S.reports = [];
-      var zeroRows = [['—', 0], ['—', 0], ['—', 0], ['—', 0], ['—', 0]];
-      ['reads', 'likes', 'voters', 'today'].forEach(function (k) {
-        replaceArr(M.SAMPLE_STATS[k], zeroRows.map(function (r) { return r.slice(); }));
-      });
-      replaceArr(M.SAMPLE_READS, [0]);
-    }
+    /* Dọn mẫu đã chạy ở boot() trước render đầu tiên; gọi lại ở đây để giữ
+       hợp đồng "dọn đúng một lần" nếu hydrate() bị gọi từ một luồng khác. */
+    clearPrototypeSeed();
     if (!S.selectedBook || !S.books.some(function (b) { return b.id === S.selectedBook; }))
       S.selectedBook = S.books.length ? S.books[0].id : null;
     if (S.selectedBook) window.initEditModels(M.getBook(S.selectedBook));
@@ -925,11 +959,16 @@
     try {
       var clock = D.getElementById('czClock');
       if (clock) clock.textContent = 'LÚC ' + CLOCK;
-      /* Tài liệu bàn giao kể lại lịch sử vòng 1–9, trong đó chữ MẪU là sự thật
+      /* Giữ bảng demo luôn đóng/rỗng ở bản phát hành. */
+      S.demoOpen = false;
+      var panel = D.getElementById('demo');
+      if (panel) { panel.hidden = true; if (panel.innerHTML) panel.innerHTML = ''; }
+      /* Tài liệu bàn giao kể lại lịch sử vòng 1–12, trong đó chữ MẪU là sự thật
          của prototype: KHÔNG được scrub thành THẬT/KV. Các modal khác (xác
          nhận mạnh…) vẫn scrub như thường. */
       var inDocs = !!D.getElementById('docsTitle');
-      ['view', 'login', 'topbar', 'sidebar', inDocs ? null : 'modalRoot', 'toasts']
+      ['view', 'login', 'topbar', 'sidebar', 'quotaBanner',
+       inDocs ? null : 'modalRoot', 'toasts']
         .forEach(function (id) { if (id) scrub(D.getElementById(id)); });
     } catch (e) {}
   };
@@ -1067,6 +1106,7 @@
   /* ---------------- 8 · khởi động ---------------- */
   function boot() {
     if (STARTED) return; STARTED = true;
+    clearPrototypeSeed();
     window.render();
     if (CFG.base && CFG.key) {
       setConn('checking');
