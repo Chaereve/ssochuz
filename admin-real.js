@@ -196,7 +196,8 @@
       ? REG.editorChoice
       : ((REG.settings && Array.isArray(REG.settings.editorChoice)) ? REG.settings.editorChoice : []);
     S.picked = choice.map(function (x) { return typeof x === 'string' ? x : ((x && x.slug) || ''); })
-      .filter(Boolean).slice(0, 12);
+      .filter(function (x, i, a) { return x && a.indexOf(x) === i; });
+    /* Vòng 15: bỏ trần 12; card hiện 12, trang riêng chọn toàn bộ KV. */
     /* Dọn mẫu đã chạy ở boot() trước render đầu tiên; gọi lại ở đây để giữ
        hợp đồng "dọn đúng một lần" nếu hydrate() bị gọi từ một luồng khác. */
     clearPrototypeSeed();
@@ -712,8 +713,9 @@
       updated: today()
     });
     /* Vòng 14: checkbox "Chuyển thể Series" phải ghi ra editorChoice, nếu không
-       bấm xong chuyển tab là mất sạch 12 lựa chọn thật của chủ trang. */
-    var picked = S.picked.slice(0, 12);
+       bấm xong chuyển tab là mất sạch lựa chọn thật của chủ trang (vòng 15 bỏ
+       trần 12 nên ghi nguyên vẹn, có thể hơn 12). */
+    var picked = S.picked.slice();
     next.editorChoice = picked;
     next.settings = next.settings || {};
     next.settings.editorChoice = picked.slice();
@@ -1154,12 +1156,14 @@
     else if (r === 'picked') {
       e.preventDefault(); e.stopPropagation();
       var pid = el.dataset.id, at = S.picked.indexOf(pid);
-      if (el.checked && at < 0) {
-        if (S.picked.length >= 12) { el.checked = false; say('Chuyển thể Series tối đa 12 bộ.', 'warn'); return; }
-        S.picked.push(pid);
-      } else if (!el.checked && at >= 0) S.picked.splice(at, 1);
-      var cnt = D.getElementById('hpPickedCount');
-      if (cnt) cnt.textContent = String(S.picked.length);
+      if (el.checked && at < 0) S.picked.push(pid);
+      else if (!el.checked && at >= 0) S.picked.splice(at, 1);
+      /* Cả card Homepage CMS lẫn trang Chuyển thể Series đang mở đều có bộ
+         đếm; cập nhật đồng loạt (change bị chặn ở capture nên hàm inline
+         syncSeriesCount() không chạy được ở đây). */
+      ['hpPickedCount', 'seriesPageCount', 'seriesPageFootCount'].forEach(function (id) {
+        var n = D.getElementById(id); if (n) n.textContent = String(S.picked.length);
+      });
     }
   }, true);
 

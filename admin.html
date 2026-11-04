@@ -331,6 +331,25 @@ td .strong{font-weight:600}
 .cover{width:42px;height:58px;flex:none;border:1px solid var(--bd2);border-radius:var(--r6);display:grid;place-items:center;text-align:center;padding:4px;color:var(--txt);font:600 11px/1.2 var(--head);overflow:hidden}
 .cover.lg{width:76px;height:104px;font-size:14px}
 .cover.sq{width:72px;height:72px}
+/* Vòng 15 · TRANG "Chuyển thể Series": overlay toàn màn hình, không thêm tab
+   vào NAV (vẫn 13 tab / 5 nhóm). Dùng đúng token :root, không màu literal. */
+.series-page-open{overflow:hidden}
+.series-page{position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;flex-direction:column;font-family:var(--font)}
+.series-page-hd{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:16px 24px;border-bottom:1px solid var(--bd2);background:var(--surf)}
+.series-page-hd h2{margin:0;font:600 22px/1.2 var(--head);color:var(--txt)}
+.series-page-hd .sub{color:var(--dim);font-size:12px;margin-top:4px}
+.series-page-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 24px;border-bottom:1px solid var(--bd2);background:var(--surf2)}
+.series-page-tools .search{flex:1 1 260px;max-width:420px}
+.series-page-body{flex:1 1 auto;overflow:auto;padding:20px 24px}
+.series-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.series-card{border:1px solid var(--bd2);border-radius:var(--r8);background:var(--surf);padding:12px;display:flex;gap:12px;align-items:flex-start}
+.series-card .cover{flex:none}
+.series-card .meta{min-width:0;flex:1}
+.series-card .meta b{display:block;font:600 13px/1.35 var(--head);color:var(--txt);overflow:hidden;text-overflow:ellipsis}
+.series-card .meta .mono{color:var(--dim);font-size:10px;word-break:break-all;margin-top:4px}
+.series-card .meta .chk{margin-top:8px;min-height:30px;font-size:12px}
+.series-page-ft{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 24px;border-top:1px solid var(--bd2);background:var(--surf)}
+@media(max-width:640px){.series-page-hd,.series-page-tools,.series-page-body,.series-page-ft{padding-left:14px;padding-right:14px}.series-grid{grid-template-columns:repeat(auto-fill,minmax(165px,1fr))}}
 .cv-1{background:var(--cover-1)} .cv-2{background:var(--cover-2)} .cv-3{background:var(--cover-3)}
 .cv-4{background:var(--cover-4)} .cv-5{background:var(--cover-5)} .cv-6{background:var(--cover-6)}
 .cv-miss{background:var(--neutral-bg);color:var(--dim);border-style:dashed;font-family:var(--mono);font-size:9px}
@@ -1266,6 +1285,84 @@ function votesHTML(){
     '</div></div>'+pagination(state.votes.length,page,pages,'page-votes');
 }
 
+/* ---------------------------------------------------------------------------
+   Vòng 15 · TRANG "CHUYỂN THỂ SERIES"
+   Card trên Homepage CMS chỉ hiện TỐI ĐA 12 bộ (đã chọn trước, fills by other
+   books). Số lượng ĐƯỢC CHỌN KHÔNG BỊ GIỚI HẠN 12 nữa — mọi thao tác thêm/bớt
+   thật sự diễn ra ở trang này, nơi liệt kê TOÀN BỘ registry KV. Overlay nằm
+   ngoài #view nên không bị render() ghi đè, không thêm route/tab vào NAV.
+   ------------------------------------------------------------------------- */
+function syncSeriesCount(){
+  var n=String(state.picked.length);
+  ['hpPickedCount','seriesPageCount','seriesPageFootCount'].forEach(function(id){
+    var e=document.getElementById(id);if(e)e.textContent=n;
+  });
+}
+function seriesPageFilter(q){
+  var host=document.getElementById('seriesPage');if(!host)return;
+  var kw=String(q||'').toLowerCase().trim(),vis=0;
+  host.querySelectorAll('[data-series-item]').forEach(function(el){
+    var hit=(!kw||String(el.getAttribute('data-s-text')||'').indexOf(kw)>=0);
+    el.style.display=hit?'':'none';if(hit)vis++;
+  });
+  var t=host.querySelector('[data-series-visible]');if(t)t.textContent=String(vis);
+}
+function closeSeriesPage(){
+  var host=document.getElementById('seriesPage');if(host&&host.remove)host.remove();
+  document.body.classList.remove('series-page-open');
+  render();
+}
+function openSeriesPage(){
+  var host=document.getElementById('seriesPage');
+  if(!host){
+    host=document.createElement('div');host.id='seriesPage';host.className='series-page';
+    host.setAttribute('role','dialog');host.setAttribute('aria-label','Tất cả bộ Chuyển thể Series');
+    document.body.appendChild(host);
+    host.addEventListener('click',function(e){
+      var el=e.target.closest?e.target.closest('[data-act]'):null;
+      if(!el)return;
+      var a=el.dataset.act;
+      if(a!=='series-close'&&a!=='series-save'&&a!=='series-all'&&a!=='series-none')return;
+      e.stopPropagation();
+      if(a==='series-close'){closeSeriesPage();return;}
+      if(a==='series-save'){
+        syncSeriesCount();
+        try{saveHomepage();}catch(err){toast('Không lưu được lựa chọn.','bad');}
+        closeSeriesPage();return;
+      }
+      var on=(a==='series-all');
+      host.querySelectorAll('[data-role="picked"]').forEach(function(cb){cb.checked=on;});
+      state.picked=on?state.books.map(function(b){return b.id;}):[];
+      syncSeriesCount();
+    });
+    host.addEventListener('input',function(e){
+      if(e.target&&e.target.dataset&&e.target.dataset.role==='series-q')seriesPageFilter(e.target.value);
+    });
+    host.addEventListener('keydown',function(e){if(e.key==='Escape')closeSeriesPage();});
+  }
+  document.body.classList.add('series-page-open');
+  var list=state.books.slice().sort(function(a,b){return String(a.t||'').localeCompare(String(b.t||''),'vi');});
+  host.innerHTML=
+    '<div class="series-page-hd"><button class="btn sm" data-act="series-close">← Quay lại Homepage CMS</button>'+
+    '<div><h2>Chuyển thể Series</h2><div class="sub">Toàn bộ bộ trong KV · chọn bao nhiêu cũng được · đang chọn <b id="seriesPageCount">'+state.picked.length+'</b> / '+state.books.length+' bộ</div></div></div>'+
+    '<div class="series-page-tools"><span class="search"><input class="inp" data-role="series-q" placeholder="Tìm tên bộ, tác giả, slug…" aria-label="Tìm bộ chuyển thể"></span>'+
+    '<button class="btn sm" data-act="series-all">Chọn tất cả</button><button class="btn sm" data-act="series-none">Bỏ chọn tất cả</button>'+
+    '<span class="xs dim">Đang hiện <b data-series-visible>'+state.books.length+'</b> / '+state.books.length+' bộ</span></div>'+
+    '<div class="series-page-body">'+
+    (list.length?'<div class="series-grid">'+list.map(function(b){
+      var st=String(b.t+' '+b.a+' '+b.id).toLowerCase();
+      return '<div class="series-card" data-series-item data-s-text="'+esc(st)+'">'+cover(b,'lg')+
+        '<div class="meta"><b>'+esc(b.t)+'</b><div class="mono">'+esc(b.id)+'</div><div class="xs dim">'+esc(b.a)+'</div>'+
+        '<label class="chk"><input type="checkbox" data-role="picked" data-id="'+esc(b.id)+'"'+(state.picked.indexOf(b.id)>=0?' checked':'')+
+        ' aria-label="Chọn '+esc(b.t)+'"><span class="box"></span><span>Chuyển thể</span></label></div></div>';
+    }).join('')+'</div>':'<div class="state"><h3>Chưa có bộ nào trong KV</h3><p>Nối Worker có dữ liệu để chọn bộ chuyển thể.</p></div>')+
+    '</div>'+
+    '<div class="series-page-ft"><span class="xs dim">Đã chọn <b id="seriesPageFootCount">'+state.picked.length+'</b> / '+state.books.length+' bộ · card Homepage CMS hiện tối đa 12.</span>'+
+    '<span class="grow"></span><button class="btn sm" data-act="series-close">Đóng</button>'+
+    '<button class="btn sm pri" data-act="series-save">Lưu lựa chọn lên KV</button></div>';
+  var q=host.querySelector('[data-role="series-q"]');if(q&&q.focus)try{q.focus();}catch(e){}
+}
+
 /* ---------- 9 · Homepage CMS ---------- */
 function homepageHTML(){
   var bookOpts=function(sel){return bookOptions(sel);};
@@ -1281,12 +1378,20 @@ function homepageHTML(){
     (state.slides.length?'':'<div class="state" style="min-height:120px"><h3>Chưa chọn slide</h3><p>Không có slide trong KV; web tự lấy 5 bộ mới nhất. Vẫn lưu được lịch, Series và thông báo.</p></div>')+
     '<div class="row wrap mt"><span class="sel" style="flex:1 1 180px"><select class="inp" id="addSlideSel" aria-label="Chọn bộ thêm vào slide">'+bookOpts('')+'</select></span>'+
     '<button class="btn sm" data-act="slide-add">'+icon('plus','s')+'Thêm slide</button></div></div></div>';
-  var picked='<div class="card"><div class="card-hd"><h3>Chuyển thể Series</h3><span class="right">tối đa 12 · đã chọn <b id="hpPickedCount">'+state.picked.length+'</b></span></div><div class="card-bd">'+
-    '<div class="grid3" style="max-height:280px;overflow:auto">'+state.books.slice().sort(function(a,b){return String(a.t||'').localeCompare(String(b.t||''),'vi');}).map(function(b){
+  /* Vòng 15: card chỉ TỐI ĐA 12 bộ (ưu tiên bộ đã chọn), nhưng state.picked
+     không còn trần 12 — chọn thêm/bớt ở trang mở bằng nút Xem thêm. */
+  var byId={};state.books.forEach(function(b){byId[b.id]=b;});
+  var shownIds=state.picked.slice(0,12).slice();
+  state.books.forEach(function(b){if(shownIds.length<12&&shownIds.indexOf(b.id)<0)shownIds.push(b.id);});
+  var shown=shownIds.map(function(id){return byId[id];}).filter(Boolean);
+  var picked='<div class="card"><div class="card-hd"><h3>Chuyển thể Series</h3><span class="right">đã chọn <b id="hpPickedCount">'+state.picked.length+'</b> / '+state.books.length+' bộ</span></div><div class="card-bd">'+
+    '<div class="grid3" id="seriesPickedGrid">'+shown.map(function(b){
       return '<label class="chk"><input type="checkbox" data-role="picked" data-id="'+esc(b.id)+'"'+(state.picked.indexOf(b.id)>=0?' checked':'')+'><span class="box"></span><span>'+esc(b.t)+'</span></label>';
     }).join('')+'</div>'+
+    (state.picked.length>12?'<p class="xs dim mt">… và '+(state.picked.length-12)+' bộ nữa. Mở trang Chuyển thể Series để xem hết.</p>':'')+
     (state.books.length?'':'<div class="state"><p>Chưa có bộ nào trong KV.</p></div>')+
-    '<p class="xs dim mt">Bấm Lưu trang chủ để ghi lựa chọn vào KV.</p></div></div>';
+    '<div class="row wrap mt" style="gap:8px;align-items:center"><button class="btn sm" data-act="series-page">Xem thêm · tất cả '+state.books.length+' bộ</button>'+
+    '<span class="grow"></span><span class="xs dim">Hiện tối đa 12 bộ · bấm Lưu trang chủ để ghi vào KV.</span></div></div></div>';
   var sched='<div class="card"><div class="card-hd"><h3>Lịch ra chương</h3><span class="right">DỮ LIỆU THẬT</span></div><div class="card-bd">'+
     state.schedule.map(function(s,i){
       return '<div class="row wrap mb" style="gap:8px"><input class="inp" style="flex:1 1 120px" data-role="sched-date" data-idx="'+i+'" value="'+esc(s.d)+'" aria-label="Ngày trong tuần" placeholder="Thứ 2, Thứ 5">'+
@@ -1639,7 +1744,7 @@ const DOCS_HTML =
 '<li><b>Dữ liệu giả lộ khi chưa cấu hình Worker:</b> 13 mảng SAMPLE_* (18 bộ Truyện mẫu, 6.420 chương, 248 book, 18.400 lượt đọc, nhật ký 03/11 20:40) được thay bằng cấu trúc rỗng ngay trong bản sinh. admin-real.js có clearPrototypeSeed() chạy TRƯỚC window.render() đầu tiên trong boot(), nên không còn một nháy dữ liệu giả trước khi KV kịp tải.</li>'+
 '<li><b>Hằng số và trạng thái bịa:</b> 3 báo lỗi / 2 spam / 5 khoá / 4 thiếu bìa / 3 bộ mới / 18.400 / Supabase: unavailable / KV chỉ còn stub / Đã chuyển 248 book — đổi thành số đếm từ state.books, state.reports, state.comments, SAMPLE_METRICS do Worker trả; biểu đồ có guard chia cho 0 khi KV rỗng.</li>'+
 '<li><b>Nhãn, placeholder, aria-label, toast và mã chết:</b> mọi cụm mẫu, chữ MẪU viết hoa, mô phỏng, Mockup:, minh hoạ ngoài khối tài liệu lịch sử được dọn; trạng rỗng dùng Chưa có dữ liệu trong KV.; tab Sửa bộ có guard riêng khi KV rỗng (trước đó gọi slugOf(undefined) và vỡ).</li>'+
-'<li><b>Cách làm:</b> toàn bộ khác biệt prototype → bản phát hành nằm trong tools/admin_prod_replacements.json (94 mục ở vòng 12 · 128 mục sau vòng 13 · 141 mục sau vòng 14, có chú thích). Generator áp từng mục và FAIL NGAY nếu một chuỗi nguồn biến mất do mockup đổi tay — tránh vá sót như các vòng trước. Khối DOCS_HTML được tách riêng khi dọn mã chết để lịch sử vòng 1–11 không bị sửa.</li>'+
+'<li><b>Cách làm:</b> toàn bộ khác biệt prototype → bản phát hành nằm trong tools/admin_prod_replacements.json (94 mục ở vòng 12 · 128 mục sau vòng 13 · 141 mục ở vòng 14 · 145 mục sau vòng 15, có chú thích). Generator áp từng mục và FAIL NGAY nếu một chuỗi nguồn biến mất do mockup đổi tay — tránh vá sót như các vòng trước. Khối DOCS_HTML được tách riêng khi dọn mã chết để lịch sử vòng 1–11 không bị sửa.</li>'+
 '<li><b>Không đổi:</b> 13 tab / 5 nhóm, 49 biến :root / 0 màu literal / 0 emoji, design system, luồng đọc/ghi KV thật, CORS preflight, khoá ADMIN_KEY chỉ trong session, sanitizer và gating. Bản prototype tĩnh mockup/ssochuz-admin-mockup.html vẫn GIỮ nguyên bảng thiết kế để mở offline.</li>'+
 '</ul>'+
 '<p><b>Kiểm chứng vòng 12:</b> npm run build đạt · toàn bộ npm test đạt · tests/t_admin_no_demo.js 96/96 · tests/t_admin_rail.js 54/54 · audit jsdom 13 tab × 3 trạng thái × 5 mode đăng nhập ở CẢ HAI chế độ (chưa cấu hình Worker / online 67 bộ KV) đều 0 lỗi JS và 0 dấu vết prototype.</p>'+
@@ -1665,6 +1770,17 @@ const DOCS_HTML =
 '<li><b>Chống tái diễn:</b> tests/t_admin_full_data.js (140 kiểm) khoá nguồn + 13 tab ở CẢ HAI chế độ, 67 tuỳ chọn ở mọi select, 6 slug lịch, 12 editorChoice, bấm Lưu thật rồi soi body PUT /api/registry, tick Series / đổi lịch / bật banner / sửa thông báo rồi kiểm tra lần ghi tiếp, và fallback ảnh bìa hỏng.</li>'+
 '</ul>'+
 '<p><b>Kiểm chứng vòng 14:</b> npm run build đạt · toàn bộ npm test đạt · tests/t_admin_full_data.js 140/140 · tests/t_admin_no_demo.js 96/96 · tests/t_admin_rail.js 54/54 · tests/t_admin_kv_chip.js 121/121 · audit jsdom 13 tab online 67 bộ và chưa cấu hình đều 0 lỗi JS.</p>'+
+'<h4>VÒNG 15 · CHUYỂN THỂ SERIES: CARD 12 BỘ, CHỌN KHÔNG GIỚI HẠN, CÓ TRANG RIÊNG</h4>'+
+'<p>Owner: "chỗ chuyển thể series hiển thị tối đa là 12 bộ nhưng số lượng đc chọn nhiều hơn, hiện nút xem thêm rồi mở ra 1 trang toàn những bộ chuyển thể á". Vòng 14 liệt kê 67 checkbox ngay trong card và khoá trần 12 — đúng dữ liệu nhưng rối. Vòng 15 tách làm 2 lớp.</p>'+
+'<ul>'+
+'<li><b>Card Homepage CMS:</b> chỉ hiện TỐI ĐA 12 ô (ưu tiên bộ đã chọn, điền thêm các bộ khác nếu chọn chưa đủ 12). Bộ đếm <code>hpPickedCount</code> in tổng số ĐANG CHỌN, không phải số ô trên card. Nếu chọn quá 12 thì hiện dòng "… và N bộ nữa".</li>'+
+'<li><b>Bỏ trần 12:</b> <code>hydrate()</code> không còn <code>.slice(0,12)</code> (có khử trùng slug), <code>currentRegistryFromState()</code> ghi nguyên <code>S.picked.slice()</code> ra cả <code>editorChoice</code> lẫn <code>settings.editorChoice</code>, listener change không còn từ chối tick thứ 13. Trang public sẽ hiện đúng số bộ chủ trang chọn.</li>'+
+'<li><b>Trang Chuyển thể Series:</b> nút <b>Xem thêm · tất cả N bộ</b> mở overlay TOÀN MÀN HÌNH (role=dialog, z-index 200, không thêm tab vào NAV nên vẫn 13 tab / 5 nhóm). Trang có tiêu đề riêng, ô tìm theo tên / tác giả / slug (lọc bằng CSS, giữ focus), 67 thẻ bộ kèm ảnh bìa THẬT, nút Chọn tất cả / Bỏ chọn tất cả, 2 bộ đếm, và nút <b>Lưu lựa chọn lên KV</b> gọi thẳng <code>realSaveHomepage()</code>. Đóng bằng Quay lại / Đóng / Esc.</li>'+
+'<li><b>Đồng bộ bộ đếm:</b> <code>admin-real.js</code> chặn change ở capture nên cập nhật cả <code>hpPickedCount</code>, <code>seriesPageCount</code>, <code>seriesPageFootCount</code> cùng lúc; overlay nằm ngoài <code>#view</code> nên không bị <code>render()</code> ghi đè.</li>'+
+'<li><b>Giữ nguyên:</b> fix vòng 14 (mọi ô chọn bộ đủ 67 · 6 slug lịch · ghi chú/banner · 20 bộ/trang · ảnh bìa có fallback), chip KV vòng 13, 49 biến :root / 0 màu literal / 0 emoji, dữ liệu chương thật trong KV và prototype MẪU offline.</li>'+
+'<li><b>Chống tái diễn:</b> <code>tests/t_admin_series_page.js</code> (95 kiểm) khoá card 12 · trang 67 · lọc · tick vượt 12 · chọn/bỏ tất cả · PUT với editorChoice=20 · đóng bằng nút/Esc · 13 tab × 2 chế độ 0 lỗi JS. <code>tests/t_admin_full_data.js</code> cập nhật lên 144 kiểm.</li>'+
+'</ul>'+
+'<p><b>Kiểm chứng vòng 15:</b> npm run build đạt · toàn bộ npm test đạt · tests/t_admin_series_page.js 95/95 · tests/t_admin_full_data.js 144/144 · E2E HTTP thật qua Worker RAM đạt · 13 tab / 5 nhóm / 49 biến :root / 0 màu literal / 0 emoji.</p>'+
 '<h4>ĐỀ XUẤT THÊM (không nằm trong mockup)</h4>'+
 '<ul>'+
 '<li>Phỏng vấn chủ site và quan sát 2 ca tự dịch, đăng chương để kiểm chứng 5 giả thuyết.</li>'+
@@ -2012,6 +2128,7 @@ document.addEventListener('click',function(e){
   if(a==='close-modal'&&e.target.closest('.modal'))return;
   if(a==='close-drawer'&&e.target.closest('.sidebar'))return;
   switch(a){
+    case 'series-page':openSeriesPage();break;
     case 'go':navigate(id);break;
     case 'toggle-collapse':state.collapsed=!state.collapsed;render();break;
     case 'toggle-drawer':state.drawer=!state.drawer;render();break;
@@ -2428,6 +2545,6 @@ window.CZ_MOCKUP = {
   SAMPLE_NOTIFS: SAMPLE_NOTIFS, SAMPLE_LOGS: SAMPLE_LOGS
 };
 </script>
-<script src="/admin-real.js?v=272bed9541"></script>
+<script src="/admin-real.js?v=28c59a8c02"></script>
 </body>
 </html>
