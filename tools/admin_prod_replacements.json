@@ -503,5 +503,177 @@
   "from": "<h3 id=\"docsTitle\">Tài liệu bàn giao · Mockup admin ssochuz</h3>",
   "to": "<h3 id=\"docsTitle\">Tài liệu bàn giao · Quản trị ssochuz</h3>",
   "note": "giữ tài liệu lịch sử nhưng không gọi là Mockup"
+ },
+ {
+  "from": "const CONN = {\n  checking:['Đang kiểm tra kết nối','t-warn'],online:['Cloudflare KV · Online','t-ok'],\n  badkey:['Sai ADMIN_KEY','t-bad'],workererr:['Lỗi kết nối Worker','t-bad'],\n  static:['Dữ liệu tĩnh · Chỉ đọc','t-slate']\n};",
+  "to": "const CONN = {\n  checking:['Đang nối','t-warn'],online:['Online','t-ok'],\n  badkey:['Sai khoá','t-bad'],workererr:['Mất kết nối','t-bad'],\n  static:['Chỉ đọc','t-slate']\n};",
+  "note": "Vòng 13: rút gọn nhãn kết nối, bỏ \"Cloudflare KV · Online\" dài dòng"
+ },
+ {
+  "from": "const QUOTA = {\n  ok:{tone:'t-ok',txt:'KV write 120/1000',banner:''},\n  warn:{tone:'t-warn',txt:'KV write 800/1000',banner:'Quota 800/1000 · cân nhắc dời thao tác hàng loạt.'},\n  bad:{tone:'t-bad',txt:'KV write 950/1000',banner:'Quota 950/1000 · thao tác ghi có thể bị chặn.'},\n  blocked:{tone:'t-blocked',txt:'KV write 1000/1000 · bị chặn',banner:'HẾT QUOTA GHI KV · mọi thao tác ghi bị chặn.'}\n};",
+  "to": "/* Vòng 13: KHÔNG còn txt/banner cứng. Số ghi lấy state.kvWrites do\n   admin-real.js nạp từ /api/admin/kv (writesToday), banner tự sinh bên dưới. */\nconst QUOTA = {ok:{tone:'t-ok'},warn:{tone:'t-warn'},bad:{tone:'t-bad'},blocked:{tone:'t-blocked'}};",
+  "note": "Vòng 13: xoá 120/1000, 800/1000, 950/1000, 1000/1000 cứng"
+ },
+ {
+  "from": "      '<span class=\"chip '+c[1]+'\"><span class=\"dot\"></span>'+esc(c[0])+'</span>'+\n      '<span class=\"quota '+q.tone+'\">KV&nbsp;<b>'+esc(q.txt.replace('KV write ',''))+'</b></span>'+",
+  "to": "      '<span class=\"chip '+(state.quota==='blocked'?'t-bad':c[1])+'\" id=\"czKvChip\" title=\"Cloudflare KV · '+esc(c[0])+' · '+nfmt(state.kvWrites||0)+'/1000 lượt ghi hôm nay\" aria-label=\"Cloudflare KV · '+esc(c[0])+' · '+nfmt(state.kvWrites||0)+'/1000 lượt ghi hôm nay\"><span class=\"dot\"></span><b>KV</b>'+\n      (state.conn==='online'?'<span class=\"chip-num\">'+nfmt(state.kvWrites||0)+'/1000</span>':'<span class=\"chip-state\">'+esc(c[0])+'</span>')+'</span>'+",
+  "note": "Vòng 13: 1 chip duy nhất, online hiện số ghi THẬT, các trạng thái khác hiện nhãn ngắn"
+ },
+ {
+  "from": "  document.getElementById('quotaBanner').innerHTML = q.banner\n    ? '<div class=\"banner'+(state.quota==='blocked'?' danger':'')+'\" role=\"status\">'+icon('alert','s')+'<span>'+esc(q.banner)+'</span></div>' : '';",
+  "to": "  var qw=Number(state.kvWrites||0);\n  document.getElementById('quotaBanner').innerHTML = qw>=1000\n    ? '<div class=\"banner danger\" role=\"status\">'+icon('alert','s')+'<span>HẾT QUOTA GHI KV ('+nfmt(qw)+'/1000) · mọi thao tác ghi bị chặn.</span></div>'\n    : qw>=800 ? '<div class=\"banner\" role=\"status\">'+icon('alert','s')+'<span>Quota ghi KV '+nfmt(qw)+'/1000 · cân nhắc dời thao tác hàng loạt.</span></div>' : '';",
+  "note": "Vòng 13: banner quota tự sinh từ writesToday, không còn câu cứng"
+ },
+ {
+  "from": "    '<div class=\"sysrow\"><span class=\"dot '+(state.quota==='ok'?'':'warn')+'\"></span><div><b>Quota ghi KV: '+esc((QUOTA[state.quota]||QUOTA.ok).txt.replace('KV write ',''))+'</b><span>Worker trả writesToday/lastReset.</span></div></div>'+",
+  "to": "    '<div class=\"sysrow\"><span class=\"dot '+(state.quota==='ok'?'':'warn')+'\"></span><div><b>Quota ghi KV: '+nfmt(state.kvWrites||0)+'/1000</b><span>Worker trả writesToday/lastReset.</span></div></div>'+",
+  "note": "Vòng 13: Dashboard quota ghi lấy writesToday thật"
+ },
+ {
+  "from": "<b>Quota đọc KV: '+nfmt(SAMPLE_METRICS[5].n)+' / 100.000</b>",
+  "to": "<b>Quota đọc KV: '+nfmt(SAMPLE_METRICS[5].n)+'/100.000</b>",
+  "note": "Vòng 13: gọn dấu cách quanh /100.000"
+ },
+ {
+  "from": "    '<div class=\"gate-top\"><div><span class=\"eyebrow\">KHỞI ĐẦU</span><h2>Đăng nhập</h2></div><span class=\"chip '+c[1]+'\"><span class=\"dot\"></span>'+esc(c[0])+'</span></div>'+",
+  "to": "    '<div class=\"gate-top\"><div><span class=\"eyebrow\">KHỞI ĐẦU</span><h2>Đăng nhập</h2></div><span class=\"chip '+c[1]+'\"><span class=\"dot\"></span><b>KV</b><span class=\"chip-state\">'+esc(c[0])+'</span></span></div>'+",
+  "note": "Vòng 13: chip đăng nhập cùng ngôn ngữ với topbar"
+ },
+ {
+  "from": "route:'dashboard', modes:{}, conn:'online', quota:'ok',",
+  "to": "route:'dashboard', modes:{}, conn:'checking', quota:'ok',",
+  "note": "Vòng 13: render đầu tiên hiện \"Đang nối\", không khẳng định Online khi chưa kiểm tra"
+ },
+ {
+  "from": ".chip{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 10px;border:1px solid var(--bd2);border-radius:99px;background:var(--surf);font:600 11px/1 var(--mono);letter-spacing:.02em;white-space:nowrap}\n.chip .dot{width:7px;height:7px;border-radius:99px;background:currentColor;flex:none}",
+  "to": ".chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;border:1px solid var(--bd2);border-radius:99px;background:var(--surf);font:600 11px/1 var(--mono);white-space:nowrap}\n.chip .dot{width:6px;height:6px;border-radius:99px;background:currentColor;flex:none;align-self:center;margin:0}\n.chip>b{font-weight:700;letter-spacing:.06em;align-self:center;line-height:1}\n.chip .chip-num{color:var(--txt);font-variant-numeric:tabular-nums;letter-spacing:0;align-self:center;line-height:1}\n.chip .chip-state{opacity:.82;letter-spacing:0;align-self:center;line-height:1}",
+  "note": "Vòng 13: chấm 6px canh giữa tuyệt đối, mọi con chip cùng 1 trục, bỏ letter-spacing lệch"
+ },
+ {
+  "re": true,
+  "from": "^\\.quota[^\\n]*\\n",
+  "to": "",
+  "flags": "gm",
+  "note": "Vòng 13: xoá CSS .quota không còn dùng"
+ },
+ {
+  "from": ".chip,.quota{height:32px}",
+  "to": ".chip{height:30px}",
+  "note": "Vòng 13: media query chỉ còn .chip"
+ },
+ {
+  "from": ".topbar .chip,.topbar .quota{max-width:132px;overflow:hidden;text-overflow:ellipsis}",
+  "to": ".topbar .chip{max-width:none;overflow:visible;text-overflow:clip}",
+  "note": "Vòng 13: chip ngắn nên không bị cắt \"…\" thiếu chuyên nghiệp"
+ },
+ {
+  "from": "body.sim360 .topbar .chip,body.sim360 .topbar .quota{max-width:132px;overflow:hidden;text-overflow:ellipsis}",
+  "to": "body.sim360 .topbar .chip{max-width:none;overflow:visible}",
+  "note": "Vòng 13: khung hẹp 360px cũng không cắt chip"
+ },
+ {
+  "from": "'<p class=\"sm mut\">Kết nối bằng ADMIN_KEY qua header x-admin-key.</p>'+",
+  "to": "'<p class=\"sm mut\">ADMIN_KEY qua header x-admin-key.</p>'+",
+  "note": "Vòng 13: gọn dòng hướng dẫn cổng đăng nhập"
+ },
+ {
+  "from": "'<button class=\"btn pri\" data-act=\"login-supabase\">'+icon('shield','s')+'Đăng nhập Supabase (chỉ dành cho độc giả)</button>'+",
+  "to": "'<button class=\"btn pri\" data-act=\"login-supabase\" title=\"Chỉ dành cho độc giả; quản trị dùng ADMIN_KEY\">'+icon('shield','s')+'Đăng nhập Supabase</button>'+",
+  "note": "Vòng 13: bỏ phần trong ngoặc dài, giữ ngữ cảnh ở title"
+ },
+ {
+  "from": "'<button class=\"btn\" data-act=\"static-mode\">'+icon('database','s')+'Xem dữ liệu tĩnh, chỉ đọc</button>'+",
+  "to": "'<button class=\"btn\" data-act=\"static-mode\">'+icon('database','s')+'Chế độ chỉ đọc</button>'+",
+  "note": "Vòng 13: nút chế độ tĩnh gọn"
+ },
+ {
+  "from": "'<div class=\"sep\">hoặc kết nối bằng ADMIN_KEY</div>'+",
+  "to": "'<div class=\"sep\">hoặc ADMIN_KEY</div>'+",
+  "note": "Vòng 13: dấu phân cách gọn"
+ },
+ {
+  "from": "><span class=\"track\"></span><span>Dữ liệu tĩnh, chỉ đọc</span></label>'+",
+  "to": "><span class=\"track\"></span><span>Chỉ đọc</span></label>'+",
+  "note": "Vòng 13: nhãn công tắc gọn"
+ },
+ {
+  "from": "data-id=\"dashboard\">Vào Dashboard (chỉ đọc)</button></div>'+",
+  "to": "data-id=\"dashboard\">Vào Dashboard</button></div>'+",
+  "note": "Vòng 13: bỏ \"(chỉ đọc)\" thừa (chip đã nói rõ)"
+ },
+ {
+  "from": "'<div class=\"gate-foot\">ADMIN_KEY chỉ lưu trong phiên này (sessionStorage), không ghi vào localStorage.<br>URL Worker được nhớ trên máy; không gửi khoá cho bên thứ ba.</div></div></div>';",
+  "to": "'<div class=\"gate-foot\">ADMIN_KEY chỉ lưu trong phiên (sessionStorage).<br>URL Worker được nhớ trên máy; khoá không gửi cho bên thứ ba.</div></div></div>';",
+  "note": "Vòng 13: chân thẻ bớt rườm rà, giữ đủ ý bảo mật"
+ },
+ {
+  "from": "Về trạng thái bình thường",
+  "to": "Quay lại",
+  "note": "Vòng 13: nút quay lại gọn"
+ },
+ {
+  "from": "ĐANG TẢI · kiểm tra kết nối Worker",
+  "to": "ĐANG KIỂM TRA KẾT NỐI",
+  "note": "Vòng 13: trạng tải gọn"
+ },
+ {
+  "from": "Nhập địa chỉ Worker ở trạng thái bình thường, hoặc dùng chế độ dữ liệu tĩnh chỉ đọc. DỮ LIỆU THẬT.",
+  "to": "Nhập URL Worker + ADMIN_KEY, hoặc chọn chế độ chỉ đọc.",
+  "note": "Vòng 13: trạng rỗng gọn, bỏ cụm DỮ LIỆU THẬT lặp"
+ },
+ {
+  "from": "Sai ADMIN_KEY hoặc Worker trả lỗi. Thử lại hoặc chuyển sang dữ liệu tĩnh chỉ đọc.",
+  "to": "Sai ADMIN_KEY hoặc Worker lỗi. Thử lại, hoặc chọn chế độ chỉ đọc.",
+  "note": "Vòng 13: trạng lỗi gọn"
+ },
+ {
+  "from": "Ghi cần đăng nhập, lưu trực tiếp vào Cloudflare KV.",
+  "to": "Ghi trực tiếp vào Cloudflare KV.",
+  "note": "Vòng 13: câu dẫn gọn"
+ },
+ {
+  "from": "Lọc, sửa và xuất bản bộ truyện hàng loạt",
+  "to": "Lọc, sửa, xuất bản hàng loạt",
+  "note": "Vòng 13: feature gọn"
+ },
+ {
+  "from": "Trình soạn thảo, nháp tự lưu, nhập .txt/.docx",
+  "to": "Soạn thảo, nháp tự lưu, .txt/.docx",
+  "note": "Vòng 13: feature gọn"
+ },
+ {
+  "from": "Bình luận, báo lỗi và phiếu bầu",
+  "to": "Bình luận, báo lỗi, phiếu bầu",
+  "note": "Vòng 13: feature gọn"
+ },
+ {
+  "from": "desc:'Lỗi độc giả gửi · xử lý, mở lại.'",
+  "to": "desc:'Báo lỗi độc giả'",
+  "note": "Vòng 13: mô tả tab Báo lỗi gọn, không dấu · rườm rà"
+ },
+ {
+  "from": "placeholder=\"Tìm tên, tác giả gốc, couple, slug…\"",
+  "to": "placeholder=\"Tìm tên, tác giả…\"",
+  "note": "Vòng 13: placeholder đúng với searchData() (chỉ tìm tên + tác giả)"
+ },
+ {
+  "from": "Thông báo từ Cloudflare KV",
+  "to": "Từ Cloudflare KV",
+  "note": "Vòng 13: phụ đề popover gọn"
+ },
+ {
+  "from": "đăng nhập · chương · Worker · quota",
+  "to": "đăng nhập · Worker · quota",
+  "note": "Vòng 13: nhãn phải card Tình trạng hệ thống gọn"
+ },
+ {
+  "from": "Nháp, chờ duyệt, lưu trữ hoặc riêng tư",
+  "to": "Nháp, chờ duyệt, riêng tư",
+  "note": "Vòng 13: phụ đề Việc nên xem lại gọn"
+ },
+ {
+  "from": "Trang truyện và thẻ ở thư viện trống giới thiệu",
+  "to": "Thiếu giới thiệu trên thẻ & trang truyện",
+  "note": "Vòng 13: phụ đề Thiếu mô tả gọn"
  }
 ]

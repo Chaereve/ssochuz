@@ -79,6 +79,8 @@
     S.picked = []; S.selectedBook = null; S.chapterBook = null;
     S.savedAt = ''; S.chapterAt = ''; S.hpNote = ''; S.hpText = ''; S.hpHref = '';
     S.migrateResult = ''; S.demoOpen = false;
+    /* Vòng 13: counter KV thật, renderTopbar() đọc để vẽ chip. */
+    S.kvWrites = 0; S.kvReads = 0;
     S.couples = { nb: [''], eb: [''] };
     var zeroRows = [['—', 0], ['—', 0], ['—', 0], ['—', 0], ['—', 0]];
     ['reads', 'likes', 'voters', 'today'].forEach(function (k) {
@@ -102,6 +104,8 @@
      data-act="demo" nào đó trong tương lai, panel không bao giờ hiện. */
   function redraw() {
     S.demoOpen = false;
+    /* Chip KV phải hiện writesToday thật, không phải hằng 120/1000 của prototype. */
+    S.kvWrites = WRITES; S.kvReads = READS;
     var demo = D.getElementById('demo');
     if (demo) { demo.hidden = true; if (demo.innerHTML) demo.innerHTML = ''; }
     if (WRAPPED) window.render(); else M.render();
@@ -132,6 +136,7 @@
   function setConn(c) { S.conn = c; try { redraw(); } catch (e) {} }
   function setQuota() {
     S.quota = WRITES >= 1000 ? 'blocked' : WRITES >= 950 ? 'bad' : WRITES >= 800 ? 'warn' : 'ok';
+    S.kvWrites = WRITES; S.kvReads = READS;
   }
   function ensureOnline() {
     if (S.conn !== 'online' || !CFG.key) {
@@ -826,7 +831,7 @@
       }, 'Flush stats', true);
     },
     'login-supabase': function () {
-      say('Ghi KV cần ADMIN_KEY qua Worker. Supabase/Google chỉ dùng cho độc giả — nhập URL Worker + ADMIN_KEY bên dưới.', 'info');
+      say('Supabase chỉ dành cho độc giả. Quản trị: nhập URL Worker + ADMIN_KEY.', 'info');
     },
     'static-mode': function () {
       CFG.key = ''; delete S.models['gate-key']; setConn('static');
@@ -955,6 +960,9 @@
     return z(d.getDate()) + '/' + z(d.getMonth() + 1) + ' ' + z(d.getHours()) + ':' + z(d.getMinutes());
   })();
   window.render = function () {
+    /* Đẩy counter TRƯỚC khi origRender() dựng chip (kể cả render parse-time
+       của script inline nếu ai đó gọi lại window.render). */
+    S.kvWrites = WRITES; S.kvReads = READS;
     origRender();
     try {
       var clock = D.getElementById('czClock');

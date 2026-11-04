@@ -8,10 +8,12 @@
      1. cầu nối window.CZ_MOCKUP ngay trước </script> của script inline;
         <script src="/admin-real.js?v=<sha1>"> nạp lớp đọc/ghi KV thật;
         đổi <title>, favicon, bỏ link sang bản admin cũ.
-     2. tools/admin_prod_replacements.json (vòng 12): bảng KHÁC BIỆT giữa
+     2. tools/admin_prod_replacements.json (vòng 12–13): bảng KHÁC BIỆT giữa
         prototype và bản phát hành — gỡ bảng điều khiển demo, thay 13 mảng
         SAMPLE_* bằng cấu trúc rỗng, đổi số cứng thành số đếm từ KV, sửa
-        placeholder/aria-label/trạng rỗng/toast, thêm guard KV rỗng. Build
+        placeholder/aria-label/trạng rỗng/toast, thêm guard KV rỗng; vòng 13
+        gộp 2 pill topbar thành 1 chip KV, xoá hằng quota 120/1000 và rút gọn
+        nhãn để chip/banner/sysrow cùng đọc writesToday thật. Build
         FAIL NGAY nếu một chuỗi nguồn biến mất do mockup đổi tay.
      3. scrubProto(): dọn nốt cụm prototype trong mã JS còn sót (kể cả handler
         bị lớp KV chặn), NHƯNG tách riêng khối DOCS_HTML để không ghi đè tài
@@ -128,7 +130,7 @@ html = html
   .replace('title="Ngày mẫu: ', 'title="Ngày: ');
 
 /* ----------------------------------------------------------------------------
-   BẢNG KHÁC BIỆT PROTOTYPE → BẢN PHÁT HÀNH (vòng 12)
+   BẢNG KHÁC BIỆT PROTOTYPE → BẢN PHÁT HÀNH (vòng 12–13)
    ----------------------------------------------------------------------------
    Owner rà lại toàn bộ /admin và hỏi "sao vẫn còn vài chỗ tạo lúc demo
    mockup?". Ngoài nhãn, prototype còn có: nguyên bảng điều khiển demo (nút
