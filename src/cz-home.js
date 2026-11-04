@@ -54,6 +54,11 @@
     if (n.locked) badges.push({ label: 'Có mật mã', tone: 'lock', icon: 'lock' });
     if (n.is18) badges.push({ label: '18+', tone: 'bad' });
     if (n.fresh) badges.push({ label: 'MỚI', tone: 'acc' });
+    /* Vòng 16: Homepage CMS có ô "Lý do giới thiệu" cho từng slide, ghi vào
+       slides[].reason; CZ.slides() gắn thành n._reason. Trước đây heroItem bỏ
+       qua hoàn toàn ⇒ ô nhập liệu vô tác dụng, web không bao giờ hiện lý do.
+       Hiện thành viên nhãn accent cạnh tình trạng, cắt 60 ký tự cho gọn. */
+    if (n._reason) badges.push({ label: String(n._reason).slice(0, 60), tone: 'acc' });
     /* Một hàng meta KHÔNG icon: chỉ còn chữ, cách nhau bằng dấu chấm mảnh (CSS lo). */
     var meta = [{ label: CZ.countText(n), strong: true, title: 'Số chương' }];
     if (n.author) meta.push({ label: n.author, title: 'Tác giả' });
@@ -427,7 +432,12 @@
       var n = schedFind(x.it);
       var im = n && CZ.coverSrc(n);
       var title = (n && n.title) || x.it.title || '';
-      var meta = n ? (n.canRead ? CZ.countText(n) : CZ.statusLabel(n.statusCls)) : (x.it.detail || '');
+      /* Vòng 16: ô "Ghi chú" của Lịch ra chương (schedule.items[].detail) do
+         Homepage CMS ghi, nhưng bản cũ chỉ dùng khi KHÔNG tìm được bộ ⇒ với dữ
+         liệu thật (có slug) ghi chú biến mất. Luôn ghép ghi chú vào dòng phụ. */
+      var rowNote = String(x.it.detail || '').trim();
+      var stat = n ? (n.canRead ? CZ.countText(n) : CZ.statusLabel(n.statusCls)) : '';
+      var meta = rowNote && stat ? stat + ' · ' + rowNote : (rowNote || stat);
       var i = dayIdx(x);
       var label = i >= 0 ? (i === todayIdx ? 'Hôm nay' : WDL[i]) : 'Chưa hẹn';
       return '<a class="w3r sched' + (i === todayIdx ? ' now' : '') + '"' +
@@ -442,7 +452,9 @@
     var hn = schedFind(hero.it);
     var him = hn && CZ.coverSrc(hn);
     var htitle = (hn && hn.title) || hero.it.title || '';
-    var hmeta = hn ? (hn.canRead ? CZ.countText(hn) : CZ.statusLabel(hn.statusCls)) : (hero.it.detail || '');
+    var hnote = String(hero.it.detail || '').trim();
+    var hstat = hn ? (hn.canRead ? CZ.countText(hn) : CZ.statusLabel(hn.statusCls)) : '';
+    var hmeta = hnote && hstat ? hstat + ' · ' + hnote : (hnote || hstat);
     var kicker = (heroIsToday ? 'Ra hôm nay' : 'Ra ' + WDL[heroIdx]) + ' · ' + dayDate(heroIdx);
     var heroHTML = '<a class="w3feat v3b sched' + (hn ? '' : ' off') + '"' +
       (hn ? ' href="' + esc(CZ.storyURL(hn.slug)) + '"' : '') + '>' +
@@ -875,9 +887,30 @@
       'Kiểm tra mạng rồi tải lại trang. Dữ liệu vẫn còn nguyên trong kho.</div>';
   }
   CZ.mountShell({ active: 'home' });          /* đầu trang hiện ngay, không chờ dữ liệu */
+
+  /* Vòng 16 · THÔNG BÁO THẬT TỪ HOMEPAGE CMS --------------------------------
+     Admin đã ghi settings.announcement (enabled / text / href) lên KV từ vòng 14,
+     nhưng trang chủ chưa từng đọc khoá này ⇒ công tắc "Bật banner" vô tác dụng.
+     Chỉ hiện khi bật VÀ có chữ; không có nội dung mẫu. Link lạ (javascript:,
+     data:, //host…) bị bỏ để không mở ra ngoài ý chủ trang. */
+  function renderAnnouncement(reg) {
+    var el = $('#announce');
+    if (!el) return;
+    var a = (reg && reg.settings && reg.settings.announcement) || {};
+    var text = String(a.text || '').trim();
+    if (!a.enabled || !text) { el.hidden = true; el.innerHTML = ''; return; }
+    var href = String(a.href || '').trim();
+    var safe = /^\/(?!\/)|^https?:\/\//i.test(href) ? href : '';
+    el.innerHTML = '<span class="an-dot" aria-hidden="true"></span>' +
+      '<span class="an-tx">' + esc(text) + '</span>' +
+      (safe ? '<a class="an-link" href="' + esc(safe) + '">Xem chi tiết ›</a>' : '');
+    el.hidden = false;
+  }
+
   function boot(reg) {
     try {
       CZ._setLib();
+      renderAnnouncement(reg);
       var lib = CZ.lib();
       CZ.mountShell({ active: 'home' });       /* dựng lại để chân trang có rev mới */
       mountHero(CZ.slides(reg).slice(0, 5));

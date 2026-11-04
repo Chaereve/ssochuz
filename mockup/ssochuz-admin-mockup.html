@@ -1749,6 +1749,18 @@ const DOCS_HTML =
 '<li><b>Chống tái diễn:</b> <code>tests/t_admin_series_page.js</code> (95 kiểm) khoá card 12 · trang 67 · lọc · tick vượt 12 · chọn/bỏ tất cả · PUT với editorChoice=20 · đóng bằng nút/Esc · 13 tab × 2 chế độ 0 lỗi JS. <code>tests/t_admin_full_data.js</code> cập nhật lên 144 kiểm.</li>'+
 '</ul>'+
 '<p><b>Kiểm chứng vòng 15:</b> npm run build đạt · toàn bộ npm test đạt · tests/t_admin_series_page.js 95/95 · tests/t_admin_full_data.js 144/144 · E2E HTTP thật qua Worker RAM đạt · 13 tab / 5 nhóm / 49 biến :root / 0 màu literal / 0 emoji.</p>'+
+'<h4>VÒNG 16 · ĐỒNG BỘ DỮ LIỆU HOMEPAGE CMS ↔ WEB PUBLIC</h4>'+
+'<p>Owner: "nhiều chức năng trong admin panel chưa đồng bộ so với dữ liệu hiển thị thật của trang, fix đi". Rà từng khoá admin ghi ra KV rồi đối chiếu ngược với những gì web thật sự đọc.</p>'+
+'<ul>'+
+'<li><b>Banner thông báo:</b> <code>settings.announcement</code> (enabled / text / href) đã được ghi từ vòng 14 nhưng web chưa từng đọc khoá này ⇒ công tắc vô tác dụng. <code>renderAnnouncement()</code> trong cz-home.js nay hiện đúng nội dung, chỉ nhận link nội bộ hoặc https, ẩn mặc định nên không có dữ liệu giả.</li>'+
+'<li><b>Lý do giới thiệu slide:</b> <code>slides[].reason</code> được CZ.slides() gắn thành _reason nhưng heroItem() bỏ qua. Giờ hiện thành viên nhãn cạnh tình trạng trên sạp báo.</li>'+
+'<li><b>Ghi chú lịch:</b> <code>schedule.items[].detail</code> trước chỉ dùng khi KHÔNG tìm được bộ; dữ liệu thật luôn có slug nên ghi chú biến mất. Giờ ghép vào dòng phụ của cả hàng thường lẫn tấm tiêu điểm. schedule.note và ngày hôm nay vốn đã đúng, rà lại và giữ nguyên.</li>'+
+'<li><b>Chuyển thể Series trên web:</b> vòng 15 cho chọn không giới hạn nhưng trang chủ vẫn cắt 8 tấm. Thêm nút <b>Xem thêm ›</b> (KHÁC nút cùng tên trong card admin) mở trang <code>/chuyen-the</code> liệt kê toàn bộ editorChoice bằng CZ.card().</li>'+
+'<li><b>Không sửa 2 chỗ tưởng lệch:</b> Worker tự <code>syncCountToRegistry()</code> khi lưu/xoá chương và tự <code>setLockFlag()</code> khi đặt/bỏ mật mã; admin ghi thêm lần nữa chỉ tốn quota và phá hợp đồng đã có bài kiểm thử khoá.</li>'+
+'<li><b>Giao diện trang chủ:</b> sạp báo nhỏ ~20% CHỈ ở desktop ≥1024px (mobile giữ nguyên); Ranking / Đáng xem chuyển thành 2 ô song song, bỏ thanh hồng chạy dài. Bản xem thử: <code>mockup/home-preview.html</code>.</li>'+
+'<li><b>Giữ nguyên:</b> 13 tab / 5 nhóm, 49 biến :root / 0 màu literal / 0 emoji, dữ liệu KV thật, 145 mục thay thế fail-fast, và lịch sử các vòng trong tài liệu này.</li>'+
+'</ul>'+
+'<p><b>Kiểm chứng vòng 16:</b> tests/t_v16.js (cấu trúc + 6 màn jsdom thật: banner, link lạ, lý do slide, ghi chú lịch, 20 thẻ trang riêng vs 8 thẻ trang chủ) · t_pwa · t_html (173 luật _redirects) · toàn bộ npm test · audit trợ năng · E2E Worker KV RAM.</p>'+
 '<h4>ĐỀ XUẤT THÊM (không nằm trong mockup)</h4>'+
 '<ul>'+
 '<li>Phỏng vấn chủ site và quan sát 2 ca tự dịch, đăng chương để kiểm chứng 5 giả thuyết.</li>'+
