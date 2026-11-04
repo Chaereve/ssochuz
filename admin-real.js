@@ -190,7 +190,13 @@
     REG = reg || { lib: [] };
     var lib = REG.lib || [];
     S.books = lib.map(metaToBook);
-    S.picked = lib.slice(0, 3).map(function (m) { return m.slug; });
+    /* Vòng 14: "Chuyển thể Series" là editorChoice thật trong registry
+       (12 slug), KHÔNG phải 3 bộ đầu. Web đọc cả 2 chỗ nên giữ đồng bộ. */
+    var choice = (Array.isArray(REG.editorChoice) && REG.editorChoice.length)
+      ? REG.editorChoice
+      : ((REG.settings && Array.isArray(REG.settings.editorChoice)) ? REG.settings.editorChoice : []);
+    S.picked = choice.map(function (x) { return typeof x === 'string' ? x : ((x && x.slug) || ''); })
+      .filter(Boolean).slice(0, 12);
     /* Dọn mẫu đã chạy ở boot() trước render đầu tiên; gọi lại ở đây để giữ
        hợp đồng "dọn đúng một lần" nếu hydrate() bị gọi từ một luồng khác. */
     clearPrototypeSeed();
@@ -198,7 +204,6 @@
       S.selectedBook = S.books.length ? S.books[0].id : null;
     if (S.selectedBook) window.initEditModels(M.getBook(S.selectedBook));
     S.models['st-slug'] = S.books.length ? S.books[0].id : '';
-    S.models['hp-text'] = S.hpText || ''; S.models['hp-href'] = S.hpHref || '';
     S.chapterBook = S.selectedBook;
 
     var slides = Array.isArray(REG.slides) ? REG.slides : [];
@@ -207,10 +212,19 @@
     });
     var sch = (REG.schedule && Array.isArray(REG.schedule.items)) ? REG.schedule.items : [];
     S.schedule = sch.map(function (x) {
-      return { d: x.days || x.day || '', b: x.slug || '', c: x.detail || x.title || '' };
+      /* detail là GHI CHÚ (thường rỗng); title là TÊN BỘ — trước đây gộp
+         title vào ô ghi chú rồi ghi ngược lại vào KV. */
+      return { d: x.days || x.day || '', b: x.slug || '', c: x.detail || x.note || '' };
     });
     var ann = (REG.settings && REG.settings.announcement) || {};
-    S.hpNote = ann.text || ''; S.hpText = ann.text || ''; S.hpHref = ann.href || '';
+    S.hpNote = (REG.schedule && REG.schedule.note) || '';
+    S.hpText = ann.text || ''; S.hpHref = ann.href || '';
+    /* Gán SAU khi đã đọc ann: trước đây gán trước nên 2 ô luôn rỗng dù KV có
+       nội dung thông báo, và công tắc banner luôn tắt. */
+    S.models['hp-text'] = S.hpText;
+    S.models['hp-href'] = S.hpHref;
+    S.models['hp-banner'] = !!ann.enabled;
+    S.models['hp-note'] = S.hpNote;
     S.migrateResult = '';
 
     var totalCh = lib.reduce(function (n, m) { return n + (Number(m.chapters) || 0); }, 0);
@@ -317,9 +331,11 @@
       if (m2) m2.n = String(READS);
     });
   }
+  var STATS_ITEMS = {};   /* /api/admin/stats · dùng để biết bộ nào CÓ phiếu */
   function loadStats() {
     return apiCall('/api/admin/stats').then(function (r) {
       var items = r.items || {}, days = r.days || [];
+      STATS_ITEMS = items;
       var pairs = Object.keys(items).map(function (slug) {
         var it = items[slug] || {};
         return { slug: slug, name: titleOf(slug), views: Number(it.views || 0), votes: Number(it.votes || 0), today: Number(it.viewsDay || 0) };
@@ -334,7 +350,19 @@
     });
   }
   function loadVoters() {
-    var slugs = (REG.lib || []).slice(0, 5).map(function (m) { return m.slug; });
+    /* Vòng 14: trước đây chỉ hỏi 5 bộ đầu ⇒ tab Phiếu bầu thiếu phiếu của 62
+       bộ còn lại. NHƯNG gọi 67 lần /api/admin/voters thì mỗi lần Worker lại
+       flushStats + readStats (tốn KV read). /api/admin/stats đã trả số phiếu
+       của MỌI bộ trong 1 request ⇒ chỉ hỏi những bộ thật sự có phiếu. */
+    var all = (REG.lib || []).map(function (m) { return m.slug; }).filter(Boolean);
+    var hot = all.filter(function (sl) {
+      var it = STATS_ITEMS[sl] || {};
+      return (Number(it.voters) || 0) > 0 ||
+        (it.chapVotes && Object.keys(it.chapVotes).length > 0);
+    });
+    /* Stats rỗng (KV mới / Worker cũ): vẫn thăm 12 bộ đầu để không im lặng,
+       nhưng không bao giờ bắn hàng chục request mỗi lần mở /admin. */
+    var slugs = (hot.length ? hot : all.slice(0, 12)).slice(0, 40);
     return Promise.all(slugs.map(function (slug) {
       return apiCall('/api/admin/voters?slug=' + encodeURIComponent(slug))
         .then(function (r) {
@@ -346,7 +374,7 @@
         }).catch(function () { return []; });
     })).then(function (groups) {
       var flat = []; groups.forEach(function (g) { flat = flat.concat(g); });
-      S.votes = flat.slice(0, 60);
+      S.votes = flat.slice(0, 200);
     });
   }
 
@@ -354,8 +382,11 @@
     return apiCall('/api/registry').then(function (reg) {
       hydrate(reg); redraw();
       return Promise.allSettled([
-        loadComments(), loadReports(), loadStats(), loadLog(), loadKv(), loadVoters(), loadBook(S.selectedBook, true)
+        loadComments(), loadReports(), loadStats(), loadLog(), loadKv(), loadBook(S.selectedBook, true)
       ]);
+    }).then(function () {
+      /* loadVoters() đọc STATS_ITEMS nên phải chạy SAU loadStats(). */
+      return loadVoters().catch(function () {});
     }).then(function () { setQuota(); redraw(); });
   }
   function loadStatic() {
@@ -675,8 +706,17 @@
     var nextItems = S.schedule.map(function (x, i) {
       return Object.assign({}, origItems[i] || {}, { days: x.d, slug: x.b, detail: x.c, title: (origItems[i] || {}).title || titleOf(x.b) });
     });
-    next.schedule = Object.assign({}, REG.schedule || {}, { items: nextItems });
+    next.schedule = Object.assign({}, REG.schedule || {}, {
+      items: nextItems,
+      note: val('hp-note') || S.hpNote || '',
+      updated: today()
+    });
+    /* Vòng 14: checkbox "Chuyển thể Series" phải ghi ra editorChoice, nếu không
+       bấm xong chuyển tab là mất sạch 12 lựa chọn thật của chủ trang. */
+    var picked = S.picked.slice(0, 12);
+    next.editorChoice = picked;
     next.settings = next.settings || {};
+    next.settings.editorChoice = picked.slice();
     next.settings.announcement = Object.assign({}, next.settings.announcement || {}, {
       enabled: !!(checked('hp-banner') || S.models['hp-banner']),
       text: val('hp-text') || S.hpText || '',
@@ -686,9 +726,14 @@
   }
   function realSaveHomepage() {
     if (!ensureOnline()) return;
-    if (!S.slides.length) { say('Cần ít nhất 1 slide trước khi lưu.', 'bad'); return; }
+    /* registry thật có slides:[] là HỢP LỆ (web tự lấy 5 bộ mới nhất). Bắt
+       phải có >=1 slide khiến nút Lưu trang chủ luôn báo lỗi dù chỉ muốn sửa
+       lịch / Series / thông báo — đó là lỗi owner gặp ở Homepage CMS. */
     if (S.schedule.some(function (x) { return !x.d || !x.b; })) { say('Lịch ra chương còn dòng thiếu thứ hoặc bộ.', 'bad'); return; }
-    writeRegistry(currentRegistryFromState()).then(function () { say('Đã lưu trang chủ lên KV.'); }).catch(fail);
+    writeRegistry(currentRegistryFromState()).then(function () {
+      say(S.slides.length ? 'Đã lưu trang chủ lên KV.'
+        : 'Đã lưu lịch, Series và thông báo lên KV · không có slide, web tự lấy 5 bộ mới nhất.');
+    }).catch(fail);
   }
   function realSlideChange(kind, idx, dir, el) {
     if (kind === 'add') {
@@ -943,8 +988,15 @@
   };
   var origCover = M.cover;
   window.cover = function (b, cls) {
-    if (b && b.thumb && /^https?:\/\//i.test(b.thumb))
-      return '<img class="cover ' + (cls || '') + '" src="' + esc(b.thumb) + '" alt="' + esc(b.t || '') + '" loading="lazy">';
+    /* Vòng 14: ảnh bìa thật từ registry.thumb. Chỉ nhận http(s) (CSP img-src
+       cho phép), có decoding/referrerpolicy như trang public, và mang
+       data-cover + data-fb-text để listener bên dưới thay bằng ô dự phòng
+       khi URL hỏng — CSP script-src-attr 'none' cấm onerror inline. */
+    var u = b && String(b.thumb || '').trim();
+    if (u && /^https?:\/\//i.test(u))
+      return '<img class="cover ' + (cls || '') + '" src="' + esc(u) + '" alt="Bìa ' + esc(b.t || '') +
+        '" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-cover="1" data-fb-text="' +
+        esc(String(b.t || '').slice(0, 3)) + '">';
     return origCover(b, cls);
   };
   var st = D.createElement('style');
@@ -1099,6 +1151,29 @@
       S.chapterBook = el.value;
       (S.conn === 'static' ? loadStaticBook(el.value) : loadBook(el.value)).catch(function () {});
     }
+    else if (r === 'picked') {
+      e.preventDefault(); e.stopPropagation();
+      var pid = el.dataset.id, at = S.picked.indexOf(pid);
+      if (el.checked && at < 0) {
+        if (S.picked.length >= 12) { el.checked = false; say('Chuyển thể Series tối đa 12 bộ.', 'warn'); return; }
+        S.picked.push(pid);
+      } else if (!el.checked && at >= 0) S.picked.splice(at, 1);
+      var cnt = D.getElementById('hpPickedCount');
+      if (cnt) cnt.textContent = String(S.picked.length);
+    }
+  }, true);
+
+  /* CSP có script-src-attr 'none' nên KHÔNG dùng onerror inline. Ảnh bìa lỗi:
+     ẩn <img> để lộ chữ dự phòng (cover() luôn đặt sẵn .cv-fb bên dưới). */
+  D.addEventListener('error', function (e) {
+    var im = e.target;
+    if (!im || im.tagName !== 'IMG' || !im.getAttribute('data-cover')) return;
+    im.removeAttribute('data-cover');
+    var out = D.createElement('span');
+    out.className = 'cover cv-miss ' + String(im.className || '').replace(/\bcover\b/g, '').trim();
+    out.setAttribute('aria-label', 'Bìa bị thiếu');
+    out.textContent = im.getAttribute('data-fb-text') || '—';
+    if (im.parentNode) im.parentNode.replaceChild(out, im);
   }, true);
 
   /* capture: chặn trước khi listener bubble của mockup chạy */

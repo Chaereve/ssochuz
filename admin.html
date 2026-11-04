@@ -855,8 +855,8 @@ function renderTopbar(){
 function searchData(q){
   var out=[];
   NAV.forEach(function(g){g.items.forEach(function(it){if(!q||it[1].toLowerCase().indexOf(q.toLowerCase())>=0)out.push({type:'Tab',label:it[1],id:it[0],sub:g.g});});});
-  state.books.forEach(function(b){if(!q||b.t.toLowerCase().indexOf(q.toLowerCase())>=0||b.a.toLowerCase().indexOf(q.toLowerCase())>=0)out.push({type:'Bộ',label:b.t,id:b.id,sub:b.a});});
-  return out.slice(0,8);
+  state.books.forEach(function(b){if(!q||[b.t,b.a,b.id,b.c].some(function(x){return String(x||'').toLowerCase().indexOf(q.toLowerCase())>=0;}))out.push({type:'Bộ',label:b.t,id:b.id,sub:b.a});});
+  return out.slice(0,12);
 }
 function suggestList(q,kind){
   var list=searchData(q);
@@ -884,6 +884,16 @@ function paletteRows(q){
   }).join('');
 }
 function getBook(id){return state.books.find(function(b){return b.id===id;})||state.books[0];}
+/* Vòng 14: mọi ô chọn bộ phải liệt kê TOÀN BỘ registry KV, sắp A–Z. Nếu slug
+   đang lưu không còn trong KV vẫn giữ option đó (đừng để select tự nhảy sang
+   bộ đầu rồi ghi đè mất dữ liệu thật). useTitle=true dùng cho bộ lọc bình luận. */
+function bookOptions(sel,useTitle){
+  var list=state.books.slice().sort(function(a,b){return String(a.t||'').localeCompare(String(b.t||''),'vi');});
+  var v=function(b){return useTitle?b.t:b.id;};
+  var has=sel&&list.some(function(b){return v(b)===sel;});
+  return (!sel||has?'':'<option value="'+esc(sel)+'" selected>'+esc(sel)+' (không còn trong KV)</option>')+
+    list.map(function(b){return '<option value="'+esc(v(b))+'"'+(sel===v(b)?' selected':'')+'>'+esc(b.t)+'</option>';}).join('');
+}
 function slugOf(b){return b.slug||'bo-'+b.id;}
 function titleOf(id){var b=getBook(id);return esc(b.t);}
 
@@ -969,7 +979,7 @@ function filteredBooks(){
   return arr;
 }
 function libraryHTML(){
-  var arr=filteredBooks(),per=8,pages=Math.max(1,Math.ceil(arr.length/per)),page=Math.min(state.lib.page,pages);
+  var arr=filteredBooks(),per=20,pages=Math.max(1,Math.ceil(arr.length/per)),page=Math.min(state.lib.page,pages);
   state.lib.page=page;
   var rows=arr.slice((page-1)*per,page*per);
   var opts=function(list,cur){return list.map(function(o){return '<option value="'+esc(o[0])+'"'+(cur===o[0]?' selected':'')+'>'+esc(o[1])+'</option>';}).join('');};
@@ -1055,7 +1065,7 @@ function editBookHTML(){
   var pubOpts=Object.keys(PUB).map(function(k){return [k,PUB_SELECT[k]];});
   var visOpts=Object.keys(VIS).map(function(k){return [k,VIS[k]];});
   var picker='<div class="card"><div class="card-hd">'+cover(b)+'<div><h3>Đang sửa: '+esc(b.t)+'</h3><span class="xs dim">'+esc(slugOf(b))+'</span></div>'+
-    '<span class="right"><span class="sel"><select class="inp" data-role="switch-book" aria-label="Chọn bộ khác">'+state.books.slice(0,8).map(function(x){return '<option value="'+x.id+'"'+(x.id===b.id?' selected':'')+'>'+esc(x.t)+'</option>';}).join('')+'</select></span></span>'+
+    '<span class="right"><span class="sel"><select class="inp" data-role="switch-book" aria-label="Chọn bộ khác">'+bookOptions(b.id)+'</select></span></span>'+
     '<button class="btn sm" data-act="go" data-id="thu-vien">Chọn bộ khác</button></div></div>';
   var main='<div class="card"><div class="card-hd"><h3>Thông tin bộ</h3><span class="right">Metadata · bìa · giới thiệu</span></div><div class="card-bd">'+
     '<div class="grid2" style="gap:16px">'+
@@ -1142,7 +1152,7 @@ function chapterPipeline(){
   var empty={draft:'Không có bộ nháp.',pending:'Không có bộ chờ duyệt.',scheduled:'Không có bộ hẹn giờ.',waiting:'Không có chương nào đang hẹn giờ.'};
   var pick=state.chapterBook||(state.books[0]||{}).id;
   var head='<div class="card"><div class="card-hd"><h3>Chọn một bộ để quản lý chương</h3><span class="right">'+state.books.length+' bộ</span></div><div class="card-bd">'+
-    '<div class="row wrap" style="gap:8px"><span class="sel" style="flex:1 1 220px"><select class="inp" data-role="chapter-book" aria-label="Chọn bộ">'+state.books.slice(0,8).map(function(b){return '<option value="'+b.id+'"'+(b.id===pick?' selected':'')+'>'+esc(b.t)+'</option>';}).join('')+'</select></span>'+
+    '<div class="row wrap" style="gap:8px"><span class="sel" style="flex:1 1 220px"><select class="inp" data-role="chapter-book" aria-label="Chọn bộ">'+bookOptions(pick)+'</select></span>'+
     '<button class="btn sm" data-act="manage-chapters">'+icon('list','s')+'Quản lý chương</button></div></div></div>';
   return head+'<div class="grid2 mt">'+tabs.map(function(t){
     var list=queues[t[0]];
@@ -1208,7 +1218,7 @@ function commentsHTML(){
     '<span class="right">'+state.comments.length+' bình luận</span></div><div class="card-bd">'+
     '<div class="toolbar mb"><div class="search">'+icon('search','xs')+'<input class="inp" data-role="cmt-q" placeholder="Tìm nội dung, người gửi, bộ…" value="'+esc(state.cmtQ)+'" aria-label="Tìm bình luận"></div>'+
     '<span class="sel"><select class="inp" data-role="cmt-book" aria-label="Lọc theo bộ"><option value="">Mọi bộ</option>'+
-      state.books.slice(0,8).map(function(b){return '<option value="'+esc(b.t)+'"'+(state.cmtBook===b.t?' selected':'')+'>'+esc(b.t)+'</option>';}).join('')+'</select></span></div>'+
+      bookOptions(state.cmtBook,true)+'</select></span></div>'+
     '<div class="card-bd tight" style="padding:0">'+
     (arr.length?arr.map(function(c){
       return '<div class="list-item cmt"><div class="t"><b>'+esc(c.r)+'</b><span>'+esc(c.b)+' · '+esc(c.date)+'</span><span>'+esc(c.txt)+'</span></div>'+
@@ -1258,7 +1268,7 @@ function votesHTML(){
 
 /* ---------- 9 · Homepage CMS ---------- */
 function homepageHTML(){
-  var bookOpts=function(sel){return state.books.slice(0,8).map(function(b){return '<option value="'+b.id+'"'+(sel===b.id?' selected':'')+'>'+esc(b.t)+'</option>';}).join('');};
+  var bookOpts=function(sel){return bookOptions(sel);};
   var slides='<div class="card"><div class="card-hd"><h3>Hero / slides trang chủ</h3><div class="row"><span class="seg"><button class="btn sm'+(state.hpPreview==='desktop'?' pri':'')+'" data-act="hp-preview" data-v="desktop" aria-pressed="'+(state.hpPreview==='desktop')+'">Desktop</button><button class="btn sm'+(state.hpPreview==='mobile'?' pri':'')+'" data-act="hp-preview" data-v="mobile" aria-pressed="'+(state.hpPreview==='mobile')+'">Mobile</button></span></div><span class="right">tối đa 8</span></div><div class="card-bd">'+
     state.slides.map(function(s,i){
       return '<div class="row wrap mb" style="gap:8px;padding-bottom:10px;border-bottom:1px solid var(--bd)">'+cover(getBook(s.b))+
@@ -1268,13 +1278,15 @@ function homepageHTML(){
         '<button class="btn icon sm" data-act="slide-move" data-dir="1" data-idx="'+i+'" aria-label="Xuống sau">'+icon('arrowdown','s')+'</button>'+
         '<button class="btn icon sm ghost" data-act="slide-remove" data-idx="'+i+'" aria-label="Gỡ slide">'+icon('x','s')+'</button></div>';
     }).join('')+
-    (state.slides.length?'':'<div class="state" style="min-height:120px"><h3>Chưa chọn slide</h3><p>Trang chủ sẽ lấy 5 bộ mới nhất.</p></div>')+
+    (state.slides.length?'':'<div class="state" style="min-height:120px"><h3>Chưa chọn slide</h3><p>Không có slide trong KV; web tự lấy 5 bộ mới nhất. Vẫn lưu được lịch, Series và thông báo.</p></div>')+
     '<div class="row wrap mt"><span class="sel" style="flex:1 1 180px"><select class="inp" id="addSlideSel" aria-label="Chọn bộ thêm vào slide">'+bookOpts('')+'</select></span>'+
     '<button class="btn sm" data-act="slide-add">'+icon('plus','s')+'Thêm slide</button></div></div></div>';
-  var picked='<div class="card"><div class="card-hd"><h3>Chuyển thể Series</h3><span class="right">tối đa 12</span></div><div class="card-bd">'+
-    '<div class="grid3">'+state.books.slice(0,6).map(function(b){
-      return '<label class="chk"><input type="checkbox" data-role="picked" data-id="'+b.id+'"'+(state.picked.indexOf(b.id)>=0?' checked':'')+'><span class="box"></span><span>'+esc(b.t)+'</span></label>';
-    }).join('')+'</div></div></div>';
+  var picked='<div class="card"><div class="card-hd"><h3>Chuyển thể Series</h3><span class="right">tối đa 12 · đã chọn <b id="hpPickedCount">'+state.picked.length+'</b></span></div><div class="card-bd">'+
+    '<div class="grid3" style="max-height:280px;overflow:auto">'+state.books.slice().sort(function(a,b){return String(a.t||'').localeCompare(String(b.t||''),'vi');}).map(function(b){
+      return '<label class="chk"><input type="checkbox" data-role="picked" data-id="'+esc(b.id)+'"'+(state.picked.indexOf(b.id)>=0?' checked':'')+'><span class="box"></span><span>'+esc(b.t)+'</span></label>';
+    }).join('')+'</div>'+
+    (state.books.length?'':'<div class="state"><p>Chưa có bộ nào trong KV.</p></div>')+
+    '<p class="xs dim mt">Bấm Lưu trang chủ để ghi lựa chọn vào KV.</p></div></div>';
   var sched='<div class="card"><div class="card-hd"><h3>Lịch ra chương</h3><span class="right">DỮ LIỆU THẬT</span></div><div class="card-bd">'+
     state.schedule.map(function(s,i){
       return '<div class="row wrap mb" style="gap:8px"><input class="inp" style="flex:1 1 120px" data-role="sched-date" data-idx="'+i+'" value="'+esc(s.d)+'" aria-label="Ngày trong tuần" placeholder="Thứ 2, Thứ 5">'+
@@ -1282,11 +1294,11 @@ function homepageHTML(){
         '<input class="inp" style="flex:1 1 110px" data-role="sched-ch" data-idx="'+i+'" value="'+esc(s.c)+'" aria-label="Ghi chú lịch" placeholder="Ghi chú">'+
         '<button class="btn icon sm ghost" data-act="sched-remove" data-idx="'+i+'" aria-label="Gỡ lịch">'+icon('x','s')+'</button></div>';
     }).join('')+
-    '<div class="mt">'+field('Ghi chú lịch','hp-note',state.hpNote,{ph:'Ghi chú lịch'})+'</div>'+
+    '<div class="mt">'+field('Ghi chú lịch','hp-note',state.models['hp-note']||state.hpNote||'',{ph:'Ghi chú lịch'})+'</div>'+
     '<div class="row mt"><button class="btn sm" data-act="sched-add">'+icon('plus','s')+'Thêm dòng lịch</button>'+
     '<button class="btn sm" data-act="save-homepage">'+icon('save','s')+'Lưu trang chủ</button></div></div></div>';
   var announce='<div class="card"><div class="card-hd"><h3>Thông báo trang chủ</h3><span class="right">CLOUDFLARE KV</span></div><div class="card-bd stack">'+
-    '<label class="sw"><input type="checkbox" id="hp-banner" data-model="hp-banner"><span class="track"></span><span>Bật banner</span></label>'+
+    '<label class="sw"><input type="checkbox" id="hp-banner" data-model="hp-banner"'+(state.models['hp-banner']?' checked':'')+'><span class="track"></span><span>Bật banner</span></label>'+
     field('Nội dung thông báo','hp-text',state.models['hp-text']||'',{ph:'Nội dung thông báo'})+
     field('Link (tuỳ chọn)','hp-href',state.models['hp-href']||'',{ph:'https://…'})+'</div></div>';
   return '<div class="stack">'+slides+'<div class="grid2">'+picked+sched+'</div><div class="mt">'+announce+'</div></div>';
@@ -1352,7 +1364,7 @@ function settingsHTML(){
     '<div class="field"><label>Khôi phục từ backup JSON</label><span class="file"><input type="file" accept=".json,application/json" data-role="restore-file" aria-label="Chọn file backup JSON"></span><span class="hint">Ghi đè gõ KHÔI PHỤC.</span></div>'+
     '</div></div>';
   var blogger='<div class="card"><div class="card-hd"><h3>Nhập và đồng bộ Blogger</h3><span class="right">DỮ LIỆU THẬT</span></div><div class="card-bd stack">'+
-    field('Bộ nhận chương','st-slug',m['st-slug']||'b01',{type:'select',options:state.books.slice(0,6).map(function(b){return [b.id,b.t];})})+
+    field('Bộ nhận chương','st-slug',m['st-slug']||'b01',{type:'select',options:state.books.slice().sort(function(a,b){return String(a.t||'').localeCompare(String(b.t||''),'vi');}).map(function(b){return [b.id,b.t];})})+
     field('URL bài Blogger *','st-blogger-url',m['st-blogger-url']||'',{ph:'https://…'})+
     field('Cách nhập','st-mode',m['st-mode']||'append',{type:'select',options:[['append','Thêm vào cuối'],['replace-last','Thay chương cuối']]})+
     '<div class="row wrap"><button class="btn" data-act="blogger-import">'+icon('upload','s')+'Nhập chương</button><button class="btn" data-act="blogger-sync">'+icon('refresh','s')+'Đồng bộ metadata Blogger</button></div>'+
@@ -1627,7 +1639,7 @@ const DOCS_HTML =
 '<li><b>Dữ liệu giả lộ khi chưa cấu hình Worker:</b> 13 mảng SAMPLE_* (18 bộ Truyện mẫu, 6.420 chương, 248 book, 18.400 lượt đọc, nhật ký 03/11 20:40) được thay bằng cấu trúc rỗng ngay trong bản sinh. admin-real.js có clearPrototypeSeed() chạy TRƯỚC window.render() đầu tiên trong boot(), nên không còn một nháy dữ liệu giả trước khi KV kịp tải.</li>'+
 '<li><b>Hằng số và trạng thái bịa:</b> 3 báo lỗi / 2 spam / 5 khoá / 4 thiếu bìa / 3 bộ mới / 18.400 / Supabase: unavailable / KV chỉ còn stub / Đã chuyển 248 book — đổi thành số đếm từ state.books, state.reports, state.comments, SAMPLE_METRICS do Worker trả; biểu đồ có guard chia cho 0 khi KV rỗng.</li>'+
 '<li><b>Nhãn, placeholder, aria-label, toast và mã chết:</b> mọi cụm mẫu, chữ MẪU viết hoa, mô phỏng, Mockup:, minh hoạ ngoài khối tài liệu lịch sử được dọn; trạng rỗng dùng Chưa có dữ liệu trong KV.; tab Sửa bộ có guard riêng khi KV rỗng (trước đó gọi slugOf(undefined) và vỡ).</li>'+
-'<li><b>Cách làm:</b> toàn bộ khác biệt prototype → bản phát hành nằm trong tools/admin_prod_replacements.json (94 mục ở vòng 12 · 128 mục sau vòng 13, có chú thích). Generator áp từng mục và FAIL NGAY nếu một chuỗi nguồn biến mất do mockup đổi tay — tránh vá sót như các vòng trước. Khối DOCS_HTML được tách riêng khi dọn mã chết để lịch sử vòng 1–11 không bị sửa.</li>'+
+'<li><b>Cách làm:</b> toàn bộ khác biệt prototype → bản phát hành nằm trong tools/admin_prod_replacements.json (94 mục ở vòng 12 · 128 mục sau vòng 13 · 141 mục sau vòng 14, có chú thích). Generator áp từng mục và FAIL NGAY nếu một chuỗi nguồn biến mất do mockup đổi tay — tránh vá sót như các vòng trước. Khối DOCS_HTML được tách riêng khi dọn mã chết để lịch sử vòng 1–11 không bị sửa.</li>'+
 '<li><b>Không đổi:</b> 13 tab / 5 nhóm, 49 biến :root / 0 màu literal / 0 emoji, design system, luồng đọc/ghi KV thật, CORS preflight, khoá ADMIN_KEY chỉ trong session, sanitizer và gating. Bản prototype tĩnh mockup/ssochuz-admin-mockup.html vẫn GIỮ nguyên bảng thiết kế để mở offline.</li>'+
 '</ul>'+
 '<p><b>Kiểm chứng vòng 12:</b> npm run build đạt · toàn bộ npm test đạt · tests/t_admin_no_demo.js 96/96 · tests/t_admin_rail.js 54/54 · audit jsdom 13 tab × 3 trạng thái × 5 mode đăng nhập ở CẢ HAI chế độ (chưa cấu hình Worker / online 67 bộ KV) đều 0 lỗi JS và 0 dấu vết prototype.</p>'+
@@ -1641,6 +1653,18 @@ const DOCS_HTML =
 '<li><b>Chống tái diễn:</b> tests/t_admin_kv_chip.js (121 kiểm) khoá 4 tầng — nguồn phát hành (không còn txt/banner cứng, không 2 pill, mặc định checking, CSS canh trục), DOM online 137 lượt ghi, DOM quota cao 850 (banner tự sinh), DOM chưa cấu hình và DOM parse-time chưa nạp admin-real.js; đối chiếu luôn prototype vẫn là bản thiết kế 2 pill. Đưa vào npm test.</li>'+
 '</ul>'+
 '<p><b>Kiểm chứng vòng 13:</b> npm run build đạt · toàn bộ npm test đạt · tests/t_admin_kv_chip.js 121/121 · tests/t_admin_no_demo.js 96/96 · tests/t_admin_rail.js 54/54 · tests/t_admin_real.js 0 lỗi · 13 tab / 5 nhóm / 49 biến :root / 0 màu literal / 0 emoji và luồng ghi KV thật giữ nguyên.</p>'+
+'<h4>VÒNG 14 · RÀ TOÀN BỘ ADMIN: ĐỪNG CỤT DANH SÁCH BỘ, SỬA HOMEPAGE CMS</h4>'+
+'<p>Owner báo: "có lỗi ở trang chỉnh homepage, dữ liệu truyện bị thiếu tùm lum, check kĩ toàn bộ admin panel đi tr". Rà lại từng tab với registry thật (67 bộ, 12 editorChoice, 6 dòng lịch, 67/67 bộ có ảnh bìa) thay vì chỉ sửa màn hình trong ảnh.</p>'+
+'<ul>'+
+'<li><b>Lỗi ở Homepage CMS:</b> nút Lưu trang chủ chặn cứng "Cần ít nhất 1 slide trước khi lưu" trong khi registry.slides=[] là HỢP LỆ (web tự lấy 5 bộ mới nhất) nên nút luôn báo lỗi. Bỏ chặn, vẫn kiểm tra dòng lịch thiếu thứ/bộ; thông báo ghi rõ đã lưu lịch, Series và thông báo.</li>'+
+'<li><b>Danh sách bộ bị cụt:</b> ô chọn bộ ở Homepage (slide + lịch), Sửa bộ, Chương, Bình luận và Cài đặt dùng slice(0,8) / slice(0,6) nên chỉ thấy 6–8 bộ đầu; 6 dòng lịch vì thế đều nhảy về bộ đầu tiên. Thay bằng bookOptions() duyệt TOÀN BỘ registry, sắp A–Z, và giữ option riêng nếu slug đang lưu không còn trong KV để không ghi đè mất dữ liệu. Thư viện lên 20 bộ/trang.</li>'+
+'<li><b>Chuyển thể Series:</b> trước hiện 6 checkbox, tick 3 bộ đầu và KHÔNG ghi ra registry. Giờ liệt kê 67 bộ, tick đúng 12 editorChoice thật, có bộ đếm, giới hạn 12 khi tick, và currentRegistryFromState() ghi đồng bộ editorChoice + settings.editorChoice.</li>'+
+'<li><b>Banner / ghi chú lịch:</b> models được gán TRƯỚC khi đọc announcement nên ô thông báo luôn rỗng, công tắc banner luôn tắt; ô Ghi chú lịch lại nhầm nội dung banner, và lúc ghi ra KV biến detail (ghi chú rỗng) thành title (tên bộ). Sửa thứ tự hydrate, tách schedule.note, giữ nguyên title, và ghi ngược note/enabled/text/href.</li>'+
+'<li><b>Ảnh bìa & dữ liệu khác:</b> window.cover trong admin-real.js nhận decoding/referrerpolicy, chặn URL không phải https và có ô dự phòng khi ảnh hỏng (CSP cấm onerror inline nên dùng listener capture). loadVoters() trước chỉ hỏi 5 bộ đầu: giờ đọc /api/admin/stats để chỉ hỏi những bộ THẬT SỰ có phiếu, không bắn hàng chục request mỗi lần mở /admin. Gợi ý tìm kiếm tìm cả slug/couple và rộng lên 12 kết quả.</li>'+
+'<li><b>Không đổi:</b> 13 tab / 5 nhóm, 49 biến :root / 0 màu literal / 0 emoji, chip KV vòng 13, CORS preflight, ADMIN_KEY session-only, sanitizer, gating, văn bản chương thật trong KV và lịch sử MẪU. Prototype mockup vẫn GIỮ thiết kế cũ để mở offline.</li>'+
+'<li><b>Chống tái diễn:</b> tests/t_admin_full_data.js (140 kiểm) khoá nguồn + 13 tab ở CẢ HAI chế độ, 67 tuỳ chọn ở mọi select, 6 slug lịch, 12 editorChoice, bấm Lưu thật rồi soi body PUT /api/registry, tick Series / đổi lịch / bật banner / sửa thông báo rồi kiểm tra lần ghi tiếp, và fallback ảnh bìa hỏng.</li>'+
+'</ul>'+
+'<p><b>Kiểm chứng vòng 14:</b> npm run build đạt · toàn bộ npm test đạt · tests/t_admin_full_data.js 140/140 · tests/t_admin_no_demo.js 96/96 · tests/t_admin_rail.js 54/54 · tests/t_admin_kv_chip.js 121/121 · audit jsdom 13 tab online 67 bộ và chưa cấu hình đều 0 lỗi JS.</p>'+
 '<h4>ĐỀ XUẤT THÊM (không nằm trong mockup)</h4>'+
 '<ul>'+
 '<li>Phỏng vấn chủ site và quan sát 2 ca tự dịch, đăng chương để kiểm chứng 5 giả thuyết.</li>'+
@@ -1801,7 +1825,7 @@ function slugify(s){
 }
 function val(id){var el=document.getElementById(id);return el?el.value.trim():String(state.models[id]||'').trim();}
 function currentPageBooks(){
-  var arr=filteredBooks(),per=8,page=Math.min(state.lib.page,Math.max(1,Math.ceil(arr.length/per)));
+  var arr=filteredBooks(),per=20,page=Math.min(state.lib.page,Math.max(1,Math.ceil(arr.length/per)));
   return arr.slice((page-1)*per,page*per);
 }
 function setLock(v){
@@ -2404,6 +2428,6 @@ window.CZ_MOCKUP = {
   SAMPLE_NOTIFS: SAMPLE_NOTIFS, SAMPLE_LOGS: SAMPLE_LOGS
 };
 </script>
-<script src="/admin-real.js?v=eb7a6a29be"></script>
+<script src="/admin-real.js?v=272bed9541"></script>
 </body>
 </html>
