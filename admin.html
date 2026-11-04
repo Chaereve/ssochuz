@@ -148,18 +148,16 @@ ul,ol{margin:0;padding:0;list-style:none}
 .tool.icon{width:var(--h);padding:0;position:relative}
 .tool .ic{width:17px;height:17px}
 .tool .ndot{position:absolute;top:3px;right:2px;min-width:16px;height:16px;padding:0 4px;border-radius:99px;background:var(--acc);color:var(--ink);font:700 10px/16px var(--mono);text-align:center}
-.chip{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 10px;border:1px solid var(--bd2);border-radius:99px;background:var(--surf);font:600 11px/1 var(--mono);letter-spacing:.02em;white-space:nowrap}
-.chip .dot{width:7px;height:7px;border-radius:99px;background:currentColor;flex:none}
+.chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;border:1px solid var(--bd2);border-radius:99px;background:var(--surf);font:600 11px/1 var(--mono);white-space:nowrap}
+.chip .dot{width:6px;height:6px;border-radius:99px;background:currentColor;flex:none;align-self:center;margin:0}
+.chip>b{font-weight:700;letter-spacing:.06em;align-self:center;line-height:1}
+.chip .chip-num{color:var(--txt);font-variant-numeric:tabular-nums;letter-spacing:0;align-self:center;line-height:1}
+.chip .chip-state{opacity:.82;letter-spacing:0;align-self:center;line-height:1}
 .chip.t-ok{color:var(--ok);background:var(--ok-bg);border-color:var(--ok)}
 .chip.t-warn{color:var(--warn);background:var(--warn-bg);border-color:var(--warn)}
 .chip.t-bad{color:var(--bad);background:var(--bad-bg);border-color:var(--bad)}
 .chip.t-info{color:var(--info);background:var(--info-bg);border-color:var(--info)}
 .chip.t-slate{color:var(--slate);background:var(--slate-bg);border-color:var(--slate)}
-.quota{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 11px;border:1px solid var(--bd2);border-radius:99px;background:var(--surf);font:600 11px/1 var(--mono);white-space:nowrap}
-.quota b{font-weight:600}
-.quota.t-ok{color:var(--ok);border-color:var(--ok)} .quota.t-warn{color:var(--warn);background:var(--warn-bg);border-color:var(--warn)}
-.quota.t-bad{color:var(--bad);background:var(--bad-bg);border-color:var(--bad)}
-.quota.t-blocked{color:var(--ink);background:var(--bad);border-color:var(--bad)}
 .popover{position:absolute;right:0;top:calc(100% + 6px);z-index:65;min-width:260px;padding:6px;border:1px solid var(--bd2);border-radius:var(--r12);background:var(--surf)}
 .popover .ph{padding:8px 10px 10px;border-bottom:1px solid var(--bd);margin-bottom:6px}
 .popover button{display:block;width:100%;min-height:38px;padding:8px 10px;border-radius:var(--r6);color:var(--txt);font-size:13px;text-align:left}
@@ -476,7 +474,7 @@ body.force-drawer .app.collapsed .side-foot{display:grid}
   .inp,select.inp{height:44px} .tool,.tool.icon{height:44px;width:44px}
   .tool:not(.icon){width:auto;padding:0 10px}
   .tab,.pg button{min-height:44px;height:44px}
-  .chip,.quota{height:32px}
+  .chip{height:30px}
   .nav-item{min-height:44px}
   .view{padding:var(--s2) 14px 120px}
   .pagehead{gap:12px;margin-bottom:18px}
@@ -501,7 +499,7 @@ body.force-drawer .app.collapsed .side-foot{display:grid}
   .gate-panel{padding:24px 14px} .gate-card{padding:20px}
   #toasts{left:8px;right:8px;bottom:60px;max-width:none}
   .topbar .tools{flex-wrap:wrap;justify-content:flex-end;row-gap:6px}
-  .topbar .chip,.topbar .quota{max-width:132px;overflow:hidden;text-overflow:ellipsis}
+  .topbar .chip{max-width:none;overflow:visible;text-overflow:clip}
   .topbar>.grow{display:none}
   .pagehead .meta{font-size:10px}
 }
@@ -516,7 +514,7 @@ body.sim360 .topbar{flex-wrap:wrap;row-gap:8px;min-height:0;padding:8px 12px}
 body.sim360 .topbar .search{order:5;flex:1 1 100%;max-width:none}
 body.sim360 .topbar .tools{flex-wrap:wrap;justify-content:flex-end;row-gap:6px}
 body.sim360 .tools .lbl{display:none}
-body.sim360 .topbar .chip,body.sim360 .topbar .quota{max-width:132px;overflow:hidden;text-overflow:ellipsis}
+body.sim360 .topbar .chip{max-width:none;overflow:visible}
 body.sim360 .view{padding:16px 14px 120px}
 body.sim360 .pagehead h2{font-size:24px}
 body.sim360 .pagehead .actions{width:100%;margin-left:0;justify-content:flex-start}
@@ -683,22 +681,19 @@ const VIS = {public:'Công khai',unlisted:'Không liệt kê (chỉ link)',priva
 const CH_STATUS = {published:'Xuất bản',scheduled:'Hẹn giờ',hidden:'Ẩn',draft:'Nháp'};
 const COMPLETION = {'Hoàn thành':'tone-ok','Đang cập nhật':'tone-info','Sắp ra mắt':'tone-violet'};
 const CONN = {
-  checking:['Đang kiểm tra kết nối','t-warn'],online:['Cloudflare KV · Online','t-ok'],
-  badkey:['Sai ADMIN_KEY','t-bad'],workererr:['Lỗi kết nối Worker','t-bad'],
-  static:['Dữ liệu tĩnh · Chỉ đọc','t-slate']
+  checking:['Đang nối','t-warn'],online:['Online','t-ok'],
+  badkey:['Sai khoá','t-bad'],workererr:['Mất kết nối','t-bad'],
+  static:['Chỉ đọc','t-slate']
 };
-const QUOTA = {
-  ok:{tone:'t-ok',txt:'KV write 120/1000',banner:''},
-  warn:{tone:'t-warn',txt:'KV write 800/1000',banner:'Quota 800/1000 · cân nhắc dời thao tác hàng loạt.'},
-  bad:{tone:'t-bad',txt:'KV write 950/1000',banner:'Quota 950/1000 · thao tác ghi có thể bị chặn.'},
-  blocked:{tone:'t-blocked',txt:'KV write 1000/1000 · bị chặn',banner:'HẾT QUOTA GHI KV · mọi thao tác ghi bị chặn.'}
-};
+/* Vòng 13: KHÔNG còn txt/banner cứng. Số ghi lấy state.kvWrites do
+   admin-real.js nạp từ /api/admin/kv (writesToday), banner tự sinh bên dưới. */
+const QUOTA = {ok:{tone:'t-ok'},warn:{tone:'t-warn'},bad:{tone:'t-bad'},blocked:{tone:'t-blocked'}};
 
 /* ============================================================
    STATE — chỉ trong bộ nhớ của trang, không lưu trình duyệt
    ============================================================ */
 const state = {
-  route:'dashboard', modes:{}, conn:'online', quota:'ok',
+  route:'dashboard', modes:{}, conn:'checking', quota:'ok',
   collapsed:false, drawer:false, forceDrawer:false, sim360:false,
   selectedBook:null, sel:new Set(), lib:{q:'',status:'all',pub:'',vis:'',lock:'',adult:'',sort:'new',page:1}, bulkAction:'',
   books:SAMPLE_BOOKS.slice(), comments:SAMPLE_COMMENTS.slice(), reports:SAMPLE_REPORTS.slice(),
@@ -795,7 +790,7 @@ function pagination(total,page,pages,act){
   return h+'</div></div>';
 }
 function stateBlock(mode,label){
-  var back='<button class="btn sm" data-act="set-mode" data-mode="normal">Về trạng thái bình thường</button>';
+  var back='<button class="btn sm" data-act="set-mode" data-mode="normal">Quay lại</button>';
   if(mode==='loading'){
     return '<div class="state-note">'+icon('info','s')+' ĐANG TẢI · '+esc(label)+'</div>'+
       '<div class="sk-grid mb">'+[1,2,3].map(function(){return '<div class="sk-card"><div class="sk sk-line" style="width:40%"></div><div class="sk sk-line" style="width:80%"></div><div class="sk sk-block"></div></div>';}).join('')+'</div>'+
@@ -836,7 +831,7 @@ function renderSidebar(){
 function renderTopbar(){
   var c=CONN[state.conn]||CONN.online,q=QUOTA[state.quota]||QUOTA.ok;
   var sugg=state.suggestOpen?suggestList(state.suggestQuery,'suggest'):'';
-  var notif=state.notifOpen?'<div class="popover" id="notifPop" style="right:0"><div class="ph"><b class="sm">Thông báo</b><div class="xs dim">Thông báo từ Cloudflare KV</div></div>'+SAMPLE_NOTIFS.map(function(n){return '<div class="row-item"><b>'+esc(n.t)+'</b>'+esc(n.s)+'</div>';}).join('')+'</div>':'';
+  var notif=state.notifOpen?'<div class="popover" id="notifPop" style="right:0"><div class="ph"><b class="sm">Thông báo</b><div class="xs dim">Từ Cloudflare KV</div></div>'+SAMPLE_NOTIFS.map(function(n){return '<div class="row-item"><b>'+esc(n.t)+'</b>'+esc(n.s)+'</div>';}).join('')+'</div>':'';
   var acct=state.accountOpen?'<div class="popover" id="acctPop"><div class="ph"><b class="sm">Quản trị viên</b><div class="xs dim">Phiên quản trị</div></div>'+
     '<button data-act="go" data-id="dang-nhap">Đăng nhập / nối Worker</button>'+
     '<button data-act="docs">Tài liệu bàn giao</button></div>':'';
@@ -846,14 +841,16 @@ function renderTopbar(){
       '<input class="inp" id="globalSearch" data-role="suggest-input" type="search" autocomplete="off" placeholder="Tìm bộ, tab…" value="'+esc(state.suggestQuery)+'" aria-label="Tìm kiếm có gợi ý" aria-expanded="'+(state.suggestOpen?'true':'false')+'">'+
       '<kbd>CTRL+K</kbd>'+sugg+'</div>'+
     '<div class="tools">'+
-      '<span class="chip '+c[1]+'"><span class="dot"></span>'+esc(c[0])+'</span>'+
-      '<span class="quota '+q.tone+'">KV&nbsp;<b>'+esc(q.txt.replace('KV write ',''))+'</b></span>'+
+      '<span class="chip '+(state.quota==='blocked'?'t-bad':c[1])+'" id="czKvChip" title="Cloudflare KV · '+esc(c[0])+' · '+nfmt(state.kvWrites||0)+'/1000 lượt ghi hôm nay" aria-label="Cloudflare KV · '+esc(c[0])+' · '+nfmt(state.kvWrites||0)+'/1000 lượt ghi hôm nay"><span class="dot"></span><b>KV</b>'+
+      (state.conn==='online'?'<span class="chip-num">'+nfmt(state.kvWrites||0)+'/1000</span>':'<span class="chip-state">'+esc(c[0])+'</span>')+'</span>'+
       '<div style="position:relative"><button class="tool icon" data-act="toggle-notif" aria-label="Thông báo" aria-expanded="'+(state.notifOpen?'true':'false')+'">'+icon('bell','s')+'<span class="ndot">'+SAMPLE_NOTIFS.length+'</span></button>'+notif+'</div>'+
       '<button class="tool" data-act="view-web">'+icon('external','s')+'<span class="lbl">Xem web</span></button>'+
       '<div style="position:relative"><button class="tool" data-act="toggle-account" aria-expanded="'+(state.accountOpen?'true':'false')+'">'+icon('users','s')+'<span class="lbl">Quản trị viên</span>'+icon('down','xs')+'</button>'+acct+'</div>'+
     '</div>';
-  document.getElementById('quotaBanner').innerHTML = q.banner
-    ? '<div class="banner'+(state.quota==='blocked'?' danger':'')+'" role="status">'+icon('alert','s')+'<span>'+esc(q.banner)+'</span></div>' : '';
+  var qw=Number(state.kvWrites||0);
+  document.getElementById('quotaBanner').innerHTML = qw>=1000
+    ? '<div class="banner danger" role="status">'+icon('alert','s')+'<span>HẾT QUOTA GHI KV ('+nfmt(qw)+'/1000) · mọi thao tác ghi bị chặn.</span></div>'
+    : qw>=800 ? '<div class="banner" role="status">'+icon('alert','s')+'<span>Quota ghi KV '+nfmt(qw)+'/1000 · cân nhắc dời thao tác hàng loạt.</span></div>' : '';
 }
 function searchData(q){
   var out=[];
@@ -900,7 +897,7 @@ const PAGES = {
   'sua-bo':{label:'Sửa bộ',desc:'Sửa metadata, khóa và nhân bản bộ đã chọn.',act:{l:'Lưu metadata',a:'save-edit',tone:'pri'}},
   'chuong':{label:'Chương',desc:'4 hàng đợi và trình soạn chương.',act:{l:'Quản lý chương',a:'focus-editor',tone:'pri'}},
   'binh-luan':{label:'Bình luận',desc:'Đọc bình luận · xoá nghi spam.',act:{l:'Đọc bình luận',a:'refresh',tone:''}},
-  'bao-loi':{label:'Báo lỗi',desc:'Lỗi độc giả gửi · xử lý, mở lại.',act:{l:'Đọc báo lỗi',a:'refresh',tone:''}},
+  'bao-loi':{label:'Báo lỗi',desc:'Báo lỗi độc giả',act:{l:'Đọc báo lỗi',a:'refresh',tone:''}},
   'phieu-bau':{label:'Phiếu bầu',desc:'Phiếu theo người đọc · gỡ có xác nhận.',act:{l:'Reset phiếu bộ này',a:'reset-votes',tone:'danger pri'}},
   'homepage-cms':{label:'Trang chủ',desc:'Slide, bộ chọn và lịch ra chương.',act:{l:'Lưu trang chủ',a:'save-homepage',tone:'pri'}},
   'thong-ke':{label:'Thống kê',desc:'Lượt đọc và phiếu bầu từ KV.',act:{l:'Đọc thống kê KV',a:'refresh',tone:''}},
@@ -928,16 +925,16 @@ function dashboardHTML(){
       '<button data-act="go" data-id="binh-luan"><span class="n">'+state.comments.filter(function(x){return x.spam;}).length+'</span><span class="k">Bình luận nghi spam</span></button>'+
       '<button data-act="go" data-id="thu-vien"><span class="n">'+state.books.filter(function(x){return x.lock;}).length+'</span><span class="k">Bộ đang khóa mật mã</span></button>'+
     '</div><hr class="hr"><div class="section-title">Việc nên xem lại</div><div class="list">'+
-      '<div class="list-item">'+badge(String(state.books.filter(function(b){return b.pub!=='published'||b.vis!=='public';}).length),'tone-acc')+'<div class="t"><b>Đang ẩn khỏi trang chủ</b><span>Nháp, chờ duyệt, lưu trữ hoặc riêng tư</span></div><button class="btn sm" data-act="go" data-id="thu-vien">Xem danh sách</button></div>'+
+      '<div class="list-item">'+badge(String(state.books.filter(function(b){return b.pub!=='published'||b.vis!=='public';}).length),'tone-acc')+'<div class="t"><b>Đang ẩn khỏi trang chủ</b><span>Nháp, chờ duyệt, riêng tư</span></div><button class="btn sm" data-act="go" data-id="thu-vien">Xem danh sách</button></div>'+
       '<div class="list-item">'+badge(String(state.books.filter(function(b){return !b.thumb;}).length),'tone-warn')+'<div class="t"><b>Thiếu ảnh bìa</b><span>Các bộ thiếu ảnh bìa</span></div><button class="btn sm" data-act="go" data-id="thu-vien">Xem danh sách</button></div>'+
-      '<div class="list-item">'+badge(String(state.books.filter(function(b){return !b.syn;}).length),'tone-info')+'<div class="t"><b>Thiếu mô tả</b><span>Trang truyện và thẻ ở thư viện trống giới thiệu</span></div><button class="btn sm" data-act="go" data-id="thu-vien">Xem danh sách</button></div>'+
+      '<div class="list-item">'+badge(String(state.books.filter(function(b){return !b.syn;}).length),'tone-info')+'<div class="t"><b>Thiếu mô tả</b><span>Thiếu giới thiệu trên thẻ & trang truyện</span></div><button class="btn sm" data-act="go" data-id="thu-vien">Xem danh sách</button></div>'+
     '</div></div></div>';
-  var sys='<div class="card"><div class="card-hd"><h3>Tình trạng hệ thống</h3><span class="right">đăng nhập · chương · Worker · quota</span></div><div class="card-bd">'+
+  var sys='<div class="card"><div class="card-hd"><h3>Tình trạng hệ thống</h3><span class="right">đăng nhập · Worker · quota</span></div><div class="card-bd">'+
     '<div class="sysrow"><span class="dot"></span><div><b>Đăng nhập người đọc: Supabase (cz-config.js)</b><span>Quyền quản trị vẫn do Worker xác nhận.</span></div></div>'+
     '<div class="sysrow"><span class="dot"></span><div><b>Doctor: đã có kiểm tra nền</b><span>Audit KV, quét book, lệch số chương, chương rỗng.</span></div></div>'+
     '<div class="sysrow"><span class="dot'+(state.conn==='workererr'||state.conn==='badkey'?' bad':state.conn==='checking'?' warn':'')+'"></span><div><b>Worker: '+esc((CONN[state.conn]||CONN.online)[0])+'</b><span>Sửa ở đây sẽ đi qua API tập trung.</span></div></div>'+
-    '<div class="sysrow"><span class="dot '+(state.quota==='ok'?'':'warn')+'"></span><div><b>Quota ghi KV: '+esc((QUOTA[state.quota]||QUOTA.ok).txt.replace('KV write ',''))+'</b><span>Worker trả writesToday/lastReset.</span></div></div>'+
-    '<div class="sysrow"><span class="dot"></span><div><b>Quota đọc KV: '+nfmt(SAMPLE_METRICS[5].n)+' / 100.000</b><span>Worker trả readsToday / readWarn.</span></div></div>'+
+    '<div class="sysrow"><span class="dot '+(state.quota==='ok'?'':'warn')+'"></span><div><b>Quota ghi KV: '+nfmt(state.kvWrites||0)+'/1000</b><span>Worker trả writesToday/lastReset.</span></div></div>'+
+    '<div class="sysrow"><span class="dot"></span><div><b>Quota đọc KV: '+nfmt(SAMPLE_METRICS[5].n)+'/100.000</b><span>Worker trả readsToday / readWarn.</span></div></div>'+
     '<div class="sysrow"><span class="dot '+(state.quota==='blocked'?'bad':'')+'"></span><div><b>Lưu trữ tràn (tuỳ chọn)</b><span>Bìa và ảnh chương đang lưu trong Cloudflare KV.</span></div></div>'+
     '</div></div>';
   var max=Math.max.apply(null,SAMPLE_READS);
@@ -977,7 +974,7 @@ function libraryHTML(){
   var rows=arr.slice((page-1)*per,page*per);
   var opts=function(list,cur){return list.map(function(o){return '<option value="'+esc(o[0])+'"'+(cur===o[0]?' selected':'')+'>'+esc(o[1])+'</option>';}).join('');};
   var toolbar='<div class="toolbar">'+
-    '<div class="search">'+icon('search','xs')+'<input class="inp" data-role="lib-q" type="search" placeholder="Tìm tên, tác giả gốc, couple, slug…" value="'+esc(state.lib.q)+'" aria-label="Tìm trong thư viện"></div>'+
+    '<div class="search">'+icon('search','xs')+'<input class="inp" data-role="lib-q" type="search" placeholder="Tìm tên, tác giả…" value="'+esc(state.lib.q)+'" aria-label="Tìm trong thư viện"></div>'+
     '<span class="sel"><select class="inp" data-role="lib-status" aria-label="Lọc tình trạng hoàn thành">'+opts([['all','Mọi tình trạng'],['Hoàn thành','Hoàn thành'],['Đang cập nhật','Đang cập nhật'],['Sắp ra mắt','Sắp ra mắt']],state.lib.status)+'</select></span>'+
     '<span class="sel"><select class="inp" data-role="lib-pub" aria-label="Lọc trạng thái xuất bản">'+opts([['','Mọi xuất bản'],['draft','Nháp'],['pending_review','Chờ duyệt'],['scheduled','Hẹn giờ'],['published','Xuất bản'],['archived','Lưu trữ']],state.lib.pub)+'</select></span>'+
     '<span class="sel"><select class="inp" data-role="lib-vis" aria-label="Lọc chế độ hiển thị">'+opts([['','Mọi hiển thị'],['public','Công khai'],['unlisted','Không liệt kê'],['private','Riêng tư']],state.lib.vis)+'</select></span>'+
@@ -1368,37 +1365,37 @@ function settingsHTML(){
 
 /* ---------- Đăng nhập / nối Worker ---------- */
 function loginStateBlock(mode){
-  var back='<button class="btn sm" data-act="set-mode" data-mode="normal">Về trạng thái bình thường</button>';
-  if(mode==='loading') return '<div class="state-note">'+icon('info','s')+' ĐANG TẢI · kiểm tra kết nối Worker</div><div class="stack"><div class="sk sk-line" style="width:60%"></div><div class="sk sk-line" style="width:90%"></div><div class="sk sk-block" style="height:120px"></div><p class="xs dim">Đang kiểm tra kết nối</p>'+back+'</div>';
-  if(mode==='empty') return '<div class="state" style="min-height:200px">'+icon('inbox')+'<h3>Chưa có cấu hình Worker</h3><p>Nhập địa chỉ Worker ở trạng thái bình thường, hoặc dùng chế độ dữ liệu tĩnh chỉ đọc. DỮ LIỆU THẬT.</p>'+back+'</div>';
-  if(mode==='error') return '<div class="state bad" style="min-height:200px">'+icon('alert')+'<h3>Không nối được Worker</h3><p>Sai ADMIN_KEY hoặc Worker trả lỗi. Thử lại hoặc chuyển sang dữ liệu tĩnh chỉ đọc.</p><div class="row"><button class="btn sm" data-act="set-mode" data-mode="normal">Thử lại</button><button class="btn sm" data-act="static-mode">Dữ liệu tĩnh</button></div></div>';
+  var back='<button class="btn sm" data-act="set-mode" data-mode="normal">Quay lại</button>';
+  if(mode==='loading') return '<div class="state-note">'+icon('info','s')+' ĐANG KIỂM TRA KẾT NỐI</div><div class="stack"><div class="sk sk-line" style="width:60%"></div><div class="sk sk-line" style="width:90%"></div><div class="sk sk-block" style="height:120px"></div><p class="xs dim">Đang kiểm tra kết nối</p>'+back+'</div>';
+  if(mode==='empty') return '<div class="state" style="min-height:200px">'+icon('inbox')+'<h3>Chưa có cấu hình Worker</h3><p>Nhập URL Worker + ADMIN_KEY, hoặc chọn chế độ chỉ đọc.</p>'+back+'</div>';
+  if(mode==='error') return '<div class="state bad" style="min-height:200px">'+icon('alert')+'<h3>Không nối được Worker</h3><p>Sai ADMIN_KEY hoặc Worker lỗi. Thử lại, hoặc chọn chế độ chỉ đọc.</p><div class="row"><button class="btn sm" data-act="set-mode" data-mode="normal">Thử lại</button><button class="btn sm" data-act="static-mode">Dữ liệu tĩnh</button></div></div>';
   return '';
 }
 function loginHTML(){
   var m=state.models,mode=state.modes['dang-nhap']||'normal';
   var c=CONN[state.conn]||CONN.online;
   var brand='<div class="gate-brand"><div class="logo"><span class="dot"></span>ssochuz <span style="font:600 11px/1 var(--mono);letter-spacing:.14em;color:var(--dim)">ADMIN</span></div>'+
-    '<h1>Quản lý thư viện từ một chỗ.</h1><p>Ghi cần đăng nhập, lưu trực tiếp vào Cloudflare KV.</p>'+
-    '<ul class="gate-features"><li><b>Thư viện</b><span>Lọc, sửa và xuất bản bộ truyện hàng loạt</span></li>'+
-    '<li><b>Soạn chương</b><span>Trình soạn thảo, nháp tự lưu, nhập .txt/.docx</span></li>'+
-    '<li><b>Kiểm duyệt</b><span>Bình luận, báo lỗi và phiếu bầu</span></li></ul>'+
+    '<h1>Quản lý thư viện từ một chỗ.</h1><p>Ghi trực tiếp vào Cloudflare KV.</p>'+
+    '<ul class="gate-features"><li><b>Thư viện</b><span>Lọc, sửa, xuất bản hàng loạt</span></li>'+
+    '<li><b>Soạn chương</b><span>Soạn thảo, nháp tự lưu, .txt/.docx</span></li>'+
+    '<li><b>Kiểm duyệt</b><span>Bình luận, báo lỗi, phiếu bầu</span></li></ul>'+
     '<p class="lb">DỮ LIỆU THẬT · NỀN TỐI DUY NHẤT</p></div>';
   var body;
   if(mode!=='normal') body=loginStateBlock(mode);
   else body='<div class="stack" style="gap:14px">'+
-    '<div class="gate-top"><div><span class="eyebrow">KHỞI ĐẦU</span><h2>Đăng nhập</h2></div><span class="chip '+c[1]+'"><span class="dot"></span>'+esc(c[0])+'</span></div>'+
-    '<p class="sm mut">Kết nối bằng ADMIN_KEY qua header x-admin-key.</p>'+
-    '<button class="btn pri" data-act="login-supabase">'+icon('shield','s')+'Đăng nhập Supabase (chỉ dành cho độc giả)</button>'+
-    '<button class="btn" data-act="static-mode">'+icon('database','s')+'Xem dữ liệu tĩnh, chỉ đọc</button>'+
-    '<div class="sep">hoặc kết nối bằng ADMIN_KEY</div>'+
+    '<div class="gate-top"><div><span class="eyebrow">KHỞI ĐẦU</span><h2>Đăng nhập</h2></div><span class="chip '+c[1]+'"><span class="dot"></span><b>KV</b><span class="chip-state">'+esc(c[0])+'</span></span></div>'+
+    '<p class="sm mut">ADMIN_KEY qua header x-admin-key.</p>'+
+    '<button class="btn pri" data-act="login-supabase" title="Chỉ dành cho độc giả; quản trị dùng ADMIN_KEY">'+icon('shield','s')+'Đăng nhập Supabase</button>'+
+    '<button class="btn" data-act="static-mode">'+icon('database','s')+'Chế độ chỉ đọc</button>'+
+    '<div class="sep">hoặc ADMIN_KEY</div>'+
     field('URL Worker *','gate-api',m['gate-api']||'',{ph:'https://your-worker.workers.dev'})+
     field('ADMIN_KEY *','gate-key',m['gate-key']||'',{type:'password',ph:'•••••••• (không nhập key thật)'})+
-    '<label class="sw"><input type="checkbox" data-role="gate-static"'+(m['gate-static']?' checked':'')+'><span class="track"></span><span>Dữ liệu tĩnh, chỉ đọc</span></label>'+
+    '<label class="sw"><input type="checkbox" data-role="gate-static"'+(m['gate-static']?' checked':'')+'><span class="track"></span><span>Chỉ đọc</span></label>'+
     '<button class="btn pri" data-act="connect">'+icon('key','s')+'Kết nối và đọc KV</button>'+
-    '<div class="row"><span class="grow"></span><button class="btn ghost sm" data-act="go" data-id="dashboard">Vào Dashboard (chỉ đọc)</button></div>'+
+    '<div class="row"><span class="grow"></span><button class="btn ghost sm" data-act="go" data-id="dashboard">Vào Dashboard</button></div>'+
     '</div>';
   return brand+'<div class="gate-panel"><div class="gate-card">'+body+
-    '<div class="gate-foot">ADMIN_KEY chỉ lưu trong phiên này (sessionStorage), không ghi vào localStorage.<br>URL Worker được nhớ trên máy; không gửi khoá cho bên thứ ba.</div></div></div>';
+    '<div class="gate-foot">ADMIN_KEY chỉ lưu trong phiên (sessionStorage).<br>URL Worker được nhớ trên máy; khoá không gửi cho bên thứ ba.</div></div></div>';
 }
 
 /* ============================================================
@@ -1630,10 +1627,20 @@ const DOCS_HTML =
 '<li><b>Dữ liệu giả lộ khi chưa cấu hình Worker:</b> 13 mảng SAMPLE_* (18 bộ Truyện mẫu, 6.420 chương, 248 book, 18.400 lượt đọc, nhật ký 03/11 20:40) được thay bằng cấu trúc rỗng ngay trong bản sinh. admin-real.js có clearPrototypeSeed() chạy TRƯỚC window.render() đầu tiên trong boot(), nên không còn một nháy dữ liệu giả trước khi KV kịp tải.</li>'+
 '<li><b>Hằng số và trạng thái bịa:</b> 3 báo lỗi / 2 spam / 5 khoá / 4 thiếu bìa / 3 bộ mới / 18.400 / Supabase: unavailable / KV chỉ còn stub / Đã chuyển 248 book — đổi thành số đếm từ state.books, state.reports, state.comments, SAMPLE_METRICS do Worker trả; biểu đồ có guard chia cho 0 khi KV rỗng.</li>'+
 '<li><b>Nhãn, placeholder, aria-label, toast và mã chết:</b> mọi cụm mẫu, chữ MẪU viết hoa, mô phỏng, Mockup:, minh hoạ ngoài khối tài liệu lịch sử được dọn; trạng rỗng dùng Chưa có dữ liệu trong KV.; tab Sửa bộ có guard riêng khi KV rỗng (trước đó gọi slugOf(undefined) và vỡ).</li>'+
-'<li><b>Cách làm:</b> toàn bộ khác biệt prototype → bản phát hành nằm trong tools/admin_prod_replacements.json (94 mục, có chú thích). Generator áp từng mục và FAIL NGAY nếu một chuỗi nguồn biến mất do mockup đổi tay — tránh vá sót như các vòng trước. Khối DOCS_HTML được tách riêng khi dọn mã chết để lịch sử vòng 1–11 không bị sửa.</li>'+
+'<li><b>Cách làm:</b> toàn bộ khác biệt prototype → bản phát hành nằm trong tools/admin_prod_replacements.json (94 mục ở vòng 12 · 128 mục sau vòng 13, có chú thích). Generator áp từng mục và FAIL NGAY nếu một chuỗi nguồn biến mất do mockup đổi tay — tránh vá sót như các vòng trước. Khối DOCS_HTML được tách riêng khi dọn mã chết để lịch sử vòng 1–11 không bị sửa.</li>'+
 '<li><b>Không đổi:</b> 13 tab / 5 nhóm, 49 biến :root / 0 màu literal / 0 emoji, design system, luồng đọc/ghi KV thật, CORS preflight, khoá ADMIN_KEY chỉ trong session, sanitizer và gating. Bản prototype tĩnh mockup/ssochuz-admin-mockup.html vẫn GIỮ nguyên bảng thiết kế để mở offline.</li>'+
 '</ul>'+
 '<p><b>Kiểm chứng vòng 12:</b> npm run build đạt · toàn bộ npm test đạt · tests/t_admin_no_demo.js 96/96 · tests/t_admin_rail.js 54/54 · audit jsdom 13 tab × 3 trạng thái × 5 mode đăng nhập ở CẢ HAI chế độ (chưa cấu hình Worker / online 67 bộ KV) đều 0 lỗi JS và 0 dấu vết prototype.</p>'+
+'<h4>VÒNG 13 · CHIP KV GỌN, ICON THẲNG TRỤC, SỐ QUOTA LẤY TỪ WORKER</h4>'+
+'<p>Owner gửi ảnh 2 pill topbar và hỏi: "vẫn còn lệch icon và 1 số chỗ bố cục bị dài dòng, thiếu chuyên nghiệp và gọn gàng / sao t chưa sửa j mà kv worker lại hiện như hình". <b>Giải thích:</b> chữ Online là có thật — admin-real.js gọi /api/whoami rồi setConn(online); còn 120/1000 là HẰNG SỐ CỨNG của prototype (QUOTA.ok.txt). Vòng 12 gỡ nút đổi trạng thái demo nhưng để sót hằng này, renderTopbar() vẫn đọc q.txt và q.banner, trong khi WRITES lấy từ /api/admin/kv chỉ dùng để chọn MÀU. Nên giao diện tự hiện như ảnh dù chủ trang không sửa gì và Worker mock cục bộ đã tắt.</p>'+
+'<ul>'+
+'<li><b>1 chip thay 2 pill:</b> gộp chip kết nối + pill quota thành #czKvChip duy nhất: chấm trạng thái · nhãn KV · số ghi thật. Khi online hiện writesToday/1000; khi chưa nối hiện Đang nối / Chỉ đọc / Sai khoá / Mất kết nối. title và aria-label giữ đủ cụm "Cloudflare KV · … · N/1000 lượt ghi hôm nay" để hover và trình đọc màn hình không mất ngữ cảnh.</li>'+
+'<li><b>Số liệu thật, không hằng:</b> xoá 120/1000, 800/1000, 950/1000, 1000/1000 · bị chặn khỏi QUOTA (giữ lại tone màu). admin-real.js đẩy WRITES/READS từ /api/admin/kv xuống state.kvWrites/state.kvReads tại boot, setQuota(), redraw() và TRƯỚC origRender(); chip, banner và dòng Quota ghi KV trên Dashboard cùng đọc một nguồn. Banner tự sinh ở ngưỡng 800 và 1000 với số thật.</li>'+
+'<li><b>Icon hết lệch:</b> .chip còn 28px, gap 6px, bỏ letter-spacing:.02em; chấm 6px có align-self:center và margin:0; b, chip-num, chip-state đều align-self:center + line-height:1 nên chấm và chữ chung một trục. Bỏ luôn max-width:132px / text-overflow:ellipsis làm chip bị cắt dấu ba chấm. CSS .quota, media query và chip màn đăng nhập được đồng bộ.</li>'+
+'<li><b>Bố cục gọn lại:</b> CONN rút thành Đang nối / Online / Chỉ đọc; state mặc định checking nên render đầu tiên KHÔNG tự nhận Online. Cổng đăng nhập: Đăng nhập Supabase (bỏ phần trong ngoặc, đưa vào title), Chế độ chỉ đọc, Vào Dashboard, placeholder Tìm tên, tác giả… đúng với searchData(); trạng tải/lỗi/rỗng, chân thẻ bảo mật, 3 dòng giới thiệu và mô tả tab Báo lỗi cũng rút gọn. KHÔNG đụng vào văn bản chương thật trong KV (Lingling x Orm, Tác giả gốc, Độc giả, giải pháp, câu trích dẫn dài) hay lịch sử MẪU trong tài liệu.</li>'+
+'<li><b>Chống tái diễn:</b> tests/t_admin_kv_chip.js (121 kiểm) khoá 4 tầng — nguồn phát hành (không còn txt/banner cứng, không 2 pill, mặc định checking, CSS canh trục), DOM online 137 lượt ghi, DOM quota cao 850 (banner tự sinh), DOM chưa cấu hình và DOM parse-time chưa nạp admin-real.js; đối chiếu luôn prototype vẫn là bản thiết kế 2 pill. Đưa vào npm test.</li>'+
+'</ul>'+
+'<p><b>Kiểm chứng vòng 13:</b> npm run build đạt · toàn bộ npm test đạt · tests/t_admin_kv_chip.js 121/121 · tests/t_admin_no_demo.js 96/96 · tests/t_admin_rail.js 54/54 · tests/t_admin_real.js 0 lỗi · 13 tab / 5 nhóm / 49 biến :root / 0 màu literal / 0 emoji và luồng ghi KV thật giữ nguyên.</p>'+
 '<h4>ĐỀ XUẤT THÊM (không nằm trong mockup)</h4>'+
 '<ul>'+
 '<li>Phỏng vấn chủ site và quan sát 2 ca tự dịch, đăng chương để kiểm chứng 5 giả thuyết.</li>'+
@@ -2397,6 +2404,6 @@ window.CZ_MOCKUP = {
   SAMPLE_NOTIFS: SAMPLE_NOTIFS, SAMPLE_LOGS: SAMPLE_LOGS
 };
 </script>
-<script src="/admin-real.js?v=dff66844ed"></script>
+<script src="/admin-real.js?v=eb7a6a29be"></script>
 </body>
 </html>
