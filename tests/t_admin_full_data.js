@@ -65,6 +65,12 @@ ok((prodUI.match(/var arr=filteredBooks\(\),per=20/g) || []).length === 2, 'Thư
 ok(/return out\.slice\(0,12\)/.test(prodUI) && /\[b\.t,b\.a,b\.id,b\.c\]/.test(prodUI),
   'gợi ý tìm kiếm rộng hơn, tìm cả slug/couple');
 ok(/id="hpPickedCount"/.test(prodUI), 'Series có bộ đếm đã chọn');
+ok(/function openSeriesPage\(/.test(prodUI) && /data-act="series-page"/.test(prodUI),
+  'Vòng 15: có hàm mở trang Series + nút Xem thêm');
+ok(/\.series-page\{/.test(prodUI) && /seriesCardHTML|series-grid/.test(prodUI),
+  'Vòng 15: CSS + lưới của trang Series');
+ok(!/S\.picked\.length >= 12/.test(real) && /var picked = S\.picked\.slice\(\);/.test(real),
+  'Vòng 15: bỏ trần 12, ghi nguyên vẹn lựa chọn vào editorChoice');
 ok(/state\.models\['hp-banner'\]\?' checked'/.test(prodUI), 'công tắc banner đọc trạng thái thật');
 ok(/state\.models\['hp-note'\]\|\|state\.hpNote/.test(prodUI), 'ghi chú lịch đọc schedule.note');
 ok(/Vẫn lưu được lịch, Series và thông báo/.test(prodUI), 'trạng rỗng slide nói rõ vẫn lưu được');
@@ -211,11 +217,14 @@ async function main() {
   });
   const addSel = D.getElementById('addSlideSel');
   ok(addSel && addSel.options.length === LIBN, 'Homepage · Thêm slide: đủ ' + LIBN + ' bộ');
-  const boxes = [...D.querySelectorAll('[data-role="picked"]')];
+  /* Vòng 15: card chỉ hiện TỐI ĐA 12 bộ; danh sách đầy đủ nằm ở trang mở
+     bằng nút Xem thêm (bài t_admin_series_page.js kiểm riêng). */
+  const boxes = [...D.querySelectorAll('#seriesPickedGrid [data-role="picked"]')];
   const checked = boxes.filter(function (b) { return b.checked; }).map(function (b) { return b.dataset.id; }).sort();
-  ok(boxes.length === LIBN, 'Homepage · Series: liệt kê ' + LIBN + ' bộ (trước 6)');
+  ok(boxes.length === 12, 'Vòng 15 · Homepage · Series: card hiện tối đa 12 bộ');
   ok(checked.length === CHOICE.length && JSON.stringify(checked) === JSON.stringify(CHOICE.slice().sort()),
-    'Homepage · Series: tick đúng 12 editorChoice thật');
+    'Vòng 15 · Homepage · Series: 12 bộ trên card đều là editorChoice thật');
+  ok(!!D.querySelector('[data-act="series-page"]'), 'Vòng 15 · Homepage · Series: có nút Xem thêm');
   const cnt = D.getElementById('hpPickedCount');
   ok(cnt && cnt.textContent === '12', 'Homepage · Series: bộ đếm = 12');
   const banner = D.getElementById('hp-banner');
@@ -257,10 +266,12 @@ async function main() {
   /* Tương tác thật: tick Series, đổi bộ lịch, bật banner, sửa thông báo/ghi chú */
   S.route = 'homepage-cms'; w.render();
   const off = CHOICE[0], extra = 'yours-ever';
-  const boxOff = D.querySelector('[data-role="picked"][data-id="' + off + '"]');
-  const boxOn = D.querySelector('[data-role="picked"][data-id="' + extra + '"]');
+  D.querySelector('[data-act="series-page"]').click();
+  const boxOff = D.querySelector('#seriesPage [data-role="picked"][data-id="' + off + '"]');
+  const boxOn = D.querySelector('#seriesPage [data-role="picked"][data-id="' + extra + '"]');
   if (boxOff) { boxOff.checked = false; fire(boxOff, 'change'); }
   if (boxOn) { boxOn.checked = true; fire(boxOn, 'change'); }
+  D.querySelector('#seriesPage [data-act="series-close"]').click();
   ok(S.picked.indexOf(off) < 0 && S.picked.indexOf(extra) >= 0,
     'tick Series cập nhật state.picked (bỏ ' + off + ', thêm ' + extra + ')');
   ok((D.getElementById('hpPickedCount') || {}).textContent === String(S.picked.length),
