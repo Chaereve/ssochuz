@@ -59,7 +59,7 @@
   function go(route) { M.navigate(route); }
   function guard(fn) { return function () { Promise.resolve().then(fn).catch(fail); }; }
   var WRAPPED = false;
-  function redraw() { if (WRAPPED) window.render(); else redraw(); }
+  function redraw() { if (WRAPPED) window.render(); else M.render(); }
   function findMeta(slug) { return (REG.lib || []).find(function (m) { return m.slug === slug; }); }
   function titleOf(slug) { var m = findMeta(slug); return m ? (m.title || slug) : slug; }
   function couplesOf(m) { return Array.isArray(m.couples) && m.couples.length ? m.couples.join(', ') : (m.couple || ''); }
@@ -98,7 +98,12 @@
   async function apiCall(path, opts) {
     opts = opts || {};
     if (!CFG.base) throw new Error('Chưa có URL Worker — vào Đăng nhập / nối Worker.');
-    var headers = { 'cache-control': 'no-store' };
+    /* KHÔNG được gửi header 'cache-control' (hay bất kỳ header nào ngoài danh
+       sách access-control-allow-headers của worker/cms.js): header lạ bắt trình
+       duyệt gửi preflight OPTIONS, Worker từ chối ⇒ "Failed to fetch" ngay cả ở
+       /api/health. Việc không cache nằm ở tuỳ chọn `cache: 'no-store'` bên dưới,
+       đúng như src/admin/api.js của admin cũ vẫn chạy tốt. */
+    var headers = {};
     var hasBody = opts.body !== undefined && opts.body !== null;
     if (hasBody && !(opts.body instanceof FormData)) headers['content-type'] = 'application/json';
     if (opts.auth !== false && CFG.key) headers['x-admin-key'] = CFG.key;
@@ -122,7 +127,7 @@
     } catch (e) {
       if (e && e.name === 'AbortError') { e = new Error('Hết thời gian chờ Worker tại ' + CFG.base); e.kind = 'network'; }
       else if (/Failed to fetch|NetworkError|Load failed/i.test(String((e && e.message) || e))) {
-        e = new Error('Không nối được Worker tại ' + CFG.base + ' (CORS, URL sai hoặc Worker chưa deploy).');
+        e = new Error('Không nối được Worker tại ' + CFG.base + ' — trình duyệt chặn request (preflight CORS / CSP connect-src), URL sai hoặc Worker chưa deploy. Mở tab Network để thấy lý do cụ thể.');
         e.kind = 'network';
       }
       throw e;

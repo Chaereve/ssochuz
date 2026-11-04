@@ -49,6 +49,13 @@ const KV = {
   voters: { 'bake-love-feelings': [{ key: 'g:abc', at: '2026-11-01T10:00:00Z' }] }
 };
 const calls = [];
+/* HỒI QUY CORS: worker/cms.js chỉ cho phép đúng các header này trong preflight.
+   Bất kỳ header lạ (vd 'cache-control') làm OPTIONS bị từ chối ⇒ trình duyệt
+   báo "Failed to fetch" ngay ở /api/health, màn đăng nhập kẹt "Lỗi kết nối
+   Worker". Đọc thẳng từ mã Worker để bài kiểm không bị lỗi thời. */
+const allowLine = R('worker/cms.js').match(/'access-control-allow-headers':\s*'([^']+)'/);
+const ALLOWED_HEADERS = new Set(String((allowLine && allowLine[1]) || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean));
+const headerViolations = [];
 function resp(data, status = 200) {
   return {
     ok: status >= 200 && status < 300, status,
@@ -61,7 +68,14 @@ function fakeFetch(url, opts) {
   const u = new URL(url, 'https://ssochuz.pages.dev');
   const p = u.pathname, method = opts.method || 'GET';
   const body = opts.body ? JSON.parse(opts.body) : null;
-  calls.push({ p, method, key: (opts.headers || {})['x-admin-key'] || '', body });
+  const hdr = opts.headers || {};
+  const illegal = Object.keys(hdr).filter(h => !ALLOWED_HEADERS.has(h.toLowerCase()));
+  illegal.forEach(h => headerViolations.push(p + ': ' + h));
+  /* Giả lập ĐÚNG hành vi trình duyệt: preflight OPTIONS bị Worker từ chối ⇒
+     fetch() reject bằng TypeError "Failed to fetch", KHÔNG có response. Với lỗi
+     cache-control ở vòng 10, dòng này làm màn đăng nhập kẹt như ảnh owner gửi. */
+  if (illegal.length) return Promise.reject(new TypeError('Failed to fetch'));
+  calls.push({ p, method, key: hdr['x-admin-key'] || '', headers: Object.keys(hdr), body });
   const send = (d, st) => Promise.resolve(resp(d, st));
   if (p === '/api/health') return send({ ok: true });
   if (p === '/api/whoami') return (opts.headers || {})['x-admin-key'] ? send({ ok: true, role: 'super_admin' }) : send({ ok: false, error: 'thiếu key' }, 401);
@@ -159,6 +173,10 @@ function confirmStrong(phrase) {
   await tick(12);
   ok(S().conn === 'online', 'kết nối Worker ⇒ online (đang ' + S().conn + ')');
   ok(calls.some(c => c.p === '/api/whoami' && c.key === 'ADMIN_KEY_QA'), 'gọi /api/whoami kèm x-admin-key');
+  ok(ALLOWED_HEADERS.has('x-admin-key') && ALLOWED_HEADERS.has('content-type'), 'đọc được danh sách allow-headers từ worker/cms.js');
+  ok(headerViolations.length === 0, 'mọi request chỉ dùng header nằm trong access-control-allow-headers (' + headerViolations.slice(0, 4).join(', ') + ')');
+  ok(!calls.some(c => c.headers.indexOf('cache-control') >= 0), 'KHÔNG gửi header cache-control (gây preflight CORS bị từ chối)');
+  ok(calls[0] && calls[0].p === '/api/health' && calls[0].headers.length === 0, '/api/health là simple request, không có header tự đặt ⇒ không cần preflight');
   ok(w.sessionStorage.getItem('cz_kv_key') === 'ADMIN_KEY_QA', 'ADMIN_KEY chỉ ở sessionStorage');
   ok(!w.localStorage.getItem('cz_kv_key'), 'ADMIN_KEY không nằm ở localStorage');
   ok(w.localStorage.getItem('cz_kv_api') === 'https://ten-worker.workers.dev', 'URL Worker lưu ở localStorage');
@@ -198,7 +216,7 @@ function confirmStrong(phrase) {
   await tick(12);
   ok(!!KV.books['bo-qa-vong-10'], 'PUT /api/book/<slug> tạo book thật');
   ok(!!KV.registry.lib.find(m => m.slug === 'bo-qa-vong-10'), 'PUT /api/registry thêm meta thật');
-  ok((KV.books['bo-qa-vong-10'].chapters || []).length === 1, 'chương đầu được ghi');
+  ok(((KV.books['bo-qa-vong-10'] || {}).chapters || []).length === 1, 'chương đầu được ghi');
 
   /* ---- 4 · Sửa bộ / đổi slug ---- */
   nav('sua-bo');
@@ -254,6 +272,7 @@ function confirmStrong(phrase) {
   ok(!/^\/admin\s+\/mockup/m.test(R('_redirects')), '_redirects không còn rewrite /admin → mockup');
   ok(/admin-real\.js/.test(R('_headers')), '_headers có rule cho admin-real.js');
   ok(!/ADMIN_KEY_QA|ten-worker/.test(realJs), 'admin-real.js không hardcode key/URL Worker');
+  ok(headerViolations.length === 0, 'toàn bộ ' + calls.length + ' request (kể cả PUT/DELETE/PATCH) đều an toàn preflight CORS');
 
   /* ---- 9 · prototype vẫn là bản MẪU ---- */
   const mockHtml = R('mockup/ssochuz-admin-mockup.html');

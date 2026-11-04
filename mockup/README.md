@@ -21,6 +21,8 @@ Thiết kế lại giao diện quản trị. **Chức năng đã có, không th�
 
 Sửa thiết kế thì sửa `mockup/ssochuz-admin-mockup.html`, sửa lớp dữ liệu thì sửa `admin-real.js` ở thư mục gốc, rồi chạy `npm run build` (`tools/build_admin_html.mjs` sinh lại `admin.html`; `?v=` là sha1 nội dung `admin-real.js`). URL Worker phải là `https://` và nằm trong `connect-src` của CSP hiện hành (mặc định `https://*.workers.dev`). Nếu đăng nhập bằng Supabase/Google, thêm `https://ssochuz.pages.dev/admin` vào **Redirect URLs** trong Supabase (OAuth dùng `location.pathname` làm `redirectTo`).
 
+**Nếu báo "Không nối được Worker":** kiểm tra URL có `https://` và đúng domain Worker, `ADMIN_KEY` đúng, và Worker có `ALLOW_ORIGIN` chứa origin của trang. Lớp `admin-real.js` chỉ gửi đúng 4 header mà `worker/cms.js` cho phép trong preflight CORS (`content-type`, `x-admin-key`, `x-import-mode`, `authorization`) — đừng thêm header tuỳ tiện, vì trình duyệt sẽ gửi `OPTIONS` và bị từ chối trước cả `/api/health`. Mở tab Network/Console để thấy lý do cụ thể.
+
 Google Fonts là tài nguyên ngoài duy nhất; nếu offline thì dùng fallback hệ thống, vẫn đọc được. Bấm **Tài liệu bàn giao** trong sidebar (hoặc nút docs) để xem đủ 10 vòng, trong đó có mục 11 về kiểm chéo bảo mật/kết nối và vòng 10 về nối dữ liệu thật.
 
 ## Các file
