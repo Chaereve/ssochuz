@@ -170,6 +170,13 @@
     if (r) r.hidden = !hasResume;
     if (f) f.hidden = !hasFollow;
     if (st) { st.hidden = !showStarter; if (showStarter) renderStarter(); }
+    /* Vòng 17: ô này từng giữ min-height 400px cho MỌI trạng thái để chống nhảy
+       bố cục, nhưng khi đã có thẻ "Đọc tiếp" (nội dung chỉ ~200px) thì phần thừa
+       biến thành khoảng trống lớn trước "Mới cập nhật". Nay chỉ chừa chiều cao
+       cho trạng thái "Bắt đầu từ đâu?" (khối cao thật); có thẻ đọc tiếp thì để
+       nội dung tự quyết định chiều cao. */
+    var dt = $('#doc-tiep');
+    if (dt) dt.classList.toggle('is-starter', !!showStarter);
     /* Người mới chưa đọc gì: khối này KHÔNG còn là “Đọc tiếp” nữa, nên đầu mục
        đổi theo chứ không để tiêu đề “Đọc tiếp” đứng trên lời mời bắt đầu. Link
        bên phải cũng đổi: tủ còn trống thì “My Space” chẳng có gì để xem. */
