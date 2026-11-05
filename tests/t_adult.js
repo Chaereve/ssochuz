@@ -116,7 +116,7 @@ function api(p, opt, statsItems) {
   eq('hero/slide có badge trạng thái', out.heroBadge.length >= 1, true);
   eq('hero/không còn nhãn mục (eyebrow)', out.heroEyebrow, 0);
   eq('Ranking giữ đúng tên dù không có phiếu', out.rankTitle, 'Ranking');
-  eq('Ranking luôn có ba kỳ', out.rankTabs, 3);
+  eq('Ranking luôn có hai kỳ (Tháng + Tất cả)', out.rankTabs, 2);
   eq('Không lấy tổng view thay view kỳ còn thiếu', out.rankRows, 0);
   eq('Ranking rỗng vẫn cho chọn hạng mục', out.rankHiddenWhenEmpty, false);
 

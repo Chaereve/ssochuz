@@ -3,11 +3,14 @@ const {page,dataFetch,read} = require('./mk');
 const wait = ms => new Promise(r=>setTimeout(r,ms));
 const reg = JSON.parse(read('data/registry.json'));
 const [a,b,c,d] = reg.lib.slice(0,4).map(n=>n.slug);
+/* Vòng 17b: chỉ còn Tháng + Tất cả (all-time = views/votes trọn đời).
+   d trội về trọn đời (700/600) nhưng KHÔNG có số tháng → kiểm "Tất cả" dùng
+   counter trọn đời, còn "Tháng" chỉ dùng viewsMonth/votesMonth. */
 const items = {
- [a]:{views:999999,votes:999999,viewsDay:3,viewsWeek:90,viewsMonth:10,votesDay:8,votesWeek:1,votesMonth:3,rating:4.8,ratingCount:2},
- [b]:{views:100,votes:100,viewsDay:10,viewsWeek:5,viewsMonth:80,votesDay:2,votesWeek:20,votesMonth:1,rating:4.8,ratingCount:8},
- [c]:{views:100,votes:100,viewsDay:1,viewsWeek:2,viewsMonth:3,votesDay:1,votesWeek:2,votesMonth:50,rating:4.5,ratingCount:100},
- [d]:{views:999999,votes:999999,rating:5,ratingCount:0}
+ [a]:{views:500,votes:300,viewsMonth:10,votesMonth:3,rating:4.8,ratingCount:2},
+ [b]:{views:100,votes:100,viewsMonth:80,votesMonth:1,rating:4.8,ratingCount:8},
+ [c]:{views:100,votes:100,viewsMonth:3,votesMonth:50,rating:4.5,ratingCount:100},
+ [d]:{views:700,votes:600,rating:5,ratingCount:0}
 };
 const J = body => Promise.resolve({ok:true,json:async()=>body,text:async()=>JSON.stringify(body)});
 (async()=>{
@@ -15,7 +18,9 @@ const J = body => Promise.resolve({ok:true,json:async()=>body,text:async()=>JSON
  await wait(450);
  const click=s=>p.doc.querySelector(s).click();
  const first=()=>p.doc.querySelector('#rank .rank').getAttribute('href');
- for(const [mode,period,slug,score] of [['views','day',b,10],['views','week',a,90],['views','month',b,80],['votes','day',a,8],['votes','week',b,20],['votes','month',c,50]]){
+ /* lượt cuối là votes-month để phần kiểm cập nhật trực tiếp bên dưới (đặt
+    c.votesMonth=100) chạy trên đúng kỳ Tháng. */
+ for(const [mode,period,slug,score] of [['views','month',b,80],['views','all',d,700],['votes','all',d,600],['votes','month',c,50]]){
   click('[data-mode="'+mode+'"]');click('#rankTabs [data-k="'+period+'"]');
   assert.ok(first().includes(slug),mode+' '+period);
   assert.ok(p.doc.querySelector('#rank .v').textContent.startsWith(String(score)+' '));
@@ -38,5 +43,5 @@ const J = body => Promise.resolve({ok:true,json:async()=>body,text:async()=>JSON
  assert.equal(p.doc.querySelector('#rank').textContent,'');
  assert.equal(p.doc.querySelector('#worthRail').textContent,'');
  assert.deepEqual(p.errors,[]);p.dom.window.close();
- console.log('Ranking: all six periods, exact counters, no lifetime fallback, rating ties, live updates, keyboard focus and empty/offline states passed.');
+ console.log('Ranking: Tháng + Tất cả (all-time dùng counter trọn đời), exact counters, rating ties, live updates, keyboard focus and empty/offline states passed.');
 })().catch(e=>{console.error(e);process.exit(1)});
