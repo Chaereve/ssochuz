@@ -73,6 +73,18 @@ function openPage(file, reg) {
   assert.ok(/\.rankpair \{ display: grid; grid-template-columns: minmax\(0, 1\.06fr\) minmax\(0, 1fr\)/.test(v16),
     'Ranking / Đáng xem chưa thành 2 ô song song');
   assert.ok(/\.rankpair \.rank \.bar \{ display: none !important; \}/.test(v16), 'thanh hồng chưa bị bỏ');
+  assert.ok(/\.rankpair \{ align-items: stretch; margin-top: 22px; \}/.test(v16),
+    'rankpair chưa tách khỏi dải Mới cập nhật (margin-top 22px đúng nhịp .fsec)');
+  assert.ok(/\.rankpair > \.fsec \{ padding-top: 0; gap: 12px; \}/.test(v16),
+    'gap đầu mục → thân trong ô chưa đồng bộ 12px');
+  assert.ok(/\.rankpair \.sechead h2 \{ font-size: 22px; \}/.test(v16),
+    'h2 trong ô Ranking/Đáng xem chưa đồng bộ 22px với trang chủ');
+  assert.ok(/#bxh \.tilehead h2 \{ margin: 0; font-family: var\(--font-head\); font-size: 22px; font-weight: 700;/.test(css),
+    'tilehead Ranking chưa đồng bộ cỡ chữ 22px / đậm 700');
+  assert.ok(/#bxh \.tilehead \{[^}]*border-bottom: 1px solid var\(--bd\);/.test(css),
+    'tilehead Ranking thiếu kẻ dưới đồng bộ với .sechead chung');
+  assert.ok(!/#bxh \.tilehead h2 \{ font-size: 18px; \}/.test(css),
+    'còn override thu chữ Ranking xuống 18px ở máy nhỏ');
   assert.ok(/\.rankpair > \.rankbox \{ min-width: 0; padding: 14px 16px;/.test(v16),
     'đáy ô Ranking/Đáng xem chưa thoáng (padding đáy 4px cũ làm dính mép khối)');
   assert.ok(/\.rankpair \.rank:last-child \{ border-bottom: 0; padding-bottom: 0; \}/.test(v16),

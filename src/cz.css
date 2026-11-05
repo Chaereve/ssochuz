@@ -3831,11 +3831,14 @@ body.rd-focus .rdcmts { display: none; }
   line-height: 1.35; overflow-wrap: anywhere; }
 .starter .s-m { display: block; margin-top: 2px; font-size: 11px; color: var(--dim); }
 /* --- ô Ranking: đầu ô một hàng, thân hai cột (bảng · đáng xem) ------- */
-#bxh { gap: 14px; }
+#bxh { gap: 12px; }
+/* đầu ô Ranking phải ĐỒNG BỘ với .sechead chung (Đọc tiếp / Mới cập nhật /
+   Đáng xem): cùng kẻ dưới, cùng đệm 12px, cùng cỡ chữ 22px / đậm 700.
+   Trước đây tilehead tự bỏ kẻ và thu chữ 20/18px ⇒ lệch nhịp toàn trang. */
 #bxh .tilehead { display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
-  padding: 0; margin: 0; border-bottom: 0; }
-#bxh .tilehead h2 { margin: 0; font-family: var(--font-head); font-size: 20px; font-weight: 650;
-  line-height: 1.2; letter-spacing: -.015em; text-transform: none; color: var(--txt); }
+  padding: 0 0 12px; margin: 0; border-bottom: 1px solid var(--bd); }
+#bxh .tilehead h2 { margin: 0; font-family: var(--font-head); font-size: 22px; font-weight: 700;
+  line-height: 1.2; letter-spacing: -.018em; text-transform: none; color: var(--txt); }
 #bxh .tilehead .right { margin-left: auto; padding: 0; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 #bxh .tabs { padding: 0; gap: 2px; }
 #bxh .tabs > button { min-height: 26px; padding: 0 8px; font-size: 12px; font-weight: 600;
@@ -3952,7 +3955,7 @@ body.rd-focus .rdcmts { display: none; }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* --- thu nhỏ theo bề ngang (giữ nguyên cấu trúc, đổi số cột) --------- */
 
-@media (max-width: 880px) { #bxh .tilehead h2 { font-size: 18px; }
+@media (max-width: 880px) {
   .mlist { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 26px; }
   .wcards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   #sched .w3grid { grid-template-columns: minmax(0, 1fr); gap: 22px; }
@@ -4246,15 +4249,17 @@ img.cmt-ava { border: 0; background: transparent; }
   gap: 16px; align-items: start; min-width: 0; }
 /* .fsec:first-child chỉ bỏ padding-top cho ô đầu; trong cặp này cả hai phải
    cùng mép trên nên triệt tiêu padding của ô thứ hai. */
-.rankpair > .fsec { padding-top: 0; gap: 8px; }
+.rankpair > .fsec { padding-top: 0; gap: 12px; }
 .rankpair > .fsec[hidden] { display: none !important; }
 /* đáy ô phải thoáng như hai bên: 4px cũ khiến thẻ/hàng cuối dính mép khối */
 .rankpair > .rankbox { min-width: 0; padding: 14px 16px;
   background: var(--surf); border: 1px solid var(--bd);
   border-radius: var(--r); box-shadow: var(--sh-card); }
+/* đầu mục trong ô dùng đúng nhịp .sechead trang chủ: kẻ dưới cách chữ 12px,
+   không margin thừa; cỡ chữ h2 đồng bộ 22px với Đọc tiếp / Mới cập nhật */
 .rankpair .sechead { align-items: center; flex-wrap: wrap; gap: 8px;
-  margin-bottom: 2px; padding-bottom: 10px; border-bottom: 1px solid var(--bd); }
-.rankpair .sechead h2 { font-size: 19px; }
+  margin-bottom: 0; padding-bottom: 12px; border-bottom: 1px solid var(--bd); }
+.rankpair .sechead h2 { font-size: 22px; }
 .rankpair .sechead .right { gap: 6px; padding-bottom: 0; }
 .rankpair .rbody { gap: 0; }
 .rankpair .rank { grid-template-columns: 38px 52px minmax(0, 1fr) auto;
@@ -4315,7 +4320,9 @@ img.cmt-ava { border: 0; background: transparent; }
 
 /* Hai ô cao bằng nhau (ô thẻ đề cử thường cao hơn ô danh sách); nội dung mỗi ô
    canh giữa theo chiều dọc để không bên nào bị hụt đáy. */
-.rankpair { align-items: stretch; }
+/* tách khối khỏi dải Mới cập nhật phía trên: .rankpair không phải .fsec nên
+   không có padding-top 22px của nhịp trang → thêm margin-top đúng nhịp đó */
+.rankpair { align-items: stretch; margin-top: 22px; }
 .rankpair > .rankbox { display: flex; flex-direction: column; }
 .rankpair #bxh .rbody { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; }
 .rankpair #dang-xem .rbody { flex: 1; justify-content: flex-start; }
