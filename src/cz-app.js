@@ -1913,7 +1913,10 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       { k: 'rank', label: 'Ranking', i: 'trophy', h: '/#bxh' },
       { k: 'sched', label: 'Lịch ra chương', i: 'calendar', h: '/#lich' },
       { k: 'authors', label: 'Tác giả', i: 'pen', h: '/tac-gia/' },
-      { k: 'couples', label: 'Couple', i: 'users', h: '/couple/' }
+      { k: 'couples', label: 'Couple', i: 'users', h: '/couple/' },
+      /* Vòng 17: trang "Chuyển thể Series" trước chỉ vào được bằng nút Xem thêm
+         ở trang chủ; nay có một lối riêng trong sidebar như các mục duyệt khác. */
+      { k: 'series', label: 'Chuyển thể Series', i: 'film', h: '/chuyen-the', tip: 'Chuyển thể Series — tuyển tập do chủ trang chọn' }
     ];
     /* Điều hướng bằng MỘT nút "Danh mục" thay cho dãy mục ngang: tám điểm đến
        nằm trong một bảng hai cột, mở tại chỗ. Dãy ngang cũ phải thu về icon ở

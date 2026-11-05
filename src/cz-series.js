@@ -10,7 +10,9 @@
 (function () {
   'use strict';
   var $ = function (s) { return document.querySelector(s); };
-  CZ.mountShell({ active: 'home' });
+  /* Vòng 17: trang này có mục riêng trong sidebar (NAV 'series') nên đánh dấu
+     đúng mục đang mở thay vì mượn 'home' như trước. */
+  CZ.mountShell({ active: 'series' });
   function render(reg) {
     var grid = $('#seriesGrid'), count = $('#seriesCount');
     if (!grid) return;

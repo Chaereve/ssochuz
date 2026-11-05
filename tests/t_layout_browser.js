@@ -8,7 +8,7 @@ const root=path.join(__dirname,'..');
 const reg=JSON.parse(fs.readFileSync(path.join(root,'data/registry.json')));
 const slug=reg.lib[0].slug;
 const full='Một đoạn tóm tắt đầy đủ để kiểm tra phần hiển thị trên màn hình nhỏ. '.repeat(60)+'\nĐÂY LÀ ĐOẠN CUỐI.';
-const items={}; reg.lib.slice(0,5).forEach((n,i)=>items[n.slug]={viewsDay:20-i,viewsWeek:30-i,viewsMonth:40-i,votesDay:5+i,votesWeek:10+i,votesMonth:20+i,rating:5-i*.1,ratingCount:10+i});
+const items={}; reg.lib.slice(0,5).forEach((n,i)=>items[n.slug]={views:100-i*5,votes:50-i*3,viewsMonth:40-i,votesMonth:20+i,rating:5-i*.1,ratingCount:10+i});
 (async()=>{
  const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_EXECUTABLE||undefined,args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu']});
  try {
@@ -27,7 +27,7 @@ const items={}; reg.lib.slice(0,5).forEach((n,i)=>items[n.slug]={viewsDay:20-i,v
   await page.setViewportSize({width,height:1000});
   await page.goto('http://localhost:8000/');
   await page.waitForSelector('#rank .rank');
-  for(const mode of ['views','votes']) for(const period of ['day','week','month']) {
+  for(const mode of ['views','votes']) for(const period of ['month','all']) {
    await page.click('[data-mode="'+mode+'"]');await page.click('#rankTabs [data-k="'+period+'"]');
    assert.equal(await page.locator('#rank .rank').count(),5);
   }

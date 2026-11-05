@@ -170,6 +170,13 @@
     if (r) r.hidden = !hasResume;
     if (f) f.hidden = !hasFollow;
     if (st) { st.hidden = !showStarter; if (showStarter) renderStarter(); }
+    /* Vòng 17: ô này từng giữ min-height 400px cho MỌI trạng thái để chống nhảy
+       bố cục, nhưng khi đã có thẻ "Đọc tiếp" (nội dung chỉ ~200px) thì phần thừa
+       biến thành khoảng trống lớn trước "Mới cập nhật". Nay chỉ chừa chiều cao
+       cho trạng thái "Bắt đầu từ đâu?" (khối cao thật); có thẻ đọc tiếp thì để
+       nội dung tự quyết định chiều cao. */
+    var dt = $('#doc-tiep');
+    if (dt) dt.classList.toggle('is-starter', !!showStarter);
     /* Người mới chưa đọc gì: khối này KHÔNG còn là “Đọc tiếp” nữa, nên đầu mục
        đổi theo chứ không để tiêu đề “Đọc tiếp” đứng trên lời mời bắt đầu. Link
        bên phải cũng đổi: tủ còn trống thì “My Space” chẳng có gì để xem. */
@@ -278,12 +285,15 @@
     // intentionally empty - no count badges in header
   }
 
-  /* Ranking uses period counters only: never mix lifetime totals or recency. */
+  /* Vòng 17b: Ranking chỉ còn HAI mốc — Tháng (viewsMonth/votesMonth) và Tất cả
+     (all-time = tổng lượt views/votes trọn đời). Bỏ Ngày/Tuần theo yêu cầu chủ
+     trang. Mặc định mở Tháng. "Tất cả" dùng đúng counter trọn đời Worker trả về
+     (views/votes), không suy diễn từ recency. */
   function statsOn() { return !!(CZ._memo.stats && CZ._memo.stats.on); }
   function rankTabs() {
-    return [{ k: 'day', l: 'Ngày' }, { k: 'week', l: 'Tuần' }, { k: 'month', l: 'Tháng' }];
+    return [{ k: 'month', l: 'Tháng' }, { k: 'all', l: 'Tất cả' }];
   }
-  var rankBy = 'week', rankMode = 'views';
+  var rankBy = 'month', rankMode = 'views';
   function positive(value) { var n = Number(value); return Number.isFinite(n) && n > 0 ? n : 0; }
   function renderRecommended() {
     var rail = $('#worthRail');
@@ -324,7 +334,8 @@
     $('#rankTabs').innerHTML = tabs.map(function (t) {
       return '<button class="tab' + (t.k === rankBy ? ' on' : '') + '" data-k="' + t.k + '" aria-pressed="' + (t.k === rankBy) + '">' + t.l + '</button>';
     }).join('');
-    var key = rankMode + ({ day: 'Day', week: 'Week', month: 'Month' }[rankBy]);
+    /* 'all' → hậu tố rỗng ⇒ dùng thẳng views/votes trọn đời; 'month' → viewsMonth… */
+    var key = rankMode + ({ month: 'Month', all: '' }[rankBy] || '');
     var rows = on ? CZ.lib().map(function (n) { return { n: n, score: positive((CZ.statsOf(n) || {})[key]) }; })
       .filter(function (r) { return r.score > 0; })
       .sort(function (a, b) { return b.score - a.score || a.n.slug.localeCompare(b.n.slug); }).slice(0, 5) : [];

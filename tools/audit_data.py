@@ -13,6 +13,9 @@ Kiểm tra:
   5. countLabel phải khớp với số chương thật
   6. tiêu đề chương lặp lại — tách 2 loại: đăng trùng thật (giống cả nội dung, xoá 1 bản)
      và đặt tên nhầm (khác nội dung, chỉ đổi tiêu đề; xem số chương bị nhảy để biết tên đúng)
+  7. truyện khóa mật mã (registry lock:1 / lock:true) KHÔNG được có bản sao tĩnh
+     data/book/<slug>.json — thiếu file là đúng chính sách, không phải lỗi cần sync;
+     còn file cũ là lỗi lộ nội dung khóa, phải báo để xoá (audit chỉ đọc, không tự xoá).
 """
 import argparse, html as html_mod, io, json, os, re, sys
 
@@ -30,6 +33,14 @@ def load(p, default=None):
             return json.load(f)
     except Exception:
         return default
+
+
+def is_locked(n):
+    """Cờ khóa mật mã công khai trong registry — đúng hợp đồng CZ.norm:
+    chỉ `lock:1` hoặc `lock:true`. Mật mã/salt/hash nằm trong book trên KV,
+    không bao giờ được kéo về mirror tĩnh. Thiếu data/book/<slug>.json của bộ
+    khóa là CHỦ ĐÍCH (pull_from_kv.py cũng bỏ qua/xoá bản sao cũ)."""
+    return n.get('lock') is True or n.get('lock') == 1
 
 
 def label_matches(label, total):
@@ -122,12 +133,13 @@ def chapter_gaps(chapters):
     return [i for i in range(min(have), max(have) + 1) if i not in have]
 
 
-def main():
+def main(root=None):
     ap = argparse.ArgumentParser()
     ap.add_argument('--md', help='ghi báo cáo ra file markdown')
     a = ap.parse_args()
+    root = os.path.abspath(root or ROOT)
 
-    reg = load(os.path.join(ROOT, 'data/registry.json')) or {}
+    reg = load(os.path.join(root, 'data/registry.json')) or {}
     lib = reg.get('lib') or []
     cards = []
     for c in CARD_CANDIDATES:
@@ -147,11 +159,30 @@ def main():
         loose.setdefault(k, []).append(c)
     by_card.update({k: v[0] for k, v in loose.items() if len(v) == 1 and k not in by_card})
 
-    problems, notes, titlefix = [], [], []
+    problems, notes, titlefix, locknotes = [], [], [], []
     tot_ch = 0
+    n_locked = 0
     for n in lib:
         slug = n.get('slug')
-        p = os.path.join(ROOT, 'data/book', slug + '.json')
+        p = os.path.join(root, 'data/book', slug + '.json')
+        # dữ liệu không được chứa số liệu tự đặt — áp dụng cho MỌI entry,
+        # kể cả bộ khóa mật mã không có mirror chương.
+        bad = [k for k in n if k in FAKE_KEYS]
+        if bad:
+            problems.append('%s có khoá số liệu tự đặt: %s' % (slug, ', '.join(bad)))
+        if is_locked(n):
+            n_locked += 1
+            if os.path.exists(p):
+                problems.append('%s: truyện khóa mật mã vẫn còn bản sao tĩnh data/book/%s.json — '
+                                'xoá bản sao cũ, KHÔNG sync nội dung khóa ra repo công khai' % (slug, slug))
+                locknotes.append('**%s** (`%s`) — CÒN bản sao tĩnh `data/book/%s.json`; cần xoá để đóng đường vòng đọc nội dung khóa.'
+                                 % (n.get('title'), slug, slug))
+            else:
+                locknotes.append('**%s** (`%s`) — khóa mật mã; không có `data/book/%s.json` là đúng chính sách, không cần sync nội dung.'
+                                 % (n.get('title'), slug, slug))
+            # Không đọc/đối chiếu chương của bộ khóa: registry chỉ mang cờ +
+            # số chương khai báo, nội dung thật chỉ mở qua Worker sau mật mã.
+            continue
         if not os.path.exists(p):
             problems.append('Thiếu file chương: data/book/%s.json' % slug)
             continue
@@ -183,10 +214,6 @@ def main():
         lab = str(n.get('countLabel') or '')
         if lab and lab.split('/')[0].strip() not in ('—', '-') and lab.split('/')[0].strip() != str(len(chs)):
             problems.append('countLabel lệch %s: "%s" vs %d chương thật' % (slug, lab, len(chs)))
-        # dữ liệu không được chứa số liệu tự đặt
-        bad = [k for k in n if k in FAKE_KEYS]
-        if bad:
-            problems.append('%s có khoá số liệu tự đặt: %s' % (slug, ', '.join(bad)))
         # so với thẻ truyện trên blogspot (nếu có)
         c = (by_card.get(norm_full(n.get('title'))) or by_card.get(norm(n.get('title'))))
         if c:
@@ -210,14 +237,19 @@ def main():
     rep.append('| Mục | Số |\n|---|---|')
     rep.append('| Số bộ trong thư viện | %d |' % len(lib))
     rep.append('| Thẻ truyện đối chiếu được từ Blogger | %d |' % len([n for n in lib if (by_card.get(norm_full(n.get('title'))) or by_card.get(norm(n.get('title'))))]))
-    rep.append('| Tổng chương có nội dung thật | %d |' % tot_ch)
-    rep.append('| Bộ chưa có chương (khoá đọc) | %d |' % n0)
+    rep.append('| Tổng chương trong bản sao công khai | %d |' % tot_ch)
+    rep.append('| Bộ khai 0 chương | %d |' % n0)
+    rep.append('| Bộ khóa mật mã (không sync bản tĩnh) | %d |' % n_locked)
     rep.append('| Số bộ trong bảng xếp hạng dùng số tự đặt | 0 |')
     rep.append('| Tiêu đề chương lặp cần đổi tên | %d |' % len(titlefix))
     rep.append('| Lỗi cần sửa | %d |' % len(problems))
     rep.append('')
     rep.append('## Lỗi\n')
     rep.append('\n'.join('- %s' % x for x in problems) if problems else 'Không có lỗi nào.')
+    rep.append('')
+    rep.append('## Truyện khóa mật mã (không sync nội dung)\n')
+    rep.append('\n'.join('- %s' % x for x in locknotes) if locknotes
+               else 'Không có bộ khóa mật mã nào.')
     rep.append('')
     rep.append('## Tiêu đề chương bị lặp (KHÔNG xoá — chỉ sửa tên)\n')
     rep.append('\n'.join('- %s' % x for x in titlefix) if titlefix
@@ -234,7 +266,7 @@ def main():
         c = by_card.get(norm_full(n.get('title'))) or by_card.get(norm(n.get('title')))
         if not c:
             continue
-        p2 = os.path.join(ROOT, 'data/book', (n.get('slug') or '') + '.json')
+        p2 = os.path.join(root, 'data/book', (n.get('slug') or '') + '.json')
         if not os.path.exists(p2):
             continue
         mx = chapter_mix((load(p2) or {}).get('chapters') or [])
