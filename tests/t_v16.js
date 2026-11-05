@@ -47,6 +47,9 @@ function openPage(file, reg) {
   const series = read('chuyen-the.html');
   assert.ok(series.includes('/cz-series.js'), 'trang /chuyen-the không nạp cz-series.js');
   assert.ok(series.includes('id="seriesGrid"') && series.includes('<h1'), 'trang /chuyen-the thiếu h1 / lưới thẻ');
+  assert.ok(!series.includes('Tuyển tập · Chủ trang chọn lọc'), 'trang Series còn kicker đã yêu cầu bỏ');
+  assert.ok(!series.includes('do chủ trang tuyển chọn'), 'trang Series còn cụm lead đã yêu cầu bỏ');
+  assert.ok(series.includes('Những bộ truyện được chuyển thể thành phim.'), 'lead trang Series sai sau khi rút gọn');
   assert.ok(exists('cz-series.js') && exists('src/cz-series.js'), 'cz-series.js chưa được build / thiếu nguồn');
 
   const rd = read('_redirects');
@@ -72,6 +75,11 @@ function openPage(file, reg) {
   assert.ok(/\.rankpair \.rank \.bar \{ display: none !important; \}/.test(v16), 'thanh hồng chưa bị bỏ');
   assert.ok(/@media \(max-width: 900px\) \{ \.rankpair \{ grid-template-columns: minmax\(0, 1fr\)/.test(v16),
     'thiếu bố cục 1 cột trên máy nhỏ');
+  assert.ok(/#doc-tiep, #moi-cap-nhat \{ gap: 12px; \}/.test(v16),
+    'Đọc tiếp / Mới cập nhật chưa rút gap đầu mục');
+  assert.ok(/#doc-tiep > \.sechead, #moi-cap-nhat > \.sechead \{ margin-bottom: 0; \}/.test(v16),
+    'Đọc tiếp / Mới cập nhật còn margin thừa dưới tiêu đề');
+  assert.ok(!/\.series-kick/.test(css), 'còn CSS của kicker Series đã bỏ');
   /* invariant: khối mới không thêm màu literal */
   assert.ok(!/#[0-9a-fA-F]{3,8}\b/.test(v16), 'khối CSS vòng 16 có màu literal — dùng biến :root');
 

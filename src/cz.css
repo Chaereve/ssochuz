@@ -4371,11 +4371,17 @@ img.cmt-ava { border: 0; background: transparent; }
 /* thẻ first-place nhấn nhẹ viền accent cho đáng xem */
 .rankpair #dang-xem .wrank:first-child { border-color: color-mix(in srgb, var(--acc) 30%, var(--bd)); }
 
+/* ---- 17.2b Nhịp đầu mục Đọc tiếp / Mới cập nhật --------------------------
+   Hai dải này từng thừa một lớp margin-bottom 20px của .sechead cộng với gap
+   14px của .fsec ⇒ đường kẻ dưới tiêu đề cách nội dung ~34px. Chỉ rút hai dải
+   khách gửi ảnh: bỏ margin thừa, giữ gap 12px để tiêu đề · kẻ · nội dung liền
+   nhịp, không đụng các đầu mục khác của trang. */
+#doc-tiep, #moi-cap-nhat { gap: 12px; }
+#doc-tiep > .sechead, #moi-cap-nhat > .sechead { margin-bottom: 0; }
+
 /* ---- 17.3 Trang Chuyển thể Series · đồng bộ nhịp trang chủ --------------- */
 .series-page { padding-top: 30px; }
 .series-head { margin-bottom: 24px; }
-.series-kick { margin: 0 0 10px; font-family: var(--font-mono); font-size: 10.5px;
-  font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--acc); }
 .series-page .sechead { margin-bottom: 12px; }
 .series-count { display: inline-flex; align-items: center; padding: 4px 13px;
   border: 1px solid var(--bd); border-radius: 99px; background: var(--surf);
