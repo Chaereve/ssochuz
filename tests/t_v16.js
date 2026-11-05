@@ -73,6 +73,10 @@ function openPage(file, reg) {
   assert.ok(/\.rankpair \{ display: grid; grid-template-columns: minmax\(0, 1\.06fr\) minmax\(0, 1fr\)/.test(v16),
     'Ranking / Đáng xem chưa thành 2 ô song song');
   assert.ok(/\.rankpair \.rank \.bar \{ display: none !important; \}/.test(v16), 'thanh hồng chưa bị bỏ');
+  assert.ok(/\.rankpair > \.rankbox \{ min-width: 0; padding: 14px 16px;/.test(v16),
+    'đáy ô Ranking/Đáng xem chưa thoáng (padding đáy 4px cũ làm dính mép khối)');
+  assert.ok(/\.rankpair \.rank:last-child \{ border-bottom: 0; padding-bottom: 0; \}/.test(v16),
+    'hàng cuối Ranking còn đệm đáy thừa');
   assert.ok(/@media \(max-width: 900px\) \{ \.rankpair \{ grid-template-columns: minmax\(0, 1fr\)/.test(v16),
     'thiếu bố cục 1 cột trên máy nhỏ');
   assert.ok(/#doc-tiep, #moi-cap-nhat \{ gap: 12px; \}/.test(v16),

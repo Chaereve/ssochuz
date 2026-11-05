@@ -4248,7 +4248,8 @@ img.cmt-ava { border: 0; background: transparent; }
    cùng mép trên nên triệt tiêu padding của ô thứ hai. */
 .rankpair > .fsec { padding-top: 0; gap: 8px; }
 .rankpair > .fsec[hidden] { display: none !important; }
-.rankpair > .rankbox { min-width: 0; padding: 14px 16px 4px;
+/* đáy ô phải thoáng như hai bên: 4px cũ khiến thẻ/hàng cuối dính mép khối */
+.rankpair > .rankbox { min-width: 0; padding: 14px 16px;
   background: var(--surf); border: 1px solid var(--bd);
   border-radius: var(--r); box-shadow: var(--sh-card); }
 .rankpair .sechead { align-items: center; flex-wrap: wrap; gap: 8px;
@@ -4259,7 +4260,8 @@ img.cmt-ava { border: 0; background: transparent; }
 .rankpair .rank { grid-template-columns: 38px 52px minmax(0, 1fr) auto;
   gap: 12px; padding: 9px 2px 10px; border-radius: 0;
   border-bottom: 1px solid var(--bd); background: transparent; }
-.rankpair .rank:last-child { border-bottom: 0; padding-bottom: 9px; }
+/* hàng cuối không đệm thêm: khoảng thở đáy đã thuộc về padding của ô */
+.rankpair .rank:last-child { border-bottom: 0; padding-bottom: 0; }
 .rankpair .rank .n { font-size: 30px; font-weight: 400; line-height: 1;
   color: var(--dim); }
 .rankpair .rank .n.t1 { font-size: 34px; }
