@@ -289,19 +289,12 @@ async function tick(n = 6) { for (let i = 0; i < n; i++) await sleep(20); }
   await tick(3);
   ok($('#editor').textContent.includes('Đoạn gõ thêm chưa lưu lên KV.'), 'Nút Khôi phục nháp lấy lại đúng bản nháp đã lưu ở localStorage');
 
-  /* ---- 4 · Thanh công cụ định dạng + Modal chèn liên kết + Ngăn cách ---- */
-  $('#editor').innerHTML = '<p id="fmtTarget">Tiêu đề thử nghiệm</p>';
+  /* ---- 4 · Thanh công cụ định dạng gọn (không còn H2/H3, chèn link, đường kẻ ngang) ---- */
+  ok(!$('.ed-toolbar [data-cmd="h2"]') && !$('.ed-toolbar [data-cmd="h3"]'), 'Đã gỡ nút H2 và H3 khỏi thanh công cụ chỉnh sửa chương');
+  ok(!$('.ed-toolbar [data-cmd="link"]') && !$('.ed-toolbar [data-cmd="hr"]'), 'Đã gỡ nút Chèn liên kết và Đường kẻ ngang khỏi thanh công cụ chỉnh sửa chương');
+
+  $('#editor').innerHTML = '<p id="fmtTarget">Đoạn trích thử nghiệm</p>';
   selectNodeContents($('#editor #fmtTarget'));
-  click('[data-act="format"][data-cmd="h2"]');
-  await tick(2);
-  ok(!!$('#editor h2') && $('#editor h2').textContent === 'Tiêu đề thử nghiệm', 'Nút H2 chuyển đoạn đang chọn sang <h2>');
-
-  selectNodeContents($('#editor h2'));
-  click('[data-act="format"][data-cmd="h2"]');
-  await tick(2);
-  ok(!$('#editor h2') && !!$('#editor p'), 'Bấm lại H2 chuyển ngược tiêu đề về đoạn <p>');
-
-  selectNodeContents($('#editor p'));
   click('[data-act="format"][data-cmd="quote"]');
   await tick(2);
   ok(!!$('#editor blockquote'), 'Nút Trích dẫn bọc đoạn đang chọn vào <blockquote>');
@@ -320,17 +313,6 @@ async function tick(n = 6) { for (let i = 0; i < n; i++) await sleep(20); }
   click('[data-act="insert-separator"]');
   await tick(2);
   ok(!!$('#editor p.ch-sep') && $('#editor p.ch-sep').textContent.includes('•••'), 'Nút Ngăn cách chèn <p class="ch-sep">•••</p> tại con trỏ');
-
-  placeCaretAtEnd($('#editor'));
-  click('[data-act="format"][data-cmd="link"]');
-  await tick(3);
-  ok(!!$('#linkModalHref') && !!$('#linkModalText'), 'Bấm nút Liên kết mở modal nhập URL & văn bản hiển thị');
-  setVal('linkModalHref', 'https://ssochuz.pages.dev/chuyen-the');
-  setVal('linkModalText', 'Xem chuyển thể');
-  click('[data-act="link-confirm"]');
-  await tick(3);
-  const insLink = $('#editor a[href="https://ssochuz.pages.dev/chuyen-the"]');
-  ok(!!insLink && insLink.textContent === 'Xem chuyển thể' && insLink.getAttribute('rel') === 'noopener noreferrer', 'Modal liên kết chèn thẻ <a> an toàn vào đúng vị trí con trỏ');
 
   /* ---- 5 · Dán thông minh từ Word / Google Docs & chặn XSS ---- */
   placeCaretAtEnd($('#editor'));
@@ -426,6 +408,99 @@ async function tick(n = 6) { for (let i = 0; i < n; i++) await sleep(20); }
   ok(fullBookPutsAfter === fullBookPutsBefore + 1, 'Xác nhận nhập nhiều chương chỉ tốn ĐÚNG 1 lệnh PUT /api/book/<slug> nguyên tử');
   ok(KV.books[SLUG].chapters.length === 5 && KV.books[SLUG].chapters[4].t === 'Ngoại truyện 1: Sau cơn mưa', 'KV nối thêm đủ 3 chương mới (tổng 5 chương) đúng thứ tự và nội dung');
   ok(S().chapters.length === 5, 'Danh sách chương trên giao diện cập nhật ngay lên 5 chương');
+
+  /* ---- 9 · Chuẩn hoá cách dòng đoạn văn (không nhân đôi/nhân ba khoảng trống giữa các đoạn) ---- */
+  KV.books['the-fire'] = {
+    slug: 'the-fire',
+    title: 'The Fire',
+    chapters: [{
+      t: 'Chương 1: Kiểm chứng nhịp cách dòng',
+      status: 'published',
+      html: [
+        '<div><div>Buổi sáng thứ ba của kỳ thực tập, tòa nhà AKKR vẫn ồn ào.</div>',
+        '<div><br></div>',
+        '<p><br></p>',
+        '<p>Nhưng đối với Phakhwan, hôm nay có chút khác biệt.</p>',
+        '<p>&nbsp;</p>',
+        '<br>',
+        '<div style="height: 12px;"></div>',
+        '<p>"Ơn trời. Bảng màu may mắn nói rằng hôm nay nên mặc màu xanh lá."<br><br>Cô mỉm cười bước vào thang máy.</p>',
+        '<div class="ch-sep">* * *</div>',
+        '<p><br></p>',
+        '<p>Câu thơ một<br>Câu thơ hai giữ nguyên ngắt dòng mềm</p>',
+        '<p><img src="/api/img/anh-1" alt="Minh hoạ"></p></div>'
+      ].join('')
+    }]
+  };
+  const chBookSel = $('[data-role="chapter-book"]');
+  chBookSel.value = 'the-fire';
+  chBookSel.dispatchEvent(new w.Event('change', { bubbles: true }));
+  click('[data-act="manage-chapters"]');
+  await tick(10);
+
+  const edParas6 = Array.from($$('#editor > p:not(.ch-sep)'));
+  const edEmptySpacers = edParas6.filter(p => !p.querySelector('img') && !(p.textContent || '').replace(/\s+/g, ''));
+  ok(edEmptySpacers.length === 0, '#editor dọn sạch 100% khối rỗng (<p><br></p>, <p>&nbsp;</p>, <div><br></div>, spacer Blogger)');
+  ok(edParas6.length === 6, '#editor tách đúng 5 đoạn chữ + 1 đoạn ảnh (gồm cả tách <br><br> thành 2 <p>), không sót khối rỗng: thực tế=' + edParas6.length);
+  ok(!!$('#editor .ch-sep') && $('#editor .ch-sep').textContent.includes('* * *'), 'Giữ nguyên dải ngăn cách cảnh .ch-sep');
+  ok(edParas6.some(p => p.innerHTML.includes('<br>') && p.textContent.includes('Câu thơ một')), 'Giữ nguyên 1 thẻ <br> ngắt dòng mềm trong thơ/thoại');
+
+  /* Bật Xem trước độc giả và đối chiếu 1:1 với truyen.html */
+  click('[data-act="toggle-preview"]');
+  await tick(3);
+  const pv6 = $('#readerPreview .rtext');
+  const pv6Empty = Array.from(pv6.querySelectorAll('p,div')).filter(el => !el.classList.contains('ch-sep') && !el.querySelector('img') && !(el.textContent || '').replace(/\s+/g, ''));
+  ok(pv6Empty.length === 0 && pv6.querySelectorAll('p:not(.ch-sep)').length === 6, 'Xem trước độc giả hiển thị đúng 6 khối <p>, 0 dòng trống thừa giữa các đoạn');
+
+  const pubReader6 = page('truyen.html', {
+    url: 'https://ssochuz.pages.dev/truyen/the-fire/#chuong-1',
+    config: { CZ_API: '' },
+    fetch: (u) => {
+      const pu = new URL(u, 'https://ssochuz.pages.dev').pathname;
+      if (pu.endsWith('/data/registry.json') || pu === '/api/registry') return Promise.resolve(resp(KV.registry));
+      if (pu.endsWith('/data/book/the-fire.json') || pu === '/api/book/the-fire') return Promise.resolve(resp(KV.books['the-fire']));
+      return Promise.resolve(resp({ ok: false }, 404));
+    }
+  });
+  await sleep(650);
+  const pub6 = pubReader6.doc.querySelector('#rdText');
+  const pub6Empty = Array.from(pub6.querySelectorAll('p,div')).filter(el => !el.classList.contains('ch-sep') && !el.querySelector('img') && !(el.textContent || '').replace(/\s+/g, ''));
+  ok(pub6Empty.length === 0, 'truyen.html (cleanHTML) cũng dọn sạch 100% khối rỗng <p><br></p> thừa giữa các đoạn');
+  ok(pub6.querySelectorAll('p').length === pv6.querySelectorAll('p').length, 'Số khối <p> khớp 1:1 giữa Xem trước /admin và truyen.html (' + pv6.querySelectorAll('p').length + ')');
+
+  /* Đóng xem trước & kiểm chứng dán văn bản nhiều dòng trống + dán HTML từ Word/Docs */
+  click('[data-act="toggle-preview"]');
+  await tick(2);
+  $('#editor').innerHTML = '<p><br></p>';
+  placeCaretAtEnd($('#editor'));
+  const plainPasteEv = new w.Event('paste', { bubbles: true, cancelable: true });
+  plainPasteEv.clipboardData = {
+    items: [],
+    getData: type => (type === 'text/plain' ? 'Đoạn văn thứ nhất.\r\n\r\n\r\nĐoạn văn thứ hai.\n   \nĐoạn văn thứ ba.' : '')
+  };
+  $('#editor').dispatchEvent(plainPasteEv);
+  await tick(3);
+  const plainParas = Array.from($$('#editor > p')).filter(p => (p.textContent || '').trim());
+  const plainSpacers = Array.from($$('#editor > p, #editor > div')).filter(el => !(el.textContent || '').replace(/\s+/g, ''));
+  ok(plainParas.length === 3 && plainSpacers.length === 0, 'Dán văn bản thuần có nhiều dòng trống liên tiếp tạo đúng 3 <p> liền kề, 0 dòng trống thừa');
+
+  $('#editor').innerHTML = '<p><br></p>';
+  placeCaretAtEnd($('#editor'));
+  const wordSpacerHtml = '<p class="MsoNormal">Đoạn Word A</p><p class="MsoNormal"><o:p>&nbsp;</o:p></p><br><p class="MsoNormal">Đoạn Word B<br><br>Đoạn Word C</p>';
+  const wordPasteEv = new w.Event('paste', { bubbles: true, cancelable: true });
+  wordPasteEv.clipboardData = {
+    items: [],
+    getData: type => (type === 'text/html' ? wordSpacerHtml : 'Đoạn Word A\n\nĐoạn Word B\n\nĐoạn Word C')
+  };
+  $('#editor').dispatchEvent(wordPasteEv);
+  await tick(3);
+  const wordParas = Array.from($$('#editor > p')).filter(p => (p.textContent || '').trim());
+  const wordSpacers = Array.from($$('#editor > p, #editor > div')).filter(el => !(el.textContent || '').replace(/\s+/g, ''));
+  ok(wordParas.length === 3 && wordSpacers.length === 0, 'Dán HTML từ Word/Docs (<p>&nbsp;</p>, <br> giữa đoạn, <br><br> trong đoạn) chuẩn hoá thành đúng 3 <p> sạch, 0 khối rỗng');
+
+  click('[data-act="save-chapter"]');
+  await tick(8);
+  ok(!/<p>(?:\s|<br\s*\/?>|&nbsp;)*<\/p>/i.test(KV.books['the-fire'].chapters[0].html), 'HTML lưu lên KV không còn bất kỳ khối <p><br></p> hay <p>&nbsp;</p> rỗng nào');
 
   ok(jsErrors.length === 0, '0 lỗi runtime JS trong suốt bài kiểm thử: ' + jsErrors.join(' | '));
 

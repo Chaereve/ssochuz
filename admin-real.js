@@ -1,19 +1,4 @@
-/* ============================================================================
-   admin-real.js · LỚP DỮ LIỆU THẬT CHO GIAO DIỆN QUẢN TRỊ MỚI
-   ----------------------------------------------------------------------------
-   admin.html được sinh từ mockup/ssochuz-admin-mockup.html (giữ nguyên CSS và
-   toàn bộ hàm render). File này nạp NGAY SAU script inline, lấy cầu nối
-   window.CZ_MOCKUP rồi:
-
-     · đọc/ghi Cloudflare KV qua Worker với header x-admin-key (giống
-       src/admin/api.js), lưu URL Worker ở localStorage và khoá ở sessionStorage;
-     · đổ registry, bình luận, báo lỗi, phiếu bầu, thống kê, nhật ký, quota
-       vào `state` của giao diện → mọi tab hiện DỮ LIỆU THẬT;
-     · chặn các data-act GHI để gọi API thật thay vì toast mô phỏng.
-
-   File mockup gốc (mở double-click) KHÔNG nạp file này, nên vẫn là prototype
-   an toàn. Không có ADMIN_KEY ⇒ chuyển về màn đăng nhập / chế độ đọc tĩnh.
-   ========================================================================== */
+/* admin-real.js · Lớp dữ liệu thật KV cho giao diện quản trị mới (admin.html) */
 (function () {
   'use strict';
   var M = window.CZ_MOCKUP;
@@ -35,11 +20,11 @@
   function nowStamp() { return new Date().toISOString().slice(0, 16).replace('T', ' '); }
   function teaser(t, n) { return String(t || '').replace(/\s+/g, ' ').trim().slice(0, n || 220); }
   function textToHtml(t) {
-    var raw = String(t || '').replace(/\r\n/g, '\n').trim();
+    var raw = String(t || '').replace(/\r\n?/g, '\n').trim();
     if (!raw) return '';
-    return raw.split(/\n{2,}/).map(function (p) {
-      return '<p>' + p.trim().replace(/\n/g, ' ').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p>';
-    }).filter(function (p) { return p !== '<p></p>'; }).join('\n');
+    return raw.split(/\n+/).map(function (ln) { return ln.trim(); }).filter(Boolean).map(function (ln) {
+      return '<p>' + ln.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p>';
+    }).join('');
   }
   function slugify(v) {
     return String(v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -61,16 +46,7 @@
   var WRAPPED = false;
   var SAMPLE_CLEARED = false;
 
-  /* --------------------------------------------------------------------------
-     Vòng 12 · KHÔNG để bất kỳ dữ liệu prototype nào tồn tại trong bản phát hành.
-     --------------------------------------------------------------------------
-     Trước đây dọn mẫu chỉ chạy BÊN TRONG hydrate(), tức là chỉ khi có URL
-     Worker. Mở /admin lần đầu chưa cấu hình → 18 bộ "Truyện mẫu 01…08",
-     6.420 chương, 248 book, 18.400 lượt đọc vẫn hiện ra; và ngay cả khi đã
-     cấu hình, render() đầu tiên vẫn chạy TRƯỚC khi loadAll() kịp đổ KV thật
-     nên có một nháy dữ liệu giả. Dọn ngay tại boot(), đúng MỘT LẦN, trước
-     window.render() đầu tiên. hydrate() gọi lại hàm này (no-op) để giữ nguyên
-     hợp đồng "không dọn lại giữa chừng làm mất dữ liệu thật". */
+  /* Vòng 12: dọn sạch seed prototype ngay tại boot() trước render đầu tiên. */
   function clearPrototypeSeed() {
     if (SAMPLE_CLEARED) return;
     SAMPLE_CLEARED = true;
@@ -149,11 +125,7 @@
   async function apiCall(path, opts) {
     opts = opts || {};
     if (!CFG.base) throw new Error('Chưa có URL Worker — vào Đăng nhập / nối Worker.');
-    /* KHÔNG được gửi header 'cache-control' (hay bất kỳ header nào ngoài danh
-       sách access-control-allow-headers của worker/cms.js): header lạ bắt trình
-       duyệt gửi preflight OPTIONS, Worker từ chối ⇒ "Failed to fetch" ngay cả ở
-       /api/health. Việc không cache nằm ở tuỳ chọn `cache: 'no-store'` bên dưới,
-       đúng như src/admin/api.js của admin cũ vẫn chạy tốt. */
+    /* Chỉ gửi header nằm trong access-control-allow-headers của worker/cms.js; dùng cache:'no-store'. */
     var headers = {};
     var hasBody = opts.body !== undefined && opts.body !== null;
     if (hasBody && !(opts.body instanceof FormData)) headers['content-type'] = 'application/json';
@@ -190,16 +162,11 @@
     REG = reg || { lib: [] };
     var lib = REG.lib || [];
     S.books = lib.map(metaToBook);
-    /* Vòng 14: "Chuyển thể Series" là editorChoice thật trong registry
-       (12 slug), KHÔNG phải 3 bộ đầu. Web đọc cả 2 chỗ nên giữ đồng bộ. */
     var choice = (Array.isArray(REG.editorChoice) && REG.editorChoice.length)
       ? REG.editorChoice
       : ((REG.settings && Array.isArray(REG.settings.editorChoice)) ? REG.settings.editorChoice : []);
     S.picked = choice.map(function (x) { return typeof x === 'string' ? x : ((x && x.slug) || ''); })
       .filter(function (x, i, a) { return x && a.indexOf(x) === i; });
-    /* Vòng 15: bỏ trần 12; card hiện 12, trang riêng chọn toàn bộ KV. */
-    /* Dọn mẫu đã chạy ở boot() trước render đầu tiên; gọi lại ở đây để giữ
-       hợp đồng "dọn đúng một lần" nếu hydrate() bị gọi từ một luồng khác. */
     clearPrototypeSeed();
     if (!S.selectedBook || !S.books.some(function (b) { return b.id === S.selectedBook; }))
       S.selectedBook = S.books.length ? S.books[0].id : null;
@@ -417,32 +384,88 @@
     if (CFG.base) out = out.split(CFG.base + '/api/img/').join('/api/img/');
     return out;
   }
-  function isBloggerSpacerDiv(el) {
-    if (!el || el.nodeType !== 1 || el.tagName.toLowerCase() !== 'div') return false;
-    if (el.getAttribute('class')) return false;
-    if (el.querySelector('img,video,audio,hr,table,figure')) return false;
-    var txt = (el.textContent || '').replace(/\u00a0/g, ' ').trim();
-    if (txt) return false;
-    var st = String(el.getAttribute('style') || '').trim();
-    return /^height\s*:\s*\d+(?:\.\d+)?px\s*;?$/i.test(st);
+  var KEEP_MEDIA_SEL = 'img,picture,source,video,audio,hr,table,figure,ul,ol,blockquote,pre,details,h1,h2,h3,h4,h5,h6';
+  var DOUBLE_BR_RE = /(?:<br\s*\/?>(?:\s|&nbsp;|\u00a0)*){2,}/i;
+  var DOUBLE_BR_SPLIT = /(?:<br\s*\/?>(?:\s|&nbsp;|\u00a0)*){2,}/gi;
+  var BLK_TAG_RE = /^(div|p|ul|ol|li|blockquote|table|figure|h[1-6]|pre|hr|details)$/i;
+  function isWsNode(n) {
+    return !!(n && n.nodeType === 3 && !String(n.nodeValue || '').replace(/[\s\u00a0\u200b\ufeff]+/g, ''));
+  }
+  function isSpacerBlock(el) {
+    if (!el || el.nodeType !== 1) return false;
+    var tg = (el.tagName || '').toLowerCase();
+    if (tg !== 'p' && tg !== 'div') return false;
+    if (el.classList && (el.classList.contains('ch-sep') || el.classList.contains('chat-container') || el.classList.contains('msg'))) return false;
+    if (el.querySelector(KEEP_MEDIA_SEL)) return false;
+    return !String(el.textContent || '').replace(/[\s\u00a0\u200b\ufeff]+/g, '');
+  }
+  function copyBlockAttrs(srcEl, dstEl) {
+    if (srcEl.className) dstEl.className = srcEl.className;
+    var st = srcEl.getAttribute('style');
+    if (st) dstEl.setAttribute('style', st);
+    var al = srcEl.getAttribute('align');
+    if (al) dstEl.setAttribute('align', al);
   }
   function normalizeBlocksInContainer(box) {
-    Array.prototype.slice.call(box.querySelectorAll('div')).forEach(function (d) {
-      if (!d.parentNode) return;
-      if (isBloggerSpacerDiv(d)) { d.remove(); return; }
-      if (d.classList && (d.classList.contains('chat-container') || d.classList.contains('msg'))) return;
-      if (!d.querySelector(BLOCK_CHILD_SEL)) {
-        var p = D.createElement('p');
-        if (d.className) p.className = d.className;
-        var st = d.getAttribute('style');
-        if (st) p.setAttribute('style', st);
-        var al = d.getAttribute('align');
-        if (al) p.setAttribute('align', al);
-        while (d.firstChild) p.appendChild(d.firstChild);
-        d.parentNode.replaceChild(p, d);
+    if (!box.querySelector(BLOCK_CHILD_SEL) && DOUBLE_BR_RE.test(box.innerHTML)) {
+      box.innerHTML = box.innerHTML.split(DOUBLE_BR_SPLIT).map(function (s) { return s.trim(); }).filter(Boolean)
+        .map(function (s) { return '<p>' + s + '</p>'; }).join('');
+    }
+    Array.prototype.slice.call(box.querySelectorAll('p,div')).forEach(function (el) {
+      if (!el.parentNode) return;
+      if (el.classList && (el.classList.contains('chat-container') || el.classList.contains('msg') || el.classList.contains('ch-sep'))) return;
+      if (el.querySelector(BLOCK_CHILD_SEL) || el.querySelector('img,video,audio,picture,figure,table')) return;
+      if (DOUBLE_BR_RE.test(el.innerHTML)) {
+        var frag = D.createDocumentFragment();
+        el.innerHTML.split(DOUBLE_BR_SPLIT).map(function (s) { return s.trim(); }).filter(Boolean).forEach(function (part) {
+          var p = D.createElement('p');
+          copyBlockAttrs(el, p);
+          p.innerHTML = part;
+          frag.appendChild(p);
+        });
+        el.parentNode.replaceChild(frag, el);
       }
     });
-    var hasBlock = !!box.querySelector('p,div,h1,h2,h3,h4,h5,h6,blockquote,ul,ol,table,figure,pre,hr,details');
+    Array.prototype.slice.call(box.querySelectorAll('div')).reverse().forEach(function (d) {
+      if (!d.parentNode) return;
+      if (d.classList && (d.classList.contains('chat-container') || d.classList.contains('msg'))) return;
+      if (isSpacerBlock(d)) { d.remove(); return; }
+      if (!d.querySelector(BLOCK_CHILD_SEL)) {
+        var p = D.createElement('p');
+        copyBlockAttrs(d, p);
+        while (d.firstChild) p.appendChild(d.firstChild);
+        d.parentNode.replaceChild(p, d);
+      } else if (!d.getAttribute('class') && !d.getAttribute('style') && !d.getAttribute('align')) {
+        var onlyBlk = Array.prototype.every.call(d.childNodes, function (c) {
+          return isWsNode(c) || (c.nodeType === 1 && (c.tagName === 'BR' || BLK_TAG_RE.test(c.tagName)));
+        });
+        if (onlyBlk) {
+          var par = d.parentNode;
+          while (d.firstChild) par.insertBefore(d.firstChild, d);
+          d.remove();
+        }
+      }
+    });
+    Array.prototype.slice.call(box.querySelectorAll('br')).forEach(function (br) {
+      if (!br.parentNode) return;
+      var prev = br.previousSibling; while (prev && isWsNode(prev)) prev = prev.previousSibling;
+      var next = br.nextSibling; while (next && isWsNode(next)) next = next.nextSibling;
+      if ((prev && prev.nodeType === 1 && BLK_TAG_RE.test(prev.tagName)) || (next && next.nodeType === 1 && BLK_TAG_RE.test(next.tagName))) br.remove();
+    });
+    Array.prototype.slice.call(box.querySelectorAll('p,li,h1,h2,h3,h4,h5,h6')).forEach(function (el) {
+      while (el.firstChild && (isWsNode(el.firstChild) || (el.firstChild.nodeType === 1 && el.firstChild.tagName === 'BR'))) {
+        if (isWsNode(el.firstChild) && el.firstChild.nextSibling && el.firstChild.nextSibling.tagName !== 'BR') break;
+        el.removeChild(el.firstChild);
+      }
+      while (el.lastChild && (isWsNode(el.lastChild) || (el.lastChild.nodeType === 1 && el.lastChild.tagName === 'BR'))) {
+        if (isWsNode(el.lastChild) && el.lastChild.previousSibling && el.lastChild.previousSibling.tagName !== 'BR') break;
+        el.removeChild(el.lastChild);
+      }
+    });
+    Array.prototype.slice.call(box.querySelectorAll('p,div')).reverse().forEach(function (el) {
+      if (isSpacerBlock(el)) el.remove();
+    });
+    var hasBlock = !!box.querySelector(BLOCK_CHILD_SEL);
     if (!hasBlock && (box.textContent || '').trim()) {
       var wrap = D.createElement('p');
       while (box.firstChild) wrap.appendChild(box.firstChild);
@@ -457,8 +480,7 @@
   function htmlForStorage(rawHtml) {
     var box = boxFromHtml(realSanitizeEditorHtml(rewriteImgForStorage(rawHtml)));
     normalizeBlocksInContainer(box);
-    var res = box.innerHTML.trim();
-    return res === '<p><br></p>' ? '<p></p>' : res;
+    return box.innerHTML.trim() || '<p></p>';
   }
   /* Dựng HTML xem trước khớp 1:1 với cleanHTML() của src/cz-story.js trên truyen.html */
   function renderReaderHtml(rawHtml) {
@@ -473,52 +495,8 @@
       im.removeAttribute('width');
       im.removeAttribute('height');
     });
-    Array.prototype.slice.call(tmp.querySelectorAll('div')).forEach(function (d) {
-      if (!d.parentNode) return;
-      if (d.classList && (d.classList.contains('chat-container') || d.classList.contains('msg'))) return;
-      if (!d.querySelector('div,p,ul,ol,blockquote,table,img,figure,h1,h2,h3,h4')) {
-        var p = D.createElement('p');
-        if (d.className) p.className = d.className;
-        var st = d.getAttribute('style');
-        if (st && /text-align\s*:\s*(center|right|left|justify)/i.test(st)) {
-          var m = st.match(/text-align\s*:\s*(center|right|left|justify)/i);
-          if (m) p.style.textAlign = m[1].toLowerCase();
-        }
-        var al = d.getAttribute('align');
-        if (al && /^(center|right|left|justify)$/i.test(al)) p.setAttribute('align', al.toLowerCase());
-        while (d.firstChild) p.appendChild(d.firstChild);
-        d.parentNode.replaceChild(p, d);
-      }
-    });
-    function isEmptyReaderBlock(el) {
-      if (!el || el.nodeType !== 1) return false;
-      var tg = el.tagName ? el.tagName.toLowerCase() : '';
-      if (tg !== 'p' && tg !== 'div') return false;
-      if (el.classList && el.classList.contains('ch-sep')) return false;
-      if (el.querySelector('img,video,hr,table,ul,ol,blockquote,h1,h2,h3,h4,figure')) return false;
-      var txt = (el.textContent || '').replace(/\u00a0/g, ' ').trim();
-      var inner = (el.innerHTML || '').replace(/<br\s*\/?>/gi, '').replace(/&nbsp;/gi, '').trim();
-      return !txt && !inner;
-    }
-    Array.prototype.slice.call(tmp.querySelectorAll('p')).forEach(function (p) {
-      if (p.querySelector('img')) return;
-      var h = p.innerHTML;
-      var n = h.replace(/(?:<br\s*\/?>\s*){2,}/gi, '<br>');
-      if (n !== h) p.innerHTML = n;
-    });
-    var prevEmpty = false;
-    Array.prototype.slice.call(tmp.childNodes).forEach(function (node) {
-      if (node.nodeType === 3 && !String(node.nodeValue || '').trim()) return;
-      if (isEmptyReaderBlock(node)) {
-        if (prevEmpty) node.remove();
-        else prevEmpty = true;
-      } else if (node.nodeType === 1 || (node.nodeType === 3 && String(node.nodeValue || '').trim())) {
-        prevEmpty = false;
-      }
-    });
-    while (tmp.firstElementChild && isEmptyReaderBlock(tmp.firstElementChild)) tmp.firstElementChild.remove();
-    while (tmp.lastElementChild && isEmptyReaderBlock(tmp.lastElementChild)) tmp.lastElementChild.remove();
-    return tmp.innerHTML || '<p class="mut"><em>Chương chưa có nội dung văn bản.</em></p>';
+    normalizeBlocksInContainer(tmp);
+    return tmp.innerHTML.trim() || '<p class="mut"><em>Chương chưa có nội dung văn bản.</em></p>';
   }
 
   /* Đếm từ / ký tự / thời gian đọc & hẹn giờ chuẩn ISO <-> datetime-local */
@@ -915,18 +893,12 @@
     });
   }
   function loadVoters() {
-    /* Vòng 14: trước đây chỉ hỏi 5 bộ đầu ⇒ tab Phiếu bầu thiếu phiếu của 62
-       bộ còn lại. NHƯNG gọi 67 lần /api/admin/voters thì mỗi lần Worker lại
-       flushStats + readStats (tốn KV read). /api/admin/stats đã trả số phiếu
-       của MỌI bộ trong 1 request ⇒ chỉ hỏi những bộ thật sự có phiếu. */
     var all = (REG.lib || []).map(function (m) { return m.slug; }).filter(Boolean);
     var hot = all.filter(function (sl) {
       var it = STATS_ITEMS[sl] || {};
       return (Number(it.voters) || 0) > 0 ||
         (it.chapVotes && Object.keys(it.chapVotes).length > 0);
     });
-    /* Stats rỗng (KV mới / Worker cũ): vẫn thăm 12 bộ đầu để không im lặng,
-       nhưng không bao giờ bắn hàng chục request mỗi lần mở /admin. */
     var slugs = (hot.length ? hot : all.slice(0, 12)).slice(0, 40);
     return Promise.all(slugs.map(function (slug) {
       return apiCall('/api/admin/voters?slug=' + encodeURIComponent(slug))
@@ -1507,9 +1479,43 @@
     LAST_EDITOR_RANGE = r.cloneRange();
     return r;
   }
+  function placeCaretAfter(node) {
+    if (!node || !node.parentNode) return;
+    var after = D.createRange();
+    if (node.nodeType === 1 && node.childNodes.length) {
+      after.selectNodeContents(node);
+      after.collapse(false);
+    } else {
+      after.setStartAfter(node);
+      after.collapse(true);
+    }
+    var sel = window.getSelection && window.getSelection();
+    if (sel) { sel.removeAllRanges(); sel.addRange(after); }
+    LAST_EDITOR_RANGE = after.cloneRange();
+  }
   function insertHtmlAtEditorCursor(ed, htmlSnippet) {
     if (!ed) return;
+    var isBlkSnippet = /<(p|div|h[1-6]|blockquote|ul|ol|table|figure|hr)\b/i.test(htmlSnippet);
+    if (isBlkSnippet && !String(ed.textContent || '').replace(/[\s\u00a0\u200b\ufeff]+/g, '') && !ed.querySelector('img,video,hr,table,figure')) {
+      ed.innerHTML = htmlSnippet;
+      if (ed.lastChild) placeCaretAfter(ed.lastChild);
+      saveEditorSelection();
+      return;
+    }
     var r = restoreEditorSelection(ed);
+    if (isBlkSnippet && r) {
+      var blkAnc = r.startContainer;
+      while (blkAnc && blkAnc !== ed && blkAnc.parentNode !== ed) blkAnc = blkAnc.parentNode;
+      if (blkAnc && blkAnc !== ed && isSpacerBlock(blkAnc)) {
+        var tmpl0 = D.createElement('template');
+        tmpl0.innerHTML = htmlSnippet;
+        var last0 = tmpl0.content.lastChild;
+        blkAnc.parentNode.replaceChild(tmpl0.content, blkAnc);
+        placeCaretAfter(last0);
+        saveEditorSelection();
+        return;
+      }
+    }
     var before = ed.innerHTML, done = false;
     try {
       if (D.execCommand) done = D.execCommand('insertHTML', false, htmlSnippet);
@@ -1521,15 +1527,26 @@
       var lastNode = frag.lastChild;
       if (r) {
         r.deleteContents();
-        r.insertNode(frag);
-        if (lastNode && lastNode.parentNode) {
-          var after = D.createRange();
-          after.setStartAfter(lastNode);
-          after.collapse(true);
-          var sel = window.getSelection && window.getSelection();
-          if (sel) { sel.removeAllRanges(); sel.addRange(after); }
-          LAST_EDITOR_RANGE = after.cloneRange();
+        var topBlk = isBlkSnippet ? r.startContainer : null;
+        while (topBlk && topBlk !== ed && topBlk.parentNode !== ed) topBlk = topBlk.parentNode;
+        if (topBlk && topBlk !== ed && /^(P|H[1-6])$/.test(topBlk.tagName || '')) {
+          var tail = r.cloneRange();
+          tail.selectNodeContents(topBlk);
+          tail.setStart(r.endContainer, r.endOffset);
+          var tailFrag = tail.extractContents();
+          var refNext = topBlk.nextSibling;
+          ed.insertBefore(frag, refNext);
+          if (String(tailFrag.textContent || '').trim() || (tailFrag.querySelector && tailFrag.querySelector('img,br'))) {
+            var tailP = D.createElement(topBlk.tagName.toLowerCase());
+            copyBlockAttrs(topBlk, tailP);
+            tailP.appendChild(tailFrag);
+            if (!isSpacerBlock(tailP)) ed.insertBefore(tailP, refNext);
+          }
+          if (isSpacerBlock(topBlk)) topBlk.remove();
+        } else {
+          r.insertNode(frag);
         }
+        placeCaretAfter(lastNode);
       } else {
         ed.insertAdjacentHTML('beforeend', htmlSnippet);
       }
@@ -1555,21 +1572,16 @@
     var sel = window.getSelection && window.getSelection();
     if (!sel || !sel.rangeCount || !ed.contains(sel.anchorNode)) return;
     var block = findAncestorInEditor(ed, { p: 1, div: 1, h1: 1, h2: 1, h3: 1, h4: 1, blockquote: 1, li: 1 });
-    var blockTag = block ? block.tagName.toLowerCase() : '';
     var inQuote = !!findAncestorInEditor(ed, { blockquote: 1 });
-    var inLink = !!findAncestorInEditor(ed, { a: 1 });
     var align = block ? String(block.style.textAlign || block.getAttribute('align') || '').toLowerCase() : '';
     function qState(cmd) { try { return !!(D.queryCommandState && D.queryCommandState(cmd)); } catch (e) { return false; } }
     var activeMap = {
       bold: qState('bold') || !!findAncestorInEditor(ed, { b: 1, strong: 1 }),
       italic: qState('italic') || !!findAncestorInEditor(ed, { i: 1, em: 1 }),
       underline: qState('underline') || !!findAncestorInEditor(ed, { u: 1 }),
-      h2: blockTag === 'h2',
-      h3: blockTag === 'h3',
       quote: inQuote,
       'align-center': align === 'center',
-      'align-left': align === 'left',
-      link: inLink
+      'align-left': align === 'left'
     };
     Array.prototype.slice.call(bar.querySelectorAll('[data-act="format"]')).forEach(function (btn) {
       var c = btn.dataset.cmd;
@@ -1600,26 +1612,6 @@
     if (ed) ed.hidden = false;
     if (pv) pv.remove();
     if (btn) btn.innerHTML = window.icon('eye', 's') + 'Xem trước độc giả';
-  }
-  function changeBlockTag(ed, targetTag) {
-    restoreEditorSelection(ed);
-    var cur = findAncestorInEditor(ed, { h1: 1, h2: 1, h3: 1, h4: 1, p: 1, div: 1 });
-    var nextTag = (cur && cur.tagName.toLowerCase() === targetTag) ? 'p' : targetTag;
-    var ok = false;
-    try { if (D.execCommand) ok = D.execCommand('formatBlock', false, nextTag); } catch (e) { ok = false; }
-    var after = findAncestorInEditor(ed, { h1: 1, h2: 1, h3: 1, h4: 1, p: 1, div: 1 });
-    if ((!ok || (after && after.tagName.toLowerCase() !== nextTag)) && cur && cur !== ed && !cur.classList.contains('chat-container')) {
-      var rep = D.createElement(nextTag);
-      if (cur.getAttribute('style')) rep.setAttribute('style', cur.getAttribute('style'));
-      while (cur.firstChild) rep.appendChild(cur.firstChild);
-      cur.parentNode.replaceChild(rep, cur);
-      var r = D.createRange();
-      r.selectNodeContents(rep);
-      r.collapse(false);
-      var sel = window.getSelection && window.getSelection();
-      if (sel) { sel.removeAllRanges(); sel.addRange(r); }
-      LAST_EDITOR_RANGE = r.cloneRange();
-    }
   }
   function toggleBlockquote(ed) {
     restoreEditorSelection(ed);
@@ -1670,95 +1662,14 @@
     else block.style.textAlign = align;
     if (!block.getAttribute('style')) block.removeAttribute('style');
   }
-  function openLinkModal() {
-    ensureEditingMode();
-    var ed = D.getElementById('editor');
-    if (!ed) return;
-    saveEditorSelection();
-    var existingA = findAncestorInEditor(ed, { a: 1 });
-    var curHref = existingA ? (existingA.getAttribute('href') || '') : '';
-    var sel = window.getSelection && window.getSelection();
-    var hasSelText = !!(existingA || (sel && sel.rangeCount && !sel.getRangeAt(0).collapsed));
-    var html = '<div class="modal" role="dialog" aria-modal="true" aria-labelledby="linkModalTitle">' +
-      '<div class="modal-hd">' + window.icon('link', 's') + '<h3 id="linkModalTitle">' + (existingA ? 'Sửa liên kết' : 'Chèn liên kết') + '</h3>' +
-        '<button class="btn icon ghost sm" data-act="close-modal" aria-label="Đóng">' + window.icon('x', 's') + '</button></div>' +
-      '<div class="modal-bd">' +
-        '<div class="field"><label for="linkModalHref">Địa chỉ URL</label>' +
-          '<input class="inp" id="linkModalHref" type="url" value="' + esc(curHref || 'https://') + '" placeholder="https://...">' +
-          '<span class="hint">Chỉ hỗ trợ https://, http://, mailto: hoặc đường dẫn nội bộ /.</span></div>' +
-        (hasSelText ? '' : '<div class="field mt"><label for="linkModalText">Chữ hiển thị</label><input class="inp" id="linkModalText" value="" placeholder="Nhấn vào đây"></div>') +
-      '</div>' +
-      '<div class="modal-ft">' +
-        (existingA ? '<button class="btn danger sm" data-act="unlink-confirm">Gỡ liên kết</button>' : '') +
-        '<span class="grow"></span>' +
-        '<button class="btn sm" data-act="close-modal">Huỷ</button>' +
-        '<button class="btn pri sm" data-act="link-confirm">Áp dụng</button>' +
-      '</div></div>';
-    openCustomModal(html, '#linkModalHref');
-  }
-  function applyLinkFromModal(removeOnly) {
-    var hrefInp = D.getElementById('linkModalHref');
-    var txtInp = D.getElementById('linkModalText');
-    var rawUrl = hrefInp ? String(hrefInp.value || '').trim() : '';
-    var label = txtInp ? String(txtInp.value || '').trim() : '';
-    if (!removeOnly && rawUrl && rawUrl !== 'https://') {
-      var safe = safeEditorUrl(rawUrl);
-      if (!safe) { say('URL không hợp lệ — hãy dùng https:// hoặc đường dẫn nội bộ.', 'bad'); return; }
-      rawUrl = safe;
-    } else if (!removeOnly) {
-      removeOnly = true;
-    }
-    if (typeof window.closeModal === 'function') window.closeModal();
-    var ed = D.getElementById('editor');
-    if (!ed) return;
-    restoreEditorSelection(ed);
-    var existingA = findAncestorInEditor(ed, { a: 1 });
-    if (removeOnly) {
-      if (existingA && existingA.parentNode) {
-        var parent = existingA.parentNode;
-        while (existingA.firstChild) parent.insertBefore(existingA.firstChild, existingA);
-        existingA.remove();
-      } else {
-        try { if (D.execCommand) D.execCommand('unlink', false, null); } catch (e) {}
-      }
-      markEditorDirtyAndAutosave();
-      updateToolbarActiveState();
-      say('Đã gỡ liên kết.');
-      return;
-    }
-    if (existingA) {
-      existingA.setAttribute('href', rawUrl);
-      existingA.setAttribute('target', '_blank');
-      existingA.setAttribute('rel', 'noopener noreferrer');
-    } else {
-      var r = LAST_EDITOR_RANGE;
-      if (r && !r.collapsed) {
-        var a = D.createElement('a');
-        a.setAttribute('href', rawUrl);
-        a.setAttribute('target', '_blank');
-        a.setAttribute('rel', 'noopener noreferrer');
-        a.appendChild(r.extractContents());
-        r.insertNode(a);
-      } else {
-        var disp = esc(label || rawUrl);
-        insertHtmlAtEditorCursor(ed, '<a href="' + esc(rawUrl) + '" target="_blank" rel="noopener noreferrer">' + disp + '</a>');
-      }
-    }
-    markEditorDirtyAndAutosave();
-    updateToolbarActiveState();
-    say('Đã chèn liên kết.');
-  }
   function execEditorFormat(cmd) {
-    if (cmd === 'link') { openLinkModal(); return; }
     ensureEditingMode();
     var ed = D.getElementById('editor');
     if (!ed) return;
     restoreEditorSelection(ed);
-    if (cmd === 'h2' || cmd === 'h3') changeBlockTag(ed, cmd);
-    else if (cmd === 'quote') toggleBlockquote(ed);
+    if (cmd === 'quote') toggleBlockquote(ed);
     else if (cmd === 'align-left') setBlockAlign(ed, 'left');
     else if (cmd === 'align-center') setBlockAlign(ed, 'center');
-    else if (cmd === 'hr') insertHtmlAtEditorCursor(ed, '<hr><p><br></p>');
     else if (cmd === 'undo' || cmd === 'redo') {
       try { if (D.execCommand) D.execCommand(cmd, false, null); } catch (e) {}
     } else {
@@ -1900,8 +1811,6 @@
     'format': function (el) { execEditorFormat(el.dataset.cmd); },
     'insert-separator': realInsertSeparator,
     'toggle-preview': realTogglePreview,
-    'link-confirm': function () { applyLinkFromModal(false); },
-    'unlink-confirm': function () { applyLinkFromModal(true); },
     'import-confirm': function () { confirmMultiImport(); },
     'sched-plus': function (el) {
       S.chapterStatus = 'scheduled';
@@ -2089,15 +1998,9 @@
       ['italic', 'italic', 'In nghiêng (Ctrl+I)'],
       ['underline', 'underline', 'Gạch chân (Ctrl+U)'],
       '|',
-      ['h2', 'h2', 'Tiêu đề lớn (H2)'],
-      ['h3', 'h3', 'Tiêu đề phụ (H3)'],
       ['quote', 'quote', 'Trích dẫn'],
-      '|',
       ['alignLeft', 'align-left', 'Căn trái'],
       ['alignCenter', 'align-center', 'Căn giữa'],
-      '|',
-      ['link', 'link', 'Chèn hoặc sửa liên kết'],
-      ['hr', 'hr', 'Đường kẻ ngang'],
       '|',
       ['undo', 'undo', 'Hoàn tác (Ctrl+Z)'],
       ['redo', 'redo', 'Làm lại (Ctrl+Y)']
