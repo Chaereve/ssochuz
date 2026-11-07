@@ -250,22 +250,586 @@
     replaceArr(M.SAMPLE_ISSUES, issues.slice(0, 12));
   }
 
-  function applyBook(slug, book) {
+  window.__CZ_REAL_EDITOR__ = true;
+  var FORCE_EDITOR_SEED = false;
+  var DIRTY_CHAPTER = false;
+  var DRAFT_SAVED_AT = '';
+  var LAST_EDITOR_RANGE = null;
+  var EDITOR_AUTOSAVE_TIMER = null;
+  var PENDING_IMPORT = null;
+
+  /* ==========================================================================
+     TRÌNH SOẠN CHƯƠNG & XEM TRƯỚC ĐỘC GIẢ (chuẩn truyen.html + sanitize.js)
+     ========================================================================== */
+  function toSetMap(csv) {
+    var m = {};
+    csv.split(',').forEach(function (k) { m[k] = 1; });
+    return m;
+  }
+  function boxFromHtml(html) {
+    var tmpl = D.createElement('template');
+    tmpl.innerHTML = String(html || '');
+    var box = D.createElement('div');
+    box.appendChild(tmpl.content.cloneNode(true));
+    return box;
+  }
+  var SAFE_EDITOR_TAGS = toSetMap('p,div,span,br,hr,b,strong,i,em,u,s,strike,del,ins,mark,small,sub,sup,code,pre,q,cite,abbr,time,blockquote,ul,ol,li,dl,dt,dd,a,img,figure,figcaption,picture,source,video,audio,table,caption,thead,tbody,tfoot,tr,th,td,h1,h2,h3,h4,h5,h6,details,summary');
+  var DROP_EDITOR_TAGS = toSetMap('script,style,template,iframe,frame,frameset,noframes,noscript,object,embed,applet,param,form,input,button,select,option,optgroup,textarea,label,fieldset,legend,link,meta,base,title,head,html,body,svg,math,dialog,marquee,blink,portal');
+  var SAFE_EDITOR_ATTRS = toSetMap('class,style,title,dir,lang,align,href,target,rel,src,srcset,sizes,alt,width,height,loading,decoding,colspan,rowspan,scope,start,reversed,type,cite,datetime,controls,poster,open,data-original-height,data-original-width');
+  var WIDGET_CLS_RE = /(^|\s)(pagination-container|pagination|page-nav|pagenav|pager|paging)(\s|$)/i;
+  var BLOCK_CHILD_SEL = 'div,p,ul,ol,blockquote,table,figure,h1,h2,h3,h4,h5,h6,pre,hr,details';
+
+  function safeEditorUrl(raw) {
+    var v = String(raw == null ? '' : raw).replace(/[\u0000-\u001F\u007F\s]+/g, '').trim();
+    if (!v) return '';
+    if (/^(https?:|mailto:|tel:|\/\/)/i.test(v)) return String(raw).trim();
+    if (/^[#/?]/.test(v) || /^\.{0,2}\//.test(v)) return String(raw).trim();
+    return '';
+  }
+  function safeEditorSrcset(raw) {
+    return String(raw == null ? '' : raw).split(',').map(function (p) {
+      var piece = String(p).trim();
+      var m = piece.match(/^(\S+)(\s+[\d.]+[wx])?$/);
+      if (!m || !safeEditorUrl(m[1])) return '';
+      return m[1] + (m[2] || '');
+    }).filter(Boolean).join(', ');
+  }
+  function safeEditorStyle(raw, fromPaste) {
+    var v = String(raw == null ? '' : raw).replace(/\/\*[\s\S]*?\*\//g, ' ');
+    if (!v.trim()) return '';
+    if (/expression\s*\(|javascript:|vbscript:|-moz-binding|behaviou?r\s*:|@import|@charset/i.test(v)) return '';
+    if (fromPaste) {
+      var align = v.match(/text-align\s*:\s*(center|right|left|justify)/i);
+      return align ? ('text-align: ' + align[1].toLowerCase()) : '';
+    }
+    v = v.replace(/url\(\s*(['"]?)([^)'"]*)\1\s*\)/gi, function (_, q, u) {
+      var ok = safeEditorUrl(u);
+      return ok ? ('url(' + q + ok + q + ')') : '';
+    });
+    v = v.replace(/\bposition\s*:\s*fixed/gi, 'position:static').replace(/[\u0000-\u001F\u007F]/g, ' ');
+    return v.replace(/\s+/g, ' ').trim();
+  }
+  function cleanInertNode(parent, opts) {
+    opts = opts || {};
+    Array.prototype.slice.call(parent.childNodes).forEach(function (ch) {
+      if (ch.nodeType === 8) { ch.remove(); return; }
+      if (ch.nodeType !== 1) return;
+      var tag = (ch.tagName || '').toLowerCase();
+      if (DROP_EDITOR_TAGS[tag]) { ch.remove(); return; }
+      var cls = ch.getAttribute('class') || '';
+      if (WIDGET_CLS_RE.test(cls)) { ch.remove(); return; }
+      if (opts.fromPaste && (tag === 'b' || tag === 'strong')) {
+        var bSt = ch.getAttribute('style') || '';
+        if (/font-weight\s*:\s*(normal|400)\b/i.test(bSt) || /^docs-internal-guid/i.test(ch.getAttribute('id') || '')) {
+          cleanInertNode(ch, opts);
+          while (ch.firstChild) parent.insertBefore(ch.firstChild, ch);
+          ch.remove();
+          return;
+        }
+      }
+      if (opts.fromPaste && tag === 'span') {
+        var spSt = ch.getAttribute('style') || '';
+        cleanInertNode(ch, opts);
+        var wrapTags = [];
+        if (/font-weight\s*:\s*(bold|[6-9]00)\b/i.test(spSt)) wrapTags.push('strong');
+        if (/font-style\s*:\s*italic\b/i.test(spSt)) wrapTags.push('em');
+        if (/text-decoration[^;]*underline/i.test(spSt)) wrapTags.push('u');
+        if (/text-decoration[^;]*line-through/i.test(spSt)) wrapTags.push('s');
+        if (wrapTags.length) {
+          var outer = D.createElement(wrapTags[0]), inner = outer;
+          for (var wi = 1; wi < wrapTags.length; wi++) {
+            var nxt = D.createElement(wrapTags[wi]);
+            inner.appendChild(nxt); inner = nxt;
+          }
+          while (ch.firstChild) inner.appendChild(ch.firstChild);
+          parent.replaceChild(outer, ch);
+        } else {
+          while (ch.firstChild) parent.insertBefore(ch.firstChild, ch);
+          ch.remove();
+        }
+        return;
+      }
+      if (tag === 'center') {
+        var cp = D.createElement('p');
+        cp.setAttribute('style', 'text-align: center');
+        while (ch.firstChild) cp.appendChild(ch.firstChild);
+        parent.replaceChild(cp, ch);
+        ch = cp; tag = 'p';
+      } else if (tag === 'font') {
+        var sp = D.createElement('span');
+        while (ch.firstChild) sp.appendChild(ch.firstChild);
+        parent.replaceChild(sp, ch);
+        ch = sp; tag = 'span';
+      }
+      cleanInertNode(ch, opts);
+      if (!SAFE_EDITOR_TAGS[tag]) {
+        while (ch.firstChild) parent.insertBefore(ch.firstChild, ch);
+        ch.remove();
+        return;
+      }
+      Array.prototype.slice.call(ch.attributes).forEach(function (at) {
+        var n = at.name.toLowerCase(), v = at.value;
+        if (n.indexOf('on') === 0 || !SAFE_EDITOR_ATTRS[n]) { ch.removeAttribute(at.name); return; }
+        if (n === 'href' || n === 'src' || n === 'poster' || n === 'cite') {
+          var u = safeEditorUrl(v);
+          if (!u) ch.removeAttribute(at.name); else ch.setAttribute(n, u);
+          return;
+        }
+        if (n === 'srcset') {
+          var ss = safeEditorSrcset(v);
+          if (!ss) ch.removeAttribute(at.name); else ch.setAttribute('srcset', ss);
+          return;
+        }
+        if (n === 'style') {
+          var stv = safeEditorStyle(v, opts.fromPaste);
+          if (!stv) ch.removeAttribute('style'); else ch.setAttribute('style', stv);
+          return;
+        }
+        if (n === 'target') {
+          if (!/^_(blank|self|parent|top)$/i.test(v)) ch.removeAttribute('target');
+          else ch.setAttribute('target', v.toLowerCase());
+          return;
+        }
+        if (n === 'align' && !/^(left|center|right|justify)$/i.test(v)) ch.removeAttribute('align');
+      });
+      if (tag === 'a' && ch.getAttribute('target') === '_blank' && !ch.getAttribute('rel')) {
+        ch.setAttribute('rel', 'noopener noreferrer');
+      }
+    });
+  }
+  function realSanitizeEditorHtml(html, opts) {
+    var src = String(html == null ? '' : html);
+    if (!src) return '';
+    var tmpl = D.createElement('template');
+    tmpl.innerHTML = src;
+    cleanInertNode(tmpl.content, opts);
+    var holder = D.createElement('div');
+    holder.appendChild(tmpl.content.cloneNode(true));
+    return holder.innerHTML;
+  }
+  function rewriteImgForEditor(html) {
+    var out = String(html || '');
+    if (!CFG.base) return out;
+    return out.replace(/(\bsrc\s*=\s*['"])\/api\/img\//gi, '$1' + CFG.base + '/api/img/');
+  }
+  function rewriteImgForStorage(html) {
+    var out = String(html || '');
+    if (CFG.base) out = out.split(CFG.base + '/api/img/').join('/api/img/');
+    return out;
+  }
+  function isBloggerSpacerDiv(el) {
+    if (!el || el.nodeType !== 1 || el.tagName.toLowerCase() !== 'div') return false;
+    if (el.getAttribute('class')) return false;
+    if (el.querySelector('img,video,audio,hr,table,figure')) return false;
+    var txt = (el.textContent || '').replace(/\u00a0/g, ' ').trim();
+    if (txt) return false;
+    var st = String(el.getAttribute('style') || '').trim();
+    return /^height\s*:\s*\d+(?:\.\d+)?px\s*;?$/i.test(st);
+  }
+  function normalizeBlocksInContainer(box) {
+    Array.prototype.slice.call(box.querySelectorAll('div')).forEach(function (d) {
+      if (!d.parentNode) return;
+      if (isBloggerSpacerDiv(d)) { d.remove(); return; }
+      if (d.classList && (d.classList.contains('chat-container') || d.classList.contains('msg'))) return;
+      if (!d.querySelector(BLOCK_CHILD_SEL)) {
+        var p = D.createElement('p');
+        if (d.className) p.className = d.className;
+        var st = d.getAttribute('style');
+        if (st) p.setAttribute('style', st);
+        var al = d.getAttribute('align');
+        if (al) p.setAttribute('align', al);
+        while (d.firstChild) p.appendChild(d.firstChild);
+        d.parentNode.replaceChild(p, d);
+      }
+    });
+    var hasBlock = !!box.querySelector('p,div,h1,h2,h3,h4,h5,h6,blockquote,ul,ol,table,figure,pre,hr,details');
+    if (!hasBlock && (box.textContent || '').trim()) {
+      var wrap = D.createElement('p');
+      while (box.firstChild) wrap.appendChild(box.firstChild);
+      box.appendChild(wrap);
+    }
+  }
+  function htmlForEditor(rawHtml) {
+    var box = boxFromHtml(realSanitizeEditorHtml(rewriteImgForEditor(rawHtml)));
+    normalizeBlocksInContainer(box);
+    return box.innerHTML.trim() || '<p><br></p>';
+  }
+  function htmlForStorage(rawHtml) {
+    var box = boxFromHtml(realSanitizeEditorHtml(rewriteImgForStorage(rawHtml)));
+    normalizeBlocksInContainer(box);
+    var res = box.innerHTML.trim();
+    return res === '<p><br></p>' ? '<p></p>' : res;
+  }
+  /* Dựng HTML xem trước khớp 1:1 với cleanHTML() của src/cz-story.js trên truyen.html */
+  function renderReaderHtml(rawHtml) {
+    var tmp = boxFromHtml(realSanitizeEditorHtml(rewriteImgForEditor(rawHtml)));
+    Array.prototype.slice.call(tmp.querySelectorAll('a')).forEach(function (a) {
+      a.setAttribute('target', '_blank');
+      a.setAttribute('rel', 'noopener nofollow');
+    });
+    Array.prototype.slice.call(tmp.querySelectorAll('img')).forEach(function (im) {
+      im.setAttribute('loading', 'lazy');
+      im.setAttribute('decoding', 'async');
+      im.removeAttribute('width');
+      im.removeAttribute('height');
+    });
+    Array.prototype.slice.call(tmp.querySelectorAll('div')).forEach(function (d) {
+      if (!d.parentNode) return;
+      if (d.classList && (d.classList.contains('chat-container') || d.classList.contains('msg'))) return;
+      if (!d.querySelector('div,p,ul,ol,blockquote,table,img,figure,h1,h2,h3,h4')) {
+        var p = D.createElement('p');
+        if (d.className) p.className = d.className;
+        var st = d.getAttribute('style');
+        if (st && /text-align\s*:\s*(center|right|left|justify)/i.test(st)) {
+          var m = st.match(/text-align\s*:\s*(center|right|left|justify)/i);
+          if (m) p.style.textAlign = m[1].toLowerCase();
+        }
+        var al = d.getAttribute('align');
+        if (al && /^(center|right|left|justify)$/i.test(al)) p.setAttribute('align', al.toLowerCase());
+        while (d.firstChild) p.appendChild(d.firstChild);
+        d.parentNode.replaceChild(p, d);
+      }
+    });
+    function isEmptyReaderBlock(el) {
+      if (!el || el.nodeType !== 1) return false;
+      var tg = el.tagName ? el.tagName.toLowerCase() : '';
+      if (tg !== 'p' && tg !== 'div') return false;
+      if (el.classList && el.classList.contains('ch-sep')) return false;
+      if (el.querySelector('img,video,hr,table,ul,ol,blockquote,h1,h2,h3,h4,figure')) return false;
+      var txt = (el.textContent || '').replace(/\u00a0/g, ' ').trim();
+      var inner = (el.innerHTML || '').replace(/<br\s*\/?>/gi, '').replace(/&nbsp;/gi, '').trim();
+      return !txt && !inner;
+    }
+    Array.prototype.slice.call(tmp.querySelectorAll('p')).forEach(function (p) {
+      if (p.querySelector('img')) return;
+      var h = p.innerHTML;
+      var n = h.replace(/(?:<br\s*\/?>\s*){2,}/gi, '<br>');
+      if (n !== h) p.innerHTML = n;
+    });
+    var prevEmpty = false;
+    Array.prototype.slice.call(tmp.childNodes).forEach(function (node) {
+      if (node.nodeType === 3 && !String(node.nodeValue || '').trim()) return;
+      if (isEmptyReaderBlock(node)) {
+        if (prevEmpty) node.remove();
+        else prevEmpty = true;
+      } else if (node.nodeType === 1 || (node.nodeType === 3 && String(node.nodeValue || '').trim())) {
+        prevEmpty = false;
+      }
+    });
+    while (tmp.firstElementChild && isEmptyReaderBlock(tmp.firstElementChild)) tmp.firstElementChild.remove();
+    while (tmp.lastElementChild && isEmptyReaderBlock(tmp.lastElementChild)) tmp.lastElementChild.remove();
+    return tmp.innerHTML || '<p class="mut"><em>Chương chưa có nội dung văn bản.</em></p>';
+  }
+
+  /* Đếm từ / ký tự / thời gian đọc & hẹn giờ chuẩn ISO <-> datetime-local */
+  function chapterPlainStats(html) {
+    var tmpl = D.createElement('template');
+    tmpl.innerHTML = String(html || '').replace(/<\/(p|div|h[1-6]|li|blockquote|tr)>/gi, '</$1> ').replace(/<br\s*\/?>/gi, ' ');
+    var text = (tmpl.content.textContent || '').replace(/\s+/g, ' ').trim();
+    var words = text ? text.split(' ').filter(Boolean).length : 0;
+    var chars = text.length;
+    var mins = Math.max(1, Math.round(words / 240));
+    return { words: words, chars: chars, mins: words ? mins : 0 };
+  }
+  function formatChapterStats(html) {
+    var st = chapterPlainStats(html);
+    if (!st.words) return '0 từ · 0 ký tự';
+    return st.words.toLocaleString('vi-VN') + ' từ · ' + st.chars.toLocaleString('vi-VN') + ' ký tự · ~' + st.mins + ' phút đọc';
+  }
+  function parseAtMs(valStr) {
+    var s = String(valStr == null ? '' : valStr).trim();
+    if (!s) return 0;
+    var t = Date.parse(s);
+    if (isNaN(t)) t = Date.parse(s.replace(' ', 'T'));
+    return isNaN(t) ? 0 : t;
+  }
+  function isoToLocalInput(iso) {
+    var t = parseAtMs(iso);
+    if (!t) return '';
+    var d = new Date(t - new Date(t).getTimezoneOffset() * 60000);
+    return d.toISOString().slice(0, 16);
+  }
+  function localInputToIso(valStr) {
+    var s = String(valStr == null ? '' : valStr).trim();
+    if (!s) return '';
+    var t = Date.parse(s);
+    return isNaN(t) ? '' : new Date(t).toISOString();
+  }
+  function localInputPlusHours(hours) {
+    var base = Date.now() + Number(hours || 1) * 3600000;
+    return isoToLocalInput(new Date(base).toISOString());
+  }
+  function defaultScheduleLocalInput() {
+    var d = new Date();
+    d.setHours(20, 0, 0, 0);
+    var ms = d.getTime() > Date.now() ? d.getTime() : (Date.now() + 3600000);
+    return isoToLocalInput(new Date(ms).toISOString());
+  }
+  function chapterRowBadge(c) {
+    if (!c) return '';
+    var st = String(c.s || 'published').toLowerCase();
+    var out = '';
+    if (st === 'scheduled') {
+      var ms = parseAtMs(c.d);
+      if (!ms) out += M.badge ? '' : '';
+      var lbl = 'Hẹn giờ';
+      if (ms > Date.now()) {
+        var dt = new Date(ms);
+        var z = function (n) { return ('0' + n).slice(-2); };
+        lbl = 'Hẹn ' + z(dt.getDate()) + '/' + z(dt.getMonth() + 1) + ' ' + z(dt.getHours()) + ':' + z(dt.getMinutes());
+      }
+      out += '<span class="badge tone-info">' + esc(lbl) + '</span>';
+    } else if (st === 'hidden') {
+      out += '<span class="badge tone-slate">Ẩn</span>';
+    } else if (st === 'draft') {
+      out += '<span class="badge tone-warn">Nháp</span>';
+    }
+    if (c._dirty) out += '<span class="badge tone-warn">Chưa lưu</span>';
+    return out;
+  }
+
+  /* Bản nháp cục bộ theo từng (slug, index) trong localStorage */
+  function draftStorageKey(slug, idx) {
+    return slug ? ('cz_chapter_draft:' + slug + ':' + Number(idx || 0)) : '';
+  }
+  function readChapterDraft(slug, idx) {
+    var k = draftStorageKey(slug, idx);
+    if (!k) return null;
+    var raw = lsGet(k);
+    if (!raw) return null;
+    try {
+      var obj = JSON.parse(raw);
+      return obj && typeof obj === 'object' ? obj : null;
+    } catch (e) { return null; }
+  }
+  function writeChapterDraft(slug, idx, payload) {
+    var k = draftStorageKey(slug, idx);
+    if (!k) return;
+    lsSet(k, JSON.stringify({
+      t: String(payload.t || ''),
+      html: String(payload.html || ''),
+      s: String(payload.s || 'published'),
+      d: String(payload.d || ''),
+      savedAt: payload.savedAt || new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+    }));
+  }
+  function clearChapterDraft(slug, idx) {
+    var k = draftStorageKey(slug, idx);
+    if (!k) return;
+    try { localStorage.removeItem(k); } catch (e) {}
+  }
+  function updateSaveNoteDom() {
+    var n = D.getElementById('saveNote');
+    if (!n) return;
+    var slug = BOOK_SLUG || S.chapterBook || S.selectedBook || '';
+    var draft = readChapterDraft(slug, S.activeChapter);
+    if (S.conn === 'static') {
+      n.textContent = 'Chế độ đọc tĩnh · chỉ đọc';
+    } else if (DIRTY_CHAPTER) {
+      n.textContent = '● Chưa lưu KV' + (DRAFT_SAVED_AT ? ' · giữ nháp ' + DRAFT_SAVED_AT : '');
+    } else if (S.savedAt) {
+      n.innerHTML = window.icon('check', 'xs') + ' Đã lưu KV lúc ' + esc(S.savedAt);
+    } else if (draft && draft.savedAt) {
+      n.textContent = '● Có nháp cục bộ lúc ' + draft.savedAt;
+    } else {
+      n.innerHTML = window.icon('check', 'xs') + ' Đã đồng bộ KV';
+    }
+  }
+  function updateChapterStatsDom(html) {
+    var el = D.getElementById('chapterStats');
+    if (el) el.textContent = formatChapterStats(html);
+  }
+  function snapshotLiveEditor() {
+    var ed = D.getElementById('editor');
+    var curSlug = String(BOOK_SLUG || S.chapterBook || S.selectedBook || '');
+    if (!ed || ed.getAttribute('data-book') !== curSlug) return;
+    var idx = Number(ed.getAttribute('data-ch-idx'));
+    if (isNaN(idx) || idx !== S.activeChapter) return;
+    var rawStorage = htmlForStorage(ed.innerHTML);
+    var tEl = D.getElementById('chapterTitle');
+    var curTitle = tEl ? String(tEl.value || '') : ((S.chapters[idx] || {}).t || '');
+    S.editorSeed = htmlForEditor(rawStorage);
+    if (DIRTY_CHAPTER && S.chapters[idx]) {
+      S.chapters[idx].t = curTitle;
+      S.chapters[idx].html = rawStorage;
+      S.chapters[idx].s = S.chapterStatus || 'published';
+      S.chapters[idx].d = S.chapterStatus === 'scheduled' ? localInputToIso(S.chapterAt) : '';
+      S.chapters[idx]._dirty = true;
+      var stamp = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      DRAFT_SAVED_AT = stamp;
+      writeChapterDraft(curSlug, idx, { t: curTitle, html: rawStorage, s: S.chapters[idx].s, d: S.chapters[idx].d, savedAt: stamp });
+    }
+  }
+
+  /* Tách tên chương & tách nhiều chương .txt / .docx (khớp src/shared/chapters.js + docxChapters.js) */
+  var CHAP_NUM_RE = /^(?:chương|chuong|chap|chapter|quyển|quyen|khổ|kho|hồi|hoi|tập|tap|ep(?:isode)?)\b\s*[-–—.]?\s*(\d+(?:[.,]\d+)?|[ivxlcdm]+)\s*[:.\-–—]?\s*(.*)$/i;
+  var END_RE = /^(lời\s*kết|loi\s*ket|kết\s*truyện|ket\s*truyen|lời\s*bạt|loi\s*bat|bạt\s*truyện|bat\s*truyen|epilogue|hậu\s*truyện|hau\s*truyen)\s*(\d+(?:[.,]\d+)?)?\s*[:.\-–—]?\s*(.*)$/i;
+  var AUTHOR_RE = /^(lời\s*tác\s*giả|loi\s*tac\s*gia|đôi\s*lời|doi\s*loi|lời\s*ngõ|loi\s*ngo|author'?s?\s*note|thông\s*báo|thong\s*bao|notice|credits?)\s*(\d+(?:[.,]\d+)?)?\s*[:.\-–—]?\s*(.*)$/i;
+  var EXTRA_RE = /^(ngoại\s*truyện|ngoai\s*truyen|phụ\s*chương|phu\s*chuong|phiên\s*ngoại|phien\s*ngoai|side\s*story|extra|đặc\s*biệt|dac\s*biet)\s*(\d+(?:[.,]\d+)?|[ivxlcdm]+)?\s*[:.\-–—]?\s*(.*)$/i;
+  var OPEN_RE = /^(lời\s*mở\s*đầu|loi\s*mo\s*dau|mở\s*đầu|mo\s*dau|prologue|giới\s*thiệu|gioi\s*thieu(\s*\S+)?|nhân\s*vật|nhan\s*vat)\s*(\d+(?:[.,]\d+)?)?\s*[:.\-–—]?\s*(.*)$/i;
+  function isChapHeadingLine(line) {
+    var t = String(line || '').trim();
+    if (!t || t.length > 90) return false;
+    var bare = t.replace(/^#{1,3}\s+/, '');
+    if (CHAP_NUM_RE.test(bare) || EXTRA_RE.test(bare) || OPEN_RE.test(bare) || END_RE.test(bare) || AUTHOR_RE.test(bare)) return true;
+    return /^#{1,3}\s+\S/.test(t) && t.length <= 60;
+  }
+  function suggestNextChapTitle(list) {
+    var arr = Array.isArray(list) ? list : [];
+    var maxMain = 0, mainCount = 0;
+    arr.forEach(function (c) {
+      var full = String((c && c.t) || '').trim();
+      if (!full) return;
+      if (EXTRA_RE.test(full) || END_RE.test(full) || OPEN_RE.test(full) || AUTHOR_RE.test(full)) return;
+      var m = CHAP_NUM_RE.exec(full);
+      if (m) {
+        var n = parseFloat(String(m[1] || '').replace(',', '.')) || 0;
+        if (n === 0) return;
+        mainCount++;
+        if (n > maxMain) maxMain = n;
+        return;
+      }
+      mainCount++;
+    });
+    return 'Chương ' + (maxMain > 0 ? (Math.floor(maxMain) + 1) : (mainCount + 1));
+  }
+  function splitTxtIntoChapters(text) {
+    var lines = String(text || '').replace(/\r\n?/g, '\n').split('\n');
+    var out = [], cur = null;
+    function flush() {
+      if (!cur) return;
+      var body = cur.lines.join('\n').trim();
+      if (body) out.push({ t: cur.t || suggestNextChapTitle(out), html: textToHtml(body) });
+      cur = null;
+    }
+    lines.forEach(function (line) {
+      if (isChapHeadingLine(line)) {
+        flush();
+        cur = { t: line.trim().replace(/^#{1,3}\s*/, ''), lines: [] };
+      } else {
+        if (!cur) cur = { t: '', lines: [] };
+        cur.lines.push(line);
+      }
+    });
+    flush();
+    return out;
+  }
+  function splitDocxHtmlIntoChapters(html) {
+    var BLOCKS = toSetMap('p,div,h1,h2,h3,h4,h5,h6,blockquote,li,ul,ol,table,tr,td,th');
+    var DROP = toSetMap('script,style,iframe,object,embed,svg,math,template,img,video,audio,input,button');
+    var MARKS = { b: 'strong', strong: 'strong', i: 'em', em: 'em', u: 'u', s: 's', strike: 's', del: 's', sub: 'sub', sup: 'sup' };
+    var ORDER = ['strong', 'em', 'u', 's', 'sub', 'sup'];
+    var root = D.createElement('template');
+    root.innerHTML = String(html || '');
+    var out = [], cur = null, runs = [], paragraph = [], hasText = false;
+    function flushCh() { if (cur && cur.body.length) out.push({ t: cur.t || suggestNextChapTitle(out), html: cur.body.join('') }); cur = null; }
+    function flushP() { if (hasText) { if (!cur) cur = { t: '', body: [] }; cur.body.push('<p>' + paragraph.join('<br>') + '</p>'); } paragraph = []; hasText = false; }
+    function flushLn() {
+      var text = runs.map(function (r) { return r.text.join(''); }).join('');
+      if (isChapHeadingLine(text)) { flushP(); flushCh(); cur = { t: text.trim().replace(/^#{1,3}\s*/, ''), body: [] }; }
+      else {
+        paragraph.push(runs.map(function (r) {
+          var s = esc(r.text.join(''));
+          return r.marks.map(function (m) { return '<' + m + '>'; }).join('') + s + r.marks.slice().reverse().map(function (m) { return '</' + m + '>'; }).join('');
+        }).join(''));
+        if (text.trim()) hasText = true;
+      }
+      runs = [];
+    }
+    function boundary() { if (runs.length) flushLn(); flushP(); }
+    var stack = [{ node: root.content, marks: [] }];
+    while (stack.length) {
+      var item = stack.pop();
+      if (item.end) { boundary(); continue; }
+      var node = item.node, marks = item.marks;
+      if (node.nodeType === 3) {
+        if (!node.nodeValue) continue;
+        var key = marks.join(','), last = runs[runs.length - 1];
+        if (last && last.key === key) last.text.push(node.nodeValue);
+        else runs.push({ key: key, marks: marks, text: [node.nodeValue] });
+        continue;
+      }
+      if (node.nodeType !== 1 && node.nodeType !== 11) continue;
+      var tag = (node.localName || '').toLowerCase();
+      if (DROP[tag]) continue;
+      if (tag === 'br') { flushLn(); continue; }
+      if (BLOCKS[tag]) { boundary(); stack.push({ end: true }); }
+      var mark = MARKS[tag];
+      var nextMarks = (mark && marks.indexOf(mark) < 0) ? ORDER.filter(function (m) { return m === mark || marks.indexOf(m) >= 0; }) : marks;
+      for (var ch = node.lastChild; ch; ch = ch.previousSibling) stack.push({ node: ch, marks: nextMarks });
+    }
+    boundary(); flushCh();
+    return out;
+  }
+  function convertDocxBuffer(arrayBuffer) {
+    return new Promise(function (resolve, reject) {
+      if (typeof Worker === 'undefined') {
+        reject(new Error('Trình duyệt không hỗ trợ đọc file Word (.docx).'));
+        return;
+      }
+      var worker, timer, settled = false;
+      function done(err, data) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        if (worker) worker.terminate();
+        if (err) reject(err); else resolve(data);
+      }
+      try {
+        worker = new Worker('/admin-docx.js');
+        worker.onmessage = function (ev) {
+          var d = ev && ev.data;
+          if (!d || typeof d.html !== 'string') done(new Error((d && d.error) || 'Không đọc được nội dung file DOCX.'));
+          else done(null, d);
+        };
+        worker.onerror = function (ev) {
+          if (ev && ev.preventDefault) ev.preventDefault();
+          done(new Error('Không khởi chạy được bộ đọc Word (/admin-docx.js).'));
+        };
+        timer = setTimeout(function () { done(new Error('Đọc file Word quá 90 giây. Hãy chia nhỏ file.')); }, 90000);
+        worker.postMessage(arrayBuffer, [arrayBuffer]);
+      } catch (err) {
+        done(new Error('Không đọc được file DOCX: ' + (err.message || err)));
+      }
+    });
+  }
+
+  function syncBookCountsInState(slug, chaptersArr) {
+    var list = Array.isArray(chaptersArr) ? chaptersArr : [];
+    var now = Date.now();
+    var pending = 0, visible = 0;
+    list.forEach(function (c) {
+      var st = String((c && (c.status || c.s)) || 'published').toLowerCase();
+      var at = parseAtMs(c && (c.at || c.d));
+      var held = st === 'hidden' || (st === 'scheduled' && at > now);
+      if (held) pending++; else visible++;
+    });
+    var b = (S.books || []).find(function (x) { return x.id === slug; });
+    if (b) { b.ch = visible; b.pending = pending; }
+    var m = findMeta(slug);
+    if (m) { m.chapters = visible; m.pending = pending; }
+  }
+
+  function applyBook(slug, book, keepIdx) {
     BOOK_SLUG = slug; BOOK = book || { chapters: [] };
     var arr = Array.isArray(BOOK.chapters) ? BOOK.chapters : [];
     S.chapters = arr.map(function (c, i) {
-      return { t: c.t || ('Chương ' + (i + 1)), b: titleOf(slug), s: c.status || 'published', d: c.at || '', html: c.html || '' };
+      return { t: c.t || c.title || ('Chương ' + (i + 1)), b: titleOf(slug), s: c.status || c.s || 'published', d: c.at || c.d || '', html: c.html || '', _dirty: false };
     });
-    S.activeChapter = Math.max(0, Math.min(S.activeChapter || 0, Math.max(0, S.chapters.length - 1)));
-    S.chapterStatus = (S.chapters[S.activeChapter] || {}).s || 'published';
-    S.editorSeed = M.sanitizeEditorHtml((S.chapters[S.activeChapter] || {}).html || '<p></p>');
+    S.activeChapter = keepIdx
+      ? Math.max(0, Math.min(S.activeChapter || 0, Math.max(0, S.chapters.length - 1)))
+      : 0;
     S.chapterBook = slug;
+    delete S.models['chapter-title'];
+    S.savedAt = '';
+    syncChaptersToState();
+    syncBookCountsInState(slug, arr);
   }
-  function loadBook(slug, quiet) {
+  function loadBook(slug, quiet, keepIdx) {
     if (!slug) return Promise.resolve(null);
     return apiCall('/api/book/' + encodeURIComponent(slug)).then(function (r) {
       var b = (r && r.book && Array.isArray(r.book.chapters)) ? r.book : r;
-      applyBook(slug, b);
+      applyBook(slug, b, keepIdx);
       if (!quiet) redraw();
       return b;
     });
@@ -588,67 +1152,115 @@
 
   function realSaveChapter() {
     if (!ensureOnline()) return;
-    var slug = BOOK_SLUG || S.selectedBook;
+    var slug = BOOK_SLUG || S.chapterBook || S.selectedBook;
     if (!slug) { say('Chọn bộ trước khi lưu chương.', 'bad'); return; }
-    var idx = S.activeChapter || 0;
-    var title = val('chapterTitle') || (S.chapters[idx] || {}).t || ('Chương ' + (idx + 1));
+    var idx = Math.max(0, Math.min(S.activeChapter || 0, S.chapters.length));
+    var titleEl = D.getElementById('chapterTitle');
+    var title = String(titleEl ? titleEl.value : ((S.chapters[idx] || {}).t || '')).trim() || suggestNextChapTitle(S.chapters.slice(0, idx));
     var ed = D.getElementById('editor');
-    var html = M.sanitizeEditorHtml(ed ? ed.innerHTML : (S.editorSeed || ''));
-    var body = { index: idx, chapter: { t: title, html: html, status: S.chapterStatus || 'published', at: S.chapterAt || '' } };
+    var rawDom = ed ? ed.innerHTML : (S.editorSeed || '');
+    if (/\bsrc\s*=\s*['"]?\s*(?:blob:|data:)/i.test(rawDom)) {
+      say('Còn ảnh tạm (blob:/data:) chưa tải lên Worker — hãy dùng nút Ảnh vào chương.', 'bad');
+      return;
+    }
+    var html = htmlForStorage(rawDom);
+    var status = S.chapterStatus || 'published';
+    var atIso = status === 'scheduled' ? localInputToIso(S.chapterAt) : '';
+    var body = { index: idx, chapter: { t: title, html: html, status: status, at: atIso } };
     apiCall('/api/book/' + encodeURIComponent(slug) + '/chapter', { method: 'PUT', body: body, timeout: 120000 })
       .then(function () {
         WRITES += 1; setQuota();
-        if (BOOK && Array.isArray(BOOK.chapters)) BOOK.chapters[idx] = body.chapter;
-        if (S.chapters[idx]) { S.chapters[idx].t = title; S.chapters[idx].html = html; S.chapters[idx].s = body.chapter.status; }
-        S.editorSeed = html; S.savedAt = new Date().toLocaleTimeString('vi-VN');
-        say('Đã lưu chương "' + title + '" lên KV.'); redraw();
+        if (!BOOK || typeof BOOK !== 'object') BOOK = { chapters: [] };
+        if (!Array.isArray(BOOK.chapters)) BOOK.chapters = [];
+        BOOK.chapters[idx] = body.chapter;
+        var row = { t: title, b: titleOf(slug), s: status, d: atIso, html: html, _dirty: false };
+        if (S.chapters[idx]) S.chapters[idx] = row;
+        else S.chapters.push(row);
+        S.activeChapter = idx;
+        delete S.models['chapter-title'];
+        clearChapterDraft(slug, idx);
+        DIRTY_CHAPTER = false; DRAFT_SAVED_AT = '';
+        S.editorSeed = htmlForEditor(html);
+        FORCE_EDITOR_SEED = true;
+        S.savedAt = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        syncBookCountsInState(slug, BOOK.chapters);
+        say('Đã lưu chương "' + title + '" lên KV.');
+        redraw();
       }).catch(fail);
   }
   function realChapterAdd() {
     if (!ensureOnline()) return;
-    var slug = BOOK_SLUG || S.selectedBook;
-    if (!slug) return;
+    var slug = BOOK_SLUG || S.chapterBook || S.selectedBook;
+    if (!slug) { say('Chọn bộ trước khi thêm chương.', 'bad'); return; }
+    snapshotLiveEditor();
     var idx = S.chapters.length;
-    var ch = { t: 'Chương ' + (idx + 1), html: '<p></p>', status: 'published' };
+    var nextTitle = suggestNextChapTitle(S.chapters);
+    var ch = { t: nextTitle, html: '<p>' + esc(nextTitle) + '</p>', status: 'published' };
     apiCall('/api/book/' + encodeURIComponent(slug) + '/chapter', { method: 'PUT', body: { index: idx, chapter: ch } })
       .then(function () {
-        WRITES += 1; if (BOOK && Array.isArray(BOOK.chapters)) BOOK.chapters[idx] = ch;
-        S.chapters.push({ t: ch.t, b: titleOf(slug), s: 'published', d: '', html: ch.html });
-        S.activeChapter = idx; S.chapterStatus = 'published'; S.editorSeed = '<p></p>';
-        say('Đã thêm chương trên KV.'); redraw();
+        WRITES += 1; setQuota();
+        if (!BOOK || typeof BOOK !== 'object') BOOK = { chapters: [] };
+        if (!Array.isArray(BOOK.chapters)) BOOK.chapters = [];
+        BOOK.chapters[idx] = ch;
+        S.chapters.push({ t: ch.t, b: titleOf(slug), s: 'published', d: '', html: ch.html, _dirty: false });
+        S.activeChapter = idx;
+        S.editorPreview = false;
+        delete S.models['chapter-title'];
+        syncChaptersToState();
+        syncBookCountsInState(slug, BOOK.chapters);
+        say('Đã thêm "' + ch.t + '" trên KV.');
+        redraw();
+        var tInp = D.getElementById('chapterTitle');
+        if (tInp) { tInp.focus(); try { tInp.select(); } catch (e) {} }
       }).catch(fail);
   }
   function realChapterDelete(idx) {
     if (!ensureOnline()) return;
-    var slug = BOOK_SLUG || S.selectedBook;
-    M.openStrong('Xoá chương khỏi KV', 'Xoá chương · không hoàn tác.', 'XOÁ', function () {
+    var slug = BOOK_SLUG || S.chapterBook || S.selectedBook;
+    if (!slug || !S.chapters[idx]) return;
+    var victimTitle = S.chapters[idx].t || ('Chương ' + (idx + 1));
+    M.openStrong('Xoá chương khỏi KV', 'Xoá "' + victimTitle + '" · không hoàn tác.', 'XOÁ', function () {
       apiCall('/api/book/' + encodeURIComponent(slug) + '/chapter', { method: 'PUT', body: { index: idx, remove: true } })
         .then(function () {
-          WRITES += 1; if (BOOK && Array.isArray(BOOK.chapters)) BOOK.chapters.splice(idx, 1);
+          WRITES += 1; setQuota();
+          clearChapterDraft(slug, idx);
+          if (BOOK && Array.isArray(BOOK.chapters)) BOOK.chapters.splice(idx, 1);
           S.chapters.splice(idx, 1);
-          S.activeChapter = Math.max(0, Math.min(idx, S.chapters.length - 1));
-          S.chapterStatus = (S.chapters[S.activeChapter] || {}).s || 'published';
-          S.editorSeed = M.sanitizeEditorHtml((S.chapters[S.activeChapter] || {}).html || '<p></p>');
-          say('Đã xoá chương trên KV.'); redraw();
+          S.activeChapter = Math.max(0, Math.min(idx, Math.max(0, S.chapters.length - 1)));
+          delete S.models['chapter-title'];
+          syncChaptersToState();
+          syncBookCountsInState(slug, BOOK ? BOOK.chapters : []);
+          say('Đã xoá chương "' + victimTitle + '" trên KV.');
+          redraw();
         }).catch(fail);
     }, 'Xoá chương');
   }
   function realChapterMove(idx, dir) {
     if (!ensureOnline()) return;
-    var to = idx + dir, slug = BOOK_SLUG || S.selectedBook;
-    if (to < 0 || to >= S.chapters.length) return;
+    var to = idx + dir, slug = BOOK_SLUG || S.chapterBook || S.selectedBook;
+    if (!slug || to < 0 || to >= S.chapters.length) return;
+    snapshotLiveEditor();
     apiCall('/api/book/' + encodeURIComponent(slug) + '/chapter', { method: 'PUT', body: { from: idx, to: to } })
       .then(function () {
-        WRITES += 1;
+        WRITES += 1; setQuota();
         if (BOOK && Array.isArray(BOOK.chapters)) { var t = BOOK.chapters[idx]; BOOK.chapters[idx] = BOOK.chapters[to]; BOOK.chapters[to] = t; }
         var tmp = S.chapters[idx]; S.chapters[idx] = S.chapters[to]; S.chapters[to] = tmp;
-        S.activeChapter = to; S.editorSeed = M.sanitizeEditorHtml((S.chapters[to] || {}).html || '<p></p>');
-        say('Đã đổi thứ tự chương trên KV.'); redraw();
+        if (S.activeChapter === idx) S.activeChapter = to;
+        else if (S.activeChapter === to) S.activeChapter = idx;
+        delete S.models['chapter-title'];
+        syncChaptersToState();
+        say('Đã đổi thứ tự chương trên KV.');
+        redraw();
       }).catch(fail);
   }
   function syncChaptersToState() {
-    S.editorSeed = M.sanitizeEditorHtml((S.chapters[S.activeChapter] || {}).html || '<p></p>');
-    S.chapterStatus = (S.chapters[S.activeChapter] || {}).s || 'published';
+    var cur = S.chapters[S.activeChapter] || null;
+    S.editorSeed = htmlForEditor(cur ? cur.html : '');
+    S.chapterStatus = (cur && cur.s) || 'published';
+    S.chapterAt = cur && cur.d ? isoToLocalInput(cur.d) : '';
+    DIRTY_CHAPTER = !!(cur && cur._dirty);
+    DRAFT_SAVED_AT = '';
+    FORCE_EDITOR_SEED = true;
   }
 
   function realDeleteComment(id) {
@@ -824,6 +1436,435 @@
     say('Đã xuất ' + arr.length + ' bộ từ dữ liệu thật.');
   }
 
+  /* ---------------- 4b · công cụ soạn thảo, chèn link/ảnh, nhập file ---------------- */
+  var EXTRA_ICONS = {
+    underline: '<path d="M6 4v7a6 6 0 0 0 12 0V4M4 20h16"/>',
+    h3: '<path d="M4 5v14M12 5v14M4 12h8M16 10h4l-2.2 3.8a2.6 2.6 0 1 1-1.3 4.6"/>',
+    alignLeft: '<path d="M4 6h16M4 12h10M4 18h14"/>',
+    alignCenter: '<path d="M4 6h16M7 12h10M5 18h14"/>',
+    hr: '<path d="M4 12h16"/>',
+    undo: '<path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+    redo: '<path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>'
+  };
+  var origIcon = window.icon;
+  if (typeof origIcon === 'function') {
+    window.icon = function (name, cls) {
+      if (EXTRA_ICONS[name]) {
+        return '<svg class="ic ' + (cls || '') + '" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + EXTRA_ICONS[name] + '</svg>';
+      }
+      return origIcon(name, cls);
+    };
+  }
+  var origRenderModal = window.renderModal;
+  if (typeof origRenderModal === 'function') {
+    window.renderModal = function () {
+      var c = S.modal;
+      if (c && c.kind === 'custom') {
+        var root = D.getElementById('modalRoot');
+        if (!root) return;
+        root.innerHTML = '<div class="modal-scrim" data-act="close-modal">' + c.html + '</div>';
+        if (typeof window.hydrateIcons === 'function') window.hydrateIcons(root);
+        if (S.modalJustOpened) {
+          S.modalJustOpened = false;
+          var f = (c.focusSel && root.querySelector(c.focusSel)) || root.querySelector('input,select,button');
+          if (f && f.focus) try { f.focus(); } catch (e) {}
+        }
+        return;
+      }
+      return origRenderModal();
+    };
+  }
+  function openCustomModal(html, focusSel) {
+    S.lastFocus = D.activeElement;
+    S.modal = { kind: 'custom', html: html, focusSel: focusSel || '' };
+    S.modalJustOpened = true;
+    window.renderModal();
+  }
+
+  function saveEditorSelection() {
+    var ed = D.getElementById('editor');
+    if (!ed || !window.getSelection) return;
+    var sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    var r = sel.getRangeAt(0);
+    if (ed.contains(r.commonAncestorContainer)) LAST_EDITOR_RANGE = r.cloneRange();
+  }
+  function restoreEditorSelection(ed) {
+    if (!ed || !window.getSelection) return null;
+    ed.focus();
+    var sel = window.getSelection();
+    if (!sel) return null;
+    if (LAST_EDITOR_RANGE && ed.contains(LAST_EDITOR_RANGE.commonAncestorContainer)) {
+      sel.removeAllRanges();
+      sel.addRange(LAST_EDITOR_RANGE);
+      return LAST_EDITOR_RANGE;
+    }
+    var r = D.createRange();
+    r.selectNodeContents(ed);
+    r.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(r);
+    LAST_EDITOR_RANGE = r.cloneRange();
+    return r;
+  }
+  function insertHtmlAtEditorCursor(ed, htmlSnippet) {
+    if (!ed) return;
+    var r = restoreEditorSelection(ed);
+    var before = ed.innerHTML, done = false;
+    try {
+      if (D.execCommand) done = D.execCommand('insertHTML', false, htmlSnippet);
+    } catch (e) { done = false; }
+    if (!done || ed.innerHTML === before) {
+      var tmpl = D.createElement('template');
+      tmpl.innerHTML = htmlSnippet;
+      var frag = tmpl.content;
+      var lastNode = frag.lastChild;
+      if (r) {
+        r.deleteContents();
+        r.insertNode(frag);
+        if (lastNode && lastNode.parentNode) {
+          var after = D.createRange();
+          after.setStartAfter(lastNode);
+          after.collapse(true);
+          var sel = window.getSelection && window.getSelection();
+          if (sel) { sel.removeAllRanges(); sel.addRange(after); }
+          LAST_EDITOR_RANGE = after.cloneRange();
+        }
+      } else {
+        ed.insertAdjacentHTML('beforeend', htmlSnippet);
+      }
+    }
+    saveEditorSelection();
+  }
+  function findAncestorInEditor(ed, tagNames) {
+    var sel = window.getSelection && window.getSelection();
+    var node = sel && sel.rangeCount ? sel.anchorNode : (LAST_EDITOR_RANGE ? LAST_EDITOR_RANGE.startContainer : null);
+    while (node && node !== ed) {
+      if (node.nodeType === 1) {
+        var tg = node.tagName.toLowerCase();
+        if (tagNames[tg]) return node;
+      }
+      node = node.parentNode;
+    }
+    return null;
+  }
+  function updateToolbarActiveState() {
+    var ed = D.getElementById('editor');
+    var bar = D.querySelector('.ed-toolbar');
+    if (!ed || !bar) return;
+    var sel = window.getSelection && window.getSelection();
+    if (!sel || !sel.rangeCount || !ed.contains(sel.anchorNode)) return;
+    var block = findAncestorInEditor(ed, { p: 1, div: 1, h1: 1, h2: 1, h3: 1, h4: 1, blockquote: 1, li: 1 });
+    var blockTag = block ? block.tagName.toLowerCase() : '';
+    var inQuote = !!findAncestorInEditor(ed, { blockquote: 1 });
+    var inLink = !!findAncestorInEditor(ed, { a: 1 });
+    var align = block ? String(block.style.textAlign || block.getAttribute('align') || '').toLowerCase() : '';
+    function qState(cmd) { try { return !!(D.queryCommandState && D.queryCommandState(cmd)); } catch (e) { return false; } }
+    var activeMap = {
+      bold: qState('bold') || !!findAncestorInEditor(ed, { b: 1, strong: 1 }),
+      italic: qState('italic') || !!findAncestorInEditor(ed, { i: 1, em: 1 }),
+      underline: qState('underline') || !!findAncestorInEditor(ed, { u: 1 }),
+      h2: blockTag === 'h2',
+      h3: blockTag === 'h3',
+      quote: inQuote,
+      'align-center': align === 'center',
+      'align-left': align === 'left',
+      link: inLink
+    };
+    Array.prototype.slice.call(bar.querySelectorAll('[data-act="format"]')).forEach(function (btn) {
+      var c = btn.dataset.cmd;
+      if (!(c in activeMap)) return;
+      var on = !!activeMap[c];
+      btn.classList.toggle('on', on);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+  function markEditorDirtyAndAutosave() {
+    var ed = D.getElementById('editor');
+    if (!ed) return;
+    DIRTY_CHAPTER = true;
+    updateChapterStatsDom(ed.innerHTML);
+    updateSaveNoteDom();
+    clearTimeout(EDITOR_AUTOSAVE_TIMER);
+    EDITOR_AUTOSAVE_TIMER = setTimeout(function () {
+      snapshotLiveEditor();
+      updateSaveNoteDom();
+    }, 550);
+  }
+  function ensureEditingMode() {
+    if (!S.editorPreview) return;
+    S.editorPreview = false;
+    var ed = D.getElementById('editor');
+    var pv = D.getElementById('readerPreview');
+    var btn = D.querySelector('[data-act="toggle-preview"]');
+    if (ed) ed.hidden = false;
+    if (pv) pv.remove();
+    if (btn) btn.innerHTML = window.icon('eye', 's') + 'Xem trước độc giả';
+  }
+  function changeBlockTag(ed, targetTag) {
+    restoreEditorSelection(ed);
+    var cur = findAncestorInEditor(ed, { h1: 1, h2: 1, h3: 1, h4: 1, p: 1, div: 1 });
+    var nextTag = (cur && cur.tagName.toLowerCase() === targetTag) ? 'p' : targetTag;
+    var ok = false;
+    try { if (D.execCommand) ok = D.execCommand('formatBlock', false, nextTag); } catch (e) { ok = false; }
+    var after = findAncestorInEditor(ed, { h1: 1, h2: 1, h3: 1, h4: 1, p: 1, div: 1 });
+    if ((!ok || (after && after.tagName.toLowerCase() !== nextTag)) && cur && cur !== ed && !cur.classList.contains('chat-container')) {
+      var rep = D.createElement(nextTag);
+      if (cur.getAttribute('style')) rep.setAttribute('style', cur.getAttribute('style'));
+      while (cur.firstChild) rep.appendChild(cur.firstChild);
+      cur.parentNode.replaceChild(rep, cur);
+      var r = D.createRange();
+      r.selectNodeContents(rep);
+      r.collapse(false);
+      var sel = window.getSelection && window.getSelection();
+      if (sel) { sel.removeAllRanges(); sel.addRange(r); }
+      LAST_EDITOR_RANGE = r.cloneRange();
+    }
+  }
+  function toggleBlockquote(ed) {
+    restoreEditorSelection(ed);
+    var bq = findAncestorInEditor(ed, { blockquote: 1 });
+    if (bq && bq.parentNode) {
+      var p = D.createElement('p');
+      while (bq.firstChild) {
+        var fc = bq.firstChild;
+        if (fc.nodeType === 1 && (fc.tagName.toLowerCase() === 'p' || fc.tagName.toLowerCase() === 'div')) {
+          while (fc.firstChild) p.appendChild(fc.firstChild);
+          fc.remove();
+        } else {
+          p.appendChild(fc);
+        }
+      }
+      if (!p.childNodes.length) p.appendChild(D.createElement('br'));
+      bq.parentNode.replaceChild(p, bq);
+      var r = D.createRange();
+      r.selectNodeContents(p);
+      r.collapse(false);
+      var sel = window.getSelection && window.getSelection();
+      if (sel) { sel.removeAllRanges(); sel.addRange(r); }
+      LAST_EDITOR_RANGE = r.cloneRange();
+      return;
+    }
+    var ok = false;
+    try { if (D.execCommand) ok = D.execCommand('formatBlock', false, 'blockquote'); } catch (e) { ok = false; }
+    if (!ok) {
+      var cur = findAncestorInEditor(ed, { p: 1, div: 1, h2: 1, h3: 1 });
+      if (cur && cur !== ed) {
+        var q = D.createElement('blockquote');
+        cur.parentNode.insertBefore(q, cur);
+        q.appendChild(cur);
+      }
+    }
+  }
+  function setBlockAlign(ed, align) {
+    restoreEditorSelection(ed);
+    var block = findAncestorInEditor(ed, { p: 1, div: 1, h1: 1, h2: 1, h3: 1, h4: 1, blockquote: 1 });
+    if (!block || block === ed) {
+      if (!ed.firstElementChild) ed.innerHTML = '<p><br></p>';
+      block = ed.firstElementChild;
+    }
+    if (!block) return;
+    var cur = String(block.style.textAlign || block.getAttribute('align') || '').toLowerCase();
+    block.removeAttribute('align');
+    if (align === 'left' || cur === align) block.style.removeProperty('text-align');
+    else block.style.textAlign = align;
+    if (!block.getAttribute('style')) block.removeAttribute('style');
+  }
+  function openLinkModal() {
+    ensureEditingMode();
+    var ed = D.getElementById('editor');
+    if (!ed) return;
+    saveEditorSelection();
+    var existingA = findAncestorInEditor(ed, { a: 1 });
+    var curHref = existingA ? (existingA.getAttribute('href') || '') : '';
+    var sel = window.getSelection && window.getSelection();
+    var hasSelText = !!(existingA || (sel && sel.rangeCount && !sel.getRangeAt(0).collapsed));
+    var html = '<div class="modal" role="dialog" aria-modal="true" aria-labelledby="linkModalTitle">' +
+      '<div class="modal-hd">' + window.icon('link', 's') + '<h3 id="linkModalTitle">' + (existingA ? 'Sửa liên kết' : 'Chèn liên kết') + '</h3>' +
+        '<button class="btn icon ghost sm" data-act="close-modal" aria-label="Đóng">' + window.icon('x', 's') + '</button></div>' +
+      '<div class="modal-bd">' +
+        '<div class="field"><label for="linkModalHref">Địa chỉ URL</label>' +
+          '<input class="inp" id="linkModalHref" type="url" value="' + esc(curHref || 'https://') + '" placeholder="https://...">' +
+          '<span class="hint">Chỉ hỗ trợ https://, http://, mailto: hoặc đường dẫn nội bộ /.</span></div>' +
+        (hasSelText ? '' : '<div class="field mt"><label for="linkModalText">Chữ hiển thị</label><input class="inp" id="linkModalText" value="" placeholder="Nhấn vào đây"></div>') +
+      '</div>' +
+      '<div class="modal-ft">' +
+        (existingA ? '<button class="btn danger sm" data-act="unlink-confirm">Gỡ liên kết</button>' : '') +
+        '<span class="grow"></span>' +
+        '<button class="btn sm" data-act="close-modal">Huỷ</button>' +
+        '<button class="btn pri sm" data-act="link-confirm">Áp dụng</button>' +
+      '</div></div>';
+    openCustomModal(html, '#linkModalHref');
+  }
+  function applyLinkFromModal(removeOnly) {
+    var hrefInp = D.getElementById('linkModalHref');
+    var txtInp = D.getElementById('linkModalText');
+    var rawUrl = hrefInp ? String(hrefInp.value || '').trim() : '';
+    var label = txtInp ? String(txtInp.value || '').trim() : '';
+    if (!removeOnly && rawUrl && rawUrl !== 'https://') {
+      var safe = safeEditorUrl(rawUrl);
+      if (!safe) { say('URL không hợp lệ — hãy dùng https:// hoặc đường dẫn nội bộ.', 'bad'); return; }
+      rawUrl = safe;
+    } else if (!removeOnly) {
+      removeOnly = true;
+    }
+    if (typeof window.closeModal === 'function') window.closeModal();
+    var ed = D.getElementById('editor');
+    if (!ed) return;
+    restoreEditorSelection(ed);
+    var existingA = findAncestorInEditor(ed, { a: 1 });
+    if (removeOnly) {
+      if (existingA && existingA.parentNode) {
+        var parent = existingA.parentNode;
+        while (existingA.firstChild) parent.insertBefore(existingA.firstChild, existingA);
+        existingA.remove();
+      } else {
+        try { if (D.execCommand) D.execCommand('unlink', false, null); } catch (e) {}
+      }
+      markEditorDirtyAndAutosave();
+      updateToolbarActiveState();
+      say('Đã gỡ liên kết.');
+      return;
+    }
+    if (existingA) {
+      existingA.setAttribute('href', rawUrl);
+      existingA.setAttribute('target', '_blank');
+      existingA.setAttribute('rel', 'noopener noreferrer');
+    } else {
+      var r = LAST_EDITOR_RANGE;
+      if (r && !r.collapsed) {
+        var a = D.createElement('a');
+        a.setAttribute('href', rawUrl);
+        a.setAttribute('target', '_blank');
+        a.setAttribute('rel', 'noopener noreferrer');
+        a.appendChild(r.extractContents());
+        r.insertNode(a);
+      } else {
+        var disp = esc(label || rawUrl);
+        insertHtmlAtEditorCursor(ed, '<a href="' + esc(rawUrl) + '" target="_blank" rel="noopener noreferrer">' + disp + '</a>');
+      }
+    }
+    markEditorDirtyAndAutosave();
+    updateToolbarActiveState();
+    say('Đã chèn liên kết.');
+  }
+  function execEditorFormat(cmd) {
+    if (cmd === 'link') { openLinkModal(); return; }
+    ensureEditingMode();
+    var ed = D.getElementById('editor');
+    if (!ed) return;
+    restoreEditorSelection(ed);
+    if (cmd === 'h2' || cmd === 'h3') changeBlockTag(ed, cmd);
+    else if (cmd === 'quote') toggleBlockquote(ed);
+    else if (cmd === 'align-left') setBlockAlign(ed, 'left');
+    else if (cmd === 'align-center') setBlockAlign(ed, 'center');
+    else if (cmd === 'hr') insertHtmlAtEditorCursor(ed, '<hr><p><br></p>');
+    else if (cmd === 'undo' || cmd === 'redo') {
+      try { if (D.execCommand) D.execCommand(cmd, false, null); } catch (e) {}
+    } else {
+      var ok = false;
+      try { if (D.execCommand) ok = D.execCommand(cmd, false, null); } catch (e) { ok = false; }
+      if (!ok && LAST_EDITOR_RANGE && !LAST_EDITOR_RANGE.collapsed) {
+        var wrapMap = { bold: 'strong', italic: 'em', underline: 'u' };
+        if (wrapMap[cmd]) {
+          var w = D.createElement(wrapMap[cmd]);
+          w.appendChild(LAST_EDITOR_RANGE.extractContents());
+          LAST_EDITOR_RANGE.insertNode(w);
+        }
+      }
+    }
+    saveEditorSelection();
+    markEditorDirtyAndAutosave();
+    updateToolbarActiveState();
+  }
+  function realInsertSeparator() {
+    ensureEditingMode();
+    var ed = D.getElementById('editor');
+    var sep = '<p class="ch-sep">•••</p><p><br></p>';
+    if (!ed) {
+      S.editorSeed = htmlForEditor((S.editorSeed || '') + sep);
+      FORCE_EDITOR_SEED = true;
+      redraw();
+      return;
+    }
+    insertHtmlAtEditorCursor(ed, sep);
+    markEditorDirtyAndAutosave();
+    say('Đã chèn dấu ngăn cách.');
+  }
+  function renderPreviewCardHtml(bookSlug, idx, curTitle, curHtml) {
+    var b = M.getBook(bookSlug) || {};
+    var bookTitle = b.t || titleOf(bookSlug) || 'Truyện';
+    var author = b.a || (findMeta(bookSlug) || {}).author || 'Tác giả';
+    var total = Math.max(1, S.chapters.length);
+    var st = chapterPlainStats(curHtml);
+    var statTxt = st.words ? (st.words.toLocaleString('vi-VN') + ' từ · ~' + st.mins + ' phút đọc') : '0 từ';
+    var bodyHtml = renderReaderHtml(curHtml);
+    return '<div class="reader-preview" id="readerPreview">' +
+      '<div class="rd-preview-bar">' +
+        '<span class="lb">' + window.icon('eye', 'xs') + ' Xem trước giao diện độc giả · truyen.html</span>' +
+        '<div class="row" style="gap:10px"><span class="xs mut">' + esc(statTxt) + '</span>' +
+        '<button class="btn sm" data-act="toggle-preview">Quay lại chỉnh sửa</button></div>' +
+      '</div>' +
+      '<div class="rd-stage" tabindex="0" role="region" aria-label="Bản xem trước chương">' +
+        '<header class="rdhead">' +
+          '<div class="rd-crumb">Thư viện › ' + esc(bookTitle) + ' › Chương ' + (idx + 1) + ' / ' + total + '</div>' +
+          '<h3 class="rd-title">' + esc(curTitle || ('Chương ' + (idx + 1))) + '</h3>' +
+          '<div class="rd-meta"><span>✎ ' + esc(author) + '</span><span>·</span><span>' + esc(statTxt) + '</span></div>' +
+        '</header>' +
+        '<article class="rtext">' + bodyHtml + '</article>' +
+      '</div></div>';
+  }
+  function realTogglePreview() {
+    var ed = D.getElementById('editor');
+    if (ed) saveEditorSelection();
+    S.editorPreview = !S.editorPreview;
+    if (ed) {
+      var slug = BOOK_SLUG || S.chapterBook || S.selectedBook || '';
+      var tEl = D.getElementById('chapterTitle');
+      var curTitle = tEl ? tEl.value : ((S.chapters[S.activeChapter] || {}).t || '');
+      var oldPv = D.getElementById('readerPreview');
+      if (oldPv) oldPv.remove();
+      if (S.editorPreview) {
+        ed.hidden = true;
+        ed.insertAdjacentHTML('afterend', renderPreviewCardHtml(slug, S.activeChapter || 0, curTitle, ed.innerHTML));
+        var pvRoot = D.getElementById('readerPreview');
+        if (pvRoot && typeof window.hydrateIcons === 'function') window.hydrateIcons(pvRoot);
+      } else {
+        ed.hidden = false;
+        restoreEditorSelection(ed);
+      }
+      var btn = D.querySelector('.ed-toolbar [data-act="toggle-preview"]');
+      if (btn) btn.innerHTML = window.icon('eye', 's') + (S.editorPreview ? 'Đóng xem trước' : 'Xem trước độc giả');
+      return;
+    }
+    redraw();
+  }
+  function realRestoreDraft() {
+    var slug = BOOK_SLUG || S.chapterBook || S.selectedBook;
+    var idx = S.activeChapter || 0;
+    var draft = readChapterDraft(slug, idx);
+    if (!draft) {
+      syncChaptersToState();
+      say('Không có bản nháp cục bộ — đã nạp lại bản đang có trên KV.', 'info');
+      redraw();
+      return;
+    }
+    if (S.chapters[idx]) {
+      if (draft.t) S.chapters[idx].t = draft.t;
+      S.chapters[idx].html = draft.html || '';
+      S.chapters[idx].s = draft.s || S.chapters[idx].s || 'published';
+      S.chapters[idx].d = draft.d || '';
+      S.chapters[idx]._dirty = true;
+    }
+    delete S.models['chapter-title'];
+    S.editorPreview = false;
+    syncChaptersToState();
+    DIRTY_CHAPTER = true;
+    DRAFT_SAVED_AT = draft.savedAt || '';
+    say('Đã khôi phục bản nháp cục bộ' + (draft.savedAt ? ' lúc ' + draft.savedAt : '') + ' · bấm Lưu chương để ghi lên KV.');
+    redraw();
+  }
+
   /* ---------------- 5 · chặn action ghi (capture phase) ---------------- */
   var REAL_CLICK = {
     'delete-book': function (el) { realDeleteBook(el.dataset.id); },
@@ -834,11 +1875,52 @@
     'chapter-delete': function (el) { realChapterDelete(Number(el.dataset.idx)); },
     'chapter-select': function (el) {
       var i = Number(el.dataset.idx);
-      S.activeChapter = i; S.editorPreview = false; syncChaptersToState(); redraw();
-      var ce = D.getElementById('editor'); if (ce) ce.focus();
+      if (isNaN(i) || !S.chapters[i]) return;
+      snapshotLiveEditor();
+      S.activeChapter = i;
+      S.editorPreview = false;
+      delete S.models['chapter-title'];
+      S.savedAt = '';
+      syncChaptersToState();
+      redraw();
+      var ce = D.getElementById('editor');
+      if (ce) ce.focus();
+    },
+    'chapter-pick-book': function (el) {
+      var pickSlug = el.dataset.id;
+      if (!pickSlug) return;
+      snapshotLiveEditor();
+      S.chapterBook = pickSlug; S.selectedBook = pickSlug; S.editorPreview = false;
+      (S.conn === 'static' ? loadStaticBook(pickSlug) : loadBook(pickSlug)).then(function () {
+        say('Đang quản lý chương của ' + titleOf(pickSlug) + '.');
+        var card = D.getElementById('editorCard');
+        if (card && card.scrollIntoView) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }).catch(fail);
+    },
+    'format': function (el) { execEditorFormat(el.dataset.cmd); },
+    'insert-separator': realInsertSeparator,
+    'toggle-preview': realTogglePreview,
+    'link-confirm': function () { applyLinkFromModal(false); },
+    'unlink-confirm': function () { applyLinkFromModal(true); },
+    'import-confirm': function () { confirmMultiImport(); },
+    'sched-plus': function (el) {
+      S.chapterStatus = 'scheduled';
+      S.chapterAt = localInputPlusHours(Number(el.dataset.hours || 1));
+      var inp = D.getElementById('chapterAt');
+      if (inp) inp.value = S.chapterAt;
+      DIRTY_CHAPTER = true;
+      updateSaveNoteDom();
+      say('Đã đặt mốc hẹn giờ · bấm Lưu chương để ghi lên KV.', 'info');
     },
     'save-chapter': realSaveChapter,
-    'schedule-chapter': function () { S.chapterStatus = 'scheduled'; say('Đã chọn Hẹn giờ · đặt mốc rồi bấm Lưu chương để ghi KV.'); redraw(); },
+    'schedule-chapter': function () {
+      snapshotLiveEditor();
+      S.chapterStatus = 'scheduled';
+      if (!S.chapterAt) S.chapterAt = defaultScheduleLocalInput();
+      DIRTY_CHAPTER = true;
+      say('Đã chọn Hẹn giờ · đặt mốc rồi bấm Lưu chương để ghi KV.');
+      redraw();
+    },
     'delete-comment': function (el) { realDeleteComment(el.dataset.id); },
     'toggle-report': function (el) { realToggleReport(el.dataset.id); },
     'remove-votes': realRemoveVotes,
@@ -885,24 +1967,37 @@
       loadStatic().then(function () { say('Chế độ đọc tĩnh · /data/registry.json (chỉ đọc).'); go('dashboard'); }).catch(fail);
     },
     'view-web': function () { window.open('/', '_blank', 'noopener'); },
-    'restore-draft': function () { syncChaptersToState(); say('Đã nạp lại chương từ KV.'); redraw(); },
+    'restore-draft': realRestoreDraft,
     'save-draft': function () {
-      var ed = D.getElementById('editor');
-      S.editorSeed = M.sanitizeEditorHtml(ed ? ed.innerHTML : S.editorSeed);
-      S.savedAt = new Date().toLocaleTimeString('vi-VN');
-      say('Nháp cục bộ đã cập nhật · bấm Lưu chương để ghi KV.'); redraw();
+      DIRTY_CHAPTER = true;
+      snapshotLiveEditor();
+      updateSaveNoteDom();
+      say('Đã lưu nháp cục bộ · bấm Lưu chương để ghi lên KV.');
     },
     'manage-chapters': function () {
-      var cb = S.chapterBook || S.selectedBook;
-      if (cb && cb !== BOOK_SLUG) loadBook(cb).then(function () { redraw(); }).catch(fail);
-      else redraw();
-      say('Đang quản lý chương của ' + titleOf(cb) + ' · dữ liệu KV.');
+      snapshotLiveEditor();
+      var selEl = D.querySelector('[data-role="chapter-book"]');
+      var cb = (selEl && selEl.value) || S.chapterBook || S.selectedBook || (S.books[0] || {}).id;
+      if (!cb) return;
+      S.chapterBook = cb; S.selectedBook = cb; S.editorPreview = false;
+      var p = (cb !== BOOK_SLUG) ? (S.conn === 'static' ? loadStaticBook(cb) : loadBook(cb)) : Promise.resolve();
+      p.then(function () {
+        redraw();
+        var mc = D.getElementById('editorCard');
+        if (mc && mc.scrollIntoView) mc.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        say('Đang quản lý chương của ' + titleOf(cb) + '.');
+      }).catch(fail);
     },
     'focus-editor': function () {
-      if (S.editorPreview) { S.editorPreview = false; redraw(); }
+      ensureEditingMode();
       var card = D.getElementById('editorCard'), ed = D.getElementById('editor');
       if (card && typeof card.scrollIntoView === 'function') card.scrollIntoView({ behavior: 'smooth', block: 'center' });
       if (ed) ed.focus();
+    },
+    'insert-image': function () {
+      ensureEditingMode();
+      var img = $('[data-role="chapter-image"]');
+      if (img) img.click();
     },
     'reset-demo': function () { reload(); },
     'toast-demo': function () { say('Dữ liệu thật · Cloudflare KV.'); },
@@ -939,6 +2034,131 @@
       .catch(function (e) { setConn(classify(e)); fail(e); });
   }
 
+  window.__CZ_SANITIZE__ = realSanitizeEditorHtml;
+  M.sanitizeEditorHtml = realSanitizeEditorHtml;
+  window.sanitizeEditorHtml = realSanitizeEditorHtml;
+  window.sanitizeEditorDom = function () {};
+  window.insertSeparator = realInsertSeparator;
+  window.editorHtml = function () {
+    var curSlug = String(BOOK_SLUG || S.chapterBook || S.selectedBook || '');
+    var el = D.getElementById('editor');
+    if (!FORCE_EDITOR_SEED && el && el.getAttribute('data-book') === curSlug && Number(el.getAttribute('data-ch-idx')) === S.activeChapter) {
+      return realSanitizeEditorHtml(el.innerHTML);
+    }
+    return S.editorSeed || '<p><br></p>';
+  };
+  var CH_STATUS_LABELS = { published: 'Xuất bản', scheduled: 'Hẹn giờ', hidden: 'Ẩn', draft: 'Nháp' };
+  window.__CZ_CHAPTER_VIEW__ = window.chapterEditorHTML = function () {
+    var curSlug = String(BOOK_SLUG || S.chapterBook || S.selectedBook || (S.books[0] || {}).id || '');
+    var curBookTitle = titleOf(curSlug) || 'Chưa chọn bộ';
+    var active = S.chapters[S.activeChapter] || { t: '', s: 'published', d: '', html: '' };
+    var curHtml = window.editorHtml();
+    var curTitle = S.models['chapter-title'] != null ? S.models['chapter-title'] : (active.t || '');
+    var draft = readChapterDraft(curSlug, S.activeChapter);
+    var saveNoteHtml = S.conn === 'static'
+      ? 'Chế độ đọc tĩnh · chỉ đọc'
+      : DIRTY_CHAPTER
+        ? ('● Chưa lưu KV' + (DRAFT_SAVED_AT ? ' · giữ nháp ' + esc(DRAFT_SAVED_AT) : ''))
+        : S.savedAt
+          ? (window.icon('check', 'xs') + ' Đã lưu KV lúc ' + esc(S.savedAt))
+          : (draft && draft.savedAt ? ('● Có nháp cục bộ lúc ' + esc(draft.savedAt)) : (window.icon('check', 'xs') + ' Đã đồng bộ KV'));
+
+    var leftBody = S.chapters.length
+      ? S.chapters.map(function (c, i) {
+          var isAct = i === S.activeChapter;
+          return '<div class="list-item ch' + (isAct ? ' active' : '') + '" style="gap:6px">' +
+            '<button class="btn ghost sm" style="flex:1;min-width:0;text-align:left;justify-content:flex-start;overflow:hidden" data-act="chapter-select" data-idx="' + i + '">' +
+              '<span class="mono xs dim" style="flex:none">#' + (i + 1) + '</span>' +
+              '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap' + (isAct ? ';color:var(--acc);font-weight:600' : '') + '">' + esc(c.t || ('Chương ' + (i + 1))) + '</span>' +
+            '</button>' +
+            chapterRowBadge(c) +
+            '<button class="btn icon ghost sm" data-act="chapter-move" data-dir="-1" data-idx="' + i + '"' + (i === 0 ? ' disabled' : '') + ' aria-label="Di chuyển lên">' + window.icon('arrowup', 's') + '</button>' +
+            '<button class="btn icon ghost sm" data-act="chapter-move" data-dir="1" data-idx="' + i + '"' + (i === S.chapters.length - 1 ? ' disabled' : '') + ' aria-label="Di chuyển xuống">' + window.icon('arrowdown', 's') + '</button>' +
+            '<button class="btn icon ghost sm" data-act="chapter-delete" data-idx="' + i + '" aria-label="Xóa chương">' + window.icon('trash', 's') + '</button>' +
+          '</div>';
+        }).join('')
+      : '<div class="state" style="min-height:110px;border:0"><p>Bộ này chưa có chương nào · bấm <b>+ Thêm</b> hoặc nhập tiêu đề và nội dung bên dưới rồi bấm <b>Lưu chương</b>.</p></div>';
+
+    var left = '<div class="card"><div class="card-hd"><h3>Danh sách chương · ' + esc(curBookTitle) + '</h3>' +
+      '<span class="right">' + S.chapters.length + ' chương</span>' +
+      '<button class="btn sm" data-act="chapter-add">' + window.icon('plus', 's') + 'Thêm</button></div>' +
+      '<div class="card-bd tight ch-list-scroll" style="padding:6px 10px" tabindex="0" role="region" aria-label="Danh sách chương">' + leftBody + '</div></div>';
+
+    var tools = [
+      ['bold', 'bold', 'In đậm (Ctrl+B)'],
+      ['italic', 'italic', 'In nghiêng (Ctrl+I)'],
+      ['underline', 'underline', 'Gạch chân (Ctrl+U)'],
+      '|',
+      ['h2', 'h2', 'Tiêu đề lớn (H2)'],
+      ['h3', 'h3', 'Tiêu đề phụ (H3)'],
+      ['quote', 'quote', 'Trích dẫn'],
+      '|',
+      ['alignLeft', 'align-left', 'Căn trái'],
+      ['alignCenter', 'align-center', 'Căn giữa'],
+      '|',
+      ['link', 'link', 'Chèn hoặc sửa liên kết'],
+      ['hr', 'hr', 'Đường kẻ ngang'],
+      '|',
+      ['undo', 'undo', 'Hoàn tác (Ctrl+Z)'],
+      ['redo', 'redo', 'Làm lại (Ctrl+Y)']
+    ];
+    var toolbarHtml = '<div class="ed-toolbar mb" role="toolbar" aria-label="Định dạng nội dung chương">' +
+      tools.map(function (t) {
+        if (t === '|') return '<span class="ed-sep" aria-hidden="true"></span>';
+        return '<button class="btn icon sm" type="button" data-act="format" data-cmd="' + t[1] + '" data-tip="' + esc(t[2]) + '" aria-label="' + esc(t[2]) + '">' + window.icon(t[0], 's') + '</button>';
+      }).join('') +
+      '<button class="btn icon sm" type="button" data-act="insert-image" data-tip="Tải ảnh vào vị trí con trỏ" aria-label="Tải ảnh vào chương">' + window.icon('image', 's') + '</button>' +
+      '<button class="btn sm" type="button" data-act="insert-separator" data-tip="Chèn dấu ngăn cách •••" aria-label="Chèn dấu ngăn cách nội dung">' + window.icon('separator', 's') + 'Ngăn cách</button>' +
+      '<span class="grow"></span>' +
+      '<button class="btn sm" type="button" data-act="toggle-preview">' + window.icon('eye', 's') + (S.editorPreview ? 'Đóng xem trước' : 'Xem trước độc giả') + '</button>' +
+      '</div>';
+
+    var schedExtra = S.chapterStatus === 'scheduled'
+      ? '<div class="field mb"><label for="chapterAt">Chương lên sóng lúc</label>' +
+          '<div class="row wrap" style="gap:8px"><input class="inp" id="chapterAt" data-role="chapter-at" type="datetime-local" style="max-width:260px" value="' + esc(S.chapterAt || defaultScheduleLocalInput()) + '">' +
+          '<button class="btn ghost sm" type="button" data-act="sched-plus" data-hours="1">+1 giờ</button>' +
+          '<button class="btn ghost sm" type="button" data-act="sched-plus" data-hours="24">+1 ngày</button>' +
+          '<button class="btn ghost sm" type="button" data-act="sched-plus" data-hours="168">+1 tuần</button></div>' +
+          '<span class="hint">Độc giả chỉ thấy chương khi tới mốc giờ đã đặt.</span></div>'
+      : '';
+
+    var imports = [
+      ['single', 'Import .txt/.html', '.txt,.html,.htm'],
+      ['multi', 'Nhập nhiều chương .txt/.docx', '.txt,.docx']
+    ];
+
+    var editor = '<div class="card" id="editorCard"><div class="card-hd"><h3>Trình soạn chương</h3>' +
+      '<span class="right" id="saveNote" aria-live="polite">' + saveNoteHtml + '</span></div><div class="card-bd">' +
+      '<div class="field mb"><label for="chapterTitle">Tên chương</label>' +
+        '<div class="row title-case"><input class="inp" id="chapterTitle" data-role="chapter-title" value="' + esc(curTitle) + '" placeholder="Chương 1: Tiêu đề chương…">' +
+          '<span class="sel"><select class="inp" data-role="case-mode" aria-label="Đổi kiểu chữ tên chương">' +
+          '<option value="">Đổi kiểu chữ tên…</option><option value="upper">CHỮ HOA</option><option value="lower">chữ thường</option>' +
+          '<option value="title">Chữ Hoa Mỗi Từ</option><option value="sentence">Định dạng câu</option></select></span></div>' +
+        '<span class="hint">Chỉ đổi kiểu chữ tên chương, không chạm nội dung truyện.</span></div>' +
+      '<div class="grid2 mb" style="gap:10px">' +
+        '<div class="field"><label for="chapterStatus">Trạng thái chương</label>' +
+          '<span class="sel"><select class="inp" id="chapterStatus" data-role="chapter-status">' +
+          Object.keys(CH_STATUS_LABELS).map(function (k) { return '<option value="' + k + '"' + (k === S.chapterStatus ? ' selected' : '') + '>' + esc(CH_STATUS_LABELS[k]) + '</option>'; }).join('') +
+          '</select></span></div>' +
+        '<div class="field"><span class="lb">Số liệu chương</span><span class="sm mut" id="chapterStats">' + esc(formatChapterStats(curHtml)) + '</span></div>' +
+      '</div>' +
+      schedExtra +
+      toolbarHtml +
+      '<div id="editor" class="inp" data-role="editor" data-book="' + esc(curSlug) + '" data-ch-idx="' + (S.activeChapter || 0) + '" data-placeholder="Nhập hoặc dán nội dung chương tại đây…" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Nội dung chương"' + (S.editorPreview ? ' hidden' : '') + '>' + curHtml + '</div>' +
+      (S.editorPreview ? renderPreviewCardHtml(curSlug, S.activeChapter || 0, curTitle, curHtml) : '') +
+      '<div class="row wrap mt" style="gap:8px"><span class="lb">Nhập tệp:</span>' + imports.map(function (im) {
+        return '<label class="btn sm">' + esc(im[1]) + '<input type="file" class="sr-only" accept="' + esc(im[2]) + '" data-role="import-file" data-kind="' + im[0] + '" aria-label="Nhập ' + esc(im[1]) + '"></label>';
+      }).join('') + '<label class="btn sm">' + window.icon('image', 's') + 'Ảnh vào chương<input type="file" class="sr-only" accept="image/jpeg,image/png,image/webp,image/*" data-role="chapter-image" aria-label="Tải ảnh vào chương"></label></div>' +
+      '<div class="row wrap mt" style="gap:8px"><span class="grow"></span>' +
+        '<button class="btn sm" type="button" data-act="restore-draft">' + (draft ? 'Khôi phục nháp cục bộ' : 'Nạp lại từ KV') + '</button>' +
+        '<button class="btn pri sm" type="button" data-act="save-chapter">' + window.icon('save', 's') + 'Lưu chương</button>' +
+        '<button class="btn danger sm" type="button" data-act="chapter-delete" data-idx="' + (S.activeChapter || 0) + '"' + (S.chapters.length ? '' : ' disabled') + '>' + window.icon('trash', 's') + 'Xoá chương</button></div>' +
+      '<div class="state-note mt">' + window.icon('info', 's') + ' Ctrl/Cmd+S lưu chương lên KV · Ctrl/Cmd+Alt+N thêm chương mới · Dán trực tiếp từ Word/Google Docs giữ nguyên đậm/nghiêng/đoạn văn.</div>' +
+      '</div></div>';
+
+    return window.chapterPipeline() + '<div class="mt">' + left + '</div><div class="mt">' + editor + '</div>';
+  };
+
   window.connect = realConnect;
   window.submitNew = realSubmitNew;
   window.saveEdit = realSaveEdit;
@@ -948,7 +2168,8 @@
   window.exportBooks = realExport;
   window.resetDemo = function () { reload(); };
   window.selectBook = function (id) {
-    S.selectedBook = id; window.initEditModels(M.getBook(id));
+    snapshotLiveEditor();
+    S.selectedBook = id; S.chapterBook = id; window.initEditModels(M.getBook(id));
     say('Đã chọn ' + (M.getBook(id).t || id) + ' · dữ liệu KV.', 'info');
     if (CFG.base) (S.conn === 'static' ? loadStaticBook(id) : loadBook(id)).catch(function () {});
   };
@@ -971,7 +2192,10 @@
     else say('Không có gì để lưu ở màn này.', 'info');
   };
   if (typeof window.shortcutNewChapter === 'function') window.shortcutNewChapter = function () {
-    if (S.route === 'chuong') realChapterAdd(); else say('Vào tab Chương để thêm chương.', 'info');
+    if (S.route === 'chuong' || S.route === 'sua-bo') {
+      if (S.route !== 'chuong') go('chuong');
+      realChapterAdd();
+    } else say('Vào tab Chương để thêm chương.', 'info');
   };
 
   /* ---------------- 7 · nhãn giao diện: THẬT thay vì MẪU ---------------- */
@@ -990,10 +2214,6 @@
   };
   var origCover = M.cover;
   window.cover = function (b, cls) {
-    /* Vòng 14: ảnh bìa thật từ registry.thumb. Chỉ nhận http(s) (CSP img-src
-       cho phép), có decoding/referrerpolicy như trang public, và mang
-       data-cover + data-fb-text để listener bên dưới thay bằng ô dự phòng
-       khi URL hỏng — CSP script-src-attr 'none' cấm onerror inline. */
     var u = b && String(b.thumb || '').trim();
     if (u && /^https?:\/\//i.test(u))
       return '<img class="cover ' + (cls || '') + '" src="' + esc(u) + '" alt="Bìa ' + esc(b.t || '') +
@@ -1006,32 +2226,29 @@
   D.head.appendChild(st);
 
   var origRender = M.render;
-  /* Giờ hiển thị là giờ THẬT của phiên làm việc, thay cho "03/11 20:40" của
-     bản mockup (con số tĩnh đó khiến owner tưởng dữ liệu cũ). */
   var CLOCK = (function () {
     function z(n) { return ('0' + n).slice(-2); }
     var d = new Date();
     return z(d.getDate()) + '/' + z(d.getMonth() + 1) + ' ' + z(d.getHours()) + ':' + z(d.getMinutes());
   })();
   window.render = function () {
-    /* Đẩy counter TRƯỚC khi origRender() dựng chip (kể cả render parse-time
-       của script inline nếu ai đó gọi lại window.render). */
     S.kvWrites = WRITES; S.kvReads = READS;
     origRender();
+    FORCE_EDITOR_SEED = false;
     try {
       var clock = D.getElementById('czClock');
       if (clock) clock.textContent = 'LÚC ' + CLOCK;
-      /* Giữ bảng demo luôn đóng/rỗng ở bản phát hành. */
       S.demoOpen = false;
       var panel = D.getElementById('demo');
       if (panel) { panel.hidden = true; if (panel.innerHTML) panel.innerHTML = ''; }
-      /* Tài liệu bàn giao kể lại lịch sử vòng 1–12, trong đó chữ MẪU là sự thật
-         của prototype: KHÔNG được scrub thành THẬT/KV. Các modal khác (xác
-         nhận mạnh…) vẫn scrub như thường. */
       var inDocs = !!D.getElementById('docsTitle');
       ['view', 'login', 'topbar', 'sidebar', 'quotaBanner',
        inDocs ? null : 'modalRoot', 'toasts']
         .forEach(function (id) { if (id) scrub(D.getElementById(id)); });
+      if (S.route === 'chuong') {
+        var actRow = D.querySelector('.ch-list-scroll .list-item.ch.active');
+        if (actRow && actRow.scrollIntoView) actRow.scrollIntoView({ block: 'nearest' });
+      }
     } catch (e) {}
   };
   WRAPPED = true;
@@ -1043,17 +2260,11 @@
       if (!/MẪU|mô phỏng|\(mẫu\)/i.test(t)) continue;
       n.nodeValue = t
         .replace(/DỮ LIỆU MẪU/g, 'DỮ LIỆU THẬT')
-        /* Bỏ ĐUÔI "· MẪU" thay vì đổi thành "· KV": trước đây mọi slug trong
-           Thư viện hiện "bake-love-feelings · KV", mọi eyebrow hiện
-           "NỘI DUNG · KV", mọi card hiện "tối đa 8 · KV" — trông như dữ liệu
-           bị lệch/kèm rác. Prototype suffix không có ý nghĩa ở bản thật. */
         .replace(/\s*·\s*MẪU/g, '')
         .replace(/\s*\(mô phỏng\)/g, '')
         .replace(/mô phỏng/g, 'thật')
         .replace(/\s*\(mẫu\)/g, '')
         .replace(/\bMẪU\b/g, 'THẬT');
-      /* Cố tình KHÔNG sửa chữ "mẫu" viết thường: đó có thể là tên bộ / tên tác
-         giả THẬT trong KV. Chỉ xử lý nhãn prototype viết hoa. */
     }
   }
 
@@ -1074,6 +2285,52 @@
       fr.readAsText(file);
     });
   }
+  function readAsArrayBuffer(file) {
+    return new Promise(function (resolve, reject) {
+      var fr = new FileReader();
+      fr.onload = function () { resolve(fr.result); };
+      fr.onerror = function () { reject(new Error('Không đọc được file nhị phân.')); };
+      fr.readAsArrayBuffer(file);
+    });
+  }
+  function prepareImagePayload(file, maxDim) {
+    return readAsDataURL(file).then(function (dataUrl) {
+      var fallbackType = (file && file.type && /^image\/(jpeg|png|webp)$/i.test(file.type)) ? file.type : 'image/png';
+      if (typeof Image === 'undefined' || !file || file.size < 180 * 1024) {
+        return { data: dataUrl, type: fallbackType, id: '' };
+      }
+      return new Promise(function (resolve) {
+        var img = new Image();
+        img.onload = function () {
+          try {
+            var w = img.naturalWidth || img.width || 0, h = img.naturalHeight || img.height || 0;
+            if (!w || !h) { resolve({ data: dataUrl, type: fallbackType, id: '' }); return; }
+            var lim = maxDim || 1400;
+            if (w > lim || h > lim) {
+              var sc = lim / Math.max(w, h);
+              w = Math.max(1, Math.round(w * sc));
+              h = Math.max(1, Math.round(h * sc));
+            }
+            var cv = D.createElement('canvas');
+            cv.width = w; cv.height = h;
+            var ctx = cv.getContext && cv.getContext('2d');
+            if (!ctx) { resolve({ data: dataUrl, type: fallbackType, id: '' }); return; }
+            ctx.drawImage(img, 0, 0, w, h);
+            var webp = cv.toDataURL('image/webp', 0.85);
+            if (webp && webp.indexOf('data:image/webp') === 0 && webp.length < dataUrl.length) {
+              resolve({ data: webp, type: 'image/webp', id: '' });
+            } else {
+              resolve({ data: dataUrl, type: fallbackType, id: '' });
+            }
+          } catch (e) {
+            resolve({ data: dataUrl, type: fallbackType, id: '' });
+          }
+        };
+        img.onerror = function () { resolve({ data: dataUrl, type: fallbackType, id: '' }); };
+        img.src = dataUrl;
+      });
+    });
+  }
   function realRestoreFile(el) {
     if (!ensureOnline() || !(el.files && el.files.length)) return;
     var file = el.files[0]; el.value = '';
@@ -1089,49 +2346,187 @@
       }, 'Khôi phục');
     }).catch(fail);
   }
-  function realImportFile(el) {
-    if (!ensureOnline() || !(el.files && el.files.length)) return;
-    var files = Array.prototype.slice.call(el.files);
-    var kind = el.dataset.kind, slug = BOOK_SLUG || S.selectedBook;
-    el.value = '';
-    Promise.all(files.map(readAsText)).then(function (texts) {
-      if (kind === 'multi') {
-        var base = S.chapters.length;
-        var chain = Promise.resolve();
-        texts.forEach(function (txt, i) {
-          var ch = { t: files[i].name.replace(/\.(txt|docx)$/i, '') || ('Chương ' + (base + i + 1)), html: textToHtml(txt), status: 'published' };
-          chain = chain.then(function () {
-            return apiCall('/api/book/' + encodeURIComponent(slug) + '/chapter', { method: 'PUT', body: { index: base + i, chapter: ch } });
-          });
-        });
-        return chain.then(function () { WRITES += 1; say('Đã nhập ' + texts.length + ' chương lên KV.'); return loadBook(slug, true); });
+  function parseSingleImportFile(file) {
+    if (/\.docx$/i.test(file.name || '')) {
+      return readAsArrayBuffer(file).then(convertDocxBuffer).then(function (d) {
+        var parts = splitDocxHtmlIntoChapters(d.html);
+        if (!parts.length) return { t: '', html: htmlForEditor(d.html) };
+        if (parts.length === 1) return { t: parts[0].t, html: htmlForEditor(parts[0].html) };
+        return {
+          t: parts[0].t,
+          html: htmlForEditor(parts.map(function (p) { return (p.t ? '<h2>' + esc(p.t) + '</h2>' : '') + p.html; }).join(''))
+        };
+      });
+    }
+    return readAsText(file).then(function (raw) {
+      if (/\.html?$/i.test(file.name || '') || /<(p|div|br|h[1-6]|blockquote|img|strong|em|b|i)\b/i.test(raw)) {
+        var bodyMatch = raw.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+        var inner = bodyMatch ? bodyMatch[1] : raw;
+        return { t: '', html: htmlForEditor(inner) };
       }
-      var raw = texts[0] || '';
-      S.editorSeed = M.sanitizeEditorHtml(/<[a-z][\s\S]*>/i.test(raw) ? raw : textToHtml(raw));
+      var lines = String(raw || '').replace(/\r\n?/g, '\n').split('\n');
+      var firstNonEmpty = '';
+      var startIdx = 0;
+      for (var i = 0; i < lines.length; i++) {
+        if (lines[i].trim()) { firstNonEmpty = lines[i].trim(); startIdx = i; break; }
+      }
+      if (firstNonEmpty && isChapHeadingLine(firstNonEmpty)) {
+        return { t: firstNonEmpty.replace(/^#{1,3}\s*/, ''), html: htmlForEditor(textToHtml(lines.slice(startIdx + 1).join('\n'))) };
+      }
+      return { t: '', html: htmlForEditor(textToHtml(raw)) };
+    });
+  }
+  function parseMultiImportFile(file) {
+    if (!/\.(txt|docx)$/i.test(file.name || '')) {
+      return Promise.reject(new Error('Chỉ hỗ trợ tệp .txt hoặc .docx cho nhập nhiều chương.'));
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      return Promise.reject(new Error('Tệp quá lớn (tối đa 20 MB). Hãy chia nhỏ tệp.'));
+    }
+    if (/\.docx$/i.test(file.name || '')) {
+      return readAsArrayBuffer(file).then(convertDocxBuffer).then(function (res) {
+        var parts = splitDocxHtmlIntoChapters(res.html);
+        return { file: file.name, bytes: file.size, parts: parts, imagesSkipped: res.imagesSkipped || 0 };
+      });
+    }
+    return readAsText(file).then(function (txt) {
+      var parts = splitTxtIntoChapters(txt);
+      return { file: file.name, bytes: file.size, parts: parts, imagesSkipped: 0 };
+    });
+  }
+  function openMultiImportModal(info, slug) {
+    PENDING_IMPORT = { slug: slug, parts: info.parts, file: info.file };
+    var kbLabel = info.bytes >= 1048576
+      ? (info.bytes / 1048576).toFixed(2) + ' MB'
+      : Math.max(1, Math.round(info.bytes / 1024)) + ' KB';
+    var previewList = info.parts.slice(0, 12).map(function (p, i) {
+      return '<li style="padding:3px 0;border-bottom:1px solid var(--bd)"><span class="mono xs dim">#' + (i + 1) + '</span> ' + esc(p.t) + '</li>';
+    }).join('');
+    var more = info.parts.length > 12 ? '<p class="xs dim mt">… và ' + (info.parts.length - 12) + ' chương nữa.</p>' : '';
+    var imgWarn = info.imagesSkipped ? '<p class="xs mut mt">Đã bỏ qua ' + info.imagesSkipped + ' ảnh nhúng trong Word để tránh lưu base64 nặng.</p>' : '';
+    var html = '<div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="importModalTitle">' +
+      '<div class="modal-hd">' + window.icon('upload', 's') + '<h3 id="importModalTitle">Xem trước nhập nhiều chương</h3>' +
+        '<button class="btn icon ghost sm" data-act="close-modal" aria-label="Đóng">' + window.icon('x', 's') + '</button></div>' +
+      '<div class="modal-bd">' +
+        '<p class="sm">Phát hiện <b>' + info.parts.length + ' chương</b> từ tệp <b>' + esc(info.file) + '</b> (' + esc(kbLabel) + ') cho bộ <b>' + esc(titleOf(slug)) + '</b>.</p>' +
+        imgWarn +
+        '<ul style="max-height:200px;overflow-y:auto;margin:10px 0;padding:0;list-style:none">' + previewList + '</ul>' +
+        more +
+        '<div class="field mt"><label for="importModeSel">Cách ghi vào bộ</label>' +
+          '<span class="sel"><select class="inp" id="importModeSel">' +
+            '<option value="append">Nối thêm vào cuối bộ (' + S.chapters.length + ' + ' + info.parts.length + ' chương)</option>' +
+            '<option value="replace">Thay thế toàn bộ chương hiện có (' + info.parts.length + ' chương)</option>' +
+          '</select></span></div>' +
+      '</div>' +
+      '<div class="modal-ft">' +
+        '<button class="btn sm" data-act="close-modal">Huỷ</button>' +
+        '<button class="btn pri sm" data-act="import-confirm">Xác nhận ghi lên KV</button>' +
+      '</div></div>';
+    openCustomModal(html, '#importModeSel');
+  }
+  function confirmMultiImport() {
+    if (!PENDING_IMPORT || !ensureOnline()) return;
+    var job = PENDING_IMPORT;
+    var modeEl = D.getElementById('importModeSel');
+    var mode = modeEl ? modeEl.value : 'append';
+    PENDING_IMPORT = null;
+    if (typeof window.closeModal === 'function') window.closeModal();
+    var slug = job.slug;
+    var incoming = job.parts.map(function (p) {
+      return { t: p.t, html: htmlForStorage(p.html), status: 'published' };
+    });
+    var ensureBook = (BOOK_SLUG === slug && BOOK && Array.isArray(BOOK.chapters))
+      ? Promise.resolve(BOOK)
+      : apiCall('/api/book/' + encodeURIComponent(slug)).catch(function () { return { slug: slug, title: titleOf(slug), chapters: [] }; });
+    ensureBook.then(function (baseBook) {
+      var nextBook = clone(baseBook || {});
+      nextBook.slug = slug;
+      nextBook.title = nextBook.title || titleOf(slug);
+      var existing = Array.isArray(nextBook.chapters) ? nextBook.chapters : [];
+      nextBook.chapters = mode === 'replace' ? incoming : existing.concat(incoming);
+      return apiCall('/api/book/' + encodeURIComponent(slug), { method: 'PUT', body: nextBook, timeout: 120000 })
+        .then(function () {
+          WRITES += 1; setQuota();
+          applyBook(slug, nextBook);
+          S.activeChapter = mode === 'replace' ? 0 : Math.max(0, nextBook.chapters.length - incoming.length);
+          syncChaptersToState();
+          say('Đã nhập ' + incoming.length + ' chương từ "' + job.file + '" lên KV.');
+          redraw();
+        });
+    }).catch(fail);
+  }
+  function realImportFile(el) {
+    if (!(el.files && el.files.length)) return;
+    var file = el.files[0];
+    var kind = el.dataset.kind;
+    var slug = BOOK_SLUG || S.chapterBook || S.selectedBook;
+    el.value = '';
+    if (!slug) { say('Chọn một bộ trước khi nhập chương.', 'bad'); return; }
+    if (kind === 'multi') {
+      if (!ensureOnline()) return;
+      say('Đang đọc và tách chương từ "' + file.name + '"…', 'info');
+      parseMultiImportFile(file).then(function (info) {
+        if (!info.parts.length) throw new Error('Không tìm thấy nội dung chương hợp lệ trong tệp này.');
+        openMultiImportModal(info, slug);
+      }).catch(fail);
+      return;
+    }
+    parseSingleImportFile(file).then(function (parsed) {
       S.editorPreview = false;
-      say('Đã nạp nội dung vào trình soạn · bấm Lưu chương để ghi KV.');
+      S.editorSeed = parsed.html || '<p><br></p>';
+      FORCE_EDITOR_SEED = true;
+      var cur = S.chapters[S.activeChapter];
+      if (parsed.t && cur) {
+        cur.t = parsed.t;
+        delete S.models['chapter-title'];
+      }
+      DIRTY_CHAPTER = true;
       redraw();
-    }).then(function () { redraw(); }).catch(fail);
+      snapshotLiveEditor();
+      updateSaveNoteDom();
+      say('Đã nạp "' + file.name + '" vào trình soạn · bấm Lưu chương để ghi KV.');
+    }).catch(fail);
+  }
+  function realInsertImageFile(file) {
+    if (!file || !ensureOnline()) return Promise.resolve();
+    ensureEditingMode();
+    var ed = D.getElementById('editor');
+    if (ed) saveEditorSelection();
+    say('Đang tối ưu và tải ảnh lên Worker…', 'info');
+    return prepareImagePayload(file, 1400).then(function (img) {
+      return apiCall('/api/img', { method: 'POST', body: { type: img.type, data: img.data, kind: 'chapter', id: img.id || '' }, timeout: 30000 });
+    }).then(function (r) {
+      var rawSrc = (r && (r.url || (r.id ? '/api/img/' + r.id : ''))) || '';
+      if (!rawSrc) throw new Error('Worker không trả URL ảnh.');
+      var editorSrc = rewriteImgForEditor('src="' + rawSrc + '"').slice(5, -1);
+      var altText = String(file.name || '').replace(/\.[^.]+$/, '');
+      var snippet = '<p><img class="story-inline-image" src="' + esc(editorSrc) + '" alt="' + esc(altText) + '"></p><p><br></p>';
+      var liveEd = D.getElementById('editor');
+      if (liveEd) {
+        insertHtmlAtEditorCursor(liveEd, snippet);
+        markEditorDirtyAndAutosave();
+      } else {
+        S.editorSeed = htmlForEditor((S.editorSeed || '') + snippet);
+        FORCE_EDITOR_SEED = true;
+        DIRTY_CHAPTER = true;
+        redraw();
+      }
+      say('Đã tải ảnh lên Worker và chèn tại vị trí con trỏ.');
+    }).catch(fail);
   }
   function realInsertImage(el) {
-    if (!ensureOnline() || !(el.files && el.files.length)) return;
+    if (!(el.files && el.files.length)) return;
     var file = el.files[0]; el.value = '';
-    readAsDataURL(file).then(function (url) {
-      return apiCall('/api/img', { method: 'POST', body: { type: file.type || 'image/png', data: url, kind: 'chapter' }, timeout: 30000 });
-    }).then(function (r) {
-      var src = r.url || ('/api/img/' + r.id);
-      S.editorPreview = false;
-      S.editorSeed = M.sanitizeEditorHtml((S.editorSeed || '') + '<p><img src="' + esc(src) + '" alt="' + esc(file.name) + '"></p>');
-      say('Đã tải ảnh lên KV và chèn vào chương.'); redraw();
-    }).catch(fail);
+    realInsertImageFile(file);
   }
   function realCoverUpload(el) {
     if (!ensureOnline() || !(el.files && el.files.length)) return;
     var file = el.files[0]; el.value = '';
-    readAsDataURL(file).then(function (url) {
-      return apiCall('/api/img', { method: 'POST', body: { type: file.type || 'image/png', data: url, kind: 'cover' }, timeout: 30000 });
+    prepareImagePayload(file, 1200).then(function (img) {
+      return apiCall('/api/img', { method: 'POST', body: { type: img.type, data: img.data, kind: 'cover' }, timeout: 30000 });
     }).then(function (r) {
       var src = r.url || ('/api/img/' + r.id);
+      if (/^\/api\/img\//i.test(src) && CFG.base) src = CFG.base + src;
       var meta = findMeta(S.selectedBook || BOOK_SLUG);
       if (!meta) throw new Error('Chọn bộ trước khi tải bìa.');
       var next = clone(REG);
@@ -1141,6 +2536,84 @@
     }).then(function () { say('Đã lưu ảnh bìa lên KV.'); }).catch(fail);
   }
 
+  /* Dán nội dung thông minh vào #editor: giữ đậm/nghiêng/gạch chân/tiêu đề/đoạn văn
+     từ Word/Google Docs/HTML qua <template> trơ (chặn mọi script & onerror),
+     hoặc tải ảnh nếu dán ảnh từ clipboard. */
+  D.addEventListener('paste', function (e) {
+    var t = e.target;
+    var ed = t && t.closest ? t.closest('#editor') : null;
+    if (!ed) return;
+    var cd = e.clipboardData || window.clipboardData;
+    if (!cd) return;
+    var items = cd.items ? Array.prototype.slice.call(cd.items) : [];
+    var htmlData = String(cd.getData('text/html') || '');
+    var textData = String(cd.getData('text/plain') || '');
+    var imgItem = items.find(function (it) { return it && it.kind === 'file' && /^image\//i.test(it.type || ''); });
+    if (imgItem && !textData.trim() && !htmlData.trim()) {
+      var imgFile = imgItem.getAsFile && imgItem.getAsFile();
+      if (imgFile) {
+        e.preventDefault(); e.stopPropagation();
+        realInsertImageFile(imgFile);
+        return;
+      }
+    }
+    e.preventDefault(); e.stopPropagation();
+    saveEditorSelection();
+    var toInsert = '';
+    if (!e.shiftKey && htmlData && /<[a-z][\s\S]*>/i.test(htmlData)) {
+      var bodyM = htmlData.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+      var rawFrag = (bodyM ? bodyM[1] : htmlData).replace(/<!--StartFragment-->|<!--EndFragment-->/g, '');
+      var box = boxFromHtml(realSanitizeEditorHtml(rewriteImgForEditor(rawFrag), { fromPaste: true }));
+      normalizeBlocksInContainer(box);
+      toInsert = box.innerHTML.trim();
+    }
+    if (!toInsert) {
+      var normalizedTxt = textData.replace(/\r\n?/g, '\n');
+      toInsert = /\n/.test(normalizedTxt) ? textToHtml(normalizedTxt) : esc(normalizedTxt);
+    }
+    if (toInsert) {
+      insertHtmlAtEditorCursor(ed, toInsert);
+      markEditorDirtyAndAutosave();
+      updateToolbarActiveState();
+    }
+  }, true);
+
+  D.addEventListener('focusin', function (e) {
+    var ed = e.target && e.target.id === 'editor' ? e.target : null;
+    if (!ed) return;
+    try { if (D.execCommand) D.execCommand('defaultParagraphSeparator', false, 'p'); } catch (err) {}
+    saveEditorSelection(); updateToolbarActiveState();
+  });
+  ['keyup', 'mouseup'].forEach(function (evName) {
+    D.addEventListener(evName, function (e) {
+      if (e.target && e.target.closest && e.target.closest('#editor')) { saveEditorSelection(); updateToolbarActiveState(); }
+    });
+  });
+  D.addEventListener('input', function (e) {
+    var el = e.target;
+    if (!el) return;
+    if (el.id === 'editor' || (el.closest && el.closest('#editor'))) {
+      saveEditorSelection();
+      markEditorDirtyAndAutosave();
+      return;
+    }
+    if (el.dataset && (el.dataset.role === 'chapter-title' || el.dataset.role === 'chapter-at')) {
+      DIRTY_CHAPTER = true;
+      if (el.dataset.role === 'chapter-at') S.chapterAt = el.value;
+      clearTimeout(EDITOR_AUTOSAVE_TIMER);
+      EDITOR_AUTOSAVE_TIMER = setTimeout(function () { snapshotLiveEditor(); updateSaveNoteDom(); }, 550);
+      updateSaveNoteDom();
+    }
+  }, true);
+  D.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && S.modal && S.modal.kind === 'custom') {
+      if (e.target && e.target.id === 'linkModalHref' || (e.target && e.target.id === 'linkModalText')) {
+        e.preventDefault();
+        applyLinkFromModal(false);
+      }
+    }
+  });
+
   D.addEventListener('change', function (e) {
     var el = e.target; if (!el || !el.dataset) return;
     var r = el.dataset.role;
@@ -1148,9 +2621,28 @@
     else if (r === 'import-file') { e.preventDefault(); e.stopPropagation(); realImportFile(el); }
     else if (r === 'chapter-image') { e.preventDefault(); e.stopPropagation(); realInsertImage(el); }
     else if (r === 'cover-upload') { e.preventDefault(); e.stopPropagation(); realCoverUpload(el); }
+    else if (r === 'chapter-status') {
+      e.preventDefault(); e.stopPropagation();
+      snapshotLiveEditor();
+      S.chapterStatus = el.value;
+      if (S.chapterStatus === 'scheduled' && !S.chapterAt) S.chapterAt = defaultScheduleLocalInput();
+      DIRTY_CHAPTER = true;
+      redraw();
+    }
+    else if (r === 'case-mode') {
+      if (el.value && typeof window.applyCase === 'function') {
+        e.preventDefault(); e.stopPropagation();
+        window.applyCase(el.value);
+        el.value = '';
+        DIRTY_CHAPTER = true;
+        snapshotLiveEditor();
+        updateSaveNoteDom();
+      }
+    }
     else if (r === 'chapter-book') {
       e.preventDefault(); e.stopPropagation();
-      S.chapterBook = el.value;
+      snapshotLiveEditor();
+      S.chapterBook = el.value; S.selectedBook = el.value; S.editorPreview = false;
       (S.conn === 'static' ? loadStaticBook(el.value) : loadBook(el.value)).catch(function () {});
     }
     else if (r === 'picked') {
@@ -1158,9 +2650,6 @@
       var pid = el.dataset.id, at = S.picked.indexOf(pid);
       if (el.checked && at < 0) S.picked.push(pid);
       else if (!el.checked && at >= 0) S.picked.splice(at, 1);
-      /* Cả card Homepage CMS lẫn trang Chuyển thể Series đang mở đều có bộ
-         đếm; cập nhật đồng loạt (change bị chặn ở capture nên hàm inline
-         syncSeriesCount() không chạy được ở đây). */
       ['hpPickedCount', 'seriesPageCount', 'seriesPageFootCount'].forEach(function (id) {
         var n = D.getElementById(id); if (n) n.textContent = String(S.picked.length);
       });

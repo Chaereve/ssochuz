@@ -154,7 +154,7 @@
   function cleanHTML(html) {
     var tmp = document.createElement('div');
     tmp.innerHTML = String(html || '');
-    $$('script,style,iframe,form,object,embed,link,meta,input,button', tmp).forEach(function (el) { el.remove(); });
+    $$('script,style,iframe,form,object,embed,link,meta,input,button,.pagination-container', tmp).forEach(function (el) { el.remove(); });
     $$('*', tmp).forEach(function (el) {
       Array.prototype.slice.call(el.attributes || []).forEach(function (a) {
         var n = String(a.name || '').toLowerCase(), v = String(a.value || '');
@@ -169,10 +169,24 @@
         if (CZ.API && /^\s*\/api\/img\//i.test(src)) el.setAttribute('src', CZ.API + src.replace(/^\s+/, ''));
       }
     });
-    /* <div> chỉ chứa chữ → <p> cho đúng nhịp đoạn văn */
+    /* <div> chỉ chứa chữ → <p> cho đúng nhịp đoạn văn (giữ class/căn lề cho ch-sep, chat, thơ) */
     $$('div', tmp).forEach(function (d) {
+      if (d.classList && (d.classList.contains('chat-container') || d.classList.contains('msg'))) return;
+      if (!d.getAttribute('class') && !d.querySelector('img,video,audio,hr,table,figure') &&
+          !(d.textContent || '').replace(/\u00a0/g, ' ').trim() &&
+          /^height\s*:\s*\d+(?:\.\d+)?px\s*;?$/i.test(String(d.getAttribute('style') || '').trim())) {
+        d.remove(); return;
+      }
       if (!d.querySelector('div,p,ul,ol,blockquote,table,img,figure,h1,h2,h3,h4')) {
         var p = document.createElement('p');
+        if (d.className) p.className = d.className;
+        var st = d.getAttribute('style');
+        if (st && /text-align\s*:\s*(center|right|left|justify)/i.test(st)) {
+          var m = st.match(/text-align\s*:\s*(center|right|left|justify)/i);
+          if (m) p.style.textAlign = m[1].toLowerCase();
+        }
+        var al = d.getAttribute('align');
+        if (al && /^(center|right|left|justify)$/i.test(al)) p.setAttribute('align', al.toLowerCase());
         p.innerHTML = d.innerHTML;
         d.parentNode.replaceChild(p, d);
       }
