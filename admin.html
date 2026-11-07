@@ -301,7 +301,57 @@ select.inp{appearance:none;padding-right:32px;cursor:pointer}
 .title-case>.inp{flex:1 1 220px;width:auto;min-width:0}
 .title-case>.sel{flex:0 0 168px;min-width:0}
 @media (max-width:600px){.title-case>.inp,.title-case>.sel{flex:1 1 100%}}
-.ch-sep{text-align:center;letter-spacing:.55em;color:var(--acc);font:600 13px/1.6 var(--mono);margin:16px 0}
+.ch-sep,.rtext .ch-sep{text-align:center;letter-spacing:.55em;color:var(--acc);font:600 13px/1.6 var(--mono);margin:1.6em 0}
+.ed-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:6px 8px;border:1px solid var(--bd);border-radius:var(--r8);background:var(--surf2)}
+.ed-toolbar .ed-sep{width:1px;height:20px;background:var(--bd2);margin:0 3px;flex:none}
+.ed-toolbar .btn.on,.ed-toolbar .btn[aria-pressed="true"]{background:var(--acc-soft);border-color:var(--acc);color:var(--acc)}
+.ch-list-scroll{max-height:300px;overflow-y:auto}
+.list-item.ch.active{background:var(--acc-soft);border-radius:var(--r6)}
+.list-item.q.clickable{cursor:pointer;border-radius:var(--r6);padding-left:8px;padding-right:8px}
+.list-item.q.clickable:hover{background:var(--surf2)}
+#editor.inp{min-height:380px;max-height:68vh;overflow-y:auto;padding:20px 24px;height:auto;line-height:1.8;font-family:var(--head);font-size:17px;color:var(--txt);background:var(--bg);border:1px solid var(--bd2);border-radius:var(--r8);overflow-wrap:break-word}
+#editor.inp[hidden]{display:none}
+#editor:empty::before{content:attr(data-placeholder);color:var(--dim);pointer-events:none}
+#editor>*:first-child,.rtext>*:first-child{margin-top:0}
+#editor p,#editor div:not(.chat-container):not(.msg){margin:0 0 .95em}
+#editor p:last-child,#editor div:last-child,.rtext p:last-child{margin-bottom:0}
+#editor h1,#editor h2,.rtext h1,.rtext h2{font-family:var(--head);font-size:22px;font-weight:700;margin:1.5em 0 .55em;line-height:1.3}
+#editor h3,.rtext h3{font-family:var(--head);font-size:18.5px;font-weight:700;margin:1.3em 0 .45em;line-height:1.35}
+#editor h4,.rtext h4{font-family:var(--head);font-size:16.5px;font-weight:700;margin:1.15em 0 .4em;line-height:1.35}
+#editor blockquote{margin:1.25em 0;padding:6px 16px;border-left:3px solid var(--acc);color:var(--mut);background:var(--surf2);font-style:italic;border-radius:0 var(--r6) var(--r6) 0}
+#editor hr,.rtext hr{border:0;height:1px;width:38%;margin:2em auto;background:var(--bd2)}
+#editor ul,#editor ol,.rtext ul,.rtext ol{margin:0 0 1em 1.2em;padding-left:.5em}
+#editor ul,.rtext ul{list-style:disc}
+#editor ol,.rtext ol{list-style:decimal}
+#editor li,.rtext li{margin-bottom:.35em}
+#editor img,#editor video,.rtext img,.rtext video{max-width:100%;height:auto;border-radius:var(--r8);margin:12px auto;display:block}
+#editor figure,.rtext figure{margin:1.3em 0;text-align:center}
+#editor figcaption,.rtext figcaption{font-size:13px;color:var(--mut);margin-top:6px}
+#editor a,.rtext a{color:var(--acc);text-decoration:underline;text-underline-offset:2px}
+#editor u,.rtext u{text-decoration:underline}
+#editor s,#editor strike,#editor del,.rtext s,.rtext strike,.rtext del{text-decoration:line-through}
+#editor pre,#editor code,.rtext pre,.rtext code{font-family:var(--mono);font-size:.88em;background:var(--surf2);border-radius:var(--r6)}
+#editor pre,.rtext pre{padding:12px 14px;overflow-x:auto;margin:1.1em 0;white-space:pre-wrap}
+#editor code,.rtext code{padding:1px 5px}
+#editor table,.rtext table{width:100%;border-collapse:collapse;margin:1.1em 0;font-size:15px}
+#editor th,#editor td,.rtext th,.rtext td{border:1px solid var(--bd2);padding:7px 10px}
+#editor .chat-container,.rtext .chat-container{display:flex;flex-direction:column;gap:6px;margin:1.1em 0}
+#editor .msg,.rtext .msg{max-width:76%;padding:8px 13px;border-radius:14px;font-family:var(--font);font-size:14.5px;line-height:1.45;border:1px solid var(--bd2);background:var(--surf2);color:var(--txt);margin:0;text-align:left}
+#editor .msg.left,.rtext .msg.left{align-self:flex-start;border-bottom-left-radius:4px}
+#editor .msg.right,.rtext .msg.right{align-self:flex-end;background:var(--acc-soft);border-color:var(--acc);border-bottom-right-radius:4px}
+#editor .msg b,#editor .msg strong,.rtext .msg b,.rtext .msg strong{display:block;font-size:11px;margin-bottom:2px;color:var(--acc)}
+.reader-preview{border:1px solid var(--bd2);border-radius:var(--r12);background:var(--bg);overflow:hidden}
+.rd-preview-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 18px;border-bottom:1px solid var(--bd);background:var(--surf2);flex-wrap:wrap}
+.rd-stage{max-width:768px;margin:0 auto;padding:28px 24px 36px;max-height:70vh;overflow-y:auto}
+.rdhead{max-width:720px;margin:0 auto 22px;padding-bottom:18px;border-bottom:1px solid var(--bd)}
+.rdhead .rd-crumb{font-size:12px;color:var(--mut);margin-bottom:8px}
+.rdhead .rd-title{font-family:var(--head);font-size:clamp(22px,2.6vw,30px);font-weight:700;line-height:1.2;letter-spacing:-.01em;color:var(--txt);margin:0 0 10px}
+.rdhead .rd-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:12.5px;color:var(--mut)}
+.rtext{max-width:720px;margin:0 auto;font-family:var(--head);font-size:18px;line-height:1.8;color:var(--txt);overflow-wrap:break-word}
+.rtext p{margin:0 0 1.05em}
+.rtext p:empty{margin:0}
+.rtext blockquote{margin:1.4em 0;padding:2px 0 2px 18px;border-left:2px solid var(--acc);color:var(--mut);font-style:italic}
+@media(max-width:600px){#editor.inp{padding:16px}.rd-stage{padding:20px 16px 26px}.rtext{font-size:17px}}
 .sysrow{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)}
 .sysrow:last-child{border-bottom:0}
 .sysrow .dot{width:8px;height:8px;border-radius:99px;flex:none;margin-top:6px;background:var(--ok)}
@@ -1122,34 +1172,7 @@ function editBookHTML(){
    nội dung dán vào contenteditable). render() vẫn
    dựng lại editorSeed, nên lọc 2 lớp: regex chặn handler/script TRƯỚC khi
    parse, rồi DOM bỏ thẻ không cho phép và URL javascript:/data:/blob:. */
-function sanitizeEditorHtml(input){
-  var src=String(input==null?'':input)
-    .replace(/<\s*(script|iframe|object|embed|link|meta|base|style|form|svg|math|template)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi,'')
-    .replace(/<\s*(script|iframe|object|embed|link|meta|base|style|form|svg|math|template)\b[^>]*\/?>/gi,'')
-    .replace(/\son[a-z0-9_-]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi,'')
-    .replace(/\s(?:srcdoc|formaction)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi,'')
-    .replace(/(\s(?:href|src|xlink:href)\s*=\s*)(["']?)\s*(?:javascript|data|blob):[^"'<>\s]*\2/gi,'');
-  var box=document.createElement('div');
-  box.innerHTML=src;
-  var allowed={P:1,BR:1,B:1,STRONG:1,I:1,EM:1,U:1,H1:1,H2:1,H3:1,H4:1,BLOCKQUOTE:1,UL:1,OL:1,LI:1,A:1,IMG:1,DIV:1,SPAN:1,HR:1};
-  Array.prototype.slice.call(box.querySelectorAll('*')).forEach(function(el){
-    var tag=el.tagName.toUpperCase();
-    Array.prototype.slice.call(el.attributes).forEach(function(a){
-      var nm=a.name.toLowerCase(),v=String(a.value||'').trim();
-      if(/^on/i.test(nm)||nm==='srcdoc'||nm==='formaction'){el.removeAttribute(a.name);return;}
-      if((nm==='href'||nm==='src'||nm==='xlink:href')&&/^\s*(?:javascript|data|blob):/i.test(v)){el.removeAttribute(a.name);return;}
-      if(nm==='style'&&/(?:url\s*\(|expression\s*\()/i.test(v))el.removeAttribute(a.name);
-    });
-    if(!allowed[tag]){
-      var par=el.parentNode;if(!par)return;
-      while(el.firstChild)par.insertBefore(el.firstChild,el);
-      par.removeChild(el);return;
-    }
-    Array.prototype.slice.call(el.classList).forEach(function(c){if(c!=='ch-sep')el.classList.remove(c);});
-    if(!el.getAttribute('class'))el.removeAttribute('class');
-  });
-  return box.innerHTML;
-}
+function sanitizeEditorHtml(input){return window.__CZ_SANITIZE__?window.__CZ_SANITIZE__(input):String(input==null?'':input).replace(/<(?:script|iframe|object|embed|style|svg|math|template|form)[\s\S]*?>/gi,'');}
 function editorHtml(){return sanitizeEditorHtml(state.editorSeed);}
 function sanitizeEditorDom(){
   var el=document.getElementById('editor');
@@ -1169,59 +1192,20 @@ function chapterPipeline(){
     waiting:state.books.filter(function(b){return Number(b.pending)>0;})
   };
   var empty={draft:'Không có bộ nháp.',pending:'Không có bộ chờ duyệt.',scheduled:'Không có bộ hẹn giờ.',waiting:'Không có chương nào đang hẹn giờ.'};
-  var pick=state.chapterBook||(state.books[0]||{}).id;
+  var pick=state.chapterBook||state.selectedBook||(state.books[0]||{}).id;
   var head='<div class="card"><div class="card-hd"><h3>Chọn một bộ để quản lý chương</h3><span class="right">'+state.books.length+' bộ</span></div><div class="card-bd">'+
     '<div class="row wrap" style="gap:8px"><span class="sel" style="flex:1 1 220px"><select class="inp" data-role="chapter-book" aria-label="Chọn bộ">'+bookOptions(pick)+'</select></span>'+
     '<button class="btn sm" data-act="manage-chapters">'+icon('list','s')+'Quản lý chương</button></div></div></div>';
   return head+'<div class="grid2 mt">'+tabs.map(function(t){
     var list=queues[t[0]];
     return '<div class="card"><div class="card-hd"><h3>'+esc(t[1])+'</h3><span class="right">'+list.length+'</span></div><div class="card-bd tight" style="padding:0 14px">'+
-      (list.length?list.slice(0,4).map(function(b){
-        return '<div class="list-item q"><div class="t"><b>'+esc(b.t)+'</b><span>'+(t[0]==='waiting'?b.pending+' chương chờ tới giờ':b.ch+' chương')+' · '+esc(b.d.slice(0,5))+'</span></div>'+badge(PUB[b.pub][0],PUB[b.pub][1])+'</div>';
+      (list.length?list.slice(0,6).map(function(b){
+        return '<div class="list-item q clickable" data-act="chapter-pick-book" data-id="'+esc(b.id)+'"><div class="t"><b>'+esc(b.t)+'</b><span>'+(t[0]==='waiting'?b.pending+' chương chờ tới giờ':b.ch+' chương')+' · '+esc(b.d.slice(0,5))+'</span></div>'+badge(PUB[b.pub][0],PUB[b.pub][1])+'</div>';
       }).join(''):'<div class="state" style="min-height:100px;border:0"><p>'+esc(empty[t[0]])+'</p></div>')+
       '</div></div>';
   }).join('')+'</div>';
 }
-function chapterEditorHTML(){
-  var tools=[['bold','bold','In đậm'],['italic','italic','In nghiêng'],['h2','h2','Tiêu đề'],['quote','quote','Trích dẫn'],['link','link','Chèn liên kết']];
-  var imports=[['single','Import .txt/.html','.txt,.html,.htm'],['multi','Nhập nhiều chương .txt/.docx','.txt,.docx']];
-  var left='<div class="card"><div class="card-hd"><h3>Danh sách chương</h3><button class="btn sm" data-act="chapter-add">'+icon('plus','s')+'Thêm</button></div><div class="card-bd tight" style="padding:6px 10px">'+
-    state.chapters.map(function(c,i){
-      return '<div class="list-item ch" style="gap:6px"><button class="btn ghost sm" style="text-align:left;justify-content:flex-start;overflow:hidden" data-act="chapter-select" data-idx="'+i+'"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap'+(i===state.activeChapter?';color:var(--acc)':'')+'">'+esc(c.t)+'</span></button>'+
-        '<button class="btn icon ghost sm" data-act="chapter-move" data-dir="-1" data-idx="'+i+'" aria-label="Di chuyển lên">'+icon('arrowup','s')+'</button>'+
-        '<button class="btn icon ghost sm" data-act="chapter-move" data-dir="1" data-idx="'+i+'" aria-label="Di chuyển xuống">'+icon('arrowdown','s')+'</button>'+
-        '<button class="btn icon ghost sm" data-act="chapter-delete" data-idx="'+i+'" aria-label="Xóa chương">'+icon('trash','s')+'</button></div>';
-    }).join('')+'</div></div>';
-  var editor='<div class="card" id="editorCard"><div class="card-hd"><h3>Trình soạn chương</h3><span class="right" id="saveNote" aria-live="polite">'+icon('check','xs')+' Đã lưu lúc '+esc(state.savedAt)+'</span></div><div class="card-bd">'+
-    '<div class="field mb"><label for="chapterTitle">Tên chương</label>'+
-    '<div class="row title-case"><input class="inp" id="chapterTitle" data-role="chapter-title" value="'+esc((state.chapters[state.activeChapter]||{t:''}).t)+'" placeholder="Chương mới · tiêu đề">'+
-      '<span class="sel"><select class="inp" data-role="case-mode" aria-label="Đổi case tên chương">'+
-      '<option value="">Đổi case tên…</option><option value="upper">CHỮ HOA</option><option value="lower">chữ thường</option>'+
-      '<option value="title">Chữ Hoa Mỗi Từ</option><option value="sentence">Định dạng câu</option></select></span></div>'+
-    '<span class="hint">Chỉ đổi tên chương.</span></div>'+
-    '<div class="grid2 mb" style="gap:10px"><div class="field"><label for="chapterStatus">Trạng thái chương</label>'+
-      '<span class="sel"><select class="inp" id="chapterStatus" data-role="chapter-status">'+Object.keys(CH_STATUS).map(function(k){return '<option value="'+k+'"'+(k===state.chapterStatus?' selected':'')+'>'+esc(CH_STATUS[k])+'</option>';}).join('')+'</select></span></div>'+
-      (state.chapterStatus==='scheduled'?'<div class="field"><label for="chapterAt">Chương lên sóng lúc</label><input class="inp" id="chapterAt" data-role="chapter-at" type="datetime-local" value="'+esc(state.chapterAt||'2026-11-05T08:00')+'"></div>':'<div class="field"><span class="lb">Số liệu chương</span><span class="sm mut">~120 từ</span></div>')+
-    '</div>'+
-    '<div class="row wrap mb" style="gap:6px">'+tools.map(function(t){
-      return '<button class="btn icon sm" data-act="format" data-cmd="'+t[1]+'" data-tip="'+esc(t[2])+'" aria-label="'+esc(t[2])+'">'+icon(t[0],'s')+'</button>';
-    }).join('')+'<button class="btn icon sm" data-act="insert-image" data-tip="Tải ảnh vào chương" aria-label="Tải ảnh vào chương">'+icon('image','s')+'</button>'+
-    '<button class="btn sm" data-act="insert-separator" data-tip="Chèn dấu ngăn cách nội dung" aria-label="Chèn dấu ngăn cách nội dung">'+icon('separator','s')+'Chèn dấu ngăn cách</button>'+
-    '<span class="grow"></span><button class="btn sm" data-act="toggle-preview">'+icon('eye','s')+(state.editorPreview?'Đóng xem trước':'Xem trước')+'</button></div>'+
-    (state.editorPreview
-      ? '<div class="card" style="background:var(--surf2)"><div class="card-bd"><div class="lb mb">Xem trước</div><div style="font-family:var(--head);font-size:16px;line-height:1.8">'+esc(plainText(editorHtml()))+'</div></div></div>'
-      : '<div id="editor" class="inp" data-role="editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Nội dung chương" style="min-height:190px;height:auto;line-height:1.8;font-family:var(--head);font-size:15px">'+editorHtml()+'</div>')+
-    '<div class="row wrap mt" style="gap:8px"><span class="lb">Nhập:</span>'+imports.map(function(im){
-      return '<label class="btn sm">'+esc(im[1])+'<input type="file" class="sr-only" accept="'+esc(im[2])+'" data-role="import-file" data-kind="'+im[0]+'" aria-label="Nhập '+esc(im[1])+'"></label>';
-    }).join('')+'<label class="btn sm">'+icon('image','s')+'Ảnh vào chương<input type="file" class="sr-only" accept="image/*" data-role="chapter-image" aria-label="Tải ảnh vào chương"></label></div>'+
-    '<div class="row wrap mt"><span class="grow"></span>'+
-      '<button class="btn sm" data-act="restore-draft">Khôi phục nháp</button>'+
-      '<button class="btn pri sm" data-act="save-chapter">'+icon('save','s')+'Lưu chương</button>'+
-      '<button class="btn danger sm" data-act="chapter-delete" data-idx="'+state.activeChapter+'">'+icon('trash','s')+'Xoá chương</button></div>'+
-    '<div class="state-note mt">'+icon('info','s')+' Ctrl/Cmd+S lưu · Ctrl/Cmd+Alt+N thêm chương.</div>'+
-    '</div></div>';
-  return chapterPipeline()+'<div class="mt">'+left+'</div><div class="mt">'+editor+'</div>';
-}
+function chapterEditorHTML(){return window.__CZ_CHAPTER_VIEW__?window.__CZ_CHAPTER_VIEW__():chapterPipeline();}
 
 /* ---------- 6 · Bình luận ---------- */
 function commentsHTML(){
@@ -2403,6 +2387,7 @@ let saveTimer=null;
 /* Dán vào trình soạn: chỉ chèn text thường. Nếu để trình duyệt tự dán HTML,
    onerror của <img> chạy ngay trong DOM sống trước khi sự kiện input kịp lọc. */
 document.addEventListener('paste',function(e){
+  if(window.__CZ_REAL_EDITOR__)return;
   var t=e.target;
   if(!t||!t.closest||!t.closest('#editor'))return;
   e.preventDefault();
@@ -2453,6 +2438,7 @@ document.addEventListener('input',function(e){
       if(ok&&state.modal&&state.modal.kind==='strong')ok.disabled=(el.value.trim()!==state.modal.phrase);
       break;
     case 'editor':
+      if(window.__CZ_REAL_EDITOR__)break;
       sanitizeEditorDom();
       clearTimeout(saveTimer);
       saveTimer=setTimeout(function(){
@@ -2557,6 +2543,6 @@ window.CZ_MOCKUP = {
   SAMPLE_NOTIFS: SAMPLE_NOTIFS, SAMPLE_LOGS: SAMPLE_LOGS
 };
 </script>
-<script src="/admin-real.js?v=28c59a8c02"></script>
+<script src="/admin-real.js?v=d1066af1c1"></script>
 </body>
 </html>
