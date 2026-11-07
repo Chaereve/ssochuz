@@ -407,6 +407,13 @@
     if (al) dstEl.setAttribute('align', al);
   }
   function normalizeBlocksInContainer(box) {
+    Array.prototype.slice.call(box.querySelectorAll('hr')).forEach(function (hr) {
+      if (!hr.parentNode) return;
+      var sp = D.createElement('p');
+      sp.className = 'ch-sep';
+      sp.textContent = '✦';
+      hr.parentNode.replaceChild(sp, hr);
+    });
     if (!box.querySelector(BLOCK_CHILD_SEL) && DOUBLE_BR_RE.test(box.innerHTML)) {
       box.innerHTML = box.innerHTML.split(DOUBLE_BR_SPLIT).map(function (s) { return s.trim(); }).filter(Boolean)
         .map(function (s) { return '<p>' + s + '</p>'; }).join('');
@@ -471,6 +478,19 @@
       while (box.firstChild) wrap.appendChild(box.firstChild);
       box.appendChild(wrap);
     }
+    var sepRawRe = /^(?:(?:\*(?:\s*\*){2,})|(?:•(?:\s*•){2,})|(?:·(?:\s*·){2,})|(?:[-–―−─━_~=](?:\s*[-–―−─━_~=]){2,})|(?:[—⸺](?:\s*[—⸺])+)|⸻+|✦)$/u;
+    var sepDefRe = /^(?:(?:•(?:\s*•)*)|(?:·(?:\s*·)*)|(?:\*(?:\s*\*){2,})|(?:[-–―−─━_~=](?:\s*[-–―−─━_~=]){2,})|(?:[—⸺](?:\s*[—⸺])+)|⸻+|✦)?$/u;
+    Array.prototype.slice.call(box.querySelectorAll('p')).forEach(function (p) {
+      var stxt = String(p.textContent || '').replace(/[\s\u00a0\u200b\ufeff]+/g, ' ').trim();
+      if (p.classList && p.classList.contains('ch-sep')) {
+        if (sepDefRe.test(stxt)) p.textContent = '✦';
+        p.removeAttribute('style'); p.removeAttribute('align');
+      } else if (!(p.classList && (p.classList.contains('chat-container') || p.classList.contains('msg'))) && !p.querySelector('img,video,audio,a,table,figure,br') && sepRawRe.test(stxt)) {
+        p.className = 'ch-sep';
+        p.removeAttribute('style'); p.removeAttribute('align');
+        p.textContent = '✦';
+      }
+    });
   }
   function htmlForEditor(rawHtml) {
     var box = boxFromHtml(realSanitizeEditorHtml(rewriteImgForEditor(rawHtml)));
@@ -1691,7 +1711,7 @@
   function realInsertSeparator() {
     ensureEditingMode();
     var ed = D.getElementById('editor');
-    var sep = '<p class="ch-sep">•••</p><p><br></p>';
+    var sep = '<p class="ch-sep">✦</p><p><br></p>';
     if (!ed) {
       S.editorSeed = htmlForEditor((S.editorSeed || '') + sep);
       FORCE_EDITOR_SEED = true;
@@ -1700,7 +1720,7 @@
     }
     insertHtmlAtEditorCursor(ed, sep);
     markEditorDirtyAndAutosave();
-    say('Đã chèn dấu ngăn cách.');
+    say('Đã chèn dấu ngăn cách cảnh.');
   }
   function renderPreviewCardHtml(bookSlug, idx, curTitle, curHtml) {
     var b = M.getBook(bookSlug) || {};
@@ -2011,7 +2031,7 @@
         return '<button class="btn icon sm" type="button" data-act="format" data-cmd="' + t[1] + '" data-tip="' + esc(t[2]) + '" aria-label="' + esc(t[2]) + '">' + window.icon(t[0], 's') + '</button>';
       }).join('') +
       '<button class="btn icon sm" type="button" data-act="insert-image" data-tip="Tải ảnh vào vị trí con trỏ" aria-label="Tải ảnh vào chương">' + window.icon('image', 's') + '</button>' +
-      '<button class="btn sm" type="button" data-act="insert-separator" data-tip="Chèn dấu ngăn cách •••" aria-label="Chèn dấu ngăn cách nội dung">' + window.icon('separator', 's') + 'Ngăn cách</button>' +
+      '<button class="btn sm" type="button" data-act="insert-separator" data-tip="Chèn dấu ngăn cách cảnh (─── ✦ ───)" aria-label="Chèn dấu ngăn cách nội dung">' + window.icon('separator', 's') + 'Ngăn cách</button>' +
       '<span class="grow"></span>' +
       '<button class="btn sm" type="button" data-act="toggle-preview">' + window.icon('eye', 's') + (S.editorPreview ? 'Đóng xem trước' : 'Xem trước độc giả') + '</button>' +
       '</div>';
@@ -2509,11 +2529,17 @@
     }
   }, true);
   D.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter' && S.modal && S.modal.kind === 'custom') {
-      if (e.target && e.target.id === 'linkModalHref' || (e.target && e.target.id === 'linkModalText')) {
-        e.preventDefault();
-        applyLinkFromModal(false);
-      }
+    if (e.key !== 'Enter' || e.shiftKey) return;
+    var ed = e.target && e.target.closest ? e.target.closest('#editor') : null;
+    if (!ed) return;
+    var sepEl = findAncestorInEditor(ed, { p: 1, div: 1 });
+    if (sepEl && sepEl.classList && sepEl.classList.contains('ch-sep') && sepEl.parentNode) {
+      e.preventDefault();
+      var nextP = D.createElement('p');
+      nextP.appendChild(D.createElement('br'));
+      sepEl.parentNode.insertBefore(nextP, sepEl.nextSibling);
+      placeCaretAfter(nextP.firstChild);
+      markEditorDirtyAndAutosave();
     }
   });
 
