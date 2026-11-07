@@ -309,11 +309,12 @@ select.inp{appearance:none;padding-right:32px;cursor:pointer}
 .list-item.ch.active{background:var(--acc-soft);border-radius:var(--r6)}
 .list-item.q.clickable{cursor:pointer;border-radius:var(--r6);padding-left:8px;padding-right:8px}
 .list-item.q.clickable:hover{background:var(--surf2)}
-#editor.inp{min-height:380px;max-height:68vh;overflow-y:auto;padding:20px 24px;height:auto;line-height:1.8;font-family:var(--head);font-size:17px;color:var(--txt);background:var(--bg);border:1px solid var(--bd2);border-radius:var(--r8);overflow-wrap:break-word}
+#editor.inp{min-height:380px;max-height:68vh;overflow-y:auto;padding:20px 24px;height:auto;line-height:1.85;font-family:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,"Times New Roman",serif;font-size:17.5px;color:var(--txt);background:var(--bg);border:1px solid var(--bd2);border-radius:var(--r8);overflow-wrap:break-word}
 #editor.inp[hidden]{display:none}
 #editor:empty::before{content:attr(data-placeholder);color:var(--dim);pointer-events:none}
 #editor>*:first-child,.rtext>*:first-child{margin-top:0}
-#editor p,#editor div:not(.chat-container):not(.msg){margin:0 0 .95em}
+#editor p,#editor div:not(.chat-container):not(.msg),.rtext p{margin:0 0 1.05em}
+#editor p:empty,.rtext p:empty{margin:0}
 #editor p:last-child,#editor div:last-child,.rtext p:last-child{margin-bottom:0}
 #editor h1,#editor h2,.rtext h1,.rtext h2{font-family:var(--head);font-size:22px;font-weight:700;margin:1.5em 0 .55em;line-height:1.3}
 #editor h3,.rtext h3{font-family:var(--head);font-size:18.5px;font-weight:700;margin:1.3em 0 .45em;line-height:1.35}
@@ -347,9 +348,7 @@ select.inp{appearance:none;padding-right:32px;cursor:pointer}
 .rdhead .rd-crumb{font-size:12px;color:var(--mut);margin-bottom:8px}
 .rdhead .rd-title{font-family:var(--head);font-size:clamp(22px,2.6vw,30px);font-weight:700;line-height:1.2;letter-spacing:-.01em;color:var(--txt);margin:0 0 10px}
 .rdhead .rd-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:12.5px;color:var(--mut)}
-.rtext{max-width:720px;margin:0 auto;font-family:var(--head);font-size:18px;line-height:1.8;color:var(--txt);overflow-wrap:break-word}
-.rtext p{margin:0 0 1.05em}
-.rtext p:empty{margin:0}
+.rtext{max-width:720px;margin:0 auto;font-family:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,"Times New Roman",serif;font-size:18px;line-height:1.85;color:var(--txt);overflow-wrap:break-word}
 .rtext blockquote{margin:1.4em 0;padding:2px 0 2px 18px;border-left:2px solid var(--acc);color:var(--mut);font-style:italic}
 @media(max-width:600px){#editor.inp{padding:16px}.rd-stage{padding:20px 16px 26px}.rtext{font-size:17px}}
 .sysrow{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)}
@@ -2543,6 +2542,6 @@ window.CZ_MOCKUP = {
   SAMPLE_NOTIFS: SAMPLE_NOTIFS, SAMPLE_LOGS: SAMPLE_LOGS
 };
 </script>
-<script src="/admin-real.js?v=d1066af1c1"></script>
+<script src="/admin-real.js?v=998efa72f1"></script>
 </body>
 </html>
