@@ -1806,10 +1806,13 @@ body.rd-focus .rdpct { opacity: .35; }
 /* trang đọc: chữ nghỉ mắt hơn — trích dẫn, đường ngắt cảnh, bôi đen */
 .rtext blockquote { margin: 1.4em 0; padding: 2px 0 2px 18px; border-left: 2px solid var(--rd-acc);
   color: var(--rd-mut); font-style: italic; }
-.rtext hr { border: 0; height: 1px; width: 38%; margin: 2.2em auto; background: var(--rd-bd); }
+.rtext hr { border: 0; height: 1px; width: min(52%, 220px); margin: 2.15em auto; background: linear-gradient(90deg, transparent, var(--rd-bd), transparent); }
 .rtext ul, .rtext ol { margin: 0 0 var(--rd-para, 1.05em) 1.2em; }
 .rtext li { margin-bottom: .35em; }
-.rtext .ch-sep, .rtext.just .ch-sep { text-align: center; letter-spacing: .55em; color: var(--rd-acc); font-weight: 600; margin: 1.8em 0; }
+.rtext .ch-sep, .rtext.just .ch-sep { display: flex; align-items: center; justify-content: center; gap: 14px; width: min(64%, 240px); margin: 2.15em auto; color: var(--rd-acc); font-family: var(--font-head); font-size: 12.5px; font-weight: 400; line-height: 1; letter-spacing: 0; text-indent: 0; text-align: center; user-select: none; }
+.rtext .ch-sep::before, .rtext .ch-sep::after { content: ""; flex: 1 1 0; height: 1px; opacity: .48; }
+.rtext .ch-sep::before { background: linear-gradient(90deg, transparent, currentColor); }
+.rtext .ch-sep::after { background: linear-gradient(270deg, transparent, currentColor); }
 .rtext .chat-container { display: flex; flex-direction: column; gap: 6px; margin: 1.1em 0; }
 .rtext .msg, .rtext.just .msg { max-width: 76%; padding: 8px 13px; border-radius: 14px; font-family: var(--font); font-size: 14.5px; line-height: 1.45; border: 1px solid var(--rd-bd); background: var(--rd-surf2); color: var(--rd-tx); margin: 0; text-align: left; }
 .rtext .msg.left { align-self: flex-start; border-bottom-left-radius: 4px; }

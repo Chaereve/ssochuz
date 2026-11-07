@@ -210,7 +210,7 @@ async function tick(n = 6) { for (let i = 0; i < n; i++) await sleep(20); }
   ok(!ed0.querySelector('.pagination-container') && !ed0.querySelector('button'), 'Đã gỡ cụm nút .pagination-container của Blogger khỏi #editor');
   ok(!/height:\s*24px/i.test(ed0.innerHTML), 'Đã gỡ thẻ div spacer rỗng của Blogger khỏi #editor');
   ok(!!ed0.querySelector('.chat-container .msg.left') && !!ed0.querySelector('.msg.right'), 'Giữ nguyên hộp thoại .chat-container / .msg.left / .msg.right trong #editor');
-  ok(!!ed0.querySelector('p.ch-sep'), 'Giữ nguyên dấu ngăn cách p.ch-sep trong #editor');
+  ok(!!ed0.querySelector('p.ch-sep') && ed0.querySelector('p.ch-sep').textContent.trim() === '✦', 'Chuẩn hoá dấu ngăn cách cũ ••• sang kiểu p.ch-sep ✦ trong #editor');
   const centeredP = Array.from(ed0.querySelectorAll('p')).find(p => /center/i.test(p.getAttribute('style') || ''));
   ok(!!centeredP && centeredP.textContent.trim() === 'MỞ ĐẦU', 'Chuyển div căn giữa thành p giữ nguyên text-align: center');
   const edImg0 = ed0.querySelector('img');
@@ -312,7 +312,12 @@ async function tick(n = 6) { for (let i = 0; i < n; i++) await sleep(20); }
   placeCaretAtEnd($('#editor'));
   click('[data-act="insert-separator"]');
   await tick(2);
-  ok(!!$('#editor p.ch-sep') && $('#editor p.ch-sep').textContent.includes('•••'), 'Nút Ngăn cách chèn <p class="ch-sep">•••</p> tại con trỏ');
+  const sepInserted = $('#editor p.ch-sep');
+  ok(!!sepInserted && sepInserted.textContent.trim() === '✦', 'Nút Ngăn cách chèn <p class="ch-sep">✦</p> (─── ✦ ───) tại con trỏ');
+  selectNodeContents(sepInserted);
+  sepInserted.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+  await tick(2);
+  ok(sepInserted.nextElementSibling && sepInserted.nextElementSibling.tagName === 'P' && !sepInserted.nextElementSibling.classList.contains('ch-sep'), 'Nhấn Enter tại dấu ngăn cách tạo đoạn <p> thường bên dưới, không nhân bản class ch-sep');
 
   /* ---- 5 · Dán thông minh từ Word / Google Docs & chặn XSS ---- */
   placeCaretAtEnd($('#editor'));
@@ -426,6 +431,9 @@ async function tick(n = 6) { for (let i = 0; i < n; i++) await sleep(20); }
         '<div style="height: 12px;"></div>',
         '<p>"Ơn trời. Bảng màu may mắn nói rằng hôm nay nên mặc màu xanh lá."<br><br>Cô mỉm cười bước vào thang máy.</p>',
         '<div class="ch-sep">* * *</div>',
+        '<p>---</p>',
+        '<hr id="null">',
+        '<div>⸺⸺⸺⸺⸺⸺</div>',
         '<p><br></p>',
         '<p>Câu thơ một<br>Câu thơ hai giữ nguyên ngắt dòng mềm</p>',
         '<p><img src="/api/img/anh-1" alt="Minh hoạ"></p></div>'
@@ -442,8 +450,21 @@ async function tick(n = 6) { for (let i = 0; i < n; i++) await sleep(20); }
   const edEmptySpacers = edParas6.filter(p => !p.querySelector('img') && !(p.textContent || '').replace(/\s+/g, ''));
   ok(edEmptySpacers.length === 0, '#editor dọn sạch 100% khối rỗng (<p><br></p>, <p>&nbsp;</p>, <div><br></div>, spacer Blogger)');
   ok(edParas6.length === 6, '#editor tách đúng 5 đoạn chữ + 1 đoạn ảnh (gồm cả tách <br><br> thành 2 <p>), không sót khối rỗng: thực tế=' + edParas6.length);
-  ok(!!$('#editor .ch-sep') && $('#editor .ch-sep').textContent.includes('* * *'), 'Giữ nguyên dải ngăn cách cảnh .ch-sep');
+  const edSeps6 = Array.from($$('#editor > p.ch-sep'));
+  ok(edSeps6.length === 4 && !$('#editor hr') && edSeps6.every(s => s.textContent.trim() === '✦'), 'Chuẩn hoá cả .ch-sep (* * *), <p>---</p>, <hr id="null"> và <div>⸺⸺⸺⸺⸺⸺</div> thành <p class="ch-sep">✦</p>');
   ok(edParas6.some(p => p.innerHTML.includes('<br>') && p.textContent.includes('Câu thơ một')), 'Giữ nguyên 1 thẻ <br> ngắt dòng mềm trong thơ/thoại');
+
+  /* Kiểm chứng toàn bộ data/book/*.json không còn sót thẻ <hr> hay dòng gạch ngang cũ */
+  let leftoverOldSep = 0, upgradedSepTotal = 0;
+  for (const bf of fs.readdirSync(path.join(ROOT, 'data/book')).filter(x => x.endsWith('.json'))) {
+    const bd = JSON.parse(R('data/book/' + bf));
+    for (const bc of (bd.chapters || [])) {
+      const bh = bc.html || '';
+      if (/<hr\b/i.test(bh) || /<(p|div)\b[^>]*>\s*(?:[-–―−─━_~=]{3,}|[—⸺]{2,}|⸻+)\s*<\/\1>/u.test(bh)) leftoverOldSep++;
+      upgradedSepTotal += (bh.match(/<p class="ch-sep">✦<\/p>/g) || []).length;
+    }
+  }
+  ok(leftoverOldSep === 0 && upgradedSepTotal >= 63, 'Toàn bộ data/book/*.json đã chuyển hết dấu gạch ngang cũ (<hr>, ---, ⸺⸺⸺) sang <p class="ch-sep">✦</p> (tổng=' + upgradedSepTotal + ')');
 
   /* Bật Xem trước độc giả và đối chiếu 1:1 với truyen.html */
   click('[data-act="toggle-preview"]');
