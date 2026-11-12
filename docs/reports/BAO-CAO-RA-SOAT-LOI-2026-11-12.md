@@ -2,7 +2,7 @@
 
 - Nhánh: `arena/d558b6b7-ssochuz` (từ `main` @ `c6e3163`)
 - Phạm vi: toàn bộ mã nguồn (`src/`, `worker/`, `tools/`, `tests/`, cấu hình Pages) — chạy hết bộ kiểm thử, typecheck Worker, các script kiểm tra, rồi đọc mã để tìm lỗi mà bộ test chưa chạm tới.
-- Kết luận ngắn: **hạ tầng kiểm thử đang xanh** (60/60 bài, `npm run build` tái lập từng byte, `tsc` Worker sạch, 0 lỗi trợ năng). Rà mã tìm thêm **3 lỗi thật ở trang “Bốc bài”**, **1 rò rỉ bộ nhớ ở My Space** và **1 lỗi nhật ký ở Worker**; cả 5 đã sửa kèm test khoá lại.
+- Kết luận ngắn: **hạ tầng kiểm thử đang xanh** (60/60 bài, `npm run build` tái lập từng byte, `tsc` Worker sạch, 0 lỗi trợ năng). Rà mã + fuzz tìm thêm **3 lỗi thật ở trang “Bốc bài”**, **1 lỗ hổng bỏ qua bộ lọc HTML chương (XSS)**, **1 rò rỉ bộ nhớ ở My Space** và **1 lỗi nhật ký ở Worker**; cả 6 đã sửa kèm test khoá lại.
 
 ## 1. Đã chạy (bằng chứng)
 
@@ -52,6 +52,27 @@ Nhánh `remove: true` không gán `idx` ⇒ response trả `index: -1` và nhậ
 - Sửa: `idx = index` trước khi `splice`.
 - Test: thêm một dòng vào `tests/t_schedule.mjs` (`chapter/xoá → index trả đúng chương vừa xoá`).
 
+### 2.6 `src/shared/sanitize.js` — thẻ HTML **không có `>` đóng** lọt nguyên `on*` (XSS)
+
+Khi `<` không có `>` phía sau (hết chuỗi), bộ lọc chép nguyên phần còn lại vào đầu ra
+(`out += src.slice(lt)`). Trình duyệt gặp thẻ chưa đóng ở cuối đoạn vẫn dựng phần tử khi
+chuỗi được ghép thêm markup phía sau (vd đặt trong một `innerHTML` có thẻ bao), nên
+`<img src=x onerror=alert(1)` ⇒ `<img>` có `onerror`, `onload`… — đúng thứ bộ lọc vừa bỏ.
+
+- Sửa: mọi `<` không mở được thẻ hợp lệ đều được **thoát thành `&lt;`** rồi quét tiếp
+  (không chép cụm thô). Lưu ý: không thể “giữ nguyên `<` khi thấy đó là chữ” — thẻ đứng
+  sau có thể bị bỏ cả cụm và chữ phía sau dính liền thành thẻ mới (`<<</style>script`
+  ⇒ `<script`). Hiển thị vẫn y như cũ (`<3` đọc ra `<3`).
+- `htmlFacts()` nay giải mã entity cơ bản khi so “chữ hiển thị”, để `&lt;` ≡ `<`.
+- `tools/check_chapter_html.mjs`: so chữ bằng hàm bóc **thẻ thật** (bắt đầu bằng chữ/slash)
+  thay vì bỏ mọi cụm `<…>` — bản cũ nuốt luôn chữ `<3` của tác giả rồi báo sai là bản
+  sạch “sinh thêm chữ”.
+- Test: `tests/t_sanitize.mjs` thêm 4 mẫu thẻ thiếu `>`, mẫu `<<</style>script`, và **kiểm
+  bằng DOM thật (jsdom)**: đầu ra không được dựng `script/iframe/svg/...`, không còn thuộc
+  tính `on*`, không còn URL `javascript:`. Fuzz 40.000 chuỗi ngẫu nhiên (atom thẻ/thuộc
+  tính/entity) qua DOM: **0 mẫu nguy hiểm**. Toàn bộ 1.283 chương thật vẫn qua
+  `tools/check_chapter_html.mjs` (không mất chữ, không mất ảnh).
+
 ## 3. Ghi nhận, chưa sửa (không phải lỗi chức năng, cần chủ trang quyết)
 
 1. **`npm audit` 2 lỗ hổng high** — `undici` + `source-map-js` nằm trong `jsdom` (devDependency). Không lên production; chỉ ảnh hưởng máy chạy test. Nếu muốn sạch báo cáo: nâng `jsdom`, hoặc chấp nhận vì đây là công cụ test.
@@ -68,4 +89,6 @@ npm run build          # bản phát hành ở gốc phải khớp src/
 npm run check:worker
 npm test               # 61 bài, gồm t_dice_state.js mới
 node tests/t_dice_state.js   # riêng phần trạng thái xấp bài
+node tests/t_sanitize.mjs    # riêng bộ lọc HTML (có kiểm bằng DOM thật)
+node tools/check_chapter_html.mjs   # chạy bộ lọc trên 1.283 chương thật
 ```
