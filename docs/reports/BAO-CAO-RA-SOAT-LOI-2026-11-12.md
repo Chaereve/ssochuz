@@ -84,6 +84,23 @@ một lượt cả nghìn bình luận — phí băng thông và làm chậm tra
 - Test: `tests/t_worker.mjs` đăng 3 bình luận rồi gọi `?limit=-1`, đòi đúng 1 mục
   (`shown: 1`); bản cũ trả 2 ⇒ bắt được ngay. Worker: **441/441 ĐẠT**.
 
+### 2.8 Một dòng `null` trong registry làm **sập cả trang chủ**
+
+`CZ.slides()` và `CZ.editorChoice()` đọc thẳng `n.slug` của từng dòng `reg.lib`;
+`renderSched()` đọc `it.slug` của từng mục lịch. Một dòng rác (null, số, chuỗi —
+import hỏng, sửa KV tay, mảng JSON thừa dấu phẩy) ⇒ `TypeError` NGAY GIỮA lúc
+dựng trang chủ, khối thư viện rơi vào khung “Chưa tải được dữ liệu truyện” dù
+66 bộ khác vẫn tốt. Trang Chuyển thể Series dính cùng lỗi ở `editorChoice`.
+
+- Sửa: hàm chung `regRows(reg)` chỉ giữ dòng là object (dùng cho `libList`,
+  `slides`, `editorChoice`); `renderSched` lọc mục lịch cùng luật.
+- Kèm một lỗi nhỏ cùng gốc “dữ liệu bẩn”: `chapters: -3` từng hiện nguyên xi
+  nhãn **“-3/-3”** trên thẻ truyện. Nay `norm()` kẹp `chapters`/`declared` ≥ 0.
+- Test: `tests/t_registry_dirty.js` (mới, có trong `npm test`) — registry có
+  null/rác ở cả `lib`, `slides`, `editorChoice`, `schedule.items` + một bộ số
+  chương âm: trang chủ vẫn vẽ thư viện, hero, lịch, không lỗi JS, số chương = 0.
+  Đã kiểm ngược: bản cũ **rớt ngay** ở khung “Chưa tải được dữ liệu truyện”.
+
 ## 3. Ghi nhận, chưa sửa (không phải lỗi chức năng, cần chủ trang quyết)
 
 1. **`npm audit` 2 lỗ hổng high** — `undici` + `source-map-js` nằm trong `jsdom` (devDependency). Không lên production; chỉ ảnh hưởng máy chạy test. Nếu muốn sạch báo cáo: nâng `jsdom`, hoặc chấp nhận vì đây là công cụ test.
