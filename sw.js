@@ -12,7 +12,7 @@
    ⚠ MỖI LẦN ĐỔI ?v= TĨNH (cz.css/cz-*.js): sửa cả PRECACHE dưới đây + tăng
    CZ_SW_VER → trình duyệt tự tải SW mới, hiện “Đã có bản cập nhật — tải lại”.
    ========================================================================== */
-var CZ_SW_VER = '20261104v16';
+var CZ_SW_VER = '20261112v17';
 
 /* kho shell theo version (update là thay kho mới, xoá kho cũ);
    kho trang/API/ảnh KHÔNG theo version để dữ liệu offline còn lại sau update */
@@ -50,8 +50,8 @@ var PRECACHE = [
   '/cz-auth.js?v=20261012n',
   '/cz-personal.js?v=20261013notif1',
   /* bộ tính năng tương tác — giữ trong shell để đọc offline vẫn có
-     hàng reaction sticker */
-  '/cz-react.js?v=20261014feat1',
+     vòng bốc bài. (cz-react.js đã bỏ khỏi PRECACHE: khối cảm xúc gỡ từ r90,
+     không trang nào nạp tệp đó nữa ⇒ precache chỉ tốn 17 kB mỗi lần cài) */
   '/cz-dice.js?v=20261102r121',
   /* 2026-10-29: hero banner dùng chung (component của khối “Nổi bật hôm nay”) */
   '/cz-hero.js?v=20261029perf1',

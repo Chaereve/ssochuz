@@ -11,9 +11,9 @@
 | `npm ci` (gốc + `tests/`) | ĐẠT |
 | `npm run build` rồi `git status` | ĐẠT — không sinh khác biệt (bundle tái lập) |
 | `npm run check:worker` (tsc `checkJs`) | ĐẠT — không lỗi |
-| `npm test` | **91/91 ĐẠT** (gồm các bài mới của lượt rà: `t_registry_dirty.js`, `t_admin_dirty_registry.js`, `t_dice_state.js`…) |
+| `npm test` | **92/92 ĐẠT** (gồm các bài mới của lượt rà: `t_registry_dirty.js`, `t_admin_dirty_registry.js`, `t_sw_precache.js`, `t_dice_state.js`…) |
 | `tools/check_html.js`, `check_headers.js`, `check_calls.js`, `check_css.py`, `check_og.mjs`, `check_chapter_html.mjs`, `check_chapter_routes.mjs`, `audit_data.py`, `bundle_budget.mjs` | ĐẠT — không lỗi |
-| `npm audit` | 2 lỗ hổng **high** — đều nằm trong `jsdom` (devDependency, chỉ dùng lúc test: `undici`, `source-map-js`), **không có gói nào lên production |
+| `npm audit` | **0 lỗ hổng** sau `npm audit fix` (trước đó 2 **high** trong `jsdom` bản dev: `undici`, `source-map-js`) |
 | ESLint (cấu hình tạm, `no-use-before-define`, `no-redeclare`, `require-atomic-updates`…) | Chỉ ra đúng 1 lỗi runtime thật: `settle()` ở `src/cz-dice.js` (mục 2.1); còn lại là cảnh báo/biến thừa |
 
 ## 2. Lỗi đã sửa
@@ -151,9 +151,39 @@ registry giờ dọn luôn:
   `title` phải sống sót qua “Lưu trang chủ”. Dữ liệu thật `data/registry.json`
   (67 bộ, 12 editorChoice, 6 dòng lịch): **0 dòng bị bỏ**.
 
+### 2.11 `sw.js` precache `cz-react.js` — tệp đã chết từ r90
+
+Khối cảm xúc/reaction bị gỡ khỏi trang đọc từ r90 (chính `tests/t_react.js` đang
+giữ điều đó), nhưng `PRECACHE` của service worker vẫn còn
+`'/cz-react.js?v=20261014feat1'`. Vì precache là “cố gắng hết sức”
+(`cache.add(...).catch(() => {})`), cái chết này **không báo gì**: mỗi lần cài
+SW vẫn tải thêm 17 kB và kho shell ôm mãi một bản sao không ai gọi.
+
+- Sửa (`sw.js`): bỏ mục `cz-react.js` khỏi `PRECACHE`, sửa chú thích, tăng
+  `CZ_SW_VER` `20261104v16` → `20261112v17` (đổi shell mà không tăng version
+  thì trình duyệt giữ kho cũ, đúng như cảnh báo đầu tệp).
+- Test mới `tests/t_sw_precache.js` (trong `npm test`), khoá 4 điều: mỗi
+  `cz-*.js`/`cz.css` trong `PRECACHE` phải (1) có tệp thật ở gốc, (2) có ít
+  nhất một trang HTML thật nạp nó, (3) trùng **đúng** chuỗi `?v=` với trang
+  (lệch version là kho shell lưu URL mà trang không hỏi ⇒ offline vẫn trượt),
+  (4) `CZ_SW_VER` đúng dạng ngày và `C_SHELL` ghép từ nó. Kiểm ngược: trả
+  `cz-react.js` về `PRECACHE` thì bài này rớt đúng dòng đó.
+- `tests/t_v16.js` ghim cứng `CZ_SW_VER == '20261104v16'`, nên lần tăng version
+  hợp lệ này làm nó rớt oan. Đã đổi thành “đúng dạng + không lùi so với mốc
+  vòng 16” — giữ đúng ý định (đổi shell phải đánh version mới) mà không khoá
+  cứng một chuỗi sẽ lỗi thời.
+
+### 2.12 `npm audit` 2 lỗ hổng **high** — chỉ trong devDependency
+
+`source-map-js@1.2.1` và `undici@8.11.2` (đi kèm `jsdom` bản dev). Đã chạy
+`npm audit fix` (không `--force`): lên `undici@8.12.4`, `source-map-js@1.2.2`,
+**0 lỗ hổng**; `package-lock.json` chỉ đổi 6 dòng (đều là bản vá trong phạm vi
+`^` có sẵn, không thêm gói mới). `npm run build` cho ra bundle **y hệt**
+(cùng `?v=`, cùng kích thước), `tools/audit_a11y.mjs` và các bài jsdom vẫn đạt.
+
 ## 3. Ghi nhận, chưa sửa (không phải lỗi chức năng, cần chủ trang quyết)
 
-1. **`npm audit` 2 lỗ hổng high** — `undici` + `source-map-js` nằm trong `jsdom` (devDependency). Không lên production; chỉ ảnh hưởng máy chạy test. Nếu muốn sạch báo cáo: nâng `jsdom`, hoặc chấp nhận vì đây là công cụ test.
+1. **`src/cz-react.js` (16,9 kB) giờ không còn ai nạp** — khối cảm xúc gỡ từ r90, `PRECACHE` đã bỏ (mục 2.11), nhưng mã nguồn + tệp build ở gốc vẫn còn. Xoá hẳn thì phải sửa `tools/build_site.mjs`, `tools/check_src.js`, `tools/bundle_budget.mjs` và tài liệu — để chủ trang quyết vì đây là gỡ tính năng, không phải sửa lỗi.
 2. **CSP có `'unsafe-inline'` trong `script-src`** (`_headers`) — cần cho các script nội tuyến hiện tại; nghĩa là CSP không chặn được script chèn qua lỗ hổng HTML. Muốn siết phải bỏ dần script nội tuyến (việc lớn, ngoài phạm vi lượt rà này).
 3. **`CZ.registry(true)`**: chú thích nói `force` “đọc lại từ đầu, bỏ qua memo”, nhưng điều kiện `memo.reg && (!force || hasLib(memo.reg))` vẫn trả memo khi memo có sách. Hiện không gây lỗi vì nút “Thử lại” gọi `purgeRegistry()` trước (dọn memo), nên chỉ là chú thích chưa khớp mã.
 4. **Kiểm issuer token Supabase** so bằng tiền tố (`iss` bắt đầu bằng `base`). Chữ ký đã được kiểm bằng JWKS của project đã ghim nên không khai thác được, nhưng nếu muốn chặt thì nên so khớp tuyệt đối `base + '/auth/v1'`.
@@ -165,7 +195,7 @@ registry giờ dọn luôn:
 npm ci && (cd tests && npm ci)
 npm run build          # bản phát hành ở gốc phải khớp src/
 npm run check:worker
-npm test               # 91 bài, gồm t_registry_dirty.js / t_admin_dirty_registry.js
+npm test               # 92 bài, gồm t_registry_dirty.js / t_admin_dirty_registry.js / t_sw_precache.js
 node tests/t_dice_state.js   # riêng phần trạng thái xấp bài
 node tests/t_sanitize.mjs    # riêng bộ lọc HTML (có kiểm bằng DOM thật)
 node tools/check_chapter_html.mjs   # chạy bộ lọc trên 1.283 chương thật
