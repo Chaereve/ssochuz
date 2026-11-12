@@ -2244,6 +2244,7 @@ async function putChapter(req, env, slug, cors) {
     if (body.remove) {
       if (!book.chapters[index]) return json({ ok: false, error: 'Không thấy chương cần xoá.' }, { status: 404, cors });
       book.chapters.splice(index, 1);
+      idx = index;                 /* nhật ký/response phải chỉ đúng chương vừa xoá (trước là -1 ⇒ “#0”) */
       action = 'delete';
     } else {
       const incoming = body.chapter && typeof body.chapter === 'object' ? body.chapter : {};

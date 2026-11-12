@@ -177,6 +177,12 @@
     if (todayEl && !todayEl.innerHTML) todayEl.innerHTML = todayHTML();
 
     refreshPool();
+    /* `body.innerHTML` dựng lại từ trạng thái ÚP BÀI: không còn lá nào trên
+       khung, nên trạng thái “đang có lá” phải trả về false — trước đây nó dính
+       lại, lượt bốc kế tiếp tưởng đang có lá mà chạy nhánh gập lá cũ (không
+       thấy gì xảy ra, chỉ chậm và không lật vào). */
+    S.hasCard = false;
+    S.pick = null;
     if (!S.pool.length) {
       body.innerHTML = filtersHTML(0) +
         '<div class="dc-empty"><b>Chưa có truyện khớp bộ lọc.</b>' +
@@ -221,8 +227,13 @@
     if (el) { try { el.focus({ preventScroll: true }); } catch (e) {} }
   }
 
-  /* xấp bài mới: xáo lại toàn bộ truyện khớp bộ lọc */
+  /* xấp bài mới: xáo lại toàn bộ truyện khớp bộ lọc.
+     `gen` tăng ở đây để mọi hoạt ảnh đang chạy của lượt bốc TRƯỚC bị bỏ: bộ lọc
+     đổi giữa lúc lật thì callback cũ không được “đáp” lá của xấp cũ lên khung
+     mới (trước đây `gen` không bao giờ tăng nên phép so sánh vô hiệu, lá cũ vẫn
+     hiện sau khi người đọc đã đổi bộ lọc). */
   function refreshPool() {
+    S.gen += 1;
     S.pool = shuffleArr(candidates());
     S.deck = S.pool.slice();
   }
@@ -331,7 +342,11 @@
   function flipIn(book, gen) {
     var m = d.querySelector('#czDiceBox') || d;
     var board = m.querySelector('#dcBoard'), pile = m.querySelector('#dcPile'), face = m.querySelector('#dcFace');
-    if (!board || !face) { settle(); return; }
+    /* Khung bị dựng lại/không còn khung: bỏ lượt bốc này và MỞ KHOÁ nút.
+       Trước đây gọi `settle()` — biến đó chỉ được gán ở dưới trong cùng hàm nên
+       lúc này là undefined ⇒ TypeError, `S.busy` kẹt true và nút “Bốc một lá”
+       chết hẳn tới khi tải lại trang. */
+    if (!board || !face) { setBusy(false); return; }
     var ch = CZ.progress ? (CZ.progress(book) || 0) : 0;
     var el = d.createElement('div');
     el.className = 'dc-flip';

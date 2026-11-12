@@ -147,6 +147,7 @@ const b64 = Buffer.from('524946462400000057454550565038201c000000080000003001000
   /* ---------- 4. xoá + đổi thứ tự bằng đường 1 chương ---------- */
   const del = await call('PUT', '/api/book/hb/chapter', { headers: ADMH, body: { index: 4, remove: true } });
   eq('chapter/xoá → action delete', del.body && del.body.action, 'delete');
+  eq('chapter/xoá → index trả đúng chương vừa xoá', del.body && del.body.index, 4);
   eq('chapter/xoá → còn 4 chương', del.body && del.body.chapters, 4);
   const mv = await call('PUT', '/api/book/hb/chapter', { headers: ADMH, body: { from: 3, to: 1 } });
   eq('chapter/đổi thứ tự → action move', mv.body && mv.body.action, 'move');
