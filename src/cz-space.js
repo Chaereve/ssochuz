@@ -541,10 +541,16 @@
           try { cropped = await CZ_AUTH.cropAvatar(avatarSource); } catch (e) { cropped = null; }
         }
         if (ticket !== epoch) return;
+        /* blob: URL của lượt chọn này phải được thu hồi trước khi thay bằng data
+           URL — trước đây gán đè nên mỗi lần chọn ảnh để lại một blob sống tới
+           khi đóng tab (rò rỉ bộ nhớ). */
         if (cropped) {
+          releaseAvatarSource();
           avatar = cropped; avatarSource = cropped; avatarOff = false;
         } else {
           avatar = await autoCrop256(file);
+          releaseAvatarSource();
+          avatarSource = avatar;          /* vẫn “Căn chỉnh” lại được như trước */
           avatarOff = false;
         }
         paintAvatar();

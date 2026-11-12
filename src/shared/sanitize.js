@@ -182,12 +182,23 @@ export function sanitizeChapterHtml(html) {
       continue;
     }
     const gt = src.indexOf('>', lt);
-    if (gt < 0) { if (!dropDepth) out += src.slice(lt); break; }   /* '<' lơ lửng → coi là chữ */
+    /* '<' KHÔNG có '>' phía sau (hết chuỗi): phải thoát thành chữ, KHÔNG được
+       chép nguyên. Trình duyệt gặp thẻ chưa đóng ở cuối đoạn vẫn dựng phần tử
+       (vd "<img src=x onerror=alert(1)" ⇒ <img> có onerror) — chép nguyên là
+       lọt đúng thuộc tính nguy hiểm mà bộ lọc vừa bỏ. Quét tiếp sau '<' để
+       mọi '<' còn lại (nếu có) cũng được thoát, không chỉ cái đầu. */
+    /* Luôn thoát '<' thành `&lt;` (hiển thị vẫn y như cũ) rồi quét tiếp sau nó:
+       chép một '<' thô là nguy hiểm, vì thẻ đứng ngay sau có thể bị bỏ cả cụm
+       và chữ phía sau dính liền thành thẻ mới ("<<</style>script" ⇒ "<script"). */
+    if (gt < 0) { if (!dropDepth) out += '&lt;'; i = lt + 1; continue; }
     const raw = src.slice(lt + 1, gt);
     i = gt + 1;
     const closing = raw.charAt(0) === '/';
     const tag = parseTag(closing ? raw.slice(1) : raw);
-    if (!tag) continue;
+    /* tên thẻ không hợp lệ (vd "a <3 và >5") là CHỮ, không phải thẻ: thoát '<'
+       rồi QUÉT TIẾP từng ký tự sau nó — không chép cả cụm tới '>' vì trong cụm
+       đó có thể có thẻ thật ("<=div<iframe>" sẽ lọt <iframe> nếu chép nguyên). */
+    if (!tag) { if (!dropDepth) out += '&lt;'; i = lt + 1; continue; }
     if (closing) {
       /* tìm frame gần nhất cùng tên để đóng cho khớp */
       let at = -1;
@@ -222,7 +233,11 @@ export function htmlFacts(html) {
   const re = /<\s*\/?\s*([a-zA-Z][a-zA-Z0-9:-]*)/g;
   let m;
   while ((m = re.exec(s))) { const t = m[1].toLowerCase(); tags[t] = (tags[t] || 0) + 1; }
-  const text = s.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  const text = s.replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/&quot;/gi, '"').replace(/&apos;/gi, "'")
+    .replace(/&#0*39;/g, "'").replace(/&amp;/gi, '&')
+    .replace(/\s+/g, ' ').trim();
   const imgs = (s.match(/<img\b/gi) || []).length;
   const scripts = (s.match(/<script\b/gi) || []).length + (s.match(/\son[a-z]+\s*=/gi) || []).length +
     (s.match(/(?:href|src)\s*=\s*["']?\s*(?:javascript|data|vbscript):/gi) || []).length;

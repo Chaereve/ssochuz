@@ -945,7 +945,7 @@ async function publishDueChapters(env) {
 }
 /* Cron drain: gửi tối đa PUSH_BATCH tin, sub chết thì xoá, job xong thì gỡ */
 async function drainPushQueue(env) {
-  const stat = { sent: 0, failed: 0, removed: 0, jobs: 0, jobsLeft: 0 };
+  const stat = { sent: 0, failed: 0, removed: 0, deferred: 0, jobs: 0, jobsLeft: 0 };
   if (!env.CZ_KV) return stat;
   if (!env.VAPID_PUBLIC || !env.VAPID_PRIVATE) return stat;   /* chưa cấu hình VAPID */
   let q = [];
@@ -960,11 +960,18 @@ async function drainPushQueue(env) {
   let budget = PUSH_BATCH;
   let checked = 0; // Bound Supabase reads as well as push sends per cron.
   const deadKeys = [];
+  /* Sub cần tra Supabase (account) xếp SAU sub chỉ cần chủ đề. Trần 45 lượt
+     kiểm/invocation là của CHUNG: thiếu SUPABASE_SERVICE_ROLE (hoặc backend
+     sập) thì mỗi lượt tra trả `null` = hoãn, và nếu 45 sub account đứng trước
+     thì trần hết sạch ⇒ sub theo chủ đề không bao giờ nhận được tin dù chỉ
+     cần gửi một cái. Thứ tự cũ = theo khoá KV ⇒ tuỳ duyên. */
+  const needsBackend = (s) => !!(s.sub && s.sub.ownerId && s.sub.scopeVersion === 2);
+  const ordered = subs.slice().sort((a, b) => (needsBackend(a) ? 1 : 0) - (needsBackend(b) ? 1 : 0));
   for (const job of q) {
     if (budget <= 0) break;
     job.sent = job.sent || {};
     const todo = [];
-    for (const s of subs) {
+    for (const s of ordered) {
       if (job.sent[s.key] || deadKeys.includes(s.key)) continue;
       if (checked >= PUSH_BATCH) break;
       if (s.sub.ownerId && s.sub.scopeVersion === 2) {
@@ -973,7 +980,7 @@ async function drainPushQueue(env) {
       }
       checked++;
       const allowed = await eligible(s.sub, job.slug);
-      if (allowed === null) continue; // fail closed; leave pending for next cron
+      if (allowed === null) { stat.deferred++; continue; } // fail closed; leave pending for next cron
       if (!allowed) { job.sent[s.key] = 1; continue; }
       todo.push(s);
       if (todo.length >= budget) break;
@@ -1012,7 +1019,8 @@ async function drainPushQueue(env) {
   if (stat.sent || stat.removed || stat.failed) {
     await logAct(env, 'push chương mới: gửi ' + stat.sent + ' tin' +
       (stat.removed ? ' · xoá ' + stat.removed + ' sub chết' : '') +
-      (stat.failed ? ' · lỗi ' + stat.failed : ''), null);
+      (stat.failed ? ' · lỗi ' + stat.failed : '') +
+      (stat.deferred ? ' · hoãn ' + stat.deferred + ' lượt kiểm (chưa tra được người theo dõi)' : ''), null);
   }
   return stat;
 }
@@ -1210,7 +1218,59 @@ function stripPrivateRegistrySettings(reg) {
   } else if (Object.prototype.hasOwnProperty.call(settings, 'report')) delete settings.report;
   return reg;
 }
-function registryJSON(reg) { return JSON.stringify(stripPrivateRegistrySettings(reg)); }
+/* ===== DỌN DÒNG RÁC TRONG REGISTRY, NGAY LÚC GHI =======================
+   Vì sao: `lib`/`slides`/`editorChoice`/`schedule.items` từng nhận cả null,
+   số, chuỗi rỗng hay object không slug (import hỏng, sửa KV tay). Ba lớp đọc
+   của web đều đọc thuộc tính từng dòng, nên MỘT dòng rác đủ làm sập trang chủ
+   và khoá luôn /admin (xem docs/reports/BAO-CAO-…, §2.8–2.9). Chặn ở đây —
+   cửa ghi duy nhất của registry — để dữ liệu bẩn không bao giờ vào KV nữa;
+   mọi lần ghi sau đó cũng tự làm sạch bản cũ (registryJSON dùng hàm này).
+   Trả `{ reg, dropped }` để putKV báo cho admin biết đã bỏ bao nhiêu dòng. */
+function registryRowOk(x) {
+  return !!x && typeof x === 'object' && !Array.isArray(x) && String(x.slug || '').trim() !== '';
+}
+/* slides/editorChoice nhận cả CHUỖI slug (dạng cũ) lẫn object {slug, reason} */
+function registryRefOk(x) {
+  if (typeof x === 'string') return x.trim() !== '';
+  return registryRowOk(x);
+}
+/* Dòng lịch ra chương có hai dạng hợp lệ: {days, slug} (admin ghi) và
+   {days, title, detail} (syncBlogger đọc từ trang Blogger). Trang chủ ghép bộ
+   theo slug, không khớp thì so tên (schedFind) ⇒ dòng chỉ có title VẪN dùng
+   được, đừng bỏ oan. */
+function registrySchedOk(x) {
+  if (!x || typeof x !== 'object' || Array.isArray(x)) return false;
+  return String(x.slug || '').trim() !== '' || String(x.title || '').trim() !== '';
+}
+function cleanRegistry(reg) {
+  const dropped = { total: 0 };
+  if (!reg || typeof reg !== 'object' || Array.isArray(reg)) return { reg, dropped };
+  const out = Object.assign({}, reg);
+  const dropRows = (key, okRow) => {
+    if (!Array.isArray(out[key])) return;
+    const before = out[key].length;
+    out[key] = out[key].filter(okRow);
+    dropped[key] = before - out[key].length;
+    dropped.total += dropped[key];
+  };
+  dropRows('lib', registryRowOk);
+  dropRows('slides', registryRefOk);
+  dropRows('editorChoice', registryRefOk);
+  if (out.schedule && typeof out.schedule === 'object' && Array.isArray(out.schedule.items)) {
+    const before = out.schedule.items.length;
+    out.schedule = Object.assign({}, out.schedule, {
+      items: out.schedule.items.filter(registrySchedOk),
+    });
+    dropped.schedule = before - out.schedule.items.length; dropped.total += dropped.schedule;
+  }
+  if (out.settings && typeof out.settings === 'object' && Array.isArray(out.settings.editorChoice)) {
+    const before = out.settings.editorChoice.length;
+    out.settings = Object.assign({}, out.settings, { editorChoice: out.settings.editorChoice.filter(registryRefOk) });
+    dropped.settings = before - out.settings.editorChoice.length; dropped.total += dropped.settings;
+  }
+  return { reg: out, dropped };
+}
+function registryJSON(reg) { return JSON.stringify(stripPrivateRegistrySettings(cleanRegistry(reg).reg)); }
 /* ================= CACHE BIÊN CHO 3 ĐƯỜNG ĐỌC NHIỀU ==================
    GET /api/registry, /api/book/<slug>, /api/stats: hàng trăm người cùng đọc
    trong một phút thì KV chỉ bị đọc 1 lần — các lần sau Worker phục vụ từ bản
@@ -2039,6 +2099,13 @@ async function putKV(req, env, key, cors, label) {
   if (new TextEncoder().encode(body).length > 24 * 1024 * 1024) return json({ ok: false, error: 'dữ liệu quá lớn (>24MB)' }, { status: 413, cors });
   let parsed;
   try { parsed = JSON.parse(body); } catch (e) { return json({ ok: false, error: 'JSON lỗi: ' + e.message }, { status: 400, cors }); }
+  /* dọn dòng rác TRƯỚC hàng rào "ghi rỗng đè lên kho có sách": bản chỉ toàn
+     dòng rác cũng là bản rỗng, phải bị chặn như lib: [] */
+  let cleaned = { total: 0 };
+  if (key === 'registry' && parsed && typeof parsed === 'object') {
+    const c = cleanRegistry(parsed);
+    parsed = c.reg; cleaned = c.dropped;
+  }
   /* tối ưu registry: tự bóc các trường CŨ/trùng lặp mỗi lần ghi — KV tự lành
      sau lần lưu đầu tiên. `postId` là di sản Blogger/Firebase cũ (không nơi
      nào đọc nữa); `count`/`canRead` là bản sao của `countLabel` + số chương
@@ -2068,7 +2135,8 @@ async function putKV(req, env, key, cors, label) {
   if (key === 'registry') sbPinReset(env);       // ghim Supabase (nếu đổi) có hiệu lực ngay
   if (key === 'registry') regEntryCacheDrop();   // trạng thái xuất bản đổi → hạ cache entry
   if (label) await logAct(env, label, req);
-  return json({ ok: true, key, bytes, saved }, { cors });
+  const extra = key === 'registry' && cleaned.total ? { dropped: cleaned } : {};
+  return json(Object.assign({ ok: true, key, bytes, saved }, extra), { cors });
 }
 
 /* ============================================================================
@@ -2244,6 +2312,7 @@ async function putChapter(req, env, slug, cors) {
     if (body.remove) {
       if (!book.chapters[index]) return json({ ok: false, error: 'Không thấy chương cần xoá.' }, { status: 404, cors });
       book.chapters.splice(index, 1);
+      idx = index;                 /* nhật ký/response phải chỉ đúng chương vừa xoá (trước là -1 ⇒ “#0”) */
       action = 'delete';
     } else {
       const incoming = body.chapter && typeof body.chapter === 'object' ? body.chapter : {};
@@ -2423,7 +2492,9 @@ async function adminComments(req, env, cors) {
   if (!env.CZ_KV) return noKV(cors);
   const u = new URL(req.url);
   const only = String(u.searchParams.get('slug') || '');
-  const limit = Math.min(parseInt(u.searchParams.get('limit') || '500', 10) || 500, 2000);
+  /* kẹp CẢ HAI đầu: limit âm ⇒ slice(0, -5) trả gần như TOÀN BỘ danh sách
+     thay vì 5 mục — hàng rào duy nhất là 2.000 mục. */
+  const limit = Math.max(1, Math.min(parseInt(u.searchParams.get('limit') || '500', 10) || 500, 2000));
   const keys = [];
   let cursor;
   do {
@@ -3830,6 +3901,21 @@ async function supabaseJWKS(env, base) {
   const jwks = await r.json();
   return (jwks && jwks.keys) || [];
 }
+/* Issuer của Supabase phải TRÙNG ĐÚNG project đã ghim, không phải “bắt đầu
+   bằng”. Bản cũ so bằng tiền tố nên `https://sb.test.evil.test/auth/v1` (và
+   `https://evil.test/?x=https://sb.test`) đều lọt — chữ ký vẫn phải khớp khoá
+   của project nên chưa khai thác được, nhưng đây là lớp duy nhất còn hở nếu
+   một ngày khoá bị lộ. Chấp nhận đúng 2 dạng thật của GoTrue: `<url>/auth/v1`
+   và `<url>` (token cũ), có/không có scheme, tha dấu `/` cuối. */
+function supabaseIssuerOk(iss, base) {
+  const norm = (x) => String(x || '').trim().replace(/\/+$/, '').toLowerCase();
+  const s = norm(iss);
+  if (!s) return true;
+  const full = norm(base);
+  const bare = full.replace(/^https?:\/\//, '');
+  const allowed = [full + '/auth/v1', full, bare + '/auth/v1', bare];
+  return allowed.some((a) => a === s);
+}
 async function supabasePubKey(env, kid, alg, base) {
   const ck = base + '|' + kid + '|' + alg;
   if (_sbKeys.has(ck)) return _sbKeys.get(ck);
@@ -3881,7 +3967,7 @@ async function verifySupabaseToken(tok, env) {
   if (payload.exp && payload.exp < now) throw new Error('phiên đăng nhập đã hết hạn — đăng nhập lại');
   const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
   if (!aud.some((a) => a === 'authenticated' || a === 'anon')) throw new Error('token sai audience: ' + aud.join(','));
-  if (base && payload.iss && String(payload.iss).indexOf(base) !== 0 && String(payload.iss).indexOf(base.replace(/^https?:\/\//, '')) < 0) {
+  if (base && payload.iss && !supabaseIssuerOk(payload.iss, base)) {
     throw new Error('token sai issuer — token do "' + payload.iss + '" cấp nhưng Worker đang ghim project "' + base + '" (đặt SUPABASE_URL trên Worker đúng project Supabase của web, hoặc sửa lại Project URL ở /admin)');
   }
   if (payload.email && payload.email_verified === false) throw new Error('email chưa xác thực');
@@ -4079,7 +4165,9 @@ async function getComments(slug, req, env, cors) {
   let limit = 200, ch = null;
   try {
     const q = new URL(req.url).searchParams;
-    limit = Math.min(parseInt(q.get('limit') || '200', 10) || 200, 500);
+    /* limit âm từng lọt xuống slice(0, -1) ⇒ trả nhiều hơn số khách xin;
+       kẹp dưới = 1 để "limit=-1" chỉ trả 1 bình luận như ý nghĩa tối thiểu. */
+    limit = Math.max(1, Math.min(parseInt(q.get('limit') || '200', 10) || 200, 500));
     if (q.get('ch') != null && q.get('ch') !== '') ch = parseInt(q.get('ch'), 10) || 0;
   } catch (e) {}
   /* ch = số chương: chỉ trả bình luận của chương đó (0 = bình luận chung của bộ) */

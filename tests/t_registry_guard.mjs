@@ -80,5 +80,42 @@ eq('GET public lib rỗng', r.body && r.body.lib, []);
 r = await call('PUT', '/api/registry', { body: { rev: 'x', lib: [] } });
 eq('PUT thiếu khoá -> 401', r.status, 401);
 
+/* 7. DỌN DÒNG RÁC ngay lúc ghi: null/số/chuỗi rỗng/không slug bị bỏ, báo lại số đã bỏ */
+await kv.delete('registry');
+r = await call('PUT', '/api/registry', { headers: ADMH, body: {
+  rev: 't7',
+  lib: [null, { slug: 'a', title: 'A' }, 5, 'rác', { slug: '', title: 'thiếu slug' }, ['x']],
+  slides: [null, { slug: 'a' }, 7],
+  editorChoice: [null, { slug: 'a' }],
+  schedule: { items: [null, { slug: 'a', days: 'Thứ 2' }, { days: 'Thứ 3', title: 'Bộ cũ' }, { days: '' }] },
+} });
+eq('dòng rác: PUT vẫn ok', r.body && r.body.ok, true);
+/* `lib` chỉ nhận OBJECT có slug — chuỗi 'rác' trong lib cũng là dòng hỏng,
+   còn slides/editorChoice thì chuỗi slug là dạng cũ hợp lệ. */
+eq('dòng rác: báo đã bỏ (lib 5, slides 2, editorChoice 1, schedule 2)',
+  r.body && r.body.dropped && [r.body.dropped.lib, r.body.dropped.slides, r.body.dropped.editorChoice, r.body.dropped.schedule],
+  [5, 2, 1, 2]);
+const saved = await kv.get('registry', { type: 'json' });
+/* lịch: 1 dòng theo slug (admin) + 1 dòng chỉ có title (sync từ Blogger) đều hợp lệ */
+eq('dòng rác: KV chỉ còn dòng hợp lệ', [saved.lib.length, saved.slides.length, saved.editorChoice.length, saved.schedule.items.length], [1, 1, 1, 2]);
+eq('dòng rác: KHÔNG có null nào trong KV', JSON.stringify(saved).includes('null'), false);
+const pub = await call('GET', '/api/registry');
+eq('dòng rác: GET public sạch', pub.body && [pub.body.lib.length, pub.body.slides.length], [1, 1]);
+eq('dòng rác: lịch giữ dòng chỉ có title', pub.body && pub.body.schedule.items.map((x) => x.title || x.slug), ['a', 'Bộ cũ']);
+
+/* 8. Bản CHỈ TOÀN dòng rác = bản rỗng ⇒ bị chặn như lib: [] */
+r = await call('PUT', '/api/registry', { headers: ADMH, body: { rev: 't8', lib: [null, 0, '', '  '] } });
+eq('toàn dòng rác -> 400 (không xoá sạch kho)', r.status, 400);
+const after8 = await kv.get('registry', { type: 'json' });
+eq('toàn dòng rác: kho còn 1 bộ', after8 && after8.lib.length, 1);
+
+/* 9. Lần ghi bất kỳ sau đó cũng TỰ LÀM SẠCH bản cũ đang bẩn trong KV */
+const dirty = JSON.parse(await kv.get('registry'));
+dirty.lib = [null, dirty.lib[0], 0];
+await kv.put('registry', JSON.stringify(dirty));
+await call('PUT', '/api/registry', { headers: ADMH, body: { rev: 't9', lib: [dirty.lib[1]] } });
+const healed = JSON.parse(await kv.get('registry'));
+eq('tự làm sạch: KV không còn dòng rác sau lần ghi sau', healed.lib.length, 1);
+
 console.log(fails.length ? 'CÒN ' + fails.length + ' LỖI REGISTRY-GUARD: ' + fails.join(' | ') : 'registry-guard đạt hết');
 process.exit(fails.length ? 1 : 0);

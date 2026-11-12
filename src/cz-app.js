@@ -146,9 +146,11 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     return p.then(function () { memo.reg = null; libCache = null; return true; });
   }
   function registry(force) {
-    /* Bản RỖNG không được memo cứng: force (nút “Thử lại”) là đọc lại từ đầu.
-       Bản có sách thì vẫn memo như cũ để không gọi Worker thừa. */
-    if (memo.reg && (!force || hasLib(memo.reg))) return Promise.resolve({ reg: memo.reg, src: memo.src });
+    /* force = “đọc lại từ đầu”: bỏ qua memo, bỏ qua cả localStorage (xem chú
+       thích đầu tệp). Bản cũ vẫn trả memo khi memo có sách, nên nút “Thử lại”
+       chỉ đúng nhờ purgeRegistry() dọn memo trước — gọi CZ.registry(true) trực
+       tiếp thì không có tác dụng gì. Giờ force là force. */
+    if (!force && memo.reg) return Promise.resolve({ reg: memo.reg, src: memo.src });
     var cached = force ? null : lsGet('ssochuz-reg', TTL_REG);
     /* force cũng dỡ cờ cấm Worker 10 phút — người đọc đã bấm “Thử lại” nghĩa là
        muốn thử thật, không phải để web lặng lẽ quay về bản tĩnh cũ. */
@@ -1417,7 +1419,9 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     o.author = authorFix(o.author);
     o.couples = couplesOf(o);
     o.couple = o.couples.join(', ');
-    o.chapters = parseInt(o.chapters, 10) || 0;
+    /* số chương ÂM (import hỏng, sửa tay sai) từng lọt nguyên vào nhãn
+       "-3/-3" và lên thẻ truyện; mọi con số hiển thị phải >= 0. */
+    o.chapters = Math.max(0, parseInt(o.chapters, 10) || 0);
     /* số chương đã đối chiếu từ kho chương thật luôn thắng nhãn cũ trong registry */
     var rc = realCount(o.slug);
     if (rc != null && rc !== o.chapters) { o.chapters = rc; o.countFixed = true; }
@@ -1438,9 +1442,10 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     }
     o.countLabel = rawLabel;
     var parts = String(o.countLabel || '').split('/');
+    /* nhãn rác "-3/-3" ⇒ declared âm; kẹp lại để "N chương" không âm */
     var second = String(parts[1] || '').trim();
     if (second === '—' || second === '' || second === '-') o.declared = o.chapters;
-    else o.declared = parseInt(second, 10) || o.chapters;
+    else o.declared = Math.max(o.chapters, parseInt(second, 10) || 0);
     /* đã đối chiếu số thật thì đừng để nhãn "29/30" cũ làm người đọc tưởng còn thiếu */
     if (rc != null) {
       var planned = parseInt(o.planned, 10) || 0;
@@ -2942,10 +2947,18 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     }
     return true;
   }
+  /* Dòng registry có thể là null/rác (import hỏng, sửa KV tay). Bản cũ đọc
+     thẳng x.slug ⇒ MỘT dòng null làm `slides()`/`editorChoice()` ném TypeError,
+     và cả trang chủ rơi vào khung "Chưa tải được dữ liệu truyện" dù 66 bộ khác
+     vẫn tốt. Lọc rác ở đúng một chỗ, mọi nơi khác dùng lại. */
+  function regRows(reg) {
+    var lib = reg && Array.isArray(reg.lib) ? reg.lib : [];
+    return lib.filter(function (n) { return !!n && typeof n === 'object' && !Array.isArray(n); });
+  }
   function libList() {
     if (libCache) return libCache;
     var reg = memo.reg || {};
-    var list = (reg.lib || []).filter(listedPublicly).map(norm);
+    var list = regRows(reg).filter(listedPublicly).map(norm);
     /* bộ nào lên chương trong 10 ngày gần nhất (so với bộ mới nhất) thì gắn nhãn “Mới” */
     var dates = list.map(function (n) { return String(n.updated || ''); }).sort();
     var top = Date.parse(dates[dates.length - 1] || '');
@@ -2959,7 +2972,8 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   function slides(reg) {
     reg = reg || memo.reg || {};
     var by = {};
-    (reg.lib || []).forEach(function (n) { by[n.slug] = n; });
+    var rows = regRows(reg);
+    rows.forEach(function (n) { if (n.slug) by[n.slug] = n; });
     /* registry chỉ giữ danh sách slug của khối hero — khỏi nhân đôi dữ liệu bộ truyện.
        N12: slide có thể kèm `reason` (lý do giới thiệu của ban biên tập); nhãn mặc định
        vẫn theo vị trí (slide đầu = “Nổi bật hôm nay”, các slide sau = “Đề xuất cho bạn”). */
@@ -2970,7 +2984,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       return n;
     }).filter(Boolean).map(norm);
     if (s.length) return s;
-    return (reg.lib || []).map(norm)
+    return rows.map(norm)
       .filter(function (n) { return n.canRead; })
       .sort(function (a, b) { return String(b.updated || '').localeCompare(String(a.updated || '')); })
       .slice(0, 5);
@@ -2978,7 +2992,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   function editorChoice(reg) {
     reg = reg || memo.reg || {};
     var by = {};
-    (reg.lib || []).forEach(function (n) { by[n.slug] = n; });
+    regRows(reg).forEach(function (n) { if (n.slug) by[n.slug] = n; });
     var raw = reg.editorChoice || (reg.settings && reg.settings.editorChoice) || [];
     var list = raw.map(function (x) { return by[typeof x === 'string' ? x : (x && x.slug)]; }).filter(Boolean).map(norm);
     return list;

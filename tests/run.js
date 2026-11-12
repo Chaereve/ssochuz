@@ -35,8 +35,15 @@
      t_sweep.js        bấm hết mọi nút trong trang xem có lỗi JS nào không
      t_react.js        trang đọc KHÔNG tải cz-react.js nữa (khối cảm xúc bỏ từ r89e/r90),
                        không còn #rdReact/.rreact, hàng hành động cuối chương vẫn nguyên
+     t_sw_precache.js  PRECACHE của sw.js chỉ chứa shell THẬT: mỗi cz-*.js/cz.css
+                       có tệp, có trang nạp đúng ?v= đó, và CZ_SW_VER khớp C_SHELL
+                       (cz-react.js từng nằm lại trong precache suốt 17 kB chết)
      t_dice.js         vòng quay: ưu tiên follow, lọc 18+/tình trạng/thể loại,
                        loại truyện vừa đọc, tùy chọn/kết quả lưu key versioned :v1
+     t_dice_state.js   trạng thái xấp bài khi khung bị dựng lại giữa lúc lật:
+                       không TypeError kiểu `settle` (nút không kẹt “Đang bốc…”),
+                       S.gen tăng để lá của xấp cũ không rơi vào khung mới,
+                       S.hasCard về false khi dựng lại khung
      t_schedule.mjs    HẸN GIỜ CHƯƠNG + LƯU 1 CHƯƠNG + DUNG LƯỢNG ẢNH: chương hẹn
                        giờ tương lai KHÔNG lọt ra /api/book công khai, RSS, số chương;
                        cron tới mốc tự cập nhật registry + báo đẩy; PUT /api/book/<slug>/chapter
@@ -148,9 +155,9 @@ const cands = (process.env.CZ_TEST_MODULES || '').split(path.delimiter).filter(B
   .concat([path.join(__dirname, 'node_modules'), path.join(__dirname, '..', 'node_modules')]);
 const env = Object.assign({}, process.env, { NODE_PATH: cands.join(path.delimiter) });
 const files = [path.join('..', 'tools', 'check_src.js'), path.join('..', 'tools', 'check_version.mjs'), path.join('..', 'tools', 'check_secrets.js'), path.join('..', 'tools', 'check_headers.js'), path.join('..', 'tools', 'check_chapter_html.mjs'), path.join('..', 'tools', 'check_chapter_routes.mjs'), path.join('..', 'tools', 'check_og.mjs'), path.join('..', 'tools', 'audit_a11y.mjs'), 't_worker.mjs', 't_community.mjs', 't_community_sql.mjs', 't_kv_quota.mjs', 't_sanitize.mjs', 't_schedule.mjs', 't_registry_guard.mjs', 't_data_audit.py', 't_private.mjs', 't_member_spaces.mjs', 't_space.js', 't_space_hero.js', 't_auth_flow.js', 't_rating_withdraw.js', 't_private_ui.js', 't_config.js', 't_html.js', 't_follow.js', 't_personal.js', 't_comment_sticker.js', 't_feed.js', 't_push.js', 't_people.js', 't_people_data.js', 't_notif.js', 't_notification_refresh.js', 't_push_audience.mjs', 't_push_scope_ui.js', 't_follow_only.js', 't_pwa.js', 't_sw_img.js', 't_devserver.js', 't_preload.js', 't_chapter_light.mjs', 't_view.js', 't_chapter_url.js',
-  't_chapters.js', 't_home.js', 't_hero.js', 't_mobile.js', 't_stats.js', 't_ranking.js', 't_quiet_home.js', 't_ranking_worker.mjs', 't_synopsis.js', 't_story.js', 't_reader.js', 't_flows.js', 't_sweep.js', 't_mystats.js', 't_rating.js', 't_adult.js', 't_fallback.js', 't_lock.mjs', 't_lock_ui.js', 't_admin_core.js', 't_admin_online.js', 't_admin_writes.js', 't_admin_chapter.js', 't_admin_chapter_state.js', 't_admin_book_integrity.js', 't_admin_editor_lazy.js', 't_admin_editor_keyboard.js', 't_cover_mirror.mjs', 't_admin_upload.js', 't_admin_budget.js', 't_admin_features.js', 't_admin_docx.js', 't_docx_content.js', 't_admin_sidebar.js',
-  't_admin_real.js', 't_admin_rail.js', 't_admin_no_demo.js', 't_admin_kv_chip.js',
-  't_admin_full_data.js', 't_admin_series_page.js', 't_admin_chapter_editor.js', 't_v16.js', 't_react.js', 't_dice.js'];
+  't_chapters.js', 't_home.js', 't_hero.js', 't_mobile.js', 't_stats.js', 't_ranking.js', 't_quiet_home.js', 't_ranking_worker.mjs', 't_synopsis.js', 't_story.js', 't_reader.js', 't_flows.js', 't_sweep.js', 't_mystats.js', 't_rating.js', 't_adult.js', 't_fallback.js', 't_registry_dirty.js', 't_lock.mjs', 't_lock_ui.js', 't_admin_core.js', 't_admin_online.js', 't_admin_writes.js', 't_admin_chapter.js', 't_admin_chapter_state.js', 't_admin_book_integrity.js', 't_admin_editor_lazy.js', 't_admin_editor_keyboard.js', 't_cover_mirror.mjs', 't_admin_upload.js', 't_admin_budget.js', 't_admin_features.js', 't_admin_docx.js', 't_docx_content.js', 't_admin_sidebar.js',
+  't_admin_real.js', 't_admin_dirty_registry.js', 't_admin_rail.js', 't_admin_no_demo.js', 't_admin_kv_chip.js',
+  't_admin_full_data.js', 't_admin_series_page.js', 't_admin_chapter_editor.js', 't_v16.js', 't_react.js', 't_dice.js', 't_dice_state.js', 't_sw_precache.js'];
 let bad = 0;
 for (const f of files) {
   const isPy = f.endsWith('.py');

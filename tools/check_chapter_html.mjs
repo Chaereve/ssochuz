@@ -31,6 +31,15 @@ let widgetChapters = 0, imgsBefore = 0, imgsAfter = 0, emptyAfter = 0;
 
 const bump = (box, k, n = 1) => { box[k] = (box[k] || 0) + n; };
 const words = (s) => String(s || '').split(' ').filter((w) => w.length > 1);
+/* Chữ HIỂN THỊ để so “không tự sinh chữ”: bỏ thẻ THẬT (bắt đầu bằng chữ/slash),
+   giữ dấu '<' đứng trước số/dấu câu (vd "<3") — bản cũ bỏ mọi cụm <…> nên nuốt
+   luôn chữ của tác giả, rồi báo sai là bản sạch “sinh thêm chữ”. */
+const visibleText = (s) => String(s || '')
+  .replace(/<\/?[A-Za-z][^>]*>/g, ' ')
+  .replace(/&nbsp;/gi, ' ')
+  .replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/&quot;/gi, '"').replace(/&apos;/gi, "'")
+  .replace(/&amp;/gi, '&')
+  .replace(/\s+/g, ' ').trim();
 
 /* đếm thẻ/thuộc tính bị bỏ để in báo cáo */
 function diffTags(before, after) {
@@ -69,8 +78,8 @@ for (const f of files) {
     if (fb.textLen > 0 && fa.textLen === 0 && fb.imgs === 0) { emptyAfter += 1; bad.push(slug + ' #' + (i + 1) + ': sạch xong thành RỖNG'); }
     if (fa.scripts > 0) bad.push(slug + ' #' + (i + 1) + ': vẫn còn thẻ/URL nguy hiểm (' + fa.scripts + ')');
     /* mọi từ của bản sạch phải có trong bản gốc */
-    const pool = new Set(words(fb.text));
-    const missing = words(fa.text).filter((w) => !pool.has(w));
+    const pool = new Set(words(visibleText(before)));
+    const missing = words(visibleText(after)).filter((w) => !pool.has(w));
     if (missing.length) bad.push(slug + ' #' + (i + 1) + ': bản sạch có chữ KHÔNG có trong bản gốc (' + missing.slice(0, 3).join(' ') + ')');
     if (/<button\b/i.test(before)) widgetChapters += 1;
   });

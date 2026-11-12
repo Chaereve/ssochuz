@@ -408,8 +408,13 @@
   function renderSched(sch) {
     var el = $('#sched');
     if (!el) return;
-    var items = (sch && sch.items) || [];
-    var local = ((CZ._memo.reg || {}).schedule || {}).items || [];
+    /* dòng lịch rác (null trong mảng) từng làm renderSched ném TypeError ngay
+       giữa lúc dựng trang chủ ⇒ cả khối thư viện mất theo. Bỏ dòng không phải object. */
+    var rowsOnly = function (list) {
+      return (Array.isArray(list) ? list : []).filter(function (it) { return !!it && typeof it === 'object'; });
+    };
+    var items = rowsOnly(sch && sch.items);
+    var local = rowsOnly(((CZ._memo.reg || {}).schedule || {}).items);
     var usable = function (list) {
       return list.filter(function (it) { return !!schedFind(it); });
     };

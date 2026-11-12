@@ -58,7 +58,12 @@ function openPage(file, reg) {
   assert.ok(!/\/chuyen-the\s+\/chuyen-the\.html\s+200/.test(rd), 'đích .html sinh vòng lặp 308');
 
   const sw = read('sw.js');
-  assert.ok(sw.includes("var CZ_SW_VER = '20261104v16'"), 'chưa tăng phiên bản SW (CSS/JS đổi nội dung)');
+  /* Ý định: shell phải được đánh version MỚI khi CSS/JS đổi nội dung. Ghim cứng
+     '20261104v16' thì mọi lần tăng version hợp lệ sau đó đều rớt oan, nên chỉ
+     đòi: đúng dạng YYYYMMDD + hậu tố, và không LÙI so với mốc vòng 16. */
+  const swVer = (sw.match(/var CZ_SW_VER = '([^']+)';/) || [])[1] || '';
+  assert.ok(/^\d{8}[a-z0-9]+$/i.test(swVer), 'CZ_SW_VER sai dạng: ' + swVer);
+  assert.ok(swVer >= '20261104v16', 'chưa tăng phiên bản SW (CSS/JS đổi nội dung): ' + swVer);
   assert.ok(sw.includes("'/chuyen-the'") && sw.includes("'/cz-series.js"), 'PRECACHE thiếu trang/script mới');
 
   /* ---------------- 2 · CSS vòng 16 -------------------------------------- */

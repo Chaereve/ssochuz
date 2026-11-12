@@ -162,6 +162,27 @@ const state = (p) => ({
   ok(out.F.after === N_LIB, 'F: goi CZ.lib() truoc khi registry ve xong van phai co du ' + N_LIB + ' bo (thay ' + out.F.after + ')');
   ok(typeof pF.win.CZ.purgeRegistry === 'function', 'F: thieu CZ.purgeRegistry() de doc lai registry tu dau');
 
+  /* ---------- G. CZ.registry(true) phải THẬT SỰ bỏ qua memo -------------- */
+  const gCalls = { reg: 0 };
+  const baseG = mkFetch();
+  const pG = page('tac-gia/index.html', {
+    url: 'https://ssochuz.pages.dev/tac-gia/',
+    fetch: (u) => { if (String(u).indexOf('/api/registry') !== -1) gCalls.reg++; return baseG(u); },
+  });
+  await pG.win.CZ.registry();
+  await wait(400);
+  const g1 = gCalls.reg;
+  await pG.win.CZ.registry();
+  await wait(300);
+  const g2 = gCalls.reg;
+  await pG.win.CZ.registry(true);
+  await wait(700);
+  const g3 = gCalls.reg;
+  out.G = { afterLoad: g1, afterPlain: g2, afterForce: g3 };
+  ok(g1 > 0, 'G: lần đầu phải gọi Worker lấy registry');
+  ok(g2 === g1, 'G: registry() thường phải dùng memo, không gọi Worker lại (thấy ' + g1 + ' → ' + g2 + ')');
+  ok(g3 > g2, 'G: registry(true) phải đọc lại từ đầu, bỏ qua memo (thấy ' + g2 + ' → ' + g3 + ')');
+
   out.errors2 = bad;
   console.log(JSON.stringify(out, null, 1));
   process.exit(0);

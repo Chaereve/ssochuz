@@ -52,6 +52,21 @@ for (const [name, html] of attacks) {
     /expression\s*\(/.test(lower) || /position\s*:\s*fixed/.test(lower);
   ck('tấn công bị chặn: ' + name, !bad, out, 'không còn mẫu nguy hiểm');
 }
+/* Thẻ KHÔNG có '>' đóng ở cuối chuỗi: trình duyệt vẫn dựng phần tử kèm thuộc
+   tính on* (vd mở bằng innerHTML), nên bộ lọc phải THOÁT '<' thành chữ thay vì
+   chép nguyên phần còn lại. Kiểm cả chuỗi lẫn DOM thật (mục 5). */
+const unterminated = [
+  ['img onerror', '<img src=x onerror=alert(1)', '&lt;img src=x onerror=alert(1)'],
+  ['script', '<script alert(1)', '&lt;script alert(1)'],
+  ['giữa câu chữ', 'Chữ thường <img src=x onerror=alert(1)', 'Chữ thường &lt;img src=x onerror=alert(1)'],
+  ['svg onload', '<svg onload=alert(1)', '&lt;svg onload=alert(1)'],
+];
+for (const [name, input, want] of unterminated) {
+  const out = sanitizeChapterHtml(input);
+  ck('thẻ thiếu > bị thoát thành chữ: ' + name, out === want, out, want);
+  ck('thẻ thiếu > không còn dấu < thô: ' + name, out.indexOf('<') < 0, out, 'không còn <');
+}
+
 /* chữ trong cụm bị bỏ KHÔNG được sót lại (nút chết “1 2 3…” là rác) */
 ck('nút phân trang Blogger bị bỏ cả chữ', sanitizeChapterHtml('<div class="pagination-container"><button>1</button><button>2</button></div>') === '', sanitizeChapterHtml('<div class="pagination-container"><button>1</button><button>2</button></div>'), '');
 /* chữ của đoạn văn THẬT vẫn còn */
@@ -90,8 +105,48 @@ ck('safeStyleValue: position fixed → static', safeStyleValue('position: fixed;
 /* ---- 4. dữ liệu hỏng không làm nổ hàm ---- */
 ck('rỗng → rỗng', sanitizeChapterHtml('') === '' && sanitizeChapterHtml(null) === '', [sanitizeChapterHtml(''), sanitizeChapterHtml(null)], ['', '']);
 ck('thẻ mở lơ lửng', typeof sanitizeChapterHtml('<div>a') === 'string', sanitizeChapterHtml('<div>a'), 'chuỗi');
-ck('dấu < lơ lửng giữ làm chữ', sanitizeChapterHtml('a < b').includes('a < b'), sanitizeChapterHtml('a < b'), 'giữ chữ');
+ck('dấu < lơ lửng được thoát thành chữ', sanitizeChapterHtml('a < b') === 'a &lt; b', sanitizeChapterHtml('a < b'), 'a &lt; b');
+ck('chữ "<3" vẫn đọc ra "<3"', sanitizeChapterHtml('Chữ <3') === 'Chữ &lt;3', sanitizeChapterHtml('Chữ <3'), 'Chữ &lt;3');
+ck('"<<" trước thẻ bị bỏ không dựng thành <script>', sanitizeChapterHtml('<<</style>script>x') === '&lt;&lt;script>x', sanitizeChapterHtml('<<</style>script>x'), '&lt;&lt;script>x');
+ck('chữ có <3 và >5 không bị nuốt', sanitizeChapterHtml('Chữ <3 và >5').indexOf('3') >= 0 && sanitizeChapterHtml('Chữ <3 và >5').indexOf('5') >= 0, sanitizeChapterHtml('Chữ <3 và >5'), 'còn chữ');
 ck('chuỗi rất lớn bị chặn', sanitizeChapterHtml('a'.repeat(5 * 1024 * 1024)) === '', 'chặn', '');
+
+/* ---- 5. kiểm bằng DOM THẬT: đầu ra không được dựng phần tử hay thuộc tính
+   nguy hiểm nào (đây là lớp kiểm đúng thứ trình duyệt nhìn thấy) ---- */
+import { createRequire } from 'module';
+const requireCjs = createRequire(import.meta.url);
+let JSDOM = null;
+try { ({ JSDOM } = requireCjs('jsdom')); } catch (e) { JSDOM = null; }
+if (JSDOM) {
+  const doc = new JSDOM('<div id="x"></div>').window.document;
+  const host = doc.getElementById('x');
+  const evil = [
+    '<img src=x onerror=alert(1)',
+    '<img src=x onerror=alert(1)>',
+    '<a href="javascript:alert(1)">bấm</a>',
+    '<div style="background:url(javascript:alert(1))">a</div>',
+    '<svg onload=alert(1)>',
+    '<img src="x" onerror="alert(1)"',
+  ];
+  for (const html of evil) {
+    host.innerHTML = sanitizeChapterHtml(html);
+    let unsafe = '';
+    host.querySelectorAll('*').forEach((el) => {
+      const tag = el.tagName.toLowerCase();
+      if (['script', 'iframe', 'object', 'embed', 'svg', 'form', 'input', 'style', 'link', 'meta', 'base'].includes(tag)) unsafe += ' tag:' + tag;
+      Array.prototype.forEach.call(el.attributes, (a) => {
+        const n = a.name.toLowerCase(), v = String(a.value);
+        if (n.indexOf('on') === 0) unsafe += ' attr:' + n;
+        if ((n === 'href' || n === 'src' || n === 'poster' || n === 'cite') && /^\s*(javascript|vbscript|data:text\/html)/i.test(v)) unsafe += ' url:' + n;
+        if (n === 'style' && /javascript:|expression\s*\(|behavior\s*:|@import/i.test(v)) unsafe += ' style';
+      });
+    });
+    ck('DOM thật không dựng mã nguy hiểm: ' + html, !unsafe, unsafe || 'sạch', 'sạch');
+  }
+  host.innerHTML = '';
+} else {
+  ck('có jsdom để kiểm bằng DOM thật', false, 'thiếu jsdom', 'có jsdom');
+}
 
 const bad = checks.filter((c) => !c.ok);
 console.log(JSON.stringify({
