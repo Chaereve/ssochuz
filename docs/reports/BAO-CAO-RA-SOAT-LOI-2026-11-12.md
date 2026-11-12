@@ -101,6 +101,25 @@ dựng trang chủ, khối thư viện rơi vào khung “Chưa tải được d
   chương âm: trang chủ vẫn vẽ thư viện, hero, lịch, không lỗi JS, số chương = 0.
   Đã kiểm ngược: bản cũ **rớt ngay** ở khung “Chưa tải được dữ liệu truyện”.
 
+### 2.9 Cùng dòng rác đó làm **`/admin` không tải được dữ liệu**
+
+Trang quản trị tự đọc lại registry (`admin-real.js`), và lớp đó cũng đọc thẳng
+thuộc tính của từng dòng: `lib.map(metaToBook)` ⇒ `m.slug`; sau đó hydrate gọi
+`initEditModels()` → `findMeta()` lặp `REG.lib` ⇒ gặp `null` là `TypeError`.
+Hậu quả: kết nối Worker xong `/admin` báo `workererr`, Dashboard 0 bộ — đúng lúc
+cần vào để dọn dữ liệu thì cửa duy nhất lại khoá. Dòng lịch thiếu `slug` còn làm
+`realSaveHomepage()` từ chối lưu (“thiếu thứ hoặc bộ”), nên không tự sửa được.
+
+- Sửa (`admin-real.js`): `hydrate()` chỉ giữ dòng là object **và có slug**, gán
+  lại `REG.lib` đã sạch; `findMeta()` chống null; `initEditModels(undefined)`
+  trả về sớm; lịch bỏ dòng không có slug.
+- Nhờ vậy lần “Lưu trang chủ” kế tiếp **ghi lại registry đã sạch** (dòng rác bị
+  loại) — sửa được dữ liệu ngay trong trang quản trị.
+- Test: `tests/t_admin_dirty_registry.js` (mới, trong `npm test`) — Worker giả
+  trả registry có null/rác ở `lib`, `slides`, `editorChoice`, `schedule.items`;
+  đòi `/admin` kết nối được, chỉ còn 1 bộ hợp lệ, tab Thư viện hiện đúng, và
+  PUT `/api/registry` ghi lên **không còn dòng rác**. Kiểm ngược: bản cũ rớt.
+
 ## 3. Ghi nhận, chưa sửa (không phải lỗi chức năng, cần chủ trang quyết)
 
 1. **`npm audit` 2 lỗ hổng high** — `undici` + `source-map-js` nằm trong `jsdom` (devDependency). Không lên production; chỉ ảnh hưởng máy chạy test. Nếu muốn sạch báo cáo: nâng `jsdom`, hoặc chấp nhận vì đây là công cụ test.

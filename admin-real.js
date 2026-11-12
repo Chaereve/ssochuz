@@ -86,7 +86,9 @@
     if (demo) { demo.hidden = true; if (demo.innerHTML) demo.innerHTML = ''; }
     if (WRAPPED) window.render(); else M.render();
   }
-  function findMeta(slug) { return (REG.lib || []).find(function (m) { return m.slug === slug; }); }
+  function findMeta(slug) {
+    return (Array.isArray(REG.lib) ? REG.lib : []).find(function (m) { return !!m && m.slug === slug; });
+  }
   function titleOf(slug) { var m = findMeta(slug); return m ? (m.title || slug) : slug; }
   function couplesOf(m) { return Array.isArray(m.couples) && m.couples.length ? m.couples.join(', ') : (m.couple || ''); }
   function metaToBook(m, i) {
@@ -160,7 +162,11 @@
   /* ---------------- 3 · đổ dữ liệu thật vào state ---------------- */
   function hydrate(reg) {
     REG = reg || { lib: [] };
-    var lib = REG.lib || [];
+    /* Bỏ dòng rác (null/không slug): metaToBook(null), findMeta() từng ném TypeError khi mở /admin. */
+    var lib = (Array.isArray(REG.lib) ? REG.lib : []).filter(function (m) {
+      return !!m && typeof m === 'object' && !Array.isArray(m) && String(m.slug || '').trim() !== '';
+    });
+    REG.lib = lib;      /* findMeta/titleOf đọc REG.lib — để nguyên dòng rác là ném lỗi */
     S.books = lib.map(metaToBook);
     var choice = (Array.isArray(REG.editorChoice) && REG.editorChoice.length)
       ? REG.editorChoice
@@ -175,11 +181,15 @@
     S.chapterBook = S.selectedBook;
 
     var slides = Array.isArray(REG.slides) ? REG.slides : [];
-    S.slides = slides.slice(0, 8).map(function (x) {
+    S.slides = slides.filter(function (x) { return !!x && (typeof x === 'string' || typeof x === 'object'); }).slice(0, 8).map(function (x) {
       return { b: (typeof x === 'string' ? x : (x && x.slug) || ''), r: (x && (x.reason || x.note)) || '' };
     });
     var sch = (REG.schedule && Array.isArray(REG.schedule.items)) ? REG.schedule.items : [];
-    S.schedule = sch.map(function (x) {
+    /* dòng lịch không có slug là rác: không dẫn được tới bộ nào, mà còn làm
+       realSaveHomepage() từ chối lưu (“thiếu thứ hoặc bộ”) ⇒ bỏ ngay từ hydrate. */
+    S.schedule = sch.filter(function (x) {
+      return !!x && typeof x === 'object' && String(x.slug || '').trim() !== '';
+    }).map(function (x) {
       /* detail là GHI CHÚ (thường rỗng); title là TÊN BỘ — trước đây gộp
          title vào ô ghi chú rồi ghi ngược lại vào KV. */
       return { d: x.days || x.day || '', b: x.slug || '', c: x.detail || x.note || '' };
@@ -2097,6 +2107,7 @@
     if (CFG.base) (S.conn === 'static' ? loadStaticBook(id) : loadBook(id)).catch(function () {});
   };
   window.initEditModels = function (b) {
+    if (!b) return;                       /* không có bộ đang chọn — đừng ném TypeError */
     var meta = findMeta(b.id) || {};
     S.models['eb-t'] = b.t; S.models['eb-slug'] = b.slug || b.id;
     S.models['eb-a'] = b.a; S.models['eb-c'] = b.c;
