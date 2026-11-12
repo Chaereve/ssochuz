@@ -54,6 +54,12 @@ async function authenticatedUser(req, env, userFromReq, json, cors) {
   }
   return { userId: sub };
 }
+/* Hạn mức chống spam — BEST EFFORT, không phải hàng rào an ninh:
+   Map nằm trong bộ nhớ một isolate của Worker, nên mỗi isolate đếm riêng và
+   isolate bị thu hồi là bộ đếm về 0. Người cố tình spam có thể vượt hạn mức
+   bằng cách rơi vào isolate khác. Muốn chặn cứng thì phải đếm trong D1 (thêm
+   bảng + index) hoặc dùng rate limiting của Cloudflare cho route — cả hai đều
+   là việc hạ tầng, xem community-worker/README.md. */
 function limited(key, limit, windowMs) {
   const now = Date.now();
   if (rateWindows.size > 5000) {

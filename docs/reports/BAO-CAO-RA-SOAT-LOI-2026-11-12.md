@@ -181,13 +181,57 @@ SW vẫn tải thêm 17 kB và kho shell ôm mãi một bản sao không ai gọ
 `^` có sẵn, không thêm gói mới). `npm run build` cho ra bundle **y hệt**
 (cùng `?v=`, cùng kích thước), `tools/audit_a11y.mjs` và các bài jsdom vẫn đạt.
 
+### 2.13 `CZ.registry(true)` không bỏ qua memo — chú thích nói một đằng, mã làm một nẻo
+
+`src/cz-app.js` ghi rõ `registry(true)` là “đọc lại từ đầu, bỏ qua memo”, nhưng
+điều kiện cũ `memo.reg && (!force || hasLib(memo.reg))` vẫn trả memo khi memo
+đang có sách. Trang tác giả/couple gọi `purgeRegistry()` rồi mới `registry(true)`
+nên người đọc không thấy lỗi; ai gọi thẳng `CZ.registry(true)` (API công khai
+của `CZ`) thì không có tác dụng gì.
+
+- Sửa: `if (!force && memo.reg) return …` — `force` giờ là force, vẫn bỏ qua cả
+  localStorage như cũ.
+- Test: `tests/t_people_data.js` thêm mục G đếm số lượt gọi `/api/registry`:
+  `registry()` thường **không** gọi lại (dùng memo), `registry(true)` **phải**
+  gọi lại.
+
+### 2.14 Token Supabase: issuer so bằng **tiền tố** thay vì so khớp tuyệt đối
+
+`worker/cms.js` kiểm `String(payload.iss).indexOf(base) !== 0`, nên hai kiểu
+issuer đội lốt đều lọt: `https://sb.test.evil.test/auth/v1` (host của kẻ tấn
+công chỉ cần *bắt đầu bằng* URL project) và `https://evil.test/?x=https://sb.test`
+(nhét URL vào query). Chưa khai thác được vì chữ ký vẫn phải khớp JWKS của
+project đã ghim, nhưng đây là lớp duy nhất còn hở nếu khoá bị lộ.
+
+- Sửa: thêm `supabaseIssuerOk(iss, base)` — chấp nhận đúng 2 dạng thật của
+  GoTrue (`<url>/auth/v1`, `<url>`), có/không scheme, tha dấu `/` cuối; ngoài
+  danh sách là 401.
+- Test: `tests/t_worker.mjs` thêm 3 kiểm tra (đội lốt hậu tố host → 401, nhét
+  URL vào query → 401, `/` cuối vẫn nhận), tổng 445 kiểm tra Worker.
+
+### 2.15 Hàng đợi push: trần 45 lượt kiểm/invocation làm **chết đói** sub không cần backend
+
+`drainPushQueue()` dùng chung `PUSH_BATCH = 45` cho hai thứ: số tin gửi và số
+lượt *kiểm người nhận* (`pushAudience`). Sub kiểu tài khoản (`scopeVersion 2` +
+`ownerId`) phải tra Supabase; khi `SUPABASE_SERVICE_ROLE` chưa đặt hoặc backend
+sập, mỗi lượt tra trả `null` (hoãn, đúng chủ ý “fail closed”). Nhưng sub được
+duyệt theo **thứ tự khoá KV**, nên chỉ cần 45 sub-tài khoản đứng trước là trần
+hết sạch: sub chỉ cần chủ đề (`topics`) — vốn không cần backend — **không bao
+giờ** nhận được tin, dù chỉ cần gửi một cái. Job cũng không bao giờ `done`.
+
+- Sửa (`worker/cms.js`): duyệt sub **không cần backend trước**, sub-tài khoản
+  sau (`needsBackend()`), giữ nguyên trần 45 và nguyên tắc fail-closed; thêm
+  `stat.deferred` + ghi vào log hoạt động để nhìn ra “hoãn N lượt kiểm” thay vì
+  im lặng.
+- Test: `tests/t_worker.mjs` — 50 sub-tài khoản + 1 sub chủ đề, không cấu hình
+  Supabase: sub chủ đề **phải** nhận đúng 1 tin. Kiểm ngược: bản cũ gửi 0.
+
 ## 3. Ghi nhận, chưa sửa (không phải lỗi chức năng, cần chủ trang quyết)
 
 1. **`src/cz-react.js` (16,9 kB) giờ không còn ai nạp** — khối cảm xúc gỡ từ r90, `PRECACHE` đã bỏ (mục 2.11), nhưng mã nguồn + tệp build ở gốc vẫn còn. Xoá hẳn thì phải sửa `tools/build_site.mjs`, `tools/check_src.js`, `tools/bundle_budget.mjs` và tài liệu — để chủ trang quyết vì đây là gỡ tính năng, không phải sửa lỗi.
 2. **CSP có `'unsafe-inline'` trong `script-src`** (`_headers`) — cần cho các script nội tuyến hiện tại; nghĩa là CSP không chặn được script chèn qua lỗ hổng HTML. Muốn siết phải bỏ dần script nội tuyến (việc lớn, ngoài phạm vi lượt rà này).
-3. **`CZ.registry(true)`**: chú thích nói `force` “đọc lại từ đầu, bỏ qua memo”, nhưng điều kiện `memo.reg && (!force || hasLib(memo.reg))` vẫn trả memo khi memo có sách. Hiện không gây lỗi vì nút “Thử lại” gọi `purgeRegistry()` trước (dọn memo), nên chỉ là chú thích chưa khớp mã.
-4. **Kiểm issuer token Supabase** so bằng tiền tố (`iss` bắt đầu bằng `base`). Chữ ký đã được kiểm bằng JWKS của project đã ghim nên không khai thác được, nhưng nếu muốn chặt thì nên so khớp tuyệt đối `base + '/auth/v1'`.
-5. **Dữ liệu lịch sử `'YYYY-MM-DD HH:mm'`** (không có múi giờ) được `Date.parse` hiểu theo múi giờ của máy chạy: Worker (UTC) và trình quản trị (giờ VN) lệch nhau 7 giờ. Chỉ ảnh hưởng chương hẹn giờ nhập từ bản cũ; dữ liệu mới luôn lưu ISO UTC.
+3. **Hạn mức chống spam của `community-worker` là best effort** — bộ đếm nằm trong bộ nhớ **một isolate** (`rateWindows`), mỗi isolate đếm riêng, isolate bị thu hồi là về 0. Chặn cứng phải đếm trong D1 (thêm bảng + index) hoặc dùng rate limiting của Cloudflare cho route `/api/community/*` — cả hai đụng hạ tầng production nên chỉ ghi nhận, đã viết rõ trong `community-worker/README.md`.
+4. **Dữ liệu lịch sử `'YYYY-MM-DD HH:mm'`** (không có múi giờ) được `Date.parse` hiểu theo múi giờ của máy chạy: Worker (UTC) và trình quản trị (giờ VN) lệch nhau 7 giờ. Chỉ ảnh hưởng chương hẹn giờ nhập từ bản cũ; dữ liệu mới luôn lưu ISO UTC.
 
 ## 4. Cách chạy lại
 

@@ -945,7 +945,7 @@ async function publishDueChapters(env) {
 }
 /* Cron drain: gửi tối đa PUSH_BATCH tin, sub chết thì xoá, job xong thì gỡ */
 async function drainPushQueue(env) {
-  const stat = { sent: 0, failed: 0, removed: 0, jobs: 0, jobsLeft: 0 };
+  const stat = { sent: 0, failed: 0, removed: 0, deferred: 0, jobs: 0, jobsLeft: 0 };
   if (!env.CZ_KV) return stat;
   if (!env.VAPID_PUBLIC || !env.VAPID_PRIVATE) return stat;   /* chưa cấu hình VAPID */
   let q = [];
@@ -960,11 +960,18 @@ async function drainPushQueue(env) {
   let budget = PUSH_BATCH;
   let checked = 0; // Bound Supabase reads as well as push sends per cron.
   const deadKeys = [];
+  /* Sub cần tra Supabase (account) xếp SAU sub chỉ cần chủ đề. Trần 45 lượt
+     kiểm/invocation là của CHUNG: thiếu SUPABASE_SERVICE_ROLE (hoặc backend
+     sập) thì mỗi lượt tra trả `null` = hoãn, và nếu 45 sub account đứng trước
+     thì trần hết sạch ⇒ sub theo chủ đề không bao giờ nhận được tin dù chỉ
+     cần gửi một cái. Thứ tự cũ = theo khoá KV ⇒ tuỳ duyên. */
+  const needsBackend = (s) => !!(s.sub && s.sub.ownerId && s.sub.scopeVersion === 2);
+  const ordered = subs.slice().sort((a, b) => (needsBackend(a) ? 1 : 0) - (needsBackend(b) ? 1 : 0));
   for (const job of q) {
     if (budget <= 0) break;
     job.sent = job.sent || {};
     const todo = [];
-    for (const s of subs) {
+    for (const s of ordered) {
       if (job.sent[s.key] || deadKeys.includes(s.key)) continue;
       if (checked >= PUSH_BATCH) break;
       if (s.sub.ownerId && s.sub.scopeVersion === 2) {
@@ -973,7 +980,7 @@ async function drainPushQueue(env) {
       }
       checked++;
       const allowed = await eligible(s.sub, job.slug);
-      if (allowed === null) continue; // fail closed; leave pending for next cron
+      if (allowed === null) { stat.deferred++; continue; } // fail closed; leave pending for next cron
       if (!allowed) { job.sent[s.key] = 1; continue; }
       todo.push(s);
       if (todo.length >= budget) break;
@@ -1012,7 +1019,8 @@ async function drainPushQueue(env) {
   if (stat.sent || stat.removed || stat.failed) {
     await logAct(env, 'push chương mới: gửi ' + stat.sent + ' tin' +
       (stat.removed ? ' · xoá ' + stat.removed + ' sub chết' : '') +
-      (stat.failed ? ' · lỗi ' + stat.failed : ''), null);
+      (stat.failed ? ' · lỗi ' + stat.failed : '') +
+      (stat.deferred ? ' · hoãn ' + stat.deferred + ' lượt kiểm (chưa tra được người theo dõi)' : ''), null);
   }
   return stat;
 }
@@ -3893,6 +3901,21 @@ async function supabaseJWKS(env, base) {
   const jwks = await r.json();
   return (jwks && jwks.keys) || [];
 }
+/* Issuer của Supabase phải TRÙNG ĐÚNG project đã ghim, không phải “bắt đầu
+   bằng”. Bản cũ so bằng tiền tố nên `https://sb.test.evil.test/auth/v1` (và
+   `https://evil.test/?x=https://sb.test`) đều lọt — chữ ký vẫn phải khớp khoá
+   của project nên chưa khai thác được, nhưng đây là lớp duy nhất còn hở nếu
+   một ngày khoá bị lộ. Chấp nhận đúng 2 dạng thật của GoTrue: `<url>/auth/v1`
+   và `<url>` (token cũ), có/không có scheme, tha dấu `/` cuối. */
+function supabaseIssuerOk(iss, base) {
+  const norm = (x) => String(x || '').trim().replace(/\/+$/, '').toLowerCase();
+  const s = norm(iss);
+  if (!s) return true;
+  const full = norm(base);
+  const bare = full.replace(/^https?:\/\//, '');
+  const allowed = [full + '/auth/v1', full, bare + '/auth/v1', bare];
+  return allowed.some((a) => a === s);
+}
 async function supabasePubKey(env, kid, alg, base) {
   const ck = base + '|' + kid + '|' + alg;
   if (_sbKeys.has(ck)) return _sbKeys.get(ck);
@@ -3944,7 +3967,7 @@ async function verifySupabaseToken(tok, env) {
   if (payload.exp && payload.exp < now) throw new Error('phiên đăng nhập đã hết hạn — đăng nhập lại');
   const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
   if (!aud.some((a) => a === 'authenticated' || a === 'anon')) throw new Error('token sai audience: ' + aud.join(','));
-  if (base && payload.iss && String(payload.iss).indexOf(base) !== 0 && String(payload.iss).indexOf(base.replace(/^https?:\/\//, '')) < 0) {
+  if (base && payload.iss && !supabaseIssuerOk(payload.iss, base)) {
     throw new Error('token sai issuer — token do "' + payload.iss + '" cấp nhưng Worker đang ghim project "' + base + '" (đặt SUPABASE_URL trên Worker đúng project Supabase của web, hoặc sửa lại Project URL ở /admin)');
   }
   if (payload.email && payload.email_verified === false) throw new Error('email chưa xác thực');

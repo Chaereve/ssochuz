@@ -146,9 +146,11 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     return p.then(function () { memo.reg = null; libCache = null; return true; });
   }
   function registry(force) {
-    /* Bản RỖNG không được memo cứng: force (nút “Thử lại”) là đọc lại từ đầu.
-       Bản có sách thì vẫn memo như cũ để không gọi Worker thừa. */
-    if (memo.reg && (!force || hasLib(memo.reg))) return Promise.resolve({ reg: memo.reg, src: memo.src });
+    /* force = “đọc lại từ đầu”: bỏ qua memo, bỏ qua cả localStorage (xem chú
+       thích đầu tệp). Bản cũ vẫn trả memo khi memo có sách, nên nút “Thử lại”
+       chỉ đúng nhờ purgeRegistry() dọn memo trước — gọi CZ.registry(true) trực
+       tiếp thì không có tác dụng gì. Giờ force là force. */
+    if (!force && memo.reg) return Promise.resolve({ reg: memo.reg, src: memo.src });
     var cached = force ? null : lsGet('ssochuz-reg', TTL_REG);
     /* force cũng dỡ cờ cấm Worker 10 phút — người đọc đã bấm “Thử lại” nghĩa là
        muốn thử thật, không phải để web lặng lẽ quay về bản tĩnh cũ. */

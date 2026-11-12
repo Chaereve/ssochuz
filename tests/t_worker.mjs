@@ -384,6 +384,15 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
       ck('supabase/401 nêu issuer thật của token', /project-khac\.supabase\.co/.test((r.body && r.body.error) || ''), r.body && r.body.error, 'có URL trong error');
       eq('supabase/401 kèm SUPABASE_URL đang cấu hình', r.body && r.body.supabaseUrl, 'https://sb.test');
     }
+    /* issuer chỉ cần “bắt đầu bằng” URL đã ghim là lọt (bản cũ): chặn cả 2 kiểu */
+    {
+      const tail = await call('POST', '/api/auth/supabase', { e: envSB, body: { accessToken: sbTok({ iss: 'https://sb.test.evil.test/auth/v1' }) } });
+      eq('supabase/issuer đội lốt hậu tố host → 401', tail.status, 401);
+      const q = await call('POST', '/api/auth/supabase', { e: envSB, body: { accessToken: sbTok({ iss: 'https://evil.test/?x=https://sb.test' }) } });
+      eq('supabase/issuer nhét URL vào query → 401', q.status, 401);
+      const slash = await call('POST', '/api/auth/supabase', { e: envSB, body: { accessToken: sbTok({ iss: 'https://sb.test/auth/v1/' }) } });
+      ck('supabase/issuer có / cuối vẫn nhận', !!(slash.body && slash.body.ok === true), slash.body && slash.body.error, 'ok');
+    }
     /* token rác → 401 kèm lý do (không được trả lỗi chung chung) */
     {
       const r = await call('POST', '/api/auth/supabase', { e: envSB, body: { accessToken: 'token-rac' } });
@@ -1403,6 +1412,25 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     await kv.put('pushq', JSON.stringify([jobFor('truyen-push')]));
     await scheduled(accountEnv);
     eq('push/backend failure sends nothing and retains job', [accountPosts.length, (await getQ()).length], [0, 1]);
+    /* Trần 45 lượt kiểm/invocation: sub cần tra Supabase xếp TRƯỚC sẽ ăn hết
+       trần khi backend chưa cấu hình (mỗi lượt trả null = hoãn) ⇒ sub theo chủ
+       đề, vốn không cần backend, không bao giờ nhận được tin. */
+    pushKeys().forEach((k) => kv.m.delete(k));
+    for (let i = 0; i < 50; i++) {
+      await kv.put('push:a' + String(i).padStart(2, '0'), JSON.stringify({ endpoint: 'https://push.test/acct' + i, scopeVersion: 2, ownerId: 'u' + i, topics: [], keys: { p256dh: cliPub, auth: cliAuth } }));
+    }
+    await kv.put('push:z-topic', JSON.stringify({ endpoint: 'https://push.test/topic', scopeVersion: 2, topics: ['truyen-push'], keys: { p256dh: cliPub, auth: cliAuth } }));
+    await kv.put('pushq', JSON.stringify([jobFor('truyen-push')]));
+    let topicPosts = [];
+    routes = (u) => {
+      if (String(u).startsWith('https://push.test/')) { topicPosts.push(String(u)); return { status: 201, body: '' }; }
+      return null;
+    };
+    await scheduled(Object.assign({}, envPush, { SUPABASE_URL: '', SUPABASE_SERVICE_ROLE: '' }));
+    routes = () => null;
+    eq('push/thiếu cấu hình Supabase → sub theo chủ đề vẫn nhận tin', topicPosts, ['https://push.test/topic']);
+    pushKeys().forEach((k) => kv.m.delete(k));
+    await kv.put('pushq', '[]');
     routes = () => null;
     pushKeys().forEach(k => kv.m.delete(k));
     kv.m.delete('pushq');

@@ -38,3 +38,21 @@ Health cần có `worker: "ssochuz-community"`, `d1: true`, `cmsBinding: true`. 
 Pages của site này phục vụ các asset tĩnh đã build/commit ở repo root; không có thư mục `/functions` hoặc Wrangler config ở root. Vì vậy log Pages báo “No build command specified” / “No functions dir” là đúng với cách deploy hiện tại. Pages preview không deploy `chuseoz-cms` hoặc `ssochuz-community`; mỗi Worker được deploy riêng từ thư mục và config của chính nó.
 
 Trong log PR #73, Pages đã validate `_redirects`/`_headers` và upload assets thành công, rồi lỗi ở bước cuối “Failed to publish your Function. Got error: Unknown internal error occurred.” Đây là lỗi của bước publish/finalize Pages sau khi static assets đã lên; không phải lỗi D1 migration hay bundle của hai Worker. Không sửa Wrangler config của CMS hoặc community để xử lý lỗi Pages này; nếu lặp lại, xem/download toàn bộ Pages deployment log để có error ID/chi tiết cho Cloudflare.
+
+## Hạn mức chống spam (đọc kỹ trước khi tin)
+
+`community.js` có hạn mức mềm: 60 reaction/phút/người và 30 lượt góp gạch/giờ/người.
+Bộ đếm nằm trong **bộ nhớ của isolate** (`rateWindows`), nên:
+
+- mỗi isolate đếm riêng, isolate bị thu hồi là bộ đếm về 0;
+- người cố tình spam có thể vượt hạn mức bằng cách rơi vào isolate khác hoặc chờ isolate mới.
+
+Đây là **best effort** để chặn spam ngẫu nhiên, **không phải hàng rào an ninh**. Muốn chặn
+cứng thì chọn một trong hai, đều là việc hạ tầng:
+
+1. **Đếm trong D1**: thêm bảng `community_rate (user_id, action, window_start, count)` + index,
+   hoặc đếm trực tiếp `community_reactions` theo `user_id` + `updated_at` (cần index
+   `(user_id, updated_at)`); đổi lại mỗi thao tác tốn thêm 1 lượt đọc/ghi D1.
+2. **Rate limiting của Cloudflare** cho route `/api/community/*` (WAF/rate limiting rule).
+
+Chưa làm vì cả hai đều đụng hạ tầng production (migration D1 / cấu hình Cloudflare) — cần chủ trang quyết.
