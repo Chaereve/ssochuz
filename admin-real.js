@@ -185,14 +185,18 @@
       return { b: (typeof x === 'string' ? x : (x && x.slug) || ''), r: (x && (x.reason || x.note)) || '' };
     });
     var sch = (REG.schedule && Array.isArray(REG.schedule.items)) ? REG.schedule.items : [];
-    /* dòng lịch không có slug là rác: không dẫn được tới bộ nào, mà còn làm
-       realSaveHomepage() từ chối lưu (“thiếu thứ hoặc bộ”) ⇒ bỏ ngay từ hydrate. */
+    /* dòng lịch rác (null, số, object rỗng) không dẫn được tới bộ nào, lại làm
+       realSaveHomepage() từ chối lưu (“thiếu thứ hoặc bộ”) ⇒ bỏ ngay từ hydrate.
+       Dòng CHỈ có title là dạng syncBlogger ghi ra (trang chủ ghép bộ theo tên),
+       giữ lại kèm title để bấm Lưu không xoá mất lịch cũ. */
     S.schedule = sch.filter(function (x) {
-      return !!x && typeof x === 'object' && String(x.slug || '').trim() !== '';
+      return !!x && typeof x === 'object' &&
+        (String(x.slug || '').trim() !== '' || String(x.title || '').trim() !== '');
     }).map(function (x) {
       /* detail là GHI CHÚ (thường rỗng); title là TÊN BỘ — trước đây gộp
          title vào ô ghi chú rồi ghi ngược lại vào KV. */
-      return { d: x.days || x.day || '', b: x.slug || '', c: x.detail || x.note || '' };
+      return { d: x.days || x.day || '', b: x.slug || '', c: x.detail || x.note || '',
+        t: x.slug ? '' : (x.title || '') };
     });
     var ann = (REG.settings && REG.settings.announcement) || {};
     S.hpNote = (REG.schedule && REG.schedule.note) || '';
@@ -1319,7 +1323,12 @@
     });
     var origItems = (REG.schedule && Array.isArray(REG.schedule.items)) ? REG.schedule.items : [];
     var nextItems = S.schedule.map(function (x, i) {
-      return Object.assign({}, origItems[i] || {}, { days: x.d, slug: x.b, detail: x.c, title: (origItems[i] || {}).title || titleOf(x.b) });
+      var base = origItems[i] || {};
+      var out = Object.assign({}, base, { days: x.d, detail: x.c });
+      if (x.b) out.slug = x.b; else delete out.slug;
+      var t = x.b ? (base.title || titleOf(x.b)) : (x.t || base.title || '');
+      if (t) out.title = t; else delete out.title;
+      return out;
     });
     next.schedule = Object.assign({}, REG.schedule || {}, {
       items: nextItems,
@@ -1345,7 +1354,7 @@
     /* registry thật có slides:[] là HỢP LỆ (web tự lấy 5 bộ mới nhất). Bắt
        phải có >=1 slide khiến nút Lưu trang chủ luôn báo lỗi dù chỉ muốn sửa
        lịch / Series / thông báo — đó là lỗi owner gặp ở Homepage CMS. */
-    if (S.schedule.some(function (x) { return !x.d || !x.b; })) { say('Lịch ra chương còn dòng thiếu thứ hoặc bộ.', 'bad'); return; }
+    if (S.schedule.some(function (x) { return !x.d || (!x.b && !x.t); })) { say('Lịch ra chương còn dòng thiếu thứ hoặc bộ.', 'bad'); return; }
     writeRegistry(currentRegistryFromState()).then(function () {
       say(S.slides.length ? 'Đã lưu trang chủ lên KV.'
         : 'Đã lưu lịch, Series và thông báo lên KV · không có slide, web tự lấy 5 bộ mới nhất.');

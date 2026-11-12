@@ -28,7 +28,9 @@ let REGISTRY = {
   lib: [null, GOOD, 0, 'rác', { slug: '', title: 'thiếu slug' }],
   editorChoice: [null, { slug: 'good-story' }],
   slides: [null, { slug: 'good-story', reason: 'lý do' }, 5],
-  schedule: { items: [null, { slug: 'good-story', days: 'Thứ 2' }, { days: '' }], note: '' },
+  schedule: { items: [null, { slug: 'good-story', days: 'Thứ 2' }, { days: '' },
+    /* dòng CHỈ có title: dạng syncBlogger ghi ra, trang chủ ghép bộ theo tên */
+    { days: 'Thứ 3', title: 'Truyện Cũ', detail: 'ra sớm' }], note: '' },
   settings: { announcement: { text: '', href: '', enabled: false } },
 };
 const puts = [];
@@ -97,7 +99,9 @@ const tick = async (n = 6) => { for (let i = 0; i < n; i++) await sleep(25); };
     'S.books phải chỉ còn 1 bộ hợp lệ, đang: ' + JSON.stringify(S().books.map((b) => b.id)));
   ok(w.CZ_MOCKUP.SAMPLE_METRICS[0].n === '1', 'Dashboard đếm sai số bộ (' + w.CZ_MOCKUP.SAMPLE_METRICS[0].n + ')');
   ok(S().slides.length === 1 && S().slides[0].b === 'good-story', 'slide rác vẫn lọt: ' + JSON.stringify(S().slides));
-  ok(S().schedule.length === 1 && S().schedule[0].b === 'good-story', 'lịch rác vẫn lọt: ' + JSON.stringify(S().schedule));
+  ok(S().schedule.length === 2 && S().schedule[0].b === 'good-story', 'lịch rác vẫn lọt / mất dòng title: ' + JSON.stringify(S().schedule));
+  ok(S().schedule[1] && S().schedule[1].b === '' && S().schedule[1].t === 'Truyện Cũ',
+    'dòng lịch chỉ có title phải được giữ kèm tên bộ: ' + JSON.stringify(S().schedule[1]));
 
   /* mở tab Thư viện: trước đây hydrate đã ném lỗi nên tab rỗng */
   S().route = 'thu-vien';
@@ -113,8 +117,11 @@ const tick = async (n = 6) => { for (let i = 0; i < n; i++) await sleep(25); };
   ok(last && Array.isArray(last.lib) && last.lib.every((m) => m && typeof m === 'object' && m.slug),
     'registry ghi lên vẫn còn dòng rác: ' + JSON.stringify(last && last.lib));
   ok(last && last.lib.length === 1, 'registry ghi lên phải còn đúng 1 bộ, đang ' + (last && last.lib.length));
-  ok(last && Array.isArray(last.schedule && last.schedule.items) && last.schedule.items.every((x) => x && x.slug),
-    'lịch ghi lên vẫn còn dòng rác');
+  ok(last && Array.isArray(last.schedule && last.schedule.items) && last.schedule.items.every((x) => x && (x.slug || x.title)),
+    'lịch ghi lên vẫn còn dòng rác: ' + JSON.stringify(last && last.schedule && last.schedule.items));
+  ok(last && last.schedule.items.length === 2, 'Lưu trang chủ đã nuốt mất dòng lịch cũ: ' + JSON.stringify(last && last.schedule && last.schedule.items));
+  ok(last && last.schedule.items[1] && last.schedule.items[1].title === 'Truyện Cũ' && !last.schedule.items[1].slug,
+    'dòng lịch cũ mất title hoặc bị ghi slug rỗng: ' + JSON.stringify(last && last.schedule.items[1]));
 
   dom.window.close();
   if (bad.length) { console.error(bad.join('\n')); process.exit(1); }

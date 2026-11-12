@@ -11,7 +11,7 @@
 | `npm ci` (gốc + `tests/`) | ĐẠT |
 | `npm run build` rồi `git status` | ĐẠT — không sinh khác biệt (bundle tái lập) |
 | `npm run check:worker` (tsc `checkJs`) | ĐẠT — không lỗi |
-| `npm test` | **60/60 ĐẠT** (61 bài sau khi thêm `t_dice_state.js`) |
+| `npm test` | **91/91 ĐẠT** (gồm các bài mới của lượt rà: `t_registry_dirty.js`, `t_admin_dirty_registry.js`, `t_dice_state.js`…) |
 | `tools/check_html.js`, `check_headers.js`, `check_calls.js`, `check_css.py`, `check_og.mjs`, `check_chapter_html.mjs`, `check_chapter_routes.mjs`, `audit_data.py`, `bundle_budget.mjs` | ĐẠT — không lỗi |
 | `npm audit` | 2 lỗ hổng **high** — đều nằm trong `jsdom` (devDependency, chỉ dùng lúc test: `undici`, `source-map-js`), **không có gói nào lên production |
 | ESLint (cấu hình tạm, `no-use-before-define`, `no-redeclare`, `require-atomic-updates`…) | Chỉ ra đúng 1 lỗi runtime thật: `settle()` ở `src/cz-dice.js` (mục 2.1); còn lại là cảnh báo/biến thừa |
@@ -120,6 +120,37 @@ cần vào để dọn dữ liệu thì cửa duy nhất lại khoá. Dòng lị
   đòi `/admin` kết nối được, chỉ còn 1 bộ hợp lệ, tab Thư viện hiện đúng, và
   PUT `/api/registry` ghi lên **không còn dòng rác**. Kiểm ngược: bản cũ rớt.
 
+### 2.10 Registry bẩn bị **dọn ngay lúc ghi** — phòng bệnh, không chỉ chữa
+
+§2.8–2.9 chỉ chặn hậu quả ở phía đọc: dòng rác vẫn nằm trong KV, và mỗi lần
+import hỏng / sửa KV tay là lại phải trông vào các lớp đọc tự lọc. Cửa ghi của
+registry giờ dọn luôn:
+
+- `worker/cms.js`: thêm `cleanRegistry()` + `registryRowOk()` / `registryRefOk()`
+  / `registrySchedOk()`, dùng trong `registryJSON()` — tức **mọi** đường ghi
+  registry (`PUT /api/registry`, `/api/seed`, `/api/sync`, nút Lưu của admin)
+  đều đi qua một bộ lọc.
+  - `lib`: chỉ giữ object có `slug` khác rỗng (sách phải là object; chuỗi
+    trong `lib` là dòng hỏng).
+  - `slides`, `editorChoice` (cả `settings.editorChoice`): giữ chuỗi slug
+    (dạng cũ) hoặc object có `slug`.
+  - `schedule.items`: giữ dòng có `slug` (admin ghi) **hoặc** `title`
+    (`syncBlogger` đọc từ trang Blogger, trang chủ ghép bộ theo tên) — bỏ oan
+    dòng title là mất lịch vừa sync.
+- `putKV` dọn **trước** hàng rào “không cho ghi registry rỗng đè lên kho đang
+  có sách”, nên một bản chỉ toàn dòng rác bị coi là bản rỗng ⇒ **400**, kho còn
+  nguyên. Response có `dropped: {total, lib, slides, editorChoice, schedule}`
+  để admin biết đã bỏ bao nhiêu dòng.
+- `admin-real.js` (đồng bộ với bộ lọc trên): hydrate giữ dòng lịch chỉ có
+  `title` kèm tên bộ, và `currentRegistryFromState()` ghi lại dòng đó dưới dạng
+  `{days, title, detail}` thay vì `slug: ''` — bấm “Lưu trang chủ” **không còn
+  nuốt mất** lịch cũ do sync về.
+- Test: `tests/t_registry_guard.mjs` thêm 3 nhóm kiểm tra (dòng rác bị bỏ + báo
+  `dropped`; bản chỉ toàn dòng rác ⇒ 400, kho nguyên; lần ghi sau tự làm sạch
+  bản cũ đang bẩn), `tests/t_admin_dirty_registry.js` thêm dòng lịch chỉ có
+  `title` phải sống sót qua “Lưu trang chủ”. Dữ liệu thật `data/registry.json`
+  (67 bộ, 12 editorChoice, 6 dòng lịch): **0 dòng bị bỏ**.
+
 ## 3. Ghi nhận, chưa sửa (không phải lỗi chức năng, cần chủ trang quyết)
 
 1. **`npm audit` 2 lỗ hổng high** — `undici` + `source-map-js` nằm trong `jsdom` (devDependency). Không lên production; chỉ ảnh hưởng máy chạy test. Nếu muốn sạch báo cáo: nâng `jsdom`, hoặc chấp nhận vì đây là công cụ test.
@@ -134,7 +165,7 @@ cần vào để dọn dữ liệu thì cửa duy nhất lại khoá. Dòng lị
 npm ci && (cd tests && npm ci)
 npm run build          # bản phát hành ở gốc phải khớp src/
 npm run check:worker
-npm test               # 61 bài, gồm t_dice_state.js mới
+npm test               # 91 bài, gồm t_registry_dirty.js / t_admin_dirty_registry.js
 node tests/t_dice_state.js   # riêng phần trạng thái xấp bài
 node tests/t_sanitize.mjs    # riêng bộ lọc HTML (có kiểm bằng DOM thật)
 node tools/check_chapter_html.mjs   # chạy bộ lọc trên 1.283 chương thật

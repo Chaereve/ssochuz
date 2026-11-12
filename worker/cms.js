@@ -1210,7 +1210,59 @@ function stripPrivateRegistrySettings(reg) {
   } else if (Object.prototype.hasOwnProperty.call(settings, 'report')) delete settings.report;
   return reg;
 }
-function registryJSON(reg) { return JSON.stringify(stripPrivateRegistrySettings(reg)); }
+/* ===== DỌN DÒNG RÁC TRONG REGISTRY, NGAY LÚC GHI =======================
+   Vì sao: `lib`/`slides`/`editorChoice`/`schedule.items` từng nhận cả null,
+   số, chuỗi rỗng hay object không slug (import hỏng, sửa KV tay). Ba lớp đọc
+   của web đều đọc thuộc tính từng dòng, nên MỘT dòng rác đủ làm sập trang chủ
+   và khoá luôn /admin (xem docs/reports/BAO-CAO-…, §2.8–2.9). Chặn ở đây —
+   cửa ghi duy nhất của registry — để dữ liệu bẩn không bao giờ vào KV nữa;
+   mọi lần ghi sau đó cũng tự làm sạch bản cũ (registryJSON dùng hàm này).
+   Trả `{ reg, dropped }` để putKV báo cho admin biết đã bỏ bao nhiêu dòng. */
+function registryRowOk(x) {
+  return !!x && typeof x === 'object' && !Array.isArray(x) && String(x.slug || '').trim() !== '';
+}
+/* slides/editorChoice nhận cả CHUỖI slug (dạng cũ) lẫn object {slug, reason} */
+function registryRefOk(x) {
+  if (typeof x === 'string') return x.trim() !== '';
+  return registryRowOk(x);
+}
+/* Dòng lịch ra chương có hai dạng hợp lệ: {days, slug} (admin ghi) và
+   {days, title, detail} (syncBlogger đọc từ trang Blogger). Trang chủ ghép bộ
+   theo slug, không khớp thì so tên (schedFind) ⇒ dòng chỉ có title VẪN dùng
+   được, đừng bỏ oan. */
+function registrySchedOk(x) {
+  if (!x || typeof x !== 'object' || Array.isArray(x)) return false;
+  return String(x.slug || '').trim() !== '' || String(x.title || '').trim() !== '';
+}
+function cleanRegistry(reg) {
+  const dropped = { total: 0 };
+  if (!reg || typeof reg !== 'object' || Array.isArray(reg)) return { reg, dropped };
+  const out = Object.assign({}, reg);
+  const dropRows = (key, okRow) => {
+    if (!Array.isArray(out[key])) return;
+    const before = out[key].length;
+    out[key] = out[key].filter(okRow);
+    dropped[key] = before - out[key].length;
+    dropped.total += dropped[key];
+  };
+  dropRows('lib', registryRowOk);
+  dropRows('slides', registryRefOk);
+  dropRows('editorChoice', registryRefOk);
+  if (out.schedule && typeof out.schedule === 'object' && Array.isArray(out.schedule.items)) {
+    const before = out.schedule.items.length;
+    out.schedule = Object.assign({}, out.schedule, {
+      items: out.schedule.items.filter(registrySchedOk),
+    });
+    dropped.schedule = before - out.schedule.items.length; dropped.total += dropped.schedule;
+  }
+  if (out.settings && typeof out.settings === 'object' && Array.isArray(out.settings.editorChoice)) {
+    const before = out.settings.editorChoice.length;
+    out.settings = Object.assign({}, out.settings, { editorChoice: out.settings.editorChoice.filter(registryRefOk) });
+    dropped.settings = before - out.settings.editorChoice.length; dropped.total += dropped.settings;
+  }
+  return { reg: out, dropped };
+}
+function registryJSON(reg) { return JSON.stringify(stripPrivateRegistrySettings(cleanRegistry(reg).reg)); }
 /* ================= CACHE BIÊN CHO 3 ĐƯỜNG ĐỌC NHIỀU ==================
    GET /api/registry, /api/book/<slug>, /api/stats: hàng trăm người cùng đọc
    trong một phút thì KV chỉ bị đọc 1 lần — các lần sau Worker phục vụ từ bản
@@ -2039,6 +2091,13 @@ async function putKV(req, env, key, cors, label) {
   if (new TextEncoder().encode(body).length > 24 * 1024 * 1024) return json({ ok: false, error: 'dữ liệu quá lớn (>24MB)' }, { status: 413, cors });
   let parsed;
   try { parsed = JSON.parse(body); } catch (e) { return json({ ok: false, error: 'JSON lỗi: ' + e.message }, { status: 400, cors }); }
+  /* dọn dòng rác TRƯỚC hàng rào "ghi rỗng đè lên kho có sách": bản chỉ toàn
+     dòng rác cũng là bản rỗng, phải bị chặn như lib: [] */
+  let cleaned = { total: 0 };
+  if (key === 'registry' && parsed && typeof parsed === 'object') {
+    const c = cleanRegistry(parsed);
+    parsed = c.reg; cleaned = c.dropped;
+  }
   /* tối ưu registry: tự bóc các trường CŨ/trùng lặp mỗi lần ghi — KV tự lành
      sau lần lưu đầu tiên. `postId` là di sản Blogger/Firebase cũ (không nơi
      nào đọc nữa); `count`/`canRead` là bản sao của `countLabel` + số chương
@@ -2068,7 +2127,8 @@ async function putKV(req, env, key, cors, label) {
   if (key === 'registry') sbPinReset(env);       // ghim Supabase (nếu đổi) có hiệu lực ngay
   if (key === 'registry') regEntryCacheDrop();   // trạng thái xuất bản đổi → hạ cache entry
   if (label) await logAct(env, label, req);
-  return json({ ok: true, key, bytes, saved }, { cors });
+  const extra = key === 'registry' && cleaned.total ? { dropped: cleaned } : {};
+  return json(Object.assign({ ok: true, key, bytes, saved }, extra), { cors });
 }
 
 /* ============================================================================
