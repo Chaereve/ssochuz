@@ -73,6 +73,17 @@ chuỗi được ghép thêm markup phía sau (vd đặt trong một `innerHTML`
   tính/entity) qua DOM: **0 mẫu nguy hiểm**. Toàn bộ 1.283 chương thật vẫn qua
   `tools/check_chapter_html.mjs` (không mất chữ, không mất ảnh).
 
+### 2.7 `GET /api/comments?limit=-1` trả **gần hết** danh sách thay vì 1
+
+`Math.min(parseInt(limit) || 200, 500)` chỉ kẹp trần, không kẹp đáy. `limit=-1` ⇒
+`pool.slice(0, -1)` = **bỏ mục cuối, trả tất cả phần còn lại** (hàng rào duy nhất là
+500). Cùng lỗi ở `adminComments` (kẹp 2.000). Người đọc chỉ cần sửa `?limit=` là tải
+một lượt cả nghìn bình luận — phí băng thông và làm chậm trang.
+
+- Sửa: `Math.max(1, Math.min(...))` ở cả `getComments` và `adminComments`.
+- Test: `tests/t_worker.mjs` đăng 3 bình luận rồi gọi `?limit=-1`, đòi đúng 1 mục
+  (`shown: 1`); bản cũ trả 2 ⇒ bắt được ngay. Worker: **441/441 ĐẠT**.
+
 ## 3. Ghi nhận, chưa sửa (không phải lỗi chức năng, cần chủ trang quyết)
 
 1. **`npm audit` 2 lỗ hổng high** — `undici` + `source-map-js` nằm trong `jsdom` (devDependency). Không lên production; chỉ ảnh hưởng máy chạy test. Nếu muốn sạch báo cáo: nâng `jsdom`, hoặc chấp nhận vì đây là công cụ test.

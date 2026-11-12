@@ -2424,7 +2424,9 @@ async function adminComments(req, env, cors) {
   if (!env.CZ_KV) return noKV(cors);
   const u = new URL(req.url);
   const only = String(u.searchParams.get('slug') || '');
-  const limit = Math.min(parseInt(u.searchParams.get('limit') || '500', 10) || 500, 2000);
+  /* kẹp CẢ HAI đầu: limit âm ⇒ slice(0, -5) trả gần như TOÀN BỘ danh sách
+     thay vì 5 mục — hàng rào duy nhất là 2.000 mục. */
+  const limit = Math.max(1, Math.min(parseInt(u.searchParams.get('limit') || '500', 10) || 500, 2000));
   const keys = [];
   let cursor;
   do {
@@ -4080,7 +4082,9 @@ async function getComments(slug, req, env, cors) {
   let limit = 200, ch = null;
   try {
     const q = new URL(req.url).searchParams;
-    limit = Math.min(parseInt(q.get('limit') || '200', 10) || 200, 500);
+    /* limit âm từng lọt xuống slice(0, -1) ⇒ trả nhiều hơn số khách xin;
+       kẹp dưới = 1 để "limit=-1" chỉ trả 1 bình luận như ý nghĩa tối thiểu. */
+    limit = Math.max(1, Math.min(parseInt(q.get('limit') || '200', 10) || 200, 500));
     if (q.get('ch') != null && q.get('ch') !== '') ch = parseInt(q.get('ch'), 10) || 0;
   } catch (e) {}
   /* ch = số chương: chỉ trả bình luận của chương đó (0 = bình luận chung của bộ) */

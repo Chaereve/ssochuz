@@ -1097,6 +1097,12 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
       ck('comments/đăng được bình luận', post.status === 200 && post.body && post.body.ok !== false, post.body, 'ok');
       const k5 = await call('GET', '/api/comments/lite-truyen?limit=200');
       eq('comments/bình luận mới → MISS, thấy ngay', [k5.headers.get('x-cz-cache'), (k5.body.comments || []).length >= 1], ['MISS', true]);
+      /* limit ÂM: slice(0, -1) trả gần hết danh sách — phải kẹp về 1.
+         Cần >=3 bình luận mới phân biệt được (bản cũ trả N-1 mục). */
+      await call('POST', '/api/comments/lite-truyen', { body: { vid: 'may-cmt-2', name: 'Khách', text: 'Bình luận thử 2.' } });
+      await call('POST', '/api/comments/lite-truyen', { body: { vid: 'may-cmt-3', name: 'Khách', text: 'Bình luận thử 3.' } });
+      const neg = await call('GET', '/api/comments/lite-truyen?limit=-1');
+      eq('comments/limit âm bị kẹp về 1', [(neg.body.comments || []).length, neg.body.shown], [1, 1]);
       ck('comments/không lưu khoá có tham số lạ', ![...fake.store.keys()].some((u) => u.includes('limit=50') && u.includes('&x=')), [...fake.store.keys()].length, 'không khoá rác');
     } finally {
       globalThis.caches = realCaches;
