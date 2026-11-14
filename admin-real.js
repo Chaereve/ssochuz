@@ -111,7 +111,7 @@
     if (st === 401 || st === 403 || /unauthor|forbidden|admin_key|sai.*kho/i.test(msg)) return 'badkey';
     return 'workererr';
   }
-  function setConn(c) { S.conn = c; try { redraw(); } catch (e) {} }
+  function setConn(c) { if (S.conn === c) return; S.conn = c; try { redraw(); } catch (e) {} }
   function setQuota() {
     S.quota = WRITES >= 1000 ? 'blocked' : WRITES >= 950 ? 'bad' : WRITES >= 800 ? 'warn' : 'ok';
     S.kvWrites = WRITES; S.kvReads = READS;
@@ -178,7 +178,6 @@
       S.selectedBook = S.books.length ? S.books[0].id : null;
     if (S.selectedBook) window.initEditModels(M.getBook(S.selectedBook));
     S.models['st-slug'] = S.books.length ? S.books[0].id : '';
-    /* chapterBook = bộ đang mở trong editor (BOOK_SLUG); chưa nạp thì theo selectedBook */
     S.chapterBook = BOOK_SLUG || S.selectedBook;
 
     var slides = Array.isArray(REG.slides) ? REG.slides : [];
@@ -635,7 +634,7 @@
     var n = D.getElementById('saveNote');
     if (!n) return;
     var slug = BOOK_SLUG || S.chapterBook || S.selectedBook || '';
-    var draft = readChapterDraft(slug, S.activeChapter);
+    var draft = DIRTY_CHAPTER ? null : readChapterDraft(slug, S.activeChapter);
     if (S.conn === 'static') {
       n.textContent = 'Chế độ đọc tĩnh · chỉ đọc';
     } else if (DIRTY_CHAPTER) {
@@ -957,15 +956,16 @@
     });
   }
 
-  function loadAll() {
-    return apiCall('/api/registry').then(function (reg) {
+  function loadAll(regP) {
+    var first = regP || apiCall('/api/registry').then(function (reg) {
       hydrate(reg); redraw();
+    });
+    return first.then(function () {
       return Promise.allSettled([
-        loadComments(), loadReports(), loadStats(), loadLog(), loadKv(), loadBook(S.selectedBook, true)
+        loadComments(), loadReports(),
+        loadStats() /* voters gắn sau loadStats — cần STATS_ITEMS */.then(function () { return loadVoters().catch(function () {}); }),
+        loadLog(), loadKv(), loadBook(S.selectedBook, true)
       ]);
-    }).then(function () {
-      /* loadVoters() đọc STATS_ITEMS nên phải chạy SAU loadStats(). */
-      return loadVoters().catch(function () {});
     }).then(function () { setQuota(); redraw(); });
   }
   function loadStatic() {
@@ -1050,7 +1050,6 @@
       .then(function () {
         Object.keys(S.models).forEach(function (k) { if (k.indexOf('nb-') === 0) delete S.models[k]; });
         S.couples.nb = ['']; S.selectedBook = sl;
-        /* hydrate đã chạy khi selectedBook còn bộ cũ — trỏ tab Chương sang bộ vừa tạo */
         applyBook(sl, book);
         say('Đã tạo bộ “' + t + '” và ghi lên KV.'); go('thu-vien');
       }).catch(fail);
@@ -1683,10 +1682,11 @@
     var ed = D.getElementById('editor');
     if (!ed) return;
     DIRTY_CHAPTER = true;
-    updateChapterStatsDom(ed.innerHTML);
     updateSaveNoteDom();
     clearTimeout(EDITOR_AUTOSAVE_TIMER);
     EDITOR_AUTOSAVE_TIMER = setTimeout(function () {
+      var e2 = D.getElementById('editor');
+      if (e2) updateChapterStatsDom(e2.innerHTML);
       snapshotLiveEditor();
       updateSaveNoteDom();
     }, 550);
@@ -2698,7 +2698,9 @@
     window.render();
     if (CFG.base && CFG.key) {
       setConn('checking');
-      apiCall('/api/whoami').then(function () { setConn('online'); return loadAll(); })
+      var regP = apiCall('/api/registry').then(function (reg) { hydrate(reg); redraw(); });
+      regP.catch(function () {});
+      apiCall('/api/whoami').then(function () { setConn('online'); return loadAll(regP); })
         .then(function () { say('Đã nối Worker · dữ liệu thật từ KV.'); })
         .catch(function (e) {
           setConn(classify(e)); fail(e);
