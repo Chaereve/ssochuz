@@ -1114,7 +1114,7 @@ function newBookHTML(){
     '</div></div>';
   var side='<div class="stack">'+
     '<div class="card"><div class="card-hd"><h3>Ảnh bìa</h3></div><div class="card-bd"><div class="row" style="align-items:flex-start;gap:14px">'+
-      '<div id="nb-cover-preview"><span class="cover cv-1 lg" aria-label="Ô màu bìa mẫu">BÌA<br>MẪU</span></div>'+
+      '<div id="nb-cover-preview">'+(state.models['nb-cover']?'<img class="cover lg" src="'+esc(state.models['nb-cover'])+'" alt="Ảnh bìa xem trước">':'<span class="cover cv-1 lg" aria-label="Ô màu bìa mẫu">BÌA<br>MẪU</span>')+'</div>'+
       '<div class="col" style="flex:1"><span class="file"><input type="file" accept="image/*" data-role="cover-upload" data-target="nb-cover-preview" aria-label="Tải ảnh bìa mẫu"></span></div>'+
     '</div></div></div>'+
     '<div class="card"><div class="card-hd"><h3>Chương đầu (tuỳ chọn)</h3></div><div class="card-bd">'+

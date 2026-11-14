@@ -114,6 +114,9 @@ function fakeFetch(url, opts) {
     return send({ ok: true, book: { count: list.length, voters: list } });
   }
   if (p.startsWith('/api/comments/')) return send({ ok: true });
+  /* Ảnh bìa Tạo bộ: PHẢI trả id/url TRƯỚC catch-all (catch-all không có id ⇒
+     realCoverUpload tính ra src='/api/img/undefined'). Pattern t_admin_chapter_editor. */
+  if (p === '/api/img' && method === 'POST') return send({ ok: true, id: 'imgqa01', url: '/api/img/imgqa01' });
   if (/^\/api\/(admin\/vote-remove|admin\/votes\/reset|recount|sync|import|stats\/refresh|lock\/set|img|admin\/migrate-overflow)/.test(p)) return send({ ok: true, books: 3, covers: 4, images: 2 });
   return send({ ok: false, error: 'endpoint giả chưa có: ' + p }, 404);
 }
@@ -212,11 +215,40 @@ function confirmStrong(phrase) {
   setVal('nb-t', 'Bộ QA Vòng 10'); setVal('nb-slug', 'bo-qa-vong-10');
   setVal('nb-a', 'Tác giả QA'); setVal('nb-sum', 'Mô tả thật.');
   setVal('nb-chapter', 'Nội dung chương đầu.');
+  /* Ảnh bìa form Tạo bộ: POST /api/img THẬT → giữ URL trong model, KHÔNG PUT registry. */
+  const covIn = w.document.querySelector('[data-role="cover-upload"][data-target="nb-cover-preview"]');
+  ok(!!covIn, 'form Tạo bộ có ô tải ảnh bìa nb-cover');
+  const covFile = new w.File([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])], 'bia-qa.png', { type: 'image/png' });
+  Object.defineProperty(covIn, 'files', { value: [covFile], configurable: true });
+  covIn.dispatchEvent(new w.Event('change', { bubbles: true }));
+  await tick(12);
+  ok(S().models['nb-cover'] === 'https://ten-worker.workers.dev/api/img/imgqa01',
+    'tải bìa Tạo bộ ⇒ model nb-cover = URL Worker thật (thấy ' + S().models['nb-cover'] + ')');
+  ok(calls.filter(c => c.p === '/api/registry' && c.method === 'PUT').length === 0,
+    'CHƯA có PUT registry trước khi bấm Tạo bộ');
   click('[data-act="submit-new"]');
   await tick(12);
   ok(!!KV.books['bo-qa-vong-10'], 'PUT /api/book/<slug> tạo book thật');
-  ok(!!KV.registry.lib.find(m => m.slug === 'bo-qa-vong-10'), 'PUT /api/registry thêm meta thật');
+  const metaNew = KV.registry.lib.find(m => m.slug === 'bo-qa-vong-10');
+  ok(!!metaNew, 'PUT /api/registry thêm meta thật');
+  ok(metaNew && metaNew.thumb === 'https://ten-worker.workers.dev/api/img/imgqa01',
+    'meta.thumb nhận URL bìa cùng lúc tạo bộ (thấy ' + (metaNew && metaNew.thumb) + ')');
   ok(((KV.books['bo-qa-vong-10'] || {}).chapters || []).length === 1, 'chương đầu được ghi');
+  /* Không chọn lại bộ: tab Chương phải tự trỏ bộ VỪA TẠO. */
+  ok(S().chapterBook === 'bo-qa-vong-10',
+    'sau Tạo bộ chapterBook = bộ mới (thấy ' + S().chapterBook + ')');
+  nav('chuong');
+  const dd3 = $('[data-role="chapter-book"]');
+  ok(dd3 && dd3.value === 'bo-qa-vong-10', 'dropdown Chương = bộ vừa tạo (thấy ' + (dd3 && dd3.value) + ')');
+  const ed3 = $('#editor');
+  ok(ed3 && ed3.getAttribute('data-book') === 'bo-qa-vong-10',
+    'editor data-book = bộ vừa tạo (thấy ' + (ed3 && ed3.getAttribute('data-book')) + ')');
+  const mark3 = calls.length;
+  click('[data-act="save-chapter"]');
+  await tick(10);
+  const puts3 = calls.slice(mark3).filter(c => c.method === 'PUT' && /\/chapter$/.test(c.p));
+  ok(puts3.some(c => c.p === '/api/book/bo-qa-vong-10/chapter'), 'Lưu chương KHÔNG chọn lại ghi vào bộ MỚI');
+  ok(!puts3.some(c => c.p === '/api/book/hometown-romance-special/chapter'), 'KHÔNG ghi nhầm bộ hometown (lib[0])');
 
   /* ---- 4 · Sửa bộ / đổi slug ---- */
   nav('sua-bo');
@@ -226,6 +258,21 @@ function confirmStrong(phrase) {
   await tick(6); confirmStrong('ĐỔI SLUG'); await tick(14);
   ok(!!KV.books['bo-qa-da-doi'], 'book được ghi ở slug mới');
   ok(!!KV.registry.lib.find(m => m.slug === 'bo-qa-da-doi') && !KV.registry.lib.find(m => m.slug === 'bo-qa-vong-10'), 'registry đổi slug, slug cũ bị gỡ');
+  /* Không chọn lại bộ sau đổi slug: tab Chương phải trỏ slug MỚI. */
+  ok(S().chapterBook === 'bo-qa-da-doi',
+    'sau Đổi slug chapterBook = slug mới (thấy ' + S().chapterBook + ')');
+  nav('chuong');
+  const dd4 = $('[data-role="chapter-book"]');
+  ok(dd4 && dd4.value === 'bo-qa-da-doi', 'dropdown Chương = slug mới (thấy ' + (dd4 && dd4.value) + ')');
+  const ed4 = $('#editor');
+  ok(ed4 && ed4.getAttribute('data-book') === 'bo-qa-da-doi',
+    'editor data-book = slug mới (thấy ' + (ed4 && ed4.getAttribute('data-book')) + ')');
+  const mark4 = calls.length;
+  click('[data-act="save-chapter"]');
+  await tick(10);
+  const puts4 = calls.slice(mark4).filter(c => c.method === 'PUT' && /\/chapter$/.test(c.p));
+  ok(puts4.some(c => c.p === '/api/book/bo-qa-da-doi/chapter'), 'Lưu chương sau đổi slug ghi vào slug MỚI');
+  ok(!puts4.some(c => c.p === '/api/book/bo-qa-vong-10/chapter'), 'KHÔNG PUT chương vào slug CŨ sau khi đổi');
 
   /* ---- 5 · Lưu chương ---- */
   nav('chuong');
