@@ -111,7 +111,7 @@
     if (st === 401 || st === 403 || /unauthor|forbidden|admin_key|sai.*kho/i.test(msg)) return 'badkey';
     return 'workererr';
   }
-  function setConn(c) { S.conn = c; try { redraw(); } catch (e) {} }
+  function setConn(c) { if (S.conn === c) return; S.conn = c; try { redraw(); } catch (e) {} }
   function setQuota() {
     S.quota = WRITES >= 1000 ? 'blocked' : WRITES >= 950 ? 'bad' : WRITES >= 800 ? 'warn' : 'ok';
     S.kvWrites = WRITES; S.kvReads = READS;
@@ -178,7 +178,7 @@
       S.selectedBook = S.books.length ? S.books[0].id : null;
     if (S.selectedBook) window.initEditModels(M.getBook(S.selectedBook));
     S.models['st-slug'] = S.books.length ? S.books[0].id : '';
-    S.chapterBook = S.selectedBook;
+    S.chapterBook = BOOK_SLUG || S.selectedBook;
 
     var slides = Array.isArray(REG.slides) ? REG.slides : [];
     S.slides = slides.filter(function (x) { return !!x && (typeof x === 'string' || typeof x === 'object'); }).slice(0, 8).map(function (x) {
@@ -634,7 +634,7 @@
     var n = D.getElementById('saveNote');
     if (!n) return;
     var slug = BOOK_SLUG || S.chapterBook || S.selectedBook || '';
-    var draft = readChapterDraft(slug, S.activeChapter);
+    var draft = DIRTY_CHAPTER ? null : readChapterDraft(slug, S.activeChapter);
     if (S.conn === 'static') {
       n.textContent = 'Chế độ đọc tĩnh · chỉ đọc';
     } else if (DIRTY_CHAPTER) {
@@ -854,6 +854,13 @@
       .catch(function () { return null; });
   }
 
+  function revertChapterBook() {
+    if (BOOK_SLUG && S.chapterBook !== BOOK_SLUG) {
+      S.chapterBook = BOOK_SLUG;
+      redraw();
+    }
+  }
+
   function loadComments() {
     return apiCall('/api/admin/comments?limit=800').then(function (r) {
       var list = r.comments || r.items || [];
@@ -949,15 +956,16 @@
     });
   }
 
-  function loadAll() {
-    return apiCall('/api/registry').then(function (reg) {
+  function loadAll(regP) {
+    var first = regP || apiCall('/api/registry').then(function (reg) {
       hydrate(reg); redraw();
+    });
+    return first.then(function () {
       return Promise.allSettled([
-        loadComments(), loadReports(), loadStats(), loadLog(), loadKv(), loadBook(S.selectedBook, true)
+        loadComments(), loadReports(),
+        loadStats() /* voters gắn sau loadStats — cần STATS_ITEMS */.then(function () { return loadVoters().catch(function () {}); }),
+        loadLog(), loadKv(), loadBook(S.selectedBook, true)
       ]);
-    }).then(function () {
-      /* loadVoters() đọc STATS_ITEMS nên phải chạy SAU loadStats(). */
-      return loadVoters().catch(function () {});
     }).then(function () { setQuota(); redraw(); });
   }
   function loadStatic() {
@@ -1031,7 +1039,7 @@
       title: t, slug: sl, author: a, year: val('nb-year') || String(new Date().getFullYear()),
       status: S.models['nb-st'] || 'Đang cập nhật', countLabel: chapters.length ? '1/1' : '0/—',
       is18: checked('nb-18'), synopsis: val('nb-sum'), pubStatus: S.models['nb-pub'] || 'draft',
-      visibility: S.models['nb-vis'] || 'public', thumb: ''
+      visibility: S.models['nb-vis'] || 'public', thumb: S.models['nb-cover'] || ''
     }, couples);
     meta.chapters = chapters.length;
     var book = { title: t, slug: sl, author: a, couple: meta.couple, chapters: chapters };
@@ -1042,6 +1050,7 @@
       .then(function () {
         Object.keys(S.models).forEach(function (k) { if (k.indexOf('nb-') === 0) delete S.models[k]; });
         S.couples.nb = ['']; S.selectedBook = sl;
+        applyBook(sl, book);
         say('Đã tạo bộ “' + t + '” và ghi lên KV.'); go('thu-vien');
       }).catch(fail);
   }
@@ -1076,20 +1085,30 @@
     next.lib[idx] = meta;
     function renameRefs(reg, from, to) {
       if (from === to) return;
-      ['slides', 'editorChoice'].forEach(function (key) {
-        if (!Array.isArray(reg[key])) return;
-        reg[key] = reg[key].map(function (x) {
+      function ren(list) {
+        return list.map(function (x) {
           var s = typeof x === 'string' ? x : (x && x.slug);
           if (s !== from) return x;
           return typeof x === 'string' ? to : Object.assign({}, x, { slug: to });
         });
+      }
+      ['slides', 'editorChoice'].forEach(function (key) {
+        if (Array.isArray(reg[key])) reg[key] = ren(reg[key]);
       });
+      if (reg.settings && Array.isArray(reg.settings.editorChoice)) {
+        reg.settings.editorChoice = ren(reg.settings.editorChoice);
+      }
+      if (reg.schedule && Array.isArray(reg.schedule.items)) {
+        reg.schedule.items = reg.schedule.items.map(function (x) {
+          return (x && x.slug === from) ? Object.assign({}, x, { slug: to }) : x;
+        });
+      }
     }
-    var chain;
+    var chain, moved = null;
     if (sl !== oldSlug) {
       chain = apiCall('/api/book/' + encodeURIComponent(oldSlug))
         .then(function (b) {
-          var moved = Object.assign({}, b, { slug: sl, title: t, author: a, couple: meta.couple });
+          moved = Object.assign({}, b, { slug: sl, title: t, author: a, couple: meta.couple });
           if (meta.couples && meta.couples.length > 1) moved.couples = meta.couples.slice();
           return apiCall('/api/book/' + encodeURIComponent(sl), { method: 'PUT', body: moved, timeout: 120000 });
         })
@@ -1099,10 +1118,28 @@
     } else chain = writeRegistry(next);
     chain.then(function () {
       S.selectedBook = sl; window.initEditModels(M.getBook(sl));
+      if (sl !== oldSlug && moved && (BOOK_SLUG === oldSlug || !BOOK_SLUG)) {
+        applyBook(sl, moved, true);
+      }
       say('Đã lưu metadata “' + t + '” lên KV.'); redraw();
     }).catch(fail);
   }
 
+  function dropBookRefs(reg, slug) {
+    function keep(x) {
+      var s = typeof x === 'string' ? x : x && x.slug;
+      return s !== slug;
+    }
+    ['slides', 'editorChoice'].forEach(function (key) {
+      if (Array.isArray(reg[key])) reg[key] = reg[key].filter(keep);
+    });
+    if (reg.settings && Array.isArray(reg.settings.editorChoice)) {
+      reg.settings.editorChoice = reg.settings.editorChoice.filter(keep);
+    }
+    if (reg.schedule && Array.isArray(reg.schedule.items)) {
+      reg.schedule.items = reg.schedule.items.filter(function (x) { return !(x && x.slug === slug); });
+    }
+  }
   function realDeleteBook(id) {
     if (!ensureOnline()) return;
     var slug = id || S.selectedBook;
@@ -1111,11 +1148,20 @@
     M.openStrong('Xoá bộ truyện khỏi KV', 'Gõ đúng slug để xoá vĩnh viễn bộ và toàn bộ chương trên KV.', slug, function () {
       var next = clone(REG);
       next.lib = (next.lib || []).filter(function (m) { return m.slug !== slug; });
+      dropBookRefs(next, slug);
       apiCall('/api/book/' + encodeURIComponent(slug), { method: 'DELETE' })
         .then(function () { WRITES += 1; return writeRegistry(next, !next.lib.length); })
         .then(function () {
           S.sel.delete(slug);
           if (S.selectedBook === slug) S.selectedBook = (S.books[0] || {}).id || null;
+          if (BOOK_SLUG === slug) {
+            BOOK_SLUG = ''; BOOK = null; S.chapters = []; S.activeChapter = 0;
+            delete S.models['chapter-title']; syncChaptersToState();
+            S.chapterBook = S.selectedBook;
+            if (S.selectedBook) loadBook(S.selectedBook).catch(function () {});
+          } else if (S.chapterBook === slug) {
+            S.chapterBook = BOOK_SLUG || S.selectedBook;
+          }
           say('Đã xoá “' + b.title + '” khỏi KV.'); redraw();
         }).catch(fail);
     }, 'Xoá vĩnh viễn');
@@ -1158,8 +1204,8 @@
 
   function realSaveChapter() {
     if (!ensureOnline()) return;
-    var slug = BOOK_SLUG || S.chapterBook || S.selectedBook;
-    if (!slug) { say('Chọn bộ trước khi lưu chương.', 'bad'); return; }
+    var slug = BOOK_SLUG;
+    if (!slug) { say('Chưa nạp dữ liệu chương — chọn bộ rồi bấm Quản lý chương.', 'bad'); return; }
     var idx = Math.max(0, Math.min(S.activeChapter || 0, S.chapters.length));
     var titleEl = D.getElementById('chapterTitle');
     var title = String(titleEl ? titleEl.value : ((S.chapters[idx] || {}).t || '')).trim() || suggestNextChapTitle(S.chapters.slice(0, idx));
@@ -1196,8 +1242,8 @@
   }
   function realChapterAdd() {
     if (!ensureOnline()) return;
-    var slug = BOOK_SLUG || S.chapterBook || S.selectedBook;
-    if (!slug) { say('Chọn bộ trước khi thêm chương.', 'bad'); return; }
+    var slug = BOOK_SLUG;
+    if (!slug) { say('Chưa nạp dữ liệu chương — chọn bộ rồi bấm Quản lý chương.', 'bad'); return; }
     snapshotLiveEditor();
     var idx = S.chapters.length;
     var nextTitle = suggestNextChapTitle(S.chapters);
@@ -1222,8 +1268,9 @@
   }
   function realChapterDelete(idx) {
     if (!ensureOnline()) return;
-    var slug = BOOK_SLUG || S.chapterBook || S.selectedBook;
-    if (!slug || !S.chapters[idx]) return;
+    var slug = BOOK_SLUG;
+    if (!slug) { say('Chưa nạp dữ liệu chương — chọn bộ rồi bấm Quản lý chương.', 'bad'); return; }
+    if (!S.chapters[idx]) return;
     var victimTitle = S.chapters[idx].t || ('Chương ' + (idx + 1));
     M.openStrong('Xoá chương khỏi KV', 'Xoá "' + victimTitle + '" · không hoàn tác.', 'XOÁ', function () {
       apiCall('/api/book/' + encodeURIComponent(slug) + '/chapter', { method: 'PUT', body: { index: idx, remove: true } })
@@ -1243,8 +1290,9 @@
   }
   function realChapterMove(idx, dir) {
     if (!ensureOnline()) return;
-    var to = idx + dir, slug = BOOK_SLUG || S.chapterBook || S.selectedBook;
-    if (!slug || to < 0 || to >= S.chapters.length) return;
+    var to = idx + dir, slug = BOOK_SLUG;
+    if (!slug) { say('Chưa nạp dữ liệu chương — chọn bộ rồi bấm Quản lý chương.', 'bad'); return; }
+    if (to < 0 || to >= S.chapters.length) return;
     snapshotLiveEditor();
     apiCall('/api/book/' + encodeURIComponent(slug) + '/chapter', { method: 'PUT', body: { from: idx, to: to } })
       .then(function () {
@@ -1634,10 +1682,11 @@
     var ed = D.getElementById('editor');
     if (!ed) return;
     DIRTY_CHAPTER = true;
-    updateChapterStatsDom(ed.innerHTML);
     updateSaveNoteDom();
     clearTimeout(EDITOR_AUTOSAVE_TIMER);
     EDITOR_AUTOSAVE_TIMER = setTimeout(function () {
+      var e2 = D.getElementById('editor');
+      if (e2) updateChapterStatsDom(e2.innerHTML);
       snapshotLiveEditor();
       updateSaveNoteDom();
     }, 550);
@@ -1841,11 +1890,12 @@
       if (!pickSlug) return;
       snapshotLiveEditor();
       S.chapterBook = pickSlug; S.selectedBook = pickSlug; S.editorPreview = false;
-      (S.conn === 'static' ? loadStaticBook(pickSlug) : loadBook(pickSlug)).then(function () {
+      (S.conn === 'static' ? loadStaticBook(pickSlug) : loadBook(pickSlug)).then(function (b) {
+        if (!b) { revertChapterBook(); say('Không tải được dữ liệu chương của bộ này.', 'bad'); return; }
         say('Đang quản lý chương của ' + titleOf(pickSlug) + '.');
         var card = D.getElementById('editorCard');
         if (card && card.scrollIntoView) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }).catch(fail);
+      }).catch(function (e) { revertChapterBook(); fail(e); });
     },
     'format': function (el) { execEditorFormat(el.dataset.cmd); },
     'insert-separator': realInsertSeparator,
@@ -1928,13 +1978,14 @@
       var cb = (selEl && selEl.value) || S.chapterBook || S.selectedBook || (S.books[0] || {}).id;
       if (!cb) return;
       S.chapterBook = cb; S.selectedBook = cb; S.editorPreview = false;
-      var p = (cb !== BOOK_SLUG) ? (S.conn === 'static' ? loadStaticBook(cb) : loadBook(cb)) : Promise.resolve();
-      p.then(function () {
+      var p = (cb !== BOOK_SLUG) ? (S.conn === 'static' ? loadStaticBook(cb) : loadBook(cb)) : Promise.resolve('ok');
+      p.then(function (b) {
+        if (!b) { revertChapterBook(); say('Không tải được dữ liệu chương của bộ này.', 'bad'); return; }
         redraw();
         var mc = D.getElementById('editorCard');
         if (mc && mc.scrollIntoView) mc.scrollIntoView({ behavior: 'smooth', block: 'start' });
         say('Đang quản lý chương của ' + titleOf(cb) + '.');
-      }).catch(fail);
+      }).catch(function (e) { revertChapterBook(); fail(e); });
     },
     'focus-editor': function () {
       ensureEditingMode();
@@ -2113,7 +2164,10 @@
     snapshotLiveEditor();
     S.selectedBook = id; S.chapterBook = id; window.initEditModels(M.getBook(id));
     say('Đã chọn ' + (M.getBook(id).t || id) + ' · dữ liệu KV.', 'info');
-    if (CFG.base) (S.conn === 'static' ? loadStaticBook(id) : loadBook(id)).catch(function () {});
+    if (CFG.base) {
+      (S.conn === 'static' ? loadStaticBook(id) : loadBook(id))
+        .then(function (b) { if (!b) revertChapterBook(); }, revertChapterBook);
+    }
   };
   window.initEditModels = function (b) {
     if (!b) return;                       /* không có bộ đang chọn — đừng ném TypeError */
@@ -2402,9 +2456,9 @@
     if (!(el.files && el.files.length)) return;
     var file = el.files[0];
     var kind = el.dataset.kind;
-    var slug = BOOK_SLUG || S.chapterBook || S.selectedBook;
+    var slug = BOOK_SLUG;
     el.value = '';
-    if (!slug) { say('Chọn một bộ trước khi nhập chương.', 'bad'); return; }
+    if (!slug) { say('Chưa nạp dữ liệu chương — chọn bộ rồi bấm Quản lý chương.', 'bad'); return; }
     if (kind === 'multi') {
       if (!ensureOnline()) return;
       say('Đang đọc và tách chương từ "' + file.name + '"…', 'info');
@@ -2470,13 +2524,21 @@
     }).then(function (r) {
       var src = r.url || ('/api/img/' + r.id);
       if (/^\/api\/img\//i.test(src) && CFG.base) src = CFG.base + src;
+      if (el.dataset.target === 'nb-cover-preview') {
+        S.models['nb-cover'] = src;
+        var pv = D.getElementById('nb-cover-preview');
+        if (pv) pv.innerHTML = '<img class="cover lg" src="' + esc(src) + '" alt="Ảnh bìa xem trước">';
+        say('Đã tải ảnh — sẽ ghi cùng lúc tạo bộ.');
+        return;
+      }
       var meta = findMeta(S.selectedBook || BOOK_SLUG);
       if (!meta) throw new Error('Chọn bộ trước khi tải bìa.');
       var next = clone(REG);
       var hit = (next.lib || []).find(function (m) { return m.slug === meta.slug; });
       hit.thumb = src; hit.slide = src;
-      return writeRegistry(next);
-    }).then(function () { say('Đã lưu ảnh bìa lên KV.'); }).catch(fail);
+      /* Tạo bộ đã báo riêng */
+      return writeRegistry(next).then(function () { say('Đã lưu ảnh bìa lên KV.'); });
+    }).catch(fail);
   }
 
   /* Dán nội dung thông minh vào #editor: giữ đậm/nghiêng/gạch chân/tiêu đề/đoạn văn
@@ -2592,7 +2654,8 @@
       e.preventDefault(); e.stopPropagation();
       snapshotLiveEditor();
       S.chapterBook = el.value; S.selectedBook = el.value; S.editorPreview = false;
-      (S.conn === 'static' ? loadStaticBook(el.value) : loadBook(el.value)).catch(function () {});
+      (S.conn === 'static' ? loadStaticBook(el.value) : loadBook(el.value))
+        .then(function (b) { if (!b) revertChapterBook(); }, revertChapterBook);
     }
     else if (r === 'picked') {
       e.preventDefault(); e.stopPropagation();
@@ -2635,7 +2698,9 @@
     window.render();
     if (CFG.base && CFG.key) {
       setConn('checking');
-      apiCall('/api/whoami').then(function () { setConn('online'); return loadAll(); })
+      var regP = apiCall('/api/registry').then(function (reg) { hydrate(reg); redraw(); });
+      regP.catch(function () {});
+      apiCall('/api/whoami').then(function () { setConn('online'); return loadAll(regP); })
         .then(function () { say('Đã nối Worker · dữ liệu thật từ KV.'); })
         .catch(function (e) {
           setConn(classify(e)); fail(e);

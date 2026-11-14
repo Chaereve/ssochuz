@@ -1114,7 +1114,7 @@ function newBookHTML(){
     '</div></div>';
   var side='<div class="stack">'+
     '<div class="card"><div class="card-hd"><h3>Ảnh bìa</h3></div><div class="card-bd"><div class="row" style="align-items:flex-start;gap:14px">'+
-      '<div id="nb-cover-preview"><span class="cover cv-1 lg" aria-label="Ô màu bìa mẫu">BÌA<br>MẪU</span></div>'+
+      '<div id="nb-cover-preview">'+(state.models['nb-cover']?'<img class="cover lg" src="'+esc(state.models['nb-cover'])+'" alt="Ảnh bìa xem trước">':'<span class="cover cv-1 lg" aria-label="Ô màu bìa mẫu">BÌA<br>MẪU</span>')+'</div>'+
       '<div class="col" style="flex:1"><span class="file"><input type="file" accept="image/*" data-role="cover-upload" data-target="nb-cover-preview" aria-label="Tải ảnh bìa mẫu"></span></div>'+
     '</div></div></div>'+
     '<div class="card"><div class="card-hd"><h3>Chương đầu (tuỳ chọn)</h3></div><div class="card-bd">'+
@@ -2417,6 +2417,18 @@ document.addEventListener('change',function(e){
   }
 });
 let saveTimer=null;
+let sT=null,sC=false;
+document.addEventListener('compositionstart',function(){sC=true;});
+document.addEventListener('compositionend',function(){sC=false;});
+function scheduleSearchRender(r,p){
+  clearTimeout(sT);
+  sT=setTimeout(function(){
+    if(sC){scheduleSearchRender(r,p);return;}
+    var f=document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.role===r;
+    render();
+    if(f){var n=document.querySelector('[data-role="'+r+'"]');if(n){n.focus();try{n.setSelectionRange(p,p);}catch(e){}}}
+  },160);
+}
 /* Dán vào trình soạn: chỉ chèn text thường. Nếu để trình duyệt tự dán HTML,
    onerror của <img> chạy ngay trong DOM sống trước khi sự kiện input kịp lọc. */
 document.addEventListener('paste',function(e){
@@ -2447,14 +2459,12 @@ document.addEventListener('input',function(e){
   var r=el.dataset.role;if(!r)return;
   switch(r){
     case 'cmt-q':
-      var cv=el.value;state.cmtQ=cv;render();
-      var nc=document.querySelector('[data-role="cmt-q"]');
-      if(nc){nc.focus();try{nc.setSelectionRange(cv.length,cv.length);}catch(err){}}
+      state.cmtQ=el.value;
+      scheduleSearchRender('cmt-q',el.value.length);
       break;
     case 'lib-q':
-      var v=el.value;state.lib.q=v;state.lib.page=1;render();
-      var ne=document.querySelector('[data-role="lib-q"]');
-      if(ne){ne.focus();try{ne.setSelectionRange(v.length,v.length);}catch(err){}}
+      state.lib.q=el.value;state.lib.page=1;
+      scheduleSearchRender('lib-q',el.value.length);
       break;
     case 'suggest-input':
       state.suggestQuery=el.value;state.suggestOpen=true;
