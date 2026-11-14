@@ -2536,8 +2536,9 @@
       var next = clone(REG);
       var hit = (next.lib || []).find(function (m) { return m.slug === meta.slug; });
       hit.thumb = src; hit.slide = src;
-      return writeRegistry(next);
-    }).then(function () { say('Đã lưu ảnh bìa lên KV.'); }).catch(fail);
+      /* Tạo bộ đã báo riêng */
+      return writeRegistry(next).then(function () { say('Đã lưu ảnh bìa lên KV.'); });
+    }).catch(fail);
   }
 
   /* Dán nội dung thông minh vào #editor: giữ đậm/nghiêng/gạch chân/tiêu đề/đoạn văn

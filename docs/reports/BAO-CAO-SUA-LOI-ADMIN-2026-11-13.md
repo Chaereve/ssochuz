@@ -13,7 +13,7 @@
 | Repro sau sửa | A ✓ C ✓ B ✓ (điểm `!x.status` trong repro là lỗi assertion của harness — `wFetch` luôn set `status: 200`; test thật assert `status === 200`) |
 | `node tests/t_admin_real.js` | EXIT 0 — `loi: 0`, `errors0: []`, 36 request tới Worker giả |
 | `node tests/t_admin_flow.mjs` | EXIT 0 — **52/52**, `errors: []` |
-| `npm run build` | ĐẠT — `admin.html` tái sinh (225 538 byte, `admin-real.js?v=a7d4ee4142`) |
+| `npm run build` | ĐẠT — `admin.html` tái sinh (225 538 byte, `admin-real.js?v=e58d4bfd70`) |
 | `npm test` | **Tất cả bài kiểm thử đều đạt** (109 bài trong `run.js`, gồm `tools/audit_a11y.mjs`: 0 lỗi axe-core, payload ≤ ngưỡng) |
 
 ## 2. Lỗi đã sửa
@@ -58,6 +58,7 @@ Trước: `realCoverUpload` không có nhánh `nb-cover-preview` ⇒ tải bìa 
   - `admin-real.js:1042` — `thumb: S.models['nb-cover'] || ''` — bìa ghi cùng lúc tạo bộ;
   - `mockup/ssochuz-admin-mockup.html:1117` — `newBookHTML` render preview khi `state.models['nb-cover']` có giá trị (còn không thì ô “BÌA mẫu” như cũ);
   - `admin.html` tái build từ mockup.
+- Rà lại sau sửa còn bắt thêm 1 lỗi nhỏ của chính bản vá: nhánh Tạo bộ vẫn chạy `.then` cuối ⇒ toast “Đã lưu ảnh bìa lên KV.” hiện lên dù **chưa** ghi KV (chỉ ghi lúc bấm Tạo bộ). Đã chuyển `say` vào đúng nhánh `writeRegistry` — nhánh Tạo bộ chỉ báo “sẽ ghi cùng lúc tạo bộ”.
 - Test: `t_admin_real.js` mục 3 — tải bìa thật (`POST /api/img` → `imgqa01`), **chưa** có PUT registry trước khi bấm Tạo bộ; sau tạo: `meta.thumb` đúng URL; kết hợp kiểm “không chọn lại” (2.1).
 
 ### 2.6 Bảo hiểm: dropdown không được trỏ bộ chưa nạp + bỏ fallback che lỗi
@@ -93,7 +94,7 @@ npm test                         # tất cả 109 bài
 
 | File | Thay đổi |
 | --- | --- |
-| `admin-real.js` | 17 điểm sửa chức năng: hydrate `chapterBook`, `applyBook` sau tạo/đổi slug, `renameRefs` parity, `dropBookRefs` + dọn state khi xoá, `revertChapterBook`, 5 cửa chốt slug chỉ nhận `BOOK_SLUG`, nhánh bìa `nb-cover-preview`, `thumb` lúc tạo (sau đó nén comment/helper cho ngưỡng payload) |
+| `admin-real.js` | 18 điểm sửa chức năng: hydrate `chapterBook`, `applyBook` sau tạo/đổi slug, `renameRefs` parity, `dropBookRefs` + dọn state khi xoá, `revertChapterBook`, 5 cửa chốt slug chỉ nhận `BOOK_SLUG`, nhánh bìa `nb-cover-preview` (+ toast đúng nhánh), `thumb` lúc tạo (sau đó nén comment/helper cho ngưỡng payload) |
 | `mockup/ssochuz-admin-mockup.html` | preview ảnh bìa form Tạo bộ khi `state.models['nb-cover']` có giá trị |
 | `admin.html` | tái build (`npm run build`) |
 | `tests/t_admin_real.js` | mục 3/4 mở rộng + route `/api/img` POST |
