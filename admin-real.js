@@ -1369,7 +1369,32 @@
     }, 'Reset phiếu');
   }
 
+  /* Vòng 17b: giá trị NGƯỜI DÙNG ĐANG GÕ chưa chắc đã vào state — handler
+     ‘input’ chỉ chạy khi trình duyệt phát sự kiện, còn bấm Lưu bằng chuột ngay
+     sau khi gõ (chưa blur) vẫn có thể lệch một nhịp. Trước khi dựng registry,
+     đọc thẳng những ô đang có trên màn hình. */
+  function collectHomepageDraft() {
+    var each = function (sel, fn) { Array.prototype.forEach.call(D.querySelectorAll(sel), fn); };
+    each('[data-role="slide-reason"]', function (el) {
+      var x = S.slides[Number(el.dataset.idx)];
+      if (x) x.r = el.value;
+    });
+    each('[data-role="sched-ch"]', function (el) {
+      var x = S.schedule[Number(el.dataset.idx)];
+      if (x) x.c = el.value;
+    });
+    each('[data-role="sched-book"]', function (el) {
+      var x = S.schedule[Number(el.dataset.idx)];
+      if (x && el.value) x.b = el.value;
+    });
+    var note = D.getElementById('hp-note'); if (note) S.models['hp-note'] = S.hpNote = note.value;
+    var tx = D.getElementById('hp-text'); if (tx) S.models['hp-text'] = tx.value;
+    var href = D.getElementById('hp-href'); if (href) S.models['hp-href'] = href.value;
+    var sw = D.getElementById('hp-banner'); if (sw) S.models['hp-banner'] = !!sw.checked;
+  }
+
   function currentRegistryFromState() {
+    collectHomepageDraft();
     var next = clone(REG);
     var origSlides = Array.isArray(REG.slides) ? REG.slides : [];
     var origSlug = function (o) { return typeof o === 'string' ? o : (o && o.slug) || ''; };
@@ -1415,6 +1440,28 @@
     });
     return next;
   }
+  /* Vòng 17b: overlay “Chuyển thể Series” là một TRANG RIÊNG có nút Lưu riêng.
+     Bản trước nó gọi saveHomepage() ⇒ ghi TOÀN BỘ registry, kéo theo cả bản
+     nháp trang chủ mà người dùng đang sửa dở nhưng CHƯA bấm Lưu (banner, ghi
+     chú, lịch…). Nay chỉ ghi đúng thứ trang đó quản lý: editorChoice +
+     settings.editorChoice; các phần khác giữ nguyên bản đang có trên KV. */
+  function realSaveSeriesOnly() {
+    if (!ensureOnline()) return;
+    var next = clone(REG);
+    var picked = S.picked.slice();
+    next.editorChoice = picked;
+    next.settings = Object.assign({}, next.settings || {});
+    next.settings.editorChoice = picked.slice();
+    writeRegistry(next).then(function () {
+      say('Đã lưu ' + picked.length + ' bộ Chuyển thể Series lên KV.');
+      /* Lưu xong thì đóng trang Series (nút “Đóng”/Esc vẫn dùng được), và
+         phần trang chủ trong state vẫn là bản nháp: giữ nguyên ● Chưa lưu. */
+      if (typeof window.closeSeriesPage === 'function') { try { window.closeSeriesPage(); } catch (e) {} }
+      else redraw();
+    }).catch(fail);
+  }
+  window.realSaveSeriesOnly = realSaveSeriesOnly;
+
   function realSaveHomepage() {
     if (!ensureOnline()) return;
     /* registry thật có slides:[] là HỢP LỆ (web tự lấy 5 bộ mới nhất). Bắt
@@ -1458,8 +1505,18 @@
       else { var t = S.slides[idx]; S.slides[idx] = S.slides[j]; S.slides[j] = t; }
     } else if (kind === 'remove') S.slides.splice(idx, 1);
     else if (kind === 'sched-add') {
-      S.schedule.push({ d: '', b: (S.picked[0] || (S.books[0] || {}).id || ''), c: '', t: '' });
-      say('Đã thêm dòng lịch trống — chọn thứ và bộ, rồi bấm Lưu trang chủ.', 'info');
+      /* Vòng 17b: dòng mới phải DÙNG ĐƯỢC NGAY. Bản trước tạo dòng không có
+         thứ ⇒ bấm Lưu bị chặn ngay (“dòng N thiếu thứ”), người dùng phải tự đi
+         bấm chip. Nay mặc định lấy thứ HÔM NAY (vẫn đổi được bằng chip), chọn
+         bộ đang có ở Series hoặc bộ đầu thư viện. */
+      var wd = (typeof window.HP_DAYS !== 'undefined' && window.HP_DAYS)
+        ? window.HP_DAYS[(new Date().getDay() + 6) % 7][0] : 'T2';
+      S.schedule.push({
+        d: window.hpDaysText ? window.hpDaysText([wd]) : 'Thứ 2',
+        b: (S.picked[0] || (S.books[0] || {}).id || ''), c: '', t: ''
+      });
+      say('Đã thêm dòng lịch cho hôm nay — đổi thứ bằng các chip nếu cần.', 'info');
+      changed = false;   /* câu báo ở dưới là báo chung, ở đây đã báo riêng */
     } else if (kind === 'sched-remove') S.schedule.splice(idx, 1);
     if (!changed) return;
     redraw();
@@ -1969,6 +2026,15 @@
     'remove-votes': realRemoveVotes,
     'reset-votes': realResetVotes,
     'slide-add': function (el) { realSlideChange('add', 0, 0, el); },
+    /* Lối tắt “Sửa bộ” ngay trên dòng slide: chọn bộ rồi sang tab Sửa bộ với
+       đúng bộ đó, khỏi phải nhớ slug rồi quay lại Thư viện tìm. */
+    'hp-edit-book': function (el) {
+      var id = el.dataset.id;
+      if (!id) return;
+      S.selectedBook = id;
+      go('sua-bo');
+      say('Đang sửa bộ: ' + (titleOf(id) || id));
+    },
     'hp-day': function (el) {
       /* Chip thứ của dòng lịch: đổi state rồi vẽ lại đúng card đó, KHÔNG ghi KV
          (xem realSlideChange). */
@@ -1986,6 +2052,10 @@
     'slide-remove': function (el) { realSlideChange('remove', Number(el.dataset.idx), 0, el); },
     'sched-add': function (el) { realSlideChange('sched-add', 0, 0, el); },
     'sched-remove': function (el) { realSlideChange('sched-remove', Number(el.dataset.idx), 0, el); },
+    'series-save': function (e) {
+      /* overlay chặn nổi bọt ⇒ phải bắt ở capture (xem capture click cuối file) */
+      realSaveSeriesOnly();
+    },
     'series-page': function () {
       /* Overlay dựng bằng mã của mockup và nằm NGOÀI #view nên render() không
          xoá. Lớp KV chỉ cần MỞ nó và đồng bộ bộ đếm — trước đây hàm này chỉ
@@ -2001,7 +2071,15 @@
     'blogger-sync': realBlogSync,
     'backup': realBackup,
     'export': function (el) { realExport(el.dataset.type); },
-    'refresh': function () { reload(); },
+    'refresh': function () {
+      /* Vòng 17b: trang chủ giữ bản nháp trong state. Nạp lại dữ liệu là XOÁ
+         bản nháp đó, nên phải hỏi trước — bản trước xoá im lặng, ai đang sửa
+         dở mất trắng mà không hiểu vì sao. */
+      var draft = false;
+      try { draft = typeof window.hpDirty === 'function' && window.hpDirty(); } catch (e) { draft = false; }
+      if (draft && !window.confirm('Trang chủ đang có thay đổi CHƯA lưu.\nĐọc lại dữ liệu sẽ bỏ các thay đổi đó. Tiếp tục?')) return;
+      reload();
+    },
     'scan': function () {
       if (!ensureOnline()) return;
       say('Đã quét ' + (REG.lib || []).length + ' bộ từ registry KV · ' + M.SAMPLE_ISSUES.length + ' vấn đề.');
@@ -2275,6 +2353,24 @@
     return '<p class="sample-note">DỮ LIỆU THẬT · CLOUDFLARE KV · ' + esc(host) + '</p>';
   };
   var origCover = M.cover;
+  /* Vòng 17b: cột “Xem trước” dính theo cuộn, nhưng chỉ dính khi nó THẤP hơn
+     màn hình. Cao hơn thì phải để nó cuộn theo trang, nếu không phần dưới
+     (lịch, chân thẻ) bị cắt và không có cách nào xem — lỗi rất dễ gặp ở màn
+     900px. Đo bằng JS chứ không đoán bằng CSS. */
+  function fitPreviewColumn() {
+    var side = D.querySelector('.hp-side'), card = D.querySelector('.hp-pv-card');
+    if (!side || !card) return;
+    side.style.position = '';
+    var h = card.getBoundingClientRect ? card.getBoundingClientRect().height : 0;
+    var limit = (window.innerHeight || 900) - 90;
+    if (h > limit) {
+      side.style.position = 'static';
+      card.setAttribute('data-own-scroll', '1');
+    } else {
+      card.removeAttribute('data-own-scroll');
+    }
+  }
+
   window.cover = function (b, cls) {
     var u = b && String(b.thumb || '').trim();
     if (u && /^https?:\/\//i.test(u))
@@ -2283,6 +2379,12 @@
         esc(String(b.t || '').slice(0, 3)) + '">';
     return origCover(b, cls);
   };
+  var resizeT = 0;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeT);
+    resizeT = setTimeout(function () { if (S.route === 'homepage-cms') { try { fitPreviewColumn(); } catch (e) {} } }, 120);
+  });
+
   var st = D.createElement('style');
   st.textContent = 'img.cover{object-fit:cover;display:block;padding:0}';
   D.head.appendChild(st);
@@ -2296,6 +2398,8 @@
   window.render = function () {
     S.kvWrites = WRITES; S.kvReads = READS;
     origRender();
+    /* sau khi vẽ: đo lại cột xem trước — chỉ trang chủ mới có .hp-side */
+    if (S.route === 'homepage-cms') { try { fitPreviewColumn(); } catch (e) {} }
     FORCE_EDITOR_SEED = false;
     try {
       var clock = D.getElementById('czClock');
@@ -2752,6 +2856,12 @@
     if (!el) return;
     var fn = REAL_CLICK[el.dataset.act];
     if (!fn) return;
+    /* Vòng 17b: overlay #seriesPage gắn listener RIÊNG ở chính nó và tự
+       stopPropagation. Nếu ta chặn ở capture với mọi data-act thì nút
+       “Lưu lựa chọn” trong overlay bị chặn luôn trước khi tới listener đó ⇒
+       bấm không có gì xảy ra. Chỉ nhường những act overlay thật sự xử lý. */
+    var OVERLAY = { 'series-close': 1, 'series-all': 1, 'series-none': 1 };
+    if (el.closest('#seriesPage') && OVERLAY[el.dataset.act]) return;
     e.preventDefault(); e.stopPropagation();
     try { fn(el); } catch (err) { fail(err); }
   }, true);

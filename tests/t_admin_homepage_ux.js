@@ -86,8 +86,9 @@ function ok(cond, label) { checks++; if (!cond) fails.push(label); }
   ok(!!D.querySelector('.hp-cols .hp-side .hp-pv'), 'cột phải có khung Xem trước');
   ok(!!D.getElementById('hpDirty') && D.getElementById('hpDirty').hidden === true,
     'vừa nạp: ● Chưa lưu đang ẩn');
-  ok(!!D.getElementById('hpReset') && D.getElementById('hpReset').disabled === true,
-    'vừa nạp: Hoàn tác bị khoá');
+  /* Vòng 17b: chưa có thay đổi thì KHÔNG hiện nút Hoàn tác (đỡ một nút chết
+     trên màn hình); nó xuất hiện cùng ● Chưa lưu. */
+  ok(!D.getElementById('hpReset'), 'vừa nạp: chưa hiện nút Hoàn tác (không có gì để hoàn tác)');
   ['hpSumSlides', 'hpSumSeries', 'hpSumSched', 'hpSumBanner'].forEach(id => {
     ok(!!D.getElementById(id), 'thanh tóm tắt có ô ' + id);
   });
@@ -166,7 +167,7 @@ function ok(cond, label) { checks++; if (!cond) fails.push(label); }
   ok(S.models['hp-note'] === 'Lịch mới', 'ghi chú lịch vào state.models');
 
   ok(D.getElementById('hpDirty').hidden === false, 'có thay đổi → hiện ● Chưa lưu');
-  ok(D.getElementById('hpReset').disabled === false, 'Hoàn tác được bật');
+  ok(!!D.getElementById('hpReset'), 'có thay đổi → nút Hoàn tác xuất hiện');
   ok(puts.length === 0, 'tới đây vẫn 0 lượt ghi KV');
 
   /* -------------------------------------------------------- KHUNG XEM TRƯỚC */

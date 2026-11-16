@@ -394,7 +394,7 @@ td .strong{font-weight:600}
   align-items:center;gap:9px;font-size:12.5px;color:var(--txt);min-width:0}
 .hp-series-row:hover{border-color:var(--bd2)}
 .hp-series-row>.ic,.hp-series-cv{flex:none}
-.hp-series-cv{width:26px;height:36px;font-size:8px;border-radius:4px}
+.hp-series-cv{width:28px;height:38px;font-size:8px;border-radius:4px}
 .hp-series-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* ---- lịch: thẻ riêng + chip thứ ---- */
@@ -405,6 +405,7 @@ td .strong{font-weight:600}
 .hp-sched-sel{flex:1 1 auto;min-width:0}
 .hp-sched-note{height:32px;font-size:12.5px;background:var(--surf)}
 .hp-warn{display:flex;align-items:center;gap:6px;margin:0;font-size:11.5px;color:var(--warn)}
+.hp-warn-block{align-items:flex-start;margin:0 0 10px;padding:9px 11px;border:1px solid var(--warn);border-radius:var(--r6);background:var(--warn-bg);line-height:1.45}
 .hp-warn .ic{width:14px;height:14px;flex:none}
 .hp-days{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
 .hp-days-lb{flex:none;margin-right:3px;font:600 10px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
@@ -418,10 +419,11 @@ td .strong{font-weight:600}
 .hp-ann-pv{padding:8px 11px;border:1px solid var(--bd);border-radius:var(--r6);background:var(--surf2);font-size:12px}
 .hp-ann-on{display:flex;align-items:center;gap:7px;color:var(--ok)}
 .hp-ann-off{display:flex;align-items:center;gap:7px;color:var(--dim)}
+.hp-ann-warn{display:flex;align-items:flex-start;gap:7px;color:var(--warn);line-height:1.45}
 .hp-ann-pv .ic{width:14px;height:14px;flex:none}
 
 /* ---- cột xem trước ---- */
-.hp-side{display:grid;gap:10px;min-width:0;position:sticky;top:calc(var(--top) + 64px)}
+.hp-side{display:grid;gap:10px;min-width:0;position:sticky;top:calc(var(--top) + 64px);max-height:calc(100vh - var(--top) - 76px)}
 .hp-pv-card .card-hd{padding:10px 12px}
 .hp-pv-card .card-hd h3{font-size:14px}
 .hp-seg{display:inline-flex;gap:2px;margin-left:auto;padding:2px;border:1px solid var(--bd);border-radius:var(--r8);background:var(--surf2)}
@@ -429,6 +431,10 @@ td .strong{font-weight:600}
 .hp-seg .btn.icon.pri{background:var(--acc);border-color:var(--acc);color:var(--ink)}
 .hp-pv-bd{padding:0}
 .hp-pv{background:var(--bg2);border-radius:0 0 var(--r12) var(--r12);overflow:hidden;transition:max-width .15s ease}
+/* Cột xem trước dính theo cuộn: chỉ dính khi thẻ cao hơn màn hình. Bản real
+   thêm [data-own-scroll] (admin-real.js đo chiều cao) — không đoán bằng CSS. */
+.hp-pv-card{display:flex;flex-direction:column;min-width:0}
+.hp-pv-card[data-own-scroll] .hp-pv-scroll{max-height:52vh}
 .hp-pv.mob{max-width:300px;margin:0 auto}
 .hp-pv-bar{display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--bd);background:var(--surf2)}
 .hp-pv-url{font:500 10px/1 var(--mono);color:var(--dim);padding:3px 8px;border:1px solid var(--bd);border-radius:99px;background:var(--bg2)}
@@ -439,6 +445,7 @@ td .strong{font-weight:600}
 .hp-pv-ann .ic{width:13px;height:13px;color:var(--acc);flex:none}
 .hp-pv-hero{display:flex;gap:11px;min-width:0}
 .hp-pv-big{flex:none;width:84px;height:116px;border-radius:var(--r8)}
+img.hp-pv-big,img.hp-pv-thumb,img.hp-pv-mini,img.hp-series-cv{object-fit:cover;display:block;padding:0;border:1px solid var(--bd2)}
 .hp-pv-herot{min-width:0;display:grid;gap:4px;align-content:start}
 .hp-pv-k{font:600 9.5px/1.3 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--acc)}
 .hp-pv-herot b{font:600 15px/1.25 var(--head);color:var(--txt)}
@@ -450,7 +457,8 @@ td .strong{font-weight:600}
 .hp-pv-thumb{width:34px;height:46px;font-size:7px;border-radius:4px}
 .hp-pv-mini{width:26px;height:36px;font-size:6px;border-radius:4px}
 .hp-pv-sec{display:grid;gap:7px}
-.hp-pv-h{font:600 10px/1.3 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.hp-pv-h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font:600 10px/1.3 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.hp-pv-n{font:500 9.5px/1.3 var(--mono);letter-spacing:0;text-transform:none;color:var(--dim);opacity:.85}
 .hp-pv-rail{display:flex;align-items:center;gap:8px;min-width:0}
 .hp-pv-railt{min-width:0;display:grid;gap:1px}
 .hp-pv-railt b{font-size:11px;font-weight:600;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1133,7 +1141,10 @@ const PAGES = {
   'binh-luan':{label:'Bình luận',desc:'Đọc bình luận · xoá nghi spam.',act:{l:'Đọc bình luận',a:'refresh',tone:''}},
   'bao-loi':{label:'Báo lỗi',desc:'Lỗi độc giả gửi · xử lý, mở lại.',act:{l:'Đọc báo lỗi',a:'refresh',tone:''}},
   'phieu-bau':{label:'Phiếu bầu',desc:'Phiếu theo người đọc · gỡ có xác nhận.',act:{l:'Reset phiếu bộ này',a:'reset-votes',tone:'danger pri'}},
-  'homepage-cms':{label:'Trang chủ',desc:'Slide, bộ chọn và lịch ra chương.',act:{l:'Lưu trang chủ',a:'save-homepage',tone:'pri'}},
+  /* Vòng 17b: trang chủ KHÔNG đặt nút Lưu ở pagehead nữa. Thanh tóm tắt dính
+     đã có Lưu + Hoàn tác + trạng thái ● Chưa lưu; hai nút cùng tên ở hai nơi
+     làm người dùng băn khoăn “bấm cái nào mới lưu”. Một hành động, một chỗ. */
+  'homepage-cms':{label:'Trang chủ',desc:'Slide, bộ chọn và lịch ra chương.',act:null},
   'thong-ke':{label:'Thống kê',desc:'Lượt đọc và phiếu bầu từ KV.',act:{l:'Đọc thống kê KV',a:'refresh',tone:''}},
   'kiem-tra-du-lieu':{label:'Kiểm tra dữ liệu',desc:'Đối chiếu KV, chương và bộ thiếu dữ liệu.',act:{l:'Đếm lại số chương',a:'recount',tone:'danger pri'}},
   'nhat-ky':{label:'Nhật ký',desc:'200 thao tác gần nhất.',act:{l:'Đọc log',a:'refresh',tone:''}},
@@ -1141,11 +1152,12 @@ const PAGES = {
 };
 
 function pageHead(p){
-  var a=p.act;
+  var a=p.act;   /* act:null ⇒ màn tự đặt hành động (trang chủ: thanh tóm tắt dính) */
   return '<div class="pagehead"><div class="hh"><span class="eyebrow">'+esc((ROUTES[state.route]||{}).group||'Quản trị')+' · MẪU</span>'+
     '<h2>'+esc(p.label)+'</h2><p class="desc">'+esc(p.desc)+'</p>'+
     '<p class="meta">DỮ LIỆU MẪU · 03/11 20:40</p></div>'+
-    '<div class="actions"><button class="btn '+esc(a.tone||'')+'" data-act="'+a.a+'"'+(a.id?' data-id="'+a.id+'"':'')+'>'+icon(a.a==='refresh'?'refresh':a.a==='backup'?'download':a.tone.indexOf('danger')>=0?'alert':'plus','s')+esc(a.l)+'</button></div></div>';
+    (a?'<div class="actions"><button class="btn '+esc(a.tone||'')+'" data-act="'+a.a+'"'+(a.id?' data-id="'+a.id+'"':'')+'>'+icon(a.a==='refresh'?'refresh':a.a==='backup'?'download':a.tone.indexOf('danger')>=0?'alert':'plus','s')+esc(a.l)+'</button></div>':'')+
+    '</div>';
 }
 
 /* ---------- 1 · Dashboard ---------- */
@@ -1512,7 +1524,8 @@ function homepageHTML(){
       '</span></div>'+
     '<span class="hp-dirty" id="hpDirty"'+(dirty?'':' hidden')+'>'+icon('info','xs')+' Chưa lưu</span>'+
     '<span class="grow"></span>'+
-    '<button class="btn sm" type="button" id="hpReset" data-act="hp-reset"'+(dirty?'':' disabled')+'>Hoàn tác</button>'+
+    '<button class="btn sm ghost" type="button" data-act="refresh" title="Bỏ bản nháp và đọc lại dữ liệu mới nhất từ KV">'+icon('refresh','s')+'Đọc lại</button>'+
+    (dirty?'<button class="btn sm" type="button" id="hpReset" data-act="hp-reset">Hoàn tác</button>':'')+
     '<button class="btn sm pri" type="button" data-act="save-homepage">'+icon('save','s')+'Lưu trang chủ</button>'+
   '</div>';
 
@@ -1535,6 +1548,7 @@ function homepageHTML(){
       '<div class="hp-row-act">'+
         '<button class="btn icon sm" type="button" data-act="slide-move" data-idx="'+i+'" data-dir="-1"'+(i===0?' disabled':'')+' aria-label="Đưa slide lên trước" title="Lên trước">'+icon('arrowup','s')+'</button>'+
         '<button class="btn icon sm" type="button" data-act="slide-move" data-idx="'+i+'" data-dir="1"'+(i===SL.length-1?' disabled':'')+' aria-label="Đưa slide xuống sau" title="Xuống sau">'+icon('arrowdown','s')+'</button>'+
+        (b?'<button class="btn icon ghost sm" type="button" data-act="hp-edit-book" data-id="'+esc(b.id)+'" aria-label="Sửa bộ '+esc(b.t)+'" title="Sửa bộ này">'+icon('edit','s')+'</button>':'')+
         '<button class="btn icon ghost sm" type="button" data-act="slide-remove" data-idx="'+i+'" aria-label="Gỡ slide khỏi hero" title="Gỡ khỏi hero">'+icon('x','s')+'</button>'+
       '</div></div>';
   };
@@ -1544,14 +1558,15 @@ function homepageHTML(){
     (SL.length
       ? '<div class="hp-list">'+SL.map(rowOf).join('')+'</div>'
       : '<div class="hp-empty">'+icon('image')+'<div><b>Chưa chọn slide</b><p>Trang chủ sẽ lấy 5 bộ mới nhất.</p></div></div>')+
-    (SL.length>=8
-      ? '<p class="xs dim mt">Đã đủ 8 slide — gỡ bớt một slide để thêm bộ khác.</p>'
-      : '<div class="hp-add">'+
-          '<span class="search">'+icon('search','xs')+'<input class="inp" id="hpSlideQ" data-role="hp-slide-q" type="search" autocomplete="off" placeholder="Tìm bộ để thêm…" aria-label="Tìm bộ để thêm vào hero">'+
-          '</span>'+
-          '<span class="sel hp-add-sel"><select class="inp" id="addSlideSel" aria-label="Chọn bộ thêm vào hero">'+bookOpts('')+'</select></span>'+
-          '<button class="btn sm" type="button" data-act="slide-add">'+icon('plus','s')+'Thêm slide</button>'+
-        '</div>')+
+    /* Đủ 8 slide vẫn HIỆN ô thêm bộ nhưng khoá lại kèm lý do — bản trước ẩn
+       hẳn đi, người dùng tưởng chức năng thêm slide biến mất. */
+    '<div class="hp-add'+(SL.length>=8?' is-full':'')+'">'+
+      '<span class="search">'+icon('search','xs')+'<input class="inp" id="hpSlideQ" data-role="hp-slide-q" type="search" autocomplete="off" placeholder="Tìm bộ để thêm…" aria-label="Tìm bộ để thêm vào hero"'+(SL.length>=8?' disabled':'')+'>'+
+      '</span>'+
+      '<span class="sel hp-add-sel"><select class="inp" id="addSlideSel" aria-label="Chọn bộ thêm vào hero"'+(SL.length>=8?' disabled':'')+'>'+bookOpts('')+'</select></span>'+
+      '<button class="btn sm" type="button" data-act="slide-add"'+(SL.length>=8?' disabled':'')+'>'+icon('plus','s')+'Thêm slide</button>'+
+    '</div>'+
+    (SL.length>=8?'<p class="hp-hint hp-hint-tight">'+icon('info','xs')+'Đã đủ 8 slide — trần của khối hero. Gỡ bớt một slide để thêm bộ khác.</p>':'')+
     '</div></section>';
 
   /* ---------- 2 · Chuyển thể Series ---------- */
@@ -1592,8 +1607,15 @@ function homepageHTML(){
       (days.length?'':'<p class="hp-warn">'+icon('alert','xs')+'Chưa chọn thứ — bấm ít nhất một chip ở trên.</p>')+
     '</div>';
   };
+  /* Bộ xuất hiện ở NHIỀU dòng lịch: web vẽ một tấm tiêu điểm + danh sách nên
+     bộ đó hiện hai lần, dễ tưởng lỗi. Cảnh báo ngay trên card. */
+  var dupB={},dup=[];
+  SC.forEach(function(x){if(!x.b)return;if(dupB[x.b]){if(dup.indexOf(x.b)<0)dup.push(x.b);}else dupB[x.b]=1;});
+  var dupNote=dup.length
+    ? '<p class="hp-warn hp-warn-block">'+icon('alert','xs')+'Cùng một bộ nằm ở '+dup.length+' dòng lịch: '+esc(dup.map(function(id){var b=hpBook(id);return b?b.t:id;}).join(', '))+' — trang chủ sẽ hiện bộ đó nhiều lần.</p>'
+    : '';
   var sched='<section class="card hp-block"><div class="card-hd"><h3>'+icon('clock','s')+'Lịch ra chương</h3>'+
-      '<span class="right"><b>'+SC.length+'</b> dòng</span></div><div class="card-bd">'+
+      '<span class="right"><b>'+SC.length+'</b> dòng</span></div><div class="card-bd">'+dupNote+
     '<p class="hp-hint">Mỗi dòng là một bộ và những thứ nó ra chương. Bấm chip để chọn thứ — khỏi phải gõ “Thứ 2, Thứ 5”. Ghi chú hiện ngay dưới tên bộ trên trang chủ.</p>'+
     (SC.length?SC.map(rowOf2).join(''):'<div class="hp-empty">'+icon('clock')+'<div><b>Chưa có lịch ra chương</b><p>Trang chủ sẽ ẩn khối này. Thêm dòng để báo lịch cho người đọc.</p></div></div>')+
     '<div class="hp-add hp-add-end"><button class="btn sm" type="button" data-act="sched-add">'+icon('plus','s')+'Thêm dòng lịch</button></div>'+
@@ -1608,7 +1630,7 @@ function homepageHTML(){
       field('Nội dung thông báo','hp-text',state.models['hp-text']||'',{ph:'Thông báo mẫu'})+
       field('Link (tuỳ chọn)','hp-href',state.models['hp-href']||'',{ph:'https://mau.example'})+
     '</div>'+
-    '<div class="hp-ann-pv" id="hpAnnPv" aria-live="polite"></div>'+
+    '<div class="hp-ann-pv" id="hpAnnPv" aria-live="polite">'+hpAnnStatus()+'</div>'+
     '<p class="hp-hint hp-hint-tight">Link chỉ nhận đường dẫn nội bộ (bắt đầu bằng “/”) hoặc https://. Nội dung để trống thì banner không hiện dù công tắc đã bật.</p>'+
     '</div></section>';
 
@@ -1682,12 +1704,16 @@ function hpBanner(){
   var on=!!state.models['hp-banner'],tx=String(state.models['hp-text']||'').trim();
   return (on&&tx)?tx:'';
 }
+/* Danh sách lên hero — PHẢI khớp src/cz-home.js:
+     có slides  → đúng thứ tự slides[] (tối đa 5)
+     không có   → 5 bộ mới cập nhật nhất (sắp theo ngày, KHÔNG theo thứ tự lib)
+   Bản trước gán đè bằng `state.books.slice(0,5)` nên preview hiện 5 bộ đầu
+   registry trong khi trang thật hiện 5 bộ mới nhất — preview nói dối. */
 function hpHeroList(){
   var list=(state.slides||[]).map(function(x){return hpBook(x.b);}).filter(Boolean);
   if(!list.length){
     list=state.books.slice().filter(function(b){return b.ch>0;})
-      .sort(function(a,b){return String(b.d||'').localeCompare(String(a.d||''));}).slice(0,5);
-    list=state.books.slice(0,5);
+      .sort(function(a,b){return String(b.d||'').localeCompare(String(a.d||''));});
   }
   return list.slice(0,5);
 }
@@ -1725,7 +1751,7 @@ function hpPvHTML(){
           return '<span class="hp-pv-rail">'+cover(b,'hp-pv-mini')+'<span class="hp-pv-railt"><b>'+esc(b.t)+'</b><i>'+esc(b.a||'')+'</i></span></span>';
         }).join(''):'<span class="hp-pv-none">Chưa có chương nào.</span>')+
       '</div>'+
-      (series.length?'<div class="hp-pv-sec"><span class="hp-pv-h">Chuyển thể Series</span>'+
+      (series.length?'<div class="hp-pv-sec"><span class="hp-pv-h">Chuyển thể Series<span class="hp-pv-n">'+series.length+' bộ đã chọn · web hiện 8</span></span>'+
         '<div class="hp-pv-grid">'+series.slice(0,3).map(function(b){
           return '<span class="hp-pv-cell">'+cover(b,'hp-pv-thumb')+'<b>'+esc(b.t)+'</b></span>';
         }).join('')+'</div></div>':'')+
@@ -1736,18 +1762,20 @@ function hpPvHTML(){
         }).join('')+'</div>':'')+
     '</div></div>';
 }
+/* Trạng thái banner, nói đúng cái người dùng cần biết NGAY tại ô nhập. */
+function hpAnnStatus(){
+  var tx=hpBanner();
+  if(tx)return '<span class="hp-ann-on">'+icon('check','xs')+'Banner đang bật: '+esc(tx)+'</span>';
+  if(state.models['hp-banner'])return '<span class="hp-ann-warn">'+icon('alert','xs')+'Công tắc đang BẬT nhưng chưa có nội dung — trang chủ sẽ không hiện banner. Nhập nội dung hoặc tắt công tắc.</span>';
+  return '<span class="hp-ann-off">'+icon('info','xs')+'Banner đang tắt — trang chủ không hiện dải thông báo.</span>';
+}
 /* Cập nhật những phần ĐỔI THEO TỪNG PHÍM GÕ mà KHÔNG render lại cả trang
    (render lại sẽ cướp focus khỏi ô đang gõ). */
 function hpSyncLive(){
   var pv=document.getElementById('hpPvBody');
   if(pv)pv.innerHTML=hpPvHTML();
   var ann=document.getElementById('hpAnnPv');
-  if(ann){
-    var tx=hpBanner();
-    ann.innerHTML=tx
-      ? '<span class="hp-ann-on">'+icon('check','xs')+'Banner đang bật: '+esc(tx)+'</span>'
-      : '<span class="hp-ann-off">'+icon('info','xs')+(state.models['hp-banner']?'Đã bật nhưng chưa có nội dung — banner sẽ không hiện.':'Banner đang tắt.')+'</span>';
-  }
+  if(ann)ann.innerHTML=hpAnnStatus();
   var d=document.getElementById('hpDirty'),r=document.getElementById('hpReset');
   var dirtyNow=hpDirty();
   if(d)d.hidden=!dirtyNow;
@@ -2740,6 +2768,7 @@ document.addEventListener('click',function(e){
       state.slides.push({b:as.value,r:''});
       toast('Đã thêm slide mẫu.');render();break;}
     case 'hp-day':hpToggleDay(idx,el.dataset.day);render();break;
+    case 'hp-edit-book':state.selectedBook=el.dataset.id;navigate('sua-bo');break;
     case 'hp-reset':hpResetAll();toast('Đã hoàn tác về dữ liệu đã lưu.','info');render();break;
     case 'slide-move':
       var sj=idx+Number(el.dataset.dir);
