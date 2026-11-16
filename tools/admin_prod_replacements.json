@@ -128,11 +128,6 @@
   "note": "đếm thật"
  },
  {
-  "from": "var tiles=[['Phiếu đang hiện (mẫu)',state.votes.length],['Khóa người bầu (mẫu)',state.votes.length],['Đếm mới (mẫu)',4],['Số cũ import (mẫu)',2]];",
-  "to": "var tiles=[['Phiếu đang hiện',state.votes.length],['Khoá người bầu',state.votes.length],['Bộ trong thư viện',state.books.length],['Chương đang mở',state.chapters.length]];",
-  "note": "bỏ 4/2 giả"
- },
- {
   "from": "<span class=\"right\">MẪU</span>",
   "to": "<span class=\"right\">CLOUDFLARE KV</span>",
   "note": "nhãn card"
@@ -191,11 +186,6 @@
   "from": "<p>Dữ liệu mẫu.</p>",
   "to": "<p>Chưa có dữ liệu trong KV.</p>",
   "note": "empty state Bình luận / Báo lỗi"
- },
- {
-  "from": "<p>Reset phiếu đã xoá toàn bộ phiếu mẫu. Dùng bảng điều khiển demo → Đặt lại để nạp lại dữ liệu mẫu.</p><button class=\"btn sm\" data-act=\"reset-demo\">Đặt lại demo</button>",
-  "to": "<p>Chưa có phiếu nào trong KV. Bấm Đọc lại để nạp dữ liệu mới nhất.</p><button class=\"btn sm\" data-act=\"refresh\">Đọc lại KV</button>",
-  "note": "empty state Phiếu bầu: bỏ lời dẫn tới bảng demo"
  },
  {
   "from": "return '<p class=\"sample-note\">DỮ LIỆU THẬT</p>';",
@@ -267,7 +257,7 @@
  {
   "from": "aria-label=\"Chọn file backup JSON mẫu\"",
   "to": "aria-label=\"Chọn file backup JSON\"",
-  "note": ""
+  "note": "ô chọn file khôi phục: bản phát hành bỏ chữ “mẫu”"
  },
  {
   "from": "placeholder=\"Chương 65 · tiêu đề mẫu\"",
@@ -292,11 +282,6 @@
  {
   "from": "ph:'truyen-mau-01'",
   "to": "ph:'slug-bo-truyen'",
-  "note": ""
- },
- {
-  "from": "ph:'https://mau.example/bai-mau'",
-  "to": "ph:'https://…'",
   "note": ""
  },
  {
@@ -353,12 +338,6 @@
  {
   "from": "ph:'Chương 65 · tiêu đề mẫu'",
   "to": "ph:'Chương 65 · tiêu đề'",
-  "note": "",
-  "optional": true
- },
- {
-  "from": "ph:'https://mau.example'",
-  "to": "ph:'https://…'",
   "note": "",
   "optional": true
  },
@@ -697,14 +676,10 @@
   "note": "Vòng 14: Chương · Chọn bộ dùng toàn bộ bộ"
  },
  {
-  "from": "state.books.slice(0,8).map(function(b){return '<option value=\"'+esc(b.t)+'\"'+(state.cmtBook===b.t?' selected':'')+'>'+esc(b.t)+'</option>';}).join('')",
-  "to": "bookOptions(state.cmtBook,true)",
-  "note": "Vòng 14: Bình luận · Lọc theo bộ dùng toàn bộ bộ"
- },
- {
-  "from": "options:state.books.slice(0,6).map(function(b){return [b.id,b.t];})",
+  "from": "options:state.books.slice().sort(function(a,b){return String(a.t||'').localeCompare(String(b.t||''),'vi');}).map(function(b){return [b.id,b.t];})",
   "to": "options:state.books.slice().sort(function(a,b){return String(a.t||'').localeCompare(String(b.t||''),'vi');}).map(function(b){return [b.id,b.t];})",
-  "note": "Vòng 14: Cài đặt · Bộ nhận chương dùng toàn bộ bộ"
+  "note": "Cài đặt · Bộ nhận chương đã dùng toàn bộ bộ, sắp theo tên — không cần thay nữa",
+  "optional": true
  },
  {
   "from": "'<label class=\"sw\"><input type=\"checkbox\" id=\"hp-banner\" data-model=\"hp-banner\"><span class=\"track\"></span><span>Bật banner</span></label>'+",

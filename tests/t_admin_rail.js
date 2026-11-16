@@ -137,7 +137,12 @@ ok(/LÚC ' \+ CLOCK/.test(real), 'admin-real.js điền giờ thật vào #czClo
 ok(!/replace\(\/\\bmẫu\\b\/g/.test(real), 'scrub() KHÔNG sửa chữ "mẫu" thường (có thể là tên bộ thật trong KV)');
 ok(/replace\(\/\\s\*·\\s\*MẪU\/g, ''\)/.test(real), 'scrub() cắt đuôi · MẪU thay vì đổi thành · KV');
 ok(/getElementById\('docsTitle'\)/.test(real), 'tài liệu lịch sử vòng 1–9 không bị scrub');
-ok(/Bộ có số liệu',String\(state\.books\.length\)/.test(prod), 'Thống kê tính số bộ thật, không còn 18 cứng');
+/* Vòng 18: “Bộ có số liệu” phải đếm số bộ CÓ số liệu (st.items), không đếm
+   cả thư viện — bản cũ 18 cứng, bản 17 đếm state.books.length (67 bộ dù chỉ
+   3 bộ có lượt đọc). */
+ok(!/'Bộ có số liệu',\s*String\('18'\)/.test(prod), 'Thống kê không còn 18 cứng');
+ok(/Bộ có số liệu',\s*st\.items/.test(prod) || /Bộ có số liệu',String\(Object\.keys\(st\.items\)/.test(prod),
+  'Thống kê tính số bộ CÓ số liệu thật (st.items), không đếm cả thư viện');
 ok(/bộ trong registry',String\(state\.books\.length\)/.test(prod), 'Kiểm tra dữ liệu tính số bộ thật, không còn 248 cứng');
 ok(/Chưa có phiếu nào trong KV/.test(prod), 'card Phiếu theo chương hết 4 dòng số liệu bịa');
 

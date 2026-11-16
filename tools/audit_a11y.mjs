@@ -201,7 +201,13 @@ function gzipSize(relPath) {
        phải trang người đọc; ngân sách trang đọc (home/reader) giữ nguyên. */
     adminInitial: {
       files: ['admin.html', 'admin-real.js'],
-      maxGzipKb: 115,
+      /* Vòng 18c: 115 → 125 kB. Vòng 18 thêm số liệu THẬT cho tab Thống kê
+         (biểu đồ lượt đọc theo ngày, phiếu theo chương), bảng Kiểm tra dữ liệu
+         đọc số chương từ /api/book cho từng bộ, và khối Sức khoẻ KV ở Cài đặt.
+         Đây vẫn là màn hình quản trị trên máy tính; ngân sách trang ĐỌC
+         (home/reader/…) không đổi. Muốn hạ lại thì cắt khối DOCS_HTML lịch sử
+         (~12,7 kB gzip) ra khỏi payload đầu, không phải cắt tính năng. */
+      maxGzipKb: 125,
     },
   };
   const payloadSummary = {};
