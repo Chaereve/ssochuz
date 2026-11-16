@@ -100,6 +100,10 @@
                        với bản build_og sinh lại từ registry (quên npm run og là đỏ)
      ../tools/check_version.mjs  G10: phiên bản đồng bộ giữa src/shared/version.js,
                        package.json, package-lock.json, worker/cms.js và worker/README.md
+     ../tools/check_homepage_css.mjs  Vòng 17: mọi lớp mới của trang chủ PHẢI có
+                       luật CSS (không ô trống vô hình), không màu literal ngoài
+                       :root, chip đang chọn đủ tương phản, có nhánh hẹp ≤1240px,
+                       không còn CSS chết và không lọt chữ “mẫu” sang admin.html
      ../tools/audit_a11y.mjs  D3 (Milestone C): axe-core 0 lỗi trợ năng trên 24 màn
                        công khai + quản trị, kèm kiểm tra Lighthouse tĩnh & gzip payload
      t_admin_editor_keyboard.js  Milestone C + D2: điều hướng bàn phím trọn vẹn trong
@@ -147,10 +151,14 @@
                        và 12 editorChoice, Lưu trang chủ hết lỗi khi
                        slides=[], banner/ghi chú đọc đúng KV, ảnh bìa thật
                        có fallback; soi body PUT /api/registry. 144 kiểm.
-     t_admin_series_page.js Vòng 15: card Series tối đa 12 bộ, bỏ trần 12,
-                       nút Xem thêm mở trang toàn màn hình 67 bộ có
-                       tìm kiếm / chọn tất cả / lưu thẳng KV; kiểm PUT
-                       editorChoice=20 và đóng bằng nút/Esc. 95 kiểm.
+     t_admin_homepage_ux.js  Vòng 17: trang chỉnh trang chủ sửa TẠI CHỖ —
+                       cột “Xem trước” dựng từ state đang sửa, thanh tóm tắt
+                       dính + ● Chưa lưu + Hoàn tác, chip thứ thay ô gõ tay,
+                       tìm bộ khi thêm slide; thao tác KHÔNG ghi KV, Lưu chỉ
+                       PUT đúng 1 lần, lịch thiếu thứ bị chặn kèm số dòng.
+                       71 kiểm.
+     t_admin_series_page.js Vòng 15 (cập nhật vòng 17): ô tick Series không
+                       render lại khi vừa bấm, sau khi lưu ● Chưa lưu tắt. 97 kiểm.
      t_v16.js          Vòng 16: sạp báo nhỏ lại CHỈ ở desktop, Ranking /
                        Đáng xem thành 2 ô, nút Xem thêm public mở trang
                        /chuyen-the hiện toàn bộ editorChoice, và 4 dữ liệu
@@ -161,10 +169,10 @@ const path = require('path'), { spawnSync } = require('child_process');
 const cands = (process.env.CZ_TEST_MODULES || '').split(path.delimiter).filter(Boolean)
   .concat([path.join(__dirname, 'node_modules'), path.join(__dirname, '..', 'node_modules')]);
 const env = Object.assign({}, process.env, { NODE_PATH: cands.join(path.delimiter) });
-const files = [path.join('..', 'tools', 'check_src.js'), path.join('..', 'tools', 'check_version.mjs'), path.join('..', 'tools', 'check_secrets.js'), path.join('..', 'tools', 'check_headers.js'), path.join('..', 'tools', 'check_chapter_html.mjs'), path.join('..', 'tools', 'check_chapter_routes.mjs'), path.join('..', 'tools', 'check_og.mjs'), path.join('..', 'tools', 'audit_a11y.mjs'), 't_worker.mjs', 't_community.mjs', 't_community_sql.mjs', 't_kv_quota.mjs', 't_sanitize.mjs', 't_schedule.mjs', 't_registry_guard.mjs', 't_data_audit.py', 't_private.mjs', 't_member_spaces.mjs', 't_space.js', 't_space_hero.js', 't_auth_flow.js', 't_rating_withdraw.js', 't_private_ui.js', 't_config.js', 't_html.js', 't_follow.js', 't_personal.js', 't_comment_sticker.js', 't_feed.js', 't_push.js', 't_people.js', 't_people_data.js', 't_notif.js', 't_notification_refresh.js', 't_push_audience.mjs', 't_push_scope_ui.js', 't_follow_only.js', 't_pwa.js', 't_sw_img.js', 't_devserver.js', 't_preload.js', 't_chapter_light.mjs', 't_view.js', 't_chapter_url.js',
+const files = [path.join('..', 'tools', 'check_src.js'), path.join('..', 'tools', 'check_version.mjs'), path.join('..', 'tools', 'check_secrets.js'), path.join('..', 'tools', 'check_headers.js'), path.join('..', 'tools', 'check_chapter_html.mjs'), path.join('..', 'tools', 'check_chapter_routes.mjs'), path.join('..', 'tools', 'check_og.mjs'), path.join('..', 'tools', 'audit_a11y.mjs'), path.join('..', 'tools', 'check_homepage_css.mjs'), 't_worker.mjs', 't_community.mjs', 't_community_sql.mjs', 't_kv_quota.mjs', 't_sanitize.mjs', 't_schedule.mjs', 't_registry_guard.mjs', 't_data_audit.py', 't_private.mjs', 't_member_spaces.mjs', 't_space.js', 't_space_hero.js', 't_auth_flow.js', 't_rating_withdraw.js', 't_private_ui.js', 't_config.js', 't_html.js', 't_follow.js', 't_personal.js', 't_comment_sticker.js', 't_feed.js', 't_push.js', 't_people.js', 't_people_data.js', 't_notif.js', 't_notification_refresh.js', 't_push_audience.mjs', 't_push_scope_ui.js', 't_follow_only.js', 't_pwa.js', 't_sw_img.js', 't_devserver.js', 't_preload.js', 't_chapter_light.mjs', 't_view.js', 't_chapter_url.js',
   't_chapters.js', 't_home.js', 't_hero.js', 't_mobile.js', 't_stats.js', 't_ranking.js', 't_quiet_home.js', 't_ranking_worker.mjs', 't_synopsis.js', 't_story.js', 't_reader.js', 't_flows.js', 't_sweep.js', 't_mystats.js', 't_rating.js', 't_adult.js', 't_fallback.js', 't_registry_dirty.js', 't_lock.mjs', 't_lock_ui.js', 't_admin_core.js', 't_admin_online.js', 't_admin_writes.js', 't_admin_chapter.js', 't_admin_chapter_state.js', 't_admin_book_integrity.js', 't_admin_editor_lazy.js', 't_admin_editor_keyboard.js', 't_cover_mirror.mjs', 't_admin_upload.js', 't_admin_budget.js', 't_admin_features.js', 't_admin_docx.js', 't_docx_content.js', 't_admin_sidebar.js',
   't_admin_real.js', 't_admin_flow.mjs', 't_admin_dirty_registry.js', 't_admin_rail.js', 't_admin_no_demo.js', 't_admin_kv_chip.js',
-  't_admin_full_data.js', 't_admin_series_page.js', 't_admin_chapter_editor.js', 't_v16.js', 't_react.js', 't_dice.js', 't_dice_state.js', 't_sw_precache.js'];
+  't_admin_full_data.js', 't_admin_series_page.js', 't_admin_homepage_ux.js', 't_admin_chapter_editor.js', 't_v16.js', 't_react.js', 't_dice.js', 't_dice_state.js', 't_sw_precache.js'];
 let bad = 0;
 for (const f of files) {
   const isPy = f.endsWith('.py');

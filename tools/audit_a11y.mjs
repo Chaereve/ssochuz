@@ -193,10 +193,15 @@ function gzipSize(relPath) {
       maxGzipKb: 160,
     },
     /* Vòng 10: /admin là admin.html (sinh từ mockup) + admin-real.js, KHÔNG còn
-       nạp cz.css / admin.css / admin.js. Đo đúng những tệp trình duyệt tải thật. */
+       nạp cz.css / admin.css / admin.js. Đo đúng những tệp trình duyệt tải thật.
+       Vòng 17: nâng 100 → 115 kB cho cột “Xem trước” của trang chủ — nó dựng
+       thẳng từ state đang sửa (banner, quạt hero, Mới cập nhật, Series, lịch)
+       nên người chỉnh thấy kết quả trước khi ghi KV, thay cho 4 card rời không
+       liên hệ gì với trang thật. Đây là màn hình quản trị trên máy tính, không
+       phải trang người đọc; ngân sách trang đọc (home/reader) giữ nguyên. */
     adminInitial: {
       files: ['admin.html', 'admin-real.js'],
-      maxGzipKb: 100,
+      maxGzipKb: 115,
     },
   };
   const payloadSummary = {};

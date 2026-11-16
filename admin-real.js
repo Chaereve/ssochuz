@@ -207,6 +207,13 @@
     S.models['hp-href'] = S.hpHref;
     S.models['hp-banner'] = !!ann.enabled;
     S.models['hp-note'] = S.hpNote;
+    /* Vòng 17: trang chủ sửa tại chỗ rồi lưu MỘT lần, nên cần mốc “đã lưu”
+       để biết khi nào có thay đổi chưa ghi và nút Hoàn tác quay về đâu.
+       `hpKeep` là bản sao của đúng dữ liệu KV vừa nạp. */
+    try {
+      S.hpBase = window.hpSnapshot ? window.hpSnapshot() : null;
+      S.hpKeep = S.hpBase ? JSON.parse(S.hpBase) : null;
+    } catch (e) { S.hpBase = null; S.hpKeep = null; }
     S.migrateResult = '';
 
     var totalCh = lib.reduce(function (n, m) { return n + (Number(m.chapters) || 0); }, 0);
@@ -982,6 +989,9 @@
     });
   }
   function reload() {
+    /* Nạp lại dữ liệu thì trang chủ lấy bản mới làm mốc “đã lưu” (nếu không
+       sẽ báo ● Chưa lưu oan cho mọi thay đổi của người khác). */
+    if (typeof window.hpClear === 'function') window.hpClear();
     if (S.conn === 'static') return loadStatic().catch(fail);
     if (!S.conn || S.conn === 'badkey' || S.conn === 'workererr') { go('dang-nhap'); return Promise.resolve(); }
     return loadAll().then(function () { say('Đã đọc lại dữ liệu thật từ KV.'); }).catch(function (e) { setConn(classify(e)); fail(e); });
@@ -1362,19 +1372,27 @@
   function currentRegistryFromState() {
     var next = clone(REG);
     var origSlides = Array.isArray(REG.slides) ? REG.slides : [];
-    next.slides = S.slides.map(function (x, i) {
-      var base = origSlides[i] || {};
+    var origSlug = function (o) { return typeof o === 'string' ? o : (o && o.slug) || ''; };
+    next.slides = S.slides.map(function (x) {
+      /* Khớp bản cũ theo SLUG, không theo vị trí: đổi thứ tự hay chèn slide thì
+         bản cũ vẫn ôm nhầm khoá lạ (`reason` của bộ khác) sang dòng mới. */
+      var base = origSlides.filter(function (o) { return origSlug(o) === x.b; })[0];
       if (typeof base === 'string') return x.r ? { slug: x.b, reason: x.r } : x.b;
-      var out = Object.assign({}, base, { slug: x.b });
+      var out = Object.assign({}, base || {}, { slug: x.b });
       if (x.r) out.reason = x.r; else delete out.reason;
       return out;
     });
     var origItems = (REG.schedule && Array.isArray(REG.schedule.items)) ? REG.schedule.items : [];
     var nextItems = S.schedule.map(function (x, i) {
-      var base = origItems[i] || {};
+      /* Khớp dòng theo slug/ngày thay vì theo vị trí: xoá hay chèn một dòng
+         không còn làm “base” của các dòng sau lệch sang dòng khác (bản cũ dùng
+         origItems[i], tức là đọc nhầm title của dòng khác). */
+      var base = origItems.filter(function (o) {
+        return o && ((x.b && o.slug === x.b) || (!x.b && o.slug == null && String(o.days || '') === String(x.d || '')));
+      })[0] || {};
       var out = Object.assign({}, base, { days: x.d, detail: x.c });
       if (x.b) out.slug = x.b; else delete out.slug;
-      var t = x.b ? (base.title || titleOf(x.b)) : (x.t || base.title || '');
+      var t = x.b ? (titleOf(x.b) || base.title || '') : (x.t || base.title || '');
       if (t) out.title = t; else delete out.title;
       return out;
     });
@@ -1402,24 +1420,51 @@
     /* registry thật có slides:[] là HỢP LỆ (web tự lấy 5 bộ mới nhất). Bắt
        phải có >=1 slide khiến nút Lưu trang chủ luôn báo lỗi dù chỉ muốn sửa
        lịch / Series / thông báo — đó là lỗi owner gặp ở Homepage CMS. */
-    if (S.schedule.some(function (x) { return !x.d || (!x.b && !x.t); })) { say('Lịch ra chương còn dòng thiếu thứ hoặc bộ.', 'bad'); return; }
+    /* Chặn MỀM có chỉ đích: báo rõ dòng nào thiếu gì, không chỉ “còn dòng
+       thiếu thứ hoặc bộ”. Vẫn cho lưu phần còn lại — nhưng lịch thiếu thứ thì
+       trang chủ xếp vào nhóm “Chưa hẹn”, nên nói thẳng ra. */
+    var bad = [];
+    (S.schedule || []).forEach(function (x, i) {
+      if (!x) return;
+      if (!String(x.d || '').trim()) bad.push('dòng ' + (i + 1) + ' thiếu thứ');
+      else if (!x.b && !String(x.t || '').trim()) bad.push('dòng ' + (i + 1) + ' chưa chọn bộ');
+    });
+    if (bad.length) { say('Lịch ra chương: ' + bad.join(' · ') + '.', 'bad'); return; }
     writeRegistry(currentRegistryFromState()).then(function () {
+      /* Mốc sạch mới: hydrate() đã nạp lại dữ liệu vừa ghi, nên “Chưa lưu”
+         phải tắt và nút Hoàn tác quay về đúng bản vừa lưu. */
+      try { S.hpBase = window.hpSnapshot ? window.hpSnapshot() : null; S.hpKeep = S.hpBase ? JSON.parse(S.hpBase) : null; } catch (e) {}
+      redraw();
       say(S.slides.length ? 'Đã lưu trang chủ lên KV.'
         : 'Đã lưu lịch, Series và thông báo lên KV · không có slide, web tự lấy 5 bộ mới nhất.');
     }).catch(fail);
   }
+  /* Vòng 17: mọi thao tác trên trang chủ chỉ đổi STATE, không ghi KV.
+     Bản cũ gọi writeRegistry() sau TỪNG lần bấm ⇒ mỗi lần thêm/nhích slide là
+     một lượt ghi quota, và vì registry vừa ghi lại được hydrate() nạp đè lên
+     state nên người dùng mất luôn phần đang sửa dở ở các card khác. Nay:
+     sửa → thấy ngay ở cột “Xem trước” → bấm Lưu trang chủ (một lượt ghi). */
   function realSlideChange(kind, idx, dir, el) {
+    var changed = true;
     if (kind === 'add') {
       var sel = D.getElementById('addSlideSel');
-      if (sel && S.slides.length < 8) S.slides.push({ b: sel.value, r: '' });
-      else { say('Tối đa 8 slide.', 'warn'); return; }
+      if (!sel || !sel.value) { say('Chọn một bộ trước khi thêm slide.', 'warn'); return; }
+      if (S.slides.length >= 8) { say('Tối đa 8 slide.', 'warn'); return; }
+      if (S.slides.some(function (x) { return x.b === sel.value; })) { say('Bộ này đã có trong hero.', 'warn'); return; }
+      S.slides.push({ b: sel.value, r: '' });
     } else if (kind === 'move') {
       var j = idx + dir;
-      if (j >= 0 && j < S.slides.length) { var t = S.slides[idx]; S.slides[idx] = S.slides[j]; S.slides[j] = t; }
+      if (j < 0 || j >= S.slides.length) changed = false;
+      else { var t = S.slides[idx]; S.slides[idx] = S.slides[j]; S.slides[j] = t; }
     } else if (kind === 'remove') S.slides.splice(idx, 1);
-    else if (kind === 'sched-add') S.schedule.push({ d: 'Thứ 5', b: (S.picked[0] || ''), c: '' });
-    else if (kind === 'sched-remove') S.schedule.splice(idx, 1);
-    writeRegistry(currentRegistryFromState()).then(function () { say('Đã lưu thay đổi trang chủ lên KV.'); }).catch(fail);
+    else if (kind === 'sched-add') {
+      S.schedule.push({ d: '', b: (S.picked[0] || (S.books[0] || {}).id || ''), c: '', t: '' });
+      say('Đã thêm dòng lịch trống — chọn thứ và bộ, rồi bấm Lưu trang chủ.', 'info');
+    } else if (kind === 'sched-remove') S.schedule.splice(idx, 1);
+    if (!changed) return;
+    redraw();
+    /* Báo rõ là CHƯA ghi, để không ai tưởng thao tác đã lên KV. */
+    if (kind !== 'sched-add') say('Đã đổi trang chủ trong bản nháp — bấm Lưu trang chủ để ghi KV.', 'info');
   }
 
   function realBulkApply(el) {
@@ -1924,10 +1969,30 @@
     'remove-votes': realRemoveVotes,
     'reset-votes': realResetVotes,
     'slide-add': function (el) { realSlideChange('add', 0, 0, el); },
+    'hp-day': function (el) {
+      /* Chip thứ của dòng lịch: đổi state rồi vẽ lại đúng card đó, KHÔNG ghi KV
+         (xem realSlideChange). */
+      if (!window.hpToggleDay) return;
+      window.hpToggleDay(Number(el.dataset.idx), el.dataset.day);
+      redraw();
+    },
+    'hp-reset': function () {
+      if (!window.hpResetAll) return;
+      window.hpResetAll();
+      redraw();
+      say('Đã hoàn tác về dữ liệu đang lưu trên KV.', 'info');
+    },
     'slide-move': function (el) { realSlideChange('move', Number(el.dataset.idx), Number(el.dataset.dir), el); },
     'slide-remove': function (el) { realSlideChange('remove', Number(el.dataset.idx), 0, el); },
     'sched-add': function (el) { realSlideChange('sched-add', 0, 0, el); },
     'sched-remove': function (el) { realSlideChange('sched-remove', Number(el.dataset.idx), 0, el); },
+    'series-page': function () {
+      /* Overlay dựng bằng mã của mockup và nằm NGOÀI #view nên render() không
+         xoá. Lớp KV chỉ cần MỞ nó và đồng bộ bộ đếm — trước đây hàm này chỉ
+         đồng bộ mà không mở, nên nút Xem thêm im lặng. */
+      if (typeof window.openSeriesPage === 'function') { try { window.openSeriesPage(); } catch (e) { fail(e); } }
+      if (typeof window.syncSeriesCount === 'function') { try { window.syncSeriesCount(); } catch (e) {} }
+    },
     'recount': realRecount,
     'migrate': function (el) {
       var only = el.dataset.only || '';
