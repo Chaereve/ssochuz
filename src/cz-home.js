@@ -339,7 +339,13 @@
     var rows = on ? CZ.lib().map(function (n) { return { n: n, score: positive((CZ.statsOf(n) || {})[key]) }; })
       .filter(function (r) { return r.score > 0; })
       .sort(function (a, b) { return b.score - a.score || a.n.slug.localeCompare(b.n.slug); }).slice(0, 5) : [];
-    $('#rankSummary').textContent = (rankMode === 'views' ? 'Lượt đọc' : 'Lượt thích') + ' · ' + tabs.find(function (t) { return t.k === rankBy; }).l;
+    /* Chưa bật số liệu (máy chủ chưa có /api/stats) thì khối chỉ còn tiêu đề +
+       2 hàng tab, trông như hỏng. Nói rõ ở phụ đề cạnh tiêu đề (#rankSummary,
+       .sr-only nên đây là chỗ DUY NHẤT đọc được lý do — không bịa con số nào và
+       không chèn chữ vào #rank, bài kiểm t_ranking canh đúng chỗ đó). */
+    $('#rankSummary').textContent = on
+      ? (rankMode === 'views' ? 'Lượt đọc' : 'Lượt thích') + ' · ' + tabs.find(function (t) { return t.k === rankBy; }).l
+      : 'Chưa có số liệu để xếp hạng';
     var peak = rows.length ? rows[0].score : 0;
     /* Không có số liệu thì KHÔNG bịa gì trong #rank (bài kiểm canh đúng chỗ này);
        trạng thái “chưa có số” nói ở phụ đề cạnh tiêu đề. */
@@ -428,11 +434,16 @@
     }
     var now = new Date();
     var monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
+    var todayIdx = (now.getDay() + 6) % 7;
+    /* Tuần đang xem bắt đầu từ THỨ 2, nên những thứ đứng TRƯỚC hôm nay trong
+       tuần (vd hôm nay Thứ 3 mà xem Thứ 2) thực ra là của TUẦN SAU. Bản trước
+       in thẳng monday + i ⇒ dòng cuối danh sách ghi “Thứ 2 · 16/11”, tức một
+       ngày đã qua, trong khi đúng phải là 23/11. Lấy lần tới gần nhất. */
     var dayDate = function (i) {
       var d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+      if (i < todayIdx) d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7);
       return pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1);
     };
-    var todayIdx = (now.getDay() + 6) % 7;
     var dated = items.map(function (it) { return { it: it, days: parseDays(it.days) }; });
     var dayIdx = function (x) { return x.days.length ? WD.indexOf(x.days[0]) : -1; };
     var unplaced = dated.filter(function (x) { return dayIdx(x) < 0; });
@@ -492,28 +503,79 @@
           (meta ? ' · ' + esc(meta) : '') + '</span></span></a>';
     };
 
+    /* Vòng 19b · NHIỀU BỘ CÙNG MỘT NGÀY THÌ HIỆN NGAY TRONG KHỐI TIÊU ĐIỂM.
+       Bản 19a để tấm tiêu điểm 1 bộ rồi nhét bộ thứ hai xuống danh sách ⇒ chủ
+       trang nhìn ảnh thấy “vẫn chỉ 1 bộ to”. Nay khi hôm nay có ≥2 bộ, khối
+       tiêu điểm giữ nguyên nền bìa mờ + veil nhưng chứa 2 tấm bìa cạnh nhau,
+       mỗi tấm là một liên kết riêng (bấm bộ nào sang bộ đó). Hai kiểu trình bày
+       (đổi bằng window.__CZ_SCHED_HERO__ = 'b'):
+         a) hai thẻ đứng cạnh nhau, mỗi thẻ bìa trái + chữ phải (mặc định)
+         b) hai hàng xếp dọc, bìa nhỏ bên trái, kẻ tóc ngăn cách
+       Chỉ 1 bộ thì giữ nguyên hình thức cũ (một tấm lớn). */
+    /* ĐÃ CHỐT kiểu B (2 bộ xếp dọc, kẻ tóc) — xem ảnh chủ trang chọn ngày
+       17/11. Kiểu A vẫn để lại sau một biến toàn cục để đối chiếu nhanh khi
+       cần, nhưng KHÔNG phải bản phát hành: bỏ biến là về B. */
+    var heroStyle = (window.__CZ_SCHED_HERO__ === 'a') ? 'a' : 'b';
+    el.setAttribute('data-hero-style', heroStyle);
+    var heroPairs = (todays.length >= 2) ? todays.slice(0, 2) : (hero ? [hero] : []);
     var heroHTML = '';
-    if (hero) {
-      var hn = schedFind(hero.it);
-      var him = hn && CZ.coverSrc(hn);
-      var htitle = (hn && hn.title) || hero.it.title || '';
-      var hnote = String(hero.it.detail || '').trim();
-      var hstat = hn ? (hn.canRead ? CZ.countText(hn) : CZ.statusLabel(hn.statusCls)) : '';
-      var hmeta = hnote && hstat ? hstat + ' · ' + hnote : (hnote || hstat);
-      /* có nhiều bộ ra hôm nay thì nói rõ ngay trên tiêu điểm */
-      var kicker = todays.length > 1
-        ? 'Hôm nay · ' + todays.length + ' bộ ra chương'
+    if (heroPairs.length) {
+      var kicker = heroPairs.length > 1
+        ? 'Hôm nay · ' + todays.length + ' bộ ra chương · ' + esc(WDL[todayIdx]) + ' ' + dayDate(todayIdx)
         : 'Ra hôm nay · ' + dayDate(todayIdx);
-      heroHTML = '<a class="w3feat v3b sched' + (hn ? '' : ' off') + '"' +
-        (hn ? ' href="' + esc(CZ.storyURL(hn.slug)) + '"' : '') + '>' +
-        (him ? '<img class="w3bg" src="' + esc(him) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' +
-          '<span class="w3veil"></span>' +
-          '<span class="w3poster"><img src="' + esc(him) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"></span>' : '') +
-        '<span class="w3txt"><span class="w3k">' + esc(kicker) + '</span>' +
-          '<span class="w3n">' + esc(htitle) + '</span>' +
-          (hmeta ? '<span class="w3m">' + esc(hmeta) + '</span>' : '') +
-          (hn ? '<span class="w3go">Xem truyện</span>' : '') +
-        '</span></a>';
+      var bgSrc = (function () {
+        var n0 = schedFind(heroPairs[0].it);
+        return n0 && CZ.coverSrc(n0) || '';
+      })();
+
+      if (heroPairs.length === 1) {
+        var hn = schedFind(heroPairs[0].it);
+        var him = hn && CZ.coverSrc(hn);
+        var htitle = (hn && hn.title) || heroPairs[0].it.title || '';
+        var hnote = String(heroPairs[0].it.detail || '').trim();
+        var hstat = hn ? (hn.canRead ? CZ.countText(hn) : CZ.statusLabel(hn.statusCls)) : '';
+        var hmeta = hnote && hstat ? hstat + ' · ' + hnote : (hnote || hstat);
+        heroHTML = '<a class="w3feat v3b sched' + (hn ? '' : ' off') + '"' +
+          (hn ? ' href="' + esc(CZ.storyURL(hn.slug)) + '"' : '') + '>' +
+          (him ? '<img class="w3bg" src="' + esc(him) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' +
+            '<span class="w3veil"></span>' +
+            '<span class="w3poster"><img src="' + esc(him) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"></span>' : '') +
+          '<span class="w3txt"><span class="w3k">' + esc(kicker) + '</span>' +
+            '<span class="w3n">' + esc(htitle) + '</span>' +
+            (hmeta ? '<span class="w3m">' + esc(hmeta) + '</span>' : '') +
+            (hn ? '<span class="w3go">Xem truyện</span>' : '') +
+          '</span></a>';
+      } else {
+        /* Kiểu B: mỗi bộ một HÀNG — bìa trái, tên bộ to, dưới là tình trạng
+           (số chương / sắp ra mắt), rồi ghi chú lịch (“Ra chương 3”) tách riêng
+           vì đó là thứ chủ trang muốn báo, không phải status của truyện. */
+        var cardOf = function (x) {
+          var n = schedFind(x.it);
+          var im = n && CZ.coverSrc(n);
+          var title = (n && n.title) || x.it.title || '';
+          var note = String(x.it.detail || '').trim();
+          var stat = n ? (n.canRead ? CZ.countText(n) : CZ.statusLabel(n.statusCls)) : '';
+          return '<a class="w3p' + (n ? '' : ' off') + '"' +
+            (n ? ' href="' + esc(CZ.storyURL(n.slug)) + '"' : '') + '>' +
+            '<span class="w3p-cv">' +
+              (im ? '<img src="' + esc(im) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">'
+                  : '<span class="w3p-ph" aria-hidden="true"></span>') +
+            '</span>' +
+            '<span class="w3p-tx">' +
+              '<span class="w3p-n">' + esc(title) + '</span>' +
+              (stat ? '<span class="w3p-st">' + esc(stat) + '</span>' : '') +
+              (note ? '<span class="w3p-nt">' + esc(note) + '</span>' : '') +
+            '</span>' +
+            '<span class="w3p-arrow" aria-hidden="true">›</span>' +
+          '</a>';
+        };
+        heroHTML = '<div class="w3feat w3feat-multi v3b sched" data-n="' + heroPairs.length + '">' +
+          (bgSrc ? '<img class="w3bg" src="' + esc(bgSrc) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' +
+            '<span class="w3veil"></span>' : '') +
+          '<div class="w3m-hd"><span class="w3k">' + kicker + '</span></div>' +
+          '<div class="w3pair">' + heroPairs.map(cardOf).join('') + '</div>' +
+        '</div>';
+      }
     }
 
     /* Danh sách bên phải. Nguyên tắc: chỉ tách NHÓM RIÊNG cho ngày có từ 2 bộ
@@ -522,18 +584,15 @@
        ngày ở nhãn trái. Bản trước tách mỗi ngày một đầu mục nên lịch bình
        thường (6 ngày × 1 bộ) thành 6 tiêu đề cho 6 dòng — rối mà không thêm
        thông tin gì. */
-    var todayRest = hero ? todays.slice(1) : todays.slice();
+    var todayRest = todays.slice(heroPairs.length);
     var listHTML = '';
-    if (todays.length > 1 || (!hero && todays.length === 1)) {
-      /* hero đã là 1 trong số đó ⇒ nói “1 bộ nữa · tổng 2” thay vì hứa 2 dòng
-         mà chỉ có 1, người đọc dễ tưởng thiếu. */
-      var emTxt = hero ? (todayRest.length + ' bộ nữa · tổng ' + todays.length)
-                       : (todays.length + ' bộ');
+    if (todayRest.length) {
+      /* chỉ còn khi hôm nay có >2 bộ: 2 bộ đầu đã nằm trong khối tiêu điểm */
       listHTML += '<div class="w3lh w3lh-first"><span>Hôm nay · ' + esc(WDL[todayIdx]) + '</span><em>' +
-        emTxt + '</em></div>' +
+        todayRest.length + ' bộ nữa · tổng ' + todays.length + '</em></div>' +
         todayRest.map(function (x) { return row(x, todayIdx); }).join('');
     }
-    if (!hero && !todays.length) {
+    if (!todays.length) {
       listHTML += '<div class="w3lh w3lh-first"><span>Hôm nay · ' + esc(WDL[todayIdx]) + '</span><em>không có bộ</em></div>';
     }
     var multiGroups = laterDays.filter(function (g) { return g.rows.length > 1; });
@@ -553,7 +612,6 @@
         singleRows.map(function (o) { return row(o.x, o.idx); }).join('');
     }
     if (!listHTML) listHTML = '<p class="w3none">Tuần này chưa có bộ nào khác.</p>';
-    var restCount = laterDays.reduce(function (n, g) { return n + g.rows.length; }, 0);
 
     el.innerHTML = '<div class="w3grid">' +
       (heroHTML || '') +
@@ -564,13 +622,7 @@
             var n = schedFind(x.it);
             return esc((n && n.title) || x.it.title || '');
           }).join(' · ') + '</div>'
-        : '') +
-      '<p class="w3sum" id="schedSum" data-today="' + todays.length + '" data-later="' + restCount + '">' +
-        (todays.length
-          ? 'Hôm nay ' + todays.length + ' bộ ra chương'
-          : 'Hôm nay không có bộ nào ra chương') +
-        (restCount ? ' · ' + restCount + ' lượt ra chương trong các ngày còn lại' : '') +
-      '</p>';
+        : '');
 
     /* Ghi chú “lịch có thể thay đổi” không nằm trong lưới: nó là câu dẫn ngay
        dưới đầu mục (xem #lichNote trong index.html). */

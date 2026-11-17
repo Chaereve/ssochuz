@@ -3940,6 +3940,67 @@ body.rd-focus .rdcmts { display: none; }
 #sched .w3go::after { content: "›"; margin-left: 5px; }
 #sched .w3feat:hover .w3go { color: #fff; transform: translateX(3px); }
 #sched .w3feat.off { background: var(--surf); }
+/* ======================================================================
+   VÒNG 19b · 2 BỘ CÙNG MỘT NGÀY NẰM NGAY TRONG KHỐI TIÊU ĐIỂM
+   ----------------------------------------------------------------------
+   Chủ trang đã CHỐT kiểu B: nền bìa mờ + veil giữ nguyên nên khối vẫn “là
+   một”, bên trong là HAI HÀNG xếp dọc, mỗi hàng một bộ, kẻ tóc ngăn cách.
+   Bìa 78px (đủ nhận mặt nhân vật), tên bộ cỡ tiêu đề, tình trạng + ghi chú
+   lịch tách thành 2 dòng riêng, mũi tên › ở cuối hàng cho biết bấm được.
+   Kiểu A (2 thẻ cạnh nhau) vẫn còn trong mã sau biến __CZ_SCHED_HERO__='a'.
+   ====================================================================== */
+#sched .w3feat-multi { display: block; padding: 20px 22px; }
+#sched .w3m-hd { position: relative; margin-bottom: 12px; }
+#sched .w3pair { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); }
+
+#sched .w3p { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 16px;
+  align-items: center; min-width: 0; padding: 14px 4px 14px 0;
+  border-top: 1px solid rgba(255, 255, 255, .14); color: #fff;
+  transition: background-color var(--t-fast) var(--ease); }
+#sched .w3p:first-child { border-top: 0; }
+#sched .w3p:hover { background: rgba(255, 255, 255, .05); }
+#sched .w3p.off { opacity: .72; }
+#sched .w3p-cv { display: block; width: 78px; flex: none; border-radius: 6px; overflow: hidden;
+  box-shadow: 0 16px 28px -16px #000, 0 0 0 1px rgba(255, 255, 255, .18);
+  transition: transform .25s var(--ease); }
+#sched .w3p:hover .w3p-cv { transform: translateY(-2px); }
+#sched .w3p-cv img { display: block; width: 100%; aspect-ratio: 2 / 3; object-fit: cover; }
+#sched .w3p-ph { display: block; width: 100%; aspect-ratio: 2 / 3; background: rgba(255, 255, 255, .08); }
+#sched .w3p-tx { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
+#sched .w3p-n { display: -webkit-box; font-family: var(--font-head); font-size: 21px; font-weight: 700;
+  line-height: 1.24; letter-spacing: -.012em; color: #fff; text-shadow: 0 2px 16px rgba(0, 0, 0, .62);
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+#sched .w3p-st { margin-top: 5px; font-family: var(--font-mono); font-size: 10.5px;
+  line-height: 1.4; color: rgba(255, 255, 255, .66); }
+#sched .w3p-nt { margin-top: 4px; font-size: 12.5px; font-weight: 650; line-height: 1.4; color: var(--acc); }
+#sched .w3p-arrow { flex: none; font-size: 18px; line-height: 1; color: rgba(255, 255, 255, .42);
+  transition: color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
+#sched .w3p:hover .w3p-arrow { color: var(--acc); transform: translateX(3px); }
+
+/* kiểu A · hai thẻ cạnh nhau (giữ lại để đối chiếu, không phải mặc định) */
+#sched[data-hero-style="a"] .w3pair { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+#sched[data-hero-style="a"] .w3p { grid-template-columns: auto minmax(0, 1fr); gap: 14px;
+  padding: 10px; border-top: 0; border-radius: 10px; background: rgba(10, 7, 5, .38);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1); }
+#sched[data-hero-style="a"] .w3p-cv { width: 86px; }
+#sched[data-hero-style="a"] .w3p-n { font-size: 17px; -webkit-line-clamp: 3; }
+#sched[data-hero-style="a"] .w3p-arrow { display: none; }
+#sched[data-hero-style="a"] .w3p-st, #sched[data-hero-style="a"] .w3p-nt { font-size: 10px; }
+
+@media (max-width: 880px) {
+  #sched .w3feat-multi { padding: 16px 18px; }
+  #sched .w3p-n { font-size: 19px; }
+  #sched .w3p-cv { width: 70px; }
+}
+@media (max-width: 620px) {
+  /* hẹp: vẫn xếp dọc, bìa nhỏ lại, mũi tên bỏ để chữ rộng hơn */
+  #sched .w3feat-multi { padding: 14px; }
+  #sched .w3p { grid-template-columns: auto minmax(0, 1fr); gap: 12px; padding: 11px 0; }
+  #sched .w3p-cv { width: 60px; }
+  #sched .w3p-n { font-size: 16.5px; -webkit-line-clamp: 2; }
+  #sched .w3p-arrow { display: none; }
+  #sched .w3m-hd { margin-bottom: 8px; }
+}
 #sched .w3list { display: flex; flex-direction: column; min-width: 0; }
 #sched .w3lh { display: flex; align-items: baseline; gap: 8px; padding-bottom: 9px;
   border-bottom: 1px solid var(--bd-soft); font-family: var(--font-mono); font-size: 9.5px;
@@ -3953,10 +4014,6 @@ body.rd-focus .rdcmts { display: none; }
 #sched .w3list .w3lh:first-child, #sched .w3lh-first { margin-top: 0; }
 #sched .w3none { margin: 0; padding: 10px 0 2px; font-size: 12px; color: var(--dim); }
 #sched .w3unplaced { margin-top: 14px; font-size: 12px; color: var(--dim); }
-#sched .w3sum { margin: 16px 0 0; padding-top: 12px; border-top: 1px solid var(--bd-soft);
-  font-family: var(--font-mono); font-size: 10.5px; line-height: 1.5;
-  letter-spacing: .04em; color: var(--mut); }
-#sched .w3sum[data-today="0"] { color: var(--dim); }
 #sched .w3r { display: grid; grid-template-columns: 26px 28px minmax(0, 1fr); gap: 12px;
   align-items: center; min-width: 0; padding: 10px 0;
   border-bottom: 1px solid var(--bd-soft); color: var(--txt); }

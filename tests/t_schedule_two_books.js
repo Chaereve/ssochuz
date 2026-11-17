@@ -102,6 +102,50 @@ const ok = (c, m) => { checks++; if (!c) bad.push(m); };
   ok(shownDays.filter(d => d !== '—').length >= 2,
     'L4b: hai lần đó nằm ở hai thứ khác nhau (' + shownDays.join(' ') + ')');
 
+  /* ---------- PHẦN A2 · KIỂU B: 2 BỘ NẰM NGAY TRONG KHỐI TIÊU ĐIỂM ---------- */
+  const multiBox = sched.querySelector('.w3feat-multi');
+  ok(!!multiBox, 'B1: hôm nay có 2 bộ ⇒ khối tiêu điểm ở dạng nhiều bộ (.w3feat-multi)');
+  ok(sched.getAttribute('data-hero-style') === 'b',
+    'B1b: kiểu đã chốt là B (xếp dọc) — đang là “' + sched.getAttribute('data-hero-style') + '”');
+  const cards = [...(multiBox ? multiBox.querySelectorAll('.w3p') : [])];
+  ok(cards.length === 2, 'B2: khối tiêu điểm chứa ĐÚNG 2 thẻ bộ (' + cards.length + ')');
+  const hrefs = cards.map(a => a.getAttribute('href') || '');
+  ok(hrefs.every(h => /^\/truyen\/[^/]+\/$/.test(h)),
+    'B2b: mỗi thẻ là một liên kết tới trang truyện riêng (' + hrefs.join(' , ') + ')');
+  ok(new Set(hrefs).size === 2, 'B2c: hai thẻ trỏ tới HAI bộ khác nhau');
+  const names = cards.map(a => (a.querySelector('.w3p-n') || {}).textContent || '');
+  ok(names.every(n => n.trim().length > 0), 'B3: thẻ có tên bộ (' + names.join(' / ') + ')');
+  ok(cards.every(a => !!a.querySelector('.w3p-cv img')),
+    'B3b: thẻ nào cũng có bìa (ảnh thật, không phải ô trống)');
+  /* ghi chú lịch (“Ra chương 3”) phải nằm trong thẻ của chính bộ đó */
+  const withNote = cards.filter(a => /\.\w|Ra chương|chương/.test((a.querySelector('.w3p-nt') || {}).textContent || ''));
+  ok(withNote.length >= 1, 'B3c: ghi chú lịch hiện ngay trong thẻ của bộ (' + withNote.length + ' thẻ)');
+  /* và KHÔNG được lặp lại 2 bộ đó trong danh sách bên phải */
+  const listTitles = [...sched.querySelectorAll('.w3r .w3t b')].map(b => b.textContent);
+  const dupInList = names.filter(n => listTitles.indexOf(n) >= 0);
+  ok(dupInList.length === 0, 'B4: 2 bộ trong khối không bị lặp lại ở danh sách (' + dupInList.join(', ') + ')');
+  /* chủ trang yêu cầu BỎ dòng ghi chú tổng kết dưới khối lịch */
+  ok(!sched.querySelector('#schedSum') && !sched.querySelector('.w3sum'),
+    'B4b: đã bỏ dòng tổng kết dưới khối lịch (không còn #schedSum/.w3sum)');
+  ok(!/lượt ra chương trong các ngày còn lại/.test(sched.textContent),
+    'B4c: không còn câu “… lượt ra chương trong các ngày còn lại”');
+
+  /* ---------- PHẦN A3 · NGÀY GHI CẠNH THỨ KHÔNG ĐƯỢC LÀ NGÀY ĐÃ QUA ----------
+     Tuần bắt đầu từ Thứ 2, nên khi hôm nay là Thứ 3 thì “Thứ 2” trong danh sách
+     là của TUẦN SAU. Bản trước in thẳng monday + i ⇒ hiện “Thứ 2 · 16/11”
+     (hôm qua) trong khi đúng phải là 23/11. */
+  const today0 = new Date();
+  const dd0 = new Date(today0.getFullYear(), today0.getMonth(), today0.getDate());
+  const past = [];
+  [...sched.querySelectorAll('.w3r .w3t span')].forEach(el => {
+    const m = /\u00b7\s*(\d{2})\/(\d{2})/.exec(el.textContent || '');
+    if (!m) return;
+    const dt = new Date(today0.getFullYear(), Number(m[2]) - 1, Number(m[1]));
+    if (dt < dd0 && (dd0 - dt) > 864e5) return; /* cho phép lệch 1 ngày do múi giờ */
+    if (dt < dd0) past.push(m[1] + '/' + m[2] + ' (' + el.textContent.replace(/\s+/g, ' ').trim() + ')');
+  });
+  ok(past.length === 0, 'A3: không dòng nào ghi ngày đã qua (' + (past.join(', ') || 'sạch') + ')');
+
   /* ---------- PHẦN B · ADMIN: thêm 2 bộ cho CÙNG một thứ ---------- */
   const errs = [];
   const pre = '<script>try{localStorage.setItem("cz_kv_api","https://qa-worker.workers.dev");sessionStorage.setItem("cz_kv_key","K");}catch(e){}<\/script>';
