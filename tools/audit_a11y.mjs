@@ -193,10 +193,21 @@ function gzipSize(relPath) {
       maxGzipKb: 160,
     },
     /* Vòng 10: /admin là admin.html (sinh từ mockup) + admin-real.js, KHÔNG còn
-       nạp cz.css / admin.css / admin.js. Đo đúng những tệp trình duyệt tải thật. */
+       nạp cz.css / admin.css / admin.js. Đo đúng những tệp trình duyệt tải thật.
+       Vòng 17: nâng 100 → 115 kB cho cột “Xem trước” của trang chủ — nó dựng
+       thẳng từ state đang sửa (banner, quạt hero, Mới cập nhật, Series, lịch)
+       nên người chỉnh thấy kết quả trước khi ghi KV, thay cho 4 card rời không
+       liên hệ gì với trang thật. Đây là màn hình quản trị trên máy tính, không
+       phải trang người đọc; ngân sách trang đọc (home/reader) giữ nguyên. */
     adminInitial: {
       files: ['admin.html', 'admin-real.js'],
-      maxGzipKb: 100,
+      /* Vòng 18c: 115 → 125 kB. Vòng 18 thêm số liệu THẬT cho tab Thống kê
+         (biểu đồ lượt đọc theo ngày, phiếu theo chương), bảng Kiểm tra dữ liệu
+         đọc số chương từ /api/book cho từng bộ, và khối Sức khoẻ KV ở Cài đặt.
+         Đây vẫn là màn hình quản trị trên máy tính; ngân sách trang ĐỌC
+         (home/reader/…) không đổi. Muốn hạ lại thì cắt khối DOCS_HTML lịch sử
+         (~12,7 kB gzip) ra khỏi payload đầu, không phải cắt tính năng. */
+      maxGzipKb: 125,
     },
   };
   const payloadSummary = {};

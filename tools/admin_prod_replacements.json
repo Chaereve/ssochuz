@@ -128,11 +128,6 @@
   "note": "đếm thật"
  },
  {
-  "from": "var tiles=[['Phiếu đang hiện (mẫu)',state.votes.length],['Khóa người bầu (mẫu)',state.votes.length],['Đếm mới (mẫu)',4],['Số cũ import (mẫu)',2]];",
-  "to": "var tiles=[['Phiếu đang hiện',state.votes.length],['Khoá người bầu',state.votes.length],['Bộ trong thư viện',state.books.length],['Chương đang mở',state.chapters.length]];",
-  "note": "bỏ 4/2 giả"
- },
- {
   "from": "<span class=\"right\">MẪU</span>",
   "to": "<span class=\"right\">CLOUDFLARE KV</span>",
   "note": "nhãn card"
@@ -191,11 +186,6 @@
   "from": "<p>Dữ liệu mẫu.</p>",
   "to": "<p>Chưa có dữ liệu trong KV.</p>",
   "note": "empty state Bình luận / Báo lỗi"
- },
- {
-  "from": "<p>Reset phiếu đã xoá toàn bộ phiếu mẫu. Dùng bảng điều khiển demo → Đặt lại để nạp lại dữ liệu mẫu.</p><button class=\"btn sm\" data-act=\"reset-demo\">Đặt lại demo</button>",
-  "to": "<p>Chưa có phiếu nào trong KV. Bấm Đọc lại để nạp dữ liệu mới nhất.</p><button class=\"btn sm\" data-act=\"refresh\">Đọc lại KV</button>",
-  "note": "empty state Phiếu bầu: bỏ lời dẫn tới bảng demo"
  },
  {
   "from": "return '<p class=\"sample-note\">DỮ LIỆU THẬT</p>';",
@@ -267,7 +257,7 @@
  {
   "from": "aria-label=\"Chọn file backup JSON mẫu\"",
   "to": "aria-label=\"Chọn file backup JSON\"",
-  "note": ""
+  "note": "ô chọn file khôi phục: bản phát hành bỏ chữ “mẫu”"
  },
  {
   "from": "placeholder=\"Chương 65 · tiêu đề mẫu\"",
@@ -292,11 +282,6 @@
  {
   "from": "ph:'truyen-mau-01'",
   "to": "ph:'slug-bo-truyen'",
-  "note": ""
- },
- {
-  "from": "ph:'https://mau.example/bai-mau'",
-  "to": "ph:'https://…'",
   "note": ""
  },
  {
@@ -353,12 +338,6 @@
  {
   "from": "ph:'Chương 65 · tiêu đề mẫu'",
   "to": "ph:'Chương 65 · tiêu đề'",
-  "note": "",
-  "optional": true
- },
- {
-  "from": "ph:'https://mau.example'",
-  "to": "ph:'https://…'",
   "note": "",
   "optional": true
  },
@@ -697,19 +676,10 @@
   "note": "Vòng 14: Chương · Chọn bộ dùng toàn bộ bộ"
  },
  {
-  "from": "state.books.slice(0,8).map(function(b){return '<option value=\"'+esc(b.t)+'\"'+(state.cmtBook===b.t?' selected':'')+'>'+esc(b.t)+'</option>';}).join('')",
-  "to": "bookOptions(state.cmtBook,true)",
-  "note": "Vòng 14: Bình luận · Lọc theo bộ dùng toàn bộ bộ"
- },
- {
-  "from": "options:state.books.slice(0,6).map(function(b){return [b.id,b.t];})",
+  "from": "options:state.books.slice().sort(function(a,b){return String(a.t||'').localeCompare(String(b.t||''),'vi');}).map(function(b){return [b.id,b.t];})",
   "to": "options:state.books.slice().sort(function(a,b){return String(a.t||'').localeCompare(String(b.t||''),'vi');}).map(function(b){return [b.id,b.t];})",
-  "note": "Vòng 14: Cài đặt · Bộ nhận chương dùng toàn bộ bộ"
- },
- {
-  "from": "  var picked='<div class=\"card\"><div class=\"card-hd\"><h3>Chuyển thể Series</h3><span class=\"right\">tối đa 12</span></div><div class=\"card-bd\">'+\n    '<div class=\"grid3\">'+state.books.slice(0,6).map(function(b){\n      return '<label class=\"chk\"><input type=\"checkbox\" data-role=\"picked\" data-id=\"'+b.id+'\"'+(state.picked.indexOf(b.id)>=0?' checked':'')+'><span class=\"box\"></span><span>'+esc(b.t)+'</span></label>';\n    }).join('')+'</div></div></div>';",
-  "to": "  var picked='<div class=\"card\"><div class=\"card-hd\"><h3>Chuyển thể Series</h3><span class=\"right\">tối đa 12 · đã chọn <b id=\"hpPickedCount\">'+state.picked.length+'</b></span></div><div class=\"card-bd\">'+\n    '<div class=\"grid3\" style=\"max-height:280px;overflow:auto\">'+state.books.slice().sort(function(a,b){return String(a.t||'').localeCompare(String(b.t||''),'vi');}).map(function(b){\n      return '<label class=\"chk\"><input type=\"checkbox\" data-role=\"picked\" data-id=\"'+esc(b.id)+'\"'+(state.picked.indexOf(b.id)>=0?' checked':'')+'><span class=\"box\"></span><span>'+esc(b.t)+'</span></label>';\n    }).join('')+'</div>'+\n    (state.books.length?'':'<div class=\"state\"><p>Chưa có bộ nào trong KV.</p></div>')+\n    '<p class=\"xs dim mt\">Bấm Lưu trang chủ để ghi lựa chọn vào KV.</p></div></div>';",
-  "note": "Vòng 14: Series liệt kê toàn bộ bộ + đếm số đã chọn theo editorChoice thật"
+  "note": "Cài đặt · Bộ nhận chương đã dùng toàn bộ bộ, sắp theo tên — không cần thay nữa",
+  "optional": true
  },
  {
   "from": "'<label class=\"sw\"><input type=\"checkbox\" id=\"hp-banner\" data-model=\"hp-banner\"><span class=\"track\"></span><span>Bật banner</span></label>'+",
@@ -750,11 +720,6 @@
   "from": "/* ---------- 9 · Homepage CMS ---------- */\nfunction homepageHTML(){",
   "to": "/* ---------------------------------------------------------------------------\n   Vòng 15 · TRANG \"CHUYỂN THỂ SERIES\"\n   Card trên Homepage CMS chỉ hiện TỐI ĐA 12 bộ (đã chọn trước, fills by other\n   books). Số lượng ĐƯỢC CHỌN KHÔNG BỊ GIỚI HẠN 12 nữa — mọi thao tác thêm/bớt\n   thật sự diễn ra ở trang này, nơi liệt kê TOÀN BỘ registry KV. Overlay nằm\n   ngoài #view nên không bị render() ghi đè, không thêm route/tab vào NAV.\n   ------------------------------------------------------------------------- */\nfunction syncSeriesCount(){\n  var n=String(state.picked.length);\n  ['hpPickedCount','seriesPageCount','seriesPageFootCount'].forEach(function(id){\n    var e=document.getElementById(id);if(e)e.textContent=n;\n  });\n}\nfunction seriesPageFilter(q){\n  var host=document.getElementById('seriesPage');if(!host)return;\n  var kw=String(q||'').toLowerCase().trim(),vis=0;\n  host.querySelectorAll('[data-series-item]').forEach(function(el){\n    var hit=(!kw||String(el.getAttribute('data-s-text')||'').indexOf(kw)>=0);\n    el.style.display=hit?'':'none';if(hit)vis++;\n  });\n  var t=host.querySelector('[data-series-visible]');if(t)t.textContent=String(vis);\n}\nfunction closeSeriesPage(){\n  var host=document.getElementById('seriesPage');if(host&&host.remove)host.remove();\n  document.body.classList.remove('series-page-open');\n  render();\n}\nfunction openSeriesPage(){\n  var host=document.getElementById('seriesPage');\n  if(!host){\n    host=document.createElement('div');host.id='seriesPage';host.className='series-page';\n    host.setAttribute('role','dialog');host.setAttribute('aria-label','Tất cả bộ Chuyển thể Series');\n    document.body.appendChild(host);\n    host.addEventListener('click',function(e){\n      var el=e.target.closest?e.target.closest('[data-act]'):null;\n      if(!el)return;\n      var a=el.dataset.act;\n      if(a!=='series-close'&&a!=='series-save'&&a!=='series-all'&&a!=='series-none')return;\n      e.stopPropagation();\n      if(a==='series-close'){closeSeriesPage();return;}\n      if(a==='series-save'){\n        syncSeriesCount();\n        try{saveHomepage();}catch(err){toast('Không lưu được lựa chọn.','bad');}\n        closeSeriesPage();return;\n      }\n      var on=(a==='series-all');\n      host.querySelectorAll('[data-role=\"picked\"]').forEach(function(cb){cb.checked=on;});\n      state.picked=on?state.books.map(function(b){return b.id;}):[];\n      syncSeriesCount();\n    });\n    host.addEventListener('input',function(e){\n      if(e.target&&e.target.dataset&&e.target.dataset.role==='series-q')seriesPageFilter(e.target.value);\n    });\n    host.addEventListener('keydown',function(e){if(e.key==='Escape')closeSeriesPage();});\n  }\n  document.body.classList.add('series-page-open');\n  var list=state.books.slice().sort(function(a,b){return String(a.t||'').localeCompare(String(b.t||''),'vi');});\n  host.innerHTML=\n    '<div class=\"series-page-hd\"><button class=\"btn sm\" data-act=\"series-close\">← Quay lại Homepage CMS</button>'+\n    '<div><h2>Chuyển thể Series</h2><div class=\"sub\">Toàn bộ bộ trong KV · chọn bao nhiêu cũng được · đang chọn <b id=\"seriesPageCount\">'+state.picked.length+'</b> / '+state.books.length+' bộ</div></div></div>'+\n    '<div class=\"series-page-tools\"><span class=\"search\"><input class=\"inp\" data-role=\"series-q\" placeholder=\"Tìm tên bộ, tác giả, slug…\" aria-label=\"Tìm bộ chuyển thể\"></span>'+\n    '<button class=\"btn sm\" data-act=\"series-all\">Chọn tất cả</button><button class=\"btn sm\" data-act=\"series-none\">Bỏ chọn tất cả</button>'+\n    '<span class=\"xs dim\">Đang hiện <b data-series-visible>'+state.books.length+'</b> / '+state.books.length+' bộ</span></div>'+\n    '<div class=\"series-page-body\">'+\n    (list.length?'<div class=\"series-grid\">'+list.map(function(b){\n      var st=String(b.t+' '+b.a+' '+b.id).toLowerCase();\n      return '<div class=\"series-card\" data-series-item data-s-text=\"'+esc(st)+'\">'+cover(b,'lg')+\n        '<div class=\"meta\"><b>'+esc(b.t)+'</b><div class=\"mono\">'+esc(b.id)+'</div><div class=\"xs dim\">'+esc(b.a)+'</div>'+\n        '<label class=\"chk\"><input type=\"checkbox\" data-role=\"picked\" data-id=\"'+esc(b.id)+'\"'+(state.picked.indexOf(b.id)>=0?' checked':'')+\n        ' aria-label=\"Chọn '+esc(b.t)+'\"><span class=\"box\"></span><span>Chuyển thể</span></label></div></div>';\n    }).join('')+'</div>':'<div class=\"state\"><h3>Chưa có bộ nào trong KV</h3><p>Nối Worker có dữ liệu để chọn bộ chuyển thể.</p></div>')+\n    '</div>'+\n    '<div class=\"series-page-ft\"><span class=\"xs dim\">Đã chọn <b id=\"seriesPageFootCount\">'+state.picked.length+'</b> / '+state.books.length+' bộ · card Homepage CMS hiện tối đa 12.</span>'+\n    '<span class=\"grow\"></span><button class=\"btn sm\" data-act=\"series-close\">Đóng</button>'+\n    '<button class=\"btn sm pri\" data-act=\"series-save\">Lưu lựa chọn lên KV</button></div>';\n  var q=host.querySelector('[data-role=\"series-q\"]');if(q&&q.focus)try{q.focus();}catch(e){}\n}\n\n/* ---------- 9 · Homepage CMS ---------- */\nfunction homepageHTML(){",
   "note": "Vòng 15: hàm mở trang Chuyển thể Series (lọc, chọn tất cả, lưu KV, Esc)"
- },
- {
-  "from": "  var picked='<div class=\"card\"><div class=\"card-hd\"><h3>Chuyển thể Series</h3><span class=\"right\">tối đa 12 · đã chọn <b id=\"hpPickedCount\">'+state.picked.length+'</b></span></div><div class=\"card-bd\">'+\n    '<div class=\"grid3\" style=\"max-height:280px;overflow:auto\">'+state.books.slice().sort(function(a,b){return String(a.t||'').localeCompare(String(b.t||''),'vi');}).map(function(b){\n      return '<label class=\"chk\"><input type=\"checkbox\" data-role=\"picked\" data-id=\"'+esc(b.id)+'\"'+(state.picked.indexOf(b.id)>=0?' checked':'')+'><span class=\"box\"></span><span>'+esc(b.t)+'</span></label>';\n    }).join('')+'</div>'+\n    (state.books.length?'':'<div class=\"state\"><p>Chưa có bộ nào trong KV.</p></div>')+\n    '<p class=\"xs dim mt\">Bấm Lưu trang chủ để ghi lựa chọn vào KV.</p></div></div>';",
-  "to": "  /* Vòng 15: card chỉ TỐI ĐA 12 bộ (ưu tiên bộ đã chọn), nhưng state.picked\n     không còn trần 12 — chọn thêm/bớt ở trang mở bằng nút Xem thêm. */\n  var byId={};state.books.forEach(function(b){byId[b.id]=b;});\n  var shownIds=state.picked.slice(0,12).slice();\n  state.books.forEach(function(b){if(shownIds.length<12&&shownIds.indexOf(b.id)<0)shownIds.push(b.id);});\n  var shown=shownIds.map(function(id){return byId[id];}).filter(Boolean);\n  var picked='<div class=\"card\"><div class=\"card-hd\"><h3>Chuyển thể Series</h3><span class=\"right\">đã chọn <b id=\"hpPickedCount\">'+state.picked.length+'</b> / '+state.books.length+' bộ</span></div><div class=\"card-bd\">'+\n    '<div class=\"grid3\" id=\"seriesPickedGrid\">'+shown.map(function(b){\n      return '<label class=\"chk\"><input type=\"checkbox\" data-role=\"picked\" data-id=\"'+esc(b.id)+'\"'+(state.picked.indexOf(b.id)>=0?' checked':'')+'><span class=\"box\"></span><span>'+esc(b.t)+'</span></label>';\n    }).join('')+'</div>'+\n    (state.picked.length>12?'<p class=\"xs dim mt\">… và '+(state.picked.length-12)+' bộ nữa. Mở trang Chuyển thể Series để xem hết.</p>':'')+\n    (state.books.length?'':'<div class=\"state\"><p>Chưa có bộ nào trong KV.</p></div>')+\n    '<div class=\"row wrap mt\" style=\"gap:8px;align-items:center\"><button class=\"btn sm\" data-act=\"series-page\">Xem thêm · tất cả '+state.books.length+' bộ</button>'+\n    '<span class=\"grow\"></span><span class=\"xs dim\">Hiện tối đa 12 bộ · bấm Lưu trang chủ để ghi vào KV.</span></div></div></div>';",
-  "note": "Vòng 15: card Series tối đa 12 bộ + nút Xem thêm"
  },
  {
   "from": "    case 'go':navigate(id);break;",

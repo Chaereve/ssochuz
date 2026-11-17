@@ -99,18 +99,15 @@ html = html
   .replace('Truyện mẫu 04, 13, 17', 'Các bộ thiếu ảnh bìa')
   /* Số liệu GIẢ nằm cứng trong 2 màn (Thống kê / Kiểm tra dữ liệu): bản
      prototype giữ nguyên, bản phát hành phải tính từ state KV thật. */
-  .replace("var tiles=[['Bộ có số liệu','18'],['Lượt đọc trong top','8.420'],['Phiếu trong top','1.161'],['Ngày có chuỗi','30']];",
-    "var tiles=[['Bộ có số liệu',String(state.books.length)],['Lượt đọc trong top',nfmt(SAMPLE_STATS.reads.reduce(function(a,b){return a+(Number(b[1])||0);},0))],['Phiếu trong top',nfmt(SAMPLE_STATS.likes.reduce(function(a,b){return a+(Number(b[1])||0);},0))],['Ngày có chuỗi',String(SAMPLE_READS.length)]];")
   .replace("var tiles=[['bộ trong registry','248'],['slug trùng/thiếu','0'],['thiếu bìa','4'],['thiếu mô tả','2']];",
     "var tiles=[['bộ trong registry',String(state.books.length)],['vấn đề quét được',String(SAMPLE_ISSUES.length)],['thiếu bìa',String(SAMPLE_ISSUES.filter(function(x){return x.t==='Thiếu bìa';}).length)],['thiếu mô tả',String(SAMPLE_ISSUES.filter(function(x){return x.t==='Thiếu mô tả';}).length)]];")
   .replace('<p class="xs dim mt">MẪU</p>', '<p class="xs dim mt">CLOUDFLARE KV</p>')
-  .replace('Đây là nội dung chương mẫu. Gõ vào đây để thấy chỉ báo tự lưu nháp cập nhật.',
-    'Soạn nội dung chương tại đây. Bản nháp được lưu tự động.')
-  /* Card "Phiếu theo chương" của mockup có 4 dòng số liệu bịa. Dùng regex vì
-     đuôi "· MẪU" đã bị cắt ở bước trên; bản thật lấy state.votes (nạp từ
-     /api/admin/voters), không có thì hiện trạng rỗng. */
-  .replace(/  var chap='<div class="card"><div class="card-hd"><h3>Phiếu theo chương<\/h3>[\s\S]*?\n  return kpi\+/,
-    "  var chap='<div class=\"card\"><div class=\"card-hd\"><h3>Phiếu theo chương</h3><span class=\"right\">DỮ LIỆU THẬT</span></div><div class=\"card-bd tight\" style=\"padding:0 18px\">'+\n    (state.votes.length ? state.votes.slice(0,4).map(function(v){return '<div class=\"list-item\"><div class=\"t\"><b>'+esc(v.b||'Bộ truyện')+'</b><span>'+esc(v.d||'Phiếu từ KV')+'</span></div>'+badge('1','tone-acc')+'</div>';}).join('') : '<div class=\"state\"><p>Chưa có phiếu nào trong KV.</p></div>')+'</div></div>';\n  return kpi+")
+  /* Vòng 18: khối “Phiếu theo chương” và 4 ô KPI của tab Thống kê đã được viết
+     ĐÚNG ngay trong nguồn thiết kế (statsHTML đọc window.__czStats() →
+     /api/admin/stats: chapVotes, days, không đệm dòng “—”). Bản build từng có
+     bản sao thay thế cứng ở đây; nó ghi đè code mới và làm card đó LUÔN rỗng vì
+     đọc nhầm state.votes (danh sách người bầu) thay vì chapVotes. Đã bỏ — một
+     nguồn sự thật duy nhất cho nội dung màn hình là mockup + bảng thay thế. */
   .replace(/DỮ LIỆU MẪU — không phải dữ liệu thật/g, 'DỮ LIỆU THẬT TỪ CLOUDFLARE KV')
   .replace(/DỮ LIỆU MẪU/g, 'DỮ LIỆU THẬT')
   /* Màn đăng nhập / modal: prototype nói "mô phỏng, không gọi Worker thật" —

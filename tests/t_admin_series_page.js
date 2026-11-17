@@ -168,7 +168,11 @@ async function main() {
   ok(!!add && !add.checked, 'yours-ever chưa được chọn');
   add.checked = true; fire(add, 'change');
   ok(S.picked.length === 13, 'tick thêm → 13 lựa chọn (KHÔNG bị chặn bởi trần 12)');
-  ok(add.checked === true, 'checkbox vẫn giữ trạng thái đã tick');
+  /* Vòng 17: trang chủ sửa tại chỗ, chỉ khi bấm Lưu mới ghi KV. Ô tick vừa bấm
+     KHÔNG được render lại (mất focus / nhảy vị trí), nên trạng thái tick do
+     chính trình duyệt giữ — ta kiểm tra đúng điều đó, không đòi render lại. */
+  ok(add.checked === true, 'checkbox vẫn giữ trạng thái đã tick (không render lại ô đang bấm)');
+  ok(S.picked.indexOf('yours-ever') >= 0, 'bộ vừa tick nằm trong state.picked');
   ok((D.getElementById('seriesPageCount') || {}).textContent === '13' &&
      (D.getElementById('seriesPageFootCount') || {}).textContent === '13' &&
      (D.getElementById('hpPickedCount') || {}).textContent === '13',
@@ -208,6 +212,8 @@ async function main() {
   }
   ok(!D.getElementById('seriesPage'), 'Lưu xong tự đóng trang');
   ok(!D.body.classList.contains('series-page-open'), 'body mở khoá cuộn sau khi đóng');
+  ok((D.getElementById('hpDirty') || {}).hidden === true,
+    'Vòng 17: Lưu lựa chọn xong → ● Chưa lưu tắt (dữ liệu đã lên KV)');
   S.route = 'homepage-cms'; w.render();
   ok(D.querySelectorAll('#seriesPickedGrid [data-role="picked"]').length === 12,
     'card vẫn chỉ hiện 12 bộ dù đã chọn 20');

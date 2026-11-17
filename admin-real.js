@@ -207,6 +207,13 @@
     S.models['hp-href'] = S.hpHref;
     S.models['hp-banner'] = !!ann.enabled;
     S.models['hp-note'] = S.hpNote;
+    /* Vòng 17: trang chủ sửa tại chỗ rồi lưu MỘT lần, nên cần mốc “đã lưu”
+       để biết khi nào có thay đổi chưa ghi và nút Hoàn tác quay về đâu.
+       `hpKeep` là bản sao của đúng dữ liệu KV vừa nạp. */
+    try {
+      S.hpBase = window.hpSnapshot ? window.hpSnapshot() : null;
+      S.hpKeep = S.hpBase ? JSON.parse(S.hpBase) : null;
+    } catch (e) { S.hpBase = null; S.hpKeep = null; }
     S.migrateResult = '';
 
     var totalCh = lib.reduce(function (n, m) { return n + (Number(m.chapters) || 0); }, 0);
@@ -222,14 +229,48 @@
     ]);
     var issues = [], seen = Object.create(null);
     lib.forEach(function (m) {
-      if (seen[m.slug]) issues.push({ t: 'Slug trùng', b: m.title, d: m.slug, lv: 'bad' });
+      if (seen[m.slug]) issues.push({ t: 'Slug trùng', b: m.title, slug: m.slug, d: m.slug, reg: '', lv: 'bad' });
       seen[m.slug] = 1;
-      if (!m.thumb) issues.push({ t: 'Thiếu bìa', b: m.title, d: 'chưa có thumb', lv: 'warn' });
-      if (!(m.synFull || m.syn)) issues.push({ t: 'Thiếu mô tả', b: m.title, d: 'chưa có syn', lv: 'warn' });
-      if (!(Number(m.chapters) > 0)) issues.push({ t: 'Chưa có chương', b: m.title, d: 'chapters = 0', lv: 'warn' });
+      if (!m.thumb) issues.push({ t: 'Thiếu bìa', b: m.title, slug: m.slug, d: 'chưa có thumb', reg: '', lv: 'warn' });
+      if (!(m.synFull || m.syn)) issues.push({ t: 'Thiếu mô tả', b: m.title, slug: m.slug, d: 'chưa có syn', reg: '', lv: 'warn' });
+      if (!(Number(m.chapters) > 0)) issues.push({ t: 'Chưa có chương', b: m.title, slug: m.slug, d: '0 chương', reg: '', lv: 'warn' });
     });
-    replaceArr(M.SAMPLE_ISSUES, issues.slice(0, 12));
+    /* Vòng 18b: mỗi dòng phải mang SLUG (để nút “Sửa” mở đúng bộ) và ô
+       registry/book TÁCH RIÊNG — trước đây nhồi một chuỗi “chapters = 0” rồi
+       tách bằng dấu “·” nên cột Book luôn “—”, người quản lý không biết
+       registry ghi 0 hay book thật sự 0 chương. */
+    issues.forEach(function (x) { x.reg = x.d; x.book = ''; });
+    replaceArr(M.SAMPLE_ISSUES, issues.slice(0, 60));
+    /* Nạp số chương THẬT của book ngay sau khi có registry (nền, không chặn vẽ
+       màn hình) — trước đây cột Book luôn “—” nên không ai thấy lệch. */
+    try { setTimeout(function () { loadIssueBooks(); }, 0); } catch (e) {}
   }
+
+  /* Đối chiếu registry ↔ book thật: chỉ hỏi những bộ ĐANG có vấn đề, chạy nền
+     để bảng hiện ngay. Kết quả ghi vào issues.book rồi vẽ lại bảng. */
+  var ISSUE_BOOKS = {};      /* slug → số chương thật | 'missing' */
+  function loadIssueBooks() {
+    var slugs = [];
+    (M.SAMPLE_ISSUES || []).forEach(function (x) { if (x.slug && slugs.indexOf(x.slug) < 0) slugs.push(x.slug); });
+    if (!slugs.length) return Promise.resolve();
+    return Promise.allSettled(slugs.slice(0, 24).map(function (slug) {
+      return apiCall('/api/book/' + encodeURIComponent(slug)).then(function (b) {
+        var n = b && Array.isArray(b.chapters) ? b.chapters.length : (b && Number(b.count)) || 0;
+        ISSUE_BOOKS[slug] = n;
+        (M.SAMPLE_ISSUES || []).forEach(function (x) {
+          if (x.slug !== slug) return;
+          x.book = n + ' chương';
+          if (n > 0 && x.t === 'Chưa có chương') x.note = 'registry ghi 0 nhưng book có ' + n;
+        });
+      }).catch(function (e) {
+        ISSUE_BOOKS[slug] = 'missing';
+        (M.SAMPLE_ISSUES || []).forEach(function (x) { if (x.slug === slug) x.book = 'chưa có book'; });
+      });
+    })).then(function () { try { redraw(); } catch (e) {} });
+  }
+  window.__czIssueBooks = function () { return ISSUE_BOOKS; };
+  /* Tab Cài đặt cần thấy tình trạng kho KV ngay (khối “Sức khoẻ KV”). */
+  window.__czKv = function () { return KVINFO; };
 
   window.__CZ_REAL_EDITOR__ = true;
   var FORCE_EDITOR_SEED = false;
@@ -881,6 +922,8 @@
         return {
           id: x.id || ('r' + i), b: titleOf(x.slug), ch: x.ch ? ('Chương ' + x.ch) : (x.title || ''),
           txt: x.text || x.title || '', by: x.name || x.email || x.by || 'Độc giả',
+          /* vòng 18d: giữ slug để nút “Mở bộ” trên dòng báo lỗi đi đúng chỗ */
+          slug: x.slug || '',
           date: String(x.createdAt || x.at || '').slice(0, 16).replace('T', ' '), done: !!x.done
         };
       });
@@ -916,23 +959,49 @@
     });
   }
   var STATS_ITEMS = {};   /* /api/admin/stats · dùng để biết bộ nào CÓ phiếu */
+  /* Toàn bộ dữ liệu tab Thống kê, giữ đúng những gì Worker trả về. */
+  var STATS = { items: {}, days: [], chapters: [], top: 0, votes: 0 };
   function loadStats() {
     return apiCall('/api/admin/stats').then(function (r) {
       var items = r.items || {}, days = r.days || [];
       STATS_ITEMS = items;
-      var pairs = Object.keys(items).map(function (slug) {
+      var all = Object.keys(items).map(function (slug) {
         var it = items[slug] || {};
-        return { slug: slug, name: titleOf(slug), views: Number(it.views || 0), votes: Number(it.votes || 0), today: Number(it.viewsDay || 0) };
-      }).sort(function (a, b) { return b.views - a.views; }).slice(0, 5);
-      while (pairs.length < 5) pairs.push({ slug: '', name: '—', views: 0, votes: 0, today: 0 });
+        return { slug: slug, name: titleOf(slug), views: Number(it.views || 0),
+          votes: Number(it.votes || 0), voters: Number(it.voters || 0),
+          today: Number(it.viewsDay || 0), chap: it.chapVotes || {} };
+      });
+      var pairs = all.filter(function (x) { return x.views || x.votes; })
+        .sort(function (a, b) { return b.views - a.views; }).slice(0, 5);
+      /* KHÔNG đệm dòng “—” cho đủ 5: dòng tên “—” với 0 lượt đọc trông y như
+         một bộ thật tên “—” trong KV. Ít dữ liệu thì hiện ít dòng. */
       replaceArr(M.SAMPLE_STATS.reads, pairs.map(function (p) { return [p.name, p.views]; }));
       replaceArr(M.SAMPLE_STATS.likes, pairs.map(function (p) { return [p.name, p.votes]; }));
-      replaceArr(M.SAMPLE_STATS.voters, pairs.map(function (p) { return [p.name, p.votes]; }));
+      replaceArr(M.SAMPLE_STATS.voters, pairs.map(function (p) { return [p.name, p.voters]; }));
       replaceArr(M.SAMPLE_STATS.today, pairs.map(function (p) { return [p.name, p.today]; }));
-      replaceArr(M.SAMPLE_READS, days.slice(-14).map(function (d) { return Number(d.views || 0); }));
+
+      /* S1: “Phiếu theo chương” phải đọc chapVotes của Worker. Bản trước đọc
+         state.votes (danh sách NGƯỜI bầu) nên luôn rỗng dù KV có phiếu. */
+      var chapters = [];
+      all.forEach(function (x) {
+        Object.keys(x.chap || {}).forEach(function (ch) {
+          var n = Number(x.chap[ch] || 0);
+          if (n > 0) chapters.push({ book: x.name, ch: String(ch), n: n });
+        });
+      });
+      chapters.sort(function (a, b) { return b.n - a.n; });
+      STATS = {
+        items: items, days: days,
+        chapters: chapters.slice(0, 12),
+        top: all.filter(function (x) { return x.views || x.votes; }).length,
+        votes: pairs.reduce(function (a, x) { return a + x.votes; }, 0),
+        views: pairs.reduce(function (a, x) { return a + x.views; }, 0),
+      };
+      replaceArr(M.SAMPLE_READS, days.slice(-30).map(function (d) { return Number(d.views || 0); }));
       if (!M.SAMPLE_READS.length) replaceArr(M.SAMPLE_READS, [0]);
     });
   }
+  window.__czStats = function () { return STATS; };
   function loadVoters() {
     var all = (REG.lib || []).map(function (m) { return m.slug; }).filter(Boolean);
     var hot = all.filter(function (sl) {
@@ -946,9 +1015,24 @@
         .then(function (r) {
           var book = (r && (r.book || r.items)) || [];
           var list = Array.isArray(book) ? book : (Array.isArray(book.voters) ? book.voters : []);
-          return list.map(function (v) {
-            return { k: v.key || v.id || v.name || 'Độc giả', b: titleOf(slug), d: String(v.at || v.t || '').slice(0, 10) };
+          var rows = list.map(function (v) {
+            return {
+              k: v.key || v.id || v.name || 'Độc giả', b: titleOf(slug), d: String(v.at || v.t || '').slice(0, 10),
+              /* giữ bộ + chương của CHÍNH phiếu: trước đây gỡ/reset phiếu lấy
+                 S.selectedBook (bộ đang sửa) nên rất dễ ghi sai bộ. */
+              s: slug, ch: Number(v.ch) || 0, kind: v.kindLabel || ''
+            };
           });
+          /* phiếu từng chương nằm ở r.chapters, không ở book.voters */
+          Object.keys((r && r.chapters) || {}).forEach(function (n) {
+            (((r.chapters || {})[n] || {}).voters || []).forEach(function (v) {
+              rows.push({
+                k: v.key || v.id || 'Độc giả', b: titleOf(slug), d: String(v.at || v.t || '').slice(0, 10),
+                s: slug, ch: Number(n) || 0, kind: v.kindLabel || ''
+              });
+            });
+          });
+          return rows;
         }).catch(function () { return []; });
     })).then(function (groups) {
       var flat = []; groups.forEach(function (g) { flat = flat.concat(g); });
@@ -982,6 +1066,9 @@
     });
   }
   function reload() {
+    /* Nạp lại dữ liệu thì trang chủ lấy bản mới làm mốc “đã lưu” (nếu không
+       sẽ báo ● Chưa lưu oan cho mọi thay đổi của người khác). */
+    if (typeof window.hpClear === 'function') window.hpClear();
     if (S.conn === 'static') return loadStatic().catch(fail);
     if (!S.conn || S.conn === 'badkey' || S.conn === 'workererr') { go('dang-nhap'); return Promise.resolve(); }
     return loadAll().then(function () { say('Đã đọc lại dữ liệu thật từ KV.'); }).catch(function (e) { setConn(classify(e)); fail(e); });
@@ -1321,8 +1408,14 @@
     if (!ensureOnline()) return;
     var c = S.comments.find(function (x) { return x.id === id; });
     if (!c) return;
-    M.openSimple('Xác nhận lần 1 · xoá bình luận', 'Bước 2 sẽ yêu cầu gõ XOÁ.', function () {
-      M.openStrong('Xác nhận lần 2 · xoá bình luận', 'Xoá vĩnh viễn bình luận khỏi KV.', 'XOÁ', function () {
+    /* Vòng 18d: xoá 2 bước mà hộp thoại chỉ nói “xoá bình luận” thì người quản
+       lý không biết mình đang xoá bình luận NÀO — phải thấy người gửi, nội
+       dung và bộ. */
+    var who = c.r || 'Bạn đọc';
+    var excerpt = String(c.txt || '').slice(0, 140) + (String(c.txt || '').length > 140 ? '…' : '');
+    var about = '"' + excerpt + '" — ' + who + ' · ' + (c.b || '') + (c.date ? ' · ' + c.date : '');
+    M.openSimple('Xác nhận lần 1 · xoá bình luận', 'Bình luận: ' + about + '\n\nBước 2 sẽ yêu cầu gõ XOÁ.', function () {
+      M.openStrong('Xác nhận lần 2 · xoá bình luận', 'Xoá vĩnh viễn khỏi KV: ' + about, 'XOÁ', function () {
         apiCall('/api/comments/' + encodeURIComponent(c.slug || '') + '/' + encodeURIComponent(id), { method: 'DELETE' })
           .then(function () { WRITES += 1; S.comments = S.comments.filter(function (x) { return x.id !== id; }); say('Đã xoá bình luận trên KV.'); redraw(); })
           .catch(fail);
@@ -1337,44 +1430,113 @@
       .then(function () { WRITES += 1; r.done = !r.done; say(r.done ? 'Đã đánh dấu xử lý trên KV.' : 'Đã mở lại báo lỗi trên KV.'); redraw(); })
       .catch(fail);
   }
+  /* Vòng 18d — lỗi nặng nhất của tab Phiếu bầu: cả “Gỡ phiếu đã chọn” lẫn
+     “Reset phiếu bộ này” đều gửi `S.selectedBook`, tức bộ đang chọn ở tab SỬA
+     BỘ, chứ không phải bộ của dòng phiếu người quản lý đang nhìn. Đứng ở tab
+     Phiếu bầu mà selectedBook trỏ bộ khác (hoặc rỗng) là reset/gỡ phiếu của
+     SAI BỘ — slug rỗng còn bị Worker hiểu là reset MỌI BỘ. Nay khoá theo bộ
+     của chính dòng phiếu (mỗi dòng đã mang `s`), và từ chối khi trộn nhiều bộ. */
+  function voteSlugOf(v) {
+    return (v && (v.s || v.slug)) || '';
+  }
+  function voteBookLabel(v) {
+    return (v && voteSlugOf(v)) ? titleOf(voteSlugOf(v)) : (v && v.b) || '';
+  }
   function realRemoveVotes() {
     if (!ensureOnline()) return;
     if (!S.voteSel.size) { say('Chọn ít nhất một phiếu.', 'warn'); return; }
     var chosen = []; S.voteSel.forEach(function (i) { if (S.votes[i]) chosen.push(S.votes[i]); });
-    M.openStrong('Gỡ phiếu đã chọn', 'Gỡ ' + chosen.length + ' phiếu · không hoàn tác.', 'GỠ PHIẾU', function () {
-      var slug = S.selectedBook || (REG.lib[0] || {}).slug || '';
-      apiCall('/api/admin/vote-remove', { method: 'POST', body: { slug: slug, ch: 0, keys: chosen.map(function (v) { return v.k; }) } })
-        .then(function () { WRITES += 1; S.votes = S.votes.filter(function (v, i) { return !S.voteSel.has(i); }); S.voteSel.clear(); say('Đã gỡ phiếu trên KV.'); redraw(); })
-        .catch(fail);
-    }, 'Gỡ phiếu');
+    var slugs = [];
+    chosen.forEach(function (v) { var sl = voteSlugOf(v); if (sl && slugs.indexOf(sl) < 0) slugs.push(sl); });
+    if (slugs.length !== 1) {
+      say(slugs.length ? 'Các phiếu đang chọn thuộc ' + slugs.length + ' bộ khác nhau — chọn phiếu của MỘT bộ mỗi lần.'
+        : 'Các phiếu này không rõ thuộc bộ nào; bấm “Đọc lại KV” rồi thử lại.', 'warn');
+      return;
+    }
+    var slug = slugs[0];
+    var names = chosen.map(function (v) { return v.k + ' · Chương ' + (Number(v.ch) || 0); }).slice(0, 6).join(', ');
+    M.openStrong('Gỡ phiếu đã chọn',
+      'Bộ “' + titleOf(slug) + '” · gỡ ' + chosen.length + ' phiếu: ' + names + (chosen.length > 6 ? '…' : '') + ' · không hoàn tác.',
+      'GỠ PHIẾU', function () {
+        apiCall('/api/admin/vote-remove', { method: 'POST', body: { slug: slug, ch: 0, keys: chosen.map(function (v) { return v.k; }) } })
+          .then(function () { WRITES += 1; S.votes = S.votes.filter(function (v, i) { return !S.voteSel.has(i); }); S.voteSel.clear(); say('Đã gỡ ' + chosen.length + ' phiếu của “' + titleOf(slug) + '”.'); redraw(); })
+          .catch(fail);
+      }, 'Gỡ phiếu');
   }
   function realResetVotes() {
     if (!ensureOnline()) return;
     var rc = D.querySelector('[data-role="reset-ch"]');
     var ch = rc ? String(rc.value || '') : '';
-    M.openStrong('Reset phiếu bộ này', 'Phiếu về 0' + (ch ? ' ở chương ' + ch : '') + ' · không hoàn tác.', 'RESET', function () {
-      apiCall('/api/admin/votes/reset', { method: 'POST', body: { slug: S.selectedBook, ch: ch } })
-        .then(function () { WRITES += 1; S.votes = []; S.voteSel.clear(); S.votePage = 1; say('Đã reset phiếu trên KV.'); redraw(); })
-        .catch(fail);
-    }, 'Reset phiếu');
+    /* Bộ để reset: bộ đang lọc ở bảng phiếu (state.voteBook) → bộ của dòng
+       được chọn → bộ đang mở ở Sửa bộ. Không bao giờ rơi về chuỗi rỗng, vì
+       Worker hiểu slug rỗng là reset TOÀN BỘ bộ. */
+    /* Bộ đang chọn đọc THẲNG từ ô select trên màn hình: nextTick/render có thể
+       chưa kịp ghi `S.voteBook` (cùng lý do như collectHomepageDraft). */
+    var box = D.querySelector('[data-role="vote-book"]');
+    var fromBox = box && box.value ? String(box.value) : '';
+    var picked = null;
+    S.voteSel.forEach(function (i) { if (!picked && S.votes[i]) picked = S.votes[i]; });
+    var slug = fromBox || S.voteBook || voteSlugOf(picked) || '';
+    if (!slug) { say('Chọn bộ cần reset phiếu ở ô lọc phía trên trước.', 'warn'); return; }
+    if (!/^\d+$/.test(ch) && ch !== '') { say('Số chương phải là số (để trống nếu reset cả bộ).', 'warn'); return; }
+    M.openStrong('Reset phiếu bộ “' + titleOf(slug) + '”',
+      'Phiếu về 0' + (ch ? ' ở chương ' + ch : ' (cả bộ + mọi chương, giữ lượt đọc)') + ' · không hoàn tác.',
+      'RESET', function () {
+        apiCall('/api/admin/votes/reset', { method: 'POST', body: { slug: slug, ch: ch } })
+          .then(function () { WRITES += 1; S.votes = S.votes.filter(function (v) { return voteSlugOf(v) !== slug; }); S.voteSel.clear(); S.votePage = 1; say('Đã reset phiếu của “' + titleOf(slug) + '” trên KV.'); redraw(); })
+          .catch(fail);
+      }, 'Reset phiếu');
+  }
+
+  /* Vòng 17b: giá trị NGƯỜI DÙNG ĐANG GÕ chưa chắc đã vào state — handler
+     ‘input’ chỉ chạy khi trình duyệt phát sự kiện, còn bấm Lưu bằng chuột ngay
+     sau khi gõ (chưa blur) vẫn có thể lệch một nhịp. Trước khi dựng registry,
+     đọc thẳng những ô đang có trên màn hình. */
+  function collectHomepageDraft() {
+    var each = function (sel, fn) { Array.prototype.forEach.call(D.querySelectorAll(sel), fn); };
+    each('[data-role="slide-reason"]', function (el) {
+      var x = S.slides[Number(el.dataset.idx)];
+      if (x) x.r = el.value;
+    });
+    each('[data-role="sched-ch"]', function (el) {
+      var x = S.schedule[Number(el.dataset.idx)];
+      if (x) x.c = el.value;
+    });
+    each('[data-role="sched-book"]', function (el) {
+      var x = S.schedule[Number(el.dataset.idx)];
+      if (x && el.value) x.b = el.value;
+    });
+    var note = D.getElementById('hp-note'); if (note) S.models['hp-note'] = S.hpNote = note.value;
+    var tx = D.getElementById('hp-text'); if (tx) S.models['hp-text'] = tx.value;
+    var href = D.getElementById('hp-href'); if (href) S.models['hp-href'] = href.value;
+    var sw = D.getElementById('hp-banner'); if (sw) S.models['hp-banner'] = !!sw.checked;
   }
 
   function currentRegistryFromState() {
+    collectHomepageDraft();
     var next = clone(REG);
     var origSlides = Array.isArray(REG.slides) ? REG.slides : [];
-    next.slides = S.slides.map(function (x, i) {
-      var base = origSlides[i] || {};
+    var origSlug = function (o) { return typeof o === 'string' ? o : (o && o.slug) || ''; };
+    next.slides = S.slides.map(function (x) {
+      /* Khớp bản cũ theo SLUG, không theo vị trí: đổi thứ tự hay chèn slide thì
+         bản cũ vẫn ôm nhầm khoá lạ (`reason` của bộ khác) sang dòng mới. */
+      var base = origSlides.filter(function (o) { return origSlug(o) === x.b; })[0];
       if (typeof base === 'string') return x.r ? { slug: x.b, reason: x.r } : x.b;
-      var out = Object.assign({}, base, { slug: x.b });
+      var out = Object.assign({}, base || {}, { slug: x.b });
       if (x.r) out.reason = x.r; else delete out.reason;
       return out;
     });
     var origItems = (REG.schedule && Array.isArray(REG.schedule.items)) ? REG.schedule.items : [];
     var nextItems = S.schedule.map(function (x, i) {
-      var base = origItems[i] || {};
+      /* Khớp dòng theo slug/ngày thay vì theo vị trí: xoá hay chèn một dòng
+         không còn làm “base” của các dòng sau lệch sang dòng khác (bản cũ dùng
+         origItems[i], tức là đọc nhầm title của dòng khác). */
+      var base = origItems.filter(function (o) {
+        return o && ((x.b && o.slug === x.b) || (!x.b && o.slug == null && String(o.days || '') === String(x.d || '')));
+      })[0] || {};
       var out = Object.assign({}, base, { days: x.d, detail: x.c });
       if (x.b) out.slug = x.b; else delete out.slug;
-      var t = x.b ? (base.title || titleOf(x.b)) : (x.t || base.title || '');
+      var t = x.b ? (titleOf(x.b) || base.title || '') : (x.t || base.title || '');
       if (t) out.title = t; else delete out.title;
       return out;
     });
@@ -1397,29 +1559,88 @@
     });
     return next;
   }
+  /* Vòng 17b: overlay “Chuyển thể Series” là một TRANG RIÊNG có nút Lưu riêng.
+     Bản trước nó gọi saveHomepage() ⇒ ghi TOÀN BỘ registry, kéo theo cả bản
+     nháp trang chủ mà người dùng đang sửa dở nhưng CHƯA bấm Lưu (banner, ghi
+     chú, lịch…). Nay chỉ ghi đúng thứ trang đó quản lý: editorChoice +
+     settings.editorChoice; các phần khác giữ nguyên bản đang có trên KV. */
+  function realSaveSeriesOnly() {
+    if (!ensureOnline()) return;
+    var next = clone(REG);
+    var picked = S.picked.slice();
+    next.editorChoice = picked;
+    next.settings = Object.assign({}, next.settings || {});
+    next.settings.editorChoice = picked.slice();
+    writeRegistry(next).then(function () {
+      say('Đã lưu ' + picked.length + ' bộ Chuyển thể Series lên KV.');
+      /* Lưu xong thì đóng trang Series (nút “Đóng”/Esc vẫn dùng được), và
+         phần trang chủ trong state vẫn là bản nháp: giữ nguyên ● Chưa lưu. */
+      if (typeof window.closeSeriesPage === 'function') { try { window.closeSeriesPage(); } catch (e) {} }
+      else redraw();
+    }).catch(fail);
+  }
+  window.realSaveSeriesOnly = realSaveSeriesOnly;
+
   function realSaveHomepage() {
     if (!ensureOnline()) return;
     /* registry thật có slides:[] là HỢP LỆ (web tự lấy 5 bộ mới nhất). Bắt
        phải có >=1 slide khiến nút Lưu trang chủ luôn báo lỗi dù chỉ muốn sửa
        lịch / Series / thông báo — đó là lỗi owner gặp ở Homepage CMS. */
-    if (S.schedule.some(function (x) { return !x.d || (!x.b && !x.t); })) { say('Lịch ra chương còn dòng thiếu thứ hoặc bộ.', 'bad'); return; }
+    /* Chặn MỀM có chỉ đích: báo rõ dòng nào thiếu gì, không chỉ “còn dòng
+       thiếu thứ hoặc bộ”. Vẫn cho lưu phần còn lại — nhưng lịch thiếu thứ thì
+       trang chủ xếp vào nhóm “Chưa hẹn”, nên nói thẳng ra. */
+    var bad = [];
+    (S.schedule || []).forEach(function (x, i) {
+      if (!x) return;
+      if (!String(x.d || '').trim()) bad.push('dòng ' + (i + 1) + ' thiếu thứ');
+      else if (!x.b && !String(x.t || '').trim()) bad.push('dòng ' + (i + 1) + ' chưa chọn bộ');
+    });
+    if (bad.length) { say('Lịch ra chương: ' + bad.join(' · ') + '.', 'bad'); return; }
     writeRegistry(currentRegistryFromState()).then(function () {
+      /* Mốc sạch mới: hydrate() đã nạp lại dữ liệu vừa ghi, nên “Chưa lưu”
+         phải tắt và nút Hoàn tác quay về đúng bản vừa lưu. */
+      try { S.hpBase = window.hpSnapshot ? window.hpSnapshot() : null; S.hpKeep = S.hpBase ? JSON.parse(S.hpBase) : null; } catch (e) {}
+      redraw();
       say(S.slides.length ? 'Đã lưu trang chủ lên KV.'
         : 'Đã lưu lịch, Series và thông báo lên KV · không có slide, web tự lấy 5 bộ mới nhất.');
     }).catch(fail);
   }
+  /* Vòng 17: mọi thao tác trên trang chủ chỉ đổi STATE, không ghi KV.
+     Bản cũ gọi writeRegistry() sau TỪNG lần bấm ⇒ mỗi lần thêm/nhích slide là
+     một lượt ghi quota, và vì registry vừa ghi lại được hydrate() nạp đè lên
+     state nên người dùng mất luôn phần đang sửa dở ở các card khác. Nay:
+     sửa → thấy ngay ở cột “Xem trước” → bấm Lưu trang chủ (một lượt ghi). */
   function realSlideChange(kind, idx, dir, el) {
+    var changed = true;
     if (kind === 'add') {
       var sel = D.getElementById('addSlideSel');
-      if (sel && S.slides.length < 8) S.slides.push({ b: sel.value, r: '' });
-      else { say('Tối đa 8 slide.', 'warn'); return; }
+      if (!sel || !sel.value) { say('Chọn một bộ trước khi thêm slide.', 'warn'); return; }
+      if (S.slides.length >= 8) { say('Tối đa 8 slide.', 'warn'); return; }
+      if (S.slides.some(function (x) { return x.b === sel.value; })) { say('Bộ này đã có trong hero.', 'warn'); return; }
+      S.slides.push({ b: sel.value, r: '' });
     } else if (kind === 'move') {
       var j = idx + dir;
-      if (j >= 0 && j < S.slides.length) { var t = S.slides[idx]; S.slides[idx] = S.slides[j]; S.slides[j] = t; }
+      if (j < 0 || j >= S.slides.length) changed = false;
+      else { var t = S.slides[idx]; S.slides[idx] = S.slides[j]; S.slides[j] = t; }
     } else if (kind === 'remove') S.slides.splice(idx, 1);
-    else if (kind === 'sched-add') S.schedule.push({ d: 'Thứ 5', b: (S.picked[0] || ''), c: '' });
-    else if (kind === 'sched-remove') S.schedule.splice(idx, 1);
-    writeRegistry(currentRegistryFromState()).then(function () { say('Đã lưu thay đổi trang chủ lên KV.'); }).catch(fail);
+    else if (kind === 'sched-add') {
+      /* Vòng 17b: dòng mới phải DÙNG ĐƯỢC NGAY. Bản trước tạo dòng không có
+         thứ ⇒ bấm Lưu bị chặn ngay (“dòng N thiếu thứ”), người dùng phải tự đi
+         bấm chip. Nay mặc định lấy thứ HÔM NAY (vẫn đổi được bằng chip), chọn
+         bộ đang có ở Series hoặc bộ đầu thư viện. */
+      var wd = (typeof window.HP_DAYS !== 'undefined' && window.HP_DAYS)
+        ? window.HP_DAYS[(new Date().getDay() + 6) % 7][0] : 'T2';
+      S.schedule.push({
+        d: window.hpDaysText ? window.hpDaysText([wd]) : 'Thứ 2',
+        b: (S.picked[0] || (S.books[0] || {}).id || ''), c: '', t: ''
+      });
+      say('Đã thêm dòng lịch cho hôm nay — đổi thứ bằng các chip nếu cần.', 'info');
+      changed = false;   /* câu báo ở dưới là báo chung, ở đây đã báo riêng */
+    } else if (kind === 'sched-remove') S.schedule.splice(idx, 1);
+    if (!changed) return;
+    redraw();
+    /* Báo rõ là CHƯA ghi, để không ai tưởng thao tác đã lên KV. */
+    if (kind !== 'sched-add') say('Đã đổi trang chủ trong bản nháp — bấm Lưu trang chủ để ghi KV.', 'info');
   }
 
   function realBulkApply(el) {
@@ -1444,7 +1665,7 @@
       apiCall('/api/recount', { method: 'POST' }).then(function (r) {
         WRITES += 1; setQuota();
         say('Đã đếm lại: ' + ((r && (r.updated || r.fixed || r.count)) || 'xong') + '.');
-        return reload();
+        return Promise.resolve(reload()).then(function () { return loadIssueBooks(); });
       }).catch(fail);
     }, 'Đếm lại');
   }
@@ -1460,9 +1681,16 @@
   }
   function realBlogSync() {
     if (!ensureOnline()) return;
-    M.openStrong('Đồng bộ metadata Blogger', 'Cập nhật registry từ list-novel; KV vẫn là nguồn thắng.', 'ĐỒNG BỘ', function () {
-      apiCall('/api/sync', { method: 'POST' }).then(function () { say('Đã đồng bộ metadata Blogger.'); return reload(); }).catch(fail);
-    }, 'Đồng bộ');
+    /* K3: nói rõ nó ghi đè cái gì, bao nhiêu bộ, và nhắc backup trước — trước
+       đây chỉ có một câu “KV vẫn là nguồn thắng” rồi ghi ngay. */
+    var n = (REG.lib || []).length;
+    M.openStrong('Đồng bộ metadata Blogger',
+      'Ghi đè metadata của ' + n + ' bộ trong registry bằng list-novel lấy từ Blogger '
+      + '(tên, tác giả, bìa, tình trạng). Chương và nội dung KHÔNG bị đổi. '
+      + 'Nên tải backup JSON ở cột bên trái trước khi đồng bộ — thao tác này không hoàn tác được.',
+      'ĐỒNG BỘ', function () {
+        apiCall('/api/sync', { method: 'POST' }).then(function () { say('Đã đồng bộ metadata của ' + n + ' bộ từ Blogger.'); return reload(); }).catch(fail);
+      }, 'Đồng bộ');
   }
   function realBloggerImport() {
     if (!ensureOnline()) return;
@@ -1476,10 +1704,32 @@
       .then(function () { WRITES += 1; say('Đã nhập chương từ Blogger lên KV.'); return loadBook(slug, true); })
       .then(function () { redraw(); }).catch(fail);
   }
+  /* Vòng 18c: trang này registry LÀ toàn bộ dữ liệu (thông báo trang chủ,
+     editorChoice, lịch ra chương nằm trong registry.settings/schedule) nhưng
+     bình luận, báo lỗi, số liệu đọc/phiếu nằm ở khoá RIÊNG trên KV. Bản backup
+     cũ chỉ có `registry` ⇒ khôi phục lại tưởng đã đủ mà mất sạch 3 thứ đó.
+     Nay gom thêm comments/reports/stats/settings/schedule từ Worker. */
+  var BACKUP_PARTS = ['registry', 'comments', 'reports', 'stats', 'settings', 'schedule'];
   function realBackup() {
-    var payload = { note: 'Sao lưu thật từ Cloudflare KV · ' + new Date().toISOString(), registry: REG };
-    M.download('ssochuz-backup-' + today() + '.json', JSON.stringify(payload, null, 2), 'application/json;charset=utf-8');
-    say('Đã tải backup registry thật.');
+    say('Đang gom dữ liệu để sao lưu…', 'info');
+    var jobs = [
+      apiCall('/api/admin/comments').then(function (r) { return { k: 'comments', v: (r && r.comments) || [] }; }).catch(function () { return { k: 'comments', v: [] }; }),
+      apiCall('/api/admin/reports').then(function (r) { return { k: 'reports', v: (r && r.reports) || [] }; }).catch(function () { return { k: 'reports', v: [] }; }),
+      apiCall('/api/stats').then(function (r) { return { k: 'stats', v: { items: (r && r.items) || {}, votes: (r && r.votes) || {} } }; }).catch(function () { return { k: 'stats', v: { items: {}, votes: {} } }; })
+    ];
+    return Promise.all(jobs).then(function (parts) {
+      var payload = {
+        note: 'Sao lưu thật từ Cloudflare KV · ' + new Date().toISOString(),
+        parts: BACKUP_PARTS.slice(),
+        registry: REG,
+        settings: (REG && REG.settings) || {},
+        schedule: (REG && REG.schedule) || {}
+      };
+      parts.forEach(function (x) { payload[x.k] = x.v; });
+      M.download('ssochuz-backup-' + today() + '.json', JSON.stringify(payload, null, 2), 'application/json;charset=utf-8');
+      var rc = payload.comments.length, rr = payload.reports.length, rv = Object.keys(payload.stats.items || {}).length;
+      say('Đã tải backup: registry ' + ((REG.lib || []).length) + ' bộ · ' + rc + ' bình luận · ' + rr + ' báo lỗi · ' + rv + ' bộ có số liệu.');
+    }).catch(fail);
   }
   function realExport(type) {
     var arr = S.books.filter(function (b) { return S.sel.has(b.id); });
@@ -1922,12 +2172,52 @@
     'delete-comment': function (el) { realDeleteComment(el.dataset.id); },
     'toggle-report': function (el) { realToggleReport(el.dataset.id); },
     'remove-votes': realRemoveVotes,
+    /* “Đọc lại KV” ở trạng thái rỗng của bảng phiếu: nạp lại thư viện + phiếu
+       thay vì đứng yên như trước. */
+    'vote-reload': function () {
+      if (!ensureOnline()) return;
+      say('Đang đọc lại phiếu từ KV…', 'info');
+      reload().then(function () { say('Đã đọc lại phiếu bầu từ KV.'); }).catch(fail);
+    },
     'reset-votes': realResetVotes,
     'slide-add': function (el) { realSlideChange('add', 0, 0, el); },
+    /* Lối tắt “Sửa bộ” ngay trên dòng slide: chọn bộ rồi sang tab Sửa bộ với
+       đúng bộ đó, khỏi phải nhớ slug rồi quay lại Thư viện tìm. */
+    'hp-edit-book': function (el) {
+      var id = el.dataset.id;
+      if (!id) return;
+      S.selectedBook = id;
+      go('sua-bo');
+      say('Đang sửa bộ: ' + (titleOf(id) || id));
+    },
+    'hp-day': function (el) {
+      /* Chip thứ của dòng lịch: đổi state rồi vẽ lại đúng card đó, KHÔNG ghi KV
+         (xem realSlideChange). */
+      if (!window.hpToggleDay) return;
+      window.hpToggleDay(Number(el.dataset.idx), el.dataset.day);
+      redraw();
+    },
+    'hp-reset': function () {
+      if (!window.hpResetAll) return;
+      window.hpResetAll();
+      redraw();
+      say('Đã hoàn tác về dữ liệu đang lưu trên KV.', 'info');
+    },
     'slide-move': function (el) { realSlideChange('move', Number(el.dataset.idx), Number(el.dataset.dir), el); },
     'slide-remove': function (el) { realSlideChange('remove', Number(el.dataset.idx), 0, el); },
     'sched-add': function (el) { realSlideChange('sched-add', 0, 0, el); },
     'sched-remove': function (el) { realSlideChange('sched-remove', Number(el.dataset.idx), 0, el); },
+    'series-save': function (e) {
+      /* overlay chặn nổi bọt ⇒ phải bắt ở capture (xem capture click cuối file) */
+      realSaveSeriesOnly();
+    },
+    'series-page': function () {
+      /* Overlay dựng bằng mã của mockup và nằm NGOÀI #view nên render() không
+         xoá. Lớp KV chỉ cần MỞ nó và đồng bộ bộ đếm — trước đây hàm này chỉ
+         đồng bộ mà không mở, nên nút Xem thêm im lặng. */
+      if (typeof window.openSeriesPage === 'function') { try { window.openSeriesPage(); } catch (e) { fail(e); } }
+      if (typeof window.syncSeriesCount === 'function') { try { window.syncSeriesCount(); } catch (e) {} }
+    },
     'recount': realRecount,
     'migrate': function (el) {
       var only = el.dataset.only || '';
@@ -1936,10 +2226,25 @@
     'blogger-sync': realBlogSync,
     'backup': realBackup,
     'export': function (el) { realExport(el.dataset.type); },
-    'refresh': function () { reload(); },
+    'refresh': function () {
+      /* Vòng 17b: trang chủ giữ bản nháp trong state. Nạp lại dữ liệu là XOÁ
+         bản nháp đó, nên phải hỏi trước — bản trước xoá im lặng, ai đang sửa
+         dở mất trắng mà không hiểu vì sao. */
+      var draft = false;
+      try { draft = typeof window.hpDirty === 'function' && window.hpDirty(); } catch (e) { draft = false; }
+      if (draft && !window.confirm('Trang chủ đang có thay đổi CHƯA lưu.\nĐọc lại dữ liệu sẽ bỏ các thay đổi đó. Tiếp tục?')) return;
+      reload();
+    },
+    /* “Quét book” trước đây chỉ báo lại đúng những gì registry đã có — quét mà
+       không đọc gì cả. Nay đọc số chương THẬT của từng bộ đang có vấn đề để
+       cột Book trên bảng có số, và nêu rõ bao nhiêu bộ lệch. */
     'scan': function () {
       if (!ensureOnline()) return;
       say('Đã quét ' + (REG.lib || []).length + ' bộ từ registry KV · ' + M.SAMPLE_ISSUES.length + ' vấn đề.');
+      loadIssueBooks().then(function () {
+        var diff = (M.SAMPLE_ISSUES || []).filter(function (x) { return x.note; }).length;
+        say('Đối chiếu book thật: ' + Object.keys(ISSUE_BOOKS).length + ' bộ đã đọc · ' + diff + ' bộ lệch registry.', diff ? 'warn' : 'ok');
+      }).catch(function () {});
     },
     'kv-audit': function () {
       if (!ensureOnline()) return;
@@ -1950,7 +2255,27 @@
         redraw();
       }).catch(fail);
     },
-    'fix-row': function () { say('Hãy sửa bộ đó trong Thư viện → Sửa bộ rồi bấm Lưu metadata để ghi KV.', 'info'); },
+    /* Vòng 18b: đây là bảng ĐỂ SỬA — nút “Sửa” phải mở đúng bộ, không phải
+       toast rồi đứng yên. */
+    'fix-row': function (el) {
+      var slug = (el && el.dataset && el.dataset.id) || '';
+      if (!slug) { say('Dòng này không có slug để mở bộ.', 'warn'); return; }
+      S.selectedBook = slug;
+      go('sua-bo');
+      say('Đang sửa bộ: ' + (titleOf(slug) || slug));
+    },
+    /* Sửa cả nhóm cùng một loại vấn đề: mở bộ đầu tiên và nêu rõ còn bao nhiêu
+       bộ nữa, kèm danh sách slug trong toast để không phải dò lại từ đầu. */
+    'fix-all': function (el) {
+      var type = (el && el.dataset && el.dataset.type) || '';
+      var list = (M.SAMPLE_ISSUES || []).filter(function (x) { return !type || x.t === type; });
+      if (!list.length) { say('Không còn dòng nào thuộc nhóm này.', 'info'); return; }
+      var first = list[0];
+      if (first.slug) S.selectedBook = first.slug;
+      say('Nhóm “' + (type || 'vấn đề') + '”: ' + list.length + ' bộ — đang mở “' + (first.b || '') + '”. Còn lại: '
+        + list.slice(1, 4).map(function (x) { return x.b; }).join(', ') + (list.length > 4 ? '…' : ''));
+      if (first.slug) go('sua-bo');
+    },
     'flush-stats': function () {
       if (!ensureOnline()) return;
       M.openSimple('Flush stats cache', 'Đẩy cache stats vào KV.', function () {
@@ -2210,6 +2535,24 @@
     return '<p class="sample-note">DỮ LIỆU THẬT · CLOUDFLARE KV · ' + esc(host) + '</p>';
   };
   var origCover = M.cover;
+  /* Vòng 17b: cột “Xem trước” dính theo cuộn, nhưng chỉ dính khi nó THẤP hơn
+     màn hình. Cao hơn thì phải để nó cuộn theo trang, nếu không phần dưới
+     (lịch, chân thẻ) bị cắt và không có cách nào xem — lỗi rất dễ gặp ở màn
+     900px. Đo bằng JS chứ không đoán bằng CSS. */
+  function fitPreviewColumn() {
+    var side = D.querySelector('.hp-side'), card = D.querySelector('.hp-pv-card');
+    if (!side || !card) return;
+    side.style.position = '';
+    var h = card.getBoundingClientRect ? card.getBoundingClientRect().height : 0;
+    var limit = (window.innerHeight || 900) - 90;
+    if (h > limit) {
+      side.style.position = 'static';
+      card.setAttribute('data-own-scroll', '1');
+    } else {
+      card.removeAttribute('data-own-scroll');
+    }
+  }
+
   window.cover = function (b, cls) {
     var u = b && String(b.thumb || '').trim();
     if (u && /^https?:\/\//i.test(u))
@@ -2218,6 +2561,12 @@
         esc(String(b.t || '').slice(0, 3)) + '">';
     return origCover(b, cls);
   };
+  var resizeT = 0;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeT);
+    resizeT = setTimeout(function () { if (S.route === 'homepage-cms') { try { fitPreviewColumn(); } catch (e) {} } }, 120);
+  });
+
   var st = D.createElement('style');
   st.textContent = 'img.cover{object-fit:cover;display:block;padding:0}';
   D.head.appendChild(st);
@@ -2231,6 +2580,8 @@
   window.render = function () {
     S.kvWrites = WRITES; S.kvReads = READS;
     origRender();
+    /* sau khi vẽ: đo lại cột xem trước — chỉ trang chủ mới có .hp-side */
+    if (S.route === 'homepage-cms') { try { fitPreviewColumn(); } catch (e) {} }
     FORCE_EDITOR_SEED = false;
     try {
       var clock = D.getElementById('czClock');
@@ -2687,6 +3038,12 @@
     if (!el) return;
     var fn = REAL_CLICK[el.dataset.act];
     if (!fn) return;
+    /* Vòng 17b: overlay #seriesPage gắn listener RIÊNG ở chính nó và tự
+       stopPropagation. Nếu ta chặn ở capture với mọi data-act thì nút
+       “Lưu lựa chọn” trong overlay bị chặn luôn trước khi tới listener đó ⇒
+       bấm không có gì xảy ra. Chỉ nhường những act overlay thật sự xử lý. */
+    var OVERLAY = { 'series-close': 1, 'series-all': 1, 'series-none': 1 };
+    if (el.closest('#seriesPage') && OVERLAY[el.dataset.act]) return;
     e.preventDefault(); e.stopPropagation();
     try { fn(el); } catch (err) { fail(err); }
   }, true);

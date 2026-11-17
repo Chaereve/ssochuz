@@ -274,10 +274,14 @@ select.inp{appearance:none;padding-right:32px;cursor:pointer}
 .list-item .t b{display:block;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .list-item .t>span{display:block;font-size:12px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Hàng danh sách có cột cố định: badge / nút không bị đẩy lệch giữa các dòng */
-.list-item.rep{display:grid;grid-template-columns:minmax(0,1fr) 96px 168px;align-items:center;gap:12px}
+.list-item.rep{display:grid;grid-template-columns:minmax(0,1fr) auto 168px 152px;align-items:center;gap:12px}
 .list-item.rep>.t{grid-column:1}
 .list-item.rep>.badge{grid-column:2;justify-self:start}
-.list-item.rep>[data-act=toggle-report]{grid-column:3;justify-self:stretch;width:100%}
+.list-item.rep>.row{grid-column:4;justify-self:stretch;justify-content:flex-end}
+.list-item.rep>[data-act=toggle-report]{grid-column:4;justify-self:stretch;width:100%}
+/* Vòng 18d: báo lỗi dài phải đọc được hết, không cắt bằng dấu “…” một dòng. */
+.list-item.rep .rep-txt{display:block;font-size:12.5px;color:var(--txt);white-space:normal;overflow-wrap:anywhere}
+.list-item .t>span.rep-txt{white-space:normal}
 .list-item.cmt{display:grid;grid-template-columns:minmax(0,1fr) 92px 128px;align-items:center;gap:12px}
 .list-item.cmt>.t{grid-column:1}
 .list-item.cmt>.badge{grid-column:2;justify-self:start}
@@ -288,7 +292,9 @@ select.inp{appearance:none;padding-right:32px;cursor:pointer}
 .list-item.ch>[data-act=chapter-select]{width:100%}
 .list-item.ch>.btn.icon{width:100%}
 @media (max-width:600px){
-  .list-item.rep{grid-template-columns:minmax(0,1fr) 168px;gap:8px}
+  /* hẹp: chữ chiếm cả hàng, badge + nút xuống dưới, không tràn ngang */
+  .list-item.rep{grid-template-columns:minmax(0,1fr) auto;gap:8px}
+  .list-item.rep>.row{grid-column:1/-1;justify-content:flex-start;flex-wrap:wrap}
   .list-item.cmt{grid-template-columns:minmax(0,1fr) 128px;gap:8px}
   .list-item.rep>.t,.list-item.cmt>.t{grid-column:1/-1}
   .list-item.rep>.badge,.list-item.cmt>.badge{grid-column:1}
@@ -330,6 +336,167 @@ td .strong{font-weight:600}
 .cover{width:42px;height:58px;flex:none;border:1px solid var(--bd2);border-radius:var(--r6);display:grid;place-items:center;text-align:center;padding:4px;color:var(--txt);font:600 11px/1.2 var(--head);overflow:hidden}
 .cover.lg{width:76px;height:104px;font-size:14px}
 .cover.sq{width:72px;height:72px}
+
+/* ============================================================================
+   VÒNG 17 · TRANG CHỦ: hai cột (sửa ↔ xem trước), thanh tóm tắt dính, chip thứ.
+   Toàn bộ màu lấy từ token :root ở trên — không có mã màu literal.
+   ========================================================================== */
+.hp-wrap{display:grid;gap:var(--s2);min-width:0}
+.hp-sum{position:sticky;top:calc(var(--top) + 4px);z-index:20;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:10px 12px;border:1px solid var(--bd2);border-radius:var(--r12);background:var(--surf);box-shadow:0 2px 0 var(--bg)}
+.hp-sum-txt{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}
+.hp-sum-txt>.lb{flex:none}
+.hp-pills{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.hp-pill{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 9px;border:1px solid var(--bd);
+  border-radius:99px;background:var(--surf2);color:var(--mut);font:500 11px/1 var(--mono);white-space:nowrap}
+.hp-pill b{color:var(--txt);font-weight:600}
+.hp-dirty{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border:1px solid var(--acc);
+  border-radius:99px;background:var(--acc-soft);color:var(--acc);font:600 11px/1 var(--mono);white-space:nowrap}
+.hp-dirty .ic{width:13px;height:13px}
+.hp-dirty::before{content:"";width:7px;height:7px;border-radius:99px;background:var(--acc);flex:none}
+
+.hp-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,400px);gap:var(--s2);align-items:start;min-width:0}
+.hp-main{display:grid;gap:var(--s2);min-width:0}
+.hp-block>.card-hd h3{display:flex;align-items:center;gap:8px}
+.hp-block>.card-hd h3 .ic{width:17px;height:17px;color:var(--dim)}
+.hp-block>.card-hd .right b{color:var(--txt);font-weight:600}
+.hp-hint{margin:0 0 12px;font-size:12.5px;line-height:1.55;color:var(--dim);max-width:78ch}
+.hp-hint-tight{margin:10px 0 0}
+
+/* ---- danh sách slide ---- */
+.hp-list{display:grid;gap:8px}
+.hp-row{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;align-items:center;gap:12px;min-width:0;
+  padding:10px 12px;border:1px solid var(--bd);border-radius:var(--r8);background:var(--surf2)}
+.hp-row:hover{border-color:var(--bd2)}
+.hp-row-n{font:600 12px/1 var(--mono);color:var(--dim);min-width:18px;text-align:right}
+.hp-row-bd{min-width:0;display:grid;gap:5px}
+.hp-row-t{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
+.hp-row-t>b{font:600 13.5px/1.3 var(--head);color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.hp-row-m{font-size:11.5px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hp-row-in{height:32px;font-size:12.5px;background:var(--surf)}
+.hp-row-f{display:flex;align-items:center;gap:8px;min-width:0}
+.hp-row-lb{flex:none;font:600 10px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.hp-row-f .hp-row-in{flex:1 1 auto;min-width:0}
+.hp-row-act{display:flex;align-items:center;gap:4px;flex:none}
+.hp-row-act .btn.icon{width:32px;min-height:32px}
+.hp-row-act .btn.icon .ic{width:15px;height:15px}
+
+/* ---- ô thêm bộ (tìm + chọn + nút) ---- */
+.hp-add{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)}
+.hp-add-end{border-top:1px solid var(--bd)}
+.hp-add .search{flex:1 1 200px;max-width:none}
+.hp-add-sel{flex:1 1 240px;min-width:0}
+.hp-add>.btn{flex:none}
+
+/* ---- trạng rỗng gọn (không chiếm 260px như .state) ---- */
+.hp-empty{display:flex;align-items:flex-start;gap:12px;padding:16px;border:1px dashed var(--bd2);border-radius:var(--r8);background:var(--surf2)}
+.hp-empty>.ic{width:20px;height:20px;color:var(--dim);flex:none;margin-top:2px}
+.hp-empty b{display:block;font-size:13px;color:var(--txt)}
+.hp-empty p{margin:3px 0 0;font-size:12px;line-height:1.5;color:var(--mut)}
+
+/* ---- Series: lưới 2 cột, có bìa thật ---- */
+.hp-series{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.hp-series-row{min-height:0;padding:6px 8px;border:1px solid var(--bd);border-radius:var(--r6);background:var(--surf2);
+  align-items:center;gap:9px;font-size:12.5px;color:var(--txt);min-width:0}
+.hp-series-row:hover{border-color:var(--bd2)}
+.hp-series-row>.ic,.hp-series-cv{flex:none}
+.hp-series-cv{width:28px;height:38px;font-size:8px;border-radius:4px}
+.hp-series-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---- lịch: thẻ riêng + chip thứ ---- */
+.hp-sched{padding:12px;border:1px solid var(--bd);border-radius:var(--r8);background:var(--surf2);display:grid;gap:10px}
+.hp-sched .inp{height:32px}
+.hp-sched+.hp-sched{margin-top:8px}
+.hp-sched-top{display:flex;align-items:center;gap:10px;min-width:0}
+.hp-sched-sel{flex:1 1 auto;min-width:0}
+.hp-sched-note{height:32px;font-size:12.5px;background:var(--surf)}
+.hp-warn{display:flex;align-items:center;gap:6px;margin:0;font-size:11.5px;color:var(--warn)}
+.hp-warn-block{align-items:flex-start;margin:0 0 10px;padding:9px 11px;border:1px solid var(--warn);border-radius:var(--r6);background:var(--warn-bg);line-height:1.45}
+.hp-warn .ic{width:14px;height:14px;flex:none}
+.hp-days{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.hp-days-lb{flex:none;margin-right:3px;font:600 10px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.hp-day{height:30px;min-width:40px;padding:0 10px;border:1px solid var(--bd2);border-radius:99px;background:var(--surf);
+  color:var(--mut);font:600 11.5px/1 var(--mono);transition:background-color .12s ease}
+.hp-day:hover{background:var(--surf3);color:var(--txt)}
+.hp-day.on{background:var(--acc);border-color:var(--acc);color:var(--ink)}
+
+/* ---- thông báo ---- */
+.hp-form{display:grid;gap:12px;margin-top:6px;max-width:560px}
+.hp-ann-pv{padding:8px 11px;border:1px solid var(--bd);border-radius:var(--r6);background:var(--surf2);font-size:12px}
+.hp-ann-on{display:flex;align-items:center;gap:7px;color:var(--ok)}
+.hp-ann-off{display:flex;align-items:center;gap:7px;color:var(--dim)}
+.hp-ann-warn{display:flex;align-items:flex-start;gap:7px;color:var(--warn);line-height:1.45}
+/* Biểu đồ xu hướng tab Thống kê: cột cao theo tỉ lệ, không canvas. */
+.hp-trend{display:flex;align-items:flex-end;gap:4px;height:80px}
+.hp-trend-b{flex:1 1 0;min-width:4px;border-radius:3px 3px 0 0;background:var(--acc-soft);border:1px solid var(--acc);border-bottom:0}
+.hp-trend-b:hover{background:var(--acc);}
+.hp-trend-x{display:flex;justify-content:space-between;margin-top:6px;font:500 10px/1 var(--mono);color:var(--dim)}
+.hp-ann-pv .ic{width:14px;height:14px;flex:none}
+
+/* ---- cột xem trước ---- */
+.hp-side{display:grid;gap:10px;min-width:0;position:sticky;top:calc(var(--top) + 64px);max-height:calc(100vh - var(--top) - 76px)}
+.hp-pv-card .card-hd{padding:10px 12px}
+.hp-pv-card .card-hd h3{font-size:14px}
+.hp-seg{display:inline-flex;gap:2px;margin-left:auto;padding:2px;border:1px solid var(--bd);border-radius:var(--r8);background:var(--surf2)}
+.hp-seg .btn.icon{width:30px;min-height:30px;border:0;background:transparent;color:var(--mut)}
+.hp-seg .btn.icon.pri{background:var(--acc);border-color:var(--acc);color:var(--ink)}
+.hp-pv-bd{padding:0}
+.hp-pv{background:var(--bg2);border-radius:0 0 var(--r12) var(--r12);overflow:hidden;transition:max-width .15s ease}
+/* Cột xem trước dính theo cuộn: chỉ dính khi thẻ cao hơn màn hình. Bản real
+   thêm [data-own-scroll] (admin-real.js đo chiều cao) — không đoán bằng CSS. */
+.hp-pv-card{display:flex;flex-direction:column;min-width:0}
+.hp-pv-card[data-own-scroll] .hp-pv-scroll{max-height:52vh}
+.hp-pv.mob{max-width:300px;margin:0 auto}
+.hp-pv-bar{display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--bd);background:var(--surf2)}
+.hp-pv-url{font:500 10px/1 var(--mono);color:var(--dim);padding:3px 8px;border:1px solid var(--bd);border-radius:99px;background:var(--bg2)}
+.hp-pv-dot{width:8px;height:8px;border-radius:99px;border:1px solid var(--acc);margin-left:auto}
+.hp-pv-scroll{display:grid;gap:14px;padding:12px;max-height:min(62vh,560px);overflow:auto;scrollbar-width:thin}
+.hp-pv-ann{display:flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid var(--bd);border-radius:var(--r6);
+  background:var(--surf2);color:var(--mut);font-size:11.5px;line-height:1.4}
+.hp-pv-ann .ic{width:13px;height:13px;color:var(--acc);flex:none}
+.hp-pv-hero{display:flex;gap:11px;min-width:0}
+.hp-pv-big{flex:none;width:84px;height:116px;border-radius:var(--r8)}
+img.hp-pv-big,img.hp-pv-thumb,img.hp-pv-mini,img.hp-series-cv{object-fit:cover;display:block;padding:0;border:1px solid var(--bd2)}
+.hp-pv-herot{min-width:0;display:grid;gap:4px;align-content:start}
+.hp-pv-k{font:600 9.5px/1.3 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--acc)}
+.hp-pv-herot b{font:600 15px/1.25 var(--head);color:var(--txt)}
+.hp-pv-a{font-size:10.5px;color:var(--dim)}
+.hp-pv-s{font-size:10.5px;line-height:1.45;color:var(--mut);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hp-pv-fan{display:flex;gap:6px;padding-top:2px}
+.hp-pv-fan-i{opacity:.55}
+.hp-pv-fan-i.on{opacity:1}
+.hp-pv-thumb{width:34px;height:46px;font-size:7px;border-radius:4px}
+.hp-pv-mini{width:26px;height:36px;font-size:6px;border-radius:4px}
+.hp-pv-sec{display:grid;gap:7px}
+.hp-pv-h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font:600 10px/1.3 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.hp-pv-n{font:500 9.5px/1.3 var(--mono);letter-spacing:0;text-transform:none;color:var(--dim);opacity:.85}
+.hp-pv-rail{display:flex;align-items:center;gap:8px;min-width:0}
+.hp-pv-railt{min-width:0;display:grid;gap:1px}
+.hp-pv-railt b{font-size:11px;font-weight:600;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hp-pv-railt i{font-style:normal;font-size:9.5px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hp-pv-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.hp-pv-cell{display:grid;gap:3px;min-width:0}
+.hp-pv-cell b{font-size:9.5px;font-weight:600;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hp-pv-day{flex:none;min-width:26px;font:600 10px/1 var(--mono);color:var(--acc);text-align:center;padding:4px 0;border:1px solid var(--bd2);border-radius:var(--r6)}
+.hp-pv-none{font-size:10.5px;color:var(--dim)}
+.hp-pv-empty{padding:14px;border:1px dashed var(--bd2);border-radius:var(--r8);font-size:11px;color:var(--dim);text-align:center}
+.hp-pv-note{margin:0;line-height:1.5}
+
+@media (max-width:1240px){
+  .hp-cols{grid-template-columns:minmax(0,1fr)}
+  .hp-side{position:static;grid-row:1}
+  .hp-pv-scroll{max-height:none}
+}
+@media (max-width:640px){
+  .hp-row-lb,.hp-days-lb{display:none}
+  .hp-series{grid-template-columns:minmax(0,1fr)}
+  .hp-row{grid-template-columns:auto minmax(0,1fr);row-gap:8px}
+  .hp-row-n{display:none}
+  .hp-row-act{grid-column:1 / -1;justify-content:flex-end}
+  .hp-sum{position:static}
+  .hp-sum>.btn{flex:1 1 auto}
+  .hp-pv-hero{flex-wrap:wrap}
+}
 .cv-1{background:var(--cover-1)} .cv-2{background:var(--cover-2)} .cv-3{background:var(--cover-3)}
 .cv-4{background:var(--cover-4)} .cv-5{background:var(--cover-5)} .cv-6{background:var(--cover-6)}
 .cv-miss{background:var(--neutral-bg);color:var(--dim);border-style:dashed;font-family:var(--mono);font-size:9px}
@@ -788,7 +955,7 @@ const state = {
   votes:SAMPLE_VOTES.slice(), chapters:SAMPLE_CHAPTERS.slice(), activeChapter:0,
   slides:SAMPLE_SLIDES.slice(), schedule:SAMPLE_SCHEDULE.slice(), picked:['b01','b05','b12'],
   chapterTab:'draft', commentTab:'all', reportTab:'all', editorPreview:false, savedAt:'20:40:12',
-  chapterStatus:'published', chapterAt:'', chapterBook:null, voteSel:new Set(), hpPreview:'desktop',
+  chapterStatus:'published', chapterAt:'', chapterBook:null, voteSel:new Set(), hpPreview:'desktop', repBook:'',
   cmtQ:'', cmtBook:'', hpNote:'Lịch có thể thay đổi nếu có việc đột xuất.',
   couples:{nb:[''],eb:['']}, migrateResult:'',
   models:{}, errors:{}, notifOpen:false, accountOpen:false, suggestOpen:false, suggestQuery:'',
@@ -985,7 +1152,10 @@ const PAGES = {
   'binh-luan':{label:'Bình luận',desc:'Đọc bình luận · xoá nghi spam.',act:{l:'Đọc bình luận',a:'refresh',tone:''}},
   'bao-loi':{label:'Báo lỗi',desc:'Lỗi độc giả gửi · xử lý, mở lại.',act:{l:'Đọc báo lỗi',a:'refresh',tone:''}},
   'phieu-bau':{label:'Phiếu bầu',desc:'Phiếu theo người đọc · gỡ có xác nhận.',act:{l:'Reset phiếu bộ này',a:'reset-votes',tone:'danger pri'}},
-  'homepage-cms':{label:'Trang chủ',desc:'Slide, bộ chọn và lịch ra chương.',act:{l:'Lưu trang chủ',a:'save-homepage',tone:'pri'}},
+  /* Vòng 17b: trang chủ KHÔNG đặt nút Lưu ở pagehead nữa. Thanh tóm tắt dính
+     đã có Lưu + Hoàn tác + trạng thái ● Chưa lưu; hai nút cùng tên ở hai nơi
+     làm người dùng băn khoăn “bấm cái nào mới lưu”. Một hành động, một chỗ. */
+  'homepage-cms':{label:'Trang chủ',desc:'Slide, bộ chọn và lịch ra chương.',act:null},
   'thong-ke':{label:'Thống kê',desc:'Lượt đọc và phiếu bầu từ KV.',act:{l:'Đọc thống kê KV',a:'refresh',tone:''}},
   'kiem-tra-du-lieu':{label:'Kiểm tra dữ liệu',desc:'Đối chiếu KV, chương và bộ thiếu dữ liệu.',act:{l:'Đếm lại số chương',a:'recount',tone:'danger pri'}},
   'nhat-ky':{label:'Nhật ký',desc:'200 thao tác gần nhất.',act:{l:'Đọc log',a:'refresh',tone:''}},
@@ -993,11 +1163,12 @@ const PAGES = {
 };
 
 function pageHead(p){
-  var a=p.act;
+  var a=p.act;   /* act:null ⇒ màn tự đặt hành động (trang chủ: thanh tóm tắt dính) */
   return '<div class="pagehead"><div class="hh"><span class="eyebrow">'+esc((ROUTES[state.route]||{}).group||'Quản trị')+' · MẪU</span>'+
     '<h2>'+esc(p.label)+'</h2><p class="desc">'+esc(p.desc)+'</p>'+
     '<p class="meta">DỮ LIỆU MẪU · 03/11 20:40</p></div>'+
-    '<div class="actions"><button class="btn '+esc(a.tone||'')+'" data-act="'+a.a+'"'+(a.id?' data-id="'+a.id+'"':'')+'>'+icon(a.a==='refresh'?'refresh':a.a==='backup'?'download':a.tone.indexOf('danger')>=0?'alert':'plus','s')+esc(a.l)+'</button></div></div>';
+    (a?'<div class="actions"><button class="btn '+esc(a.tone||'')+'" data-act="'+a.a+'"'+(a.id?' data-id="'+a.id+'"':'')+'>'+icon(a.a==='refresh'?'refresh':a.a==='backup'?'download':a.tone.indexOf('danger')>=0?'alert':'plus','s')+esc(a.l)+'</button></div>':'')+
+    '</div>';
 }
 
 /* ---------- 1 · Dashboard ---------- */
@@ -1292,8 +1463,12 @@ function commentsHTML(){
     '<button class="tab'+(state.commentTab==='spam'?' on':'')+'" data-act="comment-tab" data-tab="spam">Chỉ nghi spam · '+state.comments.filter(function(c){return c.spam;}).length+'</button></div>'+
     '<span class="right">'+state.comments.length+' bình luận · MẪU</span></div><div class="card-bd">'+
     '<div class="toolbar mb"><div class="search">'+icon('search','xs')+'<input class="inp" data-role="cmt-q" placeholder="Tìm nội dung, người gửi, bộ…" value="'+esc(state.cmtQ)+'" aria-label="Tìm bình luận"></div>'+
-    '<span class="sel"><select class="inp" data-role="cmt-book" aria-label="Lọc theo bộ"><option value="">Mọi bộ</option>'+
-      state.books.slice(0,8).map(function(b){return '<option value="'+esc(b.t)+'"'+(state.cmtBook===b.t?' selected':'')+'>'+esc(b.t)+'</option>';}).join('')+'</select></span></div>'+
+    /* Vòng 18d: trước chỉ 8 bộ đầu (8 bộ mới cập nhật) ⇒ không lọc được bình
+       luận của 59 bộ còn lại. Nay đủ thư viện, sắp A–Z (bản phát hành dùng
+       bookOptions() của admin-real; mockup tự dựng danh sách tương đương). */
+    '<span class="sel"><select class="inp" data-role="cmt-book" aria-label="Lọc theo bộ"><option value="">Mọi bộ · '+state.comments.length+' bình luận</option>'+
+      (typeof bookOptions==='function'?bookOptions(state.cmtBook,true):state.books.slice().sort(function(a,b){return String(a.t||'').localeCompare(String(b.t||''),'vi');}).map(function(b){return '<option value="'+esc(b.t)+'"'+(state.cmtBook===b.t?' selected':'')+'>'+esc(b.t)+'</option>';}).join(''))+
+    '</select></span></div>'+
     '<div class="card-bd tight" style="padding:0">'+
     (arr.length?arr.map(function(c){
       return '<div class="list-item cmt"><div class="t"><b>'+esc(c.r)+'</b><span>'+esc(c.b)+' · '+esc(c.date)+' · MẪU</span><span>'+esc(c.txt)+'</span></div>'+
@@ -1306,102 +1481,532 @@ function commentsHTML(){
 
 /* ---------- 7 · Báo lỗi ---------- */
 function reportsHTML(){
+  /* Vòng 18d: trước đây không lọc được theo bộ, không đi được tới bộ đang bị
+     báo lỗi, và nội dung dài bị cắt mất. Nay: ô lọc theo bộ (chỉ bộ có báo
+     lỗi), nút mở bộ, nội dung hiện đủ và có nút “Sửa bộ” trên từng dòng. */
   var pending=state.reports.filter(function(r){return !r.done;}).length;
   var tabs=[['all','Tất cả · '+state.reports.length],['open','Chưa xử lý · '+pending],['done','Đã xử lý']];
-  var arr=state.reports.filter(function(r){return state.reportTab==='all'||(state.reportTab==='open'?!r.done:r.done);});
+  var arr=state.reports.filter(function(r){
+    if(state.reportTab==='open'&&r.done)return false;
+    if(state.reportTab==='done'&&!r.done)return false;
+    if(state.repBook&&r.b!==state.repBook)return false;
+    return true;
+  });
+  var bookNames=[];state.reports.forEach(function(r){if(r.b&&bookNames.indexOf(r.b)<0)bookNames.push(r.b);});
+  var bar='<div class="toolbar mb"><span class="sel" style="flex:1 1 220px"><select class="inp" data-role="rep-book" aria-label="Lọc báo lỗi theo bộ">'+
+      '<option value="">Mọi bộ · '+state.reports.length+' báo lỗi</option>'+
+      bookNames.sort(function(a,b){return String(a).localeCompare(String(b),'vi');}).map(function(t){
+        return '<option value="'+esc(t)+'"'+(state.repBook===t?' selected':'')+'>'+esc(t)+' · '+state.reports.filter(function(r){return r.b===t;}).length+'</option>';
+      }).join('')+'</select></span>'+
+      (state.repBook?'<button class="btn sm" data-act="clear-rep-book">Bỏ lọc</button>':'')+'</div>';
   return '<div class="card"><div class="card-hd"><div class="tabs">'+tabs.map(function(t){
     return '<button class="tab'+(state.reportTab===t[0]?' on':'')+'" data-act="report-tab" data-tab="'+t[0]+'">'+esc(t[1])+'</button>';
-  }).join('')+'</div><span class="right">DỮ LIỆU MẪU</span></div>'+
-    '<div class="card-bd tight" style="padding:0 18px">'+
+  }).join('')+'</div><span class="right">DỮ LIỆU THẬT</span></div>'+
+    '<div class="card-bd">'+bar+
+    '<div class="tight" style="padding:0">'+
     (arr.length?arr.map(function(r){
-      return '<div class="list-item rep"><div class="t"><b>'+esc(r.b)+' · '+esc(r.ch)+'</b><span>'+esc(r.txt)+' · '+esc(r.by)+' · '+esc(r.date)+' · MẪU</span></div>'+
+      return '<div class="list-item rep"><div class="t"><b>'+esc(r.b)+' · '+esc(r.ch)+'</b>'+
+        '<span class="rep-txt">'+esc(r.txt)+'</span>'+
+        '<span>'+esc(r.by)+' · '+esc(r.date)+'</span></div>'+
+        '<div class="row wrap" style="gap:6px;flex:0 0 auto">'+
         (r.done?badge('Đã xử lý','tone-ok'):badge('Chưa xử lý','tone-bad'))+
-        '<button class="btn '+(r.done?'':'pri ')+'sm" data-act="toggle-report" data-id="'+r.id+'">'+icon(r.done?'refresh':'check','s')+(r.done?'Mở lại':'Đánh dấu đã xử lý')+'</button></div>';
-    }).join(''):'<div class="state" style="min-height:140px;border:0"><h3>Không có báo lỗi ở nhóm này</h3><p>Dữ liệu mẫu.</p></div>')+
-    '</div></div>'+
-    '';
+        (r.slug?'<button class="btn sm" data-act="open-report-book" data-id="'+esc(r.slug)+'">'+icon('book','s')+'Mở bộ</button>':'')+
+        '<button class="btn '+(r.done?'':'pri ')+'sm" data-act="toggle-report" data-id="'+r.id+'">'+icon(r.done?'refresh':'check','s')+(r.done?'Mở lại':'Đánh dấu đã xử lý')+'</button></div></div>';
+    }).join(''):'<div class="state" style="min-height:140px;border:0"><h3>Không có báo lỗi ở nhóm này</h3><p>'+(state.repBook?'Bộ “'+esc(state.repBook)+'” chưa có báo lỗi ở nhóm đang xem.':'Chưa có báo lỗi nào trong KV.')+'</p></div>')+
+    '</div></div></div>';
 }
 
 /* ---------- 8 · Phiếu bầu ---------- */
 function votesHTML(){
-  var per=6,pages=Math.max(1,Math.ceil(state.votes.length/per)),page=Math.min(state.votePage||1,pages);
+  /* Vòng 18d — bảng này phải TỰ NÓI nó đang thao tác trên bộ nào. Ba lỗi cũ:
+       · “Reset phiếu bộ này” / “Gỡ phiếu đã chọn” lấy bộ đang chọn ở tab SỬA
+         BỘ ⇒ reset/gỡ phiếu của sai bộ (selectedBook rỗng = reset MỌI BỘ);
+       · dòng phiếu không cho biết phiếu của chương nào;
+       · số phiếu đang chọn hiện ở góc card nhưng không có nút thao tác nào gắn
+         với vùng chọn.
+     Nay có ô chọn BỘ (mặc định bộ của dòng đầu), chip cho biết đang thao tác
+     trên bộ nào, và cột “Phạm vi” (Cả bộ / Chương n). */
+  var all=state.votes||[];
+  var bookOf=function(v){return (v&&(v.s||v.slug))||'';};
+  var names=[];
+  all.forEach(function(v){var sl=bookOf(v);if(sl&&names.indexOf(sl)<0)names.push(sl);});
+  if(state.voteBook&&names.indexOf(state.voteBook)<0)names.push(state.voteBook);
+  var cur=state.voteBook||names[0]||'';
+  var list=cur?all.filter(function(v){return bookOf(v)===cur;}):all;
+  var per=6,pages=Math.max(1,Math.ceil(list.length/per)),page=Math.min(state.votePage||1,pages);
   state.votePage=page;
-  var rows=state.votes.slice((page-1)*per,page*per);
-  var tiles=[['Phiếu đang hiện (mẫu)',state.votes.length],['Khóa người bầu (mẫu)',state.votes.length],['Đếm mới (mẫu)',4],['Số cũ import (mẫu)',2]];
+  var rows=list.slice((page-1)*per,page*per);
+  var bookName=function(sl){var b=state.books.filter(function(x){return x.id===sl;})[0];return b?b.t:sl;};
+  var tiles=[
+    ['Phiếu đang hiện',all.length],
+    ['Bộ có phiếu',names.length],
+    ['Chương có phiếu',(function(){var n=0;all.forEach(function(v){if(Number(v.ch)>0)n++;});return n;})()],
+    ['Phiếu cả bộ',(function(){var n=0;all.forEach(function(v){if(!(Number(v.ch)>0))n++;});return n;})()]
+  ];
   var kpis='<div class="grid3 mb">'+tiles.map(function(x){return '<div class="card"><div class="card-bd"><div class="num" style="font-size:28px">'+x[1]+'</div><span class="lb">'+esc(x[0])+'</span></div></div>';}).join('')+'</div>';
-  if(!state.votes.length)return kpis+'<div class="state">'+icon('inbox')+'<h3>Chưa có phiếu bầu</h3><p>Reset phiếu đã xoá toàn bộ phiếu mẫu. Dùng bảng điều khiển demo → Đặt lại để nạp lại dữ liệu mẫu.</p><button class="btn sm" data-act="reset-demo">Đặt lại demo</button></div>';
-  return kpis+'<div class="card"><div class="card-hd"><h3>Phiếu theo người đọc</h3><span class="right">'+state.voteSel.size+' phiếu được chọn · MẪU</span></div><div class="card-bd tight">'+
-    '<div class="table-wrap" style="border:0;border-radius:0"><table><thead><tr><th style="width:44px">Chọn</th><th>Khóa người đọc</th><th>Bộ được bầu</th><th>Ngày</th></tr></thead><tbody>'+
+  if(!all.length)return kpis+'<div class="state">'+icon('inbox')+'<h3>Chưa có phiếu bầu</h3><p>Chưa có phiếu nào trong KV. Bấm Đọc lại để nạp dữ liệu mới nhất.</p><button class="btn sm" data-act="vote-reload">Đọc lại KV</button></div>';
+  var bookSel='<div class="row wrap mb" style="gap:8px"><span class="sel" style="flex:1 1 240px"><select class="inp" data-role="vote-book" aria-label="Chọn bộ để thao tác phiếu">'+
+    names.map(function(sl){return '<option value="'+esc(sl)+'"'+(cur===sl?' selected':'')+'>'+esc(bookName(sl))+' · '+all.filter(function(v){return bookOf(v)===sl;}).length+' phiếu</option>';}).join('')+
+    '</select></span>'+
+    '<span class="tag" title="Mọi nút bên dưới chỉ tác động bộ này"><b>Đang thao tác</b> '+esc(bookName(cur))+'</span></div>';
+  return kpis+'<div class="card"><div class="card-hd"><h3>Phiếu theo người đọc</h3><span class="right">'+state.voteSel.size+' phiếu được chọn · '+list.length+'/ '+all.length+' phiếu</span></div><div class="card-bd tight">'+
+    '<div style="padding:0 16px">'+bookSel+'</div>'+
+    (rows.length?'<div class="table-wrap" style="border:0;border-radius:0"><table><thead><tr><th style="width:44px">Chọn</th><th>Khóa người đọc</th><th>Bộ được bầu</th><th>Phạm vi</th><th>Ngày</th></tr></thead><tbody>'+
     rows.map(function(v,i){var gi=(page-1)*per+i;return '<tr><td><label class="chk"><input type="checkbox" data-role="vote-sel" data-idx="'+gi+'"'+(state.voteSel.has(gi)?' checked':'')+' aria-label="Chọn phiếu '+esc(v.k)+'"><span class="box"></span></label></td>'+
-      '<td><span class="mono sm">'+esc(v.k)+'</span></td><td>'+esc(v.b)+'</td><td class="sm mut">'+esc(v.d)+'</td></tr>';}).join('')+
-    '</tbody></table></div>'+
+      '<td><span class="mono sm">'+esc(v.k)+'</span>'+(v.kind?'<div class="xs dim">'+esc(v.kind)+'</div>':'')+'</td>'+
+      '<td>'+esc(v.b)+'</td>'+
+      '<td class="sm mut">'+(Number(v.ch)>0?('Chương '+esc(String(v.ch))):'Cả bộ')+'</td>'+
+      '<td class="sm mut">'+esc(v.d||'—')+'</td></tr>';}).join('')+
+    '</tbody></table></div>':'<div class="state" style="min-height:120px;border:0"><h3>Bộ này không còn phiếu</h3><p>Chọn bộ khác ở ô phía trên.</p></div>')+
     '<div class="row wrap mt" style="gap:8px;padding:0 16px 14px"><button class="btn danger sm" data-act="remove-votes">'+icon('trash','s')+'Gỡ phiếu đã chọn</button><span class="grow"></span>'+
-      '<input class="inp sm" style="max-width:130px" data-role="reset-ch" placeholder="chương?" aria-label="Số chương cần reset phiếu">'+
-      '<button class="btn danger sm" data-act="reset-votes">Reset phiếu bộ này</button></div>'+
-    '</div></div>'+pagination(state.votes.length,page,pages,'page-votes');
+      '<input class="inp sm" style="width:150px;max-width:100%" data-role="reset-ch" placeholder="chương? (trống = cả bộ)" aria-label="Số chương cần reset phiếu">'+
+      '<button class="btn danger sm" data-act="reset-votes">Reset phiếu bộ đang chọn</button></div>'+
+    '</div></div>'+pagination(list.length,page,pages,'page-votes');
 }
 
 /* ---------- 9 · Homepage CMS ---------- */
 function homepageHTML(){
+  /* VÒNG 17 · Trang chủ: sửa tại chỗ → thấy ngay ở cột “Xem trước” → Lưu MỘT
+     lần. Thao tác chỉ đổi state (bản cũ ghi KV sau từng cú bấm và bị hydrate
+     đè mất phần đang sửa). Hợp đồng dữ liệu KV giữ nguyên: slides[{slug,reason}],
+     editorChoice, schedule{items[{days,slug,title,detail}],note},
+     settings.announcement. */
+  var SL=state.slides||[],PK=state.picked||[],SC=state.schedule||[];
   var bookOpts=function(sel){return state.books.slice(0,8).map(function(b){return '<option value="'+b.id+'"'+(sel===b.id?' selected':'')+'>'+esc(b.t)+'</option>';}).join('');};
-  var slides='<div class="card"><div class="card-hd"><h3>Hero / slides trang chủ</h3><div class="row"><span class="seg"><button class="btn sm'+(state.hpPreview==='desktop'?' pri':'')+'" data-act="hp-preview" data-v="desktop" aria-pressed="'+(state.hpPreview==='desktop')+'">Desktop</button><button class="btn sm'+(state.hpPreview==='mobile'?' pri':'')+'" data-act="hp-preview" data-v="mobile" aria-pressed="'+(state.hpPreview==='mobile')+'">Mobile</button></span></div><span class="right">tối đa 8 · MẪU</span></div><div class="card-bd">'+
-    state.slides.map(function(s,i){
-      return '<div class="row wrap mb" style="gap:8px;padding-bottom:10px;border-bottom:1px solid var(--bd)">'+cover(getBook(s.b))+
-        '<span class="sel" style="flex:1 1 160px"><select class="inp" data-role="slide-book" data-idx="'+i+'" aria-label="Bộ cho slide '+(i+1)+'">'+bookOpts(s.b)+'</select></span>'+
-        '<input class="inp" style="flex:1 1 180px" data-role="slide-reason" data-idx="'+i+'" value="'+esc(s.r)+'" placeholder="Lý do slide mẫu" aria-label="Lý do slide">'+
-        '<button class="btn icon sm" data-act="slide-move" data-dir="-1" data-idx="'+i+'" aria-label="Lên trước">'+icon('arrowup','s')+'</button>'+
-        '<button class="btn icon sm" data-act="slide-move" data-dir="1" data-idx="'+i+'" aria-label="Xuống sau">'+icon('arrowdown','s')+'</button>'+
-        '<button class="btn icon sm ghost" data-act="slide-remove" data-idx="'+i+'" aria-label="Gỡ slide">'+icon('x','s')+'</button></div>';
-    }).join('')+
-    (state.slides.length?'':'<div class="state" style="min-height:120px"><h3>Chưa chọn slide</h3><p>Trang chủ sẽ lấy 5 bộ mới nhất.</p></div>')+
-    '<div class="row wrap mt"><span class="sel" style="flex:1 1 180px"><select class="inp" id="addSlideSel" aria-label="Chọn bộ thêm vào slide">'+bookOpts('')+'</select></span>'+
-    '<button class="btn sm" data-act="slide-add">'+icon('plus','s')+'Thêm slide</button></div></div></div>';
-  var picked='<div class="card"><div class="card-hd"><h3>Chuyển thể Series</h3><span class="right">tối đa 12 · MẪU</span></div><div class="card-bd">'+
-    '<div class="grid3">'+state.books.slice(0,6).map(function(b){
-      return '<label class="chk"><input type="checkbox" data-role="picked" data-id="'+b.id+'"'+(state.picked.indexOf(b.id)>=0?' checked':'')+'><span class="box"></span><span>'+esc(b.t)+'</span></label>';
-    }).join('')+'</div></div></div>';
-  var sched='<div class="card"><div class="card-hd"><h3>Lịch ra chương</h3><span class="right">DỮ LIỆU MẪU</span></div><div class="card-bd">'+
-    state.schedule.map(function(s,i){
-      return '<div class="row wrap mb" style="gap:8px"><input class="inp" style="flex:1 1 120px" data-role="sched-date" data-idx="'+i+'" value="'+esc(s.d)+'" aria-label="Ngày trong tuần" placeholder="Thứ 2, Thứ 5">'+
-        '<span class="sel" style="flex:1 1 150px"><select class="inp" data-role="sched-book" data-idx="'+i+'" aria-label="Bộ truyện trong lịch">'+bookOpts(s.b)+'</select></span>'+
-        '<input class="inp" style="flex:1 1 110px" data-role="sched-ch" data-idx="'+i+'" value="'+esc(s.c)+'" aria-label="Ghi chú lịch" placeholder="Ghi chú">'+
-        '<button class="btn icon sm ghost" data-act="sched-remove" data-idx="'+i+'" aria-label="Gỡ lịch">'+icon('x','s')+'</button></div>';
-    }).join('')+
+  var bannerOn=!!state.models['hp-banner']&&String(state.models['hp-text']||'').trim()!=='';
+  var dirty=hpDirty();
+
+  /* ---------- thanh tóm tắt (dính) ---------- */
+  var sum='<div class="hp-sum" role="group" aria-label="Tóm tắt trang chủ và nút lưu">'+
+    '<div class="hp-sum-txt"><span class="lb">Tóm tắt trang chủ</span>'+
+      '<span class="hp-pills">'+
+        '<span class="hp-pill"><b id="hpSumSlides">'+SL.length+'</b> slide hero</span>'+
+        '<span class="hp-pill"><b id="hpSumSeries">'+PK.length+'</b> Chuyển thể</span>'+
+        '<span class="hp-pill"><b id="hpSumSched">'+SC.length+'</b> dòng lịch</span>'+
+        '<span class="hp-pill">Banner <b id="hpSumBanner">'+(bannerOn?'bật':'tắt')+'</b></span>'+
+      '</span></div>'+
+    '<span class="hp-dirty" id="hpDirty"'+(dirty?'':' hidden')+'>'+icon('info','xs')+' Chưa lưu</span>'+
+    '<span class="grow"></span>'+
+    '<button class="btn sm ghost" type="button" data-act="refresh" title="Bỏ bản nháp và đọc lại dữ liệu mới nhất từ KV">'+icon('refresh','s')+'Đọc lại</button>'+
+    (dirty?'<button class="btn sm" type="button" id="hpReset" data-act="hp-reset">Hoàn tác</button>':'')+
+    '<button class="btn sm pri" type="button" data-act="save-homepage">'+icon('save','s')+'Lưu trang chủ</button>'+
+  '</div>';
+
+  /* ---------- 1 · hero ---------- */
+  var rowOf=function(x,i){
+    var b=hpBook(x.b);
+    var meta=b?(String(Number(b.ch)||0)+' chương · '+String(b.a||b.c||'—')):'Không còn trong KV — gỡ slide hoặc chọn bộ khác.';
+    return '<div class="hp-row">'+
+      '<span class="hp-row-n" aria-hidden="true">'+('0'+(i+1)).slice(-2)+'</span>'+
+      (b?cover(b):'<span class="cover cv-miss" aria-hidden="true">?</span>')+
+      '<div class="hp-row-bd">'+
+        '<div class="hp-row-t"><b title="'+esc(b?b.t:x.b)+'">'+esc(b?b.t:(x.b||'—'))+'</b>'+
+          (b?badge(b.st,COMPLETION[b.st]||'tone-neutral'):badge('Không có trong KV','tone-bad'))+
+          (i===0?badge('Nổi bật hôm nay','tone-acc'):'')+
+        '</div>'+
+        '<span class="hp-row-m">'+esc(meta)+'</span>'+
+        '<span class="hp-row-f"><span class="hp-row-lb">Lý do chọn</span>'+
+          '<input class="inp hp-row-in" data-role="slide-reason" data-idx="'+i+'" value="'+esc(x.r)+'" placeholder="Lý do slide mẫu" aria-label="Lý do chọn slide '+(i+1)+'"></span>'+
+      '</div>'+
+      '<div class="hp-row-act">'+
+        '<button class="btn icon sm" type="button" data-act="slide-move" data-idx="'+i+'" data-dir="-1"'+(i===0?' disabled':'')+' aria-label="Đưa slide lên trước" title="Lên trước">'+icon('arrowup','s')+'</button>'+
+        '<button class="btn icon sm" type="button" data-act="slide-move" data-idx="'+i+'" data-dir="1"'+(i===SL.length-1?' disabled':'')+' aria-label="Đưa slide xuống sau" title="Xuống sau">'+icon('arrowdown','s')+'</button>'+
+        (b?'<button class="btn icon ghost sm" type="button" data-act="hp-edit-book" data-id="'+esc(b.id)+'" aria-label="Sửa bộ '+esc(b.t)+'" title="Sửa bộ này">'+icon('edit','s')+'</button>':'')+
+        '<button class="btn icon ghost sm" type="button" data-act="slide-remove" data-idx="'+i+'" aria-label="Gỡ slide khỏi hero" title="Gỡ khỏi hero">'+icon('x','s')+'</button>'+
+      '</div></div>';
+  };
+  var slides='<section class="card hp-block"><div class="card-hd"><h3>'+icon('home','s')+'Hero · slide trang chủ</h3>'+
+      '<span class="right"><b>'+SL.length+'</b> / 8 slide · MẪU</span></div><div class="card-bd">'+
+    '<p class="hp-hint">Thứ tự dưới đây là thứ tự trên sạp báo: slide đầu mang nhãn “Nổi bật hôm nay”, các slide sau là “Đề xuất cho bạn”. Lý do chọn slide hiện thành nhãn cạnh tình trạng truyện.</p>'+
+    (SL.length
+      ? '<div class="hp-list">'+SL.map(rowOf).join('')+'</div>'
+      : '<div class="hp-empty">'+icon('image')+'<div><b>Chưa chọn slide</b><p>Trang chủ sẽ lấy 5 bộ mới nhất.</p></div></div>')+
+    /* Đủ 8 slide vẫn HIỆN ô thêm bộ nhưng khoá lại kèm lý do — bản trước ẩn
+       hẳn đi, người dùng tưởng chức năng thêm slide biến mất. */
+    '<div class="hp-add'+(SL.length>=8?' is-full':'')+'">'+
+      '<span class="search">'+icon('search','xs')+'<input class="inp" id="hpSlideQ" data-role="hp-slide-q" type="search" autocomplete="off" placeholder="Tìm bộ để thêm…" aria-label="Tìm bộ để thêm vào hero"'+(SL.length>=8?' disabled':'')+'>'+
+      '</span>'+
+      '<span class="sel hp-add-sel"><select class="inp" id="addSlideSel" aria-label="Chọn bộ thêm vào hero"'+(SL.length>=8?' disabled':'')+'>'+bookOpts('')+'</select></span>'+
+      '<button class="btn sm" type="button" data-act="slide-add"'+(SL.length>=8?' disabled':'')+'>'+icon('plus','s')+'Thêm slide</button>'+
+    '</div>'+
+    (SL.length>=8?'<p class="hp-hint hp-hint-tight">'+icon('info','xs')+'Đã đủ 8 slide — trần của khối hero. Gỡ bớt một slide để thêm bộ khác.</p>':'')+
+    '</div></section>';
+
+  /* ---------- 2 · Chuyển thể Series ---------- */
+  var byId={};state.books.forEach(function(b){byId[b.id]=b;});
+  var shown=state.picked.slice(0,12).map(function(id){return byId[id];}).filter(Boolean);
+  var seriesBody=!state.books.length
+    ? '<div class="hp-empty">'+icon('library')+'<div><b>Chưa có bộ nào trong KV.</b><p>Nối KV ở mục Kết nối rồi Đọc lại để chọn bộ cho khối này.</p></div></div>'
+    : shown.length
+      ? '<p class="hp-hint">Bỏ tick để gỡ bộ khỏi trang chủ. Thứ tự lấy theo lúc bạn chọn; trang chủ hiện 8 bộ đầu, nút “Xem thêm” dẫn tới trang riêng đủ bộ.</p>'+
+        '<div class="hp-series" id="seriesPickedGrid">'+shown.map(function(b){
+          return '<label class="chk hp-series-row"><input type="checkbox" data-role="picked" data-id="'+esc(b.id)+'" checked aria-label="Chọn '+esc(b.t)+'"><span class="box"></span>'+cover(b,'hp-series-cv')+'<span class="hp-series-t">'+esc(b.t)+'</span></label>';
+        }).join('')+'</div>'
+      : '<div class="hp-empty">'+icon('library')+'<div><b>Chưa chọn bộ chuyển thể</b><p>Trang chủ sẽ ẩn khối “Chuyển thể Series” cho tới khi bạn chọn ít nhất một bộ.</p></div></div>';
+  var picked='<section class="card hp-block"><div class="card-hd"><h3>'+icon('library','s')+'Chuyển thể Series</h3>'+
+      '<span class="right">đã chọn <b id="hpPickedCount">'+PK.length+'</b> / '+state.books.length+' bộ</span></div><div class="card-bd">'+
+    seriesBody+
+    (PK.length>12?'<p class="xs dim mt">… và '+(PK.length-12)+' bộ nữa. Mở trang Chuyển thể Series để xem hết.</p>':'')+
+    '<div class="hp-add hp-add-end"><button class="btn sm" type="button" data-act="series-page">'+icon('plus','s')+'Xem thêm · tất cả '+state.books.length+' bộ</button>'+
+    '<span class="grow"></span><span class="xs dim">Thêm/bớt ở trang riêng, lưu bằng nút bên dưới.</span></div>'+
+    '</div></section>';
+
+  /* ---------- 3 · Lịch ra chương ---------- */
+  var rowOf2=function(x,i){
+    var b=hpBook(x.b),days=hpDaysOf(x.d);
+    var chips=HP_DAYS.map(function(d){
+      var on=days.indexOf(d[0])>=0;
+      return '<button class="hp-day'+(on?' on':'')+'" type="button" data-act="hp-day" data-idx="'+i+'" data-day="'+d[0]+'" aria-pressed="'+(on?'true':'false')+'" title="'+esc(d[1])+'">'+esc(d[0])+'</button>';
+    }).join('');
+    return '<div class="hp-sched">'+
+      '<div class="hp-sched-top">'+
+        (b?cover(b):'<span class="cover cv-miss" aria-hidden="true">?</span>')+
+        '<span class="sel hp-sched-sel"><select class="inp" data-role="sched-book" data-idx="'+i+'" aria-label="Bộ truyện của lịch dòng '+(i+1)+'">'+bookOpts(x.b)+'</select></span>'+
+        '<button class="btn icon ghost sm" type="button" data-act="sched-remove" data-idx="'+i+'" aria-label="Xoá dòng lịch '+(i+1)+'" title="Xoá dòng">'+icon('trash','s')+'</button>'+
+      '</div>'+
+      (!b&&x.t?'<p class="hp-warn">'+icon('alert','xs')+'Dòng cũ chỉ còn tên “'+esc(x.t)+'” — chọn lại bộ để chắc chắn đúng truyện.</p>':'')+
+      '<div class="hp-days" role="group" aria-label="Thứ ra chương của dòng '+(i+1)+'"><span class="hp-days-lb">Ra chương vào</span>'+chips+'</div>'+
+      '<input class="inp hp-sched-note" data-role="sched-ch" data-idx="'+i+'" value="'+esc(x.c)+'" placeholder="Ghi chú (tuỳ chọn) — vd: ra chương 19 mẫu" aria-label="Ghi chú lịch dòng '+(i+1)+'">'+
+      (days.length?'':'<p class="hp-warn">'+icon('alert','xs')+'Chưa chọn thứ — bấm ít nhất một chip ở trên.</p>')+
+    '</div>';
+  };
+  /* Bộ xuất hiện ở NHIỀU dòng lịch: web vẽ một tấm tiêu điểm + danh sách nên
+     bộ đó hiện hai lần, dễ tưởng lỗi. Cảnh báo ngay trên card. */
+  var dupB={},dup=[];
+  SC.forEach(function(x){if(!x.b)return;if(dupB[x.b]){if(dup.indexOf(x.b)<0)dup.push(x.b);}else dupB[x.b]=1;});
+  var dupNote=dup.length
+    ? '<p class="hp-warn hp-warn-block">'+icon('alert','xs')+'Cùng một bộ nằm ở '+dup.length+' dòng lịch: '+esc(dup.map(function(id){var b=hpBook(id);return b?b.t:id;}).join(', '))+' — trang chủ sẽ hiện bộ đó nhiều lần.</p>'
+    : '';
+  var sched='<section class="card hp-block"><div class="card-hd"><h3>'+icon('clock','s')+'Lịch ra chương</h3>'+
+      '<span class="right"><b>'+SC.length+'</b> dòng</span></div><div class="card-bd">'+dupNote+
+    '<p class="hp-hint">Mỗi dòng là một bộ và những thứ nó ra chương. Bấm chip để chọn thứ — khỏi phải gõ “Thứ 2, Thứ 5”. Ghi chú hiện ngay dưới tên bộ trên trang chủ.</p>'+
+    (SC.length?SC.map(rowOf2).join(''):'<div class="hp-empty">'+icon('clock')+'<div><b>Chưa có lịch ra chương</b><p>Trang chủ sẽ ẩn khối này. Thêm dòng để báo lịch cho người đọc.</p></div></div>')+
+    '<div class="hp-add hp-add-end"><button class="btn sm" type="button" data-act="sched-add">'+icon('plus','s')+'Thêm dòng lịch</button></div>'+
     '<div class="mt">'+field('Ghi chú lịch','hp-note',state.hpNote,{ph:'Ghi chú lịch mẫu'})+'</div>'+
-    '<div class="row mt"><button class="btn sm" data-act="sched-add">'+icon('plus','s')+'Thêm dòng lịch</button>'+
-    '<button class="btn sm" data-act="save-homepage">'+icon('save','s')+'Lưu trang chủ</button></div></div></div>';
-  var announce='<div class="card"><div class="card-hd"><h3>Thông báo trang chủ</h3><span class="right">MẪU</span></div><div class="card-bd stack">'+
+    '</div></section>';
+
+  /* ---------- 4 · thông báo ---------- */
+  var announce='<section class="card hp-block"><div class="card-hd"><h3>'+icon('bell','s')+'Thông báo trang chủ</h3>'+
+      '<span class="right">banner đầu trang</span></div><div class="card-bd">'+
     '<label class="sw"><input type="checkbox" id="hp-banner" data-model="hp-banner"><span class="track"></span><span>Bật banner</span></label>'+
-    field('Nội dung thông báo','hp-text',state.models['hp-text']||'',{ph:'Thông báo mẫu'})+
-    field('Link (tuỳ chọn)','hp-href',state.models['hp-href']||'',{ph:'https://mau.example'})+'</div></div>';
-  return '<div class="stack">'+slides+'<div class="grid2">'+picked+sched+'</div><div class="mt">'+announce+'</div></div>';
+    '<div class="hp-form">'+
+      field('Nội dung thông báo','hp-text',state.models['hp-text']||'',{ph:'Thông báo mẫu'})+
+      field('Link (tuỳ chọn)','hp-href',state.models['hp-href']||'',{ph:'https://mau.example'})+
+    '</div>'+
+    '<div class="hp-ann-pv" id="hpAnnPv" aria-live="polite">'+hpAnnStatus()+'</div>'+
+    '<p class="hp-hint hp-hint-tight">Link chỉ nhận đường dẫn nội bộ (bắt đầu bằng “/”) hoặc https://. Nội dung để trống thì banner không hiện dù công tắc đã bật.</p>'+
+    '</div></section>';
+
+  /* ---------- cột phải: xem trước ---------- */
+  var side='<aside class="hp-side" aria-label="Xem trước trang chủ">'+
+    '<div class="card hp-pv-card"><div class="card-hd"><h3>Xem trước</h3>'+
+      '<div class="hp-seg" role="group" aria-label="Khung xem trước">'+
+        '<button class="btn icon sm'+(state.hpPreview==='mobile'?'':' pri')+'" type="button" data-act="hp-preview" data-v="desktop" aria-pressed="'+(state.hpPreview!=='mobile')+'" title="Khung máy tính" aria-label="Xem trước khung máy tính">'+icon('grid','s')+'</button>'+
+        '<button class="btn icon sm'+(state.hpPreview==='mobile'?' pri':'')+'" type="button" data-act="hp-preview" data-v="mobile" aria-pressed="'+(state.hpPreview==='mobile')+'" title="Khung điện thoại" aria-label="Xem trước khung điện thoại">'+icon('chapter','s')+'</button>'+
+      '</div></div>'+
+      '<div class="card-bd hp-pv-bd" id="hpPvBody">'+hpPvHTML()+'</div></div>'+
+    '<p class="xs dim hp-pv-note">Sau hero, trang chủ tự dựng “Mới cập nhật”, Bảng xếp hạng, “Đáng xem” và Thư viện từ dữ liệu bộ truyện — không cần chỉnh ở đây.</p>'+
+  '</aside>';
+
+  return '<div class="hp-wrap">'+sum+
+    '<div class="hp-cols"><div class="hp-main">'+slides+picked+sched+announce+'</div>'+side+'</div>'+
+  '</div>';
 }
 
+
+/* ============================================================================
+   VÒNG 17 · TRỢ THỦ CHO TRANG CHỦ
+   ----------------------------------------------------------------------------
+   HP_DAYS: đúng 7 token mà cz-home.js `parseDays()` sinh ra và so với
+   WD = ['T2'…'T7','CN'] — lưu xuống KV vẫn là chuỗi "Thứ 2, Thứ 5" như cũ,
+   chỉ khác là người dùng bấm chip thay vì gõ.
+   ========================================================================== */
+var HP_DAYS=[['T2','Thứ 2'],['T3','Thứ 3'],['T4','Thứ 4'],['T5','Thứ 5'],['T6','Thứ 6'],['T7','Thứ 7'],['CN','Chủ nhật']];
+function hpDaysOf(s){
+  return String(s||'').split(/[,/–—]+/).map(function(p){
+    p=p.trim();if(!p)return '';
+    if(/^\d+$/.test(p))return 'T'+p;
+    if(/chủ|chunhat|^cn$/i.test(p))return 'CN';
+    var m=p.match(/(\d+)/);return m?('T'+m[1]):p;
+  }).filter(Boolean);
+}
+/* Tên để ghi ra KV: đọc lại đúng dạng "Thứ 2, Thứ 5" mà syncBlogger/CMS quen. */
+function hpDaysText(tokens){
+  var out=[];
+  HP_DAYS.forEach(function(d){if(tokens.indexOf(d[0])>=0)out.push(d[1]);});
+  tokens.forEach(function(t){if(!HP_DAYS.some(function(d){return d[0]===t;}))out.push(t);});
+  return out.join(', ');
+}
+function hpBook(slug){return state.books.find(function(b){return b.id===slug;})||null;}
+function hpSnapshotObj(){
+  return {
+    s:(state.slides||[]).map(function(x){return [x.b,x.r];}),
+    p:(state.picked||[]).slice(),c:(state.schedule||[]).map(function(x){return [x.d,x.b,x.c,x.t||''];}),
+    n:state.models['hp-note']!=null?state.models['hp-note']:(state.hpNote||''),
+    b:!!state.models['hp-banner'],
+    t:state.models['hp-text']||'',h:state.models['hp-href']||''
+  };
+}
+function hpSnapshot(){return JSON.stringify(hpSnapshotObj());}
+/* Lần render ĐẦU sau khi hydrate (hoặc sau khi lưu) là mốc sạch: state.hpBase
+   do lớp KV đặt, thiếu thì tự lấy chính dữ liệu đang có — và giữ luôn một bản
+   sao trong state.hpKeep để nút Hoàn tác quay về đúng dữ liệu đã lưu. */
+function hpDirty(){
+  var cur=hpSnapshot();
+  if(state.hpBase==null){
+    state.hpBase=cur;
+    state.hpKeep=JSON.parse(cur);
+    return false;
+  }
+  return cur!==state.hpBase;
+}
+/* Đặt lại mốc: dùng khi nạp lại dữ liệu (Đọc lại / resetDemo của prototype) để
+   lần render sau lấy dữ liệu mới làm mốc “đã lưu”, không báo Chưa lưu oan. */
+function hpClear(){state.hpBase=null;state.hpKeep=null;}
+function hpBanner(){
+  var on=!!state.models['hp-banner'],tx=String(state.models['hp-text']||'').trim();
+  return (on&&tx)?tx:'';
+}
+/* Danh sách lên hero — PHẢI khớp src/cz-home.js:
+     có slides  → đúng thứ tự slides[] (tối đa 5)
+     không có   → 5 bộ mới cập nhật nhất (sắp theo ngày, KHÔNG theo thứ tự lib)
+   Bản trước gán đè bằng `state.books.slice(0,5)` nên preview hiện 5 bộ đầu
+   registry trong khi trang thật hiện 5 bộ mới nhất — preview nói dối. */
+function hpHeroList(){
+  var list=(state.slides||[]).map(function(x){return hpBook(x.b);}).filter(Boolean);
+  if(!list.length){
+    list=state.books.slice().filter(function(b){return b.ch>0;})
+      .sort(function(a,b){return String(b.d||'').localeCompare(String(a.d||''));});
+  }
+  return list.slice(0,5);
+}
+/* Cột “Xem trước”: dựng từ CHÍNH state đang sửa, không phải ảnh chụp tay. */
+function hpPvHTML(){
+  var mob=state.hpPreview==='mobile';
+  var banner=hpBanner();
+  var series=(state.picked||[]).map(hpBook).filter(Boolean).slice(0,8);
+  var sched=(state.schedule||[]).filter(function(x){return x&&x.b;}).slice(0,4);
+  var hero=hpHeroList();
+  var main=hero[0];
+  var rail=state.books.slice().filter(function(b){return b.ch>0;})
+    .sort(function(a,b){return String(b.d||'').localeCompare(String(a.d||''));}).slice(0,4);
+  var heroHTML=!hero.length
+    ? '<div class="hp-pv-empty">Chưa có bộ nào để dựng hero.</div>'
+    : '<div class="hp-pv-hero">'+
+        (main?cover(main,'hp-pv-big'):'')+
+        '<div class="hp-pv-herot">'+
+          '<span class="hp-pv-k">Nổi bật hôm nay</span>'+
+          '<b>'+esc(main?main.t:'—')+'</b>'+
+          (main&&main.a?'<span class="hp-pv-a">'+esc(main.a)+'</span>':'')+
+          (main&&main.syn?'<span class="hp-pv-s">'+esc(String(main.syn).slice(0,110))+(String(main.syn).length>110?'…':'')+'</span>':'')+
+        '</div>'+
+      '</div>'+
+      (hero.length>1?'<div class="hp-pv-fan">'+hero.slice(1).map(function(b){
+        return '<span class="hp-pv-fan-i'+(b.id===(main&&main.id)?' on':'')+'" title="'+esc(b.t)+'">'+cover(b,'hp-pv-thumb')+'</span>';
+      }).join('')+'</div>':'');
+  return '<div class="hp-pv'+(mob?' mob':'')+'" aria-label="Xem trước trang chủ">'+
+    '<div class="hp-pv-bar"><span class="hp-pv-url">ssochuz.pages.dev</span><span class="hp-pv-dot"></span></div>'+
+    '<div class="hp-pv-scroll">'+
+      (banner?'<div class="hp-pv-ann">'+icon('bell','xs')+'<span>'+esc(banner)+'</span></div>':'')+
+      heroHTML+
+      '<div class="hp-pv-sec"><span class="hp-pv-h">Mới cập nhật</span>'+
+        (rail.length?rail.map(function(b){
+          return '<span class="hp-pv-rail">'+cover(b,'hp-pv-mini')+'<span class="hp-pv-railt"><b>'+esc(b.t)+'</b><i>'+esc(b.a||'')+'</i></span></span>';
+        }).join(''):'<span class="hp-pv-none">Chưa có chương nào.</span>')+
+      '</div>'+
+      (series.length?'<div class="hp-pv-sec"><span class="hp-pv-h">Chuyển thể Series<span class="hp-pv-n">'+series.length+' bộ đã chọn · web hiện 8</span></span>'+
+        '<div class="hp-pv-grid">'+series.slice(0,3).map(function(b){
+          return '<span class="hp-pv-cell">'+cover(b,'hp-pv-thumb')+'<b>'+esc(b.t)+'</b></span>';
+        }).join('')+'</div></div>':'')+
+      (sched.length?'<div class="hp-pv-sec"><span class="hp-pv-h">Lịch ra chương</span>'+
+        sched.map(function(x){
+          var b=hpBook(x.b),d=hpDaysOf(x.d);
+          return '<span class="hp-pv-rail"><span class="hp-pv-day">'+esc(d.length?d[0]:'—')+'</span><span class="hp-pv-railt"><b>'+esc(b?b.t:'—')+'</b><i>'+esc(x.c||hpDaysText(d))+'</i></span></span>';
+        }).join('')+'</div>':'')+
+    '</div></div>';
+}
+/* Trạng thái banner, nói đúng cái người dùng cần biết NGAY tại ô nhập. */
+function hpAnnStatus(){
+  var tx=hpBanner();
+  if(tx)return '<span class="hp-ann-on">'+icon('check','xs')+'Banner đang bật: '+esc(tx)+'</span>';
+  if(state.models['hp-banner'])return '<span class="hp-ann-warn">'+icon('alert','xs')+'Công tắc đang BẬT nhưng chưa có nội dung — trang chủ sẽ không hiện banner. Nhập nội dung hoặc tắt công tắc.</span>';
+  return '<span class="hp-ann-off">'+icon('info','xs')+'Banner đang tắt — trang chủ không hiện dải thông báo.</span>';
+}
+/* Cập nhật những phần ĐỔI THEO TỪNG PHÍM GÕ mà KHÔNG render lại cả trang
+   (render lại sẽ cướp focus khỏi ô đang gõ). */
+function hpSyncLive(){
+  var pv=document.getElementById('hpPvBody');
+  if(pv)pv.innerHTML=hpPvHTML();
+  var ann=document.getElementById('hpAnnPv');
+  if(ann)ann.innerHTML=hpAnnStatus();
+  var d=document.getElementById('hpDirty'),r=document.getElementById('hpReset');
+  var dirtyNow=hpDirty();
+  if(d)d.hidden=!dirtyNow;
+  if(r)r.disabled=!dirtyNow;
+  var sum=document.getElementById('hpSumBanner');
+  if(sum)sum.textContent=hpBanner()?'bật':'tắt';
+}
+
+/* Bật/tắt một thứ cho dòng lịch. Ghi ra KV vẫn là chuỗi "Thứ 2, Thứ 5" nên
+   `CZ.schedule()` và cz-home.js không phải đổi gì. */
+function hpToggleDay(idx,day){
+  var it=state.schedule[idx];if(!it)return;
+  var cur=hpDaysOf(it.d),at=cur.indexOf(day);
+  if(at>=0)cur.splice(at,1);else cur.push(day);
+  cur.sort(function(a,b){
+    var ia=HP_DAYS.findIndex(function(d){return d[0]===a;}),ib=HP_DAYS.findIndex(function(d){return d[0]===b;});
+    return (ia<0?9:ia)-(ib<0?9:ib);
+  });
+  it.d=hpDaysText(cur);
+}
+/* Hoàn tác: đọc lại đúng mốc đã lưu. Giữ object cũ trong state.hpKeep để bấm
+   Hoàn tác nhiều lần vẫn quay về dữ liệu KV, không quay về bản vừa sửa. */
+function hpResetAll(){
+  var snap=state.hpKeep||null;
+  if(!snap){state.hpBase=null;hpDirty();hpSyncLive();return;}
+  state.slides=snap.s.map(function(x){return {b:x[0],r:x[1]};});
+  state.picked=snap.p.slice();
+  state.schedule=snap.c.map(function(x){return {d:x[0],b:x[1],c:x[2],t:x[3]};});
+  state.hpNote=snap.n;state.models['hp-note']=snap.n;
+  state.models['hp-banner']=snap.b;
+  state.models['hp-text']=snap.t;state.models['hp-href']=snap.h;
+  state.hpBase=hpSnapshot();
+  hpSyncLive();
+}
+/* Lọc tại chỗ danh sách bộ trong ô "Thêm slide": chỉ ẩn/hiện <option>, KHÔNG
+   render lại — render lại là mất focus và mất chữ đang gõ. */
+function hpSlideFilter(q){
+  var sel=document.getElementById('addSlideSel');if(!sel)return;
+  var kw=String(q||'').toLowerCase().trim(),first='';
+  Array.prototype.forEach.call(sel.options,function(o){
+    if(!o.value){o.hidden=false;return;}
+    var b=hpBook(o.value);
+    var hay=String(o.textContent+' '+(b?b.a+' '+b.id:'')).toLowerCase();
+    var hit=!kw||hay.indexOf(kw)>=0;
+    o.hidden=!hit;o.disabled=!hit;
+    if(hit&&!first)first=o.value;
+  });
+  sel.value=first;
+}
+/* Số trên thanh tóm tắt đổi ngay khi thêm/bớt (không cần render lại cả trang). */
+function hpSyncSum(){
+  var map=[['hpSumSlides',(state.slides||[]).length],['hpSumSeries',(state.picked||[]).length],
+    ['hpSumSched',(state.schedule||[]).length]];
+  map.forEach(function(p){var e=document.getElementById(p[0]);if(e)e.textContent=String(p[1]);});
+  hpSyncLive();
+}
 /* ---------- 12 · Thống kê ---------- */
 function statsHTML(){
-  var tiles=[['Bộ có số liệu','18'],['Lượt đọc trong top','8.420'],['Phiếu trong top','1.161'],['Ngày có chuỗi','30']];
-  var kpi='<div class="grid3 mb">'+tiles.map(function(t){return '<div class="card"><div class="card-bd"><div class="num" style="font-size:26px">'+esc(t[1])+'</div><span class="lb">'+esc(t[0])+' · MẪU</span></div></div>';}).join('')+'</div>';
+  /* Vòng 18: tab Thống kê đọc đúng dữ liệu Worker (/api/admin/stats) mà
+     admin-real.js đã giữ trong window.__czStats(). Bốn lỗi cũ:
+       · “Phiếu theo chương” đọc state.votes (danh sách NGƯỜI bầu) ⇒ luôn rỗng;
+       · “Bộ có số liệu” đếm state.books.length ⇒ 67 dù chỉ 3 bộ có số;
+       · bảng đệm dòng “—” cho đủ 5 ⇒ trông như có bộ tên “—” thật;
+       · chuỗi ngày của Worker bị bỏ đi ⇒ không thấy xu hướng.
+     Prototype (không có __czStats) dùng SAMPLE_STATS như cũ. */
+  var st=(typeof window.__czStats==='function')?window.__czStats():{items:{},days:[],chapters:[],top:0};
   var rows=SAMPLE_STATS.reads.map(function(x,i){return [x[0],x[1],SAMPLE_STATS.likes[i][1],SAMPLE_STATS.voters[i][1],SAMPLE_STATS.today[i][1]];});
-  var table='<div class="card"><div class="card-hd"><h3>Số liệu KV</h3><span class="right">Lượt đọc 30 ngày · MẪU</span></div><div class="card-bd tight">'+
-    '<div class="table-wrap" style="border:0;border-radius:0"><table><thead><tr><th>Bộ</th><th>Views</th><th>Votes</th><th>Voters</th><th>Hôm nay</th></tr></thead><tbody>'+
-    rows.map(function(r){return '<tr><td><span class="strong">'+esc(r[0])+'</span></td><td>'+nfmt(r[1])+'</td><td>'+nfmt(r[2])+'</td><td>'+nfmt(r[3])+'</td><td class="sm mut">'+nfmt(r[4])+' đọc</td></tr>';}).join('')+
-    '</tbody></table></div></div></div>';
-  var chap='<div class="card"><div class="card-hd"><h3>Phiếu theo chương</h3><span class="right">Truyện mẫu 01 · MẪU</span></div><div class="card-bd tight" style="padding:0 18px">'+
-    [['Chương 64',31],['Chương 63',24],['Chương 62',18],['Chương 61',12]].map(function(x){return '<div class="list-item"><div class="t"><b>'+esc(x[0])+'</b><span>Phiếu bầu theo chương · MẪU</span></div>'+badge(String(x[1]),'tone-acc')+'</div>';}).join('')+'</div></div>';
-  return kpi+'<div class="grid2">'+table+'<div class="stack">'+chap+'</div></div>';
+  var has=rows.length&&rows[0][0]!=='—';
+  var tiles=[
+    ['Bộ có số liệu', st.items?String(Object.keys(st.items).length||rows.length):String(rows.length)],
+    ['Lượt đọc trong top', nfmt(rows.reduce(function(a,r){return a+(Number(r[1])||0);},0))],
+    ['Phiếu trong top', nfmt(rows.reduce(function(a,r){return a+(Number(r[2])||0);},0))],
+    ['Ngày có chuỗi', String((st.days&&st.days.length)||SAMPLE_READS.length)]
+  ];
+  var kpi='<div class="grid3 mb">'+tiles.map(function(t){return '<div class="card"><div class="card-bd"><div class="num" style="font-size:26px">'+esc(t[1])+'</div><span class="lb">'+esc(t[0])+'</span></div></div>';}).join('')+'</div>';
+
+  var table='<div class="card"><div class="card-hd"><h3>Số liệu KV</h3><span class="right">'+(st.days&&st.days.length?st.days.length+' ngày gần nhất':'Lượt đọc 30 ngày')+'</span></div><div class="card-bd tight">'+
+    (rows.length
+      ? '<div class="table-wrap" style="border:0;border-radius:0"><table><thead><tr><th>Bộ</th><th>Views</th><th>Votes</th><th>Voters</th><th>Hôm nay</th></tr></thead><tbody>'+
+        rows.map(function(r){return '<tr><td><span class="strong">'+esc(r[0])+'</span></td><td>'+nfmt(r[1])+'</td><td>'+nfmt(r[2])+'</td><td>'+nfmt(r[3])+'</td><td class="sm mut">'+nfmt(r[4])+' đọc</td></tr>';}).join('')+
+        '</tbody></table></div>'
+      : '<div class="state" style="min-height:160px"><p>Chưa có lượt đọc nào trong KV. Số liệu xuất hiện sau lượt đọc đầu tiên.</p></div>')+
+    '</div></div>';
+
+  /* Xu hướng: vẽ bằng <i> cao theo tỉ lệ — không canvas, không thư viện. */
+  var days=(st.days||[]).slice(-14);
+  var maxD=days.reduce(function(a,d){return Math.max(a,Number(d.views)||0);},0)||1;
+  var trend=days.length
+    ? '<div class="card"><div class="card-hd"><h3>Lượt đọc theo ngày</h3><span class="right">'+days.length+' ngày · cao nhất '+nfmt(maxD)+'</span></div><div class="card-bd">'+
+        '<div class="hp-trend">'+days.map(function(d){
+          var h=Math.max(2,Math.round((Number(d.views)||0)/maxD*72));
+          return '<span class="hp-trend-b" style="height:'+h+'px" title="'+esc(String(d.day||''))+' · '+nfmt(d.views||0)+' đọc"></span>';
+        }).join('')+'</div>'+
+        '<div class="hp-trend-x"><span>'+esc(String((days[0]||{}).day||''))+'</span><span>'+esc(String((days[days.length-1]||{}).day||''))+'</span></div>'+
+      '</div></div>'
+    : '';
+
+  /* Phiếu theo chương: chapVotes từ Worker. */
+  var chaps=st.chapters||[];
+  var chap='<div class="card"><div class="card-hd"><h3>Phiếu theo chương</h3><span class="right">'+(chaps.length?chaps.length+' chương có phiếu':'từ KV')+'</span></div><div class="card-bd tight" style="padding:0 18px">'+
+    (chaps.length
+      ? chaps.slice(0,6).map(function(c){return '<div class="list-item"><div class="t"><b>Chương '+esc(c.ch)+'</b><span>'+esc(c.book)+'</span></div>'+badge(nfmt(c.n),'tone-acc')+'</div>';}).join('')
+      : '<div class="state" style="min-height:140px"><p>Chưa có phiếu theo chương nào trong KV.</p></div>')+
+    '</div></div>';
+
+  return kpi+'<div class="grid2">'+table+'<div class="stack">'+trend+chap+'</div></div>';
 }
 
 /* ---------- 13 · Kiểm tra dữ liệu ---------- */
 function doctorHTML(){
-  var tiles=[['bộ trong registry','248'],['slug trùng/thiếu','0'],['thiếu bìa','4'],['thiếu mô tả','2']];
-  return '<div class="grid3 mb">'+tiles.map(function(x){return '<div class="card"><div class="card-bd"><span class="lb">'+esc(x[0])+'</span><div class="num" style="font-size:26px;margin-top:8px">'+esc(x[1])+'</div><p class="xs dim mt">MẪU</p></div></div>';}).join('')+'</div>'+
+  /* Vòng 18b: bảng này để SỬA, không phải để đọc. Bốn lỗi cũ:
+       · nút “Sửa” chỉ hiện toast rồi đứng yên (nút chết);
+       · cột “Book” luôn “—” vì dữ liệu quét không có số chương thật;
+       · 12 dòng cùng một loại phải bấm 12 lần;
+       · không lọc/sắp xếp được theo mức độ.
+     Nay mỗi dòng có slug → “Sửa” mở đúng bộ; cột Registry/Book tách riêng
+     (book đọc từ /api/book, xem admin-real.js loadIssueBooks); có ô lọc và
+     nút sửa cả nhóm cùng loại vấn đề. */
+  var all=SAMPLE_ISSUES||[];
+  var q=String(state.issueQ||'').toLowerCase().trim();
+  var lv=state.issueLv||'all';
+  var shown=all.filter(function(x){
+    if(lv!=='all'&&(x.lv||'warn')!==lv)return false;
+    if(!q)return true;
+    return String(x.b+' '+x.t+' '+(x.slug||'')).toLowerCase().indexOf(q)>=0;
+  });
+  var tiles=[
+    ['bộ trong registry',String(state.books.length)],
+    ['vấn đề quét được',String(all.length)],
+    ['thiếu bìa',String(all.filter(function(x){return x.t==='Thiếu bìa';}).length)],
+    ['registry lệch book',String(all.filter(function(x){return x.note;}).length)]
+  ];
+  var filter='<div class="hp-add" style="border-top:0;margin:0 0 10px;padding:0 0 2px">'+
+      '<span class="search">'+icon('search','xs')+'<input class="inp" type="search" data-role="issue-q" value="'+esc(state.issueQ||'')+'" placeholder="Tìm theo tên bộ, slug hoặc vấn đề…" aria-label="Tìm vấn đề"></span>'+
+      '<span class="sel" style="flex:0 0 190px"><select class="inp" data-role="issue-filter" aria-label="Lọc theo mức độ">'+
+        [['all','Mọi mức độ'],['bad','Chỉ lỗi nặng'],['warn','Chỉ cảnh báo']].map(function(o){
+          return '<option value="'+o[0]+'"'+((state.issueLv||'all')===o[0]?' selected':'')+'>'+o[1]+'</option>';
+        }).join('')+'</select></span>'+
+      '<span class="grow"></span>'+
+      '<span class="xs dim">'+shown.length+' / '+all.length+' dòng</span>'+
+    '</div>';
+  var body=shown.length
+    ? '<div class="table-wrap" style="border:0;border-radius:0"><table><thead><tr><th>Bộ</th><th>Vấn đề</th><th>Registry</th><th>Book</th><th style="text-align:right">Thao tác</th></tr></thead><tbody>'+
+      shown.map(function(x){
+        var reg=x.reg!==undefined?x.reg:(x.d||'—');
+        var bk=x.book!==undefined&&x.book!==''?x.book:'…';
+        return '<tr>'+
+          '<td><span class="strong">'+esc(x.b)+'</span>'+(x.slug?'<div class="mono xs dim">'+esc(x.slug)+'</div>':'')+'</td>'+
+          '<td><span class="strong">'+esc(x.t)+'</span>'+(x.note?'<div class="xs" style="color:var(--warn)">'+esc(x.note)+'</div>':'')+'</td>'+
+          '<td class="sm mut">'+esc(reg||'—')+'</td>'+
+          '<td class="sm mut">'+esc(bk)+'</td>'+
+          '<td style="text-align:right"><button class="btn sm" data-act="fix-row" data-id="'+esc(x.slug||'')+'">Sửa</button></td>'+
+        '</tr>';
+      }).join('')+'</tbody></table></div>'
+    : '<div class="state" style="min-height:150px"><p>'+(all.length?'Không dòng nào khớp bộ lọc.':'Không có vấn đề nào — registry và book khớp nhau.')+'</p></div>';
+  /* Nút sửa cả nhóm: chỉ hiện khi nhóm đang xem có ≥2 dòng cùng một loại. */
+  var byType={};shown.forEach(function(x){byType[x.t]=(byType[x.t]||0)+1;});
+  var bulkType=Object.keys(byType).filter(function(t){return byType[t]>=2;})
+    .sort(function(a,b){return byType[b]-byType[a];})[0];
+  var bulk=bulkType
+    ? '<button class="btn sm" data-act="fix-all" data-type="'+esc(bulkType)+'">Sửa cả nhóm “'+esc(bulkType)+'” ('+byType[bulkType]+')</button>'
+    : '';
+  return '<div class="grid3 mb">'+tiles.map(function(x){return '<div class="card"><div class="card-bd"><span class="lb">'+esc(x[0])+'</span><div class="num" style="font-size:26px;margin-top:8px">'+esc(x[1])+'</div><p class="xs dim mt">CLOUDFLARE KV</p></div></div>';}).join('')+'</div>'+
   '<div class="card"><div class="card-hd"><h3>Kiểm tra dữ liệu</h3><div class="row"><button class="btn sm" data-act="refresh">Đọc lại registry</button>'+
-    '<button class="btn sm" data-act="scan">Quét book</button><button class="btn sm" data-act="kv-audit">Audit KV</button></div></div><div class="card-bd tight">'+
-    '<div class="state-note" style="margin:12px">'+icon('info','s')+' Chỉ đọc · “Sửa” ghi KV.</div>'+
-    '<div class="table-wrap" style="border:0;border-radius:0"><table><thead><tr><th>Bộ</th><th>Vấn đề</th><th>Registry</th><th>Book</th><th style="text-align:right">Thao tác</th></tr></thead><tbody>'+
-    SAMPLE_ISSUES.map(function(x){return '<tr><td>'+esc(x.b)+'</td><td><span class="strong">'+esc(x.t)+'</span></td><td class="sm mut">'+esc(x.d.split('·')[0])+'</td><td class="sm mut">'+esc(x.d.split('·').slice(1).join('·')||'—')+'</td><td style="text-align:right"><button class="btn sm" data-act="fix-row" data-id="'+esc(x.b)+'">Sửa</button></td></tr>';}).join('')+
-    '</tbody></table></div>'+
-    '<div class="row mt" style="padding:0 16px 14px"><span class="grow"></span><button class="btn pri sm" data-act="recount">Đếm lại số chương từ KV</button></div>'+
+    '<button class="btn sm" data-act="scan">Quét book</button><button class="btn sm" data-act="kv-audit">Audit KV</button></div></div><div class="card-bd">'+
+    '<div class="state-note" style="margin:0 0 12px">'+icon('info','s')+' Chỉ đọc · “Sửa” mở đúng bộ ở tab Sửa bộ (không ghi KV cho tới khi bạn bấm Lưu metadata).</div>'+
+    filter+body+
+    '<div class="row mt" style="padding-top:12px">'+bulk+'<span class="grow"></span><button class="btn pri sm" data-act="recount">Đếm lại số chương từ KV</button></div>'+
     '</div></div>'+migrationCard();
 }
 function migrationCard(){
@@ -1432,20 +2037,48 @@ function logsHTML(){
 /* ---------- 15 · Cài đặt ---------- */
 function settingsHTML(){
   var m=state.models;
-  var backup='<div class="card"><div class="card-hd"><h3>Sao lưu / khôi phục JSON</h3><span class="right">DỮ LIỆU MẪU</span></div><div class="card-bd stack">'+
+  /* Vòng 18c — ba lỗi của tab này:
+       · “Khôi phục” ghi “Ghi đè gõ KHÔI PHỤC” nhưng KHÔNG có ô nào để gõ
+         (khoá xác nhận nằm trong hộp thoại) ⇒ câu hướng dẫn chỉ sai địa chỉ;
+       · “Bảo trì số liệu” không cho thấy tình trạng kho KV dù mọi dữ liệu đều
+         nằm ở đó ⇒ thêm khối Sức khoẻ KV (đọc /api/admin/kv qua window.__czKv);
+       · hai cột không nói được bản backup chứa gì. */
+  var kv = (window.__czKv && window.__czKv()) || null;
+  var groups = (kv && Array.isArray(kv.groups)) ? kv.groups : [];
+  var totalB = groups.reduce(function(n,g){return n+(Number(g.bytes)||0);},0);
+  var totalK = kv ? (Number(kv.keys)||0) : 0;
+  function mb(b){ return b>=1048576 ? (b/1048576).toFixed(1)+' MB' : (b>=1024? (b/1024).toFixed(0)+' kB' : b+' B'); }
+  var health = kv
+    ? '<div class="card"><div class="card-hd"><h3>Sức khoẻ KV</h3><span class="right">'+esc(totalK)+' khoá · '+esc(mb(totalB))+'</span></div><div class="card-bd">'+
+        '<div class="table-wrap" style="border-radius:8px"><table><thead><tr><th>Nhóm khoá</th><th style="text-align:right">Khoá</th><th style="text-align:right">Dung lượng</th></tr></thead><tbody>'+
+        (groups.length?groups.map(function(g){
+          return '<tr><td class="mono sm">'+esc(g.prefix||'khác')+'</td><td style="text-align:right" class="sm">'+esc(String(g.keys||0))+'</td><td style="text-align:right" class="sm">'+esc(mb(Number(g.bytes)||0))+'</td></tr>';
+        }).join(''):'<tr><td colspan="3" class="sm mut">Chưa đọc được nhóm khoá nào.</td></tr>')+
+        '</tbody></table></div>'+
+        '<div class="row mt wrap"><span class="tag"><b>Ghi hôm nay</b> '+esc(String(kv.writesToday||0))+'</span>'+
+        '<span class="tag"><b>Đọc hôm nay</b> '+esc(String(kv.readsToday||0))+'</span>'+
+        '<span class="grow"></span><button class="btn sm" data-act="kv-audit">Đọc lại KV</button></div>'+
+      '</div></div>'
+    : '<div class="card"><div class="card-hd"><h3>Sức khoẻ KV</h3></div><div class="card-bd"><div class="state-note">'+icon('info','s')+' Chưa đọc được /api/admin/kv. Bấm “Đọc lại KV” khi đã nối Worker.</div><div class="row mt"><button class="btn sm" data-act="kv-audit">Đọc lại KV</button></div></div></div>';
+
+  var backup='<div class="card"><div class="card-hd"><h3>Sao lưu / khôi phục JSON</h3><span class="right">DỮ LIỆU THẬT</span></div><div class="card-bd stack">'+
     '<button class="btn" data-act="backup">'+icon('download','s')+'Tải backup JSON</button>'+
-    '<div class="field"><label>Khôi phục từ backup JSON</label><span class="file"><input type="file" accept=".json,application/json" data-role="restore-file" aria-label="Chọn file backup JSON mẫu"></span><span class="hint">Ghi đè gõ KHÔI PHỤC.</span></div>'+
+    '<p class="xs dim" style="margin:0">Bản backup gồm registry (thư viện, thông báo trang chủ, Series, lịch ra chương), bình luận, báo lỗi và số liệu đọc/phiếu.</p>'+
+    '<div class="field"><label>Khôi phục từ backup JSON</label><span class="file"><input type="file" accept=".json,application/json" data-role="restore-file" aria-label="Chọn file backup JSON mẫu"></span>'+
+    '<span class="hint">Chọn tệp xong sẽ hiện hộp thoại xác nhận — phải gõ <b>KHÔI PHỤC</b> trong hộp thoại đó mới ghi KV. Khôi phục chỉ ghi lại registry; bình luận, báo lỗi và số liệu trong tệp để đối chiếu, chưa ghi ngược.</span></div>'+
     '</div></div>';
-  var blogger='<div class="card"><div class="card-hd"><h3>Nhập và đồng bộ Blogger</h3><span class="right">DỮ LIỆU MẪU</span></div><div class="card-bd stack">'+
-    field('Bộ nhận chương','st-slug',m['st-slug']||'b01',{type:'select',options:state.books.slice(0,6).map(function(b){return [b.id,b.t];})})+
-    field('URL bài Blogger *','st-blogger-url',m['st-blogger-url']||'',{ph:'https://mau.example/bai-mau'})+
+  var blogger='<div class="card"><div class="card-hd"><h3>Nhập và đồng bộ Blogger</h3><span class="right">DỮ LIỆU THẬT</span></div><div class="card-bd stack">'+
+    field('Bộ nhận chương','st-slug',m['st-slug']||'b01',{type:'select',options:state.books.slice().sort(function(a,b){return String(a.t||'').localeCompare(String(b.t||''),'vi');}).map(function(b){return [b.id,b.t];})})+
+    field('URL bài Blogger *','st-blogger-url',m['st-blogger-url']||'',{ph:'https://…'})+
     field('Cách nhập','st-mode',m['st-mode']||'append',{type:'select',options:[['append','Thêm vào cuối'],['replace-last','Thay chương cuối']]})+
     '<div class="row wrap"><button class="btn" data-act="blogger-import">'+icon('upload','s')+'Nhập chương</button><button class="btn" data-act="blogger-sync">'+icon('refresh','s')+'Đồng bộ metadata Blogger</button></div>'+
+    '<p class="xs dim" style="margin:0">Đồng bộ ghi đè metadata (tên, tác giả, bìa, tình trạng) của toàn bộ registry — chương không bị đổi. Tải backup trước nếu chưa chắc.</p>'+
     '</div></div>';
   var maint='<div class="card"><div class="card-hd"><h3>Bảo trì số liệu</h3><span class="right">có xác nhận mạnh</span></div><div class="card-bd stack">'+
     '<div class="row wrap"><button class="btn" data-act="flush-stats">'+icon('refresh','s')+'Flush stats cache</button><button class="btn danger" data-act="recount">'+icon('pulse','s')+'Đếm lại số chương</button></div>'+
+    '<p class="xs dim" style="margin:0">Flush ghi số đang đệm ra KV; Đếm lại đọc toàn bộ book và sửa số chương trong registry (chữa “hiện 30 mà chỉ có 29”).</p>'+
     '</div></div>';
-  return '<div class="grid2">'+backup+blogger+'</div><div class="mt">'+maint+'</div>';
+  return '<div class="grid2">'+backup+blogger+'</div><div class="mt grid2">'+health+maint+'</div>';
 }
 
 /* ---------- Đăng nhập / nối Worker ---------- */
@@ -2064,6 +2697,7 @@ function resetDemo(){
   state.sel.clear();state.lib={q:'',status:'all',pub:'',vis:'',lock:'',adult:'',sort:'new',page:1};state.bulkAction='';
   state.votePage=1;state.logPage=1;state.chapterTab='draft';state.commentTab='all';state.reportTab='all';state.activeChapter=0;
   state.voteSel.clear();state.chapterStatus='published';state.chapterAt='';state.chapterBook=null;state.hpPreview='desktop';
+  hpClear();
   state.cmtQ='';state.cmtBook='';state.couples={nb:[''],eb:['']};state.migrateResult='';
   state.editorPreview=false;state.savedAt='20:40:12';state.editorSeed=sanitizeEditorHtml(state.defaultEditor);
   state.notifOpen=false;state.accountOpen=false;state.suggestOpen=false;state.suggestQuery='';
@@ -2177,6 +2811,7 @@ document.addEventListener('click',function(e){
     case 'pick-search':pickSearch(el.dataset.type,el.dataset.id,el.dataset.kind);break;
     case 'page-lib':state.lib.page=Number(el.dataset.page)||1;render();break;
     case 'page-votes':state.votePage=Number(el.dataset.page)||1;render();break;
+    case 'vote-book':state.voteBook=el.value;state.votePage=1;state.voteSel.clear();render();break;
     case 'page-logs':state.logPage=Number(el.dataset.page)||1;render();break;
     case 'reset-lib':state.lib={q:'',status:'all',pub:'',vis:'',lock:'',adult:'',sort:'new',page:1};render();break;
     case 'clear-sel':state.sel.clear();render();break;
@@ -2304,10 +2939,16 @@ document.addEventListener('click',function(e){
         state.votes=[];state.voteSel.clear();state.votePage=1;toast('Đã reset phiếu mẫu.');render();
       },'Reset phiếu');break;
     case 'hp-preview':state.hpPreview=el.dataset.v;render();break;
-    case 'slide-add':
+    case 'slide-add':{
       var as=document.getElementById('addSlideSel');
-      if(as&&state.slides.length<8){state.slides.push({b:as.value,r:'Lý do slide mẫu'});toast('Đã thêm slide mẫu.');render();}
-      else toast('Tối đa 8 slide.','warn');break;
+      if(!as||!as.value){toast('Chọn một bộ trước khi thêm slide.','warn');break;}
+      if(state.slides.length>=8){toast('Tối đa 8 slide.','warn');break;}
+      if(state.slides.some(function(x){return x.b===as.value;})){toast('Bộ này đã có trong hero.','warn');break;}
+      state.slides.push({b:as.value,r:''});
+      toast('Đã thêm slide mẫu.');render();break;}
+    case 'hp-day':hpToggleDay(idx,el.dataset.day);render();break;
+    case 'hp-edit-book':state.selectedBook=el.dataset.id;navigate('sua-bo');break;
+    case 'hp-reset':hpResetAll();toast('Đã hoàn tác về dữ liệu đã lưu.','info');render();break;
     case 'slide-move':
       var sj=idx+Number(el.dataset.dir);
       if(sj>=0&&sj<state.slides.length){var st=state.slides[idx];state.slides[idx]=state.slides[sj];state.slides[sj]=st;render();}
@@ -2344,6 +2985,7 @@ document.addEventListener('change',function(e){
   var el=e.target;if(!el||!el.dataset)return;
   if(el.dataset.model){
     state.models[el.id]=(el.type==='checkbox')?el.checked:el.value;
+    if(String(el.id).indexOf('hp-')===0)hpSyncLive();
     if(state.errors[el.id])setErr(el.id,'');
   }
   var r=el.dataset.role;if(!r)return;
@@ -2384,7 +3026,7 @@ document.addEventListener('change',function(e){
       if(!el.checked&&at>=0)state.picked.splice(at,1);
       break;
     case 'slide-book':state.slides[Number(el.dataset.idx)].b=el.value;render();break;
-    case 'sched-book':state.schedule[Number(el.dataset.idx)].b=el.value;break;
+    case 'sched-book':state.schedule[Number(el.dataset.idx)].b=el.value;hpSyncLive();break;
     case 'restore-file':
       if(el.files&&el.files.length){
         openStrong('Khôi phục từ JSON','Ghi đè registry và book · không hoàn tác.','KHÔI PHỤC',function(){
@@ -2445,6 +3087,7 @@ document.addEventListener('input',function(e){
   var mid=el.dataset.model;
   if(mid){
     state.models[mid]=el.value;
+    if(mid.indexOf('hp-')===0)hpSyncLive();
     if(state.errors[mid])setErr(mid,'');
     if(mid==='nb-t'){
       var sl=document.getElementById('nb-slug');
@@ -2496,10 +3139,18 @@ document.addEventListener('input',function(e){
     case 'chapter-at':state.chapterAt=el.value;break;
     case 'couple-row':
       var cf3=el.dataset.form;state.couples[cf3][Number(el.dataset.idx)]=el.value;syncCouples(cf3);break;
-    case 'hp-note':state.hpNote=el.value;break;
-    case 'slide-reason':state.slides[Number(el.dataset.idx)].r=el.value;break;
-    case 'sched-date':state.schedule[Number(el.dataset.idx)].d=el.value;break;
-    case 'sched-ch':state.schedule[Number(el.dataset.idx)].c=el.value;break;
+    case 'hp-note':state.hpNote=el.value;state.models['hp-note']=el.value;hpSyncLive();break;
+    case 'slide-reason':state.slides[Number(el.dataset.idx)].r=el.value;hpSyncLive();break;
+    case 'sched-date':state.schedule[Number(el.dataset.idx)].d=el.value;hpSyncLive();break;
+    case 'sched-ch':state.schedule[Number(el.dataset.idx)].c=el.value;hpSyncLive();break;
+    case 'hp-slide-q':hpSlideFilter(el.value);break;
+    case 'issue-q':state.issueQ=el.value;render();break;
+    case 'rep-book':state.repBook=el.value;render();break;
+    case 'clear-rep-book':state.repBook='';render();break;
+    case 'open-report-book':
+      if(el.dataset.id){state.selectedBook=el.dataset.id;navigate('sua-bo');}
+      break;
+    case 'issue-filter':state.issueLv=el.value;render();break;
   }
 });
 
