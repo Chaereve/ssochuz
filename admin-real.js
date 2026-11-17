@@ -2207,6 +2207,27 @@
     'slide-remove': function (el) { realSlideChange('remove', Number(el.dataset.idx), 0, el); },
     'sched-add': function (el) { realSlideChange('sched-add', 0, 0, el); },
     'sched-remove': function (el) { realSlideChange('sched-remove', Number(el.dataset.idx), 0, el); },
+    /* Vòng 19: thêm MỘT BỘ NỮA cho đúng thứ của dòng đang xem — ca “đăng 2 bộ
+       trong một ngày”. Trước đây muốn vậy phải Thêm dòng rồi bấm lại đúng chip
+       thứ và tự nhớ mình đã chọn thứ nào. Chép nguyên chuỗi thứ của dòng gốc,
+       chọn sẵn một bộ CHƯA có trong lịch để không tạo hai dòng y hệt. */
+    'sched-dup-day': function (el) {
+      var i = Number(el && el.dataset && el.dataset.idx);
+      var it = S.schedule[i];
+      if (!it) { say('Không tìm thấy dòng lịch để nhân bản.', 'warn'); return; }
+      var used = {};
+      (S.schedule || []).forEach(function (x) { if (x && x.b) used[x.b] = 1; });
+      var pick = ((S.books || []).filter(function (b) { return !used[b.id]; })[0] || S.books[0] || {}).id || '';
+      var days = window.hpDaysOf ? window.hpDaysOf(it.d) : [];
+      S.schedule.push({
+        d: it.d,
+        b: pick, c: '', t: ''
+      });
+      var dayTxt = days.length ? days.join(', ') : (it.d || 'cùng ngày');
+      var title = titleOf(pick) || pick || 'bộ mới';
+      redraw();
+      say('Đã thêm “' + title + '” vào ' + dayTxt + ' — giờ ngày đó có 2 bộ. Chọn bộ khác nếu cần rồi bấm Lưu trang chủ.', 'info');
+    },
     'series-save': function (e) {
       /* overlay chặn nổi bọt ⇒ phải bắt ở capture (xem capture click cuối file) */
       realSaveSeriesOnly();

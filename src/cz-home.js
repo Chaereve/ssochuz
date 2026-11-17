@@ -437,14 +437,41 @@
     var dayIdx = function (x) { return x.days.length ? WD.indexOf(x.days[0]) : -1; };
     var unplaced = dated.filter(function (x) { return dayIdx(x) < 0; });
 
-    /* chọn tấm tiêu điểm: hôm nay → bộ gần nhất sắp ra → bộ đầu tiên */
-    var hero = dated.filter(function (x) { return x.days.indexOf(WD[todayIdx]) >= 0; })[0] ||
-      dated.filter(function (x) { return dayIdx(x) > todayIdx; })[0] ||
-      dated[0];
-    var heroIsToday = hero.days.indexOf(WD[todayIdx]) >= 0;
-    var heroIdx = heroIsToday ? todayIdx : Math.max(0, dayIdx(hero));
+    /* Vòng 19 · ĐĂNG NHIỀU BỘ TRONG MỘT NGÀY.
+       Ca thật: chủ trang muốn 2 bộ cùng ra một hôm. Bản cũ chọn ĐÚNG MỘT tấm
+       tiêu điểm rồi tống mọi bộ còn lại xuống “Còn lại trong tuần” — bộ thứ hai
+       ra hôm nay bị xếp ngang hàng với bộ ra thứ Sáu, và bộ ra nhiều thứ chỉ
+       hiện ở thứ ĐẦU (days[0]) nên thứ kia mất hút.
+       Nay:
+         · gom MỌI bộ theo từng thứ trong tuần (bộ ra T3+T5 nằm ở cả hai);
+         · hôm nay là một NHÓM riêng, hiện đủ số bộ của hôm nay;
+         · tấm tiêu điểm lấy bộ đầu của hôm nay, phần còn lại của hôm nay nằm
+           ngay dưới nó chứ không trộn xuống cuối tuần;
+         · các thứ sau sắp theo NGÀY, kèm số bộ mỗi ngày. */
+    var RANK = { T2: 0, T3: 1, T4: 2, T5: 3, T6: 4, T7: 5, CN: 6 };
+    var byDay = [[], [], [], [], [], [], []];
+    var seen = {};                       /* chống 1 bộ 2 dòng lịch cùng thứ → hiện 2 lần */
+    dated.forEach(function (x) {
+      var days = x.days.filter(function (d) { return RANK[d] != null; });
+      if (!days.length) return;
+      var slugKey = String((schedFind(x.it) || {}).slug || x.it.slug || x.it.title || '');
+      days.forEach(function (d) {
+        var i = RANK[d];
+        var k = i + '|' + slugKey;
+        if (seen[k]) return;
+        seen[k] = 1;
+        byDay[i].push(x);
+      });
+    });
+    var todays = byDay[todayIdx];
+    var hero = todays[0] || null;        /* chỉ lấy tiêu điểm khi HÔM NAY có bộ */
+    var laterDays = [];
+    for (var k = 1; k < 7; k++) {
+      var di = (todayIdx + k) % 7;
+      if (byDay[di].length) laterDays.push({ idx: di, rows: byDay[di] });
+    }
 
-    var row = function (x) {
+    var row = function (x, forDay) {
       var n = schedFind(x.it);
       var im = n && CZ.coverSrc(n);
       var title = (n && n.title) || x.it.title || '';
@@ -454,8 +481,8 @@
       var rowNote = String(x.it.detail || '').trim();
       var stat = n ? (n.canRead ? CZ.countText(n) : CZ.statusLabel(n.statusCls)) : '';
       var meta = rowNote && stat ? stat + ' · ' + rowNote : (rowNote || stat);
-      var i = dayIdx(x);
-      var label = i >= 0 ? (i === todayIdx ? 'Hôm nay' : WDL[i]) : 'Chưa hẹn';
+      var i = typeof forDay === 'number' ? forDay : dayIdx(x);
+      var label = i === todayIdx ? 'Hôm nay' : (i >= 0 ? WDL[i] + ' · ' + dayDate(i) : 'Chưa hẹn');
       return '<a class="w3r sched' + (i === todayIdx ? ' now' : '') + '"' +
         (n ? ' href="' + esc(CZ.storyURL(n.slug)) + '"' : '') + '>' +
         '<span class="w3d">' + esc(i >= 0 ? WD[i] : '—') + '</span>' +
@@ -465,30 +492,85 @@
           (meta ? ' · ' + esc(meta) : '') + '</span></span></a>';
     };
 
-    var hn = schedFind(hero.it);
-    var him = hn && CZ.coverSrc(hn);
-    var htitle = (hn && hn.title) || hero.it.title || '';
-    var hnote = String(hero.it.detail || '').trim();
-    var hstat = hn ? (hn.canRead ? CZ.countText(hn) : CZ.statusLabel(hn.statusCls)) : '';
-    var hmeta = hnote && hstat ? hstat + ' · ' + hnote : (hnote || hstat);
-    var kicker = (heroIsToday ? 'Ra hôm nay' : 'Ra ' + WDL[heroIdx]) + ' · ' + dayDate(heroIdx);
-    var heroHTML = '<a class="w3feat v3b sched' + (hn ? '' : ' off') + '"' +
-      (hn ? ' href="' + esc(CZ.storyURL(hn.slug)) + '"' : '') + '>' +
-      (him ? '<img class="w3bg" src="' + esc(him) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' +
-        '<span class="w3veil"></span>' +
-        '<span class="w3poster"><img src="' + esc(him) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"></span>' : '') +
-      '<span class="w3txt"><span class="w3k">' + esc(kicker) + '</span>' +
-        '<span class="w3n">' + esc(htitle) + '</span>' +
-        (hmeta ? '<span class="w3m">' + esc(hmeta) + '</span>' : '') +
-        (hn ? '<span class="w3go">Xem truyện</span>' : '') +
-      '</span></a>';
+    var heroHTML = '';
+    if (hero) {
+      var hn = schedFind(hero.it);
+      var him = hn && CZ.coverSrc(hn);
+      var htitle = (hn && hn.title) || hero.it.title || '';
+      var hnote = String(hero.it.detail || '').trim();
+      var hstat = hn ? (hn.canRead ? CZ.countText(hn) : CZ.statusLabel(hn.statusCls)) : '';
+      var hmeta = hnote && hstat ? hstat + ' · ' + hnote : (hnote || hstat);
+      /* có nhiều bộ ra hôm nay thì nói rõ ngay trên tiêu điểm */
+      var kicker = todays.length > 1
+        ? 'Hôm nay · ' + todays.length + ' bộ ra chương'
+        : 'Ra hôm nay · ' + dayDate(todayIdx);
+      heroHTML = '<a class="w3feat v3b sched' + (hn ? '' : ' off') + '"' +
+        (hn ? ' href="' + esc(CZ.storyURL(hn.slug)) + '"' : '') + '>' +
+        (him ? '<img class="w3bg" src="' + esc(him) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">' +
+          '<span class="w3veil"></span>' +
+          '<span class="w3poster"><img src="' + esc(him) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"></span>' : '') +
+        '<span class="w3txt"><span class="w3k">' + esc(kicker) + '</span>' +
+          '<span class="w3n">' + esc(htitle) + '</span>' +
+          (hmeta ? '<span class="w3m">' + esc(hmeta) + '</span>' : '') +
+          (hn ? '<span class="w3go">Xem truyện</span>' : '') +
+        '</span></a>';
+    }
 
-    var rest = dated.filter(function (x) { return x !== hero; });
-    el.innerHTML = '<div class="w3grid">' + heroHTML +
-      '<div class="w3list"><div class="w3lh"><span>Còn lại trong tuần</span><em>' +
-        (rest.length + unplaced.length) + ' bộ</em></div>' +
-        rest.map(row).join('') +
-      '</div></div>';
+    /* Danh sách bên phải. Nguyên tắc: chỉ tách NHÓM RIÊNG cho ngày có từ 2 bộ
+       trở lên (ca “đăng 2 bộ trong một ngày” cần được nhìn thấy); những ngày chỉ
+       có 1 bộ gom vào MỘT danh sách phẳng sắp theo tuần, mỗi dòng tự ghi thứ +
+       ngày ở nhãn trái. Bản trước tách mỗi ngày một đầu mục nên lịch bình
+       thường (6 ngày × 1 bộ) thành 6 tiêu đề cho 6 dòng — rối mà không thêm
+       thông tin gì. */
+    var todayRest = hero ? todays.slice(1) : todays.slice();
+    var listHTML = '';
+    if (todays.length > 1 || (!hero && todays.length === 1)) {
+      /* hero đã là 1 trong số đó ⇒ nói “1 bộ nữa · tổng 2” thay vì hứa 2 dòng
+         mà chỉ có 1, người đọc dễ tưởng thiếu. */
+      var emTxt = hero ? (todayRest.length + ' bộ nữa · tổng ' + todays.length)
+                       : (todays.length + ' bộ');
+      listHTML += '<div class="w3lh w3lh-first"><span>Hôm nay · ' + esc(WDL[todayIdx]) + '</span><em>' +
+        emTxt + '</em></div>' +
+        todayRest.map(function (x) { return row(x, todayIdx); }).join('');
+    }
+    if (!hero && !todays.length) {
+      listHTML += '<div class="w3lh w3lh-first"><span>Hôm nay · ' + esc(WDL[todayIdx]) + '</span><em>không có bộ</em></div>';
+    }
+    var multiGroups = laterDays.filter(function (g) { return g.rows.length > 1; });
+    var singleRows = [];
+    laterDays.forEach(function (g) {
+      if (g.rows.length > 1) return;
+      g.rows.forEach(function (x) { singleRows.push({ x: x, idx: g.idx }); });
+    });
+    multiGroups.forEach(function (g) {
+      listHTML += '<div class="w3lh"><span>' + esc(WDL[g.idx]) + ' · ' + dayDate(g.idx) + '</span><em>' +
+        g.rows.length + ' bộ</em></div>' +
+        g.rows.map(function (x) { return row(x, g.idx); }).join('');
+    });
+    if (singleRows.length) {
+      listHTML += '<div class="w3lh' + (listHTML ? '' : ' w3lh-first') + '"><span>Các ngày còn lại trong tuần</span><em>' +
+        singleRows.length + ' bộ</em></div>' +
+        singleRows.map(function (o) { return row(o.x, o.idx); }).join('');
+    }
+    if (!listHTML) listHTML = '<p class="w3none">Tuần này chưa có bộ nào khác.</p>';
+    var restCount = laterDays.reduce(function (n, g) { return n + g.rows.length; }, 0);
+
+    el.innerHTML = '<div class="w3grid">' +
+      (heroHTML || '') +
+      '<div class="w3list">' + listHTML + '</div></div>' +
+      (unplaced.length
+        ? '<div class="w3unplaced">Chưa hẹn ngày: ' +
+          unplaced.map(function (x) {
+            var n = schedFind(x.it);
+            return esc((n && n.title) || x.it.title || '');
+          }).join(' · ') + '</div>'
+        : '') +
+      '<p class="w3sum" id="schedSum" data-today="' + todays.length + '" data-later="' + restCount + '">' +
+        (todays.length
+          ? 'Hôm nay ' + todays.length + ' bộ ra chương'
+          : 'Hôm nay không có bộ nào ra chương') +
+        (restCount ? ' · ' + restCount + ' lượt ra chương trong các ngày còn lại' : '') +
+      '</p>';
 
     /* Ghi chú “lịch có thể thay đổi” không nằm trong lưới: nó là câu dẫn ngay
        dưới đầu mục (xem #lichNote trong index.html). */
@@ -497,8 +579,8 @@
       if (sch && sch.note) { note.textContent = sch.note; note.hidden = false; }
       else { note.textContent = ''; note.hidden = true; }
     }
-    var today = $('#lichToday');
-    if (today) today.textContent = WDL[todayIdx] + ', ' + dayDate(todayIdx);
+    var todayLabel = $('#lichToday');
+    if (todayLabel) todayLabel.textContent = WDL[todayIdx] + ', ' + dayDate(todayIdx);
   }
   function renderEditorChoice() {
     var el = $('#bien-tap'), rail = $('#editRail');

@@ -3946,6 +3946,17 @@ body.rd-focus .rdcmts { display: none; }
   font-weight: 700; line-height: 1; letter-spacing: .12em; text-transform: uppercase; color: var(--mut); }
 #sched .w3lh em { margin-left: auto; font-style: normal; font-weight: 600;
   letter-spacing: 0; text-transform: none; color: var(--dim); }
+/* Vòng 19 · đăng nhiều bộ trong một ngày: mỗi ngày là một NHÓM có số bộ, nên
+   nhóm thứ hai trở đi cần khoảng cách trên; dòng “không có” và câu tổng kết
+   dưới lịch phải đọc được ngay, không chìm vào nền. */
+#sched .w3lh { margin-top: 14px; }
+#sched .w3list .w3lh:first-child, #sched .w3lh-first { margin-top: 0; }
+#sched .w3none { margin: 0; padding: 10px 0 2px; font-size: 12px; color: var(--dim); }
+#sched .w3unplaced { margin-top: 14px; font-size: 12px; color: var(--dim); }
+#sched .w3sum { margin: 16px 0 0; padding-top: 12px; border-top: 1px solid var(--bd-soft);
+  font-family: var(--font-mono); font-size: 10.5px; line-height: 1.5;
+  letter-spacing: .04em; color: var(--mut); }
+#sched .w3sum[data-today="0"] { color: var(--dim); }
 #sched .w3r { display: grid; grid-template-columns: 26px 28px minmax(0, 1fr); gap: 12px;
   align-items: center; min-width: 0; padding: 10px 0;
   border-bottom: 1px solid var(--bd-soft); color: var(--txt); }
