@@ -419,6 +419,21 @@ td .strong{font-weight:600}
   color:var(--mut);font:600 11.5px/1 var(--mono);transition:background-color .12s ease}
 .hp-day:hover{background:var(--surf3);color:var(--txt)}
 .hp-day.on{background:var(--acc);border-color:var(--acc);color:var(--ink)}
+/* Vòng 19 · đăng nhiều bộ trong một ngày: chip thứ mang số bộ đang ra ngày đó,
+   bảng đếm theo ngày ở đầu card. Số >1 phải NỔI LÊN vì đó là ca cần để ý. */
+.hp-day{position:relative;display:inline-flex;align-items:center;gap:5px}
+.hp-day-n{display:inline-grid;place-items:center;min-width:15px;height:15px;padding:0 4px;
+  border-radius:99px;background:var(--surf3);color:var(--mut);font:700 9.5px/1 var(--mono)}
+.hp-day.on .hp-day-n{background:color-mix(in srgb,var(--ink) 22%,transparent);color:var(--ink)}
+.hp-day[data-track]>span:not(.hp-day-n){white-space:nowrap}
+.hp-dayboard{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.hp-dcount{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 9px;border:1px solid var(--bd);
+  border-radius:99px;background:var(--surf);font:600 10.5px/1 var(--mono);letter-spacing:.04em;color:var(--dim)}
+.hp-dcount b{font-size:11.5px;color:var(--mut);font-variant-numeric:tabular-nums}
+.hp-dcount.none{opacity:.6}
+.hp-dcount.multi{border-color:var(--warn);background:var(--warn-bg);color:var(--warn)}
+.hp-dcount.multi b{color:var(--warn)}
+.hp-share{margin:8px 0 0;font-size:11.5px;line-height:1.5;color:var(--warn);display:flex;gap:6px;align-items:flex-start}
 
 /* ---- thông báo ---- */
 .hp-form{display:grid;gap:12px;margin-top:6px;max-width:560px}
@@ -1651,25 +1666,52 @@ function homepageHTML(){
     '<span class="grow"></span><span class="xs dim">Thêm/bớt ở trang riêng, lưu bằng nút bên dưới.</span></div>'+
     '</div></section>';
 
-  /* ---------- 3 · Lịch ra chương ---------- */
+  /* ---------- 3 · Lịch ra chương ----------
+     Vòng 19 · ĐĂNG NHIỀU BỘ TRONG MỘT NGÀY.
+     Dữ liệu KV vốn cho phép nhiều dòng cùng thứ (chủ trang muốn 2 bộ ra cùng
+     một hôm) nhưng admin không hề nói ra: bấm chip không biết thứ đó đã có bộ
+     nào, cũng không biết mình vừa tạo ngày có 2 bộ. Nay:
+       · mỗi chip thứ mang SỐ BỘ đang ra trong ngày đó (chấm nhỏ, chỉ hiện khi >0);
+       · dòng lịch có cảnh báo khi thứ của nó trùng với dòng khác;
+       · mỗi dòng có nút “+” thêm nhanh MỘT BỘ NỮA cho đúng thứ đó;
+       · đầu card có bảng đếm theo ngày: 2 bộ/T3, 1 bộ/T5… */
+  var dayCount={};
+  HP_DAYS.forEach(function(d){dayCount[d[0]]=0;});
+  SC.forEach(function(x){
+    hpDaysOf(x.d).forEach(function(d){if(dayCount[d]!=null)dayCount[d]+=1;});
+  });
   var rowOf2=function(x,i){
     var b=hpBook(x.b),days=hpDaysOf(x.d);
     var chips=HP_DAYS.map(function(d){
       var on=days.indexOf(d[0])>=0;
-      return '<button class="hp-day'+(on?' on':'')+'" type="button" data-act="hp-day" data-idx="'+i+'" data-day="'+d[0]+'" aria-pressed="'+(on?'true':'false')+'" title="'+esc(d[1])+'">'+esc(d[0])+'</button>';
+      var n=dayCount[d[0]]||0;
+      return '<button class="hp-day'+(on?' on':'')+'" type="button" data-act="hp-day" data-idx="'+i+'" data-day="'+d[0]+'" aria-pressed="'+(on?'true':'false')+'" aria-label="'+esc(d[1])+(n?' · đang có '+n+' bộ':'')+'" title="'+esc(d[1])+(n?' · đang có '+n+' bộ':'')+'">'+esc(d[0])+
+        (n?('<span class="hp-day-n" data-day="'+esc(d[0])+'" data-n="'+n+'">'+n+'</span>'):'')+'</button>';
     }).join('');
+    /* cảnh báo trùng thứ: thứ nào của dòng này cũng có dòng khác chạm vào */
+    var shared=days.filter(function(d){
+      var n=0;SC.forEach(function(y){if(hpDaysOf(y.d).indexOf(d)>=0)n++;});
+      return n>1;
+    });
     return '<div class="hp-sched">'+
       '<div class="hp-sched-top">'+
         (b?cover(b):'<span class="cover cv-miss" aria-hidden="true">?</span>')+
         '<span class="sel hp-sched-sel"><select class="inp" data-role="sched-book" data-idx="'+i+'" aria-label="Bộ truyện của lịch dòng '+(i+1)+'">'+bookOpts(x.b)+'</select></span>'+
+        '<button class="btn icon ghost sm" type="button" data-act="sched-dup-day" data-idx="'+i+'" aria-label="Thêm một bộ nữa cho cùng thứ của dòng '+(i+1)+'" title="Đăng thêm một bộ nữa trong cùng ngày">'+icon('plus','s')+'</button>'+
         '<button class="btn icon ghost sm" type="button" data-act="sched-remove" data-idx="'+i+'" aria-label="Xoá dòng lịch '+(i+1)+'" title="Xoá dòng">'+icon('trash','s')+'</button>'+
       '</div>'+
       (!b&&x.t?'<p class="hp-warn">'+icon('alert','xs')+'Dòng cũ chỉ còn tên “'+esc(x.t)+'” — chọn lại bộ để chắc chắn đúng truyện.</p>':'')+
       '<div class="hp-days" role="group" aria-label="Thứ ra chương của dòng '+(i+1)+'"><span class="hp-days-lb">Ra chương vào</span>'+chips+'</div>'+
       '<input class="inp hp-sched-note" data-role="sched-ch" data-idx="'+i+'" value="'+esc(x.c)+'" placeholder="Ghi chú (tuỳ chọn) — vd: ra chương 19 mẫu" aria-label="Ghi chú lịch dòng '+(i+1)+'">'+
       (days.length?'':'<p class="hp-warn">'+icon('alert','xs')+'Chưa chọn thứ — bấm ít nhất một chip ở trên.</p>')+
+      (shared.length?'<p class="hp-share">'+icon('info','xs')+'Trùng lịch: '+esc(shared.join(', '))+' đã có dòng khác — ngày đó sẽ ra '+shared.map(function(d){return dayCount[d]+' bộ';}).join(', ')+'.</p>':'')+
     '</div>';
   };
+  /* Bảng đếm theo ngày: nhìn một chỗ là biết ngày nào 2 bộ. */
+  var dayBoard=HP_DAYS.map(function(d){
+    var n=dayCount[d[0]]||0;
+    return '<span class="hp-dcount'+(n>1?' multi':'')+(n===0?' none':'')+'" data-day="'+esc(d[0])+'" data-role="day-count" title="'+esc(d[1])+' · '+n+' bộ">'+esc(d[0])+' <b>'+n+'</b></span>';
+  }).join('');
   /* Bộ xuất hiện ở NHIỀU dòng lịch: web vẽ một tấm tiêu điểm + danh sách nên
      bộ đó hiện hai lần, dễ tưởng lỗi. Cảnh báo ngay trên card. */
   var dupB={},dup=[];
@@ -1677,9 +1719,12 @@ function homepageHTML(){
   var dupNote=dup.length
     ? '<p class="hp-warn hp-warn-block">'+icon('alert','xs')+'Cùng một bộ nằm ở '+dup.length+' dòng lịch: '+esc(dup.map(function(id){var b=hpBook(id);return b?b.t:id;}).join(', '))+' — trang chủ sẽ hiện bộ đó nhiều lần.</p>'
     : '';
+  var multiDays=HP_DAYS.filter(function(d){return (dayCount[d[0]]||0)>1;}).length;
   var sched='<section class="card hp-block"><div class="card-hd"><h3>'+icon('clock','s')+'Lịch ra chương</h3>'+
-      '<span class="right"><b>'+SC.length+'</b> dòng</span></div><div class="card-bd">'+dupNote+
+      '<span class="right"><b>'+SC.length+'</b> dòng · '+HP_DAYS.filter(function(d){return (dayCount[d[0]]||0)>0;}).length+' ngày có truyện</span></div><div class="card-bd">'+dupNote+
     '<p class="hp-hint">Mỗi dòng là một bộ và những thứ nó ra chương. Bấm chip để chọn thứ — khỏi phải gõ “Thứ 2, Thứ 5”. Ghi chú hiện ngay dưới tên bộ trên trang chủ.</p>'+
+    '<div class="hp-dayboard" aria-label="Số bộ ra chương theo từng thứ">'+dayBoard+'</div>'+
+    (multiDays?'<p class="hp-hint hp-hint-tight">'+icon('info','xs')+multiDays+' ngày có nhiều hơn 1 bộ — trang chủ gom các bộ cùng ngày thành một nhóm và ghi rõ số bộ.</p>':'')+
     (SC.length?SC.map(rowOf2).join(''):'<div class="hp-empty">'+icon('clock')+'<div><b>Chưa có lịch ra chương</b><p>Trang chủ sẽ ẩn khối này. Thêm dòng để báo lịch cho người đọc.</p></div></div>')+
     '<div class="hp-add hp-add-end"><button class="btn sm" type="button" data-act="sched-add">'+icon('plus','s')+'Thêm dòng lịch</button></div>'+
     '<div class="mt">'+field('Ghi chú lịch','hp-note',state.hpNote,{ph:'Ghi chú lịch mẫu'})+'</div>'+
@@ -2955,6 +3000,21 @@ document.addEventListener('click',function(e){
       break;
     case 'slide-remove':state.slides.splice(idx,1);render();break;
     case 'sched-add':state.schedule.push({d:'Thứ 5',b:'b01',c:'Ghi chú mẫu'});render();break;
+    /* Vòng 19: thêm MỘT BỘ NỮA cho đúng thứ của dòng này — ca “đăng 2 bộ trong
+       một ngày”. Chép nguyên chuỗi thứ, chọn bộ khác dòng gốc để không tạo ra
+       hai dòng y hệt. */
+    case 'sched-dup-day':
+      (function(){
+        var it=state.schedule[Number(el.dataset.idx)];
+        if(!it)return;
+        var used={};state.schedule.forEach(function(x){if(x.b)used[x.b]=1;});
+        var pick=(state.books.filter(function(b){return !used[b.id];})[0]||state.books[0]||{}).id||'';
+        var days=hpDaysOf(it.d);
+        state.schedule.push({d:hpDaysText(days),b:pick,c:'',t:''});
+        toast('Đã thêm một bộ nữa cho '+(days.length?days.join(', '):'cùng ngày')+' — chọn bộ ở dòng mới rồi Lưu trang chủ.','info');
+        render();
+      })();
+      break;
     case 'sched-remove':state.schedule.splice(idx,1);render();break;
     case 'save-homepage':saveHomepage();break;
     case 'scan':toast('Đã quét 248 book (mẫu).');break;
