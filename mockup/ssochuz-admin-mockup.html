@@ -945,7 +945,7 @@ const PUB_SELECT = {
   archived:'Lưu trữ (ẩn khỏi trang chủ)'
 };
 const VIS = {public:'Công khai',unlisted:'Không liệt kê (chỉ link)',private:'Riêng tư'};
-const CH_STATUS = {published:'Xuất bản',scheduled:'Hẹn giờ',hidden:'Ẩn',draft:'Nháp'};
+const CH_STATUS = {published:'Xuất bản',scheduled:'Hẹn giờ',hidden:'Ẩn',draft:'Nháp (chưa xuất bản)'};
 const COMPLETION = {'Hoàn thành':'tone-ok','Đang cập nhật':'tone-info','Sắp ra mắt':'tone-violet'};
 const CONN = {
   checking:['Đang kiểm tra kết nối','t-warn'],online:['Cloudflare KV · Online','t-ok'],
@@ -970,7 +970,7 @@ const state = {
   votes:SAMPLE_VOTES.slice(), chapters:SAMPLE_CHAPTERS.slice(), activeChapter:0,
   slides:SAMPLE_SLIDES.slice(), schedule:SAMPLE_SCHEDULE.slice(), picked:['b01','b05','b12'],
   chapterTab:'draft', commentTab:'all', reportTab:'all', editorPreview:false, savedAt:'20:40:12',
-  chapterStatus:'published', chapterAt:'', chapterBook:null, voteSel:new Set(), hpPreview:'desktop', repBook:'',
+  chapterStatus:'draft', chapterAt:'', chapterBook:null, voteSel:new Set(), hpPreview:'desktop', repBook:'',
   cmtQ:'', cmtBook:'', hpNote:'Lịch có thể thay đổi nếu có việc đột xuất.',
   couples:{nb:[''],eb:['']}, migrateResult:'',
   models:{}, errors:{}, notifOpen:false, accountOpen:false, suggestOpen:false, suggestQuery:'',
@@ -1403,14 +1403,14 @@ function sanitizeEditorDom(){
 }
 function plainText(html){var d=document.createElement('div');d.innerHTML=sanitizeEditorHtml(html);return d.textContent||'';}
 function chapterPipeline(){
-  var tabs=[['draft','Nháp'],['pending','Chờ duyệt'],['scheduled','Hẹn giờ'],['waiting','Chờ tới giờ']];
+  var tabs=[['draft','Nháp'],['pending','Chờ duyệt'],['scheduled','Hẹn giờ'],['waiting','Chưa lên sóng']];
   var queues={
     draft:state.books.filter(function(b){return b.pub==='draft';}),
     pending:state.books.filter(function(b){return b.pub==='pending_review';}),
     scheduled:state.books.filter(function(b){return b.pub==='scheduled';}),
     waiting:state.books.filter(function(b){return Number(b.pending)>0;})
   };
-  var empty={draft:'Không có bộ nháp.',pending:'Không có bộ chờ duyệt.',scheduled:'Không có bộ hẹn giờ.',waiting:'Không có chương nào đang hẹn giờ.'};
+  var empty={draft:'Không có bộ nháp.',pending:'Không có bộ chờ duyệt.',scheduled:'Không có bộ hẹn giờ.',waiting:'Không có chương nháp hay hẹn giờ.'};
   var pick=state.chapterBook||(state.books[0]||{}).id;
   var head='<div class="card"><div class="card-hd"><h3>Chọn một bộ để quản lý chương</h3><span class="right">'+state.books.length+' bộ · MẪU</span></div><div class="card-bd">'+
     '<div class="row wrap" style="gap:8px"><span class="sel" style="flex:1 1 220px"><select class="inp" data-role="chapter-book" aria-label="Chọn bộ">'+state.books.slice(0,8).map(function(b){return '<option value="'+b.id+'"'+(b.id===pick?' selected':'')+'>'+esc(b.t)+'</option>';}).join('')+'</select></span>'+
@@ -1419,7 +1419,7 @@ function chapterPipeline(){
     var list=queues[t[0]];
     return '<div class="card"><div class="card-hd"><h3>'+esc(t[1])+'</h3><span class="right">'+list.length+'</span></div><div class="card-bd tight" style="padding:0 14px">'+
       (list.length?list.slice(0,4).map(function(b){
-        return '<div class="list-item q"><div class="t"><b>'+esc(b.t)+'</b><span>'+(t[0]==='waiting'?b.pending+' chương chờ tới giờ':b.ch+' chương')+' · '+esc(b.d.slice(0,5))+' · MẪU</span></div>'+badge(PUB[b.pub][0],PUB[b.pub][1])+'</div>';
+        return '<div class="list-item q"><div class="t"><b>'+esc(b.t)+'</b><span>'+(t[0]==='waiting'?b.pending+' chương nháp/hẹn giờ':b.ch+' chương')+' · '+esc(b.d.slice(0,5))+' · MẪU</span></div>'+badge(PUB[b.pub][0],PUB[b.pub][1])+'</div>';
       }).join(''):'<div class="state" style="min-height:100px;border:0"><p>'+esc(empty[t[0]])+'</p></div>')+
       '</div></div>';
   }).join('')+'</div>';
@@ -2741,7 +2741,7 @@ function resetDemo(){
   state.chapters=SAMPLE_CHAPTERS.slice();state.slides=SAMPLE_SLIDES.slice();state.schedule=SAMPLE_SCHEDULE.slice();state.picked=['b01','b05','b12'];
   state.sel.clear();state.lib={q:'',status:'all',pub:'',vis:'',lock:'',adult:'',sort:'new',page:1};state.bulkAction='';
   state.votePage=1;state.logPage=1;state.chapterTab='draft';state.commentTab='all';state.reportTab='all';state.activeChapter=0;
-  state.voteSel.clear();state.chapterStatus='published';state.chapterAt='';state.chapterBook=null;state.hpPreview='desktop';
+  state.voteSel.clear();state.chapterStatus='draft';state.chapterAt='';state.chapterBook=null;state.hpPreview='desktop';
   hpClear();
   state.cmtQ='';state.cmtBook='';state.couples={nb:[''],eb:['']};state.migrateResult='';
   state.editorPreview=false;state.savedAt='20:40:12';state.editorSeed=sanitizeEditorHtml(state.defaultEditor);
@@ -2815,8 +2815,8 @@ function shortcutSave(){
   toast('Không có gì để lưu ở màn hình này.','info');
 }
 function shortcutNewChapter(){
-  state.chapters.push({t:'Chương mẫu mới '+(state.chapters.length+1),b:'Truyện mẫu 01',s:'published',d:'03/11 20:40'});
-  state.activeChapter=state.chapters.length-1;state.chapterStatus='published';
+  state.chapters.push({t:'Chương mẫu mới '+(state.chapters.length+1),b:'Truyện mẫu 01',s:'draft',d:'03/11 20:40'});
+  state.activeChapter=state.chapters.length-1;state.chapterStatus='draft';
   toast('Ctrl+Alt+N · đã thêm chương (mô phỏng).');
   if(state.route!=='chuong')navigate('chuong');else render();
 }
@@ -2909,8 +2909,8 @@ document.addEventListener('click',function(e){
       var mc=document.getElementById('editorCard');if(mc)mc.scrollIntoView({behavior:'smooth',block:'center'});
       toast('Đang quản lý chương của bộ mẫu (mô phỏng).');break;
     case 'chapter-add':
-      state.chapters.push({t:'Chương mẫu mới '+(state.chapters.length+1),b:'Truyện mẫu 01',s:'published',d:'03/11 20:40'});
-      state.activeChapter=state.chapters.length-1;state.chapterStatus='published';toast('Đã thêm chương mẫu.');render();break;
+      state.chapters.push({t:'Chương mẫu mới '+(state.chapters.length+1),b:'Truyện mẫu 01',s:'draft',d:'03/11 20:40'});
+      state.activeChapter=state.chapters.length-1;state.chapterStatus='draft';toast('Đã thêm chương mẫu.');render();break;
     case 'chapter-move':
       var j=idx+Number(el.dataset.dir);
       if(j>=0&&j<state.chapters.length){var tmp=state.chapters[idx];state.chapters[idx]=state.chapters[j];state.chapters[j]=tmp;state.activeChapter=j;render();}
@@ -3098,7 +3098,7 @@ document.addEventListener('change',function(e){
       if(el.files&&el.files.length){
         var kind=el.dataset.kind,name=el.files[0].name;
         if(kind==='multi'){
-          for(var i=0;i<3;i++)state.chapters.push({t:'Chương mẫu nhập '+(i+1),b:'Truyện mẫu 14',s:'published',d:'03/11 20:40'});
+          for(var i=0;i<3;i++)state.chapters.push({t:'Chương mẫu nhập '+(i+1),b:'Truyện mẫu 14',s:'draft',d:'03/11 20:40'});
           toast('Đã nhập 3 chương mẫu từ '+name+'.');
         }else toast('Đã nạp '+kind.toUpperCase()+' mẫu: '+name+' (mô phỏng).','info');
         el.value='';render();

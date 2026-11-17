@@ -347,7 +347,7 @@
   "note": ""
  },
  {
-  "from": "state.chapters.push({t:'Chương mẫu nhập '+(i+1),b:'Truyện mẫu 14',s:'published',d:'03/11 20:40'});",
+  "from": "state.chapters.push({t:'Chương mẫu nhập '+(i+1),b:'Truyện mẫu 14',s:'draft',d:'03/11 20:40'});",
   "to": "/* bản phát hành: import-file do admin-real.js xử lý, ghi KV thật */",
   "note": ""
  },

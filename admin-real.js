@@ -854,7 +854,9 @@
     list.forEach(function (c) {
       var st = String((c && (c.status || c.s)) || 'published').toLowerCase();
       var at = parseAtMs(c && (c.at || c.d));
-      var held = st === 'hidden' || (st === 'scheduled' && at > now);
+      /* phải khớp isChapterPending() của src/shared/schedule.js: nháp cũng là
+         “chưa lên sóng”, nếu không admin đếm 3 chương còn web chỉ thấy 2. */
+      var held = st === 'hidden' || st === 'draft' || (st === 'scheduled' && at > now);
       if (held) pending++; else visible++;
     });
     var b = (S.books || []).find(function (x) { return x.id === slug; });
@@ -1121,14 +1123,16 @@
     if ((REG.lib || []).some(function (m) { return m.slug === sl; })) { say('Slug đã tồn tại: ' + sl, 'bad'); return; }
     var couples = (S.couples.nb || []).filter(function (x) { return String(x || '').trim(); });
     var first = val('nb-chapter').trim();
-    var chapters = first ? [{ t: 'Chương 1', html: textToHtml(first), status: 'published' }] : [];
+    /* Chương đầu tiên của bộ mới cũng là NHÁP: bộ vừa tạo chưa ai đọc lại.
+       countLabel đếm theo chương ĐANG HIỆN nên bộ mới = 0/1, không phải 1/1. */
+    var chapters = first ? [{ t: 'Chương 1', html: textToHtml(first), status: 'draft' }] : [];
     var meta = metaFromForm({}, {
       title: t, slug: sl, author: a, year: val('nb-year') || String(new Date().getFullYear()),
-      status: S.models['nb-st'] || 'Đang cập nhật', countLabel: chapters.length ? '1/1' : '0/—',
+      status: S.models['nb-st'] || 'Đang cập nhật', countLabel: chapters.length ? '0/1' : '0/—',
       is18: checked('nb-18'), synopsis: val('nb-sum'), pubStatus: S.models['nb-pub'] || 'draft',
       visibility: S.models['nb-vis'] || 'public', thumb: S.models['nb-cover'] || ''
     }, couples);
-    meta.chapters = chapters.length;
+    meta.chapters = 0;
     var book = { title: t, slug: sl, author: a, couple: meta.couple, chapters: chapters };
     if (meta.couples && meta.couples.length > 1) book.couples = meta.couples.slice();
     var next = clone(REG); next.lib = (next.lib || []).concat([meta]);
@@ -1289,7 +1293,7 @@
     }, 'Nhân bản');
   }
 
-  function realSaveChapter() {
+  function realSaveChapter(forceStatus) {
     if (!ensureOnline()) return;
     var slug = BOOK_SLUG;
     if (!slug) { say('Chưa nạp dữ liệu chương — chọn bộ rồi bấm Quản lý chương.', 'bad'); return; }
@@ -1303,7 +1307,10 @@
       return;
     }
     var html = htmlForStorage(rawDom);
-    var status = S.chapterStatus || 'published';
+    /* Không có trạng thái đang chọn (chương hoàn toàn mới) ⇒ NHÁP, không phải
+       xuất bản: bản cũ mặc định 'published' nên bấm Lưu là lên sóng luôn. */
+    var status = forceStatus || S.chapterStatus || (S.chapters[idx] && S.chapters[idx].s) || 'draft';
+    S.chapterStatus = status;
     var atIso = status === 'scheduled' ? localInputToIso(S.chapterAt) : '';
     var body = { index: idx, chapter: { t: title, html: html, status: status, at: atIso } };
     apiCall('/api/book/' + encodeURIComponent(slug) + '/chapter', { method: 'PUT', body: body, timeout: 120000 })
@@ -1323,7 +1330,13 @@
         FORCE_EDITOR_SEED = true;
         S.savedAt = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
         syncBookCountsInState(slug, BOOK.chapters);
-        say('Đã lưu chương "' + title + '" lên KV.');
+        say(status === 'draft'
+          ? ('Đã lưu NHÁP "' + title + '" · độc giả chưa thấy — bấm Xuất bản khi soạn xong.')
+          : status === 'published'
+            ? ('Đã xuất bản "' + title + '" · độc giả đọc được ngay.')
+            : status === 'scheduled'
+              ? ('Đã lưu "' + title + '" · chương lên sóng đúng mốc giờ đã đặt.')
+              : ('Đã lưu "' + title + '" ở trạng thái Ẩn · độc giả không thấy.'));
         redraw();
       }).catch(fail);
   }
@@ -1334,20 +1347,23 @@
     snapshotLiveEditor();
     var idx = S.chapters.length;
     var nextTitle = suggestNextChapTitle(S.chapters);
-    var ch = { t: nextTitle, html: '<p>' + esc(nextTitle) + '</p>', status: 'published' };
+    /* Chương mới LUÔN vào dạng nháp: nội dung còn trống, chưa ai biên tập.
+       Bản cũ để 'published' nên vừa bấm Thêm là độc giả đã thấy một chương
+       rỗng ngoài web. */
+    var ch = { t: nextTitle, html: '<p>' + esc(nextTitle) + '</p>', status: 'draft' };
     apiCall('/api/book/' + encodeURIComponent(slug) + '/chapter', { method: 'PUT', body: { index: idx, chapter: ch } })
       .then(function () {
         WRITES += 1; setQuota();
         if (!BOOK || typeof BOOK !== 'object') BOOK = { chapters: [] };
         if (!Array.isArray(BOOK.chapters)) BOOK.chapters = [];
         BOOK.chapters[idx] = ch;
-        S.chapters.push({ t: ch.t, b: titleOf(slug), s: 'published', d: '', html: ch.html, _dirty: false });
+        S.chapters.push({ t: ch.t, b: titleOf(slug), s: 'draft', d: '', html: ch.html, _dirty: false });
         S.activeChapter = idx;
         S.editorPreview = false;
         delete S.models['chapter-title'];
         syncChaptersToState();
         syncBookCountsInState(slug, BOOK.chapters);
-        say('Đã thêm "' + ch.t + '" trên KV.');
+        say('Đã thêm "' + ch.t + '" ở dạng NHÁP · độc giả chưa thấy. Soạn xong bấm Xuất bản.', 'info');
         redraw();
         var tInp = D.getElementById('chapterTitle');
         if (tInp) { tInp.focus(); try { tInp.select(); } catch (e) {} }
@@ -1397,7 +1413,10 @@
   function syncChaptersToState() {
     var cur = S.chapters[S.activeChapter] || null;
     S.editorSeed = htmlForEditor(cur ? cur.html : '');
-    S.chapterStatus = (cur && cur.s) || 'published';
+    /* Chưa có chương nào để mở ⇒ đang viết chương MỚI ⇒ mặc định Nháp.
+       Chương đã có luôn mang trạng thái của chính nó (dữ liệu cũ không có
+       trường status được applyBook quy về 'published'). */
+    S.chapterStatus = (cur && cur.s) || 'draft';
     S.chapterAt = cur && cur.d ? isoToLocalInput(cur.d) : '';
     DIRTY_CHAPTER = !!(cur && cur._dirty);
     DRAFT_SAVED_AT = '';
@@ -2159,7 +2178,15 @@
       updateSaveNoteDom();
       say('Đã đặt mốc hẹn giờ · bấm Lưu chương để ghi lên KV.', 'info');
     },
-    'save-chapter': realSaveChapter,
+    'save-chapter': function () { realSaveChapter(); },
+    /* Xuất bản = ghi 1 lượt: lưu nội dung hiện tại + đặt trạng thái Xuất bản.
+       Không bắt người sửa phải Lưu rồi đổi trạng thái rồi Lưu lần nữa (2 lượt
+       ghi KV mà người dùng quota chỉ có 1.000 lượt/ngày). */
+    'publish-chapter': function () {
+      S.chapterStatus = 'published';
+      DIRTY_CHAPTER = true;
+      realSaveChapter('published');
+    },
     'schedule-chapter': function () {
       snapshotLiveEditor();
       S.chapterStatus = 'scheduled';
@@ -2392,10 +2419,18 @@
     return S.editorSeed || '<p><br></p>';
   };
   var CH_STATUS_LABELS = { published: 'Xuất bản', scheduled: 'Hẹn giờ', hidden: 'Ẩn', draft: 'Nháp' };
+  var CH_STATUS_HINTS = {
+    published: 'Xuất bản — độc giả đọc được ngay sau khi lưu.',
+    scheduled: 'Chương chỉ hiện khi tới mốc giờ đã đặt.',
+    hidden: 'Chương nằm trong bộ nhưng độc giả không thấy.',
+    draft: 'Nháp — chỉ admin thấy, độc giả CHƯA đọc được cho tới khi bấm Xuất bản.'
+  };
   window.__CZ_CHAPTER_VIEW__ = window.chapterEditorHTML = function () {
     var curSlug = String(BOOK_SLUG || S.chapterBook || S.selectedBook || (S.books[0] || {}).id || '');
     var curBookTitle = titleOf(curSlug) || 'Chưa chọn bộ';
-    var active = S.chapters[S.activeChapter] || { t: '', s: 'published', d: '', html: '' };
+    var active = S.chapters[S.activeChapter] || { t: '', s: 'draft', d: '', html: '' };
+    var draftCount = S.chapters.filter(function (c) { return String((c && c.s) || '').toLowerCase() === 'draft'; }).length;
+    var statusNow = String(S.chapterStatus || (active && active.s) || 'draft').toLowerCase();
     var curHtml = window.editorHtml();
     var curTitle = S.models['chapter-title'] != null ? S.models['chapter-title'] : (active.t || '');
     var draft = readChapterDraft(curSlug, S.activeChapter);
@@ -2424,7 +2459,7 @@
       : '<div class="state" style="min-height:110px;border:0"><p>Bộ này chưa có chương nào · bấm <b>+ Thêm</b> hoặc nhập tiêu đề và nội dung bên dưới rồi bấm <b>Lưu chương</b>.</p></div>';
 
     var left = '<div class="card"><div class="card-hd"><h3>Danh sách chương · ' + esc(curBookTitle) + '</h3>' +
-      '<span class="right">' + S.chapters.length + ' chương</span>' +
+      '<span class="right">' + S.chapters.length + ' chương' + (draftCount ? ' · ' + draftCount + ' nháp' : '') + '</span>' +
       '<button class="btn sm" data-act="chapter-add">' + window.icon('plus', 's') + 'Thêm</button></div>' +
       '<div class="card-bd tight ch-list-scroll" style="padding:6px 10px" tabindex="0" role="region" aria-label="Danh sách chương">' + leftBody + '</div></div>';
 
@@ -2476,8 +2511,9 @@
       '<div class="grid2 mb" style="gap:10px">' +
         '<div class="field"><label for="chapterStatus">Trạng thái chương</label>' +
           '<span class="sel"><select class="inp" id="chapterStatus" data-role="chapter-status">' +
-          Object.keys(CH_STATUS_LABELS).map(function (k) { return '<option value="' + k + '"' + (k === S.chapterStatus ? ' selected' : '') + '>' + esc(CH_STATUS_LABELS[k]) + '</option>'; }).join('') +
-          '</select></span></div>' +
+          Object.keys(CH_STATUS_LABELS).map(function (k) { return '<option value="' + k + '"' + (k === statusNow ? ' selected' : '') + '>' + esc(CH_STATUS_LABELS[k]) + '</option>'; }).join('') +
+          '</select></span>' +
+          '<span class="hint" id="chapterStatusHint">' + esc(CH_STATUS_HINTS[statusNow] || CH_STATUS_HINTS.draft) + '</span></div>' +
         '<div class="field"><span class="lb">Số liệu chương</span><span class="sm mut" id="chapterStats">' + esc(formatChapterStats(curHtml)) + '</span></div>' +
       '</div>' +
       schedExtra +
@@ -2490,8 +2526,9 @@
       '<div class="row wrap mt" style="gap:8px"><span class="grow"></span>' +
         '<button class="btn sm" type="button" data-act="restore-draft">' + (draft ? 'Khôi phục nháp cục bộ' : 'Nạp lại từ KV') + '</button>' +
         '<button class="btn pri sm" type="button" data-act="save-chapter">' + window.icon('save', 's') + 'Lưu chương</button>' +
+        (statusNow === 'published' ? '' : '<button class="btn sm" type="button" data-act="publish-chapter" data-tip="Lưu và cho độc giả đọc ngay">' + window.icon('upload', 's') + 'Xuất bản ngay</button>') +
         '<button class="btn danger sm" type="button" data-act="chapter-delete" data-idx="' + (S.activeChapter || 0) + '"' + (S.chapters.length ? '' : ' disabled') + '>' + window.icon('trash', 's') + 'Xoá chương</button></div>' +
-      '<div class="state-note mt">' + window.icon('info', 's') + ' Ctrl/Cmd+S lưu chương lên KV · Ctrl/Cmd+Alt+N thêm chương mới · Dán trực tiếp từ Word/Google Docs giữ nguyên đậm/nghiêng/đoạn văn.</div>' +
+      '<div class="state-note mt">' + window.icon('info', 's') + ' Chương mới / chương nhập từ tệp mặc định là <b>Nháp</b> — độc giả chưa thấy, bấm <b>Xuất bản ngay</b> khi đã soát xong. Ctrl/Cmd+S lưu chương lên KV · Ctrl/Cmd+Alt+N thêm chương mới · Dán trực tiếp từ Word/Google Docs giữ nguyên đậm/nghiêng/đoạn văn.</div>' +
       '</div></div>';
 
     return window.chapterPipeline() + '<div class="mt">' + left + '</div><div class="mt">' + editor + '</div>';
@@ -2800,8 +2837,10 @@
     PENDING_IMPORT = null;
     if (typeof window.closeModal === 'function') window.closeModal();
     var slug = job.slug;
+    /* Nhập từ tệp = nội dung thô vừa đọc vào, chưa ai đọc lại ⇒ NHÁP. Xuất
+       bản từng chương (hoặc cả bộ) sau khi đã soát. */
     var incoming = job.parts.map(function (p) {
-      return { t: p.t, html: htmlForStorage(p.html), status: 'published' };
+      return { t: p.t, html: htmlForStorage(p.html), status: 'draft' };
     });
     var ensureBook = (BOOK_SLUG === slug && BOOK && Array.isArray(BOOK.chapters))
       ? Promise.resolve(BOOK)
@@ -2818,7 +2857,7 @@
           applyBook(slug, nextBook);
           S.activeChapter = mode === 'replace' ? 0 : Math.max(0, nextBook.chapters.length - incoming.length);
           syncChaptersToState();
-          say('Đã nhập ' + incoming.length + ' chương từ "' + job.file + '" lên KV.');
+          say('Đã nhập ' + incoming.length + ' chương từ "' + job.file + '" vào dạng NHÁP · độc giả chưa thấy. Soát xong rồi xuất bản.', 'info');
           redraw();
         });
     }).catch(fail);

@@ -2229,6 +2229,17 @@ function chapterHasContent(c) {
   if (/<img\b/i.test(h)) return true;
   return h.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/&[a-z#0-9]+;/gi, ' ').trim().length > 0;
 }
+/* Trạng thái chương hợp lệ. Giá trị lạ (gõ tay trong JSON, dữ liệu cũ) không
+   được lọt xuống tầng đọc: một chuỗi rác sẽ bị isChapterPending coi là “đang
+   hiện”, trong khi ý người sửa có thể là nháp/ẩn. Không rõ thì giữ trạng thái
+   đang có, cuối cùng mới về 'published' (dữ liệu cũ chưa từng có trường này). */
+const CHAPTER_STATUS_SET = new Set(['published', 'scheduled', 'hidden', 'draft']);
+function normChapterStatus(value, fallback) {
+  const s = String(value == null ? '' : value).trim().toLowerCase();
+  if (CHAPTER_STATUS_SET.has(s)) return s;
+  const f = String(fallback == null ? '' : fallback).trim().toLowerCase();
+  return CHAPTER_STATUS_SET.has(f) ? f : 'published';
+}
 /* PUT /api/book/<slug> — ghi 1 bộ RỒI tự sửa số chương trong registry */
 async function putBook(req, env, slug, cors) {
   if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
@@ -2242,7 +2253,7 @@ async function putBook(req, env, slug, cors) {
   let parsed;
   try { parsed = JSON.parse(body); } catch (e) { return json({ ok: false, error: 'JSON lỗi: ' + e.message }, { status: 400, cors }); }
   if (!Array.isArray(parsed.chapters)) parsed.chapters = [];
-  parsed.chapters.forEach((c) => { if (c) c.html = sanitizeChapterHtml(c.html); });
+  parsed.chapters.forEach((c) => { if (c) { c.html = sanitizeChapterHtml(c.html); c.status = normChapterStatus(c.status, 'published'); } });
   /* bỏ chương rỗng cả tiêu đề lẫn nội dung — chính chúng là thủ phạm làm lệch số chương */
   const before = parsed.chapters.length;
   parsed.chapters = parsed.chapters.filter(chapterHasContent);
@@ -2320,7 +2331,7 @@ async function putChapter(req, env, slug, cors) {
       const next = Object.assign({}, prev, {
         t: String(incoming.t == null ? prev.t || '' : incoming.t).slice(0, 300),
         html: sanitizeChapterHtml(incoming.html == null ? prev.html || '' : incoming.html),
-        status: String(incoming.status || prev.status || 'published').toLowerCase(),
+        status: normChapterStatus(incoming.status !== undefined ? incoming.status : prev.status, prev.status),
       });
       /* mốc hẹn giờ: nhận ISO (admin gửi lên) hoặc bản cũ 'YYYY-MM-DD HH:mm'
          — dùng atMs() cho CHUỖI, chapterAtMs() chỉ dành cho object chương */
