@@ -1634,13 +1634,12 @@
         d: window.hpDaysText ? window.hpDaysText([wd]) : 'Thứ 2',
         b: (S.picked[0] || (S.books[0] || {}).id || ''), c: '', t: ''
       });
-      say('Đã thêm dòng lịch cho hôm nay — đổi thứ bằng các chip nếu cần.', 'info');
-      changed = false;   /* câu báo ở dưới là báo chung, ở đây đã báo riêng */
     } else if (kind === 'sched-remove') S.schedule.splice(idx, 1);
     if (!changed) return;
     redraw();
     /* Báo rõ là CHƯA ghi, để không ai tưởng thao tác đã lên KV. */
-    if (kind !== 'sched-add') say('Đã đổi trang chủ trong bản nháp — bấm Lưu trang chủ để ghi KV.', 'info');
+    if (kind === 'sched-add') say('Đã thêm dòng lịch cho hôm nay — đổi thứ bằng chip rồi bấm Lưu trang chủ.', 'info');
+    else say('Đã đổi trang chủ trong bản nháp — bấm Lưu trang chủ để ghi KV.', 'info');
   }
 
   function realBulkApply(el) {

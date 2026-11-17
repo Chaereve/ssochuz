@@ -124,10 +124,18 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 
   /* L6: thêm dòng lịch phải dùng được ngay, không bị chặn lưu */
   await check('L6', 'Thêm dòng lịch → dòng mới có thứ sẵn (không bị chặn lưu)', async (env, S) => {
+    const before = S.schedule.length;
+    const putsBefore = env.puts.length;
     env.D.querySelector('[data-act="sched-add"]').click();
     await wait(60);
     const last = S.schedule[S.schedule.length - 1] || {};
-    return { pass: !!String(last.d || '').trim(), detail: 'dòng mới: ' + JSON.stringify(last) };
+    const rows = env.D.querySelectorAll('.hp-sched');
+    const newRow = rows[rows.length - 1];
+    const dirty = env.D.getElementById('hpDirty');
+    const pass = S.schedule.length === before + 1 && !!String(last.d || '').trim()
+      && rows.length === S.schedule.length && !!newRow.querySelector('.hp-day.on')
+      && dirty && !dirty.hidden && env.puts.length === putsBefore;
+    return { pass, detail: 'dòng state=' + S.schedule.length + ' DOM=' + rows.length + ' chưa lưu=' + (dirty && !dirty.hidden) };
   });
 
   /* L7: khi đã đủ 8 slide vẫn thấy chỗ thêm bộ (kèm lý do khoá) */
