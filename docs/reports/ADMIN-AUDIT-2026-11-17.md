@@ -256,3 +256,55 @@ danh sách vấn đề ở mục 5) và đã sửa:
 Lưu ý vận hành: chương nào đang mang `status: 'draft'` trong KV sẽ ẩn khỏi web sau khi
 deploy — đúng nghĩa Nháp. Duyệt lại ở tab Chương (nhãn **Nháp**, đếm "· n nháp") rồi
 bấm **Xuất bản ngay** cho những chương cần lên sóng.
+
+---
+
+## 8. Rà soát "giữ / bổ sung / bỏ" và cải thiện giao diện (cùng ngày, lượt 2)
+
+Yêu cầu: *"kiểm tra admin còn thiếu tính năng gì, cái nào nên bỏ, cải thiện giao diện"*.
+Lần này rà **admin.html (bản phát hành)**, không chỉ mockup — nhiều con số cứng trong
+mockup đã được `tools/admin_prod_replacements.json` thay bằng số đếm thật lúc build,
+nên chỉ những gì còn trong `admin.html` mới là lỗi thật của sản phẩm.
+
+### 8.1 Đã sửa trong lượt này
+
+| # | Vấn đề (đã xác minh trên admin.html) | Cách sửa |
+|---|---|---|
+| 1 | **Tab Nhật ký vô dụng**: worker chỉ lưu `{at,text,who}` ⇒ 5 cột mà "Thao tác" và "Đối tượng" in *cùng một chuỗi*, "Kết quả" luôn "Thành công"; không lọc, không tìm, không phân trang. | `logAct(env,text,req,meta)` ghi thêm `kind` + `target` (18 điểm gọi đã gắn loại). Bảng còn **4 cột có nghĩa** (Thời gian · Người · Hành động · Đối tượng), thêm **lọc theo loại**, **tìm chữ**, phân trang 20 dòng, nút **Đọc lại**, giờ dạng `dd/mm/yyyy hh:mm`. Bản ghi cũ không có `kind/target` vẫn đọc được (suy loại từ câu chữ, cột Đối tượng để "—" thay vì lặp lại câu). |
+| 2 | **Tab Chương không có tìm/lọc**: 38 chương của một bộ chỉ cuộn tay; không biết đang lọc gì; đổi bộ phải mở `<select>` 67 dòng. | Thêm **ô tìm chương** (tên hoặc số chương, cập nhật tại chỗ nên không mất focus), **5 nút lọc trạng thái** kèm số đếm, bộ đếm "x/tổng chương · n nháp", **chip 6 bộ mới cập nhật** + **hàng đợi xuất bản** (Nháp / Chờ duyệt / Hẹn giờ / Chưa lên sóng) bấm được để sang Thư viện đúng bộ lọc. |
+| 3 | **Tab Chương không có trạng thái tải**: `loadBook` lỗi thì im lặng, khung soạn hiện dữ liệu cũ ⇒ biên tập viên tưởng bộ trống. | `CHAPTER_LOAD` (`loading/ok/error`, `missing` khi 404). 404 ⇒ "Bộ này chưa có dữ liệu chương" (không phải lỗi, có nút Mở Sửa bộ); lỗi 500/mạng ⇒ hộp `role="alert"` **"Không tải được dữ liệu chương"** + lý do + **Thử lại**. Đổi bộ lỗi KHÔNG còn tự quay về bộ cũ (trước đây revert làm giấu lỗi). |
+| 4 | **Nhãn ngày ISO** `2026-11-11` trên trục biểu đồ; ô "Ngày có chuỗi" fallback về `SAMPLE_READS` khi KV rỗng ⇒ hiện "1" dù chưa có ngày nào. | `dayLabel()` → `11/11`; ô đếm hiện `0` khi đã nối Worker mà chưa có dữ liệu. |
+| 5 | **Bình luận**: không biết bình luận thuộc **chương nào**; ghi chú "Xoá (2 lần) · Không có chức năng duyệt" nằm lẫn dưới danh sách; nút ghi "Xoá (2 lần)" như một nhãn kỹ thuật. | Dòng bình luận hiện `Bộ · chương N · slug · ngày`; nút gọn **Xoá** + tooltip/aria-label nói rõ xác nhận 2 bước; ghi chú chuyển lên đầu tab, nói hậu quả thật ("xoá vĩnh viễn trên KV, xoá cả câu trả lời"); thêm **Tải lại**. |
+| 6 | **Thư viện** thiếu thông tin quyết định: không thấy bộ nào vừa cập nhật, không thấy lượt đọc; trạng thái rỗng không có lối đi. | Thêm cột **Cập nhật** (`dd/mm`) và **Đọc** (`/api/admin/stats`), trạng thái rỗng có nút **Thêm bộ**, và mỗi dòng có nút **Chương** mở thẳng tab Chương đúng bộ. |
+| 7 | **Trùng lặp thao tác nguy hiểm**: "Đếm lại số chương" nằm ở cả Cài đặt và Kiểm tra dữ liệu. | Bỏ ở Cài đặt, để lại **một chỗ duy nhất** (Kiểm tra dữ liệu) + câu giải thích lý do. |
+
+Kiểm thử: `tests/t_admin_real.js` thêm 33 kiểm tra cho các luồng trên (tìm/lọc chương,
+404 vs 500, Thử lại, lọc/tìm nhật ký, nút Chương ở Thư viện) — **0 lỗi**;
+`tests/t_chapter_draft.js` thêm 4 kiểm tra cho `kind/target` của nhật ký — **45/45**.
+
+### 8.2 Giữ nguyên (đã đúng, không nên "cải thiện" thêm)
+
+- **13 tab + route ẩn `dang-nhap`**: phân nhóm Nội dung / Cộng đồng / Hệ thống hợp lý, không gộp.
+- **Xác nhận mạnh** (gõ `XOÁ` / `ĐẾM LẠI` / slug) cho thao tác phá huỷ: giữ, vì mọi thao tác đều ghi thẳng KV.
+- **Chip quota + banner đỏ** khi gần trần ghi KV, **chip KV** trên topbar: giữ.
+- **Nháp = chưa xuất bản** (mục 7) và nút **Xuất bản ngay**: giữ.
+- **Bảng Thư viện 20 dòng/trang**: mockup để 8 là cố ý cho prototype, bản phát hành đã là 20 — *không* phải lỗi.
+- **Số đếm trên Dashboard** ("Việc cần làm hôm nay", "Đang ẩn khỏi trang chủ"…): đã là số thật từ `state`, không phải số cứng — *không* phải lỗi.
+- `/api/admin/voters` + `/api/admin/vote-remove`: **đã** được dùng (tab Phiếu bầu có ô chọn bộ, cột Phạm vi, gỡ theo phiếu, reset theo chương).
+
+### 8.3 Nên bổ sung (chưa làm — cần đổi dữ liệu/worker, ghi lại để quyết định)
+
+1. **Duyệt/ẩn bình luận** thay vì chỉ xoá: cần thêm trạng thái `hidden` vào `cmt:<slug>` và cho trang đọc lọc ra. Hiện worker chỉ có xoá (kèm xoá dây chuyền câu trả lời).
+2. **Trả lời bình luận từ admin**: worker đã hỗ trợ `parentId`, nhưng admin chưa có ô trả lời (phải vào web).
+3. **Chuẩn hoá 58/67 bộ thiếu `pubStatus`/`visibility`** trong registry: bộ lọc "xuất bản" hiện dựa trên giá trị mặc định (`published`/`public`) nên đúng nhưng gây hiểu nhầm "đã đặt". Nên có một lần ghi bù (backfill) thay vì thêm cảnh báo lặp lại trong từng tab.
+4. **RBAC / nhiều vai trò**: hiện chỉ một `ADMIN_KEY` (hoặc người có `role: admin`). Muốn phân quyền biên tập/kiểm duyệt thì phải thêm bảng vai trò ở Worker — ngoài phạm vi một lượt sửa giao diện.
+5. **Sửa nhanh inline ở Thư viện** (đổi trạng thái/tình trạng ngay trên dòng) và **cột "Lượt đọc theo tuần"**: đã có dữ liệu trong `/api/admin/stats`, chỉ cần thêm UI.
+6. **Editor contenteditable** vẫn yếu hơn Tiptap (undo, dán ảnh, heading) — nâng cấp là dự án riêng.
+
+### 8.4 Nên bỏ / đã bỏ
+
+- ~~Cột "Kết quả" trong Nhật ký~~ (luôn "Thành công" — không mang thông tin).
+- ~~Cột "Bộ được bầu" trong bảng Phiếu bầu~~: bảng đã lọc theo đúng một bộ nên cột này lặp lại ô chọn bộ phía trên. *(ghi nhận, chưa xoá vì cần đối chiếu ảnh chụp cũ của owner)*
+- ~~Nút "Đếm lại số chương" thứ hai ở Cài đặt~~ (đã bỏ ở 8.1 mục 7).
+- ~~Khối "BẢNG ĐIỀU KHIỂN DEMO · MOCKUP"~~: build đã gỡ từ vòng 12 — không còn trong admin.html.
+- **Không nên bỏ**: "Lưu trữ tràn (tuỳ chọn)" (worker có `/api/admin/migrate-overflow` thật), "Sao lưu/khôi phục JSON" (đã gom 6 khoá KV), "Kiểm tra dữ liệu" (đối chiếu registry ↔ book thật).

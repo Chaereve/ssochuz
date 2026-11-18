@@ -309,6 +309,17 @@ const ok = (cond, msg) => { n++; if (!cond) bad.push(msg); };
   const legacyPub = await call('GET', '/api/book/legacybook');
   ok(legacyPub.body && legacyPub.body.chapters.length === 1, 'worker: chương cũ không có status vẫn hiện (không phá dữ liệu đang chạy)');
 
+  /* nhật ký có CẤU TRÚC: trước chỉ {at,text,who} nên tab Nhật ký phải in cùng
+     một chuỗi ở 2 cột và luôn “Thành công”. Nay mỗi bản ghi có kind + target. */
+  const logArr = JSON.parse((await kv.get('log')) || '[]');
+  ok(logArr.length >= 2, 'worker: thao tác ghi có tạo bản ghi nhật ký (nhận ' + logArr.length + ')');
+  const chLog = logArr.filter((x) => /lưu chương wbook/.test(x.text || ''))[0];
+  ok(chLog && chLog.kind === 'chuong' && chLog.target === 'wbook',
+    'worker: nhật ký lưu chương có kind="chuong"/target=slug (nhận ' + JSON.stringify(chLog || null).slice(0, 120) + ')');
+  const KINDS = ['chuong', 'bo', 'registry', 'binh-luan', 'bao-loi', 'phieu', 'anh', 'bao-mat', 'he-thong'];
+  ok(logArr.every((x) => KINDS.indexOf(x.kind) >= 0), 'worker: kind của mọi bản ghi nằm trong bộ lọc của giao diện (' + JSON.stringify(logArr.map((x) => x.kind)) + ')');
+  ok(logArr.every((x) => typeof x.who === 'string' && x.who.length > 0), 'worker: mọi bản ghi có người thực hiện');
+
   const out = { kiemTra: n, dat: n - bad.length, loi: bad, errors0: bad };
   console.log(JSON.stringify(out, null, 1));
   console.log(bad.length ? 'CÒN ' + bad.length + ' LỖI NHÁP/XUẤT BẢN' : 'Nháp = chưa xuất bản: đạt ' + n + ' kiểm tra');

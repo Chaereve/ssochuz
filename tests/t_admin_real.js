@@ -305,6 +305,143 @@ function confirmStrong(phrase) {
   ok(w.CZ_MOCKUP.SAMPLE_ISSUES.length > 0, 'Kiểm tra dữ liệu quét registry thật');
   ok(errors.length === 0, '0 lỗi JS ở các luồng ghi: ' + errors.join(' | '));
 
+  /* ---- 6b · Tab Chương và Nhật ký: những chỗ trước đây KHÔNG dùng được ---- */
+  /* (a) Thư viện có nút mở thẳng tab Chương của đúng bộ — trước phải sang tab
+     Chương rồi lần trong select 67 dòng. */
+  /* Mồi mỗi bộ trong registry một book 2 chương (1 xuất bản + 1 nháp) để luồng
+     chương có dữ liệu thật; bộ nào đã có book thì giữ nguyên. */
+  (registry.lib || []).forEach((b) => {
+    if (!b || !b.slug || KV.books[b.slug]) return;
+    KV.books[b.slug] = {
+      title: b.title || b.slug, slug: b.slug,
+      chapters: [
+        { t: 'Chương 1', html: '<p>đã đăng</p>', status: 'published' },
+        { t: 'Chương 2 nháp', html: '<p>chưa xuất bản</p>', status: 'draft' }
+      ]
+    };
+  });
+  nav('thu-vien');
+  await tick(4);
+  const chBtn = $('[data-act="open-chapters"]');
+  ok(!!chBtn, 'Thư viện có nút “Chương” trên từng dòng');
+  const chSlug = chBtn.dataset.id;
+  chBtn.click();
+  await tick(10);
+  ok(S().route === 'chuong' && S().chapterBook === chSlug, 'nút “Chương” mở tab Chương với đúng bộ (' + S().route + '/' + S().chapterBook + ')');
+  ok(!$('[data-role="chapter-book"]') || $('[data-role="chapter-book"]').value === chSlug, 'ô chọn bộ trong tab Chương khớp bộ vừa mở (' + (($('[data-role="chapter-book"]') || {}).value) + ' vs ' + chSlug + ')');
+  const chCount = S().chapters.length;
+  ok(chCount > 0, 'tab Chương nạp được chương của bộ (nhận ' + chCount + ')');
+
+  /* (b) Tìm chương: gõ tới đâu lọc tới đó, KHÔNG dựng lại cả trang (giữ focus). */
+  const q = $('#chapterQuery');
+  ok(!!q, 'tab Chương có ô tìm chương');
+  const rowsShown = () => w.document.querySelectorAll('#chapterListBody .list-item.ch').length;
+  ok(rowsShown() === chCount, 'chưa lọc ⇒ hiện đủ ' + chCount + ' chương (nhận ' + rowsShown() + ')');
+  q.focus();
+  q.value = 'zzz-khong-co-chuong-nao';
+  q.dispatchEvent(new w.Event('input', { bubbles: true }));
+  await tick(2);
+  ok(w.document.activeElement === q, 'ô tìm chương giữ focus khi đang gõ (không redraw toàn trang)');
+  ok(/Không có chương nào khớp/.test($('#chapterListBody').textContent), 'tìm không ra ⇒ nói rõ “Không có chương nào khớp”');
+  ok(rowsShown() === 0, 'tìm không ra ⇒ 0 dòng (nhận ' + rowsShown() + ')');
+  const title0 = String((S().chapters[0] && S().chapters[0].t) || '');
+  q.value = title0.slice(0, Math.min(6, title0.length));
+  q.dispatchEvent(new w.Event('input', { bubbles: true }));
+  await tick(2);
+  ok(rowsShown() >= 1 && rowsShown() <= chCount, 'tìm theo tên chương ra ' + rowsShown() + '/' + chCount + ' dòng');
+  const cntTxt = $('#chapterListCount').textContent.trim();
+  const wantCnt = rowsShown() === chCount ? String(chCount) + ' chương' : rowsShown() + '/' + chCount + ' chương';
+  ok(cntTxt.indexOf(wantCnt) === 0, 'đếm chương hiện đúng “' + wantCnt + '” khi đang lọc (nhận: ' + cntTxt + ')');
+  q.value = '';
+  q.dispatchEvent(new w.Event('input', { bubbles: true }));
+  q.dispatchEvent(new w.Event('change', { bubbles: true }));
+  await tick(3);
+
+  /* (c) Lọc theo trạng thái chương. */
+  /* đổi bộ lọc ⇒ cả trang dựng lại, nên mỗi lần phải LẤY LẠI nút (node cũ đã rời DOM) */
+  const chip = (f) => [...w.document.querySelectorAll('[data-act="chapter-filter"]')].find((b) => b.dataset.f === f);
+  ok(w.document.querySelectorAll('[data-act="chapter-filter"]').length >= 4, 'có nút lọc chương theo trạng thái');
+  chip('published').click();
+  await tick(3);
+  const nPub = (S().chapters || []).filter((c) => String(c.s || 'published').toLowerCase() === 'published').length;
+  ok(S().chapterFilter === 'published' && rowsShown() === nPub, 'lọc “Xuất bản” hiện đúng ' + nPub + ' chương (nhận ' + rowsShown() + ')');
+  ok(chip('published').getAttribute('aria-pressed') === 'true', 'nút lọc đang chọn có aria-pressed="true"');
+  chip('draft').click();
+  await tick(3);
+  const nDraft = (S().chapters || []).filter((c) => String(c.s || '').toLowerCase() === 'draft').length;
+  ok(rowsShown() === nDraft, 'lọc “Nháp” hiện đúng ' + nDraft + ' chương (nhận ' + rowsShown() + ')');
+  chip('all').click();
+  await tick(3);
+  ok(rowsShown() === chCount, 'bỏ lọc ⇒ trở lại đủ ' + chCount + ' chương');
+
+  /* (d) Bộ chưa có dữ liệu (404) ≠ lỗi tải; lỗi tải phải có role=alert + Thử lại. */
+  const bkSlug = 'bake-love-feelings';
+  const bkBackup = KV.books[bkSlug];
+  const pickBook = async (slug) => {
+    const sel = $('[data-role="chapter-book"]');
+    sel.value = slug;
+    sel.dispatchEvent(new w.Event('change', { bubbles: true }));
+    await tick(10);
+  };
+  delete KV.books[bkSlug];
+  await pickBook(bkSlug);
+  const err404 = $('#chapterLoadError');
+  ok(!!err404 && /Bộ này chưa có dữ liệu chương/.test(err404.textContent), 'book 404 ⇒ “Bộ này chưa có dữ liệu chương” (nhận: ' + ((err404 && err404.textContent) || '<không có>').slice(0, 120) + ')');
+  ok(err404 && !err404.querySelector('[role="alert"]'), '404 KHÔNG dùng role="alert" (không phải lỗi)');
+  ok(!/Không tải được dữ liệu chương/.test(w.document.getElementById('view').textContent), '404 không bị báo thành lỗi tải');
+  KV.books[bkSlug] = bkBackup;
+  click('[data-act="retry-chapter"]');
+  await tick(12);
+  ok(!$('#chapterLoadError') && S().chapters.length > 0, 'Thử lại sau 404 tải được chương (' + S().chapters.length + ')');
+
+  const goodFetch = w.fetch;
+  w.fetch = (u, o) => (new RegExp('/api/book/' + bkSlug + '$').test(String(u))
+    ? Promise.resolve(resp({ ok: false, error: 'KV tạm lỗi (QA)' }, 500))
+    : goodFetch(u, o));
+  await pickBook(bkSlug);
+  const errBox = $('#chapterLoadError');
+  ok(!!errBox && /Không tải được dữ liệu chương/.test(errBox.textContent), 'book 500 ⇒ “Không tải được dữ liệu chương” (nhận: ' + ((errBox && errBox.textContent) || '<không có>').slice(0, 120) + ')');
+  ok(errBox && errBox.getAttribute('role') === 'alert', 'lỗi tải có role="alert" để trình đọc màn hình đọc ngay');
+  ok(errBox && /KV tạm lỗi \(QA\)/.test(errBox.textContent), 'thông báo lỗi kèm lý do Worker trả về');
+  ok(!!$('[data-act="retry-chapter"]'), 'lỗi tải có nút Thử lại');
+  w.fetch = goodFetch;
+  click('[data-act="retry-chapter"]');
+  await tick(12);
+  ok(!$('#chapterLoadError'), 'Thử lại thành công ⇒ khung lỗi biến mất');
+
+  /* (e) Nhật ký: bỏ 2 cột vô nghĩa, có lọc loại + tìm chữ. */
+  KV.log = [
+    { at: '2026-11-03T12:00:00Z', text: 'lưu chương bake-love-feelings #1 (update)', who: 'admin-key', kind: 'chuong', target: 'bake-love-feelings' },
+    { at: '2026-11-03T11:00:00Z', text: 'sửa bộ bake-love-feelings', who: 'bien-tap@ssochuz.test' }
+  ];
+  nav('nhat-ky');
+  await tick(3);
+  click('[data-act="reload-log"]');
+  await tick(12);
+  const th = [...w.document.querySelectorAll('#view table thead th')].map((x) => x.textContent.trim());
+  ok(th.length === 4, 'bảng nhật ký còn 4 cột có nghĩa (' + th.join(' · ') + ')');
+  ok(!th.some((x) => /Kết quả/.test(x)), 'bỏ cột “Kết quả” (luôn “Thành công”)');
+  const logs = w.CZ_MOCKUP.SAMPLE_LOGS;
+  ok(logs.length === 2 && logs[0].k === 'chuong' && logs[0].o === 'bake-love-feelings', 'nhật ký giữ kind/target do Worker ghi');
+  ok(logs[1].k === 'bo' && logs[1].o === '', 'bản ghi CŨ (chỉ text) vẫn phân loại được và KHÔNG lặp text sang cột Đối tượng');
+  ok(logs[0].t === '03/11/2026 19:00' || /^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/.test(logs[0].t), 'thời gian nhật ký dạng dd/mm/yyyy hh:mm (' + logs[0].t + ')');
+  const bodyTxt = () => $('#logBody').textContent;
+  ok(!/Thao tác\s*Thao tác/.test(bodyTxt()), 'không còn hai cột in trùng một chuỗi');
+  setVal('logQuery', 'sửa bộ');
+  await tick(6);
+  ok(!/lưu chương/.test(bodyTxt()) && /sửa bộ/.test(bodyTxt()), 'tìm trong nhật ký lọc đúng dòng (nhận: ' + bodyTxt().slice(0, 120) + ')');
+  setVal('logQuery', 'khong-co-gi-khop');
+  await tick(6);
+  ok(/Không có thao tác nào khớp/.test(bodyTxt()), 'tìm không ra ⇒ trạng thái rỗng có lối thoát');
+  setVal('logQuery', '');
+  await tick(4);
+  click('[data-act="log-kind"][data-k="chuong"]');
+  await tick(4);
+  ok(S().logKind === 'chuong' && /lưu chương/.test(bodyTxt()) && !/sửa bộ bake/.test(bodyTxt()), 'lọc theo loại “Chương” chỉ còn dòng chương');
+  click('[data-act="log-kind"][data-k="all"]');
+  await tick(4);
+  ok(w.document.querySelectorAll('#logBody tbody tr').length === 2, 'bỏ lọc loại ⇒ lại đủ 2 dòng');
+
   /* ---- 7 · không có key ⇒ chặn ghi ---- */
   const n0 = calls.length;
   S().conn = 'static';
@@ -344,6 +481,6 @@ function confirmStrong(phrase) {
   w.close(); dom2.window.close();
   process.exit(bad.length ? 1 : 0);
 })().catch(e => {
-  console.log(JSON.stringify({ errors0: ['harness: ' + (e && e.stack || e)] }, null, 1));
+  console.log(JSON.stringify({ errors0: ['harness: ' + (e && e.stack || e)].concat(bad) }, null, 1));
   process.exit(2);
 });

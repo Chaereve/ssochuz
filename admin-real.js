@@ -279,6 +279,12 @@
   var LAST_EDITOR_RANGE = null;
   var EDITOR_AUTOSAVE_TIMER = null;
   var PENDING_IMPORT = null;
+  /* Trạng thái TẢI BỘ cho tab Chương. Trước đây loadBook() chỉ reject rồi im
+     lặng: bộ 404/500 vẫn hiện khung soạn của bộ CŨ (hoặc rỗng) nên người sửa
+     tưởng đang sửa đúng bộ. Giờ mỗi lần tải đều ghi lại kết quả để khung
+     chương dựng được thông báo + nút Thử lại. */
+  var CHAPTER_LOAD = { slug: '', status: 'idle', error: '', missing: false, at: '' };
+  window.__czChapterLoad = function () { return CHAPTER_LOAD; };
 
   /* ==========================================================================
      TRÌNH SOẠN CHƯƠNG & XEM TRƯỚC ĐỘC GIẢ (chuẩn truyen.html + sanitize.js)
@@ -882,19 +888,42 @@
   }
   function loadBook(slug, quiet, keepIdx) {
     if (!slug) return Promise.resolve(null);
+    CHAPTER_LOAD = { slug: slug, status: 'loading', error: '', missing: false, at: '' };
     return apiCall('/api/book/' + encodeURIComponent(slug)).then(function (r) {
       var b = (r && r.book && Array.isArray(r.book.chapters)) ? r.book : r;
       applyBook(slug, b, keepIdx);
+      CHAPTER_LOAD = { slug: slug, status: 'ok', error: '', missing: false, at: '' };
       if (!quiet) redraw();
       return b;
+    }).catch(function (e) {
+      /* 404 = bộ chưa có dữ liệu chương (không phải lỗi hệ thống) — vẫn mở được
+         khung soạn để tạo chương đầu. 500/mạng = lỗi tải, phải hiện Thử lại. */
+      var st = e && e.status;
+      CHAPTER_LOAD = {
+        slug: slug, status: 'error',
+        error: String((e && e.message) || 'Không rõ lỗi'),
+        missing: st === 404, at: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+      };
+      if (!quiet) redraw();
+      throw e;
     });
   }
   function loadStaticBook(slug) {
     if (!slug) return Promise.resolve(null);
+    CHAPTER_LOAD = { slug: slug, status: 'loading', error: '', missing: false, at: '' };
     return fetch('/data/book/' + encodeURIComponent(slug) + '.json', { cache: 'no-store' })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (b) { if (b) applyBook(slug, b); redraw(); return b; })
-      .catch(function () { return null; });
+      .then(function (r) {
+        if (r.ok) return r.json();
+        CHAPTER_LOAD = { slug: slug, status: 'error', error: 'Không thấy tệp /data/book/' + slug + '.json', missing: r.status === 404, at: '' };
+        redraw();
+        return null;
+      })
+      .then(function (b) { if (b) { applyBook(slug, b); CHAPTER_LOAD = { slug: slug, status: 'ok', error: '', missing: false, at: '' }; } redraw(); return b; })
+      .catch(function (e) {
+        CHAPTER_LOAD = { slug: slug, status: 'error', error: String((e && e.message) || 'Không đọc được tệp'), missing: false, at: '' };
+        redraw();
+        return null;
+      });
   }
 
   function revertChapterBook() {
@@ -910,6 +939,9 @@
       S.comments = list.map(function (c, i) {
         return {
           id: c.id || ('c' + i), r: c.name || c.uid || 'Bạn đọc', b: titleOf(c.slug),
+          /* giữ số chương: trước bị bỏ nên mọi bình luận của một bộ trông giống
+             nhau, không biết đang nói về chương nào */
+          ch: Number(c.ch) || 0,
           txt: c.text || '', d: String(c.createdAt || '').slice(0, 16).replace('T', ' '),
           spam: /https?:\/\/|kiếm tiền|inbox|kiếm thêm/i.test(String(c.text || '')),
           done: false, slug: c.slug || ''
@@ -938,14 +970,37 @@
       ]);
     });
   }
+  function fmtLogTime(at) {
+    var d = new Date(at);
+    if (!at || isNaN(d.getTime())) return String(at || '').slice(0, 16).replace('T', ' ');
+    function p(n) { return (n < 10 ? '0' : '') + n; }
+    return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+  function guessLogKind(text) {
+    var t = String(text || '');
+    if (/chương|chapter/i.test(t)) return 'chuong';
+    if (/xoá bộ|lưu bộ|tạo bộ|bộ /.test(t)) return 'bo';
+    if (/registry|homepage/i.test(t)) return 'registry';
+    if (/bình luận/i.test(t)) return 'binh-luan';
+    if (/báo lỗi/i.test(t)) return 'bao-loi';
+    if (/phiếu/i.test(t)) return 'phieu';
+    if (/ảnh|bìa/i.test(t)) return 'anh';
+    if (/khóa|mật mã|đăng nhập|đăng xuất/i.test(t)) return 'bao-mat';
+    return 'he-thong';
+  }
   function loadLog() {
     return apiCall('/api/admin/log').then(function (r) {
       var list = r.items || r.log || [];
       replaceArr(M.SAMPLE_LOGS, list.slice(0, 200).map(function (x) {
+        /* Bản ghi cũ (trước 18/11) chỉ có {at,text,who}: kind suy từ tiền tố
+           câu chữ để bộ lọc vẫn dùng được; target để trống chứ KHÔNG lặp lại
+           nguyên câu “Thao tác” ở cột Đối tượng như trước. */
         return {
-          t: String(x.at || '').slice(0, 16).replace('T', ' '), a: x.who || 'admin-key',
-          x: x.text || x.action || 'Thao tác', o: x.target || x.text || '—',
-          r: x.result === 'bad' ? 'bad' : (x.result === 'warn' ? 'warn' : 'ok')
+          t: fmtLogTime(x.at),
+          a: x.who || 'admin-key',
+          k: x.kind || guessLogKind(x.text || ''),
+          x: x.text || x.action || 'Thao tác',
+          o: x.target || ''
         };
       }));
     });
@@ -2153,17 +2208,44 @@
       var ce = D.getElementById('editor');
       if (ce) ce.focus();
     },
-    'chapter-pick-book': function (el) {
-      var pickSlug = el.dataset.id;
-      if (!pickSlug) return;
+    'chapter-pick-book': function (el) { openChapterBook(el.dataset.id, false); },
+    /* Từ Thư viện / Dashboard: mở đúng bộ đó ở tab Chương (1 cú bấm, không phải
+       nhớ slug rồi sang tab kia chọn lại). */
+    'open-chapters': function (el) { openChapterBook(el.dataset.id, true); },
+    'reload-comments': function () {
+      say('Đang đọc lại bình luận…', 'info');
+      loadComments().then(function () { redraw(); say('Đã đọc lại bình luận.'); }).catch(fail);
+    },
+    'log-kind': function (el) {
+      S.logKind = String((el && el.dataset && el.dataset.k) || 'all');
+      S.logPage = 1;
+      redraw();
+    },
+    'reload-log': function () {
+      say('Đang đọc lại nhật ký…', 'info');
+      loadLog().then(function () { redraw(); say('Đã đọc lại nhật ký.'); }).catch(fail);
+    },
+    'retry-chapter': function () {
+      var slug = String(BOOK_SLUG || S.chapterBook || '');
+      if (!slug) { say('Chưa chọn bộ để tải chương.', 'warn'); return; }
+      say('Đang tải lại chương của “' + (titleOf(slug) || slug) + '”…', 'info');
+      var p = (S.conn === 'static' ? loadStaticBook(slug) : loadBook(slug, true));
+      p.then(function (b) {
+        if (b) { say('Đã tải lại ' + (S.chapters.length) + ' chương của “' + (titleOf(slug) || slug) + '”.'); redraw(); }
+        else { say('Vẫn chưa tải được chương của bộ này.', 'bad'); }
+      }).catch(function () { say('Vẫn chưa tải được chương của “' + (titleOf(slug) || slug) + '” — xem chi tiết trong khung.', 'bad'); });
+    },
+    'chapter-filter': function (el) {
       snapshotLiveEditor();
-      S.chapterBook = pickSlug; S.selectedBook = pickSlug; S.editorPreview = false;
-      (S.conn === 'static' ? loadStaticBook(pickSlug) : loadBook(pickSlug)).then(function (b) {
-        if (!b) { revertChapterBook(); say('Không tải được dữ liệu chương của bộ này.', 'bad'); return; }
-        say('Đang quản lý chương của ' + titleOf(pickSlug) + '.');
-        var card = D.getElementById('editorCard');
-        if (card && card.scrollIntoView) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }).catch(function (e) { revertChapterBook(); fail(e); });
+      S.chapterFilter = String((el && el.dataset && el.dataset.f) || 'all');
+      redraw();
+    },
+    'lib-pub-filter': function (el) {
+      var pub = String((el && el.dataset && el.dataset.pub) || '');
+      S.lib = S.lib || { q: '', status: 'all', pub: '', vis: '', lock: '', adult: '', sort: 'new', page: 1 };
+      S.lib.pub = pub; S.lib.page = 1;
+      go('thu-vien');
+      say(pub === 'draft' ? 'Thư viện · đang lọc bộ Nháp.' : 'Thư viện · đang lọc bộ ' + (PUB_LABEL[pub] || pub) + '.', 'info');
     },
     'format': function (el) { execEditorFormat(el.dataset.cmd); },
     'insert-separator': realInsertSeparator,
@@ -2352,12 +2434,17 @@
       S.chapterBook = cb; S.selectedBook = cb; S.editorPreview = false;
       var p = (cb !== BOOK_SLUG) ? (S.conn === 'static' ? loadStaticBook(cb) : loadBook(cb)) : Promise.resolve('ok');
       p.then(function (b) {
-        if (!b) { revertChapterBook(); say('Không tải được dữ liệu chương của bộ này.', 'bad'); return; }
+        if (!b) { say('Không tải được dữ liệu chương của bộ này — xem thông báo trong khung.', 'bad'); return; }
         redraw();
-        var mc = D.getElementById('editorCard');
+        var mc = D.getElementById('editorCard') || D.getElementById('chapterLoadError');
         if (mc && mc.scrollIntoView) mc.scrollIntoView({ behavior: 'smooth', block: 'start' });
         say('Đang quản lý chương của ' + titleOf(cb) + '.');
-      }).catch(function (e) { revertChapterBook(); fail(e); });
+      }).catch(function () {
+        /* Không revert: quay về bộ cũ sẽ GIẤU lỗi và người sửa tưởng đang ở bộ
+           mình vừa chọn. Khung chương dựng thông báo + nút Thử lại. */
+        say('Không tải được chương của “' + (titleOf(cb) || cb) + '” — bấm Thử lại trong khung.', 'bad');
+        redraw();
+      });
     },
     'focus-editor': function () {
       ensureEditingMode();
@@ -2425,11 +2512,175 @@
     hidden: 'Chương nằm trong bộ nhưng độc giả không thấy.',
     draft: 'Nháp — chỉ admin thấy, độc giả CHƯA đọc được cho tới khi bấm Xuất bản.'
   };
+  /* ---------------- Tab Chương · chọn bộ + tìm/lọc chương ---------------- */
+  var CH_FILTERS = [
+    ['all', 'Tất cả'], ['draft', 'Nháp'], ['published', 'Xuất bản'], ['scheduled', 'Hẹn giờ'], ['hidden', 'Ẩn']
+  ];
+  var PUB_LABEL = { draft: 'Nháp', pending_review: 'Chờ duyệt', approved: 'Đã duyệt', scheduled: 'Hẹn giờ', published: 'Xuất bản', rejected: 'Từ chối', archived: 'Lưu trữ' };
+  /* Mở 1 bộ ở tab Chương. Dùng chung cho chip “mới cập nhật”, nút “Chương” ở
+     Thư viện và nút Quản lý chương — một đường, một cách báo lỗi. */
+  function openChapterBook(slug, nav) {
+    if (!slug) return;
+    snapshotLiveEditor();
+    S.chapterBook = slug; S.selectedBook = slug; S.editorPreview = false;
+    if (nav) go('chuong');
+    var p = (S.conn === 'static' ? loadStaticBook(slug) : loadBook(slug));
+    p.then(function (b) {
+      if (!b) { say('Không tải được dữ liệu chương của bộ này — xem thông báo trong khung.', 'bad'); return; }
+      say('Đang quản lý chương của “' + (titleOf(slug) || slug) + '”.');
+      var card = D.getElementById(nav ? 'chapterListBody' : 'editorCard');
+      if (card && card.scrollIntoView) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }).catch(function () {
+      say('Không tải được chương của “' + (titleOf(slug) || slug) + '” — bấm Thử lại trong khung.', 'bad');
+    });
+  }
+  function chapterStatusKey(c) { return String((c && c.s) || 'published').toLowerCase(); }
+  function chapterCounts() {
+    var n = { all: (S.chapters || []).length, draft: 0, published: 0, scheduled: 0, hidden: 0 };
+    (S.chapters || []).forEach(function (c) { var k = chapterStatusKey(c); n[k] = (n[k] || 0) + 1; });
+    return n;
+  }
+  function chapterVisibleRows() {
+    var q = String(S.chapterQuery || '').trim().toLowerCase().replace(/^#/, '');
+    var f = String(S.chapterFilter || 'all').toLowerCase();
+    var out = [];
+    (S.chapters || []).forEach(function (c, i) {
+      if (f !== 'all' && chapterStatusKey(c) !== f) return;
+      if (q) {
+        var hit = String((c && c.t) || '').toLowerCase().indexOf(q) >= 0 || String(i + 1) === q;
+        if (!hit) return;
+      }
+      out.push({ c: c, i: i });
+    });
+    return out;
+  }
+  /* Bộ mới cập nhật trước — chuyển bộ bằng 1 cú bấm thay vì mở select 67 dòng. */
+  function chapterRecentBooks(n) {
+    var lib = (REG.lib || []).slice();
+    lib.sort(function (a, b) {
+      var d = String(b && b.updated || '').localeCompare(String(a && a.updated || ''));
+      return d !== 0 ? d : String(a && a.title || '').localeCompare(String(b && b.title || ''));
+    });
+    return lib.slice(0, n || 6);
+  }
+  function chapterPickerHtml(curSlug) {
+    var books = S.books || [];
+    var inList = books.some(function (b) { return b.id === curSlug; });
+    var opts = books.map(function (b) {
+      return '<option value="' + esc(b.id) + '"' + (b.id === curSlug ? ' selected' : '') + '>' + esc(b.t || b.id) + '</option>';
+    }).join('');
+    if (curSlug && !inList) opts = '<option value="' + esc(curSlug) + '" selected>' + esc(titleOf(curSlug) || curSlug) + '</option>' + opts;
+    var recent = chapterRecentBooks(6).filter(function (m) { return m && m.slug; });
+    var chips = recent.length
+      ? '<div class="ch-recent" role="group" aria-label="Bộ mới cập nhật">' +
+          '<span class="lb">Mới cập nhật:</span>' +
+          recent.map(function (m) {
+            var on = m.slug === curSlug;
+            return '<button type="button" class="chip' + (on ? ' on' : '') + '" data-act="chapter-pick-book" data-id="' + esc(m.slug) + '"' +
+              (on ? ' aria-current="true"' : '') + ' data-tip="' + esc(m.title || m.slug) + '">' +
+              esc(String(m.title || m.slug).slice(0, 26)) + '</button>';
+          }).join('') +
+        '</div>'
+      : '';
+    var q = chapterCounts();
+    var books_ = S.books || [];
+    var qDraft = books_.filter(function (b) { return String(b.pub || '') === 'draft'; }).length;
+    var qPending = books_.filter(function (b) { return String(b.pub || '') === 'pending_review'; }).length;
+    var qSched = books_.filter(function (b) { return String(b.pub || '') === 'scheduled'; }).length;
+    var qWait = books_.filter(function (b) { return Number(b.pending) > 0; }).length;
+    var queue = '<div class="ch-queue" aria-label="Hàng đợi xuất bản">' +
+      '<span class="lb">Hàng đợi:</span>' +
+      '<button type="button" class="chip ' + (qDraft ? 't-slate' : '') + '" data-act="lib-pub-filter" data-pub="draft" data-tip="Xem các bộ đang là nháp ở Thư viện">Nháp <b>' + qDraft + '</b></button>' +
+      '<button type="button" class="chip ' + (qPending ? 't-warn' : '') + '" data-act="lib-pub-filter" data-pub="pending_review" data-tip="Xem các bộ chờ duyệt ở Thư viện">Chờ duyệt <b>' + qPending + '</b></button>' +
+      '<button type="button" class="chip ' + (qSched ? 't-info' : '') + '" data-act="lib-pub-filter" data-pub="scheduled" data-tip="Xem các bộ hẹn giờ ở Thư viện">Hẹn giờ <b>' + qSched + '</b></button>' +
+      '<span class="chip ' + (qWait ? 't-warn' : '') + '" data-tip="Số bộ còn chương nháp / hẹn giờ / ẩn chưa lên sóng">Chưa lên sóng <b>' + qWait + '</b></span>' +
+      '</div>';
+    return '<div class="card"><div class="card-hd"><h3>Chọn bộ để quản lý chương</h3>' +
+      '<span class="right">' + books.length + ' bộ</span></div>' +
+      '<div class="card-bd ch-picker">' +
+        '<div class="row wrap" style="gap:8px">' +
+          '<span class="sel" style="flex:1 1 260px"><select class="inp" data-role="chapter-book" aria-label="Chọn bộ cần quản lý chương">' + opts + '</select></span>' +
+          '<button class="btn sm" data-act="manage-chapters">' + window.icon('list', 's') + 'Quản lý chương</button>' +
+        '</div>' +
+        chips + queue +
+      '</div></div>';
+  }
+  function chapterLoadErrorHtml(load) {
+    var name = titleOf(load.slug) || load.slug || 'bộ này';
+    if (load.missing) {
+      return '<div class="card" id="chapterLoadError"><div class="card-hd"><h3>Bộ này chưa có dữ liệu chương</h3>' +
+        '<span class="right">404 · ' + esc(load.slug) + '</span></div><div class="card-bd">' +
+        '<div class="state" style="min-height:150px;border:0" role="status">' + window.icon('inbox') +
+          '<h3>Chưa có tệp chương</h3>' +
+          '<p>Registry có “' + esc(name) + '” nhưng KV chưa có nội dung bộ. Mở tab Sửa bộ để tạo bộ trống rồi quay lại viết chương đầu.</p>' +
+          '<div class="row wrap" style="gap:8px;justify-content:center">' +
+            '<button class="btn sm" data-act="retry-chapter">' + window.icon('refresh', 's') + 'Thử lại</button>' +
+            '<button class="btn sm ghost" data-act="go" data-id="sua-bo">Mở Sửa bộ</button>' +
+          '</div></div></div></div>';
+    }
+    return '<div class="card" id="chapterLoadError" role="alert"><div class="card-hd"><h3>Không tải được dữ liệu chương</h3>' +
+      '<span class="right">' + esc(load.at || '') + '</span></div><div class="card-bd">' +
+      '<div class="state bad" style="min-height:150px;border:0">' + window.icon('alert') +
+        '<h3>Lỗi tải dữ liệu chương</h3>' +
+        '<p>“' + esc(name) + '” · ' + esc(load.error || 'Không rõ lỗi') + '. Chưa có gì bị ghi lên KV — thử lại trước khi sửa.</p>' +
+        '<div class="row wrap" style="gap:8px;justify-content:center">' +
+          '<button class="btn pri sm" data-act="retry-chapter">' + window.icon('refresh', 's') + 'Thử lại</button>' +
+          '<button class="btn sm ghost" data-act="go" data-id="thu-vien">Về Thư viện</button>' +
+          '<button class="btn sm ghost" data-act="go" data-id="cai-dat">Mở Cài đặt</button>' +
+        '</div></div></div></div>';
+  }
+  function chapterRowHtml(c, i) {
+    var isAct = i === S.activeChapter;
+    var viTri = i === 0 ? -1 : i;
+    return '<div class="list-item ch' + (isAct ? ' active' : '') + '" style="gap:6px">' +
+      '<button class="btn ghost sm" style="flex:1;min-width:0;text-align:left;justify-content:flex-start;overflow:hidden" data-act="chapter-select" data-idx="' + i + '">' +
+        '<span class="mono xs dim" style="flex:none">#' + (i + 1) + '</span>' +
+        '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap' + (isAct ? ';color:var(--acc);font-weight:600' : '') + '">' + esc(c.t || ('Chương ' + (i + 1))) + '</span>' +
+      '</button>' +
+      chapterRowBadge(c) +
+      '<button class="btn icon ghost sm" data-act="chapter-move" data-dir="-1" data-idx="' + i + '"' + (viTri < 0 ? ' disabled' : '') + ' aria-label="Di chuyển lên">' + window.icon('arrowup', 's') + '</button>' +
+      '<button class="btn icon ghost sm" data-act="chapter-move" data-dir="1" data-idx="' + i + '"' + (i === S.chapters.length - 1 ? ' disabled' : '') + ' aria-label="Di chuyển xuống">' + window.icon('arrowdown', 's') + '</button>' +
+      '<button class="btn icon ghost sm" data-act="chapter-delete" data-idx="' + i + '" aria-label="Xóa chương">' + window.icon('trash', 's') + '</button>' +
+    '</div>';
+  }
+  function chapterListBodyHtml() {
+    if (!S.chapters.length) {
+      return '<div class="state" style="min-height:110px;border:0"><p>Bộ này chưa có chương nào · bấm <b>+ Thêm</b> hoặc nhập tiêu đề và nội dung bên dưới rồi bấm <b>Lưu chương</b>.</p></div>';
+    }
+    var rows = chapterVisibleRows();
+    if (!rows.length) {
+      return '<div class="state" style="min-height:110px;border:0" role="status"><p>Không có chương nào khớp “' + esc(S.chapterQuery || '') + '”. ' +
+        '<button class="btn ghost sm" data-act="chapter-filter" data-f="all">Xoá lọc</button></p></div>';
+    }
+    return rows.map(function (r) { return chapterRowHtml(r.c, r.i); }).join('');
+  }
+  function chapterListCountText() {
+    var n = chapterCounts();
+    var rows = chapterVisibleRows().length;
+    var head = rows === S.chapters.length ? (S.chapters.length + ' chương') : (rows + '/' + S.chapters.length + ' chương');
+    return head + (n.draft ? ' · ' + n.draft + ' nháp' : '');
+  }
+  function renderChapterListOnly() {
+    var body = D.getElementById('chapterListBody');
+    if (body) body.innerHTML = chapterListBodyHtml();
+    var count = D.getElementById('chapterListCount');
+    if (count) count.textContent = chapterListCountText();
+    var tabs = D.querySelectorAll('[data-act="chapter-filter"]');
+    Array.prototype.forEach.call(tabs, function (b) {
+      var on = String(b.dataset.f || 'all') === String(S.chapterFilter || 'all');
+      b.classList.toggle('on', on);
+      if (on) b.setAttribute('aria-pressed', 'true'); else b.setAttribute('aria-pressed', 'false');
+    });
+    updateSaveNoteDom();
+  }
+
   window.__CZ_CHAPTER_VIEW__ = window.chapterEditorHTML = function () {
-    var curSlug = String(BOOK_SLUG || S.chapterBook || S.selectedBook || (S.books[0] || {}).id || '');
+    /* Ưu tiên bộ ĐANG CHỌN ở tab Chương: khi tải lỗi, ô chọn vẫn phải chỉ đúng
+       bộ người dùng vừa bấm (nếu lấy BOOK_SLUG trước, lỗi sẽ hiện dưới tên bộ cũ
+       và nút “Thử lại” tải nhầm bộ). */
+    var curSlug = String(S.chapterBook || BOOK_SLUG || S.selectedBook || (S.books[0] || {}).id || '');
     var curBookTitle = titleOf(curSlug) || 'Chưa chọn bộ';
     var active = S.chapters[S.activeChapter] || { t: '', s: 'draft', d: '', html: '' };
-    var draftCount = S.chapters.filter(function (c) { return String((c && c.s) || '').toLowerCase() === 'draft'; }).length;
     var statusNow = String(S.chapterStatus || (active && active.s) || 'draft').toLowerCase();
     var curHtml = window.editorHtml();
     var curTitle = S.models['chapter-title'] != null ? S.models['chapter-title'] : (active.t || '');
@@ -2442,26 +2693,26 @@
           ? (window.icon('check', 'xs') + ' Đã lưu KV lúc ' + esc(S.savedAt))
           : (draft && draft.savedAt ? ('● Có nháp cục bộ lúc ' + esc(draft.savedAt)) : (window.icon('check', 'xs') + ' Đã đồng bộ KV'));
 
-    var leftBody = S.chapters.length
-      ? S.chapters.map(function (c, i) {
-          var isAct = i === S.activeChapter;
-          return '<div class="list-item ch' + (isAct ? ' active' : '') + '" style="gap:6px">' +
-            '<button class="btn ghost sm" style="flex:1;min-width:0;text-align:left;justify-content:flex-start;overflow:hidden" data-act="chapter-select" data-idx="' + i + '">' +
-              '<span class="mono xs dim" style="flex:none">#' + (i + 1) + '</span>' +
-              '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap' + (isAct ? ';color:var(--acc);font-weight:600' : '') + '">' + esc(c.t || ('Chương ' + (i + 1))) + '</span>' +
-            '</button>' +
-            chapterRowBadge(c) +
-            '<button class="btn icon ghost sm" data-act="chapter-move" data-dir="-1" data-idx="' + i + '"' + (i === 0 ? ' disabled' : '') + ' aria-label="Di chuyển lên">' + window.icon('arrowup', 's') + '</button>' +
-            '<button class="btn icon ghost sm" data-act="chapter-move" data-dir="1" data-idx="' + i + '"' + (i === S.chapters.length - 1 ? ' disabled' : '') + ' aria-label="Di chuyển xuống">' + window.icon('arrowdown', 's') + '</button>' +
-            '<button class="btn icon ghost sm" data-act="chapter-delete" data-idx="' + i + '" aria-label="Xóa chương">' + window.icon('trash', 's') + '</button>' +
-          '</div>';
-        }).join('')
-      : '<div class="state" style="min-height:110px;border:0"><p>Bộ này chưa có chương nào · bấm <b>+ Thêm</b> hoặc nhập tiêu đề và nội dung bên dưới rồi bấm <b>Lưu chương</b>.</p></div>';
+    var counts = chapterCounts();
+    var chFilter = String(S.chapterFilter || 'all');
+    var filterBar = '<div class="ch-tools mb">' +
+      '<div class="search">' + window.icon('search', 'xs') +
+        '<input class="inp" type="search" id="chapterQuery" data-role="chapter-q" value="' + esc(S.chapterQuery || '') + '" placeholder="Tìm chương theo tên hoặc số…" aria-label="Tìm chương">' +
+      '</div>' +
+      '<div class="tabs" role="group" aria-label="Lọc chương theo trạng thái">' +
+        CH_FILTERS.map(function (f) {
+          var on = f[0] === chFilter;
+          return '<button class="tab' + (on ? ' on' : '') + '" type="button" data-act="chapter-filter" data-f="' + f[0] + '" aria-pressed="' + (on ? 'true' : 'false') + '">' +
+            f[1] + (counts[f[0]] ? ' <span class="mono xs dim">' + counts[f[0]] + '</span>' : '') + '</button>';
+        }).join('') +
+      '</div>' +
+      '</div>';
 
     var left = '<div class="card"><div class="card-hd"><h3>Danh sách chương · ' + esc(curBookTitle) + '</h3>' +
-      '<span class="right">' + S.chapters.length + ' chương' + (draftCount ? ' · ' + draftCount + ' nháp' : '') + '</span>' +
+      '<span class="right" id="chapterListCount">' + esc(chapterListCountText()) + '</span>' +
       '<button class="btn sm" data-act="chapter-add">' + window.icon('plus', 's') + 'Thêm</button></div>' +
-      '<div class="card-bd tight ch-list-scroll" style="padding:6px 10px" tabindex="0" role="region" aria-label="Danh sách chương">' + leftBody + '</div></div>';
+      '<div class="card-bd" style="padding:12px 12px 0">' + filterBar + '</div>' +
+      '<div class="card-bd tight ch-list-scroll" id="chapterListBody" style="padding:6px 10px" tabindex="0" role="region" aria-label="Danh sách chương">' + chapterListBodyHtml() + '</div></div>';
 
     var tools = [
       ['bold', 'bold', 'In đậm (Ctrl+B)'],
@@ -2531,7 +2782,10 @@
       '<div class="state-note mt">' + window.icon('info', 's') + ' Chương mới / chương nhập từ tệp mặc định là <b>Nháp</b> — độc giả chưa thấy, bấm <b>Xuất bản ngay</b> khi đã soát xong. Ctrl/Cmd+S lưu chương lên KV · Ctrl/Cmd+Alt+N thêm chương mới · Dán trực tiếp từ Word/Google Docs giữ nguyên đậm/nghiêng/đoạn văn.</div>' +
       '</div></div>';
 
-    return window.chapterPipeline() + '<div class="mt">' + left + '</div><div class="mt">' + editor + '</div>';
+    var load = (CHAPTER_LOAD && CHAPTER_LOAD.slug === curSlug && CHAPTER_LOAD.status === 'error') ? CHAPTER_LOAD : null;
+    return chapterPickerHtml(curSlug) + (load
+      ? '<div class="mt">' + chapterLoadErrorHtml(load) + '</div>'
+      : '<div class="mt">' + left + '</div><div class="mt">' + editor + '</div>');
   };
 
   window.connect = realConnect;
@@ -2548,7 +2802,12 @@
     say('Đã chọn ' + (M.getBook(id).t || id) + ' · dữ liệu KV.', 'info');
     if (CFG.base) {
       (S.conn === 'static' ? loadStaticBook(id) : loadBook(id))
-        .then(function (b) { if (!b) revertChapterBook(); }, revertChapterBook);
+        .then(function (b) {
+          if (!b) say('Không tải được dữ liệu chương của bộ này — xem thông báo trong khung.', 'bad');
+        })
+        .catch(function () {
+          say('Không tải được chương của “' + (titleOf(id) || id) + '” — bấm Thử lại trong khung.', 'bad');
+        });
     }
   };
   window.initEditModels = function (b) {
@@ -3035,6 +3294,15 @@
     }
   });
 
+  /* Ô tìm chương: cập nhật TẠI CHỖ danh sách (không redraw toàn trang) để
+     không mất focus / không rơi chữ đang gõ trong trình soạn. */
+  D.addEventListener('input', function (e) {
+    var el = e.target;
+    if (!el || !el.dataset || el.dataset.role !== 'chapter-q') return;
+    S.chapterQuery = String(el.value || '');
+    renderChapterListOnly();
+  });
+
   D.addEventListener('change', function (e) {
     var el = e.target; if (!el || !el.dataset) return;
     var r = el.dataset.role;
@@ -3060,12 +3328,18 @@
         updateSaveNoteDom();
       }
     }
-    else if (r === 'chapter-book') {
+    else if (r === 'log-q') {
+      /* Tìm trong nhật ký: chạy ở 'change' (Enter / rời ô) để không dựng lại
+         cả trang sau từng phím — dựng lại sẽ cướp focus khỏi ô đang gõ. */
       e.preventDefault(); e.stopPropagation();
-      snapshotLiveEditor();
-      S.chapterBook = el.value; S.selectedBook = el.value; S.editorPreview = false;
-      (S.conn === 'static' ? loadStaticBook(el.value) : loadBook(el.value))
-        .then(function (b) { if (!b) revertChapterBook(); }, revertChapterBook);
+      S.logQ = String(el.value || ''); S.logPage = 1;
+      redraw();
+    }
+    else if (r === 'chapter-book') {
+      /* Đổi bộ qua ô chọn: đi CÙNG một đường với chip/nút “Chương” để lỗi tải
+         hiện đúng khung + Thử lại, không lặng lẽ quay về bộ cũ. */
+      e.preventDefault(); e.stopPropagation();
+      openChapterBook(el.value, false);
     }
     else if (r === 'picked') {
       e.preventDefault(); e.stopPropagation();
