@@ -1100,6 +1100,8 @@ function renderSidebar(){
       return '<button class="nav-item'+(on?' on':'')+(gated?' gated':'')+'" data-act="go" data-id="'+id+'"'+(on?' aria-current="page"':'')+' title="'+esc(tip)+'"'+(gated?' data-tip="'+esc(tip)+'"':'')+'>'+icon(ic,'s')+'<span class="tx">'+esc(label)+'</span>'+ct+'</button>';
     }).join('')+'</div>';
   }).join('');
+  var prevSide=document.querySelector('#sidebar .side-scroll');
+  var prevTop=prevSide?prevSide.scrollTop:0;
   document.getElementById('sidebar').innerHTML =
     '<div class="brand"><span class="dot"></span><span class="logo"><span class="tx">ssochuz</span><i>admin</i></span>'+
     '<button class="tool icon collapse-btn" data-act="toggle-collapse" data-tip="Thu gọn / mở rộng sidebar" aria-label="'+(state.collapsed?'Mở rộng sidebar':'Thu gọn sidebar')+'">'+icon('menu','s')+'</button></div>'+
@@ -1108,6 +1110,8 @@ function renderSidebar(){
     '<button data-act="go" data-id="dang-nhap">Đăng nhập / nối Worker</button>'+
     '<button data-act="docs">Tài liệu bàn giao</button>'+
     '</div>';
+  var nextSide=document.querySelector('#sidebar .side-scroll');
+  if(nextSide&&prevTop)nextSide.scrollTop=prevTop;
 }
 function renderTopbar(){
   var c=CONN[state.conn]||CONN.online,q=QUOTA[state.quota]||QUOTA.ok;
