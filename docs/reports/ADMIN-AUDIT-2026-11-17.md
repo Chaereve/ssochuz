@@ -326,3 +326,11 @@ Theo yêu cầu kiểm tra lại bằng thực thi, lần này đối chiếu t�
 **Kết quả kiểm tra ban đầu:** `t_admin_real.js` đạt (0 lỗi, 138 request Worker giả); audit jsdom 13 tab đạt 0 lỗi JS; năm `tools/check_*.mjs` đều đạt; build `admin.html` chạy lại được. Lần chạy đầu chưa có các gói `axe-core`, `esbuild`, `mammoth`; `t_follow_only.js` cũng được sửa dùng đường dẫn theo `__dirname` để chạy được cả khi gọi từ runner.
 
 **Kiểm tra cuối trước merge (sau `npm ci`):** toàn bộ test trong `tests/run.js` đạt, ngoại trừ `tools/audit_a11y.mjs` thất bại đúng một ngưỡng: payload gzip admin **129 kB**, giới hạn **125 kB**. Trong audit trợ năng vẫn có **585 lượt đạt, 0 vi phạm axe**; các trang home/reader nằm trong ngân sách. Đây là lỗi ngân sách đã tồn tại ở commit cha (admin HTML + `admin-real.js`: **128.67 kB gzip** theo cách cộng của audit); commit hiện tại tăng khoảng **0.39 kB** lên 129.06 kB, nên không phải lỗi mới làm vượt ngưỡng nhưng vẫn làm tăng nhẹ payload. Không hạ ngưỡng kiểm thử để che lỗi; ghi nhận đây là việc cần xử lý/duyệt ngoại lệ trước khi coi pipeline hoàn toàn xanh. Các test admin mục tiêu, test moderation/doctor/flow/homepage/chapter draft, 5 `tools/check_*.mjs`, `check_src`, `check_secrets`, `check_headers` đều đạt; build tái lập ra `admin.html` 282601 byte, `admin-real.js?v=c22f1bbe85`.
+
+### 8.6 Xử lý ngân sách payload admin
+
+Không tăng trần kiểm thử. Phần `DOCS_HTML` là tài liệu lịch sử dài, chỉ cần khi admin mở **Tài liệu bàn giao**, nên build `admin.html` nay tách nó thành `admin-docs.html`; modal chỉ GET `/admin-docs` khi được mở. Mockup vẫn giữ tài liệu nhúng để mở offline như trước. `_headers` đặt `no-store` và `noindex` cho cả URL sạch lẫn tệp `.html`.
+
+- Payload đầu admin giảm từ **129.06 kB xuống 109.7 kB gzip**, thấp hơn trần 125 kB **15.3 kB**; giảm khoảng **19.4 kB** mà không bỏ tính năng tài liệu.
+- `t_admin_real.js` kiểm tra không tải fragment lúc vào admin, mở modal mới tải đúng một lần và nội dung hiện đầy đủ; `t_devserver.js` kiểm tra `/admin-docs` phục vụ đúng fragment.
+- Cập nhật các kiểm tra nguồn cũ để xác minh tài liệu ở file riêng. `npm run build` tái lập được; chạy lại **toàn bộ `tests/run.js`: tất cả bài đạt**, bao gồm audit 24 màn, 585 lượt axe, 0 vi phạm và không còn Lighthouse budget issue.

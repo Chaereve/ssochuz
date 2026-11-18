@@ -40,11 +40,9 @@ const reg = JSON.parse(R('data/registry.json'));
 const bookSeed = JSON.parse(R('data/book/bake-love-feelings.json'));
 const repl = JSON.parse(R('tools/admin_prod_replacements.json'));
 
-const docsStart = prod.indexOf('const DOCS_HTML =');
-const docsEndMark = "\n'</ul></div>';";
-const docsEnd = prod.indexOf(docsEndMark, docsStart) + docsEndMark.length;
-ok(docsStart > 0 && docsEnd > docsStart, 'xác định được khối DOCS_HTML');
-const prodUI = prod.slice(0, docsStart) + prod.slice(docsEnd);
+const prodUI = prod;
+ok(!prod.includes('PHASE 1 · NGHIÊN CỨU') && R('admin-docs.html').includes('PHASE 1 · NGHIÊN CỨU'),
+  'DOCS_HTML ở fragment riêng, không nằm trong payload admin');
 
 const LIBN = reg.lib.length;                       // 67
 const CHOICE = reg.editorChoice.slice();            // 12 slug thật

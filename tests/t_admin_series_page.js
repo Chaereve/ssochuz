@@ -33,9 +33,7 @@ const reg = JSON.parse(R('data/registry.json'));
 const bookSeed = JSON.parse(R('data/book/bake-love-feelings.json'));
 const repl = JSON.parse(R('tools/admin_prod_replacements.json'));
 
-const ds = prod.indexOf('const DOCS_HTML =');
-const de = prod.indexOf("\n'</ul></div>';", ds) + "\n'</ul></div>';".length;
-const prodUI = prod.slice(0, ds) + prod.slice(de);
+const prodUI = prod;
 const LIBN = reg.lib.length, CHOICE = reg.editorChoice.slice();
 
 /* ------------------------------------------------------------ 1 · NGUỒN */

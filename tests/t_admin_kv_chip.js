@@ -43,13 +43,11 @@ const real = R('admin-real.js');
 const reg = JSON.parse(R('data/registry.json'));
 const bookSeed = JSON.parse(R('data/book/bake-love-feelings.json'));
 
-/* Tách đúng khối tài liệu lịch sử (DOCS_HTML) để không nhầm chữ MẪU/120. */
-const docsStart = prod.indexOf('const DOCS_HTML =');
-const docsEndMark = "\n'</ul></div>';";
-const docsEnd = prod.indexOf(docsEndMark, docsStart) + docsEndMark.length;
-ok(docsStart > 0 && docsEnd > docsStart, 'xác định được khối DOCS_HTML');
-const prodUI = prod.slice(0, docsStart) + prod.slice(docsEnd);
-const docsHTML = prod.slice(docsStart, docsEnd);
+/* Tài liệu lịch sử tách ra để không tải cùng admin và không lẫn với UI. */
+const prodUI = prod;
+const docsHTML = R('admin-docs.html');
+ok(!prod.includes('PHASE 1 · NGHIÊN CỨU') && docsHTML.includes('PHASE 1 · NGHIÊN CỨU'),
+  'DOCS_HTML ở file riêng, không nhúng trong admin.html');
 
 /* ------------------------------------------------------- 1 · NGUỒN PHÁT HÀNH */
 [

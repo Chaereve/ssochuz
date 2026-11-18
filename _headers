@@ -36,6 +36,15 @@
 /admin-real.js
   Cache-Control: no-cache
 
+# Tài liệu lịch sử của admin chỉ được tải khi mở modal trợ giúp.
+/admin-docs
+  Cache-Control: no-store, max-age=0
+  X-Robots-Tag: noindex
+
+/admin-docs.html
+  Cache-Control: no-store, max-age=0
+  X-Robots-Tag: noindex
+
 /admin-docx.js
   Cache-Control: no-cache
 

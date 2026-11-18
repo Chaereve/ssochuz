@@ -2542,6 +2542,7 @@ const DOCS_HTML =
 '<li>Đo hiệu năng bảng lớn, thử nghiệm 360px trên thiết bị thật và kiểm tra AT trước khi chuyển code production.</li>'+
 '<li>Dựng môi trường staging có Worker + KV + Supabase/R2 + Blogger để kiểm chứng CORS, x-admin-key, timeout và migration overflow trước khi nối bản thật.</li>'+
 '</ul></div>';
+var DOCS_CACHE = DOCS_HTML;
 
 /* ============================================================
    MODAL · TOAST · ĐIỀU HƯỚNG · RENDER
@@ -2558,7 +2559,7 @@ function renderModal(){
   if(c.kind==='docs'){
     inner='<div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="docsTitle">'+
       '<div class="modal-hd"><h3 id="docsTitle">Tài liệu bàn giao · Mockup admin ssochuz</h3><button class="btn icon ghost sm" data-act="close-modal" aria-label="Đóng">'+icon('x','s')+'</button></div>'+
-      '<div class="modal-bd" style="display:block">'+DOCS_HTML+'</div>'+
+      '<div class="modal-bd" style="display:block"><div id="docsContent">'+(DOCS_HTML||'<p class="sm mut">Đang tải tài liệu…</p>')+'</div></div>'+
       '<div class="modal-ft"><span class="xs dim">DỮ LIỆU MẪU</span><button class="btn sm" data-act="close-modal">Đóng</button></div></div>';
   }else if(c.kind==='strong'){
     var ok=(state.confirmValue||'').trim()===c.phrase;
@@ -2614,7 +2615,27 @@ function applyConfirm(){
   closeModal();
   if(fn)fn();
 }
-function openDocs(){openModal({kind:'docs',title:'Tài liệu bàn giao'});}
+function openDocs(){
+  openModal({kind:'docs',title:'Tài liệu bàn giao'});
+  /* Mockup giữ DOCS_HTML nhúng để mở offline; bản phát hành build DOCS_HTML
+     rỗng và chỉ tải khối lịch sử này khi admin chủ động mở tài liệu. */
+  if(DOCS_HTML)return;
+  var host=document.getElementById('docsContent');
+  if(!host)return;
+  if(DOCS_CACHE){host.innerHTML=DOCS_CACHE;return;}
+  fetch('/admin-docs',{credentials:'same-origin',cache:'no-store'})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text();})
+    .then(function(markup){
+      if(!state.modal||state.modal.kind!=='docs')return;
+      DOCS_CACHE=markup;
+      var target=document.getElementById('docsContent');
+      if(target)target.innerHTML=markup;
+    })
+    .catch(function(){
+      var target=document.getElementById('docsContent');
+      if(target&&state.modal&&state.modal.kind==='docs')target.innerHTML='<p class="sm mut" role="alert">Không tải được tài liệu. Đóng cửa sổ rồi thử mở lại.</p>';
+    });
+}
 
 function syncRoute(){
   var h=location.hash.replace(/^#\/?/,'').trim();

@@ -18,9 +18,8 @@
         registry và sửa ô lịch / Series / banner / ghi chú Homepage CMS;
         vòng 15 gom card Series về 12 bộ và dựng trang riêng liệt kê toàn bộ KV.
         Build FAIL NGAY nếu một chuỗi nguồn biến mất do mockup đổi tay.
-     3. scrubProto(): dọn nốt cụm prototype trong mã JS còn sót (kể cả handler
-        bị lớp KV chặn), NHƯNG tách riêng khối DOCS_HTML để không ghi đè tài
-        liệu lịch sử các vòng (chữ MẪU ở đó là sự thật của bản thiết kế).
+     3. Tách DOCS_HTML lịch sử thành /admin-docs.html tải theo yêu cầu (chỉ khi
+        mở Tài liệu bàn giao), rồi scrubProto() dọn các cụm prototype còn sót.
 
    File mockup gốc KHÔNG bị xoá nội dung thiết kế: mở double-click vẫn là
    prototype tĩnh MẪU, không gọi Worker. Chạy tự động từ tools/build_admin.mjs
@@ -28,6 +27,7 @@
    ========================================================================== */
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -35,6 +35,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = path.join(ROOT, 'mockup', 'ssochuz-admin-mockup.html');
 const REAL = path.join(ROOT, 'admin-real.js');
 const OUT = path.join(ROOT, 'admin.html');
+const DOCS_OUT = path.join(ROOT, 'admin-docs.html');
 
 const BRIDGE = `
 /* ---------- CẦU NỐI DỮ LIỆU THẬT (chỉ có ở admin.html, không có ở mockup) ----------
@@ -54,6 +55,24 @@ window.CZ_MOCKUP = {
 
 let html = readFileSync(SRC, 'utf8');
 const realHash = createHash('sha1').update(readFileSync(REAL)).digest('hex').slice(0, 10);
+
+/* DOCS_HTML là tài liệu lịch sử dài (không cần tải để vào admin). Giữ nó nhúng
+   trong mockup offline, nhưng build thành fragment riêng để modal live tải theo
+   yêu cầu. Expression chỉ gồm literal/array map đã có trong mockup. */
+const DOCS_BLOCK = /const DOCS_HTML =[\s\S]*?\n'<\/ul><\/div>';/;
+const docsMatch = html.match(DOCS_BLOCK);
+if (!docsMatch) throw new Error('build_admin_html: không xác định được khối DOCS_HTML');
+const docsExpr = docsMatch[0]
+  .replace(/^const DOCS_HTML =\s*/, '')
+  .replace(/;\s*$/, '');
+const docsFragment = runInNewContext(docsExpr, Object.create(null), {
+  timeout: 1000,
+  contextCodeGeneration: { strings: false, wasm: false },
+});
+if (typeof docsFragment !== 'string' || !docsFragment.startsWith('<div class="docs">')) {
+  throw new Error('build_admin_html: DOCS_HTML không sinh được fragment hợp lệ');
+}
+writeFileSync(DOCS_OUT, docsFragment + '\n');
 
 const end = html.lastIndexOf('</script>');
 if (end < 0) throw new Error('mockup không có thẻ </script> của script inline');
@@ -152,17 +171,14 @@ for (const r of REPL) {
 }
 
 /* ----------------------------------------------------------------------------
-   Vòng 12 · DỌN NỐT CÁC CỤM PROTOTYPE TRONG MÃ JS (ngoài khối tài liệu).
+   Vòng 12 · DỌN NỐT CÁC CỤM PROTOTYPE TRONG MÃ JS.
    ----------------------------------------------------------------------------
-   Rất nhiều handler của prototype bị admin-real.js chặn trước khi chạy
-   (REAL_CLICK / change listener), nên không bao giờ hiện ra — nhưng để lại
-   hàng chục câu "… mẫu", "MẪU.", "(mô phỏng)" trong source. Owner yêu cầu rà
-   kĩ TOÀN BỘ trang, nên dọn cả mã chết. KHỐI DOCS_HTML được tách ra và giữ
-   nguyên: đó là tài liệu lịch sử các vòng, chữ MẪU ở đó là sự thật của bản
-   thiết kế, không phải dữ liệu giả lọt vào giao diện. */
-const DOCS_BLOCK = /const DOCS_HTML =[\s\S]*?\n'<\/ul><\/div>';/;
-const dm = html.match(DOCS_BLOCK);
-if (!dm) throw new Error('build_admin_html: không xác định được khối DOCS_HTML');
+   DOCS_HTML đã được sinh thành admin-docs.html ở trên. Sau khi áp bảng khác
+   biệt sản phẩm, bỏ khai báo lớn khỏi admin.html; modal chỉ tải fragment này
+   khi được mở. */
+const docsBlockFinal = html.match(DOCS_BLOCK);
+if (!docsBlockFinal) throw new Error('build_admin_html: DOCS_HTML biến mất sau replacements');
+html = html.replace(DOCS_BLOCK, "const DOCS_HTML = '';");
 function scrubProto(t) {
   return t
     .replace(/[ \t]*MẪU\b\.?/g, '')
@@ -172,8 +188,7 @@ function scrubProto(t) {
     .replace(/[ \t]*Mockup:[ \t]*/g, '')
     .replace(/[ \t]*\(minh hoạ\)/gi, '');
 }
-html = scrubProto(html.slice(0, dm.index)) + dm[0] +
-       scrubProto(html.slice(dm.index + dm[0].length));
+html = scrubProto(html);
 
 /* Không còn link sang bản admin cũ; admin.html TỰ ghi KV. */
 html = html.replace(

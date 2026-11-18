@@ -116,6 +116,8 @@ async function boot(root, pys) {
       ['/tac-gia/', 200, 'trang tác giả'],
       ['/admin', 200, '/admin = admin.html: giao diện thiết kế mới + lớp ghi KV thật'],
       ['/admin-real.js', 200, 'lớp dữ liệu thật của admin.html phải được phục vụ'],
+      ['/admin-docs.html', 308, 'Pages chuẩn hoá .html thành URL sạch cho tài liệu admin'],
+      ['/admin-docs', 200, 'fragment tài liệu admin phải được phục vụ để modal tải theo yêu cầu'],
       ['/admin-cu', 404, 'bản sao admin cũ đã bị gỡ hoàn toàn theo yêu cầu owner'],
       ['/admin-v2', 200, 'URL đời hai bản vẫn vào đúng một admin'],
       ['/admin-v2/', 200, 'URL đời hai bản với dấu /'],
@@ -159,6 +161,9 @@ async function boot(root, pys) {
     const NEW_ADMIN = b => /admin-real\.js/.test(b) && /CZ_MOCKUP/.test(b) && !/adminRoot/.test(b);
     const adminNow = await get(port, '/admin');
     ok(NEW_ADMIN(adminNow.body), '/admin phải trả admin.html mới (mockup + admin-real.js, không còn adminRoot)');
+    const adminDocs = await get(port, '/admin-docs');
+    ok(/PHASE 1 · NGHIÊN CỨU/.test(adminDocs.body) && /MẪU/.test(adminDocs.body),
+      '/admin-docs.html phải trả fragment tài liệu lịch sử đầy đủ');
     const adminV2 = await get(port, '/admin-v2');
     ok(NEW_ADMIN(adminV2.body), '/admin-v2 phải merge về đúng admin.html mới');
     const legacy = await get(port, '/admin-legacy');
