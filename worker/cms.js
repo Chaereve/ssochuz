@@ -416,7 +416,7 @@ const handler = {
         await env.CZ_KV.delete('book:' + slug);
         await dropOverflow(env, 'book:' + slug);
         await syncCountToRegistry(env, slug, null);       /* registry không còn treo số chương của bộ đã xoá */
-        await logAct(env, 'xoá bộ ' + slug, req);
+        await logAct(env, 'xoá bộ ' + slug, req, { kind: 'bo', target: slug });
         await edgePurge(org + '/api/book/' + m[1], org + '/api/registry');
         await purgeChapterCache(org, m[1], 0, true);
         await purgeFeed(org);
@@ -619,7 +619,7 @@ async function importPost(req, env, cors) {
     reg.source = { synced: new Date().toISOString(), note: 'nhập từ bài viết Blogger qua trang quản trị' };
     await env.CZ_KV.put('registry', registryJSON(reg), { metadata: { saved: new Date().toISOString(), rev: reg.rev } });
   }
-  await logAct(env, 'nhập chương từ Blogger: ' + slug + ' → ' + chapTitle, req);
+  await logAct(env, 'nhập chương từ Blogger: ' + slug + ' → ' + chapTitle, req, { kind: 'chuong', target: slug });
   const iorg = new URL(req.url).origin;
   await edgePurge(iorg + '/api/book/' + encodeURIComponent(slug), iorg + '/api/registry');
   await purgeChapterCache(iorg, encodeURIComponent(slug), 0, true);
@@ -1928,7 +1928,7 @@ async function setLock(req, env, cors, org) {
     /* lỗi ghi cờ KHÔNG được chặn purge: nội dung đã đổi, cache biên phải xoá
        (cờ hỏng chỉ mất huy hiệu trên thẻ — không làm lộ nội dung) */
     try { await setLockFlag(env, slug, 0); } catch (e) {}
-    await logAct(env, 'bỏ khóa ' + slug, req);
+    await logAct(env, 'bỏ khóa ' + slug, req, { kind: 'bao-mat', target: slug });
     await edgePurge(org + '/api/book/' + encodeURIComponent(slug), org + '/api/registry');
     await purgeChapterCache(org, encodeURIComponent(slug), 0, true);
     await purgeFeed(org);
@@ -1944,7 +1944,7 @@ async function setLock(req, env, cors, org) {
   /* như trên: book.lock đã ghi là nội dung ĐÃ khóa — dù ghi cờ registry lỗi
      cũng vẫn purge cache biên ngay (lần lưu sau sẽ tự ghi lại cờ) */
   try { await setLockFlag(env, slug, 1); } catch (e) {}
-  await logAct(env, 'khóa/đổi mật mã ' + slug, req);
+  await logAct(env, 'khóa/đổi mật mã ' + slug, req, { kind: 'bao-mat', target: slug });
   await edgePurge(org + '/api/book/' + encodeURIComponent(slug), org + '/api/registry');
   await purgeChapterCache(org, encodeURIComponent(slug), 0, true);
   await purgeFeed(org);
@@ -2004,7 +2004,7 @@ async function postImage(req, env, cors) {
   } catch (e) {
     return json({ ok: false, error: String((e && e.message) || e) }, { status: 502, cors });
   }
-  await logAct(env, 'lên ảnh ' + (kind === 'cover' ? 'bìa ' : '') + id.slice(0, 8) + '… (' + Math.max(1, Math.round(stored.bytes / 1024)) + ' KB)', req);
+  await logAct(env, 'lên ảnh ' + (kind === 'cover' ? 'bìa ' : '') + id.slice(0, 8) + '… (' + Math.max(1, Math.round(stored.bytes / 1024)) + ' KB)', req, { kind: 'anh', target: id });
   const url = stored.url || ('/api/img/' + id);
   return json({ ok: true, id: id, url, bytes: stored.bytes, overflow: stored.overflow || '', dedupe: false }, { cors });
 }
@@ -2134,7 +2134,7 @@ async function putKV(req, env, key, cors, label) {
   await env.CZ_KV.put(key, body, { metadata: { saved, rev: parsed.rev || '', bytes } });
   if (key === 'registry') sbPinReset(env);       // ghim Supabase (nếu đổi) có hiệu lực ngay
   if (key === 'registry') regEntryCacheDrop();   // trạng thái xuất bản đổi → hạ cache entry
-  if (label) await logAct(env, label, req);
+  if (label) await logAct(env, label, req, { kind: key === 'registry' ? 'registry' : 'he-thong', target: key });
   const extra = key === 'registry' && cleaned.total ? { dropped: cleaned } : {};
   return json(Object.assign({ ok: true, key, bytes, saved }, extra), { cors });
 }
@@ -2229,6 +2229,17 @@ function chapterHasContent(c) {
   if (/<img\b/i.test(h)) return true;
   return h.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/&[a-z#0-9]+;/gi, ' ').trim().length > 0;
 }
+/* Trạng thái chương hợp lệ. Giá trị lạ (gõ tay trong JSON, dữ liệu cũ) không
+   được lọt xuống tầng đọc: một chuỗi rác sẽ bị isChapterPending coi là “đang
+   hiện”, trong khi ý người sửa có thể là nháp/ẩn. Không rõ thì giữ trạng thái
+   đang có, cuối cùng mới về 'published' (dữ liệu cũ chưa từng có trường này). */
+const CHAPTER_STATUS_SET = new Set(['published', 'scheduled', 'hidden', 'draft']);
+function normChapterStatus(value, fallback) {
+  const s = String(value == null ? '' : value).trim().toLowerCase();
+  if (CHAPTER_STATUS_SET.has(s)) return s;
+  const f = String(fallback == null ? '' : fallback).trim().toLowerCase();
+  return CHAPTER_STATUS_SET.has(f) ? f : 'published';
+}
 /* PUT /api/book/<slug> — ghi 1 bộ RỒI tự sửa số chương trong registry */
 async function putBook(req, env, slug, cors) {
   if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
@@ -2242,7 +2253,7 @@ async function putBook(req, env, slug, cors) {
   let parsed;
   try { parsed = JSON.parse(body); } catch (e) { return json({ ok: false, error: 'JSON lỗi: ' + e.message }, { status: 400, cors }); }
   if (!Array.isArray(parsed.chapters)) parsed.chapters = [];
-  parsed.chapters.forEach((c) => { if (c) c.html = sanitizeChapterHtml(c.html); });
+  parsed.chapters.forEach((c) => { if (c) { c.html = sanitizeChapterHtml(c.html); c.status = normChapterStatus(c.status, 'published'); } });
   /* bỏ chương rỗng cả tiêu đề lẫn nội dung — chính chúng là thủ phạm làm lệch số chương */
   const before = parsed.chapters.length;
   parsed.chapters = parsed.chapters.filter(chapterHasContent);
@@ -2262,7 +2273,7 @@ async function putBook(req, env, slug, cors) {
     last.notified = true;
     await enqueuePush(env, slug, parsed.chapters.length, last.t || '');
   }
-  await logAct(env, 'lưu bộ ' + slug + ' (' + parsed.chapters.length + ' chương)', req);
+  await logAct(env, 'lưu bộ ' + slug + ' (' + parsed.chapters.length + ' chương)', req, { kind: 'bo', target: slug });
   return json({ ok: true, key: 'book:' + slug, bytes: stored.bytes, saved: stored.saved, chapters: parsed.chapters.length, dropped, registry: sync, overflow: stored.overflow || '' }, { cors });
 }
 
@@ -2320,7 +2331,7 @@ async function putChapter(req, env, slug, cors) {
       const next = Object.assign({}, prev, {
         t: String(incoming.t == null ? prev.t || '' : incoming.t).slice(0, 300),
         html: sanitizeChapterHtml(incoming.html == null ? prev.html || '' : incoming.html),
-        status: String(incoming.status || prev.status || 'published').toLowerCase(),
+        status: normChapterStatus(incoming.status !== undefined ? incoming.status : prev.status, prev.status),
       });
       /* mốc hẹn giờ: nhận ISO (admin gửi lên) hoặc bản cũ 'YYYY-MM-DD HH:mm'
          — dùng atMs() cho CHUỖI, chapterAtMs() chỉ dành cho object chương */
@@ -2350,7 +2361,7 @@ async function putChapter(req, env, slug, cors) {
     push = await enqueuePush(env, slug, book.chapters.length, last.t || '');
     if (push && push.queued) await persistBook(env, slug, book);
   }
-  await logAct(env, 'lưu chương ' + slug + ' #' + (idx + 1) + ' (' + action + ')', req);
+  await logAct(env, 'lưu chương ' + slug + ' #' + (idx + 1) + ' (' + action + ')', req, { kind: 'chuong', target: slug });
   const pending = countPendingChapters(book.chapters);
   const nextMs = nextScheduleMs(book.chapters);
   return json({
@@ -2419,7 +2430,7 @@ async function migrateOverflowRun(req, env, cors) {
   const m = res.moved || { books: 0, covers: 0, images: 0 };
   if ((m.books | 0) || (m.covers | 0) || (m.images | 0)) {
     await logAct(env, 'chuyển overflow (' + (res.status && res.status.supabase ? 'supabase' : 'r2') + '): ' +
-      (m.books | 0) + ' book, ' + (m.covers | 0) + ' bìa, ' + (m.images | 0) + ' ảnh' + (res.done ? ' · xong' : ''), req);
+      (m.books | 0) + ' book, ' + (m.covers | 0) + ' bìa, ' + (m.images | 0) + ' ảnh' + (res.done ? ' · xong' : ''), req, { kind: 'he-thong' });
   }
   return json(res, { cors });
 }
@@ -2441,7 +2452,7 @@ async function mirrorImagesRun(req, env, cors, org) {
   if (!res.dryRun && res.rewrites) await edgePurge(String(org || '') + '/api/registry');
   if (!res.dryRun && (res.mirrored || res.rewrites)) {
     await logAct(env, 'sao lưu ảnh ngoài: ' + res.mirrored + ' ảnh, ' + res.rewrites + ' link viết lại'
-      + (res.failed.length ? ', ' + res.failed.length + ' lỗi' : '') + (res.done ? ' · xong' : ' · còn'), req);
+      + (res.failed.length ? ', ' + res.failed.length + ' lỗi' : '') + (res.done ? ' · xong' : ' · còn'), req, { kind: 'anh' });
   }
   return json(res, { cors });
 }
@@ -2457,7 +2468,7 @@ async function recount(req, env, cors) {
   if (res.fixed.length) {
     reg.source = { synced: new Date().toISOString(), note: 'đếm lại số chương từ kho chương trên KV (/api/recount)' };
     await env.CZ_KV.put('registry', registryJSON(reg), { metadata: { saved: new Date().toISOString(), rev: reg.rev } });
-    await logAct(env, 'đếm lại số chương: sửa ' + res.fixed.length + ' bộ', req);
+    await logAct(env, 'đếm lại số chương: sửa ' + res.fixed.length + ' bộ', req, { kind: 'he-thong' });
   }
   return json({ ok: true, books: res.books, novels: reg.lib.length, fixed: res.fixed, missing: res.missing, orphan: res.orphan, rev: reg.rev || '' }, { cors });
 }
@@ -2465,7 +2476,12 @@ async function recount(req, env, cors) {
 /* ============================================================================
    NHẬT KÝ HOẠT ĐỘNG (activity log) — 200 dòng gần nhất, khoá KV `log`
    ============================================================================ */
-async function logAct(env, text, req) {
+/* meta (tuỳ chọn): { kind: 'chuong'|'bo'|'registry'|'binh-luan'|'bao-loi'|'phieu'|'anh'|'bao-mat'|'he-thong', target: 'slug / id' }
+   Trước đây log chỉ có `text` gộp cả hành động lẫn đối tượng nên tab Nhật ký
+   phải in lại đúng một chuỗi ở HAI cột (“Thao tác” và “Đối tượng” trùng nhau)
+   và cột “Kết quả” luôn “Thành công”. Tách sẵn ở đây thì giao diện lọc/tìm
+   được theo loại và đối tượng; bản ghi cũ không có kind/target vẫn đọc được. */
+async function logAct(env, text, req, meta) {
   if (!env.CZ_KV) return;
   try {
     const arr = (await env.CZ_KV.get('log', { type: 'json' })) || [];
@@ -2475,7 +2491,14 @@ async function logAct(env, text, req) {
       const a = h ? await userFromReq(req, env) : null;
       if (a && a.user && a.user.email) who = a.user.email;
     } catch (e) {}
-    arr.unshift({ at: new Date().toISOString(), text: String(text || '').slice(0, 200), who });
+    const m = meta && typeof meta === 'object' ? meta : {};
+    arr.unshift({
+      at: new Date().toISOString(),
+      text: String(text || '').slice(0, 200),
+      who,
+      kind: String(m.kind || 'he-thong').slice(0, 24),
+      target: String(m.target || '').slice(0, 120),
+    });
     if (arr.length > 200) arr.length = 200;
     await env.CZ_KV.put('log', JSON.stringify(arr));
   } catch (e) { /* nhật ký không được làm hỏng thao tác chính */ }
@@ -2649,7 +2672,7 @@ async function postReport(req, env, ctx, cors) {
   list.unshift(it);
   if (list.length > 300) list.length = 300;
   await env.CZ_KV.put('report', JSON.stringify(list));
-  await logAct(env, 'báo lỗi mới: ' + (it.title || it.slug || '?') + (it.ch ? ' · chương ' + it.ch : ''), req);
+  await logAct(env, 'báo lỗi mới: ' + (it.title || it.slug || '?') + (it.ch ? ' · chương ' + it.ch : ''), req, { kind: 'bao-loi', target: it.slug || '' });
   const mail = await mailReport(env, it);
   return json({ ok: true, mailed: !!mail.sent, note: mail.reason || '', at: it.at }, { cors });
 }
@@ -2760,7 +2783,7 @@ async function patchReport(req, env, cors) {
   it.done = done;
   it.doneAt = done ? new Date().toISOString() : '';
   await env.CZ_KV.put('report', JSON.stringify(list));
-  await logAct(env, (done ? 'đã xử lý báo lỗi: ' : 'mở lại báo lỗi: ') + (it.title || it.slug || '?'), req);
+  await logAct(env, (done ? 'đã xử lý báo lỗi: ' : 'mở lại báo lỗi: ') + (it.title || it.slug || '?'), req, { kind: 'bao-loi', target: it.slug || '' });
   const open = list.filter((x) => !x.done).length;
   return json({ ok: true, id, done, open }, { cors, headers: { 'cache-control': 'no-store' } });
 }
@@ -2849,7 +2872,7 @@ async function adminVoteRemove(req, env, cors) {
     it.updatedAt = new Date().toISOString();
     await writeStats(env, st);
   }
-  await logAct(env, 'gỡ ' + removed + ' phiếu ' + (ch > 0 ? ('chương ' + ch) : 'cả bộ') + ' · ' + slug, req);
+  await logAct(env, 'gỡ ' + removed + ' phiếu ' + (ch > 0 ? ('chương ' + ch) : 'cả bộ') + ' · ' + slug, req, { kind: 'phieu', target: slug });
   const pub = publicStat(it, dayStr());
   return json({ ok: true, slug, ch, removed, total: pub.votes, chapVotes: pub.chapVotes },
     { cors, headers: { 'cache-control': 'no-store' } });
@@ -2896,7 +2919,7 @@ async function adminVotesReset(req, env, cors) {
   });
   await writeStats(env, st);
   await logAct(env, 'reset phiếu ' + (slug ? ('bộ ' + slug) : 'TẤT CẢ bộ') +
-    (ch > 0 ? (' · chỉ chương ' + ch) : '') + ' — xoá ' + cleared + ' phiếu', req);
+    (ch > 0 ? (' · chỉ chương ' + ch) : '') + ' — xoá ' + cleared + ' phiếu', req, { kind: 'phieu', target: slug || 'TẤT CẢ' });
   return json({ ok: true, slug: slug || '', ch, stories, cleared },
     { cors, headers: { 'cache-control': 'no-store' } });
 }
@@ -3011,7 +3034,7 @@ async function seed(req, env, cors) {
       await env.CZ_KV.put('registry', registryJSON(reg2), { metadata: { saved: new Date().toISOString(), rev: reg2.rev || '' } });
     }
   }
-  await logAct(env, 'nạp dữ liệu: ' + out.books + ' bộ' + (counts.fixed && counts.fixed.length ? ' · sửa số chương ' + counts.fixed.length + ' bộ' : ''), req);
+  await logAct(env, 'nạp dữ liệu: ' + out.books + ' bộ' + (counts.fixed && counts.fixed.length ? ' · sửa số chương ' + counts.fixed.length + ' bộ' : ''), req, { kind: 'he-thong' });
   return json({ ok: true, ...out, registry: !!d.registry, recount: counts.fixed || [] }, { cors });
 }
 
@@ -4277,6 +4300,6 @@ async function deleteComment(slug, id, req, env, cors) {
   }
   const kept = arr.filter((c) => !removed.has(String(c.id)));
   await env.CZ_KV.put(key, JSON.stringify(kept));
-  if (mod) await logAct(env, 'kiểm duyệt: xoá bình luận ' + id + ' của bộ ' + slug, req);
+  if (mod) await logAct(env, 'kiểm duyệt: xoá bình luận ' + id + ' của bộ ' + slug, req, { kind: 'binh-luan', target: slug });
   return json({ ok: true, deleted: id, deletedCount: arr.length - kept.length, count: kept.length, moderated: !!mod }, { cors });
 }

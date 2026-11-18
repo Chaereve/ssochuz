@@ -420,7 +420,7 @@ Trang quản trị đã có tab **Phiếu bầu** (phím `V`): chọn bộ → d
 | GET | `/api/registry` | mở | toàn bộ thư viện (62 bộ + slides + lịch + series) |
 | GET | `/api/book/<slug>` | mở | tiêu đề + các chương của 1 bộ (bản đầy đủ — trang đọc cũ, admin, RSS) |
 | GET | `/api/book/<slug>/toc` | mở | **mục lục nhẹ**: đầu sách + tên các chương ĐANG HIỆN (không kèm nội dung) |
-| GET | `/api/book/<slug>/chapter/<n>` | mở | **đúng 1 chương** (n = vị trí trong danh sách đang hiện) + mục lục; chương ẩn/hẹn giờ trả 404 |
+| GET | `/api/book/<slug>/chapter/<n>` | mở | **đúng 1 chương** (n = vị trí trong danh sách đang hiện) + mục lục; chương nháp/ẩn/hẹn giờ trả 404 |
 | GET | `/api/schedule` | mở | lịch ra chương |
 | GET | `/api/comments/<slug>` | mở | bình luận của 1 bộ (`?ch=` lọc theo chương, `?limit=`), cache biên 15 giây |
 | GET | `/api/stats` | mở | **lượt đọc/bình chọn + đánh giá sao từ KV** (tổng + hôm nay/tuần/tháng + `rating`/`ratingCount`) |

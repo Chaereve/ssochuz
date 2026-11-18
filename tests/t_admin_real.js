@@ -36,17 +36,21 @@ const KV = {
   ],
   reports: [
     { id: 'r1', done: false, text: 'Lỗi chương 3', title: 'Chương 3', slug: 'bake-love-feelings', ch: 3, name: 'Bạn đọc B' },
-    { id: 'r2', done: true, text: 'Đã xong', title: 'Chương 4', slug: 'bake-love-feelings', ch: 4 }
+    { id: 'r2', done: true, text: 'Đã xong', title: 'Chương 4', slug: 'bake-love-feelings', ch: 4 },
+    { id: 'r3', done: false, text: 'Thiếu chương', title: 'Chương 1', slug: 'lunar-secret', ch: 1, name: 'Bạn đọc C' }
   ],
   log: [{ at: '2026-11-03T12:00:00Z', text: 'sửa bộ bake-love-feelings', who: 'admin-key' }],
   stats: {
     items: {
-      'bake-love-feelings': { views: 8420, votes: 1161, viewsDay: 120, votesDay: 8 },
-      'lunar-secret': { views: 4210, votes: 640, viewsDay: 80, votesDay: 5 }
+      'bake-love-feelings': { views: 8420, votes: 1161, voters: 1, viewsDay: 120, votesDay: 8 },
+      'lunar-secret': { views: 4210, votes: 640, voters: 1, viewsDay: 80, votesDay: 5 }
     },
     days: Array.from({ length: 14 }, (_, i) => ({ day: '2026-10-' + (20 + i), views: 40 + i * 3, votes: 2 + i }))
   },
-  voters: { 'bake-love-feelings': [{ key: 'g:abc', at: '2026-11-01T10:00:00Z' }] }
+  voters: {
+    'bake-love-feelings': [{ key: 'g:abc', at: '2026-11-01T10:00:00Z' }],
+    'lunar-secret': [{ key: 'g:lunar', at: '2026-11-02T10:00:00Z' }]
+  }
 };
 const calls = [];
 /* HỒI QUY CORS: worker/cms.js chỉ cho phép đúng các header này trong preflight.
@@ -191,11 +195,25 @@ function confirmStrong(phrase) {
   ok(S().books.length === libCount && S().books.some(b => b.t === registry.lib[0].title), 'state.books = registry.lib thật');
   ok(!/DỮ LIỆU MẪU|MẪU|mẫu|mô phỏng/.test(w.document.getElementById('view').textContent), '#view không còn nhãn prototype');
   ok(S().comments.length === 2 && S().comments[0].r === 'Độc giả A', 'bình luận từ /api/admin/comments');
-  ok(S().reports.length === 2 && S().reports[0].by === 'Bạn đọc B', 'báo lỗi từ /api/admin/reports');
+  ok(S().reports.length === 3 && S().reports[0].by === 'Bạn đọc B', 'báo lỗi từ /api/admin/reports');
   ok(w.CZ_MOCKUP.SAMPLE_LOGS.length === 1 && /sửa bộ/.test(w.CZ_MOCKUP.SAMPLE_LOGS[0].x), 'nhật ký từ /api/admin/log');
   ok(w.CZ_MOCKUP.SAMPLE_READS.length === 14, 'chuỗi 14 ngày từ /api/admin/stats');
   ok(w.CZ_MOCKUP.SAMPLE_METRICS[4].n === '137', 'quota ghi thật từ /api/admin/kv');
-  ok(S().votes.length === 1 && S().votes[0].k === 'g:abc', 'phiếu bầu đọc được dạng book.voters của Worker');
+  ok(S().votes.length === 2 && S().votes.some(v => v.k === 'g:abc'), 'phiếu bầu nhiều bộ đọc được dạng book.voters của Worker');
+  /* Hồi quy: đổi bộ phải phát change, cập nhật state và lọc bảng trước khi
+     Gỡ/Reset đọc bộ đang chọn — click không phải event của <select>. */
+  nav('phieu-bau');
+  const voteSel = $('[data-role="vote-book"]');
+  const voteBefore = voteSel.value;
+  const voteOther = [...voteSel.options].find(o => o.value !== voteBefore);
+  voteSel.value = voteOther.value;
+  voteSel.dispatchEvent(new w.Event('change', { bubbles: true }));
+  ok(S().voteBook === voteOther.value, 'đổi bộ phiếu cập nhật state.voteBook bằng change');
+  const voteText = $('#view').textContent;
+  const expectedVoteKey = KV.voters[voteOther.value][0].key;
+  const previousVoteKey = KV.voters[voteBefore][0].key;
+  ok(voteText.includes(expectedVoteKey) && !voteText.includes(previousVoteKey),
+    'đổi bộ phiếu lọc bảng theo bộ mới trước thao tác gỡ/reset');
   const TABS = ['dashboard', 'thu-vien', 'them-bo', 'sua-bo', 'chuong', 'binh-luan', 'bao-loi', 'phieu-bau', 'homepage-cms', 'thong-ke', 'kiem-tra-du-lieu', 'nhat-ky', 'cai-dat'];
   const STALE = /MẪU|mẫu|mô phỏng|DỮ LIỆU MẪU/;
   TABS.forEach(t => {
@@ -288,6 +306,30 @@ function confirmStrong(phrase) {
   nav('bao-loi');
   const rpt = $('[data-act="toggle-report"]'); if (rpt) { rpt.click(); await tick(8); }
   ok(calls.some(c => c.p === '/api/admin/reports' && c.method === 'PATCH') && KV.reports[0].done === true, 'PATCH báo lỗi đổi trạng thái trên KV');
+  const repSel = $('[data-role="rep-book"]');
+  const lunarTitle = S().books.find(b => b.id === 'lunar-secret').t;
+  repSel.value = lunarTitle;
+  repSel.dispatchEvent(new w.Event('change', { bubbles: true }));
+  ok(S().repBook === lunarTitle, 'lọc báo lỗi cập nhật state.repBook bằng change');
+  ok(w.document.querySelectorAll('#view .list-item.rep').length === 1 && /Thiếu chương/.test($('#view').textContent),
+    'lọc báo lỗi theo bộ mới chỉ còn dòng đúng bộ');
+  click('[data-act="clear-rep-book"]');
+  ok(S().repBook === '' && w.document.querySelectorAll('#view .list-item.rep').length === 3,
+    'Bỏ lọc báo lỗi trả lại toàn bộ các dòng');
+  click('[data-act="open-report-book"][data-id="bake-love-feelings"]');
+  await tick(2);
+  ok(S().route === 'sua-bo' && S().selectedBook === 'bake-love-feelings',
+    'Mở bộ từ báo lỗi điều hướng tới đúng bộ trong Sửa bộ');
+  nav('bao-loi');
+  const savedReports = S().reports.slice();
+  S().reports.push({ id: 'r-gone', b: 'Bộ đã mất', ch: 'Chương 1', txt: 'báo lỗi', by: 'QA', date: '', slug: 'missing-book', done: false });
+  w.render();
+  click('[data-act="open-report-book"][data-id="missing-book"]');
+  await tick(2);
+  ok(S().route === 'thu-vien' && /không còn trong registry/.test($('#toasts').textContent),
+    'Mở báo lỗi của bộ đã mất cảnh báo và dẫn tới Thư viện');
+  S().reports = savedReports;
+  nav('bao-loi');
 
   nav('binh-luan');
   const del = $('[data-act="delete-comment"]');
@@ -303,7 +345,181 @@ function confirmStrong(phrase) {
   ok(calls.filter(c => c.p === '/api/registry' && c.method === 'PUT').length >= 2, 'Lưu trang chủ PUT registry thật');
   nav('kiem-tra-du-lieu');
   ok(w.CZ_MOCKUP.SAMPLE_ISSUES.length > 0, 'Kiểm tra dữ liệu quét registry thật');
+  const issueSel = $('[data-role="issue-filter"]');
+  issueSel.value = 'bad';
+  issueSel.dispatchEvent(new w.Event('change', { bubbles: true }));
+  const badCount = w.CZ_MOCKUP.SAMPLE_ISSUES.filter(x => (x.lv || 'warn') === 'bad').length;
+  ok(S().issueLv === 'bad' && $('#view').textContent.includes(badCount + ' / '),
+    'lọc mức độ Kiểm tra dữ liệu xử lý change và hiện đúng số dòng');
+  const issueSelAgain = $('[data-role="issue-filter"]');
+  issueSelAgain.value = 'all';
+  issueSelAgain.dispatchEvent(new w.Event('change', { bubbles: true }));
+  ok(S().issueLv === 'all', 'bỏ lọc mức độ bằng change');
   ok(errors.length === 0, '0 lỗi JS ở các luồng ghi: ' + errors.join(' | '));
+
+  /* ---- 6b · Tab Chương và Nhật ký: những chỗ trước đây KHÔNG dùng được ---- */
+  /* (a) Thư viện có nút mở thẳng tab Chương của đúng bộ — trước phải sang tab
+     Chương rồi lần trong select 67 dòng. */
+  /* Mồi mỗi bộ trong registry một book 2 chương (1 xuất bản + 1 nháp) để luồng
+     chương có dữ liệu thật; bộ nào đã có book thì giữ nguyên. */
+  (registry.lib || []).forEach((b) => {
+    if (!b || !b.slug || KV.books[b.slug]) return;
+    KV.books[b.slug] = {
+      title: b.title || b.slug, slug: b.slug,
+      chapters: [
+        { t: 'Chương 1', html: '<p>đã đăng</p>', status: 'published' },
+        { t: 'Chương 2 nháp', html: '<p>chưa xuất bản</p>', status: 'draft' }
+      ]
+    };
+  });
+  nav('thu-vien');
+  await tick(4);
+  const changeRole = (role, value) => {
+    const el = $('[data-role="' + role + '"]');
+    if (!el) throw new Error('không thấy select ' + role);
+    el.value = value;
+    el.dispatchEvent(new w.Event('change', { bubbles: true }));
+  };
+  changeRole('lib-adult', '1');
+  const adultCount = S().books.filter(b => b.adult).length;
+  ok(S().lib.adult === '1' && w.document.querySelectorAll('#view tbody tr').length === Math.min(20, adultCount),
+    'lọc Thư viện 18+ hoạt động với dữ liệu khớp');
+  changeRole('lib-lock', '1');
+  const lockedCount = S().books.filter(b => b.lock).length;
+  ok(S().lib.lock === '1' && w.document.querySelectorAll('#view tbody tr').length === Math.min(20, lockedCount),
+    'lọc Thư viện bộ khóa hoạt động với dữ liệu khớp');
+  changeRole('lib-vis', 'public');
+  const publicCount = S().books.filter(b => (b.vis || 'public') === 'public' && b.adult && b.lock).length;
+  ok(S().lib.vis === 'public' && w.document.querySelectorAll('#view tbody tr').length === Math.min(20, publicCount),
+    'lọc Thư viện hiển thị hoạt động kết hợp các lọc đang chọn');
+  changeRole('lib-sort', 'az');
+  const sortedTitle = S().books.filter(b => (b.vis || 'public') === 'public' && b.adult && b.lock)
+    .sort((a, b) => a.t.localeCompare(b.t, 'vi'))[0].t;
+  ok(S().lib.sort === 'az' && $('#view tbody tr .strong').textContent === sortedTitle,
+    'sắp xếp Thư viện A–Z thay đổi thứ tự đúng');
+  click('[data-act="reset-lib"]');
+  await tick(2);
+  const chBtn = $('[data-act="open-chapters"]');
+  ok(!!chBtn, 'Thư viện có nút “Chương” trên từng dòng');
+  const chSlug = chBtn.dataset.id;
+  chBtn.click();
+  await tick(10);
+  ok(S().route === 'chuong' && S().chapterBook === chSlug, 'nút “Chương” mở tab Chương với đúng bộ (' + S().route + '/' + S().chapterBook + ')');
+  ok(!$('[data-role="chapter-book"]') || $('[data-role="chapter-book"]').value === chSlug, 'ô chọn bộ trong tab Chương khớp bộ vừa mở (' + (($('[data-role="chapter-book"]') || {}).value) + ' vs ' + chSlug + ')');
+  const chCount = S().chapters.length;
+  ok(chCount > 0, 'tab Chương nạp được chương của bộ (nhận ' + chCount + ')');
+
+  /* (b) Tìm chương: gõ tới đâu lọc tới đó, KHÔNG dựng lại cả trang (giữ focus). */
+  const q = $('#chapterQuery');
+  ok(!!q, 'tab Chương có ô tìm chương');
+  const rowsShown = () => w.document.querySelectorAll('#chapterListBody .list-item.ch').length;
+  ok(rowsShown() === chCount, 'chưa lọc ⇒ hiện đủ ' + chCount + ' chương (nhận ' + rowsShown() + ')');
+  q.focus();
+  q.value = 'zzz-khong-co-chuong-nao';
+  q.dispatchEvent(new w.Event('input', { bubbles: true }));
+  await tick(2);
+  ok(w.document.activeElement === q, 'ô tìm chương giữ focus khi đang gõ (không redraw toàn trang)');
+  ok(/Không có chương nào khớp/.test($('#chapterListBody').textContent), 'tìm không ra ⇒ nói rõ “Không có chương nào khớp”');
+  ok(rowsShown() === 0, 'tìm không ra ⇒ 0 dòng (nhận ' + rowsShown() + ')');
+  const title0 = String((S().chapters[0] && S().chapters[0].t) || '');
+  q.value = title0.slice(0, Math.min(6, title0.length));
+  q.dispatchEvent(new w.Event('input', { bubbles: true }));
+  await tick(2);
+  ok(rowsShown() >= 1 && rowsShown() <= chCount, 'tìm theo tên chương ra ' + rowsShown() + '/' + chCount + ' dòng');
+  const cntTxt = $('#chapterListCount').textContent.trim();
+  const wantCnt = rowsShown() === chCount ? String(chCount) + ' chương' : rowsShown() + '/' + chCount + ' chương';
+  ok(cntTxt.indexOf(wantCnt) === 0, 'đếm chương hiện đúng “' + wantCnt + '” khi đang lọc (nhận: ' + cntTxt + ')');
+  q.value = '';
+  q.dispatchEvent(new w.Event('input', { bubbles: true }));
+  q.dispatchEvent(new w.Event('change', { bubbles: true }));
+  await tick(3);
+
+  /* (c) Lọc theo trạng thái chương. */
+  /* đổi bộ lọc ⇒ cả trang dựng lại, nên mỗi lần phải LẤY LẠI nút (node cũ đã rời DOM) */
+  const chip = (f) => [...w.document.querySelectorAll('[data-act="chapter-filter"]')].find((b) => b.dataset.f === f);
+  ok(w.document.querySelectorAll('[data-act="chapter-filter"]').length >= 4, 'có nút lọc chương theo trạng thái');
+  chip('published').click();
+  await tick(3);
+  const nPub = (S().chapters || []).filter((c) => String(c.s || 'published').toLowerCase() === 'published').length;
+  ok(S().chapterFilter === 'published' && rowsShown() === nPub, 'lọc “Xuất bản” hiện đúng ' + nPub + ' chương (nhận ' + rowsShown() + ')');
+  ok(chip('published').getAttribute('aria-pressed') === 'true', 'nút lọc đang chọn có aria-pressed="true"');
+  chip('draft').click();
+  await tick(3);
+  const nDraft = (S().chapters || []).filter((c) => String(c.s || '').toLowerCase() === 'draft').length;
+  ok(rowsShown() === nDraft, 'lọc “Nháp” hiện đúng ' + nDraft + ' chương (nhận ' + rowsShown() + ')');
+  chip('all').click();
+  await tick(3);
+  ok(rowsShown() === chCount, 'bỏ lọc ⇒ trở lại đủ ' + chCount + ' chương');
+
+  /* (d) Bộ chưa có dữ liệu (404) ≠ lỗi tải; lỗi tải phải có role=alert + Thử lại. */
+  const bkSlug = 'bake-love-feelings';
+  const bkBackup = KV.books[bkSlug];
+  const pickBook = async (slug) => {
+    const sel = $('[data-role="chapter-book"]');
+    sel.value = slug;
+    sel.dispatchEvent(new w.Event('change', { bubbles: true }));
+    await tick(10);
+  };
+  delete KV.books[bkSlug];
+  await pickBook(bkSlug);
+  const err404 = $('#chapterLoadError');
+  ok(!!err404 && /Bộ này chưa có dữ liệu chương/.test(err404.textContent), 'book 404 ⇒ “Bộ này chưa có dữ liệu chương” (nhận: ' + ((err404 && err404.textContent) || '<không có>').slice(0, 120) + ')');
+  ok(err404 && !err404.querySelector('[role="alert"]'), '404 KHÔNG dùng role="alert" (không phải lỗi)');
+  ok(!/Không tải được dữ liệu chương/.test(w.document.getElementById('view').textContent), '404 không bị báo thành lỗi tải');
+  KV.books[bkSlug] = bkBackup;
+  click('[data-act="retry-chapter"]');
+  await tick(12);
+  ok(!$('#chapterLoadError') && S().chapters.length > 0, 'Thử lại sau 404 tải được chương (' + S().chapters.length + ')');
+
+  const goodFetch = w.fetch;
+  w.fetch = (u, o) => (new RegExp('/api/book/' + bkSlug + '$').test(String(u))
+    ? Promise.resolve(resp({ ok: false, error: 'KV tạm lỗi (QA)' }, 500))
+    : goodFetch(u, o));
+  await pickBook(bkSlug);
+  const errBox = $('#chapterLoadError');
+  ok(!!errBox && /Không tải được dữ liệu chương/.test(errBox.textContent), 'book 500 ⇒ “Không tải được dữ liệu chương” (nhận: ' + ((errBox && errBox.textContent) || '<không có>').slice(0, 120) + ')');
+  ok(errBox && errBox.getAttribute('role') === 'alert', 'lỗi tải có role="alert" để trình đọc màn hình đọc ngay');
+  ok(errBox && /KV tạm lỗi \(QA\)/.test(errBox.textContent), 'thông báo lỗi kèm lý do Worker trả về');
+  ok(!!$('[data-act="retry-chapter"]'), 'lỗi tải có nút Thử lại');
+  w.fetch = goodFetch;
+  click('[data-act="retry-chapter"]');
+  await tick(12);
+  ok(!$('#chapterLoadError'), 'Thử lại thành công ⇒ khung lỗi biến mất');
+
+  /* (e) Nhật ký: bỏ 2 cột vô nghĩa, có lọc loại + tìm chữ. */
+  KV.log = [
+    { at: '2026-11-03T12:00:00Z', text: 'lưu chương bake-love-feelings #1 (update)', who: 'admin-key', kind: 'chuong', target: 'bake-love-feelings' },
+    { at: '2026-11-03T11:00:00Z', text: 'sửa bộ bake-love-feelings', who: 'bien-tap@ssochuz.test' }
+  ];
+  nav('nhat-ky');
+  await tick(3);
+  /* nút duy nhất trên đầu tab (không thêm nút “Đọc lại” thứ hai trong card) */
+  ok(!!$('#view [data-act="refresh"]'), 'tab Nhật ký có đúng một nút đọc lại ở đầu trang');
+  click('#view [data-act="refresh"]');
+  await tick(14);
+  const th = [...w.document.querySelectorAll('#view table thead th')].map((x) => x.textContent.trim());
+  ok(th.length === 4, 'bảng nhật ký còn 4 cột có nghĩa (' + th.join(' · ') + ')');
+  ok(!th.some((x) => /Kết quả/.test(x)), 'bỏ cột “Kết quả” (luôn “Thành công”)');
+  const logs = w.CZ_MOCKUP.SAMPLE_LOGS;
+  ok(logs.length === 2 && logs[0].k === 'chuong' && logs[0].o === 'bake-love-feelings', 'nhật ký giữ kind/target do Worker ghi');
+  ok(logs[1].k === 'bo' && logs[1].o === '', 'bản ghi CŨ (chỉ text) vẫn phân loại được và KHÔNG lặp text sang cột Đối tượng');
+  ok(logs[0].t === '03/11/2026 19:00' || /^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/.test(logs[0].t), 'thời gian nhật ký dạng dd/mm/yyyy hh:mm (' + logs[0].t + ')');
+  const bodyTxt = () => $('#logBody').textContent;
+  ok(!/Thao tác\s*Thao tác/.test(bodyTxt()), 'không còn hai cột in trùng một chuỗi');
+  setVal('logQuery', 'sửa bộ');
+  await tick(6);
+  ok(!/lưu chương/.test(bodyTxt()) && /sửa bộ/.test(bodyTxt()), 'tìm trong nhật ký lọc đúng dòng (nhận: ' + bodyTxt().slice(0, 120) + ')');
+  setVal('logQuery', 'khong-co-gi-khop');
+  await tick(6);
+  ok(/Không có thao tác nào khớp/.test(bodyTxt()), 'tìm không ra ⇒ trạng thái rỗng có lối thoát');
+  setVal('logQuery', '');
+  await tick(4);
+  click('[data-act="log-kind"][data-k="chuong"]');
+  await tick(4);
+  ok(S().logKind === 'chuong' && /lưu chương/.test(bodyTxt()) && !/sửa bộ bake/.test(bodyTxt()), 'lọc theo loại “Chương” chỉ còn dòng chương');
+  click('[data-act="log-kind"][data-k="all"]');
+  await tick(4);
+  ok(w.document.querySelectorAll('#logBody tbody tr').length === 2, 'bỏ lọc loại ⇒ lại đủ 2 dòng');
 
   /* ---- 7 · không có key ⇒ chặn ghi ---- */
   const n0 = calls.length;
@@ -344,6 +560,6 @@ function confirmStrong(phrase) {
   w.close(); dom2.window.close();
   process.exit(bad.length ? 1 : 0);
 })().catch(e => {
-  console.log(JSON.stringify({ errors0: ['harness: ' + (e && e.stack || e)] }, null, 1));
+  console.log(JSON.stringify({ errors0: ['harness: ' + (e && e.stack || e)].concat(bad) }, null, 1));
   process.exit(2);
 });

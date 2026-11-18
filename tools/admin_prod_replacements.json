@@ -180,12 +180,14 @@
  {
   "from": "<p>Đổi từ khoá hoặc bộ lọc. Đây là dữ liệu mẫu.</p>",
   "to": "<p>Đổi từ khoá hoặc bộ lọc.</p>",
-  "note": "empty state Thư viện"
+  "note": "(không còn khớp: trạng thái rỗng Thư viện nay đổi theo có/không có bộ và có nút Thêm bộ)",
+  "optional": true
  },
  {
   "from": "<p>Dữ liệu mẫu.</p>",
   "to": "<p>Chưa có dữ liệu trong KV.</p>",
-  "note": "empty state Bình luận / Báo lỗi"
+  "note": "(không còn trong nguồn: trạng thái rỗng của Bình luận nay nói rõ “bình luận sẽ hiện sau lần gửi đầu tiên”)",
+  "optional": true
  },
  {
   "from": "return '<p class=\"sample-note\">DỮ LIỆU THẬT</p>';",
@@ -347,7 +349,7 @@
   "note": ""
  },
  {
-  "from": "state.chapters.push({t:'Chương mẫu nhập '+(i+1),b:'Truyện mẫu 14',s:'published',d:'03/11 20:40'});",
+  "from": "state.chapters.push({t:'Chương mẫu nhập '+(i+1),b:'Truyện mẫu 14',s:'draft',d:'03/11 20:40'});",
   "to": "/* bản phát hành: import-file do admin-real.js xử lý, ghi KV thật */",
   "note": ""
  },

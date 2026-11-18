@@ -10,17 +10,22 @@
    Quy ước dữ liệu (nằm trong chính object chương, không thêm bảng):
      · status: 'draft' | 'scheduled' | 'published' | 'hidden'
      · at    : ISO UTC ('2026-09-25T13:00:00.000Z') — mốc chương lên sóng
-   “Chương chưa lên sóng” = status 'hidden', hoặc status 'scheduled' CÓ mốc
-   giờ ở TƯƠNG LAI. Chương chọn 'scheduled' mà chưa có giờ (dữ liệu cũ, hoặc
-   người sửa chưa kịp nhập) vẫn coi như đang hiện — không im lặng ẩn mất
-   chương của người ta.
+   “Chương chưa lên sóng” = status 'draft' (nháp, chưa xuất bản), status
+   'hidden', hoặc status 'scheduled' CÓ mốc giờ ở TƯƠNG LAI. Chương chọn
+   'scheduled' mà chưa có giờ (dữ liệu cũ, hoặc người sửa chưa kịp nhập) vẫn
+   coi như đang hiện — không im lặng ẩn mất chương của người ta.
+
+   Vì sao 'draft' phải bị giữ lại: trước đây Nháp chỉ là NHÃN ghi chú, chương
+   vẫn hiện ngoài web ngay khi bấm Lưu — người viết tưởng đang để nháp nhưng
+   độc giả đã đọc được. Giờ Nháp = CHƯA XUẤT BẢN: chỉ admin thấy, và chỉ lên
+   sóng khi người sửa đổi trạng thái sang Xuất bản (hoặc Hẹn giờ).
    ============================================================================ */
 
 export const CHAPTER_STATUSES = [
   { id: 'published', label: 'Xuất bản', hint: 'Độc giả thấy ngay khi lưu.' },
   { id: 'scheduled', label: 'Hẹn giờ', hint: 'Chương chỉ hiện khi tới mốc giờ đã đặt.' },
   { id: 'hidden', label: 'Ẩn', hint: 'Chương nằm trong bộ nhưng độc giả không thấy.' },
-  { id: 'draft', label: 'Nháp', hint: 'Chỉ là nhãn ghi chú trong admin — chương vẫn hiện ngoài web.' },
+  { id: 'draft', label: 'Nháp', hint: 'Chưa xuất bản — chỉ admin thấy, độc giả chưa đọc được.' },
 ];
 
 export function chapterStatusLabel(status) {
@@ -46,19 +51,22 @@ export function chapterStatusOf(chapter) {
   return String((chapter && chapter.status) || '').trim().toLowerCase();
 }
 
-/* Chương có đang bị giữ lại không? (chưa tới giờ, hoặc bị ẩn) */
+/* Chương có đang bị giữ lại không? (nháp, chưa tới giờ, hoặc bị ẩn) */
 export function isChapterPending(chapter, now) {
   const st = chapterStatusOf(chapter);
+  /* Nháp = CHƯA XUẤT BẢN. Không có trạng thái (dữ liệu cũ) vẫn là đang hiện. */
+  if (st === 'draft') return true;
   if (st === 'hidden') return true;
   if (st !== 'scheduled') return false;
   const at = chapterAtMs(chapter);
   return at > 0 && at > (Number(now) || Date.now());
 }
 
-/* Vì sao đang bị giữ: '' (đang hiện) | 'hidden' | 'scheduled' */
+/* Vì sao đang bị giữ: '' (đang hiện) | 'draft' | 'hidden' | 'scheduled' */
 export function chapterPendingReason(chapter, now) {
   if (!isChapterPending(chapter, now)) return '';
-  return chapterStatusOf(chapter) === 'hidden' ? 'hidden' : 'scheduled';
+  const st = chapterStatusOf(chapter);
+  return st === 'draft' ? 'draft' : (st === 'hidden' ? 'hidden' : 'scheduled');
 }
 
 export function countVisibleChapters(chapters, now) {
@@ -97,6 +105,7 @@ export function scheduleLabelOf(chapter, now) {
     return 'Hẹn ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
   }
   if (st === 'hidden') return 'Đang ẩn';
+  if (st === 'draft') return 'Đang là nháp · chưa xuất bản';
   return '';
 }
 

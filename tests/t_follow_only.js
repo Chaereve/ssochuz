@@ -1,5 +1,6 @@
 const {JSDOM} = require('jsdom');
 const fs = require('node:fs');
+const path = require('node:path');
 const assert = require('node:assert/strict');
 (async () => {
   const dom = new JSDOM('<body data-personal-follow-only></body>', {url:'https://test.invalid/', runScripts: 'dangerously'});
@@ -15,7 +16,7 @@ const assert = require('node:assert/strict');
   w.CZ = {findLib: () => ({chapters:6})};
   w.CZ_AUTH = {current: () => ({uid:'user-a'}), state: () => 'in', getClient: async () => client,
     onAuth: fn => {listener=fn;}};
-  w.eval(fs.readFileSync('src/cz-personal.js','utf8'));
+  w.eval(fs.readFileSync(path.join(__dirname, '..', 'src/cz-personal.js'),'utf8'));
   if (listener) listener({uid:'user-a'});
   await w.CZFollowPersonal.whenReady();
   assert.equal(w.CZPersonal, undefined, 'do not override existing device history');
