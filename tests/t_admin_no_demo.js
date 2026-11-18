@@ -17,8 +17,8 @@
      • toast / mã chết "mô phỏng", "Đã chuyển 248 book … MẪU".
 
    Bài này khoá 3 tầng:
-     (1) MÃ NGUỒN admin.html — ngoài khối DOCS_HTML (tài liệu lịch sử, cố tình
-         giữ chữ MẪU) không còn bất kỳ dấu vết prototype nào.
+     (1) MÃ NGUỒN admin.html — tài liệu lịch sử được tải riêng theo yêu cầu,
+         còn payload ban đầu không có dấu vết prototype nào.
      (2) DOM RENDER THẬT ở CHƯA cấu hình Worker (static, KV rỗng) và ĐÃ cấu
          hình (online, 67 bộ từ registry) — quét 13 tab × 3 trạng thái × 5
          mode đăng nhập × popover × palette × modal × toast, 0 lỗi JS.
@@ -46,14 +46,12 @@ const repl = JSON.parse(R('tools/admin_prod_replacements.json'));
 const reg = JSON.parse(R('data/registry.json'));
 const bookSeed = JSON.parse(R('data/book/bake-love-feelings.json'));
 
-/* Tách đúng khối tài liệu lịch sử. MẪU trong đó là SỰ THẬT của prototype,
-   không được tính là dữ liệu giả lọt vào giao diện. */
-const docsStart = prod.indexOf('const DOCS_HTML =');
-const docsEndMark = "\n'</ul></div>';";
-const docsEnd = prod.indexOf(docsEndMark, docsStart) + docsEndMark.length;
-ok(docsStart > 0 && docsEnd > docsStart, 'xác định được khối DOCS_HTML trong admin.html');
-const prodUI = prod.slice(0, docsStart) + prod.slice(docsEnd);
-const docsHTML = prod.slice(docsStart, docsEnd);
+/* Tài liệu lịch sử MẪU được tách thành fragment tải theo yêu cầu; không nằm
+   trong admin.html hay payload ban đầu. */
+const prodUI = prod;
+const docsHTML = R('admin-docs.html');
+ok(!prod.includes('PHASE 1 · NGHIÊN CỨU') && docsHTML.includes('PHASE 1 · NGHIÊN CỨU'),
+  'DOCS_HTML ở file riêng, không nhúng trong admin.html');
 
 /* ---------------------------------------------------------------- 1 · NGUỒN */
 ok(/^const SAMPLE_BOOKS = \[\];/m.test(prodUI), 'seed SAMPLE_BOOKS rỗng (không mang 18 bộ mẫu)');

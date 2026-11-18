@@ -205,8 +205,8 @@ function gzipSize(relPath) {
          (biểu đồ lượt đọc theo ngày, phiếu theo chương), bảng Kiểm tra dữ liệu
          đọc số chương từ /api/book cho từng bộ, và khối Sức khoẻ KV ở Cài đặt.
          Đây vẫn là màn hình quản trị trên máy tính; ngân sách trang ĐỌC
-         (home/reader/…) không đổi. Muốn hạ lại thì cắt khối DOCS_HTML lịch sử
-         (~12,7 kB gzip) ra khỏi payload đầu, không phải cắt tính năng. */
+         (home/reader/…) không đổi. DOCS_HTML lịch sử được sinh thành
+         admin-docs.html và chỉ tải khi mở modal, không tính vào payload đầu. */
       maxGzipKb: 125,
     },
   };

@@ -81,6 +81,11 @@ function fakeFetch(url, opts) {
   if (illegal.length) return Promise.reject(new TypeError('Failed to fetch'));
   calls.push({ p, method, key: hdr['x-admin-key'] || '', headers: Object.keys(hdr), body });
   const send = (d, st) => Promise.resolve(resp(d, st));
+  if (p === '/admin-docs') return Promise.resolve({
+    ok: true, status: 200,
+    headers: { get: () => 'text/html; charset=utf-8' },
+    text: async () => '<div class="docs"><h4>QA DOCS SENTINEL</h4></div>'
+  });
   if (p === '/api/health') return send({ ok: true });
   if (p === '/api/whoami') return (opts.headers || {})['x-admin-key'] ? send({ ok: true, role: 'super_admin' }) : send({ ok: false, error: 'thiếu key' }, 401);
   if (p === '/api/registry') {
@@ -128,6 +133,8 @@ function fakeFetch(url, opts) {
 /* ---------------- nạp đúng admin.html ---------------- */
 const rawHtml = R('admin.html');
 ok(/<script src="\/admin-real\.js\?v=[a-f0-9]+"><\/script>/.test(rawHtml), 'admin.html nạp admin-real.js kèm ?v= sha1');
+ok(!rawHtml.includes('PHASE 1 · NGHIÊN CỨU') && R('admin-docs.html').includes('PHASE 1 · NGHIÊN CỨU'),
+  'tài liệu bàn giao ở fragment tải riêng, không nằm trong payload ban đầu');
 ok(!/admin-cu|adminRoot|Admin thật · ghi KV/.test(rawHtml), 'admin.html sạch link/nhãn bản admin sao chép');
 const html = rawHtml.replace(/<script src="\/admin-real\.js[^"]*"><\/script>/, '');
 const realJs = R('admin-real.js');
@@ -200,6 +207,7 @@ function confirmStrong(phrase) {
   ok(w.CZ_MOCKUP.SAMPLE_READS.length === 14, 'chuỗi 14 ngày từ /api/admin/stats');
   ok(w.CZ_MOCKUP.SAMPLE_METRICS[4].n === '137', 'quota ghi thật từ /api/admin/kv');
   ok(S().votes.length === 2 && S().votes.some(v => v.k === 'g:abc'), 'phiếu bầu nhiều bộ đọc được dạng book.voters của Worker');
+  ok(!calls.some(c => c.p === '/admin-docs'), 'không tải tài liệu lịch sử khi vào admin ban đầu');
   /* Hồi quy: đổi bộ phải phát change, cập nhật state và lọc bảng trước khi
      Gỡ/Reset đọc bộ đang chọn — click không phải event của <select>. */
   nav('phieu-bau');
@@ -549,6 +557,12 @@ function confirmStrong(phrase) {
   ok(!/<script[^>]+src="\/admin-real\.js/.test(mockHtml), 'prototype không nạp admin-real.js');
   ok(!e2.some(x => x.indexOf('PROTOTYPE_CALLED_FETCH') >= 0), 'prototype không gọi fetch');
   ok(e2.length === 0, 'prototype 0 lỗi JS: ' + e2.join(' | '));
+
+  /* Tài liệu lịch sử được tải riêng chỉ khi chủ động mở modal, vẫn render đầy đủ. */
+  click('[data-act="docs"]');
+  await tick(3);
+  ok(calls.filter(c => c.p === '/admin-docs').length === 1, 'mở tài liệu mới phát sinh đúng một GET fragment');
+  ok($('#modalRoot').textContent.includes('QA DOCS SENTINEL'), 'modal tài liệu hiển thị nội dung vừa tải');
 
   console.log(JSON.stringify({
     bai: 't_admin_real.js / vòng 10',
