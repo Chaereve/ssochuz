@@ -198,6 +198,7 @@
       return { d: x.days || x.day || '', b: x.slug || '', c: x.detail || x.note || '',
         t: x.slug ? '' : (x.title || '') };
     });
+    window.hpSortSchedule(S.schedule); // Lấy mốc hoàn tác sau khi xếp lịch cũ theo thứ.
     var ann = (REG.settings && REG.settings.announcement) || {};
     S.hpNote = (REG.schedule && REG.schedule.note) || '';
     S.hpText = ann.text || ''; S.hpHref = ann.href || '';

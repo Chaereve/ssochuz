@@ -1626,7 +1626,7 @@ function homepageHTML(){
      đè mất phần đang sửa). Hợp đồng dữ liệu KV giữ nguyên: slides[{slug,reason}],
      editorChoice, schedule{items[{days,slug,title,detail}],note},
      settings.announcement. */
-  var SL=state.slides||[],PK=state.picked||[],SC=state.schedule||[];
+  var SL=state.slides||[],PK=state.picked||[],SC=hpSortSchedule(state.schedule||[]);
   var bookOpts=function(sel){return state.books.slice(0,8).map(function(b){return '<option value="'+b.id+'"'+(sel===b.id?' selected':'')+'>'+esc(b.t)+'</option>';}).join('');};
   var bannerOn=!!state.models['hp-banner']&&String(state.models['hp-text']||'').trim()!=='';
   var dirty=hpDirty();
@@ -1815,6 +1815,16 @@ function hpDaysOf(s){
     var m=p.match(/(\d+)/);return m?('T'+m[1]):p;
   }).filter(Boolean);
 }
+/* Dùng cùng thứ tự cho dòng sửa, chỉ số data-idx, xem trước và bản lưu.
+   Dòng nhiều thứ lấy thứ sớm nhất; chưa chọn thứ thì nằm cuối. */
+function hpFirstDay(s){
+  var tokens=hpDaysOf(s);
+  var rank=HP_DAYS.findIndex(function(day){return tokens.indexOf(day[0])>=0;});
+  return rank<0?HP_DAYS.length:rank;
+}
+function hpSortSchedule(rows){
+  return rows.sort(function(a,b){return hpFirstDay(a.d)-hpFirstDay(b.d);});
+}
 /* Tên để ghi ra KV: đọc lại đúng dạng "Thứ 2, Thứ 5" mà syncBlogger/CMS quen. */
 function hpDaysText(tokens){
   var out=[];
@@ -1905,8 +1915,8 @@ function hpPvHTML(){
         }).join('')+'</div></div>':'')+
       (sched.length?'<div class="hp-pv-sec"><span class="hp-pv-h">Lịch ra chương</span>'+
         sched.map(function(x){
-          var b=hpBook(x.b),d=hpDaysOf(x.d);
-          return '<span class="hp-pv-rail"><span class="hp-pv-day">'+esc(d.length?d[0]:'—')+'</span><span class="hp-pv-railt"><b>'+esc(b?b.t:'—')+'</b><i>'+esc(x.c||hpDaysText(d))+'</i></span></span>';
+          var b=hpBook(x.b),day=HP_DAYS[hpFirstDay(x.d)];
+          return '<span class="hp-pv-rail"><span class="hp-pv-day">'+esc(day?day[0]:'—')+'</span><span class="hp-pv-railt"><b>'+esc(b?b.t:'—')+'</b><i>'+esc(x.c||x.d)+'</i></span></span>';
         }).join('')+'</div>':'')+
     '</div></div>';
 }

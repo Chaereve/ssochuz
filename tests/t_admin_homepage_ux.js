@@ -138,17 +138,18 @@ function ok(cond, label) { checks++; if (!cond) fails.push(label); }
   /* ----------------------------------------------------------- CHIP THỨ */
   const chips1 = D.querySelectorAll('.hp-sched')[0].querySelectorAll('.hp-day');
   ok(chips1.length === 7, 'mỗi dòng lịch có 7 chip thứ (T2…CN)');
-  const before = S.schedule[0].d;
+  const edited = S.schedule[0];
+  const before = edited.d;
   const tokensBefore = w.hpDaysOf(before);
   const chipOff = [...chips1].find(c => c.classList.contains('on'));
   if (chipOff) { chipOff.click(); await wait(20); }
-  ok(w.hpDaysOf(S.schedule[0].d).length === tokensBefore.length - 1,
-    'bấm chip đang bật → bỏ thứ đó (' + before + ' → ' + S.schedule[0].d + ')');
-  const chipOn = [...D.querySelectorAll('.hp-sched')[0].querySelectorAll('.hp-day')].find(c => !c.classList.contains('on'));
+  ok(w.hpDaysOf(edited.d).length === tokensBefore.length - 1,
+    'bấm chip đang bật → bỏ thứ đó (' + before + ' → ' + edited.d + ')');
+  const chipOn = [...D.querySelectorAll('.hp-sched')[S.schedule.indexOf(edited)].querySelectorAll('.hp-day')].find(c => !c.classList.contains('on'));
   chipOn.click(); await wait(20);
-  ok(w.hpDaysOf(S.schedule[0].d).length === tokensBefore.length,
-    'bấm chip đang tắt → thêm thứ đó (' + S.schedule[0].d + ')');
-  ok(/^(T[2-7]|CN)$/.test(w.hpDaysOf(S.schedule[0].d)[0]), 'chip ghi đúng token CZ dùng (T2…CN)');
+  ok(w.hpDaysOf(edited.d).length === tokensBefore.length,
+    'bấm chip đang tắt → thêm thứ đó (' + edited.d + ')');
+  ok(/^(T[2-7]|CN)$/.test(w.hpDaysOf(edited.d)[0]), 'chip ghi đúng token CZ dùng (T2…CN)');
   ok(w.hpDaysText(['T2', 'T5']) === 'Thứ 2, Thứ 5', 'đọc ra chuỗi KV quen thuộc: "Thứ 2, Thứ 5"');
   ok(puts.length === 0, 'đổi lịch bằng chip cũng không ghi KV');
 
@@ -189,7 +190,9 @@ function ok(cond, label) { checks++; if (!cond) fails.push(label); }
   /* ------------------------------------------------- LƯU: ĐÚNG MỘT LƯỢT */
   S.slides = [{ b: 'lunar-secret', r: 'Đề cử tháng 11' }, { b: 'bake-love-feelings', r: '' }];
   S.picked = ['lunar-secret', 'bake-love-feelings'];
-  S.schedule = [{ d: 'Thứ 2, Thứ 5', b: 'lunar-secret', c: 'ra chương 20', t: '' }];
+  S.schedule = [{ d: 'Chủ nhật', b: 'bake-love-feelings', c: 'CN', t: '' },
+    { d: 'Thứ 3', b: 'bake-love-feelings', c: 'T3', t: '' },
+    { d: 'Thứ 5, Thứ 2', b: 'lunar-secret', c: 'ra chương 20', t: '' }];
   S.models['hp-banner'] = true;
   S.models['hp-text'] = 'Bảo trì 20:00';
   S.models['hp-note'] = 'Lịch mới';
@@ -208,7 +211,7 @@ function ok(cond, label) { checks++; if (!cond) fails.push(label); }
   ok(sl[1] && !sl[1].reason, 'PUT slides: slide không có lý do thì không sinh khoá reason rỗng');
   ok(JSON.stringify(b.editorChoice) === JSON.stringify(['lunar-secret', 'bake-love-feelings']),
     'PUT editorChoice đúng thứ tự đã chọn');
-  ok(it.length === 1 && it[0].slug === 'lunar-secret' && it[0].days === 'Thứ 2, Thứ 5',
+  ok(it.length === 3 && it[0].slug === 'lunar-secret' && it[0].days === 'Thứ 5, Thứ 2' && it[1].detail === 'T3' && it[2].detail === 'CN',
     'PUT lịch: slug + days đúng chuỗi KV');
   ok(it[0] && it[0].detail === 'ra chương 20', 'PUT lịch: detail = ghi chú dòng');
   ok(it[0] && /Lunar/i.test(String(it[0].title)), 'PUT lịch: tự điền title từ bộ đã chọn');
@@ -225,7 +228,7 @@ function ok(cond, label) { checks++; if (!cond) fails.push(label); }
   w.render();
   D.querySelector('[data-act="save-homepage"]').click(); await wait(350);
   const toastTxt = (D.getElementById('toasts') || {}).textContent || (D.body.textContent || '');
-  ok(/dòng 1 thiếu thứ/.test(toastTxt), 'lịch thiếu thứ: báo đúng DÒNG NÀO thiếu gì (' +
+  ok(/dòng 2 thiếu thứ/.test(toastTxt), 'lịch thiếu thứ: báo đúng DÒNG NÀO thiếu gì (' +
     toastTxt.trim().slice(-70) + ')');
   ok(puts.length === 1, 'lịch lỗi → không ghi KV thêm');
   ok(/Chưa chọn thứ/.test(txt()), 'dòng lịch thiếu thứ hiện cảnh báo ngay trên card');
