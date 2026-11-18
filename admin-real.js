@@ -2212,18 +2212,10 @@
     /* Từ Thư viện / Dashboard: mở đúng bộ đó ở tab Chương (1 cú bấm, không phải
        nhớ slug rồi sang tab kia chọn lại). */
     'open-chapters': function (el) { openChapterBook(el.dataset.id, true); },
-    'reload-comments': function () {
-      say('Đang đọc lại bình luận…', 'info');
-      loadComments().then(function () { redraw(); say('Đã đọc lại bình luận.'); }).catch(fail);
-    },
     'log-kind': function (el) {
       S.logKind = String((el && el.dataset && el.dataset.k) || 'all');
       S.logPage = 1;
       redraw();
-    },
-    'reload-log': function () {
-      say('Đang đọc lại nhật ký…', 'info');
-      loadLog().then(function () { redraw(); say('Đã đọc lại nhật ký.'); }).catch(fail);
     },
     'retry-chapter': function () {
       var slug = String(BOOK_SLUG || S.chapterBook || '');

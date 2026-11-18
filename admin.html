@@ -1444,8 +1444,7 @@ function commentsHTML(){
   var head='<div class="card"><div class="card-hd"><div class="tabs">'+
     '<button class="tab'+(state.commentTab==='all'?' on':'')+'" data-act="comment-tab" data-tab="all">Tất cả</button>'+
     '<button class="tab'+(state.commentTab==='spam'?' on':'')+'" data-act="comment-tab" data-tab="spam">Chỉ nghi spam · '+state.comments.filter(function(c){return c.spam;}).length+'</button></div>'+
-    '<span class="right" id="cmtCount">'+state.comments.length+' bình luận</span>'+
-    '<button class="btn sm ghost" data-act="reload-comments" data-tip="Đọc lại bình luận từ KV">'+icon('refresh','s')+'Tải lại</button></div><div class="card-bd">'+
+    '<span class="right" id="cmtCount">'+state.comments.length+' bình luận</span></div><div class="card-bd">'+
     '<div class="toolbar mb"><div class="search">'+icon('search','xs')+'<input class="inp" data-role="cmt-q" placeholder="Tìm nội dung, người gửi, bộ…" value="'+esc(state.cmtQ)+'" aria-label="Tìm bình luận"></div>'+
     /* Vòng 18d: trước chỉ 8 bộ đầu (8 bộ mới cập nhật) ⇒ không lọc được bình
        luận của 59 bộ còn lại. Nay đủ thư viện, sắp A–Z (bản phát hành dùng
@@ -2169,8 +2168,7 @@ function logsHTML(){
       '<button class="btn sm ghost" data-act="log-kind" data-k="all">Xoá lọc</button></div>';
   return '<div class="state-note">'+icon('history','s')+' Nhật ký giữ <b>200</b> thao tác gần nhất trên KV · mỗi dòng do Worker ghi khi thao tác thành công.</div>'+
     '<div class="card"><div class="card-hd"><h3>Thao tác gần nhất</h3>'+
-      '<span class="right" id="logCount">'+rows.length+'/'+list.length+' dòng</span>'+
-      '<button class="btn sm ghost" data-act="reload-log" data-tip="Đọc lại nhật ký từ KV">'+icon('refresh','s')+'Đọc lại</button></div>'+
+      '<span class="right" id="logCount">'+rows.length+'/'+list.length+' dòng</span></div>'+
     '<div class="card-bd" style="padding:12px 16px 0"><div class="ch-tools">'+
       '<div class="search">'+icon('search','xs')+
         '<input class="inp" type="search" id="logQuery" data-role="log-q" value="'+esc(state.logQ||'')+'" placeholder="Tìm theo hành động, slug, người…" aria-label="Tìm trong nhật ký">'+
@@ -2900,6 +2898,19 @@ document.addEventListener('click',function(e){
     case 'toggle-account':state.accountOpen=!state.accountOpen;state.notifOpen=false;renderTopbar();break;
     case 'view-web':break;
     case 'demo':break;
+    /* Trước đây case này nằm nhầm trong listener 'input' (chỉ chạy khi gõ vào
+       ô nhập) nên nút “Mở bộ” trên dòng báo lỗi bấm KHÔNG có gì xảy ra. */
+    case 'open-report-book':{
+      var bid=el.dataset.id;
+      if(!bid)break;
+      if(!(state.books||[]).some(function(b){return b.id===bid;})){
+        toast('Bộ “'+bid+'” không còn trong registry — mở Thư viện để kiểm tra.','warn');
+        navigate('thu-vien');break;
+      }
+      state.selectedBook=bid;navigate('sua-bo');break;
+    }
+    /* Cùng lỗi: nút “Bỏ lọc” của tab Báo lỗi chỉ có case trong listener input. */
+    case 'clear-rep-book':state.repBook='';render();break;
     case 'docs':openDocs();break;
     case 'close-modal':closeModal();break;
     case 'confirm-ok':applyConfirm();break;
@@ -2911,7 +2922,6 @@ document.addEventListener('click',function(e){
     case 'pick-search':pickSearch(el.dataset.type,el.dataset.id,el.dataset.kind);break;
     case 'page-lib':state.lib.page=Number(el.dataset.page)||1;render();break;
     case 'page-votes':state.votePage=Number(el.dataset.page)||1;render();break;
-    case 'vote-book':state.voteBook=el.value;state.votePage=1;state.voteSel.clear();render();break;
     case 'page-logs':state.logPage=Number(el.dataset.page)||1;render();break;
     case 'reset-lib':state.lib={q:'',status:'all',pub:'',vis:'',lock:'',adult:'',sort:'new',page:1};render();break;
     case 'clear-sel':state.sel.clear();render();break;
@@ -3105,6 +3115,15 @@ document.addEventListener('change',function(e){
   }
   var r=el.dataset.role;if(!r)return;
   switch(r){
+    /* Ô chọn bộ ở tab Phiếu bầu: trước đây case này nằm nhầm trong listener
+       'click' nên đổi bộ KHÔNG lọc lại bảng — bảng vẫn hiện phiếu của bộ
+       cũ trong khi nút Gỡ/Reset lại đọc đúng bộ mới ⇒ dễ gỡ nhầm phiếu. */
+    /* Hai ô <select> này trước chỉ có case trong listener 'input' — trình duyệt
+       thật có bắn 'input' cho select nên vẫn chạy, nhưng mọi bài kiểm và môi
+       trường không bắn 'input' thì ô lọc im lặng. Đặt ở 'change' cho đúng chuẩn. */
+    case 'issue-filter':state.issueLv=el.value;render();break;
+    case 'rep-book':state.repBook=el.value;render();break;
+    case 'vote-book':state.voteBook=el.value;state.votePage=1;state.voteSel.clear();render();break;
     case 'mode':state.modes[state.route]=el.value;render();break;
     case 'conn':state.conn=el.value;render();break;
     case 'quota':state.quota=el.value;render();break;
@@ -3262,12 +3281,6 @@ document.addEventListener('input',function(e){
     case 'sched-ch':state.schedule[Number(el.dataset.idx)].c=el.value;hpSyncLive();break;
     case 'hp-slide-q':hpSlideFilter(el.value);break;
     case 'issue-q':state.issueQ=el.value;render();break;
-    case 'rep-book':state.repBook=el.value;render();break;
-    case 'clear-rep-book':state.repBook='';render();break;
-    case 'open-report-book':
-      if(el.dataset.id){state.selectedBook=el.dataset.id;navigate('sua-bo');}
-      break;
-    case 'issue-filter':state.issueLv=el.value;render();break;
   }
 });
 
@@ -3352,6 +3365,6 @@ window.CZ_MOCKUP = {
   SAMPLE_NOTIFS: SAMPLE_NOTIFS, SAMPLE_LOGS: SAMPLE_LOGS
 };
 </script>
-<script src="/admin-real.js?v=686df560fe"></script>
+<script src="/admin-real.js?v=c22f1bbe85"></script>
 </body>
 </html>
