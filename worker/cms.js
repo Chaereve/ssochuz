@@ -3707,9 +3707,15 @@ async function syncBlogger(req, env, cors) {
     let n = bySlug[key];
     if (!n) n = (reg.lib || []).find((x) => sameTitle(x.title, c.title));
     if (!n) { log.push({ action: 'mới (chưa có trong KV)', title: c.title }); continue; }
-    ['author', 'couple', 'year', 'thumb', 'status', 'is18'].forEach((f) => {
+    ['author', 'couple', 'year', 'status', 'is18'].forEach((f) => {
       if (c[f] !== undefined && String(c[f]) !== String(n[f] === undefined ? '' : n[f])) { n[f] = c[f]; changed++; }
     });
+    /* Ảnh bìa: chỉ nhận thumb từ Blogger khi KV chưa có ảnh. Bản upload lên Worker
+       (/api/img/…) hoặc URL đã sửa tay không bị ghi đè bởi ảnh gốc trên trang blog —
+       ảnh blog có thể chết (domain hỏng) hoặc khác bản đã chỉnh sửa. slide theo thumb. */
+    if (c.thumb !== undefined && !String(n.thumb || '').trim() && String(c.thumb) !== String(n.thumb || '')) {
+      n.thumb = c.thumb; n.slide = c.thumb; changed++;
+    }
     if (c.count) {
       if (String(c.count) !== String(n.countLabel || '')) { n.countLabel = c.count; changed++; }
       const have = parseInt(String(c.count).split('/')[0], 10) || 0;

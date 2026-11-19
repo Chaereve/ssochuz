@@ -1014,7 +1014,7 @@ function field(label,id,val,opts){
   var ctl;
   if(opts.type==='textarea') ctl='<textarea class="inp'+(state.errors[id]?' invalid':'')+'" id="'+id+'" data-model="'+id+'" rows="'+(opts.rows||4)+'" placeholder="'+esc(opts.ph||'')+'">'+esc(val)+'</textarea>';
   else if(opts.type==='select') ctl='<span class="sel"><select class="inp'+(state.errors[id]?' invalid':'')+'" id="'+id+'" data-model="'+id+'">'+opts.options.map(function(o){var v=Array.isArray(o)?o[0]:o,l=Array.isArray(o)?o[1]:o;return '<option value="'+esc(v)+'"'+(String(val)===String(v)?' selected':'')+'>'+esc(l)+'</option>';}).join('')+'</select></span>';
-  else ctl='<input class="inp'+(state.errors[id]?' invalid':'')+'" id="'+id+'" data-model="'+id+'" type="'+(opts.type||'text')+'" value="'+esc(val)+'" placeholder="'+esc(opts.ph||'')+'"'+(opts.readonly?' readonly':'')+'>';
+  else ctl='<input class="inp'+(state.errors[id]?' invalid':'')+'" id="'+id+'" data-model="'+id+'"'+(opts.role?' data-role="'+esc(opts.role)+'"':'')+' type="'+(opts.type||'text')+'" value="'+esc(val)+'" placeholder="'+esc(opts.ph||'')+'"'+(opts.readonly?' readonly':'')+'>';
   return '<div class="field"><label for="'+id+'">'+esc(label)+'</label>'+ctl+hint+err+'</div>';
 }
 /* Nhiều dòng Couple theo NewBook.jsx / BookEditor.jsx: Enter thêm dòng, × xoá,
@@ -1028,12 +1028,12 @@ function coupleBlock(form){
   var all=state.books.map(function(b){return b.c;}).filter(Boolean);
   var known=all.filter(function(x,i){return all.indexOf(x)===i;});
   return '<div class="field mt" style="max-width:520px"><div class="row" style="justify-content:space-between;align-items:center;gap:8px">'+
-    '<span class="lb">Couple</span><button class="btn ghost sm" data-act="couple-add" data-form="'+form+'">+ Thêm couple</button></div>'+
+      '<span class="lb">Couple</span><span class="row" style="gap:6px"><button class="btn ghost sm" data-act="couple-add" data-form="'+form+'">+ Thêm couple</button><button class="btn ghost sm" data-act="couple-clear" data-form="'+form+'">Không có couple</button></span></div>'+
     '<datalist id="'+form+'-couples">'+known.map(function(x){return '<option value="'+esc(x)+'"></option>';}).join('')+'</datalist>'+
     '<div class="stack" style="gap:6px">'+arr.map(function(v,i){
       return '<div class="row" style="gap:6px"><input class="inp" style="flex:1 1 auto" data-role="couple-row" data-form="'+form+'" data-idx="'+i+'" list="'+form+'-couples" value="'+esc(v)+'" placeholder="'+(i?'Couple tiếp theo…':'VD: Nhân vật A × B')+'" aria-label="Couple '+(i+1)+'">'+
         ((arr.length>1||v)?'<button class="btn icon ghost sm" data-act="couple-remove" data-form="'+form+'" data-idx="'+i+'" aria-label="Xoá couple '+(i+1)+'">'+icon('x','s')+'</button>':'')+'</div>';
-    }).join('')+'</div><span class="hint">Enter thêm dòng.</span></div>';
+    }).join('')+'</div><span class="hint">Enter thêm dòng · bấm “Không có couple” để giữ trống.</span></div>';
 }
 function setErr(id,msg){
   state.errors[id]=msg||'';
@@ -1100,8 +1100,6 @@ function renderSidebar(){
       return '<button class="nav-item'+(on?' on':'')+(gated?' gated':'')+'" data-act="go" data-id="'+id+'"'+(on?' aria-current="page"':'')+' title="'+esc(tip)+'"'+(gated?' data-tip="'+esc(tip)+'"':'')+'>'+icon(ic,'s')+'<span class="tx">'+esc(label)+'</span>'+ct+'</button>';
     }).join('')+'</div>';
   }).join('');
-  var prevSide=document.querySelector('#sidebar .side-scroll');
-  var prevTop=prevSide?prevSide.scrollTop:0;
   document.getElementById('sidebar').innerHTML =
     '<div class="brand"><span class="dot"></span><span class="logo"><span class="tx">ssochuz</span><i>admin</i></span>'+
     '<button class="tool icon collapse-btn" data-act="toggle-collapse" data-tip="Thu gọn / mở rộng sidebar" aria-label="'+(state.collapsed?'Mở rộng sidebar':'Thu gọn sidebar')+'">'+icon('menu','s')+'</button></div>'+
@@ -1110,8 +1108,6 @@ function renderSidebar(){
     '<button data-act="go" data-id="dang-nhap">Đăng nhập / nối Worker</button>'+
     '<button data-act="docs">Tài liệu bàn giao</button>'+
     '</div>';
-  var nextSide=document.querySelector('#sidebar .side-scroll');
-  if(nextSide&&prevTop)nextSide.scrollTop=prevTop;
 }
 function renderTopbar(){
   var c=CONN[state.conn]||CONN.online,q=QUOTA[state.quota]||QUOTA.ok;
@@ -1338,7 +1334,7 @@ function newBookHTML(){
   var side='<div class="stack">'+
     '<div class="card"><div class="card-hd"><h3>Ảnh bìa</h3></div><div class="card-bd"><div class="row" style="align-items:flex-start;gap:14px">'+
       '<div id="nb-cover-preview">'+(state.models['nb-cover']?'<img class="cover lg" src="'+esc(state.models['nb-cover'])+'" alt="Ảnh bìa xem trước">':'<span class="cover cv-1 lg" aria-label="Ô màu bìa">BÌA<br>MỚI</span>')+'</div>'+
-      '<div class="col" style="flex:1"><span class="file"><input type="file" accept="image/*" data-role="cover-upload" data-target="nb-cover-preview" aria-label="Tải ảnh bìa"></span></div>'+
+      '<div class="col" style="flex:1"><span class="file"><input type="file" accept="image/*" data-role="cover-upload" data-target="nb-cover-preview" aria-label="Tải ảnh bìa"></span>'+field('Đường dẫn ảnh bìa (URL)','nb-cover',state.models['nb-cover']||'',{ph:'https://… (bỏ trống nếu chỉ tải ảnh lên)',hint:'Dán URL ảnh bìa trực tiếp; tải ảnh lên sẽ ghi đè.',role:'cover-url'})+'</div>'+
     '</div></div></div>'+
     '<div class="card"><div class="card-hd"><h3>Chương đầu (tuỳ chọn)</h3></div><div class="card-bd">'+
       '<label class="chk"><input type="checkbox" data-role="nb-first"><span class="box"></span><span>Thêm chương đầu khi tạo bộ</span></label>'+
@@ -1380,7 +1376,7 @@ function editBookHTML(){
     '<div id="slugWarn" class="mt" style="display:flex;gap:10px;padding:12px;border:1px solid var(--bad);border-radius:8px;background:var(--bad-bg);font-size:12.5px"'+(changed?'':' hidden')+'>'+icon('alert','s')+'<span id="slugWarnText"><b>Cảnh báo đổi slug:</b> '+esc(orig)+' → '+esc(slug)+'. Liên kết cũ sẽ hỏng; cần xác nhận khi lưu.</span></div>'+
     '<div class="mt">'+field('Giới thiệu','eb-sum',m['eb-sum'],{type:'textarea'})+'</div>'+
     '<div class="row mt" style="align-items:flex-start;gap:14px"><div id="eb-cover-preview">'+cover(b,'lg')+'</div>'+
-      '<div class="col" style="flex:1"><span class="lb">Ảnh bìa</span><span class="file"><input type="file" accept="image/*" data-role="cover-upload" data-target="eb-cover-preview" aria-label="Tải ảnh bìa"></span></div></div>'+
+      '<div class="col" style="flex:1"><span class="lb">Ảnh bìa</span><span class="file"><input type="file" accept="image/*" data-role="cover-upload" data-target="eb-cover-preview" aria-label="Tải ảnh bìa"></span>'+field('Đường dẫn ảnh bìa (URL)','eb-cover',m['eb-cover']||'',{ph:'https://… (bỏ trống để giữ ảnh hiện tại)',hint:'Dán URL ảnh bìa trực tiếp; tải ảnh lên sẽ ghi đè.',role:'cover-url'})+'</div></div>'+
     '</div></div>';
   var side='<div class="stack">'+
     '<div class="card"><div class="card-hd"><h3>Khóa mật mã</h3><span class="right">'+(b.lock?'đang khóa':'không khóa')+'</span></div><div class="card-bd">'+
@@ -2746,6 +2742,9 @@ document.addEventListener('click',function(e){
       var cf2=el.dataset.form;state.couples[cf2].splice(Number(el.dataset.idx),1);
       if(!state.couples[cf2].length)state.couples[cf2].push('');
       syncCouples(cf2);render();break;
+    case 'couple-clear':
+      /* Truyền lựa chọn "Không có couple": gộp về 1 dòng trống, couple ghi '' khi lưu. */
+      var cf3=el.dataset.form;state.couples[cf3]=[''];syncCouples(cf3);render();break;
     case 'migrate':
       var only=el.dataset.only||'';
       var label=only==='books'?'chỉ book':only==='covers'?'chỉ bìa':'book + bìa + ảnh chương';
@@ -3116,6 +3115,6 @@ window.CZ_MOCKUP = {
   SAMPLE_NOTIFS: SAMPLE_NOTIFS, SAMPLE_LOGS: SAMPLE_LOGS
 };
 </script>
-<script src="/admin-real.js?v=f0f51a1910"></script>
+<script src="/admin-real.js?v=3955c6caa5"></script>
 </body>
 </html>
