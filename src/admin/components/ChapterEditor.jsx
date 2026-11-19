@@ -419,17 +419,17 @@ export function ChapterEditor({ slug, book, loading, loadError, apiBase, onLoad,
     next.chapters = Array.isArray(next.chapters) ? next.chapters : [];
     /* gợi ý số chương CHÍNH kế tiếp (bỏ qua Lời mở đầu / giới thiệu nhân vật /
        ngoại truyện) — trước đây cứ length+1 nên bộ có mở đầu bị gọi sai số */
-    /* chương mới mặc định XUẤT BẢN: đây vẫn là hành vi cũ trên thực tế (trạng
-       thái chương chưa từng chặn hiển thị), nay ghi thẳng ra cho khỏi hiểu nhầm;
-       muốn giữ riêng thì chọn “Hẹn giờ” hoặc “Ẩn” ngay trên ô trạng thái */
-    next.chapters.push({ t: suggestChapterTitle(next.chapters), html: '<p></p>', status: 'published' });
+    /* chương mới mặc định ở trạng thái 'draft' (Nháp — chưa xuất bản), để
+       người viết chỉnh sửa thoải mái mà không bị lộ ra trang chủ; khi nào
+       muốn đăng thì đổi sang “Xuất bản” hoặc “Hẹn giờ”. */
+    next.chapters.push({ t: suggestChapterTitle(next.chapters), html: '<p></p>', status: 'draft' });
     const newIdx = next.chapters.length - 1;
     const added = next.chapters[newIdx];
-    baseRef.current = { title: added.t, html: '<p></p>', status: 'published', atLocal: '' };
+    baseRef.current = { title: added.t, html: '<p></p>', status: 'draft', atLocal: '' };
     bootRef.current = (next.slug || slug) + '#' + newIdx;
     bootTickRef.current = reloadTick;
     bootChapterRef.current = added;
-    setTitle(added.t); setHtml('<p></p>'); setStatus('published'); setAtLocal('');
+    setTitle(added.t); setHtml('<p></p>'); setStatus('draft'); setAtLocal('');
     setLocalBook(next); setRestored(false); setIndex(newIdx);
   };
   const deleteChapter = async () => {
