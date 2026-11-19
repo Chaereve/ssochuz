@@ -1217,12 +1217,15 @@
     if (S.errors['eb-t'] || S.errors['eb-slug'] || S.errors['eb-a']) { M.focusFirst(['eb-t', 'eb-slug', 'eb-a']); say('Form còn lỗi.', 'bad'); return; }
     if (sl !== oldSlug && (REG.lib || []).some(function (m) { return m.slug === sl; })) { say('Slug mới đã tồn tại: ' + sl, 'bad'); return; }
     var couples = (S.couples.eb || []).filter(function (x) { return String(x || '').trim(); });
-    if (!couples.length) couples = String(base.couple || '').split(/,\s*/).filter(Boolean);
+    /* Chỉ dự phòng lấy couple cũ khi form CHƯA nạp couple (S.couples.eb chưa là mảng).
+       Khi đã nạp — kể cả chọn "Không có couple" ⇒ mảng rỗng — phải tôn trọng giá trị
+       form, không quay lại couple cũ, nếu không clear couple không生效. */
+    if (!couples.length && !Array.isArray(S.couples.eb)) couples = String(base.couple || '').split(/,\s*/).filter(Boolean);
     var meta = metaFromForm(base, {
       title: t, slug: sl, author: a, year: val('eb-year') || base.year || '',
       status: S.models['eb-st'] || base.status, countLabel: base.countLabel,
       is18: checked('eb-18'), synopsis: val('eb-sum'), pubStatus: S.models['eb-pub'] || base.pubStatus || 'published',
-      visibility: S.models['eb-vis'] || base.visibility || 'public', thumb: base.thumb || '',
+      visibility: S.models['eb-vis'] || base.visibility || 'public', thumb: S.models['eb-cover'] || base.thumb || '',
       publishedAt: base.publishedAt || ''
     }, couples);
     meta.chapters = Number(base.chapters) || 0;
@@ -2812,6 +2815,7 @@
     S.models['eb-year'] = meta.year || '';
     S.models['eb-vis'] = b.vis || 'public'; S.models['eb-18'] = !!b.adult;
     S.models['eb-sum'] = meta.synFull || meta.syn || b.syn || '';
+    S.models['eb-cover'] = meta.thumb || b.thumb || '';
     S.models['eb-pass'] = ''; S.models['eb-pass2'] = '';
     S.couples.eb = String(b.c || '').split(/,\s*/).filter(Boolean);
     if (!S.couples.eb.length) S.couples.eb = [''];
@@ -3190,6 +3194,7 @@
         S.models['nb-cover'] = src;
         var pv = D.getElementById('nb-cover-preview');
         if (pv) pv.innerHTML = '<img class="cover lg" src="' + esc(src) + '" alt="Ảnh bìa xem trước">';
+        var nu = D.getElementById('nb-cover'); if (nu) nu.value = src;
         say('Đã tải ảnh — sẽ ghi cùng lúc tạo bộ.');
         return;
       }
@@ -3198,6 +3203,10 @@
       var next = clone(REG);
       var hit = (next.lib || []).find(function (m) { return m.slug === meta.slug; });
       hit.thumb = src; hit.slide = src;
+      S.models['eb-cover'] = src;
+      var eu = D.getElementById('eb-cover'); if (eu) eu.value = src;
+      var ep = D.getElementById('eb-cover-preview');
+      if (ep) ep.innerHTML = '<img class="cover lg" src="' + esc(src) + '" alt="Ảnh bìa xem trước">';
       /* Tạo bộ đã báo riêng */
       return writeRegistry(next).then(function () { say('Đã lưu ảnh bìa lên KV.'); });
     }).catch(fail);
@@ -3291,7 +3300,15 @@
      không mất focus / không rơi chữ đang gõ trong trình soạn. */
   D.addEventListener('input', function (e) {
     var el = e.target;
-    if (!el || !el.dataset || el.dataset.role !== 'chapter-q') return;
+    if (!el || !el.dataset) return;
+    if (el.dataset.role === 'cover-url') {
+      /* Đường dẫn ảnh bìa (URL): xem trước trực tiếp khi gõ, không cần đợi lưu. */
+      var v = String(el.value || '').trim();
+      var pv = D.getElementById(String(el.id || '').replace('-cover', '-cover-preview'));
+      if (pv && v) pv.innerHTML = '<img class="cover lg" src="' + esc(v) + '" alt="Ảnh bìa xem trước">';
+      return;
+    }
+    if (el.dataset.role !== 'chapter-q') return;
     S.chapterQuery = String(el.value || '');
     renderChapterListOnly();
   });

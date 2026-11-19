@@ -291,8 +291,12 @@ def build(pages_path, posts_path, details_path, cards_path, registry_path, books
             new['series'] = card.get('series') or n.get('series') or ''
             new['year'] = card.get('year') or n.get('year')
             new['is18'] = bool(card.get('is18'))
-            if card.get('thumb'):
+            # Ảnh bìa: chỉ nhận thumb từ Blogger khi registry chưa có ảnh. Bản upload
+            # lên Worker (/api/img/…) hoặc URL đã sửa tay không bị ghi đè bởi ảnh gốc
+            # trên trang blog (có thể chết domain / khác bản đã chỉnh). slide theo thumb.
+            if card.get('thumb') and not str(n.get('thumb') or '').strip():
                 new['thumb'] = card['thumb']
+                new['slide'] = card['thumb']
         new['url'] = '/truyen/%s/' % slug
         new['blog'] = (post or {}).get('url') or (card.get('url') or '')
         new['postId'] = re.sub(r'\D', '', str((post or {}).get('postId') or n.get('postId') or ''))
