@@ -2568,7 +2568,9 @@ body:fullscreen .rdbar { background: var(--rd-bg); }
 .cmt-form { display: flex; gap: 12px; align-items: flex-start; }
 .cmt-wrap code { font-family: var(--font-mono); font-size: 12px; }
 /* khung bình luận TRONG TRANG ĐỌC — chi tiết ở khối .rdcmts cuối tệp */
-body.rd-focus .rdcmts { display: none; }
+/* Chế độ tập trung chỉ nên dọn những thứ QUANH chữ (crumb, meta, hàng nút).
+   Bản cũ ẩn cả #rdCmts ⇒ bấm nút “Bình luận” trong lúc đang tập trung thì
+   không thấy gì, tưởng bình luận hỏng. Khung bình luận ở cuối chương vẫn hiện. */
 @media (max-width: 700px) {
 .rdcmts { padding: 28px 16px 48px; }
 .cmt-thread.is-reply { margin-left: 18px; padding-left: 8px; }
