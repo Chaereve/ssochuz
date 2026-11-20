@@ -16,7 +16,10 @@
   function ssSet(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} }
   function norm(v) { v = String(v || '').trim().replace(/\/+$/, ''); if (v && !/^https?:\/\//i.test(v)) v = 'https://' + v; return v; }
   function clone(o) { return JSON.parse(JSON.stringify(o || { lib: [] })); }
-  function today() { return new Date().toISOString().slice(0, 10); }
+  /* Ngày “hôm nay” theo GIỜ VIỆT NAM (UTC+7) — khớp vnDay() của worker/cms.js.
+     Bản cũ lấy toISOString() (UTC) nên từ 0h tới 7h sáng giờ VN vẫn ra ngày
+     HÔM QUA: tạo bộ / lưu ngày cập nhật lúc 1 giờ sáng là web ghi ngày cũ. */
+  function today() { return new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10); }
   function nowStamp() { return new Date().toISOString().slice(0, 16).replace('T', ' '); }
   function teaser(t, n) { return String(t || '').replace(/\s+/g, ' ').trim().slice(0, n || 220); }
   function textToHtml(t) {
@@ -1145,7 +1148,11 @@
     out.status = m.status || 'Đang cập nhật';
     out.countLabel = m.countLabel || out.countLabel || '0/—';
     out.is18 = !!m.is18;
-    out.updated = m.updated || today();
+    /* `updated` = NGÀY CÓ CHƯƠNG MỚI (worker tự ghi khi số chương đọc được
+       tăng). Sửa mô tả / ảnh bìa / tình trạng mà gán lại hôm nay là bịa “vừa
+       cập nhật”: trang chủ nhảy ngày dù độc giả chẳng có chương nào mới. Chỉ
+       dùng ngày hôm nay cho BỘ MỚI (chưa có ngày). */
+    out.updated = m.updated || out.updated || today();
     out.thumb = m.thumb === undefined ? (out.thumb || '') : m.thumb;
     out.slide = out.thumb;
     out.synFull = m.synopsis || '';

@@ -5,8 +5,10 @@ export function slugify(value) {
   return cz().slugify ? cz().slugify(value) : String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 }
 
+/* Ngày hôm nay theo GIỜ VIỆT NAM (UTC+7) — khớp vnDay() của worker/cms.js:
+   lấy UTC thì 0h–7h sáng giờ VN vẫn ra ngày hôm qua. */
 export function today() {
-  return new Date().toISOString().slice(0, 10);
+  return new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10);
 }
 
 export function teaser(text, limit = 220) {

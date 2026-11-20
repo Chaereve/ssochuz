@@ -56,6 +56,29 @@ Admin (admin.html)  ──PUT──▶  Worker (worker/cms.js)  ──▶  Cloud
 
 GitHub vẫn dùng để **chứa code** (muốn deploy code mới thì mới cần build); dữ liệu thì không đi qua GitHub nữa.
 
+## Ngày cập nhật & cột ngày tháng (bản này) — một luật duy nhất
+
+`updated` trong registry là **ngày độc giả thấy** trên thẻ truyện / trang truyện / RSS.
+Trước đây chỉ đường **nhập từ Blogger** gán trường này; lưu chương từ `/admin` không
+đụng tới nên đăng chương xong trang chủ vẫn hiện ngày cũ. Nay:
+
+| Sự kiện | `updated` |
+|---|---|
+| Số chương **đọc được** tăng (thêm chương, xoá-nháp-bị-bỏ…) | = hôm nay (giờ Việt Nam) |
+| Chương chuyển từ nháp/ẩn/hẹn giờ sang **hiện** (bấm Xuất bản) | = hôm nay |
+| Cron: chương hẹn giờ tới mốc, lên sóng | = hôm nay |
+| Sửa chữ chương cũ, đổi thứ tự, lưu nháp, sửa mô tả/bìa | **không đổi** |
+| `/api/recount` thấy số chương thật **tăng** so với registry | = hôm nay |
+
+· Ngày tính theo **UTC+7** (`vnDay()` trong `worker/cms.js`, `today()` ở `admin-real.js`
+và `src/admin/utils/books.js`). Lấy giờ UTC thì 0h–7h sáng giờ Việt Nam vẫn ra hôm qua.
+· Chỉ **tiến, không lùi**: bản ghi có ngày tương lai (nhập tay) thì giữ nguyên.
+· `'YYYY-MM-DD'` được đọc là **00:00 +07:00** ở mọi nơi (web: `CZ.dateVN/timeAgo`,
+RSS: `rfc822()`), nên máy đặt múi giờ khác cũng không thấy lùi một ngày.
+· Service worker trả `/api/registry` theo kiểu **bản mạng trước** (các API khác vẫn
+stale-while-revalidate) — nếu không, lần mở trang đầu tiên sau khi đăng chương vẫn
+hiện số liệu/ngày của lần trước.
+
 ## Có gì mới ở bản 1.20.0 — dữ liệu cá nhân + community D1
 
 | Tính năng | Nguồn dữ liệu / nguyên tắc |

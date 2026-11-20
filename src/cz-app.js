@@ -1267,22 +1267,54 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       .replace(/^salmonlover$/i, 'SalmonLover');
   }
   function num(n) { return (Number(n) || 0).toLocaleString('vi-VN'); }
+  /* `updated` trong registry là NGÀY (YYYY-MM-DD) theo giờ Việt Nam — xem
+     vnDay() trong worker/cms.js. Vì thế chuỗi ngày phải đọc là 00:00 +07:00 và
+     in theo múi giờ Việt Nam, KHÔNG để JS hiểu thành 00:00 UTC (UTC+0) rồi in
+     ra ngày hôm trước trên máy đặt múi giờ khác. Bản cũ vừa in lệch ngày vừa
+     tính “x ngày trước” lệch nửa ngày: đăng lúc 1 giờ sáng hôm nay vẫn hiện
+     “1 ngày trước” như hôm qua. */
+  function dayMs(s) {
+    var t = String(s == null ? '' : s).trim();
+    if (!t) return 0;
+    var x = new Date(t.length <= 10 ? t + 'T00:00:00+07:00' : t).getTime();
+    return isNaN(x) ? 0 : x;
+  }
+  function vnToday(ms) {
+    var d = new Date((Number(ms) || Date.now()) + 7 * 3600e3);
+    return d.toISOString().slice(0, 10);
+  }
   function dateVN(s) {
     if (!s) return '—';
-    var x = new Date(String(s).length <= 10 ? s + 'T00:00:00' : s);
-    if (isNaN(x)) return String(s);
-    return x.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    var t = dayMs(s);
+    if (!t) return String(s);
+    var d = new Date(t + 7 * 3600e3);
+    /* in bằng UTC sau khi đã cộng 7 giờ: cùng một kết quả trên MỌI máy, không
+       phụ thuộc múi giờ người đọc (trước đây máy đặt UTC-5 thấy ngày lùi 1) */
+    return String(d.getUTCDate()).padStart(2, '0') + '/' +
+      String(d.getUTCMonth() + 1).padStart(2, '0') + '/' + d.getUTCFullYear();
   }
   function dateShort(s) {
     if (!s) return '—';
-    var x = new Date(String(s).length <= 10 ? s + 'T00:00:00' : s);
-    if (isNaN(x)) return String(s);
-    return x.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+    var t = dayMs(s);
+    if (!t) return String(s);
+    var d = new Date(t + 7 * 3600e3);
+    return String(d.getUTCDate()).padStart(2, '0') + '/' + String(d.getUTCMonth() + 1).padStart(2, '0');
   }
   function timeAgo(s) {
-    var x = new Date(String(s).length <= 10 ? s + 'T00:00:00' : s).getTime();
-    if (!x || isNaN(x)) return '—';
-    var diff = Date.now() - x, day = 864e5;
+    var t = dayMs(s);
+    if (!t) return '—';
+    /* ngày lịch (không kèm giờ): so theo NGÀY Việt Nam, không theo mili-giây.
+       Hôm nay → “hôm nay”, hôm qua → “hôm qua”, cũ hơn → “N ngày trước”. */
+    if (String(s).trim().length <= 10) {
+      var dayNow = vnToday();
+      var dayWas = String(s).trim();
+      if (dayWas === dayNow) return 'hôm nay';
+      var back = Math.round((dayMs(dayNow) - dayMs(dayWas)) / 864e5);
+      if (back === 1) return 'hôm qua';
+      if (back > 1 && back < 30) return back + ' ngày trước';
+      return dateShort(s);
+    }
+    var diff = Date.now() - t, day = 864e5;
     if (diff < 3600e3) return 'vừa xong';
     if (diff < day) return Math.floor(diff / 3600e3) + ' giờ trước';
     if (diff < 30 * day) return Math.floor(diff / day) + ' ngày trước';
@@ -1380,6 +1412,16 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       reg.lib.forEach(function (x) {
         if (!x || x.slug !== slug) return;
         var was = Number(x.chapters) || 0;
+        /* Số chương thật TĂNG = vừa có chương mới. Worker đã ghi `updated` cho
+           registry, nhưng máy người đọc có thể còn bản registry cũ trong
+           localStorage / cache của service worker: số chương thì trang này tự
+           sửa được (reconcile), còn NGÀY thì không — nên cũng phải sửa, không
+           thì thẻ truyện hiện “42 chương” mà ngày vẫn của tháng trước. Chỉ
+           tiến, không lùi. */
+        if (real > was) {
+          var today = vnToday();
+          if (String(x.updated || '').slice(0, 10) < today) x.updated = today;
+        }
         if (was !== real) {
           x.chapters = real;
           x.countFixed = true;
@@ -3007,12 +3049,15 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     if (libCache) return libCache;
     var reg = memo.reg || {};
     var list = regRows(reg).filter(listedPublicly).map(norm);
-    /* bộ nào lên chương trong 10 ngày gần nhất (so với bộ mới nhất) thì gắn nhãn “Mới” */
+    /* bộ nào lên chương trong 10 ngày gần nhất (so với bộ mới nhất) thì gắn nhãn
+       “Mới”. Tính theo NGÀY Việt Nam (dayMs) để hai bộ cùng một ngày luôn cùng
+       một nhóm — bản cũ trộn mili-giây UTC với ngày lịch nên bộ “hôm nay” và
+       “10 ngày trước” có lúc lệch đúng một nhãn. */
     var dates = list.map(function (n) { return String(n.updated || ''); }).sort();
-    var top = Date.parse(dates[dates.length - 1] || '');
-    if (!isNaN(top)) list.forEach(function (n) {
-      var t = Date.parse(n.updated || '');
-      n.fresh = !isNaN(t) && (top - t) <= 10 * 864e5;
+    var top = dayMs(dates[dates.length - 1] || '');
+    if (top) list.forEach(function (n) {
+      var t = dayMs(n.updated);
+      n.fresh = !!t && (top - t) <= 10 * 864e5;
     });
     libCache = list;
     return list;
@@ -3110,6 +3155,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     realCount: realCount, reconcileCount: reconcileCount, onStatsChange: onStatsChange, notifyStats: notifyStats,
     rdGet: rdGet, rdSet: rdSet, themeInit: themeInit, themeToggle: themeToggle, themeMeta: themeMeta,
     icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo, teaser: teaser,
+    vnToday: vnToday, dayMs: dayMs,
     statusCls: statusCls, statusLabel: statusLabel, statusIcon: statusIcon, words: words, norm: norm, couplesOf: couplesOf, countText: countText,
     /* bóc tên chương dùng chung (src/shared/chapters.js): trang truyện, mục
        lục, nhảy chương — và trang quản trị đều qua đây, khỏi lệch nhau */

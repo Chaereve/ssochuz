@@ -1238,7 +1238,7 @@ function dashboardHTML(){
     '<div class="chart-labels"><span>14 ngày trước</span><span>7 ngày trước</span><span>Hôm nay</span></div></div></div>';
   var recent='<div class="card"><div class="card-hd"><h3>Mới cập nhật</h3><span class="right">'+state.books.length+' bộ</span></div><div class="card-bd tight" style="padding:0 18px">'+
     state.books.slice(0,3).map(function(b){
-      return '<div class="list-item">'+cover(b)+'<div class="t"><b>'+esc(b.t)+'</b><span>'+esc(b.a)+' · '+b.ch+' chương · '+esc(b.d.slice(0,5))+'</span><div style="margin-top:6px">'+bookBadges(b)+'</div></div></div>';
+      return '<div class="list-item">'+cover(b)+'<div class="t"><b>'+esc(b.t)+'</b><span>'+esc(b.a)+' · '+b.ch+' chương · '+esc(b.d?dayLabel(b.d):'')+'</span><div style="margin-top:6px">'+bookBadges(b)+'</div></div></div>';
     }).join('')+'</div></div>';
   return metrics+'<div class="grid2">'+todo+sys+'</div><div class="grid2 mt">'+chart+recent+'</div>';
 }
@@ -1426,7 +1426,7 @@ function chapterPipeline(){
     var list=queues[t[0]];
     return '<div class="card"><div class="card-hd"><h3>'+esc(t[1])+'</h3><span class="right">'+list.length+'</span></div><div class="card-bd tight" style="padding:0 14px">'+
       (list.length?list.slice(0,6).map(function(b){
-        return '<div class="list-item q clickable" data-act="chapter-pick-book" data-id="'+esc(b.id)+'"><div class="t"><b>'+esc(b.t)+'</b><span>'+(t[0]==='waiting'?b.pending+' chương nháp/hẹn giờ':b.ch+' chương')+' · '+esc(b.d.slice(0,5))+'</span></div>'+badge(PUB[b.pub][0],PUB[b.pub][1])+'</div>';
+        return '<div class="list-item q clickable" data-act="chapter-pick-book" data-id="'+esc(b.id)+'"><div class="t"><b>'+esc(b.t)+'</b><span>'+(t[0]==='waiting'?b.pending+' chương nháp/hẹn giờ':b.ch+' chương')+' · '+esc(b.d?dayLabel(b.d):'')+'</span></div>'+badge(PUB[b.pub][0],PUB[b.pub][1])+'</div>';
       }).join(''):'<div class="state" style="min-height:100px;border:0"><p>'+esc(empty[t[0]])+'</p></div>')+
       '</div></div>';
   }).join('')+'</div>';
@@ -3115,6 +3115,6 @@ window.CZ_MOCKUP = {
   SAMPLE_NOTIFS: SAMPLE_NOTIFS, SAMPLE_LOGS: SAMPLE_LOGS
 };
 </script>
-<script src="/admin-real.js?v=3955c6caa5"></script>
+<script src="/admin-real.js?v=1e381700f3"></script>
 </body>
 </html>

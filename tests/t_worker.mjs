@@ -1118,6 +1118,164 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     }
   }
 
+  /* ---- 11d. NGÀY CẬP NHẬT: đăng chương thì ngày trên web phải NHẢY ----
+     Lỗi người dùng báo: “t up truyện hqua nhưng lúc lên xem thì nó ko hiện lên
+     ngày cập nhật hôm nay mà vẫn hiện ngày cũ”. Nguyên nhân: `updated` trong
+     registry (thứ trang chủ/trang truyện/RSS in ra) CHỈ được gán ở đường nhập
+     từ Blogger; lưu chương qua /admin đi đường putChapter/putBook →
+     syncCountToRegistry, mà hàm đó chỉ sửa số chương. Nay:
+       · số chương ĐANG HIỆN tăng ⇒ `updated` = HÔM NAY (giờ Việt Nam, UTC+7)
+       · sửa chữ chương cũ / lưu nháp / đổi thứ tự ⇒ KHÔNG đụng ngày
+       · chỉ tiến, không lùi (ngày tương lai do nhập tay thì giữ nguyên)
+       · cron (chương hẹn giờ tới mốc) và /api/recount cũng ghi ngày          */
+  {
+    /* hôm nay theo giờ Việt Nam — đúng thứ người dùng thấy trên lịch */
+    const vnToday = () => new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10);
+    const OLD = '2026-01-02';
+    const mkBook = (chapters, extra) => Object.assign({ title: 'Ngày Cập Nhật', slug: 'ngay-cap-nhat', chapters }, extra || {});
+    const seedReg = async () => kv.put('registry', JSON.stringify({
+      rev: 'upd-t1',
+      lib: [{ title: 'Ngày Cập Nhật', slug: 'ngay-cap-nhat', chapters: 2, countLabel: '2/2', updated: OLD }],
+    }));
+
+    /* (a) thêm chương mới ĐÃ XUẤT BẢN → ngày hôm nay */
+    await seedReg();
+    await kv.put('book:ngay-cap-nhat', JSON.stringify(mkBook([
+      { t: 'Chương 1', html: '<p>một</p>' }, { t: 'Chương 2', html: '<p>hai</p>' },
+    ])));
+    const addPub = await call('PUT', '/api/book/ngay-cap-nhat/chapter', {
+      headers: ADMH, body: { index: 2, chapter: { t: 'Chương 3', html: '<p>ba</p>', status: 'published' } },
+    });
+    eq('ngày/ thêm chương mới → 200', addPub.status, 200);
+    let regN = (await kv.get('registry', { type: 'json' })).lib[0];
+    eq('ngày/ thêm chương mới → updated = HÔM NAY (giờ VN)', regN.updated, vnToday());
+    ck('ngày/ updated thật sự đổi khỏi ngày cũ', regN.updated !== OLD, regN.updated, '≠ ' + OLD);
+    eq('ngày/ phản hồi nêu ngày mới', addPub.body && addPub.body.registry && addPub.body.registry.updated, vnToday());
+    const pubReg = await call('GET', '/api/registry');
+    eq('ngày/ /api/registry (thứ trang chủ đọc) đã có ngày mới',
+      ((pubReg.body.lib || []).find((x) => x.slug === 'ngay-cap-nhat') || {}).updated, vnToday());
+
+    /* (b) SỬA CHỮ một chương cũ → KHÔNG được đổi ngày */
+    await kv.put('registry', JSON.stringify({
+      rev: 'upd-t2',
+      lib: [{ title: 'Ngày Cập Nhật', slug: 'ngay-cap-nhat', chapters: 3, countLabel: '3/3', updated: OLD }],
+    }));
+    await call('PUT', '/api/book/ngay-cap-nhat/chapter', {
+      headers: ADMH, body: { index: 1, chapter: { t: 'Chương 2', html: '<p>hai (sửa lỗi chính tả)</p>', status: 'published' } },
+    });
+    regN = (await kv.get('registry', { type: 'json' })).lib[0];
+    eq('ngày/ sửa chữ chương cũ KHÔNG đổi ngày', regN.updated, OLD);
+
+    /* (c) lưu NHÁP → chưa ai đọc được ⇒ không phải “vừa cập nhật” */
+    await call('PUT', '/api/book/ngay-cap-nhat/chapter', {
+      headers: ADMH, body: { index: 3, chapter: { t: 'Chương 4', html: '<p>bốn, còn soạn</p>', status: 'draft' } },
+    });
+    regN = (await kv.get('registry', { type: 'json' })).lib[0];
+    eq('ngày/ lưu nháp KHÔNG đổi ngày', regN.updated, OLD);
+
+    /* (d) chương hẹn giờ tương lai → chưa lên sóng ⇒ không đổi ngày */
+    await call('PUT', '/api/book/ngay-cap-nhat/chapter', {
+      headers: ADMH,
+      body: { index: 4, chapter: { t: 'Chương 5', html: '<p>năm, hẹn giờ</p>', status: 'scheduled', at: new Date(Date.now() + 7200000).toISOString() } },
+    });
+    regN = (await kv.get('registry', { type: 'json' })).lib[0];
+    eq('ngày/ chương hẹn giờ tương lai KHÔNG đổi ngày', regN.updated, OLD);
+
+    /* (e) cron tới mốc → chương lên sóng ⇒ ngày nhảy */
+    const past = new Date(Date.now() - 60000).toISOString();
+    const bookE = mkBook([
+      { t: 'Chương 1', html: '<p>một</p>' },
+      { t: 'Chương 2', html: '<p>hai</p>' },
+      { t: 'Chương 3', html: '<p>ba</p>' },
+      { t: 'Chương 4', html: '<p>bốn, còn soạn</p>', status: 'draft' },
+      { t: 'Chương 5', html: '<p>năm</p>', status: 'scheduled', at: past },
+    ]);
+    await kv.put('book:ngay-cap-nhat', JSON.stringify(bookE));
+    const regE = await kv.get('registry', { type: 'json' });
+    regE.lib[0].updated = OLD; regE.lib[0].chapters = 3; regE.lib[0].countLabel = '3/5';
+    regE.lib[0].pending = 2; regE.lib[0].schedNext = past;
+    await kv.put('registry', JSON.stringify(regE));
+    await worker.scheduled({}, env, ctx);
+    await Promise.all(waits.splice(0));
+    regN = (await kv.get('registry', { type: 'json' })).lib[0];
+    eq('ngày/ cron: chương hẹn giờ lên sóng → ngày hôm nay', regN.updated, vnToday());
+
+    /* (f) /api/recount: số chương thật TĂNG so với registry → ghi ngày */
+    await kv.put('book:ngay-cap-nhat', JSON.stringify(mkBook([
+      { t: 'Chương 1', html: '<p>một</p>' }, { t: 'Chương 2', html: '<p>hai</p>' },
+      { t: 'Chương 3', html: '<p>ba</p>' }, { t: 'Chương 4', html: '<p>bốn</p>' },
+    ])));
+    const regF = await kv.get('registry', { type: 'json' });
+    regF.lib[0].updated = OLD; regF.lib[0].chapters = 2; regF.lib[0].countLabel = '2/4';
+    delete regF.lib[0].pending; delete regF.lib[0].schedNext;
+    await kv.put('registry', JSON.stringify(regF));
+    await call('POST', '/api/recount', { headers: ADMH });
+    regN = (await kv.get('registry', { type: 'json' })).lib[0];
+    eq('ngày/ đếm lại số chương (tăng) → ghi ngày hôm nay', regN.updated, vnToday());
+
+    /* (g) chỉ TIẾN, không lùi: bản ghi có ngày tương lai (nhập tay) thì giữ */
+    const FUT = '2099-12-31';
+    await kv.put('registry', JSON.stringify({
+      rev: 'upd-t3',
+      lib: [{ title: 'Ngày Cập Nhật', slug: 'ngay-cap-nhat', chapters: 4, countLabel: '4/4', updated: FUT }],
+    }));
+    await call('PUT', '/api/book/ngay-cap-nhat/chapter', {
+      headers: ADMH, body: { index: 4, chapter: { t: 'Chương 5', html: '<p>năm</p>', status: 'published' } },
+    });
+    regN = (await kv.get('registry', { type: 'json' })).lib[0];
+    eq('ngày/ ngày tương lai (nhập tay) không bị lùi về hôm nay', regN.updated, FUT);
+
+    /* (h) LƯU CẢ BỘ (PUT /api/book/<slug>) cũng phải ghi ngày */
+    await kv.put('registry', JSON.stringify({
+      rev: 'upd-t4',
+      lib: [{ title: 'Ngày Cập Nhật', slug: 'ngay-cap-nhat', chapters: 5, countLabel: '5/5', updated: OLD }],
+    }));
+    await call('PUT', '/api/book/ngay-cap-nhat', {
+      headers: ADMH,
+      body: mkBook([
+        { t: 'Chương 1', html: '<p>một</p>' }, { t: 'Chương 2', html: '<p>hai</p>' },
+        { t: 'Chương 3', html: '<p>ba</p>' }, { t: 'Chương 4', html: '<p>bốn</p>' },
+        { t: 'Chương 5', html: '<p>năm</p>' }, { t: 'Chương 6', html: '<p>sáu</p>' },
+      ]),
+    });
+    regN = (await kv.get('registry', { type: 'json' })).lib[0];
+    eq('ngày/ lưu cả bộ có chương mới → ngày hôm nay', regN.updated, vnToday());
+
+    /* (j) ĐƯỜNG HAY ĐI NHẤT: “+ Thêm” tạo chương NHÁP → soạn nội dung → bấm
+       Xuất bản. Số chương đọc được chỉ tăng đúng lúc bấm Xuất bản (lúc soạn thì
+       vẫn 0 chương hiện), nên nếu chỉ nhìn con số thì lần lưu quan trọng nhất
+       lại không ghi ngày. */
+    await kv.put('registry', JSON.stringify({
+      rev: 'upd-t3b',
+      lib: [{ title: 'Ngày Cập Nhật', slug: 'ngay-cap-nhat', chapters: 5, countLabel: '5/6', updated: OLD }],
+    }));
+    await kv.put('book:ngay-cap-nhat', JSON.stringify(mkBook([
+      { t: 'Chương 1', html: '<p>một</p>' }, { t: 'Chương 2', html: '<p>hai</p>' },
+      { t: 'Chương 3', html: '<p>ba</p>' }, { t: 'Chương 4', html: '<p>bốn</p>' },
+      { t: 'Chương 5', html: '<p>năm</p>' },
+      { t: 'Chương 6', html: '<p>сáu, đang soạn</p>', status: 'draft' },
+    ])));
+    /* soạn nội dung vào chương nháp: KHÔNG phải chương mới lên sóng → ngày đứng yên */
+    await call('PUT', '/api/book/ngay-cap-nhat/chapter', {
+      headers: ADMH, body: { index: 5, chapter: { t: 'Chương 6', html: '<p>sáu, đã viết xong</p>', status: 'draft' } },
+    });
+    regN = (await kv.get('registry', { type: 'json' })).lib[0];
+    eq('ngày/ soạn vào chương nháp KHÔNG đổi ngày', regN.updated, OLD);
+    /* bấm Xuất bản → độc giả có chương mới ⇒ ngày nhảy */
+    await call('PUT', '/api/book/ngay-cap-nhat/chapter', {
+      headers: ADMH, body: { index: 5, chapter: { t: 'Chương 6', html: '<p>sáu, đã viết xong</p>', status: 'published' } },
+    });
+    regN = (await kv.get('registry', { type: 'json' })).lib[0];
+    eq('ngày/ Xuất bản chương nháp → ngày hôm nay', regN.updated, vnToday());
+
+    /* (i) RSS: <pubDate> của bộ phải là NGÀY của bộ (giờ VN), không lùi 7 tiếng */
+    const feed = await call('GET', '/feed.xml?slug=ngay-cap-nhat');
+    const pubLine = (feed.text.match(/<pubDate>([^<]+)<\/pubDate>/) || [])[1] || '';
+    ck('ngày/ RSS pubDate đọc ngày theo giờ VN',
+      pubLine && new Date(pubLine).toISOString().slice(0, 10) === new Date(vnToday() + 'T00:00:00+07:00').toISOString().slice(0, 10),
+      pubLine, 'ngày ' + vnToday() + ' (00:00 +07:00) = ' + new Date(vnToday() + 'T00:00:00+07:00').toUTCString());
+  }
+
   /* ---------- 12. RSS FEED: /feed.xml + /feed.xml?slug= ---------- */
   {
     const realCaches = globalThis.caches;

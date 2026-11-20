@@ -612,7 +612,7 @@ async function importPost(req, env, cors) {
   await persistBook(env, slug, book);
 
   if (nov) {
-    nov.updated = new Date().toISOString().slice(0, 10);
+    nov.updated = vnDay();
     if (nov.status === 'Sắp ra mắt') nov.status = 'Đang cập nhật';
     await applyRealCounts(env, reg);            /* số chương + nhãn lấy theo chương thật */
     reg.rev = new Date().toISOString().slice(0, 16).replace('T', ' ');
@@ -932,6 +932,10 @@ async function publishDueChapters(env) {
     }
     const live = countVisibleChapters(book.chapters, now);
     const labelNow = countLabelOf(n, live, meta.pending);
+    /* chương tới mốc = chương MỚI lên sóng ⇒ ngày cập nhật nhảy theo. Chỉ khi
+       số chương đọc được TĂNG: cron chạy mỗi phút, còn dọn dẹp (pending=0) thì
+       không được coi là “vừa có chương mới”. */
+    if (live > (Number(n.chapters) || 0)) bumpUpdated(n, now);
     if (Number(n.chapters) !== live || String(n.countLabel || '') !== labelNow) {
       n.chapters = live; n.countLabel = labelNow;
     }
@@ -1430,7 +1434,11 @@ function escXml(s) {
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 }
 function rfc822(s) {
-  const d = s ? new Date(s) : new Date();
+  /* 'YYYY-MM-DD' là NGÀY theo giờ Việt Nam ⇒ đọc là 00:00 +07:00. Bản cũ để
+     JS hiểu là 00:00 UTC (tức 07:00 VN) nên RSS lùi/tiến lệch 7 tiếng so với
+     ngày trên web. */
+  const raw = String(s == null ? '' : s).trim();
+  const d = raw ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw + 'T00:00:00+07:00' : s) : new Date();
   return isNaN(d.getTime()) ? new Date().toUTCString() : d.toUTCString();
 }
 function chapSnippet(html, len) {
@@ -2194,8 +2202,12 @@ function countLabelOf(n, real, pending) {
   if (planned === 0) return real + '/—';
   return real + '/' + planned;
 }
-/* ghi lại số chương thật vào registry; trả về {changed, was, now, label} */
-async function syncCountToRegistry(env, slug, book) {
+/* ghi lại số chương thật vào registry; trả về {changed, was, now, label}
+   opts.liveBefore = số chương ĐANG HIỆN trước lần lưu này (nếu caller biết).
+   Vì sao cần: registry có thể đã lệch sẵn (web tự đối chiếu số chương, lần
+   recount trước, người sửa tay…). So `real > n.chapters` thôi thì một bộ đang
+   lệch sẽ không bao giờ được ghi ngày — nên khi biết số cũ, so với số cũ. */
+async function syncCountToRegistry(env, slug, book, opts) {
   if (!env.CZ_KV || !slug) return { changed: false };
   const reg = await env.CZ_KV.get('registry', { type: 'json' });
   if (!reg || !Array.isArray(reg.lib)) return { changed: false };
@@ -2209,7 +2221,15 @@ async function syncCountToRegistry(env, slug, book) {
   const labelNow = countLabelOf(n, real, schedMeta.pending);
   const wasPending = Number(n.pending) || 0;
   const wasNext = String(n.schedNext || '');
-  const changed = was !== real || labelWas !== labelNow || wasPending !== schedMeta.pending || wasNext !== String(schedMeta.schedNext || '');
+  /* SỐ CHƯƠNG ĐỌC ĐƯỢC vừa tăng = có chương mới lên sóng ⇒ ngày cập nhật hiện
+     ngoài web phải nhảy (xem bumpUpdated). Sửa chữ trong chương cũ, đổi thứ tự
+     hay lưu nháp thì KHÔNG đụng ngày — ngày cập nhật là “lần cuối có chương
+     mới”, không phải “lần cuối ai bấm Lưu”. */
+  const before = opts && Number.isFinite(opts.liveBefore) ? opts.liveBefore : null;
+  const wentLive = !!(opts && opts.wentLive);
+  const grew = real > was || (before != null && real > before) || wentLive;
+  const dated = grew ? bumpUpdated(n) : false;
+  const changed = grew || dated || was !== real || labelWas !== labelNow || wasPending !== schedMeta.pending || wasNext !== String(schedMeta.schedNext || '');
   if (!changed) return { changed: false, was, now: real };
   n.chapters = real;
   n.countLabel = labelNow;   /* KHÔNG ghi lại `count`/`canRead`: web tự tính (CZ.norm),
@@ -2217,7 +2237,7 @@ async function syncCountToRegistry(env, slug, book) {
   if (book) applyScheduleMeta(n, book);
   reg.rev = new Date().toISOString().slice(0, 16).replace('T', ' ');
   await env.CZ_KV.put('registry', registryJSON(reg), { metadata: { saved: new Date().toISOString(), rev: reg.rev } });
-  return { changed: true, was, now: real, labelWas, labelNow, rev: reg.rev, pending: schedMeta.pending, schedNext: schedMeta.schedNext };
+  return { changed: true, was, now: real, labelWas, labelNow, rev: reg.rev, updated: n.updated || '', dated, grew, pending: schedMeta.pending, schedNext: schedMeta.schedNext };
 }
 /* Chương có nội dung thật không? Chuỗi '<p></p>' hay '<p>&nbsp;</p>' KHÔNG phải
    nội dung — trước đây chỉ so chuỗi thô nên chương rỗng vẫn lọt vào bộ và làm
@@ -2266,7 +2286,7 @@ async function putBook(req, env, slug, cors) {
      tiếp chỉ làm phản hồi chậm thêm một vòng KV (~100–200ms). */
   const [stored, sync] = await Promise.all([
     persistBook(env, slug, parsed),
-    syncCountToRegistry(env, slug, parsed),
+    syncCountToRegistry(env, slug, parsed, { liveBefore: chapLen(oldBook) }),
   ]);
   const last = parsed.chapters[parsed.chapters.length - 1] || {};
   if (parsed.chapters.length > oldLen && !isChapterPending(last)) {
@@ -2304,6 +2324,15 @@ async function putChapter(req, env, slug, cors) {
   const book = gotCh.book;
   book.chapters = Array.isArray(book.chapters) ? book.chapters : [];
   const oldLen = book.chapters.length;
+  /* số chương ĐỘC GIẢ THẤY trước lần lưu này — để biết “vừa có chương mới lên
+     sóng” mà ghi ngày cập nhật (xem syncCountToRegistry) */
+  const liveBefore = chapLen(book);
+  /* Cờ “vừa lên sóng”: một chương CHUYỂN từ chưa-hiện (nháp/ẩn/hẹn giờ) sang
+     hiện tại lúc lưu. Số chương đọc được không đổi khi người viết soạn tiếp vào
+     chính chương đó — nhưng lần bấm Xuất bản mới là lúc độc giả có chương để
+     đọc, và đó cũng là lúc phải ghi ngày cập nhật (đường hay đi nhất: “+ Thêm”
+     tạo chương nháp → soạn → Xuất bản). */
+  let wentLive = false;
   let action = '';
   let idx = -1;
 
@@ -2344,6 +2373,7 @@ async function putChapter(req, env, slug, cors) {
       /* có nội dung/giờ mới → cho phép báo đẩy lần sau (chương hẹn giờ báo lúc lên sóng) */
       const contentChanged = String(prev.html || '') !== String(next.html || '') || String(prev.t || '') !== String(next.t || '');
       if (contentChanged) delete next.notified;
+      if (isChapterPending(prev) && !isChapterPending(next)) wentLive = true;
       book.chapters[index] = next;
       idx = index;
       action = oldLen === index ? 'append' : 'update';
@@ -2351,7 +2381,7 @@ async function putChapter(req, env, slug, cors) {
   }
 
   const stored = await persistBook(env, slug, book);
-  const sync = await syncCountToRegistry(env, slug, book);
+  const sync = await syncCountToRegistry(env, slug, book, { liveBefore, wentLive });
   /* push: chỉ báo khi có CHƯƠNG MỚI đã lên sóng ở cuối bộ; chương hẹn giờ để
      Cron báo đúng lúc tới giờ (publishDueChapters). */
   const last = book.chapters[book.chapters.length - 1];
@@ -2405,10 +2435,12 @@ async function applyRealCounts(env, reg) {
     const labelNow = countLabelOf(n, real, schedMeta.pending);
     const wasPending = Number(n.pending) || 0, wasNext = String(n.schedNext || '');
     const pendingChanged = wasPending !== schedMeta.pending || wasNext !== String(schedMeta.schedNext || '');
-    if (was !== real || labelWas !== labelNow || pendingChanged) {
+    /* số chương thật TĂNG so với registry ⇒ có chương mới mà chưa ghi ngày */
+    const dated = real > was ? bumpUpdated(n) : false;
+    if (was !== real || labelWas !== labelNow || pendingChanged || dated) {
       n.chapters = real; n.countLabel = labelNow;
       if (book) applyScheduleMeta(n, book);
-      out.fixed.push({ slug, title: n.title || '', was, now: real, labelWas, labelNow, pending: schedMeta.pending });
+      out.fixed.push({ slug, title: n.title || '', was, now: real, labelWas, labelNow, dated, updated: n.updated || '', pending: schedMeta.pending });
     }
   }
   reg.lib.forEach((n) => {
@@ -3128,6 +3160,29 @@ function scheduleFlush(env, ctx) {
 }
 
 function dayStr(d) { return (d || new Date()).toISOString().slice(0, 10); }
+/* Ngày “hôm nay” theo GIỜ VIỆT NAM (UTC+7), không theo UTC.
+   Vì sao: `updated` là NGÀY ĐỘC GIẢ THẤY trên thẻ truyện (“Cập nhật 20/11”).
+   Bản cũ lấy toISOString() (UTC) nên từ 00:00 tới 06:59 giờ Việt Nam vẫn ra
+   ngày HÔM QUA — đăng chương lúc 1 giờ sáng thì web ghi ngày cũ, đúng lỗi
+   “đăng hôm nay mà vẫn hiện ngày cũ”. Việt Nam không có giờ mùa hè nên cộng
+   thẳng 7 giờ là đủ và không phụ thuộc TZ của máy chạy (Workers luôn là UTC). */
+function vnDay(ms) {
+  const t = Number(ms) || Date.now();
+  return new Date(t + 7 * 3600000).toISOString().slice(0, 10);
+}
+/* `updated` (ngày cập nhật hiện trên thẻ truyện / trang truyện / RSS) phải nhảy
+   khi CÓ CHƯƠNG MỚI LÊN SÓNG — trước đây chỉ đường nhập từ Blogger gán trường
+   này, nên lưu chương từ /admin xong trang chủ vẫn hiện ngày cũ (lỗi người dùng
+   báo). Luật: chỉ tiến, không lùi (bản ghi cũ có ngày tương lai do nhập tay thì
+   giữ nguyên) và chỉ ghi khi đổi để khỏi đụng registry vô ích. */
+function bumpUpdated(n, ms) {
+  if (!n) return false;
+  const day = vnDay(ms);
+  const cur = String(n.updated || '').slice(0, 10);
+  if (cur && cur >= day) return false;
+  n.updated = day;
+  return true;
+}
 function cleanSlug(s) {
   s = String(s || '').trim().toLowerCase();
   return /^[a-z0-9][a-z0-9._-]{0,79}$/.test(s) ? s : '';
