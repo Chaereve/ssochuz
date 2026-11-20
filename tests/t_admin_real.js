@@ -366,6 +366,29 @@ function confirmStrong(phrase) {
     'ghi registry kéo LÙI ngày cập nhật (KV nhận ' + sentBake.updated + ', phải là 2026-11-20)');
   /* nhãn chương thì mockup tự chuẩn hoá lại theo số chương (hành vi sẵn có,
      không liên quan ngày) — ca kiểm nhãn nằm ở t_admin_updated_guard.js */
+  /* ---- LƯU BỘ không được ghi đè số chương cũ (ca thật 20/11) ----
+     ĐÚNG THỨ TỰ THẬT: mở admin + mở bộ (RAM 38 chương) → đăng thêm chương ở
+     NƠI KHÁC (tab khác / nhập từ Blogger ⇒ bản lưu thành 39, RAM vẫn 38) →
+     bấm Lưu bộ. Đường cũ ghi `chapters: 38` trở lại KV: web lại hiện số cũ. */
+  {
+    nav('thu-vien'); await tick(4);
+    w.selectBook('bake-love-feelings'); await tick(8);
+    nav('sua-bo'); await tick(4);
+    const ramBook = S().books.find((b) => b.id === 'bake-love-feelings') || {};
+    const ramCh = Number(ramBook.ch) || 0;
+    /* đăng thêm 1 chương "ở nơi khác": chỉ bản lưu đổi, RAM admin thì không */
+    const bk2 = KV.books['bake-love-feelings'];
+    bk2.chapters.push({ t: 'Chương đăng ngoài admin', html: '<p>mới</p>' });
+    const realCh = bk2.chapters.length;
+    if (typeof w.saveEdit === 'function') {
+      w.saveEdit(); await tick(14);
+      const mAfter = (KV.registry.lib || []).find((m) => m.slug === 'bake-love-feelings') || {};
+      ok(Number(mAfter.chapters) === realCh,
+        'Lưu bộ ghi đè số chương cũ (' + mAfter.chapters + ' thay vì ' + realCh + ', RAM có ' + ramCh + ')');
+    } else ok(false, 'không gọi được Lưu bộ (window.saveEdit)');
+  }
+
+
   nav('kiem-tra-du-lieu');
   ok(w.CZ_MOCKUP.SAMPLE_ISSUES.length > 0, 'Kiểm tra dữ liệu quét registry thật');
   const issueSel = $('[data-role="issue-filter"]');

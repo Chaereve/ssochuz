@@ -628,6 +628,15 @@
     var ms = d.getTime() > Date.now() ? d.getTime() : (Date.now() + 3600000);
     return isoToLocalInput(new Date(ms).toISOString());
   }
+  /* Mốc Date ĐÃ CỘNG +07:00 — đọc getDate()/getHours() ra LỊCH/ GIỜ Việt Nam
+     trên mọi máy. Admin mở ở múi giờ khác từng thấy nhãn hẹn giờ lệch 7 tiếng
+     so với lúc chương thật sự lên sóng. */
+  function vnDate(ms) { return new Date((Number(ms) || Date.now()) + 7 * 3600000); }
+  function vnStamp(ms) {
+    var d = vnDate(ms);
+    var z = function (n) { return ('0' + n).slice(-2); };
+    return z(d.getUTCDate()) + '/' + z(d.getUTCMonth() + 1) + ' ' + z(d.getUTCHours()) + ':' + z(d.getUTCMinutes());
+  }
   function chapterRowBadge(c) {
     if (!c) return '';
     var st = String(c.s || 'published').toLowerCase();
@@ -636,11 +645,7 @@
       var ms = parseAtMs(c.d);
       if (!ms) out += M.badge ? '' : '';
       var lbl = 'Hẹn giờ';
-      if (ms > Date.now()) {
-        var dt = new Date(ms);
-        var z = function (n) { return ('0' + n).slice(-2); };
-        lbl = 'Hẹn ' + z(dt.getDate()) + '/' + z(dt.getMonth() + 1) + ' ' + z(dt.getHours()) + ':' + z(dt.getMinutes());
-      }
+      if (ms > Date.now()) lbl = 'Hẹn ' + vnStamp(ms);
       out += '<span class="badge tone-info">' + esc(lbl) + '</span>';
     } else if (st === 'hidden') {
       out += '<span class="badge tone-slate">Ẩn</span>';
@@ -863,9 +868,47 @@
      theo đúng phản hồi vừa nhận — nếu không, lần bấm “Lưu trang chủ” kế tiếp
      (ghi CẢ registry) sẽ đẩy ngày cũ trở lại KV, xoá mất việc Worker vừa làm.
      Ngày chỉ TIẾN: phản hồi cũ/vắng thì giữ nguyên ngày đang có. */
+  /* Trước khi ghi registry từ trang Sửa bộ: số chương + nhãn của bộ đang sửa
+     phải lấy theo BẢN LƯU, không lấy bản trong RAM. Ca thật: mở admin (RAM có
+     18 chương) → đăng thêm 6 chương (bản lưu 24) → bấm Lưu bộ ⇒ đường cũ ghi
+     \`chapters: 18\` trở lại KV, web lại hiện số cũ. Hàm này trả về bản meta của
+     bộ đang sửa đã đắp số chương thật; lỗi đọc thì trả null (giữ nguyên). */
+  /* đếm chương ĐANG HIỆN của bộ đang mở trong admin (khớp isChapterPending của
+     web/admin); bộ khác hoặc chưa tải thì trả -1 = “không biết, đừng sửa” */
+  function liveCountOfBook(slug) {
+    if (!slug || BOOK_SLUG !== slug || !BOOK || !Array.isArray(BOOK.chapters)) return -1;
+    var live = 0;
+    BOOK.chapters.forEach(function (c) {
+      var st = String((c && (c.status || c.s)) || 'published').toLowerCase();
+      var at = parseAtMs(c && (c.at || c.d));
+      if (!(st === 'hidden' || st === 'draft' || (st === 'scheduled' && at > Date.now()))) live++;
+    });
+    return live;
+  }
+  /* vá meta của MỘT bộ trong bản registry sắp ghi: số chương lấy từ bản lưu,
+     nhãn tính lại, và chỉ đặt ngày khi bộ CHƯA có ngày (không đè ngày mới hơn
+     mà Worker vừa ghi). */
+  function syncMetaCounts(reg, slug, live) {
+    if (!reg || !Array.isArray(reg.lib) || !slug || !(live >= 0)) return false;
+    var m = null;
+    for (var i = 0; i < reg.lib.length; i++) { if (reg.lib[i] && reg.lib[i].slug === slug) { m = reg.lib[i]; break; } }
+    if (!m) return false;
+    var changed = false;
+    if (Number(m.chapters) !== live) { m.chapters = live; changed = true; }
+    var raw = String(m.countLabel || '');
+    var plannedRaw = raw.split('/')[1] || '';
+    var planned = plannedRaw.trim() === '—' ? 0 : (parseInt(plannedRaw, 10) || 0);
+    var label = live ? (live + '/' + Math.max(planned, live)) : (planned > 0 ? '0/' + planned : '0/—');
+    if (String(m.countLabel || '') !== label) { m.countLabel = label; changed = true; }
+    if (!m.updated) { m.updated = today(); changed = true; }
+    return changed;
+  }
+
   function applySyncMeta(m, sync) {
     if (!m || !sync) return false;
     var changed = false;
+    /* số chương + nhãn: chép đúng con số Worker vừa tính (cả tăng lẫn giảm —
+       xoá chương là giảm thật, không được giữ số cũ) */
     if (Number.isFinite(Number(sync.now)) && Number(m.chapters) !== Number(sync.now)) { m.chapters = Number(sync.now); changed = true; }
     if (sync.labelNow && String(m.countLabel || '') !== String(sync.labelNow)) { m.countLabel = String(sync.labelNow); changed = true; }
     var upd = String(sync.updated || '').slice(0, 10);
@@ -995,8 +1038,11 @@
   function fmtLogTime(at) {
     var d = new Date(at);
     if (!at || isNaN(d.getTime())) return String(at || '').slice(0, 16).replace('T', ' ');
+    /* giờ Việt Nam: Worker ghi log bằng ISO UTC, đọc theo giờ máy thì người mở
+       admin ở múi giờ khác thấy lệch (và lệch cả ngày khi qua nửa đêm) */
+    var v = vnDate(d.getTime());
     function p(n) { return (n < 10 ? '0' : '') + n; }
-    return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+    return p(v.getUTCDate()) + '/' + p(v.getUTCMonth() + 1) + '/' + v.getUTCFullYear() + ' ' + p(v.getUTCHours()) + ':' + p(v.getUTCMinutes());
   }
   function guessLogKind(text) {
     var t = String(text || '');
@@ -1291,6 +1337,9 @@
     var idx = (next.lib || []).findIndex(function (m) { return m.slug === oldSlug; });
     if (idx < 0) { say('Registry không còn bộ này.', 'bad'); return; }
     next.lib[idx] = meta;
+    /* số chương/nhãn của bộ ĐANG SỬA lấy theo bản lưu đã tải (nguồn sự thật),
+       không theo con số cũ trong RAM — xem syncMetaCounts(). */
+    try { syncMetaCounts(next, oldSlug, liveCountOfBook(oldSlug)); } catch (e) {}
     function renameRefs(reg, from, to) {
       if (from === to) return;
       function ren(list) {
@@ -2948,10 +2997,12 @@
   D.head.appendChild(st);
 
   var origRender = M.render;
+  /* đồng hồ trên thanh quản trị = giờ VIỆT NAM (chủ trang người Việt), không
+     phải giờ của máy đang mở admin */
   var CLOCK = (function () {
     function z(n) { return ('0' + n).slice(-2); }
-    var d = new Date();
-    return z(d.getDate()) + '/' + z(d.getMonth() + 1) + ' ' + z(d.getHours()) + ':' + z(d.getMinutes());
+    var d = vnDate();
+    return z(d.getUTCDate()) + '/' + z(d.getUTCMonth() + 1) + ' ' + z(d.getUTCHours()) + ':' + z(d.getUTCMinutes());
   })();
   window.render = function () {
     S.kvWrites = WRITES; S.kvReads = READS;
