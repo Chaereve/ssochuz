@@ -56,6 +56,14 @@ const pngSize = f => {
   ok(/SKIP_WAITING/.test(sw), 'sw.js thieu SKIP_WAITING cho nut Tai lai');
   ok(/IMG_MAX = 200/.test(sw), 'sw.js anh phai gioi han 200 muc');
   ok(/\/api\/registry/.test(sw) && /\/api\/book/.test(sw) && /\/api\/stats/.test(sw), 'sw.js phai cache API registry/book/stats');
+  /* registry: bản MẠNG trước, không phải stale-while-revalidate. SWR trả bản cũ
+     trước rồi mới cập nhật cho lần sau ⇒ mở trang ngay sau khi đăng chương vẫn
+     thấy số liệu/NGÀY CẬP NHẬT của lần trước (lỗi “đăng hôm nay mà vẫn hiện
+     ngày cũ”), và chỉ tự khỏi khi người đọc F5 lần nữa. */
+  ok(/function netFirst\(/.test(sw), 'sw.js thieu netFirst() cho registry (ngày cập nhật không được trễ một lượt tải)');
+  ok(/function isTinyFresh\(/.test(sw) && /isTinyFresh\(url\.pathname\) \? netFirst\(req, C_API\) : swr\(req, C_API\)/.test(sw),
+    'sw.js phai tra registry bằng netFirst (bản mạng trước), các API khác vẫn swr');
+  ok(/isTinyFresh[\s\S]{0,200}\/api\/registry/.test(sw), 'isTinyFresh phai bao gồm /api/registry và /data/registry.json');
   /* precache phai khop ?v= trong HTML (chong lech version) */
   const htmlVs = {};
   PAGES.forEach(f => {

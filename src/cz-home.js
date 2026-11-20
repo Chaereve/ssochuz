@@ -432,7 +432,9 @@
       el.innerHTML = '<div class="empty">Chưa có lịch ra chương.</div>';
       return;
     }
-    var now = new Date();
+    /* tuần bắt đầu từ thứ 2 theo LỊCH VIỆT NAM (CZ.vnNow đã cộng +07:00): máy
+       người đọc ở múi giờ khác từng thấy “hôm nay” rơi sang tuần sau/chủ nhật */
+    var now = (CZ.vnNow ? CZ.vnNow() : new Date());
     var monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
     var todayIdx = (now.getDay() + 6) % 7;
     /* Tuần đang xem bắt đầu từ THỨ 2, nên những thứ đứng TRƯỚC hôm nay trong

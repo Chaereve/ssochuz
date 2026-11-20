@@ -349,8 +349,23 @@ function confirmStrong(phrase) {
   } else ok(false, 'thiếu nút xoá bình luận');
 
   nav('homepage-cms');
-  const hp = $('[data-act="save-homepage"]'); if (hp) { hp.click(); await tick(8); }
+  /* ĐĂNG CHƯƠNG XONG PHẢI GIỮ NGÀY MỚI: Worker tự bump `updated` trong KV, còn
+     REG trong RAM của /admin là bản chụp lúc mở trang (ngày cũ). Lưu trang chủ
+     mà ghi thẳng bản RAM là kéo lùi ngày — đúng lỗi chủ trang báo 20/11. */
+  const mBake = KV.registry.lib.find(m => m.slug === 'bake-love-feelings');
+  const ramBake = S().books.find(b => b.id === 'bake-love-feelings');
+  if (mBake && ramBake) {
+    mBake.updated = '2026-11-20';                       /* KV: Worker vừa bump */
+    ramBake.updated = '2026-01-15';                     /* RAM: bản chụp cũ */
+    ramBake.countLabel = '37/40';                       /* chủ trang vừa sửa tay */
+  }
+  const hp = $('[data-act="save-homepage"]'); if (hp) { hp.click(); await tick(10); }
   ok(calls.filter(c => c.p === '/api/registry' && c.method === 'PUT').length >= 2, 'Lưu trang chủ PUT registry thật');
+  const sentBake = (KV.registry.lib || []).find(m => m.slug === 'bake-love-feelings') || {};
+  ok(String(sentBake.updated || '') === '2026-11-20',
+    'ghi registry kéo LÙI ngày cập nhật (KV nhận ' + sentBake.updated + ', phải là 2026-11-20)');
+  /* nhãn chương thì mockup tự chuẩn hoá lại theo số chương (hành vi sẵn có,
+     không liên quan ngày) — ca kiểm nhãn nằm ở t_admin_updated_guard.js */
   nav('kiem-tra-du-lieu');
   ok(w.CZ_MOCKUP.SAMPLE_ISSUES.length > 0, 'Kiểm tra dữ liệu quét registry thật');
   const issueSel = $('[data-role="issue-filter"]');

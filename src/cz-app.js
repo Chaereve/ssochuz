@@ -392,9 +392,14 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
      POST nên tải lại nhiều lần cũng chỉ tốn 1 request (tiết kiệm quota ghi KV). */
   function reportView(slug, ch) {
     if (!API || !slug) return Promise.resolve(null);
+    /* Khoá chống đếm trùng phải là NGÀY VIỆT NAM, cùng mốc với thống kê của
+       Worker (buckets lấy ngày theo giờ VN): máy đặt UTC-… mà dùng ngày máy thì
+       từ 0h tới 7h sáng VN vẫn tính là “hôm qua” ⇒ lượt đọc đầu ngày bị nuốt,
+       còn máy đặt UTC+… thì lại đếm sớm một ngày. `k` (mới) và `legacy` (khoá
+       cũ theo ngày máy/UTC) đều được kiểm để không đếm hai lần. */
     var d = new Date();
     function p2(n) { return ('0' + n).slice(-2); }
-    var k = 'ssochuz-viewsent-' + slug + '-' + d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate());
+    var k = 'ssochuz-viewsent-' + slug + '-' + vnToday().replace(/-/g, '');
     var legacy = 'ssochuz-viewed-' + slug + '-' + d.toISOString().slice(0, 10);
     if (safeGet(k) || safeGet(legacy)) return Promise.resolve(null);
     safeSet(k, '1');
@@ -1267,22 +1272,60 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       .replace(/^salmonlover$/i, 'SalmonLover');
   }
   function num(n) { return (Number(n) || 0).toLocaleString('vi-VN'); }
+  /* `updated` trong registry là NGÀY (YYYY-MM-DD) theo giờ Việt Nam — xem
+     vnDay() trong worker/cms.js. Vì thế chuỗi ngày phải đọc là 00:00 +07:00 và
+     in theo múi giờ Việt Nam, KHÔNG để JS hiểu thành 00:00 UTC (UTC+0) rồi in
+     ra ngày hôm trước trên máy đặt múi giờ khác. Bản cũ vừa in lệch ngày vừa
+     tính “x ngày trước” lệch nửa ngày: đăng lúc 1 giờ sáng hôm nay vẫn hiện
+     “1 ngày trước” như hôm qua. */
+  function dayMs(s) {
+    var t = String(s == null ? '' : s).trim();
+    if (!t) return 0;
+    var x = new Date(t.length <= 10 ? t + 'T00:00:00+07:00' : t).getTime();
+    return isNaN(x) ? 0 : x;
+  }
+  function vnToday(ms) {
+    var d = new Date((Number(ms) || Date.now()) + 7 * 3600e3);
+    return d.toISOString().slice(0, 10);
+  }
+  /* Mốc Date ĐÃ CỘNG +07:00 — đọc getDate()/getDay()/getMonth() ra LỊCH VIỆT
+     NAM trên mọi máy. Dùng cho chỗ cần thứ/ngày (lịch ra chương, “hôm nay” của
+     trang bốc bài) thay vì getDate() của giờ máy. */
+  function vnNow(ms) {
+    return new Date((Number(ms) || Date.now()) + 7 * 3600e3);
+  }
   function dateVN(s) {
     if (!s) return '—';
-    var x = new Date(String(s).length <= 10 ? s + 'T00:00:00' : s);
-    if (isNaN(x)) return String(s);
-    return x.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    var t = dayMs(s);
+    if (!t) return String(s);
+    var d = new Date(t + 7 * 3600e3);
+    /* in bằng UTC sau khi đã cộng 7 giờ: cùng một kết quả trên MỌI máy, không
+       phụ thuộc múi giờ người đọc (trước đây máy đặt UTC-5 thấy ngày lùi 1) */
+    return String(d.getUTCDate()).padStart(2, '0') + '/' +
+      String(d.getUTCMonth() + 1).padStart(2, '0') + '/' + d.getUTCFullYear();
   }
   function dateShort(s) {
     if (!s) return '—';
-    var x = new Date(String(s).length <= 10 ? s + 'T00:00:00' : s);
-    if (isNaN(x)) return String(s);
-    return x.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+    var t = dayMs(s);
+    if (!t) return String(s);
+    var d = new Date(t + 7 * 3600e3);
+    return String(d.getUTCDate()).padStart(2, '0') + '/' + String(d.getUTCMonth() + 1).padStart(2, '0');
   }
   function timeAgo(s) {
-    var x = new Date(String(s).length <= 10 ? s + 'T00:00:00' : s).getTime();
-    if (!x || isNaN(x)) return '—';
-    var diff = Date.now() - x, day = 864e5;
+    var t = dayMs(s);
+    if (!t) return '—';
+    /* ngày lịch (không kèm giờ): so theo NGÀY Việt Nam, không theo mili-giây.
+       Hôm nay → “hôm nay”, hôm qua → “hôm qua”, cũ hơn → “N ngày trước”. */
+    if (String(s).trim().length <= 10) {
+      var dayNow = vnToday();
+      var dayWas = String(s).trim();
+      if (dayWas === dayNow) return 'hôm nay';
+      var back = Math.round((dayMs(dayNow) - dayMs(dayWas)) / 864e5);
+      if (back === 1) return 'hôm qua';
+      if (back > 1 && back < 30) return back + ' ngày trước';
+      return dateShort(s);
+    }
+    var diff = Date.now() - t, day = 864e5;
     if (diff < 3600e3) return 'vừa xong';
     if (diff < day) return Math.floor(diff / 3600e3) + ' giờ trước';
     if (diff < 30 * day) return Math.floor(diff / day) + ' ngày trước';
@@ -1380,6 +1423,16 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       reg.lib.forEach(function (x) {
         if (!x || x.slug !== slug) return;
         var was = Number(x.chapters) || 0;
+        /* Số chương thật TĂNG = vừa có chương mới. Worker đã ghi `updated` cho
+           registry, nhưng máy người đọc có thể còn bản registry cũ trong
+           localStorage / cache của service worker: số chương thì trang này tự
+           sửa được (reconcile), còn NGÀY thì không — nên cũng phải sửa, không
+           thì thẻ truyện hiện “42 chương” mà ngày vẫn của tháng trước. Chỉ
+           tiến, không lùi. */
+        if (real > was) {
+          var today = vnToday();
+          if (String(x.updated || '').slice(0, 10) < today) x.updated = today;
+        }
         if (was !== real) {
           x.chapters = real;
           x.countFixed = true;
@@ -2500,7 +2553,23 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       /* chLabel: chữ hiện cho người đọc ("Chương 1", "Ngoại truyện 2"…). Số `chap` chỉ là
          vị trí trong kho chương nên không phải lúc nào cũng trùng tên chương thật. */
       var chLabel = String(opt.chLabel || '').trim();
+      /* `setChapter(c, label)` đổi cả số lẫn NHÃN: người đọc lật chương thì nhãn
+         “Chương 3” phải đi theo, không được giữ nhãn của chương mở đầu tiên. */
+      function setChLabel(v) { chLabel = String(v || '').trim(); }
       function chWord() { return chLabel || (chap ? 'chương ' + chap : ''); }
+      /* VỊ TRÍ ≠ SỐ TRÊN TIÊU ĐỀ. Rất nhiều bộ mở màn bằng “Lời mở đầu”/“Bắt đầu
+         đăng ký”: người đọc đang ở VỊ TRÍ 5 mà tiêu đề ghi “Chương 4”. Bình luận
+         lưu `ch` = VỊ TRÍ (giống phiếu thích, số liệu xem theo chương…), còn
+         `chLabels` do trang đọc đưa vào để hiện đúng chữ người đọc nhìn thấy.
+         Nhờ vậy một câu bình luận chỉ có MỘT cách hiểu, mà nhãn vẫn đúng. */
+      var chLabels = (opt.chLabels && typeof opt.chLabels === 'object') ? opt.chLabels : {};
+      function labelOf(n) {
+        n = Number(n) || 0;
+        if (!n) return '';
+        if (n === chap && chLabel) return chLabel;
+        var v = chLabels[String(n)] || chLabels[n];
+        return v ? String(v) : 'chương ' + n;
+      }
       var state = { all: [], byChap: {}, filter: chap > 0 && opt.chapterFilter !== false ? 'chap' : 'all', busy: false, count: 0, replyTo: '', stickerId: '', open: false, replyStickers: Object.create(null) };
 
       function u() { return (w.CZ_AUTH && w.CZ_AUTH.current && w.CZ_AUTH.current()) || null; }
@@ -2576,7 +2645,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         return '<div class="cmt-item" data-id="' + esc(c.id) + '">' + ava(c) +
           '<div class="cmt-body"><div class="cmt-h">' + (c.profileId && /^[a-f0-9]{64}$/.test(c.profileId) ? '<a class="cmt-profile" href="/profile?id=' + c.profileId + '"><b>' + esc(c.name || 'Bạn đọc') + '</b></a>' : '<b>' + esc(c.name || 'Bạn đọc') + '</b>') +
             (c.guest ? '<span class="cmt-guest" title="Bình luận khi chưa đăng nhập">khách</span>' : '') +
-            (c.ch ? '<span class="cmt-ch">chương ' + esc(c.ch) + '</span>' : '') +
+            (c.ch ? '<span class="cmt-ch">' + esc(labelOf(c.ch)) + '</span>' : '') +
             '<span class="cmt-time">' + esc(timeAgo(c.createdAt)) + '</span>' +
             '<button class="cmt-reply" data-reply="' + esc(c.id) + '" type="button">Trả lời</button>' +
             ((me || admin) ? '<button class="cmt-del" data-del="' + esc(c.id) + '" title="Xoá bình luận" aria-label="Xoá bình luận">✕</button>' : '') +
@@ -2584,12 +2653,34 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
           (stickerOf(c.stickerId) ? '<div class="cmt-sticker-posted" aria-label="Sticker Sso: ' + esc(stickerOf(c.stickerId).label) + '">' + stickerCard(stickerOf(c.stickerId), false) + '</div>' : '') +
           (state.replyTo === c.id ? replyForm(c) : '') + '</div></div>';
       }
+      /* LỌC THEO CHƯƠNG — và đây là chỗ từng làm bình luận “biến mất”. Nhiều
+         người đọc bình luận ngay ở TRANG TRUYỆN (tab Đánh giá, gửi `ch:0`) chứ
+         không vào trang đọc; bản cũ lọc CỨNG `(c.ch||0) === ch` nên những bình
+         luận chung của bộ không bao giờ hiện ở tab chương đang đọc — muốn thấy
+         phải bấm sang “Tất cả” (đúng hiện tượng “ở chương không thấy, qua Tất
+         cả lại thấy”).
+         Nay tab chương = bình luận CỦA chương này + bình luận CHUNG của bộ. Câu
+         trả lời vẫn dính chương của bình luận cha (Worker giữ nguyên finalCh),
+         nên luồng hội thoại không bị cắt khúc. */
+      function rowsFor(filter) {
+        if (filter !== 'chap' || !chap) return state.all;
+        return state.all.filter(function (c) {
+          var n = Number(c.ch) || 0;
+          return n === chap || n === 0;      /* của chương này + chung của bộ */
+        });
+      }
       function list() {
-        var rows = state.filter === 'chap' ? state.all.filter(function (c) { return (Number(c.ch) || 0) === chap; }) : state.all;
+        var rows = rowsFor(state.filter);
         if (!rows.length) {
-          return '<div class="cmt-status">' + (state.filter === 'chap'
-            ? 'Chưa có bình luận nào. Bạn mở màn nhé.'
-            : 'Chưa có bình luận nào. Hãy là người đầu tiên!') + '</div>';
+          /* nói ĐÚNG chuyện đang xảy ra: chương này chưa có ai viết, nhưng bộ
+             thì có thể đã có bình luận chung — đừng để người đọc tưởng mất dữ liệu */
+          var nAll = state.count || state.all.length;
+          return '<div class="cmt-status">' + (state.filter === 'chap' && nAll
+            ? 'Chưa có bình luận cho ' + esc(chWord()) + '. Bộ này đã có ' + num(nAll) +
+              ' bình luận — bấm <b>Tất cả</b> để xem.'
+            : state.filter === 'chap'
+              ? 'Chưa có bình luận nào. Bạn mở màn nhé.'
+              : 'Chưa có bình luận nào. Hãy là người đầu tiên!') + '</div>';
         }
         var children = {};
         rows.forEach(function (c) {
@@ -2652,8 +2743,12 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
           '</div></div>';
       }
       function paint() {
+        /* con số ở đầu khung phải là con số của DANH SÁCH ĐANG HIỆN. Bản cũ lấy
+           `byChap[ch]` (chỉ bình luận riêng của chương) trong khi danh sách
+           còn kèm bình luận chung ⇒ tiêu đề ghi 0 mà bên dưới vẫn có dòng. */
+        var shown = state.filter === 'chap' && chap ? rowsFor('chap').length : state.count;
         host.innerHTML = '<div class="cmt-wrap' + (opt.compact ? ' cmt-compact' : '') + '" id="' + id + '">' +
-          head(opt.title || 'Bình luận', state.filter === 'chap' ? (Number(state.byChap[String(chap)]) || 0) : state.count) +
+          head(opt.title || 'Bình luận', shown) +
           filters() +
           '<div data-formbox>' + form() + '</div>' +
           '<div class="cmt-list" data-list>' + (state.busy ? '<div class="cmt-status">Đang tải bình luận…</div>' : list()) + '</div>' +
@@ -2758,6 +2853,9 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       }
       function makePayload(text, nameInput, parentId, stickerId) {
         var me = u();
+        /* `ch` = VỊ TRÍ chương (cùng đơn vị với phiếu thích và số liệu theo
+           chương); nhãn hiện cho người đọc do `chLabels` lo. Trả lời thì Worker
+           tự lấy chương của bình luận cha. */
         var payload = { text: text, ch: chap, vid: vid() };
         if (parentId) payload.parentId = String(parentId);
         if (stickerOf(stickerId)) payload.stickerId = String(stickerId);
@@ -2919,7 +3017,10 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         reload: function () { return load(); },
         setChapter: function (c, label) {
           var n = Math.max(0, parseInt(c, 10) || 0);
-          if (label) chLabel = String(label).trim();
+          /* nhãn phải cập nhật CẢ khi số chương không đổi: “Chương 1: Học Sinh
+             Mới” và “Chương 1” của bộ khác nhau vẫn là cùng một vị trí, còn
+             tiêu đề đọc được thì đã đổi (bản cũ giữ nhãn chương mở đầu). */
+          setChLabel(label);
           if (n === chap) { paint(); return; }
           chap = n;
           state.filter = (chap > 0 && opt.chapterFilter !== false) ? 'chap' : 'all';
@@ -2959,12 +3060,15 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     if (libCache) return libCache;
     var reg = memo.reg || {};
     var list = regRows(reg).filter(listedPublicly).map(norm);
-    /* bộ nào lên chương trong 10 ngày gần nhất (so với bộ mới nhất) thì gắn nhãn “Mới” */
+    /* bộ nào lên chương trong 10 ngày gần nhất (so với bộ mới nhất) thì gắn nhãn
+       “Mới”. Tính theo NGÀY Việt Nam (dayMs) để hai bộ cùng một ngày luôn cùng
+       một nhóm — bản cũ trộn mili-giây UTC với ngày lịch nên bộ “hôm nay” và
+       “10 ngày trước” có lúc lệch đúng một nhãn. */
     var dates = list.map(function (n) { return String(n.updated || ''); }).sort();
-    var top = Date.parse(dates[dates.length - 1] || '');
-    if (!isNaN(top)) list.forEach(function (n) {
-      var t = Date.parse(n.updated || '');
-      n.fresh = !isNaN(t) && (top - t) <= 10 * 864e5;
+    var top = dayMs(dates[dates.length - 1] || '');
+    if (top) list.forEach(function (n) {
+      var t = dayMs(n.updated);
+      n.fresh = !!t && (top - t) <= 10 * 864e5;
     });
     libCache = list;
     return list;
@@ -3062,6 +3166,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     realCount: realCount, reconcileCount: reconcileCount, onStatsChange: onStatsChange, notifyStats: notifyStats,
     rdGet: rdGet, rdSet: rdSet, themeInit: themeInit, themeToggle: themeToggle, themeMeta: themeMeta,
     icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo, teaser: teaser,
+    vnToday: vnToday, vnNow: vnNow, dayMs: dayMs,
     statusCls: statusCls, statusLabel: statusLabel, statusIcon: statusIcon, words: words, norm: norm, couplesOf: couplesOf, countText: countText,
     /* bóc tên chương dùng chung (src/shared/chapters.js): trang truyện, mục
        lục, nhảy chương — và trang quản trị đều qua đây, khỏi lệch nhau */

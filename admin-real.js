@@ -16,7 +16,10 @@
   function ssSet(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} }
   function norm(v) { v = String(v || '').trim().replace(/\/+$/, ''); if (v && !/^https?:\/\//i.test(v)) v = 'https://' + v; return v; }
   function clone(o) { return JSON.parse(JSON.stringify(o || { lib: [] })); }
-  function today() { return new Date().toISOString().slice(0, 10); }
+  /* Ngày “hôm nay” theo GIỜ VIỆT NAM (UTC+7) — khớp vnDay() của worker/cms.js.
+     Bản cũ lấy toISOString() (UTC) nên từ 0h tới 7h sáng giờ VN vẫn ra ngày
+     HÔM QUA: tạo bộ / lưu ngày cập nhật lúc 1 giờ sáng là web ghi ngày cũ. */
+  function today() { return new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10); }
   function nowStamp() { return new Date().toISOString().slice(0, 16).replace('T', ' '); }
   function teaser(t, n) { return String(t || '').replace(/\s+/g, ' ').trim().slice(0, n || 220); }
   function textToHtml(t) {
@@ -854,6 +857,24 @@
     });
   }
 
+  /* Worker là nguồn sự thật của số chương VÀ NGÀY CẬP NHẬT (xem
+     syncCountToRegistry trong worker/cms.js): nó ghi `updated` khi có chương
+     mới lên sóng. Bản registry admin đang giữ trong bộ nhớ thì cũ, nên phải vá
+     theo đúng phản hồi vừa nhận — nếu không, lần bấm “Lưu trang chủ” kế tiếp
+     (ghi CẢ registry) sẽ đẩy ngày cũ trở lại KV, xoá mất việc Worker vừa làm.
+     Ngày chỉ TIẾN: phản hồi cũ/vắng thì giữ nguyên ngày đang có. */
+  function applySyncMeta(m, sync) {
+    if (!m || !sync) return false;
+    var changed = false;
+    if (Number.isFinite(Number(sync.now)) && Number(m.chapters) !== Number(sync.now)) { m.chapters = Number(sync.now); changed = true; }
+    if (sync.labelNow && String(m.countLabel || '') !== String(sync.labelNow)) { m.countLabel = String(sync.labelNow); changed = true; }
+    var upd = String(sync.updated || '').slice(0, 10);
+    if (upd && upd > String(m.updated || '').slice(0, 10)) { m.updated = upd; changed = true; }
+    if (sync.pending) { m.pending = sync.pending; if (sync.schedNext) m.schedNext = sync.schedNext; else delete m.schedNext; }
+    else { delete m.pending; delete m.schedNext; }
+    return changed;
+  }
+
   function syncBookCountsInState(slug, chaptersArr) {
     var list = Array.isArray(chaptersArr) ? chaptersArr : [];
     var now = Date.now();
@@ -1145,7 +1166,11 @@
     out.status = m.status || 'Đang cập nhật';
     out.countLabel = m.countLabel || out.countLabel || '0/—';
     out.is18 = !!m.is18;
-    out.updated = m.updated || today();
+    /* `updated` = NGÀY CÓ CHƯƠNG MỚI (worker tự ghi khi số chương đọc được
+       tăng). Sửa mô tả / ảnh bìa / tình trạng mà gán lại hôm nay là bịa “vừa
+       cập nhật”: trang chủ nhảy ngày dù độc giả chẳng có chương nào mới. Chỉ
+       dùng ngày hôm nay cho BỘ MỚI (chưa có ngày). */
+    out.updated = m.updated || out.updated || today();
     out.thumb = m.thumb === undefined ? (out.thumb || '') : m.thumb;
     out.slide = out.thumb;
     out.synFull = m.synopsis || '';
@@ -1158,10 +1183,43 @@
     delete out.tags;
     return out;
   }
+  /* --------------------------------------------------------------------------
+     CHẶN GHI ĐÈ NGÀY CẬP NHẬT Ở TẦNG GHI (đừng bỏ, rất dễ tái phát)
+     --------------------------------------------------------------------------
+     REG là ẢNH CHỤP registry lúc mở /admin. Worker thì tự bump `updated` của
+     một bộ ngay khi có chương mới lên sóng (syncCountToRegistry). Admin ghi lại
+     cả registry (Lưu trang chủ, lưu metadata, mốc lịch, xoá bộ, nhân bản…) mà
+     dùng bản trong RAM là mỗi lần lưu lại đẩy NGÀY CŨ trở lại KV — đăng chương
+     xong trang chủ vẫn hiện ngày cũ (đúng lỗi chủ trang báo 20/11).
+     Nên: đọc bản mới nhất từ KV rồi hợp nhất NGÀY (chỉ tiến). Chỉ trường
+     `updated` được lấy từ KV; `chapters`/`countLabel` giữ nguyên bản admin vì
+     chủ trang có thể vừa sửa tay. Đọc lỗi thì ghi như cũ (không chặn thao tác).
+  ------------------------------------------------------------------------- */
+  function mergeNewerUpdated(next, current) {
+    if (!next || !current || !Array.isArray(next.lib) || !Array.isArray(current.lib)) return false;
+    var fresh = {};
+    current.lib.forEach(function (m) { if (m && m.slug) fresh[String(m.slug)] = String(m.updated || '').slice(0, 10); });
+    var touched = false;
+    next.lib.forEach(function (m) {
+      if (!m || !m.slug) return;
+      var kvDay = fresh[String(m.slug)] || '';
+      if (kvDay && kvDay > String(m.updated || '').slice(0, 10)) { m.updated = kvDay; touched = true; }
+    });
+    return touched;
+  }
+  function putRegistryLatest(next) {
+    return apiCall('/api/registry').then(function (current) {
+      /* chỉ nhận object registry hợp lệ; lỗi/khác kiểu thì bỏ qua */
+      if (current && Array.isArray(current.lib)) mergeNewerUpdated(next, current);
+      return null;
+    }, function () { return null; }).then(function () {
+      return apiCall('/api/registry', { method: 'PUT', body: next });
+    });
+  }
   function writeRegistry(reg, force) {
     var next = touch(clone(reg), 'ghi registry từ admin ssochuz');
     if (force) next.force = true;
-    return apiCall('/api/registry', { method: 'PUT', body: next }).then(function () {
+    return putRegistryLatest(next).then(function () {
       REG = next; WRITES += 1; setQuota(); hydrate(next); redraw();
       return next;
     });
@@ -1373,8 +1431,10 @@
     var atIso = status === 'scheduled' ? localInputToIso(S.chapterAt) : '';
     var body = { index: idx, chapter: { t: title, html: html, status: status, at: atIso } };
     apiCall('/api/book/' + encodeURIComponent(slug) + '/chapter', { method: 'PUT', body: body, timeout: 120000 })
-      .then(function () {
+      .then(function (res) {
         WRITES += 1; setQuota();
+        /* vá số chương + NGÀY CẬP NHẬT theo Worker (nó vừa ghi ngày mới) */
+        applySyncMeta(findMeta(slug), res && res.registry);
         if (!BOOK || typeof BOOK !== 'object') BOOK = { chapters: [] };
         if (!Array.isArray(BOOK.chapters)) BOOK.chapters = [];
         BOOK.chapters[idx] = body.chapter;
@@ -1411,8 +1471,9 @@
        rỗng ngoài web. */
     var ch = { t: nextTitle, html: '<p>' + esc(nextTitle) + '</p>', status: 'draft' };
     apiCall('/api/book/' + encodeURIComponent(slug) + '/chapter', { method: 'PUT', body: { index: idx, chapter: ch } })
-      .then(function () {
+      .then(function (res) {
         WRITES += 1; setQuota();
+        applySyncMeta(findMeta(slug), res && res.registry);
         if (!BOOK || typeof BOOK !== 'object') BOOK = { chapters: [] };
         if (!Array.isArray(BOOK.chapters)) BOOK.chapters = [];
         BOOK.chapters[idx] = ch;
@@ -1436,8 +1497,9 @@
     var victimTitle = S.chapters[idx].t || ('Chương ' + (idx + 1));
     M.openStrong('Xoá chương khỏi KV', 'Xoá "' + victimTitle + '" · không hoàn tác.', 'XOÁ', function () {
       apiCall('/api/book/' + encodeURIComponent(slug) + '/chapter', { method: 'PUT', body: { index: idx, remove: true } })
-        .then(function () {
+        .then(function (res) {
           WRITES += 1; setQuota();
+          applySyncMeta(findMeta(slug), res && res.registry);
           clearChapterDraft(slug, idx);
           if (BOOK && Array.isArray(BOOK.chapters)) BOOK.chapters.splice(idx, 1);
           S.chapters.splice(idx, 1);
@@ -1457,6 +1519,7 @@
     if (to < 0 || to >= S.chapters.length) return;
     snapshotLiveEditor();
     apiCall('/api/book/' + encodeURIComponent(slug) + '/chapter', { method: 'PUT', body: { from: idx, to: to } })
+      .then(function (res) { applySyncMeta(findMeta(slug), res && res.registry); return res; })
       .then(function () {
         WRITES += 1; setQuota();
         if (BOOK && Array.isArray(BOOK.chapters)) { var t = BOOK.chapters[idx]; BOOK.chapters[idx] = BOOK.chapters[to]; BOOK.chapters[to] = t; }

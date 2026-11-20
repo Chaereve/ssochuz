@@ -301,6 +301,19 @@
     if (!p.full) p.full = t;
     return p;
   }
+  /* BẢNG NHÃN CHƯƠNG: vị trí trong kho → đúng chữ người đọc thấy (“Chương 3”,
+     “S1”, “Lời Mở Đầu”). Bình luận lưu `ch` = VỊ TRÍ (cùng đơn vị với phiếu
+     thích), nhưng nhãn dưới mỗi câu phải là số trên tiêu đề — bộ mở màn bằng
+     “Lời mở đầu” thì vị trí 5 là “Chương 4”, hiện “chương 5” là sai.
+     Dựng MỘT lần cho cả bộ, tra theo số nên rẻ. */
+  var CH_LABELS = null, CH_LABELS_FOR = -1;
+  function chLabels() {
+    if (CH_LABELS && CH_LABELS_FOR === CHS.length) return CH_LABELS;
+    var map = {};
+    for (var i = 1; i <= CHS.length; i++) map[i] = chapLabel(i);
+    CH_LABELS = map; CH_LABELS_FOR = CHS.length;
+    return map;
+  }
   function chapLabel(i) {                     /* i: vị trí 1-based trong sách */
     var c = CHS[i - 1];
     if (!c) return 'Chương ' + i;
@@ -881,15 +894,31 @@
     if (!box || !N) return;
     if (!CMT_READER) {
       CMT_READER = CZ.comments.mount(box, {
-        slug: N.slug, ch: cur, chLabel: chapLabel(cur), compact: true,
+        slug: N.slug, ch: cur, chLabel: chapLabel(cur), chLabels: chLabels(), compact: true,
         title: 'Bình luận',
-        hint: ''
+        hint: '',
+        /* số ở tab lọc/tiêu đề phải đổi ngay sau khi người đọc gửi hoặc xoá —
+           không có chỗ này thì con số đứng yên ở giá trị lúc mở chương */
+        onChanged: function () { syncReaderTab(box); }
       });
     } else {
       CMT_READER.setChapter(cur, chapLabel(cur));
       /* tiêu đề giữ nguyên “Bình luận”; số chương đã hiện ở tab lọc bên dưới,
          không lặp lại thành “Bình luận Chương 3” mỗi lần lật chương */
     }
+  }
+  /* tab “Bình luận” của trang đọc mang số bình luận của CẢ BỘ (bấm vào là thấy
+     đủ, kể cả bình luận chung). Trước đây nó đứng yên ở số cũ nên người đọc
+     tưởng bình luận vừa gửi/xoá không được tính. */
+  function syncReaderTab(box) {
+    var btn = document.querySelector('#rdActs [data-cmt-count]');
+    if (!btn) return;
+    var w = box && box.querySelector('.cmt-filters .tab[data-f="all"] .ct');
+    var n = parseInt(String((w && w.textContent) || '').replace(/[^0-9]/g, '') || '0', 10) || 0;
+    var lbl = btn.querySelector('.lbl');
+    if (lbl) lbl.textContent = n ? 'Bình luận (' + num(n) + ')' : 'Bình luận';
+    btn.setAttribute('data-cmt-count', String(n));
+    btn.setAttribute('title', n ? n + ' bình luận trong bộ này' : 'Bình luận');
   }
   function bumpTabCount(delta, set) {
     var tab = $('#storyTabs .stab[data-tab="cmt"]');
@@ -1485,9 +1514,10 @@
        Mỗi chương một phiếu, số phiếu hiện trên nút; tổng phiếu của bộ vẫn cộng lên
        bảng xếp hạng. */
     var st = CZ.statsOf(N);
-    function actBtn(id, ico, label, on) {
+    function actBtn(id, ico, label, on, extra) {
       var followAttr = id === 'actFollow' ? ' data-followbtn="' + esc(N.slug) + '" aria-pressed="' + (!!on) + '"' : '';
-      return '<button id="' + id + '" class="' + (on ? 'on' : '') + '"' + followAttr + ' title="' + esc(label) + '" aria-label="' + esc(label) + '">' +
+      return '<button id="' + id + '" class="' + (on ? 'on' : '') + '"' + followAttr + (extra || '') +
+        ' title="' + esc(label) + '" aria-label="' + esc(label) + '">' +
         ic(ico, 'i-s') + '<span class="lbl">' + esc(label) + '</span></button>';
     }
     var liked = CZ.isLiked(N, cur);
@@ -1495,11 +1525,16 @@
     var likeL = (liked ? 'Đã thích' : 'Thích') + (chapVotes ? ' · ' + num(chapVotes) : '');
     var saveL = CZ.inShelf(N) ? 'Đã lưu trong tủ' : 'Lưu vào tủ';
     var marked = CZ.marks(N).indexOf(cur) >= 0;
+    /* nhãn nút bình luận mang SỐ bình luận của bộ: người đọc thấy ngay là có
+       người đã viết, khỏi phải mò xuống cuối chương. Số này cập nhật lại sau
+       mỗi lần gửi/xoá (xem syncReaderTab). */
+    var cmtN = CMT_READER ? CMT_READER.count() : 0;
+    var cmtL = 'Bình luận' + (cmtN ? ' (' + num(cmtN) + ')' : '');
     var acts = [
       actBtn('actLike', 'heart', likeL, liked),
       actBtn('actSave', 'shelf', saveL, CZ.inShelf(N)),          /* icon TỦ SÁCH */
       actBtn('actFollow', 'bell', CZ.isFollowed(N) ? 'Đang theo dõi' : 'Theo dõi', CZ.isFollowed(N)),
-      actBtn('actComment', 'chat', 'Bình luận', false),
+      actBtn('actComment', 'chat', cmtL, false, ' data-cmt-count="' + cmtN + '"'),
       actBtn('actReport', 'alert', 'Báo lỗi', false)
     ];
     /* số liệu không chen vào hàng nút nữa: một dòng chữ nhỏ phía trên */
@@ -1683,9 +1718,9 @@
     progressSavedAt = Date.now();
     try { document.title = c.t + ' · ' + N.title + ' — ssochuz library'; } catch (e) {}
     paintTOC(); paintTopNav();
-    /* hàng reaction sticker cuối chương — dựng SAU khi nội dung chương đã nằm
-       trong #rdText, không đụng tới dữ liệu chương. */
-    mountReaderComments();          /* bình luận theo chương, nằm cuối trang đọc */
+    /* bình luận theo chương, nằm cuối trang đọc — dựng TRƯỚC hàng nút để nhãn
+       “Bình luận (N)” có sẵn con số của bộ ngay từ khung hình đầu */
+    mountReaderComments();
     var cr = $('#crumbStory');
     if (cr) cr.addEventListener('click', function (e) { e.preventDefault(); exitReader(); });
   }

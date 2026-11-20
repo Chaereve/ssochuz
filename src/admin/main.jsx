@@ -11,7 +11,7 @@ import { NewBook } from './components/NewBook.jsx';
 import { BookEditor } from './components/BookEditor.jsx';
 import { PlaceholderTab } from './components/PlaceholderTab.jsx';
 import { DoctorPanel, CommentsPanel, ReportsPanel, StatsPanel, VotesPanel, LogPanel, SettingsPanel } from './components/OperationalPanels.jsx';
-import { cloneRegistry, metaFromForm, newBookRecord, removeBookReferences, renameReferences, slugify, touchRegistry } from './utils/books.js';
+import { cloneRegistry, mergeNewerUpdated, metaFromForm, newBookRecord, removeBookReferences, renameReferences, slugify, today as todayVN, touchRegistry } from './utils/books.js';
 import { chapterIsEmpty } from '../shared/chapters.js';
 import { compressImage, withContentId, formatBytes } from './utils/images.js';
 import { HomepageCMS } from './components/HomepageCMS.jsx';
@@ -228,6 +228,15 @@ function App() {
   async function writeRegistry(registry, okMsg = 'Đã lưu thư viện', force = false) {
     const next = touchRegistry(registry);
     if (state.online) {
+      /* Đọc bản mới nhất trên KV rồi hợp nhất NGÀY CẬP NHẬT trước khi ghi: bản
+         trong RAM là ảnh chụp lúc mở trang, còn Worker vừa có thể đã bump ngày
+         của một bộ khi chương mới lên sóng. Ghi thẳng bản RAM = xoá mất ngày
+         mới (lỗi “đăng chương xong vẫn hiện ngày cũ”). Đọc lỗi thì bỏ qua, ghi
+         như cũ — không chặn thao tác của chủ trang. */
+      try {
+        const current = await api.registry();
+        mergeNewerUpdated(next, current);
+      } catch (error) { /* offline/401: Worker vẫn tự bảo vệ ngày của nó */ }
       ensureQuota(1, okMsg);
       await api.putRegistry(force ? Object.assign({}, next, { force: true }) : next);
       trackQuotaWrite(1, okMsg);
@@ -476,7 +485,9 @@ function App() {
         const plannedRaw = raw.split('/')[1] || '';
         const planned = plannedRaw.trim() === '—' ? 0 : (parseInt(plannedRaw, 10) || 0);
         meta.countLabel = nextBook.chapters.length ? (nextBook.chapters.length + '/' + Math.max(planned, nextBook.chapters.length)) : (planned > 0 ? '0/' + planned : '0/—');
-        meta.updated = new Date().toISOString().slice(0, 10);
+        /* KHÔNG tự đặt `updated` ở đây: ngày cập nhật là NGÀY CÓ CHƯƠNG MỚI và do
+           Worker quyết định (syncCountToRegistry → bumpUpdated). Đặt hôm nay mỗi
+           lần lưu cả bộ là bịa “vừa cập nhật” khi chỉ sửa chữ. */
       }
       await persistBookAndRegistry(nextBook.slug, nextBook, registry, 'Đã lưu chương “' + (meta && meta.title || nextBook.title || nextBook.slug) + '”');
       setBookCache((prev) => Object.assign({}, prev, { [nextBook.slug]: nextBook }));
@@ -502,7 +513,11 @@ function App() {
       }
       if (res.pending) { meta.pending = res.pending; if (res.schedNext) meta.schedNext = res.schedNext; else delete meta.schedNext; }
       else { delete meta.pending; delete meta.schedNext; }
-      meta.updated = new Date().toISOString().slice(0, 10);
+      /* Ngày do Worker ghi (nó biết chương nào vừa lên sóng) — chép về đây, và
+         chỉ TIẾN. Gán hôm nay mỗi lần lưu là trang chủ nhảy ngày cả khi chỉ sửa
+         lỗi chính tả một chương cũ. */
+      const upd = String((res.registry && res.registry.updated) || '').slice(0, 10);
+      if (upd && upd > String(meta.updated || '').slice(0, 10)) meta.updated = upd;
     }
     store.setState({ registry });
   }
@@ -599,7 +614,8 @@ function App() {
       const nextMeta = Object.assign({}, src, {
         title: (src.title || src.slug) + ' (bản sao)',
         slug: nextSlug,
-        updated: new Date().toISOString().slice(0, 10),
+        /* ngày của BẢN SAO: hôm nay theo giờ Việt Nam (bản sao là bộ mới) */
+        updated: todayVN(),
       });
       delete nextMeta.lock;
       registry.lib = registry.lib || [];

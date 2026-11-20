@@ -12,7 +12,7 @@
    ⚠ MỖI LẦN ĐỔI ?v= TĨNH (cz.css/cz-*.js): sửa cả PRECACHE dưới đây + tăng
    CZ_SW_VER → trình duyệt tự tải SW mới, hiện “Đã có bản cập nhật — tải lại”.
    ========================================================================== */
-var CZ_SW_VER = '20261112v17';
+var CZ_SW_VER = '20261121v19';
 
 /* kho shell theo version (update là thay kho mới, xoá kho cũ);
    kho trang/API/ảnh KHÔNG theo version để dữ liệu offline còn lại sau update */
@@ -40,9 +40,9 @@ var PRECACHE = [
   '/profile',
   '/cz-space.js?v=20261012n',
   '/manifest.webmanifest',
-  '/cz.css?v=20261102r121',
-  '/cz-app.js?v=20261102r121',
-  '/cz-home.js?v=20261102r121',
+  '/cz.css?v=20261121r131',
+  '/cz-app.js?v=20261120r130',
+  '/cz-home.js?v=20261121r131',
   '/cz-story.js?v=20261101r99',
   '/cz-people.js?v=20261012n',
   '/cz-config.js?v=20261012n',
@@ -52,12 +52,12 @@ var PRECACHE = [
   /* bộ tính năng tương tác — giữ trong shell để đọc offline vẫn có
      vòng bốc bài. (cz-react.js đã bỏ khỏi PRECACHE: khối cảm xúc gỡ từ r90,
      không trang nào nạp tệp đó nữa ⇒ precache chỉ tốn 17 kB mỗi lần cài) */
-  '/cz-dice.js?v=20261102r121',
+  '/cz-dice.js?v=20261121r131',
   /* 2026-10-29: hero banner dùng chung (component của khối “Nổi bật hôm nay”) */
   '/cz-hero.js?v=20261029perf1',
   /* vòng 16: trang Chuyển thể Series (nút Xem thêm) + script dựng trang đó */
   '/chuyen-the',
-  '/cz-series.js?v=20261102r121',
+  '/cz-series.js?v=20261121r131',
   '/stickers/sso/full/sso-brick.webp',
   '/stickers/sso/full/sso-love-it.webp',
   '/stickers/sso/full/sso-cry-flood.webp',
@@ -130,6 +130,31 @@ function netThenCache(req, cacheName, okOnly) {
     }
     return res;
   });
+}
+
+/* network-first cho vài khoá NHỎ mà tính tươi là cả ý nghĩa: trả bản mạng khi
+   có (và lưu lại), mất mạng mới dùng bản cũ để còn đọc offline.
+   Vì sao registry cần: stale-while-revalidate trả bản CŨ trước rồi mới cập nhật
+   cho lần sau ⇒ đăng chương xong, đúng lần mở trang đầu tiên người đọc vẫn thấy
+   số liệu/NGÀY CẬP NHẬT của lần trước (“đăng hôm nay mà vẫn hiện ngày cũ”).
+   Registry chỉ ~64 KB nên tải lại mỗi lần mở trang không đáng kể. */
+function netFirst(req, cacheName) {
+  return caches.open(cacheName).then(function (cache) {
+    return fetch(req).then(function (res) {
+      if (res && res.ok) {
+        var copy = res.clone();
+        cache.put(req, copy).catch(function () {});
+      }
+      return res;
+    }).catch(function () {
+      return cache.match(req).then(function (hit) { return hit || Response.error(); });
+    });
+  });
+}
+
+/* Thứ trang chủ/trang truyện đọc để vẽ số chương + NGÀY CẬP NHẬT */
+function isTinyFresh(path) {
+  return path === '/api/registry' || path === '/data/registry.json';
 }
 
 /* stale-while-revalidate: có cache thì trả ngay, đồng thời tải mới cho lần sau */
@@ -298,9 +323,14 @@ self.addEventListener('fetch', function (e) {
   if (req.cache === 'no-store') { e.respondWith(fetch(req)); return; }
 
   if (req.mode === 'navigate') { e.respondWith(navFallback(req)); return; }
-  if (isApiRead(url.pathname)) { e.respondWith(swr(req, C_API)); return; }
+  if (isApiRead(url.pathname)) {
+    /* registry: bản mạng trước (xem netFirst) để ngày cập nhật không trễ một lượt */
+    e.respondWith(isTinyFresh(url.pathname) ? netFirst(req, C_API) : swr(req, C_API));
+    return;
+  }
   if (url.origin === self.location.origin && url.pathname.indexOf('/data/') === 0) {
-    e.respondWith(swr(req, C_API)); return;
+    e.respondWith(isTinyFresh(url.pathname) ? netFirst(req, C_API) : swr(req, C_API));
+    return;
   }
   /* ảnh bìa có khi không gắn destination (trình duyệt cũ) → bắt thêm theo đuôi */
   if (req.destination === 'image' || /\.(png|jpe?g|gif|webp|svg|ico|avif)(\?|#|$)/i.test(url.pathname)) {
