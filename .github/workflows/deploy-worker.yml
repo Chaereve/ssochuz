@@ -1,0 +1,95 @@
+# Deploy Worker lên Cloudflare — TỰ ĐỘNG, chỉ khi CI đã xanh trên main.
+#
+# VÌ SAO CẦN: sửa `worker/cms.js` mà không deploy thì người đọc vẫn chạy mã CŨ.
+# Đúng ca 20/11: bản vá RSS `rfc822` (+07:00) đã nằm trong git từ lâu nhưng
+# Worker production vẫn trả `... 00:00:00 GMT` (kiểu UTC cũ) ⇒ ngày trên web
+# lệch 7 tiếng / lệch ngày, sửa trong repo mấy lần cũng "không ăn".
+#
+# ĐIỀU KIỆN CHẠY
+#   · CI (ci.yml) đã chạy xong và ĐẠT cho đúng commit đó trên nhánh main, hoặc
+#   · bấm tay: Actions → "Deploy Worker" → Run workflow.
+#
+# CẦN 2 THỨ (đặt 1 lần, Settings → Secrets and variables → Actions):
+#   · Secret   CLOUDFLARE_API_TOKEN   — token quyền "Edit Cloudflare Workers"
+#                                       (My Profile → API Tokens → Create Token
+#                                       → template "Edit Cloudflare Workers")
+#   · Variable CLOUDFLARE_ACCOUNT_ID  — mã tài khoản (Workers & Pages → cột phải)
+#
+# CHƯA ĐẶT TOKEN thì workflow KHÔNG báo đỏ: nó in hướng dẫn rồi bỏ qua, để
+# không ai phải "đỏ CI oan". Khi đó vẫn deploy tay: `cd worker && npx wrangler deploy`.
+#
+# KHÔNG sợ mất biến: SUPABASE_URL, ALLOW_ORIGIN, SITE_BASE… đều nằm trong
+# worker/wrangler.toml; secret (ADMIN_KEY, SESSION_SECRET, SUPABASE_SERVICE_ROLE,
+# VAPID_PRIVATE…) wrangler giữ nguyên qua mỗi lần deploy.
+name: Deploy Worker
+
+on:
+  workflow_run:
+    workflows: ['Kiểm thử']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: deploy-worker
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    name: Kiểm điều kiện
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    outputs:
+      has_token: ${{ steps.t.outputs.has_token }}
+    steps:
+      - id: t
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -n "$TOKEN" ]; then
+            echo 'has_token=yes' >> "$GITHUB_OUTPUT"
+          else
+            echo 'has_token=no' >> "$GITHUB_OUTPUT"
+            {
+              echo '### Bỏ qua deploy Worker — chưa đặt `CLOUDFLARE_API_TOKEN`'
+              echo ''
+              echo 'Thêm secret này (quyền **Edit Cloudflare Workers**) và variable'
+              echo '`CLOUDFLARE_ACCOUNT_ID` để lần sau tự deploy.'
+              echo 'Trong lúc chờ, deploy tay: `cd worker && npx wrangler deploy`.'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  deploy:
+    name: Deploy worker/cms.js
+    needs: guard
+    if: needs.guard.outputs.has_token == 'yes'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # workflow_run chạy trên commit của nhánh mặc định ⇒ phải lấy đúng SHA
+          # mà CI vừa kiểm, không lấy HEAD mới hơn (có thể chưa ai kiểm).
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # wrangler tự gộp các tệp import (overflow.js, src/shared/*) khi deploy.
+      # Chạy dry-run trước để bắt lỗi cấu hình NGAY trong CI (nhanh, không đụng
+      # production): thiếu id KV, cấu hình sai bảng TOML, thiếu tệp import…
+      - name: Kiểm gói trước khi lên sóng
+        working-directory: worker
+        run: npx --yes wrangler@4 deploy --dry-run --outdir /tmp/wrangler-dry
+
+      - name: Deploy
+        working-directory: worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4 deploy
