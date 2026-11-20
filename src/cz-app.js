@@ -392,9 +392,14 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
      POST nên tải lại nhiều lần cũng chỉ tốn 1 request (tiết kiệm quota ghi KV). */
   function reportView(slug, ch) {
     if (!API || !slug) return Promise.resolve(null);
+    /* Khoá chống đếm trùng phải là NGÀY VIỆT NAM, cùng mốc với thống kê của
+       Worker (buckets lấy ngày theo giờ VN): máy đặt UTC-… mà dùng ngày máy thì
+       từ 0h tới 7h sáng VN vẫn tính là “hôm qua” ⇒ lượt đọc đầu ngày bị nuốt,
+       còn máy đặt UTC+… thì lại đếm sớm một ngày. `k` (mới) và `legacy` (khoá
+       cũ theo ngày máy/UTC) đều được kiểm để không đếm hai lần. */
     var d = new Date();
     function p2(n) { return ('0' + n).slice(-2); }
-    var k = 'ssochuz-viewsent-' + slug + '-' + d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate());
+    var k = 'ssochuz-viewsent-' + slug + '-' + vnToday().replace(/-/g, '');
     var legacy = 'ssochuz-viewed-' + slug + '-' + d.toISOString().slice(0, 10);
     if (safeGet(k) || safeGet(legacy)) return Promise.resolve(null);
     safeSet(k, '1');
@@ -1282,6 +1287,12 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
   function vnToday(ms) {
     var d = new Date((Number(ms) || Date.now()) + 7 * 3600e3);
     return d.toISOString().slice(0, 10);
+  }
+  /* Mốc Date ĐÃ CỘNG +07:00 — đọc getDate()/getDay()/getMonth() ra LỊCH VIỆT
+     NAM trên mọi máy. Dùng cho chỗ cần thứ/ngày (lịch ra chương, “hôm nay” của
+     trang bốc bài) thay vì getDate() của giờ máy. */
+  function vnNow(ms) {
+    return new Date((Number(ms) || Date.now()) + 7 * 3600e3);
   }
   function dateVN(s) {
     if (!s) return '—';
@@ -3155,7 +3166,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
     realCount: realCount, reconcileCount: reconcileCount, onStatsChange: onStatsChange, notifyStats: notifyStats,
     rdGet: rdGet, rdSet: rdSet, themeInit: themeInit, themeToggle: themeToggle, themeMeta: themeMeta,
     icon: icon, esc: esc, num: num, dateVN: dateVN, dateShort: dateShort, timeAgo: timeAgo, teaser: teaser,
-    vnToday: vnToday, dayMs: dayMs,
+    vnToday: vnToday, vnNow: vnNow, dayMs: dayMs,
     statusCls: statusCls, statusLabel: statusLabel, statusIcon: statusIcon, words: words, norm: norm, couplesOf: couplesOf, countText: countText,
     /* bóc tên chương dùng chung (src/shared/chapters.js): trang truyện, mục
        lục, nhảy chương — và trang quản trị đều qua đây, khỏi lệch nhau */

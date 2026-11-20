@@ -12,7 +12,7 @@
    ⚠ MỖI LẦN ĐỔI ?v= TĨNH (cz.css/cz-*.js): sửa cả PRECACHE dưới đây + tăng
    CZ_SW_VER → trình duyệt tự tải SW mới, hiện “Đã có bản cập nhật — tải lại”.
    ========================================================================== */
-var CZ_SW_VER = '20261120v18';
+var CZ_SW_VER = '20261121v19';
 
 /* kho shell theo version (update là thay kho mới, xoá kho cũ);
    kho trang/API/ảnh KHÔNG theo version để dữ liệu offline còn lại sau update */
@@ -40,9 +40,9 @@ var PRECACHE = [
   '/profile',
   '/cz-space.js?v=20261012n',
   '/manifest.webmanifest',
-  '/cz.css?v=20261102r121',
+  '/cz.css?v=20261121r131',
   '/cz-app.js?v=20261120r130',
-  '/cz-home.js?v=20261102r121',
+  '/cz-home.js?v=20261121r131',
   '/cz-story.js?v=20261101r99',
   '/cz-people.js?v=20261012n',
   '/cz-config.js?v=20261012n',
@@ -52,12 +52,12 @@ var PRECACHE = [
   /* bộ tính năng tương tác — giữ trong shell để đọc offline vẫn có
      vòng bốc bài. (cz-react.js đã bỏ khỏi PRECACHE: khối cảm xúc gỡ từ r90,
      không trang nào nạp tệp đó nữa ⇒ precache chỉ tốn 17 kB mỗi lần cài) */
-  '/cz-dice.js?v=20261102r121',
+  '/cz-dice.js?v=20261121r131',
   /* 2026-10-29: hero banner dùng chung (component của khối “Nổi bật hôm nay”) */
   '/cz-hero.js?v=20261029perf1',
   /* vòng 16: trang Chuyển thể Series (nút Xem thêm) + script dựng trang đó */
   '/chuyen-the',
-  '/cz-series.js?v=20261102r121',
+  '/cz-series.js?v=20261121r131',
   '/stickers/sso/full/sso-brick.webp',
   '/stickers/sso/full/sso-love-it.webp',
   '/stickers/sso/full/sso-cry-flood.webp',

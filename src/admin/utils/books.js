@@ -35,6 +35,46 @@ export function touchRegistry(registry, note = 'sửa từ trang quản trị ss
   return registry;
 }
 
+/* ---------------------------------------------------------------------------
+   CHẶN GHI ĐÈ NGÀY CẬP NHẬT (rất dễ tái phát)
+   ---------------------------------------------------------------------------
+   Registry admin giữ trong bộ nhớ là ẢNH CHỤP lúc mở trang. Worker thì tự ghi
+   `updated` của một bộ ngay khi có chương mới lên sóng (syncCountToRegistry).
+   Nếu admin cứ PUT nguyên registry từ RAM (Lưu trang chủ, đổi mốc lịch, nhân
+   bản, đổi slug…) thì mỗi lần như vậy lại đẩy NGÀY CŨ trở lại KV — chương vừa
+   đăng xong, trang chủ lại hiện ngày cũ. Đây chính là lỗi người dùng báo.
+   Cách chữa: trước khi ghi, đọc registry mới nhất từ KV rồi hợp nhất — với mỗi
+   bộ còn trong cả hai bản, lấy `updated` MỚI HƠN; ngày chỉ tiến, không lùi.
+   `chapters`/`countLabel` thì KHÔNG lấy từ KV: admin có thể vừa sửa nhãn tay.
+   Đọc KV lỗi (offline/401) thì trả nguyên bản gửi lên — ghi vẫn chạy như cũ.
+--------------------------------------------------------------------------- */
+function dayOf(value) {
+  const s = String(value || '').trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const ms = Date.parse(s);
+  if (!Number.isFinite(ms)) return '';
+  return new Date(ms + 7 * 3600000).toISOString().slice(0, 10);
+}
+
+export function mergeNewerUpdated(next, current) {
+  if (!next || !current || !Array.isArray(next.lib) || !Array.isArray(current.lib)) return next;
+  const fresh = new Map();
+  current.lib.forEach((item) => { if (item && item.slug) fresh.set(String(item.slug), dayOf(item.updated)); });
+  let touched = false;
+  next.lib.forEach((item) => {
+    if (!item || !item.slug) return;
+    const kvDay = fresh.get(String(item.slug));
+    if (!kvDay) return;
+    const mine = dayOf(item.updated);
+    if (kvDay > mine) { item.updated = kvDay; touched = true; }
+  });
+  if (touched) {
+    /* giữ metadata của bản admin, chỉ nói thật là vừa chạm registry */
+    next.source = Object.assign({}, next.source || {}, { restoredUpdated: new Date().toISOString() });
+  }
+  return next;
+}
+
 export const COMPLETION_STATUSES = ['Đang cập nhật', 'Hoàn thành', 'Sắp ra mắt'];
 export const PUB_STATUSES = [
   { id: 'draft', label: 'Nháp (ẩn khỏi trang chủ)' },
@@ -162,7 +202,9 @@ export function metaFromForm(book, values) {
   out.status = values.status || 'Đang cập nhật';
   out.countLabel = values.countLabel || out.countLabel || '0/—';
   out.is18 = values.is18 === true || values.is18 === '1';
-  out.updated = values.updated || today();
+  /* không đụng tới ngày cập nhật khi form không có ô này: ngày là chuyện của
+     Worker (chương mới lên sóng), sửa mô tả không được làm nhảy ngày */
+  out.updated = values.updated || out.updated || today();
   out.thumb = persistableCover(values.thumb || '');
   out.slide = out.thumb;
   out.coverAlt = String(values.coverAlt || values.cover_alt || out.coverAlt || '').trim().slice(0, 120);

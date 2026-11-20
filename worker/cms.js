@@ -3039,7 +3039,7 @@ async function readScheduleFromBlog(env) {
     items.push({ days: m[1].trim(), title: m[2].trim(), detail: m[3].trim().slice(0, 160) });
   }
   const note = (text.match(/Lịch có thể[^.]*\./) || [''])[0];
-  return { items, note, updated: new Date().toISOString().slice(0, 10), source: blog + '/p/lich-ra-chuong.html' };
+  return { items, note, updated: vnDay(), source: blog + '/p/lich-ra-chuong.html' };
 }
 async function seed(req, env, cors) {
   if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });

@@ -8,7 +8,10 @@ export const statusCls = (status) => (cz().statusCls ? cz().statusCls(status) : 
 
 export function daysSince(dateLike) {
   if (!dateLike) return 9999;
-  const time = Date.parse(String(dateLike) + 'T00:00:00');
+  /* mốc ngày là giờ Việt Nam (+07:00), không phải nửa đêm máy người xem: thiếu
+     hậu tố là lệch cả ngày ở máy đặt UTC-… hoặc tính sai “đã 45 ngày chưa” */
+  const raw = String(dateLike);
+  const time = Date.parse(raw.length <= 10 ? raw + 'T00:00:00+07:00' : raw);
   if (Number.isNaN(time)) return 9999;
   return Math.round((Date.now() - time) / 86400000);
 }

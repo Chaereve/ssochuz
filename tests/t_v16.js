@@ -41,7 +41,7 @@ function openPage(file, reg) {
   assert.ok(idx.indexOf('id="dang-xem"') < idx.indexOf('</div><!-- /.rankpair -->'), '#dang-xem phải nằm trong .rankpair');
   assert.ok(/<a class="btm" href="\/chuyen-the">Xem thêm ›<\/a>/.test(idx), 'Chuyển thể Series thiếu nút Xem thêm');
   assert.ok(/<div class="announce" id="announce" role="note" hidden>/.test(idx), 'thiếu #announce ẩn mặc định');
-  assert.ok(idx.includes('?v=20261102r121'), 'đổi ?v= phải sửa PRECACHE + CZ_SW_VER (xem t_pwa.js)');
+  assert.ok(idx.includes('?v=20261121r131'), 'đổi ?v= phải sửa PRECACHE + CZ_SW_VER (xem t_pwa.js)');
 
   assert.ok(exists('chuyen-the.html'), 'thiếu trang /chuyen-the');
   const series = read('chuyen-the.html');

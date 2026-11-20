@@ -29,6 +29,7 @@ const { page, dataFetch } = require('./mk');
 const fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..');
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const { pathToFileURL } = require('url');
 const bad = [];
 const ok = (cond, msg, got) => { if (!cond) bad.push(msg + (got === undefined ? '' : '  («' + got + '»)')); };
 
@@ -172,6 +173,66 @@ const text = (doc, sel) => { const e = doc.querySelector(sel); return e ? e.text
     ok(/out\.updated = m\.updated \|\| out\.updated \|\| today\(\)/.test(real),
       'admin: sửa mô tả/ảnh bìa KHÔNG được gán lại ngày cập nhật hôm nay');
     out.nguon = { worker: /vnDay/.test(cms), admin: /Date\.now\(\) \+ 7 \* 3600000/.test(real) };
+  }
+
+  /* ---------- 6. MỌI MỐC “HÔM NAY” TRÊN GIAO DIỆN LÀ HÔM NAY Ở VIỆT NAM ----------
+     Lịch ra chương (tuần bắt đầu thứ 2) và đầu trang bốc bài đều từng đọc
+     getDate()/getDay() của GIỜ MÁY ⇒ máy đặt múi giờ khác thấy sai thứ/ngày. */
+  {
+    const p = page('index.html', { config: { CZ_API: 'https://cms.test' }, fetch: dataFetch({ apiBase: 'https://cms.test', api: apiFor(registryWith(vnToday())) }) });
+    await wait(1200);
+    const CZ = p.win.CZ;
+    const now = new Date();
+    const vn = CZ.vnNow ? CZ.vnNow() : null;
+    ok(!!vn && vn.getTime() - now.getTime() > 6 * 3600e3 && vn.getTime() - now.getTime() < 8 * 3600e3,
+      'CZ.vnNow(): mốc phải lệch giờ máy đúng +7 giờ (để getDate() ra lịch Việt Nam)', vn && (vn.getTime() - now.getTime()));
+    if (vn) {
+      ok(vn.getUTCDate() === Number(vnToday().slice(8, 10)), 'CZ.vnNow(): ngày đọc ra phải khớp vnToday()');
+    }
+    /* trang bốc bài: nhãn “Hôm nay” lấy theo lịch VN */
+    const dice = fs.readFileSync(path.join(ROOT, 'src/cz-dice.js'), 'utf8');
+    ok(/CZ\.vnNow/.test(dice), 'trang bốc bài: nhãn “Hôm nay” phải đọc CZ.vnNow() (giờ VN), không dùng getDate() của giờ máy');
+    const home = fs.readFileSync(path.join(ROOT, 'src/cz-home.js'), 'utf8');
+    ok(/CZ\.vnNow/.test(home), 'lịch ra chương: tuần phải tính theo CZ.vnNow() (giờ VN)');
+    /* khoá chống đếm trùng lượt đọc: cùng mốc ngày với thống kê của Worker */
+    out.mocGioVN = { vnNow: vn && (vn.getTime() - now.getTime()), vnToday: vnToday() };
+    const app = fs.readFileSync(path.join(ROOT, 'src/cz-app.js'), 'utf8');
+    ok(/ssochuz-viewsent-' \+ slug \+ '-' \+ vnToday\(\)/.test(app),
+      'reportView: khoá chống đếm trùng phải theo NGÀY VIỆT NAM (vnToday), không theo ngày máy');
+    ok(p.errors.length === 0, 'trang chủ (mốc giờ VN) chạy không lỗi JS', p.errors.slice(0, 2).join(' | '));
+    p.win.close();
+  }
+
+  /* ---------- 7. ADMIN: ghi registry KHÔNG được kéo lùi ngày Worker vừa bump ---------- */
+  {
+    const real = fs.readFileSync(path.join(ROOT, 'admin-real.js'), 'utf8');
+    const main = fs.readFileSync(path.join(ROOT, 'src/admin/main.jsx'), 'utf8');
+    const bk = fs.readFileSync(path.join(ROOT, 'src/admin/utils/books.js'), 'utf8');
+    ok(/function mergeNewerUpdated/.test(real) && /function putRegistryLatest/.test(real),
+      'admin-real.js: writeRegistry phải đọc registry mới nhất từ KV rồi hợp nhất NGÀY trước khi ghi');
+    ok(/putRegistryLatest\(next\)/.test(real), 'admin-real.js: writeRegistry phải đi qua putRegistryLatest');
+    ok(/mergeNewerUpdated/.test(main), 'admin v2: writeRegistry phải hợp nhất ngày mới từ KV trước khi ghi');
+    ok(/export function mergeNewerUpdated/.test(bk), 'src/admin/utils/books.js: phải có mergeNewerUpdated()');
+    ok(/out\.updated = values\.updated \|\| out\.updated \|\| today\(\)/.test(bk),
+      'admin v2 metaFromForm: form không có ô ngày thì KHÔNG được gán lại hôm nay');
+    ok(/function daysSince[\s\S]{0,400}\+07:00/.test(fs.readFileSync(path.join(ROOT, 'src/admin/utils/format.js'), 'utf8')),
+      'admin “Sắp ra mắt > 45 ngày”: daysSince phải parse ngày theo +07:00, không nửa đêm máy');
+    const cms = fs.readFileSync(path.join(ROOT, 'worker/cms.js'), 'utf8');
+    ok(/updated: vnDay\(\), source: blog/.test(cms), 'worker: nhãn ngày của khối lịch ra chương phải là vnDay() (giờ VN)');
+    /* ĐƠN VỊ: registry RAM (ngày cũ) gặp KV (ngày mới) ⇒ ngày phải TIẾN, và
+       sửa tay của chủ trang (countLabel) không bị KV đè. */
+    const merged = await import(pathToFileURL(path.join(ROOT, 'src/admin/utils/books.js')).href);
+    const next = { lib: [{ slug: 'a', updated: '2026-01-15', countLabel: '40/40' }, { slug: 'b', updated: '2026-12-01' }] };
+    const cur = { lib: [{ slug: 'a', updated: '2026-11-20', countLabel: '41/41' }] };
+    merged.mergeNewerUpdated(next, cur);
+    ok(next.lib[0].updated === '2026-11-20', 'mergeNewerUpdated: phải lấy ngày MỚI HƠN của KV', next.lib[0].updated);
+    ok(next.lib[0].countLabel === '40/40', 'mergeNewerUpdated: không được đè nhãn chương admin vừa sửa', next.lib[0].countLabel);
+    ok(next.lib[1].updated === '2026-12-01', 'mergeNewerUpdated: bộ ngày mới hơn của admin phải giữ nguyên (ngày chỉ tiến)', next.lib[1].updated);
+    const older = { lib: [{ slug: 'a', updated: '2026-12-31' }] };
+    merged.mergeNewerUpdated(older, cur);
+    ok(older.lib[0].updated === '2026-12-31', 'mergeNewerUpdated: KV cũ hơn thì KHÔNG được kéo lùi', older.lib[0].updated);
+    ok(merged.mergeNewerUpdated({ lib: [] }, null) !== undefined, 'mergeNewerUpdated: thiếu bản KV thì trả nguyên bản gửi lên, không ném lỗi');
+    out.adminGhi = { nextA: next.lib[0].updated, nhan: next.lib[0].countLabel, nextB: next.lib[1].updated, luiKhiKVCu: older.lib[0].updated };
   }
 
   out.errors2 = bad;

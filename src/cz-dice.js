@@ -103,7 +103,10 @@
   }
 
   function todayHTML() {
-    var now = new Date();
+    /* “Hôm nay” là hôm nay ở VIỆT NAM: đọc giờ máy thì độc giả ở múi giờ khác
+       thấy sai thứ/ngày (máy UTC-7 lúc 20h đã là hôm sau ở VN). CZ.vnNow trả
+       mốc đã cộng +07:00 nên getDate()/getDay() đọc ra lịch Việt Nam. */
+    var now = (window.CZ && window.CZ.vnNow) ? window.CZ.vnNow() : new Date();
     var days = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
     var dd = String(now.getDate()).padStart(2, '0'), mm = String(now.getMonth() + 1).padStart(2, '0');
     return '<b><i></i>' + days[now.getDay()] + ', ' + dd + '/' + mm + '</b><span>Hôm nay</span>';
