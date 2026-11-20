@@ -1363,6 +1363,58 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
     }
   }
 
+    const vnToday = () => new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10);
+    /* (k) DỮ LIỆU CŨ: bộ đã có chương mới lên sóng TRƯỚC bản vá nên `updated`
+       vẫn là ngày cũ (ca thật trên KV 20/11: 24 chương, bản lưu 19/11, mà
+       ngày vẫn 30/09). Vá 1.20.0 chỉ ghi ngày cho lần lưu MỚI, nên phải có
+       đường tự chữa: so `updated` với mốc chương MỚI NHẤT trong bản lưu. */
+    {
+      const OLDDAY = '2026-09-30';
+      const NEWDAY = vnToday();
+      await kv.put('registry', JSON.stringify({
+        rev: 'heal-1',
+        lib: [
+          { title: 'Cũ Chưa Chữa', slug: 'heal-cu', chapters: 3, countLabel: '3/3', updated: OLDDAY },
+          { title: 'Sửa Vặt', slug: 'heal-vat', chapters: 2, countLabel: '2/2', updated: OLDDAY },
+        ],
+      }));
+      /* bộ 1: chương thứ 3 lên sóng hôm nay ⇒ ngày phải được nâng */
+      await kv.put('book:heal-cu', JSON.stringify({
+        title: 'Cũ Chưa Chữa', slug: 'heal-cu',
+        chapters: [
+          { t: 'Chương 1', html: '<p>một</p>' },
+          { t: 'Chương 2', html: '<p>hai</p>' },
+          { t: 'Chương 3', html: '<p>ba</p>', at: NEWDAY + 'T09:00:00+07:00' },
+        ],
+      }), { metadata: { saved: new Date().toISOString() } });
+      /* bộ 2: chỉ sửa chữ chương cũ, chương không có mốc mới ⇒ ngày ĐỨNG YÊN */
+      await kv.put('book:heal-vat', JSON.stringify({
+        title: 'Sửa Vặt', slug: 'heal-vat',
+        chapters: [{ t: 'Chương 1', html: '<p>một, sửa lỗi chính tả</p>' }, { t: 'Chương 2', html: '<p>hai</p>' }],
+      }), { metadata: { saved: new Date().toISOString() } });
+
+      const heal = await call('POST', '/api/admin/heal-updated', { headers: ADMH, body: {} });
+      eq('tự chữa/ cần ADMIN_KEY → 200 khi có key', heal.status, 200);
+      const noKey = await call('POST', '/api/admin/heal-updated', { body: {} });
+      eq('tự chữa/ không có key → 401', noKey.status, 401);
+      const libH = (await kv.get('registry', { type: 'json' })).lib;
+      const cuH = libH.find((x) => x.slug === 'heal-cu') || {};
+      const vatH = libH.find((x) => x.slug === 'heal-vat') || {};
+      eq('tự chữa/ bộ có chương mới hơn ngày → nâng lên đúng ngày chương', cuH.updated, NEWDAY);
+      eq('tự chữa/ bộ chỉ sửa chữ chương cũ → KHÔNG bịa “vừa cập nhật”', vatH.updated, OLDDAY);
+      ck('tự chữa/ phản hồi liệt kê bộ đã sửa', !!(heal.body && heal.body.fixed >= 1), heal.body && heal.body.fixed, '≥1');
+      /* ngày chỉ tiến: bộ đã có ngày mới hơn thì không bị kéo lùi */
+      const FUT2 = new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10);
+      await kv.put('registry', JSON.stringify({
+        rev: 'heal-2', lib: [{ title: 'Tương Lai', slug: 'heal-fut', chapters: 1, updated: FUT2 }],
+      }));
+      await kv.put('book:heal-fut', JSON.stringify({
+        title: 'Tương Lai', slug: 'heal-fut', chapters: [{ t: 'Chương 1', html: '<p>x</p>' }],
+      }), { metadata: { saved: new Date().toISOString() } });
+      await call('POST', '/api/admin/heal-updated', { headers: ADMH, body: {} });
+      eq('tự chữa/ không kéo lùi ngày tương lai', ((await kv.get('registry', { type: 'json' })).lib[0] || {}).updated, FUT2);
+    }
+
   /* ---------- 13. WEB PUSH "RA CHƯƠNG MỚI" ---------- */
   {
     const b64u = (b) => Buffer.from(b).toString('base64url');

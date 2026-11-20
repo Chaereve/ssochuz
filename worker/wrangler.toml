@@ -37,6 +37,12 @@ BLOG = "https://chuseoz.blogspot.com"
 ALLOW_ORIGIN = "https://ssochuz.pages.dev,https://chuseoz.pages.dev,https://chuseoz.blogspot.com"
 # Gốc dựng link chương trong GET /feed.xml (RSS). Có custom domain thì đổi cả hai chỗ rồi deploy lại.
 SITE_BASE = "https://ssochuz.pages.dev"
+# TUỲ CHỌN — chỉ dùng cho POST /api/stats/import-firebase (kéo số liệu CŨ về KV 1 lần).
+# Lượt đọc/bình chọn mới do Worker tự đếm trên KV, không gọi tới Firebase.
+# ⚠ Phải nằm TRONG [vars]. Trước 1.20.1 dòng này nằm dưới [observability] ⇒ TOML
+# hiểu nó là khoá con của bảng đó: wrangler cảnh báo "Unexpected fields found in
+# triggers field" và Worker production không hề nhận được FIREBASE_PROJECT.
+FIREBASE_PROJECT = "chuseoz-library"
 # Khoá CÔNG KHAI VAPID cho Web Push (không nhạy cảm — web cũng nhúng key này).
 # Khoá RIÊNG đặt bằng: npx wrangler secret put VAPID_PRIVATE  (không ghi vào file này)
 VAPID_PUBLIC = "BDzU2yh_uWzhaTZ6HZe3s-aLk6w5BnKCv5gTzUZYNjTyObcAlJa5GnZGrbfwHeOdUpDistwMgMaKvnmqLiXzobs"
@@ -65,9 +71,6 @@ crons = ["*/10 * * * *"]
 # [[r2_buckets]]
 # binding = "CZ_R2"
 # bucket_name = "ssochuz-blobs"
-# TUỲ CHỌN — chỉ dùng cho POST /api/stats/import-firebase (kéo số liệu CŨ về KV 1 lần).
-# Lượt đọc/bình chọn mới do Worker tự đếm trên KV, không gọi tới Firebase.
-FIREBASE_PROJECT = "chuseoz-library"
 
 [observability]
 enabled = true

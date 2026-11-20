@@ -440,6 +440,16 @@ const handler = {
         if (r.ok) await edgePurge(org + '/api/registry', org + '/api/stats');
         return r;
       }
+      /* POST /api/admin/heal-updated — chữa NGAY ngày cập nhật của mọi bộ
+         (không đợi cron chạy vòng). Xem healStaleUpdated: so `updated` với mốc
+         lưu gần nhất của bản lưu chương, ngày chỉ tiến. */
+      if (p === '/api/admin/heal-updated' && req.method === 'POST') {
+        if (!authed(req, env)) return json({ ok: false, error: adminAuthError(env) }, { status: 401, cors });
+        if (!env.CZ_KV) return noKV(cors);
+        const out = await healStaleUpdated(env, { all: true });
+        if (out && out.fixed) await edgePurge(org + '/api/registry', org + '/feed.xml');
+        return json(out || { ok: false }, { cors, headers: { 'cache-control': 'no-store' } });
+      }
       if (p === '/api/admin/comments' && req.method === 'GET') return await adminComments(req, env, cors);
       if (p === '/api/admin/log' && req.method === 'GET') return await adminLog(req, env, cors);
       if (p === '/api/admin/stats' && req.method === 'GET') return await adminStats(req, env, cors);
@@ -502,7 +512,7 @@ const handler = {
     /* 1) chương hẹn giờ tới mốc → cập nhật lại số chương trong registry + báo
           đẩy “chương mới” cho người theo dõi
        2) rút hàng đợi thông báo đẩy (tối đa 45 tin mỗi lần) */
-    ctx.waitUntil(publishDueChapters(env).then(() => drainPushQueue(env)).catch(() => {}));
+    ctx.waitUntil(publishDueChapters(env).then(() => healStaleUpdated(env)).then(() => drainPushQueue(env)).catch(() => {}));
   },
 };
 
@@ -2207,6 +2217,102 @@ function countLabelOf(n, real, pending) {
    Vì sao cần: registry có thể đã lệch sẵn (web tự đối chiếu số chương, lần
    recount trước, người sửa tay…). So `real > n.chapters` thôi thì một bộ đang
    lệch sẽ không bao giờ được ghi ngày — nên khi biết số cũ, so với số cũ. */
+/* ============================================================================
+   TỰ CHỮA NGÀY CẬP NHẬT CỦA DỮ LIỆU CŨ  (thêm 20/11)
+   ----------------------------------------------------------------------------
+   Lỗi chủ trang báo: “vẫn chưa fix được cái thời gian cập nhật truyện”.
+   Dữ liệu thật cho thấy HAI tầng, chỉ sửa một tầng thì vẫn thấy y như cũ:
+
+   1) Dữ liệu đã sai từ TRƯỚC bản vá: bộ có chương mới lên sóng nhưng `updated`
+      vẫn là ngày cũ. Ví dụ thật trên KV: `nguoi-chong-lanh-lung-cua-co-vo-beo`
+      có 24 chương (bản lưu 19/11) mà `updated` = 30/09; `nakira` 3 chương mà
+      `updated` = 11/11 trong khi bản lưu cũ hơn. Phần vá 1.20.0 chỉ ghi ngày
+      khi lưu chương QUA ĐƯỜNG MỚI — chương đã đăng trước đó không tự nhảy.
+   2) Bản vá đó là mã trong `worker/cms.js`, mà Worker phải được DEPLOY LẠI mới
+      chạy: RSS của Worker đang trả `Sun, 15 Nov 2026 00:00:00 GMT` (đọc ngày
+      theo UTC — kiểu cũ) thay vì `Sat, 14 Nov 2026 17:00:00 GMT` (+07:00 —
+      kiểu đã sửa). Tức bản đang chạy vẫn là bản CŨ.
+
+   Hàm dưới đây chữa tầng (1) mà KHÔNG cần ADMIN_KEY và không cần ai bấm nút:
+   mỗi lượt cron (10 phút) chỉ soi vài bộ, so `updated` với mốc ĐỔI GẦN NHẤT của
+   bản lưu chương (`metadata.saved` do persistBook ghi mỗi lần lưu). Lệch quá
+   một ngưỡng an toàn ⇒ ngày cập nhật đang cũ ⇒ nâng lên đúng ngày bản lưu.
+   Ngày KHÔNG BAO GIỜ lùi: một bộ vừa được sửa metadata (Lưu bộ) mà chưa có
+   chương mới thì `updated` = hôm nay > `saved` cũ ⇒ bỏ qua.
+   Lượt ghi bị chặn bởi ngân sách ghi KV (budgetCredits) — cron không được đốt
+   quota của người đọc.
+============================================================================ */
+const HEAL = { scan: 6, minLagMs: 20 * 3600 * 1000, tag: 'heal-updated-v1', key: 'heal:cursor' };
+async function healStaleUpdated(env, opts) {
+  if (!env.CZ_KV) return { ok: false, why: 'no-kv' };
+  /* cron không được đốt hạn mức ghi của người đọc: chỉ chạy khi đệm thống kê
+     chưa dùng hết “tem” ngân sách của ngày UTC. Đệm đầy thì bỏ lượt này, 10
+     phút sau thử lại — dữ liệu cũ chậm thêm vài giờ cũng không sao. */
+  try {
+    if (budgetCredits(env) - _buf.size < 4) return { ok: false, why: 'quota' };
+  } catch (e) { /* không đo được thì cứ chạy: chữa ngày quan trọng hơn */ }
+  const reg = await env.CZ_KV.get('registry', { type: 'json' });
+  if (!reg || !Array.isArray(reg.lib) || !reg.lib.length) return { ok: false, why: 'no-registry' };
+  const lib = reg.lib.filter((n) => n && n.slug);
+  /* con trỏ chạy vòng để mỗi lượt soi một khúc khác nhau, hết danh sách thì
+     quay lại đầu — 67 bộ / 6 bộ mỗi lượt / 10 phút ⇒ rà hết khoảng 2 giờ */
+  let start = 0;
+  try { start = parseInt(String(await env.CZ_KV.get(HEAL.key) || '0'), 10) || 0; } catch (e) { start = 0; }
+  const all = !!(opts && opts.all);
+  const take = all ? lib.length : Math.min(HEAL.scan, lib.length);
+  const at = all ? 0 : start;
+  const batch = [];
+  for (let i = 0; i < take; i++) batch.push(lib[(at + i) % lib.length]);
+  const fixed = [], checked = [];
+  for (const n of batch) {
+    if (!n || !n.slug) continue;
+    let meta = null;
+    try { meta = await env.CZ_KV.getWithMetadata('book:' + n.slug, { type: 'text' }); } catch (e) { meta = null; }
+    const savedRaw = meta && meta.metadata && meta.metadata.saved;
+    const savedMs = savedRaw ? Date.parse(savedRaw) : NaN;
+    if (!Number.isFinite(savedMs)) continue;          /* book cũ chưa có metadata ⇒ không đoán */
+    const updDay = String(n.updated || '').slice(0, 10);
+    const updMs = updDay ? Date.parse(updDay + 'T00:00:00+07:00') : NaN;
+    if (!Number.isFinite(updMs)) {
+      /* chưa có ngày: lấy ngày bản lưu, nhưng chỉ khi bản lưu đủ cũ để chắc
+         đây là “lần cập nhật thật” chứ không phải vừa sửa nhầm */
+      n.updated = vnDay(savedMs);
+      fixed.push({ slug: n.slug, was: '', now: n.updated, why: 'thieu-ngay' });
+      checked.push({ slug: n.slug, lag: 'n/a' });
+      continue;
+    }
+    const lag = savedMs - updMs;
+    checked.push({ slug: n.slug, lag: Math.round(lag / 3600000) + 'h' });
+    if (lag <= HEAL.minLagMs) continue;               /* ngày mới hơn/khớp bản lưu: bỏ qua */
+    /* `metadata.saved` một mình KHÔNG đủ để nói “vừa có chương mới”: mỗi lần
+       lưu đều bump nó, kể cả khi chỉ sửa lỗi chính tả một chương cũ. Dùng nó
+       làm căn cứ là lại rơi đúng vào lỗi “bịa vừa cập nhật” mà bản vá trước
+       đã dẹp. Nên bằng chứng duy nhất được chấp nhận: có chương mang mốc NGÀY
+       GIỜ (`at`) MỚI HƠN ngày đang ghi — đó là chương vừa lên sóng. Bộ không
+       có mốc nào (chương nhập từ Blogger) thì để nguyên, chờ người viết đăng
+       chương tiếp theo (lúc đó đường lưu chương tự ghi ngày). */
+    let newestAt = 0;
+    try {
+      const bk = JSON.parse(String((meta && meta.value) || 'null'));
+      const chs = bk && Array.isArray(bk.chapters) ? bk.chapters : [];
+      chs.forEach((c) => { const t = chapterAtMs(c); if (t > newestAt) newestAt = t; });
+    } catch (e) { newestAt = 0; }
+    if (!(newestAt > updMs + HEAL.minLagMs)) continue;
+    const was = updDay;
+    if (!bumpUpdated(n, newestAt)) continue;
+    if (String(n.updated) === was) continue;
+    fixed.push({ slug: n.slug, was, now: n.updated, why: 'chuong-moi-hon' });
+  }
+  if (!all) { try { await env.CZ_KV.put(HEAL.key, String((start + batch.length) % Math.max(1, lib.length))); } catch (e) {} }
+  if (!fixed.length) return { ok: true, checked: checked.length, fixed: 0, cursor: start };
+  reg.rev = new Date().toISOString().slice(0, 16).replace('T', ' ');
+  await env.CZ_KV.put('registry', registryJSON(reg), { metadata: { saved: new Date().toISOString(), rev: reg.rev } });
+  try {
+    await logAct(env, 'tự chữa ngày cập nhật: ' + fixed.map((f) => f.slug + ' ' + (f.was || '—') + '→' + f.now).join(', '), null, { kind: 'he-thong' });
+  } catch (e) { /* ghi nhật ký lỗi vẫn phải trả kết quả đã chữa */ }
+  return { ok: true, checked: checked.length, fixed: fixed.length, items: fixed, cursor: start };
+}
+
 async function syncCountToRegistry(env, slug, book, opts) {
   if (!env.CZ_KV || !slug) return { changed: false };
   const reg = await env.CZ_KV.get('registry', { type: 'json' });

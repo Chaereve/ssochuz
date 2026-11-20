@@ -155,7 +155,42 @@ Các bước chi tiết/data flow ở [`docs/features/personal-community-1.20.md
 4. Từ cùng thư mục, áp schema D1: `npx wrangler d1 migrations apply ssochuz-community --remote` (file `community-worker/migrations/0001_community.sql`).
 5. `community-worker/wrangler.toml` đã có service binding `CMS → chuseoz-cms`. Binding này gọi CMS hiện có để xác minh Supabase JWT và đọc registry/TOC public; không yêu cầu đổi config CMS.
 
-## 0. Deploy bản 1.20.0 — CMS cũ + Worker community riêng
+## ⚠ Deploy — VIỆC BẮT BUỘC, không deploy = người đọc vẫn chạy mã cũ
+
+> **Sự cố 20/11/2026:** bản vá RSS `rfc822` (+07:00 giờ VN) đã nằm trong git từ lâu
+> nhưng Worker production vẫn trả `... 00:00:00 GMT` (kiểu đọc ngày UTC cũ). Ngày
+> "cập nhật" trên web vì thế lệch 7 tiếng — và lệch cả NGÀY khi máy người đọc ở múi
+> giờ âm. Sửa trong repo bao nhiêu lần cũng vô ích nếu không deploy.
+>
+> **Cách kiểm nhanh đã lên bản mới chưa:** mở `/api/health`, xem `"version"`.
+> Trùng số trong `src/shared/version.js` là đã lên; còn số cũ là **chưa deploy**.
+
+Deploy tự động: push vào `main` → CI xanh → workflow **Deploy Worker** tự đẩy
+(`.github/workflows/deploy-worker.yml`). Cần đặt 1 lần trong
+Settings → Secrets and variables → Actions:
+
+| Loại | Tên | Giá trị |
+|---|---|---|
+| Secret | `CLOUDFLARE_API_TOKEN` | token quyền **Edit Cloudflare Workers** (My Profile → API Tokens → Create Token → template cùng tên) |
+| Variable | `CLOUDFLARE_ACCOUNT_ID` | mã tài khoản, ở Workers & Pages (cột phải) |
+
+Chưa đặt token thì workflow **bỏ qua** (in hướng dẫn, không báo đỏ). Khi đó deploy tay:
+
+```bash
+cd worker && npx wrangler deploy      # wrangler tự gộp import; cần đăng nhập 1 lần
+```
+
+Deploy bằng bảng điều khiển Cloudflare (Workers & Pages → chọn Worker → Edit code)
+thì phải dán MỘT tệp: `npm run build:worker` rồi dán `worker/cms.bundle.js`.
+
+**Sau khi deploy, chữa ngày cũ đang treo trong dữ liệu** (không đợi cron):
+
+```bash
+curl -X POST -H "x-admin-key: $ADMIN_KEY" \
+  https://chuseoz-cms.kimtong1906.workers.dev/api/admin/heal-updated
+```
+
+## 0. Deploy bản 1.21.0 — CMS cũ + Worker community riêng
 
 ### A. Cập nhật code CMS hiện có (giữ nguyên config)
 
@@ -179,7 +214,7 @@ npx wrangler d1 migrations apply ssochuz-community --remote
 npx wrangler deploy
 ```
 
-CMS `/api/health` vẫn trả `"version": "1.20.0"` (bản này: `1.20.0`); Community Worker `https://ssochuz-community.<account-subdomain>.workers.dev/api/health` phải có `worker: "ssochuz-community"`, `d1: true`, `cmsBinding: true`. Reaction summary kiểm tra qua Worker mới:
+CMS `/api/health` vẫn trả `"version": "1.21.0"` (bản này: `1.21.0`); Community Worker `https://ssochuz-community.<account-subdomain>.workers.dev/api/health` phải có `worker: "ssochuz-community"`, `d1: true`, `cmsBinding: true`. Reaction summary kiểm tra qua Worker mới:
 
 ```bash
 curl -i -X POST https://ssochuz-community.<account-subdomain>.workers.dev/api/community/reactions \
