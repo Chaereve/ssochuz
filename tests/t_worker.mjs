@@ -1413,6 +1413,41 @@ const POST_HTML = `<html><head><title>Chương 5: Gặp lại | chuseoz</title><
       }), { metadata: { saved: new Date().toISOString() } });
       await call('POST', '/api/admin/heal-updated', { headers: ADMH, body: {} });
       eq('tự chữa/ không kéo lùi ngày tương lai', ((await kv.get('registry', { type: 'json' })).lib[0] || {}).updated, FUT2);
+
+      /* (l) ADMIN ĐANG MỞ TỪ TRƯỚC (RAM CŨ) BẤM "LƯU BỘ" — KHÔNG ĐƯỢC KÉO LÙI.
+         Sự cố thật 19–21/11 với bộ love-me-to-hurt-me: admin mở trang (RAM:
+         6 chương, ngày 15/11) → đăng chương thứ 7 (Worker ghi 7 chương, ngày
+         21/11) → bấm Lưu bộ ⇒ client PUT cả registry RAM cũ ⇒ số chương về 6 và
+         NGÀY VỀ 15/11. Người dùng thấy "ngày vẫn sai" dù KV đã đúng. */
+      {
+        const OLD = '2026-11-15';
+        const mk = (n) => ({ title: 'Kéo Lùi', slug: 'keo-lui',
+          chapters: Array.from({ length: n }, (_, i) => ({ t: 'Chương ' + i, html: '<p>x</p>', status: 'published' })) });
+        await kv.put('registry', JSON.stringify({ rev: 'keo-1', lib: [
+          { title: 'Kéo Lùi', slug: 'keo-lui', chapters: 6, countLabel: '6/6', updated: OLD }] }));
+        await kv.put('book:keo-lui', JSON.stringify(mk(6)));
+        /* bản RAM mà admin đang giữ (chụp lúc mở trang) */
+        const ramCopy = await kv.get('registry', { type: 'json' });
+        /* người dùng đăng chương thứ 7 → Worker ghi đúng */
+        const pub7 = await call('PUT', '/api/book/keo-lui/chapter', { headers: ADMH,
+          body: { index: 6, chapter: { t: 'Chương 6', html: '<p>mới</p>', status: 'published' } } });
+        eq('kéo lùi/ đăng chương 7 → 200', pub7.status, 200);
+        let n7 = (await kv.get('registry', { type: 'json' })).lib[0];
+        eq('kéo lùi/ Worker ghi đúng 7 chương', n7.chapters, 7);
+        eq('kéo lùi/ Worker ghi đúng ngày hôm nay', n7.updated, vnToday());
+        /* rồi bấm "Lưu bộ" bằng bản RAM cũ */
+        const putOld = await call('PUT', '/api/registry', { headers: ADMH, body: ramCopy });
+        eq('kéo lùi/ Lưu bộ bằng RAM cũ → 200', putOld.status, 200);
+        const after = (await kv.get('registry', { type: 'json' })).lib[0];
+        eq('kéo lùi/ Lưu bộ KHÔNG kéo số chương về 6', after.chapters, 7);
+        eq('kéo lùi/ Lưu bộ KHÔNG kéo ngày về 15/11', after.updated, vnToday());
+        eq('kéo lùi/ nhãn chương vẫn 7/7', String(after.countLabel), '7/7');
+        /* nhưng client gửi ngày MỚI HƠN thì vẫn ghi được (không chặn nhầm) */
+        const newer = JSON.parse(JSON.stringify(await kv.get('registry', { type: 'json' })));
+        newer.lib[0].updated = '2026-12-31';
+        await call('PUT', '/api/registry', { headers: ADMH, body: newer });
+        eq('kéo lùi/ client gửi ngày mới hơn thì vẫn nhận', ((await kv.get('registry', { type: 'json' })).lib[0] || {}).updated, '2026-12-31');
+      }
     }
 
   /* ---------- 13. WEB PUSH "RA CHƯƠNG MỚI" ---------- */

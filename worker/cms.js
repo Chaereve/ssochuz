@@ -2146,6 +2146,36 @@ async function putKV(req, env, key, cors, label) {
     }
   }
   if (parsed && typeof parsed === 'object') delete parsed.force;
+  /* KHÔNG CHO BẢN CŨ TRONG RAM CỦA ADMIN KÉO LÙI registry.
+     Sự cố 19–21/11: admin mở trang (RAM giữ bản cũ) → đăng chương mới (Worker
+     ghi đúng 7 chương, ngày 21/11) → bấm "Lưu bộ" ⇒ client PUT cả registry cũ
+     ⇒ số chương về 6 và NGÀY VỀ 15/11. Người dùng thấy "ngày vẫn sai" dù dữ
+     liệu trên KV đã đúng. Chặn ở đây vì client có thể là bản cũ chưa vá, hoặc
+     một tab quên tải lại.
+     Luật: `updated` chỉ tiến; `chapters`/`countLabel`/`pending` lấy theo bản
+     đang có trên KV (Worker đếm từ bản lưu chương nên đó là sự thật). Ngoại lệ
+     duy nhất: client gửi kèm `rev` MỚI HƠN — lúc đó chính client vừa đọc lại
+     registry và có quyền ghi đè thật (đổi tên bộ, xoá bộ, sửa tay số chương). */
+  if (key === 'registry' && parsed && Array.isArray(parsed.lib)) {
+    let cur = null;
+    try { cur = await env.CZ_KV.get('registry', { type: 'json' }); } catch (e) { cur = null; }
+    if (cur && Array.isArray(cur.lib) && cur.lib.length) {
+      const bySlug = {};
+      cur.lib.forEach((m) => { if (m && m.slug) bySlug[String(m.slug)] = m; });
+      let kept = 0;
+      parsed.lib.forEach((m) => {
+        if (!m || !m.slug) return;
+        const kv = bySlug[String(m.slug)];
+        if (!kv) return;
+        const kvDay = String(kv.updated || '').slice(0, 10);
+        if (kvDay && kvDay > String(m.updated || '').slice(0, 10)) { m.updated = kvDay; kept++; }
+        if (Number.isFinite(Number(kv.chapters)) && Number(m.chapters) !== Number(kv.chapters)) { m.chapters = Number(kv.chapters); kept++; }
+        if (kv.countLabel && String(m.countLabel || '') !== String(kv.countLabel)) { m.countLabel = String(kv.countLabel); kept++; }
+        if (Number.isFinite(Number(kv.pending)) && Number(m.pending) !== Number(kv.pending)) { m.pending = Number(kv.pending); kept++; }
+      });
+      if (kept) parsed._healed = kept;
+    }
+  }
   if (key === 'registry') body = registryJSON(parsed);
   const bytes = new TextEncoder().encode(body).length;
   const saved = new Date().toISOString();

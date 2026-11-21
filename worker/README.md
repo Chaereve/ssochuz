@@ -190,7 +190,7 @@ curl -X POST -H "x-admin-key: $ADMIN_KEY" \
   https://chuseoz-cms.kimtong1906.workers.dev/api/admin/heal-updated
 ```
 
-## 0. Deploy bản 1.21.0 — CMS cũ + Worker community riêng
+## 0. Deploy bản 1.21.1 — CMS cũ + Worker community riêng
 
 ### A. Cập nhật code CMS hiện có (giữ nguyên config)
 
@@ -214,7 +214,7 @@ npx wrangler d1 migrations apply ssochuz-community --remote
 npx wrangler deploy
 ```
 
-CMS `/api/health` vẫn trả `"version": "1.21.0"` (bản này: `1.21.0`); Community Worker `https://ssochuz-community.<account-subdomain>.workers.dev/api/health` phải có `worker: "ssochuz-community"`, `d1: true`, `cmsBinding: true`. Reaction summary kiểm tra qua Worker mới:
+CMS `/api/health` vẫn trả `"version": "1.21.1"` (bản này: `1.21.1`); Community Worker `https://ssochuz-community.<account-subdomain>.workers.dev/api/health` phải có `worker: "ssochuz-community"`, `d1: true`, `cmsBinding: true`. Reaction summary kiểm tra qua Worker mới:
 
 ```bash
 curl -i -X POST https://ssochuz-community.<account-subdomain>.workers.dev/api/community/reactions \
