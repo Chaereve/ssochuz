@@ -314,6 +314,22 @@
     CH_LABELS = map; CH_LABELS_FOR = CHS.length;
     return map;
   }
+  /* BẢNG TÊN CHƯƠNG ĐẦY ĐỦ: vị trí → nguyên tiêu đề. Bình luận mang theo tên
+     này (chTitle) làm MỎ NEO — khi kho chương đổi thứ tự (chương hẹn giờ lên
+     sóng, admin xoá/đảo/chèn chương) bình luận vẫn tìm về đúng chương cũ thay
+     vì dính vào chương hàng xóm. */
+  var CH_TITLES = null, CH_TITLES_FOR = -1;
+  function chTitles() {
+    if (CH_TITLES && CH_TITLES_FOR === CHS.length) return CH_TITLES;
+    var map = {};
+    for (var i = 1; i <= CHS.length; i++) map[i] = chapTitle(i);
+    CH_TITLES = map; CH_TITLES_FOR = CHS.length;
+    return map;
+  }
+  function chapTitle(i) {
+    var c = CHS[i - 1];
+    return String((c && c.t) || '').replace(/\s+/g, ' ').trim();
+  }
   function chapLabel(i) {                     /* i: vị trí 1-based trong sách */
     var c = CHS[i - 1];
     if (!c) return 'Chương ' + i;
@@ -883,6 +899,7 @@
     if (!box) return;
     CMT_STORY = CZ.comments.mount(box, {
       slug: N.slug, ch: 0, title: 'Đánh giá & bình luận', chapterFilter: false, hint: '',
+      chLabels: chLabels(), chTitles: chTitles(),
       onChanged: function (n) { bumpTabCount(n, true); }
     });
     /* đăng nhập xong (quay về từ Supabase) thì vẽ lại khung để hiện ô viết */
@@ -894,7 +911,8 @@
     if (!box || !N) return;
     if (!CMT_READER) {
       CMT_READER = CZ.comments.mount(box, {
-        slug: N.slug, ch: cur, chLabel: chapLabel(cur), chLabels: chLabels(), compact: true,
+        slug: N.slug, ch: cur, chLabel: chapLabel(cur), chLabels: chLabels(),
+        chTitle: chapTitle(cur), chTitles: chTitles(), compact: true,
         title: 'Bình luận',
         hint: '',
         /* số ở tab lọc/tiêu đề phải đổi ngay sau khi người đọc gửi hoặc xoá —
@@ -902,7 +920,7 @@
         onChanged: function () { syncReaderTab(box); }
       });
     } else {
-      CMT_READER.setChapter(cur, chapLabel(cur));
+      CMT_READER.setChapter(cur, chapLabel(cur), chapTitle(cur));
       /* tiêu đề giữ nguyên “Bình luận”; số chương đã hiện ở tab lọc bên dưới,
          không lặp lại thành “Bình luận Chương 3” mỗi lần lật chương */
     }

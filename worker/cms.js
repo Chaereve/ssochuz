@@ -4256,7 +4256,11 @@ function publicComment(c) {
   return {
     id: c.id, uid: c.uid, name: c.name || 'Bạn đọc', picture: c.picture || '', text: c.text,
     stickerId: Object.prototype.hasOwnProperty.call(STICKER_BY_ID, String(c.stickerId || '')) ? String(c.stickerId) : '',
-    ch: Number(c.ch) || 0, parentId: c.parentId ? String(c.parentId) : '',
+    ch: Number(c.ch) || 0,
+    /* chTitle: tên chương đầy đủ lúc gửi — mỏ neo để trang đọc neo lại chương
+       khi kho chương đổi thứ tự (xem chú thích ở postComment). */
+    chTitle: String(c.chTitle || '').slice(0, 200),
+    parentId: c.parentId ? String(c.parentId) : '',
     guest: !!c.guest, createdAt: c.createdAt,
   };
 }
@@ -4442,6 +4446,14 @@ async function postComment(slug, req, env, cors) {
     if (response.ok) { const member = await response.json(); name = member.profile.name; picture = member.profile.avatar; }
   }
   const ch = Math.max(0, Math.min(99999, parseInt(body.ch, 10) || 0));
+  /* chTitle: tên chương đầy đủ tại thời điểm gửi — MỎ NEO chống “bình luận lẫn
+     vào chương khác”. `ch` là vị trí trong danh sách chương ĐANG HIỆN mà danh
+     sách này đổi được (chương hẹn giờ lên sóng giữa danh sách, admin xoá/đảo/
+     chèn chương) nên vị trí dịch chuyển và bình luận cũ dính sang chương bên
+     cạnh. Khi hiển thị, trang đọc ưu tiên tìm chương đúng tên chTitle; không
+     thấy (chương đã xoá/đổi tên) thì chỉ hiện ở “Tất cả”. Chuỗi thuần văn bản,
+     cắt 200 ký tự, gộp khoảng trắng — không nhận HTML. */
+  const chTitle = String(body.chTitle || '').replace(/\s+/g, ' ').trim().slice(0, 200);
   /* parentId là id của bình luận mà người đọc đang trả lời. Chỉ nhận id trong
      cùng bộ; ch của reply được giữ theo bình luận cha để bộ lọc chương không
      làm rơi mất câu trả lời. Cho phép trả lời reply tiếp (thread nhiều tầng). */
@@ -4454,6 +4466,9 @@ async function postComment(slug, req, env, cors) {
     if (!parent) return json({ ok: false, error: 'bình luận gốc không còn tồn tại — tải lại trang rồi thử lại' }, { status: 400, cors });
   }
   const finalCh = parent ? (Number(parent.ch) || 0) : ch;
+  /* trả lời dính CẢ chương lẫn mỏ neo của bình luận cha: mở “Tất cả” rồi trả lời
+     một câu của chương khác thì câu trả lời vẫn nằm dưới đúng chương đó. */
+  const finalChTitle = parent ? String(parent.chTitle || '') : chTitle;
   /* hai lớp chặn spam: theo mỗi chương và toàn trang. Reply dùng cùng giới hạn. */
   const perChap = u ? 3 : 2, perAll = u ? 12 : 6;
   if (!await rateLimit(env, 'rl:cmt:' + hash(uid) + ':' + slug + ':' + finalCh, perChap, 600) ||
@@ -4462,7 +4477,7 @@ async function postComment(slug, req, env, cors) {
   }
   const c = {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-    uid, name, picture, text, stickerId, ch: finalCh, parentId: parent ? String(parent.id) : '', guest: !u,
+    uid, name, picture, text, stickerId, ch: finalCh, chTitle: finalChTitle, parentId: parent ? String(parent.id) : '', guest: !u,
     createdAt: new Date().toISOString(),
   };
   arr.unshift(c);

@@ -2553,8 +2553,9 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       /* chLabel: chữ hiện cho người đọc ("Chương 1", "Ngoại truyện 2"…). Số `chap` chỉ là
          vị trí trong kho chương nên không phải lúc nào cũng trùng tên chương thật. */
       var chLabel = String(opt.chLabel || '').trim();
-      /* `setChapter(c, label)` đổi cả số lẫn NHÃN: người đọc lật chương thì nhãn
-         “Chương 3” phải đi theo, không được giữ nhãn của chương mở đầu tiên. */
+      /* `setChapter(c, label, title)` đổi cả số lẫn NHÃN lẫn TÊN CHƯƠNG: người
+         đọc lật chương thì nhãn “Chương 3” phải đi theo, không được giữ nhãn của
+         chương mở đầu tiên. */
       function setChLabel(v) { chLabel = String(v || '').trim(); }
       function chWord() { return chLabel || (chap ? 'chương ' + chap : ''); }
       /* VỊ TRÍ ≠ SỐ TRÊN TIÊU ĐỀ. Rất nhiều bộ mở màn bằng “Lời mở đầu”/“Bắt đầu
@@ -2563,12 +2564,42 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
          `chLabels` do trang đọc đưa vào để hiện đúng chữ người đọc nhìn thấy.
          Nhờ vậy một câu bình luận chỉ có MỘT cách hiểu, mà nhãn vẫn đúng. */
       var chLabels = (opt.chLabels && typeof opt.chLabels === 'object') ? opt.chLabels : {};
-      function labelOf(n) {
-        n = Number(n) || 0;
-        if (!n) return '';
-        if (n === chap && chLabel) return chLabel;
-        var v = chLabels[String(n)] || chLabels[n];
-        return v ? String(v) : 'chương ' + n;
+      /* MỎ NEO TÊN CHƯƠNG (chTitle) — chống “bình luận lẫn vào chương khác”.
+         `ch` là VỊ TRÍ trong danh sách chương ĐANG HIỆN, mà danh sách này đổi
+         theo thời gian: chương hẹn giờ lên sóng giữa danh sách, admin xoá/đảo/
+         chèn chương — mọi vị trí sau điểm đổi dịch chuyển, bình luận cũ dính sang
+         chương bên cạnh. Nay mỗi bình luận mang theo TÊN CHƯƠNG lúc gửi
+         (`chTitle`); khi hiển thị, ưu tiên tìm vị trí HIỆN TẠI có đúng tên đó
+         (gần vị trí cũ nhất khi trùng tên), không thấy thì coi như chương đã
+         xoá/đổi tên: chỉ hiện ở “Tất cả” với đúng tên đã lưu, KHÔNG dính vào
+         chương nào khác. Bình luận cũ chưa có chTitle thì hành xử như trước. */
+      var chTitles = (opt.chTitles && typeof opt.chTitles === 'object') ? opt.chTitles : {};
+      function normTitle(v) { return String(v || '').replace(/\s+/g, ' ').trim(); }
+      var chTitle = normTitle(opt.chTitle);
+      function setChTitle(v) { chTitle = normTitle(v); }
+      function posOf(c) {
+        var n = Number(c && c.ch) || 0;
+        var t = normTitle(c && c.chTitle);
+        if (!t) return n;
+        var best = 0, bestD = Infinity;
+        for (var k in chTitles) {
+          if (normTitle(chTitles[k]) !== t) continue;
+          var p = parseInt(k, 10) || 0;
+          var d = Math.abs(p - n);
+          if (d < bestD) { bestD = d; best = p; }
+        }
+        return best || -1;            /* -1 = không còn chương nào trùng tên */
+      }
+      function labelOf(c) {
+        var n = posOf(c);
+        var t = normTitle(c && c.chTitle);
+        if (n > 0) {
+          if (n === chap && chLabel) return chLabel;
+          var v = chLabels[String(n)] || chLabels[n];
+          return v ? String(v) : 'chương ' + n;
+        }
+        if (n < 0) return t;          /* chương đã xoá/đổi tên — giữ tên lúc gửi */
+        return t || '';
       }
       var state = { all: [], byChap: {}, filter: chap > 0 && opt.chapterFilter !== false ? 'chap' : 'all', busy: false, count: 0, replyTo: '', stickerId: '', open: false, replyStickers: Object.create(null) };
 
@@ -2613,7 +2644,10 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       }
       function filters() {
         if (opt.chapterFilter === false || !chap) return '';
-        var nAll = state.count, nCh = Number(state.byChap[String(chap)]) || 0;
+        /* số trên tab = số dòng BÊN DƯỚI tab đó (chương này + bình luận chung),
+           không lấy byChapter của Worker: sau khi neo lại chương bằng chTitle,
+           con số theo vị trí cũ sẽ không khớp danh sách đang hiện. */
+        var nAll = state.count, nCh = rowsFor('chap').length;
         return '<div class="cmt-filters" role="tablist">' +
           '<button class="tab' + (state.filter === 'chap' ? ' on' : '') + '" data-f="chap" role="tab">' + esc(chWord()) +
             (nCh ? ' <span class="ct">' + nCh + '</span>' : '') + '</button>' +
@@ -2645,7 +2679,7 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
         return '<div class="cmt-item" data-id="' + esc(c.id) + '">' + ava(c) +
           '<div class="cmt-body"><div class="cmt-h">' + (c.profileId && /^[a-f0-9]{64}$/.test(c.profileId) ? '<a class="cmt-profile" href="/profile?id=' + c.profileId + '"><b>' + esc(c.name || 'Bạn đọc') + '</b></a>' : '<b>' + esc(c.name || 'Bạn đọc') + '</b>') +
             (c.guest ? '<span class="cmt-guest" title="Bình luận khi chưa đăng nhập">khách</span>' : '') +
-            (c.ch ? '<span class="cmt-ch">' + esc(labelOf(c.ch)) + '</span>' : '') +
+            ((c.ch || c.chTitle) ? '<span class="cmt-ch">' + esc(labelOf(c)) + '</span>' : '') +
             '<span class="cmt-time">' + esc(timeAgo(c.createdAt)) + '</span>' +
             '<button class="cmt-reply" data-reply="' + esc(c.id) + '" type="button">Trả lời</button>' +
             ((me || admin) ? '<button class="cmt-del" data-del="' + esc(c.id) + '" title="Xoá bình luận" aria-label="Xoá bình luận">✕</button>' : '') +
@@ -2661,11 +2695,14 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
          cả lại thấy”).
          Nay tab chương = bình luận CỦA chương này + bình luận CHUNG của bộ. Câu
          trả lời vẫn dính chương của bình luận cha (Worker giữ nguyên finalCh),
-         nên luồng hội thoại không bị cắt khúc. */
+         nên luồng hội thoại không bị cắt khúc.
+         Lọc theo VỊ TRÍ ĐÃ NEO LẠI (posOf): bình luận mang chTitle thì đi theo
+         chương đúng tên của nó dù kho chương đã đổi thứ tự; chương đã xoá/đổi
+         tên (posOf = -1) chỉ hiện ở “Tất cả” — không được dính vào chương khác. */
       function rowsFor(filter) {
         if (filter !== 'chap' || !chap) return state.all;
         return state.all.filter(function (c) {
-          var n = Number(c.ch) || 0;
+          var n = posOf(c);
           return n === chap || n === 0;      /* của chương này + chung của bộ */
         });
       }
@@ -2854,9 +2891,11 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       function makePayload(text, nameInput, parentId, stickerId) {
         var me = u();
         /* `ch` = VỊ TRÍ chương (cùng đơn vị với phiếu thích và số liệu theo
-           chương); nhãn hiện cho người đọc do `chLabels` lo. Trả lời thì Worker
-           tự lấy chương của bình luận cha. */
-        var payload = { text: text, ch: chap, vid: vid() };
+           chương); nhãn hiện cho người đọc do `chLabels` lo. `chTitle` = tên
+           chương đầy đủ lúc gửi — mỏ neo để khi kho chương đổi thứ tự (chương
+           hẹn giờ lên sóng, admin xoá/đảo chương) bình luận vẫn về đúng chương
+           cũ của nó. Trả lời thì Worker tự lấy chương + chTitle của bình luận cha. */
+        var payload = { text: text, ch: chap, chTitle: chTitle, vid: vid() };
         if (parentId) payload.parentId = String(parentId);
         if (stickerOf(stickerId)) payload.stickerId = String(stickerId);
         if (me) {
@@ -3015,12 +3054,13 @@ var COVER_KEYS = (COVER_MANIFEST && COVER_MANIFEST.keys) || [];
       load(true);
       return {
         reload: function () { return load(); },
-        setChapter: function (c, label) {
+        setChapter: function (c, label, title) {
           var n = Math.max(0, parseInt(c, 10) || 0);
           /* nhãn phải cập nhật CẢ khi số chương không đổi: “Chương 1: Học Sinh
              Mới” và “Chương 1” của bộ khác nhau vẫn là cùng một vị trí, còn
              tiêu đề đọc được thì đã đổi (bản cũ giữ nhãn chương mở đầu). */
           setChLabel(label);
+          setChTitle(title);
           if (n === chap) { paint(); return; }
           chap = n;
           state.filter = (chap > 0 && opt.chapterFilter !== false) ? 'chap' : 'all';

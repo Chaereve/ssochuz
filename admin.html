@@ -1455,8 +1455,11 @@ function commentsHTML(){
     '<div class="card-bd tight" style="padding:0">'+
     (arr.length?arr.map(function(c){
       /* Hiện cả CHƯƠNG và slug: trước chỉ có tên bộ nên 2 bình luận của cùng
-         một bộ ở 2 chương khác nhau trông y hệt nhau. */
-      var meta=esc(c.b)+(Number(c.ch)>0?(' · chương '+esc(String(c.ch))):'')+(c.slug?(' · '+esc(c.slug)):'')+' · '+esc(c.date);
+         một bộ ở 2 chương khác nhau trông y hệt nhau. Ưu tiên TÊN CHƯƠNG đã lưu
+         (chTitle) — “Chương 3: Thịt Viên…” thay vì “chương 4” (vị trí trong kho
+         chương, lệch với tên chương thật ở bộ có lời mở đầu). */
+      var chTxt=c.ct||(Number(c.ch)>0?('chương '+String(c.ch)):'');
+      var meta=esc(c.b)+(chTxt?(' · '+esc(chTxt)):'')+(c.slug?(' · '+esc(c.slug)):'')+' · '+esc(c.date);
       return '<div class="list-item cmt"><div class="t"><b>'+esc(c.r)+'</b><span>'+meta+'</span><span>'+esc(c.txt)+'</span></div>'+
         (c.spam?badge('Nghi spam','tone-warn'):'')+
         '<button class="btn danger sm" data-act="delete-comment" data-id="'+c.id+'" aria-label="Xoá bình luận của '+esc(c.r)+' (xác nhận 2 bước)" data-tip="Xoá 2 bước: bấm Xoá rồi gõ XOÁ">'+icon('trash','s')+'Xoá</button></div>';
@@ -3115,6 +3118,6 @@ window.CZ_MOCKUP = {
   SAMPLE_NOTIFS: SAMPLE_NOTIFS, SAMPLE_LOGS: SAMPLE_LOGS
 };
 </script>
-<script src="/admin-real.js?v=85682046cb"></script>
+<script src="/admin-real.js?v=6b0914ad2f"></script>
 </body>
 </html>

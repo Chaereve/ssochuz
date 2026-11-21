@@ -1007,6 +1007,10 @@
           /* giữ số chương: trước bị bỏ nên mọi bình luận của một bộ trông giống
              nhau, không biết đang nói về chương nào */
           ch: Number(c.ch) || 0,
+          /* chTitle: tên chương lúc gửi — hiện TÊN CHƯƠNG THẬT thay cho vị trí
+             (“chương 4” trong khi chương có tên “Chương 3”). Bình luận cũ chưa
+             có chTitle thì giữ “chương <vị trí>” như trước. */
+          ct: String(c.chTitle || '').replace(/\s+/g, ' ').trim().slice(0, 200),
           txt: c.text || '', d: String(c.createdAt || '').slice(0, 16).replace('T', ' '),
           spam: /https?:\/\/|kiếm tiền|inbox|kiếm thêm/i.test(String(c.text || '')),
           done: false, slug: c.slug || ''
