@@ -8,4 +8,4 @@
    Muốn nâng phiên bản:
      node tools/check_version.mjs --write <phiên-bản-mới>
    ========================================================================== */
-export const VERSION = '1.21.0';
+export const VERSION = '1.21.1';

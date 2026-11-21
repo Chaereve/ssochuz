@@ -1241,15 +1241,42 @@
      `updated` được lấy từ KV; `chapters`/`countLabel` giữ nguyên bản admin vì
      chủ trang có thể vừa sửa tay. Đọc lỗi thì ghi như cũ (không chặn thao tác).
   ------------------------------------------------------------------------- */
+  /* TRƯỚC KHI GHI registry: chép lại những gì KV đang có mà bản trong RAM
+     KHÔNG biết. Bản RAM là ảnh chụp lúc mở /admin (hoặc lúc nạp xong), nên nó
+     thiếu mọi thứ đã xảy ra sau đó — kể cả chương vừa đăng từ tab khác.
+
+     Sự cố 19–21/11: admin mở (RAM: bộ 6 chương, ngày 15/11) → đăng chương thứ
+     7 (Worker ghi đúng: 7 chương, ngày 21/11) → bấm **Lưu bộ** ⇒ ghi đè bằng
+     bản RAM ⇒ số chương về 6, NGÀY VỀ 15/11. Người dùng thấy "ngày vẫn sai"
+     dù Worker thừa sự đúng. Bản cũ chỉ cứu `updated`, nên số chương vẫn lùi —
+     và ngày cũng lùi theo vì bộ không còn "có chương mới".
+
+     Nay chép lại ĐỦ: ngày (chỉ tiến), số chương + nhãn, trạng thái chờ, và cờ
+     xuất bản. Số chương lấy theo bản GHI của Worker (đếm từ bản lưu chương),
+     không theo con số trong RAM. */
   function mergeNewerUpdated(next, current) {
     if (!next || !current || !Array.isArray(next.lib) || !Array.isArray(current.lib)) return false;
     var fresh = {};
-    current.lib.forEach(function (m) { if (m && m.slug) fresh[String(m.slug)] = String(m.updated || '').slice(0, 10); });
+    current.lib.forEach(function (m) { if (m && m.slug) fresh[String(m.slug)] = m; });
     var touched = false;
     next.lib.forEach(function (m) {
       if (!m || !m.slug) return;
-      var kvDay = fresh[String(m.slug)] || '';
+      var kv = fresh[String(m.slug)];
+      if (!kv) return;
+      /* ngày cập nhật: chỉ tiến */
+      var kvDay = String(kv.updated || '').slice(0, 10);
       if (kvDay && kvDay > String(m.updated || '').slice(0, 10)) { m.updated = kvDay; touched = true; }
+      /* số chương: Worker đếm từ BẢN LƯU CHƯƠNG nên nó là sự thật. Nhận cả
+         tăng lẫn giảm (xoá chương là giảm thật) — RAM không được kéo lùi. */
+      if (Number.isFinite(Number(kv.chapters)) && Number(m.chapters) !== Number(kv.chapters)) {
+        m.chapters = Number(kv.chapters); touched = true;
+      }
+      if (kv.countLabel && String(m.countLabel || '') !== String(kv.countLabel)) { m.countLabel = String(kv.countLabel); touched = true; }
+      if (Number.isFinite(Number(kv.pending)) && Number(m.pending) !== Number(kv.pending)) { m.pending = Number(kv.pending); touched = true; }
+      /* cờ xuất bản / riêng tư: đổi ở tab khác thì cũng phải giữ */
+      ['pubStatus', 'visibility', 'lock'].forEach(function (k) {
+        if (kv[k] !== undefined && String(m[k] === undefined ? '' : m[k]) !== String(kv[k])) { m[k] = kv[k]; touched = true; }
+      });
     });
     return touched;
   }
@@ -2899,6 +2926,8 @@
   window.connect = realConnect;
   window.submitNew = realSubmitNew;
   window.saveEdit = realSaveEdit;
+  /* xuất để bài kiểm gọi trực tiếp (không có UI nào chạm tới hàm này) */
+  window.mergeNewerUpdated = mergeNewerUpdated;
   window.setLock = realSetLock;
   window.saveHomepage = realSaveHomepage;
   window.bloggerImport = realBloggerImport;

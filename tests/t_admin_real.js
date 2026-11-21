@@ -366,6 +366,28 @@ function confirmStrong(phrase) {
     'ghi registry kéo LÙI ngày cập nhật (KV nhận ' + sentBake.updated + ', phải là 2026-11-20)');
   /* nhãn chương thì mockup tự chuẩn hoá lại theo số chương (hành vi sẵn có,
      không liên quan ngày) — ca kiểm nhãn nằm ở t_admin_updated_guard.js */
+  /* ---- mergeNewerUpdated phải cứu SỐ CHƯƠNG, không chỉ NGÀY (sự cố 19–21/11) ----
+     Bản RAM của admin là ảnh chụp lúc mở trang. Bản cũ của hàm này chỉ chép lại
+     `updated` từ KV, nên số chương cũ trong RAM vẫn thắng ⇒ web hiện lại số cũ,
+     và ngày cũng lùi theo. Ca này kiểm trực tiếp hàm đó. */
+  if (typeof w.mergeNewerUpdated === 'function') {
+    const next = { lib: [{ slug: 'x', chapters: 6, countLabel: '6/6', updated: '2026-11-15' }] };
+    const cur = { lib: [{ slug: 'x', chapters: 7, countLabel: '7/7', updated: '2026-11-21', pending: 0 }] };
+    w.mergeNewerUpdated(next, cur);
+    ok(Number(next.lib[0].chapters) === 7,
+      'mergeNewerUpdated không cứu số chương (giữ ' + next.lib[0].chapters + ', phải 7)');
+    ok(String(next.lib[0].updated) === '2026-11-21',
+      'mergeNewerUpdated không cứu ngày (giữ ' + next.lib[0].updated + ', phải 2026-11-21)');
+    /* ngày chỉ tiến: RAM mới hơn thì giữ của RAM */
+    const next2 = { lib: [{ slug: 'y', chapters: 7, updated: '2026-12-01' }] };
+    const cur2 = { lib: [{ slug: 'y', chapters: 7, updated: '2026-11-21' }] };
+    w.mergeNewerUpdated(next2, cur2);
+    ok(String(next2.lib[0].updated) === '2026-12-01',
+      'mergeNewerUpdated kéo lùi ngày mới hơn (' + next2.lib[0].updated + ')');
+  } else {
+    ok(false, 'không thấy window.mergeNewerUpdated — admin-real.js phải xuất hàm này để kiểm');
+  }
+
   /* ---- LƯU BỘ không được ghi đè số chương cũ (ca thật 20/11) ----
      ĐÚNG THỨ TỰ THẬT: mở admin + mở bộ (RAM 38 chương) → đăng thêm chương ở
      NƠI KHÁC (tab khác / nhập từ Blogger ⇒ bản lưu thành 39, RAM vẫn 38) →
@@ -376,10 +398,15 @@ function confirmStrong(phrase) {
     nav('sua-bo'); await tick(4);
     const ramBook = S().books.find((b) => b.id === 'bake-love-feelings') || {};
     const ramCh = Number(ramBook.ch) || 0;
-    /* đăng thêm 1 chương "ở nơi khác": chỉ bản lưu đổi, RAM admin thì không */
+    /* đăng thêm 1 chương "ở nơi khác": bản lưu VÀ registry KV cùng tiến (đúng
+       như Worker làm: mỗi lần lưu chương đều syncCountToRegistry), chỉ RAM của
+       admin là còn cũ. Trước đây ca này chỉ sửa bản lưu nên Worker "chữa hộ"
+       bằng số chương registry — không giống thực tế. */
     const bk2 = KV.books['bake-love-feelings'];
     bk2.chapters.push({ t: 'Chương đăng ngoài admin', html: '<p>mới</p>' });
     const realCh = bk2.chapters.length;
+    const mKv = (KV.registry.lib || []).find((m) => m.slug === 'bake-love-feelings');
+    if (mKv) { mKv.chapters = realCh; mKv.countLabel = realCh + '/' + realCh; mKv.updated = '2026-11-20'; }
     if (typeof w.saveEdit === 'function') {
       w.saveEdit(); await tick(14);
       const mAfter = (KV.registry.lib || []).find((m) => m.slug === 'bake-love-feelings') || {};
